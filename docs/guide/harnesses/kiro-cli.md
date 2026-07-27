@@ -85,14 +85,14 @@ harnesses (or running both side by side) is supported-but-untested; `/amadeus
 
 ## For framework developers
 
-`dist/kiro` is **generated** from `core/` + `harness/kiro/` by
+`dist/kiro` is **generated** from `packages/framework/core/` + `packages/framework/harness/kiro/` by
 `bun scripts/package.ts kiro` (core copy with the `{{HARNESS_DIR}}` token
 substituted to `.kiro` and the `rules/` → `steering/` rename). `bun
 scripts/package.ts --check` is the drift guard and runs in CI (t145). The
-authored Kiro surfaces live in `harness/kiro/`: the orchestrator skill
+authored Kiro surfaces live in `packages/framework/harness/kiro/`: the orchestrator skill
 (`skills/amadeus/`), the agent JSONs (`agents/`), the hook adapter
 (`hooks/amadeus-kiro-adapter.ts`), `settings/cli.json`, and `AGENTS.md` — edit
-those (or `core/`), never the generated `dist/kiro`. See
+those (or `packages/framework/core/`), never the generated `dist/kiro`. See
 [Porting to a New Harness](../../harness-engineering/09-porting-to-a-new-harness.md).
 
 A live TUI journey test exists alongside the Claude twins:

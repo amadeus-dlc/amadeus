@@ -53,7 +53,7 @@ until a stage opts to use it.
 
 Two pieces of machinery move work through these stages, and as a harness
 engineer you shape the **data** both of them read. The deterministic **engine**
-(`core/tools/amadeus-orchestrate.ts`, with its `next` and `report`
+(`packages/framework/core/tools/amadeus-orchestrate.ts`, with its `next` and `report`
 subcommands) reads `amadeus-state.md` and the compiled `stage-graph.json`,
 decides what runs next, and emits one typed directive. The **conductor**
 (`skills/amadeus/SKILL.md`) is a thin forwarding loop that carries each directive
@@ -74,19 +74,19 @@ Everything else a harness engineer configures hangs off these two:
 
 ## What you can change without code
 
-You author all of these in `core/` — the hand-authored, harness-neutral source
+You author all of these in `packages/framework/core/` — the hand-authored, harness-neutral source
 — then regenerate the per-harness trees (see [The build model](#the-build-model-author-in-core-regenerate-the-harnesses) below).
 
 | Change | Where you author it | Chapter |
 |--------|-------|---------|
-| Edit what a stage does | `core/amadeus-common/stages/<phase>/<slug>.md` | [Anatomy of a Stage](01-anatomy-of-a-stage.md) |
+| Edit what a stage does | `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` | [Anatomy of a Stage](01-anatomy-of-a-stage.md) |
 | Add a brand-new stage | a new file in the right phase directory + graph wiring | [Adding a Stage](02-adding-a-stage.md) |
-| Add or modify an agent | `core/agents/<name>-agent.md` | [Adding an Agent](03-adding-an-agent.md) |
-| Define a scope | `core/scopes/amadeus-<name>.md` + per-stage `scopes:` tags | [Scopes](04-scopes.md) |
-| Teach a standing rule | `core/memory/{team,project}.md` | [Rules and the Learning Loop](05-rules-and-the-loop.md) |
-| Wire a deterministic check | a sensor manifest under `core/sensors/` + a stage's `sensors:` import | [Sensors](06-sensors.md) |
+| Add or modify an agent | `packages/framework/core/agents/<name>-agent.md` | [Adding an Agent](03-adding-an-agent.md) |
+| Define a scope | `packages/framework/core/scopes/amadeus-<name>.md` + per-stage `scopes:` tags | [Scopes](04-scopes.md) |
+| Teach a standing rule | `packages/framework/core/memory/{team,project}.md` | [Rules and the Learning Loop](05-rules-and-the-loop.md) |
+| Wire a deterministic check | a sensor manifest under `packages/framework/core/sensors/` + a stage's `sensors:` import | [Sensors](06-sensors.md) |
 | Add team domain knowledge | `amadeus/knowledge/<agent>-agent/` (the space-level knowledge dir, at runtime) | [Team Knowledge](07-team-knowledge.md) |
-| Shape Construction and swarm posture | `core/memory/` + the `units-generation` stage | [Construction and the Swarm](08-construction-and-swarm.md) |
+| Shape Construction and swarm posture | `packages/framework/core/memory/` + the `units-generation` stage | [Construction and the Swarm](08-construction-and-swarm.md) |
 
 Each chapter narrates the *how* and links down to the
 [Developer Reference](../reference/00-overview.md) for the exhaustive schema —
@@ -94,38 +94,38 @@ the reference is the normative contract; this guide is the working narrative.
 
 One row is the exception: **team domain knowledge** is the context *you* add in
 your own project at the space level (`amadeus/knowledge/`, a sibling of the space's
-`memory/`, `codekb/`, and `intents/`), at runtime — it is not part of `core/` and
+`memory/`, `codekb/`, and `intents/`), at runtime — it is not part of `packages/framework/core/` and
 the framework never overwrites it. Everything else above is framework source you
-author in `core/`.
+author in `packages/framework/core/`.
 
 ---
 
-## The build model: author in `core/`, regenerate the harnesses
+## The build model: author in `packages/framework/core/`, regenerate the harnesses
 
-Everything a harness engineer authors lives in **`core/`** — the hand-authored,
-harness-neutral source of truth (stages under `core/amadeus-common/stages/`,
-agents under `core/agents/`, scopes, rules, sensors, knowledge, tools, hooks).
+Everything a harness engineer authors lives in **`packages/framework/core/`** — the hand-authored,
+harness-neutral source of truth (stages under `packages/framework/core/amadeus-common/stages/`,
+agents under `packages/framework/core/agents/`, scopes, rules, sensors, knowledge, tools, hooks).
 The per-harness `dist/<harness>/` trees you actually run (`dist/claude/.claude/`,
-`dist/kiro/.kiro/`, `dist/codex/`) are **generated** from `core/` plus a thin
-`harness/<name>/` surface, and they are **drift-guarded** — a hand-edit there is
+`dist/kiro/.kiro/`, `dist/codex/`) are **generated** from `packages/framework/core/` plus a thin
+`packages/framework/harness/<name>/` surface, and they are **drift-guarded** — a hand-edit there is
 rejected by CI. The loop is always:
 
 ```bash
-# 1. edit the source in core/ (never dist/)
-$EDITOR core/amadeus-common/stages/inception/my-stage.md
+# 1. edit the source in packages/framework/core/ (never dist/)
+$EDITOR packages/framework/core/amadeus-common/stages/inception/my-stage.md
 
-# 2. regenerate every harness tree from core/ + harness/
+# 2. regenerate every harness tree from packages/framework/core/ + packages/framework/harness/
 bun scripts/package.ts
 
 # 3. confirm no drift (the CI guard; run before committing)
 bun scripts/package.ts --check
 ```
 
-Commit the `core/` edit and the regenerated `dist/` together. When a recipe in
+Commit the `packages/framework/core/` edit and the regenerated `dist/` together. When a recipe in
 the chapters below says to run `bun .claude/tools/amadeus-graph.ts compile` (or
 another tool), that command runs against an *installed* tree — your project's
 `.claude/` (or `.kiro/` / `.codex/`) — to recompile the graph at runtime; it is
-not where you author. **You author in `core/`; the tools run in the harness
+not where you author. **You author in `packages/framework/core/`; the tools run in the harness
 directory.** That split — authored source vs. generated runtime — is the one to
 keep straight throughout this guide. For the full build contract see
 [Porting to a New Harness](09-porting-to-a-new-harness.md) and the Developer
@@ -199,8 +199,8 @@ Read it in order the first time:
    team's Construction autonomy posture in the rule layer, and shape what the
    per-Unit Bolt swarm can run in parallel through `units-generation`.
 9. **[Porting to a New Harness](09-porting-to-a-new-harness.md)** — add another
-   CLI harness with one `harness/<name>/` directory and a manifest row, no
-   `core/` edits: the manifest contract, the hook adapter, and `emit.ts`.
+   CLI harness with one `packages/framework/harness/<name>/` directory and a manifest row, no
+   `packages/framework/core/` edits: the manifest contract, the hook adapter, and `emit.ts`.
 
 ## Next
 

@@ -22,7 +22,7 @@ are designed to pair.
 
 ## The five layers and which file you edit
 
-Rules live as Markdown files under `core/memory/` (the authored source for the space memory layer), one file per scope.
+Rules live as Markdown files under `packages/framework/core/memory/` (the authored source for the space memory layer), one file per scope.
 There is no `scope:` frontmatter field — this implementation derives scope from
 the filename, so the file you pick *is* the scope you author at:
 

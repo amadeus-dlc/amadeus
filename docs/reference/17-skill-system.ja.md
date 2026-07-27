@@ -14,7 +14,7 @@
 
 このカットオーバーは1つの関心事を2つに分割します。**エンジン**は*ステージ間ルーティング* — スコープ解決、フラグの優先順位ラダー、ジャンプ方向の計算、resume と init のガード、ステージシーケンス、ゲートステータス、ワークフロー完了 — を所有します。**コンダクター**は*エンジンが指名した move の内部の実行品質* — ペルソナのフレーミング、良い質問をすること、ステージダイアリーの維持、ステージ内の Keep/Modify/Redo ループ、ゲートでの人間への判断の提示 — を所有します。
 
-エンジンは `core/tools/amadeus-orchestrate.ts` で作成され、各ハーネスへ `<harness-dir>/tools/amadeus-orchestrate.ts`(例 `.claude/tools/`)として出荷されます。これはちょうど2つのサブコマンドを持つ Bun CLI です:
+エンジンは `packages/framework/core/tools/amadeus-orchestrate.ts` で作成され、各ハーネスへ `<harness-dir>/tools/amadeus-orchestrate.ts`(例 `.claude/tools/`)として出荷されます。これはちょうど2つのサブコマンドを持つ Bun CLI です:
 
 | サブコマンド | 役割 | 状態を変更する? |
 |------------|------|----------------|
@@ -81,7 +81,7 @@ flowchart LR
 
 ## 4. 複数スキル、ランナー、共有された背骨
 
-オーケストレーターは数多くのスキルの1つです。各ハーネスはそのスキルディレクトリ(`<harness-dir>/skills/`、例 `dist/claude/.claude/skills/`)配下に複数セットを出荷します: ベースの `amadeus` オーケストレーター、実行可能なステージごとに1つの**ステージランナー**(`amadeus-<slug>`)、first-batch スコープごとに1つの**スコープランナー**(`amadeus-<scope>`)、読み取り専用のセッションスキル(`amadeus-session-cost`、`amadeus-replay`、`amadeus-outcomes-pack`、`amadeus-grilling`)、そして `amadeus-init`。すべてのルーティングと実行の知識は、`core/amadeus-common/` で作成される**共有された背骨**(`<harness-dir>/amadeus-common/` として出荷)に一度だけ存在します: `conductor.md` ペルソナ、`protocols/`、そして `stages/{initialization,ideation,inception,construction,operation}/` 配下の32個のステージファイル。
+オーケストレーターは数多くのスキルの1つです。各ハーネスはそのスキルディレクトリ(`<harness-dir>/skills/`、例 `dist/claude/.claude/skills/`)配下に複数セットを出荷します: ベースの `amadeus` オーケストレーター、実行可能なステージごとに1つの**ステージランナー**(`amadeus-<slug>`)、first-batch スコープごとに1つの**スコープランナー**(`amadeus-<scope>`)、読み取り専用のセッションスキル(`amadeus-session-cost`、`amadeus-replay`、`amadeus-outcomes-pack`、`amadeus-grilling`)、そして `amadeus-init`。すべてのルーティングと実行の知識は、`packages/framework/core/amadeus-common/` で作成される**共有された背骨**(`<harness-dir>/amadeus-common/` として出荷)に一度だけ存在します: `conductor.md` ペルソナ、`protocols/`、そして `stages/{initialization,ideation,inception,construction,operation}/` 配下の32個のステージファイル。
 
 ランナースキルは生成されるものであり、決して手書きされません。`tools/amadeus-runner-gen.ts` によって:
 

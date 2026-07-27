@@ -33,7 +33,7 @@ AI-DLC のドキュメントは、トピックではなく、あなたが何を�
 
 ステージは自身のリードエージェントを名指ししますが、エージェントは自身のステージを決して名指ししません。この非対称性は意図的です: 作業者を書き換えずに作業を再割り当て(ステージを編集)でき、ワークフローを乱すことなく作業者を追加(エージェントファイルを置くだけ)できます — あるステージがそのエージェントを使うと決めるまでは。
 
-2 つの機構がこれらのステージを通じて作業を進めます。ハーネスエンジニアとして、あなたはその両方が読む**データ**を形作ります。決定論的な**エンジン**(`core/tools/amadeus-orchestrate.ts`、その `next` と `report` サブコマンド)は `amadeus-state.md` とコンパイル済みの `stage-graph.json` を読み、次に何を実行するかを決定し、型付きのディレクティブを 1 つ発行します。**コンダクター**(`skills/amadeus/SKILL.md`)は各ディレクティブを実行に運ぶ薄い転送ループです。ルーティングはエンジンに存在し、あなたのステージファイル、スコープ、ルールはそれを操縦する入力です。
+2 つの機構がこれらのステージを通じて作業を進めます。ハーネスエンジニアとして、あなたはその両方が読む**データ**を形作ります。決定論的な**エンジン**(`packages/framework/core/tools/amadeus-orchestrate.ts`、その `next` と `report` サブコマンド)は `amadeus-state.md` とコンパイル済みの `stage-graph.json` を読み、次に何を実行するかを決定し、型付きのディレクティブを 1 つ発行します。**コンダクター**(`skills/amadeus/SKILL.md`)は各ディレクティブを実行に運ぶ薄い転送ループです。ルーティングはエンジンに存在し、あなたのステージファイル、スコープ、ルールはそれを操縦する入力です。
 
 ハーネスエンジニアが設定するその他すべては、この 2 つにぶら下がっています:
 
@@ -46,41 +46,41 @@ AI-DLC のドキュメントは、トピックではなく、あなたが何を�
 
 ## コードなしで変えられること
 
-これらすべてを、手書きでハーネス中立なソースである `core/` で作成し、その後ハーネスごとのツリーを再生成します(後述の[ビルドモデル](#ビルドモデル-core-で作成しハーネスを再生成する)を参照)。
+これらすべてを、手書きでハーネス中立なソースである `packages/framework/core/` で作成し、その後ハーネスごとのツリーを再生成します(後述の[ビルドモデル](#ビルドモデル-core-で作成しハーネスを再生成する)を参照)。
 
 | 変更 | 作成する場所 | 章 |
 |--------|-------|---------|
-| ステージの動作を編集する | `core/amadeus-common/stages/<phase>/<slug>.md` | [ステージの解剖学](01-anatomy-of-a-stage.ja.md) |
+| ステージの動作を編集する | `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` | [ステージの解剖学](01-anatomy-of-a-stage.ja.md) |
 | まったく新しいステージを追加する | 適切なフェーズディレクトリの新規ファイル + グラフ配線 | [ステージの追加](02-adding-a-stage.ja.md) |
-| エージェントを追加・変更する | `core/agents/<name>-agent.md` | [エージェントの追加](03-adding-an-agent.ja.md) |
-| スコープを定義する | `core/scopes/amadeus-<name>.md` + ステージごとの `scopes:` タグ | [スコープ](04-scopes.ja.md) |
-| 恒久的なルールを教える | `core/memory/{team,project}.md` | [ルールと学習ループ](05-rules-and-the-loop.ja.md) |
-| 決定論的なチェックを組み込む | `core/sensors/` 配下のセンサーマニフェスト + ステージの `sensors:` インポート | [センサー](06-sensors.ja.md) |
+| エージェントを追加・変更する | `packages/framework/core/agents/<name>-agent.md` | [エージェントの追加](03-adding-an-agent.ja.md) |
+| スコープを定義する | `packages/framework/core/scopes/amadeus-<name>.md` + ステージごとの `scopes:` タグ | [スコープ](04-scopes.ja.md) |
+| 恒久的なルールを教える | `packages/framework/core/memory/{team,project}.md` | [ルールと学習ループ](05-rules-and-the-loop.ja.md) |
+| 決定論的なチェックを組み込む | `packages/framework/core/sensors/` 配下のセンサーマニフェスト + ステージの `sensors:` インポート | [センサー](06-sensors.ja.md) |
 | チームのドメインナレッジを追加する | `amadeus/knowledge/<agent>-agent/`(実行時、space レベルのナレッジディレクトリ) | [チームナレッジ](07-team-knowledge.ja.md) |
-| Construction とスウォームの姿勢を形作る | `core/memory/` + `units-generation` ステージ | [Construction とスウォーム](08-construction-and-swarm.ja.md) |
+| Construction とスウォームの姿勢を形作る | `packages/framework/core/memory/` + `units-generation` ステージ | [Construction とスウォーム](08-construction-and-swarm.ja.md) |
 
 各章は*方法*を語り、網羅的なスキーマについては[開発者リファレンス](../reference/00-overview.ja.md)へのリンクを張っています — リファレンスは規範的な契約であり、本ガイドは実務的な語りです。
 
-1 行だけ例外があります: **チームのドメインナレッジ**は、*あなた*が自分のプロジェクトの space レベル(`amadeus/knowledge/`、space の `memory/`、`codekb/`、`intents/` の兄弟)で、実行時に追加するコンテキストです — これは `core/` の一部ではなく、フレームワークが上書きすることは決してありません。上記のその他すべては、あなたが `core/` で作成するフレームワークソースです。
+1 行だけ例外があります: **チームのドメインナレッジ**は、*あなた*が自分のプロジェクトの space レベル(`amadeus/knowledge/`、space の `memory/`、`codekb/`、`intents/` の兄弟)で、実行時に追加するコンテキストです — これは `packages/framework/core/` の一部ではなく、フレームワークが上書きすることは決してありません。上記のその他すべては、あなたが `packages/framework/core/` で作成するフレームワークソースです。
 
 ---
 
-## ビルドモデル: `core/` で作成し、ハーネスを再生成する
+## ビルドモデル: `packages/framework/core/` で作成し、ハーネスを再生成する
 
-ハーネスエンジニアが作成するものはすべて **`core/`** に存在します — 手書きでハーネス中立なソースオブトゥルース(ステージは `core/amadeus-common/stages/`、エージェントは `core/agents/`、スコープ、ルール、センサー、ナレッジ、ツール、フック)。実際に実行するハーネスごとの `dist/<harness>/` ツリー(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)は、`core/` に薄い `harness/<name>/` 表層を加えたものから**生成**され、**ドリフトガード**されています — そこを手編集すると CI が拒否します。ループは常にこうです:
+ハーネスエンジニアが作成するものはすべて **`packages/framework/core/`** に存在します — 手書きでハーネス中立なソースオブトゥルース(ステージは `packages/framework/core/amadeus-common/stages/`、エージェントは `packages/framework/core/agents/`、スコープ、ルール、センサー、ナレッジ、ツール、フック)。実際に実行するハーネスごとの `dist/<harness>/` ツリー(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)は、`packages/framework/core/` に薄い `packages/framework/harness/<name>/` 表層を加えたものから**生成**され、**ドリフトガード**されています — そこを手編集すると CI が拒否します。ループは常にこうです:
 
 ```bash
-# 1. core/ でソースを編集する(dist/ は決して編集しない)
-$EDITOR core/amadeus-common/stages/inception/my-stage.md
+# 1. packages/framework/core/ でソースを編集する(dist/ は決して編集しない)
+$EDITOR packages/framework/core/amadeus-common/stages/inception/my-stage.md
 
-# 2. core/ + harness/ からすべてのハーネスツリーを再生成する
+# 2. packages/framework/core/ + packages/framework/harness/ からすべてのハーネスツリーを再生成する
 bun scripts/package.ts
 
 # 3. ドリフトがないことを確認する(CI ガード。コミット前に実行)
 bun scripts/package.ts --check
 ```
 
-`core/` の編集と再生成された `dist/` を一緒にコミットします。以下の各章のレシピで `bun .claude/tools/amadeus-graph.ts compile`(または別のツール)を実行するように書かれている場合、そのコマンドは*インストール済み*のツリー — あなたのプロジェクトの `.claude/`(または `.kiro/` / `.codex/`)— に対して実行され、実行時にグラフを再コンパイルします。そこは作成する場所ではありません。**あなたは `core/` で作成し、ツールはハーネスディレクトリで実行します。** その分割 — 作成されるソース対生成される実行時 — が、本ガイドを通じて区別し続けるべきものです。ビルド契約の全容は[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)と開発者リファレンスの[アーキテクチャ § ソース対配布](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses)を参照してください。
+`packages/framework/core/` の編集と再生成された `dist/` を一緒にコミットします。以下の各章のレシピで `bun .claude/tools/amadeus-graph.ts compile`(または別のツール)を実行するように書かれている場合、そのコマンドは*インストール済み*のツリー — あなたのプロジェクトの `.claude/`(または `.kiro/` / `.codex/`)— に対して実行され、実行時にグラフを再コンパイルします。そこは作成する場所ではありません。**あなたは `packages/framework/core/` で作成し、ツールはハーネスディレクトリで実行します。** その分割 — 作成されるソース対生成される実行時 — が、本ガイドを通じて区別し続けるべきものです。ビルド契約の全容は[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)と開発者リファレンスの[アーキテクチャ § ソース対配布](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses)を参照してください。
 
 ### フレームワークコードの配置先
 
@@ -131,7 +131,7 @@ bun scripts/package.ts --check
 6. **[センサー](06-sensors.ja.md)** — 決定論的なチェックを作成し、ステージに束縛する。
 7. **[チームナレッジ](07-team-knowledge.ja.md)** — エージェントにあなたのドメインコンテキストを与える。
 8. **[Construction とスウォーム](08-construction-and-swarm.ja.md)** — ルールレイヤーでチームの Construction 自律性の姿勢を設定し、`units-generation` を通じて Unit ごとの Bolt スウォームが並列で何を実行できるかを形作る。
-9. **[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)** — `harness/<name>/` ディレクトリ 1 つとマニフェスト行 1 行で、`core/` を編集せずに別の CLI ハーネスを追加する: マニフェスト契約、フックアダプター、`emit.ts`。
+9. **[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)** — `packages/framework/harness/<name>/` ディレクトリ 1 つとマニフェスト行 1 行で、`packages/framework/core/` を編集せずに別の CLI ハーネスを追加する: マニフェスト契約、フックアダプター、`emit.ts`。
 
 ## 次へ
 

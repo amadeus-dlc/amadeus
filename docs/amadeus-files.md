@@ -5,7 +5,7 @@
 Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-07)
 - Official reference: `docs/guide/14-artifacts-reference.md` (directory tree and git policy)
 - Workspace layout: `docs/guide/03-spaces-and-intents.md`
-- Exact file names: extracted from the `outputs:` frontmatter in all 31 stage files under `core/amadeus-common/stages/*/*.md`
+- Exact file names: extracted from the `outputs:` frontmatter in all 32 stage files under `packages/framework/core/amadeus-common/stages/*/*.md`
 
 ---
 
@@ -33,6 +33,7 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │   ├── amadeus-audit-logger.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
+│   ├── amadeus-plugin-compose.ts
 │   ├── amadeus-runtime-compile.ts
 │   ├── amadeus-sensor-fire.ts
 │   ├── amadeus-session-end.ts
@@ -49,7 +50,9 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 ├── scopes/                                               # Scope definitions such as amadeus-mvp
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # Deterministic sensor definitions
+│   ├── amadeus-answer-evidence.md
 │   ├── amadeus-linter.md
+│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
@@ -78,11 +81,12 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │   ├── conductor.md
 │   ├── protocols/
 │   └── stages/
-├── hooks/                                                # Codex hook implementations (11 shared hooks + Codex adapter)
+├── hooks/                                                # Codex hook implementations (shared framework hooks + Codex adapter)
 │   ├── amadeus-codex-adapter.ts
 │   ├── amadeus-audit-logger.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
+│   ├── amadeus-plugin-compose.ts
 │   ├── amadeus-runtime-compile.ts
 │   ├── amadeus-sensor-fire.ts
 │   ├── amadeus-session-end.ts
@@ -99,7 +103,9 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 ├── scopes/                                               # Scope definitions such as amadeus-mvp
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # Deterministic sensor definitions
+│   ├── amadeus-answer-evidence.md
 │   ├── amadeus-linter.md
+│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
@@ -153,7 +159,7 @@ amadeus/
 
 | Path | Role | Manual edits | git |
 |---|---|---|---|
-| `.claude/` | Runtime engine for Claude Code. Generated from `dist/claude/` and promoted into the project | Do not edit directly. Edit `core/` or `harness/claude/`, then regenerate | Committed |
+| `.claude/` | Runtime engine for Claude Code. Generated from `dist/claude/` and promoted into the project | Do not edit directly. Edit `packages/framework/core/` or `packages/framework/harness/claude/`, then regenerate | Committed |
 | `.codex/` | Runtime engine for Codex CLI. Copied/promoted from `dist/codex/` | Do not edit generated files directly. The local active `hooks.json` may be updated by Codex integrations | Committed, except gitignored `.codex/hooks.json` |
 | `.agents/` | Skill distribution consumed by Codex. Includes `$amadeus` and every stage runner | Do not edit directly. Edit the generation source, then regenerate | Committed |
 | `amadeus/` | Harness-neutral AI-DLC workspace. Holds spaces, intents, state, audit, artifacts, and team memory | `memory/` and artifacts are normal review targets. Runtime scratch files should not be edited | Committed + partly gitignored |

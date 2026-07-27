@@ -19,7 +19,7 @@ Keeping both in one file means you see the graph edges and the execution steps s
 
 This split is the key to knowing what you're editing. Change a frontmatter field and you've changed the *graph* (a dependency edge, the agent that leads, the execution mode). Change the body and you've changed the *work* (what the agent actually does). The two are independent.
 
-A real stage is authored at `core/amadeus-common/stages/<phase>/<slug>.md` — for example `stages/inception/application-design.md`. Open one alongside this chapter; the shape will be familiar by the end.
+A real stage is authored at `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` — for example `stages/inception/application-design.md`. Open one alongside this chapter; the shape will be familiar by the end.
 
 ---
 
@@ -42,7 +42,7 @@ A few notes on the calls that bite hardest:
 - **`consumes[].conditional_on` captures the brownfield/greenfield split.** A consume marked `conditional_on: brownfield` is only required when the workflow is brownfield. For an unconditional consume, omit the field entirely — there is no `always` value.
 - **`mode` is a dispatch mechanism.** `inline` runs short stages in the conductor's own context; `subagent` delegates long stages (like Construction code generation) to a fresh context so they don't blow out the main context window. Multiple agents touching a stage is expressed with `support_agents`, not `mode` — the conductor invokes the lead first, then each supporter in turn.
 - **`for_each` names the iteration artifact.** The five Construction stages that run once per Unit declare `for_each: unit-of-work`; the other stages omit the field and run once. Aggregation is inferred from the graph, not declared.
-- **`lead_agent` and `support_agents` validate against `core/agents/*.md`.** There's no hardcoded list — adding an agent means dropping its file in that directory (see [Adding an Agent](03-adding-an-agent.md)).
+- **`lead_agent` and `support_agents` validate against `packages/framework/core/agents/*.md`.** There's no hardcoded list — adding an agent means dropping its file in that directory (see [Adding an Agent](03-adding-an-agent.md)).
 
 This is the orientation, not the contract. For the complete field table with types, constraints, and the reserved-namespace fields AI-DLC will add later, read [Field reference — when to use](../reference/15-stage-definition.md#field-reference--when-to-use) in the Developer Reference.
 

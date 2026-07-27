@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](06-hooks-and-tools.ja.md)
 
-This chapter documents the hook system architecture, all twelve hook scripts, the audit event taxonomy, CLI tool configuration, and the deterministic utility tool.
+This chapter documents the hook system architecture, all framework hook scripts, the audit event taxonomy, CLI tool configuration, and the deterministic utility tool.
 
 > **Path convention.** State, audit, and artifacts live under the active intent's **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below (a compact UTC date prefix plus a short kebab-case label so record dirs sort chronologically; the canonical id is the UUIDv7 in the `intents.json` registry row). The audit trail is a directory of per-clone shards under `<record>/audit/`, not a single file.
 
@@ -10,46 +10,46 @@ This chapter documents the hook system architecture, all twelve hook scripts, th
 
 ## Hook System Architecture
 
-This implementation uses twelve hook scripts in `.claude/hooks/`. All twelve are TypeScript (run via `bun`). All twelve are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the other eleven via the `hooks` block), they fire regardless of which skill is active. They were previously split (six declared in `amadeus/SKILL.md` frontmatter as skill-scoped, the rest project-wide); v0.6.0 moved the skill-scoped six into `settings.json` so every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
+This implementation uses the framework hook scripts in `.claude/hooks/`. All of them are TypeScript (run via `bun`). All of them are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the rest via the `hooks` block), they fire regardless of which skill is active. They were previously split (six declared in `amadeus/SKILL.md` frontmatter as skill-scoped, the rest project-wide); v0.6.0 moved the skill-scoped six into `settings.json` so every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
 
-Eleven of the twelve are **non-blocking** — they observe and exit 0, never altering control flow. One, the `Stop` hook (`amadeus-stop.ts`), is **flow-altering**: it may return `{"decision":"block"}` to keep the interactive forwarding loop running. That is a sanctioned, deliberate contract for loop enforcement and is distinct from the advisory `never-block` contract every other hook honours (see "The flow-altering `Stop` hook" below).
+All but one are **non-blocking** — they observe and exit 0, never altering control flow. One, the `Stop` hook (`amadeus-stop.ts`), is **flow-altering**: it may return `{"decision":"block"}` to keep the interactive forwarding loop running. That is a sanctioned, deliberate contract for loop enforcement and is distinct from the advisory `never-block` contract every other hook honours (see "The flow-altering `Stop` hook" below).
 
 ```
 .claude/hooks/
-+-- mint-presence.ts     # UserPromptSubmit + PostToolUse AskUserQuestion (project-wide, settings.json, TypeScript)
-+-- audit-logger.ts      # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
-+-- sensor-fire.ts       # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
-+-- sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
-+-- runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
-+-- validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
-+-- log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
-+-- amadeus-stop.ts        # Stop (project-wide, settings.json, TypeScript, flow-altering)
-+-- session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
-+-- plugin-compose.ts    # SessionStart (project-wide, settings.json, TypeScript)
-+-- session-end.ts       # SessionEnd (project-wide, settings.json, TypeScript)
-+-- amadeus-statusline.ts  # statusLine (project-wide, settings.json, TypeScript)
++-- amadeus-mint-presence.ts     # UserPromptSubmit + PostToolUse AskUserQuestion (project-wide, settings.json, TypeScript)
++-- amadeus-audit-logger.ts      # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
++-- amadeus-sensor-fire.ts       # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
++-- amadeus-sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
++-- amadeus-runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
++-- amadeus-validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
++-- amadeus-log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
++-- amadeus-stop.ts              # Stop (project-wide, settings.json, TypeScript, flow-altering)
++-- amadeus-session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
++-- amadeus-plugin-compose.ts    # SessionStart (project-wide, settings.json, TypeScript)
++-- amadeus-session-end.ts       # SessionEnd (project-wide, settings.json, TypeScript)
++-- amadeus-statusline.ts        # statusLine (project-wide, settings.json, TypeScript)
 ```
 
 ### Hook Summary
 
 | Hook | Event | Scoping | Matcher | Purpose |
 |------|-------|---------|---------|---------|
-| `mint-presence.ts` | UserPromptSubmit + PostToolUse | Project-wide (settings.json) | (empty) / `AskUserQuestion` | Record a `HUMAN_TURN` event on every real human prompt and on every answered `AskUserQuestion` widget (gate approvals and interview answers are widget clicks, not typed prompts); the approval/interview gate checks the ledger and requires one since the last gate resolution so a model under autopilot cannot fabricate an approval with no human having acted |
-| `audit-logger.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Auto-log artifact writes to the `audit/` shards |
-| `sensor-fire.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Fire the active stage's resolved Sensors on matching writes (advisory; never blocks) |
-| `sync-statusline.ts` | PostToolUse | Project-wide (settings.json) | `TaskUpdate` | Auto-sync state file on stage task activation |
-| `runtime-compile.ts` | PostToolUse | Project-wide (settings.json) | `Bash` | Recompile `runtime-graph.json` on transition-class audit emits |
-| `validate-state.ts` | PreCompact | Project-wide (settings.json) | (empty) | Validate state file, write recovery breadcrumb |
-| `log-subagent.ts` | SubagentStop | Project-wide (settings.json) | (empty) | Log subagent completion events |
+| `amadeus-mint-presence.ts` | UserPromptSubmit + PostToolUse | Project-wide (settings.json) | (empty) / `AskUserQuestion` | Record a `HUMAN_TURN` event on every real human prompt and on every answered `AskUserQuestion` widget (gate approvals and interview answers are widget clicks, not typed prompts); the approval/interview gate checks the ledger and requires one since the last gate resolution so a model under autopilot cannot fabricate an approval with no human having acted |
+| `amadeus-audit-logger.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Auto-log artifact writes to the `audit/` shards |
+| `amadeus-sensor-fire.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Fire the active stage's resolved Sensors on matching writes (advisory; never blocks) |
+| `amadeus-sync-statusline.ts` | PostToolUse | Project-wide (settings.json) | `TaskUpdate` | Auto-sync state file on stage task activation |
+| `amadeus-runtime-compile.ts` | PostToolUse | Project-wide (settings.json) | `Bash` | Recompile `runtime-graph.json` on transition-class audit emits |
+| `amadeus-validate-state.ts` | PreCompact | Project-wide (settings.json) | (empty) | Validate state file, write recovery breadcrumb |
+| `amadeus-log-subagent.ts` | SubagentStop | Project-wide (settings.json) | (empty) | Log subagent completion events |
 | `amadeus-stop.ts` | Stop | Project-wide (settings.json) | (empty) | **Flow-altering.** Enforce the forwarding loop on turn-end: run `amadeus-orchestrate next`; on `done` or `parked` allow the stop, on a pending directive block the stop and inject the next move back via `reason`. Allows the stop (human-wait carve-out) when the current stage is awaiting approval (`[?]`), being revised (`[R]`), `[-]` in-progress with an unanswered question in its `<slug>-questions.md`, or the ending turn was conversational (the human's last prompt was answered with no workflow-engine call, read from the harness transcript) - the last two suppressed under autonomous Construction. Recursion-bounded (no-progress counter + `stop_hook_active` under `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; default 2 in an interactive run and 8 under autonomous Construction). No-op outside an AIDLC workflow |
-| `session-start.ts` | SessionStart | Project-wide (settings.json) | (empty) | Inject workflow context on session resume |
-| `plugin-compose.ts` | SessionStart | Project-wide (settings.json) | (empty) | Auto-compose opted-in plugins into the host (`amadeus-plugin.ts compose --if-stale`); non-blocking, no-op when the composition record is current |
-| `session-end.ts` | SessionEnd | Project-wide (settings.json) | (empty) | Emit `SESSION_ENDED` audit event on graceful exit |
+| `amadeus-session-start.ts` | SessionStart | Project-wide (settings.json) | (empty) | Inject workflow context on session resume |
+| `amadeus-plugin-compose.ts` | SessionStart | Project-wide (settings.json) | (empty) | Auto-compose opted-in plugins into the host (`amadeus-plugin.ts compose --if-stale`); non-blocking, no-op when the composition record is current |
+| `amadeus-session-end.ts` | SessionEnd | Project-wide (settings.json) | (empty) | Emit `SESSION_ENDED` audit event on graceful exit |
 | `amadeus-statusline.ts` | statusLine | Project-wide (settings.json) | -- | Show real-time progress in terminal |
 
 ### Shared Characteristics
 
-All twelve TypeScript hooks:
+All of the TypeScript hooks:
 
 - Written in TypeScript, run via `bun`
 - Do not need executable permissions — work identically on macOS, Linux, and native Windows PowerShell
@@ -64,11 +64,11 @@ All twelve TypeScript hooks:
 ```mermaid
 sequenceDiagram
     participant CC as Claude Code
-    participant AL as audit-logger.ts
-    participant VS as validate-state.ts
-    participant LS as log-subagent.ts
-    participant SS as session-start.ts
-    participant SE as session-end.ts
+    participant AL as amadeus-audit-logger.ts
+    participant VS as amadeus-validate-state.ts
+    participant LS as amadeus-log-subagent.ts
+    participant SS as amadeus-session-start.ts
+    participant SE as amadeus-session-end.ts
     participant AF as audit/ shard
     participant SF as amadeus-state.md
     participant RF as .amadeus-recovery.md
@@ -107,7 +107,7 @@ sequenceDiagram
 
 These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/subagent spine) are registered project-wide in `settings.json`. They are always on, but each **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so audit logging and state sync never clutter non-AI-DLC sessions. Before v0.6.0 they were declared in `amadeus/SKILL.md` frontmatter (skill-scoped); the move to `settings.json` lets every entry point — the orchestrator and every packaged or hand-written runner — inherit the spine without copying a `hooks:` block.
 
-### PostToolUse: audit-logger.ts
+### PostToolUse: amadeus-audit-logger.ts
 
 **Source:** `.claude/hooks/amadeus-audit-logger.ts`
 **Trigger:** After every `Write` or `Edit` Claude Code tool call (matcher: `"Write|Edit"`)
@@ -124,7 +124,7 @@ These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/su
 7. **Atomic locking:** Uses `mkdir`-based lock in the system temp directory (`os.tmpdir()`) with 3-retry loop (100ms delay). The hash isolates locks per project.
 8. **Log entry:** Appends a canonical `ARTIFACT_CREATED` (for Write to a net-new path) or `ARTIFACT_UPDATED` (for Edit, or Write overwriting existing) event via `appendAuditEntry`. Fields: Timestamp, Event, Tool, File, Context.
 
-### PostToolUse: sync-statusline.ts
+### PostToolUse: amadeus-sync-statusline.ts
 
 **Source:** `.claude/hooks/amadeus-sync-statusline.ts`
 **Trigger:** After every `TaskUpdate` call (matcher: `"TaskUpdate"`)
@@ -132,7 +132,7 @@ These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/su
 
 **Processing steps:**
 
-1. **Project directory resolution:** Same multi-fallback pattern as audit-logger.ts.
+1. **Project directory resolution:** Same multi-fallback pattern as amadeus-audit-logger.ts.
 2. **Status filter:** Only fires when `status` is `in_progress`. Exits silently for `completed`, `pending`, etc.
 3. **activeForm filter:** Exits silently if no `activeForm` field or no `[slug]` suffix pattern.
 4. **State file guard:** Exits silently if `amadeus-state.md` does not exist (pre-init).
@@ -143,7 +143,7 @@ These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/su
 - Stage Jump tasks (no `[slug]`) and dependency-wiring TaskUpdates (no activeForm) are naturally filtered out.
 - The hook calls the existing `set-status` subcommand — no new code path needed.
 
-### PostToolUse: sensor-fire.ts
+### PostToolUse: amadeus-sensor-fire.ts
 
 **Source:** `.claude/hooks/amadeus-sensor-fire.ts`
 **Trigger:** After every `Write` or `Edit` Claude Code tool call (matcher: `"Write|Edit"`)
@@ -151,7 +151,7 @@ These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/su
 
 **Processing steps:**
 
-1. **Project directory resolution:** Same multi-fallback pattern as audit-logger.ts.
+1. **Project directory resolution:** Same multi-fallback pattern as amadeus-audit-logger.ts.
 2. **Audit + state guards:** Exits silently if the `audit/` shard or `amadeus-state.md` does not exist (pre-init).
 3. **Active-stage read:** Reads the active stage's `sensors_applicable` array off `stage-graph.json` — the compile-resolved sensor list for that stage node (empty for stages like workspace-scaffold).
 4. **Dispatch:** For each applicable Sensor, spawns `amadeus-sensor.ts fire <id> --stage <slug> --output-path <path>`. The dispatcher applies each Sensor's `matches` glob hook-side; a non-matching write is skipped. Outcomes are advisory — the hook never blocks the write.
@@ -159,7 +159,7 @@ These six hooks (the audit/sensor/statusline/runtime-compile/state-validation/su
 
 See [Sensor System](07-sensor-system.md) for the manifest schema and the fire lifecycle.
 
-### PostToolUse: runtime-compile.ts
+### PostToolUse: amadeus-runtime-compile.ts
 
 **Source:** `.claude/hooks/amadeus-runtime-compile.ts`
 **Trigger:** After every `Bash` Claude Code tool call (matcher: `"Bash"`)
@@ -176,7 +176,7 @@ See [Sensor System](07-sensor-system.md) for the manifest schema and the fire li
 
 See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locked schema.
 
-### PreCompact: validate-state.ts
+### PreCompact: amadeus-validate-state.ts
 
 **Source:** `.claude/hooks/amadeus-validate-state.ts`
 **Trigger:** Before Claude Code compacts the conversation context (matcher: empty = always)
@@ -193,7 +193,7 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 
 **Why this matters:** Context compaction discards conversation history. If compaction happens mid-stage, the model loses awareness of what it was doing. The recovery breadcrumb provides an external checkpoint that survives compaction.
 
-### SubagentStop: log-subagent.ts
+### SubagentStop: amadeus-log-subagent.ts
 
 **Source:** `.claude/hooks/amadeus-log-subagent.ts`
 **Trigger:** When any subagent (Claude Code Task tool invocation) completes (matcher: empty = always)
@@ -201,12 +201,12 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 
 **Processing steps:**
 
-1. **Project directory resolution:** Same multi-fallback pattern as audit-logger.ts.
+1. **Project directory resolution:** Same multi-fallback pattern as amadeus-audit-logger.ts.
 2. **Health heartbeat:** Writes to `.amadeus-hooks-health/log-subagent.last`.
 3. **JSON parsing:** Extracts `agent_type` (defaults to `"unknown"`), `agent_id`, and `last_assistant_message` (truncated to 200 characters).
 4. **Audit file guard:** Exits silently if the `audit/` shard does not exist.
 5. **Entry assembly:** Emits canonical `SUBAGENT_COMPLETED` event via `appendAuditEntry`. Fields: Timestamp, Event, Agent Type, and optionally Agent ID and truncated Message.
-6. **Atomic locking:** Same `mkdir`-based pattern as audit-logger.ts (unified in `lib.ts`) but with a separate lock name to avoid contention.
+6. **Atomic locking:** Same `mkdir`-based pattern as amadeus-audit-logger.ts (unified in `lib.ts`) but with a separate lock name to avoid contention.
 
 **Fires for the two subagent stages:**
 - Stage 2.1 (Reverse Engineering) -- two-step delegation (fires twice: `amadeus-developer-agent` code scan, then `amadeus-architect-agent` synthesis)
@@ -226,7 +226,7 @@ This is the framework's **first and only flow-altering hook**. Every other hook 
 
 **Processing steps:**
 
-1. **stdin idiom:** Mirrors `log-subagent.ts` — a TTY means no Claude Code JSON is coming (test/debug), so it allows the stop. Otherwise it reads the Stop-hook JSON, from which it needs only `stop_hook_active`.
+1. **stdin idiom:** Mirrors `amadeus-log-subagent.ts` — a TTY means no Claude Code JSON is coming (test/debug), so it allows the stop. Otherwise it reads the Stop-hook JSON, from which it needs only `stop_hook_active`.
 2. **No-op outside AIDLC:** If there is no active intent's `amadeus-state.md` under the project dir, there is nothing to enforce — it allows the stop. The frontmatter `Stop` matcher already scopes the hook to `/amadeus`; this is defence in depth so a non-AIDLC session is never blocked.
 3. **Compose the engine:** Runs `bun .claude/tools/amadeus-orchestrate.ts next --project-dir <dir>` and parses the directive `kind`. It does not re-derive state — it composes the engine.
 4. **`done` → allow:** If the directive is `done`, the workflow is complete; the hook emits nothing and exits 0 (the precedent non-blocking pattern), then clears the recursion counter.
@@ -257,7 +257,7 @@ This is the framework's **first and only flow-altering hook**. Every other hook 
 
 These three hooks fire regardless of whether the `/amadeus` skill is active.
 
-### SessionStart: session-start.ts
+### SessionStart: amadeus-session-start.ts
 
 **Source:** `.claude/hooks/amadeus-session-start.ts`
 **Registration:** `settings.json` under `hooks.SessionStart`
@@ -287,15 +287,15 @@ Last Completed: 2.3 Requirements Analysis
 Next Action: resume current stage
 ```
 
-### SessionEnd: session-end.ts
+### SessionEnd: amadeus-session-end.ts
 
 **Source:** `.claude/hooks/amadeus-session-end.ts`
 **Registration:** `settings.json` under `hooks.SessionEnd`
 **Purpose:** Emit a `SESSION_ENDED` audit event on every graceful Claude Code exit when an active AI-DLC workflow is present.
 
 **Lifecycle:**
-1. **Workflow guard:** Exits silently when no active intent's `amadeus-state.md` exists (the canonical "active workflow" marker — same guard as `session-start.ts`). A workspace shell with no born intent emits nothing.
-2. **Audit emission:** Appends `SESSION_ENDED` to the `audit/` shard via `amadeus-audit.ts`. Pairs with `session-start.ts`'s `SESSION_STARTED` for session lifecycle observability.
+1. **Workflow guard:** Exits silently when no active intent's `amadeus-state.md` exists (the canonical "active workflow" marker — same guard as `amadeus-session-start.ts`). A workspace shell with no born intent emits nothing.
+2. **Audit emission:** Appends `SESSION_ENDED` to the `audit/` shard via `amadeus-audit.ts`. Pairs with `amadeus-session-start.ts`'s `SESSION_STARTED` for session lifecycle observability.
 
 ### Status Line: amadeus-statusline.ts
 
@@ -371,11 +371,11 @@ Every stage execution must produce exactly two events:
 
 | Source | Events | When |
 |--------|--------|------|
-| `audit-logger.ts` | `ARTIFACT_CREATED` / `ARTIFACT_UPDATED` | Every Write/Edit to the intent's record dir (except the `audit/` shards) |
-| `log-subagent.ts` | `SUBAGENT_COMPLETED` | Any subagent stop |
-| `session-start.ts` | `SESSION_STARTED` / `SESSION_RESUMED` | Per Claude Code SessionStart hook input `source` field |
-| `session-end.ts` | `SESSION_ENDED` | Claude Code SessionEnd hook |
-| `validate-state.ts` | `SESSION_COMPACTED` | Claude Code PreCompact hook |
+| `amadeus-audit-logger.ts` | `ARTIFACT_CREATED` / `ARTIFACT_UPDATED` | Every Write/Edit to the intent's record dir (except the `audit/` shards) |
+| `amadeus-log-subagent.ts` | `SUBAGENT_COMPLETED` | Any subagent stop |
+| `amadeus-session-start.ts` | `SESSION_STARTED` / `SESSION_RESUMED` | Per Claude Code SessionStart hook input `source` field |
+| `amadeus-session-end.ts` | `SESSION_ENDED` | Claude Code SessionEnd hook |
+| `amadeus-validate-state.ts` | `SESSION_COMPACTED` | Claude Code PreCompact hook |
 | CLI tools | All other events (stage/phase/workflow lifecycle, gates, decisions, bolts, sensors, learnings, recovery, …) | Emitted by the tool subcommands the conductor calls — `amadeus-state.ts`, `amadeus-log.ts`, `amadeus-bolt.ts`, `amadeus-learnings.ts`, `amadeus-utility.ts`. Never hand-appended from prose (see `SKILL.md`: "Never emit audit events from prose"). |
 
 ---
@@ -431,7 +431,7 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 | `init` | Run the Initialization phase (scaffold dirs, detect workspace, init state). Accepts `--scope <scope>` (defaults to `poc`), `--depth`, `--test-strategy`, `--force`. | `WORKFLOW_STARTED`, `PHASE_STARTED`, `PHASE_SKIPPED`, `STAGE_STARTED`, `STAGE_COMPLETED`, `WORKSPACE_*`, and the init→first-post-init phase hand-off events |
 | `scope-change` | Atomic scope updates mid-workflow (recalculate stage inclusion). Re-plans which stages are EXECUTE/SKIP. | `SCOPE_CHANGED` |
 | `config-change` | `--depth` / `--test-strategy` updates on an active workflow | `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED` |
-| `set-status` | Low-level state-field sync (called by `sync-statusline.ts` hook on TaskUpdate) | — |
+| `set-status` | Low-level state-field sync (called by `amadeus-sync-statusline.ts` hook on TaskUpdate) | — |
 | `detect-scope` | Record a scope-detection event during freeform handling. Two modes: `--scope <s> --input <text> [--source freeform\|keyword\|env\|cli]` (explicit), or `--from-text --input <text>` (inference via `inferScopeFromText` — reads each scope's `keywords` from its `.claude/scopes/*.md` frontmatter with word-boundary matching, alphabetical tie-break, `>5`-word fallback to `feature`). Modes are mutually exclusive. Audit event includes optional `Matched keywords` field when a keyword fires. | `SCOPE_DETECTED` |
 | `detect` | Read-only composer scan (the dispatched composer's first call): prints the stock scope registry, the compiled stage graph summary, and the paths a composed scope's two files must land at, as JSON (`--json`). Mutates nothing. | — |
 | `recompose` | In-flight plan re-shape: `--skip <slug,...>` / `--add <slug,...>` flips PENDING ahead-of-cursor stages' plan suffixes on the live state file, under the audit lock. Validates strictly (a starved required input, a frozen/behind-cursor stage, a walking-skeleton anchor move, or a non-Running workflow all reject) and rebuilds the derived state fields. | `RECOMPOSED` |
@@ -443,7 +443,7 @@ This table is the canonical contract for the harness-provenance environment over
 
 | Variable | Default | Contract |
 |----------|---------|----------|
-| `AMADEUS_HARNESS_TYPE` | Unset | Optional intent-birth provenance override. Exact valid values are `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `unknown`, and `manual`. Presence takes priority over `CLAUDECODE` and harness dot-directory detection. An empty or invalid value is normalized to `unknown` without falling through, and only the normalized value is written once to the new state as the optional V7 `Harness` field. |
+| `AMADEUS_HARNESS_TYPE` | Unset | Optional intent-birth provenance override. Exact valid values are `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `kimi`, `unknown`, and `manual`. Presence takes priority over `CLAUDECODE` and harness dot-directory detection. An empty or invalid value is normalized to `unknown` without falling through, and only the normalized value is written once to the new state as the optional V7 `Harness` field. |
 
 ### Design Rationale
 

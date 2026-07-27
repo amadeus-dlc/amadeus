@@ -57,7 +57,7 @@ graph LR
 
 **Rules** (`rules/`) -- Organization and project guardrails. Self-learning: human corrections become persistent behavioral rules. Only ~35 lines total -- kept minimal to avoid context bloat in non-AI-DLC conversations.
 
-**Agents** (`agents/*.md`) -- Eleven flat agent files, each defining a domain-expert persona with role, responsibilities, stage ownership, collaboration patterns, Claude Code tools, and knowledge loading order. All have `disallowedTools: Task` -- only the conductor delegates.
+**Agents** (`agents/*.md`) -- Fourteen flat agent files (eleven domain-expert personas plus the two reviewers and the composer), each defining a persona with role, responsibilities, stage ownership, collaboration patterns, Claude Code tools, and knowledge loading order. All have `disallowedTools: Task` -- only the conductor delegates.
 
 **Knowledge** (`knowledge/`) -- Two-tier methodology reference:
 - `amadeus-shared/` -- Principles, verification, brownfield safeguards, **audit event taxonomy** (canonical event registry), state template
@@ -255,25 +255,25 @@ sequenceDiagram
 
 The framework is **authored once and generated per harness** — today Claude
 Code, Kiro CLI, and Codex CLI, and any capable CLI you port it to. The
-hand-authored source is a harness-neutral `core/` plus a thin `harness/<name>/`
+hand-authored source is a harness-neutral `packages/framework/core/` plus a thin `packages/framework/harness/<name>/`
 surface per CLI; `bun scripts/package.ts` regenerates the committed,
 drift-guarded `dist/<harness>/` trees:
 
 ```
-core/                  # hand-authored, harness-neutral (tools, amadeus-common,
-                       #   agents, rules, scopes, sensors, knowledge, hooks,
-                       #   4 session skills); prose uses the {{HARNESS_DIR}} token
-harness/<name>/        # per-CLI surface: manifest.ts + orchestrator skill +
-                       #   harness files (+ emit.ts for codex)
-scripts/package.ts     # the build: copy core (token→.claude/.kiro/.codex) +
-                       #   harness, compile the graph, generate runners, emit;
-                       #   `--check` is the byte-parity drift guard
-dist/<harness>/        # GENERATED + committed: claude/.claude, kiro/.kiro,
-                       #   codex/{.codex,.agents} — never hand-edited
+packages/framework/core/           # hand-authored, harness-neutral (tools, amadeus-common,
+                                   #   agents, rules, scopes, sensors, knowledge, hooks,
+                                   #   4 session skills); prose uses the {{HARNESS_DIR}} token
+packages/framework/harness/<name>/ # per-CLI surface: manifest.ts + orchestrator skill +
+                                   #   harness files (+ emit.ts for codex)
+scripts/package.ts                 # the build: copy core (token→.claude/.kiro/.codex) +
+                                   #   harness, compile the graph, generate runners, emit;
+                                   #   `--check` is the byte-parity drift guard
+dist/<harness>/                    # GENERATED + committed: claude/.claude, kiro/.kiro,
+                                   #   codex/{.codex,.agents} — never hand-edited
 ```
 
-`core/` `.ts` is byte-copied untransformed; the runtime `harnessDir()` seam
-(`core/tools/amadeus-lib.ts`) derives the harness dir from the shipped layout at
+`packages/framework/core/` `.ts` is byte-copied untransformed; the runtime `harnessDir()` seam
+(`packages/framework/core/tools/amadeus-lib.ts`) derives the harness dir from the shipped layout at
 execution time — open-set, from the tool's own path rather than a hardcoded
 list, so a new harness needs no edit here — and its rules-dir rename ships
 per-tree in a generated `tools/data/harness.json` the `rulesSubdir()` seam
@@ -283,11 +283,11 @@ reads. One set of tool sources runs in every harness. See
 ## Directory Structure
 
 The shipped Claude distribution (`dist/claude/.claude/`, regenerated
-byte-for-byte from `core/` + `harness/claude/`):
+byte-for-byte from `packages/framework/core/` + `packages/framework/harness/claude/`):
 
 ```
 dist/claude/.claude/
-+-- VERSION                       # plain-text framework version marker, emitted from core/tools/amadeus-version.ts
++-- VERSION                       # plain-text framework version marker, emitted from packages/framework/core/tools/amadeus-version.ts
 +-- CLAUDE.md
 +-- settings.json
 +-- hooks/
@@ -419,7 +419,7 @@ amadeus/                                    # neutral, harness-independent, comm
 missing cursor falls back to a default):
 
 - **Space** — `amadeus/active-space`, precedence `explicit arg > cursor > "default"`
-  (`DEFAULT_SPACE`, `core/tools/amadeus-lib.ts:285`; resolver `activeSpace()`,
+  (`DEFAULT_SPACE`, `packages/framework/core/tools/amadeus-lib.ts:285`; resolver `activeSpace()`,
   `amadeus-lib.ts:354-366`). `listSpaces()` always reports `default` even with
   nothing on disk (`amadeus-lib.ts:713-728`).
 - **Intent** — `amadeus/spaces/<space>/intents/active-intent`, precedence
@@ -438,7 +438,7 @@ above, Kiro's resources glob, Codex's rules dir) at the switched space's
 committed tree never churns.
 
 **Committed vs gitignored.** `amadeus/` is checked in so a team shares its work.
-The split (`harness/claude/dot-gitignore:34-54`): the two cursors
+The split (`packages/framework/harness/claude/dot-gitignore:34-54`): the two cursors
 (`active-space`, `active-intent`), per-clone runtime (`.amadeus-clone-id`,
 `.amadeus-sessions/`), and derived state (`runtime-graph.json`, `.amadeus-*` under a
 record) are **gitignored**; the method (`memory/**`), knowledge (`knowledge/**`,

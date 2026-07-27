@@ -163,7 +163,7 @@ Files are loaded automatically when the agent is activated (steps 4-5 of the loa
 
 ### Knowledge by Agent
 
-> This table is a snapshot. The authoritative `display_name` + `examples` for each agent lives in the agent's frontmatter at `core/agents/<slug>-agent.md` and is surfaced programmatically via `loadAgents()` in `core/tools/amadeus-lib.ts`. Add a new agent there first; update this table in the same PR.
+> This table is a snapshot. The authoritative `display_name` + `examples` for each agent lives in the agent's frontmatter at `packages/framework/core/agents/<slug>-agent.md` and is surfaced programmatically via `loadAgents()` in `packages/framework/core/tools/amadeus-lib.ts`. Add a new agent there first; update this table in the same PR.
 
 | Directory | Purpose | Example Files |
 |-----------|---------|---------------|

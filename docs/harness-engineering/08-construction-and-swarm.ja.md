@@ -4,7 +4,7 @@
 
 Construction は AI-DLC が対象物を構築する場所です — Unit ごとのステージが実行され、**スウォーム(swarm)** がその作業を多数の Unit に一度にファンアウトできる場所です。ここはまた、「何を、どう形づくれるか?」という最もクリーンな答えのために、どのつまみが誰のものかを正直に見極める必要のあるハーネスの部分でもあります。ここにあるレバーのいくつかは、他のすべての章が教えるようにデータとして執筆する、ハーネスエンジニアであるあなたのものです。他のつまみは、ゲートにいる人間と、実行を起動するオペレーターのものです。この章ではそのすべてを見ていき、境界線を正確に印すので、あなたは正しい面に手を伸ばし、あなたが押すべきでないものを押すのをやめられます。
 
-一貫した筋道は、このガイドの残りが運ぶものと同じです: あなたは `core/` 配下の **データ** — ルール、ステージ、センサーのチェックコマンド — を編集することで Construction を再形成し、コードを編集することは決してありません。Construction が違って感じられる理由は、その最も目に見える挙動のうち2つ(自律性の付与、スウォームドライバ)が、意図的に *データファイルではない* 関心事によって統治されていることにあります。それを認識することが、存在しない設定を執筆してしまうのを防ぎます。
+一貫した筋道は、このガイドの残りが運ぶものと同じです: あなたは `packages/framework/core/` 配下の **データ** — ルール、ステージ、センサーのチェックコマンド — を編集することで Construction を再形成し、コードを編集することは決してありません。Construction が違って感じられる理由は、その最も目に見える挙動のうち2つ(自律性の付与、スウォームドライバ)が、意図的に *データファイルではない* 関心事によって統治されていることにあります。それを認識することが、存在しない設定を執筆してしまうのを防ぎます。
 
 ---
 
@@ -14,7 +14,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 | Construction における関心事 | 所有者 | 存在する場所 |
 |---|---|---|
-| チームの自律性 **姿勢**(既定のデフォルト) | あなた、ハーネスエンジニア | `core/memory/{team,project}.md` のルール(データ) |
+| チームの自律性 **姿勢**(既定のデフォルト) | あなた、ハーネスエンジニア | `packages/framework/core/memory/{team,project}.md` のルール(データ) |
 | Unit が **並列化できる** もの | あなた、ハーネスエンジニア | `units-generation` ステージとその依存 DAG(データ) |
 | スウォームが信頼する **収束チェック** | あなた、ハーネスエンジニア | プロジェクト自身の build/test コマンド + 保護された spec(データ + プロジェクト設定) |
 | このプロジェクトの実際の自律性 **付与** | 人間 | ランタイムのラダープロンプト |
@@ -27,7 +27,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 ## 自律性の姿勢 — ルールとして書かれる、あなたの真のレバー
 
-チームがまず制御したいのは、Construction がどれだけの手取り足取りを要求するかです。同梱のデフォルトは、あなたが `core/memory/org.md` の `## Walking Skeleton` 見出しの下に執筆する org ルール(`org.md:28-42`)に存在します。フレームワークのスタンスとして読んでください:
+チームがまず制御したいのは、Construction がどれだけの手取り足取りを要求するかです。同梱のデフォルトは、あなたが `packages/framework/core/memory/org.md` の `## Walking Skeleton` 見出しの下に執筆する org ルール(`org.md:28-42`)に存在します。フレームワークのスタンスとして読んでください:
 
 - グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独・ゲート付きで、残りの Bolt が実行される前にユーザーがそれを承認します。
 - インクリメンタルなスコープ — `bugfix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
@@ -39,7 +39,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 ### 実例 — チームがデフォルトですべての Bolt をゲートするようにする
 
-あなたのチームが自律的な Construction に不慣れで、保守的な姿勢 — すべての Bolt をレビューし、手放しの実行はせず、信頼が得られるまで — を望むとします。`core/memory/team.md` の `## Walking Skeleton` の下に箇条書きを追加します:
+あなたのチームが自律的な Construction に不慣れで、保守的な姿勢 — すべての Bolt をレビューし、手放しの実行はせず、信頼が得られるまで — を望むとします。`packages/framework/core/memory/team.md` の `## Walking Skeleton` の下に箇条書きを追加します:
 
 ```markdown
 ## Walking Skeleton
@@ -58,7 +58,7 @@ checks have proven reliable.
 
 ## 並列に実行できるものを形づくる — Bolt-DAG
 
-スウォームは作業を Unit にファンアウトするので、「何を一度に実行できるか?」という問いは上流の、inception の `units-generation` ステージで決定されます。そのステージは `unit-of-work-dependency.md` を生成し(`core/amadeus-common/stages/inception/units-generation.md` が `produces: unit-of-work-dependency` を宣言)、その成果物の中で、必須の fenced な `yaml` エッジブロックが各 Unit をその `depends_on` リストとともに列挙します。
+スウォームは作業を Unit にファンアウトするので、「何を一度に実行できるか?」という問いは上流の、inception の `units-generation` ステージで決定されます。そのステージは `unit-of-work-dependency.md` を生成し(`packages/framework/core/amadeus-common/stages/inception/units-generation.md` が `produces: unit-of-work-dependency` を宣言)、その成果物の中で、必須の fenced な `yaml` エッジブロックが各 Unit をその `depends_on` リストとともに列挙します。
 
 コンパイラはそのブロックを `runtime-graph.json` の `bolt_dag` ノードに読み込みます。このノードは、エッジブロックが整形式かつ非巡回である **場合のみ** 存在します。ブロックが欠落・不整形・巡回している場合、ノードは完全に省略されます([Runtime Graph](../reference/13-runtime-graph.ja.md)、44行目のスキーマ注記)。`bolt_dag` ノードは `batches` も持ちます — すべての Unit の依存が先行するレベルによって満たされるトポロジカルなレベルで、あるバッチの Unit 間にはエッジがなく、一緒にファンアウトできます。
 
@@ -118,7 +118,7 @@ checks have proven reliable.
 
 `opencode` と `cursor` は invoke-swarm dispatch 指示を持たないため、`AMADEUS_USE_SWARM` の影響を受けません。
 
-すべての解決は同じ5つの Unit ごとのステージを実行し、同じプロジェクトチェックに対して収束します。違いは、純粋に並列作業がどうディスパッチされるかだけです。暴走に対するバックストップは、スウォームツール自体の外、ハーネスの **Stop-hook シーリング**(`core/hooks/amadeus-stop.ts`、`blockCap()` / `defaultBlockCap()` のペア、`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` として公開)に存在します。この自律 Construction パスでは、デフォルトのシーリングは **8ブロック** です(対話型のデフォルトは2。明示的な `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` は両方を上書きします)。ドライバのシーム契約は [Skill System § 6](../reference/17-skill-system.ja.md#6-the-swarm-referee-the-driver-seam-and-the-bolt-dag) にあります。
+すべての解決は同じ5つの Unit ごとのステージを実行し、同じプロジェクトチェックに対して収束します。違いは、純粋に並列作業がどうディスパッチされるかだけです。暴走に対するバックストップは、スウォームツール自体の外、ハーネスの **Stop-hook シーリング**(`packages/framework/core/hooks/amadeus-stop.ts`、`blockCap()` / `defaultBlockCap()` のペア、`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` として公開)に存在します。この自律 Construction パスでは、デフォルトのシーリングは **8ブロック** です(対話型のデフォルトは2。明示的な `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` は両方を上書きします)。ドライバのシーム契約は [Skill System § 6](../reference/17-skill-system.ja.md#6-the-swarm-referee-the-driver-seam-and-the-bolt-dag) にあります。
 
 1つの判断だけはドライバとともに動きません: 失敗は自律モードに関係なく **常に停止して人間を再び関与させます**。これは `amadeus-common/protocols/stage-protocol.md:125`(「Halt-and-ask on failure」)に従います。レフェリーの `finalize` がその exit-2 エンベロープを返すと、コンダクターは人間にバトンを戻します。手放しモードはハッピーパスのゲートを取り除きますが、失敗の停止は大きく鳴らしたまま保ちます。
 
@@ -126,7 +126,7 @@ checks have proven reliable.
 
 ## どこでコード変更になるか
 
-境界線はクリーンです。上記のすべて — 自律性の姿勢ルール、エッジブロックを生成する Unit 分解、プロジェクトのチェックコマンドと保護された spec、補完的なセンサー — は、あなたが `core/` 配下やプロジェクト設定で執筆するデータです。あなたはコードに触れることなく Construction を形づくります。
+境界線はクリーンです。上記のすべて — 自律性の姿勢ルール、エッジブロックを生成する Unit 分解、プロジェクトのチェックコマンドと保護された spec、補完的なセンサー — は、あなたが `packages/framework/core/` 配下やプロジェクト設定で執筆するデータです。あなたはコードに触れることなく Construction を形づくります。
 
 スウォームの機構はコードであり、それを形づくるのは Developer Reference の領域です:
 
@@ -142,6 +142,6 @@ checks have proven reliable.
 
 ## 次へ
 
-- **[Porting to a New Harness](09-porting-to-a-new-harness.ja.md)** — このガイドの集大成。あなたは `core/` のすべてのデータ面を形づくりました。最後のステップは、そのコアを *新しい* CLI へレンダリングすることです: 1つの `harness/<name>/` ディレクトリ、1つのマニフェスト行、1つのフックアダプタ、そしてバイト同一性ゲート。
+- **[Porting to a New Harness](09-porting-to-a-new-harness.ja.md)** — このガイドの集大成。あなたは `packages/framework/core/` のすべてのデータ面を形づくりました。最後のステップは、そのコアを *新しい* CLI へレンダリングすることです: 1つの `packages/framework/harness/<name>/` ディレクトリ、1つのマニフェスト行、1つのフックアダプタ、そしてバイト同一性ゲート。
 - あなたが形づくるデータ面の全体マップについては、[ハーネスエンジニアガイド概要](00-overview.ja.md) に戻ってください。
 - コードレベルのスウォーム、エンジン、Bolt-DAG 契約 — Construction を形づくることがデータ編集であることをやめてコード変更になる境界線 — については [Developer Reference § Skill System](../reference/17-skill-system.ja.md) を参照してください。
