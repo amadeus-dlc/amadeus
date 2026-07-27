@@ -650,3 +650,153 @@
 **Message**: Done — Steps 1〜3 完了(Step 4〜5 は未着手)。\n\n## 変更ファイル(正本)\n\n**Step 1 — FR-2 / #1585(standalone doctor の canonical レンダラ統一)**\n- `packages/framework/core/tools/amadeus-plugin.ts:89` — `PluginCliResult` の doctor 
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-27T12:27:33Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T12:46:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ab570598ba0869666
+**Message**: **逸脱停止しました。タスク1(FR-4 E2E)とタスク2(FR-5 CI ジョブ)は未実装です。** タスク3(FR-6)は完了しています。\n\n## 停止理由 — 前提1 の不成立(新規欠陥2件)\n\nFR-4 の名指し経路を出荷面で実測したところ、**(c) compiled graph 到達と (d) run-stage directive emit が、出荷どおりの導入手順では構造的に成立
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-27T12:49:26Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-27T12:51:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/plugin-dev/amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T13:30:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a093407666ad32497
+**Message**: Work complete. All steps A–E implemented, verified, and synced.\n\n## 変更ファイル(file:line)\n\n**正本(core)**\n- `/Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/plugin-dev/packages
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-27T13:31:45Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/plugin-dev/amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/fix-plugin-leftovers/code-generation/code-summary.md
+**Context**: construction > fix-plugin-leftovers > code-generation > code-summary.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:32:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3e88ef0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:32:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3e88ef0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+**Duration ms**: 1832
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:32:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa34e051
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:32:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa34e051
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+**Duration ms**: 1768
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:32:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: e92daf0a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:32:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: e92daf0a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+**Duration ms**: 1808
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:32:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93530a6b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:32:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93530a6b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+**Duration ms**: 627
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T13:47:52Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a8627962f00d273f3
+**Message**: Confirmed independently: full suite RESULT: PASS, 608 files / 8249 assertions / 0 failed — exact match to the builder's reported numbers. This is my complete review.\n\nReviewer: amadeus-architecture-re
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-27T13:48:27Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/plugin-dev/amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---

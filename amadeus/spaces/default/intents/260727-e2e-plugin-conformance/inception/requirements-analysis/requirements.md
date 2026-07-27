@@ -91,3 +91,38 @@ compose の `mkdirSync(..., {recursive:true})`(`amadeus-plugin-compose.ts:1150`)
 ## Open Questions
 
 - なし(Q1〜Q4 で裁定済み。実装時に前提1/前提2 が不成立と判明した場合は deviation-stop-before-implement に従い停止・報告)
+
+## 承認後追補(2026-07-27 ユーザー裁定)
+
+### FR-6 t132 ガードの count-free doc 追従(#1590)
+
+承認系譜: 本 FR は requirements 承認後、CG Steps 1-3 の full CI 検証で発見された latent パイプラインブロッカー #1590 を、ユーザー裁定(AskUserQuestion、2026-07-27、「本 intent へ巻き取る」採用)により追加したもの。既承認 FR-1〜FR-5 は不変。
+
+背景: doc の count-free 改稿(PR #1578 / 27af06897)が ci.yml の docs-only paths-ignore で Tests skip のまま着地し、`tests/unit/t132-hooks-doc-count-sync.test.ts` の count-word parse 3テストが NaN で恒久赤(対照実測: 0c4709102 と origin/main の doc 両方で 5 pass / 3 fail)。
+
+- 合否1: t132 の count-word parse 依存の3テストを「doc が stale な件数断定を含まない」ことの検査(count-free 契約のピン)へ置換する。disk/settings 相互整合の既存5テストは不変
+- 合否2: 現行 doc で t132 が 8/8 green、かつ doc へ stale な件数断定(例: 「uses twelve hook scripts」)を注入すると赤になる(落ちる実証)
+- 合否3: `bash tests/run-tests.sh --ci` が exit 0(本 intent PR の CI 通過前提の回復)
+
+### FR-7 compose⇔engine ホストルートの統一(#1591、承認後追補・ユーザー裁定 2026-07-27 = 案B)
+
+承認系譜: FR-4 E2E 実装時の builder 逸脱停止(前提1不成立の実測)→ #1591 起票 → ユーザー裁定「案B: ハーネス側へ統一」(#1569 の project-root 方向の再裁定。#1569/#1591 へ裁定コメント記録済み)。
+
+- 合否1: INSTALL.md 投影(plugin-projection.ts)・auto-compose hook(amadeus-plugin-compose.ts hooks)・compose CLI の既定 hostRoot がハーネスディレクトリ(claude 面では `<project>/.claude`)基準に統一され、engine/graph の読取ルート(pluginsHostRoot / pluginActivationHostRoot)と一致する。同根第3面として統合 doctor の plugin 観測ルート(amadeus-utility.ts)も含む(same-root-inventory 準拠の実装時追記 — reviewer Minor 1 のトレーサビリティ補完)
+- 合否2: docs/guide/19-plugins.md(:30 と :183 の割れ)を裁定Bへ統一(EN+JA)
+- 合否3: リグレッション — INSTALL 手順どおりの導入 → compose → ステージ到達、が FR-4 E2E の (a)〜(d) で固定される
+
+### FR-8 compose 後 recompile の stage-graph 更新(#1592、承認後追補)
+
+元 intent 260726-plugin-host-delivery の承認済み FR-4「compose 完了後、stage graph / scope grid が自動再コンパイル」の実装漏れ(spawnRecompile が runtime-graph のみ)。方針は承認済み要件から一意のため機械的修正。
+
+- 合否1: compose 完了経路が stage-graph.json の再コンパイル(amadeus-graph.ts compile 相当)も実行し、auto-compose 単独で `next --stage <plugin-stage>`(--single なし)が run-stage directive を emit する
+- 合否2: FR-4 E2E の (c)(d) がこれを固定する
+
+### FR-4 追補(フィクスチャ裁定 2026-07-27)
+
+合否2 のフィクスチャは出荷実装 `plugins/formal-model-check` を read-only 参照する(ユーザー裁定。test-pro は seams/fragments 宣言のため出荷面ホストへ compose 不能 — builder 実測)。
+
+### FR-6 追補(t132 test 5/8)
+
+count-word parse の NaN 同士比較で空振り pass していた test 5/8 は検証劇場 Forbidden の機械的執行として count-free 契約へ畳む(conductor 裁定 — 既決ノルムの執行であり選挙・エスカレーション不要)。

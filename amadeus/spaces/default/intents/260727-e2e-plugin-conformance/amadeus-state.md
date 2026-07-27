@@ -1,7 +1,7 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: Issue #1589/#1575/#1585/#1586 バッチ: plugin 積み残し修正 — (1)#1589 開発者視点 E2E 欠落(出荷 dist 導入→SessionStart auto-compose→実 recompile→通常 scope 実行での plugin stage 到達→doctor→drop→baseline 復元を tests/e2e/ で検証) (2)#1575 promote-self.ts の PACKAGE_HARNESSES が plugin-projection.ts の同名 export と値衝突(5 vs 7、canonical 1定義違反) (3)#1585 standalone doctor が 0-plugin ホストで無出力(統合 doctor と非対称) (4)#1586 drop 後に plugins/<name>/stages/ 空ディレクトリ残存(baseline 復元の完全性)
+- **Project**: Issue #1589/#1575/#1585/#1586/#1590/#1591/#1592 バッチ: plugin 積み残し修正+E2E — #1589 開発者視点E2E / #1575 定数衝突 / #1585 doctor無出力 / #1586 drop空dir / #1590 t132ガード / #1591 compose⇔engine ホストルート乖離(裁定B: ハーネス側統一) / #1592 recompile が stage-graph 未更新
 - **Project Type**: Brownfield
 - **Scope**: amadeus-bugfix
 - **Start Date**: 2026-07-27T11:02:10Z
