@@ -71,7 +71,7 @@ export interface SubjectElection {
 }
 
 export type SubjectTally =
-  | { kind: "hold"; reason: "tie" | "block" | "quorum-short" | "discussion-needed" }
+  | { kind: "hold"; reason: "tie" | "block" | "quorum-short" | "discussion-needed" | "split" }
   | { kind: "established"; winner: number };
 
 export type ValidationOutcome = { ok: true; ballot: ArmBallot } | { ok: false; error: string };

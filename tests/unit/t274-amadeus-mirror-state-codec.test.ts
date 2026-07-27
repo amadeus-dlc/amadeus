@@ -41,9 +41,9 @@ function wrap(json: string, prefix = "# state\n\n", suffix = "\n\n# end\n"): str
 }
 
 describe("codec golden + empty", () => {
-  test("empty snapshot renders to the frozen 10-key wire form", () => {
+  test("empty snapshot renders to the frozen 9-key wire form", () => {
     expect(renderMirrorStateJson(EMPTY_MIRROR_STATE)).toBe(
-      '{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}',
+      '{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}',
     );
   });
 
@@ -73,20 +73,20 @@ describe("codec rejection", () => {
   test("duplicate JSON key in receipts is rejected (not silently overwritten)", () => {
     const k = mirrorEventKey(ev("create"));
     const r = JSON.stringify(receipt(ev("create"), "prepared"));
-    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"${k}":${r},"${k}":${r}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"${k}":${r},"${k}":${r}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     const parsed = parseMirrorStateDocument(wrap(json));
     expect(parsed.kind).toBe("invalid");
   });
 
   test("unknown root field is rejected", () => {
-    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null,"rogue":1}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"rogue":1}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
   test("unknown receipt status is rejected", () => {
     const k = mirrorEventKey(ev("create"));
     const bad = JSON.stringify({ ...receipt(ev("create"), "prepared"), status: "bogus" });
-    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"${k}":${bad}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"${k}":${bad}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
@@ -97,18 +97,18 @@ describe("codec rejection", () => {
 
   test("nesting past depth 16 is rejected", () => {
     const deep = `${"[".repeat(20)}${"]".repeat(20)}`;
-    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":${deep},"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":${deep},"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
   test("map key that is not the canonical event key is rejected (SP-C05)", () => {
     const r = JSON.stringify(receipt(ev("create"), "prepared"));
-    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"wrong-key":${r}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{"wrong-key":${r}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
   test("issueNumber without provenance is rejected (SP-C06)", () => {
-    const json = `{"schema":1,"revision":0,"issueNumber":7,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":null}`;
+    const json = `{"schema":1,"revision":0,"issueNumber":7,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 

@@ -20,9 +20,6 @@ import type {
   MirrorEventIdentity,
   MirrorMutationPermit,
   MirrorOperation,
-  MirrorProjectMutation,
-  MirrorProjectMutationPermit,
-  MirrorProjectRef,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 
@@ -88,54 +85,4 @@ export function validateMirrorMutationPermit(
     typeof bound.issueNumber === "number" &&
     bound.issueNumber === expected.issueNumber
   );
-}
-
-// --- Project mutation permits ------------------------------------------------
-//
-// A parallel authority for the two Project board mutations. It is a separate
-// brand and a separate registry on purpose: an Issue permit can never authorize
-// a Project mutation and vice versa, even though both flow through C6 and the
-// Gateway. MirrorOperation stays closed to create | sync | close.
-
-export type MirrorProjectPermitBinding = Readonly<{
-  event: MirrorEventIdentity;
-  repository: RepositoryIdentity;
-  mutation: MirrorProjectMutation;
-  project: MirrorProjectRef;
-}>;
-
-// What the Gateway can independently prove about the Project call it is about to
-// make. Only the mutation kind qualifies: `projectId` / `itemId` / `issueNodeId`
-// are opaque GraphQL node ids with no derivable relation to the configured
-// owner/number, so the binding's `project` is retained for C6 and audit
-// correlation but is NOT re-compared here — comparing a value against itself
-// would be a check that cannot fail.
-export type MirrorProjectPermitExpectation = Readonly<{
-  mutation: MirrorProjectMutation;
-}>;
-
-const mintedProjectPermits = new WeakSet<object>();
-
-export function createMirrorProjectMutationPermit(
-  binding: MirrorProjectPermitBinding,
-): MirrorProjectMutationPermit {
-  const permit = Object.freeze({
-    event: binding.event,
-    repository: binding.repository,
-    mutation: binding.mutation,
-    project: binding.project,
-  });
-  mintedProjectPermits.add(permit);
-  return permit as unknown as MirrorProjectMutationPermit;
-}
-
-// Rejects a non-member permit, an Issue permit presented as a Project permit,
-// and a permit bound to the other Project mutation.
-export function validateMirrorProjectMutationPermit(
-  permit: MirrorProjectMutationPermit,
-  expected: MirrorProjectPermitExpectation,
-): boolean {
-  if (!mintedProjectPermits.has(permit as unknown as object)) return false;
-  const bound = permit as unknown as MirrorProjectPermitBinding;
-  return bound.mutation === expected.mutation;
 }

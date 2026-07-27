@@ -4,15 +4,8 @@
 // state store, provenance verifier, and GitHub Gateway without reimplementing
 // their codecs or transports.
 
-import {
-  createMirrorMutationPermit,
-  createMirrorProjectMutationPermit,
-} from "./amadeus-mirror-capability.ts";
-import {
-  expectedProjectStatus,
-  mirrorEventKey,
-  selectProjectStatusOption,
-} from "./amadeus-mirror-policy.ts";
+import { createMirrorMutationPermit } from "./amadeus-mirror-capability.ts";
+import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
 import {
   classifyCandidates,
   createIdentityMatchesContext,
@@ -34,12 +27,6 @@ import type {
   MirrorMutationEffect,
   MirrorOperationOutcome,
   MirrorOperationReceipt,
-  MirrorProjectDiagnostic,
-  MirrorProjectItemsView,
-  MirrorProjectStatusField,
-  MirrorProjectSyncEntry,
-  MirrorProjectTarget,
-  MirrorSnapshot,
   MirrorStateSnapshot,
   MirrorWarning,
   RemoteMirrorIssue,
@@ -1213,252 +1200,6 @@ async function executeLinked(
   );
 }
 
-// --- Project status sync (U1 internal step) ----------------------------------
-//
-// Runs after the Issue body mutation has already succeeded, inside the same
-// chain. Every failure below is contained: the Issue outcome is never rolled
-// back and never downgraded, because the Project board is a second, independent
-// mutation target. U1 records only successful rows in the ledger — the pending
-// ledger and its reconciliation belong to U2 — so a failure leaves a visible
-// warning and a diagnostic and writes nothing.
-
-function projectDiagnostic(
-  context: MirrorExecutionContext,
-  diagnostic: MirrorProjectDiagnostic,
-): void {
-  context.projectSync?.diagnostic?.(diagnostic);
-}
-
-function canonicalProject(target: MirrorProjectTarget): string {
-  return `${target.project.owner}/${target.project.number}`;
-}
-
-// A single unsynchronized warning, not attached to any operation receipt: the
-// Issue operation itself succeeded, so its receipt must stay `succeeded`.
-function persistUnsyncedWarning(
-  ports: MirrorStateStorePorts,
-  context: MirrorExecutionContext,
-  classification: MirrorFailureClass,
-  summary: string,
-): void {
-  const latest = readMirrorState(ports);
-  if (latest.kind !== "ok") return;
-  applyTransition(
-    ports,
-    context,
-    latest.snapshot,
-    {
-      kind: "set-global-warning",
-      warning: {
-        operationId: null,
-        operation: null,
-        classification,
-        summary,
-        occurredAt: context.now(),
-        retryable: false,
-        effect: "not-started",
-        source: "current-invocation",
-      },
-    },
-    undefined,
-    false,
-    classification,
-  );
-}
-
-function upsertProjectEntry(
-  ports: MirrorStateStorePorts,
-  context: MirrorExecutionContext,
-  entry: MirrorProjectSyncEntry,
-): void {
-  const latest = readMirrorState(ports);
-  if (latest.kind !== "ok") return;
-  applyTransition(
-    ports,
-    context,
-    latest.snapshot,
-    { kind: "upsert-project-entry", entry },
-    undefined,
-  );
-}
-
-function findProjectItem(
-  view: MirrorProjectItemsView,
-  target: MirrorProjectTarget,
-) {
-  return view.items.find(
-    (item) =>
-      item.projectNumber === target.project.number &&
-      item.projectOwner === target.project.owner,
-  );
-}
-
-type MembershipResolution =
-  | { kind: "member"; itemId: string; currentStatus: string | null }
-  | { kind: "blocked" };
-
-// Resolve the Issue's item on this Project, adding it when absent. A freshly
-// added item has no Status yet, so its current value is null rather than
-// assumed.
-async function resolveMembership(
-  context: MirrorExecutionContext,
-  target: MirrorProjectTarget,
-  view: MirrorProjectItemsView,
-  field: MirrorProjectStatusField,
-): Promise<MembershipResolution> {
-  const existing = findProjectItem(view, target);
-  if (existing) {
-    return {
-      kind: "member",
-      itemId: existing.itemId,
-      currentStatus: existing.currentStatus,
-    };
-  }
-  const permit = createMirrorProjectMutationPermit({
-    event: context.event,
-    repository: context.repository,
-    mutation: "add-project-item",
-    project: target.project,
-  });
-  const added = await context.gateway.addProjectItem(
-    permit,
-    field.projectId,
-    view.issueNodeId,
-  );
-  if (added.kind === "failure") {
-    projectDiagnostic(context, {
-      project: canonicalProject(target),
-      reason: "add-failed",
-      expectedStatus: null,
-      availableOptions: [],
-      summary: `could not add the Issue to the Project: ${added.summary}`,
-    });
-    return { kind: "blocked" };
-  }
-  return { kind: "member", itemId: added.value.itemId, currentStatus: null };
-}
-
-async function syncOneProject(
-  ports: MirrorStateStorePorts,
-  context: MirrorExecutionContext,
-  target: MirrorProjectTarget,
-  view: MirrorProjectItemsView,
-  snapshot: MirrorSnapshot,
-): Promise<void> {
-  const project = canonicalProject(target);
-  const resolved = await context.gateway.resolveProjectStatusField(target.project);
-  if (resolved.kind === "failure") {
-    projectDiagnostic(context, {
-      project,
-      reason: "project-unresolved",
-      expectedStatus: null,
-      availableOptions: [],
-      summary: `the Project or its Status field could not be resolved: ${resolved.summary}`,
-    });
-    return;
-  }
-  const field = resolved.value;
-  const membership = await resolveMembership(context, target, view, field);
-  if (membership.kind === "blocked") return;
-
-  const expected = expectedProjectStatus(
-    snapshot,
-    context.event.boundary.kind,
-    target.statusNames,
-  );
-  if (expected.kind === "keep") {
-    upsertProjectEntry(ports, context, {
-      project,
-      projectId: field.projectId,
-      itemId: membership.itemId,
-      lastAppliedStatus: membership.currentStatus,
-      state: "synced",
-      updatedAt: context.now(),
-    });
-    return;
-  }
-
-  const option = selectProjectStatusOption(field, expected.name);
-  if (option === null) {
-    projectDiagnostic(context, {
-      project,
-      reason: "option-missing",
-      expectedStatus: expected.name,
-      availableOptions: field.options.map((each) => each.name),
-      summary: `the Project has no Status option named exactly "${expected.name}"`,
-    });
-    return;
-  }
-
-  if (membership.currentStatus !== expected.name) {
-    const permit = createMirrorProjectMutationPermit({
-      event: context.event,
-      repository: context.repository,
-      mutation: "update-project-item-status",
-      project: target.project,
-    });
-    const updated = await context.gateway.updateProjectItemStatus(
-      permit,
-      field.projectId,
-      membership.itemId,
-      field.fieldId,
-      option.id,
-    );
-    if (updated.kind === "failure") {
-      projectDiagnostic(context, {
-        project,
-        reason: "update-failed",
-        expectedStatus: expected.name,
-        availableOptions: [],
-        summary: `could not set the Project Status: ${updated.summary}`,
-      });
-      return;
-    }
-  }
-
-  upsertProjectEntry(ports, context, {
-    project,
-    projectId: field.projectId,
-    itemId: membership.itemId,
-    lastAppliedStatus: expected.name,
-    state: "synced",
-    updatedAt: context.now(),
-  });
-}
-
-export async function syncProjects(
-  ports: MirrorStateStorePorts,
-  context: MirrorExecutionContext,
-  issueNumber: number,
-): Promise<void> {
-  const config = context.projectSync;
-  if (config === undefined || config.targets.length === 0) return;
-  const targets = config.targets;
-  const view = await context.gateway.listProjectItems({
-    repository: context.repository,
-    number: issueNumber,
-  });
-  if (view.kind === "failure") {
-    projectDiagnostic(context, {
-      project: targets.map(canonicalProject).join(", "),
-      reason: "membership-query-failed",
-      expectedStatus: null,
-      availableOptions: [],
-      summary: `Project membership could not be read: ${view.summary}`,
-    });
-    persistUnsyncedWarning(
-      ports,
-      context,
-      view.classification,
-      `Project status is unsynchronized: ${view.summary}`,
-    );
-    return;
-  }
-  for (const target of targets) {
-    await syncOneProject(ports, context, target, view.value, config.snapshot);
-  }
-}
-
 export async function executeMirrorOperation(
   input: ExecuteMirrorOperationInput,
 ): Promise<MirrorOperationOutcome> {
@@ -1476,15 +1217,7 @@ export async function executeMirrorOperation(
       ),
     };
   }
-  const outcome =
-    input.context.operation === "create"
-      ? await executeCreate(input)
-      : await executeLinked(input);
-  // Single hook point for every completion path (fresh create, adopted create,
-  // edit, and the already-converged reconciliations): the Project step runs only
-  // after the Issue body itself landed, and never for `close`.
-  if (outcome.kind === "completed" && input.context.operation !== "close") {
-    await syncProjects(input.ports, input.context, outcome.issueNumber);
-  }
-  return outcome;
+  return input.context.operation === "create"
+    ? executeCreate(input)
+    : executeLinked(input);
 }

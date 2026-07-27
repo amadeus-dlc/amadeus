@@ -25,7 +25,7 @@ describe("t257 pure config resolution", () => {
   test("defaults to prompt when no layer is present", () => {
     expect(
       parseMirrorConfigLayers([absent("global"), absent("space"), absent("intent")]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [] }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt" }, sources: [] });
   });
 
   test.each(["off", "prompt", "auto"] as const)(
@@ -33,7 +33,7 @@ describe("t257 pure config resolution", () => {
     (value) => {
       expect(parseMirrorConfigLayers([mode(value)])).toEqual({
         kind: "resolved",
-        config: { autoMirror: value, projects: [] },
+        config: { autoMirror: value },
         sources: ["amadeus/global.json"],
       });
     },
@@ -46,7 +46,7 @@ describe("t257 pure config resolution", () => {
         present("space", {}),
         present("intent", {}),
       ]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [] }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt" }, sources: [] });
   });
 
   // Each present layer carries a distinct mode (global=off, space=prompt,
@@ -87,7 +87,7 @@ describe("t257 pure config resolution", () => {
       ];
       expect(parseMirrorConfigLayers(layers)).toEqual({
         kind: "resolved",
-        config: { autoMirror: expectedMode, projects: [] },
+        config: { autoMirror: expectedMode },
         sources: expectedSources,
       });
     },
@@ -102,7 +102,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [] },
+      config: { autoMirror: "prompt" },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -116,7 +116,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [] },
+      config: { autoMirror: "auto" },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -130,7 +130,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [] },
+      config: { autoMirror: "auto" },
       sources: ["amadeus/space.json"],
     });
   });

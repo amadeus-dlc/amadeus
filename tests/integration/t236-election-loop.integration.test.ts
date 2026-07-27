@@ -635,4 +635,69 @@ describe("t236 election directive loop", () => {
     expect(doc).toContain("GoA[E-LOOP1]: 1x2 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
   });
+
+  test("solo-election U1: subagent 2-voter loop — 2-0 established and 1-1 split hold (FR-01/03/05)", () => {
+    const soloDef = {
+      electionId: "E-SOLO1",
+      kind: "zero-confirm",
+      question: "ソロ選挙スケルトン",
+      choices: [{ internalNo: 1, label: "採用" }],
+      voters: ["subagent-1", "subagent-2"],
+    };
+    expect(run(["open", "--file", writeJson("solo-def.json", soloDef)])).toBe(0);
+    expect(run(["report", "--election", "E-SOLO1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("solo-b1.json", {
+      electionId: "E-SOLO1",
+      voter: "subagent-1",
+      voterKind: "subagent",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    const b2 = writeJson("solo-b2.json", {
+      electionId: "E-SOLO1",
+      voter: "subagent-2",
+      voterKind: "subagent",
+      choiceInternalNo: 1,
+      goa: 2,
+      reservation: "軽微な留保",
+      submittedAt: "2026-07-19T00:02:00Z",
+    });
+    expect(run(["vote", "--election", "E-SOLO1", "--file", b1])).toBe(0);
+    expect(run(["vote", "--election", "E-SOLO1", "--file", b2])).toBe(0);
+    expect(run(["tally", "--election", "E-SOLO1"])).toBe(0);
+    const established = lastJson().result as { kind: string; winner?: { internalNo: number } };
+    expect(established.kind).toBe("established");
+    expect(established.winner?.internalNo).toBe(1);
+    expect(run(["report", "--election", "E-SOLO1", "--result", "tallied"])).toBe(0);
+
+    // 1-1 split escalation path on a fresh election
+    const splitDef = { ...soloDef, electionId: "E-SOLO2" };
+    expect(run(["open", "--file", writeJson("solo-split-def.json", splitDef)])).toBe(0);
+    expect(run(["report", "--election", "E-SOLO2", "--result", "distributed"])).toBe(0);
+    const s1 = writeJson("split-b1.json", {
+      electionId: "E-SOLO2",
+      voter: "subagent-1",
+      voterKind: "subagent",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    const s2 = writeJson("split-b2.json", {
+      electionId: "E-SOLO2",
+      voter: "subagent-2",
+      voterKind: "subagent",
+      choiceInternalNo: 1,
+      goa: 7,
+      submittedAt: "2026-07-19T00:02:00Z",
+    });
+    expect(run(["vote", "--election", "E-SOLO2", "--file", s1])).toBe(0);
+    expect(run(["vote", "--election", "E-SOLO2", "--file", s2])).toBe(0);
+    expect(run(["tally", "--election", "E-SOLO2"])).toBe(0);
+    const split = lastJson().result as { kind: string; reason?: string };
+    expect(split.kind).toBe("hold");
+    expect(split.reason).toBe("split");
+    expect(run(["report", "--election", "E-SOLO2", "--result", "tallied"])).toBe(0);
+    expect(lastJson().state).toBe("hold");
+  });
 });

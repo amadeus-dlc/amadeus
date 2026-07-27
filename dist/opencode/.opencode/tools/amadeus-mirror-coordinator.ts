@@ -38,8 +38,6 @@ import type {
   MirrorMode,
   MirrorOperation,
   MirrorOperationOutcome,
-  MirrorProjectDiagnostic,
-  MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
   MirrorWarning,
@@ -105,9 +103,6 @@ export type DriveMirrorBoundaryInput = Readonly<{
   manualOperation?: MirrorOperation;
   invocationId?: string;
   answer?: MirrorPromptAnswer;
-  // Optional observation sink for Project skips. Absent means the diagnostics
-  // are simply not surfaced; they never alter an outcome.
-  projectDiagnostic?: (diagnostic: MirrorProjectDiagnostic) => void;
   dependencies?: MirrorCoordinatorDependencies;
 }>;
 
@@ -325,7 +320,6 @@ async function executeDecision(
   triggerEvent: MirrorEventIdentity,
   event: MirrorEventIdentity,
   operation: MirrorOperation,
-  projects: readonly MirrorProjectTarget[],
   promptAnswer?: MirrorPromptAnswer,
 ): Promise<MirrorOperationOutcome> {
   const operationId =
@@ -366,15 +360,6 @@ async function executeDecision(
       newOperationId: () => operationId,
       gateway: input.gateway,
       authorization,
-      // The coordinator owns both halves the Project step needs: the resolved
-      // configuration and the workflow snapshot the Issue body was rendered from.
-      projectSync: {
-        targets: projects,
-        snapshot: input.context.snapshot,
-        ...(input.projectDiagnostic
-          ? { diagnostic: input.projectDiagnostic }
-          : {}),
-      },
     },
     ports: input.ports,
     localState: state,
@@ -445,7 +430,6 @@ function initializeBoundary(
       kind: "ready";
       state: MirrorStateSnapshot;
       mode: MirrorMode;
-      projects: readonly MirrorProjectTarget[];
       fallbackEvent: MirrorEventIdentity;
     } {
   const resolve = input.dependencies?.resolveConfig ?? resolveMirrorConfig;
@@ -523,7 +507,6 @@ function initializeBoundary(
     kind: "ready",
     state,
     mode: config.config.autoMirror,
-    projects: config.config.projects,
     fallbackEvent,
   };
 }
@@ -532,7 +515,6 @@ async function handlePromptAnswer(
   input: DriveMirrorBoundaryInput,
   state: MirrorStateSnapshot,
   answer: MirrorPromptAnswer,
-  projects: readonly MirrorProjectTarget[],
 ): Promise<MirrorBoundaryOutcome> {
   const expected = state.expectedPrompt;
   if (!expected) {
@@ -574,7 +556,6 @@ async function handlePromptAnswer(
     triggerEvent,
     approved.event,
     approved.operation,
-    projects,
     answer,
   );
   consumeAnsweredPrompt(input, approved.event, approved.operation);
@@ -662,7 +643,6 @@ async function driveBoundaryDecisions(
   input: DriveMirrorBoundaryInput,
   initialState: MirrorStateSnapshot,
   mode: MirrorMode,
-  projects: readonly MirrorProjectTarget[],
 ): Promise<MirrorBoundaryOutcome> {
   let state = initialState;
   const read = input.dependencies?.readState ?? readMirrorState;
@@ -739,7 +719,6 @@ async function driveBoundaryDecisions(
       triggerEvent,
       decision.event,
       decision.operation,
-      projects,
     );
     outcomes.push(outcome);
     if (
@@ -769,17 +748,7 @@ export async function driveMirrorBoundary(
     ]);
   }
   if (input.answer) {
-    return handlePromptAnswer(
-      input,
-      initialized.state,
-      input.answer,
-      initialized.projects,
-    );
+    return handlePromptAnswer(input, initialized.state, input.answer);
   }
-  return driveBoundaryDecisions(
-    input,
-    initialized.state,
-    initialized.mode,
-    initialized.projects,
-  );
+  return driveBoundaryDecisions(input, initialized.state, initialized.mode);
 }

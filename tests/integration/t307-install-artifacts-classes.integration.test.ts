@@ -76,40 +76,23 @@ describe("t307 installArtifacts (class-driven layout)", () => {
     expect(rels("opencode")).not.toContain("hooks/auto-compose.snippet");
   });
 
-  // #1569 + #1591 (ruling B): the INSTALL.md copy destination must match the
-  // CLI's discovery root — the shared PLUGIN_SOURCE_DIR_NAME under the HARNESS
-  // dir, which is also the root the engine reads plugin stages back from
-  // (pluginActivationHostRoot / pluginsHostRoot). NOT a project-root-relative
-  // path (the pre-#1591 direction, invisible to the harness-rooted scan) and
-  // NOT a `<harnessDir>/plugins/<name>/` path (the pre-#1569 direction, the
-  // composed OUTPUT namespace the scan never reads). Import the constant from
-  // the CLI module so this asserts the two surfaces agree.
+  // #1569: the INSTALL.md copy destination must match the CLI's discovery root
+  // (the shared PLUGIN_SOURCE_DIR_NAME, project-root relative), NOT a
+  // `<harnessDir>/plugins/<name>/` path the compose scan never reaches. Import
+  // the constant from the CLI module so this asserts the two surfaces agree.
   const installText = (h: Parameters<typeof installArtifacts>[1]) =>
     Buffer.from(installArtifacts(plugin, h).find((a) => a.relativePath === "INSTALL.md")!.bytes).toString("utf-8");
 
-  test("folder-drop-auto (codex) INSTALL.md copies into the harness-rooted discovery dir (#1569, #1591)", () => {
+  test("folder-drop-auto (codex) INSTALL.md copies into the shared discovery dir, not a harnessDir path (#1569)", () => {
     const text = installText("codex");
-    expect(text).toContain(`.codex/${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`); // the dir compose actually scans
-    expect(text).not.toContain(`/plugins/${FIXTURE}/`); // the pre-#1569 `<harnessDir>/plugins/<name>/` dest
+    expect(text).toContain(`${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`); // the dir compose actually scans
+    expect(text).not.toContain(`/plugins/${FIXTURE}/`); // the old `<harnessDir>/plugins/<name>/` dest
   });
 
-  test("manual-only (opencode) INSTALL.md copies into the harness-rooted discovery dir (#1569, #1591)", () => {
+  test("manual-only (opencode) INSTALL.md copies into the shared discovery dir, not a harnessDir path (#1569)", () => {
     const text = installText("opencode");
-    expect(text).toContain(`.opencode/${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`);
+    expect(text).toContain(`${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`);
     expect(text).not.toContain(`/plugins/${FIXTURE}/`);
-  });
-
-  // The harness token is per-face, not a hardcoded ".claude" leak: each
-  // folder-drop face names its OWN dir, and never another face's.
-  test("every folder-drop face's INSTALL.md names its own harness dir and no other (#1591)", () => {
-    const dirs = { codex: ".codex", cursor: ".cursor", kimi: ".kimi-code", kiro: ".kiro", opencode: ".opencode" } as const;
-    for (const [harness, dir] of Object.entries(dirs) as [keyof typeof dirs, string][]) {
-      const text = installText(harness);
-      expect(text).toContain(`${dir}/${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`);
-      for (const other of Object.values(dirs)) {
-        if (other !== dir) expect(text).not.toContain(`${other}/${PLUGIN_SOURCE_DIR_NAME}/`);
-      }
-    }
   });
 
   test("native-manifest (claude) INSTALL.md has no folder-copy step (marketplace install, unchanged) (#1569)", () => {

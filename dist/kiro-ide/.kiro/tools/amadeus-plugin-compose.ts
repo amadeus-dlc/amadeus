@@ -40,8 +40,8 @@
 // against a real temp filesystem in the integration layer.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, posix, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, posix } from "node:path";
 import { parseStageFrontmatter } from "./amadeus-lib.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 
@@ -1139,23 +1139,6 @@ export function createInMemoryBackend(seed?: InMemoryBackendSeed): WorkspaceBack
 // composition record, audit log and journal are dot-files at the root. Buffers
 // serialize via base64 tags. Used by the integration test to prove the mechanism
 // against real files.
-// The inverse of writeHost's `mkdirSync(..., {recursive:true})`: once a host file
-// is removed, the directory chain that mkdir materialized for it is pruned back
-// off — bottom-up, stopping at the FIRST directory that still holds anything (so
-// a directory carrying any other content, plugin or user, is never touched) and
-// never reaching the host root itself. Without this, a drop leaves the empty
-// `plugins/<name>/stages/` shell behind (#1586). rmdirSync (not rmSync) is the
-// strong predicate: it refuses a non-empty directory instead of recursing.
-function pruneEmptyAncestors(root: string, removedAbs: string): void {
-  const stopAt = `${root}${sep}`;
-  let dir = dirname(removedAbs);
-  while (dir !== root && dir.startsWith(stopAt)) {
-    if (!existsSync(dir) || readdirSync(dir).length > 0) return;
-    rmdirSync(dir);
-    dir = dirname(dir);
-  }
-}
-
 export function createNodeBackend(root: string): WorkspaceBackend {
   const compPath = join(root, ".amadeus-plugin-composition.json");
   const auditPath = join(root, ".amadeus-plugin-audit.json");
@@ -1168,9 +1151,7 @@ export function createNodeBackend(root: string): WorkspaceBackend {
       writeFileSync(abs(p), b);
     },
     removeHost: (p) => {
-      if (!existsSync(abs(p))) return;
-      rmSync(abs(p));
-      pruneEmptyAncestors(root, abs(p));
+      if (existsSync(abs(p))) rmSync(abs(p));
     },
     readComposition: () => (existsSync(compPath) ? compositionFromJson(readFileSync(compPath, "utf-8")) : emptyComposition()),
     writeComposition: (c) => writeFileSync(compPath, compositionToJson(c)),

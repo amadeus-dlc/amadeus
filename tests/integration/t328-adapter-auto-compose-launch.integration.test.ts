@@ -44,14 +44,10 @@ let host = "";
 
 beforeEach(() => {
   host = mkdtempSync(join(tmpdir(), "amadeus-t328-"));
+  // Stage the opt-in plugin so compose has something to apply (its observable
+  // effect is the proof the adapter reached compose).
+  cpSync(FIXTURE, join(host, ".amadeus-plugin-src", PLUGIN), { recursive: true });
 });
-
-// The plugin host root is the face's HARNESS dir under the project root (#1591
-// ruling B) — where the shipped INSTALL doc says to stage, where compose writes,
-// and where the engine reads composed stages back from.
-function hostRootOf(face: (typeof FACES)[number]): string {
-  return join(host, face.harnessDir);
-}
 
 afterEach(() => {
   rmSync(host, { recursive: true, force: true });
@@ -61,11 +57,7 @@ afterEach(() => {
 // session-start target — exactly how the host CLI fires the session hook.
 function fireSessionStart(face: (typeof FACES)[number]): ReturnType<typeof spawnSync> {
   const distTree = join(REPO_ROOT, "dist", face.distName, face.harnessDir);
-  cpSync(distTree, hostRootOf(face), { recursive: true });
-  // Stage the opt-in plugin so compose has something to apply (its observable
-  // effect is the proof the adapter reached compose). Staged after the tree copy
-  // because the staging dir lives inside the harness root.
-  cpSync(FIXTURE, join(hostRootOf(face), ".amadeus-plugin-src", PLUGIN), { recursive: true });
+  cpSync(distTree, join(host, face.harnessDir), { recursive: true });
   const adapter = join(host, face.harnessDir, "hooks", face.adapter);
   return spawnSync("bun", [adapter, "session-start"], {
     encoding: "utf-8",
@@ -82,20 +74,20 @@ describe("t328 adapter auto-compose real launch (U4)", () => {
   for (const face of FACES) {
     test(`${face.name}: session-start adapter really reaches compose (BR-U4-3, not verification theatre)`, () => {
       // Before: nothing composed.
-      expect(existsSync(join(hostRootOf(face), COMPOSITION))).toBe(false);
+      expect(existsSync(join(host, COMPOSITION))).toBe(false);
 
       fireSessionStart(face);
 
       // After: the real subprocess reached the engine and wrote the record.
-      const record = createNodeBackend(hostRootOf(face)).readComposition();
+      const record = createNodeBackend(host).readComposition();
       expect(record.plugins.has(PLUGIN), `${face.name} auto-composed the staged plugin`).toBe(true);
 
       // No-op fast path (FR-3c / PERF-U4-1): a second session-start with the record
       // already current re-fires --if-stale and leaves the record byte-identical —
       // the compose applied no second time.
-      const before = readFileSync(join(hostRootOf(face), COMPOSITION));
+      const before = readFileSync(join(host, COMPOSITION));
       fireSessionStart(face);
-      expect(readFileSync(join(hostRootOf(face), COMPOSITION)).equals(before), `${face.name} second fire is a no-op`).toBe(true);
+      expect(readFileSync(join(host, COMPOSITION)).equals(before), `${face.name} second fire is a no-op`).toBe(true);
     });
   }
 });

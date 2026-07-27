@@ -70,7 +70,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `SCOPE_DETECTED` | Auto-detected from freeform text | Timestamp, Detected scope, Input text, Source, Matched keywords (optional; present when `Source=keyword`) | `tools/amadeus-utility.ts detect-scope` |
 | `RECOMPOSED` | The adaptive composer re-shaped a running workflow's pending stages (suffix flips via `recompose`) | Timestamp, Scope, Stages skipped, Stages added, Stages in Scope | `tools/amadeus-utility.ts recompose` |
 
-### Interaction Events (6 events)
+### Interaction Events (4 events)
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|

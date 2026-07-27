@@ -5,17 +5,15 @@
 // with the other framework hooks (t132/t231/doctor). Any failure is a single
 // stderr warning and a zero exit so the session is never blocked
 // (BR-U2-4 fail-loud/continue).
-import { readHookStdin } from "../tools/amadeus-lib.ts";
-import { handlePluginCli, pluginHostRootFromHook } from "../tools/amadeus-plugin.ts";
+import { readHookStdin, resolveProjectDirFromHook } from "../tools/amadeus-lib.ts";
+import { handlePluginCli } from "../tools/amadeus-plugin.ts";
 
 // Drain stdin first: this hook has no use for the payload, but its `cwd` is the
-// top rung of project-dir resolution (#1482). The composed host root is the
-// HARNESS dir under that project dir (#1591 ruling B) — the same root the
-// engine reads plugin stages back from.
+// top rung of project-dir resolution (#1482).
 const hookStdin = await readHookStdin();
-const hostRoot = pluginHostRootFromHook(import.meta.url, hookStdin.cwd);
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 try {
-  const code = handlePluginCli(["compose", "--if-stale", "--project-root", hostRoot]);
+  const code = handlePluginCli(["compose", "--if-stale", "--project-root", projectDir]);
   if (code !== 0) {
     console.error("amadeus-plugin: auto-compose failed (non-blocking); run `amadeus-plugin.ts compose` to retry");
   }

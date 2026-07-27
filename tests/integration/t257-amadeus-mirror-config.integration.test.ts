@@ -70,7 +70,7 @@ describe("t257 resolve against real files", () => {
   test("all three absent resolves to the default prompt mode", () => {
     expect(resolveMirrorConfig(project(), INTENT)).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [] },
+      config: { autoMirror: "prompt" },
       sources: [],
     });
   });

@@ -40,8 +40,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SELF_INSTALL_HARNESSES } from "../../scripts/plugin-projection.ts";
 import {
+  PACKAGE_HARNESSES,
   composeRootAgents,
   packageFreshnessArgs,
   promoteSelfMain,
@@ -148,11 +148,8 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  // The freshness args are DERIVED from the canonical self-install face set — no
-  // second, equal-valued list lives in promote-self.ts (#1575).
-  test("package freshness covers exactly the canonical self-install faces", () => {
-    const faces = packageFreshnessArgs("apply").map((args) => args[1]);
-    expect(faces).toEqual([...SELF_INSTALL_HARNESSES]);
+  test("PACKAGE_HARNESSES includes Cursor, OpenCode, and Kimi alongside Claude and Codex", () => {
+    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor", "opencode", "kimi"]);
   });
 
   test("packageFreshnessArgs covers apply and check for every harness", () => {

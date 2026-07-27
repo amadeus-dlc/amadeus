@@ -25,10 +25,8 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isHarnessDirName } from "./amadeus-harness.ts";
-import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
 import {
   applyPluginDrop,
   applyPluginPlan,
@@ -50,7 +48,6 @@ import {
   type PluginDescriptor,
   type PluginManifest,
   type PluginDiagnostic,
-  type PluginRecord,
   SEAM_NAMES,
   type SeamName,
   type StageSeams,
@@ -88,7 +85,7 @@ export type PluginCliResult =
   | { kind: "composed"; applied: number; recompiled: true }
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
-  | { kind: "doctor"; section: DoctorPluginSection; degraded: boolean }
+  | { kind: "doctor"; lines: readonly DoctorLine[]; degraded: boolean }
   | { kind: "status"; installed: number; composed: number; revision: number }
   | { kind: "usage-error"; message: string }
   | { kind: "failure"; stage: "discover" | "trust" | "plan" | "apply" | "recover"; message: string };
@@ -243,23 +240,10 @@ function nodeTx(hostRoot: string, backend: WorkspaceBackend): WorkspaceTransacti
   };
 }
 
-// Post-apply recompile (#1592): BOTH compiled artifacts, in dependency order.
-// `amadeus-graph.ts compile` is the only writer of stage-graph.json + scope-grid
-// — the join that makes a composed plugin stage visible to `next` — and
-// `amadeus-runtime.ts compile` derives the runtime graph from it. Compiling only
-// the runtime left the composed stage off the stage graph, so auto-compose alone
-// never reached a run-stage directive. Fails loud: the first non-zero exit stops
-// the chain and the caller reports the recompile failure.
 function spawnRecompile(projectRoot: string): boolean {
-  for (const tool of ["amadeus-graph.ts", "amadeus-runtime.ts"]) {
-    const res = spawnSync("bun", [join(THIS_DIR, tool), "compile"], {
-      cwd: projectRoot,
-      stdio: "ignore",
-      env: process.env,
-    });
-    if (res.status !== 0) return false;
-  }
-  return true;
+  const runtime = join(THIS_DIR, "amadeus-runtime.ts");
+  const res = spawnSync("bun", [runtime, "compile"], { cwd: projectRoot, stdio: "ignore", env: process.env });
+  return res.status === 0;
 }
 
 export function defaultPluginCliDeps(): PluginCliDeps {
@@ -281,37 +265,8 @@ export function defaultPluginCliDeps(): PluginCliDeps {
   };
 }
 
-// The plugin host root when the caller names none (#1591 ruling B): the HARNESS
-// directory, i.e. the same root the engine reads back
-// (amadeus-orchestrate.ts:pluginActivationHostRoot and
-// amadeus-graph.ts:pluginsHostRoot both resolve to the harness dir). Derived
-// from THIS file's own installed location, so the compose command the shipped
-// INSTALL doc prints — run from the project root, through the harness copy of
-// this CLI — targets that harness dir no matter what the cwd is. In the
-// canonical source layout there is no harness leaf above `tools/`, so the cwd
-// stands in.
-export function defaultPluginHostRoot(scriptDir: string = THIS_DIR, cwd: string = process.cwd()): string {
-  if (basename(scriptDir) !== "tools") return cwd;
-  const harnessRoot = dirname(scriptDir);
-  return isHarnessDirName(basename(harnessRoot)) ? harnessRoot : cwd;
-}
-
-// The plugin host root for a SessionStart auto-compose hook. The project dir
-// comes from the shared hook ladder (payload cwd / CLAUDE_PROJECT_DIR / marker
-// ancestor / script path), then the harness leaf of the hook's OWN installed
-// path is appended — a hook shipped at `<project>/.claude/hooks/` composes into
-// `<project>/.claude/`. In the canonical source layout (`.../core/hooks/`) there
-// is no harness leaf, so the resolved project dir is the host root.
-export function pluginHostRootFromHook(importMetaUrl: string, payloadCwd?: string | null): string {
-  const projectDir = resolveProjectDirFromHook(importMetaUrl, payloadCwd);
-  const hookDir = dirname(fileURLToPath(importMetaUrl));
-  if (basename(hookDir) !== "hooks") return projectDir;
-  const harnessName = basename(dirname(hookDir));
-  return isHarnessDirName(harnessName) ? join(projectDir, harnessName) : projectDir;
-}
-
 function resolveProjectRoot(cmd: PluginCliCommand): string {
-  const raw = cmd.projectRoot ?? defaultPluginHostRoot();
+  const raw = cmd.projectRoot ?? process.cwd();
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
@@ -419,54 +374,34 @@ function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: Plug
   if (!deps.recompile(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "recompile failed after drop" };
   }
-  const baselineRestored = backend.readComposition().plugins.size === 0 && pluginArtifactsAbsent(hostRoot, record);
+  const baselineRestored = backend.readComposition().plugins.size === 0;
   return { kind: "dropped", plugin: cmd.name, baselineRestored, recompiled: true };
 }
 
-// FS-measured restore (#1586): the record no longer carries the plugin AND the
-// filesystem agrees — every owned path is gone and none of the directories that
-// carried them survives as an empty shell. A directory that still holds content
-// is NOT a restore failure (it carries something the plugin does not own), and
-// the .amadeus-plugin-drops.json audit file is deliberately out of scope: it is
-// engine dot-state, not host surface, and its survival never denies restore.
-function pluginArtifactsAbsent(hostRoot: string, record: PluginRecord): boolean {
-  for (const p of record.ownedPaths) {
-    const abs = join(hostRoot, p);
-    if (existsSync(abs)) return false;
-    if (hasEmptyAncestorDir(hostRoot, abs)) return false;
-  }
-  return true;
+// Exhaustive over PluginDiagnostic["status"] (the three engine statuses), so no
+// unreachable default branch: the compiler proves the map total.
+const DOCTOR_STATE_OF: Record<PluginDiagnostic["status"], DoctorLineState> = {
+  composed: "ok",
+  drift: "drift",
+  "recovery-pending": "recovery-pending",
+};
+
+function diagStateOf(status: PluginDiagnostic["status"]): DoctorLineState {
+  return DOCTOR_STATE_OF[status];
 }
 
-// True when any directory between `abs` and the host root still exists and is
-// empty — the observable residue of the mkdir⇔rm asymmetry.
-function hasEmptyAncestorDir(hostRoot: string, abs: string): boolean {
-  const stopAt = `${hostRoot}${sep}`;
-  let dir = dirname(abs);
-  while (dir !== hostRoot && dir.startsWith(stopAt)) {
-    if (existsSync(dir) && readdirSync(dir).length === 0) return true;
-    dir = dirname(dir);
-  }
-  return false;
-}
-
-// The standalone `doctor` verb projects the SAME observation the integrated
-// `/amadeus --doctor` reads and hands it to the SAME pure projection + renderer
-// (buildDoctorPluginSection → doctorPluginRows). One vocabulary, one 0-plugin
-// degrade: a pristine host reports "Plugins: 0 installed" here too (#1585).
 function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: PluginCliDeps): PluginCliResult {
   const hostRoot = resolveProjectRoot(cmd);
   const backend = deps.makeBackend(hostRoot);
   const host = deps.buildHostSnapshot(hostRoot, backend);
   const journalPending = backend.readJournal() !== undefined;
-  const section = buildDoctorPluginSection({
-    diagnostics: deps.diagnosePlugins(host, journalPending),
-    drops: readDropsRecord(hostRoot),
-    revision: backend.auditCount(),
-    activation: null,
-  });
-  const degraded = section.lines.some((l) => isFailingPluginState(l.state));
-  return { kind: "doctor", section, degraded };
+  const lines = deps.diagnosePlugins(host, journalPending).map((d): DoctorLine => ({
+    plugin: d.plugin,
+    state: diagStateOf(d.status),
+    detail: d.observations.join("; "),
+  }));
+  const degraded = lines.some((l) => l.state === "degraded" || l.state === "recovery-pending" || l.state === "unknown");
+  return { kind: "doctor", lines, degraded };
 }
 
 function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: PluginCliDeps): PluginCliResult {
@@ -654,7 +589,7 @@ export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDe
       deps.out(`dropped ${result.plugin}${result.baselineRestored ? " (baseline restored)" : ""}, recompiled`);
       return 0;
     case "doctor":
-      for (const row of doctorPluginRows(result.section)) deps.out(`  - ${row.label}`);
+      for (const l of result.lines) deps.out(`  - ${l.plugin} [${l.state}]${l.detail ? `: ${l.detail}` : ""}`);
       return result.degraded ? 1 : 0;
     case "status":
       deps.out(`Plugins: ${result.installed} installed, ${result.composed} composed, revision ${result.revision}`);

@@ -25,8 +25,6 @@ import type {
   MirrorMutationEffect,
   MirrorOperation,
   MirrorOperationReceipt,
-  MirrorProjectSyncEntry,
-  MirrorProjectSyncLedger,
   MirrorProvenance,
   MirrorReceiptStatus,
   MirrorRepairChallenge,
@@ -440,25 +438,6 @@ const ROOT_KEYS: ReadonlySet<string> = new Set([
   "repairChallenges",
   "expectedPrompt",
   "auditOutbox",
-  "projectSync",
-]);
-
-const PROJECT_SYNC_KEYS: ReadonlySet<string> = new Set(["projects"]);
-const PROJECT_ENTRY_KEYS: ReadonlySet<string> = new Set([
-  "project",
-  "projectId",
-  "itemId",
-  "lastAppliedStatus",
-  "state",
-  "updatedAt",
-]);
-
-// The ledger accepts all three states so U2's pending / safety-blocked writes
-// land without a codec change; U1's writer only ever emits `synced`.
-const PROJECT_SYNC_STATES: ReadonlySet<MirrorProjectSyncEntry["state"]> = new Set([
-  "synced",
-  "pending",
-  "safety-blocked",
 ]);
 
 const REPOSITORY_KEYS: ReadonlySet<string> = new Set(["owner", "name", "canonical"]);
@@ -1106,76 +1085,6 @@ function validateAuditOutbox(
   return null;
 }
 
-// One projectSync ledger row. `itemId` and `lastAppliedStatus` are
-// nullable-required: the key must be present and either a non-empty string or
-// null, so an absent key is a defect rather than an implied null.
-function validateProjectEntry(
-  v: JsonValue,
-  path: string,
-  issues: string[],
-): MirrorProjectSyncEntry | null {
-  if (!isObject(v)) {
-    issues.push(`${path}: project entry must be an object`);
-    return null;
-  }
-  checkUnknownKeys(v, PROJECT_ENTRY_KEYS, path, issues);
-  const project = reqNonEmptyString(v, "project", path, issues);
-  const projectId = reqNonEmptyString(v, "projectId", path, issues);
-  const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
-  const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
-  const itemId = nullableString(v.itemId, "itemId", path, issues);
-  const lastAppliedStatus = nullableString(
-    v.lastAppliedStatus,
-    "lastAppliedStatus",
-    path,
-    issues,
-  );
-  if (
-    project === undefined ||
-    projectId === undefined ||
-    state === undefined ||
-    updatedAt === undefined ||
-    itemId === undefined ||
-    lastAppliedStatus === undefined
-  ) {
-    return null;
-  }
-  return { project, projectId, itemId, lastAppliedStatus, state, updatedAt };
-}
-
-// The ledger is keyed by canonical "owner/number" through the entry's own
-// `project` field; duplicate rows for one Project are a defect, since the
-// reducer upserts by that key.
-function validateProjectSync(
-  v: JsonValue,
-  path: string,
-  issues: string[],
-): MirrorProjectSyncLedger | null {
-  if (!isObject(v)) {
-    issues.push(`${path}: projectSync must be an object or null`);
-    return null;
-  }
-  checkUnknownKeys(v, PROJECT_SYNC_KEYS, path, issues);
-  const raw = v.projects;
-  if (!Array.isArray(raw)) {
-    issues.push(`${path}.projects: required array`);
-    return null;
-  }
-  const projects: MirrorProjectSyncEntry[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < raw.length; i += 1) {
-    const entry = validateProjectEntry(raw[i], `${path}.projects[${i}]`, issues);
-    if (entry === null) continue;
-    if (seen.has(entry.project)) {
-      issues.push(`${path}.projects[${i}]: duplicate project '${entry.project}'`);
-      continue;
-    }
-    seen.add(entry.project);
-    projects.push(entry);
-  }
-  return { projects };
-}
-
 function validateExpectedPrompt(
   v: JsonValue,
   path: string,
@@ -1316,14 +1225,6 @@ function parseOptionalOutbox(v: JsonValue, issues: string[]): MirrorAuditOutbox 
   return validateAuditOutbox(v, "$.auditOutbox", issues);
 }
 
-function parseOptionalProjectSync(
-  v: JsonValue,
-  issues: string[],
-): MirrorProjectSyncLedger | null {
-  if (v === null || v === undefined) return null;
-  return validateProjectSync(v, "$.projectSync", issues);
-}
-
 function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapshot | null {
   if (!isObject(root)) {
     issues.push("$: Mirror block must be a JSON object");
@@ -1346,7 +1247,6 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
   const repairChallenges = validateChallengeMap(root.repairChallenges, issues);
   const expectedPrompt = parseOptionalPrompt(root.expectedPrompt, issues);
   const auditOutbox = parseOptionalOutbox(root.auditOutbox, issues);
-  const projectSync = parseOptionalProjectSync(root.projectSync, issues);
 
   if (revision === undefined || issues.length > 0) return null;
 
@@ -1359,7 +1259,6 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
     repairChallenges: Record<string, MirrorRepairChallenge>;
     expectedPrompt?: MirrorExpectedPrompt;
     auditOutbox?: MirrorAuditOutbox | null;
-    projectSync?: MirrorProjectSyncLedger | null;
   } = {
     revision,
     issueNumber: issueNumber ?? null,
@@ -1368,7 +1267,6 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
     warnings,
     repairChallenges,
     auditOutbox,
-    projectSync,
   };
   if (expectedPrompt) snapshot.expectedPrompt = expectedPrompt;
   return snapshot;
@@ -1386,7 +1284,6 @@ export const EMPTY_MIRROR_STATE: MirrorStateSnapshot = {
   warnings: [],
   repairChallenges: {},
   auditOutbox: null,
-  projectSync: null,
 };
 
 function allIndexesOf(haystack: string, needle: string): number[] {
@@ -1587,22 +1484,6 @@ function renderExpectedPrompt(p: MirrorExpectedPrompt): unknown {
   return out;
 }
 
-// An empty ledger renders as null, matching the provenance / expectedPrompt /
-// auditOutbox convention, so a workspace with no configured Project keeps the
-// steady-state block bytes.
-function renderProjectSync(ledger: MirrorProjectSyncLedger): unknown {
-  return {
-    projects: ledger.projects.map((entry) => ({
-      project: entry.project,
-      projectId: entry.projectId,
-      itemId: entry.itemId,
-      lastAppliedStatus: entry.lastAppliedStatus,
-      state: entry.state,
-      updatedAt: entry.updatedAt,
-    })),
-  };
-}
-
 function renderAuditOutbox(o: MirrorAuditOutbox): unknown {
   // fields render in insertion order; the reducer/store control field order.
   return { transactionId: o.transactionId, digest: o.digest, fields: o.fields };
@@ -1629,10 +1510,6 @@ export function renderMirrorStateJson(snapshot: MirrorStateSnapshot): string {
       ? renderExpectedPrompt(snapshot.expectedPrompt)
       : null,
     auditOutbox: snapshot.auditOutbox ? renderAuditOutbox(snapshot.auditOutbox) : null,
-    projectSync:
-      snapshot.projectSync && snapshot.projectSync.projects.length > 0
-        ? renderProjectSync(snapshot.projectSync)
-        : null,
   };
   return JSON.stringify(root);
 }

@@ -856,7 +856,6 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "e2e/t-formal-verif-model-completeness-sensor.test.ts",
     "e2e/t237-election-walking-skeleton.test.ts",
     "e2e/t265-engine-boundary.test.ts",
-    "e2e/t341-plugin-conformance-journey.serial.test.ts",
     "integration/t236-election-loop.integration.test.ts",
     "integration/t241-election-machine-executor.integration.test.ts",
     "integration/t257-status-registry-migration.test.ts",

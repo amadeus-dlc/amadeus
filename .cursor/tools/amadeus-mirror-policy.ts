@@ -8,18 +8,13 @@
 // imports only the C0 domain types.
 
 import type {
-  ExpectedProjectStatus,
   MirrorBoundary,
   MirrorDecision,
   MirrorEventIdentity,
   MirrorExpectedPrompt,
   MirrorOperation,
   MirrorOperationReceipt,
-  MirrorPhaseKey,
-  MirrorProjectStatusField,
-  MirrorProjectStatusNames,
   MirrorReceiptStatus,
-  MirrorSnapshot,
   MirrorStateSnapshot,
 } from "./amadeus-mirror-types.ts";
 
@@ -199,75 +194,6 @@ export function approveMirrorPrompt(
     event: expected.event,
     ...withRetry(expected.retryOf),
   };
-}
-
-// --- Project status derivation (U1) ------------------------------------------
-
-// The FR-3a phase -> column-name table. This is the ONLY definition: the config
-// layer's `status-names` overrides entries here, and every consumer derives from
-// this map rather than restating a literal.
-export const DEFAULT_PROJECT_STATUS_NAMES: Record<MirrorPhaseKey, string> = {
-  ideation: "Ideation",
-  inception: "Inception",
-  construction: "Construction",
-  operation: "Operation",
-  done: "Done",
-};
-
-const PHASE_KEYS: ReadonlySet<string> = new Set(Object.keys(
-  DEFAULT_PROJECT_STATUS_NAMES,
-));
-
-const KEEP: ExpectedProjectStatus = { kind: "keep" };
-
-// Map the workflow's Lifecycle Phase to a Project column key. Returns null for a
-// phase outside the closed vocabulary (`initialization` is a real engine phase
-// with no board column), which the caller answers with `keep`.
-function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
-  const lower = lifecyclePhase.toLowerCase();
-  // `done` is a landing outcome, not a lifecycle phase: it is reachable only
-  // through the completion branch, never by naming a phase `done`.
-  if (lower === "done") return null;
-  return PHASE_KEYS.has(lower) ? (lower as MirrorPhaseKey) : null;
-}
-
-// Derive the Status a boundary expects. Ordered rules:
-//   1. parked (boundary kind or registry status) -> keep: a parked Intent's
-//      column is left exactly as the human left it (FR-4).
-//   2. landed (registry complete + workflow Completed) -> the `done` column.
-//   3. otherwise the current Lifecycle Phase's column.
-// An unmapped phase yields `keep`, so an unrecognised snapshot never drives a
-// mutation toward a column name this module invented.
-export function expectedProjectStatus(
-  snapshot: MirrorSnapshot,
-  boundaryKind: MirrorBoundary["kind"],
-  statusNames: MirrorProjectStatusNames,
-): ExpectedProjectStatus {
-  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
-    return KEEP;
-  }
-  const named = (phase: MirrorPhaseKey): ExpectedProjectStatus => ({
-    kind: "status",
-    name: statusNames[phase] ?? DEFAULT_PROJECT_STATUS_NAMES[phase],
-  });
-  if (
-    snapshot.registryStatus === "complete" &&
-    snapshot.status === "Completed"
-  ) {
-    return named("done");
-  }
-  const phase = phaseKeyOf(snapshot.lifecyclePhase);
-  return phase === null ? KEEP : named(phase);
-}
-
-// Exact-match option lookup (BR-U1-4): no case folding, no trimming, no
-// fuzzy fallback. A name that does not appear verbatim in the remote Project's
-// own option list is unresolved, and the caller reports it as a diagnostic.
-export function selectProjectStatusOption(
-  field: MirrorProjectStatusField,
-  name: string,
-): Readonly<{ id: string; name: string }> | null {
-  return field.options.find((option) => option.name === name) ?? null;
 }
 
 // Select the single next operation for the current workflow-completion

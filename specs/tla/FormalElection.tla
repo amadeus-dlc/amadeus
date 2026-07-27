@@ -21,7 +21,7 @@ TallyReceivedRepresentative == "T1"
 UnknownRef == "UNKNOWN_REF"
 NoBallot == [choice |-> "NONE", submittedAt |-> "T0", goaClass |-> "EXCLUDED", arrivalSeq |-> 0]
 GoAClasses == {"FAVOR", "EXCLUDED", "DISCUSS", "AGAINST", "BLOCK"}
-HoldReasons == {"BLOCK", "DISCUSSION_NEEDED", "QUORUM_SHORT", "TIE"}
+HoldReasons == {"BLOCK", "DISCUSSION_NEEDED", "QUORUM_SHORT", "SPLIT", "TIE"}
 Ballots == [choice: Choices, submittedAt: SubmittedAt, goaClass: GoAClasses, arrivalSeq: 1..6]
 
 GoAClass(g) ==
@@ -50,6 +50,12 @@ TopChoices(r) == {c \in Choices : \A other \in Choices: ChoiceCount(r, c) >= Cho
 UniqueWinner(r) == IF Cardinality(TopChoices(r)) = 1 THEN CHOOSE c \in TopChoices(r): TRUE ELSE "NONE"
 HoldReason(r) ==
   IF BlockCount(r) >= 1 THEN "BLOCK"
+  ELSE IF Cardinality(Voters) = 2 THEN
+    IF DiscussCount(r) >= 1 THEN "DISCUSSION_NEEDED"
+    ELSE IF Cardinality({b \in ResolvedSet(r) : b.goaClass = "EXCLUDED"}) >= 1 THEN "QUORUM_SHORT"
+    ELSE IF FavorCount(r) = 1 /\ AgainstCount(r) = 1 THEN "SPLIT"
+    ELSE IF Cardinality(TopChoices(r)) /= 1 THEN "TIE"
+    ELSE "NONE"
   ELSE IF DiscussCount(r) >= 2 THEN "DISCUSSION_NEEDED"
   ELSE IF FavorCount(r) + AgainstCount(r) = 0 THEN "QUORUM_SHORT"
   ELSE IF Cardinality(TopChoices(r)) /= 1 THEN "TIE"

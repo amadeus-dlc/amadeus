@@ -81,6 +81,7 @@ type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | "hold-
 const HOLD_RESOLUTIONS: Record<HoldReason, Record<string, ElectionState>> = {
   tie: {},
   block: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
+  split: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
   "quorum-short": { "resume-collecting": "collecting", "close-rejected": "tallied" },
   "discussion-needed": { discussed: "collecting" },
 };
