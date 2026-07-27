@@ -596,199 +596,181 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "101-108",
+    "lines": "103-110",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "111",
+    "lines": "113",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "114",
+    "lines": "116",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "123",
+    "lines": "125",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "241",
+    "lines": "243",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "397-400",
+    "lines": "399-402",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "477",
+    "lines": "479",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "485-487",
+    "lines": "487-489",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "509-511",
+    "lines": "511-513",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "529-533",
+    "lines": "531-535",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "611-616",
+    "lines": "613-618",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "618-619",
+    "lines": "620-621",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "621-631",
+    "lines": "623-633",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "655-658",
+    "lines": "657-660",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "726",
+    "lines": "728",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "761",
+    "lines": "763",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "798-804",
+    "lines": "800-806",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "846-847",
+    "lines": "848-849",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "860-864",
+    "lines": "862-866",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "870-875",
+    "lines": "872-877",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "882-887",
+    "lines": "884-889",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "898-903",
+    "lines": "954-958",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "905",
+    "lines": "980-981",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "934-937",
+    "lines": "991-993",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "949-953",
+    "lines": "1007-1011",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "975-976",
+    "lines": "1013",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "986-988",
+    "lines": "1047-1052",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1002-1006",
+    "lines": "1095-1096",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1008",
+    "lines": "1148-1149",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1042-1047",
-    "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1090-1091",
-    "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1143-1144",
-    "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1157-1162",
+    "lines": "1162-1167",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -968,7 +950,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-policy.ts",
-    "lines": "172-181",
+    "lines": "174-183",
     "reason": "t268 through t271 exercise every supported boundary/mode policy result; Bun stamps the exhaustive fallback branch DA:0 although validated union inputs cannot reach it.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1130,145 +1112,145 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "889-896",
+    "lines": "953-960",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1061-1068",
+    "lines": "1128-1135",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1202-1206",
+    "lines": "1269-1273",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1354-1362",
+    "lines": "1421-1429",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "173",
+    "lines": "192",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "271-272",
+    "lines": "290-291",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "274",
+    "lines": "293",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "277-283",
+    "lines": "296-302",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "300",
+    "lines": "319",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "347-349",
+    "lines": "369-371",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "394-396",
+    "lines": "418-420",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "398-400",
+    "lines": "422-424",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "402-404",
+    "lines": "426-428",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "423-424",
+    "lines": "447-448",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "468",
+    "lines": "492",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "543-546",
+    "lines": "567-570",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "548-549",
+    "lines": "572-573",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "554-563",
+    "lines": "578-587",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "653",
+    "lines": "740",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "659",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "671",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "730",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "750",
+    "lines": "746",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
     "lines": "758",
+    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "lines": "817",
+    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "lines": "837",
+    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "lines": "851",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1604,13 +1586,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "98-99",
+    "lines": "100-101",
     "reason": "Exclusive compare-and-set conflict guard. Operation identity and concurrent state conflicts are covered, but this exact branch requires a competing writer between the exclusive transition read and commit.",
     "expiry": "remove when executor transition scheduling exposes a deterministic competing-writer seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "647",
+    "lines": "649",
     "reason": "Defensive create-attempt claim failure projection. t279 covers lock and write failures before remote mutation; Bun leaves this multiline forwarding row DA:0.",
     "expiry": "remove when Bun LCOV attributes the forwarding return or the claim helper is flattened"
   },

@@ -10,7 +10,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import {
+  executeMirrorOperation,
+  resolveMembership,
+} from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import {
   mirrorEventIdentity,
   mirrorEventKey,
@@ -775,5 +778,51 @@ describe("t345 secret containment", () => {
       reason: "project-sync-unsettled",
       heldAt: NOW,
     });
+  });
+});
+
+describe("t345 defensive classification", () => {
+  test("an unconfigured target with no board item is classified, not joined", async () => {
+    const gateway = new BoardGateway(markerBody());
+    const diagnostics: MirrorProjectDiagnostic[] = [];
+    const ctx = context("sync", gateway, { diagnostics });
+    const resolution = await resolveMembership(
+      ctx,
+      { project: BOARD_A, statusNames: {} },
+      { issueNodeId: ISSUE_NODE_ID, items: [] },
+      {
+        projectId: nodeIdOf(BOARD_A),
+        fieldId: `PVTSSF_${BOARD_A.number}`,
+        options: DEFAULT_OPTIONS,
+      },
+      false,
+    );
+    expect(resolution).toEqual({ kind: "failed", classification: "configuration" });
+    // No add mutation was attempted, and the diagnostic explains why.
+    expect(mutations(gateway)).toEqual([]);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.summary).toContain("not configured");
+  });
+
+  test("a state-write failure after a failed issue view surfaces as state failure", async () => {
+    const store = fileStore(linkedState());
+    const gateway = new BoardGateway(markerBody());
+    gateway.viewIssue = async () => failure("network");
+    // Fail only the write that persists the view warning; the receipt writes
+    // before it (and any after) go through, so the injection hits the
+    // set-warning transition alone.
+    const realWrite = store.ports.writeDocumentAtomic.bind(store.ports);
+    store.ports.writeDocumentAtomic = (text: string) =>
+      text.includes('"classification":"network"')
+        ? { kind: "io-failure", summary: "disk full" }
+        : realWrite(text);
+
+    const outcome = await run(store, gateway);
+
+    expect(outcome.kind).toBe("safety-blocked");
+    if (outcome.kind === "safety-blocked") {
+      expect(outcome.warning.classification).toBe("state-write");
+      expect(outcome.warning.summary).toBe("disk full");
+    }
   });
 });

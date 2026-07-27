@@ -1353,7 +1353,10 @@ type MembershipResolution =
 // configured target may be joined: a Project the Issue merely already belongs to
 // is synced where it sits and never recruited. A freshly added item has no
 // Status yet, so its current value is null rather than assumed.
-async function resolveMembership(
+// Exported as an in-process seam: the unconfigured non-member branch below is
+// unreachable through syncProjects (reconcileTargets only admits unconfigured
+// targets that appear in the items view), so tests drive it directly.
+export async function resolveMembership(
   context: MirrorExecutionContext,
   target: MirrorProjectTarget,
   view: MirrorProjectItemsView,
