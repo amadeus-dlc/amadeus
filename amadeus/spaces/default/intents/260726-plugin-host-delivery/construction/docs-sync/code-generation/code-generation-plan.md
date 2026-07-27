@@ -27,3 +27,32 @@ vocab 起点の repo 全域 grep（BR-U8-2）で更新対象を確定した結�
 ## 逸脱
 
 component-methods.md C1-C6 の契約と実装・docs 記載の間に乖離なし（BR-U8-5: 乖離 0 件）。ハーネス別クラス語彙は ADR-4 正準 literal `native-manifest | folder-drop-auto | manual-only` を逐語使用（BR-U8-6）。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T06:07:38Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+docs が実装に存在しない --doctor 出力文言を事実として記載(Critical)、かつ 7 面化の記述が一部本文で 6 面のまま残り自己矛盾(Major)
+
+### Findings
+
+- [Critical] docs/guide/19-plugins.md:143-145(および 19-plugins.ja.md:136-138 対訳)が『doctor on such a face emits `[degraded] opencode: no session-start trigger — run \'amadeus-plugin.ts compose\' manually`』と、opencode の --doctor 実出力として断定しているが、この文字列は実装(packages/framework/core/tools/amadeus-plugin.ts の buildDoctorPluginSection/doctorPluginRows/formatDoctorPluginLine、:470-472,495-544)のどこにも存在しない。--doctor のプラグイン節は composition 状態(ok/drift/degraded/recovery-pending/advisory/unknown、いずれもプラグイン単位)のみを描画し、opencode のようなハーネス面単位の session-start 未配線状態(resolveFaceDisposition/FaceDisposition、scripts/plugin-projection.ts:390-421)を doctor へ出力する経路は存在しない。code-summary.md:29 自身が『harness-capability-matrix.md 列6（転記）』と認めている通り、実装コードの grep 裏取りではなく設計文書(harness-capability-matrix.md:99)からの転記であり、BR-U8-1/BR-U8-2(記憶起草禁止・grep 裏取り必須)および FR-9 の合否基準『docs 記載のコマンド・パスが実装と一致』に違反する。repo 全域 grep(`grep -rn "no session-start trigger" packages/ scripts/ tests/`)でヒット0件を確認済み。
+- [Major] EN/JA とも『seven packaged faces』への全数更新(BR-U8: 6/4→7/5 化)が本文中2箇所で未反映のまま残存し、同一ファイル内で自己矛盾している。docs/guide/19-plugins.md:70『projects every plugin into the six packaged harness trees』と :250『projects into all six faces』は実装の PACKAGE_HARNESSES(scripts/plugin-projection.ts:42-50、7要素、かつ同ファイル:4 のコメント・tests/integration/t254-reference-plugin-lifecycle.test.ts:189 の `toHaveLength(7)` で7が権威)と矛盾する一方、同ファイル :15,129,174,267,269,275 は正しく『seven』と記載——1ファイル内で6と7が混在。19-plugins.ja.md も同型(:68『6 つのパッケージハーネスツリー』、:240『6 面すべてへ投影』 vs :123,166,263『7』)。日英は1:1で誤りが対称のため対訳同期(BR-U8-3)は形式的に満たすが、FR-9 が名指しした『全ハーネスへ投影』記述の実態更新が本文中で不完全。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T06:07:38Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 の Critical(捏造 doctor 文言)と Major(6/7 面混在)を実装接地で確認、両方閉包
+
+### Findings
+
+- None
