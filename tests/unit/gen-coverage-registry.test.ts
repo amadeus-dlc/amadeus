@@ -928,6 +928,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t257-doctor-inprocess-seam.test.ts",
     "integration/t265-engine-boundary.integration.test.ts",
     "integration/t31-help.test.ts",
+    "integration/t328-adapter-auto-compose-launch.integration.test.ts",
     "integration/t33-hook-concurrency.test.ts",
     "integration/t39.test.ts",
     "integration/t45.test.ts",

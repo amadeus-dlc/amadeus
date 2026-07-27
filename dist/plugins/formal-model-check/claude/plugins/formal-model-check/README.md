@@ -3,8 +3,11 @@
 An opt-in Amadeus plugin that adds one construction-phase stage,
 `formal-model-check`, which runs an exhaustive TLC exploration of a TLA+ model
 via the `run-model-check` CLI. The stage carries an empty `scopes:` list, so it
-is never selected by a stock scope — it runs only on an explicit
-`amadeus-orchestrate next --stage formal-model-check --single` invocation.
+is never selected by a stock scope. Install is the opt-in boundary: once
+composed it runs on an explicit `amadeus-orchestrate next --stage
+formal-model-check` invocation (`--single` optional). Amadeus never runs it
+automatically — the engine only emits a spec-hash advisory when the watched
+spec changed (U6 activation-policy).
 
 ## Bundle layout
 

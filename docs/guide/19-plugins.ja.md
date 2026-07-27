@@ -9,10 +9,11 @@
 可逆で、ワークスペースが既に所有するものを一切上書きしません。
 
 この章は利用者向けリファレンスであり、オーサリングガイドです。プラグインシステムが
-現在サポートする面、意図的に見送っている面、利用者に見える安全契約、ローカルでの
-検証手順、そして 6 つのパッケージハーネス面と 4 つのセルフインストール面の違いを
-記述します。これはいかなる上流 README のコピーでもありません — 以下のパス・コマンド・
-失敗契約はすべて Amadeus のものです。
+現在サポートする面、そのコマンドライン面、セッション起動時にプラグインがホストへ自動
+compose される仕組み、利用者に見える安全契約、ローカルでの検証手順、そして 7 つの
+パッケージハーネス面と 5 つのセルフインストール面の違いを記述します。これはいかなる
+上流 README のコピーでもありません — 以下のパス・コマンド・失敗契約はすべて Amadeus
+のものです。
 
 実例はリファレンスプラグイン `test-pro` です。オーサリングソースは
 `tests/fixtures/plugins/test-pro/` に置かれ、
@@ -64,7 +65,7 @@ plugins/example/
 1. **オーサリング** — `plugins/<name>/plugin.json` と参照ファイルを書きます。
 2. **投影** — パッケージャが `plugins/` を discover し、各ソースを構造的に検証
    (マニフェスト存在・identity 一意・プラグイン自身のサブツリーを逸脱するパスなし)
-   し、各プラグインを 6 つのパッケージハーネスツリーとハーネス中立バンドルへ投影
+   し、各プラグインを 7 つのパッケージハーネスツリーとハーネス中立バンドルへ投影
    します。プラグインが 0 件のとき、出力はプラグイン非対応ビルドと byte-identical
    です。
 3. **inspect** — 合成エンジンが discover 済みプラグインをホストスナップショットと
@@ -78,6 +79,109 @@ plugins/example/
    状態(`composed`・`drift`・`recovery-pending`)を射影します。
 6. **drop** — レコード所有の除去が、プラグインの所有ファイルを削除し、各共有ファイルを
    base と *残り* のプラグインの貢献から再構築します。
+
+---
+
+## CLI
+
+ホスト側の操作はすべて、ハーネス中立 CLI `amadeus-plugin.ts` の verb です。ハーネス
+ツリーへ配布されたコピー経由で実行します — Claude Code なら次のとおりです。
+
+```
+bun .claude/tools/amadeus-plugin.ts <verb> [flags]
+```
+
+他のハーネスは各自のディレクトリ(`.codex`・`.cursor`・`.kimi` など)に置き換えます:
+`bun <harness-dir>/tools/amadeus-plugin.ts <verb>`。verb は次のとおりです。
+
+| verb | 動作 | exit |
+| --- | --- | --- |
+| `compose [--if-stale] [--project-root <dir>]` | 全インストール済みプラグインを単一のアトミックトランザクションとしてホストへ適用。`--if-stale` は合成レコードが既に最新なら即座に戻る no-op 高速路。 | 成功・no-op で `0`、適用失敗で `1` |
+| `doctor [--project-root <dir>]` | 各 compose 済みプラグインの状態(`ok`・`drift`・`recovery-pending`)を表示。 | 健全なら `0`、degraded / recovery-pending があれば `1` |
+| `drop <plugin-name> [--project-root <dir>]` | 1 プラグインの所有ファイルを除去し、残りのプラグインから共有ファイルを再構築。 | 成功で `0`、拒否・失敗で `1` |
+| `status [--project-root <dir>]` | 件数(installed・composed・監査 revision)を表示。 | `0` |
+
+`--project-root <dir>` はカレントディレクトリ以外のワークスペースを対象にします — CLI
+が存在する場所以外のホストへ compose する手段で、パッケージされるがセルフインストール
+されない `kiro` / `kiro-ide` 面では常に必要です。
+
+引数処理は fail-closed で、いかなる変更よりも **前** に行われます: 未知 verb・未知
+フラグ・余剰引数は usage を stderr へ出して exit `2` で終わり、ホストには一切触れません。
+`--help` フラグはありません。verb なしで実行すると usage ブロックが表示されます。
+
+---
+
+## セッション起動時の自動 compose
+
+通常、`compose` を手で実行することはありません。session-start 相当のフックを持つ各
+ハーネスは、セッション開始時に `amadeus-plugin.ts compose --if-stale` を呼ぶ自動
+compose を配線しています。`--if-stale` 高速路により、合成レコードが既に最新のセッション
+は数回の `existsSync` プローブだけで再 compose せずに戻るため、通常ケースでフックは
+起動レイテンシを増やしません。フックの失敗は stderr 警告 1 行と exit 0 であり —
+プラグインの問題がセッションをブロックすることはありません。
+
+7 つのパッケージ面のうち 6 面がこのトリガーを配線し、1 面は配線しません。
+
+| 面 | session-start トリガー | 自動 compose |
+| --- | --- | --- |
+| `claude` | `SessionStart` | 配線あり |
+| `codex` | `SessionStart` | 配線あり |
+| `cursor` | `sessionStart` | 配線あり |
+| `kimi` | `SessionStart` | 配線あり |
+| `kiro` | `agentSpawn` | 配線あり |
+| `kiro-ide` | `promptSubmit`(`--if-stale` で冪等) | 配線あり |
+| `opencode` | なし(`chat.message` のみ) | **degraded — 手動のみ** |
+
+`opencode` は `manual-only` クラスで、session-start シームを持たないため、自動 compose を
+配線せず、唯一の契約は手動 `compose` 床です。この degrade はサイレントなスキップではなく、
+面のインストールバンドルに書き込まれています。`manual-only` 面が同梱する `INSTALL.md` は
+明示的にこう記します: *"This harness has no auto-compose session hook. Run compose after
+install and after every plugin change"* に続けて `compose` コマンド。つまり `opencode` では
+`compose` を自分で実行し、他の 6 面ではセッションフックが代わりに実行します。
+
+---
+
+## `--doctor` のプラグイン節
+
+`/amadeus --doctor` には読み取り専用のプラグイン節が含まれます。これは既存 3 エンジン
+リード(診断・合成 revision・drops レコード)の純粋な射影であり — 新しいスキャンも
+新しい判定も行いません。各行は状態を pass/fail 寄与へ写像します。
+
+| 状態 | 意味 | doctor |
+| --- | --- | --- |
+| `ok` | compose 済みでレコードと一致(`composed@<rev>`) | 可視・通過 |
+| `drift` | 共有ファイルが記録された合成から乖離 | 可視・通過 |
+| `advisory` | レコードが持つ drop 時 advisory | 可視・通過 |
+| `degraded` | レコードが degraded と印を付けた面・drop | **loud fail** |
+| `recovery-pending` | クラッシュが回復保留を残した(`run compose to recover`) | **loud fail** |
+| `unknown` | 既知集合外の status・severity(fail-closed) | **loud fail** |
+
+プラグイン 0 件のホストは単一の通過行 `Plugins: 0 installed` に degrade するため、
+プラグイン節がプラグイン非対応プロジェクトの健全な `--doctor` exit を反転させることは
+ありません。既知集合外のエンジン status・drop severity は信頼も暗黙破棄もされず —
+チェックを fail させる `unknown` 行としてレンダリングされます。
+
+---
+
+## プラグインのホストへのインストール
+
+パッケージャは 7 面それぞれに対し、面ごとの **インストールバンドル** と、面のホスト
+クラスで分岐する手順を持つトップレベル `INSTALL.md` を出力します。
+
+- **`native-manifest`**(`claude`)— ホストのプラグインマーケットプレイス経由で
+  `.claude-plugin/plugin.json` を使ってインストール。自動 compose は `hooks/hooks.json`
+  から走ります。
+- **`folder-drop-auto`**(`codex`・`cursor`・`kimi`・`kiro`・`kiro-ide`)— バンドルの
+  `plugins/<name>/` を `<harness-dir>/plugins/<name>/` へコピー。自動 compose は
+  `hooks/auto-compose.snippet` から配線されます。
+- **`manual-only`**(`opencode`)— フォルダをコピー。セッションフックがないため、
+  インストール後および全プラグイン変更後に `compose` を実行します。
+
+compose は、出力ディレクトリが空か、同一プラグイン・同一ハーネスの自分自身の以前の
+投影である場合を除き、書き込みを拒否します。既存の非空ディレクトリ、*別* プラグイン・
+別ハーネスの投影、通常ファイル、シンボリックリンク、壊れたシンボリックリンクがターゲット
+にある場合は、それぞれ固有の理由で拒否されます — 生の filesystem スタックにも上書きにも
+なりません。
 
 ---
 
@@ -117,12 +221,25 @@ plugins/example/
 
 ---
 
+## activation ポリシー: formal-model-check
+
+同梱の `formal-model-check` プラグインは *advisory のみ* です。Amadeus はその spec
+ファイル(`specs/tla/**`)の決定的ハッシュを計算し、最後に記録された verdict と比較
+します。ハッシュが変化した場合 — または一度も記録されていない場合 — エンジンは
+build-and-test の前に stderr のみの advisory をレンダリングし、doctor は
+`formal-model-check: spec-hash CHANGED` の activation 行を追加します。モデルチェッカ
+(TLC)を自動実行するものは何もなく、勝手に state を書くものも何もありません: advisory は
+spec が drift したことを知らせ、*あなた* がチェック再実行を判断できるようにするものです。
+ハッシュが一致するとき advisory は silent です。
+
+---
+
 ## プラグインの検証
 
 検証はローカルかつ一時的です — プラグインを試すためにコミット済みツリーを変更する
 ことはありません。リファレンスライフサイクルテストがモデルです。canonical ソースを
 使い捨ての一時ワークスペースへコピーし、パッケージャのソース/出力ルートをそこへ
-リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、6 面すべてへ投影し、
+リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、7 面すべてへ投影し、
 一時ホストへ compose し、doctor を実行し、drop します。宣言物だけが生成・検出・除去
 され、tracked tree に一時ファイルが 1 つも残らないことを assert します。
 
@@ -138,11 +255,11 @@ bun test tests/integration/t254-reference-plugin-lifecycle.test.ts
 
 ---
 
-## 6 つのパッケージ面、4 つのセルフインストール面
+## 7 つのパッケージ面、5 つのセルフインストール面
 
-パッケージャは各プラグインを **6 つ** のハーネス面へ投影します: `claude`・`codex`・
-`cursor`・`kiro`・`kiro-ide`・`opencode`。セルフインストール(ハーネスをプロジェクト
-ルートへ反映すること)は **閉じた 4 面** のままです: `claude`・`codex`・`cursor`・
-`opencode`。`kiro` と `kiro-ide` はパッケージされますがプロジェクトルートへは決して
-昇格しません。2 つのマトリクスは別々の期待集合に対して検証され、一方が他方の代替に
-使われることも、4 面が 6 面へ広げられることもありません。
+パッケージャは各プラグインを **7 つ** のハーネス面へ投影します: `claude`・`codex`・
+`cursor`・`kiro`・`kiro-ide`・`opencode`・`kimi`。セルフインストール(ハーネスを
+プロジェクトルートへ反映すること)は **閉じた 5 面** のままです: `claude`・`codex`・
+`cursor`・`opencode`・`kimi`。`kiro` と `kiro-ide` はパッケージされますがプロジェクト
+ルートへは決して昇格しません。2 つのマトリクスは別々の期待集合に対して検証され、一方が
+他方の代替に使われることも、5 面が 7 面へ広げられることもありません。

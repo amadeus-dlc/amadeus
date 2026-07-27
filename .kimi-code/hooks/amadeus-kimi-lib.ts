@@ -204,7 +204,16 @@ export function routeTarget(target: string, env: KimiEnvelope): CoreHookCall[] {
   if (stdin === null) return [];
   switch (target) {
     case "session-start":
-      return [{ hookPath: "amadeus-session-start.ts", stdin, translate: "session-start" }];
+      // Auto-compose opted-in plugins (U4 hook-wiring-remaining, BR-U4-1): a
+      // 1-point invocation of the SAME core hook the claude face wires (U2),
+      // with NO composition logic (--if-stale no-op fast path). translate:
+      // "none" drops its (empty) stdout so amadeus-session-start.ts keeps
+      // owning Kimi's context channel; order is irrelevant since only the
+      // session-start relay sets output. Advisory (stderr + exit 0).
+      return [
+        { hookPath: "amadeus-session-start.ts", stdin, translate: "session-start" },
+        { hookPath: "amadeus-plugin-compose.ts", stdin, translate: "none" },
+      ];
     case "session-end":
       return [{ hookPath: "amadeus-session-end.ts", stdin, translate: "none" }];
     case "mint":

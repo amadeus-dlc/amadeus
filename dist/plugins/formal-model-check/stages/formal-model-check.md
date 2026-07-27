@@ -2,7 +2,7 @@
 slug: formal-model-check
 phase: construction
 execution: CONDITIONAL
-condition: Opt-in — runs only on an explicit `--stage formal-model-check --single` invocation; never auto-selected by a stock scope (scopes is empty).
+condition: Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).
 lead_agent: amadeus-quality-agent
 support_agents: []
 mode: inline
@@ -20,9 +20,13 @@ scopes: []
 
 The `formal-model-check` plugin stage runs a **single formal-model-check pass**:
 an exhaustive TLC exploration of a declared TLA+ model, driven by the
-`run-model-check` CLI. It is an opt-in plugin stage (empty `scopes:`), reachable
-only via `amadeus-orchestrate next --stage formal-model-check --single`, so it
-never joins a stock scope's workflow and never runs on `push` / `pull_request`.
+`run-model-check` CLI. It is an opt-in plugin stage (empty `scopes:`): install is
+the opt-in boundary, so once composed it is reachable via
+`amadeus-orchestrate next --stage formal-model-check` — `--single` optional
+(U6 activation-policy, FR-7(a)). It never joins a stock scope's workflow and
+never runs on `push` / `pull_request`. Amadeus never runs it automatically: the
+engine only emits a spec-hash advisory nudge when the watched spec changed
+(ADR-1 option A, U6).
 
 ## Stage body
 
