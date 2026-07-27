@@ -178,6 +178,18 @@ import {
 // import is safe (amadeus-utility.ts main() runs only under import.meta.main,
 // and utility never imports this module - no cycle).
 import { inferScopeFromText } from "./amadeus-utility.ts";
+// U6 activation-policy (C6). The spec-hash judgment + advisory + verdict-record
+// machinery lives in amadeus-plugin-activation.ts as pure, injectable-FS seams;
+// this module only wires the three engine touch points (advisory before
+// build-and-test, `--single`-free reach of a composed plugin stage, verdict
+// record on stage completion). It re-implements none of that logic.
+import {
+  ACTIVATION_PLUGIN,
+  ACTIVATION_WATCH_GLOBS,
+  activationAdvisoryForHost,
+  isComposedPluginStage,
+  recordActivationVerdict,
+} from "./amadeus-plugin-activation.ts";
 
 // Read the workflow state file if it exists, else null. The engine's `next` is
 // a pure read: an absent state file is a legitimate branch (no workflow yet),
@@ -962,6 +974,71 @@ function trustedPluginStageFile(slug: string): string | null {
 
 export function _trustedPluginStageFileForTests(slug: string): string | null {
   return trustedPluginStageFile(slug);
+}
+
+// ---------------------------------------------------------------------------
+// U6 activation-policy engine touch points (C6). All three delegate the DECISION
+// to amadeus-plugin-activation.ts (in-process seams) and keep the engine glue
+// thin. The plugin host root is the same one trustedPluginStageFile resolves
+// (env override, else the harness dir), so the composition record + spec files +
+// state file are all read from one consistent root. Resolution is total: a
+// missing/misconfigured root degrades to the raw path so an advisory failure can
+// never break `next`.
+// ---------------------------------------------------------------------------
+export function pluginActivationHostRoot(): string {
+  const configured = process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(TOOLS_DIR);
+  try {
+    return realpathSync(configured);
+  } catch {
+    return configured;
+  }
+}
+
+// The stage whose imminent directive triggers the advisory (business-logic-model
+// flow 2: "just before next emits the build-and-test directive").
+const ACTIVATION_ADVISORY_STAGE = "build-and-test";
+
+// Flow 2 — emit the formal-model-check activation advisory (stderr, at most one
+// line) when the engine is about to emit the build-and-test directive. Only the
+// build-and-test slug triggers it (single guarded call site — emitForSlug — so
+// no latch is needed for BR-U6-8). Silent when formal-model-check is not composed
+// (0-plugin zero-impact) or the spec is unchanged (`current`). Writes ONLY stderr
+// — the stdout directive JSON stays byte-pure (stdout-directive-stderr-advisory).
+export function emitActivationAdvisory(
+  slug: string,
+  hostRoot: string,
+  err: (line: string) => void,
+): void {
+  if (slug !== ACTIVATION_ADVISORY_STAGE) return;
+  const line = activationAdvisoryForHost(hostRoot);
+  if (line !== null) err(line);
+}
+
+// FR-7(a) — a compose-installed plugin stage is reachable via `--stage <slug>`
+// WITHOUT `--single`. When the requested stage is a composed plugin stage, emit
+// the isolated single run-stage and return true; otherwise return false so the
+// caller falls through to the normal jump path. Limited to compose-installed
+// plugin stages (BR-U6-5) — a stock stage is untouched.
+export function emitComposedPluginStageIfInstalled(
+  flags: ParsedFlags,
+  scope: string,
+  projectType: "brownfield" | "greenfield" | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx | undefined,
+  hostRoot: string,
+): boolean {
+  if (!flags.stage || flags.phase) return false;
+  if (!isComposedPluginStage(hostRoot, flags.stage)) return false;
+  emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx);
+  return true;
+}
+
+// Flow 4 — record the activation verdict when the formal-model-check stage
+// completes (the explicit-run completion signal). The SOLE writer of
+// SpecHashState (BR-U6-6); every advisory/doctor read path is read-only.
+export function recordActivationVerdictIfActivationStage(slug: string, hostRoot: string): void {
+  if (slug !== ACTIVATION_PLUGIN) return;
+  recordActivationVerdict(hostRoot, ACTIVATION_WATCH_GLOBS);
 }
 
 // --- The conductor persona (decision D-E, SPIKE 6) ---
@@ -2205,6 +2282,13 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // carrying resolved artifact paths (projectType feeds the conditional_on
   // filter for the jumped-to stage).
   if (flags.phase || flags.stage) {
+    // FR-7(a): a compose-installed plugin stage runs via `--stage <slug>` with
+    // NO `--single` — the opt-in reach that install alone grants. This precedes
+    // the jump path so a composed opt-in stage (scopes: []), which the jump would
+    // reject as "skipped for scope", instead runs as an isolated single stage.
+    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginActivationHostRoot())) {
+      return;
+    }
     emitJumpDirective(flags, scope, pd, projectType);
     return;
   }
@@ -2726,6 +2810,9 @@ function emitForSlug(
   codekbCtx: CodekbCtx,
   projectDir: string,
 ): void {
+  // Flow 2: the formal-model-check activation advisory fires here — the single
+  // guarded call site — just before the build-and-test directive is emitted.
+  emitActivationAdvisory(slug, pluginActivationHostRoot(), (line) => process.stderr.write(`${line}\n`));
   const node = nodeForSlug(slug);
   if (node && isPerUnit(node)) {
     emitPerUnitRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
@@ -3351,6 +3438,11 @@ function handleSingleReport(
     ));
     return;
   }
+
+  // Flow 4: a completed formal-model-check single run records the activation
+  // verdict (the current spec hash), the sole write of SpecHashState (BR-U6-6).
+  // A no-op for every other stage.
+  recordActivationVerdictIfActivationStage(node.slug, pluginActivationHostRoot());
 
   emit({
     kind: "done",

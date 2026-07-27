@@ -124,6 +124,12 @@ import {
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
+import {
+  buildDoctorPluginSection,
+  type DoctorPluginObservation,
+  doctorPluginRows,
+  readDoctorPluginObservation,
+} from "./amadeus-plugin.ts";
 import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
@@ -516,6 +522,10 @@ export interface DoctorContext {
   readonly scopeMapping: DeepReadonly<Record<string, ScopeDefinition>>;
   readonly artifactNames: readonly string[];
   readonly teamPrerequisites: readonly PrereqStatus[];
+  // Plugin state read once at context resolution (read-only). handleDoctor
+  // projects this into the --doctor plugin section (U5), so the report stays
+  // deterministic over a single snapshot rather than re-reading disk.
+  readonly pluginObservation: DoctorPluginObservation;
 }
 
 export interface DoctorRunResult {
@@ -614,6 +624,9 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const teamPrerequisites = deepFreezeDoctorSnapshot(
     detectTeamPrerequisites(process.env, probeExecutable),
   );
+  const pluginObservation = deepFreezeDoctorSnapshot(
+    readDoctorPluginObservation(projectDir),
+  ) as DoctorPluginObservation;
   return Object.freeze({
     projectDir,
     harnessDir: resolvedHarnessDir,
@@ -634,6 +647,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
     scopeMapping,
     artifactNames,
     teamPrerequisites,
+    pluginObservation,
   });
 }
 
@@ -1476,6 +1490,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     scopeMapping,
     artifactNames,
     teamPrerequisites,
+    pluginObservation,
   } = context;
   const results: DoctorCheckResult[] = [];
   const isWindows = platform === "win32";
@@ -2864,6 +2879,16 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
         });
       }
     }
+  }
+
+  // Plugin observability (U5). Projects the read-only plugin observation (read
+  // once at context resolution) into doctor rows via the pure branch-table
+  // projection — no new judgment or scan here (BR-U5-1). A 0-plugin host adds a
+  // single passing "Plugins: 0 installed" row (BR-U5-4); [degraded]/[recovery-
+  // pending]/[unknown] rows fail loudly and flow into the aggregate exit below
+  // (BR-U5-2/2b/8), while [drift]/[advisory] stay visible-but-passing.
+  for (const row of doctorPluginRows(buildDoctorPluginSection(pluginObservation))) {
+    results.push({ pass: row.pass, label: row.label });
   }
 
   // Print report

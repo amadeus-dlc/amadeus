@@ -41,3 +41,32 @@ Bolt 内順序(business-logic-model「engine 移設(C2)の実行順」= リス�
 
 ### 段7: 全検証
 - 転記は code-summary.md 「検証コマンドと exit」節に集約。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-26T19:04:32Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+BR-U2-1/3/4 は実コード裏取り済み、逸脱申告 3 件は妥当。Major 2: (1) BR-U2-11 DropsRecord 骨格が無申告で未実装(grep 0 件、FR-4(d) dropped-with-log 未実現) (2) BR-U2-6 の実起動テストが hook ファイル本体を迂回し CLI 直 spawn のみ(ラッパー分岐が未実行検証)。
+
+### Findings
+
+- [Major] BR-U2-11 DropsRecord 骨格の無申告未実装
+- [Major] BR-U2-6 の hook ファイル実起動検証の欠落(CLI 直 spawn のみ)
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-26T19:22:08Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Major 2 件の実測閉包を確認。DropsRecord 骨格は生きた配線(compose/drop 対称)+U5 正本形状一致、範囲限定は engine 実挙動の正確な記述。t299 は正準 hook の実 spawn 両分岐(15 pass 自走確認)。新規指摘なし。
+
+### Findings
+
+- None

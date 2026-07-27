@@ -143,6 +143,8 @@ Use this exact top-level structure:
 
 ## Verification contract
 
+## Conformance
+
 ## Ledger transition contract
 
 ## Handoff
@@ -152,6 +154,15 @@ For each domain, include a table with item ID, summary, disposition, local
 state, confidence, and implementation effect. Follow it with evidence,
 dependencies, risks, and verification details that remain readable without the
 ledger.
+
+The `## Conformance` section carries the upstream conformance-suite result — a
+second follow-state ground alongside the file diff (FR-10). It is rendered from
+`scripts/conformance-report.ts` (`buildConformanceReportSection` +
+`renderConformanceReportSection`), whose verdict is DERIVED from the t188
+conformance suite's real exit code and a machine recount of
+`tests/conformance/t188-trace.md` — never a hardcoded status. A **red** suite
+result blocks an `APPLIED` follow-state regardless of the diff. Do not hand-write
+this verdict; a hardcoded pass is a verification-theatre violation.
 
 The Handoff section must contain:
 

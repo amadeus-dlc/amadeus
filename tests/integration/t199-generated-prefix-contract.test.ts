@@ -37,6 +37,9 @@ const foreignPrefixContentAllowlist = new Set([
   "docs/research/upstream-sync/reports/v2.2.0-to-v2.3.0-plan.md",
   "docs/guide/18-migrating-upstream-v2.md",
   "docs/guide/18-migrating-upstream-v2.ja.md",
+  // U7 conformance trace: cites the pinned upstream repo by its real name as
+  // the provenance of the 32 traced cases.
+  "tests/conformance/t188-trace.md",
   "README.md",
   "README.ja.md",
   "amadeus/spaces/default/codekb/amadeus/business-overview.md",
