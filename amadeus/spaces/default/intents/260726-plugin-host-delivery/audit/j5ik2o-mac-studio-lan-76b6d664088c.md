@@ -28712,3 +28712,39 @@
 **Failed count**: 0
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T02:25:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u4
+**Agent ID**: abuilder-u4-94de6c3e744a2642
+**Message**: U4（hook-wiring-remaining）の code-generation を完了し、team-lead へ報告しました。\n\n## 実装結果サマリ\n\n**worktree** `bolt-hook-wiring-remaining` / **コミット** `08db9b23b`（push なし — finalize は conductor）\n\nU1 マトリクスの機械可読 Bolt6 結論
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T02:26:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u4
+**Agent ID**: abuilder-u4-94de6c3e744a2642
+**Message**: U4（hook-wiring-remaining）の code-generation は完了済みで、再通知された tasks 8・11 はいずれもその成果に含まれることを team-lead へ確認・ack しました。\n\n## 現状\n\n- **成果**: コミット `08db9b23b`（worktree `bolt-hook-wiring-remaining`、push なし）\n- **検証**
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-27T02:26:57Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 2 of 8 units are not yet complete (conformance-suite, docs-sync). Run `next` to continue the remaining units before approving.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T02:27:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u4
+**Agent ID**: areviewer-u4-249ab37824a4402d
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\n\nU4 hook-wiring-remaining のレビュー結果です。\n\n```json\n{"verdict":"READY","summary":"U4 wires the U2 core compose hook into the 5 remaining matrix-wired faces (cod
+
+---

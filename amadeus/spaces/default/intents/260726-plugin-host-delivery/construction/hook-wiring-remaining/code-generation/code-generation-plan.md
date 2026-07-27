@@ -67,3 +67,17 @@ coverage: 追加行の駆動面は (a) `scripts/plugin-projection.ts` の判定�
 ## 検証(同期・exit code 個別)
 
 `bun run typecheck` / `bun run lint` / `bash tests/run-tests.sh --ci` / `bun run dist:check` / `bun run promote:self:check` / `bun run coverage:ci`(lcov DA:0 diff 実測)。正本変更後 `bun scripts/package.ts`(7 ハーネス)+ `bun run promote:self`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T02:26:57Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U4 wires the U2 core compose hook into the 5 remaining matrix-wired faces (codex/cursor/kimi/kiro/kiro-ide) 1:1 with the U1 Bolt6 conclusion, keeps opencode degraded per the already-decided manual-only class, and proves auto-compose via a real adapter-file spawn (t328), not a manifest/CLI-only check.
+
+### Findings
+
+- None
