@@ -10,11 +10,11 @@ reports on it, and removes it again — all reversibly and without clobbering
 anything the workspace already owns.
 
 This chapter is the user-facing reference and the authoring guide. It describes
-what the plugin system supports today, what it deliberately defers, the
-user-visible safety contract, how to verify a plugin locally, and how the six
-packaged harness faces differ from the four self-install faces. It is not a copy
-of any upstream README — every path, command, and failure contract below is the
-Amadeus one.
+what the plugin system supports today, its command-line surface, how a plugin is
+composed into a host automatically at session start, what the safety contract
+guarantees, how to verify a plugin locally, and how the seven packaged harness
+faces differ from the five self-install faces. It is not a copy of any upstream
+README — every path, command, and failure contract below is the Amadeus one.
 
 The worked example is the reference plugin `test-pro`, kept as authoring source
 at `tests/fixtures/plugins/test-pro/` and driven end to end by
@@ -85,6 +85,112 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
 
 ---
 
+## The CLI
+
+Every host-side operation is a verb of the harness-neutral CLI
+`amadeus-plugin.ts`. Run it through the copy shipped into your harness tree — for
+Claude Code that is:
+
+```
+bun .claude/tools/amadeus-plugin.ts <verb> [flags]
+```
+
+Other harnesses substitute their own directory (`.codex`, `.cursor`, `.kimi`, and
+so on): `bun <harness-dir>/tools/amadeus-plugin.ts <verb>`. The verbs are:
+
+| Verb | What it does | Exit |
+| --- | --- | --- |
+| `compose [--if-stale] [--project-root <dir>]` | Apply every installed plugin to the host as one atomic transaction. `--if-stale` is a no-op fast path that returns immediately when the composition record is already current. | `0` on success or no-op; `1` on a failed apply |
+| `doctor [--project-root <dir>]` | Print each composed plugin's state (`ok`, `drift`, `recovery-pending`). | `0` when healthy; `1` when any plugin is degraded or recovery-pending |
+| `drop <plugin-name> [--project-root <dir>]` | Remove one plugin's owned files and rebuild the shared files from the remaining plugins. | `0` on success; `1` on a rejected or failed drop |
+| `status [--project-root <dir>]` | Print counts: installed, composed, and the audit revision. | `0` |
+
+`--project-root <dir>` targets a workspace other than the current directory — it
+is how you compose into a host that is not where the CLI lives (the `kiro` and
+`kiro-ide` faces, which are packaged but never self-installed, always need it).
+
+Argument handling is fail-closed and happens **before** any mutation: an unknown
+verb, an unknown flag, or a surplus argument prints usage on stderr and exits `2`
+without touching the host. There is no `--help` flag; run the CLI with no verb to
+see the usage block.
+
+---
+
+## Automatic composition at session start
+
+You do not normally run `compose` by hand. Each harness that exposes a
+session-start-equivalent hook wires an auto-compose call that runs
+`amadeus-plugin.ts compose --if-stale` when a session begins. Because of the
+`--if-stale` fast path, a session whose composition record is already current
+pays only a few `existsSync` probes and returns without recomposing, so the hook
+adds no startup latency in the common case. Any hook failure is a single stderr
+warning and a zero exit — a plugin problem never blocks the session.
+
+Six of the seven packaged faces wire this trigger; one does not:
+
+| Face | Session-start trigger | Auto-compose |
+| --- | --- | --- |
+| `claude` | `SessionStart` | wired |
+| `codex` | `SessionStart` | wired |
+| `cursor` | `sessionStart` | wired |
+| `kimi` | `SessionStart` | wired |
+| `kiro` | `agentSpawn` | wired |
+| `kiro-ide` | `promptSubmit` (idempotent via `--if-stale`) | wired |
+| `opencode` | none (only `chat.message` is exposed) | **degraded — manual only** |
+
+`opencode` is the `manual-only` class: it has no session-start seam, so its sole
+contract is the manual `compose` floor. A face is never silently skipped — the
+degrade is surfaced loudly through the doctor (below), and `doctor` on such a face
+emits `[degraded] opencode: no session-start trigger — run 'amadeus-plugin.ts
+compose' manually`.
+
+---
+
+## The plugin section of `--doctor`
+
+`/amadeus --doctor` includes a read-only plugin section that is a pure projection
+of three existing engine reads (the diagnostics, the composition revision, and the
+drops record) — it runs no new scan and makes no new judgment. Each row maps a
+state to a pass/fail contribution:
+
+| State | Meaning | Doctor |
+| --- | --- | --- |
+| `ok` | composed and matching the record (`composed@<rev>`) | visible, passing |
+| `drift` | a shared file diverged from the recorded composition | visible, passing |
+| `advisory` | a drop-time advisory the record carries | visible, passing |
+| `degraded` | a face or drop the record marks as degraded | **loud fail** |
+| `recovery-pending` | a crash left a pending recovery (`run compose to recover`) | **loud fail** |
+| `unknown` | a status or severity outside the known set (fail-closed) | **loud fail** |
+
+A host with no plugins degrades to a single passing row, `Plugins: 0 installed`,
+so the plugin section never flips a healthy `--doctor` exit on a plugin-free
+project. Any engine status or drop severity outside the known set is not trusted
+or silently dropped — it renders as an `unknown` row that fails the check.
+
+---
+
+## Installing a plugin into a host
+
+The packager emits a per-face **install bundle** for every one of the seven faces,
+alongside a top-level `INSTALL.md` whose steps are dispatched on the face's host
+class:
+
+- **`native-manifest`** (`claude`) — install through the host plugin marketplace
+  using `.claude-plugin/plugin.json`; auto-compose runs from `hooks/hooks.json`.
+- **`folder-drop-auto`** (`codex`, `cursor`, `kimi`, `kiro`, `kiro-ide`) — copy the
+  bundle's `plugins/<name>/` into `<harness-dir>/plugins/<name>/`; auto-compose is
+  wired from `hooks/auto-compose.snippet`.
+- **`manual-only`** (`opencode`) — copy the folder; there is no session hook, so
+  run `compose` after install and after every plugin change.
+
+Composition refuses to write into an output directory unless it is empty or is our
+own prior projection of the *same* plugin and harness. A pre-existing non-empty
+directory, a projection of a *different* plugin or harness, a regular file, a
+symlink, or a broken symlink at the target is each rejected with its own reason —
+never a raw filesystem stack, and never a clobber.
+
+---
+
 ## The safety contract
 
 These guarantees are user-visible and hold for every compose and drop:
@@ -123,6 +229,19 @@ more. Treat any of the above as a future capability, not a current one.
 
 ---
 
+## Activation policy: formal-model-check
+
+The bundled `formal-model-check` plugin is *advisory only*. Amadeus computes a
+deterministic hash of its spec files (`specs/tla/**`) and compares it against the
+last recorded verdict. When the hash has changed — or has never been recorded —
+the engine renders a stderr-only advisory before build-and-test, and the doctor
+adds a `formal-model-check: spec-hash CHANGED` activation line. Nothing runs the
+model checker (TLC) automatically and nothing writes state on your behalf: the
+advisory tells you the spec drifted so *you* can decide to re-run the check. When
+the hash matches, the advisory is silent.
+
+---
+
 ## Verifying a plugin
 
 Verification is local and temporary — you never mutate the committed tree to try
@@ -145,12 +264,12 @@ clean afterwards.
 
 ---
 
-## Six packaged faces, four self-install faces
+## Seven packaged faces, five self-install faces
 
-The packager projects every plugin into **six** harness faces: `claude`, `codex`,
-`cursor`, `kiro`, `kiro-ide`, and `opencode`. Self-install — the reflection of a
-harness into the project root — stays the **closed four**: `claude`, `codex`,
-`cursor`, and `opencode`. `kiro` and `kiro-ide` are packaged but never promoted to
-the project root. The two matrices are verified against separate expected sets;
-one is never used as a stand-in for the other, and the four is never widened to
-six.
+The packager projects every plugin into **seven** harness faces: `claude`,
+`codex`, `cursor`, `kiro`, `kiro-ide`, `opencode`, and `kimi`. Self-install — the
+reflection of a harness into the project root — stays the **closed five**:
+`claude`, `codex`, `cursor`, `opencode`, and `kimi`. `kiro` and `kiro-ide` are
+packaged but never promoted to the project root. The two matrices are verified
+against separate expected sets; one is never used as a stand-in for the other, and
+the five is never widened to seven.
