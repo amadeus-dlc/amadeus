@@ -22,10 +22,10 @@
 
 ### 1. ステージがどのフェーズに属するかを決める
 
-ステージファイルは `core/amadeus-common/stages/<phase>/<slug>.md` に置かれます。フェーズはディレクトリです。5つあります:
+ステージファイルは `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` に置かれます。フェーズはディレクトリです。5つあります:
 
 ```
-core/amadeus-common/stages/
+packages/framework/core/amadeus-common/stages/
 ├── initialization/
 ├── ideation/
 ├── inception/
@@ -65,10 +65,10 @@ core/amadeus-common/stages/
 
 ### 4. ハーネスを再生成し、`stage-graph.json` を再コンパイルする
 
-あなたが `core/` 配下に作成した YAML が正典のソースです。パッケージャーを実行して、すべての `dist/<harness>/` ツリーを `core/` から再生成します — これにより新しいステージファイルがコピーされ、グラフが再コンパイルされます:
+あなたが `packages/framework/core/` 配下に作成した YAML が正典のソースです。パッケージャーを実行して、すべての `dist/<harness>/` ツリーを `packages/framework/core/` から再生成します — これにより新しいステージファイルがコピーされ、グラフが再コンパイルされます:
 
 ```bash
-bun scripts/package.ts            # core/ + harness/ からすべてのハーネスを再生成
+bun scripts/package.ts            # packages/framework/core/ + packages/framework/harness/ からすべてのハーネスを再生成
 bun scripts/package.ts --check    # CI ドリフトガード — コミット前に実行
 ```
 
@@ -78,7 +78,7 @@ bun scripts/package.ts --check    # CI ドリフトガード — コミット前
 bun .claude/tools/amadeus-graph.ts compile
 ```
 
-いずれにせよ、この作成フローは一方向のパイプラインです — `core/` の YAML を編集し、パッケージャーを実行(またはインストール済みツリーに対して `compile`)すると、JSON が更新され、ランタイムのローダー(`loadStageGraph()`)が新しいノードをそのまま拾います。`stage-graph.json` を手作業で編集してはいけません。それはビルド成果物であり、手編集は次のコンパイルで上書きされます。完全なパイプライン図と CI ドリフトガードは [Authoring flow](../reference/15-stage-definition.ja.md#authoring-flow) にあります。
+いずれにせよ、この作成フローは一方向のパイプラインです — `packages/framework/core/` の YAML を編集し、パッケージャーを実行(またはインストール済みツリーに対して `compile`)すると、JSON が更新され、ランタイムのローダー(`loadStageGraph()`)が新しいノードをそのまま拾います。`stage-graph.json` を手作業で編集してはいけません。それはビルド成果物であり、手編集は次のコンパイルで上書きされます。完全なパイプライン図と CI ドリフトガードは [Authoring flow](../reference/15-stage-definition.ja.md#authoring-flow) にあります。
 
 ### 5. 出現することを確認する — そしてどのスコープでか
 

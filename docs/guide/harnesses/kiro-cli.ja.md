@@ -87,14 +87,14 @@ per-scope(`/amadeus-feature`)のランナースキルがインストールされ
 
 ## フレームワーク開発者向け
 
-`dist/kiro` は `bun scripts/package.ts kiro` によって `core/` + `harness/kiro/`
+`dist/kiro` は `bun scripts/package.ts kiro` によって `packages/framework/core/` + `packages/framework/harness/kiro/`
 から **生成** されます(`{{HARNESS_DIR}}` トークンを `.kiro` に置換し、
 `rules/` → `steering/` をリネームしたコアコピー)。`bun scripts/package.ts --check`
 がドリフトガードで、CI(t145)で実行されます。作成された Kiro サーフェスは
-`harness/kiro/` にあります: オーケストレータースキル(`skills/amadeus/`)、
+`packages/framework/harness/kiro/` にあります: オーケストレータースキル(`skills/amadeus/`)、
 エージェント JSON(`agents/`)、フックアダプタ
 (`hooks/amadeus-kiro-adapter.ts`)、`settings/cli.json`、`AGENTS.md` — それら
-(または `core/`)を編集し、生成された `dist/kiro` は決して編集しないでください。
+(または `packages/framework/core/`)を編集し、生成された `dist/kiro` は決して編集しないでください。
 [新しいハーネスへの移植](../../harness-engineering/09-porting-to-a-new-harness.ja.md) を参照。
 
 Claude のツインと並んでライブな TUI 旅路テストが存在します:

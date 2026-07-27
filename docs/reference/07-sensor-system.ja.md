@@ -12,7 +12,7 @@
 位置づけます。
 
 この章はマニフェストの*ファイルフォーマット*を扱います — センサーマニフェストが
-何を含むか、ステージがどのようにセンサーをインポートするか、出荷された4つのマニフェストが
+何を含むか、ステージがどのようにセンサーをインポートするか、出荷されたマニフェストが
 どう設定されているかです。ワークフロー中にセンサーがどう発火するかのユーザー向けの
 ビューについては、ユーザーガイドの[ルールと学習ループ](../guide/09-rules-and-the-learning-loop.ja.md)を
 参照してください。
@@ -48,7 +48,7 @@ dist/claude/.claude/sensors/amadeus-<id>.md
 | `amadeus-required-sections.md` | `required-sections` |
 | `amadeus-linter.md` | `linter` |
 
-filename↔id ルールは `tests/unit/t86-sensor-manifest-schema.sh` によって強制されます。
+filename↔id ルールは `tests/unit/t86-sensor-manifest-schema.test.ts` によって強制されます。
 `amadeus-` プレフィックスは**すべてのセンサーに必須であり、カスタムの
 ユーザー出荷センサーも含みます**: コンパイルリゾルバは
 `SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/`(`amadeus-graph.ts` の `loadSensors`)で
@@ -96,7 +96,7 @@ timeout_seconds: 5                           # optional
 | `command` | ✓ | string | 正典の呼び出しプレフィックス — 出荷された各センサーは自身のper-sensorスクリプトを名指しする(例 `bun .claude/tools/amadeus-sensor-required-sections.ts`)。ディスパッチャ(`amadeus-sensor.ts`)は `--stage <slug>` に加え、センサーの入力形状に一致するファイルフラグを追加する: document センサーは `--output-path <path>`、code センサー(`linter`、`type-check`)は `--file-path <path>`。 |
 | `default_severity` | ✓ | enum | 現在は `advisory` のみ受け付ける。`blocking` は将来の ralph-driver 作業のために予約。 |
 | `description` | ✓ | string | 1行の人間向け説明。 |
-| `category` | optional | string | フリーフォームの記述ラベル(出荷された4つのマニフェストは `document-shape` と `code-quality` を使う。閉じたenumではない)。 |
+| `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`formal-verification` を使う。閉じたenumではない)。 |
 | `matches` | optional | glob文字列 | PostToolUse フックが発火時に消費する能力フィルタ。下記の[`matches` フィルタ](#matches-filter)を参照。 |
 | `input_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがテンプレート化の契約として使う。 |
 | `output_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがパースの契約として使う。 |
@@ -204,7 +204,7 @@ outputs: ...
 `matches` **こそが**発火フィルタです — 実際にはオプションではありません。フックは
 書き込まれるパスをglobと比較し、一致した場合のみ発火します。
 `matches` globを**持たない**エントリは一切発火しません(`amadeus-sensor-fire.ts`:
-`if (!entry.matches) continue`)。したがって出荷された4つのマニフェストはすべて
+`if (!entry.matches) continue`)。したがって出荷されたマニフェストはすべて
 1つを宣言します — 2つのdocument-shapeセンサーはartifact treeにスコープし(出荷された
 マニフェストは上記に示した `matches` 値を持つ)、2つの
 code-qualityセンサーはそれぞれの言語globにスコープします。コンパイルリゾルバは
@@ -345,7 +345,7 @@ selections-file はリプレイの成果物です: クラッシュした persist
 内容は不変ではない)を成長させ、`## Steps` / `## Sensors`
 / `## Learn` の本文は決して成長させません。
 
-出荷された4つのマニフェストは、これらのデフォルトが後に進化する
+出荷されたマニフェストは、これらのデフォルトが後に進化する
 バリエーションを示します: `amadeus-required-sections.md` と
 `amadeus-upstream-coverage.md` は、artifact-treeの `matches` glob(上記の `matches` テーブルに
 示した値)とともに `timeout_seconds: 5` を使います。

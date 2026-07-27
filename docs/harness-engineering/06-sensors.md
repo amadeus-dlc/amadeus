@@ -10,7 +10,7 @@ rule says "user stories follow Given/When/Then"; a sensor verifies, byte for
 byte, that the required headings are present in the file the agent just wrote.
 
 This chapter narrates the work a harness engineer actually does with sensors:
-understand the four that ship, author a new manifest, and bind it to the stages
+understand the ones that ship, author a new manifest, and bind it to the stages
 that should run it. The full field-by-field contract lives in
 [Sensor System](../reference/07-sensor-system.md) in the Developer Reference —
 this chapter points down to it at each schema decision rather than restating it.
@@ -20,7 +20,7 @@ this chapter points down to it at each schema decision rather than restating it.
 ## What a sensor is
 
 A sensor manifest is a Markdown file with YAML frontmatter, dropped under
-`core/sensors/`. The frontmatter is a pure **capability descriptor** — it
+`packages/framework/core/sensors/`. The frontmatter is a pure **capability descriptor** — it
 says what the check is and how to invoke it. It says nothing about which stages
 use it. That binding lives on the stage side, which is the central idea of this
 chapter and the reason a manifest and a stage stay loosely coupled.
@@ -54,24 +54,28 @@ User Guide.
 
 ---
 
-## The four sensors that ship
+## The sensors that ship
 
-Four manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
+These manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 
 | Manifest | Fires on | Checks |
 |----------|----------|--------|
 | `amadeus-required-sections.md` | record-dir markdown output | The output carries the required H2 headings — a generic content-shape check |
 | `amadeus-upstream-coverage.md` | record-dir markdown output | The prose references each upstream artifact the stage declares it consumes |
+| `amadeus-answer-evidence.md` | a stage's `*-questions.md` | A filled `[Answer]` carries a ruling reference (E-code) or a leader-approval timestamp |
 | `amadeus-linter.md` | `.ts` / `.js` code output | Wraps your configured linter (ESLint by default) |
 | `amadeus-type-check.md` | `.ts` / `.tsx` code output | Wraps your configured type-checker (`tsc` by default) |
+| `amadeus-model-completeness.md` | the TLA model and its canonical implementation files | Drift between the `FormalElection` TLA model and the election implementation |
 
-All four are gated by a `matches:` glob (more on that below): the first two
+Every one of them is gated by a `matches:` glob (more on that below): the first two
 document-shape checks scope to the artifact tree (the shipped manifests carry
 `**/{amadeus-docs,intents}/**` — the per-intent record tree, with the legacy
 `amadeus-docs/` arm kept for a pre-migration project), the two code-quality checks
-to their language globs (`**/*.{ts,js}`, `**/*.{ts,tsx}`).
+to their language globs (`**/*.{ts,js}`, `**/*.{ts,tsx}`), the answer-evidence
+check to the questions file (`**/*-questions.md`), and the model check to the
+spec and implementation paths it compares.
 Read `amadeus-required-sections.md` end to end before authoring your own — it is
-the smallest of the four and shows the whole shape, frontmatter plus prose body.
+the smallest of them and shows the whole shape, frontmatter plus prose body.
 
 ---
 
@@ -82,7 +86,7 @@ the framework deliberately removed it. A stage decides what fires on its
 outputs by naming the sensor in its own frontmatter:
 
 ```yaml
-# core/amadeus-common/stages/construction/code-generation.md
+# packages/framework/core/amadeus-common/stages/construction/code-generation.md
 ---
 slug: code-generation
 phase: construction
@@ -121,7 +125,7 @@ full resolver mechanics are in
 
 Adding a sensor is two writes: the manifest, then the binding.
 
-**1. Drop a manifest at `core/sensors/amadeus-<id>.md`.** The filename stem
+**1. Drop a manifest at `packages/framework/core/sensors/amadeus-<id>.md`.** The filename stem
 (minus the `amadeus-` prefix) must equal the frontmatter `id:`. The frontmatter is
 short — five required fields and a handful of optional ones:
 
@@ -158,7 +162,7 @@ The `amadeus-` filename prefix is mandatory for every sensor, custom ones
 included — the compile resolver (`loadSensors` in `amadeus-graph.ts`) discovers
 manifests with `SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/` and silently
 skips any file without the prefix, so it is never discovered and never binds to a
-stage. Name your sensor `core/sensors/amadeus-<id>.md` and set `id: <id>`; the
+stage. Name your sensor `packages/framework/core/sensors/amadeus-<id>.md` and set `id: <id>`; the
 filename-to-id rule applies to the stem after the prefix.
 
 ---

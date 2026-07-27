@@ -13,7 +13,7 @@ frames both as control-plane inputs that the compile resolves into each
 stage node.
 
 This chapter covers the manifest *file format* — what a sensor manifest
-contains, how stages import sensors, and how the four shipped manifests
+contains, how stages import sensors, and how the shipped manifests
 are configured. For the user-facing view of how sensors fire during a
 workflow, see [Rules and the Learning Loop](../guide/09-rules-and-the-learning-loop.md)
 in the User Guide.
@@ -49,7 +49,7 @@ the `.md` suffix stripped:
 | `amadeus-required-sections.md` | `required-sections` |
 | `amadeus-linter.md` | `linter` |
 
-The filename↔id rule is enforced by `tests/unit/t86-sensor-manifest-schema.sh`.
+The filename↔id rule is enforced by `tests/unit/t86-sensor-manifest-schema.test.ts`.
 The `amadeus-` prefix is **mandatory for all sensors, including custom
 user-shipped ones**: the compile resolver discovers manifests with
 `SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/` (`loadSensors` in
@@ -97,7 +97,7 @@ timeout_seconds: 5                           # optional
 | `command` | ✓ | string | Canonical invocation prefix — each shipped sensor names its own per-sensor script (e.g. `bun .claude/tools/amadeus-sensor-required-sections.ts`). The dispatcher (`amadeus-sensor.ts`) appends `--stage <slug>` plus the file flag matching the sensor's input shape: `--output-path <path>` for document sensors, `--file-path <path>` for the code sensors (`linter`, `type-check`). |
 | `default_severity` | ✓ | enum | Only `advisory` is accepted today; `blocking` reserved for the future ralph-driver work. |
 | `description` | ✓ | string | One-line human description. |
-| `category` | optional | string | Free-form descriptive label (the four shipped manifests use `document-shape` and `code-quality`; not a closed enum). |
+| `category` | optional | string | Free-form descriptive label (the shipped manifests use `document-shape`, `code-quality`, `governance`, and `formal-verification`; not a closed enum). |
 | `matches` | optional | glob string | Capability filter consumed by the PostToolUse hook at fire time. See [`matches` filter](#matches-filter) below. |
 | `input_schema` | optional | object | Advisory today; future LLM dispatch will use it as a templating contract. |
 | `output_schema` | optional | object | Advisory today; future LLM dispatch will use it as a parsing contract. |
@@ -205,7 +205,7 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 `matches` **is** the fire filter — it is not optional in practice. The hook
 compares the path being written against the glob and fires only on a match;
 an entry **without** a `matches` glob never fires at all (`amadeus-sensor-fire.ts`:
-`if (!entry.matches) continue`). All four shipped manifests therefore declare
+`if (!entry.matches) continue`). All shipped manifests therefore declare
 one — the two document-shape sensors scope to the artifact tree (the shipped
 manifests carry the `matches` value shown above), the two
 code-quality sensors to their language globs. The compile resolver copies
@@ -347,7 +347,7 @@ is the one sanctioned stage-frontmatter edit: it grows the import list
 (immutable in shape, not in contents), never the `## Steps` / `## Sensors`
 / `## Learn` body.
 
-The four shipped manifests illustrate the variation these defaults
+The shipped manifests illustrate the variation these defaults
 later evolve into: `amadeus-required-sections.md` and
 `amadeus-upstream-coverage.md` use `timeout_seconds: 5` with their
 artifact-tree `matches` glob (the value shown in the `matches` table above);
@@ -399,5 +399,5 @@ is an author error that the parser rejects.
   at workflow start and read off the graph node at fire time. See
   [Plane Architecture](02-plane-architecture.md).
 
-The schema above plus the four shipped manifests in
+The schema above plus the shipped manifests in
 `dist/claude/.claude/sensors/` are the working examples.

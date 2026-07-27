@@ -19,7 +19,7 @@
 
 この分割は、あなたが何を編集しているのかを知る鍵です。フロントマターのフィールドを変えれば*グラフ*(依存エッジ、リードエージェント、実行モード)を変えたことになります。本文を変えれば*作業*(エージェントが実際に何をするか)を変えたことになります。両者は独立しています。
 
-実際のステージは `core/amadeus-common/stages/<phase>/<slug>.md` で作成されます — 例えば `stages/inception/application-design.md` です。本章と並べて 1 つ開いてみてください。読み終わる頃には形が馴染んでいるはずです。
+実際のステージは `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` で作成されます — 例えば `stages/inception/application-design.md` です。本章と並べて 1 つ開いてみてください。読み終わる頃には形が馴染んでいるはずです。
 
 ---
 
@@ -42,7 +42,7 @@
 - **`consumes[].conditional_on` は brownfield/greenfield の分岐を捉えます。** `conditional_on: brownfield` とマークされた消費は、ワークフローが brownfield のときのみ必須です。無条件の消費については、フィールドを完全に省略します — `always` という値は存在しません。
 - **`mode` はディスパッチの仕組みです。** `inline` は短いステージをコンダクター自身のコンテキストで実行します。`subagent` は長いステージ(Construction のコード生成など)を新しいコンテキストに委譲し、メインのコンテキストウィンドウを溢れさせないようにします。複数のエージェントが 1 つのステージに関わることは、`mode` ではなく `support_agents` で表現します — コンダクターはまずリードを、次に各サポーターを順に呼び出します。
 - **`for_each` は反復の成果物を名指しします。** Unit ごとに 1 回実行される 5 つの Construction ステージは `for_each: unit-of-work` を宣言します。他のステージはこのフィールドを省略し、1 回だけ実行されます。集約はグラフから推論され、宣言されません。
-- **`lead_agent` と `support_agents` は `core/agents/*.md` に対して検証されます。** ハードコードされたリストはありません — エージェントの追加は、そのファイルをそのディレクトリに置くことを意味します([エージェントの追加](03-adding-an-agent.ja.md)を参照)。
+- **`lead_agent` と `support_agents` は `packages/framework/core/agents/*.md` に対して検証されます。** ハードコードされたリストはありません — エージェントの追加は、そのファイルをそのディレクトリに置くことを意味します([エージェントの追加](03-adding-an-agent.ja.md)を参照)。
 
 これはオリエンテーションであって契約ではありません。型、制約、そして AI-DLC が後に追加する予約名前空間フィールドを含む完全なフィールド表については、開発者リファレンスの[フィールドリファレンス — いつ使うか](../reference/15-stage-definition.ja.md#field-reference--when-to-use)を読んでください。
 

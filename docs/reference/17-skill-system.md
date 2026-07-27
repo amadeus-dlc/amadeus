@@ -14,7 +14,7 @@ This chapter is the canonical reference for the orchestration architecture that 
 
 The cutover splits one concern into two. The **engine** owns *between-stage routing* — scope resolution, the flag-precedence ladder, jump-direction computation, resume and init guards, stage sequencing, gate status, and workflow completion. The **conductor** owns *execution quality inside the move the engine named* — framing the persona, asking good questions, keeping the stage diary, the intra-stage Keep/Modify/Redo loop, and surfacing judgement to the human at gates.
 
-The engine is authored at `core/tools/amadeus-orchestrate.ts` and ships into each harness as `<harness-dir>/tools/amadeus-orchestrate.ts` (e.g. `.claude/tools/`); it is a Bun CLI with exactly two subcommands:
+The engine is authored at `packages/framework/core/tools/amadeus-orchestrate.ts` and ships into each harness as `<harness-dir>/tools/amadeus-orchestrate.ts` (e.g. `.claude/tools/`); it is a Bun CLI with exactly two subcommands:
 
 | Subcommand | Role | Mutates state? |
 |------------|------|----------------|
@@ -81,7 +81,7 @@ On the interactive path the conductor holds the loop, because only it can ask th
 
 ## 4. Plural skills, runners, and the shared spine
 
-The orchestrator is one skill among many. Each harness ships a plural set under its skills directory (`<harness-dir>/skills/`, e.g. `dist/claude/.claude/skills/`): the base `amadeus` orchestrator, one **stage-runner** per runnable stage (`amadeus-<slug>`), one **scope-runner** per first-batch scope (`amadeus-<scope>`), the read-only session skills (`amadeus-session-cost`, `amadeus-replay`, `amadeus-outcomes-pack`, `amadeus-grilling`), and `amadeus-init`. All of the routing-and-execution knowledge lives once in the **shared spine** authored at `core/amadeus-common/` (shipped as `<harness-dir>/amadeus-common/`): the `conductor.md` persona, the `protocols/`, and the 32 stage files under `stages/{initialization,ideation,inception,construction,operation}/`.
+The orchestrator is one skill among many. Each harness ships a plural set under its skills directory (`<harness-dir>/skills/`, e.g. `dist/claude/.claude/skills/`): the base `amadeus` orchestrator, one **stage-runner** per runnable stage (`amadeus-<slug>`), one **scope-runner** per first-batch scope (`amadeus-<scope>`), the read-only session skills (`amadeus-session-cost`, `amadeus-replay`, `amadeus-outcomes-pack`, `amadeus-grilling`), and `amadeus-init`. All of the routing-and-execution knowledge lives once in the **shared spine** authored at `packages/framework/core/amadeus-common/` (shipped as `<harness-dir>/amadeus-common/`): the `conductor.md` persona, the `protocols/`, and the 32 stage files under `stages/{initialization,ideation,inception,construction,operation}/`.
 
 The runner skills are generated, never hand-written, by `tools/amadeus-runner-gen.ts`:
 

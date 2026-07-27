@@ -5,7 +5,7 @@
 出典(一次情報): `amadeus-dlc/amadeus` v2ブランチ(commit 9b77786, 2026-07時点)
 - 公式リファレンス: `docs/guide/14-artifacts-reference.md`(ディレクトリツリー・git方針)
 - ワークスペース構造: `docs/guide/03-spaces-and-intents.md`
-- 正確なファイル名: `core/amadeus-common/stages/*/*.md` 全31ステージのfrontmatter `outputs:` から抽出
+- 正確なファイル名: `packages/framework/core/amadeus-common/stages/*/*.md` 全32ステージのfrontmatter `outputs:` から抽出
 
 ---
 
@@ -29,10 +29,11 @@
 │       ├── inception/
 │       ├── construction/
 │       └── operation/
-├── hooks/                                                # Claude Code hook本体(11本)
+├── hooks/                                                # Claude Code hook本体(フレームワークのフック)
 │   ├── amadeus-audit-logger.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
+│   ├── amadeus-plugin-compose.ts
 │   ├── amadeus-runtime-compile.ts
 │   ├── amadeus-sensor-fire.ts
 │   ├── amadeus-session-end.ts
@@ -49,7 +50,9 @@
 ├── scopes/                                               # scope定義(amadeus-mvp等)
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # 決定論センサー定義
+│   ├── amadeus-answer-evidence.md
 │   ├── amadeus-linter.md
+│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
@@ -78,11 +81,12 @@
 │   ├── conductor.md
 │   ├── protocols/
 │   └── stages/
-├── hooks/                                                # Codex hook本体(Claude共通11本 + Codex adapter)
+├── hooks/                                                # Codex hook本体(Claude共通のフレームワークフック + Codex adapter)
 │   ├── amadeus-codex-adapter.ts
 │   ├── amadeus-audit-logger.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
+│   ├── amadeus-plugin-compose.ts
 │   ├── amadeus-runtime-compile.ts
 │   ├── amadeus-sensor-fire.ts
 │   ├── amadeus-session-end.ts
@@ -99,7 +103,9 @@
 ├── scopes/                                               # scope定義(amadeus-mvp等)
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # 決定論センサー定義
+│   ├── amadeus-answer-evidence.md
 │   ├── amadeus-linter.md
+│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
@@ -153,7 +159,7 @@ amadeus/
 
 | パス | 役割 | 手編集 | git |
 |---|---|---|---|
-| `.claude/` | Claude Code向けの実行エンジン。`dist/claude/` から昇格される生成物 | 原則しない。`core/` または `harness/claude/` を編集して再生成 | コミット |
+| `.claude/` | Claude Code向けの実行エンジン。`dist/claude/` から昇格される生成物 | 原則しない。`packages/framework/core/` または `packages/framework/harness/claude/` を編集して再生成 | コミット |
 | `.codex/` | Codex CLI向けの実行エンジン。`dist/codex/` からコピー/昇格される生成物 | 生成物は原則として直接編集しない。ローカルのactive `hooks.json`はCodex連携が更新する場合がある | `.codex/hooks.json`を除いてコミット。active fileはgitignore |
 | `.agents/` | Codexがskillとして読む配布先。`$amadeus` と各stage runnerを含む | 原則しない。生成元を編集して再生成 | コミット |
 | `amadeus/` | AI-DLCの中立ワークスペース。space、intent、state、audit、artifact、team memoryを保持 | `memory/` と成果物は通常のレビュー対象。runtime一時ファイルは手編集しない | コミット + 一部gitignore |

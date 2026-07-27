@@ -8,7 +8,7 @@ architecture, AWS platform, compliance, DevSecOps, development, quality,
 pipeline-deploy, and operations. When your team needs a domain the framework
 doesn't cover (a data-governance reviewer or a mobile specialist, say), you
 add a persona by dropping a single Markdown file
-into `core/agents/`. No TypeScript.
+into `packages/framework/core/agents/`. No TypeScript.
 
 This chapter walks the workflow: what a persona file is, the judgment calls in
 its frontmatter, and the two-step truth that an agent which is *visible* is not
@@ -20,7 +20,7 @@ Agents](../guide/06-agents.md).
 
 ## What a persona file is, and where it lives
 
-Every agent is one flat file at `core/agents/<slug>-agent.md`: YAML
+Every agent is one flat file at `packages/framework/core/agents/<slug>-agent.md`: YAML
 frontmatter on top, a Markdown body below. The shipped files all carry the
 `amadeus-` prefix (`amadeus-architect-agent.md`, `amadeus-developer-agent.md`); a file
 you add is yours and need not use that prefix. Treat the shipped 11 as
@@ -36,7 +36,7 @@ machine-read; the body is for the agent's own framing, and you write it to
 match the structure of the shipped files.
 
 Here is the frontmatter from a real agent, authored at
-`core/agents/amadeus-architect-agent.md`:
+`packages/framework/core/agents/amadeus-architect-agent.md`:
 
 ```yaml
 ---
@@ -128,7 +128,7 @@ new persona to work, edit the stage that should use it; the binding mechanics
 live in [Adding a Stage](02-adding-a-stage.md).
 
 Each agent also pairs with a knowledge directory you author at
-`core/knowledge/amadeus-<slug>-agent/` (framework methodology) and an optional team
+`packages/framework/core/knowledge/amadeus-<slug>-agent/` (framework methodology) and an optional team
 overlay at the space level, `amadeus/knowledge/<slug>-agent/` (your standards). The
 space-level `amadeus/knowledge/` directory is free-form and empty at bootstrap; the
 team creates the per-agent subdirectory when it has content — the engine does not
@@ -141,16 +141,16 @@ scaffold it. The two-tier knowledge workflow is covered in
 
 Mirroring the reference recipe, here is the workflow end to end.
 
-1. **Create the agent file** — `core/agents/<slug>-agent.md` with the
+1. **Create the agent file** — `packages/framework/core/agents/<slug>-agent.md` with the
    required frontmatter: `name`, `display_name`, `examples`, `description`,
    `disallowedTools` (including `Task`), `model`. An optional `tools:`
    allowlist narrows the persona; omit it to inherit the full session toolset.
    Write the body to match the shipped files' structure (Core Responsibilities,
    Stages Owned, Collaboration, Knowledge Loading, Key Principles).
-2. **Add knowledge files** under `core/knowledge/amadeus-<slug>-agent/` for the
+2. **Add knowledge files** under `packages/framework/core/knowledge/amadeus-<slug>-agent/` for the
    methodology the persona should load on activation.
 3. **Wire it into stages** — add the slug to the `lead_agent` /
-   `support_agents` frontmatter of each stage file (`core/amadeus-common/stages/<phase>/<slug>.md`)
+   `support_agents` frontmatter of each stage file (`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`)
    where it leads or supports, then recompile (`bun .claude/tools/amadeus-graph.ts compile`)
    so `stage-graph.json` regenerates. Never hand-edit `stage-graph.json` — it is
    a build artifact, and the next compile overwrites a manual change (see

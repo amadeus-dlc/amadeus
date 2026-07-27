@@ -4,7 +4,7 @@
 
 A scope is the dial that decides *which* of the framework's 32 stages run for a given kind of work, and which sit out. A bugfix doesn't need market research or a deployment pipeline; a regulated enterprise feature needs all of it. Rather than asking the user to hand-pick stages every time, AI-DLC ships ten named scopes — each one a curated EXECUTE/SKIP verdict over the full stage set, paired with a default depth and test strategy. Pick the scope and the rest cascades.
 
-For a harness engineer, a scope is pure data, authored the same way every other primitive is — as a file. It is two halves: one `core/scopes/amadeus-<name>.md` file (its identity — name, depth, keywords, description) plus a per-stage membership tag (each stage's frontmatter `scopes:` list naming the scopes it runs under). Adding or tuning a scope requires no TypeScript. This chapter walks the workflow: what a scope is made of, how to add a team scope, how to tune an existing one, and what the tooling checks for you versus what it leaves to you.
+For a harness engineer, a scope is pure data, authored the same way every other primitive is — as a file. It is two halves: one `packages/framework/core/scopes/amadeus-<name>.md` file (its identity — name, depth, keywords, description) plus a per-stage membership tag (each stage's frontmatter `scopes:` list naming the scopes it runs under). Adding or tuning a scope requires no TypeScript. This chapter walks the workflow: what a scope is made of, how to add a team scope, how to tune an existing one, and what the tooling checks for you versus what it leaves to you.
 
 For the full ten-scope catalog with use cases and the routing table users read, see [Scopes, Depth, and Test Strategy](../guide/05-scopes-and-depth.md) in the User Guide. This chapter is the authoring side of that same data.
 
@@ -14,7 +14,7 @@ For the full ten-scope catalog with use cases and the routing table users read, 
 
 A scope is authored in two places, and the split is the whole idea: the scope's *identity* lives in its own file, and its *membership* (which stages run under it) lives transposed onto the stages.
 
-**1. The scope file — `core/scopes/amadeus-<name>.md`.** One file per scope, mirroring `core/sensors/`. The `feature` scope's frontmatter looks like this:
+**1. The scope file — `packages/framework/core/scopes/amadeus-<name>.md`.** One file per scope, mirroring `packages/framework/core/sensors/`. The `feature` scope's frontmatter looks like this:
 
 ```yaml
 ---
@@ -39,7 +39,7 @@ The frontmatter fields divide into one required field and three optional knobs:
 | `keywords` | No | Natural-language triggers for `/amadeus <freeform text>` auto-detection. Empty list opts out. |
 | `description` | No | The one-liner rendered in `/amadeus --help`. (The compiled scope-table in SKILL.md shows only Scope / Depth / TestStrategy / EXECUTE / Total, leaving the description out.) |
 
-**2. The membership tag — each stage's `scopes:` frontmatter.** A stage names the scopes it runs under in its own frontmatter, in `core/amadeus-common/stages/<phase>/<slug>.md`:
+**2. The membership tag — each stage's `scopes:` frontmatter.** A stage names the scopes it runs under in its own frontmatter, in `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`:
 
 ```yaml
 scopes:
@@ -72,9 +72,9 @@ Suppose your team wants a `hotfix` scope — leaner than `bugfix`, for the urgen
 
 ### Steps
 
-1. **Drop `core/scopes/amadeus-hotfix.md`.** Copy `amadeus-bugfix.md` (the closest existing scope) and edit the frontmatter: set `name: hotfix`, pick `depth`, add `keywords` if you want freeform auto-detection (`[hotfix, urgent]`), a `description` for the help text, and `testStrategy` only if it should diverge from `depth`. Write a short prose body explaining the intent.
+1. **Drop `packages/framework/core/scopes/amadeus-hotfix.md`.** Copy `amadeus-bugfix.md` (the closest existing scope) and edit the frontmatter: set `name: hotfix`, pick `depth`, add `keywords` if you want freeform auto-detection (`[hotfix, urgent]`), a `description` for the help text, and `testStrategy` only if it should diverge from `depth`. Write a short prose body explaining the intent.
 
-2. **Tag the stages that should run under `hotfix`.** In each stage you want `EXECUTE` (under `core/amadeus-common/stages/<phase>/`), add `hotfix` to its frontmatter `scopes:` list. A stage you don't tag is `SKIP` for the scope. The 3 initialization stages must include it (they always run).
+2. **Tag the stages that should run under `hotfix`.** In each stage you want `EXECUTE` (under `packages/framework/core/amadeus-common/stages/<phase>/`), add `hotfix` to its frontmatter `scopes:` list. A stage you don't tag is `SKIP` for the scope. The 3 initialization stages must include it (they always run).
 
 3. **Recompile.** Run `bun .claude/tools/amadeus-graph.ts compile` to transpose the tags into `scope-grid.json`, then regenerate SKILL.md's compiled scope-table (`bun .claude/tools/amadeus-utility.ts scope-table`, paste between the `<!-- BEGIN: compiled ... -->` / `<!-- END: compiled ... -->` markers). Run `bun .claude/tools/amadeus-graph.ts compile --check` and `bun .claude/tools/amadeus-utility.ts scope-table --check` to confirm no drift (exit 0).
 
@@ -109,11 +109,11 @@ This implementation derives the valid-scope list from `.claude/scopes/*.md` pres
 Tuning is a smaller edit, but it lands on the stage, not the scope. Two changes come up often:
 
 - **Flip a stage in or out.** Add or remove the scope name from a stage's `scopes:` list. This is how you'd, say, add `mvp` to `observability-setup`'s `scopes:` because your team always wires monitoring even for a first cut. One tag, then recompile (`compile` + scope-table) and run `--doctor`.
-- **Change a default depth or test strategy.** Adjust `depth`, or add/remove `testStrategy`, in the scope's `core/scopes/amadeus-<name>.md` frontmatter to recalibrate what a scope produces. Because each scope carries its own defaults, this change cascades to every workflow that selects the scope — no per-run flags needed. A user can still override on any given run with `--depth` or `--test-strategy`, but the scope's value is the team-wide baseline.
+- **Change a default depth or test strategy.** Adjust `depth`, or add/remove `testStrategy`, in the scope's `packages/framework/core/scopes/amadeus-<name>.md` frontmatter to recalibrate what a scope produces. Because each scope carries its own defaults, this change cascades to every workflow that selects the scope — no per-run flags needed. A user can still override on any given run with `--depth` or `--test-strategy`, but the scope's value is the team-wide baseline.
 
 Either way, the recompile-and-doctor pair from step 3 above applies. The edit is small; the verification is the same.
 
-A note on layering: tuning the shipped scopes edits framework-shipped files directly — a stage's `scopes:` tag or a shipped `core/scopes/amadeus-*.md`. That's legitimate for a fork that wants different defaults, but be aware you're changing files that carry the `amadeus-` lineage and a framework upgrade may want to reconcile them. Adding a net-new scope file alongside the shipped ten is the cleaner path when you want a team-specific behavior without touching the defaults everyone else relies on.
+A note on layering: tuning the shipped scopes edits framework-shipped files directly — a stage's `scopes:` tag or a shipped `packages/framework/core/scopes/amadeus-*.md`. That's legitimate for a fork that wants different defaults, but be aware you're changing files that carry the `amadeus-` lineage and a framework upgrade may want to reconcile them. Adding a net-new scope file alongside the shipped ten is the cleaner path when you want a team-specific behavior without touching the defaults everyone else relies on.
 
 ---
 

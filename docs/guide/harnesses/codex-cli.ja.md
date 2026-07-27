@@ -6,7 +6,7 @@
 ディストリビューションの 1 つです。1 つの決定論的なコア、多数のハーネス:
 エンジン、ステートマシン、監査ログ、グラフ、swarm レフェリー、learnings ゲートは
 すべてのディストリビューションでバイト単位で同一であり、異なるのはシェルだけです。
-このツリーは `bun scripts/package.ts codex` によって `core/` + `harness/codex/` から
+このツリーは `bun scripts/package.ts codex` によって `packages/framework/core/` + `packages/framework/harness/codex/` から
 **生成** されます。手編集しないでください(ドリフトガードが CI で失敗します)。
 
 ## 前提条件
@@ -408,11 +408,11 @@ bridge が実際に起動し、再起動後も動くことまでは証明しま�
 ## 再生成
 
 ```bash
-bun scripts/package.ts codex          # core/ + harness/codex/ から dist/codex を再生成
+bun scripts/package.ts codex          # packages/framework/core/ + packages/framework/harness/codex/ から dist/codex を再生成
 bun scripts/package.ts --check        # CI ドリフトガード(全ハーネス)
 ```
 
-コアの `.ts` ファイルはそれらの `core/tools/` と `core/hooks/` のソースと
+コアの `.ts` ファイルはそれらの `packages/framework/core/tools/` と `packages/framework/core/hooks/` のソースと
 バイト単位で同一です(`tests/unit/t150-codex-packaging.test.ts` でピン留め)。
 プロセ(散文)は `{{HARNESS_DIR}}` トークンを持ち、パッケージャがこれを `.codex`
 に置換します(加えて `rules/` → `amadeus-rules/` のリネーム)。これが許可された
