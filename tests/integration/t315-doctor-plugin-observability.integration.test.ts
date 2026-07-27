@@ -56,6 +56,14 @@ function doctor(projectDir: string): { exitCode: number; output: string } {
   return handleDoctor(resolveDoctorContext(projectDir));
 }
 
+// The plugin host root is the HARNESS dir under the project dir (#1591 ruling
+// B) — the root compose writes to and doctor reads back. Seeding at the project
+// dir would place the dot-files where nothing reads them, so every seed below
+// goes through here.
+function pluginHost(projectDir: string): string {
+  return join(projectDir, ".claude");
+}
+
 function minimalRecord(plugin: string): PluginRecord {
   return {
     plugin,
@@ -69,7 +77,7 @@ function minimalRecord(plugin: string): PluginRecord {
 }
 
 function seedComposedPlugin(projectDir: string, plugin: string): void {
-  const backend = createNodeBackend(projectDir);
+  const backend = createNodeBackend(pluginHost(projectDir));
   backend.writeComposition({ ledger: new Map(), plugins: new Map([[plugin, minimalRecord(plugin)]]) });
 }
 
@@ -82,7 +90,7 @@ function seedPendingJournal(projectDir: string): void {
     writeSet: { hostWrites: new Map(), hostRemovals: [], composition: emptyComposition(), audit: { event: "COMMIT_PREPARED", plugin: "pro", detail: "" } },
     preimages: { host: new Map(), composition: emptyComposition(), auditCount: 0 },
   };
-  createNodeBackend(projectDir).writeJournal(journal);
+  createNodeBackend(pluginHost(projectDir)).writeJournal(journal);
 }
 
 beforeEach(() => {
@@ -117,7 +125,7 @@ describe("t315 doctor plugin observability — real read path", () => {
     const projectDir = healthyProject();
     // Baseline is exit 0 (t257), so the flip is attributable to the degraded row.
     expect(doctor(projectDir).exitCode).toBe(0);
-    writeDropsRecord(projectDir, {
+    writeDropsRecord(pluginHost(projectDir), {
       plugins: new Map([["pro", [{ surface: "hooks", severity: "degraded", reason: "no host hook adapter" }]]]),
     });
     const result = doctor(projectDir);
@@ -127,7 +135,7 @@ describe("t315 doctor plugin observability — real read path", () => {
 
   test("an advisory drop is visible but stays green (PASS(advisory))", () => {
     const projectDir = healthyProject();
-    writeDropsRecord(projectDir, {
+    writeDropsRecord(pluginHost(projectDir), {
       plugins: new Map([["pro", [{ surface: "marketplace", severity: "advisory", reason: "metadata only" }]]]),
     });
     const result = doctor(projectDir);
@@ -137,7 +145,7 @@ describe("t315 doctor plugin observability — real read path", () => {
 
   test("both severities coexist for one plugin — degraded fails, advisory stays visible", () => {
     const projectDir = healthyProject();
-    writeDropsRecord(projectDir, {
+    writeDropsRecord(pluginHost(projectDir), {
       plugins: new Map([
         [
           "pro",
@@ -176,7 +184,7 @@ describe("t315 doctor plugin observability — real read path", () => {
     // Write the drops JSON directly with an out-of-union severity — exactly what
     // dropsFromJson casts without validating. The projection must not trust it.
     writeFileSync(
-      join(projectDir, ".amadeus-plugin-drops.json"),
+      join(pluginHost(projectDir), ".amadeus-plugin-drops.json"),
       JSON.stringify({ plugins: { pro: [{ surface: "hooks", severity: "critical", reason: "x" }] } }, null, 2),
     );
     const result = doctor(projectDir);
@@ -186,8 +194,8 @@ describe("t315 doctor plugin observability — real read path", () => {
 
   test("doctor is read-only: the plugin dot-files are byte-identical across a run (BR-U5-3)", () => {
     const projectDir = healthyProject();
-    const dropsPath = join(projectDir, ".amadeus-plugin-drops.json");
-    writeDropsRecord(projectDir, {
+    const dropsPath = join(pluginHost(projectDir), ".amadeus-plugin-drops.json");
+    writeDropsRecord(pluginHost(projectDir), {
       plugins: new Map([["pro", [{ surface: "hooks", severity: "degraded", reason: "d" }]]]),
     });
     const before = readFileSync(dropsPath);
@@ -197,7 +205,7 @@ describe("t315 doctor plugin observability — real read path", () => {
 
   test("readDoctorPluginObservation skips the host walk for a 0-plugin host (projection returns empty)", () => {
     const projectDir = healthyProject();
-    const obs = readDoctorPluginObservation(projectDir);
+    const obs = readDoctorPluginObservation(pluginHost(projectDir));
     expect(obs.diagnostics).toEqual([]);
     expect(obs.activation).toBeNull();
     const section = buildDoctorPluginSection(obs);

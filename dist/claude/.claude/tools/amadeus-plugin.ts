@@ -25,8 +25,10 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isHarnessDirName } from "./amadeus-harness.ts";
+import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
 import {
   applyPluginDrop,
   applyPluginPlan,
@@ -241,10 +243,23 @@ function nodeTx(hostRoot: string, backend: WorkspaceBackend): WorkspaceTransacti
   };
 }
 
+// Post-apply recompile (#1592): BOTH compiled artifacts, in dependency order.
+// `amadeus-graph.ts compile` is the only writer of stage-graph.json + scope-grid
+// — the join that makes a composed plugin stage visible to `next` — and
+// `amadeus-runtime.ts compile` derives the runtime graph from it. Compiling only
+// the runtime left the composed stage off the stage graph, so auto-compose alone
+// never reached a run-stage directive. Fails loud: the first non-zero exit stops
+// the chain and the caller reports the recompile failure.
 function spawnRecompile(projectRoot: string): boolean {
-  const runtime = join(THIS_DIR, "amadeus-runtime.ts");
-  const res = spawnSync("bun", [runtime, "compile"], { cwd: projectRoot, stdio: "ignore", env: process.env });
-  return res.status === 0;
+  for (const tool of ["amadeus-graph.ts", "amadeus-runtime.ts"]) {
+    const res = spawnSync("bun", [join(THIS_DIR, tool), "compile"], {
+      cwd: projectRoot,
+      stdio: "ignore",
+      env: process.env,
+    });
+    if (res.status !== 0) return false;
+  }
+  return true;
 }
 
 export function defaultPluginCliDeps(): PluginCliDeps {
@@ -266,8 +281,37 @@ export function defaultPluginCliDeps(): PluginCliDeps {
   };
 }
 
+// The plugin host root when the caller names none (#1591 ruling B): the HARNESS
+// directory, i.e. the same root the engine reads back
+// (amadeus-orchestrate.ts:pluginActivationHostRoot and
+// amadeus-graph.ts:pluginsHostRoot both resolve to the harness dir). Derived
+// from THIS file's own installed location, so the compose command the shipped
+// INSTALL doc prints — run from the project root, through the harness copy of
+// this CLI — targets that harness dir no matter what the cwd is. In the
+// canonical source layout there is no harness leaf above `tools/`, so the cwd
+// stands in.
+export function defaultPluginHostRoot(scriptDir: string = THIS_DIR, cwd: string = process.cwd()): string {
+  if (basename(scriptDir) !== "tools") return cwd;
+  const harnessRoot = dirname(scriptDir);
+  return isHarnessDirName(basename(harnessRoot)) ? harnessRoot : cwd;
+}
+
+// The plugin host root for a SessionStart auto-compose hook. The project dir
+// comes from the shared hook ladder (payload cwd / CLAUDE_PROJECT_DIR / marker
+// ancestor / script path), then the harness leaf of the hook's OWN installed
+// path is appended — a hook shipped at `<project>/.claude/hooks/` composes into
+// `<project>/.claude/`. In the canonical source layout (`.../core/hooks/`) there
+// is no harness leaf, so the resolved project dir is the host root.
+export function pluginHostRootFromHook(importMetaUrl: string, payloadCwd?: string | null): string {
+  const projectDir = resolveProjectDirFromHook(importMetaUrl, payloadCwd);
+  const hookDir = dirname(fileURLToPath(importMetaUrl));
+  if (basename(hookDir) !== "hooks") return projectDir;
+  const harnessName = basename(dirname(hookDir));
+  return isHarnessDirName(harnessName) ? join(projectDir, harnessName) : projectDir;
+}
+
 function resolveProjectRoot(cmd: PluginCliCommand): string {
-  const raw = cmd.projectRoot ?? process.cwd();
+  const raw = cmd.projectRoot ?? defaultPluginHostRoot();
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 

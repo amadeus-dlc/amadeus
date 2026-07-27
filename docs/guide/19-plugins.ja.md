@@ -101,9 +101,13 @@ bun .claude/tools/amadeus-plugin.ts <verb> [flags]
 | `drop <plugin-name> [--project-root <dir>]` | 1 プラグインの所有ファイルを除去し、残りのプラグインから共有ファイルを再構築。 | 成功で `0`、拒否・失敗で `1` |
 | `status [--project-root <dir>]` | 件数(installed・composed・監査 revision)を表示。 | `0` |
 
-`--project-root <dir>` はカレントディレクトリ以外のワークスペースを対象にします — CLI
-が存在する場所以外のホストへ compose する手段で、パッケージされるがセルフインストール
-されない `kiro` / `kiro-ide` 面では常に必要です。
+`--project-root` を省略した場合、ホストルートは **CLI 自身がインストールされている
+ハーネスディレクトリ** です — `bun .codex/tools/amadeus-plugin.ts compose` はどこから
+実行しても `.codex/` へ compose します。ここはエンジンが合成済みプラグインステージを
+読み戻すルートと同一なので、install・compose・discovery が乖離することはありません。
+`--project-root <dir>` はこれを上書きして別のホストを対象にします — CLI が存在する場所
+以外のホストへ compose する手段で、パッケージされるがセルフインストールされない
+`kiro` / `kiro-ide` 面では常に必要です。
 
 引数処理は fail-closed で、いかなる変更よりも **前** に行われます: 未知 verb・未知
 フラグ・余剰引数は usage を stderr へ出して exit `2` で終わり、ホストには一切触れません。
@@ -172,8 +176,10 @@ install and after every plugin change"* に続けて `compose` コマンド。�
   `.claude-plugin/plugin.json` を使ってインストール。自動 compose は `hooks/hooks.json`
   から走ります。
 - **`folder-drop-auto`**(`codex`・`cursor`・`kimi`・`kiro`・`kiro-ide`)— バンドルの
-  `plugins/<name>/` を、プロジェクトルート(`compose` が走査するディレクトリ)の
-  `.amadeus-plugin-src/<name>/` へコピー。自動 compose は
+  `plugins/<name>/` を、プロジェクトルート配下の
+  `<ハーネスディレクトリ>/.amadeus-plugin-src/<name>/`(Codex なら
+  `.codex/.amadeus-plugin-src/<name>/`)へコピー。ここが `compose` の走査先であり、
+  エンジンが合成済みプラグインステージを読み戻すルートでもあります。自動 compose は
   `hooks/auto-compose.snippet` から配線されます。
 - **`manual-only`**(`opencode`)— フォルダをコピー。セッションフックがないため、
   インストール後および全プラグイン変更後に `compose` を実行します。
@@ -206,7 +212,7 @@ compose は、出力ディレクトリが空か、同一プラグイン・同一
   します — あなたの編集がサイレントに破棄されることはありません。
 - **ファイルシステムのベースライン復元。** drop は、compose がプラグインのために作成した
   ディレクトリ(`plugins/<name>/stages/` とその親)が空になった時点で除去し、ホストツリーを
-  compose 前の構造へ戻します。中身が残っているディレクトリには触れません。プロジェクト
+  compose 前の構造へ戻します。中身が残っているディレクトリには触れません。ハーネス
   ルートのエンジン dot-state — `.amadeus-plugin-drops.json` を含む — はホスト面ではなく
   監査データであり、drop 後に残存することがあります。その残存はベースライン復元の失敗とは
   判定されません。

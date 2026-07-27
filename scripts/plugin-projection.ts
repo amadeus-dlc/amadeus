@@ -578,6 +578,9 @@ function code(s: string): string {
 //   native-manifest → marketplace install + the claude hooks.json auto-compose.
 //   folder-drop-auto → copy the folder + the auto-compose snippet.
 //   manual-only     → copy the folder + a manual compose step (no snippet).
+// The folder-drop destination is `<harnessDir>/<PLUGIN_SOURCE_DIR_NAME>/<name>/`
+// — the harness-rooted staging dir the CLI scans (#1591 ruling B). The doc and
+// the scan share PLUGIN_SOURCE_DIR_NAME so the two can never drift (#1569).
 export function installDoc(name: string, harnessDir: string, clazz: PluginHostClass): string {
   const lines = [`# Install: ${name}`, ""];
   if (clazz === "native-manifest") {
@@ -592,7 +595,7 @@ export function installDoc(name: string, harnessDir: string, clazz: PluginHostCl
     return lines.join("\n");
   }
   lines.push(
-    `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${PLUGIN_SOURCE_DIR_NAME}/${name}/`)} at your project root (the directory you run ${code("compose")} from).`,
+    `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/${PLUGIN_SOURCE_DIR_NAME}/${name}/`)} under your project root (the harness directory ${code("compose")} scans, and the one the engine reads plugin stages back from).`,
     "",
   );
   if (clazz === "manual-only") {

@@ -34,15 +34,22 @@
 // and settings.json — the same forward/reverse discipline, without a number that
 // has to be hand-maintained (cid:code-generation:count-comment-sync-on-catalog-change).
 //
+// FR-6 addendum: tests 5 and 8 survived that pass in their NUMERIC form, where
+// both sides parsed to NaN — `expect(NaN).toBe(NaN)` and `expect(NaN+1).toBe(NaN)`
+// pass under Object.is no matter what the doc says, so neither could ever fail.
+// They are folded into the count-free contract here: 5 pins the absence of both
+// total slots, 8 pins the absence of the subcount slot and restates the whole-split
+// arithmetic over the doc's per-script inventory against disk + settings.json.
+//
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1  assert_gt DISK_COUNT 0                        -> "ground truth A: hooks/amadeus-*.ts exist on disk"
 //   .sh test 2  assert_eq SETTINGS_STATUSLINE_COUNT 1         -> "ground truth B: settings.json registers exactly 1 statusLine hook"
 //   .sh test 3  assert_eq SETTINGS_TOTAL DISK_COUNT           -> "ground truth cross-check: settings total == disk files"
 //   .sh test 4  doc three count-words parse cleanly           -> (FR-6) "doc: the hook-scope prose asserts no script count"
-//   .sh test 5  assert_eq DOC_ALL_PW DOC_TOTAL                -> "doc internal: 'All N project-wide' matches 'uses N hook scripts'"
+//   .sh test 5  assert_eq DOC_ALL_PW DOC_TOTAL                -> (FR-6) "doc internal: neither total slot carries a count word"
 //   .sh test 6  assert_eq DOC_TOTAL DISK_COUNT                -> (FR-6) "doc forward: the inventory block names every hook on disk"
 //   .sh test 7  assert_eq DOC_BLOCK SETTINGS_BLOCK_COUNT      -> (FR-6) "doc reverse: every inventoried hook exists and the statusLine entry matches settings.json"
-//   .sh test 8  assert_eq (DOC_BLOCK+1) DOC_TOTAL             -> "doc reverse: hooks-block (N) + statusLine (1) == total (whole split)"
+//   .sh test 8  assert_eq (DOC_BLOCK+1) DOC_TOTAL             -> (FR-6) "doc reverse: the inventory's block + statusLine split covers every hook on disk"
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
@@ -93,17 +100,14 @@ function settingsCounts(): SettingsCounts {
   return { block: commands.size, statusline, total: commands.size + statusline };
 }
 
-// --- Doc count-words (number-word -> int) ------------------------------------
-// The .sh's word2int case statement. "MISS" (here: NaN) if not a known word.
+// --- Doc count-words -------------------------------------------------------
+// The .sh's word2int case table, kept as the vocabulary COUNT_TOKEN is built
+// from. No word->int conversion remains: under the count-free contract every
+// count slot must be absent, which is asserted on the capture directly.
 const WORD2INT: Record<string, number> = {
   zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
   seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
 };
-function word2int(word: string | undefined): number {
-  if (word === undefined || !(word in WORD2INT)) return Number.NaN;
-  return WORD2INT[word];
-}
-
 /** First capture-group match of `re` against the doc, or undefined. */
 function docWord(re: RegExp): string | undefined {
   const m = readFileSync(DOC, "utf-8").match(re);
@@ -150,10 +154,6 @@ function settingsStatusLineScript(): string | undefined {
   return s.statusLine?.command?.match(/(amadeus-[\w-]+\.ts)/)?.[1];
 }
 
-const DOC_TOTAL = word2int(DOC_TOTAL_WORD);
-const DOC_ALL_PW = word2int(DOC_ALL_PW_WORD);
-const DOC_BLOCK = word2int(DOC_BLOCK_WORD);
-
 describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-count-sync.sh, plan 8)", () => {
   // --- Ground truth A ---
   test("1: ground truth A — hooks/amadeus-*.ts exist on disk [.sh test 1]", () => {
@@ -182,9 +182,14 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     }
   });
 
-  // --- Doc internal consistency ---
-  test("5: doc internal — 'All N project-wide' matches 'uses N hook scripts' [.sh test 5]", () => {
-    expect(DOC_ALL_PW).toBe(DOC_TOTAL);
+  // --- Doc internal consistency, count-free ---
+  test("5: doc internal — neither total slot carries a count word to cross-check [FR-6, was .sh test 5]", () => {
+    // The .sh cross-checked two restatements of the SAME total. Count-free prose
+    // has no restatement, so the honest form of that check is the absence of
+    // both capture sites. (The word2int form this replaced compared NaN to NaN —
+    // a pass no doc content could ever break: verification theatre.)
+    expect(DOC_TOTAL_WORD).toBeUndefined();
+    expect(DOC_ALL_PW_WORD).toBeUndefined();
   });
 
   // --- Doc forward: the inventory names every hook on disk (no omission) ---
@@ -209,9 +214,18 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     expect(inventory.length - statusLineEntries.length).toBe(settingsCounts().block);
   });
 
-  // --- Doc reverse: the doc's own split is arithmetically whole ---
-  test("8: doc reverse — hooks-block (N) + statusLine (1) == total (whole split) [.sh test 8]", () => {
-    // Catches a half-correction that fixes one count-word but not the other.
-    expect(DOC_BLOCK + 1).toBe(DOC_TOTAL);
+  // --- Doc reverse: the doc's own split is whole, counted from the inventory ---
+  test("8: doc reverse — the inventory's block + statusLine split covers every hook on disk [FR-6, was .sh test 8]", () => {
+    // The .sh's subcount arithmetic, restated over the set that replaced the
+    // count: the annotated split must partition the doc's inventory, and that
+    // inventory must account for every hook on disk. Anchored on disk rather
+    // than on settingsCounts(), whose own `total` IS block + statusline (an
+    // x === x comparison would assert nothing).
+    expect(DOC_BLOCK_WORD).toBeUndefined();
+    const inventory = docHookInventory();
+    const statusLineEntries = inventory.filter((e) => e.annotation.includes("statusLine"));
+    expect(statusLineEntries.length).toBe(settingsCounts().statusline);
+    expect(inventory.length - statusLineEntries.length).toBe(settingsCounts().block);
+    expect(inventory.length).toBe(diskHookCount());
   });
 });
