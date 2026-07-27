@@ -27292,3 +27292,688 @@
 **Failed count**: 0
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:08:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 75969f1a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin-activation.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:08:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 75969f1a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin-activation.ts
+**Duration ms**: 1923
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:08:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3040accc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin-activation.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:08:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3040accc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin-activation.ts
+**Duration ms**: 1895
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:08:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: b298aa8e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:08:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: b298aa8e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1901
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:08:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: abac81bb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:08:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: abac81bb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 662
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:08:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79e3c2ff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79e3c2ff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+**Duration ms**: 1918
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5cf15f8c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5cf15f8c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-plugin.ts
+**Duration ms**: 687
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 903ef14f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 903ef14f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 1905
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb3ba5a7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: bb3ba5a7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 622
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26248ac1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26248ac1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/plugin-projection.ts
+**Duration ms**: 1852
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4faf08ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4faf08ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/plugin-projection.ts
+**Duration ms**: 644
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: e4d8fe1a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/package.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: e4d8fe1a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/package.ts
+**Duration ms**: 1886
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:09:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: ccc41ee9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/package.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:09:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: ccc41ee9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/package.ts
+**Duration ms**: 607
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:12:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u6
+**Agent ID**: abuilder-u6-d5cb8bf0f26cabe9
+**Message**: The two `produces` record artifacts are created and committed.\n\n- **`code-generation-plan.md`** (50 行) と **`code-summary.md`** (74 行) を worktree 内に日本語で作成。両ファイル冒頭に「上流入力(consumes 全数)」行(実参照した design/nfr/
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-27T01:15:21Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 3 of 8 units are not yet complete (hook-wiring-remaining, conformance-suite, docs-sync). Run `next` to continue the remaining units before approving.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:17:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u6
+**Agent ID**: areviewer-u6-95eac73d94a9bc87
+**Message**: team-lead へ verdict を送信しました(前段でJSON形式の直接送信に何度か失敗しましたが、最終的にプレーンテキスト形式で成功しました)。\n\n## U6 activation-policy レビュー結果: READY\n\nReviewer: amadeus-architecture-reviewer-agent\n\n**verdict: READY**(findings なし)\n\n設計
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:20:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u5
+**Agent ID**: areviewer-u5-189fbb5b7ef2dfb0
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\n\nU5 doctor-observability の code-generation 成果物をレビューしました。verdict は READY です。scratch ファイル(`/private/tmp/claude-501/-Users-j5ik2o-worktrees-j5ik2o-github-com
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:23:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u3
+**Agent ID**: areviewer-u3-0f2c2ad872bf1964
+**Message**: team-lead へレビュー結果を送付しました。\n\n**verdict: NOT-READY**\n\nU3(host-projection-all)の code-generation 成果物をレビューし、Major な指摘を2件検出しました。\n\n1. **OutDirRefusal 安全策が本番経路に未配線**: `classifyOutDir`/`projectPluginForHarness`
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:26:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4b1a0e3f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:26:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4b1a0e3f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 1966
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:26:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: d89fbd66
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:26:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: d89fbd66
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 824
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:26:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 13b52cd6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:26:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 13b52cd6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 1801
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:26:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 195d710a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:26:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 195d710a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 673
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 590390e2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 590390e2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 1835
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: dc96325f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: dc96325f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 677
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 710e65da
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 710e65da
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 1794
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9085357a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9085357a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 673
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1a58f269
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1a58f269
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 1819
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:27:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1dfb0a8b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:27:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1dfb0a8b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/plugin-projection.ts
+**Duration ms**: 702
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 863fb131
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:28:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 863fb131
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+**Duration ms**: 1995
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 468ab543
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T01:28:08Z
+**Event**: SENSOR_FAILED
+**Fire id**: 468ab543
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/code-generation/type-check-468ab543.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: f1dff6fe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:28:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: f1dff6fe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+**Duration ms**: 1891
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc3651bb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:28:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc3651bb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/scripts/package.ts
+**Duration ms**: 671
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6d0399aa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t307-install-artifacts-classes.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:28:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6d0399aa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t307-install-artifacts-classes.integration.test.ts
+**Duration ms**: 1841
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:28:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2e10481
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t307-install-artifacts-classes.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:28:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2e10481
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t307-install-artifacts-classes.integration.test.ts
+**Duration ms**: 593
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:29:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: fc3d446a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t312-writebundle-outdir-refusal.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:29:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: fc3d446a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t312-writebundle-outdir-refusal.integration.test.ts
+**Duration ms**: 1745
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:29:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: f06e3637
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t312-writebundle-outdir-refusal.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:29:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: f06e3637
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all/tests/integration/t312-writebundle-outdir-refusal.integration.test.ts
+**Duration ms**: 600
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:39:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u3
+**Agent ID**: abuilder-u3-80818346a49c89c8
+**Message**: §12a iteration 1 の Major 2 件を是正しました。新規コミット `30b3afc99`(過去コミット rewrite なし・push なし)。\n\n## Major 1(OutDirRefusal 未配線)是正\n`classifyOutDir` が test 以外から呼ばれず本番書込経路を経由しない指摘に対し、`assertInstallOutDirsSafe(classify
+
+---

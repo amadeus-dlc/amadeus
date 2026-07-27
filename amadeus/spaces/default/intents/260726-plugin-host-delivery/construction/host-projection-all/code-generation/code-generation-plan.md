@@ -70,3 +70,32 @@ U4(hook-wiring-remaining)の FD で「投影(U3)がフック snippet を配布�
 ## 検証コマンド(全て同期・exit code 個別記録)
 
 `bun run typecheck` / `bun run lint` / `bash tests/run-tests.sh --ci` / `bun run dist:check` / `bun run promote:self:check` / coverage lcov 照合(fork 4ea02e41a diff 追加行 DA:0=0)。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T01:41:18Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+OutDirRefusal(BR-U3-3/SEC-U3-1)の実装は本番書込経路に配線されておらずFR-2合否3が未充足、かつclaudeのINSTALL_doc除外がBR-U3-2の転記のみ規則に反する無申告(未選挙)逸脱
+
+### Findings
+
+- [Major] projectPluginForHarness(scripts/plugin-projection.ts:576-593、classifyOutDirを呼ぶ唯一の関数)は scripts/package.ts のどこからも呼ばれていない(repo全域grep実測: scripts/, packages/ 配下でtest以外の呼出し元0件)。実際の書込経路 writeNeutralBundle(scripts/package.ts:798-810)は pluginBundleExpected→installArtifacts で得たbytesを rmSync(distPlugins,{recursive:true,force:true}) の全面clean-sweep後に mkdirSync+writeFileSync で直接書き込んでおり、classifyOutDir/probeOutDirによるOutDirRefusal判定を一切経由しない。application-design/decisions.md:61 のADRは『outDir安全性は上流#27-32と同等の拒否集合...を実装』と dist/plugins/<name>/<harness>/ への書込を対象に明記しており、requirements.md:29 のFR-2合否3(『出力先の安全性...の拒否』)もこの経路を指す。t304/t308/t309はclassifyOutDir/projectPluginForHarnessを直接呼ぶ単体・統合テストで green だが、それは孤立した公開関数への到達を実証するのみで、`bun scripts/package.ts`(CI/実ビルドが唯一実行する経路)がこの安全策を一切通らないことは検証されていない。amadeus-plugin.ts のCLI(compose/drop/doctor/status)にもinstall系サブコマンドは無く、projectPluginForHarnessを呼ぶ本番呼出し元は現状ゼロ。結果としてFR-2合否3・BR-U3-3は本番動作としては未充足(テストのみが到達する検証劇場に近い状態)。
+- [Major] BR-U3-2(business-rules.md:8)は『投影対象面とクラスはU1マトリクスの機械可読列挙(BR-U1-7)からの転記のみ。FD・実装での面の追加/除外判断を禁止』と明記するが、harness-capability-matrix.md:224 の bolt3_projection_targets は claude の install_artifacts を [plugin_content, marketplace_metadata, hooks_snippet, INSTALL_doc] と確定しているのに対し、claudeInstallArtifacts(scripts/plugin-projection.ts:328-343、U2から不変)は INSTALL.md を生成せず、t307(tests/integration/t307-install-artifacts-classes.integration.test.ts:33-39)がこの欠落を『claude projector unchanged (U2)』として意図的に固定している。code-summary.md の『逸脱・特記』項2でこれをFDの『残面の layout 分岐を追加』という一文からの builder 独自解釈として自己申告しているが、team.md の cid:code-generation:deviation-stop-before-implement(逸脱は実装前に停止して選挙裁定を得る)を経ておらず、マトリクス転記のみを義務付けるBR-U3-2に反する無申告(未選挙)の面/成果物除外判断である。business-logic-model.md 側のFDレビューもこの除外を明示指摘・裁定した記録がない。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T01:41:18Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+両 Major が実測で閉包。OutDirRefusal は writeNeutralBundle の本番経路へ配線され t312 が実経路で赤/緑を実証、claude 面は BR-U1-7 に忠実な INSTALL.md を生成し t307 で固定、dist:check/対象テストとも green。
+
+### Findings
+
+- None

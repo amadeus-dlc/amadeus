@@ -36,3 +36,18 @@ functional-design は純関数を `buildDoctorPluginSection(diag, record, judgme
 ## 検証(全て同期実行・exit code 個別記録)
 
 `bun run typecheck` / `bun run lint` / `bun scripts/package.ts` + `bun run promote:self` / `bun run dist:check` / `bun run promote:self:check` / `bash tests/run-tests.sh --ci` / coverage lcov 照合(fork 4ea02e41a との diff 追加行 DA:0 = 0)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T01:21:34Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U5 doctor-observability implementation is a faithful 1:1 mechanical mapping of the 8-row business-logic-model branch table, fully tested (t313/t314/t315) with exit-aggregation, silent-drop, recovery-pending, and fail-closed-unknown coverage; only two minor hygiene nits found.
+
+### Findings
+
+- [Minor] DoctorPluginSection.installed (packages/framework/core/tools/amadeus-plugin.ts:452, set at :503 `installed: obs.diagnostics.length`) is written by buildDoctorPluginSection but never read by doctorPluginRows (:528-540) or handleDoctor's row push (amadeus-utility.ts:2890-2892) — no --doctor output line renders it (the 0-plugin line at :530 is a hardcoded literal, not derived from section.installed). This is the exact 'unconsumed field = documentation-fiction' pattern construction.md forbids and the same file's own comment at :448-450 explicitly disclaims for exitContribution, but the disclaim was not applied to installed.
+- [Minor] Comment at packages/framework/core/tools/amadeus-plugin.ts:546 claims the 0-plugin common case 'pays only three existsSync probes', but readDoctorPluginObservation (:548-557) performs four existsSync-guarded reads: backend.readComposition() (:1156 in amadeus-plugin-compose.ts), backend.readJournal() (:1161), backend.auditCount()->readAudit (:1183), and readDropsRecord (:1211) — the comment undercounts by one. No functional impact; performance-design.md's structural (non-numeric) acceptance is unaffected.
