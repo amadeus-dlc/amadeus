@@ -54,3 +54,49 @@ New relinks write Provenance V2. Its digest includes inspection-clock
 
 The contract grants no authority for pull requests, releases, deploys,
 background daemons, or polling.
+
+<!-- amadeus-topic:projects -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+## Project configuration schema
+
+`mirror-projects` is an array of `{ project, status-names? }`. `project` matches
+`"<owner>/<number>"` with a positive integer number; a padded, float, or
+otherwise malformed value is rejected rather than coerced. `status-names` keys
+are the closed phase vocabulary `ideation | inception | construction |
+operation | done`, and each value is a non-empty string. An unknown element key,
+an unknown phase key, or one malformed element rejects the whole layer instead
+of contributing a partial list. `auto-mirror` and `mirror-projects` resolve
+independently: for each key, the last layer carrying a valid value wins, and a
+winning `mirror-projects` replaces the previous layer's target list entirely.
+
+<!-- amadeus-topic:auth -->
+<!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
+## Project authorization
+
+Both ProjectV2 reads (item listing, Status field resolution) and both mutations
+(item add, Status update) require the `project` token scope. Credentials are
+delegated to `gh`; no token value is read, stored, logged, or included in any
+rendered text, and no scope is changed or refreshed automatically. A credential
+lacking the scope surfaces as the `permission-denied` diagnostic naming the
+board and the scope, and nothing else.
+
+<!-- amadeus-topic:diagnostics -->
+<!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->
+## Project diagnostics
+
+`repair status` reports one diagnostic per board over the union of configured
+targets, ledger entries, and current Issue memberships, ordered by canonical
+`owner/number`. Each row carries `membership`, `currentStatus`,
+`expectedStatus`, `drift`, `resolution`, and a `summary` sentence; a null
+`expectedStatus` (no column expected at this boundary) makes `drift` false by
+construction. `expectedStatus` comes from the same definition the sync applies,
+so a diagnosis cannot disagree with what a sync would do. `availableOptions` is
+present only for `option-missing` and lists the board's declared option names
+verbatim. The path is read-only: only the gateway's read methods are reachable,
+and the ledger is an input, never an output.
+
+The per-board ledger records `synced`, `pending`, or `safety-blocked` with the
+last applied column, so a partially applied boundary is representable. Gateway
+work runs as `gh` subprocesses invoked with an argument array; a missing,
+unauthenticated, rate-limited, or failing `gh` fails the mirror operation loudly
+while the workflow may still advance.

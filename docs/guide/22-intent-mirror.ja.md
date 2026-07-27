@@ -51,3 +51,41 @@ closeにはverified provenance、同一repository、workflow landed、final sync
 ## 対象外
 
 Pull Request、release、deploy、daemon、pollingはIntent Mirrorの対象外です。
+
+<!-- amadeus-topic:projects -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+## Project board
+
+`mirror-projects`は、このIntentが同期するGitHub Project boardを列挙します。各要素は`project: "<owner>/<number>"`でboardを1件指定し、任意で`status-names`によりphaseキーからそのboardのcolumn名への上書きを持てます。phaseキーは`ideation`、`inception`、`construction`、`operation`、`done`で、未知のキーは無視せずエラーにします。
+
+```json
+{
+  "mirror-projects": [
+    { "project": "acme/7" },
+    { "project": "acme/12", "status-names": { "construction": "In Progress" } }
+  ]
+}
+```
+
+このキーは層ごとに解決され、値を持つ最後の層が前の層のリストへマージせず全置換します。したがってSpaceやIntentの層では、対象boardの完全な集合を書きます。`mirror-projects`は`auto-mirror`とは独立です — モードは操作を実行するかどうかを決め、このキーはその操作がどのboardへ及ぶかを決めます。
+
+<!-- amadeus-topic:auth -->
+<!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
+## Project boardの認証
+
+boardのStatus fieldの読取もcolumnの設定もGraphQLのProjectV2 API経由で行うため、Issue自体に必要な権限に加えて`project` token scopeが必要です。credentialは`gh`とそのcredential storeに委譲され、Intent Mirrorはtoken値を読まず、scopeを変更せず、代理で再認証もしません。scope付与はこのツールの外で人間が行う操作です(例: `gh auth refresh -s project`)。
+
+<!-- amadeus-topic:diagnostics -->
+<!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->
+## Project同期の診断
+
+`repair status`は、board 1件につきread-onlyの行を1つ報告します。対象は設定が指すboard、ledgerが既に記録しているboard、そしてIssueが現在所属しているboardの全数です。各行は、Issueがboard上にあるか、現在のcolumn、workflowが期待するcolumn、その2つがdriftしているか、および次の4値のいずれかのresolutionを示します。
+
+- `resolved` — 期待するcolumnへ到達可能で、行は観測結果のみを示します。
+- `field-missing` — boardのStatus fieldを読み取れず、columnを適用できません。
+- `option-missing` — 期待する名前と完全一致(大文字小文字・空白を含む)するStatus optionをboardが宣言していません。boardが実際に持つoption名は`availableOptions`として一覧されるため、boardへoptionを追加するか、`status-names`の上書きで当該phaseを既存optionへ対応付けます。
+- `permission-denied` — 使用中のcredentialではそのboardのStatus fieldを読めません。`project` scopeを付与してから`repair status`を再実行します。
+
+各行には、board名・column名・解決手順を述べる要約文が付きます。この文にtokenや生のAPIレスポンスは入りません。`repair status`は観測のみで、ローカルにもリモートにも変更を加えません — driftしたboardは報告されるだけで記録されません。
+
+Project関連の操作は`gh`サブプロセスをargument arrayで起動して実行し、shell文字列を組み立てません。`gh`が不在・未認証・rate limit・その他の失敗のときは、当該mirror操作をloudに失敗させ、AI-DLC workflow自体は停止しません。retryは次のeligible boundaryか、明示のmanual commandで行います。一部のboardだけ同期して他が失敗したboundaryでは、board単位のledger entry(`synced`、retry可能な失敗の`pending`、boardの形状や権限が人手を要する`safety-blocked`)が残るため、部分成功は単一の判定へ潰されずboard単位で見えます。

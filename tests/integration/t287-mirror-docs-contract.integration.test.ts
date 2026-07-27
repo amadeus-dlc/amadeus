@@ -22,7 +22,7 @@ function docsFixture(): string {
 }
 
 describe("t287 docs contract", () => {
-  test("accepts four documents and 32 runtime-derived topics", () => {
+  test("accepts every document with its runtime-derived topics", () => {
     expect(validateMirrorDocs(process.cwd())).toEqual([]);
   });
 
