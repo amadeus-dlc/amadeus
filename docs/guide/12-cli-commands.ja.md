@@ -468,7 +468,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 | `describe <id>` | 1 つのセンサーの完全なマニフェスト(command、default severity、`matches` glob、timeout)を出力 |
 | `fire <id> --stage <slug> --output-path <path>` | ファイルに対してセンサーを実行し、`SENSOR_FIRED` 行とそのペア結果行を発火 |
 
-手動発火は `SENSOR_FIRED` 監査行を発火し、続いて正確に 1 つの終端行(`SENSOR_PASSED`、`SENSOR_FAILED`、または `SENSOR_BUDGET_OVERRIDE`)を発火します。失敗は `<record>/.amadeus-sensors/<stage>/`(intent のレコードディレクトリ内)に詳細ファイルを書き込みます。センサーはアドバイザリです。センサーの失敗はツールの失敗にはならないため、コマンドは 0 で終了します。フレームワークに付属する 4 つのセンサーは `required-sections`、`upstream-coverage`、`linter`、`type-check` です。
+手動発火は `SENSOR_FIRED` 監査行を発火し、続いて正確に 1 つの終端行(`SENSOR_PASSED`、`SENSOR_FAILED`、または `SENSOR_BUDGET_OVERRIDE`)を発火します。失敗は `<record>/.amadeus-sensors/<stage>/`(intent のレコードディレクトリ内)に詳細ファイルを書き込みます。センサーはアドバイザリです。センサーの失敗はツールの失敗にはならないため、コマンドは 0 で終了します。フレームワークに付属するセンサーは `answer-evidence`、`linter`、`model-completeness`、`required-sections`、`type-check`、`upstream-coverage` です。
 
 ```
 bun .claude/tools/amadeus-sensor.ts list
@@ -547,7 +547,7 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 
 intent birth 時に記録するハーネス provenance を上書きします。自動検出が `unknown` になる場合に利用でき、`manual` は人が明示指定したことを表します。
 
-**有効な値:** `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`unknown`、`manual`。
+**有効な値:** `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`kimi`、`unknown`、`manual`。
 
 **優先順位:** `AMADEUS_HARNESS_TYPE` が環境変数として存在すると、`CLAUDECODE` シグナルおよびハーネス dot-directory 検出より優先されます。空文字または不正な値は `unknown` に正規化され、自動検出へフォールスルーしません。
 

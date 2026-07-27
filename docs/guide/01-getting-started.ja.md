@@ -48,7 +48,7 @@ Claude Code の配布物は、デフォルトではプロジェクトの `.mcp.j
 
 ## インストール
 
-AI-DLC は、あなたのハーネス向けの配布物をプロジェクトへコピーすることでインストールします。以下の手順は **Claude Code**(`dist/claude/.claude/` ツリー)を対象とします。Kiro または Codex を実行しますか? それぞれが独自の配布物とインストール手順を同梱しています — [Running on Kiro IDE](harnesses/kiro-ide.ja.md) または [Running on Codex CLI](harnesses/codex-cli.ja.md) を参照してください。Claude Code 実装は、プロジェクトにコピーする `.claude/` ディレクトリとして提供されます。
+AI-DLC は、あなたのハーネス向けの配布物をプロジェクトへコピーすることでインストールします。以下の手順は **Claude Code**(`dist/claude/.claude/` ツリー)を対象とします。他のハーネスを実行しますか? Kiro IDE、Kiro CLI、Codex CLI、Cursor、OpenCode、Kimi Code はそれぞれ独自の配布物とインストール手順を同梱しています — [他のハーネスで実行する](harnesses/README.ja.md) を参照してください。Claude Code 実装は、プロジェクトにコピーする `.claude/` ディレクトリとして提供されます。
 
 ### ステップ 1: 実装をコピーする
 
@@ -102,7 +102,7 @@ cd your-project
 | チェック | 検証する内容 |
 |-------|-------------------|
 | 前提条件 | `bun` がインストールされ、`$PATH` 上にある |
-| フックの存在 | `settings.json` が接続するすべてのフック(その `hooks` ブロック + `statusLine` コマンド — 11 個すべてのフレームワークフック)が `.claude/hooks/` に存在する。接続されているのに欠けているフックは大声で失敗する。想定されるフック一覧を `settings.json` から取得するため、そこにフックを追加すると自動でチェックされる |
+| フックの存在 | `settings.json` が接続するすべてのフック(その `hooks` ブロック + `statusLine` コマンド — すべてのフレームワークフック)が `.claude/hooks/` に存在する。接続されているのに欠けているフックは大声で失敗する。想定されるフック一覧を `settings.json` から取得するため、そこにフックを追加すると自動でチェックされる |
 | プロジェクト構造 | `.claude/settings.json` が想定される構成で存在する |
 | ワークスペースシェル | `.claude/` + `amadeus/spaces/default/memory/` が存在する(同梱シェル) |
 | 状態ファイル | アクティブな intent の `amadeus-state.md` がその監査証跡と一致する(ドリフトなし) |

@@ -145,9 +145,9 @@ Sam は ANZ 銀行プロジェクトで `/amadeus feature` を実行します。
 
 センサーの活動は、intent の `audit/` シャードに `Sensor Fired`、`Sensor Passed`、`Sensor Failed` の行として現れます。失敗した行は、特定のギャップ — 欠けている見出し、参照されていない上流成果物、lint エラー — を列挙する詳細ファイル(たとえば `<record>/.amadeus-sensors/<stage-slug>/required-sections-<timestamp>.md`)にリンクします。監査ログは [状態と監査](10-state-and-audit.ja.md) でカバーされています。
 
-### 4 つのフレームワークセンサー
+### フレームワークセンサー
 
-4 つのセンサーがフレームワークに同梱されます:
+以下のセンサーがフレームワークに同梱されます:
 
 | センサー | 発火対象 | チェック内容 |
 |--------|----------|--------|
@@ -155,6 +155,8 @@ Sam は ANZ 銀行プロジェクトで `/amadeus feature` を実行します。
 | `upstream-coverage` | 任意の record ディレクトリの markdown 出力 | 出力の散文が、ステージが消費すると宣言した各上流成果物を参照すること |
 | `linter` | `.ts` / `.js` コード出力 | 設定したリンター(デフォルトは ESLint)をラップ |
 | `type-check` | `.ts` / `.tsx` コード出力 | 設定した型チェッカー(デフォルトは `tsc`)をラップ |
+| `answer-evidence` | 任意の `*-questions.md` 出力 | 記入済みの `[Answer]` が裁定参照(E-code)またはリーダー承認タイムスタンプを伴うこと |
+| `model-completeness` | TLA spec 群とそれがモデル化する選挙ツール | FormalElection の TLA モデルが正本の実装ファイルから乖離していないこと |
 
 各ステージは、その出力に対してどのセンサーが発火するかを宣言します。独自のセンサーを追加できます — `.claude/sensors/` の下にマニフェストを作成し、その id を実行すべきステージに追加します。学習ループも、ゲートで確認したときにセンサーをインストールできます。マニフェスト形式、ステージごとのマトリクス、作成のウォークスルーは [センサーシステム](../reference/07-sensor-system.ja.md) に存在します。自分のプロジェクトに追加するには、[カスタマイズ](13-customization.ja.md) を参照してください。
 
