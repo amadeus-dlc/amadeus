@@ -365,18 +365,23 @@ export function cleanupWorktreeFixture(proj: string | undefined): void {
   removeTreeWithRetry(proj);
 }
 
+// rmSync with force:true can return without error while leaving the tree in
+// place (observed on macOS/bun 1.3.13 against large fixture trees — issue
+// #1565), so success is verified by the post-condition (the path is gone),
+// never by rmSync returning.
 function removeTreeWithRetry(path: string): void {
-  const attempts = process.platform === "win32" ? 10 : 1;
+  const attempts = process.platform === "win32" ? 10 : 5;
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
       rmSync(path, { recursive: true, force: true });
-      return;
+      if (!existsSync(path)) return;
+      lastErr = new Error(`rmSync returned but the tree still exists: ${path}`);
     } catch (err) {
       lastErr = err;
       if (!isRetryableRmError(err) || i === attempts - 1) break;
-      sleepSync(50 * (i + 1));
     }
+    if (i < attempts - 1) sleepSync(50 * (i + 1));
   }
   throw lastErr;
 }
