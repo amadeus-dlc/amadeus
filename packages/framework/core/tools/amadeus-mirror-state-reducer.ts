@@ -339,14 +339,14 @@ function attempt(
     if (r.attemptedAt === attemptedAt) return { kind: "unchanged" };
     return invalid("attempt: receipt already attempted with a different timestamp");
   }
+  // A Project-sync hold never reaches here: both pending guards below require a
+  // `lastEffect`, which a hold deliberately does not set. Such a receipt
+  // converges through `complete`, not through a retry.
   const next: MirrorOperationReceipt = {
     ...r,
     status: "attempted",
     attemptedAt,
   };
-  // Re-attempting supersedes any Project-sync hold: this pass will reconcile the
-  // board again and write its own verdict.
-  delete (next as { projectSyncHold?: MirrorProjectSyncHold }).projectSyncHold;
   if (clearEffectAndWarnings) {
     // pending -> attempted retry: drop lastEffect + same-operation warnings.
     const cleaned: MirrorOperationReceipt = { ...next };
