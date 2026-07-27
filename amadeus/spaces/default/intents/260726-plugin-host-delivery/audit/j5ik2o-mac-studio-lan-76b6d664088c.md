@@ -29267,3 +29267,12 @@
 **Failed count**: 0
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-27T04:20:16Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 1 of 8 units are not yet complete (docs-sync). Run `next` to continue the remaining units before approving.
+
+---

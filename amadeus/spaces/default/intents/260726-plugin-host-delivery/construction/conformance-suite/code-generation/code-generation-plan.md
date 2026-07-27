@@ -92,3 +92,17 @@ report 契約の 4 箇所に閉じる(`scripts/` は配布対象外の dev tooli
 
 追跡表(+機械検査)→ 層別テスト(adopted)→ レポート拡張(FR-10)→ CI 編入・時間計測 の順で実装した
 (逆順は暗黙成功・仕様先取りを生む — BR-U7-2)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T04:20:16Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U7 conformance-suite: 32-row trace table recount matches (2/22/8), 8 sampled covered-existing/adopted target citations are verbatim-exact and file-existent, suiteResultFromExitCode is genuinely fail-closed with a both-sided falling proof, t338 asserts a real (not stubbed) unconditional-vs-if-stale recompile asymmetry, t258 allowlist entry is narrowly scoped to the one new file, and all 4 new test files (17 tests) plus typecheck/lint pass.
+
+### Findings
+
+- None
