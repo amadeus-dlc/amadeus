@@ -180,8 +180,9 @@ class:
 - **`native-manifest`** (`claude`) — install through the host plugin marketplace
   using `.claude-plugin/plugin.json`; auto-compose runs from `hooks/hooks.json`.
 - **`folder-drop-auto`** (`codex`, `cursor`, `kimi`, `kiro`, `kiro-ide`) — copy the
-  bundle's `plugins/<name>/` into `<harness-dir>/plugins/<name>/`; auto-compose is
-  wired from `hooks/auto-compose.snippet`.
+  bundle's `plugins/<name>/` into `.amadeus-plugin-src/<name>/` at your project root
+  (the directory `compose` scans); auto-compose is wired from
+  `hooks/auto-compose.snippet`.
 - **`manual-only`** (`opencode`) — copy the folder; there is no session hook, so
   run `compose` after install and after every plugin change.
 

@@ -61,6 +61,7 @@ export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 // import; imported for local use and re-exported for existing consumers of this
 // module (C2 relocation, single definition — no double-def).
 import { type ReadOnlyFs, nodeReadOnlyFs } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import { PLUGIN_SOURCE_DIR_NAME } from "../packages/framework/core/tools/amadeus-plugin.ts";
 export { type ReadOnlyFs, nodeReadOnlyFs };
 
 export type SourceArtifact = {
@@ -590,7 +591,10 @@ export function installDoc(name: string, harnessDir: string, clazz: PluginHostCl
     );
     return lines.join("\n");
   }
-  lines.push(`Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/plugins/${name}/`)}.`, "");
+  lines.push(
+    `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${PLUGIN_SOURCE_DIR_NAME}/${name}/`)} at your project root (the directory you run ${code("compose")} from).`,
+    "",
+  );
   if (clazz === "manual-only") {
     lines.push(
       "This harness has no auto-compose session hook. Run compose after install and after every plugin change:",

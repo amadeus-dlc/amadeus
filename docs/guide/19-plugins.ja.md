@@ -172,7 +172,8 @@ install and after every plugin change"* に続けて `compose` コマンド。�
   `.claude-plugin/plugin.json` を使ってインストール。自動 compose は `hooks/hooks.json`
   から走ります。
 - **`folder-drop-auto`**(`codex`・`cursor`・`kimi`・`kiro`・`kiro-ide`)— バンドルの
-  `plugins/<name>/` を `<harness-dir>/plugins/<name>/` へコピー。自動 compose は
+  `plugins/<name>/` を、プロジェクトルート(`compose` が走査するディレクトリ)の
+  `.amadeus-plugin-src/<name>/` へコピー。自動 compose は
   `hooks/auto-compose.snippet` から配線されます。
 - **`manual-only`**(`opencode`)— フォルダをコピー。セッションフックがないため、
   インストール後および全プラグイン変更後に `compose` を実行します。
