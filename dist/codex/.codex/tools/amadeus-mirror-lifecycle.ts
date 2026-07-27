@@ -1049,6 +1049,13 @@ export async function runMirrorLifecycleAnswer(
       message: "Mirror answer binding does not match the current expected prompt.",
     };
   }
+  const manualBinding =
+    expected.event.boundary.kind === "manual"
+      ? {
+          manualOperation: expected.operation,
+          invocationId: expected.event.boundary.instance,
+        }
+      : {};
   return runMirrorLifecycleBoundary(
     {
       projectDir: request.projectDir,
@@ -1056,6 +1063,7 @@ export async function runMirrorLifecycleAnswer(
       intentDir: identity.intentDir,
       ...(request.repository ? { repository: request.repository } : {}),
       boundary: expected.event.boundary,
+      ...manualBinding,
       answer: {
         choice: request.choice,
         bindingId: request.bindingId,
