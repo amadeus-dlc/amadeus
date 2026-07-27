@@ -140,7 +140,7 @@ describe("t292 distribution performance protocol", () => {
     expect(aggregateMirrorBenchmarks([
       replica(10),
       replica(40, "other"),
-      replica(200),
+      replica(250),
     ])).toEqual(expect.arrayContaining([
       "benchmark runner image mismatch",
       expect.stringContaining("dispersion"),
@@ -174,8 +174,24 @@ describe("t292 distribution performance protocol", () => {
     }
   });
 
+  // Series measured twice on PR #1540. Both fast read-only workloads stayed
+  // far below their 2s budgets while hosted-runner tail jitter crossed the old
+  // 100ms floor.
+  test("keeps sub-budget hosted-runner tail jitter green", () => {
+    for (
+      const [name, p95Series] of [
+        ["docsParity", [3.8, 8.6, 104.3]],
+        ["digestMatrix", [47.3, 107.6, 215.4]],
+      ] as [MirrorBenchmarkWorkload, number[]][]
+    ) {
+      expect(aggregateMirrorBenchmarks(replicasFor(name, p95Series))).toEqual(
+        [],
+      );
+    }
+  });
+
   // 40/100/250 puts both median ratios at 2.5 and the spread at 210ms, which
-  // is 2.1x the 100ms digestMatrix noise floor — neither half can be dismissed
+  // exceeds the 200ms digestMatrix noise floor — neither half can be dismissed
   // as the single-replica jitter measured on PR #1487.
   test("still reports dispersion and uniform degradation across every replica", () => {
     expect(
