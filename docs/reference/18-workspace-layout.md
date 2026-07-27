@@ -102,7 +102,7 @@ When shipping a change that touches this layout, confirm the following according
 ### Negative
 
 - root `core` / `harness` aliases are transitional compatibility surface and must not become a second source of truth.
-- Some docs/tests still mention root `core/` and `harness/`. That remains valid as a compatibility alias, but wording that explains the source of truth is updated to `packages/framework/` incrementally.
+- Some docs/tests still mention root `core/` and `harness/`. No compatibility alias exists on disk (there is no root `core/` or `harness/` directory), so these are stale prose references; wording that explains the source of truth is updated to `packages/framework/` incrementally.
 - Full relocation of `scripts/` or `dist/`, if desired later, still requires a dedicated migration intent.
 
 ## Future Migration Trigger
