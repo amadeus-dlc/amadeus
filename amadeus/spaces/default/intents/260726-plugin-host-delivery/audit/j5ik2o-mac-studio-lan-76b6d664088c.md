@@ -29276,3 +29276,52 @@
 **Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 1 of 8 units are not yet complete (docs-sync). Run `next` to continue the remaining units before approving.
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-27T04:20:26Z
+**Event**: SWARM_STARTED
+**Batch number**: 4
+**Unit names**: docs-sync
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-27T04:20:26Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: docs-sync
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync
+**Branch name**: bolt-docs-sync
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: BOLT_STARTED
+**Bolt names**: docs-sync
+**Batch number**: 4
+**Walking skeleton**: false
+**Bolt slug**: docs-sync
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: STATE_FORKED
+**Bolt slug**: docs-sync
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync
+**Source state hash**: d434c08e8e4263bf158fe554a4b11afded01a9b411d98e332e042d818d751127
+**Target state hash**: d434c08e8e4263bf158fe554a4b11afded01a9b411d98e332e042d818d751127
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: docs-sync
+**Source Audit Hash**: cd5a189feb67c9d36be80baefb352aa3ab38ae8cbe78489fec26e64dea1341e6
+**Fork Boundary**: 942352
+**Reentrant**: true
+
+---
