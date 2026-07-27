@@ -2,7 +2,7 @@
 
 > 言語: [English](README.md) | **日本語**
 
-**AI-DLC は方法論です** — AI 駆動のソフトウェア開発に対する、構造化されゲートで区切られたアプローチ(AWS によって定義)。**このリポジトリはそのネイティブなマルチハーネス実装です:** 方法論を、ハーネス非依存の単一の `core/` からスキル・エージェント・フック・ツールとしてレンダリングしているため、あなたが使う CLI ハーネス上でネイティブに動作します — 現時点では Claude Code、Kiro CLI、Kiro IDE、Codex CLI、そしてあなたが移植できる任意の対応 CLI です。方法論は *何をするか* であり、各ハーネスの配布物は 1 つのランタイムに対する *どう動かすか* であって、すべての配布物は同じソースから生成されます。
+**AI-DLC は方法論です** — AI 駆動のソフトウェア開発に対する、構造化されゲートで区切られたアプローチ(AWS によって定義)。**このリポジトリはそのネイティブなマルチハーネス実装です:** 方法論を、ハーネス非依存の単一の `packages/framework/core/` からスキル・エージェント・フック・ツールとしてレンダリングしているため、あなたが使う CLI ハーネス上でネイティブに動作します — 現時点では Claude Code、Kiro CLI、Kiro IDE、Codex CLI、そしてあなたが移植できる任意の対応 CLI です。方法論は *何をするか* であり、各ハーネスの配布物は 1 つのランタイムに対する *どう動かすか* であって、すべての配布物は同じソースから生成されます。
 
 初めてですか? [README](../README.ja.md) にインストールのクイックスタートと「ハーネスを選ぶ」の表があります。このページはドキュメント自体の地図です。
 
@@ -24,7 +24,7 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 
 ## ビルドと貢献
 
-メンテナは `core/` で著述し、`bun run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。
+メンテナは `packages/framework/core/` で著述し、`bun run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。
 
 ## 本家 AI-DLC v2の違い
 
@@ -33,3 +33,8 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 - [Intent Mirrorを運用する](guide/22-intent-mirror.ja.md)
 - [メトリクスダッシュボード](guide/23-metrics-dashboard.ja.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.ja.md)
+
+リポジトリレイアウトの設計判断は
+[Workspace Layout Decision](reference/18-workspace-layout.ja.md) に記録しています。
+framework source は `packages/framework/core` と `packages/framework/harness` に置き、
+root の `scripts/` と `dist/` はリポジトリレベルのコントラクトとして維持します。

@@ -83,7 +83,7 @@ bash {{HARNESS_DIR}}/tools/team-msg.sh read leader
 ```
 
 role は `leader`、`e1`、`e2` などです。backend の詳細、配送の意味論、再開時の
-挙動は [Team Messaging Backend](team-messaging.md) を参照してください。
+挙動は [Team Messaging Backend](team-messaging.ja.md) を参照してください。
 
 ## 選挙の実行
 

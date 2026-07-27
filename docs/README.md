@@ -48,4 +48,7 @@ to add one.
 - [Metrics Dashboard](guide/23-metrics-dashboard.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.md)
 
-Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source は `packages/framework/core` と `packages/framework/harness` に置き、root `scripts/` と `dist/` は repository-level contract として維持する。
+The repository layout decision is recorded in
+[Workspace Layout Decision](reference/18-workspace-layout.md): the framework
+source lives in `packages/framework/core` and `packages/framework/harness`,
+while root `scripts/` and `dist/` stay as repository-level contracts.

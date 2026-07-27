@@ -73,7 +73,7 @@ framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて�
 この decision は release/drift guard を弱めません。
 
 - `bun run dist:check` は `packages/framework/core` + `packages/framework/harness` から root `dist/<harness>` が byte-identical に生成できることを検証します。
-- `bun run promote:self:check` は root `.claude/.codex/.agents/.cursor/.opencode` が generated distributions と同期していることを検証し続けます。
+- `bun run promote:self:check` は root `.claude/.codex/.agents/.cursor/.opencode/.kimi-code` が generated distributions と同期していることを検証し続けます。
 - `bun run typecheck`, `bun run lint`, および関連する `tests/run-tests.sh` プロファイルは、コードやテストが変わるときの検証パスであり続けます。
 
 `dist/` を移動しないため、既存の install commands と public distribution path は維持されます。
