@@ -624,5 +624,26 @@
     "dirName": "260726-promote-self-hooks",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9ec8-7a7c-75cf-bfbb-85cdf16d3430",
+    "slug": "mirror-state-split",
+    "dirName": "260726-mirror-state-split",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f9f6a-654e-7ffc-b87c-073df7cce477",
+    "slug": "t258-p95-flake",
+    "dirName": "260726-t258-p95-flake",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fa0d8-df5f-7446-b1fa-87f93d26e906",
+    "slug": "answer-manual-binding",
+    "dirName": "260726-answer-manual-binding",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
