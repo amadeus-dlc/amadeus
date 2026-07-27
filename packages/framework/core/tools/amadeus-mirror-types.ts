@@ -183,6 +183,10 @@ export type MirrorStateSnapshot = Readonly<{
   // steady state); a snapshot with the key absent is treated as no outbox, the
   // same convention as `expectedPrompt?`. The codec normalises undefined->null.
   auditOutbox?: MirrorAuditOutbox | null;
+  // Project status ledger, same optional-with-null convention: an empty ledger
+  // renders as null so a workspace that configured no Project keeps the
+  // steady-state block shape.
+  projectSync?: MirrorProjectSyncLedger | null;
 }>;
 
 export type WriteOutcome<T = MirrorStateSnapshot> =
@@ -263,6 +267,98 @@ export type MirrorMutationPermit = Readonly<{
   issueNumber: number | null;
 }>;
 
+// --- Project status sync (U1) ------------------------------------------------
+//
+// A Project board reference parsed from the `"<owner>/<number>"` configuration
+// string. Parse-don't-validate: the config layer rejects a malformed value and
+// every consumer downstream carries this proven shape.
+export type MirrorProjectRef = Readonly<{ owner: string; number: number }>;
+
+// The phase vocabulary a Project Status column can be derived from. Closed to
+// these five keys: an unknown phase name in configuration is a configuration
+// error, never coerced.
+export type MirrorPhaseKey =
+  | "ideation"
+  | "inception"
+  | "construction"
+  | "operation"
+  | "done";
+
+export type MirrorProjectStatusNames = Partial<Record<MirrorPhaseKey, string>>;
+
+export type MirrorProjectTarget = Readonly<{
+  project: MirrorProjectRef;
+  statusNames: MirrorProjectStatusNames;
+}>;
+
+// One row of the `projectSync` ledger. The state union is three-valued so U2 can
+// add the pending / safety-blocked writes without a codec change; U1 only ever
+// writes `synced`.
+export type MirrorProjectSyncEntry = Readonly<{
+  project: string; // canonical "owner/number"
+  projectId: string;
+  itemId: string | null;
+  lastAppliedStatus: string | null;
+  state: "synced" | "pending" | "safety-blocked";
+  updatedAt: string;
+}>;
+
+export type MirrorProjectSyncLedger = Readonly<{
+  projects: readonly MirrorProjectSyncEntry[];
+}>;
+
+// The resolved Status single-select field of one Project. `options` holds only
+// the options the remote Project actually declares — never a synthesized name,
+// because the option-missing diagnostic lists this set verbatim.
+export type MirrorProjectStatusField = Readonly<{
+  projectId: string;
+  fieldId: string;
+  options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
+}>;
+
+export type MirrorProjectItem = Readonly<{
+  projectId: string;
+  projectNumber: number;
+  projectOwner: string;
+  itemId: string;
+  currentStatus: string | null;
+}>;
+
+// The single membership query returns the Issue's GraphQL node id alongside its
+// current Project items. The node id is required to add the Issue to a Project
+// it is not yet a member of, and this one query is its only in-budget source
+// (E-U1CG option A: no extra call).
+export type MirrorProjectItemsView = Readonly<{
+  issueNodeId: string;
+  items: readonly MirrorProjectItem[];
+}>;
+
+// The Status a boundary expects. `keep` means "leave the column alone" and
+// deliberately carries no name, so no caller can mistake it for a target.
+export type ExpectedProjectStatus =
+  | { kind: "status"; name: string }
+  | { kind: "keep" };
+
+// Project board mutations are a separate permit axis from MirrorOperation.
+// MirrorOperation stays exactly create | sync | close (see this module's header):
+// widening it would leak Project verbs into the receipt, policy, and codec
+// vocabularies that key off it. This parallel brand reuses the same runtime
+// authority pattern — a module-private WeakSet in the capability factory — so a
+// forged literal is rejected before any process spawns.
+declare const mirrorProjectPermitBrand: unique symbol;
+
+export type MirrorProjectMutation =
+  | "add-project-item"
+  | "update-project-item-status";
+
+export type MirrorProjectMutationPermit = Readonly<{
+  [mirrorProjectPermitBrand]: true;
+  event: MirrorEventIdentity;
+  repository: RepositoryIdentity;
+  mutation: MirrorProjectMutation;
+  project: MirrorProjectRef;
+}>;
+
 // The Gateway methods are asynchronous: a mutation deadline drives a multi-step
 // SIGTERM -> grace -> SIGKILL -> process-group-death termination that cannot
 // settle behind a synchronous return. Every consumer (the C6 executor reached
@@ -288,6 +384,26 @@ export interface MirrorGitHubGateway {
   closeIssue(
     permit: MirrorMutationPermit,
   ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
+  // Project status sync (U1). The two read methods take no permit; the two
+  // mutations require a Project permit, mirroring the Issue mutation rule.
+  listProjectItems(
+    issue: RemoteMirrorIssue,
+  ): Promise<GatewayOutcome<MirrorProjectItemsView>>;
+  resolveProjectStatusField(
+    project: MirrorProjectRef,
+  ): Promise<GatewayOutcome<MirrorProjectStatusField>>;
+  addProjectItem(
+    permit: MirrorProjectMutationPermit,
+    projectId: string,
+    issueNodeId: string,
+  ): Promise<GatewayOutcome<{ itemId: string }>>;
+  updateProjectItemStatus(
+    permit: MirrorProjectMutationPermit,
+    projectId: string,
+    itemId: string,
+    fieldId: string,
+    optionId: string,
+  ): Promise<GatewayOutcome<void>>;
 }
 
 export type MirrorExecutionContext = Readonly<{
@@ -304,6 +420,31 @@ export type MirrorExecutionContext = Readonly<{
   newOperationId: () => string;
   gateway: MirrorGitHubGateway;
   authorization: MirrorExecutionAuthorization;
+  // Project status sync inputs, supplied by the coordinator (which owns both the
+  // resolved configuration and the workflow snapshot). Absent means the step is
+  // not wired for this invocation and no Project API call is made.
+  projectSync?: Readonly<{
+    targets: readonly MirrorProjectTarget[];
+    snapshot: MirrorSnapshot;
+    diagnostic?: (diagnostic: MirrorProjectDiagnostic) => void;
+  }>;
+}>;
+
+// An observation-only Project diagnostic. Built from a fixed template over the
+// remote Project's own vocabulary, so it carries no credential and no raw
+// response bytes.
+export type MirrorProjectDiagnostic = Readonly<{
+  project: string;
+  reason:
+    | "membership-query-failed"
+    | "project-unresolved"
+    | "field-missing"
+    | "option-missing"
+    | "add-failed"
+    | "update-failed";
+  expectedStatus: string | null;
+  availableOptions: readonly string[];
+  summary: string;
 }>;
 
 export type MirrorSnapshot = Readonly<{
