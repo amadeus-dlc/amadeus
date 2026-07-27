@@ -28748,3 +28748,522 @@
 **Message**: Reviewer: amadeus-architecture-reviewer-agent\n\nU4 hook-wiring-remaining のレビュー結果です。\n\n```json\n{"verdict":"READY","summary":"U4 wires the U2 core compose hook into the 5 remaining matrix-wired faces (cod
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-27T02:27:05Z
+**Event**: SWARM_STARTED
+**Batch number**: 3
+**Unit names**: conformance-suite
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-27T02:27:05Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: conformance-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite
+**Branch name**: bolt-conformance-suite
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-27T02:27:06Z
+**Event**: BOLT_STARTED
+**Bolt names**: conformance-suite
+**Batch number**: 3
+**Walking skeleton**: false
+**Bolt slug**: conformance-suite
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-27T02:27:06Z
+**Event**: STATE_FORKED
+**Bolt slug**: conformance-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite
+**Source state hash**: 65a9b3db5709d6b5ea8aa018000186a85326d9b1decd3048c63623b0eb77b10f
+**Target state hash**: 65a9b3db5709d6b5ea8aa018000186a85326d9b1decd3048c63623b0eb77b10f
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-27T02:27:06Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: conformance-suite
+**Source Audit Hash**: 148ebc14ecd9a75ecfbd39a65186c804939c0eda39cf2a6ba8191dd754849d8c
+**Fork Boundary**: 924577
+**Reentrant**: true
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:44:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 33b8f970
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/scripts/conformance-report.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:44:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 33b8f970
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/scripts/conformance-report.ts
+**Duration ms**: 1905
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:44:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: f15950a7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/scripts/conformance-report.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:44:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: f15950a7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/scripts/conformance-report.ts
+**Duration ms**: 1777
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:45:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: f281d726
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t335-conformance-trace-machine-check.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:45:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: f281d726
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t335-conformance-trace-machine-check.integration.test.ts
+**Duration ms**: 2127
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:45:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9f83e59
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t335-conformance-trace-machine-check.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:45:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: d9f83e59
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t335-conformance-trace-machine-check.integration.test.ts
+**Duration ms**: 621
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:45:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 98d21c50
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t336-conformance-report-section.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:45:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 98d21c50
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t336-conformance-report-section.test.ts
+**Duration ms**: 1905
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:45:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa60876c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t336-conformance-report-section.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:45:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa60876c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t336-conformance-report-section.test.ts
+**Duration ms**: 661
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:48:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93daea0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:48:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93daea0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 1886
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:48:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a67140c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:48:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a67140c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 697
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:49:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: a775fd56
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t338-conformance-recompile-selfheal.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:49:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: a775fd56
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t338-conformance-recompile-selfheal.integration.test.ts
+**Duration ms**: 1916
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:49:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 43cae41d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t338-conformance-recompile-selfheal.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:49:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 43cae41d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t338-conformance-recompile-selfheal.integration.test.ts
+**Duration ms**: 683
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:51:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68a9237a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:51:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68a9237a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 1884
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:51:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1dfbeb4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:51:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1dfbeb4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 622
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:51:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 691fb650
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:51:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 691fb650
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 1841
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:51:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f98a88e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:51:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f98a88e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 602
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:53:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7cc17e8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:53:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7cc17e8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 1846
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:53:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: c20248db
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:53:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: c20248db
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/unit/t337-conformance-fragment-order.test.ts
+**Duration ms**: 611
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T02:58:14Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u7
+**Agent ID**: abuilder-u7-71db0214bb717a4a
+**Message**: CI (integration ティア) は実行継続中で出力はバッファされています。monitor `b2rxjm2wu` が完了を検知して通知します。それまで待機します。完了後に coverage:ci の lcov DA 確認と code-summary.md 作成・コミットを行います。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T03:04:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae46291796c9ce627
+**Message**: 順調です。現時点の状況をまとめると:\n\n**完了**\n- PR #1554(U2 walking skeleton)— coverage 修正 → 全 checks green → 承認マージ済み(main 着地)\n- fix/plugin の再接地マージ(origin/main 取込・衝突は機械照合で解消)\n- swarm を U2 込み base で再構築し、U3/U5/U6 を並列再実装 →
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T03:28:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad5600063a00759ee
+**Message**: このセッションで Opus は稼働していません。\n\n- **メインセッション(conductor)**: Claude Fable 5(モデル ID: `claude-fable-5`)で動いています。Opus ではなく、Claude 5 ファミリーの Mythos クラス(Opus より上位の階層)のモデルです。\n- **サブエージェント(builder-u2-coverage / builde
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T03:28:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a364f0d0535e48e30
+**Message**: このセッションで起動したサブエージェントと、モデルの決まり方は次のとおりです。\n\n**起動したサブエージェント(いずれも Agent ツール経由)**\n- builder-u2-coverage、builder-u3、builder-u5、builder-u6、builder-u4、builder-u7(amadeus-developer-agent)\n- reviewer-u6、reviewer
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T03:37:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u7
+**Agent ID**: abuilder-u7-71db0214bb717a4a
+**Message**: 再実行はまだ実行中です。バックグラウンドタスク b4umet1yk は完了時に自動で私を再開します。それまで待機し、完了通知を受けたら失敗ファイルを assertion 実文まで特定して帰属を確定し、緑または既存/環境起因と確認でき次第 commit(英語)と code-summary.md 作成・完了報告を行います。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T04:10:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a37378c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t258-boundary-guard.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T04:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a37378c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t258-boundary-guard.integration.test.ts
+**Duration ms**: 1855
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T04:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: de5c4dff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t258-boundary-guard.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T04:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: de5c4dff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite/tests/integration/t258-boundary-guard.integration.test.ts
+**Duration ms**: 631
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-27T04:16:55Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: conformance-suite
+**Batch number**: 3
+**Bolt slug**: conformance-suite
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-27T04:16:55Z
+**Event**: STATE_MERGED
+**Bolt slug**: conformance-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-conformance-suite
+**Source state hash**: b840f77d987a358048ec8a768421a7aacab1689c538f0f37d18a3a7bc1f50420
+**Target state hash**: 65a9b3db5709d6b5ea8aa018000186a85326d9b1decd3048c63623b0eb77b10f
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-27T04:16:55Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: conformance-suite
+**Entries Merged**: 0
+**Source Audit Hash**: 148ebc14ecd9a75ecfbd39a65186c804939c0eda39cf2a6ba8191dd754849d8c
+**Fork Boundary**: 924577
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-27T04:16:55Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 3
+**Unit name**: conformance-suite
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-27T04:16:55Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 3
+**Converged count**: 1
+**Failed count**: 0
+
+---
