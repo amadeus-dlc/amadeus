@@ -225,9 +225,9 @@ subagent floor while passing `--degraded-from <requested>` so the referee emits
 `SWARM_DEGRADED` (the requested value is preserved in the audit); `rejected`
 stops the batch immediately — no worktree, no spawn, no `SWARM_STARTED`.
 
-**Breaking change.** The legacy `AMADEUS_USE_SWARM=1` no longer selects a driver
-— it is an unknown value and is **fail-closed**. There is no compatibility shim:
-a value the running harness cannot dispatch either loud-degrades (a sibling
+**Fail-closed on unknown values.** `AMADEUS_USE_SWARM=1` selects no driver — it
+is an unknown value and is **fail-closed**. There is no compatibility shim: a
+value the running harness cannot dispatch either loud-degrades (a sibling
 harness's ultra) or is rejected (`1` and every other unrecognised string).
 
 **Effort evidence limit (C-15).** In the `codex-ultra` selected case each child

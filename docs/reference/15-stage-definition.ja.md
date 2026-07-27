@@ -20,7 +20,7 @@
 
 すべてのステージ `.md` ファイルは2人の読者に仕える:
 
-- **パーサー**(`lib.ts` の `parseStageFrontmatter`、milestone 7 で出荷)。
+- **パーサー**(`lib.ts` の `parseStageFrontmatter`)。
   YAML フロントマターを読み、構造化された `StageEntry` を生成する。本体には
   触れない。
 - ステージを実行する **LLM エージェント**。本体を読み、散文の指示に従い、
@@ -69,7 +69,7 @@
 
 YAML が権威あるものです。JSON はビルド成果物です。CI がその関係を強制します。
 
-`amadeus-graph compile` と `compile --check` は CLI サブコマンドとして出荷されます(milestone 9)。
+`amadeus-graph compile` と `compile --check` は CLI サブコマンドです。
 ステージ YAML を編集した後は compile を手動で実行し、CI が `compile
 --check` を強制してドリフトを検出します。これを自動化する pre-commit フックは
 後の PR に延期されています。`stage-graph.json` はコンパイル済み成果物です — それを
@@ -235,7 +235,7 @@ Unit 完了判定の対象から外れてしまいます。各出力リスト内
 - `agent-team` — **予約**。Anthropic の実験的な
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` プリミティブが安定化し、直接的な
   エージェント間メッセージングが必要になったときのため。最初の消費者はおそらく
-  v0.8.0 の Ralph ループドライバです。v0.3.0 ではどのステージも `agent-team` を
+  v0.8.0 の Ralph ループドライバです。どのステージも `agent-team` を
   宣言しません。
 
 注: 今日のマルチエージェント実行は `support_agents` を介して表現されます。
@@ -259,7 +259,7 @@ enum 拡張時のサイレントなフォールスルーは既知の落とし穴
 キャパシティの現実チェックのために `amadeus-delivery-agent` をサポートとして
 ロードするかもしれません。
 
-両フィールドは `loadAgents()`(milestone 3 で導入)を介して `.claude/agents/*.md` に対して
+両フィールドは `loadAgents()` を介して `.claude/agents/*.md` に対して
 動的に検証されます — `amadeus-graph.ts compile` が発見されたエージェント slug を
 `validateStageFrontmatter` に渡すため、対応するファイルのないエージェントを名指しする
 `lead_agent` や `support_agents` の値は、実行時に未登録サブエージェントの `Task`
@@ -336,44 +336,31 @@ review/revise ループに上限を設けます。`reviewer` が宣言されて�
 ## 3コンパートメントの本体モデル
 
 ステージファイルの本体には3つのコンパートメントがあり、この順序で宣言されます。
-v0.3.0 で populate されるのは `## Steps` のみです。
 
-| コンパートメント | v0.3.0 | v0.5.0 | ここに入るもの |
-|-------------|--------|--------|----------------|
-| `## Steps` | 必須、populate 済み | 変更なし | エージェントが従う命令的な散文 |
-| `## Sensors` | 予約、不在 | populate 済み | 決定論的なセンサーバインディング(フラットな `.claude/sensors/` レジストリからの ID) |
-| `## Learn` | 予約、不在 | populate 済み | ループドライバのバインディングとオブザーバールール |
+| コンパートメント | 存在 | ここに入るもの |
+|-------------|------|----------------|
+| `## Steps` | 必須 | エージェントが従う命令的な散文 |
+| `## Sensors` | 任意 | 決定論的なセンサーバインディング(フラットな `.claude/sensors/` レジストリからの ID) |
+| `## Learn` | 任意 | ループドライバのバインディングとオブザーバールール |
 
-v0.3.0 で3つのコンパートメントを事前宣言しておいたことは、v0.5.0 の追加が
-本体の再構築ではなくスロットインの変更であったことを意味しました。`## Sensors` の
-バインディングセマンティクスとプルインポートモデルについては [Sensor
-System](07-sensor-system.md) を参照。
-
-**milestone 8 の移行ルール:** 既存の本体を `## Steps` の下でラップするだけで、
-それ以外は何もしない。ほとんどのステージファイルはすでに `## Steps` を最初の本体
-見出しとして使用しています。
+`## Sensors` のバインディングセマンティクスとプルインポートモデルについては
+[Sensor System](07-sensor-system.ja.md) を参照。
 
 ---
 
-## YAML 移行 — 出荷済み
+## YAML フロントマター
 
-milestone 7 は `lib.ts` に `parseStageFrontmatter` と `emitStageFrontmatter` を
-出荷しました — YAML のみ、散文の後方互換パスなし。milestone 8 は31個すべての
-ステージファイルを単一のアトミックな変更で YAML フロントマターへ移行しました。
-milestone 9 は `amadeus-graph.ts` を拡張して YAML を `stage-graph.json` へコンパイルし、
-CI ドリフトガードとして `compile --check` を追加しました。クリーンなツリーで
+`lib.ts` の `parseStageFrontmatter` と `emitStageFrontmatter` は YAML のみを
+扱います — 散文の後方互換パスはありません。すべてのステージファイルが YAML
+フロントマターを持ち、`amadeus-graph.ts` がそれを `stage-graph.json` へ
+コンパイルし、`compile --check` が CI のドリフトガードです。クリーンなツリーで
 `bun amadeus-graph.ts compile --check` を実行すると 0 で終了します。任意のステージ
 YAML を JSON を再コンパイルせずに編集すると、明確なメッセージとともに 1 で終了します。
 
 ---
 
-## v0.3.0 における既知の制限
+## 既知の制限
 
-- **`for_each` は新しい。**`**Per-Unit**: Yes` を持つ5つの Construction ステージは
-  `for_each: unit-of-work` へ移行します。他の26ステージはフィールドを完全に省略します。
-- **Sensors / Learn コンパートメントは宣言されているが空。** パーサーはそれらの
-  不在を許容します。v0.5.0 がそれらを populate しました([Sensor
-  System](07-sensor-system.md) を参照)。
 - **ドリフトチェック以上のランタイム検証はない。** パーサーは有効な `StageEntry` を
   生成する任意の YAML を受け付けます。doctor の後の拡張がその上にアドバイザリな
   rule/sensor チェックを加えます。

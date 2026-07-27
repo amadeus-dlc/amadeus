@@ -54,7 +54,7 @@ bun --version
 
 ### フックが設定されていない
 
-フックは `.claude/settings.json` でプロジェクト全体に登録されます(v0.6.0 以降。それ以前のバージョンではワークフロースパインのフックを SKILL.md のフロントマターで宣言していました)。`settings.json` に `PostToolUse`、`PreCompact`、`SubagentStop`、`Stop` エントリ(および `SessionStart`/`SessionEnd`)を含む `hooks` ブロックがあることを確認してください。これらを移動したアップグレードを取り込み、ディスク上の `settings.json` がそれより古い場合は、出荷される `settings.json` の hooks ブロックを再コピーしてください。
+フックは `.claude/settings.json` でプロジェクト全体に登録されます。`settings.json` に `PostToolUse`、`PreCompact`、`SubagentStop`、`Stop` エントリ(および `SessionStart`/`SessionEnd`)を含む `hooks` ブロックがあることを確認してください。ディスク上の `settings.json` にそれらが欠けている場合は、出荷される `settings.json` の hooks ブロックを再コピーしてください。
 
 ---
 

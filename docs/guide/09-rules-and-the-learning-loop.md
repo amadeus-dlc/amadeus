@@ -42,7 +42,7 @@ org → team → project → phase → stage
 
 The model is **strict-additive**. Every applicable rule appears in the agent's context — nothing is silently dropped or overridden at runtime. Org defaults, team practices, and project specialization concatenate. The matching phase rule attaches because the stage already declares its phase. (The fifth layer, per-stage rules, is reserved for a future release.)
 
-This is a deliberate change from earlier versions. There is no `overrides:` block and no `enforcement:` keyword anymore. All the applicable layers are present at once, and conflicts are caught when a rule is written, before it ever reaches runtime (see [Admission-time conflict checks](#admission-time-conflict-checks) below).
+There is no `overrides:` block and no `enforcement:` keyword. All the applicable layers are present at once, and conflicts are caught when a rule is written, before it ever reaches runtime (see [Admission-time conflict checks](#admission-time-conflict-checks) below).
 
 The chain is resolved **once**, at workflow start, when the framework compiles your stage definitions, rules, and sensors into a single graph. Throughout the workflow the agent reads the resolved view; it never re-walks the chain mid-run. That compile boundary is the same one the planes model describes — see [Planes: how it fits together](#planes-how-it-fits-together) at the end of this chapter.
 

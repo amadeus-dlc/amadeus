@@ -8,7 +8,7 @@ amadeus-developer-agent はシニアソフトウェア開発者です。アー�
 
 amadeus-developer-agent は Inception と Construction にまたがる 2 つのステージをリードします。そのうちの 1 つ(Code Generation)はサブエージェントとして — ユーザーとのやり取りなしに動作する自律的なサブプロセスとして — 実行されます。ビルドツール、パッケージマネージャ、テストコマンドを実行するための Bash アクセスを持ちます。
 
-Workspace Detection(0.2)は以前は amadeus-developer-agent がサブエージェントとしてリードしていましたが、現在は `amadeus-utility init` 内でルールベースのスキャナーとして決定論的に実行されます。amadeus-developer-agent はもはや Initialization には関与しません。
+Workspace Detection(0.2)は `amadeus-utility init` 内でルールベースのスキャナーとして決定論的に実行されます。amadeus-developer-agent は Initialization には関与しません。
 
 ## リードするステージ
 

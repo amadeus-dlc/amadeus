@@ -282,11 +282,11 @@ On affirmation, content is promoted to:
    Atomicity: write `project.md` first, then `team.md`. On failure,
    emit `PRACTICES_OVERRIDE` and abort without recording PRACTICES_AFFIRMED.
 7. Emit `PRACTICES_AFFIRMED`; update state checkbox; update
-   `Practices Affirmed Timestamp` (v7 state template field, milestone 6).
+   `Practices Affirmed Timestamp` (v7 state template field).
 
 ### Notes
 
-- The `replaceSection` helper in `.claude/tools/amadeus-lib.ts` was added in milestone 8
+- The `replaceSection` helper in `.claude/tools/amadeus-lib.ts` exists
   specifically to support the team.md cross-row promotion (the existing
   `appendUnderHeading` accumulates duplicates across re-runs).
 - `org.md` and `team.md` share one Title Case heading set

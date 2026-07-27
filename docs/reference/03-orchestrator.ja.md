@@ -394,7 +394,7 @@ sequenceDiagram
 | 2.1 Reverse Engineering | `amadeus-developer-agent` その後 `amadeus-architect-agent`(2ステップ) | amadeus-developer-agent + amadeus-architect-agent | 深いコード分析は大きな中間出力を生成する |
 | 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | コード記述はユニット仕様に集中したクリーンなコンテキストから利益を得る |
 
-Workspace detection(0.2)は以前はサブエージェントでした。現在は `amadeus-utility init` 内部の決定論的なルールベースのスキャナーです — ルールは `amadeus-common/stages/initialization/workspace-detection.md` に文書化されています。
+Workspace detection(0.2)は `amadeus-utility init` 内部の決定論的なルールベースのスキャナーです — ルールは `amadeus-common/stages/initialization/workspace-detection.md` に文書化されています。
 
 6ステップのプロセス:
 
@@ -711,7 +711,7 @@ Claude Code の Task ツール呼び出しが失敗したとき:
 
 ## Appendix B: Hook Reference
 
-フレームワークフックは `settings.json` にプロジェクト全体で登録されます(v0.6.0 のフック移動。ワークフローがアクティブでないとき自己ゲートする)。そのうち3つを以下に詳述します。残り(`amadeus-sensor-fire.ts`、`amadeus-sync-statusline.ts`、`amadeus-runtime-compile.ts` を含む)は [Hooks and Tools](06-hooks-and-tools.ja.md) でカバーされ、そこがすべての権威あるフックリストと完全なソースレベルドキュメントを運びます。
+フレームワークフックは `settings.json` にプロジェクト全体で登録されます(ワークフローがアクティブでないとき自己ゲートする)。そのうち3つを以下に詳述します。残り(`amadeus-sensor-fire.ts`、`amadeus-sync-statusline.ts`、`amadeus-runtime-compile.ts` を含む)は [Hooks and Tools](06-hooks-and-tools.ja.md) でカバーされ、そこがすべての権威あるフックリストと完全なソースレベルドキュメントを運びます。
 
 ### PostToolUse: audit-logger.ts
 

@@ -33,7 +33,7 @@ AI-DLC 用語の正典的定義。ユーザーガイドと Developer Reference �
 | **Command(コマンド)** | AI-DLC のユーザー向け起動。`/amadeus` の後にスコープ、フラグ、または自由記述を続けてタイプします。内部的に `/amadeus` は Claude Code スキルにマップされます。 |
 | **Compaction** | コンテキストウィンドウが満杯になったときに、以前の会話コンテキストを要約する Claude Code の自動プロセス。この実装は `amadeus-state.md` と `.amadeus-recovery.md` を介して compaction をまたいで状態を保持します。 |
 | **Conductor(コンダクター)** | `/amadeus` セッション自体(`SKILL.md`)。薄い転送ループを実行します: **Engine** に次の手を求め、それを実行し(ステージ実行、質問、swarm の fan-out)、結果を報告し、繰り返します。ルーティングではなく実行品質を所有します。[エンジンとスキルシステム](../reference/17-skill-system.ja.md) を参照。 |
-| **Control loop(制御ループ)** | ステージを方向づけ検証する、**Rules**(作業前に適用される standing decision)と **Sensors**(出力に対して発火する決定論的チェック)のフィードフォワード/フィードバックのペアリング。(**Harness** とは別物です — こちらは CLI ディストリビューションの意味。両者はかつてどちらも「harness」と呼ばれていました。) |
+| **Control loop(制御ループ)** | ステージを方向づけ検証する、**Rules**(作業前に適用される standing decision)と **Sensors**(出力に対して発火する決定論的チェック)のフィードフォワード/フィードバックのペアリング。(**Harness** とは別物です — こちらは CLI ディストリビューションの意味。) |
 | **Core** | `packages/framework/core/` にある手作業で作成されたハーネス中立なソースオブトゥルース — エンジン、ステージ、エージェント、ルール、スコープ、センサー、knowledge、フック、セッションスキル。すべてのハーネスディストリビューションはそこから生成されます。ここで編集し、`dist/` では決して編集しません。 |
 | **Depth(深さ)** | 各ステージが生成する詳細の量を制御する 3 つの詳細レベル(Minimal、Standard、Comprehensive)の 1 つ。スコープにはデフォルトの深さがあり、任意の承認ゲートで上書きできます。[スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照。 |
 | **Directive(ディレクティブ)** | **Engine** が各 `next` で発行する型付き命令(例: `run-stage`、`ask`、`print`、`done`、`invoke-swarm`)。**Conductor** に次に何をするかを正確に伝えます。[エンジンとスキルシステム](../reference/17-skill-system.ja.md) を参照。 |

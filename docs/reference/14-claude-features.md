@@ -64,7 +64,7 @@ user-invocable: true
 ---
 ```
 
-The orchestrator's frontmatter carries no `hooks:` block. As of v0.6.0 every framework hook is registered project-wide in `settings.json` (the hooks-move, Fork 2→B), so the orchestrator and every packaged or hand-written runner inherit the deterministic spine without copying a per-runner `hooks:` block.
+The orchestrator's frontmatter carries no `hooks:` block. Every framework hook is registered project-wide in `settings.json`, so the orchestrator and every packaged or hand-written runner inherit the deterministic spine without copying a per-runner `hooks:` block.
 
 | Field | Purpose |
 |-------|---------|
@@ -111,7 +111,7 @@ The conductor delegates to a separate Claude instance via the Claude Code Task t
 | 2.1 Reverse Engineering | `amadeus-developer-agent` then `amadeus-architect-agent` (two-step) | amadeus-developer-agent + amadeus-architect-agent | Deep code analysis produces large intermediate output |
 | 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | Code writing benefits from clean context focused on the unit specification |
 
-Workspace detection (0.2) used to be a subagent; it now runs deterministically inside `amadeus-utility init`.
+Workspace detection (0.2) runs deterministically inside `amadeus-utility init`.
 
 ### Model Overrides
 
@@ -242,7 +242,7 @@ Runs periodically (not just on tool use) to keep the terminal status current.
 }
 ```
 
-Registered in `settings.json` (project-wide) — as are all framework hooks since the v0.6.0 hooks-move. Session lifecycle events must be project-wide regardless, because they fire before `/amadeus` activates and after it exits: `session-start.ts` injects resume context, `session-end.ts` emits `SESSION_ENDED` for audit completeness.
+Registered in `settings.json` (project-wide) — as are all framework hooks. Session lifecycle events must be project-wide regardless, because they fire before `/amadeus` activates and after it exits: `session-start.ts` injects resume context, `session-end.ts` emits `SESSION_ENDED` for audit completeness.
 
 ### Personal Settings Override
 

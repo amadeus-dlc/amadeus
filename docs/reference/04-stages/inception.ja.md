@@ -180,11 +180,11 @@ Practices Discovery は、AI-DLC において2軸の構成モデルの両方の�
 4. コンソリデート -- 4つの成果物を書き出す。`PRACTICES_DISCOVERED` を発火する。
 5. 承認ゲート -- AskUserQuestion が両方のドラフトを提示する。選択肢: Approve / Edit-then-Approve / Reject-and-rewrite-from-scratch。
 6. 昇格(Approve 時)-- `amadeus/spaces/<space>/memory/team.md` の5つのプラクティスセクションをセクション置換する。`amadeus/spaces/<space>/memory/project.md` の `## Mandated` と `## Forbidden` の下に日付スタンプ付きでルールを追記する。アトミック性: まず `project.md` を書き、その後 `team.md` を書く。失敗時は `PRACTICES_OVERRIDE` を発火し、PRACTICES_AFFIRMED を記録せずに中断する。
-7. `PRACTICES_AFFIRMED` を発火する。状態のチェックボックスを更新する。`Practices Affirmed Timestamp`(v7 状態テンプレートのフィールド、マイルストーン6)を更新する。
+7. `PRACTICES_AFFIRMED` を発火する。状態のチェックボックスを更新する。`Practices Affirmed Timestamp`(v7 状態テンプレートのフィールド)を更新する。
 
 ### 備考
 
-- `.claude/tools/amadeus-lib.ts` の `replaceSection` ヘルパーは、team.md の行をまたぐ昇格をサポートするためにマイルストーン8で追加された(既存の `appendUnderHeading` は再実行をまたいで重複を蓄積する)。
+- `.claude/tools/amadeus-lib.ts` の `replaceSection` ヘルパーは、team.md の行をまたぐ昇格をサポートするために存在する(既存の `appendUnderHeading` は再実行をまたいで重複を蓄積する)。
 - `org.md` と `team.md` は1組の Title Case 見出しセット(`## Way of Working`、`## Walking Skeleton`、`## Testing Posture`、`## Deployment`、`## Code Style`)を共有する。このステージは、対応する Title Case 見出しで `extractMarkdownSection` を使って `org.md` の各セクションを読み、`team.md` の同じ見出しをセクション置換する。
 
 ---

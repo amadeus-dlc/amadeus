@@ -298,7 +298,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 
 ### Worktree
 
-v0.4.0 向けに事前登録。3つの `WORKTREE_*` 行は `amadeus-worktree.ts`(milestone 7)とともに出荷。`STATE_*` は milestone 9(状態 fork/merge)で到着。`AUDIT_*` は milestone 10(監査 fork/merge)で到着。t48 forward チェックは Emitter セルがまだ `Reserved` と読める行をスキップします。
+3つの `WORKTREE_*` 行は `amadeus-worktree.ts`、`STATE_*` は `amadeus-state.ts`(状態 fork/merge)、`AUDIT_*` は `amadeus-audit.ts`(監査 fork/merge)から発行されます。t48 forward チェックは Emitter セルがまだ `Reserved` と読める行をスキップします。
 
 | Event | Emitter | Trigger |
 |---|---|---|
@@ -312,18 +312,18 @@ v0.4.0 向けに事前登録。3つの `WORKTREE_*` 行は `amadeus-worktree.ts`
 
 ### Practices
 
-v0.4.0 向けに事前登録。エミッタは milestone 8(ステージ 2.2 practices-discovery)と milestone 13(Construction オーケストレーターランタイム)で到着します。
+ステージ 2.2 practices-discovery と Construction オーケストレーターランタイムから発行されます。
 
 | Event | Emitter | Trigger |
 |---|---|---|
 | `PRACTICES_DISCOVERED` | `tools/amadeus-state.ts` `practices-event --type discovered` | ブラウンフィールド発見 + ドラフト完了。ステージ 2.2 ゲートで承認待ちのチームプラクティスドラフト |
 | `PRACTICES_AFFIRMED` | `tools/amadeus-state.ts` `practices-promote` | チームがプラクティスを承認。intent の `inception/practices-discovery/` から space メモリ層(`amadeus/spaces/<space>/memory/team.md` および `memory/project.md`)へコンテンツを昇格 |
-| `PRACTICES_OVERRIDE` | `tools/amadeus-state.ts` `practices-promote`(milestone 8 の write-failure パス)および `tools/amadeus-state.ts` `practices-event --type override`(milestone 13 の bolt-plan-marker-conflict パス — 別イベントなしで `Reason` フィールドによる discriminator-field 曖昧性解消) | いずれか: ステージ 2.2 affirmation 中に cross-row 昇格が失敗した(Reason: `write-failure-*`)、または `amadeus/spaces/<space>/memory/team.md` の walking-skeleton スタンスが現在の Bolt に対して bolt-plan のマーカーを上書きした(Reason: `bolt-plan-marker-conflict`) |
+| `PRACTICES_OVERRIDE` | `tools/amadeus-state.ts` `practices-promote`(write-failure パス)および `tools/amadeus-state.ts` `practices-event --type override`(bolt-plan-marker-conflict パス — 別イベントなしで `Reason` フィールドによる discriminator-field 曖昧性解消) | いずれか: ステージ 2.2 affirmation 中に cross-row 昇格が失敗した(Reason: `write-failure-*`)、または `amadeus/spaces/<space>/memory/team.md` の walking-skeleton スタンスが現在の Bolt に対して bolt-plan のマーカーを上書きした(Reason: `bolt-plan-marker-conflict`) |
 | `PRACTICES_SECTION_EMPTY` | `tools/amadeus-state.ts` `practices-event --type empty` | コンダクターが空を返した practices セクションを読んだ。アドバイザリのみ、org デフォルトにフォールバック |
 
 ### Merge dispatch
 
-milestone 1 で v0.4.0 向けに事前登録。エミッタは新しい `amadeus-bolt dispatch-event` サブコマンド経由で milestone 13 に到着します。コンダクターは各 amadeus-pipeline-deploy-agent ディスパッチをブラケットします — 呼び出し前 INVOKED、YAML パース成功時に呼び出し後 RETURNED、タイムアウト / 不正 YAML / 低信頼度時に FALLBACK。
+`amadeus-bolt dispatch-event` サブコマンド経由で発行されます。コンダクターは各 amadeus-pipeline-deploy-agent ディスパッチをブラケットします — 呼び出し前 INVOKED、YAML パース成功時に呼び出し後 RETURNED、タイムアウト / 不正 YAML / 低信頼度時に FALLBACK。
 
 | Event | Emitter | Trigger |
 |---|---|---|
@@ -333,7 +333,7 @@ milestone 1 で v0.4.0 向けに事前登録。エミッタは新しい `amadeus
 
 ### Sensors
 
-milestone 1 で v0.5.0 向けに事前登録。エミッタは4つの `SENSOR_*` イベントについて milestone 9(センサーディスパッチャー)に、`GUARDRAIL_LOADED` について milestone 14(paired-coverage doctor 行)に到着します。カバレッジは環境的です — markdown を書くすべての Inception/Construction/Operation ステージは、レジストリデフォルトのセンサーから少なくとも1つの `SENSOR_FIRED` 行を発行します。v0.5.0 ではアドバイザリのみ。v0.8.0 の ralph ドライバが Construction フェーズのセンサーにブロッキングセマンティクスを導入します。
+4つの `SENSOR_*` イベントはセンサーディスパッチャーから、`GUARDRAIL_LOADED` は paired-coverage doctor 行から発行されます。カバレッジは環境的です — markdown を書くすべての Inception/Construction/Operation ステージは、レジストリデフォルトのセンサーから少なくとも1つの `SENSOR_FIRED` 行を発行します。アドバイザリのみです。将来の ralph ドライバが Construction フェーズのセンサーにブロッキングセマンティクスを導入します。
 
 | Event | Emitter | Trigger |
 |---|---|---|
@@ -345,7 +345,7 @@ milestone 1 で v0.5.0 向けに事前登録。エミッタは4つの `SENSOR_*`
 
 ### Learning loop
 
-milestone 4 で v0.5.0 向けに事前登録。`MEMORY_EMPTY` エミッタは milestone 8(`amadeus-runtime.ts compile`)に到着します。§13 の Learnings Ritual は実行中にステージごとの memory.md を書きます。ステージ承認時、runtime-graph の compile が memory.md を読み、4つの標準見出しの下に非空エントリが0のステージについて `MEMORY_EMPTY` を発行します。milestone 12 の learning-gate ツール(`amadeus-learnings.ts persist`)は、保持された学習が `amadeus/spaces/<space>/memory/{project,team}.md` に日付付きのプラクティスエントリとして到着したとき `RULE_LEARNED` を発行し、学習がセンサーバインディング(マニフェスト + 起源ステージの `sensors:` フロントマター)をインストールしたとき `SENSOR_PROPOSED` を発行します。doctor はダイアリー規律の可観測性のためにこれらの行を読みます。
+`MEMORY_EMPTY` は `amadeus-runtime.ts compile` から発行されます。§13 の Learnings Ritual は実行中にステージごとの memory.md を書きます。ステージ承認時、runtime-graph の compile が memory.md を読み、4つの標準見出しの下に非空エントリが0のステージについて `MEMORY_EMPTY` を発行します。learning-gate ツール(`amadeus-learnings.ts persist`)は、保持された学習が `amadeus/spaces/<space>/memory/{project,team}.md` に日付付きのプラクティスエントリとして到着したとき `RULE_LEARNED` を発行し、学習がセンサーバインディング(マニフェスト + 起源ステージの `sensors:` フロントマター)をインストールしたとき `SENSOR_PROPOSED` を発行します。doctor はダイアリー規律の可観測性のためにこれらの行を読みます。
 
 | Event | Emitter | Trigger |
 |---|---|---|
@@ -355,7 +355,7 @@ milestone 4 で v0.5.0 向けに事前登録。`MEMORY_EMPTY` エミッタは mi
 
 ### Swarm
 
-milestone 2 で v0.6.0 向けに事前登録。6つの swarm イベントはすべて swarm referee `amadeus-swarm.ts` から発行されるようになりました — コンダクターが参照する決定論的な verdict サーフェスです。referee はステートレスです: `prepare` はユニットごとの worktree を fork し `SWARM_STARTED` を発行します(加えて、コンダクターが loud downgrade を報告したときの `SWARM_DEGRADED` は Wave 4 milestone 16 で誕生)。`finalize` はコンダクターが収束を主張したセットを再検証し、Unit ごとのペア、失敗した Unit ごとの baton 行、バッチ集計を発行します。`check` サブコマンドはアドバイザリで何も発行しません。エンジンは読み取り専用でコンダクターは監査イベントを発行しないため、決定論的ツールが swarm 分類体系全体を所有します。これらの行は依存リンクされた Units のバッチのライフサイクルを追跡します: バッチ開始時のファンアウト、Unit ごとの収束または再検証失敗、コンダクターへの return-the-baton の受け渡し、バッチ完了。コンダクターは `invoke-swarm` をステージ `mode` enum と並ぶ直交的なディレクティブ種別として扱います — 予約された `agent-team` モードをアクティブにはしません(そのモードは予約されたままです)。t48 forward チェックは Emitter セルがまだ `Reserved` と読める行をスキップします。
+6つの swarm イベントはすべて swarm referee `amadeus-swarm.ts` から発行されます — コンダクターが参照する決定論的な verdict サーフェスです。referee はステートレスです: `prepare` はユニットごとの worktree を fork し `SWARM_STARTED` を発行します(加えて、コンダクターが loud downgrade を報告したときは `SWARM_DEGRADED`)。`finalize` はコンダクターが収束を主張したセットを再検証し、Unit ごとのペア、失敗した Unit ごとの baton 行、バッチ集計を発行します。`check` サブコマンドはアドバイザリで何も発行しません。エンジンは読み取り専用でコンダクターは監査イベントを発行しないため、決定論的ツールが swarm 分類体系全体を所有します。これらの行は依存リンクされた Units のバッチのライフサイクルを追跡します: バッチ開始時のファンアウト、Unit ごとの収束または再検証失敗、コンダクターへの return-the-baton の受け渡し、バッチ完了。コンダクターは `invoke-swarm` をステージ `mode` enum と並ぶ直交的なディレクティブ種別として扱います — 予約された `agent-team` モードをアクティブにはしません(そのモードは予約されたままです)。t48 forward チェックは Emitter セルがまだ `Reserved` と読める行をスキップします。
 
 | Event | Emitter | Trigger |
 |---|---|---|
@@ -377,13 +377,13 @@ milestone 2 で v0.6.0 向けに事前登録。6つの swarm イベントはす�
 1. 監査発行が失敗した場合(ロックタイムアウト、ディスクエラー、無効なイベント型)、ツールは状態に触れる前に例外を投げます。状態は以前の値のまま、audit.md はクリーンなままです。
 2. 監査発行の *後に* 状態書き込みが失敗した場合、監査には「意図」エントリがあるが状態は動いていない状態になります。ドリフトは可視で診断可能であり、`--doctor` がそれを表面化します。
 
-`tests/unit/t17.test.ts` のケース `test("65: approve is audit-first ...")` は `approve` についてこれを証明します: audit.md を chmod で読み取り専用にすると監査失敗が強制され、状態ファイルが `[?]` のまま(`[x]` ではない)であることをアサートします。同じ不変条件は `gate-start`、`reject`、`revise`、`skip`、`advance`、`complete-workflow`、`reuse-artifact`、`amadeus-bolt.ts set-autonomy`、`amadeus-state.ts fork` / `amadeus-state.ts merge`(v0.4.0 milestone 9 の状態 fork/merge サブコマンド — 同等の chmod-the-lock-dir Part A および chmod-the-target-after-emit Part B の証明については `tests/unit/t76.test.ts` を参照)についても成立します。
+`tests/unit/t17.test.ts` のケース `test("65: approve is audit-first ...")` は `approve` についてこれを証明します: audit.md を chmod で読み取り専用にすると監査失敗が強制され、状態ファイルが `[?]` のまま(`[x]` ではない)であることをアサートします。同じ不変条件は `gate-start`、`reject`、`revise`、`skip`、`advance`、`complete-workflow`、`reuse-artifact`、`amadeus-bolt.ts set-autonomy`、`amadeus-state.ts fork` / `amadeus-state.ts merge`(状態 fork/merge サブコマンド — 同等の chmod-the-lock-dir Part A および chmod-the-target-after-emit Part B の証明については `tests/unit/t76.test.ts` を参照)についても成立します。
 
-状態の fork/merge は、意図的に下記の audit-of-intent 例外に **含まれていません**: 状態ファイルの再読み取りと再書き込みは冪等です(`git worktree add` とは異なり、これは emit と git の間の kill-9 の後に worktree を残します)。したがって厳格な不変条件がきれいに適用されます。監査発行成功後の状態書き込み失敗は、doctor(v0.4.0 milestone 15)が worktree の record ディレクトリの `amadeus-state.md` の存在に対して照合するファントム `STATE_FORKED` 行になります。
+状態の fork/merge は、意図的に下記の audit-of-intent 例外に **含まれていません**: 状態ファイルの再読み取りと再書き込みは冪等です(`git worktree add` とは異なり、これは emit と git の間の kill-9 の後に worktree を残します)。したがって厳格な不変条件がきれいに適用されます。監査発行成功後の状態書き込み失敗は、doctor が worktree の record ディレクトリの `amadeus-state.md` の存在に対して照合するファントム `STATE_FORKED` 行になります。
 
 ### Audit-of-intent semantics (`WORKTREE_*`, `AUDIT_*`, and merge-dispatch `MERGE_DISPATCH_INVOKED`)
 
-audit-of-intent セマンティクスは、発行前に結果を確認できない副作用に適用されます — ディスク操作(worktree 作成 / 削除、監査バイトコピー)および LLM Task ディスパッチ(amadeus-pipeline-deploy-agent)を含みます。発行するツールはまず監査エントリを書き、その後副作用を実行します。emit の後に副作用が失敗した場合、ツールはメッセージに slug を埋め込んで(`[slug=<slug>]`)`emitError` を呼びます。audit-fork / audit-merge ハンドラはさらに `[fork-emitted:<timestamp>]` で失敗をタグ付けし、`--doctor`(v0.4.0 milestone 15)が「意図は記録されたが副作用は到着しなかった」を以前の障害モードと区別できるようにします。`MERGE_DISPATCH_INVOKED` については、doctor の照合が孤立した INVOKED 行を、欠落した `MERGE_DISPATCH_RETURNED` または `MERGE_DISPATCH_FALLBACK` のパートナーと slug + タイムスタンプウィンドウでマッチします(LLM Task 呼び出しはシーケンスする対象のディスク成果物を持たないため相関タグは不要)。`appendAuditEntry` はディスク副作用の失敗時にディスク上へ `ERROR_LOGGED` エントリを記録します。doctor は観測時に監査ドリフトを照合します。
+audit-of-intent セマンティクスは、発行前に結果を確認できない副作用に適用されます — ディスク操作(worktree 作成 / 削除、監査バイトコピー)および LLM Task ディスパッチ(amadeus-pipeline-deploy-agent)を含みます。発行するツールはまず監査エントリを書き、その後副作用を実行します。emit の後に副作用が失敗した場合、ツールはメッセージに slug を埋め込んで(`[slug=<slug>]`)`emitError` を呼びます。audit-fork / audit-merge ハンドラはさらに `[fork-emitted:<timestamp>]` で失敗をタグ付けし、`--doctor` が「意図は記録されたが副作用は到着しなかった」を以前の障害モードと区別できるようにします。`MERGE_DISPATCH_INVOKED` については、doctor の照合が孤立した INVOKED 行を、欠落した `MERGE_DISPATCH_RETURNED` または `MERGE_DISPATCH_FALLBACK` のパートナーと slug + タイムスタンプウィンドウでマッチします(LLM Task 呼び出しはシーケンスする対象のディスク成果物を持たないため相関タグは不要)。`appendAuditEntry` はディスク副作用の失敗時にディスク上へ `ERROR_LOGGED` エントリを記録します。doctor は観測時に監査ドリフトを照合します。
 
 | Event group | Emitter | emit に続く副作用 |
 |---|---|---|
@@ -391,7 +391,7 @@ audit-of-intent セマンティクスは、発行前に結果を確認できな�
 | `AUDIT_FORKED`、`AUDIT_MERGED` | `tools/amadeus-audit.ts` | main 監査の `mkdir -p` + `copyFileSync`、worktree 監査デルタの main 監査への `appendFileSync` |
 | `MERGE_DISPATCH_INVOKED` | `tools/amadeus-bolt.ts` `dispatch-event` | `Task(amadeus-pipeline-deploy-agent, ...)` LLM ディスパッチ — 副作用は LLM 呼び出しそのもの。成功はマッチする `MERGE_DISPATCH_RETURNED` または `MERGE_DISPATCH_FALLBACK` の呼び出し後 emit で観測される |
 
-これはステージ遷移の厳格な audit-first 不変条件からの意図的な逸脱であり、ロールバック emit も `ERROR_LOGGED` も保証できない kill-9 / OS クラッシュのウィンドウが動機です。このパターンは上記のイベントに限定されています。`STATE_FORKED` / `STATE_MERGED`(milestone 9)は意図的にこの例外を **取りません** — strict-first の根拠については前のセクションを参照してください(状態書き込みは冪等なので、書き込み失敗は回復不能な孤立状態ではなく回復可能なドリフトとして表面化します)。`MERGE_DISPATCH_RETURNED` / `MERGE_DISPATCH_FALLBACK` は呼び出し後 emit(意図ではなく結果の監査 — strict-first)であり、例外を取りません。他のすべての状態変更コマンドは上記セクションに従い strict-first のままです。
+これはステージ遷移の厳格な audit-first 不変条件からの意図的な逸脱であり、ロールバック emit も `ERROR_LOGGED` も保証できない kill-9 / OS クラッシュのウィンドウが動機です。このパターンは上記のイベントに限定されています。`STATE_FORKED` / `STATE_MERGED` は意図的にこの例外を **取りません** — strict-first の根拠については前のセクションを参照してください(状態書き込みは冪等なので、書き込み失敗は回復不能な孤立状態ではなく回復可能なドリフトとして表面化します)。`MERGE_DISPATCH_RETURNED` / `MERGE_DISPATCH_FALLBACK` は呼び出し後 emit(意図ではなく結果の監査 — strict-first)であり、例外を取りません。他のすべての状態変更コマンドは上記セクションに従い strict-first のままです。
 
 ### Forbidden patterns
 

@@ -385,8 +385,8 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   harness: unset selects the subagent floor; `codex-ultra` selects native
   fan-out at reasoning effort=ultra; `claude-ultra` loud-degrades to the floor
   (`SWARM_DEGRADED` is audited); the legacy `1` or any other value is rejected
-  fail-closed. **Breaking change**: the old headless `codex exec` per-unit
-  worker floor is retired — there is no `codex exec` fallback. For the
+  fail-closed. There is no `codex exec` fallback — the per-unit worker floor is
+  the subagent floor. For the
   `codex-ultra` case, reasoning effort=ultra is accepted by the API and the
   child runs to completion — there is no telemetry that ultra was actually
   applied.

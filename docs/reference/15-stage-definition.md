@@ -21,7 +21,7 @@ the canonical spec — this chapter adds narrative and "when to use" guidance.
 
 Every stage `.md` file serves two readers:
 
-- **The parser** (`parseStageFrontmatter` in `lib.ts`, ships in milestone 7). Reads
+- **The parser** (`parseStageFrontmatter` in `lib.ts`). Reads
   the YAML frontmatter, produces a structured `StageEntry`. Doesn't touch the
   body.
 - **The LLM agent** executing the stage. Reads the body, follows the prose
@@ -71,7 +71,7 @@ which artifacts a stage produces while editing its prose.
 The YAML is authoritative. The JSON is a build artifact. CI enforces the
 relationship.
 
-`amadeus-graph compile` and `compile --check` ship as CLI subcommands (milestone 9);
+`amadeus-graph compile` and `compile --check` are CLI subcommands;
 run compile manually after editing stage YAML, and CI enforces `compile
 --check` to catch drift. A pre-commit hook that automates this is deferred
 to a later PR. `stage-graph.json` is a compiled artifact — do not edit it
@@ -237,7 +237,7 @@ Dispatch mechanism, three values:
 - `agent-team` — **reserved**. For when Anthropic's experimental
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` primitive stabilises and we need
   direct agent-to-agent messaging. Likely first consumer is v0.8.0's Ralph
-  loop driver. No stage declares `agent-team` in v0.3.0.
+  loop driver. No stage declares `agent-team`.
 
 Note: multi-agent execution today is expressed via `support_agents`. The
 conductor invokes the lead agent first, then each supporter in turn with
@@ -260,7 +260,7 @@ stage might lead with `amadeus-product-agent` for requirements work but load
 `amadeus-delivery-agent` as support for capacity reality-checking.
 
 Both fields validate dynamically against `.claude/agents/*.md` via
-`loadAgents()` (introduced in milestone 3) — `amadeus-graph.ts compile` passes the
+`loadAgents()` — `amadeus-graph.ts compile` passes the
 discovered agent slugs into `validateStageFrontmatter`, so a `lead_agent` or
 `support_agents` value naming an agent with no matching file fails the
 compile loudly (`lead_agent "<name>" has no matching .claude/agents/*.md`)
@@ -337,44 +337,31 @@ The example encodes, in structured form, what today's prose describes:
 ## Three-compartment body model
 
 The body of a stage file has three compartments, declared in this order.
-Only `## Steps` is populated in v0.3.0.
 
-| Compartment | v0.3.0 | v0.5.0 | What goes here |
-|-------------|--------|--------|----------------|
-| `## Steps` | Required, populated | Unchanged | Imperative prose the agent follows |
-| `## Sensors` | Reserved, absent | Populated | Deterministic sensor bindings (IDs from the flat `.claude/sensors/` registry) |
-| `## Learn` | Reserved, absent | Populated | Loop-driver bindings and observer rules |
+| Compartment | Presence | What goes here |
+|-------------|----------|----------------|
+| `## Steps` | Required | Imperative prose the agent follows |
+| `## Sensors` | Optional | Deterministic sensor bindings (IDs from the flat `.claude/sensors/` registry) |
+| `## Learn` | Optional | Loop-driver bindings and observer rules |
 
-Pre-declaring the three compartments in v0.3.0 meant v0.5.0's additions
-were slot-in changes, not body restructures. See [Sensor
-System](07-sensor-system.md) for the `## Sensors` binding semantics and
-the pull-import model.
-
-**milestone 8 migration rule:** wrap the existing body under `## Steps`, nothing
-else. Most stage files already use `## Steps` as their first body heading.
+See [Sensor System](07-sensor-system.md) for the `## Sensors` binding
+semantics and the pull-import model.
 
 ---
 
-## YAML migration — shipped
+## YAML frontmatter
 
-milestone 7 shipped `parseStageFrontmatter` and `emitStageFrontmatter` in
-`lib.ts` — YAML-only, no prose back-compat path. milestone 8 migrated all 31
-stage files to YAML frontmatter in a single atomic change. milestone 9 expanded
-`amadeus-graph.ts` to compile the YAML into `stage-graph.json` and added
-`compile --check` as the CI drift guard. Running `bun amadeus-graph.ts
-compile --check` on a clean tree exits 0; editing any stage YAML without
-recompiling the JSON exits 1 with a clear message.
+`parseStageFrontmatter` and `emitStageFrontmatter` in `lib.ts` are YAML-only —
+there is no prose back-compat path. Every stage file carries YAML frontmatter,
+`amadeus-graph.ts` compiles it into `stage-graph.json`, and `compile --check` is
+the CI drift guard. Running `bun amadeus-graph.ts compile --check` on a clean
+tree exits 0; editing any stage YAML without recompiling the JSON exits 1 with a
+clear message.
 
 ---
 
-## Known limits in v0.3.0
+## Known limits
 
-- **`for_each` is new.** The 5 Construction stages with `**Per-Unit**: Yes`
-  migrate to `for_each: unit-of-work`; the other 26 stages omit the field
-  entirely.
-- **Sensors / Learn compartments declared but empty.** The parser
-  tolerates their absence; v0.5.0 populated them (see [Sensor
-  System](07-sensor-system.md)).
 - **No runtime validation beyond drift check.** The parser accepts any
   YAML that produces a valid `StageEntry`; doctor's later extensions add
   advisory rule/sensor checks on top.

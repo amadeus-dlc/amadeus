@@ -10,7 +10,7 @@ This chapter documents the hook system architecture, all framework hook scripts,
 
 ## Hook System Architecture
 
-This implementation uses the framework hook scripts in `.claude/hooks/`. All of them are TypeScript (run via `bun`). All of them are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the rest via the `hooks` block), they fire regardless of which skill is active. They were previously split (six declared in `amadeus/SKILL.md` frontmatter as skill-scoped, the rest project-wide); v0.6.0 moved the skill-scoped six into `settings.json` so every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
+This implementation uses the framework hook scripts in `.claude/hooks/`. All of them are TypeScript (run via `bun`). All of them are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the rest via the `hooks` block), they fire regardless of which skill is active. Every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
 
 All but one are **non-blocking** — they observe and exit 0, never altering control flow. One, the `Stop` hook (`amadeus-stop.ts`), is **flow-altering**: it may return `{"decision":"block"}` to keep the interactive forwarding loop running. That is a sanctioned, deliberate contract for loop enforcement and is distinct from the advisory `never-block` contract every other hook honours (see "The flow-altering `Stop` hook" below).
 
@@ -212,7 +212,7 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 - Stage 2.1 (Reverse Engineering) -- two-step delegation (fires twice: `amadeus-developer-agent` code scan, then `amadeus-architect-agent` synthesis)
 - Stage 3.5 (Code Generation) -- `amadeus-developer-agent` subagent (fires once per unit of work)
 
-Workspace detection (0.2) used to be a subagent; it now runs deterministically inside `amadeus-utility init`, so this hook no longer fires during initialization.
+Workspace detection (0.2) runs deterministically inside `amadeus-utility init`, so this hook does not fire during initialization.
 
 ---
 

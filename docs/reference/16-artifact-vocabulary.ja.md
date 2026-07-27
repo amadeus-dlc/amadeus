@@ -24,7 +24,7 @@
 `consumes[]` で同じ識別子を参照し、読み取り依存を宣言します。識別子は短いケバブケース文字列です
 — ファイル拡張子なし、フォルダプレフィックスなし、スラッシュなし。
 
-`dist/claude/.claude/amadeus-common/protocols/stage-definition.md` のマイルストーン4の実例より:
+`dist/claude/.claude/amadeus-common/protocols/stage-definition.md` の実例より:
 
 ```yaml
 slug: scope-definition

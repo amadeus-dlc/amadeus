@@ -4,7 +4,7 @@
 
 > 対象読者: Tier 2/3(チーム採用者、フレームワーク貢献者)。
 
-本章は、v0.5.0 milestone 8 で導入された workflow ごとの `runtime-graph.json` 成果物を文書化します — `stage-graph.json` のデータプレーンミラーであり、あらゆる承認ゲートで監査ログから実体化されます。[Plane Architecture](02-plane-architecture.ja.md)(この成果物を動機づける control/data プレーンの分離)および [State Machine](12-state-machine.ja.md)(その遷移が compile をトリガーするライフサイクル)へ相互リンクします。
+本章は、workflow ごとの `runtime-graph.json` 成果物を文書化します — `stage-graph.json` のデータプレーンミラーであり、あらゆる承認ゲートで監査ログから実体化されます。[Plane Architecture](02-plane-architecture.ja.md)(この成果物を動機づける control/data プレーンの分離)および [State Machine](12-state-machine.ja.md)(その遷移が compile をトリガーするライフサイクル)へ相互リンクします。
 
 ---
 
@@ -14,7 +14,7 @@
 
 `runtime-graph.json` は実行の真実です — *現在の* workflow について、どのステージが開始されたか、どれが承認されたか、各ステージの memory.md がどう見えるか、どのセンサーが発火したか。workflow ごとに1ファイルで、`<record>/runtime-graph.json` に存在します — `<record>/` = intent の record ディレクトリ、`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`。`stage-graph.json` と同じノード形状で、構造の代わりにテレメトリで populate されます。
 
-これはコンシューマ(milestone 11 の Bolt fork/merge、milestone 12 のゲート ritual、milestone 14 の doctor、v0.10.0 の cross-workflow observer)が、クエリごとに監査ログを再ウォークするのではなく1つの実体化ビューを読むために存在します。
+これはコンシューマ(Bolt fork/merge、ゲート ritual、doctor、将来の cross-workflow observer)が、クエリごとに監査ログを再ウォークするのではなく1つの実体化ビューを読むために存在します。
 
 ---
 
@@ -49,13 +49,13 @@ interface RuntimeStage {
     tradeoffs: number;
     open_questions: number;
   } | null;
-  sensor_firings: SensorFiring[]; // empty array in milestone 8 (sensors fire in milestone 9 + milestone 10)
+  sensor_firings: SensorFiring[]; // populated by the sensor dispatcher
   outcome: "approved" | "failed" | "pending";
   learnings_captured: {           // null on pending rows; populated on transition to approved
-    from_orchestrator: number;    // zero in milestone 8 (gate ritual is milestone 12)
+    from_orchestrator: number;    // populated by the gate ritual
     from_user_addition: number;
   } | null;
-  instances?: BoltInstance[];     // present only when stage runs per-Bolt; milestone 11 populates
+  instances?: BoltInstance[];     // present only when the stage runs per-Bolt
 }
 
 interface BoltInstance {
@@ -72,8 +72,8 @@ interface BoltInstance {
 
 interface SensorFiring {
   id: string;
-  fire_id: string;                // 8-hex correlator emitted by the milestone 9 dispatcher on every row
-  result: "passed" | "failed" | "budget-override" | "incomplete"; // 4-state (milestone 12 Q10)
+  fire_id: string;                // 8-hex correlator emitted by the sensor dispatcher on every row
+  result: "passed" | "failed" | "budget-override" | "incomplete"; // 4-state
   ts: string;                     // FIRED row's timestamp
   detail_path?: string;
 }
@@ -137,7 +137,7 @@ Single-stage 除外: `--single` のステージランナー実行は、その `S
 - `outcome === "approved"`(pending 行は発行しない — 下記 §6 を参照)
 - `memory_entries === 0`(ファイルは存在し、§13 の4つの正典見出しの下にエントリが0)
 
-エントリが0の pending 行は発行 **しません**。まだ実行中のステージは、コンダクターがまだ memory.md に書いていないため正当にエントリ0であり得ます — 実行途中で MEMORY_EMPTY を発行すると、実際のダイアリースキップを表さないノイズを生成します。milestone 14 の doctor が欲しいシグナルは「エントリ0で承認されたステージ」です — それにはステージが承認されている必要があります。
+エントリが0の pending 行は発行 **しません**。まだ実行中のステージは、コンダクターがまだ memory.md に書いていないため正当にエントリ0であり得ます — 実行途中で MEMORY_EMPTY を発行すると、実際のダイアリースキップを表さないノイズを生成します。doctor が欲しいシグナルは「エントリ0で承認されたステージ」です — それにはステージが承認されている必要があります。
 
 ### Idempotency — exactly once per (slug, gate-completion)
 
@@ -155,14 +155,14 @@ doctor の MEMORY_EMPTY-rate メトリックは重複排除なしにこれらの
 
 ---
 
-## 6. v0.4.0 backfill rule
+## 6. Backfill rule
 
-milestone 13 の memory.md ライフサイクルが出荷される前に完了したステージには memory.md 履歴がありません。backfill 規則:
+memory.md ライフサイクルを経ずに完了したステージには memory.md 履歴がありません。backfill 規則:
 
 - `memory_entries: null` ↔ `memory_breakdown: null` ↔ MEMORY_EMPTY emit なし。
 - 両フィールドは一緒に動きます。判別子は「`parseMemoryHeadings` は実行されたか?」です — memory.md が存在すれば(たとえゼロバイトでも)実行され、キーは数値です。memory.md が不在なら両方が `null` です。
 
-この規則がなければ、v0.5.0 にアップグレードするすべての v0.4.x ユーザーは、アップグレード後の最初の workflow で MEMORY_EMPTY 行の嵐を目にすることになります。
+この規則がなければ、そうしたステージを含む workflow は MEMORY_EMPTY 行の嵐を目にすることになります。
 
 ---
 
@@ -182,13 +182,11 @@ milestone 13 の memory.md ライフサイクルが出荷される前に完了�
 
 pending 行の `memory_entries` と `memory_breakdown` は最後の compile 時にスナップショットされました。ステージが実行途中で、最後の compile 発火以降にコンダクターがより多くのエントリを書いていた場合、スナップショットは遅れます。recovery のコンシューマは recovery 時に memory.md を再パースしなければなりません。pending 行についてスナップショットされたカウントを信頼しては **なりません**。
 
-v0.5.0 には pending カウントをライブで読むコンシューマはありません。この carve-out を必要とする v0.6.0 の `--resume` のために文書化しています。
+pending カウントをライブで読むコンシューマはありません。この carve-out は将来の `--resume` のために文書化しています。
 
-### Parallel-Bolt mid-flight recovery (closed in v0.5.0)
+### Parallel-Bolt mid-flight recovery
 
-並列 Bolt がバッチ途中でクラッシュする workflow には、milestone 8 では Bolt ごとの recovery シームがありませんでした — スキーマは `instances?` を予約していましたが、compile は main 上に単一インスタンス行のみを書き、worktree は runtime-graph フラグメントを決して受け取りませんでした。v0.5.0 で `amadeus-runtime.ts fragment-fork`(Bolt 開始)と `fragment-merge`(Bolt 完了 --merge)、および Construction フェーズのステージのウィンドウ内に監査が2つ以上の異なる slug を示すとき `BoltInstance[]` を発行する compile populator 拡張によって解決されました。
-
-Bolt ごとのフラグメントは v0.5.0 では dead-on-arrival です(worktree の record ディレクトリの `runtime-graph.json` を読む v0.5.0 の読み手はいません)。v0.6.0 の `--resume` はフラグメントをヒントとして扱い、main のマージ後 runtime-graph を正典とし、加えて `amadeus-bolt.ts` に従って孤立した worktree をチェックして、それらの recovery プロンプトを表面化すべきです。
+`amadeus-runtime.ts fragment-fork`(Bolt 開始)と `fragment-merge`(Bolt 完了 `--merge`)が並列 Bolt に Bolt ごとの recovery シームを与え、compile populator は Construction フェーズのステージのウィンドウ内に監査が2つ以上の異なる slug を示すとき `BoltInstance[]` を発行します。
 
 ---
 
@@ -239,17 +237,7 @@ PostToolUse Bash フックは、LLM が次に何をしようと、コンダク�
 
 ---
 
-## 10. Known gaps closed by future PRs
-
-- **MEMORY_EMPTY-rate メトリック** — milestone 14 の doctor が §5 で凍結された `(Stage, ISO-second)` の重複排除タプルを使ってレートを表面化します。
-- **`learnings_captured` の由来カウント** — milestone 12 のゲート ritual が `from_orchestrator` と `from_user_addition` を populate します。
-- **`sensor_firings` 配列** — milestone 9 + milestone 10 がセンサーをディスパッチし、このスロットを populate します。
-- **runtime-graph.json の Bolt fork/merge** — v0.5.0 で `fragment-fork`(新しい監査イベントなし。STATE_FORKED + AUDIT_FORKED に乗る)と `fragment-merge`(新しい監査イベントなし。STATE_MERGED + AUDIT_MERGED に乗る)によって解決。compile は Construction ステージのウィンドウ内に2つ以上の異なる slug が座るとき、監査の BOLT_*-タグ付きイベントから `instances[]` を populate します。
-- **ヘッドレス workflow のための CLI モードディスパッチ** — v0.6.0+ が非 Claude Code 実行パスを出荷する可能性があります。フックは Claude Code セッション内でのみ発火します。
-
----
-
-## 11. Fragment lifecycle
+## 10. Fragment lifecycle
 
 Bolt ごとの runtime-graph フラグメントファイルは `<worktree>/<record>/runtime-graph.json` に存在し、gitignore され、main の場所をミラーします。そのライフサイクルは:
 
