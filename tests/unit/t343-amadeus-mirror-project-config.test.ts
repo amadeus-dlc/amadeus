@@ -118,15 +118,17 @@ describe("t343 project parse", () => {
     });
   });
 
-  test("more than one target is rejected rather than silently truncated", () => {
-    const reported = issues([
-      layer("global", {
-        "mirror-projects": [{ project: "a/1" }, { project: "a/2" }],
-      }),
+  test("every element of a multi-target array is parsed in order", () => {
+    expect(
+      resolved([
+        layer("global", {
+          "mirror-projects": [{ project: "a/1" }, { project: "a/2" }],
+        }),
+      ]).config.projects.map((target) => target.project),
+    ).toEqual([
+      { owner: "a", number: 1 },
+      { owner: "a", number: 2 },
     ]);
-    expect(reported[0].kind === "invalid-value" && reported[0].actualType).toContain(
-      "2 elements",
-    );
   });
 
   test("an unknown key inside a target is rejected", () => {

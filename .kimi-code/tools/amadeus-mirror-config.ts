@@ -56,10 +56,6 @@ const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
   "done",
 ];
 
-// U1 consumes exactly one configured Project. A multi-element array is rejected
-// rather than silently truncated; the generalization to N targets is U4's.
-const MAX_PROJECT_TARGETS = 1;
-
 const MODE_EXPECTED = "off | prompt | auto";
 const PROJECTS_EXPECTED =
   'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }';
@@ -433,15 +429,12 @@ function parseProjectTarget(element: unknown): ProjectsParse {
   return { ok: true, projects: [{ project, statusNames: statusNames.statusNames }] };
 }
 
+// Any number of Projects may be configured: the list is the complete set of
+// targets for the layer that wins, and one malformed element rejects the whole
+// layer rather than contributing a partial list.
 function parseProjects(value: unknown): ProjectsParse {
   if (!Array.isArray(value)) {
     return { ok: false, actualType: valueKind(value) };
-  }
-  if (value.length > MAX_PROJECT_TARGETS) {
-    return {
-      ok: false,
-      actualType: `array of ${value.length} elements (U1 supports ${MAX_PROJECT_TARGETS})`,
-    };
   }
   const projects: MirrorProjectTarget[] = [];
   for (const element of value) {
