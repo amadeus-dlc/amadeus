@@ -29276,3 +29276,219 @@
 **Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 1 of 8 units are not yet complete (docs-sync). Run `next` to continue the remaining units before approving.
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-27T04:20:26Z
+**Event**: SWARM_STARTED
+**Batch number**: 4
+**Unit names**: docs-sync
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-27T04:20:26Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: docs-sync
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync
+**Branch name**: bolt-docs-sync
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: BOLT_STARTED
+**Bolt names**: docs-sync
+**Batch number**: 4
+**Walking skeleton**: false
+**Bolt slug**: docs-sync
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: STATE_FORKED
+**Bolt slug**: docs-sync
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync
+**Source state hash**: d434c08e8e4263bf158fe554a4b11afded01a9b411d98e332e042d818d751127
+**Target state hash**: d434c08e8e4263bf158fe554a4b11afded01a9b411d98e332e042d818d751127
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-27T04:20:27Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: docs-sync
+**Source Audit Hash**: cd5a189feb67c9d36be80baefb352aa3ab38ae8cbe78489fec26e64dea1341e6
+**Fork Boundary**: 942352
+**Reentrant**: true
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T04:20:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u7
+**Agent ID**: areviewer-u7-4da82ede12fccaf6
+**Message**: U7(conformance-suite)のレビューが完了し、team-lead へ verdict を送信しました。\n\n**結論: READY(指摘なし)**\n\n実測した主な確認事項:\n\n- **追跡表の機械再集計**: `tests/conformance/t188-trace.md` の32行を手動で数え直し、disposition 集計 adopted=2(#9, #12)/ covere
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T04:28:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u8
+**Agent ID**: abuilder-u8-0e546c8ce5e9459b
+**Message**: team-lead へ報告し、裁定受領まで停止します。これは私が単独で決められない設計/所有の裁定事項(install 先の権威)であり、待ちが妥当です。\n\n## U8(docs-sync)ステータス: 実装間乖離により commit 保留\n\n**発見した乖離**(docs 起草中、BR-U8-5 / implementation-deviation-election / P3 に従い停止・報告)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T04:52:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u8
+**Agent ID**: abuilder-u8-0e546c8ce5e9459b
+**Message**: U8 はブロッカーにより停止中で、team-lead へ裁定を仰いでいます(msg f7e13428 に続き、進捗確認への返信として 118f1f56 で再確認済み)。\n\n## 状況\n\nworktree に変更・commit が無いのは意図的です。docs 起草中に**実装間の乖離**を発見し、BR-U8-5(乖離は逸脱扱い)/ implementation-deviation-election 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T05:29:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u8b
+**Agent ID**: abuilder-u8b-2c4e5f05b43ae050
+**Message**: U8 docs-sync を完遂しました。\n\n## 完了サマリ\n\n`docs/guide/19-plugins.md`(英語)と `docs/guide/19-plugins.ja.md`(日本語対訳)を、概念記述のみの現状から実装後の実手順へ更新しました。記載した CLI・パス・挙動はすべて実装ソースを grep で裏取りしています(file:line は code-summary.md に記録
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T05:35:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b5b3dd5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T05:35:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b5b3dd5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 2238
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T05:35:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 030a8041
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T05:35:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 030a8041
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 1712
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T05:41:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6ed5f8cd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T05:41:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6ed5f8cd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 1842
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T05:41:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: e59cab28
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T05:41:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: e59cab28
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 613
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-27T05:52:29Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: docs-sync
+**Batch number**: 4
+**Bolt slug**: docs-sync
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-27T05:52:29Z
+**Event**: STATE_MERGED
+**Bolt slug**: docs-sync
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-docs-sync
+**Source state hash**: 02e3a296eccdb0445d45a42ae4d03f5c6117266e0e3688b816c8a815b0aaca69
+**Target state hash**: d434c08e8e4263bf158fe554a4b11afded01a9b411d98e332e042d818d751127
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-27T05:52:30Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: docs-sync
+**Entries Merged**: 0
+**Source Audit Hash**: cd5a189feb67c9d36be80baefb352aa3ab38ae8cbe78489fec26e64dea1341e6
+**Fork Boundary**: 942352
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-27T05:52:30Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 4
+**Unit name**: docs-sync
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-27T05:52:30Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 4
+**Converged count**: 1
+**Failed count**: 0
+
+---
