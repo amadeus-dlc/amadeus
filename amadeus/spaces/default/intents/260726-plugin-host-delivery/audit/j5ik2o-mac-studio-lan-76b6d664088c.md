@@ -27977,3 +27977,738 @@
 **Message**: §12a iteration 1 の Major 2 件を是正しました。新規コミット `30b3afc99`(過去コミット rewrite なし・push なし)。\n\n## Major 1(OutDirRefusal 未配線)是正\n`classifyOutDir` が test 以外から呼ばれず本番書込経路を経由しない指摘に対し、`assertInstallOutDirsSafe(classify
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-27T01:41:31Z
+**Event**: SWARM_STARTED
+**Batch number**: 2
+**Unit names**: hook-wiring-remaining
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-27T01:41:31Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: hook-wiring-remaining
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
+**Branch name**: bolt-hook-wiring-remaining
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: BOLT_STARTED
+**Bolt names**: hook-wiring-remaining
+**Batch number**: 2
+**Walking skeleton**: false
+**Bolt slug**: hook-wiring-remaining
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: STATE_FORKED
+**Bolt slug**: hook-wiring-remaining
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
+**Source state hash**: 432162df731c52c57781da61ba9ceb0e5313fd256db27d18ce32129a10e62b11
+**Target state hash**: 432162df731c52c57781da61ba9ceb0e5313fd256db27d18ce32129a10e62b11
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: hook-wiring-remaining
+**Source Audit Hash**: dc1bcdcdc95444e5634be766de824db5ee9705117e944038d4eb947011e913ad
+**Fork Boundary**: 899009
+**Reentrant**: true
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-27T01:43:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: reviewer-u3-it2
+**Agent ID**: areviewer-u3-it2-17f00ee35239a3ef
+**Message**: team-lead へ verdict を送付しました。\n\n**結論: READY**\n\nUnit host-projection-all(U3)の iteration 2 レビューを実施し、iteration 1 で指摘した Major 2件がいずれも実測で閉包していることを確認しました。\n\n- **Major 1(OutDirRefusal 未配線)**: `scripts/package.t
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:55:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1ae5cbd9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:55:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1ae5cbd9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/scripts/plugin-projection.ts
+**Duration ms**: 2154
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:55:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb1d2bc0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/scripts/plugin-projection.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:55:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: fb1d2bc0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/scripts/plugin-projection.ts
+**Duration ms**: 1788
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 20efc26c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 20efc26c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts
+**Duration ms**: 1943
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f3aafb7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f3aafb7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts
+**Duration ms**: 649
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17d4e531
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17d4e531
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts
+**Duration ms**: 1861
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 304e1a8e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 304e1a8e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts
+**Duration ms**: 617
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: bc098780
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: bc098780
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts
+**Duration ms**: 1869
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd242e52
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: cd242e52
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts
+**Duration ms**: 605
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7cb4a095
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7cb4a095
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts
+**Duration ms**: 1908
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:56:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a397719
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:56:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a397719
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts
+**Duration ms**: 630
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:57:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: de7d3908
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:57:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: de7d3908
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
+**Duration ms**: 1906
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T01:57:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd2e9053
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T01:57:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd2e9053
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
+**Duration ms**: 617
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:01:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5ff2d0cc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t325-face-disposition.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:01:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5ff2d0cc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t325-face-disposition.test.ts
+**Duration ms**: 1786
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:01:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb1d30e5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t325-face-disposition.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:01:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: fb1d30e5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t325-face-disposition.test.ts
+**Duration ms**: 595
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:02:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: d734bdfc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t326-adapter-compose-seam.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:02:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: d734bdfc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t326-adapter-compose-seam.test.ts
+**Duration ms**: 1825
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:02:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab3d6a6d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t326-adapter-compose-seam.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:02:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab3d6a6d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/t326-adapter-compose-seam.test.ts
+**Duration ms**: 592
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:03:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 12031afe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t327-hook-wiring-xor-closure.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:03:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 12031afe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t327-hook-wiring-xor-closure.integration.test.ts
+**Duration ms**: 1872
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:03:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5860adc2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t327-hook-wiring-xor-closure.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:03:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5860adc2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t327-hook-wiring-xor-closure.integration.test.ts
+**Duration ms**: 612
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:04:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 24bb8ae2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t328-adapter-auto-compose-launch.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:04:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 24bb8ae2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t328-adapter-auto-compose-launch.integration.test.ts
+**Duration ms**: 1893
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:04:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c6ce1e2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t328-adapter-auto-compose-launch.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:04:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c6ce1e2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t328-adapter-auto-compose-launch.integration.test.ts
+**Duration ms**: 643
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:11:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 484b74c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 484b74c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+**Duration ms**: 1812
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b5eed2b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7b5eed2b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+**Duration ms**: 641
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:12:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97dda788
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:12:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97dda788
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+**Duration ms**: 1811
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:12:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 00f9bb74
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:12:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 00f9bb74
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-cursor-adapter.test.ts
+**Duration ms**: 604
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:13:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: e7d7e71d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:13:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: e7d7e71d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+**Duration ms**: 1786
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:13:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54a9b96e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:13:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54a9b96e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+**Duration ms**: 635
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:13:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 868bfa78
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:13:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 868bfa78
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+**Duration ms**: 1813
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:13:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ab47a35
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:13:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ab47a35
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/integration/t-kimi-adapter.test.ts
+**Duration ms**: 599
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:14:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 348b474f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/gen-coverage-registry.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:14:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 348b474f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/gen-coverage-registry.test.ts
+**Duration ms**: 1854
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T02:14:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23b971d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/gen-coverage-registry.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T02:14:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23b971d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining/tests/unit/gen-coverage-registry.test.ts
+**Duration ms**: 589
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-27T02:24:06Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: hook-wiring-remaining
+**Batch number**: 2
+**Bolt slug**: hook-wiring-remaining
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-27T02:24:06Z
+**Event**: STATE_MERGED
+**Bolt slug**: hook-wiring-remaining
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
+**Source state hash**: bc58c1266a8c66077297598e83b39da674acdaf10c65788e4cf490ed4ffbdec8
+**Target state hash**: 432162df731c52c57781da61ba9ceb0e5313fd256db27d18ce32129a10e62b11
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-27T02:24:06Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: hook-wiring-remaining
+**Entries Merged**: 0
+**Source Audit Hash**: dc1bcdcdc95444e5634be766de824db5ee9705117e944038d4eb947011e913ad
+**Fork Boundary**: 899009
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-27T02:24:06Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 2
+**Unit name**: hook-wiring-remaining
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-27T02:24:06Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 2
+**Converged count**: 1
+**Failed count**: 0
+
+---
