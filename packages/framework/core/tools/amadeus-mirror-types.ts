@@ -324,6 +324,13 @@ export type MirrorProjectItem = Readonly<{
   currentStatus: string | null;
 }>;
 
+// The identity the membership query needs: a Project lookup resolves the Issue
+// by repository and number, and reads none of its content.
+export type MirrorIssueRef = Readonly<{
+  repository: RepositoryIdentity;
+  number: number;
+}>;
+
 // The single membership query returns the Issue's GraphQL node id alongside its
 // current Project items. The node id is required to add the Issue to a Project
 // it is not yet a member of, and this one query is its only in-budget source
@@ -387,7 +394,7 @@ export interface MirrorGitHubGateway {
   // Project status sync (U1). The two read methods take no permit; the two
   // mutations require a Project permit, mirroring the Issue mutation rule.
   listProjectItems(
-    issue: RemoteMirrorIssue,
+    issue: MirrorIssueRef,
   ): Promise<GatewayOutcome<MirrorProjectItemsView>>;
   resolveProjectStatusField(
     project: MirrorProjectRef,

@@ -349,6 +349,13 @@ describe("t340 response parsing", () => {
     expect(parseProjectItemsView(data as Record<string, unknown>)).toBeNull();
   });
 
+  test("a non-integer project number is rejected", () => {
+    const data = (itemsBody([itemNode({ number: 1.5 })]) as {
+      data: Record<string, unknown>;
+    }).data;
+    expect(parseProjectItemsView(data)).toBeNull();
+  });
+
   test("an item node missing its project identity is rejected outright", () => {
     const data = (itemsBody([{ id: "PVTI_x", project: null }]) as {
       data: Record<string, unknown>;
@@ -425,11 +432,18 @@ describe("t340 interpretGraphqlResult", () => {
     ["SERVICE_UNAVAILABLE", "api", true],
     ["INTERNAL", "api", true],
     ["NOT_FOUND", "api", false],
-  ])("maps error type %s to %s", (type, classification, retryable) => {
-    expect(
-      interpretGraphqlResult(parsed({ data: null, errors: [{ type }] })),
-    ).toEqual({ kind: "errors", classification, retryable });
-  });
+  ] as ReadonlyArray<[string, string, boolean]>)(
+    "maps error type %s to %s",
+    (type, classification, retryable) => {
+      expect(
+        interpretGraphqlResult(parsed({ data: null, errors: [{ type }] })),
+      ).toEqual({
+        kind: "errors",
+        classification: classification as "api",
+        retryable,
+      });
+    },
+  );
 
   test("an unrecognised error type falls back to a non-retryable api class", () => {
     expect(
@@ -464,6 +478,33 @@ describe("t340 interpretGraphqlResult", () => {
     ["a body whose data is null", parsed({ data: null })],
   ])("reports %s as malformed", (_label, envelopeParse) => {
     expect(interpretGraphqlResult(envelopeParse).kind).toBe("malformed");
+  });
+
+  test("a body that is not valid JSON is malformed", () => {
+    expect(
+      interpretGraphqlResult({
+        kind: "ok",
+        statuses: [200],
+        jsonText: '{"data":}',
+      }).kind,
+    ).toBe("malformed");
+  });
+
+  test("a top-level array body is malformed even when the envelope parsed", () => {
+    expect(
+      interpretGraphqlResult({ kind: "ok", statuses: [200], jsonText: "[1,2]" }).kind,
+    ).toBe("malformed");
+  });
+
+  test("a gateway call over an unparseable body reports an invalid response", async () => {
+    const { runner } = fakeRunner([
+      exited(0, Buffer.from(`${"HTTP/2.0 200 OK\n"}\r\n{"data":}`, "utf-8")),
+    ]);
+    const outcome = await createMirrorGitHubGateway(runner).listProjectItems(ISSUE);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("invalid-response");
+    }
   });
 
   test("a non-ok envelope is malformed without inspecting a body", () => {
@@ -617,7 +658,7 @@ describe("t340 permit enforcement", () => {
 // every exported argv builder and every embedded query, so a future builder that
 // reintroduces one of these verbs fails here rather than in review.
 describe("t340 out-of-scope mutations are absent", () => {
-  const FORBIDDEN_VERBS: readonly string[] = [
+  const FORBIDDEN_VERBS: string[] = [
     "deleteProjectV2Item",
     "archiveProjectV2Item",
     "unarchiveProjectV2Item",

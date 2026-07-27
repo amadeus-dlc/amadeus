@@ -452,14 +452,16 @@ function parseProjects(value: unknown): ProjectsParse {
   return { ok: true, projects };
 }
 
+type LayerIssue = Readonly<{
+  key: MirrorConfigKey;
+  actualType: string;
+  expected: string;
+}>;
+
 type LayerClassification = Readonly<{
   mode?: MirrorMode;
   projects?: readonly MirrorProjectTarget[];
-  issues: readonly Readonly<{
-    key: MirrorConfigKey;
-    actualType: string;
-    expected: string;
-  }>[];
+  issues: readonly LayerIssue[];
 }>;
 
 // Judge one present layer's raw value. The whole config object is validated: a
@@ -494,11 +496,7 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     };
   }
 
-  const issues: {
-    key: MirrorConfigKey;
-    actualType: string;
-    expected: string;
-  }[] = [];
+  const issues: LayerIssue[] = [];
   let mode: MirrorMode | undefined;
   const rawMode = rawValue[AUTO_MIRROR_KEY];
   if (rawMode !== undefined) {

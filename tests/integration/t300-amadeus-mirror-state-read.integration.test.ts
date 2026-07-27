@@ -95,8 +95,8 @@ class FakeGateway implements MirrorGitHubGateway {
   }
 
   // Project sync is not wired in these contexts (no `projectSync` on the
-  // execution context), so any call here is a defect rather than a fixture gap:
-  // these four throw to prove the read-only state view issue no Project traffic.
+  // execution context), so a call here is a defect rather than a fixture gap.
+  // Throwing asserts by construction that the read-only state view make no Project calls.
   async listProjectItems(
     ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
   ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {

@@ -26,6 +26,7 @@ import type {
   MirrorGitHubGateway,
   MirrorMutationEffect,
   MirrorMutationPermit,
+  MirrorIssueRef,
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectMutationPermit,
@@ -253,9 +254,7 @@ export function graphqlArgv(
   return args;
 }
 
-export function listProjectItemsArgv(
-  issue: RemoteMirrorIssue,
-): readonly string[] {
+export function listProjectItemsArgv(issue: MirrorIssueRef): readonly string[] {
   return graphqlArgv(LIST_PROJECT_ITEMS_QUERY, {
     owner: issue.repository.owner,
     name: issue.repository.name,
@@ -754,13 +753,12 @@ export function interpretGraphqlResult(parse: EnvelopeParse): GraphqlBodyOutcome
   return { kind: "ok", data: data as Record<string, unknown> };
 }
 
+type ErrorClass = Readonly<{ classification: Classification; retryable: boolean }>;
+
 // The most actionable error wins: a retryable class is reported over a terminal
 // one so a transient rate limit inside a mixed batch is not buried.
-function classifyGraphqlErrors(errors: readonly unknown[]): {
-  classification: Classification;
-  retryable: boolean;
-} {
-  let firstMapped: { classification: Classification; retryable: boolean } | undefined;
+function classifyGraphqlErrors(errors: readonly unknown[]): ErrorClass {
+  let firstMapped: ErrorClass | undefined;
   for (const entry of errors) {
     const type =
       typeof entry === "object" && entry !== null
@@ -795,6 +793,10 @@ function parseSingleIssue(
   const issue = parseIssueObject(parsed, repo);
   return issue === null ? invalidResponse(op) : ok(issue);
 }
+
+type GraphqlRun =
+  | { kind: "ok"; data: Record<string, unknown> }
+  | { kind: "failure"; failure: Failure };
 
 // --- GraphQL response parsers ------------------------------------------------
 
@@ -935,9 +937,7 @@ export function createMirrorGitHubGateway(
   const runGraphql = async (
     args: readonly string[],
     op: OpKind,
-  ): Promise<
-    { kind: "ok"; data: Record<string, unknown> } | { kind: "failure"; failure: Failure }
-  > => {
+  ): Promise<GraphqlRun> => {
     const result = await runApi(args, "single");
     if (result.kind !== "exited") {
       return { kind: "failure", failure: processFailure(result, op) };
