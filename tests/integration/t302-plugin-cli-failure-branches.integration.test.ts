@@ -151,7 +151,8 @@ describe("t302 plugin CLI failure branches (U2)", () => {
     out.length = 0;
     const code = handlePluginCli(["doctor", "--project-root", host], deps());
     expect(code).toBe(0); // drift is not a degraded state
-    expect(out.some((l) => l.includes(`${PLUGIN} [drift]`))).toBe(true);
+    // Canonical renderer wording (shared with the integrated doctor, #1585).
+    expect(out.some((l) => l.includes(`Plugin ${PLUGIN}: [drift:`))).toBe(true);
   });
 });
 

@@ -39,13 +39,14 @@ import {
   buildPluginProjection,
   checkHarnessTree,
   discoverPluginSources,
+  PACKAGE_HARNESSES,
+  SELF_INSTALL_HARNESSES,
   validatePluginSources,
 } from "../../scripts/plugin-projection.ts";
-import { PACKAGE_HARNESSES as SELF_INSTALL_FACES } from "../../scripts/promote-self.ts";
+import { packageFreshnessArgs } from "../../scripts/promote-self.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = "zz-u09-fixture";
-const PACKAGE_HARNESSES_7 = ["claude", "codex", "cursor", "kiro", "kiro-ide", "opencode", "kimi"];
 const TIMEOUT_MS = 120_000;
 
 let ws = "";
@@ -157,8 +158,28 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
     expect(checkNeutralBundle()).toEqual([]);
   });
 
+  // The self-install faces are read from their single definition and are a strict
+  // subset of the package faces. A second, equal-valued list under another name
+  // (the #1575 shape) is caught by the source guard below.
   test("self-install stays the closed five faces (not widened to seven)", () => {
-    expect([...SELF_INSTALL_FACES].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
-    for (const f of SELF_INSTALL_FACES) expect(PACKAGE_HARNESSES_7).toContain(f);
+    expect([...SELF_INSTALL_HARNESSES].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
+    expect(SELF_INSTALL_HARNESSES).toHaveLength(5);
+    expect(PACKAGE_HARNESSES).toHaveLength(7);
+    for (const f of SELF_INSTALL_HARNESSES) expect([...PACKAGE_HARNESSES]).toContain(f);
+  });
+
+  test("the self-install consumer derives its faces from the canonical set (#1575)", () => {
+    expect(packageFreshnessArgs("check").map((args) => args[1])).toEqual([...SELF_INSTALL_HARNESSES]);
+  });
+
+  // Re-introduction guard: no module outside the canonical one may declare a
+  // harness-face list of its own. Matching on the DECLARATION shape (not a name)
+  // catches the renamed copy #1575 was.
+  test("no second harness-face list is declared outside the canonical module", () => {
+    const faceLiteral = /(?:const|let|var)\s+\w*(?:HARNESS|HARNESSES|FACES)\w*\s*(?::[^=]+)?=\s*\[/;
+    for (const rel of ["scripts/promote-self.ts", "scripts/package.ts"]) {
+      const src = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      expect({ rel, declares: faceLiteral.test(src) }).toEqual({ rel, declares: false });
+    }
   });
 });

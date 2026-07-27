@@ -624,8 +624,12 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const teamPrerequisites = deepFreezeDoctorSnapshot(
     detectTeamPrerequisites(process.env, probeExecutable),
   );
+  // The plugin host root is the HARNESS dir under the project dir (#1591 ruling
+  // B) — the same root compose writes to and the engine reads plugin stages
+  // back from. Reading the project dir here reported "0 installed" against a
+  // correctly composed host.
   const pluginObservation = deepFreezeDoctorSnapshot(
-    readDoctorPluginObservation(projectDir),
+    readDoctorPluginObservation(join(projectDir, resolvedHarnessDir)),
   ) as DoctorPluginObservation;
   return Object.freeze({
     projectDir,

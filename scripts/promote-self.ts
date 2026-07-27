@@ -31,6 +31,10 @@ import { planMerge, renderManagedBlock } from "../packages/setup/src/domain/kimi
 import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
 import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
+// The self-install face set is defined ONCE, next to the seven package faces it
+// is deliberately narrower than. This script consumes it; it never re-declares
+// an equal-valued list under another name (#1575).
+import { SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
 
 type Mode = "check" | "apply";
 
@@ -178,13 +182,8 @@ function run(cmd: string, args: string[]): void {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-// Harnesses whose dist trees feed the managedDirs self-install. Kept as data
-// so --apply/--check freshness can be asserted in-process without spawning
-// package.ts (bun --coverage cannot see spawned subprocesses).
-export const PACKAGE_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
-
 export function packageFreshnessArgs(mode: Mode): string[][] {
-  return PACKAGE_HARNESSES.map((harness) =>
+  return SELF_INSTALL_HARNESSES.map((harness) =>
     mode === "apply"
       ? ["scripts/package.ts", harness]
       : ["scripts/package.ts", harness, "--check"],

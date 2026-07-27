@@ -4,7 +4,36 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、現在、差分リフレッシュ）
+## plugin 実行系コンポーネントと検証コンポーネントの棚卸し（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+
+260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。件数・行数はすべて `wc -l` / `ls` / `git ls-files` / `find` 出力からの転記（測定 ref: observed `0c4709102`）。
+
+### 実行系コンポーネント（plugin 面）
+
+| コンポーネント | 実体 | 規模 | 責務 | 本 intent での関与 |
+| --- | --- | --- | --- | --- |
+| plugin CLI | `core/tools/amadeus-plugin.ts` | 613 行 | 4 動詞（compose / doctor / drop / status）、host snapshot、統合 doctor への投影 | **#1585 の所在**（`:591-593` standalone レンダラ）・#1586 の判定側（`:377`） |
+| 合成エンジン | `core/tools/amadeus-plugin-compose.ts` | 1469 行 | plan / apply / drop / journal / backend / DropsRecord | **#1586 の所在**（`:1150` mkdir ⇔ `:1154` rm の非対称） |
+| activation policy | `core/tools/amadeus-plugin-activation.ts` | 295 行 | spec-hash advisory（TLC は起動しない） | 非対象 |
+| SessionStart hook | `core/hooks/amadeus-plugin-compose.ts` | **23 行** | `handlePluginCli(["compose","--if-stale","--project-root",dir])` の薄いラッパ | **#1589 の未検証面**（hook 実体・settings 配線の実発火が未駆動） |
+| graph discovery | `core/tools/amadeus-graph.ts` の `discoverPluginStageFiles`（`:2011-2013`）/ `pluginsHostRoot`（`:2015-2023`） | — | compose 済み stage の列挙 | recompile 後の実効果が e2e 未検証 |
+| orchestrate 到達経路 | `core/tools/amadeus-orchestrate.ts` の `emitComposedPluginStageIfInstalled`（`:1017-1034`、呼び出し `:2289`） | — | `--single` なしでの plugin stage 到達 | **#1589 の未検証面**（seam 単体の in-process 呼び出しのみ） |
+| パッケージャ | `scripts/plugin-projection.ts` | — | 中立バンドル + 7 面 install バンドル生成、定数 2 本の canonical | **#1575 の canonical 側**（`:42` 7 / `:56` 5） |
+| self-install 反映 | `scripts/promote-self.ts` | — | 5 面 self-install ツリーへの反映 | **#1575 の欠陥側**（`:184` 同名 5 値定義） |
+
+配布物コンポーネント: 中立バンドル `dist/plugins/formal-model-check/`（`plugin.json` / `README.md` / `stages/formal-model-check.md` + 7 面 `INSTALL.md` = 計 10 ファイル、`find` 実測）と、各ハーネス dist / self-install の `hooks/amadeus-plugin-compose.ts` + `tools/` 3 本（5 面）。
+
+### 検証系コンポーネント（plugin テスト 24 件の内訳と駆動形態）
+
+**unit（純関数・in-process、8 件）**: `t252`（合成エンジン純関数）/ `t300`（`parsePluginCliArgs`）/ `t301`（CLI 純 seam）/ `t306`（`PLUGIN_HOST_CLASS` × 7 面）/ `t313`（`buildDoctorPluginSection`）/ `t314`（`doctorPluginRows` / `formatDoctorPluginLine`）/ `t-plugin-projection`（投影純関数 + 定数集合。`:308` `expect(PACKAGE_HARNESSES).toHaveLength(7)`）/ `plugin-discovery-overhead-gate`。
+
+**integration（実 FS、in-process 駆動が主、17 件）**: `t253`（FS 証明、medium）/ `t254`（reference lifecycle、`applyPluginDrop` を直接呼ぶ `:286`）/ `t299`（walking skeleton、**recompile スタブ** `:75-78` + 唯一の実 spawn `:205-218`、medium）/ `t302`（失敗分岐）/ `t303`（`projectPluginForHarness`、medium）/ `t308`（7 面投影）/ `t310`（`--check` seam、medium）/ `t311`（パッケージャ側 0-plugin baseline、37 行）/ `t315`（統合 doctor、medium）/ `t321`（activation seam、ヘッダ `:5` verbatim「driven IN-PROCESS so the added orchestrate lines register in lcov」）/ `t322`（activation behaviour）/ `t338`（recompile self-heal、カウンタ、medium）/ `t-formal-verif-plugin-lifecycle`（spawn した orchestrate。ヘッダ `:8` verbatim は `--single` **付き**）/ `t-formal-verif-plugin-stage-discovery`（graph join）/ `t-plugin-projection-packaging`（`:44` 別名 import、`:48` 7 値ハードコード）/ `t-plugin-stage-discovery-performance` / `t327`（hook 配線 XOR）。
+
+**e2e: 0 件**（`git ls-files tests/e2e/ | grep -c plugin` = 0）。既存 e2e コンポーネントは 83 ファイル（serial 35）で、駆動機構は (a) node-pty / @xterm/headless の TUI 系（capability gate `t-tui-preflight.serial.test.ts`）(b) ハーネス CLI 実起動 + 出荷 dist の tmp コピー（`t-print-kimi-*`、live gate 付き）(c) 実バイナリ spawn + fetch shim によるオフライン E2E（`setup-install.test.ts` ほか）の 3 系統。#1589 で追加する検証コンポーネントは (b)(c) のいずれかの様式に載る。
+
+**実行トリガーの欠落（コンポーネント外の制約）**: e2e プロファイルは `tests/run-tests.ts:125-126` の通り `--ci` に含まれず `--release` / `--e2e` 明示時のみ実行され、CI（`.github/workflows/ci.yml:163` = `bun run test:ci -- -P 4`）は `--ci` のみを呼ぶ。**e2e 検証コンポーネントを追加しても、実行するコンポーネント（CI ジョブ）が別途必要**。
+
+## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、履歴 2026-07-27、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信（前 intent `260726-plugin-host-delivery` の Construction U2–U8）が着地し、以下のコンポーネントが新規に現れた。
 

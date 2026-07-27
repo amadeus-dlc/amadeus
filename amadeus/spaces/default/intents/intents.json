@@ -659,5 +659,12 @@
     "dirName": "260727-install-doc-mismatch",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa33d-4b05-7359-8e5a-c0bb3ab600fd",
+    "slug": "e2e-plugin-conformance",
+    "dirName": "260727-e2e-plugin-conformance",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
