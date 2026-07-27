@@ -144,6 +144,30 @@ class FakeGateway implements MirrorGitHubGateway {
     this.viewed = { ...this.viewed, state: "CLOSED" };
     return ok(this.viewed);
   }
+
+  // Project sync is not wired in these contexts (no `projectSync` on the
+  // execution context), so a call here is a defect rather than a fixture gap.
+  // Throwing asserts by construction that the Issue-only executor paths make no Project calls.
+  async listProjectItems(
+    ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
+  ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
+    throw new Error("FakeGateway must not query Project items");
+  }
+  async resolveProjectStatusField(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+    throw new Error("FakeGateway must not resolve a Project Status field");
+  }
+  async addProjectItem(
+    ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
+  ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
+    throw new Error("FakeGateway must not add a Project item");
+  }
+  async updateProjectItemStatus(
+    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
+    throw new Error("FakeGateway must not update a Project item status");
+  }
 }
 
 function identity(operationId = "op-1"): MirrorCreateIdentity {

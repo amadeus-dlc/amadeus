@@ -27,7 +27,13 @@ import {
 } from "node:fs";
 import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
-import type { MirrorMode } from "./amadeus-mirror-types.ts";
+import type {
+  MirrorMode,
+  MirrorPhaseKey,
+  MirrorProjectRef,
+  MirrorProjectStatusNames,
+  MirrorProjectTarget,
+} from "./amadeus-mirror-types.ts";
 
 // A config file above this size is rejected rather than read into memory. The
 // bounded reader stops one byte past the limit so growth beyond it is caught.
@@ -36,9 +42,36 @@ const MAX_CONFIG_BYTES = 1024 * 1024;
 const VALID_MODES: readonly MirrorMode[] = ["off", "prompt", "auto"];
 const LAYER_ORDER: readonly ConfigLayer[] = ["global", "space", "intent"];
 
+// The complete allowlist of configuration keys. A key outside this set is a
+// configuration error in every layer.
+const AUTO_MIRROR_KEY = "auto-mirror";
+const MIRROR_PROJECTS_KEY = "mirror-projects";
+const ALLOWED_KEYS: readonly string[] = [AUTO_MIRROR_KEY, MIRROR_PROJECTS_KEY];
+
+const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
+  "ideation",
+  "inception",
+  "construction",
+  "operation",
+  "done",
+];
+
+// U1 consumes exactly one configured Project. A multi-element array is rejected
+// rather than silently truncated; the generalization to N targets is U4's.
+const MAX_PROJECT_TARGETS = 1;
+
+const MODE_EXPECTED = "off | prompt | auto";
+const PROJECTS_EXPECTED =
+  'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }';
+
 export type ConfigLayer = "global" | "space" | "intent";
 
-export type MirrorConfig = Readonly<{ autoMirror: MirrorMode }>;
+export type MirrorConfigKey = "auto-mirror" | "mirror-projects";
+
+export type MirrorConfig = Readonly<{
+  autoMirror: MirrorMode;
+  projects: readonly MirrorProjectTarget[];
+}>;
 
 export type MirrorConfigLayerInput = Readonly<{
   layer: ConfigLayer;
@@ -52,15 +85,18 @@ export type MirrorConfigIssue =
       kind: "invalid-value";
       layer: ConfigLayer;
       path: string;
-      key: "auto-mirror";
+      key: MirrorConfigKey;
       actualType: string;
-      expected: "off | prompt | auto";
+      expected: string;
     }>
   | Readonly<{
       kind: "read-failure";
       layer: ConfigLayer;
       path: string;
-      key: "auto-mirror";
+      // A read failure is file-level, not key-level: an unreadable layer blocks
+      // every key it could have carried. The field is retained for a uniform
+      // issue shape and reports the primary key.
+      key: MirrorConfigKey;
       summary: string;
       expected: "readable configuration";
     }>;
@@ -320,31 +356,181 @@ export function readMirrorConfigLayers(
   return { kind: "ok", layers };
 }
 
-type LayerClassification =
-  | { ok: true; mode?: MirrorMode }
+// Parse `"<owner>/<number>"`. The owner class excludes whitespace and slash and
+// the number must be a positive safe integer, so a padded or float value is
+// rejected without coercion (fail-closed, FR-5).
+const PROJECT_REF_RE = /^([A-Za-z0-9._-]+)\/([0-9]+)$/;
+
+function parseProjectRef(value: unknown): MirrorProjectRef | null {
+  if (typeof value !== "string") return null;
+  const match = PROJECT_REF_RE.exec(value);
+  if (match === null) return null;
+  const number = Number(match[2]);
+  if (!Number.isSafeInteger(number) || number <= 0) return null;
+  return { owner: match[1], number };
+}
+
+type StatusNamesParse =
+  | { ok: true; statusNames: MirrorProjectStatusNames }
   | { ok: false; actualType: string };
 
-// Judge one present layer's raw value. The whole config object is validated:
-// a non-object root, an unknown property, or a non-mode `auto-mirror` value is
-// rejected rather than silently reduced to the mode. An empty object is valid
-// and contributes no mode.
-function classifyRawValue(rawValue: unknown): LayerClassification {
-  if (!isPlainObject(rawValue)) {
-    return { ok: false, actualType: valueKind(rawValue) };
+// `status-names` overrides the default phase -> column-name table. Keys are the
+// closed phase vocabulary; an unknown phase is an error, never ignored.
+function parseStatusNames(value: unknown): StatusNamesParse {
+  if (value === undefined) return { ok: true, statusNames: {} };
+  if (!isPlainObject(value)) {
+    return { ok: false, actualType: `status-names is ${valueKind(value)}` };
   }
-  const unknownKeys = Object.keys(rawValue).filter((key) => key !== "auto-mirror");
-  if (unknownKeys.length > 0) {
+  const unknown = Object.keys(value).filter(
+    (key) => !VALID_PHASE_KEYS.includes(key as MirrorPhaseKey),
+  );
+  if (unknown.length > 0) {
     return {
       ok: false,
-      actualType: `object with unknown key(s): ${unknownKeys.join(", ")}`,
+      actualType: `status-names has unknown phase(s): ${unknown.join(", ")}`,
     };
   }
-  const raw = rawValue["auto-mirror"];
-  if (raw === undefined) return { ok: true };
-  if (VALID_MODES.includes(raw as MirrorMode)) {
-    return { ok: true, mode: raw as MirrorMode };
+  const statusNames: Record<string, string> = {};
+  for (const key of Object.keys(value)) {
+    const name = value[key];
+    if (typeof name !== "string" || name.length === 0) {
+      return {
+        ok: false,
+        actualType: `status-names.${key} is ${valueKind(name)}`,
+      };
+    }
+    statusNames[key] = name;
   }
-  return { ok: false, actualType: valueKind(raw) };
+  return { ok: true, statusNames };
+}
+
+type ProjectsParse =
+  | { ok: true; projects: readonly MirrorProjectTarget[] }
+  | { ok: false; actualType: string };
+
+function parseProjectTarget(element: unknown): ProjectsParse {
+  if (!isPlainObject(element)) {
+    return { ok: false, actualType: `element is ${valueKind(element)}` };
+  }
+  const unknown = Object.keys(element).filter(
+    (key) => key !== "project" && key !== "status-names",
+  );
+  if (unknown.length > 0) {
+    return {
+      ok: false,
+      actualType: `element has unknown key(s): ${unknown.join(", ")}`,
+    };
+  }
+  const project = parseProjectRef(element.project);
+  if (project === null) {
+    return {
+      ok: false,
+      actualType: `project is ${valueKind(element.project)} (expected "<owner>/<number>")`,
+    };
+  }
+  const statusNames = parseStatusNames(element["status-names"]);
+  if (!statusNames.ok) return statusNames;
+  return { ok: true, projects: [{ project, statusNames: statusNames.statusNames }] };
+}
+
+function parseProjects(value: unknown): ProjectsParse {
+  if (!Array.isArray(value)) {
+    return { ok: false, actualType: valueKind(value) };
+  }
+  if (value.length > MAX_PROJECT_TARGETS) {
+    return {
+      ok: false,
+      actualType: `array of ${value.length} elements (U1 supports ${MAX_PROJECT_TARGETS})`,
+    };
+  }
+  const projects: MirrorProjectTarget[] = [];
+  for (const element of value) {
+    const parsed = parseProjectTarget(element);
+    if (!parsed.ok) return parsed;
+    projects.push(...parsed.projects);
+  }
+  return { ok: true, projects };
+}
+
+type LayerIssue = Readonly<{
+  key: MirrorConfigKey;
+  actualType: string;
+  expected: string;
+}>;
+
+type LayerClassification = Readonly<{
+  mode?: MirrorMode;
+  projects?: readonly MirrorProjectTarget[];
+  issues: readonly LayerIssue[];
+}>;
+
+// Judge one present layer's raw value. The whole config object is validated: a
+// non-object root, an unknown property, or an invalid value for either key is
+// rejected rather than silently reduced. An empty object is valid and
+// contributes nothing. Both keys are judged independently so one layer can
+// report both errors at once.
+function classifyRawValue(rawValue: unknown): LayerClassification {
+  if (!isPlainObject(rawValue)) {
+    return {
+      issues: [
+        {
+          key: AUTO_MIRROR_KEY,
+          actualType: valueKind(rawValue),
+          expected: MODE_EXPECTED,
+        },
+      ],
+    };
+  }
+  const unknownKeys = Object.keys(rawValue).filter(
+    (key) => !ALLOWED_KEYS.includes(key),
+  );
+  if (unknownKeys.length > 0) {
+    return {
+      issues: [
+        {
+          key: AUTO_MIRROR_KEY,
+          actualType: `object with unknown key(s): ${unknownKeys.join(", ")}`,
+          expected: MODE_EXPECTED,
+        },
+      ],
+    };
+  }
+
+  const issues: LayerIssue[] = [];
+  let mode: MirrorMode | undefined;
+  const rawMode = rawValue[AUTO_MIRROR_KEY];
+  if (rawMode !== undefined) {
+    if (VALID_MODES.includes(rawMode as MirrorMode)) {
+      mode = rawMode as MirrorMode;
+    } else {
+      issues.push({
+        key: AUTO_MIRROR_KEY,
+        actualType: valueKind(rawMode),
+        expected: MODE_EXPECTED,
+      });
+    }
+  }
+
+  let projects: readonly MirrorProjectTarget[] | undefined;
+  const rawProjects = rawValue[MIRROR_PROJECTS_KEY];
+  if (rawProjects !== undefined) {
+    const parsed = parseProjects(rawProjects);
+    if (parsed.ok) {
+      projects = parsed.projects;
+    } else {
+      issues.push({
+        key: MIRROR_PROJECTS_KEY,
+        actualType: parsed.actualType,
+        expected: PROJECTS_EXPECTED,
+      });
+    }
+  }
+
+  return {
+    issues,
+    ...(mode === undefined ? {} : { mode }),
+    ...(projects === undefined ? {} : { projects }),
+  };
 }
 
 // Pure schema + precedence over collected layers. Every invalid layer is
@@ -364,29 +550,39 @@ export function parseMirrorConfigLayers(
   const issues: MirrorConfigIssue[] = [];
   const sources: string[] = [];
   let mode: MirrorMode | undefined;
+  let projects: readonly MirrorProjectTarget[] | undefined;
   for (const layer of ordered) {
     const classified = classifyRawValue(layer.rawValue);
-    if (!classified.ok) {
+    for (const issue of classified.issues) {
       issues.push({
         kind: "invalid-value",
         layer: layer.layer,
         path: layer.path,
-        key: "auto-mirror",
-        actualType: classified.actualType,
-        expected: "off | prompt | auto",
+        key: issue.key,
+        actualType: issue.actualType,
+        expected: issue.expected,
       });
-      continue;
     }
+    if (classified.issues.length > 0) continue;
+    // Each key resolves independently: the last layer carrying a valid value for
+    // that key wins, and `mirror-projects` fully replaces the previous layer's
+    // target list rather than merging into it.
+    let contributed = false;
     if (classified.mode !== undefined) {
       mode = classified.mode;
-      sources.push(layer.path);
+      contributed = true;
     }
+    if (classified.projects !== undefined) {
+      projects = classified.projects;
+      contributed = true;
+    }
+    if (contributed) sources.push(layer.path);
   }
 
   if (issues.length > 0) return { kind: "invalid", issues };
   return {
     kind: "resolved",
-    config: { autoMirror: mode ?? "prompt" },
+    config: { autoMirror: mode ?? "prompt", projects: projects ?? [] },
     sources,
   };
 }
