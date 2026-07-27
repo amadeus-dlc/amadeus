@@ -1,5 +1,6 @@
 # Project-Level Rules
 
+- ベンチマーク判定に baseline 相対項を設計するときは、baseline 系列が対象系列と負荷を共有する(計測ウィンドウ内に同等の資源競合面を持つ)ことを実装前に負荷スイープで実測してから採用する — 空ウィンドウ baseline(noop 等)は負荷と相関せず、相対項は絶対判定へ無音退化する(実測: 260726-t258-p95-flake で noop ≈40ns 空ウィンドウが archive 2.3倍膨張時も平坦 = 相関ゼロ → 裁定を noop 相対から median 基準へ改訂。cid:code-generation:ruling-premise-closure-verification の性能ゲート設計面) (learned 2026-07-26) <!-- cid:code-generation:c1-benchmark-baseline-correlation-verify -->
 > このプロジェクト固有の技術・構造・運用上の追加規則と是正事項。org.md、team.md に矛盾しない規則を加算し、practices-discovery と自己学習ループによって記入される。
 >
 > ランタイム、リポジトリ構造、CI、配布経路など、このプロジェクトを離れると成立しない規則をここに置く。チーム共通の判断・レビュー・エスカレーション規則は team.md、一時的な intent 制約は intent record に置く。
@@ -108,7 +109,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS make mirror retries idempotent across partial GitHub success and local-state write failure. (affirmed 2026-07-24)
 - ALWAYS verify Amadeus ownership provenance and workflow landing before automatically closing a mirror Issue. (affirmed 2026-07-24)
 - ALWAYS continue the workflow after GitHub availability, authentication, permission, rate-limit, or command failures while recording a visible unsynchronized warning and retry state. (affirmed 2026-07-24)
-- ALWAYS update the framework source, all six harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24)
+- ALWAYS update the framework source, all harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24; count-free reword approved 2026-07-26 — "six" went stale when the Kimi harness landed, per cid:code-generation:count-comment-sync-on-catalog-change)
 - ALWAYS validate TypeScript with strict typecheck, Biome lint, relevant tests, coverage gates, complexity checks, and distribution drift checks required by the changed paths. (affirmed 2026-07-24)
 ## Corrections
 
@@ -247,6 +248,9 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - UX・互換性・対応範囲など既存実装の流儀で決まる事項は、ユーザーに問わず実装を読んで既存パターンに合わせる。質問するのは既存パターンが複数競合する場合か、既存に答えがない真に新規の判断のみ(intent-capture:c1 の絞り込み規則の導出面への精緻化。同一 intent で「既存の流儀に合わせよ」のユーザー修正が2度出た実測) (learned 2026-07-25) (learned 2026-07-25) <!-- cid:requirements-analysis:c5 -->
 - ステージ成果物は作成時に、上流入力ヘッダ(宣言 consumes 全数)と各成果物名の実参照行(どの節で何に使ったか)を最初から同時に書く。後付けの参照追加で reviewer の iteration を消費しない(同一 intent で同種指摘が5回以上出た実測。artifact-upstream-inputs-header と body-derivation-before-header の様式確定版) (learned 2026-07-25) (learned 2026-07-25) <!-- cid:functional-design:c12 -->
 - サブエージェント(worker・dogfood セッション)は engine の hard error を intent の state(scope・ステージ等)の変更で自己修復しない。検出したら conductor に報告して判断を仰ぐ。dogfood 側ツリー(.kimi-code 等の self-install)には project スコープが同梱されない構造のため、dogfood で intent を進める必要がある場合は conductor が stock スコープまたはスコープ複写で案内する (learned 2026-07-26) (learned 2026-07-26) <!-- cid:code-generation:c-no-self-state-repair -->
+- questions ファイルの裁定証跡は「裁定」語彙の記録行だけでは answer-evidence 述語(checkQuestionsEvidence — 「承認」を含む行に parse 可能な ISO タイムスタンプを要求)を通らない — 裁定の記録には必ず「承認」語彙+ISO 8601 タイムスタンプの行(例: `ユーザー承認: 2026-07-26T14:41:00Z`)を含める(実測: 260726-mirror-state-split RA で unparseable-timestamp FAILED → 承認行追記で PASSED。cid:requirements-analysis:eoc1-evidence-in-questions-header / answer-evidence-predicate-scope の承認語彙面の追補) (learned 2026-07-26) <!-- cid:requirements-analysis:c4-answer-evidence-approval-vocab -->
+- 状態の write⇔read 対称性検査は「フィールド/ブロックの所在」だけでなく「比較に使うレンダラの同一性」まで対象にする — drift 比較(status 等)の期待値をローカル複製レンダラで組むと、書き手 canonical(renderMirrorIssueContent 等)との乖離が偽 drift を作る。read 統一の修正では比較レンダラも canonical 1定義へ寄せる(実測: 260726-mirror-state-split CG で builder が実装前に第2非対称を発見・逸脱停止 → ユーザー裁定 B で renderBody 重複定義を削除。cid:requirements-analysis:symmetric-pair-review のレンダラ面追補) (learned 2026-07-26) <!-- cid:code-generation:c1-drift-canonical-renderer -->
+- ガード層の欠陥修正は「ガード通過 = 症状解消」と仮定せず、narrow fix 適用後に元症状(下流の状態遷移まで)を再実測してから確定する — ガードの背後に第2層の欠陥(auth 上書き・identity 不一致等)が隠れており、ガード除去で初めて露出する(実測: 260726-answer-manual-binding で guard 補填後も expectedPrompt 非 consume の第2層を builder が適用後実測で発見 → 裁定 B でスコープ拡張。cid:code-generation:ruling-premise-closure-verification の多層欠陥面の追補 — 裁定準拠の実装完了と症状の閉包は別物、の実践形) (learned 2026-07-27) <!-- cid:code-generation:c1-narrow-fix-post-apply-remeasure -->
 - 生成系・レビュー系サブエージェントへの委譲プロンプトには、state 変更コマンド (amadeus-orchestrate.ts report、amadeus-state.ts、amadeus-log.ts、amadeus-bolt.ts) の実行禁止と、ゲート提示・レビュー・学習リチュアルは conductor のみが行う旨を必ず明記する (user decision 2026-07-26。260726-promote-self-hooks で生成サブエージェントが §12a とゲートを跳过して report --result completed を自行実行し、未消費 HUMAN_TURN を消費して code-generation を無断完了させた事案の再発防止) (learned 2026-07-26) <!-- cid:build-and-test:cg-subagent-state-mutation-ban -->
 - packages/framework/core 配下を変更したときの dist 再生成は7ハーネス全て (claude, codex, cursor, opencode, kimi, kiro, kiro-ide) を対象とする。5ハーネスで止めると kiro/kiro-ide が DIFFERS となり dist:check が落ちる (user decision 2026-07-26。260726-promote-self-hooks の build-and-test で実発) (learned 2026-07-26) <!-- cid:build-and-test:bt-dist-regen-seven-harnesses -->
 ## Testing

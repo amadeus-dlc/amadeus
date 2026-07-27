@@ -1,4 +1,10 @@
-// scripts/plugin-composition.ts — C4 Plugin Composition (U10, FR-6 item 20).
+// packages/framework/core/tools/amadeus-plugin-compose.ts — C4 Plugin Composition
+// (U10, FR-6 item 20). Relocated from the old build-time plugin-composition
+// module into the harness-neutral core so the amadeus-plugin.ts CLI can import
+// the engine and ship to every harness via coreDirs projection (U2 C2,
+// harness-tools-placement). Signatures are unchanged from the pre-move engine
+// (BR-U2-1 single implementation, BR-U2-7 no compatibility re-export at the old
+// path).
 //
 // The host-side composition ENGINE (mechanism only): inspect a discovered plugin
 // against a host snapshot, plan a no-clobber composition, apply it as a single
@@ -8,7 +14,7 @@
 // SCOPE (U10). The six public seams below plus the internal discoverPlugins
 // helper. The reference plugin `test-pro` and its authoring guide are U11; the
 // ledger/evidence closure is U12; the byte projection into dist/ is U09
-// (scripts/plugin-projection.ts). `when` evaluation, agents/scopes/memory/
+// (the plugin-projection module). `when` evaluation, agents/scopes/memory/
 // knowledge composition, marketplace, lockfiles and managed settings are OUT OF
 // SCOPE — this file never touches them.
 //
@@ -34,11 +40,31 @@
 // against a real temp filesystem in the integration layer.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
-import { parseStageFrontmatter } from "../packages/framework/core/tools/amadeus-lib.ts";
-import { validateStageFrontmatter } from "../packages/framework/core/tools/amadeus-stage-schema.ts";
-import { type ReadOnlyFs, nodeReadOnlyFs } from "./plugin-projection.ts";
+import { parseStageFrontmatter } from "./amadeus-lib.ts";
+import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+
+// Read-only filesystem seam so discovery is drivable by a fake in tests. Method
+// names deliberately avoid the node:fs API names (existsSync/readFileSync/…) so
+// a pure consumer or fake stays free of filesystem *signals* — the node backend
+// below is the only place those names appear. Co-located here (was formerly in
+// the plugin-projection module) so the moved engine carries no build-time
+// import and stays dist-shippable; plugin-projection.ts now imports it from here
+// (single definition — C2 "二重定義しない").
+export type ReadOnlyFs = {
+  exists(p: string): boolean;
+  list(p: string): readonly string[];
+  isDir(p: string): boolean;
+  read(p: string): Buffer;
+};
+
+export const nodeReadOnlyFs: ReadOnlyFs = {
+  exists: (p) => existsSync(p),
+  list: (p) => readdirSync(p),
+  isDir: (p) => statSync(p).isDirectory(),
+  read: (p) => readFileSync(p),
+};
 
 // The four host-stage seams a plugin may merge into. The canonical vocabulary is
 // StageFrontmatter's list fields (packages/framework/core/tools/
@@ -156,6 +182,24 @@ export type CompositionRecord = {
 
 export function emptyComposition(): CompositionRecord {
   return { ledger: new Map(), plugins: new Map() };
+}
+
+// ---------------------------------------------------------------------------
+// DropsRecord (U5 domain-entities is the canonical shape) — the
+// composition-record-adjacent log of surfaces a plugin's compose could not fully
+// apply (an unresolved fragment anchor / an unsupported surface), the receptacle
+// for FR-4(d) "dropped-with-log". Written by the compose apply path; plugin-
+// separated so one plugin's drops never erase another's (t188 #24). U4 adds real
+// degrade entries and U5 (doctor) reads it. U2 writes the SKELETON only: the
+// current engine rejects a missing anchor (unknown-seam) rather than dropping it,
+// so no drop-with-log path exists yet — every entry list is empty for the claude
+// face. `severity` is the sole source of the DoctorLine degraded/advisory state.
+export type DropSeverity = "degraded" | "advisory";
+export type DropEntry = { surface: string; severity: DropSeverity; reason: string };
+export type DropsRecord = { plugins: ReadonlyMap<string, readonly DropEntry[]> };
+
+export function emptyDropsRecord(): DropsRecord {
+  return { plugins: new Map() };
 }
 
 // The read model inspect/plan/diagnose consume. `files` are current on-disk
@@ -511,7 +555,7 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     sharedFiles.push({ path, expectedPostState: bytes });
   }
   const ownedPaths = m.stages.map((s) => s.path).sort();
-  const ownedContentDigests = new Map(m.stages.map((stage) => [stage.path, digestBytes(stage.bytes)]));
+  const ownedContentDigests = ownedStageDigests(plugin);
   const stageIndex = buildStageIndex(m.stages);
   const record: PluginRecord = {
     plugin: plugin.name,
@@ -530,6 +574,15 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     ledger,
     record,
   };
+}
+
+// The per-owned-stage content digests a composition would persist for `plugin`
+// (path → sha256 of the stage bytes). Exported as the single definition so the
+// no-op fast path (amadeus-plugin.ts compose --if-stale) can compare a freshly
+// discovered plugin against the recorded PluginRecord.ownedContentDigests without
+// reaching any mutation stage (inspect/plan/apply).
+export function ownedStageDigests(plugin: { manifest: PluginManifest }): ReadonlyMap<string, string> {
+  return new Map(plugin.manifest.stages.map((stage) => [stage.path, digestBytes(stage.bytes)]));
 }
 
 function buildStageIndex(stages: readonly StageCopy[]): readonly PluginStageIndexEntry[] {
@@ -1129,6 +1182,57 @@ export const noopLock: WorkspaceLock = { acquire: () => {}, release: () => {} };
 function readAudit(path: string): AuditEntry[] {
   if (!existsSync(path)) return [];
   return JSON.parse(readFileSync(path, "utf-8")) as AuditEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// DropsRecord persistence (composition-record-adjacent dot-file). Deterministic
+// JSON (plugin keys sorted) so a re-compose of the same set is byte-identical.
+// ---------------------------------------------------------------------------
+const PLUGIN_DROPS_FILE = ".amadeus-plugin-drops.json";
+
+export function dropsRecordPath(root: string): string {
+  return join(root, PLUGIN_DROPS_FILE);
+}
+
+export function dropsToJson(d: DropsRecord): string {
+  const obj: Record<string, readonly DropEntry[]> = {};
+  for (const name of [...d.plugins.keys()].sort()) obj[name] = d.plugins.get(name) ?? [];
+  return JSON.stringify({ plugins: obj }, null, 2);
+}
+
+export function dropsFromJson(text: string): DropsRecord {
+  const raw = JSON.parse(text) as { plugins?: Record<string, DropEntry[]> };
+  const plugins = new Map<string, readonly DropEntry[]>();
+  for (const [name, entries] of Object.entries(raw.plugins ?? {})) plugins.set(name, entries);
+  return { plugins };
+}
+
+export function readDropsRecord(root: string): DropsRecord {
+  const p = dropsRecordPath(root);
+  return existsSync(p) ? dropsFromJson(readFileSync(p, "utf-8")) : emptyDropsRecord();
+}
+
+export function writeDropsRecord(root: string, d: DropsRecord): void {
+  writeFileSync(dropsRecordPath(root), dropsToJson(d));
+}
+
+// Record one plugin's drops (plugin-separated: only this plugin's key is set, so
+// other plugins' drops are preserved). Written on the compose apply path — the
+// U2 skeleton passes an empty list (no drop-with-log path in the engine yet).
+export function recordPluginDrops(root: string, plugin: string, entries: readonly DropEntry[]): void {
+  const next = new Map(readDropsRecord(root).plugins);
+  next.set(plugin, entries);
+  writeDropsRecord(root, { plugins: next });
+}
+
+// Remove one plugin's drops on drop — the symmetric partner of the compose-time
+// write (symmetric-pair-review), so a dropped plugin leaves no stale drops entry.
+export function clearPluginDrops(root: string, plugin: string): void {
+  const cur = readDropsRecord(root);
+  if (!cur.plugins.has(plugin)) return;
+  const next = new Map(cur.plugins);
+  next.delete(plugin);
+  writeDropsRecord(root, { plugins: next });
 }
 
 // ---------------------------------------------------------------------------

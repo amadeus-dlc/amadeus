@@ -371,7 +371,12 @@ function skippedOutcome(
   state: MirrorStateSnapshot,
   answer: MirrorPromptAnswer,
 ): MirrorOperationOutcome {
-  const operationId = input.newOperationId();
+  // Reuse the reconciled receipt's operationId so skip-for-event's identity
+  // check accepts the transition; a fresh (non-reconcile) skip has no receipt
+  // and mints a new id.
+  const operationId =
+    state.receipts[mirrorEventKey(answer.event)]?.operationId ??
+    input.newOperationId();
   const result = mutateMirrorStateAtomic(input.ports, {
     transition: {
       kind: "skip-for-event",
@@ -545,16 +550,48 @@ async function handlePromptAnswer(
     input.context.boundary,
     approved.operation,
   );
-  return continued([
-    await executeDecision(
-      input,
-      state,
-      triggerEvent,
-      approved.event,
-      approved.operation,
-      answer,
-    ),
-  ]);
+  const outcome = await executeDecision(
+    input,
+    state,
+    triggerEvent,
+    approved.event,
+    approved.operation,
+    answer,
+  );
+  consumeAnsweredPrompt(input, approved.event, approved.operation);
+  return continued([outcome]);
+}
+
+// Consume the durable binding for an approved prompt when the execution path
+// did not already do so. The prompt-approved prepare path consumes a fresh
+// receipt's binding, but a reconciled receipt keeps its original authorization
+// (e.g. manual) and never re-prepares, so the binding must be released here or
+// it stays and blocks every later boundary. Reads the post-execution state and
+// only consumes a still-matching binding, so the already-consumed fresh path is
+// a no-op.
+function consumeAnsweredPrompt(
+  input: DriveMirrorBoundaryInput,
+  event: MirrorEventIdentity,
+  operation: MirrorOperation,
+): void {
+  const read = input.dependencies?.readState ?? readMirrorState;
+  const latest = read(input.ports);
+  if (latest.kind !== "ok") return;
+  const expected = latest.snapshot.expectedPrompt;
+  if (
+    !expected ||
+    mirrorEventKey(expected.event) !== mirrorEventKey(event) ||
+    expected.operation !== operation
+  ) {
+    return;
+  }
+  mutateMirrorStateAtomic(input.ports, {
+    transition: { kind: "consume-expected-prompt", event, operation },
+    expectedRevision: latest.snapshot.revision,
+    auditContext: { triggerEvent: event, reconciliation: false },
+    now: input.now(),
+    intentUuid: input.context.intentUuid,
+  });
 }
 
 function selectBoundaryDecision(
