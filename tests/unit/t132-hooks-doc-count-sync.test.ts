@@ -17,27 +17,31 @@
 //   A. dist/claude/.claude/hooks/amadeus-*.ts          — the hook scripts on disk
 //   B. dist/claude/.claude/settings.json             — the `hooks` block command
 //        count + the top-level `statusLine` key (1 when present)
-//   C. docs/reference/06-hooks-and-tools.md           — the count-words in the
-//        Wave-3-milestone-13 hook-scope sentence:
-//        "This implementation uses ten hook scripts ... All ten are
-//         **project-wide** ... the other nine via the `hooks` block ..."
-//        (located at line 9 at migration time; matched by phrase, not by line).
+//   C. docs/reference/06-hooks-and-tools.md           — the hook-scope section:
+//        the count-FREE prose ("uses the framework hook scripts ... All of them
+//        are **project-wide** ... the rest via the `hooks` block") plus the
+//        `.claude/hooks/` inventory block that names each script.
 //
-// This mirrors t28's two-source set-equality discipline: it derives the count
-// from disk + settings.json independently, then asserts the doc's count-words
-// agree in BOTH directions (forward: doc cannot over/under-state; reverse: the
-// doc's own block+statusLine split is arithmetically whole). t131 pins the
-// settings.json WIRING; this pins the PROSE COUNT so a reword can't silently
-// re-drift it away from ground truth.
+// This mirrors t28's two-source set-equality discipline: it derives ground truth
+// from disk + settings.json independently, then cross-checks the doc in BOTH
+// directions. t131 pins the settings.json WIRING; this pins the doc's INVENTORY
+// so a reword can't silently drift it away from ground truth.
+//
+// FR-6 (#1590): the doc went count-free in PR #1578, which left the three
+// count-word parse tests (4/6/7) permanently NaN-red. They are replaced by the
+// count-free contract itself: test 4 pins that no stale count assertion may
+// return, and tests 6/7 cross-check the doc's per-script inventory against disk
+// and settings.json — the same forward/reverse discipline, without a number that
+// has to be hand-maintained (cid:code-generation:count-comment-sync-on-catalog-change).
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1  assert_gt DISK_COUNT 0                        -> "ground truth A: hooks/amadeus-*.ts exist on disk"
 //   .sh test 2  assert_eq SETTINGS_STATUSLINE_COUNT 1         -> "ground truth B: settings.json registers exactly 1 statusLine hook"
 //   .sh test 3  assert_eq SETTINGS_TOTAL DISK_COUNT           -> "ground truth cross-check: settings total == disk files"
-//   .sh test 4  doc three count-words parse cleanly           -> "doc: the three count-words parse cleanly (sentence not reworded)"
+//   .sh test 4  doc three count-words parse cleanly           -> (FR-6) "doc: the hook-scope prose asserts no script count"
 //   .sh test 5  assert_eq DOC_ALL_PW DOC_TOTAL                -> "doc internal: 'All N project-wide' matches 'uses N hook scripts'"
-//   .sh test 6  assert_eq DOC_TOTAL DISK_COUNT                -> "doc forward: 'uses N hook scripts' == ground-truth total"
-//   .sh test 7  assert_eq DOC_BLOCK SETTINGS_BLOCK_COUNT      -> "doc subcount: 'other N via the hooks block' == settings hooks-block count"
+//   .sh test 6  assert_eq DOC_TOTAL DISK_COUNT                -> (FR-6) "doc forward: the inventory block names every hook on disk"
+//   .sh test 7  assert_eq DOC_BLOCK SETTINGS_BLOCK_COUNT      -> (FR-6) "doc reverse: every inventoried hook exists and the statusLine entry matches settings.json"
 //   .sh test 8  assert_eq (DOC_BLOCK+1) DOC_TOTAL             -> "doc reverse: hooks-block (N) + statusLine (1) == total (whole split)"
 
 import { describe, expect, test } from "bun:test";
@@ -51,10 +55,13 @@ const DOC = join(REPO_ROOT, "docs", "reference", "06-hooks-and-tools.md");
 
 // --- Ground truth A: hook scripts on disk (hooks/amadeus-*.ts) -----------------
 // The .sh did `ls -1 "$HOOKS_DIR"/amadeus-*.ts | wc -l`.
+function diskHooks(): Set<string> {
+  return new Set(
+    readdirSync(HOOKS_DIR).filter((f) => f.startsWith("amadeus-") && f.endsWith(".ts")),
+  );
+}
 function diskHookCount(): number {
-  return readdirSync(HOOKS_DIR).filter(
-    (f) => f.startsWith("amadeus-") && f.endsWith(".ts"),
-  ).length;
+  return diskHooks().size;
 }
 
 // --- Ground truth B: settings.json registrations ----------------------------
@@ -112,6 +119,37 @@ const DOC_TOTAL_WORD = docWord(/uses ([a-z]+) hook scripts/);
 const DOC_ALL_PW_WORD = docWord(/All ([a-z]+) are \*\*project-wide\*\*/);
 const DOC_BLOCK_WORD = docWord(/the other ([a-z]+) via the `hooks` block/);
 
+// --- FR-6: the count-free contract ------------------------------------------
+// A count assertion is a count-WORD or a digit run in one of the three legacy
+// hook-scope slots. Built from WORD2INT so the two stay in lockstep. "All of
+// them are **project-wide**" (the current count-free wording) is not a match:
+// "of" is not a count token.
+const COUNT_TOKEN = `(?:${Object.keys(WORD2INT).join("|")}|\\d+)`;
+const STALE_COUNT_PATTERNS: readonly RegExp[] = [
+  new RegExp(`uses ${COUNT_TOKEN} hook scripts`),
+  new RegExp(`All ${COUNT_TOKEN} are \\*\\*project-wide\\*\\*`),
+  new RegExp(`the other ${COUNT_TOKEN} via the \`hooks\` block`),
+];
+
+/** The script names in the doc's `.claude/hooks/` inventory block, each with the
+ *  registration annotation in its trailing comment. */
+function docHookInventory(): { script: string; annotation: string }[] {
+  const block = readFileSync(DOC, "utf-8").match(/\n\.claude\/hooks\/\n([\s\S]*?)\n```/);
+  if (block === null) return [];
+  const entries: { script: string; annotation: string }[] = [];
+  for (const line of block[1].split("\n")) {
+    const m = line.match(/^\+--\s+(amadeus-[\w-]+\.ts)\s+#\s*(.*)$/);
+    if (m) entries.push({ script: m[1], annotation: m[2] });
+  }
+  return entries;
+}
+
+/** The script basename settings.json wires as the statusLine command. */
+function settingsStatusLineScript(): string | undefined {
+  const s = JSON.parse(readFileSync(SETTINGS, "utf-8")) as { statusLine?: { command?: string } };
+  return s.statusLine?.command?.match(/(amadeus-[\w-]+\.ts)/)?.[1];
+}
+
 const DOC_TOTAL = word2int(DOC_TOTAL_WORD);
 const DOC_ALL_PW = word2int(DOC_ALL_PW_WORD);
 const DOC_BLOCK = word2int(DOC_BLOCK_WORD);
@@ -133,17 +171,15 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     expect(total).toBe(diskHookCount());
   });
 
-  // --- Doc parse: the three count-words survived (no silent reword) ---
-  test("4: doc — the three count-words parse cleanly (sentence not reworded) [.sh test 4]", () => {
-    // The .sh's `[ "$DOC_TOTAL" != "MISS" ] && ...` for all three. A reword
-    // that drops the pinned phrasing yields undefined -> NaN here, tripping
-    // this before any equality check.
-    expect(DOC_TOTAL_WORD).toBeDefined();
-    expect(DOC_ALL_PW_WORD).toBeDefined();
-    expect(DOC_BLOCK_WORD).toBeDefined();
-    expect(Number.isNaN(DOC_TOTAL)).toBe(false);
-    expect(Number.isNaN(DOC_ALL_PW)).toBe(false);
-    expect(Number.isNaN(DOC_BLOCK)).toBe(false);
+  // --- Doc count-free contract (FR-6) ---
+  test("4: doc — the hook-scope prose asserts no script count (count-free contract) [FR-6, was .sh test 4]", () => {
+    // A hand-maintained count in prose is drift waiting to happen: PR #1578
+    // reworded it away precisely because it had gone stale. Pin the absence, so
+    // reintroducing "uses twelve hook scripts" (or a digit) fails here.
+    const doc = readFileSync(DOC, "utf-8");
+    for (const pattern of STALE_COUNT_PATTERNS) {
+      expect(doc.match(pattern)).toBeNull();
+    }
   });
 
   // --- Doc internal consistency ---
@@ -151,18 +187,26 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     expect(DOC_ALL_PW).toBe(DOC_TOTAL);
   });
 
-  // --- Doc forward: doc total cannot over/under-state ground truth ---
-  test("6: doc forward — 'uses N hook scripts' == ground-truth total [.sh test 6]", () => {
-    // The .sh asserts against DISK_COUNT; SETTINGS_TOTAL was already proven
-    // equal to DISK_COUNT in test 3, so this pins the doc to both at once.
-    const disk = diskHookCount();
-    expect(DOC_TOTAL).toBe(disk);
-    expect(DOC_TOTAL).toBe(settingsCounts().total);
+  // --- Doc forward: the inventory names every hook on disk (no omission) ---
+  test("6: doc forward — the `.claude/hooks/` inventory names every hook on disk [FR-6, was .sh test 6]", () => {
+    // Replaces the count with the set it was standing in for: a new hook script
+    // that never reaches the doc fails here, exactly as an unbumped count did.
+    const inventoried = new Set(docHookInventory().map((e) => e.script));
+    expect(inventoried.size).toBeGreaterThan(0);
+    expect([...diskHooks()].filter((f) => !inventoried.has(f))).toEqual([]);
   });
 
-  // --- Doc subcount: hooks-block word == settings hooks-block count ---
-  test("7: doc subcount — 'other N via the hooks block' == settings.json hooks-block count [.sh test 7]", () => {
-    expect(DOC_BLOCK).toBe(settingsCounts().block);
+  // --- Doc reverse: nothing inventoried is fictional, and the split is real ---
+  test("7: doc reverse — every inventoried hook exists and the statusLine entry matches settings.json [FR-6, was .sh test 7]", () => {
+    const inventory = docHookInventory();
+    const disk = diskHooks();
+    expect(inventory.map((e) => e.script).filter((s) => !disk.has(s))).toEqual([]);
+    // The block/statusLine split the old subcount encoded, asserted per script:
+    // exactly one entry is annotated statusLine, and it is the one settings.json
+    // wires there.
+    const statusLineEntries = inventory.filter((e) => e.annotation.includes("statusLine"));
+    expect(statusLineEntries.map((e) => e.script)).toEqual([settingsStatusLineScript() ?? "<unwired>"]);
+    expect(inventory.length - statusLineEntries.length).toBe(settingsCounts().block);
   });
 
   // --- Doc reverse: the doc's own split is arithmetically whole ---
