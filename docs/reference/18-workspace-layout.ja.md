@@ -18,15 +18,13 @@ Amadeus は framework の authored source を `packages/framework/` に移しま
 - root `scripts/` は repository レベルの packaging/self-promotion tooling として維持します。
 - root `dist/<name>/` は generated かつ committed な public install contract として維持します。
 - root `.claude/`, `.codex/`, `.agents` は dogfood な self-install ターゲットとして維持します。
-- root `core` と `harness` は既存の docs/tests/import 互換のための alias として残します。
+- リポジトリ root には `core` / `harness` を置きません。docs/tests/imports は `packages/framework/core`・`packages/framework/harness` を直接参照します。
 - `packages/setup` は別 intent の sibling package として扱い、この framework migration の implementation target には含めません。
 
 ```text
 packages/framework/core/        # framework source of truth
 packages/framework/harness/     # harness-specific authored source
 packages/framework/package.json # framework package boundary
-core -> packages/framework/core       # compatibility alias
-harness -> packages/framework/harness # compatibility alias
 scripts/                       # repository-level packaging/self-promotion tooling
 dist/<name>/                    # public committed distribution output
 .claude/.codex/.agents          # dogfood runtime install targets
@@ -65,7 +63,7 @@ framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて�
 | `dist/*` | generated かつ committed な public install source | root に維持する |
 | `.claude/.codex/.agents` | repository dogfood な runtime install target | root に維持する |
 | `tsconfig.json` | authored TypeScript source は `packages/framework/core` と `packages/framework/harness` を include する | include path を更新する |
-| tests/docs | 既存の root `core` / `harness` 参照は alias で継続可能 | 段階的に package-owned なパス表記へ更新する |
+| tests/docs | `packages/framework/core` / `packages/framework/harness` を直接参照する | — |
 | `.github/workflows/ci.yml` | `dist:check` と `promote:self:check` を実行する | root script contract 維持により変更不要 |
 
 ## ガードの保全
@@ -97,12 +95,9 @@ framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて�
 - Framework source が `packages/framework/` にまとまり、`packages/setup` と sibling package として並びます。
 - root `dist/` の public install contract を維持できます。
 - root `scripts/` の build/release workflow を維持できます。
-- 既存の docs/tests/imports は、移行中も root `core` と `harness` の alias 経由で継続できます。
 
 ### ネガティブ
 
-- root `core` / `harness` の alias は移行期の互換サーフェスであり、第二の source of truth になってはなりません。
-- 一部の docs/tests はまだ root `core/` と `harness/` に言及します。ディスク上に互換 alias は存在しない(root `core/`・`harness/` ディレクトリは無い)ため、これらは陳腐化した散文参照です。source of truth を説明する文脈では段階的に `packages/framework/` 表記へ更新します。
 - `scripts/` や `dist/` の完全な relocation は、将来望む場合でも専用の migration intent を依然として必要とします。
 
 ## 将来の移行トリガー
@@ -111,37 +106,3 @@ root `scripts/` の移動は、framework packaging がリポジトリ root か�
 
 root `dist/` の移動は、install commands と public distribution への期待を README、docs、tests、CI、self-promotion にわたって意図的に変更できる場合にのみ再検討します。
 
-## 想定される後続スライス
-
-### ドキュメントパスのクリーンアップ
-
-目的: root `core/` / `harness/` の散文中の参照を、source of truth の文脈では `packages/framework/core` / `packages/framework/harness` と書くように段階的に更新する。
-
-非目的: runtime の `.claude/.codex/.agents` や root `dist/` の説明は変えない。
-
-ガードコマンド:
-
-- docs review
-- `bun tests/run-tests.ts --unit --filter t174-docs-legacy-refs-gate`
-
-### alias 廃止の準備状況
-
-目的: root `core` / `harness` の alias に依存する tests/imports/docs を棚卸しし、将来 alias を消せるかを判断する。
-
-非目的: この issue では alias を削除しない。
-
-ガードコマンド:
-
-- `bun run typecheck`
-- 関連する `tests/run-tests.sh` プロファイル
-
-### Scripts パッケージ境界
-
-目的: `scripts/` を root に残すか、将来 `packages/framework/scripts` に移すかを再評価する。
-
-非目的: `dist/` の移動を同時に行わない。
-
-ガードコマンド:
-
-- `bun run dist:check`
-- `bun run promote:self:check`
