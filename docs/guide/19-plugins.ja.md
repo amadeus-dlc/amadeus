@@ -65,7 +65,7 @@ plugins/example/
 1. **オーサリング** — `plugins/<name>/plugin.json` と参照ファイルを書きます。
 2. **投影** — パッケージャが `plugins/` を discover し、各ソースを構造的に検証
    (マニフェスト存在・identity 一意・プラグイン自身のサブツリーを逸脱するパスなし)
-   し、各プラグインを 6 つのパッケージハーネスツリーとハーネス中立バンドルへ投影
+   し、各プラグインを 7 つのパッケージハーネスツリーとハーネス中立バンドルへ投影
    します。プラグインが 0 件のとき、出力はプラグイン非対応ビルドと byte-identical
    です。
 3. **inspect** — 合成エンジンが discover 済みプラグインをホストスナップショットと
@@ -132,10 +132,12 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 | `kiro-ide` | `promptSubmit`(`--if-stale` で冪等) | 配線あり |
 | `opencode` | なし(`chat.message` のみ) | **degraded — 手動のみ** |
 
-`opencode` は `manual-only` クラスで、session-start シームを持たないため、唯一の契約は
-手動 `compose` 床です。面がサイレントにスキップされることはありません — degrade は
-doctor(後述)を通じて loud に表面化し、この面での `doctor` は `[degraded] opencode: no
-session-start trigger — run 'amadeus-plugin.ts compose' manually` を出します。
+`opencode` は `manual-only` クラスで、session-start シームを持たないため、自動 compose を
+配線せず、唯一の契約は手動 `compose` 床です。この degrade はサイレントなスキップではなく、
+面のインストールバンドルに書き込まれています。`manual-only` 面が同梱する `INSTALL.md` は
+明示的にこう記します: *"This harness has no auto-compose session hook. Run compose after
+install and after every plugin change"* に続けて `compose` コマンド。つまり `opencode` では
+`compose` を自分で実行し、他の 6 面ではセッションフックが代わりに実行します。
 
 ---
 
@@ -237,7 +239,7 @@ spec が drift したことを知らせ、*あなた* がチェック再実行�
 検証はローカルかつ一時的です — プラグインを試すためにコミット済みツリーを変更する
 ことはありません。リファレンスライフサイクルテストがモデルです。canonical ソースを
 使い捨ての一時ワークスペースへコピーし、パッケージャのソース/出力ルートをそこへ
-リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、6 面すべてへ投影し、
+リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、7 面すべてへ投影し、
 一時ホストへ compose し、doctor を実行し、drop します。宣言物だけが生成・検出・除去
 され、tracked tree に一時ファイルが 1 つも残らないことを assert します。
 

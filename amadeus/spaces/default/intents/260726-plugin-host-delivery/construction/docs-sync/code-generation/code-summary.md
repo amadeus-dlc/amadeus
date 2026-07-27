@@ -14,7 +14,7 @@
 ## 追加した節（両言語 1:1）
 
 1. **CLI** — verbs（compose/doctor/drop/status）、`--if-stale`（no-op 高速路）、`--project-root`、配布コピー経由の実行形 `bun .claude/tools/amadeus-plugin.ts <verb>`、exit（成功0 / 適用失敗1 / doctor degraded1 / usage2）、`--help` なし・verb なしで usage。
-2. **セッション起動時の自動 compose** — 7 面中 6 面（claude/codex/cursor/kimi/kiro/kiro-ide）が wired、opencode = manual-only の degrade 契約。`--if-stale` による起動レイテンシ非退行、フック失敗は非ブロッキング。
+2. **セッション起動時の自動 compose** — 7 面中 6 面（claude/codex/cursor/kimi/kiro/kiro-ide）が wired、opencode = manual-only（自動 compose の配線不在 = INSTALL.md の実文言で表現、doctor 出力ではない）。`--if-stale` による起動レイテンシ非退行、フック失敗は非ブロッキング。
 3. **`--doctor` プラグイン節** — 6 状態分岐表（ok/drift/advisory=visible-passing、degraded/recovery-pending/unknown=loud fail）、0-plugin は単一 pass 行。
 4. **プラグインのホストへのインストール** — install bundle のクラス別手順（native-manifest/folder-drop-auto/manual-only）、INSTALL.md、OutDir 拒否集合。
 5. **activation ポリシー: formal-model-check** — spec-hash advisory・TLC 自動実行なし・state 非書込（ADR-1 案A）。
@@ -26,7 +26,8 @@
 - 実行形・manual compose: 配布コピー `.claude/tools/amadeus-plugin.ts`（実在確認済み）、`scripts/plugin-projection.ts:557-559`（`bun <harnessDir>/tools/amadeus-plugin.ts compose`）
 - SessionStart hook: `packages/framework/core/hooks/amadeus-plugin-compose.ts:16`、claude 配線 `packages/framework/harness/claude/settings.json.example:34-37`
 - trigger/class/disposition: `scripts/plugin-projection.ts:459-467`（PLUGIN_COMPOSE_TRIGGER）、`:360-368`（PLUGIN_HOST_CLASS）、`:449-451,472-476`（classify/resolveFaceDisposition）
-- opencode degrade doctor 文言: harness-capability-matrix.md 列6（転記）
+- opencode（manual-only）degrade の実挙動 = 自動 compose の配線不在。実文言は install bundle の INSTALL.md（`scripts/plugin-projection.ts:594-600` installDoc manual-only 分岐: "This harness has no auto-compose session hook. Run compose after install and after every plugin change"）。**doctor 出力ではない** — --doctor プラグイン節は plugin 単位の composition 状態のみを描画し、ハーネス面単位の未配線状態を出す経路は無い（実 doctor 行形式は `formatDoctorPluginLine` `amadeus-plugin.ts:507-527` = `Plugin <name>: [<state>: <detail>]`、plugin 名 keyed）
+- reference lifecycle test の面数: `tests/integration/t254-reference-plugin-lifecycle.test.ts:187-189`（"every one of the seven package faces"、`toHaveLength(7)`）
 - --doctor section: `amadeus-plugin.ts:495-506`（buildDoctorPluginSection）、`:531-544`（doctorPluginRows）、`:470-472`（isFailingPluginState）、`:465-466`（KNOWN 集合）、`:81`（DoctorLineState union）、`amadeus-utility.ts:2887-2890`（integration）
 - install bundle: `scripts/plugin-projection.ts:580-609`（installDoc）、`:620+`（installArtifacts）、`:440-444`（OutDirRefusal）、`:461+`（classifyOutDir）
 - activation: `packages/framework/core/tools/amadeus-plugin-activation.ts:1-7,34,40`、doctor activation 行 `amadeus-plugin.ts:503`
@@ -68,6 +69,23 @@ assertion 実文を読んで帰属（local-ci-red-assertion-verbatim）。両失
 2. `tests/integration/t199-generated-prefix-contract.test.ts:215` — offender `tests/conformance/t188-trace.md: content contains aidlc-`。U7 が着地させた conformance trace（commit `14b004f55`）の上流参照。docs-sync のスコープ外・U7 の成果物。
 
 いずれも本 Unit のファイルではなく、安全・低コストに修正できる範囲外（U7 成果物 / 環境フィクスチャ）のため leader へ既存無関係失敗として報告し、本 Unit では修正しない（NEVER-ignore-red 遵守: 赤を green と報告せず明示フラグ）。
+
+## §12a レビュー是正（iteration 2）
+
+iteration 1 NOT-READY の 2 指摘を是正:
+
+- **Critical（捏造 doctor 文言）**: opencode 節の `[degraded] opencode: no session-start trigger — run 'amadeus-plugin.ts compose' manually` は実装に存在しない文字列（`grep -rn "no session-start trigger" packages/ scripts/` = 0 件）だった。原因は harness-capability-matrix 列6（設計意図としての degrade 文言）を doctor 実出力として転記したこと。是正: doctor 出力の捏造引用を削除し、opencode の degrade を「自動 compose の配線不在」として書き直し、実文言は install bundle の INSTALL.md（`scripts/plugin-projection.ts:594-600`、grep 裏取り verbatim）を引用。--doctor プラグイン節が plugin 単位状態のみ（ハーネス面 doctor 行は無い）ことを実装 `amadeus-plugin.ts:470-544` で確認。EN:143-147 / ja:136-140 を修正。
+- **Major（6/7 面混在）**: EN:70「six packaged」・:250「all six faces」、ja:68・:240 の旧6面残存を7面へ統一。権威 `scripts/plugin-projection.ts:42-50`（PACKAGE_HARNESSES 7 要素）・`tests/integration/t254-reference-plugin-lifecycle.test.ts:187-189`（seven faces / toHaveLength(7)）。是正後 `grep -nE "six|6 つ|6 面" docs/guide/19-plugins*.md` の残存は「four seams（4 シーム型）」「7 面中 6 面が配線 / other six faces（6-of-7 wired）」の正当分のみで全数確認。
+
+### 再検証（iteration 2、exit code 個別記録）
+
+| コマンド | exit | 判定 |
+| --- | --- | --- |
+| `bun run typecheck` | 0 | PASS |
+| `bun run lint` | 0 | PASS |
+| `bash tests/run-tests.sh --ci` | 1 | Failed files 1（t177 の kiro/codex 2 assertion = tmp ルート cleanup 競合の環境フィクスチャ、`existsSync(journey.root)` 期待 false→true）。iteration 1 で観測した t199（U7 の t188-trace.md aidlc- 参照）は本 run では green（環境依存の揺れ）。t174-docs-legacy-refs-gate PASS。本 docs-only 変更由来の新規失敗なし |
+
+対訳同期は是正後も H2 11 節 1:1・表 23 行 1:1 を維持。
 
 ## 逸脱
 

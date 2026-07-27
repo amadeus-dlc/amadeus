@@ -67,7 +67,7 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
 1. **Author** — write `plugins/<name>/plugin.json` and its referenced files.
 2. **Project** — the packager discovers `plugins/`, validates each source
    structurally (a manifest is present, identities are unique, no path escapes
-   the plugin's own subtree), and projects every plugin into the six packaged
+   the plugin's own subtree), and projects every plugin into the seven packaged
    harness trees plus a harness-neutral bundle. With no plugins present, the
    output is byte-identical to a plugin-free build.
 3. **Inspect** — the composition engine checks a discovered plugin against a host
@@ -138,11 +138,13 @@ Six of the seven packaged faces wire this trigger; one does not:
 | `kiro-ide` | `promptSubmit` (idempotent via `--if-stale`) | wired |
 | `opencode` | none (only `chat.message` is exposed) | **degraded — manual only** |
 
-`opencode` is the `manual-only` class: it has no session-start seam, so its sole
-contract is the manual `compose` floor. A face is never silently skipped — the
-degrade is surfaced loudly through the doctor (below), and `doctor` on such a face
-emits `[degraded] opencode: no session-start trigger — run 'amadeus-plugin.ts
-compose' manually`.
+`opencode` is the `manual-only` class: it exposes no session-start seam, so it
+wires no auto-compose and the manual `compose` floor is its sole contract. The
+degrade is not a silent skip — it is written into the face's install bundle. The
+`INSTALL.md` a `manual-only` face ships states it plainly: *"This harness has no
+auto-compose session hook. Run compose after install and after every plugin
+change"*, followed by the `compose` command. So on `opencode` you run `compose`
+yourself; on the other six faces the session hook does it for you.
 
 ---
 
@@ -247,7 +249,7 @@ the hash matches, the advisory is silent.
 Verification is local and temporary — you never mutate the committed tree to try
 a plugin out. The reference lifecycle test is the model: it copies the canonical
 source into a throwaway temp workspace, redirects the packager's source and output
-roots there (`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`), projects into all six
+roots there (`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`), projects into all seven
 faces, composes into a temp host, runs the doctor, and drops — asserting that only
 the declared artifacts are created, detected, and removed and that no temporary
 file survives in the tracked tree.
