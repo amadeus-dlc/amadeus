@@ -120,6 +120,29 @@ class PendingLifecycleGateway extends LifecycleGateway {
   }
 }
 
+// Creates successfully, then fails the first sync edit with an outcome-unknown
+// network failure to leave a pending sync receipt, and edits successfully after.
+class OnceFailingSyncGateway extends LifecycleGateway {
+  private syncEditFailed = false;
+  override async editIssue(
+    permit: MirrorMutationPermit,
+    body: string,
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
+    if (!this.syncEditFailed) {
+      this.syncEditFailed = true;
+      this.history.push("edit");
+      return {
+        kind: "failure",
+        classification: "network",
+        summary: "injected edit failure",
+        retryable: true,
+        effect: "outcome-unknown",
+      };
+    }
+    return super.editIssue(permit, body);
+  }
+}
+
 function fixture(): {
   root: string;
   statePath: string;
@@ -253,6 +276,134 @@ function boundaryInput(
       }),
     },
   };
+}
+
+type SeedRuntime = {
+  gateway: LifecycleGateway;
+  ports: MirrorStateStorePorts;
+  now: () => string;
+  newOperationId: () => string;
+  newAnswerId?: () => string;
+};
+
+// Runs a prompt-mode lifecycle boundary that reconciles the oldest in-progress
+// receipt into a durable prompt, and returns the bindingId of a prompt whose
+// expected event carries a manual boundary with the given operation.
+async function reconcileManualPrompt(
+  fx: ReturnType<typeof adapterFixture>,
+  runtime: SeedRuntime,
+  operation: "create" | "sync",
+): Promise<string> {
+  const asked = await runMirrorLifecycleBoundary(
+    {
+      projectDir: fx.root,
+      space: fx.space,
+      intentDir: fx.intentDir,
+      boundary: {
+        kind: "intent-capture-approved",
+        instance: "capture-recon-seed",
+      },
+    },
+    runtime,
+  );
+  if (asked.kind !== "ok" || asked.outcome.kind !== "ask") {
+    throw new Error("expected a manual reconciliation prompt");
+  }
+  const persisted = parseMirrorStateDocument(readFileSync(fx.statePath, "utf-8"));
+  if (persisted.kind !== "ok" || !persisted.snapshot.expectedPrompt) {
+    throw new Error("expected a persisted binding");
+  }
+  const expected = persisted.snapshot.expectedPrompt;
+  if (expected.event.boundary.kind !== "manual" || expected.operation !== operation) {
+    throw new Error(`expected a manual ${operation} binding`);
+  }
+  return expected.bindingId;
+}
+
+// Seed a prompt-mode Intent whose expected prompt carries a manual create
+// boundary: a manual create is left non-terminal (pending) by an injected gh
+// failure, then a prompt-mode lifecycle boundary reconciles that receipt.
+async function seedManualCreateReconciliationPrompt(
+  fx: ReturnType<typeof adapterFixture>,
+  runtime: SeedRuntime,
+): Promise<string> {
+  writeFileSync(
+    join(fx.root, "amadeus", "config.json"),
+    JSON.stringify({ "auto-mirror": "prompt" }),
+  );
+  const pending = await runMirrorLifecycleBoundary(
+    {
+      projectDir: fx.root,
+      space: fx.space,
+      intentDir: fx.intentDir,
+      boundary: { kind: "manual", instance: "manual-recon-seed" },
+      manualOperation: "create",
+      invocationId: "manual-recon-seed",
+    },
+    {
+      gateway: new PendingLifecycleGateway(),
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "op-manual-recon-seed",
+    },
+  );
+  if (pending.kind !== "ok") {
+    throw new Error("expected a pending manual create");
+  }
+  return reconcileManualPrompt(fx, runtime, "create");
+}
+
+// Seed a prompt-mode Intent whose expected prompt carries a manual sync
+// boundary: a manual create succeeds, a manual sync is left pending by an
+// injected edit failure, then a prompt-mode lifecycle boundary reconciles it.
+// The idempotent sync re-executes cleanly when the prompt is later approved.
+async function seedManualSyncReconciliationPrompt(
+  fx: ReturnType<typeof adapterFixture>,
+  runtime: SeedRuntime,
+): Promise<string> {
+  writeFileSync(
+    join(fx.root, "amadeus", "config.json"),
+    JSON.stringify({ "auto-mirror": "prompt" }),
+  );
+  const created = await runMirrorLifecycleBoundary(
+    {
+      projectDir: fx.root,
+      space: fx.space,
+      intentDir: fx.intentDir,
+      boundary: { kind: "manual", instance: "manual-create-seed" },
+      manualOperation: "create",
+      invocationId: "manual-create-seed",
+    },
+    {
+      gateway: runtime.gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "op-manual-create-seed",
+    },
+  );
+  if (created.kind !== "ok" || created.outcome.kind !== "continued") {
+    throw new Error("expected a completed manual create seed");
+  }
+  const pendingSync = await runMirrorLifecycleBoundary(
+    {
+      projectDir: fx.root,
+      space: fx.space,
+      intentDir: fx.intentDir,
+      boundary: { kind: "manual", instance: "manual-sync-seed" },
+      manualOperation: "sync",
+      invocationId: "manual-sync-seed",
+    },
+    {
+      gateway: runtime.gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "op-manual-sync-seed",
+    },
+  );
+  if (pendingSync.kind !== "ok") {
+    throw new Error("expected a pending manual sync");
+  }
+  return reconcileManualPrompt(fx, runtime, "sync");
 }
 
 describe("t282 walking-skeleton reconciliation", () => {
@@ -635,6 +786,145 @@ describe("t282 awaitable production lifecycle adapter", () => {
 
     expect(exitCode).toBe(0);
     expect(gateway.history.filter((entry) => entry === "create")).toHaveLength(1);
+  });
+
+  test("answer approve consumes a manual-boundary reconciliation prompt and derives its manual operation", async () => {
+    const fx = adapterFixture();
+    const gateway = new OnceFailingSyncGateway();
+    const runtime = {
+      gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "binding-manual-approve-1",
+      newAnswerId: () => "answer-manual-approve-1",
+    };
+    const bindingId = await seedManualSyncReconciliationPrompt(fx, runtime);
+    const exitCode = await runMirrorLifecycleMain(
+      [
+        "answer",
+        "approve",
+        "--binding-id",
+        bindingId,
+        "--project-dir",
+        fx.root,
+        "--space",
+        fx.space,
+        "--intent",
+        fx.intentDir,
+      ],
+      runtime,
+    );
+    expect(exitCode).toBe(0);
+    const parsed = parseMirrorStateDocument(readFileSync(fx.statePath, "utf-8"));
+    expect(parsed.kind).toBe("ok");
+    if (parsed.kind === "ok") {
+      expect(parsed.snapshot.expectedPrompt).toBeUndefined();
+      const syncReceipt = Object.values(parsed.snapshot.receipts).find(
+        (receipt) =>
+          receipt.event.boundary.kind === "manual" &&
+          receipt.event.operation === "sync",
+      );
+      expect(syncReceipt?.status).toBe("succeeded");
+    }
+  });
+
+  test("answer skip consumes a manual-boundary reconciliation prompt without remote mutation", async () => {
+    const fx = adapterFixture();
+    const gateway = new LifecycleGateway();
+    const runtime = {
+      gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "binding-manual-skip-1",
+      newAnswerId: () => "answer-manual-skip-1",
+    };
+    const bindingId = await seedManualCreateReconciliationPrompt(fx, runtime);
+    const exitCode = await runMirrorLifecycleMain(
+      [
+        "answer",
+        "skip",
+        "--binding-id",
+        bindingId,
+        "--project-dir",
+        fx.root,
+        "--space",
+        fx.space,
+        "--intent",
+        fx.intentDir,
+      ],
+      runtime,
+    );
+    expect(exitCode).toBe(1);
+    expect(gateway.history).toEqual([]);
+    const parsed = parseMirrorStateDocument(readFileSync(fx.statePath, "utf-8"));
+    expect(parsed.kind).toBe("ok");
+    if (parsed.kind === "ok") {
+      expect(parsed.snapshot.expectedPrompt).toBeUndefined();
+    }
+  });
+
+  test("consuming a manual-boundary answer unblocks the next boundary from a stale expected prompt", async () => {
+    const fx = adapterFixture();
+    const gateway = new OnceFailingSyncGateway();
+    const runtime = {
+      gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "binding-manual-unblock-1",
+      newAnswerId: () => "answer-manual-unblock-1",
+    };
+    const bindingId = await seedManualSyncReconciliationPrompt(fx, runtime);
+    const exitCode = await runMirrorLifecycleMain(
+      [
+        "answer",
+        "approve",
+        "--binding-id",
+        bindingId,
+        "--project-dir",
+        fx.root,
+        "--space",
+        fx.space,
+        "--intent",
+        fx.intentDir,
+      ],
+      runtime,
+    );
+    expect(exitCode).toBe(0);
+    const consumed = parseMirrorStateDocument(readFileSync(fx.statePath, "utf-8"));
+    expect(consumed.kind).toBe("ok");
+    if (consumed.kind === "ok") {
+      expect(consumed.snapshot.expectedPrompt).toBeUndefined();
+    }
+    // A later boundary must proceed instead of hitting the state-write safety
+    // block that a stale, unconsumable expected prompt would otherwise raise.
+    const later = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: {
+          kind: "phase-verified",
+          phase: "inception",
+          instance: "phase-recon-unblock-1",
+        },
+      },
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => "2026-07-25T01:00:00Z",
+        newOperationId: () => "binding-manual-unblock-2",
+      },
+    );
+    expect(later.kind).toBe("ok");
+    if (later.kind === "ok" && later.outcome.kind === "continued") {
+      expect(
+        later.outcome.outcomes.some(
+          (outcome) =>
+            outcome.kind === "safety-blocked" &&
+            outcome.warning.summary === "expected prompt could not be persisted",
+        ),
+      ).toBe(false);
+    }
   });
 
   test("answer skip and invalid bindings fail closed without remote mutation", async () => {
