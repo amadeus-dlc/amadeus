@@ -616,7 +616,7 @@
     "slug": "plugin-host-delivery",
     "dirName": "260726-plugin-host-delivery",
     "scope": "amadeus-feature",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019f9e5f-bbb1-7c6e-b432-867eb8a9a560",
@@ -651,6 +651,13 @@
     "slug": "docs-impl-sync",
     "dirName": "260727-docs-impl-sync",
     "scope": "amadeus-document",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
+    "slug": "install-doc-mismatch",
+    "dirName": "260727-install-doc-mismatch",
+    "scope": "amadeus-bugfix",
     "status": "complete"
   }
 ]

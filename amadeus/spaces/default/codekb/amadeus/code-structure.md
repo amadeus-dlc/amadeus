@@ -4,7 +4,51 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## docs ツリーと正本コードの対応関係（260727-docs-impl-sync、現在、amadeus-document）
+## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、現在、差分リフレッシュ）
+
+260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70、458 files）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信の Construction（前 intent `260726-plugin-host-delivery` の U2–U8）が実着地し、以下の配置が新規に現れた。
+
+### composition engine の core 再配置（U2、`f8fe817c5` / PR #1554）
+
+plugin の compose エンジンは build-time モジュール `plugin-composition.ts` から **harness 中立の core** へ再配置された（`packages/framework/core/tools/`）。coreDirs projection 経由で全ハーネス dist へ載る（cid:code-generation:harness-tools-placement 準拠）。
+
+| ファイル（observed `46a75f2e7`） | 行数（`wc -l`） | 役割 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-plugin.ts` | **607** | plugin CLI（`compose` / status / discovery）。`pluginSourceRootOf:278` discovery 定数はここ |
+| `packages/framework/core/tools/amadeus-plugin-compose.ts` | **1469** | host-side composition ENGINE（inspect / plan / apply の3面 atomic transaction、read-only doctor 投影）。旧 `plugin-composition.ts` からの移設（BR-U2-1 単一実装・BR-U2-7 旧パス互換 re-export なし） |
+| `packages/framework/core/tools/amadeus-plugin-activation.ts` | **295** | spec-hash advisory の activation policy（U6、`8ae1ef058`） |
+| `scripts/plugin-projection.ts` | **877** | install bundle のバイト投影（build 時、dist 生成）。`installDoc:580-610` / `SELF_INSTALL_HARNESSES:56`（= 5 面 claude/codex/cursor/opencode/kimi） |
+| `scripts/package.ts` | **898** | dist ビルド。`pluginsRoot:80` → `repoPlugins:302` → `pluginBundleExpected:787-796` → `checkPluginProjections:832` の plugin 投影・ガード配線 |
+
+### 新設ツリー: `plugins/`（authoring source）と `dist/plugins/`（install bundle）
+
+- **`plugins/`**（authoring source、リポジトリ直下）: 本区間で新規（`git log --oneline 0d83aa48b..HEAD -- plugins/` = 1 commit）。`plugins/formal-model-check/` に `plugin.json` / `README.md` / `stages/` を持つ参照 plugin。
+- **`dist/plugins/`**（install bundle、7 面）: 本区間で新規（同 log = 7 commits、面別内訳で `dist/plugins` = 37 files）。構造は `dist/plugins/<plugin>/<face>/`（例 `dist/plugins/formal-model-check/codex/`）で、各面が `INSTALL.md` + `plugins/<name>/`（transform 済みステージ）+ `hooks/`（folder-drop-auto は `auto-compose.snippet`、native-manifest は `.claude-plugin/` + `hooks/hooks.json`）を同梱。`claude` 面のみ native-manifest で `INSTALL.md` に copy 行なし。
+
+### #1569 対象ファイルの所在（ユーザー裁定 A）
+
+| 面 | ファイル:行（observed `46a75f2e7`） | 内容 |
+| --- | --- | --- |
+| discovery（**正**） | `amadeus-plugin.ts:278` | `pluginSourceRootOf → join(hostRoot, ".amadeus-plugin-src")`（private・非 export、呼び出し `:288`/`:323`/`:405`） |
+| installDoc（**誤**、修正対象） | `plugin-projection.ts:593` | `Copy this bundle's plugins/<name>/ into <harnessDir>/plugins/<name>/.`（案内先が discovery 入力先とずれる） |
+| dist 配布物（6 面、修正後に再生成） | `dist/plugins/formal-model-check/{codex,cursor,kimi,kiro-ide,kiro,opencode}/INSTALL.md:3` | いずれも `grep "Copy this bundle"` でヒット（claude は対象外） |
+| docs（EN、修正対象） | `docs/guide/19-plugins.md:183` | installDoc の内容を手書き複製、ドリフトガード非対象 |
+| docs（JA 対訳、修正対象） | `docs/guide/19-plugins.ja.md:175` | 同上（`19-plugins.md:183` と同じ誤り） |
+
+`plugin-projection.ts` は `.amadeus-plugin-src` を **0 回**参照（`grep -c` 実測）— discovery とは別モジュールで独立管理される。
+
+### テスト面の棚卸し（回帰テスト追加の候補地）
+
+| テスト | 所在 | 観測 |
+| --- | --- | --- |
+| t307 | `tests/integration/t307-install-artifacts-classes.integration.test.ts` | installDoc の class 別 body をアサート（`:53`/`:60` は `plugins/${FIXTURE}/plugin.json` を検査）が、**コピー先パスは非アサート** — 回帰テスト追加の最有力地 |
+| t299 / t302 / t328 / t338 | `tests/integration/` の各ファイル | fixture を `join(host, ".amadeus-plugin-src", PLUGIN)` に配置して discovery を実証（t299:109 / t302:70,87 / t328:49 / t338:80）— **正解パス `.amadeus-plugin-src` の一次証拠** |
+| t303 / t308–t312 | `tests/integration/` | projection / drift 系。INSTALL.md のバイト変更で t310（`checkPluginProjections`）/ t311 が連動しうる |
+| unit | `t-plugin-projection*` / `t304-306` / `t325` | projection / class 判定の unit |
+
+測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## docs ツリーと正本コードの対応関係（260727-docs-impl-sync、履歴、amadeus-document）
 
 測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 47）。本 intent の患部は `docs/` であり、正本コードは参照側（真実源）として扱う。
 

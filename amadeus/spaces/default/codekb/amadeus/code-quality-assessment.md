@@ -1,6 +1,22 @@
 # コード品質評価
 
-## docs／実装乖離の品質評価 — 3 クラスタと非欠陥判定（260727-docs-impl-sync、現在、amadeus-document）
+## plugin installDoc/discovery 非対称の品質評価（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+
+260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。#1569 の欠陥は前 intent `260726-plugin-host-delivery` の U3 host-projection-all（`250265adb`）で導入された、以下の負債シグナルを持つ。
+
+1. **installDoc 文言と discovery 定数の非対称（#1569 真因、S 未確定・後続でトリアージ）**: install bundle が案内するコピー先（`plugin-projection.ts:593` の `<harnessDir>/plugins/<name>/`）と、CLI discovery が実走査する staging root（`amadeus-plugin.ts:278` の `.amadeus-plugin-src`）が別モジュールで独立管理され、一致を強制する機構がない（`plugin-projection.ts` の `.amadeus-plugin-src` grep = **0 hit**、実測）。**対操作の非対称クラス**（cid:requirements-analysis:symmetric-pair-review）— 「doc が案内する先」と「code が走査する先」という書き手・読み手の対が片側だけ実装された。共有定数化（discovery 定数を installDoc から参照）で構造的一致強制が望ましい。
+
+2. **docs prose の二重管理**: `docs/guide/19-plugins.md:183`（EN）と `19-plugins.ja.md:175`（JA 対訳）が installDoc の内容を**手書き複製**しており、`dist:check` / `promote:self:check` のドリフトガード対象外。installDoc を直したのに docs を直し忘れる（またはその逆）ドリフト経路が構造的に残る。canonical な1定義からの導出が入っていない箇所（construction.md「複数箇所で消費される定数を手書き複製しない」に抵触するクラス）。
+
+3. **回帰テストの空白**: 「doc の指示先 == CLI の走査先」という不変量が未固定。t307（`tests/integration/t307-install-artifacts-classes.integration.test.ts`）は installDoc の body flavour（`plugins/${FIXTURE}/plugin.json` を含むか、`:53`/`:60`）のみアサートし、**コピー先パス（`.codex/plugins/...` 等）を非アサート**。discovery 側は t299/t302/t328/t338 が `.amadeus-plugin-src` 配置で実証している（正解パスの一次証拠）が、doc 側との整合を突き合わせるテストがない。回帰テストは「installDoc の案内先 == `pluginSourceRootOf` の返す相対パス」を固定するのが自然（cid:requirements-analysis:symmetric-pair-review の充足）。
+
+4. **修正後の未使用引数リスク**: `installDoc` 内 `:593` で `harnessDir` を copy 先の組み立てに使っているため、文言を `.amadeus-plugin-src/<name>/` へ寄せる際に `:593` での `harnessDir` 参照が減る。ただし `manualComposeCommand:557-559` が `harnessDir` を使い続けるため関数全体では未使用化しない見込み — 実装時に lint（Biome）で要実測。
+
+**機械ガードの現状（良い面）**: installDoc のバイトは `package.ts:787-796` `pluginBundleExpected` が installDoc から再導出し、`:832` `checkPluginProjections` がバイト比較するため、**installDoc 修正後は dist 6 面 INSTALL.md の stale を `dist:check` が必ず検出する**。落ちる実証は「installDoc を直す → dist 未再生成 → dist:check 赤」で成立する（cid:code-generation:injection-surface-verify — テストが読む面 = dist）。ただし docs prose はこのガードの外にあるため、docs 側の落ちる実証は別途 grep ベースの検査が要る。
+
+測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## docs／実装乖離の品質評価 — 3 クラスタと非欠陥判定（260727-docs-impl-sync、履歴、amadeus-document）
 
 測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 **47**）。全数値は `grep -ci` / `grep -c` / `grep -o … | wc -l` / `ls … | wc -l` / `find … | wc -l` / `git diff --name-only … | grep -c` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
 

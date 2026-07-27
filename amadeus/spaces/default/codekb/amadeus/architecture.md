@@ -1,6 +1,53 @@
 # アーキテクチャ
 
-## docs が追随できていない構造変化 — 第7ハーネス・plugin skeleton・12番目 hook（260727-docs-impl-sync、現在、amadeus-document）
+## plugin discovery 入力と compose 出力の分離モデル（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+
+260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果（実測済みスキャンノート）。本区間はほぼ全体が前 intent `260726-plugin-host-delivery` の Construction であり、plugin ホスト配信のアーキテクチャ（U2–U8）が実着地した断面である。
+
+### 中核アーキテクチャ: 「discovery 入力」と「compose 出力」の2つの別ルート
+
+plugin ホスト配信は、**ユーザーがバンドルを置く入力先**と、**engine が compose した所有ステージを書き出す出力先**を意図的に分離している（`amadeus-plugin.ts:270-277` のコメントで宣言）。この分離が本 intent の #1569 の核である。
+
+| 役割 | パス | 定義位置（observed `46a75f2e7`） | compile 可視性 |
+| --- | --- | --- | --- |
+| **discovery 入力**（staging root） | `<host>/.amadeus-plugin-src/<name>/` | `amadeus-plugin.ts:278` `pluginSourceRootOf(hostRoot) = join(hostRoot, ".amadeus-plugin-src")` | **非可視**（dot-dir、host snapshot 外に留める設計、t254） |
+| **compose 出力**（owned stages） | `<host>/plugins/<name>/` | `amadeus-plugin.ts:276` のコメント（composed owned stages land under `<host>/plugins/<name>/`） | **可視**（compile が拾う） |
+
+`.amadeus-plugin-src` が dot-dir なのは、compose 済み `plugins/` 領域と host snapshot の外にステージング入力を隔離するため（`amadeus-plugin.ts:270-277`）。discovery はこの入力先だけを走査する（`pluginSourceRootOf` は private・非 export、呼び出し 3 経路 = `isRecordCurrent:288` / `handleCompose:323` / status `:405`、いずれも `hostRoot = resolveProjectRoot:268` 由来）。
+
+### installDoc 生成の投影パイプラインと #1569 の非対称
+
+install bundle の各面が同梱する `INSTALL.md` は `scripts/plugin-projection.ts` の `installDoc(name, harnessDir, clazz)`（`:580-610`）が生成する。この生成器は **discovery 定数（`.amadeus-plugin-src`）を一切参照していない**（`grep -c ".amadeus-plugin-src" scripts/plugin-projection.ts` = **0**、実測）。両者は別モジュールで独立管理され、値の一致を強制する機構が存在しない。
+
+- `installDoc` の class 分岐は 3 アーム（ADR-4 由来）: `native-manifest`（claude）は `:582-591` の marketplace 手順で copy 行を出さない / `folder-drop-auto`（codex・cursor・kimi・kiro・kiro-ide）と `manual-only`（opencode）は `:593` で copy 行を出す。
+- 患部 `:593`: `lines.push(\`Copy this bundle's ${code(\`plugins/${name}/\`)} into ${code(\`${harnessDir}/plugins/${name}/\`)}.\`, "")` — **コピー先を `<harnessDir>/plugins/<name>/`（= compose 出力先）と案内する**。しかし CLI discovery が走査するのは `<host>/.amadeus-plugin-src/<name>/`（入力先）であり、doc の案内どおりに置くと discovery に載らず compose されない。
+- `manualComposeCommand`（`:557-559`）は正しい（`bun <harnessDir>/tools/amadeus-plugin.ts compose`）ため修正不要。
+- 投影 → 配布 → ガードのパイプライン: `package.ts:80` `pluginsRoot` → `:302` `repoPlugins` → `:787-796` `pluginBundleExpected`（installDoc からバイト再導出）→ `:832` `checkPluginProjections`（バイト比較）。したがって installDoc 修正後は **dist 再生成が必須**で、`dist:check` が 6 面 INSTALL.md の stale を必ず検出する（機械ガード済み）。**docs の prose（`19-plugins.md` / `.ja.md`）はこのガードの対象外**であり手動同期が要る。
+
+```mermaid
+flowchart TD
+    U["ユーザーがバンドルを配置"] -->|"doc の案内 (誤 #1569):<br/>&lt;host&gt;/plugins/&lt;name&gt;/"| WRONG["compose 出力先<br/>plugins/&lt;name&gt; (compile 可視)"]
+    U -.->|"正: 実際に走査される入力先<br/>&lt;host&gt;/.amadeus-plugin-src/&lt;name&gt;/"| SRC[".amadeus-plugin-src/&lt;name&gt;<br/>(discovery 入力・dot-dir)"]
+    SRC -->|"discoverPlugins (amadeus-plugin.ts:288/323/405)"| ENG["compose engine<br/>amadeus-plugin-compose.ts"]
+    ENG -->|"owned stages 書き出し"| WRONG
+    PROJ["installDoc<br/>plugin-projection.ts:593"] -->|"生成 (discovery 定数を参照せず)"| DOC["INSTALL.md (6面) / docs 19-plugins"]
+    DOC -->|"案内先"| WRONG
+    style WRONG fill:#fdd
+    style SRC fill:#dfd
+```
+
+テキストフォールバック（Mermaid 非対応環境向け）: ユーザーがバンドルを配置する経路は2つ描かれる。(1) **誤った案内経路**（doc/INSTALL.md `:593` が案内）は `plugins/<name>/`（compose 出力先・compile 可視）を指すが、ここは engine が書き出す先であって discovery 入力ではない。(2) **正しい経路**は `.amadeus-plugin-src/<name>/`（discovery 入力・dot-dir）で、`discoverPlugins`（`amadeus-plugin.ts:288`/`:323`/`:405`）がここだけを走査し、compose engine が `plugins/<name>/` へ owned stages を書き出す。`installDoc`（`plugin-projection.ts:593`）は discovery 定数を参照せずに doc を生成するため、案内先が (1) にずれる。ユーザー裁定 A は installDoc / docs を (2) の入力先へ修正する（CLI discovery を正とする）。
+
+### 修正インパクトの構造（後続 requirements への引き継ぎ）
+
+- installDoc `:593` の文言是正 → dist 6 面 INSTALL.md の再生成必須（`bun scripts/package.ts` → `dist:check`）。
+- docs 二重管理: `19-plugins.md:183`（EN）と `19-plugins.ja.md:175`（JA）が installDoc の内容を手書き複製しており、ドリフトガード非対象のため同一変更で両方を是正する（cid:requirements-analysis:docs-language-ownership）。
+- 修正後 `:593` で `harnessDir` 引数が未使用化する可能性がある（`manualComposeCommand` では使用継続のため関数全体では使われ続ける）— 実装時に要実測。
+- 回帰テスト空白: 「doc の指示先 == CLI の走査先」不変量が未固定。t307 は installDoc の body flavour（`plugins/${FIXTURE}/plugin.json` を含むか）のみアサートし、**コピー先パスをアサートしない**（`:53`/`:60` 実測）。これが対称性強制（cid:requirements-analysis:symmetric-pair-review）の未充足クラスである。
+
+測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## docs が追随できていない構造変化 — 第7ハーネス・plugin skeleton・12番目 hook（260727-docs-impl-sync、履歴、amadeus-document）
 
 測定 ref: observed `aabc0527d96344420cf8236967763b81ce82ac83`、base `1673c433209c74820881c75a0816bbce3fb2d512`（祖先 exit 0 / 距離 **47**）。本 intent は実装を変えず、**実装の現況と利用者向け docs の記述との乖離**を扱う。以下は乖離の対象となる区間内のアーキテクチャ差分と、docs 側の陳腐化面の対照である。
 

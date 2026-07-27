@@ -4,7 +4,26 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## docs 同期の対象コンポーネントと真実源インベントリ（260727-docs-impl-sync、現在、amadeus-document）
+## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、現在、差分リフレッシュ）
+
+260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信（前 intent `260726-plugin-host-delivery` の Construction U2–U8）が着地し、以下のコンポーネントが新規に現れた。
+
+| コンポーネント | 実体（observed `46a75f2e7`） | 責務 | #1569 との関係 |
+| --- | --- | --- | --- |
+| **plugin CLI** | `packages/framework/core/tools/amadeus-plugin.ts`（607 行） | discovery + compose + status。`pluginSourceRootOf:278` が discovery staging root（`.amadeus-plugin-src`）を決める単一定義 | discovery 入力先の**正**（ユーザー裁定 A の基準面） |
+| **composition engine** | `packages/framework/core/tools/amadeus-plugin-compose.ts`（1469 行） | inspect / plan / apply の3面 atomic transaction、read-only doctor 投影。旧 `plugin-composition.ts` からの core 再配置 | compose 出力先 `plugins/<name>/` を書き出す（doc が誤って案内する先） |
+| **activation policy** | `packages/framework/core/tools/amadeus-plugin-activation.ts`（295 行） | spec-hash advisory activation（U6） | 直接関与なし |
+| **install bundle projector** | `scripts/plugin-projection.ts`（877 行） | 7 面の install bundle をバイト投影。`installDoc:580-610` が INSTALL.md 本文を class 別生成 | installDoc `:593` が**誤**の案内先を生成（患部）。`.amadeus-plugin-src` を 0 参照 |
+| **dist packager / guard** | `scripts/package.ts`（898 行） | `pluginBundleExpected:787-796`（installDoc からバイト再導出）+ `checkPluginProjections:832`（バイト比較） | installDoc 修正後の dist 6 面 stale を機械検出（docs prose は対象外） |
+| **authoring source** | `plugins/formal-model-check/`（`plugin.json` / `README.md` / `stages/`） | 参照 plugin の正本 | — |
+| **install bundle（配布）** | `dist/plugins/formal-model-check/<face>/`（7 面、37 files） | 各面が INSTALL.md + `plugins/<name>/` + hooks を同梱 | 6 面 INSTALL.md（claude 以外）が copy 行を持つ |
+| **docs コンポーネント** | `docs/guide/19-plugins.md`（EN）/ `19-plugins.ja.md`（JA 対訳） | plugin 導入ガイド | `:183`/`:175` が installDoc 内容を手書き複製（ドリフトガード非対象・修正対象） |
+
+class 分類（`PLUGIN_HOST_CLASS`、ADR-4）: `native-manifest`（claude）/ `folder-drop-auto`（codex・cursor・kimi・kiro・kiro-ide）/ `manual-only`（opencode）。copy 行を出すのは後者 2 クラスの計 6 面。
+
+測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## docs 同期の対象コンポーネントと真実源インベントリ（260727-docs-impl-sync、履歴、amadeus-document）
 
 測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 47）。
 
