@@ -270,13 +270,19 @@ function resolveProjectRoot(cmd: PluginCliCommand): string {
   return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
 }
 
+// The dot-dir under a host/project root where a user stages a plugin bundle's
+// `<name>/` content before composing. Exported so the packager's INSTALL.md
+// generator points users at the SAME directory the CLI scans here — the install
+// instruction and discovery must not drift (#1569).
+export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";
+
 // The install/discovery staging root: where a user drops a plugin bundle's
 // `<name>/` content before composing. A `.amadeus-plugin-` dot-dir so it stays
 // out of the composed `plugins/` area and out of the host snapshot (the engine
 // keeps discovery and host separate — t254). Composed owned stages land under
 // `<host>/plugins/<name>/`, which IS compile-visible.
 function pluginSourceRootOf(hostRoot: string): string {
-  return join(hostRoot, ".amadeus-plugin-src");
+  return join(hostRoot, PLUGIN_SOURCE_DIR_NAME);
 }
 
 // Is the composition record already current for every installed plugin? Reads
