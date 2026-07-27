@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { discoverPluginSources, installArtifacts, type PluginSource, validatePluginSources } from "../../scripts/plugin-projection.ts";
+import { PLUGIN_SOURCE_DIR_NAME } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const FIXTURE = "zz-t307-fixture";
 let plugin: PluginSource;
@@ -73,5 +74,30 @@ describe("t307 installArtifacts (class-driven layout)", () => {
     for (const h of ["codex", "cursor", "kimi", "kiro", "kiro-ide"] as const)
       expect(rels(h)).toContain("hooks/auto-compose.snippet");
     expect(rels("opencode")).not.toContain("hooks/auto-compose.snippet");
+  });
+
+  // #1569: the INSTALL.md copy destination must match the CLI's discovery root
+  // (the shared PLUGIN_SOURCE_DIR_NAME, project-root relative), NOT a
+  // `<harnessDir>/plugins/<name>/` path the compose scan never reaches. Import
+  // the constant from the CLI module so this asserts the two surfaces agree.
+  const installText = (h: Parameters<typeof installArtifacts>[1]) =>
+    Buffer.from(installArtifacts(plugin, h).find((a) => a.relativePath === "INSTALL.md")!.bytes).toString("utf-8");
+
+  test("folder-drop-auto (codex) INSTALL.md copies into the shared discovery dir, not a harnessDir path (#1569)", () => {
+    const text = installText("codex");
+    expect(text).toContain(`${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`); // the dir compose actually scans
+    expect(text).not.toContain(`/plugins/${FIXTURE}/`); // the old `<harnessDir>/plugins/<name>/` dest
+  });
+
+  test("manual-only (opencode) INSTALL.md copies into the shared discovery dir, not a harnessDir path (#1569)", () => {
+    const text = installText("opencode");
+    expect(text).toContain(`${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`);
+    expect(text).not.toContain(`/plugins/${FIXTURE}/`);
+  });
+
+  test("native-manifest (claude) INSTALL.md has no folder-copy step (marketplace install, unchanged) (#1569)", () => {
+    const text = installText("claude");
+    expect(text).not.toContain("Copy this bundle");
+    expect(text).not.toContain(PLUGIN_SOURCE_DIR_NAME);
   });
 });
