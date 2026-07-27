@@ -1,6 +1,57 @@
 # コード品質評価
 
-## manual ask→answer 往復のテスト gap と guard 非対称の品質評価（260726-answer-manual-binding、現在、Issue #1548）
+## docs／実装乖離の品質評価 — 3 クラスタと非欠陥判定（260727-docs-impl-sync、現在、amadeus-document）
+
+測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 **47**）。全数値は `grep -ci` / `grep -c` / `grep -o … | wc -l` / `ls … | wc -l` / `find … | wc -l` / `git diff --name-only … | grep -c` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
+
+### クラスタ A — README のハーネス数（重大度: 高。最初に読まれる面）
+
+| 所在 | 現記述 | 実態 |
+| --- | --- | --- |
+| `README.md:5` | "running natively inside **six** coding-agent harnesses" | 7 |
+| `README.md:67` | "extending the four shipped upstream to **six**" | 7 |
+| `README.md:78-83` | ハーネス表 **6 行**（Kimi 行なし） | 7 ハーネス |
+| `README.ja.md:5` | 「**6つ**のコーディングエージェントハーネス」 | 7 |
+| `README.ja.md:78-83` | 同表 6 行 | 7 ハーネス |
+
+`grep -ci kimi README.md` = **0**、`grep -ci kimi README.ja.md` = **0**。実態は `ls -d packages/framework/harness/*/ | wc -l` = **7**。**区間内で発生した陳腐化**である — `git diff --name-only 1673c4332..HEAD -- README.md README.ja.md` = **0 行**であり、Kimi 追加 PR #1522 が README を同一変更で更新しなかった。project.md § Mandated の「ALWAYS update the framework source, all harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change」に対する**実測された違反**。対照として `docs/guide/harnesses/README.{md,ja.md}` は同区間で更新され Kimi 行を持つ（同一 PR 内でも面によって同期が及ぶ／及ばないムラがある）。
+
+### クラスタ B — plugin 投影面数（重大度: 高。数値が契約の説明そのもの）
+
+`docs/guide/19-plugins.md` は plugin 章でありながら投影行列を旧値で説明する: `:14-15`「the **six** packaged harness faces differ from the **four** self-install faces」/ `:70`「projects every plugin into the **six** packaged」/ `:131`「projects into all **six**」/ `:148` 見出し "Six packaged faces, four self-install faces" / `:150-156`（**六面の明示列挙に kimi なし**、かつ「the four is never widened to six」という規範文まで旧値で書かれている）。`docs/guide/19-plugins.ja.md` も「6 つのパッケージ面、4 つのセルフインストール面」で同型。両ファイル `grep -ci kimi` = **0**。
+
+実態は `scripts/plugin-projection.ts:41-49` = **7** / `:55` = **5**。base 断面（`git show 1673c4332:scripts/plugin-projection.ts` の `:46-53` / `:59`）は 6 / 4 で、**遷移は本区間内**、docs は未追随（`git diff --name-only … -- docs/guide/19-plugins.md docs/guide/19-plugins.ja.md` = 0 行）。本クラスタは単なる数値ずれでなく**列挙の欠落**（kimi が面リストから抜けている）を含むため、読者が「kimi にはプラグインが投影されない」と誤読しうる — クラスタ A より読者への実害が大きい可能性がある。
+
+### クラスタ C — EN/JA 対訳の非同期（重大度: 中。JA 読者のみが旧情報を得る）
+
+12 番目の hook（`core/hooks/amadeus-plugin-compose.ts`）着地に伴い EN 側 **8 ファイル**が更新された一方、**JA 対訳は 1 件も更新されていない**。EN 専用変更 8 件 = `docs/amadeus-files.md` / `docs/guide/01-getting-started.md` / `docs/guide/12-cli-commands.md` / `docs/guide/15-troubleshooting.md` / `docs/guide/glossary.md` / `docs/reference/01-architecture.md` / `docs/reference/06-hooks-and-tools.md` / `docs/reference/11-contributing.md`。
+
+JA 側の残存旧数値（実測）:
+
+| 所在 | 残存記述 | 出現数 |
+| --- | --- | --- |
+| `docs/reference/06-hooks-and-tools.ja.md:5` / `:13`(×3) / `:15` / `:50` / `:496` | 「11個」 | **7 出現 / 5 行** |
+| `docs/guide/15-troubleshooting.ja.md:39` | 「11 個すべての TypeScript フック」+ **11 個の列挙**（`amadeus-plugin-compose.ts` 欠落） | 1 |
+| `docs/guide/glossary.ja.md:45` | 「11 個のフックを使い」 | 1 |
+| `docs/reference/01-architecture.ja.md:476` | 「11個のフック」 | 1 |
+
+`grep -c 'plugin-compose' docs/reference/06-hooks-and-tools.ja.md` = **0**（EN は **2**）。JA の hook roster（列挙）にも新 hook が現れないため、JA 読者は「12 番目の hook の存在自体」を知る手段を持たない。
+
+### 未裁定仮説 — EN 側是正方針の不整合（欠陥断定しない）
+
+EN 側 8 ファイルのうち 6 ファイルは件数語を除去する **count-free 化**（cid:code-generation:count-comment-sync-on-catalog-change が推奨する形）で是正されたが、`docs/reference/06-hooks-and-tools.md` は逆に**硬数値を採用**している: `:5`「all **twelve** hook scripts」/ `:13`「uses **twelve** hook scripts … All **twelve** are TypeScript … All **twelve** are project-wide … the other **eleven** via the `hooks` block」/ `:15`「**Eleven** of the **twelve** are non-blocking」/ `:52`「All **twelve** TypeScript hooks」。どちらを正準様式とするかは**判断事項**であり、本 RE では欠陥と断定しない（13 番目の hook が着地すれば同じ手動同期負債が再発する構造である、という事実のみ記録する）。
+
+### 非欠陥判定（スコープ膨張防止のため明示記録）
+
+- **(D) `docs/reference/06-hooks-and-tools.md` に CLI ツール目録 46 件の全数記載がないことは欠陥ではない。** 当該章は hook システムのアーキテクチャ・監査イベント分類・ツール設定を扱う章であり、全ツールの網羅目録は章スコープ外である。「不在」を欠陥として起票すると章の責務境界を壊す。
+- **(E-1) 「11 domain-expert agents」を主張する docs 20 ファイルは正である。** `ls packages/framework/core/agents/*.md | wc -l` = **14** は 11 domain-expert + reviewer 2（architecture-reviewer / product-lead）+ composer 1 の内訳であり、domain-expert に限れば 11 で一致する。
+- **(E-2) ただし `docs/reference/01-architecture.md:60`「**Eleven** flat agent files」と `.ja.md:60`「**11個**のフラットなエージェントファイル」は誤り**（flat agent files = 14）。これは**区間外の pre-existing** 乖離であり、本 intent のスコープに含めるかは requirements-analysis で裁定する（含めない場合は Issue 化して追跡する）。
+
+### 品質機序の総括
+
+3 クラスタの共通機序は「**実装側に単一の機械可読な正準定義があるのに、docs 側でそれを手書き数値・手書き列挙として複製している**」ことである（真実源: `packages/framework/harness/*/`、`PACKAGE_HARNESSES` / `SELF_INSTALL_HARNESSES`、`core/hooks/*.ts`）。construction.md § Code Completeness の「canonical な1定義から導出するか、ディスクから discover する」がコード面のみに適用され、docs 面へ及んでいない。加えて **docs 面には dist:check / promote:self:check に相当するドリフトガードが存在しない**ため、乖離は CI で検出されず、本 intent のような棚卸しでしか顕在化しない（cid:code-generation:count-comment-sync-on-catalog-change が「可能なら件数語自体を除去（count-free）」を第一手として推奨するのはこの理由による）。是正方式（都度同期／count-free 化／生成・ドリフトガード導入）の選択は requirements-analysis 以降で裁定する。
+
+## manual ask→answer 往復のテスト gap と guard 非対称の品質評価（260726-answer-manual-binding、履歴、Issue #1548）
 
 測定 ref: observed `ad1ff5de9`（base `09c669901`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer コードスキャン結果 `re3-dev-scan-result.md`（Architect 段で核心 file:line を spot-check 再検証、訂正 0 件）。**区間 2 コミットは record-only で mirror スタックの source/test 変更ゼロ** — 欠陥は区間の退行でなく guard 導入コミット `2bb63f6b8` から現存。
 
@@ -90,7 +141,7 @@
 
 ## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、履歴、Issue #1498）
 
-## 新規テスト面と perf ゲート再設計の品質評価（260726-plugin-host-delivery、現在、差分リフレッシュ）
+## 新規テスト面と perf ゲート再設計の品質評価（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
 
