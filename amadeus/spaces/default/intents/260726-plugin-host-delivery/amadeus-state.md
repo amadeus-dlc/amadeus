@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
 - **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 

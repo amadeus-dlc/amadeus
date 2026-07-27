@@ -367,6 +367,60 @@ export const PLUGIN_HOST_CLASS: Record<PackageHarness, PluginHostClass> = {
   opencode: "manual-only",
 };
 
+// ---------------------------------------------------------------------------
+// Auto-compose trigger axis (U4 hook-wiring-remaining, BR-U4-4 second axis).
+// Transcribed ONCE from the U1 capability matrix's machine-readable Bolt 6
+// conclusion (`bolt6_hook_wiring`, harness-capability-matrix.md (e)/BR-U1-7):
+// every face whose session-start-equivalent event is measured is "measured";
+// a face whose session-start seam is unwired stays "deferred". This is the
+// single source for the disposition classifier below — no face is hand-listed
+// twice.
+// ---------------------------------------------------------------------------
+export type ComposeTriggerState = "measured" | "deferred";
+
+export const PLUGIN_COMPOSE_TRIGGER: Record<PackageHarness, ComposeTriggerState> = {
+  claude: "measured", // SessionStart (settings.json.example — wired in U2)
+  codex: "measured", // SessionStart (codex/emit.ts HOOK_WIRING → adapter session-start)
+  cursor: "measured", // sessionStart (cursor/emit.ts → adapter session-start)
+  kimi: "measured", // SessionStart (kimi hooks.snippet.toml → adapter session-start)
+  kiro: "measured", // agentSpawn (kiro/agents/amadeus.json → adapter session-start)
+  "kiro-ide": "measured", // promptSubmit (.kiro.hook → adapter session-start; idempotent --if-stale)
+  opencode: "deferred", // session-start seam unwired (chat.message only) — degrade
+};
+
+// A face's auto-compose disposition: either the session hook is WIRED (an
+// amadeus-plugin-compose invocation must exist at its wiring point) or the face
+// is DEGRADED (no auto trigger — the manual compose floor + DropsRecord advisory
+// is the contract). The 2-value discriminated union makes "wired AND degraded"
+// and "neither" both unrepresentable, so a silent gap (a face that is neither
+// wired nor degraded) cannot exist by construction (REL-U4-1, parse-don't-
+// validate).
+export type FaceDisposition =
+  | { readonly kind: "wired"; readonly harness: PackageHarness }
+  | { readonly kind: "degraded"; readonly harness: PackageHarness; readonly reason: "manual-only" | "deferred-trigger" };
+
+// The pure 2-axis rule (BR-U4-4): a face degrades when EITHER its host class is
+// manual-only OR its compose trigger is deferred; otherwise it is wired. Split
+// from resolveFaceDisposition so the axes can be exercised independently of the
+// real 7-face enumeration (all four combinations, not just the two the matrix
+// happens to realise today).
+export function classifyDisposition(clazz: PluginHostClass, trigger: ComposeTriggerState): FaceDisposition["kind"] {
+  if (clazz === "manual-only") return "degraded";
+  if (trigger === "deferred") return "degraded";
+  return "wired";
+}
+
+// Resolve one face's disposition from the canonical matrix maps. The XOR全数
+// assert (REL-U4-1) applies this across every PackageHarness to prove that each
+// face lands in exactly one arm, and then checks the wired arm's wiring实在 and
+// the degraded arm's DegradeContract实在.
+export function resolveFaceDisposition(harness: PackageHarness): FaceDisposition {
+  const clazz = PLUGIN_HOST_CLASS[harness];
+  const trigger = PLUGIN_COMPOSE_TRIGGER[harness];
+  if (classifyDisposition(clazz, trigger) === "wired") return { kind: "wired", harness };
+  return { kind: "degraded", harness, reason: clazz === "manual-only" ? "manual-only" : "deferred-trigger" };
+}
+
 // One face's projection spec, derived from the U1 matrix. `clazz` drives the
 // install-bundle layout via a single 3-arm switch, so the face count and the
 // branch count are decoupled (SCALE-U3-1: 7 faces, 3 branches).

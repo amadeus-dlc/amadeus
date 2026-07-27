@@ -27977,3 +27977,52 @@
 **Message**: §12a iteration 1 の Major 2 件を是正しました。新規コミット `30b3afc99`(過去コミット rewrite なし・push なし)。\n\n## Major 1(OutDirRefusal 未配線)是正\n`classifyOutDir` が test 以外から呼ばれず本番書込経路を経由しない指摘に対し、`assertInstallOutDirsSafe(classify
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-27T01:41:31Z
+**Event**: SWARM_STARTED
+**Batch number**: 2
+**Unit names**: hook-wiring-remaining
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-27T01:41:31Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: hook-wiring-remaining
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
+**Branch name**: bolt-hook-wiring-remaining
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: BOLT_STARTED
+**Bolt names**: hook-wiring-remaining
+**Batch number**: 2
+**Walking skeleton**: false
+**Bolt slug**: hook-wiring-remaining
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: STATE_FORKED
+**Bolt slug**: hook-wiring-remaining
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hook-wiring-remaining
+**Source state hash**: 432162df731c52c57781da61ba9ceb0e5313fd256db27d18ce32129a10e62b11
+**Target state hash**: 432162df731c52c57781da61ba9ceb0e5313fd256db27d18ce32129a10e62b11
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-27T01:41:33Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: hook-wiring-remaining
+**Source Audit Hash**: dc1bcdcdc95444e5634be766de824db5ee9705117e944038d4eb947011e913ad
+**Fork Boundary**: 899009
+**Reentrant**: true
+
+---

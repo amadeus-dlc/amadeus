@@ -1555,12 +1555,6 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
-    "file": "scripts/package.ts",
-    "lines": "864-865",
-    "reason": "package write/check integration tests execute the shipped CLI and verify generated distributions; the residual import-meta main wrapper is not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
     "file": "scripts/promote-self.ts",
     "lines": "359-360",
     "reason": "self-promotion integration tests execute the shipped CLI and verify byte parity; the residual import-meta main wrapper is not attributed to parent Bun LCOV.",

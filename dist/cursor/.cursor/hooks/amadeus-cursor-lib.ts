@@ -104,7 +104,19 @@ export function reconstruct(target: string, env: CursorEnvelope): Reconstruction
         source: env.source ?? "startup",
       };
       if (env.session_id) payload.session_id = env.session_id;
-      return { calls: [{ hookFile: "amadeus-session-start.ts", input: JSON.stringify(payload) }], forwardStdout: true };
+      // Auto-compose opted-in plugins (U4 hook-wiring-remaining, BR-U4-1): a
+      // 1-point invocation of the SAME core hook the claude face wires (U2),
+      // with NO composition logic (--if-stale no-op fast path). It runs FIRST
+      // so amadeus-session-start.ts stays the LAST call — runAdapter forwards
+      // only lastStdout, and session-start owns Cursor's context channel; the
+      // compose hook writes nothing to stdout. Advisory (stderr + exit 0).
+      return {
+        calls: [
+          { hookFile: "amadeus-plugin-compose.ts", input: "{}" },
+          { hookFile: "amadeus-session-start.ts", input: JSON.stringify(payload) },
+        ],
+        forwardStdout: true,
+      };
     }
 
     case "mint": {
