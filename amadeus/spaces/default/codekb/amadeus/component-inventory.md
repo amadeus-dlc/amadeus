@@ -4,6 +4,45 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
+## docs 同期の対象コンポーネントと真実源インベントリ（260727-docs-impl-sync、現在、amadeus-document）
+
+測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 47）。
+
+**ハーネス面インベントリ（`ls -d packages/framework/harness/*/`、= 7）**
+
+| ハーネス | セルフインストール面 | パッケージ面 | 区間内変更 |
+| --- | --- | --- | --- |
+| claude | `.claude/`（25 ファイル変更） | ✅ | plugin hook 追加 |
+| codex | `.codex/`（23） | ✅ | — |
+| cursor | `.cursor/`（22） | ✅ | — |
+| opencode | `.opencode/`（24） | ✅ | 起動エラー修正 #1508 |
+| **kimi** | `.kimi-code/`（**294 = 新設**） | ✅ | **#1522 新規追加** |
+| kiro | なし（意図的除外） | ✅ | — |
+| kiro-ide | なし（意図的除外） | ✅ | — |
+
+`PACKAGE_HARNESSES` = 7（`scripts/plugin-projection.ts:41-49`）、`SELF_INSTALL_HARNESSES` = 5（`:55`）。
+
+**hook インベントリ（`ls packages/framework/core/hooks/`、= 12）**: `amadeus-audit-logger.ts` / `amadeus-log-subagent.ts` / `amadeus-mint-presence.ts` / **`amadeus-plugin-compose.ts`（区間内新設・12番目）** / `amadeus-runtime-compile.ts` / `amadeus-sensor-fire.ts` / `amadeus-session-end.ts` / `amadeus-session-start.ts` / `amadeus-statusline.ts` / `amadeus-stop.ts` / `amadeus-sync-statusline.ts` / `amadeus-validate-state.ts`。うち flow-altering は `amadeus-stop.ts` の 1 件のみで、残り 11 は non-blocking（新 hook もこの契約側に属する — 失敗時 stderr 1 行 + exit 0）。
+
+**agent インベントリ（`ls packages/framework/core/agents/*.md | wc -l` = 14）**: domain-expert **11**（architect / aws-platform / compliance / delivery / design / developer / devsecops / operations / pipeline-deploy / product / quality）+ reviewer **2**（architecture-reviewer / product-lead）+ composer **1**。docs の「11 domain-expert agents」表現は**正**、「Eleven flat agent files」（`docs/reference/01-architecture.md:60` / `.ja.md:60`）は**誤**（= 14）。この乖離は区間外の pre-existing。
+
+**区間で追加された CLI／ツールコンポーネント**
+
+| コンポーネント | 種別 | 規模 | 契約 |
+| --- | --- | --- | --- |
+| `core/tools/amadeus-plugin.ts` | CLI | +454 新設 | 4 verb（compose / doctor / drop / status）、usage-error は exit 2 |
+| `core/tools/amadeus-plugin-compose.ts` | エンジン | 移設 +111/-7、1469 行 | 合成の単一定義。dist 同梱面が `scripts/` を import しない |
+| `core/hooks/amadeus-plugin-compose.ts` | hook | +23 新設 | SessionStart、CLI の薄いラッパ、合成ロジック非再実装 |
+| `scripts/metrics-visualize.ts` | スクリプト | +292 新設 | 自己完結 HTML、決定的レンダリング、`--check` バイト比較 |
+| `harness/kimi/hooks/amadeus-kimi-lib.ts` | アダプタ lib | +352 新設 | Kimi hook payload → core 中立契約の写像 |
+| `harness/kimi/hooks/amadeus-kimi-adapter.ts` | アダプタ | +28 新設 | 同上のエントリ |
+| `harness/kimi/skills/amadeus/SKILL.md` | スキル | +238 新設 | Kimi 面のオーケストレーター |
+| `harness/kimi/skills/amadeus/question-rendering.md` | スキル補助 | +109 新設 | 質問レンダリング様式 |
+
+**mirror コンポーネント群（16 モジュール、区間内で v1 統一）**: `amadeus-mirror.ts`（357 行、+73/-303）/ `-capability` / `-config` / `-coordinator` / `-executor` / `-gateway` / `-lifecycle` / `-policy` / `-presentation` / `-provenance` / `-repair` / `-runner` / `-state-codec` / `-state-reducer` / `-state-store` / `-types`。legacy「Mirror Issue」フィールドの読取コンポーネントは全廃済み。
+
+**docs 側の消費コンポーネント（患部）**: 上記真実源を手書きで複製している docs は README 2 件 + `19-plugins` 2 件 + JA hook 記述 4 件 = **8 ファイル**（`01-architecture.{md,ja.md}:60` の agent 数を含めると 10）。いずれも実装からの導出機構を持たず、ドリフトガードも存在しない。
+
 ## mirror 状態表現分裂 患部コンポーネント（260726-mirror-state-split、履歴、Issue #1547 + #1534）
 
 測定 ref: observed `f9a0fb86a`（base `1673c4332`、距離 38）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
@@ -34,7 +73,7 @@ mirror スタック各モジュールは `git ls-files "*<module>.ts"` = **13 �
 
 ## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、履歴、Issue #1498）
 
-## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（260726-plugin-host-delivery、現在、差分リフレッシュ）
+## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
 

@@ -616,7 +616,7 @@
     "slug": "plugin-host-delivery",
     "dirName": "260726-plugin-host-delivery",
     "scope": "amadeus-feature",
-    "status": "complete"
+    "status": "in-flight"
   },
   {
     "uuid": "019f9e5f-bbb1-7c6e-b432-867eb8a9a560",
@@ -644,6 +644,13 @@
     "slug": "answer-manual-binding",
     "dirName": "260726-answer-manual-binding",
     "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fa23d-cbbb-70b2-9849-65deff83d20d",
+    "slug": "docs-impl-sync",
+    "dirName": "260727-docs-impl-sync",
+    "scope": "amadeus-document",
     "status": "complete"
   }
 ]

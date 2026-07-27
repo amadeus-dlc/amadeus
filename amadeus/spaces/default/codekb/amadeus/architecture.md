@@ -1,6 +1,24 @@
 # アーキテクチャ
 
-## mirror answer の manual-boundary guard 貫通不成立（260726-answer-manual-binding、現在、Issue #1548）
+## docs が追随できていない構造変化 — 第7ハーネス・plugin skeleton・12番目 hook（260727-docs-impl-sync、現在、amadeus-document）
+
+測定 ref: observed `aabc0527d96344420cf8236967763b81ce82ac83`、base `1673c433209c74820881c75a0816bbce3fb2d512`（祖先 exit 0 / 距離 **47**）。本 intent は実装を変えず、**実装の現況と利用者向け docs の記述との乖離**を扱う。以下は乖離の対象となる区間内のアーキテクチャ差分と、docs 側の陳腐化面の対照である。
+
+**(1) ハーネス面が 6 → 7 に拡張された（Kimi Code、#1522 / #1549 / #1551）。** 正本は `packages/framework/harness/kimi/` の 8 ファイル（`manifest.ts` +98 / `onboarding.fills.ts` +45 / `hooks/amadeus-kimi-adapter.ts` +28 / `hooks/amadeus-kimi-lib.ts` +352 / `hooks/amadeus-hooks.snippet.toml` +88 / `skills/amadeus/SKILL.md` +238 / `skills/amadeus/question-rendering.md` +109 / `dot-gitignore` +64）。`ls -d packages/framework/harness/*/ | wc -l` = **7**。セルフインストール面は `.kimi-code/` **294 ファイル**として新規に投影された。既存アーキテクチャ境界（core 中立層 ↔ harness 表層）は不変で、Kimi は**表層の追加のみ**として着地している — アダプタが hook payload を core の中立 hook 契約へ写像する既習様式に従う。
+
+**(2) plugin が walking skeleton として着地し、エンジンが core へ移設された（#1554）。** 構造変化は 3 点。 (a) **新 CLI** `packages/framework/core/tools/amadeus-plugin.ts`（+454 新設、4 verb: `compose [--if-stale] [--project-root]` / `doctor` / `drop <plugin-name>` / `status`、USAGE は `:95-101`）。 (b) **合成エンジンの移設** `scripts/plugin-composition.ts` → `packages/framework/core/tools/amadeus-plugin-compose.ts`（+111/-7、現 **1469 行**）— これにより **dist に載るエンジンが `scripts/` へ import しない**境界が成立した（`scripts/plugin-projection.ts` は core 側の単一定義を re-export する消費者側に降格）。 (c) **12 番目の hook** `packages/framework/core/hooks/amadeus-plugin-compose.ts`（+23）— SessionStart で `handlePluginCli(["compose","--if-stale","--project-root",projectDir])` を呼ぶ**薄いラッパ**であり、合成ロジックを一切再実装しない（BR-U2-1）。失敗は stderr 1 行 + exit 0 の fail-loud/continue（BR-U2-4）で、他 11 hook が守る never-block 契約と整合する。`ls packages/framework/core/hooks/ | wc -l` = **12**。
+
+**(3) 投影行列が 6/4 → 7/5 に変わった。** `scripts/plugin-projection.ts:41-49` `PACKAGE_HARNESSES` = **7**（claude / codex / cursor / kiro / kiro-ide / opencode / kimi）、`:55` `SELF_INSTALL_HARNESSES` = **5**（kiro / kiro-ide を意図的に除外する型 + ランタイム境界）。base 断面（`git show 1673c4332:scripts/plugin-projection.ts:46-53` / `:59`）は 6 / 4 であり、**この遷移は本区間内**。この 2 定数は「パッケージ面」と「セルフインストール面」を型で分離する閉じた union であり、docs `19-plugins.{md,ja.md}` はこの分離を説明する章でありながら旧数値のまま（`grep -ci kimi` = **0**）。
+
+**(4) mirror の状態表現が v1 ブロック権威へ統一された（#1553 / #1559 / #1537）。** legacy「Mirror Issue」フィールドの読取経路が全廃され、`grep -rn 'Mirror Issue"' packages/framework/core/tools/*.ts` はコメント 1 行（`amadeus-mirror.ts:5`）のみを返す。`amadeus-mirror.ts` は +73/-303 で **357 行**へ縮小し、責務は mirror 系 **16 モジュール**（capability / config / coordinator / executor / gateway / lifecycle / policy / presentation / provenance / repair / runner / state-codec / state-reducer / state-store / types / 本体）へ分散した。前 intent 群が扱った write⇔read 非対称（`260726-mirror-state-split` 節）と manual ask→answer 貫通不成立（`260726-answer-manual-binding` 節）は本区間で解消済みである。
+
+**(5) 可視化面が追加された（metrics ダッシュボード、#1500 / #1504）。** `scripts/metrics-visualize.ts`（+292 新設）は `scripts/metrics-timeseries.ts` の**共有検証済みリーダ seam**を通して読み（writer/reader/pruner/renderer が「妥当なスナップショットとは何か」で合意し private parser を持たない）、自身の単一 fs 書込のみを所有してリーダの no-fs-write 契約（AC-1c）を保つ。**決定性契約** — 同一スナップショット集合が同一バイト列へレンダリングされる（wall clock / 乱数 / 環境値を埋め込まない）— が `--check` のバイト比較ドリフトガードを意味あるものにしている。`metrics/*.json` = **141 件**。この面は `docs/guide/23-metrics-dashboard.{md,ja.md}` が**対訳同時着地しており乖離なし**（正の対照例）。
+
+**(6) CI が job 分割された（#1528 / #1507 / #1508 / #1557）。** `.github/workflows/ci.yml` の job は changes / typecheck / lint / distribution-contract / tests / drift-check / distribution-benchmark / distribution-benchmark-aggregate / distribution-release-gate / coverage-head / coverage-base / coverage / metrics-snapshot / formal-model-check / ci-success。再実行効率のための分割であり、`changes` による変更検出ゲートが下流 job の実行可否を決める構造。
+
+**アーキテクチャ上の含意 — docs は「実装から導出されない第2の真実源」である。** 上記 (1)(3) の数値（ハーネス数・投影面数）と 12 hook の roster は、いずれも実装側に**単一の機械可読な正準定義**（`packages/framework/harness/*/`、`PACKAGE_HARNESSES` / `SELF_INSTALL_HARNESSES`、`core/hooks/*.ts`）を持つにもかかわらず、docs 側では**手書きの数値・列挙として複製**されている。construction.md § Code Completeness の「複数箇所で消費されるリスト・定数を手書きで複製しない — canonical な1定義から導出するか、ディスクから discover する」は現状 docs 面に及んでいない。これが本 intent の乖離 3 クラスタ（README / 19-plugins / EN-JA 対訳）の共通機序であり、是正方式（都度同期 vs count-free 化 vs 生成/ドリフトガード）は requirements-analysis 以降で裁定する。
+
+## mirror answer の manual-boundary guard 貫通不成立（260726-answer-manual-binding、履歴、Issue #1548）
 
 測定 ref: observed `ad1ff5de9785af38f3c845b64372b65e8b73bb4e`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `09c669901`（前 intent `260726-t258-p95-flake` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。**区間 2 コミットは record-only で mirror スタックの source 変更はゼロ**（`git diff --numstat 09c669901..HEAD | grep -v 'amadeus/spaces/' | wc -l` = 0、対象面交差 grep = 0 hit）。以下の file:line は同 commit の実ファイル直読で、上流 Developer スキャン結果 `re3-dev-scan-result.md` を Architect 段で spot-check 再検証（訂正 0 件）したうえで転記している。欠陥は区間の退行ではなく guard 導入コミット `2bb63f6b8`（automatic mirror modes 完成、2026-07-25）から現存する。
 
@@ -135,7 +153,7 @@ repair relink は ownership marker を必須とする（`amadeus-mirror-lifecycl
 
 ## mirror-gateway の HTTP envelope パース機序（260726-mirror-envelope-lf、履歴、Issue #1498）
 
-## plugin 導入 UX と第7ディストリ面の現況（260726-plugin-host-delivery、現在、差分リフレッシュ）
+## plugin 導入 UX と第7ディストリ面の現況（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
 
