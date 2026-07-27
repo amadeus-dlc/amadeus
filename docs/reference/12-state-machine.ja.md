@@ -192,7 +192,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 
 ## Audit event taxonomy
 
-**73 events** で、以下では17カテゴリにグループ化しています(正典の `audit-format.md` レジストリは同じ73を18に分割しています — グループ化は表現上のものであり、イベントセットが不変条件です)。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
+正典のイベントセット(`audit-format.md` レジストリで定義)を、以下では表現上のカテゴリにグループ化しています — 正典レジストリは独自のグループ化を使います。グループ化は表現上のものであり、イベントセットが不変条件です。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
 
 ### Workflow lifecycle
 
@@ -202,6 +202,8 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `WORKFLOW_COMPLETED` | `tools/amadeus-state.ts` |  |
 | `WORKFLOW_PARKED` | `tools/amadeus-state.ts` | `park` - 後のセッション向けに実行途中で park された workflow。ステージ進行なし |
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - 明示的な `--resume` 再入時に park マーカーがクリアされた |
+| `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した archive トランザクション。operation ID ごとに1回発行 |
+| `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した unarchive トランザクション。operation ID ごとに1回発行 |
 
 ### Phase lifecycle
 
@@ -234,6 +236,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` が leader セッションの人間却下を、リモートの conductor intent の監査ディレクトリへ記録。`DELEGATED_APPROVAL` の verb 対称ミラーで、reject ゲートのみを開く(#685) |
 | `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` が leader セッションの時限的スタンディンググラントを記録。TTL の間、ゲートごとの人間ターンなしにチームモードのステージゲートを開く。`Grant Id`、`Scope`、`Expires At`、`Includes Phase Boundary` と発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#1125) |
 | `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` が未失効のスタンディンググラントを `Grant Id` で取り消す。leader 自身の台帳の実 human turn に接地(#1125) |
+| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | ソロモードのルーターが、1回のステージルーティング試行で選択したスタンディンググラントそのもの — `Route Id`、`Stage`、`Grant Id` — を、キャリアが conductor に到達する前に記録する。後の approve が同じグラントをレシート所有者と照合して再検証できるようにするため(#1466) |
 
 ### User interaction
 

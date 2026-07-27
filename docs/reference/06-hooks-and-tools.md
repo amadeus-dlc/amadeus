@@ -321,30 +321,31 @@ Special states: `[Amadeus-DLC] ready` (no workflow), `[Amadeus-DLC] COMPLETE [â–
 
 ## Audit Event Taxonomy
 
-The audit trail (the intent's `audit/` shards) uses a **68-event taxonomy** defined in `.claude/knowledge/amadeus-shared/audit-format.md`. Every event is tool-owned or hook-owned - the conductor no longer emits events from prose. See [State Machine](12-state-machine.md) for the canonical emitter registry and the audit-first atomicity rules; the summary below is a cross-reference, not the source of truth.
+The audit trail (the intent's `audit/` shards) uses the event taxonomy defined in `.claude/knowledge/amadeus-shared/audit-format.md`. Every event is tool-owned or hook-owned - the conductor no longer emits events from prose. See [State Machine](12-state-machine.md) for the canonical emitter registry and the audit-first atomicity rules; the summary below is a cross-reference, not the source of truth.
 
 ### Event Categories
 
 | Category | Count | Events | Logged By |
 |----------|-------|--------|-----------|
-| **Session Lifecycle** | 4 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED` | Hooks (session-start, validate-state PreCompact, session-end) |
-| **Workflow Lifecycle** | 4 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED` | `amadeus-utility.ts init`, `amadeus-state.ts complete-workflow`/`park`/`unpark` |
-| **Phase** | 4 | `PHASE_STARTED`, `PHASE_COMPLETED`, `PHASE_VERIFIED`, `PHASE_SKIPPED` | `amadeus-utility.ts init`, `amadeus-state.ts advance` |
-| **Stage** | 6 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_SKIPPED`, `STAGE_JUMPED` | `amadeus-state.ts` (gate-start/approve/reject/skip/advance), `amadeus-jump.ts` |
-| **Initialization** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` | `amadeus-utility.ts init` |
-| **Navigation** | 4 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED` | `amadeus-utility.ts` |
-| **Interaction** | 4 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED` | `amadeus-log.ts`, `amadeus-state.ts` |
-| **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | audit-logger hook, `amadeus-state.ts reuse-artifact` |
-| **Subagent** | 1 | `SUBAGENT_COMPLETED` | log-subagent hook |
-| **Utility** | 1 | `HEALTH_CHECKED` | `amadeus-utility.ts doctor` |
-| **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `lib.ts emitError`, `amadeus-state.ts acknowledge-compaction` |
-| **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `amadeus-bolt.ts` |
-| **Worktree / fork-merge** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` | `amadeus-worktree.ts`, `amadeus-state.ts` (fork/merge), `amadeus-audit.ts` (audit-fork/merge) |
-| **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` | `amadeus-state.ts` (practices-promote / practices-event) |
-| **Merge dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` | `amadeus-bolt.ts dispatch-event` |
-| **Sensors** | 5 | `SENSOR_FIRED`, `SENSOR_PASSED`, `SENSOR_FAILED`, `SENSOR_BUDGET_OVERRIDE`, `GUARDRAIL_LOADED` | `amadeus-sensor.ts fire`, `amadeus-utility.ts doctor` (`GUARDRAIL_LOADED`) |
-| **Learning loop** | 3 | `MEMORY_EMPTY`, `RULE_LEARNED`, `SENSOR_PROPOSED` | `amadeus-runtime.ts compile`, `amadeus-learnings.ts persist` |
-| **Swarm** | 6 | `SWARM_STARTED`, `SWARM_UNIT_CONVERGED`, `SWARM_UNIT_FAILED`, `SWARM_BATON_RETURNED`, `SWARM_COMPLETED`, `SWARM_DEGRADED` | `amadeus-swarm.ts` referee â€” `SWARM_STARTED` + `SWARM_DEGRADED` from `prepare`; the per-unit pair, baton row, and batch tally from `finalize` |
+| **Workflow Lifecycle** | 6 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED`, `INTENT_ARCHIVED`, `INTENT_UNARCHIVED` | `tools/amadeus-utility.ts`, `tools/amadeus-state.ts` |
+| **Phase Lifecycle** | 4 | `PHASE_STARTED`, `PHASE_COMPLETED`, `PHASE_VERIFIED`, `PHASE_SKIPPED` | `tools/amadeus-utility.ts`, `tools/amadeus-state.ts` |
+| **Stage Lifecycle** | 7 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_JUMPED`, `STAGE_SKIPPED`, `GUARD_EXEMPTED` | `tools/amadeus-state.ts`, `tools/amadeus-utility.ts`, `tools/amadeus-jump.ts` |
+| **Session Events** | 5 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED`, `HUMAN_TURN` | `hooks/amadeus-session-start.ts`, `hooks/amadeus-validate-state.ts`, `hooks/amadeus-session-end.ts`, `tools/amadeus-presence-reservation.ts`, `hooks/amadeus-mint-presence.ts` |
+| **Initialization Events** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` | `tools/amadeus-utility.ts` |
+| **Navigation Events** | 5 | `SCOPE_CHANGED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `SCOPE_DETECTED`, `RECOMPOSED` | `tools/amadeus-utility.ts` |
+| **Interaction Events** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` | `tools/amadeus-log.ts`, `tools/amadeus-state.ts` |
+| **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-state.ts`, `tools/amadeus-grant-authorization.ts` (trusted in-process route writer) |
+| **Artifact Events** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | `hooks/amadeus-audit-logger.ts`, `tools/amadeus-state.ts` |
+| **Subagent Events** | 1 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` |
+| **Utility Events** | 1 | `HEALTH_CHECKED` | `tools/amadeus-utility.ts` |
+| **Error/Recovery Events** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `tools/amadeus-lib.ts`, `tools/amadeus-state.ts` |
+| **Construction Bolt Events** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` |
+| **Worktree** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` | `tools/amadeus-worktree.ts`, `tools/amadeus-state.ts`, `tools/amadeus-audit.ts` |
+| **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` | `tools/amadeus-state.ts` |
+| **Merge Dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` |
+| **Sensor Events** | 5 | `SENSOR_FIRED`, `SENSOR_PASSED`, `SENSOR_FAILED`, `SENSOR_BUDGET_OVERRIDE`, `GUARDRAIL_LOADED` | `tools/amadeus-sensor.ts`, `tools/amadeus-utility.ts` |
+| **Learning Loop** | 3 | `MEMORY_EMPTY`, `RULE_LEARNED`, `SENSOR_PROPOSED` | `tools/amadeus-runtime.ts`, `tools/amadeus-learnings.ts` |
+| **Swarm** | 6 | `SWARM_STARTED`, `SWARM_UNIT_CONVERGED`, `SWARM_UNIT_FAILED`, `SWARM_BATON_RETURNED`, `SWARM_COMPLETED`, `SWARM_DEGRADED` | `tools/amadeus-swarm.ts` |
 
 ### Entry Format
 
