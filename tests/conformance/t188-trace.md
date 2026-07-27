@@ -1,0 +1,60 @@
+# t188 conformance trace
+
+upstream-pin: 29a31f78
+upstream-source: awslabs/aidlc-workflows tests/integration/t188-plugin-compose.test.ts (v2.3.0, commit 29a31f7899731b53f2b8d7f76cd223f9a8a25859)
+ci-measurement-scope: smoke/unit/integration (e2e は --ci 非対象 — PERF-U7-2 の範囲宣言)
+
+<!--
+  BR-U7-1: 上流 32 ケース全行。disposition は adopted | covered-existing | n-a の 3 値。
+  BR-U7-7: target はテストのフルパス+シンボル(tNNN 短形禁止)。n-a の target は — (空)。
+  BR-U7-8: 上流参照は commit 29a31f78 固定。上流の後続変更は本 intent で追わない。
+  disposition 判定の根拠(アーキテクチャの相違):
+    - Amadeus の compose fragment は JSON manifest 宣言の構造化 seam エントリ
+      ({ file, anchor, id, text })。上流の `## fragment:` 本文ブロックパーサ方式を
+      持たないため、本文パース起因のハザード(fence / BOM / leftover / close-marker /
+      nested-fence)は構造的に存在しない → n-a。
+    - Amadeus の compose は mutation 前に fail-closed で拒否する(engine の
+      amadeus-plugin-compose.ts:194「rejects a missing anchor rather than dropping it」)。
+      上流の fail-open drop-with-log 面に対応する挙動を「より強い契約」として持つため、
+      該当ケースは既存の拒否テストで被覆(covered-existing、rationale に強契約を明記)。
+    - Amadeus の recompile は同期インライン(spawnRecompile)で、上流の非同期
+      per-plugin retry marker を持たない。per-plugin 隔離は plugin-separated
+      DropsRecord(#24)が担う → #13 は n-a。
+    - Amadeus の plugin contribution に `bundle` フィールドは無い → #26 は n-a。
+  traceCoverage(機械集計、BR-U7-1): adopted=2 / covered-existing=22 / n-a=8。
+-->
+
+| # | upstream case (verbatim) | disposition | target | rationale |
+|---|---|---|---|---|
+| 1 | packager emits a Claude host-plugin projection | covered-existing | `tests/integration/t254-reference-plugin-lifecycle.test.ts` :: "every one of the seven package faces projects exactly the declared set, deterministically" | Amadeus は claude を含む各 face の宣言セットを projection する(上流の 4 face に対し 7 face の上位集合) |
+| 2 | all four harness projections emit | covered-existing | `tests/integration/t308-project-all-harnesses.integration.test.ts` :: "writes a bundle for every packaged face, each with a prior-projection marker" <br> `tests/integration/t254-reference-plugin-lifecycle.test.ts` :: "every one of the seven package faces projects exactly the declared set, deterministically" | 上流 4 face に対し Amadeus は 7 face 全数を projection する(上位集合) |
+| 3 | new plugin stages are in the compiled graph | covered-existing | `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "compose lands and is reflected in the compiled graph (FR-4)" | compose 後の再コンパイルで plugin stage が graph に載ることを検査 |
+| 4 | contribution merges produces into the target stage node | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "serializeStageSeams is deterministic and lists every seam" <br> `tests/unit/t252-plugin-composition.test.ts` :: "plans stage copy, seam merge into shared file, fragment splice, and record" | produces は SEAM_NAMES の seam。order-preserving union(mergeSeamEntries)で target stage node へ merge |
+| 5 | contribution merges consumes into the target stage node | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "serializeStageSeams is deterministic and lists every seam" <br> `tests/unit/t252-plugin-composition.test.ts` :: "mergeSeamEntries is order-preserving union with dedup" | consumes は SEAM_NAMES の seam(string union)。上流の per-entry `required: false` 保存は Amadeus の consumes モデル(素の string 集合)に無い上流固有の nuance |
+| 6 | contribution merges sensors into the target stage node | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "serializeStageSeams is deterministic and lists every seam" <br> `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "compose lands and is reflected in the compiled graph (FR-4)" | test-pro fixture は sensors seam(code-generation ← test-pro-lint)を宣言し compose される |
+| 7 | contribution adds required_sections to the target stage source | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "serializeStageSeams is deterministic and lists every seam" | required_sections は SEAM_NAMES の seam。serialize が全 seam を列挙する |
+| 8 | prose fragments are spliced into the target stage body | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "plans stage copy, seam merge into shared file, fragment splice, and record" | fragment(SKILL.md, anchor)の text splice を検査 |
+| 9 | fragments land in step order (9a before 9b before 9c) | adopted | `tests/unit/t337-conformance-fragment-order.test.ts` :: "multiple fragments splice at their declared anchors in host order, each marked, deterministically (upstream t188 #9)" | Amadeus は複数 fragment を宣言 anchor 位置へ順序どおり splice し marker を付す(amadeus-plugin-compose.ts:519 rebuildFragmentFile、:473「insertion order is the contract」)。上流の step 順序 splice の Amadeus 相当を新規に固定 |
+| 10 | {{HARNESS_DIR}} is substituted in composed stage prose | covered-existing | `tests/integration/t-plugin-projection-packaging.test.ts` :: "buildPluginProjection loads the real manifest and transforms prose per harness" <br> `tests/integration/t254-reference-plugin-lifecycle.test.ts` :: "prose is transformed per face; JSON stays verbatim" | Amadeus は projection(package)時に {{HARNESS_DIR}} を face 別に置換する |
+| 11 | re-running compose does not duplicate fragments | covered-existing | `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "compose is idempotent — second run is byte-identical (BR-U2-2)" | 冪等 — 2 回目の compose は byte 同一(fragment 重複なし) |
+| 12 | compose recompiles when the graph lost the plugin's stages | adopted | `tests/integration/t338-conformance-recompile-selfheal.integration.test.ts` :: "plain compose recompiles unconditionally (self-heal trigger); --if-stale on a current record does not (upstream t188 #12)" | Amadeus の self-heal trigger は素の `compose`(適用 0 件でも無条件 recompile)。`compose --if-stale`(hook 経路)は record-keyed で recompile を呼ばない degrade を期待値として固定(実 recompile の graph 復元効果は #3 の t299 が end-to-end で被覆) |
+| 13 | two plugins on the same harness get distinct retry markers | n-a | — | Amadeus の recompile は同期インライン(spawnRecompile)で非同期 per-plugin retry marker を持たない。per-plugin 隔離は plugin-separated DropsRecord(#24)が担う |
+| 14 | unresolvable fragment anchor is dropped-with-log, not silent (R4-2) | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "fragment anchor absent from host is an unknown-seam error" | Amadeus は未解決 anchor を mutation 前に unknown-seam エラーで拒否する(上流の drop-with-log より強い fail-closed 契約) |
+| 15 | range-heading anchor resolves (### Step 4-8 → after-step:6) (R4-3) | n-a | — | Amadeus の anchor は literal 部分文字列一致({ file, anchor, id, text })で、上流の `after-step:N` 見出し算術 anchor DSL を持たない |
+| 16 | stage-slug collision is dropped-with-log, not a silent no-op (R4-4) | covered-existing | `tests/unit/t252-plugin-composition.test.ts` :: "collects same-name-stage, unknown-seam and clobber SIMULTANEOUSLY" | Amadeus は slug 衝突を mutation 前に same-name-stage エラーで拒否し core stage を保持する(fail-closed) |
+| 17 | a ## fragment: line inside a code fence is NOT a delimiter (R5-C1) | n-a | — | Amadeus の fragment は構造化 manifest エントリで `## fragment:` 本文ブロック区切りを持たないため、fence 誤区切りハザードが構造的に存在しない |
+| 18 | a body block with no matching frontmatter entry is dropped-with-log (R5-C5) | n-a | — | 同一根拠(構造化 manifest fragment)— 本文ブロックと frontmatter エントリの対応付けが無い(fragment は JSON manifest に 1 度だけ宣言される) |
+| 19 | a BOM-prefixed contribution is not silently skipped (R5-C4) | n-a | — | Amadeus の contribution は JSON manifest(JSON.parse で破損は malformed-manifest として loud 化)であり、BOM 前置きで無効化しうる `^---` frontmatter 本文パース面を持たない |
+| 20 | close-marker-lookalike prose survives an upgrade re-splice (R5-C2) | n-a | — | Amadeus の re-splice は構造化 fragment id marker `<!-- amadeus:plugin-fragment:<id> -->` で境界を取るため、prose 中の marker 類似行では truncate されない(本文走査型の close-marker cut を持たない) |
+| 21 | a [degraded] hook drop produces a FAILING doctor row | covered-existing | `tests/integration/t315-doctor-plugin-observability.integration.test.ts` :: "a degraded drop is visible and fails the doctor (silent drop forbidden — FR-5)" <br> `tests/unit/t314-doctor-plugin-rows.test.ts` :: "[degraded] and [recovery-pending] and [unknown] rows fail (exit contribution)" | Amadeus の DropsRecord severity=degraded は doctor 行を fail させる(severity が唯一の源) |
+| 22 | an [advisory] hook drop produces a PASSING (advisory) doctor row, not a failure | covered-existing | `tests/integration/t315-doctor-plugin-observability.integration.test.ts` :: "an advisory drop is visible but stays green (PASS(advisory))" <br> `tests/unit/t314-doctor-plugin-rows.test.ts` :: "[ok], [drift], [advisory] rows pass (visible but not failing)" | severity=advisory は可視だが doctor を fail させない |
+| 23 | compose self-clears its drops file on a clean run | covered-existing | `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "compose writes an empty DropsRecord entry per plugin, plugin-separated (BR-U2-11)" <br> `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "DropsRecord is byte-identical across an idempotent re-compose (BR-U2-11)" | clean compose は自 plugin の drops エントリを空で書く(degraded drop を残さない) |
+| 24 | a clean plugin's compose does NOT erase another plugin's drops (R6-B1) | covered-existing | `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` :: "compose writes an empty DropsRecord entry per plugin, plugin-separated (BR-U2-11)" | plugin-separated DropsRecord(amadeus-plugin-compose.ts:192 が upstream #24 を明示引用)。他 plugin の drops を pre-seed し不変を検査 |
+| 25 | a nested ```` fence does not mis-close on an inner ``` (R6-B2) | n-a | — | #17 と同一根拠 — Amadeus は本文 fence パースを行わない(構造化 manifest fragment) |
+| 26 | a bundle containing ':' is refused with a log (R6-L4) | n-a | — | Amadeus の plugin contribution に `bundle` フィールドは無い。identity 検証は plugin `name` / stage `slug`(malformed / duplicate ガード)で行う |
+| 27 | plugin build refuses a non-empty dir that is not a prior projection | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "non-empty non-projection directory is refused (#27)" <br> `tests/integration/t309-outdir-refusal.integration.test.ts` :: "refuses a non-empty non-projection directory (#27)" | classifyOutDir が非空・非 projection dir を拒否 |
+| 28 | plugin build refuses a FOREIGN .claude-plugin checkout (non-aidlc name) | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "foreign projection is refused before the non-empty check (#28)" <br> `tests/integration/t308-project-all-harnesses.integration.test.ts` :: "refuses a foreign projection: a dir marked for a different plugin (#28)" | 別 plugin 名の projection を非空チェックより先に拒否 |
+| 29 | plugin build refuses a file outDir with a usage error (no ENOTDIR stack) | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "a regular file is refused (#29, no raw ENOTDIR)" <br> `tests/integration/t309-outdir-refusal.integration.test.ts` :: "refuses a regular-file outDir (#29, no raw ENOTDIR stack)" | file outDir を usage エラーで拒否(raw ENOTDIR を出さない) |
+| 30 | plugin build refuses a symlink outDir — plain and trailing-slash | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "a symlink is refused (#30)" <br> `tests/integration/t309-outdir-refusal.integration.test.ts` :: "refuses a symlink outDir (#30)" <br> `tests/integration/t312-writebundle-outdir-refusal.integration.test.ts` :: "refuses when a per-harness install outDir is a symlink (write-0, target untouched)" | symlink outDir を拒否し target を不変に保つ |
+| 31 | plugin build refuses a broken symlink outDir (no raw EEXIST stack) | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "a broken symlink is refused (#31, no raw EEXIST)" <br> `tests/integration/t309-outdir-refusal.integration.test.ts` :: "refuses a broken symlink outDir (#31, no raw EEXIST stack)" | broken symlink を usage エラーで拒否(raw EEXIST を出さない) |
+| 32 | plugin build DOES overwrite a genuine prior AIDLC projection (no --force) | covered-existing | `tests/unit/t304-classify-outdir.test.ts` :: "our own prior projection is ok (#32 re-project)" <br> `tests/integration/t308-project-all-harnesses.integration.test.ts` :: "re-projecting the same plugin/harness into its own prior projection is accepted (#32)" | 自 plugin の prior projection への再 build は --force なしで許可 |
