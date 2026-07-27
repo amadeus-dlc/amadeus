@@ -1,6 +1,51 @@
 # コード品質評価
 
-## plugin installDoc/discovery 非対称の品質評価（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+## plugin テスト層の盲点と 4 Issue の品質評価（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+
+260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。Architect 段の独立再実測で **訂正 0 件**（件数・file:line はすべてコマンド出力または実ファイル直読からの転記、測定 ref: observed `0c4709102`）。
+
+### plugin テストの層構成（実測）
+
+`git ls-files tests/ | grep -c plugin` = **24**。層別: unit **8**（`t252` 合成エンジン純関数 / `t300` `parsePluginCliArgs` / `t301` CLI 純 seam / `t306` `PLUGIN_HOST_CLASS` × 7 面 / `t313` `buildDoctorPluginSection` / `t314` `doctorPluginRows` / `t-plugin-projection` / `plugin-discovery-overhead-gate`）、integration **17**（`t253` / `t254` / `t299` / `t302` / `t303` / `t308` / `t310` / `t311` / `t315` / `t321` / `t322` / `t338` / `t-formal-verif-plugin-lifecycle` / `t-formal-verif-plugin-stage-discovery` / `t-plugin-projection-packaging` / `t-plugin-stage-discovery-performance` / `t327`）、**e2e 0**（`ls tests/e2e/ | wc -l` = **83**、うち `*.serial.test.ts` = **35**。`git ls-files tests/e2e/ | grep -c plugin` = **0**）。
+
+### 負債シグナル 1: 検証面が全て「正本パス」で、出荷面が一度も駆動されていない
+
+plugin テストは全て `packages/framework/core/tools/` の正本を import / spawn しており、`dist/<harness>/<dir>/tools/amadeus-plugin.ts`（出荷コピー）を読む・起動するテストは **0 件**。`grep -rn "amadeus-plugin.ts" tests/ | grep -i "spawn\|join("` の唯一のヒットは `t299:206` の `join(REPO_ROOT, "packages", "framework", "core", "tools", "amadeus-plugin.ts")` = 正本パス。cid:code-generation:injection-surface-verify（注入・検証はテストが実際に読む面へ）の観点で、**plugin CLI の出荷コピーは未検証**。
+
+### 負債シグナル 2: recompile スタブ — end-to-end 効果が実ホストで未証明
+
+`t299`（walking skeleton、size: medium）はヘッダ `:1-13` verbatim で「driven IN-PROCESS through handlePluginCli(argv, deps) with an injected dependency bag (**recompile stubbed**, engine real)」と自認し、スタブ本体は `:75-78`（`recompile: () => { recompileCount += 1; return true; }`）。唯一の実 spawn（`:205-218`、BR-U2-6）も設計コメント `:198-204` verbatim が「the post-apply recompile spawns amadeus-runtime.ts compile against a **synthetic host, which has no runtime graph**, so the process exits non-zero after committing — the record write is the proof」と述べており、**compose 後に runtime graph が実再生成され plugin stage が graph に載る**という end-to-end 効果は実ホストで未検証。`t338` も recompile カウンタ方式。
+
+### 負債シグナル 3: `hashSurface` のファイルバイト限定 — #1586 が構造的に検出不能
+
+`t299:166-176`（「drop restores the 0-plugin baseline (BR-U2-8)」）は `:171` `expect(existsSync(join(host, OWNED_STAGE))).toBe(false);` と `:173` `expect(hashSurface(host)).toBe(baseline);` で baseline 復元を主張するが、`hashSurface`（`:88-101`）は `:94-97` verbatim `if (statSync(abs).isDirectory()) walk(abs); else { h.update(abs.slice(root.length)); h.update(readFileSync(abs)); }` の通り **ファイルのバイトのみ**をハッシュする。空ディレクトリは走査しても何も update しないため、残渣の有無でハッシュが変わらない — **構造的に検出不能**。`t254:286-288` はファイル 1 点の `existsSync` のみ。`t311`（全 37 行）は `scripts/plugin-projection.ts` のパッケージャ側 0-plugin baseline（`dist/plugins/` 生成）を見るテストで、ホストへの compose/drop は射程外。`t254:357-369`（Part D）は repo ツリーへの汚染を見るもので temp ホスト残渣は見ない。**`baselineRestored` の判定基準（record）とテストの判定基準（ファイルのみ）が両方ともディレクトリを見ない二重の盲点。**
+
+### 負債シグナル 4: #1585 の 0-plugin 経路をどのテストも踏まない
+
+`t314:36-38` は純関数 `doctorPluginRows` に対して 0 件行を assert し **standalone レンダラを通らない**。`t315:113` / `:204` も統合面・純関数面のみ。`t299:233-238` の doctor テストは **1 plugin composed 済み**の状態で `${PLUGIN} [ok]` を assert するだけで 0-plugin ケースを踏まない。
+
+### 負債シグナル 5: #1575 の衝突を見るガードが無く、同義集合が三重化している
+
+`tests/integration/t-plugin-projection-packaging.test.ts:44` は verbatim `import { PACKAGE_HARNESSES as SELF_INSTALL_FACES } from "../../scripts/promote-self.ts";` と **別名 import で衝突を回避**し、同ファイル `:48` は 7 値を **ハードコード再定義**する（`const PACKAGE_HARNESSES_7 = [...]` = 3 つ目の同義集合）。`:160-163` は 5 値であることと 7 値集合への包含を assert するのみで、**同名 export の衝突自体を検出するガードは存在しない**。参考: `scripts/promote-self.ts:47-54` の `managedDirs` も同じ 5 面を独立に列挙（4 つ目の同義列挙）。改名時の同期対象は展開後リテラルの 2 箇所 — `tests/unit/t209-promote-self-dangling-symlink.test.ts:152` と `t-plugin-projection-packaging.test.ts:161`（cid:application-design:dual-key-consumer-inventory の 2 キー棚卸しによる、`grep -rn "PACKAGE_HARNESSES\|SELF_INSTALL_HARNESSES" scripts/ tests/ packages/ docs/` 出力からの転記）。
+
+### 負債シグナル 6: e2e 層は既定 CI で一切実行されない
+
+`tests/run-tests.ts:125` `--ci  smoke + unit + integration` / `:126` `--release  smoke + unit + integration + e2e`、`:197-200` の `case "--ci":` は `runE2e` を立てない。CI 側は `.github/workflows/ci.yml:163` verbatim `run: bun run test:ci -- -P 4`（`package.json:19` `"test:ci": "bun tests/run-tests.ts --ci"`）であり、`grep -n "run-tests\|--release\|--e2e" .github/workflows/*.yml` のヒットは `:163` のみ。**tests/e2e/ に置くだけではリグレッションガードにならない** — #1589 の要件では実行トリガー（`--release` ジョブの新設 / 専用 workflow / スケジュール）自体を決める必要がある。
+
+### 既習様式（#1589 実装時の準拠先、実測）
+
+`tests/e2e/` には live gate の有無で 2 系統の既習様式がある。
+
+1. **出荷 dist ツリーを tmp へコピーして駆動（live gate 付き）**: `t-print-kimi-doctor.serial.test.ts:1-37` ヘッダ verbatim「drive `/skill:amadeus --doctor` through the Kimi Code CLI's headless surface (`kimi -p`) against the **SHIPPED dist/kimi tree**」/「HERMETICITY (BR-2): the project is a tmp copy of dist/kimi and KIMI_CODE_HOME points at a tmp home」/「LIVE GATE: requires AMADEUS_KIMI_PRINT_LIVE=1 + a kimi binary … SPENDS Kimi credits … Skips cleanly otherwise」。**出荷面駆動の様式は既に存在する**が、既定 skip でクレジットを消費する。
+2. **実バイナリ spawn + オフライン既定**: `setup-install.test.ts:1-19` ヘッダ verbatim「spawns the *real built* amadeus-setup binary as its own child process against a real temp target directory, using a real dist/claude archive fixture. The network boundary is faked by rewriting fetch() calls at process start … offline by default」。#1589 の「出荷 dist 導入 → CLI 駆動」は、ハーネス CLI を起動せず `bun <tmp>/.claude/tools/amadeus-plugin.ts ...` を spawn する形で **この live gate 不要の様式に載せうる**（要件段の設計選択肢）。
+
+命名規約: `.serial.` を名前に含むファイルを runner が直列扱いにする（`tests/run-tests.ts:888` verbatim `const serial = pinnedSerial || basename(file).includes(".serial.");`）。
+
+### 品質上の総括
+
+4 Issue のうち #1575 / #1585 / #1586 は **いずれも「既存の正しい実装が隣にあるのに、片側だけがそれを通らない」非対称クラス**（canonical 定数を使わない / canonical レンダラを通らない / 対操作が対称でない）であり、cid:requirements-analysis:symmetric-pair-review をレビュー観点に含めていれば設計段で捕捉できた形状。#1589 はその 3 件を **どのテスト層も検出できなかった構造的理由**そのものであり、修正の順序としては #1589 の検証面設計が他 3 件の閉包実証（cid:code-generation:c1-narrow-fix-post-apply-remeasure）を支える関係にある。
+
+## plugin installDoc/discovery 非対称の品質評価（260727-install-doc-mismatch、履歴 2026-07-27、差分リフレッシュ、Issue #1569）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。#1569 の欠陥は前 intent `260726-plugin-host-delivery` の U3 host-projection-all（`250265adb`）で導入された、以下の負債シグナルを持つ。
 

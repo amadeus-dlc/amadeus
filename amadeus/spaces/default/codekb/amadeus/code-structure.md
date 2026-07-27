@@ -4,7 +4,37 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、現在、差分リフレッシュ）
+## plugin / E2E 面のコード配置と 4 Issue 対象ファイル（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+
+260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**、区間 **1830 files / +316726 / -7366**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。すべての数値は `git diff` / `wc -l` / `ls` / `git ls-files` 出力からの転記（測定 ref: observed `0c4709102`）。
+
+### 区間の面別内訳（`git diff --name-only 1673c433..HEAD` の集計、上位）
+
+`amadeus/spaces/default` **639**（record）/ `dist/kimi` **301** / `.kimi-code` **296** / `docs` **73** / `tests/integration` **64** / `tests/unit` **48** / `dist/plugins` **37** / `.claude` **29** / `.opencode` **27** / `.cursor` **26** / `.codex` **26** / `dist/{opencode,kiro-ide,kiro,codex,claude}` 各 **25** / `packages/framework/core` **24** / `dist/cursor` **24** / `metrics` **20** / `packages/framework/harness` **17** / `tests/fixtures` **13** / `scripts` **8** / `packages/setup/src` **6** / `tests/smoke` **3** / `tests/e2e` **2** / `plugins` **2** / `tests/conformance` **1**。
+
+### 本 intent の対象ファイル配置
+
+| 面 | パス | 断面（observed `0c4709102`） |
+| --- | --- | --- |
+| plugin CLI 正本 | `packages/framework/core/tools/amadeus-plugin.ts` | 613 行。`:277` staging root 定数 / `:204-223` snapshot / `:377` `baselineRestored` / `:531-546` `doctorPluginRows` / `:569-577` dispatch / `:580-606` レンダラ / `:610-613` エントリ |
+| 合成エンジン正本 | `packages/framework/core/tools/amadeus-plugin-compose.ts` | 1469 行。`:703-730` `planPluginDrop` / `:991-1000` `applyPluginDrop` / `:1040-1053` `dropWriteSet` / `:1146-1156` `createNodeBackend`（`:1150` mkdir / `:1154` rm） / `:1230-1235` `clearPluginDrops` |
+| activation | `packages/framework/core/tools/amadeus-plugin-activation.ts` | 295 行 |
+| SessionStart hook 正本 | `packages/framework/core/hooks/amadeus-plugin-compose.ts` | **23 行**（CLI の薄いラッパ） |
+| graph discovery | `packages/framework/core/tools/amadeus-graph.ts` | `:2011-2013` `discoverPluginStageFiles` / `:2015-2023` `pluginsHostRoot` |
+| orchestrate 配線 | `packages/framework/core/tools/amadeus-orchestrate.ts` | `:892-893` / `:913` composition record / `:924-926` trust / `:988` / `:1017-1034` `emitComposedPluginStageIfInstalled` / `:2289` 呼び出し / `:2815` / `:3445` |
+| パッケージャ | `scripts/plugin-projection.ts` | `:39-57` 定数 2 本（`PACKAGE_HARNESSES` 7 / `SELF_INSTALL_HARNESSES` 5）/ `:798` install 面ループ / `:822` `assertInstallOutDirsSafe` / `:863` |
+| self-install | `scripts/promote-self.ts` | `:47-54` `managedDirs` / `:181-184` 同名 `PACKAGE_HARNESSES`（5、#1575 の所在）/ `:187` |
+| 中立バンドル配布物 | `dist/plugins/formal-model-check/` | `plugin.json` / `README.md` / `stages/formal-model-check.md` + **7 面の `<face>/INSTALL.md`**（`find` 実測 = 計 10 ファイル） |
+| ハーネス dist の plugin 面 | `dist/<harness>/<dir>/` | `hooks/amadeus-plugin-compose.ts` + `tools/` 3 本（`amadeus-plugin.ts` / `-compose.ts` / `-activation.ts`）が 5 面 dist と 5 面 self-install ツリーに存在 |
+| 設定例（hook 配線） | `dist/claude/.claude/settings.json.example` | `:34-46` SessionStart 配列（`amadeus-session-start.ts` に続く 2 本目に `amadeus-plugin-compose.ts`） |
+
+**紛らわしい同名の注意**: `packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts` は **opencode ハーネス自身のプラグイン機構**であり、本 intent が扱う Amadeus plugin 機能とは別物（要件段で混同しないこと）。また `find . -name "INSTALL.md" -not -path './amadeus/*'` の結果は上記 7 枚のみで、**リポジトリルートに INSTALL.md は無い**。
+
+### テストの配置
+
+`git ls-files tests/ | grep -c plugin` = **24**（unit 8 / integration 17 のうち plugin 系。fixtures 含む）、`ls tests/e2e/ | wc -l` = **83**（`*.serial.test.ts` = **35**）、`git ls-files tests/e2e/ | grep -c plugin` = **0**。区間で変更された `tests/e2e/` は `t-print-kimi-doctor.serial.test.ts` / `t-print-kimi-status.serial.test.ts` の **2 ファイルのみ**。e2e 命名の系統は `t-tui-*` / `t-exec-codex-*` / `t-print-kimi-*` / `t-acp-kiro-*` / `t-ide-kiro-*`（いずれも `.serial.`）と `setup-*.test.ts` / `t-formal-verif-*.test.ts`（非 serial）。#1589 で新設するファイルはこのいずれかの様式へ載せる（詳細は `code-quality-assessment.md` の同 intent 節）。
+
+## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、履歴 2026-07-27、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70、458 files）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信の Construction（前 intent `260726-plugin-host-delivery` の U2–U8）が実着地し、以下の配置が新規に現れた。
 
