@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**: [activation-policy, doctor-observability, host-projection-all]
+- **Bolt Refs**: [activation-policy, doctor-observability]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
