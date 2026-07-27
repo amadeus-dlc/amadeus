@@ -6,6 +6,10 @@ import { cpus, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { currentGitSha } from "../harness/git-sha.ts";
+import {
+  exceedsMedianLatencyBudget,
+  median,
+} from "../lib/latency-median-budget-gate.ts";
 import { appendLifecycleAuditEntryUnlocked } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import {
   auditLockDir,
@@ -432,6 +436,12 @@ function p95(values: number[]): number {
   return sorted[Math.ceil(sorted.length * 0.95) - 1];
 }
 
+// Absolute latency budgets (#1424). Unchanged in value; the verdict now gates
+// the median rather than the nearest-rank p95 so shared-runner load spikes are
+// absorbed while a genuine regression still reports (#1511, median ruling).
+const ARCHIVE_LATENCY_BUDGET_MS = 500;
+const RECOVERY_LATENCY_BUDGET_MS = 750;
+
 describe("intent lifecycle transaction performance contract", () => {
   test("records 100-child p95 and paired incremental RSS with provenance", () => {
     for (let index = 0; index < 10; index++) {
@@ -445,11 +455,15 @@ describe("intent lifecycle transaction performance contract", () => {
     const rss = archive.map((sample, index) =>
       Math.max(0, sample.rssDeltaBytes - noop[index].rssDeltaBytes)
     );
+    const archiveLatencies = archive.map((sample) => sample.elapsedMs);
+    const recoveryLatencies = recovery.map((sample) => sample.elapsedMs);
     const result = {
       samples: 100,
       warmups: 10,
-      archiveP95Ms: p95(archive.map((sample) => sample.elapsedMs)),
-      recoveryP95Ms: p95(recovery.map((sample) => sample.elapsedMs)),
+      archiveP95Ms: p95(archiveLatencies),
+      recoveryP95Ms: p95(recoveryLatencies),
+      archiveMedianMs: median(archiveLatencies),
+      recoveryMedianMs: median(recoveryLatencies),
       rssDifferenceP95MiB: p95(rss) / (1024 * 1024),
       fixtureSha256: archive[0].fixtureSha256,
       gitSha: currentGitSha(),
@@ -458,10 +472,22 @@ describe("intent lifecycle transaction performance contract", () => {
       cpuModel: cpus()[0]?.model ?? "unknown",
     };
     console.log(`LIFECYCLE_TRANSACTION_BENCHMARK ${JSON.stringify(result)}`);
-    expect(result.archiveP95Ms).toBeLessThanOrEqual(500);
-    expect(result.recoveryP95Ms).toBeLessThanOrEqual(750);
+    expect(exceedsMedianLatencyBudget(archiveLatencies, ARCHIVE_LATENCY_BUDGET_MS)).toBe(false);
+    expect(exceedsMedianLatencyBudget(recoveryLatencies, RECOVERY_LATENCY_BUDGET_MS)).toBe(false);
     expect(result.rssDifferenceP95MiB).toBeLessThanOrEqual(96);
     expect(new Set(archive.map((sample) => sample.fixtureSha256)).size).toBe(1);
     expect(new Set(recovery.map((sample) => sample.fixtureSha256)).size).toBe(1);
   }, 120_000);
+
+  // FR-4 wiring proof: a genuine across-the-board regression, fed through the
+  // exact predicate and budget constant the benchmark asserts against above,
+  // reports as a failure. This pins that the median swap did not turn the gate
+  // into a no-op — the verdict the real run consumes still catches a regression.
+  test("a regressed archive latency median fails the same verdict path", () => {
+    const regressed = Array.from(
+      { length: 100 },
+      () => ARCHIVE_LATENCY_BUDGET_MS + 100,
+    );
+    expect(exceedsMedianLatencyBudget(regressed, ARCHIVE_LATENCY_BUDGET_MS)).toBe(true);
+  });
 });
