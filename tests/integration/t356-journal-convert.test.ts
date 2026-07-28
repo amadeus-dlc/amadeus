@@ -218,20 +218,25 @@ describe("handleConvert CLI (in-process)", () => {
   });
 });
 
-describe("committed corpus sweep — the PR-3 one-shot conversion rehearsal", () => {
-  test("every committed audit shard converts losslessly (with dead forks admitted)", async () => {
+describe("committed corpus — post-switchover invariants", () => {
+  test("no legacy Markdown shard remains, and every committed JSONL shard parses", async () => {
     const root = join(import.meta.dir, "..", "..");
+    const legacy: string[] = [];
+    for (const g of ["amadeus/spaces/*/intents/*/audit/*.md", "amadeus/spaces/*/intents/audit/*.md"]) {
+      for await (const p of new Glob(g).scan(root)) legacy.push(p);
+    }
+    expect(legacy).toEqual([]);
+
     const fails: string[] = [];
     let count = 0;
-    for await (const p of new Glob("amadeus/spaces/*/intents/*/audit/*.md").scan(root)) {
-      const full = join(root, p);
-      const cloneId = cloneIdFromShardName(basename(full)) ?? "unknown000000";
-      const intentId = intentIdFromShardPath(full) ?? "unknown";
-      count += 1;
-      try {
-        convertShardText(readFileSync(full, "utf-8"), { cloneId, intentId }, { allowUnmergedForks: true });
-      } catch (e) {
-        fails.push(`${p}: ${(e as Error).message}`);
+    for (const g of ["amadeus/spaces/*/intents/*/audit/*.jsonl", "amadeus/spaces/*/intents/audit/*.jsonl"]) {
+      for await (const p of new Glob(g).scan(root)) {
+        count += 1;
+        try {
+          parseJournalShard(readFileSync(join(root, p), "utf-8"));
+        } catch (e) {
+          fails.push(`${p}: ${(e as Error).message}`);
+        }
       }
     }
     expect(count).toBeGreaterThan(0);

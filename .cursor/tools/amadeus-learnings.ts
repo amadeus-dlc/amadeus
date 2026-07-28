@@ -39,6 +39,7 @@ import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
 import { compile } from "./amadeus-runtime.ts";
 import {
+  auditBlockField,
   appendUnderHeading,
   errorMessage,
   findAllEvents,
@@ -384,9 +385,9 @@ function priorAuditRow(
   candidateId: string
 ): boolean {
   const rows = findAllEvents(auditContent, event);
-  const stageRe = new RegExp(`^\\*\\*Stage\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m");
-  const cidRe = new RegExp(`^\\*\\*Candidate-ID\\*\\*:\\s*${escapeRegex(candidateId)}\\s*$`, "m");
-  return rows.some((r) => stageRe.test(r.block) && cidRe.test(r.block));
+  return rows.some(
+    (r) => auditBlockField(r.block, "Stage") === slug && auditBlockField(r.block, "Candidate-ID") === candidateId,
+  );
 }
 
 function escapeRegex(s: string): string {

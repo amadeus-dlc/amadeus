@@ -104,10 +104,11 @@ function fire(args: string[], env: Record<string, string>): SpawnResult {
 }
 
 function auditEventCount(proj: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
   return readAllAuditShards(proj)
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === ev).length;
 }
 
 const TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"];

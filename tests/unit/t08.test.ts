@@ -163,7 +163,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 /** Pin the clone-id + create the resolved audit shard so the SESSION_COMPACTED
  *  gate (existsSync(auditFilePath)) passes; returns the audit DIR. */
@@ -183,7 +183,7 @@ function readShards(auditDir: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
@@ -219,46 +219,30 @@ function writeState(p: string, content: string): void {
   writeFileSync(statePath(p), content, "utf-8");
 }
 
-/** Count `**Event**: SESSION_COMPACTED` block headings in a buffer. */
-function sessionCompactedCount(body: string): number {
+/** Parse a JSONL shard buffer into audit records (blank lines skipped). */
+function auditRecords(body: string): Array<Record<string, unknown>> {
   return body
     .split("\n")
-    .filter((l) => l === "**Event**: SESSION_COMPACTED").length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count SESSION_COMPACTED records in a JSONL buffer. */
+function sessionCompactedCount(body: string): number {
+  return auditRecords(body).filter((r) => r.event === "SESSION_COMPACTED").length;
 }
 
 /**
- * Field values from the LAST audit block whose `**Event**:` is SESSION_COMPACTED.
- * The seed (audit-sample.md) carries none, so the hook-appended block is the
- * only — and last — one. Splits `**label**: value` on the literal `**: `
- * separator (mirrors auditField in t31.cli.test.ts / lastSubagentBlock in
- * t09.none.test.ts). Returns the field map; missing keys are absent.
+ * Field values from the LAST SESSION_COMPACTED record in a JSONL shard buffer.
+ * The seed carries none, so the hook-appended record is the only — and last —
+ * one. Returns `{ Event, ...fields }`; missing keys are absent.
  */
 function lastCompactedBlock(body: string): Record<string, string> {
-  let current: Record<string, string> | null = null;
-  let last: Record<string, string> = {};
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      current = null;
-      continue;
-    }
-    if (line === "---") {
-      current = null;
-      continue;
-    }
-    if (line === "**Event**: SESSION_COMPACTED") {
-      current = { Event: "SESSION_COMPACTED" };
-      last = current;
-      continue;
-    }
-    if (current && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        current[stripped.slice(0, pos)] = stripped.slice(pos + 4);
-      }
-    }
-  }
-  return last;
+  const hits = auditRecords(body).filter((r) => r.event === "SESSION_COMPACTED");
+  const last = hits[hits.length - 1];
+  if (!last) return {};
+  return { Event: "SESSION_COMPACTED", ...((last.fields ?? {}) as Record<string, string>) };
 }
 
 describe("t08 amadeus-validate-state hook (migrated from t08-hook-validate-state.sh, plan 14)", () => {

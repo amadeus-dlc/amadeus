@@ -48,32 +48,39 @@ const STATE_FIXTURE = join(FIXTURES_DIR, "state-construction.md");
 
 // A minimal audit shard: WORKFLOW_STARTED gives compile a real header (not the
 // empty-graph short-circuit); STAGE_STARTED/COMPLETED for units-generation makes
-// the compile emit one row we can assert on. Mirrors t133's AUDIT_MD.
-const AUDIT_MD = `# AI-DLC Audit Log
-
-## Workflow Started
-**Timestamp**: 2026-07-07T08:00:00Z
-**Event**: WORKFLOW_STARTED
-**Workflow ID**: t201-fixture
-**Scope**: feature
-
----
-
-## Stage Started
-**Timestamp**: 2026-07-07T08:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: units-generation
-**Agent**: amadeus-architect-agent
-
----
-
-## Stage Completed
-**Timestamp**: 2026-07-07T08:02:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: units-generation
-
----
-`;
+// the compile emit one row we can assert on. Mirrors t133's AUDIT_JSONL.
+const AUDIT_JSONL = `${[
+  {
+    seq: 1,
+    timestamp: "2026-07-07T08:00:00Z",
+    heading: "Workflow Started",
+    event: "WORKFLOW_STARTED",
+    fields: { "Workflow ID": "t201-fixture", Scope: "feature" },
+  },
+  {
+    seq: 2,
+    timestamp: "2026-07-07T08:01:00Z",
+    heading: "Stage Started",
+    event: "STAGE_STARTED",
+    fields: { Stage: "units-generation", Agent: "amadeus-architect-agent" },
+  },
+  {
+    seq: 3,
+    timestamp: "2026-07-07T08:02:00Z",
+    heading: "Stage Completed",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "units-generation" },
+  },
+]
+  .map((r) =>
+    JSON.stringify({
+      schemaVersion: 1,
+      cloneId: "fixturecloneid01",
+      intentId: DEFAULT_RECORD_DIR,
+      ...r,
+    }),
+  )
+  .join("\n")}\n`;
 
 // One real §13 diary entry so readMemory() counts >0 — this proves the recorded
 // path and the read path resolve to the SAME file after the fix.
@@ -106,7 +113,7 @@ describe("t201 runtime-graph memory_path carries the intent record dir (#603)", 
     cpSync(STATE_FIXTURE, seededStateFile(proj));
     const shard = seededAuditShard(proj);
     mkdirSync(dirname(shard), { recursive: true });
-    writeFileSync(shard, AUDIT_MD, "utf-8");
+    writeFileSync(shard, AUDIT_JSONL, "utf-8");
     const memPath = join(seededRecordDir(proj), "inception", "units-generation", "memory.md");
     mkdirSync(dirname(memPath), { recursive: true });
     writeFileSync(memPath, MEMORY_MD, "utf-8");

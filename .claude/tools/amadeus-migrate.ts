@@ -3016,22 +3016,24 @@ function auditFileBytes(root: string): Map<string, Buffer> {
   return files;
 }
 
-function parseDoctorAuditSuffix(input: string, allowHeader: boolean): string[] | null {
-  let suffix = input;
-  if (allowHeader) {
-    const header = "# AI-DLC Audit Log\n";
-    if (!suffix.startsWith(header)) return null;
-    suffix = suffix.slice(header.length);
-  }
+function parseDoctorAuditSuffix(input: string, _allowHeader: boolean): string[] | null {
+  // Doctor appends are JSONL journal records (one per line) since the Issue
+  // #1628 switchover. Every non-empty line must parse as a record whose event
+  // is one of the doctor health events — anything else means the doctor wrote
+  // something it must not, and the migration evidence refuses.
   const events: string[] = [];
-  const block = /\n## [^\r\n]+\r?\n\*\*Timestamp\*\*: [^\r\n]+\r?\n\*\*Event\*\*: (GUARDRAIL_LOADED|HEALTH_CHECKED)\r?\n(?:\*\*[^*\r\n]+\*\*: [^\r\n]*\r?\n)*\r?\n---\r?\n/y;
-  let offset = 0;
-  while (offset < suffix.length) {
-    block.lastIndex = offset;
-    const match = block.exec(suffix);
-    if (!match || match.index !== offset) return null;
-    events.push(match[1]);
-    offset = block.lastIndex;
+  for (const line of input.split("\n")) {
+    if (line === "") continue;
+    let record: unknown;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      return null;
+    }
+    if (record === null || typeof record !== "object" || Array.isArray(record)) return null;
+    const event = (record as { event?: unknown }).event;
+    if (event !== "GUARDRAIL_LOADED" && event !== "HEALTH_CHECKED") return null;
+    events.push(event);
   }
   return events;
 }

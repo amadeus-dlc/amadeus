@@ -53,7 +53,7 @@ function shardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-testcloneid.md`;
+  return `${host}-testcloneid.jsonl`;
 }
 
 function project(): {
@@ -113,7 +113,9 @@ function project(): {
     "- **Workflow**: feature\n- **Current Stage**: code-generation\n",
   );
   mkdirSync(seededAuditDir(root), { recursive: true });
-  writeFileSync(join(seededAuditDir(root), shardName()), "# Audit\n");
+  // The JSONL ledger carries no header — an empty shard is the "trail exists"
+  // precondition the sensor dispatcher gates on.
+  writeFileSync(join(seededAuditDir(root), shardName()), "");
   const graphPath = join(root, "stage-graph.json");
   writeFileSync(
     graphPath,
@@ -194,10 +196,24 @@ function fire(
 function audit(root: string): string {
   const dir = seededAuditDir(root);
   return readdirSync(dir)
-    .filter((file) => file.endsWith(".md"))
+    .filter((file) => file.endsWith(".jsonl"))
     .sort()
     .map((file) => readFileSync(join(dir, file), "utf-8"))
     .join("\n");
+}
+
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse the merged JSONL shards into records (blank lines skipped). */
+function auditRecords(root: string): AuditRecord[] {
+  return audit(root)
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as AuditRecord);
 }
 
 afterEach(() => {
@@ -268,12 +284,12 @@ describe("model-completeness sensor E2E", () => {
     const p = project();
     const result = fire(p.root, p.graphPath, p.implPath);
     expect(result.status).toBe(0);
-    const trail = audit(p.root);
-    expect(trail).toContain("**Event**: SENSOR_FIRED");
-    expect(trail).toContain("**Event**: SENSOR_PASSED");
-    const fireIds = [...trail.matchAll(/\*\*Fire id\*\*: ([0-9a-f]{8})/g)].map(
-      (match) => match[1],
-    );
+    const records = auditRecords(p.root);
+    expect(records.some((r) => r.event === "SENSOR_FIRED")).toBe(true);
+    expect(records.some((r) => r.event === "SENSOR_PASSED")).toBe(true);
+    const fireIds = records
+      .map((r) => r.fields?.["Fire id"])
+      .filter((id): id is string => id !== undefined);
     expect(fireIds).toHaveLength(2);
     expect(fireIds[0]).toBe(fireIds[1]);
   });
@@ -283,9 +299,10 @@ describe("model-completeness sensor E2E", () => {
     writeFileSync(p.implPath, "secret-drift-content\n");
     const result = fire(p.root, p.graphPath, p.implPath);
     expect(result.status).toBe(0);
-    const trail = audit(p.root);
-    expect(trail).toContain("**Event**: SENSOR_FAILED");
-    expect(trail).toContain("**Findings count**: 1");
+    // Record-scoped: the findings count rides on the SENSOR_FAILED record.
+    const failed = auditRecords(p.root).filter((r) => r.event === "SENSOR_FAILED");
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.fields?.["Findings count"]).toBe("1");
     const detail = join(
       seededRecordDir(p.root),
       ".amadeus-sensors",
@@ -307,7 +324,7 @@ describe("model-completeness sensor E2E", () => {
     rmSync(join(p.root, "specs", "tla", "model-map.json"));
     const result = fire(p.root, p.graphPath, p.implPath);
     expect(result.status).toBe(0);
-    expect(audit(p.root)).toContain("**Event**: SENSOR_FAILED");
+    expect(auditRecords(p.root).some((r) => r.event === "SENSOR_FAILED")).toBe(true);
   });
 
   test("manifest matchesは無関係pathをaudit前に拒否する", () => {
@@ -335,7 +352,7 @@ describe("model-completeness sensor E2E", () => {
       timeout: 30_000,
     });
     expect(result.status).toBe(0);
-    expect(audit(p.root)).toContain("**Event**: SENSOR_PASSED");
+    expect(auditRecords(p.root).some((r) => r.event === "SENSOR_PASSED")).toBe(true);
     expect(
       existsSync(
         join(

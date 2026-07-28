@@ -1,5 +1,5 @@
 // Runtime-graph compile + read tool. Materialises a per-workflow
-// runtime-graph.json from audit.md + per-stage memory.md files; the
+// runtime-graph.json from the audit shards + per-stage memory.md files; the
 // data-plane mirror of stage-graph.json (which is structural truth).
 //
 // Subcommands:
@@ -233,7 +233,7 @@ function pairStartedCompleted(
 // Build the workflow-level fields (workflow_id, scope, started_at) from
 // audit + state. workflow_id is the LATEST WORKFLOW_STARTED timestamp —
 // `--init --force` re-init appends a new WORKFLOW_STARTED without
-// truncating audit.md, and the live workflow is the latest one. Using
+// truncating the audit journal, and the live workflow is the latest one. Using
 // the first row would identify a dead workflow.
 function buildWorkflowHeader(
   audit: string,
@@ -447,18 +447,10 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
 
   // Helper: read a field's value from an audit row block. Mirrors
   // getField's discipline at amadeus-lib.ts:184-194 (single-line match,
-  // [ \t]* not \s*) without the dynamic-regexp pattern — callers pass
-  // hard-coded field names but the helper is line-scanned to keep ReDoS
-  // surface zero. Block format: lines of `**FieldName**: value`.
-  const fieldFromBlock = (block: string, fieldName: string): string | null => {
-    const prefix = `**${fieldName}**:`;
-    for (const line of block.split("\n")) {
-      if (line.startsWith(prefix)) {
-        return line.slice(prefix.length).trim();
-      }
-    }
-    return null;
-  };
+  // Field access delegates to the shared accessor, which owns the physical
+  // record format (JSONL journal lines since the Issue #1628 switchover).
+  const fieldFromBlock = (block: string, fieldName: string): string | null =>
+    auditBlockField(block, fieldName);
 
   // #761: the BoltInstance populator nulls the parent stage's completed_at (it
   // becomes a per-Bolt field once instances[] attach), but an approved parent

@@ -14,24 +14,26 @@
 // bytes) and drives forward + backward crossings in-process against seeded state.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { handleExecute } from "../../dist/claude/.claude/tools/amadeus-jump.ts";
+import { join } from "node:path";
 import {
   cleanupTestProject,
   createTestProject,
   seededAuditDir,
+  seededRecordDir,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
 // Concatenate every audit shard under the seeded record's audit/ dir — readers
-// glob audit/*.md and merge, so a single read reflects the tool's own appends.
+// glob audit/*.jsonl and merge, so a single read reflects the tool's own appends.
 function readAudit(proj: string): string {
   const dir = seededAuditDir(proj);
   let out = "";
   try {
     for (const f of readdirSync(dir)) {
-      if (f.endsWith(".md")) out += readFileSync(`${dir}/${f}`, "utf-8");
+      if (f.endsWith(".jsonl")) out += readFileSync(`${dir}/${f}`, "utf-8");
     }
   } catch {
     /* no shard yet */
@@ -39,12 +41,26 @@ function readAudit(proj: string): string {
   return out;
 }
 
+// A forward jump that closes a phase WITH executed work runs the #886
+// phase-check artifact gate (amadeus-jump.ts:500) before it writes any state.
+// That gate is orthogonal to the phase-event contract under test, so seed the
+// artifact it demands rather than let an unrelated refusal abort the case.
+function seedPhaseCheck(proj: string, phase: string): void {
+  const dir = join(seededRecordDir(proj), "verification");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `phase-check-${phase}.md`), "# Phase Check\n", "utf-8");
+}
+
 function readState(proj: string): string {
   return readFileSync(seededStateFile(proj), "utf-8");
 }
 
 function countEvent(audit: string, event: string): number {
-  return audit.split(`**Event**: ${event}\n`).length - 1;
+  return audit
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === event).length;
 }
 
 describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () => {
@@ -56,6 +72,7 @@ describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () =>
     // scope=feature, Current Stage=feasibility (ideation). Ideation has [x]
     // stages (intent-capture, market-research); inception has none.
     seedStateFile(proj, "state-mid-ideation.md");
+    seedPhaseCheck(proj, "ideation");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -81,9 +98,16 @@ describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () =>
     expect(countEvent(audit, "PHASE_SKIPPED")).toBe(1);
     expect(countEvent(audit, "PHASE_COMPLETED")).toBe(2);
     expect(countEvent(audit, "PHASE_STARTED")).toBe(1);
-    // The VERIFIED row is for ideation; the SKIPPED row is for inception.
-    expect(audit).toContain("ideation → construction");
-    expect(audit).toContain("**Phase**: inception");
+    // The VERIFIED row is for ideation; the SKIPPED row is for inception —
+    // record-scoped, so neither value can be read off a neighbouring event.
+    const rows = audit
+      .split("\n")
+      .filter((l) => l.trim().length > 0)
+      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    expect(
+      rows.find((r) => r.event === "PHASE_VERIFIED")?.fields?.["Phase boundary"],
+    ).toBe("ideation → construction");
+    expect(rows.find((r) => r.event === "PHASE_SKIPPED")?.fields?.Phase).toBe("inception");
   });
 
   test("flips Phase Progress in the same transaction: Ideation→Verified, Inception→Skipped", () => {

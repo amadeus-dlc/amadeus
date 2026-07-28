@@ -6,10 +6,16 @@ import {
   appendAuditEntry,
   appendAuditEntryUnlocked,
   appendLifecycleAuditEntryUnlocked,
-  formatAuditRecord,
+  escapeAuditValue,
 } from "./amadeus-audit.ts";
 import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+  splitJournalLines,
+} from "./amadeus-journal.ts";
+import {
   activeIntent,
+  auditCloneId,
   clearActiveIntentCursor,
   activeSpace,
   auditBlockField,
@@ -2664,12 +2670,32 @@ type ApprovalAuditBlockInput = {
   readonly fields: Readonly<Record<string, string>>;
 };
 
-function approvalAuditBlock(input: ApprovalAuditBlockInput): string {
-  return formatAuditRecord({
-    heading: input.heading,
+// Row identity for a recovery batch: the shard's clone token, the resolved
+// intent, and the seq of the first appended record (existing count + 1).
+type RecoveryBatchIdentity = {
+  readonly cloneId: string;
+  readonly intentId: string;
+  readonly baseSeq: number;
+};
+
+function approvalAuditBlock(
+  input: ApprovalAuditBlockInput,
+  identity: RecoveryBatchIdentity,
+  offset: number,
+): string {
+  const escaped: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input.fields)) {
+    escaped[key] = escapeAuditValue(value);
+  }
+  return serializeJournalEntry({
+    schemaVersion: JOURNAL_SCHEMA_VERSION,
+    seq: identity.baseSeq + offset,
+    cloneId: identity.cloneId,
+    intentId: identity.intentId,
     timestamp: input.timestamp,
+    heading: input.heading,
     event: input.event,
-    fields: input.fields,
+    fields: escaped,
   });
 }
 
@@ -2720,16 +2746,19 @@ type RecoveredApprovalBatchInput = {
   readonly grantId?: string;
 };
 
-function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string[] {
+function buildRecoveredApprovalBatch(
+  input: RecoveredApprovalBatchInput,
+  identity: RecoveryBatchIdentity,
+): string[] {
   const common = { Stage: input.slug, "Transaction Id": input.transactionId };
-  return [
-    approvalAuditBlock({
+  const inputs: ApprovalAuditBlockInput[] = [
+    {
       heading: "Gate Rejected",
       event: "GATE_REJECTED",
       timestamp: input.timestamp,
       fields: { ...common, Feedback: RECOVERED_REVISION_FEEDBACK, Recovered: "true" },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Revising",
       event: "STAGE_REVISING",
       timestamp: input.timestamp,
@@ -2739,14 +2768,14 @@ function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string
         Feedback: RECOVERED_REVISION_FEEDBACK,
         Recovered: "true",
       },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Awaiting Approval",
       event: "STAGE_AWAITING_APPROVAL",
       timestamp: input.timestamp,
       fields: { ...common, Recovered: "true" },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Gate Approved",
       event: "GATE_APPROVED",
       timestamp: input.timestamp,
@@ -2755,28 +2784,33 @@ function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string
         ...(input.userInput ? { "User Input": input.userInput } : {}),
         ...(input.grantId ? { "Grant Id": input.grantId } : {}),
       },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Completion",
       event: "STAGE_COMPLETED",
       timestamp: input.timestamp,
       fields: { ...common, Details: `Stage ${input.stageName} approved by gate` },
-    }),
+    },
   ];
+  return inputs.map((entry, offset) => approvalAuditBlock(entry, identity, offset));
 }
 
 function commitRecoveredApprovalBatch(pd: string, input: RecoveredApprovalBatchInput): void {
-  const blocks = buildRecoveredApprovalBatch(input);
-
-  validateRecoveredApprovalBatch(blocks, input);
-
   const path = auditFilePath(
     pd,
     stateOperationTarget?.intent,
     stateOperationTarget?.space,
   );
   mkdirSync(dirname(path), { recursive: true });
-  const before = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
+  const before = existsSync(path) ? readFileSync(path, "utf-8") : "";
+  const blocks = buildRecoveredApprovalBatch(input, {
+    cloneId: auditCloneId(pd),
+    intentId: activeIntent(pd, stateOperationTarget?.space, stateOperationTarget?.intent) ?? "workspace",
+    baseSeq: splitJournalLines(before).length + 1,
+  });
+
+  validateRecoveredApprovalBatch(blocks, input);
+
   writeFileAtomic(path, before + blocks.join(""));
 }
 
@@ -3779,7 +3813,7 @@ function handleResume(_args: string[]): void {
   const currentCb = checkboxes.find((c) => c.slug === currentStage);
   const gateState = currentCb?.state ?? "unknown";
 
-  // Compaction detection — scan the tail of audit.md for a SESSION_COMPACTED
+  // Compaction detection — scan the audit tail for a SESSION_COMPACTED
   // event that has no subsequent stage activity. The orchestrator uses this
   // to surface the compaction-awareness prompt without a fragile shell pipeline.
   let compactionPending = false;

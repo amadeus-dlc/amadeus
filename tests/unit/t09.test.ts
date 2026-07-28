@@ -109,8 +109,8 @@ afterAll(() => {
 });
 
 // The shard the spawned hook resolves, computed from a clone-id pinned on disk
-// (mirrors auditShardName()'s `<host>-<clone>.md` shape). The pinned shard sorts
-// AFTER the baseline seed shard (named `0-seed.md`) so the glob-concatenated read
+// (mirrors auditShardName()'s `<host>-<clone>.jsonl` shape). The pinned shard sorts
+// AFTER the baseline seed shard (named `0-seed.jsonl`) so the glob-concatenated read
 // keeps the hook's NEW block LAST — preserving the .sh's end-of-file semantics.
 const PINNED_CLONE_ID = "testcloneid09";
 function pinnedShardName(): string {
@@ -120,14 +120,14 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 /**
  * Fresh project seeded for the per-intent audit layout: state (so the
  * active-intent cursor resolves and docsRoot()/auditFilePath() point at the
- * record), a baseline seed shard carrying the audit-sample.md SUBAGENT_COMPLETED
- * block (when `seed`), and the empty pinned shard the hook resolves so its
+ * record), a baseline seed shard carrying the audit-sample.jsonl SUBAGENT_COMPLETED
+ * record (when `seed`), and the empty pinned shard the hook resolves so its
  * "shard exists" gate passes. When `seed` is false, NO shard is created (test 3's
  * no-trail path). The clone-id token is pinned on disk for the spawned hook.
  */
@@ -139,8 +139,8 @@ function proj(seed = true): string {
   if (seed) {
     const auditDir = seededAuditDir(p);
     mkdirSync(auditDir, { recursive: true });
-    // Baseline (sorts first): the audit-sample.md SUBAGENT_COMPLETED block.
-    copyFileSync(join(FIXTURES_DIR, "audit-sample.md"), join(auditDir, "0-seed.md"));
+    // Baseline (sorts first): the audit-sample.jsonl SUBAGENT_COMPLETED record.
+    copyFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), join(auditDir, "0-seed.jsonl"));
     // The hook's own shard (sorts last): empty until the hook appends.
     writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
   }
@@ -161,7 +161,7 @@ function readShards(p: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
@@ -186,47 +186,37 @@ function runHook(payload: string, p: string): HookResult {
   return { status: res.status ?? -1 };
 }
 
-/** Count `**Event**: SUBAGENT_COMPLETED` block headings in a buffer. */
-function subagentCompletedCount(body: string): number {
+/** Parse a JSONL shard buffer into audit records (blank lines skipped). */
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  timestamp: string;
+  fields?: Record<string, string>;
+}
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => l === "**Event**: SUBAGENT_COMPLETED").length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count SUBAGENT_COMPLETED records in a JSONL shard buffer. */
+function subagentCompletedCount(body: string): number {
+  return auditRecords(body).filter((r) => r.event === "SUBAGENT_COMPLETED").length;
 }
 
 /**
- * Field values from the LAST audit block whose `**Event**:` is SUBAGENT_COMPLETED.
- * The seed already has one such block (audit-sample.md:19-26); the hook appends a
- * NEW one at end-of-file, so "last" isolates the row the hook just wrote — the
- * block-scoped equivalent of the .sh's file-wide grep, but pinned to the new row.
- * Splits `**label**: value` on the literal `**: ` separator (mirrors auditField in
- * t31.cli.test.ts). Returns the field map for that block; missing keys are absent.
+ * Field values from the LAST SUBAGENT_COMPLETED record in a JSONL shard buffer.
+ * The seed already carries one such record (audit-sample.jsonl); the hook
+ * appends a NEW one at end-of-file, so "last" isolates the row the hook just
+ * wrote — the record-scoped equivalent of the .sh's file-wide grep, but pinned
+ * to the new row. Returns `{ Event, ...fields }`; missing keys are absent.
  */
 function lastSubagentBlock(body: string): Record<string, string> {
-  let current: Record<string, string> | null = null;
-  let last: Record<string, string> = {};
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      current = null;
-      continue;
-    }
-    if (line === "---") {
-      current = null;
-      continue;
-    }
-    if (line === "**Event**: SUBAGENT_COMPLETED") {
-      current = { Event: "SUBAGENT_COMPLETED" };
-      last = current;
-      continue;
-    }
-    if (current && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        current[stripped.slice(0, pos)] = stripped.slice(pos + 4);
-      }
-    }
-  }
-  return last;
+  const hits = auditRecords(body).filter((r) => r.event === "SUBAGENT_COMPLETED");
+  const last = hits[hits.length - 1];
+  if (!last) return {};
+  return { Event: "SUBAGENT_COMPLETED", ...(last.fields ?? {}) };
 }
 
 /** Whole-buffer presence (mirrors a bare grep with no anchor). */

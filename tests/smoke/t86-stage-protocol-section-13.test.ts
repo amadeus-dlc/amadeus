@@ -188,10 +188,10 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
       expect(`${ok.stdout ?? ""}`.includes('"appended":true')).toBe(true);
       const auditDir = seededAuditDir(proj);
       const body = readdirSync(auditDir)
-        .filter((f) => f.endsWith(".md"))
+        .filter((f) => f.endsWith(".jsonl"))
         .map((f) => read(join(auditDir, f)))
         .join("\n");
-      expect(body.includes("**Event**: MEMORY_EMPTY")).toBe(true);
+      expect(body.includes('"event":"MEMORY_EMPTY"')).toBe(true);
 
       // Negative control: an unregistered event is REJECTED, proving the gate
       // is real and MEMORY_EMPTY's acceptance above is meaningful (not vacuous).

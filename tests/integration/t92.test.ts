@@ -277,76 +277,44 @@ function readAudit(proj: string): string {
   return readAllAuditShards(proj);
 }
 
-/** audit_event_count: count bodies with `**Event**: <type>` across the trail. */
-function auditEventCount(proj: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** The JSONL audit records across the merged trail (blank lines skipped). */
+function auditRecords(proj: string): Array<Record<string, unknown>> {
   return readAudit(proj)
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** audit_event_count: count records whose `event` is <type> across the trail. */
+function auditEventCount(proj: string, ev: string): number {
+  return auditRecords(proj).filter((r) => r.event === ev).length;
 }
 
 /**
  * audit_field (t92-sensor-fire.sh:153-176): value of <key> from the FIRST
- * audit block whose `**Event**:` matches <ev>. Walks the merged trail; resets
- * at `## ` headings and `---` separators; splits `**label**: value` on the
- * literal `**: ` separator.
+ * audit record whose `event` matches <ev>. Record-scoped, so a field can never
+ * bleed in from a neighbouring event. Timestamp lives at the record's top
+ * level; every other key lives under `fields`.
  */
 function auditField(proj: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of readAudit(proj).split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(proj).find((r) => r.event === ev);
+  if (!rec) return "";
+  if (key === "Timestamp") return (rec.timestamp as string) ?? "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 /**
- * audit_field_count (t92-sensor-fire.sh:183-198): count `**…**:` lines in
- * the FIRST audit block whose `**Event**:` matches <ev>.
+ * audit_field_count (t92-sensor-fire.sh:183-198): the number of labelled
+ * values the FIRST audit record whose `event` matches <ev> carries. The
+ * Markdown block rendered Timestamp and Event as two `**…**:` rows; in JSONL
+ * they are the top-level `timestamp` / `event` keys, so they still count 2.
  */
 function auditFieldCount(proj: string, ev: string): number {
-  let inSection = false;
-  let n = 0;
-  let matchesEv = false;
-  for (const line of readAudit(proj).split("\n")) {
-    if (line.startsWith("## ")) {
-      inSection = true;
-      n = 0;
-      matchesEv = false;
-      continue;
-    }
-    if (line === "---") {
-      if (inSection && matchesEv) return n;
-      inSection = false;
-      n = 0;
-      matchesEv = false;
-      continue;
-    }
-    if (inSection && line.startsWith("**Event**: ")) {
-      if (line === `**Event**: ${ev}`) matchesEv = true;
-    }
-    if (inSection && line.startsWith("**")) n++;
-  }
-  return matchesEv ? n : 0;
+  const rec = auditRecords(proj).find((r) => r.event === ev);
+  if (!rec) return 0;
+  return 2 + Object.keys((rec.fields ?? {}) as Record<string, string>).length;
 }
 
 const isInteger = (s: string): boolean => /^[0-9]+$/.test(s);
@@ -908,10 +876,9 @@ describe("t92 Group G: concurrency invariants", () => {
     expect(auditEventCount(f, "SENSOR_PASSED")).toBe(5);
     // Each Fire id appears exactly twice (FIRED + PASSED); count unique ids
     // that are paired. Mirrors the awk uniq -c | $1==2 | wc -l.
-    const ids = readAudit(f)
-      .split("\n")
-      .filter((l) => l.startsWith("**Fire id**: "))
-      .map((l) => l.slice("**Fire id**: ".length));
+    const ids = auditRecords(f)
+      .map((r) => ((r.fields ?? {}) as Record<string, string>)["Fire id"])
+      .filter((id): id is string => typeof id === "string");
     const counts = new Map<string, number>();
     for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
     const paired = [...counts.values()].filter((c) => c === 2).length;
@@ -942,9 +909,9 @@ describe("t92 Group G: concurrency invariants", () => {
       while (Date.now() < deadline) {
         if (
           existsSync(f) &&
-          readAudit(f)
-            .split("\n")
-            .some((l) => l === "**Sensor ID**: required-sections")
+          auditRecords(f).some(
+            (r) => ((r.fields ?? {}) as Record<string, string>)["Sensor ID"] === "required-sections",
+          )
         ) {
           break;
         }
@@ -960,9 +927,11 @@ describe("t92 Group G: concurrency invariants", () => {
     // only its FIRED row (1); linter has FIRED+PASSED (2) — proving the slow
     // fire released its lock between windows A and B.
     const f = proj;
-    const text = readAudit(f).split("\n");
-    const slowVisible = text.filter((l) => l === "**Sensor ID**: required-sections").length;
-    const fastVisible = text.filter((l) => l === "**Sensor ID**: linter").length;
+    const sensorIds = auditRecords(f).map(
+      (r) => ((r.fields ?? {}) as Record<string, string>)["Sensor ID"],
+    );
+    const slowVisible = sensorIds.filter((id) => id === "required-sections").length;
+    const fastVisible = sensorIds.filter((id) => id === "linter").length;
     await slowDone;
     expect(slowVisible).toBe(1);
     expect(fastVisible).toBe(2);

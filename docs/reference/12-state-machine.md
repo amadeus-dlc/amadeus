@@ -8,7 +8,7 @@ Three nested state machines drive AI-DLC: **workflow**, **phase**, and **stage**
 
 > **North-star invariant:** TypeScript owns deterministic bookkeeping; the LLM owns judgment. Every audit emission originates in a tool or hook, keeping LLM prose out of the emit path. If you're reading an MD file and see `amadeus-audit.ts append <EVENT>` as a prose instruction, that is a bug.
 >
-> **Audit-first atomicity:** tools emit their audit entries *before* mutating state. If audit emission fails, the tool throws before touching state — so `audit.md` and the state file never disagree. The ["Audit-first atomicity" section](#audit-first-atomicity) near the end of this chapter spells out the failure modes.
+> **Audit-first atomicity:** tools emit their audit entries *before* mutating state. If audit emission fails, the tool throws before touching state — so the audit shard and the state file never disagree. The ["Audit-first atomicity" section](#audit-first-atomicity) near the end of this chapter spells out the failure modes.
 
 ---
 
@@ -377,10 +377,10 @@ Every event in the taxonomy is either backed by a real emitter or marked `Reserv
 
 State-mutating commands emit their audit entries **before** mutating the state file. Two consequences:
 
-1. If audit emission fails (lock timeout, disk error, invalid event type), the tool throws before touching state. The state stays at its previous value; audit.md stays clean.
+1. If audit emission fails (lock timeout, disk error, invalid event type), the tool throws before touching state. The state stays at its previous value; the audit shard stays clean.
 2. If state writing fails *after* audit emission, the audit has an "intent" entry but the state didn't move. The drift is visible and diagnosable; `--doctor` surfaces it.
 
-The case `test("65: approve is audit-first ...")` in `tests/unit/t17.test.ts` proves this for `approve`: chmod'ing audit.md to read-only forces an audit failure and asserts the state file stays at `[?]` (not `[x]`). The same invariant holds for `gate-start`, `reject`, `revise`, `skip`, `advance`, `complete-workflow`, `reuse-artifact`, `amadeus-bolt.ts set-autonomy`, and `amadeus-state.ts fork` / `amadeus-state.ts merge` (the state fork/merge subcommands — see `tests/unit/t76.test.ts` for the equivalent chmod-the-lock-dir Part A and chmod-the-target-after-emit Part B proofs).
+The case `test("65: approve is audit-first ...")` in `tests/unit/t17.test.ts` proves this for `approve`: chmod'ing the audit shard to read-only forces an audit failure and asserts the state file stays at `[?]` (not `[x]`). The same invariant holds for `gate-start`, `reject`, `revise`, `skip`, `advance`, `complete-workflow`, `reuse-artifact`, `amadeus-bolt.ts set-autonomy`, and `amadeus-state.ts fork` / `amadeus-state.ts merge` (the state fork/merge subcommands — see `tests/unit/t76.test.ts` for the equivalent chmod-the-lock-dir Part A and chmod-the-target-after-emit Part B proofs).
 
 State fork/merge are deliberately NOT in the audit-of-intent exception below: re-reading and re-writing a state file is idempotent (unlike `git worktree add`, which leaves the worktree present after a kill-9 between emit and git), so the strict invariant applies cleanly. A failed state write after a successful audit emit becomes a phantom `STATE_FORKED` row that doctor reconciles against the worktree's record-dir `amadeus-state.md` existence.
 
@@ -401,7 +401,7 @@ This is a deliberate departure from the strict audit-first invariant for stage t
 Don't emit audit events from LLM prose. The following anti-patterns are the reason this refactor exists:
 
 - `bun .claude/tools/amadeus-audit.ts append WORKFLOW_STARTED ...` as a step in SKILL.md — replaced by the tool emitting it internally
-- `**Event**: STAGE_COMPLETED` markdown block written by a stage file — events only come from `appendAuditEntry` in a tool or hook
+- A hand-written `STAGE_COMPLETED` journal record appended by a stage file — events only come from `appendAuditEntry` in a tool or hook
 - Freeform `## Artifact Update` sections written by hooks — replaced by canonical `ARTIFACT_CREATED` / `ARTIFACT_UPDATED`
 
 The drift test at `tests/integration/t48-audit-event-emitters.test.ts` catches drift between this chapter's tables and the code: every event in the tables must have a matching `appendAuditEntry(..., "EVENT", ...)` call in the declared emitter file, and every emission call site in the codebase must appear in the tables. The test also guards against deleted events being resurrected and against pairing invariants (e.g., `handleApprove` must emit both `GATE_APPROVED` and `STAGE_COMPLETED`).
@@ -421,7 +421,7 @@ Specifically:
 
 ## Known limitations
 
-- **Multi-project sessions.** Claude Code doesn't fire a hook on `cd` within a session, so if a user runs `/amadeus` in project A and then `cd`s to project B, the session hooks won't re-fire against B's audit.md. Session events may not perfectly reflect every workspace switch. This is a Claude Code limitation, not an AI-DLC design flaw.
+- **Multi-project sessions.** Claude Code doesn't fire a hook on `cd` within a session, so if a user runs `/amadeus` in project A and then `cd`s to project B, the session hooks won't re-fire against B's audit shards. Session events may not perfectly reflect every workspace switch. This is a Claude Code limitation, not an AI-DLC design flaw.
 
 ---
 

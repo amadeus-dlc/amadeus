@@ -93,6 +93,12 @@
 // under tests/fixtures/**.
 
 import { afterAll, describe, expect, test } from "bun:test";
+
+// Standalone hermeticity: the suite runner (tests/run-tests.ts) injects these
+// guard bypasses into every test file's env, so a bare `bun test <this file>`
+// otherwise trips the artifact / phase-check gates these jump cases do not seed.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -147,6 +153,9 @@ interface CliResult {
 function jump(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
+    // bun does not fold runtime process.env edits into a child implicitly, so
+    // the guard defaults above have to be handed over explicitly.
+    env: { ...process.env },
   });
   const stdout = res.stdout ?? "";
   return {
@@ -160,6 +169,7 @@ function jump(args: string[], p: string): CliResult {
 function stateGet(field: string, p: string): CliResult {
   const res = spawnSync(BUN, [STATE_TOOL, "get", field, "--project-dir", p], {
     encoding: "utf-8",
+    env: { ...process.env },
   });
   const stdout = res.stdout ?? "";
   return {
@@ -174,12 +184,22 @@ function readState(p: string): string {
   return readFileSync(statePath(p), "utf-8");
 }
 
-/** Count audit blocks with `**Event**: <ev>` in a buffer (the .sh's grep, as a count). */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+interface AuditRecord {
+  event: string | null;
+  fields?: Record<string, string>;
+}
+
+/** Every JSONL audit record in a merged shard buffer, in file order. */
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count audit records of one event type (the .sh's grep, as a count). */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
 }
 
 /**
@@ -189,29 +209,10 @@ function auditEventCount(body: string, ev: string): number {
  * t31.cli.test.ts. Returns "" when absent.
  */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
+  for (const rec of auditRecords(body)) {
+    if (rec.event !== ev) continue;
+    const value = rec.fields?.[key];
+    if (value !== undefined) return value;
   }
   return "";
 }

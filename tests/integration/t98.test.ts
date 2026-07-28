@@ -221,12 +221,12 @@ const byFireId = (firings: SensorFiring[], id: string): SensorFiring | undefined
 
 // ============================================================
 // Pairing — single-stage code-generation with mixed terminals
-// (.sh "Pairing" block, audit-sensor-pairing.md)
+// (.sh "Pairing" block, audit-sensor-pairing.jsonl)
 // ============================================================
 
 describe("t98 sensor_firings pairing (migrated from t98-sensor-firings-populator.sh, plan 16)", () => {
   // Compiled once; the pairing fixture's graph is reused by 1-4, 8, 9, 16.
-  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-sensor-pairing.md"));
+  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-sensor-pairing.jsonl"));
   const rc = runCompile(PROJ);
   const sf = (): SensorFiring[] => stage(readGraph(PROJ), "code-generation").sensor_firings;
 
@@ -257,7 +257,7 @@ describe("t98 sensor_firings pairing (migrated from t98-sensor-firings-populator
     expect(byFireId(sf(), "dddd0004")?.result).toBe("incomplete");
   });
 
-  // --- Determinism + sort (audit-sensor-pairing.md graph) ---
+  // --- Determinism + sort (audit-sensor-pairing.jsonl graph) ---
 
   test("8: re-compile produces byte-equivalent runtime-graph.json (no wall-clock)", () => {
     const before = sha256(PROJ);
@@ -286,11 +286,11 @@ describe("t98 sensor_firings pairing (migrated from t98-sensor-firings-populator
 });
 
 // ============================================================
-// Open-window orphan cutoff (audit-orphan-open-window.md)
+// Open-window orphan cutoff (audit-orphan-open-window.jsonl)
 // ============================================================
 
 describe("t98 open-window orphan cutoff", () => {
-  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-orphan-open-window.md"));
+  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-orphan-open-window.jsonl"));
   runCompile(PROJ);
   const sf = (): SensorFiring[] => stage(readGraph(PROJ), "code-generation").sensor_firings;
 
@@ -305,11 +305,11 @@ describe("t98 open-window orphan cutoff", () => {
 });
 
 // ============================================================
-// 4 parallel FIRED, interleaved terminals (audit-4-parallel-interleaved.md)
+// 4 parallel FIRED, interleaved terminals (audit-4-parallel-interleaved.jsonl)
 // ============================================================
 
 describe("t98 four-parallel fire_id pairing", () => {
-  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-4-parallel-interleaved.md"));
+  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-4-parallel-interleaved.jsonl"));
   runCompile(PROJ);
 
   test("7: 4 parallel FIRED, interleaved terminals -> each paired by fire_id (not positional)", () => {
@@ -327,11 +327,11 @@ describe("t98 four-parallel fire_id pairing", () => {
 });
 
 // ============================================================
-// BoltInstance worktree-scoped attribution (audit-3-bolts-sensors.md)
+// BoltInstance worktree-scoped attribution (audit-3-bolts-sensors.jsonl)
 // ============================================================
 
 describe("t98 BoltInstance worktree-scoped firings", () => {
-  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-3-bolts-sensors.md"));
+  const PROJ = makeProjectWithAudit(join(FIXTURES_DIR, "audit-3-bolts-sensors.jsonl"));
   runCompile(PROJ);
   const cg = (): StageRow => stage(readGraph(PROJ), "code-generation");
   // biome-ignore lint/suspicious/noExplicitAny: instances shape exercised structurally
@@ -358,11 +358,11 @@ describe("t98 BoltInstance worktree-scoped firings", () => {
 });
 
 // ============================================================
-// learnings_captured (audit-learnings-captured.md + milestone 11 failed rollup)
+// learnings_captured (audit-learnings-captured.jsonl + milestone 11 failed rollup)
 // ============================================================
 
 describe("t98 learnings_captured", () => {
-  const PROJ_L = makeProjectWithAudit(join(FIXTURES_DIR, "audit-learnings-captured.md"));
+  const PROJ_L = makeProjectWithAudit(join(FIXTURES_DIR, "audit-learnings-captured.jsonl"));
   runCompile(PROJ_L);
 
   test("13: approved stage learnings_captured = {from_orchestrator:2, from_user_addition:1}", () => {
@@ -377,7 +377,7 @@ describe("t98 learnings_captured", () => {
   });
 
   test("15: instance-bearing parent (any-failed rollup) learnings_captured = null (invariant)", () => {
-    const projF = makeProjectWithAudit(join(MILESTONE11_DIR, "audit-3-bolts-1-failed.md"));
+    const projF = makeProjectWithAudit(join(MILESTONE11_DIR, "audit-3-bolts-1-failed.jsonl"));
     runCompile(projF);
     expect(stage(readGraph(projF), "code-generation").learnings_captured).toBeNull();
   });
@@ -399,7 +399,7 @@ describe("t98 learnings_captured", () => {
 
 describe("t98 #761 instance-bearing approved parent learnings", () => {
   const PROJ_A = makeProjectWithAudit(
-    join(FIXTURES_DIR, "audit-instance-learnings-approved.md"),
+    join(FIXTURES_DIR, "audit-instance-learnings-approved.jsonl"),
   );
   const rcA = runCompile(PROJ_A);
   const cgA = (): StageRow => stage(readGraph(PROJ_A), "code-generation");
@@ -471,7 +471,7 @@ describe("t98 #761 instance-bearing approved parent learnings", () => {
 
 describe("t98 #761 instance-bearing pending parent stays null", () => {
   const PROJ_P = makeProjectWithAudit(
-    join(FIXTURES_DIR, "audit-instance-learnings-pending.md"),
+    join(FIXTURES_DIR, "audit-instance-learnings-pending.jsonl"),
   );
   runCompile(PROJ_P);
 

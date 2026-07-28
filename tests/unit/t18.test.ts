@@ -86,6 +86,23 @@ function auditPath(proj: string): string {
   return auditFilePath(proj);
 }
 
+interface AuditRecord {
+  seq: number;
+  timestamp: string;
+  heading: string;
+  event: string | null;
+  fields?: Record<string, string>;
+  rawBody?: string;
+}
+
+/** The JSONL records on the in-process shard, in write order. */
+function records(proj: string): AuditRecord[] {
+  return readFileSync(auditPath(proj), "utf-8")
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
 function withProject(fn: (proj: string) => void): void {
   const proj = makeProject();
   try {
@@ -106,97 +123,98 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
     });
   });
 
-  test("first write prepends the AI-DLC Audit Log header [.sh test 2]", () => {
+  test("first write starts the shard at the first JSONL record (no header) [.sh test 2]", () => {
     withProject((proj) => {
       appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
       const body = readFileSync(auditPath(proj), "utf-8");
-      // ensureAuditFile seeds "# AI-DLC Audit Log\n" before the first block.
-      expect(body.includes("# AI-DLC Audit Log")).toBe(true);
-      expect(body.startsWith("# AI-DLC Audit Log\n")).toBe(true);
+      // JSONL shards carry NO header — the first byte opens the first record,
+      // whose seq starts the shard's 1-based dense sequence.
+      expect(body.startsWith("{")).toBe(true);
+      expect(records(proj)).toHaveLength(1);
+      expect(records(proj)[0].seq).toBe(1);
     });
   });
 
-  test("writes the **Event**: <type> line [.sh test 3]", () => {
+  test("writes the event type into the record's `event` key [.sh test 3]", () => {
     withProject((proj) => {
       appendAuditEntry(
         "STAGE_COMPLETED",
         { Stage: "workspace-scaffold", Details: "Done" },
         proj,
       );
-      const body = readFileSync(auditPath(proj), "utf-8");
-      expect(body.includes("**Event**: STAGE_COMPLETED")).toBe(true);
+      expect(records(proj)[0].event).toBe("STAGE_COMPLETED");
     });
   });
 
-  test("writes each field as **key**: value [.sh test 4a + 4b]", () => {
+  test("writes each field into the record's fields map [.sh test 4a + 4b]", () => {
     withProject((proj) => {
       appendAuditEntry(
         "STAGE_COMPLETED",
         { Stage: "intent-capture", Details: "Q&A done" },
         proj,
       );
-      const body = readFileSync(auditPath(proj), "utf-8");
-      // .sh test 4a: Stage field value present, as a **Stage**: line.
-      expect(body.includes("**Stage**: intent-capture")).toBe(true);
-      // .sh test 4b: Details field value present, as a **Details**: line.
-      expect(body.includes("**Details**: Q&A done")).toBe(true);
+      const fields = records(proj)[0].fields ?? {};
+      // .sh test 4a: Stage field value present.
+      expect(fields.Stage).toBe("intent-capture");
+      // .sh test 4b: Details field value present.
+      expect(fields.Details).toBe("Q&A done");
     });
   });
 
-  test("writes an ISO **Timestamp** line (...Z, no millis) [.sh test 5]", () => {
+  test("writes an ISO timestamp (...Z, no millis) [.sh test 5]", () => {
     withProject((proj) => {
       const result = appendAuditEntry("HEALTH_CHECKED", { Details: "All pass" }, proj);
-      const body = readFileSync(auditPath(proj), "utf-8");
       // Same regex the .sh grepped for: YYYY-MM-DDTHH:MM:SSZ (isoTimestamp
-      // strips millis). Assert on disk bytes AND the returned timestamp.
-      const isoRe = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/;
-      expect(isoRe.test(body)).toBe(true);
-      expect(body.includes(`**Timestamp**: ${result.timestamp}`)).toBe(true);
+      // strips millis). Assert on the record on disk AND the returned timestamp.
+      const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+      expect(records(proj)[0].timestamp).toBe(result.timestamp);
       expect(isoRe.test(result.timestamp)).toBe(true);
     });
   });
 
-  test("two appends produce exactly two --- separators [.sh test 8]", () => {
+  test("two appends produce exactly two records [.sh test 8]", () => {
     withProject((proj) => {
       appendAuditEntry("STAGE_STARTED", { Stage: "workspace-scaffold" }, proj);
       appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
-      const body = readFileSync(auditPath(proj), "utf-8");
-      // .sh counted lines starting with "---" (grep -c "^---"). Each block
-      // closes with "\n---\n", so two appends => two such lines.
-      const sepLines = body.split("\n").filter((l) => l === "---").length;
-      expect(sepLines).toBe(2);
+      // The .sh counted the `---` block separators; the JSONL equivalent is the
+      // record count — one line per append, with a dense 1-based seq.
+      const rows = records(proj);
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.seq)).toEqual([1, 2]);
+      expect(rows.map((r) => r.event)).toEqual(["STAGE_STARTED", "STAGE_COMPLETED"]);
     });
   });
 
-  test("writes a standalone --- separator line [.sh test 10]", () => {
+  test("terminates each record with a newline (one record per line) [.sh test 10]", () => {
     withProject((proj) => {
       appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
       const body = readFileSync(auditPath(proj), "utf-8");
-      // Equivalent of grep "^---$": a line that is exactly "---".
-      expect(body.split("\n").some((l) => l === "---")).toBe(true);
+      // The .sh's `---` separator became the JSONL line boundary: exactly one
+      // trailing newline, and no embedded newline inside the record.
+      expect(body.endsWith("\n")).toBe(true);
+      expect(body.split("\n").filter((l) => l !== "")).toHaveLength(1);
     });
   });
 });
 
 describe("appendAuditEntry() — event-type heading + validation (in-process)", () => {
-  test("maps WORKSPACE_SCANNED to the '## Workspace Scanned' heading [.sh test 11]", () => {
+  test("maps WORKSPACE_SCANNED to the 'Workspace Scanned' heading [.sh test 11]", () => {
     withProject((proj) => {
       appendAuditEntry("WORKSPACE_SCANNED", { Details: "Greenfield" }, proj);
-      const body = readFileSync(auditPath(proj), "utf-8");
-      // EVENT_HEADINGS["WORKSPACE_SCANNED"] === "Workspace Scanned".
-      expect(body.includes("## Workspace Scanned")).toBe(true);
+      // EVENT_HEADINGS["WORKSPACE_SCANNED"] === "Workspace Scanned" — now the
+      // record's `heading` key rather than a `## ` Markdown line.
+      expect(records(proj)[0].heading).toBe("Workspace Scanned");
     });
   });
 
   test("accepts the WORKSPACE_SCANNED initialization event [.sh test 12]", () => {
     withProject((proj) => {
       const result = appendAuditEntry("WORKSPACE_SCANNED", { Details: "test" }, proj);
-      const body = readFileSync(auditPath(proj), "utf-8");
       // Event type is in VALID_EVENT_TYPES, so it lands without throwing and
-      // the **Event**: line appears.
+      // the record's `event` key carries it.
       expect(result.appended).toBe(true);
       expect(result.event).toBe("WORKSPACE_SCANNED");
-      expect(body.includes("**Event**: WORKSPACE_SCANNED")).toBe(true);
+      expect(records(proj)[0].event).toBe("WORKSPACE_SCANNED");
     });
   });
 
@@ -300,9 +318,16 @@ describe("amadeus-audit CLI shell (Bun.spawnSync env seam)", () => {
       expect(r.exitCode).toBe(0);
       // The subprocess mints its own clone-id, so read every shard (glob) rather
       // than the in-process shard name.
-      const body = readAllAuditShards(proj);
-      // handleAppendRaw writes "\n## <heading>\n..." verbatim.
-      expect(body.includes("## Custom Event")).toBe(true);
+      const raw = readAllAuditShards(proj)
+        .split("\n")
+        .filter((l) => l.trim() !== "")
+        .map((l) => JSON.parse(l) as { heading: string; event: string | null; rawBody?: string });
+      // handleAppendRaw lands an untyped record: event null, the custom heading
+      // on the envelope, and the body preserved verbatim.
+      expect(raw).toHaveLength(1);
+      expect(raw[0].heading).toBe("Custom Event");
+      expect(raw[0].event).toBeNull();
+      expect(raw[0].rawBody).toBe("**Event**: CUSTOM\n**Details**: Something happened");
     });
   });
 });

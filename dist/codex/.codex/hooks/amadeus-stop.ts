@@ -235,7 +235,7 @@ function blockStop(reason: string): never {
 // --- Recursion guard: a durable no-progress counter ---------------------------
 //
 // We persist a tiny JSON record keyed on the workflow's PROGRESS SIGNATURE: the
-// Current Stage slug plus the audit-tail length (line count of audit.md). A
+// Current Stage slug plus the audit-tail length (record count of the audit shards). A
 // `report` that advances the workflow pivots the stage and/or appends audit
 // rows, so the signature changes — that is how we detect "progress was made
 // since the last block". When the signature is unchanged across two blocks, no

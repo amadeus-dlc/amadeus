@@ -26,7 +26,7 @@
 //   dist/claude/.claude/tools/amadeus-audit.ts:214 appendAuditEntry — acquires
 //     the audit lock (acquireAuditLock), appends one block, then releases it
 //     (releaseAuditLock) in a finally (:225-233). The block format is
-//     "\n## <heading>\n**Timestamp**: ...\n**Event**: ...\n<fields>\n---\n".
+//     one JSONL record line: {"schemaVersion":1,"seq":..,"timestamp":..,"event":..,"fields":{..}}.
 //   dist/claude/.claude/tools/amadeus-lib.ts:512 auditLockDir(projectDir) =
 //     join(tmpdir(), `.amadeus-audit-${md5(projectDir).slice(0,8)}.lock`); the
 //     mkdir-based mutex (acquireAuditLock :517, releaseAuditLock :536). The .sh
@@ -35,7 +35,7 @@
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_audit_file):
 //   - createTestProject() -> a fresh temp dir with amadeus-docs/.
-//   - seedAuditFile() -> copies tests/fixtures/audit-sample.md to
+//   - seedAuditFile() -> copies tests/fixtures/audit-sample.jsonl to
 //     amadeus-docs/audit.md, which carries exactly ONE ARTIFACT_CREATED block
 //     (INITIAL_ENTRIES = 1, verified against the fixture). The hook self-gates
 //     on audit.md existing, so seeding it is the precondition for the emit.
@@ -101,17 +101,36 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
+
+// Record count in tests/fixtures/audit-sample.jsonl (the seeded baseline).
+const SEEDED_RECORDS = 3;
 
 // The audit trail read as one buffer (every per-clone shard, merge-concatenated).
 function readAudit(p: string): string {
   return readAllAuditShards(p);
 }
 
-/** Count occurrences of an "**Event**: <type>" line. */
+type AuditRecord = {
+  schemaVersion?: number;
+  seq?: number;
+  timestamp?: string;
+  event: string | null;
+  fields?: Record<string, string>;
+};
+
+/** Parse the JSONL audit buffer into records (one per non-blank line). */
+function auditRecords(body: string): AuditRecord[] {
+  return body
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count records carrying event <type>. */
 function eventCount(body: string, type: string): number {
-  return body.split("\n").filter((l) => l.trim() === `**Event**: ${type}`).length;
+  return auditRecords(body).filter((r) => r.event === type).length;
 }
 
 /**
@@ -153,12 +172,12 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     seedStateFile(proj, join(FIXTURES_DIR, "state-mid-ideation.md"));
     // Pin the clone-id + plant the one-block baseline INTO the resolved shard, so
     // all five processes resolve + append to this single shard (the audit-logger's
-    // "shard exists" gate passes for each). audit-sample.md carries exactly one
-    // ARTIFACT_CREATED block (INITIAL_ENTRIES = 1).
+    // "shard exists" gate passes for each). audit-sample.jsonl carries exactly one
+    // ARTIFACT_CREATED record (INITIAL_ENTRIES = 1) among its three records.
     writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(proj);
     mkdirSync(auditDir, { recursive: true });
-    copyFileSync(join(FIXTURES_DIR, "audit-sample.md"), join(auditDir, pinnedShardName()));
+    copyFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), join(auditDir, pinnedShardName()));
   });
 
   afterEach(() => {
@@ -201,24 +220,20 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
   test("no interleaved/corrupted blocks — counts are mutually consistent [.sh test 7]", async () => {
     await fireParallel(proj, 5);
     const body = readAudit(proj);
-    const lines = body.split("\n");
-    const sepCount = lines.filter((l) => l === "---").length;
-    const eventLines = lines.filter((l) => l.trim().startsWith("**Event**:")).length;
-    // .sh test 7: SEPARATOR_COUNT >= FINAL_ENTRIES (>= number of blocks).
-    // Each well-formed block closes with a standalone "---", so separators must
-    // be at least the number of event blocks. STRONGER than the .sh: a
-    // concurrency bug that interleaved two appends would either drop a "---" or
-    // double-write a header, breaking this one-block-one-separator-one-event
-    // invariant. With one seeded block (SESSION_STARTED + ARTIFACT_CREATED +
-    // SUBAGENT_COMPLETED = 3 events / 3 separators) plus five appends, we get
-    // 8 events and at least 8 separators, all intact.
-    expect(sepCount).toBeGreaterThanOrEqual(eventLines);
-    // And every "**Event**:" line is immediately preceded by a "**Timestamp**:"
-    // line — proving no header/field interleaving from a torn concurrent write.
-    for (let idx = 0; idx < lines.length; idx++) {
-      if (lines[idx].trim().startsWith("**Event**:")) {
-        expect(lines[idx - 1]?.trim().startsWith("**Timestamp**:")).toBe(true);
-      }
+    const lines = body.split("\n").filter((l) => l.trim() !== "");
+    // .sh test 7 counted separators vs blocks. The JSONL equivalent — and a
+    // STRONGER one — is that EVERY line is a complete, self-contained record:
+    // a concurrency bug that interleaved two appends would leave a line that
+    // fails JSON.parse or lacks the envelope fields. One line = one block.
+    const records = auditRecords(body);
+    expect(records.length).toBe(lines.length);
+    // The seeded trail (3 records) plus five parallel appends = 8 intact records.
+    expect(records.length).toBe(SEEDED_RECORDS + 5);
+    for (const record of records) {
+      expect(record.schemaVersion).toBe(1);
+      expect(typeof record.seq).toBe("number");
+      expect(typeof record.timestamp).toBe("string");
+      expect(record.timestamp).not.toBe("");
     }
   }, 30000);
 

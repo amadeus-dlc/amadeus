@@ -259,15 +259,28 @@ describe("t160 audit shards — per-clone, glob-merge read", () => {
     const auditDir = join(recordDir(proj, "auth-aaaaaaaa") as string, "audit");
     mkdirSync(auditDir, { recursive: true });
     // Two distinct clone shards.
-    writeFileSync(join(auditDir, "hostA-1001.md"), "## A\n**Timestamp**: 2026-01-01T00:00:01Z\n**Event**: STAGE_STARTED\n\n---\n", "utf-8");
-    writeFileSync(join(auditDir, "hostB-2002.md"), "## B\n**Timestamp**: 2026-01-01T00:00:02Z\n**Event**: STAGE_COMPLETED\n\n---\n", "utf-8");
+    const row = (seq: number, clone: string, ts: string, event: string): string =>
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq,
+        cloneId: clone,
+        intentId: "auth-aaaaaaaa",
+        timestamp: ts,
+        heading: event,
+        event,
+        fields: {},
+      })}\n`;
+    writeFileSync(join(auditDir, "hostA-1001.jsonl"), row(1, "1001", "2026-01-01T00:00:01Z", "STAGE_STARTED"), "utf-8");
+    writeFileSync(join(auditDir, "hostB-2002.jsonl"), row(1, "2002", "2026-01-01T00:00:02Z", "STAGE_COMPLETED"), "utf-8");
     const shards = auditShards(proj, "auth-aaaaaaaa");
     expect(shards.length).toBe(2);
     const merged = readAllAuditShards(proj, "auth-aaaaaaaa");
-    expect(merged).toContain("STAGE_STARTED");
-    expect(merged).toContain("STAGE_COMPLETED");
-    // Both blocks parse (separator preserved across the concat join).
-    expect(merged.split("\n---\n").filter((b) => b.includes("**Event**")).length).toBe(2);
+    // Both records survive the concat join and parse back as JSONL.
+    const events = merged
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => (JSON.parse(l) as { event: string | null }).event);
+    expect(events).toEqual(["STAGE_STARTED", "STAGE_COMPLETED"]);
   });
 });
 

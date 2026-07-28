@@ -187,7 +187,7 @@ Gitignore:
   - amadeus/spaces/*/intents/.amadeus-*                        (no-intent fallback root)
 ```
 
-The audit trail is committed as **per-clone shards** (`audit/<host>-<clone>.md`): each clone appends to its own shard, so concurrent appends never git-conflict. Per-user session cursors and machine-local derived state are ignored.
+The audit trail is committed as **per-clone shards** (`audit/<host>-<clone>.jsonl`): each clone appends to its own shard, so concurrent appends never git-conflict. Per-user session cursors and machine-local derived state are ignored.
 
 ---
 
@@ -311,7 +311,7 @@ An MCP server appearing in the session is a function of MCP config plus availabl
 | Stage protocol | `stage-protocol.md` | Every stage execution | Mandatory behavioral contract |
 | Stage files | `stages/**/*.md` | Engine routing | 32 individual stage definitions |
 | State file | `amadeus-state.md` | Session start + throughout | Persistent workflow state |
-| Audit file | `audit.md` | Throughout execution | Append-only audit trail |
+| Audit file | `audit/<host>-<clone>.jsonl` | Throughout execution | Append-only audit trail |
 
 ### Loading Sequence
 

@@ -132,17 +132,30 @@ function create(p: string, args: string[]): CliResult {
 const wtPath = (p: string, slug: string): string =>
   join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
-/** Concatenate every audit shard (audit/*.md) for the seeded record. */
+/** Concatenate every audit shard (audit/*.jsonl) for the seeded record. */
 const auditText = (p: string): string => {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
+
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse the merged JSONL shards into records (blank lines skipped). */
+const auditRecords = (p: string): AuditRecord[] =>
+  auditText(p)
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as AuditRecord);
 
 /**
  * Probe whether this platform enforces read-only directory permissions —
@@ -190,11 +203,12 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
       const p = freshFixture();
       // Audit is a per-clone shard DIR now: lock the audit/ DIR read-only so the
       // audit-first emit can't create its shard, the per-clone analog of the old
-      // chmod-0444 on the single audit.md. The shipped fixture.md shard is the
-      // only content; the "not mutated" check stays exact.
+      // chmod-0444 on the single audit.md. The seeded fixture.jsonl shard is
+      // the only content (the JSONL ledger has no header, so it starts empty);
+      // the "not mutated" check stays exact.
       const auditDir = seededAuditDir(p);
       mkdirSync(auditDir, { recursive: true });
-      writeFileSync(join(auditDir, "fixture.md"), "# AI-DLC Audit Log\n", "utf-8");
+      writeFileSync(join(auditDir, "fixture.jsonl"), "", "utf-8");
       chmodSync(auditDir, 0o555);
 
       const r = create(p, ["--slug", "demo", "--base", "main"]);
@@ -207,7 +221,7 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
       expect(existsSync(wtPath(p, "demo"))).toBe(false);
       // A3: the audit was NOT mutated — no WORKTREE_CREATED row (emit failed
       // pre-git) ...
-      const after = auditText(p);
+      const after = auditRecords(p).map((r) => r.event);
       expect(after).not.toContain("WORKTREE_CREATED");
       // ... and STRONGER than the .sh: no ERROR_LOGGED row either (the audit dir
       // was itself read-only, so emitError's best-effort write also failed).
@@ -241,14 +255,18 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
       // B1: create exits non-zero (git failed post-audit).
       expect(r.status).not.toBe(0);
 
-      const after = auditText(p);
+      const after = auditRecords(p);
       // B2: WORKTREE_CREATED audit-of-intent row landed BEFORE the git failure.
-      expect(after).toContain("WORKTREE_CREATED");
+      expect(after.map((r) => r.event)).toContain("WORKTREE_CREATED");
       // B3: ERROR_LOGGED appended after git failed.
-      expect(after).toContain("ERROR_LOGGED");
+      const errors = after.filter((r) => r.event === "ERROR_LOGGED");
+      expect(errors.length).toBeGreaterThanOrEqual(1);
       // B4: the ERROR_LOGGED Error field carries [slug=demo] for doctor
-      // correlation (errorWithSlug, amadeus-worktree.ts:810).
-      expect(after).toContain("[slug=demo]");
+      // correlation (errorWithSlug, amadeus-worktree.ts:810) — record-scoped,
+      // so the tag cannot be read off a neighbouring event.
+      expect(
+        errors.some((r) => Object.values(r.fields ?? {}).some((v) => v.includes("[slug=demo]"))),
+      ).toBe(true);
     },
     30000,
   );

@@ -52,6 +52,20 @@ afterAll(() => {
   cleanupSoloGateRoots();
 });
 
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse a JSONL audit shard buffer into records (blank lines skipped). */
+function auditRecords(shardBody: string): AuditRecord[] {
+  return shardBody
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as AuditRecord);
+}
+
 describe("solo gate approval transaction", () => {
   test("pins a valid grant commit to the receipt owner after a cursor switch", () => {
     const { root, owner } = setup(
@@ -83,8 +97,12 @@ describe("solo gate approval transaction", () => {
       join(owner, "audit", auditShardName(root)),
       "utf-8",
     );
-    expect(ownerAudit).toContain("**Event**: GATE_APPROVED");
-    expect(ownerAudit).toContain(`**Grant Id**: ${GRANT_ID}`);
+    // Record-scoped: the Grant Id rides on the GATE_APPROVED record itself.
+    expect(
+      auditRecords(ownerAudit).some(
+        (r) => r.event === "GATE_APPROVED" && r.fields?.["Grant Id"] === GRANT_ID,
+      ),
+    ).toBe(true);
   });
 
   test("falls back through a session reservation and commits targeted human approval", () => {
@@ -283,13 +301,12 @@ describe("solo gate approval transaction", () => {
       join(owner, "audit", auditShardName(root)),
       "utf-8",
     );
-    expect(ownerAudit).toContain(`**Grant Id**: ${GRANT_ID}`);
-    const approvedBlock = ownerAudit
-      .split(/\n---\n/)
-      .filter((block) => block.includes("**Event**: GATE_APPROVED"));
-    expect(approvedBlock).toHaveLength(1);
-    expect(approvedBlock[0]).toContain(`**Grant Id**: ${GRANT_ID}`);
-    expect(approvedBlock[0]).not.toContain(higherPriority);
+    const approved = auditRecords(ownerAudit).filter(
+      (r) => r.event === "GATE_APPROVED",
+    );
+    expect(approved).toHaveLength(1);
+    expect(approved[0]!.fields?.["Grant Id"]).toBe(GRANT_ID);
+    expect(approved[0]!.fields?.["Grant Id"]).not.toBe(higherPriority);
   });
 
   test("rejects the carrier in team mode before any mutation", () => {

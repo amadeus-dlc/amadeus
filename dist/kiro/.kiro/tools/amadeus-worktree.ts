@@ -730,8 +730,8 @@ export function handleList(
 // Usage: amadeus-worktree verify --event <WORKTREE_*> --slug <slug>
 //                              [--max-age-seconds <n>]
 //
-// Greps `amadeus-docs/audit.md` for the most recent block matching both
-// `**Event**: <event>` and `**Bolt slug**: <slug>`. Read-only — no audit
+// Scans the intent's audit shards for the most recent record matching both
+// Event <event> and Bolt slug <slug>. Read-only — no audit
 // emission. The orchestrator's deterministic post-dispatch backstop.
 function handleVerify(args: string[]): void {
   const flags = parseFlags(args);

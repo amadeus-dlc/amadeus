@@ -457,7 +457,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5583-5585",
+    "lines": "5654-5656",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
@@ -1622,19 +1622,19 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-runtime.ts",
-    "lines": "813",
+    "lines": "805",
     "reason": "MEMORY_EMPTY re-emission dedup runs only inside the spawned compile path; the single-line predicate delegates to auditBlockField (covered in-process by t351) and the timestamp compare. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the compile MEMORY_EMPTY path gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "3788",
+    "lines": "3822",
     "reason": "Resume-payload compaction flag is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the resume verb gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "3842",
+    "lines": "3876",
     "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when acknowledge-compaction gains an in-process seam test"
   },
@@ -1643,5 +1643,41 @@
     "lines": "289-298",
     "reason": "import.meta.main CLI wrapper — spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
     "expiry": "remove if the wrapper gains an in-process seam or the module stops being imported in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "lines": "389",
+    "reason": "priorAuditRow idempotency predicate runs only inside the spawned learnings persist CLI (t97/t99 drive the process boundary and prove the dedup behaviourally); the single-line predicate delegates to auditBlockField, covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when learnings persist gains an in-process seam test"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "750",
+    "reason": "Live-tier SDK harness helper: the shard listing runs only under the SDK substrate (t196/t197 .sdk tests SKIP without it), so the line is 0-stamped in the default CI lcov. Exercised by the live tier.",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "761",
+    "reason": "Same live-tier SDK harness path as line 750 (readAuditText shard listing).",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "790-795",
+    "reason": "readAuditEvents JSONL/legacy parse branches run only under the live SDK substrate (same class as lines 750/761).",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/solo-gate-fixture.ts",
+    "lines": "151-152",
+    "reason": "Defensive catch in the filler-event counter: reachable only when a seeded filler line is invalid JSON, which the serializer construction prevents. Fail-safe (counts the line as non-event).",
+    "expiry": "remove if the counter gains a malformed-line fixture"
+  },
+  {
+    "file": "tests/harness/solo-gate-fixture.ts",
+    "lines": "252",
+    "reason": "Fail-closed guard in breakGrantIssuerIntent: throws only when no record carries the seeded Issuer Intent, which the fixture construction makes impossible; the guard exists so a future seeding change fails loud instead of silently no-opping (the exact defect class this rewrite fixed).",
+    "expiry": "remove if a negative-fixture test drives the throw"
   }
 ]

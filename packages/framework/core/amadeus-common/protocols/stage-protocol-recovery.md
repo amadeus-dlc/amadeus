@@ -18,7 +18,7 @@ where the workflow stands by reading five sources, in this order:
 2. **`memory.md` per stage** (`<record>/<phase>/<stage>/memory.md`) — what
    got noticed during the decision-making (interpretations, deviations,
    trade-offs, open questions).
-3. **Audit log** (`<record>/audit/<host>-<clone>.md`, glob `<record>/audit/*.md`) —
+3. **Audit log** (`<record>/audit/<host>-<clone>.jsonl`, glob `<record>/audit/*.md`) —
    when each event happened and which gates the user approved. This is the
    canonical, append-only source of truth for "what happened"; the trail is
    per-clone sharded, so glob `audit/*.md` and merge-sort by timestamp.
@@ -152,7 +152,7 @@ When errors or issues are detected during workflow execution, classify them by s
 **Escalation guidelines:**
 - **Critical / High**: Stop and ask the user immediately. Do not attempt to proceed or guess.
 - **Medium**: Attempt resolution (e.g., re-read artifacts, infer from context). If unresolved, ask the user.
-- **Low**: Handle silently and log in `<record>/audit/<host>-<clone>.md`. No user interruption needed.
+- **Low**: Handle silently and log in `<record>/audit/<host>-<clone>.jsonl`. No user interruption needed.
 
 ### Contradictory inputs recovery
 If user inputs from different stages contradict each other (detected during execution):
@@ -160,7 +160,7 @@ If user inputs from different stages contradict each other (detected during exec
 2. Do NOT attempt to resolve the contradiction by choosing one interpretation
 3. Ask the user which input takes priority
 4. Update the overridden artifact to reflect the user's resolution
-5. Log the resolution in `<record>/audit/<host>-<clone>.md`
+5. Log the resolution in `<record>/audit/<host>-<clone>.jsonl`
 
 ---
 
@@ -208,7 +208,7 @@ Generation.
 4. Update amadeus-state.md to reflect re-run
 
 ### Scope changes (new requirements):
-1. Document the change in `<record>/audit/<host>-<clone>.md`
+1. Document the change in `<record>/audit/<host>-<clone>.jsonl`
 2. Return to requirements-analysis or delivery-planning as appropriate
 3. Re-plan execution from that point forward
 4. If scope change affects which stages execute (e.g., expanding from `poc` to `feature`), update scope configuration in amadeus-state.md

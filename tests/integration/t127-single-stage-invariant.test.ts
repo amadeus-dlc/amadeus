@@ -113,12 +113,21 @@ function currentStage(proj: string): string {
  * count_event (t127:38-40): audit rows of one event type. The .sh grepped
  * `^**Event**: <TYPE>$`; here we count lines that equal `**Event**: <TYPE>`.
  */
-function countEvent(proj: string, event: string): number {
+function auditRecords(proj: string): {
+  event: string | null;
+  fields?: Record<string, string>;
+}[] {
   // P9: the synthetic pair lands in the seeded record's per-clone shard
   // (seedAuditFile pins the clone-id, so the report subprocess and the test
   // resolve the SAME shard), not the flat amadeus-docs/audit.md.
-  const body = readFileSync(seededAuditShard(proj), "utf-8");
-  return body.split("\n").filter((l) => l === `**Event**: ${event}`).length;
+  return readFileSync(seededAuditShard(proj), "utf-8")
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+}
+
+function countEvent(proj: string, event: string): number {
+  return auditRecords(proj).filter((r) => r.event === event).length;
 }
 
 // ===========================================================================
@@ -229,13 +238,11 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
       "report", "--single", "--stage", "code-generation", "--result", "completed",
       "--project-dir", proj,
     ]);
-    const body = readFileSync(seededAuditShard(proj), "utf-8");
     // syntheticWorkflowId("code-generation") === "single-stage:code-generation".
     // STRONGER than the .sh's single grep: BOTH committed rows must carry the
-    // `**Workflow**: single-stage:code-generation` tag (the .sh proved one).
-    const tagged = body
-      .split("\n")
-      .filter((l) => l === "**Workflow**: single-stage:code-generation").length;
+    // `Workflow: single-stage:code-generation` field (the .sh proved one).
+    const tagged = auditRecords(proj)
+      .filter((r) => r.fields?.Workflow === "single-stage:code-generation").length;
     expect(tagged).toBe(2);
   });
 

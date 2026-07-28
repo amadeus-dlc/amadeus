@@ -13,9 +13,12 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import {
   appendAuditEntry,
-  formatAuditRecord,
   handleAuditMerge,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+} from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import {
   auditFilePath,
   relativeRecordDir,
@@ -88,7 +91,10 @@ function captureRun(fn: () => void): { exited: boolean; stdout: string; stderr: 
 }
 
 const SLUG = "u1-merge-seam";
-const MAIN_LEDGER = "# AI-DLC Audit Log\n";
+const SEED_IDENTITY = { schemaVersion: JOURNAL_SCHEMA_VERSION, cloneId: "seedclone0001", intentId: "seed-intent" };
+const seedLine = (seq: number, event: string, ts: string, fields: Record<string, string> = {}) =>
+  serializeJournalEntry({ ...SEED_IDENTITY, seq, timestamp: ts, heading: event, event, fields });
+const MAIN_LEDGER = seedLine(1, "WORKFLOW_STARTED", "2026-07-28T09:00:00Z");
 
 function seedProject(): string {
   const p = createTestProject();
@@ -112,27 +118,22 @@ function seedWtShard(
   mkdirSync(dirname(wtShard), { recursive: true });
   const fields = opts.anchorFields ?? {
     "Bolt slug": SLUG,
-    "Source Audit Hash": createHash("sha256").update(MAIN_LEDGER).digest("hex"),
-    "Fork Boundary": String(Buffer.byteLength(MAIN_LEDGER, "utf-8")),
+    "Source Audit Hash": createHash("sha256").update(MAIN_LEDGER, "utf-8").digest("hex"),
+    "Fork Boundary": "1",
   };
-  const anchor = formatAuditRecord({
-    heading: "Audit Forked",
-    timestamp: "2026-07-28T11:00:00Z",
-    event: "AUDIT_FORKED",
-    fields,
-  });
+  const anchor = seedLine(2, "AUDIT_FORKED", "2026-07-28T11:00:00Z", fields);
   writeFileSync(wtShard, MAIN_LEDGER + anchor + (opts.deltas ?? []).join(""), "utf-8");
   return wtShard;
 }
 
-const delta = (event: string, ts: string) =>
-  formatAuditRecord({ heading: event, timestamp: ts, event, fields: { "Bolt slug": SLUG } });
+const delta = (seq: number, event: string, ts: string) =>
+  seedLine(seq, event, ts, { "Bolt slug": SLUG });
 
 describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
   test("happy path: appends the delta verbatim and emits AUDIT_MERGED with the count", () => {
     proj = seedProject();
     seedWtShard(proj, {
-      deltas: [delta("BOLT_STARTED", "2026-07-28T11:01:00Z"), delta("BOLT_COMPLETED", "2026-07-28T11:02:00Z")],
+      deltas: [delta(3, "BOLT_STARTED", "2026-07-28T11:01:00Z"), delta(4, "BOLT_COMPLETED", "2026-07-28T11:02:00Z")],
     });
     const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
     expect(run.exited).toBe(false);
@@ -140,10 +141,10 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     expect(out.emitted).toBe("AUDIT_MERGED");
     expect(out.entries_merged ?? out.entriesMerged ?? out["Entries Merged"]).toBeDefined();
     const main = readFileSync(auditFilePath(proj), "utf-8");
-    expect(main).toContain("**Event**: BOLT_STARTED");
-    expect(main).toContain("**Event**: BOLT_COMPLETED");
-    expect(main).toContain("**Event**: AUDIT_MERGED");
-    expect(main).toContain("**Entries Merged**: 2");
+    expect(main).toContain('"event":"BOLT_STARTED"');
+    expect(main).toContain('"event":"BOLT_COMPLETED"');
+    expect(main).toContain('"event":"AUDIT_MERGED"');
+    expect(main).toContain('"Entries Merged":"2"');
   });
 
   test("malformed anchor (missing Fork Boundary) refuses via jsonError", () => {
@@ -151,7 +152,7 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     seedWtShard(proj, {
       anchorFields: {
         "Bolt slug": SLUG,
-        "Source Audit Hash": createHash("sha256").update(MAIN_LEDGER).digest("hex"),
+        "Source Audit Hash": createHash("sha256").update(MAIN_LEDGER, "utf-8").digest("hex"),
       },
     });
     const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
@@ -165,7 +166,7 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
       anchorFields: {
         "Bolt slug": SLUG,
         "Source Audit Hash": "0".repeat(64),
-        "Fork Boundary": String(Buffer.byteLength(MAIN_LEDGER, "utf-8")),
+        "Fork Boundary": "1",
       },
     });
     const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));

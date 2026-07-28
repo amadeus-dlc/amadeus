@@ -160,7 +160,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 function pinnedShardPath(proj: string): string {
   return join(seededAuditDir(proj), pinnedShardName());
@@ -231,9 +231,24 @@ function makeProject(): string {
   return proj;
 }
 
+/** One JSONL audit record — the shard format the stop hook line-counts for its
+ *  progress signature. */
+function auditRow(seq: number): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: PINNED_CLONE_ID,
+    intentId: DEFAULT_RECORD_DIR,
+    timestamp: `2026-01-01T00:00:0${seq}.000Z`,
+    heading: "Stage Started",
+    event: "STAGE_STARTED",
+    fields: { "Stage slug": "requirements-analysis" },
+  });
+}
+
 /** Write the audit fixture into the pinned per-clone shard (the stop hook reads
  *  auditFilePath(projectDir) — that exact shard — for the progress signature). */
-function seedAuditShard(proj: string, body = "audit row 1\n"): void {
+function seedAuditShard(proj: string, body = `${auditRow(1)}\n`): void {
   mkdirSync(seededAuditDir(proj), { recursive: true });
   writeFileSync(pinnedShardPath(proj), body, "utf-8");
 }
@@ -821,7 +836,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       "- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: stage-b\n",
       "utf-8",
     );
-    seedAuditShard(proj, "audit row 1\naudit row 2\n");
+    seedAuditShard(proj, `${auditRow(1)}\n${auditRow(2)}\n`);
     runHook(proj, '{"stop_hook_active":true}', "run-stage", "8");
     const countAfter = guardCount(proj);
     // .sh: count_after == 1 && count_before != 1. After two no-progress blocks

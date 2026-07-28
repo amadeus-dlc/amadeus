@@ -174,24 +174,32 @@ function readMainAudit(proj: string): string {
   const dir = seededAuditDir(proj);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md"));
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
   } catch {
     return "";
   }
-  // Split each shard into `\n---\n`-separated blocks, tag each with its
-  // **Timestamp**, then stable-sort across all shards by timestamp.
+  // One JSONL record per line; tag each with its `timestamp`, then stable-sort
+  // across all shards by timestamp.
   const blocks: { ts: string; text: string }[] = [];
   for (const n of names) {
-    const body = readFileSync(join(dir, n), "utf-8");
-    for (const raw of body.split("\n---\n")) {
-      if (!raw.includes("**Event**:")) continue;
-      const tsLine = raw.split("\n").find((l) => l.startsWith("**Timestamp**:")) ?? "";
-      const ts = tsLine.replace("**Timestamp**:", "").trim();
-      blocks.push({ ts, text: raw });
+    for (const raw of readFileSync(join(dir, n), "utf-8").split("\n")) {
+      const line = raw.trim();
+      if (!line.startsWith("{")) continue;
+      const rec = JSON.parse(line) as Record<string, unknown>;
+      if (typeof rec.event !== "string") continue;
+      blocks.push({ ts: (rec.timestamp as string) ?? "", text: line });
     }
   }
   blocks.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
-  return blocks.map((b) => b.text).join("\n---\n");
+  return blocks.map((b) => b.text).join("\n");
+}
+
+/** The timestamp-sorted JSONL records of main's audit shards. */
+function mainAuditRecords(proj: string): Array<Record<string, unknown>> {
+  return readMainAudit(proj)
+    .split("\n")
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
 /** The single `Bolt Refs` line from main's state (the .sh's `grep "Bolt Refs" | head -1`). */
@@ -200,32 +208,15 @@ function boltRefsLine(proj: string): string {
   return state.split("\n").find((l) => l.includes("Bolt Refs")) ?? "";
 }
 
-/** The ordered list of `**Event**: <TYPE>` event types in main's audit shards. */
+/** The ordered list of event types in main's audit shards. */
 function auditEvents(proj: string): string[] {
-  return readMainAudit(proj)
-    .split("\n")
-    .filter((l) => l.startsWith("**Event**:"))
-    .map((l) => l.replace("**Event**:", "").trim());
+  return mainAuditRecords(proj).map((r) => r.event as string);
 }
 
-/** The lines of the LAST `**Event**: <type>` block in main audit (for block-scoped field checks). */
-function lastEventBlock(proj: string): string[] {
-  const audit = readMainAudit(proj);
-  const lines = audit.split("\n");
-  let start = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].startsWith("**Event**:")) {
-      start = i;
-      break;
-    }
-  }
-  if (start < 0) return [];
-  const out: string[] = [];
-  for (let i = start; i < lines.length; i++) {
-    if (i > start && lines[i].startsWith("**Event**:")) break;
-    out.push(lines[i]);
-  }
-  return out;
+/** The LAST audit record in main audit (for record-scoped field checks). */
+function lastEventRecord(proj: string): Record<string, unknown> | undefined {
+  const recs = mainAuditRecords(proj);
+  return recs[recs.length - 1];
 }
 
 describe("t78 amadeus-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-worktree-lifecycle.sh, plan 13)", () => {
@@ -256,10 +247,10 @@ describe("t78 amadeus-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-w
 
     test("L1: forked worktree audit file exists [.sh T3]", () => {
       // Audit is now a per-clone shard DIR; audit-fork copies the main shard into
-      // <wt>/<record>/audit/, so at least one *.md shard exists there.
+      // <wt>/<record>/audit/, so at least one *.jsonl shard exists there.
       const wtAuditDir = join(wtRecordDir(proj, slug), "audit");
       const shards = existsSync(wtAuditDir)
-        ? readdirSync(wtAuditDir).filter((f) => f.endsWith(".md"))
+        ? readdirSync(wtAuditDir).filter((f) => f.endsWith(".jsonl"))
         : [];
       expect(shards.length).toBeGreaterThan(0);
     });
@@ -341,9 +332,9 @@ describe("t78 amadeus-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-w
     test("L2: abort BOLT_FAILED carries Reason=aborted [.sh T8]", () => {
       // STRONGER: Reason=aborted is block-scoped to the BOLT_FAILED row, not a
       // file-wide grep — sub-classifier vs the plain `fail` verb.
-      const block = lastEventBlock(proj);
-      expect(block[0]).toContain("BOLT_FAILED");
-      expect(block.some((l) => l.trim() === "**Reason**: aborted")).toBe(true);
+      const record = lastEventRecord(proj);
+      expect(record?.event).toBe("BOLT_FAILED");
+      expect(((record?.fields ?? {}) as Record<string, string>).Reason).toBe("aborted");
     });
   });
 

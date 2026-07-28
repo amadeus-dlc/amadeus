@@ -8,7 +8,7 @@
 
 > **北極星となる不変条件:** TypeScript が決定論的な記録管理を所有し、LLM が判断を所有します。すべての監査発行はツールまたはフックに起源を持ち、LLM の散文を emit パスから排除します。MD ファイルを読んでいて `amadeus-audit.ts append <EVENT>` が散文の指示として書かれているのを見つけたら、それはバグです。
 >
-> **Audit-first アトミック性:** ツールは状態を変更する *前に* 監査エントリを発行します。監査発行が失敗した場合、ツールは状態に触れる前に例外を投げます — したがって `audit.md` と状態ファイルが食い違うことはありません。本章末尾近くの[「Audit-first アトミック性」セクション](#audit-first-atomicity)が障害モードを詳述します。
+> **Audit-first アトミック性:** ツールは状態を変更する *前に* 監査エントリを発行します。監査発行が失敗した場合、ツールは状態に触れる前に例外を投げます — したがって監査シャードと状態ファイルが食い違うことはありません。本章末尾近くの[「Audit-first アトミック性」セクション](#audit-first-atomicity)が障害モードを詳述します。
 
 ---
 
@@ -377,10 +377,10 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 
 状態を変更するコマンドは、状態ファイルを変更する **前に** 監査エントリを発行します。2つの帰結があります:
 
-1. 監査発行が失敗した場合(ロックタイムアウト、ディスクエラー、無効なイベント型)、ツールは状態に触れる前に例外を投げます。状態は以前の値のまま、audit.md はクリーンなままです。
+1. 監査発行が失敗した場合(ロックタイムアウト、ディスクエラー、無効なイベント型)、ツールは状態に触れる前に例外を投げます。状態は以前の値のまま、監査シャードはクリーンなままです。
 2. 監査発行の *後に* 状態書き込みが失敗した場合、監査には「意図」エントリがあるが状態は動いていない状態になります。ドリフトは可視で診断可能であり、`--doctor` がそれを表面化します。
 
-`tests/unit/t17.test.ts` のケース `test("65: approve is audit-first ...")` は `approve` についてこれを証明します: audit.md を chmod で読み取り専用にすると監査失敗が強制され、状態ファイルが `[?]` のまま(`[x]` ではない)であることをアサートします。同じ不変条件は `gate-start`、`reject`、`revise`、`skip`、`advance`、`complete-workflow`、`reuse-artifact`、`amadeus-bolt.ts set-autonomy`、`amadeus-state.ts fork` / `amadeus-state.ts merge`(状態 fork/merge サブコマンド — 同等の chmod-the-lock-dir Part A および chmod-the-target-after-emit Part B の証明については `tests/unit/t76.test.ts` を参照)についても成立します。
+`tests/unit/t17.test.ts` のケース `test("65: approve is audit-first ...")` は `approve` についてこれを証明します: 監査シャードを chmod で読み取り専用にすると監査失敗が強制され、状態ファイルが `[?]` のまま(`[x]` ではない)であることをアサートします。同じ不変条件は `gate-start`、`reject`、`revise`、`skip`、`advance`、`complete-workflow`、`reuse-artifact`、`amadeus-bolt.ts set-autonomy`、`amadeus-state.ts fork` / `amadeus-state.ts merge`(状態 fork/merge サブコマンド — 同等の chmod-the-lock-dir Part A および chmod-the-target-after-emit Part B の証明については `tests/unit/t76.test.ts` を参照)についても成立します。
 
 状態の fork/merge は、意図的に下記の audit-of-intent 例外に **含まれていません**: 状態ファイルの再読み取りと再書き込みは冪等です(`git worktree add` とは異なり、これは emit と git の間の kill-9 の後に worktree を残します)。したがって厳格な不変条件がきれいに適用されます。監査発行成功後の状態書き込み失敗は、doctor が worktree の record ディレクトリの `amadeus-state.md` の存在に対して照合するファントム `STATE_FORKED` 行になります。
 
@@ -401,7 +401,7 @@ audit-of-intent セマンティクスは、発行前に結果を確認できな�
 LLM の散文から監査イベントを発行してはいけません。以下のアンチパターンがこのリファクタリングが存在する理由です:
 
 - SKILL.md のステップとしての `bun .claude/tools/amadeus-audit.ts append WORKFLOW_STARTED ...` — ツールが内部でそれを発行する形に置き換えられた
-- ステージファイルが書く `**Event**: STAGE_COMPLETED` markdown ブロック — イベントはツールまたはフック内の `appendAuditEntry` からのみ来る
+- ステージファイルが手書きで追記する `STAGE_COMPLETED` ジャーナルレコード — イベントはツールまたはフック内の `appendAuditEntry` からのみ来る
 - フックが書くフリーフォームの `## Artifact Update` セクション — 正典の `ARTIFACT_CREATED` / `ARTIFACT_UPDATED` に置き換えられた
 
 `tests/integration/t48-audit-event-emitters.test.ts` のドリフトテストは、本章のテーブルとコードの間のドリフトを捕捉します: テーブル内のすべてのイベントは、宣言されたエミッタファイル内にマッチする `appendAuditEntry(..., "EVENT", ...)` 呼び出しを持たなければならず、コードベース内のすべての発行呼び出し箇所はテーブルに現れなければなりません。テストはまた、削除されたイベントの復活に対して、およびペアリング不変条件に対して(例: `handleApprove` は `GATE_APPROVED` と `STAGE_COMPLETED` の両方を発行しなければならない)ガードします。
@@ -421,7 +421,7 @@ LLM の散文から監査イベントを発行してはいけません。以下�
 
 ## Known limitations
 
-- **マルチプロジェクトセッション。** Claude Code はセッション内の `cd` でフックを発火しません。したがって、ユーザーがプロジェクト A で `/amadeus` を実行してからプロジェクト B に `cd` した場合、session フックは B の audit.md に対して再発火しません。session イベントはすべてのワークスペース切り替えを完全には反映しないことがあります。これは Claude Code の制限であり、AI-DLC の設計上の欠陥ではありません。
+- **マルチプロジェクトセッション。** Claude Code はセッション内の `cd` でフックを発火しません。したがって、ユーザーがプロジェクト A で `/amadeus` を実行してからプロジェクト B に `cd` した場合、session フックは B の監査シャードに対して再発火しません。session イベントはすべてのワークスペース切り替えを完全には反映しないことがあります。これは Claude Code の制限であり、AI-DLC の設計上の欠陥ではありません。
 
 ---
 

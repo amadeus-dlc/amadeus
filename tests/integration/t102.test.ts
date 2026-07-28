@@ -122,30 +122,44 @@ function runCompile(proj: string, ...args: string[]): SpawnResult {
   return { rc: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
-// Standard 1-stage approved audit, intent-capture / ideation (t102:37-62).
-const AUDIT_APPROVED = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-**Request**: /amadeus feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-**Details**: done
-
----`;
+// Standard 1-stage approved audit, intent-capture / ideation (t102:37-62),
+// in the JSONL ledger format (one record per line, no header).
+const AUDIT_APPROVED = [
+  {
+    seq: 1,
+    timestamp: "2026-05-27T10:00:00Z",
+    heading: "Workflow Start",
+    event: "WORKFLOW_STARTED",
+    fields: { Scope: "feature", Request: "/amadeus feature" },
+  },
+  {
+    seq: 2,
+    timestamp: "2026-05-27T10:01:00Z",
+    heading: "Stage Start",
+    event: "STAGE_STARTED",
+    fields: { Stage: "intent-capture", Agent: "amadeus-product-agent" },
+  },
+  {
+    seq: 3,
+    timestamp: "2026-05-27T10:05:00Z",
+    heading: "Stage Completion",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "intent-capture", Details: "done" },
+  },
+]
+  .map((r) =>
+    JSON.stringify({
+      schemaVersion: 1,
+      seq: r.seq,
+      cloneId: "testclone0102",
+      intentId: DEFAULT_RECORD_DIR,
+      timestamp: r.timestamp,
+      heading: r.heading,
+      event: r.event,
+      fields: r.fields,
+    }),
+  )
+  .join("\n") + "\n";
 
 // state cursor (t102:64-68).
 const STATE_FEATURE = [
@@ -207,7 +221,9 @@ function readGraph(proj: string): any {
 function memoryEmptyCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
-    .filter((l) => l === "**Event**: MEMORY_EMPTY").length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === "MEMORY_EMPTY").length;
 }
 
 describe("t102 memory.md producer -> runtime compile round-trip (migrated from t102-memory-roundtrip.sh, plan 6)", () => {

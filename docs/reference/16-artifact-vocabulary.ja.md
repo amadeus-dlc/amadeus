@@ -52,7 +52,7 @@ consumes:
   「ファイルシステムマッピング」を参照。
 - **ファイル名。** ディスク上の `.md` ファイルと正規名は一致する必要はありません
   (衝突時を除き、通常は一致します)。
-- **状態のプラミング。** `amadeus-state.md`、`audit.md`、`.amadeus-recovery.md` は
+- **状態のプラミング。** `amadeus-state.md`、`audit/` シャード、`.amadeus-recovery.md` は
   ツール(`amadeus-state.ts`、フックスクリプト)によって管理され、ステージがどちらかの出力リストで
   管理するものではありません。これらはレジストリに一切現れません。
 - **ランタイム値。** "user's prose answer" や

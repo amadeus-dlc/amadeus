@@ -43,7 +43,7 @@ MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
 Read the state template from `.opencode/knowledge/amadeus-shared/state-template.md`.
 Overwrite `<record>/amadeus-state.md` with the full populated version:
-- Project description (from orchestrator's $ARGUMENTS or `<record>/audit/<host>-<clone>.md`)
+- Project description (from orchestrator's $ARGUMENTS or `<record>/audit/<host>-<clone>.jsonl`)
 - Project type (greenfield/brownfield from workspace-detection)
 - Workspace state (languages, frameworks, build system from workspace-detection)
 - Start date — run `date -u +'%Y-%m-%dT%H:%M:%SZ'` via Bash
@@ -97,7 +97,7 @@ Update amadeus-state.md with the routing decision:
 ### Step 5: Update State and Audit
 
 1. Mark state-init as `[x]` completed in `<record>/amadeus-state.md`
-2. Append WORKSPACE_INITIALISED event to `<record>/audit/<host>-<clone>.md` with project type and tech stack summary
+2. Append WORKSPACE_INITIALISED event to `<record>/audit/<host>-<clone>.jsonl` with project type and tech stack summary
 
 ### Step 6: Auto-Proceed
 

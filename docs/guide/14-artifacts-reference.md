@@ -16,7 +16,7 @@ directory structure, per-artifact descriptions, lifecycle, and git policy.
 amadeus/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
   amadeus-state.md                    # Workflow state (commit)
   audit/                            # Audit trail — per-clone shards (commit)
-    <host>-<clone>.md               # this clone's shard; readers glob + merge by timestamp
+    <host>-<clone>.jsonl            # this clone's shard; readers glob + merge by timestamp
   .amadeus-recovery.md                # Recovery breadcrumb (gitignore)
   runtime-graph.json                # Execution telemetry view (gitignore)
 
@@ -222,7 +222,7 @@ cursors and machine-local derived state are ignored.
 | Commit | Gitignore |
 |--------|-----------|
 | `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent` (per-user cursors) |
-| `audit/*.md` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` / `intents/.amadeus-*` (transient breadcrumbs; the latter is the no-intent fallback root) |
+| `audit/*.jsonl` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` / `intents/.amadeus-*` (transient breadcrumbs; the latter is the no-intent fallback root) |
 | All stage artifacts | `runtime-graph.json` (re-derivable from the audit shards) |
 | `verification/` phase check results | `amadeus/.amadeus-clone-id` (names this clone's shard; must stay machine-local) |
 | Space-level `amadeus/knowledge/` team knowledge files | `amadeus/.amadeus-sessions/` (per-conversation session→intent map) |
