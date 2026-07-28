@@ -68,7 +68,13 @@ function decideAppend(
   return ok([...ledger, ballot]);
 }
 
-export function healthyBaselineSubject(electionId = "arm-s-election"): SubjectPort {
+export function healthyBaselineSubject(
+  electionId = "arm-s-election",
+  // Declared roster — must match arm-s-runner's ELECTION.voters (FR-05 keys on
+  // election.voters.length, not ballots present at tally time).
+  voters: readonly string[] = ["V1", "V2", "V3"],
+): SubjectPort {
+  const roster = [...voters];
   return {
     validate(raw: RawBallot, subject: SubjectElection) {
       const ballotElectionId = raw.electionId ?? subject.electionId;
@@ -107,7 +113,7 @@ export function healthyBaselineSubject(electionId = "arm-s-election"): SubjectPo
       return resolveBallots(models).map((m) => source.get(m)!);
     },
     tally(choiceNos: number[], ballots: ArmBallot[]): SubjectTally {
-      const election = toElection({ electionId, voters: [], choices: choiceNos });
+      const election = toElection({ electionId, voters: roster, choices: choiceNos });
       const result = tally(election, ballots.map((b) => toModel(b, electionId)));
       if (result.kind === "hold") return { kind: "hold", reason: result.reason };
       return { kind: "established", winner: result.winner.internalNo };

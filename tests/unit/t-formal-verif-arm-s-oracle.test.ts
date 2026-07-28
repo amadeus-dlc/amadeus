@@ -85,6 +85,14 @@ describe("arm-s independent tally oracle (BR-13)", () => {
     const result = expectedTally(choices, [ballot("V1", 2, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 1, "2026-07-20T00:00:00Z"), ballot("V3", 1, 1, "2026-07-20T00:00:00Z")]);
     expect(result).toEqual({ kind: "established", winner: 2 });
   });
+  test("declared 2-voter favor vs against is split (FR-05), not established", () => {
+    const result = expectedTally(
+      choices,
+      [ballot("V1", 1, 1, "2026-07-20T00:00:00Z"), ballot("V2", 1, 7, "2026-07-20T00:00:00Z")],
+      2,
+    );
+    expect(result).toEqual({ kind: "hold", reason: "split" });
+  });
   test("tallyEqual discriminates kind, reason, and winner", () => {
     expect(tallyEqual({ kind: "hold", reason: "tie" }, { kind: "hold", reason: "block" })).toBe(false);
     expect(tallyEqual({ kind: "established", winner: 1 }, { kind: "established", winner: 2 })).toBe(false);

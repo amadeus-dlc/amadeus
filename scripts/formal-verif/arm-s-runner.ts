@@ -236,7 +236,9 @@ function assembleSequence(originals: SequenceAction[], amends: SequenceAction[],
   const post = submissions.slice(cut);
   const sequence: SequenceAction[] = [...pre, { kind: "TALLY" }, ...post];
   const preBallots = pre.map(submissionBallot).filter((b): b is ArmBallot => b !== null);
-  if (wantHold && expectedTally(CHOICES, preBallots).kind === "hold") sequence.push({ kind: "RECORD_HOLD" });
+  if (wantHold && expectedTally(CHOICES, preBallots, ELECTION.voters.length).kind === "hold") {
+    sequence.push({ kind: "RECORD_HOLD" });
+  }
   return sequence;
 }
 
@@ -310,7 +312,7 @@ const PROPERTIES: Array<{ id: PropertyId; holds: (subject: SubjectPort, actions:
       // equal the independent oracle over the pre-tally resolved ledger, and
       // reversing the CHOICE display must not move the outcome (ballots carry
       // internalNo).
-      const expected = expectedTally(CHOICES, run.ledgerAtTally);
+      const expected = expectedTally(CHOICES, run.ledgerAtTally, ELECTION.voters.length);
       const reChoiced = subject.tally([...CHOICES].reverse(), subject.resolve(run.ledgerAtTally));
       return tallyEqual(run.subjectTally, expected) && tallyEqual(run.subjectTally, reChoiced);
     },
