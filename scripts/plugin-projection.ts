@@ -559,6 +559,13 @@ function manualComposeCommand(harnessDir: string): string {
   return `bun ${harnessDir}/tools/amadeus-plugin.ts compose`;
 }
 
+// The one-operation alternative to the manual folder copy (U2 `install` verb):
+// it stages the source folder under the same discovery dir this doc names and
+// composes in the same step.
+function installVerbCommand(harnessDir: string): string {
+  return `bun ${harnessDir}/tools/amadeus-plugin.ts install <path>`;
+}
+
 // The harness-neutral auto-compose snippet a folder-drop-auto face ships. Kept
 // format-neutral on purpose: the harness-native embedding (codex config.toml,
 // kiro agents.json, kimi .toml) is U4 hook-wiring, not U3 projection.
@@ -596,6 +603,8 @@ export function installDoc(name: string, harnessDir: string, clazz: PluginHostCl
   }
   lines.push(
     `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/${PLUGIN_SOURCE_DIR_NAME}/${name}/`)} under your project root (the harness directory ${code("compose")} scans, and the one the engine reads plugin stages back from).`,
+    "",
+    `Or stage and compose in one operation with ${code(installVerbCommand(harnessDir))}, where ${code("<path>")} is this bundle's ${code(`plugins/${name}/`)} folder.`,
     "",
   );
   if (clazz === "manual-only") {
