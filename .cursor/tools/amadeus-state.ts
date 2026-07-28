@@ -6,13 +6,14 @@ import {
   appendAuditEntry,
   appendAuditEntryUnlocked,
   appendLifecycleAuditEntryUnlocked,
-  escapeAuditValue,
+  formatAuditRecord,
 } from "./amadeus-audit.ts";
 import {
   activeIntent,
   clearActiveIntentCursor,
   activeSpace,
   auditBlockField,
+  splitAuditRecords,
   auditFilePath,
   auditShardDir,
   auditShardName,
@@ -417,12 +418,10 @@ function emitAudit(
   }
 }
 
+// Thin alias over the shared accessor — kept so existing call sites read
+// naturally; the physical field format is owned by amadeus-lib.
 function auditField(block: string, fieldName: string): string | null {
-  const prefix = `**${fieldName}**:`;
-  for (const line of block.split("\n")) {
-    if (line.startsWith(prefix)) return line.slice(prefix.length).trim();
-  }
-  return null;
+  return auditBlockField(block, fieldName);
 }
 
 function hasStageAuditEvent(
@@ -2454,9 +2453,35 @@ function assertHumanPresentForGateResolution(
   );
 }
 
+// Compaction detection over the merged audit buffer: true when the most
+// recent SESSION_COMPACTED record has no later stage activity or explicit
+// recovery. Buffer order (not timestamp order) mirrors the historical tail
+// scan this replaced — within the common single-shard case they coincide.
+const COMPACTION_PROGRESS_EVENTS = new Set([
+  "STAGE_STARTED",
+  "STAGE_COMPLETED",
+  "GATE_APPROVED",
+  "SESSION_RESUMED",
+  "RECOVERY_COMPLETED",
+]);
+
+export function compactionPendingFromAudit(raw: string): boolean {
+  const blocks = splitAuditRecords(raw);
+  let lastCompact = -1;
+  for (let i = 0; i < blocks.length; i += 1) {
+    if (auditBlockField(blocks[i]!, "Event") === "SESSION_COMPACTED") lastCompact = i;
+  }
+  if (lastCompact === -1) return false;
+  for (let i = lastCompact + 1; i < blocks.length; i += 1) {
+    const event = auditBlockField(blocks[i]!, "Event");
+    if (event !== null && COMPACTION_PROGRESS_EVENTS.has(event)) return false;
+  }
+  return true;
+}
+
 function revisionEvidenceFromAudit(raw: string): RevisionEvidenceEvent[] {
   const evidence: RevisionEvidenceEvent[] = [];
-  const blocks = raw.split("\n---\n");
+  const blocks = splitAuditRecords(raw);
   for (let bufferPosition = 0; bufferPosition < blocks.length; bufferPosition += 1) {
     const block = blocks[bufferPosition]!;
     const kind = auditBlockField(block, "Event");
@@ -2537,7 +2562,7 @@ function completedRecoveryRevision(
   expectedTransactionId: string,
   expectedRevision: number,
 ): number | null {
-  const sourceBlocks = raw.split("\n---\n");
+  const sourceBlocks = splitAuditRecords(raw);
   const byTransaction = new Map<string, PositionedAuditBlock[]>();
   for (let position = 0; position < sourceBlocks.length; position += 1) {
     const block = sourceBlocks[position]!;
@@ -2640,11 +2665,12 @@ type ApprovalAuditBlockInput = {
 };
 
 function approvalAuditBlock(input: ApprovalAuditBlockInput): string {
-  let block = `\n## ${input.heading}\n**Timestamp**: ${input.timestamp}\n**Event**: ${input.event}\n`;
-  for (const [key, value] of Object.entries(input.fields)) {
-    block += `**${key}**: ${escapeAuditValue(value)}\n`;
-  }
-  return `${block}\n---\n`;
+  return formatAuditRecord({
+    heading: input.heading,
+    timestamp: input.timestamp,
+    event: input.event,
+    fields: input.fields,
+  });
 }
 
 function validateRecoveredApprovalBatch(
@@ -3759,26 +3785,7 @@ function handleResume(_args: string[]): void {
   let compactionPending = false;
   try {
     // Merge across per-clone audit shards (single shard in the common case).
-    const raw = readAllAuditShards(pd);
-    if (raw.length > 0) {
-      // Read last ~400 lines (enough to cover ~30 events' worth of blocks)
-      const tailLines = raw.split("\n").slice(-400);
-      const tail = tailLines.join("\n");
-      // Find the index of the last SESSION_COMPACTED event
-      const lastCompactIdx = tail.lastIndexOf("**Event**: SESSION_COMPACTED");
-      if (lastCompactIdx !== -1) {
-        const after = tail.slice(lastCompactIdx);
-        // Any stage activity OR explicit recovery after the compaction?
-        // STAGE_STARTED / STAGE_COMPLETED / GATE_APPROVED / SESSION_RESUMED
-        // are normal progress; RECOVERY_COMPLETED is the explicit "user saw
-        // the compaction prompt and chose how to proceed" signal.
-        const hasActivity =
-          /\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
-          );
-        compactionPending = !hasActivity;
-      }
-    }
+    compactionPending = compactionPendingFromAudit(readAllAuditShards(pd));
   } catch {
     // Audit read failures are non-fatal — default to false, orchestrator
     // will use the standard resume flow.
@@ -3832,18 +3839,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
   // RECOVERY_COMPLETED events when the orchestrator calls acknowledge unnecessarily.
   let compactionPending = false;
   try {
-    const raw = readAllAuditShards(pd);
-    if (raw.length > 0) {
-      const tail = raw.split("\n").slice(-400).join("\n");
-      const lastCompactIdx = tail.lastIndexOf("**Event**: SESSION_COMPACTED");
-      if (lastCompactIdx !== -1) {
-        const after = tail.slice(lastCompactIdx);
-        compactionPending =
-          !/\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
-          );
-      }
-    }
+    compactionPending = compactionPendingFromAudit(readAllAuditShards(pd));
   } catch {
     // Audit unreadable — nothing to recover.
   }

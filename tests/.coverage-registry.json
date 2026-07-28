@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 537,
+    "total": 538,
     "enumeratedByClass": {
-      "function": 299,
+      "function": 300,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 149,
-      "audit": 32,
+      "audit": 33,
       "scope": 10,
       "stage": 8,
       "hook": 12,
@@ -78,8 +78,13 @@
       "unitClass": "audit",
       "unitId": "AUDIT_MERGED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t355-audit-merge-info-seams.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -3500,6 +3505,13 @@
     {
       "unitClass": "function",
       "unitId": "function:spacesRoot",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:splitAuditRecords",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"

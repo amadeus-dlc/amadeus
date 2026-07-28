@@ -37,6 +37,7 @@ import {
 import type { GraphStage, RuleFile } from "./amadeus-graph.ts";
 import { repointHarnessIncludes } from "./amadeus-includes.ts";
 import {
+  auditBlockField,
   activeIntent,
   activeSpace,
   assertRecomposeAllowed,
@@ -1860,9 +1861,8 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     try {
       const auditContent = auditAllShards;
       const stateContent = readFileSync(stateMdPath, "utf-8");
-      // Find last WORKFLOW_COMPLETED event
-      const wcIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_COMPLETED");
-      if (wcIdx !== -1) {
+      // Any WORKFLOW_COMPLETED event on record?
+      if (findAllEvents(auditContent, "WORKFLOW_COMPLETED").length > 0) {
         const status = stateContent.match(/^- \*\*Status\*\*:\s*(\S+)/m);
         if (status && status[1] !== "Completed") {
           results.push({
@@ -1963,17 +1963,10 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     : [];
 
   // Helper: extract the Bolt slug from an audit block. Returns null if absent.
-  const blockBoltSlug = (block: string): string | null => {
-    const m = block.match(/^\*\*Bolt slug\*\*:\s*(\S+)/m);
-    return m ? m[1] : null;
-  };
+  const blockBoltSlug = (block: string): string | null => auditBlockField(block, "Bolt slug");
 
   // Helper: extract a named field value from an audit block.
-  const blockField = (block: string, field: string): string | null => {
-    const re = new RegExp(`^\\*\\*${escapeRegex(field)}\\*\\*:\\s*(.+)$`, "m");
-    const m = block.match(re);
-    return m ? m[1].trim() : null;
-  };
+  const blockField = (block: string, field: string): string | null => auditBlockField(block, field);
 
   // Helper: was a slug terminated (worktree merged or discarded) in audit?
   const slugTerminated = (slug: string): boolean => {

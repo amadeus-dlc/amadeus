@@ -7,6 +7,7 @@ import {
   activeIntent,
   activeSpace,
   auditBlockField,
+  splitAuditRecords,
   auditShards,
   errorMessage,
   isPlainObject,
@@ -208,7 +209,7 @@ function visitAuditShard(
   }
   context.openedCanonicalShards.add(canonicalPath);
   context.observer.shardOpened(context.pass, canonicalPath);
-  for (const block of content.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+  for (const block of splitAuditRecords(content)) {
     if (auditBlockField(block, "Event") === null) continue;
     context.observer.eventVisited(context.pass);
     visit(block, intent, basename(path));

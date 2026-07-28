@@ -18,6 +18,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
+  auditBlockField,
   emitError,
   errorMessage,
   findAllEvents,
@@ -810,7 +811,7 @@ function handleVerify(args: string[]): void {
 // The halt-and-ask flow calls this to interpolate the worktree path and
 // branch name into the AskUserQuestion prompt body. Schema pinned in
 // `knowledge/amadeus-shared/worktree-info-schema.md`.
-function handleInfo(args: string[]): void {
+export function handleInfo(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
 
@@ -832,9 +833,9 @@ function handleInfo(args: string[]): void {
     process.exit(1);
   }
 
-  const pathMatch = match.block.match(/^\*\*Worktree path\*\*:\s*(.+?)\s*$/m);
-  const branchMatch = match.block.match(/^\*\*Branch name\*\*:\s*(.+?)\s*$/m);
-  if (!pathMatch || !branchMatch) {
+  const worktreePathField = auditBlockField(match.block, "Worktree path");
+  const branchNameField = auditBlockField(match.block, "Branch name");
+  if (worktreePathField === null || branchNameField === null) {
     process.stderr.write(
       `error: malformed WORKTREE_CREATED block at ${match.timestamp} (missing Worktree path or Branch name field)\n`
     );
@@ -846,7 +847,7 @@ function handleInfo(args: string[]): void {
   // resume-path check is "do not dispatch a merge that's actively held",
   // not "every Bolt has had its hold state explicitly initialised".
   let mergeHeld = false;
-  const wtStatePath = worktreeStateFilePath(pathMatch[1]);
+  const wtStatePath = worktreeStateFilePath(worktreePathField);
   if (existsSync(wtStatePath)) {
     const wtContent = readFileSync(wtStatePath, "utf-8");
     mergeHeld = getField(wtContent, "Merge-Held") === "true";
@@ -855,8 +856,8 @@ function handleInfo(args: string[]): void {
   console.log(
     JSON.stringify({
       slug,
-      path: pathMatch[1],
-      branch_name: branchMatch[1],
+      path: worktreePathField,
+      branch_name: branchNameField,
       audit_timestamp: match.timestamp,
       merge_held: mergeHeld,
     })

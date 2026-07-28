@@ -35,7 +35,9 @@ import {
   isoTimestamp,
   isMigrationExecutionCommand,
   isRejectedMigrationDispatch,
+  auditBlockField,
   readAllAuditShards,
+  splitAuditRecords,
   recordHookDrop,
   readHookStdin,
   resolveProjectDirFromHook,
@@ -133,7 +135,7 @@ writeFileSync(join(healthDir, "runtime-compile.last"), isoTimestamp(), "utf-8");
 //    are PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED. In the common
 //    single-clone case the merged buffer is one shard, so the last 3 blocks are
 //    the just-written transition rows.
-const blocks = audit.split(/\n---\n/);
+const blocks = splitAuditRecords(audit);
 const last3 = blocks.slice(-3);
 
 // 7. Event-class filter — recursion guard + scope filter combined.
@@ -144,8 +146,17 @@ const last3 = blocks.slice(-3);
 //    runtime-graph at gate-start — without it, the gate ritual reads a
 //    stale memory_entries count snapshotted at STAGE_STARTED time
 //    (before the orchestrator wrote any §13 entries).
-const transitionRegex = /^\*\*Event\*\*:\s*(GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)\s*$/m;
-const hasTransition = last3.some((b) => transitionRegex.test(b));
+const transitionEvents = new Set([
+  "GATE_APPROVED",
+  "STAGE_STARTED",
+  "STAGE_AWAITING_APPROVAL",
+  "AUDIT_MERGED",
+  "WORKFLOW_COMPLETED",
+]);
+const hasTransition = last3.some((block) => {
+  const event = auditBlockField(block, "Event");
+  return event !== null && transitionEvents.has(event);
+});
 if (!hasTransition) process.exit(0);
 
 // Kiro IDE emits payload-free shell hooks. Its synthetic source marker reaches
