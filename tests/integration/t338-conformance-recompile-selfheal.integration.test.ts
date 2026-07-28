@@ -74,6 +74,7 @@ function deps(): PluginCliDeps {
       recompileCount += 1;
       return true;
     },
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,

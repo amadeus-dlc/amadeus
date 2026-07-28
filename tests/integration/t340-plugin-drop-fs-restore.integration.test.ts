@@ -62,6 +62,7 @@ function deps(verifyOk = true): PluginCliDeps {
       newTxnId: () => `t340-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => true,
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,

@@ -189,6 +189,7 @@ export type PluginCliDeps = {
   makeBackend: (hostRoot: string) => WorkspaceBackend;
   makeTx: (hostRoot: string, backend: WorkspaceBackend) => WorkspaceTransaction;
   recompile: (projectRoot: string) => boolean;
+  generateRunners: (projectRoot: string) => boolean;
   recordDrops: (hostRoot: string, plugin: string, entries: readonly DropEntry[]) => void;
   clearDrops: (hostRoot: string, plugin: string) => void;
   stagingEntryState: (dst: string, src: string) => StagingEntryState;
@@ -286,6 +287,23 @@ function spawnRecompile(projectRoot: string): boolean {
   return true;
 }
 
+// Post-recompile stage-runner regeneration (#1598). The compiled graph is what
+// the generator reads, so this runs AFTER spawnRecompile: `write` emits one
+// `skills/amadeus-<slug>/SKILL.md` per runnable compiled stage — which now
+// includes the composed plugin stage — and prunes the runner of a stage the
+// graph no longer has, which is what makes `drop` remove it again. Same spawn
+// shape and same loud contract as spawnRecompile: a non-zero exit returns false
+// and the caller reports an apply-stage failure rather than leaving the host
+// with a composed stage nobody can type.
+function spawnRunnerGen(projectRoot: string): boolean {
+  const res = spawnSync("bun", [join(THIS_DIR, "amadeus-runner-gen.ts"), "write"], {
+    cwd: projectRoot,
+    stdio: "ignore",
+    env: process.env,
+  });
+  return res.status === 0;
+}
+
 export function defaultPluginCliDeps(): PluginCliDeps {
   return {
     discoverPlugins: (root) => discoverPlugins(root),
@@ -298,6 +316,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     makeBackend: (hostRoot) => createNodeBackend(hostRoot),
     makeTx: nodeTx,
     recompile: spawnRecompile,
+    generateRunners: spawnRunnerGen,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,
@@ -521,6 +540,9 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
   if (!deps.recompile(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "recompile failed after compose" };
   }
+  if (!deps.generateRunners(hostRoot)) {
+    return { kind: "failure", stage: "apply", message: "stage-runner generation failed after compose" };
+  }
   return { kind: "composed", applied, recompiled: true };
 }
 
@@ -574,6 +596,11 @@ function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: Plug
   deps.clearDrops(hostRoot, cmd.name);
   if (!deps.recompile(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "recompile failed after drop" };
+  }
+  // Symmetric with compose (BR-U3-3): the same regeneration that ADDS the plugin
+  // stage's runner PRUNES it once the graph no longer carries the slug.
+  if (!deps.generateRunners(hostRoot)) {
+    return { kind: "failure", stage: "apply", message: "stage-runner generation failed after drop" };
   }
   const baselineRestored = backend.readComposition().plugins.size === 0 && pluginArtifactsAbsent(hostRoot, record);
   return { kind: "dropped", plugin: cmd.name, baselineRestored, recompiled: true };
