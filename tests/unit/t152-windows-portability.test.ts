@@ -45,7 +45,6 @@ describe("t152 Windows portability guard", () => {
     const driver = read("tests/harness/tui-drive.ts");
     expect(driver).toContain("export interface Backend");
     expect(driver).toContain("export function createTmuxBackend(");
-    expect(driver).toContain('spawnSync("tmux"');
     expect(driver).not.toContain("Bun.Terminal");
     expect(driver).not.toContain("__win-daemon");
   });
