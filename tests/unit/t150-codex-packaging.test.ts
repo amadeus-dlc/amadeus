@@ -289,9 +289,13 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     }
     for (const prose of [sourceSkill, shippedSkill]) {
       expect(prose).toContain(
-        'run exactly `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<answer>"`',
+        'run exactly `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<resolved option label or free text>"`',
       );
       expect(prose).toContain("do **not** pass `--result` or `--stage`");
+      expect(prose).toContain(
+        'intent-select-response "<exact human response>" "<option 1>" "<option 2>"',
+      );
+      expect(prose).toContain("Do not resolve ordinals yourself");
     }
     for (const prose of [sourceAnnex, shippedAnnex]) {
       expect(prose).toContain(

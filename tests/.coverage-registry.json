@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 545,
+    "total": 546,
     "enumeratedByClass": {
       "function": 306,
       "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 12,
-      "subcommand": 100,
+      "subcommand": 101,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 10,
       "stage": 8,
       "hook": 12,
-      "subcommand": 81,
+      "subcommand": 82,
       "render-surface": 7
     }
   },
@@ -6199,6 +6199,18 @@
         {
           "file": "tests/unit/t249-workspace-inspection.test.ts",
           "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-utility intent-select-response",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t171-birth-gate-registry.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

@@ -92,6 +92,7 @@ import {
   type ParkedDirective,
   type PrintDirective,
   type RunStageDirective,
+  type SelectIntentDirective,
   validateDirective,
 } from "./amadeus-directive.ts";
 import {
@@ -585,17 +586,15 @@ function toolErrorMessage(run: ToolRun): string {
 
 // --- Terminal-directive constructors (the non-run-stage kinds) ---
 
-function askDirective(
+function askDirective(question: string): AskDirective {
+  return { kind: "ask", question };
+}
+
+function selectIntentDirective(
   question: string,
-  responseAction?: AskDirective["response_action"],
-): AskDirective {
-  return {
-    kind: "ask",
-    question,
-    ...(responseAction === undefined
-      ? {}
-      : { response_action: responseAction }),
-  };
+  options: string[],
+): SelectIntentDirective {
+  return { kind: "select-intent", question, options };
 }
 
 function printDirective(message: string): PrintDirective {
@@ -830,23 +829,31 @@ function composeDispatchDirective(
 // read-only: it emits a directive, it does not touch the cursor.
 function intentPickPromptIfRecordsExist(
   projectDir: string,
-): AskDirective | null {
+): SelectIntentDirective | null {
   const space = activeSpace(projectDir);
-  const intents = listIntents(projectDir, space);
+  const intents = listIntents(projectDir, space).filter(
+    (intent): intent is typeof intent & { dirName: string } => intent.dirName !== null,
+  );
   if (intents.length === 0) return null; // zero intents → birth is correct
   if (intents.some((i) => i.active)) return null; // a cursor already resolves → not a birth path
   // Records exist but no cursor is set (the fresh-clone / >1-no-cursor case).
   // NAME the existing intents and ask the human to select one rather than
   // birthing a duplicate. Order follows listIntents (registry order).
-  const slugs = intents.map((i) => i.slug);
-  const list = slugs.map((s) => `\`${s}\``).join(", ");
+  const slugCounts = new Map<string, number>();
+  for (const intent of intents) {
+    slugCounts.set(intent.slug, (slugCounts.get(intent.slug) ?? 0) + 1);
+  }
+  const options = intents.map((intent) =>
+    slugCounts.get(intent.slug) === 1 ? intent.slug : intent.dirName,
+  );
+  const list = options.map((option) => `\`${option}\``).join(", ");
   const spaceLabel = space === "default" ? "" : ` in space "${space}"`;
-  return askDirective(
+  return selectIntentDirective(
     `This workspace already has ${intents.length} intent${intents.length === 1 ? "" : "s"}${spaceLabel} but no active intent is selected ` +
       `(the active-intent cursor is per-user and not cloned). ` +
       `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +
       "Selecting an intent sets the cursor; re-run `next` afterward to continue its workflow.",
-    { kind: "select-intent", options: slugs },
+    options,
   );
 }
 

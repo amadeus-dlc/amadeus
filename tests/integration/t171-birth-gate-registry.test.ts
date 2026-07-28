@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent-select-response, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
 //
 // Mechanism: cli (spawned dist tools) — birth + `next` run end-to-end the way
 // the conductor runs them.
@@ -11,7 +11,7 @@
 // cursor is gitignored). Without the guard the gate would mint a DUPLICATE
 // intent over the existing ones, violating "auto-birth fires only on ZERO
 // intents". The fix: before birthing, consult listIntents over the active
-// space; if intents EXIST but none is flagged active, emit an `ask` directive
+// space; if intents EXIST but none is flagged active, emit a `select-intent` directive
 // that lists them and asks the human to pick one via `/amadeus intent <slug>`,
 // instead of the birth `print`. The zero-intent case STILL births unchanged.
 
@@ -101,13 +101,13 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       return records;
     };
 
-    test("Branch 9a (explicit --scope flag) emits an `ask` listing the existing intents, not a birth print", () => {
+    test("Branch 9a emits `select-intent` with the existing intents, not a birth print", () => {
       seedTwoIntentsNoCursor();
       const r = next(["--scope", "poc"]);
       const d = JSON.parse(r.stdout.trim());
       // NOT a birth print: the gate must not name intent-birth here.
       expect(d.kind).not.toBe("print");
-      expect(d.kind).toBe("ask");
+      expect(d.kind).toBe("select-intent");
       expect(d.message ?? "").not.toContain("intent-birth");
       // It prompts to pick an existing intent by slug via `/amadeus intent <slug>`.
       expect(d.question).toContain("/amadeus intent <slug>");
@@ -120,10 +120,7 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       const slugs = readIntentRegistry(proj).map((e) => e.slug);
       expect(slugs.length).toBe(2);
       for (const s of slugs) expect(d.question).toContain(s);
-      expect(d.response_action).toEqual({
-        kind: "select-intent",
-        options: slugs,
-      });
+      expect(d.options).toEqual(slugs);
       // Read-only: no third intent was born; the cursor is still unset.
       expect(recordDirs(proj).length).toBe(2);
       expect(existsSync(cursorPath(proj))).toBe(false);
@@ -133,14 +130,40 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       seedTwoIntentsNoCursor();
       const r = next(["poc"]); // positional valid-scope name, no --scope flag
       const d = JSON.parse(r.stdout.trim());
-      expect(d.kind).toBe("ask");
-      expect(d.response_action?.kind).toBe("select-intent");
-      expect(d.response_action?.options).toEqual(
-        readIntentRegistry(proj).map((e) => e.slug),
-      );
+      expect(d.kind).toBe("select-intent");
+      expect(d.options).toEqual(readIntentRegistry(proj).map((e) => e.slug));
       expect(d.message ?? "").not.toContain("intent-birth");
       expect(d.question).toContain("/amadeus intent <slug>");
       expect(recordDirs(proj).length).toBe(2); // no duplicate born
+    });
+
+    test("the canonical response resolver maps a full-width ordinal and selects atomically", () => {
+      seedTwoIntentsNoCursor();
+      const firstRecord = readIntentRegistry(proj)[0].dirName;
+      if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
+
+      const selected = util([
+        "intent-select-response",
+        "１",
+        ...readIntentRegistry(proj).map((entry) => entry.slug),
+      ]);
+
+      expect(selected.status, selected.out).toBe(0);
+      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
+    });
+
+    test("the canonical response resolver rejects an out-of-range ordinal without a cursor", () => {
+      seedTwoIntentsNoCursor();
+
+      const rejected = util([
+        "intent-select-response",
+        "3",
+        ...readIntentRegistry(proj).map((entry) => entry.slug),
+      ]);
+
+      expect(rejected.status).toBe(1);
+      expect(rejected.out).toContain("does not match a displayed option");
+      expect(existsSync(cursorPath(proj))).toBe(false);
     });
   });
 

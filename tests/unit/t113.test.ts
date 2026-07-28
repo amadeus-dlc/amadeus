@@ -91,6 +91,14 @@ function presentGate(): Record<string, unknown> {
   };
 }
 
+function selectIntent(): Record<string, unknown> {
+  return {
+    kind: "select-intent",
+    question: "Choose an intent",
+    options: ["first-intent", "second-intent"],
+  };
+}
+
 function ask(): Record<string, unknown> {
   return { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" };
 }
@@ -292,26 +300,13 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     );
   });
 
-  test("ask select-intent response action validates its options", () => {
-    expect(
-      errs({
-        ...ask(),
-        response_action: {
-          kind: "select-intent",
-          options: ["plugin-verb-skills"],
-        },
-      }),
-    ).toBe("VALID");
-    expect(
-      errs({
-        ...ask(),
-        response_action: {
-          kind: "select-intent",
-          options: [],
-        },
-      }),
-    ).toContain(
-      "ask: response_action options must be a non-empty string array",
+  test("select-intent requires a non-empty options array", () => {
+    expect(errs(selectIntent())).toBe("VALID");
+    expect(errs({ ...selectIntent(), options: [] })).toContain(
+      "select-intent: options must be a non-empty string array",
+    );
+    expect(errs({ ...selectIntent(), options: ["same", "same"] })).toContain(
+      "select-intent: options entries must be unique",
     );
   });
 

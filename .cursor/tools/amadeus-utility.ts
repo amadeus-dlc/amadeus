@@ -126,6 +126,7 @@ import {
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
+import { resolveIntentSelectionResponse } from "./amadeus-intent-selection.ts";
 import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   buildDoctorPluginSection,
@@ -4754,27 +4755,8 @@ function selectIntentLocked(
   return selected;
 }
 
-function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
-  const asJson = flags.json === "true";
-  const target = positional[1];
-  if (!target) {
-    printIntentListing(projectDir, asJson);
-    return;
-  }
+function selectIntent(projectDir: string, target: string): void {
   const space = activeSpace(projectDir);
-  if (target === "archive" || target === "unarchive") {
-    const selector = positional[2];
-    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
-    const resolved = withIntentLifecyclePreflight(
-      projectDir,
-      space,
-      appendUtilityLifecycleEvent,
-      () => resolveIntentSelector(projectDir, space, selector).dirName,
-    );
-    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
-    delegateIntentLifecycle(projectDir, target, resolved);
-    return;
-  }
   const match = withIntentLifecyclePreflight(
     projectDir,
     space,
@@ -4797,6 +4779,46 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
   const sid = readCurrentSessionId(projectDir);
   if (sid && match.uuid) writeSessionIntentUuid(projectDir, sid, match.uuid);
   process.stdout.write(`Active intent → ${match.dirName} (space: ${space})\n`);
+}
+
+function handleIntentSelectionResponse(
+  projectDir: string,
+  positional: string[],
+): void {
+  const response = positional[1];
+  const options = positional.slice(2);
+  if (response === undefined || options.length === 0) {
+    refuseWithoutAudit(
+      "Usage: amadeus-utility.ts intent-select-response <human-response> <displayed-option>...",
+    );
+  }
+  const resolution = resolveIntentSelectionResponse(options, response);
+  if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
+  selectIntent(projectDir, resolution.target);
+}
+
+function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
+  const asJson = flags.json === "true";
+  const target = positional[1];
+  if (!target) {
+    printIntentListing(projectDir, asJson);
+    return;
+  }
+  const space = activeSpace(projectDir);
+  if (target === "archive" || target === "unarchive") {
+    const selector = positional[2];
+    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
+    const resolved = withIntentLifecyclePreflight(
+      projectDir,
+      space,
+      appendUtilityLifecycleEvent,
+      () => resolveIntentSelector(projectDir, space, selector).dirName,
+    );
+    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
+    delegateIntentLifecycle(projectDir, target, resolved);
+    return;
+  }
+  selectIntent(projectDir, target);
 }
 
 // `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space
@@ -6047,6 +6069,9 @@ export function runUtilityMain(): void {
     case "intent":
       handleIntent(projectDir, positional, flags);
       break;
+    case "intent-select-response":
+      handleIntentSelectionResponse(projectDir, positional);
+      break;
     case "space":
       handleSpace(projectDir, positional, flags);
       break;
@@ -6107,7 +6132,7 @@ export function runUtilityMain(): void {
       break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|intent-select-response|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }
