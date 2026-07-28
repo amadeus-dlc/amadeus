@@ -110,3 +110,7 @@ explicit human decision.
 Initialization, intent-capture, reverse-engineering,
 requirements-analysis, functional-design, code-generation, and
 build-and-test execute; the rest is SKIP.
+
+Lightening review 2026-07-28: only one completed amadeus-document intent
+exists, too few for the evidence-mining methodology that lightened
+amadeus-feature. Revisit once completed intents accumulate.
