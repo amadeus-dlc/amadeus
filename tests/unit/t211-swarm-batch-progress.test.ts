@@ -239,8 +239,9 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
 // Issue #1612 — `gated` fans the batch out and stops at a BATCH-END gate.
 // ---------------------------------------------------------------------------
 // The pre-fix engine read `gated` as a swarm VETO, so every parallel Unit ran
-// serially through the inline per-unit loop. stage-protocol.md:123-125 says the
-// opposite: gated selects the approval FREQUENCY ("for parallel batches the gate
+// serially through the inline per-unit loop. stage-protocol.md § "Subsequent
+// Bolt gate" says the opposite: gated selects the approval FREQUENCY ("for
+// parallel batches the gate
 // covers every Bolt in the batch"), so the batches still fan out — the engine
 // just refuses the NEXT batch until the finished one is approved.
 //

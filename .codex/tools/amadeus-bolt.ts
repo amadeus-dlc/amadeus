@@ -45,11 +45,13 @@ import {
   emitError,
   errorMessage,
   getField,
+  parseApprovedSwarmBatches,
   relativeRecordDir,
   readStateFile,
   resolveProjectDir,
   setFieldStrict,
   setOrInsertField,
+  SWARM_BATCH_APPROVALS_FIELD,
   worktreePath,
   worktreeStateFilePath,
   writeStateFile,
@@ -835,31 +837,18 @@ function handleSetAutonomy(args: string[]): void {
 // Records the human's approval at a gated swarm's BATCH-END gate (issue #1612).
 // Under `Construction Autonomy Mode: gated` the engine fans a parallel batch out
 // and then refuses the NEXT batch until the finished one is approved here — one
-// gate per batch, not one per Bolt (stage-protocol.md:123-125). The approval is
-// appended to the `Swarm Gated Batch Approvals` state field (a comma-separated
-// list of 1-origin batch numbers, inserted under `## Current Status` on first
-// use so the state template needs no bump — the Merge-Held precedent) and
-// audited with the EXISTING GATE_APPROVED event; no new taxonomy is minted.
+// gate per batch, not one per Bolt (stage-protocol.md § "Subsequent Bolt gate").
+// The approval is appended to the `Swarm Gated Batch Approvals` state field (a
+// comma-separated list of 1-origin batch numbers, inserted under
+// `## Current Status` on first use so the state template needs no bump — the
+// Merge-Held precedent) and audited with the EXISTING GATE_APPROVED event; no
+// new taxonomy is minted. The field name and its parser live in amadeus-lib so
+// this writer and the engine's reader cannot drift.
 //
 // Idempotent: re-approving a batch already on the ledger is a no-op that emits
 // NO second GATE_APPROVED, so a replayed command cannot inflate the audit trail.
 // Validation is numeric (parse, don't validate) and runs BEFORE any emission, so
 // a rejected batch number leaves neither an orphan audit row nor a state edit.
-const SWARM_BATCH_APPROVALS_FIELD = "Swarm Gated Batch Approvals";
-
-// Parse the recorded approvals into ascending 1-origin batch numbers. Tokens
-// that are not positive integers are dropped: a malformed ledger can only
-// withhold an approval (fail closed), never fabricate one.
-function parseApprovedBatches(content: string): number[] {
-  const raw = getField(content, SWARM_BATCH_APPROVALS_FIELD);
-  if (!raw) return [];
-  const parsed = raw
-    .split(",")
-    .map((token) => Number(token.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
-  return [...new Set(parsed)].sort((a, b) => a - b);
-}
-
 function handleApproveBatch(args: string[]): void {
   const flags = parseFlags(args);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
@@ -870,7 +859,7 @@ function handleApproveBatch(args: string[]): void {
 
   const pd = resolveProjectDir(projectDir);
   const content = readStateFile(pd);
-  const approved = parseApprovedBatches(content);
+  const approved = parseApprovedSwarmBatches(content);
   if (approved.includes(batch)) {
     console.log(JSON.stringify({ batch, already_approved: true, state_updated: false }));
     return;

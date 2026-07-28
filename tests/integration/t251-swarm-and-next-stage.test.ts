@@ -200,7 +200,8 @@ describe("t250 item 10 gate-next-stage-naming: directive projects next_stage", (
     // step, not an approval gate, so next_stage must be absent. The fixture
     // keeps the walking-skeleton stage IN-FLIGHT: after #1612 an unset grant is
     // legitimate only before the skeleton completes — past it the engine
-    // re-fires the ladder as an `ask` instead of iterating (stage-protocol.md:121).
+    // re-fires the ladder as an `ask` instead of iterating
+    // (stage-protocol.md § "Ladder prompt", session-resume rule).
     const proj = createTestProject();
     tempDirs.push(proj);
     writeFileSync(seededStateFile(proj), perUnitCodegenState());

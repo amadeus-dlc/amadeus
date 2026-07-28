@@ -298,8 +298,8 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
   }, 30000);
 
   // 2: issue #1612 — `gated` is an APPROVAL-FREQUENCY grant, not a swarm veto.
-  // stage-protocol.md:123-125 says the Bolt-level gate is presented per batch in
-  // gated mode ("For parallel batches the gate covers every Bolt in the batch"),
+  // stage-protocol.md § "Subsequent Bolt gate" says the Bolt-level gate is
+  // presented per batch in gated mode ("For parallel batches the gate covers every Bolt in the batch"),
   // so a gated run STILL fans the batch out; it just gates at the batch boundary.
   // The pre-fix engine returned run-stage here and serialised the DAG.
   test("2: gated autonomy -> engine still fans out the batch (batch-end gate, not serialisation)", () => {
@@ -310,8 +310,9 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
 
   // 2b: unset autonomy AFTER the walking skeleton completed (state-construction.md
   // marks functional-design — the feature-scope skeleton-gate stage — [x]) must
-  // re-fire the ladder rather than silently serialising (stage-protocol.md:121,
-  // engine-enforced). No swarm, no run-stage: an `ask`.
+  // re-fire the ladder rather than silently serialising (stage-protocol.md
+  // § "Ladder prompt", session-resume rule; engine-enforced). No swarm, no
+  // run-stage: an `ask`.
   test("2b: skeleton complete + unset autonomy -> engine re-fires the ladder ask", () => {
     const { directive } = runNext(seedCodegenProject(""));
     expect(directive.kind).toBe("ask");

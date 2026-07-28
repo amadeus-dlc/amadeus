@@ -5087,6 +5087,29 @@ export function isAutonomousMode(stateContent: string | null): boolean {
   return !!stateContent && getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() === "autonomous";
 }
 
+// --- Gated swarm batch approvals ---
+//
+// The state field recording which swarm batches the human already approved at
+// their batch-end gate under `Construction Autonomy Mode: gated` (issue #1612).
+// A comma-separated list of 1-origin batch numbers, appended by
+// `amadeus-bolt approve-batch --batch <n>`; the engine only ever READS it.
+export const SWARM_BATCH_APPROVALS_FIELD = "Swarm Gated Batch Approvals";
+
+// Parse the recorded approvals into ascending 1-origin batch numbers. Numeric
+// parse, not string compare (verification-numeric-parse): a token that is not a
+// positive integer is dropped, so a malformed ledger can only ever WITHHOLD an
+// approval (fail closed), never manufacture one. One definition for both the
+// writer (amadeus-bolt approve-batch) and the reader (the engine's batch gate).
+export function parseApprovedSwarmBatches(stateContent: string | null): number[] {
+  const raw = stateContent ? getField(stateContent, SWARM_BATCH_APPROVALS_FIELD) : null;
+  if (!raw) return [];
+  const parsed = raw
+    .split(",")
+    .map((token) => Number(token.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return [...new Set(parsed)].sort((a, b) => a - b);
+}
+
 // Deterministic off-switch for the human-presence gate (mirrors
 // artifactGuardDisabled in amadeus-state.ts). The suite sets this globally (the
 // dedicated guard test clears it), and it is the documented bypass for
