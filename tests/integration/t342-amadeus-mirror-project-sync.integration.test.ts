@@ -135,6 +135,7 @@ type ProjectFixture = {
   fieldResult?: GatewayOutcome<MirrorProjectStatusField>;
   addResult?: GatewayOutcome<{ itemId: string }>;
   updateResult?: GatewayOutcome<void>;
+  workflowUpdateResult?: GatewayOutcome<void>;
 };
 
 class ProjectGateway implements MirrorGitHubGateway {
@@ -207,8 +208,18 @@ class ProjectGateway implements MirrorGitHubGateway {
     this.history.push("add-project-item");
     return this.fixture.addResult ?? ok({ itemId: "PVTI_added" });
   }
-  async updateProjectItemStatus(): Promise<GatewayOutcome<void>> {
+  async updateProjectItemStatus(
+    _permit: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>[0],
+    _projectId: string,
+    _itemId: string,
+    _fieldId: string,
+    optionId: string,
+  ): Promise<GatewayOutcome<void>> {
     this.history.push("update-project-item-status");
+    this.history.push(`option:${optionId}`);
+    if (optionId === "opt-in-progress" || optionId === "opt-workflow-done") {
+      return this.fixture.workflowUpdateResult ?? ok(undefined);
+    }
     return this.fixture.updateResult ?? ok(undefined);
   }
 }
@@ -319,7 +330,64 @@ function projectCalls(gateway: ProjectGateway): string[] {
 }
 
 describe("t342 create then project sync", () => {
-  test("a fresh create adds the item, sets Status, and records one synced row", async () => {
+  test("an active Intent updates Intent Phase and auxiliary Status", async () => {
+    const store = fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [
+        { id: "opt-ideation", name: "Ideation" },
+        { id: "opt-done", name: "Done" },
+      ],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [
+          { id: "opt-in-progress", name: "In progress" },
+          { id: "opt-workflow-done", name: "Done" },
+        ],
+      },
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome.kind).toBe("completed");
+    expect(gateway.history).toContain("option:opt-ideation");
+    expect(gateway.history).toContain("option:opt-in-progress");
+  });
+
+  test("an auxiliary Status failure does not block Intent Phase sync", async () => {
+    const store = fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [{ id: "opt-ideation", name: "Ideation" }],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-in-progress", name: "In progress" }],
+      },
+    };
+    gateway.fixture.workflowUpdateResult = failure("network");
+
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome.kind).toBe("completed");
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      lastAppliedStatus: "Ideation",
+      state: "synced",
+    });
+  });
+
+  test("a fresh create adds the item, sets Intent Phase, and records one synced row", async () => {
     const store = fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(markerBody());
     const outcome = await executeMirrorOperation({
@@ -624,7 +692,7 @@ describe("t342 safety-blocked observations", () => {
     });
   });
 
-  test("a missing Status option yields the expected name and the real option list", async () => {
+  test("a missing Intent Phase option yields the expected name and the real option list", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
@@ -649,7 +717,7 @@ describe("t342 safety-blocked observations", () => {
         reason: "option-missing",
         expectedStatus: "Ideation",
         availableOptions: ["Backlog", "Shipped"],
-        summary: 'the Project has no Status option named exactly "Ideation"',
+        summary: 'the Project has no Intent Phase option named exactly "Ideation"',
       },
     ]);
     expect(gateway.history).not.toContain("update-project-item-status");
@@ -735,9 +803,18 @@ describe("t342 safety-blocked observations", () => {
 });
 
 describe("t342 keep branch", () => {
-  test("a parked boundary adds the item but applies no Status", async () => {
+  test("a parked boundary adds the item but applies no Intent Phase", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [{ id: "opt-ideation", name: "Ideation" }],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-in-progress", name: "In progress" }],
+      },
+    };
     await executeMirrorOperation({
       context: context("sync", gateway, {
         boundary: { kind: "parked", stage: "feasibility", instance: "park-1" },
@@ -756,9 +833,18 @@ describe("t342 keep branch", () => {
 });
 
 describe("t342 call budget", () => {
-  test("one membership query and at most two mutations per Project", async () => {
+  test("one membership query and at most three mutations per Project", async () => {
     const store = fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [{ id: "opt-ideation", name: "Ideation" }],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-in-progress", name: "In progress" }],
+      },
+    };
     await executeMirrorOperation({
       context: context("create", gateway),
       ports: store.ports,
@@ -770,12 +856,21 @@ describe("t342 call budget", () => {
     expect(calls.filter((c) => c === "resolve-status-field")).toHaveLength(1);
     expect(
       calls.filter((c) => c === "add-project-item" || c === "update-project-item-status"),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   test("a landed workflow drives the done column", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [{ id: "opt-done", name: "Done" }],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-workflow-done", name: "Done" }],
+      },
+    };
     await executeMirrorOperation({
       context: context("sync", gateway, {
         snapshot: workflowSnapshot({
@@ -790,5 +885,7 @@ describe("t342 call budget", () => {
     });
 
     expect(store.state().projectSync?.projects[0].lastAppliedStatus).toBe("Done");
+    expect(gateway.history).toContain("option:opt-done");
+    expect(gateway.history).toContain("option:opt-workflow-done");
   });
 });

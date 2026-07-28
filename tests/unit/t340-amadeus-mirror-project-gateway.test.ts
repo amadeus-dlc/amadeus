@@ -98,9 +98,12 @@ function itemNode(
     number: number;
     login: string;
     status: string | null;
+    workflowStatus: string | null;
   }> = {},
 ): unknown {
   const status = overrides.status === undefined ? "Ideation" : overrides.status;
+  const workflowStatus =
+    overrides.workflowStatus === undefined ? "In progress" : overrides.workflowStatus;
   return {
     id: overrides.id ?? "PVTI_item1",
     project: {
@@ -109,7 +112,8 @@ function itemNode(
       __typename: "Organization",
       owner: { __typename: "Organization", login: overrides.login ?? "amadeus-dlc" },
     },
-    fieldValueByName: status === null ? null : { name: status },
+    intentPhase: status === null ? null : { name: status },
+    workflowStatus: workflowStatus === null ? null : { name: workflowStatus },
   };
 }
 
@@ -129,7 +133,14 @@ function statusFieldBody(options: unknown[]): unknown {
       organization: {
         projectV2: {
           id: PROJECT_NODE_ID,
-          field: { id: "PVTSSF_status", options },
+          intentPhase: { id: "PVTSSF_intent_phase", options },
+          workflowStatus: {
+            id: "PVTSSF_status",
+            options: [
+              { id: "opt-in-progress", name: "In progress" },
+              { id: "opt-done", name: "Done" },
+            ],
+          },
         },
       },
     },
@@ -242,6 +253,21 @@ describe("t340 exact argv", () => {
     expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).not.toContain("user(");
   });
 
+  test("Project reads target Intent Phase and auxiliary Status fields", () => {
+    expect(LIST_PROJECT_ITEMS_QUERY).toContain(
+      'intentPhase:fieldValueByName(name:"Intent Phase")',
+    );
+    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
+      'intentPhase:field(name:"Intent Phase")',
+    );
+    expect(LIST_PROJECT_ITEMS_QUERY).toContain(
+      'workflowStatus:fieldValueByName(name:"Status")',
+    );
+    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
+      'workflowStatus:field(name:"Status")',
+    );
+  });
+
   test("addProjectItem binds the project and issue node ids", async () => {
     const { runner, requests } = fakeRunner([
       exited(
@@ -320,13 +346,14 @@ describe("t340 response parsing", () => {
             projectOwner: "amadeus-dlc",
             itemId: "PVTI_item1",
             currentStatus: "Ideation",
+            workflowStatus: "In progress",
           },
         ],
       },
     });
   });
 
-  test("an item with no Status value reports a null current status", () => {
+  test("an item with no Intent Phase value reports a null current phase", () => {
     const parsed = parseProjectItemsView(
       (itemsBody([itemNode({ status: null })]) as { data: Record<string, unknown> }).data,
     );
@@ -363,7 +390,7 @@ describe("t340 response parsing", () => {
     expect(parseProjectItemsView(data)).toBeNull();
   });
 
-  test("the Status field query yields the project id, field id, and options", () => {
+  test("the field query yields Intent Phase and auxiliary Status metadata", () => {
     const parsed = parseProjectStatusField(
       (statusFieldBody([
         { id: "opt-a", name: "Ideation" },
@@ -372,11 +399,33 @@ describe("t340 response parsing", () => {
     );
     expect(parsed).toEqual({
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_status",
+      fieldId: "PVTSSF_intent_phase",
       options: [
         { id: "opt-a", name: "Ideation" },
         { id: "opt-b", name: "Done" },
       ],
+      workflowStatusField: {
+        fieldId: "PVTSSF_status",
+        options: [
+          { id: "opt-in-progress", name: "In progress" },
+          { id: "opt-done", name: "Done" },
+        ],
+      },
+    });
+  });
+
+  test("an invalid auxiliary Status field does not invalidate Intent Phase", () => {
+    const data = (statusFieldBody([]) as { data: Record<string, unknown> }).data;
+    const organization = data.organization as {
+      projectV2: Record<string, unknown>;
+    };
+    organization.projectV2.workflowStatus = { id: "not-single-select" };
+
+    expect(parseProjectStatusField(data)).toEqual({
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_intent_phase",
+      options: [],
+      workflowStatusField: null,
     });
   });
 
@@ -384,12 +433,16 @@ describe("t340 response parsing", () => {
     ["an unresolved organization", { organization: null }],
     ["an unresolved project", { organization: { projectV2: null } }],
     [
-      "an absent Status field",
-      { organization: { projectV2: { id: PROJECT_NODE_ID, field: null } } },
+      "an absent Intent Phase field",
+      { organization: { projectV2: { id: PROJECT_NODE_ID, intentPhase: null } } },
     ],
     [
-      "a Status field that is not single-select",
-      { organization: { projectV2: { id: PROJECT_NODE_ID, field: { id: "F" } } } },
+      "an Intent Phase field that is not single-select",
+      {
+        organization: {
+          projectV2: { id: PROJECT_NODE_ID, intentPhase: { id: "F" } },
+        },
+      },
     ],
   ])("rejects %s", (_label, data) => {
     expect(parseProjectStatusField(data as Record<string, unknown>)).toBeNull();

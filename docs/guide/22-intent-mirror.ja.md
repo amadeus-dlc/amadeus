@@ -53,7 +53,7 @@ closeにはverified provenance、同一repository、workflow landed、final sync
 Pull Request、release、deploy、daemon、pollingはIntent Mirrorの対象外です。
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","authoritativeField":"Intent Phase","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
 ## Project board
 
 `mirror-projects`は、このIntentが同期するGitHub Project boardを列挙します。各要素は`project: "<owner>/<number>"`でboardを1件指定し、任意で`status-names`によりphaseキーからそのboardのcolumn名への上書きを持てます。phaseキーは`ideation`、`inception`、`construction`、`operation`、`done`で、未知のキーは無視せずエラーにします。
@@ -69,11 +69,13 @@ Pull Request、release、deploy、daemon、pollingはIntent Mirrorの対象外�
 
 このキーは層ごとに解決され、値を持つ最後の層が前の層のリストへマージせず全置換します。したがってSpaceやIntentの層では、対象boardの完全な集合を書きます。`mirror-projects`は`auto-mirror`とは独立です — モードは操作を実行するかどうかを決め、このキーはその操作がどのboardへ及ぶかを決めます。
 
+Lifecycleの正本値はboardのsingle-select `Intent Phase`へ書き込みます。標準の`Status`は補助同期であり、進行中Intentは`In progress`、完了Intentは`Done`へ移し、parked中は現在値を維持します。補助Statusのfield・option不足や更新失敗は、Intent PhaseのreconcileやIssue closeを阻害しません。
+
 <!-- amadeus-topic:auth -->
 <!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
 ## Project boardの認証
 
-boardのStatus fieldの読取もcolumnの設定もGraphQLのProjectV2 API経由で行うため、Issue自体に必要な権限に加えて`project` token scopeが必要です。credentialは`gh`とそのcredential storeに委譲され、Intent Mirrorはtoken値を読まず、scopeを変更せず、代理で再認証もしません。scope付与はこのツールの外で人間が行う操作です(例: `gh auth refresh -s project`)。
+boardのIntent Phaseと補助Status fieldの読取・option設定はGraphQLのProjectV2 API経由で行うため、Issue自体に必要な権限に加えて`project` token scopeが必要です。credentialは`gh`とそのcredential storeに委譲され、Intent Mirrorはtoken値を読まず、scopeを変更せず、代理で再認証もしません。scope付与はこのツールの外で人間が行う操作です(例: `gh auth refresh -s project`)。
 
 <!-- amadeus-topic:diagnostics -->
 <!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->
@@ -82,9 +84,9 @@ boardのStatus fieldの読取もcolumnの設定もGraphQLのProjectV2 API経由�
 `repair status`は、board 1件につきread-onlyの行を1つ報告します。対象は設定が指すboard、ledgerが既に記録しているboard、そしてIssueが現在所属しているboardの全数です。各行は、Issueがboard上にあるか、現在のcolumn、workflowが期待するcolumn、その2つがdriftしているか、および次の4値のいずれかのresolutionを示します。
 
 - `resolved` — 期待するcolumnへ到達可能で、行は観測結果のみを示します。
-- `field-missing` — boardのStatus fieldを読み取れず、columnを適用できません。
-- `option-missing` — 期待する名前と完全一致(大文字小文字・空白を含む)するStatus optionをboardが宣言していません。boardが実際に持つoption名は`availableOptions`として一覧されるため、boardへoptionを追加するか、`status-names`の上書きで当該phaseを既存optionへ対応付けます。
-- `permission-denied` — 使用中のcredentialではそのboardのStatus fieldを読めません。`project` scopeを付与してから`repair status`を再実行します。
+- `field-missing` — boardのIntent Phase fieldを読み取れず、columnを適用できません。
+- `option-missing` — 期待する名前と完全一致(大文字小文字・空白を含む)するIntent Phase optionをboardが宣言していません。boardが実際に持つoption名は`availableOptions`として一覧されるため、boardへoptionを追加するか、`status-names`の上書きで当該phaseを既存optionへ対応付けます。
+- `permission-denied` — 使用中のcredentialではそのboardのIntent Phase fieldを読めません。`project` scopeを付与してから`repair status`を再実行します。
 
 各行には、board名・column名・解決手順を述べる要約文が付きます。この文にtokenや生のAPIレスポンスは入りません。`repair status`は観測のみで、ローカルにもリモートにも変更を加えません — driftしたboardは報告されるだけで記録されません。
 

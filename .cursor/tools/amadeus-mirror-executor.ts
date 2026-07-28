@@ -1346,7 +1346,12 @@ function findProjectItem(
 }
 
 type MembershipResolution =
-  | { kind: "member"; itemId: string; currentStatus: string | null }
+  | {
+      kind: "member";
+      itemId: string;
+      currentStatus: string | null;
+      workflowStatus: string | null;
+    }
   | { kind: "failed"; classification: MirrorFailureClass };
 
 // Resolve the Issue's item on this Project, adding it when absent. Only a
@@ -1369,6 +1374,7 @@ export async function resolveMembership(
       kind: "member",
       itemId: existing.itemId,
       currentStatus: existing.currentStatus,
+      workflowStatus: existing.workflowStatus ?? null,
     };
   }
   if (!configured) {
@@ -1406,7 +1412,61 @@ export async function resolveMembership(
     });
     return { kind: "failed", classification: added.classification };
   }
-  return { kind: "member", itemId: added.value.itemId, currentStatus: null };
+  return {
+    kind: "member",
+    itemId: added.value.itemId,
+    currentStatus: null,
+    workflowStatus: null,
+  };
+}
+
+function expectedWorkflowStatus(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorExecutionContext["event"]["boundary"]["kind"],
+): string | null {
+  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
+    return null;
+  }
+  return snapshot.registryStatus === "complete" && snapshot.status === "Completed"
+    ? "Done"
+    : "In progress";
+}
+
+async function syncAuxiliaryWorkflowStatus(
+  context: MirrorExecutionContext,
+  target: MirrorProjectTarget,
+  field: MirrorProjectStatusField,
+  membership: Extract<MembershipResolution, { kind: "member" }>,
+  snapshot: MirrorSnapshot,
+): Promise<void> {
+  const expected = expectedWorkflowStatus(
+    snapshot,
+    context.event.boundary.kind,
+  );
+  const workflowField = field.workflowStatusField;
+  if (
+    expected === null ||
+    workflowField === null ||
+    workflowField === undefined ||
+    membership.workflowStatus === expected
+  ) {
+    return;
+  }
+  const option = workflowField.options.find((each) => each.name === expected);
+  if (option === undefined) return;
+  const permit = createMirrorProjectMutationPermit({
+    event: context.event,
+    repository: context.repository,
+    mutation: "update-project-item-status",
+    project: target.project,
+  });
+  await context.gateway.updateProjectItemStatus(
+    permit,
+    field.projectId,
+    membership.itemId,
+    workflowField.fieldId,
+    option.id,
+  );
 }
 
 async function syncOneProject(
@@ -1433,7 +1493,7 @@ async function syncOneProject(
       reason: "project-unresolved",
       expectedStatus: null,
       availableOptions: [],
-      summary: `the Project or its Status field could not be resolved: ${resolved.summary}`,
+      summary: `the Project or its Intent Phase field could not be resolved: ${resolved.summary}`,
     });
     return fail(resolved.classification);
   }
@@ -1473,7 +1533,7 @@ async function syncOneProject(
       reason: "option-missing",
       expectedStatus: expected.name,
       availableOptions: field.options.map((each) => each.name),
-      summary: `the Project has no Status option named exactly "${expected.name}"`,
+      summary: `the Project has no Intent Phase option named exactly "${expected.name}"`,
     });
     // The board's own vocabulary does not contain the column: retrying the same
     // call cannot change that, so this needs a human, not another attempt.
@@ -1500,11 +1560,19 @@ async function syncOneProject(
         reason: "update-failed",
         expectedStatus: expected.name,
         availableOptions: [],
-        summary: `could not set the Project Status: ${updated.summary}`,
+        summary: `could not set the Project Intent Phase: ${updated.summary}`,
       });
       return fail(updated.classification);
     }
   }
+
+  await syncAuxiliaryWorkflowStatus(
+    context,
+    target,
+    field,
+    membership,
+    snapshot,
+  );
 
   upsertProjectEntry(ports, context, {
     project,

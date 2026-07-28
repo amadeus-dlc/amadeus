@@ -212,7 +212,10 @@ export const LIST_PROJECT_ITEMS_QUERY =
   "repository(owner:$owner,name:$name){issue(number:$number){id " +
   "projectItems(first:$first){nodes{id " +
   "project{id number owner{__typename ... on Organization{login} ... on User{login}}} " +
-  'fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}' +
+  'intentPhase:fieldValueByName(name:"Intent Phase"){' +
+  "... on ProjectV2ItemFieldSingleSelectValue{name}} " +
+  'workflowStatus:fieldValueByName(name:"Status"){' +
+  "... on ProjectV2ItemFieldSingleSelectValue{name}}" +
   "}}}}}";
 
 // Organization-owned Projects only (E-U1CG ruling 2): no user-owner fallback, so
@@ -221,7 +224,10 @@ export const LIST_PROJECT_ITEMS_QUERY =
 export const RESOLVE_PROJECT_STATUS_FIELD_QUERY =
   "query($owner:String!,$number:Int!){" +
   "organization(login:$owner){projectV2(number:$number){id " +
-  'field(name:"Status"){... on ProjectV2SingleSelectField{id options{id name}}}' +
+  'intentPhase:field(name:"Intent Phase"){' +
+  "... on ProjectV2SingleSelectField{id options{id name}}} " +
+  'workflowStatus:field(name:"Status"){' +
+  "... on ProjectV2SingleSelectField{id options{id name}}}" +
   "}}}";
 
 export const ADD_PROJECT_ITEM_MUTATION =
@@ -828,10 +834,20 @@ function parseProjectItemNode(node: unknown): MirrorProjectItem | null {
   }
   const projectOwner = nonEmptyString(owner.login);
   if (projectOwner === null) return null;
-  const fieldValue = asRecord(record.fieldValueByName);
+  const fieldValue = asRecord(record.intentPhase);
   const currentStatus =
     fieldValue === null ? null : nonEmptyString(fieldValue.name);
-  return { projectId, projectNumber, projectOwner, itemId, currentStatus };
+  const workflowStatusValue = asRecord(record.workflowStatus);
+  const workflowStatus =
+    workflowStatusValue === null ? null : nonEmptyString(workflowStatusValue.name);
+  return {
+    projectId,
+    projectNumber,
+    projectOwner,
+    itemId,
+    currentStatus,
+    workflowStatus,
+  };
 }
 
 export function parseProjectItemsView(
@@ -854,7 +870,28 @@ export function parseProjectItemsView(
   return { issueNodeId, items };
 }
 
-// An unresolved organization / Project / Status field all return null: the
+function parseSingleSelectField(
+  value: unknown,
+): Readonly<{
+  fieldId: string;
+  options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
+}> | null {
+  const field = asRecord(value);
+  if (field === null) return null;
+  const fieldId = nonEmptyString(field.id);
+  if (fieldId === null || !Array.isArray(field.options)) return null;
+  const options: { id: string; name: string }[] = [];
+  for (const raw of field.options) {
+    const option = asRecord(raw);
+    const id = option === null ? null : nonEmptyString(option.id);
+    const name = option === null ? null : nonEmptyString(option.name);
+    if (id === null || name === null) return null;
+    options.push({ id, name });
+  }
+  return { fieldId, options };
+}
+
+// An unresolved organization / Project / Intent Phase field returns null: the
 // executor answers every one of them with skip + diagnostic, never a mutation.
 export function parseProjectStatusField(
   data: Record<string, unknown>,
@@ -864,20 +901,13 @@ export function parseProjectStatusField(
     organization === null ? null : asRecord(organization.projectV2);
   if (project === null) return null;
   const projectId = nonEmptyString(project.id);
-  const field = asRecord(project.field);
-  if (projectId === null || field === null) return null;
-  const fieldId = nonEmptyString(field.id);
-  const rawOptions = field.options;
-  if (fieldId === null || !Array.isArray(rawOptions)) return null;
-  const options: { id: string; name: string }[] = [];
-  for (const raw of rawOptions) {
-    const option = asRecord(raw);
-    const id = option === null ? null : nonEmptyString(option.id);
-    const name = option === null ? null : nonEmptyString(option.name);
-    if (id === null || name === null) return null;
-    options.push({ id, name });
-  }
-  return { projectId, fieldId, options };
+  const intentPhase = parseSingleSelectField(project.intentPhase);
+  if (projectId === null || intentPhase === null) return null;
+  const workflowStatusField =
+    project.workflowStatus === null
+      ? null
+      : parseSingleSelectField(project.workflowStatus);
+  return { projectId, ...intentPhase, workflowStatusField };
 }
 
 function parseAddedItemId(data: Record<string, unknown>): string | null {

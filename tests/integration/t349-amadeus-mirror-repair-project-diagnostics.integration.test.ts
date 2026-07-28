@@ -1,6 +1,6 @@
 // t349 — the read-only Project diagnostics `repair status` reports over a real
 // record on disk: drift against the column the sync itself would apply, an
-// unreachable Status field, a missing option with the board's own vocabulary, a
+// unreachable Intent Phase field, a missing option with the board's own vocabulary, a
 // credential without the `project` scope, the partial-success view a ledger of
 // several boards produces, and the negative assertion that diagnosing mutates
 // nothing at all.
@@ -388,7 +388,7 @@ describe("t349 drift", () => {
 });
 
 describe("t349 unresolved boards", () => {
-  test("an unreachable Status field reports field-missing", async () => {
+  test("an unreachable Intent Phase field reports field-missing", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
     fx.gateway.fieldFailures.set(BOARD_A.number, "api");
@@ -528,14 +528,14 @@ describe("t349 summaries", () => {
     for (const option of OPTIONS) expect(row.summary).not.toContain(option.name);
   });
 
-  test("an unreachable Status field says so without blaming permissions", async () => {
+  test("an unreachable Intent Phase field says so without blaming permissions", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
     fx.gateway.fieldFailures.set(BOARD_A.number, "api");
     const [row] = await diagnose(fx);
     expect(row.resolution).toBe("field-missing");
     expect(row.summary).toContain("acme/5");
-    expect(row.summary).toContain("Status");
+    expect(row.summary).toContain("Intent Phase");
     expect(row.summary).not.toContain("scope");
   });
 

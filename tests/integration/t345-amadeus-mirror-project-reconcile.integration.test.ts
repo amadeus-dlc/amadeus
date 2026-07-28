@@ -523,7 +523,7 @@ describe("t345 idempotence", () => {
 });
 
 describe("t345 call budget", () => {
-  test("one membership query and at most two mutations per Project", async () => {
+  test("without auxiliary Status, at most two mutations run per Project", async () => {
     const store = fileStore(linkedState());
     const gateway = new BoardGateway(markerBody());
 

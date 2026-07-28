@@ -62,7 +62,7 @@ Pull requests, releases, deployment, daemons, and polling are outside Intent
 Mirror.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","authoritativeField":"Intent Phase","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
 ## Project boards
 
 `mirror-projects` lists the GitHub Project boards this Intent syncs to. Each
@@ -86,11 +86,18 @@ layer states the complete set of boards it wants. `mirror-projects` is
 independent of `auto-mirror` — the mode decides whether a mirror operation runs,
 this key decides which boards that operation touches.
 
+The authoritative lifecycle value is written to the board's `Intent Phase`
+single-select field. The standard `Status` field is auxiliary: active Intents
+move to `In progress`, completed Intents move to `Done`, and parked Intents keep
+their current Status. A missing option or failed auxiliary Status update never
+blocks Intent Phase reconciliation or Issue close.
+
 <!-- amadeus-topic:auth -->
 <!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
 ## Authentication for Project boards
 
-Reading a board's Status field and setting a column both go through the GraphQL
+Reading a board's Intent Phase and auxiliary Status fields and setting their
+options all go through the GraphQL
 ProjectV2 API, which needs the `project` token scope in addition to whatever the
 Issue itself required. The credential stays with `gh` and its credential store;
 Intent Mirror never reads a token value, never changes a scope, and never
@@ -108,13 +115,13 @@ column it is in, the column the workflow expects, whether those two have
 drifted, and one of four resolutions:
 
 - `resolved` — the expected column is reachable; the row is an observation only.
-- `field-missing` — the board's Status field could not be read, so no column can
+- `field-missing` — the board's Intent Phase field could not be read, so no column can
   be applied.
-- `option-missing` — the board declares no Status option matching the expected
+- `option-missing` — the board declares no Intent Phase option matching the expected
   name exactly, case and spacing included. The board's own option names are
   listed as `availableOptions`, so you can either add the option to the board or
   map the phase onto an existing one with a `status-names` override.
-- `permission-denied` — the credential in use cannot read that board's Status
+- `permission-denied` — the credential in use cannot read that board's Intent Phase
   field; grant it the `project` scope and run `repair status` again.
 
 Each row carries a summary sentence naming the board, the column, and the move

@@ -136,6 +136,13 @@ export const MIRROR_USER_CONTRACT = {
     phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
     layerResolution: "last-layer-with-a-value-replaces",
     independentOf: "auto-mirror",
+    authoritativeField: "Intent Phase",
+    auxiliaryStatus: {
+      active: "In progress",
+      complete: "Done",
+      parked: "keep",
+      failureMode: "non-blocking",
+    },
   },
   // Reading and setting a Project column needs one extra token scope. The
   // credential itself stays with gh: this tool never changes a scope and never

@@ -954,7 +954,7 @@ function diagnosticTargets(
   );
 }
 
-// A read that did not produce a Status field leaves the column unreachable. The
+// A read that did not produce an Intent Phase field leaves the column unreachable. The
 // two reasons a human can act on are distinguished: a credential that lacks the
 // `project` scope, and everything else (an absent field, an unresolved Project,
 // a failed query) reported as the field being unavailable.
@@ -997,7 +997,7 @@ function resolvedSummary(row: RepairSummaryRow): string {
 // has. The board's own option names travel in `availableOptions`.
 function optionMissingSummary(project: string, expected: string): string {
   return (
-    `${project} declares no Status option named exactly "${expected}" ` +
+    `${project} declares no Intent Phase option named exactly "${expected}" ` +
     "(the match is exact — case and spacing included). Either add that option to " +
     "the board, or map this phase onto one of the options it already has with a " +
     "`status-names` override for this Project in `mirror-projects`."
@@ -1009,7 +1009,7 @@ function optionMissingSummary(project: string, expected: string): string {
 // credential — re-authorizing is a human's move, made outside this tool.
 function permissionDeniedSummary(project: string): string {
   return (
-    `the GitHub credential in use cannot read the Status field of ${project}; ` +
+    `the GitHub credential in use cannot read the Intent Phase field of ${project}; ` +
     `reading and setting a Project column requires the \`${PROJECT_SCOPE}\` scope. ` +
     "Grant that scope to the credential and run `repair status` again."
   );
@@ -1017,9 +1017,9 @@ function permissionDeniedSummary(project: string): string {
 
 function fieldMissingSummary(project: string): string {
   return (
-    `the Status field of ${project} could not be resolved, so no column can be ` +
+    `the Intent Phase field of ${project} could not be resolved, so no column can be ` +
     "compared or applied. Confirm the Project exists and carries a single-select " +
-    "field named Status."
+    'field named "Intent Phase".'
   );
 }
 
