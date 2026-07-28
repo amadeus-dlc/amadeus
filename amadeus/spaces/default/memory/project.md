@@ -66,7 +66,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - DECIDED: この repo で Amadeus 自体の新機能や仕様変更を扱う intent には、`amadeus-feature` スコープを明示して開始する。既存 intent の再開では、state に記録されたスコープを引き続き使用する (user decision 2026-07-24。2026-07-16 の `amadeus` 既定を変更種別別スコープへ更新) <!-- cid:scope-definition:default-scope-amadeus -->
 - DECIDED: bug ラベルの Issue を修正する intent は、`amadeus-bugfix` スコープを既定とする。クロスレビュー2名成立を起動の前提とする(issue-cross-review)。修正に新機能や仕様の設計が必要な場合は、ユーザーの明示指示を得て `amadeus-feature` へ切り替える (user decision 2026-07-24。2026-07-16 の汎用 `bugfix` 既定を更新) <!-- cid:scope-definition:bugfix-scope-for-bug-intents -->
 - DECIDED: 外部から観測できる振る舞いを変えず、Amadeus の内部構造を改善する intent には、`amadeus-refactor` スコープを明示して開始する。仕様変更を伴う場合は `amadeus-feature`、不具合の修正が主目的なら `amadeus-bugfix` を使用する (user decision 2026-07-24) <!-- cid:scope-definition:refactor-scope-for-refactor-intents -->
-- DECIDED: 互換スコープ `amadeus` は、そのスコープが state に記録されている既存 intent の再開に限って使用する。新規 intent には使用しない (user decision 2026-07-24) <!-- cid:scope-definition:legacy-amadeus-resume-only -->
+- DECIDED: 互換スコープ `amadeus` は廃止し、スコープファイル(`amadeus-amadeus.md`)と scope-grid エントリを削除した。後継は `amadeus-feature` / `amadeus-bugfix` / `amadeus-refactor`。当該スコープの intent は全件 complete/archived(in-flight 0件)を実測確認済み (user decision 2026-07-28。2026-07-24 の resume 限定運用を廃止へ更新) <!-- cid:scope-definition:legacy-amadeus-resume-only -->
 
 ## Forbidden
 
