@@ -74,6 +74,25 @@ export type PackReportError = { readonly type: "malformed-output"; readonly deta
 
 const ANSI_ESCAPE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, "g");
 
+export type PackDryRunEnvironment = {
+  pack(cwd: string): { exitCode: number; stdout: string; stderr: string };
+  readManifest(cwd: string): string;
+};
+
+const REAL_PACK_ENVIRONMENT: PackDryRunEnvironment = {
+  pack(cwd) {
+    const result = Bun.spawnSync([process.execPath, "pm", "pack", "--dry-run"], { cwd });
+    return {
+      exitCode: result.exitCode,
+      stdout: result.stdout.toString(),
+      stderr: result.stderr.toString(),
+    };
+  },
+  readManifest(cwd) {
+    return readFileSync(join(cwd, "package.json"), "utf8");
+  },
+};
+
 export namespace PackReport {
   /**
    * Parses the file rows and tarball name produced by `bun pm pack --dry-run`.
@@ -119,17 +138,20 @@ export namespace PackReport {
  * hardcoded self-referential comparison) against `cwd` and parses its stdout
  * into a PackReport.
  */
-export function runBunPackDryRun(cwd: string): Result<PackReport, PackReportError> {
-  const result = Bun.spawnSync([process.execPath, "pm", "pack", "--dry-run"], { cwd });
+export function runBunPackDryRun(
+  cwd: string,
+  environment: PackDryRunEnvironment = REAL_PACK_ENVIRONMENT,
+): Result<PackReport, PackReportError> {
+  const result = environment.pack(cwd);
   if (result.exitCode !== 0) {
     return Result.err({
       type: "malformed-output",
-      detail: `bun pm pack --dry-run exited ${result.exitCode}: ${result.stderr.toString() || result.stdout.toString()}`,
+      detail: `bun pm pack --dry-run exited ${result.exitCode}: ${result.stderr || result.stdout}`,
     });
   }
   let packageName: unknown;
   try {
-    packageName = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).name;
+    packageName = JSON.parse(environment.readManifest(cwd)).name;
   } catch (e) {
     return Result.err({
       type: "malformed-output",
@@ -139,5 +161,5 @@ export function runBunPackDryRun(cwd: string): Result<PackReport, PackReportErro
   if (typeof packageName !== "string") {
     return Result.err({ type: "malformed-output", detail: "expected a string package name in package.json" });
   }
-  return PackReport.parse(result.stdout.toString(), packageName);
+  return PackReport.parse(result.stdout, packageName);
 }
