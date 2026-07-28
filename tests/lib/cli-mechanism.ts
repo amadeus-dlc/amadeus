@@ -362,9 +362,6 @@ function scanCall(
 function scanSource(src: string): CliScan {
   const cached = SCAN_CACHE.get(src);
   if (cached) return cached;
-  if (!/\b(?:spawn(?:Sync)?|execFileSync)\b/.test(src)) {
-    return { cli: false, claude: false };
-  }
 
   const { sourceFile, checker } = sourceWithTypeChecker(src, SCAN_FILE);
   const result = { cli: false, claude: false };

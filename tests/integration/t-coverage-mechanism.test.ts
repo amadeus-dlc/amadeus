@@ -399,6 +399,25 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
     expect(wrappedCalleeMismatches(cases)).toEqual([]);
   });
 
+  test("CLI detection resolves escaped callee identifiers through the AST", () => {
+    const cases = [
+      String.raw`
+        import { sp\u0061wnSync as run } from "node:child_process";
+        run("claude", ["-p", "hello"]);
+      `,
+      String.raw`
+        Bun.sp\u0061wnSync(["claude", "-p", "hello"]);
+      `,
+    ];
+
+    for (const source of cases) {
+      expect(mechanismsOf("t99.none.test.ts", source)).toEqual(["cli"]);
+      expect(claudeDependenciesOf("t99.none.test.ts", source)).toEqual([
+        "cli-claude",
+      ]);
+    }
+  });
+
   test("Bun object spawns ignore unrelated property forms before cmd", () => {
     const src = [
       "const defaults = {};",
