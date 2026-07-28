@@ -663,7 +663,8 @@ export function mechanismOfTestFile(fileName: string): Mechanism {
  *  Scanning the code view (not the raw source) is what makes "match the CALL /
  *  SPAWN expression, never a bare mention" true: the t118 lesson (it references
  *  `run_claude` only in a comment that says it NEVER calls it) AND D-TUI-7 (only
- *  `resolveWinNode` is import-safe — importing it must NOT register `tui`) are
+ *  a helper from `tui-drive.ts` is import-safe — importing it must NOT register
+ *  `tui`) are
  *  both handled, because a driver named only in a comment or an `import` line is
  *  removed before the patterns run. A genuine spawn (`const DRIVER = join(...,
  *  "tui-drive.ts")`) or call survives the strip and registers.
@@ -679,8 +680,8 @@ export function mechanismOfTestFile(fileName: string): Mechanism {
  *  fallback always yields at least one member. */
 export function mechanismsOf(fileName: string, src: string): Mechanism[] {
   // Scan only executable code — a driver named in a comment (the t118 /
-  // calibration lesson) or imported for a helper (D-TUI-7: resolveWinNode is
-  // import-safe) is NOT a driver the test calls.
+  // calibration lesson) or imported for a helper (D-TUI-7) is NOT a driver the
+  // test calls.
   const code = codeView(src);
   const found = new Set<Mechanism>();
   // sdk — a call expression: `driveAidlc(` (whitespace tolerated before the paren).

@@ -20,9 +20,8 @@
 // t-tui-workshop, which is AMADEUS_TUI_LIVE-gated). It needs tmux + claude + the
 // distributable; absent any of those it SKIPs with a reason.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess — node on Windows so node-pty never loads under bun (#748), bun
-// elsewhere (tmux is a subprocess anyway). The driver auto-selects its backend
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
+// driver auto-selects its backend
 // by os.platform(); this test is platform-agnostic.
 
 import { describe, expect, test } from "bun:test";
@@ -31,15 +30,11 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import * as os from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag — byte-identical to the spike).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 
 interface Run {
   rc: number;
@@ -47,10 +42,7 @@ interface Run {
   stderr: string;
 }
 function drive(args: string[]): Run {
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
+  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
   return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 // `wait` returns nonzero on timeout — we want a boolean for the idempotent modal
@@ -78,14 +70,8 @@ function absentReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

@@ -5,10 +5,8 @@
 .DESCRIPTION
   This is the MR10 Windows invariance entrypoint. It sets the Windows-specific
   environment the TUI backend requires, then invokes `bun tests/run-tests.ts
-  --all --debug -P <N>`. `AMADEUS_NODE_BIN` is mandatory because the Windows TUI
-  driver runs under node (not bun) for node-pty/ConPTY input, and
-  `AMADEUS_TUI_LIVE=1` is mandatory so the full run cannot pass by silently
-  skipping the token-spending TUI journeys.
+  --all --debug -P <N>`. `AMADEUS_TUI_LIVE=1` is mandatory so the full run
+  cannot pass by silently skipping the token-spending TUI journeys.
 
 .PARAMETER ProjectDir
   Synced repo directory. Default C:\amadeus.
@@ -26,7 +24,6 @@ param(
 $ErrorActionPreference = "Continue"
 
 $GitBash = "C:\Program Files\Git\bin\bash.exe"
-$NodeExe = "C:\Program Files\nodejs\node.exe"
 $BunExe = "C:\bun\bin\bun.exe"
 
 # The claude native installer drops claude.exe under the INSTALLING user's
@@ -45,28 +42,23 @@ function Require-Path([string]$Path, [string]$What) {
 
 Require-Path $ProjectDir "project directory"
 Require-Path $GitBash "Git Bash"
-Require-Path $NodeExe "node"
 Require-Path $BunExe "bun"
 if (-not $ClaudeDir) { throw "MISSING PREREQUISITE: claude CLI not found in any of: $($ClaudeDirCandidates -join '; ')" }
 
-$env:Path = "$ClaudeDir;C:\bun\bin;C:\Program Files\nodejs;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;" + $env:Path
-$env:AMADEUS_NODE_BIN = $NodeExe
+$env:Path = "$ClaudeDir;C:\bun\bin;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;" + $env:Path
 $env:AMADEUS_TUI_LIVE = "1"
 $env:CLAUDE_CODE_USE_BEDROCK = "1"
 if (-not $env:AWS_REGION) { $env:AWS_REGION = "us-east-1" }
-Remove-Item Env:\NODE_PATH -ErrorAction SilentlyContinue
 
 Set-Location $ProjectDir
 Write-Output "=== AI-DLC Windows --all ==="
 Write-Output "ProjectDir: $ProjectDir"
-Write-Output "AMADEUS_NODE_BIN: $env:AMADEUS_NODE_BIN"
 Write-Output "AMADEUS_TUI_LIVE: $env:AMADEUS_TUI_LIVE"
 Write-Output "Parallel: $Parallel"
 Write-Output "=== preflight ==="
 & $BunExe --version
-& $NodeExe --version
 & claude --version 2>&1 | Select-Object -First 1
-& $NodeExe -e "require('node-pty'); require('@xterm/headless'); console.log('DEPS-OK: node-pty + @xterm/headless')" 2>&1 | ForEach-Object { $_.ToString() }
+& $BunExe -e "if (typeof Bun.Terminal !== 'function') process.exit(1); await import('@xterm/headless'); console.log('DEPS-OK: Bun.Terminal + @xterm/headless')" 2>&1 | ForEach-Object { $_.ToString() }
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output "=== bun tests/run-tests.ts --all --debug -P $Parallel ==="

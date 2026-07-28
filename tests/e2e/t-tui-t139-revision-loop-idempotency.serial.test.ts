@@ -60,8 +60,7 @@
 // AMADEUS_TUI_LIVE=1; tmux/claude/distributable/Windows-node absence SKIP with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a subprocess
-// (node on Windows so node-pty never loads under bun, #748; bun elsewhere). The
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
 // tui-drive.ts spawn is what DERIVES the `tui` mechanism (Phase 0). Platform-
 // invariant plain-text grid asserts.
 
@@ -71,15 +70,14 @@ import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
-import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
+import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+const DRIVE_BIN = process.execPath;
+const DRIVE_PREFIX = [DRIVER];
 
 // Two full run-throughs back-to-back. The bun:test cap is the hard ceiling; each
 // run's pass condition is its on-disk Completed milestone, not the clock.
@@ -125,11 +123,8 @@ function skipReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

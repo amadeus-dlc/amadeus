@@ -6,8 +6,8 @@
 // (fixtures.sh:168-173), too much to re-inline per file. This is the one helper.
 //
 // It is import-safe (no top-level side effects) and used ONLY by tui tests, which
-// SPAWN tui-drive.ts as a subprocess — this module never loads node-pty, so it is
-// safe to import under bun on every platform.
+// SPAWN tui-drive.ts as a subprocess — this module is safe to import under Bun
+// on every platform.
 //
 // Mirrors the bash flags faithfully:
 //   withState        -> seed_state_file       (fixtures.sh:165)  amadeus-docs/amadeus-state.md

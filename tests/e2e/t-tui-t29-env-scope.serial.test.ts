@@ -71,12 +71,11 @@
 // bare `--e2e` SKIPs it; tmux/claude/distributable absence also SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess (node on Windows so node-pty never loads under bun, #748; bun
-// elsewhere). The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform.
+// The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
 // (Phase 0) — no filename mechanism segment. Platform-invariant: the assertions
-// are plain-text grid + on-disk reads, so the Windows node-pty backend (SSM leg,
-// later) observes them identically. Only resolveWinNode is imported.
+// are plain-text grid + on-disk reads, so the Windows Bun.Terminal backend (SSM
+// leg, later) observes them identically.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -85,20 +84,16 @@ import * as os from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 // Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
 // elsewhere bun + driver.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+const DRIVE_BIN = process.execPath;
+const DRIVE_PREFIX = [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration
 // tier sets 600). A fresh-project state-init + first-post-init-stage start is a
@@ -193,8 +188,7 @@ function scopeLanded(projectDir: string, scope: string): boolean {
 
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
-// Copied verbatim from the workshop template (Windows node / node-pty checks
-// kept exactly).
+// Kept aligned with the workshop template's cross-platform substrate checks.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live env-scope journey (uses Bedrock tokens)";
@@ -202,14 +196,8 @@ function skipReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

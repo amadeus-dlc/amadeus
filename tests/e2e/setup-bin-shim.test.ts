@@ -1,13 +1,13 @@
 // covers: workflow:setup-bin-shim
 //
-// FR-002 regression guard for the npx/bunx delivery path. The 0.1.0 release
-// shipped a CLI that silently did nothing under `npx @amadeus-dlc/setup`:
+// FR-002 regression guard for the bunx delivery path. The 0.1.0 release
+// shipped a CLI that silently did nothing through a package bin shim:
 // the entrypoint guard compared `resolve(process.argv[1])` (which does NOT
 // follow symlinks) against the module's real path, and npm/bunx invoke the
 // CLI through a node_modules/.bin symlink shim — so main() never ran and the
 // process exited 0 with no output. Every existing test spawned dist/cli.js
 // directly and missed it. This suite exercises the real installed-package
-// shape: `npm pack` the package, `npm install` the tarball into a scratch
+// shape: `bun pm pack` the package, `bun add` the tarball into a scratch
 // prefix, and run the resulting .bin shim.
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -27,21 +27,21 @@ beforeAll(async () => {
   await ensureSetupCliBuilt();
   scratch = mkdtempSync(join(tmpdir(), "amadeus-setup-bin-shim-"));
 
-  // Real npm pack -> real npm install of the local tarball. The package has
+  // Real bun pm pack -> real bun add of the local tarball. The package has
   // zero runtime dependencies, so this needs no registry access.
-  const pack = spawnSync("npm", ["pack", "--pack-destination", scratch], {
+  const pack = spawnSync(process.execPath, ["pm", "pack", "--destination", scratch, "--quiet"], {
     cwd: PKG_DIR,
     encoding: "utf8",
   });
-  if (pack.status !== 0) throw new Error(`npm pack failed: ${pack.stderr}`);
-  const tarball = join(scratch, pack.stdout.trim().split("\n").pop() as string);
+  if (pack.status !== 0) throw new Error(`bun pm pack failed: ${pack.stderr}`);
+  const tarball = pack.stdout.trim().split("\n").pop() as string;
 
   const install = spawnSync(
-    "npm",
-    ["install", tarball, "--prefix", scratch, "--no-audit", "--no-fund", "--ignore-scripts"],
+    process.execPath,
+    ["add", tarball, "--cwd", scratch, "--ignore-scripts"],
     { cwd: scratch, encoding: "utf8" },
   );
-  if (install.status !== 0) throw new Error(`npm install failed: ${install.stderr}`);
+  if (install.status !== 0) throw new Error(`bun add failed: ${install.stderr}`);
 
   shim = join(scratch, "node_modules", ".bin", "amadeus-setup");
 });
@@ -50,8 +50,8 @@ afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });
 });
 
-describe("amadeus-setup via the npm .bin shim (npx/bunx delivery path)", () => {
-  test("npm install creates the bin shim", () => {
+describe("amadeus-setup via the Bun .bin shim (bunx delivery path)", () => {
+  test("bun add creates the bin shim", () => {
     expect(existsSync(shim)).toBe(true);
   });
 

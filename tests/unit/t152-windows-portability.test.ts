@@ -34,13 +34,19 @@ describe("t152 Windows portability guard", () => {
 
   test("run-all.ps1 runs --all through Bun and forces live Windows TUI env", () => {
     const ps = readFileSync(join(WINDOWS, "run-all.ps1"), "utf8");
-    expect(ps).toContain('$env:AMADEUS_NODE_BIN = $NodeExe');
     expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "1"');
     expect(ps).toContain('-ArgumentList @("tests/run-tests.ts", "--all", "--debug", "-P", "$Parallel")');
     expect(ps).toContain("$Runner = Start-Process");
     expect(ps).toContain("exit $Runner.ExitCode");
-    expect(ps).toContain("require('node-pty'); require('@xterm/headless')");
+    expect(ps).toContain("Bun.Terminal + @xterm/headless");
     expect(ps).not.toContain("run-tests.sh");
+  });
+
+  test("Windows TUI sessions use Bun.Terminal and Bun.spawn", () => {
+    const driver = read("tests/harness/tui-drive.ts");
+    expect(driver).toContain("new Bun.Terminal({");
+    expect(driver).toContain("const child = Bun.spawn([file, ...args]");
+    expect(driver).toContain("process.execPath");
   });
 
   test("CloudFormation stack is disposable SSM-only Windows Server 2022", () => {
@@ -49,7 +55,7 @@ describe("t152 Windows portability guard", () => {
     expect(yaml).toContain("AmazonSSMManagedInstanceCore");
     expect(yaml).toContain("SecurityGroupIngress: []");
     expect(yaml).toContain("Git-2.49.0-64-bit.exe");
-    expect(yaml).toContain("node-v22.14.0-x64.msi");
+    expect(yaml).not.toContain("nodejs.org");
     expect(yaml).toContain("https://bun.sh/install.ps1");
     expect(yaml).toContain("https://claude.ai/install.ps1");
   });

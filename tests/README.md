@@ -21,7 +21,7 @@ unit, and the non-live integration files) need only `bun`; the live journeys add
 | Dependency | Needed for | Notes |
 |------------|-----------|-------|
 | **`bun`** | every level | The runner, all hooks, and all CLI tools are TypeScript run via bun. No jq/sed/awk/Git-Bash dependency. |
-| **`tmux`** | `e2e` live TUI journeys (macOS/Linux) | The `tui-drive.ts` backend drives a real `claude` TUI through a tmux pane. Absent → the live tui tests SKIP with a reason. (On Windows the driver uses a node-pty backend instead — see the Windows runbook.) |
+| **`tmux`** | `e2e` live TUI journeys (macOS/Linux) | The `tui-drive.ts` backend drives a real `claude` TUI through a tmux pane. Absent → the live tui tests SKIP with a reason. (On Windows the driver uses Bun's ConPTY-backed `Bun.Terminal` instead — see the Windows runbook.) |
 | **`claude` CLI + AWS/Bedrock creds** | live `integration` + `e2e` files | The SDK/tui drivers spend real Bedrock tokens. The runner's preflight (`tests/integration/t19.test.ts`) gates the live tiers; without the substrate, live files SKIP per-file rather than fail. |
 | **`AMADEUS_TUI_LIVE=1`** | the token-spending live TUI journeys | A bare `--e2e` SKIPs them; `--all --debug` sets it by default. Set `AMADEUS_TUI_LIVE=0` to force the SKIP path. |
 

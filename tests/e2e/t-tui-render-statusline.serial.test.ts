@@ -25,7 +25,7 @@
 //                             painted right side is "<status> | BR:opus-4-8[1m]".
 //                             This asserts printLine's REAL production output and
 //                             is platform-invariant plain text (no colour escapes,
-//                             so the Windows node-pty backend captures it identically
+//                             so the Windows Bun.Terminal backend captures it identically
 //                             — unlike statusline-colour, which is macOS-only).
 //
 // DIST/ FINDING (surfaced, not chased here): printLine's right-justify/padStart
@@ -42,9 +42,8 @@
 // Needs tmux + claude + the distributable; absent any of those it SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess — node on Windows so node-pty never loads under bun (#748), bun
-// elsewhere. The driver auto-selects its backend by os.platform(); this test is
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
+// driver auto-selects its backend by os.platform(); this test is
 // platform-agnostic. The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
 // (Phase 0) — no filename mechanism segment is needed or added.
 
@@ -53,17 +52,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
 const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 
 interface Run {
   rc: number;
@@ -71,10 +66,7 @@ interface Run {
   stderr: string;
 }
 function drive(args: string[]): Run {
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
+  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
   return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 // `wait` returns nonzero on timeout — boolean for the idempotent modal clears
@@ -101,11 +93,8 @@ function absentReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
@@ -227,7 +216,7 @@ describe("t-tui-render statusline workflow branches (seeded mid-ideation, no tok
   // the distributable pins the Opus model -> abbreviateModel() -> "BR:opus-4-8[1m]".
   // So the painted line ends "... | BR:opus-4-8[1m]". Anchored on the separator +
   // model token so a stray "BR:" elsewhere can't satisfy it. Platform-invariant
-  // plain text (no SGR escapes) -> the Windows node-pty backend captures it the
+  // plain text (no SGR escapes) -> the Windows Bun.Terminal backend captures it the
   // same as tmux. (The padStart right-justify branch is dead in production — see
   // the DIST/ FINDING in the header; this asserts what printLine really paints.)
   test.skipIf(ABSENT_REASON !== null)(

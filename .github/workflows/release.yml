@@ -15,9 +15,9 @@ name: Release @amadeus-dlc/setup
 # happens in one run. GitHub App pushes trigger workflows, so the release job
 # ignores its own bot-authored tag push while CI intentionally validates the
 # bot-authored main commit. Post-publish verification is a manual step
-# (see docs/guide/publishing-setup.md ch. 6) — an in-run npx smoke was
+# (see docs/guide/publishing-setup.md ch. 6) — an in-run bunx smoke was
 # removed after producing only false alarms (registry propagation lag
-# poisons the runner's npx cache, so retries can never recover).
+# poisons the runner's registry cache, so retries can never recover).
 #
 # Bootstrap: when the repo has no v* tag yet, a dispatch skips the bump
 # and releases the committed version as-is (release-it --no-increment,
@@ -95,7 +95,7 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
-          pkg_version="$(node -p "require('./packages/setup/package.json').version")"
+          pkg_version="$(bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')"
           if [ "$tag_version" != "$pkg_version" ]; then
             echo "::error::tag v${tag_version} does not match packages/setup version ${pkg_version}"
             exit 1
@@ -125,11 +125,11 @@ jobs:
           if [ "${{ inputs.dry-run }}" = "true" ]; then
             args+=(--dry-run)
           fi
-          npx release-it "${args[@]}"
+          bunx --bun release-it "${args[@]}"
 
       - name: Resolve version
         id: version
-        run: echo "version=$(node -p "require('./packages/setup/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release with generated notes
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}

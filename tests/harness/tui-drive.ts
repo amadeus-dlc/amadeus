@@ -22,21 +22,16 @@
 //                    server-side session by name. Proven; byte-for-byte the
 //                    behaviour of the original tools/amadeus-tui-drive.ts spike.
 //
-//   win32          → node-pty backend, spawned UNDER NODE (never bun — node-pty
-//                    input wedges under bun on Windows, microsoft/node-pty #748;
-//                    so the tui tests spawn `<resolved-node> --experimental-strip-types
-//                    tui-drive.ts`, not bun — resolveWinNode() finds node even when
-//                    it is off PATH, and the strip-types flag lets node < 22.18 run
-//                    the `.ts` entrypoint). node-pty
-//                    has no server: a pty + its rendered grid cannot survive
+//   win32          → Bun.Terminal backend backed by Windows ConPTY.
+//                    A terminal cannot survive
 //                    across separate CLI invocations the way a tmux session does.
 //                    So `start` forks a long-lived DAEMON (this file re-exec'd as
-//                    `__win-daemon`) that owns the pty, pipes pty.onData into an
+//                    `__win-daemon`) that owns the terminal, pipes output into an
 //                    @xterm/headless Terminal of the same cols/rows, and snapshots
 //                    the reconstructed GRID to a file every poll. send/capture/
 //                    wait/kill are thin clients that talk to the daemon through
 //                    two on-disk channels (a command log the daemon tails, and the
-//                    grid snapshot the readers poll). Piping node-pty's raw stream
+//                    grid snapshot the readers poll). Piping ConPTY's raw stream
 //                    through @xterm/headless makes Windows `capture` return the
 //                    same current-screen grid tmux capture-pane does, so the test
 //                    layer needs ZERO platform branches (D-TUI-2).
@@ -62,7 +57,7 @@
 //          Exits 0 on match, 1 on timeout.
 //   capture --session <name> [--ansi]
 //          Print the current pane (plain text; --ansi keeps colour escapes —
-//          tmux only; the node-pty grid is always plain text).
+//          tmux only; the ConPTY grid is always plain text).
 //   kill   --session <name>
 //          Kill the session (idempotent).
 //   answer-gate --session <name> --project-dir <dir>
@@ -104,7 +99,7 @@
 //
 // Exit codes: 0 success, 1 wait-timeout / assertion miss, 2 usage/spawn error.
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -192,49 +187,9 @@ function writeTuiTrace(
 }
 
 // ---------------------------------------------------------------------------
-// Windows node resolution (D-TUI-7). The driver subprocess MUST run under node
-// on Windows — node-pty input wedges under bun (microsoft/node-pty #748) — but
-// `node` is frequently installed yet NOT on PATH (proven on the EC2 box: node
-// v22.14.0 lives at C:\Program Files\nodejs\node.exe but neither bash nor cmd
-// resolve a bare `node`). So we resolve a concrete node binary by trying, in
-// order: an explicit AMADEUS_NODE_BIN override, a bare `node` if it is actually on
-// PATH, then the canonical Program Files install path. Returns the first that
-// exists, or null when node cannot be found anywhere (the caller treats that as
-// a clean capability-ABSENT skip, not a failure).
-//
-// NOTE on `node foo.ts`: node < 22.18 does NOT auto-strip TypeScript types and
-// errors ERR_UNKNOWN_FILE_EXTENSION on a bare `.ts` entrypoint. The box's node
-// is 22.14, so every Windows node invocation of this `.ts` file (the daemon
-// re-exec here, and the tests' driver spawn) MUST pass --experimental-strip-types.
-// macOS/Linux are unaffected — there the driver runs under bun (process.execPath),
-// which executes `.ts` natively with no flag (byte-identical to the tmux spike).
-export function resolveWinNode(): string | null {
-  // bare `node` is on PATH only if `node --version` succeeds.
-  const onPath =
-    spawnSync("node", ["--version"], { encoding: "utf-8" }).status === 0;
-  const candidates = [
-    process.env.AMADEUS_NODE_BIN,
-    onPath ? "node" : undefined,
-    "C:\\Program Files\\nodejs\\node.exe",
-  ];
-  for (const c of candidates) {
-    if (!c) continue;
-    if (c === "node") return c; // already proven on PATH above
-    if (existsSync(c)) return c;
-  }
-  return null;
-}
-
-// Resolve a command name to an absolute executable path on Windows. node-pty's
-// Windows backend (ConPTY `startProcess`) does NOT do PATH lookup the way
-// child_process.spawn does, so a bare command like `claude` throws
-// "File not found:" even when it is on PATH (PROVEN on the EC2 box:
-// pty.spawn("claude", ...) SPAWN_THREW "File not found"; the absolute
-// claude.exe SPAWN_OK with data). `cmd.exe` happens to work bare only because
-// Windows resolves System32 implicitly. So before pty.spawn we resolve the
-// executable via `where` (the Windows `which`). An already-absolute path, or a
-// name that `where` cannot resolve (e.g. `cmd.exe`, which node-pty handles
-// itself), is returned unchanged so the daemon's own error path still applies.
+// Resolve a command name to an absolute executable path on Windows. An
+// already-absolute path, or a name that `where` cannot resolve, is returned
+// unchanged so Bun.spawn's own diagnostic remains authoritative.
 // POSIX is unaffected — the tmux backend never calls this.
 function resolveWinExecutable(file: string): string {
   if (os.platform() !== "win32") return file;
@@ -246,7 +201,6 @@ function resolveWinExecutable(file: string): string {
     if (first) return first.trim();
   }
   // `where` could not resolve it (e.g. cmd.exe, which ConPTY resolves itself).
-  // Return unchanged; node-pty either resolves it or throws its own diagnostic.
   return file;
 }
 
@@ -306,8 +260,7 @@ function answerGateTracePollMs(): number {
   return Math.max(1_000, raw);
 }
 
-// A small sleep that works under both bun and node (the Windows daemon runs
-// under node where Bun.sleep is absent).
+// A small promise-based sleep shared by the client and daemon paths.
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -422,16 +375,15 @@ const tmuxBackend: Backend = {
 };
 
 // ---------------------------------------------------------------------------
-// win32 backend (node-pty + @xterm/headless), via a per-session daemon.
+// win32 backend (Bun.Terminal + @xterm/headless), via a per-session daemon.
 //
-// The win32 path (node-pty under node, not bun — node-pty input wedges under
-// bun's ConPTY, microsoft/node-pty#748) is validated on a Windows Server 2022
-// EC2 host stood up from tests/harness/windows/windows-test.cfn.yaml; see the
-// Windows runbook in docs/reference/09-testing.md.
+// The win32 path is validated on a Windows Server 2022 EC2 host stood up from
+// tests/harness/windows/windows-test.cfn.yaml; see the Windows runbook in
+// docs/reference/09-testing.md.
 //
-// Cross-invocation state model: tmux keeps the session in its server; node-pty
+// Cross-invocation state model: tmux keeps the session in its server; ConPTY
 // has no server, so `start` forks a long-lived daemon (this file re-exec'd as
-// `__win-daemon`) that owns the pty + xterm Terminal. The thin clients talk to
+// `__win-daemon`) that owns the Bun terminal + xterm Terminal. The thin clients talk to
 // it through two on-disk channels under a per-session dir:
 //   <dir>/cmd.log   — append-only command log the daemon tails (send/kill).
 //   <dir>/grid.txt  — the latest reconstructed grid the daemon snapshots; the
@@ -460,27 +412,12 @@ const win32Backend: Backend = {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "meta.json"), JSON.stringify({ cols: width, rows: height }));
 
-    // Fork the daemon UNDER NODE (never bun — node-pty input wedges under bun,
-    // microsoft/node-pty #748). We re-exec THIS file with the `__win-daemon`
-    // subcommand. Resolve a concrete node binary (PATH may not carry `node` even
-    // when it is installed — proven on the EC2 box), and pass
-    // --experimental-strip-types because node < 22.18 cannot run a bare `.ts`
-    // entrypoint (ERR_UNKNOWN_FILE_EXTENSION). resolveWinNode never returns null
-    // here in practice: this branch only runs on win32 after `start` was dispatched,
-    // which the preflight gates on node being present.
-    const nodeBin = resolveWinNode();
-    if (!nodeBin) {
-      fail(
-        "cannot launch the Windows daemon — node.exe not found (set AMADEUS_NODE_BIN " +
-          "or install node so it is on PATH / at C:\\Program Files\\nodejs). #748: " +
-          "the daemon must run under node, never bun.",
-      );
-    }
+    // Re-exec this file under the current Bun runtime. The detached daemon owns
+    // ConPTY while the short-lived client process returns to the test.
     const selfPath = fileURLToPathSafe(import.meta.url);
-    const child = spawn(
-      nodeBin,
+    const child = Bun.spawn(
       [
-        "--experimental-strip-types",
+        process.execPath,
         selfPath,
         "__win-daemon",
         "--session",
@@ -496,13 +433,13 @@ const win32Backend: Backend = {
       ],
       {
         detached: true,
-        stdio: "ignore",
+        stdin: "ignore",
+        stdout: "ignore",
+        stderr: "ignore",
         windowsHide: true,
       },
     );
-    if (child.pid !== undefined) {
-      writeFileSync(join(dir, "pid"), String(child.pid));
-    }
+    writeFileSync(join(dir, "pid"), String(child.pid));
     child.unref();
     process.stdout.write(`started session '${session}' (${width}x${height})\n`);
   },
@@ -518,9 +455,9 @@ const win32Backend: Backend = {
   },
 
   capture(session, _ansi) {
-    // node-pty has no colour-escape passthrough equivalent to tmux -e; the grid
-    // is always reconstructed as plain text (xterm strips SGR into cell attrs we
-    // do not re-serialise). _ansi is accepted for surface parity and ignored.
+    // The reconstructed Windows grid has no colour-escape passthrough equivalent
+    // to tmux -e; xterm stores SGR as cell attributes that are not re-serialized.
+    // _ansi is accepted for surface parity and ignored.
     const dir = winSessionDir(session);
     const gridPath = join(dir, "grid.txt");
     if (!existsSync(gridPath)) return "";
@@ -530,16 +467,14 @@ const win32Backend: Backend = {
   kill(session) {
     const dir = winSessionDir(session);
     if (!existsSync(dir)) return;
-    // 1) Ask the daemon to tear the pty down cleanly (it filters the ConPTY
-    //    "Socket is closed" / AttachConsole teardown noise itself).
+    // 1) Ask the daemon to tear ConPTY down cleanly.
     try {
       appendFileSync(join(dir, "cmd.log"), `${JSON.stringify({ kind: "kill" })}\n`);
     } catch {
       // channel already gone — fall through to the force-kill backstop.
     }
-    // 2) Force-kill backstop: node-pty hangs on ConPTY teardown (p.kill() →
-    //    "Socket is closed"), so never block on it. Hard-terminate the daemon
-    //    pid after a short grace; the daemon's process.exit closes the pty.
+    // 2) Force-kill backstop. Hard-terminate the daemon pid after a short grace;
+    //    the daemon's process exit closes ConPTY.
     const pidPath = join(dir, "pid");
     if (existsSync(pidPath)) {
       const pid = Number.parseInt(readFileSync(pidPath, "utf8").trim(), 10);
@@ -577,13 +512,7 @@ function fileURLToPathSafe(url: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// win32 DAEMON — owns the pty + @xterm/headless Terminal for one session.
-//
-// Runs UNDER NODE only. node-pty + @xterm/headless are imported HERE (inside the
-// daemon path) via dynamic import so the macOS/Linux tmux path — and any bun
-// process that merely loads this module — never touches node-pty (the #748
-// in-process wedge can only happen if node-pty is loaded; we keep it out of
-// every path except the node daemon).
+// win32 DAEMON — owns Bun.Terminal + @xterm/headless for one session.
 // ---------------------------------------------------------------------------
 
 async function runWinDaemon(a: Args): Promise<void> {
@@ -602,17 +531,7 @@ async function runWinDaemon(a: Args): Promise<void> {
   const gridPath = join(dir, "grid.txt");
   const cmdLogPath = join(dir, "cmd.log");
 
-  // Dynamic imports: keep node-pty + @xterm/headless out of every non-daemon
-  // path. These resolve only here, under node.
-  const pty = await import("node-pty");
-  // @xterm/headless is a CommonJS module (package main = lib-headless/...). bun's
-  // ESM interop hoists its `Terminal` export to the namespace top level, but
-  // node's CJS interop nests the whole module under `default` — so a bare
-  // `{ Terminal }` destructure reads `undefined` under node and `new Terminal()`
-  // throws "Terminal is not a constructor" (proven on the EC2 box: keys=["default"],
-  // typeof m.Terminal=undefined, typeof m.default.Terminal=function). Resolve the
-  // constructor across BOTH interop shapes so the daemon builds the grid on every
-  // runtime (bun on POSIX, node on Windows).
+  // Keep @xterm/headless out of every non-daemon path.
   const xterm = (await import("@xterm/headless")) as {
     Terminal?: typeof import("@xterm/headless").Terminal;
     default?: { Terminal?: typeof import("@xterm/headless").Terminal };
@@ -621,7 +540,7 @@ async function runWinDaemon(a: Args): Promise<void> {
   if (typeof Terminal !== "function") {
     process.stderr.write(
       "tui-drive __win-daemon: @xterm/headless Terminal constructor not found " +
-        "in either interop shape (m.Terminal / m.default.Terminal)\n",
+        "in either Bun interop shape (m.Terminal / m.default.Terminal)\n",
     );
     process.exit(2);
   }
@@ -632,28 +551,17 @@ async function runWinDaemon(a: Args): Promise<void> {
   // reappears.
   preseedClaudeOnboarding(cwd);
 
-  const term = new Terminal({ cols, rows, allowProposedApi: true });
+  const screen = new Terminal({ cols, rows, allowProposedApi: true });
 
-  // Resolve to an absolute path on Windows: node-pty's ConPTY backend does no
-  // PATH lookup, so a bare `claude` throws "File not found:" even when on PATH.
   const file = resolveWinExecutable(cmd[0]);
   const args = cmd.slice(1);
-  const child = pty.spawn(file, args, {
-    name: "xterm-256color",
-    cols,
-    rows,
-    cwd,
-    env: process.env as Record<string, string>,
-  });
-
-  child.onData((data) => term.write(data));
 
   // Snapshot the reconstructed grid on a timer so capture/wait clients always
   // read a current screen — the tmux capture-pane equivalent. We serialise the
   // viewport (baseY .. baseY+rows-1) so scrollback never leaks into a match (the
   // scrollback false-positive that bit the raw-stream spike, §2.2).
   const snapshot = (): void => {
-    const buf = term.buffer.active;
+    const buf = screen.buffer.active;
     const lines: string[] = [];
     for (let y = 0; y < rows; y++) {
       const line = buf.getLine(buf.baseY + y);
@@ -670,6 +578,30 @@ async function runWinDaemon(a: Args): Promise<void> {
   };
   const snapTimer = setInterval(snapshot, POLL_INTERVAL_MS);
 
+  const terminal = new Bun.Terminal({
+    cols,
+    rows,
+    name: "xterm-256color",
+    data(_terminal, data) {
+      screen.write(data);
+    },
+  });
+  const child = Bun.spawn([file, ...args], {
+    cwd,
+    env: process.env,
+    terminal,
+    onExit() {
+      clearInterval(snapTimer);
+      snapshot();
+      try {
+        terminal.close();
+      } catch {
+        // ConPTY is already closed.
+      }
+      process.exit(0);
+    },
+  });
+
   // Tail the command log for send/kill. We track the byte offset consumed so we
   // never re-process a record.
   let consumed = 0;
@@ -677,22 +609,17 @@ async function runWinDaemon(a: Args): Promise<void> {
     clearInterval(snapTimer);
     snapshot(); // final grid
     try {
-      // node-pty hangs on ConPTY teardown; don't block. Best-effort kill, then
-      // hard-exit so the OS reaps the pty. Filter the AttachConsole stderr noise
-      // by simply not surfacing it.
       child.kill();
     } catch {
-      // "Socket is closed" / AttachConsole — expected on ConPTY teardown.
+      // The child may already have exited.
+    }
+    try {
+      terminal.close();
+    } catch {
+      // ConPTY may already be closed by the child exit.
     }
     process.exit(0);
   };
-
-  child.onExit(() => {
-    clearInterval(snapTimer);
-    snapshot();
-    // Leave the grid in place so a final capture sees the end-state, then exit.
-    process.exit(0);
-  });
 
   const pump = async (): Promise<void> => {
     for (;;) {
@@ -714,8 +641,8 @@ async function runWinDaemon(a: Args): Promise<void> {
               return;
             }
             if (rec.kind === "send") {
-              child.write(encodeKeys(rec.keys ?? "", rec.literal === true));
-              if (rec.noEnter !== true) child.write("\r");
+              terminal.write(encodeKeys(rec.keys ?? "", rec.literal === true));
+              if (rec.noEnter !== true) terminal.write("\r");
             }
           }
         }
@@ -726,7 +653,7 @@ async function runWinDaemon(a: Args): Promise<void> {
   await pump();
 }
 
-// Translate the send intent into a byte stream node-pty.write understands. For
+// Translate the send intent into a byte stream Bun.Terminal.write understands. For
 // literal text we pass it verbatim. For named keys we map the tmux key names the
 // callers already use (Enter / Down / Up / C-c / Space) to their control / CSI
 // sequences, so the same test script drives both backends unchanged.
@@ -892,7 +819,7 @@ function cmdKill(backend: Backend, a: Args): void {
 // answer-gate — the shared AskUserQuestion answer loop (§3, D-TUI-3).
 //
 // One implementation, both backends: it only uses backend.capture + backend.send,
-// so the tmux and node-pty paths drive it identically. It is the value of the
+// so the tmux and ConPTY paths drive it identically. It is the value of the
 // whole exercise — the per-tab Enter loop proven in tmp/auq-loop.sh, made reusable.
 //
 // Detection is SCREEN-based (the `Enter to select` / `Submit answers` footer on
@@ -1094,8 +1021,8 @@ function gridIsSubmitScreen(grid: string): boolean {
 //     (`"Tab/Arrow keys to navigate"`, rendered only when there is >1 tab); the
 //     toggled selection PERSISTS across the navigation (verified live).
 // We detect a multi-select question by the checkbox markers it paints on its OPTION
-// lines only — `❯ 1. [ ] Option` / `  2. [✔] Option` (tmux paints `✔`; claude -p /
-// node-pty paint `x`). We deliberately do NOT key off the prose "select all that
+// lines only — `❯ 1. [ ] Option` / `  2. [✔] Option` (some terminal paths paint
+// the selected marker as `x`). We deliberately do NOT key off the prose "select all that
 // apply" (it echoes on the Submit review screen) nor the tab-strip `☐`/`☒` glyphs
 // (present on EVERY tab, single-select ones included) — both misfire.
 function gridIsMultiSelect(grid: string): boolean {
@@ -1541,32 +1468,7 @@ async function main(): Promise<void> {
   }
 }
 
-// Run main() ONLY when this file is the executed entrypoint — never when it is
-// imported (the tui tests import resolveWinNode() from here; an unguarded
-// top-level `await main()` would parse the TEST RUNNER's argv, hit the default
-// case, and process.exit(2) the importer). bun sets import.meta.main; node < 23
-// does not, so fall back to comparing this module's path to argv[1] (covers the
-// Windows daemon re-exec, which runs under node directly).
-function isEntrypoint(): boolean {
-  // import.meta.main is a bun extension (a boolean at runtime); under node < 23
-  // it is undefined, so fall back to the argv[1] path comparison.
-  const metaMain = (import.meta as { main?: boolean }).main;
-  if (typeof metaMain === "boolean") return metaMain;
-  const entry = process.argv[1];
-  if (!entry) return false;
-  // Normalise BOTH paths before comparing. On Windows under node, argv[1] is a
-  // BACKSLASH path (C:\...\tui-drive.ts) while fileURLToPathSafe(import.meta.url)
-  // yields a FORWARD-slash path (C:/.../tui-drive.ts), so a raw === is always
-  // false there — main() never runs, every subcommand (start / capture /
-  // __win-daemon) silently no-ops with exit 0, and the Windows backend produces
-  // an empty grid (PROVEN on the EC2 box: resolved=C:/probe-entry.ts vs
-  // argv[1]=C:\probe-entry.ts, EQUAL=false). Fold separators to `/` and lowercase
-  // (Windows paths are case-insensitive) so the daemon re-exec is recognised as
-  // the entrypoint. macOS/Linux are unaffected — the bun branch returns above.
-  const norm = (p: string): string => p.replaceAll("\\", "/").toLowerCase();
-  return norm(fileURLToPathSafe(import.meta.url)) === norm(entry);
-}
-
-if (isEntrypoint()) {
+// Imports are side-effect free; only the Bun entrypoint runs the CLI dispatcher.
+if (import.meta.main) {
   await main();
 }

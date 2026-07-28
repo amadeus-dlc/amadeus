@@ -10,18 +10,19 @@
 // This is test-side vocabulary only (domain-entities.md) — no production
 // type is added to packages/setup/src/.
 
-import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 
 /**
- * package.json `files` entries that must be declared explicitly. npm does not
+ * package.json `files` entries that must be declared explicitly. Bun does not
  * auto-include non-standard LICENSE-* filenames, so these are only bundled
  * because the `files` field lists them.
  */
 const DECLARED_IN_FILES: readonly string[] = Object.freeze(["dist/cli.js", "LICENSE-MIT", "LICENSE-APACHE"]);
 
 /**
- * Files npm always bundles regardless of the `files` field's contents (npm's
+ * Files Bun always bundles regardless of the `files` field's contents (Bun's
  * own packing behavior — verified empirically against the real tool, not
  * assumed).
  */
@@ -73,37 +74,18 @@ export type PackReportError = { readonly type: "malformed-output"; readonly deta
 
 export namespace PackReport {
   /**
-   * Parses the JSON value produced by `npm pack --dry-run --json`: an array
-   * with one entry per packed workspace member. @amadeus-dlc/setup is packed
-   * alone, so exactly one entry is expected.
+   * Parses the file rows produced by `bun pm pack --dry-run`.
    */
-  export function parse(npmPackJson: unknown): Result<PackReport, PackReportError> {
-    if (!Array.isArray(npmPackJson) || npmPackJson.length === 0) {
+  export function parse(bunPackOutput: string, version: string): Result<PackReport, PackReportError> {
+    const paths = bunPackOutput
+      .split(/\r?\n/)
+      .map((line) => /^packed\s+\S+\s+(.+)$/.exec(line)?.[1])
+      .filter((path): path is string => path !== undefined);
+    if (paths.length === 0) {
       return Result.err({
         type: "malformed-output",
-        detail: "expected a non-empty array from npm pack --dry-run --json",
+        detail: "expected file rows from bun pm pack --dry-run",
       });
-    }
-    const [entry] = npmPackJson;
-    if (typeof entry !== "object" || entry === null) {
-      return Result.err({ type: "malformed-output", detail: "expected an object as the first array entry" });
-    }
-    const { files, version } = entry as Record<string, unknown>;
-    if (!Array.isArray(files)) {
-      return Result.err({ type: "malformed-output", detail: "expected a files array in npm pack output" });
-    }
-    const paths: string[] = [];
-    for (const f of files) {
-      if (typeof f !== "object" || f === null || typeof (f as Record<string, unknown>).path !== "string") {
-        return Result.err({
-          type: "malformed-output",
-          detail: "expected {path: string} entries in the files array",
-        });
-      }
-      paths.push((f as Record<string, unknown>).path as string);
-    }
-    if (typeof version !== "string") {
-      return Result.err({ type: "malformed-output", detail: "expected a string version in npm pack output" });
     }
     const frozenPaths = Object.freeze(paths);
     return Result.ok(
@@ -116,26 +98,29 @@ export namespace PackReport {
 }
 
 /**
- * Runs the real `npm pack --dry-run --json` (BR-P01: no simulation, no
+ * Runs the real `bun pm pack --dry-run` (BR-P01: no simulation, no
  * hardcoded self-referential comparison) against `cwd` and parses its stdout
  * into a PackReport.
  */
-export function runNpmPackDryRun(cwd: string): Result<PackReport, PackReportError> {
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd, encoding: "utf8" });
-  if (result.status !== 0) {
+export function runBunPackDryRun(cwd: string): Result<PackReport, PackReportError> {
+  const result = Bun.spawnSync([process.execPath, "pm", "pack", "--dry-run"], { cwd });
+  if (result.exitCode !== 0) {
     return Result.err({
       type: "malformed-output",
-      detail: `npm pack --dry-run --json exited ${result.status}: ${result.stderr || result.stdout}`,
+      detail: `bun pm pack --dry-run exited ${result.exitCode}: ${result.stderr.toString() || result.stdout.toString()}`,
     });
   }
-  let parsed: unknown;
+  let version: unknown;
   try {
-    parsed = JSON.parse(result.stdout);
+    version = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).version;
   } catch (e) {
     return Result.err({
       type: "malformed-output",
-      detail: `failed to JSON.parse npm pack output: ${(e as Error).message}`,
+      detail: `failed to read package version: ${(e as Error).message}`,
     });
   }
-  return PackReport.parse(parsed);
+  if (typeof version !== "string") {
+    return Result.err({ type: "malformed-output", detail: "expected a string version in package.json" });
+  }
+  return PackReport.parse(result.stdout.toString(), version);
 }

@@ -53,13 +53,12 @@
 //
 // COST: spends real Bedrock tokens (minutes-long LLM turns across Initialization +
 // Ideation). Gated behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it;
-// tmux/claude/distributable absence (and Windows node/node-pty resolvability) also
+// tmux/claude/distributable absence (and Windows Bun.Terminal availability) also
 // SKIP with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts (node on Windows
-// so node-pty never loads under bun, #748; bun elsewhere). The answer-gate loop
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The answer-gate loop
 // lives in the driver — one implementation, both backends. Platform-invariant
-// plain-text grid asserts (no colour escapes), so the Windows node-pty backend
+// plain-text grid asserts (no colour escapes), so the Windows Bun.Terminal backend
 // captures identically; the SSM leg runs the same file.
 
 import { describe, expect, test } from "bun:test";
@@ -68,21 +67,18 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { auditFilePathFor, recordDirFor, stateFilePathFor } from "../harness/sdk-drive.ts";
-import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
+import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag — byte-identical to the spike).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 // Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
 // elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+const DRIVE_BIN = process.execPath;
+const DRIVE_PREFIX = [DRIVER];
 
 // Hang-backstop, NOT a budget. The poc `Completed>6` milestone requires driving
 // the FULL poc lifecycle for real — intent-capture, requirements-analysis, then
@@ -132,14 +128,8 @@ function skipReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

@@ -23,7 +23,7 @@
     "lint:check": "bunx @biomejs/biome check tests/ packages/setup/ packages/framework/core/ scripts/",
     "check": "bun run typecheck && bun run lint && bun run distribution:check"
   },
-  "description": "Dev-only tooling for the AIDLC framework — not part of the distributable. The shipped framework lives under dist/<harness>/ and is installed into user projects with `npx @amadeus-dlc/setup install` (see README.md). All framework hooks and tools run via bun without requiring this package; bun-types here only powers contributor LSP coverage.",
+  "description": "Dev-only tooling for the AIDLC framework — not part of the distributable. The shipped framework lives under dist/<harness>/ and is installed into user projects with `bunx @amadeus-dlc/setup install` (see README.md). All framework hooks and tools run via bun without requiring this package; bun-types here only powers contributor LSP coverage.",
   "author": "Amazon.com, Inc. or its affiliates",
   "license": "(MIT OR Apache-2.0)",
   "repository": {
@@ -36,7 +36,6 @@
     "@xterm/headless": "^5.5.0",
     "bun-types": "^1.3.13",
     "fast-check": "^4.9.0",
-    "node-pty": "1.1.0",
     "release-it": "^20.2.1",
     "typescript": "^6.0.3"
   }

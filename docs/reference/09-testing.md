@@ -73,7 +73,7 @@ stripping comments) for four signal classes:
 | Signal class | Smallest size it forces |
 | --- | --- |
 | network (`node:net/http/…`, `WebSocket`, `fetch`, `.listen`) | large |
-| process spawn (`child_process`, `spawn*`, `Bun.spawn`, `node-pty`) | medium |
+| process spawn (`child_process`, `spawn*`, `Bun.spawn`) | medium |
 | filesystem (`node:fs`, `readFileSync`, `mkdtempSync`, …) | medium |
 | timer / wait (`setTimeout`, `setInterval`, `Bun.sleep`) | medium |
 
@@ -173,10 +173,10 @@ bun tests/run-tests.ts [--ci | --all --debug -P 8]
 
 **Running the suite on Windows manually:**
 
-1. Install `bun`, Node.js, and the Claude Code CLI.
+1. Install Bun 1.3.13 or later and the Claude Code CLI.
 2. Install Git for Windows if you are running the full suite or the POSIX wrapper compatibility smoke; the native runner path itself does not require Bash.
-3. For e2e TUI tests, install the dev dependencies with npm so node can resolve `node-pty` and `@xterm/headless`.
-4. Set `AMADEUS_NODE_BIN` to the concrete `node.exe` path and set `AMADEUS_TUI_LIVE=1` for a full acceptance run.
+3. Install the dev dependencies with `bun install --frozen-lockfile`; Windows TUI tests use `Bun.Terminal` with `@xterm/headless` for screen reconstruction.
+4. Set `AMADEUS_TUI_LIVE=1` for a full acceptance run.
 5. Run `bun tests/run-tests.ts --all --debug -P 8`.
 
 No WSL or Docker is required; the supported validation substrate is native Windows.
@@ -219,7 +219,7 @@ No WSL or Docker is required; the supported validation substrate is native Windo
    aws cloudformation delete-stack --stack-name amadeus-windows-test
    ```
 
-`run-all.ps1` exports `AMADEUS_NODE_BIN` and `AMADEUS_TUI_LIVE=1` before invoking `bun tests/run-tests.ts --all --debug -P <N>`, so a green result cannot come from silently skipping the live TUI journeys. It probes the claude binary across `C:\Users\Administrator\.local\bin` and the systemprofile home, since the native installer drops `claude.exe` under whichever user ran the CloudFormation UserData bootstrap (Administrator under EC2Launch v2).
+`run-all.ps1` verifies that `Bun.Terminal` and `@xterm/headless` are available, then exports `AMADEUS_TUI_LIVE=1` before invoking `bun tests/run-tests.ts --all --debug -P <N>`, so a green result cannot come from silently skipping the live TUI journeys. It probes the claude binary across `C:\Users\Administrator\.local\bin` and the systemprofile home, since the native installer drops `claude.exe` under whichever user ran the CloudFormation UserData bootstrap (Administrator under EC2Launch v2).
 
 The stack defaults to **`c5.4xlarge`** — the proven size for the full `--all -P 8` live run. The e2e tier carries per-test `bun:test` timeouts (the Bolt-worktree lifecycle test lands at ~5.5s of its 5s budget on c5.4xlarge), so a smaller box (e.g. `t3.large`) tips deterministic Bolt/runtime tests into spurious timeouts under parallel load. Shrink the `InstanceType` parameter only when running a lighter tier selection.
 

@@ -55,22 +55,11 @@ export type RemovalPlan = {
 const HOOKS_SIGNATURE = ".kimi-code/hooks/amadeus-kimi-adapter.ts";
 const PERMISSION_SIGNATURES: readonly string[] = [".kimi-code/hooks/", ".kimi-code/tools/"];
 
-// reliability-design.md §loud fail: the syntax oracle is Bun's native TOML
-// parser — validation ONLY. Reached via globalThis so running the installer
-// under plain node fails loudly with an actionable message instead of a raw
-// ReferenceError (the kimi harness requires bun on PATH regardless). The
-// optional `tomlParse` is the test seam for the oracle-absent branch (the
-// globalThis.Bun property is read-only and non-configurable, so the branch
-// cannot be reached by shadowing the global in-process).
-export function checkTomlSyntax(text: string, tomlParse?: ((text: string) => unknown) | null): Result<void, IoError> {
-  const parse = tomlParse === undefined
-    ? (globalThis as { Bun?: { TOML?: { parse(text: string): unknown } } }).Bun?.TOML?.parse
-    : tomlParse;
-  if (parse === undefined || parse === null) {
-    return Result.err(IoError.of("TOML syntax validation requires the Bun runtime; re-run the installer with bunx"));
-  }
+// reliability-design.md §loud fail: Bun's native TOML parser is the syntax
+// oracle. Parsing validates only; successful content is never re-serialized.
+export function checkTomlSyntax(text: string): Result<void, IoError> {
   try {
-    parse(text);
+    Bun.TOML.parse(text);
     return Result.ok(undefined);
   } catch (cause) {
     return Result.err(IoError.of(`config.toml is not valid TOML; refusing to touch it: ${String(cause)}`));

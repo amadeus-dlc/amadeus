@@ -27,7 +27,7 @@
 //   - parseMemoryHeadings(file).total == the visible `- ` entry count on disk —
 //     the .sh's assertion 7 (parser ↔ disk agreement), ported by importing the
 //     exported helper from the distributable (amadeus-lib.ts:982; import-safe under
-//     bun, never loads node-pty).
+//     Bun).
 //   - RENDER (the tui-only value-add the SDK path is blind to): the captured grid
 //     showed the AskUserQuestion approval gate at least once during the run — the
 //     `❯` caret + an `Enter to select` / `Submit answers` footer. The .sh NEVER saw
@@ -66,15 +66,14 @@
 //
 // COST: spends real Bedrock tokens (minutes-long LLM turns to reach the gate).
 // Gated behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/
-// claude/distributable absence (and the Windows node + node-pty checks) also SKIP
+// claude/distributable absence (and the Windows Bun.Terminal check) also SKIP
 // with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess (node on Windows so node-pty never loads under bun, #748; bun
-// elsewhere). The answer-gate loop lives in the driver — one implementation, both
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
+// answer-gate loop lives in the driver — one implementation, both
 // backends. The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0);
 // no filename mechanism segment is needed or added. Platform-invariant plain-text
-// grid asserts — the Windows node-pty leg (via SSM) captures the same grid.
+// grid asserts — the Windows Bun.Terminal leg (via SSM) captures the same grid.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -83,24 +82,20 @@ import * as os from "node:os";
 import { join } from "node:path";
 // parseMemoryHeadings is the SAME parser the runtime-graph populator uses
 // (amadeus-lib.ts:982). Importing it here ports the .sh's parser↔disk assertion 7.
-// amadeus-lib.ts is import-safe (no node-pty); safe under bun on every platform.
+// amadeus-lib.ts is import-safe under Bun on every platform.
 import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 // Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
 // elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+const DRIVE_BIN = process.execPath;
+const DRIVE_PREFIX = [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). Reaching a gated stage is several minutes of real LLM turns, so the
@@ -154,14 +149,8 @@ function skipReason(): string | null {
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
+  if (IS_WIN && typeof Bun.Terminal !== "function") {
+    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

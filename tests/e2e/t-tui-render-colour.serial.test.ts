@@ -20,13 +20,13 @@
 //
 // PLATFORM SCOPE — macOS only, by harness capability (verified, not a weakness):
 // the colour assertion needs the captured pane to PRESERVE the SGR escape. tmux
-// `capture-pane -e` does (tui-drive.ts:288-291). The Windows node-pty backend has
-// NO colour-escape passthrough — it explicitly ignores --ansi and returns the plain
-// reconstructed grid (tui-drive.ts:413-416). The PRODUCT paints colour identically
+// `capture-pane -e` does. The Windows Bun.Terminal backend returns a plain
+// reconstructed grid from @xterm/headless rather than reserializing cell styles
+// as SGR escapes. The PRODUCT paints colour identically
 // on both platforms (the same TS hook runs); only this TEST HARNESS's Windows
 // capture is blind to it. So on Windows this test SKIPs with that reason rather than
 // faking a pass — a documented harness-capability gap, NOT a product divergence.
-// (Teaching the node-pty backend an @xterm/headless SGR-serialize path so Windows
+// (Teaching the Bun.Terminal backend an @xterm/headless SGR-serialize path so Windows
 // could assert colour too is a deferred follow-up, decided 2026-06-06.)
 //
 // RECONCILIATION (verified live with NDJSON 2026-06-09): the hook stdout still
@@ -44,14 +44,12 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
 const IS_WIN = os.platform() === "win32";
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 
 // Generous live-turn budget — one tiny turn, but tmux+claude startup + a real
 // Bedrock round-trip. Honour the suite's AMADEUS_TEST_TIMEOUT (seconds).
@@ -64,10 +62,7 @@ interface Run {
   stderr: string;
 }
 function drive(args: string[]): Run {
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
+  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
   return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 function runStatuslineHook(hook: string, projectDir: string, pct: number): Run {
@@ -96,14 +91,14 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 }
 
 // Gating. AMADEUS_TUI_LIVE=1 first (this spends tokens). Then the Windows
-// capability gap: node-pty cannot capture colour escapes, so the colour assertion
+// capability gap: the reconstructed grid cannot capture colour escapes, so the colour assertion
 // is unprovable there — SKIP with that reason rather than fake it. Then substrate.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
   }
   if (IS_WIN) {
-    return "node-pty backend strips colour escapes (#748, tui-drive.ts:398-401) — colour capture is macOS/tmux-only; the product paints colour identically on Windows, only the test harness cannot capture it";
+    return "Bun.Terminal grid reconstruction does not reserialize colour escapes — colour capture is macOS/tmux-only; the product paints colour identically on Windows, only the test harness cannot capture it";
   }
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";

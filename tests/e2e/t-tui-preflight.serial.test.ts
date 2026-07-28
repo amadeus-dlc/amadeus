@@ -8,22 +8,18 @@
 // WORKS, with the t19 discipline of distinguishing ABSENT (skip-with-reason)
 // from PRESENT-BUT-BROKEN (fail loud). It spends NO tokens and never touches
 // claude — it drives a known-answer target (printf in tmux / cmd.exe via
-// node-pty) and asserts the captured grid carries the sentinel.
+// Bun.Terminal) and asserts the captured grid carries the sentinel.
 //
 // Why a probe, not a bare `command -v` (§6.2): presence != working.
-//   - On Windows `node -e "require('node-pty')"` SUCCEEDS even when the driver
-//     is run under bun — and that bun `_socket.write` wedge (microsoft/node-pty
-//     #748) is exactly the misdiagnosis that cost the spike days. So we drive a
-//     real round-trip, not a resolvability check.
+//   - On Windows, Bun.Terminal can exist while ConPTY session startup or input
+//     still fails. So we drive a real round-trip, not an API-presence check.
 //   - tmux can be installed yet `capture-pane` returns nothing useful; an
 //     `@xterm/headless` import can resolve yet fail to reconstruct a grid. A
 //     `command -v` sees none of this.
 //
-// SPAWN, not import (D-TUI-7): this `.test.ts` runs under bun, so it must never
-// load node-pty in-process (the #748 in-process wedge). It SPAWNS tui-drive.ts
-// as a subprocess — bun on macOS/Linux (the driver is just tmux there, a
-// subprocess anyway), node on Windows (so node-pty never loads under bun). Same
-// spawn-not-import pattern t17/t27 use for the CLI tools.
+// SPAWN, not import (D-TUI-7): this `.test.ts` spawns tui-drive.ts as a Bun
+// subprocess on every platform. The same spawn-not-import pattern is used by
+// t17/t27 for CLI tools.
 //
 // The `covers:` header above claims the tui-drive instrument-calibration unit
 // this preflight doubles as (§6.2/§7) — a harness-instrument claim, the same
@@ -44,19 +40,13 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import * as os from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Locate the driver + pick the runtime per platform (§2.1, D-TUI-7).
-// On win32 the driver subprocess MUST be node (node-pty input wedges under bun,
-// #748) — resolved via resolveWinNode() because the box's node is off PATH —
-// and the `.ts` entrypoint needs --experimental-strip-types (node < 22.18 cannot
-// run a bare `.ts`). Everywhere else it is the bun running this test (tmux
-// backend), which runs `.ts` natively with no flag (byte-identical to the spike).
+// Locate the driver. The current Bun executable runs the TypeScript entrypoint
+// on every platform (§2.1, D-TUI-7).
 // ---------------------------------------------------------------------------
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const IS_WIN = os.platform() === "win32";
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 
 // The known-answer target — no claude, no tokens. On POSIX a bash printf that
 // holds the pane open; on Windows cmd.exe echoing the sentinel (the calibration
@@ -73,12 +63,7 @@ interface Run {
 }
 
 function drive(args: string[]): Run {
-  // win32: <resolved-node> --experimental-strip-types tui-drive.ts <args>.
-  // elsewhere: <bun> tui-drive.ts <args> (bun runs .ts natively, no flag).
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
+  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
   return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 
@@ -91,24 +76,7 @@ function drive(args: string[]): Run {
 // ---------------------------------------------------------------------------
 function substrateAbsentReason(): string | null {
   if (IS_WIN) {
-    // node + node-pty + @xterm/headless must all be resolvable. Resolvability is
-    // necessary-not-sufficient (the wedge is a runtime fault), so absence here is
-    // a clean SKIP; a resolvable-but-wedged backend is the BROKEN case the test
-    // body fails on.
-    //
-    // node may be installed yet OFF PATH (proven on the EC2 box: node at
-    // C:\Program Files\nodejs but not on PATH), so we resolve a concrete binary
-    // rather than trusting a bare `node`. node ABSENT anywhere -> clean SKIP.
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    // node-pty must be require-able BY THE RESOLVED NODE. The driver loads node-pty
-    // under this same node, so testing resolvability with a bare `node` (off PATH)
-    // would falsely report absence; use the resolved binary. node-pty installed by
-    // bun cannot be required by node (ERR_MODULE_NOT_FOUND) — only an npm-installed
-    // node-pty resolves here. Absence -> clean SKIP (capability absent, not broken).
-    const ptyOk =
-      spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status === 0;
-    if (!ptyOk) return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    return null;
+    return typeof Bun.Terminal === "function" ? null : "Bun.Terminal is unavailable on Windows";
   }
   // POSIX: tmux is the substrate.
   const tmuxOk = spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status === 0;
@@ -154,8 +122,8 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
 
         // 2) wait for the sentinel to paint on the reconstructed grid. A timeout
         // here is the BROKEN signal: the substrate resolved (we are past the
-        // ABSENT skip) but capture returned nothing useful — e.g. node-pty present
-        // but wedged under bun (#748), or tmux capture-pane returning empty.
+        // ABSENT skip) but capture returned nothing useful — e.g. a broken
+        // ConPTY round-trip, or tmux capture-pane returning empty.
         const waited = drive([
           "wait",
           "--session",
@@ -171,7 +139,7 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
           throw new Error(
             `tui-drive wait timed out for the known-answer sentinel — the ` +
               `substrate is PRESENT but BROKEN (capture empty? on Windows: ` +
-              `node-pty present but running under bun? microsoft/node-pty #748). ` +
+              `Bun.Terminal/ConPTY session failed to render). ` +
               `This is a fail-loud diagnostic, not a skip.\n${waited.stderr}`,
           );
         }
