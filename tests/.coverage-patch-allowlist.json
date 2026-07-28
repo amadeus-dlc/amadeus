@@ -512,7 +512,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "166-167",
+    "lines": "168-169",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -590,7 +590,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "113",
+    "lines": "114",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -620,7 +620,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "479",
+    "lines": "480",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -734,7 +734,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1013",
+    "lines": "1014",
     "reason": "t279 and t282 exercise create, sync, close, recovery, ownership, state-write, and gateway-failure matrices in-process; these exact residual rows are multiline effect/outcome construction and defensive invariant guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -763,10 +763,22 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "lines": "1440",
+    "reason": "Parked Intents return from authoritative lifecycle reconciliation before auxiliary Status synchronization; this defensive keep guard prevents a future caller from moving Status while parked.",
+    "expiry": "remove if auxiliary workflow synchronization becomes independently callable and the parked guard can be exercised directly"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
     "lines": "593-594",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
+    "lines": "895-897",
+    "reason": "t340 and t272 exercise single-select field parsing, option validation, malformed responses, and auxiliary Status handling in-process; these type-only return-shape rows are stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV stops attributing multiline TypeScript return annotations as executable rows"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
@@ -788,7 +800,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "1106",
+    "lines": "1127",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1568,7 +1580,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "277",
+    "lines": "279",
     "reason": "Dangling-after-lstat ENOENT recovery inside the lstat-to-realpath race window; ordinary absent and symlinked files are covered in-process.",
     "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
   },
