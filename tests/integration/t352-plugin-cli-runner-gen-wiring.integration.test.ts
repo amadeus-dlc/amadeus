@@ -72,6 +72,8 @@ function deps(opts: { runnersOk?: boolean; recompileOk?: boolean } = {}): Plugin
       return runnersOk;
     },
     recordDrops: recordPluginDrops,
+    stagingEntryState: () => "absent" as const,
+    copyPluginSource: () => {},
     clearDrops: clearPluginDrops,
     out: (l) => out.push(l),
     err: (l) => err.push(l),
