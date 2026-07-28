@@ -4,14 +4,14 @@
 
 > Part of the [Developer Reference](00-overview.md)
 
-The layered configuration resolver is a read-only component used by
-phase-boundary mirror routing. Its source of truth is
+The layered configuration resolver is a read-only component shared by mirror
+routing and solo-election activation. Its source of truth is
 `packages/framework/core/tools/amadeus-mirror-config.ts`.
 
 ## Contract
 
-`resolve(projectDir, space, intentDir, reader?)` derives and reads exactly
-three paths:
+`resolveMirrorConfig(projectDir, intentDir?, space?, hooks?)` derives and reads
+these paths:
 
 ```text
 <workspace>/amadeus/config.json
@@ -19,14 +19,14 @@ three paths:
 <workspace>/amadeus/spaces/<space>/intents/<intentDir>/config.json
 ```
 
-The caller resolves the active space and intent. The resolver performs no
-cursor lookup, caching, retry, or write operation.
+The resolver uses explicit selectors when supplied and otherwise resolves the
+active space and intent. It performs no caching, retry, or write operation.
 
 Each level produces `parsed`, `absent`, or `invalid`. `ENOENT`, including a
 dangling symbolic link, means `absent`; other I/O failures mean `invalid`.
-After parsing all levels, `mergeLayers` either returns every invalid level and
-all errors collected within it, or applies Global, Space, then Intent partial
-values to `DEFAULT_MIRROR_CONFIG`.
+After parsing all levels, it either returns every invalid level and all errors
+collected within it, or applies Global, Space, then Intent values independently
+per key.
 
 The operation is atomic from the caller's perspective: an invalid level never
 produces a partial resolved configuration.
@@ -37,14 +37,25 @@ The accepted JSON shape is:
 
 ```json
 {
-  "auto-mirror": true
+  "auto-mirror": "prompt",
+  "mirror-projects": [],
+  "auto-solo-election": true
 }
 ```
 
-`MIRROR_CONFIG_KNOWN_KEYS` is the schema boundary. The parser rejects unknown
-keys, non-object roots, and non-boolean `auto-mirror` values.
-`DEFAULT_MIRROR_CONFIG.autoMirror` is `false`. The on-disk kebab-case key maps
-to the TypeScript property `MirrorConfig.autoMirror`.
+The closed key allowlist is the schema boundary. The parser rejects unknown
+keys, non-object roots, values outside the `auto-mirror` mode set, malformed
+Project targets, and non-boolean `auto-solo-election` values. Defaults are
+`autoMirror: "prompt"`, an empty Project list, and
+`autoSoloElection: false`.
+
+## Solo-election integration
+
+An automatic solo-election open uses `open --trigger auto-solo`. The CLI
+resolves configuration before reading the definition or writing the election
+store. Unless `autoSoloElection` is `true`, it returns
+`{"opened":null,"reason":"auto-solo-election-disabled"}` and writes nothing.
+Ordinary `open` remains the explicit activation path.
 
 ## Phase-boundary integration
 
@@ -52,7 +63,7 @@ to the TypeScript property `MirrorConfig.autoMirror`.
 phase boundary and before choosing the mirror directive.
 
 - Invalid resolution emits an error directive and stops routing.
-- `autoMirror: true` plus an existing Mirror Issue emits a print directive
+- `autoMirror: "auto"` plus an existing Mirror Issue emits a print directive
   that runs `sync` and records the boundary receipt.
 - Otherwise the engine emits an ask directive. When no Mirror Issue exists,
   `create` is included as a choice.
