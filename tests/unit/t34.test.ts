@@ -72,7 +72,7 @@
 // + seed_state_file + cleanup_test_project per case): each case uses a FRESH
 // temp project dir (createTestProject, which toPortablePath-converts on
 // Windows so audit.md — written by the tool — round-trips when read back).
-// Audit-emitting cases seed audit-sample.md (which contains ZERO ERROR_LOGGED
+// Audit-emitting cases seed audit-sample.jsonl (which contains ZERO ERROR_LOGGED
 // rows, so post-fire counts are unambiguous) AND state-mid-ideation.md (the
 // state file emitError's existsSync guard requires before it emits). Test 6
 // deliberately seeds NEITHER. All temp dirs cleaned in afterAll.
@@ -143,45 +143,27 @@ function run(tool: string, args: string[], p: string): CliResult {
   };
 }
 
-/** Count `**Event**: ERROR_LOGGED` lines in a buffer. */
-function errorLoggedCount(body: string): number {
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse a JSONL audit buffer into records. */
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => l === "**Event**: ERROR_LOGGED").length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count ERROR_LOGGED records in a buffer. */
+function errorLoggedCount(body: string): number {
+  return auditRecords(body).filter((r) => r.event === "ERROR_LOGGED").length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings and `---` separators; splits `**label**: value`
- * on the literal `**: ` separator. Mirrors auditField in t31.cli.test.ts.
- * Returns "" when absent (block-scoped).
+ * Value of <key> from the FIRST audit record whose event matches <ev>.
+ * Record-scoped, so a key that belongs to another record returns "".
  */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  return auditRecords(body).find((r) => r.event === ev)?.fields?.[key] ?? "";
 }
 
 // ============================================================

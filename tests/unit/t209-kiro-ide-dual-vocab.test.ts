@@ -74,7 +74,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 function scratchProject(): string {
@@ -107,23 +107,34 @@ function scratchProject(): string {
   writeFileSync(join(dir, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(dir);
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
+  writeFileSync(join(auditDir, pinnedShardName()), "");
   return dir;
 }
 
 function readAudit(dir: string): string {
   const auditDir = seededAuditDir(dir);
   return readdirSync(auditDir)
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
 }
 
 function appendStartedStage(dir: string, stage: string): void {
+  const shard = join(seededAuditDir(dir), pinnedShardName());
+  const seq = readFileSync(shard, "utf-8").split("\n").filter((l) => l.trim() !== "").length + 1;
   appendFileSync(
-    join(seededAuditDir(dir), pinnedShardName()),
-    `\n## Stage Started\n**Timestamp**: 2099-01-01T00:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: ${stage}\n\n---\n`,
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: PINNED_CLONE_ID,
+      intentId: "test-intent",
+      timestamp: "2099-01-01T00:00:00Z",
+      heading: "Stage Started",
+      event: "STAGE_STARTED",
+      fields: { Stage: stage },
+    })}\n`,
   );
 }
 

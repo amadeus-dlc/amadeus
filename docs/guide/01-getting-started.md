@@ -91,7 +91,7 @@ The first time you run `/amadeus` (or describe what to build), the engine
 record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, which holds:
 
 - `amadeus-state.md` — the per-intent workflow state
-- `audit/` — the audit trail, written as per-clone shards (`<host>-<clone>.md`)
+- `audit/` — the audit trail, written as per-clone shards (`<host>-<clone>.jsonl`)
 - `<phase>/<stage>/...` — the stage artifacts (e.g. `inception/requirements-analysis/requirements.md`)
 
 Team knowledge lives one level up, at the space level —

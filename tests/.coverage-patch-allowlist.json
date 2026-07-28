@@ -169,7 +169,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "2216",
+    "lines": "2223",
     "reason": "The handleNext early return after a mirror directive is covered by strict single-JSON generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
     "expiry": "remove when handleNext can be driven with an injected in-process emitter"
   },
@@ -205,7 +205,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "236",
+    "lines": "235",
     "reason": "The non-object Receipt guard is a defensive parser branch adjacent to invalid JSON, unknown phase/status, and duplicate-key cases covered in-process by tests/unit/t265-engine-boundary.test.ts.",
     "expiry": "remove when t265 adds explicit null/array/scalar parser cases"
   },
@@ -235,7 +235,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "907-909",
+    "lines": "906-908",
     "reason": "Successful and idempotent Receipt writes and their JSON result are asserted through the generated state CLI in t265 integration/E2E; spawned lines are not parent-LCOV visible.",
     "expiry": "remove when handleMirrorBoundary receives injected state and output ports"
   },
@@ -253,7 +253,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4808",
+    "lines": "4855",
     "reason": "Mutation-before-reject error() emit in handleSetConstructionIteration for an invalid iteration token (U05). error() is `never` (process.exit); the reject DECISION (parseConstructionIteration returning !ok) is fully covered in-process by tests/unit/t250, and the handler's reject-with-no-mutation contract is exercised by the shipped-subprocess case in tests/integration/t250 (exit code + state byte-identity). Spawn-only error-exit row per spawn-blindspot-two-step (ii).",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
@@ -265,7 +265,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "761",
+    "lines": "760",
     "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
@@ -457,7 +457,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5583-5585",
+    "lines": "5654-5656",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
@@ -512,13 +512,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "157-158",
-    "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "198",
+    "lines": "166-167",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -530,19 +524,25 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "223",
+    "lines": "216",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "268-270",
+    "lines": "232",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "342-344",
+    "lines": "277-279",
+    "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
+    "lines": "351-353",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1556,7 +1556,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "156",
+    "lines": "169",
     "reason": "Fail-closed platform guard for a runtime without O_NOFOLLOW. Supported CI and production platforms expose the constant, while t268 covers normal, symlink, containment, size, and I/O outcomes.",
     "expiry": "remove when the supported platform matrix includes a runtime without O_NOFOLLOW or the filesystem constants port becomes injectable"
   },
@@ -1568,7 +1568,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "264",
+    "lines": "277",
     "reason": "Dangling-after-lstat ENOENT recovery inside the lstat-to-realpath race window; ordinary absent and symlinked files are covered in-process.",
     "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
   },
@@ -1613,5 +1613,184 @@
     "lines": "1091",
     "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "lines": "395",
+    "reason": "idempotentAppend runs only through the spawned mirror CLI (t282/t284/t300 drive the process boundary); the single-line TransactionId scan delegates to auditBlockField/splitAuditRecords which are covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when idempotentAppend gains an in-process seam test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-runtime.ts",
+    "lines": "806",
+    "reason": "MEMORY_EMPTY re-emission dedup runs only inside the spawned compile path; the single-line predicate delegates to auditBlockField (covered in-process by t351) and the timestamp compare. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the compile MEMORY_EMPTY path gains an in-process seam test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "3822",
+    "reason": "Resume-payload compaction flag is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the resume verb gains an in-process seam test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "3893",
+    "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when acknowledge-compaction gains an in-process seam test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-journal-convert.ts",
+    "lines": "289-298",
+    "reason": "import.meta.main CLI wrapper — spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove if the wrapper gains an in-process seam or the module stops being imported in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "lines": "389",
+    "reason": "priorAuditRow idempotency predicate runs only inside the spawned learnings persist CLI (t97/t99 drive the process boundary and prove the dedup behaviourally); the single-line predicate delegates to auditBlockField, covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when learnings persist gains an in-process seam test"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "750",
+    "reason": "Live-tier SDK harness helper: the shard listing runs only under the SDK substrate (t196/t197 .sdk tests SKIP without it), so the line is 0-stamped in the default CI lcov. Exercised by the live tier.",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "761",
+    "reason": "Same live-tier SDK harness path as line 750 (readAuditText shard listing).",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "lines": "790-795",
+    "reason": "readAuditEvents JSONL/legacy parse branches run only under the live SDK substrate (same class as lines 750/761).",
+    "expiry": "remove if the SDK substrate joins default CI"
+  },
+  {
+    "file": "tests/harness/solo-gate-fixture.ts",
+    "lines": "151-152",
+    "reason": "Defensive catch in the filler-event counter: reachable only when a seeded filler line is invalid JSON, which the serializer construction prevents. Fail-safe (counts the line as non-event).",
+    "expiry": "remove if the counter gains a malformed-line fixture"
+  },
+  {
+    "file": "tests/harness/solo-gate-fixture.ts",
+    "lines": "252",
+    "reason": "Fail-closed guard in breakGrantIssuerIntent: throws only when no record carries the seeded Issuer Intent, which the fixture construction makes impossible; the guard exists so a future seeding change fails loud instead of silently no-opping (the exact defect class this rewrite fixed).",
+    "expiry": "remove if a negative-fixture test drives the throw"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "lines": "906",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-audit.ts",
+    "lines": "1045-1047",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "lines": "199-201",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "lines": "898-900",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "543-551",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "2113",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "2970",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "658-660",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "678",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "171-175",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "828-831",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "867-868",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4001-4004",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4716-4726",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4728-4730",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "lines": "107-108",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "lines": "933-935",
+    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-observability.ts",
+    "lines": "119",
+    "reason": "Defensive catch around the layered config read: readMirrorConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS — unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
+    "expiry": "remove if readMirrorConfigLayers gains a throwing path or the belt is dropped"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-otel-projector.ts",
+    "lines": "600-608",
+    "reason": "import.meta.main CLI wiring for the projector 'export' verb. The decision logic (parseCliArgs, runExport) is fully covered in-process by tests/integration/t358; the main block runs only in the spawned CLI, which Bun coverage does not attribute. Spawn-only wiring lines per spawn-blindspot-two-step (ii)."
   }
 ]

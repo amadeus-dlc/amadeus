@@ -246,42 +246,31 @@ function freshProject(opts: {
   return proj;
 }
 
-/**
- * Read the value of <key> from the FIRST audit block whose `**Event**:`
- * matches <ev>. Block-scoped (resets at `## ` headings and `---`). Mirrors the
- * audit_field helper in the sibling .cli ports. Returns "" when absent.
- */
-function auditField(file: string, ev: string, key: string): string {
-  if (!existsSync(file)) return "";
-  let matched = false;
-  for (const line of readFileSync(file, "utf-8").split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
-}
-
-/** Count audit blocks with `**Event**: <ev>` (exact-line). */
-function auditEventCount(file: string, ev: string): number {
-  if (!existsSync(file)) return 0;
+/** Parse a JSONL audit shard file into records (blank lines skipped). */
+function auditRecords(file: string): Array<Record<string, unknown>> {
+  if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
-    .filter((l) => l === `**Event**: ${ev}`).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/**
+ * Read the value of <key> from the FIRST audit record whose `event` matches
+ * <ev>. Record-scoped. Mirrors the audit_field helper in the sibling .cli
+ * ports. Returns "" when absent.
+ */
+function auditField(file: string, ev: string, key: string): string {
+  const rec = auditRecords(file).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
+}
+
+/** Count audit records whose `event` is exactly <ev>. */
+function auditEventCount(file: string, ev: string): number {
+  return auditRecords(file).filter((r) => r.event === ev).length;
 }
 
 // The 9 alphabetically-sorted default scopes (t60.sh:45). Pins the derivation

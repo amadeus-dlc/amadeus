@@ -20,6 +20,7 @@ import {
   runMirrorLifecycleBoundary,
 } from "./amadeus-mirror-lifecycle.ts";
 import { renderMirrorLegacyHelp } from "./amadeus-mirror-presentation.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -326,7 +327,7 @@ async function runMirrorMutation(
     return fail(`lifecycle outcome is not completed: ${JSON.stringify(result.outcome)}`);
   }
   const outcome = result.outcome.outcomes.at(-1);
-  if (!outcome || outcome.kind !== "completed") {
+  if (outcome?.kind !== "completed") {
     return fail("lifecycle completed without an operation outcome");
   }
   console.log(
@@ -348,6 +349,15 @@ export async function main(
     console.error(args.message);
     return 2;
   }
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-mirror:${args.kind}`, projectDir);
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
   if (args.kind !== "status") {
     return runMirrorMutation(args, projectDir, runLifecycle);
   }

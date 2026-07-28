@@ -112,6 +112,26 @@ function recordDirOf(p: string): string {
 const auditText = () => readAllAuditShards(PROJ);
 const statePath = () => join(recordDirOf(PROJ), "amadeus-state.md");
 
+/** Parse the merged JSONL audit shards into records (blank lines skipped). */
+function auditRecords(): Array<Record<string, unknown>> {
+  return auditText()
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Fields of the FIRST audit record whose `event` matches <ev> ({} when absent). */
+function auditFields(ev: string): Record<string, string> {
+  const rec = auditRecords().find((r) => r.event === ev);
+  return rec ? ((rec.fields ?? {}) as Record<string, string>) : {};
+}
+
+/** Does any audit record carry `event` === <ev>? */
+function hasAuditEvent(ev: string): boolean {
+  return auditRecords().some((r) => r.event === ev);
+}
+
 describe("t63 construction-worktrees poc (migrated from t63-construction-worktrees-poc.sh, plan 5)", () => {
   // --- assertion 1: codegen mode (structural / none) ------------------------
   test("poc code-generation mode is EXECUTE [.sh 1]", () => {
@@ -141,13 +161,11 @@ describe("t63 construction-worktrees poc (migrated from t63-construction-worktre
     // The .sh discarded stdout/stderr and grepped audit.md; we additionally
     // pin a clean exit (the emit-only contract: no state mutation, no spawn).
     expect(r.status).toBe(0);
-    const audit = auditText();
-    // STRONGER than the .sh's two independent greps: the event line and the
-    // Bolt-slug line must BOTH be present (helpers.sh:108-109), and the slug
-    // appears on a "**Bolt slug**: <slug>" field row (amadeus-bolt.ts:675 +
-    // appendAuditEntry's "**<key>**: <value>" format).
-    expect(audit).toContain("MERGE_DISPATCH_INVOKED");
-    expect(audit).toContain(`**Bolt slug**: ${slug}`);
+    // STRONGER than the .sh's two independent greps: the event and the Bolt
+    // slug must BOTH be present (helpers.sh:108-109), and the slug is read off
+    // THAT record's `fields` (amadeus-bolt.ts:675 + appendAuditEntry).
+    expect(hasAuditEvent("MERGE_DISPATCH_INVOKED")).toBe(true);
+    expect(auditFields("MERGE_DISPATCH_INVOKED")["Bolt slug"]).toBe(slug);
   });
 
   // --- assertion 3: practices-discovery SKIP (structural / none) ------------
@@ -181,10 +199,10 @@ describe("t63 construction-worktrees poc (migrated from t63-construction-worktre
     // also pin the tool's emitted-event JSON on stdout and the field rows the
     // --field flags carried.
     expect(r.stdout).toContain('"emitted":"PRACTICES_SECTION_EMPTY"');
-    const audit = auditText();
-    expect(audit).toContain("PRACTICES_SECTION_EMPTY");
-    expect(audit).toContain("**Section**: Walking Skeleton");
-    expect(audit).toContain("**Fallback**: org.md");
+    expect(hasAuditEvent("PRACTICES_SECTION_EMPTY")).toBe(true);
+    const fields = auditFields("PRACTICES_SECTION_EMPTY");
+    expect(fields.Section).toBe("Walking Skeleton");
+    expect(fields.Fallback).toBe("org.md");
   });
 
   // --- assertion 5: v7 state has the v0.4.0 fields (init seam / cli) ---------

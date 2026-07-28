@@ -148,7 +148,7 @@ afterAll(() => {
       statePath(d),
       auditShardPath(d),
       auditDirOf(d),
-      join(d, "amadeus-docs", "audit.md"),
+      join(d, "amadeus-docs", "audit.jsonl"),
       join(d, "amadeus-docs", "amadeus-state.md"),
     ]) {
       if (!f) continue;
@@ -200,22 +200,31 @@ const statePath = (p: string): string =>
 function auditShardPath(p: string): string {
   const dir = auditDirOf(p);
   if (!existsSync(dir)) return "";
-  const shard = readdirSync(dir).find((f) => f.endsWith(".md"));
+  const shard = readdirSync(dir).find((f) => f.endsWith(".jsonl"));
   return shard ? join(dir, shard) : "";
 }
 
 // Concatenate every audit shard for a content read; fall back to the flat
-// amadeus-docs/audit.md for a seeded-flat / pre-migration project.
+// amadeus-docs/audit.jsonl for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const dir = auditDirOf(p);
   if (existsSync(dir)) {
     return readdirSync(dir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(dir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "amadeus-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.jsonl");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
+}
+
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(content: string): Array<Record<string, unknown>> {
+  return content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
 interface CliResult {
@@ -255,46 +264,28 @@ function state(args: string[], p: string): CliResult {
 }
 
 /**
- * Count audit blocks with `**Event**: ERROR_LOGGED` in audit CONTENT
- * (shard-concat or flat). Mirrors the .sh's
- * `grep -cE '^\*\*Event\*\*: ERROR_LOGGED'` (t47:138,154).
+ * Count ERROR_LOGGED records in audit CONTENT (shard-concat or flat). Mirrors
+ * the .sh's `grep -cE '^\*\*Event\*\*: ERROR_LOGGED'` (t47:138,154).
  */
 function errorLoggedCount(content: string): number {
-  return content
-    .split("\n")
-    .filter((l) => /^\*\*Event\*\*: ERROR_LOGGED$/.test(l)).length;
+  return auditRecords(content).filter((r) => r.event === "ERROR_LOGGED").length;
 }
 
-/** Whole-content presence (unanchored substring, mirrors a bare grep). */
-function contentContains(content: string, needle: string): boolean {
-  return content.includes(needle);
+/** Does any audit record in CONTENT carry `event` === <ev>? */
+function hasEvent(content: string, ev: string): boolean {
+  return auditRecords(content).some((r) => r.event === ev);
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>
- * in audit CONTENT. Resets at `## ` headings and `---` separators. Used by
- * F4's STRONGER Tool-field check. Returns "" when absent.
+ * Value of <key> from the FIRST audit record whose `event` matches <ev> in
+ * audit CONTENT. Record-scoped. Used by F4's STRONGER Tool-field check.
+ * Returns "" when absent.
  */
 function auditField(content: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of content.split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0 && stripped.slice(0, pos) === key) {
-        return stripped.slice(pos + 4);
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(content).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 // ============================================================
@@ -384,9 +375,7 @@ describe("t47 F2 — missing audit.md before gate-start (ensureAuditFile recover
       // STRONGER than the .sh's bare `[ -f ... ]`: the recreated shard carries
       // the STAGE_AWAITING_APPROVAL row gate-start emits, proving it was
       // rebuilt-and-written, not merely touched.
-      expect(
-        contentContains(readAudit(p), "**Event**: STAGE_AWAITING_APPROVAL"),
-      ).toBe(true);
+      expect(hasEvent(readAudit(p), "STAGE_AWAITING_APPROVAL")).toBe(true);
     },
     30000,
   );
@@ -423,7 +412,7 @@ describe("t47 F3 — corrupted state.md before advance (refuses, names Scope)", 
     mkdirSync(join(shard, ".."), { recursive: true });
     writeFileSync(
       shard,
-      readFileSync(join(FIXTURES_DIR, "audit-sample.md"), "utf-8"),
+      readFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), "utf-8"),
       "utf-8",
     );
 

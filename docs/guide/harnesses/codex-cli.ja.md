@@ -45,7 +45,7 @@
    にあるエントリを、ワークフロー開始 **前** に project の `.gitignore` へ
    マージしてください — 各 intent の `audit/` 配下の
    per-clone 監査シャードは意図的にコミットされます(各クローンが自身の
-   `<host>-<clone>.md` を書くため、並行 append が git 競合しません)。一方、
+   `<host>-<clone>.jsonl` を書くため、並行 append が git 競合しません)。一方、
    per-user カーソルとマシンローカルなランタイム状態は無視されたままにします。
    既存の `.gitignore` を置き換えず、内容をマージしてください。同梱の Codex 向け
    ignore 契約には `.codex/hooks.json` も含まれます。

@@ -167,7 +167,7 @@ function readAudit(p: string): string {
   const dir = seededAuditDir(p);
   if (!existsSync(dir)) return "";
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
+    .filter((f) => f.endsWith(".jsonl"))
     .map((f) => readFileSync(join(dir, f), "utf-8"))
     .join("\n");
 }
@@ -203,7 +203,9 @@ function reportDirectiveInProcess(p: string, answer: string): Record<string, unk
 function eventCount(p: string, ev: string): number {
   return readAudit(p)
     .split("\n")
-    .filter((l) => l === `**Event**: ${ev}`).length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === ev).length;
 }
 
 // ============================================================

@@ -95,13 +95,13 @@ function seedSecondIntent(proj: string): void {
   copyFileSync(INIT_DONE, join(dir, "amadeus-state.md"));
 }
 
-/** Concatenated text of every *.md audit shard under <record>/audit (or "" when
+/** Concatenated text of every *.jsonl audit shard under <record>/audit (or "" when
  *  the audit dir does not exist — an un-emitted intent). */
 function auditText(recordDir: string): string {
   const auditDir = join(recordDir, "audit");
   if (!existsSync(auditDir)) return "";
   return readdirSync(auditDir)
-    .filter((f) => f.endsWith(".md"))
+    .filter((f) => f.endsWith(".jsonl"))
     .map((f) => readFileSync(join(auditDir, f), "utf-8"))
     .join("\n");
 }

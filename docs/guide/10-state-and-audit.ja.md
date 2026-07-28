@@ -77,21 +77,22 @@ stateDiagram-v2
 
 ## 監査証跡 (`audit/`)
 
-監査証跡は intent のレコードディレクトリ配下 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/` に存在します。これは **クローンごとのシャード**(`<host>-<clone>.md`)として書き込まれる追記専用のイベントログです。各クローンは自分のシャードにのみ追記するため、兄弟 worktree からの同時追記が git 上で衝突することはありません。読み手は `audit/*.md` を glob し、ISO タイムスタンプでマージソートして、決定とイベントの完全な時系列履歴を再構築します。
+監査証跡は intent のレコードディレクトリ配下 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/` に存在します。これは **クローンごとのシャード**(`<host>-<clone>.jsonl`、1行1 JSON レコード、ヘッダなし)として書き込まれる追記専用のイベントジャーナルです。各クローンは自分のシャードにのみ追記するため、兄弟 worktree からの同時追記が git 上で衝突することはありません。読み手は `audit/*.jsonl` を glob し、ISO タイムスタンプでマージソートして、決定とイベントの完全な時系列履歴を再構築します。
 
-### 68 イベントのタクソノミー
+### 78 イベントのタクソノミー
 
-イベントは 18 のカテゴリに整理されています。
+イベントは 19 のカテゴリに整理されています。
 
 | カテゴリ | 件数 | イベント |
 |----------|------:|--------|
-| **Workflow Lifecycle** | 4 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED` |
+| **Workflow Lifecycle** | 6 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED`, `INTENT_ARCHIVED`, `INTENT_UNARCHIVED` |
 | **Phase Lifecycle** | 4 | `PHASE_STARTED`, `PHASE_COMPLETED`, `PHASE_VERIFIED`, `PHASE_SKIPPED` |
-| **Stage Lifecycle** | 6 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_SKIPPED`, `STAGE_JUMPED` |
-| **Session** | 4 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED`(フック発火) |
+| **Stage Lifecycle** | 7 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_SKIPPED`, `STAGE_JUMPED`, `GUARD_EXEMPTED` |
+| **Session** | 5 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED`, `HUMAN_TURN`(フック発火) |
 | **Initialization** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` |
-| **Navigation** | 4 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED` |
-| **Interaction** | 4 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED` |
+| **Navigation** | 5 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `RECOMPOSED` |
+| **Interaction** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` |
+| **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` |
 | **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`(audit-logger フック), `ARTIFACT_REUSED` |
 | **Subagent** | 1 | `SUBAGENT_COMPLETED`(log-subagent フック) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
@@ -115,13 +116,18 @@ stateDiagram-v2
 
 ### 監査ログの読み方
 
-各エントリは以下のフィールドを持つ構造化フォーマットに従います。
+各シャードは JSONL ジャーナルで、物理1行が1 JSON レコードです。各レコードは冪等性の識別子とイベントペイロードを持ちます。
 
-- **Timestamp** — ISO 8601 タイムスタンプ
-- **Event** — 68 種類のイベントタイプのいずれか
-- **Details** — イベント固有のデータ(ステージ名、決定、成果物パスなど)
+```json
+{"schemaVersion":1,"seq":42,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:00:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"code-generation","Agent":"developer"}}
+```
 
-エントリは時系列で追記されます。特定のステージの履歴を確認するには、その `STAGE_STARTED` と `STAGE_COMPLETED` のエントリ、およびその間のすべてを検索します。
+- **`timestamp`** — ISO 8601 タイムスタンプ
+- **`event`** — 78 種類のイベントタイプのいずれか(自由記述の `append-raw` レコードでは `null` になり、本文は `rawBody` に入る)
+- **`fields`** — イベント固有のデータを文字列キー/値で保持(ステージ名、決定、成果物パスなど)
+- **`seq`** — シャードごとの単調増加シーケンス。`intentId:cloneId:seq` がグローバルな冪等性キー
+
+レコードは時系列で追記されます。特定のステージの履歴を確認するには、その `STAGE_STARTED` と `STAGE_COMPLETED` のエントリ、およびその間のすべてを検索します。
 
 ### 監査イベントフロー
 

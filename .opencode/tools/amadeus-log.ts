@@ -6,6 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { appendAuditEntry } from "./amadeus-audit.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   emitError,
   errorMessage,
@@ -175,6 +176,14 @@ function main(): void {
   }
 
   const subcommand = filteredArgs[0];
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-log:${subcommand ?? "?"}`, resolveActiveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
 
   try {
     switch (subcommand) {

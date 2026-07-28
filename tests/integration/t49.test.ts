@@ -126,17 +126,17 @@ function recordDirOf(p: string): string {
 }
 const statePath = (p: string): string =>
   join(recordDirOf(p), "amadeus-state.md");
-// Audit is sharded under <record>/audit/<host>-<pid>.md; concat every shard for
-// a content read, falling back to the flat audit.md for a not-yet-born project.
+// Audit is sharded under <record>/audit/<host>-<clone>.jsonl; concat every shard
+// for a content read, falling back to the flat audit.jsonl for a not-yet-born project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "amadeus-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.jsonl");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -179,76 +179,51 @@ function getFieldFromContent(content: string, field: string): string {
   return "";
 }
 
-/** Count audit blocks with a bare `**Event**: <ev>` line in audit CONTENT (shard-concat). Mirrors `grep -c "^\*\*Event\*\*: <ev>"`. */
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(content: string): Array<Record<string, unknown>> {
+  return content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count audit records whose `event` is exactly <ev> in audit CONTENT (shard-concat). */
 function auditEventCount(content: string, ev: string): number {
-  return content.split("\n").filter((l) => l === `**Event**: ${ev}`).length;
+  return auditRecords(content).filter((r) => r.event === ev).length;
 }
 
 /**
- * Count STAGE_COMPLETED audit blocks in CONTENT whose `**Stage**:` field equals
+ * Count STAGE_COMPLETED audit records in CONTENT whose `Stage` field equals
  * <slug>. Mirrors the .sh's `grep -A 4 "^\*\*Event\*\*: STAGE_COMPLETED" | grep
- * -c "\*\*Stage\*\*: <slug>"` — block-scoped so the 3 initialization-stage
+ * -c "\*\*Stage\*\*: <slug>"` — record-scoped so the 3 initialization-stage
  * STAGE_COMPLETED rows (workspace-scaffold/detection/state-init) don't inflate
  * the count for the requirements-analysis row.
  */
 function stageCompletedCountFor(content: string, slug: string): number {
-  const lines = content.split("\n");
-  let count = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === "**Event**: STAGE_COMPLETED") {
-      // Scan the block (the tool writes Stage on the very next line).
-      for (let j = i + 1; j < lines.length && j <= i + 4; j++) {
-        if (lines[j] === "---") break;
-        if (lines[j] === `**Stage**: ${slug}`) {
-          count++;
-          break;
-        }
-      }
-    }
-  }
-  return count;
+  return auditRecords(content).filter(
+    (r) =>
+      r.event === "STAGE_COMPLETED" &&
+      ((r.fields ?? {}) as Record<string, string>).Stage === slug,
+  ).length;
 }
 
-/** 1-based line number of the FIRST `**Event**: <ev>` line in CONTENT, or -1. Mirrors `grep -n ... | head -1 | cut -d: -f1`. */
+/** 1-based position of the FIRST record whose `event` is <ev> in CONTENT, or -1.
+ *  The JSONL successor of the .sh's `grep -n ... | head -1 | cut -d: -f1`. */
 function firstEventLine(content: string, ev: string): number {
-  const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === `**Event**: ${ev}`) return i + 1;
-  }
-  return -1;
+  const idx = auditRecords(content).findIndex((r) => r.event === ev);
+  return idx < 0 ? -1 : idx + 1;
 }
 
 /**
- * Value of <key> from the FIRST audit block in CONTENT whose `**Event**:`
- * matches <ev>. Resets at `## ` headings and `---` separators; splits
- * `**label**: value` on the literal `**: ` separator. Returns "" when absent.
+ * Value of <key> from the FIRST audit record in CONTENT whose `event` matches
+ * <ev>. Record-scoped. Returns "" when absent.
  */
 function auditField(content: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of content.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(content).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 /**

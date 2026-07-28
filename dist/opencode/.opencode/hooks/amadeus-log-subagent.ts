@@ -2,10 +2,11 @@
 // Replaces the previous free-form `## Subagent Completed` markdown write with
 // a canonical audit event.
 //
-// Receives JSON on stdin with subagent info. No-op if no audit.md exists.
+// Receives JSON on stdin with subagent info. No-op if no audit shard exists.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeWorkflowIsComplete,
   type ClaudeCodeHookInput,
@@ -59,6 +60,9 @@ if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 // unpushed audit residue in every worktree that merely runs subagents after the
 // intent finished — no-op once the workflow is terminal.
 if (activeWorkflowIsComplete(projectDir)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:log-subagent", projectDir);
 
 const fields: Record<string, string> = {
   "Agent Type": agentType,

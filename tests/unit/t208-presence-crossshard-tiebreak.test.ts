@@ -40,16 +40,30 @@ import {
 
 const HUMAN_TS = "2026-07-10T12:00:00Z";
 
-function block(event: string, ts: string, extra = ""): string {
-  return `\n## ${event}\n**Timestamp**: ${ts}\n**Event**: ${event}\n${extra}\n---\n`;
+function block(event: string, ts: string, fields: Record<string, string> = {}): string {
+  return `${JSON.stringify({
+    schemaVersion: 1,
+    seq: 0, // renumbered per shard by writeShard
+    cloneId: "testclone0001",
+    intentId: "test-intent",
+    timestamp: ts,
+    heading: event,
+    event,
+    fields,
+  })}\n`;
 }
 
-// Write one audit shard file (`<leaf>`) holding the given `\n---\n`-separated
-// blocks. Two shards let us reproduce the cross-shard same-second race.
+// Write one audit shard file (`<leaf>`) holding the given JSONL record lines.
+// Two shards let us reproduce the cross-shard same-second race. `seq` is dense
+// and 1-based within each shard, so it is assigned here rather than by block().
 function writeShard(proj: string, leaf: string, body: string): void {
   const dir = seededAuditDir(proj);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, leaf), `# AI-DLC Audit Log\n${body}`, "utf-8");
+  const lines = body
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l, i) => JSON.stringify({ ...JSON.parse(l), seq: i + 1 }));
+  writeFileSync(join(dir, leaf), `${lines.join("\n")}\n`, "utf-8");
 }
 
 let proj: string;
@@ -70,16 +84,16 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
   // position tie-break flipped the answer on filename order.
 
   test("HUMAN_TURN in the lexically-FIRST shard, resolution in the later shard → fail-closed", () => {
-    writeShard(proj, "aaa-clone.md", block("HUMAN_TURN", HUMAN_TS));
-    writeShard(proj, "bbb-clone.md", block("GATE_APPROVED", HUMAN_TS, "**Stage**: feasibility"));
+    writeShard(proj, "aaa-clone.jsonl", block("HUMAN_TURN", HUMAN_TS));
+    writeShard(proj, "bbb-clone.jsonl", block("GATE_APPROVED", HUMAN_TS, { Stage: "feasibility" }));
     // Pre-fix: HUMAN_TURN (aaa, lower position) sorts BEFORE the resolution →
     // read as consumed → false (this ordering already returned false pre-fix).
     expect(humanActedSinceGate(proj)).toBe(false);
   });
 
   test("HUMAN_TURN in the lexically-LATER shard, resolution in the earlier shard → fail-closed (the false-open)", () => {
-    writeShard(proj, "aaa-clone.md", block("GATE_APPROVED", HUMAN_TS, "**Stage**: feasibility"));
-    writeShard(proj, "zzz-clone.md", block("HUMAN_TURN", HUMAN_TS));
+    writeShard(proj, "aaa-clone.jsonl", block("GATE_APPROVED", HUMAN_TS, { Stage: "feasibility" }));
+    writeShard(proj, "zzz-clone.jsonl", block("HUMAN_TURN", HUMAN_TS));
     // Pre-fix: HUMAN_TURN (zzz, higher position) sorts AFTER the resolution →
     // read as FRESH → true. This is the #779 false-open. Post-fix: fail-closed.
     expect(humanActedSinceGate(proj)).toBe(false);
@@ -87,17 +101,17 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
 
   // The interview-path twin has the same tie-break.
   test("answer predicate: same-second cross-shard HUMAN_TURN + QUESTION_ANSWERED → fail-closed both orders", () => {
-    writeShard(proj, "aaa-clone.md", block("QUESTION_ANSWERED", HUMAN_TS, "**Stage**: feasibility"));
-    writeShard(proj, "zzz-clone.md", block("HUMAN_TURN", HUMAN_TS));
+    writeShard(proj, "aaa-clone.jsonl", block("QUESTION_ANSWERED", HUMAN_TS, { Stage: "feasibility" }));
+    writeShard(proj, "zzz-clone.jsonl", block("HUMAN_TURN", HUMAN_TS));
     expect(humanActedSinceLastAnswer(proj)).toBe(false);
   });
 
-  // An unreadable audit-dir entry (here: a DIRECTORY named *.md — readFileSync
+  // An unreadable audit-dir entry (here: a DIRECTORY named *.jsonl — readFileSync
   // throws EISDIR) is skipped, not fatal: the predicates keep answering from the
   // readable shards (scanPresenceLedger's vanished-shard tolerance).
-  test("an unreadable *.md entry in the audit dir is skipped, remaining shards still answer", () => {
-    writeShard(proj, "aaa-clone.md", block("HUMAN_TURN", "2026-07-10T12:00:02Z"));
-    mkdirSync(join(seededAuditDir(proj), "bbb-dir.md"), { recursive: true });
+  test("an unreadable *.jsonl entry in the audit dir is skipped, remaining shards still answer", () => {
+    writeShard(proj, "aaa-clone.jsonl", block("HUMAN_TURN", "2026-07-10T12:00:02Z"));
+    mkdirSync(join(seededAuditDir(proj), "bbb-dir.jsonl"), { recursive: true });
     expect(humanActedSinceGate(proj)).toBe(true); // fresh HUMAN_TURN, no resolution
   });
 
@@ -107,8 +121,8 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
     // One shard, real append order: resolution then a fresh HUMAN_TURN after it.
     writeShard(
       proj,
-      "aaa-clone.md",
-      block("GATE_APPROVED", HUMAN_TS, "**Stage**: feasibility") + block("HUMAN_TURN", HUMAN_TS),
+      "aaa-clone.jsonl",
+      block("GATE_APPROVED", HUMAN_TS, { Stage: "feasibility" }) + block("HUMAN_TURN", HUMAN_TS),
     );
     expect(humanActedSinceGate(proj)).toBe(true);
   });
@@ -116,18 +130,18 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
   test("same-shard order is UNCHANGED: HUMAN_TURN BEFORE the resolution is consumed", () => {
     writeShard(
       proj,
-      "aaa-clone.md",
-      block("HUMAN_TURN", HUMAN_TS) + block("GATE_APPROVED", HUMAN_TS, "**Stage**: feasibility"),
+      "aaa-clone.jsonl",
+      block("HUMAN_TURN", HUMAN_TS) + block("GATE_APPROVED", HUMAN_TS, { Stage: "feasibility" }),
     );
     expect(humanActedSinceGate(proj)).toBe(false);
   });
 
   test("strictly-earlier cross-shard resolution does NOT mask a later HUMAN_TURN (scenario G preserved)", () => {
-    writeShard(proj, "aaa-clone.md", block("HUMAN_TURN", HUMAN_TS));
+    writeShard(proj, "aaa-clone.jsonl", block("HUMAN_TURN", HUMAN_TS));
     writeShard(
       proj,
-      "zzz-oldclone.md",
-      block("GATE_APPROVED", "2020-01-01T00:00:00Z", "**Stage**: feasibility"),
+      "zzz-oldclone.jsonl",
+      block("GATE_APPROVED", "2020-01-01T00:00:00Z", { Stage: "feasibility" }),
     );
     expect(humanActedSinceGate(proj)).toBe(true);
   });
@@ -135,11 +149,11 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
   test("a lone fresh HUMAN_TURN across shards with an OLDER cross-shard resolution stays outstanding both orders", () => {
     // The HUMAN_TURN's second is strictly later than the resolution's, so no
     // tie exists — presence is genuinely outstanding regardless of filenames.
-    writeShard(proj, "zzz-clone.md", block("HUMAN_TURN", HUMAN_TS));
+    writeShard(proj, "zzz-clone.jsonl", block("HUMAN_TURN", HUMAN_TS));
     writeShard(
       proj,
-      "aaa-clone.md",
-      block("GATE_APPROVED", "2026-07-10T11:59:59Z", "**Stage**: feasibility"),
+      "aaa-clone.jsonl",
+      block("GATE_APPROVED", "2026-07-10T11:59:59Z", { Stage: "feasibility" }),
     );
     expect(humanActedSinceGate(proj)).toBe(true);
   });

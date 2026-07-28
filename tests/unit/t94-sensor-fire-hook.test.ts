@@ -130,7 +130,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 // Stub dispatcher (.sh:66-81): record argv to T94_SPAWN_LOG and exit 0. Written
@@ -202,7 +202,7 @@ function seedState(proj: string, body: string): void {
 function seedAudit(proj: string): void {
   const auditDir = seededAuditDir(proj);
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, pinnedShardName()), "audit fixture\n", "utf-8");
+  writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
 }
 
 function spawnLogPath(proj: string): string {

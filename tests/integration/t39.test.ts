@@ -107,7 +107,7 @@ function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
@@ -140,39 +140,34 @@ function runInit(scope: string, p: string): InitResult {
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
-/**
- * Count audit blocks with `**Event**: <ev>` at line start in audit CONTENT
- * (shard-concat). Mirrors the .sh's `grep -cE '^\*\*Event\*\*: <ev>'`
- * (amadeus-audit.ts:258 writes the row at column 0 of its line).
- */
-function auditEventCount(content: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return content.split("\n").filter((l) => re.test(l)).length;
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse a JSONL audit buffer (shard-concat) into records. */
+function auditRecords(content: string): AuditRecord[] {
+  return content
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 /**
- * Collect the `**Phase**: <name>` values from every PHASE_SKIPPED block in
- * audit CONTENT (shard-concat). Resets matched flag at `## ` headings and `---`
- * separators. STRONGER than the .sh's bare count — lets us assert WHICH phases
- * were skipped, not just how many.
+ * Count audit records with event <ev> in audit CONTENT (shard-concat).
+ * Mirrors the .sh's `grep -cE '^\*\*Event\*\*: <ev>'` over the JSONL ledger.
+ */
+function auditEventCount(content: string, ev: string): number {
+  return auditRecords(content).filter((r) => r.event === ev).length;
+}
+
+/**
+ * Collect the `Phase` field of every PHASE_SKIPPED record in audit CONTENT
+ * (shard-concat). STRONGER than the .sh's bare count — lets us assert WHICH
+ * phases were skipped, not just how many.
  */
 function skippedPhases(content: string): string[] {
-  let matched = false;
-  const phases: string[] = [];
-  for (const line of content.split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === "**Event**: PHASE_SKIPPED";
-      continue;
-    }
-    if (matched && line.startsWith("**Phase**: ")) {
-      phases.push(line.slice("**Phase**: ".length));
-    }
-  }
-  return phases;
+  return auditRecords(content)
+    .filter((r) => r.event === "PHASE_SKIPPED")
+    .map((r) => r.fields?.Phase)
+    .filter((phase): phase is string => phase !== undefined);
 }
 
 /**
@@ -250,8 +245,11 @@ describe("t39 amadeus-utility init — per-scope phase sequence (migrated from t
         // the born record's audit shards, not the flat audit.md.
         const audit = readAudit(proj);
         expect(auditEventCount(audit, "PHASE_STARTED")).toBeGreaterThanOrEqual(1);
-        expect(audit).toContain("**Event**: PHASE_STARTED");
-        expect(audit).toContain("**Phase**: initialization");
+        expect(
+          auditRecords(audit).some(
+            (r) => r.event === "PHASE_STARTED" && r.fields?.Phase === "initialization",
+          ),
+        ).toBe(true);
       });
 
       // --- Assertion 2: PHASE_SKIPPED emitted once per excluded phase ---

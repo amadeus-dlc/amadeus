@@ -170,8 +170,8 @@ See [Sensor System](07-sensor-system.md) for the manifest schema and the fire li
 1. **Command filter:** Only `bun .claude/tools/amadeus-(state|jump|bolt|utility).ts` invocations pass the early exit. `amadeus-runtime.ts` is rejected explicitly (recursion guard).
 2. **Audit-existence guard:** Exits cleanly before init (no `audit/` shard yet).
 3. **Health heartbeat:** Writes `.amadeus-hooks-health/runtime-compile.last`.
-4. **Tail-read:** Splits the merged `audit/` shards on `\n---\n` and takes the last 3 blocks (the upper bound a single `approve` call appends).
-5. **Event-class filter:** Recompiles only when one of the last 3 blocks carries `GATE_APPROVED`, `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `AUDIT_MERGED`, or `WORKFLOW_COMPLETED`. Exits on no match.
+4. **Tail-read:** Reads the last 3 journal records (JSONL lines) of the merged `audit/` shards (the upper bound a single `approve` call appends).
+5. **Event-class filter:** Recompiles only when one of the last 3 records carries `GATE_APPROVED`, `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `AUDIT_MERGED`, or `WORKFLOW_COMPLETED`. Exits on no match.
 6. **Dispatch:** Spawns `bun amadeus-runtime.ts compile`. On non-zero exit, records a hook drop for `--doctor`; never blocks the parent Bash call.
 
 See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locked schema.
@@ -349,18 +349,13 @@ The audit trail (the intent's `audit/` shards) uses the event taxonomy defined i
 
 ### Entry Format
 
-All audit events follow the format defined in `audit-format.md`:
+All audit events follow the format defined in `audit-format.md` — each shard is a JSONL journal, one JSON record per line, no header:
 
-```markdown
-## EVENT_NAME
-**Timestamp**: 2026-01-15T10:30:00Z
-**Event**: EVENT_NAME
-**Details**: [event-specific content]
-
----
+```json
+{"schemaVersion":1,"seq":42,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:00:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"code-generation","Agent":"developer"}}
 ```
 
-All events — hook-generated and tool-generated — use the same canonical `appendAuditEntry` emitter, producing identical structured markdown with `**Event**:` fields. The heading is derived from the event name via `EVENT_HEADINGS` in `amadeus-audit.ts`.
+All events — hook-generated and tool-generated — use the same canonical `appendAuditEntry` emitter, producing identical JSONL records with an `event` field and its `fields` payload. The `heading` is derived from the event name via `EVENT_HEADINGS` in `amadeus-audit.ts`.
 
 ### Mandatory Events
 

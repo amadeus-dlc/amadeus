@@ -28,6 +28,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
+import { observeSubprocess } from "./amadeus-observability.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
 const DESTINATION_NAMESPACE = "amadeus";
@@ -438,10 +439,12 @@ function git(projectDir: string, args: readonly string[]): {
   stdout: string;
   stderr: string;
 } {
-  const result = spawnSync("git", ["-C", projectDir, ...args], {
-    encoding: "utf-8",
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-  });
+  const result = observeSubprocess(projectDir, "git", () =>
+    spawnSync("git", ["-C", projectDir, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+    }),
+  );
   return {
     ok: result.status === 0,
     stdout: result.stdout || "",
@@ -2902,24 +2905,30 @@ function runDoctor(inspection: Inspection): {
   if (inspection.doctorHarness === null || inspection.doctorUtility === null) {
     throw new Error("The installed Amadeus doctor utility is unavailable.");
   }
+  // Bind the narrowed values: the spawn now runs inside a closure, where TS
+  // cannot carry a property narrowing.
+  const doctorUtility = inspection.doctorUtility;
+  const doctorHarness = inspection.doctorHarness;
   const restoreTestHealthDir = injectDoctorHealthDirectorySymlinkForTest(inspection);
   const result = (() => {
     try {
       const restoreTestUtility = injectDoctorUtilitySymlinkForTest(inspection);
       try {
         assertDoctorUtilityStable(inspection);
-        return spawnSync(
-          process.execPath,
-          [inspection.doctorUtility, "doctor", "--project-dir", inspection.projectDir],
-          {
-            cwd: inspection.projectDir,
-            encoding: "utf-8",
-            env: {
-              ...process.env,
-              AMADEUS_HARNESS_DIR: inspection.doctorHarness,
-              AMADEUS_MIGRATION_DOCTOR: "1",
+        return observeSubprocess(inspection.projectDir, "amadeus-utility:doctor", () =>
+          spawnSync(
+            process.execPath,
+            [doctorUtility, "doctor", "--project-dir", inspection.projectDir],
+            {
+              cwd: inspection.projectDir,
+              encoding: "utf-8",
+              env: {
+                ...process.env,
+                AMADEUS_HARNESS_DIR: doctorHarness,
+                AMADEUS_MIGRATION_DOCTOR: "1",
+              },
             },
-          },
+          ),
         );
       } finally {
         restoreTestUtility();
@@ -3016,22 +3025,24 @@ function auditFileBytes(root: string): Map<string, Buffer> {
   return files;
 }
 
-function parseDoctorAuditSuffix(input: string, allowHeader: boolean): string[] | null {
-  let suffix = input;
-  if (allowHeader) {
-    const header = "# AI-DLC Audit Log\n";
-    if (!suffix.startsWith(header)) return null;
-    suffix = suffix.slice(header.length);
-  }
+function parseDoctorAuditSuffix(input: string, _allowHeader: boolean): string[] | null {
+  // Doctor appends are JSONL journal records (one per line) since the Issue
+  // #1628 switchover. Every non-empty line must parse as a record whose event
+  // is one of the doctor health events — anything else means the doctor wrote
+  // something it must not, and the migration evidence refuses.
   const events: string[] = [];
-  const block = /\n## [^\r\n]+\r?\n\*\*Timestamp\*\*: [^\r\n]+\r?\n\*\*Event\*\*: (GUARDRAIL_LOADED|HEALTH_CHECKED)\r?\n(?:\*\*[^*\r\n]+\*\*: [^\r\n]*\r?\n)*\r?\n---\r?\n/y;
-  let offset = 0;
-  while (offset < suffix.length) {
-    block.lastIndex = offset;
-    const match = block.exec(suffix);
-    if (!match || match.index !== offset) return null;
-    events.push(match[1]);
-    offset = block.lastIndex;
+  for (const line of input.split("\n")) {
+    if (line === "") continue;
+    let record: unknown;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      return null;
+    }
+    if (record === null || typeof record !== "object" || Array.isArray(record)) return null;
+    const event = (record as { event?: unknown }).event;
+    if (event !== "GUARDRAIL_LOADED" && event !== "HEALTH_CHECKED") return null;
+    events.push(event);
   }
   return events;
 }

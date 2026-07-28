@@ -172,7 +172,7 @@ const statePath = (p: string): string =>
 function auditShardPath(p: string): string {
   const dir = auditDirOf(p);
   if (!existsSync(dir)) return "";
-  const shard = readdirSync(dir).find((f) => f.endsWith(".md"));
+  const shard = readdirSync(dir).find((f) => f.endsWith(".jsonl"));
   return shard ? join(dir, shard) : "";
 }
 
@@ -182,7 +182,7 @@ function readAudit(p: string): string {
   const dir = auditDirOf(p);
   if (existsSync(dir)) {
     return readdirSync(dir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(dir, f), "utf-8"))
       .join("\n");
   }
@@ -221,10 +221,18 @@ function state(args: string[], p: string): CliResult {
  * (shard-concat or flat). Mirrors the .sh's
  * `grep -cE '^\*\*Event\*\*: ERROR_LOGGED'`.
  */
-function errorLoggedCount(content: string): number {
+function auditRecords(content: string): {
+  event: string | null;
+  fields?: Record<string, string>;
+}[] {
   return content
     .split("\n")
-    .filter((l) => /^\*\*Event\*\*: ERROR_LOGGED$/.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+}
+
+function errorLoggedCount(content: string): number {
+  return auditRecords(content).filter((r) => r.event === "ERROR_LOGGED").length;
 }
 
 /** Whole-content presence (unanchored substring, mirrors a bare grep). */
@@ -238,23 +246,10 @@ function contentContains(content: string, needle: string): boolean {
  * Test 8's STRONGER Tool-field check. Returns "" when absent.
  */
 function auditField(content: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of content.split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0 && stripped.slice(0, pos) === key) {
-        return stripped.slice(pos + 4);
-      }
-    }
+  for (const rec of auditRecords(content)) {
+    if (rec.event !== ev) continue;
+    const value = rec.fields?.[key];
+    if (value !== undefined) return value;
   }
   return "";
 }
@@ -347,7 +342,9 @@ describe("t137 F2 — missing audit shard (ensureAuditFile recovers)", () => {
       // STRONGER than the .sh's bare `[ -f ... ]`: the recreated shard carries
       // the STAGE_AWAITING_APPROVAL row gate-start emits, proving it was
       // rebuilt-and-written, not merely touched.
-      expect(contentContains(readAudit(p), "**Event**: STAGE_AWAITING_APPROVAL")).toBe(
+      expect(
+        auditRecords(readAudit(p)).some((r) => r.event === "STAGE_AWAITING_APPROVAL"),
+      ).toBe(
         true,
       );
     },

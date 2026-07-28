@@ -35,20 +35,55 @@ function issues(layers: MirrorConfigLayerInput[]) {
 
 describe("t343 defaults", () => {
   test("no layer yields prompt mode and no configured Project", () => {
-    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [] });
+    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false });
   });
 
   test("a layer with only auto-mirror leaves projects empty", () => {
     expect(resolved([layer("global", { "auto-mirror": "auto" })]).config).toEqual({
       autoMirror: "auto",
-      projects: [],
+      projects: [], autoSoloElection: false,
     });
   });
 
   test("an empty object contributes nothing and is not a source", () => {
     const outcome = resolved([layer("global", {})]);
-    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [] });
+    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false });
     expect(outcome.sources).toEqual([]);
+  });
+
+  test("auto-solo-election is opt-in and accepts only an explicit boolean", () => {
+    expect(
+      resolved([layer("global", { "auto-solo-election": true })]).config
+        .autoSoloElection,
+    ).toBe(true);
+    expect(
+      resolved([layer("global", { "auto-solo-election": false })]).config
+        .autoSoloElection,
+    ).toBe(false);
+
+    const reported = issues([
+      layer("global", { "auto-solo-election": "true" }),
+    ]);
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({
+      key: "auto-solo-election",
+      actualType: "string",
+      expected: "boolean",
+    });
+  });
+
+  test("auto-solo-election follows global -> space -> intent precedence", () => {
+    const outcome = resolved([
+      layer("global", { "auto-solo-election": true }),
+      layer("space", { "auto-solo-election": false }),
+      layer("intent", { "auto-solo-election": true }),
+    ]);
+    expect(outcome.config.autoSoloElection).toBe(true);
+    expect(outcome.sources).toEqual([
+      "global/config.json",
+      "space/config.json",
+      "intent/config.json",
+    ]);
   });
 });
 
@@ -195,6 +230,7 @@ describe("t343 allowlist", () => {
     ).toEqual({
       autoMirror: "auto",
       projects: [{ project: { owner: "a", number: 1 }, statusNames: {} }],
+      autoSoloElection: false,
     });
   });
 

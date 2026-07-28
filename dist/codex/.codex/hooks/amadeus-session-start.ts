@@ -24,6 +24,7 @@ import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { stageGraphDrift } from "../tools/amadeus-graph.ts";
 import { repointHarnessIncludes } from "../tools/amadeus-includes.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeIntentUuid,
   activeSpace,
@@ -65,6 +66,9 @@ const stateFile = stateFilePath(projectDir);
 
 // No workflow active — do nothing
 if (!existsSync(stateFile)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:session-start", projectDir);
 
 // Write health heartbeat
 const healthDir = hooksHealthDir(projectDir);
@@ -110,7 +114,7 @@ if (hookStdin.text.length > 0) {
 // stamp below; no-op without a session_id.
 if (sessionId) writeCurrentSessionId(projectDir, sessionId);
 
-// Emit session event. appendAuditEntry creates audit.md if missing, so no
+// Emit session event. appendAuditEntry creates the audit shard if missing, so no
 // audit-existence guard — the state-file guard above is the sole "workflow
 // is active" check.
 let eventType: string | null = null;

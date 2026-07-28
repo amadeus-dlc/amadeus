@@ -100,7 +100,9 @@ function mint(proj: string, stdin: string | null): number {
 function humanTurnCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
-    .filter((l) => l === "**Event**: HUMAN_TURN").length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === "HUMAN_TURN").length;
 }
 
 let proj: string;

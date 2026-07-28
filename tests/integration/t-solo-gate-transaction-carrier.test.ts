@@ -178,7 +178,13 @@ describe("in-process carrier approval commits", () => {
     expect(JSON.parse(result.stdout)).toEqual({ kind: "approved" });
     expect(ownerState(owner)).toContain(`- [x] ${STAGE}`);
     expect(readFileSync(join(nonOwner, "amadeus-state.md"), "utf-8")).toBe(nonOwnerBefore);
-    expect(ownerAudit(root, owner)).toContain(`**Grant Id**: ${GRANT_ID}`);
+    expect(
+      ownerAudit(root, owner)
+        .split("\n")
+        .filter((l) => l.trim().length > 0)
+        .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+        .some((r) => r.event === "GATE_APPROVED" && r.fields?.["Grant Id"] === GRANT_ID),
+    ).toBe(true);
   });
 
   test("refuses a route id that matches no receipt", () => {
@@ -339,16 +345,27 @@ describe("in-process carrier approval commits", () => {
     // A later gate-open event makes the recorded human turn stale: the human
     // answered an older opening of this gate.
     const shard = join(owner, "audit", auditShardName(root));
+    const lines = readFileSync(shard, "utf-8")
+      .split("\n")
+      .filter((l) => l.trim().length > 0);
+    // Reuse the shard's own identity so the appended record stays a valid
+    // continuation of this clone's ledger (dense seq, same clone/intent).
+    const prev = JSON.parse(lines[lines.length - 1]!) as {
+      cloneId: string;
+      intentId: string;
+    };
     writeFileSync(
       shard,
-      `${readFileSync(shard, "utf-8")}
-## Stage Awaiting Approval
-**Timestamp**: ${new Date(Date.now() + 60_000).toISOString()}
-**Event**: STAGE_AWAITING_APPROVAL
-**Stage**: ${STAGE}
-
----
-`,
+      `${lines.join("\n")}\n${JSON.stringify({
+        schemaVersion: 1,
+        seq: lines.length + 1,
+        cloneId: prev.cloneId,
+        intentId: prev.intentId,
+        timestamp: new Date(Date.now() + 60_000).toISOString(),
+        heading: "Stage Awaiting Approval",
+        event: "STAGE_AWAITING_APPROVAL",
+        fields: { Stage: STAGE },
+      })}\n`,
     );
     const before = ownerState(owner);
 

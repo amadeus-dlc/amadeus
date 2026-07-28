@@ -126,6 +126,21 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-audit.ts"),
     join(proj, ".claude", "tools", "amadeus-audit.ts"),
   );
+  // amadeus-lib.ts / amadeus-audit.ts both import the JSONL journal codec.
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-journal.ts"),
+    join(proj, ".claude", "tools", "amadeus-journal.ts"),
+  );
+  // The hook opens a telemetry process span (#1628 Phase 2); the seam and its
+  // layered config reader are part of its module graph.
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-observability.ts"),
+    join(proj, ".claude", "tools", "amadeus-observability.ts"),
+  );
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-mirror-config.ts"),
+    join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
+  );
   copyFileSync(
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),
@@ -140,7 +155,7 @@ function makeProject(): string {
   mkdirSync(seededRecordDir(proj), { recursive: true });
   writeFileSync(seededStateFile(proj), "- **Scope**: feature", "utf-8");
   // Pre-create the record's audit/ DIR so the tests can write the AUDIT_*
-  // fixture directly into a shard (auditPath → <record>/audit/fixture.md).
+  // fixture directly into a shard (auditPath → <record>/audit/fixture.jsonl).
   mkdirSync(seededAuditDir(proj), { recursive: true });
   return proj;
 }
@@ -150,7 +165,7 @@ const hookPath = (proj: string): string =>
 // The hook reads the audit via the per-clone shard GLOB; writing the AUDIT_*
 // fixtures into one shard under the record's audit/ DIR is what the hook merges.
 const auditPath = (proj: string): string =>
-  join(seededAuditDir(proj), "fixture.md");
+  join(seededAuditDir(proj), "fixture.jsonl");
 const graphPath = (proj: string): string =>
   join(seededRecordDir(proj), "runtime-graph.json");
 const heartbeatPath = (proj: string): string =>
@@ -196,139 +211,30 @@ const payload = (command: string): string =>
 // Trailing block separator matters: split('\n---\n') leaves an empty tail
 // element, but slice(-3) is robust to it (the .sh comment at t91:55-56).
 
-const AUDIT_GATE_APPROVED = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
-
-## Gate Approved
-**Timestamp**: 2026-05-27T10:05:01Z
-**Event**: GATE_APPROVED
-**Stage**: intent-capture
-
----
+const AUDIT_GATE_APPROVED = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:01Z","heading":"Gate Approved","event":"GATE_APPROVED","fields":{"Stage":"intent-capture"}}
 `;
 
-const AUDIT_TERMINAL_WORKFLOW = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Gate Approved
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: GATE_APPROVED
-**Stage**: intent-capture
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:01Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
-
-## Phase Completion
-**Timestamp**: 2026-05-27T10:05:02Z
-**Event**: PHASE_COMPLETED
-**From phase**: ideation
-**To phase**: inception
-
----
-
-## Phase Verification
-**Timestamp**: 2026-05-27T10:05:03Z
-**Event**: PHASE_VERIFIED
-**Phase boundary**: ideation → inception
-
----
-
-## Workflow Completion
-**Timestamp**: 2026-05-27T10:05:04Z
-**Event**: WORKFLOW_COMPLETED
-**Reason**: terminal-stage-approved
-
----
+const AUDIT_TERMINAL_WORKFLOW = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Gate Approved","event":"GATE_APPROVED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:01Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":5,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:02Z","heading":"Phase Completion","event":"PHASE_COMPLETED","fields":{"From phase":"ideation","To phase":"inception"}}
+{"schemaVersion":1,"seq":6,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:03Z","heading":"Phase Verification","event":"PHASE_VERIFIED","fields":{"Phase boundary":"ideation → inception"}}
+{"schemaVersion":1,"seq":7,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:04Z","heading":"Workflow Completion","event":"WORKFLOW_COMPLETED","fields":{"Reason":"terminal-stage-approved"}}
 `;
 
-const AUDIT_GATE_START = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Awaiting Approval
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_AWAITING_APPROVAL
-**Stage**: intent-capture
-**Artifacts**: intent-statement
-
----
+const AUDIT_GATE_START = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Stage Awaiting Approval","event":"STAGE_AWAITING_APPROVAL","fields":{"Stage":"intent-capture","Artifacts":"intent-statement"}}
 `;
 
-const AUDIT_NO_TRANSITION = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Question Answered
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: QUESTION_ANSWERED
-**Stage**: intent-capture
-
----
-
-## Decision Recorded
-**Timestamp**: 2026-05-27T10:02:00Z
-**Event**: DECISION_RECORDED
-**Stage**: intent-capture
-
----
-
-## Artifact Updated
-**Timestamp**: 2026-05-27T10:03:00Z
-**Event**: ARTIFACT_UPDATED
-**Tool**: Edit
-
----
+const AUDIT_NO_TRANSITION = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Question Answered","event":"QUESTION_ANSWERED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:02:00Z","heading":"Decision Recorded","event":"DECISION_RECORDED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:03:00Z","heading":"Artifact Updated","event":"ARTIFACT_UPDATED","fields":{"Tool":"Edit"}}
 `;
 
 // (The AUDIT_GATE_APPROVED_TESTRUN fixture and its Test-Run-propagation case

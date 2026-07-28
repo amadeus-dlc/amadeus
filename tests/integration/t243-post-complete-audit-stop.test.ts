@@ -94,7 +94,7 @@ function buildWorkspace(intents: SeedIntent[], cursor?: string): string {
   return proj;
 }
 
-// Count "**Event**:" markers across the target intent's audit shard(s); -1 when
+// Count audit records across the target intent's audit shard(s); -1 when
 // the audit dir does not exist yet.
 function shardEventCount(proj: string, dirName: string): number {
   const auditDir = join(intentsDirOf(proj), dirName, "audit");
@@ -102,7 +102,7 @@ function shardEventCount(proj: string, dirName: string): number {
   let count = 0;
   for (const name of readdirSync(auditDir)) {
     const body = readFileSync(join(auditDir, name), "utf-8");
-    count += (body.match(/\*\*Event\*\*:/g) ?? []).length;
+    count += body.split("\n").filter((l) => l.trim() !== "").length;
   }
   return count;
 }
@@ -285,6 +285,6 @@ describe("t243 post-complete audit stop (#1248)", () => {
     const shard = readdirSync(auditDir)
       .map((n) => readFileSync(join(auditDir, n), "utf-8"))
       .join("\n");
-    expect(shard).toContain("**Event**: AUDIT_MERGED");
+    expect(shard).toContain('"event":"AUDIT_MERGED"');
   });
 });

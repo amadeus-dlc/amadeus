@@ -23,7 +23,7 @@
 // really invoked. (Same idiom as kiro's t141.)
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,9 +43,27 @@ const CLAUDE_LIB = join(CLAUDE_TOOLS, "amadeus-lib.ts");
 // open-set descriptor exactly as it would in a real install. Pass a rulesSubdir
 // to drive ANY harness — including a synthetic 4th (e.g. .gemini) — proving the
 // runtime needs zero edits to support a new harness.
+/**
+ * materializeHarnessLib + the JSONL journal codec sibling: amadeus-lib.ts:2
+ * imports `./amadeus-journal.ts`, which the shared helper's sibling list
+ * (tests/helpers/harness-lib-fixture.ts HARNESS_TOOL_SIBLINGS) does not yet
+ * carry — without it every spawned eval dies on a missing module.
+ */
+function materializeLib(
+  targetTools: string,
+  options: Parameters<typeof materializeHarnessLib>[2],
+): string {
+  const lib = materializeHarnessLib(CLAUDE_TOOLS, targetTools, options);
+  cpSync(
+    join(CLAUDE_TOOLS, "amadeus-journal.ts"),
+    join(targetTools, "amadeus-journal.ts"),
+  );
+  return lib;
+}
+
 function libInHarnessTree(root: string, harness: string, rulesSubdir?: string): string {
   const toolsDir = join(root, harness, "tools");
-  return materializeHarnessLib(CLAUDE_TOOLS, toolsDir, {
+  return materializeLib(toolsDir, {
     copyData: true,
     descriptor: {
       harnessDir: harness,
@@ -89,9 +107,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib copied OUTSIDE any harness tree → derivation misses → CWD probe.
-      const libCopy = materializeHarnessLib(CLAUDE_TOOLS, tmp, {
-        copyData: true,
-      });
+      const libCopy = materializeLib(tmp, { copyData: true });
       mkdirSync(join(tmp, ".codex"));
       expect(evalLib(libCopy, "harnessDir()", { cwd: tmp })).toBe(".codex");
       // Precedence: .claude beats .codex when both are present.
@@ -119,9 +135,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib outside any harness tree → suffix strip misses → CWD marker rung.
-      const libCopy = materializeHarnessLib(CLAUDE_TOOLS, tmp, {
-        copyData: true,
-      });
+      const libCopy = materializeLib(tmp, { copyData: true });
       const project = join(tmp, "proj");
       mkdirSync(join(project, ".codex"), { recursive: true });
       expect(evalLib(libCopy, "resolveProjectDir()", { cwd: project })).toBe(project);

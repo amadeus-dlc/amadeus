@@ -84,7 +84,7 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 1. `packages/framework/core/tools/amadeus-utility.ts` にサブコマンドを追加する
 2. SKILL.md から単一の Bash 呼び出しでディスパッチする: `bun .claude/tools/amadeus-utility.ts <subcommand>`
 3. タスクトラッキングは不要 -- スクリプトは 1 秒未満で実行される
-4. 監査ログはスクリプト内で `amadeus-audit.ts` の `appendAuditEntry` を通じて処理する(`**Event**:` の markdown ブロックを手書きしない)
+4. 監査ログはスクリプト内で `amadeus-audit.ts` の `appendAuditEntry` を通じて処理する(ジャーナルレコードを手書きしない)
 
 `--help`、`--version`、`--status`、`--doctor` ハンドラはリファレンス実装です。
 
@@ -94,7 +94,7 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 エージェントの推論から恩恵を受けるハンドラ(ファイルシステムのスキャン、意思決定)向け:
 1. **タスクトラッキング** -- 論理ステップごとに `TaskCreate` でタスクを作成し、作業の進行に応じて `TaskUpdate`(`in_progress` -> `completed`)で遷移させます。これが Claude Code のタスクサイドバーを駆動します。
 2. **ステータスラインの更新** -- アクティブな intent の `amadeus-state.md` が存在する場合、`Current Stage` を一時的に、実行中のユーティリティを表す値(例: `running health check`)に設定し、完了時に元の値を復元します。`amadeus-statusline.ts` フックがこのフィールドをターミナルのステータスバーのために読み取ります。
-3. **監査ログ** -- 適切なツールのサブコマンドを呼び出します(例: 内部で `appendAuditEntry` を呼ぶ `bun .claude/tools/amadeus-utility.ts <handler>`)。LLM のプロースから `**Event**:` の markdown ブロックを手書きしてはいけません — [State Machine: Forbidden patterns](12-state-machine.ja.md) を参照してください。
+3. **監査ログ** -- 適切なツールのサブコマンドを呼び出します(例: 内部で `appendAuditEntry` を呼ぶ `bun .claude/tools/amadeus-utility.ts <handler>`)。LLM のプロースからジャーナルレコードを手書きしてはいけません — [State Machine: Forbidden patterns](12-state-machine.ja.md) を参照してください。
 
 `intent-birth` ハンドラは完全に決定論的です: 3 つの init ステージ(workspace-scaffold、workspace-detection、state-init)すべてが単一の `amadeus-utility intent-birth` 呼び出しの中で実行されます。ウェルカムメッセージはセッション開始時に `settings.json` の `companyAnnouncements` を通じてレンダリングされ、ステージではありません。
 

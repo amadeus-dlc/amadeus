@@ -1,11 +1,10 @@
-// amadeus-mirror-config.ts — C1 Mirror configuration resolver.
+// amadeus-mirror-config.ts — shared layered configuration resolver.
 //
-// Resolves the `auto-mirror` mode from the three git-shared layers
-// (global -> space -> intent, later layers winning). The valid values are
-// exactly the strings `off | prompt | auto`; an unspecified mode defaults to
-// `prompt`. Booleans and any other value are configuration errors, never
-// coerced — this is a forward migration off the old boolean setting with no
-// compatibility shim.
+// Resolves the supported settings from the three git-shared layers
+// (global -> space -> intent, later layers winning per key). `auto-mirror`
+// accepts exactly `off | prompt | auto` and defaults to `prompt`;
+// `auto-solo-election` accepts only a boolean and defaults to `false`.
+// Invalid values are configuration errors and are never coerced.
 //
 // Responsibilities are split:
 //   - readMirrorConfigLayers  — the ONLY filesystem owner. Resolves the three
@@ -46,7 +45,16 @@ const LAYER_ORDER: readonly ConfigLayer[] = ["global", "space", "intent"];
 // configuration error in every layer.
 const AUTO_MIRROR_KEY = "auto-mirror";
 const MIRROR_PROJECTS_KEY = "mirror-projects";
-const ALLOWED_KEYS: readonly string[] = [AUTO_MIRROR_KEY, MIRROR_PROJECTS_KEY];
+const AUTO_SOLO_ELECTION_KEY = "auto-solo-election";
+// "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
+// the mirror parser must tolerate the key so both subsystems can share the
+// layered config.json files, but it never interprets the value.
+const ALLOWED_KEYS: readonly string[] = [
+  AUTO_MIRROR_KEY,
+  MIRROR_PROJECTS_KEY,
+  AUTO_SOLO_ELECTION_KEY,
+  "observability",
+];
 
 const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
   "ideation",
@@ -59,14 +67,19 @@ const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
 const MODE_EXPECTED = "off | prompt | auto";
 const PROJECTS_EXPECTED =
   'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }';
+const BOOLEAN_EXPECTED = "boolean";
 
 export type ConfigLayer = "global" | "space" | "intent";
 
-export type MirrorConfigKey = "auto-mirror" | "mirror-projects";
+export type MirrorConfigKey =
+  | "auto-mirror"
+  | "mirror-projects"
+  | "auto-solo-election";
 
 export type MirrorConfig = Readonly<{
   autoMirror: MirrorMode;
   projects: readonly MirrorProjectTarget[];
+  autoSoloElection: boolean;
 }>;
 
 export type MirrorConfigLayerInput = Readonly<{
@@ -454,6 +467,7 @@ type LayerIssue = Readonly<{
 type LayerClassification = Readonly<{
   mode?: MirrorMode;
   projects?: readonly MirrorProjectTarget[];
+  autoSoloElection?: boolean;
   issues: readonly LayerIssue[];
 }>;
 
@@ -519,10 +533,25 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     }
   }
 
+  let autoSoloElection: boolean | undefined;
+  const rawAutoSoloElection = rawValue[AUTO_SOLO_ELECTION_KEY];
+  if (rawAutoSoloElection !== undefined) {
+    if (typeof rawAutoSoloElection === "boolean") {
+      autoSoloElection = rawAutoSoloElection;
+    } else {
+      issues.push({
+        key: AUTO_SOLO_ELECTION_KEY,
+        actualType: valueKind(rawAutoSoloElection),
+        expected: BOOLEAN_EXPECTED,
+      });
+    }
+  }
+
   return {
     issues,
     ...(mode === undefined ? {} : { mode }),
     ...(projects === undefined ? {} : { projects }),
+    ...(autoSoloElection === undefined ? {} : { autoSoloElection }),
   };
 }
 
@@ -544,6 +573,7 @@ export function parseMirrorConfigLayers(
   const sources: string[] = [];
   let mode: MirrorMode | undefined;
   let projects: readonly MirrorProjectTarget[] | undefined;
+  let autoSoloElection: boolean | undefined;
   for (const layer of ordered) {
     const classified = classifyRawValue(layer.rawValue);
     for (const issue of classified.issues) {
@@ -569,13 +599,21 @@ export function parseMirrorConfigLayers(
       projects = classified.projects;
       contributed = true;
     }
+    if (classified.autoSoloElection !== undefined) {
+      autoSoloElection = classified.autoSoloElection;
+      contributed = true;
+    }
     if (contributed) sources.push(layer.path);
   }
 
   if (issues.length > 0) return { kind: "invalid", issues };
   return {
     kind: "resolved",
-    config: { autoMirror: mode ?? "prompt", projects: projects ?? [] },
+    config: {
+      autoMirror: mode ?? "prompt",
+      projects: projects ?? [],
+      autoSoloElection: autoSoloElection ?? false,
+    },
     sources,
   };
 }

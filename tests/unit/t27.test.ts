@@ -203,45 +203,36 @@ const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md"
 // pins the clone-id). seedAuditFile() writes here too, so seed/append/check all
 // agree on one file. Single-shard tests (size growth, one-event count) target it.
 const auditPath = (p: string): string => seededAuditShard(p);
-// Audit is written as per-clone shards under <record>/audit/<host>-<clone>.md.
+// Audit is written as per-clone JSONL shards under <record>/audit/<host>-<clone>.jsonl.
 // Concatenate every shard for a content read.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
   return "";
 }
-/** Count `**Event**: <ev>` lines in audit CONTENT (shard-concat or flat). */
-function auditEventCountIn(content: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return content.split("\n").filter((l) => re.test(l)).length;
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse JSONL audit CONTENT (shard-concat or flat) into records. */
+function auditRecordsIn(content: string): AuditRecord[] {
+  return content
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
-/** Value of <key> from the FIRST audit block matching <ev> in CONTENT. */
+
+/** Count records with event <ev> in audit CONTENT. */
+function auditEventCountIn(content: string, ev: string): number {
+  return auditRecordsIn(content).filter((r) => r.event === ev).length;
+}
+/** Value of <key> from the FIRST audit record matching <ev> in CONTENT. */
 function auditFieldIn(content: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of content.split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        if (label === key) return stripped.slice(pos + 4);
-      }
-    }
-  }
-  return "";
+  const hit = auditRecordsIn(content).find((r) => r.event === ev);
+  return hit?.fields?.[key] ?? "";
 }
 
 /** Fresh bare temp project (create_test_project). */
@@ -293,39 +284,16 @@ function stateAuditProj(): string {
   return p;
 }
 
-/** Count audit blocks with `**Event**: <ev>`. Mirrors the .sh's `^**Event**: <ev>` grep, as exact count. */
+/** Count audit records with event <ev> in a shard file. */
 function auditEventCount(file: string, ev: string): number {
   if (!existsSync(file)) return 0;
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return readFileSync(file, "utf-8").split("\n").filter((l) => re.test(l)).length;
+  return auditEventCountIn(readFileSync(file, "utf-8"), ev);
 }
 
-/**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings and `---` separators (mirrors t31's auditField).
- */
+/** Value of <key> from the FIRST audit record whose event matches <ev>. */
 function auditField(file: string, ev: string, key: string): string {
   if (!existsSync(file)) return "";
-  let matched = false;
-  for (const line of readFileSync(file, "utf-8").split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        if (label === key) return stripped.slice(pos + 4);
-      }
-    }
-  }
-  return "";
+  return auditFieldIn(readFileSync(file, "utf-8"), ev, key);
 }
 
 /** Read a `- **Field**: value` line from the state file (mirrors assert_grep 'Field.*value'). */
@@ -565,10 +533,10 @@ describe("t27 amadeus-utility init", () => {
     // P4: birth writes a per-intent record (state + audit shards), not the flat
     // amadeus-docs/ trio. (Domain knowledge is SPACE-level, asserted below.)
     expect(existsSync(statePath(p))).toBe(true);
-    // Audit is now a SHARD DIR (<record>/audit/<host>-<pid>.md), not a single file.
+    // Audit is now a SHARD DIR (<record>/audit/<host>-<pid>.jsonl), not a single file.
     const auditDir = join(recordDirOf(p), "audit");
     expect(existsSync(auditDir)).toBe(true);
-    expect(readdirSync(auditDir).filter((f) => f.endsWith(".md")).length).toBeGreaterThanOrEqual(1);
+    expect(readdirSync(auditDir).filter((f) => f.endsWith(".jsonl")).length).toBeGreaterThanOrEqual(1);
     // knowledge/ is SPACE-level (ensureWorkspaceDirs creates
     // amadeus/spaces/<space>/knowledge/ — a sibling of intents, not per-record).
     expect(existsSync(spaceKnowledgeOf(p))).toBe(true);
@@ -624,11 +592,8 @@ describe("t27 amadeus-utility init", () => {
     const p = bareProj();
     util(["init", "--scope", "bugfix"], p);
     // P4: audit is sharded under the born record's audit/ dir; read via readAudit.
-    // First **Event**: line after the `# AI-DLC Audit Log` header.
-    const firstEvent = readAudit(p)
-      .split("\n")
-      .find((l) => l.startsWith("**Event**: "))
-      ?.replace("**Event**: ", "");
+    // The first record of the JSONL ledger.
+    const firstEvent = auditRecordsIn(readAudit(p))[0]?.event;
     expect(firstEvent).toBe("WORKFLOW_STARTED");
   });
 });

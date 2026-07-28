@@ -77,21 +77,22 @@ stateDiagram-v2
 
 ## Audit Trail (`audit/`)
 
-The audit trail lives in the intent's record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/`. It is an append-only event log written as **per-clone shards** (`<host>-<clone>.md`): each clone appends only to its own shard, so concurrent appends from sibling worktrees never git-conflict. Readers glob `audit/*.md` and merge-sort by ISO timestamp to reconstruct the full chronological history of decisions and events.
+The audit trail lives in the intent's record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/`. It is an append-only event journal written as **per-clone shards** (`<host>-<clone>.jsonl`, one JSON record per line, no header): each clone appends only to its own shard, so concurrent appends from sibling worktrees never git-conflict. Readers glob `audit/*.jsonl` and merge-sort by ISO timestamp to reconstruct the full chronological history of decisions and events.
 
-### 68-event taxonomy
+### 78-event taxonomy
 
-Events are organized into 18 categories:
+Events are organized into 19 categories:
 
 | Category | Count | Events |
 |----------|------:|--------|
-| **Workflow Lifecycle** | 4 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED` |
+| **Workflow Lifecycle** | 6 | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED`, `WORKFLOW_PARKED`, `WORKFLOW_UNPARKED`, `INTENT_ARCHIVED`, `INTENT_UNARCHIVED` |
 | **Phase Lifecycle** | 4 | `PHASE_STARTED`, `PHASE_COMPLETED`, `PHASE_VERIFIED`, `PHASE_SKIPPED` |
-| **Stage Lifecycle** | 6 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_SKIPPED`, `STAGE_JUMPED` |
-| **Session** | 4 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED` (hook-emitted) |
+| **Stage Lifecycle** | 7 | `STAGE_STARTED`, `STAGE_AWAITING_APPROVAL`, `STAGE_REVISING`, `STAGE_COMPLETED`, `STAGE_SKIPPED`, `STAGE_JUMPED`, `GUARD_EXEMPTED` |
+| **Session** | 5 | `SESSION_STARTED`, `SESSION_RESUMED`, `SESSION_COMPACTED`, `SESSION_ENDED`, `HUMAN_TURN` (hook-emitted) |
 | **Initialization** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` |
-| **Navigation** | 4 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED` |
-| **Interaction** | 4 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED` |
+| **Navigation** | 5 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `RECOMPOSED` |
+| **Interaction** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` |
+| **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` |
 | **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED` (audit-logger hook), `ARTIFACT_REUSED` |
 | **Subagent** | 1 | `SUBAGENT_COMPLETED` (log-subagent hook) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
@@ -115,13 +116,18 @@ Events are organized into 18 categories:
 
 ### How to read the audit log
 
-Each entry follows a structured format with these fields:
+Each shard is a JSONL journal: one JSON record per physical line. Every record carries the idempotency identity plus the event payload:
 
-- **Timestamp** — ISO 8601 timestamp
-- **Event** - One of the 68 event types
-- **Details** — Event-specific data (stage name, decision, artifact path, etc.)
+```json
+{"schemaVersion":1,"seq":42,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:00:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"code-generation","Agent":"developer"}}
+```
 
-Entries are appended chronologically. To review the history of a specific stage, search for its `STAGE_STARTED` and `STAGE_COMPLETED` entries and everything in between.
+- **`timestamp`** — ISO 8601 timestamp
+- **`event`** — one of the 78 event types (`null` for free-form `append-raw` records, whose body lives in `rawBody`)
+- **`fields`** — event-specific data as string key/values (stage name, decision, artifact path, etc.)
+- **`seq`** — per-shard monotonic sequence; `intentId:cloneId:seq` is the global idempotency key
+
+Records are appended chronologically. To review the history of a specific stage, search for its `STAGE_STARTED` and `STAGE_COMPLETED` entries and everything in between.
 
 ### Audit event flow
 

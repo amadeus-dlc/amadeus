@@ -177,29 +177,105 @@ function seedDagProject(canonical: string): string {
   return project;
 }
 
+interface AuditRecord {
+  schemaVersion: number;
+  seq: number;
+  cloneId: string;
+  intentId: string;
+  timestamp: string;
+  heading: string;
+  event: string | null;
+  fields?: Record<string, string>;
+}
+
+/** Parse a JSONL shard buffer into records (blank lines skipped). */
+function parseRecords(body: string): AuditRecord[] {
+  return body
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as AuditRecord);
+}
+
+function readRecords(shardPath: string): AuditRecord[] {
+  return parseRecords(readFileSync(shardPath, "utf-8"));
+}
+
+/** Records carrying a Transaction Id — the recovery batch's rows. */
+function transactionRecords(shardPath: string): AuditRecord[] {
+  return readRecords(shardPath).filter(
+    (r) => r.fields?.["Transaction Id"] !== undefined,
+  );
+}
+
+/**
+ * Append records to an existing shard, continuing its clone/intent identity and
+ * its dense 1-based seq — the ledger invariants a hand-seeded row must keep.
+ */
+function appendRecords(
+  shardPath: string,
+  rows: ReadonlyArray<{
+    heading: string;
+    timestamp: string;
+    event: string;
+    fields?: Record<string, string>;
+  }>,
+): void {
+  const existing = readRecords(shardPath);
+  const last = existing.at(-1);
+  const cloneId = last?.cloneId ?? "fixturecloneid01";
+  const intentId = last?.intentId ?? "fixture-8000000000000001";
+  appendFileSync(
+    shardPath,
+    rows
+      .map((row, index) =>
+        `${JSON.stringify({
+          schemaVersion: 1,
+          seq: existing.length + index + 1,
+          cloneId,
+          intentId,
+          timestamp: row.timestamp,
+          heading: row.heading,
+          event: row.event,
+          fields: row.fields ?? {},
+        })}\n`,
+      )
+      .join(""),
+  );
+}
+
+/**
+ * Rewrite the recovered-feedback field on every record that carries it. The
+ * batch's identity hash covers the field values, so this is the minimal
+ * length-independent tamper the recovery guard must reject.
+ */
+function tamperRecoveredFeedback(shardBody: string): string {
+  return parseRecords(shardBody)
+    .map((r) =>
+      r.fields?.Feedback ===
+      "Recovered from durable artifact evidence; original feedback was not recorded"
+        ? `${JSON.stringify({ ...r, fields: { ...r.fields, Feedback: "tampered" } })}\n`
+        : `${JSON.stringify(r)}\n`,
+    )
+    .join("");
+}
+
 function seedRevisionProject(): string {
   const project = createTestProject();
   projects.push(project);
   seedStateFile(project, join(FIXTURES_DIR, "state-mid-ideation.md"));
   expect(run(STATE, project, ["gate-start", "feasibility"]).status).toBe(0);
   const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  appendFileSync(
-    seededAuditShard(project),
-    `
-## Human Turn
-**Timestamp**: ${timestamp}
-**Event**: HUMAN_TURN
-
----
-
-## Artifact Updated
-**Timestamp**: ${timestamp}
-**Event**: ARTIFACT_UPDATED
-**File**: amadeus/spaces/default/intents/fixture-8000000000000001/ideation/feasibility/feasibility-assessment.md
-
----
-`,
-  );
+  appendRecords(seededAuditShard(project), [
+    { heading: "Human Turn", timestamp, event: "HUMAN_TURN" },
+    {
+      heading: "Artifact Updated",
+      timestamp,
+      event: "ARTIFACT_UPDATED",
+      fields: {
+        File: "amadeus/spaces/default/intents/fixture-8000000000000001/ideation/feasibility/feasibility-assessment.md",
+      },
+    },
+  ]);
   return project;
 }
 
@@ -214,23 +290,21 @@ function seedPerUnitRevisionProject(updatedUnit: string): string {
     "# Units\n\n```yaml\nunits:\n  - name: unit-a\n    depends_on: []\n  - name: unit-b\n    depends_on: [unit-a]\n```\n",
   );
   expect(run(STATE, project, ["gate-start", "code-generation"]).status).toBe(0);
-  appendFileSync(
-    seededAuditShard(project),
-    `
-## Human Turn
-**Timestamp**: 2999-01-01T00:00:00Z
-**Event**: HUMAN_TURN
-
----
-
-## Artifact Updated
-**Timestamp**: 2999-01-01T00:00:01Z
-**Event**: ARTIFACT_UPDATED
-**File**: amadeus/spaces/default/intents/fixture-8000000000000001/construction/${updatedUnit}/code-generation/code-summary.md
-
----
-`,
-  );
+  appendRecords(seededAuditShard(project), [
+    {
+      heading: "Human Turn",
+      timestamp: "2999-01-01T00:00:00Z",
+      event: "HUMAN_TURN",
+    },
+    {
+      heading: "Artifact Updated",
+      timestamp: "2999-01-01T00:00:01Z",
+      event: "ARTIFACT_UPDATED",
+      fields: {
+        File: `amadeus/spaces/default/intents/fixture-8000000000000001/construction/${updatedUnit}/code-generation/code-summary.md`,
+      },
+    },
+  ]);
   return project;
 }
 
@@ -274,22 +348,25 @@ describe("t247 gate revision recovery production path", () => {
     expect(state).toContain("- **Revision Count**: 1");
     expect(state).toContain("- [x] feasibility — EXECUTE");
 
-    const audit = readFileSync(seededAuditShard(project), "utf-8");
-    const transactionBlocks = audit
-      .split("\n---\n")
-      .filter((block) => block.includes("**Transaction Id**:"));
-    expect(transactionBlocks.map((block) => /\*\*Event\*\*: (\S+)/.exec(block)?.[1])).toEqual([
+    const transactionRows = transactionRecords(seededAuditShard(project));
+    expect(transactionRows.map((r) => r.event)).toEqual([
       "GATE_REJECTED",
       "STAGE_REVISING",
       "STAGE_AWAITING_APPROVAL",
       "GATE_APPROVED",
       "STAGE_COMPLETED",
     ]);
-    expect(transactionBlocks.slice(0, 3).every((block) => block.includes("**Recovered**: true"))).toBe(true);
-    expect(transactionBlocks.slice(0, 2).every((block) =>
-      block.includes("**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded")
-    )).toBe(true);
-    expect(new Set(transactionBlocks.map((block) => /\*\*Transaction Id\*\*: (\S+)/.exec(block)?.[1])).size).toBe(1);
+    expect(transactionRows.slice(0, 3).every((r) => r.fields?.Recovered === "true")).toBe(true);
+    expect(
+      transactionRows
+        .slice(0, 2)
+        .every(
+          (r) =>
+            r.fields?.Feedback ===
+            "Recovered from durable artifact evidence; original feedback was not recorded",
+        ),
+    ).toBe(true);
+    expect(new Set(transactionRows.map((r) => r.fields?.["Transaction Id"])).size).toBe(1);
   });
 
   test("a state-write failure retries the complete audit transaction without duplicate rows", () => {
@@ -302,12 +379,11 @@ describe("t247 gate revision recovery production path", () => {
     chmodSync(statePath, 0o644);
     expect(failed.status).toBe(1);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
-    const auditAfterFailure = readFileSync(auditPath, "utf-8");
-    expect(auditAfterFailure.match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(auditPath).length).toBe(5);
 
     const retried = run(STATE, project, ["approve", "feasibility"]);
     expect(retried.status).toBe(0);
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(auditPath).length).toBe(5);
     expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
     expect(readFileSync(statePath, "utf-8")).toContain("- [x] feasibility — EXECUTE");
   });
@@ -372,13 +448,10 @@ describe("t247 recovery in-process coverage seams", () => {
     const approved = inProject(project, () => handleApprove(["feasibility"]));
     expect(approved.code).toBeNull();
     const approvedAudit = readFileSync(auditPath, "utf-8");
-    expect(approvedAudit.match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(auditPath).length).toBe(5);
 
     writeFileSync(statePath, stateBefore);
-    const persistedTamper = approvedAudit.replace(
-      "**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded",
-      "**Feedback**: tampered",
-    );
+    const persistedTamper = tamperRecoveredFeedback(approvedAudit);
     expect(persistedTamper).not.toBe(approvedAudit);
     writeFileSync(auditPath, persistedTamper);
     const refused = run(STATE, project, ["approve", "feasibility"], {
@@ -392,7 +465,7 @@ describe("t247 recovery in-process coverage seams", () => {
     writeFileSync(auditPath, approvedAudit);
     const replayed = inProject(project, () => handleApprove(["feasibility"]));
     expect(replayed.code).toBeNull();
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(auditPath).length).toBe(5);
     expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
   });
 
@@ -404,22 +477,18 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
 
     writeFileSync(statePath, stateBefore);
-    const tampered = readFileSync(auditPath, "utf-8").replace(
-      "**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded",
-      "**Feedback**: tampered",
-    );
-    writeFileSync(auditPath, tampered);
+    writeFileSync(auditPath, tamperRecoveredFeedback(readFileSync(auditPath, "utf-8")));
 
     chmodSync(statePath, 0o444);
     const rebuildWithFailedStateWrite = run(STATE, project, ["approve", "feasibility"]);
     chmodSync(statePath, 0o644);
     expect(rebuildWithFailedStateWrite.status).toBe(1);
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(transactionRecords(auditPath).length).toBe(10);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
 
     const replayedInProcess = inProject(project, () => handleApprove(["feasibility"]));
     expect(replayedInProcess.code).toBeNull();
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(transactionRecords(auditPath).length).toBe(10);
     expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
 
     writeFileSync(statePath, stateBefore);
@@ -427,7 +496,7 @@ describe("t247 recovery in-process coverage seams", () => {
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "0",
     });
     expect(retried.status).toBe(0);
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(transactionRecords(auditPath).length).toBe(10);
     expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
   });
 
@@ -438,14 +507,17 @@ describe("t247 recovery in-process coverage seams", () => {
     const stateBefore = readFileSync(statePath, "utf-8");
     expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
 
-    const committedAudit = readFileSync(auditPath, "utf-8");
-    const duplicateBatch = committedAudit
-      .split("\n---\n")
-      .filter((block) => block.includes("**Transaction Id**:"))
-      .map((block) => `${block}\n---\n`)
-      .join("");
-    expect(duplicateBatch).not.toBe("");
-    appendFileSync(auditPath, duplicateBatch);
+    // Replay the committed batch verbatim, renumbered so the duplicated rows
+    // continue the shard's dense sequence (the ledger's own invariant).
+    const committed = readRecords(auditPath);
+    const batch = committed.filter((r) => r.fields?.["Transaction Id"] !== undefined);
+    expect(batch.length).toBeGreaterThan(0);
+    appendFileSync(
+      auditPath,
+      batch
+        .map((r, index) => `${JSON.stringify({ ...r, seq: committed.length + index + 1 })}\n`)
+        .join(""),
+    );
     writeFileSync(statePath, stateBefore);
 
     const refused = run(STATE, project, ["approve", "feasibility"], {
@@ -453,7 +525,7 @@ describe("t247 recovery in-process coverage seams", () => {
     });
     expect(refused.status).toBe(1);
     expect(refused.stderr).toContain("a real human has not acted at this gate");
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(transactionRecords(auditPath).length).toBe(10);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
@@ -465,23 +537,15 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
 
     writeFileSync(statePath, stateBefore);
-    const completedAudit = readFileSync(auditPath, "utf-8");
-    const terminalBlock = completedAudit
-      .split("\n---\n")
-      .filter((block) => block.includes("**Transaction Id**:"))
-      .at(-1)!;
-    const terminalTimestamp = /\*\*Timestamp\*\*: (\S+)/.exec(terminalBlock)![1]!;
-    appendFileSync(
-      auditPath,
-      `
-## Stage Awaiting Approval
-**Timestamp**: ${terminalTimestamp}
-**Event**: STAGE_AWAITING_APPROVAL
-**Stage**: feasibility
-
----
-`,
-    );
+    const terminalRecord = transactionRecords(auditPath).at(-1)!;
+    appendRecords(auditPath, [
+      {
+        heading: "Stage Awaiting Approval",
+        timestamp: terminalRecord.timestamp,
+        event: "STAGE_AWAITING_APPROVAL",
+        fields: { Stage: "feasibility" },
+      },
+    ]);
     const auditBefore = readFileSync(auditPath, "utf-8");
     const refused = inProject(project, () => handleApprove(["feasibility"]), {
       skipHumanGuard: false,
@@ -490,9 +554,10 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(refused.stderr).toContain("a real human has not acted at this gate");
     const refusalAudit = readFileSync(auditPath, "utf-8");
     expect(refusalAudit.startsWith(auditBefore)).toBe(true);
-    expect(refusalAudit.slice(auditBefore.length)).toContain("**Event**: ERROR_LOGGED");
-    expect(refusalAudit.slice(auditBefore.length)).not.toContain("**Event**: GATE_APPROVED");
-    expect(refusalAudit.slice(auditBefore.length)).not.toContain("**Transaction Id**:");
+    const appended = parseRecords(refusalAudit.slice(auditBefore.length));
+    expect(appended.map((r) => r.event)).toContain("ERROR_LOGGED");
+    expect(appended.map((r) => r.event)).not.toContain("GATE_APPROVED");
+    expect(appended.every((r) => r.fields?.["Transaction Id"] === undefined)).toBe(true);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
@@ -503,27 +568,35 @@ describe("t247 recovery in-process coverage seams", () => {
     const stateBefore = readFileSync(statePath, "utf-8");
     expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
     writeFileSync(statePath, stateBefore);
-    const tampered = readFileSync(auditPath, "utf-8").replace(
-      /\*\*Transaction Id\*\*: [a-f0-9]+/g,
-      "**Transaction Id**: 000000000000000000000000",
+    writeFileSync(
+      auditPath,
+      readRecords(auditPath)
+        .map((r) =>
+          r.fields?.["Transaction Id"] === undefined
+            ? `${JSON.stringify(r)}\n`
+            : `${JSON.stringify({
+                ...r,
+                fields: { ...r.fields, "Transaction Id": "000000000000000000000000" },
+              })}\n`,
+        )
+        .join(""),
     );
-    writeFileSync(auditPath, tampered);
     const refused = inProject(project, () => handleApprove(["feasibility"]), { skipHumanGuard: false });
     expect(refused.code).toBe(1);
     expect(refused.stderr).toContain("a real human has not acted at this gate");
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(auditPath).length).toBe(5);
   });
 
   test("an unreadable audit shard disables revision recovery without blocking organic approval", () => {
     const project = seedRevisionProject();
     const auditDir = join(seededRecordDir(project), "audit");
-    symlinkSync(join(auditDir, "missing-target"), join(auditDir, "unreadable.md"));
+    symlinkSync(join(auditDir, "missing-target"), join(auditDir, "unreadable.jsonl"));
 
     const approved = inProject(project, () => handleApprove(["feasibility"]));
     expect(approved.code).toBeNull();
     expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
-    expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+    expect(transactionRecords(seededAuditShard(project)).length).toBe(0);
   });
 
   test("a canonical sibling Unit artifact write recovers the stage-wide per-Unit gate", () => {
@@ -531,7 +604,7 @@ describe("t247 recovery in-process coverage seams", () => {
     const approved = inProject(project, () => handleApprove(["code-generation"]));
     expect(approved.code).toBeNull();
     expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 1");
-    expect(readFileSync(seededAuditShard(project), "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    expect(transactionRecords(seededAuditShard(project)).length).toBe(5);
   });
 
   test("a non-canonical Unit artifact write cannot recover the stage-wide per-Unit gate", () => {
@@ -539,7 +612,7 @@ describe("t247 recovery in-process coverage seams", () => {
     const approved = inProject(project, () => handleApprove(["code-generation"]));
     expect(approved.code).toBeNull();
     expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
-    expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+    expect(transactionRecords(seededAuditShard(project)).length).toBe(0);
   });
 
   test("an unreadable Unit dependency artifact disables per-Unit recovery", () => {
@@ -554,23 +627,21 @@ describe("t247 recovery in-process coverage seams", () => {
       "# Units\n\n```yaml\nunits:\n  - name: unit-a\n    depends_on: []\n  - name: unit-b\n    depends_on: [unit-a]\n```\n",
     );
     expect(run(STATE, project, ["gate-start", "code-generation"]).status).toBe(0);
-    appendFileSync(
-      seededAuditShard(project),
-      `
-## Human Turn
-**Timestamp**: 2999-01-01T00:00:00Z
-**Event**: HUMAN_TURN
-
----
-
-## Artifact Updated
-**Timestamp**: 2999-01-01T00:00:01Z
-**Event**: ARTIFACT_UPDATED
-**File**: amadeus/spaces/default/intents/fixture-8000000000000001/construction/unit-b/code-generation/code-summary.md
-
----
-`,
-    );
+    appendRecords(seededAuditShard(project), [
+        {
+          heading: "Human Turn",
+          timestamp: "2999-01-01T00:00:00Z",
+          event: "HUMAN_TURN",
+        },
+        {
+          heading: "Artifact Updated",
+          timestamp: "2999-01-01T00:00:01Z",
+          event: "ARTIFACT_UPDATED",
+          fields: {
+            File: "amadeus/spaces/default/intents/fixture-8000000000000001/construction/unit-b/code-generation/code-summary.md",
+          },
+        },
+      ]);
 
     const originalReadFileSync = nodeFs.readFileSync;
     const readSpy = spyOn(nodeFs, "readFileSync").mockImplementation(
@@ -585,7 +656,7 @@ describe("t247 recovery in-process coverage seams", () => {
       const approved = inProject(project, () => handleApprove(["code-generation"]));
       expect(approved.code).toBeNull();
       expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
-      expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+      expect(transactionRecords(seededAuditShard(project)).length).toBe(0);
     } finally {
       readSpy.mockRestore();
     }
@@ -601,18 +672,34 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(run(STATE, project, ["gate-start", "feasibility"]).status).toBe(0);
     const auditDir = join(seededRecordDir(project), "audit");
     const timestamp = "2999-01-01T00:00:00Z";
-    writeFileSync(join(auditDir, humanFile), `# Audit\n\n## Human Turn\n**Timestamp**: ${timestamp}\n**Event**: HUMAN_TURN\n\n---\n`);
+    const crossShardRecord = (
+      heading: string,
+      event: string,
+      fields: Record<string, string>,
+    ): string =>
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "crossshard001",
+        intentId: "fixture-8000000000000001",
+        timestamp,
+        heading,
+        event,
+        fields,
+      })}\n`;
+    writeFileSync(join(auditDir, humanFile), crossShardRecord("Human Turn", "HUMAN_TURN", {}));
     writeFileSync(
       join(auditDir, writeFile),
-      `# Audit\n\n## Artifact Updated\n**Timestamp**: ${timestamp}\n**Event**: ARTIFACT_UPDATED\n**File**: amadeus/spaces/default/intents/fixture-8000000000000001/ideation/feasibility/feasibility-assessment.md\n\n---\n`,
+      crossShardRecord("Artifact Updated", "ARTIFACT_UPDATED", {
+        File: "amadeus/spaces/default/intents/fixture-8000000000000001/ideation/feasibility/feasibility-assessment.md",
+      }),
     );
     const approved = inProject(project, () => handleApprove(["feasibility"]));
     expect(approved.code).toBeNull();
     expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
-    const auditText = [seededAuditShard(project), join(auditDir, humanFile), join(auditDir, writeFile)]
-      .map((path) => readFileSync(path, "utf-8"))
-      .join("\n");
-    expect(auditText).not.toContain("**Transaction Id**:");
+    const auditRows = [seededAuditShard(project), join(auditDir, humanFile), join(auditDir, writeFile)]
+      .flatMap((path) => readRecords(path));
+    expect(auditRows.every((r) => r.fields?.["Transaction Id"] === undefined)).toBe(true);
   });
 
   test.each([

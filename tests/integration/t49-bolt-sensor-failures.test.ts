@@ -78,12 +78,12 @@ import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 function recordDir(proj: string): string {
   return join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents", DEFAULT_RECORD_DIR);
 }
-// Concatenate every main audit shard (audit/*.md) for the seeded record.
+// Concatenate every main audit shard (audit/*.jsonl) for the seeded record.
 function readMainAudit(proj: string): string {
   const dir = join(recordDir(proj), "audit");
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
@@ -284,11 +284,18 @@ function codegenStage(graph: Graph): StageRow | undefined {
   return graph?.stages?.find((s: StageRow) => s.stage_slug === "code-generation");
 }
 
-/** Count `**Event**: <EVENT>` occurrences across main audit shards (the .sh's grep -c). */
-function countEvent(proj: string, event: string): number {
+/** Parse the merged main audit shards into JSONL records (blank lines skipped). */
+function auditRecords(proj: string): Array<Record<string, unknown>> {
   return readMainAudit(proj)
     .split("\n")
-    .filter((l) => l.includes(`**Event**: ${event}`)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count records whose `event` is <EVENT> across main audit shards (the .sh's grep -c). */
+function countEvent(proj: string, event: string): number {
+  return auditRecords(proj).filter((r) => r.event === event).length;
 }
 
 const TEST_TIMEOUT = 120_000; // real git + multiple bun spawns per case
@@ -495,15 +502,15 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     //   BOLT_COMPLETED → STATE_MERGED → AUDIT_MERGED → BOLT_FAILED(fragment-merge-failed)
     expect(comp.out).toContain("fragment-merge-failed");
     expect(countEvent(softGapProj, "AUDIT_MERGED")).toBeGreaterThanOrEqual(1);
-    // STRONGER than the .sh's grep -B5: assert the BOLT_FAILED block that
-    // carries the fragment-merge-failed reason actually exists. Split into
-    // per-block units and find the one mentioning the reason; confirm it is a
-    // BOLT_FAILED row.
-    const auditBody = readMainAudit(softGapProj);
-    const blocks = auditBody.split(/\n---\n/);
-    const failBlock = blocks.find((b) => b.includes("fragment-merge-failed"));
-    expect(failBlock).toBeDefined();
-    expect(failBlock).toContain("**Event**: BOLT_FAILED");
+    // STRONGER than the .sh's grep -B5: assert the audit record that carries
+    // the fragment-merge-failed reason actually exists, and that it is a
+    // BOLT_FAILED row (record-scoped, so the reason can't come from a
+    // neighbouring event).
+    const failRecord = auditRecords(softGapProj).find((r) =>
+      JSON.stringify(r.fields ?? {}).includes("fragment-merge-failed"),
+    );
+    expect(failRecord).toBeDefined();
+    expect(failRecord?.event).toBe("BOLT_FAILED");
 
     // Restore the fragment so case 8's compile + teardown work.
     rmSync(softGapFrag, { recursive: true, force: true });

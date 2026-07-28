@@ -133,47 +133,29 @@ function log(args: string[], p: string): CliResult {
   };
 }
 
-/** Count audit blocks with `**Event**: <ev>` in a buffer. */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse a JSONL audit buffer into records. */
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count audit records with event <ev> in a buffer. */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Walks the file; resets at `## ` headings and `---` separators; splits
- * `**label**: value` on the literal `**: ` separator. Mirrors audit_field
- * in t92.cli.test.ts. Returns "" when absent (block-scoped, so it doubles as
- * the .sh's assert_not_grep '**Options**:' check).
+ * Value of <key> from the FIRST audit record whose event matches <ev>.
+ * Record-scoped, so it doubles as the .sh's assert_not_grep '**Options**:'
+ * check: a key absent from THAT record returns "".
  */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const hit = auditRecords(body).find((r) => r.event === ev);
+  return hit?.fields?.[key] ?? "";
 }
 
 /** Whole-buffer presence (mirrors a bare grep with no `^` anchor). */

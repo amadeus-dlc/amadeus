@@ -4,25 +4,26 @@
 // Fires after every Bash tool call from the agent. Filters cheaply on
 // the command — only direct transition tools plus `amadeus-orchestrate.ts report`
 // get past the early exit. On match, tail-reads the LAST 3
-// audit blocks (one approve writes up to 3 audit rows in a single Bash
-// call), regex-matches `**Event**: (GATE_APPROVED|STAGE_STARTED|
-// AUDIT_MERGED|WORKFLOW_COMPLETED)` against any of them, and dispatches
-// `amadeus-runtime.ts compile` on match.
+// journal records (JSONL lines; one approve writes up to 3 audit rows in a
+// single Bash call), matches the Event field against (GATE_APPROVED|
+// STAGE_STARTED|AUDIT_MERGED|WORKFLOW_COMPLETED) on any of them, and
+// dispatches `amadeus-runtime.ts compile` on match.
 //
 // WORKFLOW_COMPLETED is in the transition set so the final-stage approve
 // fires the compile (handleCompleteWorkflow at amadeus-state.ts:572-590
 // emits 5 audit rows ending with WORKFLOW_COMPLETED — without it in the
-// regex, the last 3 blocks would be PHASE_COMPLETED + PHASE_VERIFIED +
+// event set, the last 3 records would be PHASE_COMPLETED + PHASE_VERIFIED +
 // WORKFLOW_COMPLETED, none in the original transition set, and the
 // runtime-graph would never record the final stage as approved).
 //
 // Recursion guard: `amadeus-runtime.ts` is excluded from the command-regex
-// matcher set, AND MEMORY_EMPTY is not in the event-class regex. The
+// matcher set, AND MEMORY_EMPTY is not in the event-class filter. The
 // compile's own audit emits cannot re-trigger the compile.
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeIntent,
   activeSpace,
@@ -35,7 +36,9 @@ import {
   isoTimestamp,
   isMigrationExecutionCommand,
   isRejectedMigrationDispatch,
+  auditBlockField,
   readAllAuditShards,
+  splitAuditRecords,
   recordHookDrop,
   readHookStdin,
   resolveProjectDirFromHook,
@@ -119,6 +122,9 @@ const intent = activeIntent(projectDir, space) ?? undefined;
 const audit = readAllAuditShards(projectDir, intent, space).replace(/\r\n/g, "\n");
 if (audit.length === 0) process.exit(0);
 
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:runtime-compile", projectDir);
+
 // 5. Heartbeat — doctor reads this file's mtime to detect silent-hook failure.
 //    Kept at the bare (workspace-level) health dir to match where --doctor reads
 //    it (amadeus-utility.ts) and where recordHookDrop writes drops — the heartbeat
@@ -127,25 +133,34 @@ const healthDir = hooksHealthDir(projectDir);
 mkdirSync(healthDir, { recursive: true });
 writeFileSync(join(healthDir, "runtime-compile.last"), isoTimestamp(), "utf-8");
 
-// 6. Tail-read last 3 audit blocks. Three is the upper bound: a normal
+// 6. Tail-read last 3 journal records. Three is the upper bound: a normal
 //    approve writes GATE_APPROVED + STAGE_COMPLETED + STAGE_STARTED in
 //    one Bash call. Terminal-WORKFLOW approve writes 5 rows; the last 3
 //    are PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED. In the common
-//    single-clone case the merged buffer is one shard, so the last 3 blocks are
-//    the just-written transition rows.
-const blocks = audit.split(/\n---\n/);
+//    single-clone case the merged buffer is one shard, so the last 3 records
+//    are the just-written transition rows.
+const blocks = splitAuditRecords(audit);
 const last3 = blocks.slice(-3);
 
 // 7. Event-class filter — recursion guard + scope filter combined.
 //    A single Bash call can append multiple transition rows in one go
 //    (approve emits GATE_APPROVED + STAGE_COMPLETED + STAGE_STARTED).
-//    Any of the last 3 blocks may carry the transition.
+//    Any of the last 3 records may carry the transition.
 //    STAGE_AWAITING_APPROVAL is in the set so the compile refreshes the
 //    runtime-graph at gate-start — without it, the gate ritual reads a
 //    stale memory_entries count snapshotted at STAGE_STARTED time
 //    (before the orchestrator wrote any §13 entries).
-const transitionRegex = /^\*\*Event\*\*:\s*(GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)\s*$/m;
-const hasTransition = last3.some((b) => transitionRegex.test(b));
+const transitionEvents = new Set([
+  "GATE_APPROVED",
+  "STAGE_STARTED",
+  "STAGE_AWAITING_APPROVAL",
+  "AUDIT_MERGED",
+  "WORKFLOW_COMPLETED",
+]);
+const hasTransition = last3.some((block) => {
+  const event = auditBlockField(block, "Event");
+  return event !== null && transitionEvents.has(event);
+});
 if (!hasTransition) process.exit(0);
 
 // Kiro IDE emits payload-free shell hooks. Its synthetic source marker reaches

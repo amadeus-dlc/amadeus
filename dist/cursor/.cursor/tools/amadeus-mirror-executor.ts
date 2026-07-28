@@ -723,7 +723,7 @@ async function executeCreate(
     return stateFailure(context, operationId, prepared.summary);
   }
   let snapshot = prepared.snapshot;
-  let receipt = requireReceipt(snapshot, context);
+  const receipt = requireReceipt(snapshot, context);
   if (!receipt?.createIdentity) {
     return stateFailure(context, operationId, "create receipt identity is absent");
   }

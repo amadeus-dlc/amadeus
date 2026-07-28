@@ -149,11 +149,11 @@ conductor and filters cheaply:
 2. **Audit-existence guard** — exit if the intent's `audit/` shard doesn't exist yet.
 3. **Heartbeat** — write `<record>/.amadeus-hooks-health/runtime-compile.last`
    for doctor's silent-hook detection.
-4. **Last-3-block tail-read** — split `audit.md` on `\n---\n`, take the
-   last 3 entries.
+4. **Last-3-record tail-read** — read the last 3 journal records
+   (JSONL lines) of the audit shards.
 5. **Event-class filter** — match
-   `**Event**: (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)`
-   against any of the 3 blocks. Exit on no match.
+   `event` ∈ (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)
+   against any of the 3 records. Exit on no match.
 6. **Dispatch** — `spawnSync("bun", [".claude/tools/amadeus-runtime.ts", "compile", ...])`.
 
 `WORKFLOW_COMPLETED` is in the transition set so the final-stage
@@ -238,7 +238,7 @@ requires the stage to have approved.
 against the same audit log. MEMORY_EMPTY emits are stronger:
 **at most one MEMORY_EMPTY row per `(stage_slug, completed_at)` tuple**.
 
-Inside the locked section the compile re-reads `audit.md`, scans for
+Inside the locked section the compile re-reads the audit shards, scans for
 existing MEMORY_EMPTY rows for each zero-entry-approved slug, and
 suppresses the emit if any prior row's Timestamp is at or after this
 slug's `completed_at`. This means:
@@ -281,8 +281,8 @@ MEMORY_EMPTY rows.
 
 ## 7. Recovery model — snapshot + suffix replay
 
-`runtime-graph.json` + `audit.md` form an event-sourced pair.
-`audit.md` is the append-only event log; `runtime-graph.json` is a
+`runtime-graph.json` + the audit shards form an event-sourced pair.
+The audit shards are the append-only event journal; `runtime-graph.json` is a
 materialised snapshot taken at the last gate transition. A reader with
 both reconstructs the current state by reading the snapshot, then
 replaying audit rows after the snapshot's last `completed_at`.
@@ -445,7 +445,7 @@ main's location. Its lifecycle is:
 - **The lifecycle that triggers compile** — the workflow / phase /
   stage transitions whose audit emits drive the compile hook. See
   [State Machine](12-state-machine.md).
-- **The audit log this graph is derived from** - the 68-event taxonomy
+- **The audit log this graph is derived from** - the 78-event taxonomy
   and the emitter registry. See [State Machine](12-state-machine.md)
   and the User Guide's [State and Audit
   Trail](../guide/10-state-and-audit.md).

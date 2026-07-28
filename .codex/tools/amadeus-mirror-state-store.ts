@@ -30,7 +30,9 @@ import {
 import { dirname, join } from "node:path";
 import {
   acquireAuditLock,
+  auditBlockField,
   readAllAuditShards,
+  splitAuditRecords,
   releaseAuditLock,
 } from "./amadeus-lib.ts";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
@@ -390,7 +392,8 @@ function idempotentAppend(
   } catch {
     return { kind: "io-failure", summary: "audit shard read failed" };
   }
-  if (shards.includes(outbox.transactionId)) {
+  const alreadyPresent = splitAuditRecords(shards).some((block) => auditBlockField(block, "TransactionId") === outbox.transactionId);
+  if (alreadyPresent) {
     return { kind: "already-present" };
   }
   try {

@@ -77,18 +77,23 @@ function writeRecordDoc(proj: string, rel: string): void {
 
 // Append a human-approval audit event to the intent's DETERMINISTIC per-clone
 // shard - the same file the spawned tool reads (readAllAuditShards) and appends
-// to. Format mirrors appendAuditEntry so findAllEvents/auditField parse it.
+// to. Format mirrors the JSONL journal so findAllEvents/auditField parse it.
 function seedApprovalEvent(proj: string, eventType: string, stage: string): void {
   const shard = seededAuditShard(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  const block =
-    `\n## Approval\n` +
-    `**Timestamp**: 2026-07-11T10:00:00Z\n` +
-    `**Event**: ${eventType}\n` +
-    `**Stage**: ${stage}\n` +
-    `**Detail**: docs-only approval reference\n` +
-    `\n---\n`;
-  writeFileSync(shard, (existsSync(shard) ? readFileSync(shard, "utf-8") : "") + block);
+  const existing = existsSync(shard) ? readFileSync(shard, "utf-8") : "";
+  const seq = existing.split("\n").filter((l) => l.trim() !== "").length + 1;
+  const block = `${JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: "fixturecloneid01",
+    intentId: "test-intent",
+    timestamp: "2026-07-11T10:00:00Z",
+    heading: "Approval",
+    event: eventType,
+    fields: { Stage: stage, Detail: "docs-only approval reference" },
+  })}\n`;
+  writeFileSync(shard, existing + block);
 }
 
 // Move the pointer to code-generation, in-progress, and write its two per-unit
@@ -146,9 +151,13 @@ describe("t215: docs-only workspace_requires exemption (#499/#848)", () => {
     // Auto-advanced off code-generation.
     expect(field(proj, "Current Stage")).not.toBe("code-generation");
 
-    const shard = readFileSync(seededAuditShard(proj), "utf-8");
-    expect(shard).toContain("**Event**: GUARD_EXEMPTED");
-    expect(shard).toMatch(/\*\*Event\*\*: GUARD_EXEMPTED[\s\S]*?\*\*Stage\*\*: code-generation/);
+    const records = readFileSync(seededAuditShard(proj), "utf-8")
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    const exempted = records.filter((r) => r.event === "GUARD_EXEMPTED");
+    expect(exempted.length).toBeGreaterThan(0);
+    expect(exempted.some((r) => r.fields?.Stage === "code-generation")).toBe(true);
   });
 
   // (c) Invalid declarations are refused BEFORE any registry write.

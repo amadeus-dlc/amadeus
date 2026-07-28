@@ -1,5 +1,5 @@
 // Runtime-graph compile + read tool. Materialises a per-workflow
-// runtime-graph.json from audit.md + per-stage memory.md files; the
+// runtime-graph.json from the audit shards + per-stage memory.md files; the
 // data-plane mirror of stage-graph.json (which is structural truth).
 //
 // Subcommands:
@@ -26,6 +26,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
+  auditBlockField,
   errorMessage,
   activeIntent,
   findAllEvents,
@@ -53,6 +54,7 @@ import {
   worktreeRuntimeGraphPath,
   writeFileAtomic,
 } from "./amadeus-lib.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 // --- Schema (must match docs/reference/13-runtime-graph.md exactly) ---
 
@@ -165,10 +167,8 @@ interface PairingEntry {
 // mirror. Main-workflow STAGE_* rows (emitted by amadeus-state.ts /
 // amadeus-utility.ts / amadeus-jump.ts) carry NO Workflow field, so absence
 // means main-workflow and the row is kept.
-const SINGLE_STAGE_WORKFLOW_RE = /^\*\*Workflow\*\*:\s*single-stage:/m;
-
 function isSingleStageRow(block: string): boolean {
-  return SINGLE_STAGE_WORKFLOW_RE.test(block);
+  return auditBlockField(block, "Workflow")?.startsWith("single-stage:") ?? false;
 }
 
 function pairStartedCompleted(
@@ -210,13 +210,11 @@ function pairStartedCompleted(
   const map = new Map<string, PairingEntry>();
   let sourceIndex = 0;
   for (const ev of stream) {
-    const stageMatch = ev.block.match(/^\*\*Stage\*\*:\s*(\S+)/m);
-    if (!stageMatch) continue;
-    const slug = stageMatch[1].trim();
+    const slug = auditBlockField(ev.block, "Stage");
+    if (slug === null || slug === "") continue;
 
     if (ev.kind === "STARTED") {
-      const agentMatch = ev.block.match(/^\*\*Agent\*\*:\s*(.+)$/m);
-      const agent = agentMatch ? agentMatch[1].trim() : "";
+      const agent = auditBlockField(ev.block, "Agent") ?? "";
       map.set(slug, {
         started_at: ev.timestamp,
         completed_at: null,
@@ -236,7 +234,7 @@ function pairStartedCompleted(
 // Build the workflow-level fields (workflow_id, scope, started_at) from
 // audit + state. workflow_id is the LATEST WORKFLOW_STARTED timestamp —
 // `--init --force` re-init appends a new WORKFLOW_STARTED without
-// truncating audit.md, and the live workflow is the latest one. Using
+// truncating the audit journal, and the live workflow is the latest one. Using
 // the first row would identify a dead workflow.
 function buildWorkflowHeader(
   audit: string,
@@ -245,9 +243,9 @@ function buildWorkflowHeader(
   const started = findAllEvents(audit, "WORKFLOW_STARTED");
   if (started.length === 0) return null;
   const latest = started[started.length - 1];
-  const scopeFromAudit = latest.block.match(/^\*\*Scope\*\*:\s*(.+)$/m);
+  const scopeFromAudit = auditBlockField(latest.block, "Scope");
   const scopeFromState = stateContent ? getField(stateContent, "Scope") : null;
-  const scope = scopeFromState || (scopeFromAudit ? scopeFromAudit[1].trim() : "");
+  const scope = scopeFromState || scopeFromAudit || "";
   return {
     workflow_id: latest.timestamp,
     scope,
@@ -450,18 +448,10 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
 
   // Helper: read a field's value from an audit row block. Mirrors
   // getField's discipline at amadeus-lib.ts:184-194 (single-line match,
-  // [ \t]* not \s*) without the dynamic-regexp pattern — callers pass
-  // hard-coded field names but the helper is line-scanned to keep ReDoS
-  // surface zero. Block format: lines of `**FieldName**: value`.
-  const fieldFromBlock = (block: string, fieldName: string): string | null => {
-    const prefix = `**${fieldName}**:`;
-    for (const line of block.split("\n")) {
-      if (line.startsWith(prefix)) {
-        return line.slice(prefix.length).trim();
-      }
-    }
-    return null;
-  };
+  // Field access delegates to the shared accessor, which owns the physical
+  // record format (JSONL journal lines since the Issue #1628 switchover).
+  const fieldFromBlock = (block: string, fieldName: string): string | null =>
+    auditBlockField(block, fieldName);
 
   // #761: the BoltInstance populator nulls the parent stage's completed_at (it
   // becomes a per-Bolt field once instances[] attach), but an approved parent
@@ -813,11 +803,7 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
       // Skip if any MEMORY_EMPTY for this slug already lies at or after
       // this approval's completed_at — we've already recorded the skip
       // for this gate-completion.
-      const alreadyEmitted = existingEmpties.some((ev) => {
-        const stageMatch = ev.block.match(/^\*\*Stage\*\*:\s*(\S+)/m);
-        if (!stageMatch || stageMatch[1].trim() !== ze.slug) return false;
-        return ev.timestamp >= ze.completed_at;
-      });
+      const alreadyEmitted = existingEmpties.some((ev) => auditBlockField(ev.block, "Stage") === ze.slug && ev.timestamp >= ze.completed_at);
       if (alreadyEmitted) continue;
 
       const fields: Record<string, string> = { Stage: ze.slug };
@@ -1451,6 +1437,15 @@ export function main(argv: string[] = process.argv.slice(2)): void {
     process.stderr.write(`Unknown subcommand: ${cmd}. Run amadeus-runtime --help for usage.\n`);
     process.exit(1);
   }
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-runtime:${cmd}`, resolveProjectDir(projectDirArg));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   handler(subargs, resolveProjectDir(projectDirArg));
 }

@@ -125,7 +125,7 @@ function makeProject(audit: string, state: string): string {
   // write.
   writeFileSync(join(recordRoot(proj), "amadeus-state.md"), state, "utf-8");
   // Seed the DETERMINISTIC audit shard the compile tool resolves
-  // (auditFilePath -> the record's audit/<host>-<clone>.md) so its
+  // (auditFilePath -> the record's audit/<host>-<clone>.jsonl) so its
   // readAllAuditShards() merge sees this trail.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
@@ -159,13 +159,16 @@ function readAudit(proj: string): string {
 }
 
 /**
- * Count MEMORY_EMPTY rows, mirroring the .sh's
+ * Count MEMORY_EMPTY records, mirroring the .sh's
  * `grep -c "^\*\*Event\*\*: MEMORY_EMPTY"`.
  */
 function memoryEmptyCount(proj: string): number {
   return readAudit(proj)
     .split("\n")
-    .filter((l) => l === "**Event**: MEMORY_EMPTY").length;
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .filter((r) => r.event === "MEMORY_EMPTY").length;
 }
 
 /**
@@ -193,49 +196,14 @@ const STATE_FEATURE = ["- **Scope**: feature", "- **Current Stage**: scope-defin
 // `single-stage:<slug>` id that marks the pair as belonging to NO main
 // workflow. application-design (inception, amadeus-architect-agent per
 // stage-graph.json) is deliberately UNRELATED to the main workflow's slugs.
-const SINGLE_STAGE_PAIR = `## Stage Start
-**Timestamp**: 2026-05-27T10:20:00Z
-**Event**: STAGE_STARTED
-**Stage**: application-design
-**Agent**: amadeus-architect-agent
-**Workflow**: single-stage:application-design
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:25:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: application-design
-**Details**: Single-stage run of application-design completed
-**Workflow**: single-stage:application-design
-
----
+const SINGLE_STAGE_PAIR = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:20:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"application-design","Agent":"amadeus-architect-agent","Workflow":"single-stage:application-design"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:25:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"application-design","Details":"Single-stage run of application-design completed","Workflow":"single-stage:application-design"}}
 `;
 
 // Standard 1-stage approved audit (t90:53-78).
-const AUDIT_ONE_APPROVED = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-**Request**: /amadeus feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-**Details**: done
-
----
+const AUDIT_ONE_APPROVED = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature","Request":"/amadeus feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture","Details":"done"}}
 `;
 
 describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtime-compile.sh, plan 29)", () => {
@@ -252,20 +220,8 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 
   // --- Case 2: STAGE_STARTED without COMPLETED -> pending, completed_at null ---
   test("2: STAGE_STARTED without COMPLETED -> pending, completed_at null", () => {
-    const auditPending = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
+    const auditPending = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
 `;
     const proj = makeProject(auditPending, STATE_FEATURE);
     runCompile(proj);
@@ -276,35 +232,10 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 
   // --- Case 3: re-jump -> one row per slug, latest STARTED wins (pending) ---
   test("3: re-jump -> 1 row, pending, started_at = latest STARTED", () => {
-    const auditRejump = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:02:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:10:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
+    const auditRejump = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:02:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:10:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
 `;
     const proj = makeProject(auditRejump, STATE_FEATURE);
     runCompile(proj);
@@ -369,42 +300,11 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 
   // --- Case 10: ISO-second tie -> deterministic source-order rows + stable hash ---
   test("10: ISO-second tie -> source-order rows, ordering deterministic across compiles", () => {
-    const auditCollision = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: scope-definition
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: scope-definition
-
----
+    const auditCollision = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"scope-definition","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":5,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"scope-definition"}}
 `;
     const proj = makeProject(auditCollision, STATE_FEATURE);
     runCompile(proj);
@@ -419,42 +319,11 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 
   // --- Case 11: re-init -> latest WORKFLOW_STARTED wins, prior rows filtered ---
   test("11: re-init -> workflow_id is latest WORKFLOW_STARTED, 1 row, pending", () => {
-    const auditReinit = `## Workflow Start
-**Timestamp**: 2026-05-27T08:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: bugfix
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T08:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T08:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
-
-## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
+    const auditReinit = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"bugfix"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":5,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
 `;
     const proj = makeProject(auditReinit, STATE_FEATURE);
     runCompile(proj);
@@ -467,27 +336,9 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
   // --- Case 12: MEMORY_EMPTY re-emit suppression across 3 compiles ---
   // Past timestamps (2024) so compile-time wallclock is definitely after
   // completed_at, exercising the suppression scan.
-  const AUDIT_PAST_APPROVED = `## Workflow Start
-**Timestamp**: 2024-01-01T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2024-01-01T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2024-01-01T10:05:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
+  const AUDIT_PAST_APPROVED = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
 `;
 
   test("12: re-emit suppression -> first compile emits, 2nd + 3rd suppress (count stays 1)", () => {
@@ -514,29 +365,10 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
   test("13: re-approve still-empty -> fresh MEMORY_EMPTY (total 2), then suppressed", () => {
     const proj = makeProject(AUDIT_PAST_APPROVED, STATE_FEATURE);
     writeMemory(proj, "ideation", "intent-capture", "\n");
-    const priorEmpty = `
-## Memory Empty
-**Timestamp**: 2024-01-01T10:05:00Z
-**Event**: MEMORY_EMPTY
-**Stage**: intent-capture
-
----
+    const priorEmpty = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:05:00Z","heading":"Memory Empty","event":"MEMORY_EMPTY","fields":{"Stage":"intent-capture"}}
 `;
-    const rejump = `
-## Stage Start
-**Timestamp**: 2024-01-01T10:10:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2024-01-01T10:10:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-
----
+    const rejump = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
 `;
     const f = auditShardPath(proj);
     writeFileSync(f, readFileSync(f, "utf-8") + priorEmpty + rejump, "utf-8");

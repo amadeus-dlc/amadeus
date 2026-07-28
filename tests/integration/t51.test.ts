@@ -104,17 +104,17 @@ function recordDirOf(p: string): string {
   return join(p, "amadeus-docs");
 }
 const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
-// Audit is sharded under <record>/audit/<host>-<pid>.md; concat every shard for
-// a content read, falling back to the flat audit.md for a not-yet-born project.
+// Audit is sharded under <record>/audit/<host>-<clone>.jsonl; concat every shard
+// for a content read, falling back to the flat audit.jsonl for a not-yet-born project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "amadeus-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.jsonl");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -147,19 +147,25 @@ function walkStage(proj: string, slug: string): void {
   }
 }
 
-/** Count audit blocks with `**Event**: <ev>` in audit CONTENT (shard-concat). Mirrors the .sh count_event grep (L99-101). */
-function countEvent(content: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return content.split("\n").filter((l) => re.test(l)).length;
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(content: string): Array<Record<string, unknown>> {
+  return content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
-/** Ordered list of event names as they appear in audit CONTENT (header `**Event**: X` rows). */
+/** Count audit records whose `event` is <ev> in audit CONTENT (shard-concat). Mirrors the .sh count_event grep (L99-101). */
+function countEvent(content: string, ev: string): number {
+  return auditRecords(content).filter((r) => r.event === ev).length;
+}
+
+/** Ordered list of event names as they appear in audit CONTENT (one per record). */
 function eventStream(content: string): string[] {
-  const out: string[] = [];
-  for (const line of content.split("\n")) {
-    if (line.startsWith("**Event**: ")) out.push(line.slice("**Event**: ".length));
-  }
-  return out;
+  return auditRecords(content)
+    .map((r) => r.event)
+    .filter((e): e is string => typeof e === "string");
 }
 
 // One project, walked once — the multi-process bugfix walk is expensive, and

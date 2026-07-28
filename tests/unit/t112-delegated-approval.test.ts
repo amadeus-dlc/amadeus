@@ -326,7 +326,7 @@ describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
   function shardLeaf(): string {
     const host =
       hostname().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "host";
-    return `${host}-${CLONE_TOKEN}.md`;
+    return `${host}-${CLONE_TOKEN}.jsonl`;
   }
 
   // Seed a real HUMAN_TURN by writing the issuer shard file DIRECTLY. This is a
@@ -341,9 +341,17 @@ describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
     writeFileSync(join(root, "amadeus", ".amadeus-clone-id"), `${CLONE_TOKEN}\n`, "utf-8");
     const auditDir = join(root, "amadeus", "spaces", "default", "intents", issuer, "audit");
     mkdirSync(auditDir, { recursive: true });
-    const block =
-      "## Human Turn\n**Timestamp**: 2026-07-09T09:00:00.000Z\n**Event**: HUMAN_TURN\n\n---\n";
-    writeFileSync(join(auditDir, shardLeaf()), `# AI-DLC Audit Log\n\n${block}`, "utf-8");
+    const line = `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: CLONE_TOKEN,
+      intentId: issuer,
+      timestamp: "2026-07-09T09:00:00.000Z",
+      heading: "Human Turn",
+      event: "HUMAN_TURN",
+      fields: {},
+    })}\n`;
+    writeFileSync(join(auditDir, shardLeaf()), line, "utf-8");
   }
 
   // Point the leader's active intent at the issuer record (the session that

@@ -68,6 +68,7 @@
 // invert the whole thesis).
 
 import { createHash, randomUUID } from "node:crypto";
+import { observeSubprocess } from "./amadeus-observability.ts";
 import {
   closeSync,
   constants as fsConstants,
@@ -149,6 +150,7 @@ import {
   parseGrantApprovalProcessResult,
   routeSoloStandingGrantDirective,
 } from "./amadeus-grant-authorization.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   armPresenceReservation,
   type PresenceReservation,
@@ -538,12 +540,17 @@ interface ToolRun {
   stderr: string;
 }
 
-function runTool(toolFile: string, args: string[]): ToolRun {
-  const proc = Bun.spawnSync({
-    cmd: ["bun", toolPath(toolFile), ...args],
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+function runTool(projectDir: string | undefined, toolFile: string, args: string[]): ToolRun {
+  const proc = observeSubprocess(
+    resolveProjectDir(projectDir),
+    `${toolFile.replace(/\.ts$/, "")}:${args[0] ?? "?"}`,
+    () =>
+      Bun.spawnSync({
+        cmd: ["bun", toolPath(toolFile), ...args],
+        stdout: "pipe",
+        stderr: "pipe",
+      }),
+  );
   return {
     ok: proc.exitCode === 0,
     stdout: new TextDecoder().decode(proc.stdout),
@@ -2103,7 +2110,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // string downstream tests + SKILL.md:101 assert on. This precedes the generic
   // unknown-scope check so the env-specific wording wins for the env source.
   if (source === "env") {
-    const run = runTool("amadeus-utility.ts", ["resolve-env-scope"]);
+    const run = runTool(projectDir, "amadeus-utility.ts", ["resolve-env-scope"]);
     if (!run.ok) {
       emit(errorDirective(toolErrorMessage(run)));
       return;
@@ -2960,7 +2967,7 @@ function emitJumpDirective(
     if (flags.phase) resolveArgs.push("--phase", flags.phase);
     else if (flags.stage) resolveArgs.push("--stage", flags.stage);
 
-    const run = runTool("amadeus-jump.ts", resolveArgs);
+    const run = runTool(projectDir, "amadeus-jump.ts", resolveArgs);
     if (!run.ok) {
       // SKIP-for-scope, unknown stage/phase, etc. — relay the tool's verbatim
       // error (it owns the wording the rest of the framework asserts on).
@@ -3217,12 +3224,14 @@ function spawnState(
   subArgs: string[],
 ): { exitCode: number; stdout: string; stderr: string } {
   const toolPath = fileURLToPath(new URL("./amadeus-state.ts", import.meta.url));
-  const result = Bun.spawnSync({
-    cmd: ["bun", "run", toolPath, ...subArgs, "--project-dir", projectDir],
-    env: process.env,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const result = observeSubprocess(projectDir, `amadeus-state:${subArgs[0] ?? "?"}`, () =>
+    Bun.spawnSync({
+      cmd: ["bun", "run", toolPath, ...subArgs, "--project-dir", projectDir],
+      env: process.env,
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
   return {
     exitCode: result.exitCode,
     stdout: new TextDecoder().decode(result.stdout),
@@ -3235,7 +3244,7 @@ function spawnState(
 // (handleSingleReport below) uses this, mirroring report's spawn-the-atomic-tool
 // discipline: the engine itself writes nothing; the spawned tool acquires the
 // per-emit audit lock in its own process. This is the audit-only path — it
-// touches `audit.md`, never `amadeus-state.md` — so a `--single` commit cannot
+// touches the audit shard, never `amadeus-state.md` — so a `--single` commit cannot
 // reach the main pointer even by accident (amadeus-audit.ts has no state write).
 function spawnAuditAppend(
   projectDir: string,
@@ -3247,11 +3256,13 @@ function spawnAuditAppend(
   for (const [k, v] of Object.entries(fields)) {
     fieldArgs.push("--field", `${k}=${v}`);
   }
-  const result = Bun.spawnSync({
-    cmd: ["bun", "run", auditTool, "append", eventType, ...fieldArgs, "--project-dir", projectDir],
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const result = observeSubprocess(projectDir, "amadeus-audit:append", () =>
+    Bun.spawnSync({
+      cmd: ["bun", "run", auditTool, "append", eventType, ...fieldArgs, "--project-dir", projectDir],
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
   return {
     exitCode: result.exitCode,
     stdout: new TextDecoder().decode(result.stdout),
@@ -3340,7 +3351,7 @@ function handleSkeletonStanceReport(
 //
 // The synthetic workflow id a `--single` stage-runner's events are tagged with.
 // It is NOT a real WORKFLOW_STARTED id — it exists only to mark the
-// STAGE_STARTED/STAGE_COMPLETED pair in `audit.md` as belonging to an isolated
+// STAGE_STARTED/STAGE_COMPLETED pair in the audit journal as belonging to an isolated
 // single-stage run, never to the main workflow. The `<slug>` segment makes the
 // provenance legible in the audit trail.
 function syntheticWorkflowId(slug: string): string {
@@ -4044,6 +4055,15 @@ function main(): void {
   // handlers set this too (for in-process drivers that bypass main); setting it
   // here covers the unknown-subcommand path and the runEngineMain catch.
   _handlerProjectDir = projectDir;
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-orchestrate:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   switch (subcommand) {
     case "next":

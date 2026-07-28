@@ -54,6 +54,7 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 function emitAudit(
   pd: string,
@@ -114,16 +115,18 @@ function spawnSibling(
     | "amadeus-runtime.ts",
   subargs: string[]
 ): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
-  const result = spawnSync(
-    "bun",
-    [
-      "run",
-      fileURLToPath(new URL(`./${toolName}`, import.meta.url)),
-      "--project-dir",
-      pd,
-      ...subargs,
-    ],
-    { encoding: "utf-8", cwd: pd, timeout: 30_000 }
+  const result = observeSubprocess(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
+    spawnSync(
+      "bun",
+      [
+        "run",
+        fileURLToPath(new URL(`./${toolName}`, import.meta.url)),
+        "--project-dir",
+        pd,
+        ...subargs,
+      ],
+      { encoding: "utf-8", cwd: pd, timeout: 30_000 }
+    ),
   );
   return {
     ok: result.status === 0,
@@ -799,7 +802,7 @@ function handleSetAutonomy(args: string[]): void {
   // Validate state-file shape BEFORE emitting audit. setFieldStrict throws if
   // the field is absent (v4 state files or hand-edited files). If we emitted
   // audit first and the field was missing, we'd leave an orphan
-  // AUTONOMY_MODE_SET in audit.md with no corresponding state mutation —
+  // AUTONOMY_MODE_SET in the audit journal with no corresponding state mutation —
   // exactly the t59-class drift the refactor aims to prevent.
   const content = readStateFile(pd);
   let updated: string;
@@ -851,6 +854,15 @@ function main(): void {
   try {
     switch (subcommand) {
       case "start":
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-bolt:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
         handleStart(filteredArgs.slice(1));
         break;
       case "complete":

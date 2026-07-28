@@ -9,10 +9,17 @@ import {
   escapeAuditValue,
 } from "./amadeus-audit.ts";
 import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+  splitJournalLines,
+} from "./amadeus-journal.ts";
+import {
   activeIntent,
+  auditCloneId,
   clearActiveIntentCursor,
   activeSpace,
   auditBlockField,
+  splitAuditRecords,
   auditFilePath,
   auditShardDir,
   auditShardName,
@@ -103,6 +110,7 @@ import {
   type StandingGrantScanObserver,
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
@@ -417,12 +425,10 @@ function emitAudit(
   }
 }
 
+// Thin alias over the shared accessor — kept so existing call sites read
+// naturally; the physical field format is owned by amadeus-lib.
 function auditField(block: string, fieldName: string): string | null {
-  const prefix = `**${fieldName}**:`;
-  for (const line of block.split("\n")) {
-    if (line.startsWith(prefix)) return line.slice(prefix.length).trim();
-  }
-  return null;
+  return auditBlockField(block, fieldName);
 }
 
 function hasStageAuditEvent(
@@ -646,6 +652,17 @@ function withStateOperationTarget<T>(
   }
 }
 
+// Telemetry process span (opt-in; no-op unless observability.enabled).
+// Resolution failures must not change the CLI contract — skip silently. Lives
+// outside main() so the span costs the dispatcher no branch of its own.
+function observeToolRun(subcommand: string | undefined): void {
+  try {
+    initProcessObservability(`tool:amadeus-state:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+}
+
 function main(): void {
   const args = process.argv.slice(2);
 
@@ -657,6 +674,9 @@ function main(): void {
   }
 
   const subcommand = args[0];
+
+  observeToolRun(subcommand);
+
 
   try {
     switch (subcommand) {
@@ -1440,11 +1460,13 @@ export function isNonDocPath(p: string): boolean {
 // callers fall back to the filesystem check rather than trapping.
 function git(pd: string, args: string[]): string | null {
   try {
-    const r = spawnSync("git", args, {
-      cwd: pd,
-      encoding: "utf-8",
-      timeout: 30_000,
-    });
+    const r = observeSubprocess(pd, "git", () =>
+      spawnSync("git", args, {
+        cwd: pd,
+        encoding: "utf-8",
+        timeout: 30_000,
+      }),
+    );
     if (r.status !== 0 || typeof r.stdout !== "string") return null;
     return r.stdout;
   } catch {
@@ -2454,9 +2476,35 @@ function assertHumanPresentForGateResolution(
   );
 }
 
+// Compaction detection over the merged audit buffer: true when the most
+// recent SESSION_COMPACTED record has no later stage activity or explicit
+// recovery. Buffer order (not timestamp order) mirrors the historical tail
+// scan this replaced — within the common single-shard case they coincide.
+const COMPACTION_PROGRESS_EVENTS = new Set([
+  "STAGE_STARTED",
+  "STAGE_COMPLETED",
+  "GATE_APPROVED",
+  "SESSION_RESUMED",
+  "RECOVERY_COMPLETED",
+]);
+
+export function compactionPendingFromAudit(raw: string): boolean {
+  const blocks = splitAuditRecords(raw);
+  let lastCompact = -1;
+  for (let i = 0; i < blocks.length; i += 1) {
+    if (auditBlockField(blocks[i]!, "Event") === "SESSION_COMPACTED") lastCompact = i;
+  }
+  if (lastCompact === -1) return false;
+  for (let i = lastCompact + 1; i < blocks.length; i += 1) {
+    const event = auditBlockField(blocks[i]!, "Event");
+    if (event !== null && COMPACTION_PROGRESS_EVENTS.has(event)) return false;
+  }
+  return true;
+}
+
 function revisionEvidenceFromAudit(raw: string): RevisionEvidenceEvent[] {
   const evidence: RevisionEvidenceEvent[] = [];
-  const blocks = raw.split("\n---\n");
+  const blocks = splitAuditRecords(raw);
   for (let bufferPosition = 0; bufferPosition < blocks.length; bufferPosition += 1) {
     const block = blocks[bufferPosition]!;
     const kind = auditBlockField(block, "Event");
@@ -2537,7 +2585,7 @@ function completedRecoveryRevision(
   expectedTransactionId: string,
   expectedRevision: number,
 ): number | null {
-  const sourceBlocks = raw.split("\n---\n");
+  const sourceBlocks = splitAuditRecords(raw);
   const byTransaction = new Map<string, PositionedAuditBlock[]>();
   for (let position = 0; position < sourceBlocks.length; position += 1) {
     const block = sourceBlocks[position]!;
@@ -2639,12 +2687,33 @@ type ApprovalAuditBlockInput = {
   readonly fields: Readonly<Record<string, string>>;
 };
 
-function approvalAuditBlock(input: ApprovalAuditBlockInput): string {
-  let block = `\n## ${input.heading}\n**Timestamp**: ${input.timestamp}\n**Event**: ${input.event}\n`;
+// Row identity for a recovery batch: the shard's clone token, the resolved
+// intent, and the seq of the first appended record (existing count + 1).
+type RecoveryBatchIdentity = {
+  readonly cloneId: string;
+  readonly intentId: string;
+  readonly baseSeq: number;
+};
+
+function approvalAuditBlock(
+  input: ApprovalAuditBlockInput,
+  identity: RecoveryBatchIdentity,
+  offset: number,
+): string {
+  const escaped: Record<string, string> = {};
   for (const [key, value] of Object.entries(input.fields)) {
-    block += `**${key}**: ${escapeAuditValue(value)}\n`;
+    escaped[key] = escapeAuditValue(value);
   }
-  return `${block}\n---\n`;
+  return serializeJournalEntry({
+    schemaVersion: JOURNAL_SCHEMA_VERSION,
+    seq: identity.baseSeq + offset,
+    cloneId: identity.cloneId,
+    intentId: identity.intentId,
+    timestamp: input.timestamp,
+    heading: input.heading,
+    event: input.event,
+    fields: escaped,
+  });
 }
 
 function validateRecoveredApprovalBatch(
@@ -2694,16 +2763,19 @@ type RecoveredApprovalBatchInput = {
   readonly grantId?: string;
 };
 
-function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string[] {
+function buildRecoveredApprovalBatch(
+  input: RecoveredApprovalBatchInput,
+  identity: RecoveryBatchIdentity,
+): string[] {
   const common = { Stage: input.slug, "Transaction Id": input.transactionId };
-  return [
-    approvalAuditBlock({
+  const inputs: ApprovalAuditBlockInput[] = [
+    {
       heading: "Gate Rejected",
       event: "GATE_REJECTED",
       timestamp: input.timestamp,
       fields: { ...common, Feedback: RECOVERED_REVISION_FEEDBACK, Recovered: "true" },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Revising",
       event: "STAGE_REVISING",
       timestamp: input.timestamp,
@@ -2713,14 +2785,14 @@ function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string
         Feedback: RECOVERED_REVISION_FEEDBACK,
         Recovered: "true",
       },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Awaiting Approval",
       event: "STAGE_AWAITING_APPROVAL",
       timestamp: input.timestamp,
       fields: { ...common, Recovered: "true" },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Gate Approved",
       event: "GATE_APPROVED",
       timestamp: input.timestamp,
@@ -2729,28 +2801,33 @@ function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string
         ...(input.userInput ? { "User Input": input.userInput } : {}),
         ...(input.grantId ? { "Grant Id": input.grantId } : {}),
       },
-    }),
-    approvalAuditBlock({
+    },
+    {
       heading: "Stage Completion",
       event: "STAGE_COMPLETED",
       timestamp: input.timestamp,
       fields: { ...common, Details: `Stage ${input.stageName} approved by gate` },
-    }),
+    },
   ];
+  return inputs.map((entry, offset) => approvalAuditBlock(entry, identity, offset));
 }
 
 function commitRecoveredApprovalBatch(pd: string, input: RecoveredApprovalBatchInput): void {
-  const blocks = buildRecoveredApprovalBatch(input);
-
-  validateRecoveredApprovalBatch(blocks, input);
-
   const path = auditFilePath(
     pd,
     stateOperationTarget?.intent,
     stateOperationTarget?.space,
   );
   mkdirSync(dirname(path), { recursive: true });
-  const before = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
+  const before = existsSync(path) ? readFileSync(path, "utf-8") : "";
+  const blocks = buildRecoveredApprovalBatch(input, {
+    cloneId: auditCloneId(pd),
+    intentId: activeIntent(pd, stateOperationTarget?.space, stateOperationTarget?.intent) ?? "workspace",
+    baseSeq: splitJournalLines(before).length + 1,
+  });
+
+  validateRecoveredApprovalBatch(blocks, input);
+
   writeFileAtomic(path, before + blocks.join(""));
 }
 
@@ -3753,32 +3830,13 @@ function handleResume(_args: string[]): void {
   const currentCb = checkboxes.find((c) => c.slug === currentStage);
   const gateState = currentCb?.state ?? "unknown";
 
-  // Compaction detection — scan the tail of audit.md for a SESSION_COMPACTED
+  // Compaction detection — scan the audit tail for a SESSION_COMPACTED
   // event that has no subsequent stage activity. The orchestrator uses this
   // to surface the compaction-awareness prompt without a fragile shell pipeline.
   let compactionPending = false;
   try {
     // Merge across per-clone audit shards (single shard in the common case).
-    const raw = readAllAuditShards(pd);
-    if (raw.length > 0) {
-      // Read last ~400 lines (enough to cover ~30 events' worth of blocks)
-      const tailLines = raw.split("\n").slice(-400);
-      const tail = tailLines.join("\n");
-      // Find the index of the last SESSION_COMPACTED event
-      const lastCompactIdx = tail.lastIndexOf("**Event**: SESSION_COMPACTED");
-      if (lastCompactIdx !== -1) {
-        const after = tail.slice(lastCompactIdx);
-        // Any stage activity OR explicit recovery after the compaction?
-        // STAGE_STARTED / STAGE_COMPLETED / GATE_APPROVED / SESSION_RESUMED
-        // are normal progress; RECOVERY_COMPLETED is the explicit "user saw
-        // the compaction prompt and chose how to proceed" signal.
-        const hasActivity =
-          /\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
-          );
-        compactionPending = !hasActivity;
-      }
-    }
+    compactionPending = compactionPendingFromAudit(readAllAuditShards(pd));
   } catch {
     // Audit read failures are non-fatal — default to false, orchestrator
     // will use the standard resume flow.
@@ -3832,18 +3890,7 @@ function handleAcknowledgeCompaction(args: string[]): void {
   // RECOVERY_COMPLETED events when the orchestrator calls acknowledge unnecessarily.
   let compactionPending = false;
   try {
-    const raw = readAllAuditShards(pd);
-    if (raw.length > 0) {
-      const tail = raw.split("\n").slice(-400).join("\n");
-      const lastCompactIdx = tail.lastIndexOf("**Event**: SESSION_COMPACTED");
-      if (lastCompactIdx !== -1) {
-        const after = tail.slice(lastCompactIdx);
-        compactionPending =
-          !/\*\*Event\*\*: (STAGE_STARTED|STAGE_COMPLETED|GATE_APPROVED|SESSION_RESUMED|RECOVERY_COMPLETED)/.test(
-            after
-          );
-      }
-    }
+    compactionPending = compactionPendingFromAudit(readAllAuditShards(pd));
   } catch {
     // Audit unreadable — nothing to recover.
   }

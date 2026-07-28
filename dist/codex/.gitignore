@@ -55,7 +55,7 @@ amadeus/spaces/*/intents/.amadeus-*
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
 # for these): amadeus/spaces/*/memory/** · amadeus/spaces/*/codekb/** ·
 # amadeus/spaces/*/intents/intents.json · amadeus/spaces/*/intents/*/amadeus-state.md ·
-# amadeus/spaces/*/intents/*/audit/*.md (the audit trail, committed as PER-CLONE
+# amadeus/spaces/*/intents/*/audit/*.jsonl (the audit trail, committed as PER-CLONE
 # SHARDS: each machine appends to audit/<host>-<clone>.md so git never merges
 # concurrent appends — there is intentionally NO .gitattributes merge=union,
 # which was proven to corrupt the multi-line audit blocks) ·

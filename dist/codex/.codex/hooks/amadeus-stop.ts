@@ -101,6 +101,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   auditFilePath,
   COMPOSE_MARKER_RELATIVE_PATH,
@@ -235,7 +236,7 @@ function blockStop(reason: string): never {
 // --- Recursion guard: a durable no-progress counter ---------------------------
 //
 // We persist a tiny JSON record keyed on the workflow's PROGRESS SIGNATURE: the
-// Current Stage slug plus the audit-tail length (line count of audit.md). A
+// Current Stage slug plus the audit-tail length (record count of the audit shards). A
 // `report` that advances the workflow pivots the stage and/or appends audit
 // rows, so the signature changes — that is how we detect "progress was made
 // since the last block". When the signature is unchanged across two blocks, no
@@ -900,6 +901,9 @@ if (consumeMigrationStopLatch(projectDir, migrationSessionId)) allowStop();
 // there is nothing to enforce — allow the stop. Defends the frontmatter scoping.
 const statePath = stateFilePath(projectDir);
 if (!existsSync(statePath)) allowStop();
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:stop", projectDir);
 
 // Write a health heartbeat only for a real active workflow, after the terminal
 // migration carve-out. A pre-Intent installer seed must remain pristine.

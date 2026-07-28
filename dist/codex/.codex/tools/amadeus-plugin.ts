@@ -29,6 +29,7 @@ import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } fr
 import { fileURLToPath } from "node:url";
 import { isHarnessDirName } from "./amadeus-harness.ts";
 import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
+import { observeSubprocess } from "./amadeus-observability.ts";
 import {
   applyPluginDrop,
   applyPluginPlan,
@@ -268,6 +269,14 @@ function nodeTx(hostRoot: string, backend: WorkspaceBackend): WorkspaceTransacti
   };
 }
 
+// The project dir a subprocess span attaches to. `projectRoot` here is the HOST
+// root — the harness dir (.claude/.kiro/...) under the project — so strip that
+// last segment when it is one. Telemetry-only: an unresolvable root yields a
+// path whose config read fails closed to disabled, never an error.
+function telemetryProjectDir(projectRoot: string): string {
+  return isHarnessDirName(basename(projectRoot)) ? dirname(projectRoot) : projectRoot;
+}
+
 // Post-apply recompile (#1592): BOTH compiled artifacts, in dependency order.
 // `amadeus-graph.ts compile` is the only writer of stage-graph.json + scope-grid
 // — the join that makes a composed plugin stage visible to `next` — and
@@ -277,11 +286,16 @@ function nodeTx(hostRoot: string, backend: WorkspaceBackend): WorkspaceTransacti
 // the chain and the caller reports the recompile failure.
 function spawnRecompile(projectRoot: string): boolean {
   for (const tool of ["amadeus-graph.ts", "amadeus-runtime.ts"]) {
-    const res = spawnSync("bun", [join(THIS_DIR, tool), "compile"], {
-      cwd: projectRoot,
-      stdio: "ignore",
-      env: process.env,
-    });
+    const res = observeSubprocess(
+      telemetryProjectDir(projectRoot),
+      `${tool.replace(/\.ts$/, "")}:compile`,
+      () =>
+        spawnSync("bun", [join(THIS_DIR, tool), "compile"], {
+          cwd: projectRoot,
+          stdio: "ignore",
+          env: process.env,
+        }),
+    );
     if (res.status !== 0) return false;
   }
   return true;
@@ -296,11 +310,16 @@ function spawnRecompile(projectRoot: string): boolean {
 // and the caller reports an apply-stage failure rather than leaving the host
 // with a composed stage nobody can type.
 function spawnRunnerGen(projectRoot: string): boolean {
-  const res = spawnSync("bun", [join(THIS_DIR, "amadeus-runner-gen.ts"), "write"], {
-    cwd: projectRoot,
-    stdio: "ignore",
-    env: process.env,
-  });
+  const res = observeSubprocess(
+    telemetryProjectDir(projectRoot),
+    "amadeus-runner-gen:write",
+    () =>
+      spawnSync("bun", [join(THIS_DIR, "amadeus-runner-gen.ts"), "write"], {
+        cwd: projectRoot,
+        stdio: "ignore",
+        env: process.env,
+      }),
+  );
   return res.status === 0;
 }
 

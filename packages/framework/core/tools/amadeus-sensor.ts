@@ -57,6 +57,7 @@ import {
 	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 // --- Constants ---
 
@@ -454,11 +455,13 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
 	const startedAt = Date.now();
 	const outcome = decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
-		spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
-			encoding: "utf-8",
-			timeout: timeoutMs,
-			cwd: projectDir,
-		}),
+		observeSubprocess(projectDir, `sensor:${ctx.sensor.id}`, () =>
+			spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
+				encoding: "utf-8",
+				timeout: timeoutMs,
+				cwd: projectDir,
+			}),
+		),
 	);
 
 	// --- 7. If FAILED: write detail file via wx-flag + rename ---
@@ -707,7 +710,7 @@ function buildDetailBody(args: {
 // --- Terminal-row emit ---
 
 // Slim absolute paths into project-relative form for audit emission.
-// audit.md must be machine-portable across worktrees; the PostToolUse
+// The audit shards must be machine-portable across worktrees; the PostToolUse
 // hook hands us absolute paths from Claude tool calls, so without this
 // helper every row would carry $HOME prefixes. Paths that don't live
 // under projectDir are emitted verbatim (e.g., system-wide fixtures) —
@@ -855,6 +858,7 @@ Subcommands:
 export function main(argv: string[] = process.argv.slice(2)): void {
 	const { projectDirArg, rest } = stripProjectDir(argv);
 	const [cmd, ...args] = rest;
+
 	if (cmd === "--help" || cmd === "-h") {
 		printHelp();
 		return;
@@ -865,6 +869,15 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 		);
 		process.exit(1);
 	}
+
+	// Telemetry process span (opt-in; no-op unless observability.enabled).
+	// Resolution failures must not change the CLI contract — skip silently.
+	try {
+		initProcessObservability(`tool:amadeus-sensor:${cmd}`, resolveProjectDir(projectDirArg));
+	} catch {
+		// no resolvable workflow -> nothing to observe
+	}
+
 	switch (cmd) {
 		case "list":
 			handleList();

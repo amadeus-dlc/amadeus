@@ -45,11 +45,11 @@ const tmpRoots: string[] = [];
 const FIXTURE_INTENT = "t111-fixture-deadbeef";
 
 // Make a fresh project dir holding one intent record. The source's
-// ensureAuditFile() lazily creates that intent's audit SHARD dir + shard
-// (seeded "# AI-DLC Audit Log\n") on first append. `seedAuditMd` lets a case
-// pre-seed THAT shard the way the source expects when it wants to assert the
-// seed survives.
-function freshProject(seedAuditMd = false): string {
+// ensureAuditFile() lazily creates that intent's audit SHARD dir + shard on
+// first append. The JSONL trail carries no header line, so pre-seeding is an
+// empty file; `seedAuditShard` lets a case create the shard up front when it
+// wants to prove appends are a pure suffix on an existing shard.
+function freshProject(seedAuditShard = false): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t111-"));
   tmpRoots.push(root);
   // A record dir is one holding amadeus-state.md; a lone record resolves with
@@ -57,10 +57,10 @@ function freshProject(seedAuditMd = false): string {
   const record = join(root, "amadeus", "spaces", "default", "intents", FIXTURE_INTENT);
   mkdirSync(record, { recursive: true });
   writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
-  if (seedAuditMd) {
+  if (seedAuditShard) {
     const shard = auditFilePath(root);
     mkdirSync(dirname(shard), { recursive: true });
-    writeFileSync(shard, "# AI-DLC Audit Log\n", "utf-8");
+    writeFileSync(shard, "", "utf-8");
   }
   return root;
 }
@@ -79,6 +79,35 @@ function projectWithoutIntent(): string {
 // returned bytes equal that shard's contents (seed header + appended blocks).
 function readAudit(projectDir: string): string {
   return readAllAuditShards(projectDir);
+}
+
+// One parsed JSONL audit record.
+interface AuditRecord {
+  schemaVersion: number;
+  seq: number;
+  cloneId: string;
+  intentId: string;
+  timestamp: string;
+  heading: string;
+  event: string | null;
+  fields?: Record<string, string>;
+  rawBody?: string;
+}
+
+// Parse a shard buffer (JSONL — one JSON object per line, no header) into
+// records. Blank lines are skipped; anything else must parse, so a malformed
+// line fails the case loudly rather than being silently dropped.
+function parseRecords(body: string): AuditRecord[] {
+  return body
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+function readRecords(projectDir: string, intent?: string): AuditRecord[] {
+  return parseRecords(
+    intent === undefined ? readAllAuditShards(projectDir) : readAllAuditShards(projectDir, intent),
+  );
 }
 
 // Whether the resolved audit shard exists on disk (the per-intent successor to
@@ -199,24 +228,25 @@ describe("appendAuditEntry — locked variant", () => {
 
     const content = readAudit(proj);
 
-    // ensureAuditFile seeds the log header on first touch.
-    expect(content.startsWith("# AI-DLC Audit Log\n")).toBe(true);
+    // The trail carries no header line — the first append IS the first byte.
+    const records = parseRecords(content);
+    expect(records.length).toBe(1);
 
-    // The full block, byte-for-byte. STAGE_STARTED maps to heading
-    // "Stage Start" (EVENT_HEADINGS), timestamp first, then **Event**, then
-    // the custom fields in insertion order, closed by the "\n---\n" separator.
-    const expectedBlock =
-      `\n## Stage Start\n` +
-      `**Timestamp**: ${result.timestamp}\n` +
-      `**Event**: STAGE_STARTED\n` +
-      `**Stage**: 1.1-intent\n` +
-      `**Phase**: ideation\n` +
-      `\n---\n`;
-    expect(content).toContain(expectedBlock);
+    // The full record, field-for-field. STAGE_STARTED maps to heading
+    // "Stage Start" (EVENT_HEADINGS); the custom fields keep insertion order.
+    const rec = records[0]!;
+    expect(rec.schemaVersion).toBe(1);
+    expect(rec.seq).toBe(1);
+    expect(rec.intentId).toBe(FIXTURE_INTENT);
+    expect(rec.heading).toBe("Stage Start");
+    expect(rec.event).toBe("STAGE_STARTED");
+    expect(rec.timestamp).toBe(result.timestamp);
+    expect(rec.fields).toEqual({ Stage: "1.1-intent", Phase: "ideation" });
+    expect(Object.keys(rec.fields ?? {})).toEqual(["Stage", "Phase"]);
 
-    // The seed header is immediately followed by the block — nothing injected
-    // between the two. Pins that the append is a pure suffix on the seed.
-    expect(content).toBe(`# AI-DLC Audit Log\n${expectedBlock}`);
+    // The append is one whole line and nothing else — nothing injected around
+    // it. Pins that the append is a pure suffix on an empty shard.
+    expect(content).toBe(`${JSON.stringify(rec)}\n`);
   });
 
   test("uses the raw event type as heading when no EVENT_HEADINGS mapping exists", () => {
@@ -226,10 +256,10 @@ describe("appendAuditEntry — locked variant", () => {
     // that a mapped type does NOT fall through to the raw token as a heading.
     const proj = freshProject();
     appendAuditEntry("SESSION_ENDED", {}, proj);
-    const content = readAudit(proj);
-    expect(content).toContain(`\n## Session End\n`);
-    expect(content).not.toContain(`\n## SESSION_ENDED\n`);
-    expect(content).toContain(`**Event**: SESSION_ENDED\n`);
+    const rec = readRecords(proj)[0]!;
+    expect(rec.heading).toBe("Session End");
+    expect(rec.heading).not.toBe("SESSION_ENDED");
+    expect(rec.event).toBe("SESSION_ENDED");
   });
 
   test("rejects an invalid event type by throwing, with the offending token in the message", () => {
@@ -282,7 +312,9 @@ describe("appendAuditEntry — locked variant", () => {
 
     expect(() => appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj)).toThrow();
     appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj, "explicit-11111111");
-    expect(readAllAuditShards(proj, "explicit-11111111")).toContain("**Event**: RULE_LEARNED\n");
+    expect(readRecords(proj, "explicit-11111111").map((r) => r.event)).toEqual([
+      "RULE_LEARNED",
+    ]);
   });
 });
 
@@ -299,41 +331,43 @@ describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () =>
       proj,
     );
     const content = readAudit(proj);
+    const records = parseRecords(content);
 
-    // The value is written with newlines escaped to backslash-n, on ONE line.
-    expect(content).toContain(
-      `**Path**: /tmp/x\\n**Event**: FAKE_FORGED\\nmore\n`,
-    );
-    // A literal newline must NOT survive inside the value — there is exactly
-    // one real **Event** line (the legitimate one for ERROR_LOGGED), never a
-    // forged FAKE_FORGED on its own physical line.
-    const eventLines = content
-      .split("\n")
-      .filter((l) => l.startsWith("**Event**:"));
-    expect(eventLines).toEqual([`**Event**: ERROR_LOGGED`]);
-    expect(content).not.toContain(`\n**Event**: FAKE_FORGED\n`);
+    // The value is stored with newlines escaped to a literal backslash-n.
+    expect(records.length).toBe(1);
+    expect(records[0]!.fields).toEqual({
+      Path: "/tmp/x\\n**Event**: FAKE_FORGED\\nmore",
+    });
+    // A literal newline must NOT survive inside the value — the whole record
+    // is one physical line, so there is exactly one event (the legitimate
+    // ERROR_LOGGED); a forged FAKE_FORGED can never become its own record.
+    expect(content.split("\n").filter((l) => l.length > 0).length).toBe(1);
+    expect(records.map((r) => r.event)).toEqual(["ERROR_LOGGED"]);
+    expect(content).not.toContain(`"event":"FAKE_FORGED"`);
 
     // Sanity: the returned event echoes the real type, not the forged one.
     expect(result.event).toBe("ERROR_LOGGED");
   });
 
-  test("collapses CRLF to one escape but leaves a lone CR untouched (regex is /\\r?\\n/)", () => {
-    // Source escape is value.replace(/\r?\n/g, "\\n"). A CRLF pair becomes a
-    // single "\n" escape; a bare carriage return (CR not followed by LF) is
-    // NOT matched and survives verbatim. Pinning both halves of that contract
-    // catches a regression that widened the regex to also swallow lone CRs
-    // (which would change byte output for Mac-classic line endings).
+  test("collapses CRLF to one escape; a lone CR is refused fail-closed by the codec", () => {
+    // Source escape is value.replace(/\r?\n/g, "\\n"): a CRLF pair becomes a
+    // single "\n" escape, and a bare carriage return (CR not followed by LF)
+    // is NOT matched. Under JSONL the codec's assertSingleLine then rejects
+    // any surviving raw CR/LF, so a lone CR aborts the append instead of being
+    // written verbatim. Pinning both halves catches a regression that either
+    // widened the escape regex or loosened the codec's single-line guard.
     const proj = freshProject();
-    appendAuditEntryUnlocked(
-      "DECISION_RECORDED",
-      { CrLf: "p\r\nq", LoneCr: "x\ry" },
-      proj,
-    );
-    const content = readAudit(proj);
+    appendAuditEntryUnlocked("DECISION_RECORDED", { CrLf: "p\r\nq" }, proj);
+    const fields = readRecords(proj)[0]!.fields!;
     // CRLF -> single \n escape (one char each in the \r and \n collapsing).
-    expect(content).toContain(`**CrLf**: p\\nq\n`);
-    // Lone CR passes through as a literal carriage return.
-    expect(content).toContain(`**LoneCr**: x\ry\n`);
+    expect(fields.CrLf).toBe("p\\nq");
+
+    // A lone CR reaches the codec unescaped and is refused — nothing is
+    // appended, so the shard still holds only the first record.
+    expect(() =>
+      appendAuditEntryUnlocked("DECISION_RECORDED", { LoneCr: "x\ry" }, proj),
+    ).toThrow(/must not contain raw newlines/);
+    expect(readRecords(proj).length).toBe(1);
   });
 
   test("a second append preserves the first block (append, never overwrite)", () => {
@@ -351,42 +385,32 @@ describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () =>
       proj,
     );
 
-    const content = readAudit(proj);
+    const records = readRecords(proj);
 
-    // Seed header intact at the top.
-    expect(content.startsWith("# AI-DLC Audit Log\n")).toBe(true);
+    // Both event rows present, in chronological order — the second append did
+    // not overwrite the first.
+    expect(records.map((r) => r.event)).toEqual(["BOLT_STARTED", "BOLT_COMPLETED"]);
+    expect(records.map((r) => r.heading)).toEqual(["Bolt Started", "Bolt Completed"]);
 
-    // Both event rows present.
-    expect(content).toContain(`**Event**: BOLT_STARTED\n`);
-    expect(content).toContain(`**Event**: BOLT_COMPLETED\n`);
-    expect(content).toContain(`\n## Bolt Started\n`);
-    expect(content).toContain(`\n## Bolt Completed\n`);
+    // Sequence numbers are dense and 1-based across the appends.
+    expect(records.map((r) => r.seq)).toEqual([1, 2]);
 
-    // Chronological ordering: the first block lands before the second.
-    const idxFirst = content.indexOf("**Event**: BOLT_STARTED");
-    const idxSecond = content.indexOf("**Event**: BOLT_COMPLETED");
-    expect(idxFirst).toBeGreaterThanOrEqual(0);
-    expect(idxSecond).toBeGreaterThan(idxFirst);
-
-    // Two distinct timestamps came back (each call computes its own).
     expect(first.appended).toBe(true);
     expect(second.appended).toBe(true);
 
-    // Exactly two closing separators were appended (one per block).
-    const sepCount = content.split("\n---\n").length - 1;
-    expect(sepCount).toBe(2);
+    // Exactly two records were appended (one per call), no more.
+    expect(records.length).toBe(2);
   });
 
   test("an empty fields object writes only the timestamp + event header lines", () => {
     const proj = freshProject();
     const result = appendAuditEntryUnlocked("HEALTH_CHECKED", {}, proj);
-    const content = readAudit(proj);
-    const expectedBlock =
-      `\n## Health Check\n` +
-      `**Timestamp**: ${result.timestamp}\n` +
-      `**Event**: HEALTH_CHECKED\n` +
-      `\n---\n`;
-    expect(content).toContain(expectedBlock);
+    const rec = readRecords(proj)[0]!;
+    expect(rec.heading).toBe("Health Check");
+    expect(rec.timestamp).toBe(result.timestamp);
+    expect(rec.event).toBe("HEALTH_CHECKED");
+    // No custom fields at all — an empty map, not a dropped key.
+    expect(rec.fields).toEqual({});
   });
 
   test("rejects an invalid event type the same way as the locked variant", () => {
@@ -412,8 +436,7 @@ describe("VALID_EVENT_TYPES — every canonical type is accepted", () => {
       const result = appendAuditEntry(eventType, { K: "v" }, proj);
       expect(result.appended).toBe(true);
       expect(result.event).toBe(eventType);
-      const content = readAudit(proj);
-      expect(content).toContain(`**Event**: ${eventType}\n`);
+      expect(readRecords(proj).map((r) => r.event)).toEqual([eventType]);
     });
   }
 });
@@ -439,10 +462,10 @@ describe("handleAppend — thin wrapper over appendAuditEntry", () => {
         orig;
     }
 
-    // Side effect: the block is on disk.
-    const content = readAudit(proj);
-    expect(content).toContain(`**Event**: GATE_APPROVED\n`);
-    expect(content).toContain(`**Stage**: 2.1-practices\n`);
+    // Side effect: the record is on disk.
+    const rec = readRecords(proj)[0]!;
+    expect(rec.event).toBe("GATE_APPROVED");
+    expect(rec.fields).toEqual({ Stage: "2.1-practices" });
 
     // Output: exactly one trailing-newline JSON line carrying the result.
     expect(captured.length).toBe(1);
@@ -451,8 +474,8 @@ describe("handleAppend — thin wrapper over appendAuditEntry", () => {
     expect(printed.appended).toBe(true);
     expect(printed.event).toBe("GATE_APPROVED");
     expect(typeof printed.timestamp).toBe("string");
-    // The printed timestamp matches the one written into the block.
-    expect(content).toContain(`**Timestamp**: ${printed.timestamp}\n`);
+    // The printed timestamp matches the one written into the record.
+    expect(rec.timestamp).toBe(printed.timestamp);
   });
 
   test("propagates the invalid-event-type throw (does not swallow it)", () => {
