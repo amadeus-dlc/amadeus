@@ -278,6 +278,7 @@ function makeProject(withState: boolean): string {
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
     "amadeus-mirror-config.ts",
+    "amadeus-mirror-policy.ts",
   ]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }
