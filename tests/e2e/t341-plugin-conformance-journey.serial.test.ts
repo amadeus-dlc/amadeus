@@ -108,7 +108,21 @@ function shippedAutoComposeCommand(): string {
   return composeCommands[0];
 }
 
+// The repository's own .claude host legitimately carries a COMMITTED composed
+// plugin (the dogfood state, user decision 2026-07-28), so "no residue" cannot
+// be pinned as emptiness. Capture the pre-journey listings instead and assert
+// the journey leaves them unchanged — identical strength on pristine roots.
+const RESIDUE_ROOTS = [REPO_ROOT, join(REPO_ROOT, HARNESS), SHIPPED_FACE, join(SHIPPED_FACE, HARNESS)];
+const pluginEntries = (root: string): readonly string[] =>
+  readdirSync(root)
+    .filter((n) => n.startsWith(".amadeus-plugin"))
+    .sort();
+let preJourneyResidue: (readonly string[])[] = [];
+let preJourneyRepoPluginDir = false;
+
 beforeAll(() => {
+  preJourneyResidue = RESIDUE_ROOTS.map(pluginEntries);
+  preJourneyRepoPluginDir = existsSync(join(REPO_ROOT, HARNESS, "plugins", PLUGIN));
   ws = mkdtempSync(join(tmpdir(), "amadeus-t341-"));
   hostRoot = join(ws, HARNESS);
   cpSync(join(SHIPPED_FACE, HARNESS), hostRoot, { recursive: true });
@@ -216,10 +230,13 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
   test("the journey left no residue in the repository (read-only fixture, isolated host)", () => {
     // The fixture and the shipped bundles are inputs, never outputs.
     expect(existsSync(join(PLUGIN_FIXTURE, PLUGIN_SOURCE_DIR_NAME))).toBe(false);
-    for (const root of [REPO_ROOT, join(REPO_ROOT, HARNESS), SHIPPED_FACE, join(SHIPPED_FACE, HARNESS)]) {
-      expect(readdirSync(root).filter((n) => n.startsWith(".amadeus-plugin"))).toEqual([]);
-    }
-    expect(existsSync(join(REPO_ROOT, HARNESS, "plugins", PLUGIN))).toBe(false);
+    // Pre-existing committed state (the repo host's dogfood composition) is
+    // not residue; the journey must simply leave every root unchanged.
+    expect(RESIDUE_ROOTS.map(pluginEntries)).toEqual(preJourneyResidue);
+    expect(existsSync(join(REPO_ROOT, HARNESS, "plugins", PLUGIN))).toBe(preJourneyRepoPluginDir);
+    // The shipped face stays pristine outright.
+    expect(pluginEntries(SHIPPED_FACE)).toEqual([]);
+    expect(pluginEntries(join(SHIPPED_FACE, HARNESS))).toEqual([]);
     // And the temp workspace is the only thing this file created.
     expect(ws.startsWith(tmpdir())).toBe(true);
   });
