@@ -35,7 +35,7 @@ import type {
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectRef,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -167,7 +167,8 @@ function item(
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_item_${project.number}`,
-    currentStatus,
+    fieldValues:
+      currentStatus === null ? {} : { "Intent Phase": currentStatus },
   };
 }
 
@@ -184,7 +185,7 @@ class BoardGateway implements MirrorGitHubGateway {
   issue: RemoteMirrorIssue;
   items: MirrorProjectItem[] = [];
   listResult: GatewayOutcome<MirrorProjectItemsView> | null = null;
-  fieldResults = new Map<number, GatewayOutcome<MirrorProjectStatusField>>();
+  fieldResults = new Map<number, GatewayOutcome<MirrorResolvedProjectFields>>();
   addResults = new Map<number, GatewayOutcome<{ itemId: string }>>();
   updateResults = new Map<number, GatewayOutcome<void>>();
   options = new Map<number, ReadonlyArray<Readonly<{ id: string; name: string }>>>();
@@ -231,16 +232,19 @@ class BoardGateway implements MirrorGitHubGateway {
     return ok({ issueNodeId: ISSUE_NODE_ID, items: [...this.items] });
   }
 
-  async resolveProjectStatusField(
+  async resolveProjectFields(
     project: MirrorProjectRef,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>> {
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>> {
     this.history.push(`field:${canonical(project)}`);
     const scripted = this.fieldResults.get(project.number);
     if (scripted) return scripted;
     return ok({
       projectId: nodeIdOf(project),
-      fieldId: `PVTSSF_${project.number}`,
-      options: this.options.get(project.number) ?? DEFAULT_OPTIONS,
+      lifecycle: {
+        fieldId: `PVTSSF_${project.number}`,
+        options: this.options.get(project.number) ?? DEFAULT_OPTIONS,
+      },
+      auxiliaryStatus: null,
     });
   }
 
@@ -274,7 +278,13 @@ class BoardGateway implements MirrorGitHubGateway {
       (this.options.get(number) ?? DEFAULT_OPTIONS).find((o) => o.id === optionId)
         ?.name ?? null;
     this.items = this.items.map((each) =>
-      each.projectNumber === number ? { ...each, currentStatus: name } : each,
+      each.projectNumber === number
+        ? {
+            ...each,
+            fieldValues:
+              name === null ? {} : { ...each.fieldValues, "Intent Phase": name },
+          }
+        : each,
     );
     return ok(undefined);
   }
@@ -800,8 +810,11 @@ describe("t345 defensive classification", () => {
       { issueNodeId: ISSUE_NODE_ID, items: [] },
       {
         projectId: nodeIdOf(BOARD_A),
-        fieldId: `PVTSSF_${BOARD_A.number}`,
-        options: DEFAULT_OPTIONS,
+        lifecycle: {
+          fieldId: `PVTSSF_${BOARD_A.number}`,
+          options: DEFAULT_OPTIONS,
+        },
+        auxiliaryStatus: null,
       },
       false,
     );

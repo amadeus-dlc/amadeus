@@ -17,7 +17,7 @@ import type {
   MirrorOperation,
   MirrorOperationReceipt,
   MirrorPhaseKey,
-  MirrorProjectStatusField,
+  MirrorProjectSingleSelectField,
   MirrorProjectStatusNames,
   MirrorProjectSyncEntry,
   MirrorProjectSyncState,
@@ -264,6 +264,29 @@ export function expectedProjectStatus(
   return phase === null ? KEEP : named(phase);
 }
 
+export type ExpectedProjectFieldValues = Readonly<{
+  lifecycle: ExpectedProjectStatus;
+  auxiliaryStatus: string | null;
+}>;
+
+// Decide every Project field from the same snapshot in the pure policy layer.
+// The executor applies this plan but never invents workflow-state mappings.
+export function expectedProjectFieldValues(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+  statusNames: MirrorProjectStatusNames,
+): ExpectedProjectFieldValues {
+  const lifecycle = expectedProjectStatus(snapshot, boundaryKind, statusNames);
+  const auxiliaryStatus =
+    boundaryKind === "parked" || snapshot.registryStatus === "parked"
+      ? null
+      : snapshot.registryStatus === "complete" &&
+          snapshot.status === "Completed"
+        ? "Done"
+        : "In progress";
+  return { lifecycle, auxiliaryStatus };
+}
+
 // Classify one Project reconciliation failure into the ledger state it earns.
 // `pending` means "the same call could succeed later" and keeps the Project in
 // the reconcile loop; `safety-blocked` means the board's own shape or our
@@ -299,7 +322,7 @@ export function classifyProjectFailure(
 // fuzzy fallback. A name that does not appear verbatim in the remote Project's
 // own option list is unresolved, and the caller reports it as a diagnostic.
 export function selectProjectStatusOption(
-  field: MirrorProjectStatusField,
+  field: MirrorProjectSingleSelectField,
   name: string,
 ): Readonly<{ id: string; name: string }> | null {
   return field.options.find((option) => option.name === name) ?? null;

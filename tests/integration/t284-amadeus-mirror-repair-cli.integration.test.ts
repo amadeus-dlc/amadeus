@@ -104,9 +104,9 @@ class RepairGateway implements MirrorGitHubGateway {
   ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
     throw new Error("RepairGateway must not query Project items");
   }
-  async resolveProjectStatusField(
-    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
-  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+  async resolveProjectFields(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
     throw new Error("RepairGateway must not resolve a Project Status field");
   }
   async addProjectItem(

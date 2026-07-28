@@ -112,9 +112,9 @@ class LifecycleGateway implements MirrorGitHubGateway {
   ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
     throw new Error("LifecycleGateway must not query Project items");
   }
-  async resolveProjectStatusField(
-    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
-  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+  async resolveProjectFields(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
     throw new Error("LifecycleGateway must not resolve a Project Status field");
   }
   async addProjectItem(

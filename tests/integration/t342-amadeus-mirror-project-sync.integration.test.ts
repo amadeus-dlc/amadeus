@@ -25,7 +25,7 @@ import type {
   MirrorOperation,
   MirrorProjectDiagnostic,
   MirrorProjectItemsView,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -132,8 +132,8 @@ function fileStore(initial: MirrorStateSnapshot): {
 type ProjectFixture = {
   items?: MirrorProjectItemsView;
   listResult?: GatewayOutcome<MirrorProjectItemsView>;
-  field?: MirrorProjectStatusField;
-  fieldResult?: GatewayOutcome<MirrorProjectStatusField>;
+  field?: MirrorResolvedProjectFields;
+  fieldResult?: GatewayOutcome<MirrorResolvedProjectFields>;
   addResult?: GatewayOutcome<{ itemId: string }>;
   updateResult?: GatewayOutcome<void>;
   workflowUpdateResult?: GatewayOutcome<void>;
@@ -190,23 +190,26 @@ class ProjectGateway implements MirrorGitHubGateway {
     if (this.fixture.listResult) return this.fixture.listResult;
     return ok(this.fixture.items ?? { issueNodeId: ISSUE_NODE_ID, items: [] });
   }
-  async resolveProjectStatusField(
-    _project: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>[0],
-    phaseField: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>[1],
+  async resolveProjectFields(
+    _project: Parameters<MirrorGitHubGateway["resolveProjectFields"]>[0],
+    phaseField: Parameters<MirrorGitHubGateway["resolveProjectFields"]>[1],
   ): Promise<
-    GatewayOutcome<MirrorProjectStatusField>
+    GatewayOutcome<MirrorResolvedProjectFields>
   > {
-    this.history.push("resolve-status-field");
+    this.history.push("resolve-project-fields");
     this.resolvedPhaseFields.push(phaseField);
     if (this.fixture.fieldResult) return this.fixture.fieldResult;
     return ok(
       this.fixture.field ?? {
         projectId: PROJECT_NODE_ID,
-        fieldId: "PVTSSF_status",
-        options: [
-          { id: "opt-ideation", name: "Ideation" },
-          { id: "opt-done", name: "Done" },
-        ],
+        lifecycle: {
+          fieldId: "PVTSSF_status",
+          options: [
+            { id: "opt-ideation", name: "Ideation" },
+            { id: "opt-done", name: "Done" },
+          ],
+        },
+        auxiliaryStatus: null,
       },
     );
   }
@@ -326,7 +329,7 @@ function markerBody(): string {
 
 const PROJECT_CALLS: ReadonlySet<string> = new Set([
   "list-project-items",
-  "resolve-status-field",
+  "resolve-project-fields",
   "add-project-item",
   "update-project-item-status",
 ]);
@@ -347,8 +350,6 @@ describe("t342 create then project sync", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_existing",
-          currentStatus: null,
-          workflowStatus: "In progress",
           fieldValues: { Lifecycle: "Ideation", Status: "In progress" },
         },
       ],
@@ -372,9 +373,11 @@ describe("t342 create then project sync", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_shared",
-      options: [{ id: "opt-ideation", name: "Ideation" }],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_shared",
+        options: [{ id: "opt-ideation", name: "Ideation" }],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_shared",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
@@ -397,12 +400,14 @@ describe("t342 create then project sync", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [
-        { id: "opt-ideation", name: "Ideation" },
-        { id: "opt-done", name: "Done" },
-      ],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [
+          { id: "opt-ideation", name: "Ideation" },
+          { id: "opt-done", name: "Done" },
+        ],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [
           { id: "opt-in-progress", name: "In progress" },
@@ -422,14 +427,44 @@ describe("t342 create then project sync", () => {
     expect(gateway.history).toContain("option:opt-in-progress");
   });
 
+  test("an unmapped lifecycle phase still updates auxiliary Status", async () => {
+    const store = fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [{ id: "opt-ideation", name: "Ideation" }],
+      },
+      auxiliaryStatus: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-in-progress", name: "In progress" }],
+      },
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway, {
+        snapshot: workflowSnapshot({ lifecyclePhase: "Initialization" }),
+      }),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome.kind).toBe("completed");
+    expect(gateway.history).not.toContain("option:opt-ideation");
+    expect(gateway.history).toContain("option:opt-in-progress");
+  });
+
   test("an auxiliary Status failure does not block Intent Phase sync", async () => {
     const store = fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [{ id: "opt-ideation", name: "Ideation" }],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [{ id: "opt-ideation", name: "Ideation" }],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
@@ -461,7 +496,7 @@ describe("t342 create then project sync", () => {
     expect(outcome).toEqual({ kind: "completed", operation: "create", issueNumber: 7 });
     expect(projectCalls(gateway)).toEqual([
       "list-project-items",
-      "resolve-status-field",
+      "resolve-project-fields",
       "add-project-item",
       "update-project-item-status",
     ]);
@@ -504,7 +539,7 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_item1",
-          currentStatus: "Ideation",
+          fieldValues: { "Intent Phase": "Ideation" },
         },
       ],
     };
@@ -517,7 +552,7 @@ describe("t342 idempotence", () => {
     expect(outcome.kind).toBe("completed");
     expect(projectCalls(gateway)).toEqual([
       "list-project-items",
-      "resolve-status-field",
+      "resolve-project-fields",
     ]);
     expect(store.state().projectSync?.projects[0].lastAppliedStatus).toBe(
       "Ideation",
@@ -547,7 +582,7 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_added",
-          currentStatus: "Ideation",
+          fieldValues: { "Intent Phase": "Ideation" },
         },
       ],
     };
@@ -572,7 +607,7 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_item1",
-          currentStatus: "Inception",
+          fieldValues: { "Intent Phase": "Inception" },
         },
       ],
     };
@@ -739,7 +774,7 @@ describe("t342 safety-blocked observations", () => {
 
     expect(projectCalls(gateway)).toEqual([
       "list-project-items",
-      "resolve-status-field",
+      "resolve-project-fields",
     ]);
     expect(store.state().projectSync?.projects[0]).toMatchObject({
       state: "pending",
@@ -759,11 +794,14 @@ describe("t342 safety-blocked observations", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_status",
-      options: [
-        { id: "opt-a", name: "Backlog" },
-        { id: "opt-b", name: "Shipped" },
-      ],
+      lifecycle: {
+        fieldId: "PVTSSF_status",
+        options: [
+          { id: "opt-a", name: "Backlog" },
+          { id: "opt-b", name: "Shipped" },
+        ],
+      },
+      auxiliaryStatus: null,
     };
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
@@ -795,8 +833,11 @@ describe("t342 safety-blocked observations", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_status",
-      options: [{ id: "opt-a", name: "ideation" }],
+      lifecycle: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: "opt-a", name: "ideation" }],
+      },
+      auxiliaryStatus: null,
     };
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
@@ -845,8 +886,11 @@ describe("t342 safety-blocked observations", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_status",
-      options: [{ id: SECRET, name: "Backlog" }],
+      lifecycle: {
+        fieldId: "PVTSSF_status",
+        options: [{ id: SECRET, name: "Backlog" }],
+      },
+      auxiliaryStatus: null,
     };
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
@@ -872,9 +916,11 @@ describe("t342 keep branch", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [{ id: "opt-ideation", name: "Ideation" }],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [{ id: "opt-ideation", name: "Ideation" }],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
@@ -902,9 +948,11 @@ describe("t342 call budget", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [{ id: "opt-ideation", name: "Ideation" }],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [{ id: "opt-ideation", name: "Ideation" }],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
@@ -917,7 +965,7 @@ describe("t342 call budget", () => {
 
     const calls = projectCalls(gateway);
     expect(calls.filter((c) => c === "list-project-items")).toHaveLength(1);
-    expect(calls.filter((c) => c === "resolve-status-field")).toHaveLength(1);
+    expect(calls.filter((c) => c === "resolve-project-fields")).toHaveLength(1);
     expect(
       calls.filter((c) => c === "add-project-item" || c === "update-project-item-status"),
     ).toHaveLength(3);
@@ -928,9 +976,11 @@ describe("t342 call budget", () => {
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [{ id: "opt-done", name: "Done" }],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [{ id: "opt-done", name: "Done" }],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [{ id: "opt-workflow-done", name: "Done" }],
       },

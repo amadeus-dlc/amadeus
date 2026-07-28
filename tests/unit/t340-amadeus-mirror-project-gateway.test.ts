@@ -18,9 +18,9 @@ import {
   LIST_PROJECT_ITEMS_QUERY,
   parseHttpEnvelope,
   parseProjectItemsView,
-  parseProjectStatusField,
+  parseProjectFields,
   PROJECT_ITEMS_PER_PAGE,
-  RESOLVE_PROJECT_STATUS_FIELD_QUERY,
+  RESOLVE_PROJECT_FIELDS_QUERY,
   UPDATE_PROJECT_ITEM_STATUS_MUTATION,
 } from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
 import type {
@@ -109,10 +109,22 @@ function itemNode(
   const fieldValues = [
     ...(status === null
       ? []
-      : [{ name: status, field: { name: phaseField } }]),
+      : [
+          {
+            __typename: "ProjectV2ItemFieldSingleSelectValue",
+            name: status,
+            field: { name: phaseField },
+          },
+        ]),
     ...(workflowStatus === null
       ? []
-      : [{ name: workflowStatus, field: { name: "Status" } }]),
+      : [
+          {
+            __typename: "ProjectV2ItemFieldSingleSelectValue",
+            name: workflowStatus,
+            field: { name: "Status" },
+          },
+        ]),
   ];
   return {
     id: overrides.id ?? "PVTI_item1",
@@ -122,7 +134,9 @@ function itemNode(
       __typename: "Organization",
       owner: { __typename: "Organization", login: overrides.login ?? "amadeus-dlc" },
     },
-    fieldValues: { nodes: [{}, ...fieldValues] },
+    fieldValues: {
+      nodes: [{ __typename: "ProjectV2ItemFieldTextValue" }, ...fieldValues],
+    },
   };
 }
 
@@ -239,11 +253,11 @@ describe("t340 exact argv", () => {
     ]);
   });
 
-  test("resolveProjectStatusField binds the organization, number, and configured phase field", async () => {
+  test("resolveProjectFields binds the organization, number, and configured phase field", async () => {
     const { runner, requests } = fakeRunner([
       exited(0, envelope(200, statusFieldBody([]))),
     ]);
-    await createMirrorGitHubGateway(runner).resolveProjectStatusField(
+    await createMirrorGitHubGateway(runner).resolveProjectFields(
       PROJECT,
       "Lifecycle",
     );
@@ -252,7 +266,7 @@ describe("t340 exact argv", () => {
       "graphql",
       "--include",
       "-f",
-      `query=${RESOLVE_PROJECT_STATUS_FIELD_QUERY}`,
+      `query=${RESOLVE_PROJECT_FIELDS_QUERY}`,
       "-f",
       "owner=amadeus-dlc",
       "-F",
@@ -263,16 +277,16 @@ describe("t340 exact argv", () => {
   });
 
   test("the Project resolution query is organization-scoped with no user fallback", () => {
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain("organization(login:$owner)");
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).not.toContain("user(");
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain("organization(login:$owner)");
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).not.toContain("user(");
   });
 
   test("Project reads target Intent Phase and auxiliary Status fields", () => {
     expect(LIST_PROJECT_ITEMS_QUERY).toContain("fieldValues(first:");
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
       "intentPhase:field(name:$phaseField)",
     );
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
       'workflowStatus:field(name:"Status")',
     );
   });
@@ -354,8 +368,6 @@ describe("t340 response parsing", () => {
             projectNumber: 5,
             projectOwner: "amadeus-dlc",
             itemId: "PVTI_item1",
-            currentStatus: "Ideation",
-            workflowStatus: "In progress",
             fieldValues: {
               "Intent Phase": "Ideation",
               Status: "In progress",
@@ -370,7 +382,7 @@ describe("t340 response parsing", () => {
     const parsed = parseProjectItemsView(
       (itemsBody([itemNode({ status: null })]) as { data: Record<string, unknown> }).data,
     );
-    expect(parsed?.items[0].currentStatus).toBeNull();
+    expect(parsed?.items[0].fieldValues["Intent Phase"]).toBeUndefined();
   });
 
   test("membership parsing preserves a custom phase field value", () => {
@@ -413,7 +425,7 @@ describe("t340 response parsing", () => {
   });
 
   test("the field query yields Intent Phase and auxiliary Status metadata", () => {
-    const parsed = parseProjectStatusField(
+    const parsed = parseProjectFields(
       (statusFieldBody([
         { id: "opt-a", name: "Ideation" },
         { id: "opt-b", name: "Done" },
@@ -421,12 +433,14 @@ describe("t340 response parsing", () => {
     );
     expect(parsed).toEqual({
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [
-        { id: "opt-a", name: "Ideation" },
-        { id: "opt-b", name: "Done" },
-      ],
-      workflowStatusField: {
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [
+          { id: "opt-a", name: "Ideation" },
+          { id: "opt-b", name: "Done" },
+        ],
+      },
+      auxiliaryStatus: {
         fieldId: "PVTSSF_status",
         options: [
           { id: "opt-in-progress", name: "In progress" },
@@ -443,12 +457,27 @@ describe("t340 response parsing", () => {
     };
     organization.projectV2.workflowStatus = { id: "not-single-select" };
 
-    expect(parseProjectStatusField(data)).toEqual({
+    expect(parseProjectFields(data)).toEqual({
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_intent_phase",
-      options: [],
-      workflowStatusField: null,
+      lifecycle: {
+        fieldId: "PVTSSF_intent_phase",
+        options: [],
+      },
+      auxiliaryStatus: null,
     });
+  });
+
+  test("rejects a malformed single-select value instead of treating it as absent", () => {
+    const malformed = itemNode() as {
+      fieldValues: { nodes: Array<Record<string, unknown>> };
+    };
+    malformed.fieldValues.nodes[1] = {
+      __typename: "ProjectV2ItemFieldSingleSelectValue",
+    };
+    const data = (itemsBody([malformed]) as {
+      data: Record<string, unknown>;
+    }).data;
+    expect(parseProjectItemsView(data)).toBeNull();
   });
 
   test.each([
@@ -467,7 +496,7 @@ describe("t340 response parsing", () => {
       },
     ],
   ])("rejects %s", (_label, data) => {
-    expect(parseProjectStatusField(data as Record<string, unknown>)).toBeNull();
+    expect(parseProjectFields(data as Record<string, unknown>)).toBeNull();
   });
 
   test("a mutation response without the expected node is an invalid response", async () => {
@@ -717,7 +746,7 @@ describe("t340 permit enforcement", () => {
     ]);
     const gh = createMirrorGitHubGateway(runner);
     await gh.listProjectItems(ISSUE);
-    await gh.resolveProjectStatusField(PROJECT, "Intent Phase");
+    await gh.resolveProjectFields(PROJECT, "Intent Phase");
     expect(requests).toHaveLength(2);
     for (const request of requests) {
       expect(request.args).not.toContain("--method");
@@ -758,7 +787,7 @@ describe("t340 out-of-scope mutations are absent", () => {
     }
     strings.push(...gateway.listProjectItemsArgv(ISSUE));
     strings.push(
-      ...gateway.resolveProjectStatusFieldArgv(PROJECT, "Intent Phase"),
+      ...gateway.resolveProjectFieldsArgv(PROJECT, "Intent Phase"),
     );
     strings.push(...gateway.addProjectItemArgv(PROJECT_NODE_ID, ISSUE_NODE_ID));
     strings.push(

@@ -328,17 +328,17 @@ export type MirrorProjectSyncLedger = Readonly<{
   projects: readonly MirrorProjectSyncEntry[];
 }>;
 
-// The resolved lifecycle single-select field of one Project. `options` holds only
-// the options the remote Project actually declares — never a synthesized name,
-// because the option-missing diagnostic lists this set verbatim.
-export type MirrorProjectStatusField = Readonly<{
-  projectId: string;
+export type MirrorProjectSingleSelectField = Readonly<{
   fieldId: string;
   options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
-  workflowStatusField?: Readonly<{
-    fieldId: string;
-    options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
-  }> | null;
+}>;
+
+// The Project fields resolved for one sync. The configured lifecycle field is
+// authoritative; GitHub's built-in Status field is optional and best-effort.
+export type MirrorResolvedProjectFields = Readonly<{
+  projectId: string;
+  lifecycle: MirrorProjectSingleSelectField;
+  auxiliaryStatus: MirrorProjectSingleSelectField | null;
 }>;
 
 export type MirrorProjectItem = Readonly<{
@@ -346,9 +346,7 @@ export type MirrorProjectItem = Readonly<{
   projectNumber: number;
   projectOwner: string;
   itemId: string;
-  currentStatus: string | null;
-  workflowStatus?: string | null;
-  fieldValues?: Readonly<Record<string, string>>;
+  fieldValues: Readonly<Record<string, string>>;
 }>;
 
 // The identity the membership query needs: a Project lookup resolves the Issue
@@ -423,10 +421,10 @@ export interface MirrorGitHubGateway {
   listProjectItems(
     issue: MirrorIssueRef,
   ): Promise<GatewayOutcome<MirrorProjectItemsView>>;
-  resolveProjectStatusField(
+  resolveProjectFields(
     project: MirrorProjectRef,
     phaseField: string,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>>;
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>>;
   addProjectItem(
     permit: MirrorProjectMutationPermit,
     projectId: string,

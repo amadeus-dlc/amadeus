@@ -31,7 +31,7 @@ import type {
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectRef,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorProjectSyncEntry,
   MirrorStateSnapshot,
   RemoteMirrorIssue,
@@ -146,10 +146,10 @@ class DiagnosticGateway implements MirrorGitHubGateway {
     }
     return ok({ issueNodeId: "I_issue", items: [...this.items] });
   }
-  async resolveProjectStatusField(
+  async resolveProjectFields(
     project: MirrorProjectRef,
     phaseField: string,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>> {
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>> {
     this.history.push(`field:${canonical(project)}`);
     this.resolvedPhaseFields.push(phaseField);
     const injected = this.fieldFailures.get(project.number);
@@ -158,8 +158,11 @@ class DiagnosticGateway implements MirrorGitHubGateway {
     }
     return ok({
       projectId: `PVT_${project.number}`,
-      fieldId: `PVTSSF_${project.number}`,
-      options: this.options,
+      lifecycle: {
+        fieldId: `PVTSSF_${project.number}`,
+        options: this.options,
+      },
+      auxiliaryStatus: null,
     });
   }
   async addProjectItem(): Promise<GatewayOutcome<{ itemId: string }>> {
@@ -181,7 +184,8 @@ function memberItem(
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_${project.number}`,
-    currentStatus,
+    fieldValues:
+      currentStatus === null ? {} : { "Intent Phase": currentStatus },
   };
 }
 

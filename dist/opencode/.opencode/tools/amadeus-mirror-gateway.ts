@@ -31,7 +31,7 @@ import type {
   MirrorProjectItemsView,
   MirrorProjectMutationPermit,
   MirrorProjectRef,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   RemoteMirrorIssue,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
@@ -212,7 +212,7 @@ export const LIST_PROJECT_ITEMS_QUERY =
   "repository(owner:$owner,name:$name){issue(number:$number){id " +
   "projectItems(first:$first){nodes{id " +
   "project{id number owner{__typename ... on Organization{login} ... on User{login}}} " +
-  "fieldValues(first:100){nodes{" +
+  "fieldValues(first:100){nodes{__typename " +
   "... on ProjectV2ItemFieldSingleSelectValue{" +
   "name field{... on ProjectV2SingleSelectField{name}}}" +
   "}}" +
@@ -221,7 +221,7 @@ export const LIST_PROJECT_ITEMS_QUERY =
 // Organization-owned Projects only (E-U1CG ruling 2): no user-owner fallback, so
 // the per-Project query budget stays at one. An unresolved organization or
 // Project is a loud failure the executor answers with skip + diagnostic.
-export const RESOLVE_PROJECT_STATUS_FIELD_QUERY =
+export const RESOLVE_PROJECT_FIELDS_QUERY =
   "query($owner:String!,$number:Int!,$phaseField:String!){" +
   "organization(login:$owner){projectV2(number:$number){id " +
   "intentPhase:field(name:$phaseField){" +
@@ -269,11 +269,11 @@ export function listProjectItemsArgv(issue: MirrorIssueRef): readonly string[] {
   });
 }
 
-export function resolveProjectStatusFieldArgv(
+export function resolveProjectFieldsArgv(
   project: MirrorProjectRef,
   phaseField: string,
 ): readonly string[] {
-  return graphqlArgv(RESOLVE_PROJECT_STATUS_FIELD_QUERY, {
+  return graphqlArgv(RESOLVE_PROJECT_FIELDS_QUERY, {
     owner: project.owner,
     number: project.number,
     phaseField,
@@ -827,12 +827,12 @@ function parseProjectItemFieldValues(
   for (const rawValue of connection.nodes) {
     const record = asRecord(rawValue);
     if (record === null) return null;
+    const typename = nonEmptyString(record.__typename);
+    if (typename === null) return null;
+    if (typename !== "ProjectV2ItemFieldSingleSelectValue") continue;
     const name = nonEmptyString(record.name);
     const field = asRecord(record.field);
     const fieldName = field === null ? null : nonEmptyString(field.name);
-    // Non-single-select values appear as empty objects because the query uses
-    // an inline fragment. They carry no relevant data and are ignored.
-    if (name === null && fieldName === null) continue;
     if (name === null || fieldName === null) return null;
     fieldValues[fieldName] = name;
   }
@@ -864,8 +864,6 @@ function parseProjectItemNode(node: unknown): MirrorProjectItem | null {
     projectNumber,
     projectOwner,
     itemId,
-    currentStatus: fieldValues["Intent Phase"] ?? null,
-    workflowStatus: fieldValues.Status ?? null,
     fieldValues,
   };
 }
@@ -913,21 +911,21 @@ function parseSingleSelectField(
 
 // An unresolved organization / Project / configured lifecycle field returns null: the
 // executor answers every one of them with skip + diagnostic, never a mutation.
-export function parseProjectStatusField(
+export function parseProjectFields(
   data: Record<string, unknown>,
-): MirrorProjectStatusField | null {
+): MirrorResolvedProjectFields | null {
   const organization = asRecord(data.organization);
   const project =
     organization === null ? null : asRecord(organization.projectV2);
   if (project === null) return null;
   const projectId = nonEmptyString(project.id);
-  const intentPhase = parseSingleSelectField(project.intentPhase);
-  if (projectId === null || intentPhase === null) return null;
-  const workflowStatusField =
+  const lifecycle = parseSingleSelectField(project.intentPhase);
+  if (projectId === null || lifecycle === null) return null;
+  const auxiliaryStatus =
     project.workflowStatus === null
       ? null
       : parseSingleSelectField(project.workflowStatus);
-  return { projectId, ...intentPhase, workflowStatusField };
+  return { projectId, lifecycle, auxiliaryStatus };
 }
 
 function parseAddedItemId(data: Record<string, unknown>): string | null {
@@ -1168,14 +1166,14 @@ export function createMirrorGitHubGateway(
       return view === null ? invalidResponse("read-only") : ok(view);
     },
 
-    async resolveProjectStatusField(project, phaseField) {
+    async resolveProjectFields(project, phaseField) {
       const run = await runGraphql(
-        resolveProjectStatusFieldArgv(project, phaseField),
+        resolveProjectFieldsArgv(project, phaseField),
         "read-only",
       );
       if (run.kind === "failure") return run.failure;
-      const field = parseProjectStatusField(run.data);
-      return field === null ? invalidResponse("read-only") : ok(field);
+      const fields = parseProjectFields(run.data);
+      return fields === null ? invalidResponse("read-only") : ok(fields);
     },
 
     async addProjectItem(permit, projectId, issueNodeId) {

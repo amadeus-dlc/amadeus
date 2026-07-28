@@ -10,7 +10,7 @@ import {
 } from "./amadeus-mirror-capability.ts";
 import {
   classifyProjectFailure,
-  expectedProjectStatus,
+  expectedProjectFieldValues,
   mirrorEventKey,
   selectProjectStatusOption,
 } from "./amadeus-mirror-policy.ts";
@@ -38,7 +38,7 @@ import type {
   MirrorOperationReceipt,
   MirrorProjectDiagnostic,
   MirrorProjectItemsView,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorProjectSyncEntry,
   MirrorProjectSyncState,
   MirrorProjectTarget,
@@ -1346,23 +1346,11 @@ function findProjectItem(
   );
 }
 
-function projectItemFieldValue(
-  item: MirrorProjectItemsView["items"][number],
-  fieldName: string,
-): string | null {
-  const resolved = item.fieldValues?.[fieldName];
-  if (resolved !== undefined) return resolved;
-  if (fieldName === DEFAULT_PROJECT_PHASE_FIELD) return item.currentStatus;
-  if (fieldName === "Status") return item.workflowStatus ?? null;
-  return null;
-}
-
 type MembershipResolution =
   | {
       kind: "member";
       itemId: string;
-      currentStatus: string | null;
-      workflowStatus: string | null;
+      fieldValues: Readonly<Record<string, string>>;
     }
   | { kind: "failed"; classification: MirrorFailureClass };
 
@@ -1377,7 +1365,7 @@ export async function resolveMembership(
   context: MirrorExecutionContext,
   target: MirrorProjectTarget,
   view: MirrorProjectItemsView,
-  field: MirrorProjectStatusField,
+  fields: MirrorResolvedProjectFields,
   configured: boolean,
 ): Promise<MembershipResolution> {
   const existing = findProjectItem(view, target);
@@ -1385,8 +1373,7 @@ export async function resolveMembership(
     return {
       kind: "member",
       itemId: existing.itemId,
-      currentStatus: projectItemFieldValue(existing, target.phaseField),
-      workflowStatus: projectItemFieldValue(existing, "Status"),
+      fieldValues: existing.fieldValues,
     };
   }
   if (!configured) {
@@ -1411,7 +1398,7 @@ export async function resolveMembership(
   });
   const added = await context.gateway.addProjectItem(
     permit,
-    field.projectId,
+    fields.projectId,
     view.issueNodeId,
   );
   if (added.kind === "failure") {
@@ -1427,41 +1414,23 @@ export async function resolveMembership(
   return {
     kind: "member",
     itemId: added.value.itemId,
-    currentStatus: null,
-    workflowStatus: null,
+    fieldValues: {},
   };
-}
-
-function expectedWorkflowStatus(
-  snapshot: MirrorSnapshot,
-  boundaryKind: MirrorExecutionContext["event"]["boundary"]["kind"],
-): string | null {
-  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
-    return null;
-  }
-  return snapshot.registryStatus === "complete" && snapshot.status === "Completed"
-    ? "Done"
-    : "In progress";
 }
 
 async function syncAuxiliaryWorkflowStatus(
   context: MirrorExecutionContext,
   target: MirrorProjectTarget,
-  field: MirrorProjectStatusField,
+  fields: MirrorResolvedProjectFields,
   membership: Extract<MembershipResolution, { kind: "member" }>,
-  snapshot: MirrorSnapshot,
+  expected: string | null,
 ): Promise<void> {
-  const expected = expectedWorkflowStatus(
-    snapshot,
-    context.event.boundary.kind,
-  );
-  const workflowField = field.workflowStatusField;
+  const workflowField = fields.auxiliaryStatus;
   if (
     expected === null ||
     workflowField === null ||
-    workflowField === undefined ||
-    workflowField.fieldId === field.fieldId ||
-    membership.workflowStatus === expected
+    workflowField.fieldId === fields.lifecycle.fieldId ||
+    membership.fieldValues.Status === expected
   ) {
     return;
   }
@@ -1475,7 +1444,7 @@ async function syncAuxiliaryWorkflowStatus(
   });
   await context.gateway.updateProjectItemStatus(
     permit,
-    field.projectId,
+    fields.projectId,
     membership.itemId,
     workflowField.fieldId,
     option.id,
@@ -1499,7 +1468,7 @@ async function syncOneProject(
   const fail = (classification: MirrorFailureClass): ProjectVerdict =>
     markProjectFailure(ports, context, project, identity, classification);
 
-  const resolved = await context.gateway.resolveProjectStatusField(
+  const resolved = await context.gateway.resolveProjectFields(
     target.project,
     target.phaseField,
   );
@@ -1513,88 +1482,82 @@ async function syncOneProject(
     });
     return fail(resolved.classification);
   }
-  const field = resolved.value;
-  identity.projectId = field.projectId;
+  const fields = resolved.value;
+  identity.projectId = fields.projectId;
   const membership = await resolveMembership(
     context,
     target,
     view,
-    field,
+    fields,
     configured,
   );
   if (membership.kind === "failed") return fail(membership.classification);
   identity.itemId = membership.itemId;
 
-  const expected = expectedProjectStatus(
+  const expected = expectedProjectFieldValues(
     snapshot,
     context.event.boundary.kind,
     target.statusNames,
   );
-  if (expected.kind === "keep") {
-    upsertProjectEntry(ports, context, {
-      project,
-      projectId: field.projectId,
-      itemId: membership.itemId,
-      lastAppliedStatus: membership.currentStatus,
-      state: "synced",
-      updatedAt: context.now(),
-    });
-    return { state: "synced" };
-  }
-
-  const option = selectProjectStatusOption(field, expected.name);
-  if (option === null) {
-    projectDiagnostic(context, {
-      project,
-      reason: "option-missing",
-      expectedStatus: expected.name,
-      availableOptions: field.options.map((each) => each.name),
-      summary: `the Project "${target.phaseField}" field has no option named exactly "${expected.name}"`,
-    });
-    // The board's own vocabulary does not contain the column: retrying the same
-    // call cannot change that, so this needs a human, not another attempt.
-    return fail("configuration");
-  }
-
-  if (membership.currentStatus !== expected.name) {
-    const permit = createMirrorProjectMutationPermit({
-      event: context.event,
-      repository: context.repository,
-      mutation: "update-project-item-status",
-      project: target.project,
-    });
-    const updated = await context.gateway.updateProjectItemStatus(
-      permit,
-      field.projectId,
-      membership.itemId,
-      field.fieldId,
-      option.id,
+  if (expected.lifecycle.kind === "status") {
+    const option = selectProjectStatusOption(
+      fields.lifecycle,
+      expected.lifecycle.name,
     );
-    if (updated.kind === "failure") {
+    if (option === null) {
       projectDiagnostic(context, {
         project,
-        reason: "update-failed",
-        expectedStatus: expected.name,
-        availableOptions: [],
-        summary: `could not set the Project "${target.phaseField}" field: ${updated.summary}`,
+        reason: "option-missing",
+        expectedStatus: expected.lifecycle.name,
+        availableOptions: fields.lifecycle.options.map((each) => each.name),
+        summary: `the Project "${target.phaseField}" field has no option named exactly "${expected.lifecycle.name}"`,
       });
-      return fail(updated.classification);
+      return fail("configuration");
+    }
+
+    if (membership.fieldValues[target.phaseField] !== expected.lifecycle.name) {
+      const permit = createMirrorProjectMutationPermit({
+        event: context.event,
+        repository: context.repository,
+        mutation: "update-project-item-status",
+        project: target.project,
+      });
+      const updated = await context.gateway.updateProjectItemStatus(
+        permit,
+        fields.projectId,
+        membership.itemId,
+        fields.lifecycle.fieldId,
+        option.id,
+      );
+      if (updated.kind === "failure") {
+        projectDiagnostic(context, {
+          project,
+          reason: "update-failed",
+          expectedStatus: expected.lifecycle.name,
+          availableOptions: [],
+          summary: `could not set the Project "${target.phaseField}" field: ${updated.summary}`,
+        });
+        return fail(updated.classification);
+      }
     }
   }
 
   await syncAuxiliaryWorkflowStatus(
     context,
     target,
-    field,
+    fields,
     membership,
-    snapshot,
+    expected.auxiliaryStatus,
   );
 
   upsertProjectEntry(ports, context, {
     project,
-    projectId: field.projectId,
+    projectId: fields.projectId,
     itemId: membership.itemId,
-    lastAppliedStatus: expected.name,
+    lastAppliedStatus:
+      expected.lifecycle.kind === "status"
+        ? expected.lifecycle.name
+        : (membership.fieldValues[target.phaseField] ?? null),
     state: "synced",
     updatedAt: context.now(),
   });

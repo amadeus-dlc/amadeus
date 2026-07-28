@@ -32,7 +32,7 @@ import type {
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectRef,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorStateSnapshot,
   RemoteMirrorIssue,
   RepositoryIdentity,
@@ -131,13 +131,16 @@ class ProjectGateway implements MirrorGitHubGateway {
     this.history.push("list");
     return ok({ issueNodeId: "I_issue", items: [...this.items] });
   }
-  async resolveProjectStatusField(
+  async resolveProjectFields(
     project: MirrorProjectRef,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>> {
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>> {
     return ok({
       projectId: `PVT_${project.number}`,
-      fieldId: `PVTSSF_${project.number}`,
-      options: OPTIONS,
+      lifecycle: {
+        fieldId: `PVTSSF_${project.number}`,
+        options: OPTIONS,
+      },
+      auxiliaryStatus: null,
     });
   }
   async addProjectItem(
@@ -150,7 +153,7 @@ class ProjectGateway implements MirrorGitHubGateway {
       projectNumber: project.number,
       projectOwner: project.owner,
       itemId: `PVTI_${project.number}`,
-      currentStatus: null,
+      fieldValues: {},
     });
     return ok({ itemId: `PVTI_${project.number}` });
   }
@@ -175,7 +178,13 @@ class ProjectGateway implements MirrorGitHubGateway {
     }
     const name = OPTIONS.find((option) => option.id === optionId)?.name ?? null;
     this.items = this.items.map((each) =>
-      each.projectNumber === number ? { ...each, currentStatus: name } : each,
+      each.projectNumber === number
+        ? {
+            ...each,
+            fieldValues:
+              name === null ? {} : { ...each.fieldValues, "Intent Phase": name },
+          }
+        : each,
     );
     return ok(undefined);
   }
@@ -196,7 +205,8 @@ function memberItem(
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_${project.number}`,
-    currentStatus,
+    fieldValues:
+      currentStatus === null ? {} : { "Intent Phase": currentStatus },
   };
 }
 

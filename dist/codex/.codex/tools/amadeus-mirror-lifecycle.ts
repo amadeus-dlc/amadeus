@@ -1037,16 +1037,6 @@ function fieldMissingSummary(project: string, phaseField: string): string {
   );
 }
 
-function projectItemFieldValue(
-  item: MirrorProjectItem | undefined,
-  fieldName: string,
-): string | null {
-  if (item === undefined) return null;
-  const resolved = item.fieldValues?.[fieldName];
-  if (resolved !== undefined) return resolved;
-  return fieldName === DEFAULT_PROJECT_PHASE_FIELD ? item.currentStatus : null;
-}
-
 async function diagnoseProject(
   target: Extract<RepairTarget, { kind: "ok" }>,
   snapshot: MirrorSnapshot,
@@ -1059,7 +1049,7 @@ async function diagnoseProject(
       each.projectOwner === project.project.owner &&
       each.projectNumber === project.project.number,
   );
-  const currentStatus = projectItemFieldValue(item, project.phaseField);
+  const currentStatus = item?.fieldValues[project.phaseField] ?? null;
   const expected = expectedProjectStatus(snapshot, "manual", project.statusNames);
   const expectedStatus = expected.kind === "status" ? expected.name : null;
   const membership: MirrorRepairProjectDiagnostic["membership"] =
@@ -1073,7 +1063,7 @@ async function diagnoseProject(
     drift: expectedStatus !== null && currentStatus !== expectedStatus,
   };
 
-  const field = await target.gateway.resolveProjectStatusField(
+  const field = await target.gateway.resolveProjectFields(
     project.project,
     project.phaseField,
   );
@@ -1090,12 +1080,12 @@ async function diagnoseProject(
   }
   if (
     expected.kind === "status" &&
-    selectProjectStatusOption(field.value, expected.name) === null
+    selectProjectStatusOption(field.value.lifecycle, expected.name) === null
   ) {
     return {
       ...base,
       resolution: "option-missing",
-      availableOptions: field.value.options.map((option) => option.name),
+      availableOptions: field.value.lifecycle.options.map((option) => option.name),
       summary: optionMissingSummary(canonical, project.phaseField, expected.name),
     };
   }

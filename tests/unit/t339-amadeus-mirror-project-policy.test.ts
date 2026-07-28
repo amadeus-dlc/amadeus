@@ -6,11 +6,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_PROJECT_STATUS_NAMES,
+  expectedProjectFieldValues,
   expectedProjectStatus,
   selectProjectStatusOption,
 } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import type {
-  MirrorProjectStatusField,
+  MirrorProjectSingleSelectField,
   MirrorSnapshot,
 } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
 
@@ -28,8 +29,7 @@ function snapshot(overrides: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
   };
 }
 
-const FIELD: MirrorProjectStatusField = {
-  projectId: "PVT_kwDOEcw2nM4BeiIO",
+const FIELD: MirrorProjectSingleSelectField = {
   fieldId: "PVTSSF_field",
   options: [
     { id: "opt-ideation", name: "Ideation" },
@@ -208,6 +208,37 @@ describe("t339 unmapped phase", () => {
     expect(
       expectedProjectStatus(snapshot({ lifecyclePhase: "" }), "phase-verified", {}),
     ).toEqual({ kind: "keep" });
+  });
+});
+
+describe("t339 auxiliary Status policy", () => {
+  test("an active Intent expects In progress even when its phase is unmapped", () => {
+    expect(
+      expectedProjectFieldValues(
+        snapshot({ lifecyclePhase: "Initialization" }),
+        "phase-verified",
+        {},
+      ),
+    ).toEqual({
+      lifecycle: { kind: "keep" },
+      auxiliaryStatus: "In progress",
+    });
+  });
+
+  test("a landed Intent expects Done", () => {
+    expect(
+      expectedProjectFieldValues(
+        snapshot({ registryStatus: "complete", status: "Completed" }),
+        "workflow-completed",
+        {},
+      ).auxiliaryStatus,
+    ).toBe("Done");
+  });
+
+  test("a parked Intent leaves auxiliary Status unchanged", () => {
+    expect(
+      expectedProjectFieldValues(snapshot(), "parked", {}).auxiliaryStatus,
+    ).toBeNull();
   });
 });
 
