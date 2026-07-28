@@ -666,5 +666,12 @@
     "dirName": "260727-e2e-plugin-conformance",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa1ab-6548-700c-ace2-9675d4e3c20d",
+    "slug": "mirror-project-status",
+    "dirName": "260727-mirror-project-status",
+    "scope": "amadeus-feature",
+    "status": "complete"
   }
 ]
