@@ -1,0 +1,16 @@
+{
+  "electionId": "E-GSS-CG-S13",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "C1 を採用し、既存 cid:code-generation:allowlist-line-pin-stale への追補として persist する(機械 remap 手順の追加)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件で可 — E-FSPBTS13 追補(直読照合)で実質カバー済み、今回は違反実例の記録のみで足りる"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "electionId": "E-GSS-RA-S13",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — 一度きりのモード指示であり standing preference への昇格根拠が1事例では不足。持ち越さない既定に従う"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "persist する — ユーザーの対話モード選好として project.md へ記録する(様式は intent-capture/RA の質問提示に限定)"
+    }
+  ]
+}

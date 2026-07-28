@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSS-RE-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (a) RE diary(inception/reverse-engineering/memory.md)は Interpretation 2件・Deviation 1件のみで、全て既存 cid の適用記録(c3/c4 直列2段 read-only dispatch、rescan-base-ancestry による base 選定、re-sensors-codekb-filter-mismatch による sensor 不適用の代替検証)。Open questions/Tradeoffs は空。(b) audit シャード grep で SENSOR_FAILED/BLOCKER/DEVIATION は 0件。(c) reverse-engineering-timestamp.md 現在節を直読 — 非祖先 observed afb93a825 の棄却(merge-base --is-ancestor exit 1 実測)は rescan-base-ancestry が既に規定する『非祖先 observed の除外』の適用例であり新規機序ではない。measurement-ref 明記(observed ec6f16ad8)も既存規範の遵守。新規に persist すべき学習候補は実在しない。",
+  "submittedAt": "2026-07-28T07:19:30Z"
+}

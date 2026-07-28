@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSS-BT-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "merge-tree マーカー0(ステール判定)でも共有台帳の真の分岐と意味的衝突が残った事実は base-advance-regrounding (c) と shared-ledger 系の組合せで被覆済みだが、merge-tree-nondestructive-conflict-probe の適用限界(テキスト衝突のみ)の誤読が別 intent で再発1回あれば追補候補へ昇格させたい。",
+      "rationale": "独立実測: (1) 選挙 question の引用先 memory.md/build-test-results.md を直読し、bolt-1612 で再接地 merge 35856fac9(parent 2)と t33 JSONL 是正 d06d557af(t33.test.ts 2行変更)の実在を git log/show で確認。(2) 主要イベント4件の cid 写像を memory 層 grep で全数確認 — CONFLICTING CI 不発=conflicting-pr-suppresses-ci(project.md 実在)、意味的衝突の検出=base-advance-regrounding (c) 全検証再実行、台帳解消=shared-ledger-insert-collision の union→regen→検証再実行+allowlist-line-pin-stale の行ピン remap、flake 帰属=local-ci-red-assertion-verbatim、verdict 書き分け=verdict-names-unverified-facets。いずれも既存ノルムが検出器・手順として機能した適用実例であり、新規機序は不在。0件で可。",
+      "submittedAt": "2026-07-28T09:47:24Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSS-BT-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: bolt-1612 で再接地 merge 35856fac9 の parent 数 2、t33 是正コミット d06d557af(t33.test.ts 2行変更、旧 markdown grep→auditRecords() JSONL parse)の実在と commit message の機序記述を git show で確認。diary(memory.md Interpretation 4行)と build-test-results.md「再接地の記録」節の記載と一致。CONFLICTING→CI 不発は cid:code-generation:conflicting-pr-suppresses-ci、意味的衝突の検出は base-advance-regrounding (c) の全検証再実行、allowlist 行ピン remap 12件は allowlist-line-pin-stale、registry 機械再生成は shared-ledger-insert-collision の union→regen 定型の各適用実例であり、既存ノルムが検出器・解消手順として機能した。新規機序なし — 0件で可。",
+      "submittedAt": "2026-07-28T09:47:22Z"
+    }
+  ],
+  "late": []
+}

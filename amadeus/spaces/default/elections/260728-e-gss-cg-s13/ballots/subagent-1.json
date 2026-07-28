@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSS-CG-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 前に件数を機械再計算で確定すること — 私の独立再集計では bolt-1612 の allowlist diff の行ピン変更は12件(全て amadeus-orchestrate.ts)で候補文の11件と不一致(ledger-count-mechanical-recalc 準拠)。",
+  "rationale": "独立実測: (1) team.md:272 の E-FSPBTS13 追補を直読 — 定めるのは『全エントリの reason と現行行内容の直読照合』(検出・検証面)であり、base→head 行マップからの機械 remap 手順(是正面)は未規定であることを確認。(2) bolt-1612 を read-only 実測 — git diff origin/main...HEAD で tests/.coverage-patch-allowlist.json の行ピン一括シフト(2216→2246 ほか、+30〜+108行)を確認、code-summary.md:34 で patch gate PASS(追加66行 covered 66・uncovered 0)を確認、:37 で機械 remap と無音転位8件の実測記述を確認。無音転位の反復実測(E-FSPBTS13 の PR #1407 に続く2例目・今回は大規模)と、直読照合が O(N) 手作業で誤り やすいのに対し決定的な行マップ remap が成立した実測は、deterministic-function-direct-sweep 系の手順面追補として persist する価値がある。既存 cid への追補統合(独立 cid 新設でない)という C1 の形式も既習パターンに適合。",
+  "submittedAt": "2026-07-28T09:04:10Z"
+}

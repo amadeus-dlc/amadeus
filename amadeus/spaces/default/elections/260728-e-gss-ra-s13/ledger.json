@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSS-RA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "同種のモード指示が別 intent で再発した時点で persist 再提案へ昇格させること(1事例台帳としてこの選挙記録を参照可能に保つ)。",
+      "rationale": "実測: (1) memory.md:5 と requirements-analysis-questions.md:36-41 で当該指示の実在を確認 — ユーザー発話は「chatモードやりとりしたい askuserquestionやめて」で、当該やりとりに向けたその場のモード変更指示であり、標準様式の宣言語彙(常に/今後は等)を含まない。(2) repo 全域 grep で同種指示の先行事例は本 intent の1件のみ(他 intent 0 hit)。(3) memory 層に chat モード関連の既存規範は無く、逆に team.md の cid:requirements-analysis:askuserquestion-for-user-input(user decision 2026-07-16)は「ユーザー入力が必要な事項は AskUserQuestion で個別・明示的に諮る」を既決としており、chat モード優先の standing preference は選択肢2のスコープ限定(intent-capture/RA)をもってしても境界面で既決ノルムと緊張関係を持ち、§13 admission check の矛盾拒否リスクがある。AUTONOMY IS NEVER INFERRED の既定(一度きりの指示は持ち越さない)に従い0件が妥当。",
+      "submittedAt": "2026-07-28T07:35:33Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSS-RA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測3点: (1) <record>/inception/requirements-analysis/memory.md Interpretation 節 :5 と requirements-analysis-questions.md「裁定の記録」:38-41 で、chat モード指示が本 RA 内の一度きりの指示であることを確認。(2) 独立反証を発見 — 260708-installer-distribution/audit/j5ik2o-mac-studio-lan-df0cac13b1d1.md:2918 に同一ユーザーの逆方向指示 verbatim「chatモードを解除して」(2026-07-08 approval-handoff) が実在し、モード選好は状況依存であって安定 standing preference ではない。(3) 既存 team norm cid:requirements-analysis:askuserquestion-for-user-input は AskUserQuestion による明示的な諮りを既定としており、1事例での project.md 昇格は AUTONOMY IS NEVER INFERRED 既定と両裁定履歴の双方に反する。よって 0件で可(choice 1)。",
+      "submittedAt": "2026-07-28T07:35:30Z"
+    }
+  ],
+  "late": []
+}

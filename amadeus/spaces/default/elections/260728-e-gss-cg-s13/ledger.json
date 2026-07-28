@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSS-CG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 前に件数を機械再計算で確定すること — 私の独立再集計では bolt-1612 の allowlist diff の行ピン変更は12件(全て amadeus-orchestrate.ts)で候補文の11件と不一致(ledger-count-mechanical-recalc 準拠)。",
+      "rationale": "独立実測: (1) team.md:272 の E-FSPBTS13 追補を直読 — 定めるのは『全エントリの reason と現行行内容の直読照合』(検出・検証面)であり、base→head 行マップからの機械 remap 手順(是正面)は未規定であることを確認。(2) bolt-1612 を read-only 実測 — git diff origin/main...HEAD で tests/.coverage-patch-allowlist.json の行ピン一括シフト(2216→2246 ほか、+30〜+108行)を確認、code-summary.md:34 で patch gate PASS(追加66行 covered 66・uncovered 0)を確認、:37 で機械 remap と無音転位8件の実測記述を確認。無音転位の反復実測(E-FSPBTS13 の PR #1407 に続く2例目・今回は大規模)と、直読照合が O(N) 手作業で誤り やすいのに対し決定的な行マップ remap が成立した実測は、deterministic-function-direct-sweep 系の手順面追補として persist する価値がある。既存 cid への追補統合(独立 cid 新設でない)という C1 の形式も既習パターンに適合。",
+      "submittedAt": "2026-07-28T09:04:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSS-CG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文に、機械 remap は E-FSPBTS13 既定の直読照合(reason vs 現行行内容)を代替せず、remap 後の対象行不変確認と併用する旨を明記すること。",
+      "rationale": "独立実測: bolt-1612 の git diff a372165e8..7ed6bd818 -- tests/.coverage-patch-allowlist.json で行ピン12箇所の一括シフト remap を確認(+30/+108/+113 等の系統的シフト)。remap 先の意味一致を2件直読で検証 — amadeus-orchestrate.ts:2246 は emitMirrorBoundaryIfNeeded 後の early return(reason『handleNext early return after a mirror directive』と一致)、:3308-3310 は --mirror-boundary argv parser arm(reason と一致)。record 実測: construction/fix-1612-gated-swarm/code-generation/code-summary.md:37 に『行ピン11件を base→head 行マップで機械 remap(うち8件は stale 検査に映らない無音転位)』の記載を確認。既存 cid:code-generation:allowlist-line-pin-stale の E-FSPBTS13 追補は検出面(全エントリの直読照合)のみを定め、是正面の機械 remap 手順は未規定 — 8/11 が stale 検査不可視という実測は、12エントリ級の手動照合が deterministic-function-direct-sweep の機械化対象クラスであることを示す。C1 は実ギャップを埋める手順面の追補として採用が妥当。",
+      "submittedAt": "2026-07-28T09:04:22Z"
+    }
+  ],
+  "late": []
+}

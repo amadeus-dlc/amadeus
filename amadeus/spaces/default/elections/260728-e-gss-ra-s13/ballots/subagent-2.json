@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSS-RA-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測3点: (1) <record>/inception/requirements-analysis/memory.md Interpretation 節 :5 と requirements-analysis-questions.md「裁定の記録」:38-41 で、chat モード指示が本 RA 内の一度きりの指示であることを確認。(2) 独立反証を発見 — 260708-installer-distribution/audit/j5ik2o-mac-studio-lan-df0cac13b1d1.md:2918 に同一ユーザーの逆方向指示 verbatim「chatモードを解除して」(2026-07-08 approval-handoff) が実在し、モード選好は状況依存であって安定 standing preference ではない。(3) 既存 team norm cid:requirements-analysis:askuserquestion-for-user-input は AskUserQuestion による明示的な諮りを既定としており、1事例での project.md 昇格は AUTONOMY IS NEVER INFERRED 既定と両裁定履歴の双方に反する。よって 0件で可(choice 1)。",
+  "submittedAt": "2026-07-28T07:35:30Z"
+}

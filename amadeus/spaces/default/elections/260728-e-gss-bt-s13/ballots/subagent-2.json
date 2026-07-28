@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSS-BT-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: bolt-1612 で再接地 merge 35856fac9 の parent 数 2、t33 是正コミット d06d557af(t33.test.ts 2行変更、旧 markdown grep→auditRecords() JSONL parse)の実在と commit message の機序記述を git show で確認。diary(memory.md Interpretation 4行)と build-test-results.md「再接地の記録」節の記載と一致。CONFLICTING→CI 不発は cid:code-generation:conflicting-pr-suppresses-ci、意味的衝突の検出は base-advance-regrounding (c) の全検証再実行、allowlist 行ピン remap 12件は allowlist-line-pin-stale、registry 機械再生成は shared-ledger-insert-collision の union→regen 定型の各適用実例であり、既存ノルムが検出器・解消手順として機能した。新規機序なし — 0件で可。",
+  "submittedAt": "2026-07-28T09:47:22Z"
+}

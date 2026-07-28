@@ -1,0 +1,20 @@
+{
+  "electionId": "E-GSS-RE-S13",
+  "kind": "s13-learnings",
+  "question": "intent 260728-gated-swarm-serializatio の reverse-engineering ステージ §13 学習選定: 機械 surface は候補 0 件。conductor の観察でも、本ステージの学び(diff-refresh base の祖先性選定・codekb センサー不適合の手動代替)は既存 cid(rescan-base-ancestry / re-sensors-codekb-filter-mismatch)で既にカバーされており新規性がない。学習 0 件(persist なし)でよいか。根拠: <record>/inception/reverse-engineering/memory.md、codekb 更新3ファイル(reverse-engineering-timestamp.md / architecture.md / code-structure.md)、amadeus-learnings.ts surface 出力 {candidates:[]}",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習なし(既存 cid rescan-base-ancestry / re-sensors-codekb-filter-mismatch で被覆済み)"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — persist すべき新規学習候補が実在する(票コメントで候補を具体提示)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

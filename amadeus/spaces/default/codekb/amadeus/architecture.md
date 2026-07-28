@@ -1,6 +1,100 @@
 # アーキテクチャ
 
-## plugin CLI 動詞体系・ホストルート統一・スキル投影の現行アーキテクチャ（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+## swarm dispatch と autonomy ゲーティング（現在: 260728-gated-swarm-serializatio、observed `ec6f16ad81074f7ca4f252afa0d5d91ecbd48538`）
+
+260728-gated-swarm-serializatio 差分リフレッシュ（2026-07-28、observed `ec6f16ad81074f7ca4f252afa0d5d91ecbd48538`、base `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`（`git merge-base --is-ancestor` **exit 0 = 祖先**、`afb93a825` は **exit 1 = 非祖先**のため base 候補から棄却）、距離 **36**、scope `amadeus-bugfix`、[Issue #1612](https://github.com/amadeus-dlc/amadeus/issues/1612)）。上流入力: Developer スキャン結果（実測済みスキャンノート、全文読了）。**区間は欠陥領域と交差ゼロ**（`git log 0c4709102..HEAD -- packages/framework/core/tools/amadeus-orchestrate.ts` 空、`stage-protocol.md` も不在）— 欠陥は区間導入ではなく #841 のバッチ進行実装以来の既存実装に内在する。以下の file:line はすべて observed `ec6f16ad8` での直読実測。
+
+### 欠陥の所在: `tryEmitSwarm` の autonomy ガード
+
+`packages/framework/core/tools/amadeus-orchestrate.ts` の `tryEmitSwarm`（`:2511-2528`）は、swarm 発火の可否を 7 段のガード列で判定する。順に (1) `:2519-2520` `nodeForSlug` 解決 (2) `:2521` `node.phase !== "construction"` → false (3) `:2522` `for_each`/`mode` チェック（定数 `:2487-2488` `SWARM_FOR_EACH = "unit-of-work"` / `SWARM_MODE = "subagent"`。出荷 graph では `code-generation` のみ該当）(4) `:2525` `isSkeletonGateStage` → false（walking-skeleton は常に人間承認、構造的防御）(5) **`:2526` `if (readAutonomyMode(stateContent) !== "autonomous") return false;` ← 本 Issue の欠陥箇所** (6) `:2527-2528` `readBoltDagBatches` 不在 → false (7) `:2529-2551` バッチ選択（`unitCovered` フィルタで最初の未カバーバッチを `firstBatch` に。全 covered なら false を返し本ゲートへ落ちる。`:2530-2536` のコメントが `bolt_dag.batches` を STATIC topology として扱う #841 由来の契約を明示）。通過時は `:2570-2576` で `{ kind: "invoke-swarm", units: firstBatch, repo? }` を emit する。
+
+`:2526` は **承認頻度の軸（autonomy）を dispatch 並列性の軸へ直結**させている。`gated` および unset では swarm 自体が発火せず、DAG が並列バッチを持っていても per-unit 逐次経路へ落ちる。
+
+### `readAutonomyMode` の 3 値→2 値潰し
+
+`:1164-1168`:
+
+```
+1158:const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+1164:function readAutonomyMode(stateContent: string | null): "autonomous" | null {
+1165:  const raw = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD) : null;
+1166:  if (!raw) return null;
+1167:  return raw.trim() === "autonomous" ? "autonomous" : null;
+1168:}
+```
+
+戻り型が 2 値のため **`gated` と unset を区別できない**（状態としての 3 値 autonomous / gated / unset が 2 値へ潰れる）。直上の設計コメント `:1161-1163` は「The swarm trigger checks `=== "autonomous"`, so any other value (including "gated") is safely treated as "not granted"」と述べ、**「承認 grant がない」と「swarm しない（＝直列化する）」を同一視**している。これが欠陥の意味論的核心であり、修正は型の 3 値化と `:2526` の判定意味の分離の両方に触れる。
+
+### フォールバック直列化経路
+
+`tryEmitSwarm` が false を返すと、呼び出し側（`:2450` in-flight 経路 / `:2476` advance 経路、いずれも `!tryEmitSwarm(...)` 条件）は `emitForSlug` → `:2818` の per-unit 判定 → `emitPerUnitRunStage` へ進む。この経路が並列性を捨てる箇所は 2 つ:
+
+- `orderedUnits`（`:2636-2640`）: `return batches.flat();` — **バッチ構造（＝並列性の情報）を平坦化して捨てる**
+- `nextUncoveredUnit`（`:2683-2704`）: `return { unit: uncovered[0], uncovered };` — 常に未カバー先頭 **1 件**のみ
+
+`emitPerUnitRunStage`（`:2712-2789`）の分岐は `:2729` skeleton かつ stance null → unresolved gate directive / `:2737-2741` DAG なし degrade / `:2751-2756` `selectNextUnitForStage` で 1 件選択 / **`:2757` `pickUnit === null`（全 covered での再入）で初めて本ゲート** / `:2782` `directive.gate = false;`（未カバー反復中はゲート抑制）/ `:2786` `delete directive.next_stage;`。
+
+したがって gated 経路の実挙動は **1 `next` = 1 unit の gate:false 逐次で、ゲートは最後に 1 回のみ**。ゲート回数の面では既に単一ゲートを実現しており、失われているのは **dispatch 並列性だけ**である。
+
+### approve 側 `isAutonomousSwarm` との連動（片側変更でデッドロック）
+
+`readAutonomyMode` のもう 1 つの consumer が `:3824-3826`:
+
+```
+3824:  const isAutonomousSwarm =
+3825:    node.mode === SWARM_MODE && readAutonomyMode(stateContent) === "autonomous";
+3826:  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed" && !isAutonomousSwarm) {
+```
+
+これは approve 時の per-unit 全カバレッジガード（全 unit 未カバーでの早期 approve を拒否する）から autonomous swarm を**除外**する条件である。`:3810-3821` のコメントは、swarm がバッチ単位で進むため all-units チェックがバッチ 1 の approve を拒否し、かつ「`next` would re-emit batch 1 (no batch-advance), deadlocking the run」と明示的に警告している。`:3825` は `:2526` のトリガ条件の **verbatim 写し**であり、片方だけを変えるとデッドロックが再現する。gated swarm では「バッチごとの承認 → 次バッチ」という遷移が必要になるため、除外条件の意味自体も再設計対象になる。
+
+### `computeGate` は autonomy を読まない
+
+`computeGate`（`:1606-1621`）は autonomy を参照しない。`:1599-1601` のコメントが「node-level gate stays true for construction stages; Construction-Bolt autonomy is a separate runtime axis.」と述べるとおり、**autonomy が実際に効くのはエンジン全体で `:2526` と `:3825` の 2 箇所のみ**である。
+
+### `invoke-swarm` 経路にゲート機構が存在しない
+
+`InvokeSwarmDirective`（`packages/framework/core/tools/amadeus-directive.ts:173-185`）のフィールドは `kind` / `units: string[]` / `repo?` の 3 つのみで、**gate フィールドを持たない**。`:167-172` のコメントは「invoke-swarm shape is intentionally minimal… `units` is the only field both sides need」と、この最小性が意図的であることを明示する。
+
+バッチ完了後の再入経路は: finalize exit 0 → 成果物がディスクへ → 次の `next` で `tryEmitSwarm` 再走 → 次の未カバーバッチを再び `invoke-swarm`（**ゲートなし**）→ 全バッチ covered で `firstBatch` null → false → `emitPerUnitRunStage:2757` で本ゲート 1 回。すなわち **「バッチ末尾ゲート」という概念がエンジンに存在しない**。gated swarm を実装するには (a) `invoke-swarm` に gate 系フィールドを追加 (b) finalize 後の `next` 再入時にエンジンがゲート付き directive を返す (c) SKILL.md 手順に gated 分岐を置く、のいずれか（または組合せ）が必要になる。裁定は後続ステージ。
+
+### 規範根拠: `stage-protocol.md:123-125`
+
+`packages/framework/core/amadeus-common/protocols/stage-protocol.md` の `:123-125`（verbatim）:
+
+> **Subsequent Bolt gate (per autonomy mode)**
+>
+> For Bolts after the walking skeleton, the Bolt-level gate is presented only if `Construction Autonomy Mode: gated`. In `autonomous` mode the gate is skipped. For parallel batches the gate covers every Bolt in the batch (single gate, not one per Bolt).
+
+規範上 `gated` の効果は **「ゲートを提示する」ことのみ**であり、並列 dispatch の禁止は書かれていない。むしろ「For parallel batches the gate covers every Bolt in the batch」と、**gated 下でも並列バッチが存在することを前提**にしている。実装 `:2526` は仕様との不一致である。関連する同文書の周辺記述は `:96-102` Walking-skeleton gate（常時）、`:104-121` Ladder prompt（選択肢説明「Present an approval gate after each Bolt (or parallel batch).」および resume 時 unset での ladder 再提示）、`:127-129` Halt-and-ask（失敗時は mode 非依存で必ず halt）、`:132` 並列バッチ部分失敗の扱い、`:406-407`「a single Bolt-level gate (or batch-level gate for parallel batches) replaces it」、`:409` Engine-driven per-unit iteration（swarm 経路外は 1 Unit につき 1 `run-stage`）、`:746-747` Glossary（Ladder prompt / Parallel batch）。
+
+### 欠陥挙動を契約化している既存テスト（修正時の改訂候補）
+
+- `tests/integration/t135-invoke-swarm.test.ts`（describe `:287`）: **test 2（`:300-307`）が欠陥挙動そのものを契約化** — `runNext(seedCodegenProject("gated"))` に対し `expect(directive.kind).toBe("run-stage")` / `not.toBe("invoke-swarm")`。test 1（`:288`）/ 1b（`:293`）は autonomous → `invoke-swarm` units `["a","b"]`。test 7（`:309-319`）は skeleton 構造ガード（bugfix スコープ、修正後も維持されるべき）。`seedCodegenProject`（`:107-124`）が autonomy フィールドを注入する。describe `:326` の referee テスト 4 件は autonomy 非依存。
+- `tests/unit/t186-foreach-per-unit-iteration.test.ts`: test 12（`:510`）「non-autonomous code-generation iterates per unit (the issue headline)」= **gated 逐次を契約化**。test 13（`:532`）= `:3826` 除外条件の回帰。test 6（`:365`）/ 6b（`:384`）は早期 approve 拒否。
+- `tests/unit/t211-swarm-batch-progress.test.ts`（`:82-92` `autonomousCodegenState`、test a/b/c のバッチ進行）
+- `tests/integration/t251-swarm-and-next-stage.test.ts`（guard 1/2/2b の `invoke-swarm`、d（`:196`）の非 autonomous `gate:false` 契約）
+- `tests/unit/t33.test.ts`: `amadeus-bolt.ts` の set-autonomy CLI 契約（`AUTONOMY_MODE_SET`、`--mode gated`、不正値の拒否）
+- 周辺（挙動変更なしの想定）: t47（`:155`, `:191`）、t246（compose stop marker）、t121 / t122 / t195（stop hook が `invoke-swarm` を PENDING 扱い）
+
+### consumer 契約とクロスハーネス再生成対象
+
+- `packages/framework/harness/claude/skills/amadeus/SKILL.md:61`（codex / kimi / kiro / kiro-ide も同一表行）: `invoke-swarm` の手順 (1) resolve (2) prepare (3) fan out (4) check (5) finalize — exit 0 なら「report and continue the loop」。**`:64` の「emitted only for an eligible Construction batch under an `autonomous` grant」という記述自体が修正対象**。
+- `packages/framework/core/hooks/amadeus-stop.ts:1076`: `invoke-swarm` を PENDING directive として扱う（挙動変更は不要）。
+- docs 同期対象: `docs/guide/glossary.{md,ja.md}`、`docs/harness-engineering/08-construction-and-swarm.{md,ja.md}`（`:47` / `:61` / `:96` / `:103` / `:274` に autonomy 記述）、`docs/reference/06-hooks-and-tools.{md,ja.md}`、`12-state-machine.{md,ja.md}`、`17-skill-system.{md,ja.md}`。
+- クロスハーネス再生成対象: `grep -rl tryEmitSwarm`（record / tests 除外）= コード面 **17 ファイル** — 正本 **1**（`packages/framework/core/tools/amadeus-orchestrate.ts`）+ self-install **5**（`.claude` / `.codex` / `.cursor` / `.kimi-code` / `.opencode`）+ dist **7**（claude / codex / cursor / kimi / kiro / kiro-ide / opencode）。dist は 7 ハーネス全対象（cid:build-and-test:bt-dist-regen-seven-harnesses）。kiro / kiro-ide の self-install ツリーは存在しない（grep 実測）。`stage-protocol.md` / `SKILL.md` を触る場合は各 dist / self-install 面も同一変更で同期する。（測定 ref: observed `ec6f16ad8`）
+
+### 機序の整理（裁定は後続ステージ）
+
+1. `readAutonomyMode` が 3 値を 2 値へ潰す（`:1164-1168`）
+2. `tryEmitSwarm:2526` が swarm 自体を拒否する（承認頻度でなく dispatch 並列性を切る）
+3. フォールバックが `batches.flat()`（`:2639`）+ `uncovered[0]`（`:2703`）で直列化する
+4. 仕様 `:123-125` は gated = ゲート提示のみで並列バッチを前提 → 実装逸脱
+5. `:3825` `isAutonomousSwarm` は `:2526` の verbatim 写し — 片側変更はデッドロック（`:3816-3819` の警告）
+6. `invoke-swarm` に gate フィールドがなく、バッチ末尾ゲート機構がエンジンに不在
+7. 欠陥を契約化したテスト: t135 `:300-307` / t186 `:510` / t186 `:532` / t211 / t251
+
+## plugin CLI 動詞体系・ホストルート統一・スキル投影の現行アーキテクチャ（260727-plugin-verb-skills、履歴 2026-07-28、差分リフレッシュ、observed `afb93a825`、別 worktree `plugin-dev` で並行進行）
 
 260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825917220660a3d9bbfdb23d83474b94a6`、base `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **16**、区間 `git diff --shortstat` = **192 files changed, 5529 insertions(+), 956 deletions(-)**、record 除外 **161**）。上流入力: Developer スキャン結果（実測済みスキャンノート、全文読了）。
 

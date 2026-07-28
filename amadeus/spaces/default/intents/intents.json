@@ -687,5 +687,12 @@
     "dirName": "260727-plugin-verb-skills",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa788-f410-78fe-beda-6b89262b4f87",
+    "slug": "gated-swarm-serializatio",
+    "dirName": "260728-gated-swarm-serializatio",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
