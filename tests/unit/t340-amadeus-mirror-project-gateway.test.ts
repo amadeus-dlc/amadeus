@@ -21,7 +21,7 @@ import {
   parseProjectFields,
   PROJECT_ITEMS_PER_PAGE,
   RESOLVE_PROJECT_FIELDS_QUERY,
-  UPDATE_PROJECT_ITEM_STATUS_MUTATION,
+  UPDATE_PROJECT_ITEM_FIELD_MUTATION,
 } from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
 import type {
   MirrorProjectMutation,
@@ -45,6 +45,8 @@ const PROJECT: MirrorProjectRef = { owner: "amadeus-dlc", number: 5 };
 // The real Project node id measured on the target board during the ruling probe.
 const PROJECT_NODE_ID = "PVT_kwDOEcw2nM4BeiIO";
 const ISSUE_NODE_ID = "I_kwDOEcw2nM6abcde";
+const PHASE_FIELD_ID = "PVTSSF_intent_phase";
+const STATUS_FIELD_ID = "PVTSSF_status";
 
 const ISSUE: RemoteMirrorIssue = {
   repository: REPO,
@@ -99,13 +101,13 @@ function itemNode(
     login: string;
     status: string | null;
     workflowStatus: string | null;
-    phaseField: string;
+    phaseFieldId: string;
   }> = {},
 ): unknown {
   const status = overrides.status === undefined ? "Ideation" : overrides.status;
   const workflowStatus =
     overrides.workflowStatus === undefined ? "In progress" : overrides.workflowStatus;
-  const phaseField = overrides.phaseField ?? "Intent Phase";
+  const phaseFieldId = overrides.phaseFieldId ?? PHASE_FIELD_ID;
   const fieldValues = [
     ...(status === null
       ? []
@@ -113,7 +115,7 @@ function itemNode(
           {
             __typename: "ProjectV2ItemFieldSingleSelectValue",
             name: status,
-            field: { name: phaseField },
+            field: { id: phaseFieldId },
           },
         ]),
     ...(workflowStatus === null
@@ -122,7 +124,7 @@ function itemNode(
           {
             __typename: "ProjectV2ItemFieldSingleSelectValue",
             name: workflowStatus,
-            field: { name: "Status" },
+            field: { id: STATUS_FIELD_ID },
           },
         ]),
   ];
@@ -156,9 +158,14 @@ function statusFieldBody(options: unknown[]): unknown {
       organization: {
         projectV2: {
           id: PROJECT_NODE_ID,
-          intentPhase: { id: "PVTSSF_intent_phase", options },
+          intentPhase: {
+            id: PHASE_FIELD_ID,
+            name: "Intent Phase",
+            options,
+          },
           workflowStatus: {
-            id: "PVTSSF_status",
+            id: STATUS_FIELD_ID,
+            name: "Status",
             options: [
               { id: "opt-in-progress", name: "In progress" },
               { id: "opt-done", name: "Done" },
@@ -289,6 +296,9 @@ describe("t340 exact argv", () => {
     expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
       'workflowStatus:field(name:"Status")',
     );
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
+      "... on ProjectV2SingleSelectField{id name options{id name}}",
+    );
   });
 
   test("addProjectItem binds the project and issue node ids", async () => {
@@ -318,7 +328,7 @@ describe("t340 exact argv", () => {
     ]);
   });
 
-  test("updateProjectItemStatus binds every id as a literal string", async () => {
+  test("updateProjectItemSingleSelectField binds every id as a literal string", async () => {
     const { runner, requests } = fakeRunner([
       exited(
         0,
@@ -327,8 +337,8 @@ describe("t340 exact argv", () => {
         }),
       ),
     ]);
-    await createMirrorGitHubGateway(runner).updateProjectItemStatus(
-      projectPermit("update-project-item-status"),
+    await createMirrorGitHubGateway(runner).updateProjectItemSingleSelectField(
+      projectPermit("update-project-item-field"),
       PROJECT_NODE_ID,
       "PVTI_item1",
       "PVTSSF_status",
@@ -339,7 +349,7 @@ describe("t340 exact argv", () => {
       "graphql",
       "--include",
       "-f",
-      `query=${UPDATE_PROJECT_ITEM_STATUS_MUTATION}`,
+      `query=${UPDATE_PROJECT_ITEM_FIELD_MUTATION}`,
       "-f",
       `projectId=${PROJECT_NODE_ID}`,
       "-f",
@@ -368,9 +378,9 @@ describe("t340 response parsing", () => {
             projectNumber: 5,
             projectOwner: "amadeus-dlc",
             itemId: "PVTI_item1",
-            fieldValues: {
-              "Intent Phase": "Ideation",
-              Status: "In progress",
+            singleSelectValuesByFieldId: {
+              [PHASE_FIELD_ID]: "Ideation",
+              [STATUS_FIELD_ID]: "In progress",
             },
           },
         ],
@@ -382,16 +392,20 @@ describe("t340 response parsing", () => {
     const parsed = parseProjectItemsView(
       (itemsBody([itemNode({ status: null })]) as { data: Record<string, unknown> }).data,
     );
-    expect(parsed?.items[0].fieldValues["Intent Phase"]).toBeUndefined();
+    expect(
+      parsed?.items[0].singleSelectValuesByFieldId[PHASE_FIELD_ID],
+    ).toBeUndefined();
   });
 
-  test("membership parsing preserves a custom phase field value", () => {
+  test("membership parsing preserves a custom phase field id and value", () => {
     const parsed = parseProjectItemsView(
-      (itemsBody([itemNode({ phaseField: "Lifecycle" })]) as {
+      (itemsBody([itemNode({ phaseFieldId: "PVTSSF_lifecycle" })]) as {
         data: Record<string, unknown>;
       }).data,
     );
-    expect(parsed?.items[0].fieldValues?.Lifecycle).toBe("Ideation");
+    expect(
+      parsed?.items[0].singleSelectValuesByFieldId.PVTSSF_lifecycle,
+    ).toBe("Ideation");
   });
 
   test("an empty membership list still yields the issue node id", () => {
@@ -434,14 +448,16 @@ describe("t340 response parsing", () => {
     expect(parsed).toEqual({
       projectId: PROJECT_NODE_ID,
       lifecycle: {
-        fieldId: "PVTSSF_intent_phase",
+        fieldId: PHASE_FIELD_ID,
+        fieldName: "Intent Phase",
         options: [
           { id: "opt-a", name: "Ideation" },
           { id: "opt-b", name: "Done" },
         ],
       },
       auxiliaryStatus: {
-        fieldId: "PVTSSF_status",
+        fieldId: STATUS_FIELD_ID,
+        fieldName: "Status",
         options: [
           { id: "opt-in-progress", name: "In progress" },
           { id: "opt-done", name: "Done" },
@@ -460,7 +476,8 @@ describe("t340 response parsing", () => {
     expect(parseProjectFields(data)).toEqual({
       projectId: PROJECT_NODE_ID,
       lifecycle: {
-        fieldId: "PVTSSF_intent_phase",
+        fieldId: PHASE_FIELD_ID,
+        fieldName: "Intent Phase",
         options: [],
       },
       auxiliaryStatus: null,
@@ -651,8 +668,10 @@ describe("t340 interpretGraphqlResult", () => {
 
   test("a mutation that failed to spawn reports not-started", async () => {
     const { runner } = fakeRunner([{ kind: "spawn-error" }]);
-    const outcome = await createMirrorGitHubGateway(runner).updateProjectItemStatus(
-      projectPermit("update-project-item-status"),
+    const outcome = await createMirrorGitHubGateway(
+      runner,
+    ).updateProjectItemSingleSelectField(
+      projectPermit("update-project-item-field"),
       PROJECT_NODE_ID,
       "PVTI_item1",
       "PVTSSF_status",
@@ -709,7 +728,7 @@ describe("t340 permit enforcement", () => {
     const { runner, requests } = fakeRunner([]);
     await expect(
       createMirrorGitHubGateway(runner).addProjectItem(
-        projectPermit("update-project-item-status"),
+        projectPermit("update-project-item-field"),
         PROJECT_NODE_ID,
         ISSUE_NODE_ID,
       ),
@@ -758,7 +777,7 @@ describe("t340 permit enforcement", () => {
 });
 
 // BR-U1-10: the gateway offers no path to remove, archive, or otherwise reach
-// beyond adding an Issue to a board and setting its Status. This asserts over
+// beyond adding an Issue to a board and setting its single-select fields. This asserts over
 // every exported argv builder and every embedded query, so a future builder that
 // reintroduces one of these verbs fails here rather than in review.
 describe("t340 out-of-scope mutations are absent", () => {
@@ -791,7 +810,7 @@ describe("t340 out-of-scope mutations are absent", () => {
     );
     strings.push(...gateway.addProjectItemArgv(PROJECT_NODE_ID, ISSUE_NODE_ID));
     strings.push(
-      ...gateway.updateProjectItemStatusArgv(
+      ...gateway.updateProjectItemSingleSelectFieldArgv(
         PROJECT_NODE_ID,
         "PVTI_item1",
         "PVTSSF_status",
@@ -820,7 +839,7 @@ describe("t340 out-of-scope mutations are absent", () => {
     });
     expect(mutationQueries.sort()).toEqual([
       "ADD_PROJECT_ITEM_MUTATION",
-      "UPDATE_PROJECT_ITEM_STATUS_MUTATION",
+      "UPDATE_PROJECT_ITEM_FIELD_MUTATION",
     ]);
   });
 });

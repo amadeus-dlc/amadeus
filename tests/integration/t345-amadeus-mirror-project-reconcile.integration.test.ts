@@ -162,13 +162,14 @@ function item(
   project: MirrorProjectRef,
   currentStatus: string | null,
 ): MirrorProjectItem {
+  const lifecycleFieldId = `PVTSSF_${project.number}`;
   return {
     projectId: nodeIdOf(project),
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_item_${project.number}`,
-    fieldValues:
-      currentStatus === null ? {} : { "Intent Phase": currentStatus },
+    singleSelectValuesByFieldId:
+      currentStatus === null ? {} : { [lifecycleFieldId]: currentStatus },
   };
 }
 
@@ -242,6 +243,7 @@ class BoardGateway implements MirrorGitHubGateway {
       projectId: nodeIdOf(project),
       lifecycle: {
         fieldId: `PVTSSF_${project.number}`,
+        fieldName: "Intent Phase",
         options: this.options.get(project.number) ?? DEFAULT_OPTIONS,
       },
       auxiliaryStatus: null,
@@ -263,11 +265,13 @@ class BoardGateway implements MirrorGitHubGateway {
     return ok(added);
   }
 
-  async updateProjectItemStatus(
-    permit: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>[0],
+  async updateProjectItemSingleSelectField(
+    permit: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >[0],
     _projectId: string,
     _itemId: string,
-    _fieldId: string,
+    fieldId: string,
     optionId: string,
   ): Promise<GatewayOutcome<void>> {
     const number = permit.project.number;
@@ -281,8 +285,10 @@ class BoardGateway implements MirrorGitHubGateway {
       each.projectNumber === number
         ? {
             ...each,
-            fieldValues:
-              name === null ? {} : { ...each.fieldValues, "Intent Phase": name },
+            singleSelectValuesByFieldId:
+              name === null
+                ? {}
+                : { ...each.singleSelectValuesByFieldId, [fieldId]: name },
           }
         : each,
     );
@@ -812,6 +818,7 @@ describe("t345 defensive classification", () => {
         projectId: nodeIdOf(BOARD_A),
         lifecycle: {
           fieldId: `PVTSSF_${BOARD_A.number}`,
+          fieldName: "Intent Phase",
           options: DEFAULT_OPTIONS,
         },
         auxiliaryStatus: null,

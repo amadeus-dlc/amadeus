@@ -5,8 +5,9 @@
 // It owns NO filesystem, `gh`, or state write, and it does NOT evaluate the
 // provenance / repository / landing / candidate safety guards — those are C6's
 // mandatory precondition for every operation, manual included. This module
-// imports only the C0 domain types.
+// imports only the import-free C0 Project contract and C0 domain types.
 
+import { MIRROR_PROJECT_FIELD_CONTRACT } from "./amadeus-mirror-project-contract.ts";
 import type {
   ExpectedProjectStatus,
   MirrorBoundary,
@@ -26,8 +27,6 @@ import type {
   MirrorSnapshot,
   MirrorStateSnapshot,
 } from "./amadeus-mirror-types.ts";
-
-export const DEFAULT_PROJECT_PHASE_FIELD = "Intent Phase";
 
 export type MirrorPolicyInput =
   | Readonly<{
@@ -238,7 +237,7 @@ function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
 }
 
 // Derive the Status a boundary expects. Ordered rules:
-//   1. parked (boundary kind or registry status) -> keep: a parked Intent's
+//   1. parked (boundary kind or registry status) or archived -> keep: the
 //      column is left exactly as the human left it (FR-4).
 //   2. landed (registry complete + workflow Completed) -> the `done` column.
 //   3. otherwise the current Lifecycle Phase's column.
@@ -249,27 +248,52 @@ export function expectedProjectStatus(
   boundaryKind: MirrorBoundary["kind"],
   statusNames: MirrorProjectStatusNames,
 ): ExpectedProjectStatus {
-  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
-    return KEEP;
-  }
+  if (boundaryKind === "parked") return KEEP;
   const named = (phase: MirrorPhaseKey): ExpectedProjectStatus => ({
     kind: "status",
     name: statusNames[phase] ?? DEFAULT_PROJECT_STATUS_NAMES[phase],
   });
-  if (
-    snapshot.registryStatus === "complete" &&
-    snapshot.status === "Completed"
-  ) {
-    return named("done");
-  }
   const phase = phaseKeyOf(snapshot.lifecyclePhase);
-  return phase === null ? KEEP : named(phase);
+  const currentPhase = phase === null ? KEEP : named(phase);
+  switch (snapshot.registryStatus) {
+    case "in-flight":
+      return currentPhase;
+    case "complete":
+      return snapshot.status === "Completed" ? named("done") : currentPhase;
+    case "parked":
+    case "archived":
+      return KEEP;
+  }
 }
 
 export type ExpectedProjectFieldValues = Readonly<{
   lifecycle: ExpectedProjectStatus;
-  auxiliaryStatus: string | null;
+  auxiliaryStatus: ExpectedProjectStatus;
 }>;
+
+function expectedAuxiliaryProjectStatus(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+): ExpectedProjectStatus {
+  if (boundaryKind === "parked") return KEEP;
+  switch (snapshot.registryStatus) {
+    case "in-flight":
+      return {
+        kind: "status",
+        name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.active,
+      };
+    case "complete":
+      return snapshot.status === "Completed"
+        ? {
+            kind: "status",
+            name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.complete,
+          }
+        : KEEP;
+    case "parked":
+    case "archived":
+      return KEEP;
+  }
+}
 
 // Decide every Project field from the same snapshot in the pure policy layer.
 // The executor applies this plan but never invents workflow-state mappings.
@@ -278,15 +302,10 @@ export function expectedProjectFieldValues(
   boundaryKind: MirrorBoundary["kind"],
   statusNames: MirrorProjectStatusNames,
 ): ExpectedProjectFieldValues {
-  const lifecycle = expectedProjectStatus(snapshot, boundaryKind, statusNames);
-  const auxiliaryStatus =
-    boundaryKind === "parked" || snapshot.registryStatus === "parked"
-      ? null
-      : snapshot.registryStatus === "complete" &&
-          snapshot.status === "Completed"
-        ? "Done"
-        : "In progress";
-  return { lifecycle, auxiliaryStatus };
+  return {
+    lifecycle: expectedProjectStatus(snapshot, boundaryKind, statusNames),
+    auxiliaryStatus: expectedAuxiliaryProjectStatus(snapshot, boundaryKind),
+  };
 }
 
 // Classify one Project reconciliation failure into the ledger state it earns.

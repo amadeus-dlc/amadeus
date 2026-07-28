@@ -279,6 +279,7 @@ function makeProject(withState: boolean): string {
     "amadeus-observability.ts",
     "amadeus-mirror-config.ts",
     "amadeus-mirror-policy.ts",
+    "amadeus-mirror-project-contract.ts",
   ]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }

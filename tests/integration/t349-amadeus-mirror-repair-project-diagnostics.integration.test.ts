@@ -160,6 +160,7 @@ class DiagnosticGateway implements MirrorGitHubGateway {
       projectId: `PVT_${project.number}`,
       lifecycle: {
         fieldId: `PVTSSF_${project.number}`,
+        fieldName: phaseField,
         options: this.options,
       },
       auxiliaryStatus: null,
@@ -169,9 +170,9 @@ class DiagnosticGateway implements MirrorGitHubGateway {
     this.history.push("add");
     throw new Error("repair status must not add a Project item");
   }
-  async updateProjectItemStatus(): Promise<GatewayOutcome<void>> {
+  async updateProjectItemSingleSelectField(): Promise<GatewayOutcome<void>> {
     this.history.push("update");
-    throw new Error("repair status must not update a Project item status");
+    throw new Error("repair status must not update a Project item field");
   }
 }
 
@@ -179,13 +180,14 @@ function memberItem(
   project: MirrorProjectRef,
   currentStatus: string | null,
 ): MirrorProjectItem {
+  const lifecycleFieldId = `PVTSSF_${project.number}`;
   return {
     projectId: `PVT_${project.number}`,
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_${project.number}`,
-    fieldValues:
-      currentStatus === null ? {} : { "Intent Phase": currentStatus },
+    singleSelectValuesByFieldId:
+      currentStatus === null ? {} : { [lifecycleFieldId]: currentStatus },
   };
 }
 
@@ -322,12 +324,7 @@ describe("t349 drift", () => {
     const fx = fixture({
       boards: [{ project: BOARD_A, phaseField: "Lifecycle" }],
     });
-    fx.gateway.items = [
-      {
-        ...memberItem(BOARD_A, null),
-        fieldValues: { Lifecycle: "Construction" },
-      },
-    ];
+    fx.gateway.items = [memberItem(BOARD_A, "Construction")];
 
     const [row] = await diagnose(fx);
 

@@ -330,6 +330,7 @@ export type MirrorProjectSyncLedger = Readonly<{
 
 export type MirrorProjectSingleSelectField = Readonly<{
   fieldId: string;
+  fieldName: string;
   options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
 }>;
 
@@ -346,7 +347,7 @@ export type MirrorProjectItem = Readonly<{
   projectNumber: number;
   projectOwner: string;
   itemId: string;
-  fieldValues: Readonly<Record<string, string>>;
+  singleSelectValuesByFieldId: Readonly<Record<string, string>>;
 }>;
 
 // The identity the membership query needs: a Project lookup resolves the Issue
@@ -381,7 +382,7 @@ declare const mirrorProjectPermitBrand: unique symbol;
 
 export type MirrorProjectMutation =
   | "add-project-item"
-  | "update-project-item-status";
+  | "update-project-item-field";
 
 export type MirrorProjectMutationPermit = Readonly<{
   [mirrorProjectPermitBrand]: true;
@@ -430,7 +431,7 @@ export interface MirrorGitHubGateway {
     projectId: string,
     issueNodeId: string,
   ): Promise<GatewayOutcome<{ itemId: string }>>;
-  updateProjectItemStatus(
+  updateProjectItemSingleSelectField(
     permit: MirrorProjectMutationPermit,
     projectId: string,
     itemId: string,
@@ -479,6 +480,12 @@ export type MirrorProjectDiagnostic = Readonly<{
   summary: string;
 }>;
 
+export type MirrorRegistryStatus =
+  | "in-flight"
+  | "parked"
+  | "complete"
+  | "archived";
+
 export type MirrorSnapshot = Readonly<{
   intentUuid: string;
   intentDir: string;
@@ -486,7 +493,7 @@ export type MirrorSnapshot = Readonly<{
   lifecyclePhase: string;
   currentStage: string;
   status: string;
-  registryStatus: string;
+  registryStatus: MirrorRegistryStatus;
   updatedAt: string;
 }>;
 

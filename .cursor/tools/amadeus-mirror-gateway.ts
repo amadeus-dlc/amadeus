@@ -20,6 +20,7 @@ import {
   validateMirrorMutationPermit,
   validateMirrorProjectMutationPermit,
 } from "./amadeus-mirror-capability.ts";
+import { MIRROR_PROJECT_FIELD_CONTRACT } from "./amadeus-mirror-project-contract.ts";
 import type {
   CreateMirrorIssueInput,
   GatewayOutcome,
@@ -31,6 +32,7 @@ import type {
   MirrorProjectItemsView,
   MirrorProjectMutationPermit,
   MirrorProjectRef,
+  MirrorProjectSingleSelectField,
   MirrorResolvedProjectFields,
   RemoteMirrorIssue,
   RepositoryIdentity,
@@ -214,7 +216,7 @@ export const LIST_PROJECT_ITEMS_QUERY =
   "project{id number owner{__typename ... on Organization{login} ... on User{login}}} " +
   "fieldValues(first:100){nodes{__typename " +
   "... on ProjectV2ItemFieldSingleSelectValue{" +
-  "name field{... on ProjectV2SingleSelectField{name}}}" +
+  "name field{... on ProjectV2SingleSelectField{id}}}" +
   "}}" +
   "}}}}}";
 
@@ -225,9 +227,9 @@ export const RESOLVE_PROJECT_FIELDS_QUERY =
   "query($owner:String!,$number:Int!,$phaseField:String!){" +
   "organization(login:$owner){projectV2(number:$number){id " +
   "intentPhase:field(name:$phaseField){" +
-  "... on ProjectV2SingleSelectField{id options{id name}}} " +
-  'workflowStatus:field(name:"Status"){' +
-  "... on ProjectV2SingleSelectField{id options{id name}}}" +
+  "... on ProjectV2SingleSelectField{id name options{id name}}} " +
+  `workflowStatus:field(name:"${MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.field}"){` +
+  "... on ProjectV2SingleSelectField{id name options{id name}}}" +
   "}}}";
 
 export const ADD_PROJECT_ITEM_MUTATION =
@@ -235,7 +237,7 @@ export const ADD_PROJECT_ITEM_MUTATION =
   "addProjectV2ItemById(input:{projectId:$projectId,contentId:$contentId})" +
   "{item{id}}}";
 
-export const UPDATE_PROJECT_ITEM_STATUS_MUTATION =
+export const UPDATE_PROJECT_ITEM_FIELD_MUTATION =
   "mutation($projectId:ID!,$itemId:ID!,$fieldId:ID!,$optionId:String!){" +
   "updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId," +
   "fieldId:$fieldId,value:{singleSelectOptionId:$optionId}})" +
@@ -290,13 +292,13 @@ export function addProjectItemArgv(
   });
 }
 
-export function updateProjectItemStatusArgv(
+export function updateProjectItemSingleSelectFieldArgv(
   projectId: string,
   itemId: string,
   fieldId: string,
   optionId: string,
 ): readonly string[] {
-  return graphqlArgv(UPDATE_PROJECT_ITEM_STATUS_MUTATION, {
+  return graphqlArgv(UPDATE_PROJECT_ITEM_FIELD_MUTATION, {
     projectId,
     itemId,
     fieldId,
@@ -818,12 +820,12 @@ function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function parseProjectItemFieldValues(
+function parseProjectItemSingleSelectValues(
   value: unknown,
 ): Record<string, string> | null {
   const connection = asRecord(value);
   if (connection === null || !Array.isArray(connection.nodes)) return null;
-  const fieldValues: Record<string, string> = {};
+  const valuesByFieldId: Record<string, string> = {};
   for (const rawValue of connection.nodes) {
     const record = asRecord(rawValue);
     if (record === null) return null;
@@ -832,11 +834,11 @@ function parseProjectItemFieldValues(
     if (typename !== "ProjectV2ItemFieldSingleSelectValue") continue;
     const name = nonEmptyString(record.name);
     const field = asRecord(record.field);
-    const fieldName = field === null ? null : nonEmptyString(field.name);
-    if (name === null || fieldName === null) return null;
-    fieldValues[fieldName] = name;
+    const fieldId = field === null ? null : nonEmptyString(field.id);
+    if (name === null || fieldId === null) return null;
+    valuesByFieldId[fieldId] = name;
   }
-  return fieldValues;
+  return valuesByFieldId;
 }
 
 // One `projectItems` node -> MirrorProjectItem. A node whose Project identity is
@@ -857,14 +859,15 @@ function parseProjectItemNode(node: unknown): MirrorProjectItem | null {
   }
   const projectOwner = nonEmptyString(owner.login);
   if (projectOwner === null) return null;
-  const fieldValues = parseProjectItemFieldValues(record.fieldValues);
-  if (fieldValues === null) return null;
+  const singleSelectValuesByFieldId =
+    parseProjectItemSingleSelectValues(record.fieldValues);
+  if (singleSelectValuesByFieldId === null) return null;
   return {
     projectId,
     projectNumber,
     projectOwner,
     itemId,
-    fieldValues,
+    singleSelectValuesByFieldId,
   };
 }
 
@@ -890,14 +893,18 @@ export function parseProjectItemsView(
 
 function parseSingleSelectField(
   value: unknown,
-): Readonly<{
-  fieldId: string;
-  options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
-}> | null {
+): MirrorProjectSingleSelectField | null {
   const field = asRecord(value);
   if (field === null) return null;
   const fieldId = nonEmptyString(field.id);
-  if (fieldId === null || !Array.isArray(field.options)) return null;
+  const fieldName = nonEmptyString(field.name);
+  if (
+    fieldId === null ||
+    fieldName === null ||
+    !Array.isArray(field.options)
+  ) {
+    return null;
+  }
   const options: { id: string; name: string }[] = [];
   for (const raw of field.options) {
     const option = asRecord(raw);
@@ -906,7 +913,7 @@ function parseSingleSelectField(
     if (id === null || name === null) return null;
     options.push({ id, name });
   }
-  return { fieldId, options };
+  return { fieldId, fieldName, options };
 }
 
 // An unresolved organization / Project / configured lifecycle field returns null: the
@@ -1187,12 +1194,23 @@ export function createMirrorGitHubGateway(
       return itemId === null ? invalidResponse("mutation") : ok({ itemId });
     },
 
-    async updateProjectItemStatus(permit, projectId, itemId, fieldId, optionId) {
+    async updateProjectItemSingleSelectField(
+      permit,
+      projectId,
+      itemId,
+      fieldId,
+      optionId,
+    ) {
       requireValidProjectPermit(permit, {
-        mutation: "update-project-item-status",
+        mutation: "update-project-item-field",
       });
       const run = await runGraphql(
-        updateProjectItemStatusArgv(projectId, itemId, fieldId, optionId),
+        updateProjectItemSingleSelectFieldArgv(
+          projectId,
+          itemId,
+          fieldId,
+          optionId,
+        ),
         "mutation",
       );
       if (run.kind === "failure") return run.failure;

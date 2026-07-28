@@ -62,7 +62,7 @@ Pull requests, releases, deployment, daemons, and polling are outside Intent
 Mirror.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
 ## Project boards
 
 `mirror-projects` lists the GitHub Project boards this Intent syncs to. Each
@@ -93,7 +93,7 @@ this key decides which boards that operation touches.
 
 The authoritative lifecycle value is written to the single-select field named
 by `phase-field` (`Intent Phase` by default). The standard `Status` field is auxiliary: active Intents
-move to `In progress`, completed Intents move to `Done`, and parked Intents keep
+move to `In progress`, completed Intents move to `Done`, and parked or archived Intents keep
 their current Status. A missing option or failed auxiliary Status update never
 blocks lifecycle-field reconciliation or Issue close.
 

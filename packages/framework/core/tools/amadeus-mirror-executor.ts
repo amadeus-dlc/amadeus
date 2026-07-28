@@ -10,11 +10,11 @@ import {
 } from "./amadeus-mirror-capability.ts";
 import {
   classifyProjectFailure,
-  DEFAULT_PROJECT_PHASE_FIELD,
   expectedProjectFieldValues,
   mirrorEventKey,
   selectProjectStatusOption,
 } from "./amadeus-mirror-policy.ts";
+import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-project-contract.ts";
 import {
   classifyCandidates,
   createIdentityMatchesContext,
@@ -28,6 +28,7 @@ import {
   readMirrorState,
 } from "./amadeus-mirror-state-store.ts";
 import type {
+  ExpectedProjectStatus,
   GatewayOutcome,
   MirrorAuditContext,
   MirrorExecutionContext,
@@ -1350,14 +1351,15 @@ type MembershipResolution =
   | {
       kind: "member";
       itemId: string;
-      fieldValues: Readonly<Record<string, string>>;
+      singleSelectValuesByFieldId: Readonly<Record<string, string>>;
     }
   | { kind: "failed"; classification: MirrorFailureClass };
 
 // Resolve the Issue's item on this Project, adding it when absent. Only a
 // configured target may be joined: a Project the Issue merely already belongs to
 // is synced where it sits and never recruited. A freshly added item has no
-// Status yet, so its current value is null rather than assumed.
+// single-select value yet, so its current value map is empty rather than
+// assumed.
 // Exported as an in-process seam: the unconfigured non-member branch below is
 // unreachable through syncProjects (reconcileTargets only admits unconfigured
 // targets that appear in the items view), so tests drive it directly.
@@ -1373,7 +1375,7 @@ export async function resolveMembership(
     return {
       kind: "member",
       itemId: existing.itemId,
-      fieldValues: existing.fieldValues,
+      singleSelectValuesByFieldId: existing.singleSelectValuesByFieldId,
     };
   }
   if (!configured) {
@@ -1414,7 +1416,7 @@ export async function resolveMembership(
   return {
     kind: "member",
     itemId: added.value.itemId,
-    fieldValues: {},
+    singleSelectValuesByFieldId: {},
   };
 }
 
@@ -1423,26 +1425,27 @@ async function syncAuxiliaryWorkflowStatus(
   target: MirrorProjectTarget,
   fields: MirrorResolvedProjectFields,
   membership: Extract<MembershipResolution, { kind: "member" }>,
-  expected: string | null,
+  expected: ExpectedProjectStatus,
 ): Promise<void> {
   const workflowField = fields.auxiliaryStatus;
   if (
-    expected === null ||
+    expected.kind === "keep" ||
     workflowField === null ||
     workflowField.fieldId === fields.lifecycle.fieldId ||
-    membership.fieldValues.Status === expected
+    membership.singleSelectValuesByFieldId[workflowField.fieldId] ===
+      expected.name
   ) {
     return;
   }
-  const option = selectProjectStatusOption(workflowField, expected);
+  const option = selectProjectStatusOption(workflowField, expected.name);
   if (option === null) return;
   const permit = createMirrorProjectMutationPermit({
     event: context.event,
     repository: context.repository,
-    mutation: "update-project-item-status",
+    mutation: "update-project-item-field",
     project: target.project,
   });
-  await context.gateway.updateProjectItemStatus(
+  await context.gateway.updateProjectItemSingleSelectField(
     permit,
     fields.projectId,
     membership.itemId,
@@ -1510,19 +1513,22 @@ async function syncOneProject(
         reason: "option-missing",
         expectedStatus: expected.lifecycle.name,
         availableOptions: fields.lifecycle.options.map((each) => each.name),
-        summary: `the Project "${target.phaseField}" field has no option named exactly "${expected.lifecycle.name}"`,
+        summary: `the Project "${fields.lifecycle.fieldName}" field has no option named exactly "${expected.lifecycle.name}"`,
       });
       return fail("configuration");
     }
 
-    if (membership.fieldValues[target.phaseField] !== expected.lifecycle.name) {
+    if (
+      membership.singleSelectValuesByFieldId[fields.lifecycle.fieldId] !==
+      expected.lifecycle.name
+    ) {
       const permit = createMirrorProjectMutationPermit({
         event: context.event,
         repository: context.repository,
-        mutation: "update-project-item-status",
+        mutation: "update-project-item-field",
         project: target.project,
       });
-      const updated = await context.gateway.updateProjectItemStatus(
+      const updated = await context.gateway.updateProjectItemSingleSelectField(
         permit,
         fields.projectId,
         membership.itemId,
@@ -1535,7 +1541,7 @@ async function syncOneProject(
           reason: "update-failed",
           expectedStatus: expected.lifecycle.name,
           availableOptions: [],
-          summary: `could not set the Project "${target.phaseField}" field: ${updated.summary}`,
+          summary: `could not set the Project "${fields.lifecycle.fieldName}" field: ${updated.summary}`,
         });
         return fail(updated.classification);
       }
@@ -1557,7 +1563,9 @@ async function syncOneProject(
     lastAppliedStatus:
       expected.lifecycle.kind === "status"
         ? expected.lifecycle.name
-        : (membership.fieldValues[target.phaseField] ?? null),
+        : (membership.singleSelectValuesByFieldId[
+            fields.lifecycle.fieldId
+          ] ?? null),
     state: "synced",
     updatedAt: context.now(),
   });

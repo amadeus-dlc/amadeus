@@ -156,17 +156,19 @@ class FakeGateway implements MirrorGitHubGateway {
   async resolveProjectFields(
     ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
   ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
-    throw new Error("FakeGateway must not resolve a Project Status field");
+    throw new Error("FakeGateway must not resolve Project fields");
   }
   async addProjectItem(
     ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
   ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
     throw new Error("FakeGateway must not add a Project item");
   }
-  async updateProjectItemStatus(
-    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
-  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
-    throw new Error("FakeGateway must not update a Project item status");
+  async updateProjectItemSingleSelectField(
+    ..._args: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemSingleSelectField"]> {
+    throw new Error("FakeGateway must not update a Project item field");
   }
 }
 

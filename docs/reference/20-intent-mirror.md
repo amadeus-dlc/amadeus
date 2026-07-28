@@ -56,7 +56,7 @@ The contract grants no authority for pull requests, releases, deploys,
 background daemons, or polling.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
 ## Project configuration schema
 
 `mirror-projects` is an array of `{ project, phase-field?, status-names? }`. `project` matches
@@ -72,7 +72,7 @@ winning `mirror-projects` replaces the previous layer's target list entirely.
 
 The field named by `phase-field` is authoritative for lifecycle reconciliation
 and the completion gate. `Status` is auxiliary: active maps to `In progress`, complete maps to
-`Done`, parked keeps its current value, and auxiliary failures do not block
+`Done`, a parked or archived Intent keeps its current value, and auxiliary failures do not block
 reconciliation or close.
 
 <!-- amadeus-topic:auth -->

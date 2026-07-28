@@ -28,6 +28,7 @@ export const MIRROR_TOOL_FILES = [
   "amadeus-mirror-lifecycle.ts",
   "amadeus-mirror-policy.ts",
   "amadeus-mirror-presentation.ts",
+  "amadeus-mirror-project-contract.ts",
   "amadeus-mirror-provenance.ts",
   "amadeus-mirror-repair.ts",
   "amadeus-mirror-runner.ts",

@@ -1,7 +1,7 @@
 // t346 — the Project sync wired into every lifecycle boundary, over a real
 // record on disk: the per-boundary behaviour table, the completion gate that
 // withholds `close` until every board reached its done column, the two parked
-// paths that issue no Status mutation at all, and the prompt's Project face.
+// paths that issue no field mutation at all, and the prompt's Project face.
 // covers: packages/framework/core/tools/amadeus-mirror-{coordinator,lifecycle}.ts
 // size: medium
 
@@ -138,6 +138,7 @@ class ProjectGateway implements MirrorGitHubGateway {
       projectId: `PVT_${project.number}`,
       lifecycle: {
         fieldId: `PVTSSF_${project.number}`,
+        fieldName: "Intent Phase",
         options: OPTIONS,
       },
       auxiliaryStatus: null,
@@ -153,15 +154,17 @@ class ProjectGateway implements MirrorGitHubGateway {
       projectNumber: project.number,
       projectOwner: project.owner,
       itemId: `PVTI_${project.number}`,
-      fieldValues: {},
+      singleSelectValuesByFieldId: {},
     });
     return ok({ itemId: `PVTI_${project.number}` });
   }
-  async updateProjectItemStatus(
-    permit: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>[0],
+  async updateProjectItemSingleSelectField(
+    permit: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >[0],
     _projectId: string,
     _itemId: string,
-    _fieldId: string,
+    fieldId: string,
     optionId: string,
   ): Promise<GatewayOutcome<void>> {
     const number = permit.project.number;
@@ -181,8 +184,10 @@ class ProjectGateway implements MirrorGitHubGateway {
       each.projectNumber === number
         ? {
             ...each,
-            fieldValues:
-              name === null ? {} : { ...each.fieldValues, "Intent Phase": name },
+            singleSelectValuesByFieldId:
+              name === null
+                ? {}
+                : { ...each.singleSelectValuesByFieldId, [fieldId]: name },
           }
         : each,
     );
@@ -190,7 +195,7 @@ class ProjectGateway implements MirrorGitHubGateway {
   }
 }
 
-function statusMutations(gateway: ProjectGateway): string[] {
+function fieldMutations(gateway: ProjectGateway): string[] {
   return gateway.history.filter((entry) => entry.startsWith("update:"));
 }
 
@@ -200,13 +205,14 @@ function memberItem(
   project: MirrorProjectRef,
   currentStatus: string | null,
 ): MirrorProjectItem {
+  const lifecycleFieldId = `PVTSSF_${project.number}`;
   return {
     projectId: `PVT_${project.number}`,
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_${project.number}`,
-    fieldValues:
-      currentStatus === null ? {} : { "Intent Phase": currentStatus },
+    singleSelectValuesByFieldId:
+      currentStatus === null ? {} : { [lifecycleFieldId]: currentStatus },
   };
 }
 
@@ -395,7 +401,7 @@ describe("t346 boundary behaviour table", () => {
   });
 });
 
-describe("t346 parked boundaries issue no Status mutation", () => {
+describe("t346 parked boundaries issue no field mutation", () => {
   test("the parked boundary syncs the Issue body and leaves the column alone", async () => {
     const fx = fixture({ lifecyclePhase: "INCEPTION", state: linkedState() });
     const gateway = new ProjectGateway(markerBody());
@@ -403,7 +409,7 @@ describe("t346 parked boundaries issue no Status mutation", () => {
 
     await drive(fx, gateway, { kind: "parked", stage: "scope-definition", instance: "park-1" });
 
-    expect(statusMutations(gateway)).toEqual([]);
+    expect(fieldMutations(gateway)).toEqual([]);
     expect(gateway.history).toContain("edit");
     // The row is still recorded as synced, carrying the column the human left.
     expect(rowFor(fx.state(), BOARD_A)).toMatchObject({
@@ -426,7 +432,7 @@ describe("t346 parked boundaries issue no Status mutation", () => {
       invocationId: "manual-1",
     });
 
-    expect(statusMutations(gateway)).toEqual([]);
+    expect(fieldMutations(gateway)).toEqual([]);
     expect(rowFor(fx.state(), BOARD_A)?.lastAppliedStatus).toBe("Ideation");
   });
 });

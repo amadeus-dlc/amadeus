@@ -5,490 +5,47 @@
 // size: medium
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
-import { mirrorEventIdentity } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
-import { renderMirrorMarker } from "../../packages/framework/core/tools/amadeus-mirror-provenance.ts";
 import {
   EMPTY_MIRROR_STATE,
   parseMirrorStateDocument,
-  renderMirrorStateBlock,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
-import type { MirrorStateStorePorts } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
 import type {
-  GatewayOutcome,
-  MirrorCreateIdentity,
   MirrorExecutionContext,
-  MirrorGitHubGateway,
-  MirrorOperation,
   MirrorProjectDiagnostic,
-  MirrorProjectItemsView,
-  MirrorResolvedProjectFields,
-  MirrorProjectTarget,
-  MirrorSnapshot,
-  MirrorStateSnapshot,
-  RemoteMirrorIssue,
-  RepositoryIdentity,
 } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
-
-const REPO: RepositoryIdentity = {
-  owner: "acme",
-  name: "app",
-  canonical: "acme/app",
-};
-const NOW = "2026-07-27T00:00:00Z";
-const INTENT_DIR = "amadeus/spaces/default/intents/demo";
-const PROJECT_NODE_ID = "PVT_project";
-const ISSUE_NODE_ID = "I_issue";
-const TARGET: MirrorProjectTarget = {
-  project: { owner: "acme", number: 5 },
-  phaseField: "Intent Phase",
-  statusNames: {},
-};
+import {
+  ISSUE_NODE_ID,
+  NOW,
+  PROJECT_NODE_ID,
+  ProjectGateway,
+  ProjectSyncTestHarness,
+  failure,
+  projectCalls,
+} from "../helpers/amadeus-mirror-project-sync-fixture.ts";
 
 // A token that must never reach a diagnostic: the fixtures below carry it in the
 // places a careless implementation would transcribe (a gateway summary source
 // and an unrelated remote field).
 const SECRET = "ghp_projectSyncSecretToken";
 
-let dir: string;
+let harness: ProjectSyncTestHarness;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "t342-"));
+  harness = new ProjectSyncTestHarness("t342-");
 });
 
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  harness.dispose();
 });
 
-function ok<T>(value: T): GatewayOutcome<T> {
-  return { kind: "ok", value };
-}
-
-function failure(
-  classification: "network" | "permission" | "api",
-  effect: "not-started" | "outcome-unknown" = "not-started",
-): Extract<GatewayOutcome<never>, { kind: "failure" }> {
-  return {
-    kind: "failure",
-    classification,
-    summary: `GitHub unavailable (${classification}; ${effect}; exit=0; http=none)`,
-    retryable: classification !== "permission",
-    effect,
-  };
-}
-
-function identity(operationId = "op-1"): MirrorCreateIdentity {
-  return {
-    schema: 1,
-    intentUuid: "intent-1",
-    intentDir: INTENT_DIR,
-    repository: REPO,
-    operationId,
-    preparedAt: NOW,
-  };
-}
-
-// A real state document on disk behind the production store ports.
-function fileStore(initial: MirrorStateSnapshot): {
-  ports: MirrorStateStorePorts;
-  state: () => MirrorStateSnapshot;
-} {
-  const statePath = join(dir, "amadeus-state.md");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(statePath, `# State\n\n${renderMirrorStateBlock(initial)}\n`, "utf-8");
-  let locked = false;
-  return {
-    ports: {
-      acquireLock() {
-        if (locked) return false;
-        locked = true;
-        return true;
-      },
-      releaseLock() {
-        locked = false;
-      },
-      readDocument() {
-        return readFileSync(statePath, "utf-8");
-      },
-      writeDocumentAtomic(text) {
-        writeFileSync(statePath, text, "utf-8");
-        return { kind: "ok" };
-      },
-      appendArtifactUpdated() {
-        return { kind: "appended" };
-      },
-    },
-    state() {
-      const parsed = parseMirrorStateDocument(readFileSync(statePath, "utf-8"));
-      if (parsed.kind === "invalid") throw new Error(parsed.issues.join("; "));
-      return parsed.snapshot;
-    },
-  };
-}
-
-type ProjectFixture = {
-  items?: MirrorProjectItemsView;
-  listResult?: GatewayOutcome<MirrorProjectItemsView>;
-  field?: MirrorResolvedProjectFields;
-  fieldResult?: GatewayOutcome<MirrorResolvedProjectFields>;
-  addResult?: GatewayOutcome<{ itemId: string }>;
-  updateResult?: GatewayOutcome<void>;
-  workflowUpdateResult?: GatewayOutcome<void>;
-};
-
-class ProjectGateway implements MirrorGitHubGateway {
-  readonly history: string[] = [];
-  readonly resolvedPhaseFields: string[] = [];
-  issue: RemoteMirrorIssue;
-  fixture: ProjectFixture = {};
-
-  constructor(body: string) {
-    this.issue = {
-      repository: REPO,
-      number: 7,
-      title: "Mirror",
-      body,
-      state: "OPEN",
-    };
-  }
-
-  async readiness(): Promise<GatewayOutcome<void>> {
-    this.history.push("readiness");
-    return ok(undefined);
-  }
-  async createIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
-    this.history.push("create");
-    return ok(this.issue);
-  }
-  async findIssuesByMarker(): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
-    this.history.push("find");
-    return ok([]);
-  }
-  async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
-    this.history.push("view");
-    return ok(this.issue);
-  }
-  async editIssue(
-    _permit: Parameters<MirrorGitHubGateway["editIssue"]>[0],
-    body: string,
-  ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
-    this.history.push("edit");
-    this.issue = { ...this.issue, body };
-    return ok(this.issue);
-  }
-  async closeIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
-    this.history.push("close");
-    this.issue = { ...this.issue, state: "CLOSED" };
-    return ok(this.issue);
-  }
-
-  async listProjectItems(): Promise<GatewayOutcome<MirrorProjectItemsView>> {
-    this.history.push("list-project-items");
-    if (this.fixture.listResult) return this.fixture.listResult;
-    return ok(this.fixture.items ?? { issueNodeId: ISSUE_NODE_ID, items: [] });
-  }
-  async resolveProjectFields(
-    _project: Parameters<MirrorGitHubGateway["resolveProjectFields"]>[0],
-    phaseField: Parameters<MirrorGitHubGateway["resolveProjectFields"]>[1],
-  ): Promise<
-    GatewayOutcome<MirrorResolvedProjectFields>
-  > {
-    this.history.push("resolve-project-fields");
-    this.resolvedPhaseFields.push(phaseField);
-    if (this.fixture.fieldResult) return this.fixture.fieldResult;
-    return ok(
-      this.fixture.field ?? {
-        projectId: PROJECT_NODE_ID,
-        lifecycle: {
-          fieldId: "PVTSSF_status",
-          options: [
-            { id: "opt-ideation", name: "Ideation" },
-            { id: "opt-done", name: "Done" },
-          ],
-        },
-        auxiliaryStatus: null,
-      },
-    );
-  }
-  async addProjectItem(): Promise<GatewayOutcome<{ itemId: string }>> {
-    this.history.push("add-project-item");
-    return this.fixture.addResult ?? ok({ itemId: "PVTI_added" });
-  }
-  async updateProjectItemStatus(
-    _permit: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>[0],
-    _projectId: string,
-    _itemId: string,
-    _fieldId: string,
-    optionId: string,
-  ): Promise<GatewayOutcome<void>> {
-    this.history.push("update-project-item-status");
-    this.history.push(`option:${optionId}`);
-    if (optionId === "opt-in-progress" || optionId === "opt-workflow-done") {
-      return this.fixture.workflowUpdateResult ?? ok(undefined);
-    }
-    return this.fixture.updateResult ?? ok(undefined);
-  }
-}
-
-function workflowSnapshot(
-  overrides: Partial<MirrorSnapshot> = {},
-): MirrorSnapshot {
-  return {
-    intentUuid: "intent-1",
-    intentDir: INTENT_DIR,
-    projectSummary: "demo",
-    lifecyclePhase: "Ideation",
-    currentStage: "intent-capture",
-    status: "In Progress",
-    registryStatus: "in-flight",
-    updatedAt: NOW,
-    ...overrides,
-  };
-}
-
-function context(
-  operation: MirrorOperation,
-  gateway: MirrorGitHubGateway,
-  options: {
-    targets?: readonly MirrorProjectTarget[];
-    snapshot?: MirrorSnapshot;
-    diagnostics?: MirrorProjectDiagnostic[];
-    boundary?: MirrorExecutionContext["event"]["boundary"];
-  } = {},
-): MirrorExecutionContext {
-  const boundary =
-    options.boundary ??
-    ({ kind: "phase-verified", phase: "ideation", instance: "phase-1" } as const);
-  const event = mirrorEventIdentity("intent-1", boundary, operation);
-  const diagnostics = options.diagnostics;
-  const snapshot = options.snapshot ?? workflowSnapshot();
-  // The completion guard requires durable landing evidence before any
-  // workflow-completed operation runs at all.
-  const landed =
-    snapshot.registryStatus === "complete" && snapshot.status === "Completed";
-  return {
-    statePath: join(dir, "amadeus-state.md"),
-    intentUuid: "intent-1",
-    intentDir: INTENT_DIR,
-    repository: REPO,
-    triggerEvent: event,
-    event,
-    operation,
-    issueContent: {
-      title: "Mirror",
-      body: `snapshot\n${renderMirrorMarker(identity())}`,
-      labels: ["amadeus-intent-mirror"],
-    },
-    expectedMirrorRevision: 0,
-    now: () => NOW,
-    newOperationId: () => "op-1",
-    gateway,
-    authorization: {
-      kind: "auto",
-      event,
-      operation,
-      boundaryInstance: boundary.instance,
-      receiptRevision: 1,
-      resolvedMode: "auto",
-      ...(landed
-        ? {
-            landing: {
-              registryStatus: "complete" as const,
-              workflowStatus: "Completed" as const,
-            },
-          }
-        : {}),
-    },
-    projectSync: {
-      targets: options.targets ?? [TARGET],
-      snapshot,
-      ...(diagnostics ? { diagnostic: (d) => diagnostics.push(d) } : {}),
-    },
-  };
-}
-
-function linkedState(): MirrorStateSnapshot {
-  return {
-    ...EMPTY_MIRROR_STATE,
-    issueNumber: 7,
-    provenance: {
-      schema: 1,
-      createIdentity: identity(),
-      issueNumber: 7,
-      createdAt: NOW,
-    },
-  };
-}
-
-function markerBody(): string {
-  return `snapshot\n${renderMirrorMarker(identity())}`;
-}
-
-const PROJECT_CALLS: ReadonlySet<string> = new Set([
-  "list-project-items",
-  "resolve-project-fields",
-  "add-project-item",
-  "update-project-item-status",
-]);
-
-function projectCalls(gateway: ProjectGateway): string[] {
-  return gateway.history.filter((entry) => PROJECT_CALLS.has(entry));
-}
-
 describe("t342 create then project sync", () => {
-  test("a configured phase-field drives resolution and current-value comparison", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
-    gateway.fixture.items = {
-      issueNodeId: ISSUE_NODE_ID,
-      items: [
-        {
-          projectId: PROJECT_NODE_ID,
-          projectNumber: 5,
-          projectOwner: "acme",
-          itemId: "PVTI_existing",
-          fieldValues: { Lifecycle: "Ideation", Status: "In progress" },
-        },
-      ],
-    };
-
-    const outcome = await executeMirrorOperation({
-      context: context("sync", gateway, {
-        targets: [{ ...TARGET, phaseField: "Lifecycle" }],
-      }),
-      ports: store.ports,
-      localState: store.state(),
-    });
-
-    expect(outcome.kind).toBe("completed");
-    expect(gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
-    expect(gateway.history).not.toContain("update-project-item-status");
-  });
-
-  test("the authoritative field wins when phase-field and Status resolve to the same field", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
-    gateway.fixture.field = {
-      projectId: PROJECT_NODE_ID,
-      lifecycle: {
-        fieldId: "PVTSSF_shared",
-        options: [{ id: "opt-ideation", name: "Ideation" }],
-      },
-      auxiliaryStatus: {
-        fieldId: "PVTSSF_shared",
-        options: [{ id: "opt-in-progress", name: "In progress" }],
-      },
-    };
-
-    await executeMirrorOperation({
-      context: context("create", gateway, {
-        targets: [{ ...TARGET, phaseField: "Status" }],
-      }),
-      ports: store.ports,
-      localState: store.state(),
-    });
-
-    expect(gateway.history).toContain("option:opt-ideation");
-    expect(gateway.history).not.toContain("option:opt-in-progress");
-  });
-
-  test("an active Intent updates Intent Phase and auxiliary Status", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
-    gateway.fixture.field = {
-      projectId: PROJECT_NODE_ID,
-      lifecycle: {
-        fieldId: "PVTSSF_intent_phase",
-        options: [
-          { id: "opt-ideation", name: "Ideation" },
-          { id: "opt-done", name: "Done" },
-        ],
-      },
-      auxiliaryStatus: {
-        fieldId: "PVTSSF_status",
-        options: [
-          { id: "opt-in-progress", name: "In progress" },
-          { id: "opt-workflow-done", name: "Done" },
-        ],
-      },
-    };
-
-    const outcome = await executeMirrorOperation({
-      context: context("create", gateway),
-      ports: store.ports,
-      localState: store.state(),
-    });
-
-    expect(outcome.kind).toBe("completed");
-    expect(gateway.history).toContain("option:opt-ideation");
-    expect(gateway.history).toContain("option:opt-in-progress");
-  });
-
-  test("an unmapped lifecycle phase still updates auxiliary Status", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
-    gateway.fixture.field = {
-      projectId: PROJECT_NODE_ID,
-      lifecycle: {
-        fieldId: "PVTSSF_intent_phase",
-        options: [{ id: "opt-ideation", name: "Ideation" }],
-      },
-      auxiliaryStatus: {
-        fieldId: "PVTSSF_status",
-        options: [{ id: "opt-in-progress", name: "In progress" }],
-      },
-    };
-
-    const outcome = await executeMirrorOperation({
-      context: context("create", gateway, {
-        snapshot: workflowSnapshot({ lifecyclePhase: "Initialization" }),
-      }),
-      ports: store.ports,
-      localState: store.state(),
-    });
-
-    expect(outcome.kind).toBe("completed");
-    expect(gateway.history).not.toContain("option:opt-ideation");
-    expect(gateway.history).toContain("option:opt-in-progress");
-  });
-
-  test("an auxiliary Status failure does not block Intent Phase sync", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
-    gateway.fixture.field = {
-      projectId: PROJECT_NODE_ID,
-      lifecycle: {
-        fieldId: "PVTSSF_intent_phase",
-        options: [{ id: "opt-ideation", name: "Ideation" }],
-      },
-      auxiliaryStatus: {
-        fieldId: "PVTSSF_status",
-        options: [{ id: "opt-in-progress", name: "In progress" }],
-      },
-    };
-    gateway.fixture.workflowUpdateResult = failure("network");
-
-    const outcome = await executeMirrorOperation({
-      context: context("create", gateway),
-      ports: store.ports,
-      localState: store.state(),
-    });
-
-    expect(outcome.kind).toBe("completed");
-    expect(store.state().projectSync?.projects[0]).toMatchObject({
-      lastAppliedStatus: "Ideation",
-      state: "synced",
-    });
-  });
-
   test("a fresh create adds the item, sets Intent Phase, and records one synced row", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(harness.markerBody());
     const outcome = await executeMirrorOperation({
-      context: context("create", gateway),
+      context: harness.context("create", gateway),
       ports: store.ports,
       localState: store.state(),
     });
@@ -498,7 +55,7 @@ describe("t342 create then project sync", () => {
       "list-project-items",
       "resolve-project-fields",
       "add-project-item",
-      "update-project-item-status",
+      "update-project-item-field",
     ]);
     expect(store.state().projectSync).toEqual({
       projects: [
@@ -515,13 +72,13 @@ describe("t342 create then project sync", () => {
   });
 
   test("the ledger survives on disk as a parseable state document", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
     await executeMirrorOperation({
-      context: context("create", new ProjectGateway(markerBody())),
+      context: harness.context("create", new ProjectGateway(harness.markerBody())),
       ports: store.ports,
       localState: store.state(),
     });
-    const document = readFileSync(join(dir, "amadeus-state.md"), "utf-8");
+    const document = readFileSync(harness.statePath, "utf-8");
     expect(document).toContain('"projectSync":{"projects":[');
     expect(parseMirrorStateDocument(document).kind).toBe("ok");
   });
@@ -529,8 +86,8 @@ describe("t342 create then project sync", () => {
 
 describe("t342 idempotence", () => {
   test("a second sync over a converged board issues no Project mutation", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.items = {
       issueNodeId: ISSUE_NODE_ID,
       items: [
@@ -539,12 +96,12 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_item1",
-          fieldValues: { "Intent Phase": "Ideation" },
+          singleSelectValuesByFieldId: { PVTSSF_intent_phase: "Ideation" },
         },
       ],
     };
     const outcome = await executeMirrorOperation({
-      context: context("sync", gateway),
+      context: harness.context("sync", gateway),
       ports: store.ports,
       localState: store.state(),
     });
@@ -560,11 +117,11 @@ describe("t342 idempotence", () => {
   });
 
   test("running the same boundary twice leaves the Project mutation total unchanged", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     const run = () =>
       executeMirrorOperation({
-        context: context("sync", gateway),
+        context: harness.context("sync", gateway),
         ports: store.ports,
         localState: store.state(),
       });
@@ -573,7 +130,8 @@ describe("t342 idempotence", () => {
     const afterFirst = gateway.history.filter((entry) =>
       entry.startsWith("add-") || entry.startsWith("update-"),
     ).length;
-    // The board now reports the item the first pass created, at the Status it set.
+    // The board now reports the item the first pass created, at the lifecycle
+    // value it set.
     gateway.fixture.items = {
       issueNodeId: ISSUE_NODE_ID,
       items: [
@@ -582,7 +140,7 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_added",
-          fieldValues: { "Intent Phase": "Ideation" },
+          singleSelectValuesByFieldId: { PVTSSF_intent_phase: "Ideation" },
         },
       ],
     };
@@ -597,8 +155,8 @@ describe("t342 idempotence", () => {
   });
 
   test("an already-present item is never added again", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.items = {
       issueNodeId: ISSUE_NODE_ID,
       items: [
@@ -607,26 +165,26 @@ describe("t342 idempotence", () => {
           projectNumber: 5,
           projectOwner: "acme",
           itemId: "PVTI_item1",
-          fieldValues: { "Intent Phase": "Inception" },
+          singleSelectValuesByFieldId: { PVTSSF_intent_phase: "Inception" },
         },
       ],
     };
     await executeMirrorOperation({
-      context: context("sync", gateway),
+      context: harness.context("sync", gateway),
       ports: store.ports,
       localState: store.state(),
     });
     expect(gateway.history).not.toContain("add-project-item");
-    expect(gateway.history).toContain("update-project-item-status");
+    expect(gateway.history).toContain("update-project-item-field");
   });
 });
 
 describe("t342 no configuration", () => {
   test("no configured Project makes zero Project API calls and writes no ledger", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(harness.markerBody());
     const outcome = await executeMirrorOperation({
-      context: context("create", gateway, { targets: [] }),
+      context: harness.context("create", gateway, { targets: [] }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -637,9 +195,9 @@ describe("t342 no configuration", () => {
   });
 
   test("an execution context without projectSync at all behaves the same", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
-    const base = context("create", gateway);
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(harness.markerBody());
+    const base = harness.context("create", gateway);
     const { projectSync: _omitted, ...withoutProjectSync } = base;
     const outcome = await executeMirrorOperation({
       context: withoutProjectSync as MirrorExecutionContext,
@@ -652,14 +210,14 @@ describe("t342 no configuration", () => {
   });
 
   test("close never runs the Project step", async () => {
-    const store = fileStore({
-      ...linkedState(),
+    const store = harness.fileStore({
+      ...harness.linkedState(),
       receipts: {},
     });
-    const gateway = new ProjectGateway(markerBody());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.issue = { ...gateway.issue, state: "CLOSED" };
     await executeMirrorOperation({
-      context: context("close", gateway, {
+      context: harness.context("close", gateway, {
         boundary: { kind: "workflow-completed", instance: "done-1" },
       }),
       ports: store.ports,
@@ -671,13 +229,13 @@ describe("t342 no configuration", () => {
 
 describe("t342 failure containment", () => {
   test("a membership query failure keeps the Issue link and marks every target pending", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.listResult = failure("network");
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     const outcome = await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -701,12 +259,12 @@ describe("t342 failure containment", () => {
   });
 
   test("a membership query failure leaves a visible unsynchronized warning", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.listResult = failure("network");
 
     await executeMirrorOperation({
-      context: context("sync", gateway),
+      context: harness.context("sync", gateway),
       ports: store.ports,
       localState: store.state(),
     });
@@ -717,13 +275,13 @@ describe("t342 failure containment", () => {
   });
 
   test("an add failure classifies that Project by its failure class", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.addResult = failure("permission");
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     const outcome = await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -735,18 +293,18 @@ describe("t342 failure containment", () => {
       project: "acme/5",
       state: "safety-blocked",
     });
-    expect(gateway.history).not.toContain("update-project-item-status");
+    expect(gateway.history).not.toContain("update-project-item-field");
     expect(diagnostics.map((d) => d.reason)).toEqual(["add-failed"]);
   });
 
   test("an update failure leaves a pending row, so a retry re-applies", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.updateResult = failure("api", "outcome-unknown");
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -761,13 +319,13 @@ describe("t342 failure containment", () => {
 
 describe("t342 safety-blocked observations", () => {
   test("an unresolved Project is marked without any mutation", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.fieldResult = failure("api");
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -790,12 +348,13 @@ describe("t342 safety-blocked observations", () => {
   });
 
   test("a missing Intent Phase option yields the expected name and the real option list", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
-        fieldId: "PVTSSF_status",
+        fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [
           { id: "opt-a", name: "Backlog" },
           { id: "opt-b", name: "Shipped" },
@@ -806,7 +365,7 @@ describe("t342 safety-blocked observations", () => {
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -821,7 +380,7 @@ describe("t342 safety-blocked observations", () => {
           'the Project "Intent Phase" field has no option named exactly "Ideation"',
       },
     ]);
-    expect(gateway.history).not.toContain("update-project-item-status");
+    expect(gateway.history).not.toContain("update-project-item-field");
     // A column the board does not declare cannot be reached by retrying.
     expect(store.state().projectSync?.projects[0]).toMatchObject({
       state: "safety-blocked",
@@ -829,12 +388,13 @@ describe("t342 safety-blocked observations", () => {
   });
 
   test("a case-only difference does not match, proving exact-match matching", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
-        fieldId: "PVTSSF_status",
+        fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [{ id: "opt-a", name: "ideation" }],
       },
       auxiliaryStatus: null,
@@ -842,7 +402,7 @@ describe("t342 safety-blocked observations", () => {
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -852,12 +412,12 @@ describe("t342 safety-blocked observations", () => {
   });
 
   test("a configured name that no board option carries is the falling case", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, {
+      context: harness.context("sync", gateway, {
         diagnostics,
         targets: [
           {
@@ -882,12 +442,13 @@ describe("t342 safety-blocked observations", () => {
   });
 
   test("no diagnostic ever carries a secret from the remote or the summary", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
-        fieldId: "PVTSSF_status",
+        fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [{ id: SECRET, name: "Backlog" }],
       },
       auxiliaryStatus: null,
@@ -895,7 +456,7 @@ describe("t342 safety-blocked observations", () => {
     const diagnostics: MirrorProjectDiagnostic[] = [];
 
     await executeMirrorOperation({
-      context: context("sync", gateway, { diagnostics }),
+      context: harness.context("sync", gateway, { diagnostics }),
       ports: store.ports,
       localState: store.state(),
     });
@@ -904,7 +465,7 @@ describe("t342 safety-blocked observations", () => {
     expect(diagnostics).toHaveLength(1);
     expect(rendered).toContain("option-missing");
     expect(rendered).not.toContain(SECRET);
-    expect(readFileSync(join(dir, "amadeus-state.md"), "utf-8")).not.toContain(
+    expect(readFileSync(harness.statePath, "utf-8")).not.toContain(
       SECRET,
     );
   });
@@ -912,21 +473,23 @@ describe("t342 safety-blocked observations", () => {
 
 describe("t342 keep branch", () => {
   test("a parked boundary adds the item but applies no Intent Phase", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
         fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [{ id: "opt-ideation", name: "Ideation" }],
       },
       auxiliaryStatus: {
         fieldId: "PVTSSF_status",
+        fieldName: "Status",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
     };
     await executeMirrorOperation({
-      context: context("sync", gateway, {
+      context: harness.context("sync", gateway, {
         boundary: { kind: "parked", stage: "feasibility", instance: "park-1" },
       }),
       ports: store.ports,
@@ -934,7 +497,7 @@ describe("t342 keep branch", () => {
     });
 
     expect(gateway.history).toContain("add-project-item");
-    expect(gateway.history).not.toContain("update-project-item-status");
+    expect(gateway.history).not.toContain("update-project-item-field");
     expect(store.state().projectSync?.projects[0]).toMatchObject({
       state: "synced",
       lastAppliedStatus: null,
@@ -944,21 +507,23 @@ describe("t342 keep branch", () => {
 
 describe("t342 call budget", () => {
   test("one membership query and at most three mutations per Project", async () => {
-    const store = fileStore(EMPTY_MIRROR_STATE);
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
         fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [{ id: "opt-ideation", name: "Ideation" }],
       },
       auxiliaryStatus: {
         fieldId: "PVTSSF_status",
+        fieldName: "Status",
         options: [{ id: "opt-in-progress", name: "In progress" }],
       },
     };
     await executeMirrorOperation({
-      context: context("create", gateway),
+      context: harness.context("create", gateway),
       ports: store.ports,
       localState: store.state(),
     });
@@ -967,27 +532,29 @@ describe("t342 call budget", () => {
     expect(calls.filter((c) => c === "list-project-items")).toHaveLength(1);
     expect(calls.filter((c) => c === "resolve-project-fields")).toHaveLength(1);
     expect(
-      calls.filter((c) => c === "add-project-item" || c === "update-project-item-status"),
+      calls.filter((c) => c === "add-project-item" || c === "update-project-item-field"),
     ).toHaveLength(3);
   });
 
   test("a landed workflow drives the done column", async () => {
-    const store = fileStore(linkedState());
-    const gateway = new ProjectGateway(markerBody());
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.field = {
       projectId: PROJECT_NODE_ID,
       lifecycle: {
         fieldId: "PVTSSF_intent_phase",
+        fieldName: "Intent Phase",
         options: [{ id: "opt-done", name: "Done" }],
       },
       auxiliaryStatus: {
         fieldId: "PVTSSF_status",
+        fieldName: "Status",
         options: [{ id: "opt-workflow-done", name: "Done" }],
       },
     };
     await executeMirrorOperation({
-      context: context("sync", gateway, {
-        snapshot: workflowSnapshot({
+      context: harness.context("sync", gateway, {
+        snapshot: harness.workflowSnapshot({
           registryStatus: "complete",
           status: "Completed",
           lifecyclePhase: "Operation",

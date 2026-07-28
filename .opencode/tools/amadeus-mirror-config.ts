@@ -26,7 +26,7 @@ import {
 } from "node:fs";
 import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
-import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-policy.ts";
+import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-project-contract.ts";
 import type {
   MirrorMode,
   MirrorPhaseKey,

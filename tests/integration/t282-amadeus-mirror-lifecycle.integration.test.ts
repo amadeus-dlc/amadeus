@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   driveMirrorBoundary,
+  type DriveMirrorBoundaryInput,
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import {
   resolveMirrorRecordIdentity,
@@ -115,17 +116,19 @@ class LifecycleGateway implements MirrorGitHubGateway {
   async resolveProjectFields(
     ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
   ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
-    throw new Error("LifecycleGateway must not resolve a Project Status field");
+    throw new Error("LifecycleGateway must not resolve Project fields");
   }
   async addProjectItem(
     ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
   ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
     throw new Error("LifecycleGateway must not add a Project item");
   }
-  async updateProjectItemStatus(
-    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
-  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
-    throw new Error("LifecycleGateway must not update a Project item status");
+  async updateProjectItemSingleSelectField(
+    ..._args: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemSingleSelectField"]> {
+    throw new Error("LifecycleGateway must not update a Project item field");
   }
 }
 
@@ -261,7 +264,7 @@ function boundaryInput(
   mode: "off" | "prompt" | "auto",
   instance: string,
   kind: "phase" | "completion" = "phase",
-) {
+): DriveMirrorBoundaryInput {
   return {
     context: {
       projectDir: fx.root,

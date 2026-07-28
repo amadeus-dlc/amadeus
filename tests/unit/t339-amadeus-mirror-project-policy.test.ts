@@ -1,4 +1,4 @@
-// t339 — C2 Project status derivation: default table, overrides, keep branches,
+// t339 — C2 Project field derivation: default table, overrides, keep branches,
 // landing branch, unmapped phase, and exact-match option lookup.
 // covers: packages/framework/core/tools/amadeus-mirror-policy.ts
 // size: small
@@ -31,6 +31,7 @@ function snapshot(overrides: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
 
 const FIELD: MirrorProjectSingleSelectField = {
   fieldId: "PVTSSF_field",
+  fieldName: "Intent Phase",
   options: [
     { id: "opt-ideation", name: "Ideation" },
     { id: "opt-done", name: "Done" },
@@ -221,7 +222,7 @@ describe("t339 auxiliary Status policy", () => {
       ),
     ).toEqual({
       lifecycle: { kind: "keep" },
-      auxiliaryStatus: "In progress",
+      auxiliaryStatus: { kind: "status", name: "In progress" },
     });
   });
 
@@ -232,13 +233,30 @@ describe("t339 auxiliary Status policy", () => {
         "workflow-completed",
         {},
       ).auxiliaryStatus,
-    ).toBe("Done");
+    ).toEqual({ kind: "status", name: "Done" });
   });
 
   test("a parked Intent leaves auxiliary Status unchanged", () => {
     expect(
       expectedProjectFieldValues(snapshot(), "parked", {}).auxiliaryStatus,
-    ).toBeNull();
+    ).toEqual({ kind: "keep" });
+  });
+
+  test("an archived Intent leaves both Project fields unchanged", () => {
+    expect(
+      expectedProjectFieldValues(
+        snapshot({
+          registryStatus: "archived",
+          status: "Completed",
+          lifecyclePhase: "Operation",
+        }),
+        "manual",
+        {},
+      ),
+    ).toEqual({
+      lifecycle: { kind: "keep" },
+      auxiliaryStatus: { kind: "keep" },
+    });
   });
 });
 

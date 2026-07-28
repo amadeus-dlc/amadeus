@@ -146,6 +146,10 @@ function makeProject(): string {
     join(proj, ".claude", "tools", "amadeus-mirror-policy.ts"),
   );
   copyFileSync(
+    join(SRC_TOOLS, "amadeus-mirror-project-contract.ts"),
+    join(proj, ".claude", "tools", "amadeus-mirror-project-contract.ts"),
+  );
+  copyFileSync(
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),
   );

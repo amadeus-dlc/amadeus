@@ -7,6 +7,7 @@ import {
   driveMirrorBoundary,
   selectMirrorReconciliation,
   selectNextCompletion,
+  type DriveMirrorBoundaryInput,
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import { mirrorEventIdentity, mirrorEventKey } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import {
@@ -82,7 +83,7 @@ function input(
   store: ReturnType<typeof memoryStore>,
   mode: "off" | "prompt" | "auto",
   kind: "phase" | "completion" = "phase",
-) {
+): DriveMirrorBoundaryInput {
   return {
     context: {
       projectDir: "/project",

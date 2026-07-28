@@ -29,10 +29,10 @@ import {
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
 import {
-  DEFAULT_PROJECT_PHASE_FIELD,
   expectedProjectStatus,
   selectProjectStatusOption,
 } from "./amadeus-mirror-policy.ts";
+import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-project-contract.ts";
 import {
   parseMirrorMarker,
   renderMirrorMarker,
@@ -151,7 +151,7 @@ type ResolvedLifecycleTarget =
       space: string;
       intentDir: string;
       intentUuid: string;
-      registryStatus: string;
+      registryStatus: MirrorSnapshot["registryStatus"];
       repository: RepositoryIdentity;
       statePath: string;
       stateContent: string;
@@ -262,7 +262,7 @@ function lifecycleRuntime(
 type SnapshotSource = Readonly<{
   intentUuid: string;
   intentDir: string;
-  registryStatus: string;
+  registryStatus: MirrorSnapshot["registryStatus"];
   stateContent: string;
   slug: string;
 }>;
@@ -710,7 +710,7 @@ type RepairTarget =
 type RepairRegistryEntry = Readonly<{
   uuid: string;
   intentDir: string;
-  status: string;
+  status: MirrorSnapshot["registryStatus"];
   slug: string;
 }>;
 
@@ -911,9 +911,9 @@ async function issueAndConfirmRepair(input: {
 //
 // `repair status` observes the Project boards this Intent syncs to and never
 // touches them: it calls only the two read methods of the gateway, and the
-// mutation methods (addProjectItem / updateProjectItemStatus) are unreachable
-// from this path. The ledger is an input, never an output — a diagnosis of a
-// board that has drifted does not record that diagnosis anywhere.
+// mutation methods (addProjectItem / updateProjectItemSingleSelectField) are
+// unreachable from this path. The ledger is an input, never an output — a
+// diagnosis of a board that has drifted does not record that diagnosis anywhere.
 //
 // The expected column comes from `expectedProjectStatus`, the same definition
 // the sync applies, so a diagnosis can never disagree with what a sync would do.
@@ -1047,18 +1047,16 @@ async function diagnoseProject(
       each.projectOwner === project.project.owner &&
       each.projectNumber === project.project.number,
   );
-  const currentStatus = item?.fieldValues[project.phaseField] ?? null;
   const expected = expectedProjectStatus(snapshot, "manual", project.statusNames);
   const expectedStatus = expected.kind === "status" ? expected.name : null;
   const membership: MirrorRepairProjectDiagnostic["membership"] =
     item === undefined ? "not-member" : "member";
-  const base = {
+  const unresolvedBase = {
     project: canonical,
     membership,
-    currentStatus,
+    currentStatus: null,
     expectedStatus,
-    // No expected column means nothing to drift from.
-    drift: expectedStatus !== null && currentStatus !== expectedStatus,
+    drift: false,
   };
 
   const field = await target.gateway.resolveProjectFields(
@@ -1068,7 +1066,7 @@ async function diagnoseProject(
   if (field.kind === "failure") {
     const resolution = unreachableResolution(field.classification);
     return {
-      ...base,
+      ...unresolvedBase,
       resolution,
       summary:
         resolution === "permission-denied"
@@ -1076,6 +1074,14 @@ async function diagnoseProject(
           : fieldMissingSummary(canonical, project.phaseField),
     };
   }
+  const currentStatus =
+    item?.singleSelectValuesByFieldId[field.value.lifecycle.fieldId] ?? null;
+  const base = {
+    ...unresolvedBase,
+    currentStatus,
+    // No expected column means nothing to drift from.
+    drift: expectedStatus !== null && currentStatus !== expectedStatus,
+  };
   if (
     expected.kind === "status" &&
     selectProjectStatusOption(field.value.lifecycle, expected.name) === null
@@ -1084,7 +1090,11 @@ async function diagnoseProject(
       ...base,
       resolution: "option-missing",
       availableOptions: field.value.lifecycle.options.map((option) => option.name),
-      summary: optionMissingSummary(canonical, project.phaseField, expected.name),
+      summary: optionMissingSummary(
+        canonical,
+        field.value.lifecycle.fieldName,
+        expected.name,
+      ),
     };
   }
   return { ...base, resolution: "resolved", summary: resolvedSummary(base) };
