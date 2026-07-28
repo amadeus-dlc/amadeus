@@ -73,7 +73,7 @@ function deps(opts: Opts = {}): PluginCliDeps {
       backend,
       verify: () => ({ ok: true }),
       lock: createNodeLock(root),
-      newTxnId: () => `t350-${Date.now()}-${Math.random()}`,
+      newTxnId: () => `t353-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => opts.recompileOk !== false,
     recordDrops: recordPluginDrops,
@@ -95,8 +95,8 @@ const scratchDirs = (): readonly string[] =>
     : [];
 
 beforeEach(() => {
-  host = mkdtempSync(join(tmpdir(), "amadeus-t350-host-"));
-  source = join(mkdtempSync(join(tmpdir(), "amadeus-t350-src-")), PLUGIN);
+  host = mkdtempSync(join(tmpdir(), "amadeus-t353-host-"));
+  source = join(mkdtempSync(join(tmpdir(), "amadeus-t353-src-")), PLUGIN);
   cpSync(FIXTURE, source, { recursive: true });
   out.length = 0;
   err.length = 0;
@@ -108,7 +108,7 @@ afterEach(() => {
   rmSync(dirname(source), { recursive: true, force: true });
 });
 
-describe("t350 plugin install verb (U2, #1597)", () => {
+describe("t353 plugin install verb (U2, #1597)", () => {
   test("a fresh install stages the source and composes through the shared path", () => {
     const result = runPluginCli(["install", source, "--project-root", host], deps());
     expect(result).toEqual({ kind: "installed", name: PLUGIN, composeOutcome: "composed" });
