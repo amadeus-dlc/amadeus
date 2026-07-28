@@ -34,6 +34,7 @@ import {
 import {
   handleIntentSelectionResponse,
 } from "../../packages/framework/core/tools/amadeus-utility.ts";
+import { listIntents } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -41,6 +42,13 @@ const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-util
 const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-orchestrate.ts");
 
 let proj: string;
+
+function currentSelectionCandidates() {
+  return listIntents(proj).filter(
+    (intent): intent is typeof intent & { dirName: string } => intent.dirName !== null,
+  );
+}
+
 beforeEach(() => {
   proj = createTestProject();
   // P9: the birth gate's whole point is consulting an EMPTY registry (zero
@@ -152,21 +160,27 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(recordDirs(proj).length).toBe(2); // no duplicate born
     });
 
-    test("the canonical response resolver maps a full-width ordinal and selects atomically", () => {
+    test("the canonical resolver maps a full-width ordinal and the utility selects under one lock", () => {
       seedTwoIntentsNoCursor();
       const firstRecord = readIntentRegistry(proj)[0].dirName;
       if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
       const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
       expect(
-        resolveCurrentIntentSelectionResponse(proj, directive.selection_token, "１"),
+        resolveCurrentIntentSelectionResponse(
+          "default",
+          currentSelectionCandidates(),
+          directive.selection_token,
+          "１",
+        ),
       ).toEqual({
         kind: "resolved",
         target: readIntentRegistry(proj)[0].slug,
       });
       expect(
         resolveCurrentIntentSelectionResponse(
-          proj,
-          createIntentSelectionToken(["feature", "poc"]),
+          "default",
+          currentSelectionCandidates(),
+          createIntentSelectionToken("default", ["feature", "poc"]),
           "1",
         ),
       ).toMatchObject({ kind: "rejected" });
@@ -180,11 +194,24 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(selected.status, selected.out).toBe(0);
       expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
       expect(
-        resolveCurrentIntentSelectionResponse(proj, directive.selection_token, "1"),
+        resolveCurrentIntentSelectionResponse(
+          "default",
+          currentSelectionCandidates(),
+          directive.selection_token,
+          "1",
+        ),
       ).toEqual({
         kind: "rejected",
         message: "Intent selection is no longer pending because an active intent is set.",
       });
+      const repeated = util([
+        "intent-select-response",
+        directive.selection_token,
+        "1",
+      ]);
+      expect(repeated.status).toBe(1);
+      expect(repeated.out).toContain("no longer pending");
+      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
     });
 
     test("the in-process utility boundary applies the validated response", () => {
@@ -236,7 +263,7 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       ]);
       const forgedOptionSet = util([
         "intent-select-response",
-        createIntentSelectionToken(["feature", "poc"]),
+        createIntentSelectionToken("default", ["feature", "poc"]),
         "1",
       ]);
 

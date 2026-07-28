@@ -122,6 +122,7 @@ import {
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
   type IntentLifecycleAuditEvent,
+  type LockedIntentRegistryContext,
   withIntentLifecyclePreflight,
   rulesSubdir,
   type ScopeDefinition,
@@ -4776,16 +4777,22 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
     delegateIntentLifecycle(projectDir, target, resolved);
     return;
   }
-  selectIntent(projectDir, target);
+  function resolveExplicitTarget(): string {
+    return target;
+  }
+  selectIntent(projectDir, resolveExplicitTarget);
 }
 
-function selectIntent(projectDir: string, target: string): void {
+function selectIntent(
+  projectDir: string,
+  resolveTarget: (context: LockedIntentRegistryContext) => string,
+): void {
   const space = activeSpace(projectDir);
   const match = withIntentLifecyclePreflight(
     projectDir,
     space,
     appendUtilityLifecycleEvent,
-    (context) => selectIntentLocked(context, target),
+    (context) => selectIntentLocked(context, resolveTarget(context)),
   );
   // Re-stamp the LIVE conversation's session→intent record to the switched-to
   // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
@@ -4816,13 +4823,17 @@ export function handleIntentSelectionResponse(
       "Usage: amadeus-utility.ts intent-select-response <selection-token> <human-response>",
     );
   }
-  const resolution = resolveCurrentIntentSelectionResponse(
-    projectDir,
-    selectionToken,
-    response,
-  );
-  if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
-  selectIntent(projectDir, resolution.target);
+  function resolveCurrentTarget(context: LockedIntentRegistryContext): string {
+    const resolution = resolveCurrentIntentSelectionResponse(
+      context.space,
+      listIntents(context.projectDir, context.space),
+      selectionToken,
+      response,
+    );
+    if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
+    return resolution.target;
+  }
+  selectIntent(projectDir, resolveCurrentTarget);
 }
 
 // `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space

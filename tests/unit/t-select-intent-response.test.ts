@@ -7,11 +7,12 @@ import {
   createIntentSelectionToken,
   intentSelectionOptions,
   intentSelectionTokenMatchesOptions,
+  resolveCurrentIntentSelectionResponse,
   resolveIntentSelectionResponse,
 } from "../../packages/framework/core/tools/amadeus-intent-selection.ts";
 
 const options = ["first-intent", "second-intent"];
-const token = createIntentSelectionToken(options);
+const token = createIntentSelectionToken("default", options);
 
 function tokenForPayload(payload: string): string {
   const encoded = Buffer.from(payload, "utf-8").toString("base64url");
@@ -51,8 +52,9 @@ describe("intent selection response resolution", () => {
   test.each([
     ["not-json"],
     [JSON.stringify(null)],
-    [JSON.stringify({ version: 2, options })],
-    [JSON.stringify({ version: 1, options: [1, 2] })],
+    [JSON.stringify({ version: 2, space: "default", options })],
+    [JSON.stringify({ version: 1, options })],
+    [JSON.stringify({ version: 1, space: "default", options: [1, 2] })],
   ])("rejects a validly digested malformed payload: %p", (payload) => {
     expect(resolveIntentSelectionResponse(tokenForPayload(payload), "1")).toEqual({
       kind: "rejected",
@@ -63,13 +65,20 @@ describe("intent selection response resolution", () => {
   test.each([[[]], [[""]], [["   "]], [["same", "same"]]])(
     "refuses to create a token for an invalid option set: %p",
     (invalidOptions) => {
-      expect(() => createIntentSelectionToken(invalidOptions)).toThrow();
+      expect(() => createIntentSelectionToken("default", invalidOptions)).toThrow();
     },
   );
 
+  test("refuses to create a token without a concrete space", () => {
+    expect(() => createIntentSelectionToken(" ", options)).toThrow(
+      "Intent selection space must not be blank.",
+    );
+  });
+
   test("the token is deterministic for the exact displayed order", () => {
-    expect(createIntentSelectionToken(options)).toBe(token);
-    expect(createIntentSelectionToken([...options].reverse())).not.toBe(token);
+    expect(createIntentSelectionToken("default", options)).toBe(token);
+    expect(createIntentSelectionToken("default", [...options].reverse())).not.toBe(token);
+    expect(createIntentSelectionToken("other", options)).not.toBe(token);
     expect(intentSelectionTokenMatchesOptions(token, options)).toBe(true);
     expect(intentSelectionTokenMatchesOptions(token, [...options].reverse())).toBe(false);
   });
@@ -84,5 +93,38 @@ describe("intent selection response resolution", () => {
       "260102-same-bbbbbbbb",
       "unique",
     ]);
+  });
+
+  test("falls back to record directories when concise labels collide across namespaces", () => {
+    expect(intentSelectionOptions([
+      { slug: "same", dirName: "260101-same-aaaaaaaa" },
+      { slug: "same", dirName: "260102-same-bbbbbbbb" },
+      {
+        slug: "260101-same-aaaaaaaa",
+        dirName: "260103-260101-same-aaaaaaaa-cccccccc",
+      },
+    ])).toEqual([
+      "260101-same-aaaaaaaa",
+      "260102-same-bbbbbbbb",
+      "260103-260101-same-aaaaaaaa-cccccccc",
+    ]);
+  });
+
+  test("rejects a snapshot from another space even when its option labels match", () => {
+    expect(
+      resolveCurrentIntentSelectionResponse(
+        "other",
+        [
+          { slug: "first-intent", dirName: "260101-first-intent-aaaaaaaa", active: false },
+          { slug: "second-intent", dirName: "260101-second-intent-bbbbbbbb", active: false },
+        ],
+        token,
+        "1",
+      ),
+    ).toEqual({
+      kind: "rejected",
+      message:
+        "Intent selection token does not match the current registry options or space. Re-run the selection.",
+    });
   });
 });

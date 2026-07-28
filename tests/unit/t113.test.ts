@@ -96,7 +96,7 @@ function selectIntent(): Record<string, unknown> {
   const options = ["first-intent", "second-intent"];
   return {
     kind: "select-intent",
-    selection_token: createIntentSelectionToken(options),
+    selection_token: createIntentSelectionToken("default", options),
     question: "Choose an intent",
     options,
   };

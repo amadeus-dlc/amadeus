@@ -595,12 +595,13 @@ function askDirective(question: string): AskDirective {
 }
 
 function selectIntentDirective(
+  space: string,
   question: string,
   options: string[],
 ): SelectIntentDirective {
   return {
     kind: "select-intent",
-    selection_token: createIntentSelectionToken(options),
+    selection_token: createIntentSelectionToken(space, options),
     question,
     options,
   };
@@ -852,6 +853,7 @@ export function intentPickPromptIfRecordsExist(
   const list = options.map((option) => `\`${option}\``).join(", ");
   const spaceLabel = space === "default" ? "" : ` in space "${space}"`;
   return selectIntentDirective(
+    space,
     `This workspace already has ${intents.length} intent${intents.length === 1 ? "" : "s"}${spaceLabel} but no active intent is selected ` +
       `(the active-intent cursor is per-user and not cloned). ` +
       `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +

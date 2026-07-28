@@ -888,7 +888,7 @@ export const directiveSelfCheckExamples: Directive[] = [
     { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
     {
       kind: "select-intent",
-      selection_token: createIntentSelectionToken(["first-intent", "second-intent"]),
+      selection_token: createIntentSelectionToken("default", ["first-intent", "second-intent"]),
       question: "Choose an existing intent.",
       options: ["first-intent", "second-intent"],
     },
