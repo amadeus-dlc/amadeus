@@ -1,4 +1,5 @@
 {
+  "auto-solo-election": true,
   "mirror-projects": [
     {
       "project": "amadeus-dlc/5"
