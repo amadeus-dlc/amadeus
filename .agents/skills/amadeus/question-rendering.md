@@ -84,6 +84,6 @@ Reply with a number (or just tell me).
   the untouched reply to
   `bun .codex/tools/amadeus-utility.ts intent-select-response "<selection token>" "<exact human response>"`,
   passing `directive.selection_token` unchanged, and re-run `next`. The utility
-  verifies the opaque token, resolves against its engine-issued option snapshot,
+  verifies the opaque token against the current registry identity snapshot,
   normalizes full-width digits, and owns the semantic selection; the conductor
   must not pre-resolve it or call `report`.

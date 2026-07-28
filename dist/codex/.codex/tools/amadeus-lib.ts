@@ -2001,22 +2001,24 @@ export function listIntents(projectDir: string, space?: string): IntentInfo[] {
 }
 
 // Write the active-intent cursor for a space (gitignored per-user pointer).
-// Best-effort: the cursor dir is created if absent; a write failure is swallowed
-// (the cursor is per-user state, never the source of truth — the registry is).
-export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+// Callers that require a completed switch check the result; bootstrap callers
+// may deliberately keep the cursor best-effort because the registry remains
+// the source of truth.
+export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): boolean {
   const dir = intentsDir(projectDir, space);
   try {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
+    writeFileAtomic(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`);
+    return true;
   } catch {
-    /* per-user cursor; best-effort */
+    return false;
   }
 }
 
 // Clear the active-intent cursor when it still points at `dirName` (#1248). Read-
 // then-conditional-delete so a cursor already moved to another intent is left
 // untouched — only the exact intent that is completing releases its own pointer.
-// Best-effort and swallowed, mirroring setActiveIntentCursor: the cursor is
+// Best-effort and swallowed, mirroring bootstrap cursor writes: the cursor is
 // per-user state, never the source of truth (the registry is).
 export function clearActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
   const cursor = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
@@ -2215,7 +2217,7 @@ export function birthIntent(
     { uuid, slug, dirName, scope, repos: repos && repos.length > 0 ? repos : undefined, status: "in-flight" },
     space,
   );
-  setActiveIntentCursor(projectDir, dirName, space);
+  void setActiveIntentCursor(projectDir, dirName, space);
   return { uuid, slug, dirName, recordDir: recordPath, space };
 }
 

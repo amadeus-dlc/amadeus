@@ -35,7 +35,6 @@ import {
   type Directive,
   validateDirective,
 } from "../../dist/claude/.claude/tools/amadeus-directive.ts";
-import { createIntentSelectionToken } from "../../dist/claude/.claude/tools/amadeus-intent-selection.ts";
 
 // --- Well-formed fixtures, one per kind (mirror t113-directive-schema.sh:18-56) ---
 // Fresh object per call so a `delete`/spread in one case can't bleed into another.
@@ -96,7 +95,7 @@ function selectIntent(): Record<string, unknown> {
   const options = ["first-intent", "second-intent"];
   return {
     kind: "select-intent",
-    selection_token: createIntentSelectionToken("default", options),
+    selection_token: "0".repeat(64),
     question: "Choose an intent",
     options,
   };
@@ -318,7 +317,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
       "select-intent: options entries must be unique",
     );
     expect(errs({ ...selectIntent(), selection_token: "modified" })).toContain(
-      "select-intent: selection_token must encode the exact options",
+      "select-intent: selection_token must be a SHA-256 fingerprint",
     );
   });
 

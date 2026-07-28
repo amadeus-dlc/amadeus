@@ -1,36 +1,65 @@
 import { createHash } from "node:crypto";
 
-export type IntentSelectionResolution =
-  | { kind: "resolved"; target: string }
-  | { kind: "rejected"; message: string };
+type SelectableIntentStatus = "in-flight" | "parked" | "complete";
 
 type IntentSelectionCandidate = {
+  uuid: string;
   slug: string;
+  status: string;
   dirName: string | null;
   active: boolean;
 };
 
-function hasRecordDirectory(
-  intent: IntentSelectionCandidate,
-): intent is IntentSelectionCandidate & { dirName: string } {
-  return intent.dirName !== null;
-}
-
-type IntentSelectionTokenPayload = {
-  version: 1;
-  space: string;
-  options: string[];
+type SelectableCandidate = IntentSelectionCandidate & {
+  dirName: string;
+  status: SelectableIntentStatus;
 };
 
-export function intentSelectionOptions(
-  intents: readonly { slug: string; dirName: string }[],
+export type IntentSelectionTarget = Readonly<{
+  uuid: string;
+  dirName: string;
+  status: SelectableIntentStatus;
+}>;
+
+export type IntentSelectionChoice = Readonly<{
+  label: string;
+  target: IntentSelectionTarget;
+}>;
+
+export type IntentSelectionSnapshot = Readonly<{
+  choices: readonly IntentSelectionChoice[];
+  fingerprint: string;
+}>;
+
+export type IntentSelectionResolution =
+  | { kind: "resolved"; target: IntentSelectionTarget }
+  | { kind: "rejected"; message: string };
+
+function isSelectableStatus(status: string): status is SelectableIntentStatus {
+  return status === "in-flight" || status === "parked" || status === "complete";
+}
+
+function isSelectableCandidate(intent: IntentSelectionCandidate): intent is SelectableCandidate {
+  return (
+    intent.uuid.trim().length > 0
+    && intent.dirName !== null
+    && isSelectableStatus(intent.status)
+  );
+}
+
+function choiceLabels(
+  intents: readonly SelectableCandidate[],
 ): string[] {
   const slugCounts = new Map<string, number>();
   for (const intent of intents) {
-    slugCounts.set(intent.slug, (slugCounts.get(intent.slug) ?? 0) + 1);
+    if (intent.slug.trim().length > 0) {
+      slugCounts.set(intent.slug, (slugCounts.get(intent.slug) ?? 0) + 1);
+    }
   }
   const concise = intents.map((intent) =>
-    slugCounts.get(intent.slug) === 1 ? intent.slug : intent.dirName,
+    intent.slug.trim().length > 0 && slugCounts.get(intent.slug) === 1
+      ? intent.slug
+      : intent.dirName,
   );
   // A unique slug can still equal another row's disambiguating directory name.
   // In that rare cross-namespace collision, directory names are the only
@@ -40,114 +69,71 @@ export function intentSelectionOptions(
     : intents.map((intent) => intent.dirName);
 }
 
-function invalidOptions(options: readonly string[]): string | null {
-  if (options.length === 0) return "Intent selection has no displayed options.";
-  if (options.some((option) => option.trim().length === 0)) {
-    return "Intent selection options contain a blank target.";
-  }
-  if (new Set(options).size !== options.length) {
-    return "Intent selection options are not unique.";
-  }
-  return null;
-}
-
-function tokenDigest(encodedPayload: string): string {
-  return createHash("sha256").update(encodedPayload).digest("hex");
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-type DecodedIntentSelectionToken =
-  | { kind: "decoded"; space: string; options: string[] }
-  | { kind: "rejected"; message: string };
-
-export function createIntentSelectionToken(
+function snapshotFingerprint(
   space: string,
-  options: readonly string[],
+  choices: readonly IntentSelectionChoice[],
 ): string {
-  if (space.trim().length === 0) {
-    throw new Error("Intent selection space must not be blank.");
-  }
-  const invalid = invalidOptions(options);
-  if (invalid) throw new Error(invalid);
-  const payload: IntentSelectionTokenPayload = {
-    version: 1,
+  const material = {
+    domain: "amadeus.intent-selection",
+    version: 2,
     space,
-    options: [...options],
+    choices: choices.map((choice) => ({
+      label: choice.label,
+      uuid: choice.target.uuid,
+      dirName: choice.target.dirName,
+    })),
   };
-  const encoded = Buffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
-  return `${encoded}.${tokenDigest(encoded)}`;
+  return createHash("sha256").update(JSON.stringify(material)).digest("hex");
 }
 
-function decodeIntentSelectionToken(token: string): DecodedIntentSelectionToken {
-  const parts = token.split(".");
-  if (parts.length !== 2 || parts[1] !== tokenDigest(parts[0])) {
-    return { kind: "rejected", message: "Intent selection token is invalid." };
+export function buildIntentSelectionSnapshot(
+  space: string,
+  intents: readonly IntentSelectionCandidate[],
+): IntentSelectionSnapshot | null {
+  const selectable = intents.filter(isSelectableCandidate);
+  if (selectable.length === 0) return null;
+  const labels = choiceLabels(selectable);
+  if (new Set(labels).size !== labels.length) {
+    throw new Error("Intent selection labels must be unique.");
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf-8"));
-  } catch {
-    return { kind: "rejected", message: "Intent selection token is invalid." };
+  if (new Set(selectable.map((intent) => intent.uuid)).size !== selectable.length) {
+    throw new Error("Intent selection UUIDs must be unique.");
   }
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    Array.isArray(parsed) ||
-    !("version" in parsed) ||
-    parsed.version !== 1 ||
-    !("space" in parsed) ||
-    typeof parsed.space !== "string" ||
-    parsed.space.trim().length === 0 ||
-    !("options" in parsed) ||
-    !isStringArray(parsed.options)
-  ) {
-    return { kind: "rejected", message: "Intent selection token is invalid." };
+  if (new Set(selectable.map((intent) => intent.dirName)).size !== selectable.length) {
+    throw new Error("Intent selection record directories must be unique.");
   }
-  const options = parsed.options;
-  const invalid = invalidOptions(options);
-  return invalid
-    ? { kind: "rejected", message: invalid }
-    : { kind: "decoded", options, space: parsed.space };
-}
-
-export function intentSelectionTokenMatchesOptions(
-  token: string,
-  options: readonly string[],
-): boolean {
-  const decoded = decodeIntentSelectionToken(token);
-  return (
-    decoded.kind === "decoded" &&
-    decoded.options.length === options.length &&
-    decoded.options.every((option, index) => option === options[index])
+  const choices = selectable.map((intent, index) =>
+    Object.freeze({
+      label: labels[index],
+      target: Object.freeze({
+        uuid: intent.uuid,
+        dirName: intent.dirName,
+        status: intent.status,
+      }),
+    }),
   );
-}
-
-export function resolveIntentSelectionResponse(
-  token: string,
-  response: string,
-): IntentSelectionResolution {
-  const decoded = decodeIntentSelectionToken(token);
-  if (decoded.kind === "rejected") return decoded;
-  return resolveResponse(decoded.options, response);
+  return Object.freeze({
+    choices: Object.freeze(choices),
+    fingerprint: snapshotFingerprint(space, choices),
+  });
 }
 
 function resolveResponse(
-  options: readonly string[],
+  choices: readonly IntentSelectionChoice[],
   response: string,
 ): IntentSelectionResolution {
   const normalized = response.normalize("NFKC").trim();
   if (/^[1-9]\d*$/.test(normalized)) {
-    const selected = options[Number.parseInt(normalized, 10) - 1];
-    if (selected) return { kind: "resolved", target: selected };
+    const selected = choices[Number.parseInt(normalized, 10) - 1];
+    if (selected) return { kind: "resolved", target: selected.target };
   }
-  const exact = options.find((option) => option.normalize("NFKC") === normalized);
-  if (exact) return { kind: "resolved", target: exact };
+  const exact = choices.find(
+    (choice) => choice.label.normalize("NFKC") === normalized,
+  );
+  if (exact) return { kind: "resolved", target: exact.target };
   return {
     kind: "rejected",
-    message: `Intent selection "${response}" does not match a displayed option. Choose 1-${options.length} or an exact option name.`,
+    message: `Intent selection "${response}" does not match a displayed option. Choose 1-${choices.length} or an exact option name.`,
   };
 }
 
@@ -157,26 +143,26 @@ export function resolveCurrentIntentSelectionResponse(
   token: string,
   response: string,
 ): IntentSelectionResolution {
-  const selectable = intents.filter(hasRecordDirectory);
-  if (selectable.some((intent) => intent.active)) {
+  if (intents.some((intent) => intent.active)) {
     return {
       kind: "rejected",
       message: "Intent selection is no longer pending because an active intent is set.",
     };
   }
-  const currentOptions = intentSelectionOptions(selectable);
-  const decoded = decodeIntentSelectionToken(token);
-  if (
-    decoded.kind === "rejected" ||
-    decoded.space !== space ||
-    decoded.options.length !== currentOptions.length ||
-    !decoded.options.every((option, index) => option === currentOptions[index])
-  ) {
+  const snapshot = buildIntentSelectionSnapshot(space, intents);
+  if (snapshot === null) {
     return {
       kind: "rejected",
       message:
-        "Intent selection token does not match the current registry options or space. Re-run the selection.",
+        "No selectable intents remain because the current entries are orphaned, registry-only, or archived. Repair the registry or unarchive an intent, then re-run the selection.",
     };
   }
-  return resolveResponse(decoded.options, response);
+  if (token !== snapshot.fingerprint) {
+    return {
+      kind: "rejected",
+      message:
+        "Intent selection token does not match the current registry snapshot or space. Re-run the selection.",
+    };
+  }
+  return resolveResponse(snapshot.choices, response);
 }

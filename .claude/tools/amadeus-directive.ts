@@ -18,10 +18,6 @@
 // amadeus-lib.ts.
 
 import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
-import {
-  createIntentSelectionToken,
-  intentSelectionTokenMatchesOptions,
-} from "./amadeus-intent-selection.ts";
 
 // --- Public types ---
 
@@ -198,10 +194,11 @@ export interface PresentGateDirective {
   memory_path: string;
 }
 
-// select-intent — render the exact options and stop. The opaque token seals that
-// ordered option snapshot; on the answering turn the conductor passes only the
-// token and untouched human response to the deterministic
-// `intent-select-response` utility, which owns normalization and cursor selection.
+// select-intent — render the exact options and stop. The opaque fingerprint
+// binds their ordered registry identities and space; on the answering turn the
+// conductor passes only the token and untouched human response to the
+// deterministic `intent-select-response` utility, which owns normalization and
+// cursor selection.
 export interface SelectIntentDirective {
   kind: "select-intent";
   selection_token: string;
@@ -397,11 +394,9 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkNonEmptyStringArray(o, "options", "select-intent", errors);
     if (
       typeof o.selection_token === "string" &&
-      Array.isArray(o.options) &&
-      o.options.every((option) => typeof option === "string") &&
-      !intentSelectionTokenMatchesOptions(o.selection_token, o.options)
+      !/^[0-9a-f]{64}$/.test(o.selection_token)
     ) {
-      errors.push("select-intent: selection_token must encode the exact options");
+      errors.push("select-intent: selection_token must be a SHA-256 fingerprint");
     }
   },
   print: (o, errors) => checkString(o, "message", "print", errors),
@@ -888,7 +883,7 @@ export const directiveSelfCheckExamples: Directive[] = [
     { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
     {
       kind: "select-intent",
-      selection_token: createIntentSelectionToken("default", ["first-intent", "second-intent"]),
+      selection_token: "0".repeat(64),
       question: "Choose an existing intent.",
       options: ["first-intent", "second-intent"],
     },

@@ -38,8 +38,8 @@
 //
 // LIVE GATE: disabled on GitHub Actions. Locally, requires
 // AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
+// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
+// normal Codex auth.json. Skips cleanly otherwise.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -61,8 +61,6 @@ import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = process.env.AMADEUS_CODEX_DIST ?? join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
 const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
 const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
@@ -86,7 +84,10 @@ function skipReason(): string | null {
   if (environmentReason !== null) return environmentReason;
   if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
   if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  if (AUTH_HOME !== undefined && !existsSync(join(AUTH_HOME, "auth.json"))) {
+  if (AUTH_HOME === undefined) {
+    return "set AMADEUS_CODEX_EXEC_AUTH_HOME to a Codex auth directory";
+  }
+  if (!existsSync(join(AUTH_HOME, "auth.json"))) {
     return `Codex auth missing: ${join(AUTH_HOME, "auth.json")}`;
   }
   return null;
@@ -94,7 +95,7 @@ function skipReason(): string | null {
 const SKIP_REASON = skipReason();
 
 // Same scratch-install shape as t-exec-codex-status (dist/codex verbatim,
-// git-initialized, Bedrock provider + project trust + hook trust pre-seed).
+// git-initialized, normal Codex auth + project trust + hook trust pre-seed).
 function setupCodexProject(): { proj: string; home: string; root: string } {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "codex-exec-")));
   const proj = join(root, "proj");
@@ -105,9 +106,8 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
   cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
   cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
   cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
-  if (AUTH_HOME !== undefined) {
-    cpSync(join(AUTH_HOME, "auth.json"), join(home, "auth.json"));
-  }
+  if (AUTH_HOME === undefined) throw new Error("AMADEUS_CODEX_EXEC_AUTH_HOME is required");
+  cpSync(join(AUTH_HOME, "auth.json"), join(home, "auth.json"));
   for (const args of [
     ["init", "-q"],
     ["add", "-A"],
@@ -125,19 +125,10 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
   writeFileSync(
     join(home, "config.toml"),
     [
-      `model = "${AUTH_HOME === undefined ? "openai.gpt-5.5" : OPENAI_MODEL}"`,
-      ...(AUTH_HOME === undefined ? [`model_provider = "amazon-bedrock"`] : []),
+      `model = "${OPENAI_MODEL}"`,
       `model_context_window = 1000000`,
       `model_reasoning_effort = "low"`,
       ``,
-      ...(AUTH_HOME === undefined
-        ? [
-            `[model_providers.amazon-bedrock.aws]`,
-            `profile = "${AWS_PROFILE}"`,
-            `region = "${AWS_REGION}"`,
-            ``,
-          ]
-        : []),
       `[shell_environment_policy]`,
       `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
@@ -311,7 +302,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
           home,
           'Use the $amadeus skill. Run exactly `bun .codex/tools/amadeus-orchestrate.ts next --scope bugfix "fix a parser regression"` and follow the returned directive.',
         );
-        expect(b1.rc).toBe(0);
+        expect(b1.rc, `${b1.stdout}\n${b1.stderr}`).toBe(0);
         const session = sessionIdOf(b1.stderr);
         expect(session).toBeDefined();
         expect(b1.stdout).toContain("first-intent");
@@ -319,7 +310,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         expect(existsSync(cursor)).toBe(false);
 
         const b2 = codexTurn(proj, home, "１", { resume: true });
-        expect(b2.rc).toBe(0);
+        expect(b2.rc, `${b2.stdout}\n${b2.stderr}`).toBe(0);
         expect(sessionIdOf(b2.stderr)).toBe(session);
         expect(readFileSync(cursor, "utf-8").trim()).toBe(firstRecord);
         expect(`${b2.stdout}\n${b2.stderr}`).not.toContain("report requires --result");

@@ -121,6 +121,7 @@ import {
   intentNotFoundRejection,
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
+  type IntentInfo,
   type IntentLifecycleAuditEvent,
   type LockedIntentRegistryContext,
   withIntentLifecyclePreflight,
@@ -4738,13 +4739,21 @@ function delegateIntentLifecycle(
   if (run.exitCode !== 0) process.exit(run.exitCode);
 }
 
-function selectIntentLocked(
-  context: import("./amadeus-lib.ts").LockedIntentRegistryContext,
-  target: string,
-) {
+type SelectedIntent = {
+  uuid: string;
+  dirName: string;
+};
+
+type SelectIntentLocked = (context: LockedIntentRegistryContext) => SelectedIntent;
+
+function selectIntentCandidateLocked(
+  context: LockedIntentRegistryContext,
+  selected: Pick<IntentInfo, "uuid" | "dirName" | "status">,
+): SelectedIntent {
   const { projectDir, space } = context;
-  const selected = resolveIntentSelector(projectDir, space, target);
-  if (!selected.dirName) refuseWithoutAudit(`Intent "${target}" has no record directory.`);
+  if (!selected.dirName) {
+    refuseWithoutAudit("The selected intent has no record directory.");
+  }
   const guard = guardIntentOperation(
     resolveIntentOperationTargetLocked(context, selected),
     "select",
@@ -4752,8 +4761,25 @@ function selectIntentLocked(
   if (guard.kind === "rejected") {
     refuseWithoutAudit(renderIntentOperationRejection(guard.error));
   }
-  setActiveIntentCursor(projectDir, selected.dirName, space);
-  return selected;
+  if (!setActiveIntentCursor(projectDir, selected.dirName, space)) {
+    refuseWithoutAudit(
+      `Failed to write the active-intent cursor for "${selected.dirName}" in space "${space}".`,
+    );
+  }
+  return {
+    uuid: selected.uuid,
+    dirName: selected.dirName,
+  };
+}
+
+function selectIntentLocked(
+  context: LockedIntentRegistryContext,
+  target: string,
+): SelectedIntent {
+  return selectIntentCandidateLocked(
+    context,
+    resolveIntentSelector(context.projectDir, context.space, target),
+  );
 }
 
 function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
@@ -4777,22 +4803,24 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
     delegateIntentLifecycle(projectDir, target, resolved);
     return;
   }
-  function resolveExplicitTarget(): string {
-    return target;
+  function selectExplicitIntent(
+    context: LockedIntentRegistryContext,
+  ): SelectedIntent {
+    return selectIntentLocked(context, target);
   }
-  selectIntent(projectDir, resolveExplicitTarget);
+  selectIntent(projectDir, selectExplicitIntent);
 }
 
 function selectIntent(
   projectDir: string,
-  resolveTarget: (context: LockedIntentRegistryContext) => string,
+  selectLocked: SelectIntentLocked,
 ): void {
   const space = activeSpace(projectDir);
   const match = withIntentLifecyclePreflight(
     projectDir,
     space,
     appendUtilityLifecycleEvent,
-    (context) => selectIntentLocked(context, resolveTarget(context)),
+    selectLocked,
   );
   // Re-stamp the LIVE conversation's session→intent record to the switched-to
   // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
@@ -4823,17 +4851,20 @@ export function handleIntentSelectionResponse(
       "Usage: amadeus-utility.ts intent-select-response <selection-token> <human-response>",
     );
   }
-  function resolveCurrentTarget(context: LockedIntentRegistryContext): string {
+  function selectCurrentResponse(
+    context: LockedIntentRegistryContext,
+  ): SelectedIntent {
+    const intents = listIntents(context.projectDir, context.space);
     const resolution = resolveCurrentIntentSelectionResponse(
       context.space,
-      listIntents(context.projectDir, context.space),
+      intents,
       selectionToken,
       response,
     );
     if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
-    return resolution.target;
+    return selectIntentCandidateLocked(context, resolution.target);
   }
-  selectIntent(projectDir, resolveCurrentTarget);
+  selectIntent(projectDir, selectCurrentResponse);
 }
 
 // `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space
