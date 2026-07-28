@@ -826,6 +826,19 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
   });
 
+  test("Bun object spawns ignore unrelated property forms before cmd", () => {
+    const src = [
+      "const defaults = {};",
+      "Bun.spawnSync({",
+      "  ...defaults,",
+      '  0: "ignored",',
+      '  cmd: ["bun", "amadeus-state.ts"],',
+      "});",
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
+  });
+
   test("indirect wrapper targets require the canonical target marker", () => {
     const unmarkedWrapper = [
       'import { spawnSync } from "node:child_process";',
@@ -885,6 +898,10 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
       'import { spawnSync } from "./fake.ts";',
       'spawnSync("bun", ["amadeus-state.ts"]);',
     ].join("\n");
+    const malformedImport = [
+      "import { spawnSync } from childProcess;",
+      'spawnSync("bun", ["amadeus-state.ts"]);',
+    ].join("\n");
     const localBun = [
       "const Bun = { spawnSync(_command: string[]) {} };",
       'Bun.spawnSync(["bun", "amadeus-state.ts"]);',
@@ -895,7 +912,15 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
       'spawnSync(process.execPath, ["amadeus-state.ts"]);',
     ].join("\n");
 
-    for (const src of [localSpawn, fakeImport, localBun, localProcess]) {
+    for (
+      const src of [
+        localSpawn,
+        fakeImport,
+        malformedImport,
+        localBun,
+        localProcess,
+      ]
+    ) {
       expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
     }
   });
