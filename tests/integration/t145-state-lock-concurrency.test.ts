@@ -102,7 +102,7 @@ function field(p: string, name: string): string | null {
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
-    const shards = readdirSync(auditDir).filter((f) => f.endsWith(".md"));
+    const shards = readdirSync(auditDir).filter((f) => f.endsWith(".jsonl"));
     if (shards.length > 0) {
       return shards.map((f) => readFileSync(join(auditDir, f), "utf-8")).join("\n");
     }
@@ -110,11 +110,13 @@ function readAudit(p: string): string {
   const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
-/** Count occurrences of an "**Event**: <type>" line across the audit shards. */
+/** Count JSONL audit records of one event type across the audit shards. */
 function eventCount(p: string, type: string): number {
   return readAudit(p)
     .split("\n")
-    .filter((l) => l.trim() === `**Event**: ${type}`).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === type).length;
 }
 
 /** Run the state tool synchronously (for sequential setup steps). */

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 538,
+    "total": 543,
     "enumeratedByClass": {
-      "function": 299,
+      "function": 304,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 149,
-      "audit": 32,
+      "audit": 33,
       "scope": 10,
       "stage": 8,
       "hook": 12,
@@ -78,8 +78,13 @@
       "unitClass": "audit",
       "unitId": "AUDIT_MERGED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t355-audit-merge-info-seams.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -1026,7 +1031,21 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:AUDIT_SHARD_LEAF_RE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:auditBlockField",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:auditCloneId",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2223,6 +2242,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:legacyAuditShards",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:listField",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2566,6 +2592,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:normalizeAuditShardLeaf",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3500,6 +3533,13 @@
     {
       "unitClass": "function",
       "unitId": "function:spacesRoot",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:splitAuditRecords",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"

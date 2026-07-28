@@ -707,7 +707,7 @@ function buildDetailBody(args: {
 // --- Terminal-row emit ---
 
 // Slim absolute paths into project-relative form for audit emission.
-// audit.md must be machine-portable across worktrees; the PostToolUse
+// The audit shards must be machine-portable across worktrees; the PostToolUse
 // hook hands us absolute paths from Claude tool calls, so without this
 // helper every row would carry $HOME prefixes. Paths that don't live
 // under projectDir are emitted verbatim (e.g., system-wide fixtures) —

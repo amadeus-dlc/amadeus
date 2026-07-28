@@ -34,6 +34,7 @@ import {
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
+const CONVERT = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-journal-convert.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -107,11 +108,31 @@ describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
     const recordDirName = records[0];
     const record = join(intentsDir(proj), recordDirName);
 
-    // --- B2 core: the pre-migration events are reachable through the readers ---
-    // readAllAuditShards over the migrated intent returns the WORKFLOW_STARTED
-    // (and STAGE_TRANSITION) events from the flat audit.md.
+    // --- B2 core: the pre-migration events survive INSIDE the shard layout ---
     const intent = activeIntent(proj);
     expect(intent).toBe(recordDirName);
+    // The flat audit.md is relocated to `<record>/audit/<host>-<clone>.md`,
+    // BYTE-PRESERVED. Post-JSONL-switchover the readers skip a legacy `.md`
+    // leaf (doctor surfaces it and points at amadeus-journal-convert.ts), so the
+    // relocation is asserted on disk rather than through readAllAuditShards.
+    const legacy = readdirSync(join(record, "audit")).filter((f) => f.endsWith(".md"));
+    expect(legacy).toHaveLength(1);
+    expect(readFileSync(join(record, "audit", legacy[0]), "utf-8")).toBe(FLAT_AUDIT);
+
+    // ...and converting that relocated shard makes the pre-migration events
+    // reachable through the readers again — the B2 guarantee end-to-end.
+    const conv = Bun.spawnSync({
+      // --clone-id explicitly: the shared fixture pins a non-hex clone token
+      // ("fixturecloneid01"), which the converter cannot derive from the name.
+      cmd: [
+        BUN, CONVERT,
+        "--clone-id", legacy[0].replace(/\.md$/, "").split("-").pop() ?? "",
+        join(record, "audit", legacy[0]),
+      ],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(conv.exitCode).toBe(0);
     const buf = readAllAuditShards(proj, intent ?? undefined);
     expect(buf).toContain("WORKFLOW_STARTED");
     expect(buf).toContain("STAGE_TRANSITION");
@@ -122,10 +143,12 @@ describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
     expect(shards.length).toBeGreaterThan(0);
     for (const s of shards) {
       expect(s.startsWith(join(record, "audit") + "/")).toBe(true);
-      expect(s.endsWith(".md")).toBe(true);
+      expect(s.endsWith(".jsonl")).toBe(true);
     }
-    // The relocated shard actually holds the migrated content.
-    expect(readFileSync(shards[0], "utf-8")).toContain("WORKFLOW_STARTED");
+    // The converted shard actually holds the migrated content.
+    expect(
+      shards.some((sh) => readFileSync(sh, "utf-8").includes("WORKFLOW_STARTED")),
+    ).toBe(true);
 
     // No stray top-level `<record>/audit.md` FILE remains (it was relocated).
     const strayFile = join(record, "audit.md");

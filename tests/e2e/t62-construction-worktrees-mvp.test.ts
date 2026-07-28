@@ -172,38 +172,30 @@ function recordDirOf(p: string): string {
 const auditText = (p: string): string => readAllAuditShards(p);
 const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 
-/** Count audit blocks whose line is exactly `**Event**: <ev>` in audit TEXT. */
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(text: string): Array<Record<string, unknown>> {
+  return text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count audit records whose `event` is exactly <ev>. */
 function auditEventCount(text: string, ev: string): number {
-  return text.split("\n").filter((l) => l === `**Event**: ${ev}`).length;
+  return auditRecords(text).filter((r) => r.event === ev).length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Block-scoped (resets at `## ` headings and `---`). Mirrors the awk-scoped
- * block grep the sibling .cli ports use. Returns "" when absent.
+ * Value of <key> from the FIRST audit record whose `event` matches <ev>.
+ * Record-scoped — the field cannot bleed in from a neighbouring event.
+ * Returns "" when absent.
  */
 function auditField(text: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of text.split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(text).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 /** Read the compiled scope-grid.json EXECUTE/SKIP mode for mvp.<stage>. */

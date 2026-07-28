@@ -89,7 +89,7 @@ options:
     description: Archive current version and move on
 ```
 
-If "Accept as-is" selected: log the decision in `<record>/audit/<host>-<clone>.md` ("User accepted stage output as-is after [N] revision cycles"), mark stage complete, and proceed. This overrides the NO EMERGENT BEHAVIOR RULE for Construction stages only when the revision threshold is reached.
+If "Accept as-is" selected: log the decision in `<record>/audit/<host>-<clone>.jsonl` ("User accepted stage output as-is after [N] revision cycles"), mark stage complete, and proceed. This overrides the NO EMERGENT BEHAVIOR RULE for Construction stages only when the revision threshold is reached.
 
 After the 2nd revision cycle (before the escape hatch activates), include a note in the approval question: "After one more revision, an 'Accept as-is' option will become available."
 
@@ -266,7 +266,7 @@ options:
 
 Estimate `[N]` from the depth guidance below (the actual questions are authored in Step 2, per the chosen mode). When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
 
-Log the user's mode choice to `<record>/audit/<host>-<clone>.md` using the Question interaction log format.
+Log the user's mode choice to `<record>/audit/<host>-<clone>.jsonl` using the Question interaction log format.
 
 ### Depth-aware question generation
 
@@ -308,7 +308,7 @@ For multi-select questions (where user may choose more than one option), add "(s
 - For questions with 5+ options (single-select or multi-select): present ALL answer options, splitting across multiple structured questions if the harness's per-question option limit requires it (e.g., options A-D first, then options E+ in a follow-up). The user must see every option to make an informed choice. The file retains the full option set as the authoritative record.
 - Every structured question offers an "Other" escape (built into the harness UI or rendered as an explicit option per the annex). In interactive mode, if the user selects "Other" for any question, treat it as a request to discuss that question further — engage in conversation, then ask for their final answer before continuing the batch. Explicitly tell the user this before the first batch: "Select 'Other' on any question to discuss it before answering."
 - After each batch of answers, IMMEDIATELY write the answers back to the questions file (update each `[Answer]:` tag)
-- Log each batch to `<record>/audit/<host>-<clone>.md` using the Question interaction log format. Generate a fresh ISO timestamp for each batch entry.
+- Log each batch to `<record>/audit/<host>-<clone>.jsonl` using the Question interaction log format. Generate a fresh ISO timestamp for each batch entry.
   CRITICAL: Each batch entry requires its own `date -u` Bash call. Do NOT reuse the timestamp from the mode choice or prior batch.
 - Continue until all questions are answered
 - **Consolidated summary before generation**: After all questions have been answered, present a consolidated summary of all answers in a clear list and ask: "Does this all look correct before I generate the artifact?" Wait for user confirmation. If the user requests changes, update the relevant `[Answer]:` tags in the questions file and re-present the summary. Only proceed to artifact generation after the user confirms.
@@ -607,12 +607,12 @@ Use these templates for non-standard events. Each provides structured fields for
 ```
 
 ### Audit log rules
-- ALWAYS append to this clone's audit shard `<record>/audit/<host>-<clone>.md` — NEVER overwrite or truncate existing content.
+- ALWAYS append to this clone's audit shard `<record>/audit/<host>-<clone>.jsonl` — NEVER overwrite or truncate existing content.
 - CRITICAL: The "User Input" field in audit entries MUST contain the user's COMPLETE, UNMODIFIED input. NEVER summarize, paraphrase, or truncate user responses. This is a compliance and traceability requirement — the exact wording may carry nuance that summaries lose.
 - Log all approval prompts BEFORE showing them to the user. This ensures the audit trail captures what was presented, not just what was answered.
 - Log all user responses with ISO timestamps immediately after receiving them.
-- If this clone's audit shard does not exist, create it with a header: `# AI-DLC Audit Log`
-- If this clone's audit shard appears corrupted (no valid markdown structure), create a backup (`<record>/audit/<host>-<clone>.md.bak`) and start a new shard noting the corruption.
+- If this clone's audit shard does not exist, the audit tool creates it as an empty JSONL file (no header line) on first append.
+- If this clone's audit shard appears corrupted (a line that is not a JSON record), create a backup (`<record>/audit/<host>-<clone>.jsonl.bak`) and start a new shard noting the corruption.
 - `ERROR_LOGGED` and `RECOVERY_COMPLETED` are declared in the taxonomy but reserved for the recovery workflow (not yet implemented). Do not hand-write them via `amadeus-audit.ts append` — the recovery flow will ship its own emitter. Canonical state transitions go through the state/log/bolt tools (see §4 "Silent bookkeeping writes").
 
 ---
@@ -874,7 +874,7 @@ If a Task tool call fails (timeout, error, or returns truncated/incomplete outpu
 2. If the retry also fails, **inform the user** and offer two options via a structured question:
    - "Run inline" — execute the stage work directly in the orchestrator conversation (slower but avoids subagent issues)
    - "Skip and revisit" — mark the stage as incomplete and continue; return to it later
-3. Log the failure and resolution in `<record>/audit/<host>-<clone>.md` using the Error log format
+3. Log the failure and resolution in `<record>/audit/<host>-<clone>.jsonl` using the Error log format
 
 ---
 

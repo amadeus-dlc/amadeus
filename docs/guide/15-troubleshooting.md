@@ -147,15 +147,15 @@ If the recovery breadcrumb warns about a mismatch, choose **Redo current stage**
 ### How to archive
 
 ```bash
-# from the intent's record dir; <host>-<clone>.md is this clone's shard
-mv audit/<host>-<clone>.md audit-archive/<host>-<clone>-2026-02.md
+# from the intent's record dir; <host>-<clone>.jsonl is this clone's shard
+mv audit/<host>-<clone>.jsonl audit-archive/<host>-<clone>-2026-02.jsonl
 ```
 
 The next `/amadeus` invocation (or any hook-triggered write) creates a fresh shard. All audit content is safe to archive — the engine does not read the `audit/` shards for routing decisions.
 
 ### Git considerations
 
-The `audit/` shards are committed (not gitignored) — see [What to Commit vs. Gitignore](14-artifacts-reference.md#what-to-commit-vs-gitignore). Each clone writes its own `<host>-<clone>.md` shard, so concurrent appends never merge-conflict; consider archiving (see above) before commits to keep diffs manageable.
+The `audit/` shards are committed (not gitignored) — see [What to Commit vs. Gitignore](14-artifacts-reference.md#what-to-commit-vs-gitignore). Each clone writes its own `<host>-<clone>.jsonl` shard, so concurrent appends never merge-conflict; consider archiving (see above) before commits to keep diffs manageable.
 
 ---
 

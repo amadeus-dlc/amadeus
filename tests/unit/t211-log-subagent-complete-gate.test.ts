@@ -67,7 +67,20 @@ function seed(proj: string, status: string): void {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  writeFileSync(join(auditDir, `${host}-fixturecloneid01.md`), "**Event**: SEED\n", "utf-8");
+  writeFileSync(
+    join(auditDir, `${host}-fixturecloneid01.jsonl`),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: "fixturecloneid01",
+      intentId: "test-intent",
+      timestamp: "2026-07-11T08:00:00Z",
+      heading: "Seed",
+      event: "SEED",
+      fields: {},
+    })}\n`,
+    "utf-8",
+  );
 }
 
 /** Concatenate every shard in the record's audit dir (clone-id-agnostic read). */
@@ -80,10 +93,20 @@ function readAllShards(proj: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(dir, n), "utf-8"))
     .join("\n");
+}
+
+/** Every record of `event` across the shards, as its parsed `fields` object. */
+function fieldsFor(proj: string, event: string): Record<string, string>[] {
+  return readAllShards(proj)
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+    .filter((r) => r.event === event)
+    .map((r) => r.fields ?? {});
 }
 
 function runHook(proj: string, payload: Record<string, unknown>) {
@@ -125,7 +148,7 @@ describe("t211 log-subagent completion gate + agent_type normalization (#845)", 
     expect(res.status).toBe(0);
     const shards = readAllShards(proj);
     expect(shards).toContain("SUBAGENT_COMPLETED");
-    expect(shards).toContain("developer");
+    expect(fieldsFor(proj, "SUBAGENT_COMPLETED")[0]?.["Agent Type"]).toBe("developer");
   });
 
   // ---- (2) agent_type normalization -----------------------------------------
@@ -137,15 +160,14 @@ describe("t211 log-subagent completion gate + agent_type normalization (#845)", 
     const shards = readAllShards(proj);
     expect(shards).toContain("SUBAGENT_COMPLETED");
     // The Agent Type field must never be blank.
-    expect(shards).toMatch(/Agent Type\*?\*?:\s*unknown/);
-    expect(shards).not.toMatch(/Agent Type\*?\*?:\s*$/m);
+    expect(fieldsFor(proj, "SUBAGENT_COMPLETED")[0]?.["Agent Type"]).toBe("unknown");
   });
 
   test('whitespace-only agent_type is recorded as "unknown"', () => {
     seed(proj, "Running");
     const res = runHook(proj, { agent_type: "   ", agent_id: "a1" });
     expect(res.status).toBe(0);
-    expect(readAllShards(proj)).toMatch(/Agent Type\*?\*?:\s*unknown/);
+    expect(fieldsFor(proj, "SUBAGENT_COMPLETED")[0]?.["Agent Type"]).toBe("unknown");
   });
 
   // ---- In-process seam (coverage of the new lib branches). ------------------

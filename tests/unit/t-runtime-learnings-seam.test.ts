@@ -21,7 +21,7 @@ const AUDIT_FIXTURE = join(
   "tests",
   "fixtures",
   "v05-mr12-learnings",
-  "audit-instance-learnings-approved.md",
+  "audit-instance-learnings-approved.jsonl",
 );
 
 const tempDirs: string[] = [];

@@ -124,26 +124,26 @@ function git(cwd: string, args: string[]): void {
 const wtPath = (p: string, slug: string): string =>
   join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
-/** Concatenate every audit shard (audit/*.md) for the seeded record. */
+/** Concatenate every audit shard (audit/*.jsonl) for the seeded record. */
 function readAudit(p: string): string {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 
-/** True if the audit shards carry a WORKTREE_MERGED block for the given slug. */
+/** True if the audit shards carry a WORKTREE_MERGED record for the given slug.
+ *  Record-scoped: the event and the slug must ride on the SAME ledger line. */
 function hasMergedAudit(p: string, slug: string): boolean {
-  const blocks = readAudit(p).split(/\n---\n/);
-  return blocks.some(
-    (b) =>
-      /^\*\*Event\*\*:\s*WORKTREE_MERGED\b/m.test(b) &&
-      new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${slug}\\b`, "m").test(b),
-  );
+  return readAudit(p)
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+    .some((r) => r.event === "WORKTREE_MERGED" && r.fields?.["Bolt slug"] === slug);
 }
 
 describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 13)", () => {

@@ -138,39 +138,30 @@ function bolt(args: string[]): { status: number; stdout: string; out: string } {
   return { status: r.status ?? -1, stdout, out: `${stdout}${r.stderr ?? ""}` };
 }
 
-/**
- * Read the value of <key> from the FIRST audit block whose `**Event**:`
- * matches <ev>. Block-scoped (resets at `## ` headings and `---`). Returns ""
- * when absent. STRONGER than the .sh's file-wide grep — pins the field to the
- * right event.
- */
-function auditField(ev: string, key: string): string {
-  let matched = false;
-  for (const line of auditText().split("\n")) {
-    if (line.startsWith("## ") || line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0 && stripped.slice(0, pos) === key) {
-        return stripped.slice(pos + 4);
-      }
-    }
-  }
-  return "";
-}
-
-/** Count audit blocks with `**Event**: <ev>` (exact-line). */
-function auditEventCount(ev: string): number {
+/** Parse the merged JSONL audit shards into records (blank lines skipped). */
+function auditRecords(): Array<Record<string, unknown>> {
   return auditText()
     .split("\n")
-    .filter((l) => l === `**Event**: ${ev}`).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/**
+ * Read the value of <key> from the FIRST audit record whose `event` matches
+ * <ev>. Returns "" when absent. STRONGER than the .sh's file-wide grep — pins
+ * the field to the right event.
+ */
+function auditField(ev: string, key: string): string {
+  const rec = auditRecords().find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
+}
+
+/** Count audit records whose `event` is exactly <ev>. */
+function auditEventCount(ev: string): number {
+  return auditRecords().filter((r) => r.event === ev).length;
 }
 
 describe("t61 construction worktrees — feature (migrated from t61-construction-worktrees-feature.sh, plan 5)", () => {

@@ -96,6 +96,7 @@ import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
   seededAuditDir,
   seededRecordDir,
   seededStateFile,
@@ -119,7 +120,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 function pinnedShardPath(proj: string): string {
   return join(seededAuditDir(proj), pinnedShardName());
@@ -271,6 +272,8 @@ function makeProject(withState: boolean): string {
     "amadeus-lib.ts",
     "amadeus-harness.ts",
     "amadeus-audit.ts",
+    // amadeus-lib.ts imports the JSONL journal codec (amadeus-lib.ts:2).
+    "amadeus-journal.ts",
   ]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }
@@ -316,24 +319,23 @@ function runHook(hookPath: string, proj: string, json: string): HookResult {
 
 // The transition audit the runtime-compile hook tail-reads (.sh:100-118):
 // the last 3 blocks carry STAGE_COMPLETED + GATE_APPROVED -> dispatch compile.
-const TRANSITION_AUDIT = `## Stage Start
-**Event**: STAGE_STARTED
-**Stage**: requirements-analysis
+const auditRow = (seq: number, heading: string, event: string): string =>
+  JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: PINNED_CLONE_ID,
+    intentId: DEFAULT_RECORD_DIR,
+    timestamp: `2026-01-01T00:00:0${seq}.000Z`,
+    heading,
+    event,
+    fields: { Stage: "requirements-analysis" },
+  });
 
----
-
-## Stage Completion
-**Event**: STAGE_COMPLETED
-**Stage**: requirements-analysis
-
----
-
-## Gate Approved
-**Event**: GATE_APPROVED
-**Stage**: requirements-analysis
-
----
-`;
+const TRANSITION_AUDIT = `${[
+  auditRow(1, "Stage Start", "STAGE_STARTED"),
+  auditRow(2, "Stage Completion", "STAGE_COMPLETED"),
+  auditRow(3, "Gate Approved", "GATE_APPROVED"),
+].join("\n")}\n`;
 
 describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () => {
   test("B1: in-workflow Write -> audit-logger appends an audit row [.sh test 11]", () => {
@@ -341,7 +343,7 @@ describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () 
     // The audit SHARD present == active workflow (the audit-logger's :73 gate);
     // pin it as the seed so the hook (same clone-id) appends to this shard.
     mkdirSync(seededAuditDir(proj), { recursive: true });
-    writeFileSync(pinnedShardPath(proj), "# audit\n", "utf-8");
+    writeFileSync(pinnedShardPath(proj), "", "utf-8");
     const before = readAllAuditShards(proj).split("\n").length;
     const json = JSON.stringify({
       tool_name: "Write",
@@ -360,8 +362,11 @@ describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () 
     const after = readAllAuditShards(proj).split("\n").length;
     expect(after).toBeGreaterThan(before);
     // STRONGER than the .sh's wc -l comparison: an actual artifact row landed.
-    const body = readAllAuditShards(proj);
-    expect(/\*\*Event\*\*:\s*ARTIFACT_(CREATED|UPDATED)/.test(body)).toBe(true);
+    const events = readAllAuditShards(proj)
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => (JSON.parse(l) as { event: string | null }).event);
+    expect(events.some((e) => e === "ARTIFACT_CREATED" || e === "ARTIFACT_UPDATED")).toBe(true);
   }, 30000);
 
   test("B2: in-workflow transition -> runtime-compile emits runtime-graph.json [.sh test 12]", () => {

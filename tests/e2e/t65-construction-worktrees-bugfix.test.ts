@@ -183,16 +183,18 @@ describe("t65 Construction-worktrees per-scope contract — bugfix (migrated fro
 
     // The .sh grepped the audit file for "MERGE_DISPATCH_INVOKED" AND for a
     // "Bolt slug.*<slug>" line, independently. STRONGER here: assert both land
-    // in the SAME audit block (the dispatch-event entry), block-scoping the slug
-    // to the event the .sh only matched globally.
-    const audit = readAllAuditShards(proj);
-    const block =
-      audit
-        .split(/\n(?=## )/)
-        .find((b) => b.includes("**Event**: MERGE_DISPATCH_INVOKED")) ?? "";
-    expect(block).toContain("**Event**: MERGE_DISPATCH_INVOKED");
-    expect(block).toContain(`**Bolt slug**: ${slug}`);
-    expect(block).toContain(`**Practices section excerpt**: scope=${SCOPE}`);
+    // in the SAME audit record (the dispatch-event entry), record-scoping the
+    // slug to the event the .sh only matched globally.
+    const record = readAllAuditShards(proj)
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((rec) => rec.event === "MERGE_DISPATCH_INVOKED");
+    expect(record).toBeDefined();
+    const fields = (record?.fields ?? {}) as Record<string, string>;
+    expect(fields["Bolt slug"]).toBe(slug);
+    expect(fields["Practices section excerpt"]).toBe(`scope=${SCOPE}`);
   });
 
   test("4 (cli): init writes v7 state with v0.4.0 Worktree Path + Bolt Refs fields [.sh grep Worktree Path && Bolt Refs]", () => {

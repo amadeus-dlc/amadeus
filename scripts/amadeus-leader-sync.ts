@@ -121,7 +121,7 @@ export function shardBasename(host: string, cloneId: string): string {
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "host";
-  return `${normalized}-${cloneId}.md`;
+  return `${normalized}-${cloneId}.jsonl`;
 }
 
 export function readCloneId(projectDir: string): string | null {

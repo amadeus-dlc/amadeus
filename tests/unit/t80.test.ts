@@ -228,14 +228,18 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     // first emit (no state seeded → no intent resolves → bare root); read it via
     // the shard glob (readAllAuditShards).
     const audit = readAllAuditShards(proj);
-    // Slice the PRACTICES_SECTION_EMPTY block up to the next `---` separator
-    // (mirrors the .sh's `awk '/PRACTICES_SECTION_EMPTY/{flag=1} flag && /^---$/{exit} flag'`).
-    const start = audit.indexOf("PRACTICES_SECTION_EMPTY");
-    expect(start).toBeGreaterThanOrEqual(0);
-    const rest = audit.slice(start);
-    const sepIdx = rest.indexOf("\n---");
-    const block = sepIdx >= 0 ? rest.slice(0, sepIdx) : rest;
-    expect(block).toContain("**Section**: Walking Skeleton");
-    expect(block).toContain("**Fallback**: org.md");
+    // Scope the field reads to the PRACTICES_SECTION_EMPTY record itself
+    // (the JSONL successor of the .sh's `awk '/PRACTICES_SECTION_EMPTY/{flag=1}
+    // flag && /^---$/{exit} flag'` block slice).
+    const record = audit
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((r) => r.event === "PRACTICES_SECTION_EMPTY");
+    expect(record).toBeDefined();
+    const fields = (record?.fields ?? {}) as Record<string, string>;
+    expect(fields.Section).toBe("Walking Skeleton");
+    expect(fields.Fallback).toBe("org.md");
   });
 });

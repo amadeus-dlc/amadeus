@@ -40,6 +40,7 @@ import { fileURLToPath } from "node:url";
 import {
   activeIntent,
   activeSpace,
+  auditBlockField,
   hasOpenGate,
   hooksHealthDir,
   humanActedSinceGate,
@@ -48,6 +49,7 @@ import {
   isMachineInjectedTurnText,
   readAllAuditShards,
   recordHookDrop,
+  splitAuditRecords,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
@@ -232,13 +234,14 @@ function latestUnfinishedStartedStage(): string | null {
 
   const space = activeSpace(projectDir);
   const intent = activeIntent(projectDir, space) ?? undefined;
-  const candidates = readAllAuditShards(projectDir, intent, space)
-    .split(/\n---\n/)
+  const candidates = splitAuditRecords(readAllAuditShards(projectDir, intent, space))
     .flatMap((block) => {
-      if (!/^\*\*Event\*\*:\s*STAGE_STARTED\s*$/m.test(block)) return [];
-      const stage = block.match(/^\*\*Stage\*\*:\s*([a-z][a-z0-9-]*)\s*$/m)?.[1];
-      const timestamp = block.match(/^\*\*Timestamp\*\*:\s*(\S+)\s*$/m)?.[1];
-      return stage && timestamp ? [{ stage, timestamp }] : [];
+      if (auditBlockField(block, "Event") !== "STAGE_STARTED") return [];
+      const stage = auditBlockField(block, "Stage");
+      const timestamp = auditBlockField(block, "Timestamp");
+      return stage !== null && /^[a-z][a-z0-9-]*$/.test(stage) && timestamp
+        ? [{ stage, timestamp }]
+        : [];
     })
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   const stage = candidates.at(-1)?.stage;

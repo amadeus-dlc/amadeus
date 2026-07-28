@@ -39,7 +39,7 @@ Load amadeus-architect-agent persona from `agents/amadeus-architect-agent.md` fo
 
 ### Step 2: Load Prior Context
 
-- Read user's project description from $ARGUMENTS or `<record>/audit/<host>-<clone>.md`
+- Read user's project description from $ARGUMENTS or `<record>/audit/<host>-<clone>.jsonl`
 - Check for existing `<record>/` artifacts from prior sessions
 - Load guardrails from `.kimi-code/rules/`
 

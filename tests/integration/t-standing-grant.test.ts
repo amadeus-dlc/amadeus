@@ -70,6 +70,21 @@ const STATE_TS = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-
 const BUN = process.execPath;
 const GRAPH = loadStageGraph();
 
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  timestamp: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse a JSONL audit shard buffer into records (blank lines skipped). */
+function records(shardBody: string): AuditRecord[] {
+  return shardBody
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
 const tmpRoots: string[] = [];
 afterAll(() => {
   for (const root of tmpRoots) {
@@ -409,15 +424,31 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
     const host =
       hostname().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) ||
       "host";
-    return `${host}-${CLONE}.md`;
+    return `${host}-${CLONE}.jsonl`;
   }
-  function block(heading: string, event: string, fields: Record<string, string>): string {
-    let b = `\n## ${heading}\n**Timestamp**: ${fields.__ts ?? "2026-07-09T09:00:00.000Z"}\n**Event**: ${event}\n`;
+  // One JSONL ledger record. `__ts` carries the timestamp out of band; every
+  // other key is a payload field. `seq` is threaded by the caller so the seeded
+  // shard keeps a dense 1-based sequence.
+  function block(
+    seq: number,
+    heading: string,
+    event: string,
+    fields: Record<string, string>,
+  ): string {
+    const payload: Record<string, string> = {};
     for (const [k, v] of Object.entries(fields)) {
-      if (k === "__ts") continue;
-      b += `**${k}**: ${v}\n`;
+      if (k !== "__ts") payload[k] = v;
     }
-    return `${b}\n---\n`;
+    return `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: CLONE,
+      intentId: "leader-intent-ef567890",
+      timestamp: fields.__ts ?? "2026-07-09T09:00:00.000Z",
+      heading,
+      event,
+      fields: payload,
+    })}\n`;
   }
   function seedDelegateScenario(): { root: string; issuer: string; target: string } {
     const root = mkdtempSync(join(tmpdir(), "amadeus-tsg-rt-"));
@@ -438,9 +469,9 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
     const shardDir = join(intents, issuer, "audit");
     mkdirSync(shardDir, { recursive: true });
     const humanTs = "2026-07-09T09:00:00.000Z";
-    let content = "# AI-DLC Audit Log\n";
-    content += block("Human Turn", "HUMAN_TURN", { __ts: humanTs });
-    content += block("Standing Grant Issued", "GRANT_ISSUED", {
+    let content = "";
+    content += block(1, "Human Turn", "HUMAN_TURN", { __ts: humanTs });
+    content += block(2, "Standing Grant Issued", "GRANT_ISSUED", {
       __ts: "2026-07-09T09:01:00.000Z",
       "Grant Id": "55556666",
       Scope: "stage-gates",
@@ -452,7 +483,7 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
       "Issuer Human Ts": humanTs,
     });
     // A resolution AFTER the turn so humanActedSinceGate() is false.
-    content += block("Gate Approved", "GATE_APPROVED", {
+    content += block(3, "Gate Approved", "GATE_APPROVED", {
       __ts: "2026-07-09T09:02:00.000Z",
       Stage: "requirements-analysis",
     });
@@ -473,8 +504,11 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
       join(root, "amadeus", "spaces", "default", "intents", target, "audit", shardName()),
       "utf-8",
     );
-    expect(targetShard).toContain("**Event**: DELEGATED_APPROVAL");
-    expect(targetShard).toContain("**Grant Id**: 55556666");
+    expect(
+      records(targetShard).some(
+        (r) => r.event === "DELEGATED_APPROVAL" && r.fields?.["Grant Id"] === "55556666",
+      ),
+    ).toBe(true);
   });
 
   test("RED: solo mode ignores the grant and refuses the same delegation", () => {
@@ -616,8 +650,9 @@ describe("in-process handler seams (coverage)", () => {
     expect(r.stdout).toContain('"scope":"stage-gates"');
     expect(r.stderr).toContain("EXCLUDED");
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
-    expect(audit.match(/\*\*Event\*\*: GRANT_ISSUED/g)?.length).toBe(1);
-    expect(audit).toContain("**Issuer Intent**:");
+    const issued = records(audit).filter((r) => r.event === "GRANT_ISSUED");
+    expect(issued.length).toBe(1);
+    expect(issued[0]!.fields?.["Issuer Intent"]).toBeDefined();
   });
 
   test("handleGrantStandingDelegation: refuses a bad --scope and a bad --ttl-ms", () => {
@@ -703,7 +738,7 @@ describe("in-process handler seams (coverage)", () => {
     );
     expect(repeated.threw).toBe(false);
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
-    expect(audit.match(/\*\*Event\*\*: GRANT_REVOKED/g)?.length).toBe(2);
+    expect(records(audit).filter((r) => r.event === "GRANT_REVOKED").length).toBe(2);
     expect(captureIO(() => handleCanonicalRevokeStandingDelegation([])).stderr)
       .toContain("requires --grant-id");
     expect(
@@ -846,8 +881,11 @@ describe("in-process handler seams (coverage)", () => {
     const r = captureIO(() => handleApprove(["requirements-analysis"]));
     expect(r.threw).toBe(false);
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
-    expect(audit).toContain("**Event**: GATE_APPROVED");
-    expect(audit).toContain("**Grant Id**: beef0002");
+    expect(
+      records(audit).some(
+        (r) => r.event === "GATE_APPROVED" && r.fields?.["Grant Id"] === "beef0002",
+      ),
+    ).toBe(true);
   });
 
   test("handleApprove: refuses when no grant covers and no fresh human turn", () => {

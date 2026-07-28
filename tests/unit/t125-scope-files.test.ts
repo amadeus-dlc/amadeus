@@ -308,12 +308,17 @@ describe("dropped-file scope dynamics (AMADEUS_SCOPES_DIR seam)", () => {
     const auditPath = seededAuditShard(proj);
     expect(existsSync(auditPath)).toBe(true);
     const audit = readFileSync(auditPath, "utf-8");
-    // Same grep the .sh ran: a "Detected scope ... : dropscope" line. The tool
-    // writes it as "**Detected scope**: dropscope".
-    expect(/Detected scope.*: dropscope/.test(audit)).toBe(true);
+    // Same claim the .sh's grep made ("Detected scope ... : dropscope"), read
+    // off the JSONL record's fields map instead of a Markdown line.
+    const records = audit
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    const detected = records.filter((r) => r.event === "SCOPE_DETECTED");
     // STRONGER: it landed as a SCOPE_DETECTED event sourced from the keyword,
     // and stdout echoes the resolved scope.
-    expect(audit).toContain("**Event**: SCOPE_DETECTED");
+    expect(detected.length).toBeGreaterThan(0);
+    expect(detected.some((r) => r.fields?.["Detected scope"] === "dropscope")).toBe(true);
     expect(res.stdout).toContain('"scope":"dropscope"');
   });
 });

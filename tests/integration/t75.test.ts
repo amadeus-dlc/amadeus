@@ -288,49 +288,31 @@ function runPromote(fx: Fixture, ...extra: string[]): CliResult {
 // seeded record resolves (state present). seededAuditShard mirrors auditShardName.
 const auditPath = (proj: string): string => seededAuditShard(proj);
 
-/** Count audit blocks with `**Event**: <ev>`. Mirrors the .sh's PRACTICES_* grep, as a count. */
-function auditEventCount(file: string, ev: string): number {
-  if (!existsSync(file)) return 0;
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** Parse a JSONL audit shard file into records (blank lines skipped). */
+function auditRecords(file: string): Array<Record<string, unknown>> {
+  if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count audit records whose `event` is exactly <ev>. Mirrors the .sh's PRACTICES_* grep, as a count. */
+function auditEventCount(file: string, ev: string): number {
+  return auditRecords(file).filter((r) => r.event === ev).length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings and `---` separators; splits `**label**: value` on
- * the literal `**: ` separator. Mirrors auditField in t31.cli.test.ts. Used to
- * pin "Affirming User" / "Sections Written" exactly (STRONGER than the .sh's
- * substring greps).
+ * Value of <key> from the FIRST audit record whose `event` matches <ev>.
+ * Record-scoped. Used to pin "Affirming User" / "Sections Written" exactly
+ * (STRONGER than the .sh's substring greps). Returns "" when absent.
  */
 function auditField(file: string, ev: string, key: string): string {
-  if (!existsSync(file)) return "";
-  let matched = false;
-  for (const line of readFileSync(file, "utf-8").split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(file).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 /** Today in UTC, YYYY-MM-DD. Mirrors the .sh's `date -u +%Y-%m-%d`; the tool

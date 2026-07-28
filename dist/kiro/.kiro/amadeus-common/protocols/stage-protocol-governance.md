@@ -24,7 +24,7 @@ At each phase transition (Ideation→Inception (approval-handoff→reverse-engin
    - Missing traceability links (e.g., requirement without a design)
    - Orphaned artifacts (design without a requirement)
    - Inconsistencies between phase outputs
-5. Log a `PHASE_VERIFIED` event to `<record>/audit/<host>-<clone>.md`
+5. Log a `PHASE_VERIFIED` event to `<record>/audit/<host>-<clone>.jsonl`
 
 ### Phase boundary checks
 **Ideation → Inception**: Intent captured, scope defined, feasibility confirmed, initiative approved

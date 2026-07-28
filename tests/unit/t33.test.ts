@@ -106,6 +106,18 @@ function runBolt(proj: string, ...args: string[]): RunResult {
 function readAudit(proj: string): string {
   return readAllAuditShards(proj);
 }
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+/** Parse the concatenated JSONL shards into records. */
+function auditRecords(proj: string): AuditRecord[] {
+  return readAudit(proj)
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+/** Fields of the FIRST record carrying <ev> ({} when absent). */
+function auditFields(proj: string, ev: string): Record<string, string> {
+  return auditRecords(proj).find((r) => r.event === ev)?.fields ?? {};
+}
 function readState(proj: string): string {
   return readFileSync(seededStateFile(proj), "utf-8");
 }
@@ -139,15 +151,15 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
   test("start emits BOLT_STARTED", () => {
     proj = mkStartedProject();
     runBolt(proj, "start", "--name", "auth-service", "--batch", "1");
-    // .sh: assert_grep '^\*\*Event\*\*: BOLT_STARTED' (line-anchored literal)
-    expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: BOLT_STARTED/m);
+    // .sh: assert_grep '^\*\*Event\*\*: BOLT_STARTED' — now the record's `event`.
+    expect(auditRecords(proj).some((r) => r.event === "BOLT_STARTED")).toBe(true);
   });
 
   // Test 2: start records Batch number
   test("start records Batch number", () => {
     proj = mkStartedProject();
     runBolt(proj, "start", "--name", "auth-service", "--batch", "1");
-    expect(readAudit(proj)).toContain("**Batch number**: 1");
+    expect(auditFields(proj, "BOLT_STARTED")["Batch number"]).toBe("1");
   });
 
   // Test 3: start accepts CSV bolt names (parallel batch)
@@ -161,21 +173,23 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
       "--batch",
       "2",
     );
-    expect(readAudit(proj)).toContain("auth-service,payment-service,user-service");
+    expect(auditFields(proj, "BOLT_STARTED")["Bolt names"]).toBe(
+      "auth-service,payment-service,user-service",
+    );
   });
 
   // Test 4: start --walking-skeleton true flags Walking skeleton=true
   test("start --walking-skeleton true flags correctly", () => {
     proj = mkStartedProject();
     runBolt(proj, "start", "--name", "b1", "--batch", "1", "--walking-skeleton", "true");
-    expect(readAudit(proj)).toContain("**Walking skeleton**: true");
+    expect(auditFields(proj, "BOLT_STARTED")["Walking skeleton"]).toBe("true");
   });
 
   // Test 21: start without --walking-skeleton defaults to false
   test("start without --walking-skeleton defaults to false", () => {
     proj = mkStartedProject();
     runBolt(proj, "start", "--name", "b1", "--batch", "1");
-    expect(readAudit(proj)).toContain("**Walking skeleton**: false");
+    expect(auditFields(proj, "BOLT_STARTED")["Walking skeleton"]).toBe("false");
   });
 });
 
@@ -297,7 +311,7 @@ describe("t33 start/complete: JSON ack + completion audit", () => {
   test("complete emits BOLT_COMPLETED", () => {
     proj = mkStartedProject();
     runBolt(proj, "complete", "--name", "auth-service", "--batch", "1");
-    expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: BOLT_COMPLETED/m);
+    expect(auditRecords(proj).some((r) => r.event === "BOLT_COMPLETED")).toBe(true);
   });
 });
 
@@ -314,7 +328,7 @@ describe("t33 fail: BOLT_FAILED audit fields", () => {
   test("fail records Error summary", () => {
     proj = mkStartedProject();
     runBolt(proj, "fail", "--name", "auth-service", "--error", "Compilation failed");
-    expect(readAudit(proj)).toContain("**Error summary**: Compilation failed");
+    expect(auditFields(proj, "BOLT_FAILED")["Error summary"]).toBe("Compilation failed");
   });
 
   // Test 9: fail --succeeded-siblings records sibling bolts (mkStartedProject —
@@ -331,7 +345,7 @@ describe("t33 fail: BOLT_FAILED audit fields", () => {
       "--succeeded-siblings",
       "payment,user",
     );
-    expect(readAudit(proj)).toContain("**Succeeded siblings**: payment,user");
+    expect(auditFields(proj, "BOLT_FAILED")["Succeeded siblings"]).toBe("payment,user");
   });
 });
 
@@ -347,7 +361,7 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
   test("set-autonomy emits AUTONOMY_MODE_SET", () => {
     proj = setupConstructionProject();
     runBolt(proj, "set-autonomy", "--mode", "autonomous");
-    expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: AUTONOMY_MODE_SET/m);
+    expect(auditRecords(proj).some((r) => r.event === "AUTONOMY_MODE_SET")).toBe(true);
   });
 
   // Test 11: set-autonomy updates Construction Autonomy Mode in state file
@@ -525,10 +539,11 @@ describe("t33 lifecycle: BOLT_STARTED precedes BOLT_COMPLETED", () => {
       "true",
     );
     runBolt(proj, "complete", "--name", "auth-service", "--batch", "1");
-    // .sh: grep -n line numbers, assert START_LINE < COMPLETE_LINE.
-    const lines = readAudit(proj).split("\n");
-    const startLine = lines.findIndex((l) => /^\*\*Event\*\*: BOLT_STARTED/.test(l));
-    const completeLine = lines.findIndex((l) => /^\*\*Event\*\*: BOLT_COMPLETED/.test(l));
+    // .sh: grep -n line numbers, assert START_LINE < COMPLETE_LINE. Record order
+    // in the JSONL ledger is the same evidence.
+    const events = auditRecords(proj).map((r) => r.event);
+    const startLine = events.indexOf("BOLT_STARTED");
+    const completeLine = events.indexOf("BOLT_COMPLETED");
     expect(startLine).toBeGreaterThanOrEqual(0);
     expect(completeLine).toBeGreaterThanOrEqual(0);
     expect(startLine).toBeLessThan(completeLine);

@@ -107,8 +107,11 @@ function runPromote(fx: Fixture): CliResult {
 
 function auditEventCount(file: string, ev: string): number {
   if (!existsSync(file)) return 0;
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return readFileSync(file, "utf-8").split("\n").filter((l) => re.test(l)).length;
+  return readFileSync(file, "utf-8")
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === ev).length;
 }
 
 // ============================================================

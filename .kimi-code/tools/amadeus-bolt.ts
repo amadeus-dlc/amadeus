@@ -799,7 +799,7 @@ function handleSetAutonomy(args: string[]): void {
   // Validate state-file shape BEFORE emitting audit. setFieldStrict throws if
   // the field is absent (v4 state files or hand-edited files). If we emitted
   // audit first and the field was missing, we'd leave an orphan
-  // AUTONOMY_MODE_SET in audit.md with no corresponding state mutation —
+  // AUTONOMY_MODE_SET in the audit journal with no corresponding state mutation —
   // exactly the t59-class drift the refactor aims to prevent.
   const content = readStateFile(pd);
   let updated: string;

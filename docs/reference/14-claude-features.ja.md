@@ -185,7 +185,7 @@ Gitignore:
   - amadeus/spaces/*/intents/.amadeus-*                        (no-intent fallback root)
 ```
 
-監査証跡は **per-clone のシャード**(`audit/<host>-<clone>.md`)としてコミットされます: 各クローンは自身のシャードに追記するため、並行する追記が git 上で競合することはありません。per-user のセッションカーソルとマシンローカルな派生状態は無視されます。
+監査証跡は **per-clone のシャード**(`audit/<host>-<clone>.jsonl`)としてコミットされます: 各クローンは自身のシャードに追記するため、並行する追記が git 上で競合することはありません。per-user のセッションカーソルとマシンローカルな派生状態は無視されます。
 
 ---
 
@@ -306,7 +306,7 @@ per-agent の grant ステップは存在せず、必要もありません: 継�
 | Stage protocol | `stage-protocol.md` | すべてのステージ実行 | 必須の挙動契約 |
 | Stage files | `stages/**/*.md` | エンジンのルーティング | 32個の個別ステージ定義 |
 | State file | `amadeus-state.md` | セッション開始時 + 全体を通して | 永続的なワークフロー状態 |
-| Audit file | `audit.md` | 実行全体を通して | 追記専用の監査証跡 |
+| Audit file | `audit/<host>-<clone>.jsonl` | 実行全体を通して | 追記専用の監査証跡 |
 
 ### ロードシーケンス
 

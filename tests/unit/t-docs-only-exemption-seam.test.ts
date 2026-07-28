@@ -72,9 +72,19 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
 function seedApprovalEvent(proj: string, eventType: string, stage: string): void {
   const shard = seededAuditShard(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  const block =
-    `\n## Approval\n**Timestamp**: 2026-07-11T10:00:00Z\n**Event**: ${eventType}\n**Stage**: ${stage}\n\n---\n`;
-  writeFileSync(shard, block);
+  writeFileSync(
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: "testclone0499",
+      intentId: DEFAULT_RECORD_DIR,
+      timestamp: "2026-07-11T10:00:00Z",
+      heading: "Approval",
+      event: eventType,
+      fields: { Stage: stage },
+    })}\n`,
+  );
 }
 
 function writeCodeGenDocs(proj: string): void {
@@ -238,9 +248,16 @@ describe("t-docs-only-exemption-seam: verifyStageArtifacts workspace_requires br
     // in captureExit so an unrelated downstream exit cannot abort the test
     // process. The exemption itself must have been recorded regardless.
     captureExit(() => handleFinalize(["code-generation"]));
-    const shard = readFileSync(seededAuditShard(proj), "utf-8");
-    expect(shard).toContain("**Event**: GUARD_EXEMPTED");
-    expect(shard).toMatch(/\*\*Event\*\*: GUARD_EXEMPTED[\s\S]*?\*\*Stage\*\*: code-generation/);
+    const records = readFileSync(seededAuditShard(proj), "utf-8")
+      .split("\n")
+      .filter((l) => l.trim().length > 0)
+      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    // Record-scoped: the Stage rides on the SAME record as the exemption event.
+    expect(
+      records.some(
+        (r) => r.event === "GUARD_EXEMPTED" && r.fields?.Stage === "code-generation",
+      ),
+    ).toBe(true);
   });
 
   test("no declaration → workspace_requires refusal (loud)", () => {

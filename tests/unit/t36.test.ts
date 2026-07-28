@@ -48,7 +48,7 @@
 //       `|| true`; we pin clean exit).
 //   - .sh Test 2  assert_grep audit '^\*\*Event\*\*: SCOPE_CHANGED'  -> Test 2:
 //       scopeChangedCount(audit) === 1 (STRONGER: counts the row against the
-//       seeded audit-sample.md baseline — which contains NO SCOPE_CHANGED —
+//       seeded audit-sample.jsonl baseline — which contains NO SCOPE_CHANGED —
 //       rather than a bare presence grep) + res.status === 0.
 //   - .sh Test 3  loop: each of 10 scopes -> state '\*\*Scope\*\*: <t>'  ->
 //       Test 3: per-scope sub-test, getField(state,"Scope") === target exact,
@@ -78,7 +78,7 @@
 // temp project dir (createTestProject, which toPortablePath-converts on
 // Windows so audit.md / state.md — written by the tool via forward-slash
 // helpers — round-trip when read back). Audit-emitting cases seed
-// audit-sample.md (which contains NO SCOPE_CHANGED, so post-fire counts are
+// audit-sample.jsonl (which contains NO SCOPE_CHANGED, so post-fire counts are
 // unambiguous) and state-mid-ideation.md (Scope=feature) exactly as the .sh
 // did. NOTHING is written under tests/fixtures/**. All temp dirs cleaned in
 // afterAll.
@@ -186,50 +186,27 @@ function stateField(file: string, key: string): string {
   return "";
 }
 
-/**
- * Count audit blocks with `**Event**: SCOPE_CHANGED`. Mirrors the .sh's
- * `^\*\*Event\*\*: SCOPE_CHANGED` grep, but as an exact count against the
- * seeded baseline (audit-sample.md carries no SCOPE_CHANGED).
- */
-function scopeChangedCount(body: string): number {
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse a JSONL audit buffer into records. */
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => l === "**Event**: SCOPE_CHANGED").length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Walks the file; resets at `## ` headings and `---` separators; splits
- * `**label**: value` on the literal `**: ` separator (audit-row shape per
- * amadeus-audit.ts:256-267). Block-scoped, so it pins Old Scope to the
- * SCOPE_CHANGED row exactly (STRONGER than the .sh's file-wide grep).
+ * Count audit records with event SCOPE_CHANGED. Mirrors the .sh's grep, but as
+ * an exact count against the seeded baseline (audit-sample.jsonl carries none).
  */
+function scopeChangedCount(body: string): number {
+  return auditRecords(body).filter((r) => r.event === "SCOPE_CHANGED").length;
+}
+
+/** Value of <key> from the FIRST audit record whose event matches <ev>. */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  return auditRecords(body).find((r) => r.event === ev)?.fields?.[key] ?? "";
 }
 
 describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-utility-scope-change.sh, plan 7)", () => {
@@ -246,7 +223,7 @@ describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-u
     const p = proj();
     const r = scopeChange(["--scope", "bugfix"], p);
     expect(r.status).toBe(0);
-    // STRONGER: count against the seeded baseline (audit-sample.md has none).
+    // STRONGER: count against the seeded baseline (audit-sample.jsonl has none).
     expect(scopeChangedCount(readAllAuditShards(p))).toBe(1);
   });
 

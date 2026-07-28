@@ -117,7 +117,7 @@ function shardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${FIXED_CLONE_ID}.md`;
+  return `${host}-${FIXED_CLONE_ID}.jsonl`;
 }
 /** Seed a fixed clone-id into a clone (main proj or a worktree) so its audit
  *  shard name is deterministic and shared with the main checkout. */
@@ -199,7 +199,8 @@ function createWorktree(p: string, slug: string): void {
 /**
  * make_fixture (t07:53-61): a git fixture on main + a seeded state file (so the
  * active-intent cursor resolves AND emitError's stateFilePath check passes) + a
- * one-line "# AI-DLC Audit Log\n" main audit written into the per-clone shard
+ * EMPTY main audit shard (the JSONL ledger carries no header) written into the
+ * per-clone shard
  * (the fixed clone-id makes the shard name deterministic). Returns the fixture
  * path.
  */
@@ -217,7 +218,7 @@ function makeFixture(): string {
   // tool appends to the SAME shard and audit-fork copies it.
   seedCloneId(p);
   mkdirSync(seededAuditDir(p), { recursive: true });
-  writeFileSync(auditPath(p), "# AI-DLC Audit Log\n", "utf-8");
+  writeFileSync(auditPath(p), "", "utf-8");
   // COMMIT the record (state) so the git worktree (branched from main) carries
   // it and resolves the SAME intent — a worktree-side `amadeus-audit append`
   // (which can't take --intent and reads the worktree's own cursor) then lands
@@ -245,20 +246,32 @@ function makeFixture(): string {
   return p;
 }
 
-/** Count rows of the form `**Event**: <EVENT>` in a file. */
-function countEvent(file: string, event: string): number {
-  if (!existsSync(file)) return 0;
-  return readFileSync(file, "utf-8")
-    .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  timestamp: string;
+  fields?: Record<string, string>;
+  rawBody?: string;
 }
 
-/** Count standalone `---` separator lines (grep -c '^---$'). */
-function countSeparators(file: string): number {
-  if (!existsSync(file)) return 0;
+/** Parse a JSONL shard file into records ([] when the file is absent). */
+function records(file: string): AuditRecord[] {
+  if (!existsSync(file)) return [];
   return readFileSync(file, "utf-8")
     .split("\n")
-    .filter((l) => l === "---").length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** Count records carrying <event> in a file. */
+function countEvent(file: string, event: string): number {
+  return records(file).filter((r) => r.event === event).length;
+}
+
+/** Count ledger records — the JSONL successor to counting `---` separators
+ *  (one record per line, so a "new block" is a new line). */
+function countRecords(file: string): number {
+  return records(file).length;
 }
 
 /**
@@ -268,20 +281,14 @@ function countSeparators(file: string): number {
  * Returns null on success or a human-readable failure reason.
  */
 function bracketOrderViolation(file: string): string | null {
-  const lines = readFileSync(file, "utf-8").split("\n");
+  // Record-scoped: each ledger line carries its own event AND Bolt slug, so a
+  // pair can never be assembled across two unrelated records.
   const pairs: Array<{ event: string; slug: string }> = [];
-  let pendingEvent: string | null = null;
-  for (const line of lines) {
-    const evMatch = line.match(/^\*\*Event\*\*: (AUDIT_(?:FORKED|MERGED))/);
-    if (evMatch) {
-      pendingEvent = evMatch[1];
-      continue;
-    }
-    const slugMatch = line.match(/^\*\*Bolt slug\*\*:\s*(\S+)/);
-    if (slugMatch && pendingEvent) {
-      pairs.push({ event: pendingEvent, slug: slugMatch[1] });
-      pendingEvent = null;
-    }
+  for (const r of records(file)) {
+    if (r.event !== "AUDIT_FORKED" && r.event !== "AUDIT_MERGED") continue;
+    const slug = r.fields?.["Bolt slug"];
+    if (slug === undefined) continue;
+    pairs.push({ event: r.event, slug });
   }
   for (let i = 0; i < pairs.length; i++) {
     if (pairs[i].event !== "AUDIT_FORKED") continue;
@@ -318,7 +325,11 @@ describe("t07 Phase A — primitive smoke (migrated from t07-audit-fork-merge.sh
     expect(fork.status).toBe(0); // A1
     expect(fork.out).toContain('"emitted":"AUDIT_FORKED"'); // A2
     expect(countEvent(auditPath(p), "AUDIT_FORKED")).toBeGreaterThanOrEqual(1); // A3
-    expect(readFileSync(auditPath(p), "utf-8")).toContain("Fork Boundary"); // A4
+    expect(
+      records(auditPath(p)).some(
+        (r) => r.event === "AUDIT_FORKED" && r.fields?.["Fork Boundary"] !== undefined,
+      ),
+    ).toBe(true); // A4
     expect(existsSync(wtAuditPath(p, "demo"))).toBe(true); // A5
 
     // A6: worktree audit byte-identical to main audit at fork instant.
@@ -326,11 +337,12 @@ describe("t07 Phase A — primitive smoke (migrated from t07-audit-fork-merge.sh
     const wtBytes = readFileSync(wtAuditPath(p, "demo"));
     expect(wtBytes.equals(mainBytes)).toBe(true);
 
-    // A7: Fork Boundary value identical in both files.
-    const fb = (file: string): string => {
-      const m = readFileSync(file, "utf-8").match(/\*\*Fork Boundary\*\*:\s*(\d+)/);
-      return m ? m[1] : "";
-    };
+    // A7: Fork Boundary value identical in both files. Post-switchover the
+    // boundary counts RECORD LINES, not bytes, so it stays a bare integer.
+    const fb = (file: string): string =>
+      records(file).find((r) => r.fields?.["Fork Boundary"] !== undefined)?.fields?.[
+        "Fork Boundary"
+      ] ?? "";
     expect(fb(auditPath(p))).not.toBe("");
     expect(fb(wtAuditPath(p, "demo"))).toBe(fb(auditPath(p)));
   }, 30000);
@@ -349,7 +361,11 @@ describe("t07 Phase A — primitive smoke (migrated from t07-audit-fork-merge.sh
 
     expect(merge.status).toBe(0); // A8
     // A9: the appended STAGE_STARTED row landed in main (Stage: foo).
-    expect(readFileSync(auditPath(p), "utf-8")).toContain("**Stage**: foo");
+    expect(
+      records(auditPath(p)).some(
+        (r) => r.event === "STAGE_STARTED" && r.fields?.Stage === "foo",
+      ),
+    ).toBe(true);
     expect(countEvent(auditPath(p), "AUDIT_MERGED")).toBeGreaterThanOrEqual(1); // A10
     // A11 (Decision 5: main-only emit): worktree audit has no AUDIT_MERGED row.
     expect(countEvent(wtAuditPath(p, "demo"), "AUDIT_MERGED")).toBe(0);
@@ -364,13 +380,13 @@ describe("t07 Phase B — edge cases", () => {
     const p = makeFixture();
     createWorktree(p, "e1");
     runAudit(["audit-fork", "--slug", "e1", "--project-dir", p]);
-    const preSeps = countSeparators(auditPath(p));
+    const preRecords = countRecords(auditPath(p));
 
     const merge = runAudit(["audit-merge", "--slug", "e1", "--project-dir", p]);
     expect(merge.status).toBe(0); // B1.1
     expect(merge.out).toContain('"entries_merged":0'); // B1.2
-    // B1.3: empty-delta merge appends exactly one block (the AUDIT_MERGED row).
-    expect(countSeparators(auditPath(p)) - preSeps).toBe(1);
+    // B1.3: empty-delta merge appends exactly one record (the AUDIT_MERGED row).
+    expect(countRecords(auditPath(p)) - preRecords).toBe(1);
   }, 30000);
 
   test("B2: missing worktree audit shard is mkdir -p'd at fork", () => {
@@ -404,7 +420,7 @@ describe("t07 Phase B — edge cases", () => {
     // STRONGER: the pre-emit guard means no worktree audit was forged.
     expect(existsSync(wtAuditPath(p, "e3"))).toBe(false);
     // Restore so the trap/afterAll cleanup doesn't choke.
-    writeFileSync(auditPath(p), "# AI-DLC Audit Log\n", "utf-8");
+    writeFileSync(auditPath(p), "", "utf-8");
   }, 30000);
 
   test("B4: prefix-hash mismatch — merge refuses after a length-preserving main-audit edit", () => {
@@ -416,13 +432,18 @@ describe("t07 Phase B — edge cases", () => {
       "--field", "Stage=foo", "--field", "Agent=bar",
       "--project-dir", wtDir(p, "e4"),
     ]);
-    // Flip one byte in the header (length-preserving) — it lives in the prefix
-    // that Source Audit Hash covers, so the recomputed hash will differ.
-    const edited = readFileSync(auditPath(p), "utf-8").replace(
-      "# AI-DLC Audit Log",
-      "# AI-DLC Audit LOG",
+    // Flip one byte in the FIRST ledger record (length-preserving) — that record
+    // lives in the prefix Source Audit Hash covers, so the recomputed hash will
+    // differ. The JSONL trail has no header line to tamper with any more, and
+    // the clone-id is a fixed-width token, so swapping a character in it keeps
+    // the byte length identical.
+    const lines = readFileSync(auditPath(p), "utf-8").split("\n");
+    expect(lines[0]).toContain(`"cloneId":"${FIXED_CLONE_ID}"`);
+    lines[0] = lines[0]!.replace(
+      `"cloneId":"${FIXED_CLONE_ID}"`,
+      `"cloneId":"Abcdef012345"`,
     );
-    writeFileSync(auditPath(p), edited, "utf-8");
+    writeFileSync(auditPath(p), lines.join("\n"), "utf-8");
 
     const merge = runAudit(["audit-merge", "--slug", "e4", "--project-dir", p]);
     expect(merge.status).not.toBe(0); // B4.1
@@ -530,7 +551,9 @@ describe("t07 Phase B — edge cases", () => {
       "not a directory\n",
     );
     runAudit(["audit-fork", "--slug", "erro", "--project-dir", p]);
-    const main = readFileSync(auditPath(p), "utf-8");
+    const main = records(auditPath(p))
+      .map((r) => JSON.stringify(r.fields ?? {}))
+      .join("\n");
     // The correlation tag is the ISO 8601 timestamp (isoTimestamp), NOT the
     // integer Fork Boundary — doctor (milestone 15) joins the orphan AUDIT_FORKED row
     // to this ERROR_LOGGED by exact-string timestamp match.
@@ -578,11 +601,20 @@ describe("t07 Phase C — property", () => {
     for (const s of ["t1", "t2", "t3", "t4"]) {
       createWorktree(p, s);
       runAudit(["audit-fork", "--slug", s, "--project-dir", p]);
-      // Hand-author a delta block with a frozen identical timestamp, bypassing
-      // isoTimestamp() — same shape appendAuditEntry writes (block + \n---\n).
+      // Hand-author a delta record with a frozen identical timestamp, bypassing
+      // isoTimestamp() — the same JSONL line shape appendAuditEntry writes.
       appendFileSync(
         wtAuditPath(p, s),
-        `\n## Stage Start\n**Timestamp**: 2026-05-18T12:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: ${s}\n**Agent**: test\n\n---\n`,
+        `${JSON.stringify({
+          schemaVersion: 1,
+          seq: countRecords(wtAuditPath(p, s)) + 1,
+          cloneId: FIXED_CLONE_ID,
+          intentId: DEFAULT_RECORD_DIR,
+          timestamp: "2026-05-18T12:00:00Z",
+          heading: "Stage Start",
+          event: "STAGE_STARTED",
+          fields: { Stage: s, Agent: "test" },
+        })}\n`,
         "utf-8",
       );
     }

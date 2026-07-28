@@ -56,7 +56,30 @@ function writeAudit(content: string): void {
   );
   const shard = seededAuditShard(projDir);
   mkdirSync(join(shard, ".."), { recursive: true });
-  writeFileSync(shard, `${content}\n`, "utf-8");
+  writeFileSync(shard, content, "utf-8");
+}
+
+/** Render JSONL audit records into the shard the tool reads. */
+function writeAuditRecords(
+  records: Array<{ timestamp: string; fields: Record<string, string> }>,
+): void {
+  writeAudit(
+    records
+      .map((r, i) =>
+        JSON.stringify({
+          schemaVersion: 1,
+          seq: i + 1,
+          cloneId: "testclone0001",
+          intentId: "test-intent",
+          timestamp: r.timestamp,
+          heading: "Worktree Created",
+          event: "WORKTREE_CREATED",
+          fields: r.fields,
+        }),
+      )
+      .map((l) => `${l}\n`)
+      .join(""),
+  );
 }
 function runInfo(slug: string): { rc: number; out: string } {
   // Combine stdout+stderr like the .sh's `2>&1`, and run with cwd=projDir +
@@ -78,17 +101,9 @@ afterEach(() => {
 // --- Tests 1-4: hit returns expected JSON shape and field values ----------
 describe("t72 info: hit returns expected JSON", () => {
   beforeEach(() => {
-    writeAudit(`# AI-DLC Audit Log
-
-## Worktree Created
-**Timestamp**: 2026-05-18T10:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-onboarding
-**Worktree path**: /tmp/proj/.amadeus/worktrees/bolt-onboarding
-**Branch name**: bolt-onboarding
-**Base branch**: main
-
----`);
+    writeAuditRecords([
+      { timestamp: "2026-05-18T10:00:00Z", fields: { "Bolt slug": "bolt-onboarding", "Worktree path": "/tmp/proj/.amadeus/worktrees/bolt-onboarding", "Branch name": "bolt-onboarding", "Base branch": "main" } },
+    ]);
   });
 
   test("info exits 0 on hit", () => {
@@ -110,27 +125,10 @@ describe("t72 info: hit returns expected JSON", () => {
 // --- Tests 5-6: multiple WORKTREE_CREATED for same slug -> most-recent -----
 describe("t72 info: most-recent block on duplicate slug", () => {
   beforeEach(() => {
-    writeAudit(`# AI-DLC Audit Log
-
-## Worktree Created
-**Timestamp**: 2026-05-18T10:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-x
-**Worktree path**: /tmp/old-path
-**Branch name**: bolt-x
-**Base branch**: main
-
----
-
-## Worktree Created
-**Timestamp**: 2026-05-18T11:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-x
-**Worktree path**: /tmp/new-path
-**Branch name**: bolt-x
-**Base branch**: main
-
----`);
+    writeAuditRecords([
+      { timestamp: "2026-05-18T10:00:00Z", fields: { "Bolt slug": "bolt-x", "Worktree path": "/tmp/old-path", "Branch name": "bolt-x", "Base branch": "main" } },
+      { timestamp: "2026-05-18T11:00:00Z", fields: { "Bolt slug": "bolt-x", "Worktree path": "/tmp/new-path", "Branch name": "bolt-x", "Base branch": "main" } },
+    ]);
   });
 
   test("info exits 0 with multiple matching blocks", () => {
@@ -144,17 +142,9 @@ describe("t72 info: most-recent block on duplicate slug", () => {
 // --- Tests 7-8: missing slug exits non-zero with stderr message -----------
 describe("t72 info: missing slug", () => {
   beforeEach(() => {
-    writeAudit(`# AI-DLC Audit Log
-
-## Worktree Created
-**Timestamp**: 2026-05-18T10:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-other
-**Worktree path**: /tmp/other
-**Branch name**: bolt-other
-**Base branch**: main
-
----`);
+    writeAuditRecords([
+      { timestamp: "2026-05-18T10:00:00Z", fields: { "Bolt slug": "bolt-other", "Worktree path": "/tmp/other", "Branch name": "bolt-other", "Base branch": "main" } },
+    ]);
   });
 
   test("info exits non-zero on missing slug", () => {
@@ -170,16 +160,9 @@ describe("t72 info: missing slug", () => {
 // --- Tests 9-10: malformed block (missing Worktree path) exits non-zero ---
 describe("t72 info: malformed block", () => {
   beforeEach(() => {
-    writeAudit(`# AI-DLC Audit Log
-
-## Worktree Created
-**Timestamp**: 2026-05-18T10:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-broken
-**Branch name**: bolt-broken
-**Base branch**: main
-
----`);
+    writeAuditRecords([
+      { timestamp: "2026-05-18T10:00:00Z", fields: { "Bolt slug": "bolt-broken", "Branch name": "bolt-broken", "Base branch": "main" } },
+    ]);
   });
 
   test("info exits non-zero on malformed block (missing Worktree path)", () => {

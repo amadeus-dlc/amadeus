@@ -124,15 +124,17 @@ function walkStage(slug: string, proj: string): void {
 // terminal four (emitted in one complete-workflow process, one shard) stay in
 // their emit order under this sort.
 function eventSequence(proj: string): string[] {
-  const text = readAllAuditShards(proj);
-  const blocks = text.split("\n---\n");
   const parsed: { ts: string; event: string; pos: number }[] = [];
-  blocks.forEach((block, pos) => {
-    const ev = block.match(/^\*\*Event\*\*: (.+)$/m);
-    if (!ev) return;
-    const tsm = block.match(/^\*\*Timestamp\*\*: (.+)$/m);
-    parsed.push({ ts: tsm ? tsm[1].trim() : "", event: ev[1].trim(), pos });
-  });
+  readAllAuditShards(proj)
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .forEach((line, pos) => {
+      const rec = JSON.parse(line) as { event: string | null; timestamp: string };
+      // append-raw records carry event: null — they are not part of the typed
+      // terminal-ordering contract this file pins.
+      if (rec.event === null) return;
+      parsed.push({ ts: rec.timestamp, event: rec.event, pos });
+    });
   parsed.sort((a, b) => (a.ts === b.ts ? a.pos - b.pos : a.ts < b.ts ? -1 : 1));
   return parsed.map((p) => p.event);
 }

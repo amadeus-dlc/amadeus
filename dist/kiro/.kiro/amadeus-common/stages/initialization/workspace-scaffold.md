@@ -71,7 +71,7 @@ List the created directory structure for user awareness.
 ### Step 5: Update State and Audit
 
 1. Mark workspace-scaffold as `[x]` completed in `<record>/amadeus-state.md`
-2. Append WORKSPACE_SCAFFOLDED event to `<record>/audit/<host>-<clone>.md`
+2. Append WORKSPACE_SCAFFOLDED event to `<record>/audit/<host>-<clone>.jsonl`
 
 ### Step 6: Auto-Proceed
 

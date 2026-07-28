@@ -16,7 +16,7 @@
 //          payload is a valid Claude Code hook input — malformed / empty /
 //          no-reason stdin leaves reason === "unknown" (the catch swallows)
 //   :47-52 appendAuditEntry("SESSION_ENDED", { Reason: reason }, projectDir)
-//          — writes a "**Event**: SESSION_ENDED" block to audit.md, with a
+//          — writes a SESSION_ENDED record to the JSONL audit shard, with a
 //          "**Reason**: <reason>" field; on emit failure recordHookDrop + exit 0
 // None of those seams — stdin, the env/script-path projectDir derivation, the
 // exit(0) no-op gate, the heartbeat write — is reachable by importing a
@@ -52,7 +52,7 @@
 //   .sh test 7 (no heartbeat when state absent)         -> "no heartbeat when state file absent"
 //
 // 7 .sh asserts -> 7 expect()-bearing test() cases (several STRONGER: test 1
-// pins the canonical start-of-line **Event**: line; test 2 pins the **Reason**
+// pins the canonical event field; test 2 pins the Reason field
 // value co-located on the SESSION_ENDED block; test 3 asserts byte-equality of
 // audit.md, not just unchanged line count; test 5 also asserts the emit still
 // landed; test 6 asserts the reason is exactly "unknown").
@@ -96,10 +96,18 @@ function readAudit(p: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
+}
+
+/** Parse the concatenated JSONL shards into records. */
+function auditRecords(p: string): { event: string | null; fields?: Record<string, string> }[] {
+  return readAudit(p)
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
 }
 
 function heartbeatPath(p: string): string {
@@ -142,13 +150,10 @@ describe("t30 session-end SessionEnd hook (mechanism cli — spawned hook + stdi
     seedAuditFile(proj);
     fire('{"reason":"logout"}', proj);
     const body = readAudit(proj);
-    // .sh grepped "SESSION_ENDED"; STRONGER — pin the canonical start-of-line
-    // **Event**: SESSION_ENDED field the appendAuditEntry formatter writes.
+    // .sh grepped "SESSION_ENDED"; STRONGER — pin the canonical `event` field
+    // the journal serializer writes, not a loose substring.
     expect(body).toContain("SESSION_ENDED");
-    const hasCanonical = body
-      .split("\n")
-      .some((l) => l.trim() === "**Event**: SESSION_ENDED");
-    expect(hasCanonical).toBe(true);
+    expect(auditRecords(proj).some((r) => r.event === "SESSION_ENDED")).toBe(true);
   });
 
   test("records the reason field as **Reason**: <value> [.sh test 2]", () => {
@@ -156,14 +161,12 @@ describe("t30 session-end SessionEnd hook (mechanism cli — spawned hook + stdi
     seedAuditFile(proj);
     fire('{"reason":"logout"}', proj);
     const body = readAudit(proj);
-    // .sh grepped `\*\*Reason\*\*: logout`. STRONGER — assert the **Reason**
-    // line is co-located inside the SESSION_ENDED block (the field follows the
-    // **Event**: SESSION_ENDED line of the same appended entry).
-    expect(body).toContain("**Reason**: logout");
-    const idxEvent = body.indexOf("**Event**: SESSION_ENDED");
-    const idxReason = body.indexOf("**Reason**: logout");
-    expect(idxEvent).toBeGreaterThanOrEqual(0);
-    expect(idxReason).toBeGreaterThan(idxEvent);
+    // .sh grepped `\*\*Reason\*\*: logout`. STRONGER — assert Reason lives in
+    // the SAME record as the SESSION_ENDED event, not merely somewhere in the file.
+    expect(body).toContain("logout");
+    const ended = auditRecords(proj).filter((r) => r.event === "SESSION_ENDED");
+    expect(ended.length).toBeGreaterThan(0);
+    expect(ended.some((r) => r.fields?.Reason === "logout")).toBe(true);
   });
 
   test("no-op when state file absent (audit unchanged) [.sh test 3]", () => {
@@ -205,9 +208,11 @@ describe("t30 session-end SessionEnd hook (mechanism cli — spawned hook + stdi
     const body = readAudit(proj);
     // .sh grepped `\*\*Reason\*\*: unknown`. The parse failed on the lone
     // newline so reason kept its "unknown" default (:32).
-    expect(body).toContain("**Reason**: unknown");
+    expect(
+      auditRecords(proj).some((r) => r.event === "SESSION_ENDED" && r.fields?.Reason === "unknown"),
+    ).toBe(true);
     // STRONGER: confirm it did NOT carry a "logout"-style reason from elsewhere.
-    expect(body).not.toContain("**Reason**: logout");
+    expect(body).not.toContain("logout");
   });
 
   test("no heartbeat when state file absent [.sh test 7]", () => {

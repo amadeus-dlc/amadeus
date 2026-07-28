@@ -342,7 +342,7 @@ function parseAuditEvents(projectDir: string): string[] | undefined {
   const auditDir = join(recordDirOf(projectDir), "audit");
   let body: string;
   if (existsSync(auditDir)) {
-    const shards = readdirSync(auditDir).filter((f) => f.endsWith(".md"));
+    const shards = readdirSync(auditDir).filter((f) => f.endsWith(".jsonl"));
     if (shards.length === 0) return undefined;
     body = shards.map((f) => readFileSync(join(auditDir, f), "utf-8")).join("\n");
   } else {
@@ -350,7 +350,15 @@ function parseAuditEvents(projectDir: string): string[] | undefined {
     if (!existsSync(flat)) return undefined;
     body = readFileSync(flat, "utf-8");
   }
-  return [...body.matchAll(/^\*\*Event\*\*:\s*([A-Z_]+)\s*$/gm)].map((m) => m[1]);
+  const events: string[] = [];
+  for (const line of body.split("\n")) {
+    if (!line.startsWith("{")) continue;
+    try {
+      const parsed = JSON.parse(line) as { event?: unknown };
+      if (typeof parsed.event === "string") events.push(parsed.event);
+    } catch {}
+  }
+  return events;
 }
 
 // NOTE: there is deliberately NO multi-turn gate-loop here. Calibration proved

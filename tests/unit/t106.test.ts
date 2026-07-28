@@ -85,11 +85,11 @@ describe("stateFilePath()", () => {
 
 describe("auditFilePath()", () => {
   test("resolves a per-clone shard under the record's audit/ dir", () => {
-    // The audit leaf is the non-deterministic shard name (<host>-<clone>.md),
-    // so pin the DIR + the .md extension rather than a fixed audit.md.
+    // The audit leaf is the non-deterministic shard name (<host>-<clone>.jsonl),
+    // so pin the DIR + the .jsonl extension rather than a fixed leaf name.
     const audit = auditFilePath(PROJ, INTENT);
     expect(audit.startsWith(`${EXPECTED_AUDIT_DIR}${SEP}`)).toBe(true);
-    expect(audit.endsWith(".md")).toBe(true);
+    expect(audit.endsWith(".jsonl")).toBe(true);
   });
 
   test("returns an absolute path when projectDir is absolute", () => {

@@ -46,12 +46,53 @@ function scaffold(status: string, active = true): { root: string; intent: string
     }], null, 2)}\n`,
   );
   if (active) writeFileSync(join(intents, "active-intent"), `${intent}\n`);
-  const audit = join(auditDir, "fixture.md");
-  writeFileSync(
-    audit,
-    "# AI-DLC Audit Log\n\n## Human Turn\n**Timestamp**: 2026-07-23T10:00:00Z\n**Event**: HUMAN_TURN\n\n---\n",
-  );
+  const audit = join(auditDir, "fixture.jsonl");
+  writeFileSync(audit, ledgerLine(1, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:00Z", intent));
   return { root, intent, audit };
+}
+
+interface AuditRecord {
+  schemaVersion: number;
+  seq: number;
+  cloneId: string;
+  intentId: string;
+  timestamp: string;
+  heading: string;
+  event: string | null;
+  fields?: Record<string, string>;
+}
+
+/** One JSONL ledger line for a hand-seeded fixture shard. */
+function ledgerLine(
+  seq: number,
+  heading: string,
+  event: string,
+  timestamp: string,
+  intentId: string,
+  fields: Record<string, string> = {},
+): string {
+  return `${JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: "fixtureclone1",
+    intentId,
+    timestamp,
+    heading,
+    event,
+    fields,
+  })}\n`;
+}
+
+/** Parse a JSONL shard file into records ([] when absent). */
+function auditRecords(shardPath: string): AuditRecord[] {
+  return readFileSync(shardPath, "utf-8")
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as AuditRecord);
+}
+
+function eventCount(shardPath: string, event: string): number {
+  return auditRecords(shardPath).filter((r) => r.event === event).length;
 }
 
 function run(root: string, verb: string, intent: string, input = `${verb} requested`) {
@@ -70,20 +111,17 @@ function registryStatus(root: string): string {
 function lifecycleEventBlock(
   operationId: string,
   intent: string,
+  seq: number,
   fromStatus = "in-flight",
 ): string {
-  return `\n## Intent Archived
-**Timestamp**: 2026-07-23T10:00:01Z
-**Event**: INTENT_ARCHIVED
-**Intent**: ${intent}
-**From Status**: ${fromStatus}
-**To Status**: archived
-**Operation Id**: ${operationId}
-**User Input**: archive requested
-**Human Turn Timestamp**: 2026-07-23T10:00:00Z
-
----
-`;
+  return ledgerLine(seq, "Intent Archived", "INTENT_ARCHIVED", "2026-07-23T10:00:01Z", intent, {
+    Intent: intent,
+    "From Status": fromStatus,
+    "To Status": "archived",
+    "Operation Id": operationId,
+    "User Input": "archive requested",
+    "Human Turn Timestamp": "2026-07-23T10:00:00Z",
+  });
 }
 
 function appendLifecycle(
@@ -124,9 +162,12 @@ describe("intent lifecycle transaction CLI", () => {
     expect(() => readFileSync(
       join(fixture.root, "amadeus", "spaces", "default", "intents", "active-intent"),
     )).toThrow();
-    const audit = readFileSync(fixture.audit, "utf-8");
-    expect(audit.match(/\*\*Event\*\*: INTENT_ARCHIVED/g)?.length).toBe(1);
-    expect(audit).toContain("**Human Turn Timestamp**: 2026-07-23T10:00:00Z");
+    // Record-scoped: the consumed turn's timestamp rides on the archive record.
+    const archived = auditRecords(fixture.audit).filter(
+      (r) => r.event === "INTENT_ARCHIVED",
+    );
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["Human Turn Timestamp"]).toBe("2026-07-23T10:00:00Z");
   });
 
   test("archives a non-active intent without changing the cursor", () => {
@@ -143,12 +184,12 @@ describe("intent lifecycle transaction CLI", () => {
     const result = run(fixture.root, "unarchive", fixture.intent);
     expect(result.status, result.stderr).toBe(0);
     expect(registryStatus(fixture.root)).toBe("in-flight");
-    expect(readFileSync(fixture.audit, "utf-8")).toContain("**Event**: INTENT_UNARCHIVED");
+    expect(eventCount(fixture.audit, "INTENT_UNARCHIVED")).toBe(1);
   });
 
   test("rejects a missing HUMAN_TURN without changing registry or audit", () => {
     const fixture = scaffold("in-flight");
-    writeFileSync(fixture.audit, "# AI-DLC Audit Log\n");
+    writeFileSync(fixture.audit, "");
     const registryPath = join(
       fixture.root,
       "amadeus",
@@ -170,7 +211,14 @@ describe("intent lifecycle transaction CLI", () => {
     const fixture = scaffold("in-flight");
     writeFileSync(
       fixture.audit,
-      `${readFileSync(fixture.audit, "utf-8")}\n## Human Turn\n**Timestamp**: 2026-07-23T10:00:00Z\n**Event**: HUMAN_TURN\n\n---\n`,
+      readFileSync(fixture.audit, "utf-8") +
+        ledgerLine(
+          auditRecords(fixture.audit).length + 1,
+          "Human Turn",
+          "HUMAN_TURN",
+          "2026-07-23T10:00:00Z",
+          fixture.intent,
+        ),
     );
     const result = run(fixture.root, "archive", fixture.intent);
     expect(result.status).toBe(1);
@@ -182,7 +230,7 @@ describe("intent lifecycle transaction CLI", () => {
     const archived = scaffold("archived");
     const archiveResult = run(archived.root, "archive", archived.intent);
     expect(archiveResult.status).toBe(1);
-    expect(readFileSync(archived.audit, "utf-8")).not.toContain("INTENT_ARCHIVED");
+    expect(eventCount(archived.audit, "INTENT_ARCHIVED")).toBe(0);
 
     const current = scaffold("in-flight");
     const unarchiveResult = run(current.root, "unarchive", current.intent);
@@ -204,7 +252,11 @@ describe("intent lifecycle transaction CLI", () => {
         writeFileSync(
           fixture.audit,
           readFileSync(fixture.audit, "utf-8") +
-            lifecycleEventBlock(operationId, fixture.intent),
+            lifecycleEventBlock(
+              operationId,
+              fixture.intent,
+              auditRecords(fixture.audit).length + 1,
+            ),
         );
       }
       if (cursorCommitted) {
@@ -233,7 +285,7 @@ describe("intent lifecycle transaction CLI", () => {
         fromStatus: "in-flight",
         toStatus: "archived",
         humanTurn: {
-          shard: "fixture.md",
+          shard: "fixture.jsonl",
           timestamp: "2026-07-23T10:00:00Z",
         },
         userInput: "archive requested",
@@ -245,8 +297,7 @@ describe("intent lifecycle transaction CLI", () => {
       expect(result.status, result.stderr).toBe(0);
       expect(JSON.parse(result.stdout).recovered).toBe(true);
       expect(registryStatus(fixture.root)).toBe("archived");
-      expect(readFileSync(fixture.audit, "utf-8")
-        .match(/\*\*Event\*\*: INTENT_ARCHIVED/g)?.length).toBe(1);
+      expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(1);
       expect(() => readFileSync(journal)).toThrow();
     },
   );
@@ -267,8 +318,7 @@ describe("intent lifecycle transaction CLI", () => {
     expect(statuses.filter((status) => status === 0).length).toBe(1);
     expect(statuses.filter((status) => status !== 0).length).toBe(7);
     expect(registryStatus(fixture.root)).toBe("archived");
-    expect(readFileSync(fixture.audit, "utf-8")
-      .match(/\*\*Event\*\*: INTENT_ARCHIVED/g)?.length).toBe(1);
+    expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(1);
   });
 
   test("serializes eight independent intents without losing any transaction", async () => {
@@ -282,15 +332,14 @@ describe("intent lifecycle transaction CLI", () => {
       mkdirSync(join(record, "audit"), { recursive: true });
       writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n");
       writeFileSync(
-        join(record, "audit", `fixture-${index}.md`),
-        `# AI-DLC Audit Log
-
-## Human Turn
-**Timestamp**: 2026-07-23T10:00:${String(index).padStart(2, "0")}Z
-**Event**: HUMAN_TURN
-
----
-`,
+        join(record, "audit", `fixture-${index}.jsonl`),
+        ledgerLine(
+          1,
+          "Human Turn",
+          "HUMAN_TURN",
+          `2026-07-23T10:00:${String(index).padStart(2, "0")}Z`,
+          intent,
+        ),
       );
       return {
         uuid: `123e4567-e89b-42d3-a456-4266141740${String(index).padStart(2, "0")}`,
@@ -315,11 +364,12 @@ describe("intent lifecycle transaction CLI", () => {
     const finalRows = JSON.parse(readFileSync(join(intentsDir, "intents.json"), "utf-8"));
     expect(finalRows.map((row: { status: string }) => row.status)).toEqual(Array(8).fill("archived"));
     for (let index = 0; index < 8; index++) {
-      const audit = readFileSync(
-        join(intentsDir, `260723-intent-${index}`, "audit", `fixture-${index}.md`),
-        "utf-8",
-      );
-      expect(audit.match(/\*\*Event\*\*: INTENT_ARCHIVED/g)?.length).toBe(1);
+      expect(
+        eventCount(
+          join(intentsDir, `260723-intent-${index}`, "audit", `fixture-${index}.jsonl`),
+          "INTENT_ARCHIVED",
+        ),
+      ).toBe(1);
     }
   });
 
@@ -410,8 +460,7 @@ describe("intent lifecycle transaction CLI", () => {
       },
     );
     expect(registryStatus(fixture.root)).toBe("archived");
-    expect(readFileSync(fixture.audit, "utf-8")
-      .match(/\*\*Event\*\*: INTENT_ARCHIVED/g)?.length).toBe(1);
+    expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(1);
   });
 });
 

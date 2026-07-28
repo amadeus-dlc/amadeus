@@ -191,7 +191,7 @@ amadeus/
 | ファイル | 説明 | git |
 |---|---|---|
 | `amadeus-state.md` | ワークフロー状態(6状態チェックボックス) | コミット |
-| `audit/<host>-<clone>.md` | 監査証跡(クローンごとの追記専用シャード、68イベント分類) | コミット |
+| `audit/<host>-<clone>.jsonl` | 監査証跡(クローンごとの追記専用 JSONL ジャーナルシャード、78イベントタイプ) | コミット |
 | `verification/phase-check-<phase>.md` | フェーズ境界検証(3ファイル: ideation/inception/construction。stage 定義が作成を指示するのはこの3 phaseだけで、initialization と operation にはない。2026-07 の実機確認で訂正) | コミット |
 | `.amadeus-recovery.md` | リカバリ用ブレッドクラム | gitignore |
 | `runtime-graph.json` | 実行テレメトリ(監査シャードから再導出可能) | gitignore |
@@ -269,7 +269,7 @@ amadeus/
 | コミット | gitignore |
 |---|---|
 | `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent`(per-userカーソル) |
-| `audit/*.md`(per-cloneシャード) | `.amadeus-recovery.md` 等の `intents/*/.amadeus-*`(一時ブレッドクラム) |
+| `audit/*.jsonl`(per-cloneシャード) | `.amadeus-recovery.md` 等の `intents/*/.amadeus-*`(一時ブレッドクラム) |
 | 全ステージ成果物 | `runtime-graph.json`(監査シャードから再導出可能) |
 | `verification/` フェーズ検証結果 | `amadeus/.amadeus-clone-id`(machine-local) |
 | スペースレベル `knowledge/` | `amadeus/.amadeus-sessions/` |

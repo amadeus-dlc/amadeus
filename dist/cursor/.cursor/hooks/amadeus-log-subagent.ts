@@ -2,7 +2,7 @@
 // Replaces the previous free-form `## Subagent Completed` markdown write with
 // a canonical audit event.
 //
-// Receives JSON on stdin with subagent info. No-op if no audit.md exists.
+// Receives JSON on stdin with subagent info. No-op if no audit shard exists.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";

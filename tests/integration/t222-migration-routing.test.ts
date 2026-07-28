@@ -1234,11 +1234,19 @@ describe("Kiro advancing guard parity", () => {
         "utf-8",
       );
       mkdirSync(seededAuditDir(project), { recursive: true });
-      writeFileSync(
-        join(seededAuditDir(project), "presence-floor.md"),
-        "# AI-DLC Audit Log\n",
-        "utf-8",
-      );
+      // A non-empty (record-bearing) shard: the guard's self-gate only engages
+      // for an intent that already has an audit trail.
+      const presenceFloor = `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "fixturecloneid01",
+        intentId: "test-intent",
+        timestamp: "2026-07-11T08:00:00Z",
+        heading: "Workflow Started",
+        event: "WORKFLOW_STARTED",
+        fields: { "Workflow ID": "t222-fixture", Scope: "feature" },
+      })}\n`;
+      writeFileSync(join(seededAuditDir(project), "presence-floor.jsonl"), presenceFloor, "utf-8");
       const env = { ...process.env };
       delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
       const runPretool = (command: string) =>
@@ -1257,8 +1265,8 @@ describe("Kiro advancing guard parity", () => {
         "bun .kiro/tools/amadeus-orchestrate.ts next --migrate",
       );
       expect(migration.status).toBe(0);
-      expect(readFileSync(join(seededAuditDir(project), "presence-floor.md"), "utf-8")).toBe(
-        "# AI-DLC Audit Log\n",
+      expect(readFileSync(join(seededAuditDir(project), "presence-floor.jsonl"), "utf-8")).toBe(
+        presenceFloor,
       );
     } finally {
       cleanupTestProject(project);

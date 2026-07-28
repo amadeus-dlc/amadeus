@@ -78,7 +78,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { hostname } from "node:os";
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -117,13 +117,33 @@ function freshProject(): string {
   return proj;
 }
 
-/** The .sh's append_audit: leading blank line, the block body, then a `---`
- *  separator surrounded by blank lines. Matches findAllEvents' `\n---\n` split.
- *  Audit is now a per-clone shard DIR (doctor reads via readAllAuditShards) — the
- *  appended blocks ride seedAuditFile's fixture.md shard, so the doctor's glob
- *  picks them up exactly as the flat single file did. */
-function appendAudit(proj: string, body: string): void {
-  appendFileSync(join(seededAuditDir(proj), "fixture.md"), `\n${body}\n\n---\n`);
+/** The .sh's append_audit, as one JSONL record. Audit is a per-clone shard DIR
+ *  (doctor reads via readAllAuditShards) — the appended records ride
+ *  seedAuditFile's fixture shard, so the doctor's glob picks them up exactly as
+ *  the flat single file did. */
+function appendAudit(
+  proj: string,
+  heading: string,
+  event: string,
+  fields: Record<string, string>,
+  timestamp = "2026-05-19T10:00:00Z",
+): void {
+  const shard = join(seededAuditDir(proj), "fixture.jsonl");
+  const existing = existsSync(shard) ? readFileSync(shard, "utf-8") : "";
+  const seq = existing.split("\n").filter((l) => l.trim().length > 0).length + 1;
+  appendFileSync(
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: "testclone0001",
+      intentId: "test-intent",
+      timestamp,
+      heading,
+      event,
+      fields,
+    })}\n`,
+  );
 }
 
 /**
@@ -165,7 +185,7 @@ function seedWtAuditShard(proj: string, slug: string, contents: string): void {
       .slice(0, 48) || "host";
   const auditDir = join(wtRecordRoot(proj, slug), "audit");
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, `${host}-${token}.md`), contents, "utf-8");
+  writeFileSync(join(auditDir, `${host}-${token}.jsonl`), contents, "utf-8");
 }
 
 /** mkdir -p <proj>/.amadeus/worktrees/bolt-<slug>[/<bare-space-record-root>] */
@@ -227,18 +247,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
   test("3: cleanup-orphan classification (WORKTREE_MERGED + dir persists)", () => {
     const proj = freshProject();
     mkWorktree(proj, "cleanuptest");
-    appendAudit(
-      proj,
-      [
-        "## Worktree Merged",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: WORKTREE_MERGED",
-        "**Bolt slug**: cleanuptest",
-        "**Worktree path**: /tmp/bolt-cleanuptest",
-        "**Target branch**: main",
-        "**Strategy**: squash",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Worktree Merged", "WORKTREE_MERGED", { "Bolt slug": "cleanuptest", "Worktree path": "/tmp/bolt-cleanuptest", "Target branch": "main", "Strategy": "squash" });
     // STRONGER than the .sh's two independent greps: assert the classification
     // and the slug land on the SAME worktree-drift line (Check 1's fix string).
     const { out } = runDoctor(proj);
@@ -279,17 +288,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
       join(wtRecordRoot(proj, "discardedstate"), "amadeus-state.md"),
       "# state\n",
     );
-    appendAudit(
-      proj,
-      [
-        "## Worktree Discarded",
-        "**Timestamp**: 2026-05-19T11:00:00Z",
-        "**Event**: WORKTREE_DISCARDED",
-        "**Bolt slug**: discardedstate",
-        "**Worktree path**: /tmp/bolt-discardedstate",
-        "**Reason**: user-discard",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Worktree Discarded", "WORKTREE_DISCARDED", { "Bolt slug": "discardedstate", "Worktree path": "/tmp/bolt-discardedstate", "Reason": "user-discard" }, "2026-05-19T11:00:00Z");
     const { out } = runDoctor(proj);
     // Observed but reconciled → "0 (1 active)", NOT a drift row.
     expect(out).toContain("Orphan state files: 0 (1 active)");
@@ -299,17 +298,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
   test("7: AUDIT_FORKED-without-disk-state flagged (sub-case a)", () => {
     const proj = freshProject();
     // AUDIT_FORKED but no worktree audit shard on disk for slug `noaudit`.
-    appendAudit(
-      proj,
-      [
-        "## Audit Forked",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: AUDIT_FORKED",
-        "**Bolt slug**: noaudit",
-        "**Source Audit Hash**: dummy",
-        "**Fork Boundary**: 0",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Audit Forked", "AUDIT_FORKED", { "Bolt slug": "noaudit", "Source Audit Hash": "dummy", "Fork Boundary": "0" });
     const { out } = runDoctor(proj);
     const line = out.split("\n").find((l) => l.includes("AUDIT_FORKED-without-disk")) ?? "";
     expect(line).toContain("AUDIT_FORKED-without-disk");
@@ -322,20 +311,23 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // Bolt Refs, no WORKTREE_DISCARDED → sub-case (b).
     mkWorktree(proj, "deltatest", true);
     // The worktree audit is now a per-clone shard the doctor resolves via
-    // worktreeAuditFilePath → <wt>/amadeus/spaces/default/intents/audit/<host>-<clone>.md;
+    // worktreeAuditFilePath → <wt>/amadeus/spaces/default/intents/audit/<host>-<clone>.jsonl;
     // seed it at exactly that path (a fixed clone-id token the doctor re-reads).
-    seedWtAuditShard(proj, "deltatest", "# wt audit\n");
-    appendAudit(
+    seedWtAuditShard(
       proj,
-      [
-        "## Audit Forked",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: AUDIT_FORKED",
-        "**Bolt slug**: deltatest",
-        "**Source Audit Hash**: dummy",
-        "**Fork Boundary**: 0",
-      ].join("\n"),
+      "deltatest",
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "ffffffffffff",
+        intentId: "test-intent",
+        timestamp: "2026-05-19T09:00:00Z",
+        heading: "Workflow Started",
+        event: "WORKFLOW_STARTED",
+        fields: { Scope: "feature" },
+      })}\n`,
     );
+    appendAudit(proj, "Audit Forked", "AUDIT_FORKED", { "Bolt slug": "deltatest", "Source Audit Hash": "dummy", "Fork Boundary": "0" });
     const { out } = runDoctor(proj);
     const line = out.split("\n").find((l) => l.includes("orphan-delta")) ?? "";
     expect(line).toContain("orphan-delta");
@@ -344,16 +336,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
 
   test("9: PRACTICES_OVERRIDE write-failure-* without follow-up AFFIRMED is flagged", () => {
     const proj = freshProject();
-    appendAudit(
-      proj,
-      [
-        "## Practices Override",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: PRACTICES_OVERRIDE",
-        "**Reason**: write-failure-permission",
-        "**Failure detail**: chmod denied",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Practices Override", "PRACTICES_OVERRIDE", { "Reason": "write-failure-permission", "Failure detail": "chmod denied" });
     const { out } = runDoctor(proj);
     // Both phrases the .sh grepped land on the Check-4 fix string.
     expect(out).toContain("PRACTICES_OVERRIDE write-failure");
@@ -362,18 +345,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
 
   test("10: PRACTICES_OVERRIDE bolt-plan-marker-conflict is expected (not flagged)", () => {
     const proj = freshProject();
-    appendAudit(
-      proj,
-      [
-        "## Practices Override",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: PRACTICES_OVERRIDE",
-        "**Reason**: bolt-plan-marker-conflict",
-        "**Bolt slug**: foo",
-        "**Practices Stance**: always-skeleton",
-        "**Bolt-Plan Marker**: skeleton-off",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Practices Override", "PRACTICES_OVERRIDE", { "Reason": "bolt-plan-marker-conflict", "Bolt slug": "foo", "Practices Stance": "always-skeleton", "Bolt-Plan Marker": "skeleton-off" });
     const { out } = runDoctor(proj);
     // The .sh grepped `Orphan audit: 0( |$)`. The conflict reason is skipped
     // entirely (continue before the reconciled tally), so the only override row
@@ -387,16 +359,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
   test("11: MERGE_DISPATCH_INVOKED orphan is advisory (pass=true with advisory label)", () => {
     const proj = freshProject();
     // Pre-2026 timestamp → well outside the 60s timeout window.
-    appendAudit(
-      proj,
-      [
-        "## Merge Dispatch Invoked",
-        "**Timestamp**: 2024-01-01T00:00:00Z",
-        "**Event**: MERGE_DISPATCH_INVOKED",
-        "**Bolt slug**: mergedispatchtest",
-        "**Practices excerpt**: trunk-based",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Merge Dispatch Invoked", "MERGE_DISPATCH_INVOKED", { "Bolt slug": "mergedispatchtest", "Practices excerpt": "trunk-based" }, "2024-01-01T00:00:00Z");
     const { out } = runDoctor(proj);
     const line = out.split("\n").find((l) => l.includes("MERGE_DISPATCH:")) ?? "";
     expect(line).toContain("MERGE_DISPATCH: 1 orphan INVOKED");
@@ -408,29 +371,8 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // Full merge cycle: AUDIT_FORKED + AUDIT_MERGED, worktree dir gone. The
     // AUDIT_MERGED short-circuit must run BEFORE the disk-existence check, else
     // sub-case (a) flags every healthy historical fork forever.
-    appendAudit(
-      proj,
-      [
-        "## Audit Forked",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: AUDIT_FORKED",
-        "**Bolt slug**: cleanmerge",
-        "**Source Audit Hash**: dummy",
-        "**Fork Boundary**: 0",
-      ].join("\n"),
-    );
-    appendAudit(
-      proj,
-      [
-        "## Audit Merged",
-        "**Timestamp**: 2026-05-19T11:00:00Z",
-        "**Event**: AUDIT_MERGED",
-        "**Bolt slug**: cleanmerge",
-        "**Entries Merged**: 5",
-        "**Source Audit Hash**: dummy",
-        "**Fork Boundary**: 0",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Audit Forked", "AUDIT_FORKED", { "Bolt slug": "cleanmerge", "Source Audit Hash": "dummy", "Fork Boundary": "0" });
+    appendAudit(proj, "Audit Merged", "AUDIT_MERGED", { "Bolt slug": "cleanmerge", "Entries Merged": "5", "Source Audit Hash": "dummy", "Fork Boundary": "0" }, "2026-05-19T11:00:00Z");
     const { out } = runDoctor(proj);
     expect(out).toContain("Orphan audit: 0 (1 reconciled)");
     expect(out).not.toContain("AUDIT_FORKED-without-disk");
@@ -438,39 +380,9 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
 
   test("13: multi-INVOKED pair-matching — 2 INVOKED + 1 RETURNED reports 1 orphan", () => {
     const proj = freshProject();
-    appendAudit(
-      proj,
-      [
-        "## Merge Dispatch Invoked",
-        "**Timestamp**: 2024-01-01T00:00:00Z",
-        "**Event**: MERGE_DISPATCH_INVOKED",
-        "**Bolt slug**: pair",
-        "**Practices excerpt**: trunk-based",
-      ].join("\n"),
-    );
-    appendAudit(
-      proj,
-      [
-        "## Merge Dispatch Invoked",
-        "**Timestamp**: 2024-01-01T00:01:00Z",
-        "**Event**: MERGE_DISPATCH_INVOKED",
-        "**Bolt slug**: pair",
-        "**Practices excerpt**: trunk-based",
-      ].join("\n"),
-    );
-    appendAudit(
-      proj,
-      [
-        "## Merge Dispatch Returned",
-        "**Timestamp**: 2024-01-01T00:02:00Z",
-        "**Event**: MERGE_DISPATCH_RETURNED",
-        "**Bolt slug**: pair",
-        "**Strategy**: squash",
-        "**Target**: main",
-        "**Confidence**: 0.9",
-        "**Notes**: ok",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Merge Dispatch Invoked", "MERGE_DISPATCH_INVOKED", { "Bolt slug": "pair", "Practices excerpt": "trunk-based" }, "2024-01-01T00:00:00Z");
+    appendAudit(proj, "Merge Dispatch Invoked", "MERGE_DISPATCH_INVOKED", { "Bolt slug": "pair", "Practices excerpt": "trunk-based" }, "2024-01-01T00:01:00Z");
+    appendAudit(proj, "Merge Dispatch Returned", "MERGE_DISPATCH_RETURNED", { "Bolt slug": "pair", "Strategy": "squash", "Target": "main", "Confidence": "0.9", "Notes": "ok" }, "2024-01-01T00:02:00Z");
     const { out } = runDoctor(proj);
     // Each terminal consumes one preceding INVOKED → exactly 1 orphan, not 0.
     expect(out).toContain("MERGE_DISPATCH: 1 orphan INVOKED");
@@ -481,26 +393,8 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // write-failure OVERRIDE at seconds precision, AFFIRMED at ms precision a
     // fraction later. Date.parse must win over lex string compare
     // ('...123Z' < '...Z'); else this flags as orphan.
-    appendAudit(
-      proj,
-      [
-        "## Practices Override",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: PRACTICES_OVERRIDE",
-        "**Reason**: write-failure-permission",
-        "**Failure detail**: chmod denied",
-      ].join("\n"),
-    );
-    appendAudit(
-      proj,
-      [
-        "## Practices Affirmed",
-        "**Timestamp**: 2026-05-19T10:00:00.123Z",
-        "**Event**: PRACTICES_AFFIRMED",
-        "**Bolt slug**: foo",
-        "**Practices Stance**: trunk-based",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Practices Override", "PRACTICES_OVERRIDE", { "Reason": "write-failure-permission", "Failure detail": "chmod denied" });
+    appendAudit(proj, "Practices Affirmed", "PRACTICES_AFFIRMED", { "Bolt slug": "foo", "Practices Stance": "trunk-based" }, "2026-05-19T10:00:00.123Z");
     const { out } = runDoctor(proj);
     expect(out).toContain("Orphan audit: 0 (1 reconciled)");
     expect(out).not.toContain("without follow-up");
@@ -511,18 +405,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     setBoltRefs(proj, "[aborted, active]");
     mkWorktree(proj, "aborted");
     mkWorktree(proj, "active");
-    appendAudit(
-      proj,
-      [
-        "## Bolt Failed",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: BOLT_FAILED",
-        "**Failed Bolt**: my-bolt",
-        "**Bolt slug**: aborted",
-        "**Error summary**: aborted: user halted at AUQ 1 of 2",
-        "**Reason**: aborted",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Bolt Failed", "BOLT_FAILED", { "Failed Bolt": "my-bolt", "Bolt slug": "aborted", "Error summary": "aborted: user halted at AUQ 1 of 2", "Reason": "aborted" });
     const { out } = runDoctor(proj);
     // STRONGER than the .sh's two independent greps: both segments render on the
     // SAME Check-1 worktree line ("0 (1 active fork, 1 preserved-by-abort ...)").
@@ -533,16 +416,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
 
   test("16: unknown PRACTICES_OVERRIDE Reason value surfaces as advisory", () => {
     const proj = freshProject();
-    appendAudit(
-      proj,
-      [
-        "## Practices Override",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: PRACTICES_OVERRIDE",
-        "**Reason**: future-variant-not-yet-routed",
-        "**Some Field**: value",
-      ].join("\n"),
-    );
+    appendAudit(proj, "Practices Override", "PRACTICES_OVERRIDE", { "Reason": "future-variant-not-yet-routed", "Some Field": "value" });
     const { out } = runDoctor(proj);
     // Both phrases the .sh grepped land on the Check-4 advisory label.
     expect(out).toContain("unknown Reason");

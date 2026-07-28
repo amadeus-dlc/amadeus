@@ -147,19 +147,29 @@ function forkedState(proj: string, slug: string): string {
   );
 }
 
-/** Concatenate every main audit shard (audit/*.md) — the tools write their own
- *  per-clone shard alongside seedAuditFile's fixture.md. */
+/** Concatenate every main audit shard (audit/*.jsonl) — the tools write their
+ *  own per-clone shard alongside seedAuditFile's fixture. */
 function readAudit(proj: string): string {
   const dir = seededAuditDir(proj);
   let names: string[];
   try {
     names = readdirSync(dir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
+}
+
+/** Does any audit record across the main shards carry `event` === <ev>? */
+function hasAuditEvent(proj: string, ev: string): boolean {
+  return readAudit(proj)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .some((r) => r.event === ev);
 }
 
 describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-invariant.sh, plan 10)", () => {
@@ -309,10 +319,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     // grepped main audit.md for `^**Event**: BOLT_COMPLETED`. The refusal fires
     // BEFORE the BOLT_COMPLETED emit (amadeus-bolt.ts:336 < :354), so no such row
     // exists in main audit.md.
-    const audit = readAudit(proj);
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: BOLT_COMPLETED"),
-    ).toBe(false);
+    expect(hasAuditEvent(proj, "BOLT_COMPLETED")).toBe(false);
   }, 30000);
 
   test("complete --merge proceeds (exit 0) after release-merge [.sh T9]", () => {
@@ -334,10 +341,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     expect(r.status).toBe(0);
     // Positive complement to T8: now that the hold lifted, BOLT_COMPLETED IS in
     // main audit.md (the merge pipeline ran).
-    const audit = readAudit(proj);
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: BOLT_COMPLETED"),
-    ).toBe(true);
+    expect(hasAuditEvent(proj, "BOLT_COMPLETED")).toBe(true);
   }, 60000);
 
   test("hold-merge errors (exit 1) when forked state absent [.sh T10]", () => {

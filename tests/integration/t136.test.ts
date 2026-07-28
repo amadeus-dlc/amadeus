@@ -141,7 +141,7 @@ function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
@@ -203,33 +203,28 @@ function checkboxGlyph(p: string, slug: string): string {
  * (`grep -cE '^\*\*Event\*\*: <ev>$'`).
  */
 function auditEventCount(p: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+  return auditRecords(p).filter((r) => r.event === ev).length;
+}
+
+/** Every JSONL audit record across the shard set, in file order. */
+function auditRecords(p: string): {
+  event: string | null;
+  fields?: Record<string, string>;
+}[] {
   return readAudit(p)
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
 }
 
 /**
- * Return the audit blocks (heading..`---`) whose `**Event**:` matches <ev>,
- * each as the array of its lines. Used by S2/S3 to assert pair-emission and
- * per-block field values for the two covered events.
+ * Return the JSONL audit records whose event matches <ev>, in file order. Used
+ * by S2/S3 to assert pair-emission and per-record field values.
  */
-function auditBlocks(p: string, ev: string): string[][] {
-  const blocks: string[][] = [];
-  let cur: string[] = [];
-  let matched = false;
-  for (const line of readAudit(p).split("\n")) {
-    if (line === "---") {
-      if (matched) blocks.push(cur);
-      cur = [];
-      matched = false;
-      continue;
-    }
-    cur.push(line);
-    if (line === `**Event**: ${ev}`) matched = true;
-  }
-  if (matched) blocks.push(cur);
-  return blocks;
+function auditBlocks(p: string, ev: string): Record<string, string>[] {
+  return auditRecords(p)
+    .filter((r) => r.event === ev)
+    .map((r) => r.fields ?? {});
 }
 
 let proj: string;
@@ -338,12 +333,12 @@ describe("t136 revision-loop — amadeus-state gate/reject/revise/approve cumula
     expect(revising).toHaveLength(3);
     const feedbacks = ["needs more detail", "still not enough", "one more round"];
     for (let i = 0; i < 3; i++) {
-      const rejLines = rejected[i];
-      const revLines = revising[i];
-      expect(rejLines.some((l) => l === `**Stage**: ${SLUG}`)).toBe(true);
-      expect(rejLines.some((l) => l === `**Feedback**: ${feedbacks[i]}`)).toBe(true);
-      expect(revLines.some((l) => l === `**Stage**: ${SLUG}`)).toBe(true);
-      expect(revLines.some((l) => l === `**Feedback**: ${feedbacks[i]}`)).toBe(true);
+      const rejFields = rejected[i];
+      const revFields = revising[i];
+      expect(rejFields.Stage).toBe(SLUG);
+      expect(rejFields.Feedback).toBe(feedbacks[i]);
+      expect(revFields.Stage).toBe(SLUG);
+      expect(revFields.Feedback).toBe(feedbacks[i]);
     }
   });
 
@@ -351,9 +346,7 @@ describe("t136 revision-loop — amadeus-state gate/reject/revise/approve cumula
     const revising = auditBlocks(proj, "STAGE_REVISING");
     expect(revising).toHaveLength(3);
     for (let i = 0; i < 3; i++) {
-      expect(
-        revising[i].some((l) => l === `**Revision count**: ${i + 1}`),
-      ).toBe(true);
+      expect(revising[i]["Revision count"]).toBe(String(i + 1));
     }
   });
 });

@@ -141,7 +141,7 @@ function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (!existsSync(auditDir)) return "";
   return readdirSync(auditDir)
-    .filter((f) => f.endsWith(".md"))
+    .filter((f) => f.endsWith(".jsonl"))
     .map((f) => readFileSync(join(auditDir, f), "utf-8"))
     .join("\n");
 }
@@ -166,7 +166,9 @@ function stateField(p: string, key: string): string {
 function workflowStartedCount(p: string): number {
   return readAudit(p)
     .split("\n")
-    .filter((l) => l === "**Event**: WORKFLOW_STARTED").length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === "WORKFLOW_STARTED").length;
 }
 
 const PKG_REACT_TS = `{

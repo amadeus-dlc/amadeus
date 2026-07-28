@@ -286,31 +286,24 @@ function grepCountText(text: string, needle: RegExp | string): number {
 function readAudit(pd: string): string {
   return readAllAuditShards(pd);
 }
-function grepCountAudit(pd: string, needle: RegExp | string): number {
-  return grepCountText(readAudit(pd), needle);
+/** Parse the merged JSONL audit shards into records (blank lines skipped). */
+function auditRecords(content: string): Array<Record<string, unknown>> {
+  return content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
-// Block-scoped extractor — the TS analogue of the .sh's awk:
-//   awk '/Event.*: RULE_LEARNED/{p=1} p; /^---$/{if(p)exit}'
-// Starts capturing at the first line matching the start regex (`Event.*:
-// <EVENT>`), keeps capturing each subsequent line, and STOPS at the next
-// line that is exactly `---`. Returns the captured block (start line through
-// the terminating `---` inclusive), or "" if the start line never appears.
-// This pins assertions to fields co-located WITHIN ONE audit block rather
-// than anywhere in the file — strictly stronger isolation than a whole-file
-// substring check.
-function extractAuditBlock(content: string, startRe: RegExp): string {
-  const lines = content.split("\n");
-  const captured: string[] = [];
-  let inBlock = false;
-  for (const line of lines) {
-    if (!inBlock && startRe.test(line)) inBlock = true;
-    if (inBlock) {
-      captured.push(line);
-      if (line === "---") break;
-    }
-  }
-  return captured.join("\n");
+/** Count audit records whose `event` is exactly <ev>. */
+function auditEventCount(pd: string, ev: string): number {
+  return auditRecords(readAudit(pd)).filter((r) => r.event === ev).length;
+}
+
+/** Fields of the FIRST audit record whose `event` is <ev> ({} when absent). */
+function auditFields(content: string, ev: string): Record<string, string> {
+  const rec = auditRecords(content).find((r) => r.event === ev);
+  return rec ? ((rec.fields ?? {}) as Record<string, string>) : {};
 }
 
 // =====================================================================
@@ -489,7 +482,7 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
     expect(readFile(plf)).toContain("cid:user-stories:c1");
     // ensure-exists created the routed heading; the practice landed under it.
     expect(/^## Corrections/m.test(readFile(plf))).toBe(true);
-    expect(/Event.*: RULE_LEARNED/.test(readAudit(pd))).toBe(true);
+    expect(auditEventCount(pd, "RULE_LEARNED")).toBeGreaterThan(0);
   });
 
   // .sh 19 — learning (team scope) -> write a practice to team.md
@@ -567,19 +560,16 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
     runCli(["persist", "--slug", "user-stories", "--selections-json", sel, "--project-dir", pd]);
     // The .sh extracted the RULE_LEARNED block via awk
     //   (awk '/Event.*: RULE_LEARNED/{p=1} p; /^---$/{if(p)exit}')
-    // and asserted both field lines WITHIN that block. We mirror that exactly:
-    // capture the block (the `**Event**: RULE_LEARNED` line through the next
-    // `---`) and assert the fields are co-located inside it. This is stronger
-    // isolation than a whole-file substring — a Source/Candidate-ID landing in
-    // some OTHER audit block (e.g. a SENSOR_PROPOSED row, or a future second
-    // RULE_LEARNED) would no longer falsely satisfy the assertion.
+    // and asserted both field lines WITHIN that block. The JSONL successor is
+    // the record itself: read the RULE_LEARNED record's `fields` map, so a
+    // Source/Candidate-ID landing on some OTHER audit record (a SENSOR_PROPOSED
+    // row, or a future second RULE_LEARNED) cannot falsely satisfy this.
     const audit = readAudit(pd);
-    const ftBlock = extractAuditBlock(audit, /Event.*: RULE_LEARNED/);
-    // Sanity: the block must actually exist (start line found + terminated).
-    expect(ftBlock).toContain("RULE_LEARNED");
-    expect(ftBlock.endsWith("---")).toBe(true);
-    expect(ftBlock).toContain("Source**: user_addition");
-    expect(ftBlock).toContain("Candidate-ID**: free_text_1");
+    // Sanity: the record must actually exist.
+    expect(auditEventCount(pd, "RULE_LEARNED")).toBeGreaterThan(0);
+    const ftFields = auditFields(audit, "RULE_LEARNED");
+    expect(ftFields.Source).toBe("user_addition");
+    expect(ftFields["Candidate-ID"]).toBe("free_text_1");
   });
 
   // .sh 23 — idempotent re-run -> no re-emit, no duplicate line. SPAWN TWICE,
@@ -594,7 +584,7 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
     );
     runCli(["persist", "--slug", "user-stories", "--selections-json", sel, "--project-dir", pd]);
     runCli(["persist", "--slug", "user-stories", "--selections-json", sel, "--project-dir", pd]);
-    const rows = grepCountAudit(pd, /Event.*: RULE_LEARNED/);
+    const rows = auditEventCount(pd, "RULE_LEARNED");
     const lines = grepCount(
       projectPractices(pd),
       "cid:user-stories:c1",
@@ -629,7 +619,7 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
       "--project-dir",
       pd,
     ]);
-    const rows = grepCountAudit(pd, /Event.*: RULE_LEARNED/);
+    const rows = auditEventCount(pd, "RULE_LEARNED");
     const lines = grepCount(plf, "cid:user-stories:c1");
     expect(`${res.rc}:${rows}:${lines}`).toBe("0:1:1");
   });

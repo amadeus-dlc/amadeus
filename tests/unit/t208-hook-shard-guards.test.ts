@@ -37,6 +37,7 @@ import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
   seededAuditDir,
   seededAuditShard,
   seededRecordDir,
@@ -95,7 +96,7 @@ function readAllShards(proj: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(dir, n), "utf-8"))
     .join("\n");
@@ -117,7 +118,20 @@ function seedForeignShardOnly(proj: string, withDispatcher = false): void {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  writeFileSync(join(auditDir, `${host}-otherclone.md`), "**Event**: FOREIGN_SHARD\n", "utf-8");
+  writeFileSync(
+    join(auditDir, `${host}-otherclone.jsonl`),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: "otherclone",
+      intentId: DEFAULT_RECORD_DIR,
+      timestamp: "2026-01-01T00:00:00Z",
+      heading: "Session Start",
+      event: "SESSION_STARTED",
+      fields: { Source: "foreign-shard" },
+    })}\n`,
+    "utf-8",
+  );
   // Guard the precondition: the self shard must NOT exist (else the bug can't
   // manifest and the test would pass vacuously against the pre-fix hook).
   if (existsSync(seededAuditShard(proj))) {
@@ -236,7 +250,7 @@ describe("t208 hook active-workflow guard resolves ANY shard, not the self shard
     // Seed ONLY a foreign shard (self shard absent) → true.
     const auditDir = seededAuditDir(proj);
     mkdirSync(auditDir, { recursive: true });
-    writeFileSync(join(auditDir, "some-host-otherclone.md"), "**Event**: X\n", "utf-8");
+    writeFileSync(join(auditDir, "some-host-otherclone.jsonl"), "{}\n", "utf-8");
     expect(existsSync(seededAuditShard(proj))).toBe(false);
     expect(hasActiveWorkflowAudit(proj)).toBe(true);
   });
