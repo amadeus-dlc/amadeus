@@ -82,23 +82,36 @@ plugins/example/
 
 ---
 
-## CLI
+## 入口
 
-ホスト側の操作はすべて、ハーネス中立 CLI `amadeus-plugin.ts` の verb です。ハーネス
-ツリーへ配布されたコピー経由で実行します — Claude Code なら次のとおりです。
+ホスト側の操作はすべて、ハーネス中立 CLI `amadeus-plugin.ts` の verb です。その 1 本の
+CLI へ届く面は次の 3 つで、違いは体裁だけです — 下記の verb 契約はどの面でも同一です。
 
-```
-bun .claude/tools/amadeus-plugin.ts <verb> [flags]
-```
+- **エンジン verb `/amadeus plugin <verb>`** — 第一表記であり、全ハーネスで同一です。
+  `plugin` 以降はすべて未パースのままプラグイン CLI へ渡り、exit code はそのまま返る
+  ため、CLI 自身の usage エラーが正本であり続けます。
+- **スキル** — `/amadeus-plugin` はユーザー起動スキルで、まず read-only verb を実行し、
+  解決された状態を説明してから、あなたが名前で選んだ 1 verb だけを実行します。変更を
+  伴う verb(`install`・`drop`)へ至るガード付きの経路です。これとは別に、ステージを
+  提供するプラグインを compose すると、そのステージ専用のランナースキル
+  `/amadeus-<slug>` が生成されます。
+- **生 CLI** — スクリプトや上級者向け。ハーネスツリーへ配布されたコピーを直接実行します。
 
-他のハーネスは各自のディレクトリ(`.codex`・`.cursor`・`.kimi` など)に置き換えます:
-`bun <harness-dir>/tools/amadeus-plugin.ts <verb>`。verb は次のとおりです。
+  ```
+  bun .claude/tools/amadeus-plugin.ts <verb> [flags]
+  ```
+
+  他のハーネスは各自のディレクトリ(`.codex`・`.cursor`・`.kimi` など)に置き換えます:
+  `bun <harness-dir>/tools/amadeus-plugin.ts <verb>`。
+
+verb は次のとおりです。
 
 | verb | 動作 | exit |
 | --- | --- | --- |
 | `compose [--if-stale] [--project-root <dir>]` | 全インストール済みプラグインを単一のアトミックトランザクションとしてホストへ適用。`--if-stale` は合成レコードが既に最新なら即座に戻る no-op 高速路。 | 成功・no-op で `0`、適用失敗で `1` |
 | `doctor [--project-root <dir>]` | 各 compose 済みプラグインの状態(`ok`・`drift`・`recovery-pending`)を表示。 | 健全なら `0`、degraded / recovery-pending があれば `1` |
 | `drop <plugin-name> [--project-root <dir>]` | 1 プラグインの所有ファイルを除去し、残りのプラグインから共有ファイルを再構築。 | 成功で `0`、拒否・失敗で `1` |
+| `install <path> [--force] [--project-root <dir>]` | `<path>` のプラグインソースフォルダをホストの discovery ルートへ staging し、そのまま compose まで 1 操作で実行。`--force` は同名で staging 済みの *別* プラグインを置換します。 | 成功で `0`、拒否・失敗で `1` |
 | `status [--project-root <dir>]` | 件数(installed・composed・監査 revision)を表示。 | `0` |
 
 `--project-root` を省略した場合、ホストルートは **CLI 自身がインストールされている
@@ -183,6 +196,21 @@ install and after every plugin change"* に続けて `compose` コマンド。�
   `hooks/auto-compose.snippet` から配線されます。
 - **`manual-only`**(`opencode`)— フォルダをコピー。セッションフックがないため、
   インストール後および全プラグイン変更後に `compose` を実行します。
+
+`install` verb は、このフォルダドロップを 1 操作にまとめた形です — 手順が示すのと同じ
+discovery ルートへソースフォルダを staging し、同一の compose 経路をそのまま呼びます
+(compose を再実装してはいません)。
+
+```
+/amadeus plugin install path/to/plugins/example
+```
+
+プラグイン名はソースフォルダの basename で、staging されたコピーは
+`<host>/.amadeus-plugin-src/<name>/` に置かれます。同一バイト列に対する再実行は冪等です。
+同名で staging 済みの *別* プラグインは上書きされず拒否されます。`--force` はそれを置換し、
+先に drop する選択肢もあります。ソース中のシンボリックリンクは 1 本ごとに stderr 行を
+出してスキップされ、追跡されません。compose の失敗はそのまま返るため、失敗した stage が
+そのまま見えます。
 
 compose は、出力ディレクトリが空か、同一プラグイン・同一ハーネスの自分自身の以前の
 投影である場合を除き、書き込みを拒否します。既存の非空ディレクトリ、*別* プラグイン・

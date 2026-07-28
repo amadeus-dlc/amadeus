@@ -41,6 +41,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
     mirrorCoreSkillDirectory("kiro"),
+    { src: "skills/amadeus-plugin", dst: "skills/amadeus-plugin" },
   ],
 
   // Authored Kiro shell surfaces. These carry literal `.kiro` (harness-specific
