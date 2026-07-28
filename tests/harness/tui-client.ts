@@ -13,8 +13,27 @@ export type TuiDriverRun = {
   readonly stderr: string;
 };
 
-export function runTuiDriver(args: readonly string[]): TuiDriverRun {
-  const result = spawnSync(process.execPath, [TUI_DRIVER, ...args], {
+type SyncDriverSpawn = (
+  executable: string,
+  args: readonly string[],
+  options: { readonly encoding: "utf-8" },
+) => {
+  readonly status: number | null;
+  readonly stdout: string | null;
+  readonly stderr: string | null;
+};
+
+const REAL_SYNC_DRIVER_SPAWN: SyncDriverSpawn = (
+  executable,
+  args,
+  options,
+) => spawnSync(executable, args, options);
+
+export function runTuiDriver(
+  args: readonly string[],
+  spawnDriver: SyncDriverSpawn = REAL_SYNC_DRIVER_SPAWN,
+): TuiDriverRun {
+  const result = spawnDriver(process.execPath, [TUI_DRIVER, ...args], {
     encoding: "utf-8",
   });
   return {
@@ -45,13 +64,41 @@ export function waitForTui(
   );
 }
 
-export function runTuiDriverToExit(args: readonly string[]): Promise<number> {
+type AsyncDriverSpawn = (
+  executable: string,
+  args: readonly string[],
+  options: { readonly stdio: "inherit" },
+  handlers: {
+    readonly exit: (code: number | null) => void;
+    readonly error: () => void;
+  },
+) => void;
+
+const REAL_ASYNC_DRIVER_SPAWN: AsyncDriverSpawn = (
+  executable,
+  args,
+  options,
+  handlers,
+) => {
+  const child = spawn(executable, args, options);
+  child.once("exit", handlers.exit);
+  child.once("error", handlers.error);
+};
+
+export function runTuiDriverToExit(
+  args: readonly string[],
+  spawnDriver: AsyncDriverSpawn = REAL_ASYNC_DRIVER_SPAWN,
+): Promise<number> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [TUI_DRIVER, ...args], {
-      stdio: "inherit",
-    });
-    child.on("exit", (code) => resolve(code ?? -1));
-    child.on("error", () => resolve(-1));
+    spawnDriver(
+      process.execPath,
+      [TUI_DRIVER, ...args],
+      { stdio: "inherit" },
+      {
+        exit: (code) => resolve(code ?? -1),
+        error: () => resolve(-1),
+      },
+    );
   });
 }
 

@@ -4,6 +4,7 @@ import { isAmadeusToolPath } from "../harness/cli-target.ts";
 import {
   importedBindingOf,
   sourceWithTypeChecker,
+  unwrapExpression,
   visitNodes,
 } from "./typescript-source.ts";
 
@@ -25,19 +26,6 @@ const POSITIONAL_SPAWNS = new Set([
 ]);
 const CLI_TARGET_MODULE = "../harness/cli-target.ts";
 const TEST_RUNNER = "run-tests.sh";
-
-function unwrapped(expression: ts.Expression): ts.Expression {
-  if (
-    ts.isAsExpression(expression) ||
-    ts.isNonNullExpression(expression) ||
-    ts.isParenthesizedExpression(expression) ||
-    ts.isSatisfiesExpression(expression) ||
-    ts.isTypeAssertionExpression(expression)
-  ) {
-    return unwrapped(expression.expression);
-  }
-  return expression;
-}
 
 function initializerFor(
   identifier: ts.Identifier,
@@ -69,7 +57,7 @@ function resolvedExpression(
   context: ScanContext,
   resolving = new Set<ts.Symbol>(),
 ): ts.Expression {
-  const direct = unwrapped(expression);
+  const direct = unwrapExpression(expression);
   if (!ts.isIdentifier(direct)) return direct;
   const symbol = context.checker.getSymbolAtLocation(direct);
   if (!symbol || resolving.has(symbol)) return direct;
@@ -105,7 +93,7 @@ function staticPathValue(
   context: ScanContext,
   resolving = new Set<ts.Symbol>(),
 ): string | null {
-  const candidate = unwrapped(node);
+  const candidate = unwrapExpression(node);
   if (ts.isIdentifier(candidate)) {
     const initializer = initializerFor(candidate, context.checker);
     if (!initializer || resolving.has(initializer.symbol)) return null;

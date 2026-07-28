@@ -16,6 +16,19 @@ const IMPORTED_CALL_CACHE = new Map<
   ReadonlyMap<string, ReadonlySet<string>>
 >();
 
+export function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isNonNullExpression(expression) ||
+    ts.isParenthesizedExpression(expression) ||
+    ts.isSatisfiesExpression(expression) ||
+    ts.isTypeAssertionExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression);
+  }
+  return expression;
+}
+
 export function importedBindingOf(
   identifier: ts.Identifier,
   checker: ts.TypeChecker,
@@ -99,10 +112,10 @@ function importedCallsByModule(
   );
   const calls = new Map<string, Set<string>>();
   visitNodes(sourceFile, (node) => {
-    if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)) {
-      return;
-    }
-    const imported = importedBindingOf(node.expression, checker);
+    if (!ts.isCallExpression(node)) return;
+    const callee = unwrapExpression(node.expression);
+    if (!ts.isIdentifier(callee)) return;
+    const imported = importedBindingOf(callee, checker);
     if (!imported) return;
     const names = calls.get(imported.module) ?? new Set<string>();
     names.add(imported.name);

@@ -62,6 +62,25 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
     }
   });
 
+  test("SDK detection unwraps a canonical imported callee", () => {
+    const calls = [
+      '(driveAidlc)("/amadeus bugfix");',
+      'driveAidlc!("/amadeus bugfix");',
+      '(driveAidlc as typeof driveAidlc)("/amadeus bugfix");',
+      '(driveAidlc satisfies typeof driveAidlc)("/amadeus bugfix");',
+      '(<typeof driveAidlc>driveAidlc)("/amadeus bugfix");',
+    ];
+
+    for (const call of calls) {
+      const src = [
+        'import { driveAidlc } from "../harness/sdk-drive.ts";',
+        call,
+      ].join("\n");
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["sdk"]);
+      expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["sdk"]);
+    }
+  });
+
   test("classification is syntactic, not call-graph reachability analysis", () => {
     const unusedSdkCall = [
       'import { driveAidlc } from "../harness/sdk-drive.ts";',
@@ -512,6 +531,25 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
 
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
     expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);
+  });
+
+  test("TUI detection unwraps a canonical imported callee", () => {
+    const calls = [
+      "(runTuiDriver)([]);",
+      "runTuiDriver!([]);",
+      "(runTuiDriver as typeof runTuiDriver)([]);",
+      "(runTuiDriver satisfies typeof runTuiDriver)([]);",
+      "(<typeof runTuiDriver>runTuiDriver)([]);",
+    ];
+
+    for (const call of calls) {
+      const src = [
+        'import { runTuiDriver } from "../harness/tui-client.ts";',
+        call,
+      ].join("\n");
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
+      expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);
+    }
   });
 
   test("same-named locals, strings, and import-only clients do not derive tui", () => {
