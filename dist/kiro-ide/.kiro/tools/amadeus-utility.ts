@@ -126,11 +126,7 @@ import {
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
-import {
-  intentSelectionOptions,
-  intentSelectionTokenMatchesOptions,
-  resolveIntentSelectionResponse,
-} from "./amadeus-intent-selection.ts";
+import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
 import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   buildDoctorPluginSection,
@@ -4796,20 +4792,11 @@ function handleIntentSelectionResponse(
       "Usage: amadeus-utility.ts intent-select-response <selection-token> <human-response>",
     );
   }
-  const space = activeSpace(projectDir);
-  const intents = listIntents(projectDir, space).filter(
-    (intent): intent is typeof intent & { dirName: string } => intent.dirName !== null,
+  const resolution = resolveCurrentIntentSelectionResponse(
+    projectDir,
+    selectionToken,
+    response,
   );
-  if (intents.some((intent) => intent.active)) {
-    refuseWithoutAudit("Intent selection is no longer pending because an active intent is set.");
-  }
-  const currentOptions = intentSelectionOptions(intents);
-  if (!intentSelectionTokenMatchesOptions(selectionToken, currentOptions)) {
-    refuseWithoutAudit(
-      "Intent selection token does not match the current registry options. Re-run the selection.",
-    );
-  }
-  const resolution = resolveIntentSelectionResponse(selectionToken, response);
   if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
   selectIntent(projectDir, resolution.target);
 }

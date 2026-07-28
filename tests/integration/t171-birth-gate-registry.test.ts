@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent-select-response, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent-select-response, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:resolveCurrentIntentSelectionResponse, function:listIntents, function:activeSpace
 //
 // Mechanism: cli (spawned dist tools) — birth + `next` run end-to-end the way
 // the conductor runs them.

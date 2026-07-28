@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { activeSpace, listIntents } from "./amadeus-lib.ts";
 
 export type IntentSelectionResolution =
   | { kind: "resolved"; target: string }
@@ -105,4 +106,30 @@ export function resolveIntentSelectionResponse(
     kind: "rejected",
     message: `Intent selection "${response}" does not match a displayed option. Choose 1-${options.length} or an exact option name.`,
   };
+}
+
+export function resolveCurrentIntentSelectionResponse(
+  projectDir: string,
+  token: string,
+  response: string,
+): IntentSelectionResolution {
+  const space = activeSpace(projectDir);
+  const intents = listIntents(projectDir, space).filter(
+    (intent): intent is typeof intent & { dirName: string } => intent.dirName !== null,
+  );
+  if (intents.some((intent) => intent.active)) {
+    return {
+      kind: "rejected",
+      message: "Intent selection is no longer pending because an active intent is set.",
+    };
+  }
+  const currentOptions = intentSelectionOptions(intents);
+  if (!intentSelectionTokenMatchesOptions(token, currentOptions)) {
+    return {
+      kind: "rejected",
+      message:
+        "Intent selection token does not match the current registry options. Re-run the selection.",
+    };
+  }
+  return resolveIntentSelectionResponse(token, response);
 }
