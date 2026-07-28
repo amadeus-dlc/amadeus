@@ -4,6 +4,7 @@
 // size: medium
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createMirrorMutationPermit } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
 import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import { EMPTY_MIRROR_STATE } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import type { MirrorResolvedProjectFields } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
@@ -208,6 +209,28 @@ describe("t350 auxiliary Status", () => {
       lastAppliedStatus: "Construction",
       state: "synced",
     });
+  });
+});
+
+describe("t350 shared Project gateway", () => {
+  test("models issue edit and close transitions", async () => {
+    const gateway = new ProjectGateway(harness.markerBody());
+    const editEvent = harness.context("sync", gateway).event;
+
+    const edited = await gateway.editIssue(
+      createMirrorMutationPermit({
+        event: editEvent,
+        repository: gateway.issue.repository,
+        operation: "sync",
+        issueNumber: gateway.issue.number,
+      }),
+      "updated",
+    );
+    const closed = await gateway.closeIssue();
+
+    expect(edited).toMatchObject({ kind: "ok", value: { body: "updated" } });
+    expect(closed).toMatchObject({ kind: "ok", value: { state: "CLOSED" } });
+    expect(gateway.history).toEqual(["edit", "close"]);
   });
 });
 
