@@ -2521,7 +2521,7 @@ function lifecycleAuditMatches(
     } catch (error) {
       throw new Error(`Cannot read lifecycle audit shard ${basename(path)}: ${errorMessage(error)}`);
     }
-    const blocks = content.replace(/\r\n/g, "\n").split(/\n---\n/);
+    const blocks = splitAuditRecords(content);
     for (const block of blocks) {
       const event = auditBlockField(block, "Event");
       const timestamp = auditBlockField(block, "Timestamp");
@@ -3615,7 +3615,7 @@ function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
   if (contents.join("\n").length === 0) return null;
   const events: PresenceEvent[] = [];
   for (let shard = 0; shard < contents.length; shard++) {
-    const blocks = contents[shard].replace(/\r\n/g, "\n").split(/\n---\n/);
+    const blocks = splitAuditRecords(contents[shard]);
     for (let pos = 0; pos < blocks.length; pos++) {
       const ev = auditBlockField(blocks[pos], "Event");
       if (!ev) continue;
@@ -3756,7 +3756,7 @@ export function verifyDelegatedProvenance(projectDir: string, block: string): bo
   } catch {
     return false;
   }
-  const blocks = content.replace(/\r\n/g, "\n").split(/\n---\n/);
+  const blocks = splitAuditRecords(content);
   for (const b of blocks) {
     if (auditBlockField(b, "Event") !== "HUMAN_TURN") continue;
     if ((auditBlockField(b, "Timestamp") ?? "") === issuerHumanTs) return true;
@@ -5900,13 +5900,24 @@ export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
 // the same as Unix audits. Without this, `\r\n---\r\n` doesn't match the
 // `\n---\n` separator and every block past the first looks merged into one
 // — silently masking every drift class.
+// splitAuditRecords — the ONE place that turns an audit buffer (a single
+// shard, or a readAllAuditShards merge) into record blocks. Every consumer
+// that needs record boundaries must call this instead of splitting on the
+// storage format inline: when the storage format changes (Markdown blocks →
+// JSONL lines), only this function and the field accessors adapt, and no
+// call site needs to know the physical representation. Normalises CRLF → LF
+// for the same Windows-authored-audit reason findAllEvents documents below.
+export function splitAuditRecords(buffer: string): string[] {
+  return buffer.replace(/\r\n/g, "\n").split(/\n---\n/);
+}
+
 export function findAllEvents(
   audit: string,
   event: string,
   slug?: string,
 ): { timestamp: string; block: string }[] {
   const results: { timestamp: string; block: string; pos: number }[] = [];
-  const blocks = audit.replace(/\r\n/g, "\n").split(/\n---\n/);
+  const blocks = splitAuditRecords(audit);
   const eventRegex = new RegExp(`^\\*\\*Event\\*\\*:\\s*${escapeRegex(event)}\\s*$`, "m");
   const slugRegex = slug
     ? new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m")

@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   auditBlockField,
+  splitAuditRecords,
   auditShardName,
   auditShards,
   readIntentRegistry,
@@ -279,7 +280,7 @@ function reservationHumanTurns(
   const matches: Array<{ timestamp: string; shard: string }> = [];
   for (const path of auditShards(projectDir, marker.targetIntentDir, marker.space)) {
     const content = readFileSync(path, "utf-8");
-    for (const block of content.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+    for (const block of splitAuditRecords(content)) {
       if (
         auditBlockField(block, "Event") !== "HUMAN_TURN" ||
         auditBlockField(block, "Presence Reservation Id") !== marker.reservationId
@@ -487,7 +488,7 @@ export function targetedApprovalEvidence(
   let gateApproved = 0;
   let stageCompleted = 0;
   let latestGateAt = Number.NEGATIVE_INFINITY;
-  for (const block of auditText.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+  for (const block of splitAuditRecords(auditText)) {
     if (auditBlockField(block, "Stage") !== marker.stage) continue;
     const timestamp = auditBlockField(block, "Timestamp");
     const event = auditBlockField(block, "Event");

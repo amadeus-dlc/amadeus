@@ -295,6 +295,39 @@ export function unescapeAuditBody(body: string): string {
   return body.replace(/\\n/g, "\n");
 }
 
+// --- Canonical record formatter ---
+
+// The single place that renders one audit record in the on-disk format. Every
+// writer (append, append-raw, lifecycle, and amadeus-state's recovery batch)
+// must go through this function so the storage format has exactly one
+// definition. `event` is omitted for append-raw records, whose body carries
+// its own lines verbatim (already \n-expanded by the caller).
+export type AuditRecordInput = {
+  readonly heading: string;
+  readonly timestamp: string;
+  readonly event?: string;
+  readonly fields?: Readonly<Record<string, string>>;
+  readonly rawBody?: string;
+};
+
+export function formatAuditRecord(input: AuditRecordInput): string {
+  let block = `\n## ${input.heading}\n`;
+  block += `**Timestamp**: ${input.timestamp}\n`;
+  if (input.event !== undefined) {
+    block += `**Event**: ${input.event}\n`;
+  }
+  if (input.fields !== undefined) {
+    for (const [key, value] of Object.entries(input.fields)) {
+      block += `**${key}**: ${escapeAuditValue(value)}\n`;
+    }
+  }
+  if (input.rawBody !== undefined) {
+    block += `${input.rawBody}\n`;
+  }
+  block += `\n---\n`;
+  return block;
+}
+
 // --- Subcommand: append ---
 
 // Core append logic — throws on error instead of exiting. Safe for library callers.
@@ -363,14 +396,7 @@ export function appendAuditEntryUnlocked(
 
   const path = ensureAuditFile(projectDir, intent, space);
 
-  let block = `\n## ${heading}\n`;
-  block += `**Timestamp**: ${ts}\n`;
-  block += `**Event**: ${eventType}\n`;
-  for (const [key, value] of Object.entries(fields)) {
-    const safeValue = escapeAuditValue(value);
-    block += `**${key}**: ${safeValue}\n`;
-  }
-  block += `\n---\n`;
+  const block = formatAuditRecord({ heading, timestamp: ts, event: eventType, fields });
 
   appendFileSync(path, block, "utf-8");
 
@@ -398,13 +424,12 @@ export function appendLifecycleAuditEntryUnlocked(
   const path = join(shardDir, shardName);
   const previous = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
   const ts = isoTimestamp();
-  let block = `\n## ${EVENT_HEADINGS[eventType]}\n`;
-  block += `**Timestamp**: ${ts}\n`;
-  block += `**Event**: ${eventType}\n`;
-  for (const [key, value] of Object.entries(fields)) {
-    block += `**${key}**: ${escapeAuditValue(value)}\n`;
-  }
-  block += "\n---\n";
+  const block = formatAuditRecord({
+    heading: EVENT_HEADINGS[eventType] ?? eventType,
+    timestamp: ts,
+    event: eventType,
+    fields,
+  });
   writeFileAtomic(path, previous + block);
   return { appended: true, event: eventType, timestamp: ts };
 }
@@ -454,10 +479,7 @@ export function handleAppendRaw(
     // Interpret literal \n sequences in the body as actual newlines
     const expandedBody = unescapeAuditBody(body);
 
-    let block = `\n## ${heading}\n`;
-    block += `**Timestamp**: ${ts}\n`;
-    block += `${expandedBody}\n`;
-    block += `\n---\n`;
+    const block = formatAuditRecord({ heading, timestamp: ts, rawBody: expandedBody });
 
     appendFileSync(path, block, "utf-8");
   } finally {
@@ -525,6 +547,80 @@ function parseSlugFlag(args: string[], subcommand: string): string {
   return slug;
 }
 
+// --- Fork/merge physical-representation seams ---
+//
+// The four helpers below are the ONLY places fork/merge touch the physical
+// storage representation (byte offsets, block separators, raw text search).
+// A storage-format change reimplements these and leaves the handlers'
+// audit-of-intent choreography untouched.
+
+// Offset of the main shard BEFORE the AUDIT_FORKED row lands — the prefix
+// that Source Audit Hash covers. Physical unit: bytes.
+function auditForkBoundary(mainAuditPath: string): number {
+  return statSync(mainAuditPath).size;
+}
+
+// Hash of the main shard's first `boundary` units (whole file at fork time).
+function auditPrefixHash(mainBuf: Buffer, boundary: number): string {
+  const prefixLen = Math.min(boundary, mainBuf.length);
+  return createHash("sha256").update(mainBuf.subarray(0, prefixLen)).digest("hex");
+}
+
+// Locate the most recent AUDIT_FORKED record for `slug` in a worktree shard
+// and extract its anchor fields. Returns null when absent; throws on a
+// present-but-malformed record (missing fields).
+export type ForkAnchor = { boundary: number; sourceHash: string; forkTs: string; forkBlock: string };
+
+export function findForkAnchor(wtContent: string, slug: string): ForkAnchor | null {
+  const blocks = wtContent.split("\n---\n");
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+    if (!b.includes("**Event**: AUDIT_FORKED") || !b.includes(`**Bolt slug**: ${slug}`)) continue;
+    const boundaryMatch = b.match(/\*\*Fork Boundary\*\*:\s*(\d+)/);
+    const sourceHashMatch = b.match(/\*\*Source Audit Hash\*\*:\s*([0-9a-f]+)/);
+    const timestampMatch = b.match(/\*\*Timestamp\*\*:\s*([^\n]+)/);
+    if (!boundaryMatch || !sourceHashMatch || !timestampMatch) {
+      throw new Error(
+        `worktree audit AUDIT_FORKED entry for slug ${slug} missing Fork Boundary, Source Audit Hash, or Timestamp field`
+      );
+    }
+    return {
+      boundary: parseInt(boundaryMatch[1], 10),
+      sourceHash: sourceHashMatch[1],
+      forkTs: timestampMatch[1].trim(),
+      forkBlock: b,
+    };
+  }
+  return null;
+}
+
+// Everything after the record that closes the AUDIT_FORKED anchor — the
+// post-fork delta, as verbatim storage text ready for appendFileSync.
+// Returns null when the shard is malformed (no separator after the anchor).
+export function extractPostForkDelta(wtContent: string, forkBlock: string): string | null {
+  const forkBlockStart = wtContent.indexOf(forkBlock);
+  const blockEndSep = "\n---\n";
+  const sepIdx = wtContent.indexOf(blockEndSep, forkBlockStart);
+  if (sepIdx < 0) return null;
+  return wtContent.slice(sepIdx + blockEndSep.length);
+}
+
+// Count the records inside a verbatim delta produced by extractPostForkDelta.
+export function countDeltaRecords(delta: string): number {
+  return delta.split(/\n---\n/).filter((b) => b.trim()).length;
+}
+
+// Re-hash the main shard's first `boundary` units against the recorded
+// Source Audit Hash. Returns null when the prefix is intact, or the refusal
+// message classifying the mismatch (truncation vs mid-Bolt tampering).
+export function auditPrefixMismatch(mainBuf: Buffer, boundary: number, sourceHash: string): string | null {
+  if (auditPrefixHash(mainBuf, boundary) === sourceHash) return null;
+  if (mainBuf.length < boundary) {
+    return `main audit prefix-hash does not match recorded Source Audit Hash (expected at least ${boundary} bytes, got ${mainBuf.length}); refusing to merge (main-audit truncation suspected)`;
+  }
+  return `main audit prefix-hash at byte ${boundary} does not match recorded Source Audit Hash; refusing to merge (mid-Bolt tampering suspected)`;
+}
+
 export function handleAuditFork(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-fork");
   // Pin the main-side audit shard AND the worktree mirror to ONE intent so
@@ -564,13 +660,12 @@ export function handleAuditFork(args: string[], projectDir: string): void {
     reentrant = true;
   }
 
-  // Byte-offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
+  // Offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
   // prefix that Source Audit Hash covers; audit-merge re-hashes the same range
   // to detect tampering.
-  const boundary = statSync(mainAuditPath).size;
-  const sourceHash = createHash("sha256")
-    .update(readFileSync(mainAuditPath))
-    .digest("hex");
+  const boundary = auditForkBoundary(mainAuditPath);
+  const mainBuf = readFileSync(mainAuditPath);
+  const sourceHash = auditPrefixHash(mainBuf, boundary);
 
   // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
@@ -673,70 +768,40 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
 
   const wtContent = readFileSync(wtAuditPath, "utf-8");
 
-  // Locate the most recent AUDIT_FORKED block matching this slug. Block
-  // structure per appendAuditEntry: "\n## <heading>\n**Timestamp**: <ts>\n
-  // **Event**: <type>\n<fields>\n\n---\n". Blocks are separated by "\n---\n".
-  const blocks = wtContent.split("\n---\n");
-  let forkBlock: string | undefined;
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    const b = blocks[i];
-    if (b.includes("**Event**: AUDIT_FORKED") && b.includes(`**Bolt slug**: ${slug}`)) {
-      forkBlock = b;
-      break;
-    }
+  // Locate the most recent AUDIT_FORKED record matching this slug and pull
+  // its anchor fields (boundary, source hash, fork timestamp).
+  let anchor: ForkAnchor | null;
+  try {
+    anchor = findForkAnchor(wtContent, slug);
+  } catch (e) {
+    jsonError(errorMessage(e));
   }
-  if (!forkBlock) {
+  if (!anchor) {
     jsonError(`worktree audit missing AUDIT_FORKED entry for slug ${slug}`);
   }
-
-  const boundaryMatch = forkBlock.match(/\*\*Fork Boundary\*\*:\s*(\d+)/);
-  const sourceHashMatch = forkBlock.match(/\*\*Source Audit Hash\*\*:\s*([0-9a-f]+)/);
-  const timestampMatch = forkBlock.match(/\*\*Timestamp\*\*:\s*([^\n]+)/);
-  if (!boundaryMatch || !sourceHashMatch || !timestampMatch) {
-    jsonError(
-      `worktree audit AUDIT_FORKED entry for slug ${slug} missing Fork Boundary, Source Audit Hash, or Timestamp field`
-    );
-  }
-  const boundary = parseInt(boundaryMatch[1], 10);
-  const sourceHash = sourceHashMatch[1];
+  const { boundary, sourceHash } = anchor;
   // forkTs anchors the audit-of-intent correlation tag for any post-emit
   // failure on this merge — doctor joins this back to the matching
   // AUDIT_FORKED row in main audit by exact-string timestamp match.
-  const forkTs = timestampMatch[1].trim();
+  const forkTs = anchor.forkTs;
 
-  // Sanity check: re-hash main audit's first `boundary` bytes; refuse if it
+  // Sanity check: re-hash main audit's first `boundary` units; refuse if it
   // disagrees with the recorded Source Audit Hash. Catches the case where
   // the prefix has been edited (length-preserving mutation) or truncated
   // (length less than boundary — hash differs because we hash fewer bytes
   // than were originally hashed).
   const mainBuf = readFileSync(mainAuditPath);
-  const prefixLen = Math.min(boundary, mainBuf.length);
-  const prefixHash = createHash("sha256")
-    .update(mainBuf.subarray(0, prefixLen))
-    .digest("hex");
-  if (prefixHash !== sourceHash) {
-    if (mainBuf.length < boundary) {
-      jsonError(
-        `main audit prefix-hash does not match recorded Source Audit Hash (expected at least ${boundary} bytes, got ${mainBuf.length}); refusing to merge (main-audit truncation suspected)`
-      );
-    } else {
-      jsonError(
-        `main audit prefix-hash at byte ${boundary} does not match recorded Source Audit Hash; refusing to merge (mid-Bolt tampering suspected)`
-      );
-    }
+  const prefixMismatch = auditPrefixMismatch(mainBuf, boundary, sourceHash);
+  if (prefixMismatch !== null) {
+    jsonError(prefixMismatch);
   }
 
-  // Compute delta-start by locating the byte position immediately after the
-  // "\n---\n" that closes the AUDIT_FORKED block. indexOf on the matched
-  // forkBlock text gives a stable anchor.
-  const forkBlockStart = wtContent.indexOf(forkBlock);
-  const blockEndSep = "\n---\n";
-  const sepIdx = wtContent.indexOf(blockEndSep, forkBlockStart);
-  if (sepIdx < 0) {
+  // Everything after the record that closes the AUDIT_FORKED anchor is the
+  // post-fork delta, extracted as verbatim storage text.
+  const delta = extractPostForkDelta(wtContent, anchor.forkBlock);
+  if (delta === null) {
     jsonError(`worktree audit malformed — no separator after AUDIT_FORKED block for slug ${slug}`);
   }
-  const deltaStart = sepIdx + blockEndSep.length;
-  const delta = wtContent.slice(deltaStart);
 
   // Acquire outer lock with extended budget for parallel-Bolt contention.
   // Defaults: 200 retries × 100ms = 20s, sized for N=4-8 contention. The
@@ -780,7 +845,7 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
       // in "\n---\n"). Append verbatim — running it through appendAuditEntry
       // would double-wrap each block.
       appendFileSync(mainAuditPath, delta, "utf-8");
-      entriesMerged = delta.split(/\n---\n/).filter((b) => b.trim()).length;
+      entriesMerged = countDeltaRecords(delta);
     }
     result = appendAuditEntryUnlocked(
       "AUDIT_MERGED",
