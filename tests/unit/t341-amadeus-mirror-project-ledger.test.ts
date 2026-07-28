@@ -26,6 +26,7 @@ function entry(
     project: "amadeus-dlc/5",
     projectId: "PVT_kwDOEcw2nM4BeiIO",
     itemId: "PVTI_item1",
+    phaseField: "Intent Phase",
     lastAppliedStatus: "Ideation",
     state: "synced",
     updatedAt: NOW,
@@ -76,16 +77,25 @@ describe("t341 codec render", () => {
     expect(renderMirrorStateJson(withLedger([entry()]))).toContain(
       '"projectSync":{"projects":[{"project":"amadeus-dlc/5",' +
         '"projectId":"PVT_kwDOEcw2nM4BeiIO","itemId":"PVTI_item1",' +
+        '"phaseField":"Intent Phase",' +
         `"lastAppliedStatus":"Ideation","state":"synced","updatedAt":"${NOW}"}]}`,
     );
   });
 
-  test("a null itemId and lastAppliedStatus render as JSON null", () => {
+  test("nullable entry identity fields render as JSON null", () => {
     expect(
       renderMirrorStateJson(
-        withLedger([entry({ itemId: null, lastAppliedStatus: null })]),
+        withLedger([
+          entry({
+            itemId: null,
+            phaseField: null,
+            lastAppliedStatus: null,
+          }),
+        ]),
       ),
-    ).toContain('"itemId":null,"lastAppliedStatus":null');
+    ).toContain(
+      '"itemId":null,"phaseField":null,"lastAppliedStatus":null',
+    );
   });
 });
 
@@ -104,6 +114,22 @@ describe("t341 codec round-trip", () => {
   test("re-rendering a parsed snapshot reproduces identical bytes", () => {
     const first = renderMirrorStateJson(withLedger([entry()]));
     expect(renderMirrorStateJson(roundTrip(withLedger([entry()])))).toBe(first);
+  });
+
+  test("a legacy entry without phaseField normalizes to null and re-renders the key", () => {
+    const parsed = parseJson(
+      blockJson(
+        '{"projects":[{"project":"a/1","projectId":"p","itemId":null,' +
+          `"lastAppliedStatus":"Done","state":"synced","updatedAt":"${NOW}"}]}`,
+      ),
+    );
+    expect(parsed.kind).toBe("ok");
+    if (parsed.kind === "ok") {
+      expect(parsed.snapshot.projectSync?.projects[0].phaseField).toBeNull();
+      expect(renderMirrorStateJson(parsed.snapshot)).toContain(
+        '"itemId":null,"phaseField":null,"lastAppliedStatus":"Done"',
+      );
+    }
   });
 
   test.each(["synced", "pending", "safety-blocked"] as const)(
@@ -225,6 +251,19 @@ describe("t341 reducer upsert", () => {
     }
   });
 
+  test("a changed phase field is not equal to the previous sync evidence", () => {
+    const updated = entry({ phaseField: "Lifecycle" });
+    const result = reduceMirrorState(
+      withLedger([entry()]),
+      { kind: "upsert-project-entry", entry: updated },
+      NOW,
+    );
+    expect(result.kind).toBe("changed");
+    if (result.kind === "changed") {
+      expect(result.snapshot.projectSync).toEqual({ projects: [updated] });
+    }
+  });
+
   test("a different Project appends a new row", () => {
     const other = entry({ project: "amadeus-dlc/6" });
     const result = reduceMirrorState(
@@ -254,6 +293,7 @@ describe("t341 reducer upsert", () => {
   test.each([
     ["an empty project key", entry({ project: "" })],
     ["an empty projectId", entry({ projectId: "" })],
+    ["an empty phaseField", entry({ phaseField: "" })],
   ])("rejects %s", (_label, bad) => {
     const result = reduceMirrorState(
       EMPTY_MIRROR_STATE,

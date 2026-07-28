@@ -642,6 +642,7 @@ function projectEntryEquals(
     a.project === b.project &&
     a.projectId === b.projectId &&
     a.itemId === b.itemId &&
+    a.phaseField === b.phaseField &&
     a.lastAppliedStatus === b.lastAppliedStatus &&
     a.state === b.state &&
     a.updatedAt === b.updatedAt
@@ -659,6 +660,8 @@ function reduceUpsertProjectEntry(
     return invalid("upsert-project-entry: project must be non-empty");
   if (t.entry.projectId !== null && t.entry.projectId.length === 0)
     return invalid("upsert-project-entry: projectId must be non-empty or null");
+  if (t.entry.phaseField !== null && t.entry.phaseField.length === 0)
+    return invalid("upsert-project-entry: phaseField must be non-empty or null");
   return writeProjectEntry(snapshot, t.entry);
 }
 
@@ -685,8 +688,8 @@ function writeProjectEntry(
 // human). Both are unconditional re-classifications: the next state depends only
 // on this round's result, never on the row's current state, which is what makes
 // every state x result cell reachable. Identity the failure could not observe
-// (the Project node id, the item id, the last applied column) is carried over
-// from the existing row rather than erased.
+// (the Project node id, the item id, the last successfully applied field and
+// column) is carried over from the existing row rather than erased.
 function reduceProjectFailureMark(
   snapshot: MirrorStateSnapshot,
   mark: ProjectFailureMark,
@@ -701,6 +704,7 @@ function reduceProjectFailureMark(
     project: mark.project,
     projectId: mark.projectId ?? previous?.projectId ?? null,
     itemId: mark.itemId ?? previous?.itemId ?? null,
+    phaseField: previous?.phaseField ?? null,
     lastAppliedStatus: previous?.lastAppliedStatus ?? null,
     state,
     updatedAt: mark.updatedAt,

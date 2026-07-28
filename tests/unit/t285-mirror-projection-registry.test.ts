@@ -7,6 +7,7 @@ import {
   MIRROR_DOC_PROJECTIONS,
   MIRROR_PROJECTIONS,
   MIRROR_SURFACE_IDS,
+  MIRROR_TOOL_FILES,
   mirrorProjection,
   validateMirrorProjectionRegistry,
 } from "../../packages/framework/harness/projections.ts";
@@ -22,7 +23,9 @@ describe("t285 projection registry", () => {
       "kiro-ide",
       "opencode",
     ]);
-    expect(MIRROR_PROJECTIONS).toHaveLength(7);
+    expect(MIRROR_PROJECTIONS.map((projection) => projection.surface)).toEqual([
+      ...MIRROR_SURFACE_IDS,
+    ]);
     expect(
       MIRROR_PROJECTIONS.filter(
         (projection) => projection.selfTool && projection.selfSkill,
@@ -57,9 +60,19 @@ describe("t285 projection registry", () => {
 
   test("covers every wrapper and rejects path collisions and traversal", () => {
     expect(validateMirrorProjectionRegistry()).toEqual([]);
+    const expectedWrapperSources = new Set(
+      MIRROR_TOOL_FILES.filter((file) => file !== "amadeus-mirror.ts").map(
+        (file) => `packages/framework/core/tools/${file}`,
+      ),
+    );
     for (const projection of MIRROR_PROJECTIONS) {
-      expect(projection.artifacts.filter((item) => item.kind === "wrapper"))
-        .toHaveLength(16);
+      expect(
+        new Set(
+          projection.artifacts
+            .filter((item) => item.kind === "wrapper")
+            .map((item) => item.source),
+        ),
+      ).toEqual(expectedWrapperSources);
       expect(projection.artifacts.some((item) => item.kind === "registration"))
         .toBe(true);
     }

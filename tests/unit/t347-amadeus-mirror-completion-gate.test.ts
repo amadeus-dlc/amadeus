@@ -50,11 +50,13 @@ function row(
   project: string,
   state: MirrorProjectSyncState,
   lastAppliedStatus: string | null,
+  phaseField: string | null = "Intent Phase",
 ): MirrorProjectSyncEntry {
   return {
     project,
     projectId: "PVT_1",
     itemId: "PVTI_1",
+    phaseField,
     lastAppliedStatus,
     state,
     updatedAt: NOW,
@@ -70,10 +72,20 @@ describe("t347 completion gate readiness", () => {
     const gate = completionProjectGate({
       state: EMPTY_MIRROR_STATE,
       snapshot: landed(),
-      targets: [TARGET],
+      targets: [],
     });
 
     expect(gate).toEqual({ ready: true, blocking: [] });
+  });
+
+  test("a configured board with no ledger row blocks completion", () => {
+    const gate = completionProjectGate({
+      state: EMPTY_MIRROR_STATE,
+      snapshot: landed(),
+      targets: [TARGET],
+    });
+
+    expect(gate).toEqual({ ready: false, blocking: ["acme/5: missing"] });
   });
 
   test("every board synced onto the done column is ready", () => {
@@ -137,6 +149,88 @@ describe("t347 completion gate readiness", () => {
     });
 
     expect(gate.blocking).toEqual(["acme/5: pending", "acme/6: safety-blocked"]);
+  });
+
+  test("a done row for the previous configured phase field blocks until re-synced", () => {
+    const changedTarget = { ...TARGET, phaseField: "Lifecycle Phase" };
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/5", "synced", "Done", TARGET.phaseField),
+      ]),
+      snapshot: landed(),
+      targets: [changedTarget],
+    });
+
+    expect(gate).toEqual({
+      ready: false,
+      blocking: ["acme/5: phase-field-mismatch"],
+    });
+  });
+
+  test("re-syncing on the current configured phase field restores readiness", () => {
+    const changedTarget = { ...TARGET, phaseField: "Lifecycle Phase" };
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/5", "synced", "Done", changedTarget.phaseField),
+      ]),
+      snapshot: landed(),
+      targets: [changedTarget],
+    });
+
+    expect(gate).toEqual({ ready: true, blocking: [] });
+  });
+
+  test("a legacy row without phase-field identity blocks until re-synced", () => {
+    const gate = completionProjectGate({
+      state: stateWith([row("acme/5", "synced", "Done", null)]),
+      snapshot: landed(),
+      targets: [TARGET],
+    });
+
+    expect(gate).toEqual({
+      ready: false,
+      blocking: ["acme/5: phase-field-mismatch"],
+    });
+  });
+
+  test("a failure state takes precedence over stale phase-field identity", () => {
+    const changedTarget = { ...TARGET, phaseField: "Lifecycle Phase" };
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/5", "pending", "Done", TARGET.phaseField),
+      ]),
+      snapshot: landed(),
+      targets: [changedTarget],
+    });
+
+    expect(gate).toEqual({ ready: false, blocking: ["acme/5: pending"] });
+  });
+
+  test("a membership-only board uses the default phase field identity", () => {
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/7", "synced", "Done", "Intent Phase"),
+      ]),
+      snapshot: landed(),
+      targets: [],
+    });
+
+    expect(gate).toEqual({ ready: true, blocking: [] });
+  });
+
+  test("a membership-only board with another phase field blocks", () => {
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/7", "synced", "Done", "Lifecycle Phase"),
+      ]),
+      snapshot: landed(),
+      targets: [],
+    });
+
+    expect(gate).toEqual({
+      ready: false,
+      blocking: ["acme/7: phase-field-mismatch"],
+    });
   });
 });
 

@@ -6,7 +6,14 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import {
+  executeMirrorOperation,
+  syncProjects,
+} from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import {
+  mirrorEventIdentity,
+  mirrorEventKey,
+} from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import {
   EMPTY_MIRROR_STATE,
   parseMirrorStateDocument,
@@ -63,6 +70,7 @@ describe("t342 create then project sync", () => {
           project: "acme/5",
           projectId: PROJECT_NODE_ID,
           itemId: "PVTI_added",
+          phaseField: "Intent Phase",
           lastAppliedStatus: "Ideation",
           state: "synced",
           updatedAt: NOW,
@@ -85,6 +93,31 @@ describe("t342 create then project sync", () => {
 });
 
 describe("t342 idempotence", () => {
+  test("the legacy executor facade still accepts state-store ports", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_item1",
+          singleSelectValuesByFieldId: { PVTSSF_intent_phase: "Ideation" },
+        },
+      ],
+    };
+
+    await expect(
+      syncProjects(store.ports, harness.context("sync", gateway), 7),
+    ).resolves.toEqual({ kind: "converged" });
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      project: "acme/5",
+      state: "synced",
+    });
+  });
+
   test("a second sync over a converged board issues no Project mutation", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
@@ -209,20 +242,84 @@ describe("t342 no configuration", () => {
     expect(projectCalls(gateway)).toEqual([]);
   });
 
-  test("close never runs the Project step", async () => {
-    const store = harness.fileStore({
-      ...harness.linkedState(),
-      receipts: {},
-    });
+  test("sync edits the shared fake through the real executor flow", async () => {
+    const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
-    gateway.issue = { ...gateway.issue, state: "CLOSED" };
-    await executeMirrorOperation({
-      context: harness.context("close", gateway, {
-        boundary: { kind: "workflow-completed", instance: "done-1" },
-      }),
+    gateway.issue = {
+      ...gateway.issue,
+      body: gateway.issue.body.replace("snapshot", "stale snapshot"),
+    };
+    const outcome = await executeMirrorOperation({
+      context: harness.context("sync", gateway, { targets: [] }),
       ports: store.ports,
       localState: store.state(),
     });
+
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["view", "readiness", "edit"]);
+    expect(gateway.issue.body).toBe(harness.markerBody());
+  });
+
+  test("close reaches the shared fake but never runs the Project step", async () => {
+    const boundary = {
+      kind: "workflow-completed",
+      instance: "done-1",
+    } as const;
+    const finalSyncEvent = mirrorEventIdentity("intent-1", boundary, "sync");
+    const finalSyncReceiptKey = mirrorEventKey(finalSyncEvent);
+    const gateway = new ProjectGateway(harness.markerBody());
+    const landedSnapshot = harness.workflowSnapshot({
+      lifecyclePhase: "Operation",
+      registryStatus: "complete",
+      status: "Completed",
+    });
+    const finalSyncContext = harness.context("sync", gateway, {
+      boundary,
+      snapshot: landedSnapshot,
+    });
+    const store = harness.fileStore({
+      ...harness.linkedState(),
+      revision: 1,
+      receipts: {
+        [finalSyncReceiptKey]: {
+          key: finalSyncReceiptKey,
+          event: finalSyncEvent,
+          operationId: "op-final-sync",
+          status: "succeeded",
+          preparedAt: NOW,
+          attemptedAt: NOW,
+          completedAt: NOW,
+          authorization: finalSyncContext.authorization,
+        },
+      },
+    });
+    const baseContext = harness.context("close", gateway, {
+      boundary,
+      snapshot: landedSnapshot,
+    });
+    const outcome = await executeMirrorOperation({
+      context: {
+        ...baseContext,
+        authorization: {
+          ...baseContext.authorization,
+          finalSyncReceiptKey,
+        },
+      },
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "close",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["view", "readiness", "close"]);
+    expect(gateway.issue.state).toBe("CLOSED");
     expect(projectCalls(gateway)).toEqual([]);
   });
 });
@@ -249,6 +346,7 @@ describe("t342 failure containment", () => {
         project: "acme/5",
         projectId: null,
         itemId: null,
+        phaseField: null,
         lastAppliedStatus: null,
         state: "pending",
         updatedAt: NOW,

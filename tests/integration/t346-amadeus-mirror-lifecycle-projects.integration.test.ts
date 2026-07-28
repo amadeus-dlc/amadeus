@@ -221,6 +221,7 @@ type FixtureOptions = Readonly<{
   registryStatus?: "in-flight" | "parked" | "complete";
   mode?: "auto" | "prompt" | "off";
   boards?: readonly MirrorProjectRef[];
+  phaseField?: string;
   state?: MirrorStateSnapshot;
 }>;
 
@@ -267,6 +268,9 @@ function fixture(options: FixtureOptions = {}) {
       "auto-mirror": options.mode ?? "auto",
       "mirror-projects": (options.boards ?? [BOARD_A]).map((board) => ({
         project: canonical(board),
+        ...(options.phaseField
+          ? { "phase-field": options.phaseField }
+          : {}),
       })),
     }),
   );
@@ -467,6 +471,7 @@ function completedSyncState(
           project: canonical(BOARD_A),
           projectId: `PVT_${BOARD_A.number}`,
           itemId: `PVTI_${BOARD_A.number}`,
+          phaseField: "Intent Phase",
           lastAppliedStatus: row.lastAppliedStatus,
           state: row.state,
           updatedAt: NOW,
@@ -537,6 +542,31 @@ describe("t346 completion gate", () => {
 
     expect(gateway.history).toContain("close");
     expect(gateway.issue.state).toBe("CLOSED");
+  });
+
+  test("a successful final sync on the previous phase field cannot authorize close", async () => {
+    const fx = fixture({
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      phaseField: "Lifecycle",
+      state: completedSyncState({ state: "synced", lastAppliedStatus: "Done" }),
+    });
+    const gateway = new ProjectGateway(markerBody());
+
+    const result = await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
+
+    expect(gateway.history).not.toContain("close");
+    expect(gateway.issue.state).toBe("OPEN");
+    if (result.kind !== "ok" || result.outcome.kind !== "continued")
+      throw new Error("expected a continued boundary outcome");
+    const outcome = result.outcome.outcomes.at(-1);
+    expect(outcome).toMatchObject({ kind: "pending", operation: "close" });
+    expect(outcome?.kind === "pending" ? outcome.warning.summary : "").toContain(
+      `${canonical(BOARD_A)}: phase-field-mismatch`,
+    );
   });
 
   test("an unsettled final sync parks the sync itself, so the close is never reached", async () => {

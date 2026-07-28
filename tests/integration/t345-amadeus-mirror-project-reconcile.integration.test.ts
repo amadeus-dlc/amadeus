@@ -578,6 +578,7 @@ describe("t345 membership union", () => {
 
     expect(rowFor(store.state(), stray)).toMatchObject({
       state: "synced",
+      phaseField: "Intent Phase",
       lastAppliedStatus: "Ideation",
     });
   });
@@ -786,6 +787,7 @@ describe("t345 secret containment", () => {
     expect(Object.keys(rowFor(store.state(), BOARD_B) ?? {}).sort()).toEqual([
       "itemId",
       "lastAppliedStatus",
+      "phaseField",
       "project",
       "projectId",
       "state",

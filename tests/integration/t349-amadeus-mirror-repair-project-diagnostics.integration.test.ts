@@ -200,6 +200,7 @@ function ledgerEntry(
     project: canonical(project),
     projectId: `PVT_${project.number}`,
     itemId: `PVTI_${project.number}`,
+    phaseField: "Intent Phase",
     lastAppliedStatus,
     state,
     updatedAt: NOW,

@@ -49,6 +49,7 @@ function entry(
     project: PROJECT,
     projectId: "PVT_board",
     itemId: "PVTI_item1",
+    phaseField: "Intent Phase",
     lastAppliedStatus: "Ideation",
     state: "synced",
     updatedAt: NOW,
@@ -181,6 +182,7 @@ describe("t344 failure marks preserve unobserved identity", () => {
       project: PROJECT,
       projectId: "PVT_board",
       itemId: "PVTI_item1",
+      phaseField: "Intent Phase",
       lastAppliedStatus: "Inception",
       state: "pending",
       updatedAt: LATER,
@@ -194,6 +196,7 @@ describe("t344 failure marks preserve unobserved identity", () => {
     const rows = ledgerOf(reduce(before, RESULTS[2].transition));
     expect(rows[0].lastAppliedStatus).toBe("Construction");
     expect(rows[0].projectId).toBe("PVT_board");
+    expect(rows[0].phaseField).toBe("Intent Phase");
   });
 
   test("a mark supplies identity the failure did observe", () => {
@@ -210,6 +213,7 @@ describe("t344 failure marks preserve unobserved identity", () => {
       project: PROJECT,
       projectId: "PVT_seen",
       itemId: "PVTI_seen",
+      phaseField: null,
       lastAppliedStatus: null,
       state: "pending",
       updatedAt: LATER,
@@ -220,6 +224,7 @@ describe("t344 failure marks preserve unobserved identity", () => {
     const rows = ledgerOf(reduce(EMPTY_MIRROR_STATE, RESULTS[2].transition));
     expect(rows[0].projectId).toBeNull();
     expect(rows[0].itemId).toBeNull();
+    expect(rows[0].phaseField).toBeNull();
   });
 
   test("re-applying an identical mark is unchanged, so the revision holds", () => {

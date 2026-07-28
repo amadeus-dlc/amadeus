@@ -443,6 +443,34 @@ describe("t279 create", () => {
     expect(gateway.history).toEqual(["readiness", "find"]);
   });
 
+  test("marker search persistence failure surfaces state-write without creating", async () => {
+    const store = memoryStore();
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    const gateway = new FakeGateway();
+    gateway.findResult = failure("no-effect-confirmed");
+    let writes = 0;
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          if (writes === 3) {
+            return { kind: "io-failure", summary: "disk full" };
+          }
+          return writeDocumentAtomic(text);
+        },
+      },
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: { classification: "state-write" },
+    });
+    expect(writes).toBe(3);
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
   test.each([
     ["not-started", "safety-blocked"],
     ["no-effect-confirmed", "pending"],

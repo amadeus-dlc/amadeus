@@ -7,7 +7,10 @@
 // mandatory precondition for every operation, manual included. This module
 // imports only the import-free C0 Project contract and C0 domain types.
 
-import { MIRROR_PROJECT_FIELD_CONTRACT } from "./amadeus-mirror-project-contract.ts";
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  MIRROR_PROJECT_FIELD_CONTRACT,
+} from "./amadeus-mirror-project-contract.ts";
 import type {
   ExpectedProjectStatus,
   MirrorBoundary,
@@ -380,11 +383,10 @@ export function nextCompletionOperation(
 
 // --- Completion gate (U3) -----------------------------------------------------
 
-// The gate reads the Project ledger and nothing else: no board is re-queried, so
-// a completion evaluates the same way offline as online. `snapshot` and
-// `targets` are not a second source of truth — they are the two arguments
-// `expectedProjectStatus` needs to name the `done` column, which stays that
-// function's sole definition rather than a literal restated here.
+// The gate reads the Project ledger and configured target identities without
+// re-querying a board, so a completion evaluates the same way offline as
+// online. `snapshot` and target status names feed `expectedProjectStatus`,
+// which remains the sole definition of the `done` column.
 export type CompletionProjectGateInput = Readonly<{
   state: MirrorStateSnapshot;
   snapshot: MirrorSnapshot;
@@ -399,36 +401,48 @@ export type CompletionProjectGate = Readonly<{
 function projectBlocker(
   entry: MirrorProjectSyncEntry,
   expected: ExpectedProjectStatus,
+  expectedPhaseField: string,
 ): string | null {
-  if (expected.kind !== "status") return `${entry.project}: not-landed`;
   if (entry.state !== "synced") return `${entry.project}: ${entry.state}`;
+  if (entry.phaseField !== expectedPhaseField)
+    return `${entry.project}: phase-field-mismatch`;
+  if (expected.kind !== "status") return `${entry.project}: not-landed`;
   return entry.lastAppliedStatus === expected.name
     ? null
     : `${entry.project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
 }
 
-// Is every Project this Intent syncs to actually sitting in the `done` column?
-// `blocking` names each row that is not, so a withheld close explains itself
-// instead of stalling silently. An Intent with no ledger row has no board to
-// wait for and is ready by definition.
+// Is every Project this Intent syncs to actually sitting in the `done` column
+// on the authoritative field? The ledger/config union prevents a newly
+// configured Project with no sync evidence from disappearing from the gate.
+// Existing membership-only rows use the default phase field contract.
 export function completionProjectGate(
   input: CompletionProjectGateInput,
 ): CompletionProjectGate {
-  const statusNamesOf = (project: string): MirrorProjectStatusNames =>
-    input.targets.find(
-      (target) => `${target.project.owner}/${target.project.number}` === project,
-    )?.statusNames ?? {};
-  const blocking = (input.state.projectSync?.projects ?? [])
-    .map((entry) =>
-      projectBlocker(
+  const targets = new Map(
+    input.targets.map((target) => [
+      `${target.project.owner}/${target.project.number}`,
+      target,
+    ]),
+  );
+  const rows = input.state.projectSync?.projects ?? [];
+  const blocking = rows
+    .map((entry) => {
+      const target = targets.get(entry.project);
+      return projectBlocker(
         entry,
         expectedProjectStatus(
           input.snapshot,
           "workflow-completed",
-          statusNamesOf(entry.project),
+          target?.statusNames ?? {},
         ),
-      ),
-    )
+        target?.phaseField ?? DEFAULT_PROJECT_PHASE_FIELD,
+      );
+    })
     .filter((blocker): blocker is string => blocker !== null);
+  const projectsWithRows = new Set(rows.map((entry) => entry.project));
+  for (const [project] of targets) {
+    if (!projectsWithRows.has(project)) blocking.push(`${project}: missing`);
+  }
   return { ready: blocking.length === 0, blocking };
 }

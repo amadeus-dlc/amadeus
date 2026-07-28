@@ -449,6 +449,7 @@ const PROJECT_ENTRY_KEYS: ReadonlySet<string> = new Set([
   "project",
   "projectId",
   "itemId",
+  "phaseField",
   "lastAppliedStatus",
   "state",
   "updatedAt",
@@ -1175,7 +1176,8 @@ function validateAuditOutbox(
 
 // One projectSync ledger row. `projectId`, `itemId` and `lastAppliedStatus` are
 // nullable-required: the key must be present and either a non-empty string or
-// null, so an absent key is a defect rather than an implied null.
+// null, so an absent key is a defect rather than an implied null. `phaseField`
+// was added after v1 shipped, so an absent legacy key normalizes to null.
 function validateProjectEntry(
   v: JsonValue,
   path: string,
@@ -1191,6 +1193,10 @@ function validateProjectEntry(
   const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
   const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
   const itemId = nullableString(v.itemId, "itemId", path, issues);
+  const phaseField =
+    "phaseField" in v
+      ? nullableString(v.phaseField, "phaseField", path, issues)
+      : null;
   const lastAppliedStatus = nullableString(
     v.lastAppliedStatus,
     "lastAppliedStatus",
@@ -1203,11 +1209,20 @@ function validateProjectEntry(
     state === undefined ||
     updatedAt === undefined ||
     itemId === undefined ||
+    phaseField === undefined ||
     lastAppliedStatus === undefined
   ) {
     return null;
   }
-  return { project, projectId, itemId, lastAppliedStatus, state, updatedAt };
+  return {
+    project,
+    projectId,
+    itemId,
+    phaseField,
+    lastAppliedStatus,
+    state,
+    updatedAt,
+  };
 }
 
 // The ledger is keyed by canonical "owner/number" through the entry's own
@@ -1664,6 +1679,7 @@ function renderProjectSync(ledger: MirrorProjectSyncLedger): unknown {
       project: entry.project,
       projectId: entry.projectId,
       itemId: entry.itemId,
+      phaseField: entry.phaseField,
       lastAppliedStatus: entry.lastAppliedStatus,
       state: entry.state,
       updatedAt: entry.updatedAt,

@@ -311,12 +311,14 @@ export type MirrorProjectTarget = Readonly<{
 // make it unreachable without a human.
 //
 // `projectId` is nullable because a Project whose lifecycle field could not be
-// resolved has no node id to record; `lastAppliedStatus` is the last column this
-// tool actually applied, and a later failure does not erase that history.
+// resolved has no node id to record; `phaseField` and `lastAppliedStatus`
+// identify the authoritative field and column from the last successful sync,
+// and a later failure does not erase that history.
 export type MirrorProjectSyncEntry = Readonly<{
   project: string; // canonical "owner/number"
   projectId: string | null;
   itemId: string | null;
+  phaseField: string | null;
   lastAppliedStatus: string | null;
   state: MirrorProjectSyncState;
   updatedAt: string;

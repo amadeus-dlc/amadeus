@@ -4,7 +4,6 @@
 // size: medium
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { createMirrorMutationPermit } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
 import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import { EMPTY_MIRROR_STATE } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import type { MirrorResolvedProjectFields } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
@@ -72,6 +71,47 @@ describe("t350 configured lifecycle field", () => {
     expect(outcome.kind).toBe("completed");
     expect(gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
     expect(gateway.history).not.toContain("update-project-item-field");
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      phaseField: "Lifecycle",
+      lastAppliedStatus: "Ideation",
+      state: "synced",
+    });
+  });
+
+  test("a failed sync preserves the last successfully synced field identity", async () => {
+    const store = harness.fileStore({
+      ...harness.linkedState(),
+      projectSync: {
+        projects: [
+          {
+            project: "acme/5",
+            projectId: PROJECT_NODE_ID,
+            itemId: "PVTI_existing",
+            phaseField: "Intent Phase",
+            lastAppliedStatus: "Ideation",
+            state: "synced",
+            updatedAt: "2026-07-26T00:00:00Z",
+          },
+        ],
+      },
+    });
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.fieldResult = failure("api");
+
+    const outcome = await executeMirrorOperation({
+      context: harness.context("sync", gateway, {
+        targets: [{ ...TARGET, phaseField: "Lifecycle" }],
+      }),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome.kind).toBe("pending");
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      phaseField: "Intent Phase",
+      lastAppliedStatus: "Ideation",
+      state: "pending",
+    });
   });
 
   test("the authoritative field wins when it resolves to Status itself", async () => {
@@ -168,6 +208,38 @@ describe("t350 auxiliary Status", () => {
     });
   });
 
+  test("a missing auxiliary Status option does not block Intent Phase synchronization", async () => {
+    const store = harness.fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.field = {
+      ...activeFields(),
+      auxiliaryStatus: {
+        fieldId: "PVTSSF_status",
+        fieldName: "Status",
+        options: [{ id: "opt-done", name: "Done" }],
+      },
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: harness.context("create", gateway),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "create",
+      issueNumber: 7,
+    });
+    expect(gateway.fieldUpdates).toEqual([
+      { fieldId: "PVTSSF_intent_phase", optionId: "opt-ideation" },
+    ]);
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      lastAppliedStatus: "Ideation",
+      state: "synced",
+    });
+  });
+
   test("an archived Intent keeps both existing field values", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
@@ -209,28 +281,6 @@ describe("t350 auxiliary Status", () => {
       lastAppliedStatus: "Construction",
       state: "synced",
     });
-  });
-});
-
-describe("t350 shared Project gateway", () => {
-  test("models issue edit and close transitions", async () => {
-    const gateway = new ProjectGateway(harness.markerBody());
-    const editEvent = harness.context("sync", gateway).event;
-
-    const edited = await gateway.editIssue(
-      createMirrorMutationPermit({
-        event: editEvent,
-        repository: gateway.issue.repository,
-        operation: "sync",
-        issueNumber: gateway.issue.number,
-      }),
-      "updated",
-    );
-    const closed = await gateway.closeIssue();
-
-    expect(edited).toMatchObject({ kind: "ok", value: { body: "updated" } });
-    expect(closed).toMatchObject({ kind: "ok", value: { state: "CLOSED" } });
-    expect(gateway.history).toEqual(["edit", "close"]);
   });
 });
 

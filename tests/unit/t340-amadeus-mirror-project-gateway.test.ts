@@ -1,6 +1,7 @@
 // t340 — C5 Project GraphQL family via a fake process runner: exact argv, the
 // -f/-F variable split, envelope + body interpretation, response parsing,
 // permit enforcement, and the absence of out-of-scope mutation paths.
+// covers: packages/framework/core/tools/amadeus-mirror-project-gateway.ts
 // covers: packages/framework/core/tools/amadeus-mirror-gateway.ts
 // size: small
 
@@ -9,14 +10,17 @@ import {
   createMirrorMutationPermit,
   createMirrorProjectMutationPermit,
 } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
-import * as gateway from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import {
+  createMirrorGitHubGateway,
+  interpretGraphqlResult,
+  parseHttpEnvelope,
+} from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import * as publicGateway from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import * as gateway from "../../packages/framework/core/tools/amadeus-mirror-project-gateway.ts";
 import {
   ADD_PROJECT_ITEM_MUTATION,
-  createMirrorGitHubGateway,
   graphqlArgv,
-  interpretGraphqlResult,
   LIST_PROJECT_ITEMS_QUERY,
-  parseHttpEnvelope,
   parseProjectItemsView,
   parseProjectFields,
   PROJECT_ITEMS_PER_PAGE,
@@ -47,6 +51,29 @@ const PROJECT_NODE_ID = "PVT_kwDOEcw2nM4BeiIO";
 const ISSUE_NODE_ID = "I_kwDOEcw2nM6abcde";
 const PHASE_FIELD_ID = "PVTSSF_intent_phase";
 const STATUS_FIELD_ID = "PVTSSF_status";
+const LEGACY_PROJECT_EXPORT_PAIRS = [
+  [publicGateway.PROJECT_ITEMS_PER_PAGE, gateway.PROJECT_ITEMS_PER_PAGE],
+  [publicGateway.LIST_PROJECT_ITEMS_QUERY, gateway.LIST_PROJECT_ITEMS_QUERY],
+  [
+    publicGateway.RESOLVE_PROJECT_FIELDS_QUERY,
+    gateway.RESOLVE_PROJECT_FIELDS_QUERY,
+  ],
+  [publicGateway.ADD_PROJECT_ITEM_MUTATION, gateway.ADD_PROJECT_ITEM_MUTATION],
+  [
+    publicGateway.UPDATE_PROJECT_ITEM_FIELD_MUTATION,
+    gateway.UPDATE_PROJECT_ITEM_FIELD_MUTATION,
+  ],
+  [publicGateway.graphqlArgv, gateway.graphqlArgv],
+  [publicGateway.listProjectItemsArgv, gateway.listProjectItemsArgv],
+  [publicGateway.resolveProjectFieldsArgv, gateway.resolveProjectFieldsArgv],
+  [publicGateway.addProjectItemArgv, gateway.addProjectItemArgv],
+  [
+    publicGateway.updateProjectItemSingleSelectFieldArgv,
+    gateway.updateProjectItemSingleSelectFieldArgv,
+  ],
+  [publicGateway.parseProjectItemsView, gateway.parseProjectItemsView],
+  [publicGateway.parseProjectFields, gateway.parseProjectFields],
+] as const;
 
 const ISSUE: RemoteMirrorIssue = {
   repository: REPO,
@@ -191,6 +218,14 @@ function projectPermit(
     project: PROJECT,
   });
 }
+
+describe("t340 public facade", () => {
+  test("preserves every pre-extraction Project named export", () => {
+    for (const [facadeExport, implementationExport] of LEGACY_PROJECT_EXPORT_PAIRS) {
+      expect(facadeExport).toBe(implementationExport);
+    }
+  });
+});
 
 describe("t340 graphqlArgv", () => {
   test("strings use -f and numbers use -F, after the query field", () => {
