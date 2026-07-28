@@ -680,5 +680,12 @@
     "dirName": "260727-mirror-project-status",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa40f-b7f3-7ebf-89fe-dc6ec70c2b89",
+    "slug": "plugin-verb-skills",
+    "dirName": "260727-plugin-verb-skills",
+    "scope": "amadeus-feature",
+    "status": "complete"
   }
 ]

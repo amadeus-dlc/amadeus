@@ -4,7 +4,39 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin / E2E 面のコード配置と 4 Issue 対象ファイル（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+## plugin CLI・runner-gen・スキル正本のコード配置（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+
+260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**、区間 **192 files / +5529 / -956**、record 除外 **161**）。上流入力: Developer スキャン結果。すべての数値は `git diff` / `wc -l` / `ls` / `find` / `git ls-files` 出力からの転記（測定 ref: observed `afb93a825`）。
+
+### 区間の面別内訳（`git diff --name-only 0c4709102..HEAD` の集計）
+
+`amadeus/spaces` **31**（record）/ `docs/reference` **22** / `docs/guide` **18** / `tests/integration` **9** / `dist/{opencode,kiro-ide,kiro,kimi,cursor,codex,claude}` 各 **7** / `packages/framework` **6** / `dist/plugins` **6** / `tests/unit` **4** / `.{opencode,kimi-code,cursor,codex,claude}/tools` 各 **4** / `docs/harness-engineering` **2**。**正本（`packages/framework` 6）に対して生成面（7 dist × 7 + 5 self-install × 4）が支配的**という、core/tools を触った変更の典型的な増幅パターンである。
+
+### 本 intent の対象ファイル配置
+
+| 面 | パス | 断面（observed `afb93a825`） |
+| --- | --- | --- |
+| plugin CLI 正本 | `packages/framework/core/tools/amadeus-plugin.ts` | **678 行**（前区間 613 から +65）。`:71-75` 動詞 union / `:87-94` 結果 union / `:100-106` USAGE / `:146-153` parse / `:159-174` `PluginCliDeps` / `:195-197` `isEngineDotfile` / `:206` `buildHostSnapshot` / `:253-263` `spawnRecompile` / `:265-282` `defaultPluginCliDeps` / `:293-297` `defaultPluginHostRoot` / `:305-311` `pluginHostRootFromHook` / `:313-316` `resolveProjectRoot` / `:322` staging 定数 / `:329-331` `pluginSourceRootOf` / `:368`/`:401`/`:457`/`:472` 4 handler / `:422` `baselineRestored` / `:432` `pluginArtifactsAbsent` / `:443` `hasEmptyAncestorDir` / `:634-642` dispatch / `:645-670` レンダラ / `:674-676` in-process seam / `:678` `import.meta.main` |
+| 合成エンジン正本 | `packages/framework/core/tools/amadeus-plugin-compose.ts` | **1488 行**（従前記載 1469 は失効） |
+| activation | `packages/framework/core/tools/amadeus-plugin-activation.ts` | 295 行 |
+| SessionStart hook 正本 | `packages/framework/core/hooks/amadeus-plugin-compose.ts` | **25 行**（従前記載 23 は失効） |
+| graph discovery | `packages/framework/core/tools/amadeus-graph.ts` | `:1666-1667` landing path 宣言 / `:1675-1678` `PluginStageFile`（`pluginName` フィールドを持たない） / `:2021-2023` `pluginsHostRoot` |
+| 統合 CLI dispatch | `packages/framework/core/tools/amadeus-utility.ts` | `:216` `HELP_TEXT_TAIL` / `:5900` `handleMigrate`（委譲型の唯一の先例）/ `:5945` `switch (subcommand)` / `:6001` `case "init"` / `:6004` `case "state-init"` / `:6033` default `die` の usage 文字列。**`case "plugin"` は不在** |
+| stage-runner 生成 | `packages/framework/core/tools/amadeus-runner-gen.ts` | `:75-77` `runnerDirName` / `:88-90` `isRunnableStage` / `:118` `renderStageRunner` / `:342` `pruneOrphanRunners` / `:363` `handleCheck` |
+| スキル正本 | `packages/framework/core/skills/` | 6 ディレクトリ（`amadeus-election` / `amadeus-grilling` / `amadeus-mirror` / `amadeus-outcomes-pack` / `amadeus-replay` / `amadeus-session-cost`）。雛形候補 `amadeus-mirror/SKILL.md` = **94 行** |
+| スキル投影の配線 | `packages/framework/harness/projections.ts` / 各 `manifest.ts` / `harness/codex/emit.ts` | `projections.ts:296` `mirrorSessionSkillName` / `:300` `mirrorCoreSkillDirectory` / `claude/manifest.ts:60-66` / `kimi/manifest.ts:50-56` / `codex/emit.ts:338-345` |
+| パッケージャ | `scripts/plugin-projection.ts` | `:42-50` `PACKAGE_HARNESSES`（7）/ `:56` `SELF_INSTALL_HARNESSES`（5、canonical）/ `:64` core の `PLUGIN_SOURCE_DIR_NAME` を import / `:584` `installDoc` / `:598` コピー先の生成行 |
+| self-install | `scripts/promote-self.ts` | `:37` `import { SELF_INSTALL_HARNESSES }`（#1575 の是正形）/ `:186` 消費点 |
+| E2E 検証 | `tests/e2e/t341-plugin-conformance-journey.serial.test.ts` | **234 行**（新設）。ヘッダ `:1-3` に covers / size: medium |
+| CI ジョブ | `.github/workflows/ci.yml` | `:141-145` 設計コメント / `:146` `plugin-conformance-e2e` / `:165` 実行行 / `:678` 集約 `needs` / `:704` `require_result` |
+
+### テストの配置（区間の変化）
+
+`git ls-files tests/e2e/ | grep -c plugin` = **1**（前区間 **0**）— `t341-plugin-conformance-journey.serial.test.ts` の新設が唯一の変化。命名は既存 e2e の `.serial.` 規約に従い、runner が直列扱いする。区間で変更された `tests/integration` は **9**、`tests/unit` は **4**。
+
+**構造上の注記**: plugin CLI は `core/tools/` に置かれるため 7 ハーネス dist と 5 面 self-install ツリーへ投影される（区間の `dist/*` 各 7 / `.*/tools` 各 4 がその実測）。一方 `scripts/plugin-projection.ts` / `promote-self.ts` は repo-local で配布対象外であり、#1575 の是正が dist に現れないのはこの境界による。
+
+## plugin / E2E 面のコード配置と 4 Issue 対象ファイル（260727-e2e-plugin-conformance、履歴 2026-07-27、差分リフレッシュ、observed `0c4709102`。行数 613 / 1469 / 23 は当時断面）
 
 260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**、区間 **1830 files / +316726 / -7366**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。すべての数値は `git diff` / `wc -l` / `ls` / `git ls-files` 出力からの転記（測定 ref: observed `0c4709102`）。
 
