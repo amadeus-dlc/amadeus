@@ -24,6 +24,7 @@ import {
   removeWorkspaceRecord,
 } from "../harness/fixtures.ts";
 import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { createIntentSelectionToken } from "../../dist/claude/.claude/tools/amadeus-intent-selection.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -121,7 +122,11 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(slugs.length).toBe(2);
       for (const s of slugs) expect(d.question).toContain(s);
       expect(d.options).toEqual(slugs);
-      // Read-only: no third intent was born; the cursor is still unset.
+      expect(d.selection_token).toMatch(/^[A-Za-z0-9_-]+\.[0-9a-f]{64}$/);
+      expect(JSON.parse(next(["--scope", "poc"]).stdout.trim()).selection_token).toBe(
+        d.selection_token,
+      );
+      // No third intent was born and the cursor is still unset.
       expect(recordDirs(proj).length).toBe(2);
       expect(existsSync(cursorPath(proj))).toBe(false);
     });
@@ -141,11 +146,12 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       seedTwoIntentsNoCursor();
       const firstRecord = readIntentRegistry(proj)[0].dirName;
       if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
 
       const selected = util([
         "intent-select-response",
+        directive.selection_token,
         "１",
-        ...readIntentRegistry(proj).map((entry) => entry.slug),
       ]);
 
       expect(selected.status, selected.out).toBe(0);
@@ -154,15 +160,47 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
 
     test("the canonical response resolver rejects an out-of-range ordinal without a cursor", () => {
       seedTwoIntentsNoCursor();
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
 
       const rejected = util([
         "intent-select-response",
+        directive.selection_token,
         "3",
-        ...readIntentRegistry(proj).map((entry) => entry.slug),
       ]);
 
       expect(rejected.status).toBe(1);
       expect(rejected.out).toContain("does not match a displayed option");
+      expect(existsSync(cursorPath(proj))).toBe(false);
+    });
+
+    test("the response resolver rejects caller-supplied options and a modified token", () => {
+      seedTwoIntentsNoCursor();
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+
+      const injectedOptions = util([
+        "intent-select-response",
+        directive.selection_token,
+        "1",
+        "feature",
+        "poc",
+      ]);
+      const modifiedToken = util([
+        "intent-select-response",
+        `${directive.selection_token}x`,
+        "1",
+      ]);
+      const forgedOptionSet = util([
+        "intent-select-response",
+        createIntentSelectionToken(["feature", "poc"]),
+        "1",
+      ]);
+
+      expect(injectedOptions.status).toBe(1);
+      expect(injectedOptions.out).toContain("Usage:");
+      expect(modifiedToken.status).toBe(1);
+      expect(modifiedToken.out).toContain("does not match the current registry options");
+      expect(forgedOptionSet.status).toBe(1);
+      expect(forgedOptionSet.out).toContain("does not match the current registry options");
       expect(existsSync(cursorPath(proj))).toBe(false);
     });
   });

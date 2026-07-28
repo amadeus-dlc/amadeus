@@ -293,9 +293,10 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
       );
       expect(prose).toContain("do **not** pass `--result` or `--stage`");
       expect(prose).toContain(
-        'intent-select-response "<exact human response>" "<option 1>" "<option 2>"',
+        'intent-select-response "<selection token>" "<exact human response>"',
       );
       expect(prose).toContain("Do not resolve ordinals yourself");
+      expect(prose).toContain("do not call `amadeus-log.ts`");
     }
     for (const prose of [sourceAnnex, shippedAnnex]) {
       expect(prose).toContain(

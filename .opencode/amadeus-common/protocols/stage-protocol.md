@@ -450,6 +450,12 @@ At each question interaction:
 1. BEFORE presenting the question: `bun .opencode/tools/amadeus-log.ts decision --stage <slug> --decision "<summary>" --options "<A,B,C>"` (emits `DECISION_RECORDED`).
 2. AFTER response: `bun .opencode/tools/amadeus-log.ts answer --stage <slug> --details "<summary of answers>"` (emits `QUESTION_ANSWERED`).
 
+The engine's `select-intent` directive is outside this stage interaction
+contract: it occurs before an active intent or stage can be resolved. Do not call
+`amadeus-log.ts` for its question or answer. Follow the harness's
+`select-intent` directive arm, which passes only the engine-issued opaque token
+and the untouched human response to `intent-select-response`.
+
 ### Stage progress notation
 - `[ ]` — Not started
 - `[-]` — In progress (current stage, not yet approved)

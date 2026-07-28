@@ -96,6 +96,10 @@ import {
   validateDirective,
 } from "./amadeus-directive.ts";
 import {
+  createIntentSelectionToken,
+  intentSelectionOptions,
+} from "./amadeus-intent-selection.ts";
+import {
   appendAuditEntryUnlocked,
   appendLifecycleAuditEntryUnlocked,
 } from "./amadeus-audit.ts";
@@ -594,7 +598,12 @@ function selectIntentDirective(
   question: string,
   options: string[],
 ): SelectIntentDirective {
-  return { kind: "select-intent", question, options };
+  return {
+    kind: "select-intent",
+    selection_token: createIntentSelectionToken(options),
+    question,
+    options,
+  };
 }
 
 function printDirective(message: string): PrintDirective {
@@ -839,13 +848,7 @@ function intentPickPromptIfRecordsExist(
   // Records exist but no cursor is set (the fresh-clone / >1-no-cursor case).
   // NAME the existing intents and ask the human to select one rather than
   // birthing a duplicate. Order follows listIntents (registry order).
-  const slugCounts = new Map<string, number>();
-  for (const intent of intents) {
-    slugCounts.set(intent.slug, (slugCounts.get(intent.slug) ?? 0) + 1);
-  }
-  const options = intents.map((intent) =>
-    slugCounts.get(intent.slug) === 1 ? intent.slug : intent.dirName,
-  );
+  const options = intentSelectionOptions(intents);
   const list = options.map((option) => `\`${option}\``).join(", ");
   const spaceLabel = space === "default" ? "" : ` in space "${space}"`;
   return selectIntentDirective(

@@ -70,9 +70,10 @@ question in both forms for one turn.
 
 ## Answer capture
 
-- Before every structured question, record the options with
+- Before every stage or interview structured question, record the options with
   `bun .kimi-code/tools/amadeus-log.ts decision --stage <slug> ...` as required
-  by the shared stage protocol.
+  by the shared stage protocol. Do not call `amadeus-log.ts` for `select-intent`:
+  it is a pre-workflow interaction and has no active stage or resolvable intent.
 - After an ordinary stage/interview question, record the exact human response
   with `bun .kimi-code/tools/amadeus-log.ts answer --stage <slug> --details
   "<exact answer>"` before presenting another question.

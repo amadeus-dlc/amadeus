@@ -71,7 +71,7 @@
 - [ ] delivery-planning — SKIP
 
 ### CONSTRUCTION PHASE
-Per unit: [TBD]
+Per unit: slop-cleanup
 - [ ] functional-design — SKIP
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP

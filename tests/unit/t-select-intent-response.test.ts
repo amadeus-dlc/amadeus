@@ -1,10 +1,16 @@
-// covers: function:resolveIntentSelectionResponse
+// covers: function:createIntentSelectionToken, function:intentSelectionOptions, function:intentSelectionTokenMatchesOptions, function:resolveIntentSelectionResponse
 // size: small
 
 import { describe, expect, test } from "bun:test";
-import { resolveIntentSelectionResponse } from "../../packages/framework/core/tools/amadeus-intent-selection.ts";
+import {
+  createIntentSelectionToken,
+  intentSelectionOptions,
+  intentSelectionTokenMatchesOptions,
+  resolveIntentSelectionResponse,
+} from "../../packages/framework/core/tools/amadeus-intent-selection.ts";
 
 const options = ["first-intent", "second-intent"];
+const token = createIntentSelectionToken(options);
 
 describe("intent selection response resolution", () => {
   test.each([
@@ -13,7 +19,7 @@ describe("intent selection response resolution", () => {
     [" ２ ", "second-intent"],
     ["second-intent", "second-intent"],
   ])("resolves %p to the exact displayed option", (response, target) => {
-    expect(resolveIntentSelectionResponse(options, response)).toEqual({
+    expect(resolveIntentSelectionResponse(token, response)).toEqual({
       kind: "resolved",
       target,
     });
@@ -22,23 +28,42 @@ describe("intent selection response resolution", () => {
   test.each(["", "0", "3", "unknown-intent"])(
     "rejects an answer that does not identify a displayed option: %p",
     (response) => {
-      expect(resolveIntentSelectionResponse(options, response)).toMatchObject({
+      expect(resolveIntentSelectionResponse(token, response)).toMatchObject({
         kind: "rejected",
       });
     },
   );
 
-  test("rejects an invalid option set instead of choosing silently", () => {
-    expect(resolveIntentSelectionResponse(["same", "same"], "same")).toMatchObject({
+  test("rejects a modified token instead of trusting caller-supplied semantics", () => {
+    expect(resolveIntentSelectionResponse(`${token}x`, "1")).toEqual({
       kind: "rejected",
-      message: expect.stringContaining("not unique"),
+      message: "Intent selection token is invalid.",
     });
   });
 
-  test("rejects an empty option set", () => {
-    expect(resolveIntentSelectionResponse([], "1")).toMatchObject({
-      kind: "rejected",
-      message: expect.stringContaining("no displayed options"),
-    });
+  test.each([[[]], [[""]], [["   "]], [["same", "same"]]])(
+    "refuses to create a token for an invalid option set: %p",
+    (invalidOptions) => {
+      expect(() => createIntentSelectionToken(invalidOptions)).toThrow();
+    },
+  );
+
+  test("the token is deterministic for the exact displayed order", () => {
+    expect(createIntentSelectionToken(options)).toBe(token);
+    expect(createIntentSelectionToken([...options].reverse())).not.toBe(token);
+    expect(intentSelectionTokenMatchesOptions(token, options)).toBe(true);
+    expect(intentSelectionTokenMatchesOptions(token, [...options].reverse())).toBe(false);
+  });
+
+  test("derives unambiguous display options from the registry snapshot", () => {
+    expect(intentSelectionOptions([
+      { slug: "same", dirName: "260101-same-aaaaaaaa" },
+      { slug: "same", dirName: "260102-same-bbbbbbbb" },
+      { slug: "unique", dirName: "260103-unique-cccccccc" },
+    ])).toEqual([
+      "260101-same-aaaaaaaa",
+      "260102-same-bbbbbbbb",
+      "unique",
+    ]);
   });
 });

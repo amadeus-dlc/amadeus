@@ -18,6 +18,10 @@
 // amadeus-lib.ts.
 
 import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
+import {
+  createIntentSelectionToken,
+  intentSelectionTokenMatchesOptions,
+} from "./amadeus-intent-selection.ts";
 
 // --- Public types ---
 
@@ -194,11 +198,13 @@ export interface PresentGateDirective {
   memory_path: string;
 }
 
-// select-intent — render the exact options and stop. On the answering turn the
-// conductor passes the untouched human response to the deterministic
+// select-intent — render the exact options and stop. The opaque token seals that
+// ordered option snapshot; on the answering turn the conductor passes only the
+// token and untouched human response to the deterministic
 // `intent-select-response` utility, which owns normalization and cursor selection.
 export interface SelectIntentDirective {
   kind: "select-intent";
+  selection_token: string;
   question: string;
   options: string[];
 }
@@ -332,7 +338,7 @@ const DISPATCH_SUBAGENT_FIELDS = [
 const INVOKE_SWARM_FIELDS = ["kind", "units", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
-const SELECT_INTENT_FIELDS = ["kind", "question", "options"] as const;
+const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
 const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
@@ -386,8 +392,17 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkString(o, "question", "ask", errors);
   },
   "select-intent": (o, errors) => {
+    checkString(o, "selection_token", "select-intent", errors);
     checkString(o, "question", "select-intent", errors);
     checkNonEmptyStringArray(o, "options", "select-intent", errors);
+    if (
+      typeof o.selection_token === "string" &&
+      Array.isArray(o.options) &&
+      o.options.every((option) => typeof option === "string") &&
+      !intentSelectionTokenMatchesOptions(o.selection_token, o.options)
+    ) {
+      errors.push("select-intent: selection_token must encode the exact options");
+    }
   },
   print: (o, errors) => checkString(o, "message", "print", errors),
   error: (o, errors) => checkString(o, "message", "error", errors),
@@ -650,6 +665,11 @@ function checkNonEmptyStringArray(
   checkStringArray(o, field, kind, errors);
   if (Array.isArray(o[field]) && o[field].length === 0) {
     errors.push(`${kind}: ${field} must be a non-empty string array`);
+  } else if (
+    Array.isArray(o[field]) &&
+    o[field].some((entry) => typeof entry === "string" && entry.trim().length === 0)
+  ) {
+    errors.push(`${kind}: ${field} entries must be non-empty strings`);
   } else if (Array.isArray(o[field]) && new Set(o[field]).size !== o[field].length) {
     errors.push(`${kind}: ${field} entries must be unique`);
   }
@@ -868,6 +888,7 @@ export const directiveSelfCheckExamples: Directive[] = [
     { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
     {
       kind: "select-intent",
+      selection_token: createIntentSelectionToken(["first-intent", "second-intent"]),
       question: "Choose an existing intent.",
       options: ["first-intent", "second-intent"],
     },

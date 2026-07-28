@@ -47,9 +47,10 @@ Reply with a number (or just tell me).
   saw before invoking any tool. The `select-intent` directive is the one
   exception: pass its exact human response only to the dedicated
   `intent-select-response` resolver, never to the engine or an audit command.
-- Before every structured question, record the options with
+- Before every stage or interview structured question, record the options with
   `bun .codex/tools/amadeus-log.ts decision --stage <slug> ...` as required by
-  the shared stage protocol.
+  the shared stage protocol. Do not call `amadeus-log.ts` for `select-intent`:
+  it is a pre-workflow interaction and has no active stage or resolvable intent.
 - After an ordinary stage/interview question, record the exact human response
   with `bun .codex/tools/amadeus-log.ts answer --stage <slug> --details
   "<exact answer>"` before presenting another question.
@@ -81,8 +82,8 @@ Reply with a number (or just tell me).
   do not add `--result` or `--stage`.
 - For a `select-intent` directive, render exactly `directive.options`, then pass
   the untouched reply to
-  `bun .codex/tools/amadeus-utility.ts intent-select-response "<exact human response>" "<option 1>" "<option 2>" ...`,
-  passing every `directive.options` value unchanged as its own argument, and
-  re-run `next`. The utility resolves against the exact displayed option set,
+  `bun .codex/tools/amadeus-utility.ts intent-select-response "<selection token>" "<exact human response>"`,
+  passing `directive.selection_token` unchanged, and re-run `next`. The utility
+  verifies the opaque token, resolves against its engine-issued option snapshot,
   normalizes full-width digits, and owns the semantic selection; the conductor
   must not pre-resolve it or call `report`.
