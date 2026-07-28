@@ -21,6 +21,9 @@ const TOPICS = [
   "safety",
   "cli",
   "scope",
+  "projects",
+  "auth",
+  "diagnostics",
 ] as const;
 
 const commands = [
@@ -46,6 +49,9 @@ const expected: Record<(typeof TOPICS)[number], unknown> = {
     positionalArguments: "forbidden",
   },
   scope: { scopeExclusions: MIRROR_USER_CONTRACT.scopeExclusions },
+  projects: MIRROR_USER_CONTRACT.projectConfig,
+  auth: MIRROR_USER_CONTRACT.projectAuth,
+  diagnostics: MIRROR_USER_CONTRACT.projectDiagnostics,
 };
 
 const FORBIDDEN_CONTRACT_CLAIMS = [
@@ -169,10 +175,18 @@ export function validateMirrorDocs(root: string): readonly DocsFinding[] {
   );
 }
 
+// Exported so the success line is pinned in-process; the main block below is
+// spawn-only and invisible to the parent Bun LCOV.
+export function mirrorDocsOkMessage(): string {
+  const documents = MIRROR_DOC_PROJECTIONS.length;
+  const topics = documents * TOPICS.length;
+  return `mirror-docs-contract: OK (${documents} documents, ${topics} topics)`;
+}
+
 if (import.meta.main) {
   const findings = validateMirrorDocs(process.cwd());
   for (const finding of findings)
     console.error(`${finding.path}: ${finding.message}`);
   if (findings.length > 0) process.exit(1);
-  console.log("mirror-docs-contract: OK (4 documents, 32 topics)");
+  console.log(mirrorDocsOkMessage());
 }

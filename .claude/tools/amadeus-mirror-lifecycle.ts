@@ -17,6 +17,7 @@ import {
   readIntentRegistry,
   recordDirMatches,
 } from "./amadeus-lib.ts";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import {
   driveMirrorBoundary,
   type MirrorBoundaryOutcome,
@@ -27,6 +28,10 @@ import {
   parseIssueNumber,
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
+import {
+  expectedProjectStatus,
+  selectProjectStatusOption,
+} from "./amadeus-mirror-policy.ts";
 import {
   parseMirrorMarker,
   renderMirrorMarker,
@@ -52,10 +57,16 @@ import type {
   MirrorBoundary,
   MirrorCreateIdentity,
   MirrorEventIdentity,
+  MirrorFailureClass,
   MirrorGitHubGateway,
   MirrorOperation,
   MirrorOperationOutcome,
+  MirrorProjectItem,
+  MirrorProjectRef,
+  MirrorProjectSyncEntry,
+  MirrorProjectTarget,
   MirrorProvenanceV2,
+  MirrorSnapshot,
   MirrorStateSnapshot,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
@@ -241,10 +252,21 @@ function lifecycleRuntime(
   };
 }
 
+// The record fields a snapshot is derived from. Structural rather than tied to
+// one resolution, so the repair path derives its snapshot through this single
+// definition instead of restating the field mapping.
+type SnapshotSource = Readonly<{
+  intentUuid: string;
+  intentDir: string;
+  registryStatus: string;
+  stateContent: string;
+  slug: string;
+}>;
+
 function lifecycleSnapshot(
-  target: Extract<ResolvedLifecycleTarget, { kind: "ok" }>,
+  target: SnapshotSource,
   now: () => string,
-) {
+): MirrorSnapshot {
   return {
     intentUuid: target.intentUuid,
     intentDir: target.intentDir,
@@ -401,6 +423,29 @@ export type MirrorRepairRequest = Readonly<{
   command: MirrorRepairCommand;
 }>;
 
+// One read-only observation about one Project board. `expectedStatus` is the
+// column `expectedProjectStatus` names — the same definition the sync applies,
+// never a second derivation — and is null when the boundary expects no column
+// at all (a parked Intent), in which case `drift` is false by construction.
+// `resolution` closes over the reachability of that column, and
+// `availableOptions` is present only for `option-missing`, where the board's own
+// vocabulary is what the reader needs to see.
+//
+// `summary` is the sentence a human acts on: what this row means and, when the
+// column is unreachable, which move fixes it. It is built from a fixed template
+// over names this tool already holds — a Project reference, a column name, a
+// scope name — so no credential and no raw API response can reach it.
+export type MirrorRepairProjectDiagnostic = Readonly<{
+  project: string;
+  membership: "member" | "not-member";
+  currentStatus: string | null;
+  expectedStatus: string | null;
+  drift: boolean;
+  resolution: "resolved" | "field-missing" | "option-missing" | "permission-denied";
+  availableOptions?: readonly string[];
+  summary: string;
+}>;
+
 export type MirrorRepairOutcome =
   | {
       kind: "status";
@@ -410,6 +455,7 @@ export type MirrorRepairOutcome =
       issueNumber: number | null;
       provenance: "unlinked" | "verified" | "unverified";
       pendingOperations: readonly string[];
+      projectDiagnostics: readonly MirrorRepairProjectDiagnostic[];
     }
   | MirrorOperationOutcome
   | { kind: "error"; message: string };
@@ -638,13 +684,54 @@ export function parseMirrorLifecycleArgs(args: string[]): CliArgs {
 type RepairTarget =
   | {
       kind: "ok";
+      projectDir: string;
+      space: string;
       intentDir: string;
       intentUuid: string;
       repository: RepositoryIdentity;
       ports: MirrorStateStorePorts;
       gateway: MirrorGitHubGateway;
+      // The workflow snapshot the Project diagnostics derive their expected
+      // column from. Null when the record could not be read: diagnostics are
+      // then reported as unavailable rather than guessed.
+      snapshot: MirrorSnapshot | null;
     }
   | { kind: "error"; message: string };
+
+// The record view the Project diagnostics derive their expected column from.
+// An unreadable record yields null rather than a guessed snapshot: repair's
+// other verbs do not need it, so a missing record must not fail the command.
+// Module-scope aliases: inline parameter object types are runtime-erased but
+// stamped DA:0 by Bun inside the function region.
+type RepairRegistryEntry = Readonly<{
+  uuid: string;
+  intentDir: string;
+  status: string;
+  slug: string;
+}>;
+
+function repairSnapshot(
+  statePath: string,
+  entry: RepairRegistryEntry,
+  runtime: MirrorLifecycleRuntime,
+): MirrorSnapshot | null {
+  let stateContent: string;
+  try {
+    stateContent = readFileSync(statePath, "utf-8");
+  } catch {
+    return null;
+  }
+  return lifecycleSnapshot(
+    {
+      intentUuid: entry.uuid,
+      intentDir: entry.intentDir,
+      registryStatus: entry.status,
+      stateContent,
+      slug: entry.slug,
+    },
+    runtime.now ?? (() => new Date().toISOString()),
+  );
+}
 
 function resolveRepairTarget(
   request: MirrorRepairRequest,
@@ -672,9 +759,12 @@ function resolveRepairTarget(
   const statePath = join(intentsDir(request.projectDir, space), intentDir, "amadeus-state.md");
   return {
     kind: "ok",
+    projectDir: request.projectDir,
+    space,
     intentDir,
     intentUuid: entry.uuid,
     repository,
+    snapshot: repairSnapshot(statePath, { ...entry, intentDir }, runtime),
     ports:
       runtime.ports ??
       createMirrorStateStorePorts({
@@ -813,6 +903,227 @@ async function issueAndConfirmRepair(input: {
   };
 }
 
+// --- Project diagnostics (read-only) -----------------------------------------
+//
+// `repair status` observes the Project boards this Intent syncs to and never
+// touches them: it calls only the two read methods of the gateway, and the
+// mutation methods (addProjectItem / updateProjectItemStatus) are unreachable
+// from this path. The ledger is an input, never an output — a diagnosis of a
+// board that has drifted does not record that diagnosis anywhere.
+//
+// The expected column comes from `expectedProjectStatus`, the same definition
+// the sync applies, so a diagnosis can never disagree with what a sync would do.
+
+function canonicalProjectRef(project: MirrorProjectRef): string {
+  return `${project.owner}/${project.number}`;
+}
+
+// The Projects worth diagnosing: everything configuration targets, everything
+// the ledger already knows about (a board the Issue has since been removed from
+// still deserves a row), and everything the Issue currently belongs to.
+function diagnosticTargets(
+  configured: readonly MirrorProjectTarget[],
+  ledger: readonly MirrorProjectSyncEntry[],
+  items: readonly MirrorProjectItem[],
+): MirrorProjectTarget[] {
+  const byProject = new Map<string, MirrorProjectTarget>();
+  for (const target of configured) {
+    byProject.set(canonicalProjectRef(target.project), target);
+  }
+  const addBare = (project: MirrorProjectRef): void => {
+    const key = canonicalProjectRef(project);
+    // A configured target carries its own status vocabulary; a board known only
+    // from the ledger or from membership takes the defaults.
+    if (!byProject.has(key)) byProject.set(key, { project, statusNames: {} });
+  };
+  for (const entry of ledger) {
+    const parts = entry.project.split("/");
+    const number = Number(parts[1]);
+    if (parts.length === 2 && Number.isSafeInteger(number)) {
+      addBare({ owner: parts[0], number });
+    }
+  }
+  for (const item of items) {
+    addBare({ owner: item.projectOwner, number: item.projectNumber });
+  }
+  return [...byProject.values()].sort((a, b) =>
+    canonicalProjectRef(a.project).localeCompare(canonicalProjectRef(b.project)),
+  );
+}
+
+// A read that did not produce a Status field leaves the column unreachable. The
+// two reasons a human can act on are distinguished: a credential that lacks the
+// `project` scope, and everything else (an absent field, an unresolved Project,
+// a failed query) reported as the field being unavailable.
+function unreachableResolution(
+  classification: MirrorFailureClass,
+): "field-missing" | "permission-denied" {
+  return classification === "permission" || classification === "unauthenticated"
+    ? "permission-denied"
+    : "field-missing";
+}
+
+// The GitHub token scope every Project read needs. Named once here so the
+// permission diagnostic and any future consumer say the same word.
+const PROJECT_SCOPE = "project";
+
+// The sentence for a board whose expected column is reachable. It reports the
+// observation only: `repair status` proposes nothing and changes nothing.
+type RepairSummaryRow = Readonly<{
+  membership: "member" | "not-member";
+  currentStatus: string | null;
+  expectedStatus: string | null;
+  drift: boolean;
+}>;
+
+function resolvedSummary(row: RepairSummaryRow): string {
+  if (row.expectedStatus === null) {
+    return "no column is expected right now, so this board is left exactly as it is.";
+  }
+  if (row.membership === "not-member") {
+    return `the Issue is not on this board; the column it would take is "${row.expectedStatus}".`;
+  }
+  if (!row.drift) return `this board is already in "${row.expectedStatus}".`;
+  return `this board is in ${
+    row.currentStatus === null ? "no column" : `"${row.currentStatus}"`
+  } but the workflow expects "${row.expectedStatus}".`;
+}
+
+// The two moves that resolve a column the board does not declare (BR-U4-6): put
+// the option on the board, or map the phase onto an option the board already
+// has. The board's own option names travel in `availableOptions`.
+function optionMissingSummary(project: string, expected: string): string {
+  return (
+    `${project} declares no Status option named exactly "${expected}" ` +
+    "(the match is exact — case and spacing included). Either add that option to " +
+    "the board, or map this phase onto one of the options it already has with a " +
+    "`status-names` override for this Project in `mirror-projects`."
+  );
+}
+
+// A permission diagnostic names the board and the scope it needs, and nothing
+// else (BR-U4-7): no token, no response body, and no attempt to change the
+// credential — re-authorizing is a human's move, made outside this tool.
+function permissionDeniedSummary(project: string): string {
+  return (
+    `the GitHub credential in use cannot read the Status field of ${project}; ` +
+    `reading and setting a Project column requires the \`${PROJECT_SCOPE}\` scope. ` +
+    "Grant that scope to the credential and run `repair status` again."
+  );
+}
+
+function fieldMissingSummary(project: string): string {
+  return (
+    `the Status field of ${project} could not be resolved, so no column can be ` +
+    "compared or applied. Confirm the Project exists and carries a single-select " +
+    "field named Status."
+  );
+}
+
+async function diagnoseProject(
+  target: Extract<RepairTarget, { kind: "ok" }>,
+  snapshot: MirrorSnapshot,
+  project: MirrorProjectTarget,
+  items: readonly MirrorProjectItem[],
+): Promise<MirrorRepairProjectDiagnostic> {
+  const canonical = canonicalProjectRef(project.project);
+  const item = items.find(
+    (each) =>
+      each.projectOwner === project.project.owner &&
+      each.projectNumber === project.project.number,
+  );
+  const currentStatus = item?.currentStatus ?? null;
+  const expected = expectedProjectStatus(snapshot, "manual", project.statusNames);
+  const expectedStatus = expected.kind === "status" ? expected.name : null;
+  const membership: MirrorRepairProjectDiagnostic["membership"] =
+    item === undefined ? "not-member" : "member";
+  const base = {
+    project: canonical,
+    membership,
+    currentStatus,
+    expectedStatus,
+    // No expected column means nothing to drift from.
+    drift: expectedStatus !== null && currentStatus !== expectedStatus,
+  };
+
+  const field = await target.gateway.resolveProjectStatusField(project.project);
+  if (field.kind === "failure") {
+    const resolution = unreachableResolution(field.classification);
+    return {
+      ...base,
+      resolution,
+      summary:
+        resolution === "permission-denied"
+          ? permissionDeniedSummary(canonical)
+          : fieldMissingSummary(canonical),
+    };
+  }
+  if (
+    expected.kind === "status" &&
+    selectProjectStatusOption(field.value, expected.name) === null
+  ) {
+    return {
+      ...base,
+      resolution: "option-missing",
+      availableOptions: field.value.options.map((option) => option.name),
+      summary: optionMissingSummary(canonical, expected.name),
+    };
+  }
+  return { ...base, resolution: "resolved", summary: resolvedSummary(base) };
+}
+
+async function projectDiagnostics(
+  target: Extract<RepairTarget, { kind: "ok" }>,
+  state: MirrorStateSnapshot,
+): Promise<readonly MirrorRepairProjectDiagnostic[]> {
+  const config = resolveMirrorConfig(
+    target.projectDir,
+    target.intentDir,
+    target.space,
+  );
+  // An invalid layer contributes no target: the same resolution the sync uses
+  // decides here, so a rejected configuration is never diagnosed against.
+  const configured = config.kind === "resolved" ? config.config.projects : [];
+  const ledger = state.projectSync?.projects ?? [];
+  if (configured.length === 0 && ledger.length === 0) return [];
+  // Membership is a property of the mirror Issue: with no Issue there is no
+  // board relationship to observe, and no query worth spending.
+  if (state.issueNumber === null || target.snapshot === null) return [];
+
+  const view = await target.gateway.listProjectItems({
+    repository: target.repository,
+    number: state.issueNumber,
+  });
+  const items = view.kind === "ok" ? view.value.items : [];
+  if (view.kind === "failure") {
+    // Membership could not be read, so every row's membership is unknown rather
+    // than absent. Reporting the read failure per Project keeps the diagnosis
+    // loud without stopping the command.
+    const resolution = unreachableResolution(view.classification);
+    return diagnosticTargets(configured, ledger, []).map((project) => {
+      const canonical = canonicalProjectRef(project.project);
+      return {
+        project: canonical,
+        membership: "not-member" as const,
+        currentStatus: null,
+        expectedStatus: null,
+        drift: false,
+        resolution,
+        summary:
+          resolution === "permission-denied"
+            ? permissionDeniedSummary(canonical)
+            : `the Issue's Project memberships could not be read, so nothing about ${canonical} could be observed.`,
+      };
+    });
+  }
+
+  const rows: MirrorRepairProjectDiagnostic[] = [];
+  for (const project of diagnosticTargets(configured, ledger, items)) {
+    rows.push(await diagnoseProject(target, target.snapshot, project, items));
+  }
+  return rows;
+}
+
 async function runRepairStatus(
   target: Extract<RepairTarget, { kind: "ok" }>,
 ): Promise<MirrorRepairOutcome> {
@@ -846,6 +1157,7 @@ async function runRepairStatus(
     revision: read.snapshot.revision,
     issueNumber: read.snapshot.issueNumber,
     provenance,
+    projectDiagnostics: await projectDiagnostics(target, read.snapshot),
     pendingOperations: Object.values(read.snapshot.receipts)
       .filter((receipt) =>
         ["prepared", "attempted", "pending", "safety-blocked"].includes(receipt.status)

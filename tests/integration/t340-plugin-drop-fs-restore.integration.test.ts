@@ -30,8 +30,10 @@ import {
 } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import {
   buildHostSnapshot,
+  copyPluginSource,
   handlePluginCli,
   type PluginCliDeps,
+  stagingEntryState,
   runPluginCli,
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
@@ -60,8 +62,11 @@ function deps(verifyOk = true): PluginCliDeps {
       newTxnId: () => `t340-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => true,
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
+    stagingEntryState,
+    copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     out: (l) => out.push(l),
     err: (l) => err.push(l),
   };

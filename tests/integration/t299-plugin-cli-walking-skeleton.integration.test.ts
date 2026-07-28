@@ -37,7 +37,13 @@ import {
   type WorkspaceBackend,
   type WorkspaceTransaction,
 } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
-import { buildHostSnapshot, handlePluginCli, type PluginCliDeps } from "../../packages/framework/core/tools/amadeus-plugin.ts";
+import {
+  buildHostSnapshot,
+  copyPluginSource,
+  handlePluginCli,
+  type PluginCliDeps,
+  stagingEntryState,
+} from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
@@ -76,8 +82,13 @@ function deps(verifyOk = true): PluginCliDeps {
       recompileCount += 1;
       return true;
     },
+    // #1598: the CLI regenerates stage-runners after the recompile. Stubbed
+    // here (no skills tree in a synthetic host); t352 drives the real wiring.
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
+    stagingEntryState,
+    copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     out: (l) => out.push(l),
     err: (l) => err.push(l),
   };

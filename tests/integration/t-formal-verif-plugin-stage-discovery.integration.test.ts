@@ -245,6 +245,27 @@ describe("compileStageGraph plugin merge (U2)", () => {
     expect(baseline).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
   });
 
+  // U3 (#1598): the join stamps a provenance discriminant on the plugin-joined
+  // node — the one compile-owned way to tell a composed stage from a core one.
+  // It is ABSENT (never `false`) on core nodes, which is what keeps the 0-plugin
+  // compile byte-identical to the committed baseline (asserted above).
+  test("a plugin-joined node carries plugin_source; core nodes do not", () => {
+    const host = freshHost();
+    writePluginStage(host, "dummy", "zz-dummy-plugin-stage.md", stageMd("zz-dummy-plugin-stage"));
+    const { stages, json } = compileWithPluginHost(host);
+
+    const plugin = stages.find((s) => s.slug === "zz-dummy-plugin-stage");
+    expect(plugin?.plugin_source).toBe(true);
+    // Every core stage lacks the key entirely (absence, not a false value).
+    const core = stages.filter((s) => s.slug !== "zz-dummy-plugin-stage");
+    expect(core.length).toBeGreaterThan(0);
+    expect(core.some((s) => Object.hasOwn(s, "plugin_source"))).toBe(false);
+    // It survives the canonical emitter, so the on-disk graph a host recompiles
+    // into carries the stamp for downstream readers.
+    expect(json).toContain(`"plugin_source": true`);
+    expect(json.match(/"plugin_source"/g)?.length).toBe(1);
+  });
+
   test("a plugin slug colliding with a core stage is a loud SLUG_COLLISION", () => {
     const host = freshHost();
     writePluginStage(host, "clash", "code-generation.md", stageMd("code-generation"));

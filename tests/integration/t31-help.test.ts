@@ -150,6 +150,7 @@ describe("t31 amadeus-utility help — CLI contract (migrated from t31-help-text
     "--version", // S4
     "intent", // P4: the intent verb family
     "space", // P4: the space verb family
+    "plugin", // U1: the plugin CLI delegation verb
   ] as const;
 
   for (const flag of UTILITIES) {

@@ -132,6 +132,14 @@ export interface SensorResolution {
 // extended shape.
 export interface GraphStage extends StageEntry {
   condition?: string;
+  // Provenance discriminant: `true` on a node joined from a COMPOSED PLUGIN
+  // stage file (`plugins/<name>/stages/<slug>.md`), ABSENT on a core stage.
+  // Compile is the only writer (the plugin join below sets it; buildGraphStage
+  // never does), and it is NOT stage frontmatter — validateStageFrontmatter
+  // rejects unknown YAML keys, exactly as for rules_in_context. Absent (never
+  // `false`) on core nodes so the emitted stage-graph.json of a 0-plugin host
+  // stays byte-identical to the pre-extension baseline (BR-U2-3 / BR-U3-4).
+  plugin_source?: true;
   produces: string[];
   // Optional artifacts are part of the stage's output vocabulary and routing,
   // but are deliberately excluded from per-unit completion coverage.
@@ -376,6 +384,7 @@ const FIELD_ORDER = [
   "number",
   "name",
   "phase",
+  "plugin_source",
   "execution",
   "condition",
   "lead_agent",
@@ -2139,8 +2148,14 @@ export function compileStageGraph(): {
 
   // Join composed plugin stages (U2 plugin-skeleton). Discovered after the core
   // walk and merged with the SAME duplicate-slug guard, auto-seed, and
-  // buildGraphStage path, so a plugin stage is indistinguishable from a core
-  // stage once on the graph (BR-U2-1 generic). Zero plugins -> zero iterations
+  // buildGraphStage path, so a plugin stage behaves like a core stage for every
+  // routing consumer (BR-U2-1 generic). It is no longer indistinguishable: the
+  // join stamps the `plugin_source` provenance discriminant on the node (U3,
+  // BR-U3-1), the single compile-owned identifier that lets downstream tools
+  // (e.g. the runner generator's fixtures and the plugin CLI's diagnostics) tell
+  // a composed stage from a core one without guessing from paths. Behaviour is
+  // unchanged for every consumer that does not read the field. Zero plugins ->
+  // zero iterations
   // -> the emitted JSON is byte-identical to the pre-extension baseline
   // (BR-U2-3). Iteration order is the path-sorted discovery order (deterministic).
   const pluginHost = pluginsHostRoot();
@@ -2196,7 +2211,12 @@ export function compileStageGraph(): {
       number = number ?? `${prefix}.${nextIndex}`;
       name = name ?? titleCaseSlug(slug);
     }
-    stages.push(buildGraphStage(data, phase, number, name));
+    // Stamp the provenance discriminant on the plugin-joined node only. Set here
+    // rather than inside buildGraphStage so the core walk has no branch that
+    // could ever write it (absent, never `false`, on a core stage).
+    const pluginStage = buildGraphStage(data, phase, number, name);
+    pluginStage.plugin_source = true;
+    stages.push(pluginStage);
   }
 
   // Sort by numeric order (phase-prefix.index).

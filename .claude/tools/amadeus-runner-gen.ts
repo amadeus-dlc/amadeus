@@ -18,6 +18,11 @@
 //     via `/amadeus --scope <name>`; runners are typeable sugar over the
 //     high-traffic ones (the FIRST_BATCH).
 //
+//     A COMPOSED PLUGIN stage is on that compiled list like any other stage
+//     (the compile joins it and stamps `plugin_source`), so it gets the same
+//     runner from the same template — the plugin CLI just has to regenerate
+//     after it recompiles (#1598); there is no plugin-specific template here.
+//
 // COMPOSE, don't reimplement. The stage-slug list comes from loadGraph() — the
 // one compiled source of truth (data/stage-graph.json); the scope list comes
 // from the shipped `.claude/scopes/*.md` files. A stage added to the graph (or a
@@ -89,12 +94,23 @@ function isRunnableStage(node: GraphStage): boolean {
   return node.phase !== "initialization";
 }
 
+// The runner targets of a stage set: every node EXCEPT the bootstrap
+// initialization stages. A COMPOSED PLUGIN stage (`plugin_source: true`, stamped
+// by the compile's plugin join) is a target on exactly the same terms as a core
+// stage — the predicate does not read the provenance field, so a plugin stage
+// reached through `--stage <slug> --single` gets the same typeable
+// `/amadeus-<slug>` runner a core stage gets (#1598). Pure over its input so the
+// selection is drivable in-process without touching the graph or the FS.
+export function runnerTargets(stages: readonly GraphStage[]): GraphStage[] {
+  return stages.filter(isRunnableStage);
+}
+
 // The runnable stage nodes — every compiled stage EXCEPT the bootstrap
 // initialization stages. This is the source of truth for which stage-runners
 // exist; a runner is generated for each, and the drift guard asserts the
 // on-disk set matches it exactly.
 export function runnableStages(): GraphStage[] {
-  return loadGraph().filter(isRunnableStage);
+  return runnerTargets(loadGraph());
 }
 
 // The runnable stage-slug list (graph/topological-author order), excluding the
