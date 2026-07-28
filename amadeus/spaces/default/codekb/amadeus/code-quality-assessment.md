@@ -1,6 +1,47 @@
 # コード品質評価
 
-## plugin テスト層の盲点と 4 Issue の品質評価（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+## 4 Issue 閉包後の plugin 品質断面と残存する構造リスク（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+
+260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**）。上流入力: Developer スキャン結果。Architect 段の独立再実測で**訂正 3 件**（行数 1469→**1488** / hook 23→**25** / record 除外 159→**161**）、その他の file:line は訂正 0 件（測定 ref: observed `afb93a825`）。
+
+### 前区間の負債シグナル 6 件の解消状況（`f1d561904` = PR #1596 着地後）
+
+前節（履歴: 260727-e2e-plugin-conformance）が列挙した 6 シグナルを現断面で再評価する。
+
+| # | 前区間のシグナル | 現断面 | 根拠 |
+| --- | --- | --- | --- |
+| 1 | 検証面が全て正本パスで出荷面が未駆動 | **解消** | `t341` が出荷 `dist/claude` 面から使い捨てワークスペースを構築して駆動（ヘッダ `:10-11` 直読、`:31` は repo 自身の `plugins/` / `dist/` を書かないことも assert と明記） |
+| 2 | recompile スタブで end-to-end 効果が未証明 | **解消** | `t341` は出荷 `settings.json.example` から読んだ hook コマンドを**実 spawn**し（`:12-14` verbatim「no hand-written command, no in-process call, no stubbed recompile」）、compose 後に stage が compiled stage graph に載ることを assert（`:15-17`）。recompile 自体も 2 段化（`spawnRecompile:253-263`） |
+| 3 | `hashSurface` のファイルバイト限定で空ディレクトリ残渣が検出不能 | **解消** | 判定側が FS 実測へ移行（`amadeus-plugin.ts:422` の合議、`hasEmptyAncestorDir:443` が空の殻を検査）。`t341:24` が「byte + structure baseline」へ戻ることを assert |
+| 4 | 0-plugin doctor 経路をどのテストも踏まない | **解消** | standalone / 統合の両 doctor が同一レンダラ `doctorPluginRows` を通る（`renderPluginCliResult:657`）。`t341:20-23` が `--project-root` なしで両 doctor を駆動（`:22-23` verbatim「the shipped default host root (#1591 ruling B) is the thing under test」） |
+| 5 | `PACKAGE_HARNESSES` の同義集合三重化 | **解消（部分）** | `promote-self.ts:37` が canonical を import（同名 export の衝突は消滅）。ただしテスト側のハードコード列挙は別途残存しうるため、改名時の 2 キー棚卸し（cid:application-design:dual-key-consumer-inventory）は引き続き要る |
+| 6 | e2e 層が既定 CI で一切実行されない | **解消（限定）** | 専用ジョブ `ci.yml:146` `plugin-conformance-e2e` が t341 のみを走らせ、集約ゲートの必須依存（`:678` / `:704`）。**`test:ci` プロファイル自体は不変**（設計コメント `:141-145` が明言）— e2e tier の**他のテストは依然として PR で走らない** |
+
+**総括**: 4 Issue はいずれも「片側だけが canonical を通らない非対称」クラスであり、修正はすべて**非対称の解消**として着地した（定数の import 化・レンダラの一本化・判定の FS 実測化・検証面の出荷面駆動）。cid:requirements-analysis:symmetric-pair-review の適用例が 1 区間に 4 件揃った形である。
+
+### 残存リスク 1: e2e の実行トリガーが「1 ファイル名の直指定」
+
+`ci.yml:165` は `bun test tests/e2e/t341-plugin-conformance-journey.serial.test.ts` とファイルを名指しする。この形は t341 を確実に走らせる反面、**e2e tier へ新規ファイルを足しても自動では CI に載らない**。plugin 面に 2 本目の e2e を足す設計では、ジョブの実行対象をどう広げるか（glob 化 / `--release` プロファイル / ジョブ追加）が判断点になる。cid:build-and-test:test-path-set-completeness の「宣言した test path 集合の全数実行」を、CI ジョブ定義の側で担保する必要がある。
+
+### 残存リスク 2: runner-gen が plugin stage を識別できない（#1598）
+
+`isRunnableStage:88-90` は `phase !== "initialization"` の**単一条件**で、graph ノードに plugin 由来の語彙が無い（`amadeus-graph.ts:1675-1678` が `PluginStageFile` に `pluginName` を持たせない設計を宣言し、`path` もノードに残らない）。帰結として compose 済みホストでは `handleCheck:363` が MISSING を出して exit 1 になる。
+
+**この欠陥は本 repo の CI では構造的に検出不能**である — `ls -d .claude/plugins` = No such file or directory であり、repo 自身は compose 済みホストでないため runner ドリフト検査は常に green を返す。cid:code-generation:corpus-sweep-for-new-guards が要求する「正当な既存データで赤くならないこと」の対称面（**顕在化する状態が corpus に存在しない**）であり、修正時は compose 済みホストを模した fixture を用意しない限り「落ちる実証」ができない。加えて `t129` の硬い数値（`:206` `toBe(29)` / `:208` `toBe(3)` / `:221` `"(29 runners)"`）は plugin stage 1 本で崩れるため、count-free 契約へ寄せるか plugin 除外を明示するかの判断が要る（cid:code-generation:count-comment-sync-on-catalog-change の同族）。
+
+### 残存リスク 3: 統合 CLI の usage 二重定義
+
+`amadeus-utility.ts` の動詞一覧は `switch` の case 群（`:5945` 以降）・default `die` の usage 文字列（`:6033`）・`HELP_TEXT_TAIL`（`:216`、`t67` が pin）の **3 面に手書きで存在**する。現断面ですでに不一致がある — `die` 文字列は `case "init"`（`:6001`）と `case "state-init"`（`:6004`）を列挙しない。動詞を足す設計（`plugin` 委譲など）では 3 面同期が要り、canonical 1 定義から導出する構造（construction.md § Code Completeness）へ寄せる余地がある。
+
+### 残存リスク 4: スキル正本の陳腐化した面列挙
+
+`core/skills/amadeus-mirror/SKILL.md:14-16` はハーネスディレクトリを `.claude` / `.codex` / `.cursor` / `.kiro` / `.opencode` の **5 面で列挙**するが、当のスキルは **7 面へ投影**されている（`.kiro-ide` / `.kimi-code` を欠く）。この列挙は投影行列から導出されず手書きであり、ドリフトガードの対象外。新スキルの雛形として `amadeus-mirror/SKILL.md` を使う場合、この陳腐化パターンを複製しないよう面列挙を count-free / 導出可能な表現にするのが望ましい。
+
+### テスト層の現況（実測）
+
+`git ls-files tests/e2e/ | grep -c plugin` = **1**（前区間 0）。区間で `tests/integration` **9** / `tests/unit` **4** ファイルが変更された。t341 は `size: medium`（ヘッダ `:3`）で、実 FS・実 spawn を使うため integration 相当以上の層に正しく置かれている（cid:code-generation:fs-tests-integration-first）。決定性は「ネットワーク無し・env ゲート無し・LLM 無し」で担保され（ヘッダ `:26-27`）、前区間の既習様式 2 系統のうち **live gate 不要な側**（`setup-install.test.ts` 系）に載った。
+
+## plugin テスト層の盲点と 4 Issue の品質評価（260727-e2e-plugin-conformance、履歴 2026-07-27、差分リフレッシュ、observed `0c4709102`。負債シグナル 6 件はいずれも当時断面 — 現況は上の同 intent 節を参照）
 
 260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。Architect 段の独立再実測で **訂正 0 件**（件数・file:line はすべてコマンド出力または実ファイル直読からの転記、測定 ref: observed `0c4709102`）。
 
