@@ -321,6 +321,36 @@ describe("t342 no configuration", () => {
     expect(store.state().projectSync).toBeNull();
   });
 
+  test("a disappearing target after the durable hold stays pending", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    const context = harness.context("sync", gateway);
+    const configuredTargets = context.projectSync?.targets ?? [];
+    let targetReads = 0;
+    Object.defineProperty(context.projectSync, "targets", {
+      get() {
+        targetReads += 1;
+        return targetReads <= 2 ? configuredTargets : [];
+      },
+    });
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "pending",
+      warning: {
+        classification: "state-write",
+        summary:
+          "Project sync is durably held but no reconciliation target is available",
+      },
+    });
+    expect(projectCalls(gateway)).toEqual([]);
+  });
+
   test("an execution context without projectSync at all behaves the same", async () => {
     const store = harness.fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(harness.markerBody());
@@ -721,6 +751,55 @@ describe("t342 failure containment", () => {
     });
     expect(store.state().receipts[key].projectSyncHold).toBeUndefined();
     expect(store.state().projectSync?.projects[0].state).toBe("synced");
+  });
+
+  test("a lost event identity after reconciliation commit stays pending", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    const context = harness.context("sync", gateway);
+    const committedEvent = context.event;
+    const changedEvent = mirrorEventIdentity(
+      context.intentUuid,
+      {
+        kind: "phase-verified",
+        phase: "ideation",
+        instance: "phase-after-commit",
+      },
+      "sync",
+    );
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    const ports = {
+      ...store.ports,
+      writeDocumentAtomic(text: string) {
+        const result = writeDocumentAtomic(text);
+        if (
+          result.kind === "ok" &&
+          text.includes('"projectSyncVerified":true')
+        ) {
+          Object.defineProperty(context, "event", { value: changedEvent });
+        }
+        return result;
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "pending",
+      warning: {
+        classification: "state-write",
+        summary:
+          "Project reconciliation committed without durable receipt verification",
+      },
+    });
+    expect(store.state().receipts[mirrorEventKey(committedEvent)]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
   });
 
   test("an atomic reconciliation read failure leaves the receipt retryable", async () => {

@@ -1026,24 +1026,25 @@ function validateReceipt(
   ) {
     return null;
   }
-  return buildReceipt({
+  const receipt = buildReceipt({
     key,
     event,
     operationId,
     status,
     preparedAt,
-    createdRevision,
     optionals: o,
     createIdentity,
     authorization,
   });
+  return createdRevision === undefined
+    ? receipt
+    : { ...receipt, createdRevision };
 }
 
 function buildReceipt(input: {
     key: string;
     event: MirrorEventIdentity;
     operationId: string;
-    createdRevision?: number;
     status: MirrorReceiptStatus;
     preparedAt: string;
     optionals: ReceiptOptionals;
@@ -1054,9 +1055,6 @@ function buildReceipt(input: {
     key: input.key,
     event: input.event,
     operationId: input.operationId,
-    ...(input.createdRevision === undefined
-      ? {}
-      : { createdRevision: input.createdRevision }),
     status: input.status,
     preparedAt: input.preparedAt,
     ...(input.optionals.attemptedAt === undefined

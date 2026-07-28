@@ -90,6 +90,23 @@ describe("codec rejection", () => {
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
+  test("createdRevision must be a positive safe integer when present", () => {
+    const event = ev("sync");
+    const snapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 1,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 0,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
   test("createdRevision cannot exceed the snapshot revision", () => {
     const event = ev("sync");
     const snapshot: MirrorStateSnapshot = {

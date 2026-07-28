@@ -224,22 +224,6 @@ function reducePrepare(
     }
     return changed(consumeExpectedPrompt(snapshot));
   }
-  const base: {
-    key: string;
-    event: MirrorEventIdentity;
-    operationId: string;
-    createdRevision?: number;
-    status: "prepared";
-    preparedAt: string;
-    createIdentity?: MirrorCreateIdentity;
-    authorization?: MirrorExecutionAuthorization;
-  } = {
-    key,
-    event: t.event,
-    operationId: t.operationId,
-    status: "prepared",
-    preparedAt: t.preparedAt,
-  };
   if (
     t.authorization &&
     t.authorization.receiptRevision !== snapshot.revision + 1
@@ -248,13 +232,27 @@ function reducePrepare(
       "prepare: authorization receiptRevision must equal the next state revision",
     );
   }
-  base.createdRevision = snapshot.revision + 1;
-  if (t.event.operation === "create") {
-    if (!t.create)
-      return invalid("prepare: create receipt requires intentDir + repository");
-    base.createIdentity = makeCreateIdentity(t.event, t.operationId, t.preparedAt, t.create);
-  }
-  if (t.authorization) base.authorization = t.authorization;
+  const create = t.create;
+  const createIdentity =
+    t.event.operation !== "create"
+      ? undefined
+      : create === undefined
+        ? null
+        : makeCreateIdentity(t.event, t.operationId, t.preparedAt, create);
+  if (createIdentity === null)
+    return invalid("prepare: create receipt requires intentDir + repository");
+  const base: MirrorOperationReceipt = {
+    key,
+    event: t.event,
+    operationId: t.operationId,
+    createdRevision: snapshot.revision + 1,
+    status: "prepared",
+    preparedAt: t.preparedAt,
+    ...(createIdentity === undefined ? {} : { createIdentity }),
+    ...(t.authorization === undefined
+      ? {}
+      : { authorization: t.authorization }),
+  };
   let target = snapshot;
   if (t.authorization?.kind === "prompt-approved") {
     if (!promptApprovalMatches(snapshot, t.event, t.authorization)) {

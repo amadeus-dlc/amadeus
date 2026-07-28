@@ -300,6 +300,21 @@ describe("warning coalesce + capacity", () => {
   });
 });
 
+describe("closed transition surface", () => {
+  test("an unknown runtime transition fails closed", () => {
+    const result = reduceMirrorState(
+      EMPTY,
+      { kind: "unknown-transition" } as unknown as MirrorTransition,
+      NOW,
+    );
+
+    expect(result).toEqual({
+      kind: "invalid",
+      issues: ["unknown transition unknown-transition"],
+    });
+  });
+});
+
 describe("property: state-changing transitions are content-changes; no-ops are stable", () => {
   test("identical re-prepare never changes content", () => {
     fc.assert(

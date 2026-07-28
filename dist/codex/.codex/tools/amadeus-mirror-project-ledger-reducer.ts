@@ -86,9 +86,6 @@ function reduceUpsert(
   ledger: MirrorProjectSyncLedger | null | undefined,
   transition: Extract<MirrorProjectLedgerRowTransition, { kind: "upsert-project-entry" }>,
 ): ProjectLedgerReduction {
-  if (transition.entry.project.length === 0) {
-    return invalid("upsert-project-entry: project must be non-empty");
-  }
   if (
     transition.entry.projectId !== null &&
     transition.entry.projectId.length === 0
@@ -122,9 +119,6 @@ function reduceFailureMark(
 ): ProjectLedgerReduction {
   const state =
     transition.kind === "mark-project-pending" ? "pending" : "safety-blocked";
-  if (transition.project.length === 0) {
-    return invalid(`mark-project-${state}: project must be non-empty`);
-  }
   const previous =
     (ledger?.projects ?? []).find(
       (entry) => entry.project === transition.project,
