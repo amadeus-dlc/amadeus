@@ -1790,8 +1790,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-otel-projector.ts",
-    "startLine": 600,
-    "endLine": 608,
+    "lines": "600-608",
     "reason": "import.meta.main CLI wiring for the projector 'export' verb. The decision logic (parseCliArgs, runExport) is fully covered in-process by tests/integration/t358; the main block runs only in the spawned CLI, which Bun coverage does not attribute. Spawn-only wiring lines per spawn-blindspot-two-step (ii)."
   }
 ]
