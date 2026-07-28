@@ -1183,6 +1183,12 @@
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "lines": "1005",
+    "reason": "The ask/select-intent human-wait branch runs inside the spawned Stop hook. t121 drives both directive kinds through the shipped hook process and asserts exit 0 with no forwarding-loop block; the local live Codex E2E also measures the line, but that E2E is intentionally disabled on GitHub Actions, where Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when the Stop hook body gains an in-process driver or GitHub coverage can merge child-process execution without running live codex exec"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "lines": "395",
     "reason": "idempotentAppend runs only through the spawned mirror CLI (t282/t284/t300 drive the process boundary); the single-line TransactionId scan delegates to auditBlockField/splitAuditRecords which are covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
