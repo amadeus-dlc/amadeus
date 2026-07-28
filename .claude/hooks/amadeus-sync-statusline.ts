@@ -3,6 +3,7 @@
 // Receives JSON on stdin from Claude Code
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   type ClaudeCodeHookInput,
   hooksHealthDir,
@@ -58,6 +59,9 @@ const slug = slugMatch[1];
 // State file must exist (won't exist before handleInit runs)
 const stateFile = stateFilePath(projectDir);
 if (!existsSync(stateFile)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:sync-statusline", projectDir);
 
 // Health heartbeat
 const healthDir = hooksHealthDir(projectDir);

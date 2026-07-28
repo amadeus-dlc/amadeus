@@ -57,9 +57,13 @@ import {
   type TimelineEvent,
   writeStoreFile,
 } from "./amadeus-election-store";
+import {
+  type MirrorConfigIssue,
+  resolveMirrorConfig,
+} from "./amadeus-mirror-config";
 
 const USAGE =
-  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
+  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger explicit|auto-solo] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
 
 // Every actionable directive names the verb to execute and the report result
 // that commits the transition (FR-0: the caller forwards, never maps). verb
@@ -330,6 +334,35 @@ export function handleOpen(root: string, filePath: string): number {
   return 0;
 }
 
+function configIssueSummary(issue: MirrorConfigIssue): string {
+  return issue.kind === "read-failure"
+    ? `${issue.layer} (${issue.path}): ${issue.summary}`
+    : `${issue.layer} (${issue.path}): ${issue.key} expected ${issue.expected}, got ${issue.actualType}`;
+}
+
+export function handleTriggeredOpen(
+  projectDir: string,
+  root: string,
+  filePath: string,
+  trigger: string,
+): number {
+  if (trigger === "explicit") return handleOpen(root, filePath);
+  if (trigger !== "auto-solo") {
+    return fail(`open: unknown trigger "${trigger}"`);
+  }
+  const resolved = resolveMirrorConfig(projectDir);
+  if (resolved.kind === "invalid") {
+    return fail(
+      `open: invalid configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,
+    );
+  }
+  if (!resolved.config.autoSoloElection) {
+    out({ opened: null, reason: "auto-solo-election-disabled" });
+    return 0;
+  }
+  return handleOpen(root, filePath);
+}
+
 // Transport selection for notify: returns the port or a failure message.
 function buildTransport(
   kind: string,
@@ -569,11 +602,12 @@ type ParsedArgs = {
   team: string | null;
   from: string | null;
   sendScript: string | null;
+  trigger: string | null;
 };
 
 const FLAG_FIELDS: Record<
   string,
-  "electionId" | "file" | "result" | "project" | "resolution" | "transport" | "team" | "from" | "sendScript"
+  "electionId" | "file" | "result" | "project" | "resolution" | "transport" | "team" | "from" | "sendScript" | "trigger"
 > = {
   "--election": "electionId",
   "--file": "file",
@@ -584,6 +618,7 @@ const FLAG_FIELDS: Record<
   "--team": "team",
   "--from": "from",
   "--send-script": "sendScript",
+  "--trigger": "trigger",
 };
 
 function readFlags(rest: string[]): Partial<ParsedArgs> | null {
@@ -613,14 +648,21 @@ export function parseArgs(argv: string[]): ParsedArgs | { usage: string } {
     team: null,
     from: null,
     sendScript: null,
+    trigger: null,
     ...flags,
   };
 }
 
 // Verb dispatch table: every entry is total over ParsedArgs and returns
 // usage(2) itself when a required flag is missing.
-const VERBS: Record<string, (root: string, args: ParsedArgs) => number> = {
-  open: (root, a) => (a.file === null ? usageFail() : handleOpen(root, a.file)),
+const VERBS: Record<
+  string,
+  (root: string, args: ParsedArgs, projectDir: string) => number
+> = {
+  open: (root, a, projectDir) =>
+    a.file === null
+      ? usageFail()
+      : handleTriggeredOpen(projectDir, root, a.file, a.trigger ?? "explicit"),
   next: (root, a) => (a.electionId === null ? usageFail() : handleNext(root, a.electionId)),
   report: (root, a) =>
     a.electionId === null || a.result === null
@@ -656,10 +698,11 @@ export function main(argv: string[], projectDir?: string): number {
   // other amadeus CLI tool does (Issue #1450: the prior default,
   // `join(import.meta.dir, "..")`, resolved to <harness-dir> instead of the
   // repo root because import.meta.dir is this script's OWN directory).
-  const root = electionsRoot(resolveProjectDir(args.project ?? projectDir));
+  const resolvedProjectDir = resolveProjectDir(args.project ?? projectDir);
+  const root = electionsRoot(resolvedProjectDir);
   const handler = VERBS[args.verb];
   if (handler === undefined) return usageFail();
-  return handler(root, args);
+  return handler(root, args, resolvedProjectDir);
 }
 
 function usageFail(): 2 {

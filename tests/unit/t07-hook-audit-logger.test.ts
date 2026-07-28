@@ -298,6 +298,16 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-journal.ts"),
       join(proj, ".claude", "tools", "amadeus-journal.ts"),
     );
+    // The hook's telemetry seam and its own config reader are part of that same
+    // module graph (#1628 Phase 2) — an unresolved import fails the whole hook.
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-observability.ts"),
+      join(proj, ".claude", "tools", "amadeus-observability.ts"),
+    );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-mirror-config.ts"),
+      join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
+    );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
     const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);

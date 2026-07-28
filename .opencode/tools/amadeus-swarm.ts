@@ -77,6 +77,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } from "./amadeus-lib.ts";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -167,10 +168,12 @@ interface ToolRun {
 }
 
 function runTool(toolFile: string, args: string[], projectDir: string): ToolRun {
-  const result = spawnSync(
-    "bun",
-    [join(TOOLS_DIR, toolFile), "--project-dir", projectDir, ...args],
-    { encoding: "utf-8", cwd: projectDir, timeout: 60_000 }
+  const result = observeSubprocess(projectDir, `${toolFile.replace(/\.ts$/, "")}:${args[0] ?? "?"}`, () =>
+    spawnSync(
+      "bun",
+      [join(TOOLS_DIR, toolFile), "--project-dir", projectDir, ...args],
+      { encoding: "utf-8", cwd: projectDir, timeout: 60_000 }
+    ),
   );
   return {
     ok: result.status === 0,
@@ -205,17 +208,19 @@ function runTool(toolFile: string, args: string[], projectDir: string): ToolRun 
 // Construction autonomy inside a live session, and checkCmd is the user's own
 // project check command (a trusted input), not attacker-controlled. (It was
 // already shell-interpreted under the old `bash -c` form — no new surface.)
-function checkConverged(cwd: string, checkCmd: string): boolean {
+function checkConverged(projectDir: string, cwd: string, checkCmd: string): boolean {
   const shell =
     process.platform !== "win32" && existsSync("/bin/bash")
       ? "/bin/bash"
       : true;
-  const result = spawnSync(checkCmd, {
-    cwd,
-    encoding: "utf-8",
-    timeout: 60_000,
-    shell,
-  });
+  const result = observeSubprocess(projectDir, "unit-check-cmd", () =>
+    spawnSync(checkCmd, {
+      cwd,
+      encoding: "utf-8",
+      timeout: 60_000,
+      shell,
+    }),
+  );
   return result.status === 0;
 }
 
@@ -243,21 +248,25 @@ export function fileTamperResultForStatuses(
 // Anti-tamper, re-derived from the worktree's own git fork (stateless). Git diff
 // exits 0 for both an unchanged tracked file and a path absent from HEAD, so the
 // HEAD object must be confirmed before interpreting diff status 0 as clean.
-function fileTampered(cwd: string, relPath: string): FileTamperResult {
+function fileTampered(projectDir: string, cwd: string, relPath: string): FileTamperResult {
   const headPath = relPath.split(sep).join("/");
-  const head = spawnSync("git", ["cat-file", "-e", `HEAD:${headPath}`], {
-    cwd,
-    encoding: "utf-8",
-    timeout: 60_000,
-  });
+  const head = observeSubprocess(projectDir, "git", () =>
+    spawnSync("git", ["cat-file", "-e", `HEAD:${headPath}`], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 60_000,
+    }),
+  );
   if (head.status !== 0) {
     return fileTamperResultForStatuses(head.status, null, relPath);
   }
-  const diff = spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
-    cwd,
-    encoding: "utf-8",
-    timeout: 60_000,
-  });
+  const diff = observeSubprocess(projectDir, "git", () =>
+    spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 60_000,
+    }),
+  );
   return fileTamperResultForStatuses(head.status, diff.status, relPath);
 }
 
@@ -281,7 +290,7 @@ export function verdictFor(
   if (!existsSync(wt)) {
     return { exists: false, converged: false, tampered: false };
   }
-  const converged = checkConverged(wt, checkCmd);
+  const converged = checkConverged(projectDir, wt, checkCmd);
   let tampered = false;
   let confineError: string | undefined;
   if (testFile) {
@@ -293,7 +302,7 @@ export function verdictFor(
     if (!candidate.startsWith(root)) {
       confineError = `--test-file resolves outside the unit worktree: ${testFile}`;
     } else {
-      const tamperResult = fileTampered(wt, relative(wt, candidate));
+      const tamperResult = fileTampered(projectDir, wt, relative(wt, candidate));
       if (tamperResult.status === "error") confineError = tamperResult.detail;
       else tampered = tamperResult.status === "tampered";
     }
@@ -816,10 +825,12 @@ function splitCsv(value: string): string[] {
 }
 
 function currentBranch(projectDir: string): string {
-  const r = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-    cwd: projectDir,
-    encoding: "utf-8",
-  });
+  const r = observeSubprocess(projectDir, "git", () =>
+    spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: projectDir,
+      encoding: "utf-8",
+    }),
+  );
   return (r.stdout ?? "main").trim() || "main";
 }
 
@@ -850,6 +861,15 @@ function main(): void {
     break;
   }
   const rest = subIndex >= 0 ? [...argv.slice(0, subIndex), ...argv.slice(subIndex + 1)] : argv;
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-swarm:${subcommand ?? "?"}`, resolveProjectDir(parseArgs(rest).flags["project-dir"]));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
   switch (subcommand) {
     case "prepare":
       handlePrepare(rest);

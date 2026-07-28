@@ -131,6 +131,16 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-journal.ts"),
     join(proj, ".claude", "tools", "amadeus-journal.ts"),
   );
+  // The hook opens a telemetry process span (#1628 Phase 2); the seam and its
+  // layered config reader are part of its module graph.
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-observability.ts"),
+    join(proj, ".claude", "tools", "amadeus-observability.ts"),
+  );
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-mirror-config.ts"),
+    join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
+  );
   copyFileSync(
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),

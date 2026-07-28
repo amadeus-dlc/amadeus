@@ -274,6 +274,10 @@ function makeProject(withState: boolean): string {
     "amadeus-audit.ts",
     // amadeus-lib.ts imports the JSONL journal codec (amadeus-lib.ts:2).
     "amadeus-journal.ts",
+    // Both hooks open a telemetry process span (#1628 Phase 2); the seam and
+    // its layered config reader are part of their module graph.
+    "amadeus-observability.ts",
+    "amadeus-mirror-config.ts",
   ]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }

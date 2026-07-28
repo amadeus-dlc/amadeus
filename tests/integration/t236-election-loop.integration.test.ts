@@ -3,7 +3,7 @@
 // wiring lines are lcov-visible — seam-export-handler-amend). The spawn-based
 // FR-0 demonstration lives in tests/e2e/t237.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../packages/framework/core/tools/amadeus-election";
@@ -64,6 +64,71 @@ function electionPath(...segments: string[]): string {
 }
 
 describe("t236 election directive loop", () => {
+  test("automatic solo open is opt-in and fails closed before store writes", () => {
+    const definition = writeJson("auto-def.json", {
+      ...DEF,
+      electionId: "E-AUTO-OPTIN",
+      voters: ["subagent-1", "subagent-2"],
+    });
+    const registryPath = join(electionsRoot(projectDir), "elections.json");
+
+    expect(run(["open", "--trigger", "unexpected", "--file", definition])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain(
+      'unknown trigger "unexpected"',
+    );
+    expect(existsSync(registryPath)).toBe(false);
+
+    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(lastJson()).toEqual({
+      opened: null,
+      reason: "auto-solo-election-disabled",
+    });
+    expect(existsSync(registryPath)).toBe(false);
+
+    mkdirSync(join(projectDir, "amadeus"), { recursive: true });
+    writeFileSync(
+      join(projectDir, "amadeus", "config.json"),
+      JSON.stringify({ "auto-solo-election": false }),
+    );
+    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(lastJson()).toEqual({
+      opened: null,
+      reason: "auto-solo-election-disabled",
+    });
+    expect(existsSync(registryPath)).toBe(false);
+
+    writeFileSync(
+      join(projectDir, "amadeus", "config.json"),
+      JSON.stringify({ "auto-solo-election": true }),
+    );
+    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(lastJson()).toEqual({ opened: "E-AUTO-OPTIN", views: 2 });
+    expect(
+      existsSync(
+        resolveElectionDir(electionsRoot(projectDir), "E-AUTO-OPTIN").dir,
+      ),
+    ).toBe(true);
+  });
+
+  test("invalid auto-solo-election config stops automatic open without writes", () => {
+    const definition = writeJson("invalid-auto-def.json", {
+      ...DEF,
+      electionId: "E-AUTO-INVALID",
+      voters: ["subagent-1", "subagent-2"],
+    });
+    mkdirSync(join(projectDir, "amadeus"), { recursive: true });
+    writeFileSync(
+      join(projectDir, "amadeus", "config.json"),
+      JSON.stringify({ "auto-solo-election": "true" }),
+    );
+
+    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(1);
+    expect(errs.at(-1)).toContain("auto-solo-election expected boolean");
+    expect(existsSync(join(electionsRoot(projectDir), "elections.json"))).toBe(
+      false,
+    );
+  });
+
   test("open accepts natural multi-segment ids and rejects malformed ids loudly", () => {
     expect(run(["open", "--file", writeJson("natural.json", { ...DEF, electionId: "E-SDE-CG4" })])).toBe(0);
     for (const [i, electionId] of ["e-lower", "E--EMPTY", "E-TRAIL-", "-E-LEAD"].entries()) {

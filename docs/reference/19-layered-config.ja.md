@@ -4,13 +4,13 @@
 
 > [Developer Reference](00-overview.ja.md)の一部
 
-階層設定リゾルバーは、フェーズ境界のミラールーティングが使用する読み取り専用
+階層設定リゾルバーは、ミラールーティングとソロ選挙の自動発動が共有する読み取り専用
 コンポーネントです。正本は
 `packages/framework/core/tools/amadeus-mirror-config.ts` です。
 
 ## 契約
 
-`resolve(projectDir, space, intentDir, reader?)` は、次の3パスだけを導出して読み取ります。
+`resolveMirrorConfig(projectDir, intentDir?, space?, hooks?)` は、次のパスを導出して読み取ります。
 
 ```text
 <workspace>/amadeus/config.json
@@ -18,13 +18,13 @@
 <workspace>/amadeus/spaces/<space>/intents/<intentDir>/config.json
 ```
 
-active space と intent は呼び出し元が解決します。リゾルバーは cursor の探索、キャッシュ、
-リトライ、書き込みを行いません。
+明示 selector があればそれを使い、なければ active space と intent を解決します。
+リゾルバーはキャッシュ、リトライ、書き込みを行いません。
 
 各レベルの結果は `parsed`、`absent`、`invalid` のいずれかです。dangling symbolic link
 を含む `ENOENT` は `absent`、それ以外の I/O 失敗は `invalid` になります。全レベルを
-解析した後、`mergeLayers` は不正な全レベルと各レベルの全エラーを返すか、
-`DEFAULT_MIRROR_CONFIG` に Global、Space、Intent の部分値を順番に適用します。
+解析した後、不正な全レベルと各レベルの全エラーを返すか、Global、Space、Intent の値を
+キー単位で順番に適用します。
 
 呼び出し元から見た操作は原子的です。不正なレベルがある場合、部分的に解決した設定を
 返しません。
@@ -35,14 +35,23 @@ active space と intent は呼び出し元が解決します。リゾルバー�
 
 ```json
 {
-  "auto-mirror": true
+  "auto-mirror": "prompt",
+  "mirror-projects": [],
+  "auto-solo-election": true
 }
 ```
 
-`MIRROR_CONFIG_KNOWN_KEYS` がスキーマ境界です。パーサーは未知のキー、object 以外の
-ルート、boolean 以外の `auto-mirror` を拒否します。
-`DEFAULT_MIRROR_CONFIG.autoMirror` は `false` です。ディスク上の kebab-case キーは
-TypeScript の `MirrorConfig.autoMirror` プロパティへ写像されます。
+閉じたキー allowlist がスキーマ境界です。パーサーは未知のキー、object 以外のルート、
+`auto-mirror` の値集合外、壊れた Project target、boolean 以外の
+`auto-solo-election` を拒否します。既定値は `autoMirror: "prompt"`、空の Project
+一覧、`autoSoloElection: false` です。
+
+## ソロ選挙との統合
+
+ソロ選挙の自動起動は `open --trigger auto-solo` を使用します。CLI は選挙定義を読む前、
+かつ election store に書く前に階層設定を解決します。`autoSoloElection` が `true`
+でなければ `{"opened":null,"reason":"auto-solo-election-disabled"}` を返し、何も
+書きません。通常の `open` は明示起動経路として維持します。
 
 ## フェーズ境界との統合
 
@@ -50,7 +59,7 @@ TypeScript の `MirrorConfig.autoMirror` プロパティへ写像されます。
 選ぶ前に設定を解決します。
 
 - 解決結果が不正なら error directive を発行し、ルーティングを停止する
-- `autoMirror: true` かつ Mirror Issue が存在する場合、`sync` を実行して境界 receipt を記録する print directive を発行する
+- `autoMirror: "auto"` かつ Mirror Issue が存在する場合、`sync` を実行して境界 receipt を記録する print directive を発行する
 - それ以外は ask directive を発行する。Mirror Issue がなければ `create` も選択肢に含める
 
 receipt protocol により、中断した自動同期を安全に再試行できます。同期前に `pending`、

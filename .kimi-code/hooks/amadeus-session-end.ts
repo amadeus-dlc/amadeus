@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   errorMessage,
   hooksHealthDir,
@@ -25,6 +26,9 @@ const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // No workflow active — do nothing (consistent with session-start.ts)
 if (!existsSync(stateFilePath(projectDir))) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:session-end", projectDir);
 
 // Health heartbeat
 const healthDir = hooksHealthDir(projectDir);

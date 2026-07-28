@@ -25,19 +25,20 @@ Global Config → Space Config → Intent Config
 ```
 
 後から読む、より具体的なレベルがキー単位で上書きします。たとえば、
-`amadeus/config.json` で自動ミラー同期を無効にします。
+`amadeus/config.json` でソロ選挙を明示起動のみにします。
 
 ```json
 {
-  "auto-mirror": false
+  "auto-solo-election": false
 }
 ```
 
-`payments` space では `amadeus/spaces/payments/config.json` で有効にできます。
+`payments` space では `amadeus/spaces/payments/config.json` で自動発動へ
+opt-in できます。
 
 ```json
 {
-  "auto-mirror": true
+  "auto-solo-election": true
 }
 ```
 
@@ -46,15 +47,15 @@ Global Config → Space Config → Intent Config
 
 ## 対応している設定
 
-現在のスキーマには1つの設定があります。
-
 | キー | 型 | 既定値 | 効果 |
 |------|----|--------|------|
-| `auto-mirror` | boolean | `false` | 検証済みフェーズ境界で、intent に Mirror Issue がある場合にミラー同期を自動的に要求する |
+| `auto-mirror` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | 検証済みフェーズ境界でのミラー同期を制御する |
+| `mirror-projects` | Project target の配列 | `[]` | intent と GitHub Project target、任意の status 名を対応付ける |
+| `auto-solo-election` | boolean | `false` | 設計逸脱・ブロッカー・§13 学習選定でソロ選挙を自動発動する |
 
-`auto-mirror` が自動化するのは `sync` だけです。ミラーの `create` や `close` は自動実行
-しません。Mirror Issue が記録されていない場合、Amadeus は従来どおり create、sync、
-skip のどれを実行するか確認します。
+`auto-solo-election` が制御するのは自動発動だけです。未設定または `false` でも、
+ユーザーは選挙を明示的に要求できます。仕様変更などのユーザー専権事項は、この設定で
+選挙対象になりません。
 
 ## 検証と失敗時の動作
 
@@ -62,7 +63,7 @@ skip のどれを実行するか確認します。
 
 - ルート値は JSON object でなければならない
 - 未知のキーは拒否する
-- `auto-mirror` は boolean でなければならない
+- 各設定は上表の型と一致しなければならない
 - 不正な JSON や読み取れない設定ファイルはエラーにする
 - 存在しないファイルは、そのレベルに設定がないものとして扱う
 - 存在するレベルが1つでも不正なら、ほかのレベルだけを部分的に適用せず、解決結果全体を拒否する

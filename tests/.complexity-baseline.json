@@ -119,13 +119,13 @@
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
-      "ordinal": 16,
+      "ordinal": 17,
       "ccn": 30
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
-      "ordinal": 19,
+      "ordinal": 20,
       "ccn": 16
     },
     {
@@ -149,14 +149,8 @@
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "(anonymous)",
-      "ordinal": 90,
+      "ordinal": 93,
       "ccn": 16
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-utility.ts",
-      "name": "blockBoltSlug",
-      "ordinal": 0,
-      "ccn": 65
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
@@ -198,7 +192,7 @@
       "path": "packages/framework/core/tools/amadeus-worktree.ts",
       "name": "handleVerify",
       "ordinal": 0,
-      "ccn": 26
+      "ccn": 19
     },
     {
       "path": "packages/setup/src/internal/tar-archive-extractor.ts",

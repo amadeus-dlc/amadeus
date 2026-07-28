@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   errorMessage,
   getField,
@@ -34,6 +35,9 @@ mkdirSync(healthDir, { recursive: true });
 writeFileSync(join(healthDir, "validate-state.last"), isoTimestamp(), "utf-8");
 
 if (!existsSync(stateFile)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:validate-state", projectDir);
 
 const content = readFileSync(stateFile, "utf-8");
 

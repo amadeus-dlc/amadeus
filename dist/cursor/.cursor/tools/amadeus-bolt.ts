@@ -56,6 +56,7 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 function emitAudit(
   pd: string,
@@ -116,16 +117,18 @@ function spawnSibling(
     | "amadeus-runtime.ts",
   subargs: string[]
 ): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
-  const result = spawnSync(
-    "bun",
-    [
-      "run",
-      fileURLToPath(new URL(`./${toolName}`, import.meta.url)),
-      "--project-dir",
-      pd,
-      ...subargs,
-    ],
-    { encoding: "utf-8", cwd: pd, timeout: 30_000 }
+  const result = observeSubprocess(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
+    spawnSync(
+      "bun",
+      [
+        "run",
+        fileURLToPath(new URL(`./${toolName}`, import.meta.url)),
+        "--project-dir",
+        pd,
+        ...subargs,
+      ],
+      { encoding: "utf-8", cwd: pd, timeout: 30_000 }
+    ),
   );
   return {
     ok: result.status === 0,
@@ -919,6 +922,15 @@ function main(): void {
   try {
     switch (subcommand) {
       case "start":
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-bolt:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
         handleStart(filteredArgs.slice(1));
         break;
       case "complete":
