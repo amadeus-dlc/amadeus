@@ -24,9 +24,7 @@
 //                             abbreviateModel() to "BR:opus-4-8[1m]"), so the
 //                             painted right side is "<status> | BR:opus-4-8[1m]".
 //                             This asserts printLine's REAL production output and
-//                             is platform-invariant plain text (no colour escapes,
-//                             so the Windows node-pty backend captures it identically
-//                             — unlike statusline-colour, which is macOS-only).
+//                             is plain text with no colour escapes.
 //
 // DIST/ FINDING (surfaced, not chased here): printLine's right-justify/padStart
 // branch (:180-183) only fires when process.stdout.columns > 0. Claude Code pipes
@@ -42,71 +40,32 @@
 // Needs tmux + claude + the distributable; absent any of those it SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess — node on Windows so node-pty never loads under bun (#748), bun
-// elsewhere. The driver auto-selects its backend by os.platform(); this test is
-// platform-agnostic. The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// runTuiDriver() is what DERIVES the `tui` mechanism
 // (Phase 0) — no filename mechanism segment is needed or added.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
+// Bun runs the TypeScript entrypoint natively on every platform.
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
 // `wait` returns nonzero on timeout — boolean for the idempotent modal clears
 // (only act if the modal is present), mirroring the statusline template.
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT detection (skip-with-reason). On POSIX the substrate is tmux; claude is
 // needed on every platform; the distributable + the fixture must be present.
 function absentReason(): string | null {
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -136,7 +95,7 @@ function captureWorkflowStatusline(): string {
     ).toContain('"statusLine"');
 
     // --- launch the claude TUI ----------------------------------------------
-    const started = drive([
+    const started = runTuiDriver([
       "start",
       "--session",
       session,
@@ -154,20 +113,20 @@ function captureWorkflowStatusline(): string {
 
     // --- clear the two startup modals (idempotent) --------------------------
     // 3a. workspace-trust dialog: "1. Yes, I trust this folder".
-    if (waitFor(session, "trust this folder", 60000, 600)) {
-      drive(["send", "--session", session, "--keys", "1"]);
+    if (waitForTui(session, "trust this folder", 60000, 600)) {
+      runTuiDriver(["send", "--session", session, "--keys", "1"]);
     }
     // 3b. bypass-permissions warning: "2. Yes, I accept" (only with
     // --dangerously-skip-permissions; no-ops when bypass is already persisted).
-    if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-      drive(["send", "--session", session, "--keys", "2"]);
+    if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+      runTuiDriver(["send", "--session", session, "--keys", "2"]);
     }
 
     // --- wait for the WORKFLOW statusline (IDEATION, not "ready") -----------
     // P9: the statusline now carries the orientation prefix ("<intent-slug> · ")
     // between [Amadeus-DLC] and the phase, so match with .* rather than a contiguous gap.
-    const sawMarker = waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 1000);
-    const pane = drive(["capture", "--session", session]).stdout;
+    const sawMarker = waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 1000);
+    const pane = runTuiDriver(["capture", "--session", session]).stdout;
     if (!sawMarker) {
       throw new Error(
         `workflow statusline "[Amadeus-DLC] IDEATION" never appeared in the TUI.\n` +
@@ -176,7 +135,7 @@ function captureWorkflowStatusline(): string {
     }
     return pane;
   } finally {
-    drive(["kill", "--session", session]);
+    runTuiDriver(["kill", "--session", session]);
     cleanupTuiProject(sandbox);
   }
 }
@@ -226,9 +185,8 @@ describe("t-tui-render statusline workflow branches (seeded mid-ideation, no tok
   // piped stdout (cols=0, the production reality) it uses the ` | ` separator, and
   // the distributable pins the Opus model -> abbreviateModel() -> "BR:opus-4-8[1m]".
   // So the painted line ends "... | BR:opus-4-8[1m]". Anchored on the separator +
-  // model token so a stray "BR:" elsewhere can't satisfy it. Platform-invariant
-  // plain text (no SGR escapes) -> the Windows node-pty backend captures it the
-  // same as tmux. (The padStart right-justify branch is dead in production — see
+  // model token so a stray "BR:" elsewhere can't satisfy it. The assertion uses
+  // plain text with no SGR escapes. (The padStart right-justify branch is dead in production — see
   // the DIST/ FINDING in the header; this asserts what printLine really paints.)
   test.skipIf(ABSENT_REASON !== null)(
     `statusline-align paints the " | BR:opus-4-8[1m]" right side via printLine${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,

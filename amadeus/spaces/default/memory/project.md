@@ -51,7 +51,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 言語: TypeScript(typescript ^6、`tsc --noEmit` で型検査)
 - リンター: Biome 2.4系(フォーマッタ無効)
 - テスト: bun test ベースの自作ランナー `tests/run-tests.sh`(smoke / unit / integration / e2e の4層)
-- 主要開発依存: agent SDK、node-pty、@xterm/headless(e2e のターミナル駆動用)
+- 主要開発依存: agent SDK、Biome、TypeScript、fast-check。TUI E2E は Bun から tmux バックエンドを駆動する
 - 構成: `packages/framework/core/`(ハーネス中立のソースオブトゥルース)、`packages/framework/harness/<name>/`(ハーネス別表層)、`scripts/package.ts`(ビルド)、`dist/<harness>/`(生成・コミット・ドリフトガード対象)、`docs/`
 
 ## Decided

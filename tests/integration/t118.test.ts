@@ -88,6 +88,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -131,7 +132,7 @@ interface CliResult {
 }
 
 function run(tool: string, args: string[]): CliResult {
-  const res = spawnSync(BUN, [tool, ...args], { encoding: "utf-8", env: { ...process.env } });
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args], { encoding: "utf-8", env: { ...process.env } });
   const stdout = res.stdout ?? "";
   return {
     status: res.status ?? -1,

@@ -23,6 +23,7 @@ import { main } from "../../packages/setup/src/cli.ts";
 import type { CliPorts } from "../../packages/setup/src/cli.ts";
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
 import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
@@ -192,6 +193,15 @@ function run(cwd: string, cmd: string[]) {
   return Bun.spawnSync({ cmd, cwd, stderr: "pipe", stdout: "pipe" });
 }
 
+function runAmadeusTool(cwd: string, tool: string, args: string[]) {
+  return Bun.spawnSync({
+    cmd: ["bun", amadeusToolTarget(tool), ...args],
+    cwd,
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+}
+
 function git(cwd: string, ...args: string[]): string {
   const result = run(cwd, ["git", ...args]);
   expect(result.exitCode, result.stderr.toString()).toBe(0);
@@ -305,13 +315,15 @@ describe("Codex packaged consumer hooks ownership", () => {
     git(consumer, "commit", "-qm", "install fresh v2 consumer");
     const canonicalBefore = readFileSync(canonicalPath);
 
-    const activated = run(consumer, [
-      "bun",
-      join(consumer, ".codex", "tools", "amadeus-codex-hooks.ts"),
-      "activate",
-      "--project-dir",
+    const activated = runAmadeusTool(
       consumer,
-    ]);
+      join(consumer, ".codex", "tools", "amadeus-codex-hooks.ts"),
+      [
+        "activate",
+        "--project-dir",
+        consumer,
+      ],
+    );
     expect(activated.exitCode, activated.stderr.toString()).toBe(0);
     applyAgmsgMonitorWriter(consumer);
     applyAgmsgMonitorWriter(consumer);
@@ -333,14 +345,16 @@ describe("Codex packaged consumer hooks ownership", () => {
       expect(readFileSync(join(consumer, tracked), "utf8")).not.toContain(consumer);
     }
     expect(codexHooksDoctorCheck(consumer).pass).toBe(true);
-    const installedDoctor = run(consumer, [
-      "bun",
-      join(consumer, ".codex", "tools", "amadeus-codex-hooks.ts"),
-      "doctor",
-      "--json",
-      "--project-dir",
+    const installedDoctor = runAmadeusTool(
       consumer,
-    ]);
+      join(consumer, ".codex", "tools", "amadeus-codex-hooks.ts"),
+      [
+        "doctor",
+        "--json",
+        "--project-dir",
+        consumer,
+      ],
+    );
     expect(installedDoctor.exitCode, installedDoctor.stderr.toString()).toBe(0);
     const installedCheck = JSON.parse(installedDoctor.stdout.toString()) as {
       pass: boolean;

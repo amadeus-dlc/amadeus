@@ -92,6 +92,7 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -312,7 +313,7 @@ interface HookResult {
 
 /** run_hook (t131:91-92, 119-120): pipe PostToolUse JSON on stdin, CLAUDE_PROJECT_DIR set. */
 function runHook(hookPath: string, proj: string, json: string): HookResult {
-  const res = spawnSync(BUN, [hookPath], {
+  const res = spawnSync(BUN, [amadeusToolTarget(hookPath)], {
     input: json,
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: proj },

@@ -20,15 +20,17 @@
 // tmux-backend only (mirrors t-tui-t50's gating).
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
-
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const IS_WIN = os.platform() === "win32";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1800", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1800) * 1000;
@@ -41,25 +43,12 @@ const STOCK_SCOPES = new Set([
   "security-patch", "workshop",
 ]);
 
-function drive(args: string[]): { rc: number; stdout: string } {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait", "--session", session, "--pattern", pattern,
-      "--timeout-ms", String(timeoutMs), "--stable-ms", String(stableMs),
-    ]).rc === 0
-  );
-}
-
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live compose TUI journey (uses Claude credits)";
   }
-  if (IS_WIN) return "compose TUI journey is tmux-backend only";
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -74,46 +63,38 @@ describe("t-tui compose front journey (live claude TUI)", () => {
       const session = `amadeus_tui_compose_${process.pid}`;
       const sandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
       try {
-        expect(drive([
+        expect(runTuiDriver([
           "start", "--session", session, "--cwd", sandbox,
           "--width", "120", "--height", "45",
           "--", "claude", "--dangerously-skip-permissions",
         ]).rc).toBe(0);
 
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
-        expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
-        drive([
+        runTuiDriver([
           "send", "--session", session, "--keys",
           `/amadeus compose "${TASK}"`,
           "--literal", "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Answer every rendered gate with the leading (Recommended/Approve)
         // option; terminate the moment the born state carries ANY Scope field
         // (birth = the journey's last deterministic mutation). No per-gate
         // timeout - the disk terminator is the pass condition.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            process.execPath,
-            [
-              DRIVER, "answer-gate",
-              "--session", session,
-              "--project-dir", sandbox,
-              "--until-state-field", "Scope=\\S+",
-              "--overall-timeout-ms", String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session", session,
+          "--project-dir", sandbox,
+          "--until-state-field", "Scope=\\S+",
+          "--overall-timeout-ms", String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         expect(gateRc).toBe(0);
 
         // The two-file write landed: an 11th scope .md + an 11th grid key.
@@ -133,7 +114,7 @@ describe("t-tui compose front journey (live claude TUI)", () => {
         const stateMd = readFileSync(stateFilePathFor(sandbox), "utf8");
         expect(stateMd).toContain(`- **Scope**: ${composed}`);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

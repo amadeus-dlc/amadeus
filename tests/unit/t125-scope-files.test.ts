@@ -67,6 +67,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   loadScopeMapping,
   loadScopeMetadata,
@@ -86,8 +87,10 @@ const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 const SCOPES_DIR = join(AMADEUS_SRC, "scopes");
-const UTIL = fileURLToPath(
-  new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
+const UTIL = amadeusToolTarget(
+  fileURLToPath(
+    new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
+  ),
 );
 
 // The 10 scopes the framework ships, alphabetical — the .sh's hard-coded

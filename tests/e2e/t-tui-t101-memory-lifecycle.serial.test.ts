@@ -27,7 +27,7 @@
 //   - parseMemoryHeadings(file).total == the visible `- ` entry count on disk —
 //     the .sh's assertion 7 (parser ↔ disk agreement), ported by importing the
 //     exported helper from the distributable (amadeus-lib.ts:982; import-safe under
-//     bun, never loads node-pty).
+//     Bun).
 //   - RENDER (the tui-only value-add the SDK path is blind to): the captured grid
 //     showed the AskUserQuestion approval gate at least once during the run — the
 //     `❯` caret + an `Enter to select` / `Submit answers` footer. The .sh NEVER saw
@@ -66,41 +66,34 @@
 //
 // COST: spends real Bedrock tokens (minutes-long LLM turns to reach the gate).
 // Gated behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/
-// claude/distributable absence (and the Windows node + node-pty checks) also SKIP
-// with a reason — never a hollow pass.
+// claude/distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess (node on Windows so node-pty never loads under bun, #748; bun
-// elsewhere). The answer-gate loop lives in the driver — one implementation, both
-// backends. The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0);
-// no filename mechanism segment is needed or added. Platform-invariant plain-text
-// grid asserts — the Windows node-pty leg (via SSM) captures the same grid.
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
+// answer-gate loop lives in the driver — one implementation, both
+// backends. runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0);
+// no filename mechanism segment is needed or added. Assertions use the
+// plain-text tmux grid.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 // parseMemoryHeadings is the SAME parser the runtime-graph populator uses
 // (amadeus-lib.ts:982). Importing it here ports the .sh's parser↔disk assertion 7.
-// amadeus-lib.ts is import-safe (no node-pty); safe under bun on every platform.
+// amadeus-lib.ts is import-safe under Bun on every platform.
 import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). Reaching a gated stage is several minutes of real LLM turns, so the
@@ -120,49 +113,14 @@ const OWNERSHIP_LINE =
   "> This file is maintained by the orchestrator during stage execution. " +
   "Add observations at the gate ritual, not by editing here directly.";
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live memory-lifecycle journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -196,7 +154,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
       try {
         // --- launch the claude TUI -------------------------------------------
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -213,21 +171,21 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
         ).toBe(0);
 
         // clear the two startup modals (idempotent — only act if present)
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded mid-ideation state -> the statusline paints the WORKFLOW line
         // ([Amadeus-DLC] IDEATION), not the no-workflow "ready" line.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
 
         // --- jump to the approval-handoff gate stage -------------------------
         // Slash command has spaces -> send literally with no auto-Enter, then
         // Enter as a named key (the template's exact two-step). The gate paints
         // and waits for a human.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -236,13 +194,13 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Confirm the jump kicked off a live turn (statusline still IDEATION;
         // the stage name moves toward Approval & Handoff as the orchestrator
         // works). --stable-ms 0: the screen is streaming, so match the instant
         // the marker appears.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 120000, 0)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 120000, 0)).toBe(true);
 
         // --- PATTERN A (land + render), NOT answer-and-advance --------------
         // t101's contract is the memory.md START→APPROVAL lifecycle observed WHILE
@@ -273,7 +231,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
         // footer can only paint when a gate is up. If the gate never paints, waitFor
         // returns false and this reds — a FINDING that approval-handoff did not reach
         // its user-facing gate in budget, never softened to pass.
-        const gateRendered = waitFor(
+        const gateRendered = waitForTui(
           session,
           "Enter to select|Submit answers",
           Math.max(60000, TEST_TIMEOUT_MS - 60000),
@@ -339,7 +297,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
         // `gateRendered` from waitFor, the tui-only value-add the SDK path is blind
         // to. No separate poll-timer: waitFor is the robust proof.)
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

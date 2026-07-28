@@ -85,6 +85,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 // Standalone hermeticity (issue #698): the suite runner injects these guard
@@ -148,7 +149,7 @@ interface CliResult {
 
 /** Spawn `bun <tool> <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ... --project-dir "$PROJ"`. */
 function run(tool: string, args: string[], p: string): CliResult {
-  const res = spawnSync(BUN, [tool, ...args, "--project-dir", p], {
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args, "--project-dir", p], {
     encoding: "utf-8",
     env: { ...process.env },
   });

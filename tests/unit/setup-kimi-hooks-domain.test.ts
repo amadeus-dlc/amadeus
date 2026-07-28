@@ -75,13 +75,15 @@ function mustPlan(configText: string, block: string) {
   return plan.value;
 }
 
-describe("checkTomlSyntax — the Bun oracle guard", () => {
-  test("fails loudly with the bunx guidance when the Bun runtime is absent", () => {
-    const result = checkTomlSyntax("anything = 1\n", null);
+describe("checkTomlSyntax — Bun.TOML", () => {
+  test("accepts valid TOML through the required Bun runtime", () => {
+    expect(checkTomlSyntax("anything = 1\n")).toEqual({ type: "ok", value: undefined });
+  });
+
+  test("rejects invalid TOML", () => {
+    const result = checkTomlSyntax("anything = [\n");
     expect(result.type).toBe("err");
-    if (result.type === "err") {
-      expect(result.error.detail).toContain("bunx");
-    }
+    if (result.type === "err") expect(result.error.detail).toContain("not valid TOML");
   });
 });
 

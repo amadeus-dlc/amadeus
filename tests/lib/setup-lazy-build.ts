@@ -26,7 +26,7 @@ export async function ensureSetupCliBuilt(): Promise<string> {
 
   const result = spawnSync(
     process.execPath,
-    ["build", CLI_ENTRY, "--target=node", "--format=esm", `--outfile=${CLI_OUTPUT}`],
+    ["build", CLI_ENTRY, "--target=bun", "--format=esm", `--outfile=${CLI_OUTPUT}`],
     { cwd: SETUP_PACKAGE_DIR, encoding: "utf8" },
   );
   if (result.status !== 0) {

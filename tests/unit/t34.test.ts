@@ -81,6 +81,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -132,7 +133,7 @@ interface CliResult {
 
 /** Spawn `bun <tool> <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ... --project-dir "$PROJ"`. */
 function run(tool: string, args: string[], p: string): CliResult {
-  const res = spawnSync(BUN, [tool, ...args, "--project-dir", p], {
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args, "--project-dir", p], {
     encoding: "utf-8",
   });
   const stderr = res.stderr ?? "";

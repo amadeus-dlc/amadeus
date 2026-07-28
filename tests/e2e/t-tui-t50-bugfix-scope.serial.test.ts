@@ -81,26 +81,27 @@
 // backstop ever fires that is a genuine hang FINDING (the workflow wedged), never a
 // knob to turn down or a thing to soften. Gated
 // behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
-// distributable absence (and Windows node/node-pty resolvability) also SKIP with a
-// reason — never a hollow pass.
+// distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts (node on Windows
-// so node-pty never loads under bun, #748; bun elsewhere). The answer-gate loop
-// lives in the driver — one implementation, both backends. Platform-invariant
-// plain-text grid asserts (no colour escapes), so the Windows node-pty backend
-// captures identically; the SSM leg runs the same file.
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The answer-gate loop
+// lives in the driver. Assertions use the plain-text tmux grid.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import * as os from "node:os";
 import { basename, join } from "node:path";
 import {
   auditFilePathFor,
   spaceKnowledgeDirFor,
   stateFilePathFor,
 } from "../harness/sdk-drive.ts";
-import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
+import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -115,18 +116,10 @@ function codekbReDir(sandbox: string): string {
   return existsSync(spaceScoped) ? spaceScoped : bare;
 }
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag — byte-identical to the spike).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). A bugfix run-through (Initialization + the heavy reverse-engineering
@@ -135,49 +128,14 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live bugfix journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -202,7 +160,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
       let pollTimer: ReturnType<typeof setInterval> | undefined;
       try {
         // --- launch (distributable already copied by setupTuiProject) ----------
-        expect(drive([
+        expect(runTuiDriver([
           "start",
           "--session",
           session,
@@ -218,14 +176,14 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         ]).rc).toBe(0);
 
         // clear the two startup modals (idempotent — only act if present)
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Fresh project (no seeded state) -> the no-workflow "ready" line.
-        expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
         // --- submit the bugfix workflow command --------------------------------
         // Use the EXPLICIT `--scope bugfix` flag, not the bare freeform `bugfix`
@@ -245,7 +203,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // state "behaves like /amadeus bugfix") so the step-6 free-text "what to
         // build?" prompt is satisfied up front (answer-gate can't type free text).
         // Send literally (spaces) with no auto-Enter, then Enter as a named key.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -254,7 +212,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Begin tailing the grid for the render assertion BEFORE answer-gate runs,
         // so we catch the statusline phase transition and a gate menu while the
@@ -262,10 +220,9 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // current live runs can spend >120s bootstrapping init while the statusline
         // still shows `[Amadeus-DLC] ready`; the on-disk Completed terminator below is the
         // deterministic start/progress proof. Use the shared gridHasMenu() so the
-        // caret is matched platform-invariantly (`❯` on tmux, ASCII `>` on Windows
-        // ConPTY — the same detector the answer-gate uses).
+        // caret is matched consistently by the same detector the answer-gate uses.
         pollTimer = setInterval(() => {
-          const grid = drive(["capture", "--session", session]).stdout;
+          const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (gridHasMenu(grid)) {
             sawMenu = true;
           }
@@ -288,31 +245,22 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // assert "a menu must appear within N seconds" — that is a budget masquerading
         // as a backstop, and it false-fired here: bugfix's first Inception stage is
         // reverse-engineering (a `mode: subagent` stage) that legitimately runs
-        // minutes with no menu, and runs SLOWER on the Windows box, so a fixed
+        // minutes with no menu and runs slower on constrained hosts, so a fixed
         // per-gate value (200s, then 360s) killed a WORKING run mid-RE (`answered 0`).
         // Omitting it lets per-gate default to the overall deadline (one hang-backstop
         // that only a genuine wedge can trip); the overall timeout (TEST_TIMEOUT_MS -
         // 30s) bounds the journey and bun's test cap is the hard ceiling above that.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              sandbox,
-              "--until-state-field",
-              "Completed=([5-9]|[1-9][0-9])",
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          sandbox,
+          "--until-state-field",
+          "Completed=([5-9]|[1-9][0-9])",
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = undefined;
         expect(gateRc).toBe(0);
@@ -409,7 +357,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         expect(sawMenu).toBe(true);
       } finally {
         if (pollTimer) clearInterval(pollTimer);
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

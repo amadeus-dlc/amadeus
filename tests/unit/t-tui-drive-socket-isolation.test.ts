@@ -21,8 +21,14 @@
 // <socket>` ahead of the tmux args at the single chokepoint.
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type Backend,
+  createTmuxBackend,
+  main,
+} from "../harness/tui-drive.ts";
 
 const DRIVER_SRC = readFileSync(
   join(import.meta.dir, "..", "harness", "tui-drive.ts"),
@@ -64,5 +70,91 @@ describe("tui-drive tmux backend runs on a private socket (developer-session saf
       const isVersionProbe = /"-V"/.test(argsText);
       expect(isHelper || isVersionProbe).toBe(true);
     }
+  });
+
+  test("the tmux backend maps all operations to the canonical command shapes", () => {
+    const calls: string[][] = [];
+    const backend = createTmuxBackend((args) => {
+      calls.push(args);
+      return { code: 0, stdout: "captured grid", stderr: "" };
+    });
+
+    backend.start("session", "/tmp/it's-here", 80, 24, ["printf", "it's-ready"]);
+    backend.send("session", "plain text", true, false);
+    expect(backend.capture("session", true)).toBe("captured grid");
+    backend.kill("session");
+
+    expect(calls).toEqual([
+      ["kill-session", "-t", "session"],
+      [
+        "new-session",
+        "-d",
+        "-s",
+        "session",
+        "-x",
+        "80",
+        "-y",
+        "24",
+        "bash",
+        "-lc",
+        "cd '/tmp/it'\\''s-here' && exec 'printf' 'it'\\''s-ready'",
+      ],
+      ["send-keys", "-t", "session", "-l", "plain text"],
+      ["send-keys", "-t", "session", "Enter"],
+      ["capture-pane", "-t", "session", "-p", "-J", "-e"],
+      ["kill-session", "-t", "session"],
+    ]);
+  });
+
+  test("the in-process dispatcher delegates every public subcommand", async () => {
+    const calls: Array<{ operation: string; args: unknown[] }> = [];
+    const backend: Backend = {
+      start: (...args) => calls.push({ operation: "start", args }),
+      send: (...args) => calls.push({ operation: "send", args }),
+      capture: (...args) => {
+        calls.push({ operation: "capture", args });
+        return "READY";
+      },
+      kill: (...args) => calls.push({ operation: "kill", args }),
+    };
+    const projectDir = mkdtempSync(join(tmpdir(), "amadeus-tui-driver-unit-"));
+    try {
+      writeFileSync(join(projectDir, "done.txt"), "done");
+      await main(
+        ["start", "--session", "s", "--cwd", projectDir, "--width", "80", "--height", "24", "--", "bash"],
+        backend,
+      );
+      await main(["send", "--session", "s", "--keys", "hello", "--literal"], backend);
+      await main(
+        ["wait", "--session", "s", "--pattern", "READY", "--stable-ms", "0"],
+        backend,
+      );
+      await main(["capture", "--session", "s", "--ansi"], backend);
+      await main(["kill", "--session", "s"], backend);
+      await main(
+        ["answer-gate", "--session", "s", "--project-dir", projectDir, "--until-file", "done.txt"],
+        backend,
+      );
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+
+    expect(calls).toContainEqual({
+      operation: "start",
+      args: ["s", projectDir, 80, 24, ["bash"]],
+    });
+    expect(calls).toContainEqual({
+      operation: "send",
+      args: ["s", "hello", true, false],
+    });
+    expect(calls).toContainEqual({
+      operation: "capture",
+      args: ["s", false],
+    });
+    expect(calls).toContainEqual({
+      operation: "capture",
+      args: ["s", true],
+    });
+    expect(calls).toContainEqual({ operation: "kill", args: ["s"] });
   });
 });

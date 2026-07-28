@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   EMPTY_MIRROR_STATE,
   renderMirrorStateBlock,
@@ -75,7 +76,7 @@ let project = "";
 function run(tool: string, args: string[]) {
   const result = spawnSync(
     process.execPath,
-    [tool, ...args, "--project-dir", project],
+    [amadeusToolTarget(tool), ...args, "--project-dir", project],
     { encoding: "utf-8" },
   );
   expect(result.status).toBe(0);

@@ -1,10 +1,10 @@
 # @amadeus-dlc/setup
 
 Installer CLI for [Amadeus-DLC](https://github.com/amadeus-dlc/amadeus). Fetches a tagged Amadeus distribution from GitHub and installs it into your project.
+Requires Bun 1.3.13 or later.
 
 ```
 bunx @amadeus-dlc/setup
-npx @amadeus-dlc/setup
 ```
 
 > [!NOTE]

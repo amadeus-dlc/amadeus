@@ -114,11 +114,10 @@ Windows では PowerShell と CMD の*どちらか一方*を使ってくださ�
 
 ### ハーネスのインストール
 
-`@amadeus-dlc/setup` がタグ付き配布物を GitHub から取得してプロジェクトへコピーします — `dist/` の手動コピーは不要です。同等の2通りの起動方法があります(`npx` は Node.js ≥ 18.3 で動作し、このコマンドだけなら bun 不要):
+`@amadeus-dlc/setup` には Bun 1.3.13 以上が必要です。タグ付き配布物を GitHub から取得してプロジェクトへコピーします — `dist/` の手動コピーは不要です:
 
 ```bash
-bunx @amadeus-dlc/setup install     # bun
-npx @amadeus-dlc/setup install      # npm/node
+bunx @amadeus-dlc/setup install
 ```
 
 引数なしの `install` は対話ウィザードを起動します: ハーネス(`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`)とターゲットディレクトリを選ぶだけです。スクリプトや CI ではフラグで明示します:

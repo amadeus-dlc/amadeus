@@ -78,34 +78,26 @@
 // turn). Gated behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` SKIPs it; tmux/claude/
 // distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess — node on Windows so node-pty never loads under bun (#748), bun
-// elsewhere. The driver auto-selects its backend by os.platform(); this journey
-// is platform-invariant (plain-text grid + on-disk byte asserts, no colour). The
-// `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0) — no
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// journey uses plain-text grid + on-disk byte asserts with no colour. The
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0) — no
 // filename mechanism segment is needed or added.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+// Bun runs the TypeScript entrypoint natively.
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration
 // tier sets 600). A single jump turn is short, but the live TUI startup +
@@ -113,49 +105,14 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live stage-jump journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -188,7 +145,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
       try {
         // --- launch the claude TUI -------------------------------------------
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -205,20 +162,20 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         ).toBe(0);
 
         // --- clear the two startup modals (idempotent — only act if present) --
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded state -> the workflow statusline paints IDEATION (not "ready").
         // Before the jump it shows the seeded "> Feasibility" stage.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
 
         // --- send the slash command ------------------------------------------
         // Spaces in the command -> send literally with no auto-Enter, then Enter
         // as a named key (the established two-step from the workshop template).
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -227,7 +184,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // --- wait for the LANDED render (the Pattern-A terminator) ------------
         // The jump rewrites Current Stage=approval-handoff and the statusline hook
@@ -237,8 +194,8 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // instant the landed stage name appears, NOT byte-stability. We do NOT
         // wait on terminal completion: the jump leaves
         // Status=Running and the orchestrator auto-continues (FINDING in header).
-        const sawLanded = waitFor(session, "> Approval & Handoff", 180000, 0);
-        const pane = drive(["capture", "--session", session]).stdout;
+        const sawLanded = waitForTui(session, "> Approval & Handoff", 180000, 0);
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (!sawLanded) {
           throw new Error(
             `statusline never re-rendered "> Approval & Handoff" after the jump.\n` +
@@ -305,7 +262,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // writes "**Timestamp**: <ts>".
         expect(auditMd).toMatch(/\*\*Timestamp\*\*:.*\d[0-9T:Z-]/);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },

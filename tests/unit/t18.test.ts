@@ -2,8 +2,8 @@
 //
 // t18 — amadeus-audit.ts audit-append behaviour. Migrated from
 // tests/unit/t18-tool-audit.sh (13 TAP assertions, 16 bun spawns).
-// Mechanism: none (import the tool's exported functions and call them in
-// process; zero LLM, zero tokens). Three CLI-shell contracts that exercise
+// Mechanism: cli (most assertions call exported functions in process; zero
+// LLM, zero tokens). Three CLI-shell contracts that exercise
 // the process.exit / stdout / stderr seam — or a non-exported handler —
 // are kept as Bun.spawnSync env-seam cases (flagged inline) so no guarantee
 // is lost.
@@ -54,14 +54,17 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   appendAuditEntry,
   handleAppend,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { auditFilePath, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const TOOL = fileURLToPath(
-  new URL("../../dist/claude/.claude/tools/amadeus-audit.ts", import.meta.url),
+const TOOL = amadeusToolTarget(
+  fileURLToPath(
+    new URL("../../dist/claude/.claude/tools/amadeus-audit.ts", import.meta.url),
+  ),
 );
 
 // P9: the flat amadeus-docs/audit.md is retired. appendAuditEntry resolves the
