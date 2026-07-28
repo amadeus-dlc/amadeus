@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { validateMirrorDocs } from "../../scripts/mirror-docs-contract.ts";
+import { mirrorDocsOkMessage, validateMirrorDocs } from "../../scripts/mirror-docs-contract.ts";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -22,7 +22,7 @@ function docsFixture(): string {
 }
 
 describe("t287 docs contract", () => {
-  test("accepts four documents and 32 runtime-derived topics", () => {
+  test("accepts every document with its runtime-derived topics", () => {
     expect(validateMirrorDocs(process.cwd())).toEqual([]);
   });
 
@@ -49,5 +49,13 @@ describe("t287 docs contract", () => {
     const findings = validateMirrorDocs(root);
     expect(findings.some((finding) => finding.message.includes("runtime contract mismatch"))).toBe(true);
     expect(findings.some((finding) => finding.message.includes("unknown topic"))).toBe(true);
+  });
+});
+
+describe("t287 success line", () => {
+  test("the OK line reports the projection and topic counts it computes", () => {
+    expect(mirrorDocsOkMessage()).toMatch(
+      /^mirror-docs-contract: OK \(\d+ documents, \d+ topics\)$/,
+    );
   });
 });

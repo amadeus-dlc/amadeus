@@ -60,3 +60,73 @@ are forbidden.
 
 Pull requests, releases, deployment, daemons, and polling are outside Intent
 Mirror.
+
+<!-- amadeus-topic:projects -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+## Project boards
+
+`mirror-projects` lists the GitHub Project boards this Intent syncs to. Each
+element names one board as `project: "<owner>/<number>"` and may carry a
+`status-names` override mapping a phase key onto the column name that board
+uses. The phase keys are `ideation`, `inception`, `construction`, `operation`,
+and `done`; an unknown key is an error rather than an ignored entry.
+
+```json
+{
+  "mirror-projects": [
+    { "project": "acme/7" },
+    { "project": "acme/12", "status-names": { "construction": "In Progress" } }
+  ]
+}
+```
+
+The key resolves per layer: the last layer that carries a value replaces the
+previous layer's list outright instead of merging into it, so a Space or Intent
+layer states the complete set of boards it wants. `mirror-projects` is
+independent of `auto-mirror` — the mode decides whether a mirror operation runs,
+this key decides which boards that operation touches.
+
+<!-- amadeus-topic:auth -->
+<!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
+## Authentication for Project boards
+
+Reading a board's Status field and setting a column both go through the GraphQL
+ProjectV2 API, which needs the `project` token scope in addition to whatever the
+Issue itself required. The credential stays with `gh` and its credential store;
+Intent Mirror never reads a token value, never changes a scope, and never
+re-authenticates for you. Granting the scope is a human move made outside this
+tool — for example `gh auth refresh -s project`.
+
+<!-- amadeus-topic:diagnostics -->
+<!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->
+## Diagnosing Project sync
+
+`repair status` reports one read-only row per board — every board configuration
+targets, every board the ledger already recorded, and every board the Issue
+currently belongs to. Each row states whether the Issue is on the board, the
+column it is in, the column the workflow expects, whether those two have
+drifted, and one of four resolutions:
+
+- `resolved` — the expected column is reachable; the row is an observation only.
+- `field-missing` — the board's Status field could not be read, so no column can
+  be applied.
+- `option-missing` — the board declares no Status option matching the expected
+  name exactly, case and spacing included. The board's own option names are
+  listed as `availableOptions`, so you can either add the option to the board or
+  map the phase onto an existing one with a `status-names` override.
+- `permission-denied` — the credential in use cannot read that board's Status
+  field; grant it the `project` scope and run `repair status` again.
+
+Each row carries a summary sentence naming the board, the column, and the move
+that resolves it. No token and no raw API response reaches that text.
+`repair status` observes and changes nothing, locally or remotely; a board that
+has drifted is reported, not recorded.
+
+Project work runs as `gh` subprocesses invoked with an argument array — no shell
+string is built. When `gh` is missing, unauthenticated, rate-limited, or fails,
+the mirror operation fails loudly and the AI-DLC workflow still advances; retry
+at the next eligible boundary or with one explicit manual command. A boundary
+that synced some boards and failed on others keeps a per-board ledger entry —
+`synced`, `pending` for a retryable failure, or `safety-blocked` when the board's
+own shape or your permissions need a human — so a partial success stays visible
+board by board rather than collapsing into one verdict.

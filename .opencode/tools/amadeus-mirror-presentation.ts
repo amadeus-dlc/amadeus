@@ -125,6 +125,39 @@ export const MIRROR_USER_CONTRACT = {
     "final-sync-succeeded",
   ],
   scopeExclusions: ["pull-request", "release", "deploy", "daemon", "polling"],
+  // Project board sync. `mirror-projects` names the boards an Intent syncs to;
+  // it resolves per key, so a layer that carries it replaces the previous
+  // layer's list outright and never merges into it, and it is independent of
+  // `auto-mirror` (the mode decides whether an operation runs at all).
+  projectConfig: {
+    key: "mirror-projects",
+    shape:
+      'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }',
+    phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
+    layerResolution: "last-layer-with-a-value-replaces",
+    independentOf: "auto-mirror",
+  },
+  // Reading and setting a Project column needs one extra token scope. The
+  // credential itself stays with gh: this tool never changes a scope and never
+  // re-authenticates on a user's behalf.
+  projectAuth: {
+    scope: "project",
+    credentialStore: "gh",
+    automaticScopeChange: false,
+  },
+  // What `repair status` reports per board. It is read-only: it observes the
+  // boards and writes nothing, locally or remotely.
+  projectDiagnostics: {
+    command: ["repair", "status"],
+    resolutions: [
+      "resolved",
+      "field-missing",
+      "option-missing",
+      "permission-denied",
+    ],
+    availableOptionsOn: "option-missing",
+    mutatesRemote: false,
+  },
 } as const;
 
 type ContractCommand =

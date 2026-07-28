@@ -1472,19 +1472,13 @@
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "75-76",
+    "lines": "81-82",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "83",
-    "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "scripts/mirror-docs-contract.ts",
-    "lines": "102-104",
+    "lines": "89",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1496,31 +1490,37 @@
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "116-118",
+    "lines": "114-116",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "128-131",
+    "lines": "122-124",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "141",
+    "lines": "134-137",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "150-152",
+    "lines": "147",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-docs-contract.ts",
-    "lines": "173-177",
+    "lines": "156-158",
+    "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "lines": "187-191",
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },

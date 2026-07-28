@@ -51,3 +51,23 @@ receiptはnot-started、no-effect-confirmed、outcome-unknownを区別します�
 ## 対象外
 
 Pull Request、release、deploy、background daemon、pollingのauthorityを与えません。
+
+<!-- amadeus-topic:projects -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+## Project設定schema
+
+`mirror-projects`は`{ project, status-names? }`の配列です。`project`は`"<owner>/<number>"`に一致し、numberは正の整数です。ゼロ埋め・小数・その他の不正値はcoerceせず拒否します。`status-names`のキーはclosedなphase語彙`ideation | inception | construction | operation | done`で、値は空でない文字列です。未知の要素キー、未知のphaseキー、あるいは1要素の不正は、部分的なリストを作らずその層全体を拒否します。`auto-mirror`と`mirror-projects`は独立に解決され、キーごとに有効な値を持つ最後の層が勝ち、勝った`mirror-projects`は前の層の対象リストを全置換します。
+
+<!-- amadeus-topic:auth -->
+<!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
+## Projectのauthorization
+
+ProjectV2の読取(item一覧、Status fieldの解決)と2つのmutation(item追加、Status更新)はいずれも`project` token scopeを必要とします。credentialは`gh`へ委譲し、token値の読取・保存・ログ出力・描画テキストへの混入は行わず、scopeの自動変更・自動再認証もしません。scopeを欠くcredentialは、board名と必要scopeのみを述べる`permission-denied`診断として現れます。
+
+<!-- amadeus-topic:diagnostics -->
+<!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->
+## Project診断
+
+`repair status`は、設定対象・ledger entry・Issueの現在の所属の和集合について、canonicalな`owner/number`順にboard 1件ごとの診断を報告します。各行は`membership`、`currentStatus`、`expectedStatus`、`drift`、`resolution`、および`summary`文を持ちます。`expectedStatus`がnull(当該boundaryでcolumnを期待しない)の場合、`drift`は構成上falseです。`expectedStatus`はsyncが適用するのと同じ定義から得るため、診断がsyncの挙動と食い違うことはありません。`availableOptions`は`option-missing`のときだけ存在し、boardが宣言するoption名をそのまま列挙します。この経路はread-onlyで、gatewayの読取メソッドだけが到達可能であり、ledgerは入力であって出力ではありません。
+
+board単位のledgerは`synced`、`pending`、`safety-blocked`と最後に適用したcolumnを記録するため、部分適用されたboundaryを表現できます。gatewayの処理は`gh`サブプロセスをargument arrayで起動して実行し、`gh`の不在・未認証・rate limit・失敗時は当該mirror操作をloudに失敗させますが、workflowは進行しうる状態を維持します。
