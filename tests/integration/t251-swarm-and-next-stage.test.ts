@@ -194,10 +194,14 @@ describe("t250 item 10 gate-next-stage-naming: directive projects next_stage", (
   });
 
   test("d: a gate:false per-unit iteration step carries NO next_stage", () => {
-    // A non-autonomous Construction stage parked at code-generation with a unit
-    // DAG drives the per-unit for_each loop: the first uncovered unit is emitted
-    // with the gate SUPPRESSED (gate:false). That is an iteration step, not an
-    // approval gate, so next_stage must be absent.
+    // A Construction stage parked at code-generation with a unit DAG and NO
+    // autonomy grant drives the per-unit for_each loop: the first uncovered unit
+    // is emitted with the gate SUPPRESSED (gate:false). That is an iteration
+    // step, not an approval gate, so next_stage must be absent. The fixture
+    // keeps the walking-skeleton stage IN-FLIGHT: after #1612 an unset grant is
+    // legitimate only before the skeleton completes — past it the engine
+    // re-fires the ladder as an `ask` instead of iterating
+    // (stage-protocol.md § "Ladder prompt", session-resume rule).
     const proj = createTestProject();
     tempDirs.push(proj);
     writeFileSync(seededStateFile(proj), perUnitCodegenState());
@@ -288,7 +292,7 @@ function perUnitCodegenState(): string {
 ## Stage Progress
 
 ### CONSTRUCTION PHASE
-- [x] functional-design — EXECUTE
+- [-] functional-design — EXECUTE
 - [x] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
 - [x] infrastructure-design — EXECUTE

@@ -30,7 +30,7 @@
 // both bug and fix) — these tests pin the units/advance the older test left open.
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -40,7 +40,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
-import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleNext, handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 // The core source has no co-located compiled graph — point the engine at the
 // packaged dist copy (regenerated from the same core in this commit).
@@ -63,6 +63,9 @@ afterEach(() => {
 interface Directive {
   kind?: string;
   units?: unknown;
+  repo?: unknown;
+  question?: unknown;
+  message?: unknown;
   [k: string]: unknown;
 }
 
@@ -167,6 +170,13 @@ function seedSwarmProject(
   return proj;
 }
 
+function recordIntentRepos(proj: string, repos: string[]): void {
+  const path = join(proj, "amadeus", "spaces", "default", "intents", "intents.json");
+  const rows = JSON.parse(readFileSync(path, "utf-8")) as Array<Record<string, unknown>>;
+  rows[0].repos = repos;
+  writeFileSync(path, `${JSON.stringify(rows, null, 2)}\n`);
+}
+
 /** Drive `next` in-process and return the emitted directive. */
 function runNext(proj: string): Directive {
   let raw = "";
@@ -175,6 +185,20 @@ function runNext(proj: string): Directive {
   });
   try {
     handleNext([], proj);
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw) as Directive;
+}
+
+/** Drive `report` in-process and return the emitted directive (#1612 FR-6). */
+function runReport(proj: string, args: string[]): Directive {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleReport(args, proj);
   } finally {
     log.mockRestore();
   }
@@ -191,6 +215,15 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     // The crux of #841: the offered batch is the FIRST with uncovered units, not
     // the static batches[0]. Pre-fix this was ["alpha"] (batch 1 re-offered).
     expect(directive.units).toEqual(["beta"]);
+  });
+
+  test("a2: a lone recorded repo is propagated with the selected batch", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    recordIntentRepos(proj, ["service"]);
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha"]);
+    expect(directive.repo).toBe("service");
   });
 
   test("b: every batch covered -> no swarm is offered (falls through to the gate)", () => {
@@ -216,5 +249,161 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     const directive = runNext(proj);
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["beta"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #1612 — `gated` fans the batch out and stops at a BATCH-END gate.
+// ---------------------------------------------------------------------------
+// The pre-fix engine read `gated` as a swarm VETO, so every parallel Unit ran
+// serially through the inline per-unit loop. stage-protocol.md § "Subsequent
+// Bolt gate" says the opposite: gated selects the approval FREQUENCY ("for
+// parallel batches the gate
+// covers every Bolt in the batch"), so the batches still fan out — the engine
+// just refuses the NEXT batch until the finished one is approved.
+//
+// Same in-process mechanism as the #841 cases above: these new tryEmitSwarm /
+// emitPerUnitRunStage branches are only reachable through handleNext, and the
+// report-side symmetry through handleReport, so both are driven in-process to
+// keep the patch-coverage gate honest.
+
+/**
+ * The #841 state with the autonomy grant swapped for an arbitrary value, plus
+ * the bookkeeping fields `report --result approved` rewrites (Last Updated /
+ * Completed / Last Completed Stage). The #841 cases (a/b/c) never reach the
+ * approve path, so their fixture is left byte-identical.
+ */
+function codegenStateWithAutonomy(autonomy: string): string {
+  const base = autonomousCodegenState("code-generation").replace(
+    "- **Status**: Running",
+    [
+      "- **Status**: Running",
+      "- **Last Updated**: 2026-07-28T00:00:00Z",
+      "- **Completed**: 4",
+      "- **Last Completed Stage**: infrastructure-design",
+    ].join("\n"),
+  );
+  return autonomy === ""
+    ? base.replace("- **Construction Autonomy Mode**: autonomous\n", "")
+    : base.replace(
+        "- **Construction Autonomy Mode**: autonomous",
+        `- **Construction Autonomy Mode**: ${autonomy}`,
+      );
+}
+
+/** Seed a multi-batch code-generation project under an arbitrary autonomy value. */
+function seedAutonomyProject(batches: string[][], autonomy: string): string {
+  const proj = createTestProject();
+  tempDirs.push(proj);
+  writeFileSync(seededStateFile(proj), codegenStateWithAutonomy(autonomy));
+  seedMultiBatchDag(proj, batches);
+  return proj;
+}
+
+/** Record batch approvals the way `amadeus-bolt approve-batch` does. */
+function recordBatchApprovals(proj: string, batches: number[]): void {
+  const path = seededStateFile(proj);
+  writeFileSync(
+    path,
+    readFileSync(path, "utf-8").replace(
+      "- **Status**: Running",
+      `- **Status**: Running\n- **Swarm Gated Batch Approvals**: ${batches.join(", ")}`,
+    ),
+  );
+}
+
+describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
+  test("d: gated + first batch uncovered -> fans the batch out (no gate owed yet)", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha"]);
+  });
+
+  test("e: gated + batch 1 covered and unapproved -> batch-end gate ask, NO next batch", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    coverUnit(proj, "alpha");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("ask");
+    // The ask names the batch under approval, its units, and the command.
+    expect(String(directive.question)).toContain("batch 1");
+    expect(String(directive.question)).toContain("alpha");
+    expect(String(directive.question)).toContain("approve-batch --batch 1");
+  });
+
+  test("f: gated + batch 1 approved -> the next batch fans out", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    coverUnit(proj, "alpha");
+    recordBatchApprovals(proj, [1]);
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["beta"]);
+  });
+
+  test("g: gated + a malformed approvals ledger withholds the gate (fail closed)", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    coverUnit(proj, "alpha");
+    const path = seededStateFile(proj);
+    writeFileSync(
+      path,
+      readFileSync(path, "utf-8").replace(
+        "- **Status**: Running",
+        "- **Status**: Running\n- **Swarm Gated Batch Approvals**: one, 0, -1",
+      ),
+    );
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("ask");
+  });
+
+  test("h: gated + every batch covered -> the stage's own gate, never a second batch gate", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    coverUnit(proj, "alpha");
+    coverUnit(proj, "beta");
+    recordBatchApprovals(proj, [1]);
+    const directive = runNext(proj);
+    // FR-2d: the final batch owes no batch-end gate — the all-covered re-entry
+    // presents the stage gate, so the human never sees two gates in a row.
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.kind).not.toBe("ask");
+  });
+
+  test("i: autonomous ignores the approvals ledger entirely (behaviour unchanged)", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "autonomous");
+    coverUnit(proj, "alpha");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["beta"]);
+  });
+
+  test("j: unset after a completed walking skeleton -> the ladder re-fires as an ask", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("ask");
+    expect(String(directive.question)).toContain("set-autonomy");
+  });
+
+  test("k: an unrecognised autonomy value reads as unset (never fans out)", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "Autonomous");
+    const directive = runNext(proj);
+    expect(directive.kind).not.toBe("invoke-swarm");
+  });
+
+  test("l: gated batch-1 approve is NOT refused by the all-units coverage guard", () => {
+    // The report-side symmetry (FR-6). The guard excludes swarm-driven stages
+    // verbatim from tryEmitSwarm's trigger; leaving it scoped to `autonomous`
+    // while the trigger accepts `gated` would refuse this approve AND re-offer
+    // batch 1 on `next` — a deadlock.
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
+    coverUnit(proj, "alpha");
+    const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
+    expect(directive.kind).not.toBe("error");
+  });
+
+  test("m: unset keeps the all-units coverage guard on the serial per-unit path", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "");
+    coverUnit(proj, "alpha");
+    const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("beta");
   });
 });

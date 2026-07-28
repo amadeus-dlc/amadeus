@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 542,
+    "total": 545,
     "enumeratedByClass": {
-      "function": 304,
+      "function": 306,
       "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 12,
-      "subcommand": 99,
+      "subcommand": 100,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 10,
       "stage": 8,
       "hook": 12,
-      "subcommand": 80,
+      "subcommand": 81,
       "render-surface": 7
     }
   },
@@ -2640,6 +2640,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:parseApprovedSwarmBatches",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:parseArgs",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3660,6 +3667,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:SWARM_BATCH_APPROVALS_FIELD",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -4882,6 +4896,18 @@
         },
         {
           "file": "tests/unit/t77-bolt-worktree-flags.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt approve-batch",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
       ],

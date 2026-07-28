@@ -168,6 +168,15 @@ function emitFor(
     new RegExp(`^- \\[.\\] ${slug} — EXECUTE`, "m"),
     `- [-] ${slug} — EXECUTE`,
   );
+  // Record the autonomy grant the Construction fixture pre-dates: past a
+  // COMPLETED walking skeleton an unset grant makes the engine re-fire the
+  // ladder as an `ask` (issue #1612), which would pre-empt the path projection
+  // under test. No compiled unit DAG here, so the grant changes nothing else.
+  sedReplaceInFile(
+    state,
+    /^- \*\*Status\*\*: .*$/m,
+    "- **Status**: Running\n- **Construction Autonomy Mode**: gated",
+  );
   // This suite exercises path projection after routing. Mark prior mirror
   // boundaries handled so the U4 boundary prompt does not preempt Branch 10.
   sedReplaceInFile(

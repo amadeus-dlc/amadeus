@@ -297,12 +297,32 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     expect(directive.units).toEqual(["a", "b"]);
   }, 30000);
 
-  test("2: gated autonomy -> engine falls back to run-stage for code-generation (no swarm)", () => {
+  // 2: issue #1612 — `gated` is an APPROVAL-FREQUENCY grant, not a swarm veto.
+  // stage-protocol.md § "Subsequent Bolt gate" says the Bolt-level gate is
+  // presented per batch in gated mode ("For parallel batches the gate covers every Bolt in the batch"),
+  // so a gated run STILL fans the batch out; it just gates at the batch boundary.
+  // The pre-fix engine returned run-stage here and serialised the DAG.
+  test("2: gated autonomy -> engine still fans out the batch (batch-end gate, not serialisation)", () => {
     const { directive } = runNext(seedCodegenProject("gated"));
-    // The .sh asserted "$KIND|$STG" == "run-stage|code-generation".
-    expect(directive.kind).toBe("run-stage");
-    expect(directive.stage).toBe("code-generation");
-    // STRONGER: it is definitively NOT a swarm directive.
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["a", "b"]);
+  }, 30000);
+
+  // 2b: unset autonomy AFTER the walking skeleton completed (state-construction.md
+  // marks functional-design — the feature-scope skeleton-gate stage — [x]) must
+  // re-fire the ladder rather than silently serialising (stage-protocol.md
+  // § "Ladder prompt", session-resume rule; engine-enforced). No swarm, no
+  // run-stage: an `ask`.
+  test("2b: skeleton complete + unset autonomy -> engine re-fires the ladder ask", () => {
+    const { directive } = runNext(seedCodegenProject(""));
+    expect(directive.kind).toBe("ask");
+    expect(String(directive.question)).toContain("set-autonomy");
+  }, 30000);
+
+  // 2c: an unrecognised autonomy value reads as unset (safe side) — it never
+  // activates the swarm fan-out.
+  test("2c: unrecognised autonomy value never swarms", () => {
+    const { directive } = runNext(seedCodegenProject("autonomouss"));
     expect(directive.kind).not.toBe("invoke-swarm");
   }, 30000);
 
@@ -312,6 +332,16 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     // must NOT swarm it — Bolt 1 is always human-gated. Defense-in-depth that
     // does not rest on conductor ordering (tryEmitSwarm:isSkeletonGateStage).
     const proj = seedCodegenProject("autonomous");
+    setScope(proj, "bugfix");
+    const { directive } = runNext(proj);
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.kind).not.toBe("invoke-swarm");
+  }, 30000);
+
+  // 7b: the same structural guard under the gated grant (#1612). Widening the
+  // swarm trigger to `gated` must not widen it past the skeleton-gate stage.
+  test("7b: skeleton-gate stage is never swarmed under a gated grant either", () => {
+    const proj = seedCodegenProject("gated");
     setScope(proj, "bugfix");
     const { directive } = runNext(proj);
     expect(directive.kind).toBe("run-stage");

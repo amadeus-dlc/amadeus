@@ -39,7 +39,7 @@
 | `parked` | Yes | ワークフローは後のセッションのために、クリーンなステージ間境界(`directive.stage`)でフロー途中で park された。park されたこととどう resume するか(`/amadeus --resume`)をユーザーに伝え、STOP。`Parked` マーカーがセットされている間(`amadeus-orchestrate park` によって書き込まれる)の素の `next` で発行される; ステージは前進しない。Stop フックは `parked` を terminal allow として扱うため、コンダクターは `done` に到達するためにステージをラバースタンプするのではなく park する(#367)。 |
 | `run-stage` | Yes | リードエージェントのペルソナと任意の `support_agents` をロードし、`directive.stage_file` を読み、ステージ本体を実行し、`produces` を書き、`directive.memory_path` にダイアリーを保持し、`directive.gate` で分岐する([Orchestrator](03-orchestrator.ja.md) を参照)。解決されたルーティングフィールドをグラフノードからそのまま持ち込む: `lead_agent`、`support_agents`、`mode`、`gate`、`consumes`、`produces`、`rules_in_context`、`sensors_applicable`、`stage_file`。 |
 | `ask` | Yes | `directive.question` を `AskUserQuestion` 経由でレンダリングし、次の `report` で `--user-input` を通じて人間の答えをフィードバックする。エンジン自体は決して `AskUserQuestion` を呼ばない — 人間のターンをコンダクターに委ねる。 |
-| `invoke-swarm` | Yes | エンジンが適格な Construction バッチをスウォームに付与した。コンダクターは `directive.units` のユニットをファンアウトし、収束ループを実行し、スウォームレフェリーに相談する(§6 を参照)。`autonomous` 付与の下での適格な Construction バッチに対してのみ発行される。 |
+| `invoke-swarm` | Yes | エンジンが適格な Construction バッチをスウォームに付与した。コンダクターは `directive.units` のユニットをファンアウトし、収束ループを実行し、スウォームレフェリーに相談する(§6 を参照)。`autonomous` または `gated` 付与の下での適格な Construction バッチに対して発行される。`gated` ではバッチ間にエンジンが `ask` のバッチ末尾ゲートを発行し、`amadeus-bolt approve-batch --batch <n>` で解除する。 |
 | `dispatch-subagent` | No(engine-future プレースホルダ) | 指名されたステージをインラインではなく `Task` 呼び出しで実行*する予定*。今日は発行されない; 投機的に実装しない。 |
 | `present-gate` | No(engine-future プレースホルダ) | ゲートの儀式を独自のディレクティブとして実行*する予定*; 今日ゲートの決定は `run-stage` の `gate` フィールドに折り込まれている。 |
 

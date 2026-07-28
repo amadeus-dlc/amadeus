@@ -60,7 +60,15 @@ demands. The shipped default lives in the org rule you author at
 - After Bolt 1 ships, the **ladder prompt** fires once: "How should the
   remaining Bolts run?" with two options, continue autonomously or gate every
   Bolt. The chosen answer persists as `Construction Autonomy Mode` in
-  the intent's `amadeus-state.md` (under its record dir).
+  the intent's `amadeus-state.md` (under its record dir). The engine enforces
+  the prompt: past a completed walking skeleton an unset grant makes `next`
+  re-fire the ladder as an `ask` rather than executing the next Bolt.
+- `gated` selects the approval **frequency**, not the execution shape. A
+  parallel batch still fans out as a swarm under `gated`; the engine simply
+  stops at a **batch-end gate** — one `ask` covering the whole finished batch,
+  cleared by `amadeus-bolt approve-batch --batch <n>` — before it offers the
+  next batch. The final batch owes no batch-end gate: the stage's own gate
+  covers it, so gates never stack.
 
 You shape this posture the same way you shape any rule, through the
 strict-additive layers from [Rules and the Learning Loop](05-rules-and-the-loop.md):
