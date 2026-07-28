@@ -142,11 +142,11 @@ function permissionDeniedSummary(project: string, phaseField: string): string {
 }
 
 function fieldMissingSummary(project: string, phaseField: string): string {
-  return (
-    `the "${phaseField}" field of ${project} could not be resolved, so no column can be ` +
-    "compared or applied. Confirm the Project exists and carries a single-select " +
-    `field named "${phaseField}".`
-  );
+  const missing =
+    `the "${phaseField}" field of ${project} could not be resolved, so no column can be compared or applied.`;
+  const repair =
+    `Confirm the Project exists and carries a single-select field named "${phaseField}".`;
+  return `${missing} ${repair}`;
 }
 
 async function diagnoseProject(
