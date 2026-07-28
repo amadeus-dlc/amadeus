@@ -97,18 +97,20 @@ const auditText = (p: string): string => {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
 
-/** Count audit blocks emitting `event` — `**Event**: <event>` lines. */
+/** Count ledger records emitting `event`. */
 function eventCount(p: string, event: string): number {
   return auditText(p)
     .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === event).length;
 }
 
 /** Parse the `path` field out of `amadeus-worktree info`'s JSON stdout. */
@@ -201,7 +203,9 @@ describe("t11 halt-and-ask retry correlation (migrated from t11-halt-and-ask-ret
     // `bolt-r`.
     const slugLines = auditText(fixture)
       .split("\n")
-      .filter((l) => l === `**Bolt slug**: ${SLUG}`).length;
+      .filter((l) => l.trim().length > 0)
+      .map((l) => JSON.parse(l) as { fields?: Record<string, string> })
+      .filter((r) => r.fields?.["Bolt slug"] === SLUG).length;
     expect(slugLines).toBe(3);
   });
 });

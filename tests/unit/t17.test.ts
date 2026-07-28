@@ -150,7 +150,7 @@ const stateMd = (proj: string) => join(recordDirOf(proj), "amadeus-state.md");
 function auditMd(proj: string): string {
   const auditDir = join(recordDirOf(proj), "audit");
   if (existsSync(auditDir)) {
-    const shard = readdirSync(auditDir).find((f) => f.endsWith(".md"));
+    const shard = readdirSync(auditDir).find((f) => f.endsWith(".jsonl"));
     if (shard) return join(auditDir, shard);
   }
   // No shard yet — the deterministic fixture shard. Ensure its dir exists so a
@@ -166,7 +166,7 @@ function readAudit(proj: string): string {
   const auditDir = join(recordDirOf(proj), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
@@ -174,13 +174,27 @@ function readAudit(proj: string): string {
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
-// Count anchored lines `**Event**: <EVENT>` (the .sh's `grep -c "^\*\*Event\*\*: X"`).
-function countEvent(text: string, event: string): number {
+interface AuditRecord {
+  timestamp: string;
+  heading: string;
+  event: string | null;
+  fields?: Record<string, string>;
+  rawBody?: string;
+}
+
+/** Every JSONL audit record in the buffer, in file order. */
+function auditRecords(text: string): AuditRecord[] {
   return text
     .split("\n")
-    .filter((l) => l.startsWith(`**Event**: ${event}`)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
-// True if any line begins with `**Event**: <EVENT>` (`grep -q "^\*\*Event\*\*: X"`).
+
+// Count records of one event type (the .sh's `grep -c "^\*\*Event\*\*: X"`).
+function countEvent(text: string, event: string): number {
+  return auditRecords(text).filter((r) => r.event === event).length;
+}
+// True if any record carries the event (`grep -q "^\*\*Event\*\*: X"`).
 function hasEvent(text: string, event: string): boolean {
   return countEvent(text, event) > 0;
 }
@@ -404,7 +418,7 @@ describe("t17 advance emission + complete-workflow", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
     // Ensure audit.md exists but is empty (just header).
-    writeFileSync(auditMd(proj), "# AI-DLC Audit Log\n", "utf-8");
+    writeFileSync(auditMd(proj), "", "utf-8");
     runState(proj, ["advance", "feasibility", "scope-definition"]);
     const audit = readAudit(proj);
     expect(hasEvent(audit, "STAGE_COMPLETED")).toBe(true);
@@ -434,33 +448,44 @@ describe("t17 advance emission + complete-workflow", () => {
     runState(proj, ["checkbox", "feasibility=completed"]);
     writeFileSync(
       auditMd(proj),
-      `# AI-DLC Audit Log
-
-## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:20:00Z
-**Event**: STAGE_STARTED
-**Stage**: feasibility
-**Agent**: amadeus-architect-agent
-**Workflow**: single-stage:feasibility
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:25:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: feasibility
-**Details**: Single-stage run of feasibility completed
-**Workflow**: single-stage:feasibility
-
----
-`,
+      [
+        {
+          timestamp: "2026-05-27T10:00:00Z",
+          heading: "Workflow Start",
+          event: "WORKFLOW_STARTED",
+          fields: { Scope: "feature" },
+        },
+        {
+          timestamp: "2026-05-27T10:20:00Z",
+          heading: "Stage Start",
+          event: "STAGE_STARTED",
+          fields: {
+            Stage: "feasibility",
+            Agent: "amadeus-architect-agent",
+            Workflow: "single-stage:feasibility",
+          },
+        },
+        {
+          timestamp: "2026-05-27T10:25:00Z",
+          heading: "Stage Completion",
+          event: "STAGE_COMPLETED",
+          fields: {
+            Stage: "feasibility",
+            Details: "Single-stage run of feasibility completed",
+            Workflow: "single-stage:feasibility",
+          },
+        },
+      ]
+        .map((r, i) =>
+          JSON.stringify({
+            schemaVersion: 1,
+            seq: i + 1,
+            cloneId: "fixturecloneid01",
+            intentId: "fixture",
+            ...r,
+          }),
+        )
+        .join("\n") + "\n",
       "utf-8",
     );
     const r = runState(proj, ["advance", "feasibility", "scope-definition"]);
@@ -470,13 +495,11 @@ describe("t17 advance emission + complete-workflow", () => {
     expect(countEvent(audit, "STAGE_COMPLETED")).toBe(2);
     // …and the new row is a main-workflow row: a feasibility STAGE_COMPLETED
     // block WITHOUT a Workflow field.
-    const mainCompleted = audit
-      .split("\n---\n")
-      .filter(
-        (b) => b.includes("**Event**: STAGE_COMPLETED") && !b.includes("**Workflow**:"),
-      );
+    const mainCompleted = auditRecords(audit).filter(
+      (r) => r.event === "STAGE_COMPLETED" && r.fields?.Workflow === undefined,
+    );
     expect(mainCompleted).toHaveLength(1);
-    expect(mainCompleted[0]).toContain("**Stage**: feasibility");
+    expect(mainCompleted[0].fields?.Stage).toBe("feasibility");
   });
 });
 
@@ -521,7 +544,7 @@ describe("t17 advance validation", () => {
   test("31: replay of advance does not double-emit STAGE_STARTED", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
-    writeFileSync(auditMd(proj), "# Audit\n", "utf-8");
+    writeFileSync(auditMd(proj), "", "utf-8");
     runState(proj, ["advance", "feasibility"]);
     runState(proj, ["advance", "feasibility"]);
     expect(countEvent(readAudit(proj), "STAGE_STARTED")).toBe(1);
@@ -543,7 +566,7 @@ describe("t17 advance validation", () => {
     expect(hasEvent(audit, "PHASE_COMPLETED")).toBe(true);
     expect(hasEvent(audit, "PHASE_VERIFIED")).toBe(true);
     // .sh: grep -q "^\*\*Phase\*\*: inception"
-    expect(audit.split("\n").some((l) => l.startsWith("**Phase**: inception"))).toBe(true);
+    expect(auditRecords(audit).some((r) => r.fields?.Phase === "inception")).toBe(true);
   });
 
   test("34: advance past last in-scope stage exits 1, mentions complete-workflow", () => {
@@ -585,10 +608,16 @@ describe("t17 resume", () => {
     runInit(proj, "bugfix");
     appendFileSync(
       auditMd(proj),
-      "\n## Session Compacted\n" +
-        "**Timestamp**: 2026-05-02T12:00:00Z\n" +
-        "**Event**: SESSION_COMPACTED\n" +
-        "**Current Stage**: requirements-analysis\n\n---\n",
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 900,
+        cloneId: "fixturecloneid01",
+        intentId: "fixture",
+        timestamp: "2026-05-02T12:00:00Z",
+        heading: "Session Compacted",
+        event: "SESSION_COMPACTED",
+        fields: { "Current Stage": "requirements-analysis" },
+      })}\n`,
       "utf-8",
     );
     expect(runState(proj, ["resume"]).combined).toContain('"compaction_pending":true');
@@ -599,13 +628,31 @@ describe("t17 resume", () => {
     runInit(proj, "bugfix");
     appendFileSync(
       auditMd(proj),
-      "\n## Session Compacted\n" +
-        "**Timestamp**: 2026-05-02T12:00:00Z\n" +
-        "**Event**: SESSION_COMPACTED\n\n---\n\n" +
-        "## Stage Start\n" +
-        "**Timestamp**: 2026-05-02T12:01:00Z\n" +
-        "**Event**: STAGE_STARTED\n" +
-        "**Stage**: requirements-analysis\n\n---\n",
+      `${[
+        {
+          seq: 900,
+          timestamp: "2026-05-02T12:00:00Z",
+          heading: "Session Compacted",
+          event: "SESSION_COMPACTED",
+          fields: {},
+        },
+        {
+          seq: 901,
+          timestamp: "2026-05-02T12:01:00Z",
+          heading: "Stage Start",
+          event: "STAGE_STARTED",
+          fields: { Stage: "requirements-analysis" },
+        },
+      ]
+        .map((r) =>
+          JSON.stringify({
+            schemaVersion: 1,
+            cloneId: "fixturecloneid01",
+            intentId: "fixture",
+            ...r,
+          }),
+        )
+        .join("\n")}\n`,
       "utf-8",
     );
     expect(runState(proj, ["resume"]).combined).toContain('"compaction_pending":false');
@@ -656,7 +703,11 @@ describe("t17 gate-start", () => {
       "--artifacts",
       "feasibility-report.md,risks.md",
     ]);
-    expect(readAudit(proj)).toContain("**Artifacts**: feasibility-report.md,risks.md");
+    expect(
+      auditRecords(readAudit(proj)).some(
+        (r) => r.fields?.Artifacts === "feasibility-report.md,risks.md",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -690,7 +741,11 @@ describe("t17 approve", () => {
     seedAuditFile(proj);
     runState(proj, ["gate-start", "feasibility"]);
     runState(proj, ["approve", "feasibility", "--user-input", "Looks good, proceed"]);
-    expect(readAudit(proj)).toContain("**User Input**: Looks good, proceed");
+    expect(
+      auditRecords(readAudit(proj)).some(
+        (r) => r.fields?.["User Input"] === "Looks good, proceed",
+      ),
+    ).toBe(true);
   });
 
   test("47: approve rejects slug not in [?]", () => {
@@ -757,7 +812,7 @@ describe("t17 approve", () => {
   test("70: advance after approve does not double-emit STAGE_COMPLETED", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
-    writeFileSync(auditMd(proj), "# Audit\n", "utf-8");
+    writeFileSync(auditMd(proj), "", "utf-8");
     runState(proj, ["gate-start", "feasibility"]);
     runState(proj, ["approve", "feasibility"]);
     runState(proj, ["advance", "feasibility"]);
@@ -886,15 +941,14 @@ describe("t17 reject/revise", () => {
 
     const audit = readAudit(proj);
     // The backfilled gate row carries the Recovered tag.
-    const gateBlock = audit
-      .split("\n---\n")
-      .find((b) => b.includes("**Event**: STAGE_AWAITING_APPROVAL"));
+    const rows = auditRecords(audit);
+    const gateBlock = rows.find((r) => r.event === "STAGE_AWAITING_APPROVAL");
     expect(gateBlock).toBeDefined();
-    expect(gateBlock).toContain("**Recovered**: true");
+    expect(gateBlock?.fields?.Recovered).toBe("true");
     // Audit order: STAGE_AWAITING_APPROVAL -> GATE_REJECTED -> STAGE_REVISING.
-    const gateIdx = audit.indexOf("**Event**: STAGE_AWAITING_APPROVAL");
-    const rejectedIdx = audit.indexOf("**Event**: GATE_REJECTED");
-    const revisingIdx = audit.indexOf("**Event**: STAGE_REVISING");
+    const gateIdx = rows.findIndex((r) => r.event === "STAGE_AWAITING_APPROVAL");
+    const rejectedIdx = rows.findIndex((r) => r.event === "GATE_REJECTED");
+    const revisingIdx = rows.findIndex((r) => r.event === "STAGE_REVISING");
     expect(gateIdx).toBeGreaterThan(-1);
     expect(rejectedIdx).toBeGreaterThan(gateIdx);
     expect(revisingIdx).toBeGreaterThan(rejectedIdx);
@@ -906,11 +960,11 @@ describe("t17 reject/revise", () => {
     seedAuditFile(proj);
     runState(proj, ["gate-start", "feasibility"]);
     runState(proj, ["reject", "feasibility", "--feedback", "x"]);
-    const gateRows = readAudit(proj)
-      .split("\n---\n")
-      .filter((b) => b.includes("**Event**: STAGE_AWAITING_APPROVAL"));
+    const gateRows = auditRecords(readAudit(proj)).filter(
+      (r) => r.event === "STAGE_AWAITING_APPROVAL",
+    );
     expect(gateRows.length).toBe(1); // the organic gate-start; no backfill
-    expect(gateRows[0]).not.toContain("**Recovered**");
+    expect(gateRows[0].fields ?? {}).not.toHaveProperty("Recovered");
   });
 
   test("revise's re-entry STAGE_AWAITING_APPROVAL carries no Recovered tag", () => {
@@ -920,12 +974,12 @@ describe("t17 reject/revise", () => {
     runState(proj, ["gate-start", "feasibility"]);
     runState(proj, ["reject", "feasibility", "--feedback", "x"]);
     runState(proj, ["revise", "feasibility"]);
-    const gateRows = readAudit(proj)
-      .split("\n---\n")
-      .filter((b) => b.includes("**Event**: STAGE_AWAITING_APPROVAL"));
+    const gateRows = auditRecords(readAudit(proj)).filter(
+      (r) => r.event === "STAGE_AWAITING_APPROVAL",
+    );
     expect(gateRows.length).toBe(2); // organic gate-start + revise re-entry
     for (const row of gateRows) {
-      expect(row).not.toContain("**Recovered**");
+      expect(row.fields ?? {}).not.toHaveProperty("Recovered");
     }
   });
 
@@ -957,7 +1011,11 @@ describe("t17 skip", () => {
     runState(proj, ["skip", "scope-definition", "--reason", "not needed"]);
     const audit = readAudit(proj);
     expect(hasEvent(audit, "STAGE_SKIPPED")).toBe(true);
-    expect(audit).toContain("**Reason**: not needed");
+    expect(
+      auditRecords(audit).some(
+        (r) => r.event === "STAGE_SKIPPED" && r.fields?.Reason === "not needed",
+      ),
+    ).toBe(true);
   });
 
   test("57: skip accepts [-] -> [S]", () => {
@@ -1018,7 +1076,11 @@ describe("t17 reuse-artifact", () => {
       "--artifacts",
       "a.md,b.md",
     ]);
-    expect(readAudit(proj)).toContain("**Decision**: modify");
+    expect(
+      auditRecords(readAudit(proj)).some(
+        (r) => r.event === "ARTIFACT_REUSED" && r.fields?.Decision === "modify",
+      ),
+    ).toBe(true);
   });
 
   test("63: reuse-artifact rejects invalid decision", () => {

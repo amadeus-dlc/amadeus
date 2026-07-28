@@ -139,47 +139,30 @@ function dispatch(args: string[], p: string): CliResult {
   };
 }
 
-/** Count audit blocks with `**Event**: <ev>` in a buffer. */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(body: string): Array<Record<string, unknown>> {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count audit records whose `event` is exactly <ev> in a buffer. */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Walks the file; resets at `## ` headings and `---` separators; splits
- * `**label**: value` on the literal `**: ` separator. Mirrors the awk-scoped
- * block grep the .sh used (awk '/<EVENT>/{flag=1} flag && /^---$/{exit} flag').
+ * Value of <key> from the FIRST audit record whose `event` matches <ev>.
+ * Record-scoped, so a field can never bleed in from a neighbouring event.
  * Returns "" when absent.
  */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(body).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 // Single shared project for the error-only arm: a rejected dispatch writes no

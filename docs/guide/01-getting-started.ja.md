@@ -76,7 +76,7 @@ cd your-project
 初めて `/amadeus` を実行する(または作りたいものを記述する)と、エンジンは最初の intent をアクティブなスペースへ **auto-birth(自動誕生)** させます。各 intent は `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` に独自のレコードディレクトリを持ち、そこには次が含まれます:
 
 - `amadeus-state.md` — intent ごとのワークフロー状態
-- `audit/` — 監査証跡。per-clone シャード(`<host>-<clone>.md`)として書き込まれる
+- `audit/` — 監査証跡。per-clone シャード(`<host>-<clone>.jsonl`)として書き込まれる
 - `<phase>/<stage>/...` — ステージ成果物(例: `inception/requirements-analysis/requirements.md`)
 
 チーム知識は 1 階層上、スペースレベル — `amadeus/spaces/<space>/knowledge/`(`intents/` の兄弟)— に置かれるため、そのスペースのすべての intent をまたいで蓄積されます。エンジンはこれを空で作成します。任意の `amadeus-shared/` 配下やエージェントごとのサブディレクトリに、自由形式のファイルを追加します。

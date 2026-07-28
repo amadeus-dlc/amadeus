@@ -46,7 +46,7 @@ never hand-edit it (the drift guard fails CI).
    `AGENTS.md` § "Git Integration" into the project's `.gitignore` **before**
    starting a workflow — the per-clone audit shards
    under each intent's `audit/` are committed deliberately (each clone writes
-   its own `<host>-<clone>.md`, so concurrent appends never git-conflict), while
+   its own `<host>-<clone>.jsonl`, so concurrent appends never git-conflict), while
    per-user cursors and machine-local runtime state stay ignored. Do not
    replace an existing project `.gitignore`; merge it. The shipped Codex
    contract includes `.codex/hooks.json`.

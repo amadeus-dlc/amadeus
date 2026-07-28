@@ -178,12 +178,17 @@ describe("t67 construction worktrees — security-patch (migrated from t67-const
 
     // The audit row landed in the initialized project (the .sh's two greps).
     // P4: read the merged per-clone audit shards, not the retired flat audit.md.
-    const audit = readAllAuditShards(proj);
-    expect(audit.includes("**Event**: MERGE_DISPATCH_INVOKED")).toBe(true);
-    // STRONGER: the exact slug line, not the .sh's loose "Bolt slug.*" pattern.
-    expect(audit.includes(`**Bolt slug**: ${slug}`)).toBe(true);
-    // STRONGER: EVENT_HEADINGS maps the event to this ## heading (amadeus-audit.ts:168).
-    expect(audit.includes("## Merge Dispatch Invoked")).toBe(true);
+    const record = readAllAuditShards(proj)
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((rec) => rec.event === "MERGE_DISPATCH_INVOKED");
+    expect(record).toBeDefined();
+    // STRONGER: the exact slug value, not the .sh's loose "Bolt slug.*" pattern.
+    expect((record!.fields as Record<string, string>)["Bolt slug"]).toBe(slug);
+    // STRONGER: EVENT_HEADINGS maps the event to this heading (amadeus-audit.ts:168).
+    expect(record?.heading).toBe("Merge Dispatch Invoked");
   });
 
   // === .sh assert 4 — v7 state has v0.4.0 fields (mechanism cli) =============

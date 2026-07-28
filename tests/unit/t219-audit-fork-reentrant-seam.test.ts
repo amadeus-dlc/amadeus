@@ -97,10 +97,22 @@ function captureRun(fn: () => void): {
 
 // The main audit trail the tool resolves under default (active-intent)
 // resolution IS the seeded per-clone shard. Seed it with a two-line ledger so a
-// prefix (line one) is a genuine older snapshot and a divergent body is not.
-const MAIN_LEDGER = "# AI-DLC Audit Log\n\n**Event**: SEEDED\n";
-const PREFIX_OF_MAIN = "# AI-DLC Audit Log\n"; // byte-prefix of MAIN_LEDGER
-const DIVERGED_LEDGER = "# A DIFFERENT LEDGER\n\n**Event**: OTHER\n"; // not a prefix
+// prefix (record one) is a genuine older snapshot and a divergent body is not.
+const rec = (seq: number, event: string) =>
+  `${JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: "fixturecloneid01",
+    intentId: "test-intent",
+    timestamp: `2026-07-11T08:0${seq}:00Z`,
+    heading: event,
+    event,
+    fields: {},
+  })}\n`;
+
+const MAIN_LEDGER = rec(1, "SEEDED") + rec(2, "SEEDED_TWO");
+const PREFIX_OF_MAIN = rec(1, "SEEDED"); // record-line prefix of MAIN_LEDGER
+const DIVERGED_LEDGER = rec(1, "OTHER"); // same line count, different bytes
 
 function seedProject(): string {
   const p = createTestProject();
@@ -130,12 +142,16 @@ function seedWtShard(p: string, content: string): string {
   return wtShard;
 }
 
-function mainForkedRows(p: string): string[] {
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+function mainForkedRows(p: string): AuditRecord[] {
   const shard = readFileSync(auditFilePath(p), "utf-8");
-  // Split into blocks and keep the ones announcing an AUDIT_FORKED event.
+  // Parse the JSONL ledger and keep the AUDIT_FORKED records.
   return shard
-    .split(/\n(?=\*\*Event\*\*:)/)
-    .filter((b) => /^\*\*Event\*\*: AUDIT_FORKED\b/.test(b.trimStart()));
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord)
+    .filter((r) => r.event === "AUDIT_FORKED");
 }
 
 describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
@@ -153,9 +169,9 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     // The re-entry is audited distinctly from an initial fork.
     const forked = mainForkedRows(proj as string);
     expect(forked.length).toBe(1);
-    expect(forked[0]).toContain("**Reentrant**: true");
+    expect(forked[0]?.fields?.Reentrant).toBe("true");
     // The worktree shard is refreshed from main (copy happened).
-    expect(readFileSync(wtShard, "utf-8")).toContain("**Event**: AUDIT_FORKED");
+    expect(readFileSync(wtShard, "utf-8")).toContain('"event":"AUDIT_FORKED"');
   });
 
   test("(ii) DIVERGED: wt shard is not a prefix -> refuse, no audit side effect", () => {
@@ -184,7 +200,7 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     expect(out.emitted).toBe("AUDIT_FORKED");
     const forked = mainForkedRows(proj as string);
     expect(forked.length).toBe(1);
-    expect(forked[0]).not.toContain("Reentrant");
+    expect(forked[0]?.fields?.Reentrant).toBeUndefined();
     // The initial copy created the worktree shard.
     expect(existsSync(wtShard)).toBe(true);
   });

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 538,
+    "total": 542,
     "enumeratedByClass": {
-      "function": 300,
+      "function": 304,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -1031,7 +1031,21 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:AUDIT_SHARD_LEAF_RE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:auditBlockField",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:auditCloneId",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2228,6 +2242,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:legacyAuditShards",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:listField",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2571,6 +2592,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:normalizeAuditShardLeaf",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",

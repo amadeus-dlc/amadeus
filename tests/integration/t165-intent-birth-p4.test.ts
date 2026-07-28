@@ -112,7 +112,12 @@ describe("t164 auto-birth (intent-birth) on an empty workspace", () => {
     const shards = existsSync(auditDir)
       ? readdirSync(auditDir).map((f) => readFileSync(join(auditDir, f), "utf-8")).join("\n")
       : "";
-    expect(shards).toContain("**Event**: WORKFLOW_STARTED");
+    expect(
+      shards
+        .split("\n")
+        .filter((l) => l.trim() !== "")
+        .some((l) => (JSON.parse(l) as { event: string | null }).event === "WORKFLOW_STARTED"),
+    ).toBe(true);
   });
 
   test("birth slugs the freeform --arguments description (SLUG_RE-valid)", () => {

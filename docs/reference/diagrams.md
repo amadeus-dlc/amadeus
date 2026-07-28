@@ -469,7 +469,7 @@ Every stage (except the 3 Initialization stages) ends with an approval gate. The
 ```mermaid
 flowchart TD
     COMPLETE["Stage work complete"]
-    AUDIT_PRE["Append to audit.md:\nstage summary + options\n(fresh ISO timestamp)"]
+    AUDIT_PRE["Append to audit shard:\nstage summary + options\n(fresh ISO timestamp)"]
     ASK["AskUserQuestion:\nApproval Gate"]
 
     APPROVE["Approve"]

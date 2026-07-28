@@ -170,8 +170,8 @@ sequenceDiagram
 1. **コマンドフィルター:** `bun .claude/tools/amadeus-(state|jump|bolt|utility).ts` の呼び出しのみが早期終了を通過する。`amadeus-runtime.ts` は明示的に拒否される(再帰ガード)。
 2. **監査存在ガード:** 初期化前(`audit/` シャードがまだない)にクリーンに終了する。
 3. **ヘルスハートビート:** `.amadeus-hooks-health/runtime-compile.last` を書き込む。
-4. **末尾読み取り:** マージされた `audit/` シャードを `\n---\n` で分割し、最後の3ブロックを取る(単一の `approve` 呼び出しが追記する上限)。
-5. **イベントクラスフィルター:** 最後の3ブロックのいずれかが `GATE_APPROVED`、`STAGE_STARTED`、`STAGE_AWAITING_APPROVAL`、`AUDIT_MERGED`、または `WORKFLOW_COMPLETED` を持つときのみ再コンパイルする。マッチしない場合は終了する。
+4. **末尾読み取り:** マージされた `audit/` シャードの最後の3ジャーナルレコード(JSONL 行)を読む(単一の `approve` 呼び出しが追記する上限)。
+5. **イベントクラスフィルター:** 最後の3レコードのいずれかが `GATE_APPROVED`、`STAGE_STARTED`、`STAGE_AWAITING_APPROVAL`、`AUDIT_MERGED`、または `WORKFLOW_COMPLETED` を持つときのみ再コンパイルする。マッチしない場合は終了する。
 6. **ディスパッチ:** `bun amadeus-runtime.ts compile` を起動する。非ゼロ終了時は `--doctor` 用にフックドロップを記録する。親のBash呼び出しを決してブロックしない。
 
 コンパイルライフサイクルとロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.ja.md)を参照してください。
@@ -349,18 +349,13 @@ Next Action: resume current stage
 
 ### エントリフォーマット
 
-すべての監査イベントは `audit-format.md` で定義されたフォーマットに従います:
+すべての監査イベントは `audit-format.md` で定義されたフォーマットに従います — 各シャードは JSONL ジャーナルで、1行1 JSON レコード、ヘッダなしです:
 
-```markdown
-## EVENT_NAME
-**Timestamp**: 2026-01-15T10:30:00Z
-**Event**: EVENT_NAME
-**Details**: [event-specific content]
-
----
+```json
+{"schemaVersion":1,"seq":42,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:00:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"code-generation","Agent":"developer"}}
 ```
 
-すべてのイベント — フック生成とツール生成 — は同じ正典の `appendAuditEntry` エミッタを使用し、`**Event**:` フィールドを持つ同一の構造化Markdownを生成します。見出しは `amadeus-audit.ts` の `EVENT_HEADINGS` を介してイベント名から導出されます。
+すべてのイベント — フック生成とツール生成 — は同じ正典の `appendAuditEntry` エミッタを使用し、`event` フィールドとその `fields` ペイロードを持つ同一の JSONL レコードを生成します。`heading` は `amadeus-audit.ts` の `EVENT_HEADINGS` を介してイベント名から導出されます。
 
 ### 必須イベント
 

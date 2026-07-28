@@ -106,8 +106,8 @@ compile は、遷移クラスの監査 emit ごとに PostToolUse Bash フック
 1. **コマンドフィルタ** — `bun .claude/tools/amadeus-(state|jump|bolt|utility).ts` の呼び出しだけが early exit を通過します。`amadeus-runtime.ts` は除外(再帰ガード)。`amadeus-log.ts` はおしゃべりなステージ内イベントのみを発行。`amadeus-worktree.ts` は WORKTREE_* イベントのみを発行。
 2. **監査存在ガード** — intent の `audit/` シャードがまだ存在しなければ終了。
 3. **ハートビート** — doctor のサイレントフック検出のため `<record>/.amadeus-hooks-health/runtime-compile.last` を書く。
-4. **末尾3ブロックの tail-read** — `audit.md` を `\n---\n` で分割し、最後の3エントリを取る。
-5. **イベントクラスフィルタ** — 3ブロックのいずれかに対して `**Event**: (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)` をマッチ。マッチなしで終了。
+4. **末尾3レコードの tail-read** — 監査シャードの最後の3ジャーナルレコード(JSONL 行)を読む。
+5. **イベントクラスフィルタ** — 3レコードのいずれかに対して `event` ∈ (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED) をマッチ。マッチなしで終了。
 6. **ディスパッチ** — `spawnSync("bun", [".claude/tools/amadeus-runtime.ts", "compile", ...])`。
 
 `WORKFLOW_COMPLETED` が遷移セットに含まれるのは、最終ステージの approve が compile を発火させるためです。`amadeus-state.ts:575-593` の `handleCompleteWorkflow` は4つの監査行 — STAGE_COMPLETED + PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED — を発行し、そのうち最後の3つは `PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED` です。(approve パスでは approve がすでに STAGE_COMPLETED を発行しているためそれは抑制され、`GATE_APPROVED` が実行に先行します — したがって最終ステージの approve はいずれにせよ1回の Bash 呼び出しで5行を追記します。)正規表現に `WORKFLOW_COMPLETED` がなければ、runtime-graph は最終ステージを approved として決して記録しません。
@@ -143,7 +143,7 @@ Single-stage 除外: `--single` のステージランナー実行は、その `S
 
 `runtime-graph.json` 自体は、同じ監査ログに対する再 compile をまたいでバイト等価です。MEMORY_EMPTY の emit はより強力です: **`(stage_slug, completed_at)` タプルごとに高々1つの MEMORY_EMPTY 行**。
 
-ロックされたセクション内で compile は `audit.md` を再読み取りし、エントリ0で承認された各 slug について既存の MEMORY_EMPTY 行をスキャンし、いずれかの以前の行の Timestamp がこの slug の `completed_at` 以上であれば emit を抑制します。これは以下を意味します:
+ロックされたセクション内で compile は監査シャードを再読み取りし、エントリ0で承認された各 slug について既存の MEMORY_EMPTY 行をスキャンし、いずれかの以前の行の Timestamp がこの slug の `completed_at` 以上であれば emit を抑制します。これは以下を意味します:
 
 - エントリ0で承認されたステージの後の最初の compile は1つの MEMORY_EMPTY 行を発行します。
 - 同じ workflow 中のその後のすべての compile は、その slug について再発行 **しません**。
@@ -168,7 +168,7 @@ memory.md ライフサイクルを経ずに完了したステージには memory
 
 ## 7. Recovery model — snapshot + suffix replay
 
-`runtime-graph.json` + `audit.md` はイベントソースのペアを形成します。`audit.md` は append-only のイベントログ、`runtime-graph.json` は最後のゲート遷移で取られた実体化スナップショットです。両方を持つ読み手は、スナップショットを読み、その後スナップショットの最後の `completed_at` 以降の監査行をリプレイすることで現在の状態を再構築します。
+`runtime-graph.json` + 監査シャードはイベントソースのペアを形成します。監査シャードは append-only のイベントジャーナル、`runtime-graph.json` は最後のゲート遷移で取られた実体化スナップショットです。両方を持つ読み手は、スナップショットを読み、その後スナップショットの最後の `completed_at` 以降の監査行をリプレイすることで現在の状態を再構築します。
 
 5つの recovery ソース、人間の読み順で:
 
@@ -253,4 +253,4 @@ Bolt ごとの runtime-graph フラグメントファイルは `<worktree>/<reco
 
 - **データプレーンがこの構造になっている理由** — `runtime-graph.json` を第2の真実のソースではなく `stage-graph.json` のミラーにする control/data プレーンの分離。[Plane Architecture](02-plane-architecture.ja.md) を参照。
 - **compile をトリガーするライフサイクル** — その監査 emit が compile フックを駆動する workflow / phase / stage の遷移。[State Machine](12-state-machine.ja.md) を参照。
-- **このグラフが導出される元の監査ログ** - 68 イベントの分類体系とエミッタレジストリ。[State Machine](12-state-machine.ja.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.ja.md) を参照。
+- **このグラフが導出される元の監査ログ** - 78 イベントの分類体系とエミッタレジストリ。[State Machine](12-state-machine.ja.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.ja.md) を参照。

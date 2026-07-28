@@ -83,7 +83,7 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: doctor's appendAuditEvent resolves the RECORD's per-clone audit SHARD
-// (auditFilePath -> <record>/audit/<host>-<clone>.md) — the flat
+// (auditFilePath -> <record>/audit/<host>-<clone>.jsonl) — the flat
 // amadeus-docs/audit.md is retired. Seed + read THAT shard. The single-clone
 // fixture means the shard is the whole trail (no merge needed). The record is a
 // dir UNDER intents/, never the bare intents root: auditFilePath() refuses to
@@ -134,11 +134,11 @@ function runDoctor(rulesDir: string): DoctorResult {
   // self-scaffolds the audit file as a side effect — see t27 test 13b). This
   // suite asserts the GUARDRAIL_LOADED row's content, which is the
   // initialized-project path, so we seed the shard the tool resolves first.
-  // (The pristine/cold-safe arm is covered by t27.) A bare header line is enough
-  // for appendAuditEntry to append onto.
+  // (The pristine/cold-safe arm is covered by t27.) The JSONL ledger carries no
+  // header, so an EMPTY shard is the "trail exists" precondition.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  writeFileSync(shard, "# AI-DLC Audit Log\n", "utf-8");
+  writeFileSync(shard, "", "utf-8");
   const res = spawnSync(BUN, [UTIL, "doctor", "--project-dir", proj], {
     encoding: "utf-8",
     env: {
@@ -168,55 +168,42 @@ function readAudit(proj: string): string {
   return readAllAuditShards(proj);
 }
 
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse the merged JSONL trail into records (blank lines skipped). */
+function auditRecords(proj: string): AuditRecord[] {
+  return readAudit(proj)
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
 /**
- * Count audit blocks with `**Event**: <ev>`. Mirrors the .sh's `grep -q
+ * Count audit records whose event is <ev>. Mirrors the .sh's `grep -q
  * "GUARDRAIL_LOADED"` but as an exact count against a fresh-project zero
  * baseline (STRONGER than bare presence).
  */
 function auditEventCount(proj: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return readAudit(proj)
-    .split("\n")
-    .filter((l) => re.test(l)).length;
+  return auditRecords(proj).filter((r) => r.event === ev).length;
 }
 
-/** Whole-trail presence of a needle (mirrors a bare unanchored grep). */
-function fileContains(proj: string, needle: string): boolean {
-  return readAudit(proj).includes(needle);
+/** Whether any record carries <heading> (the JSONL successor to the `## ` line). */
+function hasHeading(proj: string, heading: string): boolean {
+  return auditRecords(proj).some((r) => r.heading === heading);
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings and `---` separators; splits `**label**: value`
- * on the literal `**: `. Mirrors the audit_field helper in t31.cli.test.ts.
- * Returns "" when absent.
+ * Value of <key> from the FIRST audit record whose event matches <ev>.
+ * Record-scoped by construction — a field can never be read off a neighbouring
+ * event. Returns "" when absent.
  */
 function auditField(proj: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of readAudit(proj).split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(proj).find((r) => r.event === ev);
+  return rec?.fields?.[key] ?? "";
 }
 
 /** Isolate the "Paired sensor coverage:" line from doctor stdout (case 3). */
@@ -308,12 +295,12 @@ describe("t105 doctor paired-coverage + GUARDRAIL_LOADED (migrated from t105-doc
   });
 
   // --- Case 4: GUARDRAIL_LOADED row written to audit.md ---
-  test("4: GUARDRAIL_LOADED row + heading written to audit.md", () => {
+  test("4: GUARDRAIL_LOADED row + heading written to the audit shard", () => {
     const r = ensureCov();
     // STRONGER than the .sh's bare presence grep: exact count of 1 against a
     // fresh-project zero baseline (doctor emits exactly once per run).
     expect(auditEventCount(r.proj, "GUARDRAIL_LOADED")).toBe(1);
-    expect(fileContains(r.proj, "## Guardrail Loaded")).toBe(true);
+    expect(hasHeading(r.proj, "Guardrail Loaded")).toBe(true);
   });
 
   // --- Case 5: required fields (Scope, Path, Rule count) on the row ---

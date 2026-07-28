@@ -110,7 +110,7 @@ function recordPath(proj: string, recordDir: string): string {
 function shardNames(proj: string, recordDir: string): string[] {
   const dir = join(recordPath(proj, recordDir), "audit");
   try {
-    return readdirSync(dir).filter((f) => f.endsWith(".md"));
+    return readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
   } catch {
     return [];
   }
@@ -121,7 +121,7 @@ function readShards(proj: string, recordDir: string): string {
   const dir = join(recordPath(proj, recordDir), "audit");
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }

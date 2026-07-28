@@ -211,6 +211,12 @@ export function parseJournalLine(line: string): JournalEntry {
   return { ...envelope, event, fields: record.fields };
 }
 
+// Physical line split for a JSONL shard buffer: every non-empty line is one
+// record. Shared by the writers (seq derivation) and parseJournalShard.
+export function splitJournalLines(buffer: string): string[] {
+  return buffer.split("\n").filter((line) => line !== "");
+}
+
 // Parse a whole shard buffer (all lines). Line numbers in errors are 1-based.
 export function parseJournalShard(buffer: string): JournalEntry[] {
   const entries: JournalEntry[] = [];

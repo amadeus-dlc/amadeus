@@ -101,19 +101,20 @@ function readAudit(p: string): string {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 
-/** Count distinct `**Bolt slug**: <slug>` rows across the audit shards. */
+/** Every `Bolt slug` field value across the audit shards, in ledger order. */
 function boltSlugRows(p: string): string[] {
   const out: string[] = [];
   for (const line of readAudit(p).split("\n")) {
-    const m = line.match(/^\*\*Bolt slug\*\*:\s*(\S+)/);
-    if (m) out.push(m[1]);
+    if (line.trim().length === 0) continue;
+    const slug = (JSON.parse(line) as { fields?: Record<string, string> }).fields?.["Bolt slug"];
+    if (slug !== undefined) out.push(slug);
   }
   return out;
 }

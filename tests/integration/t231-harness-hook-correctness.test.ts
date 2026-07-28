@@ -128,6 +128,26 @@ async function runAdapterWithOpenStdin(
   };
 }
 
+// One JSONL audit record appended to the intent's shard (seq = existing + 1).
+function appendStageStarted(project: string, stage: string): void {
+  const shard = seededAuditShard(project);
+  const existing = existsSync(shard) ? readFileSync(shard, "utf8") : "";
+  const seq = existing.split("\n").filter((l) => l.trim() !== "").length + 1;
+  appendFileSync(
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: "fixturecloneid01",
+      intentId: "test-intent",
+      timestamp: "2099-01-01T00:00:00Z",
+      heading: "Stage Start",
+      event: "STAGE_STARTED",
+      fields: { Stage: stage },
+    })}\n`,
+  );
+}
+
 function readTrace(project: string): Array<Record<string, unknown>> {
   const trace = join(project, "trace.jsonl");
   if (!existsSync(trace)) return [];
@@ -372,10 +392,7 @@ describe("FR-4.14 Kiro IDE USER_PROMPT forwarding", () => {
       seededStateFile(project),
       `${readFileSync(seededStateFile(project), "utf8")}\n- **Runtime State**: Parked\n- **Parked At Stage**: requirements-analysis\n`,
     );
-    appendFileSync(
-      seededAuditShard(project),
-      "\n## Stage Start\n**Timestamp**: 2099-01-01T00:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: requirements-analysis\n\n---\n",
-    );
+    appendStageStarted(project, "requirements-analysis");
 
     expect(runAdapter(project, "state-sync", {}).status).toBe(0);
     expect(readTrace(project)).toEqual([]);
@@ -495,10 +512,7 @@ describe("FR-4.14 Kiro IDE USER_PROMPT forwarding", () => {
           `- [${checkbox}] user-stories — EXECUTE`,
         ),
       );
-      appendFileSync(
-        seededAuditShard(project),
-        "\n## Stage Start\n**Timestamp**: 2099-01-01T00:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: user-stories\n\n---\n",
-      );
+      appendStageStarted(project, "user-stories");
       expect(runAdapter(project, "state-sync", {}).status).toBe(0);
       expect(readTrace(project)).toEqual([]);
     });
@@ -530,10 +544,7 @@ describe("FR-4.14 Kiro IDE USER_PROMPT forwarding", () => {
 
     const project = scratchProject();
     installCoreProbe(project, "amadeus-sync-statusline.ts", "state-sync");
-    appendFileSync(
-      seededAuditShard(project),
-      "\n## Stage Start\n**Timestamp**: 2099-01-01T00:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: user-stories\n\n---\n",
-    );
+    appendStageStarted(project, "user-stories");
     const target = registration.then.command.split(" ").at(-1);
     expect(target).toBe("state-sync");
     expect(runAdapter(project, target!, {}).status).toBe(0);
@@ -569,10 +580,7 @@ describe("FR-4.14 Kiro IDE USER_PROMPT forwarding", () => {
         `writeFileSync(${JSON.stringify(graph)}, "{}\\n");`,
       ].join("\n"),
     );
-    appendFileSync(
-      seededAuditShard(project),
-      "\n## Stage Start\n**Timestamp**: 2099-01-01T00:00:00Z\n**Event**: STAGE_STARTED\n**Stage**: requirements-analysis\n\n---\n",
-    );
+    appendStageStarted(project, "requirements-analysis");
 
     expect(runAdapter(project, "runtime-compile", {}).status).toBe(0);
     expect(runAdapter(project, "runtime-compile", {}).status).toBe(0);

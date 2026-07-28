@@ -69,7 +69,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 // Stub dispatcher: record argv to <proj>/.spawn.log and exit 0. Written to
@@ -120,7 +120,22 @@ function makeProjectActive(): string {
   );
   const auditDir = seededAuditDir(proj);
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, pinnedShardName()), "audit fixture\n", "utf-8");
+  // The gate only needs the shard to EXIST; the JSONL ledger carries no header,
+  // so one well-formed record is the minimal "active workflow" trail.
+  writeFileSync(
+    join(auditDir, pinnedShardName()),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: PINNED_CLONE_ID,
+      intentId: "glob-norm-fixture",
+      timestamp: "2026-07-11T10:00:00Z",
+      heading: "Workflow Start",
+      event: "WORKFLOW_STARTED",
+      fields: { Scope: "bugfix" },
+    })}\n`,
+    "utf-8",
+  );
   return proj;
 }
 

@@ -3235,7 +3235,7 @@ function spawnState(
 // (handleSingleReport below) uses this, mirroring report's spawn-the-atomic-tool
 // discipline: the engine itself writes nothing; the spawned tool acquires the
 // per-emit audit lock in its own process. This is the audit-only path — it
-// touches `audit.md`, never `amadeus-state.md` — so a `--single` commit cannot
+// touches the audit shard, never `amadeus-state.md` — so a `--single` commit cannot
 // reach the main pointer even by accident (amadeus-audit.ts has no state write).
 function spawnAuditAppend(
   projectDir: string,
@@ -3340,7 +3340,7 @@ function handleSkeletonStanceReport(
 //
 // The synthetic workflow id a `--single` stage-runner's events are tagged with.
 // It is NOT a real WORKFLOW_STARTED id — it exists only to mark the
-// STAGE_STARTED/STAGE_COMPLETED pair in `audit.md` as belonging to an isolated
+// STAGE_STARTED/STAGE_COMPLETED pair in the audit journal as belonging to an isolated
 // single-stage run, never to the main workflow. The `<slug>` segment makes the
 // provenance legible in the audit trail.
 function syntheticWorkflowId(slug: string): string {

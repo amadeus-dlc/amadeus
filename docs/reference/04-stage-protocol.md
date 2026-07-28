@@ -14,7 +14,7 @@ Section references (e.g., "Protocol Section 1") map to the source file.
 > **Path convention.** Artifacts, state, and the audit trail live under the
 > active intent's **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`,
 > written `<record>/` below. The audit trail is a directory of per-clone shards
-> at `<record>/audit/<host>-<clone>.md` (readers glob and merge by timestamp),
+> at `<record>/audit/<host>-<clone>.jsonl` (readers glob and merge by timestamp),
 > not a single file.
 
 ---
@@ -459,9 +459,9 @@ Never date-only. One Bash call per audit entry -- never reuse timestamps.
 
 `<record>/audit/` (per-clone shards) rules: always append (never overwrite); "User Input"
 field must be COMPLETE and UNMODIFIED; log prompts BEFORE showing; log
-responses AFTER receiving; create with `# AI-DLC Audit Log` header if missing;
-backup if corrupted; retry once if Edit fails (hooks may modify between
-Read and Edit).
+responses AFTER receiving; create as an empty JSONL file if missing (no
+header line); backup if corrupted; retry once if Edit fails (hooks may modify
+between Read and Edit).
 
 #### Standard Conversation Event
 

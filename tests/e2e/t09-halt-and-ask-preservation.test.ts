@@ -121,18 +121,20 @@ function auditBody(p: string): string {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 
-/** Count `**Event**: <type>` rows of a given event type in audit.md. */
+/** Count ledger records carrying a given event type. */
 function eventCount(p: string, event: string): number {
   return auditBody(p)
     .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === event).length;
 }
 
 /** Is `path` a registered worktree of the git repo at `repo`? (assert_worktree_at). */
@@ -184,11 +186,17 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     ]);
     expect(f.status).toBe(0);
     expect(f.stdout).toContain('"emitted":"BOLT_FAILED"');
-    const body = auditBody(p);
     // A3: BOLT_FAILED in the audit.
     expect(eventCount(p, "BOLT_FAILED")).toBe(1);
-    // A4 (STRONGER): the exact `**Bolt slug**: x` audit field, not a loose grep.
-    expect(body.includes("**Bolt slug**: x")).toBe(true);
+    // A4 (STRONGER): the Bolt slug rides on the BOLT_FAILED record itself, not
+    // merely somewhere in the trail.
+    expect(
+      auditBody(p)
+        .split("\n")
+        .filter((l) => l.trim().length > 0)
+        .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+        .some((r) => r.event === "BOLT_FAILED" && r.fields?.["Bolt slug"] === "x"),
+    ).toBe(true);
   }, 30000);
 
   test("preservation: worktree still on disk + git-registered + ZERO WORKTREE_DISCARDED after BOLT_FAILED [.sh A5, A6, A7]", () => {

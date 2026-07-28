@@ -2,7 +2,7 @@
 // amadeus-docs/ are written or edited. Distinguishes CREATE vs UPDATE by checking
 // whether the target file existed before the Write/Edit.
 //
-// Receives JSON on stdin from Claude Code. No-op if no audit.md exists (no
+// Receives JSON on stdin from Claude Code. No-op if no audit shard exists (no
 // active workflow in this cwd) to preserve the existing "only log when
 // relevant" behaviour.
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -61,12 +61,13 @@ const underRecord = fileNorm === recordRoot || fileNorm.startsWith(`${recordRoot
 if (!underRecord) process.exit(0);
 
 // Don't log writes to an audit shard itself (avoid recursion). The shard is
-// audit/<host>-<clone>.md under the record dir; the bare audit.md guard also
-// covers a migrated tree's pre-shard audit.md before it is relocated.
+// audit/<host>-<clone>.jsonl under the record dir; the legacy .md pattern
+// stays covered so a pre-conversion shard (or a migrated tree's pre-shard
+// audit.md before relocation) never re-enters the ledger either.
 if (
   file.endsWith("/audit.md") ||
   file.endsWith("\\audit.md") ||
-  /[/\\]audit[/\\][^/\\]+\.md$/.test(file)
+  /[/\\]audit[/\\][^/\\]+\.(?:md|jsonl)$/.test(file)
 ) {
   process.exit(0);
 }

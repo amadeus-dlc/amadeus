@@ -19,7 +19,7 @@ import {
   SYNC_ELECTION_THRESHOLD,
 } from "../../scripts/amadeus-leader-sync";
 
-const SHARD = "builder-abc123.md";
+const SHARD = "builder-abc123.jsonl";
 const ELECTION_JSON = "amadeus/spaces/default/elections/E-ONE/definition.json";
 const SHARD_PATH = `amadeus/spaces/default/intents/260720-one/audit/${SHARD}`;
 
@@ -27,7 +27,7 @@ function owned() {
   return resolveOwnedCandidates([
     SHARD_PATH,
     ELECTION_JSON,
-    "amadeus/spaces/default/intents/260720-two/audit/other-def456.md",
+    "amadeus/spaces/default/intents/260720-two/audit/other-def456.jsonl",
     "docs/README.md",
   ], SHARD);
 }
@@ -68,10 +68,10 @@ describe("t245 M1/M2 owned-set resolution", () => {
   });
 
   test("normalizes symbolic and long hosts and accepts clone ids of length 1..32", () => {
-    expect(shardBasename("J5IK2O.Mac Studio!", "a")).toBe("j5ik2o-mac-studio-a.md");
+    expect(shardBasename("J5IK2O.Mac Studio!", "a")).toBe("j5ik2o-mac-studio-a.jsonl");
     const longHost = `Host.${"x".repeat(80)}`;
     expect(shardBasename(longHost, "z".repeat(32))).toBe(
-      `${`host-${"x".repeat(43)}`}-${"z".repeat(32)}.md`,
+      `${`host-${"x".repeat(43)}`}-${"z".repeat(32)}.jsonl`,
     );
     expect(() => shardBasename("host", "")).toThrow();
     expect(() => shardBasename("host", "A".repeat(12))).toThrow();

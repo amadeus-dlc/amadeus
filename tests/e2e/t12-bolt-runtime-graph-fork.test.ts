@@ -153,7 +153,7 @@ function makeBoltFixture(): string {
   // Audit must be present (touched, can be empty) — a bare-header shard under the
   // record's audit/ dir (the tool appends its own per-clone shard alongside).
   mkdirSync(seededAuditDir(proj), { recursive: true });
-  writeFileSync(join(seededAuditDir(proj), "fixture.md"), "# AI-DLC Audit Log\n", "utf-8");
+  writeFileSync(join(seededAuditDir(proj), "fixture.jsonl"), "", "utf-8");
   // Per-intent framework gitignore: the record state + intents.json commit (so
   // the worktree carries them); cursors + audit shards + runtime graph stay
   // machine-local, so worktree create doesn't byte-copy them via git checkout.

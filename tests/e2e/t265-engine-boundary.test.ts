@@ -8,6 +8,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
+  EMPTY_MIRROR_STATE,
+  renderMirrorStateBlock,
+} from "../../dist/claude/.claude/tools/amadeus-mirror-state-codec.ts";
+import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -40,6 +44,32 @@ const CLAUDE_STATE = join(
   ROOT,
   "dist/claude/.claude/tools/amadeus-state.ts",
 );
+// A recorded mirror issue. The engine reads it through the mirror-state codec
+// (mirrorIssueNumberFromDocument), so the precondition is the sentinel-wrapped
+// state block — the legacy `- **Mirror Issue**: #123` line is no longer read.
+// issueNumber is only valid alongside a full provenance record.
+const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
+  ...EMPTY_MIRROR_STATE,
+  issueNumber: 123,
+  provenance: {
+    schema: 1,
+    createIdentity: {
+      schema: 1,
+      intentUuid: "11111111-1111-4111-8111-111111111111",
+      intentDir: "fixture-8000000000000001",
+      operationId: "t265-fixture-op",
+      preparedAt: "2026-07-28T00:00:00Z",
+      repository: {
+        owner: "amadeus-dlc",
+        name: "amadeus",
+        canonical: "amadeus-dlc/amadeus",
+      },
+    },
+    issueNumber: 123,
+    createdAt: "2026-07-28T00:00:00Z",
+  },
+});
+
 let project = "";
 
 function run(tool: string, args: string[]) {
@@ -121,10 +151,7 @@ describe("t265 mirror boundary distribution", () => {
         /- \*\*Inception\*\*: [^\n]+/,
         "- **Inception**: Verified",
       )
-      .replace(
-        "## Current Status",
-        "## Current Status\n- **Mirror Issue**: #123",
-      );
+      .replace("## Current Status", `## Current Status\n${MIRROR_ISSUE_BLOCK}`);
     writeFileSync(seededStateFile(project), state);
     writeFileSync(
       join(project, "amadeus", "config.json"),

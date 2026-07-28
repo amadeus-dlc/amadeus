@@ -107,7 +107,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
@@ -171,7 +171,7 @@ function makeProjectActive(slug = "requirements-analysis"): string {
   );
   const auditDir = seededAuditDir(proj);
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, pinnedShardName()), "audit fixture\n", "utf-8");
+  writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
   return proj;
 }
 

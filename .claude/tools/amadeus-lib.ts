@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -2403,7 +2404,7 @@ function parseJournalHumanTurn(raw: unknown): { shard: string; timestamp: string
   if (
     typeof value.shard !== "string" ||
     basename(value.shard) !== value.shard ||
-    !value.shard.endsWith(".md")
+    !AUDIT_SHARD_LEAF_RE.test(value.shard)
   ) {
     return journalFailure("humanTurn shard/timestamp is invalid");
   }
@@ -2558,7 +2559,7 @@ function assertLifecycleEventMatch(
     ["User Input", expected.userInput.replace(/\r?\n/g, "\\n")],
     ["Human Turn Timestamp", expected.humanTurnTimestamp],
   ];
-  if (match.shard !== journal.humanTurn.shard) {
+  if (normalizeAuditShardLeaf(match.shard) !== normalizeAuditShardLeaf(journal.humanTurn.shard)) {
     journalFailure(`operation ${journal.operationId} event is stored in unexpected shard ${match.shard}`);
   }
   for (const [name, value] of fields) {
@@ -2594,7 +2595,7 @@ function commitLifecycleAudit(
   }
   appendAudit(
     lifecycleEventFor(journal),
-    journal.humanTurn.shard,
+    normalizeAuditShardLeaf(journal.humanTurn.shard),
     projectDir,
     journal.intentDir,
     space,
@@ -3271,7 +3272,7 @@ export function migrateFlatLayout(projectDir: string): FlatMigrationResult | nul
     // (2a) RELOCATE the staged `audit.md` into the per-clone SHARD layout the
     // readers glob. The blind copy in step 1 lands the flat `amadeus-docs/audit.md`
     // FILE at `<staging>/audit.md`, but auditShards()/readAllAuditShards() read
-    // the `<record>/audit/*.md` DIR (auditShardDir), and the flat-fallback fires
+    // the `<record>/audit/*.jsonl` DIR (auditShardDir), and the flat-fallback fires
     // ONLY when the record dir is absent — which it never is post-migration. Left
     // as a top-level file, the pre-migration WORKFLOW_STARTED/STAGE/PHASE history
     // would be on disk but INVISIBLE to runtime-graph compile, summary/replay, and
@@ -3283,7 +3284,10 @@ export function migrateFlatLayout(projectDir: string): FlatMigrationResult | nul
     if (existsSync(stagedAudit)) {
       const shardDir = join(staging, "audit");
       mkdirSync(shardDir, { recursive: true });
-      renameSync(stagedAudit, join(shardDir, auditShardName(projectDir)));
+      // Legacy Markdown bytes keep a `.md` shard leaf: the JSONL readers skip
+      // it, byte-preservation holds for the migration evidence, and doctor
+      // points at amadeus-journal-convert.ts for the format conversion.
+      renameSync(stagedAudit, join(shardDir, auditShardName(projectDir).replace(/\.jsonl$/, ".md")));
     }
 
     // (2b) RELOCATE the staged `knowledge/` tree to the SPACE level. The old flat
@@ -3363,11 +3367,11 @@ export function stateFilePath(projectDir: string, intent?: string, space?: strin
 const NO_INTENT_AUDIT_REMEDY =
   'Audit events must land in an intent\'s record. Start a workflow (/amadeus "build the auth service"), select one (/amadeus intent <name>) when several exist, or pass --intent explicitly.';
 
-// Per-clone audit SHARD path: `…/intents/<slug>-<id8>/audit/<host>-<clone>.md`.
+// Per-clone audit SHARD path: `…/intents/<slug>-<id8>/audit/<host>-<clone>.jsonl`.
 // The audit trail is committed (vision §5.1) but each clone writes its OWN
 // shard so git never merge-conflicts concurrent appends (merge=union was proven
-// to corrupt the multi-line blocks). Readers glob `audit/*.md` and merge-sort by
-// timestamp — see auditShards()/readAllAuditShards().
+// to corrupt the multi-line legacy Markdown blocks). Readers glob `audit/*.jsonl`
+// and merge-sort by timestamp — see auditShards()/readAllAuditShards().
 //
 // FAIL-CLOSED when no intent resolves (#1377). The former fallback returned the
 // bare space record root's `audit/`, and the writer (amadeus-audit.ts
@@ -3412,7 +3416,7 @@ function cloneIdPath(projectDir: string): string {
 // between two first-run processes converges on whichever write lands last; both
 // then read that single file on every subsequent call, so the clone settles on
 // ONE token (a transient duplicate shard on the very first concurrent mint is
-// harmless — readers glob `audit/*.md`). Memoized per process, KEYED BY
+// harmless — readers glob `audit/*.jsonl`). Memoized per process, KEYED BY
 // projectDir (Issue #1389): a single-value memo let a fixture project's minted
 // token leak into a later emit against a DIFFERENT (real) project in the same
 // process, so the shard name mixed a fixture clone id onto the real record.
@@ -3743,16 +3747,17 @@ export function verifyDelegatedProvenance(projectDir: string, block: string): bo
   const issuerHumanTs = auditBlockField(block, "Issuer Human Ts");
   const issuerSpace = auditBlockField(block, "Issuer Space") ?? undefined;
   if (!issuerIntent || !issuerShard || !issuerHumanTs) return false;
-  // Record dir name and `<host>-<clone>.md` shard leaf — no separators, no "..".
+  // Record dir name and `<host>-<clone>.jsonl` shard leaf (legacy `.md` rows
+  // accepted) — no separators, no "..".
   if (!/^[A-Za-z0-9._-]+$/.test(issuerIntent) || issuerIntent === "." || issuerIntent === "..") {
     return false;
   }
-  if (!/^[A-Za-z0-9._-]+\.md$/.test(issuerShard)) return false;
+  if (!AUDIT_SHARD_LEAF_RE.test(issuerShard)) return false;
   const shardDir = auditShardDir(projectDir, issuerIntent, issuerSpace);
   if (shardDir === null) return false;
   let content: string;
   try {
-    content = readFileSync(join(shardDir, issuerShard), "utf-8");
+    content = readFileSync(join(shardDir, normalizeAuditShardLeaf(issuerShard)), "utf-8");
   } catch {
     return false;
   }
@@ -3762,6 +3767,16 @@ export function verifyDelegatedProvenance(projectDir: string, block: string): bo
     if ((auditBlockField(b, "Timestamp") ?? "") === issuerHumanTs) return true;
   }
   return false;
+}
+
+// Audit shard leaf-name compatibility across the JSONL switchover: rows
+// written before the migration reference `<host>-<clone>.md` shard names;
+// the on-disk files are `.jsonl` after conversion. Validation accepts both
+// spellings; reads normalise to the on-disk `.jsonl` name.
+export const AUDIT_SHARD_LEAF_RE = /^[A-Za-z0-9._-]+\.(?:md|jsonl)$/;
+
+export function normalizeAuditShardLeaf(name: string): string {
+  return name.replace(/\.md$/, ".jsonl");
 }
 
 // --- Standing delegation grants (Issue #1125) ---
@@ -3855,7 +3870,7 @@ export const StandingGrant = {
       !issuerHumanTs ||
       Number.isNaN(Date.parse(issuerHumanTs)) ||
       !/^[A-Za-z0-9._-]+$/.test(issuerIntent) ||
-      !/^[A-Za-z0-9._-]+\.md$/.test(issuerShard)
+      !AUDIT_SHARD_LEAF_RE.test(issuerShard)
     ) {
       return null;
     }
@@ -4147,25 +4162,64 @@ export function humanActedSinceLastAnswer(projectDir: string): boolean {
 // leading `- ` so it serves both audit blocks and the state file). Mirrors the
 // per-tool private auditField readers; shared here for humanActedSinceGate.
 export function auditBlockField(block: string, fieldName: string): string | null {
+  // JSONL journal record (one JSON object per line). Envelope keys are served
+  // under their historical Markdown field names; payload fields come from the
+  // entry's fields map; a raw record's body is scanned like the legacy format
+  // (converted append-raw bodies keep their `**Key**: value` lines verbatim).
+  const entry = tryParseJournalRecord(block);
+  if (entry !== null) {
+    if (fieldName === "Timestamp") return entry.timestamp;
+    if (entry.event !== null) {
+      if (fieldName === "Event") return entry.event;
+      const value = entry.fields?.[fieldName];
+      return value !== undefined ? value.trim() : null;
+    }
+    // Raw record: scan the preserved body exactly like the legacy reader did
+    // (an append-raw body may carry `**Event**:` / field lines of its own;
+    // the write-time presence guard already vets what can land there).
+    return legacyLineField(entry.rawBody ?? "", fieldName);
+  }
+  // Legacy line-scan: still the accessor for the Markdown STATE file (the
+  // `- **Field**:` shape) and for raw bodies above.
+  return legacyLineField(block, fieldName);
+}
+
+function tryParseJournalRecord(block: string): JournalEntry | null {
+  if (!block.startsWith("{")) return null;
+  try {
+    return parseJournalLine(block.trim());
+  } catch {
+    return null;
+  }
+}
+
+function legacyLineField(text: string, fieldName: string): string | null {
   const prefix = `**${fieldName}**:`;
-  for (const raw of block.split("\n")) {
+  for (const raw of text.split("\n")) {
     const line = raw.startsWith("- ") ? raw.slice(2) : raw;
     if (line.startsWith(prefix)) return line.slice(prefix.length).trim();
   }
   return null;
 }
 
-// This clone's audit shard filename: `<host>-<clone-id>.md`. The clone-id token
+// This clone's audit shard filename: `<host>-<clone-id>.jsonl`. The clone-id token
 // (not the PID) is the cross-clone disambiguator — stable across every process
 // in a clone (so the fork process and the merge process resolve ONE shard) and
 // distinct across clones (so concurrent clones never collide / git-conflict).
 // hostname() is a human-readable hint only; it can carry dots/uppercase, so
 // normalise it to the slug shape it never escapes the audit dir.
 // Memoized per process, KEYED BY projectDir (Issue #1389) in lockstep with
-// cloneId's per-project memo: the shard name is `<host>-<cloneId(projectDir)>.md`,
+// cloneId's per-project memo: the shard name is `<host>-<cloneId(projectDir)>.jsonl`,
 // so a single-value memo would pin the first project's shard name onto every
 // later project in the process (the fixture→real mixing this fix closes).
 const _auditShardNameByProject = new Map<string, string>();
+
+// This clone's stable token, exposed for the JSONL journal writers (each
+// row carries cloneId as part of its idempotency identity).
+export function auditCloneId(projectDir: string): string {
+  return cloneId(projectDir);
+}
+
 export function auditShardName(projectDir: string): string {
   const cached = _auditShardNameByProject.get(projectDir);
   if (cached !== undefined) return cached;
@@ -4174,7 +4228,7 @@ export function auditShardName(projectDir: string): string {
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "host";
-  const name = `${host}-${cloneId(projectDir)}.md`;
+  const name = `${host}-${cloneId(projectDir)}.jsonl`;
   _auditShardNameByProject.set(projectDir, name);
   return name;
 }
@@ -4199,17 +4253,34 @@ export function auditShards(projectDir: string, intent?: string, space?: string)
     return [];
   }
   return entries
+    .filter((f) => f.endsWith(".jsonl"))
+    .sort()
+    .map((f) => join(shardDir, f));
+}
+
+// Legacy (pre-JSONL) Markdown shards still on disk — surfaced so doctor /
+// migrate can point at amadeus-journal-convert.ts. Normal readers never
+// consume these.
+export function legacyAuditShards(projectDir: string, intent?: string, space?: string): string[] {
+  const shardDir = auditShardDir(projectDir, intent, space) ?? join(spaceRecordRoot(projectDir, space), "audit");
+  let entries: string[];
+  try {
+    entries = readdirSync(shardDir);
+  } catch {
+    return [];
+  }
+  return entries
     .filter((f) => f.endsWith(".md"))
     .sort()
     .map((f) => join(shardDir, f));
 }
 
 // Concatenate every audit shard's content for an intent into one buffer the
-// existing block-parsers (findAllEvents / findLatestEvent — both split on
-// `\n---\n`) can walk as if it were one file. Each shard is a self-contained
-// sequence of `\n---\n`-separated blocks, so concatenation preserves block
-// boundaries; cross-shard ordering by timestamp is the parsers' job (they read
-// **Timestamp** per block). Returns "" when no shard exists.
+// existing record-parsers (findAllEvents / findLatestEvent — both split via
+// splitAuditRecords) can walk as if it were one file. Each shard is a
+// self-contained sequence of JSONL record lines, so concatenation preserves
+// record boundaries; cross-shard ordering by timestamp is the parsers' job
+// (they read the timestamp per record). Returns "" when no shard exists.
 export function readAllAuditShards(projectDir: string, intent?: string, space?: string): string {
   const shards = auditShards(projectDir, intent, space);
   if (shards.length === 0) return "";
@@ -4231,7 +4302,7 @@ export function readAllAuditShards(projectDir: string, intent?: string, space?: 
 // `audit/*.md` shard, NOT just this process's own clone shard.
 //
 // A bare existsSync(auditFilePath(projectDir)) only tests the CALLER's own clone
-// shard name (`<host>-<clone>.md`), so a fresh clone / new worktree — which mints
+// shard name (`<host>-<clone>.jsonl`), so a fresh clone / new worktree — which mints
 // a brand-new gitignored clone-id — reads FALSE and silently drops audit/sensor
 // events until the engine's first append, even though committed shards from other
 // clones sit right beside it. This mirrors the intent of the fix in
@@ -5890,16 +5961,14 @@ export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
 
 // findAllEvents — multi-match analogue of findLatestEvent (which lives
 // tool-local in amadeus-worktree.ts and returns at most one match). Optional
-// slug filter mirrors findLatestEvent's signature. Walks audit blocks from
-// start; collects every block where **Event**: <event> matches (and
-// **Bolt slug**: <slug> if slug provided). Returns [] on no match.
+// slug filter mirrors findLatestEvent's signature. Walks audit records from
+// start; collects every record whose Event field matches (and whose
+// Bolt slug field matches <slug> if slug provided). Returns [] on no match.
 //
-// Block separator is the same `\n---\n` amadeus-audit.ts uses on emit.
-// Normalises CRLF → LF before splitting so audits authored or edited on
-// Windows (Bun's PRE_REQ env per dist/claude/.claude/CLAUDE.md.example) parse
-// the same as Unix audits. Without this, `\r\n---\r\n` doesn't match the
-// `\n---\n` separator and every block past the first looks merged into one
-// — silently masking every drift class.
+// Record boundaries come from splitAuditRecords (JSONL lines).
+// splitAuditRecords normalises CRLF → LF before splitting so audits authored
+// or edited on Windows (Bun's PRE_REQ env per
+// dist/claude/.claude/CLAUDE.md.example) parse the same as Unix audits.
 // splitAuditRecords — the ONE place that turns an audit buffer (a single
 // shard, or a readAllAuditShards merge) into record blocks. Every consumer
 // that needs record boundaries must call this instead of splitting on the
@@ -5908,7 +5977,15 @@ export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
 // call site needs to know the physical representation. Normalises CRLF → LF
 // for the same Windows-authored-audit reason findAllEvents documents below.
 export function splitAuditRecords(buffer: string): string[] {
-  return buffer.replace(/\r\n/g, "\n").split(/\n---\n/);
+  // JSONL: one record per line. Non-JSON lines (a legacy Markdown shard that
+  // escaped conversion, or hand-written garbage) are NOT half-parsed — they
+  // are dropped here so a contaminated shard reads as fewer records, never as
+  // records with silently-empty fields. Doctor surfaces legacy shards via
+  // legacyAuditShards().
+  return buffer
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((line) => line.startsWith("{"));
 }
 
 export function findAllEvents(
@@ -5918,27 +5995,22 @@ export function findAllEvents(
 ): { timestamp: string; block: string }[] {
   const results: { timestamp: string; block: string; pos: number }[] = [];
   const blocks = splitAuditRecords(audit);
-  const eventRegex = new RegExp(`^\\*\\*Event\\*\\*:\\s*${escapeRegex(event)}\\s*$`, "m");
-  const slugRegex = slug
-    ? new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m")
-    : null;
-  const tsRegex = /^\*\*Timestamp\*\*:\s*(\S+)/m;
   let pos = 0;
   for (const block of blocks) {
-    if (!eventRegex.test(block)) {
+    if (auditBlockField(block, "Event") !== event) {
       pos++;
       continue;
     }
-    if (slugRegex && !slugRegex.test(block)) {
+    if (slug !== undefined && auditBlockField(block, "Bolt slug") !== slug) {
       pos++;
       continue;
     }
-    const tsMatch = block.match(tsRegex);
-    if (!tsMatch) {
+    const timestamp = auditBlockField(block, "Timestamp");
+    if (timestamp === null || timestamp === "") {
       pos++;
       continue;
     }
-    results.push({ timestamp: tsMatch[1], block, pos });
+    results.push({ timestamp, block, pos });
     pos++;
   }
   // CHRONOLOGICAL, not buffer-order. readAllAuditShards concatenates per-clone

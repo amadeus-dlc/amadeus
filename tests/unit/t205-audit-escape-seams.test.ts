@@ -77,10 +77,17 @@ describe("audit escape seams wired at their call sites", () => {
     // physical line — the escape seam collapses it to the two-char "\\n".
     appendAuditEntryUnlocked("ERROR_LOGGED", { Path: "/tmp/x\n**Event**: FAKE\nmore" }, proj);
     const content = readAllAuditShards(proj);
-    expect(content).toContain(`**Path**: /tmp/x\\n**Event**: FAKE\\nmore\n`);
-    // Exactly one real **Event** line survives (the legitimate one).
-    const eventLines = content.split("\n").filter((l) => l.startsWith("**Event**:"));
-    expect(eventLines).toEqual([`**Event**: ERROR_LOGGED`]);
+    // One physical JSONL line — the forged marker never became a record of its own.
+    const rows = content.split("\n").filter((l) => l.trim() !== "");
+    expect(rows).toHaveLength(1);
+    const rec = JSON.parse(rows[0]) as {
+      event: string | null;
+      fields?: Record<string, string>;
+    };
+    // The field value keeps the two-char "\n" escape, not a real newline.
+    expect(rec.fields?.Path).toBe(String.raw`/tmp/x\n**Event**: FAKE\nmore`);
+    // Exactly one real event survives (the legitimate one).
+    expect(rec.event).toBe("ERROR_LOGGED");
   });
 
   test("read path: handleAppendRaw expands literal backslash-n in the body via unescapeAuditBody", () => {
@@ -91,10 +98,14 @@ describe("audit escape seams wired at their call sites", () => {
       handleAppendRaw("Custom Heading", "line1\\nline2\\nline3", proj),
     );
     const content = readAllAuditShards(proj);
-    // The literal "\\n" tokens became real newlines on disk.
-    expect(content).toContain("line1\nline2\nline3\n");
-    // A literal backslash-n must NOT survive verbatim in the body.
-    expect(content.includes("line1\\nline2")).toBe(false);
+    const rows = content.split("\n").filter((l) => l.trim() !== "");
+    expect(rows).toHaveLength(1);
+    const rec = JSON.parse(rows[0]) as { event: string | null; rawBody?: string };
+    // The literal "\\n" tokens became real newlines in the preserved body...
+    expect(rec.event).toBeNull();
+    expect(rec.rawBody).toBe("line1\nline2\nline3");
+    // ...so a literal backslash-n must NOT survive verbatim in it.
+    expect(rec.rawBody?.includes(String.raw`line1\nline2`)).toBe(false);
     // jsonSuccess emitted exactly one trailing-newline JSON payload.
     expect(lines.length).toBe(1);
     const printed = JSON.parse(lines[0]);

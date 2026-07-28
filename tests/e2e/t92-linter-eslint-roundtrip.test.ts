@@ -18,19 +18,21 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// P9: with no intent cursor seeded, the sensor dispatcher resolves the BARE
-// space record root at amadeus/spaces/default/intents/ for both the per-clone
-// audit SHARD and the detail tree. Audit reads go through readAllAuditShards
-// (the subprocess mints its own clone-id, distinct from the test process's, so
-// read the whole audit/ dir rather than a single memoized shard path).
+// P9: the sensor dispatcher resolves the per-intent RECORD dir under
+// amadeus/spaces/default/intents/ for BOTH the per-clone audit SHARD and the
+// detail tree — never the bare intents root, which auditFilePath() refuses to
+// resolve a shard for (#1377). makeProj() therefore seeds the record dir the
+// integration twin seeds. Audit reads go through readAllAuditShards (the
+// subprocess mints its own clone-id, distinct from the test process's, so read
+// the whole audit/ dir rather than a single memoized shard path).
 // Posix record prefix for the relative detail-path audit fields.
-const RP = "amadeus/spaces/default/intents";
+const RP = `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -48,6 +50,12 @@ afterAll(() => {
 function makeProj(): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t92e2e-proj-")));
   mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
+  // The record the dispatcher resolves. A dir only counts as one once it holds
+  // amadeus-state.md (the header-only stub production birthIntent() writes), and
+  // the audit shard resolves nowhere until it does (#1377).
+  const record = join(proj, "amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
   tempDirs.push(proj);
   return proj;
 }
@@ -57,41 +65,26 @@ function readAudit(proj: string): string {
   return readAllAuditShards(proj);
 }
 
-/** audit_event_count: count bodies with `**Event**: <type>` across the trail. */
-function auditEventCount(proj: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** The JSONL audit records across the merged trail (blank lines skipped). */
+function auditRecords(proj: string): Array<Record<string, unknown>> {
   return readAudit(proj)
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
-/** audit_field: value of <key> from the FIRST audit block whose Event matches <ev>. */
+/** audit_event_count: count records whose `event` is <type> across the trail. */
+function auditEventCount(proj: string, ev: string): number {
+  return auditRecords(proj).filter((r) => r.event === ev).length;
+}
+
+/** audit_field: value of <key> from the FIRST audit record whose event matches <ev>. */
 function auditField(proj: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of readAudit(proj).split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(proj).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
 /**

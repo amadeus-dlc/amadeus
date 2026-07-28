@@ -70,7 +70,7 @@ function auditText(proj: string): string {
   const dir = join(recordDirOf(proj), "audit");
   if (!existsSync(dir)) return "";
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
+    .filter((f) => f.endsWith(".jsonl"))
     .map((f) => readFileSync(join(dir, f), "utf-8"))
     .join("\n");
 }
@@ -123,9 +123,17 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
   test("RECOMPOSED audit event lands with the flip lists", () => {
     const proj = bornProject();
     run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research,team-formation"]);
-    const audit = auditText(proj);
-    expect(audit).toContain("**Event**: RECOMPOSED");
-    expect(audit).toContain("market-research, team-formation");
+    const recomposed = auditText(proj)
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+      .filter((r) => r.event === "RECOMPOSED");
+    expect(recomposed.length).toBeGreaterThan(0);
+    expect(
+      recomposed.some((r) =>
+        Object.values(r.fields ?? {}).some((v) => v.includes("market-research, team-formation")),
+      ),
+    ).toBe(true);
   });
 
   test("Stages to Skip round trip: skip+add leaves the row byte-identical to birth (annotations preserved)", () => {

@@ -55,12 +55,22 @@ ${parked ? "- **Parked**: 2026-07-23T10:00:00Z\n- **Parked At Stage**: requireme
   }], null, 2)}\n`);
   const cursor = join(intents, "active-intent");
   writeFileSync(cursor, `${intent}\n`);
-  const audit = join(auditDir, "fixture.md");
+  const audit = join(auditDir, "fixture.jsonl");
+  const rec = (seq: number, timestamp: string, heading: string, event: string) =>
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: "fixturecloneid01",
+      intentId: intent,
+      timestamp,
+      heading,
+      event,
+      fields: {},
+    })}\n`;
   writeFileSync(
     audit,
-    human
-      ? "# AI-DLC Audit Log\n\n## Human Turn\n**Timestamp**: 2026-07-23T10:00:00Z\n**Event**: HUMAN_TURN\n\n---\n"
-      : "# AI-DLC Audit Log\n",
+    rec(1, "2026-07-23T09:00:00Z", "Workflow Started", "WORKFLOW_STARTED") +
+      (human ? rec(2, "2026-07-23T10:00:00Z", "Human Turn", "HUMAN_TURN") : ""),
   );
   return { root, intent, state, registry, cursor, audit };
 }

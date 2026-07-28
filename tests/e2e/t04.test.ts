@@ -57,11 +57,12 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
+  seededStateFile,
   setupWorktreeFixture,
 } from "../harness/fixtures.ts";
 
@@ -73,10 +74,14 @@ afterAll(() => {
   for (const f of fixtures) cleanupWorktreeFixture(f);
 });
 
-/** Fresh git-repo fixture on `main` + amadeus-docs/, registered for cleanup. */
+/** Fresh git-repo fixture on `main` + amadeus-docs/, registered for cleanup.
+ *  The fixture seeds a STATELESS record; without amadeus-state.md no intent
+ *  resolves and every audit emit is refused (#1377), so seed one here — the
+ *  same shape t02's freshFixture uses. */
 function freshFixture(): string {
   const p = setupWorktreeFixture();
   fixtures.push(p);
+  writeFileSync(seededStateFile(p), "- **Current Stage**: code-generation\n", "utf-8");
   return p;
 }
 

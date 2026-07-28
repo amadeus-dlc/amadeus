@@ -159,18 +159,24 @@ function auditText(proj: string): string {
   return readAllAuditShards(proj);
 }
 
-/** The `\n---\n`-delimited audit blocks (mirrors t138's block split). */
-function auditBlocks(proj: string): string[] {
-  return auditText(proj).split(/\n---\n/);
+/** The JSONL audit records (blank lines skipped). */
+function auditRecords(proj: string): Array<Record<string, unknown>> {
+  return auditText(proj)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
 }
 
-/** The block whose **Event**: line names `event` (first match, file order). */
-function blockForEvent(proj: string, event: string): string {
-  return (
-    auditBlocks(proj).find((b) =>
-      new RegExp(`^\\*\\*Event\\*\\*:\\s*${event}\\s*$`, "m").test(b),
-    ) ?? ""
-  );
+/** The record whose `event` names `event` (first match, file order). */
+function fieldsForEvent(proj: string, event: string): Record<string, string> {
+  const rec = auditRecords(proj).find((r) => r.event === event);
+  return rec ? ((rec.fields ?? {}) as Record<string, string>) : {};
+}
+
+/** Index of the first record whose `event` is `event`; -1 when absent. */
+function indexForEvent(proj: string, event: string): number {
+  return auditRecords(proj).findIndex((r) => r.event === event);
 }
 
 describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
@@ -215,13 +221,13 @@ describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
     expect(parsed.emitted).toBe("MERGE_DISPATCH_INVOKED");
     expect(parsed.slug).toBe(slug);
 
-    // STRONGER than the .sh's two independent greps: the INVOKED audit block
+    // STRONGER than the .sh's two independent greps: the INVOKED audit record
     // carries the event, the exact Bolt slug, AND the practices-excerpt field,
-    // all co-located in the SAME `\n---\n`-delimited block.
-    const block = blockForEvent(proj, "MERGE_DISPATCH_INVOKED");
-    expect(block).toContain("**Event**: MERGE_DISPATCH_INVOKED");
-    expect(block).toContain(`**Bolt slug**: ${slug}`);
-    expect(block).toContain(`**Practices section excerpt**: scope=${SCOPE}`);
+    // all co-located in the SAME JSONL record.
+    expect(indexForEvent(proj, "MERGE_DISPATCH_INVOKED")).toBeGreaterThanOrEqual(0);
+    const fields = fieldsForEvent(proj, "MERGE_DISPATCH_INVOKED");
+    expect(fields["Bolt slug"]).toBe(slug);
+    expect(fields["Practices section excerpt"]).toBe(`scope=${SCOPE}`);
   });
 
   // .sh test 4 (inline: MERGE_DISPATCH_RETURNED post-call bracket emit)
@@ -263,18 +269,17 @@ describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
 
     // STRONGER: the RETURNED block carries the slug + Strategy/Target/Confidence
     // fields co-located (amadeus-bolt.ts:698-704), not merely the event name.
-    const block = blockForEvent(proj, "MERGE_DISPATCH_RETURNED");
-    expect(block).toContain("**Event**: MERGE_DISPATCH_RETURNED");
-    expect(block).toContain(`**Bolt slug**: ${slug}`);
-    expect(block).toContain("**Strategy**: squash");
-    expect(block).toContain("**Target branch**: main");
-    expect(block).toContain("**Confidence**: 0.9");
+    expect(indexForEvent(proj, "MERGE_DISPATCH_RETURNED")).toBeGreaterThanOrEqual(0);
+    const fields = fieldsForEvent(proj, "MERGE_DISPATCH_RETURNED");
+    expect(fields["Bolt slug"]).toBe(slug);
+    expect(fields.Strategy).toBe("squash");
+    expect(fields["Target branch"]).toBe("main");
+    expect(fields.Confidence).toBe("0.9");
 
     // The "brackets the dispatch" contract: RETURNED is the post-call emit, so
-    // its block appears AFTER the pre-call INVOKED block in audit.md.
-    const text = auditText(proj);
-    const invokedIdx = text.indexOf("**Event**: MERGE_DISPATCH_INVOKED");
-    const returnedIdx = text.indexOf("**Event**: MERGE_DISPATCH_RETURNED");
+    // its record appears AFTER the pre-call INVOKED record in the audit trail.
+    const invokedIdx = indexForEvent(proj, "MERGE_DISPATCH_INVOKED");
+    const returnedIdx = indexForEvent(proj, "MERGE_DISPATCH_RETURNED");
     expect(invokedIdx).toBeGreaterThanOrEqual(0);
     expect(returnedIdx).toBeGreaterThan(invokedIdx);
   });

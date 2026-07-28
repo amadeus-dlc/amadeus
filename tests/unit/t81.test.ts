@@ -128,78 +128,38 @@ function practicesEvent(args: string[], p: string): CliResult {
   };
 }
 
-/** Count audit blocks with `**Event**: <ev>`. Mirrors the .sh's `grep -c "PRACTICES_OVERRIDE"` but as an exact event-line count. */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(body: string): Array<Record<string, unknown>> {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/** Count audit records whose `event` is exactly <ev> in a buffer. */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
 }
 
 /**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Walks the file; resets at `## ` headings and `---` separators; splits
- * `**label**: value` on the literal `**: ` separator. Mirrors auditField in
- * t31.cli.test.ts. Returns "" when absent. This is the in-TS equivalent of the
- * .sh's `awk '/PRACTICES_OVERRIDE/{flag=1} flag && /^---$/{exit} flag'` block
- * scoping followed by per-field `grep "\*\*Key\*\*: value"`.
+ * Value of <key> from the FIRST audit record whose `event` matches <ev>.
+ * Record-scoped, so a field can never bleed in from a neighbouring event.
+ * Returns "" when absent.
  */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  const rec = auditRecords(body).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
 }
 
-/** ALL values of <key> across every block whose `**Event**:` matches <ev>. */
+/** ALL values of <key> across every record whose `event` matches <ev>. */
 function auditFieldAll(body: string, ev: string, key: string): string[] {
-  const out: string[] = [];
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) out.push(value);
-      }
-    }
-  }
-  return out;
+  return auditRecords(body)
+    .filter((r) => r.event === ev)
+    .map((r) => ((r.fields ?? {}) as Record<string, string>)[key])
+    .filter((v): v is string => v !== undefined);
 }
 
 // The milestone 13 override field set the .sh fires (t81-bolt-plan-override.sh:41-47).

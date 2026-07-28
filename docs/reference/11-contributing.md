@@ -87,7 +87,7 @@ For handlers that require no LLM reasoning (print text, read/format files, check
 1. Add a subcommand to `packages/framework/core/tools/amadeus-utility.ts`
 2. Dispatch from SKILL.md with a single Bash call: `bun .claude/tools/amadeus-utility.ts <subcommand>`
 3. No task tracking needed -- the script runs in under a second
-4. Handle audit logging inside the script via `appendAuditEntry` from `amadeus-audit.ts` (never hand-write `**Event**:` markdown blocks)
+4. Handle audit logging inside the script via `appendAuditEntry` from `amadeus-audit.ts` (never hand-write journal records)
 
 The `--help`, `--version`, `--status`, and `--doctor` handlers are reference implementations.
 
@@ -97,7 +97,7 @@ The `codekb-path` handler is a read-only **query verb** (like `intent <name>` an
 For handlers that benefit from agent reasoning (filesystem scanning, decision-making):
 1. **Task tracking** -- Create tasks via `TaskCreate` for each logical step, transition them with `TaskUpdate` (`in_progress` -> `completed`) as work progresses. This drives the task sidebar in Claude Code.
 2. **Statusline update** -- If the active intent's `amadeus-state.md` exists, temporarily set `Current Stage` to describe the running utility (e.g., `running health check`), then restore the original value when done. The `amadeus-statusline.ts` hook reads this field for the terminal status bar.
-3. **Audit logging** -- Invoke the appropriate tool subcommand (e.g., `bun .claude/tools/amadeus-utility.ts <handler>` that calls `appendAuditEntry` internally). Never hand-write `**Event**:` markdown blocks from LLM prose — see [State Machine: Forbidden patterns](12-state-machine.md).
+3. **Audit logging** -- Invoke the appropriate tool subcommand (e.g., `bun .claude/tools/amadeus-utility.ts <handler>` that calls `appendAuditEntry` internally). Never hand-write journal records from LLM prose — see [State Machine: Forbidden patterns](12-state-machine.md).
 
 The `intent-birth` handler is fully deterministic: all three init stages (workspace-scaffold, workspace-detection, state-init) run inside a single `amadeus-utility intent-birth` call. The welcome message is rendered at session start via `companyAnnouncements` in `settings.json` and is not a stage.
 

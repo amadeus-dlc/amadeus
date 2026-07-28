@@ -78,13 +78,14 @@ function runOrch(args: string[], p: string, extraEnv: Record<string, string> = {
   return { status: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 
-/** Count `**Event**: ERROR_LOGGED` blocks in the project's audit shard. */
+/** Count ERROR_LOGGED records in the project's audit shard. */
 function errorLoggedCount(p: string): number {
   const shard = seededAuditShard(p);
   if (!existsSync(shard)) return 0;
   return readFileSync(shard, "utf-8")
     .split("\n")
-    .filter((l) => /^\*\*Event\*\*: ERROR_LOGGED$/.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .filter((l) => (JSON.parse(l) as { event: string | null }).event === "ERROR_LOGGED").length;
 }
 
 describe("t214: engine error directive records ERROR_LOGGED (#839)", () => {

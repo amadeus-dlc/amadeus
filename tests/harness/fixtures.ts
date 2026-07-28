@@ -153,7 +153,7 @@ export function seededAuditDir(proj: string, space = DEFAULT_SPACE): string {
 
 /**
  * The DETERMINISTIC audit shard path a spawned tool resolves in a fixture
- * project: `<record>/audit/<host-slug>-<FIXTURE_CLONE_ID>.md`. Mirrors
+ * project: `<record>/audit/<host-slug>-<FIXTURE_CLONE_ID>.jsonl`. Mirrors
  * auditShardName() in amadeus-lib.ts (hostname slugified + the pinned clone token).
  * A test that pre-seeds an audit header or reads a single shard should target
  * THIS path so it agrees with the tool's own resolution.
@@ -165,7 +165,7 @@ export function seededAuditShard(proj: string, space = DEFAULT_SPACE): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return join(seededAuditDir(proj, space), `${host}-${FIXTURE_CLONE_ID}.md`);
+  return join(seededAuditDir(proj, space), `${host}-${FIXTURE_CLONE_ID}.jsonl`);
 }
 
 /**
@@ -241,15 +241,15 @@ export function seedStateFile(proj: string, fixturePath: string): void {
 
 /**
  * Copy the audit sample into the default intent's DETERMINISTIC per-clone shard
- * (<record>/audit/<host>-<FIXTURE_CLONE_ID>.md) — the SAME shard a spawned tool
+ * (<record>/audit/<host>-<FIXTURE_CLONE_ID>.jsonl) — the SAME shard a spawned tool
  * resolves (the fixture pins the clone-id). Seeding the tool's own shard means
- * the seeded trail and the tool's appends share one file: readers glob audit/*.md
+ * the seeded trail and the tool's appends share one file: readers glob audit/*.jsonl
  * and merge by timestamp, and a test that sabotages the shard blocks the tool.
  */
 export function seedAuditFile(proj: string): void {
   const shard = seededAuditShard(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  copyFileSync(join(FIXTURES_DIR, "audit-sample.md"), shard);
+  copyFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), shard);
 }
 
 /**

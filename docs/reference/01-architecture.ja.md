@@ -91,7 +91,7 @@ graph LR
 |  | フレームワーク作成 | チーム作成 |
 |---|---|---|
 | **継続的にロードされる**(ハーネス設定) | `.claude/skills/`、`.claude/agents/`、`.claude/knowledge/`、`amadeus/spaces/<space>/memory/org.md`、`amadeus/spaces/<space>/memory/phases/*.md`、`.claude/scopes/`、`.claude/tools/data/scope-grid.json`、`.claude/tools/data/stage-graph.json` | `amadeus/spaces/<space>/memory/team.md`、`amadeus/spaces/<space>/memory/project.md` |
-| **ワークフローごとの成果物** | *(設計上、空)* | `<record>/amadeus-state.md`、`<record>/audit/*.md`(クローンごとのシャード)、`<record>/<phase>/<stage>/*.md`、`.amadeus/worktrees/bolt-*/` |
+| **ワークフローごとの成果物** | *(設計上、空)* | `<record>/amadeus-state.md`、`<record>/audit/*.jsonl`(クローンごとのシャード)、`<record>/<phase>/<stage>/*.md`、`.amadeus/worktrees/bolt-*/` |
 
 フレームワークはワークフローごとの成果物を生成しません。なぜなら、そのような出力は配布物とともに出荷しなければならず — それはワークフローごとの出力ではなくフレームワーク作成のハーネス設定になってしまうからです。空のセルはギャップではなく、ルーティングルールの署名です。
 
@@ -223,7 +223,7 @@ sequenceDiagram
     O->>U: Present questions (mode choice)
     U-->>O: Provide answers
     O->>O: Generate artifacts
-    O->>O: Log to audit.md
+    O->>O: Log to audit shard
     O->>U: Present completion + approval gate
     U-->>O: Approve / Request Changes
     O->>ST: Update state (mark [x] completed)
@@ -395,7 +395,7 @@ amadeus/                                    # neutral, harness-independent, comm
             +-- intents.json               # the registry: [{ uuid, slug, dirName, scope, repos, status }]
             +-- <YYMMDD>-<label>/          # one record dir per intent (date-prefixed, short kebab label; UUIDv7 carries identity in intents.json)
                 +-- amadeus-state.md          # per-intent workflow state
-                +-- audit/<host>-<clone>.md # per-clone audit shards (glob-and-merge by timestamp)
+                +-- audit/<host>-<clone>.jsonl # per-clone audit shards (glob-and-merge by timestamp)
                 +-- <phase>/<stage>/*.md    # artifacts + the per-stage memory.md diary
 ```
 
@@ -406,7 +406,7 @@ amadeus/                                    # neutral, harness-independent, comm
 
 パスヘルパー — `intentsDir`、`knowledgeDir`、`codekbDir`(`amadeus-lib.ts`)、および `memoryDirFor`(`amadeus-graph.ts:234`)— はすべて space 引数を `activeSpace(projectDir)` にデフォルトするので、AI-DLC 自身のリゾルバはカーソルに従います。`/amadeus space <name>` で space を切り替えると、各ハーネスネイティブのルールインクルード(上述の Claude `@`-import スタブ、Kiro の resources glob、Codex の rules dir)も、切り替え先の space の `memory/` に再ポイントされます。`default` では、この再ポイントはバイト単位で同一の no-op なので、単一チームのコミット済みツリーは一切変化しません。
 
-**コミット対象 vs gitignore 対象。** `amadeus/` はチームが作業を共有できるようにチェックインされます。分割(`packages/framework/harness/claude/dot-gitignore:34-54`): 2つのカーソル(`active-space`、`active-intent`)、クローンごとのランタイム(`.amadeus-clone-id`、`.amadeus-sessions/`)、および派生状態(`runtime-graph.json`、record 下の `.amadeus-*`)は **gitignore 対象** です。メソッド(`memory/**`)、知識(`knowledge/**`、`codekb/**`)、`intents.json` レジストリ、各 record の `amadeus-state.md`、`audit/` シャード、成果物は **コミット対象** です。監査はクローンごとのシャード(`audit/<host>-<clone>.md`)としてコミットされます。これは、git が並行 append をマージする必要が決してないようにするためで — 意図的に `merge=union` 属性はありません。
+**コミット対象 vs gitignore 対象。** `amadeus/` はチームが作業を共有できるようにチェックインされます。分割(`packages/framework/harness/claude/dot-gitignore:34-54`): 2つのカーソル(`active-space`、`active-intent`)、クローンごとのランタイム(`.amadeus-clone-id`、`.amadeus-sessions/`)、および派生状態(`runtime-graph.json`、record 下の `.amadeus-*`)は **gitignore 対象** です。メソッド(`memory/**`)、知識(`knowledge/**`、`codekb/**`)、`intents.json` レジストリ、各 record の `amadeus-state.md`、`audit/` シャード、成果物は **コミット対象** です。監査はクローンごとのシャード(`audit/<host>-<clone>.jsonl`)としてコミットされます。これは、git が並行 append をマージする必要が決してないようにするためで — 意図的に `merge=union` 属性はありません。
 
 ## 主要な設計上の決定
 
@@ -432,7 +432,7 @@ amadeus/                                    # neutral, harness-independent, comm
 
 11. **フェーズ境界検証** — トレーサビリティチェックがフェーズ遷移時に自動実行されます(Initialization->Ideation 自動進行、Ideation->Inception、Inception->Construction、Construction->Operation)。これにより、下流ステージが不完全な基盤の上に構築する前に、要件から設計へのリンク欠落、孤立した成果物、不整合を捕捉します。
 
-12. **フックベースの監査ログ** — Write/Edit 操作の PostToolUse フックが、成果物の作成と変更を intent の `audit/` シャードへ自動ログします。PreCompact フックがコンテキスト圧縮前に状態ファイル構造を検証します。SubagentStop フックがサブエージェント完了をログします。68イベントタクソノミー(`knowledge/amadeus-shared/audit-format.md` で定義。エミッターレジストリは [State Machine](12-state-machine.ja.md) を参照)は事後分析を可能にします — 主要イベントには `STAGE_STARTED`、`STAGE_COMPLETED`、`DECISION_RECORDED`、`SCOPE_CHANGED`、`RULE_LEARNED` が含まれます。
+12. **フックベースの監査ログ** — Write/Edit 操作の PostToolUse フックが、成果物の作成と変更を intent の `audit/` シャードへ自動ログします。PreCompact フックがコンテキスト圧縮前に状態ファイル構造を検証します。SubagentStop フックがサブエージェント完了をログします。78イベントタクソノミー(`knowledge/amadeus-shared/audit-format.md` で定義。エミッターレジストリは [State Machine](12-state-machine.ja.md) を参照)は事後分析を可能にします — 主要イベントには `STAGE_STARTED`、`STAGE_COMPLETED`、`DECISION_RECORDED`、`SCOPE_CHANGED`、`RULE_LEARNED` が含まれます。
 
 13. **ネストした委譲なし** — コンダクター(SKILL.md)がすべてのエージェント Task 呼び出しを実行します。エージェントは互いを呼び出したりサブエージェントを起動したりしません。これにより委譲グラフはフラットでデバッグ可能に保たれます。
 

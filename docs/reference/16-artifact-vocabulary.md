@@ -57,7 +57,7 @@ Things that are **not** artifacts in this registry:
   "Filesystem mapping" below.
 - **Filenames.** The on-disk `.md` file and the canonical name don't have
   to match (they usually do, except at collisions).
-- **State plumbing.** `amadeus-state.md`, `audit.md`, and
+- **State plumbing.** `amadeus-state.md`, the `audit/` shards, and
   `.amadeus-recovery.md` are managed by tools (`amadeus-state.ts`, hook
   scripts), not by stages via either output list. They never appear in the
   registry.

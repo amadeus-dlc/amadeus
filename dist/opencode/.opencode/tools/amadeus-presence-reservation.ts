@@ -72,7 +72,9 @@ export type VerifyReservationInput = ConsumeReservationInput & {
 const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/;
 const STAGE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SHARD_NAME_RE = /^[A-Za-z0-9._-]+\.md$/;
+// Accepts both spellings across the JSONL switchover: markers minted before
+// the migration carry `.md` shard leaves; live shards are `.jsonl`.
+const SHARD_NAME_RE = /^[A-Za-z0-9._-]+\.(?:md|jsonl)$/;
 const RESERVATION_KEYS = [
   "armedAt",
   "humanTurnShard",
@@ -402,10 +404,13 @@ export function verifyMintedPresenceReservation(
     throw new Error("Presence reservation owner no longer matches the registry");
   }
   const turns = reservationHumanTurns(input.projectDir, marker);
+  const markerShard = marker.humanTurnShard === null
+    ? null
+    : marker.humanTurnShard.replace(/\.md$/, ".jsonl");
   if (
     turns.length !== 1 ||
     turns[0].timestamp !== marker.humanTurnTimestamp ||
-    turns[0].shard !== marker.humanTurnShard
+    turns[0].shard !== markerShard
   ) {
     throw new Error("Presence reservation HUMAN_TURN provenance does not match");
   }

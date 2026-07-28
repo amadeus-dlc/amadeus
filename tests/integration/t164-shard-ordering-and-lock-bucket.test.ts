@@ -73,7 +73,7 @@ function seedLayout(): void {
   writeFileSync(join(intentsDir, "active-intent"), `${RECORD}\n`, "utf-8");
 }
 
-/** Write a WORKTREE_CREATED audit block into a named shard. */
+/** Write a WORKTREE_CREATED audit record into a named JSONL shard. */
 function seedWorktreeCreatedShard(
   shardFile: string,
   slug: string,
@@ -82,19 +82,21 @@ function seedWorktreeCreatedShard(
   branch: string,
 ): void {
   mkdirSync(shardDir(), { recursive: true });
-  const block = [
-    "",
-    "## Worktree Created",
-    `**Timestamp**: ${timestamp}`,
-    "**Event**: WORKTREE_CREATED",
-    `**Bolt slug**: ${slug}`,
-    `**Worktree path**: ${wtPath}`,
-    `**Branch name**: ${branch}`,
-    "",
-    "---",
-    "",
-  ].join("\n");
-  writeFileSync(join(shardDir(), shardFile), block, "utf-8");
+  const line = `${JSON.stringify({
+    schemaVersion: 1,
+    seq: 1,
+    cloneId: shardFile.replace(/\.jsonl$/, ""),
+    intentId: RECORD,
+    timestamp,
+    heading: "Worktree Created",
+    event: "WORKTREE_CREATED",
+    fields: {
+      "Bolt slug": slug,
+      "Worktree path": wtPath,
+      "Branch name": branch,
+    },
+  })}\n`;
+  writeFileSync(join(shardDir(), shardFile), line, "utf-8");
 }
 
 function runIn(tool: string, args: string[]): { status: number; stdout: string; stderr: string } {
@@ -130,8 +132,8 @@ afterEach(() => {
 describe("t164 PART A — findLatestEvent picks the chronologically-newest block across shards (FIX 2)", () => {
   const SLUG = "feat-z";
 
-  // The lexically-LATER shard (host-zzzz.md) holds the OLDER block; the
-  // lexically-EARLIER shard (host-aaaa.md) holds the NEWER block. readAllAuditShards
+  // The lexically-LATER shard (host-zzzz.jsonl) holds the OLDER record; the
+  // lexically-EARLIER shard (host-aaaa.jsonl) holds the NEWER record. readAllAuditShards
   // concatenates aaaa-then-zzzz, so the OLDER block is LAST in the buffer — the
   // exact arrangement where a buffer-position "last wins" reader returns the stale
   // block. Both blocks share the slug+event, so the slug filter does not save it.
@@ -139,8 +141,8 @@ describe("t164 PART A — findLatestEvent picks the chronologically-newest block
     // Newer = "now" (so verify --max-age passes post-fix); stale = ~2 days ago.
     const newerTs = new Date().toISOString();
     const staleTs = new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString();
-    seedWorktreeCreatedShard("host-aaaa.md", SLUG, newerTs, newerPath, "fresh-branch");
-    seedWorktreeCreatedShard("host-zzzz.md", SLUG, staleTs, stalePath, "stale-branch");
+    seedWorktreeCreatedShard("host-aaaa.jsonl", SLUG, newerTs, newerPath, "fresh-branch");
+    seedWorktreeCreatedShard("host-zzzz.jsonl", SLUG, staleTs, stalePath, "stale-branch");
     return { newerTs };
   }
 
