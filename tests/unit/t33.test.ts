@@ -414,7 +414,7 @@ describe("t33 approve-batch: gated swarm batch-end gate", () => {
   test("approve-batch emits GATE_APPROVED", () => {
     proj = setupConstructionProject();
     runBolt(proj, "approve-batch", "--batch", "1");
-    expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: GATE_APPROVED/m);
+    expect(auditRecords(proj).some((r) => r.event === "GATE_APPROVED")).toBe(true);
   });
 
   test("approve-batch records the batch number in state", () => {
@@ -437,7 +437,7 @@ describe("t33 approve-batch: gated swarm batch-end gate", () => {
     expect(res.status).toBe(0);
     expect(res.out).toContain('"already_approved":true');
     // .sh-style count assertion: exactly ONE GATE_APPROVED row, not two.
-    expect(readAudit(proj).match(/^\*\*Event\*\*: GATE_APPROVED/gm)?.length).toBe(1);
+    expect(auditRecords(proj).filter((r) => r.event === "GATE_APPROVED").length).toBe(1);
     expect(readState(proj)).toMatch(/Swarm Gated Batch Approvals\*\*: 1$/m);
   });
 
