@@ -68,6 +68,7 @@
 // invert the whole thesis).
 
 import { createHash, randomUUID } from "node:crypto";
+import { observeSubprocess } from "./amadeus-observability.ts";
 import {
   closeSync,
   constants as fsConstants,
@@ -3247,11 +3248,13 @@ function spawnAuditAppend(
   for (const [k, v] of Object.entries(fields)) {
     fieldArgs.push("--field", `${k}=${v}`);
   }
-  const result = Bun.spawnSync({
-    cmd: ["bun", "run", auditTool, "append", eventType, ...fieldArgs, "--project-dir", projectDir],
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const result = observeSubprocess(projectDir, "amadeus-audit:append", () =>
+    Bun.spawnSync({
+      cmd: ["bun", "run", auditTool, "append", eventType, ...fieldArgs, "--project-dir", projectDir],
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
   return {
     exitCode: result.exitCode,
     stdout: new TextDecoder().decode(result.stdout),

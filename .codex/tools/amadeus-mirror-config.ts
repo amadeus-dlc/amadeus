@@ -46,7 +46,10 @@ const LAYER_ORDER: readonly ConfigLayer[] = ["global", "space", "intent"];
 // configuration error in every layer.
 const AUTO_MIRROR_KEY = "auto-mirror";
 const MIRROR_PROJECTS_KEY = "mirror-projects";
-const ALLOWED_KEYS: readonly string[] = [AUTO_MIRROR_KEY, MIRROR_PROJECTS_KEY];
+// "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
+// the mirror parser must tolerate the key so both subsystems can share the
+// layered config.json files, but it never interprets the value.
+const ALLOWED_KEYS: readonly string[] = [AUTO_MIRROR_KEY, MIRROR_PROJECTS_KEY, "observability"];
 
 const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
   "ideation",
