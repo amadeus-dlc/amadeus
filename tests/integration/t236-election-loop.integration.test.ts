@@ -72,6 +72,12 @@ describe("t236 election directive loop", () => {
     });
     const registryPath = join(electionsRoot(projectDir), "elections.json");
 
+    expect(run(["open", "--trigger", "unexpected", "--file", definition])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain(
+      'unknown trigger "unexpected"',
+    );
+    expect(existsSync(registryPath)).toBe(false);
+
     expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({
       opened: null,
