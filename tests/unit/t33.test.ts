@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:fail, subcommand:amadeus-bolt:set-autonomy
+// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:fail, subcommand:amadeus-bolt:set-autonomy, subcommand:amadeus-bolt:approve-batch
 //
 // bun:test port of tests/unit/t33-tool-bolt.sh (TAP plan 25), mechanism = cli.
 // Faithful 1:1 migration: each of the 25 .sh assertions is preserved at
@@ -382,6 +382,70 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
     proj = setupConstructionProject();
     const res = runBolt(proj, "set-autonomy", "--mode", "autonomous");
     expect(res.out).toContain('"state_updated":true');
+  });
+});
+
+// --- approve-batch: the gated swarm's batch-end gate (issue #1612) ----------
+// Under `Construction Autonomy Mode: gated` the engine fans a batch out and then
+// stops at a batch-end gate, refusing the next batch until the human records the
+// approval here. The subcommand appends the 1-origin batch number to
+// `Swarm Gated Batch Approvals` and emits GATE_APPROVED (existing taxonomy).
+describe("t33 approve-batch: gated swarm batch-end gate", () => {
+  let proj = "";
+  afterEach(() => {
+    cleanupTestProject(proj);
+    proj = "";
+  });
+
+  test("approve-batch emits GATE_APPROVED", () => {
+    proj = setupConstructionProject();
+    runBolt(proj, "approve-batch", "--batch", "1");
+    expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: GATE_APPROVED/m);
+  });
+
+  test("approve-batch records the batch number in state", () => {
+    proj = setupConstructionProject();
+    runBolt(proj, "approve-batch", "--batch", "1");
+    expect(readState(proj)).toMatch(/Swarm Gated Batch Approvals\*\*: 1/);
+  });
+
+  test("approve-batch appends a second batch without dropping the first", () => {
+    proj = setupConstructionProject();
+    runBolt(proj, "approve-batch", "--batch", "1");
+    runBolt(proj, "approve-batch", "--batch", "3");
+    expect(readState(proj)).toMatch(/Swarm Gated Batch Approvals\*\*: 1, 3/);
+  });
+
+  test("approve-batch is idempotent: re-approving records no second GATE_APPROVED", () => {
+    proj = setupConstructionProject();
+    runBolt(proj, "approve-batch", "--batch", "1");
+    const res = runBolt(proj, "approve-batch", "--batch", "1");
+    expect(res.status).toBe(0);
+    expect(res.out).toContain('"already_approved":true');
+    // .sh-style count assertion: exactly ONE GATE_APPROVED row, not two.
+    expect(readAudit(proj).match(/^\*\*Event\*\*: GATE_APPROVED/gm)?.length).toBe(1);
+    expect(readState(proj)).toMatch(/Swarm Gated Batch Approvals\*\*: 1$/m);
+  });
+
+  test("approve-batch --batch bogus exits 1", () => {
+    proj = setupConstructionProject();
+    expect(runBolt(proj, "approve-batch", "--batch", "bogus").status).toBe(1);
+  });
+
+  test("approve-batch --batch 0 exits 1 (batch numbers are 1-origin)", () => {
+    proj = setupConstructionProject();
+    expect(runBolt(proj, "approve-batch", "--batch", "0").status).toBe(1);
+  });
+
+  test("approve-batch missing --batch exits 1", () => {
+    proj = setupConstructionProject();
+    expect(runBolt(proj, "approve-batch").status).toBe(1);
+  });
+
+  test("approve-batch on a rejected batch number leaves no orphan GATE_APPROVED", () => {
+    proj = setupConstructionProject();
+    runBolt(proj, "approve-batch", "--batch", "-2");
+    expect(readAudit(proj)).not.toContain("GATE_APPROVED");
   });
 });
 

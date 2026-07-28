@@ -1151,20 +1151,28 @@ function readSkeletonStance(stateContent: string | null): SkeletonStance | null 
 
 // The state field recording the human's autonomy grant at the walking-skeleton
 // ladder (stage-protocol.md "Ladder prompt" — set via `amadeus-bolt set-autonomy
-// --mode <autonomous|gated>`). ONLY the exact value "autonomous" triggers the
-// swarm; unset / absent / "gated" all read as not-autonomous (the safe default —
-// the human stays in the gate loop). This is deliberately strict: an empty or
-// unrecognised value never auto-activates the swarm fan-out.
+// --mode <autonomous|gated>`). BOTH recorded grants activate the swarm fan-out:
+// `autonomous` runs the batches back to back, `gated` runs the same batches but
+// stops at a batch-end gate (stage-protocol.md:123-125 — "For parallel batches
+// the gate covers every Bolt in the batch"). Issue #1612: reading `gated` as a
+// swarm VETO serialised every parallel Unit, which the spec never asked for.
+// Only an absent, empty or unrecognised value reads as unset — the safe side,
+// which never fans out and (past the walking skeleton) re-fires the ladder.
 const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
 
-// Read the recorded Construction autonomy mode, or null when it is not exactly
-// "autonomous". Mirrors readSkeletonStance's read-and-narrow shape. The swarm
-// trigger checks `=== "autonomous"`, so any other value (including "gated") is
-// safely treated as "not granted".
-function readAutonomyMode(stateContent: string | null): "autonomous" | null {
+// The two grants the ladder can record. `null` is the third state (unset).
+type AutonomyMode = "autonomous" | "gated";
+
+// Read the recorded Construction autonomy mode as a discriminated three-valued
+// answer (parse, don't validate): "autonomous" | "gated" | null. Mirrors
+// readSkeletonStance's read-and-narrow shape. An unrecognised value (a typo, a
+// hand-edited state file) narrows to null rather than to a grant — the swarm
+// never activates on a value the engine could not recognise.
+function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
   const raw = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD) : null;
   if (!raw) return null;
-  return raw.trim() === "autonomous" ? "autonomous" : null;
+  const value = raw.trim();
+  return value === "autonomous" || value === "gated" ? value : null;
 }
 
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
@@ -1273,6 +1281,28 @@ function isSkeletonGateStage(node: GraphStage, scope: string): boolean {
   const first = firstInScopeStageOfPhase("construction", scope);
   return first !== null && first.slug === node.slug;
 }
+
+// True when the walking-skeleton gate stage is RECORDED complete in state. The
+// predicate is the skeleton-gate stage's own checkbox — derived state the engine
+// writes at approval — not a weak proxy such as an artifact directory existing
+// (observed-entity-from-failure-mode): a half-run Bolt 1 leaves directories but
+// never a completed checkbox. Drives the ladder re-fire (stage-protocol.md:121).
+function skeletonGateCompleted(stateContent: string | null, scope: string): boolean {
+  if (stateContent === null) return false;
+  const first = firstInScopeStageOfPhase("construction", scope);
+  if (first === null) return false;
+  return checkboxStateOf(parseCheckboxes(stateContent), first.slug) === "completed";
+}
+
+// The ladder re-fire question (stage-protocol.md:104-121). Emitted when the
+// walking skeleton is complete but no autonomy grant is recorded; names the
+// exact command that records either answer so the run can resume.
+const AUTONOMY_LADDER_QUESTION =
+  "The walking skeleton is complete but Construction Autonomy Mode is unset. " +
+  "How should the remaining Bolts run — continue autonomously (no per-Bolt gate), " +
+  "or gate every Bolt (a batch-end gate for each parallel batch)? Record the answer " +
+  "with `amadeus-bolt set-autonomy --mode autonomous` or " +
+  "`amadeus-bolt set-autonomy --mode gated`, then re-run `next`.";
 
 // Resolve the determined boolean gate for the skeleton-gate stage once the
 // conductor's classified stance is in hand. The round-trip's whole point is to
@@ -2488,12 +2518,102 @@ export function handleNext(args: string[], projectDir: string | undefined): void
 const SWARM_FOR_EACH = "unit-of-work";
 const SWARM_MODE = "subagent";
 
+// The state field recording which swarm batches the human already approved at
+// their batch-end gate under `Construction Autonomy Mode: gated` (issue #1612).
+// A comma-separated list of 1-origin batch numbers, appended by
+// `amadeus-bolt approve-batch --batch <n>`; the engine only ever READS it.
+const SWARM_BATCH_APPROVALS_FIELD = "Swarm Gated Batch Approvals";
+
+// Parse the recorded batch approvals into a set of 1-origin batch numbers.
+// Numeric parse, not string compare (verification-numeric-parse): a token that
+// is not a positive integer is dropped, so a malformed ledger can only ever
+// WITHHOLD an approval (fail closed), never manufacture one.
+function readApprovedSwarmBatches(stateContent: string | null): Set<number> {
+  const approved = new Set<number>();
+  const raw = stateContent ? getField(stateContent, SWARM_BATCH_APPROVALS_FIELD) : null;
+  if (!raw) return approved;
+  for (const token of raw.split(",")) {
+    const n = Number(token.trim());
+    if (Number.isInteger(n) && n > 0) approved.add(n);
+  }
+  return approved;
+}
+
+// The batch-end gate question (gated mode). Names the finished batch, the units
+// the human is approving, the exact command that records the approval, and the
+// re-entry step — the conductor renders it verbatim and cannot proceed without it.
+function batchGateQuestion(batch: number, units: string[]): string {
+  return (
+    `Swarm batch ${batch} (${units.join(", ")}) is complete and Construction Autonomy Mode is ` +
+    `gated, so the batch-end gate applies (stage-protocol.md: for parallel batches one gate ` +
+    `covers every Bolt in the batch). Approve batch ${batch} and continue to the next batch? ` +
+    `Record the approval with \`amadeus-bolt approve-batch --batch ${batch}\`, ` +
+    `then re-run \`next\` to receive the following batch.`
+  );
+}
+
+// Select the batch to fan out: the FIRST batch that still has uncovered units,
+// carrying only those units plus its 0-based position in the topology.
+//
+// Issue #841 (contract from #486): bolt_dag.batches is the STATIC topology, so
+// completed batches must be excluded here or every `next` re-offers batch 1
+// forever and the swarm never advances. Coverage uses the same ledger as the
+// per-unit loop (unitCovered: the stage's produces on disk), so no bolt-name
+// correlation is needed. null means every unit of every batch is covered — the
+// caller falls through to emitPerUnitRunStage's all-covered re-entry, which
+// presents the stage's real gate.
+function firstUncoveredBatch(
+  batches: string[][],
+  node: GraphStage,
+  projectDir: string,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+): { units: string[]; index: number } | null {
+  const unitKinds = readUnitKinds(projectDir);
+  for (let index = 0; index < batches.length; index++) {
+    const batch = batches[index];
+    if (!Array.isArray(batch) || batch.length === 0) continue;
+    const uncovered = batch.filter(
+      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+    );
+    if (uncovered.length > 0) return { units: uncovered, index };
+  }
+  return null;
+}
+
+// The batch-end gate question owed before the batch at `nextIndex` may fan out,
+// or null when nothing is owed (issue #1612).
+//
+// Every batch BEFORE the one about to be offered is complete, so under `gated`
+// each of them owes the human one gate — one gate per BATCH, not one per Bolt
+// (stage-protocol.md:125). The EARLIEST unapproved one is returned and the
+// caller emits it as an `ask` instead of the swarm: engine-enforced and fail
+// closed, not conductor prose. `autonomous` never consults the ledger
+// (behaviour unchanged), and the LAST batch owes no batch-end gate here — the
+// all-covered re-entry presents the stage's own gate, so no double gate.
+function owedBatchGate(
+  autonomy: AutonomyMode,
+  batches: string[][],
+  nextIndex: number,
+  stateContent: string | null,
+): string | null {
+  if (autonomy !== "gated") return null;
+  const approved = readApprovedSwarmBatches(stateContent);
+  for (let batchNumber = 1; batchNumber <= nextIndex; batchNumber++) {
+    if (!approved.has(batchNumber)) {
+      return batchGateQuestion(batchNumber, batches[batchNumber - 1] ?? []);
+    }
+  }
+  return null;
+}
+
 // Try to emit an `invoke-swarm` directive instead of a run-stage, returning true
 // (and emitting) ONLY when every trigger condition holds:
 //   - the slug resolves to a Construction stage that is the per-unit build stage
 //     (for_each:unit-of-work + mode:subagent — code-generation today);
-//   - the human granted autonomy at the walking-skeleton ladder
-//     (Construction Autonomy Mode: autonomous);
+//   - the human recorded a grant at the walking-skeleton ladder (Construction
+//     Autonomy Mode: autonomous OR gated — gated fans out the same batches and
+//     stops at a batch-end gate, issue #1612; only unset refuses to fan out);
 //   - the compiled Bolt/unit DAG yields a batch with uncovered units.
 // On all-true it emits `{kind:"invoke-swarm", units: <first batch's uncovered
 // units>}` — the earliest topological level not yet complete, the units eligible
@@ -2523,38 +2643,18 @@ function tryEmitSwarm(
   // Never swarm the walking-skeleton gate stage — Bolt 1 is always gated and
   // human-approved before any batch fans out (structural defense-in-depth).
   if (isSkeletonGateStage(node, scope)) return false;
-  if (readAutonomyMode(stateContent) !== "autonomous") return false;
+  const autonomy = readAutonomyMode(stateContent);
+  if (autonomy === null) return false;
   const batches = readBoltDagBatches(projectDir);
   if (!batches || batches.length === 0) return false;
-  const unitKinds = readUnitKinds(projectDir);
-  // Issue #841 (contract from #486): bolt_dag.batches is the STATIC topology —
-  // completed batches must be excluded here, or every `next` re-offers batch 1
-  // forever and the swarm never advances. Coverage uses the same ledger as the
-  // per-unit loop (unitCovered: the stage's produces on disk), so no bolt-name
-  // correlation is needed. The first batch with uncovered units is offered (only
-  // its uncovered units); when every unit of every batch is covered, fall through
-  // (return false) to emitPerUnitRunStage's all-covered re-entry, which presents
-  // the stage's real gate.
-  let firstBatch: string[] | null = null;
-  for (const batch of batches) {
-    if (!Array.isArray(batch) || batch.length === 0) continue;
-    const uncovered = batch.filter(
-      (u) =>
-        !unitCovered(
-          projectDir,
-          node,
-          u,
-          recordPrefix,
-          codekbCtx,
-          unitKinds.get(u),
-        ),
-    );
-    if (uncovered.length > 0) {
-      firstBatch = uncovered;
-      break;
-    }
+  const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
+  if (pick === null) return false;
+  const firstBatch = pick.units;
+  const owedGate = owedBatchGate(autonomy, batches, pick.index, stateContent);
+  if (owedGate !== null) {
+    emit(askDirective(owedGate));
+    return true;
   }
-  if (firstBatch === null) return false;
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
   // legacy/flat intent). NOT resolveConstructionRepo here: that THROWS on >1, and
@@ -2728,6 +2828,18 @@ function emitPerUnitRunStage(
   // the gate and re-enters here to begin per-unit iteration.
   if (isSkeletonGateStage(node, scope) && readSkeletonStance(stateContent) === null) {
     emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+    return;
+  }
+
+  // LADDER precedence (issue #1612, stage-protocol.md:121). Once the walking
+  // skeleton is complete, `Construction Autonomy Mode` must carry the human's
+  // answer before any further Bolt runs. A session that resumes with the field
+  // still unset used to serialise silently; the engine now re-fires the ladder
+  // as an `ask` and emits no work until `set-autonomy` records the choice. Only
+  // AFTER the skeleton — an unset grant before it is the legitimate initial
+  // state and keeps today's behaviour.
+  if (skeletonGateCompleted(stateContent, scope) && readAutonomyMode(stateContent) === null) {
+    emit(askDirective(AUTONOMY_LADDER_QUESTION));
     return;
   }
 
@@ -3807,7 +3919,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // and its artifacts may legitimately be absent (a fresh clone, moved files), so
   // the guard must not turn a harmless replay into an error.
   //
-  // Scoped to the INLINE per-unit loop, NOT the autonomous code-generation swarm.
+  // Scoped to the INLINE per-unit loop, NOT the code-generation swarm.
   // The swarm advances ONE Bolt BATCH at a time (tryEmitSwarm emits the first
   // batch with uncovered units)
   // and gates per BATCH (stage-protocol.md: "a single Bolt-level gate (or
@@ -3817,13 +3929,18 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // DAG merges, the later batches' units are legitimately still uncovered, so
   // requiring every unit would refuse the batch-1 approve AND `next` would
   // re-emit batch 1 (no batch-advance), deadlocking the run. So we exclude the
-  // swarm condition (per-unit + mode:subagent + autonomous) verbatim from
+  // swarm condition (per-unit + mode:subagent + a recorded grant) verbatim from
   // tryEmitSwarm's trigger and let the swarm's own per-batch verification stand.
+  // Issue #1612 widened that trigger to `gated` (the batch-end gate replaces the
+  // autonomous run-through), so this exclusion is widened SYMMETRICALLY in the
+  // same change — a gated swarm advances batch by batch exactly like an
+  // autonomous one, and an all-units check would deadlock it identically. Unset
+  // (the non-swarm serial path) keeps the guard.
   // The guard remains for every inline per-unit stage (the four design stages,
   // and code-generation when it falls back to the inline path off the swarm).
-  const isAutonomousSwarm =
-    node.mode === SWARM_MODE && readAutonomyMode(stateContent) === "autonomous";
-  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed" && !isAutonomousSwarm) {
+  const isSwarmDriven =
+    node.mode === SWARM_MODE && readAutonomyMode(stateContent) !== null;
+  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed" && !isSwarmDriven) {
     const recordPrefix = relativeRecordDir(pd);
     const codekbCtx = codekbCtxFor(pd);
     const units = orderedUnits(pd);
