@@ -1556,7 +1556,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "165",
+    "lines": "169",
     "reason": "Fail-closed platform guard for a runtime without O_NOFOLLOW. Supported CI and production platforms expose the constant, while t268 covers normal, symlink, containment, size, and I/O outcomes.",
     "expiry": "remove when the supported platform matrix includes a runtime without O_NOFOLLOW or the filesystem constants port becomes injectable"
   },
@@ -1568,7 +1568,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "264",
+    "lines": "277",
     "reason": "Dangling-after-lstat ENOENT recovery inside the lstat-to-realpath race window; ordinary absent and symlinked files are covered in-process.",
     "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
   },
