@@ -292,6 +292,29 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     );
   });
 
+  test("ask select-intent response action validates its options", () => {
+    expect(
+      errs({
+        ...ask(),
+        response_action: {
+          kind: "select-intent",
+          options: ["plugin-verb-skills"],
+        },
+      }),
+    ).toBe("VALID");
+    expect(
+      errs({
+        ...ask(),
+        response_action: {
+          kind: "select-intent",
+          options: [],
+        },
+      }),
+    ).toContain(
+      "ask: response_action options must be a non-empty string array",
+    );
+  });
+
   // ============================================================
   // The classify-round-trip gate sentinel + conductor_persona (4 assertions)
   // .sh lines 162-173

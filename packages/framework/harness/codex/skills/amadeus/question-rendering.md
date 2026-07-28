@@ -43,6 +43,10 @@ Reply with a number (or just tell me).
 
 ## Answer capture
 
+- Resolve a numeric reply to the option that the user saw before invoking any
+  tool. Normalize full-width digits (`１`–`９`) as ordinals too. Pass the
+  option's semantic label or value onward; never pass the raw ordinal to an
+  engine, audit command, or other tool.
 - Before every structured question, record the options with
   `bun .codex/tools/amadeus-log.ts decision --stage <slug> ...` as required by
   the shared stage protocol.
@@ -71,7 +75,11 @@ Reply with a number (or just tell me).
   then re-ask for a final pick).
 - Preserve the exact option label or free text in audit and `--user-input`;
   never summarize User Input.
-- Gate semantics live in the ENGINE — rendering never decides. For an `ask`
-  directive, the user's answer rides back with exactly
+- Gate semantics live in the ENGINE — rendering never decides. For an ordinary
+  `ask` directive without `response_action`, the resolved answer rides back with exactly
   `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<exact label>"`;
   do not add `--result` or `--stage`.
+- For `response_action.kind: select-intent`, render exactly
+  `response_action.options`, resolve the reply to one listed slug, run
+  `bun .codex/tools/amadeus-utility.ts intent "<slug>"`, and re-run `next`.
+  This action sets a cursor; it never calls `report`.

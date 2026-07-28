@@ -105,4 +105,3 @@ framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて�
 root `scripts/` の移動は、framework packaging がリポジトリ root から独立してリリース可能になった場合にのみ再検討します。
 
 root `dist/` の移動は、install commands と public distribution への期待を README、docs、tests、CI、self-promotion にわたって意図的に変更できる場合にのみ再検討します。
-

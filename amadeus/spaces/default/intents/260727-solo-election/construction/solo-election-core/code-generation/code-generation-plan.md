@@ -1,6 +1,6 @@
 # Code Generation Plan — solo-election-core (U1)
 
-**Intent:** 260727-solo-election | **Unit:** U1 walking skeleton | **Test strategy:** Comprehensive  
+**Intent:** 260727-solo-election | **Unit:** U1 walking skeleton | **Test strategy:** Comprehensive
 **Traceability:** FR-05/06/07, BR-U1-1〜8, bolt-plan Bolt 1 intra-bolt order
 
 ## Step 1: Baseline & failing-proof tests (red first)

@@ -241,7 +241,6 @@ type ProcessObservation = {
   projectDir: string;
   name: string;
   startMs: number;
-  registered: boolean;
 };
 
 let _processObservation: ProcessObservation | null = null;
@@ -252,7 +251,7 @@ let _processObservation: ProcessObservation | null = null;
 export function initProcessObservability(name: string, projectDir: string): void {
   if (!observabilityEnabled(projectDir)) return;
   if (_processObservation !== null) return; // first caller wins (one span per process)
-  _processObservation = { projectDir, name, startMs: Date.now(), registered: true };
+  _processObservation = { projectDir, name, startMs: Date.now() };
   process.on("exit", (code) => flushProcessObservation(code));
 }
 

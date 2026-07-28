@@ -25,7 +25,8 @@
 //   - the engine's print-directive terminal arm (status names no workflow);
 //   - nothing is scaffolded by a read-only utility (no amadeus-docs creature).
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
 // (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
 // AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
 
@@ -42,6 +43,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { codexExecLiveSkipReason } from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
@@ -61,9 +63,8 @@ function codexVersionOk(): boolean {
 }
 
 function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec journey (uses Bedrock)";
-  }
+  const environmentReason = codexExecLiveSkipReason(process.env);
+  if (environmentReason !== null) return environmentReason;
   if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
   if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
   return null;

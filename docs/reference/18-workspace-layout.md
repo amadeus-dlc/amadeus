@@ -105,4 +105,3 @@ When shipping a change that touches this layout, confirm the following according
 Reconsider moving root `scripts/` only if framework packaging becomes independently releasable from the repository root.
 
 Reconsider moving root `dist/` only if install commands and public distribution expectations can be changed deliberately across README, docs, tests, CI, and self-promotion.
-

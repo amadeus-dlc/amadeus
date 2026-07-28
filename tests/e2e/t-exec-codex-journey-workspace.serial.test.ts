@@ -26,7 +26,8 @@
 //   4. `/amadeus space-create teamB` → `/amadeus space teamB` → birth there; no leak.
 //   5. `/amadeus space default` → A still resumable.
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
 // (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
 // AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise. Serial.
 
@@ -39,6 +40,7 @@ import {
   listIntents,
   readIntentRegistry,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { codexExecLiveSkipReason } from "../harness/codex-exec-live.ts";
 import {
   cleanupWorkspaceJourney,
   REPO_ROOT,
@@ -91,9 +93,8 @@ function codexVersionOk(): boolean {
 }
 
 function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec workspace journey (uses Bedrock)";
-  }
+  const environmentReason = codexExecLiveSkipReason(process.env);
+  if (environmentReason !== null) return environmentReason;
   if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
   if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
   return null;

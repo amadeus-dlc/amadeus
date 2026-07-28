@@ -585,8 +585,17 @@ function toolErrorMessage(run: ToolRun): string {
 
 // --- Terminal-directive constructors (the non-run-stage kinds) ---
 
-function askDirective(question: string): AskDirective {
-  return { kind: "ask", question };
+function askDirective(
+  question: string,
+  responseAction?: AskDirective["response_action"],
+): AskDirective {
+  return {
+    kind: "ask",
+    question,
+    ...(responseAction === undefined
+      ? {}
+      : { response_action: responseAction }),
+  };
 }
 
 function printDirective(message: string): PrintDirective {
@@ -837,6 +846,7 @@ function intentPickPromptIfRecordsExist(
       `(the active-intent cursor is per-user and not cloned). ` +
       `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +
       "Selecting an intent sets the cursor; re-run `next` afterward to continue its workflow.",
+    { kind: "select-intent", options: slugs },
   );
 }
 

@@ -193,13 +193,18 @@ export interface PresentGateDirective {
   memory_path: string;
 }
 
+export interface SelectIntentResponseAction {
+  kind: "select-intent";
+  options: string[];
+}
+
 // ask — render a specific structured question (resume choice, scope
-// confirmation, the autonomy ladder). The engine never calls AskUserQuestion
-// itself; it emits `ask` and stops, the conductor renders it and feeds the
-// answer back via report.
+// confirmation, the autonomy ladder). Most answers return via report. Intent
+// selection is different: it sets the per-user cursor, then re-runs next.
 export interface AskDirective {
   kind: "ask";
   question: string;
+  response_action?: SelectIntentResponseAction;
 }
 
 // print — print verbatim and stop (status / help / doctor / version).
@@ -321,7 +326,7 @@ const DISPATCH_SUBAGENT_FIELDS = [
 
 const INVOKE_SWARM_FIELDS = ["kind", "units", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
-const ASK_FIELDS = ["kind", "question"] as const;
+const ASK_FIELDS = ["kind", "question", "response_action"] as const;
 const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
@@ -370,7 +375,10 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkString(o, "phase", "present-gate", errors);
     checkString(o, "memory_path", "present-gate", errors);
   },
-  ask: (o, errors) => checkString(o, "question", "ask", errors),
+  ask: (o, errors) => {
+    checkString(o, "question", "ask", errors);
+    checkAskResponseAction(o, errors);
+  },
   print: (o, errors) => checkString(o, "message", "print", errors),
   error: (o, errors) => checkString(o, "message", "error", errors),
   done: (o, errors) => checkString(o, "reason", "done", errors),
@@ -483,6 +491,42 @@ function checkRunStageShared(
   if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
 }
 
+function checkAskResponseAction(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  if (!("response_action" in o)) return;
+  if (!isPlainObject(o.response_action)) {
+    errors.push(
+      `ask: response_action must be object, got ${
+        o.response_action === null
+          ? "null"
+          : Array.isArray(o.response_action)
+            ? "array"
+            : typeof o.response_action
+      }`,
+    );
+    return;
+  }
+  const action = o.response_action;
+  for (const key of Object.keys(action)) {
+    if (key !== "kind" && key !== "options") {
+      errors.push(`ask: response_action unknown key: ${key}`);
+    }
+  }
+  if (action.kind !== "select-intent") {
+    errors.push(
+      `ask: response_action kind must be "select-intent", got ${String(action.kind)}`,
+    );
+  }
+  if (
+    !Array.isArray(action.options) ||
+    action.options.length === 0 ||
+    action.options.some((option) => typeof option !== "string" || option.length === 0)
+  ) {
+    errors.push("ask: response_action options must be a non-empty string array");
+  }
+}
 
 function checkStandingGrantCarrier(
   o: Record<string, unknown>,

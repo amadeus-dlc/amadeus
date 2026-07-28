@@ -120,6 +120,10 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       const slugs = readIntentRegistry(proj).map((e) => e.slug);
       expect(slugs.length).toBe(2);
       for (const s of slugs) expect(d.question).toContain(s);
+      expect(d.response_action).toEqual({
+        kind: "select-intent",
+        options: slugs,
+      });
       // Read-only: no third intent was born; the cursor is still unset.
       expect(recordDirs(proj).length).toBe(2);
       expect(existsSync(cursorPath(proj))).toBe(false);
@@ -130,6 +134,10 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       const r = next(["poc"]); // positional valid-scope name, no --scope flag
       const d = JSON.parse(r.stdout.trim());
       expect(d.kind).toBe("ask");
+      expect(d.response_action?.kind).toBe("select-intent");
+      expect(d.response_action?.options).toEqual(
+        readIntentRegistry(proj).map((e) => e.slug),
+      );
       expect(d.message ?? "").not.toContain("intent-birth");
       expect(d.question).toContain("/amadeus intent <slug>");
       expect(recordDirs(proj).length).toBe(2); // no duplicate born
