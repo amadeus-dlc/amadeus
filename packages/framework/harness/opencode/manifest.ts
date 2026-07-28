@@ -16,7 +16,7 @@
 //     layers live in amadeus-rules/, keeping the harness's native rules dir free)
 //   - skills ship at .opencode/skills/ (OpenCode's skill-discovery path) and user
 //     commands at .opencode/commands/ — both emitted by emit(), so skipRunnerGen
-//     is set. Only the four SESSION skills are composed there; the orchestrator
+//     is set. Only the SESSION skills are composed there; the orchestrator
 //     ships solely as the command (E-OC16 ruling C — core has no orchestrator
 //     skill origin, and re-composing it would duplicate the command in dist).
 //   - session skills ship as bare SKILL.md (no codex openai.yaml guard — that is

@@ -343,6 +343,7 @@ export default function emit(ctx: EmitContext): EmitResult {
     "amadeus-grilling",
     mirrorSessionSkillName("codex"),
     "amadeus-election",
+    "amadeus-plugin",
   ]) {
     const srcDir = join(coreRoot, "skills", skill);
     if (!existsSync(srcDir)) continue;

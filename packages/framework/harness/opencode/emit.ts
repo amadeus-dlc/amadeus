@@ -46,6 +46,7 @@ const SESSION_SKILLS = [
   "amadeus-outcomes-pack",
   "amadeus-grilling",
   mirrorSessionSkillName("opencode"),
+  "amadeus-plugin",
 ];
 
 // The opencode.json config EXAMPLE. OpenCode defaults most permissions to

@@ -37,6 +37,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
     mirrorCoreSkillDirectory("kiro-ide"),
+    { src: "skills/amadeus-plugin", dst: "skills/amadeus-plugin" },
   ],
 
   // Authored surfaces: same as CLI but adds .kiro.hook files and omits the

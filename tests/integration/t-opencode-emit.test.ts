@@ -34,6 +34,7 @@ const SESSION_SKILLS = [
   "amadeus-outcomes-pack",
   "amadeus-grilling",
   "amadeus-mirror",
+  "amadeus-plugin",
 ];
 
 const COMMAND_BODY = "AUTHORED opencode command body — probe\n";
