@@ -7,7 +7,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
-import { initProcessObservability } from "../tools/amadeus-observability.ts";
+import { initProcessObservability, observabilityEnabled } from "../tools/amadeus-observability.ts";
 import {
   errorMessage,
   hooksHealthDir,
@@ -55,4 +55,22 @@ try {
 } catch (e) {
   recordHookDrop(projectDir, "session-end", errorMessage(e));
   process.exit(0);
+}
+
+// Projector piggyback (設計裁定 Q19: on-demand, no daemon): fire-and-forget a
+// telemetry export at session end. Detached, output ignored, failures never
+// reach the hook — the projector owns its own lock, cursor, and fail-open
+// diagnostics. Guarded by the same opt-in every other telemetry surface uses.
+if (observabilityEnabled(projectDir)) {
+  try {
+    const projector = new URL("../tools/amadeus-otel-projector.ts", import.meta.url).pathname;
+    Bun.spawn({
+      cmd: ["bun", "run", projector, "export", "--project-dir", projectDir],
+      stdout: "ignore",
+      stderr: "ignore",
+      stdin: "ignore",
+    }).unref();
+  } catch {
+    // fail-open: a missing runtime or spawn failure never blocks session end
+  }
 }
