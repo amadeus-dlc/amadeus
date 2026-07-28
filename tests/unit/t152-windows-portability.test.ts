@@ -41,14 +41,11 @@ describe("t152 Windows portability guard", () => {
     expect(ps).not.toContain("run-tests.sh");
   });
 
-  test("live TUI sessions use direct tmux operations", () => {
+  test("live TUI sessions use a tmux-only injectable command boundary", () => {
     const driver = read("tests/harness/tui-drive.ts");
-    expect(driver).toContain("function startSession(");
-    expect(driver).toContain("function sendKeys(");
-    expect(driver).toContain("function capturePane(");
-    expect(driver).toContain("function killSession(");
-    expect(driver).not.toContain("interface Backend");
-    expect(driver).not.toContain("tmuxBackend");
+    expect(driver).toContain("export interface Backend");
+    expect(driver).toContain("export function createTmuxBackend(");
+    expect(driver).toContain('spawnSync("tmux"');
     expect(driver).not.toContain("Bun.Terminal");
     expect(driver).not.toContain("__win-daemon");
   });
