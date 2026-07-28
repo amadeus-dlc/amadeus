@@ -431,10 +431,6 @@ function isHumanWaitStop(stateContent: string): boolean {
   }
 }
 
-export function isHumanInputDirective(kind: string | null): boolean {
-  return kind === "ask" || kind === "select-intent";
-}
-
 // --- Tier-2: pending mid-stage question carve-out -----------------------------
 //
 // A clarifying question asked mid-stage leaves the stage at [-] in-progress —
@@ -1006,7 +1002,7 @@ if (kind === "parked") {
 
 // `ask` / `select-intent` → the engine is explicitly waiting for human input.
 // Allow the turn to end so the user can respond, rather than re-feeding the loop.
-if (isHumanInputDirective(kind)) {
+if (kind === "ask" || kind === "select-intent") {
   allowStop();
 }
 

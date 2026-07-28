@@ -1166,19 +1166,19 @@
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "878-879",
+    "lines": "874-875",
     "reason": "Stop-hook top-level wiring inside `if (import.meta.main)`: draining stdin and re-resolving projectDir from the payload cwd (#1482). The block only executes in the spawned hook process, which Bun LCOV does not attribute to the parent; the in-process import used by t246/t296 deliberately does not enter it. The behaviour is covered end-to-end by t121 (spawned Stop hook) and the resolver itself by t202.",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "883",
+    "lines": "879",
     "reason": "Stop-hook payload parse inside `if (import.meta.main)` — same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "1098",
+    "lines": "1094",
     "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
@@ -1250,7 +1250,7 @@
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "910",
+    "lines": "906",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },

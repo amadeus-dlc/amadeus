@@ -6,10 +6,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  isHumanInputDirective,
-  isPendingComposeStop,
-} from "../../packages/framework/core/hooks/amadeus-stop.ts";
+import { isPendingComposeStop } from "../../packages/framework/core/hooks/amadeus-stop.ts";
 import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
@@ -28,13 +25,6 @@ const STOP = join(ROOT, "packages/framework/core/hooks/amadeus-stop.ts");
 const roots: string[] = [];
 afterAll(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
-});
-
-test("stop hook recognizes every directive that waits for human input", () => {
-  expect(isHumanInputDirective("ask")).toBe(true);
-  expect(isHumanInputDirective("select-intent")).toBe(true);
-  expect(isHumanInputDirective("run-stage")).toBe(false);
-  expect(isHumanInputDirective(null)).toBe(false);
 });
 
 function project(): string {
