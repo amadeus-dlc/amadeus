@@ -22,13 +22,11 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const IS_WIN = os.platform() === "win32";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "900", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 900) * 1000;
@@ -57,7 +55,6 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
     return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro status journeys (uses Kiro credits)";
   }
-  if (IS_WIN) return "kiro TUI journey is tmux-backend only (no Windows kiro-cli path)";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";

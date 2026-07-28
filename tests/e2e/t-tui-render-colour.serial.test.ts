@@ -34,14 +34,12 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
-const IS_WIN = os.platform() === "win32";
 
 // Generous live-turn budget — one tiny turn, but tmux+claude startup + a real
 // Bedrock round-trip. Honour the suite's AMADEUS_TEST_TIMEOUT (seconds).
@@ -87,9 +85,6 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
-  }
-  if (IS_WIN) {
-    return "live TUI journeys are not supported on Windows";
   }
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";

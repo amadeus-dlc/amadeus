@@ -79,7 +79,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
@@ -87,7 +86,6 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
 // Bun runs the TypeScript entrypoint natively.
 const DRIVE_BIN = process.execPath;
 const DRIVE_PREFIX = [DRIVER];
@@ -190,7 +188,6 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live env-scope journey (uses Bedrock tokens)";
   }
-  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }

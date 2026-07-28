@@ -66,7 +66,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
@@ -74,7 +73,6 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
 const DRIVE_BIN = process.execPath;
 const DRIVE_PREFIX = [DRIVER];
 
@@ -119,7 +117,6 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live revision-loop journey (uses Bedrock tokens — two run-throughs)";
   }
-  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }

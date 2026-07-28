@@ -51,13 +51,11 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { AMADEUS_SRC, cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
-const IS_WIN = os.platform() === "win32";
 
 interface Run {
   rc: number;
@@ -92,7 +90,6 @@ function absentReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live Claude TUI orientation render (watched tier)";
   }
-  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }

@@ -25,13 +25,11 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import * as os from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
 // Bun runs the TypeScript entrypoint natively on every platform.
 
 interface Run {
@@ -65,7 +63,6 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 // ABSENT detection (skip-with-reason). On POSIX the substrate is tmux; claude
 // is needed on every platform; the distributable must be present to copy.
 function absentReason(): string | null {
-  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
   }

@@ -63,4 +63,4 @@ Write-Output "=== bun install --frozen-lockfile ==="
 & $BunExe install --frozen-lockfile
 if ($LASTEXITCODE -ne 0) { throw "bun install failed ($LASTEXITCODE)" }
 
-Write-Output "=== setup complete  -  run a test with run.ps1 ==="
+Write-Output "=== setup complete ==="

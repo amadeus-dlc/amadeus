@@ -16,15 +16,10 @@
 // ---------------------------------------------------------------------------
 // One backend, one subcommand surface (D-TUI-2).
 //
-//   darwin / linux → tmux backend. A detached tmux session lives in the tmux
-//                    server, so each subcommand invocation (start/send/capture/
-//                    wait/kill) is a fresh process that re-attaches to the
-//                    server-side session by name. Proven; byte-for-byte the
-//                    behaviour of the original tools/amadeus-tui-drive.ts spike.
-//
-//   win32          → unsupported for live TUI journeys. The native Bun test
-//                    runner remains portable, but this rendered-terminal
-//                    instrument deliberately requires tmux.
+//   tmux → A detached session lives in the tmux server, so each subcommand
+//          invocation (start/send/capture/wait/kill) is a fresh process that
+//          re-attaches to the server-side session by name. Proven; byte-for-byte
+//          the behaviour of the original tools/amadeus-tui-drive.ts spike.
 //
 // Subcommands:
 //   start  --session <name> --cwd <dir> [--width N] [--height N] -- <cmd...>
@@ -222,36 +217,9 @@ function answerGateTracePollMs(): number {
   return Math.max(1_000, raw);
 }
 
-// A small promise-based sleep shared by the client and daemon paths.
+// A small promise-based sleep for polling and input-settle delays.
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// ---------------------------------------------------------------------------
-// Backend contract (§2.3). Both backends satisfy the same five operations; the
-// CLI dispatch and the `wait` polling loop are backend-agnostic.
-// ---------------------------------------------------------------------------
-
-interface Backend {
-  /** Launch `cmd` (rest argv) in a fresh session of width x height at cwd. */
-  start(
-    session: string,
-    cwd: string,
-    width: number,
-    height: number,
-    cmd: string[],
-  ): void | Promise<void>;
-  /** Type keys; Enter is appended unless noEnter. literal sends verbatim. */
-  send(
-    session: string,
-    keys: string,
-    literal: boolean,
-    noEnter: boolean,
-  ): void;
-  /** Current visible grid as text. ansi keeps colour escapes (tmux only). */
-  capture(session: string, ansi: boolean): string;
-  /** Kill the session (idempotent). */
-  kill(session: string): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,70 +246,74 @@ function tmux(args: string[]): { code: number; stdout: string; stderr: string } 
   return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
-const tmuxBackend: Backend = {
-  start(session, cwd, width, height, cmd) {
-    if (cmd.length === 0) fail("no command after `--` to run in the session");
+function startSession(
+  session: string,
+  cwd: string,
+  width: number,
+  height: number,
+  cmd: string[],
+): void {
+  if (cmd.length === 0) fail("no command after `--` to run in the session");
 
-    // Kill any stale session of the same name first (idempotent start).
-    tmux(["kill-session", "-t", session]);
+  // Kill any stale session of the same name first (idempotent start).
+  tmux(["kill-session", "-t", session]);
 
-    // Build a single shell command so cwd + the target command run in one PTY.
-    // We cd then exec so the child replaces the shell (clean kill semantics).
-    const inner = cmd.map((s) => `'${s.replaceAll("'", "'\\''")}'`).join(" ");
-    const shellCmd = `cd '${cwd.replaceAll("'", "'\\''")}' && exec ${inner}`;
+  // Build a single shell command so cwd + the target command run in one PTY.
+  // We cd then exec so the child replaces the shell (clean kill semantics).
+  const inner = cmd.map((s) => `'${s.replaceAll("'", "'\\''")}'`).join(" ");
+  const shellCmd = `cd '${cwd.replaceAll("'", "'\\''")}' && exec ${inner}`;
 
-    const r = tmux([
-      "new-session",
-      "-d",
-      "-s",
-      session,
-      "-x",
-      String(width),
-      "-y",
-      String(height),
-      "bash",
-      "-lc",
-      shellCmd,
-    ]);
-    if (r.code !== 0) fail(`new-session failed: ${r.stderr.trim()}`);
-    process.stdout.write(`started session '${session}' (${width}x${height})\n`);
-  },
+  const r = tmux([
+    "new-session",
+    "-d",
+    "-s",
+    session,
+    "-x",
+    String(width),
+    "-y",
+    String(height),
+    "bash",
+    "-lc",
+    shellCmd,
+  ]);
+  if (r.code !== 0) fail(`new-session failed: ${r.stderr.trim()}`);
+  process.stdout.write(`started session '${session}' (${width}x${height})\n`);
+}
 
-  send(session, keys, literal, noEnter) {
-    // --literal (-l) sends the string verbatim, so free text containing spaces
-    // or words that collide with tmux key names ("Enter", "Space", "C-c") is
-    // typed as-is rather than interpreted. Use it for prompts / slash commands;
-    // omit it for named keys (Enter, Down, C-c).
-    const sendArgs = ["send-keys", "-t", session];
-    if (literal) sendArgs.push("-l");
-    sendArgs.push(keys);
-    const r = tmux(sendArgs);
-    if (r.code !== 0) fail(`send-keys failed: ${r.stderr.trim()}`, 1);
-    if (!noEnter) {
-      tmux(["send-keys", "-t", session, "Enter"]);
-    }
-  },
+function sendKeys(session: string, keys: string, literal: boolean, noEnter: boolean): void {
+  // --literal (-l) sends the string verbatim, so free text containing spaces
+  // or words that collide with tmux key names ("Enter", "Space", "C-c") is
+  // typed as-is rather than interpreted. Use it for prompts / slash commands;
+  // omit it for named keys (Enter, Down, C-c).
+  const sendArgs = ["send-keys", "-t", session];
+  if (literal) sendArgs.push("-l");
+  sendArgs.push(keys);
+  const r = tmux(sendArgs);
+  if (r.code !== 0) fail(`send-keys failed: ${r.stderr.trim()}`, 1);
+  if (!noEnter) {
+    tmux(["send-keys", "-t", session, "Enter"]);
+  }
+}
 
-  capture(session, ansi) {
-    // -p print to stdout, -J join wrapped lines, -e keep escapes (ansi mode).
-    const args = ["capture-pane", "-t", session, "-p", "-J"];
-    if (ansi) args.push("-e");
-    const r = tmux(args);
-    if (r.code !== 0) fail(`capture-pane failed: ${r.stderr.trim()}`, 1);
-    return r.stdout;
-  },
+function capturePane(session: string, ansi: boolean): string {
+  // -p print to stdout, -J join wrapped lines, -e keep escapes (ansi mode).
+  const args = ["capture-pane", "-t", session, "-p", "-J"];
+  if (ansi) args.push("-e");
+  const r = tmux(args);
+  if (r.code !== 0) fail(`capture-pane failed: ${r.stderr.trim()}`, 1);
+  return r.stdout;
+}
 
-  kill(session) {
-    tmux(["kill-session", "-t", session]); // idempotent; ignore errors
-  },
-};
+function killSession(session: string): void {
+  tmux(["kill-session", "-t", session]); // idempotent; ignore errors
+}
 
 // ---------------------------------------------------------------------------
 // Subcommands. `wait`'s polling loop lives here so its --stable-ms semantics
 // remain independent from tmux command execution (§2.3).
 // ---------------------------------------------------------------------------
 
-async function cmdStart(backend: Backend, a: Args): Promise<void> {
+function cmdStart(a: Args): void {
   const session = requireFlag(a, "session");
   const cwd = requireFlag(a, "cwd");
   const width = Number(a.flags.width ?? "120");
@@ -354,10 +326,10 @@ async function cmdStart(backend: Backend, a: Args): Promise<void> {
     command,
     requestedCommand: command.join("\0") === a.rest.join("\0") ? undefined : a.rest,
   });
-  await backend.start(session, cwd, width, height, command);
+  startSession(session, cwd, width, height, command);
 }
 
-function cmdSend(backend: Backend, a: Args): void {
+function cmdSend(a: Args): void {
   const session = requireFlag(a, "session");
   const keys = requireFlag(a, "keys");
   writeTuiTrace(session, "send", {
@@ -365,10 +337,10 @@ function cmdSend(backend: Backend, a: Args): void {
     literal: a.bools.literal === true,
     noEnter: a.bools["no-enter"] === true,
   });
-  backend.send(session, keys, a.bools.literal === true, a.bools["no-enter"] === true);
+  sendKeys(session, keys, a.bools.literal === true, a.bools["no-enter"] === true);
 }
 
-async function cmdWait(backend: Backend, a: Args): Promise<void> {
+async function cmdWait(a: Args): Promise<void> {
   const session = requireFlag(a, "session");
   const pattern = requireFlag(a, "pattern");
   const timeoutMs = Number(a.flags["timeout-ms"] ?? DEFAULT_TIMEOUT_MS);
@@ -381,7 +353,7 @@ async function cmdWait(backend: Backend, a: Args): Promise<void> {
   let stableSince = 0;
 
   while (Date.now() < deadline) {
-    const screen = backend.capture(session, false);
+    const screen = capturePane(session, false);
     const now = Date.now();
     if (screen === prev) {
       if (stableSince === 0) stableSince = now;
@@ -421,18 +393,18 @@ async function cmdWait(backend: Backend, a: Args): Promise<void> {
   process.exit(1);
 }
 
-function cmdCapture(backend: Backend, a: Args): void {
+function cmdCapture(a: Args): void {
   const session = requireFlag(a, "session");
   const ansi = a.bools.ansi === true;
-  const screen = backend.capture(session, ansi);
+  const screen = capturePane(session, ansi);
   writeTuiTrace(session, "capture", { ansi, screen });
   process.stdout.write(screen);
 }
 
-function cmdKill(backend: Backend, a: Args): void {
+function cmdKill(a: Args): void {
   const session = requireFlag(a, "session");
   writeTuiTrace(session, "kill", {});
-  backend.kill(session);
+  killSession(session);
   process.stdout.write(`killed session '${session}'\n`);
 }
 
@@ -677,15 +649,14 @@ function pickMenuOption(grid: string, label: RegExp): number | null {
 }
 
 async function chooseNumberedMenuOption(
-  backend: Backend,
   session: string,
   optionNum: number,
 ): Promise<void> {
   for (let i = 1; i < optionNum; i++) {
-    backend.send(session, "Down", false, true);
+    sendKeys(session, "Down", false, true);
     await sleep(120);
   }
-  backend.send(session, "Enter", false, true);
+  sendKeys(session, "Enter", false, true);
 }
 
 const REVISION_FEEDBACK =
@@ -738,17 +709,16 @@ export function pickRevisionOption(grid: string): number | null {
 }
 
 async function handleRevisionRecovery(
-  backend: Backend,
   session: string,
   answered: number,
 ): Promise<boolean> {
   const recoveryDeadline = Date.now() + 60_000;
   while (Date.now() < recoveryDeadline) {
     await sleep(POLL_INTERVAL_MS);
-    const after = backend.capture(session, false);
+    const after = capturePane(session, false);
     const typeSomethingNum = pickRevisionTypeSomethingOption(after);
     if (typeSomethingNum !== null) {
-      await chooseNumberedMenuOption(backend, session, typeSomethingNum);
+      await chooseNumberedMenuOption(session, typeSomethingNum);
       writeTuiTrace(session, "answer_gate_action", {
         answered,
         action: "reject_choose_type_something",
@@ -759,11 +729,11 @@ async function handleRevisionRecovery(
       const promptDeadline = Date.now() + 10_000;
       while (Date.now() < promptDeadline) {
         await sleep(POLL_INTERVAL_MS);
-        const prompt = backend.capture(session, false);
+        const prompt = capturePane(session, false);
         if (!gridHasMenu(prompt)) {
-          backend.send(session, REVISION_FEEDBACK, true, true);
+          sendKeys(session, REVISION_FEEDBACK, true, true);
           await sleep(300);
-          backend.send(session, "Enter", false, true);
+          sendKeys(session, "Enter", false, true);
           writeTuiTrace(session, "answer_gate_action", {
             answered,
             action: "reject_free_text_feedback",
@@ -778,7 +748,7 @@ async function handleRevisionRecovery(
     if (reviseNum !== null) {
       // Shape A: navigate the caret from option 1 down to the revise option,
       // then select it. (The caret starts on option 1 when the menu paints.)
-      await chooseNumberedMenuOption(backend, session, reviseNum);
+      await chooseNumberedMenuOption(session, reviseNum);
       writeTuiTrace(session, "answer_gate_action", {
         answered,
         action: "reject_pick_revision_option",
@@ -796,9 +766,9 @@ async function handleRevisionRecovery(
       gridLooksLikeRevisionFreeTextPrompt(after) ||
       (!gridHasMenu(after) && Date.now() > recoveryDeadline - 50_000)
     ) {
-      backend.send(session, REVISION_FEEDBACK, true, true);
+      sendKeys(session, REVISION_FEEDBACK, true, true);
       await sleep(300);
-      backend.send(session, "Enter", false, true);
+      sendKeys(session, "Enter", false, true);
       writeTuiTrace(session, "answer_gate_action", {
         answered,
         action: "reject_free_text_feedback",
@@ -814,7 +784,7 @@ async function handleRevisionRecovery(
   return false;
 }
 
-async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
+async function cmdAnswerGate(a: Args): Promise<void> {
   const session = requireFlag(a, "session");
   const projectDir = requireFlag(a, "project-dir");
   // The journey's pass condition is the ON-DISK terminator (--until-*); these
@@ -900,7 +870,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         answered,
         terminator: term.describe,
         overallMs,
-        screen: backend.capture(session, false),
+        screen: capturePane(session, false),
       });
       fail(
         `answer-gate: overall timeout (${overallMs}ms) — terminator (${term.describe}) ` +
@@ -927,7 +897,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         );
         return;
       }
-      const grid = backend.capture(session, false);
+      const grid = capturePane(session, false);
       maybeTracePoll(grid, gateDeadline);
       if (gridHasMenu(grid)) {
         sawMenu = true;
@@ -937,7 +907,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
     }
 
     if (!sawMenu) {
-      const screen = backend.capture(session, false);
+      const screen = capturePane(session, false);
       writeTuiTrace(session, "answer_gate_menu_timeout", {
         answered,
         perGateMs,
@@ -973,17 +943,17 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
     //
     // SINGLE-SELECT question (no checkbox): Enter SELECTS the highlighted/Recommended
     // option and auto-advances to the next tab (or approves a lone-question gate).
-    const grid = backend.capture(session, false);
+    const grid = capturePane(session, false);
     if (gridIsSubmitScreen(grid)) {
       writeTuiTrace(session, "answer_gate_action", {
         answered,
         action: "submit",
         screen: grid,
       });
-      backend.send(session, "Enter", false, true); // commit the whole form
+      sendKeys(session, "Enter", false, true); // commit the whole form
       if (revisionFeedbackPending) {
         revisionFeedbackPending = false;
-        await handleRevisionRecovery(backend, session, answered);
+        await handleRevisionRecovery(session, answered);
       }
     } else if (gridIsMultiSelect(grid)) {
       writeTuiTrace(session, "answer_gate_action", {
@@ -991,12 +961,12 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         action: gridIsMultiTabForm(grid) ? "multi_select_next_tab" : "multi_select_commit",
         screen: grid,
       });
-      backend.send(session, "Space", false, true); // toggle the Recommended option ON
+      sendKeys(session, "Space", false, true); // toggle the Recommended option ON
       await sleep(150);
       if (gridIsMultiTabForm(grid)) {
-        backend.send(session, "Right", false, true); // advance to the next tab / Submit
+        sendKeys(session, "Right", false, true); // advance to the next tab / Submit
       } else {
-        backend.send(session, "Enter", false, true); // lone multi-select: commit it
+        sendKeys(session, "Enter", false, true); // lone multi-select: commit it
       }
     } else if (rejectFirstGate && /\bRequest changes\b/i.test(grid)) {
       const requestChangesNeedsSubmit = gridIsMultiTabForm(grid);
@@ -1010,9 +980,9 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
       // than the highlighted "Approve" (option 1). Down moves the caret to option
       // 2; Enter selects it → handleReject (GATE_REJECTED + STAGE_REVISING +
       // Revision Count++). Consume the one-shot so every later gate is approved.
-      backend.send(session, "Down", false, true);
+      sendKeys(session, "Down", false, true);
       await sleep(150);
-      backend.send(session, "Enter", false, true);
+      sendKeys(session, "Enter", false, true);
       rejectFirstGate = false;
       process.stdout.write("answer-gate: rejected first approval gate (Request changes)\n");
       // What the engine does NEXT changed in v0.6.0, so we READ the screen and
@@ -1029,7 +999,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
           "answer-gate: waiting for the multi-tab form submit before revision feedback\n",
         );
       } else {
-        await handleRevisionRecovery(backend, session, answered);
+        await handleRevisionRecovery(session, answered);
       }
     } else {
       writeTuiTrace(session, "answer_gate_action", {
@@ -1037,7 +1007,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         action: "single_select_default",
         screen: grid,
       });
-      backend.send(session, "Enter", false, true); // select Recommended + advance
+      sendKeys(session, "Enter", false, true); // select Recommended + advance
     }
     answered++;
 
@@ -1053,20 +1023,19 @@ async function main(): Promise<void> {
   const a = parseArgs(process.argv.slice(2));
   const sub = a.positionals[0];
 
-  const backend = tmuxBackend;
   switch (sub) {
     case "start":
-      return cmdStart(backend, a);
+      return cmdStart(a);
     case "send":
-      return cmdSend(backend, a);
+      return cmdSend(a);
     case "wait":
-      return cmdWait(backend, a);
+      return cmdWait(a);
     case "capture":
-      return cmdCapture(backend, a);
+      return cmdCapture(a);
     case "kill":
-      return cmdKill(backend, a);
+      return cmdKill(a);
     case "answer-gate":
-      return cmdAnswerGate(backend, a);
+      return cmdAnswerGate(a);
     default:
       fail(
         `unknown subcommand '${sub ?? ""}'. ` +

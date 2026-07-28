@@ -34,7 +34,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import * as os from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -42,7 +41,6 @@ import { join } from "node:path";
 // Locate the driver. Bun runs the TypeScript entrypoint directly (§2.1, D-TUI-7).
 // ---------------------------------------------------------------------------
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const IS_WIN = os.platform() === "win32";
 
 // The known-answer target — no claude, no tokens. A bash printf holds the pane
 // open. The driver's `start` runs `<cmd...>` after `--`.
@@ -68,7 +66,6 @@ function drive(args: string[]): Run {
 // and FAILS LOUD, so a contributor gets one clear diagnostic line.
 // ---------------------------------------------------------------------------
 function substrateAbsentReason(): string | null {
-  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   const tmuxOk = spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status === 0;
   if (!tmuxOk) return "tmux not found";
   return null;
