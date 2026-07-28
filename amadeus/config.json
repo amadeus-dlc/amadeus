@@ -1,4 +1,5 @@
 {
+  "auto-mirror": "auto",
   "auto-solo-election": true,
   "mirror-projects": [
     {
