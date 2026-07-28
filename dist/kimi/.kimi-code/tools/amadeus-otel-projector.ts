@@ -70,7 +70,13 @@ function readBufferEvents(projectDir: string): BufferEvent[] {
   if (dir === null || !existsSync(dir)) return [];
   const events: BufferEvent[] = [];
   for (const file of readdirSync(dir).filter((f) => f.startsWith("buffer-") && f.endsWith(".jsonl"))) {
-    for (const line of readFileSync(join(dir, file), "utf-8").split("\n")) {
+    let raw: string;
+    try {
+      raw = readFileSync(join(dir, file), "utf-8");
+    } catch {
+      continue; // an unreadable buffer file never blocks the export (fail-open)
+    }
+    for (const line of raw.split("\n")) {
       if (!line.startsWith("{")) continue;
       try {
         const parsed = JSON.parse(line) as BufferEvent;
@@ -580,7 +586,7 @@ export async function runExport(
 
 // --- CLI --------------------------------------------------------------------
 
-function parseCliArgs(argv: string[]): { projectDir?: string; force: boolean } {
+export function parseCliArgs(argv: string[]): { projectDir?: string; force: boolean } {
   let projectDir: string | undefined;
   let force = false;
   for (let i = 0; i < argv.length; i += 1) {

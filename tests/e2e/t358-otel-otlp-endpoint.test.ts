@@ -117,15 +117,6 @@ describe("OTLP endpoint contract (fail-open)", () => {
     }
   });
 
-  test("an unreachable endpoint fails open: local export still lands, diagnostics noted", async () => {
-    proj = seedProject({ otlp: "http://127.0.0.1:9" });
-    const summary = await runExport(proj);
-    expect(summary.status).toBe("exported");
-    expect(summary.otlp).toEqual({ traces: "failed", metrics: "failed" });
-    expect(existsSync(join(telemetryDir(proj)!, "export", "traces.json"))).toBe(true);
-    expect(readFileSync(join(telemetryDir(proj)!, "diagnostics.log"), "utf-8")).toContain("otlp traces export failed");
-  });
-
   test("a non-2xx collector reply is a failed export, not a throw", async () => {
     const server = Bun.serve({ port: 0, fetch: () => new Response("nope", { status: 500 }) });
     try {

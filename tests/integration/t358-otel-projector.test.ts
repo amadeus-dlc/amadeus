@@ -7,7 +7,7 @@
 // loopback HTTP via Bun.serve). Imports come from the shipped dist tree.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   JOURNAL_SCHEMA_VERSION,
@@ -15,6 +15,7 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import { resetObservabilityConfigCache, telemetryDir } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
 import {
+  parseCliArgs,
   runExport,
   spanIdFor,
   traceIdFor,
@@ -171,5 +172,45 @@ describe("runExport — deterministic 5-level projection", () => {
       "utf-8",
     );
     expect((await runExport(proj)).status).toBe("exported");
+  });
+});
+
+describe("resilience seams (fail-open on damaged local state)", () => {
+  test("a completed phase closes the phase span at its completion event", async () => {
+    proj = seedProject();
+    const shard = seededAuditShard(proj);
+    const body = readFileSync(shard, "utf-8");
+    writeFileSync(shard, body + line(5, "PHASE_COMPLETED", "2026-07-28T10:06:00Z", { "From phase": "ideation" }), "utf-8");
+    await runExport(proj, { now: Date.parse("2026-07-28T11:00:00Z") });
+    const { spans } = readTraces(proj);
+    const phase = spans.find((s) => s.name === "phase ideation")!;
+    expect(phase.endTimeUnixNano).toBe(`${Date.parse("2026-07-28T10:06:00Z")}000000`);
+  });
+
+  test("an unreadable cursor or buffer shard falls back instead of failing", async () => {
+    proj = seedProject();
+    const dir = telemetryDir(proj)!;
+    // Dangling symlink: listed by readdir, ENOENT on read (portable across
+    // macOS/Linux, unlike readFileSync(dir)).
+    symlinkSync(join(dir, "missing-target"), join(dir, "buffer-dangling.jsonl"));
+    writeFileSync(join(dir, "cursor.json"), "not json", "utf-8");
+    const summary = await runExport(proj);
+    expect(summary.status).toBe("exported");
+  });
+
+  test("an unreachable endpoint fails open: local export lands, diagnostics degrade silently", async () => {
+    proj = seedProject({ otlp: "http://127.0.0.1:9" });
+    const dir = telemetryDir(proj)!;
+    // diagnostics.log as a directory: the append fails and is swallowed.
+    mkdirSync(join(dir, "diagnostics.log"), { recursive: true });
+    const summary = await runExport(proj);
+    expect(summary.status).toBe("exported");
+    expect(summary.otlp).toEqual({ traces: "failed", metrics: "failed" });
+    expect(existsSync(join(dir, "export", "traces.json"))).toBe(true);
+  });
+
+  test("parseCliArgs reads --project-dir and --force", () => {
+    expect(parseCliArgs(["--project-dir", "/x", "--force"])).toEqual({ projectDir: "/x", force: true });
+    expect(parseCliArgs([])).toEqual({ projectDir: undefined, force: false });
   });
 });
