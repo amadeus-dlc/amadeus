@@ -2,6 +2,7 @@
 // size: small
 
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   createIntentSelectionToken,
   intentSelectionOptions,
@@ -11,6 +12,12 @@ import {
 
 const options = ["first-intent", "second-intent"];
 const token = createIntentSelectionToken(options);
+
+function tokenForPayload(payload: string): string {
+  const encoded = Buffer.from(payload, "utf-8").toString("base64url");
+  const digest = createHash("sha256").update(encoded).digest("hex");
+  return `${encoded}.${digest}`;
+}
 
 describe("intent selection response resolution", () => {
   test.each([
@@ -36,6 +43,18 @@ describe("intent selection response resolution", () => {
 
   test("rejects a modified token instead of trusting caller-supplied semantics", () => {
     expect(resolveIntentSelectionResponse(`${token}x`, "1")).toEqual({
+      kind: "rejected",
+      message: "Intent selection token is invalid.",
+    });
+  });
+
+  test.each([
+    ["not-json"],
+    [JSON.stringify(null)],
+    [JSON.stringify({ version: 2, options })],
+    [JSON.stringify({ version: 1, options: [1, 2] })],
+  ])("rejects a validly digested malformed payload: %p", (payload) => {
+    expect(resolveIntentSelectionResponse(tokenForPayload(payload), "1")).toEqual({
       kind: "rejected",
       message: "Intent selection token is invalid.",
     });

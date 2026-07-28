@@ -19,13 +19,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "394",
+    "lines": "399",
     "reason": "The archived-next error emission is exercised through the generated orchestrator CLI by t259; the spawned main path is not attributed to the parent Bun LCOV process.",
     "expiry": "remove when the orchestrator CLI emitter is injected in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "935",
+    "lines": "955",
     "reason": "Defense-in-depth containment rejection after the trusted path has already been required to start with plugins/<plugin>/stages/ and every empty, dot, or dot-dot segment has been rejected; no accepted path can reach this branch.",
     "expiry": "remove if trusted plugin paths permit a new path form or path validation becomes injectable"
   },
@@ -944,7 +944,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4090",
+    "lines": "4110",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1166,19 +1166,19 @@
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "874-875",
+    "lines": "878-879",
     "reason": "Stop-hook top-level wiring inside `if (import.meta.main)`: draining stdin and re-resolving projectDir from the payload cwd (#1482). The block only executes in the spawned hook process, which Bun LCOV does not attribute to the parent; the in-process import used by t246/t296 deliberately does not enter it. The behaviour is covered end-to-end by t121 (spawned Stop hook) and the resolver itself by t202.",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "879",
+    "lines": "883",
     "reason": "Stop-hook payload parse inside `if (import.meta.main)` — same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "1091",
+    "lines": "1098",
     "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
@@ -1250,7 +1250,7 @@
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "906",
+    "lines": "910",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1280,13 +1280,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "2145",
+    "lines": "2165",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "2970",
+    "lines": "2990",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },

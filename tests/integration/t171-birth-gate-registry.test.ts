@@ -25,6 +25,15 @@ import {
 } from "../harness/fixtures.ts";
 import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { createIntentSelectionToken } from "../../dist/claude/.claude/tools/amadeus-intent-selection.ts";
+import {
+  resolveCurrentIntentSelectionResponse,
+} from "../../packages/framework/core/tools/amadeus-intent-selection.ts";
+import {
+  intentPickPromptIfRecordsExist,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  handleIntentSelectionResponse,
+} from "../../packages/framework/core/tools/amadeus-utility.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -106,6 +115,7 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       seedTwoIntentsNoCursor();
       const r = next(["--scope", "poc"]);
       const d = JSON.parse(r.stdout.trim());
+      expect(intentPickPromptIfRecordsExist(proj)).toEqual(d);
       // NOT a birth print: the gate must not name intent-birth here.
       expect(d.kind).not.toBe("print");
       expect(d.kind).toBe("select-intent");
@@ -147,6 +157,19 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       const firstRecord = readIntentRegistry(proj)[0].dirName;
       if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
       const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+      expect(
+        resolveCurrentIntentSelectionResponse(proj, directive.selection_token, "１"),
+      ).toEqual({
+        kind: "resolved",
+        target: readIntentRegistry(proj)[0].slug,
+      });
+      expect(
+        resolveCurrentIntentSelectionResponse(
+          proj,
+          createIntentSelectionToken(["feature", "poc"]),
+          "1",
+        ),
+      ).toMatchObject({ kind: "rejected" });
 
       const selected = util([
         "intent-select-response",
@@ -155,6 +178,28 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       ]);
 
       expect(selected.status, selected.out).toBe(0);
+      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
+      expect(
+        resolveCurrentIntentSelectionResponse(proj, directive.selection_token, "1"),
+      ).toEqual({
+        kind: "rejected",
+        message: "Intent selection is no longer pending because an active intent is set.",
+      });
+    });
+
+    test("the in-process utility boundary applies the validated response", () => {
+      seedTwoIntentsNoCursor();
+      const firstRecord = readIntentRegistry(proj)[0].dirName;
+      if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
+      const directive = intentPickPromptIfRecordsExist(proj);
+      if (directive === null) throw new Error("fixture did not produce an intent selection");
+
+      handleIntentSelectionResponse(proj, [
+        "intent-select-response",
+        directive.selection_token,
+        "１",
+      ]);
+
       expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
     });
 

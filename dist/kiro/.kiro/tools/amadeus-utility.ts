@@ -4755,6 +4755,30 @@ function selectIntentLocked(
   return selected;
 }
 
+function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
+  const asJson = flags.json === "true";
+  const target = positional[1];
+  if (!target) {
+    printIntentListing(projectDir, asJson);
+    return;
+  }
+  const space = activeSpace(projectDir);
+  if (target === "archive" || target === "unarchive") {
+    const selector = positional[2];
+    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
+    const resolved = withIntentLifecyclePreflight(
+      projectDir,
+      space,
+      appendUtilityLifecycleEvent,
+      () => resolveIntentSelector(projectDir, space, selector).dirName,
+    );
+    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
+    delegateIntentLifecycle(projectDir, target, resolved);
+    return;
+  }
+  selectIntent(projectDir, target);
+}
+
 function selectIntent(projectDir: string, target: string): void {
   const space = activeSpace(projectDir);
   const match = withIntentLifecyclePreflight(
@@ -4781,7 +4805,7 @@ function selectIntent(projectDir: string, target: string): void {
   process.stdout.write(`Active intent → ${match.dirName} (space: ${space})\n`);
 }
 
-function handleIntentSelectionResponse(
+export function handleIntentSelectionResponse(
   projectDir: string,
   positional: string[],
 ): void {
@@ -4799,30 +4823,6 @@ function handleIntentSelectionResponse(
   );
   if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
   selectIntent(projectDir, resolution.target);
-}
-
-function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
-  const asJson = flags.json === "true";
-  const target = positional[1];
-  if (!target) {
-    printIntentListing(projectDir, asJson);
-    return;
-  }
-  const space = activeSpace(projectDir);
-  if (target === "archive" || target === "unarchive") {
-    const selector = positional[2];
-    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
-    const resolved = withIntentLifecyclePreflight(
-      projectDir,
-      space,
-      appendUtilityLifecycleEvent,
-      () => resolveIntentSelector(projectDir, space, selector).dirName,
-    );
-    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
-    delegateIntentLifecycle(projectDir, target, resolved);
-    return;
-  }
-  selectIntent(projectDir, target);
 }
 
 // `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space

@@ -836,7 +836,7 @@ function composeDispatchDirective(
 // or one already resolved active — the latter only when this is reached with an
 // explicit scope/intent that didn't load a cursor'd state). The engine stays
 // read-only: it emits a directive, it does not touch the cursor.
-function intentPickPromptIfRecordsExist(
+export function intentPickPromptIfRecordsExist(
   projectDir: string,
 ): SelectIntentDirective | null {
   const space = activeSpace(projectDir);

@@ -6,7 +6,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isPendingComposeStop } from "../../packages/framework/core/hooks/amadeus-stop.ts";
+import {
+  isHumanInputDirective,
+  isPendingComposeStop,
+} from "../../packages/framework/core/hooks/amadeus-stop.ts";
 import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
@@ -25,6 +28,13 @@ const STOP = join(ROOT, "packages/framework/core/hooks/amadeus-stop.ts");
 const roots: string[] = [];
 afterAll(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
+});
+
+test("stop hook recognizes every directive that waits for human input", () => {
+  expect(isHumanInputDirective("ask")).toBe(true);
+  expect(isHumanInputDirective("select-intent")).toBe(true);
+  expect(isHumanInputDirective("run-stage")).toBe(false);
+  expect(isHumanInputDirective(null)).toBe(false);
 });
 
 function project(): string {
@@ -134,6 +144,14 @@ describe("t246 production help routing", () => {
     const refusal = utilityInProcess(["space-create", "-h", "--project-dir", root]);
     expect(refusal.code).toBe(1);
     expect(existsSync(join(root, "amadeus", "spaces", "h"))).toBe(false);
+
+    const invalidSelection = utilityInProcess([
+      "intent-select-response",
+      "--project-dir",
+      root,
+    ]);
+    expect(invalidSelection.code).toBe(1);
+    expect(invalidSelection.output).toContain("intent-select-response <selection-token>");
   });
 
   test("reserved birth and space slugs refuse after normalization without workflow mutation", () => {
