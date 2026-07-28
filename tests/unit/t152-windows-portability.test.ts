@@ -102,14 +102,10 @@ describe("t152 Windows portability guard", () => {
     // interpreter so bashisms don't regress to dash) and shell:true otherwise
     // (cmd.exe on win32, /bin/sh on bash-less POSIX).
     //
-    // The needles below are split (`"spawn" + "Sync("`) on purpose: a verbatim
-    // `spawnSync(` token co-occurring with the amadeus-swarm.ts literal and a
-    // runtime launcher would make the coverage generator's body-derived
-    // mechanism predicate (drivesCliSurface) misread THIS pure file-reading
-    // guard as a deterministic CLI spawner. It spawns nothing — it greps source
-    // — so the split keeps the honesty ratchet (gen-coverage-registry) accurate.
+    // The AST-based mechanism classifier ignores this string literal, so the
+    // source assertion can use the production token directly.
     const swarm = read("dist/claude/.claude/tools/amadeus-swarm.ts");
-    const spawnCall = "spawn" + "Sync(";
+    const spawnCall = "spawnSync(";
     // The convergence spawn no longer hardcodes a bash -c argv.
     expect(swarm).not.toContain(`${spawnCall}"bash", ["-c", checkCmd]`);
     // It passes the check command as the command and runs it under a shell.

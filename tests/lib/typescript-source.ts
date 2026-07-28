@@ -5,6 +5,17 @@ export type ImportedBinding = {
   name: string;
 };
 
+export type ImportedCallQuery = {
+  module: string;
+  exportNames: ReadonlySet<string>;
+};
+
+const IMPORTED_CALL_SCAN_FILE = "/imported-call-query.ts";
+const IMPORTED_CALL_CACHE = new Map<
+  string,
+  ReadonlyMap<string, ReadonlySet<string>>
+>();
+
 export function importedBindingOf(
   identifier: ts.Identifier,
   checker: ts.TypeChecker,
@@ -74,4 +85,45 @@ export function sourceWithTypeChecker(
   };
   const program = ts.createProgram([fileName], options, host);
   return { sourceFile, checker: program.getTypeChecker() };
+}
+
+function importedCallsByModule(
+  src: string,
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const cached = IMPORTED_CALL_CACHE.get(src);
+  if (cached) return cached;
+
+  const { sourceFile, checker } = sourceWithTypeChecker(
+    src,
+    IMPORTED_CALL_SCAN_FILE,
+  );
+  const calls = new Map<string, Set<string>>();
+  visitNodes(sourceFile, (node) => {
+    if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)) {
+      return;
+    }
+    const imported = importedBindingOf(node.expression, checker);
+    if (!imported) return;
+    const names = calls.get(imported.module) ?? new Set<string>();
+    names.add(imported.name);
+    calls.set(imported.module, names);
+  });
+  IMPORTED_CALL_CACHE.set(src, calls);
+  return calls;
+}
+
+/** Checks for a call bound to one of the named exports from an exact module.
+ * All imported calls in a source string are indexed together, so independent
+ * surface queries share one TypeScript program and one AST walk. */
+export function hasImportedCall(
+  src: string,
+  query: ImportedCallQuery,
+): boolean {
+  if (!src.includes(query.module)) return false;
+  const called = importedCallsByModule(src).get(query.module);
+  if (!called) return false;
+  for (const name of query.exportNames) {
+    if (called.has(name)) return true;
+  }
+  return false;
 }

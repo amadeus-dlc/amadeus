@@ -1,47 +1,21 @@
-import ts from "typescript";
 import {
-  importedBindingOf,
-  sourceWithTypeChecker,
-  visitNodes,
+  hasImportedCall,
+  type ImportedCallQuery,
 } from "./typescript-source.ts";
 
-const TUI_CLIENT_EXPORTS = new Set([
-  "runTuiDriver",
-  "runTuiDriverToExit",
-  "waitForTui",
-]);
-const TUI_SURFACE_CACHE = new Map<string, boolean>();
-const MECHANISM_SCAN_FILE = "/tui-mechanism-scan.ts";
+const TUI_CALL: ImportedCallQuery = {
+  module: "../harness/tui-client.ts",
+  exportNames: new Set([
+    "runTuiDriver",
+    "runTuiDriverToExit",
+    "waitForTui",
+  ]),
+};
 
-function isClientCall(
-  call: ts.CallExpression,
-  checker: ts.TypeChecker,
-): boolean {
-  if (!ts.isIdentifier(call.expression)) return false;
-  const imported = importedBindingOf(call.expression, checker);
-  return !!imported &&
-    imported.module.endsWith("/tui-client.ts") &&
-    TUI_CLIENT_EXPORTS.has(imported.name);
-}
-
-/** Reports whether source calls a binding imported from the canonical TUI
- * client. Symbol identity keeps aliases working while excluding shadowed
- * locals, comments, strings, import-only references, and direct driver
- * bypasses. */
+/** Reports whether source contains a call expression bound to the canonical
+ * TUI client import. Symbol identity keeps aliases working while excluding
+ * shadowed locals, comments, strings, import-only references, and direct
+ * driver bypasses; call-graph reachability is intentionally out of scope. */
 export function drivesTuiSurface(src: string): boolean {
-  if (!src.includes("tui-client.ts")) return false;
-  const cached = TUI_SURFACE_CACHE.get(src);
-  if (cached !== undefined) return cached;
-
-  const { sourceFile, checker } = sourceWithTypeChecker(
-    src,
-    MECHANISM_SCAN_FILE,
-  );
-  let found = false;
-  visitNodes(sourceFile, (node) => {
-    if (found || !ts.isCallExpression(node)) return;
-    if (isClientCall(node, checker)) found = true;
-  });
-  TUI_SURFACE_CACHE.set(src, found);
-  return found;
+  return hasImportedCall(src, TUI_CALL);
 }

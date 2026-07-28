@@ -23,6 +23,7 @@ const POSITIONAL_SPAWNS = new Set([
   "spawn",
   "spawnSync",
 ]);
+const CLI_TARGET_MODULE = "../harness/cli-target.ts";
 const TEST_RUNNER = "run-tests.sh";
 
 function unwrapped(expression: ts.Expression): ts.Expression {
@@ -99,53 +100,54 @@ function isNodePathCall(
   return imported?.module === "node:path" && imported.name === "join";
 }
 
+function staticPathValue(
+  node: ts.Expression,
+  context: ScanContext,
+  resolving = new Set<ts.Symbol>(),
+): string | null {
+  const candidate = unwrapped(node);
+  if (ts.isIdentifier(candidate)) {
+    const initializer = initializerFor(candidate, context.checker);
+    if (!initializer || resolving.has(initializer.symbol)) return null;
+    const next = new Set(resolving);
+    next.add(initializer.symbol);
+    return staticPathValue(initializer.expression, context, next);
+  }
+  const text = stringValue(candidate);
+  if (text !== null) return text;
+  if (!ts.isCallExpression(candidate) || !isNodePathCall(candidate, context)) {
+    return null;
+  }
+  const lastArgument = candidate.arguments.at(-1);
+  return lastArgument
+    ? staticPathValue(lastArgument, context, resolving)
+    : null;
+}
+
 function matchesStaticPath(
   node: ts.Expression,
   matchesPath: (path: string) => boolean,
   context: ScanContext,
-  allowToolMarker: boolean,
-  resolving = new Set<ts.Symbol>(),
 ): boolean {
-  const candidate = unwrapped(node);
-  const text = stringValue(candidate);
-  if (text !== null) return matchesPath(text);
-
-  if (ts.isIdentifier(candidate)) {
-    const symbol = context.checker.getSymbolAtLocation(candidate);
-    const initializer = initializerFor(candidate, context.checker);
-    if (!symbol || !initializer || resolving.has(symbol)) return false;
-    const next = new Set(resolving);
-    next.add(symbol);
-    return matchesStaticPath(
-      initializer.expression,
-      matchesPath,
-      context,
-      allowToolMarker,
-      next,
-    );
-  }
-
-  if (!ts.isCallExpression(candidate)) return false;
-  if (allowToolMarker && isAmadeusToolTargetCall(candidate, context)) {
-    return true;
-  }
-  if (!isNodePathCall(candidate, context)) return false;
-  const lastArgument = candidate.arguments.at(-1);
-  return !!lastArgument &&
-    matchesStaticPath(
-      lastArgument,
-      matchesPath,
-      context,
-      allowToolMarker,
-      resolving,
-    );
+  const path = staticPathValue(node, context);
+  return path !== null && matchesPath(path);
 }
 
 function matchesToolTarget(
   node: ts.Expression,
   context: ScanContext,
 ): boolean {
-  return matchesStaticPath(node, isAmadeusToolPath, context, true);
+  const candidate = resolvedExpression(node, context);
+  if (
+    ts.isCallExpression(candidate) &&
+    isAmadeusToolTargetCall(candidate, context)
+  ) {
+    const marked = candidate.arguments[0];
+    if (!marked) return false;
+    const staticPath = staticPathValue(marked, context);
+    return staticPath === null || isAmadeusToolPath(staticPath);
+  }
+  return matchesStaticPath(candidate, isAmadeusToolPath, context);
 }
 
 function matchesRunnerTarget(
@@ -156,7 +158,6 @@ function matchesRunnerTarget(
     node,
     (path) => basename(path) === TEST_RUNNER,
     context,
-    false,
   );
 }
 
@@ -200,38 +201,71 @@ function propertyName(node: ts.PropertyName): string | null {
     : null;
 }
 
+type CmdProperty = ts.PropertyAssignment | ts.ShorthandPropertyAssignment;
+
+function isCmdProperty(
+  property: ts.ObjectLiteralElementLike,
+): property is CmdProperty {
+  return (
+    (ts.isPropertyAssignment(property) ||
+      ts.isShorthandPropertyAssignment(property)) &&
+    propertyName(property.name) === "cmd"
+  );
+}
+
+function lastCmdProperty(
+  object: ts.ObjectLiteralExpression,
+): { property: CmdProperty; index: number } | null {
+  for (let index = object.properties.length - 1; index >= 0; index--) {
+    const property = object.properties[index];
+    if (property && isCmdProperty(property)) return { property, index };
+  }
+  return null;
+}
+
+function mayOverrideCmd(property: ts.ObjectLiteralElementLike): boolean {
+  if (
+    !ts.isPropertyAssignment(property) &&
+    !ts.isShorthandPropertyAssignment(property)
+  ) {
+    return true;
+  }
+  const name = propertyName(property.name);
+  return name === null || name === "cmd";
+}
+
+function cmdInitializer(
+  property: CmdProperty,
+  context: ScanContext,
+): ts.Expression | null {
+  if (ts.isPropertyAssignment(property)) return property.initializer;
+  const shorthandValue =
+    context.checker.getShorthandAssignmentValueSymbol(property);
+  return shorthandValue ? initializerForSymbol(shorthandValue) : null;
+}
+
 function bunCommand(
   call: ts.CallExpression,
   context: ScanContext,
 ): ts.ArrayLiteralExpression | null {
   const first = call.arguments[0];
   if (!first) return null;
-  let command = resolvedExpression(first, context);
-  if (ts.isObjectLiteralExpression(command)) {
-    const cmd = command.properties.find((property) => {
-      if (
-        !ts.isPropertyAssignment(property) &&
-        !ts.isShorthandPropertyAssignment(property)
-      ) {
-        return false;
-      }
-      return propertyName(property.name) === "cmd";
-    });
-    if (!cmd) return null;
-    let initializer: ts.Expression | null = null;
-    if (ts.isPropertyAssignment(cmd)) {
-      initializer = cmd.initializer;
-    } else if (ts.isShorthandPropertyAssignment(cmd)) {
-      const shorthandValue =
-        context.checker.getShorthandAssignmentValueSymbol(cmd);
-      initializer = shorthandValue
-        ? initializerForSymbol(shorthandValue)
-        : null;
-    }
-    if (!initializer) return null;
-    command = resolvedExpression(initializer, context);
+  const command = resolvedExpression(first, context);
+  if (!ts.isObjectLiteralExpression(command)) {
+    return ts.isArrayLiteralExpression(command) ? command : null;
   }
-  return ts.isArrayLiteralExpression(command) ? command : null;
+
+  const cmd = lastCmdProperty(command);
+  if (!cmd) return null;
+  // A later spread, computed property, or unsupported member could replace
+  // `cmd` at runtime. Refuse to infer a command when object ordering leaves
+  // the final value ambiguous.
+  if (command.properties.slice(cmd.index + 1).some(mayOverrideCmd)) return null;
+
+  const initializer = cmdInitializer(cmd.property, context);
+  if (!initializer) return null;
+  const resolved = resolvedExpression(initializer, context);
+  return ts.isArrayLiteralExpression(resolved) ? resolved : null;
 }
 
 function isBunSpawn(
@@ -255,7 +289,7 @@ function isAmadeusToolTargetCall(
   if (!ts.isIdentifier(call.expression)) return false;
   const imported = importedBindingOf(call.expression, context.checker);
   return imported?.name === "amadeusToolTarget" &&
-    imported.module.endsWith("/cli-target.ts");
+    imported.module === CLI_TARGET_MODULE;
 }
 
 function isBunArraySpawn(
@@ -359,8 +393,9 @@ function scanSource(src: string): CliScan {
   return result;
 }
 
-/** Reports a shipped CLI subprocess only when the launcher and argv[0] target
- * belong to the same spawn call. */
+/** Reports a provenance-validated shipped CLI spawn expression. Launcher and
+ * argv[0] must belong to the same call; call-graph reachability is intentionally
+ * outside this static classifier. */
 export function drivesCliSurface(src: string): boolean {
   return scanSource(src).cli;
 }
