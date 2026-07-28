@@ -25,20 +25,20 @@ Global Config → Space Config → Intent Config
 ```
 
 Later, more specific levels override earlier levels key by key. For example,
-`amadeus/config.json` may disable automatic mirror synchronization:
+`amadeus/config.json` may keep solo elections manual by default:
 
 ```json
 {
-  "auto-mirror": false
+  "auto-solo-election": false
 }
 ```
 
-The `payments` space can enable it in
+The `payments` space can opt in to automatic solo elections in
 `amadeus/spaces/payments/config.json`:
 
 ```json
 {
-  "auto-mirror": true
+  "auto-solo-election": true
 }
 ```
 
@@ -47,15 +47,16 @@ value. Other spaces continue to use `false`.
 
 ## Supported settings
 
-The current schema contains one setting:
-
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
-| `auto-mirror` | boolean | `false` | At a verified phase boundary, automatically request mirror synchronization when the intent already has a Mirror Issue |
+| `auto-mirror` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls mirror synchronization at verified phase boundaries |
+| `mirror-projects` | project target array | `[]` | Maps an intent to GitHub Project targets and optional status names |
+| `auto-solo-election` | boolean | `false` | Enables automatic solo elections for design deviations, blockers, and §13 learning selection |
 
-`auto-mirror` automates `sync` only. It does not automatically create or close
-a mirror. If no Mirror Issue is recorded, Amadeus still asks whether to
-create, sync, or skip.
+`auto-solo-election` controls automatic activation only. When it is absent or
+`false`, a user can still explicitly request an election. Specification
+changes and other human-only escalation decisions never become election
+eligible.
 
 ## Validation and failure behavior
 
@@ -63,7 +64,7 @@ Configuration is fail-closed:
 
 - the root value must be a JSON object;
 - unknown keys are rejected;
-- `auto-mirror` must be a boolean;
+- each setting must match the type in the table above;
 - malformed JSON or an unreadable configuration file is an error;
 - a missing file is treated as an absent level;
 - if any present level is invalid, Amadeus rejects the whole resolved

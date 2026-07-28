@@ -295,7 +295,7 @@ function boundaryInput(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [] },
+        config: { autoMirror: mode, projects: [], autoSoloElection: false },
         sources: [],
       }),
     },
