@@ -191,11 +191,18 @@ function readAudit(pd: string): string {
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 }
 
-function ruleLearnedRows(pd: string): number {
-  // Mirror the .sh's `grep -c "Event.*: RULE_LEARNED"`.
+/** Parse the seeded shard's JSONL records (non-JSON lines skipped). */
+function auditRecords(pd: string): Array<Record<string, unknown>> {
   return readAudit(pd)
     .split("\n")
-    .filter((l) => /Event.*: RULE_LEARNED/.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+function ruleLearnedRows(pd: string): number {
+  // Mirror the .sh's `grep -c "Event.*: RULE_LEARNED"`.
+  return auditRecords(pd).filter((r) => r.event === "RULE_LEARNED").length;
 }
 
 function countLines(file: string, needle: string): number {
@@ -408,12 +415,13 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(
       persist(pd, sel, "user-stories", { AMADEUS_STAGES_DIR: STAGES_DIR_OF(pd) }).status,
     ).toBe(0);
-    const audit = readAudit(pd);
-    // Extract the SENSOR_PROPOSED block (the .sh's awk span) and assert the
-    // Destinations array landed verbatim.
-    const blocks = audit.split(/\n---\n/);
-    const spBlock = blocks.find((b) => /Event.*: SENSOR_PROPOSED/.test(b)) ?? "";
-    expect(spBlock).toContain('Destinations**: ["user-stories"]');
+    // Read the SENSOR_PROPOSED record (the JSONL successor of the .sh's awk
+    // span) and assert the Destinations array landed verbatim.
+    const spRecord = auditRecords(pd).find((r) => r.event === "SENSOR_PROPOSED");
+    expect(spRecord).toBeDefined();
+    expect(((spRecord?.fields ?? {}) as Record<string, string>).Destinations).toBe(
+      '["user-stories"]',
+    );
   }, TIMEOUT);
 
   // ===========================================================================

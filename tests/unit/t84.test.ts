@@ -158,17 +158,34 @@ function initGitRepo(p: string): void {
 }
 
 /**
- * Append an audit block, then a `---` separator. Mirrors append_audit
- * (t84-doctor-stale-branch.sh:50-60): a blank line, the body, a blank line,
- * then `---`. findAllEvents keys terminal events on `**Bolt slug**: <slug>`.
+ * Append one JSONL audit record. Mirrors append_audit
+ * (t84-doctor-stale-branch.sh:50-60). findAllEvents keys terminal events on
+ * the record's `Bolt slug` field.
  */
-function appendAudit(p: string, body: string): void {
+function appendAudit(
+  p: string,
+  heading: string,
+  event: string,
+  fields: Record<string, string>,
+): void {
   // P9: append into the seeded per-clone audit SHARD (the SAME file
-  // seedAuditFile planted — seededAuditShard, `<host>-<clone>.md`). seedStateFile
-  // makes the active-intent cursor resolve, so doctor reads this trail via the
-  // record's audit/*.md shard glob (readAllAuditShards).
+  // seedAuditFile planted — seededAuditShard, `<host>-<clone>.jsonl`).
+  // seedStateFile makes the active-intent cursor resolve, so doctor reads this
+  // trail via the record's audit/*.jsonl shard glob (readAllAuditShards).
   const f = seededAuditShard(p);
-  writeFileSync(f, `${readFileSync(f, "utf-8")}\n${body}\n\n---\n`, "utf-8");
+  const existing = readFileSync(f, "utf-8");
+  const seq = existing.split("\n").filter((l) => l.trim().length > 0).length + 1;
+  const record = {
+    schemaVersion: 1,
+    seq,
+    cloneId: "testclone0001",
+    intentId: "test-intent",
+    timestamp: "2026-05-19T10:00:00Z",
+    heading,
+    event,
+    fields,
+  };
+  writeFileSync(f, `${existing}${JSON.stringify(record)}\n`, "utf-8");
 }
 
 describe("t84 amadeus-utility doctor — Check 2 stale branches (migrated from t84-doctor-stale-branch.sh, plan 5)", () => {
@@ -221,18 +238,12 @@ describe("t84 amadeus-utility doctor — Check 2 stale branches (migrated from t
     const p = proj();
     initGitRepo(p);
     git(p, "branch", "bolt-mergedfoo");
-    appendAudit(
-      p,
-      [
-        "## Worktree Merged",
-        "**Timestamp**: 2026-05-19T10:00:00Z",
-        "**Event**: WORKTREE_MERGED",
-        "**Bolt slug**: mergedfoo",
-        "**Worktree path**: /tmp/bolt-mergedfoo",
-        "**Target branch**: main",
-        "**Strategy**: squash",
-      ].join("\n"),
-    );
+    appendAudit(p, "Worktree Merged", "WORKTREE_MERGED", {
+      "Bolt slug": "mergedfoo",
+      "Worktree path": "/tmp/bolt-mergedfoo",
+      "Target branch": "main",
+      Strategy: "squash",
+    });
     const r = doctor(p);
     expect(r.out).toContain("Stale branches: 0 (1 bolt-* observed)");
     // STRONGER than the .sh: the drift label must be ABSENT — a regression

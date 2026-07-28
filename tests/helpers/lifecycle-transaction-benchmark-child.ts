@@ -16,7 +16,7 @@ const intentsDir = join(projectDir, "amadeus", "spaces", "default", "intents");
 const intentDir = "260723-benchmark-target";
 const recordDir = join(intentsDir, intentDir);
 const auditDir = join(recordDir, "audit");
-const auditPath = join(auditDir, "fixture.md");
+const auditPath = join(auditDir, "fixture.jsonl");
 const operationId = "123e4567-e89b-42d3-a456-426614174000";
 const rows = Array.from({ length: size }, (_, index) => ({
   uuid: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
@@ -24,20 +24,26 @@ const rows = Array.from({ length: size }, (_, index) => ({
   dirName: index === 0 ? intentDir : `260723-intent-${index}`,
   status: "in-flight",
 }));
-const auditRows = Array.from({ length: size - 1 }, (_, index) => `
-## Session Start
-**Timestamp**: 2026-07-22T${String(Math.floor(index / 3600) % 24).padStart(2, "0")}:${String(Math.floor(index / 60) % 60).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}Z
-**Event**: SESSION_STARTED
-
----
-`).join("");
-const humanTurn = `
-## Human Turn
-**Timestamp**: 2026-07-23T10:00:00Z
-**Event**: HUMAN_TURN
-
----
-`;
+const auditRows = Array.from({ length: size - 1 }, (_, index) => `${JSON.stringify({
+  schemaVersion: 1,
+  seq: index + 1,
+  cloneId: "benchclone001",
+  intentId: intentDir,
+  timestamp: `2026-07-22T${String(Math.floor(index / 3600) % 24).padStart(2, "0")}:${String(Math.floor(index / 60) % 60).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}Z`,
+  heading: "Session Start",
+  event: "SESSION_STARTED",
+  fields: {},
+})}\n`).join("");
+const humanTurn = `${JSON.stringify({
+  schemaVersion: 1,
+  seq: size,
+  cloneId: "benchclone001",
+  intentId: intentDir,
+  timestamp: "2026-07-23T10:00:00Z",
+  heading: "Human Turn",
+  event: "HUMAN_TURN",
+  fields: {},
+})}\n`;
 const fixtureBytes = `${JSON.stringify(rows)}\n${auditRows}${humanTurn}`;
 const fixtureSha256 = createHash("sha256").update(fixtureBytes).digest("hex");
 
@@ -45,7 +51,7 @@ mkdirSync(auditDir, { recursive: true });
 writeFileSync(join(recordDir, "amadeus-state.md"), "# AI-DLC State Tracking\n");
 writeFileSync(join(intentsDir, "intents.json"), `${JSON.stringify(rows)}\n`);
 writeFileSync(join(intentsDir, "active-intent"), `${intentDir}\n`);
-writeFileSync(auditPath, `# AI-DLC Audit Log\n${auditRows}${humanTurn}`);
+writeFileSync(auditPath, `${auditRows}${humanTurn}`);
 
 function append(
   event: IntentLifecycleAuditEvent,
@@ -74,7 +80,7 @@ if (mode === "recovery") {
       intentDir,
       fromStatus: "in-flight",
       toStatus: "archived",
-      humanTurn: { shard: "fixture.md", timestamp: "2026-07-23T10:00:00Z" },
+      humanTurn: { shard: "fixture.jsonl", timestamp: "2026-07-23T10:00:00Z" },
       userInput: "benchmark",
       auditCommitted: false,
       registryCommitted: false,

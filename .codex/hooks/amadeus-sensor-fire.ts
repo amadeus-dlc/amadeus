@@ -109,8 +109,8 @@ if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 // Step 7 — State-file guard.
 //
 // readStateFile throws on missing amadeus-state.md (lib.ts:169-175).
-// Pre-init or partially-deleted workspaces could have audit.md without
-// state.md (audit.md is write-direct; state.md is overwrite-rename).
+// Pre-init or partially-deleted workspaces could have an audit shard without
+// state.md (the audit shard is write-direct; state.md is overwrite-rename).
 // G5 ("always exit 0") demands a guard before the read.
 if (!existsSync(stateFilePath(projectDir))) process.exit(0);
 

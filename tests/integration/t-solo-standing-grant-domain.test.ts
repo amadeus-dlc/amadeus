@@ -43,7 +43,7 @@ const GRAPH: StageEntry[] = [
 const ORDINARY_STAGE = "application-design";
 const STATE = "# AI-DLC State\n\n- **Scope**: amadeus-feature\n- **Skeleton Stance**: off\n";
 const HUMAN_TS = "2026-07-25T00:00:00.000Z";
-const SHARD = "fixture-clone.md";
+const SHARD = "fixture-clone.jsonl";
 
 // Stage frontmatter carries the STOCK scope vocabulary only — the composed
 // scope this fixture's state file declares (amadeus-feature) is resolved from
@@ -74,10 +74,33 @@ afterAll(() => {
   restoreScopeData?.();
 });
 
+// One JSONL ledger record. `seq` is a placeholder here — fixture audits are
+// assembled by string concatenation, so renumberShard() below assigns the dense
+// per-shard sequence once the whole shard body is known.
 function auditBlock(event: string, timestamp: string, fields: Record<string, string> = {}): string {
-  let block = `\n## ${event}\n**Timestamp**: ${timestamp}\n**Event**: ${event}\n`;
-  for (const [name, value] of Object.entries(fields)) block += `**${name}**: ${value}\n`;
-  return `${block}\n---\n`;
+  return `${JSON.stringify({
+    schemaVersion: 1,
+    seq: 1,
+    cloneId: "fixtureclone1",
+    intentId: "solo-intent-abcd1234",
+    timestamp,
+    heading: event,
+    event,
+    fields,
+  })}\n`;
+}
+
+/** Assign a dense 1-based seq to every record in a concatenated shard body. */
+function renumberShard(body: string): string {
+  return body
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line, index) => {
+      const rec = JSON.parse(line) as Record<string, unknown>;
+      rec.seq = index + 1;
+      return `${JSON.stringify(rec)}\n`;
+    })
+    .join("");
 }
 
 function grantBlock(
@@ -119,7 +142,7 @@ function fixture(
     writeFileSync(join(record, "amadeus-state.md"), STATE, "utf-8");
     writeFileSync(
       join(record, "audit", SHARD),
-      `# AI-DLC Audit Log\n${auditBlock("HUMAN_TURN", HUMAN_TS)}${entry.audit}`,
+      renumberShard(`${auditBlock("HUMAN_TURN", HUMAN_TS)}${entry.audit}`),
       "utf-8",
     );
   }
@@ -405,9 +428,9 @@ describe("authorization selection receipt lookup", () => {
 
   test("rejects a duplicate canonical shard open reported in one pass", () => {
     const observer = createStandingGrantTestObserver();
-    observer.shardOpened("receipt-lookup", "/tmp/same-shard.md");
+    observer.shardOpened("receipt-lookup", "/tmp/same-shard.jsonl");
     expect(() =>
-      observer.shardOpened("receipt-lookup", "/tmp/same-shard.md")
+      observer.shardOpened("receipt-lookup", "/tmp/same-shard.jsonl")
     ).toThrow(/duplicate canonical shard open/);
   });
 
@@ -508,8 +531,8 @@ describe("standing grant scan integrity", () => {
   test("refuses to scan a shard whose path cannot be resolved", () => {
     const { root, intent } = fixture(receiptAudit());
     symlinkSync(
-      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "gone.md"),
-      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "dangling.md"),
+      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "gone.jsonl"),
+      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "dangling.jsonl"),
     );
     expect(() => findStandingGrantRouteReceiptById(root, routeId)).toThrow(
       /Cannot resolve standing grant audit shard/,

@@ -143,14 +143,30 @@ export const SCAN_PASSES = [
 
 function auditEventCount(content: string): number {
   return content
-    .split(/\n---\n/)
-    .filter((block) => /^\*\*Event\*\*: /m.test(block)).length;
+    .split("\n")
+    .filter((line) => {
+      if (!line.startsWith("{")) return false;
+      try {
+        return typeof (JSON.parse(line) as { event?: unknown }).event === "string";
+      } catch {
+        return false;
+      }
+    }).length;
 }
 
 function fillerEvents(count: number): string {
   let blocks = "";
   for (let index = 0; index < count; index++) {
-    blocks += `\n## FILLER\n**Timestamp**: 2026-07-25T00:00:00.000Z\n**Event**: FILLER\n**Index**: ${index}\n\n---\n`;
+    blocks += `${JSON.stringify({
+      schemaVersion: 1,
+      seq: index + 1,
+      cloneId: "fillerclone01",
+      intentId: "filler-intent",
+      timestamp: "2026-07-25T00:00:00.000Z",
+      heading: "FILLER",
+      event: "HEALTH_CHECKED",
+      fields: { Index: String(index) },
+    })}\n`;
   }
   return blocks;
 }
@@ -175,8 +191,8 @@ export function padAuditFixture(
     readFileSync(join(owner, "amadeus-state.md"), "utf-8"),
   );
   writeFileSync(
-    join(intentsDir, filler, "audit", "filler-clone.md"),
-    `# AI-DLC Audit Log\n${fillerEvents(SPACE_EVENT_BUDGET - OWNER_EVENT_BUDGET)}`,
+    join(intentsDir, filler, "audit", "filler-clone.jsonl"),
+    fillerEvents(SPACE_EVENT_BUDGET - OWNER_EVENT_BUDGET),
   );
   const registryPath = join(intentsDir, "intents.json");
   const registry: Array<Record<string, unknown>> = JSON.parse(readFileSync(registryPath, "utf-8"));
@@ -223,13 +239,19 @@ export function breakGrantIssuerIntent(root: string): void {
   const shard = join(seededRecordDir(root), "audit", auditShardName(root));
   const content = readFileSync(shard, "utf-8");
   const intent = seededRecordDir(root).split("/").at(-1)!;
-  writeFileSync(
-    shard,
-    content.replace(
-      `**Issuer Intent**: ${intent}`,
-      "**Issuer Intent**: some-other-intent-00000001",
-    ),
-  );
+  let rewritten = false;
+  const lines = content.split("\n").map((line) => {
+    if (line === "") return line;
+    const record = JSON.parse(line) as { fields?: Record<string, string> };
+    if (record.fields?.["Issuer Intent"] !== intent) return line;
+    record.fields["Issuer Intent"] = "some-other-intent-00000001";
+    rewritten = true;
+    return JSON.stringify(record);
+  });
+  if (!rewritten) {
+    throw new Error(`breakGrantIssuerIntent: no record carries Issuer Intent ${intent}`);
+  }
+  writeFileSync(shard, lines.join("\n"));
 }
 
 export function setup(expiresAt: string, routeNow: number): {

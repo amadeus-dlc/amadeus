@@ -102,7 +102,8 @@ function runWithoutProjectDirEnv(
 function humanTurnCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
-    .filter((line) => line === "**Event**: HUMAN_TURN").length;
+    .filter((line) => line.trim() !== "")
+    .filter((line) => (JSON.parse(line) as { event: string | null }).event === "HUMAN_TURN").length;
 }
 
 const projects: string[] = [];

@@ -326,7 +326,7 @@ async function runMirrorMutation(
     return fail(`lifecycle outcome is not completed: ${JSON.stringify(result.outcome)}`);
   }
   const outcome = result.outcome.outcomes.at(-1);
-  if (!outcome || outcome.kind !== "completed") {
+  if (outcome?.kind !== "completed") {
     return fail("lifecycle completed without an operation outcome");
   }
   console.log(

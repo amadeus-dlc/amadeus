@@ -6,7 +6,7 @@
 
 > ステージファイルの *フォーマット*(YAML フロントマター、ボディの慣習)については [Stage Definition](15-stage-definition.ja.md) を参照。この章はランタイムの実行振る舞いをカバーします。
 
-> **パス表記の慣習。** 成果物、状態、監査証跡は、アクティブな intent の **record dir** の下に存在します — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`、以下 `<record>/` と表記。監査証跡は、単一ファイルではなく `<record>/audit/<host>-<clone>.md` のクローンごとのシャードのディレクトリです(読み手はタイムスタンプで glob してマージします)。
+> **パス表記の慣習。** 成果物、状態、監査証跡は、アクティブな intent の **record dir** の下に存在します — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`、以下 `<record>/` と表記。監査証跡は、単一ファイルではなく `<record>/audit/<host>-<clone>.jsonl` のクローンごとのシャードのディレクトリです(読み手はタイムスタンプで glob してマージします)。
 
 ---
 
@@ -378,7 +378,7 @@ AskUserQuestion({
 
 ### 監査ログフォーマット
 
-`<record>/audit/`(クローンごとのシャード)のルール: 常に append(決して上書きしない)。「User Input」フィールドは COMPLETE かつ UNMODIFIED でなければならない。表示する **前** にプロンプトをログ。受け取った **後** に応答をログ。なければ `# AI-DLC Audit Log` ヘッダーで作成。破損していればバックアップ。Edit が失敗したら一度リトライ(Read と Edit の間にフックが変更するかもしれない)。
+`<record>/audit/`(クローンごとのシャード)のルール: 常に append(決して上書きしない)。「User Input」フィールドは COMPLETE かつ UNMODIFIED でなければならない。表示する **前** にプロンプトをログ。受け取った **後** に応答をログ。なければ空の JSONL ファイルとして作成(ヘッダ行なし)。破損していればバックアップ。Edit が失敗したら一度リトライ(Read と Edit の間にフックが変更するかもしれない)。
 
 #### 標準会話イベント
 

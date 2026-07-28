@@ -33,31 +33,34 @@ const SLUG = "units-generation";
 // empty-graph short-circuit); STAGE_STARTED/COMPLETED makes compile emit one row
 // for `slug`. Mirrors t201's AUDIT_MD.
 function auditFor(slug: string): string {
-  return `# AI-DLC Audit Log
-
-## Workflow Started
-**Timestamp**: 2026-07-11T08:00:00Z
-**Event**: WORKFLOW_STARTED
-**Workflow ID**: t212-fixture
-**Scope**: feature
-
----
-
-## Stage Started
-**Timestamp**: 2026-07-11T08:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: ${slug}
-**Agent**: amadeus-architect-agent
-
----
-
-## Stage Completed
-**Timestamp**: 2026-07-11T08:02:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: ${slug}
-
----
-`;
+  const rec = (
+    seq: number,
+    timestamp: string,
+    heading: string,
+    event: string,
+    fields: Record<string, string>,
+  ) =>
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: "fixturecloneid01",
+      intentId: "t212-fixture",
+      timestamp,
+      heading,
+      event,
+      fields,
+    })}\n`;
+  return (
+    rec(1, "2026-07-11T08:00:00Z", "Workflow Started", "WORKFLOW_STARTED", {
+      "Workflow ID": "t212-fixture",
+      Scope: "feature",
+    }) +
+    rec(2, "2026-07-11T08:01:00Z", "Stage Started", "STAGE_STARTED", {
+      Stage: slug,
+      Agent: "amadeus-architect-agent",
+    }) +
+    rec(3, "2026-07-11T08:02:00Z", "Stage Completed", "STAGE_COMPLETED", { Stage: slug })
+  );
 }
 
 const MEMORY_MD = `## Interpretations

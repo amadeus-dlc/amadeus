@@ -9,6 +9,7 @@ import { join } from "node:path";
 
 const HARNESS_TOOL_SIBLINGS = [
   "amadeus-lib.ts",
+  "amadeus-journal.ts",
   "amadeus-harness.ts",
   "amadeus-graph.ts",
   "amadeus-stage-schema.ts",

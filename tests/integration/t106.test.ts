@@ -130,7 +130,34 @@ function runSummary(proj: string, ...args: string[]): SpawnResult {
  * audit/graph paths through forward-slash helpers, so on Windows the raw
  * mktemp path can't round-trip — mirrors createTestProject (fixtures.ts).
  */
-function makeProject(audit: string, state: string): string {
+/** One seeded audit record. `seq` is assigned at serialize time so fixtures can
+ *  be concatenated (AUDIT_MIX + SINGLE_STAGE_PAIR) and still land dense. */
+interface FixtureRecord {
+  heading: string;
+  timestamp: string;
+  event: string;
+  fields?: Record<string, string>;
+}
+
+/** Render fixture records as JSONL ledger lines (one JSON object per line). */
+function serializeRecords(records: readonly FixtureRecord[]): string {
+  return records
+    .map((r, index) =>
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: index + 1,
+        cloneId: "testclone0106",
+        intentId: DEFAULT_RECORD_DIR,
+        timestamp: r.timestamp,
+        heading: r.heading,
+        event: r.event,
+        fields: r.fields ?? {},
+      })}\n`,
+    )
+    .join("");
+}
+
+function makeProject(audit: readonly FixtureRecord[], state: string): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t106-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
@@ -141,7 +168,7 @@ function makeProject(audit: string, state: string): string {
   // Seed the DETERMINISTIC audit shard the compile tool resolves (auditFilePath).
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  writeFileSync(shard, audit, "utf-8");
+  writeFileSync(shard, serializeRecords(audit), "utf-8");
   return proj;
 }
 
@@ -176,53 +203,44 @@ const STATE_FEATURE = [
 // never completed). All three slugs are phase=ideation per stage-graph.json
 // (lines 103-302). Duration spans first start (10:00) to latest completed
 // (10:40) = 40 min.
-const AUDIT_MIX = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:10:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-**Details**: done
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:11:00Z
-**Event**: STAGE_STARTED
-**Stage**: feasibility
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:40:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: feasibility
-**Details**: done
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:41:00Z
-**Event**: STAGE_STARTED
-**Stage**: scope-definition
-**Agent**: amadeus-product-agent
-
----
-`;
+const AUDIT_MIX: readonly FixtureRecord[] = [
+  {
+    heading: "Workflow Start",
+    timestamp: "2026-05-27T10:00:00Z",
+    event: "WORKFLOW_STARTED",
+    fields: { Scope: "feature" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:01:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "intent-capture", Agent: "amadeus-product-agent" },
+  },
+  {
+    heading: "Stage Completion",
+    timestamp: "2026-05-27T10:10:00Z",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "intent-capture", Details: "done" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:11:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "feasibility", Agent: "amadeus-product-agent" },
+  },
+  {
+    heading: "Stage Completion",
+    timestamp: "2026-05-27T10:40:00Z",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "feasibility", Details: "done" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:41:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "scope-definition", Agent: "amadeus-product-agent" },
+  },
+];
 
 // Memory body for intent-capture (t106:110-115): 2 interpretations + 1
 // tradeoff = 3 total entries (canonical §13 headings, parseMemoryHeadings).
@@ -234,53 +252,47 @@ const MEMORY_INTENT = `## Interpretations
 `;
 
 // AUDIT_PENDING (t106:149-164): a single STAGE_STARTED, no COMPLETED.
-const AUDIT_PENDING = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
+const AUDIT_PENDING: readonly FixtureRecord[] = [
+  {
+    heading: "Workflow Start",
+    timestamp: "2026-05-27T10:00:00Z",
+    event: "WORKFLOW_STARTED",
+    fields: { Scope: "feature" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:01:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "intent-capture", Agent: "amadeus-product-agent" },
+  },
+];
 
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-`;
-
-const AUDIT_STALE_COMPLETED = `## Workflow Start
-**Timestamp**: 2026-05-27T10:00:00Z
-**Event**: WORKFLOW_STARTED
-**Scope**: feature
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: intent-capture
-**Agent**: amadeus-product-agent
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:10:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: intent-capture
-**Details**: done
-
----
-
-## Stage Start
-**Timestamp**: 2026-05-27T10:11:00Z
-**Event**: STAGE_STARTED
-**Stage**: feasibility
-**Agent**: amadeus-product-agent
-
----
-`;
+const AUDIT_STALE_COMPLETED: readonly FixtureRecord[] = [
+  {
+    heading: "Workflow Start",
+    timestamp: "2026-05-27T10:00:00Z",
+    event: "WORKFLOW_STARTED",
+    fields: { Scope: "feature" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:01:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "intent-capture", Agent: "amadeus-product-agent" },
+  },
+  {
+    heading: "Stage Completion",
+    timestamp: "2026-05-27T10:10:00Z",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "intent-capture", Details: "done" },
+  },
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:11:00Z",
+    event: "STAGE_STARTED",
+    fields: { Stage: "feasibility", Agent: "amadeus-product-agent" },
+  },
+];
 
 const STATE_COMPLETED_OVERLAY = [
   "- **Scope**: feature",
@@ -297,24 +309,28 @@ const STATE_COMPLETED_OVERLAY = [
 // Stage + Agent + Workflow; STAGE_COMPLETED has Stage + Details + Workflow.
 // `single-stage:<slug>` marks the pair as belonging to NO main workflow —
 // compile must not pair it, so summary must not count it.
-const SINGLE_STAGE_PAIR = `## Stage Start
-**Timestamp**: 2026-05-27T10:42:00Z
-**Event**: STAGE_STARTED
-**Stage**: application-design
-**Agent**: amadeus-architect-agent
-**Workflow**: single-stage:application-design
-
----
-
-## Stage Completion
-**Timestamp**: 2026-05-27T10:45:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: application-design
-**Details**: Single-stage run of application-design completed
-**Workflow**: single-stage:application-design
-
----
-`;
+const SINGLE_STAGE_PAIR: readonly FixtureRecord[] = [
+  {
+    heading: "Stage Start",
+    timestamp: "2026-05-27T10:42:00Z",
+    event: "STAGE_STARTED",
+    fields: {
+      Stage: "application-design",
+      Agent: "amadeus-architect-agent",
+      Workflow: "single-stage:application-design",
+    },
+  },
+  {
+    heading: "Stage Completion",
+    timestamp: "2026-05-27T10:45:00Z",
+    event: "STAGE_COMPLETED",
+    fields: {
+      Stage: "application-design",
+      Details: "Single-stage run of application-design completed",
+      Workflow: "single-stage:application-design",
+    },
+  },
+];
 
 // biome-ignore lint/suspicious/noExplicitAny: test reads arbitrary summary shape
 type Summary = any;
@@ -448,7 +464,7 @@ describe("t106 amadeus-runtime summary — CLI contract (migrated from t106-runt
   // the exclusion, the inception phase appears in by_phase and stages.total/
   // approved each over-count by one.
   test("E1: synthetic single-stage pair appended to Case A leaves all counts unchanged", () => {
-    const proj = makeProject(AUDIT_MIX + SINGLE_STAGE_PAIR, STATE_FEATURE);
+    const proj = makeProject([...AUDIT_MIX, ...SINGLE_STAGE_PAIR], STATE_FEATURE);
     writeMemory(proj, "ideation", "intent-capture", MEMORY_INTENT);
     const { summary } = compileAndSummarize(proj);
     expect(summary.stages.total).toBe(3);

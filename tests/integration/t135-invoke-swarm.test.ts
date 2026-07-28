@@ -208,7 +208,7 @@ function setupReferee(): void {
     readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8"),
   );
   mkdirSync(seededAuditDir(proj), { recursive: true });
-  writeFileSync(join(seededAuditDir(proj), "fixture.md"), "# AI-DLC Audit Log\n");
+  writeFileSync(join(seededAuditDir(proj), "fixture.jsonl"), "");
   writeFileSync(
     join(proj, ".gitignore"),
     [
@@ -265,7 +265,7 @@ function setupReferee(): void {
 function readAllShards(dir: string): string {
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
@@ -323,6 +323,14 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
 // (3-6) THE REFEREE — prepare/finalize batch-level audit + baton return.
 // ---------------------------------------------------------------------------
 
+/** The JSONL audit records read back off the merged shard body. */
+function auditRecords(): { event: string | null; fields?: Record<string, string> }[] {
+  return auditBody
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+}
+
 describe("t135 referee — batch-level swarm audit taxonomy + baton return (the lying-conductor guard)", () => {
   test("3: SWARM_STARTED emitted at batch start (prepare)", () => {
     setupReferee();
@@ -336,10 +344,10 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     expect(auditBody).toContain("Converged count");
     expect(auditBody).toContain("Failed count");
     // STRONGER: the tally is the genuine 1-converged / 1-failed verdict, not a
-    // happy-path zero — the SWARM_COMPLETED block carries those exact counts.
-    const block = auditBody.slice(auditBody.indexOf("SWARM_COMPLETED"));
-    expect(block).toContain("**Converged count**: 1");
-    expect(block).toContain("**Failed count**: 1");
+    // happy-path zero — the SWARM_COMPLETED record carries those exact counts.
+    const completed = auditRecords().find((r) => r.event === "SWARM_COMPLETED");
+    expect(completed?.fields?.["Converged count"]).toBe("1");
+    expect(completed?.fields?.["Failed count"]).toBe("1");
   }, 60000);
 
   test("5: SWARM_BATON_RETURNED emitted for the failed unit (lose)", () => {
@@ -348,10 +356,9 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     // present AND the lines after it name `lose`. STRONGER: scope the unit-name
     // check to the SWARM_BATON_RETURNED block, so a stray `lose` elsewhere in
     // the audit can't satisfy it.
-    const idx = auditBody.indexOf("SWARM_BATON_RETURNED");
-    expect(idx).toBeGreaterThanOrEqual(0);
-    const block = auditBody.slice(idx);
-    expect(block).toContain("**Unit name**: lose");
+    const returned = auditRecords().filter((r) => r.event === "SWARM_BATON_RETURNED");
+    expect(returned.length).toBeGreaterThanOrEqual(1);
+    expect(returned.some((r) => r.fields?.["Unit name"] === "lose")).toBe(true);
   }, 60000);
 
   test("6: mixed batch exits 2 (baton returns) with 1 converged + 1 failed", () => {

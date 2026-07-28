@@ -74,7 +74,7 @@ function newSeededProject(): string {
 function auditShardsOf(proj: string): string[] {
   const dir = seededAuditDir(proj);
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((name) => name.endsWith(".md"));
+  return readdirSync(dir).filter((name) => name.endsWith(".jsonl"));
 }
 
 /** Drive an in-process report error (an unrecognised --result verdict) against

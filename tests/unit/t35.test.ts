@@ -68,15 +68,15 @@
 // case): each case uses a FRESH temp project dir (createTestProject, which
 // toPortablePath-converts on Windows so audit.md — written by the tool via
 // forward-slash helpers — round-trips when read back). Audit-emitting cases
-// seed audit-sample.md (which contains NONE of the events asserted here, so
+// seed audit-sample.jsonl (which contains NONE of the events asserted here, so
 // post-fire counts are unambiguous), seed state-mid-ideation.md (Current
-// Stage = feasibility), and inject a SESSION_COMPACTED block byte-for-byte
-// matching the .sh's inject_session_compacted heredoc. All temp dirs cleaned
+// Stage = feasibility), and inject a SESSION_COMPACTED record equivalent to
+// the .sh's inject_session_compacted heredoc. All temp dirs cleaned
 // in afterAll. NOTHING is written under tests/fixtures/**.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, copyFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
@@ -118,12 +118,12 @@ afterAll(() => {
 // BEFORE the tool's RECOVERY_COMPLETED shard; handleResume's compaction detection
 // is positional (lastIndexOf SESSION_COMPACTED, then scans the suffix for
 // RECOVERY_COMPLETED), so ordering must hold. The SPAWNED tool mints its own
-// clone-id and writes to `<host>-<clone>.md`, which sorts AFTER `0-seed.md`.
-const seedShardPath = (p: string): string => join(seededAuditDir(p), "0-seed.md");
+// clone-id and writes to `<host>-<clone>.jsonl`, which sorts AFTER `0-seed.jsonl`.
+const seedShardPath = (p: string): string => join(seededAuditDir(p), "0-seed.jsonl");
 function seedBaselineShard(p: string): void {
   const auditDir = seededAuditDir(p);
   mkdirSync(auditDir, { recursive: true });
-  copyFileSync(join(FIXTURES_DIR, "audit-sample.md"), seedShardPath(p));
+  copyFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), seedShardPath(p));
 }
 
 interface CliResult {
@@ -159,79 +159,71 @@ function proj(opts: { compacted?: boolean } = {}): string {
   return p;
 }
 
-/**
- * Append a SESSION_COMPACTED block to a project's audit.md — byte-for-byte the
- * heredoc the .sh's inject_session_compacted writes (t35:34-45).
- */
-function injectSessionCompacted(p: string): void {
+/** One JSONL record appended to the seed shard (seq = existing lines + 1). */
+function appendSeedRecord(
+  p: string,
+  timestamp: string,
+  heading: string,
+  event: string,
+  fields: Record<string, string>,
+): void {
+  const shard = seedShardPath(p);
+  const seq = readFileSync(shard, "utf-8").split("\n").filter((l) => l.trim() !== "").length + 1;
   appendFileSync(
-    seedShardPath(p),
-    "\n## Session Compacted\n" +
-      "**Timestamp**: 2026-05-03T00:00:00Z\n" +
-      "**Event**: SESSION_COMPACTED\n" +
-      "**Source**: compact\n" +
-      "\n---\n",
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: "fixturecloneid01",
+      intentId: "fixture-0f14ce29",
+      timestamp,
+      heading,
+      event,
+      fields,
+    })}\n`,
     "utf-8",
   );
 }
 
 /**
- * Append a STAGE_STARTED block AFTER a SESSION_COMPACTED — byte-for-byte the
- * .sh's Test 8 heredoc (t35:136-144). Simulates the user working past a
+ * Append a SESSION_COMPACTED record to a project's audit shard — the JSONL twin
+ * of the heredoc the .sh's inject_session_compacted writes (t35:34-45).
+ */
+function injectSessionCompacted(p: string): void {
+  appendSeedRecord(p, "2026-05-03T00:00:00Z", "Session Compacted", "SESSION_COMPACTED", {
+    Source: "compact",
+  });
+}
+
+/**
+ * Append a STAGE_STARTED record AFTER a SESSION_COMPACTED — the JSONL twin of
+ * the .sh's Test 8 heredoc (t35:136-144). Simulates the user working past a
  * compaction without acknowledging it.
  */
 function injectStageStarted(p: string): void {
-  appendFileSync(
-    seedShardPath(p),
-    "\n## Stage Start\n" +
-      "**Timestamp**: 2026-05-03T00:05:00Z\n" +
-      "**Event**: STAGE_STARTED\n" +
-      "**Stage**: intent-capture\n" +
-      "\n---\n",
-    "utf-8",
-  );
+  appendSeedRecord(p, "2026-05-03T00:05:00Z", "Stage Start", "STAGE_STARTED", {
+    Stage: "intent-capture",
+  });
 }
 
-/** Count audit blocks with `**Event**: <ev>` in a buffer. */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+type AuditRecord = { event: string | null; fields?: Record<string, string> };
+
+/** Parse a JSONL audit buffer into records. */
+function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
-/**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings and `---` separators; splits `**label**: value` on
- * the literal `**: ` separator. Mirrors auditField in t31.cli.test.ts. Returns
- * "" when absent (block-scoped).
- */
+/** Count audit records with event <ev> in a buffer. */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
+}
+
+/** Value of <key> from the FIRST audit record whose event matches <ev>. */
 function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
+  return auditRecords(body).find((r) => r.event === ev)?.fields?.[key] ?? "";
 }
 
 const RC = "RECOVERY_COMPLETED";
@@ -294,7 +286,7 @@ describe("t35 acknowledge-compaction -> RECOVERY_COMPLETED (migrated from t35-to
 
   // --- Test 7: no SESSION_COMPACTED -> refuses (exit 1, no emit) ---
   test("7: refuses when no pending compaction (exit 1, no emit)", () => {
-    // No injectSessionCompacted — audit-sample.md alone has no SESSION_COMPACTED.
+    // No injectSessionCompacted — audit-sample.jsonl alone has no SESSION_COMPACTED.
     const p = proj();
     const r = state(["acknowledge-compaction", "--choice", "continue"], p);
     expect(r.status).toBe(1);

@@ -162,21 +162,22 @@ function listedBolts(stdout: string): ListedBolt[] {
   return [...parsed.worktrees].sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-/** Every `**Bolt slug**: <slug>` row across a record's audit shards (audit/*.md).
+/** Every `Bolt slug` field value across a record's audit shards (audit/*.jsonl).
  *  A dir with no seeded record has no shard dir -> [] (the pre-audit negative). */
 function boltSlugRows(dir: string): string[] {
   const auditDir = seededAuditDir(dir);
   let names: string[];
   try {
-    names = readdirSync(auditDir).filter((f) => f.endsWith(".md"));
+    names = readdirSync(auditDir).filter((f) => f.endsWith(".jsonl"));
   } catch {
     return [];
   }
   const out: string[] = [];
   for (const n of names) {
     for (const line of readFileSync(join(auditDir, n), "utf-8").split("\n")) {
-      const m = line.match(/^\*\*Bolt slug\*\*:\s*(\S+)/);
-      if (m) out.push(m[1]);
+      if (line.trim().length === 0) continue;
+      const slug = (JSON.parse(line) as { fields?: Record<string, string> }).fields?.["Bolt slug"];
+      if (slug !== undefined) out.push(slug);
     }
   }
   return out;

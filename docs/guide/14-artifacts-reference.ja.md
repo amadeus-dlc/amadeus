@@ -16,7 +16,7 @@
 amadeus/spaces/<space>/intents/<YYMMDD>-<label>/   # intent ごとに 1 つのレコードディレクトリ
   amadeus-state.md                    # ワークフロー状態 (commit)
   audit/                            # 監査証跡 — クローンごとのシャード (commit)
-    <host>-<clone>.md               # このクローンのシャード。読み手は glob してタイムスタンプでマージ
+    <host>-<clone>.jsonl            # このクローンのシャード。読み手は glob してタイムスタンプでマージ
   .amadeus-recovery.md                # リカバリのブレッドクラム (gitignore)
   runtime-graph.json                # 実行テレメトリビュー (gitignore)
 
@@ -222,7 +222,7 @@ flowchart LR
 | コミット | Gitignore |
 |--------|-----------|
 | `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent`(ユーザーごとのカーソル) |
-| `audit/*.md`(クローンごとのシャード) | `.amadeus-recovery.md` およびその他の `intents/*/.amadeus-*` / `intents/.amadeus-*`(一時的なブレッドクラム。後者は intent なしのフォールバックルート) |
+| `audit/*.jsonl`(クローンごとのシャード) | `.amadeus-recovery.md` およびその他の `intents/*/.amadeus-*` / `intents/.amadeus-*`(一時的なブレッドクラム。後者は intent なしのフォールバックルート) |
 | すべてのステージ成果物 | `runtime-graph.json`(監査シャードから再導出可能) |
 | `verification/` フェーズチェック結果 | `amadeus/.amadeus-clone-id`(このクローンのシャードを命名。マシンローカルのままにする必要がある) |
 | space レベルの `amadeus/knowledge/` チーム知識ファイル | `amadeus/.amadeus-sessions/`(会話ごとの session→intent マップ) |

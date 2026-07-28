@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import type { Stats } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   appendAuditEntry,
@@ -37,6 +37,7 @@ import {
 import type { GraphStage, RuleFile } from "./amadeus-graph.ts";
 import { repointHarnessIncludes } from "./amadeus-includes.ts";
 import {
+  auditBlockField,
   activeIntent,
   activeSpace,
   assertRecomposeAllowed,
@@ -87,6 +88,7 @@ import {
   parseRefsList,
   parseStageFrontmatter,
   parseStateStageSuffixes,
+  legacyAuditShards,
   readAllAuditShards,
   readCurrentSessionId,
   readStateFile,
@@ -1849,6 +1851,32 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     healthDirSwapTarget,
   }));
 
+  // Legacy Markdown audit shards — invisible to the JSONL readers since the
+  // Issue #1628 switchover. Surface them with the conversion command so the
+  // pre-switchover history rejoins the ledger.
+  const legacyShards = legacyAuditShards(projectDir);
+  if (legacyShards.length > 0) {
+    // Migration preserves audit bytes as a hard invariant (collectAuditHashes),
+    // so a freshly-migrated tree legitimately carries its legacy Markdown
+    // shard. The migration-time doctor (AMADEUS_MIGRATION_DOCTOR=1) therefore
+    // reports it as a pass-with-notice; every normal doctor run keeps failing
+    // until the shard is converted.
+    const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
+    results.push({
+      pass: migrationDoctor,
+      label: migrationDoctor
+        ? `Legacy Markdown audit shard(s) pending conversion (expected right after migration): ${legacyShards.map((p) => basename(p)).join(", ")}`
+        : `Legacy Markdown audit shard(s) present: ${legacyShards.map((p) => basename(p)).join(", ")}`,
+      ...(migrationDoctor
+        ? {}
+        : {
+            fix: "convert with `bun tools/amadeus-journal-convert.ts <shard.md>` (under your harness dir), verify the emitted .jsonl, then delete the .md; use --allow-unmerged-forks only for verified-dead Bolt forks",
+          }),
+    });
+  } else {
+    results.push({ pass: true, label: "No legacy Markdown audit shards" });
+  }
+
   // State / audit drift check — if latest audit event implies the state file
   // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
   // verify the state actually matches. Covers the rare case where audit-first
@@ -1860,9 +1888,8 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     try {
       const auditContent = auditAllShards;
       const stateContent = readFileSync(stateMdPath, "utf-8");
-      // Find last WORKFLOW_COMPLETED event
-      const wcIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_COMPLETED");
-      if (wcIdx !== -1) {
+      // Any WORKFLOW_COMPLETED event on record?
+      if (findAllEvents(auditContent, "WORKFLOW_COMPLETED").length > 0) {
         const status = stateContent.match(/^- \*\*Status\*\*:\s*(\S+)/m);
         if (status && status[1] !== "Completed") {
           results.push({
@@ -1963,17 +1990,10 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     : [];
 
   // Helper: extract the Bolt slug from an audit block. Returns null if absent.
-  const blockBoltSlug = (block: string): string | null => {
-    const m = block.match(/^\*\*Bolt slug\*\*:\s*(\S+)/m);
-    return m ? m[1] : null;
-  };
+  const blockBoltSlug = (block: string): string | null => auditBlockField(block, "Bolt slug");
 
   // Helper: extract a named field value from an audit block.
-  const blockField = (block: string, field: string): string | null => {
-    const re = new RegExp(`^\\*\\*${escapeRegex(field)}\\*\\*:\\s*(.+)$`, "m");
-    const m = block.match(re);
-    return m ? m[1].trim() : null;
-  };
+  const blockField = (block: string, field: string): string | null => auditBlockField(block, field);
 
   // Helper: was a slug terminated (worktree merged or discarded) in audit?
   const slugTerminated = (slug: string): boolean => {
@@ -2211,7 +2231,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // Check 4 — Orphan audit drift (3 sub-cases)
   //
   // Sub-case (a): AUDIT_FORKED-without-disk-state — main has AUDIT_FORKED but
-  //   <wtPath>/amadeus-docs/audit.md is absent on disk.
+  //   the worktree audit shard under <wtPath> is absent on disk.
   // Sub-case (b): orphan-delta — main has AUDIT_FORKED but no matching
   //   AUDIT_MERGED for an unterminated, non-active slug.
   // Sub-case (c): PRACTICES_OVERRIDE Reason filter — write-failure-* rows
@@ -2846,8 +2866,10 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // Cold-safe gate: only emit audit when an audit trail already exists. On a
   // pristine project (no audit shard / flat audit.md) doctor prints its health
   // report and creates NOTHING — it stays a pure read-only diagnostic. On an
-  // initialized project both GUARDRAIL_LOADED and HEALTH_CHECKED emit as before.
-  const auditExists = auditShards(projectDir).length > 0;
+  // initialized project both GUARDRAIL_LOADED and HEALTH_CHECKED emit as
+  // before. A legacy Markdown shard counts as an existing trail: a freshly
+  // migrated tree is initialized even though its shard awaits conversion.
+  const auditExists = auditShards(projectDir).length > 0 || legacyAuditShards(projectDir).length > 0;
 
   if (auditExists) {
     appendAuditEvent(projectDir, "GUARDRAIL_LOADED", {
@@ -2921,7 +2943,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   output += `${"\u2500".repeat(37)}\n`;
   output += `${passed} passed, ${failed} failed\n`;
 
-  // Audit only if audit.md already existed when doctor started (cold-safe —
+  // Audit only if an audit shard already existed when doctor started (cold-safe —
   // see auditExists above). A pristine project gets the stdout report and no
   // file side effects; an initialized project records HEALTH_CHECKED as before.
   if (auditExists) {
@@ -4157,13 +4179,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
 
     // ---- Audit bootstrap + birth events (relocated from the old --init) ----
 
-    // audit.md: header-only bootstrap if absent. WORKFLOW_STARTED is the birth
-    // event; SESSION_STARTED is owned by the SessionStart hook. This resolves to
-    // the born intent's per-clone audit shard (cursor set above).
+    // Shard bootstrap if absent (a JSONL shard has no header line).
+    // WORKFLOW_STARTED is the birth event; SESSION_STARTED is owned by the
+    // SessionStart hook. This resolves to the born intent's per-clone shard
+    // (cursor set above).
     const auditPath = auditFilePath(projectDir);
     if (!existsSync(auditPath)) {
       mkdirSync(dirname(auditPath), { recursive: true });
-      writeFileSync(auditPath, `# AI-DLC Audit Log\n`, "utf-8");
+      writeFileSync(auditPath, "", "utf-8");
     }
 
     // WORKFLOW_STARTED — mandatory first event of any new workflow. Captures the

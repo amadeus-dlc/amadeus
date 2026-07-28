@@ -1,10 +1,16 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+  splitJournalLines,
+} from "./amadeus-journal.ts";
 import {
   acquireAuditLock,
   activeIntent,
   auditBlockField,
+  auditCloneId,
   auditFilePath,
   auditShardDir,
   errorMessage,
@@ -262,9 +268,23 @@ function ensureAuditFile(projectDir: string, intent?: string, space?: string): s
     mkdirSync(dir, { recursive: true });
   }
   if (!existsSync(path)) {
-    appendFileSync(path, "# AI-DLC Audit Log\n", "utf-8");
+    appendFileSync(path, "", "utf-8");
   }
   return path;
+}
+
+// Next per-shard monotonic sequence: existing record count + 1. Callers hold
+// the audit lock, so count-then-append is race-free within a clone.
+function nextShardSeq(path: string): number {
+  if (!existsSync(path)) return 1;
+  return splitJournalLines(readFileSync(path, "utf-8")).length + 1;
+}
+
+// The row-identity intent token: the resolved record dir name, or the
+// workspace-level marker for the flat-legacy layout (audit directly under
+// the intents root).
+function auditIntentId(projectDir: string, intent?: string, space?: string): string {
+  return activeIntent(projectDir, space, intent) ?? "workspace";
 }
 
 function jsonSuccess(data: Record<string, unknown>): void {
@@ -293,6 +313,38 @@ export function escapeAuditValue(value: string): string {
 // `body.replace(/\\n/g, "\n")`.
 export function unescapeAuditBody(body: string): string {
   return body.replace(/\\n/g, "\n");
+}
+
+// --- Canonical record formatter ---
+
+// Renders one record in the LEGACY Markdown format. Live writers emit JSONL
+// (serializeJournalEntry) since the Issue #1628 switchover; this renderer
+// remains solely for amadeus-journal-convert.ts, whose lossless proof
+// re-renders parsed legacy blocks through it. Do not add new callers.
+export type AuditRecordInput = {
+  readonly heading: string;
+  readonly timestamp: string;
+  readonly event?: string;
+  readonly fields?: Readonly<Record<string, string>>;
+  readonly rawBody?: string;
+};
+
+export function formatAuditRecord(input: AuditRecordInput): string {
+  let block = `\n## ${input.heading}\n`;
+  block += `**Timestamp**: ${input.timestamp}\n`;
+  if (input.event !== undefined) {
+    block += `**Event**: ${input.event}\n`;
+  }
+  if (input.fields !== undefined) {
+    for (const [key, value] of Object.entries(input.fields)) {
+      block += `**${key}**: ${escapeAuditValue(value)}\n`;
+    }
+  }
+  if (input.rawBody !== undefined) {
+    block += `${input.rawBody}\n`;
+  }
+  block += `\n---\n`;
+  return block;
 }
 
 // --- Subcommand: append ---
@@ -363,18 +415,31 @@ export function appendAuditEntryUnlocked(
 
   const path = ensureAuditFile(projectDir, intent, space);
 
-  let block = `\n## ${heading}\n`;
-  block += `**Timestamp**: ${ts}\n`;
-  block += `**Event**: ${eventType}\n`;
-  for (const [key, value] of Object.entries(fields)) {
-    const safeValue = escapeAuditValue(value);
-    block += `**${key}**: ${safeValue}\n`;
-  }
-  block += `\n---\n`;
+  const line = serializeJournalEntry({
+    schemaVersion: JOURNAL_SCHEMA_VERSION,
+    seq: nextShardSeq(path),
+    cloneId: auditCloneId(projectDir),
+    intentId: auditIntentId(projectDir, intent, space),
+    timestamp: ts,
+    heading,
+    event: eventType,
+    fields: escapeFieldValues(fields),
+  });
 
-  appendFileSync(path, block, "utf-8");
+  appendFileSync(path, line, "utf-8");
 
   return { appended: true, event: eventType, timestamp: ts };
+}
+
+// The forgery guard escapeAuditValue applied across a field map — CR/LF in a
+// value collapses to the literal two-character "\n" before the codec sees it,
+// exactly as the Markdown writer did (t204 contract preserved).
+function escapeFieldValues(fields: Record<string, string>): Record<string, string> {
+  const escaped: Record<string, string> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    escaped[key] = escapeAuditValue(value);
+  }
+  return escaped;
 }
 
 // Trusted lifecycle-only writer. Lifecycle transitions may start from a
@@ -389,23 +454,26 @@ export function appendLifecycleAuditEntryUnlocked(
   space: string,
   shardName: string,
 ): AppendAuditResult {
-  if (basename(shardName) !== shardName || !shardName.endsWith(".md")) {
+  if (basename(shardName) !== shardName || !shardName.endsWith(".jsonl")) {
     throw new Error(`Invalid lifecycle audit shard: ${shardName}`);
   }
   const shardDir = auditShardDir(projectDir, intent, space);
   if (shardDir === null) throw new Error(`Cannot resolve audit directory for intent ${intent}`);
   mkdirSync(shardDir, { recursive: true });
   const path = join(shardDir, shardName);
-  const previous = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
+  const previous = existsSync(path) ? readFileSync(path, "utf-8") : "";
   const ts = isoTimestamp();
-  let block = `\n## ${EVENT_HEADINGS[eventType]}\n`;
-  block += `**Timestamp**: ${ts}\n`;
-  block += `**Event**: ${eventType}\n`;
-  for (const [key, value] of Object.entries(fields)) {
-    block += `**${key}**: ${escapeAuditValue(value)}\n`;
-  }
-  block += "\n---\n";
-  writeFileAtomic(path, previous + block);
+  const line = serializeJournalEntry({
+    schemaVersion: JOURNAL_SCHEMA_VERSION,
+    seq: splitJournalLines(previous).length + 1,
+    cloneId: auditCloneId(projectDir),
+    intentId: intent,
+    timestamp: ts,
+    heading: EVENT_HEADINGS[eventType] ?? eventType,
+    event: eventType,
+    fields: escapeFieldValues(fields),
+  });
+  writeFileAtomic(path, previous + line);
   return { appended: true, event: eventType, timestamp: ts };
 }
 
@@ -454,12 +522,18 @@ export function handleAppendRaw(
     // Interpret literal \n sequences in the body as actual newlines
     const expandedBody = unescapeAuditBody(body);
 
-    let block = `\n## ${heading}\n`;
-    block += `**Timestamp**: ${ts}\n`;
-    block += `${expandedBody}\n`;
-    block += `\n---\n`;
+    const line = serializeJournalEntry({
+      schemaVersion: JOURNAL_SCHEMA_VERSION,
+      seq: nextShardSeq(path),
+      cloneId: auditCloneId(projectDir),
+      intentId: auditIntentId(projectDir),
+      timestamp: ts,
+      heading,
+      event: null,
+      rawBody: expandedBody,
+    });
 
-    appendFileSync(path, block, "utf-8");
+    appendFileSync(path, line, "utf-8");
   } finally {
     releaseAuditLock(projectDir);
   }
@@ -473,7 +547,7 @@ export function handleAppendRaw(
 //
 // Forks the main audit log into a Bolt's worktree on Bolt start. Byte-copies
 // main audit so the worktree is self-contained at fork instant. Records the
-// pre-emit byte-offset (Fork Boundary) and SHA-256 (Source Audit Hash) on
+// pre-emit record count (Fork Boundary) and SHA-256 (Source Audit Hash) on
 // AUDIT_FORKED so audit-merge can recover both at gate-approval time.
 //
 // Audit-of-intent semantics: emits AUDIT_FORKED to the main audit BEFORE the
@@ -525,6 +599,89 @@ function parseSlugFlag(args: string[], subcommand: string): string {
   return slug;
 }
 
+// --- Fork/merge physical-representation seams (JSONL) ---
+//
+// The helpers below are the ONLY places fork/merge touch the physical
+// storage representation. Since the JSONL switchover the physical unit is
+// RECORD LINES: Fork Boundary counts the main shard's records at fork time,
+// and Source Audit Hash covers the bytes of exactly those lines.
+
+// Byte length of the first `lineCount` records (including each trailing
+// newline). Caps at the whole buffer when fewer lines exist.
+function journalLinePrefixLength(text: string, lineCount: number): number {
+  let offset = 0;
+  for (let i = 0; i < lineCount; i += 1) {
+    const nl = text.indexOf("\n", offset);
+    if (nl < 0) return text.length;
+    offset = nl + 1;
+  }
+  return offset;
+}
+
+// Record count of the main shard BEFORE the AUDIT_FORKED row lands — the
+// prefix that Source Audit Hash covers. Physical unit: lines.
+function auditForkBoundary(mainAuditPath: string): number {
+  return splitJournalLines(readFileSync(mainAuditPath, "utf-8")).length;
+}
+
+// Hash of the main shard's first `boundary` records.
+function auditPrefixHash(mainText: string, boundary: number): string {
+  const prefixLen = journalLinePrefixLength(mainText, boundary);
+  return createHash("sha256").update(mainText.slice(0, prefixLen), "utf-8").digest("hex");
+}
+
+// Locate the most recent AUDIT_FORKED record for `slug` in a worktree shard
+// and extract its anchor fields. Returns null when absent; throws on a
+// present-but-malformed record (missing fields).
+export type ForkAnchor = { boundary: number; sourceHash: string; forkTs: string; forkBlock: string };
+
+export function findForkAnchor(wtContent: string, slug: string): ForkAnchor | null {
+  const lines = splitJournalLines(wtContent);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]!;
+    if (auditBlockField(line, "Event") !== "AUDIT_FORKED") continue;
+    if (auditBlockField(line, "Bolt slug") !== slug) continue;
+    const boundaryText = auditBlockField(line, "Fork Boundary");
+    const sourceHash = auditBlockField(line, "Source Audit Hash");
+    const forkTs = auditBlockField(line, "Timestamp");
+    if (boundaryText === null || !/^\d+$/.test(boundaryText) || sourceHash === null || forkTs === null) {
+      throw new Error(
+        `worktree audit AUDIT_FORKED entry for slug ${slug} missing Fork Boundary, Source Audit Hash, or Timestamp field`
+      );
+    }
+    return { boundary: parseInt(boundaryText, 10), sourceHash, forkTs, forkBlock: line };
+  }
+  return null;
+}
+
+// Everything after the AUDIT_FORKED anchor record — the post-fork delta, as
+// verbatim storage text ready for appendFileSync. Returns null when the
+// shard is malformed (anchor line not found or not newline-terminated).
+export function extractPostForkDelta(wtContent: string, forkBlock: string): string | null {
+  const anchorStart = wtContent.indexOf(forkBlock);
+  if (anchorStart < 0) return null;
+  const nl = wtContent.indexOf("\n", anchorStart + forkBlock.length - 1);
+  if (nl < 0) return null;
+  return wtContent.slice(nl + 1);
+}
+
+// Count the records inside a verbatim delta produced by extractPostForkDelta.
+export function countDeltaRecords(delta: string): number {
+  return splitJournalLines(delta).length;
+}
+
+// Re-hash the main shard's first `boundary` records against the recorded
+// Source Audit Hash. Returns null when the prefix is intact, or the refusal
+// message classifying the mismatch (truncation vs mid-Bolt tampering).
+export function auditPrefixMismatch(mainText: string, boundary: number, sourceHash: string): string | null {
+  if (auditPrefixHash(mainText, boundary) === sourceHash) return null;
+  const mainLines = splitJournalLines(mainText).length;
+  if (mainLines < boundary) {
+    return `main audit prefix-hash does not match recorded Source Audit Hash (expected at least ${boundary} records, got ${mainLines}); refusing to merge (main-audit truncation suspected)`;
+  }
+  return `main audit prefix-hash at record ${boundary} does not match recorded Source Audit Hash; refusing to merge (mid-Bolt tampering suspected)`;
+}
+
 export function handleAuditFork(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-fork");
   // Pin the main-side audit shard AND the worktree mirror to ONE intent so
@@ -564,13 +721,12 @@ export function handleAuditFork(args: string[], projectDir: string): void {
     reentrant = true;
   }
 
-  // Byte-offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
+  // Offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
   // prefix that Source Audit Hash covers; audit-merge re-hashes the same range
   // to detect tampering.
-  const boundary = statSync(mainAuditPath).size;
-  const sourceHash = createHash("sha256")
-    .update(readFileSync(mainAuditPath))
-    .digest("hex");
+  const boundary = auditForkBoundary(mainAuditPath);
+  const mainText = readFileSync(mainAuditPath, "utf-8");
+  const sourceHash = auditPrefixHash(mainText, boundary);
 
   // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
@@ -630,15 +786,15 @@ export function handleAuditFork(args: string[], projectDir: string): void {
 // Merges a Bolt's worktree audit deltas back into the main audit on gate
 // approval. Recovers Fork Boundary + Source Audit Hash from the worktree's
 // AUDIT_FORKED entry, sanity-checks the prefix-hash against main audit's
-// current first-`boundary` bytes (refuses on mismatch — catches mid-Bolt
+// current first-`boundary` records (refuses on mismatch — catches mid-Bolt
 // tampering or main-audit truncation), then appends the post-fork delta and
 // emits AUDIT_MERGED.
 //
-// Delta detection is parse-driven: locate the AUDIT_FORKED block in the
-// worktree audit, take everything after that block's "\n---\n" separator.
+// Delta detection is parse-driven: locate the AUDIT_FORKED record line in
+// the worktree audit, take everything after that line.
 // The Fork Boundary field is used solely as the prefix-hash anchor, NOT for
 // delta math (the worktree audit's copy of AUDIT_FORKED extends beyond
-// `boundary` by the entry's own size; trusting `boundary` for delta-start
+// `boundary` by the entry's own record; trusting `boundary` for delta-start
 // would duplicate AUDIT_FORKED on merge-back).
 //
 // Lock budget: extended from acquireAuditLock's 5s default to 20s
@@ -673,70 +829,40 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
 
   const wtContent = readFileSync(wtAuditPath, "utf-8");
 
-  // Locate the most recent AUDIT_FORKED block matching this slug. Block
-  // structure per appendAuditEntry: "\n## <heading>\n**Timestamp**: <ts>\n
-  // **Event**: <type>\n<fields>\n\n---\n". Blocks are separated by "\n---\n".
-  const blocks = wtContent.split("\n---\n");
-  let forkBlock: string | undefined;
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    const b = blocks[i];
-    if (b.includes("**Event**: AUDIT_FORKED") && b.includes(`**Bolt slug**: ${slug}`)) {
-      forkBlock = b;
-      break;
-    }
+  // Locate the most recent AUDIT_FORKED record matching this slug and pull
+  // its anchor fields (boundary, source hash, fork timestamp).
+  let anchor: ForkAnchor | null;
+  try {
+    anchor = findForkAnchor(wtContent, slug);
+  } catch (e) {
+    jsonError(errorMessage(e));
   }
-  if (!forkBlock) {
+  if (!anchor) {
     jsonError(`worktree audit missing AUDIT_FORKED entry for slug ${slug}`);
   }
-
-  const boundaryMatch = forkBlock.match(/\*\*Fork Boundary\*\*:\s*(\d+)/);
-  const sourceHashMatch = forkBlock.match(/\*\*Source Audit Hash\*\*:\s*([0-9a-f]+)/);
-  const timestampMatch = forkBlock.match(/\*\*Timestamp\*\*:\s*([^\n]+)/);
-  if (!boundaryMatch || !sourceHashMatch || !timestampMatch) {
-    jsonError(
-      `worktree audit AUDIT_FORKED entry for slug ${slug} missing Fork Boundary, Source Audit Hash, or Timestamp field`
-    );
-  }
-  const boundary = parseInt(boundaryMatch[1], 10);
-  const sourceHash = sourceHashMatch[1];
+  const { boundary, sourceHash } = anchor;
   // forkTs anchors the audit-of-intent correlation tag for any post-emit
   // failure on this merge — doctor joins this back to the matching
   // AUDIT_FORKED row in main audit by exact-string timestamp match.
-  const forkTs = timestampMatch[1].trim();
+  const forkTs = anchor.forkTs;
 
-  // Sanity check: re-hash main audit's first `boundary` bytes; refuse if it
+  // Sanity check: re-hash main audit's first `boundary` units; refuse if it
   // disagrees with the recorded Source Audit Hash. Catches the case where
   // the prefix has been edited (length-preserving mutation) or truncated
   // (length less than boundary — hash differs because we hash fewer bytes
   // than were originally hashed).
-  const mainBuf = readFileSync(mainAuditPath);
-  const prefixLen = Math.min(boundary, mainBuf.length);
-  const prefixHash = createHash("sha256")
-    .update(mainBuf.subarray(0, prefixLen))
-    .digest("hex");
-  if (prefixHash !== sourceHash) {
-    if (mainBuf.length < boundary) {
-      jsonError(
-        `main audit prefix-hash does not match recorded Source Audit Hash (expected at least ${boundary} bytes, got ${mainBuf.length}); refusing to merge (main-audit truncation suspected)`
-      );
-    } else {
-      jsonError(
-        `main audit prefix-hash at byte ${boundary} does not match recorded Source Audit Hash; refusing to merge (mid-Bolt tampering suspected)`
-      );
-    }
+  const mainText = readFileSync(mainAuditPath, "utf-8");
+  const prefixMismatch = auditPrefixMismatch(mainText, boundary, sourceHash);
+  if (prefixMismatch !== null) {
+    jsonError(prefixMismatch);
   }
 
-  // Compute delta-start by locating the byte position immediately after the
-  // "\n---\n" that closes the AUDIT_FORKED block. indexOf on the matched
-  // forkBlock text gives a stable anchor.
-  const forkBlockStart = wtContent.indexOf(forkBlock);
-  const blockEndSep = "\n---\n";
-  const sepIdx = wtContent.indexOf(blockEndSep, forkBlockStart);
-  if (sepIdx < 0) {
+  // Everything after the record that closes the AUDIT_FORKED anchor is the
+  // post-fork delta, extracted as verbatim storage text.
+  const delta = extractPostForkDelta(wtContent, anchor.forkBlock);
+  if (delta === null) {
     jsonError(`worktree audit malformed — no separator after AUDIT_FORKED block for slug ${slug}`);
   }
-  const deltaStart = sepIdx + blockEndSep.length;
-  const delta = wtContent.slice(deltaStart);
 
   // Acquire outer lock with extended budget for parallel-Bolt contention.
   // Defaults: 200 retries × 100ms = 20s, sized for N=4-8 contention. The
@@ -776,11 +902,11 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   try {
     const trimmed = delta.trim();
     if (trimmed !== "") {
-      // Delta is already a sequence of well-formed audit blocks (each ending
-      // in "\n---\n"). Append verbatim — running it through appendAuditEntry
-      // would double-wrap each block.
+      // Delta is already a sequence of well-formed journal records (one
+      // JSONL line each). Append verbatim — running it through
+      // appendAuditEntry would re-mint each record's identity.
       appendFileSync(mainAuditPath, delta, "utf-8");
-      entriesMerged = delta.split(/\n---\n/).filter((b) => b.trim()).length;
+      entriesMerged = countDeltaRecords(delta);
     }
     result = appendAuditEntryUnlocked(
       "AUDIT_MERGED",

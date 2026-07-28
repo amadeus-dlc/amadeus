@@ -108,7 +108,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 // Seed the per-intent workspace shell (mirrors fixtures.seedWorkspaceShell): the
@@ -145,7 +145,7 @@ function scratchProject(distTree: string, installDir: string): string {
   writeFileSync(join(dir, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(dir);
   mkdirSync(auditDir, { recursive: true });
-  writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
+  writeFileSync(join(auditDir, pinnedShardName()), "");
   return dir;
 }
 
@@ -162,11 +162,12 @@ function eventCount(dir: string, event: string): number {
     return 0;
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n")
     .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+    .filter((l) => l.trim() !== "")
+    .filter((l) => (JSON.parse(l) as { event: string | null }).event === event).length;
 }
 
 // Fire the shipped adapter's mint target through its measured prompt channel.

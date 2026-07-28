@@ -71,7 +71,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 /** Seed the per-intent workspace shell (active-space + intents/<record> + cursors
@@ -110,7 +110,7 @@ function scratchProject(withState: boolean): string {
     writeFileSync(join(dir, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(dir);
     mkdirSync(auditDir, { recursive: true });
-    writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
+    writeFileSync(join(auditDir, pinnedShardName()), "");
   }
   return dir;
 }
@@ -131,7 +131,7 @@ function readAudit(dir: string): string {
     return "";
   }
   return names
-    .filter((n: string) => n.endsWith(".md"))
+    .filter((n: string) => n.endsWith(".jsonl"))
     .sort()
     .map((n: string) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");

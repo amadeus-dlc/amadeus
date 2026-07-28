@@ -121,10 +121,25 @@ function readAudit(p: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
+}
+
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  timestamp: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse a JSONL shard buffer into records (blank lines skipped). */
+function auditRecords(body: string): AuditRecord[] {
+  return body
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 function heartbeatPath(p: string): string {
@@ -297,48 +312,43 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
   test("source=startup emits SESSION_STARTED [.sh test 14]", () => {
     seedStateFile(proj, MID_IDEATION);
     seedAuditFile(proj);
-    // The seed audit-sample.md already carries one SESSION_STARTED block, so a
-    // bare presence grep (what the .sh did) is a tautology that passes with zero
-    // hook emission. STRONGER: assert the COUNT of canonical start-of-line
-    // **Event**: SESSION_STARTED rows actually ROSE after the hook fired (a real
-    // emission), and that the new block co-locates **Source**: startup.
-    const countStarted = (b: string): number =>
-      b.split("\n").filter((l) => l.trim() === "**Event**: SESSION_STARTED").length;
-    const before = countStarted(readAudit(proj));
+    // The seed audit-sample.jsonl already carries one SESSION_STARTED record, so
+    // a bare presence grep (what the .sh did) is a tautology that passes with
+    // zero hook emission. STRONGER: assert the COUNT of SESSION_STARTED records
+    // actually ROSE after the hook fired (a real emission), and that the NEW
+    // record carries Source=startup.
+    const started = (b: string): AuditRecord[] =>
+      auditRecords(b).filter((r) => r.event === "SESSION_STARTED");
+    const before = started(readAudit(proj)).length;
     fire(proj, '{"source":"startup"}');
-    const body = readAudit(proj);
-    expect(countStarted(body)).toBe(before + 1);
-    const idxEvent = body.lastIndexOf("**Event**: SESSION_STARTED");
-    const idxSource = body.indexOf("**Source**: startup", idxEvent);
-    expect(idxSource).toBeGreaterThan(idxEvent);
+    const after = started(readAudit(proj));
+    expect(after.length).toBe(before + 1);
+    expect(after[after.length - 1]!.fields?.Source).toBe("startup");
   });
 
   test("source=resume emits SESSION_RESUMED [.sh test 15]", () => {
     seedStateFile(proj, MID_IDEATION);
     seedAuditFile(proj);
     fire(proj, '{"source":"resume"}');
-    const body = readAudit(proj);
-    expect(
-      body.split("\n").some((l) => l.trim() === "**Event**: SESSION_RESUMED"),
-    ).toBe(true);
-    const idxEvent = body.indexOf("**Event**: SESSION_RESUMED");
-    const idxSource = body.indexOf("**Source**: resume");
-    expect(idxSource).toBeGreaterThan(idxEvent);
+    const resumed = auditRecords(readAudit(proj)).filter(
+      (r) => r.event === "SESSION_RESUMED",
+    );
+    expect(resumed.length).toBe(1);
+    // The Source field rides on the SAME record as the event (not merely
+    // somewhere in the shard).
+    expect(resumed[0]!.fields?.Source).toBe("resume");
   });
 
   test("source=clear emits SESSION_STARTED [.sh test 16]", () => {
     seedStateFile(proj, MID_IDEATION);
     seedAuditFile(proj);
     fire(proj, '{"source":"clear"}');
-    const body = readAudit(proj);
     // clear maps to SESSION_STARTED (amadeus-session-start.ts :81), with the
-    // Source field carrying the original "clear".
-    expect(
-      body.split("\n").some((l) => l.trim() === "**Event**: SESSION_STARTED"),
-    ).toBe(true);
-    const idxEvent = body.indexOf("**Event**: SESSION_STARTED");
-    const idxSource = body.indexOf("**Source**: clear");
-    expect(idxSource).toBeGreaterThan(idxEvent);
+    // Source field carrying the original "clear" on that same record.
+    const cleared = auditRecords(readAudit(proj)).filter(
+      (r) => r.event === "SESSION_STARTED" && r.fields?.Source === "clear",
+    );
+    expect(cleared.length).toBe(1);
   });
 
   test("source=compact emits no session event (PreCompact owns it) [.sh test 17]", () => {
@@ -348,8 +358,8 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
     fire(proj, '{"source":"compact"}');
     const body = readAudit(proj);
     // .sh forbade "SESSION_COMPACTED" (which this hook never emits). STRONGER —
-    // assert compact emits NEITHER session event, so audit.md is byte-unchanged
-    // (no new block) and carries no SESSION_COMPACTED.
+    // assert compact emits NEITHER session event, so the shard is byte-unchanged
+    // (no new record) and carries no SESSION_COMPACTED.
     expect(body).not.toContain("SESSION_COMPACTED");
     expect(body).toBe(before);
   });

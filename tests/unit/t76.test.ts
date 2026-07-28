@@ -209,7 +209,7 @@ const statePath = (p: string): string => seededStateFile(p);
 const auditDir = (p: string): string => seededAuditDir(p);
 // The bare-header "audit.md" the .sh seeded is now a single fixture SHARD under
 // the audit/ dir (the readers glob *.md, so one shard reads back as the trail).
-const auditPath = (p: string): string => join(seededAuditDir(p), "fixture.md");
+const auditPath = (p: string): string => join(seededAuditDir(p), "fixture.jsonl");
 // The worktree mirror carries the SAME relative record dir as the main checkout
 // (relativeRecordDir → amadeus/spaces/default/intents/<record>), so the forked
 // state lands at <wt>/amadeus/spaces/default/intents/<record>/amadeus-state.md.
@@ -258,12 +258,13 @@ function makeFixture(): string {
   const proj = createTestProject();
   tempDirs.push(proj);
   writeFileSync(statePath(proj), V7_STATE, "utf-8");
-  // The .sh seeds a BARE header here (not audit-sample.md), so audit-row
-  // counts post-fire are unambiguous. Audit is now a per-clone shard DIR; the
-  // bare header lands in a single fixture shard (readers glob audit/*.md, so
-  // the tool's own <host>-<clone>.md shard and this one are merged on read).
+  // The .sh seeded a BARE header here (not audit-sample), so audit-row counts
+  // post-fire are unambiguous. JSONL shards carry no header, so the fixture
+  // shard is simply EMPTY. Audit is a per-clone shard DIR; readers glob
+  // audit/*.jsonl, so the tool's own <host>-<clone>.jsonl shard and this one
+  // are merged on read.
   mkdirSync(auditDir(proj), { recursive: true });
-  writeFileSync(auditPath(proj), "# AI-DLC Audit Log\n", "utf-8");
+  writeFileSync(auditPath(proj), "", "utf-8");
   return proj;
 }
 
@@ -284,13 +285,13 @@ function stateField(proj: string, field: string): string {
   return "";
 }
 
-/** Concatenate every audit shard (audit/*.md) — the tool writes its own
+/** Concatenate every audit shard (audit/*.jsonl) — the tool writes its own
  *  per-clone shard, so the count/contains readers must glob the whole dir. */
 function readAllShards(dir: string): string {
   let names: string[];
   try {
     names = readdirSync(dir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .sort();
   } catch {
     return "";
@@ -298,11 +299,14 @@ function readAllShards(dir: string): string {
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 
-/** Count audit blocks with `**Event**: <ev>` (mirrors `grep -c STATE_FORKED`). */
+/** Count audit records whose `event` is <ev> (mirrors `grep -c STATE_FORKED`). */
 function auditEventCount(proj: string, ev: string): number {
   return readAllShards(auditDir(proj))
     .split("\n")
-    .filter((l) => l.includes(`**Event**: ${ev}`)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .filter((r) => r.event === ev).length;
 }
 
 const auditContains = (proj: string, needle: string): boolean =>

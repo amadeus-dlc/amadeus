@@ -25,11 +25,11 @@
 //     :214 appendAuditEntry — acquireAuditLock → appendAuditEntryUnlocked →
 //          releaseAuditLock (the locked critical section each process enters).
 //     :254 heading = EVENT_HEADINGS["BOLT_STARTED"] = "Bolt Started" (:153);
-//          each block = "\n## Bolt Started\n**Timestamp**: <iso>\n**Event**:
-//          BOLT_STARTED\n**Bolt names**: <name>\n...\n\n---\n".
+//          each record = one JSONL line {"heading":"Bolt Started","event":
+//          "BOLT_STARTED","fields":{"Bolt names":"<name>",...},...}.
 //
 // Fixture discipline (mirrors the .sh): a fresh temp project with an
-// amadeus-docs/ dir, seeded with audit-sample.md (3 `---` separators) + a
+// amadeus-docs/ dir, seeded with audit-sample.jsonl (3 records) + a
 // mid-ideation state file so any accidental error path lands cleanly. Torn
 // down in afterEach. Nothing written under tests/fixtures/**.
 //
@@ -75,18 +75,28 @@ interface RaceResult {
   elapsedMs: number;
 }
 
-/** Concatenate every audit shard (audit/*.md) for the seeded record — the 5
+/** Concatenate every audit shard (audit/*.jsonl) for the seeded record — the 5
  *  racing processes share one clone-id (pre-seeded below) so they contend on a
- *  single shard, but the fixture rides a separate fixture.md shard, so we merge. */
+ *  single shard, but the fixture rides a separate shard, so we merge. */
 function readAllShards(proj: string): string {
   const dir = seededAuditDir(proj);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
+}
+
+type AuditRecord = { heading?: string; event: string | null; fields?: Record<string, string> };
+
+/** Parse the merged JSONL shard buffer into records. */
+function auditRecords(body: string): AuditRecord[] {
+  return body
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 let current: { proj: string } | null = null;
@@ -167,49 +177,44 @@ describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated 
   test("all 5 BOLT_STARTED entries land (no lost writes) [.sh 2]", () => {
     // The .sh: grep -cE '^\*\*Event\*\*: BOLT_STARTED'. Count exactly 5 — a
     // lost write under the race would drop this below 5.
-    const eventCount = race.body
-      .split("\n")
-      .filter((l) => l === "**Event**: BOLT_STARTED").length;
+    const eventCount = auditRecords(race.body).filter((r) => r.event === "BOLT_STARTED").length;
     expect(eventCount).toBe(5);
   }, 30_000);
 
   test("each of bolt-1..bolt-5 appears exactly once [.sh 3]", () => {
     // The .sh grepped presence per name; STRONGER here — assert EXACTLY one
-    // `**Bolt names**: bolt-<i>` line per i, so no name is dropped or doubled.
-    const lines = race.body.split("\n");
+    // record carrying `Bolt names: bolt-<i>` per i, so no name is dropped or
+    // doubled.
+    const records = auditRecords(race.body);
     for (let i = 1; i <= 5; i++) {
-      const hits = lines.filter((l) => l === `**Bolt names**: bolt-${i}`).length;
+      const hits = records.filter((r) => r.fields?.["Bolt names"] === `bolt-${i}`).length;
       expect(hits).toBe(1);
     }
   }, 30_000);
 
   test("every BOLT_STARTED has a matching heading (no half-writes) [.sh 4]", () => {
     // The .sh compared #'**Event**: BOLT_STARTED' to #'## Bolt Started': any
-    // half-written block would diverge the counts. STRONGER: assert equal AND
-    // both == 5 (a coherent-but-short pair would pass the .sh's equality but
-    // fail here).
-    const lines = race.body.split("\n");
-    const eventCount = lines.filter(
-      (l) => l === "**Event**: BOLT_STARTED",
-    ).length;
-    const headingCount = lines.filter((l) => l === "## Bolt Started").length;
+    // half-written block would diverge the counts. The JSONL twin compares the
+    // record's `event` to its `heading`. STRONGER: assert equal AND both == 5
+    // (a coherent-but-short pair would pass the .sh's equality but fail here).
+    const records = auditRecords(race.body);
+    const eventCount = records.filter((r) => r.event === "BOLT_STARTED").length;
+    const headingCount = records.filter((r) => r.heading === "Bolt Started").length;
     expect(headingCount).toBe(eventCount);
     expect(eventCount).toBe(5);
     expect(headingCount).toBe(5);
   }, 30_000);
 
-  test("separator count == fixture (3) + 5 bolts == 8 [.sh 5]", () => {
-    // The .sh: expected = #'^---$' in audit-sample.md (3) + 5. Each well-formed
-    // block closes with a standalone "---", so 5 clean appends add exactly 5.
-    const fixtureDashes = readFileSync(
-      join(FIXTURES_DIR, "audit-sample.md"),
-      "utf-8",
-    )
-      .split("\n")
-      .filter((l) => l === "---").length;
-    const actualDashes = race.body.split("\n").filter((l) => l === "---").length;
-    expect(fixtureDashes).toBe(3); // pin the fixture precondition the .sh relied on
-    expect(actualDashes).toBe(fixtureDashes + 5);
-    expect(actualDashes).toBe(8);
+  test("record count == fixture (3) + 5 bolts == 8 [.sh 5]", () => {
+    // The .sh: expected = #'^---$' in audit-sample.md (3) + 5. In JSONL one
+    // record is one line, so the block count IS the line count: 5 clean appends
+    // add exactly 5, and a torn write would leave an unparseable line.
+    const fixtureRecords = auditRecords(
+      readFileSync(join(FIXTURES_DIR, "audit-sample.jsonl"), "utf-8"),
+    ).length;
+    const actualRecords = auditRecords(race.body).length;
+    expect(fixtureRecords).toBe(3); // pin the fixture precondition the .sh relied on
+    expect(actualRecords).toBe(fixtureRecords + 5);
+    expect(actualRecords).toBe(8);
   }, 30_000);
 });

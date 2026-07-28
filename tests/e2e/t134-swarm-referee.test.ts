@@ -114,7 +114,7 @@ function makeSwarmFixture(): string {
     readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8"),
   );
   mkdirSync(seededAuditDir(proj), { recursive: true });
-  writeFileSync(join(seededAuditDir(proj), "fixture.md"), "# AI-DLC Audit Log\n");
+  writeFileSync(join(seededAuditDir(proj), "fixture.jsonl"), "");
   writeFileSync(
     join(proj, ".gitignore"),
     [
@@ -170,24 +170,33 @@ function runRef(proj: string, args: string[]): RefResult {
   return { rc: res.status ?? -1, out: res.stdout ?? "" };
 }
 
-/** Concatenate every audit shard (audit/*.md) for the seeded record — the swarm
- *  tool writes SWARM_* rows to its own per-clone shard alongside fixture.md. */
+/** Concatenate every audit shard (audit/*.jsonl) for the seeded record — the swarm
+ *  tool writes SWARM_* rows to its own per-clone shard alongside fixture.jsonl. */
 const auditBody = (p: string): string => {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
 
-/** Exact `**Event**: <type>` row count across the audit shards (STRONGER than grep -q). */
-function eventCount(p: string, event: string): number {
+/** Every JSONL audit record across the shard set. */
+function auditRecords(p: string): {
+  event: string | null;
+  fields?: Record<string, string>;
+}[] {
   return auditBody(p)
     .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+}
+
+/** Exact record count of one event type (STRONGER than grep -q). */
+function eventCount(p: string, event: string): number {
+  return auditRecords(p).filter((r) => r.event === event).length;
 }
 
 describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swarm-referee.sh, plan 13)", () => {
@@ -440,7 +449,11 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     ]);
     // SWARM_DEGRADED fired, and it records the requested driver (claude-ultra).
     expect(eventCount(proj, "SWARM_DEGRADED")).toBe(1);
-    expect(auditBody(proj)).toContain("**Requested driver**: claude-ultra");
+    expect(
+      auditRecords(proj).some(
+        (r) => r.event === "SWARM_DEGRADED" && r.fields?.["Requested driver"] === "claude-ultra",
+      ),
+    ).toBe(true);
   }, 120000);
 
   // ===========================================================================
@@ -498,7 +511,11 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // The typed attribution lands in the envelope (NOT the cap-exhausted default).
     expect(stuck.reason).toBe("unsatisfiable");
     // ...and in the SWARM_UNIT_FAILED audit row's Reason field.
-    expect(auditBody(proj)).toContain("**Reason**: unsatisfiable");
+    expect(
+      auditRecords(proj).some(
+        (r) => r.event === "SWARM_UNIT_FAILED" && r.fields?.Reason === "unsatisfiable",
+      ),
+    ).toBe(true);
   }, 120000);
 
   // ===========================================================================

@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   auditBlockField,
+  splitAuditRecords,
   auditShardName,
   auditShards,
   readIntentRegistry,
@@ -71,7 +72,9 @@ export type VerifyReservationInput = ConsumeReservationInput & {
 const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/;
 const STAGE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SHARD_NAME_RE = /^[A-Za-z0-9._-]+\.md$/;
+// Accepts both spellings across the JSONL switchover: markers minted before
+// the migration carry `.md` shard leaves; live shards are `.jsonl`.
+const SHARD_NAME_RE = /^[A-Za-z0-9._-]+\.(?:md|jsonl)$/;
 const RESERVATION_KEYS = [
   "armedAt",
   "humanTurnShard",
@@ -279,7 +282,7 @@ function reservationHumanTurns(
   const matches: Array<{ timestamp: string; shard: string }> = [];
   for (const path of auditShards(projectDir, marker.targetIntentDir, marker.space)) {
     const content = readFileSync(path, "utf-8");
-    for (const block of content.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+    for (const block of splitAuditRecords(content)) {
       if (
         auditBlockField(block, "Event") !== "HUMAN_TURN" ||
         auditBlockField(block, "Presence Reservation Id") !== marker.reservationId
@@ -401,10 +404,13 @@ export function verifyMintedPresenceReservation(
     throw new Error("Presence reservation owner no longer matches the registry");
   }
   const turns = reservationHumanTurns(input.projectDir, marker);
+  const markerShard = marker.humanTurnShard === null
+    ? null
+    : marker.humanTurnShard.replace(/\.md$/, ".jsonl");
   if (
     turns.length !== 1 ||
     turns[0].timestamp !== marker.humanTurnTimestamp ||
-    turns[0].shard !== marker.humanTurnShard
+    turns[0].shard !== markerShard
   ) {
     throw new Error("Presence reservation HUMAN_TURN provenance does not match");
   }
@@ -487,7 +493,7 @@ export function targetedApprovalEvidence(
   let gateApproved = 0;
   let stageCompleted = 0;
   let latestGateAt = Number.NEGATIVE_INFINITY;
-  for (const block of auditText.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+  for (const block of splitAuditRecords(auditText)) {
     if (auditBlockField(block, "Stage") !== marker.stage) continue;
     const timestamp = auditBlockField(block, "Timestamp");
     const event = auditBlockField(block, "Event");

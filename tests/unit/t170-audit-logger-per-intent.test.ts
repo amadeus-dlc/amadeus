@@ -59,7 +59,7 @@ function fire(p: string, tool: string, filePath: string): number {
 
 // The shard filename the hook subprocess will resolve, computed from a
 // DETERMINISTIC clone-id we pin on disk (see below). Mirrors auditShardName()'s
-// `<host>-<clone>.md` shape, including its hostname slug normalisation.
+// `<host>-<clone>.jsonl` shape, including its hostname slug normalisation.
 const PINNED_CLONE_ID = "testcloneid01";
 function pinnedShardName(): string {
   const host =
@@ -68,7 +68,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 /** Birth an intent and create the audit shard the HOOK will resolve, returning
@@ -98,7 +98,7 @@ function readShards(auditDir: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");

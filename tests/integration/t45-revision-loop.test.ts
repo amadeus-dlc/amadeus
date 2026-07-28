@@ -33,7 +33,7 @@
 //     assertions match the `- [X] requirements-analysis` PREFIX (the .sh used
 //     anchored regex `^- \[X\] requirements-analysis`, prefix-equivalent).
 //   - Revision Count is the `- **Revision Count**: N` field line.
-//   - audit.md event rows carry the RAW event type on the `**Event**: <TYPE>`
+//   - audit shard records carry the RAW event type in the JSONL `event` field
 //     line (the multi-word EVENT_HEADINGS value goes on the `## ` heading,
 //     amadeus-audit.ts:117-139,254); count_event greps the **Event** line.
 //
@@ -107,14 +107,14 @@ function recordDirOf(p: string): string {
   return join(p, "amadeus-docs");
 }
 
-// Audit is written as per-clone shards under <record>/audit/<host>-<pid>.md
+// Audit is written as per-clone JSONL shards under <record>/audit/<host>-<pid>.jsonl
 // (Stage B). Concatenate every shard for a content read; fall back to the flat
 // amadeus-docs/audit.md for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
     return readdirSync(auditDir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
@@ -152,11 +152,12 @@ function checkboxMarker(content: string): string | null {
   return m ? m[1] : null;
 }
 
-/** count_event (t45:62-64): rows whose `**Event**: <TYPE>` line is exactly TYPE. */
+/** count_event (t45:62-64): records whose `event` is exactly TYPE. */
 function countEvent(event: string): number {
   return readAudit(proj)
     .split("\n")
-    .filter((l) => l === `**Event**: ${event}`).length;
+    .filter((l) => l.trim() !== "")
+    .filter((l) => (JSON.parse(l) as { event: string | null }).event === event).length;
 }
 
 // Snapshots captured between transitions so each .sh assertion checks the

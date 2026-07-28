@@ -116,35 +116,42 @@ const auditText = (p: string): string => {
   const dir = seededAuditDir(p);
   let names: string[];
   try {
-    names = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    names = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
 
-/** Audit blocks are separated by lines of only `---`. The WORKTREE_DISCARDED
- *  block for slug `s` (the .sh's `Event.*WORKTREE_DISCARDED` + `Bolt slug.*s`
- *  on the same block). */
-function discardBlock(p: string, slug: string): string | undefined {
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Every ledger record in the merged shards (one JSON object per line). */
+function auditRecords(p: string): AuditRecord[] {
   return auditText(p)
-    .split(/\n---\n/)
-    .find(
-      (b) =>
-        /^\*\*Event\*\*:\s*WORKTREE_DISCARDED/m.test(b) &&
-        new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${slug}\\s*$`, "m").test(b),
-    );
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
+/** WORKTREE_DISCARDED records for slug `s` — record-scoped by construction
+ *  (the .sh's `Event.*WORKTREE_DISCARDED` + `Bolt slug.*s` on the same block). */
+function discardRecords(p: string, slug: string): AuditRecord[] {
+  return auditRecords(p).filter(
+    (r) => r.event === "WORKTREE_DISCARDED" && r.fields?.["Bolt slug"] === slug,
+  );
+}
+
+function discardBlock(p: string, slug: string): AuditRecord | undefined {
+  return discardRecords(p, slug)[0];
 }
 
 /** Count WORKTREE_DISCARDED rows for slug `s` (idempotency: must stay 1). */
 function discardCount(p: string, slug: string): number {
-  return auditText(p)
-    .split(/\n---\n/)
-    .filter(
-      (b) =>
-        /^\*\*Event\*\*:\s*WORKTREE_DISCARDED/m.test(b) &&
-        new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${slug}\\s*$`, "m").test(b),
-    ).length;
+  return discardRecords(p, slug).length;
 }
 
 /** Parse `git worktree list --porcelain` for the registered worktree paths
@@ -203,12 +210,12 @@ describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-h
       // three independent greps).
       const block = discardBlock(p, "y");
       expect(block).toBeDefined();
-      // a4: Event line.
-      expect(block).toMatch(/^\*\*Event\*\*:\s*WORKTREE_DISCARDED/m);
+      // a4: the event.
+      expect(block?.event).toBe("WORKTREE_DISCARDED");
       // a5: Reason field.
-      expect(block).toMatch(/^\*\*Reason\*\*:\s*agent-discard\s*$/m);
+      expect(block?.fields?.Reason).toBe("agent-discard");
       // a6: Bolt slug field (exactly `y`).
-      expect(block).toMatch(/^\*\*Bolt slug\*\*:\s*y\s*$/m);
+      expect(block?.fields?.["Bolt slug"]).toBe("y");
     },
     30000,
   );

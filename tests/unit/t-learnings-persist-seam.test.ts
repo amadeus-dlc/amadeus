@@ -99,8 +99,11 @@ function writeSelections(pd: string, name: string, selections: Selection[]): str
 const readIf = (p: string): string | null => (existsSync(p) ? readFileSync(p, "utf-8") : null);
 
 const ruleLearnedRows = (pd: string): number =>
-  (readIf(seededAuditShard(pd)) ?? "").split("\n").filter((l) => /Event.*: RULE_LEARNED/.test(l))
-    .length;
+  (readIf(seededAuditShard(pd)) ?? "")
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === "RULE_LEARNED").length;
 
 describe("t-learnings-persist-seam (#754/#745 in-process)", () => {
   test("duplicate candidate_id across destinations rejects before any side effect", () => {

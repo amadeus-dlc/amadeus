@@ -172,14 +172,38 @@ function fixtureFile(prefix: string, contents: string): string {
 
 const STATE_MID_IDEATION = join(REPO_ROOT, "tests", "fixtures", "state-mid-ideation.md");
 
-const WORKFLOW_COMPLETED_BLOCK = `
-## Workflow Completion
-**Timestamp**: 2026-05-03T00:00:00Z
-**Event**: WORKFLOW_COMPLETED
-**Scope**: feature
+/** One JSONL audit record line (the shard format after the #1628 switchover). */
+function auditLine(
+  seq: number,
+  timestamp: string,
+  heading: string,
+  event: string,
+  fields: Record<string, string>,
+): string {
+  return `${JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: "fixturecloneid01",
+    intentId: "fixture-0f14ce29",
+    timestamp,
+    heading,
+    event,
+    fields,
+  })}\n`;
+}
 
----
-`;
+/** Append one record to a shard, numbering seq from the existing line count. */
+function appendAuditRecord(
+  auditPath: string,
+  timestamp: string,
+  heading: string,
+  event: string,
+  fields: Record<string, string>,
+): void {
+  const existing = readFileSync(auditPath, "utf-8");
+  const seq = existing.split("\n").filter((l) => l.trim() !== "").length + 1;
+  writeFileSync(auditPath, existing + auditLine(seq, timestamp, heading, event, fields), "utf-8");
+}
 
 // ============================================================
 // State / audit drift checks (covers: subcommand:amadeus-utility:doctor)
@@ -195,11 +219,9 @@ describe("t37 amadeus-utility doctor — state/audit drift (migrated from t37-ut
     const statePath = seededStateFile(p);
     sedReplaceInFile(statePath, /^- \*\*Status\*\*:.*$/m, "- **Status**: Running");
     const auditPath = seededAuditShard(p);
-    writeFileSync(
-      auditPath,
-      `${readFileSync(auditPath, "utf-8")}${WORKFLOW_COMPLETED_BLOCK}`,
-      "utf-8",
-    );
+    appendAuditRecord(auditPath, "2026-05-03T00:00:00Z", "Workflow Completion", "WORKFLOW_COMPLETED", {
+      Scope: "feature",
+    });
     const r = doctor(p);
     expect(r.out).toContain("State/audit drift");
     // STRONGER: the failing check drives process.exit(1) (amadeus-utility.ts:1385).
@@ -213,18 +235,16 @@ describe("t37 amadeus-utility doctor — state/audit drift (migrated from t37-ut
     const statePath = seededStateFile(p);
     sedReplaceInFile(statePath, /^- \*\*Status\*\*:.*$/m, "- **Status**: Completed");
     const auditPath = seededAuditShard(p);
-    writeFileSync(
-      auditPath,
-      `${readFileSync(auditPath, "utf-8")}${WORKFLOW_COMPLETED_BLOCK}`,
-      "utf-8",
-    );
+    appendAuditRecord(auditPath, "2026-05-03T00:00:00Z", "Workflow Completion", "WORKFLOW_COMPLETED", {
+      Scope: "feature",
+    });
     const r = doctor(p);
     expect(r.out).toContain("State matches last audit event (no drift)");
   });
 
   test("3: audit has no WORKFLOW_COMPLETED -> drift check does not fire", () => {
     const p = track(createTestProject());
-    seedAuditFile(p); // audit-sample.md carries no WORKFLOW_COMPLETED
+    seedAuditFile(p); // audit-sample.jsonl carries no WORKFLOW_COMPLETED
     seedStateFile(p, STATE_MID_IDEATION);
     const r = doctor(p);
     expect(r.out).not.toContain("State/audit drift");
@@ -474,27 +494,16 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
 
 describe("t37 amadeus-lib / amadeus-utility — exports + constants", () => {
   test("18: findAllEvents -> chronological + slug filter + empty-array on miss", () => {
-    const audit = `## Worktree Created
-**Timestamp**: 2026-05-19T10:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-foo
-
----
-
-## Worktree Created
-**Timestamp**: 2026-05-19T11:00:00Z
-**Event**: WORKTREE_CREATED
-**Bolt slug**: bolt-bar
-
----
-
-## Worktree Merged
-**Timestamp**: 2026-05-19T12:00:00Z
-**Event**: WORKTREE_MERGED
-**Bolt slug**: bolt-foo
-
----
-`;
+    const audit =
+      auditLine(1, "2026-05-19T10:00:00Z", "Worktree Created", "WORKTREE_CREATED", {
+        "Bolt slug": "bolt-foo",
+      }) +
+      auditLine(2, "2026-05-19T11:00:00Z", "Worktree Created", "WORKTREE_CREATED", {
+        "Bolt slug": "bolt-bar",
+      }) +
+      auditLine(3, "2026-05-19T12:00:00Z", "Worktree Merged", "WORKTREE_MERGED", {
+        "Bolt slug": "bolt-foo",
+      });
     const all = findAllEvents(audit, "WORKTREE_CREATED");
     const filtered = findAllEvents(audit, "WORKTREE_CREATED", "bolt-foo");
     const empty = findAllEvents(audit, "NEVER_EMITTED");
@@ -523,30 +532,27 @@ describe("t37 amadeus-lib / amadeus-utility — exports + constants", () => {
   });
 
   test("22: PRACTICES_SECTION_EMPTY recognised by audit-walker", () => {
-    const audit = `## Practices Section Empty
-**Timestamp**: 2026-05-19T13:00:00Z
-**Event**: PRACTICES_SECTION_EMPTY
-**Section**: Walking Skeleton
-
----
-`;
+    const audit = auditLine(
+      1,
+      "2026-05-19T13:00:00Z",
+      "Practices Section Empty",
+      "PRACTICES_SECTION_EMPTY",
+      { Section: "Walking Skeleton" },
+    );
     const matches = findAllEvents(audit, "PRACTICES_SECTION_EMPTY");
     expect(matches).toHaveLength(1);
     expect(matches[0]?.timestamp).toBe("2026-05-19T13:00:00Z");
   });
 
   test("23: findAllEvents normalises CRLF audit files (regression for the split fix)", () => {
-    const crlf =
-      "## Worktree Created\r\n" +
-      "**Timestamp**: 2026-05-19T10:00:00Z\r\n" +
-      "**Event**: WORKTREE_CREATED\r\n" +
-      "**Bolt slug**: foo\r\n\r\n" +
-      "---\r\n\r\n" +
-      "## Worktree Merged\r\n" +
-      "**Timestamp**: 2026-05-19T11:00:00Z\r\n" +
-      "**Event**: WORKTREE_MERGED\r\n" +
-      "**Bolt slug**: foo\r\n\r\n" +
-      "---\r\n";
+    const crlf = (
+      auditLine(1, "2026-05-19T10:00:00Z", "Worktree Created", "WORKTREE_CREATED", {
+        "Bolt slug": "foo",
+      }) +
+      auditLine(2, "2026-05-19T11:00:00Z", "Worktree Merged", "WORKTREE_MERGED", {
+        "Bolt slug": "foo",
+      })
+    ).replace(/\n/g, "\r\n");
     const created = findAllEvents(crlf, "WORKTREE_CREATED");
     const merged = findAllEvents(crlf, "WORKTREE_MERGED");
     expect(created).toHaveLength(1);

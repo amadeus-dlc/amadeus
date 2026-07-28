@@ -26,13 +26,13 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 | [Stage Protocol](04-stage-protocol.ja.md) | 振る舞いの契約: 承認ゲート、コンプライアンスチェックリスト |
 | [Stages](04-stages/) | フェーズごとのステージドキュメント(5ファイル) |
 | [Agent System](05-agent-system.ja.md) | エージェント構造、フロントマター契約、設定マトリクス |
-| [Hooks and Tools](06-hooks-and-tools.ja.md) | フックシステム、CLI ツール、68イベントの監査タクソノミー |
+| [Hooks and Tools](06-hooks-and-tools.ja.md) | フックシステム、CLI ツール、78イベントの監査タクソノミー |
 | [Sensor System](07-sensor-system.ja.md) | センサーマニフェストのスキーマ、PULL インポート、発火モデル、デフォルト重大度 |
 | [Rule System](08-rule-system.ja.md) | ルールファイルのレイアウト、スコープ導出、レイヤーチェーンのリゾルバ、コンフリクトゲート |
 | [Testing](09-testing.ja.md) | テストピラミッド、階層、スタブ、フィクスチャ、テストレジストリ |
 | [Knowledge System](10-knowledge-system.ja.md) | 2層アーキテクチャ、ロード順序、テンプレート |
 | [Contributing](11-contributing.ja.md) | 開発ワークフロー、ユーティリティハンドラのチェックリスト、ドキュメントポリシー |
-| [State Machine](12-state-machine.ja.md) | ワークフロー / フェーズ / ステージの各状態機械、68イベントタクソノミー、監査ファーストのルール |
+| [State Machine](12-state-machine.ja.md) | ワークフロー / フェーズ / ステージの各状態機械、78イベントタクソノミー、監査ファーストのルール |
 | [Runtime Graph](13-runtime-graph.ja.md) | コンパイルされた `runtime-graph.json` 成果物: ステージグラフのデータプレーンミラー |
 | [Harness Primitives Mapping](14-claude-features.ja.md) | 各 AI-DLC 概念がハーネスのネイティブプリミティブへどうマッピングされるか(Claude Code を詳細に) |
 | [Stage Definition](15-stage-definition.ja.md) | YAML フロントマター契約、3区画ボディ、コンパイルパイプライン |

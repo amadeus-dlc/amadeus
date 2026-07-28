@@ -170,36 +170,40 @@ function replaceStateText(p: string, oldText: string, newText: string): void {
  * matches the `tr '\n' ' '` shape, but every assertion uses .toContain so the
  * trailing space is immaterial.
  */
+interface AuditRecord {
+  event: string | null;
+  fields?: Record<string, string>;
+}
+
+/** Every JSONL audit record across the shard set, in file order. */
+function auditRecords(p: string): AuditRecord[] {
+  return readAllAuditShards(p)
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
 function auditEvents(p: string): string {
-  const events: string[] = [];
-  for (const line of readAllAuditShards(p).split("\n")) {
-    const m = line.match(/^\*\*Event\*\*: (.+)$/);
-    if (m) events.push(m[1]);
-  }
+  const events = auditRecords(p)
+    .map((r) => r.event)
+    .filter((e): e is string => typeof e === "string");
   return events.length > 0 ? `${events.join(" ")} ` : "";
 }
 
 /** Count audit rows of one event type. Mirrors the .sh's count_event grep -c. */
 function countEvent(p: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
-  return readAllAuditShards(p)
-    .split("\n")
-    .filter((l) => re.test(l)).length;
+  return auditRecords(p).filter((r) => r.event === ev).length;
 }
 
-/** Total **Event**: rows (any type). Mirrors the .sh's `grep -c '\*\*Event\*\*:'`. */
+/** Total typed event rows (any type). Mirrors the .sh's `grep -c '\*\*Event\*\*:'`. */
 function totalEvents(p: string): number {
-  return readAllAuditShards(p)
-    .split("\n")
-    .filter((l) => l.startsWith("**Event**:")).length;
+  return auditRecords(p).filter((r) => r.event !== null).length;
 }
 
-/** Audit blocks (split on the `\n---\n` separator) carrying the given event,
- *  in file order — for asserting per-block fields like `**Recovered**: true`. */
-function auditBlocksFor(p: string, ev: string): string[] {
-  return readAllAuditShards(p)
-    .split("\n---\n")
-    .filter((b) => b.includes(`**Event**: ${ev}`));
+/** Audit records carrying the given event, in file order — for asserting
+ *  per-record fields like `Recovered: true`. */
+function auditBlocksFor(p: string, ev: string): AuditRecord[] {
+  return auditRecords(p).filter((r) => r.event === ev);
 }
 
 /**
@@ -592,7 +596,7 @@ describe("t115 report-path gate backfill carries Recovered", () => {
 
     const gateRows = auditBlocksFor(p, "STAGE_AWAITING_APPROVAL");
     expect(gateRows.length).toBe(1);
-    expect(gateRows[0]).toContain("**Recovered**: true");
+    expect(gateRows[0].fields?.Recovered).toBe("true");
   }, 30000);
 
   test("organic gate-start emits no Recovered field", () => {
@@ -601,6 +605,6 @@ describe("t115 report-path gate backfill carries Recovered", () => {
 
     const gateRows = auditBlocksFor(p, "STAGE_AWAITING_APPROVAL");
     expect(gateRows.length).toBe(1);
-    expect(gateRows[0]).not.toContain("**Recovered**");
+    expect(gateRows[0].fields ?? {}).not.toHaveProperty("Recovered");
   }, 30000);
 });

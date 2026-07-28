@@ -747,7 +747,7 @@ export function auditDirFor(projectDir: string): string {
 export function auditFilePathFor(projectDir: string): string {
   const dir = auditDirFor(projectDir);
   if (existsSync(dir)) {
-    const shards = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    const shards = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
     if (shards.length > 0) return join(dir, shards[0]);
   }
   // Pre-migration flat layout, or no shard yet — the flat audit.md path.
@@ -758,7 +758,7 @@ export function auditFilePathFor(projectDir: string): string {
 export function readAuditText(projectDir: string): string {
   const dir = auditDirFor(projectDir);
   if (existsSync(dir)) {
-    const shards = readdirSync(dir).filter((f) => f.endsWith(".md"));
+    const shards = readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
     if (shards.length > 0) {
       return shards.map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
     }
@@ -787,6 +787,14 @@ export function readAuditEvents(projectDir: string): string[] | undefined {
   if (text.length === 0) return undefined;
   const events: string[] = [];
   for (const line of text.split("\n")) {
+    if (line.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(line) as { event?: unknown };
+        if (typeof parsed.event === "string") events.push(parsed.event);
+        continue;
+      } catch {}
+    }
+    // Flat pre-migration Markdown audit (legacy fixture) keeps the line shape.
     const m = line.match(/^\*\*Event\*\*:\s*(\S+)/);
     if (m) events.push(m[1]);
   }

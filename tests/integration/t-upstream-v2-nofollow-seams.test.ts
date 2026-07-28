@@ -75,7 +75,7 @@ describe("upstream-v2 no-follow seams", () => {
       .digest("hex")
       .slice(0, 12);
 
-    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toEndWith(`-${expected}.md`);
+    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toEndWith(`-${expected}.jsonl`);
     expect(readFileSync(target, "utf-8")).toBe("do-not-read\n");
   });
 
@@ -85,7 +85,7 @@ describe("upstream-v2 no-follow seams", () => {
     mkdirSync(cloneId, { recursive: true });
 
     _resetCloneIdForTests();
-    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toMatch(/-[a-f0-9]{12}\.md$/);
+    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toMatch(/-[a-f0-9]{12}\.jsonl$/);
     expect(lstatSync(cloneId).isDirectory()).toBe(true);
   });
 

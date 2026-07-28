@@ -67,7 +67,8 @@ function errorLoggedCount(p: string): number {
   if (!existsSync(shard)) return 0;
   return readFileSync(shard, "utf-8")
     .split("\n")
-    .filter((l) => /^\*\*Event\*\*: ERROR_LOGGED$/.test(l)).length;
+    .filter((l) => l.trim() !== "")
+    .filter((l) => (JSON.parse(l) as { event: string | null }).event === "ERROR_LOGGED").length;
 }
 
 class ExitSignal extends Error {

@@ -42,6 +42,8 @@ import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
+  FIXTURE_CLONE_ID,
   resetAidlcEnv,
   seededAuditShard,
   seededStateFile,
@@ -94,8 +96,23 @@ function recordHumanTurn(proj: string): void {
   const shard = seededAuditShard(proj);
   mkdirSync(dirname(shard), { recursive: true });
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  const header = existsSync(shard) ? "" : "# AI-DLC Audit Log\n";
-  appendFileSync(shard, `${header}\n## Human Turn\n**Timestamp**: ${ts}\n**Event**: HUMAN_TURN\n\n---\n`, "utf-8");
+  const seq = existsSync(shard)
+    ? readFileSync(shard, "utf-8").split("\n").filter((l) => l.trim() !== "").length + 1
+    : 1;
+  appendFileSync(
+    shard,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq,
+      cloneId: FIXTURE_CLONE_ID,
+      intentId: DEFAULT_RECORD_DIR,
+      timestamp: ts,
+      heading: "Human Turn",
+      event: "HUMAN_TURN",
+      fields: {},
+    })}\n`,
+    "utf-8",
+  );
 }
 
 function field(proj: string, name: string): string {
@@ -104,10 +121,11 @@ function field(proj: string, name: string): string {
 
 // Count audit blocks with `**Event**: <ev>` in the merged shard buffer.
 function eventCount(proj: string, ev: string): number {
-  const body = readAllAuditShards(proj);
-  return body
+  return readAllAuditShards(proj)
     .split("\n")
-    .filter((l) => l === `**Event**: ${ev}`).length;
+    .filter((l) => l.trim() !== "")
+    .map((l) => JSON.parse(l) as { event: string | null })
+    .filter((r) => r.event === ev).length;
 }
 
 // Append the autonomy field to the seeded state file (the mid-ideation fixture
@@ -288,8 +306,17 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
     const dir = auditShardDir(proj);
     if (dir === null) throw new Error("no audit shard dir resolved");
     writeFileSync(
-      join(dir, "zzz-oldclone.md"),
-      "# AI-DLC Audit Log\n\n## Gate Approved\n**Timestamp**: 2020-01-01T00:00:00Z\n**Event**: GATE_APPROVED\n**Stage**: feasibility\n\n---\n",
+      join(dir, "zzz-oldclone.jsonl"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "oldclone",
+        intentId: DEFAULT_RECORD_DIR,
+        timestamp: "2020-01-01T00:00:00Z",
+        heading: "Gate Approved",
+        event: "GATE_APPROVED",
+        fields: { Stage: "feasibility" },
+      })}\n`,
       "utf-8",
     );
     expect(humanActedSinceGate(proj)).toBe(true);

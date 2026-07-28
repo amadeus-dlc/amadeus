@@ -91,7 +91,7 @@ From the scan results, identify:
 
 1. Mark workspace-detection as `[x]` completed in `<record>/amadeus-state.md`
 2. Update Workspace State section with detected languages, frameworks, build system
-3. Append WORKSPACE_SCANNED event to `<record>/audit/<host>-<clone>.md` with scan results and classification
+3. Append WORKSPACE_SCANNED event to `<record>/audit/<host>-<clone>.jsonl` with scan results and classification
 
 ### Step 7: Auto-Proceed
 

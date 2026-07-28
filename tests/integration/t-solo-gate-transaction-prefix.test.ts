@@ -135,18 +135,39 @@ describe("targeted approval prefix arms", () => {
   function appendBlocks(root: string, owner: string, blocks: string[]): void {
     const shard = join(owner, "audit", auditShardName(root));
     const later = new Date(Date.now() + 30_000).toISOString();
-    let text = readFileSync(shard, "utf-8");
+    const lines = readFileSync(shard, "utf-8")
+      .split("\n")
+      .filter((l) => l.trim().length > 0);
+    // Reuse the shard's own identity so the appended records stay a valid
+    // continuation of this clone's ledger (dense seq, same clone/intent).
+    const prev = JSON.parse(lines[lines.length - 1]!) as {
+      cloneId: string;
+      intentId: string;
+    };
     for (const [index, event] of blocks.entries()) {
-      text += `
-## ${event}
-**Timestamp**: ${new Date(Date.parse(later) + index).toISOString()}
-**Event**: ${event}
-**Stage**: ${STAGE}
-
----
-`;
+      lines.push(
+        JSON.stringify({
+          schemaVersion: 1,
+          seq: lines.length + 1,
+          cloneId: prev.cloneId,
+          intentId: prev.intentId,
+          timestamp: new Date(Date.parse(later) + index).toISOString(),
+          heading: event,
+          event,
+          fields: { Stage: STAGE },
+        }),
+      );
     }
-    writeFileSync(shard, text);
+    writeFileSync(shard, `${lines.join("\n")}\n`);
+  }
+
+  /** Count records carrying <event> in a JSONL shard buffer. */
+  function eventCount(shardBody: string, event: string): number {
+    return shardBody
+      .split("\n")
+      .filter((l) => l.trim().length > 0)
+      .map((l) => JSON.parse(l) as { event: string | null })
+      .filter((r) => r.event === event).length;
   }
 
   function stateFile(owner: string): string {
@@ -236,13 +257,11 @@ describe("targeted approval prefix arms", () => {
     expect(JSON.parse(recovery.stdout)).toEqual({ kind: "approved" });
     // Recovery re-runs the advance only: no second approval is written.
     const auditAfter = readFileSync(join(owner, "audit", auditShardName(root)), "utf-8");
-    expect((auditAfter.match(/\*\*Event\*\*: PHASE_STARTED/g) ?? []).length).toBeGreaterThan(
-      (auditBefore.match(/\*\*Event\*\*: PHASE_STARTED/g) ?? []).length,
+    expect(eventCount(auditAfter, "PHASE_STARTED")).toBeGreaterThan(
+      eventCount(auditBefore, "PHASE_STARTED"),
     );
-    expect(
-      (auditAfter.match(/\*\*Event\*\*: GATE_APPROVED/g) ?? []).length,
-    ).toBe(
-      (auditBefore.match(/\*\*Event\*\*: GATE_APPROVED/g) ?? []).length,
+    expect(eventCount(auditAfter, "GATE_APPROVED")).toBe(
+      eventCount(auditBefore, "GATE_APPROVED"),
     );
   });
 
@@ -280,8 +299,12 @@ describe("targeted approval prefix arms", () => {
 
     expect(recovery.exited).toBe(false);
     expect(JSON.parse(recovery.stdout)).toEqual({ kind: "approved" });
-    expect(readFileSync(join(owner, "audit", auditShardName(root)), "utf-8"))
-      .toContain("**Event**: WORKFLOW_COMPLETED");
+    expect(
+      eventCount(
+        readFileSync(join(owner, "audit", auditShardName(root)), "utf-8"),
+        "WORKFLOW_COMPLETED",
+      ),
+    ).toBe(1);
   });
 
   test("refuses a targeted approval when the owner gate is neither open nor completed", () => {

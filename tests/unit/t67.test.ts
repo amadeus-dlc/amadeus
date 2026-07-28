@@ -226,45 +226,30 @@ function ackScope(r: CliResult): string {
   return m ? m[1] : "";
 }
 
-/**
- * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
- * Resets at `## ` headings / `---`; splits `**label**: value` on `**: `.
- * Mirrors audit_field in the proven t31/t90 ports. Returns "" when absent.
- */
-function auditField(body: string, ev: string, key: string): string {
-  let matched = false;
-  for (const line of body.split("\n")) {
-    if (line.startsWith("## ")) {
-      matched = false;
-      continue;
-    }
-    if (line === "---") {
-      matched = false;
-      continue;
-    }
-    if (line.startsWith("**Event**: ")) {
-      matched = line === `**Event**: ${ev}`;
-      continue;
-    }
-    if (matched && line.startsWith("**")) {
-      const stripped = line.replace(/^\*\*/, "");
-      const pos = stripped.indexOf("**: ");
-      if (pos > 0) {
-        const label = stripped.slice(0, pos);
-        const value = stripped.slice(pos + 4);
-        if (label === key) return value;
-      }
-    }
-  }
-  return "";
-}
-
-/** Count audit blocks with `**Event**: <ev>` in a buffer. */
-function auditEventCount(body: string, ev: string): number {
-  const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
+/** Parse a JSONL audit buffer into records (blank lines skipped). */
+function auditRecords(body: string): Array<Record<string, unknown>> {
   return body
     .split("\n")
-    .filter((l) => re.test(l)).length;
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+
+/**
+ * Value of <key> from the FIRST audit record whose `event` matches <ev>.
+ * Record-scoped. Mirrors audit_field in the proven t31/t90 ports. Returns ""
+ * when absent.
+ */
+function auditField(body: string, ev: string, key: string): string {
+  const rec = auditRecords(body).find((r) => r.event === ev);
+  if (!rec) return "";
+  const fields = (rec.fields ?? {}) as Record<string, string>;
+  return fields[key] ?? "";
+}
+
+/** Count audit records whose `event` is exactly <ev> in a buffer. */
+function auditEventCount(body: string, ev: string): number {
+  return auditRecords(body).filter((r) => r.event === ev).length;
 }
 
 /** Whole-buffer presence (mirrors a bare grep). */

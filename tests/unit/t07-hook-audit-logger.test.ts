@@ -96,7 +96,7 @@ function pinnedShardName(): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return `${host}-${PINNED_CLONE_ID}.md`;
+  return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
 
 /**
@@ -127,10 +127,24 @@ function readShards(auditDir: string): string {
     return "";
   }
   return names
-    .filter((n) => n.endsWith(".md"))
+    .filter((n) => n.endsWith(".jsonl"))
     .sort()
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n");
+}
+
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse the concatenated JSONL shard bytes into records. */
+function readRecords(auditDir: string): AuditRecord[] {
+  return readShards(auditDir)
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 interface FireResult {
@@ -205,20 +219,22 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     // use a real per-intent stage artifact (domain knowledge is space-level now,
     // not a record subdir, so it is not a record-artifact example).
     fire(writeJson(join(recordRoot, "inception", "requirements-analysis", "requirements.md")), proj);
-    expect(readShards(auditDir)).toContain("ARTIFACT_CREATED");
+    expect(readShards(auditDir)).toContain('"event":"ARTIFACT_CREATED"');
   });
 
   test("extracts the ideation breadcrumb [.sh test 4]", () => {
     const { auditDir, recordRoot } = seedIntentShard(proj);
     fire(writeJson(join(recordRoot, "ideation", "intent-capture", "intent.md")), proj);
-    // STRONGER than the .sh grep: the breadcrumb is on a **Context**: line.
-    expect(readShards(auditDir)).toContain("ideation > intent-capture > intent.md");
+    // STRONGER than the .sh grep: the breadcrumb is the record's Context field.
+    expect(readRecords(auditDir).map((r) => r.fields?.Context)).toEqual([
+      "ideation > intent-capture > intent.md",
+    ]);
   });
 
   test("Edit tool emits ARTIFACT_UPDATED [.sh test 5]", () => {
     const { auditDir, recordRoot } = seedIntentShard(proj);
     fire(editJson(join(recordRoot, "state.md")), proj);
-    expect(readShards(auditDir)).toContain("ARTIFACT_UPDATED");
+    expect(readShards(auditDir)).toContain('"event":"ARTIFACT_UPDATED"');
   });
 
   test("exits silently when no audit shard (shard not created) [.sh test 6]", () => {
@@ -276,6 +292,12 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
       join(proj, ".claude", "tools", "amadeus-audit.ts"),
     );
+    // amadeus-audit.ts imports the JSONL codec — copy it too or the local hook
+    // fails to resolve its module graph and never reaches the heartbeat write.
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-journal.ts"),
+      join(proj, ".claude", "tools", "amadeus-journal.ts"),
+    );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
     const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);
@@ -288,7 +310,9 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       writeJson(join(recordRoot, "construction", "functional-design", "design.md")),
       proj,
     );
-    expect(readShards(auditDir)).toContain("construction > functional-design > design.md");
+    expect(readRecords(auditDir).map((r) => r.fields?.Context)).toEqual([
+      "construction > functional-design > design.md",
+    ]);
   });
 
   test("operation phase context breadcrumb [.sh test 12]", () => {
@@ -298,7 +322,9 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       writeJson(join(recordRoot, "operation", "deployment-pipeline", "config.md")),
       proj,
     );
-    expect(readShards(auditDir)).toContain("operation > deployment-pipeline > config.md");
+    expect(readRecords(auditDir).map((r) => r.fields?.Context)).toEqual([
+      "operation > deployment-pipeline > config.md",
+    ]);
   });
 
   test("logging path completes within 500ms [.sh test 13]", () => {
@@ -321,12 +347,11 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     // The pinned shard starts empty (only this write's block lands in it),
     // matching the .sh's `: > audit.md`.
     fire(writeJson(join(recordRoot, "test.md")), proj);
-    const body = readShards(auditDir);
-    // .sh grepped `^\*\*Event\*\*: ARTIFACT_`: a start-of-line **Event**:
-    // ARTIFACT_* field, the canonical form (not free-form markdown).
-    const hasCanonical = body
-      .split("\n")
-      .some((l) => /^\*\*Event\*\*: ARTIFACT_/.test(l));
+    // .sh grepped `^\*\*Event\*\*: ARTIFACT_`: the canonical event field, not
+    // free-form text. Under JSONL that is the record's `event` key.
+    const hasCanonical = readRecords(auditDir).some((r) =>
+      (r.event ?? "").startsWith("ARTIFACT_"),
+    );
     expect(hasCanonical).toBe(true);
   });
 
@@ -336,9 +361,9 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     const file = join(recordRoot, "x.md");
     fire(writeJson(file), proj);
     fire(editJson(file), proj);
-    const body = readShards(auditDir);
-    const created = body.split("\n").filter((l) => l.trim() === "**Event**: ARTIFACT_CREATED").length;
-    const updated = body.split("\n").filter((l) => l.trim() === "**Event**: ARTIFACT_UPDATED").length;
+    const events = readRecords(auditDir).map((r) => r.event);
+    const created = events.filter((e) => e === "ARTIFACT_CREATED").length;
+    const updated = events.filter((e) => e === "ARTIFACT_UPDATED").length;
     // .sh: CREATED == 1 && UPDATED == 1 — Write on a net-new file creates,
     // Edit on the now-existing file updates.
     expect(created).toBe(1);

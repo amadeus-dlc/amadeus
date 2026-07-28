@@ -336,21 +336,69 @@ function auditText(root: string): string {
     .join("\n");
 }
 
+interface AuditRecord {
+  event: string | null;
+  heading: string;
+  timestamp: string;
+  fields?: Record<string, string>;
+}
+
+/** Parse the merged JSONL shards into records (blank lines skipped). */
+function auditRecords(root: string): AuditRecord[] {
+  return auditText(root)
+    .split("\n")
+    .filter((l) => l.trim().length > 0)
+    .map((l) => JSON.parse(l) as AuditRecord);
+}
+
 function humanTurnCount(root: string): number {
-  return (auditText(root).match(/\*\*Event\*\*: HUMAN_TURN/g) ?? []).length;
+  return auditRecords(root).filter((r) => r.event === "HUMAN_TURN").length;
 }
 
 function reservationHumanTurnCount(root: string): number {
-  return auditText(root)
-    .split(/^---$/m)
-    .filter(
-      (block) =>
-        block.includes("**Event**: HUMAN_TURN") &&
-        block.includes(`**Presence Reservation Id**: ${RESERVATION_ID}`),
-    ).length;
+  // Record-scoped by construction: the reservation id must ride on the SAME
+  // record as the HUMAN_TURN, not merely somewhere in the same block.
+  return auditRecords(root).filter(
+    (r) =>
+      r.event === "HUMAN_TURN" &&
+      r.fields?.["Presence Reservation Id"] === RESERVATION_ID,
+  ).length;
 }
 
-function routeFixture(extraAudit = ""): string {
+// Serialize fixture records as ledger lines. `startSeq` keeps the shard's seq
+// column dense when appending onto an existing fixture shard.
+function fixtureLines(
+  records: ReadonlyArray<{
+    heading: string;
+    timestamp: string;
+    event: string;
+    fields?: Record<string, string>;
+  }>,
+  startSeq = 1,
+): string {
+  return records
+    .map((r, index) =>
+      JSON.stringify({
+        schemaVersion: 1,
+        seq: startSeq + index,
+        cloneId: "fixtureclone1",
+        intentId: "solo-intent-abcd1234",
+        timestamp: r.timestamp,
+        heading: r.heading,
+        event: r.event,
+        fields: r.fields ?? {},
+      }),
+    )
+    .map((line) => `${line}\n`)
+    .join("");
+}
+
+function routeFixture(extraAudit: ReadonlyArray<{
+  heading: string;
+  timestamp: string;
+  event: string;
+  fields?: Record<string, string>;
+}> = []): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-solo-route-"));
   TEMP_ROOTS.push(root);
   const intent = "solo-intent-abcd1234";
@@ -376,45 +424,48 @@ function routeFixture(extraAudit = ""): string {
   );
   const humanTs = "2026-07-25T00:00:00.000Z";
   writeFileSync(
-    join(record, "audit", "fixture-clone.md"),
-    `# Audit
-
-## Human Turn
-**Timestamp**: ${humanTs}
-**Event**: HUMAN_TURN
-
----
-
-## Grant Issued
-**Timestamp**: 2026-07-25T01:00:00.000Z
-**Event**: GRANT_ISSUED
-**Grant Id**: ${GRANT_ID}
-**Scope**: stage-gates
-**Expires At**: 2026-07-26T01:00:00.000Z
-**Includes Phase Boundary**: true
-**Issuer Space**: default
-**Issuer Intent**: ${intent}
-**Issuer Shard**: fixture-clone.md
-**Issuer Human Ts**: ${humanTs}
-
----
-${extraAudit}
-`,
+    join(record, "audit", "fixture-clone.jsonl"),
+    fixtureLines([
+      { heading: "Human Turn", timestamp: humanTs, event: "HUMAN_TURN" },
+      {
+        heading: "Grant Issued",
+        timestamp: "2026-07-25T01:00:00.000Z",
+        event: "GRANT_ISSUED",
+        fields: {
+          "Grant Id": GRANT_ID,
+          Scope: "stage-gates",
+          "Expires At": "2026-07-26T01:00:00.000Z",
+          "Includes Phase Boundary": "true",
+          "Issuer Space": "default",
+          "Issuer Intent": intent,
+          "Issuer Shard": "fixture-clone.jsonl",
+          "Issuer Human Ts": humanTs,
+        },
+      },
+      ...extraAudit,
+    ]),
   );
   return root;
 }
 
-function existingReceipt(): string {
-  return `
-## Authorization Selected
-**Timestamp**: 2026-07-25T02:00:00.000Z
-**Event**: GATE_AUTHORIZATION_SELECTED
-**Route Id**: ${ROUTE_ID}
-**Stage**: application-design
-**Grant Id**: ${GRANT_ID}
-
----
-`;
+function existingReceipt(): ReadonlyArray<{
+  heading: string;
+  timestamp: string;
+  event: string;
+  fields?: Record<string, string>;
+}> {
+  return [
+    {
+      heading: "Authorization Selected",
+      timestamp: "2026-07-25T02:00:00.000Z",
+      event: "GATE_AUTHORIZATION_SELECTED",
+      fields: {
+        "Route Id": ROUTE_ID,
+        Stage: "application-design",
+        "Grant Id": GRANT_ID,
+      },
+    },
+  ];
 }
 
 
@@ -517,7 +568,7 @@ describe("presence reservation rejections", () => {
     reservationFile(root, RESERVATION_ID, {
       ...armed(root),
       humanTurnTimestamp: "2026-07-25T00:00:00.000Z",
-      humanTurnShard: "fixture-clone.md",
+      humanTurnShard: "fixture-clone.jsonl",
     });
     expect(() => readPresenceReservation(root, RESERVATION_ID)).toThrow(
       /does not match its provenance/,
@@ -584,18 +635,23 @@ describe("presence reservation rejections", () => {
     // Re-arm the same marker on disk while its two owner HUMAN_TURN events stay
     // in the ledger: minting again must refuse rather than pick one.
     const shard = join(
-      root, "amadeus", "spaces", "default", "intents", "solo-intent-abcd1234", "audit", "fixture-clone.md",
+      root, "amadeus", "spaces", "default", "intents", "solo-intent-abcd1234", "audit", "fixture-clone.jsonl",
     );
+    const existing = readFileSync(shard, "utf-8");
     writeFileSync(
       shard,
-      `${readFileSync(shard, "utf-8")}
-## Human Turn
-**Timestamp**: 2026-07-25T03:00:00.000Z
-**Event**: HUMAN_TURN
-**Presence Reservation Id**: ${marker.reservationId}
-
----
-`,
+      existing +
+        fixtureLines(
+          [
+            {
+              heading: "Human Turn",
+              timestamp: "2026-07-25T03:00:00.000Z",
+              event: "HUMAN_TURN",
+              fields: { "Presence Reservation Id": marker.reservationId },
+            },
+          ],
+          existing.split("\n").filter((l) => l.trim().length > 0).length + 1,
+        ),
     );
     reservationFile(root, RESERVATION_ID, {
       ...marker,

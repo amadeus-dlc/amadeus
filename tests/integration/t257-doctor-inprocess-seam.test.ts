@@ -247,8 +247,12 @@ describe("t257 doctor audit and cleanup side effects", () => {
     const projectDir = healthyProject(true);
     const result = handleDoctor(fixtureContext(projectDir));
     const audit = readAllAuditShards(projectDir);
-    const guardrailIndex = audit.lastIndexOf("**Event**: GUARDRAIL_LOADED");
-    const healthIndex = audit.lastIndexOf("**Event**: HEALTH_CHECKED");
+    const events = audit
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => (JSON.parse(l) as { event: string | null }).event);
+    const guardrailIndex = events.lastIndexOf("GUARDRAIL_LOADED");
+    const healthIndex = events.lastIndexOf("HEALTH_CHECKED");
 
     expect(result.exitCode).toBe(0);
     expect(guardrailIndex).toBeGreaterThan(-1);

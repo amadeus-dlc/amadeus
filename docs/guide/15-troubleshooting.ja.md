@@ -147,15 +147,15 @@ bun --version
 ### アーカイブ方法
 
 ```bash
-# intent のレコードディレクトリから。<host>-<clone>.md はこのクローンのシャード
-mv audit/<host>-<clone>.md audit-archive/<host>-<clone>-2026-02.md
+# intent のレコードディレクトリから。<host>-<clone>.jsonl はこのクローンのシャード
+mv audit/<host>-<clone>.jsonl audit-archive/<host>-<clone>-2026-02.jsonl
 ```
 
 次の `/amadeus` 呼び出し(または任意のフックトリガーの書き込み)が新しいシャードを作成します。すべての監査コンテンツはアーカイブしても安全です — エンジンはルーティング決定のために `audit/` シャードを読みません。
 
 ### Git に関する考慮事項
 
-`audit/` シャードはコミットされます(gitignore されません)— [コミットするものと Gitignore するもの](14-artifacts-reference.ja.md#what-to-commit-vs-gitignore) を参照してください。各クローンは独自の `<host>-<clone>.md` シャードを書くため、同時追記が決してマージ衝突しません。diff を扱いやすく保つため、コミット前にアーカイブ(上記参照)を検討してください。
+`audit/` シャードはコミットされます(gitignore されません)— [コミットするものと Gitignore するもの](14-artifacts-reference.ja.md#what-to-commit-vs-gitignore) を参照してください。各クローンは独自の `<host>-<clone>.jsonl` シャードを書くため、同時追記が決してマージ衝突しません。diff を扱いやすく保つため、コミット前にアーカイブ(上記参照)を検討してください。
 
 ---
 

@@ -156,7 +156,7 @@ const sha256 = (proj: string): string =>
 describe("t96 amadeus-runtime compile — instances[] populator (migrated from t96-runtime-instances-compile.sh, plan 10)", () => {
   // --- 1. Single-Bolt -> no instances[] ----------------------------------
   test("1: single-Bolt -> no instances[]; row stays single-instance, outcome:approved", () => {
-    const proj = makeProjectWithAudit("audit-single-bolt.md");
+    const proj = makeProjectWithAudit("audit-single-bolt.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     // .sh: `'instances' in row === false`. STRONGER: the optional key is
@@ -168,7 +168,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 2. 3-Bolt parallel -> instances[] shape + parent null-out ----------
   test("2: 3-Bolt parallel -> instances.length=3, parent started_at/agent null, memory_path kept, sensor_firings:[]", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     expect(row.instances).toHaveLength(3);
@@ -189,7 +189,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 3. Outcome rollup — all approved -----------------------------------
   test("3: outcome rollup all-approved -> parent outcome:approved, every instance approved", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     expect(row.outcome).toBe("approved");
@@ -199,7 +199,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 4. Alphabetical ordering (L6) --------------------------------------
   test("4: alphabetical ordering -> instances[].bolt = [auth, cart, pay]", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     // biome-ignore lint/suspicious/noExplicitAny: arbitrary graph shape
@@ -208,7 +208,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 5. Determinism (L11) — byte-equal output on recompile --------------
   test("5: determinism -> re-compile produces byte-equivalent runtime-graph.json", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const before = sha256(proj);
     runCompile(proj);
@@ -218,7 +218,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 6. sensor_firings:[] contract on every BoltInstance ----------------
   test("6: every BoltInstance has sensor_firings:[] (audit carries no SENSOR rows)", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     expect(
@@ -231,7 +231,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 7. memory_entries:null + memory_breakdown:null per BoltInstance ----
   test("7: milestone 11 contract -> every BoltInstance memory_entries:null + memory_breakdown:null", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     expect(
@@ -244,7 +244,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
 
   // --- 8. Outcome rollup — any failed -> parent failed --------------------
   test("8: outcome rollup any-failed -> len 3, parent:failed, pay:failed, auth:approved", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-1-failed.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-1-failed.jsonl");
     runCompile(proj);
     const row = codeGen(proj);
     expect(row.instances).toHaveLength(3);
@@ -264,22 +264,18 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
   // then rolls up to pending (no failures, >=1 pending). The fixture source
   // under tests/fixtures/** is untouched.
   test("9: outcome rollup pending-mix -> pay:pending, parent:pending", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     const path = auditPath(proj);
-    const blocks = readFileSync(path, "utf-8").split("\n---\n");
-    const filtered = blocks.filter((b) => {
-      const slug = b.match(/\*\*Bolt slug\*\*:\s*(.+)/)?.[1]?.trim();
-      const ev = b.match(/\*\*Event\*\*:\s*(.+)/)?.[1]?.trim();
-      if (
-        slug === "pay" &&
-        ev !== undefined &&
-        ["STATE_MERGED", "AUDIT_MERGED", "BOLT_COMPLETED"].includes(ev)
-      ) {
-        return false;
-      }
-      return true;
+    const lines = readFileSync(path, "utf-8").split("\n").filter((l) => l !== "");
+    const filtered = lines.filter((line) => {
+      const rec = JSON.parse(line) as { event?: string | null; fields?: Record<string, string> };
+      return !(
+        rec.fields?.["Bolt slug"] === "pay" &&
+        typeof rec.event === "string" &&
+        ["STATE_MERGED", "AUDIT_MERGED", "BOLT_COMPLETED"].includes(rec.event)
+      );
     });
-    writeFileSync(path, filtered.join("\n---\n"), "utf-8");
+    writeFileSync(path, `${filtered.join("\n")}\n`, "utf-8");
     runCompile(proj);
     const row = codeGen(proj);
     // biome-ignore lint/suspicious/noExplicitAny: arbitrary graph shape
@@ -295,7 +291,7 @@ describe("t96 amadeus-runtime compile — instances[] populator (migrated from t
   // not by fork timestamp). Mirrors the .sh's `bun -e` re-stamp on the temp
   // project's audit COPY.
   test("10: alphabetical ordering stable across shuffled STATE_FORKED timestamps -> [auth, cart, pay]", () => {
-    const proj = makeProjectWithAudit("audit-3-bolts-parallel.md");
+    const proj = makeProjectWithAudit("audit-3-bolts-parallel.jsonl");
     const path = auditPath(proj);
     const blocks = readFileSync(path, "utf-8").split("\n---\n");
     for (let i = 0; i < blocks.length; i++) {

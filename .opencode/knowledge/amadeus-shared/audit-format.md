@@ -218,36 +218,37 @@ Hooks that emit events use the same CLI as orchestrator-driven emissions: `bun .
 
 ## Entry Format
 
-### Standard Format
-```
-## [Event Heading]
-**Timestamp**: [ISO timestamp]
-**Event**: [Event type from table above]
-**Stage**: [Stage slug — optional, context-dependent]
-**Details**: [Event-specific content]
+Since the Intent Event Journal switchover (Issue #1628) each audit shard is a
+JSONL file — `audit/<host>-<clone-id>.jsonl`, one JSON object per line,
+append-only, no header line. Every record carries the idempotency identity
+plus the event payload:
 
----
-```
-
-### Error Format
-```
-## Error: [Brief Description]
-**Timestamp**: [ISO timestamp]
-**Severity**: [Critical/High/Medium/Low]
-**Type**: [Parse error/Missing artifact/State corruption/Validation failure]
-**Description**: [What went wrong]
-**Resolution**: [Action taken]
-
----
+### Standard Format (one physical line per record)
+```json
+{"schemaVersion":1,"seq":42,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:00:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"code-generation","Agent":"developer"}}
 ```
 
-### Recovery Format
-```
-## Recovery: [Brief Description]
-**Timestamp**: [ISO timestamp]
-**Issue**: [What triggered recovery]
-**Steps**: [Numbered recovery actions]
-**Outcome**: [Successful/Partial/Failed]
+- `schemaVersion` — wire version (currently 1); readers accept older, refuse newer
+- `seq` — per-shard monotonic sequence, 1-based; `intentId:cloneId:seq` is the global idempotency key
+- `cloneId` — this clone's stable token (`amadeus/.amadeus-clone-id`)
+- `intentId` — the record dir name, or `workspace` for the flat-legacy layout
+- `event` — an event type from the table above; `fields` carries the event's Required Fields as string key/values (order preserved)
+- Field values are newline-escaped at append time (CR/LF → the literal two characters `\n`), the same forgery guard the Markdown ledger used
 
----
+### Raw Format (`append-raw` records)
+```json
+{"schemaVersion":1,"seq":43,"cloneId":"d4a945003a7f","intentId":"260728-otel-1a2b3c4d","timestamp":"2026-07-28T10:01:00Z","heading":"Custom Note","event":null,"rawBody":"**Note**: free-form"}
 ```
+
+`event` is `null` and `rawBody` preserves the body verbatim. Records converted
+from the legacy Markdown ledger may additionally carry `"opaque":true` when
+the original block did not match the canonical frame — such records preserve
+the entire legacy segment in `rawBody`.
+
+### Legacy Markdown ledger
+
+Shards written before the switchover used `\n---\n`-separated Markdown
+blocks under a `# AI-DLC Audit Log` header. They are converted losslessly by
+`tools/amadeus-journal-convert.ts` (byte-exact round-trip proof; refuses
+unmerged `AUDIT_FORKED` anchors unless `--allow-unmerged-forks`). A leftover
+`.md` shard is invisible to the JSONL readers and is surfaced by `--doctor`.

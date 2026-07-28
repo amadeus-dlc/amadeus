@@ -191,7 +191,7 @@ Located under `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.
 | File | Description | git |
 |---|---|---|
 | `amadeus-state.md` | Workflow state (six-state checkbox model) | Committed |
-| `audit/<host>-<clone>.md` | Audit trail (append-only shard per clone, 68 event categories) | Committed |
+| `audit/<host>-<clone>.jsonl` | Audit trail (append-only JSONL journal shard per clone, 78 event types) | Committed |
 | `verification/phase-check-<phase>.md` | Phase-boundary verification. Three files: ideation, inception, construction. Stage definitions only instruct creation for these three phases; initialization and operation do not have one. Corrected by live verification in 2026-07 | Committed |
 | `.amadeus-recovery.md` | Recovery breadcrumb | gitignored |
 | `runtime-graph.json` | Runtime telemetry, derivable again from audit shards | gitignored |
@@ -269,7 +269,7 @@ Stages 3.1-3.5 repeat **per Unit of Work** and write to `construction/{unit-name
 | Commit | gitignore |
 |---|---|
 | `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent` (per-user cursors) |
-| `audit/*.md` (per-clone shards) | `intents/*/.amadeus-*`, including `.amadeus-recovery.md` (temporary breadcrumbs) |
+| `audit/*.jsonl` (per-clone shards) | `intents/*/.amadeus-*`, including `.amadeus-recovery.md` (temporary breadcrumbs) |
 | All stage artifacts | `runtime-graph.json` (derivable from audit shards) |
 | `verification/` phase verification results | `amadeus/.amadeus-clone-id` (machine-local) |
 | Space-level `knowledge/` | `amadeus/.amadeus-sessions/` |

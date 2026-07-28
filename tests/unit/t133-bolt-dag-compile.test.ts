@@ -89,31 +89,38 @@ afterAll(() => {
 // audit.md carrying WORKFLOW_STARTED so compile builds a real header rather
 // than the empty-graph short-circuit. Each call is a fresh dir, torn down in
 // afterAll — same isolation the .sh's mktemp -d + EXIT trap gave.
-const AUDIT_MD = `# AI-DLC Audit Log
-
-## Workflow Started
-**Timestamp**: 2026-06-06T08:00:00Z
-**Event**: WORKFLOW_STARTED
-**Workflow ID**: t133-fixture
-**Scope**: feature
-
----
-
-## Stage Started
-**Timestamp**: 2026-06-06T08:01:00Z
-**Event**: STAGE_STARTED
-**Stage**: units-generation
-**Agent**: amadeus-architect-agent
-
----
-
-## Stage Completed
-**Timestamp**: 2026-06-06T08:02:00Z
-**Event**: STAGE_COMPLETED
-**Stage**: units-generation
-
----
-`;
+const AUDIT_JSONL = `${[
+  {
+    seq: 1,
+    timestamp: "2026-06-06T08:00:00Z",
+    heading: "Workflow Started",
+    event: "WORKFLOW_STARTED",
+    fields: { "Workflow ID": "t133-fixture", Scope: "feature" },
+  },
+  {
+    seq: 2,
+    timestamp: "2026-06-06T08:01:00Z",
+    heading: "Stage Started",
+    event: "STAGE_STARTED",
+    fields: { Stage: "units-generation", Agent: "amadeus-architect-agent" },
+  },
+  {
+    seq: 3,
+    timestamp: "2026-06-06T08:02:00Z",
+    heading: "Stage Completed",
+    event: "STAGE_COMPLETED",
+    fields: { Stage: "units-generation" },
+  },
+]
+  .map((r) =>
+    JSON.stringify({
+      schemaVersion: 1,
+      cloneId: FIXTURE_CLONE_ID,
+      intentId: "t133-fixture-deadbeef",
+      ...r,
+    }),
+  )
+  .join("\n")}\n`;
 
 function makeProject(): string {
   let proj = mkdtempSync(join(tmpdir(), "amadeus-t133-"));
@@ -134,7 +141,7 @@ function makeProject(): string {
   // readAllAuditShards() sees the WORKFLOW_STARTED header.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
-  writeFileSync(shard, AUDIT_MD, "utf-8");
+  writeFileSync(shard, AUDIT_JSONL, "utf-8");
   return proj;
 }
 

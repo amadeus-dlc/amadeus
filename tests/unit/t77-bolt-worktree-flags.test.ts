@@ -137,20 +137,47 @@ function setupV7Project(withWorktree?: string): string {
 function statePath(proj: string): string {
   return seededStateFile(proj);
 }
-// Audit is now a per-clone SHARD DIR — the tool writes its own <host>-<clone>.md
-// shard alongside seedAuditFile's fixture.md. Readers glob audit/*.md and merge,
-// so the exact-line `**Event**:` matches below still work on the concatenation.
+// Audit is now a per-clone SHARD DIR — the tool writes its own
+// <host>-<clone>.jsonl shard alongside seedAuditFile's fixture. Readers glob
+// audit/*.jsonl and merge, so the record scans below run over the concatenation.
 function readAudit(proj: string): string {
   const dir = seededAuditDir(proj);
   let names: string[];
   try {
     names = readdirSync(dir)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".jsonl"))
       .sort();
   } catch {
     return "";
   }
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
+}
+/** Parse the merged audit shards into JSONL records (non-JSON lines skipped). */
+function auditRecords(proj: string): Array<Record<string, unknown>> {
+  return readAudit(proj)
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("{"))
+    .map((l) => JSON.parse(l) as Record<string, unknown>);
+}
+/** Does any audit record carry `event` === <ev>? */
+function hasAuditEvent(proj: string, ev: string): boolean {
+  return auditRecords(proj).some((r) => r.event === ev);
+}
+/** Index of the LAST record whose `event` is <ev>; -1 when absent. */
+function lastEventIndex(proj: string, ev: string): number {
+  const recs = auditRecords(proj);
+  let idx = -1;
+  recs.forEach((r, i) => {
+    if (r.event === ev) idx = i;
+  });
+  return idx;
+}
+/** Does any audit record carry <key> === <value> in its fields? */
+function hasAuditField(proj: string, key: string, value: string): boolean {
+  return auditRecords(proj).some(
+    (r) => ((r.fields ?? {}) as Record<string, string>)[key] === value,
+  );
 }
 // The worktree mirror carries the SAME relative record dir as the main checkout.
 function wtStatePath(proj: string, slug: string): string {
@@ -238,11 +265,8 @@ describe("t77 amadeus-bolt worktree flags — start --worktree (migrated from t7
       "start", "--name", "Happy", "--batch", "1", "--worktree",
       "--slug", "happy", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
     // Mirrors `grep "^\*\*Event\*\*: BOLT_STARTED"`.
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: BOLT_STARTED"),
-    ).toBe(true);
+    expect(hasAuditEvent(proj, "BOLT_STARTED")).toBe(true);
   });
 
   test("STATE_FORKED emitted by the milestone 9 fork primitive [.sh T6]", () => {
@@ -251,10 +275,7 @@ describe("t77 amadeus-bolt worktree flags — start --worktree (migrated from t7
       "start", "--name", "Happy", "--batch", "1", "--worktree",
       "--slug", "happy", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: STATE_FORKED"),
-    ).toBe(true);
+    expect(hasAuditEvent(proj, "STATE_FORKED")).toBe(true);
   });
 
   test("AUDIT_FORKED emitted by the milestone 10 audit-fork primitive [.sh T7]", () => {
@@ -263,10 +284,7 @@ describe("t77 amadeus-bolt worktree flags — start --worktree (migrated from t7
       "start", "--name", "Happy", "--batch", "1", "--worktree",
       "--slug", "happy", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: AUDIT_FORKED"),
-    ).toBe(true);
+    expect(hasAuditEvent(proj, "AUDIT_FORKED")).toBe(true);
   });
 
   test("atomicity ordering: BOLT_STARTED precedes STATE_FORKED [.sh T8]", () => {
@@ -275,14 +293,9 @@ describe("t77 amadeus-bolt worktree flags — start --worktree (migrated from t7
       "start", "--name", "Happy", "--batch", "1", "--worktree",
       "--slug", "happy", "--project-dir", proj,
     ]);
-    const lines = readAudit(proj).split("\n");
     // Mirror the .sh's `tail -1` of each match: the LAST occurrence index.
-    let bs = -1;
-    let sf = -1;
-    lines.forEach((l, i) => {
-      if (l === "**Event**: BOLT_STARTED") bs = i;
-      if (l === "**Event**: STATE_FORKED") sf = i;
-    });
+    const bs = lastEventIndex(proj, "BOLT_STARTED");
+    const sf = lastEventIndex(proj, "STATE_FORKED");
     expect(bs).toBeGreaterThanOrEqual(0);
     expect(sf).toBeGreaterThanOrEqual(0);
     expect(bs).toBeLessThan(sf);
@@ -462,10 +475,7 @@ describe("t77 — abort", () => {
       "abort", "--name", "Foo", "--slug", "foo",
       "--reason", "user changed mind", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
-    expect(
-      audit.split("\n").some((l) => l === "**Event**: BOLT_FAILED"),
-    ).toBe(true);
+    expect(hasAuditEvent(proj, "BOLT_FAILED")).toBe(true);
   });
 
   test("abort BOLT_FAILED carries Reason: aborted [.sh T21]", () => {
@@ -474,9 +484,8 @@ describe("t77 — abort", () => {
       "abort", "--name", "Foo", "--slug", "foo",
       "--reason", "user changed mind", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
     // Mirror `grep '\*\*Reason\*\*: aborted'`.
-    expect(audit.includes("**Reason**: aborted")).toBe(true);
+    expect(hasAuditField(proj, "Reason", "aborted")).toBe(true);
   });
 
   test("abort default stdout reports discarded:false [.sh T22]", () => {
@@ -511,9 +520,8 @@ describe("t77 — fail --slug (milestone 12 halt-and-ask correlation)", () => {
       "fail", "--name", "Failed", "--slug", "fail-slug",
       "--error", "broke", "--project-dir", proj,
     ]);
-    const audit = readAudit(proj);
     // Mirror `grep '\*\*Bolt slug\*\*: fail-slug'`.
-    expect(audit.includes("**Bolt slug**: fail-slug")).toBe(true);
+    expect(hasAuditField(proj, "Bolt slug", "fail-slug")).toBe(true);
   });
 });
 

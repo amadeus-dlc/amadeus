@@ -91,7 +91,7 @@ Crossing the two axes gives four quadrants. Three are populated; one is intentio
 |  | Framework-authored | Team-authored |
 |---|---|---|
 | **Loaded continuously** (harness config) | `.claude/skills/`, `.claude/agents/`, `.claude/knowledge/`, `amadeus/spaces/<space>/memory/org.md`, `amadeus/spaces/<space>/memory/phases/*.md`, `.claude/scopes/`, `.claude/tools/data/scope-grid.json`, `.claude/tools/data/stage-graph.json` | `amadeus/spaces/<space>/memory/team.md`, `amadeus/spaces/<space>/memory/project.md` |
-| **Per-workflow artefact** | *(empty by design)* | `<record>/amadeus-state.md`, `<record>/audit/*.md` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.amadeus/worktrees/bolt-*/` |
+| **Per-workflow artefact** | *(empty by design)* | `<record>/amadeus-state.md`, `<record>/audit/*.jsonl` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.amadeus/worktrees/bolt-*/` |
 
 The framework doesn't produce per-workflow artefacts because such outputs would have to ship with the distribution — which makes them framework-authored harness config, not per-workflow output. The empty cell is the routing rule's signature, not a gap.
 
@@ -223,7 +223,7 @@ sequenceDiagram
     O->>U: Present questions (mode choice)
     U-->>O: Provide answers
     O->>O: Generate artifacts
-    O->>O: Log to audit.md
+    O->>O: Log to audit shard
     O->>U: Present completion + approval gate
     U-->>O: Approve / Request Changes
     O->>ST: Update state (mark [x] completed)
@@ -411,7 +411,7 @@ amadeus/                                    # neutral, harness-independent, comm
             +-- intents.json               # the registry: [{ uuid, slug, dirName, scope, repos, status }]
             +-- <YYMMDD>-<label>/          # one record dir per intent (date-prefixed, short kebab label; UUIDv7 carries identity in intents.json)
                 +-- amadeus-state.md          # per-intent workflow state
-                +-- audit/<host>-<clone>.md # per-clone audit shards (glob-and-merge by timestamp)
+                +-- audit/<host>-<clone>.jsonl # per-clone audit shards (glob-and-merge by timestamp)
                 +-- <phase>/<stage>/*.md    # artifacts + the per-stage memory.md diary
 ```
 
@@ -444,7 +444,7 @@ The split (`packages/framework/harness/claude/dot-gitignore:34-54`): the two cur
 record) are **gitignored**; the method (`memory/**`), knowledge (`knowledge/**`,
 `codekb/**`), the `intents.json` registry, each record's `amadeus-state.md`, the
 `audit/` shards, and artifacts are **committed**. Audit is committed as per-clone
-shards (`audit/<host>-<clone>.md`) precisely so git never has to merge concurrent
+shards (`audit/<host>-<clone>.jsonl`) precisely so git never has to merge concurrent
 appends — there is intentionally no `merge=union` attribute.
 
 ## Key Design Decisions
@@ -471,7 +471,7 @@ appends — there is intentionally no `merge=union` attribute.
 
 11. **Phase boundary verification** -- Traceability checks run automatically at phase transitions (Initialization->Ideation auto-proceed, Ideation->Inception, Inception->Construction, Construction->Operation). This catches missing requirements-to-design links, orphaned artifacts, and inconsistencies before downstream stages build on incomplete foundations.
 
-12. **Hook-based audit logging** -- A PostToolUse hook on Write/Edit operations automatically logs artifact creation and modification to the intent's `audit/` shards. A PreCompact hook validates state file structure before context compaction. A SubagentStop hook logs subagent completions. The 68-event taxonomy (defined in `knowledge/amadeus-shared/audit-format.md`; see [State Machine](12-state-machine.md) for the emitter registry) enables post-hoc analysis -- key events include `STAGE_STARTED`, `STAGE_COMPLETED`, `DECISION_RECORDED`, `SCOPE_CHANGED`, and `RULE_LEARNED`.
+12. **Hook-based audit logging** -- A PostToolUse hook on Write/Edit operations automatically logs artifact creation and modification to the intent's `audit/` shards. A PreCompact hook validates state file structure before context compaction. A SubagentStop hook logs subagent completions. The 78-event taxonomy (defined in `knowledge/amadeus-shared/audit-format.md`; see [State Machine](12-state-machine.md) for the emitter registry) enables post-hoc analysis -- key events include `STAGE_STARTED`, `STAGE_COMPLETED`, `DECISION_RECORDED`, `SCOPE_CHANGED`, and `RULE_LEARNED`.
 
 13. **No nested delegation** -- The conductor (SKILL.md) performs every agent Task call. Agents never invoke each other or spawn subagents. This keeps the delegation graph flat and debuggable.
 
