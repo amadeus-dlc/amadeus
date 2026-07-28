@@ -21,7 +21,7 @@ Every command this implementation ships is a skill under `.claude/skills/`. They
 - **Scope-runners** — `/amadeus-bugfix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch`. Same full workflow, with a scope fixed and scope detection skipped.
 - **Stage-runners** — `/amadeus-application-design`, `/amadeus-code-generation`, and 27 more. Run one stage in isolation, never touching your main workflow.
 - **`/amadeus-init`** — birth the first intent (run the whole Initialization phase) in one step; opt-in packaging over the engine's auto-birth.
-- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`, `/amadeus-mirror`. The first four are read-only views or interviews. `/amadeus-mirror` diagnoses first, then can run a user-selected mirror action.
+- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`, `/amadeus-mirror`, `/amadeus-plugin`. The first four are read-only views or interviews. `/amadeus-mirror` and `/amadeus-plugin` diagnose first (`status`), then can run one user-selected action.
 
 Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-bugfix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
 
@@ -43,6 +43,18 @@ The status exit contract is:
 
 A missing tool, launch failure, malformed exit-1 output, or unknown finding is
 a loud stop, not divergence. Only the fixed finding kind is classified.
+
+---
+
+## Plugin workflow — status first, one chosen verb
+
+Run `/amadeus-plugin` to inspect and operate this workspace's plugins. It
+always starts with `status`, explains the fixed verbs (`status`, `compose`,
+`drop`, `doctor`, `install`) and their consequences — including that `drop`
+and `install --force` are destructive or replacing — and then runs only the
+single verb you pick. The same operations are reachable on every harness as
+`/amadeus plugin <verb>`, and see the [plugins guide](19-plugins.md) for the
+full entry-point map.
 Diagnostic detail and stderr are display-only text. They are never parsed,
 evaluated, or used to produce a command.
 
