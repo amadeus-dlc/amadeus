@@ -34,9 +34,10 @@
 - **`/amadeus-init`** — 最初の intent を誕生させる(Initialization フェーズ全体を実行)
   ことを 1 ステップで行う。エンジンの auto-birth に対するオプトインのパッケージング。
 - **セッションスキル** — `/amadeus-session-cost`、`/amadeus-replay`、
-  `/amadeus-outcomes-pack`、`/amadeus-grilling`、`/amadeus-mirror`。最初の4つは
-  読み取り専用のビューまたはインタビューです。`/amadeus-mirror` は最初に診断し、
-  その後ユーザーが選択したミラー操作を実行できます。
+  `/amadeus-outcomes-pack`、`/amadeus-grilling`、`/amadeus-mirror`、
+  `/amadeus-plugin`。最初の4つは読み取り専用のビューまたはインタビューです。
+  `/amadeus-mirror` と `/amadeus-plugin` は最初に診断(`status`)し、その後
+  ユーザーが選択した1操作だけを実行できます。
 
 ランナーが行うことはすべてフラグ付きの `/amadeus` から到達可能です。ランナーは
 パッケージングです — `/amadeus-bugfix` とタイプして `/` メニューに現れるのは良い
@@ -74,6 +75,17 @@ basename だけを受け入れ、単一引数として渡します。basename �
 チーム合意により、`create` と `close` は conductor から実行します。これは運用上の
 慣例であり、機械的に強制される制約ではありません。規範となる合意は
 `amadeus/spaces/<space>/memory/team.md` にあります。
+
+---
+
+## プラグインワークフロー — status を先に、選んだ1 verb だけ
+
+このワークスペースのプラグインの確認・操作には `/amadeus-plugin` を実行します。
+入口は常に `status` です。固定 verb(`status`、`compose`、`drop`、`doctor`、
+`install`)とその影響 — `drop` と `install --force` は破壊的・置換系であること —
+を説明したうえで、ユーザーが選んだ1つの verb だけを実行します。同じ操作はどの
+ハーネスでも `/amadeus plugin <verb>` から到達できます。入口の全体像は
+[プラグインガイド](19-plugins.ja.md)を参照してください。
 
 ---
 
