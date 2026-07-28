@@ -269,6 +269,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 長い本番タイムアウトを持つ性能要件は、実時間の負荷試験ではなく counter assertion と退行上限で構成する — 同じ制御経路を通る短縮可能なタイミングシームで構成要素を決定的に確認できる場合、実時間待機より優先する(実測: 260725-solo-standing-grants の U1-PERF-02 を 5秒/100,000 event の退行上限 + counter で検証) (learned 2026-07-25) <!-- cid:build-and-test:bt-timeout-verification-shape -->
 - Test Strategy が Comprehensive でも、performance/security の検査は承認済み NFR と実在境界へ trace できる範囲だけ生成する — 戦略名だけを根拠に負荷試験・auto-scaling・DAST を機械追加せず、生成しなかった検査は根拠付きで成果物に明記する(実測: 260725-solo-standing-grants build-and-test で U1-PERF-02 と NFR-03 に trace した範囲のみ生成) (learned 2026-07-25) <!-- cid:build-and-test:bt-proportional-selection -->
 ## CI/CD
+- docs を検証対象に含むテスト(doc-count / doc-inventory ガード類)を持つこのリポジトリでは、CI の docs-only paths-ignore が「doc 変更 → 当該ガード素通り → latent 赤」を構造的に作る — doc-consuming テストの読取対象 doc は paths-ignore から除外するか、ガードを件数フリー契約(count-free)にして doc 改稿と独立にする。実測: #1578 の count-free 改稿が Tests skipped のまま着地し t132 が latent 赤化、次の非 docs PR を塞ぐ寸前で #1590 として検出・修正(2026-07-27、intent 260727-e2e-plugin-conformance。cid:code-generation:count-comment-sync-on-catalog-change の CI paths-ignore 面補完) (learned 2026-07-27) <!-- cid:build-and-test:ci-paths-ignore-doc-guard-blindspot -->
 - Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
 - Code Generationで既存workflowへ実装済みなら、CI Pipelineで新規workflowを二重生成せず、既存workflowを唯一の正本として文書化・検証する。 (learned 2026-07-12) <!-- cid:ci-pipeline:c2 -->
 
