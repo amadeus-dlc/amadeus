@@ -1,6 +1,51 @@
 # アーキテクチャ
 
-## plugin CLI 動詞体系・ホストルート統一・スキル投影の現行アーキテクチャ（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+## Slop cleanup の修正境界と相互作用（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+
+本 intent は Bun/TypeScript の単一リポジトリ、ハーネス中立 core、7 ハーネスの生成 `dist`、5 面の self-install という既存トポロジーを変更しない。修正は次の 3 境界に閉じる。
+
+| 境界 | 正本 | 修正 | 波及 |
+| --- | --- | --- | --- |
+| Journal codec | `packages/framework/core/tools/amadeus-journal.ts:9-13` | 「PR-3 まで未配線」という失効コメントを、現行 5 消費者を説明するコメントへ更新 | core 正本を `dist` 7 面・self-install 5 面へ同期（計 13 コピー） |
+| Process observability | `packages/framework/core/tools/amadeus-observability.ts:240-255` | 読まれない `ProcessObservation.registered` と初期化子を削除 | 登録済み状態の唯一の表現 `_processObservation !== null` は不変。計 13 コピーを同期 |
+| Markdown hygiene | code-generation plan 1 件、workspace-layout 日英 2 件 | trailing spaces / EOF blank line を除去 | 実行時依存・配布面への波及なし |
+
+Journal codec は codec 導入コミット `65e551452` 後、PR-3 `748e693e3` で配線済みである。現行の canonical 消費者は `amadeus-audit.ts`、`amadeus-state.ts`、`amadeus-lib.ts`、`amadeus-journal-convert.ts`、`amadeus-otel-projector.ts` の 5 モジュールで、コメントだけが旧移行状態を示している。Observability は `_processObservation` の nullable singleton が first-caller-wins と flush 後の idempotence を担い、`registered` は宣言・`true` 初期化以外に読取がない。
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+  C["amadeus-journal.ts<br/>canonical codec"] --> A["amadeus-audit.ts"]
+  C --> S["amadeus-state.ts"]
+  C --> L["amadeus-lib.ts"]
+  C --> J["amadeus-journal-convert.ts"]
+  C --> O["amadeus-otel-projector.ts"]
+  C --> P["package / promote"]
+  P --> D["dist 7面 + self-install 5面"]
+```
+
+テキスト代替: Journal codec 正本を 5 canonical module が直接 import する。正本コメントの更新後は package / promote 経路で 7 dist 面と 5 self-install 面へ同期する。
+
+```mermaid
+sequenceDiagram
+  participant E as Entrypoint
+  participant O as Observability module
+  participant X as Process exit
+  E->>O: initProcessObservability(name, projectDir)
+  alt _processObservation is null
+    O->>O: singleton observation を設定
+    O->>X: exit handler を登録
+  else already initialized
+    O-->>E: return (first caller wins)
+  end
+  X->>O: flushProcessObservation(exitCode)
+  O->>O: singleton を null にしてから telemetry を出力
+```
+
+テキスト代替: 初回だけ nullable singleton を設定して exit handler を登録し、以後の初期化は無視する。flush は singleton を先に `null` へ戻すため再呼び出しは no-op になる。未使用の `registered` を除いてもこの状態遷移は変わらず、`t357` の first-caller-wins / flush / idempotence 契約が回帰境界となる。
+
+## plugin CLI 動詞体系・ホストルート統一・スキル投影の現行アーキテクチャ（260727-plugin-verb-skills、履歴、差分リフレッシュ、observed `afb93a825`）
 
 260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825917220660a3d9bbfdb23d83474b94a6`、base `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **16**、区間 `git diff --shortstat` = **192 files changed, 5529 insertions(+), 956 deletions(-)**、record 除外 **161**）。上流入力: Developer スキャン結果（実測済みスキャンノート、全文読了）。
 

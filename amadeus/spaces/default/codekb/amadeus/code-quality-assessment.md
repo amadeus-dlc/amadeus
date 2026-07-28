@@ -1,6 +1,18 @@
 # コード品質評価
 
-## 4 Issue 閉包後の plugin 品質断面と残存する構造リスク（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+## 確定 Slop 5 パスの品質評価（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+
+確定 finding は 5 パス・3 カテゴリで、いずれも外部挙動を変えない surgical cleanup で閉包できる。
+
+| カテゴリ | 根拠 | 品質リスク | 最小検証 |
+| --- | --- | --- | --- |
+| 失効コメント | `amadeus-journal.ts:9-13` は「PR-3 まで import なし」と記すが、PR-3 `748e693e3` は着地済みで 5 canonical module が import | 保守者が現行 ownership / migration 状態を誤認 | import 集合確認、typecheck、dist/self-install drift check |
+| 未使用状態 | `ProcessObservation.registered` は宣言と `true` 初期化のみ。判定は `_processObservation !== null` | 状態の二重表現が将来の分岐誤りを誘発 | `t357` の first-caller-wins / flush / idempotence、typecheck |
+| 空白ノイズ | code-generation plan の trailing spaces 1 件、workspace-layout 日英の EOF blank line 2 件 | `git diff --check` の診断、レビュー noise | 5 target 限定 `git diff --check` |
+
+`bun run typecheck` と `bun run lint` は scan 時点で exit 0。Biome は既存 295 warnings / 21 infos を報告するが、本 intent の 3 finding とは独立する。最新取得済み coverage 86.09% は observed HEAD での再計測値ではないため、現 HEAD の coverage としては扱わない。Markdown whitespace を全 repository で一括拒否する明示 CI gate は確認できず、今回は対象 5 パスへの限定検査を代替 sensor とする。巨大 tool files と既存 complexity は技術負債だが、本 intent では扱わない。
+
+## 4 Issue 閉包後の plugin 品質断面と残存する構造リスク（260727-plugin-verb-skills、履歴、差分リフレッシュ、observed `afb93a825`）
 
 260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**）。上流入力: Developer スキャン結果。Architect 段の独立再実測で**訂正 3 件**（行数 1469→**1488** / hook 23→**25** / record 除外 159→**161**）、その他の file:line は訂正 0 件（測定 ref: observed `afb93a825`）。
 
