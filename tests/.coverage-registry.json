@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 536,
+    "total": 537,
     "enumeratedByClass": {
-      "function": 298,
+      "function": 299,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 147,
+      "function": 149,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -968,6 +968,22 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:applyPluginScopeOptIns",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t355-plugin-scope-optin.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:armMigrationPendingDecision",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1330,6 +1346,10 @@
         {
           "file": "tests/integration/t248-stage-contract-routing.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t66.test.ts",
@@ -2418,8 +2438,17 @@
       "unitClass": "function",
       "unitId": "function:mergeComposedScopes",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t355-plugin-scope-optin.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

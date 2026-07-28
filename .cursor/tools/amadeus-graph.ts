@@ -1365,8 +1365,18 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  all-SKIP, an emptied plan with no diagnostic. Any on-disk entry whose
  *  scope name the transpose does not produce survives the recompile; keys
  *  re-sort so the canonical emitter stays deterministic. Unparseable or
- *  malformed on-disk grids contribute nothing (fresh wins). */
-export function mergeComposedScopes(fresh: ScopeGrid, onDiskJson: string | null): ScopeGrid {
+ *  malformed on-disk grids contribute nothing (fresh wins).
+ *
+ *  `knownSlugs` is the slug set of the graph being compiled. A folded entry's
+ *  cells are filtered through it, so a stage that has left the graph (a
+ *  dropped plugin, a deleted core stage) does not leave a dangling cell
+ *  addressing a slug no router can resolve — the fold preserves the composed
+ *  scope, not a stale snapshot of the stage list it was authored against. */
+export function mergeComposedScopes(
+  fresh: ScopeGrid,
+  onDiskJson: string | null,
+  knownSlugs: ReadonlySet<string>,
+): ScopeGrid {
   if (!onDiskJson) return fresh;
   let onDisk: unknown;
   try {
@@ -1382,11 +1392,54 @@ export function mergeComposedScopes(fresh: ScopeGrid, onDiskJson: string | null)
       typeof entry === "object" && entry !== null && !Array.isArray(entry) &&
       typeof (entry as { stages?: unknown }).stages === "object"
     ) {
-      merged[name] = entry as ScopeGrid[string];
+      const stages = (entry as ScopeGrid[string]).stages;
+      const kept: Record<string, "EXECUTE" | "SKIP"> = {};
+      for (const [slug, action] of Object.entries(stages)) {
+        if (knownSlugs.has(slug)) kept[slug] = action;
+      }
+      merged[name] = { stages: kept };
     }
   }
   const sorted: ScopeGrid = {};
   for (const k of Object.keys(merged).sort()) sorted[k] = merged[k];
+  return sorted;
+}
+
+/** Overlay a plugin stage's `scopes:` opt-ins onto an already-merged grid.
+ *
+ *  A plugin stage is NOT a producer of scope columns: the stock grid rows are
+ *  derived from core frontmatter, and composed rows are owned by the composer.
+ *  Letting a plugin stage into the transpose makes it a producer — it mints a
+ *  fresh row for every name it declares, and that fresh row wins over the
+ *  on-disk row of the same name in `mergeComposedScopes` (which skips names
+ *  already present). A plugin declaring an existing composed scope therefore
+ *  REPLACED that scope's plan with one holding only the plugin's own stage
+ *  (#1630). So the opt-in is applied here instead, as a strictly ADDITIVE
+ *  overlay after the fold:
+ *
+ *   - row exists -> set this stage's cell to EXECUTE, touch nothing else;
+ *   - row absent -> create it holding ONLY this stage's EXECUTE cell. No
+ *     redundant SKIP cells for stages that have no membership in it, matching
+ *     the compile-side treatment of `scopes: []`.
+ *
+ *  Pure — no I/O. Keys re-sort so the canonical emitter stays deterministic. */
+export function applyPluginScopeOptIns(
+  grid: ScopeGrid,
+  pluginStages: GraphStage[],
+): ScopeGrid {
+  const out: ScopeGrid = {};
+  for (const [name, entry] of Object.entries(grid)) {
+    out[name] = { stages: { ...entry.stages } };
+  }
+  for (const stage of pluginStages) {
+    for (const scope of stage.scopes ?? []) {
+      const row = out[scope] ?? { stages: {} };
+      row.stages[stage.slug] = "EXECUTE";
+      out[scope] = row;
+    }
+  }
+  const sorted: ScopeGrid = {};
+  for (const k of Object.keys(out).sort()) sorted[k] = out[k];
   return sorted;
 }
 
@@ -2298,17 +2351,26 @@ export function compileStageGraph(): {
   } catch {
     /* first compile: no grid on disk yet */
   }
+  // Scope columns are derived from CORE frontmatter only. A plugin stage
+  // never mints a row (see applyPluginScopeOptIns): its declarations are an
+  // additive overlay applied after the composed fold, so a plugin naming an
+  // existing scope joins that plan instead of replacing it (#1630).
+  // `scopes: []` is the explicit opt-in contract used by plugin stages
+  // reached through `--single`. It has no stock workflow membership, so do
+  // not materialise redundant SKIP cells for it in every stock scope. The
+  // public transpose helper keeps its generic all-stage contract; this
+  // filtering belongs to compile integration.
+  const stockScopeStages = stages.filter(
+    (stage) => !stage.plugin_source && (stage.scopes?.length ?? 0) > 0,
+  );
+  const pluginScopeStages = stages.filter((stage) => stage.plugin_source === true);
+  const knownSlugs = new Set(stages.map((stage) => stage.slug));
   return {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
-      mergeComposedScopes(
-        // `scopes: []` is the explicit opt-in contract used by plugin
-        // stages reached through `--single`. It has no stock workflow
-        // membership, so do not materialise redundant SKIP cells for it in
-        // every stock scope. The public transpose helper keeps its generic
-        // all-stage contract; this filtering belongs to compile integration.
-        transposeScopeGrid(stages.filter((stage) => (stage.scopes?.length ?? 0) > 0)),
-        onDiskGrid,
+      applyPluginScopeOptIns(
+        mergeComposedScopes(transposeScopeGrid(stockScopeStages), onDiskGrid, knownSlugs),
+        pluginScopeStages,
       ),
     ),
     stages,
