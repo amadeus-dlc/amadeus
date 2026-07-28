@@ -6,7 +6,7 @@
 // implementation — this file re-implements NO composition logic).
 //
 // Verbs (C1): compose [--if-stale] [--project-root <dir>], doctor, drop <name>,
-// status. Unknown verb / unknown flag / surplus argument fail closed BEFORE any
+// install <path> [--force], status. Unknown verb / unknown flag / surplus argument fail closed BEFORE any
 // mutation with usage on stderr and exit 2 (ADR-3, BR-U2-4). A failed manual
 // compose exits 1 loud; the SessionStart hook wraps the call so a hook failure is
 // a single stderr warning that never blocks the session (BR-U2-4, wired in
@@ -24,7 +24,7 @@
 // full-frontmatter-stage host is out of the mechanism's current scope.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isHarnessDirName } from "./amadeus-harness.ts";
@@ -72,6 +72,7 @@ export type PluginCliCommand =
   | { kind: "compose"; ifStale: boolean; projectRoot?: string }
   | { kind: "doctor"; projectRoot?: string }
   | { kind: "drop"; name: string; projectRoot?: string }
+  | { kind: "install"; sourcePath: string; force: boolean; projectRoot?: string }
   | { kind: "status"; projectRoot?: string };
 
 export type CliParseError = { message: string };
@@ -89,9 +90,10 @@ export type PluginCliResult =
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
   | { kind: "doctor"; section: DoctorPluginSection; degraded: boolean }
+  | { kind: "installed"; name: string; composeOutcome: "composed" | "noop" }
   | { kind: "status"; installed: number; composed: number; revision: number }
   | { kind: "usage-error"; message: string }
-  | { kind: "failure"; stage: "discover" | "trust" | "plan" | "apply" | "recover"; message: string };
+  | { kind: "failure"; stage: "discover" | "trust" | "plan" | "apply" | "recover" | "install"; message: string };
 
 // ---------------------------------------------------------------------------
 // Argument parsing (fail-closed). Every verb enumerates its allowed flags and
@@ -102,6 +104,7 @@ const USAGE = [
   "  compose [--if-stale] [--project-root <dir>]",
   "  doctor  [--project-root <dir>]",
   "  drop <plugin-name> [--project-root <dir>]",
+  "  install <path> [--force] [--project-root <dir>]",
   "  status  [--project-root <dir>]",
 ].join("\n");
 
@@ -136,6 +139,24 @@ function parseDrop(rest: string[]): CliParseResult {
   return { ok: true, command: { kind: "drop", name: positionals[0], projectRoot: pr.projectRoot } };
 }
 
+// `install <path> [--force]`: exactly one positional (the plugin source folder)
+// and one optional known flag. Anything else is a usage error before any FS work.
+function parseInstall(rest: string[]): CliParseResult {
+  const pr = takeProjectRoot(rest);
+  if (pr.error) return { ok: false, error: { message: pr.error } };
+  let force = false;
+  const positionals: string[] = [];
+  const unknown: string[] = [];
+  for (const a of pr.rest) {
+    if (a === "--force") force = true;
+    else if (a.startsWith("--")) unknown.push(a);
+    else positionals.push(a);
+  }
+  if (unknown.length > 0) return { ok: false, error: { message: `install: unknown flag(s): ${unknown.join(" ")}` } };
+  if (positionals.length !== 1) return { ok: false, error: { message: "install: expects exactly one <path>" } };
+  return { ok: true, command: { kind: "install", sourcePath: positionals[0], force, projectRoot: pr.projectRoot } };
+}
+
 function parseNoArgVerb(kind: "doctor" | "status", rest: string[]): CliParseResult {
   const pr = takeProjectRoot(rest);
   if (pr.error) return { ok: false, error: { message: pr.error } };
@@ -148,6 +169,7 @@ export function parsePluginCliArgs(argv: readonly string[]): CliParseResult {
   if (verb === undefined) return { ok: false, error: { message: "no verb given" } };
   if (verb === "compose") return parseCompose(rest);
   if (verb === "drop") return parseDrop(rest);
+  if (verb === "install") return parseInstall(rest);
   if (verb === "doctor" || verb === "status") return parseNoArgVerb(verb, rest);
   return { ok: false, error: { message: `unknown verb: ${verb}` } };
 }
@@ -169,6 +191,8 @@ export type PluginCliDeps = {
   recompile: (projectRoot: string) => boolean;
   recordDrops: (hostRoot: string, plugin: string, entries: readonly DropEntry[]) => void;
   clearDrops: (hostRoot: string, plugin: string) => void;
+  stagingEntryState: (dst: string, src: string) => StagingEntryState;
+  copyPluginSource: (src: string, dst: string) => void;
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -276,6 +300,8 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     recompile: spawnRecompile,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
+    stagingEntryState,
+    copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     out: (l) => console.log(l),
     err: (l) => console.error(l),
   };
@@ -328,6 +354,106 @@ export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";
 // `<host>/plugins/<name>/`, which IS compile-visible.
 function pluginSourceRootOf(hostRoot: string): string {
   return join(hostRoot, PLUGIN_SOURCE_DIR_NAME);
+}
+
+// ---------------------------------------------------------------------------
+// install staging (U2). `install <path>` is the one-operation form of the manual
+// folder-drop the shipped INSTALL doc describes: stage the source folder under
+// PLUGIN_SOURCE_DIR_NAME, then compose. Everything it writes lives under the
+// staging root — the verb never touches the composed `plugins/` area (compose
+// owns that) and never writes outside <host>/PLUGIN_SOURCE_DIR_NAME.
+// ---------------------------------------------------------------------------
+
+// What is already staged at the landing path, relative to the source being
+// installed. `identical` is the idempotent-retry signal (skip the copy);
+// `different` is the collision --force replaces.
+export type StagingEntryState = "absent" | "identical" | "different";
+
+// The scratch dirs the copy swaps through. Dot-prefixed and named per plugin so
+// two installs of different plugins never share scratch state.
+function installTmpDirOf(stagingRoot: string, name: string): string {
+  return join(stagingRoot, `.amadeus-plugin-install-tmp-${name}`);
+}
+function installOldDirOf(stagingRoot: string, name: string): string {
+  return join(stagingRoot, `.amadeus-plugin-install-old-${name}`);
+}
+
+// Every regular file under `root`, POSIX-relative → bytes. Symlinks are SKIPPED
+// (lstat, not stat) so this reads the same set of entries copyPluginSource
+// writes — otherwise a symlinked source would compare `different` forever.
+function readTreeFiles(root: string): Map<string, Buffer> {
+  const files = new Map<string, Buffer>();
+  const walk = (dir: string): void => {
+    for (const name of [...readdirSync(dir)].sort()) {
+      const abs = join(dir, name);
+      const st = lstatSync(abs);
+      if (st.isSymbolicLink()) continue;
+      if (st.isDirectory()) walk(abs);
+      else if (st.isFile()) files.set(toPosixRel(root, abs), readFileSync(abs));
+    }
+  };
+  walk(root);
+  return files;
+}
+
+// Compare the staged landing path against the source it would be replaced by.
+export function stagingEntryState(dst: string, src: string): StagingEntryState {
+  if (!existsSync(dst)) return "absent";
+  const staged = readTreeFiles(dst);
+  const source = readTreeFiles(src);
+  if (staged.size !== source.size) return "different";
+  for (const [rel, bytes] of source) {
+    const other = staged.get(rel);
+    if (other === undefined || !other.equals(bytes)) return "different";
+  }
+  return "identical";
+}
+
+// Copy `src` onto the staging landing path `dst` so `dst` is only ever observed
+// absent, wholly-old, or wholly-new:
+//   (a) copy real files into a fresh tmp dir (symlinks skipped, warned once each),
+//   (b) rename an existing dst aside into an old dir,
+//   (c) rename tmp into place,
+//   (d) delete the old dir.
+// tmp/old are destroyed and recreated on entry, so residue from an interrupted
+// run converges on the next attempt instead of poisoning it.
+export function copyPluginSource(src: string, dst: string, warn: (line: string) => void = (l) => console.error(l)): void {
+  const stagingRoot = dirname(dst);
+  const name = basename(dst);
+  const tmp = installTmpDirOf(stagingRoot, name);
+  const old = installOldDirOf(stagingRoot, name);
+  rmSync(tmp, { recursive: true, force: true });
+  rmSync(old, { recursive: true, force: true });
+  mkdirSync(tmp, { recursive: true });
+  copyRealFiles(src, tmp, src, warn);
+  if (existsSync(dst)) renameSync(dst, old);
+  renameSync(tmp, dst);
+  rmSync(old, { recursive: true, force: true });
+}
+
+// Recursive real-file copy. Symlinks (of any target kind) are skipped with one
+// stderr line each rather than followed — an install must not import whatever a
+// symlink happens to point at.
+function copyRealFiles(dir: string, outDir: string, srcRoot: string, warn: (line: string) => void): void {
+  mkdirSync(outDir, { recursive: true });
+  for (const name of [...readdirSync(dir)].sort()) {
+    const abs = join(dir, name);
+    const st = lstatSync(abs);
+    if (st.isSymbolicLink()) {
+      warn(`amadeus-plugin: install skipped symlink ${toPosixRel(srcRoot, abs)}`);
+      continue;
+    }
+    if (st.isDirectory()) copyRealFiles(abs, join(outDir, name), srcRoot, warn);
+    else if (st.isFile()) writeFileSync(join(outDir, name), readFileSync(abs));
+  }
+}
+
+// A plugin name derived from a source path must be a single ordinary directory
+// segment — an empty, dot, or separator-bearing basename would escape the
+// staging root, so it is refused before any FS write.
+function isSafePluginDirName(name: string): boolean {
+  if (name === "" || name === "." || name === "..") return false;
+  return !name.includes("/") && !name.includes(sep);
 }
 
 // Is the composition record already current for every installed plugin? Reads
@@ -396,6 +522,36 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
     return { kind: "failure", stage: "apply", message: "recompile failed after compose" };
   }
   return { kind: "composed", applied, recompiled: true };
+}
+
+// `install <path>`: stage the source folder under PLUGIN_SOURCE_DIR_NAME, then
+// delegate to the SAME compose path the manual instruction runs (trust layers and
+// the two-stage recompile included — this verb re-implements none of it). A
+// compose failure is returned unchanged so the stage that failed stays visible.
+function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps: PluginCliDeps): PluginCliResult {
+  const hostRoot = resolveProjectRoot(cmd);
+  const src = isAbsolute(cmd.sourcePath) ? cmd.sourcePath : resolve(process.cwd(), cmd.sourcePath);
+  if (!existsSync(src) || !statSync(src).isDirectory()) {
+    return { kind: "failure", stage: "install", message: `source is not a directory: ${cmd.sourcePath}` };
+  }
+  const name = basename(src);
+  if (!isSafePluginDirName(name)) {
+    return { kind: "failure", stage: "install", message: `cannot derive a plugin name from: ${cmd.sourcePath}` };
+  }
+  const dst = join(pluginSourceRootOf(hostRoot), name);
+  const state = deps.stagingEntryState(dst, src);
+  if (state === "different" && !cmd.force) {
+    return {
+      kind: "failure",
+      stage: "install",
+      message: `a different plugin named "${name}" is already staged. Re-run with --force to replace it, or drop it first.`,
+    };
+  }
+  if (state !== "identical") deps.copyPluginSource(src, dst);
+  const composed = handleCompose({ kind: "compose", ifStale: true, projectRoot: cmd.projectRoot }, deps);
+  if (composed.kind === "composed") return { kind: "installed", name, composeOutcome: "composed" };
+  if (composed.kind === "noop") return { kind: "installed", name, composeOutcome: "noop" };
+  return composed;
 }
 
 function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: PluginCliDeps): PluginCliResult {
@@ -637,6 +793,7 @@ export function runPluginCli(argv: readonly string[], deps: PluginCliDeps = defa
   const cmd = parsed.command;
   if (cmd.kind === "compose") return handleCompose(cmd, deps);
   if (cmd.kind === "drop") return handleDrop(cmd, deps);
+  if (cmd.kind === "install") return handleInstall(cmd, deps);
   if (cmd.kind === "doctor") return handleDoctor(cmd, deps);
   return handleStatus(cmd, deps);
 }
@@ -656,6 +813,9 @@ export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDe
     case "doctor":
       for (const row of doctorPluginRows(result.section)) deps.out(`  - ${row.label}`);
       return result.degraded ? 1 : 0;
+    case "installed":
+      deps.out(`installed ${result.name} into ${PLUGIN_SOURCE_DIR_NAME}/${result.name}, compose: ${result.composeOutcome}`);
+      return 0;
     case "status":
       deps.out(`Plugins: ${result.installed} installed, ${result.composed} composed, revision ${result.revision}`);
       return 0;
