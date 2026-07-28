@@ -146,26 +146,28 @@ type GoaTotals = { favor: number; against: number; abstain: number; discuss: num
 // first). Independent re-statement of the subject's rules (BR-13 oracle) —
 // the 2-voter arm (FR-05) treats full participation and any abstention as
 // quorum conditions; the 3+ arm keeps the original thresholds.
+type GoaHoldReason = Extract<SubjectTally, { kind: "hold" }>["reason"];
+
 function goaHold(
   totals: GoaTotals,
   resolvedCount: number,
   declaredVoterCount: number,
-): SubjectTally | null {
+): GoaHoldReason | null {
   if (declaredVoterCount === 2) {
     // Full participation is part of the 2-voter quorum (FR-05 single-vote ban).
-    if (resolvedCount < 2) return { kind: "hold", reason: "quorum-short" };
-    if (totals.discuss >= 1) return { kind: "hold", reason: "discussion-needed" };
-    if (totals.abstain >= 1) return { kind: "hold", reason: "quorum-short" };
-    if (totals.favor === 1 && totals.against === 1) return { kind: "hold", reason: "split" };
+    if (resolvedCount < 2) return "quorum-short";
+    if (totals.discuss >= 1) return "discussion-needed";
+    if (totals.abstain >= 1) return "quorum-short";
+    if (totals.favor === 1 && totals.against === 1) return "split";
     return null;
   }
-  if (totals.discuss >= 2) return { kind: "hold", reason: "discussion-needed" };
-  if (totals.favor + totals.against === 0) return { kind: "hold", reason: "quorum-short" };
+  if (totals.discuss >= 2) return "discussion-needed";
+  if (totals.favor + totals.against === 0) return "quorum-short";
   return null;
 }
 
-// Independent tally oracle: resolve, then block → discussion-needed →
-// quorum-short → split (declared 2-voter only) → unique choice argmax / tie.
+// Independent tally oracle: resolve, then block → GoA-consensus holds (goaHold
+// owns the per-roster order) → unique choice argmax / tie.
 // `declaredVoterCount` is election.voters.length (FR-05), not the number of
 // ballots present at tally time — required so a forgotten call site cannot
 // silently fall back to the 3+ voter rules.
@@ -186,7 +188,7 @@ export function expectedTally(
   }
   if (blocks >= 1) return { kind: "hold", reason: "block" };
   const hold = goaHold(totals, resolved.length, declaredVoterCount);
-  if (hold !== null) return hold;
+  if (hold !== null) return { kind: "hold", reason: hold };
   return decideWinner(choices, resolved);
 }
 

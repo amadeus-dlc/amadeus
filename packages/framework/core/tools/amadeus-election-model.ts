@@ -460,7 +460,7 @@ function goaConsensusHold(counts: GoaCounts, resolvedCount: number, voterCount: 
 }
 
 // First-match decision order (functional-design business-logic-model.md):
-// block -> discussion-needed -> quorum-short -> split (2-voter only) ->
+// block -> GoA-consensus holds (goaConsensusHold owns the per-roster order) ->
 // choice winner / choice tie. The GoA-consensus holds are evaluated first;
 // only once they pass does the choiceInternalNo winner decide (Issue #1261).
 export function tally(election: Election, ballots: Ballot[]): TallyResult {
