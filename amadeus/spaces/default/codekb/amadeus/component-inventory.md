@@ -4,7 +4,40 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin 実行系コンポーネントと検証コンポーネントの棚卸し（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+## plugin CLI 層・dispatch 層・スキル層のコンポーネント棚卸し（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+
+260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**）。上流入力: Developer スキャン結果。件数・行数はすべて `wc -l` / `ls` / `find` / `git ls-files` 出力からの転記（測定 ref: observed `afb93a825`）。
+
+### 実行系コンポーネント（plugin 面、#1596 着地後）
+
+| コンポーネント | 実体 | 規模 | 責務 | 本 intent での関与 |
+| --- | --- | --- | --- | --- |
+| plugin CLI | `core/tools/amadeus-plugin.ts` | **678 行** | 4 動詞（compose / doctor / drop / status）、ホストルート解決、host snapshot、統合 doctor への投影 | **中心** — 動詞体系の拡張可否（`install` 不在・`:71-75` 判別 union が閉じている） |
+| 合成エンジン | `core/tools/amadeus-plugin-compose.ts` | **1488 行** | plan / apply / drop / journal / backend / DropsRecord | 非対象（CLI 層より下） |
+| activation policy | `core/tools/amadeus-plugin-activation.ts` | 295 行 | spec-hash advisory（TLC は起動しない） | 非対象 |
+| SessionStart hook | `core/hooks/amadeus-plugin-compose.ts` | **25 行** | `handlePluginCli(["compose","--if-stale","--project-root",dir])` の薄いラッパ | ホストルートの hook 側解決（`pluginHostRootFromHook:305-311`）を共有 |
+| ホストルート解決 | `amadeus-plugin.ts:293-297` / `:305-311` / `:313-316`、`amadeus-graph.ts:2021-2023` | — | CLI・hook・エンジンを同一ハーネスディレクトリへ収束（#1591 裁定 B） | 新動詞・新スキルが従うべき既定 |
+| recompile ドライバ | `amadeus-plugin.ts:253-263` `spawnRecompile` | — | `amadeus-graph.ts compile` → `amadeus-runtime.ts compile` の 2 段（#1592） | 新動詞が合成面を触る場合の必須後処理 |
+| 統合 CLI dispatch | `core/tools/amadeus-utility.ts:5945` `switch (subcommand)` | 20 case | 統合 CLI の唯一の動詞入口 | **`plugin` case が不在** — 委譲を足すならここ（先例は `handleMigrate:5900` の 1 件のみ） |
+| stage-runner 生成・検査 | `core/tools/amadeus-runner-gen.ts` | — | compiled graph → `skills/amadeus-<slug>/` の生成（`:118`）と等価検査（`:363`） | **#1598 の所在** — `isRunnableStage:88-90` に plugin 識別語彙が無い |
+| スキル正本 | `core/skills/`（6 ディレクトリ） | 雛形 `amadeus-mirror/SKILL.md` = **94 行** | ハーネス中立なユーザー起動スキル | 新スキルを足す場合の正本置き場 |
+| スキル投影配線 | `harness/projections.ts:300`、各 `manifest.ts`、`harness/codex/emit.ts:338-345` | — | 面ごとの投影集合を決める 3 系統の列挙 | 新スキルの配布面選択（mirror=7 面 / election=3 面の両前例） |
+
+### 検証系コンポーネント（区間で新設）
+
+| コンポーネント | 実体 | 規模 | 何を守るか |
+| --- | --- | --- | --- |
+| plugin conformance E2E | `tests/e2e/t341-plugin-conformance-journey.serial.test.ts` | **234 行** | 出荷 `dist/claude` 面での folder-drop → hook 実 spawn による compose → stage graph 到達 → `--single` なしの directive 発行 → 既定ホストルートでの doctor/status → drop の baseline 復元、という**開発者の実導線 1 本** |
+| 専用 CI ジョブ | `.github/workflows/ci.yml:146` `plugin-conformance-e2e` | — | e2e tier が `test:ci` に含まれない構造的盲点を埋める。集約ゲートの必須依存（`:678` / `:704`） |
+| runner ドリフト検査 | `amadeus-runner-gen.ts:363` `handleCheck` + `tests/unit/t129-stage-runner-drift.test.ts` | — | compiled slug 集合 と on-disk runner 集合の等価。**plugin stage を識別できないため compose 済みホストで破綻**（`t129:206` `toBe(29)` / `:208` `toBe(3)` / `:221` `"(29 runners)"` の硬い数値も同時に崩れる） |
+
+### コンポーネント境界の注記
+
+- **配布対象と repo-local の境界**: `core/tools/` / `core/hooks/` / `core/skills/` は 7 dist + 5 self-install へ投影される。`scripts/plugin-projection.ts` / `scripts/promote-self.ts` は repo-local で配布対象外。
+- **plugin CLI と統合 CLI は現状無接続**: plugin CLI は `bun <harnessDir>/tools/amadeus-plugin.ts <verb>` として独立に到達され、統合 CLI からの委譲経路を持たない（`grep -n '"plugin"' amadeus-utility.ts` = 0 hit）。
+- **同名の別物**: `packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts` は opencode ハーネス自身のプラグイン機構であり、Amadeus plugin 機能とは別コンポーネント。
+
+## plugin 実行系コンポーネントと検証コンポーネントの棚卸し（260727-e2e-plugin-conformance、履歴 2026-07-27、差分リフレッシュ、observed `0c4709102`。行数 613 / 1469 / 23 と「e2e 0 件」は当時断面）
 
 260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102`、base `1673c433`（祖先 exit 0）、距離 **60**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。件数・行数はすべて `wc -l` / `ls` / `git ls-files` / `find` 出力からの転記（測定 ref: observed `0c4709102`）。
 

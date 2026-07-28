@@ -1,6 +1,115 @@
 # アーキテクチャ
 
-## plugin 面の現行アーキテクチャと 4 Issue の欠陥所在（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+## plugin CLI 動詞体系・ホストルート統一・スキル投影の現行アーキテクチャ（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+
+260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825917220660a3d9bbfdb23d83474b94a6`、base `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **16**、区間 `git diff --shortstat` = **192 files changed, 5529 insertions(+), 956 deletions(-)**、record 除外 **161**）。上流入力: Developer スキャン結果（実測済みスキャンノート、全文読了）。
+
+区間の主系統は `f1d561904`（[PR #1596](https://github.com/amadeus-dlc/amadeus/pull/1596) 積み残し 7 Issue バッチ）であり、**前節（履歴: 260727-e2e-plugin-conformance）が「未解消の欠陥所在」として記録した 4 Issue はいずれもこの区間で着地した**。以下は着地後断面のアーキテクチャである（測定 ref: observed `afb93a825`）。
+
+### 正本モジュールと規模（`wc -l` 実測、Architect 段で再測定）
+
+| モジュール | 行数 | 役割 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-plugin.ts` | **678** | ハーネス中立 CLI（4 動詞）+ ホストルート解決 + host snapshot + 統合 doctor への投影 |
+| `packages/framework/core/tools/amadeus-plugin-compose.ts` | **1488** | 合成エンジン（plan / apply / drop / journal / backend / DropsRecord） |
+| `packages/framework/core/tools/amadeus-plugin-activation.ts` | 295 | activation policy（spec-hash advisory。TLC は起動しない） |
+| `packages/framework/core/hooks/amadeus-plugin-compose.ts` | **25** | SessionStart auto-compose の薄いラッパ（合成ロジックを再実装しない） |
+
+**従前成果物からの訂正**: 合成エンジンは 1469 行 → **1488 行**、hook 正本は 23 行 → **25 行**（いずれも本 scan の `wc -l` 実測。旧値は前区間の断面）。
+
+### CLI 動詞体系（4 動詞。`install` は不在）
+
+動詞集合は判別 union `PluginCliCommand`（`amadeus-plugin.ts:71-75`）で閉じており、`compose` / `doctor` / `drop` / `status` の **4 種のみ**である。`parsePluginCliArgs`（`:146-153`）は未知動詞を fail-closed で `unknown verb` に落とし、**`install` 動詞は定義されていない**（プラグイン導入は「バンドルを staging root へ置く」+ `compose` の 2 手であり、CLI 側に install 動詞を持たない設計）。USAGE は `:100-106`。
+
+| 層 | 実体 | 責務 |
+| --- | --- | --- |
+| parse | `parsePluginCliArgs:146-153` | argv → `PluginCliCommand` or `CliParseError`（fail-closed） |
+| dispatch | `runPluginCli:634-642` | 動詞 → `handleCompose:368` / `handleDrop:401` / `handleDoctor:457` / `handleStatus:472` |
+| render | `renderPluginCliResult:645-670` | 結果 union → stdout/stderr + exit code |
+| in-process seam | `handlePluginCli:674-676` | parse → run → render を返り値（exit code）で返す。テスト・hook が駆動する唯一の入口 |
+| process 境界 | `:678` `import.meta.main` | `process.exit(handlePluginCli(process.argv.slice(2)))` |
+
+結果 union `PluginCliResult`（`:87-94`）は 7 値 — `composed` / `noop` / `dropped` / `doctor` / `status` / `usage-error` / `failure`。`failure.stage` は `discover | trust | plan | apply | recover` の 5 値。exit code 規約（`:645-670` 直読）は **成功 0 / `doctor` は `degraded ? 1 : 0` / `usage-error` 2（stderr にメッセージ + USAGE）/ `failure` 1**。依存は `PluginCliDeps`（`:159-174`、14 フィールド）に集約され、実配線は `defaultPluginCliDeps:265-282`、テストはここへスタブを注入する（in-process seam）。
+
+### ホストルート統一（#1591 裁定 B）
+
+「CLI が書く先」と「エンジンが読む先」を同一のハーネスディレクトリへ収束させる解決規則が 3 箇所に置かれ、いずれも同じ根へ落ちる。
+
+| 経路 | 解決関数 | 規則 |
+| --- | --- | --- |
+| CLI（`--project-root` 省略時） | `defaultPluginHostRoot:293-297` | 自身の `tools/` の親ディレクトリ名がハーネス名なら**そのハーネスディレクトリ**、そうでなければ `cwd`（正本レイアウトには harness leaf が無いため cwd が代替） |
+| SessionStart hook | `pluginHostRootFromHook:305-311` | hook 共有ラダーで project dir を解決し、hook 自身の設置パスの harness leaf を付す（`<project>/.claude/hooks/` の hook は `<project>/.claude/` へ compose） |
+| CLI 引数正規化 | `resolveProjectRoot:313-316` | `cmd.projectRoot ?? defaultPluginHostRoot()` を絶対パス化 |
+| エンジン読取 | `amadeus-graph.ts:2021-2023` `pluginsHostRoot` | `AMADEUS_PLUGINS_HOST_ROOT ?? dirname(dirname(stagesDir()))`（env はテストシーム） |
+
+この統一により、**出荷 INSTALL doc が印字する compose コマンド（プロジェクトルートから、ハーネス側 CLI コピー経由で実行）は cwd に依らず当該ハーネスディレクトリを host root にする**（`:284-292` の設計コメントが根拠を明記）。読取・書込の対応は次のとおり。
+
+- **読取（staging）**: `PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src"`（`:322`、export）→ `pluginSourceRootOf:329-331` = `<hostRoot>/.amadeus-plugin-src`。パッケージャ側 `scripts/plugin-projection.ts:64` がこの定数を import して INSTALL doc の案内先を導出する（`:598`）ため、案内先と走査先はドリフト不能（#1569 の構造的封鎖）。
+- **書込（owned stages）**: `<hostRoot>/plugins/<name>/stages/<slug>.md`（`amadeus-graph.ts:1666-1667` が landing path を宣言）。
+- **snapshot 境界**: `buildHostSnapshot:206-228` はファイルのみを収集し、`isEngineDotfile:195-197` により `.amadeus-plugin-*` と `.git` をホストルート直下で除外する（staging 入力と engine dot-state を host surface から隔離）。
+
+### 2 段 recompile（#1592）
+
+`spawnRecompile:253-263` は `["amadeus-graph.ts", "amadeus-runtime.ts"]` を**この順で**各 1 回 `compile` 起動し、いずれかが非 0 なら `false` を返す。呼び出しは `handleCompose:395` と `handleDrop:419` の 2 経路。1 段（runtime graph のみ）では compose 済み plugin stage が **stage graph に載らず到達不能**のままだったのが #1592 の欠陥であり、graph → runtime の順序がこの依存を満たす。
+
+### drop の FS 実測 baseline（#1586）
+
+`handleDrop:401` の `baselineRestored` は composition record 単独ではなく **record 空 AND FS 実測**の合議になった（`:422` verbatim `const baselineRestored = backend.readComposition().plugins.size === 0 && pluginArtifactsAbsent(hostRoot, record);`）。`pluginArtifactsAbsent:432` は各 owned path の非在に加えて `hasEmptyAncestorDir:443`（host root までの祖先ディレクトリに空の殻が残っていないか）を検査する。設計コメント `:426-431` は境界を明示する — **内容を持つディレクトリは restore 失敗ではなく**、`.amadeus-plugin-drops.json` は engine dot-state として**射程外**。
+
+### doctor レンダラの一本化（#1585）
+
+`handleDoctor:457-470` は統合 doctor と同一の観測（`buildDoctorPluginSection`）を作り、`renderPluginCliResult` の `case "doctor"`（`:658-660`）が **`doctorPluginRows(result.section)` を通してから出力する**。これにより 0-plugin ホストでも `Plugins: 0 installed` の 1 行が standalone 経路に出る（設計コメント `:453-456` が「One vocabulary, one 0-plugin degrade」と宣言）。同一契約に対する 2 レンダラの非対称は解消済み（cid:code-generation:c1-drift-canonical-renderer の適用形）。
+
+### 定数の一本化（#1575）
+
+`scripts/promote-self.ts` は同名 `PACKAGE_HARNESSES` の独立定義をやめ、`:37` で `import { SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";` し `:186` で消費する。canonical は `scripts/plugin-projection.ts:56`（5 値 = claude / codex / cursor / opencode / kimi）で、パッケージ面の `PACKAGE_HARNESSES:42-50`（7 値）と型 + ランタイムで分離される。**これは packager → core への新しい依存方向ではなく、`scripts/` 内の消費者統合**である（`plugin-projection.ts:64` が core の `PLUGIN_SOURCE_DIR_NAME` を import する既存エッジとは別）。
+
+### E2E 検証面と blocking CI ジョブ（#1589）
+
+`tests/e2e/t341-plugin-conformance-journey.serial.test.ts`（**234 行**）が「開発者が実際に歩く導入経路」を 1 本で通す。ヘッダ `:5-24` 直読による工程は (a) **出荷 `dist/claude` 面**から使い捨てワークスペースを構築し、**出荷 INSTALL doc が指す場所へ**バンドルを folder-drop (b) 出荷 `settings.json.example` から読み出した SessionStart hook コマンドを**実 spawn**して compose（手書きコマンド無し・in-process 呼び出し無し・recompile スタブ無し）(c) 合成ステージが **compiled stage graph** に載ったことを assert（#1592） (d) intent を birth し `next --stage <slug>`（**`--single` なし**）で run-stage directive が出ることを assert (e) `--project-root` を**与えずに** plugin CLI の doctor/status と統合 `amadeus-utility doctor` を駆動（#1591 裁定 B の既定ホストルートが被検体） (f) drop してバイト + 構造 baseline へ戻ることを assert。決定性はネットワーク無し・env ゲート無し・LLM 無しで担保される。
+
+実行トリガーは既定 CI プロファイルの外にあるため、専用ジョブが新設された — `.github/workflows/ci.yml:146` `plugin-conformance-e2e`（`:165` `bun test tests/e2e/t341-plugin-conformance-journey.serial.test.ts`）。設計コメント `:141-145` が「e2e tier は `test:ci`（smoke+unit+integration）に含まれないため、このジョブが無ければ出荷 install journey は PR で一度も走らない — それが #1569 がリリースへ届いた経路」と根拠を述べる。**このジョブは集約ゲートの必須依存**（`:678` の `needs` 配列に列挙、`:704` `require_result "plugin-conformance-e2e"`）であり、`test:ci` プロファイル自体は変更していない。
+
+### runner-gen の plugin 非識別（#1598 の機序、本 intent の設計前提）
+
+stage-runner スキルの生成・検査は **compiled stage graph の `GraphStage` だけ**を入力とし、そこから `slug` と `phase` のみを消費する（`amadeus-runner-gen.ts:75-77` `runnerDirName` / `:118` `renderStageRunner`）。runnable 判定は `isRunnableStage:88-90` = `node.phase !== "initialization"` の**単一条件**で、**plugin 由来か否かを識別する語彙が無い**。`amadeus-graph.ts:1677-1678` の設計コメントは `PluginStageFile` に `pluginName` フィールドを持たない（path から導出可能）と宣言するが、その `path` はグラフノードに残らないため、runner-gen 側からは plugin stage と stock stage が区別できない。
+
+帰結: **compose 済みホストでは plugin stage が graph に載る → `isRunnableStage` が true → 生成側は runner を作るが、on-disk には無い → `handleCheck:363-385`（compiled slug 集合 と `--stage`+`--single` 両マーカーを持つ on-disk runner 集合の等価検査）が MISSING を報告し exit 1**。加えて `tests/unit/t129-stage-runner-drift.test.ts` の硬い数値（`:206` `expect(runnable.length).toBe(29)`、`:208` `expect(graph.length - runnable.length).toBe(3)`、`:221` `expect(r.out).toContain("(29 runners)")`）も plugin stage 1 本で崩れる。本 repo には `.claude/plugins` が存在せず（`ls -d .claude/plugins` = No such file or directory）**未発火**であり、**compose 済みホストでのみ顕在化する**。なお `pruneOrphanRunners:342-356` は両マーカーを持たないディレクトリを保護するため、無関係なスキルを誤削除はしない。
+
+### スキル投影行列（正本 → 面別、manifest の明示選択）
+
+正本は `packages/framework/core/skills/` の 6 ディレクトリ（`amadeus-election` / `amadeus-grilling` / `amadeus-mirror` / `amadeus-outcomes-pack` / `amadeus-replay` / `amadeus-session-cost`、`ls` 実測）。**正本へ置くだけでは配布されない** — 投影は面ごとの明示的な列挙によって決まり、その機構が 3 系統に分かれている。
+
+| 機構 | 実体 | 対象 |
+| --- | --- | --- |
+| 共有ヘルパ経由の coreDirs エントリ | `harness/projections.ts:300` `mirrorCoreSkillDirectory(surface)`（`:296` `mirrorSessionSkillName` が面別の投影名を引く） | claude `manifest.ts:65` / cursor `:44` / kiro `:43` / kiro-ide `:39` ほか |
+| manifest への直書き coreDirs エントリ | `harness/claude/manifest.ts:60-66`、`harness/kimi/manifest.ts:50-56`（kimi は mirror も直書き） | session 4 skill + `amadeus-election` |
+| 面別 emit の列挙 | `harness/codex/emit.ts:338-345`（session 4 skill + `mirrorSessionSkillName("codex")` + `amadeus-election` を `.agents/skills/` へ byte-copy + prose rewrite） | codex |
+
+結果として投影行列は面ごとに異なる（`find dist -type d -name <skill>` 実測）。
+
+- `amadeus-mirror`: **7 面すべて**（`find dist/<harness> -type d -name amadeus-mirror` = 各 1）。
+- `amadeus-election`: **3 面のみ** — `dist/claude/.claude/skills/`、`dist/codex/.agents/skills/`、`dist/kimi/.kimi-code/skills/`。cursor / kiro / kiro-ide / opencode には投影されない。
+
+投影先の形も面ごとに異なる: claude / kimi は `<harnessDir>/skills/`、codex は skills をハーネスディレクトリに置かず `<project>/.agents/skills/` へ emit する（`harness/codex/manifest.ts:12-14` が「Codex discovers skills at `<project>/.agents/skills/`, so skipRunnerGen is set」と宣言）、cursor は skills ディレクトリを持たず `.cursor/commands/` へ emit する（`harness/cursor/manifest.ts:33`）。**新規スキルを足す設計では、上表 3 系統のどこへ列挙を足すかが面ごとの設計判断になる**。
+
+雛形として最も近い既存スキルは `amadeus-mirror/SKILL.md`（**94 行**）で、frontmatter（`name` / `description` / `argument-hint` / `user-invocable: true`）+ 「Purpose and boundary」以降の節構成を持つ。ただし同ファイル `:14-16` のハーネスディレクトリ列挙は **`.claude` / `.codex` / `.cursor` / `.kiro` / `.opencode` の 5 面のまま**で、`.kiro-ide` と `.kimi-code` を欠く（7 面投影に対して陳腐化。cid:code-generation:count-comment-sync-on-catalog-change の同族）。
+
+### `amadeus-utility.ts` の subcommand dispatch と `plugin` の不在
+
+統合 CLI の dispatch は `switch (subcommand)`（`amadeus-utility.ts:5945`）の 1 箇所で、case は `help` / `version` / `status` / `doctor` / `migrate` / `intent-birth` / `intent` / `space` / `space-create` / `codekb-path` / `detect` / `init` / `state-init` / `scope-change` / `recompose` / `config-change` / `set-status` / `detect-scope` / `resolve-env-scope` / `scope-table`。**`"plugin"` の case は存在しない**（`grep -n '"plugin"' amadeus-utility.ts` = **0 hit**）— plugin CLI は独立ツールとしてのみ到達可能で、統合 CLI からの委譲経路を持たない。
+
+委譲型の先例は `handleMigrate:5900` **1 件のみ**である（mirror は統合 CLI の case ではなく、スキル → `amadeus-mirror-lifecycle.ts` の直叩き）。したがって「`amadeus-utility plugin …` を足す」設計を採る場合、既習様式は migrate に倣うことになる。
+
+**usage 文字列の二重定義**に注意: 動詞一覧は (1) `default` アームの `die` 文字列（`:6033`）と (2) `HELP_TEXT_TAIL`（`:216`、`t67` が pin）の 2 箇所に手書きで存在する。現状でも両者は case 集合と完全一致していない（`die` 文字列は `init` / `state-init` を列挙しない）ため、動詞を足すときは **case・`die` 文字列・`HELP_TEXT_TAIL` の 3 面同期**が要る。
+
+### 本 intent の含意（アーキテクチャ観点）
+
+- `amadeus-plugin.ts` / hook 正本を触る変更は **7 ハーネス dist + 5 面 self-install の再生成が必須**（cid:build-and-test:bt-dist-regen-seven-harnesses）。`scripts/` のみの変更なら dist 影響なし。
+- 新規スキルを足す設計は「正本追加」+「対象面 manifest への追加」+「dist 再生成」の 3 点セットになり、**どの面へ投影するかが設計判断**（election の 3 面 / mirror の 7 面という前例が両方ある）。
+- #1598 の是正は runner-gen 側に「plugin 由来かどうか」の語彙を新設する必要があり、それを **graph ノードに持たせる**（`amadeus-graph.ts:1677-1678` の設計判断を覆す）か、**runner-gen 側で別経路から導出する**かの選択になる。t129 の硬い数値（29 / 3）も同時に扱う対象。
+
+## plugin 面のアーキテクチャと 4 Issue の欠陥所在（260727-e2e-plugin-conformance、履歴 2026-07-27、差分リフレッシュ、observed `0c4709102`。**4 Issue はいずれも後続区間 `f1d561904`(#1596) で解消済み** — 当時断面として保存）
 
 260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`、base `1673c433209c74820881c75a0816bbce3fb2d512`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **60**、区間 `git diff --shortstat` = **1830 files changed, 316726 insertions(+), 7366 deletions(-)**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（全文読了）。Architect 段で核心の file:line を observed `0c4709102` に対して独立再実測し **訂正 0 件**（`amadeus-plugin.ts:277`/`:377`/`:534-536`/`:591-593`、`amadeus-plugin-compose.ts:1150`/`:1154`、`promote-self.ts:184`、`plugin-projection.ts:42`/`:56`、`amadeus-orchestrate.ts:913`/`:1017-1019`/`:2289`、`amadeus-graph.ts:2011-2013`、`t299:94-97`/`:206`、`run-tests.ts:125-126`、`ci.yml:163`、行数 613/1469/295/23 をいずれも直読一致）。
 
