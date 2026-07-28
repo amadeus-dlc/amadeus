@@ -2543,13 +2543,9 @@ function readApprovedSwarmBatches(stateContent: string | null): Set<number> {
 // the human is approving, the exact command that records the approval, and the
 // re-entry step — the conductor renders it verbatim and cannot proceed without it.
 function batchGateQuestion(batch: number, units: string[]): string {
-  return (
-    `Swarm batch ${batch} (${units.join(", ")}) is complete and Construction Autonomy Mode is ` +
-    `gated, so the batch-end gate applies (stage-protocol.md: for parallel batches one gate ` +
-    `covers every Bolt in the batch). Approve batch ${batch} and continue to the next batch? ` +
-    `Record the approval with \`amadeus-bolt approve-batch --batch ${batch}\`, ` +
-    `then re-run \`next\` to receive the following batch.`
-  );
+  const done = `Swarm batch ${batch} (${units.join(", ")}) is complete and Construction Autonomy Mode is gated, so the batch-end gate applies (stage-protocol.md: for parallel batches one gate covers every Bolt in the batch).`;
+  const how = `Approve batch ${batch} and continue to the next batch? Record the approval with \`amadeus-bolt approve-batch --batch ${batch}\`, then re-run \`next\` to receive the following batch.`;
+  return `${done} ${how}`;
 }
 
 // Select the batch to fan out: the FIRST batch that still has uncovered units,
