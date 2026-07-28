@@ -453,7 +453,7 @@
           "summary": "Upstream roadmap.html refresh (2.2.0 docs commit)",
           "disposition": "SKIP",
           "local_state": "NOT_APPLICABLE",
-          "rationale": "Amadeus's roadmap.html is a fork-native document (title: 'Amadeus-DLC Workflows 1.0 - Roadmap & Gaps'), present since bootstrap 5cfb16165, not a copy of the upstream file; the upstream refresh has no Amadeus counterpart to fold in.",
+          "rationale": "Amadeus's former roadmap.html was a stale fork-native planning draft, not a copy of the upstream file, and was removed under issue #952; the upstream refresh has no maintained Amadeus counterpart to fold in.",
           "upstream_evidence": ["b67798c"],
           "local_evidence": [
             "a326f47bc: roadmap.html PRESENT (git cat-file -e a326f47bc:roadmap.html; exit 0)",
