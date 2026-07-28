@@ -118,11 +118,13 @@ options:
 
 - Record the answer in `amadeus-state.md` as `Construction Autonomy Mode: autonomous` or `Construction Autonomy Mode: gated`.
 - Emit `AUTONOMY_MODE_SET` audit event with the chosen mode.
-- Session resume: if `Construction Autonomy Mode: unset` but the walking skeleton is already `[x]` complete, re-fire the ladder prompt before executing the next Bolt.
+- Session resume: if `Construction Autonomy Mode: unset` but the walking skeleton is already `[x]` complete, re-fire the ladder prompt before executing the next Bolt. The engine enforces this: `next` emits an `ask` (the ladder) and no run-stage / invoke-swarm until `amadeus-bolt set-autonomy --mode <autonomous|gated>` records the answer.
 
 **Subsequent Bolt gate (per autonomy mode)**
 
 For Bolts after the walking skeleton, the Bolt-level gate is presented only if `Construction Autonomy Mode: gated`. In `autonomous` mode the gate is skipped. For parallel batches the gate covers every Bolt in the batch (single gate, not one per Bolt).
+
+`gated` selects the approval FREQUENCY, not the execution shape: a parallel batch still fans out as a swarm under `gated`, and the engine presents the batch's single gate as an `ask` once the batch is complete and before the NEXT batch is offered. `amadeus-bolt approve-batch --batch <n>` records the approval (state field `Swarm Gated Batch Approvals`, audited as `GATE_APPROVED`); until it is recorded the engine will not offer the following batch. The FINAL batch owes no batch-end gate — the stage's own gate on the all-covered re-entry covers it, so gates never stack.
 
 **Halt-and-ask on failure**
 
