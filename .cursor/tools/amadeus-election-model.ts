@@ -416,7 +416,12 @@ export type GoaCounts = {
 // "tie" is now a CHOICE tie (two or more choices share the top vote count),
 // not the old GoA-axis favor===against tie (that branch is gone — the winner is
 // decided from choiceInternalNo, Issue #1261).
-export type HoldReason = "tie" | "block" | "quorum-short" | "discussion-needed";
+export type HoldReason =
+  | "tie"
+  | "block"
+  | "quorum-short"
+  | "discussion-needed"
+  | "split";
 
 // Per-choice vote count over the winner-selection population (see tally).
 export type ChoiceCount = { internalNo: number; label: string; count: number };
@@ -433,10 +438,31 @@ export type TallyResult =
 const FAVOR = new Set([1, 2, 3, 6]);
 const AGAINST = new Set([7, 8]);
 
+// GoA-consensus hold decision, block excluded (tally evaluates block first).
+// Returns the hold reason, or null when consensus passes to the choice winner.
+// The 2-voter rules (FR-05) and the 3+ voter rules are distinct policies, not
+// threshold variants: full participation and any abstention are quorum
+// conditions only when the roster is exactly two.
+function goaConsensusHold(counts: GoaCounts, resolvedCount: number, voterCount: number): HoldReason | null {
+  if (voterCount === 2) {
+    // Full participation is part of the 2-voter quorum: a single-ballot ledger
+    // must never establish 1-0. The directive loop already waits on pending
+    // voters, but the model owns the invariant (FR-05 single-vote ban).
+    if (resolvedCount < 2) return "quorum-short";
+    if (counts.discuss >= 1) return "discussion-needed";
+    if (counts.abstain >= 1) return "quorum-short";
+    if (counts.favor === 1 && counts.against === 1) return "split";
+    return null;
+  }
+  if (counts.discuss >= 2) return "discussion-needed";
+  if (counts.favor + counts.against === 0) return "quorum-short";
+  return null;
+}
+
 // First-match decision order (functional-design business-logic-model.md):
-// block -> discussion-needed -> quorum-short -> choice winner / choice tie.
-// The GoA-consensus holds are evaluated first, unchanged; only once they pass
-// does the choiceInternalNo winner decide the result (Issue #1261).
+// block -> GoA-consensus holds (goaConsensusHold owns the per-roster order) ->
+// choice winner / choice tie. The GoA-consensus holds are evaluated first;
+// only once they pass does the choiceInternalNo winner decide (Issue #1261).
 export function tally(election: Election, ballots: Ballot[]): TallyResult {
   // BR-4 #1: resolve to each voter's latest ballot before any counting — an
   // amend supersedes the voter's earlier ballot, so the superseded original
@@ -453,8 +479,8 @@ export function tally(election: Election, ballots: Ballot[]): TallyResult {
   }
   // GoA is counted over the resolved set (one ballot per voter) for these holds.
   if (blocks >= 1) return { kind: "hold", reason: "block", counts };
-  if (counts.discuss >= 2) return { kind: "hold", reason: "discussion-needed", counts };
-  if (counts.favor + counts.against === 0) return { kind: "hold", reason: "quorum-short", counts };
+  const hold = goaConsensusHold(counts, resolved.length, election.voters.length);
+  if (hold !== null) return { kind: "hold", reason: hold, counts };
   // Winner-selection population: the resolved per-voter ballot set minus GoA-4
   // abstentions. Choice tallies are simple vote counts over this population only
   // (no choice x GoA cross distribution).

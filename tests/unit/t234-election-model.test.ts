@@ -139,19 +139,38 @@ describe("t234 election-model", () => {
     expect(withReservation.ok).toBe(true);
   });
 
-  test("tally GoA holds: discussion-needed at 2+ GoA-5, a lone GoA-5 still establishes", () => {
+  test("tally GoA holds: 2-voter rules (solo-election FR-05) vs 3+ voter rules", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
-    // GoA-axis favor===against no longer holds — with a single choice the sole
-    // choice wins once the GoA-consensus holds pass (choice winner, Issue #1261).
-    const single = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
-    expect(single.kind).toBe("established");
-    if (single.kind === "established") expect(single.winner.internalNo).toBe(1);
+    // 2-voter: favor vs against (even same choice) → split, not established
+    const split = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
+    expect(split.kind).toBe("hold");
+    if (split.kind === "hold") expect(split.reason).toBe("split");
+    // 2-voter: a lone GoA-5 → discussion-needed (not established)
     const oneDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 1))]);
-    expect(oneDiscuss.kind).toBe("established"); // a single 5 does not hold
+    expect(oneDiscuss.kind).toBe("hold");
+    if (oneDiscuss.kind === "hold") expect(oneDiscuss.reason).toBe("discussion-needed");
+    // 2-voter: single-ballot ledger → quorum-short even without an abstention
+    // (the model owns the FR-05 single-vote ban, not just the directive loop)
+    const oneBallot = tally(e.value, [mustParse(ballot("alice", 1))]);
+    expect(oneBallot.kind).toBe("hold");
+    if (oneBallot.kind === "hold") expect(oneBallot.reason).toBe("quorum-short");
+    // 2-voter: GoA-4 abstention → quorum-short (single-vote establishment forbidden)
+    const oneAbstain = tally(e.value, [mustParse(ballot("alice", 4)), mustParse(ballot("bob", 1))]);
+    expect(oneAbstain.kind).toBe("hold");
+    if (oneAbstain.kind === "hold") expect(oneAbstain.reason).toBe("quorum-short");
     const twoDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 5))]);
     expect(twoDiscuss.kind).toBe("hold");
     if (twoDiscuss.kind === "hold") expect(twoDiscuss.reason).toBe("discussion-needed");
+    // 3+ voter: a lone GoA-5 still establishes (unchanged FR-06)
+    const three = Election.parse({ ...DEF, voters: ["a", "b", "c"] });
+    if (!three.ok) throw new Error("definition must parse");
+    const loneDiscussThree = tally(three.value, [
+      mustParseIn(three.value, ballot("a", 5)),
+      mustParseIn(three.value, ballot("b", 1)),
+      mustParseIn(three.value, ballot("c", 1)),
+    ]);
+    expect(loneDiscussThree.kind).toBe("established");
   });
 
   test("shuffleView: deterministic per (election, voter), blind key set, identity tally mapping", () => {

@@ -71,7 +71,7 @@ export interface SubjectElection {
 }
 
 export type SubjectTally =
-  | { kind: "hold"; reason: "tie" | "block" | "quorum-short" | "discussion-needed" }
+  | { kind: "hold"; reason: "tie" | "block" | "quorum-short" | "discussion-needed" | "split" }
   | { kind: "established"; winner: number };
 
 export type ValidationOutcome = { ok: true; ballot: ArmBallot } | { ok: false; error: string };
@@ -140,24 +140,55 @@ export function expectedCoreValidation(
 const FAVOR = new Set([1, 2, 3, 6]);
 const AGAINST = new Set([7, 8]);
 
-// Independent tally oracle: resolve, then block → discussion-needed →
-// quorum-short → unique choice argmax / tie. Re-derived from the contract, not
-// from the subject.
-export function expectedTally(choices: number[], ballots: ArmBallot[]): SubjectTally {
+type GoaTotals = { favor: number; against: number; abstain: number; discuss: number };
+
+type GoaHoldReason = Extract<SubjectTally, { kind: "hold" }>["reason"];
+
+// GoA-consensus hold decision, block excluded (expectedTally evaluates block
+// first). Independent re-statement of the subject's rules (BR-13 oracle) —
+// the 2-voter arm (FR-05) treats full participation and any abstention as
+// quorum conditions; the 3+ arm keeps the original thresholds.
+function goaHold(
+  totals: GoaTotals,
+  resolvedCount: number,
+  declaredVoterCount: number,
+): GoaHoldReason | null {
+  if (declaredVoterCount === 2) {
+    // Full participation is part of the 2-voter quorum (FR-05 single-vote ban).
+    if (resolvedCount < 2) return "quorum-short";
+    if (totals.discuss >= 1) return "discussion-needed";
+    if (totals.abstain >= 1) return "quorum-short";
+    if (totals.favor === 1 && totals.against === 1) return "split";
+    return null;
+  }
+  if (totals.discuss >= 2) return "discussion-needed";
+  if (totals.favor + totals.against === 0) return "quorum-short";
+  return null;
+}
+
+// Independent tally oracle: resolve, then block → GoA-consensus holds (goaHold
+// owns the per-roster order) → unique choice argmax / tie.
+// `declaredVoterCount` is election.voters.length (FR-05), not the number of
+// ballots present at tally time — required so a forgotten call site cannot
+// silently fall back to the 3+ voter rules.
+export function expectedTally(
+  choices: number[],
+  ballots: ArmBallot[],
+  declaredVoterCount: number,
+): SubjectTally {
   const resolved = resolvePerVoter(ballots);
-  let favor = 0;
-  let against = 0;
-  let discuss = 0;
+  const totals: GoaTotals = { favor: 0, against: 0, abstain: 0, discuss: 0 };
   let blocks = 0;
   for (const b of resolved) {
-    if (FAVOR.has(b.goa)) favor++;
-    else if (AGAINST.has(b.goa)) against++;
-    else if (b.goa === 5) discuss++;
+    if (FAVOR.has(b.goa)) totals.favor++;
+    else if (AGAINST.has(b.goa)) totals.against++;
+    else if (b.goa === 4) totals.abstain++;
+    else if (b.goa === 5) totals.discuss++;
     if (b.goa === 8) blocks++;
   }
   if (blocks >= 1) return { kind: "hold", reason: "block" };
-  if (discuss >= 2) return { kind: "hold", reason: "discussion-needed" };
-  if (favor + against === 0) return { kind: "hold", reason: "quorum-short" };
+  const hold = goaHold(totals, resolved.length, declaredVoterCount);
+  if (hold !== null) return { kind: "hold", reason: hold };
   return decideWinner(choices, resolved);
 }
 

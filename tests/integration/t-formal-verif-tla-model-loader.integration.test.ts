@@ -30,7 +30,7 @@ import type { TlaFileSystem } from "../../scripts/formal-verif/tla-model-loader-
 import type { ModelMap } from "../../scripts/formal-verif/tla-model-map.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const EXPECTED_MODULE_IDENTITY = "ca86668dcf1c39b4a72e2ca334959923184fc7874ceb7197c389840d793c3769";
+const EXPECTED_MODULE_IDENTITY = "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32";
 const EXPECTED_CFG_IDENTITY = "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b";
 const temporaryRoots: string[] = [];
 

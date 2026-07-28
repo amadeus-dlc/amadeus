@@ -70,19 +70,39 @@ describe("arm-s two-clock separation (BR-09/BR-10)", () => {
 describe("arm-s independent tally oracle (BR-13)", () => {
   const choices = [1, 2, 3];
   test("block hold when any GoA 8", () => {
-    expect(expectedTally(choices, [ballot("V1", 1, 8, "2026-07-20T00:00:00Z"), ballot("V2", 1, 1, "2026-07-20T00:00:00Z")])).toEqual({ kind: "hold", reason: "block" });
+    expect(expectedTally(choices, [ballot("V1", 1, 8, "2026-07-20T00:00:00Z"), ballot("V2", 1, 1, "2026-07-20T00:00:00Z")], 3)).toEqual({ kind: "hold", reason: "block" });
   });
   test("discussion-needed when two GoA 5", () => {
-    expect(expectedTally(choices, [ballot("V1", 1, 5, "2026-07-20T00:00:00Z"), ballot("V2", 2, 5, "2026-07-20T00:00:00Z")])).toEqual({ kind: "hold", reason: "discussion-needed" });
+    expect(expectedTally(choices, [ballot("V1", 1, 5, "2026-07-20T00:00:00Z"), ballot("V2", 2, 5, "2026-07-20T00:00:00Z")], 3)).toEqual({ kind: "hold", reason: "discussion-needed" });
   });
   test("quorum-short when no favor/against", () => {
-    expect(expectedTally(choices, [ballot("V1", 1, 4, "2026-07-20T00:00:00Z")])).toEqual({ kind: "hold", reason: "quorum-short" });
+    expect(expectedTally(choices, [ballot("V1", 1, 4, "2026-07-20T00:00:00Z")], 3)).toEqual({ kind: "hold", reason: "quorum-short" });
   });
   test("choice tie holds", () => {
-    expect(expectedTally(choices, [ballot("V1", 1, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 1, "2026-07-20T00:00:00Z")])).toEqual({ kind: "hold", reason: "tie" });
+    expect(expectedTally(choices, [ballot("V1", 1, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 1, "2026-07-20T00:00:00Z")], 3)).toEqual({ kind: "hold", reason: "tie" });
   });
   test("unique argmax establishes a winner", () => {
-    const result = expectedTally(choices, [ballot("V1", 2, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 1, "2026-07-20T00:00:00Z"), ballot("V3", 1, 1, "2026-07-20T00:00:00Z")]);
+    const result = expectedTally(choices, [ballot("V1", 2, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 1, "2026-07-20T00:00:00Z"), ballot("V3", 1, 1, "2026-07-20T00:00:00Z")], 3);
+    expect(result).toEqual({ kind: "established", winner: 2 });
+  });
+  test("declared 2-voter favor vs against is split (FR-05), not established", () => {
+    const result = expectedTally(
+      choices,
+      [ballot("V1", 1, 1, "2026-07-20T00:00:00Z"), ballot("V2", 1, 7, "2026-07-20T00:00:00Z")],
+      2,
+    );
+    expect(result).toEqual({ kind: "hold", reason: "split" });
+  });
+  test("declared 2-voter single-ballot ledger is quorum-short (FR-05 single-vote ban)", () => {
+    const result = expectedTally(choices, [ballot("V1", 1, 1, "2026-07-20T00:00:00Z")], 2);
+    expect(result).toEqual({ kind: "hold", reason: "quorum-short" });
+  });
+  test("declared 2-voter unanimous favor establishes (all 2-voter holds pass)", () => {
+    const result = expectedTally(
+      choices,
+      [ballot("V1", 2, 1, "2026-07-20T00:00:00Z"), ballot("V2", 2, 2, "2026-07-20T00:00:00Z")],
+      2,
+    );
     expect(result).toEqual({ kind: "established", winner: 2 });
   });
   test("tallyEqual discriminates kind, reason, and winner", () => {

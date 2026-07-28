@@ -131,10 +131,15 @@ const forbiddenToolSurfaces = [
 ] as const;
 
 function trackedAuthoredFiles(): string[] {
+  // Repo inventory is past Node/Bun's default 1 MiB maxBuffer (~1.06 MiB of
+  // nul-delimited paths today); without a larger buffer spawnSync returns
+  // status=null and the coverage job fails even when Tests is green.
   const res = spawnSync("git", ["ls-files", "-z"], {
     cwd: REPO_ROOT,
     encoding: "buffer",
+    maxBuffer: 32 * 1024 * 1024,
   });
+  expect(res.error ?? null).toBeNull();
   expect(res.status).toBe(0);
   return Buffer.from(res.stdout)
     .toString("utf-8")
