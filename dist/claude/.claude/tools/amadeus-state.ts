@@ -110,6 +110,7 @@ import {
   type StandingGrantScanObserver,
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
@@ -651,6 +652,17 @@ function withStateOperationTarget<T>(
   }
 }
 
+// Telemetry process span (opt-in; no-op unless observability.enabled).
+// Resolution failures must not change the CLI contract — skip silently. Lives
+// outside main() so the span costs the dispatcher no branch of its own.
+function observeToolRun(subcommand: string | undefined): void {
+  try {
+    initProcessObservability(`tool:amadeus-state:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+}
+
 function main(): void {
   const args = process.argv.slice(2);
 
@@ -662,6 +674,9 @@ function main(): void {
   }
 
   const subcommand = args[0];
+
+  observeToolRun(subcommand);
+
 
   try {
     switch (subcommand) {
@@ -1445,11 +1460,13 @@ export function isNonDocPath(p: string): boolean {
 // callers fall back to the filesystem check rather than trapping.
 function git(pd: string, args: string[]): string | null {
   try {
-    const r = spawnSync("git", args, {
-      cwd: pd,
-      encoding: "utf-8",
-      timeout: 30_000,
-    });
+    const r = observeSubprocess(pd, "git", () =>
+      spawnSync("git", args, {
+        cwd: pd,
+        encoding: "utf-8",
+        timeout: 30_000,
+      }),
+    );
     if (r.status !== 0 || typeof r.stdout !== "string") return null;
     return r.stdout;
   } catch {

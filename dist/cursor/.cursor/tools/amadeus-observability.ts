@@ -46,35 +46,43 @@ export type ObservabilityConfig = {
 
 const DISABLED: ObservabilityConfig = { enabled: false, localExport: false, redactionOptIn: [] };
 
+// Sub-parsers return null for "reject the whole observability value" and a
+// wrapped value otherwise, so absence and rejection stay distinguishable.
+function parseOtlpEndpoint(raw: unknown): { endpoint: string | undefined } | null {
+  if (raw === undefined) return { endpoint: undefined };
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const endpoint = (raw as Record<string, unknown>).endpoint;
+  if (endpoint !== undefined && typeof endpoint !== "string") return null;
+  return { endpoint };
+}
+
+function parseLocalExport(raw: unknown, fallback: boolean): { localExport: boolean } | null {
+  if (raw === undefined) return { localExport: fallback };
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const enabled = (raw as Record<string, unknown>).enabled;
+  if (enabled !== undefined && typeof enabled !== "boolean") return null;
+  return { localExport: enabled ?? fallback };
+}
+
+function parseRedactionOptIn(raw: unknown): { optIn: readonly string[] } | null {
+  if (raw === undefined) return { optIn: [] };
+  if (!Array.isArray(raw) || raw.some((v) => typeof v !== "string")) return null;
+  return { optIn: raw as readonly string[] };
+}
+
 function parseObservabilityValue(raw: unknown): ObservabilityConfig | null {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
   const record = raw as Record<string, unknown>;
   if (typeof record.enabled !== "boolean") return null;
-  const otlp = record.otlp;
-  let otlpEndpoint: string | undefined;
-  if (otlp !== undefined) {
-    if (otlp === null || typeof otlp !== "object" || Array.isArray(otlp)) return null;
-    const endpoint = (otlp as Record<string, unknown>).endpoint;
-    if (endpoint !== undefined && typeof endpoint !== "string") return null;
-    otlpEndpoint = endpoint;
-  }
-  const local = record.local;
-  let localExport = record.enabled;
-  if (local !== undefined) {
-    if (local === null || typeof local !== "object" || Array.isArray(local)) return null;
-    const enabled = (local as Record<string, unknown>).enabled;
-    if (enabled !== undefined && typeof enabled !== "boolean") return null;
-    if (enabled !== undefined) localExport = enabled;
-  }
-  const optIn = record.redactionOptIn;
-  if (optIn !== undefined && (!Array.isArray(optIn) || optIn.some((v) => typeof v !== "string"))) {
-    return null;
-  }
+  const otlp = parseOtlpEndpoint(record.otlp);
+  const local = parseLocalExport(record.local, record.enabled);
+  const optIn = parseRedactionOptIn(record.redactionOptIn);
+  if (otlp === null || local === null || optIn === null) return null;
   return {
     enabled: record.enabled,
-    otlpEndpoint,
-    localExport,
-    redactionOptIn: (optIn as readonly string[] | undefined) ?? [],
+    otlpEndpoint: otlp.endpoint,
+    localExport: local.localExport,
+    redactionOptIn: optIn.optIn,
   };
 }
 
@@ -245,17 +253,23 @@ export function initProcessObservability(name: string, projectDir: string): void
   if (!observabilityEnabled(projectDir)) return;
   if (_processObservation !== null) return; // first caller wins (one span per process)
   _processObservation = { projectDir, name, startMs: Date.now(), registered: true };
-  process.on("exit", (code) => {
-    const obs = _processObservation;
-    if (obs === null) return;
-    appendTelemetryEvent(obs.projectDir, {
-      kind: "process",
-      name: obs.name,
-      startMs: obs.startMs,
-      endMs: Date.now(),
-      ok: code === 0,
-      meta: { exitCode: String(code) },
-    });
+  process.on("exit", (code) => flushProcessObservation(code));
+}
+
+// Write the pending process span and clear it. Split out of the exit handler
+// so the write path is drivable in-process (an exit handler fires after the
+// coverage snapshot); the handler and this seam share one implementation.
+export function flushProcessObservation(exitCode: number): void {
+  const obs = _processObservation;
+  if (obs === null) return;
+  _processObservation = null;
+  appendTelemetryEvent(obs.projectDir, {
+    kind: "process",
+    name: obs.name,
+    startMs: obs.startMs,
+    endMs: Date.now(),
+    ok: exitCode === 0,
+    meta: { exitCode: String(exitCode) },
   });
 }
 

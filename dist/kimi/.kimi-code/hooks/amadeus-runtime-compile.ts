@@ -23,6 +23,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeIntent,
   activeSpace,
@@ -120,6 +121,9 @@ const space = activeSpace(projectDir);
 const intent = activeIntent(projectDir, space) ?? undefined;
 const audit = readAllAuditShards(projectDir, intent, space).replace(/\r\n/g, "\n");
 if (audit.length === 0) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:runtime-compile", projectDir);
 
 // 5. Heartbeat — doctor reads this file's mtime to detect silent-hook failure.
 //    Kept at the bare (workspace-level) health dir to match where --doctor reads

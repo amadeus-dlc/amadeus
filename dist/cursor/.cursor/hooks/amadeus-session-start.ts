@@ -24,6 +24,7 @@ import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { stageGraphDrift } from "../tools/amadeus-graph.ts";
 import { repointHarnessIncludes } from "../tools/amadeus-includes.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeIntentUuid,
   activeSpace,
@@ -65,6 +66,9 @@ const stateFile = stateFilePath(projectDir);
 
 // No workflow active — do nothing
 if (!existsSync(stateFile)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:session-start", projectDir);
 
 // Write health heartbeat
 const healthDir = hooksHealthDir(projectDir);

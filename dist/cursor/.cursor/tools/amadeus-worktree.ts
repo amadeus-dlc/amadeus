@@ -33,6 +33,7 @@ import {
   worktreePath,
   worktreeStateFilePath,
 } from "./amadeus-lib.js";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 // kebab-case slug shape: lowercase letter, then lowercase letters / digits /
 // hyphens. Mirrors stage-schema.ts:95+:101 — the codebase already duplicates
@@ -97,12 +98,25 @@ interface GitResult {
   code: number;
 }
 
+// Telemetry project dir for subprocess spans. Resolved fail-open: a telemetry
+// lookup must never change a git invocation's behaviour, and an unresolvable
+// project simply reads as observability-disabled.
+function telemetryProjectDir(): string {
+  try {
+    return resolveProjectDir(projectDir);
+  } catch {
+    return "";
+  }
+}
+
 function runGit(args: string[], cwd?: string): GitResult {
-  const r = spawnSync("git", args, {
-    cwd,
-    encoding: "utf-8",
-    env: { ...process.env, EDITOR: process.env.EDITOR ?? "false" },
-  });
+  const r = observeSubprocess(telemetryProjectDir(), "git", () =>
+    spawnSync("git", args, {
+      cwd,
+      encoding: "utf-8",
+      env: { ...process.env, EDITOR: process.env.EDITOR ?? "false" },
+    }),
+  );
   return {
     ok: r.status === 0,
     stdout: (r.stdout ?? "").toString(),
@@ -913,6 +927,15 @@ function main(): void {
   try {
     switch (subcommand) {
       case "create":
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-worktree:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
         handleCreate(filteredArgs.slice(1));
         break;
       case "merge":

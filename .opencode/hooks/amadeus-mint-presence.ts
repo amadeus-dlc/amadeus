@@ -45,6 +45,7 @@ import {
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   hostSessionCapability,
   mintHumanPresence,
@@ -92,6 +93,8 @@ try {
   const context = await readPromptContext();
   const projectDir = resolveProjectDirFromHook(import.meta.url, context.cwd);
   if (existsSync(stateFilePath(projectDir)) && !context.machineInjected) {
+    // Telemetry process span (opt-in; no-op unless observability.enabled)
+    initProcessObservability("hook:mint-presence", projectDir);
     mintHumanPresence({
       projectDir,
       capability: hostSessionCapability(context.sessionId),

@@ -11,6 +11,8 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { join } from "node:path";
 import {
   appendTelemetryEvent,
+  flushProcessObservation,
+  initProcessObservability,
   observabilityEnabled,
   observe,
   observeSubprocess,
@@ -194,6 +196,32 @@ describe("telemetry buffer (enabled path)", () => {
       ["fake-node", true, "0"],
       ["fake-bun", false, "3"],
     ]);
+  });
+});
+
+describe("process span (init + flush seam)", () => {
+  test("init arms once and flush writes the process span with the exit code", () => {
+    proj = seedProject();
+    writeConfig(proj, "global", { observability: { enabled: true } });
+    resetObservabilityConfigCache();
+    initProcessObservability("tool:test-entry", proj);
+    initProcessObservability("tool:second-caller-ignored", proj);
+    flushProcessObservation(0);
+    flushProcessObservation(0); // idempotent: pending observation already cleared
+    const records = bufferGlobRead(proj)
+      .split("\n")
+      .filter((l) => l !== "")
+      .map((l) => JSON.parse(l));
+    expect(records.length).toBe(1);
+    expect(records[0]).toMatchObject({ kind: "process", name: "tool:test-entry", ok: true });
+    expect(records[0].meta).toEqual({ exitCode: "0" });
+  });
+
+  test("a broken config file resolves to disabled (read-failure fail-closed)", () => {
+    proj = seedProject();
+    writeFileSync(join(proj, "amadeus", "config.json"), "{not json", "utf-8");
+    resetObservabilityConfigCache();
+    expect(observabilityEnabled(proj)).toBe(false);
   });
 });
 
