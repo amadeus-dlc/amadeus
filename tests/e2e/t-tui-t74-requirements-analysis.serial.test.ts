@@ -74,36 +74,30 @@
 // AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
 // distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts (node on
-// Windows so node-pty never loads under bun, #748; bun elsewhere). The
-// answer-gate loop lives in the driver — one implementation, both backends. The
-// `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0); no filename
-// mechanism segment is needed. Platform-invariant: the asserts are plain-text grid
-// + on-disk reads, so the Windows node-pty backend (validated via SSM later)
-// captures them identically. Only `resolveWinNode` is imported.
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// answer-gate loop lives in the driver. The
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0); no filename
+// mechanism segment is needed. Assertions use the plain-text tmux grid and
+// on-disk reads.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the .sh set 900 and
 // the integration tier sets 600). A full requirements-analysis run-through is
@@ -112,49 +106,14 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live requirements-analysis journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -185,7 +144,7 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
       let pollTimer: ReturnType<typeof setInterval> | undefined;
       try {
         // --- launch the claude TUI in the seeded sandbox ----------------------
-        expect(drive([
+        expect(runTuiDriver([
           "start",
           "--session",
           session,
@@ -201,23 +160,23 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         ]).rc).toBe(0);
 
         // clear the two startup modals (idempotent — only act if present)
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded mid-inception -> the statusline paints the workflow phase
         // (INCEPTION), not the fresh "ready" line. Either is a valid pre-prompt
         // resting state, but the seeded fixture is INCEPTION.
-        expect(waitFor(session, "\\[AIDLC\\].*(INCEPTION|ready)", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*(INCEPTION|ready)", 45000, 800)).toBe(true);
 
         // --- submit the stage jump --------------------------------------------
         // The slash command has spaces -> send literally with no auto-Enter, then
         // Enter as a named key (the template's exact two-step). The fixture's
         // Current Stage already equals the target, so amadeus-jump treats this as a
         // redo and does NOT terminate — the stage's own gate runs interactively.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -226,26 +185,25 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Confirm the workflow is live (the stage is running — statusline shows a
         // live phase). --stable-ms 0: the screen is streaming (token counter /
         // spinner), so match the instant the phase text appears.
         expect(
-          waitFor(session, "\\[AIDLC\\].*(INCEPTION|IDEATION|CONSTRUCTION)", 120000, 0),
+          waitForTui(session, "\\[AIDLC\\].*(INCEPTION|IDEATION|CONSTRUCTION)", 120000, 0),
         ).toBe(true);
 
         // Begin tailing the grid for the render assertion BEFORE answer-gate runs,
         // so we catch the waiting menu caret + footer while the gates are up. The
         // highlighted-option caret is PLATFORM-VARIANT: `❯` (U+276F) under tmux on
-        // macOS/Linux, but the real claude DOWNGRADES it to ASCII `>` under Windows
-        // ConPTY (proven by reading grid.txt on the EC2 box 2026-06-06). So we match
-        // the caret only when it precedes a numbered option (`❯ 1.` / `> 1.`) — the
+        // Some terminal paths downgrade the caret to ASCII `>`, so we match the
+        // caret only when it precedes a numbered option (`❯ 1.` / `> 1.`) — the
         // same shape gridHasMenu() uses; a bare `>` input prompt has no `<digit>.` and
-        // cannot satisfy it. This keeps the render proof honest on both platforms.
+        // cannot satisfy it. This keeps the render proof honest.
         const caretOnOption = /^\s*(?:❯|>)\s+\d+\.\s/m;
         pollTimer = setInterval(() => {
-          const grid = drive(["capture", "--session", session]).stdout;
+          const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (caretOnOption.test(grid)) sawMenuCaret = true;
           if (grid.includes("Enter to select") || grid.includes("Submit answers")) {
             sawSelectFooter = true;
@@ -258,42 +216,33 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         // exact final-artefact name `requirements.md` (see FINDING above) so the
         // loop does not stop early on the questions file. Run it as a long-lived
         // subprocess; its own backstops error loud, so a hang surfaces as nonzero.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              sandbox,
-              // Terminate on the POST-APPROVAL state signal, not the requirements.md
-              // file. The artefact is written at Step 5 (generation), but the stage
-              // is only marked `[x]` / Last Completed Stage / Current-Stage-advanced
-              // at Step 7 (approval). Terminating on the file stopped the answer-gate
-              // BEFORE the approval gate (verified live 2026-06-06: terminator met
-              // after 7 answers, requirements.md present, but `[x] requirements-
-              // analysis` was false — the t73 terminator-race). The approve tool
-              // writes `- **Last Completed Stage**: requirements-analysis` atomically
-              // with GATE_APPROVED + STAGE_COMPLETED, so this signal means the stage
-              // genuinely completed AND was approved — the post-condition assertions
-              // 9/10/11 (the `[x]` mark, Current-Stage-advanced, completed>4) require.
-              "--until-state-field",
-              "Last Completed Stage=^requirements-analysis$",
-              // No per-gate timeout: requirements-analysis may legitimately spend
-              // more than 200s before the first menu while reading inputs and
-              // writing memory/questions. The live NDJSON trace captured that exact
-              // active-progress path, so only the overall wedge ceiling should kill
-              // the answer loop.
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          sandbox,
+          // Terminate on the POST-APPROVAL state signal, not the requirements.md
+          // file. The artefact is written at Step 5 (generation), but the stage
+          // is only marked `[x]` / Last Completed Stage / Current-Stage-advanced
+          // at Step 7 (approval). Terminating on the file stopped the answer-gate
+          // BEFORE the approval gate (verified live 2026-06-06: terminator met
+          // after 7 answers, requirements.md present, but `[x] requirements-
+          // analysis` was false — the t73 terminator-race). The approve tool
+          // writes `- **Last Completed Stage**: requirements-analysis` atomically
+          // with GATE_APPROVED + STAGE_COMPLETED, so this signal means the stage
+          // genuinely completed AND was approved — the post-condition assertions
+          // 9/10/11 (the `[x]` mark, Current-Stage-advanced, completed>4) require.
+          "--until-state-field",
+          "Last Completed Stage=^requirements-analysis$",
+          // No per-gate timeout: requirements-analysis may legitimately spend
+          // more than 200s before the first menu while reading inputs and
+          // writing memory/questions. The live NDJSON trace captured that exact
+          // active-progress path, so only the overall wedge ceiling should kill
+          // the answer loop.
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = undefined;
         expect(gateRc).toBe(0);
@@ -387,7 +336,7 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         expect(sawSelectFooter).toBe(true);
       } finally {
         if (pollTimer) clearInterval(pollTimer);
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

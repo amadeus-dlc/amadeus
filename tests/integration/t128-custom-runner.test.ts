@@ -74,6 +74,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
@@ -91,7 +92,9 @@ function run(
   tool: string,
   args: string[],
 ): { out: string; status: number; stdout: string } {
-  const res = spawnSync(BUN, [tool, ...args], { encoding: "utf-8" });
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args], {
+    encoding: "utf-8",
+  });
   return {
     out: `${res.stdout ?? ""}${res.stderr ?? ""}`,
     stdout: res.stdout ?? "",

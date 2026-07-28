@@ -115,7 +115,7 @@ AMADEUS_SETUP_E2E_NETWORK=1 bash tests/run-tests.sh --release
 
 ```bash
 cd packages/setup
-npm pack --dry-run
+bun pm pack --dry-run
 ```
 
 期待される出力はちょうど 5 エントリです: `dist/cli.js`、`LICENSE-MIT`、
@@ -127,10 +127,10 @@ npm pack --dry-run
 次に実際の tarball をローカルへインストールしてスモークテストします:
 
 ```bash
-npm pack
+bun pm pack
 mkdir -p /tmp/amadeus-setup-smoke && cd /tmp/amadeus-setup-smoke
-npm install /path/to/packages/setup/amadeus-dlc-setup-<version>.tgz
-npx amadeus-setup --help
+bun add /path/to/packages/setup/amadeus-dlc-setup-<version>.tgz
+bunx amadeus-setup --help
 ```
 
 (`packages/setup` からの `bun link` は、tarball インストール手順の代替として
@@ -152,8 +152,7 @@ Actions タブから `main` に対して **Release @amadeus-dlc/setup** を実�
 3. `dist/cli.js` が新規にビルドされ、`npm publish --provenance --access public` で
    publish される(prerelease バージョンは自動的に `--tag next` で publish され、
    `latest` には決して触れない)
-4. リトライ付きの `npx @amadeus-dlc/setup@<version>` スモークチェックが実行を
-   締めくくる
+4. レジストリへの伝播完了後、Bun で publish 後の検証を手動実行する
 
 リリースはテストを再実行しません: `main` 上のすべてのコミットは PR 時点で 5 つの
 CI 品質ゲートを既に通過しており、bump コミット自体は release-it による 1 行の
@@ -164,7 +163,7 @@ dispatch は bump をスキップしてコミット済みのバージョンを�
 リリースします(`release-it --no-increment`、タグのみ)。`vX.Y.Z` タグを手動で
 push することはフォールバックの入口として残っています — これは bump を
 スキップし(タグはコミット済みのパッケージバージョンと一致し、`main` を指す必要が
-あります)、ノート → ビルド → publish → スモークを実行します。
+あります)、ノート → ビルド → publish を実行します。
 
 リリースせずにリハーサルするには、`dry-run: true` で dispatch します —
 release-it が `--dry-run` で実行され(コミット/タグ/push なし)、実際の publish は
@@ -192,11 +191,11 @@ npm publish --access public --tag next
 
 ## 6. Publish 後の検証
 
-手動で検証します(ワークフローが実行内の npx スモークを意図的に持たないのは、
+手動で検証します(ワークフローが実行内の bunx スモークを意図的に持たないのは、
 publish 直後のレジストリ伝播遅延が誤報の発生源になったためです):
 
 ```bash
-npx @amadeus-dlc/setup@<version> --help
+bunx @amadeus-dlc/setup@<version> --help
 ```
 
 次に `https://www.npmjs.com/package/@amadeus-dlc/setup` のパッケージページを確認し、

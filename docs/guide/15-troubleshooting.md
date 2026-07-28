@@ -213,7 +213,7 @@ Expected behavior — the statusline updates when the state file is next written
 
 ## Installer Unavailable — Manual Copy Fallback
 
-**Symptom**: `bunx @amadeus-dlc/setup install` (or the `npx` form) cannot run — no network access to GitHub, an air-gapped environment, or the npm/bun registries are unreachable from your machine.
+**Symptom**: `bunx @amadeus-dlc/setup install` cannot run — no network access to GitHub, an air-gapped environment, or the npm registry is unreachable from your machine.
 
 ### Manual copy
 

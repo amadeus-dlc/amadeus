@@ -93,6 +93,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -193,7 +194,7 @@ interface FireResult {
  */
 function fireStdin(hook: string, json: string, proj: string): FireResult {
   const r = Bun.spawnSync({
-    cmd: [BUN, hook],
+    cmd: [BUN, amadeusToolTarget(hook)],
     stdin: new TextEncoder().encode(json),
     stdout: "pipe",
     stderr: "ignore",

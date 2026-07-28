@@ -63,6 +63,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -158,7 +159,7 @@ function run(
   args: string[],
   env: Record<string, string> = {},
 ): { status: number; out: string } {
-  const r = spawnSync(BUN, [tool, ...args], {
+  const r = spawnSync(BUN, [amadeusToolTarget(tool), ...args], {
     encoding: "utf-8",
     env: { ...process.env, ...env },
   });

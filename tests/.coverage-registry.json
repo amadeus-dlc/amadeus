@@ -859,7 +859,7 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
@@ -2495,7 +2495,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -3304,7 +3304,7 @@
         },
         {
           "file": "tests/unit/t202-hook-project-dir-worktree-marker.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -3851,7 +3851,7 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
@@ -3975,7 +3975,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4102,7 +4102,7 @@
         },
         {
           "file": "tests/integration/t91.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
@@ -6158,7 +6158,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",
@@ -6317,7 +6317,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",
@@ -6341,7 +6341,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",

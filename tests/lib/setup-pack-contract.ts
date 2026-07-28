@@ -10,18 +10,19 @@
 // This is test-side vocabulary only (domain-entities.md) — no production
 // type is added to packages/setup/src/.
 
-import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 
 /**
- * package.json `files` entries that must be declared explicitly. npm does not
+ * package.json `files` entries that must be declared explicitly. Bun does not
  * auto-include non-standard LICENSE-* filenames, so these are only bundled
  * because the `files` field lists them.
  */
 const DECLARED_IN_FILES: readonly string[] = Object.freeze(["dist/cli.js", "LICENSE-MIT", "LICENSE-APACHE"]);
 
 /**
- * Files npm always bundles regardless of the `files` field's contents (npm's
+ * Files Bun always bundles regardless of the `files` field's contents (Bun's
  * own packing behavior — verified empirically against the real tool, not
  * assumed).
  */
@@ -71,39 +72,56 @@ export type PackReport = {
 
 export type PackReportError = { readonly type: "malformed-output"; readonly detail: string };
 
+const ANSI_ESCAPE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, "g");
+
+export type PackDryRunEnvironment = {
+  pack(cwd: string): { exitCode: number; stdout: string; stderr: string };
+  readManifest(cwd: string): string;
+};
+
+const REAL_PACK_ENVIRONMENT: PackDryRunEnvironment = {
+  pack(cwd) {
+    const result = Bun.spawnSync([process.execPath, "pm", "pack", "--dry-run"], { cwd });
+    return {
+      exitCode: result.exitCode,
+      stdout: result.stdout.toString(),
+      stderr: result.stderr.toString(),
+    };
+  },
+  readManifest(cwd) {
+    return readFileSync(join(cwd, "package.json"), "utf8");
+  },
+};
+
 export namespace PackReport {
   /**
-   * Parses the JSON value produced by `npm pack --dry-run --json`: an array
-   * with one entry per packed workspace member. @amadeus-dlc/setup is packed
-   * alone, so exactly one entry is expected.
+   * Parses the file rows and tarball name produced by `bun pm pack --dry-run`.
    */
-  export function parse(npmPackJson: unknown): Result<PackReport, PackReportError> {
-    if (!Array.isArray(npmPackJson) || npmPackJson.length === 0) {
+  export function parse(bunPackOutput: string, packageName: string): Result<PackReport, PackReportError> {
+    const lines = bunPackOutput
+      .replace(ANSI_ESCAPE, "")
+      .split(/\r?\n/)
+      .map((line) => line.trim());
+    const paths = lines
+      .map((line) => /^packed\s+\S+\s+(.+)$/.exec(line)?.[1])
+      .filter((path): path is string => path !== undefined);
+    if (paths.length === 0) {
       return Result.err({
         type: "malformed-output",
-        detail: "expected a non-empty array from npm pack --dry-run --json",
+        detail: "expected file rows from bun pm pack --dry-run",
       });
     }
-    const [entry] = npmPackJson;
-    if (typeof entry !== "object" || entry === null) {
-      return Result.err({ type: "malformed-output", detail: "expected an object as the first array entry" });
+    const tarball = lines.find((line) => line.endsWith(".tgz"));
+    const tarballPrefix = `${packageName.replace(/^@/, "").replaceAll("/", "-")}-`;
+    if (tarball === undefined || !tarball.startsWith(tarballPrefix)) {
+      return Result.err({
+        type: "malformed-output",
+        detail: `expected a ${tarballPrefix}<version>.tgz filename from bun pm pack --dry-run`,
+      });
     }
-    const { files, version } = entry as Record<string, unknown>;
-    if (!Array.isArray(files)) {
-      return Result.err({ type: "malformed-output", detail: "expected a files array in npm pack output" });
-    }
-    const paths: string[] = [];
-    for (const f of files) {
-      if (typeof f !== "object" || f === null || typeof (f as Record<string, unknown>).path !== "string") {
-        return Result.err({
-          type: "malformed-output",
-          detail: "expected {path: string} entries in the files array",
-        });
-      }
-      paths.push((f as Record<string, unknown>).path as string);
-    }
-    if (typeof version !== "string") {
-      return Result.err({ type: "malformed-output", detail: "expected a string version in npm pack output" });
+    const version = tarball.slice(tarballPrefix.length, -".tgz".length);
+    if (version.length === 0) {
+      return Result.err({ type: "malformed-output", detail: "expected a version in the packed tarball filename" });
     }
     const frozenPaths = Object.freeze(paths);
     return Result.ok(
@@ -116,26 +134,32 @@ export namespace PackReport {
 }
 
 /**
- * Runs the real `npm pack --dry-run --json` (BR-P01: no simulation, no
+ * Runs the real `bun pm pack --dry-run` (BR-P01: no simulation, no
  * hardcoded self-referential comparison) against `cwd` and parses its stdout
  * into a PackReport.
  */
-export function runNpmPackDryRun(cwd: string): Result<PackReport, PackReportError> {
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd, encoding: "utf8" });
-  if (result.status !== 0) {
+export function runBunPackDryRun(
+  cwd: string,
+  environment: PackDryRunEnvironment = REAL_PACK_ENVIRONMENT,
+): Result<PackReport, PackReportError> {
+  const result = environment.pack(cwd);
+  if (result.exitCode !== 0) {
     return Result.err({
       type: "malformed-output",
-      detail: `npm pack --dry-run --json exited ${result.status}: ${result.stderr || result.stdout}`,
+      detail: `bun pm pack --dry-run exited ${result.exitCode}: ${result.stderr || result.stdout}`,
     });
   }
-  let parsed: unknown;
+  let packageName: unknown;
   try {
-    parsed = JSON.parse(result.stdout);
+    packageName = JSON.parse(environment.readManifest(cwd)).name;
   } catch (e) {
     return Result.err({
       type: "malformed-output",
-      detail: `failed to JSON.parse npm pack output: ${(e as Error).message}`,
+      detail: `failed to read package name: ${(e as Error).message}`,
     });
   }
-  return PackReport.parse(parsed);
+  if (typeof packageName !== "string") {
+    return Result.err({ type: "malformed-output", detail: "expected a string package name in package.json" });
+  }
+  return PackReport.parse(result.stdout, packageName);
 }

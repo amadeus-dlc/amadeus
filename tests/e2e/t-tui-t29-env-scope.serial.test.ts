@@ -71,65 +71,32 @@
 // bare `--e2e` SKIPs it; tmux/claude/distributable absence also SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess (node on Windows so node-pty never loads under bun, #748; bun
-// elsewhere). The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
-// (Phase 0) — no filename mechanism segment. Platform-invariant: the assertions
-// are plain-text grid + on-disk reads, so the Windows node-pty backend (SSM leg,
-// later) observes them identically. Only resolveWinNode is imported.
+// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform.
+// The runTuiDriver() call is what DERIVES the `tui` mechanism
+// (Phase 0) — no filename mechanism segment. Assertions use the plain-text tmux
+// grid and on-disk reads.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
+// Bun runs the TypeScript entrypoint natively.
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration
 // tier sets 600). A fresh-project state-init + first-post-init-stage start is a
 // few minutes of real LLM turns, so the bun:test cap is generous.
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 // Poll an ON-DISK predicate until true or timeout — the deterministic completion
 // signal for a fresh-workflow start. We do NOT gate on the statusline flipping to
@@ -160,12 +127,12 @@ async function waitForScopeLanding(
   while (Date.now() < deadline) {
     if (scopeLanded(projectDir, scope)) return { landed: true, pane };
 
-    pane = drive(["capture", "--session", session]).stdout;
+    pane = runTuiDriver(["capture", "--session", session]).stdout;
     if (!answeredBootstrap && paneOffersBootstrap(pane, scope)) {
       // The conductor sometimes asks before scaffolding an empty workspace.
       // The default caret is "Scaffold & start <scope>", which is the real user
       // path to the same state-init write this test asserts.
-      drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+      runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
       answeredBootstrap = true;
     }
 
@@ -173,7 +140,7 @@ async function waitForScopeLanding(
   }
 
   if (scopeLanded(projectDir, scope)) return { landed: true, pane };
-  pane = drive(["capture", "--session", session]).stdout;
+  pane = runTuiDriver(["capture", "--session", session]).stdout;
   return { landed: false, pane };
 }
 
@@ -193,24 +160,13 @@ function scopeLanded(projectDir: string, scope: string): boolean {
 
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
-// Copied verbatim from the workshop template (Windows node / node-pty checks
-// kept exactly).
+// Kept aligned with the workshop template's cross-platform substrate checks.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live env-scope journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -237,7 +193,7 @@ function setSettingsEnvScope(projectDir: string, value: string): void {
 // project so they never share state). Returns once the no-workflow `[Amadeus-DLC] ready`
 // statusline is up (the pre-prompt baseline every case starts from).
 function launchReady(session: string, projectDir: string): void {
-  expect(drive([
+  expect(runTuiDriver([
     "start",
     "--session",
     session,
@@ -253,13 +209,13 @@ function launchReady(session: string, projectDir: string): void {
   ]).rc).toBe(0);
 
   // clear the two startup modals (idempotent — only act if present)
-  if (waitFor(session, "trust this folder", 60000, 600)) {
-    drive(["send", "--session", session, "--keys", "1"]);
+  if (waitForTui(session, "trust this folder", 60000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "1"]);
   }
-  if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-    drive(["send", "--session", session, "--keys", "2"]);
+  if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "2"]);
   }
-  expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+  expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 }
 
 describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on disk)", () => {
@@ -278,11 +234,11 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         // itself create a workflow for an otherwise empty slash command.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
-        expect(waitFor(session, "No workflow state found", 240000, 0)).toBe(true);
-        const pane = drive(["capture", "--session", session]).stdout;
+        expect(waitForTui(session, "No workflow state found", 240000, 0)).toBe(true);
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         expect(pane).toContain("No workflow state found");
         // The guidance sentence can line-wrap at any word, and Claude may
         // collapse the tail of a tool result behind "+N lines" in the rendered
@@ -296,7 +252,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         // (stateFilePathFor falls to the never-created flat fallback path).
         expect(existsSync(stateFilePathFor(proj))).toBe(false);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
@@ -325,8 +281,8 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         // Shipped `workshop` env default stays; the explicit --scope flag must win.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/amadeus --scope feature", "--literal", "--no-enter"]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "/amadeus --scope feature", "--literal", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // TERMINATE on the DETERMINISTIC disk signal: Scope=feature in state.md.
         // `feature` is a 32-stage full lifecycle, so its pre-state init reasoning is
@@ -354,7 +310,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         const wiIdx = auditMd.indexOf("WORKSPACE_INITIALISED");
         expect(auditMd.slice(wiIdx, wiIdx + 500)).toMatch(/Scope.*:\s*feature/);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
@@ -376,8 +332,8 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         // Shipped `workshop` env default stays; the known scope positional wins.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/amadeus feature", "--literal", "--no-enter"]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "/amadeus feature", "--literal", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         const { landed, pane } = await waitForScopeLanding(session, proj, "feature", 300000);
         if (!landed) {
@@ -391,7 +347,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         expect(stateMd).toMatch(/^- \*\*Scope\*\*: feature$/m);
         expect(stateMd).not.toMatch(/^- \*\*Scope\*\*: workshop$/m);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
@@ -414,15 +370,15 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         setSettingsEnvScope(proj, "bogus");
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Rendered: the canonical error text appears in the pane. The orchestrator
         // prints `Invalid AMADEUS_DEFAULT_SCOPE "bogus". Valid scopes: ...` and
         // STOPs (amadeus-utility.ts:2798). The literal substring is the .sh's
         // assert_contains target (line 58); it must paint VERBATIM.
-        expect(waitFor(session, "Invalid AMADEUS_DEFAULT_SCOPE", 240000, 0)).toBe(true);
-        const pane = drive(["capture", "--session", session]).stdout;
+        expect(waitForTui(session, "Invalid AMADEUS_DEFAULT_SCOPE", 240000, 0)).toBe(true);
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         expect(pane).toContain("Invalid AMADEUS_DEFAULT_SCOPE");
 
         // Deterministic NO-WRITE ON DISK (the .sh's Case C state-absence check,
@@ -431,7 +387,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
         // state file; stateFilePathFor falls to the never-created flat fallback).
         expect(existsSync(stateFilePathFor(proj))).toBe(false);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },

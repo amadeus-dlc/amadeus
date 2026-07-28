@@ -21,7 +21,7 @@ unit, and the non-live integration files) need only `bun`; the live journeys add
 | Dependency | Needed for | Notes |
 |------------|-----------|-------|
 | **`bun`** | every level | The runner, all hooks, and all CLI tools are TypeScript run via bun. No jq/sed/awk/Git-Bash dependency. |
-| **`tmux`** | `e2e` live TUI journeys (macOS/Linux) | The `tui-drive.ts` backend drives a real `claude` TUI through a tmux pane. Absent → the live tui tests SKIP with a reason. (On Windows the driver uses a node-pty backend instead — see the Windows runbook.) |
+| **`tmux`** | `e2e` live TUI journeys (macOS/Linux) | The `tui-drive.ts` backend drives a real `claude` TUI through a tmux pane. Absent → the live tui tests SKIP with a reason. Live rendered-terminal journeys are not supported on Windows. |
 | **`claude` CLI + AWS/Bedrock creds** | live `integration` + `e2e` files | The SDK/tui drivers spend real Bedrock tokens. The runner's preflight (`tests/integration/t19.test.ts`) gates the live tiers; without the substrate, live files SKIP per-file rather than fail. |
 | **`AMADEUS_TUI_LIVE=1`** | the token-spending live TUI journeys | A bare `--e2e` SKIPs them; `--all --debug` sets it by default. Set `AMADEUS_TUI_LIVE=0` to force the SKIP path. |
 
@@ -33,7 +33,7 @@ and the Windows substrate, see the runbook below.
 
 ## Cross-Platform
 
-The suite runs on macOS, Linux, and Windows through the native Bun runner (`bun tests/run-tests.ts`). `bash tests/run-tests.sh` remains as a POSIX compatibility wrapper for existing POSIX commands. The Windows runbook in `tests/harness/windows/` provisions a disposable Windows Server 2022 SSM host, syncs the committed git tree, installs dependencies, and runs `bun tests/run-tests.ts --all --debug` with live TUI enabled. Portability conventions used throughout the suite:
+The suite runs on macOS, Linux, and Windows through the native Bun runner (`bun tests/run-tests.ts`). `bash tests/run-tests.sh` remains as a POSIX compatibility wrapper for existing POSIX commands. The Windows runbook in `tests/harness/windows/` provisions a disposable Windows Server 2022 SSM host, syncs the committed git tree, installs dependencies, and runs `bun tests/run-tests.ts --all --debug` with live TUI disabled. Portability conventions used throughout the suite:
 
 - Use `createTestProject` from `harness/fixtures.ts` — it normalizes paths so JSON encoding and `bun` both work.
 - Use `sedReplaceInFile` from `harness/fixtures.ts`, not `sed -i` (BSD/GNU incompatible).

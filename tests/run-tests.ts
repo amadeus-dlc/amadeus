@@ -1198,8 +1198,8 @@ async function main(): Promise<number> {
       );
       if (tuiPreflightFailed) {
         process.stdout.write("\nTUI PREFLIGHT FAILURE -- skipping remaining folded TUI tests\n");
-        process.stdout.write("  The terminal substrate is present but broken (e.g. node-pty under\n");
-        process.stdout.write("  bun on Windows, microsoft/node-pty #748; or tmux capture empty).\n");
+        process.stdout.write("  The tmux terminal substrate is present but broken\n");
+        process.stdout.write("  (for example, capture-pane returned an empty grid).\n");
       } else {
         await runFilesPartitioned("e2e", args.parallel, sizeCollector, [
           ...nonTuiExcludes,

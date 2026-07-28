@@ -34,7 +34,7 @@ export const SIZE_ORDER: Record<TestSize, number> = { small: 0, medium: 1, large
 // (comment 4924008283) minus the wall-clock axis, which is dynamic (Phase D).
 const SIGNAL_PATTERNS: { readonly name: string; readonly size: TestSize; readonly re: RegExp }[] = [
   { name: "network", size: "large", re: /\bnode:(?:net|http|https|http2|dgram|tls)\b|from ["']node:(?:net|http|https|http2|dgram|tls)["']|\bWebSocket\b|\bfetch\s*\(|\.listen\s*\(/ },
-  { name: "spawn", size: "medium", re: /\bchild_process\b|node:child_process|\bspawnSync\b|\bspawn\s*\(|\bexecSync\b|\bexecFileSync\b|\bexecFile\s*\(|Bun\.spawn|node-pty/ },
+  { name: "spawn", size: "medium", re: /\bchild_process\b|node:child_process|\bspawnSync\b|\bspawn\s*\(|\bexecSync\b|\bexecFileSync\b|\bexecFile\s*\(|Bun\.spawn/ },
   { name: "filesystem", size: "medium", re: /\bnode:fs\b|from ["']fs["']|\breadFileSync\b|\bwriteFileSync\b|\bmkdirSync\b|\bmkdtempSync\b|\brmSync\b|\bexistsSync\b|\breaddirSync\b|\bstatSync\b|\bappendFileSync\b|\bcpSync\b|\brenameSync\b|\bunlinkSync\b|\bopenSync\b|\breadSync\b/ },
   { name: "timer", size: "medium", re: /\bsetTimeout\s*\(|\bsetInterval\s*\(|Bun\.sleep|\bawait\s+sleep\s*\(/ },
 ];
