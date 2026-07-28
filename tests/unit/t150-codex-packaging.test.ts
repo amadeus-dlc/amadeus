@@ -199,8 +199,15 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     const dirs = readdirSync(skillsDir).filter((d) =>
       statSync(join(skillsDir, d)).isDirectory(),
     );
-    // 42 skills: orchestrator + election + 29 stage runners + init + compose + 4 scope runners + 5 session.
-    expect(dirs.length).toBe(42);
+    // The codex skill set is the claude one, face for face: orchestrator +
+    // session skills + stage runners + init + compose + scope runners. Derived
+    // from the sibling face rather than a literal count, so adding a skill
+    // cannot go stale here — a set DIFFERENCE still fails loudly.
+    const claudeSkillsDir = join(REPO_ROOT, "dist", "claude", ".claude", "skills");
+    const claudeDirs = readdirSync(claudeSkillsDir).filter((d) =>
+      statSync(join(claudeSkillsDir, d)).isDirectory(),
+    );
+    expect(dirs.slice().sort()).toEqual(claudeDirs.slice().sort());
     for (const d of dirs) {
       const guard = join(skillsDir, d, "agents", "openai.yaml");
       if (d === "amadeus") {

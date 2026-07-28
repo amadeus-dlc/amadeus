@@ -45,14 +45,15 @@ const KIMI_EXPECTED: ReadonlyArray<string> = [
   ".kimi-code/skills/amadeus-feature/SKILL.md",
   ".kimi-code/skills/amadeus-init/SKILL.md",
   ".kimi-code/skills/amadeus-compose/SKILL.md",
-  // session skills (6) — session-cost / replay / outcomes-pack / grilling /
-  // mirror / election (FR-10, coreDirs projection)
+  // session skills — session-cost / replay / outcomes-pack / grilling /
+  // mirror / election / plugin (FR-10, coreDirs projection)
   ".kimi-code/skills/amadeus-session-cost/SKILL.md",
   ".kimi-code/skills/amadeus-replay/SKILL.md",
   ".kimi-code/skills/amadeus-outcomes-pack/SKILL.md",
   ".kimi-code/skills/amadeus-grilling/SKILL.md",
   ".kimi-code/skills/amadeus-mirror/SKILL.md",
   ".kimi-code/skills/amadeus-election/SKILL.md",
+  ".kimi-code/skills/amadeus-plugin/SKILL.md",
   // project-root install files (beside .kimi-code/, not inside it)
   "AGENTS.md", // session-resume onboarding surface
   ".gitignore", // workspace ignore split (harness-neutral + local.toml)

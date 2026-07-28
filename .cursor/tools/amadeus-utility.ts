@@ -226,7 +226,7 @@ Utilities:
   space <name>      Switch the active space (team)
   space-create <name>  Create a new space (team) seeded from the framework baseline
   codekb-path       Print the deterministic per-repo codekb directory (read-only)
-  plugin <verb>     Delegate to the plugin CLI (status, compose, drop, doctor)
+  plugin <verb>     Delegate to the plugin CLI (status, compose, drop, doctor, install)
   --doctor          Run health check on hooks, settings, and directory structure
   --stage <id>      Jump to a specific stage (by slug or number, e.g., code-generation or 3.5)
   --phase <name>    Jump to the first in-scope stage of a phase (e.g., construction or 3)

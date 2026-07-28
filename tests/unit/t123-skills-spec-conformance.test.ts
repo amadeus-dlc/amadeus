@@ -4,7 +4,7 @@
 // under dist/claude/.claude/skills/, asserted with the complete frontmatter
 // parser (the unit-tier sibling of the smoke-tier structural sweep). Migrated
 // from tests/unit/t123-skills-spec-conformance.sh (TAP plan: 1 dir-count guard
-// + 3 conformance assertions per skill = 1 + 3×38 = 115 assertions).
+// + 3 conformance assertions per discovered skill).
 //
 // Mechanism: none. There is no tool / process / argv / exit-code seam under
 // test — the subject IS the on-disk shape of the shipped skill set and the
@@ -72,9 +72,8 @@
 //         -> per-skill "SKILL.md body <= 500 lines" (wc -l counts newlines —
 //            mirrored as the count of "\n", not the split-array length).
 //
-// 1 + 3×38 = 115 .sh assertions -> 1 set-equality test() + 3 expect()s × 38
-// skills (114) = 115 expect()-bearing assertions, same observables, the
-// dir-count + name-derivation STRONGER.
+// The .sh's per-skill plan -> 1 set-equality test() + 3 expect()s per skill,
+// same observables, the dir-count + name-derivation STRONGER.
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -85,12 +84,13 @@ import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.
 const SKILLS_DIR = join(AMADEUS_SRC, "skills");
 const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
-// --- The seven shipped non-generated base skills.
+// --- The shipped non-generated base skills.
 const BASE_SKILLS = [
   "amadeus",
   "amadeus-election",
   "amadeus-grilling",
   "amadeus-mirror",
+  "amadeus-plugin",
   "amadeus-outcomes-pack",
   "amadeus-replay",
   "amadeus-session-cost",

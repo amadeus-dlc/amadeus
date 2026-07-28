@@ -42,6 +42,7 @@ const manifest: HarnessManifest = {
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
     mirrorCoreSkillDirectory("cursor"),
+    { src: "skills/amadeus-plugin", dst: "skills/amadeus-plugin" },
   ],
 
   // Three authored surfaces:

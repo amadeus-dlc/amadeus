@@ -31,11 +31,12 @@ const OPENCODE_EXPECTED: ReadonlyArray<string> = [
   ".opencode/commands/amadeus.md", // orchestrator ($amadeus command)
   "AGENTS.md", // session-resume onboarding surface
   ".opencode/opencode.json.example", // $schema + permission-narrowing example
-  // session skills (4) — session-cost / replay / outcomes-pack / grilling
+  // session skills — session-cost / replay / outcomes-pack / grilling / plugin
   ".opencode/skills/amadeus-session-cost/SKILL.md",
   ".opencode/skills/amadeus-replay/SKILL.md",
   ".opencode/skills/amadeus-outcomes-pack/SKILL.md",
   ".opencode/skills/amadeus-grilling/SKILL.md",
+  ".opencode/skills/amadeus-plugin/SKILL.md",
   ".opencode/tools/amadeus-orchestrate.ts", // the deterministic engine
   ".opencode/tools/data/harness.json", // harness descriptor
   // workspace shell seed (sibling of .opencode/, read by the engine)

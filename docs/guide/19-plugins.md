@@ -85,24 +85,39 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
 
 ---
 
-## The CLI
+## The entry points
 
 Every host-side operation is a verb of the harness-neutral CLI
-`amadeus-plugin.ts`. Run it through the copy shipped into your harness tree — for
-Claude Code that is:
+`amadeus-plugin.ts`. Three surfaces reach that one CLI. They differ in framing,
+never in behaviour — the verb contract below is the same through all of them:
 
-```
-bun .claude/tools/amadeus-plugin.ts <verb> [flags]
-```
+- **The engine verb, `/amadeus plugin <verb>`** — the first-choice notation, and
+  the same on every harness. Everything after `plugin` reaches the plugin CLI
+  unparsed, and its exit code is returned verbatim, so the CLI's own usage errors
+  stay authoritative.
+- **The skills** — `/amadeus-plugin` is a user-invocable skill that runs the
+  read-only verbs first, explains the resolved state, and then runs exactly one
+  verb you select by name; it is the guarded way to reach the mutating verbs
+  (`install`, `drop`). Separately, once a plugin that contributes a stage is
+  composed, that stage gets its own runner skill, `/amadeus-<slug>`.
+- **The raw CLI** — for scripting and advanced use, run the copy shipped into
+  your harness tree directly:
 
-Other harnesses substitute their own directory (`.codex`, `.cursor`, `.kimi`, and
-so on): `bun <harness-dir>/tools/amadeus-plugin.ts <verb>`. The verbs are:
+  ```
+  bun .claude/tools/amadeus-plugin.ts <verb> [flags]
+  ```
+
+  Other harnesses substitute their own directory (`.codex`, `.cursor`, `.kimi`,
+  and so on): `bun <harness-dir>/tools/amadeus-plugin.ts <verb>`.
+
+The verbs are:
 
 | Verb | What it does | Exit |
 | --- | --- | --- |
 | `compose [--if-stale] [--project-root <dir>]` | Apply every installed plugin to the host as one atomic transaction. `--if-stale` is a no-op fast path that returns immediately when the composition record is already current. | `0` on success or no-op; `1` on a failed apply |
 | `doctor [--project-root <dir>]` | Print each composed plugin's state (`ok`, `drift`, `recovery-pending`). | `0` when healthy; `1` when any plugin is degraded or recovery-pending |
 | `drop <plugin-name> [--project-root <dir>]` | Remove one plugin's owned files and rebuild the shared files from the remaining plugins. | `0` on success; `1` on a rejected or failed drop |
+| `install <path> [--force] [--project-root <dir>]` | Stage the plugin source folder at `<path>` into the host's discovery root and compose in one operation. `--force` replaces a *different* plugin already staged under that name. | `0` on success; `1` on a rejected or failed install |
 | `status [--project-root <dir>]` | Print counts: installed, composed, and the audit revision. | `0` |
 
 With no `--project-root`, the host root is the **harness directory the CLI itself
@@ -191,6 +206,22 @@ class:
   `hooks/auto-compose.snippet`.
 - **`manual-only`** (`opencode`) — copy the folder; there is no session hook, so
   run `compose` after install and after every plugin change.
+
+The `install` verb is the one-operation form of that folder-drop: it stages the
+source folder into the same discovery root the manual steps name and then
+composes, through the identical compose path — it re-implements none of it.
+
+```
+/amadeus plugin install path/to/plugins/example
+```
+
+The plugin's name is the source folder's basename, and the staged copy lands at
+`<host>/.amadeus-plugin-src/<name>/`. Re-running it on identical bytes is
+idempotent. A *different* plugin already staged under that name is rejected
+rather than overwritten; `--force` replaces it, and dropping it first is the
+alternative. Symlinks in the source are skipped with a stderr line each, never
+followed. A compose failure is returned unchanged, so the stage that failed stays
+visible.
 
 Composition refuses to write into an output directory unless it is empty or is our
 own prior projection of the *same* plugin and harness. A pre-existing non-empty
