@@ -193,6 +193,7 @@ describe("resilience seams (fail-open on damaged local state)", () => {
     // Dangling symlink: listed by readdir, ENOENT on read (portable across
     // macOS/Linux, unlike readFileSync(dir)).
     symlinkSync(join(dir, "missing-target"), join(dir, "buffer-dangling.jsonl"));
+    symlinkSync(join(dir, "missing-shard"), join(dirname(seededAuditShard(proj)), "host-dead00000001.jsonl"));
     writeFileSync(join(dir, "cursor.json"), "not json", "utf-8");
     const summary = await runExport(proj);
     expect(summary.status).toBe("exported");
