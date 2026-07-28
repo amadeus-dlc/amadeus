@@ -36,7 +36,7 @@ function projectionFixture(): string {
 
 describe("t288 public scanner", () => {
   test("enumerates every registered public payload and document", () => {
-    expect(publicProjectionPaths()).toHaveLength(234);
+    expect(publicProjectionPaths()).toHaveLength(247);
     expect(scanPublicProjections(process.cwd())).toEqual([]);
   });
 

@@ -59,7 +59,7 @@ describe("t285 projection registry", () => {
     expect(validateMirrorProjectionRegistry()).toEqual([]);
     for (const projection of MIRROR_PROJECTIONS) {
       expect(projection.artifacts.filter((item) => item.kind === "wrapper"))
-        .toHaveLength(15);
+        .toHaveLength(16);
       expect(projection.artifacts.some((item) => item.kind === "registration"))
         .toBe(true);
     }
