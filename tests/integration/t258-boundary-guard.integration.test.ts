@@ -81,6 +81,12 @@ const RAW_ALLOWLIST = [
   // (scripts/conformance-report.ts) is referenced from the skill's
   // artifact-contracts reference doc across the tracked distribution trees.
   { id: "conformance-report-tooling", fileGlob: "**", pattern: "scripts/conformance-report\\.ts" },
+  // Dogfood-only formal-model-check plugin (user decision 2026-07-28): the
+  // composed stage body under .claude/plugins/ and its stage-graph.json node
+  // legitimately invoke the repo-local TLC runner. The plugin never ships in a
+  // dist/<harness> tree (dist/plugins/ is a standalone opt-in bundle the
+  // installer never selects), so this reference stays repo-local by design.
+  { id: "formal-model-check-plugin-stage", fileGlob: "**", pattern: "scripts/formal-verif/run-model-check\\.ts" },
   // bare `scripts/` (directory mentions in prose/comments/lint globs): `scripts/`
   // NOT immediately followed by a filename character.
   { id: "bare-scripts-directory-mention", fileGlob: "**", pattern: "scripts/(?![A-Za-z0-9])" },
