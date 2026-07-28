@@ -150,6 +150,11 @@ describe("t234 election-model", () => {
     const oneDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 1))]);
     expect(oneDiscuss.kind).toBe("hold");
     if (oneDiscuss.kind === "hold") expect(oneDiscuss.reason).toBe("discussion-needed");
+    // 2-voter: single-ballot ledger → quorum-short even without an abstention
+    // (the model owns the FR-05 single-vote ban, not just the directive loop)
+    const oneBallot = tally(e.value, [mustParse(ballot("alice", 1))]);
+    expect(oneBallot.kind).toBe("hold");
+    if (oneBallot.kind === "hold") expect(oneBallot.reason).toBe("quorum-short");
     // 2-voter: GoA-4 abstention → quorum-short (single-vote establishment forbidden)
     const oneAbstain = tally(e.value, [mustParse(ballot("alice", 4)), mustParse(ballot("bob", 1))]);
     expect(oneAbstain.kind).toBe("hold");

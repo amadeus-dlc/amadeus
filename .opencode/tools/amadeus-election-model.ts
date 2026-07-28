@@ -459,6 +459,10 @@ export function tally(election: Election, ballots: Ballot[]): TallyResult {
   // GoA is counted over the resolved set (one ballot per voter) for these holds.
   if (blocks >= 1) return { kind: "hold", reason: "block", counts };
   if (election.voters.length === 2) {
+    // Full participation is part of the 2-voter quorum: a single-ballot ledger
+    // must never establish 1-0. The directive loop already waits on pending
+    // voters, but the model owns the invariant (FR-05 single-vote ban).
+    if (resolved.length < 2) return { kind: "hold", reason: "quorum-short", counts };
     if (counts.discuss >= 1) return { kind: "hold", reason: "discussion-needed", counts };
     if (counts.abstain >= 1) return { kind: "hold", reason: "quorum-short", counts };
     if (counts.favor === 1 && counts.against === 1) {

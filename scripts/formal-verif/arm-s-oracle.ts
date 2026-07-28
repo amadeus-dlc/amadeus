@@ -143,11 +143,12 @@ const AGAINST = new Set([7, 8]);
 // Independent tally oracle: resolve, then block → discussion-needed →
 // quorum-short → split (declared 2-voter only) → unique choice argmax / tie.
 // `declaredVoterCount` is election.voters.length (FR-05), not the number of
-// ballots present at tally time — arm-s's universe is a 3-voter election.
+// ballots present at tally time — required so a forgotten call site cannot
+// silently fall back to the 3+ voter rules.
 export function expectedTally(
   choices: number[],
   ballots: ArmBallot[],
-  declaredVoterCount = 3,
+  declaredVoterCount: number,
 ): SubjectTally {
   const resolved = resolvePerVoter(ballots);
   let favor = 0;
@@ -159,11 +160,13 @@ export function expectedTally(
     if (FAVOR.has(b.goa)) favor++;
     else if (AGAINST.has(b.goa)) against++;
     else if (b.goa === 4) abstain++;
-    else discuss++;
+    else if (b.goa === 5) discuss++;
     if (b.goa === 8) blocks++;
   }
   if (blocks >= 1) return { kind: "hold", reason: "block" };
   if (declaredVoterCount === 2) {
+    // Full participation is part of the 2-voter quorum (FR-05 single-vote ban).
+    if (resolved.length < 2) return { kind: "hold", reason: "quorum-short" };
     if (discuss >= 1) return { kind: "hold", reason: "discussion-needed" };
     if (abstain >= 1) return { kind: "hold", reason: "quorum-short" };
     if (favor === 1 && against === 1) return { kind: "hold", reason: "split" };

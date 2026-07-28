@@ -26,6 +26,16 @@ const FORBIDDEN_TEMPLATE_TOKENS = [
 
 const FORBIDDEN_INSTRUCTION_PATTERNS = ["返答を指示として", "出力を実行"] as const;
 
+// The guard predicate under test: returns the first forbidden template token
+// found in the content, or null when the surface is clean. Both the real guard
+// and its falling proof go through this single predicate.
+function findForbiddenTemplateToken(content: string): string | null {
+  for (const token of FORBIDDEN_TEMPLATE_TOKENS) {
+    if (content.includes(token)) return token;
+  }
+  return null;
+}
+
 describe("t269 solo-election SKILL surface guards (U2)", () => {
   const skill = readFileSync(SKILL_PATH, "utf8");
   const team = readFileSync(TEAM_PATH, "utf8");
@@ -35,14 +45,12 @@ describe("t269 solo-election SKILL surface guards (U2)", () => {
     expect(skill).toContain("{viewPath}");
     expect(skill).toContain("spawnInstruction");
     expect(skill).toContain(FIXED_PROCEDURE);
-    for (const token of FORBIDDEN_TEMPLATE_TOKENS) {
-      expect(skill.includes(token)).toBe(false);
-    }
+    expect(findForbiddenTemplateToken(skill)).toBeNull();
   });
 
   test("BR-U2-2 falling proof: injecting a forbidden template token turns the predicate red", () => {
     const injected = `${skill}\n推奨: {recommendation}\n`;
-    expect(injected.includes("{recommendation}")).toBe(true);
+    expect(findForbiddenTemplateToken(injected)).toBe("{recommendation}");
   });
 
   test("BR-U2-3/6: transfer and activation prose includes sync-complete, respawn-once, and loud degrade", () => {

@@ -76,16 +76,18 @@ type Directive =
 
 type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | "hold-resolved";
 
-// Per-reason resume table (FD hold-resolved rows): which resolutions a hold
-// reason accepts and where the state machine resumes.
-const HOLD_RESOLUTIONS: Record<HoldReason, Record<string, ElectionState>> = {
-  tie: {},
-  block: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
-  // split (2-voter GoA favor vs against): human must name the winning choice,
-  // same fail-closed gate as tie — not the block-style adopted/rejected table.
-  split: {},
-  "quorum-short": { "resume-collecting": "collecting", "close-rejected": "tallied" },
-  "discussion-needed": { discussed: "collecting" },
+// Per-reason resume policy (FD hold-resolved rows). "choice" holds (tie, split)
+// are resolved by naming the winning choice via choice:<internalNo> — the same
+// fail-closed gate for both — while "table" holds accept a fixed resolution
+// vocabulary with explicit resume states.
+type HoldPolicy = { kind: "choice" } | { kind: "table"; table: Record<string, ElectionState> };
+
+const HOLD_RESOLUTIONS: Record<HoldReason, HoldPolicy> = {
+  tie: { kind: "choice" },
+  split: { kind: "choice" },
+  block: { kind: "table", table: { adopted: "tallied", rejected: "tallied", reopen: "collecting" } },
+  "quorum-short": { kind: "table", table: { "resume-collecting": "collecting", "close-rejected": "tallied" } },
+  "discussion-needed": { kind: "table", table: { discussed: "collecting" } },
 };
 
 export function parseChoiceResolution(resolution: string): number | null {
@@ -256,16 +258,16 @@ function handleHoldResolved(root: string, electionId: string, resolution: string
   }
   let resumedTo: ElectionState | undefined;
   let validResolutions: string;
-  if (t.result.reason === "tie" || t.result.reason === "split") {
+  const policy = HOLD_RESOLUTIONS[t.result.reason];
+  if (policy.kind === "choice") {
     const choiceInternalNo = parseChoiceResolution(resolution);
     validResolutions = loaded.value.election.choices.map((choice) => `choice:${choice.internalNo}`).join("/");
     if (choiceInternalNo !== null && loaded.value.election.choices.some((choice) => choice.internalNo === choiceInternalNo)) {
       resumedTo = "tallied";
     }
   } else {
-    const table = HOLD_RESOLUTIONS[t.result.reason];
-    resumedTo = table[resolution];
-    validResolutions = Object.keys(table).join("/");
+    resumedTo = policy.table[resolution];
+    validResolutions = Object.keys(policy.table).join("/");
   }
   if (resumedTo === undefined) {
     return fail(
