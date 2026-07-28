@@ -83,7 +83,6 @@ function isNodePathCall(
   call: ts.CallExpression,
   context: ScanContext,
 ): boolean {
-  if (!ts.isIdentifier(call.expression)) return false;
   const imported = importedBindingOf(call.expression, context.checker);
   return imported?.module === "node:path" && imported.name === "join";
 }
@@ -260,13 +259,14 @@ function isBunSpawn(
   call: ts.CallExpression,
   context: ScanContext,
 ): boolean {
+  const callee = unwrapExpression(call.expression);
   return (
-    ts.isPropertyAccessExpression(call.expression) &&
-    ts.isIdentifier(call.expression.expression) &&
-    call.expression.expression.text === "Bun" &&
-    !context.checker.getSymbolAtLocation(call.expression.expression) &&
-    (call.expression.name.text === "spawn" ||
-      call.expression.name.text === "spawnSync")
+    ts.isPropertyAccessExpression(callee) &&
+    ts.isIdentifier(callee.expression) &&
+    callee.expression.text === "Bun" &&
+    !context.checker.getSymbolAtLocation(callee.expression) &&
+    (callee.name.text === "spawn" ||
+      callee.name.text === "spawnSync")
   );
 }
 
@@ -274,7 +274,6 @@ function isAmadeusToolTargetCall(
   call: ts.CallExpression,
   context: ScanContext,
 ): boolean {
-  if (!ts.isIdentifier(call.expression)) return false;
   const imported = importedBindingOf(call.expression, context.checker);
   return imported?.name === "amadeusToolTarget" &&
     imported.module === CLI_TARGET_MODULE;
@@ -284,7 +283,6 @@ function isBunArraySpawn(
   call: ts.CallExpression,
   context: ScanContext,
 ): boolean {
-  if (!ts.isIdentifier(call.expression)) return false;
   const imported = importedBindingOf(call.expression, context.checker);
   return imported?.module === "bun" &&
     (imported.name === "spawn" || imported.name === "spawnSync");
@@ -294,7 +292,6 @@ function positionalSpawnName(
   call: ts.CallExpression,
   context: ScanContext,
 ): string | null {
-  if (!ts.isIdentifier(call.expression)) return null;
   const imported = importedBindingOf(call.expression, context.checker);
   if (
     imported?.module === "node:child_process" &&

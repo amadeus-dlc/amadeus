@@ -4,9 +4,54 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  type ClaudeDependency,
   claudeDependenciesOf,
+  type Mechanism,
   mechanismsOf,
 } from "../gen-coverage-registry.ts";
+
+function calleeForms(callee: string): string[] {
+  return [
+    `(${callee})`,
+    `${callee}!`,
+    `(${callee} as typeof ${callee})`,
+    `(${callee} satisfies typeof ${callee})`,
+    `(<typeof ${callee}>${callee})`,
+  ];
+}
+
+type WrappedCalleeFixture = {
+  label: string;
+  callee: string;
+  source: (wrapped: string) => string;
+  expectedMechanisms: readonly Mechanism[];
+  expectedDependencies?: readonly ClaudeDependency[];
+};
+
+function wrappedCalleeMismatches(
+  fixtures: readonly WrappedCalleeFixture[],
+): string[] {
+  const mismatches: string[] = [];
+  for (const fixture of fixtures) {
+    for (const wrapped of calleeForms(fixture.callee)) {
+      const source = fixture.source(wrapped);
+      const mechanisms = mechanismsOf("t99.none.test.ts", source);
+      const dependencies = claudeDependenciesOf("t99.none.test.ts", source);
+      const expectedDependencies = fixture.expectedDependencies ?? [];
+      if (
+        mechanisms.join(",") !== fixture.expectedMechanisms.join(",") ||
+        dependencies.join(",") !== expectedDependencies.join(",")
+      ) {
+        mismatches.push(
+          `${fixture.label} via ${wrapped}: mechanisms {${mechanisms.join(
+            ",",
+          )}}, dependencies {${dependencies.join(",")}}`,
+        );
+      }
+    }
+  }
+  return mismatches;
+}
 
 describe("mechanismsOf is statically body-classified (milestone 3)", () => {
   // (a) Known-answer fixtures — each a minimal in-test source string. The
@@ -63,21 +108,39 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
   });
 
   test("SDK detection unwraps a canonical imported callee", () => {
-    const calls = [
-      '(driveAidlc)("/amadeus bugfix");',
-      'driveAidlc!("/amadeus bugfix");',
-      '(driveAidlc as typeof driveAidlc)("/amadeus bugfix");',
-      '(driveAidlc satisfies typeof driveAidlc)("/amadeus bugfix");',
-      '(<typeof driveAidlc>driveAidlc)("/amadeus bugfix");',
-    ];
-
-    for (const call of calls) {
+    for (const callee of calleeForms("driveAidlc")) {
       const src = [
         'import { driveAidlc } from "../harness/sdk-drive.ts";',
-        call,
+        `${callee}("/amadeus bugfix");`,
       ].join("\n");
       expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["sdk"]);
       expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["sdk"]);
+    }
+  });
+
+  test("escaped canonical module specifiers retain SDK and TUI identity", () => {
+    const cases = [
+      {
+        source: [
+          'import { driveAidlc } from "../harness/sdk\\x2ddrive.ts";',
+          'driveAidlc("/amadeus bugfix");',
+        ].join("\n"),
+        mechanism: "sdk",
+      },
+      {
+        source: [
+          'import { runTuiDriver } from "../harness/tui\\x2dclient.ts";',
+          "runTuiDriver([]);",
+        ].join("\n"),
+        mechanism: "tui",
+      },
+    ] as const;
+
+    for (const { source, mechanism } of cases) {
+      expect(mechanismsOf("t99.none.test.ts", source)).toEqual([mechanism]);
+      expect(claudeDependenciesOf("t99.none.test.ts", source)).toEqual([
+        mechanism,
+      ]);
     }
   });
 
@@ -190,6 +253,150 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
     ].join("\n");
 
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
+  });
+
+  test("CLI detection unwraps every canonical imported and global callee", () => {
+    const positionalCases: WrappedCalleeFixture[] = [
+      "spawn",
+      "spawnSync",
+      "execFileSync",
+    ].map((callee) => ({
+      label: `node:child_process ${callee}`,
+      callee,
+      source: (wrapped) =>
+        [
+          `import { ${callee} } from "node:child_process";`,
+          `${wrapped}("bun", ["amadeus-state.ts"]);`,
+        ].join("\n"),
+      expectedMechanisms: ["cli"],
+    }));
+    const claudeCases: WrappedCalleeFixture[] = [
+      "spawn",
+      "spawnSync",
+      "execFileSync",
+    ].map((callee) => ({
+      label: `node:child_process ${callee} for Claude print`,
+      callee,
+      source: (wrapped) =>
+        [
+          `import { ${callee} } from "node:child_process";`,
+          `${wrapped}("claude", ["-p", "hello"]);`,
+        ].join("\n"),
+      expectedMechanisms: ["cli"],
+      expectedDependencies: ["cli-claude"],
+    }));
+    const bunImportCases: WrappedCalleeFixture[] = [
+      "spawn",
+      "spawnSync",
+    ].map((callee) => ({
+      label: `bun import ${callee}`,
+      callee,
+      source: (wrapped) =>
+        [
+          `import { ${callee} } from "bun";`,
+          `${wrapped}(["bun", "amadeus-state.ts"]);`,
+        ].join("\n"),
+      expectedMechanisms: ["cli"],
+    }));
+    const globalBunCases: WrappedCalleeFixture[] = [
+      "Bun.spawn",
+      "Bun.spawnSync",
+    ].map((callee) => ({
+      label: `global ${callee}`,
+      callee,
+      source: (wrapped) =>
+        `${wrapped}(["bun", "amadeus-state.ts"]);`,
+      expectedMechanisms: ["cli"],
+    }));
+    const cases: WrappedCalleeFixture[] = [
+      ...positionalCases,
+      ...claudeCases,
+      ...bunImportCases,
+      ...globalBunCases,
+      {
+        label: "node:path join",
+        callee: "join",
+        source: (wrapped) =>
+          [
+            'import { spawnSync } from "node:child_process";',
+            'import { join } from "node:path";',
+            `spawnSync("bun", [${wrapped}("/tmp", "amadeus-state.ts")]);`,
+          ].join("\n"),
+        expectedMechanisms: ["cli"],
+      },
+      {
+        label: "amadeusToolTarget",
+        callee: "amadeusToolTarget",
+        source: (wrapped) =>
+          [
+            'import { spawnSync } from "node:child_process";',
+            'import { amadeusToolTarget } from "../harness/cli-target.ts";',
+            `spawnSync("bun", [${wrapped}("amadeus-state.ts")]);`,
+          ].join("\n"),
+        expectedMechanisms: ["cli"],
+      },
+    ];
+
+    expect(wrappedCalleeMismatches(cases)).toEqual([]);
+  });
+
+  test("wrapped CLI lookalikes and wrong-module imports remain fail closed", () => {
+    const cases: WrappedCalleeFixture[] = [
+      {
+        label: "local spawnSync",
+        callee: "spawnSync",
+        source: (wrapped) =>
+          [
+            "function spawnSync(_command: string, _args: string[]) {}",
+            `${wrapped}("bun", ["amadeus-state.ts"]);`,
+          ].join("\n"),
+        expectedMechanisms: ["none"],
+      },
+      {
+        label: "wrong-module spawnSync",
+        callee: "spawnSync",
+        source: (wrapped) =>
+          [
+            'import { spawnSync } from "./fake.ts";',
+            `${wrapped}("bun", ["amadeus-state.ts"]);`,
+          ].join("\n"),
+        expectedMechanisms: ["none"],
+      },
+      {
+        label: "wrong-module join",
+        callee: "join",
+        source: (wrapped) =>
+          [
+            'import { spawnSync } from "node:child_process";',
+            'import { join } from "./fake.ts";',
+            `spawnSync("bun", [${wrapped}("/tmp", "amadeus-state.ts")]);`,
+          ].join("\n"),
+        expectedMechanisms: ["none"],
+      },
+      {
+        label: "wrong-module amadeusToolTarget",
+        callee: "amadeusToolTarget",
+        source: (wrapped) =>
+          [
+            'import { spawnSync } from "node:child_process";',
+            'import { amadeusToolTarget } from "../fake/cli-target.ts";',
+            `spawnSync("bun", [${wrapped}("amadeus-state.ts")]);`,
+          ].join("\n"),
+        expectedMechanisms: ["none"],
+      },
+      {
+        label: "shadowed Bun.spawnSync",
+        callee: "Bun.spawnSync",
+        source: (wrapped) =>
+          [
+            "const Bun = { spawnSync(_command: string[]) {} };",
+            `${wrapped}(["bun", "amadeus-state.ts"]);`,
+          ].join("\n"),
+        expectedMechanisms: ["none"],
+      },
+    ];
+
+    expect(wrappedCalleeMismatches(cases)).toEqual([]);
   });
 
   test("Bun object spawns ignore unrelated property forms before cmd", () => {
@@ -534,18 +741,10 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
   });
 
   test("TUI detection unwraps a canonical imported callee", () => {
-    const calls = [
-      "(runTuiDriver)([]);",
-      "runTuiDriver!([]);",
-      "(runTuiDriver as typeof runTuiDriver)([]);",
-      "(runTuiDriver satisfies typeof runTuiDriver)([]);",
-      "(<typeof runTuiDriver>runTuiDriver)([]);",
-    ];
-
-    for (const call of calls) {
+    for (const callee of calleeForms("runTuiDriver")) {
       const src = [
         'import { runTuiDriver } from "../harness/tui-client.ts";',
-        call,
+        `${callee}([]);`,
       ].join("\n");
       expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
       expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);

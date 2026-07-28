@@ -30,9 +30,11 @@ export function unwrapExpression(expression: ts.Expression): ts.Expression {
 }
 
 export function importedBindingOf(
-  identifier: ts.Identifier,
+  expression: ts.Expression,
   checker: ts.TypeChecker,
 ): ImportedBinding | null {
+  const identifier = unwrapExpression(expression);
+  if (!ts.isIdentifier(identifier)) return null;
   const symbol = checker.getSymbolAtLocation(identifier);
   const declaration = symbol?.declarations?.find(ts.isImportSpecifier);
   if (!declaration) return null;
@@ -113,9 +115,7 @@ function importedCallsByModule(
   const calls = new Map<string, Set<string>>();
   visitNodes(sourceFile, (node) => {
     if (!ts.isCallExpression(node)) return;
-    const callee = unwrapExpression(node.expression);
-    if (!ts.isIdentifier(callee)) return;
-    const imported = importedBindingOf(callee, checker);
+    const imported = importedBindingOf(node.expression, checker);
     if (!imported) return;
     const names = calls.get(imported.module) ?? new Set<string>();
     names.add(imported.name);
@@ -132,7 +132,6 @@ export function hasImportedCall(
   src: string,
   query: ImportedCallQuery,
 ): boolean {
-  if (!src.includes(query.module)) return false;
   const called = importedCallsByModule(src).get(query.module);
   if (!called) return false;
   for (const name of query.exportNames) {
