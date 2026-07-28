@@ -3,10 +3,9 @@
   Idempotent dependency setup for the synced AI-DLC Windows test tree.
 
 .DESCRIPTION
-  The `e2e` TUI tests drive the real `claude` TUI through Bun.Terminal +
-  @xterm/headless on Windows (docs/reference/09-testing.md "The tui Mechanism").
   This script verifies the Bun-only prerequisites and installs the locked
-  development dependencies with Bun.
+  development dependencies with Bun. Live rendered-terminal tests require tmux
+  and are not supported on Windows.
 
 .PARAMETER ProjectDir
   The synced project tree (where sync.sh deposited the git-archive). Default C:\amadeus.
@@ -63,10 +62,5 @@ if (Test-Path "$ProjectDir\node_modules") {
 Write-Output "=== bun install --frozen-lockfile ==="
 & $BunExe install --frozen-lockfile
 if ($LASTEXITCODE -ne 0) { throw "bun install failed ($LASTEXITCODE)" }
-
-# --- 3. Verify Bun's Windows PTY API and screen renderer.
-Write-Output "=== verify Bun.Terminal + @xterm/headless ==="
-& $BunExe -e "if (typeof Bun.Terminal !== 'function') process.exit(1); await import('@xterm/headless'); console.log('DEPS-OK: Bun.Terminal + @xterm/headless')"
-if ($LASTEXITCODE -ne 0) { throw "dependency resolution check failed" }
 
 Write-Output "=== setup complete  -  run a test with run.ps1 ==="

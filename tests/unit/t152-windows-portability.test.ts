@@ -32,21 +32,20 @@ describe("t152 Windows portability guard", () => {
     expect(ts).not.toContain("jq is required");
   });
 
-  test("run-all.ps1 runs --all through Bun and forces live Windows TUI env", () => {
+  test("run-all.ps1 runs --all through Bun and excludes unsupported live TUI", () => {
     const ps = readFileSync(join(WINDOWS, "run-all.ps1"), "utf8");
-    expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "1"');
+    expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "0"');
     expect(ps).toContain('-ArgumentList @("tests/run-tests.ts", "--all", "--debug", "-P", "$Parallel")');
     expect(ps).toContain("$Runner = Start-Process");
     expect(ps).toContain("exit $Runner.ExitCode");
-    expect(ps).toContain("Bun.Terminal + @xterm/headless");
     expect(ps).not.toContain("run-tests.sh");
   });
 
-  test("Windows TUI sessions use Bun.Terminal and Bun.spawn", () => {
+  test("live TUI sessions remain tmux-only", () => {
     const driver = read("tests/harness/tui-drive.ts");
-    expect(driver).toContain("new Bun.Terminal({");
-    expect(driver).toContain("const child = Bun.spawn([file, ...args]");
-    expect(driver).toContain("process.execPath");
+    expect(driver).toContain("const tmuxBackend");
+    expect(driver).not.toContain("Bun.Terminal");
+    expect(driver).not.toContain("__win-daemon");
   });
 
   test("CloudFormation stack is disposable SSM-only Windows Server 2022", () => {

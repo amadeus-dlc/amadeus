@@ -72,13 +72,18 @@ export type PackReport = {
 
 export type PackReportError = { readonly type: "malformed-output"; readonly detail: string };
 
+const ANSI_ESCAPE = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, "g");
+
 export namespace PackReport {
   /**
-   * Parses the file rows produced by `bun pm pack --dry-run`.
+   * Parses the file rows and tarball name produced by `bun pm pack --dry-run`.
    */
-  export function parse(bunPackOutput: string, version: string): Result<PackReport, PackReportError> {
-    const paths = bunPackOutput
+  export function parse(bunPackOutput: string, packageName: string): Result<PackReport, PackReportError> {
+    const lines = bunPackOutput
+      .replace(ANSI_ESCAPE, "")
       .split(/\r?\n/)
+      .map((line) => line.trim());
+    const paths = lines
       .map((line) => /^packed\s+\S+\s+(.+)$/.exec(line)?.[1])
       .filter((path): path is string => path !== undefined);
     if (paths.length === 0) {
@@ -86,6 +91,18 @@ export namespace PackReport {
         type: "malformed-output",
         detail: "expected file rows from bun pm pack --dry-run",
       });
+    }
+    const tarball = lines.find((line) => line.endsWith(".tgz"));
+    const tarballPrefix = `${packageName.replace(/^@/, "").replaceAll("/", "-")}-`;
+    if (tarball === undefined || !tarball.startsWith(tarballPrefix)) {
+      return Result.err({
+        type: "malformed-output",
+        detail: `expected a ${tarballPrefix}<version>.tgz filename from bun pm pack --dry-run`,
+      });
+    }
+    const version = tarball.slice(tarballPrefix.length, -".tgz".length);
+    if (version.length === 0) {
+      return Result.err({ type: "malformed-output", detail: "expected a version in the packed tarball filename" });
     }
     const frozenPaths = Object.freeze(paths);
     return Result.ok(
@@ -110,17 +127,17 @@ export function runBunPackDryRun(cwd: string): Result<PackReport, PackReportErro
       detail: `bun pm pack --dry-run exited ${result.exitCode}: ${result.stderr.toString() || result.stdout.toString()}`,
     });
   }
-  let version: unknown;
+  let packageName: unknown;
   try {
-    version = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).version;
+    packageName = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).name;
   } catch (e) {
     return Result.err({
       type: "malformed-output",
-      detail: `failed to read package version: ${(e as Error).message}`,
+      detail: `failed to read package name: ${(e as Error).message}`,
     });
   }
-  if (typeof version !== "string") {
-    return Result.err({ type: "malformed-output", detail: "expected a string version in package.json" });
+  if (typeof packageName !== "string") {
+    return Result.err({ type: "malformed-output", detail: "expected a string package name in package.json" });
   }
-  return PackReport.parse(result.stdout.toString(), version);
+  return PackReport.parse(result.stdout.toString(), packageName);
 }

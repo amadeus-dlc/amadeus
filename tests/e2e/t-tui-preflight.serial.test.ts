@@ -7,15 +7,12 @@
 // and it gates the rest: it proves the terminal rendering SUBSTRATE actually
 // WORKS, with the t19 discipline of distinguishing ABSENT (skip-with-reason)
 // from PRESENT-BUT-BROKEN (fail loud). It spends NO tokens and never touches
-// claude — it drives a known-answer target (printf in tmux / cmd.exe via
-// Bun.Terminal) and asserts the captured grid carries the sentinel.
+// claude — it drives a known-answer target in tmux and asserts the captured
+// grid carries the sentinel.
 //
 // Why a probe, not a bare `command -v` (§6.2): presence != working.
-//   - On Windows, Bun.Terminal can exist while ConPTY session startup or input
-//     still fails. So we drive a real round-trip, not an API-presence check.
-//   - tmux can be installed yet `capture-pane` returns nothing useful; an
-//     `@xterm/headless` import can resolve yet fail to reconstruct a grid. A
-//     `command -v` sees none of this.
+//   - tmux can be installed yet `capture-pane` returns nothing useful. A
+//     `command -v` does not detect that.
 //
 // SPAWN, not import (D-TUI-7): this `.test.ts` spawns tui-drive.ts as a Bun
 // subprocess on every platform. The same spawn-not-import pattern is used by
@@ -42,19 +39,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
-// Locate the driver. The current Bun executable runs the TypeScript entrypoint
-// on every platform (§2.1, D-TUI-7).
+// Locate the driver. Bun runs the TypeScript entrypoint directly (§2.1, D-TUI-7).
 // ---------------------------------------------------------------------------
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const IS_WIN = os.platform() === "win32";
 
-// The known-answer target — no claude, no tokens. On POSIX a bash printf that
-// holds the pane open; on Windows cmd.exe echoing the sentinel (the calibration
-// proven in the spike). The driver's `start` runs `<cmd...>` after `--`.
+// The known-answer target — no claude, no tokens. A bash printf holds the pane
+// open. The driver's `start` runs `<cmd...>` after `--`.
 const SENTINEL = "AMADEUS_TUI_PREFLIGHT_OK";
-const TARGET_CMD: string[] = IS_WIN
-  ? ["cmd.exe", "/c", `echo ${SENTINEL} & timeout /t 10`]
-  : ["bash", "-c", `printf '${SENTINEL}\\n'; sleep 10`];
+const TARGET_CMD = ["bash", "-c", `printf '${SENTINEL}\\n'; sleep 10`];
 
 interface Run {
   rc: number;
@@ -75,10 +68,7 @@ function drive(args: string[]): Run {
 // and FAILS LOUD, so a contributor gets one clear diagnostic line.
 // ---------------------------------------------------------------------------
 function substrateAbsentReason(): string | null {
-  if (IS_WIN) {
-    return typeof Bun.Terminal === "function" ? null : "Bun.Terminal is unavailable on Windows";
-  }
-  // POSIX: tmux is the substrate.
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
   const tmuxOk = spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status === 0;
   if (!tmuxOk) return "tmux not found";
   return null;
@@ -122,8 +112,8 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
 
         // 2) wait for the sentinel to paint on the reconstructed grid. A timeout
         // here is the BROKEN signal: the substrate resolved (we are past the
-        // ABSENT skip) but capture returned nothing useful — e.g. a broken
-        // ConPTY round-trip, or tmux capture-pane returning empty.
+        // ABSENT skip) but capture returned nothing useful — e.g. tmux
+        // capture-pane returning empty.
         const waited = drive([
           "wait",
           "--session",
@@ -138,16 +128,13 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
         if (waited.rc !== 0) {
           throw new Error(
             `tui-drive wait timed out for the known-answer sentinel — the ` +
-              `substrate is PRESENT but BROKEN (capture empty? on Windows: ` +
-              `Bun.Terminal/ConPTY session failed to render). ` +
+              `substrate is PRESENT but BROKEN (tmux capture empty?). ` +
               `This is a fail-loud diagnostic, not a skip.\n${waited.stderr}`,
           );
         }
 
         // 3) capture the grid and assert the sentinel is really there — proves
-        // the round-trip (send-or-emit -> render -> capture) closes. On Windows
-        // this is the @xterm/headless grid; on POSIX the tmux capture-pane grid.
-        // Either way capture returns the same current-screen text (D-TUI-2).
+        // the round-trip (send-or-emit -> render -> capture) closes.
         const captured = drive(["capture", "--session", session]);
         expect(captured.rc).toBe(0);
         expect(captured.stdout).toContain(SENTINEL);

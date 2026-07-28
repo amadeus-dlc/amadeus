@@ -46,8 +46,7 @@
 // pass. (P10 hazard: the live-TUI legs are flaky-by-nature; re-run a flake ~5x
 // watched before calling it red.)
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// driver auto-selects its backend by os.platform().
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -93,11 +92,9 @@ function absentReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live Claude TUI orientation render (watched tier)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

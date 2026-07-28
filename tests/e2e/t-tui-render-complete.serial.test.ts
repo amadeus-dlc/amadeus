@@ -18,8 +18,7 @@
 // Needs tmux + claude + the distributable; absent any of those it SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The driver
-// auto-selects its backend by os.platform(); this test is platform-agnostic. The
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
 // `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0) — no
 // filename mechanism segment is needed or added.
 
@@ -61,11 +60,9 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 }
 
 function absentReason(): string | null {
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

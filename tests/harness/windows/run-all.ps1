@@ -3,10 +3,9 @@
   Run the full AI-DLC test suite on Windows through the native Bun runner.
 
 .DESCRIPTION
-  This is the MR10 Windows invariance entrypoint. It sets the Windows-specific
-  environment the TUI backend requires, then invokes `bun tests/run-tests.ts
-  --all --debug -P <N>`. `AMADEUS_TUI_LIVE=1` is mandatory so the full run
-  cannot pass by silently skipping the token-spending TUI journeys.
+  This is the MR10 Windows invariance entrypoint. It invokes `bun
+  tests/run-tests.ts --all --debug -P <N>` with live TUI journeys disabled;
+  the rendered-terminal harness requires tmux and is not supported on Windows.
 
 .PARAMETER ProjectDir
   Synced repo directory. Default C:\amadeus.
@@ -46,7 +45,7 @@ Require-Path $BunExe "bun"
 if (-not $ClaudeDir) { throw "MISSING PREREQUISITE: claude CLI not found in any of: $($ClaudeDirCandidates -join '; ')" }
 
 $env:Path = "$ClaudeDir;C:\bun\bin;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;" + $env:Path
-$env:AMADEUS_TUI_LIVE = "1"
+$env:AMADEUS_TUI_LIVE = "0"
 $env:CLAUDE_CODE_USE_BEDROCK = "1"
 if (-not $env:AWS_REGION) { $env:AWS_REGION = "us-east-1" }
 
@@ -58,9 +57,6 @@ Write-Output "Parallel: $Parallel"
 Write-Output "=== preflight ==="
 & $BunExe --version
 & claude --version 2>&1 | Select-Object -First 1
-& $BunExe -e "if (typeof Bun.Terminal !== 'function') process.exit(1); await import('@xterm/headless'); console.log('DEPS-OK: Bun.Terminal + @xterm/headless')" 2>&1 | ForEach-Object { $_.ToString() }
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
 Write-Output "=== bun tests/run-tests.ts --all --debug -P $Parallel ==="
 $RunOut = Join-Path $ProjectDir "tests\logs\windows-run-all-wrapper.out.log"
 $RunErr = Join-Path $ProjectDir "tests\logs\windows-run-all-wrapper.err.log"

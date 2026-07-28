@@ -2,13 +2,14 @@
 //
 // FR-018 / BR-P01-P03 / REL-P01-P02: real `bun pm pack --dry-run` runs
 // against packages/setup (never simulated — team.md Forbidden bans
-// self-referential validation theater). Three real invocations total
+// self-referential validation theater). Four real invocations total
 // (performance-design.md budget, ≤28s):
 //   1. the real packages/setup directory -> must be "satisfied"
 //   2. a mutated copy with LICENSE-MIT dropped from `files` -> must detect
 //      "missing" with an exact file list
 //   3. a mutated copy with an extra source file added to `files` -> must
 //      detect "unexpected" with an exact file list
+//   4. the real package with FORCE_COLOR inherited -> must still parse cleanly
 // Ordering matters (performance-design.md): ensureSetupCliBuilt() runs first
 // so dist/cli.js exists in packages/setup BEFORE any copy is made — otherwise
 // a missing dist/cli.js would falsely present as a "missing" contract
@@ -25,6 +26,9 @@ import { PackContract, type PackReport, runBunPackDryRun } from "../lib/setup-pa
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(TESTS_DIR, "..", "..");
 const SETUP_PACKAGE_DIR = join(REPO_ROOT, "packages", "setup");
+const SETUP_PACKAGE_VERSION = JSON.parse(
+  readFileSync(join(SETUP_PACKAGE_DIR, "package.json"), "utf8"),
+).version as string;
 
 const mutationCopyDirs: string[] = [];
 
@@ -60,6 +64,23 @@ describe("pack contract — bun pm pack --dry-run (FR-018, BR-P01-P03)", () => {
   test("the real packages/setup tarball satisfies PackContract", () => {
     const verdict = PackContract.current().isSatisfiedBy(satisfiedReport);
     expect(verdict).toEqual({ type: "satisfied" });
+  });
+
+  test("the packed tarball reports the package manifest version", () => {
+    expect(satisfiedReport.packageVersion()).toBe(SETUP_PACKAGE_VERSION);
+  });
+
+  test("inherited colour settings cannot corrupt the pack report parser", () => {
+    const previous = process.env.FORCE_COLOR;
+    process.env.FORCE_COLOR = "1";
+    try {
+      const result = runBunPackDryRun(SETUP_PACKAGE_DIR);
+      if (result.type === "err") throw new Error(result.error.detail);
+      expect(PackContract.current().isSatisfiedBy(result.value)).toEqual({ type: "satisfied" });
+    } finally {
+      if (previous === undefined) delete process.env.FORCE_COLOR;
+      else process.env.FORCE_COLOR = previous;
+    }
   });
 
   test("edge case: a declared file dropped from `files` is detected as missing (REL-P02a)", () => {

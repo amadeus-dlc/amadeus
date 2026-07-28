@@ -24,9 +24,7 @@
 //                             abbreviateModel() to "BR:opus-4-8[1m]"), so the
 //                             painted right side is "<status> | BR:opus-4-8[1m]".
 //                             This asserts printLine's REAL production output and
-//                             is platform-invariant plain text (no colour escapes,
-//                             so the Windows Bun.Terminal backend captures it identically
-//                             — unlike statusline-colour, which is macOS-only).
+//                             is plain text with no colour escapes.
 //
 // DIST/ FINDING (surfaced, not chased here): printLine's right-justify/padStart
 // branch (:180-183) only fires when process.stdout.columns > 0. Claude Code pipes
@@ -42,9 +40,8 @@
 // Needs tmux + claude + the distributable; absent any of those it SKIPs with a
 // reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// driver auto-selects its backend by os.platform(); this test is
-// platform-agnostic. The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
 // (Phase 0) — no filename mechanism segment is needed or added.
 
 import { describe, expect, test } from "bun:test";
@@ -90,11 +87,9 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 // ABSENT detection (skip-with-reason). On POSIX the substrate is tmux; claude is
 // needed on every platform; the distributable + the fixture must be present.
 function absentReason(): string | null {
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
@@ -215,9 +210,8 @@ describe("t-tui-render statusline workflow branches (seeded mid-ideation, no tok
   // piped stdout (cols=0, the production reality) it uses the ` | ` separator, and
   // the distributable pins the Opus model -> abbreviateModel() -> "BR:opus-4-8[1m]".
   // So the painted line ends "... | BR:opus-4-8[1m]". Anchored on the separator +
-  // model token so a stray "BR:" elsewhere can't satisfy it. Platform-invariant
-  // plain text (no SGR escapes) -> the Windows Bun.Terminal backend captures it the
-  // same as tmux. (The padStart right-justify branch is dead in production — see
+  // model token so a stray "BR:" elsewhere can't satisfy it. The assertion uses
+  // plain text with no SGR escapes. (The padStart right-justify branch is dead in production — see
   // the DIST/ FINDING in the header; this asserts what printLine really paints.)
   test.skipIf(ABSENT_REASON !== null)(
     `statusline-align paints the " | BR:opus-4-8[1m]" right side via printLine${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,

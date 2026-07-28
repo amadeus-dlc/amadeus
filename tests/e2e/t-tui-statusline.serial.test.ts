@@ -20,9 +20,7 @@
 // t-tui-workshop, which is AMADEUS_TUI_LIVE-gated). It needs tmux + claude + the
 // distributable; absent any of those it SKIPs with a reason.
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// driver auto-selects its backend
-// by os.platform(); this test is platform-agnostic.
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -67,11 +65,9 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 // ABSENT detection (skip-with-reason). On POSIX the substrate is tmux; claude
 // is needed on every platform; the distributable must be present to copy.
 function absentReason(): string | null {
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

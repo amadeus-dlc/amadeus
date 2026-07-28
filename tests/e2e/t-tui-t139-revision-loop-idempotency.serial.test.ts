@@ -51,14 +51,13 @@
 //     first; scope-mapping.json "bugfix" + amadeus-utility.ts greenfield downgrade).
 //   - Completed counter == `- [x]` grid count (amadeus-state.ts:256-258 sync); the
 //     terminator + the cross-run comparison both read this field.
-//   - the AUQ gate footer + caret signal is gridHasMenu (tui-drive.ts; `❯` on
-//     tmux, `>` on Windows ConPTY — platform-invariant).
+//   - the AUQ gate footer + caret signal is gridHasMenu (tui-drive.ts).
 //
 // SERIAL (.serial. in the filename): two full back-to-back TUI run-throughs in one
 // test, each its own claude session, sequential. SPENDS REAL TOKENS (two bugfix
 // workflows on Opus/Bedrock — the heaviest journey in the §5-D set). Gated behind
-// AMADEUS_TUI_LIVE=1; tmux/claude/distributable/Windows-node absence SKIP with a
-// reason — never a hollow pass.
+// AMADEUS_TUI_LIVE=1; tmux/claude/distributable absence SKIPs with a reason —
+// never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
 // tui-drive.ts spawn is what DERIVES the `tui` mechanism (Phase 0). Platform-
@@ -120,11 +119,9 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live revision-loop journey (uses Bedrock tokens — two run-throughs)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

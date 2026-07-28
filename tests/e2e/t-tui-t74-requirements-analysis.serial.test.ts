@@ -74,12 +74,11 @@
 // AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
 // distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// answer-gate loop lives in the driver — one implementation, both backends. The
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// answer-gate loop lives in the driver. The
 // `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0); no filename
-// mechanism segment is needed. Platform-invariant: the asserts are plain-text grid
-// + on-disk reads, so the Windows Bun.Terminal backend (validated via SSM later)
-// captures them identically.
+// mechanism segment is needed. Assertions use the plain-text tmux grid and
+// on-disk reads.
 
 import { describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
@@ -93,9 +92,8 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// Bun runs the TypeScript entrypoint natively on every platform.
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
 const DRIVE_BIN = process.execPath;
 const DRIVE_PREFIX = [DRIVER];
@@ -138,11 +136,9 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live requirements-analysis journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
@@ -227,11 +223,10 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         // Begin tailing the grid for the render assertion BEFORE answer-gate runs,
         // so we catch the waiting menu caret + footer while the gates are up. The
         // highlighted-option caret is PLATFORM-VARIANT: `❯` (U+276F) under tmux on
-        // macOS/Linux, but the real claude DOWNGRADES it to ASCII `>` under Windows
-        // ConPTY (proven by reading grid.txt on the EC2 box 2026-06-06). So we match
-        // the caret only when it precedes a numbered option (`❯ 1.` / `> 1.`) — the
+        // Some terminal paths downgrade the caret to ASCII `>`, so we match the
+        // caret only when it precedes a numbered option (`❯ 1.` / `> 1.`) — the
         // same shape gridHasMenu() uses; a bare `>` input prompt has no `<digit>.` and
-        // cannot satisfy it. This keeps the render proof honest on both platforms.
+        // cannot satisfy it. This keeps the render proof honest.
         const caretOnOption = /^\s*(?:❯|>)\s+\d+\.\s/m;
         pollTimer = setInterval(() => {
           const grid = drive(["capture", "--session", session]).stdout;

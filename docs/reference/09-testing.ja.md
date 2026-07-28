@@ -173,8 +173,8 @@ bun tests/run-tests.ts [--ci | --all --debug -P 8]
 
 1. Bun 1.3.13 以上と Claude Code CLI をインストールします。
 2. フルスイートまたは POSIX ラッパー互換 smoke を実行する場合は Git for Windows をインストールします。ネイティブランナーのパス自体は Bash を必要としません。
-3. `bun install --frozen-lockfile` で開発依存をインストールします。Windows TUI テストは `Bun.Terminal` と、画面再構築用の `@xterm/headless` を使います。
-4. フルアクセプタンス実行のために `AMADEUS_TUI_LIVE=1` を設定します。
+3. `bun install --frozen-lockfile` で開発依存をインストールします。
+4. `AMADEUS_TUI_LIVE=0` を設定します。ライブのレンダリングターミナルジャーニーは tmux を必要とするため、Windows ではサポートしません。
 5. `bun tests/run-tests.ts --all --debug -P 8` を実行します。
 
 WSL や Docker は不要です。サポートされる検証基盤はネイティブ Windows です。
@@ -204,7 +204,7 @@ WSL や Docker は不要です。サポートされる検証基盤はネイテ�
      powershell -ExecutionPolicy Bypass -File C:\amadeus\tests\harness\windows\setup.ps1 -ProjectDir C:\amadeus
    ```
 
-4. ライブ TUI を有効にして Windows `--all` ゲートを実行します:
+4. ライブ TUI を除外して Windows `--all` ゲートを実行します:
 
    ```bash
    bun tests/harness/windows/ssm-run.ts --stack-name amadeus-windows-test -- \
@@ -217,7 +217,7 @@ WSL や Docker は不要です。サポートされる検証基盤はネイテ�
    aws cloudformation delete-stack --stack-name amadeus-windows-test
    ```
 
-`run-all.ps1` は `Bun.Terminal` と `@xterm/headless` が利用可能であることを検証し、`bun tests/run-tests.ts --all --debug -P <N>` を呼び出す前に `AMADEUS_TUI_LIVE=1` をエクスポートするため、グリーンの結果がライブ TUI ジャーニーを黙ってスキップして得られることはありません。ネイティブインストーラは CloudFormation UserData ブートストラップを実行したユーザー(EC2Launch v2 では Administrator)のもとに `claude.exe` を配置するため、`C:\Users\Administrator\.local\bin` と systemprofile ホームにまたがって claude バイナリを探索します。
+`run-all.ps1` は、ライブのレンダリングターミナルジャーニーが tmux を必要とし Windows ではサポートされないため、`bun tests/run-tests.ts --all --debug -P <N>` を呼び出す前に `AMADEUS_TUI_LIVE=0` をエクスポートします。ネイティブインストーラは CloudFormation UserData ブートストラップを実行したユーザー(EC2Launch v2 では Administrator)のもとに `claude.exe` を配置するため、`C:\Users\Administrator\.local\bin` と systemprofile ホームにまたがって claude バイナリを探索します。
 
 スタックのデフォルトは **`c5.4xlarge`** です — フルの `--all -P 8` ライブ実行に実証済みのサイズです。e2e 層はテストごとに `bun:test` タイムアウトを持ち(Bolt-worktree ライフサイクルテストは c5.4xlarge で 5s の予算のうち ~5.5s に達します)、そのため小さいボックス(例: `t3.large`)は並列負荷下で決定論的な Bolt/ランタイムテストを偽のタイムアウトに陥らせます。より軽い層の選択を実行するときにのみ、`InstanceType` パラメータを縮小します。
 

@@ -73,9 +73,8 @@
 //
 // SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform.
 // The `tui-drive.ts` spawn is what DERIVES the `tui` mechanism
-// (Phase 0) — no filename mechanism segment. Platform-invariant: the assertions
-// are plain-text grid + on-disk reads, so the Windows Bun.Terminal backend (SSM
-// leg, later) observes them identically.
+// (Phase 0) — no filename mechanism segment. Assertions use the plain-text tmux
+// grid and on-disk reads.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -89,9 +88,7 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// Bun runs the TypeScript entrypoint natively on every platform.
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver.
+// Bun runs the TypeScript entrypoint natively.
 const DRIVE_BIN = process.execPath;
 const DRIVE_PREFIX = [DRIVER];
 
@@ -193,11 +190,9 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live env-scope journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";

@@ -6,8 +6,8 @@
 .DESCRIPTION
   Sets only the environment the framework + harness actually require on Windows
   (docs/guide/01-getting-started.md prerequisites + docs/reference/09-testing.md e2e
-  mechanism), then invokes `bun test` on the chosen file. Bun owns both the test
-  runner and the Windows ConPTY driver.
+  mechanism), then invokes `bun test` on the chosen file. Live TUI journeys are
+  unsupported on Windows and skip explicitly.
 
 .PARAMETER Test
   A test selector. Either a bare token (e.g. "t27" -> the matching tests/e2e file),
@@ -52,9 +52,8 @@ Write-Output "=== running e2e test: $testFile (timeout ${TimeoutS}s) ==="
 # --- Environment (documented prerequisites) ----------------------------------------
 # claude + bun on PATH (statusline hook shells `bun`; claude is the TUI under test).
 $env:Path = "$ClaudeDir;C:\bun\bin;" + $env:Path
-# tui live opt-in + hang-backstop (seconds). The journey terminates on the on-disk
-# artifact; this only ever fires as a loud backstop, never as a pass/fail budget.
-$env:AMADEUS_TUI_LIVE = "1"
+# Live rendered-terminal journeys require tmux and are unsupported on Windows.
+$env:AMADEUS_TUI_LIVE = "0"
 $env:AMADEUS_TEST_TIMEOUT = "$TimeoutS"
 # Bedrock routing (the shipped settings.json defaults; region required).
 $env:CLAUDE_CODE_USE_BEDROCK = "1"
@@ -62,8 +61,6 @@ $env:AWS_REGION = "us-east-1"
 # --- Preflight echo so a failed run is self-diagnosing -----------------------------
 Write-Output "=== preflight ==="
 & claude --version 2>&1 | Select-Object -First 1
-& $BunExe -e "if (typeof Bun.Terminal !== 'function') process.exit(1); await import('@xterm/headless'); console.log('DEPS-OK')" 2>&1 | Select-Object -First 1
-
 # --- Run -----------------------------------------------------------------------------
 # bun writes its test results to stderr. We redirect 2>&1 to capture them, but render
 # each record via ToString() so PowerShell does NOT decorate native stderr lines as

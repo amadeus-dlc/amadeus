@@ -81,13 +81,10 @@
 // backstop ever fires that is a genuine hang FINDING (the workflow wedged), never a
 // knob to turn down or a thing to soften. Gated
 // behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
-// distributable absence (and Windows Bun.Terminal availability) also SKIP with a
-// reason — never a hollow pass.
+// distributable absence also SKIPs with a reason — never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The answer-gate loop
-// lives in the driver — one implementation, both backends. Platform-invariant
-// plain-text grid asserts (no colour escapes), so the Windows Bun.Terminal backend
-// captures identically; the SSM leg runs the same file.
+// lives in the driver. Assertions use the plain-text tmux grid.
 
 import { describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
@@ -117,9 +114,8 @@ function codekbReDir(sandbox: string): string {
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
-// Bun runs the TypeScript entrypoint natively on every platform.
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
 const DRIVE_BIN = process.execPath;
 const DRIVE_PREFIX = [DRIVER];
@@ -162,11 +158,9 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live bugfix journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
+  if (IS_WIN) return "live TUI journeys are not supported on Windows";
+  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
-  }
-  if (IS_WIN && typeof Bun.Terminal !== "function") {
-    return "Bun.Terminal is unavailable on Windows";
   }
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
@@ -252,8 +246,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // current live runs can spend >120s bootstrapping init while the statusline
         // still shows `[Amadeus-DLC] ready`; the on-disk Completed terminator below is the
         // deterministic start/progress proof. Use the shared gridHasMenu() so the
-        // caret is matched platform-invariantly (`❯` on tmux, ASCII `>` on Windows
-        // ConPTY — the same detector the answer-gate uses).
+        // caret is matched consistently by the same detector the answer-gate uses.
         pollTimer = setInterval(() => {
           const grid = drive(["capture", "--session", session]).stdout;
           if (gridHasMenu(grid)) {
@@ -278,7 +271,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // assert "a menu must appear within N seconds" — that is a budget masquerading
         // as a backstop, and it false-fired here: bugfix's first Inception stage is
         // reverse-engineering (a `mode: subagent` stage) that legitimately runs
-        // minutes with no menu, and runs SLOWER on the Windows box, so a fixed
+        // minutes with no menu and runs slower on constrained hosts, so a fixed
         // per-gate value (200s, then 360s) killed a WORKING run mid-RE (`answered 0`).
         // Omitting it lets per-gate default to the overall deadline (one hang-backstop
         // that only a genuine wedge can trip); the overall timeout (TEST_TIMEOUT_MS -

@@ -18,16 +18,8 @@
 // row renders ctx:N%. COST: a few hundred Bedrock tokens (one tiny turn) — gated
 // behind AMADEUS_TUI_LIVE=1.
 //
-// PLATFORM SCOPE — macOS only, by harness capability (verified, not a weakness):
-// the colour assertion needs the captured pane to PRESERVE the SGR escape. tmux
-// `capture-pane -e` does. The Windows Bun.Terminal backend returns a plain
-// reconstructed grid from @xterm/headless rather than reserializing cell styles
-// as SGR escapes. The PRODUCT paints colour identically
-// on both platforms (the same TS hook runs); only this TEST HARNESS's Windows
-// capture is blind to it. So on Windows this test SKIPs with that reason rather than
-// faking a pass — a documented harness-capability gap, NOT a product divergence.
-// (Teaching the Bun.Terminal backend an @xterm/headless SGR-serialize path so Windows
-// could assert colour too is a deferred follow-up, decided 2026-06-06.)
+// PLATFORM SCOPE — tmux only. The colour assertion needs `capture-pane -e` to
+// preserve the SGR escape.
 //
 // RECONCILIATION (verified live with NDJSON 2026-06-09): the hook stdout still
 // contains ESC [32m ctx:N% ESC [0m, but current Claude Code strips that hook SGR
@@ -90,15 +82,14 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// Gating. AMADEUS_TUI_LIVE=1 first (this spends tokens). Then the Windows
-// capability gap: the reconstructed grid cannot capture colour escapes, so the colour assertion
-// is unprovable there — SKIP with that reason rather than fake it. Then substrate.
+// Gating. AMADEUS_TUI_LIVE=1 first (this spends tokens), then platform and
+// substrate availability.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
   }
   if (IS_WIN) {
-    return "Bun.Terminal grid reconstruction does not reserialize colour escapes — colour capture is macOS/tmux-only; the product paints colour identically on Windows, only the test harness cannot capture it";
+    return "live TUI journeys are not supported on Windows";
   }
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
