@@ -74,10 +74,7 @@ function writeProjectEntry(
 
 function reduceUpsert(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<
-    MirrorProjectLedgerTransition,
-    { kind: "upsert-project-entry" }
-  >,
+  transition: Extract<MirrorProjectLedgerTransition, { kind: "upsert-project-entry" }>,
 ): ProjectLedgerReduction {
   if (transition.entry.project.length === 0) {
     return invalid("upsert-project-entry: project must be non-empty");
@@ -99,10 +96,7 @@ function reduceUpsert(
 
 function reducePrune(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<
-    MirrorProjectLedgerTransition,
-    { kind: "prune-project-entries" }
-  >,
+  transition: Extract<MirrorProjectLedgerTransition, { kind: "prune-project-entries" }>,
 ): ProjectLedgerReduction {
   if (transition.activeProjects.some((project) => project.length === 0)) {
     return invalid("prune-project-entries: active project must be non-empty");
@@ -117,10 +111,7 @@ function reducePrune(
 
 function reduceFailureMark(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<
-    MirrorProjectLedgerTransition,
-    { kind: "mark-project-pending" | "mark-project-safety-blocked" }
-  >,
+  transition: Extract<MirrorProjectLedgerTransition, { kind: "mark-project-pending" | "mark-project-safety-blocked" }>,
 ): ProjectLedgerReduction {
   const state =
     transition.kind === "mark-project-pending" ? "pending" : "safety-blocked";

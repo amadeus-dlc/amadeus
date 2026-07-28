@@ -173,6 +173,32 @@ describe("t344 ledger state x result matrix", () => {
 });
 
 describe("t344 failure marks preserve unobserved identity", () => {
+  test("upsert rejects empty Project identity fields", () => {
+    const cases = [
+      {
+        entry: entry({ project: "" }),
+        issue: "upsert-project-entry: project must be non-empty",
+      },
+      {
+        entry: entry({ projectId: "" }),
+        issue: "upsert-project-entry: projectId must be non-empty or null",
+      },
+      {
+        entry: entry({ phaseField: "" }),
+        issue: "upsert-project-entry: phaseField must be non-empty or null",
+      },
+    ];
+
+    for (const invalid of cases) {
+      expect(
+        reduce(EMPTY_MIRROR_STATE, {
+          kind: "upsert-project-entry",
+          entry: invalid.entry,
+        }),
+      ).toEqual({ kind: "invalid", issues: [invalid.issue] });
+    }
+  });
+
   test("pending keeps the column last actually applied", () => {
     const before = withLedger([
       entry({ state: "synced", lastAppliedStatus: "Inception" }),
@@ -285,6 +311,18 @@ describe("t344 failure marks preserve unobserved identity", () => {
         activeProjects: [PROJECT],
       }).kind,
     ).toBe("unchanged");
+  });
+
+  test("pruning rejects an empty active Project identity", () => {
+    expect(
+      reduce(withLedger([entry()]), {
+        kind: "prune-project-entries",
+        activeProjects: [""],
+      }),
+    ).toEqual({
+      kind: "invalid",
+      issues: ["prune-project-entries: active project must be non-empty"],
+    });
   });
 });
 

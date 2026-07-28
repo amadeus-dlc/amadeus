@@ -21,6 +21,7 @@ import type {
   MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
+  WriteOutcome,
 } from "./amadeus-mirror-types.ts";
 
 export type ProjectVerificationScope = Readonly<{
@@ -89,12 +90,6 @@ function projectVerificationReady(
   scope: ProjectVerificationScope,
   state: MirrorStateSnapshot,
 ): boolean {
-  if (
-    scope.boundary.kind !== "workflow-completed" ||
-    scope.projects.length === 0
-  ) {
-    return true;
-  }
   const event = mirrorEventIdentity(
     scope.intentUuid,
     scope.boundary,
@@ -113,10 +108,7 @@ function projectVerificationReady(
 }
 
 function writeFailureSummary(
-  result: Exclude<
-    ReturnType<typeof mutateMirrorStateAtomic>,
-    { kind: "written" | "unchanged" }
-  >,
+  result: Exclude<WriteOutcome, { kind: "written" | "unchanged" }>,
 ): string {
   switch (result.kind) {
     case "conflict":
@@ -160,11 +152,11 @@ export function prepareCompletionProjectVerification(
   scope: ProjectVerificationScope,
   state: MirrorStateSnapshot,
 ): ProjectVerificationPreparation {
-  if (projectVerificationReady(scope, state)) {
-    return { kind: "ready", state, verificationRequired: false };
-  }
   const boundary = scope.boundary;
   if (boundary.kind !== "workflow-completed" || scope.projects.length === 0) {
+    return { kind: "ready", state, verificationRequired: false };
+  }
+  if (projectVerificationReady(scope, state)) {
     return { kind: "ready", state, verificationRequired: false };
   }
   const event = mirrorEventIdentity(scope.intentUuid, boundary, "sync");
@@ -208,10 +200,7 @@ export function prepareCompletionProjectVerification(
 export function consumeStaleCloseApproval(
   scope: ProjectVerificationScope,
   state: MirrorStateSnapshot,
-  answer: Readonly<{
-    event: MirrorEventIdentity;
-    operation: MirrorOperation;
-  }>,
+  answer: Readonly<{ event: MirrorEventIdentity; operation: MirrorOperation }>,
 ): ProjectVerificationPreparation {
   const occurredAt = scope.now();
   const result = mutateMirrorStateAtomic(scope.ports, {
