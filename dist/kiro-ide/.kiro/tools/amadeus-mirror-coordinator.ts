@@ -24,11 +24,12 @@ import {
   renderMirrorIssueContent,
   renderMirrorPrompt,
 } from "./amadeus-mirror-presentation.ts";
+import { mirrorProjectKey } from "./amadeus-mirror-project-contract.ts";
 import {
   consumeStaleCloseApproval,
-  finalSyncReceiptKey,
-  heldCompletionSyncReconciliation,
+  currentFinalSyncEvidenceKey,
   prepareCompletionProjectVerification,
+  selectCompletionSyncReconciliation,
   type ProjectVerificationScope,
 } from "./amadeus-mirror-project-verification.ts";
 import { renderMirrorMarker } from "./amadeus-mirror-provenance.ts";
@@ -277,12 +278,20 @@ function executionAuthorization(
   state: MirrorStateSnapshot,
   event: MirrorEventIdentity,
   operation: MirrorOperation,
+  projects: readonly MirrorProjectTarget[],
   promptAnswer?: MirrorPromptAnswer,
 ): MirrorExecutionAuthorization {
   const existing = state.receipts[mirrorEventKey(event)]?.authorization;
   if (existing) return existing;
   const finalSyncKey =
-    operation === "close" ? finalSyncReceiptKey(state, event) : undefined;
+    operation === "close"
+      ? currentFinalSyncEvidenceKey({
+          state,
+          event,
+          snapshot: input.context.snapshot,
+          projects,
+        })
+      : undefined;
   const base = {
     event,
     operation,
@@ -348,6 +357,7 @@ async function executeDecision(
     state,
     event,
     operation,
+    projects,
     promptAnswer,
   );
   return execute({
@@ -621,16 +631,16 @@ function selectBoundaryDecision(
   triggerEvent?: MirrorEventIdentity;
   decision?: ReturnType<typeof decideMirrorAction>;
 } {
-  const reconciliation =
-    heldCompletionSyncReconciliation(
-      state,
-      input.context.intentUuid,
-      input.context.boundary,
-    ) ??
-    selectMirrorReconciliation({
+  const reconciliation = selectCompletionSyncReconciliation({
+    state,
+    intentUuid: input.context.intentUuid,
+    boundary: input.context.boundary,
+    operation: input.manualOperation,
+    fallback: selectMirrorReconciliation({
       snapshot: state,
       snapshotRevision: state.revision,
-    });
+    }),
+  });
   const operation =
     reconciliation?.originalEvent.operation ??
     (input.context.boundary.kind === "manual"
@@ -698,9 +708,11 @@ function promptProjects(
 ) {
   if (operation === "close" || projects.length === 0) return undefined;
   const known = new Set(projects.map(
-    (target) => `${target.project.owner}/${target.project.number}`,
+    (target) => mirrorProjectKey(target.project),
   ));
-  for (const entry of state.projectSync?.projects ?? []) known.add(entry.project);
+  for (const entry of state.projectSync?.projects ?? []) {
+    known.add(mirrorProjectKey(entry.project));
+  }
   const names = new Set<string>();
   for (const target of projects) {
     const expected = expectedProjectStatus(
@@ -727,6 +739,7 @@ function projectVerificationScope(
   return {
     intentUuid: input.context.intentUuid,
     boundary: input.context.boundary,
+    operation: input.manualOperation ?? input.answer?.operation,
     snapshot: input.context.snapshot,
     projects,
     ports: input.ports,
@@ -843,10 +856,7 @@ function resolveBoundaryStep(
       ]),
     );
   }
-  if (
-    decision.operation === "close" &&
-    input.context.boundary.kind === "workflow-completed"
-  ) {
+  if (decision.operation === "close") {
     const held = closeGateHold(input, state, projects);
     if (held) return settled(continued([...outcomes, held]));
   }
@@ -894,10 +904,12 @@ async function driveBoundaryDecisions(
       projects,
     );
     outcomes.push(outcome);
-    if (
-      outcome.kind !== "completed" ||
-      input.context.boundary.kind !== "workflow-completed"
-    ) {
+    const continuesCompletionSequence =
+      input.context.boundary.kind === "workflow-completed" ||
+      (input.context.boundary.kind === "manual" &&
+        input.manualOperation === "close" &&
+        step.decision.operation !== "close");
+    if (outcome.kind !== "completed" || !continuesCompletionSequence) {
       return continued(outcomes);
     }
     const latest = read(input.ports);

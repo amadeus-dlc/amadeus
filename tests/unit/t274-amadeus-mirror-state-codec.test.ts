@@ -90,6 +90,72 @@ describe("codec rejection", () => {
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
+  test("createdRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 3,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("createdRevision must match its authorization binding", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 3,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 2,
+          authorization: {
+            kind: "manual",
+            event,
+            operation: "sync",
+            boundaryInstance: event.boundary.instance,
+            receiptRevision: 3,
+            invocationId: "manual-sync",
+          },
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("authorization receiptRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          authorization: {
+            kind: "manual",
+            event,
+            operation: "sync",
+            boundaryInstance: event.boundary.instance,
+            receiptRevision: 3,
+            invocationId: "manual-sync",
+          },
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
   test("Project verification cannot be attached to a close receipt", () => {
     const event = ev("close");
     const snapshot: MirrorStateSnapshot = {

@@ -32,6 +32,7 @@ import type {
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectRef,
+  MirrorProjectStatusNames,
   MirrorResolvedProjectFields,
   MirrorStateSnapshot,
   RemoteMirrorIssue,
@@ -222,6 +223,7 @@ type FixtureOptions = Readonly<{
   mode?: "auto" | "prompt" | "off";
   boards?: readonly MirrorProjectRef[];
   phaseField?: string;
+  statusNames?: MirrorProjectStatusNames;
   state?: MirrorStateSnapshot;
 }>;
 
@@ -270,6 +272,9 @@ function fixture(options: FixtureOptions = {}) {
         project: canonical(board),
         ...(options.phaseField
           ? { "phase-field": options.phaseField }
+          : {}),
+        ...(options.statusNames
+          ? { "status-names": options.statusNames }
           : {}),
       })),
     }),
@@ -446,7 +451,7 @@ describe("t346 parked boundaries issue no field mutation", () => {
 // from the receipt hold that parks an unsettled sync.
 function completedSyncState(
   row: Readonly<{ state: "synced" | "pending"; lastAppliedStatus: string | null }>,
-  options: Readonly<{ verified?: boolean }> = {},
+  options: Readonly<{ verified?: boolean; legacy?: boolean }> = {},
 ): MirrorStateSnapshot {
   const event = mirrorEventIdentity(
     INTENT_UUID,
@@ -455,11 +460,13 @@ function completedSyncState(
   );
   const key = mirrorEventKey(event);
   return linkedState({
+    revision: 1,
     receipts: {
       [key]: {
         key,
         event,
         operationId: "op-sync",
+        ...(options.legacy ? {} : { createdRevision: 1 }),
         status: "succeeded",
         preparedAt: NOW,
         attemptedAt: NOW,
@@ -534,7 +541,7 @@ describe("t346 completion gate", () => {
     const seeded = completedSyncState({
       state: "synced",
       lastAppliedStatus: "Done",
-    });
+    }, { legacy: true });
     const fx = fixture({
       lifecyclePhase: "OPERATION",
       registryStatus: "complete",
@@ -691,6 +698,101 @@ describe("t346 completion gate", () => {
       projectSyncVerified: true,
     });
     expect(rowFor(fx.state(), BOARD_A)?.phaseField).toBe("Lifecycle");
+  });
+
+  test("a manual close re-syncs target, field, and status config drift before closing", async () => {
+    const fx = fixture({
+      boards: [BOARD_B],
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      phaseField: "Lifecycle",
+      statusNames: { done: "Shipped" },
+      state: completedSyncState(
+        { state: "synced", lastAppliedStatus: "Done" },
+        { verified: true },
+      ),
+    });
+    const gateway = new ProjectGateway(markerBody());
+    gateway.items = [];
+    gateway.resolveProjectFields = async (project) =>
+      ok({
+        projectId: `PVT_${project.number}`,
+        lifecycle: {
+          fieldId: `PVTSSF_${project.number}`,
+          fieldName: "Lifecycle",
+          options: [...OPTIONS, { id: "opt-shipped", name: "Shipped" }],
+        },
+        auxiliaryStatus: null,
+      });
+
+    await drive(
+      fx,
+      gateway,
+      { kind: "manual", instance: "manual-close-drift" },
+      { operation: "close", invocationId: "manual-close-drift" },
+    );
+
+    const queriedAt = gateway.history.indexOf("list");
+    const addedAt = gateway.history.indexOf(`add:${canonical(BOARD_B)}`);
+    const updatedAt = gateway.history.indexOf(`update:${canonical(BOARD_B)}`);
+    const closedAt = gateway.history.indexOf("close");
+    expect(queriedAt).toBeGreaterThanOrEqual(0);
+    expect(addedAt).toBeGreaterThan(queriedAt);
+    expect(updatedAt).toBeGreaterThan(addedAt);
+    expect(closedAt).toBeGreaterThan(updatedAt);
+    expect(rowFor(fx.state(), BOARD_B)).toMatchObject({
+      phaseField: "Lifecycle",
+      lastAppliedStatus: "Shipped",
+      state: "synced",
+    });
+    expect(gateway.issue.state).toBe("CLOSED");
+  });
+
+  test("disabling Projects retires an existing sync hold and then closes", async () => {
+    const seeded = completedSyncState({
+      state: "pending",
+      lastAppliedStatus: "Operation",
+    });
+    const syncKey = Object.keys(seeded.receipts)[0];
+    const heldReceipt = {
+      ...seeded.receipts[syncKey],
+      status: "pending" as const,
+      projectSyncHold: {
+        reason: "project-sync-unsettled" as const,
+        heldAt: NOW,
+      },
+    };
+    const held = {
+      ...seeded,
+      revision: 1,
+      receipts: { [syncKey]: heldReceipt },
+    };
+    const fx = fixture({
+      boards: [],
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      state: held,
+    });
+    const gateway = new ProjectGateway(markerBody());
+    const priorProvenance = fx.state().provenance;
+
+    await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
+
+    expect(gateway.history).not.toContain("list");
+    expect(fieldMutations(gateway)).toEqual([]);
+    expect(gateway.history).toContain("close");
+    expect(gateway.issue.state).toBe("CLOSED");
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "succeeded",
+      completedAt: NOW,
+    });
+    expect(fx.state().receipts[syncKey].projectSyncHold).toBeUndefined();
+    expect(fx.state().receipts[syncKey].projectSyncVerified).toBeUndefined();
+    expect(fx.state().issueNumber).toBe(ISSUE);
+    expect(fx.state().provenance).toEqual(priorProvenance);
   });
 
   test("an unsettled final sync parks the sync itself, so the close is never reached", async () => {

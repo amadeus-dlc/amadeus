@@ -26,7 +26,11 @@ import {
 } from "node:fs";
 import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
-import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-project-contract.ts";
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  mirrorProjectKey,
+  normalizeMirrorProjectIdentity,
+} from "./amadeus-mirror-project-contract.ts";
 import type {
   MirrorMode,
   MirrorPhaseKey,
@@ -376,8 +380,14 @@ function parseProjectRef(value: unknown): MirrorProjectRef | null {
   const match = PROJECT_REF_RE.exec(value);
   if (match === null) return null;
   const number = Number(match[2]);
-  if (!Number.isSafeInteger(number) || number <= 0) return null;
-  return { owner: match[1], number };
+  if (
+    !Number.isSafeInteger(number) ||
+    number <= 0 ||
+    match[2] !== String(number)
+  ) {
+    return null;
+  }
+  return normalizeMirrorProjectIdentity({ owner: match[1], number });
 }
 
 type StatusNamesParse =
@@ -471,7 +481,7 @@ function parseProjects(value: unknown): ProjectsParse {
     const parsed = parseProjectTarget(element);
     if (!parsed.ok) return parsed;
     for (const target of parsed.projects) {
-      const identity = `${target.project.owner.toLowerCase()}/${target.project.number}`;
+      const identity = mirrorProjectKey(target.project);
       if (seen.has(identity)) {
         return {
           ok: false,

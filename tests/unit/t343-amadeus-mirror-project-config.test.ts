@@ -102,6 +102,16 @@ describe("t343 project parse", () => {
     expect(outcome.sources).toEqual(["space/config.json"]);
   });
 
+  test("GitHub owner casing is normalized at the configuration boundary", () => {
+    const [target] = resolved([
+      layer("space", {
+        "mirror-projects": [{ project: "AmAdEuS-DlC/5" }],
+      }),
+    ]).config.projects;
+
+    expect(target.project).toEqual({ owner: "amadeus-dlc", number: 5 });
+  });
+
   test("phase-field overrides the authoritative field name", () => {
     const [target] = resolved([
       layer("space", {
@@ -156,6 +166,7 @@ describe("t343 project parse", () => {
     ["a missing slash", "amadeus-dlc"],
     ["a non-numeric number", "amadeus-dlc/five"],
     ["a zero number", "amadeus-dlc/0"],
+    ["a zero-padded number", "amadeus-dlc/005"],
     ["a negative number", "amadeus-dlc/-1"],
     ["a fractional number", "amadeus-dlc/1.5"],
     ["an empty owner", "/5"],

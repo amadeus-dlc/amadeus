@@ -259,6 +259,23 @@ describe("t347 the gate derives the done column, never names one", () => {
     expect(gate.ready).toBe(true);
   });
 
+  test("owner casing cannot detach a row from its configured field and done name", () => {
+    const target: MirrorProjectTarget = {
+      project: { owner: "ACME", number: 6 },
+      phaseField: "Lifecycle",
+      statusNames: { done: "Shipped" },
+    };
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("AcMe/6", "synced", "Shipped", target.phaseField),
+      ]),
+      snapshot: landed(),
+      targets: [target],
+    });
+
+    expect(gate).toEqual({ ready: true, blocking: [] });
+  });
+
   test("the default column name does not satisfy a board that renamed it", () => {
     const gate = completionProjectGate({
       state: stateWith([row("acme/6", "synced", "Done")]),

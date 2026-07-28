@@ -76,6 +76,9 @@ export type MirrorOperationReceipt = Readonly<{
   key: string;
   event: MirrorEventIdentity;
   operationId: string;
+  // State revision that first created this receipt. Older persisted receipts
+  // omit it; authorization.receiptRevision remains their migration fallback.
+  createdRevision?: number;
   status: MirrorReceiptStatus;
   preparedAt: string;
   attemptedAt?: string;

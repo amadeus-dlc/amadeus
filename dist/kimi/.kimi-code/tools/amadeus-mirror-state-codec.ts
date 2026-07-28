@@ -4,8 +4,9 @@
 // duplicate-key-aware JSON tokenizer, entity validation, canonical rendering,
 // and byte-preserving splice. It NEVER re-serialises bytes outside the Mirror
 // block, and it parses only the Mirror JSON (the surrounding document is kept
-// as substrings). Imports C0 types + the C2 canonical event-key function only;
-// no filesystem, process, GitHub, reducer, or store dependency.
+// as substrings). Imports C0 types plus the pure canonical event-key and
+// timestamp helpers only; no filesystem, process, GitHub, reducer, or store
+// dependency.
 //
 // Wire contract (business-logic-model.md:27) — a single block:
 //   <!-- amadeus:mirror-state:v1:start -->
@@ -36,6 +37,7 @@ import type {
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
+import { mirrorTimestampEpoch } from "./amadeus-mirror-timestamp.ts";
 
 export const MIRROR_STATE_SENTINEL_START =
   "<!-- amadeus:mirror-state:v1:start -->";
@@ -343,11 +345,21 @@ function isNonEmptyString(v: JsonValue): v is string {
   return typeof v === "string" && v.length > 0;
 }
 
-const RFC3339_RE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+function optionalPositiveInt(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): number | undefined {
+  if (!(key in obj)) return undefined;
+  const value = obj[key];
+  if (isPositiveInt(value)) return value;
+  issues.push(`${path}.${key}: must be a positive safe integer`);
+  return undefined;
+}
 
 function isTimestamp(v: JsonValue): v is string {
-  return typeof v === "string" && RFC3339_RE.test(v);
+  return typeof v === "string" && mirrorTimestampEpoch(v) !== null;
 }
 
 // Typed field extractors: push a path-scoped issue on failure and return
@@ -481,6 +493,7 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "key",
   "event",
   "operationId",
+  "createdRevision",
   "status",
   "preparedAt",
   "attemptedAt",
@@ -978,6 +991,12 @@ function validateReceipt(
   checkUnknownKeys(v, RECEIPT_KEYS, path, issues);
   const key = reqNonEmptyString(v, "key", path, issues);
   const operationId = reqNonEmptyString(v, "operationId", path, issues);
+  const createdRevision = optionalPositiveInt(
+    v,
+    "createdRevision",
+    path,
+    issues,
+  );
   const status = reqEnum(v, "status", RECEIPT_STATUSES, "receipt status", path, issues);
   const preparedAt = reqTimestamp(v, "preparedAt", path, issues);
   const event = validateEvent(v.event, `${path}.event`, issues);
@@ -1013,6 +1032,7 @@ function validateReceipt(
     operationId,
     status,
     preparedAt,
+    createdRevision,
     optionals: o,
     createIdentity,
     authorization,
@@ -1023,6 +1043,7 @@ function buildReceipt(input: {
     key: string;
     event: MirrorEventIdentity;
     operationId: string;
+    createdRevision?: number;
     status: MirrorReceiptStatus;
     preparedAt: string;
     optionals: ReceiptOptionals;
@@ -1033,6 +1054,9 @@ function buildReceipt(input: {
     key: input.key,
     event: input.event,
     operationId: input.operationId,
+    ...(input.createdRevision === undefined
+      ? {}
+      : { createdRevision: input.createdRevision }),
     status: input.status,
     preparedAt: input.preparedAt,
     ...(input.optionals.attemptedAt === undefined
@@ -1399,6 +1423,39 @@ function validateReceiptMap(
   return receipts;
 }
 
+function checkReceiptRevisionInvariants(
+  receipts: Readonly<Record<string, MirrorOperationReceipt>>,
+  snapshotRevision: number | undefined,
+  issues: string[],
+): void {
+  if (snapshotRevision === undefined) return;
+  for (const [key, receipt] of Object.entries(receipts)) {
+    const path = `$.receipts["${key}"]`;
+    const authorizationRevision = receipt.authorization?.receiptRevision;
+    if (
+      receipt.createdRevision !== undefined &&
+      receipt.createdRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.createdRevision: must not exceed $.revision`);
+    }
+    if (
+      authorizationRevision !== undefined &&
+      authorizationRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.authorization.receiptRevision: must not exceed $.revision`);
+    }
+    if (
+      receipt.createdRevision !== undefined &&
+      authorizationRevision !== undefined &&
+      receipt.createdRevision !== authorizationRevision
+    ) {
+      issues.push(
+        `${path}.createdRevision: must equal authorization.receiptRevision`,
+      );
+    }
+  }
+}
+
 function validateWarningList(raw: JsonValue, issues: string[]): MirrorWarning[] {
   const warnings: MirrorWarning[] = [];
   if (raw === undefined) return warnings;
@@ -1496,6 +1553,7 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
   checkIssueNumberConsistency(root, issueNumber ?? null, provenance, issues);
 
   const receipts = validateReceiptMap(root.receipts, issues);
+  checkReceiptRevisionInvariants(receipts, revision, issues);
   const warnings = validateWarningList(root.warnings, issues);
   const repairChallenges = validateChallengeMap(root.repairChallenges, issues);
   const expectedPrompt = parseOptionalPrompt(root.expectedPrompt, issues);
@@ -1654,6 +1712,9 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
     key: r.key,
     event: renderEvent(r.event),
     operationId: r.operationId,
+    ...(r.createdRevision === undefined
+      ? {}
+      : { createdRevision: r.createdRevision }),
     status: r.status,
     preparedAt: r.preparedAt,
   };

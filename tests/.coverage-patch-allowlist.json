@@ -512,12 +512,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "168-169",
-    "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
     "lines": "207",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -525,12 +519,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
     "lines": "216",
-    "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "232",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -776,19 +764,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "293",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
     "lines": "296-302",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "319",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -849,18 +825,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
     "lines": "817",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "837",
-    "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "851",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1175,12 +1139,6 @@
     "lines": "86-91",
     "reason": "projection scan integration tests exercise clean, missing, and forbidden public projection outcomes through the shipped CLI; these residual scanner/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "169",
-    "reason": "Fail-closed platform guard for a runtime without O_NOFOLLOW. Supported CI and production platforms expose the constant, while t268 covers normal, symlink, containment, size, and I/O outcomes.",
-    "expiry": "remove when the supported platform matrix includes a runtime without O_NOFOLLOW or the filesystem constants port becomes injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",

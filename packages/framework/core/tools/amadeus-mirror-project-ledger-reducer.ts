@@ -9,21 +9,31 @@ import type {
   MirrorProjectSyncLedger,
 } from "./amadeus-mirror-types.ts";
 
-// What a failed reconciliation of one Project knows. It deliberately carries no
-// `lastAppliedStatus`: a later failure preserves the last successfully applied
-// field and column rather than rewriting history it could not observe.
-export type ProjectFailureMark = Readonly<{
+// A failure row deliberately carries no `lastAppliedStatus`: a later failure
+// preserves the last successfully applied field and column rather than
+// rewriting history it could not observe.
+type ProjectFailureRow = Readonly<{
   project: string;
   projectId: string | null;
   itemId: string | null;
   updatedAt: string;
 }>;
 
-export type MirrorProjectLedgerTransition =
+type ProjectFailureTransition =
+  | ({ kind: "mark-project-pending" } & ProjectFailureRow)
+  | ({ kind: "mark-project-safety-blocked" } & ProjectFailureRow);
+
+export type MirrorProjectLedgerRowTransition =
   | { kind: "upsert-project-entry"; entry: MirrorProjectSyncEntry }
-  | { kind: "prune-project-entries"; activeProjects: readonly string[] }
-  | ({ kind: "mark-project-pending" } & ProjectFailureMark)
-  | ({ kind: "mark-project-safety-blocked" } & ProjectFailureMark);
+  | ProjectFailureTransition;
+
+// One reconciliation round is immutable evidence: the authoritative Project
+// scope and exactly one verdict for each Project, in the same order. The state
+// reducer folds the complete plan before it commits any ledger bytes.
+export type MirrorProjectLedgerPlan = Readonly<{
+  activeProjects: readonly string[];
+  rows: readonly MirrorProjectLedgerRowTransition[];
+}>;
 
 export type ProjectLedgerReduction =
   | { kind: "changed"; ledger: MirrorProjectSyncLedger | null }
@@ -74,7 +84,7 @@ function writeProjectEntry(
 
 function reduceUpsert(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<MirrorProjectLedgerTransition, { kind: "upsert-project-entry" }>,
+  transition: Extract<MirrorProjectLedgerRowTransition, { kind: "upsert-project-entry" }>,
 ): ProjectLedgerReduction {
   if (transition.entry.project.length === 0) {
     return invalid("upsert-project-entry: project must be non-empty");
@@ -96,13 +106,10 @@ function reduceUpsert(
 
 function reducePrune(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<MirrorProjectLedgerTransition, { kind: "prune-project-entries" }>,
+  activeProjects: readonly string[],
 ): ProjectLedgerReduction {
-  if (transition.activeProjects.some((project) => project.length === 0)) {
-    return invalid("prune-project-entries: active project must be non-empty");
-  }
   const existing = ledger?.projects ?? [];
-  const active = new Set(transition.activeProjects);
+  const active = new Set(activeProjects);
   const projects = existing.filter((entry) => active.has(entry.project));
   return projects.length === existing.length
     ? { kind: "unchanged" }
@@ -111,7 +118,7 @@ function reducePrune(
 
 function reduceFailureMark(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: Extract<MirrorProjectLedgerTransition, { kind: "mark-project-pending" | "mark-project-safety-blocked" }>,
+  transition: ProjectFailureTransition,
 ): ProjectLedgerReduction {
   const state =
     transition.kind === "mark-project-pending" ? "pending" : "safety-blocked";
@@ -133,17 +140,121 @@ function reduceFailureMark(
   });
 }
 
-export function reduceProjectLedger(
+function reduceProjectLedgerRow(
   ledger: MirrorProjectSyncLedger | null | undefined,
-  transition: MirrorProjectLedgerTransition,
+  transition: MirrorProjectLedgerRowTransition,
 ): ProjectLedgerReduction {
   switch (transition.kind) {
     case "upsert-project-entry":
       return reduceUpsert(ledger, transition);
-    case "prune-project-entries":
-      return reducePrune(ledger, transition);
     case "mark-project-pending":
     case "mark-project-safety-blocked":
       return reduceFailureMark(ledger, transition);
   }
+}
+
+function rowProject(row: MirrorProjectLedgerRowTransition): string {
+  return row.kind === "upsert-project-entry"
+    ? row.entry.project
+    : row.project;
+}
+
+function validateProjectLedgerPlan(
+  plan: MirrorProjectLedgerPlan,
+): ProjectLedgerReduction | null {
+  if (plan.activeProjects.length === 0) {
+    return invalid(
+      "project-ledger-plan: activeProjects must not be empty",
+    );
+  }
+  if (plan.activeProjects.some((project) => project.length === 0)) {
+    return invalid(
+      "project-ledger-plan: active Project must be non-empty",
+    );
+  }
+  if (new Set(plan.activeProjects).size !== plan.activeProjects.length) {
+    return invalid(
+      "project-ledger-plan: activeProjects must not contain duplicates",
+    );
+  }
+  if (plan.rows.length !== plan.activeProjects.length) {
+    return invalid(
+      "project-ledger-plan: requires one row per active Project",
+    );
+  }
+  for (let index = 0; index < plan.rows.length; index += 1) {
+    const row = plan.rows[index];
+    if (rowProject(row) !== plan.activeProjects[index]) {
+      return invalid(
+        "project-ledger-plan: row order must match activeProjects",
+      );
+    }
+    if (
+      row.kind === "upsert-project-entry" &&
+      row.entry.state !== "synced"
+    ) {
+      return invalid(
+        "project-ledger-plan: upsert rows must be synced",
+      );
+    }
+  }
+  return null;
+}
+
+export function projectLedgerPlanIsConverged(
+  plan: MirrorProjectLedgerPlan,
+): boolean {
+  return (
+    plan.rows.length > 0 &&
+    plan.rows.every(
+      (row) =>
+        row.kind === "upsert-project-entry" &&
+        row.entry.state === "synced",
+    )
+  );
+}
+
+export function reduceProjectLedgerPlan(
+  ledger: MirrorProjectSyncLedger | null | undefined,
+  plan: MirrorProjectLedgerPlan,
+): ProjectLedgerReduction {
+  const invalidPlan = validateProjectLedgerPlan(plan);
+  if (invalidPlan) return invalidPlan;
+
+  let current = ledger ?? null;
+  let changedLedger = false;
+  const pruned = reducePrune(current, plan.activeProjects);
+  if (pruned.kind === "invalid") return pruned;
+  if (pruned.kind === "changed") {
+    current = pruned.ledger;
+    changedLedger = true;
+  }
+  for (const row of plan.rows) {
+    const result = reduceProjectLedgerRow(current, row);
+    if (result.kind === "invalid") return result;
+    if (result.kind === "changed") {
+      current = result.ledger;
+      changedLedger = true;
+    }
+  }
+  if (current !== null) {
+    const entries = new Map(
+      current.projects.map((entry) => [entry.project, entry]),
+    );
+    const ordered = plan.activeProjects.flatMap((project) => {
+      const entry = entries.get(project);
+      return entry === undefined ? [] : [entry];
+    });
+    if (
+      ordered.some(
+        (entry, index) => current?.projects[index]?.project !== entry.project,
+      )
+    ) {
+      current = { projects: ordered };
+      changedLedger = true;
+    }
+  }
+  return changedLedger
+    ? { kind: "changed", ledger: current }
+    : { kind: "unchanged" };
 }

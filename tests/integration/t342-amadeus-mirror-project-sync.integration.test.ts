@@ -6,10 +6,8 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import {
-  executeMirrorOperation,
-  syncProjects,
-} from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import { syncProjects as planProjectSync } from "../../packages/framework/core/tools/amadeus-mirror-project-executor.ts";
 import {
   mirrorEventIdentity,
   mirrorEventKey,
@@ -41,6 +39,17 @@ const SECRET = "ghp_projectSyncSecretToken";
 
 let harness: ProjectSyncTestHarness;
 
+function deferredSignal(): Readonly<{
+  promise: Promise<void>;
+  resolve: () => void;
+}> {
+  let signal = (): void => {};
+  const promise = new Promise<void>((resolve) => {
+    signal = resolve;
+  });
+  return { promise, resolve: () => signal() };
+}
+
 beforeEach(() => {
   harness = new ProjectSyncTestHarness("t342-");
 });
@@ -48,56 +57,6 @@ beforeEach(() => {
 afterEach(() => {
   harness.dispose();
 });
-
-type ReleaseRead =
-  | "io-failure"
-  | "invalid-state"
-  | "succeeded-without-verification"
-  | "pending-without-hold";
-
-function injectReleaseRead(
-  store: ReturnType<ProjectSyncTestHarness["fileStore"]>,
-  context: MirrorExecutionContext,
-  mode: ReleaseRead,
-) {
-  const readDocument = store.ports.readDocument;
-  let injected = false;
-  const ports = {
-    ...store.ports,
-    readDocument() {
-      const document = readDocument();
-      const parsed = parseMirrorStateDocument(document);
-      if (injected || parsed.kind === "invalid") return document;
-      const key = mirrorEventKey(context.event);
-      const receipt = parsed.snapshot.receipts[key];
-      const synced =
-        parsed.snapshot.projectSync?.projects.some(
-          (project) => project.state === "synced",
-        ) === true;
-      if (receipt?.projectSyncHold === undefined || !synced) return document;
-      injected = true;
-      if (mode === "io-failure") throw new Error("release read failed");
-      if (mode === "invalid-state") {
-        return document.replace('"schema":1', '"schema":99');
-      }
-      const { projectSyncHold: _hold, ...unheld } = receipt;
-      const replacement =
-        mode === "succeeded-without-verification"
-          ? { ...unheld, status: "succeeded" as const }
-          : {
-              ...unheld,
-              status: "pending" as const,
-              failureClass: "state-write" as const,
-              lastEffect: "outcome-unknown" as const,
-            };
-      return `# State\n\n${renderMirrorStateBlock({
-        ...parsed.snapshot,
-        receipts: { ...parsed.snapshot.receipts, [key]: replacement },
-      })}\n`;
-    },
-  } satisfies MirrorStateStorePorts;
-  return { ports, injected: () => injected };
-}
 
 describe("t342 create then project sync", () => {
   test("a fresh create adds the item, sets Intent Phase, and records one synced row", async () => {
@@ -149,7 +108,7 @@ describe("t342 create then project sync", () => {
 });
 
 describe("t342 idempotence", () => {
-  test("the legacy executor facade still accepts state-store ports", async () => {
+  test("the Project planner returns immutable evidence without writing state", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.items = {
@@ -165,13 +124,26 @@ describe("t342 idempotence", () => {
       ],
     };
 
-    await expect(
-      syncProjects(store.ports, harness.context("sync", gateway), 7),
-    ).resolves.toEqual({ kind: "converged" });
-    expect(store.state().projectSync?.projects[0]).toMatchObject({
-      project: "acme/5",
-      state: "synced",
+    const result = await planProjectSync(
+      harness.context("sync", gateway),
+      7,
+    );
+
+    expect(result.kind).toBe("converged");
+    if (result.kind !== "converged") throw new Error("expected converged");
+    expect(result.ledgerPlan).toEqual({
+      activeProjects: ["acme/5"],
+      rows: [
+        {
+          kind: "upsert-project-entry",
+          entry: expect.objectContaining({
+            project: "acme/5",
+            state: "synced",
+          }),
+        },
+      ],
     });
+    expect(store.state().projectSync).toBeNull();
   });
 
   test("a second sync over a converged board issues no Project mutation", async () => {
@@ -215,7 +187,7 @@ describe("t342 idempotence", () => {
         localState: store.state(),
       });
 
-    await run();
+    const second = await run();
     const afterFirst = gateway.history.filter((entry) =>
       entry.startsWith("add-") || entry.startsWith("update-"),
     ).length;
@@ -240,7 +212,61 @@ describe("t342 idempotence", () => {
 
     expect(afterFirst).toBe(2);
     expect(afterSecond).toBe(2);
+    expect(second).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
+    });
     expect(store.state().projectSync?.projects).toHaveLength(1);
+  });
+
+  test("a legacy succeeded receipt without Project verification is held and reconciled", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    const context = harness.context("sync", gateway);
+    await executeMirrorOperation({
+      context,
+      ports: store.ports,
+      localState: store.state(),
+    });
+    const succeeded = store.state();
+    const key = mirrorEventKey(context.event);
+    const { projectSyncVerified: _verified, ...legacyReceipt } =
+      succeeded.receipts[key];
+    const legacyStore = harness.fileStore({
+      ...succeeded,
+      receipts: { ...succeeded.receipts, [key]: legacyReceipt },
+    });
+    gateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_added",
+          singleSelectValuesByFieldId: {
+            PVTSSF_intent_phase: "Ideation",
+          },
+        },
+      ],
+    };
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports: legacyStore.ports,
+      localState: legacyStore.state(),
+    });
+
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
+    });
+    expect(legacyStore.state().receipts[key]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
   });
 
   test("an already-present item is never added again", async () => {
@@ -270,16 +296,14 @@ describe("t342 idempotence", () => {
 
 describe("t342 no configuration", () => {
   test("the Project executor converges immediately when the configured target list is empty", async () => {
-    const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
 
     await expect(
-      syncProjects(
-        store.ports,
+      planProjectSync(
         harness.context("sync", gateway, { targets: [] }),
         7,
       ),
-    ).resolves.toEqual({ kind: "converged" });
+    ).resolves.toEqual({ kind: "not-required" });
     expect(projectCalls(gateway)).toEqual([]);
   });
 
@@ -372,16 +396,18 @@ describe("t342 no configuration", () => {
       snapshot: landedSnapshot,
       targets: [],
     });
+    const localState = store.state();
     const outcome = await executeMirrorOperation({
       context: {
         ...baseContext,
         authorization: {
           ...baseContext.authorization,
           finalSyncReceiptKey,
+          receiptRevision: localState.revision + 1,
         },
       },
       ports: store.ports,
-      localState: store.state(),
+      localState,
     });
 
     expect(outcome).toEqual({
@@ -443,6 +469,44 @@ describe("t342 failure containment", () => {
     expect(warnings.some((w) => w.classification === "network")).toBe(true);
   });
 
+  test("a recovered membership query clears its operation warning atomically", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.listResult = failure("network");
+    const context = harness.context("sync", gateway);
+
+    const first = await executeMirrorOperation({
+      context,
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(first.kind).toBe("pending");
+    const key = mirrorEventKey(context.event);
+    const operationId = store.state().receipts[key].operationId;
+    expect(store.state().warnings).toContainEqual(
+      expect.objectContaining({
+        operationId,
+        operation: "sync",
+        summary: expect.stringContaining("unsynchronized"),
+      }),
+    );
+
+    gateway.fixture.listResult = undefined;
+    const recovered = await executeMirrorOperation({
+      context,
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(recovered.kind).toBe("completed");
+    expect(store.state().warnings).toEqual([]);
+    expect(store.state().receipts[key]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
+  });
+
   test("an add failure classifies that Project by its failure class", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
@@ -485,7 +549,7 @@ describe("t342 failure containment", () => {
     expect(diagnostics.map((d) => d.reason)).toEqual(["update-failed"]);
   });
 
-  test("a Project ledger write failure leaves the sync receipt retryable", async () => {
+  test("remote mutations survive an atomic state failure and are observed on retry", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
     const context = harness.context("sync", gateway);
@@ -529,9 +593,57 @@ describe("t342 failure containment", () => {
       status: "pending",
       projectSyncHold: { reason: "project-sync-unsettled" },
     });
+    expect(projectCalls(gateway)).toEqual([
+      "list-project-items",
+      "resolve-project-fields",
+      "add-project-item",
+      "update-project-item-field",
+    ]);
+
+    gateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_added",
+          singleSelectValuesByFieldId: {
+            PVTSSF_intent_phase: "Ideation",
+          },
+        },
+      ],
+    };
+    const mutationCount = projectCalls(gateway).filter(
+      (call) =>
+        call === "add-project-item" ||
+        call === "update-project-item-field",
+    ).length;
+
+    const retry = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(retry.kind).toBe("completed");
+    expect(
+      projectCalls(gateway).filter(
+        (call) =>
+          call === "add-project-item" ||
+          call === "update-project-item-field",
+      ),
+    ).toHaveLength(mutationCount);
+    expect(store.state().projectSync?.projects[0].state).toBe("synced");
+    expect(
+      store.state().receipts[mirrorEventKey(context.event)],
+    ).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
   });
 
-  test("a receipt release write failure preserves the Project sync hold", async () => {
+  test("an atomic reconciliation write failure preserves both the old ledger and hold", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.items = {
@@ -589,7 +701,8 @@ describe("t342 failure containment", () => {
       status: "pending",
       projectSyncHold: { reason: "project-sync-unsettled" },
     });
-    expect(store.state().projectSync?.projects[0].state).toBe("synced");
+    expect(store.state().receipts[key].projectSyncVerified).toBeUndefined();
+    expect(store.state().projectSync).toBeNull();
 
     const retry = await executeMirrorOperation({
       context,
@@ -604,17 +717,19 @@ describe("t342 failure containment", () => {
     });
     expect(store.state().receipts[key]).toMatchObject({
       status: "succeeded",
+      projectSyncVerified: true,
     });
     expect(store.state().receipts[key].projectSyncHold).toBeUndefined();
+    expect(store.state().projectSync?.projects[0].state).toBe("synced");
   });
 
-  test("Project failure bookkeeping read failures also leave the receipt retryable", async () => {
+  test("an atomic reconciliation read failure leaves the receipt retryable", async () => {
     const store = harness.fileStore(harness.linkedState());
     const gateway = new ProjectGateway(harness.markerBody());
     gateway.fixture.listResult = failure("network");
     const context = harness.context("sync", gateway);
     const readDocument = store.ports.readDocument;
-    let rejectedProjectReads = 2;
+    let rejectedProjectReads = 1;
     const ports = {
       ...store.ports,
       readDocument() {
@@ -653,51 +768,247 @@ describe("t342 failure containment", () => {
     });
   });
 
+  test("a stale completion plan loses its CAS race without overwriting the newer phase", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const remoteBoard = { phase: "Ideation" };
+    const completionUpdated = deferredSignal();
+    const releaseCompletion = deferredSignal();
+    const completionGateway = new ProjectGateway(harness.markerBody());
+    completionGateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_item1",
+          singleSelectValuesByFieldId: {
+            PVTSSF_intent_phase: remoteBoard.phase,
+          },
+        },
+      ],
+    };
+    const updateForCompletion =
+      completionGateway.updateProjectItemSingleSelectField.bind(
+        completionGateway,
+      );
+    completionGateway.updateProjectItemSingleSelectField = async (...args) => {
+      const result = await updateForCompletion(...args);
+      if (result.kind === "ok" && args[4] === "opt-done") {
+        remoteBoard.phase = "Done";
+        completionUpdated.resolve();
+        await releaseCompletion.promise;
+      }
+      return result;
+    };
+    const completionContext = harness.context("sync", completionGateway, {
+      boundary: { kind: "workflow-completed", instance: "done-race" },
+      snapshot: harness.workflowSnapshot({
+        lifecyclePhase: "Operation",
+        registryStatus: "complete",
+        status: "Completed",
+      }),
+    });
+
+    const completion = executeMirrorOperation({
+      context: completionContext,
+      ports: store.ports,
+      localState: store.state(),
+    });
+    await completionUpdated.promise;
+    expect(remoteBoard.phase).toBe("Done");
+
+    const phaseGateway = new ProjectGateway(harness.markerBody());
+    phaseGateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_item1",
+          singleSelectValuesByFieldId: {
+            PVTSSF_intent_phase: remoteBoard.phase,
+          },
+        },
+      ],
+    };
+    const updateForPhase =
+      phaseGateway.updateProjectItemSingleSelectField.bind(phaseGateway);
+    phaseGateway.updateProjectItemSingleSelectField = async (...args) => {
+      const result = await updateForPhase(...args);
+      if (result.kind === "ok" && args[4] === "opt-ideation") {
+        remoteBoard.phase = "Ideation";
+      }
+      return result;
+    };
+    const phaseContext = harness.context("sync", phaseGateway, {
+      boundary: {
+        kind: "phase-verified",
+        phase: "ideation",
+        instance: "phase-race",
+      },
+    });
+    const phaseLocalState = store.state();
+    const phaseOutcome = await (async () => {
+      try {
+        return await executeMirrorOperation({
+          context: {
+            ...phaseContext,
+            authorization: {
+              ...phaseContext.authorization,
+              receiptRevision: phaseLocalState.revision + 1,
+            },
+          },
+          ports: store.ports,
+          localState: phaseLocalState,
+        });
+      } finally {
+        releaseCompletion.resolve();
+      }
+    })();
+    const completionOutcome = await completion;
+
+    expect(phaseOutcome).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
+    });
+    expect(completionOutcome).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        classification: "state-write",
+        summary:
+          "Project reconciliation could not be committed atomically: state compare-and-set conflict",
+      },
+    });
+    expect(remoteBoard.phase).toBe("Ideation");
+    expect(completionGateway.history).toContain("option:opt-done");
+    expect(phaseGateway.history).toContain("option:opt-ideation");
+    const state = store.state();
+    expect(state.projectSync?.projects[0]).toMatchObject({
+      state: "synced",
+      lastAppliedStatus: "Ideation",
+    });
+    expect(state.receipts[mirrorEventKey(phaseContext.event)]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
+    const completionReceipt =
+      state.receipts[mirrorEventKey(completionContext.event)];
+    expect(completionReceipt).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+    expect(completionReceipt.projectSyncVerified).toBeUndefined();
+  });
+
+  test("a durable barrier read failure stops before any Project API call", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    const context = harness.context("sync", gateway);
+    const readDocument = store.ports.readDocument;
+    let rejectedBarrierRead = false;
+    const ports = {
+      ...store.ports,
+      readDocument() {
+        const document = readDocument();
+        if (
+          !rejectedBarrierRead &&
+          document.includes('"projectSyncHold"')
+        ) {
+          rejectedBarrierRead = true;
+          throw new Error("injected durable barrier read failure");
+        }
+        return document;
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(rejectedBarrierRead).toBe(true);
+    expect(outcome).toMatchObject({
+      kind: "pending",
+      warning: { classification: "state-write" },
+    });
+    expect(projectCalls(gateway)).toEqual([]);
+    expect(store.state().receipts[mirrorEventKey(context.event)]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+  });
+
   test.each([
-    ["read failure", "io-failure", "state document read failed"],
     [
-      "invalid state",
-      "invalid-state",
-      "Project sync receipt state is invalid: $.schema: must be 1",
-    ],
-    [
-      "missing verification marker",
-      "succeeded-without-verification",
+      "loses its verification marker",
       "Project sync converged but its durable verification marker is absent",
+      "succeeded-without-marker",
     ],
     [
-      "missing hold",
-      "pending-without-hold",
+      "loses its receipt",
       "Project sync converged but its durable receipt hold is absent",
+      "receipt-absent",
     ],
   ] as const)(
-    "Project release %s stays pending",
-    async (_case, mode, summary) => {
+    "a barrier that concurrently %s remains pending",
+    async (_case, expectedSummary, replacement) => {
       const store = harness.fileStore(harness.linkedState());
       const gateway = new ProjectGateway(harness.markerBody());
       const context = harness.context("sync", gateway);
-      const releaseRead = injectReleaseRead(store, context, mode);
+      const key = mirrorEventKey(context.event);
+      const readDocument = store.ports.readDocument;
+      let replacedBarrier = false;
+      const ports = {
+        ...store.ports,
+        readDocument() {
+          const document = readDocument();
+          if (
+            replacedBarrier ||
+            !document.includes('"projectSyncHold"')
+          ) {
+            return document;
+          }
+          const parsed = parseMirrorStateDocument(document);
+          if (parsed.kind !== "ok") {
+            throw new Error(parsed.issues.join("; "));
+          }
+          const receipts = { ...parsed.snapshot.receipts };
+          if (replacement === "receipt-absent") {
+            delete receipts[key];
+          } else {
+            const succeeded = { ...receipts[key], status: "succeeded" as const };
+            delete succeeded.projectSyncHold;
+            delete succeeded.projectSyncVerified;
+            receipts[key] = succeeded;
+          }
+          replacedBarrier = true;
+          return `# State\n\n${renderMirrorStateBlock({
+            ...parsed.snapshot,
+            receipts,
+          })}\n`;
+        },
+      } satisfies MirrorStateStorePorts;
 
       const outcome = await executeMirrorOperation({
         context,
-        ports: releaseRead.ports,
+        ports,
         localState: store.state(),
       });
 
-      expect(releaseRead.injected()).toBe(true);
+      expect(replacedBarrier).toBe(true);
       expect(outcome).toMatchObject({
         kind: "pending",
-        operation: "sync",
         warning: {
           classification: "state-write",
-          summary,
-          retryable: true,
+          summary: expectedSummary,
         },
       });
-      expect(store.state().receipts[mirrorEventKey(context.event)]).toMatchObject({
-        status: "pending",
-        projectSyncHold: { reason: "project-sync-unsettled" },
-      });
+      expect(projectCalls(gateway)).toEqual([]);
     },
   );
 });

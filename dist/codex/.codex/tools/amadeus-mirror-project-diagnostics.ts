@@ -8,7 +8,11 @@ import {
   expectedProjectStatus,
   selectProjectStatusOption,
 } from "./amadeus-mirror-policy.ts";
-import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-project-contract.ts";
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  mirrorProjectKey,
+  normalizeMirrorProjectIdentity,
+} from "./amadeus-mirror-project-contract.ts";
 import type {
   MirrorFailureClass,
   MirrorGitHubGateway,
@@ -50,10 +54,6 @@ export type MirrorProjectDiagnosticTarget = Readonly<{
   snapshot: MirrorSnapshot | null;
 }>;
 
-function canonicalProjectRef(project: MirrorProjectRef): string {
-  return `${project.owner}/${project.number}`;
-}
-
 // Diagnose configured boards, ledger-known boards, and current memberships.
 // A board discovered outside configuration uses the default lifecycle field.
 function diagnosticTargets(
@@ -63,16 +63,20 @@ function diagnosticTargets(
 ): MirrorProjectTarget[] {
   const byProject = new Map<string, MirrorProjectTarget>();
   for (const target of configured) {
-    byProject.set(canonicalProjectRef(target.project), target);
+    byProject.set(mirrorProjectKey(target.project), {
+      ...target,
+      project: normalizeMirrorProjectIdentity(target.project),
+    });
   }
   const addBare = (
     project: MirrorProjectRef,
     phaseField: string = DEFAULT_PROJECT_PHASE_FIELD,
   ): void => {
-    const key = canonicalProjectRef(project);
+    const normalized = normalizeMirrorProjectIdentity(project);
+    const key = mirrorProjectKey(normalized);
     if (!byProject.has(key)) {
       byProject.set(key, {
-        project,
+        project: normalized,
         phaseField,
         statusNames: {},
       });
@@ -92,8 +96,8 @@ function diagnosticTargets(
     addBare({ owner: item.projectOwner, number: item.projectNumber });
   }
   return [...byProject.values()].sort((left, right) =>
-    canonicalProjectRef(left.project).localeCompare(
-      canonicalProjectRef(right.project),
+    mirrorProjectKey(left.project).localeCompare(
+      mirrorProjectKey(right.project),
     ),
   );
 }
@@ -161,11 +165,13 @@ async function diagnoseProject(
   project: MirrorProjectTarget,
   items: readonly MirrorProjectItem[],
 ): Promise<MirrorRepairProjectDiagnostic> {
-  const canonical = canonicalProjectRef(project.project);
+  const canonical = mirrorProjectKey(project.project);
   const item = items.find(
     (candidate) =>
-      candidate.projectOwner === project.project.owner &&
-      candidate.projectNumber === project.project.number,
+      mirrorProjectKey({
+        owner: candidate.projectOwner,
+        number: candidate.projectNumber,
+      }) === canonical,
   );
   const expected = expectedProjectStatus(
     snapshot,
@@ -225,6 +231,42 @@ async function diagnoseProject(
   return { ...base, resolution: "resolved", summary: resolvedSummary(base) };
 }
 
+const PROJECT_DIAGNOSTIC_CONCURRENCY = 2;
+
+// Project reads are independent, but an Intent may reference many boards.
+// A fixed worker pool avoids both serial latency and an unbounded GraphQL burst.
+// Each worker claims its index before awaiting, then writes back to that index,
+// so completion order never changes the stable diagnostic target order.
+async function diagnoseProjects(
+  target: MirrorProjectDiagnosticTarget,
+  snapshot: MirrorSnapshot,
+  projects: readonly MirrorProjectTarget[],
+  items: readonly MirrorProjectItem[],
+): Promise<MirrorRepairProjectDiagnostic[]> {
+  const rows = new Array<MirrorRepairProjectDiagnostic>(projects.length);
+  let nextIndex = 0;
+  const runWorker = async (): Promise<void> => {
+    while (nextIndex < projects.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      rows[index] = await diagnoseProject(
+        target,
+        snapshot,
+        projects[index],
+        items,
+      );
+    }
+  };
+  const workerCount = Math.min(
+    PROJECT_DIAGNOSTIC_CONCURRENCY,
+    projects.length,
+  );
+  await Promise.all(
+    Array.from({ length: workerCount }, () => runWorker()),
+  );
+  return rows;
+}
+
 export async function diagnoseMirrorProjects(
   target: MirrorProjectDiagnosticTarget,
   state: MirrorStateSnapshot,
@@ -247,7 +289,7 @@ export async function diagnoseMirrorProjects(
   if (view.kind === "failure") {
     const resolution = unreachableResolution(view.classification);
     return diagnosticTargets(configured, ledger, []).map((project) => {
-      const canonical = canonicalProjectRef(project.project);
+      const canonical = mirrorProjectKey(project.project);
       return {
         project: canonical,
         membership: "not-member" as const,
@@ -263,9 +305,10 @@ export async function diagnoseMirrorProjects(
     });
   }
 
-  const rows: MirrorRepairProjectDiagnostic[] = [];
-  for (const project of diagnosticTargets(configured, ledger, items)) {
-    rows.push(await diagnoseProject(target, target.snapshot, project, items));
-  }
-  return rows;
+  return diagnoseProjects(
+    target,
+    target.snapshot,
+    diagnosticTargets(configured, ledger, items),
+    items,
+  );
 }

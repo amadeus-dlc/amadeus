@@ -11,7 +11,11 @@ import {
   renderMirrorStateBlock,
   renderMirrorStateJson,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
-import { reduceMirrorState } from "../../packages/framework/core/tools/amadeus-mirror-state-reducer.ts";
+import {
+  projectLedgerPlanIsConverged,
+  reduceProjectLedgerPlan,
+  type MirrorProjectLedgerRowTransition,
+} from "../../packages/framework/core/tools/amadeus-mirror-project-ledger-reducer.ts";
 import type {
   MirrorProjectSyncEntry,
   MirrorStateSnapshot,
@@ -36,6 +40,20 @@ function entry(
 
 function withLedger(entries: MirrorProjectSyncEntry[]): MirrorStateSnapshot {
   return { ...EMPTY_MIRROR_STATE, projectSync: { projects: entries } };
+}
+
+function reduceLedgerRow(
+  ledger: MirrorStateSnapshot["projectSync"],
+  row: MirrorProjectLedgerRowTransition,
+) {
+  const project =
+    row.kind === "upsert-project-entry"
+      ? row.entry.project
+      : row.project;
+  return reduceProjectLedgerPlan(ledger, {
+    activeProjects: [project],
+    rows: [row],
+  });
 }
 
 function roundTrip(snapshot: MirrorStateSnapshot): MirrorStateSnapshot {
@@ -215,79 +233,82 @@ describe("t341 codec rejects", () => {
   });
 });
 
-describe("t341 reducer upsert", () => {
+describe("t341 plan upsert", () => {
   test("the first entry creates the ledger", () => {
-    const result = reduceMirrorState(
-      EMPTY_MIRROR_STATE,
-      { kind: "upsert-project-entry", entry: entry() },
-      NOW,
-    );
+    const result = reduceLedgerRow(null, {
+      kind: "upsert-project-entry",
+      entry: entry(),
+    });
     expect(result.kind).toBe("changed");
     if (result.kind === "changed") {
-      expect(result.snapshot.projectSync).toEqual({ projects: [entry()] });
+      expect(result.ledger).toEqual({ projects: [entry()] });
     }
   });
 
   test("re-applying an identical entry is unchanged, so a converged re-run writes nothing", () => {
-    const result = reduceMirrorState(
-      withLedger([entry()]),
-      { kind: "upsert-project-entry", entry: entry() },
-      NOW,
-    );
+    const result = reduceLedgerRow({ projects: [entry()] }, {
+      kind: "upsert-project-entry",
+      entry: entry(),
+    });
     expect(result).toEqual({ kind: "unchanged" });
   });
 
   test("a changed field replaces the row in place without reordering", () => {
     const other = entry({ project: "amadeus-dlc/6" });
     const updated = entry({ lastAppliedStatus: "Construction" });
-    const result = reduceMirrorState(
-      withLedger([entry(), other]),
-      { kind: "upsert-project-entry", entry: updated },
-      NOW,
+    const result = reduceProjectLedgerPlan(
+      { projects: [entry(), other] },
+      {
+        activeProjects: [updated.project, other.project],
+        rows: [
+          { kind: "upsert-project-entry", entry: updated },
+          { kind: "upsert-project-entry", entry: other },
+        ],
+      },
     );
     expect(result.kind).toBe("changed");
     if (result.kind === "changed") {
-      expect(result.snapshot.projectSync).toEqual({ projects: [updated, other] });
+      expect(result.ledger).toEqual({ projects: [updated, other] });
     }
   });
 
   test("a changed phase field is not equal to the previous sync evidence", () => {
     const updated = entry({ phaseField: "Lifecycle" });
-    const result = reduceMirrorState(
-      withLedger([entry()]),
-      { kind: "upsert-project-entry", entry: updated },
-      NOW,
-    );
+    const result = reduceLedgerRow({ projects: [entry()] }, {
+      kind: "upsert-project-entry",
+      entry: updated,
+    });
     expect(result.kind).toBe("changed");
     if (result.kind === "changed") {
-      expect(result.snapshot.projectSync).toEqual({ projects: [updated] });
+      expect(result.ledger).toEqual({ projects: [updated] });
     }
   });
 
   test("a different Project appends a new row", () => {
     const other = entry({ project: "amadeus-dlc/6" });
-    const result = reduceMirrorState(
-      withLedger([entry()]),
-      { kind: "upsert-project-entry", entry: other },
-      NOW,
+    const result = reduceProjectLedgerPlan(
+      { projects: [entry()] },
+      {
+        activeProjects: [entry().project, other.project],
+        rows: [
+          { kind: "upsert-project-entry", entry: entry() },
+          { kind: "upsert-project-entry", entry: other },
+        ],
+      },
     );
     expect(result.kind).toBe("changed");
     if (result.kind === "changed") {
-      expect(result.snapshot.projectSync?.projects).toEqual([entry(), other]);
+      expect(result.ledger?.projects).toEqual([entry(), other]);
     }
   });
 
-  test("the upsert does not mutate the input snapshot", () => {
-    const before = withLedger([entry()]);
-    reduceMirrorState(
-      before,
-      {
-        kind: "upsert-project-entry",
-        entry: entry({ lastAppliedStatus: "Done" }),
-      },
-      NOW,
-    );
-    expect(before.projectSync).toEqual({ projects: [entry()] });
+  test("the upsert does not mutate the input ledger", () => {
+    const before = { projects: [entry()] };
+    reduceLedgerRow(before, {
+      kind: "upsert-project-entry",
+      entry: entry({ lastAppliedStatus: "Done" }),
+    });
+    expect(before).toEqual({ projects: [entry()] });
   });
 
   test.each([
@@ -295,38 +316,135 @@ describe("t341 reducer upsert", () => {
     ["an empty projectId", entry({ projectId: "" })],
     ["an empty phaseField", entry({ phaseField: "" })],
   ])("rejects %s", (_label, bad) => {
-    const result = reduceMirrorState(
-      EMPTY_MIRROR_STATE,
-      { kind: "upsert-project-entry", entry: bad },
-      NOW,
-    );
+    const result = reduceLedgerRow(null, {
+      kind: "upsert-project-entry",
+      entry: bad,
+    });
     expect(result.kind).toBe("invalid");
   });
 
-  test("a changed upsert clears any pending audit outbox, like every transition", () => {
-    const result = reduceMirrorState(
-      {
+  test("a reduced ledger survives a codec round-trip", () => {
+    const result = reduceLedgerRow(null, {
+      kind: "upsert-project-entry",
+      entry: entry(),
+    });
+    if (result.kind !== "changed") throw new Error("expected a changed result");
+    expect(
+      roundTrip({
         ...EMPTY_MIRROR_STATE,
-        auditOutbox: { transactionId: "t", digest: "d", fields: {} },
-      },
-      { kind: "upsert-project-entry", entry: entry() },
-      NOW,
+        projectSync: result.ledger,
+      }).projectSync,
+    ).toEqual({
+      projects: [entry()],
+    });
+  });
+});
+
+describe("t341 immutable reconciliation plan", () => {
+  test("prunes stale rows and applies every active Project verdict together", () => {
+    const active = entry({ project: "amadeus-dlc/4" });
+    const stale = entry({ project: "amadeus-dlc/stale" });
+    const pending = {
+      kind: "mark-project-pending",
+      project: "amadeus-dlc/5",
+      projectId: "PVT_5",
+      itemId: "PVTI_5",
+      updatedAt: NOW,
+    } as const;
+    const plan = {
+      activeProjects: [active.project, pending.project],
+      rows: [
+        { kind: "upsert-project-entry", entry: active },
+        pending,
+      ],
+    } as const;
+
+    const result = reduceProjectLedgerPlan(
+      { projects: [stale, entry({ project: pending.project })] },
+      plan,
     );
+
     expect(result.kind).toBe("changed");
-    if (result.kind === "changed") {
-      expect(result.snapshot.auditOutbox).toBeNull();
+    if (result.kind !== "changed") throw new Error("expected changed");
+    expect(result.ledger?.projects).toEqual([
+      active,
+      expect.objectContaining({
+        project: pending.project,
+        projectId: "PVT_5",
+        itemId: "PVTI_5",
+        state: "pending",
+      }),
+    ]);
+    expect(projectLedgerPlanIsConverged(plan)).toBe(false);
+  });
+
+  test.each([
+    [
+      "empty scope",
+      { activeProjects: [], rows: [] },
+      "activeProjects must not be empty",
+    ],
+    [
+      "duplicate scope",
+      {
+        activeProjects: ["amadeus-dlc/5", "amadeus-dlc/5"],
+        rows: [
+          { kind: "upsert-project-entry", entry: entry() },
+          { kind: "upsert-project-entry", entry: entry() },
+        ],
+      },
+      "activeProjects must not contain duplicates",
+    ],
+    [
+      "missing row",
+      { activeProjects: ["amadeus-dlc/5"], rows: [] },
+      "one row per active Project",
+    ],
+    [
+      "misordered row",
+      {
+        activeProjects: ["amadeus-dlc/5", "amadeus-dlc/6"],
+        rows: [
+          {
+            kind: "upsert-project-entry",
+            entry: entry({ project: "amadeus-dlc/6" }),
+          },
+          { kind: "upsert-project-entry", entry: entry() },
+        ],
+      },
+      "row order must match activeProjects",
+    ],
+    [
+      "non-synced upsert",
+      {
+        activeProjects: ["amadeus-dlc/5"],
+        rows: [
+          {
+            kind: "upsert-project-entry",
+            entry: entry({ state: "pending" }),
+          },
+        ],
+      },
+      "upsert rows must be synced",
+    ],
+  ] as const)("rejects a %s plan", (_name, plan, issue) => {
+    const result = reduceProjectLedgerPlan(null, plan);
+    expect(result.kind).toBe("invalid");
+    if (result.kind === "invalid") {
+      expect(result.issues.join("; ")).toContain(issue);
     }
   });
 
-  test("a reduced ledger survives a codec round-trip", () => {
-    const result = reduceMirrorState(
-      EMPTY_MIRROR_STATE,
-      { kind: "upsert-project-entry", entry: entry() },
-      NOW,
-    );
-    if (result.kind !== "changed") throw new Error("expected a changed result");
-    expect(roundTrip(result.snapshot).projectSync).toEqual({
-      projects: [entry()],
+  test("an identical converged plan is unchanged and reports convergence", () => {
+    const synced = entry();
+    const plan = {
+      activeProjects: [synced.project],
+      rows: [{ kind: "upsert-project-entry", entry: synced }],
+    } as const;
+
+    expect(reduceProjectLedgerPlan({ projects: [synced] }, plan)).toEqual({
+      kind: "unchanged",
     });
+    expect(projectLedgerPlanIsConverged(plan)).toBe(true);
   });
 });

@@ -10,10 +10,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  executeMirrorOperation,
-  resolveMembership,
-} from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
+import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import {
   mirrorEventIdentity,
   mirrorEventKey,
@@ -113,11 +110,13 @@ function fileStore(initial: MirrorStateSnapshot): {
   ports: MirrorStateStorePorts;
   state: () => MirrorStateSnapshot;
   document: () => string;
+  auditTransitions: () => string[];
 } {
   const statePath = join(dir, "amadeus-state.md");
   mkdirSync(dir, { recursive: true });
   writeFileSync(statePath, `# State\n\n${renderMirrorStateBlock(initial)}\n`, "utf-8");
   let locked = false;
+  const auditTransitions: string[] = [];
   return {
     ports: {
       acquireLock() {
@@ -135,7 +134,8 @@ function fileStore(initial: MirrorStateSnapshot): {
         writeFileSync(statePath, text, "utf-8");
         return { kind: "ok" };
       },
-      appendArtifactUpdated() {
+      appendArtifactUpdated(outbox) {
+        auditTransitions.push(outbox.fields.TransitionKind ?? "");
         return { kind: "appended" };
       },
     },
@@ -146,6 +146,9 @@ function fileStore(initial: MirrorStateSnapshot): {
     },
     document() {
       return readFileSync(statePath, "utf-8");
+    },
+    auditTransitions() {
+      return [...auditTransitions];
     },
   };
 }
@@ -319,6 +322,7 @@ function context(
     targets?: readonly MirrorProjectTarget[];
     diagnostics?: MirrorProjectDiagnostic[];
     instance?: string;
+    receiptRevision?: number;
   } = {},
 ): MirrorExecutionContext {
   const boundary = {
@@ -350,7 +354,7 @@ function context(
       event,
       operation,
       boundaryInstance: boundary.instance,
-      receiptRevision: 1,
+      receiptRevision: options.receiptRevision ?? 1,
       resolvedMode: "auto",
     },
     projectSync: {
@@ -402,10 +406,14 @@ function run(
   gateway: MirrorGitHubGateway,
   options: Parameters<typeof context>[2] = {},
 ) {
+  const localState = store.state();
   return executeMirrorOperation({
-    context: context("sync", gateway, options),
+    context: context("sync", gateway, {
+      ...options,
+      receiptRevision: localState.revision + 1,
+    }),
     ports: store.ports,
-    localState: store.state(),
+    localState,
   });
 }
 
@@ -439,6 +447,14 @@ describe("t345 per-Project independence", () => {
       lastAppliedStatus: "Ideation",
     });
     expect(rowFor(state, BOARD_B)).toMatchObject({ state: "pending" });
+    expect(
+      store.auditTransitions().filter(
+        (kind) => kind === "commit-project-reconciliation",
+      ),
+    ).toHaveLength(1);
+    expect(store.auditTransitions()).not.toContain("upsert-project-entry");
+    expect(store.auditTransitions()).not.toContain("mark-project-pending");
+    expect(store.auditTransitions()).not.toContain("prune-project-entries");
   });
 
   test("a failure on the first board does not stop the second", async () => {
@@ -587,6 +603,38 @@ describe("t345 call budget", () => {
 });
 
 describe("t345 membership union", () => {
+  test("owner casing resolves one board and keeps its configured vocabulary", async () => {
+    const store = fileStore(linkedState());
+    const gateway = new BoardGateway(markerBody());
+    const configured: MirrorProjectTarget = {
+      project: { owner: "ACME", number: BOARD_A.number },
+      phaseField: "Lifecycle",
+      statusNames: { ideation: "Discovery" },
+    };
+    gateway.options.set(BOARD_A.number, [
+      ...DEFAULT_OPTIONS,
+      { id: "opt-discovery", name: "Discovery" },
+    ]);
+    gateway.items = [item(BOARD_A, null)];
+
+    const outcome = await run(store, gateway, { targets: [configured] });
+
+    expect(outcome.kind).toBe("completed");
+    expect(gateway.history.filter((entry) => entry === "field:acme/5")).toHaveLength(
+      1,
+    );
+    expect(gateway.history).not.toContain("add:acme/5");
+    expect(mutations(gateway)).toEqual(["update:acme/5"]);
+    expect(store.state().projectSync?.projects).toEqual([
+      expect.objectContaining({
+        project: "acme/5",
+        phaseField: "Lifecycle",
+        lastAppliedStatus: "Discovery",
+        state: "synced",
+      }),
+    ]);
+  });
+
   test("historical non-members are pruned from the active sync scope", async () => {
     const store = fileStore(staleBoardState());
     const gateway = new BoardGateway(markerBody());
@@ -599,25 +647,27 @@ describe("t345 membership union", () => {
     expect(rowFor(store.state(), BOARD_B)).toBeUndefined();
   });
 
-  test("a prune write failure stops before Project mutation and retries", async () => {
+  test("an atomic commit failure preserves the pre-plan ledger and retries", async () => {
     const store = fileStore(staleBoardState());
     const gateway = new BoardGateway(markerBody());
     gateway.items = [item(BOARD_A, "Ideation")];
     const operation = context("sync", gateway, { targets: [TARGET_A] });
     const writeDocumentAtomic = store.ports.writeDocumentAtomic;
-    let failPrune = true;
+    let failCommit = true;
     const ports = {
       ...store.ports,
       writeDocumentAtomic(text: string) {
         if (
-          failPrune &&
+          failCommit &&
           gateway.history.includes("list") &&
-          text.includes('"projectSync":null')
+          text.includes('"project":"acme/5"') &&
+          !text.includes('"project":"acme/6"') &&
+          text.includes('"projectSyncVerified":true')
         ) {
-          failPrune = false;
+          failCommit = false;
           return {
             kind: "io-failure" as const,
-            summary: "injected Project prune failure",
+            summary: "injected Project reconciliation failure",
           };
         }
         return writeDocumentAtomic(text);
@@ -635,11 +685,14 @@ describe("t345 membership union", () => {
       operation: "sync",
       warning: { classification: "state-write" },
     });
-    expect(gateway.history.some((entry) => entry.startsWith("field:"))).toBe(
-      false,
-    );
+    expect(gateway.history).toContain(`field:${canonical(BOARD_A)}`);
     expect(mutations(gateway)).toEqual([]);
     expect(rowFor(store.state(), BOARD_B)?.state).toBe("pending");
+    expect(rowFor(store.state(), BOARD_A)).toBeUndefined();
+    expect(
+      store.state().receipts[mirrorEventKey(operation.event)]
+        .projectSyncVerified,
+    ).toBeUndefined();
 
     const retry = await executeMirrorOperation({
       context: operation,
@@ -853,6 +906,16 @@ describe("t345 secret containment", () => {
     expect(rowFor(store.state(), BOARD_B)?.state).toBe("pending");
     expect(JSON.stringify(store.state().projectSync)).not.toContain(SECRET);
     expect(JSON.stringify(store.state().receipts)).not.toContain(SECRET);
+    expect(
+      store.auditTransitions().filter(
+        (kind) => kind === "commit-project-reconciliation",
+      ),
+    ).toHaveLength(1);
+    expect(
+      store.state().warnings.some(
+        (warning) => warning.classification === "api",
+      ),
+    ).toBe(true);
   });
 
   test("the ledger row and the hold carry no free text at all", async () => {
@@ -891,33 +954,7 @@ describe("t345 secret containment", () => {
   });
 });
 
-describe("t345 defensive classification", () => {
-  test("an unconfigured target with no board item is classified, not joined", async () => {
-    const gateway = new BoardGateway(markerBody());
-    const diagnostics: MirrorProjectDiagnostic[] = [];
-    const ctx = context("sync", gateway, { diagnostics });
-    const resolution = await resolveMembership(
-      ctx,
-      { project: BOARD_A, phaseField: "Intent Phase", statusNames: {} },
-      { issueNodeId: ISSUE_NODE_ID, items: [] },
-      {
-        projectId: nodeIdOf(BOARD_A),
-        lifecycle: {
-          fieldId: `PVTSSF_${BOARD_A.number}`,
-          fieldName: "Intent Phase",
-          options: DEFAULT_OPTIONS,
-        },
-        auxiliaryStatus: null,
-      },
-      false,
-    );
-    expect(resolution).toEqual({ kind: "failed", classification: "configuration" });
-    // No add mutation was attempted, and the diagnostic explains why.
-    expect(mutations(gateway)).toEqual([]);
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.summary).toContain("not configured");
-  });
-
+describe("t345 state-write classification", () => {
   test("a state-write failure after a failed issue view surfaces as state failure", async () => {
     const store = fileStore(linkedState());
     const gateway = new BoardGateway(markerBody());

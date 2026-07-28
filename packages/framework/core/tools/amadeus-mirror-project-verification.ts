@@ -13,11 +13,13 @@ import {
   type MirrorStateStorePorts,
   mutateMirrorStateAtomic,
 } from "./amadeus-mirror-state-store.ts";
+import { mirrorTimestampEpoch } from "./amadeus-mirror-timestamp.ts";
 import type {
   MirrorBoundary,
   MirrorEventIdentity,
   MirrorOperation,
   MirrorOperationOutcome,
+  MirrorOperationReceipt,
   MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -27,6 +29,7 @@ import type {
 export type ProjectVerificationScope = Readonly<{
   intentUuid: string;
   boundary: MirrorBoundary;
+  operation?: MirrorOperation;
   snapshot: MirrorSnapshot;
   projects: readonly MirrorProjectTarget[];
   ports: MirrorStateStorePorts;
@@ -48,6 +51,158 @@ export type ProjectSyncReconciliation = Readonly<{
   expectedRevision: number;
 }>;
 
+type CompletionReconciliationInput = Readonly<{
+  state: MirrorStateSnapshot;
+  intentUuid: string;
+  boundary: MirrorBoundary;
+  operation?: MirrorOperation;
+  fallback: ProjectSyncReconciliation | null;
+}>;
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareNumbersNewestFirst(left: number, right: number): number {
+  return left < right ? 1 : left > right ? -1 : 0;
+}
+
+type CompletionSyncSelection =
+  | { kind: "none" }
+  | { kind: "invalid" }
+  | {
+      kind: "receipt";
+      key: string;
+      receipt: MirrorOperationReceipt;
+      effectiveAt: number;
+      preparedAt: number;
+    };
+
+type SelectedCompletionReceipt = Extract<
+  CompletionSyncSelection,
+  { kind: "receipt" }
+>;
+
+function compareReceiptTimes(
+  left: SelectedCompletionReceipt,
+  right: SelectedCompletionReceipt,
+): number {
+  return (
+    compareNumbersNewestFirst(left.effectiveAt, right.effectiveAt) ||
+    compareNumbersNewestFirst(left.preparedAt, right.preparedAt) ||
+    Number(right.receipt.projectSyncVerified === true) -
+      Number(left.receipt.projectSyncVerified === true) ||
+    compareCodeUnits(left.key, right.key)
+  );
+}
+
+function compareCompletionReceipts(
+  left: SelectedCompletionReceipt,
+  right: SelectedCompletionReceipt,
+  legacyRevisionOrdered: boolean,
+): number {
+  const leftCurrentRevision = left.receipt.createdRevision;
+  const rightCurrentRevision = right.receipt.createdRevision;
+  if (leftCurrentRevision !== undefined || rightCurrentRevision !== undefined) {
+    if (leftCurrentRevision === undefined) return 1;
+    if (rightCurrentRevision === undefined) return -1;
+    const byRevision = compareNumbersNewestFirst(
+      leftCurrentRevision,
+      rightCurrentRevision,
+    );
+    return byRevision || compareReceiptTimes(left, right);
+  }
+  if (legacyRevisionOrdered) {
+    const leftLegacyRevision = left.receipt.authorization?.receiptRevision;
+    const rightLegacyRevision = right.receipt.authorization?.receiptRevision;
+    if (
+      leftLegacyRevision !== undefined &&
+      rightLegacyRevision !== undefined
+    ) {
+      const byRevision = compareNumbersNewestFirst(
+        leftLegacyRevision,
+        rightLegacyRevision,
+      );
+      if (byRevision !== 0) return byRevision;
+    }
+  }
+  return compareReceiptTimes(left, right);
+}
+
+function latestCompletionSyncReceipt(
+  state: MirrorStateSnapshot,
+  intentUuid: string,
+): CompletionSyncSelection {
+  const candidates = Object.entries(state.receipts).filter(
+    ([, receipt]) =>
+      receipt.event.intentUuid === intentUuid &&
+      receipt.event.boundary.kind === "workflow-completed" &&
+      receipt.event.operation === "sync",
+  );
+  if (candidates.length === 0) return { kind: "none" };
+  const ordered: SelectedCompletionReceipt[] = [];
+  for (const [key, receipt] of candidates) {
+    const effectiveAt = mirrorTimestampEpoch(
+      receipt.completedAt ?? receipt.preparedAt,
+    );
+    const preparedAt = mirrorTimestampEpoch(receipt.preparedAt);
+    if (effectiveAt === null || preparedAt === null) {
+      return { kind: "invalid" };
+    }
+    ordered.push({
+      kind: "receipt",
+      key,
+      receipt,
+      effectiveAt,
+      preparedAt,
+    });
+  }
+  const legacyRevisionOrdered = ordered
+    .filter(({ receipt }) => receipt.createdRevision === undefined)
+    .every(
+      ({ receipt }) => receipt.authorization?.receiptRevision !== undefined,
+    );
+  ordered.sort((left, right) =>
+    compareCompletionReceipts(left, right, legacyRevisionOrdered)
+  );
+  return ordered[0];
+}
+
+function closeVerificationRequested(
+  boundary: MirrorBoundary,
+  operation?: MirrorOperation,
+): boolean {
+  return boundary.kind === "workflow-completed" ||
+    (boundary.kind === "manual" && operation === "close");
+}
+
+function reconciliationForReceipt(
+  receipt: MirrorOperationReceipt,
+  expectedRevision: number,
+): ProjectSyncReconciliation {
+  return {
+    receiptKey: receipt.key,
+    originalEvent: receipt.event,
+    operationId: receipt.operationId,
+    expectedRevision,
+  };
+}
+
+function receiptIsInProgress(receipt: MirrorOperationReceipt): boolean {
+  return receipt.status === "prepared" ||
+    receipt.status === "attempted" ||
+    receipt.status === "pending";
+}
+
+function isCompletionSyncForIntent(
+  selection: ProjectSyncReconciliation,
+  intentUuid: string,
+): boolean {
+  return selection.originalEvent.intentUuid === intentUuid &&
+    selection.originalEvent.boundary.kind === "workflow-completed" &&
+    selection.originalEvent.operation === "sync";
+}
+
 export function finalSyncReceiptKey(
   state: MirrorStateSnapshot,
   event: MirrorEventIdentity,
@@ -58,52 +213,109 @@ export function finalSyncReceiptKey(
     );
     return state.receipts[key]?.status === "succeeded" ? key : undefined;
   }
-  return Object.entries(state.receipts).find(
-    ([, receipt]) =>
-      receipt.event.intentUuid === event.intentUuid &&
-      receipt.event.boundary.kind === "workflow-completed" &&
-      receipt.event.operation === "sync" &&
-      receipt.status === "succeeded",
-  )?.[0];
+  if (event.boundary.kind !== "manual") return undefined;
+  const latest = latestCompletionSyncReceipt(state, event.intentUuid);
+  return latest.kind === "receipt" &&
+      latest.receipt.status === "succeeded"
+    ? latest.key
+    : undefined;
 }
 
-export function heldCompletionSyncReconciliation(
-  state: MirrorStateSnapshot,
-  intentUuid: string,
-  boundary: MirrorBoundary,
+type FinalSyncEvidenceInput = Readonly<{
+  state: MirrorStateSnapshot;
+  event: MirrorEventIdentity;
+  snapshot?: MirrorSnapshot;
+  projects: readonly MirrorProjectTarget[];
+  receiptKey: string;
+}>;
+
+// Validate one bound close authorization against the same policy used before
+// preparing it. A workflow-completion close remains tied to its exact instance;
+// an explicit close remains tied to the newest completion sync for this Intent.
+export function finalSyncEvidenceReady(
+  input: FinalSyncEvidenceInput,
+): boolean {
+  const receipt = input.state.receipts[input.receiptKey];
+  const currentReceiptKey = finalSyncReceiptKey(input.state, input.event);
+  if (
+    input.event.operation !== "close" ||
+    currentReceiptKey !== input.receiptKey ||
+    receipt?.event.intentUuid !== input.event.intentUuid ||
+    receipt.event.boundary.kind !== "workflow-completed" ||
+    receipt.event.operation !== "sync" ||
+    receipt.status !== "succeeded"
+  ) {
+    return false;
+  }
+  if (input.projects.length === 0) return true;
+  return (
+    receipt.projectSyncVerified === true &&
+    input.snapshot !== undefined &&
+    completionProjectGate({
+      state: input.state,
+      snapshot: input.snapshot,
+      targets: input.projects,
+    }).ready
+  );
+}
+
+export function currentFinalSyncEvidenceKey(
+  input: Omit<FinalSyncEvidenceInput, "receiptKey">,
+): string | undefined {
+  const receiptKey = finalSyncReceiptKey(input.state, input.event);
+  return receiptKey !== undefined &&
+      finalSyncEvidenceReady({ ...input, receiptKey })
+    ? receiptKey
+    : undefined;
+}
+
+// Manual close treats the newest completion sync as authoritative. Its
+// in-progress receipt wins over generic reconciliation; once it is terminal,
+// obsolete completion-sync receipts cannot pull the close backwards.
+export function selectCompletionSyncReconciliation(
+  input: CompletionReconciliationInput,
 ): ProjectSyncReconciliation | null {
-  if (boundary.kind !== "workflow-completed") return null;
-  const event = mirrorEventIdentity(intentUuid, boundary, "sync");
-  const receipt = state.receipts[mirrorEventKey(event)];
-  return receipt?.status === "pending" &&
-    receipt.projectSyncHold !== undefined
-    ? {
-        receiptKey: receipt.key,
-        originalEvent: event,
-        operationId: receipt.operationId,
-        expectedRevision: state.revision,
-      }
-    : null;
+  if (!closeVerificationRequested(input.boundary, input.operation)) {
+    return input.fallback;
+  }
+  if (input.boundary.kind === "workflow-completed") {
+    const receipt = input.state.receipts[
+      mirrorEventKey(
+        mirrorEventIdentity(input.intentUuid, input.boundary, "sync"),
+      )
+    ];
+    return receipt?.status === "pending" &&
+        receipt.projectSyncHold !== undefined
+      ? reconciliationForReceipt(receipt, input.state.revision)
+      : input.fallback;
+  }
+  const latest = latestCompletionSyncReceipt(
+    input.state,
+    input.intentUuid,
+  );
+  if (latest.kind === "none") return input.fallback;
+  if (latest.kind === "invalid") return null;
+  if (receiptIsInProgress(latest.receipt)) {
+    return reconciliationForReceipt(latest.receipt, input.state.revision);
+  }
+  return input.fallback !== null &&
+      isCompletionSyncForIntent(input.fallback, input.intentUuid)
+    ? null
+    : input.fallback;
 }
 
 function projectVerificationReady(
   scope: ProjectVerificationScope,
   state: MirrorStateSnapshot,
 ): boolean {
-  const event = mirrorEventIdentity(
-    scope.intentUuid,
-    scope.boundary,
-    "sync",
-  );
-  const receipt = state.receipts[mirrorEventKey(event)];
+  const event = mirrorEventIdentity(scope.intentUuid, scope.boundary, "close");
   return (
-    receipt?.status === "succeeded" &&
-    receipt.projectSyncVerified === true &&
-    completionProjectGate({
+    currentFinalSyncEvidenceKey({
       state,
+      event,
       snapshot: scope.snapshot,
-      targets: scope.projects,
-    }).ready
+      projects: scope.projects,
+    }) !== undefined
   );
 }
 
@@ -153,17 +365,23 @@ export function prepareCompletionProjectVerification(
   state: MirrorStateSnapshot,
 ): ProjectVerificationPreparation {
   const boundary = scope.boundary;
-  if (boundary.kind !== "workflow-completed" || scope.projects.length === 0) {
+  if (
+    !closeVerificationRequested(boundary, scope.operation) ||
+    scope.projects.length === 0
+  ) {
     return { kind: "ready", state, verificationRequired: false };
   }
   if (projectVerificationReady(scope, state)) {
     return { kind: "ready", state, verificationRequired: false };
   }
-  const event = mirrorEventIdentity(scope.intentUuid, boundary, "sync");
-  const receipt = state.receipts[mirrorEventKey(event)];
+  const closeEvent = mirrorEventIdentity(scope.intentUuid, boundary, "close");
+  const receiptKey = finalSyncReceiptKey(state, closeEvent);
+  const receipt =
+    receiptKey === undefined ? undefined : state.receipts[receiptKey];
   if (receipt?.status !== "succeeded") {
     return { kind: "ready", state, verificationRequired: true };
   }
+  const event = receipt.event;
   const heldAt = scope.now();
   const result = mutateMirrorStateAtomic(scope.ports, {
     transition: {
@@ -174,7 +392,7 @@ export function prepareCompletionProjectVerification(
     },
     expectedRevision: state.revision,
     auditContext: {
-      triggerEvent: mirrorEventIdentity(scope.intentUuid, boundary, "close"),
+      triggerEvent: closeEvent,
       operationEvent: event,
       operationId: receipt.operationId,
       reconciliation: true,

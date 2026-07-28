@@ -10,6 +10,7 @@
 import {
   DEFAULT_PROJECT_PHASE_FIELD,
   MIRROR_PROJECT_FIELD_CONTRACT,
+  mirrorProjectKey,
 } from "./amadeus-mirror-project-contract.ts";
 import type {
   ExpectedProjectStatus,
@@ -400,16 +401,17 @@ export type CompletionProjectGate = Readonly<{
 
 function projectBlocker(
   entry: MirrorProjectSyncEntry,
+  project: string,
   expected: ExpectedProjectStatus,
   expectedPhaseField: string,
 ): string | null {
-  if (entry.state !== "synced") return `${entry.project}: ${entry.state}`;
+  if (entry.state !== "synced") return `${project}: ${entry.state}`;
   if (entry.phaseField !== expectedPhaseField)
-    return `${entry.project}: phase-field-mismatch`;
-  if (expected.kind !== "status") return `${entry.project}: not-landed`;
+    return `${project}: phase-field-mismatch`;
+  if (expected.kind !== "status") return `${project}: not-landed`;
   return entry.lastAppliedStatus === expected.name
     ? null
-    : `${entry.project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
+    : `${project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
 }
 
 // Is every Project this Intent syncs to actually sitting in the `done` column
@@ -426,16 +428,18 @@ export function completionProjectGate(
 
   const targets = new Map(
     input.targets.map((target) => [
-      `${target.project.owner}/${target.project.number}`,
+      mirrorProjectKey(target.project),
       target,
     ]),
   );
   const rows = input.state.projectSync?.projects ?? [];
   const blocking = rows
     .map((entry) => {
-      const target = targets.get(entry.project);
+      const project = mirrorProjectKey(entry.project);
+      const target = targets.get(project);
       return projectBlocker(
         entry,
+        project,
         expectedProjectStatus(
           input.snapshot,
           "workflow-completed",
@@ -445,7 +449,9 @@ export function completionProjectGate(
       );
     })
     .filter((blocker): blocker is string => blocker !== null);
-  const projectsWithRows = new Set(rows.map((entry) => entry.project));
+  const projectsWithRows = new Set(
+    rows.map((entry) => mirrorProjectKey(entry.project)),
+  );
   for (const [project] of targets) {
     if (!projectsWithRows.has(project)) blocking.push(`${project}: missing`);
   }

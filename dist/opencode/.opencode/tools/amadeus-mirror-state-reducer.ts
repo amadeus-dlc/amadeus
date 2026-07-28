@@ -2,9 +2,9 @@
 //
 // A pure, exhaustive receipt/warning/provenance/challenge transition function.
 // It never touches revision (the Atomic File Store owns the +1 on a changed
-// result), never performs I/O, and imports C0 types + the C2 event-key helper +
-// the S7 repair helpers only. Idempotent re-entry returns `unchanged` with no
-// write; undefined edges return `invalid`; terminal receipts reject ordinary
+// result), never performs I/O, and composes only pure event-key, Project-sync,
+// warning, and S7 repair reducers. Idempotent re-entry returns `unchanged` with
+// no write; undefined edges return `invalid`; terminal receipts reject ordinary
 // transitions. Business-rules.md Receipt Transition Rules is the source table.
 
 import type {
@@ -24,10 +24,9 @@ import type {
 } from "./amadeus-mirror-types.ts";
 import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
 import {
-  type MirrorProjectLedgerTransition,
-  type ProjectFailureMark,
-  reduceProjectLedger,
-} from "./amadeus-mirror-project-ledger-reducer.ts";
+  type ProjectSyncTransition,
+  reduceProjectSyncTransition,
+} from "./amadeus-mirror-project-reconciliation-reducer.ts";
 import {
   type ChallengeConsumeInput,
   consumeRepairChallenge,
@@ -35,10 +34,16 @@ import {
   provenanceDigestV2,
   repairPlanDigest,
 } from "./amadeus-mirror-repair.ts";
+import {
+  upsertMirrorWarning,
+  warningCoalesceFacts,
+} from "./amadeus-mirror-warning-reducer.ts";
 
 export const MAX_RECEIPTS = 1000;
-export const MAX_NORMAL_WARNINGS = 999;
-export const CAPACITY_WARNING_MARKER = "state-capacity";
+export {
+  CAPACITY_WARNING_MARKER,
+  MAX_NORMAL_WARNINGS,
+} from "./amadeus-mirror-warning-reducer.ts";
 
 type CompletionTransitionFields = {
   event: MirrorEventIdentity;
@@ -106,15 +111,7 @@ export type MirrorTransition =
       consume: ChallengeConsumeInput;
   }
   | { kind: "issue-repair-challenge"; challenge: MirrorRepairChallenge; now: string }
-  | MirrorProjectLedgerTransition
-  | {
-      kind: "hold-for-project-sync";
-      event: MirrorEventIdentity;
-      operationId: string;
-      heldAt: string;
-    };
-
-export type { ProjectFailureMark };
+  | ProjectSyncTransition;
 
 export type ReducerResult =
   | {
@@ -163,73 +160,6 @@ function eventEquals(a: MirrorEventIdentity, b: MirrorEventIdentity): boolean {
     a.boundary.kind === b.boundary.kind &&
     a.boundary.instance === b.boundary.instance
   );
-}
-
-function isCapacityWarning(w: MirrorWarning): boolean {
-  return w.operationId === null && w.summary.startsWith(CAPACITY_WARNING_MARKER);
-}
-
-function warningsEqual(a: MirrorWarning, b: MirrorWarning): boolean {
-  return (
-    a.operationId === b.operationId &&
-    a.operation === b.operation &&
-    a.classification === b.classification &&
-    a.summary === b.summary &&
-    a.occurredAt === b.occurredAt &&
-    a.retryable === b.retryable &&
-    a.effect === b.effect &&
-    a.source === b.source
-  );
-}
-
-// Coalesce by (operationId, classification, effect): the latest replaces the
-// prior, whose value is surfaced for the transaction audit. Enforces the
-// 999 normal + 1 reserved capacity slot bound.
-function upsertWarning(
-  warnings: readonly MirrorWarning[],
-  warning: MirrorWarning,
-): { warnings: MirrorWarning[]; coalesced: MirrorWarning | null; unchanged: boolean } {
-  const existingIdx = warnings.findIndex((w) => warningsEqual(w, warning));
-  if (existingIdx !== -1) {
-    return { warnings: [...warnings], coalesced: null, unchanged: true };
-  }
-  const coalesceIdx = warnings.findIndex(
-    (w) =>
-      !isCapacityWarning(w) &&
-      w.operationId === warning.operationId &&
-      w.classification === warning.classification &&
-      w.effect === warning.effect,
-  );
-  if (coalesceIdx !== -1) {
-    const coalesced = warnings[coalesceIdx];
-    const next = [...warnings];
-    next[coalesceIdx] = warning;
-    return { warnings: next, coalesced, unchanged: false };
-  }
-  const normalCount = warnings.filter((w) => !isCapacityWarning(w)).length;
-  if (!isCapacityWarning(warning) && normalCount >= MAX_NORMAL_WARNINGS) {
-    // Normal slots exhausted: write/replace the single reserved capacity slot.
-    const capacity: MirrorWarning = {
-      operationId: null,
-      operation: null,
-      classification: warning.classification,
-      summary: `${CAPACITY_WARNING_MARKER}: normal warning slots exhausted`,
-      occurredAt: warning.occurredAt,
-      retryable: false,
-      effect: "not-started",
-      source: "persisted-warning",
-    };
-    const withoutCapacity = warnings.filter((w) => !isCapacityWarning(w));
-    return { warnings: [...withoutCapacity, capacity], coalesced: warning, unchanged: false };
-  }
-  return { warnings: [...warnings, warning], coalesced: null, unchanged: false };
-}
-
-function coalesceFacts(coalesced: MirrorWarning | null): Record<string, string> | undefined {
-  if (!coalesced) return undefined;
-  return {
-    coalescedWarning: `${coalesced.operationId ?? "null"}:${coalesced.classification}:${coalesced.effect}:${coalesced.occurredAt}`,
-  };
 }
 
 function makeCreateIdentity(
@@ -298,6 +228,7 @@ function reducePrepare(
     key: string;
     event: MirrorEventIdentity;
     operationId: string;
+    createdRevision?: number;
     status: "prepared";
     preparedAt: string;
     createIdentity?: MirrorCreateIdentity;
@@ -309,6 +240,15 @@ function reducePrepare(
     status: "prepared",
     preparedAt: t.preparedAt,
   };
+  if (
+    t.authorization &&
+    t.authorization.receiptRevision !== snapshot.revision + 1
+  ) {
+    return invalid(
+      "prepare: authorization receiptRevision must equal the next state revision",
+    );
+  }
+  base.createdRevision = snapshot.revision + 1;
   if (t.event.operation === "create") {
     if (!t.create)
       return invalid("prepare: create receipt requires intentDir + repository");
@@ -535,6 +475,11 @@ function reduceSkip(
     key,
     event: t.event,
     operationId: t.operationId,
+    ...(existing?.createdRevision === undefined
+      ? existing
+        ? {}
+        : { createdRevision: snapshot.revision + 1 }
+      : { createdRevision: existing.createdRevision }),
     status: "skipped-for-event",
     preparedAt: t.preparedAt,
     completedAt: t.completedAt,
@@ -570,9 +515,12 @@ function reduceSetWarning(
     return invalid("set-warning: prepared receipt warning must have effect=not-started");
   if (t.warning.operationId !== r.operationId)
     return invalid("set-warning: warning operationId must match receipt");
-  const up = upsertWarning(snapshot.warnings, t.warning);
+  const up = upsertMirrorWarning(snapshot.warnings, t.warning);
   if (up.unchanged) return { kind: "unchanged" };
-  return changed({ ...snapshot, warnings: up.warnings }, coalesceFacts(up.coalesced));
+  return changed(
+    { ...snapshot, warnings: up.warnings },
+    warningCoalesceFacts(up.coalesced),
+  );
 }
 
 function reduceGlobalWarning(
@@ -583,9 +531,12 @@ function reduceGlobalWarning(
     return invalid("set-global-warning: operation and operationId must be null");
   if (t.warning.effect !== "not-started")
     return invalid("set-global-warning: effect must be not-started");
-  const up = upsertWarning(snapshot.warnings, t.warning);
+  const up = upsertMirrorWarning(snapshot.warnings, t.warning);
   if (up.unchanged) return { kind: "unchanged" };
-  return changed({ ...snapshot, warnings: up.warnings }, coalesceFacts(up.coalesced));
+  return changed(
+    { ...snapshot, warnings: up.warnings },
+    warningCoalesceFacts(up.coalesced),
+  );
 }
 
 function reduceClearGlobalWarning(snapshot: MirrorStateSnapshot): ReducerResult {
@@ -615,10 +566,10 @@ function reduceMarkPending(
     lastEffect: t.effect,
     failureClass: t.warning.classification,
   };
-  const up = upsertWarning(snapshot.warnings, t.warning);
+  const up = upsertMirrorWarning(snapshot.warnings, t.warning);
   return changed(
     withReceipt({ ...snapshot, warnings: up.warnings }, key, pending),
-    coalesceFacts(up.coalesced),
+    warningCoalesceFacts(up.coalesced),
   );
 }
 
@@ -638,10 +589,10 @@ function reduceSafetyBlocked(
     status: "safety-blocked",
     failureClass: t.warning.classification,
   };
-  const up = upsertWarning(snapshot.warnings, t.warning);
+  const up = upsertMirrorWarning(snapshot.warnings, t.warning);
   return changed(
     withReceipt({ ...snapshot, warnings: up.warnings }, key, blocked),
-    coalesceFacts(up.coalesced),
+    warningCoalesceFacts(up.coalesced),
   );
 }
 
@@ -736,44 +687,6 @@ function reduceIssueChallenge(
       ? { prunedChallenges: result.prunedProofs.map((p) => p.challengeId).join(",") }
       : undefined;
   return changed(result.snapshot, facts);
-}
-
-function reduceProjectLedgerTransition(
-  snapshot: MirrorStateSnapshot,
-  transition: MirrorProjectLedgerTransition,
-): ReducerResult {
-  const result = reduceProjectLedger(snapshot.projectSync, transition);
-  return result.kind === "changed"
-    ? changed({ ...snapshot, projectSync: result.ledger })
-    : result;
-}
-
-// Park a succeeded receipt at `pending` because the Project board did not
-// converge (E-U2CG). `completedAt` and the Issue-side fields stay exactly as the
-// completion left them — only `status` moves, and the separate hold field says
-// why, so nothing here claims the Issue mutation failed.
-function reduceHoldForProjectSync(
-  snapshot: MirrorStateSnapshot,
-  t: Extract<MirrorTransition, { kind: "hold-for-project-sync" }>,
-): ReducerResult {
-  const key = mirrorEventKey(t.event);
-  const r = snapshot.receipts[key];
-  if (!r) return invalid("hold-for-project-sync: no receipt for event");
-  if (r.operationId !== t.operationId)
-    return invalid("hold-for-project-sync: operationId must match receipt");
-  if (r.status === "pending" && r.projectSyncHold?.heldAt === t.heldAt)
-    return { kind: "unchanged" };
-  if (r.status !== "succeeded")
-    return invalid(
-      `hold-for-project-sync: only allowed from 'succeeded', not '${r.status}'`,
-    );
-  const held: MirrorOperationReceipt = {
-    ...r,
-    status: "pending",
-    projectSyncHold: { reason: "project-sync-unsettled", heldAt: t.heldAt },
-  };
-  delete (held as { projectSyncVerified?: true }).projectSyncVerified;
-  return changed(withReceipt(snapshot, key, held));
 }
 
 function guardMarkAttempted(r: MirrorOperationReceipt): string | null {
@@ -883,13 +796,14 @@ function reduceAuxTransition(
       return reduceRepairLink(snapshot, transition, now);
     case "issue-repair-challenge":
       return reduceIssueChallenge(snapshot, transition);
-    case "upsert-project-entry":
-    case "prune-project-entries":
-    case "mark-project-pending":
-    case "mark-project-safety-blocked":
-      return reduceProjectLedgerTransition(snapshot, transition);
+    case "commit-project-reconciliation":
     case "hold-for-project-sync":
-      return reduceHoldForProjectSync(snapshot, transition);
+    case "retire-project-sync-hold": {
+      const reconciled = reduceProjectSyncTransition(snapshot, transition);
+      return reconciled.kind === "changed"
+        ? changed(reconciled.snapshot, reconciled.auditFacts)
+        : reconciled;
+    }
     default:
       return invalid(`unknown transition ${(transition as { kind: string }).kind}`);
   }

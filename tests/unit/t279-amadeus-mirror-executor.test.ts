@@ -690,30 +690,45 @@ describe("t279 sync and close convergence", () => {
     const gateway = new FakeGateway();
     gateway.viewed = issue();
     const base = context("close", gateway);
+    const closeEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "manual", instance: "manual-close" },
+      "close",
+    );
     const syncEvent = mirrorEventIdentity(
       "intent-1",
       { kind: "workflow-completed", instance: "complete-1" },
       "sync",
     );
     const syncKey = mirrorEventKey(syncEvent);
+    const closeAuthorization = {
+      kind: "manual" as const,
+      event: closeEvent,
+      operation: "close" as const,
+      boundaryInstance: closeEvent.boundary.instance,
+      receiptRevision: 1,
+      invocationId: closeEvent.boundary.instance,
+      finalSyncReceiptKey: syncKey,
+    };
     const closeContext = {
       ...base,
-      authorization: authorization(base.event, "close", syncKey),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
     };
-    const event = base.event;
     const initial = {
       ...linkedState(),
       receipts: {
-        [mirrorEventKey(event)]: {
-          key: mirrorEventKey(event),
-          event,
+        [mirrorEventKey(closeEvent)]: {
+          key: mirrorEventKey(closeEvent),
+          event: closeEvent,
           operationId: "op-close",
           status: "pending" as const,
           preparedAt: NOW,
           attemptedAt: NOW,
           lastEffect: "outcome-unknown" as const,
           failureClass: "network" as const,
-          authorization: authorization(event, "close", syncKey),
+          authorization: closeAuthorization,
         },
         [syncKey]: {
           key: syncKey,
