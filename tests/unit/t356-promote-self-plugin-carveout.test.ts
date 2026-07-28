@@ -168,6 +168,11 @@ describe("t356 mergeStageGraph", () => {
     expect(mergeStageGraph(buf(COMPOSED_GRAPH), want, null)).toEqual(want);
   });
 
+  test("falls back to dist bytes on unparseable existing content", () => {
+    const want = buf(STOCK_GRAPH);
+    expect(mergeStageGraph(Buffer.from("not json"), want, LEDGER)).toEqual(want);
+  });
+
   test("keeps an in-sync composed graph byte-identical (apply is byte-stable)", () => {
     const got = buf(COMPOSED_GRAPH);
     expect(mergeStageGraph(got, buf(STOCK_GRAPH), LEDGER)).toEqual(got);
