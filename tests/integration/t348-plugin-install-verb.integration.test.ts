@@ -196,6 +196,16 @@ describe("t348 plugin install verb (U2, #1597)", () => {
     expect(existsSync(join(host, PLUGIN_SOURCE_DIR_NAME))).toBe(false);
   });
 
+  // The plugin name is derived from the source basename, so a path with no
+  // ordinary trailing segment (the filesystem root) has no name to derive and is
+  // refused rather than allowed to resolve to something outside the staging root.
+  test("a source path with no derivable plugin name is refused", () => {
+    const code = handlePluginCli(["install", "/", "--project-root", host], deps());
+    expect(code).toBe(1);
+    expect(err.join("\n")).toContain("cannot derive a plugin name");
+    expect(existsSync(join(host, PLUGIN_SOURCE_DIR_NAME))).toBe(false);
+  });
+
   test("unknown flags and surplus arguments are usage errors (exit 2), never a partial install", () => {
     expect(handlePluginCli(["install", source, "--nope", "--project-root", host], deps())).toBe(2);
     expect(handlePluginCli(["install", "--project-root", host], deps())).toBe(2);
