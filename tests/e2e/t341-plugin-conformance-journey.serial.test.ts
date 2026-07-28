@@ -117,7 +117,7 @@ const pluginEntries = (root: string): readonly string[] =>
   readdirSync(root)
     .filter((n) => n.startsWith(".amadeus-plugin"))
     .sort();
-let preJourneyResidue: readonly (readonly string[])[] = [];
+let preJourneyResidue: (readonly string[])[] = [];
 let preJourneyRepoPluginDir = false;
 
 beforeAll(() => {
