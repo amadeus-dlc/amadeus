@@ -1,0 +1,160 @@
+// covers: file:scripts
+// size: medium
+//
+// t356 (integration) — composed-plugin preservation through the real
+// promote-self check/apply flow. Mechanism: in-process drive of the exported
+// promoteSelfMain(argv, repoRoot) seam against a temp fixture root (t209's
+// pattern) — zero spawn (spawned subprocesses are invisible to bun
+// --coverage), zero LLM. The pure predicates are pinned by
+// tests/unit/t356-promote-self-plugin-carveout.test.ts.
+//
+// WHAT IS UNDER TEST:
+//   1. A composed host (plugin stage body + runner skill + engine dot-state +
+//      plugin_source graph node + composition record) passes --check (FR:
+//      composed state is committable).
+//   2. --apply preserves every composed surface byte-for-byte — the
+//      destructive twin that used to delete the composition.
+//   3. Falling proofs: without the composition record the same tree is ORPHAN
+//      + DIFFERS red; a stray file next to composed surfaces is still an
+//      ORPHAN; an unmarked extra graph node is still DIFFERS.
+
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promoteSelfMain } from "../../scripts/promote-self.ts";
+
+let root: string;
+
+const write = (rel: string, content: string): void => {
+  const abs = join(root, rel);
+  mkdirSync(join(abs, ".."), { recursive: true });
+  writeFileSync(abs, content);
+};
+
+const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
+
+const STOCK_GRAPH = [
+  { slug: "intent-capture", phase: "ideation" },
+  { slug: "code-generation", phase: "construction" },
+];
+
+const PLUGIN_NODE = { slug: "formal-model-check", phase: "construction", plugin_source: true };
+
+const COMPOSITION_RECORD = {
+  ledger: [],
+  plugins: [
+    [
+      "formal-model-check",
+      {
+        plugin: "formal-model-check",
+        ownedPaths: ["plugins/formal-model-check/stages/formal-model-check.md"],
+        stageIndex: [{ slug: "formal-model-check" }],
+      },
+    ],
+  ],
+};
+
+const composedSurfaces = [
+  ".claude/plugins/formal-model-check/stages/formal-model-check.md",
+  ".claude/skills/amadeus-formal-model-check/SKILL.md",
+  ".claude/.amadeus-plugin-composition.json",
+  ".claude/.amadeus-plugin-audit.json",
+  ".claude/.amadeus-plugin-drops.json",
+  ".claude/.amadeus-plugin-src/formal-model-check/plugin.json",
+];
+
+const composeHost = (): void => {
+  write(".claude/tools/data/stage-graph.json", json([STOCK_GRAPH[0], STOCK_GRAPH[1], PLUGIN_NODE]));
+  write(".claude/plugins/formal-model-check/stages/formal-model-check.md", "# stage body\n");
+  write(".claude/skills/amadeus-formal-model-check/SKILL.md", "# runner\n");
+  write(".claude/.amadeus-plugin-composition.json", json(COMPOSITION_RECORD));
+  write(".claude/.amadeus-plugin-audit.json", json([{ event: "composed" }]));
+  write(".claude/.amadeus-plugin-drops.json", json({ plugins: { "formal-model-check": [] } }));
+  write(".claude/.amadeus-plugin-src/formal-model-check/plugin.json", json({ name: "formal-model-check" }));
+};
+
+beforeEach(async () => {
+  root = mkdtempSync(join(tmpdir(), "t356-plugin-carveout-"));
+  // Minimal dist fixture covering all managed dirs, with a compiled graph.
+  write("dist/claude/.claude/tools/data/stage-graph.json", json(STOCK_GRAPH));
+  write("dist/codex/.codex/b.txt", "beta\n");
+  write("dist/codex/.agents/c.txt", "gamma\n");
+  write("dist/cursor/.cursor/d.txt", "delta\n");
+  write("dist/opencode/.opencode/e.txt", "epsilon\n");
+  write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
+  write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
+  // Materialize an in-sync stock self install first.
+  expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+  expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
+});
+
+afterEach(() => {
+  rmSync(root, { recursive: true, force: true });
+});
+
+describe("t356 composed-plugin state through promote-self", () => {
+  test("a composed host passes --check", async () => {
+    composeHost();
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
+  });
+
+  test("--apply preserves every composed surface byte-for-byte", async () => {
+    composeHost();
+    const before = new Map(
+      composedSurfaces.map((rel) => [rel, readFileSync(join(root, rel), "utf-8")]),
+    );
+    const graphBefore = readFileSync(join(root, ".claude/tools/data/stage-graph.json"), "utf-8");
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    for (const [rel, bytes] of before) {
+      expect(existsSync(join(root, rel))).toBe(true);
+      expect(readFileSync(join(root, rel), "utf-8")).toBe(bytes);
+    }
+    expect(readFileSync(join(root, ".claude/tools/data/stage-graph.json"), "utf-8")).toBe(
+      graphBefore,
+    );
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
+  });
+
+  test("--apply re-anchors the plugin node when dist content moved", async () => {
+    composeHost();
+    // dist gained a field on every stock node — the composed graph is now out
+    // of sync and apply must merge rather than clobber.
+    const fresh = STOCK_GRAPH.map((n) => ({ ...n, fresh: true }));
+    write("dist/claude/.claude/tools/data/stage-graph.json", json(fresh));
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    const merged = JSON.parse(
+      readFileSync(join(root, ".claude/tools/data/stage-graph.json"), "utf-8"),
+    ) as Array<{ slug: string; fresh?: boolean }>;
+    expect(merged.map((n) => n.slug)).toEqual([
+      "intent-capture",
+      "code-generation",
+      "formal-model-check",
+    ]);
+    expect(merged[0]?.fresh).toBe(true);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
+  });
+
+  test("falling proof: the same tree without the composition record is red", async () => {
+    composeHost();
+    rmSync(join(root, ".claude/.amadeus-plugin-composition.json"));
+    // Graph node unauthorised (DIFFERS) + plugin body/skill orphaned (ORPHAN).
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+  });
+
+  test("falling proof: a stray file beside composed surfaces is still an ORPHAN", async () => {
+    composeHost();
+    write(".claude/plugins/formal-model-check/stages/stray.md", "not owned\n");
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+  });
+
+  test("falling proof: an unmarked extra graph node is still DIFFERS", async () => {
+    composeHost();
+    write(
+      ".claude/tools/data/stage-graph.json",
+      json([STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "formal-model-check" }]),
+    );
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+  });
+});

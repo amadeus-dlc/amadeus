@@ -159,6 +159,172 @@ export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
   }
 }
 
+// Composed-plugin runtime data: the plugin engine (amadeus-plugin.ts compose)
+// writes surfaces that never exist in dist/ — the composed stage bodies under
+// plugins/<name>/, the generated runner skill for each plugin stage, the
+// engine dot-state (.amadeus-plugin-* records + staging), and one extra
+// plugin_source node inside tools/data/stage-graph.json. A byte-parity promote
+// would misread all of them as drift (ORPHAN / DIFFERS) and --apply would
+// destroy the composition. They are tolerated instead, mirroring the
+// composed-scope carve-out above, with ownership decided by the composition
+// record (.amadeus-plugin-composition.json) — a deterministic ledger, not a
+// path convention. The ledger cannot hide real drift: managed files stay
+// byte-compared (DIFFERS is unaffected by ownedPaths), only plugins/-prefixed
+// owned paths and plugin-slug runner skills are exempt from ORPHAN, and the
+// graph tolerance accepts only nodes carrying plugin_source: true whose slug
+// the ledger indexes.
+export const PLUGIN_ENGINE_STATE_RE = /^\.[^/]+\/\.amadeus-plugin-[^/]+(\/.*)?$/;
+export const STAGE_GRAPH_RE = /^\.[^/]+\/tools\/data\/stage-graph\.json$/;
+
+export type PluginLedger = {
+  slugs: Set<string>;
+  ownedPaths: Set<string>;
+};
+
+// Parse the composition record into the ownership ledger the carve-out
+// predicates consult. Malformed content yields null — every consumer then
+// falls back to the strict byte/path behaviour, never weaker than stock.
+export function parsePluginLedger(bytes: Buffer): PluginLedger | null {
+  try {
+    const record = JSON.parse(bytes.toString("utf-8")) as { plugins?: unknown };
+    if (!Array.isArray(record.plugins)) return null;
+    const slugs = new Set<string>();
+    const ownedPaths = new Set<string>();
+    for (const entry of record.plugins) {
+      if (!Array.isArray(entry) || entry.length !== 2) continue;
+      const rec = entry[1] as { ownedPaths?: unknown; stageIndex?: unknown };
+      if (Array.isArray(rec?.ownedPaths)) {
+        for (const p of rec.ownedPaths) {
+          // Only plugins/-rooted paths are exemptible: a ledger claiming
+          // ownership elsewhere must not widen the orphan carve-out.
+          if (typeof p === "string" && p.startsWith("plugins/")) ownedPaths.add(p);
+        }
+      }
+      if (Array.isArray(rec?.stageIndex)) {
+        for (const s of rec.stageIndex) {
+          const slug = (s as { slug?: unknown })?.slug;
+          if (typeof slug === "string") slugs.add(slug);
+        }
+      }
+    }
+    return { slugs, ownedPaths };
+  } catch {
+    return null;
+  }
+}
+
+function readPluginLedger(repoRoot: string, host: string): PluginLedger | null {
+  const p = join(repoRoot, host, ".amadeus-plugin-composition.json");
+  if (!existsSync(p)) return null;
+  return parsePluginLedger(readFileSync(p));
+}
+
+// Per-host ledger cache for one check/apply pass.
+function ledgerLookup(repoRoot: string): (rel: string) => PluginLedger | null {
+  const cache = new Map<string, PluginLedger | null>();
+  return (rel: string) => {
+    const host = normalizeRel(rel).split("/")[0] ?? "";
+    if (!cache.has(host)) cache.set(host, readPluginLedger(repoRoot, host));
+    return cache.get(host) ?? null;
+  };
+}
+
+// True when `rel` (repo-relative, host-prefixed) is a composed-plugin surface
+// the ledger owns: a composed stage body under plugins/, or the generated
+// runner skill of a ledger-indexed plugin stage slug.
+export function isPluginOwned(rel: string, ledger: PluginLedger | null): boolean {
+  if (ledger === null) return false;
+  const normalized = normalizeRel(rel);
+  const slash = normalized.indexOf("/");
+  if (slash < 0) return false;
+  const hostRel = normalized.slice(slash + 1);
+  if (ledger.ownedPaths.has(hostRel)) return true;
+  for (const slug of ledger.slugs) {
+    if (hostRel.startsWith(`skills/amadeus-${slug}/`)) return true;
+  }
+  return false;
+}
+
+function isLedgerPluginNode(node: unknown, ledger: PluginLedger): boolean {
+  if (typeof node !== "object" || node === null) return false;
+  const n = node as { slug?: unknown; plugin_source?: unknown };
+  return n.plugin_source === true && typeof n.slug === "string" && ledger.slugs.has(n.slug);
+}
+
+// True when the graph at `got` equals dist after removing the ledger-indexed
+// plugin_source nodes. Any other extra, missing, or differing node still
+// fails. Unparseable content falls back to the strict byte compare.
+export function stageGraphInSync(
+  got: Buffer,
+  want: Buffer,
+  ledger: PluginLedger | null,
+): boolean {
+  if (ledger === null || ledger.slugs.size === 0) return got.equals(want);
+  try {
+    const g = JSON.parse(got.toString("utf-8")) as unknown;
+    const w = JSON.parse(want.toString("utf-8")) as unknown;
+    if (!Array.isArray(g) || !Array.isArray(w)) return got.equals(want);
+    const rest = g.filter((node) => !isLedgerPluginNode(node, ledger));
+    return JSON.stringify(rest) === JSON.stringify(w);
+  } catch {
+    return got.equals(want);
+  }
+}
+
+// The graph bytes --apply writes: dist content plus the ledger-owned
+// plugin_source nodes carried over from the existing file, each re-anchored
+// after its preceding non-plugin slug so the compile-time spine position is
+// preserved. Derived from the same predicate as the check: when the existing
+// file is already in sync it is kept byte-identical, so check(merge(x)) holds.
+type PluginInsert = { node: unknown; afterSlug: string | null };
+
+// The ledger-owned plugin nodes of `g`, each remembering the non-plugin slug
+// that precedes it (its compile-time spine anchor).
+function collectPluginInserts(g: unknown[], ledger: PluginLedger): PluginInsert[] {
+  const inserts: PluginInsert[] = [];
+  let lastSlug: string | null = null;
+  for (const node of g) {
+    if (isLedgerPluginNode(node, ledger)) {
+      inserts.push({ node, afterSlug: lastSlug });
+    } else {
+      const slug = (node as { slug?: unknown })?.slug;
+      if (typeof slug === "string") lastSlug = slug;
+    }
+  }
+  return inserts;
+}
+
+function insertPluginNodes(w: unknown[], inserts: PluginInsert[]): unknown[] {
+  const merged: unknown[] = [...w];
+  for (const { node, afterSlug } of inserts) {
+    const anchor =
+      afterSlug === null
+        ? -1
+        : merged.findIndex((n) => (n as { slug?: unknown })?.slug === afterSlug);
+    merged.splice(anchor < 0 && afterSlug !== null ? merged.length : anchor + 1, 0, node);
+  }
+  return merged;
+}
+
+export function mergeStageGraph(
+  got: Buffer | null,
+  want: Buffer,
+  ledger: PluginLedger | null,
+): Buffer {
+  if (got === null || ledger === null || ledger.slugs.size === 0) return want;
+  if (stageGraphInSync(got, want, ledger)) return got;
+  try {
+    const g = JSON.parse(got.toString("utf-8")) as unknown;
+    const w = JSON.parse(want.toString("utf-8")) as unknown;
+    if (!Array.isArray(g) || !Array.isArray(w)) return want;
+    const inserts = collectPluginInserts(g, ledger);
+    if (inserts.length === 0) return want;
+    return Buffer.from(`${JSON.stringify(insertPluginNodes(w, inserts), null, 2)}\n`, "utf-8");
+  } catch {
+    return want;
+  }
+}
+
 function printUsage(): void {
   console.error(
     [
@@ -277,6 +443,7 @@ function managedRoots(): string[] {
 function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const roots = managedRoots();
   const orphans: string[] = [];
+  const ledgerFor = ledgerLookup(repoRoot);
   for (const root of roots) {
     const abs = join(repoRoot, root);
     if (!existsSync(abs)) continue;
@@ -284,6 +451,8 @@ function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[
       const rel = normalizeRel(relative(repoRoot, file));
       if (isPreserved(rel)) continue;
       if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist
+      if (PLUGIN_ENGINE_STATE_RE.test(rel)) continue; // plugin engine dot-state — runtime data, never in dist
+      if (isPluginOwned(rel, ledgerFor(rel))) continue; // composed plugin surface — owned by the composition record
       if (!expected.has(rel)) orphans.push(rel);
     }
   }
@@ -299,6 +468,7 @@ function ensureActiveSpaceCursor(repoRoot: string): void {
 
 function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const problems: string[] = [];
+  const ledgerFor = ledgerLookup(repoRoot);
   for (const [rel, want] of expected) {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) {
@@ -308,6 +478,8 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
     const got = readFileSync(abs);
     if (SCOPE_GRID_RE.test(rel)) {
       if (!scopeGridInSync(got, want)) problems.push(`DIFFERS: ${rel}`);
+    } else if (STAGE_GRAPH_RE.test(rel)) {
+      if (!stageGraphInSync(got, want, ledgerFor(rel))) problems.push(`DIFFERS: ${rel}`);
     } else if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
   }
   for (const rel of orphanedFiles(expected, repoRoot)) problems.push(`ORPHAN: ${rel}`);
@@ -326,11 +498,13 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
     if (lstatSync(path).isSymbolicLink()) rmSync(path);
     else updates.push({ path: rel, bytes: null });
   }
+  const ledgerFor = ledgerLookup(repoRoot);
   for (const [rel, bytes] of expected) {
     const abs = join(repoRoot, rel);
-    const out =
-      SCOPE_GRID_RE.test(rel) && existsSync(abs)
-        ? mergeScopeGrid(readFileSync(abs), bytes)
+    const out = SCOPE_GRID_RE.test(rel) && existsSync(abs)
+      ? mergeScopeGrid(readFileSync(abs), bytes)
+      : STAGE_GRAPH_RE.test(rel) && existsSync(abs)
+        ? mergeStageGraph(readFileSync(abs), bytes, ledgerFor(rel))
         : bytes;
     updates.push({ path: rel, bytes: out });
   }

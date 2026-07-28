@@ -17,6 +17,11 @@ fi
 cp -R "$SRC/.claude" "$TMP/.claude"
 # Strip machine-local runtime that may ride along from a live checkout.
 rm -rf "$TMP/.claude/worktrees" "$TMP/.claude/settings.local.json"
+# Strip any composed plugin (dogfood host state, e.g. formal-model-check):
+# the pack's shape pins below assume the stock 32-stage host, and apply-pack's
+# recompile rebuilds the graph from stages/ + plugins/, so removing the
+# composition surfaces yields the stock graph regardless of the source host.
+rm -rf "$TMP/.claude/plugins" "$TMP/.claude/.amadeus-plugin-"*
 
 "$PACK_DIR/scripts/apply-pack.sh" "$TMP"
 CL="$TMP/.claude"
