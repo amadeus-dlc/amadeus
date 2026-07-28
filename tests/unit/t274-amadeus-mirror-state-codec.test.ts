@@ -90,6 +90,25 @@ describe("codec rejection", () => {
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
+  test("Project verification cannot be attached to a close receipt", () => {
+    const event = ev("close");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "succeeded", {
+          attemptedAt: TS,
+          completedAt: TS,
+          projectSyncVerified: true,
+        }),
+      },
+    };
+    expect(
+      parseMirrorStateDocument(
+        wrap(renderMirrorStateJson(snapshot)),
+      ).kind,
+    ).toBe("invalid");
+  });
+
   test("two start sentinels are rejected", () => {
     const doc = `${MIRROR_STATE_SENTINEL_START}\n${renderMirrorStateJson(EMPTY_MIRROR_STATE)}\n${MIRROR_STATE_SENTINEL_END}\n${MIRROR_STATE_SENTINEL_START}\n`;
     expect(parseMirrorStateDocument(doc).kind).toBe("invalid");

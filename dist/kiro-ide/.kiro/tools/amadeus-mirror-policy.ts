@@ -419,6 +419,11 @@ function projectBlocker(
 export function completionProjectGate(
   input: CompletionProjectGateInput,
 ): CompletionProjectGate {
+  // An empty target set disables Project synchronization. Ledger rows are
+  // historical evidence, not active completion requirements once every board
+  // has been removed from configuration.
+  if (input.targets.length === 0) return { ready: true, blocking: [] };
+
   const targets = new Map(
     input.targets.map((target) => [
       `${target.project.owner}/${target.project.number}`,

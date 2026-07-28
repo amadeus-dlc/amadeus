@@ -65,12 +65,15 @@ function diagnosticTargets(
   for (const target of configured) {
     byProject.set(canonicalProjectRef(target.project), target);
   }
-  const addBare = (project: MirrorProjectRef): void => {
+  const addBare = (
+    project: MirrorProjectRef,
+    phaseField: string = DEFAULT_PROJECT_PHASE_FIELD,
+  ): void => {
     const key = canonicalProjectRef(project);
     if (!byProject.has(key)) {
       byProject.set(key, {
         project,
-        phaseField: DEFAULT_PROJECT_PHASE_FIELD,
+        phaseField,
         statusNames: {},
       });
     }
@@ -79,7 +82,10 @@ function diagnosticTargets(
     const parts = entry.project.split("/");
     const number = Number(parts[1]);
     if (parts.length === 2 && Number.isSafeInteger(number)) {
-      addBare({ owner: parts[0], number });
+      addBare(
+        { owner: parts[0], number },
+        entry.phaseField ?? DEFAULT_PROJECT_PHASE_FIELD,
+      );
     }
   }
   for (const item of items) {

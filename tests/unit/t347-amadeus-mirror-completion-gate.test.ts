@@ -78,6 +78,18 @@ describe("t347 completion gate readiness", () => {
     expect(gate).toEqual({ ready: true, blocking: [] });
   });
 
+  test("removing every configured board ignores historical ledger rows", () => {
+    const gate = completionProjectGate({
+      state: stateWith([
+        row("acme/5", "pending", "Operation", "Lifecycle Phase"),
+      ]),
+      snapshot: landed(),
+      targets: [],
+    });
+
+    expect(gate).toEqual({ ready: true, blocking: [] });
+  });
+
   test("a configured board with no ledger row blocks completion", () => {
     const gate = completionProjectGate({
       state: EMPTY_MIRROR_STATE,
@@ -209,10 +221,11 @@ describe("t347 completion gate readiness", () => {
   test("a membership-only board uses the default phase field identity", () => {
     const gate = completionProjectGate({
       state: stateWith([
+        row("acme/5", "synced", "Done"),
         row("acme/7", "synced", "Done", "Intent Phase"),
       ]),
       snapshot: landed(),
-      targets: [],
+      targets: [TARGET],
     });
 
     expect(gate).toEqual({ ready: true, blocking: [] });
@@ -221,10 +234,11 @@ describe("t347 completion gate readiness", () => {
   test("a membership-only board with another phase field blocks", () => {
     const gate = completionProjectGate({
       state: stateWith([
+        row("acme/5", "synced", "Done"),
         row("acme/7", "synced", "Done", "Lifecycle Phase"),
       ]),
       snapshot: landed(),
-      targets: [],
+      targets: [TARGET],
     });
 
     expect(gate).toEqual({

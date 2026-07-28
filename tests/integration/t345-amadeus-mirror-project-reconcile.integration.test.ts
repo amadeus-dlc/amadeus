@@ -374,6 +374,25 @@ function linkedState(): MirrorStateSnapshot {
   };
 }
 
+function staleBoardState(): MirrorStateSnapshot {
+  return {
+    ...linkedState(),
+    projectSync: {
+      projects: [
+        {
+          project: canonical(BOARD_B),
+          projectId: "PVT_6",
+          itemId: "PVTI_6",
+          phaseField: "Intent Phase",
+          lastAppliedStatus: "Inception",
+          state: "pending",
+          updatedAt: NOW,
+        },
+      ],
+    },
+  };
+}
+
 function markerBody(): string {
   return `snapshot\n${renderMirrorMarker(identity())}`;
 }
@@ -568,6 +587,71 @@ describe("t345 call budget", () => {
 });
 
 describe("t345 membership union", () => {
+  test("historical non-members are pruned from the active sync scope", async () => {
+    const store = fileStore(staleBoardState());
+    const gateway = new BoardGateway(markerBody());
+    gateway.items = [item(BOARD_A, "Ideation")];
+
+    const outcome = await run(store, gateway, { targets: [TARGET_A] });
+
+    expect(outcome.kind).toBe("completed");
+    expect(rowFor(store.state(), BOARD_A)?.state).toBe("synced");
+    expect(rowFor(store.state(), BOARD_B)).toBeUndefined();
+  });
+
+  test("a prune write failure stops before Project mutation and retries", async () => {
+    const store = fileStore(staleBoardState());
+    const gateway = new BoardGateway(markerBody());
+    gateway.items = [item(BOARD_A, "Ideation")];
+    const operation = context("sync", gateway, { targets: [TARGET_A] });
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let failPrune = true;
+    const ports = {
+      ...store.ports,
+      writeDocumentAtomic(text: string) {
+        if (
+          failPrune &&
+          gateway.history.includes("list") &&
+          text.includes('"projectSync":null')
+        ) {
+          failPrune = false;
+          return {
+            kind: "io-failure" as const,
+            summary: "injected Project prune failure",
+          };
+        }
+        return writeDocumentAtomic(text);
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const first = await executeMirrorOperation({
+      context: operation,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(first).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: { classification: "state-write" },
+    });
+    expect(gateway.history.some((entry) => entry.startsWith("field:"))).toBe(
+      false,
+    );
+    expect(mutations(gateway)).toEqual([]);
+    expect(rowFor(store.state(), BOARD_B)?.state).toBe("pending");
+
+    const retry = await executeMirrorOperation({
+      context: operation,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(retry.kind).toBe("completed");
+    expect(rowFor(store.state(), BOARD_B)).toBeUndefined();
+    expect(rowFor(store.state(), BOARD_A)?.state).toBe("synced");
+  });
+
   test("a board the Issue already belongs to is synced even unconfigured", async () => {
     const store = fileStore(linkedState());
     const gateway = new BoardGateway(markerBody());

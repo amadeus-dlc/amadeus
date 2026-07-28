@@ -490,6 +490,7 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "createIdentity",
   "authorization",
   "projectSyncHold",
+  "projectSyncVerified",
 ]);
 const PROJECT_SYNC_HOLD_KEYS: ReadonlySet<string> = new Set(["reason", "heldAt"]);
 const PROJECT_SYNC_HOLD_REASONS: ReadonlySet<MirrorProjectSyncHold["reason"]> =
@@ -800,7 +801,18 @@ type ReceiptOptionals = {
   failureClass: MirrorFailureClass | undefined;
   lastEffect: MirrorMutationEffect | undefined;
   projectSyncHold: MirrorProjectSyncHold | null | undefined;
+  projectSyncVerified: true | null | undefined;
 };
+
+function validateProjectSyncVerified(
+  value: JsonValue,
+  path: string,
+  issues: string[],
+): true | null {
+  if (value === true) return true;
+  issues.push(`${path}: must be true when present`);
+  return null;
+}
 
 // The Project-sync hold that parks an otherwise-succeeded receipt at `pending`
 // (E-U2CG). `null` signals a malformed value, distinct from `undefined` = absent.
@@ -825,6 +837,65 @@ function validateProjectSyncHold(
   const heldAt = reqTimestamp(v, "heldAt", path, issues);
   if (reason === undefined || heldAt === undefined) return null;
   return { reason, heldAt };
+}
+
+function validateReceiptOptionals(
+  value: { [key: string]: JsonValue },
+  path: string,
+  issues: string[],
+): ReceiptOptionals {
+  return {
+    attemptedAt: optTimestamp(value, "attemptedAt", path, issues),
+    completedAt: optTimestamp(value, "completedAt", path, issues),
+    failureClass: optEnum(
+      value,
+      "failureClass",
+      FAILURE_CLASSES,
+      "failure class",
+      path,
+      issues,
+    ),
+    lastEffect: optEnum(
+      value,
+      "lastEffect",
+      MUTATION_EFFECTS,
+      "mutation effect",
+      path,
+      issues,
+    ),
+    projectSyncHold:
+      "projectSyncHold" in value
+        ? validateProjectSyncHold(
+            value.projectSyncHold,
+            `${path}.projectSyncHold`,
+            issues,
+          )
+        : undefined,
+    projectSyncVerified:
+      "projectSyncVerified" in value
+        ? validateProjectSyncVerified(
+            value.projectSyncVerified,
+            `${path}.projectSyncVerified`,
+            issues,
+          )
+        : undefined,
+  };
+}
+
+function checkReceiptVerificationOperation(
+  event: MirrorEventIdentity | null,
+  optionals: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  if (
+    optionals.projectSyncVerified === true &&
+    event?.operation === "close"
+  ) {
+    issues.push(
+      `${path}.projectSyncVerified: not allowed for operation 'close'`,
+    );
+  }
 }
 
 function checkReceiptKey(
@@ -877,6 +948,11 @@ function checkReceiptHoldInvariants(
     issues.push(`${path}.lastEffect: required for status 'pending'`);
   if (held && status !== "pending")
     issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
+  if (o.projectSyncVerified === true && status !== "succeeded") {
+    issues.push(
+      `${path}.projectSyncVerified: only allowed for status 'succeeded'`,
+    );
+  }
 }
 
 function checkReceiptStatusInvariants(
@@ -906,16 +982,7 @@ function validateReceipt(
   const preparedAt = reqTimestamp(v, "preparedAt", path, issues);
   const event = validateEvent(v.event, `${path}.event`, issues);
   checkReceiptKey(event, key, mapKey, path, issues);
-  const o: ReceiptOptionals = {
-    attemptedAt: optTimestamp(v, "attemptedAt", path, issues),
-    completedAt: optTimestamp(v, "completedAt", path, issues),
-    failureClass: optEnum(v, "failureClass", FAILURE_CLASSES, "failure class", path, issues),
-    lastEffect: optEnum(v, "lastEffect", MUTATION_EFFECTS, "mutation effect", path, issues),
-    projectSyncHold:
-      "projectSyncHold" in v
-        ? validateProjectSyncHold(v.projectSyncHold, `${path}.projectSyncHold`, issues)
-        : undefined,
-  };
+  const o = validateReceiptOptionals(v, path, issues);
   const createIdentity =
     "createIdentity" in v
       ? validateCreateIdentity(v.createIdentity, `${path}.createIdentity`, issues)
@@ -925,6 +992,7 @@ function validateReceipt(
       ? validateAuthorization(v.authorization, `${path}.authorization`, issues)
       : undefined;
   if (status !== undefined) checkReceiptStatusInvariants(status, o, path, issues);
+  checkReceiptVerificationOperation(event, o, path, issues);
 
   if (
     key === undefined ||
@@ -934,7 +1002,8 @@ function validateReceipt(
     event === null ||
     createIdentity === null ||
     authorization === null ||
-    o.projectSyncHold === null
+    o.projectSyncHold === null ||
+    o.projectSyncVerified === null
   ) {
     return null;
   }
@@ -980,6 +1049,9 @@ function buildReceipt(input: {
       : { lastEffect: input.optionals.lastEffect }),
     ...(input.optionals.projectSyncHold
       ? { projectSyncHold: input.optionals.projectSyncHold }
+      : {}),
+    ...(input.optionals.projectSyncVerified === true
+      ? { projectSyncVerified: true as const }
       : {}),
     ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
     ...(input.authorization ? { authorization: input.authorization } : {}),
@@ -1590,6 +1662,8 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
   if (r.failureClass !== undefined) out.failureClass = r.failureClass;
   if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
   if (r.projectSyncHold !== undefined) out.projectSyncHold = r.projectSyncHold;
+  if (r.projectSyncVerified !== undefined)
+    out.projectSyncVerified = r.projectSyncVerified;
   if (r.createIdentity !== undefined)
     out.createIdentity = renderCreateIdentity(r.createIdentity);
   if (r.authorization !== undefined)

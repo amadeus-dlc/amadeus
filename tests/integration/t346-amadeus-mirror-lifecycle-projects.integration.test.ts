@@ -446,6 +446,7 @@ describe("t346 parked boundaries issue no field mutation", () => {
 // from the receipt hold that parks an unsettled sync.
 function completedSyncState(
   row: Readonly<{ state: "synced" | "pending"; lastAppliedStatus: string | null }>,
+  options: Readonly<{ verified?: boolean }> = {},
 ): MirrorStateSnapshot {
   const event = mirrorEventIdentity(
     INTENT_UUID,
@@ -463,6 +464,19 @@ function completedSyncState(
         preparedAt: NOW,
         attemptedAt: NOW,
         completedAt: NOW,
+        ...(options.verified ? { projectSyncVerified: true as const } : {}),
+        authorization: {
+          kind: "auto",
+          event,
+          operation: "sync",
+          boundaryInstance: event.boundary.instance,
+          receiptRevision: 1,
+          landing: {
+            registryStatus: "complete",
+            workflowStatus: "Completed",
+          },
+          resolvedMode: "auto",
+        },
       },
     },
     projectSync: {
@@ -482,74 +496,171 @@ function completedSyncState(
 }
 
 describe("t346 completion gate", () => {
-  test("a board short of done withholds the close", async () => {
+  test("a pre-marker final sync is re-queried before close", async () => {
     const fx = fixture({
       lifecyclePhase: "OPERATION",
       registryStatus: "complete",
-      state: completedSyncState({ state: "pending", lastAppliedStatus: "Operation" }),
+      state: completedSyncState({ state: "synced", lastAppliedStatus: "Done" }),
     });
     const gateway = new ProjectGateway(markerBody());
+    gateway.items = [memberItem(BOARD_A, "Operation")];
 
-    const result = await drive(fx, gateway, {
+    await drive(fx, gateway, {
       kind: "workflow-completed",
       instance: "completion-gate",
     });
 
-    expect(gateway.history).not.toContain("close");
-    expect(gateway.issue.state).toBe("OPEN");
-    if (result.kind !== "ok" || result.outcome.kind !== "continued")
-      throw new Error("expected a continued boundary outcome");
-    const outcome = result.outcome.outcomes.at(-1);
-    expect(outcome).toMatchObject({ kind: "pending", operation: "close" });
-    // The hold explains itself with the blocking row rather than stalling silently.
-    expect(outcome?.kind === "pending" ? outcome.warning.summary : "").toContain(
-      `${canonical(BOARD_A)}: pending`,
+    const queriedAt = gateway.history.indexOf("list");
+    const updatedAt = gateway.history.indexOf(`update:${canonical(BOARD_A)}`);
+    const closedAt = gateway.history.indexOf("close");
+    expect(queriedAt).toBeGreaterThanOrEqual(0);
+    expect(updatedAt).toBeGreaterThan(queriedAt);
+    expect(closedAt).toBeGreaterThan(updatedAt);
+    expect(gateway.issue.state).toBe("CLOSED");
+    const syncKey = mirrorEventKey(
+      mirrorEventIdentity(
+        INTENT_UUID,
+        { kind: "workflow-completed", instance: "completion-gate" },
+        "sync",
+      ),
     );
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
   });
 
-  test("the withheld close writes no receipt and leaves the ledger untouched", async () => {
-    const seeded = completedSyncState({ state: "pending", lastAppliedStatus: "Operation" });
+  test("a failed legacy requeue write blocks close and retries next time", async () => {
+    const seeded = completedSyncState({
+      state: "synced",
+      lastAppliedStatus: "Done",
+    });
     const fx = fixture({
       lifecyclePhase: "OPERATION",
       registryStatus: "complete",
       state: seeded,
     });
     const gateway = new ProjectGateway(markerBody());
+    gateway.items = [memberItem(BOARD_A, "Operation")];
+    const writeDocumentAtomic = fx.ports.writeDocumentAtomic;
+    let failRequeue = true;
+    fx.ports = {
+      ...fx.ports,
+      writeDocumentAtomic(text: string) {
+        if (failRequeue && text.includes('"projectSyncHold"')) {
+          failRequeue = false;
+          return {
+            kind: "io-failure" as const,
+            summary: "injected legacy requeue failure",
+          };
+        }
+        return writeDocumentAtomic(text);
+      },
+    } satisfies MirrorStateStorePorts;
 
-    await drive(fx, gateway, { kind: "workflow-completed", instance: "completion-gate" });
+    const first = await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
 
-    const after = fx.state();
-    const closeKey = mirrorEventKey(
+    const syncKey = mirrorEventKey(
       mirrorEventIdentity(
         INTENT_UUID,
         { kind: "workflow-completed", instance: "completion-gate" },
-        "close",
+        "sync",
       ),
     );
-    expect(after.receipts[closeKey]).toBeUndefined();
-    expect(after.projectSync).toEqual(seeded.projectSync ?? null);
+    expect(gateway.history).not.toContain("close");
+    expect(gateway.history).not.toContain("list");
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "succeeded",
+    });
+    expect(fx.state().receipts[syncKey].projectSyncVerified).toBeUndefined();
+    if (first.kind !== "ok" || first.outcome.kind !== "continued") {
+      throw new Error("expected a continued boundary outcome");
+    }
+    expect(first.outcome.outcomes.at(-1)).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        operation: "sync",
+        operationId: "op-sync",
+        classification: "state-write",
+      },
+    });
+
+    await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
+
+    expect(gateway.history).toContain("list");
+    expect(gateway.history).toContain("close");
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
   });
 
   test("once every board reached done the same boundary closes", async () => {
     const fx = fixture({
       lifecyclePhase: "OPERATION",
       registryStatus: "complete",
-      state: completedSyncState({ state: "synced", lastAppliedStatus: "Done" }),
+      state: completedSyncState(
+        { state: "synced", lastAppliedStatus: "Done" },
+        { verified: true },
+      ),
     });
     const gateway = new ProjectGateway(markerBody());
 
     await drive(fx, gateway, { kind: "workflow-completed", instance: "completion-gate" });
 
     expect(gateway.history).toContain("close");
+    expect(gateway.history).not.toContain("list");
     expect(gateway.issue.state).toBe("CLOSED");
   });
 
-  test("a successful final sync on the previous phase field cannot authorize close", async () => {
+  test("removing every configured board retires stale ledger rows from the close gate", async () => {
+    const seeded = completedSyncState({
+      state: "synced",
+      lastAppliedStatus: "Done",
+    });
+    const stale = {
+      ...seeded,
+      projectSync: {
+        projects: (seeded.projectSync?.projects ?? []).map((entry) => ({
+          ...entry,
+          phaseField: "Lifecycle Phase",
+        })),
+      },
+    };
+    const fx = fixture({
+      boards: [],
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      state: stale,
+    });
+    const gateway = new ProjectGateway(markerBody());
+
+    await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
+
+    expect(gateway.history).toContain("close");
+    expect(gateway.history).not.toContain("list-project-items");
+    expect(gateway.issue.state).toBe("CLOSED");
+  });
+
+  test("a verified sync is re-run when the configured phase field changes", async () => {
     const fx = fixture({
       lifecyclePhase: "OPERATION",
       registryStatus: "complete",
       phaseField: "Lifecycle",
-      state: completedSyncState({ state: "synced", lastAppliedStatus: "Done" }),
+      state: completedSyncState(
+        { state: "synced", lastAppliedStatus: "Done" },
+        { verified: true },
+      ),
     });
     const gateway = new ProjectGateway(markerBody());
 
@@ -558,15 +669,28 @@ describe("t346 completion gate", () => {
       instance: "completion-gate",
     });
 
-    expect(gateway.history).not.toContain("close");
-    expect(gateway.issue.state).toBe("OPEN");
+    const queriedAt = gateway.history.indexOf("list");
+    const closedAt = gateway.history.indexOf("close");
+    expect(queriedAt).toBeGreaterThanOrEqual(0);
+    expect(closedAt).toBeGreaterThan(queriedAt);
+    expect(gateway.history).toContain("list");
+    expect(gateway.issue.state).toBe("CLOSED");
     if (result.kind !== "ok" || result.outcome.kind !== "continued")
       throw new Error("expected a continued boundary outcome");
     const outcome = result.outcome.outcomes.at(-1);
-    expect(outcome).toMatchObject({ kind: "pending", operation: "close" });
-    expect(outcome?.kind === "pending" ? outcome.warning.summary : "").toContain(
-      `${canonical(BOARD_A)}: phase-field-mismatch`,
+    expect(outcome).toMatchObject({ kind: "completed", operation: "close" });
+    const syncKey = mirrorEventKey(
+      mirrorEventIdentity(
+        INTENT_UUID,
+        { kind: "workflow-completed", instance: "completion-gate" },
+        "sync",
+      ),
     );
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
+    });
+    expect(rowFor(fx.state(), BOARD_A)?.phaseField).toBe("Lifecycle");
   });
 
   test("an unsettled final sync parks the sync itself, so the close is never reached", async () => {
@@ -606,9 +730,203 @@ describe("t346 completion gate", () => {
     });
     expect(gateway.history).toContain("close");
   });
+
+  test("a failed Project ledger write cannot close and the same sync retries after recovery", async () => {
+    const fx = fixture({
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      state: linkedState({
+        projectSync: {
+          projects: [
+            {
+              project: canonical(BOARD_A),
+              projectId: `PVT_${BOARD_A.number}`,
+              itemId: `PVTI_${BOARD_A.number}`,
+              phaseField: "Intent Phase",
+              lastAppliedStatus: "Done",
+              state: "synced",
+              updatedAt: NOW,
+            },
+          ],
+        },
+      }),
+    });
+    const gateway = new ProjectGateway(markerBody());
+    gateway.items = [memberItem(BOARD_A, "Operation")];
+    gateway.updateFailures.set(BOARD_A.number, "network");
+    const writeDocumentAtomic = fx.ports.writeDocumentAtomic;
+    let remainingProjectWriteFailures = 2;
+    fx.ports = {
+      ...fx.ports,
+      writeDocumentAtomic(text: string) {
+        if (
+          remainingProjectWriteFailures > 0 &&
+          gateway.history.includes(`update:${canonical(BOARD_A)}`) &&
+          (text.includes('"state":"pending"') ||
+            text.includes('"projectSyncHold"'))
+        ) {
+          remainingProjectWriteFailures -= 1;
+          return {
+            kind: "io-failure" as const,
+            summary: "injected Project bookkeeping failure",
+          };
+        }
+        return writeDocumentAtomic(text);
+      },
+    } satisfies MirrorStateStorePorts;
+    const boundary = {
+      kind: "workflow-completed",
+      instance: "completion-retry",
+    } as const;
+
+    await drive(fx, gateway, boundary);
+
+    const syncKey = mirrorEventKey(
+      mirrorEventIdentity(INTENT_UUID, boundary, "sync"),
+    );
+    expect(gateway.history).not.toContain("close");
+    expect(gateway.issue.state).toBe("OPEN");
+    // The old flow attempted a second, post-failure hold write. The barrier is
+    // already durable now, so only the failed ledger write is reached.
+    expect(remainingProjectWriteFailures).toBe(1);
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+    expect(rowFor(fx.state(), BOARD_A)).toMatchObject({
+      state: "synced",
+      lastAppliedStatus: "Done",
+    });
+
+    remainingProjectWriteFailures = 0;
+    gateway.updateFailures.delete(BOARD_A.number);
+    await drive(fx, gateway, boundary);
+
+    expect(
+      gateway.history.filter(
+        (entry) => entry === `update:${canonical(BOARD_A)}`,
+      ),
+    ).toHaveLength(2);
+    expect(fx.state().receipts[syncKey].status).toBe("succeeded");
+    expect(rowFor(fx.state(), BOARD_A)).toMatchObject({
+      state: "synced",
+      lastAppliedStatus: "Done",
+    });
+    expect(gateway.history).toContain("close");
+    expect(gateway.issue.state).toBe("CLOSED");
+  });
 });
 
 describe("t346 prompt Project face", () => {
+  test.each([
+    ["successful retirement", "none", null],
+    ["verification requeue write failure", "prepare", "sync"],
+    ["stale prompt consumption write failure", "consume", "close"],
+  ] as const)("%s keeps close safe", async (_name, failure, blockedOperation) => {
+    const boundary = {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    } as const;
+    const fx = fixture({
+      mode: "prompt",
+      lifecyclePhase: "OPERATION",
+      registryStatus: "complete",
+      state: completedSyncState(
+        { state: "synced", lastAppliedStatus: "Done" },
+        { verified: true },
+      ),
+    });
+    const gateway = new ProjectGateway(markerBody());
+    const asked = await drive(fx, gateway, boundary);
+    if (
+      asked.kind !== "ok" ||
+      asked.outcome.kind !== "ask" ||
+      asked.outcome.operation !== "close"
+    ) {
+      throw new Error("expected a close prompt");
+    }
+    writeFileSync(
+      join(fx.root, "amadeus", "config.json"),
+      JSON.stringify({
+        "auto-mirror": "prompt",
+        "mirror-projects": [
+          { project: canonical(BOARD_A), "phase-field": "Lifecycle" },
+        ],
+      }),
+    );
+    if (failure !== "none") {
+      const writeDocumentAtomic = fx.ports.writeDocumentAtomic;
+      fx.ports = {
+        ...fx.ports,
+        writeDocumentAtomic(text: string) {
+          const consumingPrompt = text.includes('"expectedPrompt":null');
+          const selected =
+            failure === (consumingPrompt ? "consume" : "prepare");
+          if (selected && text.includes('"projectSyncHold"')) {
+            return {
+              kind: "io-failure" as const,
+              summary: `injected ${failure} state failure`,
+            };
+          }
+          return writeDocumentAtomic(text);
+        },
+      } satisfies MirrorStateStorePorts;
+    }
+
+    const answered = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: INTENT_DIR,
+        repository: REPO,
+        boundary,
+        answer: {
+          choice: "approve",
+          bindingId: asked.outcome.bindingId,
+          answerId: "answer-stale-close",
+          event: asked.outcome.event,
+          operation: asked.outcome.operation,
+        },
+      },
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => NOW,
+        newOperationId: () => "op-1",
+      },
+    );
+
+    expect(gateway.history).not.toContain("close");
+    if (blockedOperation !== null) {
+      if (answered.kind !== "ok" || answered.outcome.kind !== "continued") {
+        throw new Error("expected a pending state-write outcome");
+      }
+      expect(answered.outcome.outcomes.at(-1)).toMatchObject({
+        kind: "pending",
+        operation: blockedOperation,
+        warning: {
+          operation: blockedOperation,
+          classification: "state-write",
+          retryable: true,
+        },
+      });
+      return;
+    }
+    if (answered.kind !== "ok" || answered.outcome.kind !== "ask") {
+      throw new Error("expected a replacement sync prompt");
+    }
+    expect(answered.outcome.operation).toBe("sync");
+    const syncKey = mirrorEventKey(
+      mirrorEventIdentity(INTENT_UUID, boundary, "sync"),
+    );
+    expect(fx.state().receipts[syncKey]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+    expect(fx.state().receipts[syncKey].projectSyncVerified).toBeUndefined();
+    expect(fx.state().expectedPrompt?.operation).toBe("sync");
+  });
+
   test("the ask names the boards and the column the approval would write", async () => {
     const fx = fixture({ mode: "prompt", state: linkedState() });
     const gateway = new ProjectGateway(markerBody());

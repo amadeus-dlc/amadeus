@@ -90,6 +90,10 @@ export type MirrorOperationReceipt = Readonly<{
   // Issue mutation, and reusing them here would record a failure that did not
   // happen. `completedAt` stays set, because the Issue side really did complete.
   projectSyncHold?: MirrorProjectSyncHold;
+  // Durable proof that every configured Project and its ledger entry converged
+  // for this exact operation receipt. Older states omit the marker and are
+  // deliberately re-verified before a workflow-completion close.
+  projectSyncVerified?: true;
 }>;
 
 export type MirrorProjectSyncHold = Readonly<{

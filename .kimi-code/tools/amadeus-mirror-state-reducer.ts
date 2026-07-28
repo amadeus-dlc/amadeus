@@ -15,7 +15,6 @@ import type {
   MirrorFailureClass,
   MirrorMutationEffect,
   MirrorOperationReceipt,
-  MirrorProjectSyncEntry,
   MirrorProjectSyncHold,
   MirrorProvenance,
   MirrorRepairChallenge,
@@ -24,6 +23,11 @@ import type {
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
+import {
+  type MirrorProjectLedgerTransition,
+  type ProjectFailureMark,
+  reduceProjectLedger,
+} from "./amadeus-mirror-project-ledger-reducer.ts";
 import {
   type ChallengeConsumeInput,
   consumeRepairChallenge,
@@ -35,6 +39,13 @@ import {
 export const MAX_RECEIPTS = 1000;
 export const MAX_NORMAL_WARNINGS = 999;
 export const CAPACITY_WARNING_MARKER = "state-capacity";
+
+type CompletionTransitionFields = {
+  event: MirrorEventIdentity;
+  issueNumber: number;
+  completedAt: string;
+  createdAt?: string; // required for a create completion's provenance
+};
 
 export type MirrorTransition =
   | {
@@ -49,13 +60,14 @@ export type MirrorTransition =
   | { kind: "claim-create-attempt"; event: MirrorEventIdentity; attemptedAt: string }
   | { kind: "retry-after-no-effect"; event: MirrorEventIdentity; attemptedAt: string }
   | { kind: "claim-observed-retry"; event: MirrorEventIdentity; attemptedAt: string }
-  | {
+  | ({
       kind: "complete";
-      event: MirrorEventIdentity;
-      issueNumber: number;
-      completedAt: string;
-      createdAt?: string; // required for a create completion's provenance
-    }
+      projectSyncVerified?: true;
+    } & CompletionTransitionFields)
+  | ({
+      kind: "complete-with-project-sync-hold";
+      heldAt: string;
+    } & CompletionTransitionFields)
   | {
       kind: "skip-for-event";
       event: MirrorEventIdentity;
@@ -92,11 +104,9 @@ export type MirrorTransition =
       issueNumber: number;
       provenance: MirrorProvenance;
       consume: ChallengeConsumeInput;
-    }
+  }
   | { kind: "issue-repair-challenge"; challenge: MirrorRepairChallenge; now: string }
-  | { kind: "upsert-project-entry"; entry: MirrorProjectSyncEntry }
-  | ({ kind: "mark-project-pending" } & ProjectFailureMark)
-  | ({ kind: "mark-project-safety-blocked" } & ProjectFailureMark)
+  | MirrorProjectLedgerTransition
   | {
       kind: "hold-for-project-sync";
       event: MirrorEventIdentity;
@@ -104,15 +114,7 @@ export type MirrorTransition =
       heldAt: string;
     };
 
-// What a failed reconciliation of one Project knows. It deliberately carries no
-// `lastAppliedStatus`: the column this tool last applied is history that a later
-// failure does not rewrite, so the reducer preserves the existing row's value.
-export type ProjectFailureMark = Readonly<{
-  project: string;
-  projectId: string | null;
-  itemId: string | null;
-  updatedAt: string;
-}>;
+export type { ProjectFailureMark };
 
 export type ReducerResult =
   | {
@@ -358,54 +360,156 @@ function attempt(
   return changed(withReceipt(snapshot, key, next));
 }
 
-function reduceComplete(
-  snapshot: MirrorStateSnapshot,
-  t: Extract<MirrorTransition, { kind: "complete" }>,
-): ReducerResult {
-  const key = mirrorEventKey(t.event);
-  const r = snapshot.receipts[key];
-  if (!r) return invalid("complete: no receipt for event");
-  if (r.status === "succeeded") {
-    if (r.completedAt === t.completedAt && snapshot.issueNumber === t.issueNumber)
-      return { kind: "unchanged" };
-    return invalid("complete: receipt already succeeded");
+type CompletionTransition =
+  | Extract<MirrorTransition, { kind: "complete" }>
+  | Extract<MirrorTransition, { kind: "complete-with-project-sync-hold" }>;
+
+function completedReceipt(
+  receipt: MirrorOperationReceipt,
+  transition: CompletionTransition,
+): MirrorOperationReceipt {
+  if (transition.kind === "complete") {
+    const succeeded: MirrorOperationReceipt = {
+      ...receipt,
+      status: "succeeded",
+      completedAt: transition.completedAt,
+      ...(transition.projectSyncVerified === true
+        ? { projectSyncVerified: true as const }
+        : {}),
+    };
+    delete (succeeded as { projectSyncHold?: MirrorProjectSyncHold }).projectSyncHold;
+    if (transition.projectSyncVerified !== true) {
+      delete (succeeded as { projectSyncVerified?: true }).projectSyncVerified;
+    }
+    return succeeded;
   }
-  if (r.status !== "attempted" && r.status !== "pending")
-    return invalid(`complete: cannot complete from status '${r.status}'`);
-
-  const succeeded: MirrorOperationReceipt = {
-    ...r,
-    status: "succeeded",
-    completedAt: t.completedAt,
+  const held: MirrorOperationReceipt = {
+    ...receipt,
+    status: "pending",
+    completedAt: transition.completedAt,
+    projectSyncHold: {
+      reason: "project-sync-unsettled",
+      heldAt: transition.heldAt,
+    },
   };
-  // A completion is the convergence the Project-sync hold was waiting for.
-  delete (succeeded as { projectSyncHold?: MirrorProjectSyncHold }).projectSyncHold;
-  // Clear any warnings for this operation on successful completion.
-  const warnings = snapshot.warnings.filter((w) => w.operationId !== r.operationId);
+  delete (held as { failureClass?: MirrorFailureClass }).failureClass;
+  delete (held as { lastEffect?: MirrorMutationEffect }).lastEffect;
+  delete (held as { projectSyncVerified?: true }).projectSyncVerified;
+  return held;
+}
 
-  if (t.event.operation === "create") {
-    if (!r.createIdentity)
+function writeCompletedIssue(
+  snapshot: MirrorStateSnapshot,
+  transition: CompletionTransition,
+  receipt: MirrorOperationReceipt,
+  completed: MirrorOperationReceipt,
+): ReducerResult {
+  // Clear any warnings for this operation on successful completion.
+  const warnings = snapshot.warnings.filter(
+    (warning) => warning.operationId !== receipt.operationId,
+  );
+  const key = mirrorEventKey(transition.event);
+
+  if (transition.event.operation === "create") {
+    if (!receipt.createIdentity)
       return invalid("complete: create receipt has no create identity");
-    if (t.createdAt === undefined)
+    if (transition.createdAt === undefined)
       return invalid("complete: create completion requires provenance createdAt");
     const provenance: MirrorProvenance = {
       schema: 1,
-      createIdentity: r.createIdentity,
-      issueNumber: t.issueNumber,
-      createdAt: t.createdAt,
+      createIdentity: receipt.createIdentity,
+      issueNumber: transition.issueNumber,
+      createdAt: transition.createdAt,
     };
     return changed(
       withReceipt(
-        { ...snapshot, warnings, provenance, issueNumber: t.issueNumber },
+        {
+          ...snapshot,
+          warnings,
+          provenance,
+          issueNumber: transition.issueNumber,
+        },
         key,
-        succeeded,
+        completed,
       ),
     );
   }
   // sync / close completion: existing provenance unchanged, issue number must match.
-  if (snapshot.issueNumber !== null && snapshot.issueNumber !== t.issueNumber)
+  if (
+    snapshot.issueNumber !== null &&
+    snapshot.issueNumber !== transition.issueNumber
+  )
     return invalid("complete: sync/close issue number does not match linked issue");
-  return changed(withReceipt({ ...snapshot, warnings }, key, succeeded));
+  return changed(withReceipt({ ...snapshot, warnings }, key, completed));
+}
+
+function replayedCompletion(
+  snapshot: MirrorStateSnapshot,
+  transition: CompletionTransition,
+  receipt: MirrorOperationReceipt,
+): ReducerResult | null {
+  if (transition.kind === "complete") {
+    if (receipt.status !== "succeeded") return null;
+    return receipt.completedAt === transition.completedAt &&
+      receipt.projectSyncVerified === transition.projectSyncVerified &&
+      snapshot.issueNumber === transition.issueNumber
+      ? { kind: "unchanged" }
+      : invalid("complete: receipt already succeeded");
+  }
+  if (receipt.projectSyncHold === undefined) return null;
+  return receipt.status === "pending" &&
+    receipt.completedAt === transition.completedAt &&
+    receipt.projectSyncHold.heldAt === transition.heldAt &&
+    snapshot.issueNumber === transition.issueNumber
+    ? { kind: "unchanged" }
+    : invalid("complete-with-project-sync-hold: receipt already held");
+}
+
+function reduceComplete(
+  snapshot: MirrorStateSnapshot,
+  transition: CompletionTransition,
+): ReducerResult {
+  const key = mirrorEventKey(transition.event);
+  const receipt = snapshot.receipts[key];
+  if (!receipt) return invalid("complete: no receipt for event");
+  if (
+    transition.kind === "complete-with-project-sync-hold" &&
+    transition.event.operation === "close"
+  ) {
+    return invalid(
+      "complete-with-project-sync-hold: close never synchronizes Projects",
+    );
+  }
+  const replayed = replayedCompletion(snapshot, transition, receipt);
+  if (replayed) return replayed;
+  if (
+    transition.kind === "complete" &&
+    transition.projectSyncVerified === true &&
+    (transition.event.operation === "close" ||
+      receipt.projectSyncHold === undefined)
+  ) {
+    return invalid(
+      "complete: Project verification requires a held create or sync receipt",
+    );
+  }
+  if (
+    transition.kind === "complete" &&
+    receipt.projectSyncHold !== undefined &&
+    transition.projectSyncVerified !== true
+  ) {
+    return invalid(
+      "complete: releasing a Project sync hold requires verification",
+    );
+  }
+  if (receipt.status !== "attempted" && receipt.status !== "pending") {
+    return invalid(`complete: cannot complete from status '${receipt.status}'`);
+  }
+  return writeCompletedIssue(
+    snapshot,
+    transition,
+    receipt,
+    completedReceipt(receipt, transition),
+  );
 }
 
 function reduceSkip(
@@ -634,81 +738,14 @@ function reduceIssueChallenge(
   return changed(result.snapshot, facts);
 }
 
-function projectEntryEquals(
-  a: MirrorProjectSyncEntry,
-  b: MirrorProjectSyncEntry,
-): boolean {
-  return (
-    a.project === b.project &&
-    a.projectId === b.projectId &&
-    a.itemId === b.itemId &&
-    a.phaseField === b.phaseField &&
-    a.lastAppliedStatus === b.lastAppliedStatus &&
-    a.state === b.state &&
-    a.updatedAt === b.updatedAt
-  );
-}
-
-// Upsert one ledger row keyed by canonical "owner/number". Re-applying an
-// identical row is `unchanged`, so a converged re-run writes nothing and the
-// revision does not advance.
-function reduceUpsertProjectEntry(
+function reduceProjectLedgerTransition(
   snapshot: MirrorStateSnapshot,
-  t: Extract<MirrorTransition, { kind: "upsert-project-entry" }>,
+  transition: MirrorProjectLedgerTransition,
 ): ReducerResult {
-  if (t.entry.project.length === 0)
-    return invalid("upsert-project-entry: project must be non-empty");
-  if (t.entry.projectId !== null && t.entry.projectId.length === 0)
-    return invalid("upsert-project-entry: projectId must be non-empty or null");
-  if (t.entry.phaseField !== null && t.entry.phaseField.length === 0)
-    return invalid("upsert-project-entry: phaseField must be non-empty or null");
-  return writeProjectEntry(snapshot, t.entry);
-}
-
-// The one write path into the ledger: upsert by canonical "owner/number", and
-// report `unchanged` when the row is byte-identical so a converged re-run does
-// not advance the revision.
-function writeProjectEntry(
-  snapshot: MirrorStateSnapshot,
-  entry: MirrorProjectSyncEntry,
-): ReducerResult {
-  const existing = snapshot.projectSync?.projects ?? [];
-  const at = existing.findIndex((each) => each.project === entry.project);
-  if (at >= 0 && projectEntryEquals(existing[at], entry)) {
-    return { kind: "unchanged" };
-  }
-  const projects =
-    at >= 0
-      ? existing.map((each, index) => (index === at ? entry : each))
-      : [...existing, entry];
-  return changed({ ...snapshot, projectSync: { projects } });
-}
-
-// Mark one Project row `pending` (retryable) or `safety-blocked` (needs a
-// human). Both are unconditional re-classifications: the next state depends only
-// on this round's result, never on the row's current state, which is what makes
-// every state x result cell reachable. Identity the failure could not observe
-// (the Project node id, the item id, the last successfully applied field and
-// column) is carried over from the existing row rather than erased.
-function reduceProjectFailureMark(
-  snapshot: MirrorStateSnapshot,
-  mark: ProjectFailureMark,
-  state: Extract<MirrorProjectSyncEntry["state"], "pending" | "safety-blocked">,
-): ReducerResult {
-  if (mark.project.length === 0)
-    return invalid(`mark-project-${state}: project must be non-empty`);
-  const previous = (snapshot.projectSync?.projects ?? []).find(
-    (each) => each.project === mark.project,
-  );
-  return writeProjectEntry(snapshot, {
-    project: mark.project,
-    projectId: mark.projectId ?? previous?.projectId ?? null,
-    itemId: mark.itemId ?? previous?.itemId ?? null,
-    phaseField: previous?.phaseField ?? null,
-    lastAppliedStatus: previous?.lastAppliedStatus ?? null,
-    state,
-    updatedAt: mark.updatedAt,
-  });
+  const result = reduceProjectLedger(snapshot.projectSync, transition);
+  return result.kind === "changed"
+    ? changed({ ...snapshot, projectSync: result.ledger })
+    : result;
 }
 
 // Park a succeeded receipt at `pending` because the Project board did not
@@ -735,6 +772,7 @@ function reduceHoldForProjectSync(
     status: "pending",
     projectSyncHold: { reason: "project-sync-unsettled", heldAt: t.heldAt },
   };
+  delete (held as { projectSyncVerified?: true }).projectSyncVerified;
   return changed(withReceipt(snapshot, key, held));
 }
 
@@ -809,6 +847,7 @@ function reduceReceiptTransition(
     case "claim-observed-retry":
       return attempt(snapshot, transition.event, transition.attemptedAt, guardObservedRetry, true);
     case "complete":
+    case "complete-with-project-sync-hold":
       return reduceComplete(snapshot, transition);
     case "skip-for-event":
       return reduceSkip(snapshot, transition);
@@ -845,11 +884,10 @@ function reduceAuxTransition(
     case "issue-repair-challenge":
       return reduceIssueChallenge(snapshot, transition);
     case "upsert-project-entry":
-      return reduceUpsertProjectEntry(snapshot, transition);
+    case "prune-project-entries":
     case "mark-project-pending":
-      return reduceProjectFailureMark(snapshot, transition, "pending");
     case "mark-project-safety-blocked":
-      return reduceProjectFailureMark(snapshot, transition, "safety-blocked");
+      return reduceProjectLedgerTransition(snapshot, transition);
     case "hold-for-project-sync":
       return reduceHoldForProjectSync(snapshot, transition);
     default:

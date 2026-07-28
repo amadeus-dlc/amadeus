@@ -32,6 +32,8 @@ export const MIRROR_TOOL_FILES = [
   "amadeus-mirror-project-diagnostics.ts",
   "amadeus-mirror-project-executor.ts",
   "amadeus-mirror-project-gateway.ts",
+  "amadeus-mirror-project-ledger-reducer.ts",
+  "amadeus-mirror-project-verification.ts",
   "amadeus-mirror-provenance.ts",
   "amadeus-mirror-repair.ts",
   "amadeus-mirror-runner.ts",

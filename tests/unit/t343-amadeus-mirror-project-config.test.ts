@@ -197,6 +197,23 @@ describe("t343 project parse", () => {
     ]);
   });
 
+  test("duplicate Project identities in one layer are rejected", () => {
+    const reported = issues([
+      layer("space", {
+        "mirror-projects": [
+          { project: "acme/5", "phase-field": "Intent Phase" },
+          { project: "ACME/5", "phase-field": "Lifecycle" },
+        ],
+      }),
+    ]);
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({
+      key: "mirror-projects",
+      actualType: "duplicate project acme/5",
+    });
+  });
+
   test("an unknown key inside a target is rejected", () => {
     const reported = issues([
       layer("global", { "mirror-projects": [{ project: "a/1", colour: "red" }] }),

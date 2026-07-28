@@ -548,12 +548,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "125-126",
-    "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
     "lines": "151-154",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"

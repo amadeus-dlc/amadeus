@@ -737,4 +737,84 @@ describe("t279 sync and close convergence", () => {
     expect(outcome.kind).toBe("completed");
     expect(gateway.history).toEqual(["view", "readiness", "close"]);
   });
+
+  test("close rejects Project evidence from a different completion instance", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewed = issue();
+    const oldSyncEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "workflow-completed", instance: "complete-old" },
+      "sync",
+    );
+    const oldSyncKey = mirrorEventKey(oldSyncEvent);
+    const closeEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "workflow-completed", instance: "complete-current" },
+      "close",
+    );
+    const closeAuthorization = {
+      ...authorization(closeEvent, "close", oldSyncKey),
+      landing: {
+        registryStatus: "complete" as const,
+        workflowStatus: "Completed" as const,
+      },
+    };
+    const snapshot = {
+      intentUuid: "intent-1",
+      intentDir: INTENT_DIR,
+      projectSummary: "Mirror",
+      lifecyclePhase: "Operation",
+      currentStage: "workflow-completed",
+      status: "Completed",
+      registryStatus: "complete" as const,
+      updatedAt: NOW,
+    };
+    const closeContext: MirrorExecutionContext = {
+      ...context("close", gateway),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
+      projectSync: {
+        targets: [
+          {
+            project: { owner: "acme", number: 5 },
+            phaseField: "Intent Phase",
+            statusNames: {},
+          },
+        ],
+        snapshot,
+      },
+    };
+    const initial: MirrorStateSnapshot = {
+      ...linkedState(),
+      revision: 1,
+      receipts: {
+        [oldSyncKey]: {
+          key: oldSyncKey,
+          event: oldSyncEvent,
+          operationId: "op-old-sync",
+          status: "succeeded",
+          preparedAt: NOW,
+          attemptedAt: NOW,
+          completedAt: NOW,
+          projectSyncVerified: true,
+          authorization: authorization(oldSyncEvent, "sync"),
+        },
+      },
+    };
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: {
+        summary: "close requires final sync success for the same completion instance",
+      },
+    });
+    expect(gateway.history).not.toContain("close");
+  });
 });

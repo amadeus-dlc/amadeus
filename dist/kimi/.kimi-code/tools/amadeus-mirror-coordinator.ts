@@ -24,6 +24,13 @@ import {
   renderMirrorIssueContent,
   renderMirrorPrompt,
 } from "./amadeus-mirror-presentation.ts";
+import {
+  consumeStaleCloseApproval,
+  finalSyncReceiptKey,
+  heldCompletionSyncReconciliation,
+  prepareCompletionProjectVerification,
+  type ProjectVerificationScope,
+} from "./amadeus-mirror-project-verification.ts";
 import { renderMirrorMarker } from "./amadeus-mirror-provenance.ts";
 import type { MirrorTransition } from "./amadeus-mirror-state-reducer.ts";
 import {
@@ -265,17 +272,6 @@ function landingEvidence(context: MirrorBoundaryContext) {
     : undefined;
 }
 
-function finalSyncReceiptKey(
-  state: MirrorStateSnapshot,
-): string | undefined {
-  return Object.entries(state.receipts).find(
-    ([, receipt]) =>
-      receipt.event.boundary.kind === "workflow-completed" &&
-      receipt.event.operation === "sync" &&
-      receipt.status === "succeeded",
-  )?.[0];
-}
-
 function executionAuthorization(
   input: DriveMirrorBoundaryInput,
   state: MirrorStateSnapshot,
@@ -285,6 +281,8 @@ function executionAuthorization(
 ): MirrorExecutionAuthorization {
   const existing = state.receipts[mirrorEventKey(event)]?.authorization;
   if (existing) return existing;
+  const finalSyncKey =
+    operation === "close" ? finalSyncReceiptKey(state, event) : undefined;
   const base = {
     event,
     operation,
@@ -293,9 +291,7 @@ function executionAuthorization(
     ...(landingEvidence(input.context)
       ? { landing: landingEvidence(input.context) }
       : {}),
-    ...(operation === "close" && finalSyncReceiptKey(state)
-      ? { finalSyncReceiptKey: finalSyncReceiptKey(state) }
-      : {}),
+    ...(finalSyncKey ? { finalSyncReceiptKey: finalSyncKey } : {}),
   };
   if (promptAnswer) {
     const expected = state.expectedPrompt;
@@ -625,10 +621,16 @@ function selectBoundaryDecision(
   triggerEvent?: MirrorEventIdentity;
   decision?: ReturnType<typeof decideMirrorAction>;
 } {
-  const reconciliation = selectMirrorReconciliation({
-    snapshot: state,
-    snapshotRevision: state.revision,
-  });
+  const reconciliation =
+    heldCompletionSyncReconciliation(
+      state,
+      input.context.intentUuid,
+      input.context.boundary,
+    ) ??
+    selectMirrorReconciliation({
+      snapshot: state,
+      snapshotRevision: state.revision,
+    });
   const operation =
     reconciliation?.originalEvent.operation ??
     (input.context.boundary.kind === "manual"
@@ -716,6 +718,20 @@ function expectedPromptWasPersisted(
   operation: MirrorOperation,
 ): boolean {
   return state.expectedPrompt?.operation === operation;
+}
+
+function projectVerificationScope(
+  input: DriveMirrorBoundaryInput,
+  projects: readonly MirrorProjectTarget[],
+): ProjectVerificationScope {
+  return {
+    intentUuid: input.context.intentUuid,
+    boundary: input.context.boundary,
+    snapshot: input.context.snapshot,
+    projects,
+    ports: input.ports,
+    now: input.now,
+  };
 }
 
 // Persist the durable binding for one prompted operation and turn it into the
@@ -857,7 +873,16 @@ async function driveBoundaryDecisions(
   let state = initialState;
   const read = input.dependencies?.readState ?? readMirrorState;
   const outcomes: MirrorOperationOutcome[] = [];
+  const verificationScope = projectVerificationScope(input, projects);
   for (let count = 0; count < 3; count += 1) {
+    const verification = prepareCompletionProjectVerification(
+      verificationScope,
+      state,
+    );
+    if (verification.kind === "blocked") {
+      return continued([...outcomes, verification.outcome]);
+    }
+    state = verification.state;
     const step = resolveBoundaryStep(input, state, mode, projects, outcomes);
     if (step.kind === "settled") return step.outcome;
     const outcome = await executeDecision(
@@ -896,9 +921,50 @@ export async function driveMirrorBoundary(
     ]);
   }
   if (input.answer) {
+    const verificationScope = projectVerificationScope(
+      input,
+      initialized.projects,
+    );
+    const verification = prepareCompletionProjectVerification(
+      verificationScope,
+      initialized.state,
+    );
+    if (verification.kind === "blocked") {
+      return continued([verification.outcome]);
+    }
+    const expected = verification.state.expectedPrompt;
+    const approved =
+      expected === undefined
+        ? null
+        : approveMirrorPrompt({
+            expected,
+            answer: input.answer,
+            state: verification.state,
+          });
+    if (
+      input.answer.choice === "approve" &&
+      input.answer.operation === "close" &&
+      approved?.kind === "execute" &&
+      verification.verificationRequired
+    ) {
+      const consumed = consumeStaleCloseApproval(
+        verificationScope,
+        verification.state,
+        input.answer,
+      );
+      if (consumed.kind === "blocked") {
+        return continued([consumed.outcome]);
+      }
+      return driveBoundaryDecisions(
+        input,
+        consumed.state,
+        initialized.mode,
+        initialized.projects,
+      );
+    }
     return handlePromptAnswer(
       input,
-      initialized.state,
+      verification.state,
       input.answer,
       initialized.projects,
     );

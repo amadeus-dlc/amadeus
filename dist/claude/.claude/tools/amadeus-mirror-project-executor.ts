@@ -45,6 +45,7 @@ export type ProjectTransition = Extract<
     kind:
       | "set-global-warning"
       | "upsert-project-entry"
+      | "prune-project-entries"
       | "mark-project-pending"
       | "mark-project-safety-blocked";
   }
@@ -54,8 +55,12 @@ export type ProjectTransitionPort = Readonly<{
   apply: (
     transition: ProjectTransition,
     classification?: MirrorFailureClass,
-  ) => void;
+  ) => ProjectTransitionResult;
 }>;
+
+export type ProjectTransitionResult =
+  | { kind: "applied" }
+  | { kind: "failed" };
 
 function projectDiagnostic(
   context: MirrorExecutionContext,
@@ -75,8 +80,8 @@ function persistUnsyncedWarning(
   context: MirrorExecutionContext,
   classification: MirrorFailureClass,
   summary: string,
-): void {
-  transitions.apply(
+): ProjectTransitionResult {
+  return transitions.apply(
     {
       kind: "set-global-warning",
       warning: {
@@ -97,8 +102,8 @@ function persistUnsyncedWarning(
 function upsertProjectEntry(
   transitions: ProjectTransitionPort,
   entry: MirrorProjectSyncEntry,
-): void {
-  transitions.apply({
+): ProjectTransitionResult {
+  return transitions.apply({
     kind: "upsert-project-entry",
     entry,
   });
@@ -113,7 +118,7 @@ function markProjectFailure(
   classification: MirrorFailureClass,
 ): ProjectVerdict {
   const state = classifyProjectFailure(classification);
-  transitions.apply({
+  const persisted = transitions.apply({
     kind:
       state === "pending"
         ? "mark-project-pending"
@@ -123,6 +128,9 @@ function markProjectFailure(
     itemId: identity.itemId,
     updatedAt: context.now(),
   });
+  if (persisted.kind === "failed") {
+    return { state: "state-write-failed", classification: "state-write" };
+  }
   return { state, classification };
 }
 
@@ -136,6 +144,10 @@ type ProjectVerdict =
   | {
       state: Extract<MirrorProjectSyncState, "pending" | "safety-blocked">;
       classification: MirrorFailureClass;
+    }
+  | {
+      state: "state-write-failed";
+      classification: "state-write";
     };
 
 function findProjectItem(
@@ -364,7 +376,7 @@ async function syncOneProject(
     expected.auxiliaryStatus,
   );
 
-  upsertProjectEntry(transitions, {
+  const persisted = upsertProjectEntry(transitions, {
     project,
     projectId: fields.projectId,
     itemId: membership.itemId,
@@ -378,6 +390,9 @@ async function syncOneProject(
     state: "synced",
     updatedAt: context.now(),
   });
+  if (persisted.kind === "failed") {
+    return { state: "state-write-failed", classification: "state-write" };
+  }
   return { state: "synced" };
 }
 
@@ -415,6 +430,46 @@ export type ProjectReconcileResult =
       unsettled: number;
     };
 
+function recordMembershipFailure(
+  transitions: ProjectTransitionPort,
+  context: MirrorExecutionContext,
+  targets: readonly MirrorProjectTarget[],
+  failure: { classification: MirrorFailureClass; summary: string },
+): ProjectReconcileResult {
+  projectDiagnostic(context, {
+    project: targets.map(canonicalProject).join(", "),
+    reason: "membership-query-failed",
+    expectedStatus: null,
+    availableOptions: [],
+    summary: `Project membership could not be read: ${failure.summary}`,
+  });
+  const warning = persistUnsyncedWarning(
+    transitions,
+    context,
+    failure.classification,
+    `Project status is unsynchronized: ${failure.summary}`,
+  );
+  let classification: MirrorFailureClass =
+    warning.kind === "failed" ? "state-write" : failure.classification;
+  // Membership is the one read the whole loop depends on, so its failure
+  // classifies every configured Project at once.
+  for (const target of targets) {
+    const verdict = markProjectFailure(
+      transitions,
+      context,
+      canonicalProject(target),
+      { projectId: null, itemId: null },
+      failure.classification,
+    );
+    if (verdict.classification === "state-write") classification = "state-write";
+  }
+  return {
+    kind: "unsettled",
+    classification,
+    unsettled: targets.length,
+  };
+}
+
 // Reconcile every in-scope Project and report whether the board as a whole
 // converged. `unsettled` means at least one row is pending or safety-blocked,
 // which is what parks the operation receipt.
@@ -433,39 +488,23 @@ export async function syncProjects(
     number: issueNumber,
   });
   if (view.kind === "failure") {
-    projectDiagnostic(context, {
-      project: targets.map(canonicalProject).join(", "),
-      reason: "membership-query-failed",
-      expectedStatus: null,
-      availableOptions: [],
-      summary: `Project membership could not be read: ${view.summary}`,
-    });
-    persistUnsyncedWarning(
-      transitions,
-      context,
-      view.classification,
-      `Project status is unsynchronized: ${view.summary}`,
-    );
-    // Membership is the one read the whole loop depends on, so its failure
-    // classifies every configured Project at once.
-    for (const target of targets) {
-      markProjectFailure(
-        transitions,
-        context,
-        canonicalProject(target),
-        { projectId: null, itemId: null },
-        view.classification,
-      );
-    }
+    return recordMembershipFailure(transitions, context, targets, view);
+  }
+  const scope = reconcileTargets(targets, view.value);
+  const pruned = transitions.apply({
+    kind: "prune-project-entries",
+    activeProjects: scope.map((each) => canonicalProject(each.target)),
+  });
+  if (pruned.kind === "failed") {
     return {
       kind: "unsettled",
-      classification: view.classification,
-      unsettled: targets.length,
+      classification: "state-write",
+      unsettled: scope.length,
     };
   }
   let first: MirrorFailureClass | null = null;
   let unsettled = 0;
-  for (const each of reconcileTargets(targets, view.value)) {
+  for (const each of scope) {
     const verdict = await syncOneProject(
       transitions,
       context,
@@ -476,7 +515,10 @@ export async function syncProjects(
     );
     if (verdict.state === "synced") continue;
     unsettled += 1;
-    first = first ?? verdict.classification;
+    first =
+      verdict.classification === "state-write"
+        ? "state-write"
+        : (first ?? verdict.classification);
   }
   if (first === null) return { kind: "converged" };
   return { kind: "unsettled", classification: first, unsettled };

@@ -466,10 +466,21 @@ function parseProjects(value: unknown): ProjectsParse {
     return { ok: false, actualType: valueKind(value) };
   }
   const projects: MirrorProjectTarget[] = [];
+  const seen = new Set<string>();
   for (const element of value) {
     const parsed = parseProjectTarget(element);
     if (!parsed.ok) return parsed;
-    projects.push(...parsed.projects);
+    for (const target of parsed.projects) {
+      const identity = `${target.project.owner.toLowerCase()}/${target.project.number}`;
+      if (seen.has(identity)) {
+        return {
+          ok: false,
+          actualType: `duplicate project ${identity}`,
+        };
+      }
+      seen.add(identity);
+      projects.push(target);
+    }
   }
   return { ok: true, projects };
 }

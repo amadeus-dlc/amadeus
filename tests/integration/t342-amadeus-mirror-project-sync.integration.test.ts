@@ -17,7 +17,9 @@ import {
 import {
   EMPTY_MIRROR_STATE,
   parseMirrorStateDocument,
+  renderMirrorStateBlock,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
+import type { MirrorStateStorePorts } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
 import type {
   MirrorExecutionContext,
   MirrorProjectDiagnostic,
@@ -46,6 +48,56 @@ beforeEach(() => {
 afterEach(() => {
   harness.dispose();
 });
+
+type ReleaseRead =
+  | "io-failure"
+  | "invalid-state"
+  | "succeeded-without-verification"
+  | "pending-without-hold";
+
+function injectReleaseRead(
+  store: ReturnType<ProjectSyncTestHarness["fileStore"]>,
+  context: MirrorExecutionContext,
+  mode: ReleaseRead,
+) {
+  const readDocument = store.ports.readDocument;
+  let injected = false;
+  const ports = {
+    ...store.ports,
+    readDocument() {
+      const document = readDocument();
+      const parsed = parseMirrorStateDocument(document);
+      if (injected || parsed.kind === "invalid") return document;
+      const key = mirrorEventKey(context.event);
+      const receipt = parsed.snapshot.receipts[key];
+      const synced =
+        parsed.snapshot.projectSync?.projects.some(
+          (project) => project.state === "synced",
+        ) === true;
+      if (receipt?.projectSyncHold === undefined || !synced) return document;
+      injected = true;
+      if (mode === "io-failure") throw new Error("release read failed");
+      if (mode === "invalid-state") {
+        return document.replace('"schema":1', '"schema":99');
+      }
+      const { projectSyncHold: _hold, ...unheld } = receipt;
+      const replacement =
+        mode === "succeeded-without-verification"
+          ? { ...unheld, status: "succeeded" as const }
+          : {
+              ...unheld,
+              status: "pending" as const,
+              failureClass: "state-write" as const,
+              lastEffect: "outcome-unknown" as const,
+            };
+      return `# State\n\n${renderMirrorStateBlock({
+        ...parsed.snapshot,
+        receipts: { ...parsed.snapshot.receipts, [key]: replacement },
+      })}\n`;
+    },
+  } satisfies MirrorStateStorePorts;
+  return { ports, injected: () => injected };
+}
 
 describe("t342 create then project sync", () => {
   test("a fresh create adds the item, sets Intent Phase, and records one synced row", async () => {
@@ -76,6 +128,10 @@ describe("t342 create then project sync", () => {
           updatedAt: NOW,
         },
       ],
+    });
+    expect(Object.values(store.state().receipts)[0]).toMatchObject({
+      status: "succeeded",
+      projectSyncVerified: true,
     });
   });
 
@@ -213,6 +269,20 @@ describe("t342 idempotence", () => {
 });
 
 describe("t342 no configuration", () => {
+  test("the Project executor converges immediately when the configured target list is empty", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+
+    await expect(
+      syncProjects(
+        store.ports,
+        harness.context("sync", gateway, { targets: [] }),
+        7,
+      ),
+    ).resolves.toEqual({ kind: "converged" });
+    expect(projectCalls(gateway)).toEqual([]);
+  });
+
   test("no configured Project makes zero Project API calls and writes no ledger", async () => {
     const store = harness.fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(harness.markerBody());
@@ -300,6 +370,7 @@ describe("t342 no configuration", () => {
     const baseContext = harness.context("close", gateway, {
       boundary,
       snapshot: landedSnapshot,
+      targets: [],
     });
     const outcome = await executeMirrorOperation({
       context: {
@@ -413,6 +484,222 @@ describe("t342 failure containment", () => {
     });
     expect(diagnostics.map((d) => d.reason)).toEqual(["update-failed"]);
   });
+
+  test("a Project ledger write failure leaves the sync receipt retryable", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    const context = harness.context("sync", gateway);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let rejectedProjectLedger = false;
+    const ports = {
+      ...store.ports,
+      writeDocumentAtomic(text: string) {
+        if (
+          !rejectedProjectLedger &&
+          text.includes('"projectSync":{"projects":[')
+        ) {
+          rejectedProjectLedger = true;
+          return {
+            kind: "io-failure" as const,
+            summary: "injected Project ledger failure",
+          };
+        }
+        return writeDocumentAtomic(text);
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(rejectedProjectLedger).toBe(true);
+    expect(outcome).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        classification: "state-write",
+        retryable: true,
+      },
+    });
+    const state = store.state();
+    expect(state.projectSync).toBeNull();
+    expect(state.receipts[mirrorEventKey(context.event)]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+  });
+
+  test("a receipt release write failure preserves the Project sync hold", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_item1",
+          singleSelectValuesByFieldId: {
+            PVTSSF_intent_phase: "Ideation",
+          },
+        },
+      ],
+    };
+    const context = harness.context("sync", gateway);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let rejectedRelease = false;
+    const ports = {
+      ...store.ports,
+      writeDocumentAtomic(text: string) {
+        if (
+          !rejectedRelease &&
+          text.includes('"projectSync":{"projects":[') &&
+          text.includes('"status":"succeeded"')
+        ) {
+          rejectedRelease = true;
+          return {
+            kind: "io-failure" as const,
+            summary: "injected receipt release failure",
+          };
+        }
+        return writeDocumentAtomic(text);
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const first = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(rejectedRelease).toBe(true);
+    expect(first).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        classification: "state-write",
+        retryable: true,
+      },
+    });
+    const key = mirrorEventKey(context.event);
+    expect(store.state().receipts[key]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+    expect(store.state().projectSync?.projects[0].state).toBe("synced");
+
+    const retry = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(retry).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
+    });
+    expect(store.state().receipts[key]).toMatchObject({
+      status: "succeeded",
+    });
+    expect(store.state().receipts[key].projectSyncHold).toBeUndefined();
+  });
+
+  test("Project failure bookkeeping read failures also leave the receipt retryable", async () => {
+    const store = harness.fileStore(harness.linkedState());
+    const gateway = new ProjectGateway(harness.markerBody());
+    gateway.fixture.listResult = failure("network");
+    const context = harness.context("sync", gateway);
+    const readDocument = store.ports.readDocument;
+    let rejectedProjectReads = 2;
+    const ports = {
+      ...store.ports,
+      readDocument() {
+        if (
+          rejectedProjectReads > 0 &&
+          gateway.history.includes("list-project-items")
+        ) {
+          rejectedProjectReads -= 1;
+          throw new Error("injected Project state read failure");
+        }
+        return readDocument();
+      },
+    } satisfies MirrorStateStorePorts;
+
+    const outcome = await executeMirrorOperation({
+      context,
+      ports,
+      localState: store.state(),
+    });
+
+    expect(rejectedProjectReads).toBe(0);
+    expect(outcome).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        classification: "state-write",
+        retryable: true,
+      },
+    });
+    const state = store.state();
+    expect(state.projectSync).toBeNull();
+    expect(state.warnings).toEqual([]);
+    expect(state.receipts[mirrorEventKey(context.event)]).toMatchObject({
+      status: "pending",
+      projectSyncHold: { reason: "project-sync-unsettled" },
+    });
+  });
+
+  test.each([
+    ["read failure", "io-failure", "state document read failed"],
+    [
+      "invalid state",
+      "invalid-state",
+      "Project sync receipt state is invalid: $.schema: must be 1",
+    ],
+    [
+      "missing verification marker",
+      "succeeded-without-verification",
+      "Project sync converged but its durable verification marker is absent",
+    ],
+    [
+      "missing hold",
+      "pending-without-hold",
+      "Project sync converged but its durable receipt hold is absent",
+    ],
+  ] as const)(
+    "Project release %s stays pending",
+    async (_case, mode, summary) => {
+      const store = harness.fileStore(harness.linkedState());
+      const gateway = new ProjectGateway(harness.markerBody());
+      const context = harness.context("sync", gateway);
+      const releaseRead = injectReleaseRead(store, context, mode);
+
+      const outcome = await executeMirrorOperation({
+        context,
+        ports: releaseRead.ports,
+        localState: store.state(),
+      });
+
+      expect(releaseRead.injected()).toBe(true);
+      expect(outcome).toMatchObject({
+        kind: "pending",
+        operation: "sync",
+        warning: {
+          classification: "state-write",
+          summary,
+          retryable: true,
+        },
+      });
+      expect(store.state().receipts[mirrorEventKey(context.event)]).toMatchObject({
+        status: "pending",
+        projectSyncHold: { reason: "project-sync-unsettled" },
+      });
+    },
+  );
 });
 
 describe("t342 safety-blocked observations", () => {

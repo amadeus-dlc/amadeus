@@ -4,7 +4,10 @@
 // mutations are delegated to the Project executor after an Issue has landed.
 
 import { createMirrorMutationPermit } from "./amadeus-mirror-capability.ts";
-import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
+import {
+  mirrorEventIdentity,
+  mirrorEventKey,
+} from "./amadeus-mirror-policy.ts";
 import {
   type ProjectReconcileResult,
   type ProjectTransition,
@@ -366,11 +369,24 @@ function hasFinalSyncEvidence(
   const key = context.authorization.finalSyncReceiptKey;
   if (!key) return false;
   const receipt = snapshot.receipts[key];
+  const exactCompletionKey =
+    context.event.boundary.kind === "workflow-completed"
+      ? mirrorEventKey(
+          mirrorEventIdentity(
+            context.intentUuid,
+            context.event.boundary,
+            "sync",
+          ),
+        )
+      : null;
   return (
+    (exactCompletionKey === null || key === exactCompletionKey) &&
     receipt?.event.intentUuid === context.intentUuid &&
     receipt.event.boundary.kind === "workflow-completed" &&
     receipt.event.operation === "sync" &&
-    receipt.status === "succeeded"
+    receipt.status === "succeeded" &&
+    (!hasConfiguredProjectTargets(context) ||
+      receipt.projectSyncVerified === true)
   );
 }
 
@@ -406,6 +422,38 @@ function markAttempted(
   );
 }
 
+function hasConfiguredProjectTargets(context: MirrorExecutionContext): boolean {
+  return (context.projectSync?.targets.length ?? 0) > 0;
+}
+
+function requiresProjectSync(context: MirrorExecutionContext): boolean {
+  return context.operation !== "close" && hasConfiguredProjectTargets(context);
+}
+
+function completionTransition(
+  context: MirrorExecutionContext,
+  snapshot: MirrorStateSnapshot,
+  receipt: MirrorOperationReceipt,
+  issue: RemoteMirrorIssue,
+): MirrorTransition {
+  const completedAt = receipt.completedAt ?? context.now();
+  const completion = {
+    event: context.event,
+    issueNumber: issue.number,
+    completedAt,
+    ...(context.operation === "create"
+      ? { createdAt: snapshot.provenance?.createdAt ?? completedAt }
+      : {}),
+  };
+  return requiresProjectSync(context)
+    ? {
+        kind: "complete-with-project-sync-hold",
+        ...completion,
+        heldAt: receipt.projectSyncHold?.heldAt ?? completedAt,
+      }
+    : { kind: "complete", ...completion };
+}
+
 function complete(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
@@ -418,13 +466,7 @@ function complete(
     ports,
     context,
     snapshot,
-    {
-      kind: "complete",
-      event: context.event,
-      issueNumber: issue.number,
-      completedAt: context.now(),
-      ...(context.operation === "create" ? { createdAt: context.now() } : {}),
-    },
+    completionTransition(context, snapshot, receipt, issue),
     receipt.operationId,
     reconciliation,
   );
@@ -1224,10 +1266,10 @@ function projectTransitionPort(
     apply(
       transition: ProjectTransition,
       classification?: MirrorFailureClass,
-    ): void {
+    ) {
       const latest = readMirrorState(ports);
-      if (latest.kind !== "ok") return;
-      applyTransition(
+      if (latest.kind !== "ok") return { kind: "failed" };
+      const result = applyTransition(
         ports,
         context,
         latest.snapshot,
@@ -1236,6 +1278,7 @@ function projectTransitionPort(
         false,
         classification,
       );
+      return result.kind === "ok" ? { kind: "applied" } : { kind: "failed" };
     },
   };
 }
@@ -1275,60 +1318,121 @@ export async function executeMirrorOperation(
     input.context.operation === "create"
       ? await executeCreate(input)
       : await executeLinked(input);
-  // Single hook point for every completion path (fresh create, adopted create,
-  // edit, and the already-converged reconciliations): the Project step runs only
-  // after the Issue body itself landed, and never for `close`.
-  if (outcome.kind === "completed" && input.context.operation !== "close") {
+  // Every configured create/sync completion is already durably held at this
+  // point. The receipt becomes succeeded only after all Project ledger evidence
+  // has landed, so the completion loop cannot advance to close through a failed
+  // bookkeeping write.
+  if (outcome.kind === "completed" && requiresProjectSync(input.context)) {
     const projects = await syncProjects(
       input.ports,
       input.context,
       outcome.issueNumber,
     );
     if (projects.kind === "unsettled") {
-      return holdForProjectSync(input, outcome, projects);
+      return pendingProjectSync(
+        input,
+        projects.classification,
+        `the Issue is up to date but ${projects.unsettled} Project board(s) are unsynchronized; the next boundary reconciles them`,
+      );
     }
+    return releaseProjectSyncHold(input, outcome);
   }
   return outcome;
 }
 
-// Park the completed operation at `pending` so the next boundary retries it.
-// The completion itself already landed in state, so the Issue link is safe; if
-// the hold cannot be written the operation simply stays `completed` and the next
-// boundary's fresh receipts reconcile the board anyway.
-function holdForProjectSync(
+function projectSyncOperationId(
+  input: ExecuteMirrorOperationInput,
+  snapshot = input.localState,
+): string {
+  return (
+    requireReceipt(snapshot, input.context)?.operationId ??
+    input.context.newOperationId()
+  );
+}
+
+function pendingProjectSync(
+  input: ExecuteMirrorOperationInput,
+  classification: MirrorFailureClass,
+  summary: string,
+  snapshot?: MirrorStateSnapshot,
+): MirrorOperationOutcome {
+  const operationId = projectSyncOperationId(input, snapshot);
+  return {
+    kind: "pending",
+    operation: input.context.operation,
+    warning: warning(
+      input.context,
+      operationId,
+      classification,
+      summary,
+      true,
+      "outcome-unknown",
+    ),
+  };
+}
+
+// Release the durable barrier only after the Project executor reported that
+// every row, including its ledger entry, converged. Any read/write failure leaves
+// the pending hold on disk, so a later invocation starts with Project sync again.
+function releaseProjectSyncHold(
   input: ExecuteMirrorOperationInput,
   outcome: Extract<MirrorOperationOutcome, { kind: "completed" }>,
-  projects: Extract<ProjectReconcileResult, { kind: "unsettled" }>,
 ): MirrorOperationOutcome {
   const { context, ports } = input;
   const latest = readMirrorState(ports);
-  if (latest.kind !== "ok") return outcome;
+  if (latest.kind !== "ok") {
+    const summary =
+      latest.kind === "invalid"
+        ? `Project sync receipt state is invalid: ${latest.issues.join("; ")}`
+        : latest.summary;
+    return pendingProjectSync(input, "state-write", summary);
+  }
   const receipt = requireReceipt(latest.snapshot, context);
-  if (receipt === null || receipt.status !== "succeeded") return outcome;
-  const heldAt = context.now();
+  if (receipt?.status === "succeeded") {
+    return receipt.projectSyncVerified === true
+      ? outcome
+      : pendingProjectSync(
+          input,
+          "state-write",
+          "Project sync converged but its durable verification marker is absent",
+          latest.snapshot,
+        );
+  }
+  if (receipt?.status !== "pending" || receipt.projectSyncHold === undefined) {
+    return pendingProjectSync(
+      input,
+      "state-write",
+      "Project sync converged but its durable receipt hold is absent",
+      latest.snapshot,
+    );
+  }
+  const completedAt = receipt.completedAt ?? context.now();
   const result = applyTransition(
     ports,
     context,
     latest.snapshot,
     {
-      kind: "hold-for-project-sync",
+      kind: "complete",
       event: context.event,
-      operationId: receipt.operationId,
-      heldAt,
+      issueNumber: outcome.issueNumber,
+      completedAt,
+      projectSyncVerified: true,
+      ...(context.operation === "create"
+        ? {
+            createdAt:
+              latest.snapshot.provenance?.createdAt ?? completedAt,
+          }
+        : {}),
     },
     receipt.operationId,
+    true,
   );
-  if (result.kind !== "ok") return outcome;
-  return {
-    kind: "pending",
-    operation: context.operation,
-    warning: warning(
-      context,
-      receipt.operationId,
-      projects.classification,
-      `the Issue is up to date but ${projects.unsettled} Project board(s) are unsynchronized; the next boundary reconciles them`,
-      true,
-      "outcome-unknown",
-    ),
-  };
+  return result.kind === "ok"
+    ? outcome
+    : pendingProjectSync(
+        input,
+        "state-write",
+        `Project sync converged but its receipt could not be released: ${result.summary}`,
+        latest.snapshot,
+      );
 }

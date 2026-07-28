@@ -261,6 +261,31 @@ describe("t344 failure marks preserve unobserved identity", () => {
     expect(rows.find((r) => r.project === "amadeus-dlc/4")?.state).toBe("synced");
     expect(rows.find((r) => r.project === PROJECT)?.state).toBe("pending");
   });
+
+  test("the authoritative membership scope prunes historical rows", () => {
+    const active = "amadeus-dlc/4";
+    const before = withLedger([
+      entry({ project: active, state: "synced" }),
+      entry({ project: PROJECT, state: "pending" }),
+    ]);
+    const rows = ledgerOf(
+      reduce(before, {
+        kind: "prune-project-entries",
+        activeProjects: [active],
+      }),
+    );
+    expect(rows.map((row) => row.project)).toEqual([active]);
+  });
+
+  test("pruning an already-current scope is unchanged", () => {
+    const before = withLedger([entry()]);
+    expect(
+      reduce(before, {
+        kind: "prune-project-entries",
+        activeProjects: [PROJECT],
+      }).kind,
+    ).toBe("unchanged");
+  });
 });
 
 // --- the receipt hold -------------------------------------------------------
@@ -318,13 +343,84 @@ function heldReceipt(result: ReturnType<typeof reduce>): MirrorOperationReceipt 
 }
 
 describe("t344 receipt hold", () => {
+  test("Issue completion and its Project barrier land in one transition", () => {
+    const completed = heldReceipt(
+      reduce(withReceipt(receipt("attempted")), {
+        kind: "complete-with-project-sync-hold",
+        event: EVENT,
+        issueNumber: 7,
+        completedAt: NOW,
+        heldAt: LATER,
+      }),
+    );
+    expect(completed).toMatchObject({
+      status: "pending",
+      completedAt: NOW,
+      projectSyncHold: {
+        reason: "project-sync-unsettled",
+        heldAt: LATER,
+      },
+    });
+  });
+
+  test("an identical verified completion replay is unchanged", () => {
+    const snapshot = withReceipt(
+      receipt("succeeded", { projectSyncVerified: true }),
+    );
+    const completion: MirrorTransition = {
+      kind: "complete",
+      event: EVENT,
+      issueNumber: 7,
+      completedAt: NOW,
+      projectSyncVerified: true,
+    };
+
+    expect(reduce(snapshot, completion).kind).toBe("unchanged");
+    expect(
+      reduce(snapshot, {
+        kind: "complete",
+        event: EVENT,
+        issueNumber: 7,
+        completedAt: NOW,
+      }).kind,
+    ).toBe("invalid");
+  });
+
+  test("an identical atomic Project hold replay is unchanged", () => {
+    const completion: MirrorTransition = {
+      kind: "complete-with-project-sync-hold",
+      event: EVENT,
+      issueNumber: 7,
+      completedAt: NOW,
+      heldAt: LATER,
+    };
+    const first = reduce(withReceipt(receipt("attempted")), completion);
+    if (first.kind !== "changed") throw new Error("expected changed");
+
+    expect(reduce(first.snapshot, completion).kind).toBe("unchanged");
+    expect(
+      reduce(first.snapshot, {
+        ...completion,
+        heldAt: NOW,
+      }).kind,
+    ).toBe("invalid");
+  });
+
   test("a succeeded receipt parks at pending with its own reason", () => {
-    const held = heldReceipt(reduce(withReceipt(receipt("succeeded")), HOLD));
+    const held = heldReceipt(
+      reduce(
+        withReceipt(
+          receipt("succeeded", { projectSyncVerified: true }),
+        ),
+        HOLD,
+      ),
+    );
     expect(held.status).toBe("pending");
     expect(held.projectSyncHold).toEqual({
       reason: "project-sync-unsettled",
       heldAt: LATER,
     });
+    expect(held.projectSyncVerified).toBeUndefined();
   });
 
   test("the hold makes no claim about the Issue mutation", () => {
@@ -356,10 +452,63 @@ describe("t344 receipt hold", () => {
       event: EVENT,
       issueNumber: 7,
       completedAt: LATER,
+      projectSyncVerified: true,
     });
     const settled = heldReceipt(done);
     expect(settled.status).toBe("succeeded");
     expect(settled.projectSyncHold).toBeUndefined();
+    expect(settled.projectSyncVerified).toBe(true);
+  });
+
+  test("an unheld receipt cannot mint Project verification", () => {
+    const result = reduce(withReceipt(receipt("attempted")), {
+      kind: "complete",
+      event: EVENT,
+      issueNumber: 7,
+      completedAt: LATER,
+      projectSyncVerified: true,
+    });
+    expect(result.kind).toBe("invalid");
+  });
+
+  test("a Project hold cannot be released without verification", () => {
+    const once = reduce(withReceipt(receipt("succeeded")), HOLD);
+    if (once.kind !== "changed") throw new Error("expected changed");
+    expect(
+      reduce(once.snapshot, {
+        kind: "complete",
+        event: EVENT,
+        issueNumber: 7,
+        completedAt: LATER,
+      }).kind,
+    ).toBe("invalid");
+  });
+
+  test("a close receipt cannot enter the Project sync hold", () => {
+    const closeEvent = mirrorEventIdentity(
+      EVENT.intentUuid,
+      EVENT.boundary,
+      "close",
+    );
+    const closeKey = mirrorEventKey(closeEvent);
+    const closeReceipt = {
+      ...receipt("attempted"),
+      key: closeKey,
+      event: closeEvent,
+    };
+    const snapshot = {
+      ...withReceipt(closeReceipt),
+      receipts: { [closeKey]: closeReceipt },
+    };
+    expect(
+      reduce(snapshot, {
+        kind: "complete-with-project-sync-hold",
+        event: closeEvent,
+        issueNumber: 7,
+        completedAt: NOW,
+        heldAt: LATER,
+      }).kind,
+    ).toBe("invalid");
   });
 
   // A held receipt converges through `complete`, never through an Issue-mutation
@@ -407,6 +556,47 @@ describe("t344 receipt hold", () => {
 });
 
 describe("t344 hold survives the state document", () => {
+  test("a verified succeeded receipt round-trips its durable marker", () => {
+    const snapshot = withReceipt(
+      receipt("succeeded", { projectSyncVerified: true }),
+    );
+    const parsed = parseMirrorStateDocument(
+      `# State\n\n${renderMirrorStateBlock(snapshot)}\n`,
+    );
+    if (parsed.kind !== "ok") {
+      throw new Error(`unexpected invalid parse: ${parsed.issues.join("; ")}`);
+    }
+    expect(parsed.snapshot.receipts[KEY].projectSyncVerified).toBe(true);
+  });
+
+  test("a non-true Project verification marker is rejected", () => {
+    const snapshot = withReceipt(
+      receipt("succeeded", { projectSyncVerified: true }),
+    );
+    const document = `# State\n\n${renderMirrorStateBlock(snapshot).replace(
+      '"projectSyncVerified":true',
+      '"projectSyncVerified":false',
+    )}\n`;
+    expect(parseMirrorStateDocument(document).kind).toBe("invalid");
+  });
+
+  test("a Project verification marker on pending is rejected", () => {
+    const snapshot = withReceipt(
+      receipt("pending", {
+        projectSyncHold: {
+          reason: "project-sync-unsettled",
+          heldAt: LATER,
+        },
+        projectSyncVerified: true,
+      }),
+    );
+    expect(
+      parseMirrorStateDocument(
+        `# State\n\n${renderMirrorStateBlock(snapshot)}\n`,
+      ).kind,
+    ).toBe("invalid");
+  });
+
   test("a held receipt round-trips without failureClass or lastEffect", () => {
     const once = reduce(withReceipt(receipt("succeeded")), HOLD);
     if (once.kind !== "changed") throw new Error("expected changed");

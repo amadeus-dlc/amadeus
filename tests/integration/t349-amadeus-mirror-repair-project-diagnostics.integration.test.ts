@@ -195,12 +195,13 @@ function ledgerEntry(
   project: MirrorProjectRef,
   state: MirrorProjectSyncEntry["state"],
   lastAppliedStatus: string | null,
+  phaseField = "Intent Phase",
 ): MirrorProjectSyncEntry {
   return {
     project: canonical(project),
     projectId: `PVT_${project.number}`,
     itemId: `PVTI_${project.number}`,
-    phaseField: "Intent Phase",
+    phaseField,
     lastAppliedStatus,
     state,
     updatedAt: NOW,
@@ -412,6 +413,20 @@ describe("t349 drift", () => {
       ["acme/5", "member"],
       ["acme/6", "not-member"],
     ]);
+  });
+
+  test("a ledger-only board keeps the phase field used by its last sync", async () => {
+    const fx = fixture({
+      boards: [],
+      state: linkedState([
+        ledgerEntry(BOARD_B, "synced", "Construction", "Lifecycle Phase"),
+      ]),
+    });
+    fx.gateway.items = [memberItem(BOARD_B, "Construction")];
+
+    await diagnose(fx);
+
+    expect(fx.gateway.resolvedPhaseFields).toEqual(["Lifecycle Phase"]);
   });
 });
 
