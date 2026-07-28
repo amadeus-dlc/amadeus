@@ -12,6 +12,24 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { ensureSetupCliBuilt } from "../lib/setup-lazy-build.ts";
 
+const DEPENDENCY_BUCKETS = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+] as const;
+const WORKSPACE_MANIFESTS = [
+  ["package.json", new URL("../../package.json", import.meta.url)],
+  [
+    "packages/framework/package.json",
+    new URL("../../packages/framework/package.json", import.meta.url),
+  ],
+  [
+    "packages/setup/package.json",
+    new URL("../../packages/setup/package.json", import.meta.url),
+  ],
+] as const;
+
 describe("setup CLI smoke (FR-002: Bun runtime)", () => {
   test("dist/cli.js is built with a Bun shebang", async () => {
     const cliPath = await ensureSetupCliBuilt();
@@ -38,5 +56,25 @@ describe("setup CLI smoke (FR-002: Bun runtime)", () => {
     const pkg = JSON.parse(readFileSync(new URL("../../packages/setup/package.json", import.meta.url), "utf8"));
     expect(pkg.engines).toEqual({ bun: ">=1.3.13" });
     expect(pkg.scripts.build).toContain("--target=bun");
+  });
+
+  test("workspace manifests exclude the retired PTY dependency stack", () => {
+    const forbidden = new Set(["node-pty", "@xterm/headless"]);
+    const violations: string[] = [];
+
+    for (const [label, url] of WORKSPACE_MANIFESTS) {
+      const manifest = JSON.parse(readFileSync(url, "utf8")) as Partial<
+        Record<(typeof DEPENDENCY_BUCKETS)[number], Record<string, string>>
+      >;
+      for (const bucket of DEPENDENCY_BUCKETS) {
+        for (const dependency of Object.keys(manifest[bucket] ?? {})) {
+          if (forbidden.has(dependency)) {
+            violations.push(`${label}:${bucket}:${dependency}`);
+          }
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
   });
 });

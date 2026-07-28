@@ -52,6 +52,11 @@
 // confirmation picker that 2.6.1 shows on launch is cleared by the prep step.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -59,40 +64,21 @@ import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 function send(session: string, keys: string, literal: boolean): void {
-  const args = ["send", "--session", session, "--keys", keys, "--no-enter"];
+  const args = [
+    "send",
+    "--session",
+    session,
+    "--keys",
+    keys,
+    "--no-enter",
+  ];
   if (literal) args.push("--literal");
-  drive(args);
-  drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  runTuiDriver(args);
+  runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 }
 
 // Kiro TUI idle detection: the input footer reads "ask a question or describe
@@ -106,9 +92,8 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
     return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro intent-capture journey (uses Kiro credits)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
   }
@@ -165,7 +150,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
         // default agent, so a bare chat lands on the conductor (D-5, verified
         // in the Wave 4 smoke). --trust-all-tools: see TRUST POSTURE above.
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -184,14 +169,14 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
 
         // Clear the 2.6.1 trust-all confirmation picker if it renders ("Yes, I
         // accept" is one Down from the default "No, exit").
-        if (waitFor(session, "Yes, I accept", 30000, 400)) {
-          drive(["send", "--session", session, "--keys", "Down", "--no-enter"]);
-          drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        if (waitForTui(session, "Yes, I accept", 30000, 400)) {
+          runTuiDriver(["send", "--session", session, "--keys", "Down", "--no-enter"]);
+          runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
         }
         // Wait for the idle input footer + the amadeus agent in the statusbar —
         // proves the workspace default-agent activation on the shipped tree.
-        expect(waitFor(session, "amadeus", 60000, 400)).toBe(true);
-        expect(waitFor(session, IDLE_PATTERN, 60000, 600)).toBe(true);
+        expect(waitForTui(session, "amadeus", 60000, 400)).toBe(true);
+        expect(waitForTui(session, IDLE_PATTERN, 60000, 600)).toBe(true);
 
         // --- submit the stage-jump with the build description -----------------
         // Same trailing-freeform trick as the Claude twin: the description lands
@@ -219,7 +204,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
             break;
           }
           // Idle? (stable 1.5s so a mid-stream repaint doesn't false-trigger)
-          if (!waitFor(session, IDLE_PATTERN, 240000, 1500)) continue;
+          if (!waitForTui(session, IDLE_PATTERN, 240000, 1500)) continue;
           if (lastCompletedIsIntentCapture(sandbox)) {
             terminated = true;
             break;
@@ -265,7 +250,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
         expect(auditMd).toMatch(/STAGE_COMPLETED/);
         expect(auditMd.toLowerCase()).toContain("intent-capture");
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

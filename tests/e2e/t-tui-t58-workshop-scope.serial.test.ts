@@ -84,55 +84,33 @@
 // tmux/claude/distributable absence also SKIPs with a reason — never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// tui-drive.ts spawn is what DERIVES the `tui` mechanism (Phase 0) — no filename
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0) — no filename
 // mechanism segment. Every assertion is a plain-text tmux grid read or an
 // on-disk read (no colour escapes).
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { auditFilePathFor, recordDirFor, stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
 // reuses this so the long-lived
 // subprocess hits the same runtime.
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). A workshop run-through (fresh state-init + several gated post-init
 // stages) is several minutes of real LLM turns, so the bun:test cap is generous.
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
@@ -141,9 +119,8 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live workshop-scope journey (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -212,7 +189,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
       try {
         // --- launch the claude TUI + clear the two startup modals ----------------
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -227,20 +204,20 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
             "--dangerously-skip-permissions",
           ]).rc,
         ).toBe(0);
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Fresh project -> the no-workflow `[Amadeus-DLC] ready` baseline.
-        expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
         // --- submit the workshop command ----------------------------------------
         // Slash command has spaces -> send literally with no auto-Enter, then a
         // named Enter. The explicit scope flag avoids the current bare-keyword
         // confirmation loop; t29 owns the scope-disambiguation surface.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -249,13 +226,13 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Begin tailing the grid BEFORE the answer-gate runs, so we catch the
         // INCEPTION statusline + any gate menu while the workshop is live. Plain
         // text only — platform-invariant (no colour escapes).
         pollTimer = setInterval(() => {
-          const grid = drive(["capture", "--session", session]).stdout;
+          const grid = runTuiDriver(["capture", "--session", session]).stdout;
           // P9: the statusline carries an orientation prefix ("<intent-slug> · ")
           // before the phase, so anchor on the "· <PHASE>" separator.
           if (grid.includes("· INCEPTION")) sawInception = true;
@@ -273,29 +250,20 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         // proves the workshop progressed past Initialization AND respected the
         // workshop scope's 25-EXECUTE cap. answer-gate is a no-op disk-poller if no
         // menu paints (known-scope path), so this is safe for BOTH routings.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              proj,
-              "--until-state-field",
-              "Completed=^([5-9]|[12][0-9])$",
-              // No per-gate timeout: workshop can spend several minutes in real
-              // stage work between menus. The overall timeout is the wedge
-              // backstop; per-gate budgets false-fire on active progress.
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          proj,
+          "--until-state-field",
+          "Completed=^([5-9]|[12][0-9])$",
+          // No per-gate timeout: workshop can spend several minutes in real
+          // stage work between menus. The overall timeout is the wedge
+          // backstop; per-gate budgets false-fire on active progress.
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = undefined;
 
@@ -303,7 +271,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         // is a FINDING, never softened. But also confirm the disk terminator
         // actually landed (defence against a clean-exit race): the Completed
         // counter must be in [5, 29].
-        const pane = drive(["capture", "--session", session]).stdout;
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (gateRc !== 0) {
           throw new Error(
             `answer-gate exited ${gateRc} (workshop gates never reached Completed in [5,29]).\n` +
@@ -396,7 +364,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         expect(sawMenu).toBe(true);
       } finally {
         if (pollTimer) clearInterval(pollTimer);
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },

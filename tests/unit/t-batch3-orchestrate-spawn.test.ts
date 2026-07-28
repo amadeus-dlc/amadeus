@@ -16,6 +16,7 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -39,7 +40,11 @@ interface RunResult {
 }
 
 function run(tool: string, args: string[], proj?: string): RunResult {
-  const full = proj ? [tool, ...args, "--project-dir", proj] : [tool, ...args];
+  const full = [
+    amadeusToolTarget(tool),
+    ...args,
+    ...(proj ? ["--project-dir", proj] : []),
+  ];
   const res = spawnSync(BUN, full, {
     encoding: "utf-8",
     ...(proj ? { cwd: proj } : {}),

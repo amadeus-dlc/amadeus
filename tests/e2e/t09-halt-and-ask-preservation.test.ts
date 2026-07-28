@@ -68,6 +68,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -105,7 +106,7 @@ interface CliResult {
 
 /** Spawn `bun <tool> <subcommand> ... --project-dir <p>` from cwd=<p>. */
 function run(p: string, tool: string, args: string[]): CliResult {
-  const res = spawnSync(BUN, [tool, ...args, "--project-dir", p], {
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args, "--project-dir", p], {
     cwd: p,
     encoding: "utf-8",
   });

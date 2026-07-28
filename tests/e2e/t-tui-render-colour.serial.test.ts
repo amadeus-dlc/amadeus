@@ -28,16 +28,22 @@
 // this test accepts that stronger evidence.
 //
 // SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts. The
-// `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0) — no filename
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0) — no filename
 // mechanism segment is needed or added.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+  type TuiDriverRun,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
 
@@ -46,49 +52,23 @@ const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md")
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function runStatuslineHook(hook: string, projectDir: string, pct: number): Run {
+function runStatuslineHook(hook: string, projectDir: string, pct: number): TuiDriverRun {
   const input = JSON.stringify({
     workspace: { project_dir: projectDir },
     model: { id: "us.anthropic.claude-opus-4-20250514-v1:0" },
     context_window: { used_percentage: pct },
   });
-  const res = spawnSync(process.execPath, [hook], { encoding: "utf-8", input });
+  const res = spawnSync(process.execPath, [amadeusToolTarget(hook)], { encoding: "utf-8", input });
   return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // Gating. AMADEUS_TUI_LIVE=1 first (this spends tokens), then platform and
 // substrate availability.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -120,7 +100,7 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
         expect(hookOut.stdout).toMatch(new RegExp(`${ESC}\\[32mctx:4%${ESC}\\[0m`));
 
         // --- launch the claude TUI --------------------------------------------
-        const started = drive([
+        const started = runTuiDriver([
           "start",
           "--session",
           session,
@@ -137,19 +117,19 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
         expect(started.rc).toBe(0);
 
         // --- clear the two startup modals (idempotent) ------------------------
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // P9: orientation prefix ("<intent-slug> · ") sits between [Amadeus-DLC] and the
         // phase, so match with .* rather than a contiguous gap.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 1000)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 1000)).toBe(true);
 
         // --- submit a trivial prompt to consume context (populate ctx:%) ------
         // One word back; the smallest turn that still advances the context window.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -162,20 +142,20 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
         // The pane is still streaming while the stop hook/orchestrator notices
         // the seeded pending step, so requiring a byte-stable screen can miss a
         // ctx:N% token that is plainly rendered. Match immediately once present.
-        expect(waitFor(session, "ctx:\\d", 180000, 0)).toBe(true);
+        expect(waitForTui(session, "ctx:\\d", 180000, 0)).toBe(true);
 
         // --- assert the live statusline token in the ANSI capture --------------
         // The hook branch is proven above. On the current Claude Code renderer,
         // the statusline pane strips hook SGR while preserving the text token. If
         // the renderer starts preserving SGR again, accept that stronger evidence.
-        const ansi = drive(["capture", "--session", session, "--ansi"]).stdout;
+        const ansi = runTuiDriver(["capture", "--session", session, "--ansi"]).stdout;
         expect(ansi).toMatch(/ctx:\d+%/);
         const colourPainted = new RegExp(`${ESC}\\[3[123]m\\s*ctx:\\d`).test(ansi);
         if (colourPainted) {
           expect(ansi).toMatch(new RegExp(`${ESC}\\[32m\\s*ctx:\\d`));
         }
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

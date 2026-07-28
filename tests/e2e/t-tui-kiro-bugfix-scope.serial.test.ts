@@ -24,40 +24,31 @@
 // AMADEUS_KIRO_TUI_LIVE=1 with skip-reasons; tmux-backend only.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-function drive(args: string[]): { rc: number; stdout: string } {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 function send(session: string, keys: string): void {
-  drive(["send", "--session", session, "--keys", keys, "--literal", "--no-enter"]);
-  drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  runTuiDriver([
+    "send",
+    "--session",
+    session,
+    "--keys",
+    keys,
+    "--literal",
+    "--no-enter",
+  ]);
+  runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 }
 
 const IDLE_PATTERN = "ask a question or describe a task";
@@ -66,7 +57,8 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
     return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro bugfix journey (uses Kiro credits)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
   }
@@ -100,7 +92,7 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
       });
       try {
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -116,11 +108,11 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
             "--trust-all-tools",
           ]).rc,
         ).toBe(0);
-        if (waitFor(session, "Yes, I accept", 30000, 400)) {
-          drive(["send", "--session", session, "--keys", "Down", "--no-enter"]);
-          drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        if (waitForTui(session, "Yes, I accept", 30000, 400)) {
+          runTuiDriver(["send", "--session", session, "--keys", "Down", "--no-enter"]);
+          runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
         }
-        expect(waitFor(session, IDLE_PATTERN, 60000, 600)).toBe(true);
+        expect(waitForTui(session, IDLE_PATTERN, 60000, 600)).toBe(true);
 
         send(
           session,
@@ -134,7 +126,7 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
         const MAX_ANSWERS = 60;
         while (Date.now() < deadline && answers < MAX_ANSWERS) {
           if (completedCount(sandbox) >= 5) break;
-          if (!waitFor(session, IDLE_PATTERN, 300000, 1500)) continue;
+          if (!waitForTui(session, IDLE_PATTERN, 300000, 1500)) continue;
           if (completedCount(sandbox) >= 5) break;
           send(session, "1");
           answers += 1;
@@ -156,7 +148,7 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
         expect(audit).toContain("WORKFLOW_STARTED");
         expect(audit).toContain("GATE_APPROVED");
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

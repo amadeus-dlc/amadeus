@@ -80,10 +80,15 @@
 //
 // SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
 // journey uses plain-text grid + on-disk byte asserts with no colour. The
-// `tui-drive.ts` spawn is what DERIVES the `tui` mechanism (Phase 0) — no
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0) — no
 // filename mechanism segment is needed or added.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -91,11 +96,8 @@ import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.
 import { seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively.
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration
 // tier sets 600). A single jump turn is short, but the live TUI startup +
@@ -103,40 +105,14 @@ const DRIVE_PREFIX = [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live stage-jump journey (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -169,7 +145,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
       try {
         // --- launch the claude TUI -------------------------------------------
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -186,20 +162,20 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         ).toBe(0);
 
         // --- clear the two startup modals (idempotent — only act if present) --
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded state -> the workflow statusline paints IDEATION (not "ready").
         // Before the jump it shows the seeded "> Feasibility" stage.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
 
         // --- send the slash command ------------------------------------------
         // Spaces in the command -> send literally with no auto-Enter, then Enter
         // as a named key (the established two-step from the workshop template).
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -208,7 +184,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // --- wait for the LANDED render (the Pattern-A terminator) ------------
         // The jump rewrites Current Stage=approval-handoff and the statusline hook
@@ -218,8 +194,8 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // instant the landed stage name appears, NOT byte-stability. We do NOT
         // wait on terminal completion: the jump leaves
         // Status=Running and the orchestrator auto-continues (FINDING in header).
-        const sawLanded = waitFor(session, "> Approval & Handoff", 180000, 0);
-        const pane = drive(["capture", "--session", session]).stdout;
+        const sawLanded = waitForTui(session, "> Approval & Handoff", 180000, 0);
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (!sawLanded) {
           throw new Error(
             `statusline never re-rendered "> Approval & Handoff" after the jump.\n` +
@@ -286,7 +262,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // writes "**Timestamp**: <ts>".
         expect(auditMd).toMatch(/\*\*Timestamp\*\*:.*\d[0-9T:Z-]/);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },

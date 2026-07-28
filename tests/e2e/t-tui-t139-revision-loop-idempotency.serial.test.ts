@@ -60,21 +60,24 @@
 // never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The
-// tui-drive.ts spawn is what DERIVES the `tui` mechanism (Phase 0). Platform-
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0). Platform-
 // invariant plain-text grid asserts.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
 
 // Two full run-throughs back-to-back. The bun:test cap is the hard ceiling; each
 // run's pass condition is its on-disk Completed milestone, not the clock.
@@ -88,38 +91,12 @@ const PER_RUN_OVERALL_MS = Math.max(120_000, Math.floor(TEST_TIMEOUT_MS / 2) - 3
 // init 3 + >= 2 Inception (reverse-engineering + requirements-analysis) >= 5.
 const UNTIL_COMPLETED = "Completed=([5-9]|[1-9][0-9])";
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live revision-loop journey (uses Bedrock tokens — two run-throughs)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -141,27 +118,18 @@ function runAnswerGateToMilestone(
   sandbox: string,
   rejectFirstGate: boolean,
 ): Promise<number> {
-  return new Promise<number>((resolve) => {
-    const child = spawn(
-      DRIVE_BIN,
-      [
-        ...DRIVE_PREFIX,
-        "answer-gate",
-        "--session",
-        session,
-        "--project-dir",
-        sandbox,
-        "--until-state-field",
-        UNTIL_COMPLETED,
-        "--overall-timeout-ms",
-        String(PER_RUN_OVERALL_MS),
-        ...(rejectFirstGate ? ["--reject-first-gate"] : []),
-      ],
-      { stdio: "inherit" },
-    );
-    child.on("exit", (code) => resolve(code ?? -1));
-    child.on("error", () => resolve(-1));
-  });
+  return runTuiDriverToExit([
+    "answer-gate",
+    "--session",
+    session,
+    "--project-dir",
+    sandbox,
+    "--until-state-field",
+    UNTIL_COMPLETED,
+    "--overall-timeout-ms",
+    String(PER_RUN_OVERALL_MS),
+    ...(rejectFirstGate ? ["--reject-first-gate"] : []),
+  ]);
 }
 
 interface Terminal {
@@ -207,7 +175,7 @@ function readTerminal(sandbox: string): Terminal {
  *  bugfix command. Returns the session name (caller drives gates + reads disk). */
 function launchBugfix(session: string, sandbox: string): void {
   expect(
-    drive([
+    runTuiDriver([
       "start",
       "--session",
       session,
@@ -222,20 +190,20 @@ function launchBugfix(session: string, sandbox: string): void {
       "--dangerously-skip-permissions",
     ]).rc,
   ).toBe(0);
-  if (waitFor(session, "trust this folder", 60000, 600)) {
-    drive(["send", "--session", session, "--keys", "1"]);
+  if (waitForTui(session, "trust this folder", 60000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "1"]);
   }
-  if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-    drive(["send", "--session", session, "--keys", "2"]);
+  if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "2"]);
   }
-  expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+  expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
   // Explicit `--scope bugfix` (not the bare keyword) so the shipped
   // AMADEUS_DEFAULT_SCOPE=workshop env-default does NOT trigger a scope-
   // disambiguation gate at START (the t50 lesson, SKILL.md:105 "explicit CLI flag
   // wins"). The trailing description satisfies the step-6 "what to build?" prompt
   // up front (answer-gate can't type free text).
-  drive([
+  runTuiDriver([
     "send",
     "--session",
     session,
@@ -244,7 +212,7 @@ function launchBugfix(session: string, sandbox: string): void {
     "--literal",
     "--no-enter",
   ]);
-  drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
   // Do not require an intermediate phase/statusline paint here. Fresh brownfield
   // bootstraps can spend minutes routing while the statusline still shows ready
   // or an interim phase; the answer-gate's on-disk Completed terminator below is
@@ -267,7 +235,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
         const cleanRc = await runAnswerGateToMilestone(cleanSession, cleanSandbox, false);
         expect(cleanRc).toBe(0);
         const clean = readTerminal(cleanSandbox);
-        drive(["kill", "--session", cleanSession]);
+        runTuiDriver(["kill", "--session", cleanSession]);
 
         // CLEAN sanity: it reached the milestone with NO rejection.
         expect(clean.scope).toMatch(/bugfix/i);
@@ -300,7 +268,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
           // runs (mirrors t50's pollTimer). The answer-gate's own backstops are
           // HANG-only; pass is the on-disk Completed>=5 terminator, never the clock.
           pollTimer = setInterval(() => {
-            const grid = drive(["capture", "--session", revisedSession]).stdout;
+            const grid = runTuiDriver(["capture", "--session", revisedSession]).stdout;
             if (gridHasMenu(grid)) sawMenu = true;
           }, 1000);
           const revisedRc = await runAnswerGateToMilestone(
@@ -342,10 +310,10 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
           expect(revised.revisionCount).toBeGreaterThan(clean.revisionCount);
         } finally {
           if (pollTimer) clearInterval(pollTimer);
-          if (revisedSession) drive(["kill", "--session", revisedSession]);
+          if (revisedSession) runTuiDriver(["kill", "--session", revisedSession]);
         }
       } finally {
-        drive(["kill", "--session", cleanSession]);
+        runTuiDriver(["kill", "--session", cleanSession]);
         cleanupTuiProject(cleanSandbox);
         if (revisedSandbox) cleanupTuiProject(revisedSandbox);
       }

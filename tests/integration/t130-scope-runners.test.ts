@@ -74,6 +74,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   resetAidlcEnv,
@@ -136,7 +137,7 @@ function firstMoveDirective(scope: string): Directive {
   const init = spawnSync(
     BUN,
     [
-      tool(proj, "amadeus-utility.ts"),
+      amadeusToolTarget(tool(proj, "amadeus-utility.ts")),
       "init",
       "--scope",
       scope,
@@ -153,7 +154,7 @@ function firstMoveDirective(scope: string): Directive {
   const next = spawnSync(
     BUN,
     [
-      tool(proj, "amadeus-orchestrate.ts"),
+      amadeusToolTarget(tool(proj, "amadeus-orchestrate.ts")),
       "next",
       "--scope",
       scope,

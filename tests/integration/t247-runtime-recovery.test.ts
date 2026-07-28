@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleApprove } from "../../packages/framework/core/tools/amadeus-state.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -116,7 +117,7 @@ function run(
   args: string[],
   envOverrides: Record<string, string> = {},
 ) {
-  return spawnSync(process.execPath, [tool, ...args, "--project-dir", project], {
+  return spawnSync(process.execPath, [amadeusToolTarget(tool), ...args, "--project-dir", project], {
     cwd: project,
     encoding: "utf-8",
     env: {

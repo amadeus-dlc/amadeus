@@ -59,20 +59,23 @@
 // lives in the driver. Assertions use the plain-text tmux grid.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { auditFilePathFor, recordDirFor, stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
 // (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
 
 // Hang-backstop, NOT a budget. The poc `Completed>6` milestone requires driving
 // the FULL poc lifecycle for real — intent-capture, requirements-analysis, then
@@ -88,40 +91,14 @@ const DRIVE_PREFIX = [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live poc journey (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -145,7 +122,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
       let pollTimer: ReturnType<typeof setInterval> | undefined;
       try {
         // --- launch (distributable already copied by setupTuiProject) ----------
-        expect(drive([
+        expect(runTuiDriver([
           "start",
           "--session",
           session,
@@ -161,14 +138,14 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         ]).rc).toBe(0);
 
         // clear the two startup modals (idempotent — only act if present)
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Fresh project (no seeded state) -> the no-workflow "ready" line.
-        expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
         // --- submit the poc workflow command -----------------------------------
         // `/amadeus poc` is a single token-stream with no embedded spaces beyond the
@@ -185,7 +162,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         // handler (SKILL.md:122 `--scope poc` with no state behaves like /amadeus poc)
         // satisfying the step-6 free-text "what to build?" prompt up front (the
         // answer-gate cannot type free text).
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -194,21 +171,21 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Confirm the workflow started (statusline shows a live phase, not
         // `ready`). poc begins in INITIALIZATION and advances into IDEATION.
         // --stable-ms 0: the screen is streaming (live token counter / spinner),
         // so match the instant the phase text appears.
         expect(
-          waitFor(session, "\\[AIDLC\\].*(INITIALIZATION|IDEATION|INCEPTION)", 120000, 0),
+          waitForTui(session, "\\[AIDLC\\].*(INITIALIZATION|IDEATION|INCEPTION)", 120000, 0),
         ).toBe(true);
 
         // Begin tailing the grid for the render assertion BEFORE answer-gate runs,
         // so we catch a gate menu (caret + footer) while the gates are up. Use the
         // shared gridHasMenu() so the caret is matched consistently.
         pollTimer = setInterval(() => {
-          const grid = drive(["capture", "--session", session]).stdout;
+          const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (gridHasMenu(grid)) {
             sawMenu = true;
           }
@@ -229,34 +206,25 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         // Run it as a long-lived subprocess; its own backstops error loud, so a
         // hang surfaces as a nonzero exit (never a manufactured pass; an unreachable
         // milestone in budget is a FINDING, not a thing to soften).
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              sandbox,
-              "--until-state-field",
-              "Completed=^([7-9]|[1-9][0-9])$",
-              // NO per-gate timeout. The pass condition is the on-disk terminator
-              // (Completed>=7); the loop returns the instant it lands. poc's EXECUTE
-              // chain includes the reverse-engineering `mode: subagent` stage, which
-              // legitimately runs minutes with no menu and runs slower on the Windows
-              // box — a fixed per-gate value is a budget masquerading as a backstop and
-              // false-fires on a working run. Omitting it defaults per-gate to the
-              // overall deadline (one wedge-only backstop); the overall timeout bounds
-              // the journey and bun's test cap is the hard ceiling above it.
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          sandbox,
+          "--until-state-field",
+          "Completed=^([7-9]|[1-9][0-9])$",
+          // NO per-gate timeout. The pass condition is the on-disk terminator
+          // (Completed>=7); the loop returns the instant it lands. poc's EXECUTE
+          // chain includes the reverse-engineering `mode: subagent` stage, which
+          // legitimately runs minutes with no menu and runs slower on the Windows
+          // box — a fixed per-gate value is a budget masquerading as a backstop and
+          // false-fires on a working run. Omitting it defaults per-gate to the
+          // overall deadline (one wedge-only backstop); the overall timeout bounds
+          // the journey and bun's test cap is the hard ceiling above it.
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = undefined;
         expect(gateRc).toBe(0);
@@ -336,7 +304,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         expect(sawMenu).toBe(true);
       } finally {
         if (pollTimer) clearInterval(pollTimer);
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

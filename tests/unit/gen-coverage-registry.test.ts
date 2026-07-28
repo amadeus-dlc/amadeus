@@ -40,6 +40,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildRegistry,
+  claudeDependenciesOf,
   emptyClasses,
   enumerateAllUnits,
   MECHANISMS,
@@ -693,9 +694,10 @@ describe("committed coverage registry is fresh (the live CI ratchet)", () => {
 //
 // Until milestone 3, mechanism came from the filename SEGMENT (t17.cli -> cli). milestone 3
 // makes it the SET read from the drivers the body actually CALLS (refactor doc
-// §2): driveAidlc( -> sdk, a tui-drive.ts spawn -> tui, and a shipped-binary
-// subprocess (claude -p, a bun/node spawn of an amadeus-*.ts tool, or a bash
-// spawn of run-tests.sh) -> cli. These tests pin three properties:
+// §2): driveAidlc( -> sdk, a canonical tui-client call -> tui, and a
+// shipped-binary subprocess (claude -p, a Bun spawn of an amadeus-*.ts
+// tool, or a bash spawn of run-tests.sh) -> cli. These tests pin three
+// properties:
 //
 //   (a) THREE KNOWN-ANSWER FIXTURES — body wins over the segment; the codeView
 //       comment-strip recovers a swallowed spawn; an import is not a drive.
@@ -785,6 +787,253 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
   });
 
+  test("a non-Bun tool spawn stays none beside unrelated Bun tokens", () => {
+    const nodeOnly = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
+      'spawnSync("node", [TOOL, "show"]);',
+    ].join("\n");
+    const unrelatedConstant = [
+      nodeOnly,
+      'const runtime = "bun";',
+    ].join("\n");
+    const unrelatedProbe = [
+      nodeOnly,
+      'spawnSync("bun", ["--version"]);',
+    ].join("\n");
+
+    for (const src of [nodeOnly, unrelatedConstant, unrelatedProbe]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("an amadeus path in Bun eval source is not a command target", () => {
+    const src = [
+      'const source = \'import "../../tools/amadeus-state.ts";\';',
+      'Bun.spawn([process.execPath, "-e", source]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+  });
+
+  test("Bun array spawns bind the launcher and tool in one call", () => {
+    const src = [
+      'import { spawnSync } from "bun";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
+      'spawnSync(["bun", TOOL, "show"]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
+  });
+
+  test("indirect wrapper targets require the canonical target marker", () => {
+    const unmarkedWrapper = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
+      "function run(command: string, args: string[]) {",
+      "  return spawnSync(command, args);",
+      "}",
+    ];
+    const unmarkedBunCall = [
+      ...unmarkedWrapper,
+      'run("bun", [TOOL, "show"]);',
+    ].join("\n");
+    const crossedCalls = [
+      ...unmarkedWrapper,
+      'run("node", [TOOL, "show"]);',
+      'run("bun", ["--version"]);',
+    ].join("\n");
+    const markedWrapper = [
+      'import { spawnSync } from "node:child_process";',
+      'import { amadeusToolTarget } from "../harness/cli-target.ts";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
+      "function run(tool: string, args: string[]) {",
+      '  return spawnSync("bun", [amadeusToolTarget(tool), ...args]);',
+      "}",
+      'run(TOOL, ["show"]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", unmarkedBunCall)).toEqual(["none"]);
+    expect(mechanismsOf("t99.none.test.ts", crossedCalls)).toEqual(["none"]);
+    expect(mechanismsOf("t99.none.test.ts", markedWrapper)).toEqual(["cli"]);
+  });
+
+  test("the canonical target marker proves only imported indirect tool paths", () => {
+    const marked = [
+      'import { amadeusToolTarget as target } from "../harness/cli-target.ts";',
+      'import { spawnSync } from "node:child_process";',
+      'import { STATE } from "../harness/solo-gate-fixture.ts";',
+      "spawnSync(process.execPath, [target(STATE), \"show\"]);",
+    ].join("\n");
+    const sameNamedLocal = [
+      'import { spawnSync } from "node:child_process";',
+      "const amadeusToolTarget = (path: string) => path;",
+      'spawnSync(process.execPath, [amadeusToolTarget("helper.ts")]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", marked)).toEqual(["cli"]);
+    expect(mechanismsOf("t99.none.test.ts", sameNamedLocal)).toEqual(["none"]);
+  });
+
+  test("spawn and Bun lookalikes do not satisfy subprocess provenance", () => {
+    const localSpawn = [
+      'const TOOL = "amadeus-state.ts";',
+      "function spawnSync(_command: string, _args: string[]) {}",
+      'spawnSync("bun", [TOOL]);',
+    ].join("\n");
+    const fakeImport = [
+      'import { spawnSync } from "./fake.ts";',
+      'spawnSync("bun", ["amadeus-state.ts"]);',
+    ].join("\n");
+    const localBun = [
+      "const Bun = { spawnSync(_command: string[]) {} };",
+      'Bun.spawnSync(["bun", "amadeus-state.ts"]);',
+    ].join("\n");
+    const localProcess = [
+      'import { spawnSync } from "node:child_process";',
+      'const process = { execPath: "bun" };',
+      'spawnSync(process.execPath, ["amadeus-state.ts"]);',
+    ].join("\n");
+
+    for (const src of [localSpawn, fakeImport, localBun, localProcess]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("object and array selectors do not borrow an unrelated tool value", () => {
+    const objectSelector = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'const config = { tool: TOOL, version: "--version" };',
+      'spawnSync("bun", [config.version]);',
+    ].join("\n");
+    const arraySelector = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'const values = [TOOL, "--version"];',
+      'spawnSync("bun", [values[1]]);',
+    ].join("\n");
+
+    for (const src of [objectSelector, arraySelector]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("unknown target expressions do not borrow non-result tool values", () => {
+    const helperCall = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      "function first(a: string, _b: string) { return a; }",
+      'spawnSync("bun", [first("--version", TOOL)]);',
+    ].join("\n");
+    const commaExpression = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'spawnSync("bun", [(TOOL, "--version")]);',
+    ].join("\n");
+    const logicalExpression = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'spawnSync("bun", [TOOL && "--version"]);',
+    ].join("\n");
+
+    for (const src of [helperCall, commaExpression, logicalExpression]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("static subprocess targets require an exact basename", () => {
+    const nearMisses = [
+      'spawnSync("bun", ["/tmp/not-amadeus-state.ts"]);',
+      'spawnSync("bun", ["/tmp/amadeus-state.ts.bak"]);',
+      'spawnSync("bash", ["/tmp/not-run-tests.sh"]);',
+      'spawnSync("bash", ["/tmp/run-tests.sh.bak"]);',
+    ];
+
+    for (const command of nearMisses) {
+      const src = [
+        'import { spawnSync } from "node:child_process";',
+        command,
+      ].join("\n");
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("static path construction allows only canonical node:path join", () => {
+    const canonicalJoin = [
+      'import { spawnSync } from "node:child_process";',
+      'import { join } from "node:path";',
+      'spawnSync("bun", [join("/tmp", "amadeus-state.ts")]);',
+    ].join("\n");
+    const canonicalResolve = [
+      'import { spawnSync } from "node:child_process";',
+      'import { resolve } from "node:path";',
+      'spawnSync("bun", [resolve("/tmp", "amadeus-state.ts")]);',
+    ].join("\n");
+    const localJoin = [
+      'import { spawnSync } from "node:child_process";',
+      "function join(...parts: string[]) { return parts.join('/'); }",
+      'spawnSync("bun", [join("/tmp", "amadeus-state.ts")]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", canonicalJoin)).toEqual(["cli"]);
+    expect(mechanismsOf("t99.none.test.ts", canonicalResolve)).toEqual(["none"]);
+    expect(mechanismsOf("t99.none.test.ts", localJoin)).toEqual(["none"]);
+  });
+
+  test("reassigned launcher and target variables fail closed", () => {
+    const reassignedLauncher = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'let runtime = "bun";',
+      'runtime = "node";',
+      'spawnSync(runtime, [TOOL]);',
+    ].join("\n");
+    const reassignedTarget = [
+      'import { spawnSync } from "node:child_process";',
+      'let target = "amadeus-state.ts";',
+      'target = "helper.ts";',
+      'spawnSync("bun", [target]);',
+    ].join("\n");
+    const reassignedParameter = [
+      'import { spawnSync } from "node:child_process";',
+      'const TOOL = "amadeus-state.ts";',
+      'function run(runtime = "bun") {',
+      '  runtime = "node";',
+      '  spawnSync(runtime, [TOOL]);',
+      '}',
+      'run();',
+    ].join("\n");
+
+    for (
+      const src of [
+        reassignedLauncher,
+        reassignedTarget,
+        reassignedParameter,
+      ]
+    ) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+    }
+  });
+
+  test("Claude print mode requires an exact argv flag", () => {
+    const promptMention = [
+      'import { spawnSync } from "node:child_process";',
+      'spawnSync("claude", ["explain the -p option"]);',
+    ].join("\n");
+    const printFlag = [
+      'import { spawnSync } from "node:child_process";',
+      'spawnSync("claude", ["-p", "hello"]);',
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", promptMention)).toEqual(["none"]);
+    expect(claudeDependenciesOf("t99.none.test.ts", promptMention)).toEqual([]);
+    expect(mechanismsOf("t99.none.test.ts", printFlag)).toEqual(["cli"]);
+    expect(claudeDependenciesOf("t99.none.test.ts", printFlag)).toEqual([
+      "cli-claude",
+    ]);
+  });
+
   test("a suffix-free file with a dotted descriptive slug seeds none (no throw)", () => {
     // Forward-compat for milestone 6 (suffix drop): once .none/.cli are gone, a test whose
     // basename carries a DOT in a descriptive slug (not a mechanism segment) must
@@ -806,6 +1055,95 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
       "});",
     ].join("\n");
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+  });
+
+  test("calling the canonical TUI client derives the tui mechanism", () => {
+    const src = [
+      "// covers: render-surface:statusline",
+      'import { runTuiDriver } from "../harness/tui-client.ts";',
+      'test("x", () => {',
+      '  const result = runTuiDriver(["capture", "--session", "s"]);',
+      "  expect(result.rc).toBe(0);",
+      "});",
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
+    expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);
+  });
+
+  test("calling the long-running TUI client derives the tui mechanism", () => {
+    const src = [
+      "// covers: render-surface:statusline",
+      'import { runTuiDriverToExit } from "../harness/tui-client.ts";',
+      'test("x", async () => {',
+      '  expect(await runTuiDriverToExit(["answer-gate"])).toBe(0);',
+      "});",
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
+    expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);
+  });
+
+  test("calling an aliased canonical TUI client binding derives tui", () => {
+    const src = [
+      'import { waitForTui as waitForScreen } from "../harness/tui-client.ts";',
+      'test("x", () => {',
+      '  expect(waitForScreen("s", "ready", 1000, 0)).toBe(true);',
+      "});",
+    ].join("\n");
+
+    expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["tui"]);
+    expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["tui"]);
+  });
+
+  test("same-named locals, strings, and import-only clients do not derive tui", () => {
+    const local = [
+      "function runTuiDriver() { return 0; }",
+      "runTuiDriver();",
+      'const mention = "runTuiDriver(";',
+      'const driverFile = "tui-drive.ts";',
+    ].join("\n");
+    const importOnly = [
+      'import { runTuiDriver } from "../harness/tui-client.ts";',
+      'test("x", () => expect(typeof runTuiDriver).toBe("function"));',
+    ].join("\n");
+    const shadowed = [
+      'import { runTuiDriver } from "../harness/tui-client.ts";',
+      "function invoke(runTuiDriver: () => void) {",
+      "  runTuiDriver();",
+      "}",
+      "invoke(() => {});",
+    ].join("\n");
+
+    for (const src of [local, importOnly, shadowed]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+      expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual([]);
+    }
+  });
+
+  test("direct driver references stay outside the canonical client contract", () => {
+    const directSpawn = [
+      'import { spawnSync as runChild } from "node:child_process";',
+      'import { join } from "node:path";',
+      'const DRIVER = join(import.meta.dir, "../harness/tui-drive.ts");',
+      "runChild(process.execPath, [DRIVER]);",
+    ].join("\n");
+    const wrongExecutable = [
+      'import { spawnSync } from "node:child_process";',
+      'spawnSync("echo", ["../harness/tui-drive.ts"]);',
+    ].join("\n");
+    const sourceReadThenSpawn = [
+      'import { spawnSync } from "node:child_process";',
+      'import { readFileSync } from "node:fs";',
+      'import { join } from "node:path";',
+      'const source = readFileSync(join(import.meta.dir, "../harness/tui-drive.ts"), "utf8");',
+      'spawnSync("wc", ["-c"], { input: source });',
+    ].join("\n");
+
+    for (const src of [directSpawn, wrongExecutable, sourceReadThenSpawn]) {
+      expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["none"]);
+      expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual([]);
+    }
   });
 
   // Recursively list every t*.test.ts under tests/ (the level dirs + harness).
@@ -838,7 +1176,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
   //
   // MAINTENANCE (read before you touch this): this pin is a deliberate manual
   // ratchet. When a later PR adds or rewrites a DETERMINISTIC test that spawns an
-  // amadeus-*.ts tool / a hook / run-tests.sh under the bun-or-node runtime (milestone 4's
+  // amadeus-*.ts tool / a hook / run-tests.sh under the Bun runtime (milestone 4's
   // floor rewrites and milestone 5's .sh->bun ports will do exactly this), that file is a
   // new none->cli member and this test WILL red. That red is correct — add the
   // new file's tests/-relative path to this array (the failure message prints the
@@ -858,9 +1196,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "e2e/t341-plugin-conformance-journey.serial.test.ts",
     "integration/t236-election-loop.integration.test.ts",
     "integration/t241-election-machine-executor.integration.test.ts",
-    "integration/t257-status-registry-migration.test.ts",
     "integration/t258-lifecycle-transaction.test.ts",
-    "integration/t259-guard-corpus.test.ts",
     "integration/t259-guard-integration.test.ts",
     "integration/t270-harness-provenance-birth.test.ts",
     "integration/t296-hook-launch-and-worktree-resolution.test.ts",
@@ -875,11 +1211,8 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t233-set-status-retreat-guard.integration.test.ts",
     "integration/t-practices-promote-contract.test.ts",
     "integration/t-sensor-fire-hardening.test.ts",
-    "integration/t-run-codex-project-target.test.ts",
-    "integration/t-solo-gate-transaction-seam.test.ts",
     "integration/t-solo-gate-transaction.test.ts",
     "integration/t-standing-grant.test.ts",
-    "integration/t-team-up-codex-resume.serial.test.ts",
     "integration/t-transition-guard-audit.test.ts",
     "integration/t102.test.ts",
     "integration/t104.test.ts",
@@ -900,7 +1233,6 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t137.test.ts",
     "integration/t145-state-lock-concurrency.test.ts",
     "integration/t162-per-intent-layout-cli.test.ts",
-    "integration/t163-reaper-steal-race.test.ts",
     "integration/t164-shard-ordering-and-lock-bucket.test.ts",
     "integration/t165-intent-birth-p4.test.ts",
     "integration/t166-multi-repo-construction.test.ts",
@@ -925,7 +1257,6 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t249-workspace-inspection.test.ts",
     "integration/t250-unit-iteration-and-scope-preview.test.ts",
     "integration/t256-state-intent-selector.test.ts",
-    "integration/t257-doctor-inprocess-seam.test.ts",
     "integration/t265-engine-boundary.integration.test.ts",
     "integration/t31-help.test.ts",
     "integration/t328-adapter-auto-compose-launch.integration.test.ts",
@@ -935,20 +1266,17 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t45.test.ts",
     "integration/t49.test.ts",
     "integration/t51.test.ts",
-    "integration/t52-drift-meta-validation.test.ts",
     "integration/t66.test.ts",
     "integration/t75.test.ts",
     "integration/t78-bolt-worktree-lifecycle.test.ts",
     "integration/t89.test.ts",
     "integration/t90.test.ts",
-    "integration/t91.test.ts",
     "integration/t92.test.ts",
     "integration/t93.test.ts",
     "integration/t95-sensor-fire-hook-feature.test.ts",
     "integration/t96.test.ts",
     "integration/t98.test.ts",
     "integration/t-custom-harness-compile.test.ts",
-    "integration/t-release-sync-atomicity.test.ts",
     "integration/t45-revision-loop.test.ts",
     "integration/t46-parallel-bolt.test.ts",
     "integration/t47-failure-injection.test.ts",
@@ -958,10 +1286,8 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "smoke/t05-run-tests-parallel.test.ts",
     "smoke/t130-scope-runners.test.ts",
     "smoke/t86-stage-protocol-section-13.test.ts",
-    "e2e/t-exec-codex-journey-workspace.serial.test.ts",
     "e2e/t-tui-custom-harness.serial.test.ts",
     "e2e/t-tui-render-colour.serial.test.ts",
-    "unit/gen-coverage-registry.test.ts",
     "unit/t-graph-dispatch-seam.test.ts",
     "unit/t-batch3-orchestrate-spawn.test.ts",
     "unit/t-memory-seed.test.ts",
@@ -994,7 +1320,6 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t133-bolt-dag-compile.test.ts",
     "unit/t147-kiro-hook-adapter.test.ts",
     "unit/t149-codex-hook-adapter.test.ts",
-    "unit/t150-codex-packaging.test.ts",
     "unit/t155-template-override.test.ts",
     "unit/t158-memory-writer-reader-seam.test.ts",
     "unit/t168-statusline-orientation.test.ts",
@@ -1016,9 +1341,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t19.test.ts",
     "unit/t20.test.ts",
     "unit/t201-runtime-graph-memory-path-record-dir.test.ts",
-    "unit/t202-hook-project-dir-worktree-marker.test.ts",
     "unit/t203-mint-presence-classify.test.ts",
-    "unit/t207-swarm-guards.test.ts",
     "unit/t207-worktree-base-freshness.test.ts",
     "unit/t209-kiro-ide-dual-vocab.test.ts",
     "unit/t27.test.ts",

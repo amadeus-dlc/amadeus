@@ -20,42 +20,25 @@
 //                   birth an intent or invent state).
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "900", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 900) * 1000;
-
-function drive(args: string[]): { rc: number; stdout: string } {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 function skipReason(): string | null {
   if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
     return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro status journeys (uses Kiro credits)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
   }
@@ -69,7 +52,7 @@ const SKIP_REASON = skipReason();
 
 function launch(session: string, sandbox: string): void {
   expect(
-    drive([
+    runTuiDriver([
       "start",
       "--session",
       session,
@@ -85,15 +68,15 @@ function launch(session: string, sandbox: string): void {
       "--trust-all-tools",
     ]).rc,
   ).toBe(0);
-  if (waitFor(session, "Yes, I accept", 30000, 400)) {
-    drive(["send", "--session", session, "--keys", "Down", "--no-enter"]);
-    drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  if (waitForTui(session, "Yes, I accept", 30000, 400)) {
+    runTuiDriver(["send", "--session", session, "--keys", "Down", "--no-enter"]);
+    runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
   }
-  expect(waitFor(session, "ask a question or describe a task", 60000, 600)).toBe(true);
+  expect(waitForTui(session, "ask a question or describe a task", 60000, 600)).toBe(true);
 }
 function submitStatus(session: string): void {
-  drive(["send", "--session", session, "--keys", "/amadeus --status", "--literal", "--no-enter"]);
-  drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  runTuiDriver(["send", "--session", session, "--keys", "/amadeus --status", "--literal", "--no-enter"]);
+  runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 }
 
 describe("t-tui-kiro-status (read-only status through the Kiro print-directive arm)", () => {
@@ -118,12 +101,12 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
         // `Current Stage:  ${stageDisplay}` from the graph entry's `name`
         // (amadeus-utility.ts:347 / :267-282), so we wait on the display name, the
         // same calibration lesson the ACP twin (t-acp-kiro-utilities) encodes.
-        expect(waitFor(session, "Requirements Analysis", 240000, 0)).toBe(true);
-        expect(waitFor(session, "feature", 30000, 0)).toBe(true);
+        expect(waitForTui(session, "Requirements Analysis", 240000, 0)).toBe(true);
+        expect(waitForTui(session, "feature", 30000, 0)).toBe(true);
         // Read-only contract: the state file is byte-identical afterwards.
         expect(readFileSync(statePath, "utf8")).toBe(stateBefore);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },
@@ -140,13 +123,13 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
         submitStatus(session);
         // The engine's no-state status path prints the utility's exact wording
         // (amadeus-utility.ts:186, verified live): "No active AI-DLC workflow".
-        expect(waitFor(session, "No active AI-DLC workflow", 240000, 0)).toBe(true);
+        expect(waitForTui(session, "No active AI-DLC workflow", 240000, 0)).toBe(true);
         // And it must NOT scaffold: status is read-only even with no state. The
         // seeded record was stripped (noAidlcDocs); status births nothing, so the
         // per-intent state file the seeded record would hold never appears.
         expect(existsSync(seededStateFile(sandbox))).toBe(false);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

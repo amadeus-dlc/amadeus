@@ -28,6 +28,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   GRANT_ID,
   GRAPH,
@@ -145,7 +146,7 @@ describe("solo gate approval transaction", () => {
     expect(readPresenceReservation(root, fallback.presence_reservation_id)?.state)
       .toBe("armed");
 
-    const hook = spawnSync(process.execPath, [MINT], {
+    const hook = spawnSync(process.execPath, [amadeusToolTarget(MINT)], {
       encoding: "utf-8",
       input: JSON.stringify({
         session_id: SESSION_ID,
@@ -323,7 +324,7 @@ describe("solo gate approval transaction", () => {
     const result = spawnSync(
       process.execPath,
       [
-        STATE,
+        amadeusToolTarget(STATE),
         "approve",
         STAGE,
         "--standing-grant-id",
@@ -434,7 +435,7 @@ describe("solo gate approval transaction", () => {
     expect(fallback.kind).toBe("await-approval");
 
     expect(
-      spawnSync(process.execPath, [MINT], {
+      spawnSync(process.execPath, [amadeusToolTarget(MINT)], {
         encoding: "utf-8",
         input: JSON.stringify({
           session_id: SESSION_ID,

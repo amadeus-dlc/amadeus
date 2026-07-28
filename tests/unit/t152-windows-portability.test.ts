@@ -41,14 +41,6 @@ describe("t152 Windows portability guard", () => {
     expect(ps).not.toContain("run-tests.sh");
   });
 
-  test("live TUI sessions use a tmux-only injectable command boundary", () => {
-    const driver = read("tests/harness/tui-drive.ts");
-    expect(driver).toContain("export interface Backend");
-    expect(driver).toContain("export function createTmuxBackend(");
-    expect(driver).not.toContain("Bun.Terminal");
-    expect(driver).not.toContain("__win-daemon");
-  });
-
   test("CloudFormation stack is disposable SSM-only Windows Server 2022", () => {
     const yaml = readFileSync(join(WINDOWS, "windows-test.cfn.yaml"), "utf8");
     expect(yaml).toContain("Windows_Server-2022-English-Full-Base");

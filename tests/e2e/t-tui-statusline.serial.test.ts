@@ -23,49 +23,27 @@
 // SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively on every platform.
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
 // `wait` returns nonzero on timeout — we want a boolean for the idempotent modal
 // clears (only act if the modal is present), mirroring the spike's
 // `if drive wait ...; then send; fi`.
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT detection (skip-with-reason). On POSIX the substrate is tmux; claude
 // is needed on every platform; the distributable must be present to copy.
 function absentReason(): string | null {
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -100,7 +78,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         expect(readFileSync(settingsPath, "utf8")).toContain('"statusLine"');
 
         // --- step 2: launch the claude TUI ------------------------------------
-        const started = drive([
+        const started = runTuiDriver([
           "start",
           "--session",
           session,
@@ -118,19 +96,19 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
 
         // --- step 3: clear the two startup modals (idempotent) ----------------
         // 3a. workspace-trust dialog: "1. Yes, I trust this folder".
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
         // 3b. bypass-permissions warning: "2. Yes, I accept" (only with
         // --dangerously-skip-permissions).
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
 
         // --- step 4: wait for the statusline marker ---------------------------
-        const sawMarker = waitFor(session, "\\[AIDLC\\]", 45000, 1000);
+        const sawMarker = waitForTui(session, "\\[AIDLC\\]", 45000, 1000);
         if (!sawMarker) {
-          const pane = drive(["capture", "--session", session]).stdout;
+          const pane = runTuiDriver(["capture", "--session", session]).stdout;
           throw new Error(
             `statusline marker [Amadeus-DLC] never appeared in the TUI.\n` +
               `---- last pane ----\n${pane}\n-------------------`,
@@ -141,10 +119,10 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // The no-workflow state (no amadeus-docs/ present) renders "[Amadeus-DLC] ready"
         // (amadeus-statusline.ts). This is the one thing the SDK path cannot see —
         // the painted statusline.
-        const pane = drive(["capture", "--session", session]).stdout;
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         expect(pane).toContain("[Amadeus-DLC] ready");
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         if (existsSync(sandbox)) rmSync(sandbox, { recursive: true, force: true });
       }
     },

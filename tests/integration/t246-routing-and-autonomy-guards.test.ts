@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { isPendingComposeStop } from "../../packages/framework/core/hooks/amadeus-stop.ts";
 import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   handleDoctor,
   resolveDoctorContext,
@@ -34,8 +35,8 @@ function project(): string {
   return root;
 }
 
-function run(tool: string, args: string[], cwd = ROOT) {
-  const result = spawnSync(BUN, [tool, ...args], {
+function runTool(tool: string, args: string[], cwd = ROOT) {
+  const result = spawnSync(BUN, [amadeusToolTarget(tool), ...args], {
     cwd,
     encoding: "utf-8",
     env: { ...process.env, AMADEUS_HARNESS_DIR: ".claude" },
@@ -96,7 +97,7 @@ function utilityInProcess(args: string[]): { code: number; output: string } {
 describe("t246 production help routing", () => {
   test("engine routes every reserved form to global help before state inspection", () => {
     for (const tokens of [["help"], ["-h"], ["intent", "help"], ["space", "-h"]]) {
-      const result = run(ORCHESTRATE, ["next", ...tokens]);
+      const result = runTool(ORCHESTRATE, ["next", ...tokens]);
       expect(result.status).toBe(0);
       const directive = JSON.parse(result.stdout) as { kind: string; message?: string };
       expect(directive.kind).toBe("print");
@@ -106,7 +107,7 @@ describe("t246 production help routing", () => {
 
   test("space-create -h refuses before slugify and creates no h space", () => {
     const root = project();
-    const result = run(UTILITY, ["space-create", "-h", "--project-dir", root], root);
+    const result = runTool(UTILITY, ["space-create", "-h", "--project-dir", root], root);
     expect(result.status).not.toBe(0);
     expect(result.output).toMatch(/reserved|help|-h/i);
     expect(existsSync(join(root, "amadeus", "spaces", "h"))).toBe(false);
@@ -293,9 +294,13 @@ describe("t246 production marker carrier", () => {
 describe("t246 Stop hook import safety", () => {
   test("module import reaches the sentinel without reading stdin or exiting", () => {
     const script = `await import(${JSON.stringify(STOP)}); console.log("T246_IMPORTED");`;
-    const result = run("-e", [script]);
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("T246_IMPORTED");
+    const result = spawnSync(BUN, ["-e", script], {
+      cwd: ROOT,
+      encoding: "utf-8",
+      env: { ...process.env, AMADEUS_HARNESS_DIR: ".claude" },
+    });
+    expect(result.status ?? -1).toBe(0);
+    expect(result.stdout ?? "").toContain("T246_IMPORTED");
   });
 });
 
@@ -320,7 +325,7 @@ describe("t246 autonomous recompose atomicity", () => {
     const statePath = join(record, "amadeus-state.md");
     writeFileSync(statePath, state, "utf-8");
     const before = readFileSync(statePath, "utf-8");
-    const result = run(UTILITY, ["recompose", "--skip", "market-research", "--project-dir", root], root);
+    const result = runTool(UTILITY, ["recompose", "--skip", "market-research", "--project-dir", root], root);
     expect(result.status).not.toBe(0);
     expect(result.output).toMatch(/autonomous|human gate/i);
     expect(readFileSync(statePath, "utf-8")).toBe(before);

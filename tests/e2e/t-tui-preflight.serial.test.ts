@@ -14,9 +14,9 @@
 //   - tmux can be installed yet `capture-pane` returns nothing useful. A
 //     `command -v` does not detect that.
 //
-// SPAWN, not import (D-TUI-7): this `.test.ts` spawns tui-drive.ts as a Bun
-// subprocess on every platform. The same spawn-not-import pattern is used by
-// t17/t27 for CLI tools.
+// SUBPROCESS, not in-process driver execution (D-TUI-7): runTuiDriver() launches
+// tui-drive.ts through the canonical Bun client. The same subprocess boundary
+// is used by t17/t27 for CLI tools.
 //
 // The `covers:` header above claims the tui-drive instrument-calibration unit
 // this preflight doubles as (§6.2/§7) — a harness-instrument claim, the same
@@ -32,31 +32,18 @@
 // until a test asserts a specific branch's painted output.
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-// ---------------------------------------------------------------------------
-// Locate the driver. Bun runs the TypeScript entrypoint directly (§2.1, D-TUI-7).
-// ---------------------------------------------------------------------------
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 
 // The known-answer target — no claude, no tokens. A bash printf holds the pane
 // open. The driver's `start` runs `<cmd...>` after `--`.
 const SENTINEL = "AMADEUS_TUI_PREFLIGHT_OK";
 const TARGET_CMD = ["bash", "-c", `printf '${SENTINEL}\\n'; sleep 10`];
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-
-function drive(args: string[]): Run {
-  const res = spawnSync(process.execPath, [DRIVER, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
 
 // ---------------------------------------------------------------------------
 // ABSENT detection — runs OUTSIDE the test body so skipIf can gate the whole
@@ -66,8 +53,8 @@ function drive(args: string[]): Run {
 // and FAILS LOUD, so a contributor gets one clear diagnostic line.
 // ---------------------------------------------------------------------------
 function substrateAbsentReason(): string | null {
-  const tmuxOk = spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status === 0;
-  if (!tmuxOk) return "tmux not found";
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   return null;
 }
 
@@ -85,7 +72,7 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
       const sandbox = mkdtempSync(join(tmpdir(), "amadeus-tui-preflight-"));
       try {
         // 1) start the known-answer target in a fixed-size session.
-        const started = drive([
+        const started = runTuiDriver([
           "start",
           "--session",
           session,
@@ -111,7 +98,7 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
         // here is the BROKEN signal: the substrate resolved (we are past the
         // ABSENT skip) but capture returned nothing useful — e.g. tmux
         // capture-pane returning empty.
-        const waited = drive([
+        const waited = runTuiDriver([
           "wait",
           "--session",
           session,
@@ -132,11 +119,11 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
 
         // 3) capture the grid and assert the sentinel is really there — proves
         // the round-trip (send-or-emit -> render -> capture) closes.
-        const captured = drive(["capture", "--session", session]);
+        const captured = runTuiDriver(["capture", "--session", session]);
         expect(captured.rc).toBe(0);
         expect(captured.stdout).toContain(SENTINEL);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         if (existsSync(sandbox)) rmSync(sandbox, { recursive: true, force: true });
       }
     },

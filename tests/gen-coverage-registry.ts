@@ -47,6 +47,11 @@ import {
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  drivesClaudePrintSurface,
+  drivesCliSurface,
+} from "./lib/cli-mechanism.ts";
+import { drivesTuiSurface } from "./lib/tui-mechanism.ts";
 
 // ---------------------------------------------------------------------------
 // Paths. Resolved from this file's location so the tool runs from any cwd.
@@ -601,8 +606,8 @@ const TEST_TIERS = [
 export interface DiscoveredClaim {
   file: string; // relative to repo root
   // The DERIVED mechanism SET — every driver the test body actually calls (§2
-  // of the refactor doc). A test that calls driveAidlc() AND spawns
-  // tui-drive.ts derives {sdk, tui}; one that calls no driver is the
+  // of the refactor doc). A test that calls driveAidlc() AND the canonical TUI
+  // client derives {sdk, tui}; one that calls no driver is the
   // deterministic floor, seeded from its filename segment. This field is the
   // single source of truth for the gate (which takes max(...ranks)); it is NOT
   // serialised — the per-claim mechanism written into the registry is the
@@ -652,22 +657,20 @@ export function mechanismOfTestFile(fileName: string): Mechanism {
  *  the test invokes ARE the tags; you never declare a mechanism, so a test
  *  cannot claim one it does not drive.
  *
- *  Scan the test's EXECUTABLE CODE (see codeView — comments and `import` lines
- *  are stripped first) and collect every match (not the first):
+ *  Scan the test's executable code and collect every match (not the first):
  *    - `driveAidlc(` ............ adds `sdk` (the Agent-SDK driver)
- *    - spawns `tui-drive.ts` .... adds `tui` (the painted-terminal driver)
+ *    - calls a binding imported from `tui-client.ts`
+ *                                adds `tui` (the painted-terminal driver)
  *    - shipped-surface spawn .... adds `cli` (the literal shipped binary): `claude -p`,
- *                                 a runtime (`BUN`/`process.execPath`/`"bun"`/`"node"`)
+ *                                 a Bun runtime (`BUN`/`process.execPath`/`"bun"`)
  *                                 spawn whose argv targets an `amadeus-*.ts` tool, or a
  *                                 `bash`/`execFileSync("bash")` spawn of `run-tests.sh`
- *  Scanning the code view (not the raw source) is what makes "match the CALL /
- *  SPAWN expression, never a bare mention" true: the t118 lesson (it references
- *  `run_claude` only in a comment that says it NEVER calls it) AND D-TUI-7 (only
- *  a helper from `tui-drive.ts` is import-safe — importing it must NOT register
- *  `tui`) are
- *  both handled, because a driver named only in a comment or an `import` line is
- *  removed before the patterns run. A genuine spawn (`const DRIVER = join(...,
- *  "tui-drive.ts")`) or call survives the strip and registers.
+ *  SDK signals use codeView, which removes comments and imports. CLI and TUI
+ *  signals use TypeScript symbol resolution so imported aliases and real call
+ *  expressions are resolved without mistaking comments, strings, shadowed
+ *  locals, helper imports, or source file reads for a driver invocation.
+ *  Direct `tui-drive.ts` spawning is intentionally outside this contract: TUI
+ *  tests must use the canonical client.
  *
  *  When the body scan is INCONCLUSIVE (no driver call — the deterministic floor,
  *  or a file whose driver is still only implied by its legacy `.sdk.`/`.tui.`/
@@ -679,18 +682,17 @@ export function mechanismOfTestFile(fileName: string): Mechanism {
  *  Returns the SET (deduped, ladder-ordered). The empty set never happens — the
  *  fallback always yields at least one member. */
 export function mechanismsOf(fileName: string, src: string): Mechanism[] {
-  // Scan only executable code — a driver named in a comment (the t118 /
-  // calibration lesson) or imported for a helper (D-TUI-7) is NOT a driver the
-  // test calls.
+  // SDK discovery uses the executable-code view. CLI and TUI discovery parse
+  // the raw source and validate call/import provenance through TypeScript.
   const code = codeView(src);
   const found = new Set<Mechanism>();
   // sdk — a call expression: `driveAidlc(` (whitespace tolerated before the paren).
   if (/\bdriveAidlc\s*\(/.test(code)) found.add("sdk");
-  // tui — spawning the painted-terminal driver by its filename (in code, not an import).
-  if (/tui-drive\.ts/.test(code)) found.add("tui");
+  // tui — calling a symbol imported from the canonical subprocess client.
+  if (drivesTuiSurface(src)) found.add("tui");
   // cli — driving a shipped binary as a subprocess (claude -p, an amadeus-*.ts tool
-  // under the bun/node runtime, or run-tests.sh under bash). See drivesCliSurface.
-  if (drivesCliSurface(code)) found.add("cli");
+  // under the Bun runtime, or run-tests.sh under bash). See drivesCliSurface.
+  if (drivesCliSurface(src)) found.add("cli");
 
   if (found.size === 0) {
     // Inconclusive body scan → seed from the filename segment (non-breaking).
@@ -707,66 +709,9 @@ export function claudeDependenciesOf(_fileName: string, src: string): ClaudeDepe
   const code = codeView(src);
   const found = new Set<ClaudeDependency>();
   if (/\bdriveAidlc\s*\(/.test(code)) found.add("sdk");
-  if (/tui-drive\.ts/.test(code)) found.add("tui");
-  if (drivesClaudePrintSurface(code)) found.add("cli-claude");
+  if (drivesTuiSurface(src)) found.add("tui");
+  if (drivesClaudePrintSurface(src)) found.add("cli-claude");
   return CLAUDE_DEPENDENCIES.filter((m) => found.has(m));
-}
-
-/** Does this code-view DRIVE the shipped CLI surface as a subprocess? Three ways,
- *  each a genuine spawn of a literal shipped binary — never a bare mention:
- *
- *    1. `claude -p` / `claude --print` — the one live-model preflight surface.
- *       (A `claude --version` AVAILABILITY GUARD is NOT a drive — it is excluded,
- *        which is why 16 tui tests that guard on `spawnSync("claude",["--version"])`
- *        stay {tui} and never spuriously gain {cli}.)
- *    2. A RUNTIME spawn — `spawnSync`/`spawn`/`execSync`/`execFileSync`/`Bun.spawn*`
- *       whose runtime is `BUN` / `process.execPath` / a literal `"bun"` or `"node"` —
- *       whose argv targets an `amadeus-*.ts` tool. The tool is matched whether it is an
- *       inline string literal (`spawnSync(BUN,["…/amadeus-state.ts"])`) OR a const bound
- *       to one (`const GRAPH_TS = join(TOOLS_DIR,"amadeus-graph.ts"); spawnSync(BUN,[GRAPH_TS,…])`),
- *       since the const definition survives in the code view (imports/comments are stripped,
- *       but a `const X = "…amadeus-*.ts"` is real code).
- *    3. A `bash` spawn (`spawnSync("bash",…)` / `execFileSync("bash",…)`) of `run-tests.sh`.
- *
- *  WHY gate on a real spawn and not a bare `amadeus-*.ts` mention: 12 deterministic floor
- *  tests reference a tool ONLY through a multi-line `import { … } from "…/amadeus-lib.ts"`
- *  whose path lands on a CONTINUATION line the import-strip misses — they call the lib
- *  IN-PROCESS and must stay {none}. Requiring (spawn primitive ∧ runtime ∧ shipped target)
- *  keeps every such import-only test out of cli. */
-function drivesCliSurface(code: string): boolean {
-  // 1. claude in print mode (NOT --version).
-  if (drivesClaudePrintSurface(code)) return true;
-
-  // The shipped targets: an amadeus-*.ts tool, or the run-tests.sh runner — as a
-  // string literal anywhere in the code view (inline arg OR a `const X = "…"` def).
-  const hasAidlcToolLiteral = /["'][^"']*\bamadeus-[A-Za-z0-9_-]+\.ts["']/.test(code);
-  const hasRunnerLiteral = /["'][^"']*\brun-tests\.sh["']/.test(code);
-  if (!hasAidlcToolLiteral && !hasRunnerLiteral) return false;
-
-  // 2 + 3. A subprocess primitive must actually appear AND its launcher must be a
-  // runtime / bash — never tmux, git, grep, or the tui driver binary (those are not
-  // the shipped CLI surface). We require a runtime/bash token to co-occur with a
-  // spawn primitive; combined with the shipped-target literal above, that is the
-  // "spawned a shipped binary" signal.
-  const SPAWN_PRIMITIVE =
-    /\b(?:spawnSync|spawn|execSync|execFileSync|Bun\.spawnSync|Bun\.spawn)\s*[({]/;
-  if (!SPAWN_PRIMITIVE.test(code)) return false;
-
-  // runtime launcher (bun/node) — covers `spawnSync(BUN,…)`, `spawnSync(process.execPath,…)`,
-  // `Bun.spawnSync({cmd:["bun",…]})` (t18's object form), and literal `"bun"`/`"node"`.
-  const RUNTIME_LAUNCHER =
-    /\bBUN\b|\bprocess\.execPath\b|["'](?:bun|node)["']/;
-  if (RUNTIME_LAUNCHER.test(code) && hasAidlcToolLiteral) return true;
-
-  // bash launcher driving the runner.
-  const BASH_LAUNCHER = /["']bash["']/;
-  if (BASH_LAUNCHER.test(code) && hasRunnerLiteral) return true;
-
-  return false;
-}
-
-function drivesClaudePrintSurface(code: string): boolean {
-  return /claude\s+-p\b|claude\s+--print\b/.test(code);
 }
 
 /** A code-only view of a test's source: per line, ES `import` statements, shell
@@ -814,7 +759,7 @@ export function codeView(src: string): string {
  *  a comment-opener appearing INSIDE a string (a URL's "//", or a "/*" in a glob)
  *  never truncates or swallows real code. A small single-pass state machine — not
  *  a full tokeniser (it does not lex regex literals) — sufficient for the
- *  mechanism scan, whose tokens (driveAidlc(, tui-drive.ts, spawnSync, BUN,
+ *  mechanism scan, whose lexical tokens (driveAidlc(, spawnSync, BUN,
  *  claude -p) never live inside a string or a regex. Newlines are preserved so
  *  downstream line-based patterns still work. */
 function stripCommentsRespectingStrings(src: string): string {

@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main as graphMain } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { handleSetConstructionIteration } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -50,7 +51,7 @@ interface CliResult {
 }
 
 function run(tool: string, args: string[]): CliResult {
-  const res = spawnSync(BUN, [tool, ...args], { encoding: "utf-8" });
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args], { encoding: "utf-8" });
   const stdout = res.stdout ?? "";
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
 }

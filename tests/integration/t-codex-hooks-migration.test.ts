@@ -21,6 +21,7 @@ import {
   codexHooksDoctorCheck,
   main as codexHooksMain,
 } from "../../packages/framework/harness/codex/tools/amadeus-codex-hooks.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const SOURCE_HELPER_DIR = join(
@@ -67,6 +68,21 @@ afterEach(() => {
 function run(cwd: string, cmd: string[], env: Record<string, string> = {}) {
   return Bun.spawnSync({
     cmd,
+    cwd,
+    env: { ...process.env, ...env },
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+}
+
+function runAmadeusTool(
+  cwd: string,
+  tool: string,
+  args: string[],
+  env: Record<string, string> = {},
+) {
+  return Bun.spawnSync({
+    cmd: ["bun", amadeusToolTarget(tool), ...args],
     cwd,
     env: { ...process.env, ...env },
     stderr: "pipe",
@@ -236,15 +252,18 @@ function runMigrationCli(
   targetRef = fixture.targetRef,
   env: Record<string, string> = {},
 ) {
-  return run(fixture.checkout, [
-    "bun",
-    fixture.bootstrapHelper,
-    "migrate-self",
-    "--target-ref",
-    targetRef,
-    "--project-dir",
+  return runAmadeusTool(
     fixture.checkout,
-  ], env);
+    fixture.bootstrapHelper,
+    [
+      "migrate-self",
+      "--target-ref",
+      targetRef,
+      "--project-dir",
+      fixture.checkout,
+    ],
+    env,
+  );
 }
 
 function runHelperInProcess(argv: string[], env: Record<string, string> = {}) {

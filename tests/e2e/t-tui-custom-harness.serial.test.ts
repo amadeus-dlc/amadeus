@@ -107,11 +107,17 @@
 //
 // SPAWN, not import (D-TUI-7): Bun runs tui-drive.ts as a subprocess on every
 // platform. The
-// tui-drive.ts spawn is what DERIVES the tui mechanism; the driveAidlc() call is
+// runTuiDriver() derives the tui mechanism; the driveAidlc() call is
 // what derives sdk — together {sdk, tui}.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertAuditEvent, assertToolResultContains } from "../harness/assert.ts";
@@ -135,40 +141,11 @@ import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.
 import { driveAidlc, recordDirFor, stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
-
 // Wedge-ceiling, never a budget (the timer lesson): one generous cap; pass on
 // the on-disk signal, not the clock. Matches the suite convention.
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 // ABSENT / opt-in gating, AMADEUS_TUI_LIVE first (a bare --e2e run reports the
 // clear opt-in reason, not a substrate miss). Mirrors t-tui-workshop.
@@ -176,9 +153,8 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live harness-engineer journey (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -269,7 +245,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
         expect(stateField(state, "Active Agent")).toBe(CUSTOM_AGENT_SLUG);
 
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -284,17 +260,17 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
             "--dangerously-skip-permissions",
           ]).rc,
         ).toBe(0);
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // The custom stage is in INCEPTION — wait for the workflow statusline.
         // P9: the orientation prefix ("<intent-slug> · ") sits between [Amadeus-DLC] and
         // the phase, so match with .* rather than a contiguous gap.
-        const sawMarker = waitFor(session, "\\[AIDLC\\].*INCEPTION", 45000, 1000);
-        const pane = drive(["capture", "--session", session]).stdout;
+        const sawMarker = waitForTui(session, "\\[AIDLC\\].*INCEPTION", 45000, 1000);
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (!sawMarker) {
           throw new Error(
             `workflow statusline "[Amadeus-DLC] INCEPTION" never painted.\n---- pane ----\n${pane}\n--------------`,
@@ -304,7 +280,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
         expect(pane).toContain(`> ${SNAPSHOT_STAGE_SLUG}`);
         expect(pane).toContain(`-- ${CUSTOM_AGENT_DISPLAY}`);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
@@ -312,8 +288,8 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   );
 
   // -------------------------------------------------------------------------
-  // THE TWO-DRIVER PAIR: the file calls BOTH driveAidlc() (sdk) AND spawns
-  // tui-drive.ts (tui), so the derive-by-driver registry reads the FILE's set as
+  // THE TWO-DRIVER PAIR: the file calls BOTH driveAidlc() (sdk) AND
+  // runTuiDriver() (tui), so the derive-by-driver registry reads the FILE's set as
   // {sdk, tui} (mechanismsOf scans the whole file's code, not one test block).
   // The two journeys are SEPARATE tests so each gets its OWN wedge ceiling — a
   // single combined test summed the sdk drive (~4.5 min) and the cold-start tui
@@ -444,7 +420,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
         expect(stateField(state, "Current Stage")).toBe(SNAPSHOT_STAGE_SLUG);
 
         expect(
-          drive([
+          runTuiDriver([
             "start",
             "--session",
             session,
@@ -459,18 +435,18 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
             "--dangerously-skip-permissions",
           ]).rc,
         ).toBe(0);
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
-        expect(waitFor(session, "\\[AIDLC\\].*(ready|INCEPTION)", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*(ready|INCEPTION)", 45000, 800)).toBe(true);
 
         // Resume the pre-initialized custom-scope workflow. The first menu is
         // the resume gate; answer-gate below handles it and the custom-stage
         // approval gates by keystroke.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -479,7 +455,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Answer the custom stages' gates by keystroke (Recommended default per
         // menu) and TERMINATE on the migration-plan artefact appearing on disk —
@@ -487,26 +463,17 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
         // in order (migration-plan is the chain's tail). answer-gate loops over
         // every gate until the terminator is met; its own backstops error loud
         // on a real hang.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              tuiProj,
-              "--until-file",
-              PLAN_OUTPUT_REL,
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          tuiProj,
+          "--until-file",
+          PLAN_OUTPUT_REL,
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+        ]);
         expect(gateRc).toBe(0);
 
         // --- SURFACE 2: the custom sensor fired on the artefact write(s) ------
@@ -570,7 +537,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
         const tailKnowledge = readFileSync(tailArtifact, "utf8").includes(CUSTOM_KNOWLEDGE_MARKER);
         expect(headKnowledge || tailKnowledge).toBe(true);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(tuiProj);
       }
     },

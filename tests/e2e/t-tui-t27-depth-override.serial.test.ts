@@ -70,11 +70,17 @@
 // orchestrator STOPs, so we wait on the landed surface (the rendered confirmation
 // + the on-disk field), never on a result event.
 //
-// SPAWN, not import (D-TUI-7): Bun spawns tui-drive.ts on every platform. The tui-drive.ts
-// spawn is what DERIVES the `tui` mechanism (Phase 0) — no filename mechanism
+// SUBPROCESS, not in-process driver execution (D-TUI-7): Bun launches
+// tui-drive.ts on every platform. runTuiDriver() is what DERIVES the `tui`
+// mechanism (Phase 0) — no filename mechanism
 // segment. Assertions use the plain-text tmux grid without colour escapes.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -82,42 +88,14 @@ import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.
 import { seededAuditDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively.
-const DRIVE_BIN = process.execPath;
-const DRIVE_PREFIX = [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). A config override is short, but the claude TUI startup + a brief
 // orchestrator turn is the bulk of the wall-clock, so the cap is generous.
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 // Poll an ON-DISK predicate until true or timeout. The deterministic completion
 // signal for a config-change command: SKILL.md:125 instructs only "Print output,
@@ -160,9 +138,8 @@ function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live depth-override journey (uses Bedrock tokens)";
   }
-  if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -180,7 +157,7 @@ function bootSeededWorkflow(tag: string): { session: string; proj: string } {
   const proj = setupTuiProject({ withState: "state-mid-ideation.md", withAudit: true });
   // launch
   expect(
-    drive([
+    runTuiDriver([
       "start",
       "--session",
       session,
@@ -196,23 +173,23 @@ function bootSeededWorkflow(tag: string): { session: string; proj: string } {
     ]).rc,
   ).toBe(0);
   // clear the two startup modals (idempotent — only act if present)
-  if (waitFor(session, "trust this folder", 60000, 600)) {
-    drive(["send", "--session", session, "--keys", "1"]);
+  if (waitForTui(session, "trust this folder", 60000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "1"]);
   }
-  if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-    drive(["send", "--session", session, "--keys", "2"]);
+  if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+    runTuiDriver(["send", "--session", session, "--keys", "2"]);
   }
   // The seeded mid-ideation state paints the WORKFLOW line (IDEATION), not the
   // no-workflow "ready" line. Anchor the override against the live workflow row.
-  expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 1000)).toBe(true);
+  expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 1000)).toBe(true);
   return { session, proj };
 }
 
 // Send a slash command that contains spaces: literal, no auto-Enter, then a named
 // Enter (the spike's exact two-step). Mirrors the workshop template.
 function sendSlash(session: string, command: string): void {
-  drive(["send", "--session", session, "--keys", command, "--literal", "--no-enter"]);
-  drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+  runTuiDriver(["send", "--session", session, "--keys", command, "--literal", "--no-enter"]);
+  runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 }
 
 describe("t-tui-t27 depth override (config-change lands + renders)", () => {
@@ -244,7 +221,7 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
           () => auditHasEvent(auditDir, "DEPTH_CHANGED"),
           120000,
         );
-        const pane = drive(["capture", "--session", session]).stdout;
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (!landed) {
           throw new Error(
             `DEPTH_CHANGED never landed in audit.md within budget.\n` +
@@ -273,7 +250,7 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         // what the headless SDK path could not see, asserted without grepping prose.
         expect(pane).toContain("· IDEATION");
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
@@ -297,13 +274,13 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         // --- RENDERED: the invalid-depth recovery menu surfaces. v0.6.1 now
         // offers valid alternatives rather than printing the older "Unknown
         // depth" text directly. --stable-ms 0: streaming.
-        const sawError = waitFor(
+        const sawError = waitForTui(
           session,
           "(isn't valid|not valid|Which depth level)",
           120000,
           0,
         );
-        const pane = drive(["capture", "--session", session]).stdout;
+        const pane = runTuiDriver(["capture", "--session", session]).stdout;
         if (!sawError) {
           throw new Error(
             `Invalid-depth recovery never appeared in the TUI for --depth extreme.\n` +
@@ -320,7 +297,7 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         const after = readFileSync(statePath, "utf8");
         expect(after).toBe(before);
       } finally {
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(proj);
       }
     },
