@@ -20,6 +20,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   type ClaudeCodeHookInput,
   getField,
@@ -113,6 +114,9 @@ if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 // state.md (the audit shard is write-direct; state.md is overwrite-rename).
 // G5 ("always exit 0") demands a guard before the read.
 if (!existsSync(stateFilePath(projectDir))) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:sensor-fire", projectDir);
 
 let stateContent: string;
 try {

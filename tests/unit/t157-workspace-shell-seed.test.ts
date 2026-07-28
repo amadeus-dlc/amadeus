@@ -228,7 +228,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
   });
 
   // === (c) the re-rooted .gitignore — audit SHARDS committed, NO merge=union =
-  test("9: audit shards (audit/*.md) are COMMITTED — no active ignore rule, no merge=union", () => {
+  test("9: audit shards (audit/*.jsonl) are COMMITTED — no active ignore rule, no merge=union", () => {
     for (const h of HARNESSES) {
       const gi = readFileSync(gitignore(h), "utf-8");
       const lines = gi.split("\n").map((l) => l.trim());
@@ -236,9 +236,9 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
       // it may only appear inside a comment documenting the committed set.
       const isIgnoreRule = (l: string): boolean => l.length > 0 && !l.startsWith("#");
       const ignoresAuditShards = lines.some(
-        (l) => isIgnoreRule(l) && /audit\/.*\.md$/.test(l),
+        (l) => isIgnoreRule(l) && /audit\/.*\.(?:md|jsonl)$/.test(l),
       );
-      expect(ignoresAuditShards, `${h}: audit/*.md must stay committed (no ignore rule)`).toBe(
+      expect(ignoresAuditShards, `${h}: audit shards must stay committed (no ignore rule)`).toBe(
         false,
       );
       const ignoresWholeAudit = lines.some(
@@ -277,7 +277,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
         "codekb/**",
         "intents.json",
         "amadeus-state.md",
-        "audit/*.md",
+        "audit/*.jsonl",
       ]) {
         expect(gi, `${h}: gitignore documents committed ${token}`).toContain(token);
       }

@@ -70,6 +70,7 @@ import type {
   MirrorStateSnapshot,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
+import { observeSubprocess } from "./amadeus-observability.ts";
 
 export type MirrorLifecycleRequest = Readonly<{
   projectDir: string;
@@ -109,11 +110,13 @@ type MirrorLifecycleAnswerRequest = Readonly<{
 }>;
 
 function repositoryFromOrigin(projectDir: string): RepositoryIdentity | null {
-  const result = spawnSync("git", ["remote", "get-url", "origin"], {
-    cwd: projectDir,
-    encoding: "utf-8",
-    timeout: 5_000,
-  });
+  const result = observeSubprocess(projectDir, "git", () =>
+    spawnSync("git", ["remote", "get-url", "origin"], {
+      cwd: projectDir,
+      encoding: "utf-8",
+      timeout: 5_000,
+    }),
+  );
   if (result.status !== 0 || typeof result.stdout !== "string") return null;
   const url = result.stdout.trim().replace(/\.git$/u, "");
   const match =

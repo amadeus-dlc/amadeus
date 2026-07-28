@@ -1,4 +1,5 @@
 import { appendAuditEntry } from "./amadeus-audit.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   markPhaseVerified,
   PHASE_PROGRESS_FIELD,
@@ -192,6 +193,15 @@ function main(): void {
   try {
     switch (subcommand) {
       case "resolve":
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-jump:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
         handleResolve(filteredArgs.slice(1));
         break;
       case "execute":

@@ -8,6 +8,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   type ClaudeCodeHookInput,
   docsRoot,
@@ -77,6 +78,9 @@ if (
 // clone's own shard: a fresh clone / new worktree mints a new clone-id, so a bare
 // self-shard existsSync would drop every event until the engine's first append.
 if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
+
+// Telemetry process span (opt-in; no-op unless observability.enabled)
+initProcessObservability("hook:audit-logger", projectDir);
 
 // Extract the context breadcrumb: the path relative to the record root (the
 // per-intent record dir on the new layout, or the flat `amadeus-docs/` root).

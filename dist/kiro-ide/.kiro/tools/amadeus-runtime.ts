@@ -54,6 +54,7 @@ import {
   worktreeRuntimeGraphPath,
   writeFileAtomic,
 } from "./amadeus-lib.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 // --- Schema (must match docs/reference/13-runtime-graph.md exactly) ---
 
@@ -1436,6 +1437,15 @@ export function main(argv: string[] = process.argv.slice(2)): void {
     process.stderr.write(`Unknown subcommand: ${cmd}. Run amadeus-runtime --help for usage.\n`);
     process.exit(1);
   }
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-runtime:${cmd}`, resolveProjectDir(projectDirArg));
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   handler(subargs, resolveProjectDir(projectDirArg));
 }

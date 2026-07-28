@@ -1,10 +1,12 @@
 // Status line: Display amadeus workflow position in the terminal status area
 // Registered via statusLine setting in settings.json
 // Invoked via: bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts"
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   activeIntent,
   activeSpace,
+  detectHarnessType,
   displaySlugFromDirName,
   listIntents,
   listSpaces,
@@ -12,6 +14,11 @@ import {
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
+import {
+  initProcessObservability,
+  observabilityEnabled,
+  telemetryDir,
+} from "../tools/amadeus-observability.ts";
 
 type Input = {
   cwd?: string;
@@ -214,6 +221,40 @@ function printLine(left: string, right: { plain: string; formatted: string }): v
   }
 }
 
+// Runtime attributes the projector (Phase 3) needs but no other process sees:
+// the statusline payload is the only place the host tells us which model is
+// driving the session. Written under the telemetry dir as a single small JSON
+// object, and only when a value actually changed — the statusline fires on
+// every render, so an unconditional write would churn the file continuously.
+// Fail-open throughout: this is telemetry, never a correctness path.
+function recordRuntimeAttrs(projectDir: string, input: Input): void {
+  try {
+    const modelId = input.model?.id ?? "";
+    if (!modelId) return;
+    if (!observabilityEnabled(projectDir)) return;
+    const dir = telemetryDir(projectDir);
+    if (dir === null) return;
+    const path = join(dir, "runtime-attrs.json");
+    const harness = detectHarnessType();
+    let current: unknown = null;
+    try {
+      current = JSON.parse(readFileSync(path, "utf-8"));
+    } catch {
+      current = null;
+    }
+    const previous = current as { model?: unknown; harness?: unknown } | null;
+    if (previous?.model === modelId && previous?.harness === harness) return;
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path,
+      `${JSON.stringify({ model: modelId, harness, updatedAt: new Date().toISOString() })}\n`,
+      "utf-8",
+    );
+  } catch {
+    // fail-open — a runtime-attrs write must never affect the status line
+  }
+}
+
 async function main(): Promise<void> {
   // Skip stdin read when stdin is a TTY — Claude Code always pipes JSON,
   // never runs the statusline with a terminal attached. Without this guard
@@ -237,6 +278,10 @@ async function main(): Promise<void> {
     printLine(`${STATUSLINE_PREFIX} ready`, right);
     return;
   }
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled)
+  initProcessObservability("hook:statusline", projectDir);
+  recordRuntimeAttrs(projectDir, input);
 
   const state = readFileSync(stateFile, "utf-8");
   const phase = extractField(state, "Lifecycle Phase");

@@ -25,6 +25,7 @@ import {
   worktreeAuditFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
@@ -1038,6 +1039,15 @@ function main(): void {
 
   const projectDir = resolveProjectDir(projectDirArg);
   const subcommand = filteredArgs[0];
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-audit:${subcommand ?? "?"}`, projectDir);
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   if (!subcommand) {
     jsonError("Usage: amadeus-audit <append|append-raw|audit-fork|audit-merge> [args...]");

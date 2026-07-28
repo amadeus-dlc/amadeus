@@ -37,6 +37,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { dirname, join } from "node:path";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import { compile } from "./amadeus-runtime.ts";
 import {
   auditBlockField,
@@ -891,6 +892,15 @@ function main(): void {
   }
 
   const projectDir = resolveProjectDir(projectDirArg);
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-learnings:${cmd}`, projectDir);
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   switch (cmd) {
     case "surface":

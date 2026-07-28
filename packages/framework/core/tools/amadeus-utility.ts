@@ -126,6 +126,7 @@ import {
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
+import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   buildDoctorPluginSection,
   type DoctorPluginObservation,
@@ -1425,9 +1426,11 @@ function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
       fix: "restore `.codex/tools/amadeus-codex-hooks.ts` from the installed distribution",
     };
   }
-  const result = Bun.spawnSync(
-    ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
-    { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
+  const result = observeSubprocess(projectDir, "amadeus-codex-hooks:doctor", () =>
+    Bun.spawnSync(
+      ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
+      { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
+    ),
   );
   let payload: unknown;
   try {
@@ -2128,11 +2131,13 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // repo (smoke / fresh fixtures) so doctor remains usable in non-git contexts.
   // ---------------------------------------------------------------------------
   try {
-    const proc = Bun.spawnSync({
-      cmd: ["git", "-C", projectDir, "branch", "--list", "bolt-*"],
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const proc = observeSubprocess(projectDir, "git", () =>
+      Bun.spawnSync({
+        cmd: ["git", "-C", projectDir, "branch", "--list", "bolt-*"],
+        stdout: "pipe",
+        stderr: "pipe",
+      }),
+    );
     if (proc.exitCode !== 0) {
       // Not a git repo or git failure — skip silently with informational pass.
       results.push({ pass: true, label: "Stale branches: 0 observed (not a git repo)" });
@@ -3993,10 +3998,12 @@ function gitRmFlatTree(projectDir: string, flatTree: string): void {
     if (!existsSync(flatTree)) return;
     // Untrack (cached only — the data already moved). Ignore failure (non-git
     // project, or already untracked) — the rmSync below still tidies disk.
-    Bun.spawnSync(["git", "-C", projectDir, "rm", "-r", "--cached", "--quiet", "--", flatTree], {
-      stdout: "ignore",
-      stderr: "ignore",
-    });
+    observeSubprocess(projectDir, "git", () =>
+      Bun.spawnSync(["git", "-C", projectDir, "rm", "-r", "--cached", "--quiet", "--", flatTree], {
+        stdout: "ignore",
+        stderr: "ignore",
+      }),
+    );
     // Remove the moved-from directory from the working tree (the data lives in
     // the per-intent record now; this is the empty husk).
     rmSync(flatTree, { recursive: true, force: true });
@@ -4706,21 +4713,23 @@ function delegateIntentLifecycle(
   verb: "archive" | "unarchive",
   intentDir: string,
 ): void {
-  const run = Bun.spawnSync({
-    cmd: [
-      "bun",
-      join(TOOLS_DIR, "amadeus-state.ts"),
-      verb,
-      intentDir,
-      "--user-input",
-      `intent ${verb} ${intentDir}`,
-      "--project-dir",
-      projectDir,
-    ],
-    cwd: projectDir,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const run = observeSubprocess(projectDir, `amadeus-state:${verb}`, () =>
+    Bun.spawnSync({
+      cmd: [
+        "bun",
+        join(TOOLS_DIR, "amadeus-state.ts"),
+        verb,
+        intentDir,
+        "--user-input",
+        `intent ${verb} ${intentDir}`,
+        "--project-dir",
+        projectDir,
+      ],
+      cwd: projectDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
   process.stdout.write(new TextDecoder().decode(run.stdout));
   process.stderr.write(new TextDecoder().decode(run.stderr));
   if (run.signalCode) process.kill(process.pid, run.signalCode as NodeJS.Signals);
@@ -5941,12 +5950,14 @@ function handleMigrate(
   }
 
   const absoluteProjectDir = resolve(projectDir);
-  const run = Bun.spawnSync({
-    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
-    cwd: absoluteProjectDir,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const run = observeSubprocess(absoluteProjectDir, "amadeus-migrate", () =>
+    Bun.spawnSync({
+      cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
+      cwd: absoluteProjectDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
   process.stdout.write(new TextDecoder().decode(run.stdout));
   process.stderr.write(new TextDecoder().decode(run.stderr));
   if (run.exitCode !== 0) process.exit(run.exitCode);
@@ -5993,6 +6004,15 @@ export function runUtilityMain(): void {
   }
   const subcommand = positional[0];
   const projectDir = resolveProjectDir(flags["project-dir"]);
+
+  // Telemetry process span (opt-in; no-op unless observability.enabled).
+  // Resolution failures must not change the CLI contract — skip silently.
+  try {
+    initProcessObservability(`tool:amadeus-utility:${subcommand ?? "?"}`, projectDir);
+  } catch {
+    // no resolvable workflow -> nothing to observe
+  }
+
 
   switch (subcommand) {
     case "help":
