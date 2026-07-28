@@ -1637,5 +1637,11 @@
     "lines": "3842",
     "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when acknowledge-compaction gains an in-process seam test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-journal-convert.ts",
+    "lines": "289-298",
+    "reason": "import.meta.main CLI wrapper — spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove if the wrapper gains an in-process seam or the module stops being imported in-process"
   }
 ]

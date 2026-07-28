@@ -172,12 +172,7 @@ export function convertShardText(
   if (options.allowUnmergedForks !== true) assertNoUnmergedForks(blocks);
 
   // Loss-proof: header + re-rendered records must reproduce the input bytes.
-  const rendered = AUDIT_HEADER + blocks.map(renderParsedBlock).join("");
-  if (rendered !== text) {
-    throw new JournalConvertError(
-      "round-trip mismatch: re-rendered shard differs from the original bytes; refusing to convert",
-    );
-  }
+  assertLosslessRender(text, AUDIT_HEADER + blocks.map(renderParsedBlock).join(""));
 
   const entries: JournalEntry[] = blocks.map((block, index) => ({
     schemaVersion: JOURNAL_SCHEMA_VERSION,
@@ -191,6 +186,18 @@ export function convertShardText(
     ...(block.opaque === true ? { opaque: true as const } : {}),
   }));
   return { entries, jsonl: entries.map(serializeJournalEntry).join("") };
+}
+
+
+// The lossless-conversion invariant, split out so the refusal is directly
+// testable: a conversion whose re-render diverges from the original bytes
+// must never return.
+export function assertLosslessRender(text: string, rendered: string): void {
+  if (rendered !== text) {
+    throw new JournalConvertError(
+      "round-trip mismatch: re-rendered shard differs from the original bytes; refusing to convert",
+    );
+  }
 }
 
 // --- shard identity derivation ---

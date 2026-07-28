@@ -15,8 +15,10 @@ import { Glob } from "bun";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { formatAuditRecord } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { spawnSync } from "node:child_process";
 import {
   JournalConvertError,
+  assertLosslessRender,
   cloneIdFromShardName,
   convertShardText,
   handleConvert,
@@ -85,6 +87,11 @@ describe("convertShardText — lossless conversion", () => {
     expect(entries.length).toBe(1);
   });
 
+  test("the lossless invariant refuses a divergent re-render", () => {
+    expect(() => assertLosslessRender("original", "different")).toThrow(/round-trip mismatch/);
+    expect(() => assertLosslessRender("same", "same")).not.toThrow();
+  });
+
   test("a forked-then-merged slug converts without the flag", () => {
     const shard =
       HEADER +
@@ -149,6 +156,52 @@ describe("handleConvert CLI (in-process)", () => {
     // Identity derived from the path/filename, not from flags.
     expect(entries[0]!.cloneId).toBe("abc123def456");
     expect(entries[0]!.intentId).toBe("260728-demo-1234abcd");
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  test("bad flags and empty path lists exit through usage()", () => {
+    const origExit = process.exit.bind(process);
+    const origErr = process.stderr.write.bind(process.stderr);
+    let stderr = "";
+    const seen = { exited: null as number | null };
+    process.exit = ((code?: number) => {
+      seen.exited = code ?? 0;
+      throw new Error("exit");
+    }) as typeof process.exit;
+    process.stderr.write = ((chunk: unknown) => {
+      stderr += String(chunk);
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(() => handleConvert(["--bogus-flag"])).toThrow();
+      expect(() => handleConvert([])).toThrow();
+    } finally {
+      process.exit = origExit;
+      process.stderr.write = origErr;
+    }
+    expect(seen.exited).toBe(1);
+    expect(stderr).toContain("Usage: amadeus-journal-convert.ts");
+  });
+
+  test("intent id underivable with clone id supplied is its own loud refusal", () => {
+    seed();
+    const bare = join(tmpRoot, "loose-abc123def456.md");
+    writeFileSync(bare, HEADER + record("HUMAN_TURN", "2026-07-28T10:00:00Z"), "utf-8");
+    expect(() =>
+      captureStdout(() => handleConvert(["--check-only", "--clone-id", "abc123def456", bare])),
+    ).toThrow(/intent id/);
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  test("the CLI wrapper reports codec errors as JSON on stderr (spawned)", () => {
+    seed();
+    const cli = join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools", "amadeus-journal-convert.ts");
+    const bad = spawnSync("bun", [cli, "--check-only", "/nonexistent/loose.md"], { encoding: "utf-8", env: process.env });
+    expect(bad.status).toBe(1);
+    expect(JSON.parse(bad.stderr.trim()).error).toContain("clone id");
+    const good = spawnSync("bun", [cli, "--check-only", shardPath], { encoding: "utf-8", env: process.env });
+    expect(good.status).toBe(0);
+    expect(JSON.parse(good.stdout.trim()).converted[0].checked).toBe(true);
     rmSync(tmpRoot, { recursive: true, force: true });
   });
 

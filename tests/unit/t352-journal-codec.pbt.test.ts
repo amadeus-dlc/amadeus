@@ -142,6 +142,20 @@ describe("journal codec — refusals (parse, don't validate)", () => {
     expect(() => parseJournalLine(JSON.stringify({ ...base, event: "STAGE_STARTED", fields: { K: 1 } }))).toThrow(JournalCodecError);
   });
 
+  test("parse rejects envelope violations branch-by-branch", () => {
+    const raw = { ...base, event: null, rawBody: "" };
+    // invalid seq (schemaVersion valid so the seq branch is the one that fires)
+    expect(() => parseJournalLine(JSON.stringify({ ...raw, seq: 0 }))).toThrow(/invalid seq/);
+    expect(() => parseJournalLine(JSON.stringify({ ...raw, seq: 1.5 }))).toThrow(/invalid seq/);
+    // missing / non-string envelope members
+    expect(() => parseJournalLine(JSON.stringify({ ...raw, cloneId: undefined }))).toThrow(/missing string field cloneId/);
+    expect(() => parseJournalLine(JSON.stringify({ ...raw, timestamp: 42 }))).toThrow(/missing string field timestamp/);
+    // opaque must be literally true when present
+    expect(() => parseJournalLine(JSON.stringify({ ...raw, opaque: "yes" }))).toThrow(/opaque must be true/);
+    // event must be string or null
+    expect(() => parseJournalLine(JSON.stringify({ ...base, event: 7 }))).toThrow(/event must be a string or null/);
+  });
+
   test("parseJournalShard reports the 1-based line number of a bad line", () => {
     const good = serializeJournalEntry({ ...base, event: "STAGE_STARTED", fields: {} });
     expect(() => parseJournalShard(`${good}garbage\n`)).toThrow(/line 2:/);
