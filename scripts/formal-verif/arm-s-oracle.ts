@@ -142,12 +142,12 @@ const AGAINST = new Set([7, 8]);
 
 type GoaTotals = { favor: number; against: number; abstain: number; discuss: number };
 
+type GoaHoldReason = Extract<SubjectTally, { kind: "hold" }>["reason"];
+
 // GoA-consensus hold decision, block excluded (expectedTally evaluates block
 // first). Independent re-statement of the subject's rules (BR-13 oracle) —
 // the 2-voter arm (FR-05) treats full participation and any abstention as
 // quorum conditions; the 3+ arm keeps the original thresholds.
-type GoaHoldReason = Extract<SubjectTally, { kind: "hold" }>["reason"];
-
 function goaHold(
   totals: GoaTotals,
   resolvedCount: number,
