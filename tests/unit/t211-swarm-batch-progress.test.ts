@@ -63,6 +63,7 @@ afterEach(() => {
 interface Directive {
   kind?: string;
   units?: unknown;
+  repo?: unknown;
   question?: unknown;
   message?: unknown;
   [k: string]: unknown;
@@ -169,6 +170,13 @@ function seedSwarmProject(
   return proj;
 }
 
+function recordIntentRepos(proj: string, repos: string[]): void {
+  const path = join(proj, "amadeus", "spaces", "default", "intents", "intents.json");
+  const rows = JSON.parse(readFileSync(path, "utf-8")) as Array<Record<string, unknown>>;
+  rows[0].repos = repos;
+  writeFileSync(path, `${JSON.stringify(rows, null, 2)}\n`);
+}
+
 /** Drive `next` in-process and return the emitted directive. */
 function runNext(proj: string): Directive {
   let raw = "";
@@ -207,6 +215,15 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     // The crux of #841: the offered batch is the FIRST with uncovered units, not
     // the static batches[0]. Pre-fix this was ["alpha"] (batch 1 re-offered).
     expect(directive.units).toEqual(["beta"]);
+  });
+
+  test("a2: a lone recorded repo is propagated with the selected batch", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    recordIntentRepos(proj, ["service"]);
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha"]);
+    expect(directive.repo).toBe("service");
   });
 
   test("b: every batch covered -> no swarm is offered (falls through to the gate)", () => {
