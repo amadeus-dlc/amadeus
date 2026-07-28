@@ -66,6 +66,7 @@ function deps(opts: { verifyOk?: boolean; recompileOk?: boolean } = {}): PluginC
       newTxnId: () => `t302-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => recompileOk,
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,

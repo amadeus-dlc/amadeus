@@ -82,6 +82,9 @@ function deps(verifyOk = true): PluginCliDeps {
       recompileCount += 1;
       return true;
     },
+    // #1598: the CLI regenerates stage-runners after the recompile. Stubbed
+    // here (no skills tree in a synthetic host); t352 drives the real wiring.
+    generateRunners: () => true,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,

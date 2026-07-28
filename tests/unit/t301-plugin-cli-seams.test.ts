@@ -65,6 +65,7 @@ describe("t301 defaultPluginCliDeps (real dependency bag)", () => {
       "makeBackend",
       "makeTx",
       "recompile",
+      "generateRunners",
       "recordDrops",
       "clearDrops",
       "out",
