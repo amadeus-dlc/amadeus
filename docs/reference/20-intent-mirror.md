@@ -56,12 +56,13 @@ The contract grants no authority for pull requests, releases, deploys,
 background daemons, or polling.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","authoritativeField":"Intent Phase","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
 ## Project configuration schema
 
-`mirror-projects` is an array of `{ project, status-names? }`. `project` matches
+`mirror-projects` is an array of `{ project, phase-field?, status-names? }`. `project` matches
 `"<owner>/<number>"` with a positive integer number; a padded, float, or
-otherwise malformed value is rejected rather than coerced. `status-names` keys
+otherwise malformed value is rejected rather than coerced. `phase-field` is a
+non-empty field name and defaults to `Intent Phase`. `status-names` keys
 are the closed phase vocabulary `ideation | inception | construction |
 operation | done`, and each value is a non-empty string. An unknown element key,
 an unknown phase key, or one malformed element rejects the whole layer instead
@@ -69,8 +70,8 @@ of contributing a partial list. `auto-mirror` and `mirror-projects` resolve
 independently: for each key, the last layer carrying a valid value wins, and a
 winning `mirror-projects` replaces the previous layer's target list entirely.
 
-`Intent Phase` is authoritative for lifecycle reconciliation and the completion
-gate. `Status` is auxiliary: active maps to `In progress`, complete maps to
+The field named by `phase-field` is authoritative for lifecycle reconciliation
+and the completion gate. `Status` is auxiliary: active maps to `In progress`, complete maps to
 `Done`, parked keeps its current value, and auxiliary failures do not block
 reconciliation or close.
 

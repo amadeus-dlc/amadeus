@@ -34,6 +34,8 @@ import type {
   MirrorProjectTarget,
 } from "./amadeus-mirror-types.ts";
 
+export const DEFAULT_PROJECT_PHASE_FIELD = "Intent Phase";
+
 // A config file above this size is rejected rather than read into memory. The
 // bounded reader stops one byte past the limit so growth beyond it is caught.
 const MAX_CONFIG_BYTES = 1024 * 1024;
@@ -66,7 +68,7 @@ const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
 
 const MODE_EXPECTED = "off | prompt | auto";
 const PROJECTS_EXPECTED =
-  'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }';
+  'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }';
 const BOOLEAN_EXPECTED = "boolean";
 
 export type ConfigLayer = "global" | "space" | "intent";
@@ -422,7 +424,8 @@ function parseProjectTarget(element: unknown): ProjectsParse {
     return { ok: false, actualType: `element is ${valueKind(element)}` };
   }
   const unknown = Object.keys(element).filter(
-    (key) => key !== "project" && key !== "status-names",
+    (key) =>
+      key !== "project" && key !== "phase-field" && key !== "status-names",
   );
   if (unknown.length > 0) {
     return {
@@ -437,9 +440,23 @@ function parseProjectTarget(element: unknown): ProjectsParse {
       actualType: `project is ${valueKind(element.project)} (expected "<owner>/<number>")`,
     };
   }
+  const rawPhaseField = element["phase-field"];
+  if (
+    rawPhaseField !== undefined &&
+    (typeof rawPhaseField !== "string" || rawPhaseField.length === 0)
+  ) {
+    return {
+      ok: false,
+      actualType: `phase-field is ${valueKind(rawPhaseField)}`,
+    };
+  }
+  const phaseField = rawPhaseField ?? DEFAULT_PROJECT_PHASE_FIELD;
   const statusNames = parseStatusNames(element["status-names"]);
   if (!statusNames.ok) return statusNames;
-  return { ok: true, projects: [{ project, statusNames: statusNames.statusNames }] };
+  return {
+    ok: true,
+    projects: [{ project, phaseField, statusNames: statusNames.statusNames }],
+  };
 }
 
 // Any number of Projects may be configured: the list is the complete set of

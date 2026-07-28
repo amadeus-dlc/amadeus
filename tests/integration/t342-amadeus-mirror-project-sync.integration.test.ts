@@ -44,6 +44,7 @@ const PROJECT_NODE_ID = "PVT_project";
 const ISSUE_NODE_ID = "I_issue";
 const TARGET: MirrorProjectTarget = {
   project: { owner: "acme", number: 5 },
+  phaseField: "Intent Phase",
   statusNames: {},
 };
 
@@ -140,6 +141,7 @@ type ProjectFixture = {
 
 class ProjectGateway implements MirrorGitHubGateway {
   readonly history: string[] = [];
+  readonly resolvedPhaseFields: string[] = [];
   issue: RemoteMirrorIssue;
   fixture: ProjectFixture = {};
 
@@ -188,10 +190,14 @@ class ProjectGateway implements MirrorGitHubGateway {
     if (this.fixture.listResult) return this.fixture.listResult;
     return ok(this.fixture.items ?? { issueNodeId: ISSUE_NODE_ID, items: [] });
   }
-  async resolveProjectStatusField(): Promise<
+  async resolveProjectStatusField(
+    _project: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>[0],
+    phaseField: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>[1],
+  ): Promise<
     GatewayOutcome<MirrorProjectStatusField>
   > {
     this.history.push("resolve-status-field");
+    this.resolvedPhaseFields.push(phaseField);
     if (this.fixture.fieldResult) return this.fixture.fieldResult;
     return ok(
       this.fixture.field ?? {
@@ -330,6 +336,62 @@ function projectCalls(gateway: ProjectGateway): string[] {
 }
 
 describe("t342 create then project sync", () => {
+  test("a configured phase-field drives resolution and current-value comparison", async () => {
+    const store = fileStore(linkedState());
+    const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.items = {
+      issueNodeId: ISSUE_NODE_ID,
+      items: [
+        {
+          projectId: PROJECT_NODE_ID,
+          projectNumber: 5,
+          projectOwner: "acme",
+          itemId: "PVTI_existing",
+          currentStatus: null,
+          workflowStatus: "In progress",
+          fieldValues: { Lifecycle: "Ideation", Status: "In progress" },
+        },
+      ],
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway, {
+        targets: [{ ...TARGET, phaseField: "Lifecycle" }],
+      }),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(outcome.kind).toBe("completed");
+    expect(gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
+    expect(gateway.history).not.toContain("update-project-item-status");
+  });
+
+  test("the authoritative field wins when phase-field and Status resolve to the same field", async () => {
+    const store = fileStore(EMPTY_MIRROR_STATE);
+    const gateway = new ProjectGateway(markerBody());
+    gateway.fixture.field = {
+      projectId: PROJECT_NODE_ID,
+      fieldId: "PVTSSF_shared",
+      options: [{ id: "opt-ideation", name: "Ideation" }],
+      workflowStatusField: {
+        fieldId: "PVTSSF_shared",
+        options: [{ id: "opt-in-progress", name: "In progress" }],
+      },
+    };
+
+    await executeMirrorOperation({
+      context: context("create", gateway, {
+        targets: [{ ...TARGET, phaseField: "Status" }],
+      }),
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(gateway.history).toContain("option:opt-ideation");
+    expect(gateway.history).not.toContain("option:opt-in-progress");
+  });
+
   test("an active Intent updates Intent Phase and auxiliary Status", async () => {
     const store = fileStore(EMPTY_MIRROR_STATE);
     const gateway = new ProjectGateway(markerBody());
@@ -717,7 +779,8 @@ describe("t342 safety-blocked observations", () => {
         reason: "option-missing",
         expectedStatus: "Ideation",
         availableOptions: ["Backlog", "Shipped"],
-        summary: 'the Project has no Intent Phase option named exactly "Ideation"',
+        summary:
+          'the Project "Intent Phase" field has no option named exactly "Ideation"',
       },
     ]);
     expect(gateway.history).not.toContain("update-project-item-status");
@@ -758,6 +821,7 @@ describe("t342 safety-blocked observations", () => {
         targets: [
           {
             project: { owner: "acme", number: 5 },
+            phaseField: "Intent Phase",
             statusNames: { ideation: "No Such Column" },
           },
         ],

@@ -212,19 +212,19 @@ export const LIST_PROJECT_ITEMS_QUERY =
   "repository(owner:$owner,name:$name){issue(number:$number){id " +
   "projectItems(first:$first){nodes{id " +
   "project{id number owner{__typename ... on Organization{login} ... on User{login}}} " +
-  'intentPhase:fieldValueByName(name:"Intent Phase"){' +
-  "... on ProjectV2ItemFieldSingleSelectValue{name}} " +
-  'workflowStatus:fieldValueByName(name:"Status"){' +
-  "... on ProjectV2ItemFieldSingleSelectValue{name}}" +
+  "fieldValues(first:100){nodes{" +
+  "... on ProjectV2ItemFieldSingleSelectValue{" +
+  "name field{... on ProjectV2SingleSelectField{name}}}" +
+  "}}" +
   "}}}}}";
 
 // Organization-owned Projects only (E-U1CG ruling 2): no user-owner fallback, so
 // the per-Project query budget stays at one. An unresolved organization or
 // Project is a loud failure the executor answers with skip + diagnostic.
 export const RESOLVE_PROJECT_STATUS_FIELD_QUERY =
-  "query($owner:String!,$number:Int!){" +
+  "query($owner:String!,$number:Int!,$phaseField:String!){" +
   "organization(login:$owner){projectV2(number:$number){id " +
-  'intentPhase:field(name:"Intent Phase"){' +
+  "intentPhase:field(name:$phaseField){" +
   "... on ProjectV2SingleSelectField{id options{id name}}} " +
   'workflowStatus:field(name:"Status"){' +
   "... on ProjectV2SingleSelectField{id options{id name}}}" +
@@ -271,10 +271,12 @@ export function listProjectItemsArgv(issue: MirrorIssueRef): readonly string[] {
 
 export function resolveProjectStatusFieldArgv(
   project: MirrorProjectRef,
+  phaseField: string,
 ): readonly string[] {
   return graphqlArgv(RESOLVE_PROJECT_STATUS_FIELD_QUERY, {
     owner: project.owner,
     number: project.number,
+    phaseField,
   });
 }
 
@@ -816,6 +818,27 @@ function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function parseProjectItemFieldValues(
+  value: unknown,
+): Record<string, string> | null {
+  const connection = asRecord(value);
+  if (connection === null || !Array.isArray(connection.nodes)) return null;
+  const fieldValues: Record<string, string> = {};
+  for (const rawValue of connection.nodes) {
+    const record = asRecord(rawValue);
+    if (record === null) return null;
+    const name = nonEmptyString(record.name);
+    const field = asRecord(record.field);
+    const fieldName = field === null ? null : nonEmptyString(field.name);
+    // Non-single-select values appear as empty objects because the query uses
+    // an inline fragment. They carry no relevant data and are ignored.
+    if (name === null && fieldName === null) continue;
+    if (name === null || fieldName === null) return null;
+    fieldValues[fieldName] = name;
+  }
+  return fieldValues;
+}
+
 // One `projectItems` node -> MirrorProjectItem. A node whose Project identity is
 // incomplete is rejected (null) rather than defaulted, so a partial response can
 // never be read as "not a member of the configured Project".
@@ -834,19 +857,16 @@ function parseProjectItemNode(node: unknown): MirrorProjectItem | null {
   }
   const projectOwner = nonEmptyString(owner.login);
   if (projectOwner === null) return null;
-  const fieldValue = asRecord(record.intentPhase);
-  const currentStatus =
-    fieldValue === null ? null : nonEmptyString(fieldValue.name);
-  const workflowStatusValue = asRecord(record.workflowStatus);
-  const workflowStatus =
-    workflowStatusValue === null ? null : nonEmptyString(workflowStatusValue.name);
+  const fieldValues = parseProjectItemFieldValues(record.fieldValues);
+  if (fieldValues === null) return null;
   return {
     projectId,
     projectNumber,
     projectOwner,
     itemId,
-    currentStatus,
-    workflowStatus,
+    currentStatus: fieldValues["Intent Phase"] ?? null,
+    workflowStatus: fieldValues.Status ?? null,
+    fieldValues,
   };
 }
 
@@ -891,7 +911,7 @@ function parseSingleSelectField(
   return { fieldId, options };
 }
 
-// An unresolved organization / Project / Intent Phase field returns null: the
+// An unresolved organization / Project / configured lifecycle field returns null: the
 // executor answers every one of them with skip + diagnostic, never a mutation.
 export function parseProjectStatusField(
   data: Record<string, unknown>,
@@ -1148,9 +1168,9 @@ export function createMirrorGitHubGateway(
       return view === null ? invalidResponse("read-only") : ok(view);
     },
 
-    async resolveProjectStatusField(project) {
+    async resolveProjectStatusField(project, phaseField) {
       const run = await runGraphql(
-        resolveProjectStatusFieldArgv(project),
+        resolveProjectStatusFieldArgv(project, phaseField),
         "read-only",
       );
       if (run.kind === "failure") return run.failure;

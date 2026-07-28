@@ -132,11 +132,12 @@ export const MIRROR_USER_CONTRACT = {
   projectConfig: {
     key: "mirror-projects",
     shape:
-      'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }',
+      'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }',
     phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
     layerResolution: "last-layer-with-a-value-replaces",
     independentOf: "auto-mirror",
-    authoritativeField: "Intent Phase",
+    phaseField: { key: "phase-field", default: "Intent Phase" },
+    authoritativeField: "phase-field",
     auxiliaryStatus: {
       active: "In progress",
       complete: "Done",

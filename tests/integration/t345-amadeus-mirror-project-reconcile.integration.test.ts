@@ -55,8 +55,16 @@ const ISSUE_NODE_ID = "I_issue";
 // Two configured boards, so a failure on one can be shown not to touch the other.
 const BOARD_A: MirrorProjectRef = { owner: "acme", number: 5 };
 const BOARD_B: MirrorProjectRef = { owner: "acme", number: 6 };
-const TARGET_A: MirrorProjectTarget = { project: BOARD_A, statusNames: {} };
-const TARGET_B: MirrorProjectTarget = { project: BOARD_B, statusNames: {} };
+const TARGET_A: MirrorProjectTarget = {
+  project: BOARD_A,
+  phaseField: "Intent Phase",
+  statusNames: {},
+};
+const TARGET_B: MirrorProjectTarget = {
+  project: BOARD_B,
+  phaseField: "Intent Phase",
+  statusNames: {},
+};
 
 // A token the implementation must never transcribe out of a gateway summary.
 const SECRET = "SECRET_TOKEN_XYZ";
@@ -788,7 +796,7 @@ describe("t345 defensive classification", () => {
     const ctx = context("sync", gateway, { diagnostics });
     const resolution = await resolveMembership(
       ctx,
-      { project: BOARD_A, statusNames: {} },
+      { project: BOARD_A, phaseField: "Intent Phase", statusNames: {} },
       { issueNodeId: ISSUE_NODE_ID, items: [] },
       {
         projectId: nodeIdOf(BOARD_A),

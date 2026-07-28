@@ -62,20 +62,25 @@ Pull requests, releases, deployment, daemons, and polling are outside Intent
 Mirror.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","authoritativeField":"Intent Phase","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"active":"In progress","complete":"Done","parked":"keep","failureMode":"non-blocking"}} -->
 ## Project boards
 
 `mirror-projects` lists the GitHub Project boards this Intent syncs to. Each
 element names one board as `project: "<owner>/<number>"` and may carry a
-`status-names` override mapping a phase key onto the column name that board
-uses. The phase keys are `ideation`, `inception`, `construction`, `operation`,
-and `done`; an unknown key is an error rather than an ignored entry.
+`phase-field` name and a `status-names` override mapping a phase key onto the
+option name that board uses. `phase-field` defaults to `Intent Phase`. The phase
+keys are `ideation`, `inception`, `construction`, `operation`, and `done`; an
+unknown key is an error rather than an ignored entry.
 
 ```json
 {
   "mirror-projects": [
     { "project": "acme/7" },
-    { "project": "acme/12", "status-names": { "construction": "In Progress" } }
+    {
+      "project": "acme/12",
+      "phase-field": "Lifecycle",
+      "status-names": { "construction": "In Progress" }
+    }
   ]
 }
 ```
@@ -86,17 +91,17 @@ layer states the complete set of boards it wants. `mirror-projects` is
 independent of `auto-mirror` — the mode decides whether a mirror operation runs,
 this key decides which boards that operation touches.
 
-The authoritative lifecycle value is written to the board's `Intent Phase`
-single-select field. The standard `Status` field is auxiliary: active Intents
+The authoritative lifecycle value is written to the single-select field named
+by `phase-field` (`Intent Phase` by default). The standard `Status` field is auxiliary: active Intents
 move to `In progress`, completed Intents move to `Done`, and parked Intents keep
 their current Status. A missing option or failed auxiliary Status update never
-blocks Intent Phase reconciliation or Issue close.
+blocks lifecycle-field reconciliation or Issue close.
 
 <!-- amadeus-topic:auth -->
 <!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
 ## Authentication for Project boards
 
-Reading a board's Intent Phase and auxiliary Status fields and setting their
+Reading a board's configured lifecycle and auxiliary Status fields and setting their
 options all go through the GraphQL
 ProjectV2 API, which needs the `project` token scope in addition to whatever the
 Issue itself required. The credential stays with `gh` and its credential store;
@@ -115,13 +120,13 @@ column it is in, the column the workflow expects, whether those two have
 drifted, and one of four resolutions:
 
 - `resolved` — the expected column is reachable; the row is an observation only.
-- `field-missing` — the board's Intent Phase field could not be read, so no column can
+- `field-missing` — the board's configured lifecycle field could not be read, so no column can
   be applied.
-- `option-missing` — the board declares no Intent Phase option matching the expected
+- `option-missing` — the configured lifecycle field declares no option matching the expected
   name exactly, case and spacing included. The board's own option names are
   listed as `availableOptions`, so you can either add the option to the board or
   map the phase onto an existing one with a `status-names` override.
-- `permission-denied` — the credential in use cannot read that board's Intent Phase
+- `permission-denied` — the credential in use cannot read that board's configured lifecycle
   field; grant it the `project` scope and run `repair status` again.
 
 Each row carries a summary sentence naming the board, the column, and the move

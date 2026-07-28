@@ -285,7 +285,7 @@ export type MirrorMutationPermit = Readonly<{
 // every consumer downstream carries this proven shape.
 export type MirrorProjectRef = Readonly<{ owner: string; number: number }>;
 
-// The phase vocabulary a Project Intent Phase option can be derived from. Closed to
+// The phase vocabulary a configured Project lifecycle option can be derived from. Closed to
 // these five keys: an unknown phase name in configuration is a configuration
 // error, never coerced.
 export type MirrorPhaseKey =
@@ -299,6 +299,7 @@ export type MirrorProjectStatusNames = Partial<Record<MirrorPhaseKey, string>>;
 
 export type MirrorProjectTarget = Readonly<{
   project: MirrorProjectRef;
+  phaseField: string;
   statusNames: MirrorProjectStatusNames;
 }>;
 
@@ -306,10 +307,10 @@ export type MirrorProjectTarget = Readonly<{
 // `project`. `state` records the outcome of the most recent reconciliation of
 // that one Project: `synced` when the board matches the expected column,
 // `pending` when a retryable failure left it unknown, and `safety-blocked` when
-// the board's own shape (no Intent Phase field, no matching option) or our permissions
+// the board's own shape (no configured lifecycle field, no matching option) or our permissions
 // make it unreachable without a human.
 //
-// `projectId` is nullable because a Project whose Intent Phase field could not be
+// `projectId` is nullable because a Project whose lifecycle field could not be
 // resolved has no node id to record; `lastAppliedStatus` is the last column this
 // tool actually applied, and a later failure does not erase that history.
 export type MirrorProjectSyncEntry = Readonly<{
@@ -327,7 +328,7 @@ export type MirrorProjectSyncLedger = Readonly<{
   projects: readonly MirrorProjectSyncEntry[];
 }>;
 
-// The resolved Intent Phase single-select field of one Project. `options` holds only
+// The resolved lifecycle single-select field of one Project. `options` holds only
 // the options the remote Project actually declares — never a synthesized name,
 // because the option-missing diagnostic lists this set verbatim.
 export type MirrorProjectStatusField = Readonly<{
@@ -347,6 +348,7 @@ export type MirrorProjectItem = Readonly<{
   itemId: string;
   currentStatus: string | null;
   workflowStatus?: string | null;
+  fieldValues?: Readonly<Record<string, string>>;
 }>;
 
 // The identity the membership query needs: a Project lookup resolves the Issue
@@ -423,6 +425,7 @@ export interface MirrorGitHubGateway {
   ): Promise<GatewayOutcome<MirrorProjectItemsView>>;
   resolveProjectStatusField(
     project: MirrorProjectRef,
+    phaseField: string,
   ): Promise<GatewayOutcome<MirrorProjectStatusField>>;
   addProjectItem(
     permit: MirrorProjectMutationPermit,

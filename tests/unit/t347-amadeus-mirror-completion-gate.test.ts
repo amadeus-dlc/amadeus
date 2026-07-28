@@ -20,6 +20,7 @@ const NOW = "2026-07-27T00:00:00Z";
 
 const TARGET: MirrorProjectTarget = {
   project: { owner: "acme", number: 5 },
+  phaseField: "Intent Phase",
   statusNames: {},
 };
 
@@ -27,6 +28,7 @@ const TARGET: MirrorProjectTarget = {
 // read the configured name rather than a literal of its own.
 const RENAMED: MirrorProjectTarget = {
   project: { owner: "acme", number: 6 },
+  phaseField: "Intent Phase",
   statusNames: { done: "Shipped" },
 };
 

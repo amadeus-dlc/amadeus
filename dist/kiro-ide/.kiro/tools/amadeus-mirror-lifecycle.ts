@@ -17,7 +17,10 @@ import {
   readIntentRegistry,
   recordDirMatches,
 } from "./amadeus-lib.ts";
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  resolveMirrorConfig,
+} from "./amadeus-mirror-config.ts";
 import {
   driveMirrorBoundary,
   type MirrorBoundaryOutcome,
@@ -937,7 +940,13 @@ function diagnosticTargets(
     const key = canonicalProjectRef(project);
     // A configured target carries its own status vocabulary; a board known only
     // from the ledger or from membership takes the defaults.
-    if (!byProject.has(key)) byProject.set(key, { project, statusNames: {} });
+    if (!byProject.has(key)) {
+      byProject.set(key, {
+        project,
+        phaseField: DEFAULT_PROJECT_PHASE_FIELD,
+        statusNames: {},
+      });
+    }
   };
   for (const entry of ledger) {
     const parts = entry.project.split("/");
@@ -954,7 +963,8 @@ function diagnosticTargets(
   );
 }
 
-// A read that did not produce an Intent Phase field leaves the column unreachable. The
+// A read that did not produce the configured lifecycle field leaves the column
+// unreachable. The
 // two reasons a human can act on are distinguished: a credential that lacks the
 // `project` scope, and everything else (an absent field, an unresolved Project,
 // a failed query) reported as the field being unavailable.
@@ -995,9 +1005,13 @@ function resolvedSummary(row: RepairSummaryRow): string {
 // The two moves that resolve a column the board does not declare (BR-U4-6): put
 // the option on the board, or map the phase onto an option the board already
 // has. The board's own option names travel in `availableOptions`.
-function optionMissingSummary(project: string, expected: string): string {
+function optionMissingSummary(
+  project: string,
+  phaseField: string,
+  expected: string,
+): string {
   return (
-    `${project} declares no Intent Phase option named exactly "${expected}" ` +
+    `${project} declares no "${phaseField}" option named exactly "${expected}" ` +
     "(the match is exact — case and spacing included). Either add that option to " +
     "the board, or map this phase onto one of the options it already has with a " +
     "`status-names` override for this Project in `mirror-projects`."
@@ -1007,20 +1021,30 @@ function optionMissingSummary(project: string, expected: string): string {
 // A permission diagnostic names the board and the scope it needs, and nothing
 // else (BR-U4-7): no token, no response body, and no attempt to change the
 // credential — re-authorizing is a human's move, made outside this tool.
-function permissionDeniedSummary(project: string): string {
+function permissionDeniedSummary(project: string, phaseField: string): string {
   return (
-    `the GitHub credential in use cannot read the Intent Phase field of ${project}; ` +
+    `the GitHub credential in use cannot read the "${phaseField}" field of ${project}; ` +
     `reading and setting a Project column requires the \`${PROJECT_SCOPE}\` scope. ` +
     "Grant that scope to the credential and run `repair status` again."
   );
 }
 
-function fieldMissingSummary(project: string): string {
+function fieldMissingSummary(project: string, phaseField: string): string {
   return (
-    `the Intent Phase field of ${project} could not be resolved, so no column can be ` +
+    `the "${phaseField}" field of ${project} could not be resolved, so no column can be ` +
     "compared or applied. Confirm the Project exists and carries a single-select " +
-    'field named "Intent Phase".'
+    `field named "${phaseField}".`
   );
+}
+
+function projectItemFieldValue(
+  item: MirrorProjectItem | undefined,
+  fieldName: string,
+): string | null {
+  if (item === undefined) return null;
+  const resolved = item.fieldValues?.[fieldName];
+  if (resolved !== undefined) return resolved;
+  return fieldName === DEFAULT_PROJECT_PHASE_FIELD ? item.currentStatus : null;
 }
 
 async function diagnoseProject(
@@ -1035,7 +1059,7 @@ async function diagnoseProject(
       each.projectOwner === project.project.owner &&
       each.projectNumber === project.project.number,
   );
-  const currentStatus = item?.currentStatus ?? null;
+  const currentStatus = projectItemFieldValue(item, project.phaseField);
   const expected = expectedProjectStatus(snapshot, "manual", project.statusNames);
   const expectedStatus = expected.kind === "status" ? expected.name : null;
   const membership: MirrorRepairProjectDiagnostic["membership"] =
@@ -1049,7 +1073,10 @@ async function diagnoseProject(
     drift: expectedStatus !== null && currentStatus !== expectedStatus,
   };
 
-  const field = await target.gateway.resolveProjectStatusField(project.project);
+  const field = await target.gateway.resolveProjectStatusField(
+    project.project,
+    project.phaseField,
+  );
   if (field.kind === "failure") {
     const resolution = unreachableResolution(field.classification);
     return {
@@ -1057,8 +1084,8 @@ async function diagnoseProject(
       resolution,
       summary:
         resolution === "permission-denied"
-          ? permissionDeniedSummary(canonical)
-          : fieldMissingSummary(canonical),
+          ? permissionDeniedSummary(canonical, project.phaseField)
+          : fieldMissingSummary(canonical, project.phaseField),
     };
   }
   if (
@@ -1069,7 +1096,7 @@ async function diagnoseProject(
       ...base,
       resolution: "option-missing",
       availableOptions: field.value.options.map((option) => option.name),
-      summary: optionMissingSummary(canonical, expected.name),
+      summary: optionMissingSummary(canonical, project.phaseField, expected.name),
     };
   }
   return { ...base, resolution: "resolved", summary: resolvedSummary(base) };
@@ -1114,7 +1141,7 @@ async function projectDiagnostics(
         resolution,
         summary:
           resolution === "permission-denied"
-            ? permissionDeniedSummary(canonical)
+            ? permissionDeniedSummary(canonical, project.phaseField)
             : `the Issue's Project memberships could not be read, so nothing about ${canonical} could be observed.`,
       };
     });

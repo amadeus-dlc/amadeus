@@ -26,6 +26,7 @@ import {
   mutateMirrorStateAtomic,
   readMirrorState,
 } from "./amadeus-mirror-state-store.ts";
+import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-config.ts";
 import type {
   GatewayOutcome,
   MirrorAuditContext,
@@ -1345,6 +1346,17 @@ function findProjectItem(
   );
 }
 
+function projectItemFieldValue(
+  item: MirrorProjectItemsView["items"][number],
+  fieldName: string,
+): string | null {
+  const resolved = item.fieldValues?.[fieldName];
+  if (resolved !== undefined) return resolved;
+  if (fieldName === DEFAULT_PROJECT_PHASE_FIELD) return item.currentStatus;
+  if (fieldName === "Status") return item.workflowStatus ?? null;
+  return null;
+}
+
 type MembershipResolution =
   | {
       kind: "member";
@@ -1373,8 +1385,8 @@ export async function resolveMembership(
     return {
       kind: "member",
       itemId: existing.itemId,
-      currentStatus: existing.currentStatus,
-      workflowStatus: existing.workflowStatus ?? null,
+      currentStatus: projectItemFieldValue(existing, target.phaseField),
+      workflowStatus: projectItemFieldValue(existing, "Status"),
     };
   }
   if (!configured) {
@@ -1448,6 +1460,7 @@ async function syncAuxiliaryWorkflowStatus(
     expected === null ||
     workflowField === null ||
     workflowField === undefined ||
+    workflowField.fieldId === field.fieldId ||
     membership.workflowStatus === expected
   ) {
     return;
@@ -1486,14 +1499,17 @@ async function syncOneProject(
   const fail = (classification: MirrorFailureClass): ProjectVerdict =>
     markProjectFailure(ports, context, project, identity, classification);
 
-  const resolved = await context.gateway.resolveProjectStatusField(target.project);
+  const resolved = await context.gateway.resolveProjectStatusField(
+    target.project,
+    target.phaseField,
+  );
   if (resolved.kind === "failure") {
     projectDiagnostic(context, {
       project,
       reason: "project-unresolved",
       expectedStatus: null,
       availableOptions: [],
-      summary: `the Project or its Intent Phase field could not be resolved: ${resolved.summary}`,
+      summary: `the Project or its "${target.phaseField}" field could not be resolved: ${resolved.summary}`,
     });
     return fail(resolved.classification);
   }
@@ -1533,7 +1549,7 @@ async function syncOneProject(
       reason: "option-missing",
       expectedStatus: expected.name,
       availableOptions: field.options.map((each) => each.name),
-      summary: `the Project has no Intent Phase option named exactly "${expected.name}"`,
+      summary: `the Project "${target.phaseField}" field has no option named exactly "${expected.name}"`,
     });
     // The board's own vocabulary does not contain the column: retrying the same
     // call cannot change that, so this needs a human, not another attempt.
@@ -1560,7 +1576,7 @@ async function syncOneProject(
         reason: "update-failed",
         expectedStatus: expected.name,
         availableOptions: [],
-        summary: `could not set the Project Intent Phase: ${updated.summary}`,
+        summary: `could not set the Project "${target.phaseField}" field: ${updated.summary}`,
       });
       return fail(updated.classification);
     }
@@ -1597,6 +1613,7 @@ function reconcileTargets(
   for (const item of view.items) {
     const target: MirrorProjectTarget = {
       project: { owner: item.projectOwner, number: item.projectNumber },
+      phaseField: DEFAULT_PROJECT_PHASE_FIELD,
       statusNames: {},
     };
     const key = canonicalProject(target);

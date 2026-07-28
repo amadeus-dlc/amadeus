@@ -99,11 +99,21 @@ function itemNode(
     login: string;
     status: string | null;
     workflowStatus: string | null;
+    phaseField: string;
   }> = {},
 ): unknown {
   const status = overrides.status === undefined ? "Ideation" : overrides.status;
   const workflowStatus =
     overrides.workflowStatus === undefined ? "In progress" : overrides.workflowStatus;
+  const phaseField = overrides.phaseField ?? "Intent Phase";
+  const fieldValues = [
+    ...(status === null
+      ? []
+      : [{ name: status, field: { name: phaseField } }]),
+    ...(workflowStatus === null
+      ? []
+      : [{ name: workflowStatus, field: { name: "Status" } }]),
+  ];
   return {
     id: overrides.id ?? "PVTI_item1",
     project: {
@@ -112,8 +122,7 @@ function itemNode(
       __typename: "Organization",
       owner: { __typename: "Organization", login: overrides.login ?? "amadeus-dlc" },
     },
-    intentPhase: status === null ? null : { name: status },
-    workflowStatus: workflowStatus === null ? null : { name: workflowStatus },
+    fieldValues: { nodes: [{}, ...fieldValues] },
   };
 }
 
@@ -230,11 +239,14 @@ describe("t340 exact argv", () => {
     ]);
   });
 
-  test("resolveProjectStatusField binds the organization login and number", async () => {
+  test("resolveProjectStatusField binds the organization, number, and configured phase field", async () => {
     const { runner, requests } = fakeRunner([
       exited(0, envelope(200, statusFieldBody([]))),
     ]);
-    await createMirrorGitHubGateway(runner).resolveProjectStatusField(PROJECT);
+    await createMirrorGitHubGateway(runner).resolveProjectStatusField(
+      PROJECT,
+      "Lifecycle",
+    );
     expect(requests[0].args).toEqual([
       "api",
       "graphql",
@@ -245,6 +257,8 @@ describe("t340 exact argv", () => {
       "owner=amadeus-dlc",
       "-F",
       "number=5",
+      "-f",
+      "phaseField=Lifecycle",
     ]);
   });
 
@@ -254,14 +268,9 @@ describe("t340 exact argv", () => {
   });
 
   test("Project reads target Intent Phase and auxiliary Status fields", () => {
-    expect(LIST_PROJECT_ITEMS_QUERY).toContain(
-      'intentPhase:fieldValueByName(name:"Intent Phase")',
-    );
+    expect(LIST_PROJECT_ITEMS_QUERY).toContain("fieldValues(first:");
     expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
-      'intentPhase:field(name:"Intent Phase")',
-    );
-    expect(LIST_PROJECT_ITEMS_QUERY).toContain(
-      'workflowStatus:fieldValueByName(name:"Status")',
+      "intentPhase:field(name:$phaseField)",
     );
     expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain(
       'workflowStatus:field(name:"Status")',
@@ -347,6 +356,10 @@ describe("t340 response parsing", () => {
             itemId: "PVTI_item1",
             currentStatus: "Ideation",
             workflowStatus: "In progress",
+            fieldValues: {
+              "Intent Phase": "Ideation",
+              Status: "In progress",
+            },
           },
         ],
       },
@@ -358,6 +371,15 @@ describe("t340 response parsing", () => {
       (itemsBody([itemNode({ status: null })]) as { data: Record<string, unknown> }).data,
     );
     expect(parsed?.items[0].currentStatus).toBeNull();
+  });
+
+  test("membership parsing preserves a custom phase field value", () => {
+    const parsed = parseProjectItemsView(
+      (itemsBody([itemNode({ phaseField: "Lifecycle" })]) as {
+        data: Record<string, unknown>;
+      }).data,
+    );
+    expect(parsed?.items[0].fieldValues?.Lifecycle).toBe("Ideation");
   });
 
   test("an empty membership list still yields the issue node id", () => {
@@ -695,7 +717,7 @@ describe("t340 permit enforcement", () => {
     ]);
     const gh = createMirrorGitHubGateway(runner);
     await gh.listProjectItems(ISSUE);
-    await gh.resolveProjectStatusField(PROJECT);
+    await gh.resolveProjectStatusField(PROJECT, "Intent Phase");
     expect(requests).toHaveLength(2);
     for (const request of requests) {
       expect(request.args).not.toContain("--method");
@@ -735,7 +757,9 @@ describe("t340 out-of-scope mutations are absent", () => {
       if (typeof value === "string") strings.push(value);
     }
     strings.push(...gateway.listProjectItemsArgv(ISSUE));
-    strings.push(...gateway.resolveProjectStatusFieldArgv(PROJECT));
+    strings.push(
+      ...gateway.resolveProjectStatusFieldArgv(PROJECT, "Intent Phase"),
+    );
     strings.push(...gateway.addProjectItemArgv(PROJECT_NODE_ID, ISSUE_NODE_ID));
     strings.push(
       ...gateway.updateProjectItemStatusArgv(

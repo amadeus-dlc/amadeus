@@ -93,9 +93,40 @@ describe("t343 project parse", () => {
       layer("space", { "mirror-projects": [{ project: "amadeus-dlc/5" }] }),
     ]);
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "amadeus-dlc", number: 5 }, statusNames: {} },
+      {
+        project: { owner: "amadeus-dlc", number: 5 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
     expect(outcome.sources).toEqual(["space/config.json"]);
+  });
+
+  test("phase-field overrides the authoritative field name", () => {
+    const [target] = resolved([
+      layer("space", {
+        "mirror-projects": [
+          { project: "amadeus-dlc/5", "phase-field": "Lifecycle" },
+        ],
+      }),
+    ]).config.projects;
+
+    expect(target.phaseField).toBe("Lifecycle");
+  });
+
+  test.each([
+    ["an empty phase-field", ""],
+    ["a non-string phase-field", 5],
+    ["a null phase-field", null],
+  ])("rejects %s", (_label, phaseField) => {
+    const reported = issues([
+      layer("global", {
+        "mirror-projects": [
+          { project: "a/1", "phase-field": phaseField },
+        ],
+      }),
+    ]);
+    expect(reported[0].key).toBe("mirror-projects");
   });
 
   test("an empty array is valid and configures no Project", () => {
@@ -229,7 +260,13 @@ describe("t343 allowlist", () => {
       ]).config,
     ).toEqual({
       autoMirror: "auto",
-      projects: [{ project: { owner: "a", number: 1 }, statusNames: {} }],
+      projects: [
+        {
+          project: { owner: "a", number: 1 },
+          phaseField: "Intent Phase",
+          statusNames: {},
+        },
+      ],
       autoSoloElection: false,
     });
   });
@@ -256,7 +293,11 @@ describe("t343 layer precedence", () => {
       layer("intent", { "mirror-projects": [{ project: "b/2" }] }),
     ]);
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "b", number: 2 }, statusNames: {} },
+      {
+        project: { owner: "b", number: 2 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
   });
 
@@ -276,7 +317,11 @@ describe("t343 layer precedence", () => {
     ]);
     expect(outcome.config.autoMirror).toBe("auto");
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "a", number: 1 }, statusNames: {} },
+      {
+        project: { owner: "a", number: 1 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
     expect(outcome.sources).toEqual(["global/config.json", "intent/config.json"]);
   });

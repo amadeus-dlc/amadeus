@@ -103,6 +103,7 @@ function identity(): MirrorCreateIdentity {
 // so an accidental call fails loudly rather than being counted after the fact.
 class DiagnosticGateway implements MirrorGitHubGateway {
   readonly history: string[] = [];
+  readonly resolvedPhaseFields: string[] = [];
   items: MirrorProjectItem[] = [];
   membershipFailure: GatewayFailureClass | null = null;
   fieldFailures = new Map<number, GatewayFailureClass>();
@@ -147,8 +148,10 @@ class DiagnosticGateway implements MirrorGitHubGateway {
   }
   async resolveProjectStatusField(
     project: MirrorProjectRef,
+    phaseField: string,
   ): Promise<GatewayOutcome<MirrorProjectStatusField>> {
     this.history.push(`field:${canonical(project)}`);
+    this.resolvedPhaseFields.push(phaseField);
     const injected = this.fieldFailures.get(project.number);
     if (injected !== undefined) {
       return failure(injected, `GraphQL errors: [{"message":"${SECRET}"}]`);
@@ -217,7 +220,11 @@ type FixtureOptions = Readonly<{
   lifecyclePhase?: string;
   registryStatus?: "in-flight" | "parked" | "complete";
   boards?: ReadonlyArray<
-    Readonly<{ project: MirrorProjectRef; statusNames?: Record<string, string> }>
+    Readonly<{
+      project: MirrorProjectRef;
+      phaseField?: string;
+      statusNames?: Record<string, string>;
+    }>
   >;
   state?: MirrorStateSnapshot;
 }>;
@@ -265,6 +272,7 @@ function fixture(options: FixtureOptions = {}) {
       "auto-mirror": "auto",
       "mirror-projects": (options.boards ?? [{ project: BOARD_A }]).map((board) => ({
         project: canonical(board.project),
+        ...(board.phaseField ? { "phase-field": board.phaseField } : {}),
         ...(board.statusNames ? { "status-names": board.statusNames } : {}),
       })),
     }),
@@ -306,6 +314,24 @@ function mutations(gateway: DiagnosticGateway): string[] {
 }
 
 describe("t349 drift", () => {
+  test("a configured phase-field drives read-only drift diagnosis", async () => {
+    const fx = fixture({
+      boards: [{ project: BOARD_A, phaseField: "Lifecycle" }],
+    });
+    fx.gateway.items = [
+      {
+        ...memberItem(BOARD_A, null),
+        fieldValues: { Lifecycle: "Construction" },
+      },
+    ];
+
+    const [row] = await diagnose(fx);
+
+    expect(row.currentStatus).toBe("Construction");
+    expect(row.drift).toBe(false);
+    expect(fx.gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
+  });
+
   test("a board sitting in the expected column reports no drift", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Construction")];
