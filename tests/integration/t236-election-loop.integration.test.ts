@@ -699,5 +699,8 @@ describe("t236 election directive loop", () => {
     expect(split.reason).toBe("split");
     expect(run(["report", "--election", "E-SOLO2", "--result", "tallied"])).toBe(0);
     expect(lastJson().state).toBe("hold");
+    expect(run(["report", "--election", "E-SOLO2", "--result", "hold-resolved", "--resolution", "adopted"])).toBe(1);
+    expect(run(["report", "--election", "E-SOLO2", "--result", "hold-resolved", "--resolution", "choice:1"])).toBe(0);
+    expect((lastJson() as { resumedTo?: string }).resumedTo).toBe("tallied");
   });
 });

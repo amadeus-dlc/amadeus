@@ -141,23 +141,31 @@ const FAVOR = new Set([1, 2, 3, 6]);
 const AGAINST = new Set([7, 8]);
 
 // Independent tally oracle: resolve, then block → discussion-needed →
-// quorum-short → unique choice argmax / tie. Re-derived from the contract, not
-// from the subject.
+// quorum-short → split (2-voter only) → unique choice argmax / tie.
 export function expectedTally(choices: number[], ballots: ArmBallot[]): SubjectTally {
   const resolved = resolvePerVoter(ballots);
   let favor = 0;
   let against = 0;
+  let abstain = 0;
   let discuss = 0;
   let blocks = 0;
   for (const b of resolved) {
     if (FAVOR.has(b.goa)) favor++;
     else if (AGAINST.has(b.goa)) against++;
-    else if (b.goa === 5) discuss++;
+    else if (b.goa === 4) abstain++;
+    else discuss++;
     if (b.goa === 8) blocks++;
   }
   if (blocks >= 1) return { kind: "hold", reason: "block" };
-  if (discuss >= 2) return { kind: "hold", reason: "discussion-needed" };
-  if (favor + against === 0) return { kind: "hold", reason: "quorum-short" };
+  const voterCount = new Set(resolved.map((b) => b.voter)).size;
+  if (voterCount === 2) {
+    if (discuss >= 1) return { kind: "hold", reason: "discussion-needed" };
+    if (abstain >= 1) return { kind: "hold", reason: "quorum-short" };
+    if (favor === 1 && against === 1) return { kind: "hold", reason: "split" };
+  } else {
+    if (discuss >= 2) return { kind: "hold", reason: "discussion-needed" };
+    if (favor + against === 0) return { kind: "hold", reason: "quorum-short" };
+  }
   return decideWinner(choices, resolved);
 }
 

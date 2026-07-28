@@ -8,13 +8,22 @@
 // imports only the C0 domain types.
 
 import type {
+  ExpectedProjectStatus,
   MirrorBoundary,
   MirrorDecision,
   MirrorEventIdentity,
   MirrorExpectedPrompt,
+  MirrorFailureClass,
   MirrorOperation,
   MirrorOperationReceipt,
+  MirrorPhaseKey,
+  MirrorProjectStatusField,
+  MirrorProjectStatusNames,
+  MirrorProjectSyncEntry,
+  MirrorProjectSyncState,
+  MirrorProjectTarget,
   MirrorReceiptStatus,
+  MirrorSnapshot,
   MirrorStateSnapshot,
 } from "./amadeus-mirror-types.ts";
 
@@ -196,6 +205,106 @@ export function approveMirrorPrompt(
   };
 }
 
+// --- Project status derivation (U1) ------------------------------------------
+
+// The FR-3a phase -> column-name table. This is the ONLY definition: the config
+// layer's `status-names` overrides entries here, and every consumer derives from
+// this map rather than restating a literal.
+export const DEFAULT_PROJECT_STATUS_NAMES: Record<MirrorPhaseKey, string> = {
+  ideation: "Ideation",
+  inception: "Inception",
+  construction: "Construction",
+  operation: "Operation",
+  done: "Done",
+};
+
+const PHASE_KEYS: ReadonlySet<string> = new Set(Object.keys(
+  DEFAULT_PROJECT_STATUS_NAMES,
+));
+
+const KEEP: ExpectedProjectStatus = { kind: "keep" };
+
+// Map the workflow's Lifecycle Phase to a Project column key. Returns null for a
+// phase outside the closed vocabulary (`initialization` is a real engine phase
+// with no board column), which the caller answers with `keep`.
+function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
+  const lower = lifecyclePhase.toLowerCase();
+  // `done` is a landing outcome, not a lifecycle phase: it is reachable only
+  // through the completion branch, never by naming a phase `done`.
+  if (lower === "done") return null;
+  return PHASE_KEYS.has(lower) ? (lower as MirrorPhaseKey) : null;
+}
+
+// Derive the Status a boundary expects. Ordered rules:
+//   1. parked (boundary kind or registry status) -> keep: a parked Intent's
+//      column is left exactly as the human left it (FR-4).
+//   2. landed (registry complete + workflow Completed) -> the `done` column.
+//   3. otherwise the current Lifecycle Phase's column.
+// An unmapped phase yields `keep`, so an unrecognised snapshot never drives a
+// mutation toward a column name this module invented.
+export function expectedProjectStatus(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+  statusNames: MirrorProjectStatusNames,
+): ExpectedProjectStatus {
+  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
+    return KEEP;
+  }
+  const named = (phase: MirrorPhaseKey): ExpectedProjectStatus => ({
+    kind: "status",
+    name: statusNames[phase] ?? DEFAULT_PROJECT_STATUS_NAMES[phase],
+  });
+  if (
+    snapshot.registryStatus === "complete" &&
+    snapshot.status === "Completed"
+  ) {
+    return named("done");
+  }
+  const phase = phaseKeyOf(snapshot.lifecyclePhase);
+  return phase === null ? KEEP : named(phase);
+}
+
+// Classify one Project reconciliation failure into the ledger state it earns.
+// `pending` means "the same call could succeed later" and keeps the Project in
+// the reconcile loop; `safety-blocked` means the board's own shape or our
+// permissions make it unreachable, so retrying is noise until a human acts.
+//
+// This is a total function over MirrorFailureClass rather than a list of
+// retryable classes, so a class added to that union is a compile error here
+// instead of a silent default.
+export function classifyProjectFailure(
+  classification: MirrorFailureClass,
+): Extract<MirrorProjectSyncState, "pending" | "safety-blocked"> {
+  switch (classification) {
+    case "rate-limit":
+    case "network":
+    case "api":
+    case "command":
+    case "state-write":
+      return "pending";
+    case "permission":
+    case "unauthenticated":
+    case "not-installed":
+    case "configuration":
+    case "invalid-response":
+    case "state-parse":
+    case "provenance":
+    case "landing":
+    case "ambiguous-create":
+      return "safety-blocked";
+  }
+}
+
+// Exact-match option lookup (BR-U1-4): no case folding, no trimming, no
+// fuzzy fallback. A name that does not appear verbatim in the remote Project's
+// own option list is unresolved, and the caller reports it as a diagnostic.
+export function selectProjectStatusOption(
+  field: MirrorProjectStatusField,
+  name: string,
+): Readonly<{ id: string; name: string }> | null {
+  return field.options.find((option) => option.name === name) ?? null;
+}
+
 // Select the single next operation for the current workflow-completion
 // boundary, considering only that instance's receipts. Returns the same
 // operation while in progress, null when a stage is terminally blocked, and
@@ -223,4 +332,59 @@ export function nextCompletionOperation(
   if (close === "in-progress") return "close";
   if (close === "terminal-block" || close === "succeeded") return null;
   return "close";
+}
+
+// --- Completion gate (U3) -----------------------------------------------------
+
+// The gate reads the Project ledger and nothing else: no board is re-queried, so
+// a completion evaluates the same way offline as online. `snapshot` and
+// `targets` are not a second source of truth — they are the two arguments
+// `expectedProjectStatus` needs to name the `done` column, which stays that
+// function's sole definition rather than a literal restated here.
+export type CompletionProjectGateInput = Readonly<{
+  state: MirrorStateSnapshot;
+  snapshot: MirrorSnapshot;
+  targets: readonly MirrorProjectTarget[];
+}>;
+
+export type CompletionProjectGate = Readonly<{
+  ready: boolean;
+  blocking: readonly string[];
+}>;
+
+function projectBlocker(
+  entry: MirrorProjectSyncEntry,
+  expected: ExpectedProjectStatus,
+): string | null {
+  if (expected.kind !== "status") return `${entry.project}: not-landed`;
+  if (entry.state !== "synced") return `${entry.project}: ${entry.state}`;
+  return entry.lastAppliedStatus === expected.name
+    ? null
+    : `${entry.project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
+}
+
+// Is every Project this Intent syncs to actually sitting in the `done` column?
+// `blocking` names each row that is not, so a withheld close explains itself
+// instead of stalling silently. An Intent with no ledger row has no board to
+// wait for and is ready by definition.
+export function completionProjectGate(
+  input: CompletionProjectGateInput,
+): CompletionProjectGate {
+  const statusNamesOf = (project: string): MirrorProjectStatusNames =>
+    input.targets.find(
+      (target) => `${target.project.owner}/${target.project.number}` === project,
+    )?.statusNames ?? {};
+  const blocking = (input.state.projectSync?.projects ?? [])
+    .map((entry) =>
+      projectBlocker(
+        entry,
+        expectedProjectStatus(
+          input.snapshot,
+          "workflow-completed",
+          statusNamesOf(entry.project),
+        ),
+      ),
+    )
+    .filter((blocker): blocker is string => blocker !== null);
+  return { ready: blocking.length === 0, blocking };
 }

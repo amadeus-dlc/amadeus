@@ -25,6 +25,9 @@ import type {
   MirrorMutationEffect,
   MirrorOperation,
   MirrorOperationReceipt,
+  MirrorProjectSyncEntry,
+  MirrorProjectSyncHold,
+  MirrorProjectSyncLedger,
   MirrorProvenance,
   MirrorReceiptStatus,
   MirrorRepairChallenge,
@@ -438,6 +441,25 @@ const ROOT_KEYS: ReadonlySet<string> = new Set([
   "repairChallenges",
   "expectedPrompt",
   "auditOutbox",
+  "projectSync",
+]);
+
+const PROJECT_SYNC_KEYS: ReadonlySet<string> = new Set(["projects"]);
+const PROJECT_ENTRY_KEYS: ReadonlySet<string> = new Set([
+  "project",
+  "projectId",
+  "itemId",
+  "lastAppliedStatus",
+  "state",
+  "updatedAt",
+]);
+
+// The ledger accepts all three states so U2's pending / safety-blocked writes
+// land without a codec change; U1's writer only ever emits `synced`.
+const PROJECT_SYNC_STATES: ReadonlySet<MirrorProjectSyncEntry["state"]> = new Set([
+  "synced",
+  "pending",
+  "safety-blocked",
 ]);
 
 const REPOSITORY_KEYS: ReadonlySet<string> = new Set(["owner", "name", "canonical"]);
@@ -466,7 +488,11 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "lastEffect",
   "createIdentity",
   "authorization",
+  "projectSyncHold",
 ]);
+const PROJECT_SYNC_HOLD_KEYS: ReadonlySet<string> = new Set(["reason", "heldAt"]);
+const PROJECT_SYNC_HOLD_REASONS: ReadonlySet<MirrorProjectSyncHold["reason"]> =
+  new Set(["project-sync-unsettled"]);
 const WARNING_KEYS: ReadonlySet<string> = new Set([
   "operationId",
   "operation",
@@ -772,7 +798,33 @@ type ReceiptOptionals = {
   completedAt: string | undefined;
   failureClass: MirrorFailureClass | undefined;
   lastEffect: MirrorMutationEffect | undefined;
+  projectSyncHold: MirrorProjectSyncHold | null | undefined;
 };
+
+// The Project-sync hold that parks an otherwise-succeeded receipt at `pending`
+// (E-U2CG). `null` signals a malformed value, distinct from `undefined` = absent.
+function validateProjectSyncHold(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncHold | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: projectSyncHold must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_SYNC_HOLD_KEYS, path, issues);
+  const reason = reqEnum(
+    v,
+    "reason",
+    PROJECT_SYNC_HOLD_REASONS,
+    "project sync hold reason",
+    path,
+    issues,
+  );
+  const heldAt = reqTimestamp(v, "heldAt", path, issues);
+  if (reason === undefined || heldAt === undefined) return null;
+  return { reason, heldAt };
+}
 
 function checkReceiptKey(
   event: MirrorEventIdentity | null,
@@ -789,7 +841,7 @@ function checkReceiptKey(
     issues.push(`${path}.key: does not match canonical event key`);
 }
 
-function checkReceiptStatusInvariants(
+function checkReceiptTimestampInvariants(
   status: MirrorReceiptStatus,
   o: ReceiptOptionals,
   path: string,
@@ -802,10 +854,38 @@ function checkReceiptStatusInvariants(
     status === "succeeded" || status === "skipped-for-event" || status === "abandoned";
   if (needsCompleted && o.completedAt === undefined)
     issues.push(`${path}.completedAt: required for status '${status}'`);
-  if ((status === "pending" || status === "safety-blocked") && o.failureClass === undefined)
+}
+
+// A Project-sync hold is the one way a receipt reaches `pending` without a
+// failed Issue mutation, so it stands in for the failure fields that describe
+// one. It is meaningless on any other status.
+function checkReceiptHoldInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  const held = o.projectSyncHold !== undefined && o.projectSyncHold !== null;
+  if (
+    (status === "pending" || status === "safety-blocked") &&
+    o.failureClass === undefined &&
+    !(status === "pending" && held)
+  )
     issues.push(`${path}.failureClass: required for status '${status}'`);
-  if (status === "pending" && o.lastEffect === undefined)
+  if (status === "pending" && o.lastEffect === undefined && !held)
     issues.push(`${path}.lastEffect: required for status 'pending'`);
+  if (held && status !== "pending")
+    issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
+}
+
+function checkReceiptStatusInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  checkReceiptTimestampInvariants(status, o, path, issues);
+  checkReceiptHoldInvariants(status, o, path, issues);
 }
 
 function validateReceipt(
@@ -830,6 +910,10 @@ function validateReceipt(
     completedAt: optTimestamp(v, "completedAt", path, issues),
     failureClass: optEnum(v, "failureClass", FAILURE_CLASSES, "failure class", path, issues),
     lastEffect: optEnum(v, "lastEffect", MUTATION_EFFECTS, "mutation effect", path, issues),
+    projectSyncHold:
+      "projectSyncHold" in v
+        ? validateProjectSyncHold(v.projectSyncHold, `${path}.projectSyncHold`, issues)
+        : undefined,
   };
   const createIdentity =
     "createIdentity" in v
@@ -848,7 +932,8 @@ function validateReceipt(
     preparedAt === undefined ||
     event === null ||
     createIdentity === null ||
-    authorization === null
+    authorization === null ||
+    o.projectSyncHold === null
   ) {
     return null;
   }
@@ -892,6 +977,9 @@ function buildReceipt(input: {
     ...(input.optionals.lastEffect === undefined
       ? {}
       : { lastEffect: input.optionals.lastEffect }),
+    ...(input.optionals.projectSyncHold
+      ? { projectSyncHold: input.optionals.projectSyncHold }
+      : {}),
     ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
     ...(input.authorization ? { authorization: input.authorization } : {}),
   };
@@ -1085,6 +1173,76 @@ function validateAuditOutbox(
   return null;
 }
 
+// One projectSync ledger row. `projectId`, `itemId` and `lastAppliedStatus` are
+// nullable-required: the key must be present and either a non-empty string or
+// null, so an absent key is a defect rather than an implied null.
+function validateProjectEntry(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncEntry | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: project entry must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_ENTRY_KEYS, path, issues);
+  const project = reqNonEmptyString(v, "project", path, issues);
+  const projectId = nullableString(v.projectId, "projectId", path, issues);
+  const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
+  const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
+  const itemId = nullableString(v.itemId, "itemId", path, issues);
+  const lastAppliedStatus = nullableString(
+    v.lastAppliedStatus,
+    "lastAppliedStatus",
+    path,
+    issues,
+  );
+  if (
+    project === undefined ||
+    projectId === undefined ||
+    state === undefined ||
+    updatedAt === undefined ||
+    itemId === undefined ||
+    lastAppliedStatus === undefined
+  ) {
+    return null;
+  }
+  return { project, projectId, itemId, lastAppliedStatus, state, updatedAt };
+}
+
+// The ledger is keyed by canonical "owner/number" through the entry's own
+// `project` field; duplicate rows for one Project are a defect, since the
+// reducer upserts by that key.
+function validateProjectSync(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncLedger | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: projectSync must be an object or null`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_SYNC_KEYS, path, issues);
+  const raw = v.projects;
+  if (!Array.isArray(raw)) {
+    issues.push(`${path}.projects: required array`);
+    return null;
+  }
+  const projects: MirrorProjectSyncEntry[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < raw.length; i += 1) {
+    const entry = validateProjectEntry(raw[i], `${path}.projects[${i}]`, issues);
+    if (entry === null) continue;
+    if (seen.has(entry.project)) {
+      issues.push(`${path}.projects[${i}]: duplicate project '${entry.project}'`);
+      continue;
+    }
+    seen.add(entry.project);
+    projects.push(entry);
+  }
+  return { projects };
+}
+
 function validateExpectedPrompt(
   v: JsonValue,
   path: string,
@@ -1225,6 +1383,14 @@ function parseOptionalOutbox(v: JsonValue, issues: string[]): MirrorAuditOutbox 
   return validateAuditOutbox(v, "$.auditOutbox", issues);
 }
 
+function parseOptionalProjectSync(
+  v: JsonValue,
+  issues: string[],
+): MirrorProjectSyncLedger | null {
+  if (v === null || v === undefined) return null;
+  return validateProjectSync(v, "$.projectSync", issues);
+}
+
 function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapshot | null {
   if (!isObject(root)) {
     issues.push("$: Mirror block must be a JSON object");
@@ -1247,6 +1413,7 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
   const repairChallenges = validateChallengeMap(root.repairChallenges, issues);
   const expectedPrompt = parseOptionalPrompt(root.expectedPrompt, issues);
   const auditOutbox = parseOptionalOutbox(root.auditOutbox, issues);
+  const projectSync = parseOptionalProjectSync(root.projectSync, issues);
 
   if (revision === undefined || issues.length > 0) return null;
 
@@ -1259,6 +1426,7 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
     repairChallenges: Record<string, MirrorRepairChallenge>;
     expectedPrompt?: MirrorExpectedPrompt;
     auditOutbox?: MirrorAuditOutbox | null;
+    projectSync?: MirrorProjectSyncLedger | null;
   } = {
     revision,
     issueNumber: issueNumber ?? null,
@@ -1267,6 +1435,7 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
     warnings,
     repairChallenges,
     auditOutbox,
+    projectSync,
   };
   if (expectedPrompt) snapshot.expectedPrompt = expectedPrompt;
   return snapshot;
@@ -1284,6 +1453,7 @@ export const EMPTY_MIRROR_STATE: MirrorStateSnapshot = {
   warnings: [],
   repairChallenges: {},
   auditOutbox: null,
+  projectSync: null,
 };
 
 function allIndexesOf(haystack: string, needle: string): number[] {
@@ -1404,6 +1574,7 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
   if (r.completedAt !== undefined) out.completedAt = r.completedAt;
   if (r.failureClass !== undefined) out.failureClass = r.failureClass;
   if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
+  if (r.projectSyncHold !== undefined) out.projectSyncHold = r.projectSyncHold;
   if (r.createIdentity !== undefined)
     out.createIdentity = renderCreateIdentity(r.createIdentity);
   if (r.authorization !== undefined)
@@ -1484,6 +1655,22 @@ function renderExpectedPrompt(p: MirrorExpectedPrompt): unknown {
   return out;
 }
 
+// An empty ledger renders as null, matching the provenance / expectedPrompt /
+// auditOutbox convention, so a workspace with no configured Project keeps the
+// steady-state block bytes.
+function renderProjectSync(ledger: MirrorProjectSyncLedger): unknown {
+  return {
+    projects: ledger.projects.map((entry) => ({
+      project: entry.project,
+      projectId: entry.projectId,
+      itemId: entry.itemId,
+      lastAppliedStatus: entry.lastAppliedStatus,
+      state: entry.state,
+      updatedAt: entry.updatedAt,
+    })),
+  };
+}
+
 function renderAuditOutbox(o: MirrorAuditOutbox): unknown {
   // fields render in insertion order; the reducer/store control field order.
   return { transactionId: o.transactionId, digest: o.digest, fields: o.fields };
@@ -1510,6 +1697,10 @@ export function renderMirrorStateJson(snapshot: MirrorStateSnapshot): string {
       ? renderExpectedPrompt(snapshot.expectedPrompt)
       : null,
     auditOutbox: snapshot.auditOutbox ? renderAuditOutbox(snapshot.auditOutbox) : null,
+    projectSync:
+      snapshot.projectSync && snapshot.projectSync.projects.length > 0
+        ? renderProjectSync(snapshot.projectSync)
+        : null,
   };
   return JSON.stringify(root);
 }

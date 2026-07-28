@@ -3998,6 +3998,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/e2e/t341-plugin-conformance-journey.serial.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
           "mechanism": "cli"
         }

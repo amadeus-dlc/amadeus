@@ -162,7 +162,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - tests\n      - drift-check\n      - coverage",
+      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
@@ -173,6 +173,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(ciSuccessJob).toContain(`require_result "lint" "\${{ needs.lint.result }}"`);
     expect(ciSuccessJob).toContain(
       `require_result "distribution-contract" "\${{ needs.distribution-contract.result }}"`,
+    );
+    expect(ciSuccessJob).toContain(
+      `require_result "plugin-conformance-e2e" "\${{ needs.plugin-conformance-e2e.result }}"`,
     );
     expect(ciSuccessJob).toContain(`require_result "tests" "\${{ needs.tests.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "drift-check" "\${{ needs.drift-check.result }}"`);

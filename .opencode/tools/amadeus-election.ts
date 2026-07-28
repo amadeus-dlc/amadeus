@@ -81,7 +81,9 @@ type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | "hold-
 const HOLD_RESOLUTIONS: Record<HoldReason, Record<string, ElectionState>> = {
   tie: {},
   block: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
-  split: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
+  // split (2-voter GoA favor vs against): human must name the winning choice,
+  // same fail-closed gate as tie — not the block-style adopted/rejected table.
+  split: {},
   "quorum-short": { "resume-collecting": "collecting", "close-rejected": "tallied" },
   "discussion-needed": { discussed: "collecting" },
 };
@@ -254,7 +256,7 @@ function handleHoldResolved(root: string, electionId: string, resolution: string
   }
   let resumedTo: ElectionState | undefined;
   let validResolutions: string;
-  if (t.result.reason === "tie") {
+  if (t.result.reason === "tie" || t.result.reason === "split") {
     const choiceInternalNo = parseChoiceResolution(resolution);
     validResolutions = loaded.value.election.choices.map((choice) => `choice:${choice.internalNo}`).join("/");
     if (choiceInternalNo !== null && loaded.value.election.choices.some((choice) => choice.internalNo === choiceInternalNo)) {

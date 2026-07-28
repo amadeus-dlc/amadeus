@@ -13,7 +13,9 @@ import {
 } from "./amadeus-mirror-executor.ts";
 import {
   approveMirrorPrompt,
+  completionProjectGate,
   decideMirrorAction,
+  expectedProjectStatus,
   mirrorEventKey,
   mirrorEventIdentity,
   nextCompletionOperation,
@@ -32,12 +34,15 @@ import {
 } from "./amadeus-mirror-state-store.ts";
 import type {
   MirrorBoundary,
+  MirrorDecision,
   MirrorEventIdentity,
   MirrorGitHubGateway,
   MirrorExecutionAuthorization,
   MirrorMode,
   MirrorOperation,
   MirrorOperationOutcome,
+  MirrorProjectDiagnostic,
+  MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
   MirrorWarning,
@@ -103,6 +108,9 @@ export type DriveMirrorBoundaryInput = Readonly<{
   manualOperation?: MirrorOperation;
   invocationId?: string;
   answer?: MirrorPromptAnswer;
+  // Optional observation sink for Project skips. Absent means the diagnostics
+  // are simply not surfaced; they never alter an outcome.
+  projectDiagnostic?: (diagnostic: MirrorProjectDiagnostic) => void;
   dependencies?: MirrorCoordinatorDependencies;
 }>;
 
@@ -320,6 +328,7 @@ async function executeDecision(
   triggerEvent: MirrorEventIdentity,
   event: MirrorEventIdentity,
   operation: MirrorOperation,
+  projects: readonly MirrorProjectTarget[],
   promptAnswer?: MirrorPromptAnswer,
 ): Promise<MirrorOperationOutcome> {
   const operationId =
@@ -360,6 +369,15 @@ async function executeDecision(
       newOperationId: () => operationId,
       gateway: input.gateway,
       authorization,
+      // The coordinator owns both halves the Project step needs: the resolved
+      // configuration and the workflow snapshot the Issue body was rendered from.
+      projectSync: {
+        targets: projects,
+        snapshot: input.context.snapshot,
+        ...(input.projectDiagnostic
+          ? { diagnostic: input.projectDiagnostic }
+          : {}),
+      },
     },
     ports: input.ports,
     localState: state,
@@ -430,6 +448,7 @@ function initializeBoundary(
       kind: "ready";
       state: MirrorStateSnapshot;
       mode: MirrorMode;
+      projects: readonly MirrorProjectTarget[];
       fallbackEvent: MirrorEventIdentity;
     } {
   const resolve = input.dependencies?.resolveConfig ?? resolveMirrorConfig;
@@ -507,6 +526,7 @@ function initializeBoundary(
     kind: "ready",
     state,
     mode: config.config.autoMirror,
+    projects: config.config.projects,
     fallbackEvent,
   };
 }
@@ -515,6 +535,7 @@ async function handlePromptAnswer(
   input: DriveMirrorBoundaryInput,
   state: MirrorStateSnapshot,
   answer: MirrorPromptAnswer,
+  projects: readonly MirrorProjectTarget[],
 ): Promise<MirrorBoundaryOutcome> {
   const expected = state.expectedPrompt;
   if (!expected) {
@@ -556,6 +577,7 @@ async function handlePromptAnswer(
     triggerEvent,
     approved.event,
     approved.operation,
+    projects,
     answer,
   );
   consumeAnsweredPrompt(input, approved.event, approved.operation);
@@ -632,6 +654,63 @@ function selectBoundaryDecision(
   return { operation, triggerEvent, decision };
 }
 
+// Withhold `close` until every Project row reached the `done` column. This is a
+// hold, not a failure: no receipt is written, so the next completion boundary or
+// manual sync re-runs the reconciliation and re-evaluates the gate. The warning
+// carries the blocking rows so a completion that stops short says why.
+function closeGateHold(
+  input: DriveMirrorBoundaryInput,
+  state: MirrorStateSnapshot,
+  projects: readonly MirrorProjectTarget[],
+): MirrorOperationOutcome | null {
+  const gate = completionProjectGate({
+    state,
+    snapshot: input.context.snapshot,
+    targets: projects,
+  });
+  if (gate.ready) return null;
+  return {
+    kind: "pending",
+    operation: "close",
+    warning: {
+      operationId: null,
+      operation: "close",
+      classification: "landing",
+      summary: `the Issue stays open until every Project board reaches its done column: ${gate.blocking.join("; ")}`,
+      occurredAt: input.now(),
+      retryable: true,
+      effect: "not-started",
+      source: "current-invocation",
+    },
+  };
+}
+
+// The Project face of the operation the prompt is about, derived without a
+// single board query: the configured targets unioned with the boards the ledger
+// already knows the Issue belongs to, and the column those boards would receive.
+function promptProjects(
+  input: DriveMirrorBoundaryInput,
+  state: MirrorStateSnapshot,
+  projects: readonly MirrorProjectTarget[],
+  operation: MirrorOperation,
+) {
+  if (operation === "close" || projects.length === 0) return undefined;
+  const known = new Set(projects.map(
+    (target) => `${target.project.owner}/${target.project.number}`,
+  ));
+  for (const entry of state.projectSync?.projects ?? []) known.add(entry.project);
+  const names = new Set<string>();
+  for (const target of projects) {
+    const expected = expectedProjectStatus(
+      input.context.snapshot,
+      input.context.boundary.kind,
+      target.statusNames,
+    );
+    if (expected.kind === "status") names.add(expected.name);
+  }
+  return { count: known.size, statusNames: [...names].sort() };
+}
+
 function expectedPromptWasPersisted(
   state: MirrorStateSnapshot,
   operation: MirrorOperation,
@@ -639,86 +718,155 @@ function expectedPromptWasPersisted(
   return state.expectedPrompt?.operation === operation;
 }
 
+// Persist the durable binding for one prompted operation and turn it into the
+// question the human answers. A binding that cannot be persisted is reported as
+// a blocked operation rather than an ask nobody could approve.
+// Module-scope alias: the runtime-erased type lines would otherwise be stamped
+// DA:0 by Bun inside the function body region.
+type PendingPromptStep = Readonly<{
+  decision: Extract<MirrorDecision, { kind: "prompt" }>;
+  triggerEvent: MirrorEventIdentity;
+  preceding: readonly MirrorOperationOutcome[];
+}>;
+
+function askOutcome(
+  input: DriveMirrorBoundaryInput,
+  snapshot: MirrorStateSnapshot,
+  projects: readonly MirrorProjectTarget[],
+  pending: PendingPromptStep,
+): MirrorBoundaryOutcome {
+  const { decision, triggerEvent, preceding } = pending;
+  const prompt = {
+    bindingId: input.newOperationId(),
+    event: decision.event,
+    operation: decision.operation,
+    issuedAt: input.now(),
+    ...(decision.retryOf === undefined ? {} : { retryOf: decision.retryOf }),
+  };
+  const state = persistAuxiliary(input, snapshot, triggerEvent, {
+    kind: "set-expected-prompt",
+    prompt,
+  });
+  if (!expectedPromptWasPersisted(state, decision.operation)) {
+    return continued([
+      ...preceding,
+      {
+        kind: "safety-blocked",
+        operation: decision.operation,
+        warning: {
+          operationId: input.newOperationId(),
+          operation: decision.operation,
+          classification: "state-write",
+          summary: "expected prompt could not be persisted",
+          occurredAt: input.now(),
+          retryable: false,
+          effect: "not-started",
+          source: "current-invocation",
+        },
+      },
+    ]);
+  }
+  const askProjects = promptProjects(input, state, projects, decision.operation);
+  return {
+    kind: "ask",
+    question: renderMirrorPrompt({
+      operation: decision.operation,
+      event: decision.event,
+      intentDir: input.context.intentDir,
+      repository: input.context.repository.canonical,
+      issueNumber: state.issueNumber,
+      ...(askProjects === undefined ? {} : { projects: askProjects }),
+    }),
+    bindingId: prompt.bindingId,
+    event: decision.event,
+    operation: decision.operation,
+    workflowMayAdvance: true,
+  };
+}
+
+// One turn of the boundary loop before anything is executed: what the policy
+// selected, and every answer that is already final without touching GitHub —
+// nothing left to do, a suppression, a withheld close, or a question to ask.
+type BoundaryStep =
+  | { kind: "settled"; outcome: MirrorBoundaryOutcome }
+  | {
+      kind: "execute";
+      triggerEvent: MirrorEventIdentity;
+      decision: Extract<MirrorDecision, { kind: "execute" }>;
+    };
+
+function resolveBoundaryStep(
+  input: DriveMirrorBoundaryInput,
+  state: MirrorStateSnapshot,
+  mode: MirrorMode,
+  projects: readonly MirrorProjectTarget[],
+  outcomes: readonly MirrorOperationOutcome[],
+): BoundaryStep {
+  const settled = (outcome: MirrorBoundaryOutcome): BoundaryStep => ({
+    kind: "settled",
+    outcome,
+  });
+  const selected = selectBoundaryDecision(input, state, mode);
+  const { operation, triggerEvent, decision } = selected;
+  if (operation === null || !triggerEvent || !decision) {
+    return settled(
+      outcomes.length === 0
+        ? { kind: "none", workflowMayAdvance: true }
+        : continued(outcomes),
+    );
+  }
+  if (decision.kind === "suppress") {
+    return settled(
+      continued([
+        ...outcomes,
+        {
+          kind: "suppressed",
+          operation,
+          reason: decision.reason === "off" ? "off" : "not-applicable",
+        },
+      ]),
+    );
+  }
+  if (
+    decision.operation === "close" &&
+    input.context.boundary.kind === "workflow-completed"
+  ) {
+    const held = closeGateHold(input, state, projects);
+    if (held) return settled(continued([...outcomes, held]));
+  }
+  return decision.kind === "prompt"
+    ? settled(
+        askOutcome(input, state, projects, {
+          decision,
+          triggerEvent,
+          preceding: outcomes,
+        }),
+      )
+    : { kind: "execute", triggerEvent, decision };
+}
+
+// Drive the boundary until it settles. Only a workflow completion takes more
+// than one turn: it advances create -> sync -> close one operation at a time,
+// re-reading state between them.
 async function driveBoundaryDecisions(
   input: DriveMirrorBoundaryInput,
   initialState: MirrorStateSnapshot,
   mode: MirrorMode,
+  projects: readonly MirrorProjectTarget[],
 ): Promise<MirrorBoundaryOutcome> {
   let state = initialState;
   const read = input.dependencies?.readState ?? readMirrorState;
   const outcomes: MirrorOperationOutcome[] = [];
   for (let count = 0; count < 3; count += 1) {
-    const selected = selectBoundaryDecision(input, state, mode);
-    if (
-      selected.operation === null ||
-      !selected.triggerEvent ||
-      !selected.decision
-    ) {
-      return outcomes.length === 0
-        ? { kind: "none", workflowMayAdvance: true }
-        : continued(outcomes);
-    }
-    const { operation, triggerEvent, decision } = selected;
-    if (decision.kind === "suppress") {
-      outcomes.push({
-        kind: "suppressed",
-        operation,
-        reason: decision.reason === "off" ? "off" : "not-applicable",
-      });
-      return continued(outcomes);
-    }
-    if (decision.kind === "prompt") {
-      const prompt = {
-        bindingId: input.newOperationId(),
-        event: decision.event,
-        operation: decision.operation,
-        issuedAt: input.now(),
-        ...(decision.retryOf === undefined ? {} : { retryOf: decision.retryOf }),
-      };
-      state = persistAuxiliary(input, state, triggerEvent, {
-        kind: "set-expected-prompt",
-        prompt,
-      });
-      if (!expectedPromptWasPersisted(state, decision.operation)) {
-        return continued([
-          ...outcomes,
-          {
-            kind: "safety-blocked",
-            operation: decision.operation,
-            warning: {
-              operationId: input.newOperationId(),
-              operation: decision.operation,
-              classification: "state-write",
-              summary: "expected prompt could not be persisted",
-              occurredAt: input.now(),
-              retryable: false,
-              effect: "not-started",
-              source: "current-invocation",
-            },
-          },
-        ]);
-      }
-      return {
-        kind: "ask",
-        question: renderMirrorPrompt({
-          operation: decision.operation,
-          event: decision.event,
-          intentDir: input.context.intentDir,
-          repository: input.context.repository.canonical,
-          issueNumber: state.issueNumber,
-        }),
-        bindingId: prompt.bindingId,
-        event: decision.event,
-        operation: decision.operation,
-        workflowMayAdvance: true,
-      };
-    }
+    const step = resolveBoundaryStep(input, state, mode, projects, outcomes);
+    if (step.kind === "settled") return step.outcome;
     const outcome = await executeDecision(
       input,
       state,
-      triggerEvent,
-      decision.event,
-      decision.operation,
+      step.triggerEvent,
+      step.decision.event,
+      step.decision.operation,
+      projects,
     );
     outcomes.push(outcome);
     if (
@@ -748,7 +896,17 @@ export async function driveMirrorBoundary(
     ]);
   }
   if (input.answer) {
-    return handlePromptAnswer(input, initialized.state, input.answer);
+    return handlePromptAnswer(
+      input,
+      initialized.state,
+      input.answer,
+      initialized.projects,
+    );
   }
-  return driveBoundaryDecisions(input, initialized.state, initialized.mode);
+  return driveBoundaryDecisions(
+    input,
+    initialized.state,
+    initialized.mode,
+    initialized.projects,
+  );
 }
