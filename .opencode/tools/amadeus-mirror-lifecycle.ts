@@ -701,14 +701,18 @@ type RepairTarget =
 // The record view the Project diagnostics derive their expected column from.
 // An unreadable record yields null rather than a guessed snapshot: repair's
 // other verbs do not need it, so a missing record must not fail the command.
+// Module-scope aliases: inline parameter object types are runtime-erased but
+// stamped DA:0 by Bun inside the function region.
+type RepairRegistryEntry = Readonly<{
+  uuid: string;
+  intentDir: string;
+  status: string;
+  slug: string;
+}>;
+
 function repairSnapshot(
   statePath: string,
-  entry: Readonly<{
-    uuid: string;
-    intentDir: string;
-    status: string;
-    slug: string;
-  }>,
+  entry: RepairRegistryEntry,
   runtime: MirrorLifecycleRuntime,
 ): MirrorSnapshot | null {
   let stateContent: string;
@@ -965,14 +969,14 @@ const PROJECT_SCOPE = "project";
 
 // The sentence for a board whose expected column is reachable. It reports the
 // observation only: `repair status` proposes nothing and changes nothing.
-function resolvedSummary(
-  row: Readonly<{
-    membership: "member" | "not-member";
-    currentStatus: string | null;
-    expectedStatus: string | null;
-    drift: boolean;
-  }>,
-): string {
+type RepairSummaryRow = Readonly<{
+  membership: "member" | "not-member";
+  currentStatus: string | null;
+  expectedStatus: string | null;
+  drift: boolean;
+}>;
+
+function resolvedSummary(row: RepairSummaryRow): string {
   if (row.expectedStatus === null) {
     return "no column is expected right now, so this board is left exactly as it is.";
   }
@@ -1031,11 +1035,11 @@ async function diagnoseProject(
   const currentStatus = item?.currentStatus ?? null;
   const expected = expectedProjectStatus(snapshot, "manual", project.statusNames);
   const expectedStatus = expected.kind === "status" ? expected.name : null;
+  const membership: MirrorRepairProjectDiagnostic["membership"] =
+    item === undefined ? "not-member" : "member";
   const base = {
     project: canonical,
-    membership: (item === undefined ? "not-member" : "member") as
-      | "member"
-      | "not-member",
+    membership,
     currentStatus,
     expectedStatus,
     // No expected column means nothing to drift from.

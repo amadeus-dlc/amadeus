@@ -598,3 +598,34 @@ describe("t349 read-only", () => {
     expect(JSON.stringify(await diagnose(fx))).not.toContain(SECRET);
   });
 });
+
+describe("t349 unreadable record", () => {
+  test("an unreadable record yields no expected column instead of failing", async () => {
+    const fx = fixture({ boards: [{ project: BOARD_A }] });
+    fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
+    // Serve the mirror-state block from memory while the record file itself is
+    // gone: only the workflow-snapshot read (repairSnapshot) sees the missing
+    // file, which is exactly the branch under test.
+    const saved = readFileSync(fx.statePath, "utf-8");
+    rmSync(fx.statePath);
+    const ports = { ...fx.ports, readDocument: () => saved };
+
+    const result = await runMirrorRepairCommand(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: INTENT_DIR,
+        repository: REPO,
+        command: { kind: "status" },
+      },
+      { gateway: fx.gateway, ports, now: () => NOW },
+    );
+
+    // The command still answers; without a readable record there is no expected
+    // column to derive, so the Project diagnostics are omitted rather than
+    // guessed — and nothing is mutated.
+    if (result.kind !== "status") throw new Error(`expected status, got ${result.kind}`);
+    expect(result.projectDiagnostics).toEqual([]);
+    expect(mutations(fx.gateway)).toEqual([]);
+  });
+});
