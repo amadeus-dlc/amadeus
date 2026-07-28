@@ -26,6 +26,7 @@ import {
 } from "node:fs";
 import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
+import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-policy.ts";
 import type {
   MirrorMode,
   MirrorPhaseKey,
@@ -33,8 +34,6 @@ import type {
   MirrorProjectStatusNames,
   MirrorProjectTarget,
 } from "./amadeus-mirror-types.ts";
-
-export const DEFAULT_PROJECT_PHASE_FIELD = "Intent Phase";
 
 // A config file above this size is rejected rather than read into memory. The
 // bounded reader stops one byte past the limit so growth beyond it is caught.

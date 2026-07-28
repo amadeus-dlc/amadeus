@@ -17,10 +17,7 @@ import {
   readIntentRegistry,
   recordDirMatches,
 } from "./amadeus-lib.ts";
-import {
-  DEFAULT_PROJECT_PHASE_FIELD,
-  resolveMirrorConfig,
-} from "./amadeus-mirror-config.ts";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import {
   driveMirrorBoundary,
   type MirrorBoundaryOutcome,
@@ -32,6 +29,7 @@ import {
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
 import {
+  DEFAULT_PROJECT_PHASE_FIELD,
   expectedProjectStatus,
   selectProjectStatusOption,
 } from "./amadeus-mirror-policy.ts";

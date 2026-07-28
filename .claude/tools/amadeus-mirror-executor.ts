@@ -10,6 +10,7 @@ import {
 } from "./amadeus-mirror-capability.ts";
 import {
   classifyProjectFailure,
+  DEFAULT_PROJECT_PHASE_FIELD,
   expectedProjectFieldValues,
   mirrorEventKey,
   selectProjectStatusOption,
@@ -26,7 +27,6 @@ import {
   mutateMirrorStateAtomic,
   readMirrorState,
 } from "./amadeus-mirror-state-store.ts";
-import { DEFAULT_PROJECT_PHASE_FIELD } from "./amadeus-mirror-config.ts";
 import type {
   GatewayOutcome,
   MirrorAuditContext,
@@ -1434,8 +1434,8 @@ async function syncAuxiliaryWorkflowStatus(
   ) {
     return;
   }
-  const option = workflowField.options.find((each) => each.name === expected);
-  if (option === undefined) return;
+  const option = selectProjectStatusOption(workflowField, expected);
+  if (option === null) return;
   const permit = createMirrorProjectMutationPermit({
     event: context.event,
     repository: context.repository,

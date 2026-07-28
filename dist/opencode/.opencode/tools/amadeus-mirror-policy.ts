@@ -27,6 +27,8 @@ import type {
   MirrorStateSnapshot,
 } from "./amadeus-mirror-types.ts";
 
+export const DEFAULT_PROJECT_PHASE_FIELD = "Intent Phase";
+
 export type MirrorPolicyInput =
   | Readonly<{
       kind: "lifecycle";
