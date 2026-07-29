@@ -2441,10 +2441,11 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       ));
       return;
     }
+    const directScopeExamples = "fix, feature, poc";
     emit(askDirective(
       `No stock scope clearly fits: "${flags.intent}". ` +
         "I can compose a tailored plan for this task (recommended: reply \"compose\"), " +
-        "or you can name a scope directly (e.g. fix, feature, poc; see /amadeus --help for all).",
+        `or you can name a scope directly (e.g. ${directScopeExamples}; see /amadeus --help for all).`,
     ));
     return;
   }

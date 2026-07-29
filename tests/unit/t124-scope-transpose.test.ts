@@ -115,12 +115,22 @@ function mkTempPath(tag: string): string {
  * captured streams).
  */
 function runGraph(args: string[], graphPath: string, gridPath: string) {
+  return runGraphWithScopes(args, graphPath, gridPath);
+}
+
+function runGraphWithScopes(
+  args: string[],
+  graphPath: string,
+  gridPath: string,
+  scopesDir?: string,
+) {
   return spawnSync(BUN, [GRAPH_TOOL, ...args], {
     encoding: "utf-8",
     env: {
       ...process.env,
       AMADEUS_STAGE_GRAPH: graphPath,
       AMADEUS_SCOPE_GRID: gridPath,
+      ...(scopesDir ? { AMADEUS_SCOPES_DIR: scopesDir } : {}),
     },
   });
 }
@@ -318,13 +328,25 @@ describe("compile preserves composed scope-grid entries", () => {
     const donor = Object.keys(grid)[0];
     grid["composed-t124"] = { stages: { ...grid[donor].stages } };
     writeFileSync(gridPath, `${JSON.stringify(grid, null, 2)}\n`, "utf-8");
+    const scopesDir = mkdtempSync(join(tmpdir(), "amadeus-t124-scopes-"));
+    tempFiles.push(scopesDir);
+    writeFileSync(
+      join(scopesDir, "amadeus-composed-t124.md"),
+      "---\nname: composed-t124\n---\n",
+      "utf-8",
+    );
 
     // A grid carrying a composed entry is NOT drift: --check exits 0.
-    const check = runGraph(["compile", "--check"], graphPath, gridPath);
+    const check = runGraphWithScopes(
+      ["compile", "--check"],
+      graphPath,
+      gridPath,
+      scopesDir,
+    );
     expect(check.status).toBe(0);
 
     // A full recompile keeps the composed entry (and the stock scopes).
-    const r = runGraph(["compile"], graphPath, gridPath);
+    const r = runGraphWithScopes(["compile"], graphPath, gridPath, scopesDir);
     expect(r.status).toBe(0);
     const after = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<
       string,

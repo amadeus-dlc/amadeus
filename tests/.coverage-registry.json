@@ -4373,6 +4373,50 @@
     },
     {
       "unitClass": "scope",
+      "unitId": "chore",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t125-scope-files.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "enterprise",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t141-enterprise-scope-routing.test.ts",
+          "mechanism": "sdk"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "feature",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/e2e/t-tui-t29-env-scope.serial.test.ts",
+          "mechanism": "tui"
+        },
+        {
+          "file": "tests/integration/t130-scope-runners.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/smoke/t130-scope-runners.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
       "unitId": "fix",
       "minMechanism": "none",
       "coveredBy": [
@@ -4419,50 +4463,6 @@
         {
           "file": "tests/integration/t30-scope-stage-mapping.test.ts",
           "mechanism": "none"
-        },
-        {
-          "file": "tests/smoke/t130-scope-runners.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "scope",
-      "unitId": "chore",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/unit/t125-scope-files.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "scope",
-      "unitId": "enterprise",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t141-enterprise-scope-routing.test.ts",
-          "mechanism": "sdk"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "scope",
-      "unitId": "feature",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/e2e/t-tui-t29-env-scope.serial.test.ts",
-          "mechanism": "tui"
-        },
-        {
-          "file": "tests/integration/t130-scope-runners.test.ts",
-          "mechanism": "cli"
         },
         {
           "file": "tests/smoke/t130-scope-runners.test.ts",
