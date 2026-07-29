@@ -8,7 +8,12 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { initProcessObservability, observabilityEnabled } from "../tools/amadeus-observability.ts";
+import { ensureContextManager, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
+import { createLocalSpanExporter } from "../otel/local-span-exporter.ts";
+import { getAmadeusTracer, registerTracerProvider } from "../otel/tracer-provider.ts";
 import {
+  activeIntent,
+  docsRoot,
   errorMessage,
   hooksHealthDir,
   isClaudeCodeHookInput,
@@ -63,13 +68,38 @@ try {
 // diagnostics. Guarded by the same opt-in every other telemetry surface uses.
 if (observabilityEnabled(projectDir)) {
   try {
-    const projector = new URL("../tools/amadeus-otel-projector.ts", import.meta.url).pathname;
-    Bun.spawn({
-      cmd: ["bun", "run", projector, "export", "--project-dir", projectDir],
-      stdout: "ignore",
-      stderr: "ignore",
-      stdin: "ignore",
-    }).unref();
+    // U1 representative subprocess wiring: the session-end -> projector spawn
+    // is wrapped in a span (FR-TRC-1) with W3C context injected into the
+    // child environment (FR-TRC-5 minimal). The callback does NOT auto-end
+    // the span — finally { span.end(); } (FR-TRC-2).
+    ensureContextManager();
+    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir }) });
+    const tracer = getAmadeusTracer();
+    const recordRoot = docsRoot(projectDir);
+    const intent = activeIntent(projectDir);
+    tracer.startActiveSpan("session-end->projector", (span) => {
+      try {
+        if (recordRoot !== null && intent !== null) {
+          // Persist the intent anchor so a later short-lived process can
+          // rejoin this trace as a remote parent (FR-TRC-4).
+          persistIntentContext(recordRoot, {
+            traceId: span.spanContext().traceId,
+            anchorSpanId: span.spanContext().spanId,
+            intentId: intent,
+          });
+        }
+        const projector = new URL("../tools/amadeus-otel-projector.ts", import.meta.url).pathname;
+        Bun.spawn({
+          cmd: ["bun", "run", projector, "export", "--project-dir", projectDir],
+          stdout: "ignore",
+          stderr: "ignore",
+          stdin: "ignore",
+          env: injectToSubprocess({ ...process.env }),
+        }).unref();
+      } finally {
+        span.end();
+      }
+    });
   } catch {
     // fail-open: a missing runtime or spawn failure never blocks session end
   }

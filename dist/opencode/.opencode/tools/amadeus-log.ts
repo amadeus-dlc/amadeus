@@ -5,9 +5,16 @@
 // these because they fire per-question, not per state transition.
 
 import { existsSync, readFileSync } from "node:fs";
-import { appendAuditEntry } from "./amadeus-audit.ts";
+import { createAuditLogExporter } from "../otel/audit-log-exporter.ts";
+import { attachIntentContext, ensureContextManager, restoreIntentContext } from "../otel/context.ts";
+import { createLocalLogExporter } from "../otel/local-log-exporter.ts";
+import { emitEvent, registerLoggerProvider } from "../otel/logger-provider.ts";
+import { assertMutationAllowed, setFatal, verifyJournalHealth } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
+  activeIntent,
+  auditFilePath,
+  docsRoot,
   emitError,
   errorMessage,
   hasOpenGate,
@@ -42,12 +49,48 @@ function resolveActiveProjectDir(explicit?: string): string {
   return pd;
 }
 
+// v1 audit event type -> OTel event name for the representative U1 pair.
+const OTEL_EVENT_NAMES: Record<string, string> = {
+  DECISION_RECORDED: "amadeus.decision.recorded",
+  QUESTION_ANSWERED: "amadeus.question.answered",
+};
+
 function emitAudit(
-  pd: string,
   eventType: string,
   fields: Record<string, string>
 ): void {
-  appendAuditEntry(eventType, fields, pd);
+  // U1 representative wiring: canonical events flow through the Amadeus
+  // Logger Provider (emitEvent -> AuditLogExporter), never through a direct
+  // appendAuditEntry call site (BR-1). The failure contract is unchanged:
+  // a write failure throws synchronously here AND sets the fatal latch.
+  emitEvent(OTEL_EVENT_NAMES[eventType] ?? eventType, fields);
+}
+
+// One-time OTel bootstrap for this short-lived CLI process (FR-EXP-1):
+// register the Amadeus Logger Provider against the synchronous
+// AuditLogExporter, restore the persisted intent anchor (FR-TRC-4), and run
+// the non-destructive journal health probe — an unhealthy journal latches
+// the process so no later canonical mutation proceeds (FR-EVT-5).
+function bootstrapOtel(pd: string): void {
+  ensureContextManager();
+  registerLoggerProvider({
+    projectDir: pd,
+    auditExporter: createAuditLogExporter({ projectDir: pd }),
+    logExporter: createLocalLogExporter({ projectDir: pd }),
+  });
+  const intent = activeIntent(pd);
+  const root = docsRoot(pd);
+  if (intent !== null && root !== null) {
+    const restored = restoreIntentContext(root, intent);
+    if (restored !== null) attachIntentContext(restored);
+  }
+  const shard = auditFilePath(pd);
+  if (existsSync(shard)) {
+    const health = verifyJournalHealth({ shardPath: shard, projectDir: pd });
+    if (!health.ok) {
+      setFatal(`journal health probe failed: ${health.detail}`);
+    }
+  }
 }
 
 // --- Flag parsing ---
@@ -86,7 +129,10 @@ function handleDecision(args: string[]): void {
   if (!flags.stage) error("Missing --stage <slug>");
   if (!flags.decision) error("Missing --decision <text>");
 
-  const pd = resolveActiveProjectDir(projectDir);
+  // The active-workflow guard already ran in main (bootstrapOtel resolves
+  // the project dir with the same refusal). The latch check is the
+  // FR-EVT-4 mutation gate for this entrypoint.
+  assertMutationAllowed();
   const fields: Record<string, string> = {
     Stage: flags.stage,
     Decision: flags.decision,
@@ -95,7 +141,7 @@ function handleDecision(args: string[]): void {
   if (flags.rationale) fields.Rationale = flags.rationale;
 
   try {
-    emitAudit(pd, "DECISION_RECORDED", fields);
+    emitAudit("DECISION_RECORDED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -115,6 +161,7 @@ function handleAnswer(args: string[]): void {
   if (!flags.details) error("Missing --details <text>");
 
   const pd = resolveActiveProjectDir(projectDir);
+  assertMutationAllowed(); // FR-EVT-4: refuse when a prior canonical write failed
   const fields: Record<string, string> = {
     Stage: flags.stage,
     Details: flags.details,
@@ -147,7 +194,7 @@ function handleAnswer(args: string[]): void {
   }
 
   try {
-    emitAudit(pd, "QUESTION_ANSWERED", fields);
+    emitAudit("QUESTION_ANSWERED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -186,6 +233,7 @@ function main(): void {
   }
 
   try {
+    bootstrapOtel(resolveActiveProjectDir(projectDir));
     switch (subcommand) {
       case "decision":
         handleDecision(filteredArgs.slice(1));
