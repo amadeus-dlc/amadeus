@@ -23,6 +23,7 @@ import type {
   Tracer,
   TracerProvider,
 } from "../vendor/opentelemetry/api/index.js";
+import { processParentSpanContext } from "./context.ts";
 import type { CompletedSpanRecord, LocalSpanExporter } from "./local-span-exporter.ts";
 
 function hexId(bytes: number): string {
@@ -58,7 +59,13 @@ class AmadeusSpan implements Span {
   ) {
     this.kind = options?.kind !== undefined ? String(options.kind) : "internal";
     this.startMs = options?.startTime !== undefined ? toMs(options.startTime) : Date.now();
-    const parent = trace.getSpan(parentContext)?.spanContext();
+    const parent =
+      trace.getSpan(parentContext)?.spanContext() ??
+      // No span in scope: fall back to the process remote parent (the env
+      // carrier or the restored intent anchor) so this short-lived process
+      // joins the intent trace instead of opening an orphan trace (BR-3).
+      processParentSpanContext() ??
+      undefined;
     if (parent !== undefined) {
       this.ctx = { traceId: parent.traceId, spanId: hexId(8), traceFlags: parent.traceFlags };
       this.parentSpanId = parent.spanId;

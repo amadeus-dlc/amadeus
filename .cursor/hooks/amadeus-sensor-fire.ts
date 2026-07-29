@@ -20,7 +20,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
-import { initProcessObservability } from "../tools/amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "../tools/amadeus-observability.ts";
+import { injectToSubprocess } from "../otel/context.ts";
 import {
   type ClaudeCodeHookInput,
   getField,
@@ -117,6 +118,9 @@ if (!existsSync(stateFilePath(projectDir))) process.exit(0);
 
 // Telemetry process span (opt-in; no-op unless observability.enabled)
 initProcessObservability("hook:sensor-fire", projectDir);
+// Re-attach to the intent trace (FR-TRC-4/5) so the dispatcher spawn below
+// carries the W3C carrier and the sensor path joins the same trace (BR-3).
+attachProcessTraceContext(projectDir);
 
 let stateContent: string;
 try {
@@ -229,6 +233,9 @@ for (const entry of applicableSensors) {
         cwd: projectDir,
         timeout: SUBPROCESS_TIMEOUT_MS,
         stdio: ["ignore", "pipe", "pipe"],
+        // W3C carrier into the dispatcher env (FR-TRC-5); no-op keys absent
+        // when no trace context is attached.
+        env: injectToSubprocess({ ...process.env }),
       }
     );
     // Sensor outcomes stay inside the dispatcher (paired audit rows by

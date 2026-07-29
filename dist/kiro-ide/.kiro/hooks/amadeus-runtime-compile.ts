@@ -23,7 +23,8 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { initProcessObservability } from "../tools/amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "../tools/amadeus-observability.ts";
+import { injectToSubprocess } from "../otel/context.ts";
 import {
   activeIntent,
   activeSpace,
@@ -124,6 +125,9 @@ if (audit.length === 0) process.exit(0);
 
 // Telemetry process span (opt-in; no-op unless observability.enabled)
 initProcessObservability("hook:runtime-compile", projectDir);
+// Re-attach to the intent trace (FR-TRC-4/5) so the compile subprocess below
+// carries the W3C carrier and joins the same trace (BR-3).
+attachProcessTraceContext(projectDir);
 
 // 5. Heartbeat — doctor reads this file's mtime to detect silent-hook failure.
 //    Kept at the bare (workspace-level) health dir to match where --doctor reads
@@ -191,6 +195,8 @@ try {
     cwd: projectDir,
     timeout: 30_000,
     stdio: ["ignore", "pipe", "pipe"],
+    // W3C carrier into the compile subprocess env (FR-TRC-5).
+    env: injectToSubprocess({ ...process.env }),
   });
   if (result.status !== 0) {
     recordHookDrop(

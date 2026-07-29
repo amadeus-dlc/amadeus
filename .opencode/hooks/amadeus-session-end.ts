@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { initProcessObservability, observabilityEnabled } from "../tools/amadeus-observability.ts";
-import { ensureContextManager, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
+import { ensureContextManager, INTENT_CONTEXT_SCHEMA_VERSION, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
 import { createLocalSpanExporter } from "../otel/local-span-exporter.ts";
 import { getAmadeusTracer, registerTracerProvider } from "../otel/tracer-provider.ts";
 import {
@@ -86,6 +86,7 @@ if (observabilityEnabled(projectDir)) {
             traceId: span.spanContext().traceId,
             anchorSpanId: span.spanContext().spanId,
             intentId: intent,
+            schemaVersion: INTENT_CONTEXT_SCHEMA_VERSION,
           });
         }
         const projector = new URL("../tools/amadeus-otel-projector.ts", import.meta.url).pathname;
