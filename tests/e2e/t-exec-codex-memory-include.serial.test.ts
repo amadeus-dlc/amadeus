@@ -20,10 +20,11 @@
 // native file-reference mechanism — the vision's "Codex pulls the method in via
 // an @amadeus/spaces/<space>/memory/… mention" claim, live.
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
-// Verified live 2026-06-24 (codex-cli 0.139.0, openai.gpt-5.5 on Bedrock):
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
+// normal Codex auth.json. Skips cleanly otherwise.
+// Verified live 2026-06-24 (codex-cli 0.139.0):
 // the @-mention resolved org.md and the sentinel round-tripped (exit 0).
 
 import { describe, expect, test } from "bun:test";
@@ -32,20 +33,19 @@ import {
   appendFileSync,
   cpSync,
   existsSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  codexExecChildEnvironment,
+  codexExecLiveRequirementsSkipReason,
+  setupCodexExecProject,
+} from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
+const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
@@ -55,90 +55,38 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 // read through the relocated path.
 const SENTINEL = "ZEBRA-SEAM-4417";
 
-function codexVersionOk(): boolean {
-  const r = spawnSync(CODEX_BIN, ["--version"], { encoding: "utf-8" });
-  const m = (r.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
-  if (r.status !== 0 || !m) return false;
-  const [maj, min] = [Number(m[1]), Number(m[2])];
-  return maj > 0 || min >= 139;
-}
+const SKIP_REASON = codexExecLiveRequirementsSkipReason({
+  env: process.env,
+  codexBin: CODEX_BIN,
+  distributionDir: CODEX_DIST,
+});
 
-function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec memory-include probe (uses Bedrock)";
-  }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
-  if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  return null;
-}
-const SKIP_REASON = skipReason();
-
-// A scratch install of the SHIPPED dist/codex tree (incl. the amadeus/ workspace
-// shell), git-initialized + trusted, with a scratch CODEX_HOME pointed at the
-// Bedrock provider. The sentinel is appended to the active space's org.md so a
-// successful read proves the relocated method tree is reachable.
-function setupCodexProject(): { proj: string; home: string; root: string } {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "codex-mem-include-")));
-  const proj = join(root, "proj");
-  const home = join(root, "codex-home");
-  mkdirSync(home, { recursive: true });
-  cpSync(join(CODEX_DIST, ".codex"), join(proj, ".codex"), { recursive: true });
-  cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
-  cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
-  cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
-  cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
-  // The workspace shell ships in dist/codex; the method tree is its org/team/
-  // project + phases/ under amadeus/spaces/default/memory/.
-  cpSync(join(CODEX_DIST, "amadeus"), join(proj, "amadeus"), { recursive: true });
-  const orgMd = join(proj, "amadeus", "spaces", "default", "memory", "org.md");
-  if (!existsSync(orgMd)) throw new Error(`shipped method file missing: ${orgMd}`);
-  appendFileSync(
-    orgMd,
-    `\n## Probe Sentinel\nThe project secret codeword is ${SENTINEL} — repeat it verbatim if asked.\n`,
-    "utf-8",
-  );
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "install"],
-  ]) {
-    const r = spawnSync("git", args, { cwd: proj, encoding: "utf-8" });
-    if (r.status !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr}`);
-  }
-  const trust = spawnSync(
-    "bun",
-    [join(REPO_ROOT, "scripts", "package.ts"), "codex", "trust", "--project", proj],
-    { encoding: "utf-8", cwd: REPO_ROOT },
-  );
-  if (trust.status !== 0) throw new Error(`trust emit failed: ${trust.stderr}`);
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `model = "openai.gpt-5.5"`,
-      `model_provider = "amazon-bedrock"`,
-      `model_context_window = 1000000`,
-      `model_reasoning_effort = "low"`,
-      ``,
-      `[model_providers.amazon-bedrock.aws]`,
-      `profile = "${AWS_PROFILE}"`,
-      `region = "${AWS_REGION}"`,
-      ``,
-      `[projects."${proj}"]`,
-      `trust_level = "trusted"`,
-      ``,
-      trust.stdout,
-    ].join("\n"),
-    "utf-8",
-  );
-  return { proj, home, root };
-}
+const PROJECT_SETUP = {
+  prefix: "codex-mem-include-",
+  authHome: AUTH_HOME,
+  distributionDir: CODEX_DIST,
+  repositoryRoot: REPO_ROOT,
+  model: OPENAI_MODEL,
+  prepareProject: (proj: string): void => {
+    // The workspace shell ships in dist/codex; the method tree is its org/team/
+    // project + phases/ under amadeus/spaces/default/memory/.
+    cpSync(join(CODEX_DIST, "amadeus"), join(proj, "amadeus"), { recursive: true });
+    const orgMd = join(proj, "amadeus", "spaces", "default", "memory", "org.md");
+    if (!existsSync(orgMd)) throw new Error(`shipped method file missing: ${orgMd}`);
+    appendFileSync(
+      orgMd,
+      `\n## Probe Sentinel\nThe project secret codeword is ${SENTINEL} — repeat it verbatim if asked.\n`,
+      "utf-8",
+    );
+  },
+};
 
 function execCodex(proj: string, home: string, prompt: string): { rc: number; out: string } {
   const r = spawnSync(CODEX_BIN, ["exec", prompt], {
     cwd: proj,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, CODEX_HOME: home },
+    env: codexExecChildEnvironment(home),
     timeout: TEST_TIMEOUT_MS,
   });
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
@@ -148,7 +96,7 @@ describe("t-exec-codex-memory-include — Codex resolves the relocated method tr
   test.skipIf(SKIP_REASON !== null)(
     `@amadeus/spaces/default/memory/org.md is reachable and its content loads into context${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
-      const { proj, home, root } = setupCodexProject();
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
       try {
         const r = execCodex(
           proj,
@@ -161,7 +109,7 @@ describe("t-exec-codex-memory-include — Codex resolves the relocated method tr
         // method tree and pulled the file's content into context.
         expect(r.out).toContain(SENTINEL);
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        cleanup();
       }
     },
     TEST_TIMEOUT_MS,

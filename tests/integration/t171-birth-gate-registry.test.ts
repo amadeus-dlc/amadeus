@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent-select-response, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:buildIntentSelectionSnapshot, function:resolveCurrentIntentSelectionResponse, function:listIntents, function:activeSpace
 //
 // Mechanism: cli (spawned dist tools) — birth + `next` run end-to-end the way
 // the conductor runs them.
@@ -11,12 +11,20 @@
 // cursor is gitignored). Without the guard the gate would mint a DUPLICATE
 // intent over the existing ones, violating "auto-birth fires only on ZERO
 // intents". The fix: before birthing, consult listIntents over the active
-// space; if intents EXIST but none is flagged active, emit an `ask` directive
-// that lists them and asks the human to pick one via `/amadeus intent <slug>`,
-// instead of the birth `print`. The zero-intent case STILL births unchanged.
+// space; if intents EXIST but none is flagged active, emit a `select-intent` directive
+// that lists them and accepts the human's displayed choice, instead of the birth
+// `print`. The zero-intent case STILL births unchanged.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   cleanupTestProject,
@@ -24,6 +32,12 @@ import {
   removeWorkspaceRecord,
 } from "../harness/fixtures.ts";
 import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  setActiveIntentCursor,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  intentPickPromptIfRecordsExist,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -31,6 +45,7 @@ const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-util
 const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-orchestrate.ts");
 
 let proj: string;
+
 beforeEach(() => {
   proj = createTestProject();
   // P9: the birth gate's whole point is consulting an EMPTY registry (zero
@@ -82,6 +97,71 @@ const recordDirs = (p: string, space = "default"): string[] =>
     existsSync(join(intentsDir(p, space), d, "amadeus-state.md")),
   );
 
+function writeIntentRegistryFixture(entries: unknown): void {
+  const dir = intentsDir(proj);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "intents.json"),
+    `${JSON.stringify(entries, null, 2)}\n`,
+    "utf-8",
+  );
+}
+
+function writeIntentRecordFixture(dirName: string): void {
+  const recordDir = join(intentsDir(proj), dirName);
+  mkdirSync(recordDir, { recursive: true });
+  writeFileSync(
+    join(recordDir, "amadeus-state.md"),
+    "# AI-DLC State Tracking\n",
+    "utf-8",
+  );
+}
+
+describe("t171 active-intent cursor commit reporting", () => {
+  const selected = "260101-selected-intent";
+
+  test("reports success when directory fsync fails after the requested cursor was renamed", () => {
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeDirectoryFsync: () => {
+        throw new Error("directory-fsync");
+      },
+    });
+
+    expect(result).toBe(true);
+    expect(readFileSync(cursorPath(proj), "utf-8")).toBe(`${selected}\n`);
+  });
+
+  test("reports a pre-rename failure even when the previous cursor already has the requested value", () => {
+    mkdirSync(intentsDir(proj), { recursive: true });
+    writeFileSync(cursorPath(proj), `${selected}\n`, "utf-8");
+
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeRename: () => {
+        throw new Error("before-rename");
+      },
+    });
+
+    expect(result).toBe(false);
+    expect(readFileSync(cursorPath(proj), "utf-8")).toBe(`${selected}\n`);
+  });
+
+  test("does not follow a symlink installed after rename while confirming the cursor", () => {
+    const external = join(proj, "external-cursor-target");
+    writeFileSync(external, `${selected}\n`, "utf-8");
+
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeDirectoryFsync: () => {
+        rmSync(cursorPath(proj));
+        symlinkSync(external, cursorPath(proj));
+        throw new Error("directory-fsync");
+      },
+    });
+
+    expect(result).toBe(false);
+    expect(readFileSync(external, "utf-8")).toBe(`${selected}\n`);
+  });
+});
+
 describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
   // ----------------------------------------------------------------
   // (1) >1 intents + no active-intent cursor (fresh clone) → PROMPT, not birth
@@ -101,26 +181,32 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       return records;
     };
 
-    test("Branch 9a (explicit --scope flag) emits an `ask` listing the existing intents, not a birth print", () => {
+    test("Branch 9a emits `select-intent` with the existing intents, not a birth print", () => {
       seedTwoIntentsNoCursor();
       const r = next(["--scope", "poc"]);
       const d = JSON.parse(r.stdout.trim());
+      expect(intentPickPromptIfRecordsExist(proj)).toEqual(d);
       // NOT a birth print: the gate must not name intent-birth here.
       expect(d.kind).not.toBe("print");
-      expect(d.kind).toBe("ask");
+      expect(d.kind).toBe("select-intent");
       expect(d.message ?? "").not.toContain("intent-birth");
-      // It prompts to pick an existing intent by slug via `/amadeus intent <slug>`.
-      expect(d.question).toContain("/amadeus intent <slug>");
-      // The two existing intent slugs are named in the prompt. The engine lists
-      // the registry `slug` values (amadeus-orchestrate.ts intentPickPrompt →
-      // intents.map(i => i.slug)), NOT the dir names — so derive the expected
-      // slugs from the registry, not by stripping the (now date-prefixed, no-hex)
-      // dir name. These births passed no description, so each slug is its scope
-      // token ("poc", "feature").
+      // The human answers this gate directly. The conductor owns applying the
+      // response and continuing; the question must not instruct the human to
+      // run an internal command or re-run the engine.
+      expect(d.question).toBe("Choose an existing intent to continue.");
+      expect(d.question).not.toContain("/amadeus intent");
+      expect(d.question).not.toContain("re-run");
+      // The displayed options, rather than the prose question, carry the
+      // registry-backed choices. These births passed no description, so each
+      // label is its scope token ("poc", "feature").
       const slugs = readIntentRegistry(proj).map((e) => e.slug);
       expect(slugs.length).toBe(2);
-      for (const s of slugs) expect(d.question).toContain(s);
-      // Read-only: no third intent was born; the cursor is still unset.
+      expect(d.options).toEqual(slugs);
+      expect(d.selection_token).toMatch(/^[0-9a-f]{64}$/);
+      expect(JSON.parse(next(["--scope", "poc"]).stdout.trim()).selection_token).toBe(
+        d.selection_token,
+      );
+      // No third intent was born and the cursor is still unset.
       expect(recordDirs(proj).length).toBe(2);
       expect(existsSync(cursorPath(proj))).toBe(false);
     });
@@ -129,10 +215,161 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       seedTwoIntentsNoCursor();
       const r = next(["poc"]); // positional valid-scope name, no --scope flag
       const d = JSON.parse(r.stdout.trim());
-      expect(d.kind).toBe("ask");
+      expect(d.kind).toBe("select-intent");
+      expect(d.options).toEqual(readIntentRegistry(proj).map((e) => e.slug));
       expect(d.message ?? "").not.toContain("intent-birth");
-      expect(d.question).toContain("/amadeus intent <slug>");
+      expect(d.question).toBe("Choose an existing intent to continue.");
       expect(recordDirs(proj).length).toBe(2); // no duplicate born
+    });
+
+    test("the utility maps a full-width ordinal and selects under one lock", () => {
+      seedTwoIntentsNoCursor();
+      const firstRecord = readIntentRegistry(proj)[0].dirName;
+      if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+
+      const selected = util([
+        "intent-select-response",
+        directive.selection_token,
+        "１",
+      ]);
+
+      expect(selected.status, selected.out).toBe(0);
+      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
+    });
+
+    test("a cursor write failure rejects the selection instead of reporting success", () => {
+      seedTwoIntentsNoCursor();
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+      mkdirSync(cursorPath(proj));
+
+      const rejected = util([
+        "intent-select-response",
+        directive.selection_token,
+        "1",
+      ]);
+
+      expect(rejected.status).toBe(1);
+      expect(rejected.out).toContain("active-intent cursor");
+      expect(rejected.stdout).not.toContain("Active intent");
+    });
+
+    test("cursor selection replaces a symlink atomically without modifying its target", () => {
+      seedTwoIntentsNoCursor();
+      const firstRecord = readIntentRegistry(proj)[0].dirName;
+      if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+      const external = join(proj, "external-cursor-target");
+      writeFileSync(external, "external\n", "utf-8");
+      symlinkSync(external, cursorPath(proj));
+
+      const selected = util([
+        "intent-select-response",
+        directive.selection_token,
+        "1",
+      ]);
+
+      expect(selected.status, selected.out).toBe(0);
+      expect(readFileSync(external, "utf-8")).toBe("external\n");
+      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
+    });
+
+    test("archived intents are omitted from the selectable snapshot", () => {
+      seedTwoIntentsNoCursor();
+      const registry = readIntentRegistry(proj);
+      registry[0] = { ...registry[0], status: "archived" };
+      writeIntentRegistryFixture(registry);
+
+      const r = next(["--scope", "poc"]);
+      const d = JSON.parse(r.stdout.trim());
+
+      expect(d.kind).toBe("select-intent");
+      expect(d.options).toEqual([registry[1].slug]);
+      expect(existsSync(cursorPath(proj))).toBe(false);
+    });
+
+    test("an orphan is omitted when registry-backed intents remain selectable", () => {
+      seedTwoIntentsNoCursor();
+      const orphan = "260101-orphan-alongside-valid";
+      writeIntentRecordFixture(orphan);
+
+      const d = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+
+      expect(d.kind).toBe("select-intent");
+      expect(d.options).toEqual(readIntentRegistry(proj).map((entry) => entry.slug));
+      expect(JSON.stringify(d)).not.toContain(orphan);
+      expect(recordDirs(proj)).toHaveLength(3);
+    });
+
+    test("all-archived entries emit an error instead of a selection or birth", () => {
+      seedTwoIntentsNoCursor();
+      const registry = readIntentRegistry(proj).map((entry) => ({
+        ...entry,
+        status: "archived" as const,
+      }));
+      writeIntentRegistryFixture(registry);
+
+      const d = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+
+      expect(d.kind).toBe("error");
+      expect(d.message).toContain("none are selectable");
+      for (const entry of registry) expect(d.message).toContain(entry.dirName);
+      expect(recordDirs(proj)).toHaveLength(2);
+    });
+
+    test("the utility rejects caller-supplied options", () => {
+      seedTwoIntentsNoCursor();
+      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
+
+      const injectedOptions = util([
+        "intent-select-response",
+        directive.selection_token,
+        "1",
+        "feature",
+        "poc",
+      ]);
+
+      expect(injectedOptions.status).toBe(1);
+      expect(injectedOptions.out).toContain("Usage:");
+      expect(existsSync(cursorPath(proj))).toBe(false);
+    });
+  });
+
+  describe("unselectable intent entries fail closed instead of birthing duplicates", () => {
+    test("an orphan record emits an actionable error that names the record", () => {
+      const orphan = "260101-orphan-record";
+      writeIntentRecordFixture(orphan);
+
+      const r = next(["--scope", "poc"]);
+      expect(r.status, r.out).toBe(0);
+      const d = JSON.parse(r.stdout.trim());
+
+      expect(d.kind).toBe("error");
+      expect(d.message).toContain(orphan);
+      expect(d.message).toContain("Repair the intent registry");
+      expect(recordDirs(proj)).toEqual([orphan]);
+      expect(existsSync(cursorPath(proj))).toBe(false);
+    });
+
+    test("a registry-only entry emits an actionable error", () => {
+      writeIntentRegistryFixture([
+        {
+          uuid: "00000000-0000-7000-8000-000000000123",
+          slug: "missing-record",
+          dirName: "260101-missing-record",
+          scope: "poc",
+          status: "in-flight",
+        },
+      ]);
+
+      const r = next(["--scope", "poc"]);
+      expect(r.status, r.out).toBe(0);
+      const d = JSON.parse(r.stdout.trim());
+
+      expect(d.kind).toBe("error");
+      expect(d.message).toContain("missing-record");
+      expect(d.message).toContain("registry-only");
+      expect(recordDirs(proj)).toEqual([]);
     });
   });
 

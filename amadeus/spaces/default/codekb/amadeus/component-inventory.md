@@ -1,10 +1,20 @@
 # コンポーネント棚卸し
 
+## Slop cleanup 対象コンポーネント（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+
+| コンポーネント | 責務 | 現状 | 最小修正 |
+| --- | --- | --- | --- |
+| Intent Event Journal codec | JSONL journal の serialize / parse / identity | 5 canonical module が利用中だがコメントは「未配線」 | コメントを現行依存へ整合 |
+| Process observability seam | process span の初期化・exit flush | nullable singleton と未使用 `registered` が状態を二重表現 | 未使用フィールドと初期化子を削除 |
+| Markdown artifacts | 計画・workspace layout の説明 | 3 件の空白 diagnostic | 空白のみ除去 |
+
+全コンポーネントの責務・ownership・境界は不変。core tools 2 コンポーネントは正本 1 + dist 7 + self-install 5 の 13 コピー同期対象である。
+
 > **2026-07-27（intent `260726-answer-manual-binding`、[Issue #1548](https://github.com/amadeus-dlc/amadeus/issues/1548) bug、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（コンポーネント面に変化なし）。** 測定 ref: observed `ad1ff5de9`、base `09c669901`、距離 2。区間 2 コミットは record-only で mirror answer/guard スタックの source 変更ゼロ。#1548 は既存 mirror コンポーネント（adapter `amadeus-mirror-lifecycle.ts` / coordinator `amadeus-mirror-coordinator.ts` / types `amadeus-mirror-types.ts`）間の**契約の欠落**（answer 転送 `:969-985` が guard `:257-265` の要求フィールドを渡さない）で、新規コンポーネントの追加はない。配布は `amadeus-mirror-lifecycle.ts` の **13 コピー**（canonical 1 + self-install 5 + dist 7）が同期対象。詳細は上流入力 `re3-dev-scan-result.md` と本 scan の `architecture.md` / `code-quality-assessment.md` 新節、`re-scans/260726-answer-manual-binding.md`。
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin CLI 層・dispatch 層・スキル層のコンポーネント棚卸し（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+## plugin CLI 層・dispatch 層・スキル層のコンポーネント棚卸し（260727-plugin-verb-skills、履歴、差分リフレッシュ、observed `afb93a825`）
 
 260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**）。上流入力: Developer スキャン結果。件数・行数はすべて `wc -l` / `ls` / `find` / `git ls-files` 出力からの転記（測定 ref: observed `afb93a825`）。
 

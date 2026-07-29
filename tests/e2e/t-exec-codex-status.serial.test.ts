@@ -7,11 +7,11 @@
 // driver (no tmux, no painted screen; the model's final message + the
 // project's on-disk state are the observables).
 //
-// MR-6-PROVEN (2026-06-12, codex-cli 0.139.0 on Bedrock): the same rig shape
+// MR-6-PROVEN (2026-06-12, codex-cli 0.139.0): the same rig shape
 // ran a FULL poc workflow (INIT → 7 stages → Completed, 43 audit rows) with
 // hooks live — transcript archived in the journey write-up. This test pins
-// the cheap status journey so CI can re-verify the shipped tree end-to-end
-// without burning a whole workflow.
+// the cheap status journey so a local live run can re-verify the shipped tree
+// end-to-end without burning a whole workflow.
 //
 // SCOPE: the no-state case ONLY (status with no workflow = print-directive
 // terminal arm — turn-stable). With an ACTIVE workflow the conductor may
@@ -25,110 +25,51 @@
 //   - the engine's print-directive terminal arm (status names no workflow);
 //   - nothing is scaffolded by a read-only utility (no amadeus-docs creature).
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
+// normal Codex auth.json. Skips cleanly otherwise.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import {
+  codexExecChildEnvironment,
+  codexExecLiveRequirementsSkipReason,
+  setupCodexExecProject,
+} from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
+const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 
-function codexVersionOk(): boolean {
-  const r = spawnSync(CODEX_BIN, ["--version"], { encoding: "utf-8" });
-  const m = (r.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
-  if (r.status !== 0 || !m) return false;
-  const [maj, min] = [Number(m[1]), Number(m[2])];
-  return maj > 0 || min >= 139;
-}
+const SKIP_REASON = codexExecLiveRequirementsSkipReason({
+  env: process.env,
+  codexBin: CODEX_BIN,
+  distributionDir: CODEX_DIST,
+});
 
-function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec journey (uses Bedrock)";
-  }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
-  if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  return null;
-}
-const SKIP_REASON = skipReason();
-
-// A scratch install: dist/codex copied verbatim, git-initialized (project
-// hooks.json discovery requires a git repo — MR-3 finding D10), a scratch
-// CODEX_HOME with Bedrock provider + project trust + the trust pre-seed from
-// `package.ts codex trust` so hooks fire with zero TUI passes.
-function setupCodexProject(): { proj: string; home: string; root: string } {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "codex-exec-")));
-  const proj = join(root, "proj");
-  const home = join(root, "codex-home");
-  mkdirSync(home, { recursive: true });
-  cpSync(join(CODEX_DIST, ".codex"), join(proj, ".codex"), { recursive: true });
-  cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
-  cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
-  cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
-  cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "install"],
-  ]) {
-    const r = spawnSync("git", args, { cwd: proj, encoding: "utf-8" });
-    if (r.status !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr}`);
-  }
-  const trust = spawnSync(
-    "bun",
-    [join(REPO_ROOT, "scripts", "package.ts"), "codex", "trust", "--project", proj],
-    { encoding: "utf-8", cwd: REPO_ROOT },
-  );
-  if (trust.status !== 0) throw new Error(`trust emit failed: ${trust.stderr}`);
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `model = "openai.gpt-5.5"`,
-      `model_provider = "amazon-bedrock"`,
-      `model_context_window = 1000000`,
-      `model_reasoning_effort = "low"`,
-      ``,
-      `[model_providers.amazon-bedrock.aws]`,
-      `profile = "${AWS_PROFILE}"`,
-      `region = "${AWS_REGION}"`,
-      ``,
-      `[shell_environment_policy]`,
-      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
-      ``,
-      `[projects."${proj}"]`,
-      `trust_level = "trusted"`,
-      ``,
-      trust.stdout,
-    ].join("\n"),
-    "utf-8",
-  );
-  return { proj, home, root };
-}
+const PROJECT_SETUP = {
+  prefix: "codex-exec-",
+  authHome: AUTH_HOME,
+  distributionDir: CODEX_DIST,
+  repositoryRoot: REPO_ROOT,
+  model: OPENAI_MODEL,
+  rulesDir: ".codex/amadeus-rules",
+};
 
 function execCodex(proj: string, home: string, prompt: string): { rc: number; out: string } {
   const r = spawnSync(CODEX_BIN, ["exec", prompt], {
     cwd: proj,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, CODEX_HOME: home },
+    env: codexExecChildEnvironment(home),
     timeout: TEST_TIMEOUT_MS,
   });
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
@@ -138,7 +79,7 @@ describe("t-exec-codex-status — $amadeus --status on the shipped dist/codex vi
   test.skipIf(SKIP_REASON !== null)(
     `no-state: status renders 'no active workflow' and scaffolds nothing${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
-      const { proj, home, root } = setupCodexProject();
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
       try {
         const r = execCodex(proj, home, "Use the $amadeus skill to run: /amadeus --status");
         expect(r.rc).toBe(0);
@@ -152,7 +93,7 @@ describe("t-exec-codex-status — $amadeus --status on the shipped dist/codex vi
         expect(existsSync(join(proj, "amadeus-docs", "amadeus-state.md"))).toBe(false);
         expect(existsSync(join(proj, "amadeus-docs", "ideation"))).toBe(false);
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        cleanup();
       }
     },
     TEST_TIMEOUT_MS,

@@ -36,31 +36,32 @@
 // `--last` filters recorded sessions by cwd, so beat 2 MUST run with the same
 // cwd as beat 1 (both use the project dir).
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
+// normal Codex auth.json. Skips cleanly otherwise.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  cpSync,
   existsSync,
-  mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  codexExecChildEnvironment,
+  codexExecLiveRequirementsSkipReason,
+  setupCodexExecProject,
+} from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
-const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
+const CODEX_DIST = process.env.AMADEUS_CODEX_DIST ?? join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
+const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const PER_BEAT_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
@@ -69,74 +70,20 @@ const PER_BEAT_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 100
 // all plus slack.
 const TEST_TIMEOUT_MS = PER_BEAT_TIMEOUT_MS * 3 + 30_000;
 
-function codexVersionOk(): boolean {
-  const r = spawnSync(CODEX_BIN, ["--version"], { encoding: "utf-8" });
-  const m = (r.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
-  if (r.status !== 0 || !m) return false;
-  const [maj, min] = [Number(m[1]), Number(m[2])];
-  return maj > 0 || min >= 139;
-}
+const SKIP_REASON = codexExecLiveRequirementsSkipReason({
+  env: process.env,
+  codexBin: CODEX_BIN,
+  distributionDir: CODEX_DIST,
+});
 
-function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec journey (uses Bedrock)";
-  }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
-  if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  return null;
-}
-const SKIP_REASON = skipReason();
-
-// Same scratch-install shape as t-exec-codex-status (dist/codex verbatim,
-// git-initialized, Bedrock provider + project trust + hook trust pre-seed).
-function setupCodexProject(): { proj: string; home: string; root: string } {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "codex-exec-")));
-  const proj = join(root, "proj");
-  const home = join(root, "codex-home");
-  mkdirSync(home, { recursive: true });
-  cpSync(join(CODEX_DIST, ".codex"), join(proj, ".codex"), { recursive: true });
-  cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
-  cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
-  cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
-  cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "install"],
-  ]) {
-    const r = spawnSync("git", args, { cwd: proj, encoding: "utf-8" });
-    if (r.status !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr}`);
-  }
-  const trust = spawnSync(
-    "bun",
-    [join(REPO_ROOT, "scripts", "package.ts"), "codex", "trust", "--project", proj],
-    { encoding: "utf-8", cwd: REPO_ROOT },
-  );
-  if (trust.status !== 0) throw new Error(`trust emit failed: ${trust.stderr}`);
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `model = "openai.gpt-5.5"`,
-      `model_provider = "amazon-bedrock"`,
-      `model_context_window = 1000000`,
-      `model_reasoning_effort = "low"`,
-      ``,
-      `[model_providers.amazon-bedrock.aws]`,
-      `profile = "${AWS_PROFILE}"`,
-      `region = "${AWS_REGION}"`,
-      ``,
-      `[shell_environment_policy]`,
-      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
-      ``,
-      `[projects."${proj}"]`,
-      `trust_level = "trusted"`,
-      ``,
-      trust.stdout,
-    ].join("\n"),
-    "utf-8",
-  );
-  return { proj, home, root };
-}
+const PROJECT_SETUP = {
+  prefix: "codex-exec-",
+  authHome: AUTH_HOME,
+  distributionDir: CODEX_DIST,
+  repositoryRoot: REPO_ROOT,
+  model: OPENAI_MODEL,
+  rulesDir: ".codex/amadeus-rules",
+};
 
 // One codex turn. `resume: true` continues the newest recorded session for
 // this cwd (`codex exec resume --last "<prompt>"`) instead of starting fresh.
@@ -153,7 +100,7 @@ function codexTurn(
     cwd: proj,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, CODEX_HOME: home },
+    env: codexExecChildEnvironment(home),
     timeout: PER_BEAT_TIMEOUT_MS,
   });
   return { rc: r.status ?? -1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
@@ -172,11 +119,51 @@ function intentRecords(proj: string): string[] {
     .map((e) => e.name);
 }
 
+function packagedTool(proj: string, tool: string, args: string[]): void {
+  const r = spawnSync("bun", [join(proj, ".codex", "tools", tool), ...args], {
+    cwd: proj,
+    encoding: "utf-8",
+  });
+  if (r.status !== 0) {
+    throw new Error(`${tool} failed: ${r.stderr || r.stdout}`);
+  }
+}
+
+function seedCompletedIntent(proj: string, label: string): string {
+  packagedTool(proj, "amadeus-utility.ts", [
+    "intent-birth",
+    "--scope",
+    "bugfix",
+    "--arguments",
+    `${label} fixture`,
+    "--label",
+    label,
+  ]);
+  const cursor = join(proj, "amadeus", "spaces", "default", "intents", "active-intent");
+  const record = readFileSync(cursor, "utf-8").trim();
+  const statePath = join(
+    proj,
+    "amadeus",
+    "spaces",
+    "default",
+    "intents",
+    record,
+    "amadeus-state.md",
+  );
+  const completed = readFileSync(statePath, "utf-8")
+    .replace(/- \*\*Completed\*\*: \d+/, "- **Completed**: 7")
+    .replace(/- \*\*In Progress\*\*: .*/, "- **In Progress**: none")
+    .replace(/- \*\*Current Stage\*\*: .*/, "- **Current Stage**: build-and-test")
+    .replace(/- \[[- ?R]\] ([^—]+ — EXECUTE)/g, "- [x] $1");
+  writeFileSync(statePath, completed, "utf-8");
+  return record;
+}
+
 describe("t-exec-codex-compose-front - interactive compose over exec + exec resume", () => {
   test.skipIf(SKIP_REASON !== null)(
     `beat 1 stops at the gate with nothing written; beat 2 resume-approves into birth${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
-      const { proj, home, root } = setupCodexProject();
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
       try {
         // Beat 1: the compose front. The turn must END at a human question
         // (the proposal gate, or - conductor-forwarding variance - the
@@ -230,7 +217,48 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
           .join("\n");
         expect(audit).toContain("**Event**: WORKFLOW_STARTED");
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        cleanup();
+      }
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  test.skipIf(SKIP_REASON !== null)(
+    `a full-width ordinal selects the visible intent instead of reaching report as raw input${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
+    () => {
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
+      try {
+        const firstRecord = seedCompletedIntent(proj, "first-intent");
+        seedCompletedIntent(proj, "second-intent");
+        const cursor = join(
+          proj,
+          "amadeus",
+          "spaces",
+          "default",
+          "intents",
+          "active-intent",
+        );
+        rmSync(cursor);
+
+        const b1 = codexTurn(
+          proj,
+          home,
+          'Use the $amadeus skill. Run exactly `bun .codex/tools/amadeus-orchestrate.ts next --scope bugfix "fix a parser regression"` and follow the returned directive.',
+        );
+        expect(b1.rc, `${b1.stdout}\n${b1.stderr}`).toBe(0);
+        const session = sessionIdOf(b1.stderr);
+        expect(session).toBeDefined();
+        expect(b1.stdout).toContain("first-intent");
+        expect(b1.stdout).toContain("second-intent");
+        expect(existsSync(cursor)).toBe(false);
+
+        const b2 = codexTurn(proj, home, "１", { resume: true });
+        expect(b2.rc, `${b2.stdout}\n${b2.stderr}`).toBe(0);
+        expect(sessionIdOf(b2.stderr)).toBe(session);
+        expect(readFileSync(cursor, "utf-8").trim()).toBe(firstRecord);
+        expect(`${b2.stdout}\n${b2.stderr}`).not.toContain("report requires --result");
+      } finally {
+        cleanup();
       }
     },
     TEST_TIMEOUT_MS,

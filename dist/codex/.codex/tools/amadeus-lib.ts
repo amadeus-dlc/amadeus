@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2001,22 +2001,70 @@ export function listIntents(projectDir: string, space?: string): IntentInfo[] {
 }
 
 // Write the active-intent cursor for a space (gitignored per-user pointer).
-// Best-effort: the cursor dir is created if absent; a write failure is swallowed
-// (the cursor is per-user state, never the source of truth — the registry is).
-export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+// Callers that require a completed switch check the result; bootstrap callers
+// may deliberately keep the cursor best-effort because the registry remains
+// the source of truth.
+function activeIntentCursorMatches(path: string, dirName: string): boolean {
+  let fd: number | null = null;
+  try {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return false;
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    if (
+      !opened.isFile()
+      || after.isSymbolicLink()
+      || !after.isFile()
+      || before.dev !== opened.dev
+      || before.ino !== opened.ino
+      || opened.dev !== after.dev
+      || opened.ino !== after.ino
+    ) {
+      return false;
+    }
+    return readFileSync(fd, "utf-8").trim() === dirName;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* Read-back is already fail-closed. */ }
+    }
+  }
+}
+
+export function setActiveIntentCursor(
+  projectDir: string,
+  dirName: string,
+  space?: string,
+  writeHooks: AtomicWriteHooks = {},
+): boolean {
   const dir = intentsDir(projectDir, space);
+  const cursor = join(dir, ACTIVE_INTENT_POINTER);
+  let renamed = false;
   try {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
+    writeFileAtomic(cursor, `${dirName}\n`, {
+      beforeTempFsync: writeHooks.beforeTempFsync,
+      beforeRename: writeHooks.beforeRename,
+      beforeDirectoryFsync: () => {
+        renamed = true;
+        writeHooks.beforeDirectoryFsync?.();
+      },
+    });
+    return true;
   } catch {
-    /* per-user cursor; best-effort */
+    return renamed && activeIntentCursorMatches(cursor, dirName);
   }
 }
 
 // Clear the active-intent cursor when it still points at `dirName` (#1248). Read-
 // then-conditional-delete so a cursor already moved to another intent is left
 // untouched — only the exact intent that is completing releases its own pointer.
-// Best-effort and swallowed, mirroring setActiveIntentCursor: the cursor is
+// Best-effort and swallowed, mirroring bootstrap cursor writes: the cursor is
 // per-user state, never the source of truth (the registry is).
 export function clearActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
   const cursor = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
@@ -2215,7 +2263,7 @@ export function birthIntent(
     { uuid, slug, dirName, scope, repos: repos && repos.length > 0 ? repos : undefined, status: "in-flight" },
     space,
   );
-  setActiveIntentCursor(projectDir, dirName, space);
+  void setActiveIntentCursor(projectDir, dirName, space);
   return { uuid, slug, dirName, recordDir: recordPath, space };
 }
 

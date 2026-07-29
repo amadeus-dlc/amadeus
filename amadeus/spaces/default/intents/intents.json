@@ -687,5 +687,12 @@
     "dirName": "260727-plugin-verb-skills",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa8f7-d4bb-779a-8412-19d41ce07462",
+    "slug": "slop-cleanup",
+    "dirName": "260728-slop-cleanup",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]

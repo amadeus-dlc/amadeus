@@ -1,6 +1,18 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260727-plugin-verb-skills）
+## 実行メタデータ（現在: 260728-slop-cleanup）
+
+- Date: `2026-07-28`
+- Base commit: `none`（既存 codekb の最新 observed `afb93a825...` は現 HEAD の祖先ではなく、差分 base として不適格。現 HEAD の実測を正とした）
+- Observed commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`
+- Release reference: `v0.1.6` = `68f2d6699ccb8148c0427b1ff56d37116e565f89`（observed の祖先、`v0.1.6..observed` は 47 commits、1,939 files changed、188,699 insertions、830,609 deletions）
+- Scope: `amadeus-bugfix`、Minimal、Brownfield、単一 repo `amadeus`
+- Focus: 5 パス・3 カテゴリの確定 Slop — `amadeus-journal.ts` の失効コメント、`amadeus-observability.ts` の未使用 `registered`、Markdown 3 件の空白診断
+- Scan summary: Bun/TypeScript の既存構造、7 harness 面、正本 + 7 dist + 5 self-install の同期境界、対象 test / lint / typecheck を確認。HTTP server / database はなく、外部境界は CLI、GitHub、OTLP/HTTP JSON
+- 更新成果物: 共有 codekb 9 件と per-intent `re-scans/260728-slop-cleanup.md`
+- Sensor 代替: codekb path が既存 sensor filter と一致しないため成功とは扱わず、10 ファイルの H2 数、競合マーカー、現在マーカー、Mermaid 構文、対象パス限定 `git diff --check` を機械確認する
+
+## 実行メタデータ（履歴: 260727-plugin-verb-skills）
 
 - Date: `2026-07-28`
 - Base commit: `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`（前 intent `260727-e2e-plugin-conformance` の observed。`git merge-base --is-ancestor 0c4709102 HEAD` **exit 0 = 祖先**、`git rev-list --count 0c4709102..HEAD` = **16**。cid:reverse-engineering:rescan-base-ancestry)

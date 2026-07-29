@@ -1000,10 +1000,9 @@ if (kind === "parked") {
   }
 }
 
-// `ask` → the engine is explicitly waiting for human input (resume re-entry or
-// freeform scope confirmation; amadeus-orchestrate.ts:1040,1105). Allow the turn
-// to end so the user can respond, rather than re-feeding the loop.
-if (kind === "ask") {
+// `ask` / `select-intent` → the engine is explicitly waiting for human input.
+// Allow the turn to end so the user can respond, rather than re-feeding the loop.
+if (kind === "ask" || kind === "select-intent") {
   allowStop();
 }
 

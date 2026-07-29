@@ -1,10 +1,14 @@
 # コード構造
 
+## Slop cleanup の対象配置（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+
+構造変更、新規モジュール、新規ディレクトリはない。対象は core tools 2 ファイルと Markdown 3 ファイルである。`amadeus-journal.ts` と `amadeus-observability.ts` は `packages/framework/core/tools/` の正本であり、修正後は既存 packaging / self-promotion 経路で 7 `dist` 面と 5 self-install 面へ同期する。Markdown hygiene は `amadeus/spaces/default/intents/260727-solo-election/.../code-generation-plan.md` と `docs/reference/18-workspace-layout.{md,ja.md}` に閉じる。
+
 > **2026-07-27（intent `260726-answer-manual-binding`、[Issue #1548](https://github.com/amadeus-dlc/amadeus/issues/1548) bug、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（構造に変化なし）。** 測定 ref: observed `ad1ff5de9`、base `09c669901`、距離 2。区間 2 コミットは record-only で mirror answer/guard スタックの source 変更ゼロ。#1548 は mirror lifecycle 内の欠陥（`amadeus-mirror-lifecycle.ts:969-985` の `runMirrorLifecycleAnswer` が answer 転送時に `manualOperation`/`invocationId` を落とし、guard `:257-265` に弾かれる）で、モジュール境界・ファイル配置・依存方向は不変。修正は既存関数（answer 転送 or guard 条件）の局所変更で、新規モジュール・新ディレクトリは伴わない見込み。詳細は上流入力 `re3-dev-scan-result.md` と本 scan の `architecture.md` / `code-quality-assessment.md` 新節、`re-scans/260726-answer-manual-binding.md`。
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin CLI・runner-gen・スキル正本のコード配置（260727-plugin-verb-skills、現在、差分リフレッシュ、observed `afb93a825`）
+## plugin CLI・runner-gen・スキル正本のコード配置（260727-plugin-verb-skills、履歴、差分リフレッシュ、observed `afb93a825`）
 
 260727-plugin-verb-skills 差分リフレッシュ（2026-07-28、observed `afb93a825`、base `0c4709102`（祖先 exit 0）、距離 **16**、区間 **192 files / +5529 / -956**、record 除外 **161**）。上流入力: Developer スキャン結果。すべての数値は `git diff` / `wc -l` / `ls` / `find` / `git ls-files` 出力からの転記（測定 ref: observed `afb93a825`）。
 

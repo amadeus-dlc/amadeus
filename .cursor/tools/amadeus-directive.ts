@@ -1,7 +1,7 @@
 // Directive schema — the frozen engine↔conductor interface. The engine
 // (amadeus-orchestrate.ts) answers "what's next?" with exactly one typed
 // `Directive`; the conductor reads its `kind` and does the one move it names.
-// This module defines the discriminated union over the 9 kinds the engine can
+// This module defines the discriminated union over the directive kinds the engine can
 // emit, plus a runtime validator. Sibling of amadeus-stage-schema.ts and
 // amadeus-sensor-schema.ts — same tool-boundary discipline: a refused or
 // malformed directive is a clear signal, not a silent miss.
@@ -37,13 +37,14 @@ import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-li
 export const GATE_UNRESOLVED = "unresolved" as const;
 export type GateValue = boolean | typeof GATE_UNRESOLVED;
 
-// The 9 kinds, keyed on the `kind` discriminator.
+// Directive kinds, keyed on the `kind` discriminator.
 export type DirectiveKind =
   | "run-stage"
   | "dispatch-subagent"
   | "invoke-swarm"
   | "present-gate"
   | "ask"
+  | "select-intent"
   | "print"
   | "error"
   | "done"
@@ -193,10 +194,20 @@ export interface PresentGateDirective {
   memory_path: string;
 }
 
+// select-intent — render the exact options and stop. The opaque fingerprint
+// binds their ordered registry identities and space; on the answering turn the
+// conductor passes only the token and untouched human response to the
+// deterministic `intent-select-response` utility, which owns normalization and
+// cursor selection.
+export interface SelectIntentDirective {
+  kind: "select-intent";
+  selection_token: string;
+  question: string;
+  options: string[];
+}
+
 // ask — render a specific structured question (resume choice, scope
-// confirmation, the autonomy ladder). The engine never calls AskUserQuestion
-// itself; it emits `ask` and stops, the conductor renders it and feeds the
-// answer back via report.
+// confirmation, the autonomy ladder), then return the answer via report.
 export interface AskDirective {
   kind: "ask";
   question: string;
@@ -249,6 +260,7 @@ export type Directive =
   | InvokeSwarmDirective
   | PresentGateDirective
   | AskDirective
+  | SelectIntentDirective
   | PrintDirective
   | ErrorDirective
   | DoneDirective
@@ -261,7 +273,7 @@ export type ValidationResult =
 
 // --- Exported constants (imported by tests) ---
 
-// The 9 kinds, in the engine design's catalogue order. Used both for the unknown-kind
+// The kinds, in the engine design's catalogue order. Used both for the unknown-kind
 // error message and as the discriminator allowlist.
 export const VALID_KINDS = [
   "run-stage",
@@ -269,6 +281,7 @@ export const VALID_KINDS = [
   "invoke-swarm",
   "present-gate",
   "ask",
+  "select-intent",
   "print",
   "error",
   "done",
@@ -322,6 +335,7 @@ const DISPATCH_SUBAGENT_FIELDS = [
 const INVOKE_SWARM_FIELDS = ["kind", "units", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
+const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
 const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
@@ -340,6 +354,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   "invoke-swarm": INVOKE_SWARM_FIELDS,
   "present-gate": PRESENT_GATE_FIELDS,
   ask: ASK_FIELDS,
+  "select-intent": SELECT_INTENT_FIELDS,
   print: PRINT_FIELDS,
   error: ERROR_FIELDS,
   done: DONE_FIELDS,
@@ -370,7 +385,20 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkString(o, "phase", "present-gate", errors);
     checkString(o, "memory_path", "present-gate", errors);
   },
-  ask: (o, errors) => checkString(o, "question", "ask", errors),
+  ask: (o, errors) => {
+    checkString(o, "question", "ask", errors);
+  },
+  "select-intent": (o, errors) => {
+    checkString(o, "selection_token", "select-intent", errors);
+    checkString(o, "question", "select-intent", errors);
+    checkNonEmptyStringArray(o, "options", "select-intent", errors);
+    if (
+      typeof o.selection_token === "string" &&
+      !/^[0-9a-f]{64}$/.test(o.selection_token)
+    ) {
+      errors.push("select-intent: selection_token must be a SHA-256 fingerprint");
+    }
+  },
   print: (o, errors) => checkString(o, "message", "print", errors),
   error: (o, errors) => checkString(o, "message", "error", errors),
   done: (o, errors) => checkString(o, "reason", "done", errors),
@@ -401,7 +429,7 @@ export function validateDirective(obj: unknown): ValidationResult {
   const o = obj;
   const errors: string[] = [];
 
-  // Rule 2: kind discriminator. Must be present and a string, and one of the 8.
+  // Rule 2: kind discriminator. Must be present, a string, and allowlisted.
   if (!("kind" in o) || typeof o.kind !== "string") {
     errors.push("missing or non-string required field: kind");
     return { valid: false, errors };
@@ -482,7 +510,6 @@ function checkRunStageShared(
   checkOptionalNullableString(o, "next_stage", kind, errors);
   if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
 }
-
 
 function checkStandingGrantCarrier(
   o: Record<string, unknown>,
@@ -622,6 +649,25 @@ function checkOptionalStringArray(
       errors.push(`${kind}: ${field}[${i}] must be string, got ${describe(item)}`);
     }
   });
+}
+
+function checkNonEmptyStringArray(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  checkStringArray(o, field, kind, errors);
+  if (Array.isArray(o[field]) && o[field].length === 0) {
+    errors.push(`${kind}: ${field} must be a non-empty string array`);
+  } else if (
+    Array.isArray(o[field]) &&
+    o[field].some((entry) => typeof entry === "string" && entry.trim().length === 0)
+  ) {
+    errors.push(`${kind}: ${field} entries must be non-empty strings`);
+  } else if (Array.isArray(o[field]) && new Set(o[field]).size !== o[field].length) {
+    errors.push(`${kind}: ${field} entries must be unique`);
+  }
 }
 
 // `produces` is the complete output-candidate set and optional_produces is a
@@ -777,11 +823,10 @@ function checkEnum(
 
 // --- CLI self-check ---
 //
-// `bun amadeus-directive.ts` constructs one well-formed example of each of the 9
-// kinds, validates each, prints one line per kind ("<kind>: VALID" or the
-// errors), and exits 0 iff all 9 validate. Satisfies the acceptance check
-// "bun .../amadeus-directive.ts validates the 9 kinds". Exporting the fixtures
-// lets tests validate the same examples without spawning a process.
+// `bun amadeus-directive.ts` constructs well-formed examples of every kind,
+// validates each, prints one line per example ("<kind>: VALID" or the errors),
+// and exits 0 iff all validate. Exporting the fixtures lets tests validate the
+// same examples without spawning a process.
 export const directiveSelfCheckExamples: Directive[] = [
     {
       kind: "run-stage",
@@ -836,6 +881,12 @@ export const directiveSelfCheckExamples: Directive[] = [
       memory_path: "amadeus-docs/inception/application-design/memory.md",
     },
     { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
+    {
+      kind: "select-intent",
+      selection_token: "0".repeat(64),
+      question: "Choose an existing intent.",
+      options: ["first-intent", "second-intent"],
+    },
     { kind: "print", message: "AIDLC framework version 0.0.0" },
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
     { kind: "done", reason: "Workflow complete — all in-scope stages approved." },

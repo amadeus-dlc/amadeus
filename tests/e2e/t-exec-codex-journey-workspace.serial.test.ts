@@ -26,19 +26,26 @@
 //   4. `/amadeus space-create teamB` → `/amadeus space teamB` → birth there; no leak.
 //   5. `/amadeus space default` → A still resumable.
 //
-// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise. Serial.
+// LIVE GATE: disabled on GitHub Actions. Locally, requires
+// AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
+// normal Codex auth.json. Skips cleanly otherwise. Serial.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   activeSpace,
   listIntents,
   readIntentRegistry,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  codexExecChildEnvironment,
+  codexExecLiveRequirementsSkipReason,
+  initializeCodexExecProject,
+  setupCodexExecHome,
+} from "../harness/codex-exec-live.ts";
 import {
   cleanupWorkspaceJourney,
   REPO_ROOT,
@@ -48,8 +55,8 @@ import {
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
+const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 // A multi-spawn live journey. codex exec is the slowest harness — even a "cheap"
 // verb spawn can run several minutes when the model reasons before invoking the
@@ -82,71 +89,54 @@ function birthToolPrompt(scope: string, args: string): string {
   );
 }
 
-function codexVersionOk(): boolean {
-  const r = spawnSync(CODEX_BIN, ["--version"], { encoding: "utf-8" });
-  const m = (r.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
-  if (r.status !== 0 || !m) return false;
-  const [maj, min] = [Number(m[1]), Number(m[2])];
-  return maj > 0 || min >= 139;
-}
-
-function skipReason(): string | null {
-  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
-    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec workspace journey (uses Bedrock)";
-  }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
-  if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  return null;
-}
-const SKIP_REASON = skipReason();
+const SKIP_REASON = codexExecLiveRequirementsSkipReason({
+  env: process.env,
+  codexBin: CODEX_BIN,
+  distributionDir: CODEX_DIST,
+});
 
 // The journey root with the codex shell, git-init'd + trusted + a CODEX_HOME
-// config.toml (Bedrock provider + project trust). Mirrors setupCodexProject in
-// t-exec-codex-status, but the project dir is the WORKSPACE ROOT carrying two
-// sibling repos (setupWorkspaceJourney) — the engine runs against the root.
-function setupCodexJourney(): WorkspaceJourney {
-  const journey = setupWorkspaceJourney("codex");
-  const { root, home } = journey;
-  // The codex project must be a git repo (project hooks.json discovery — MR-3
-  // D10). git-init the workspace ROOT; the sibling repos keep their own .git
-  // (embedded; the `add -A` warns but does not fail).
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "install"],
-  ]) {
-    const r = spawnSync("git", args, { cwd: root, encoding: "utf-8" });
-    if (r.status !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr}`);
+// containing normal Codex auth and project trust. The real CODEX_HOME lives in
+// a separate scratch root so preserving or committing the workspace can never
+// retain auth.json.
+interface CodexWorkspaceJourney extends WorkspaceJourney {
+  cleanupAuth: () => void;
+}
+
+function cleanupCodexJourney(
+  journey: WorkspaceJourney,
+  cleanupAuth: (() => void) | undefined,
+): void {
+  try {
+    cleanupAuth?.();
+  } finally {
+    cleanupWorkspaceJourney(journey);
   }
-  const trust = spawnSync(
-    "bun",
-    [join(REPO_ROOT, "scripts", "package.ts"), "codex", "trust", "--project", root],
-    { encoding: "utf-8", cwd: REPO_ROOT },
-  );
-  if (trust.status !== 0) throw new Error(`trust emit failed: ${trust.stderr}`);
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `model = "openai.gpt-5.5"`,
-      `model_provider = "amazon-bedrock"`,
-      `model_context_window = 1000000`,
-      `model_reasoning_effort = "low"`,
-      ``,
-      `[model_providers.amazon-bedrock.aws]`,
-      `profile = "${AWS_PROFILE}"`,
-      `region = "${AWS_REGION}"`,
-      ``,
-      `[shell_environment_policy]`,
-      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
-      ``,
-      `[projects."${root}"]`,
-      `trust_level = "trusted"`,
-      ``,
-      trust.stdout,
-    ].join("\n"),
-    "utf-8",
-  );
-  return journey;
+}
+
+function setupCodexJourney(): CodexWorkspaceJourney {
+  const journey = setupWorkspaceJourney("codex");
+  const { root } = journey;
+  let cleanupAuth: (() => void) | undefined;
+  try {
+    const auth = setupCodexExecHome("codex-journey-auth-", AUTH_HOME);
+    cleanupAuth = auth.cleanup;
+    initializeCodexExecProject({
+      projectDir: root,
+      home: auth.home,
+      repositoryRoot: REPO_ROOT,
+      model: OPENAI_MODEL,
+      rulesDir: ".codex/amadeus-rules",
+    });
+    return {
+      ...journey,
+      home: auth.home,
+      cleanupAuth: auth.cleanup,
+    };
+  } catch (error) {
+    cleanupCodexJourney(journey, cleanupAuth);
+    throw error;
+  }
 }
 
 function execCodex(
@@ -159,7 +149,7 @@ function execCodex(
     cwd: proj,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, CODEX_HOME: home },
+    env: codexExecChildEnvironment(home),
     timeout: timeoutMs,
   });
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
@@ -301,7 +291,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(workflowStartedCount(recordADir)).toBe(1);
         expect(readIntentRegistry(root, "default").length).toBe(2);
       } finally {
-        cleanupWorkspaceJourney(journey);
+        cleanupCodexJourney(journey, journey.cleanupAuth);
       }
     },
     TEST_TIMEOUT_MS,

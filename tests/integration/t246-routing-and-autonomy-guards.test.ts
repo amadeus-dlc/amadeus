@@ -134,6 +134,14 @@ describe("t246 production help routing", () => {
     const refusal = utilityInProcess(["space-create", "-h", "--project-dir", root]);
     expect(refusal.code).toBe(1);
     expect(existsSync(join(root, "amadeus", "spaces", "h"))).toBe(false);
+
+    const invalidSelection = utilityInProcess([
+      "intent-select-response",
+      "--project-dir",
+      root,
+    ]);
+    expect(invalidSelection.code).toBe(1);
+    expect(invalidSelection.output).toContain("intent-select-response <selection-token>");
   });
 
   test("reserved birth and space slugs refuse after normalization without workflow mutation", () => {

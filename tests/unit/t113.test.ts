@@ -91,6 +91,16 @@ function presentGate(): Record<string, unknown> {
   };
 }
 
+function selectIntent(): Record<string, unknown> {
+  const options = ["first-intent", "second-intent"];
+  return {
+    kind: "select-intent",
+    selection_token: "0".repeat(64),
+    question: "Choose an intent",
+    options,
+  };
+}
+
 function ask(): Record<string, unknown> {
   return { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" };
 }
@@ -289,6 +299,25 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   test("ask question 42 -> string type error", () => {
     expect(errs({ ...ask(), question: 42 })).toContain(
       "ask: question must be string, got number",
+    );
+  });
+
+  test("select-intent requires a non-empty options array", () => {
+    expect(errs(selectIntent())).toBe("VALID");
+    expect(errs({ ...selectIntent(), options: [] })).toContain(
+      "select-intent: options must be a non-empty string array",
+    );
+    expect(errs({ ...selectIntent(), options: [""] })).toContain(
+      "select-intent: options entries must be non-empty strings",
+    );
+    expect(errs({ ...selectIntent(), options: ["   "] })).toContain(
+      "select-intent: options entries must be non-empty strings",
+    );
+    expect(errs({ ...selectIntent(), options: ["same", "same"] })).toContain(
+      "select-intent: options entries must be unique",
+    );
+    expect(errs({ ...selectIntent(), selection_token: "modified" })).toContain(
+      "select-intent: selection_token must be a SHA-256 fingerprint",
     );
   });
 

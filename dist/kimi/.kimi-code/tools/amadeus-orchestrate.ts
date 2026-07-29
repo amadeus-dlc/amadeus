@@ -92,8 +92,13 @@ import {
   type ParkedDirective,
   type PrintDirective,
   type RunStageDirective,
+  type SelectIntentDirective,
   validateDirective,
 } from "./amadeus-directive.ts";
+import {
+  buildIntentSelectionSnapshot,
+  type IntentSelectionSnapshot,
+} from "./amadeus-intent-selection.ts";
 import {
   appendAuditEntryUnlocked,
   appendLifecycleAuditEntryUnlocked,
@@ -140,6 +145,7 @@ import {
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
   resolveOperatingMode,
+  type IntentInfo,
   type IntentLifecycleAuditEvent,
   type OperatingMode,
   withIntentLifecyclePreflight,
@@ -379,6 +385,9 @@ export function archivedNextGuard(projectDir: string): ErrorDirective | undefine
     (context) => {
       const active = listIntents(projectDir, space).find((intent) => intent.active);
       if (!active?.dirName) return undefined;
+      if (active.uuid.trim().length === 0) {
+        return orphanedCurrentIntentError(space, active.dirName);
+      }
       const result = guardIntentOperation(
         resolveIntentOperationTargetLocked(context, active),
         "next",
@@ -387,6 +396,28 @@ export function archivedNextGuard(projectDir: string): ErrorDirective | undefine
         ? errorDirective(renderIntentOperationRejection(result.error))
         : undefined;
     },
+  );
+}
+
+function orphanedCurrentIntentError(
+  space: string,
+  dirName: string,
+): ErrorDirective {
+  return errorDirective(
+    `The current intent record "${dirName}" in space "${space}" has no registry identity. Repair the intent registry before continuing.`,
+  );
+}
+
+function unselectableIntentError(
+  space: string,
+  intents: readonly IntentInfo[],
+): ErrorDirective {
+  const entries: string[] = [];
+  for (const intent of intents) {
+    entries.push(`${intent.dirName ?? intent.slug} (${intent.status})`);
+  }
+  return errorDirective(
+    `Intent entries exist in space "${space}", but none are selectable because they are orphaned, registry-only, or archived: ${entries.join(", ")}. Repair the intent registry or unarchive an intent before continuing.`,
   );
 }
 
@@ -587,6 +618,18 @@ function toolErrorMessage(run: ToolRun): string {
 
 function askDirective(question: string): AskDirective {
   return { kind: "ask", question };
+}
+
+function selectIntentDirective(
+  question: string,
+  snapshot: IntentSelectionSnapshot,
+): SelectIntentDirective {
+  return {
+    kind: "select-intent",
+    selection_token: snapshot.fingerprint,
+    question,
+    options: snapshot.choices.map((choice) => choice.label),
+  };
 }
 
 function printDirective(message: string): PrintDirective {
@@ -812,31 +855,28 @@ function composeDispatchDirective(
 // (violates the P4 hazard "auto-birth fires only on ZERO intents").
 //
 // This consults the deterministic query layer (listIntents over the active
-// space) and, when intents EXIST but none is flagged active, NAMES the
-// disambiguation move as an `ask` directive that lists the existing intents and
-// asks the human to pick one via `/amadeus intent <slug>` — instead of birthing.
+// space) and, when selectable intents EXIST but none is flagged active, NAMES
+// the disambiguation move as a `select-intent` directive instead of birthing.
+// Orphaned, registry-only, and archived entries are not selectable; if they are
+// the only entries, an explicit repair error prevents a duplicate birth.
 // Returns null when birth should proceed unchanged (zero intents in the space,
 // or one already resolved active — the latter only when this is reached with an
 // explicit scope/intent that didn't load a cursor'd state). The engine stays
 // read-only: it emits a directive, it does not touch the cursor.
-function intentPickPromptIfRecordsExist(
+export function intentPickPromptIfRecordsExist(
   projectDir: string,
-): AskDirective | null {
+): SelectIntentDirective | ErrorDirective | null {
   const space = activeSpace(projectDir);
   const intents = listIntents(projectDir, space);
   if (intents.length === 0) return null; // zero intents → birth is correct
   if (intents.some((i) => i.active)) return null; // a cursor already resolves → not a birth path
-  // Records exist but no cursor is set (the fresh-clone / >1-no-cursor case).
-  // NAME the existing intents and ask the human to select one rather than
-  // birthing a duplicate. Order follows listIntents (registry order).
-  const slugs = intents.map((i) => i.slug);
-  const list = slugs.map((s) => `\`${s}\``).join(", ");
-  const spaceLabel = space === "default" ? "" : ` in space "${space}"`;
-  return askDirective(
-    `This workspace already has ${intents.length} intent${intents.length === 1 ? "" : "s"}${spaceLabel} but no active intent is selected ` +
-      `(the active-intent cursor is per-user and not cloned). ` +
-      `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +
-      "Selecting an intent sets the cursor; re-run `next` afterward to continue its workflow.",
+  const snapshot = buildIntentSelectionSnapshot(space, intents);
+  if (snapshot === null) {
+    return unselectableIntentError(space, intents);
+  }
+  return selectIntentDirective(
+    "Choose an existing intent to continue.",
+    snapshot,
   );
 }
 
