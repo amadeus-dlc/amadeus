@@ -21,6 +21,27 @@
       "expected_output": "This request is identified as backlog triage rather than single-Issue cross-review, so the cross-review workflow is not run and an issue-organizer workflow is recommended.",
       "files": [],
       "expectations": []
+    },
+    {
+      "id": 4,
+      "prompt": "直前のユーザーメッセージで https://github.com/amadeus-dlc/amadeus/issues/1389 を調べたいと伝えました。$j5ik2o-gh-issue-cross-review を実行して。",
+      "expected_output": "The skill auto-resolves Issue #1389 from user-authored conversation context, announces the inferred target without asking for its number again, freezes the manifest, and starts two blind reviews.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 5,
+      "prompt": "現在のブランチのPRにはopen Issueが1件だけclosing issueとしてリンクされています。Issue番号を指定せずにクロスレビューして。",
+      "expected_output": "The skill obtains structured closingIssuesReferences from the current PR, verifies the sole open Issue, records AUTO_RESOLVED with tier-2 evidence, and proceeds without asking the user to repeat the number.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 6,
+      "prompt": "対象番号は省略します。cross-review-pendingラベルのopen Issueが3件あるリポジトリでクロスレビューして。",
+      "expected_output": "The skill returns AMBIGUOUS, presents the three candidates as clickable Issue links, and asks the user to choose without selecting by recency, number, or priority.",
+      "files": [],
+      "expectations": []
     }
   ]
 }
