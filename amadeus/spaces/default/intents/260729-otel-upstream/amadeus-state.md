@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: kimi
 - **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [context-propagation, event-registry, journal-v2]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -95,8 +95,9 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-07-29T12:22:44Z
+- **Last Updated**: 2026-07-29T15:10:46Z
 
+- **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
