@@ -1,6 +1,27 @@
 # コード品質評価
 
-## 確定 Slop 5 パスの品質評価（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## OTel/observability 面の品質評価（260729-otel-upstream、現在、observed `22ee27dbe`）
+
+### 現存判定
+
+Focus 5 モジュールの品質水準は高く、#1672 の置換基点として信頼できる断面である（直読 + `grep` 実測、測定 ref: observed `22ee27dbe`）。
+
+- **codec（`amadeus-journal.ts`）**: parse-don't-validate を徹底し、malformed 行は 1-based 行番号付き `JournalCodecError` で loud fail する（「journal shard は security-relevant なので silent skip しない」の設計コメントどおり）。serialize 側でも不変条件（正の整数 seq、raw 改行の禁止、raw/canonical の排他）を強制し、key 順固定で byte-identical な出力を保証する。
+- **converter（`amadeus-journal-convert.ts`）**: byte-exact round-trip 自己検証の fail-closed 設計で、部分出力を残さない refusal 規約（ヘッダ欠落 / 末尾ゴミ / unmerged fork の AUDIT_FORKED）を持つ。変換の等価性証明を「バイト一致」に集約している点は簡潔で強い。
+- **fail-open / fail-closed の非対称は意図的**: telemetry（seam / projector）は fail-open 端到端（buffer 書込失敗も OTLP POST 失敗もワークフローと exit code を止めない）で、journal は fail-closed のまま。設計裁定 Q12 の非対称が混線なく実装されている。
+- **状態の二重表現が解消済み**: 前 intent 260728-slop-cleanup の修正（`ProcessObservation.registered` 削除、journal 配線コメント是正）が本 HEAD に着地していることを確認した。
+
+### テスト層の現況
+
+codec は unit PBT（`t352`、fast-check）、converter / seam / projector は integration（`t356` / `t357` / `t358`）、周辺に `t355`（audit merge seams）と `t315`（doctor observability section）。層は unit + integration で、e2e 面は持たない。`t357` が first-caller-wins / flush / idempotence の回帰境界として機能している（区間の `registered` 削除がこの契約を壊さなかったことの根拠）。
+
+### 品質上の残課題（後続ステージへの引き継ぎ）
+
+- **#1672 置換時の二系統化リスク**: audit writer には Markdown renderer `formatAuditRecord` が converter の lossless proof 専用に残存しており（`amadeus-audit.ts:323` コメント）、OTel EventRecord 化の際にこの残存面の扱い（converter ごと退役か、proof 経路の置換か）を裁定する必要がある。
+- **巨大モジュールの継続的肥大**: 区間で `amadeus-orchestrate.ts` が 4257 行（+289）、`amadeus-lib.ts` が 7975 行（+153）、`amadeus-utility.ts` が 6186 行（+91）、`amadeus-mirror-executor.ts` が 1553 行に達した。lint の cognitive-complexity warning は既知ベースラインだが、#1672 の writer 置換は `amadeus-audit.ts`（1094 行）を直接触るため、変更面の局所化が品質リスクになる。
+- **区間の主系統（mirror-project）は未評価**: 9 モジュール新設と executor / gateway / lifecycle の大再編（正本面 +4433 / -1559 の主系統）は本 intent の focus 外であり、本 scan はその品質評価を行っていない（別 intent の scan 対象とする）。
+
+## 確定 Slop 5 パスの品質評価（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 確定 finding は 5 パス・3 カテゴリで、いずれも外部挙動を変えない surgical cleanup で閉包できる。
 

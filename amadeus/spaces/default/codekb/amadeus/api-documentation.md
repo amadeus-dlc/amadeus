@@ -1,6 +1,20 @@
 # API ドキュメント
 
-## Slop cleanup の API 影響（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## OTel/observability 面の公開契約（260729-otel-upstream、現在、observed `22ee27dbe`）
+
+区間内で focus 面の公開契約に変更はない（`amadeus-observability.ts` の `registered` はモジュール内部型の未使用フィールドで export 面に現れない）。#1672 の置換が触る現行契約を以下に固定する（いずれも `grep -n "^export"` 実測、測定 ref: observed `22ee27dbe`）。
+
+**(1) Journal codec（`amadeus-journal.ts`、内部 wire 契約）**: `JOURNAL_SCHEMA_VERSION = 1`（reader は `<= current` を受理し、超過は `JournalCodecError`）、`JournalEntry`（`schemaVersion` / `seq` / `cloneId` / `intentId` / `timestamp` / `heading` / `event: string | null`。canonical レコードは `fields`、raw レコード（`event: null`）は `rawBody`、converter 専用 escape hatch の `opaque`）、`journalEntryId`（`intentId:cloneId:seq` のべき等キー）、`forkLineageCloneId`（md5 先頭 12 hex の派生 clone token）、`serializeJournalEntry` / `parseJournalLine` / `splitJournalLines` / `parseJournalShard`。1 レコード = 1 物理行の不変条件を codec が強制し（値中の raw 改行は throw）、key 順固定で同一 entry は常に byte-identical に serialize される。フィールド値の CR/LF は append 側（`escapeAuditValue`）で `\n` リテラル化済みという前提で、codec は再エスケープしない。
+
+**(2) Observability seam（`amadeus-observability.ts`）**: 設定契約は layered `config.json`（global → space → intent）の `observability` 値（`enabled: boolean` 必須、`otlp.endpoint?`、`local.enabled?`、`redactionOptIn?: string[]`）で、narrowest present が全体を上書きし、いずれかの層が malformed なら DISABLED に落ちる。export は `ObservabilityConfig` / `resolveObservabilityConfig` / `observabilityEnabled` / `resetObservabilityConfigCache`（テスト seam）/ `TELEMETRY_DIR`（`.amadeus-otel`）/ `telemetryDir` / `TelemetryEvent`（`v: 1`、`kind: "process" | "operation" | "subprocess"`）/ `appendTelemetryEvent` / `initProcessObservability` / `flushProcessObservation` / `observe<T>` / `observeSubprocess<T>`。`meta` は default-deny の `META_SAFE_KEYS`（`stage` / `phase` / `event` / `tool` / `outcome` / `exitCode` / `command`）+ `redactionOptIn` のみ通過する。`initProcessObservability` は first-caller-wins、`flushProcessObservation` は再呼び出し no-op（`t357` が回帰境界）。全 API は fail-open で、buffer 書込失敗は呼び出し側へ throw しない。
+
+**(3) OTLP projector（`amadeus-otel-projector.ts`）**: `traceIdFor` / `spanIdFor`（sha256 による決定論的 ID）、`buildSpans`（intent → phase → stage → process → operation/subprocess の 5 層 hierarchy、parenting は時間包含）、`buildOtlpTraces` / `buildOtlpMetrics`、`runExport`、`parseCliArgs`（`{ projectDir?, force }`）、`OtlpSignalResult = "posted" | "failed" | "skipped"`、`ExportSummary`。消費側は CLI 起動点と `hooks/amadeus-session-end.ts` の piggyback で、Core は import しない。`OTEL_EXPORTER_OTLP_ENDPOINT` env が config 値に優先し、export 失敗は exit code を緑のまま維持する（fail-open 端到端）。
+
+**(4) Journal converter（`amadeus-journal-convert.ts`）**: `convertShardText` / `assertLosslessRender`（byte-exact round-trip 不成立で `JournalConvertError`、部分出力を残さない）/ `parseLegacyBlock` / `cloneIdFromShardName` / `intentIdFromShardPath` / `handleConvert`。CLI 契約は `bun tools/amadeus-journal-convert.ts <shard.md> [--allow-unmerged-forks]` で、doctor の fix-hint が案内する正規手順（convert → 生成 .jsonl 検証 → .md 削除）と一致する。
+
+**(5) 区間の他面（focus 外）**: `amadeus/config.json` に `mirror-projects` キー（例 `[{ "project": "amadeus-dlc/5" }]`）が新設された。`package.json` description のインストール導線は `bunx @amadeus-dlc/setup install` 表記へ更新。直後の `260728-slop-cleanup` 断面は履歴として保持する。
+
+## Slop cleanup の API 影響（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 外部 API、CLI 動詞、exit code、JSON/Markdown wire format、関数シグネチャに変更はない。`amadeus-journal.ts` はコメントのみの更新、`ProcessObservation.registered` はモジュール内部の未使用型フィールドであり公開 export ではない。`initProcessObservability` / `flushProcessObservation` の first-caller-wins、flush、再 flush no-op 契約は維持する。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 
