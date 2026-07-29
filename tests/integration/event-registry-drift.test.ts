@@ -186,3 +186,20 @@ describe("extraction parity with the t28 vocabulary guard", () => {
     expect(vocab).toEqual([...SETS.auditVocabulary].sort());
   });
 });
+
+describe("patch-gate edge coverage — vocabulary extraction and journal-reader set", () => {
+  test("extractAuditVocabulary refuses a source without the VALID_EVENT_TYPES table (drift.ts:65)", () => {
+    expect(() => extractAuditVocabulary("// no table here\n")).toThrow(/VALID_EVENT_TYPES table not found/);
+  });
+
+  test("a tampered journal-reader decode set is a finding naming the set (drift.ts:147-148)", () => {
+    // In this branch the journal-reader set is null (it activates when U3's
+    // codec lands). Drive the guarded branch with a synthetic non-null set
+    // that is missing one canonical event.
+    const tampered = {
+      ...SETS,
+      journalReaderUnderstood: new Set([...SETS.registryCanonical].slice(1)),
+    };
+    expect(findRegistryDrift(tampered).join("\n")).toContain("journal reader decode");
+  });
+});
