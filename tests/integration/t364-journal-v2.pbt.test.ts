@@ -502,3 +502,52 @@ describe("reader-first regression — the live v1 shard fixture decodes whole (F
     expect(parseJournalShard(buffer)).toEqual(records as JournalEntry[]);
   });
 });
+
+describe("patch-gate edge coverage — validator and reader tie-breaks", () => {
+  const edgeBase: JournalEntryV2 = {
+    schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+    eventId: "evt-edge",
+    seq: 1,
+    timestamp: "2026-07-29T00:00:00.000Z",
+    eventName: "amadeus.session.ended",
+    attributes: {},
+    intentId: "260729-demo-deadbeef",
+    space: "default",
+    cloneId: "abc123def456",
+    traceId: null,
+    spanId: null,
+    traceFlags: 0,
+    idempotencyKey: "260729-demo-deadbeef:abc123def456:1",
+    canonical: true,
+  };
+
+  test("serialize rejects a non-JSON attribute value type (isJsonValue default branch)", () => {
+    // An attribute value that is neither JSON scalar nor object/array hits
+    // isJsonValue's default -> false (journal.ts:211).
+    const entry = { ...edgeBase, attributes: { K: BigInt(1) as unknown as string } };
+    expect(() => serializeJournalEntryV2(entry)).toThrow(JournalCodecError);
+  });
+
+  test("parse rejects a non-integer traceFlags (journal.ts:242)", () => {
+    expect(() => parseJournalLine(JSON.stringify({ ...edgeBase, traceFlags: 1.5 }))).toThrow(/traceFlags/);
+  });
+
+  test("readJournalRecords wraps a torn line with its 1-based position (journal.ts:483-485)", () => {
+    const good = serializeJournalEntryV2(edgeBase);
+    const buffer = `${good}{"schemaVersion":2,"broken":true\n${good}`;
+    expect(() => readJournalRecords(buffer)).toThrow(/line 2:/);
+  });
+
+  test("the View orders exact-key collisions by serialized form (journal.ts:529-531)", () => {
+    // Survivors with the same timestamp and the same record key cannot come
+    // from mergeShards (one group, one survivor), but the View sorts any
+    // array — same timestamp + same idempotency key, differing only in body,
+    // so the serialized form decides (compareJournalRecords tie-break).
+    const a = { ...edgeBase, idempotencyKey: "k1", attributes: { k: "a" } };
+    const b = { ...edgeBase, idempotencyKey: "k1", attributes: { k: "b" } };
+    const view = renderJournalView([b, a]);
+    // a's serialized form is strictly smaller (fewer attributes collate first),
+    // so the View must render a's block before b's.
+    expect(view.indexOf("**k**: a")).toBeLessThan(view.indexOf("**k**: b"));
+  });
+});
