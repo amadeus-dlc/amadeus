@@ -51,7 +51,7 @@ AI-DLC の *振る舞い* を作り替えるには — ステージやエージ�
 | フェーズ | 5(Initialization、Ideation、Inception、Construction、Operation) |
 | ステージ | 32 |
 | エージェント | 11 のドメインエキスパートペルソナ |
-| スコープ | 10(bugfix から workshop まで)+ 自動検出 |
+| スコープ | 10(fix から workshop まで)+ 自動検出 |
 | 深さレベル | 3(Minimal、Standard、Comprehensive) |
 | テスト戦略レベル | 3(Minimal、Standard、Comprehensive) |
 | 監査イベント種別 | 68 |
@@ -76,7 +76,7 @@ AI-DLC の *振る舞い* を作り替えるには — ステージやエージ�
 | [Customization](13-customization.ja.md) | 設定、スコープ構成、エージェントのチューニング |
 | [Artifacts Reference](14-artifacts-reference.ja.md) | intent ごとのレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)の解説 |
 | [Troubleshooting](15-troubleshooting.ja.md) | 症状ベースの問題解決 |
-| [Worked Examples](16-worked-examples.ja.md) | bugfix と feature の完全なウォークスルー |
+| [Worked Examples](16-worked-examples.ja.md) | fix と feature の完全なウォークスルー |
 | [Skills and Runner Commands](17-skills.ja.md) | `/amadeus-*` ステージランナー/スコープランナーコマンドと、自作ランナーの作成手順 |
 | [本家 v2 ワークスペースの移行](18-migrating-upstream-v2.ja.md) | `aidlc/` から Amadeus への dry-run、承認、互換性、復旧手順 |
 | [階層設定](21-layered-config.ja.md) | Global、Space、Intent Config の配置、優先順位、スキーマ、検証 |

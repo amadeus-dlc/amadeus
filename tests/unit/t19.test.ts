@@ -36,7 +36,7 @@
 //       "functional-design"' -> Test 4: same + parsed .target_slug ===
 //       "functional-design" (STRONGER: pins the first-in-scope-of-phase
 //       resolution exactly).
-//   - .sh Test 5  resolve --stage intent-capture --scope bugfix (SKIP) ||
+//   - .sh Test 5  resolve --stage intent-capture --scope fix (SKIP) ||
 //       true -> "skipped for scope" -> Test 5: res.status === 1 (the .sh
 //       swallowed $? with `|| true`; we PIN the non-zero exit, STRONGER) +
 //       stderr/out contains "skipped for scope".
@@ -271,10 +271,10 @@ describe("t19 amadeus-jump resolve (migrated from t19-tool-jump.sh, plan 16)", (
 
   test("5: resolve rejects SKIP stage", () => {
     const p = proj("state-initialization-done.md");
-    // intent-capture is SKIP for scope bugfix. The .sh swallowed $? with
+    // intent-capture is SKIP for scope fix. The .sh swallowed $? with
     // `|| true`; we PIN the non-zero exit (STRONGER) AND the message.
     const r = jump(
-      ["resolve", "--stage", "intent-capture", "--scope", "bugfix"],
+      ["resolve", "--stage", "intent-capture", "--scope", "fix"],
       p,
     );
     expect(r.status).toBe(1);

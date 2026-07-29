@@ -172,7 +172,7 @@ const KNOWN_STAGE_RUNNERS = [
 ] as const;
 
 const KNOWN_SCOPE_NAMES = [
-  "bugfix",
+  "fix",
   "enterprise",
   "feature",
   "infra",
@@ -184,7 +184,7 @@ const KNOWN_SCOPE_NAMES = [
 ] as const;
 
 const KNOWN_BARE_SCOPE_NAMES = [
-  "bugfix",
+  "fix",
   "feature",
   "mvp",
   "security-patch",

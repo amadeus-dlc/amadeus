@@ -289,7 +289,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "e2e/t62-construction-worktrees-mvp.test.ts",
     "e2e/t63-construction-worktrees-poc.test.ts",
     "e2e/t64-construction-worktrees-workshop.test.ts",
-    "e2e/t65-construction-worktrees-bugfix.test.ts",
+    "e2e/t65-construction-worktrees-fix.test.ts",
     "e2e/t66-construction-worktrees-refactor.test.ts",
     "e2e/t67-construction-worktrees-security-patch.test.ts",
     "e2e/t02.test.ts",

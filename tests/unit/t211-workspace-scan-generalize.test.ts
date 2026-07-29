@@ -8,7 +8,7 @@
 // counted zero files -> langCounts empty -> hasSourceFiles=false. When no other
 // brownfield signal is present (no framework config, no manifest, no non-dev
 // deps, no SCAN_SOURCE_DIRS dir) the repo is misclassified Greenfield and the
-// bugfix-scope reverse-engineering stage is downgraded to SKIP.
+// fix-scope reverse-engineering stage is downgraded to SKIP.
 //
 // The #459 fix (765fe4f20) generalized the walk to every non-excluded, non-dot
 // top-level directory; it was lost in the 2026-07-06 restart rebaseline and is

@@ -30,7 +30,7 @@ const HUMAN_TS = "2026-07-25T00:00:00.000Z";
 const SHARD = "fixture-clone.md";
 
 // Stage frontmatter carries the STOCK scope vocabulary only — composed scopes
-// (amadeus-feature, …) live in the compiled scope-grid — so the fixture graph
+// (self-feature, …) live in the compiled scope-grid — so the fixture graph
 // must not invent a composed name here (#1497 FR-4b).
 function stage(slug: string, number: string, phase: string): StageEntry {
   return {
@@ -140,7 +140,7 @@ describe("standing grant gate eligibility", () => {
     isFirstConstructionGate: false,
     isPerUnitStage: false,
     isPerUnitFinalGate: false,
-    scope: "amadeus-feature",
+    scope: "self-feature",
     walkingSkeletonStance: "off" as const,
   };
 
@@ -178,12 +178,11 @@ describe("standing grant gate eligibility", () => {
   });
 
   test.each([
-    ["on", "amadeus-feature", "ineligible"],
-    ["off", "amadeus-feature", "eligible"],
-    ["scope-dependent", "amadeus-feature", "ineligible"],
-    [undefined, "amadeus-feature", "ineligible"],
-    ["scope-dependent", "amadeus-fix", "eligible"],
-    ["scope-dependent", "amadeus-bugfix", "eligible"],
+    ["on", "self-feature", "ineligible"],
+    ["off", "self-feature", "eligible"],
+    ["scope-dependent", "self-feature", "ineligible"],
+    [undefined, "self-feature", "ineligible"],
+    ["scope-dependent", "self-fix", "eligible"],
     [undefined, "unknown-scope", "ineligible"],
   ] as const)("resolves stance %p and scope %s fail-closed", (stance, scope, expected) => {
     const result = evaluateStandingGrantGateEligibility(parsedGrant(), {

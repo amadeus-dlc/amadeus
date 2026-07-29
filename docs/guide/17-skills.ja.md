@@ -11,7 +11,7 @@
 > **ハーネスに関する注記。** この章は Claude Code のサーフェスを使います —
 > `.claude/skills/` 配下のスキルで、ピッカーから先頭に `/` を付けてタイプします。
 > Kiro は同じランナーセットを `.kiro/skills/` 配下に同梱します(こちらも `/` で
-> タイプ)。Codex はそれらを `.agents/skills/` に同梱し、`$`(`$amadeus-bugfix`)で
+> タイプ)。Codex はそれらを `.agents/skills/` に同梱し、`$`(`$amadeus-fix`)で
 > タイプします。ランナーの *セット* と各々の動作はハーネス間で同一です — 異なるのは
 > ディレクトリと接頭辞だけです。[他のハーネスで実行する](harnesses/README.ja.md) を参照。
 
@@ -26,7 +26,7 @@
 - **`/amadeus`** — フルのオーケストレーター。フラグはベイクインされません。スコープを
   検出(または欲しいものを説明)し、スコープ内のすべてのステージを完了まで駆動します。
   最もよく使うものです。
-- **スコープランナー** — `/amadeus-bugfix`、`/amadeus-feature`、`/amadeus-mvp`、
+- **スコープランナー** — `/amadeus-fix`、`/amadeus-feature`、`/amadeus-mvp`、
   `/amadeus-security-patch`。同じフルワークフローで、スコープが固定され、スコープ検出が
   スキップされます。
 - **ステージランナー** — `/amadeus-application-design`、`/amadeus-code-generation`
@@ -40,7 +40,7 @@
   ユーザーが選択した1操作だけを実行できます。
 
 ランナーが行うことはすべてフラグ付きの `/amadeus` から到達可能です。ランナーは
-パッケージングです — `/amadeus-bugfix` とタイプして `/` メニューに現れるのは良い
+パッケージングです — `/amadeus-fix` とタイプして `/` メニューに現れるのは良い
 エルゴノミクスであり、それ以上ではありません。すべてのランナーを削除すればショート
 カットは消えますが、能力は残り、`/amadeus` のフラグを通じて到達可能です。
 
@@ -95,7 +95,7 @@ basename だけを受け入れ、単一引数として渡します。basename �
 種類の作業をしているかすでに分かっていて、スコープ検出をスキップしたいときに使います。
 
 ```
-/amadeus-bugfix          特定のバグを修正 — minimal depth、合理化されたパス
+/amadeus-fix          特定のバグを修正 — minimal depth、合理化されたパス
 /amadeus-feature         新機能を構築 — standard depth、全ステージ
 /amadeus-mvp             コアを出荷 — 後半の operations ステージをスキップ
 /amadeus-security-patch  CVE / 脆弱性対応
@@ -104,14 +104,14 @@ basename だけを受け入れ、単一引数として渡します。basename �
 各々はオーケストレーターに `--scope` を渡すのと同一です:
 
 ```
-/amadeus-bugfix          ==  /amadeus --scope bugfix
+/amadeus-fix          ==  /amadeus --scope fix
 /amadeus-feature         ==  /amadeus --scope feature
 ```
 
 `/amadeus` に対するのと全く同じように、説明とフラグをそのまま通せます:
 
 ```
-/amadeus-bugfix The profile API returns 500 when display_name is null
+/amadeus-fix The profile API returns 500 when display_name is null
 /amadeus-feature --status
 ```
 
@@ -182,7 +182,7 @@ basename だけを受け入れ、単一引数として渡します。basename �
 | ファミリー | 例 | 何をするか | オーケストレーター等価 |
 |---|---|---|---|
 | オーケストレーター | `/amadeus` | フルワークフロー、スコープ検出 | — |
-| スコープランナー | `/amadeus-bugfix`、`/amadeus-feature`、`/amadeus-mvp`、`/amadeus-security-patch` | フルワークフロー、スコープ固定、検出なし | `/amadeus --scope <name>` |
+| スコープランナー | `/amadeus-fix`、`/amadeus-feature`、`/amadeus-mvp`、`/amadeus-security-patch` | フルワークフロー、スコープ固定、検出なし | `/amadeus --scope <name>` |
 | ステージランナー | `/amadeus-application-design`、`/amadeus-code-generation`、…(計 29) | 1 ステージを単独で、ワークフローを決して進めない | `/amadeus --stage <slug> --single` |
 | Init ラッパー | `/amadeus-init` | 最初の intent を誕生させる(Initialization を実行) | 新規ワークスペースでの `/amadeus` |
 | セッションビュー | `/amadeus-session-cost`、`/amadeus-replay`、`/amadeus-outcomes-pack` | 読み取り専用のワークフローレポート | [セッション管理](11-session-management.ja.md) を参照 |
@@ -249,7 +249,7 @@ bun .claude/tools/amadeus-runner-gen.ts scopes --check   # スコープランナ
 /amadeus --scope enterprise           10 スコープのいずれか
 
 # スコープランナー(トラフィックの多い 4 つの入口)
-/amadeus-bugfix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch
+/amadeus-fix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch
 
 # 1 ステージ、単独(ワークフローを決して進めない)
 /amadeus-code-generation              == /amadeus --stage code-generation --single

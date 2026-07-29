@@ -62,6 +62,7 @@ import {
   errorMessage,
   isMarkerArtifact,
   loadAgents,
+  loadScopeMetadata,
   loadScopeMapping,
   harnessDir,
   PHASES,
@@ -1371,11 +1372,15 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  cells are filtered through it, so a stage that has left the graph (a
  *  dropped plugin, a deleted core stage) does not leave a dangling cell
  *  addressing a slug no router can resolve — the fold preserves the composed
- *  scope, not a stale snapshot of the stage list it was authored against. */
+ *  scope, not a stale snapshot of the stage list it was authored against.
+ *  When `registeredScopes` is provided, only folded rows that still have a
+ *  scope metadata file survive; this removes renamed stock scopes without
+ *  treating their old grid rows as composed scopes. */
 export function mergeComposedScopes(
   fresh: ScopeGrid,
   onDiskJson: string | null,
   knownSlugs: ReadonlySet<string>,
+  registeredScopes?: ReadonlySet<string>,
 ): ScopeGrid {
   if (!onDiskJson) return fresh;
   let onDisk: unknown;
@@ -1388,6 +1393,7 @@ export function mergeComposedScopes(
   const merged: ScopeGrid = { ...fresh };
   for (const [name, entry] of Object.entries(onDisk as Record<string, unknown>)) {
     if (name in merged) continue;
+    if (registeredScopes !== undefined && !registeredScopes.has(name)) continue;
     if (
       typeof entry === "object" && entry !== null && !Array.isArray(entry) &&
       typeof (entry as { stages?: unknown }).stages === "object"
@@ -2369,7 +2375,12 @@ export function compileStageGraph(): {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
       applyPluginScopeOptIns(
-        mergeComposedScopes(transposeScopeGrid(stockScopeStages), onDiskGrid, knownSlugs),
+        mergeComposedScopes(
+          transposeScopeGrid(stockScopeStages),
+          onDiskGrid,
+          knownSlugs,
+          new Set(Object.keys(loadScopeMetadata())),
+        ),
         pluginScopeStages,
       ),
     ),

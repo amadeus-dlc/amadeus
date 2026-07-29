@@ -144,7 +144,7 @@ LLM を呼び出さずにオーケストレーターの構造的正しさを検�
 **レベル:** e2e
 
 **テスト対象:**
-- brownfield スタブ + 成果物アサーションによる完全な bugfix ライフサイクル
+- brownfield スタブ + 成果物アサーションによる完全な fix ライフサイクル
 - greenfield スタブ + 成果物アサーションによる完全な POC ライフサイクル
 - 状態進行、スコープルーティング、監査の完全性、ジャンプ機構
 - ステージ指示品質の LLM 意味的レビュー(明確さ、論理的流れ、曖昧さ検出)
@@ -356,13 +356,13 @@ construction 中盤のステージ(例: code-generation)にジャンプするテ
 |---------|-------------|-------|------|--------|
 | `state-pre-workspace-detection.md` | -- | feature | Welcome+scaffold 完了、次は workspace-detection | t70, t71 |
 | `state-initialization-done.md` | Greenfield | feature | Init 完了、次は intent-capture | t73 |
-| `state-brownfield-init-done.md` | Brownfield | bugfix | Init 完了、次は RE | t72 |
-| `state-mid-inception.md` | Brownfield | bugfix | RE 完了、次は requirements-analysis | t74 |
+| `state-brownfield-init-done.md` | Brownfield | fix | Init 完了、次は RE | t72 |
+| `state-mid-inception.md` | Brownfield | fix | RE 完了、次は requirements-analysis | t74 |
 | `state-mid-ideation.md` | Greenfield | feature | Intent+market 完了、次は feasibility | t08, t10, t11, t12, t20, t22, t24, t25, t37 |
 | `state-construction.md` | -- | -- | Construction フェーズ | t07, t10, t11, t26, t57 |
 | `state-operation.md` | -- | -- | Operation フェーズ | t07, t10, t11 |
 | `state-completed.md` | -- | -- | 全ステージ完了 | t08, t11 |
-| `state-jumped.md` | Brownfield | bugfix | ジャンプ履歴を持つワークフロー中盤 | t11, t37, t42 |
+| `state-jumped.md` | Brownfield | fix | ジャンプ履歴を持つワークフロー中盤 | t11, t37, t42 |
 | `state-corrupted.md` | -- | -- | 無効/破損した状態 | t08, t10 |
 
 ## ステージテストの追加方法

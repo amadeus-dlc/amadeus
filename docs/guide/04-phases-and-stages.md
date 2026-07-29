@@ -101,7 +101,7 @@ flowchart TD
     VG1{{"Verification Gate:\nIdeation → Inception"}}
 
     S11 ==>|ALWAYS| S12
-    S11 -.->|"skip: bugfix, chore, refactor,\ninfra, security-patch"| S14
+    S11 -.->|"skip: fix, chore, refactor,\ninfra, security-patch"| S14
     S12 -.->|CONDITIONAL| S13
     S12 -.->|"skip if no\nfeasibility needed"| S14
     S13 -.->|CONDITIONAL| S14
@@ -377,7 +377,7 @@ flowchart TD
 | 4.7 | Feedback & Optimization | amadeus-operations-agent | amadeus-aws-platform-agent | SLO report, cost analysis, feedback loop doc | CONDITIONAL |
 
 **Key behaviors:**
-- All 7 stages are **conditional** — the entire phase may be skipped for `mvp`, `poc`, `bugfix`, `chore`, and `refactor` scopes
+- All 7 stages are **conditional** — the entire phase may be skipped for `mvp`, `poc`, `fix`, `chore`, and `refactor` scopes
 - Stage 4.7 is the **terminal stage** — on approval, the workflow is complete
 - The **feedback loop** from 4.7 back to 1.1 enables iterative development cycles
 

@@ -300,7 +300,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -4373,11 +4373,11 @@
     },
     {
       "unitClass": "scope",
-      "unitId": "bugfix",
+      "unitId": "fix",
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/e2e/t-tui-kiro-bugfix-scope.serial.test.ts",
+          "file": "tests/e2e/t-tui-kiro-fix-scope.serial.test.ts",
           "mechanism": "tui"
         },
         {
@@ -4385,7 +4385,7 @@
           "mechanism": "tui"
         },
         {
-          "file": "tests/e2e/t-tui-t50-bugfix-scope.serial.test.ts",
+          "file": "tests/e2e/t-tui-t50-fix-scope.serial.test.ts",
           "mechanism": "tui"
         },
         {
@@ -4405,7 +4405,7 @@
           "mechanism": "sdk"
         },
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         },
         {
@@ -4959,7 +4959,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         },
         {
@@ -6101,7 +6101,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         },
         {

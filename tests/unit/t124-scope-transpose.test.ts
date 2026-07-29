@@ -84,7 +84,7 @@ const SCOPES = [
   "feature",
   "mvp",
   "poc",
-  "bugfix",
+  "fix",
   "chore",
   "refactor",
   "infra",

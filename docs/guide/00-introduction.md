@@ -51,7 +51,7 @@ To reshape *how* AI-DLC behaves — add a stage or an agent, define a scope, aut
 | Phases | 5 (Initialization, Ideation, Inception, Construction, Operation) |
 | Stages | 32 |
 | Agents | 11 domain-expert personas |
-| Scopes | 10 (bugfix through workshop) + auto-detect |
+| Scopes | 10 (fix through workshop) + auto-detect |
 | Depth levels | 3 (Minimal, Standard, Comprehensive) |
 | Test strategy levels | 3 (Minimal, Standard, Comprehensive) |
 | Audit event types | 68 |
@@ -76,7 +76,7 @@ To reshape *how* AI-DLC behaves — add a stage or an agent, define a scope, aut
 | [Customization](13-customization.md) | Settings, scope config, agent tuning |
 | [Artifacts Reference](14-artifacts-reference.md) | The per-intent record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`) explained |
 | [Troubleshooting](15-troubleshooting.md) | Symptom-based problem solving |
-| [Worked Examples](16-worked-examples.md) | Full bugfix and feature walkthroughs |
+| [Worked Examples](16-worked-examples.md) | Full fix and feature walkthroughs |
 | [Skills and Runner Commands](17-skills.md) | The `/amadeus-*` stage- and scope-runner commands and the author-your-own-runner path |
 | [Migrating an Upstream v2 Workspace](18-migrating-upstream-v2.md) | Dry-run, approval, compatibility, and recovery for `aidlc/` to Amadeus migration |
 | [Layered Configuration](21-layered-config.md) | Global, Space, and Intent Config placement, precedence, schema, and validation |

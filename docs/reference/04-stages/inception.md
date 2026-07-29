@@ -65,7 +65,7 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 | feature          | All 2.1--2.8                                                   |
 | mvp              | 2.1 (if brownfield), 2.2, 2.3, 2.4, 2.5 (if UI), 2.6, 2.7, 2.8 |
 | poc              | 2.1 (if brownfield), 2.3 (minimal)                             |
-| bugfix           | 2.1 (always -- find the bug), 2.3 (minimal -- bug description) |
+| fix           | 2.1 (always -- find the bug), 2.3 (minimal -- bug description) |
 | chore            | None (Inception skipped entirely)                             |
 | refactor         | 2.1 (always -- understand current code), 2.3 (minimal)         |
 | infra            | 2.2, 2.3 (infra requirements)                                  |
@@ -193,7 +193,7 @@ Standard 2-option gate: **Approve** (continue to Requirements Analysis) /
   artifacts. This separation ensures the scan is thorough (developer
   perspective) and the synthesis is architecturally informed (architect
   perspective).
-- For bugfix and refactor scopes, this stage always executes (even for what
+- For fix and refactor scopes, this stage always executes (even for what
   might be borderline greenfield) because understanding existing code is
   essential.
 - For security-patch scope, this stage executes to find vulnerability context.
@@ -440,9 +440,9 @@ Conditional gate format:
 - This is the most detailed question-and-answer stage in the workflow. It
   enforces mandatory ambiguity detection and will not proceed with partial or
   vague answers.
-- Depth scales with complexity: minimal for bugfix/poc, standard for feature,
+- Depth scales with complexity: minimal for fix/poc, standard for feature,
   comprehensive for enterprise.
-- For bugfix scope, this stage captures the bug description at minimal depth.
+- For fix scope, this stage captures the bug description at minimal depth.
 - For infra scope, this stage captures infrastructure requirements.
 - The requirements document produced here is consumed by User Stories (2.4),
   Refined Mockups (2.5), Application Design (2.6), Units Generation (2.7),

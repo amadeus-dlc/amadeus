@@ -296,20 +296,20 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
 
   // =========================================================================
   // Test 15: a SKIP-for-scope stage cannot run via --single.
-  // `user-stories` is SKIP for bugfix; --single relays the verbatim skip
-  // wording. Use a NO-STATE project so the explicit --scope bugfix resolves
+  // `user-stories` is SKIP for fix; --single relays the verbatim skip
+  // wording. Use a NO-STATE project so the explicit --scope fix resolves
   // (an active workflow's state Scope would win the precedence ladder).
   // =========================================================================
   test("15: next --single rejects a SKIP-for-scope stage with the verbatim skip wording [.sh 15]", () => {
     const proj = freshProject();
     // No-state project: createTestProject already leaves amadeus-docs/ empty, so
     // there is no amadeus-state.md (the .sh did `rm -f` defensively — here it
-    // never existed). The flag --scope bugfix therefore resolves.
+    // never existed). The flag --scope fix therefore resolves.
     const r = run(TOOL, [
-      "next", "--stage", "user-stories", "--single", "--scope", "bugfix",
+      "next", "--stage", "user-stories", "--single", "--scope", "fix",
       "--project-dir", proj,
     ]);
-    // The verbatim wording is `Stage "..." is skipped for scope "bugfix".`; in
+    // The verbatim wording is `Stage "..." is skipped for scope "fix".`; in
     // JSON stdout the quotes are backslash-escaped, so match the quote-free
     // substring (same as the .sh).
     expect(r.out).toContain("is skipped for scope");

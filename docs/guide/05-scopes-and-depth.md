@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](05-scopes-and-depth.ja.md)
 
-Scopes control **which stages execute**. Depth controls **how much detail** each stage produces. Test strategy controls **how many tests** are generated. Together, they adapt the lifecycle to your task — from a comprehensive enterprise feature to a quick bugfix.
+Scopes control **which stages execute**. Depth controls **how much detail** each stage produces. Test strategy controls **how many tests** are generated. Together, they adapt the lifecycle to your task — from a comprehensive enterprise feature to a quick fix.
 
 ---
 
@@ -42,7 +42,7 @@ Every workflow runs under one of 10 named scopes. Each scope defines a stage set
 - **Default depth:** Minimal
 - **Skips:** Market Research, Feasibility, Team Formation, Mockups, User Stories, most Operation stages
 
-### bugfix
+### fix
 
 **Use when:** Fixing a specific bug. Streamlined path from intent capture through code generation and testing.
 
@@ -64,7 +64,7 @@ Every workflow runs under one of 10 named scopes. Each scope defines a stage set
 
 - **Stages:** 8 of 32
 - **Default depth:** Minimal
-- **Skips:** Similar to bugfix — focused on code analysis, design, and implementation
+- **Skips:** Similar to fix — focused on code analysis, design, and implementation
 
 ### infra
 
@@ -105,7 +105,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files (scope 
 | `feature` | 32 / 32 | Standard | Standard | Default for new features |
 | `mvp` | 22 / 32 | Standard | Standard | Greenfield, skip late operations |
 | `poc` | 8 / 32 | Minimal | Minimal | Prove feasibility fast |
-| `bugfix` | 7 / 32 | Minimal | Minimal | Fix a specific bug |
+| `fix` | 7 / 32 | Minimal | Minimal | Fix a specific bug |
 | `chore` | 5 / 32 | Minimal | Minimal | Small self-contained tweak |
 | `refactor` | 8 / 32 | Minimal | Minimal | Clean up existing code |
 | `infra` | 13 / 32 | Standard | Standard | Infrastructure change |
@@ -129,7 +129,7 @@ The engine analyzes your intent against keyword patterns:
 
 | Keywords | Detected Scope |
 |----------|---------------|
-| "fix", "bug", "broken" | `bugfix` |
+| "fix", "bug", "broken" | `fix` |
 | "chore", "tweak" | `chore` |
 | "refactor", "clean up", "simplify" | `refactor` |
 | "infrastructure", "deploy", "infra" | `infra` |
@@ -144,7 +144,7 @@ The engine analyzes your intent against keyword patterns:
 After a clear keyword match, you get a one-line confirmation naming the MATCHED scope:
 
 ```
-Starting a "bugfix" workflow for: "fix login bug". Confirm to proceed,
+Starting a "fix" workflow for: "fix login bug". Confirm to proceed,
 name a different scope, or say "compose" for a tailored plan.
 ```
 
@@ -165,7 +165,7 @@ When no stock scope clearly fits (rich prose, no keyword hit, or a keyword burie
 
 The composer agent reads your task and the workspace scan (brownfield/greenfield, languages), then proposes the EXECUTE/SKIP grid that fits, with a reason for every skipped stage. You approve, edit, or reject at a gate; nothing is written and no workflow starts before an explicit approval. On approve:
 
-- If the proposal MATCHED a stock scope, the workflow births on that scope directly (a scan report full of code-level findings usually routes to `bugfix` or `security-patch` this way).
+- If the proposal MATCHED a stock scope, the workflow births on that scope directly (a scan report full of code-level findings usually routes to `fix` or `security-patch` this way).
 - For a CUSTOM grid, the composer authors a real scope (a `scopes/amadeus-<name>.md` plus a `scope-grid.json` entry) and the workflow births on it in the same turn. The composed scope resolves like any stock scope afterwards (`/amadeus --scope <name>`), and it survives a graph recompile: `amadeus-graph.ts compile` folds composed grid entries back into the regenerated `scope-grid.json` rather than rebuilding the grid from stage frontmatter alone.
 
 **Keyword hygiene:** composed scopes ship with `keywords: []`, so a one-off plan never participates in keyword auto-detection. Making a composed scope inferable for future prompts is an explicit question at the gate, never a side effect.
@@ -201,7 +201,7 @@ You can change the depth at three points:
 1. **Via the `--depth` CLI flag** — override depth at invocation time:
    ```
    /amadeus --depth comprehensive
-   /amadeus --scope bugfix --depth standard
+   /amadeus --scope fix --depth standard
    /amadeus --stage code-generation --depth minimal
    ```
 2. **At scope confirmation** — when the orchestrator confirms the detected scope, reply with `--depth <level>` instead of just confirming
@@ -223,21 +223,21 @@ You can request different depth or test strategy at any approval gate.
 
 ```
 /amadeus feature
-/amadeus bugfix
+/amadeus fix
 /amadeus enterprise
 ```
 
 ### Scope with description
 
 ```
-/amadeus bugfix Fix the login timeout issue
+/amadeus fix Fix the login timeout issue
 /amadeus poc Build a quick prototype for the search feature
 ```
 
 ### Override scope with utility command
 
 ```
-/amadeus --scope bugfix
+/amadeus --scope fix
 /amadeus --scope enterprise --stage code-generation
 ```
 
@@ -247,7 +247,7 @@ The `--scope` flag is composable with `--stage`, `--phase`, and `--depth` for ju
 
 ```
 /amadeus --depth minimal
-/amadeus --scope bugfix --depth comprehensive
+/amadeus --scope fix --depth comprehensive
 /amadeus --scope enterprise --depth standard --stage code-generation
 ```
 
@@ -321,7 +321,7 @@ You can change the test strategy at three points:
    ```
    /amadeus --test-strategy minimal
    /amadeus --depth standard --test-strategy minimal
-   /amadeus --scope bugfix --test-strategy comprehensive
+   /amadeus --scope fix --test-strategy comprehensive
    ```
 2. **Mid-workflow** — change test strategy on an active workflow:
    ```
@@ -338,7 +338,7 @@ You can change the test strategy at three points:
 | Minimal | Minimal | Lean artifacts, lean tests | Quick bugfixes, patches |
 | Comprehensive | Comprehensive | Full everything | Regulated enterprise features |
 | Comprehensive | Standard | Full artifacts, balanced tests | Enterprise with pragmatic testing |
-| Minimal | Comprehensive | Lean artifacts, thorough tests | Critical bugfix needing confidence |
+| Minimal | Comprehensive | Lean artifacts, thorough tests | Critical fix needing confidence |
 
 ---
 
@@ -349,7 +349,7 @@ You can change the test strategy at three points:
 | New feature for a production application | `feature` |
 | Greenfield product from scratch | `mvp` or `feature` |
 | Quick validation of an approach | `poc` |
-| Known bug to fix | `bugfix` |
+| Known bug to fix | `fix` |
 | Small self-contained tweak — a 1-to-few-file change to a dev script, docs, or CI config touching no user-visible contract | `chore` |
 | Code cleanup without behavior changes | `refactor` |
 | New AWS environment or CDK changes | `infra` |
@@ -365,6 +365,6 @@ When in doubt, start with `feature` — it includes all 32 stages, and you can s
 
 - [Phases and Stages](04-phases-and-stages.md) — what each stage does
 - [Agents](06-agents.md) — which agents participate in which scopes
-- [Skills and Runner Commands](17-skills.md) — the one-word `/amadeus-<scope>` runners for bugfix, feature, mvp, and security-patch
+- [Skills and Runner Commands](17-skills.md) — the one-word `/amadeus-<scope>` runners for fix, feature, mvp, and security-patch
 - [CLI Commands](12-cli-commands.md) — full command reference
 - [Glossary](glossary.md) — terminology reference

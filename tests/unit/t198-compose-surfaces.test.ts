@@ -185,8 +185,8 @@ describe("t198 Branch 8: inference confirm + compose offer", () => {
     proj = createTestProject();
     const d = directiveOf(runNext(proj, ["fix login bug"]).out);
     expect(d.kind).toBe("ask");
-    // bugfix carries keyword "fix"; the old code would have said "feature".
-    expect(String(d.question)).toContain('"bugfix"');
+    // fix carries keyword "fix"; the old code would have said "feature".
+    expect(String(d.question)).toContain('"fix"');
     expect(String(d.question)).toContain("compose");
   });
 
@@ -206,9 +206,9 @@ describe("t198 Branch 8: inference confirm + compose offer", () => {
     // engine asks to select the seeded record instead of birthing (t118's
     // pattern).
     removeWorkspaceRecord(proj);
-    const d = directiveOf(runNext(proj, ["bugfix"]).out);
+    const d = directiveOf(runNext(proj, ["fix"]).out);
     expect(d.kind).toBe("print");
-    expect(String(d.message)).toContain("intent-birth --scope bugfix");
+    expect(String(d.message)).toContain("intent-birth --scope fix");
   });
 });
 
@@ -226,7 +226,7 @@ describe("t198 detect --json is a pure read that names the write target", () => 
     expect(typeof payload.languages).toBe("string");
     expect(String(payload.scopesDir)).toContain("scopes");
     expect(String(payload.scopeGridPath)).toContain("scope-grid.json");
-    expect(payload.scopes as string[]).toContain("bugfix");
+    expect(payload.scopes as string[]).toContain("fix");
     const after = readdirSync(proj).sort().join(",");
     expect(after).toBe(before); // no dir created, no file written
   });

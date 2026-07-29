@@ -39,7 +39,7 @@
 //
 // EVERY shape below was verified against the shipped sources before coding
 // (the "shipped shapes ARE the spec" discipline):
-//   - scope metadata/routing shape .... scopes/amadeus-bugfix.md +
+//   - scope metadata/routing shape .... scopes/amadeus-fix.md +
 //     amadeus-common/stages/* `scopes:` frontmatter transposed into scope-grid
 //   - stage frontmatter required set .. tools/amadeus-stage-schema.ts:75-88
 //     (REQUIRED_FIELDS: slug,phase,execution,condition,lead_agent,support_agents,

@@ -39,7 +39,7 @@
 //   .sh:29  "feature"           -> "lists feature scope"
 //   .sh:30  "mvp"               -> "lists mvp scope"
 //   .sh:31  "poc"               -> "lists poc scope"
-//   .sh:32  "bugfix"            -> "lists bugfix scope"
+//   .sh:32  "fix"            -> "lists fix scope"
 //   .sh:33  "refactor"          -> "lists refactor scope"
 //   .sh:34  "infra"             -> "lists infra scope"
 //   .sh:35  "security-patch"    -> "lists security-patch scope"
@@ -48,7 +48,7 @@
 //   .sh:40  "--doctor"          -> "lists --doctor utility"
 //   .sh:41  "--help"            -> "lists --help utility"
 //   .sh:47  "All 32 stages"     -> "enterprise/feature shows 'All 32 stages'"
-//   .sh:48  "7 of 32 stages"    -> "bugfix shows compiled '7 of 32 stages'"
+//   .sh:48  "7 of 32 stages"    -> "fix shows compiled '7 of 32 stages'"
 //   .sh:49  "(default)"         -> "feature row shows '(default)' marker"
 //   .sh:52  "--force"           -> "lists --force flag"
 //   .sh:55  "--stage"           -> "lists --stage utility"
@@ -119,7 +119,7 @@ describe("t31 amadeus-utility help — CLI contract (migrated from t31-help-text
     "feature",
     "mvp",
     "poc",
-    "bugfix",
+    "fix",
     "refactor",
     "infra",
     "security-patch",
@@ -173,8 +173,8 @@ describe("t31 amadeus-utility help — CLI contract (migrated from t31-help-text
     expect(HELP.stdout).toContain("All 32 stages");
   });
 
-  test("bugfix shows compiled '7 of 32 stages' count", () => {
-    // execute !== total -> "<execute> of <total> stages"; bugfix tallies 7
+  test("fix shows compiled '7 of 32 stages' count", () => {
+    // execute !== total -> "<execute> of <total> stages"; fix tallies 7
     // EXECUTE of 32 (was the stale "~8 stages" pre-milestone-10).
     expect(HELP.stdout).toContain("7 of 32 stages");
   });

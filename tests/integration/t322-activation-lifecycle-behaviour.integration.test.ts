@@ -46,7 +46,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "plugins");
 const STAGE_LANDING = `plugins/${ACTIVATION_PLUGIN}/stages/${ACTIVATION_PLUGIN}.md`;
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
-const BUGFIX_BUILD_STAGE = join(FIXTURES_DIR, "state-bugfix-final-construction.md");
+const BUGFIX_BUILD_STAGE = join(FIXTURES_DIR, "state-fix-final-construction.md");
 
 let host = "";
 let proj = "";

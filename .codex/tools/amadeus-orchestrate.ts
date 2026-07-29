@@ -758,7 +758,7 @@ function parseNextFlags(args: string[]): ParsedFlags {
 
 // The workflow-birth print for a resolved scope on a fresh workspace (no intent
 // record yet). A user who described what to build — `/amadeus "build the auth
-// service"`, the bare positional `next bugfix`, or `next --scope bugfix` — asked
+// service"`, the bare positional `next fix`, or `next --scope fix` — asked
 // to START a workflow; there is nothing to run until an intent is born, and
 // birth is a mutation, so `next` (read-only) NAMES the move as a
 // run-then-continue print and the conductor runs it, then re-runs `next` to land
@@ -827,7 +827,7 @@ function composeDispatchDirective(
     );
     if (flags.report) {
       parts.push(
-        `First have it read and triage the scan report at "${flags.report}" (auto-fixable vs human-decision findings), then compose a compact fix-and-ship grid - this often routes to the stock bugfix or security-patch scope rather than minting a new one.`,
+        `First have it read and triage the scan report at "${flags.report}" (auto-fixable vs human-decision findings), then compose a compact fix-and-ship grid - this often routes to the stock fix or security-patch scope rather than minting a new one.`,
       );
     }
     if (flags.newScope) {
@@ -1321,7 +1321,7 @@ function readUnitKinds(projectDir: string): ReadonlyMap<string, UnitKind> {
 // not hardcoded: firstInScopeStageOfPhase("construction", scope) walks the
 // scope's EXECUTE-only sub-DAG and returns its first construction stage (e.g.
 // functional-design for feature/enterprise/mvp/refactor/workshop, code-generation
-// for poc/bugfix/security-patch, nfr-requirements for infra). A scope-mapping
+// for poc/fix/security-patch, nfr-requirements for infra). A scope-mapping
 // edit that moves the first construction stage moves the skeleton gate with it,
 // no code change. Non-construction stages are never the skeleton gate.
 function isSkeletonGateStage(node: GraphStage, scope: string): boolean {
@@ -2373,7 +2373,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   }
 
   // Branch 7b — bare KNOWN-SCOPE positional with no workflow yet. A user who
-  // types `/amadeus bugfix` (no `--scope`) named a scope, not freeform intent —
+  // types `/amadeus fix` (no `--scope`) named a scope, not freeform intent —
   // but the parser captures any non-`--` token as `flags.intent`, so without
   // this branch the literal scope name would slip into Branch 8 and surface a
   // freeform `ask` defaulting to the wrong scope (Wave-1 audit finding 2). When
@@ -2444,7 +2444,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     emit(askDirective(
       `No stock scope clearly fits: "${flags.intent}". ` +
         "I can compose a tailored plan for this task (recommended: reply \"compose\"), " +
-        "or you can name a scope directly (e.g. bugfix, feature, poc; see /amadeus --help for all).",
+        "or you can name a scope directly (e.g. fix, feature, poc; see /amadeus --help for all).",
     ));
     return;
   }
@@ -2659,7 +2659,7 @@ function owedBatchGate(
 // unset until the ladder fires after Bolt 1 ships) AND structurally — the
 // isSkeletonGateStage guard below refuses to swarm the walking-skeleton gate stage
 // regardless of autonomy state. The structural guard matters for scopes where the
-// per-unit build stage (code-generation) IS the skeleton-gate stage (poc / bugfix /
+// per-unit build stage (code-generation) IS the skeleton-gate stage (poc / fix /
 // security-patch): there the skeleton's always-gated approval must never be bypassed
 // by a stray autonomous setting, so the engine enforces it rather than trusting the
 // conductor's ordering.
@@ -2879,7 +2879,7 @@ function emitPerUnitRunStage(
   }
 
   // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
-  // security-patch / infra / bugfix / poc, or a pre-compile moment): degrade to
+  // security-patch / infra / fix / poc, or a pre-compile moment): degrade to
   // today's single {unit-name} directive. Zero behaviour change off this path.
   const units = orderedUnits(projectDir);
   if (units.length === 0) {
@@ -3188,7 +3188,7 @@ function emitJumpDirective(
   // SKIP validation for free from `amadeus-jump.ts resolve`, but resolve REQUIRES
   // a state file, so this no-state branch did a bare graph lookup with no
   // in-scope check — emitting run-stage for a stage the scope SKIPs (e.g.
-  // `next --scope bugfix --stage user-stories`). Mirror the with-state error by
+  // `next --scope fix --stage user-stories`). Mirror the with-state error by
   // testing membership against the scope's EXECUTE-only sub-DAG; relay the
   // verbatim skip wording resolve uses (amadeus-jump.ts:118) so the directive
   // stream is identical regardless of whether state exists yet.

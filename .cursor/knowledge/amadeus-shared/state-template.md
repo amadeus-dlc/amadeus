@@ -3,7 +3,7 @@
 ## Project Information
 - **Project**: [Project description]
 - **Project Type**: [Greenfield/Brownfield]
-- **Scope**: [enterprise/feature/mvp/poc/bugfix/refactor/infra/security-patch/workshop]
+- **Scope**: [enterprise/feature/mvp/poc/fix/refactor/infra/security-patch/workshop]
 - **Start Date**: [ISO timestamp]
 - **State Version**: 7
 - **Active Agent**: [current lead agent name]

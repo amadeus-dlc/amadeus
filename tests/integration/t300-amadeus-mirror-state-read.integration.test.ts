@@ -137,7 +137,7 @@ function makeWorkspace(opts: { block: "absent" | "empty" }): {
         uuid: "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
         slug: "mirror-state-read",
         dirName: DIR,
-        scope: "amadeus-bugfix",
+        scope: "self-fix",
         repos: [REPO.canonical],
         status: "in-flight",
       },

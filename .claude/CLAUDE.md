@@ -13,8 +13,8 @@
 
 This project uses AI-DLC (AI-Driven Development Life Cycle) for structured development. The workspace shell ships in `.claude/` (no setup command); the engine auto-births the first intent when you describe what to build. Run `/amadeus` followed by a scope or project description to begin. Run `/amadeus --doctor` to validate your setup. Run `/amadeus --version` to print the framework version. Run `/amadeus --stage <slug>` to jump to a specific stage, `/amadeus --phase <name>` to jump to a phase, `/amadeus --depth <level>` to override depth, `/amadeus --test-strategy <level>` to override test volume. Run `/amadeus compose "<task>"` to have the adaptive composer propose a tailored EXECUTE/SKIP plan (works up front, from a scan report via `--report <path>`, and mid-workflow to re-shape the pending stages - every proposal stops at an approve/edit/reject gate).
 
-For Amadeus self-development, explicitly select `amadeus-feature`,
-`amadeus-fix`, or `amadeus-refactor` based on the change type. The canonical
+For Amadeus self-development, explicitly select `self-feature`,
+`self-fix`, or `self-refactor` based on the change type. The canonical
 policy is `amadeus/spaces/default/memory/project.md` § Scope Overrides.
 
 ## Prerequisites

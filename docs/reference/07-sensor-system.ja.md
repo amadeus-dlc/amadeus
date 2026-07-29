@@ -96,7 +96,7 @@ timeout_seconds: 5                           # optional
 | `command` | ✓ | string | 正典の呼び出しプレフィックス — 出荷された各センサーは自身のper-sensorスクリプトを名指しする(例 `bun .claude/tools/amadeus-sensor-required-sections.ts`)。ディスパッチャ(`amadeus-sensor.ts`)は `--stage <slug>` に加え、センサーの入力形状に一致するファイルフラグを追加する: document センサーは `--output-path <path>`、code センサー(`linter`、`type-check`)は `--file-path <path>`。 |
 | `default_severity` | ✓ | enum | 現在は `advisory` のみ受け付ける。`blocking` は将来の ralph-driver 作業のために予約。 |
 | `description` | ✓ | string | 1行の人間向け説明。 |
-| `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`formal-verification` を使う。閉じたenumではない)。 |
+| `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`formal-verification`、`framework-integrity` を使う。閉じたenumではない)。 |
 | `matches` | optional | glob文字列 | PostToolUse フックが発火時に消費する能力フィルタ。下記の[`matches` フィルタ](#matches-filter)を参照。 |
 | `input_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがテンプレート化の契約として使う。 |
 | `output_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがパースの契約として使う。 |
@@ -174,7 +174,7 @@ outputs: ...
 | ステージ | `sensors:` |
 |---|---|
 | 3 initialization(workspace-scaffold, workspace-detection, state-init) | `[]`(決定論的セットアップ、エージェント作成のmarkdownなし) |
-| 7 ideation、8 inception、7 operation の markdown ステージ + `code-generation` | markdown ステージは `[required-sections, upstream-coverage]`。`code-generation` は `[linter, type-check]`(コードのみ) |
+| 7 ideation、8 inception、7 operation の markdown ステージ + `code-generation` | markdown ステージは `[required-sections, upstream-coverage]`。`code-generation` は `[linter, type-check, answer-evidence, self-scope-consistency]`。最後のセンサーは Amadeus の自己開発以外では休止する |
 | `build-and-test` | `[required-sections, upstream-coverage, type-check]`(linter は意図的に省略 — ビルドが正典のlintを実行) |
 | 5 construction-design(ci-pipeline, functional-design, infrastructure-design, nfr-design, nfr-requirements) | `[required-sections, upstream-coverage, linter, type-check]`(コードサンプルを含むmarkdown設計) |
 
@@ -397,5 +397,5 @@ enum型のフィールド(`default_severity`)にも適用されます。
   解決され、発火時にグラフノードから読まれる仕組み。
   [プレーンアーキテクチャ](02-plane-architecture.ja.md)を参照。
 
-上記のスキーマに加え、`dist/claude/.claude/sensors/` の出荷された4つの
+上記のスキーマに加え、`dist/claude/.claude/sensors/` の出荷された7つの
 マニフェストが、動作する例です。

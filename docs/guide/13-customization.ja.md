@@ -47,12 +47,12 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 
 **優先順位(高い順):**
 
-1. 明示的な CLI フラグ: `/amadeus feature` または `/amadeus --scope bugfix` が優先。
-2. 自由形式テキストのキーワード検出: `/amadeus fix the login bug` は依然として `bugfix` にマップされる。ユーザーは既存の確認プロンプトで検出されたスコープを上書きできる。
+1. 明示的な CLI フラグ: `/amadeus feature` または `/amadeus --scope fix` が優先。
+2. 自由形式テキストのキーワード検出: `/amadeus fix the login bug` は依然として `fix` にマップされる。ユーザーは既存の確認プロンプトで検出されたスコープを上書きできる。
 3. `.claude/settings.json` の `AMADEUS_DEFAULT_SCOPE` 環境変数。
 4. ハードコードされたフォールバック(intent 生成時は `poc`、未マッチな自由形式は `feature`)。
 
-**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。無効な値は呼び出し時に明確なメッセージとともにエラーになります。チームは `.claude/scopes/amadeus-<name>.md` ファイルを配置し、メンバーステージの `scopes:` リストにタグ付けすることで、追加のスコープを定義できます — [Contributing: スコープの追加](../reference/11-contributing.ja.md#adding-a-scope) を参照してください。チームは `.claude/agents/` に追加のエージェントを定義することもできます — [Contributing: エージェントの追加](../reference/11-contributing.ja.md#adding-an-agent) を参照してください。
+**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`fix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。無効な値は呼び出し時に明確なメッセージとともにエラーになります。チームは `.claude/scopes/amadeus-<name>.md` ファイルを配置し、メンバーステージの `scopes:` リストにタグ付けすることで、追加のスコープを定義できます — [Contributing: スコープの追加](../reference/11-contributing.ja.md#adding-a-scope) を参照してください。チームは `.claude/agents/` に追加のエージェントを定義することもできます — [Contributing: エージェントの追加](../reference/11-contributing.ja.md#adding-an-agent) を参照してください。
 
 **設定の検証:** `/amadeus --doctor` を実行して環境変数が設定され有効であることを確認します。
 
@@ -79,7 +79,7 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 ```
 /amadeus enterprise       # 明示的なスコープ
 /amadeus Build a payments API  # "feature" を自動検出
-/amadeus Fix the login bug     # "bugfix" を自動検出
+/amadeus Fix the login bug     # "fix" を自動検出
 ```
 
 ### 実行時の上書き

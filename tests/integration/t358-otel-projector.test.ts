@@ -78,7 +78,7 @@ function seedProject(opts: { enabled?: boolean; otlp?: string } = {}): string {
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(
     shard,
-    line(1, "WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "amadeus-feature" }) +
+    line(1, "WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "self-feature" }) +
       line(2, "PHASE_STARTED", "2026-07-28T10:00:01Z", { Phase: "ideation" }) +
       line(3, "STAGE_STARTED", "2026-07-28T10:00:02Z", { Stage: "intent-capture", Agent: "product" }) +
       line(4, "STAGE_COMPLETED", "2026-07-28T10:05:02Z", { Stage: "intent-capture" }),

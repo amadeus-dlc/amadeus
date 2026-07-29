@@ -16,7 +16,7 @@ scopes:
   - feature
   - mvp
   - poc
-  - bugfix
+  - fix
   - refactor
   - infra
   - security-patch
@@ -56,7 +56,7 @@ Overwrite `<record>/amadeus-state.md` with the full populated version:
   | enterprise / feature | 31 / 31 |
   | mvp | 21 / 31 |
   | poc | 8 / 31 |
-  | bugfix | 7 / 31 |
+  | fix | 7 / 31 |
   | refactor | 8 / 31 |
   | infra | 12 / 31 |
   | security-patch | 9 / 31 |

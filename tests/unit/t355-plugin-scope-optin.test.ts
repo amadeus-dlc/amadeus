@@ -73,7 +73,7 @@ const CORE: Stages = [
 ];
 const COMPOSED_ON_DISK = JSON.stringify({
   feature: { stages: { alpha: "EXECUTE", beta: "EXECUTE", gamma: "SKIP" } },
-  "amadeus-feature": {
+  "self-feature": {
     stages: { alpha: "EXECUTE", beta: "EXECUTE", gamma: "EXECUTE" },
   },
 });
@@ -82,19 +82,19 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
   test("a plugin declaring a composed scope joins it — the composed plan survives", () => {
     const grid = compileGrid(
       CORE,
-      [stage("model-check", ["amadeus-feature"], true)],
+      [stage("model-check", ["self-feature"], true)],
       COMPOSED_ON_DISK,
     );
     // Regression assertion: the composed row keeps ALL THREE core EXECUTE
     // cells (pre-fix this row was replaced by { "model-check": "EXECUTE" }),
     // and the plugin stage is added as a fourth.
-    expect(grid["amadeus-feature"].stages).toEqual({
+    expect(grid["self-feature"].stages).toEqual({
       alpha: "EXECUTE",
       beta: "EXECUTE",
       gamma: "EXECUTE",
       "model-check": "EXECUTE",
     });
-    const execCount = Object.values(grid["amadeus-feature"].stages).filter(
+    const execCount = Object.values(grid["self-feature"].stages).filter(
       (a) => a === "EXECUTE",
     ).length;
     expect(execCount).toBe(4);
@@ -151,7 +151,7 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
 describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", () => {
   test("a folded composed row drops cells addressing absent slugs, keeps present ones", () => {
     const onDisk = JSON.stringify({
-      "amadeus-feature": {
+      "self-feature": {
         stages: { alpha: "EXECUTE", "dropped-plugin": "EXECUTE", beta: "SKIP" },
       },
     });
@@ -160,7 +160,7 @@ describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", 
       onDisk,
       new Set(["alpha", "beta"]), // dropped-plugin is no longer in the graph
     );
-    expect(merged["amadeus-feature"].stages).toEqual({
+    expect(merged["self-feature"].stages).toEqual({
       alpha: "EXECUTE",
       beta: "SKIP",
     });
@@ -193,5 +193,20 @@ describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", 
     expect(mergeComposedScopes(fresh, "{ not json", new Set(["alpha"]))).toEqual(fresh);
     expect(mergeComposedScopes(fresh, null, new Set(["alpha"]))).toEqual(fresh);
     expect(mergeComposedScopes(fresh, "[]", new Set(["alpha"]))).toEqual(fresh);
+  });
+
+  test("a folded row without scope metadata is removed as stale", () => {
+    const fresh = transposeScopeGrid([stage("alpha", ["fix"])]);
+    const merged = mergeComposedScopes(
+      fresh,
+      JSON.stringify({
+        fix: { stages: { alpha: "EXECUTE" } },
+        bugfix: { stages: { alpha: "EXECUTE" } },
+        "team-custom": { stages: { alpha: "EXECUTE" } },
+      }),
+      new Set(["alpha"]),
+      new Set(["fix", "team-custom"]),
+    );
+    expect(Object.keys(merged)).toEqual(["fix", "team-custom"]);
   });
 });

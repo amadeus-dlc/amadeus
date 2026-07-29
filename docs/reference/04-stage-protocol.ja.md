@@ -630,7 +630,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | feature | Standard | Standard | 32 | 全ステージ |
 | mvp | Standard | Standard | 22 | Operation を全スキップ |
 | poc | Minimal | Minimal | ~8 | Initialization + Ideation + コア Inception |
-| bugfix | Minimal | Minimal | ~8 | 対象を絞る |
+| fix | Minimal | Minimal | ~8 | 対象を絞る |
 | chore | Minimal | Minimal | 5 | 小さな自己完結の修正 |
 | refactor | Minimal | Minimal | 8 | 対象を絞る |
 | infra | Standard | Standard | ~13 | インフラ重視 |
@@ -641,7 +641,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 ### 3つの深度レベル
 
-**Minimal**(poc、bugfix、chore、refactor、security-patch)— 最小限の成果物、簡潔な分析、オプションステージをスキップ:
+**Minimal**(poc、fix、chore、refactor、security-patch)— 最小限の成果物、簡潔な分析、オプションステージをスキップ:
 - Requirements: 5-10 項目、簡潔な説明、最小限の NFR
 - App Design: 単一のコンポーネント図、基本的なデータモデル、ADR なし
 - Functional Design: 簡潔なビジネスルール、単純なエンティティ、`frontend-components.md` をスキップ
@@ -667,7 +667,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **AI-DLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論 |
 | **Phase** | トップレベルのグループ化: Initialization、Ideation、Inception、Construction、Operation |
 | **Stage** | フェーズ内の個別のステップ(例 Intent Capture、Code Generation) |
-| **Scope** | どのステージがどの深度で実行されるかを制御(enterprise、feature、mvp、poc、bugfix、chore、refactor、infra、security-patch、workshop) |
+| **Scope** | どのステージがどの深度で実行されるかを制御(enterprise、feature、mvp、poc、fix、chore、refactor、infra、security-patch、workshop) |
 | **Depth** | 成果物の詳細スケール: Minimal、Standard、または Comprehensive |
 | **Unit of Work** | 独立して実装可能な機能パッケージ。Construction のイテレーション単位。ステージ 3.1-3.7 を1回通過する。 |
 | **Service** | デプロイ可能なプロセスまたはコンテナ(API サーバー、ワーカー、フロントエンドアプリ) |

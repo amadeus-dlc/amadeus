@@ -4,9 +4,9 @@
 // t355 (integration) — #1630 end-to-end: `amadeus-graph compile` over a real
 // plugin host whose plugin stage declares an EXISTING composed scope.
 //
-// The reported failure was a full compile: with `amadeus-feature` carrying 18
+// The reported failure was a full compile: with `self-feature` carrying 18
 // EXECUTE stages on disk, composing a plugin stage that declares
-// `scopes: [amadeus-feature]` recompiled the row down to 1 EXECUTE (the
+// `scopes: [self-feature]` recompiled the row down to 1 EXECUTE (the
 // plugin stage alone) — the approved plan was destroyed with no diagnostic,
 // because the transposed row shadowed the on-disk one in mergeComposedScopes.
 // A second recompile after dropping the plugin then kept the wrecked row,
@@ -35,6 +35,7 @@ const tempDirs: string[] = [];
 const originalPluginRoot = process.env.AMADEUS_PLUGINS_HOST_ROOT;
 const originalStageGraph = process.env.AMADEUS_STAGE_GRAPH;
 const originalScopeGrid = process.env.AMADEUS_SCOPE_GRID;
+const originalScopesDir = process.env.AMADEUS_SCOPES_DIR;
 
 type Grid = Record<string, { stages: Record<string, "EXECUTE" | "SKIP"> }>;
 
@@ -132,6 +133,23 @@ function seedComposedScope(root: string, donorScope: string): Grid[string] {
   const entry = { stages: { ...grid[donorScope].stages } };
   grid[COMPOSED_SCOPE] = entry;
   writeFileSync(gridPath, `${JSON.stringify(grid, null, 2)}\n`, "utf-8");
+  const scopesDir = join(root, "scopes");
+  mkdirSync(scopesDir, { recursive: true });
+  writeFileSync(
+    join(scopesDir, `amadeus-${COMPOSED_SCOPE}.md`),
+    [
+      "---",
+      `name: ${COMPOSED_SCOPE}`,
+      "depth: Standard",
+      "description: Composed scope fixture.",
+      "keywords: []",
+      "---",
+      "",
+      "Fixture scope.",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
   return entry;
 }
 
@@ -139,6 +157,7 @@ async function compileHost(root: string): Promise<Grid> {
   process.env.AMADEUS_PLUGINS_HOST_ROOT = root;
   process.env.AMADEUS_STAGE_GRAPH = join(root, "stage-graph.json");
   process.env.AMADEUS_SCOPE_GRID = join(root, "scope-grid.json");
+  process.env.AMADEUS_SCOPES_DIR = join(root, "scopes");
   __resetGraphCache();
   await main(["compile"]);
   return JSON.parse(readFileSync(join(root, "scope-grid.json"), "utf-8")) as Grid;
@@ -162,6 +181,8 @@ afterAll(() => {
   else process.env.AMADEUS_STAGE_GRAPH = originalStageGraph;
   if (originalScopeGrid === undefined) delete process.env.AMADEUS_SCOPE_GRID;
   else process.env.AMADEUS_SCOPE_GRID = originalScopeGrid;
+  if (originalScopesDir === undefined) delete process.env.AMADEUS_SCOPES_DIR;
+  else process.env.AMADEUS_SCOPES_DIR = originalScopesDir;
   __resetGraphCache();
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
 });
@@ -199,7 +220,7 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
       expect(grid.feature.stages[slug]).toBe(action);
     }
     // Other stock scopes gain no cell for the plugin stage (no redundant SKIP).
-    expect(grid.bugfix.stages[STAGE_SLUG]).toBeUndefined();
+    expect(grid.fix.stages[STAGE_SLUG]).toBeUndefined();
   }, 30000);
 
   test("a plugin declaring a brand-new scope gets a row holding only its own cell", async () => {

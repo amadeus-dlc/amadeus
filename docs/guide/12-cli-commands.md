@@ -85,7 +85,7 @@ Start a new workflow with one of the 10 named scopes.
 /amadeus feature
 /amadeus mvp
 /amadeus poc
-/amadeus bugfix
+/amadeus fix
 /amadeus refactor
 /amadeus infra
 /amadeus security-patch
@@ -96,7 +96,7 @@ Start a new workflow with one of the 10 named scopes.
 **Example:**
 
 ```
-/amadeus bugfix
+/amadeus fix
 > What would you like to fix?
 > The login API returns 500 when email contains a plus sign
 ```
@@ -114,13 +114,13 @@ Describe what you want to build and the engine auto-detects the appropriate scop
 /amadeus Fix the login timeout bug
 ```
 
-**Behavior:** The engine analyzes keywords in your description (e.g., "fix" suggests bugfix). A clear match asks a one-line confirm naming the MATCHED scope; rich or unmatched prose gets the compose offer (see `/amadeus compose` below) instead of a silent default. You confirm or override before the workflow begins.
+**Behavior:** The engine analyzes keywords in your description (e.g., "fix" suggests fix). A clear match asks a one-line confirm naming the MATCHED scope; rich or unmatched prose gets the compose offer (see `/amadeus compose` below) instead of a silent default. You confirm or override before the workflow begins.
 
 **Example:**
 
 ```
 /amadeus Fix the null pointer in ProfileSerializer
-> Detected scope: bugfix (Minimal depth, Minimal test strategy, 8 stages)
+> Detected scope: fix (Minimal depth, Minimal test strategy, 8 stages)
 > Approve scope? [Yes / Change scope / Change depth / Change test strategy]
 ```
 
@@ -302,7 +302,7 @@ Jump directly to a specific stage by slug or number.
 **Behavior:** If a workflow is active, jumps to the target stage (skipping intervening stages with warnings). If no workflow exists, you can combine with `--scope`:
 
 ```
-/amadeus --stage code-generation --scope bugfix
+/amadeus --stage code-generation --scope fix
 ```
 
 ---
@@ -351,7 +351,7 @@ Change the active scope of a running workflow.
 **Syntax:**
 
 ```
-/amadeus --scope bugfix
+/amadeus --scope fix
 /amadeus --scope enterprise
 ```
 
@@ -381,7 +381,7 @@ Override the depth level of the current or new workflow.
 
 ```
 /amadeus --depth minimal                            Change depth of active workflow
-/amadeus --scope bugfix --depth comprehensive        Bugfix with comprehensive analysis
+/amadeus --scope fix --depth comprehensive        Bugfix with comprehensive analysis
 /amadeus --stage code-generation --depth minimal     Jump with minimal depth
 ```
 
@@ -415,7 +415,7 @@ See [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md#the-3-test-strateg
 ```
 /amadeus --test-strategy minimal                         Minimal testing for active workflow
 /amadeus --depth standard --test-strategy minimal        Full artifacts, minimal tests
-/amadeus --scope bugfix --test-strategy comprehensive    Bugfix with thorough testing
+/amadeus --scope fix --test-strategy comprehensive    Bugfix with thorough testing
 ```
 
 ---
@@ -543,7 +543,7 @@ Pre-set the default scope for a project. Read from `.claude/settings.json` `env`
 }
 ```
 
-**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`.
+**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `fix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`.
 
 **Precedence:** explicit CLI flag > keyword detection > `AMADEUS_DEFAULT_SCOPE` > hard-coded fallback.
 

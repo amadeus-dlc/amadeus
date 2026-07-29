@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](16-worked-examples.ja.md)
 
-Two complete walkthroughs showing AI-DLC in action: a bugfix and a feature. Each demonstrates the command invocation, stage progression, approval gates, and artifact output.
+Two complete walkthroughs showing AI-DLC in action: a fix and a feature. Each demonstrates the command invocation, stage progression, approval gates, and artifact output.
 
 > **Harness note.** These transcripts are recorded on **Claude Code**, so they show
 > its surfaces — `/amadeus`, and subagent stages dispatched via `Task` calls. The
@@ -14,12 +14,12 @@ Two complete walkthroughs showing AI-DLC in action: a bugfix and a feature. Each
 
 ## Bugfix Walkthrough
 
-This example fixes a null pointer exception in a user profile API. The **bugfix** scope runs 7 stages (3 Initialization + 4 domain) at Minimal depth.
+This example fixes a null pointer exception in a user profile API. The **fix** scope runs 7 stages (3 Initialization + 4 domain) at Minimal depth.
 
 ### Invocation
 
 ```
-/amadeus bugfix
+/amadeus fix
 ```
 
 The conductor asks what you want to fix:
@@ -48,7 +48,7 @@ The 3 Initialization stages run as a single deterministic tool call (`amadeus-ut
 
 - **0.1 Workspace Scaffold** — Auto-births the first intent and creates its record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) — `<YYMMDD>` is a compact UTC date prefix so records sort chronologically, and `<label>` is the conductor's short kebab-case essence of the request; the canonical id is a UUIDv7 carried in the `intents.json` registry row
 - **0.2 Workspace Detection** — Rule-based scan identifies Java 17, Spring Boot 3.2, Maven, brownfield project
-- **0.3 State Init** — Initializes `amadeus-state.md` with scope `bugfix`, depth `Minimal`, and the domain stages marked for execution
+- **0.3 State Init** — Initializes `amadeus-state.md` with scope `fix`, depth `Minimal`, and the domain stages marked for execution
 
 > Progress: 3/7 overall | 3/3 INITIALIZATION stages complete. Next: Reverse Engineering
 
@@ -153,7 +153,7 @@ amadeus/spaces/default/intents/260624-null-display-fix/
     reverse-engineering/       # 9 RE artifacts
     requirements-analysis/     # requirements.md + questions
   construction/
-    bugfix-null-display-name/
+    fix-null-display-name/
       code-generation/         # plan + summary
     build-and-test/            # instructions + test results
 ```
@@ -334,7 +334,7 @@ Configures CI pipeline with lint, build, test, and security scan stages. Quality
 
 > Progress: 32/32 overall | OPERATION complete. Feature workflow complete.
 
-### Key differences from bugfix
+### Key differences from fix
 
 | Aspect | Bugfix | Feature |
 |--------|--------|---------|
@@ -342,7 +342,7 @@ Configures CI pipeline with lint, build, test, and security scan stages. Quality
 | Depth | Minimal | Standard |
 | Phases | Initialization + Inception + Construction | All 5 |
 | Units of work | 1 | 3 |
-| Bolt-by-Bolt Construction | No (bugfix runs a single Bolt) | Yes — 2 Bolts (walking skeleton + 1 parallel batch) |
+| Bolt-by-Bolt Construction | No (fix runs a single Bolt) | Yes — 2 Bolts (walking skeleton + 1 parallel batch) |
 | Conditional stages | Most skipped | Most executed |
 | Approval gates | 4 | Walking skeleton + ladder prompt; remaining Bolts per autonomy mode |
 

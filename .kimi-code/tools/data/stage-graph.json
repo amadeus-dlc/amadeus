@@ -18,7 +18,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -64,7 +64,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -110,7 +110,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -754,7 +754,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop"
@@ -960,7 +960,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -2090,14 +2090,15 @@
     "sensors": [
       "linter",
       "type-check",
-      "answer-evidence"
+      "answer-evidence",
+      "self-scope-consistency"
     ],
     "scopes": [
       "enterprise",
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop",
@@ -2140,6 +2141,11 @@
         "id": "answer-evidence",
         "path": ".kimi-code/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md"
+      },
+      {
+        "id": "self-scope-consistency",
+        "path": ".kimi-code/sensors/amadeus-self-scope-consistency.md",
+        "matches": "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}"
       }
     ]
   },
@@ -2188,7 +2194,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop",

@@ -108,16 +108,16 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     expect(next.out.trim()).toBe("feasibility");
   });
 
-  test("pending forward ADD honored: a bugfix-scope grid-SKIP stage promotes and the router walks TO it", () => {
-    const proj = bornProject("bugfix");
-    // bugfix's grid SKIPs user-stories; born state carries the SKIP suffix.
+  test("pending forward ADD honored: a fix-scope grid-SKIP stage promotes and the router walks TO it", () => {
+    const proj = bornProject("fix");
+    // fix's grid SKIPs user-stories; born state carries the SKIP suffix.
     expect(readState(proj)).toMatch(/- \[ \] user-stories — SKIP/);
     const r = run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     expect(r.status).toBe(0);
     expect(readState(proj)).toMatch(/- \[ \] user-stories — EXECUTE/);
     // ADD-direction routing: after requirements-analysis the walk reaches the
     // promoted stage instead of skipping to code-generation.
-    const next = run(proj, "amadeus-state.ts", ["lookup", "next-stage", "requirements-analysis", "bugfix"]);
+    const next = run(proj, "amadeus-state.ts", ["lookup", "next-stage", "requirements-analysis", "fix"]);
     expect(next.out.trim()).toBe("user-stories");
   });
 
@@ -209,10 +209,10 @@ describe("t194 recompose - rejections", () => {
   });
 
   test("ADD-direction anchor move rejected: promoting a construction stage AHEAD of the anchor", () => {
-    // bugfix's first construction EXECUTE is code-generation; functional-design
+    // fix's first construction EXECUTE is code-generation; functional-design
     // sits ahead of it in the grid. Promoting it would silently relocate the
     // walking-skeleton gate anchor, so the ADD must reject like the SKIP does.
-    const proj = bornProject("bugfix");
+    const proj = bornProject("fix");
     const r = run(proj, "amadeus-utility.ts", ["recompose", "--add", "functional-design"]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("walking-skeleton gate anchor");
@@ -258,9 +258,9 @@ describe("t194 recompose - the jump readers honour the recomposed plan", () => {
     const refuse = run(proj, "amadeus-jump.ts", ["resolve", "--stage", "market-research"]);
     expect(refuse.status).not.toBe(0);
     expect(refuse.out).toContain("skipped for scope");
-    // The promoted direction: bugfix project, ADD a grid-SKIP stage, then
+    // The promoted direction: fix project, ADD a grid-SKIP stage, then
     // resolve targets it successfully.
-    const proj2 = bornProject("bugfix");
+    const proj2 = bornProject("fix");
     run(proj2, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     const allow = run(proj2, "amadeus-jump.ts", ["resolve", "--stage", "user-stories"]);
     expect(allow.status).toBe(0);
@@ -270,7 +270,7 @@ describe("t194 recompose - the jump readers honour the recomposed plan", () => {
   });
 
   test("ADD-then-jump consistency: a forward jump marks the promoted stage [S] like any on-plan stage", () => {
-    const proj = bornProject("bugfix");
+    const proj = bornProject("fix");
     run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     // Jump forward over the promoted stage to code-generation: the forward
     // loop must mark IN-FLIGHT intermediates [S] against the EFFECTIVE plan.
@@ -287,7 +287,7 @@ describe("t194 recompose - the jump readers honour the recomposed plan", () => {
   });
 
   test("backward jump resets a promoted stage's [S/x] like any on-plan stage", () => {
-    const proj = bornProject("bugfix");
+    const proj = bornProject("fix");
     run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     run(proj, "amadeus-jump.ts", ["execute", "--target", "code-generation", "--direction", "forward"]);
     expect(readState(proj)).toMatch(/- \[S\] user-stories — EXECUTE/);

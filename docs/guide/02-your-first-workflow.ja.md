@@ -177,7 +177,7 @@ The walking skeleton shipped. How should the remaining Bolts run?
 
 ## Operation フェーズ
 
-Operation はソリューションをデプロイし、監視します。7 つのステージはすべて条件付きです — `poc` や `bugfix` のような小さいスコープでは、このフェーズ全体をスキップすることがあります。
+Operation はソリューションをデプロイし、監視します。7 つのステージはすべて条件付きです — `poc` や `fix` のような小さいスコープでは、このフェーズ全体をスキップすることがあります。
 
 最終ステージ(4.7 Feedback & Optimization)の後、ワークフローは完了です。
 

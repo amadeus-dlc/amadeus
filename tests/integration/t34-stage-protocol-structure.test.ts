@@ -193,7 +193,7 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
     "feature",
     "mvp",
     "poc",
-    "bugfix",
+    "fix",
     "refactor",
     "infra",
     "security-patch",

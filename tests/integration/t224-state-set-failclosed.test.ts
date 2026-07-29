@@ -216,7 +216,7 @@ describe("t224 fieldExists predicate", () => {
   // is lcov-visible.
   test("setFieldStrict replaces a present field via the shared matcher", () => {
     const content = "- **Scope**: feature\n";
-    expect(setFieldStrict(content, "Scope", "bugfix")).toContain("- **Scope**: bugfix");
+    expect(setFieldStrict(content, "Scope", "fix")).toContain("- **Scope**: fix");
   });
 
   test("setFieldStrict throws on an absent field", () => {

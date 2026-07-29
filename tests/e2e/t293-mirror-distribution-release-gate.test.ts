@@ -41,7 +41,7 @@ function addIntent(
     uuid,
     slug: dirName,
     dirName,
-    scope: "amadeus-feature",
+    scope: "self-feature",
     status: "in-flight",
     repos: ["acme/app"],
   });

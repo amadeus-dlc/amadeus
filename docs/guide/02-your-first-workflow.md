@@ -177,7 +177,7 @@ After all Bolts complete, stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run 
 
 ## Operation Phase
 
-Operation deploys and monitors the solution. All 7 stages are conditional — smaller scopes like `poc` and `bugfix` may skip this entire phase.
+Operation deploys and monitors the solution. All 7 stages are conditional — smaller scopes like `poc` and `fix` may skip this entire phase.
 
 After the final stage (4.7 Feedback & Optimization), the workflow is complete.
 

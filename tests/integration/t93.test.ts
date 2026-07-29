@@ -16,7 +16,7 @@
 // (dist/claude/.claude/sensors/), resolved by loadSensors() as
 // __FILE_DIR/../sensors (amadeus-graph.ts:168) — independent of cwd, so no temp
 // project, no fixtures, no audit.md. This port therefore writes NOTHING to disk
-// and seeds nothing; it doubles as a forward-check that the 4 shipped manifests
+// and seeds nothing; it doubles as a forward-check that the 7 shipped manifests
 // stay parseable, exactly as the .sh comment (t93:17-19) states.
 //
 // COVERS ID: this .cli file credits the `amadeus-sensor list` subcommand unit
@@ -26,8 +26,8 @@
 //
 // PARITY NOTES (every .sh `ok`/`assert_eq` line maps to an expect() below;
 // several are STRONGER than the original grep/awk):
-//   - .sh Case 1  list emits the framework sensors (now 5 with answer-evidence) -> Test 1:
-//       rows.length === 4 (same observable: count of tab-bearing rows).
+//   - .sh Case 1  list emits the framework sensors (now 7) -> Test 1:
+//       rows.length === 7 (same observable: count of tab-bearing rows).
 //   - .sh Case 2  every row column 2 == "deterministic" (awk != count) -> Test 2:
 //       every row's cols[1] === "deterministic" (same observable, per-row).
 //   - .sh Case 3  list is alpha-sorted by id (IDS == sort IDS)        -> Test 3:
@@ -102,6 +102,7 @@ const EXPECTED_IDS = [
   "linter",
   "model-completeness",
   "required-sections",
+  "self-scope-consistency",
   "type-check",
   "upstream-coverage",
 ];
@@ -111,10 +112,10 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 6 framework sensors", () => {
+  test("1: list emits exactly 7 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(6);
+    expect(listRows(r.out)).toHaveLength(7);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
@@ -132,7 +133,7 @@ describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, pl
     expect(ids).toEqual([...ids].sort());
   });
 
-  test("4: list returns exactly the 6 framework sensor ids", () => {
+  test("4: list returns exactly the 7 framework sensor ids", () => {
     const r = sensor("list");
     const ids = listRows(r.out).map((cols) => cols[0]);
     // .sh sentinel set — flags drift if a sensor is renamed/added/removed.

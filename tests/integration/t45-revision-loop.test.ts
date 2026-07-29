@@ -23,12 +23,12 @@
 //          ("Re-entering gate after revision", :868-871)
 //   :717 handleApprove(slug, --user-input) — [?] -> [x]; emits GATE_APPROVED +
 //          STAGE_COMPLETED, then auto-advances (delegates handleAdvance, :775).
-//          For bugfix scope, requirements-analysis is NOT the final EXECUTE
+//          For fix scope, requirements-analysis is NOT the final EXECUTE
 //          stage (code-generation + build-and-test follow), so the final
 //          approve emits GATE_APPROVED exactly once and lands [x].
 //
-// State + audit contract (verified against a live cycle on bugfix scope):
-//   - bugfix `init` leaves requirements-analysis at `[-] ... — EXECUTE`.
+// State + audit contract (verified against a live cycle on fix scope):
+//   - fix `init` leaves requirements-analysis at `[-] ... — EXECUTE`.
 //     The checkbox line carries the trailing ` — EXECUTE` suffix, so checkbox
 //     assertions match the `- [X] requirements-analysis` PREFIX (the .sh used
 //     anchored regex `^- \[X\] requirements-analysis`, prefix-equivalent).
@@ -175,10 +175,10 @@ beforeAll(() => {
   resetAidlcEnv();
   proj = createTestProject();
 
-  // Init bugfix scope — leaves requirements-analysis in [-] ready to gate.
+  // Init fix scope — leaves requirements-analysis in [-] ready to gate.
   const init = spawnSync(
     BUN,
-    [UTIL, "init", "--scope", "bugfix", "--project-dir", proj],
+    [UTIL, "init", "--scope", "fix", "--project-dir", proj],
     { encoding: "utf-8", env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "revision loop test" } },
   );
   expect(init.status, `init stderr=${init.stderr ?? ""}`).toBe(0);

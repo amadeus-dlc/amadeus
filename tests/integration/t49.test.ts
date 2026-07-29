@@ -27,7 +27,7 @@
 // their own dedicated covers ids live on their own ports.
 //
 // SHARED-WALK FIXTURE (mirrors the .sh's single create_test_project + one
-// linear walk, NOT a fresh project per assertion): the .sh builds ONE bugfix
+// linear walk, NOT a fresh project per assertion): the .sh builds ONE fix
 // workflow and walks it end-to-end, because the audit-ordering + revision-loop
 // assertions only make sense against a single contiguous event stream. We
 // replicate that exactly: beforeAll() does the init + 6 transitions ONCE into a
@@ -58,7 +58,7 @@
 //   - .sh Test 7  assert_not_eq Current Stage != requirements-analysis (advance
 //       moves forward)                                              -> Test 7
 //       PLUS STRONGER: assert the EXACT downstream slug (code-generation) the
-//       bugfix scope routes to after approve auto-advanced, not just "different".
+//       fix scope routes to after approve auto-advanced, not just "different".
 //   - .sh Test 8  assert_gt STAGE_AWAITING_APPROVAL count > 1       -> Test 8
 //       (gate-start + revise both emit it; STRONGER: exact count === 2).
 //   - .sh Test 9  assert_eq GATE_REJECTED count == 1                -> Test 9.
@@ -262,8 +262,8 @@ let stateAfterApprove: string;
 beforeAll(() => {
   proj = createTestProject();
 
-  // init --scope bugfix (the .sh's `bun "$UTIL" init --scope bugfix`).
-  const init = run(UTIL, ["init", "--scope", "bugfix"], proj);
+  // init --scope fix (the .sh's `bun "$UTIL" init --scope fix`).
+  const init = run(UTIL, ["init", "--scope", "fix"], proj);
   expect(init.status).toBe(0);
   // P4: resolve the state path only AFTER init — birth creates the per-intent
   // record + active-intent cursor that statePath/recordDirOf follow. Computing
@@ -347,14 +347,14 @@ describe("t49 amadeus-state lifecycle — approve gate (migrated from t49-state-
     const ack = JSON.parse(approveAck.stdout);
     expect(ack.completed).toBe("requirements-analysis");
     expect(ack.already_completed).toBe(true); // advance saw the slug already [x]
-    expect(ack.started).toBe("code-generation"); // the bugfix next-in-scope stage
+    expect(ack.started).toBe("code-generation"); // the fix next-in-scope stage
   });
 
   // .sh Test 7 — advance moves Current Stage forward
   test("7: Current Stage advanced past requirements-analysis", () => {
     const current = get(proj, "Current Stage");
     expect(current).not.toBe("requirements-analysis"); // .sh assert_not_eq
-    // STRONGER: pin the exact downstream slug the bugfix scope routes to.
+    // STRONGER: pin the exact downstream slug the fix scope routes to.
     expect(current).toBe("code-generation");
     // advance after approve is a clean replay (no second advance side-effects).
     expect(JSON.parse(advanceAck.stdout).replay).toBe(true);

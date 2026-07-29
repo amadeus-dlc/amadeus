@@ -20,7 +20,7 @@ Initialization フェーズは AI-DLC ワークフローにおける5フェー�
 | feature | 0.1-0.3 すべて |
 | mvp | 0.1-0.3 すべて |
 | poc | 0.1-0.3 すべて |
-| bugfix | 0.1-0.3 すべて |
+| fix | 0.1-0.3 すべて |
 | chore | 0.1-0.3 すべて |
 | refactor | 0.1-0.3 すべて |
 | infra | 0.1-0.3 すべて |
@@ -138,7 +138,7 @@ Initialization フェーズは AI-DLC ワークフローにおける5フェー�
 
 ### 備考
 - brownfield プロジェクトは reverse-engineering(ステージ2.1)へルーティングされる
-- greenfield プロジェクトは初期化以外の最初のステージへルーティングされる(feature/poc の場合は intent-capture、bugfix/refactor の場合は requirements-analysis、workshop の場合は practices-discovery。workshop は Ideation 全体をスキップし、greenfield では reverse-engineering が SKIP へ格下げされるため)
+- greenfield プロジェクトは初期化以外の最初のステージへルーティングされる(feature/poc の場合は intent-capture、fix/refactor の場合は requirements-analysis、workshop の場合は practices-discovery。workshop は Ideation 全体をスキップし、greenfield では reverse-engineering が SKIP へ格下げされるため)
 - `/amadeus-init`(明示的な birth パッケージング)から呼び出された場合、オーケストレーターはこのステージの後で停止する
 - ワークフロー開始(`/amadeus <scope>` または何を作るかの説明)から呼び出された場合、オーケストレーターは初期化後の最初のステージへ続行する
 

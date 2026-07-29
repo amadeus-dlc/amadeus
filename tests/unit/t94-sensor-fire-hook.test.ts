@@ -179,8 +179,8 @@ function makeProjectActive(): string {
     [
       "# AI-DLC State (t94 fixture)",
       "",
-      "- **Workflow**: bugfix",
-      "- **Scope**: bugfix",
+      "- **Workflow**: fix",
+      "- **Scope**: fix",
       "- **Phase**: inception",
       "- **Current Stage**: requirements-analysis",
       "",
@@ -424,7 +424,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
   test("missing Current Stage -> no spawn [.sh case 12]", () => {
     const proj = makeProject();
     seedAudit(proj);
-    seedState(proj, "- **Workflow**: bugfix\n");
+    seedState(proj, "- **Workflow**: fix\n");
     const r = runHook(proj, inceptionMd(proj));
     expect(r.status).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(false);

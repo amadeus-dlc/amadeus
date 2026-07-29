@@ -1,7 +1,7 @@
-// covers: audit:STAGE_STARTED, scope:bugfix
+// covers: audit:STAGE_STARTED, scope:fix
 //
 // t53.test.ts — SDK-harness port of tests/e2e/t53-workflow-scope-routing.sh
-// (plan 11). Drives the real `/amadeus bugfix` (TRAP 2: the run
+// (plan 11). Drives the real `/amadeus fix` (TRAP 2: the run
 // stops at the FIRST orchestrator directive, BEFORE any gate, so headless
 // auto-approve was never load-bearing; both the live prompt and the
 // deterministic seed are plain, human-driven)
@@ -22,7 +22,7 @@
 // directly on the audit's STAGE_STARTED blocks (every STAGE_STARTED names only
 // an EXECUTE stage; no SKIP slug ever appears in a STAGE_STARTED block).
 //
-// THE JOURNEY. `bugfix` is a Minimal scope whose scope-mapping marks the entire
+// THE JOURNEY. `fix` is a Minimal scope whose scope-mapping marks the entire
 // Ideation phase SKIP and only six stages EXECUTE: workspace-scaffold,
 // workspace-detection, state-init (the 3 init stages), reverse-engineering,
 // requirements-analysis (Inception), code-generation, build-and-test
@@ -30,7 +30,7 @@
 // noAidlcDocs:true) reverse-engineering is auto-downgraded to SKIP
 // (amadeus-utility.ts:1958-1968), leaving requirements-analysis as the first
 // post-init stage. The deterministic seed runs
-// `amadeus-utility.ts init --scope bugfix` directly, which writes
+// `amadeus-utility.ts init --scope fix` directly, which writes
 // the full amadeus-state.md and the audit's WORKFLOW_STARTED / PHASE_STARTED /
 // PHASE_SKIPPED×2 / STAGE_STARTED+COMPLETED×3 / WORKSPACE_* events plus the
 // init->Inception phase hand-off (a 4th STAGE_STARTED naming requirements-
@@ -39,7 +39,7 @@
 // (every Ideation stage, all Operation stages, etc.) get a `[ ] <slug> — SKIP`
 // row in Stage Progress and a `## Scope Configuration` Skip-list entry, but NO
 // audit STAGE_STARTED. The SDK portion proves the live slash route asks the
-// orchestrator for bugfix's next directive and receives requirements-analysis;
+// orchestrator for fix's next directive and receives requirements-analysis;
 // full golden-path auto-advance/co-fire coverage lives in t126/t138, where that
 // broader workflow behavior is the actual invariant.
 //
@@ -62,9 +62,9 @@
 //                                              `[ ] <slug> — SKIP` (never [x]); asserted per-stage
 //   7-9 `[x] <init-stage>` × 3              -> the 3 init rows are `[x] <slug> — EXECUTE`; asserted
 //                                              per-stage (utility.ts:1995-1998 marker=[x] for init phase)
-//   11 grep STATE [Bb]ugfix                 -> readStateField(state,"Scope") === "bugfix"
+//   11 grep STATE [Bb]ugfix                 -> readStateField(state,"Scope") === "fix"
 //                                              (## Project Information Scope line, utility.ts:2049)
-//   12 COMPLETED < 12 (`^- [x]` lines)      -> STRONGER: bugfix marks the 3 init stages [x] at init;
+//   12 COMPLETED < 12 (`^- [x]` lines)      -> STRONGER: fix marks the 3 init stages [x] at init;
 //                                              the count of `[x]` Stage-Progress rows is bounded < 12
 //                                              the way the .sh did, AND the SKIP invariant below pins WHY.
 //
@@ -75,14 +75,14 @@
 //       all EXECUTE). assertAuditEvent(r,"STAGE_STARTED") first proves the event class fired.
 //
 // Known-answer literals (read from the SHIPPED handler / scope-mapping, not guessed):
-//   - bugfix scope mapping (Ideation all SKIP, EXECUTE = init×3 + reverse-engineering +
-//     requirements-analysis + code-generation + build-and-test): scope-mapping.json "bugfix"
+//   - fix scope mapping (Ideation all SKIP, EXECUTE = init×3 + reverse-engineering +
+//     requirements-analysis + code-generation + build-and-test): scope-mapping.json "fix"
 //   - greenfield downgrades reverse-engineering EXECUTE->SKIP: amadeus-utility.ts:1958-1968
 //   - Stage Progress row shape `- [x|-| ] <slug> — EXECUTE|SKIP`: amadeus-utility.ts:1996-1998
-//   - Scope line "- **Scope**: bugfix": amadeus-utility.ts:2049
+//   - Scope line "- **Scope**: fix": amadeus-utility.ts:2049
 //   - STAGE_STARTED emitted for EXECUTE stages only: amadeus-utility.ts:1813,1907,1928,2134
 //
-// It SPENDS TOKENS — driveAidlc drives the real /amadeus bugfix on
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus fix on
 // Opus/Bedrock until the deterministic run-stage directive. Generous per-test
 // timeout so a hung SDK stream fails LOUD.
 
@@ -98,7 +98,7 @@ import {
 import { auditFilePathFor, driveAidlc } from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget. `/amadeus bugfix` is live SDK traffic even though the
+// Timeout budget. `/amadeus fix` is live SDK traffic even though the
 // test stops after the deterministic orchestrator directive.
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the .sh family
 // allotted generous workflow budgets). The drive aborts a hair before bun
@@ -108,9 +108,9 @@ const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10)
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
-// Known-answer stage slugs from the SHIPPED scope-mapping.json "bugfix" entry.
-// The Ideation phase is ENTIRELY SKIP for bugfix; the 3 init stages EXECUTE; the
-// Operation phase is entirely SKIP. (scope-mapping.json "bugfix".stages)
+// Known-answer stage slugs from the SHIPPED scope-mapping.json "fix" entry.
+// The Ideation phase is ENTIRELY SKIP for fix; the 3 init stages EXECUTE; the
+// Operation phase is entirely SKIP. (scope-mapping.json "fix".stages)
 const IDEATION_STAGES = [
   "intent-capture",
   "market-research",
@@ -131,17 +131,17 @@ const OPERATION_STAGES = [
 ];
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
 
-/** Seed the bugfix state through the same per-project utility the slash command
+/** Seed the fix state through the same per-project utility the slash command
  * ultimately delegates to. This test's invariant is SDK routing over an already
- * valid bugfix workflow; fresh no-state slash-command recovery is covered
- * elsewhere and can otherwise pollute audit.md before the bugfix run begins. */
+ * valid fix workflow; fresh no-state slash-command recovery is covered
+ * elsewhere and can otherwise pollute audit.md before the fix run begins. */
 function seedBugfixState(proj: string): void {
   const utility = join(proj, ".claude", "tools", "amadeus-utility.ts");
   // The seed is a plain, deterministic init (TRAP 2). The live journey stops
   // at the first orchestrator directive, before any gate, so it needs no mode.
   const res = spawnSync(
     process.execPath,
-    [utility, "init", "--scope", "bugfix", "--project-dir", proj],
+    [utility, "init", "--scope", "fix", "--project-dir", proj],
     { cwd: proj, encoding: "utf8" },
   );
   expect(res.status).toBe(0);
@@ -172,7 +172,7 @@ function completedRowCount(stateText: string): number {
 
 /** Files (not dirs) under <proj>/amadeus-docs/ideation/, recursively. The init
  *  tool scaffolds EMPTY stage dirs; because every Ideation stage is SKIP for
- *  bugfix, nothing should ever write a file there. Mirrors the .sh's
+ *  fix, nothing should ever write a file there. Mirrors the .sh's
  *  `find amadeus-docs/ideation -type f`. */
 function ideationFiles(proj: string): string[] {
   const dir = join(proj, "amadeus-docs", "ideation");
@@ -209,9 +209,9 @@ function stageStartedStages(proj: string): string[] {
   return slugs;
 }
 
-describe("t53 /amadeus bugfix scope routing (sdk)", () => {
+describe("t53 /amadeus fix scope routing (sdk)", () => {
   test(
-    "bugfix skips Ideation+Operation, marks init [x], records bugfix scope; STAGE_STARTED names EXECUTE stages only",
+    "fix skips Ideation+Operation, marks init [x], records fix scope; STAGE_STARTED names EXECUTE stages only",
     async () => {
       // --no-amadeus-docs: fresh greenfield project; init creates amadeus-docs/ from
       // scratch and downgrades reverse-engineering to SKIP (greenfield).
@@ -219,7 +219,7 @@ describe("t53 /amadeus bugfix scope routing (sdk)", () => {
       try {
         seedBugfixState(proj);
 
-        const r = await driveAidlc("/amadeus bugfix", {
+        const r = await driveAidlc("/amadeus fix", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: {
@@ -242,11 +242,11 @@ describe("t53 /amadeus bugfix scope routing (sdk)", () => {
         expect(r.stateFile).toBeDefined();
         const state = r.stateFile as string;
 
-        // ---- .sh test 11: bugfix scope recorded ----
+        // ---- .sh test 11: fix scope recorded ----
         // The ## Project Information Scope line (amadeus-utility.ts:2049). Stronger
         // than the .sh's case-insensitive [Bb]ugfix grep: an exact field read.
         const scope = state.match(/^- \*\*Scope\*\*: (\S+)$/m)?.[1];
-        expect(scope).toBe("bugfix");
+        expect(scope).toBe("fix");
 
         // ---- .sh test 3: no Ideation stage marked [x] ----
         // STRONGER: every Ideation stage row is `[ ] <slug> — SKIP`, asserted
@@ -276,7 +276,7 @@ describe("t53 /amadeus bugfix scope routing (sdk)", () => {
         }
 
         // ---- .sh test 4: Inception stages present ----
-        // requirements-analysis is the first post-init EXECUTE stage for bugfix
+        // requirements-analysis is the first post-init EXECUTE stage for fix
         // (reverse-engineering downgraded to SKIP on greenfield); its EXECUTE
         // row must be present.
         const reqRow = stageRow(state, "requirements-analysis");
@@ -284,7 +284,7 @@ describe("t53 /amadeus bugfix scope routing (sdk)", () => {
         expect(reqRow!.action).toBe("EXECUTE");
 
         // ---- .sh test 5: Construction stages present ----
-        // Both Construction EXECUTE stages for bugfix.
+        // Both Construction EXECUTE stages for fix.
         for (const slug of ["code-generation", "build-and-test"]) {
           const row = stageRow(state, slug);
           expect(row).toBeDefined();
@@ -296,8 +296,8 @@ describe("t53 /amadeus bugfix scope routing (sdk)", () => {
         // stage ever writes a file under amadeus-docs/ideation/.
         expect(ideationFiles(proj)).toEqual([]);
 
-        // ---- .sh test 12: completed stages < 12 (bugfix scope constraint) ----
-        // The count of `- [x]` Stage-Progress rows. bugfix marks the 3 init
+        // ---- .sh test 12: completed stages < 12 (fix scope constraint) ----
+        // The count of `- [x]` Stage-Progress rows. fix marks the 3 init
         // stages [x] at init; the run stops at the first directive (before any
         // gate), so nothing beyond init can complete. The .sh bounded this < 12.
         expect(completedRowCount(state)).toBeLessThan(12);

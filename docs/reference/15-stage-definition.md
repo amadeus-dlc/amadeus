@@ -160,7 +160,7 @@ not a global assertion that the artifact always exists somewhere:
 > `required: true` means *"if the producing stage runs in the active
 > plan, this consume must be satisfied."* It does **not** mean "the
 > producer always runs." When a scope excludes the producer
-> (e.g., `bugfix` skips `units-generation`), every `required: true`
+> (e.g., `fix` skips `units-generation`), every `required: true`
 > consume of that producer's artifacts becomes moot — there is
 > nothing to require.
 

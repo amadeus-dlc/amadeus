@@ -7,7 +7,7 @@
 > **Harness note.** This chapter uses Claude Code's surfaces — skills under
 > `.claude/skills/`, typed with a leading `/` from the picker. Kiro ships the same
 > runner set under `.kiro/skills/` (also `/`-typed); Codex ships them to
-> `.agents/skills/` and types them with `$` (`$amadeus-bugfix`). The runner *set* and
+> `.agents/skills/` and types them with `$` (`$amadeus-fix`). The runner *set* and
 > what each does are identical across harnesses — only the directory and prefix
 > differ. See [Running on other harnesses](harnesses/README.md).
 
@@ -18,12 +18,12 @@
 Every command this implementation ships is a skill under `.claude/skills/`. They all drive the same deterministic engine — they differ only in what they bake in before they start:
 
 - **`/amadeus`** — the full orchestrator. No flags baked in; it detects your scope (or you describe what you want), then drives every stage in your scope to completion. This is the one you reach for most.
-- **Scope-runners** — `/amadeus-bugfix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch`. Same full workflow, with a scope fixed and scope detection skipped.
+- **Scope-runners** — `/amadeus-fix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch`. Same full workflow, with a scope fixed and scope detection skipped.
 - **Stage-runners** — `/amadeus-application-design`, `/amadeus-code-generation`, and 27 more. Run one stage in isolation, never touching your main workflow.
 - **`/amadeus-init`** — birth the first intent (run the whole Initialization phase) in one step; opt-in packaging over the engine's auto-birth.
 - **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`, `/amadeus-mirror`, `/amadeus-plugin`. The first four are read-only views or interviews. `/amadeus-mirror` and `/amadeus-plugin` diagnose first (`status`), then can run one user-selected action.
 
-Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-bugfix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
+Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-fix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
 
 ---
 
@@ -81,7 +81,7 @@ agreement remains in `amadeus/spaces/<space>/memory/team.md`.
 A scope-runner drives the full workflow with one scope locked in. Use it when you already know what kind of work you're doing and want to skip scope detection.
 
 ```
-/amadeus-bugfix          Fix a specific bug — minimal depth, streamlined path
+/amadeus-fix          Fix a specific bug — minimal depth, streamlined path
 /amadeus-feature         Build a new feature — standard depth, all stages
 /amadeus-mvp             Ship the core — skips late operations stages
 /amadeus-security-patch  CVE / vulnerability response
@@ -90,14 +90,14 @@ A scope-runner drives the full workflow with one scope locked in. Use it when yo
 Each is identical to passing `--scope` to the orchestrator:
 
 ```
-/amadeus-bugfix          ==  /amadeus --scope bugfix
+/amadeus-fix          ==  /amadeus --scope fix
 /amadeus-feature         ==  /amadeus --scope feature
 ```
 
 You can pass a description and flags straight through, exactly as you would to `/amadeus`:
 
 ```
-/amadeus-bugfix The profile API returns 500 when display_name is null
+/amadeus-fix The profile API returns 500 when display_name is null
 /amadeus-feature --status
 ```
 
@@ -152,7 +152,7 @@ The three bootstrap **initialization** stages ship no stage-runner — birthing 
 | Family | Examples | What it does | Orchestrator equivalent |
 |---|---|---|---|
 | Orchestrator | `/amadeus` | Full workflow, scope detected | — |
-| Scope-runner | `/amadeus-bugfix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch` | Full workflow, scope fixed, no detection | `/amadeus --scope <name>` |
+| Scope-runner | `/amadeus-fix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch` | Full workflow, scope fixed, no detection | `/amadeus --scope <name>` |
 | Stage-runner | `/amadeus-application-design`, `/amadeus-code-generation`, … (29 total) | One stage in isolation, never advances your workflow | `/amadeus --stage <slug> --single` |
 | Init wrapper | `/amadeus-init` | Birth the first intent (run Initialization) | `/amadeus` on a fresh workspace |
 | Session views | `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack` | Read-only workflow reports | see [Session Management](11-session-management.md) |
@@ -203,7 +203,7 @@ For the mechanics of writing a stage file, see [Customization](13-customization.
 /amadeus --scope enterprise           any of the 10 scopes
 
 # Scope-runners (the 4 high-traffic doors)
-/amadeus-bugfix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch
+/amadeus-fix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch
 
 # One stage, isolated (never advances your workflow)
 /amadeus-code-generation              == /amadeus --stage code-generation --single

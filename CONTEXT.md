@@ -5,15 +5,16 @@ self-development work.
 
 ## Self-development scopes
 
-**Amadeus Fix**:
-A bounded correction that restores alignment with an existing design, policy,
-or cross-harness contract without introducing a new capability or architecture.
-_Avoid_: Amadeus Bugfix, maintenance
+**Self Fix**:
+A bounded correction, including a software defect fix, that restores alignment
+with an existing design, policy, or cross-harness contract without introducing
+a new capability or architecture.
+_Avoid_: Amadeus Fix, Amadeus Bugfix, maintenance
 
-**Amadeus Feature**:
+**Self Feature**:
 A change that introduces a new capability, specification, or design to Amadeus.
 _Avoid_: enhancement, improvement
 
-**Amadeus Refactor**:
+**Self Refactor**:
 A behavior-preserving change to Amadeus's internal structure.
 _Avoid_: cleanup, rewrite
