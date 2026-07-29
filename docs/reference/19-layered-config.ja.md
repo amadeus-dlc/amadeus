@@ -59,11 +59,14 @@
 選ぶ前に設定を解決します。
 
 - 解決結果が不正なら error directive を発行し、ルーティングを停止する
-- `autoMirror: "auto"` かつ Mirror Issue が存在する場合、`sync` を実行して境界 receipt を記録する print directive を発行する
-- それ以外は ask directive を発行する。Mirror Issue がなければ `create` も選択肢に含める
+- `autoMirror: "auto"` は固定 lifecycle boundary command を実行する print directive を発行する。mirror coordinator は Mirror Issue がなければ guarded `create`、存在すれば guarded `sync` を選ぶ
+- `autoMirror: "prompt"` だけが ask directive を発行する。Mirror Issue がなければ `create`、`sync`、`skip` を選択肢に含める
+- `autoMirror: "off"` は mirror 質問も GitHub mutation も発行しない
 
-receipt protocol により、中断した自動同期を安全に再試行できます。同期前に `pending`、
-成功後に `completed` を記録します。
+durable identity と receipt protocol により、中断した自動 create または sync を安全に
+再試行できます。lifecycle operation 前に `pending`、成功後に `completed` を記録します。
+リモート create 成功後にローカル永続化が失敗しても、再試行は重複 Issue を作らず同じ
+Issue に収束します。
 
 ## テスト
 
@@ -71,7 +74,8 @@ receipt protocol により、中断した自動同期を安全に再試行でき
 
 - `tests/unit/t257-amadeus-mirror-config.test.ts`: 解析、マージ、既定値、パス導出、reader の動作
 - `tests/integration/t257-amadeus-mirror-config.integration.test.ts`: 実ファイル上の優先順位と失敗ケース
-- `tests/e2e/t265-engine-boundary.test.ts`: フェーズ境界の自動同期と receipt による復旧
+- `tests/integration/t265-engine-boundary.integration.test.ts`: mode と Issue 有無の全6組
+- `tests/e2e/t265-engine-boundary.test.ts`: 自動 lifecycle 委譲と receipt による復旧
 
 配置と利用例については
 [階層設定](../guide/21-layered-config.ja.md)を参照してください。

@@ -493,13 +493,14 @@ describe("t265 mirror boundary distribution", () => {
     ).toBe(CORE_STATE);
   });
 
-  test("auto execution names only the fixed sync command", () => {
+  test("auto execution names only the fixed lifecycle command", () => {
     const functionBody =
       CORE_ENGINE.match(
-        /function mirrorSyncPrint\([\s\S]*?\n}\n\nfunction emitMirrorBoundaryIfNeeded/,
+        /function mirrorLifecyclePrint\([\s\S]*?\n}\n\nfunction emitMirrorBoundaryIfNeeded/,
       )?.[0] ?? "";
     expect(functionBody).toContain("amadeus-mirror-lifecycle.ts boundary");
     expect(functionBody).not.toContain("amadeus-mirror.ts create");
+    expect(functionBody).not.toContain("amadeus-mirror.ts sync");
     expect(functionBody).not.toContain("amadeus-mirror.ts close");
     expect(functionBody).not.toContain("eval(");
   });
@@ -545,31 +546,40 @@ describe("t265 mirror boundary distribution", () => {
   });
 });
 
-describe("t265 engine boundary four quadrants", () => {
+describe("t265 engine boundary mode and issue matrix", () => {
   const cells = (["ideation", "inception", "construction"] as const).flatMap(
     (phase) =>
-      ([false, true] as const).flatMap((auto) =>
+      (["off", "prompt", "auto"] as const).flatMap((mode) =>
         ([false, true] as const).map((mirror) => ({
           phase,
-          auto,
+          mode,
           mirror,
         })),
       ),
   );
 
   test.each(cells)(
-    "$phase auto=$auto mirror=$mirror",
-    ({ phase, auto, mirror }) => {
-    seedBoundary(phase, { auto, mirror });
-    const before = readFileSync(seededStateFile(project), "utf-8");
-    const result = run(ENGINE, ["next"]);
-    const directive = parseDirective(result);
-    const shouldSync = auto && mirror;
-    expect(directive.kind).toBe(shouldSync ? "print" : "ask");
-    const prose = directive.message ?? directive.question ?? "";
-    expect(prose.includes("amadeus-mirror-lifecycle.ts boundary")).toBe(shouldSync);
-    expect(prose.includes("Choose create")).toBe(!mirror);
-    expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
+    "$phase mode=$mode mirror=$mirror",
+    ({ phase, mode, mirror }) => {
+      seedBoundary(phase, { mode, mirror });
+      const before = readFileSync(seededStateFile(project), "utf-8");
+      const result = run(ENGINE, ["next"]);
+      const directive = parseDirective(result);
+      if (mode === "auto") {
+        expect(directive.kind).toBe("print");
+      } else if (mode === "prompt") {
+        expect(directive.kind).toBe("ask");
+      } else {
+        expect(["ask", "print"]).not.toContain(directive.kind);
+      }
+      const prose = directive.message ?? directive.question ?? "";
+      expect(prose.includes("amadeus-mirror-lifecycle.ts boundary")).toBe(
+        mode === "auto",
+      );
+      expect(prose.includes("Choose create")).toBe(
+        mode === "prompt" && !mirror,
+      );
+      expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
     },
   );
 });

@@ -128,13 +128,19 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "lines": "247-248",
-    "reason": "Construction-boundary recognition is exercised through the generated Claude CLI by the 3-phase x 4-quadrant table in tests/integration/t265-engine-boundary.integration.test.ts. Bun does not merge spawned-child coverage into the parent LCOV report.",
+    "reason": "Construction-boundary recognition is exercised through the generated Claude CLI by the 18-cell phase, mode, and Issue matrix in tests/integration/t265-engine-boundary.integration.test.ts. Bun does not merge spawned-child coverage into the parent LCOV report.",
     "expiry": "remove when mirror boundary routing has an in-process engine port or Bun merges child-process coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "302-308",
-    "reason": "Fixed auto-sync print construction is asserted through generated-CLI stdout and the restart journey in tests/integration/t265-engine-boundary.integration.test.ts; child-process execution is invisible to parent LCOV.",
+    "lines": "306",
+    "reason": "Lifecycle-operation success prose is asserted through generated-CLI stdout and the restart journey in tests/integration/t265-engine-boundary.integration.test.ts; child-process execution is invisible to parent LCOV.",
+    "expiry": "remove when directive emission gains an injected in-process sink"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "308",
+    "reason": "Lifecycle-operation retry prose is asserted through generated-CLI stdout and the restart journey in tests/integration/t265-engine-boundary.integration.test.ts; child-process execution is invisible to parent LCOV.",
     "expiry": "remove when directive emission gains an injected in-process sink"
   },
   {
@@ -145,7 +151,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "368-381",
+    "lines": "370",
     "reason": "Canonical pending Receipt reissue is exercised through generated CLI and separate-process session restart tests in t265 integration/E2E; spawned execution is not LCOV-visible.",
     "expiry": "remove when mirror boundary routing has an in-process engine port"
   },
@@ -163,8 +169,14 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "397-428",
-    "reason": "The auto-sync and ask branches, including create availability and fixed command prose, are covered by all 12 generated-CLI quadrant cells in t265 integration. Spawn-only routing is not parent-LCOV resident.",
+    "lines": "403",
+    "reason": "The auto-lifecycle decision branch is covered by the generated-CLI 18-cell phase, mode, and Issue matrix in t265 integration. Spawn-only routing is not parent-LCOV resident.",
+    "expiry": "remove when boundary decision emission has an in-process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "405",
+    "reason": "The auto-lifecycle directive emission is covered by the generated-CLI 18-cell phase, mode, and Issue matrix in t265 integration. Spawn-only routing is not parent-LCOV resident.",
     "expiry": "remove when boundary decision emission has an in-process port"
   },
   {
