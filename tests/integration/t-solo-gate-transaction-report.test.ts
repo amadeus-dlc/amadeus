@@ -78,10 +78,14 @@ describe("carrier report rejections", () => {
   test("reports a rejected transition when the state commit fails", () => {
     const { root, owner } = setup(new Date(Date.now() + 60_000).toISOString(), Date.now());
     const before = readFileSync(join(owner, "amadeus-state.md"), "utf-8");
+    const registryPath = join(root, "amadeus", "spaces", "default", "intents", "intents.json");
+    const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Array<Record<string, unknown>>;
+    registry[0].status = "parked";
+    writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
     const message = reportError(root, [
       "--stage", STAGE, "--result", "approved",
       "--standing-grant-id", GRANT_ID,
-      "--standing-grant-route-id", "87654321-4321-4abc-8def-1234567890ab",
+      "--standing-grant-route-id", ROUTE_ID,
     ]);
     expect(message).toContain(`Transition rejected by amadeus-state.ts approve for "${STAGE}"`);
     expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8")).toBe(before);
