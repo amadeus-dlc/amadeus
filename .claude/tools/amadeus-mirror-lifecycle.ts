@@ -264,6 +264,13 @@ function lifecycleSnapshot(
   target: SnapshotSource,
   now: () => string,
 ): MirrorSnapshot {
+  const completionInstance = getField(
+    target.stateContent,
+    "Workflow Completion Instance",
+  )?.trim();
+  const completionPending =
+    getField(target.stateContent, "Workflow Completion Status")?.trim() !==
+    "completed";
   return {
     intentUuid: target.intentUuid,
     intentDir: target.intentDir,
@@ -273,6 +280,7 @@ function lifecycleSnapshot(
     status: getField(target.stateContent, "Status") ?? "?",
     registryStatus: target.registryStatus,
     updatedAt: getField(target.stateContent, "Last Updated") ?? now(),
+    ...(completionInstance && completionPending ? { completionInstance } : {}),
   };
 }
 

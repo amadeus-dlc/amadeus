@@ -264,13 +264,27 @@ function markerFor(
 }
 
 function landingEvidence(context: MirrorBoundaryContext) {
-  return context.snapshot.registryStatus === "complete" &&
+  if (
+    context.snapshot.registryStatus === "complete" &&
     context.snapshot.status === "Completed"
-    ? {
-        registryStatus: "complete" as const,
-        workflowStatus: "Completed" as const,
-      }
-    : undefined;
+  ) {
+    return {
+      registryStatus: "complete" as const,
+      workflowStatus: "Completed" as const,
+    };
+  }
+  if (
+    context.boundary.kind === "workflow-completed" &&
+    context.snapshot.registryStatus === "in-flight" &&
+    context.snapshot.completionInstance === context.boundary.instance
+  ) {
+    return {
+      registryStatus: "in-flight" as const,
+      workflowStatus: context.snapshot.status,
+      completionInstance: context.boundary.instance,
+    };
+  }
+  return undefined;
 }
 
 function executionAuthorization(

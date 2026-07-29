@@ -64,6 +64,7 @@ import {
   readAllAuditShards,
   readIntentRegistry,
   readStateFile,
+  recordDirMatches,
   recoverBoltDag,
   recoverGateRevision,
   type GateRevisionRecovery,
@@ -124,6 +125,14 @@ import {
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
+import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
+import {
+  prepareWorkflowCompletion,
+  type WorkflowCompletionPreparation,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -2085,8 +2094,14 @@ export function handleCompleteWorkflow(args: string[]): void {
   // --reason takes a value, so its argument is excluded from positionals too.
   const reasonIdx = args.indexOf("--reason");
   const reasonValueIdx = reasonIdx !== -1 ? reasonIdx + 1 : -1;
+  const completionInstanceIdx = args.indexOf("--completion-instance");
+  const completionInstanceValueIdx =
+    completionInstanceIdx !== -1 ? completionInstanceIdx + 1 : -1;
   const positional = args.filter(
-    (a, i) => !a.startsWith("--") && i !== reasonValueIdx,
+    (a, i) =>
+      !a.startsWith("--") &&
+      i !== reasonValueIdx &&
+      i !== completionInstanceValueIdx,
   );
   if (positional.length < 1)
     error("Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]");
@@ -2097,6 +2112,10 @@ export function handleCompleteWorkflow(args: string[]): void {
   if (reasonIdx !== -1 && reasonIdx + 1 < args.length) {
     reason = args[reasonIdx + 1];
   }
+  const requestedInstance =
+    completionInstanceIdx !== -1 && completionInstanceIdx + 1 < args.length
+      ? args[completionInstanceIdx + 1]
+      : undefined;
 
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: read→decide→emit-audit (4 rows)→write under one
@@ -2108,6 +2127,12 @@ export function handleCompleteWorkflow(args: string[]): void {
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+  verifyPreparedWorkflowCompletion(
+    pd,
+    content,
+    completedSlug,
+    requestedInstance,
+  );
 
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
@@ -2143,6 +2168,14 @@ export function handleCompleteWorkflow(args: string[]): void {
   // 3. Update all fields atomically for workflow completion
   const timestamp = isoTimestamp();
   content = setField(content, "Status", "Completed");
+  if (workflowCompletionPreparation(content) !== null) {
+    content = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Workflow Completion Status",
+      "completed",
+    );
+  }
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "In Progress", "none");
@@ -2892,6 +2925,7 @@ type ApprovalAuditInput = {
   readonly userInput?: string;
   readonly authorization: ApprovalAuthorization;
   readonly recovery: GateRevisionRecovery | null;
+  readonly deferStageCompletion: boolean;
 };
 
 function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
@@ -2917,7 +2951,7 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     if (auditPrefix === "none") {
       emitAudit(pd, "GATE_APPROVED", gateFields);
     }
-    if (auditPrefix !== "completed") {
+    if (auditPrefix !== "completed" && !input.deferStageCompletion) {
       emitAudit(pd, "STAGE_COMPLETED", {
         Stage: input.slug,
         Details: `Stage ${input.stageName} approved by gate`,
@@ -2966,6 +3000,7 @@ function approveUnderLock(
   slug: string,
   userInput: string | undefined,
   override?: ApprovalAuthorizationOverride,
+  deferWorkflowCompletion = false,
 ): void {
   let content = operationReadState(pd);
 
@@ -2980,6 +3015,9 @@ function approveUnderLock(
 
   const approveScope = getField(content, "Scope")!;
   const nextForPhaseGate = nextInScopeStage(slug, approveScope, content);
+  if (deferWorkflowCompletion && nextForPhaseGate !== null) {
+    error("--defer-workflow-completion is valid only for the final in-scope stage.");
+  }
   if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
     verifyPhaseCheckArtifact(pd, stage.phase);
   }
@@ -2996,6 +3034,9 @@ function approveUnderLock(
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
+  if (deferWorkflowCompletion) {
+    content = prepareWorkflowCompletion(content, slug, timestamp);
+  }
 
   const nextStateIssue = approvalNextStateIssue(content, slug, timestamp, recoveredRevision);
   if (nextStateIssue !== null) failApprovalCommitValidation(nextStateIssue);
@@ -3007,6 +3048,7 @@ function approveUnderLock(
     ...(userInput ? { userInput } : {}),
     authorization,
     recovery,
+    deferStageCompletion: deferWorkflowCompletion,
   });
   operationWriteState(pd, content);
   const scope = approveScope;
@@ -3014,6 +3056,12 @@ function approveUnderLock(
   const next = nextInScopeStage(slug, scope, content);
   if (next) {
     handleAdvance([slug]);
+  } else if (deferWorkflowCompletion) {
+    console.log(JSON.stringify({
+      completed: slug,
+      status: "completion-pending",
+      completion_instance: timestamp,
+    }));
   } else {
     handleCompleteWorkflow([slug]);
   }
@@ -3086,7 +3134,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
             runWithoutTransitionOutput(() => {
               approveUnderLock(pd, slug, undefined, {
                 grantId: authority.grantId,
-              });
+              }, flags.deferWorkflowCompletion);
             });
             console.log(JSON.stringify({ kind: "approved" }));
           });
@@ -3163,7 +3211,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
               approveUnderLock(pd, slug, authority.userInput, {
                 grantId: null,
                 auditPrefix,
-              });
+              }, flags.deferWorkflowCompletion);
             });
           } else if (stageState === "completed") {
             if (prefix.gateApproved !== 1 || prefix.stageCompleted !== 1) {
@@ -3196,7 +3244,13 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-    approveUnderLock(pd, slug, authority.userInput);
+    approveUnderLock(
+      pd,
+      slug,
+      authority.userInput,
+      undefined,
+      flags.deferWorkflowCompletion,
+    );
   });
 }
 
@@ -3224,6 +3278,7 @@ type ApproveFlags = {
   readonly standingGrantRouteId?: string;
   readonly targetIntentId?: string;
   readonly presenceReservationId?: string;
+  readonly deferWorkflowCompletion: boolean;
 };
 
 function parseApproveFlags(args: string[]): ApproveFlags {
@@ -3233,6 +3288,7 @@ function parseApproveFlags(args: string[]): ApproveFlags {
     standingGrantRouteId: getFlagValue(args, "--standing-grant-route-id"),
     targetIntentId: getFlagValue(args, "--target-intent-id"),
     presenceReservationId: getFlagValue(args, "--presence-reservation-id"),
+    deferWorkflowCompletion: args.includes("--defer-workflow-completion"),
   };
 }
 
@@ -4868,6 +4924,87 @@ export function handleSetConstructionIteration(args: string[]): void {
     writeStateFile(pd, updated);
     console.log(JSON.stringify({ updated: true, construction_iteration: value }));
   });
+}
+
+function verifyPreparedCompletionIdentity(
+  prepared: WorkflowCompletionPreparation,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  if (prepared.stage !== completedSlug) {
+    error(
+      `Workflow completion was prepared for "${prepared.stage}", not "${completedSlug}".`,
+    );
+  }
+  if (requestedInstance === undefined) {
+    error(
+      `Prepared workflow completion requires --completion-instance "${prepared.instance}".`,
+    );
+  }
+  if (requestedInstance !== prepared.instance) {
+    error(
+      `Workflow completion instance mismatch: expected "${prepared.instance}", got "${requestedInstance}".`,
+    );
+  }
+}
+
+function verifyPreparedWorkflowCompletion(
+  pd: string,
+  content: string,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  const prepared = workflowCompletionPreparation(content);
+  if (prepared === null) return;
+  verifyPreparedCompletionIdentity(prepared, completedSlug, requestedInstance);
+  const space = stateOperationTarget?.space ?? activeSpace(pd);
+  const intent =
+    stateOperationTarget?.intent ?? activeIntent(pd, space);
+  if (!intent) {
+    error("Prepared workflow completion cannot resolve its Intent.");
+  }
+  const config = resolveMirrorConfig(pd, intent, space);
+  if (config.kind === "invalid") {
+    error(
+      `Prepared workflow completion cannot resolve mirror configuration: ${
+        config.issues.map((issue) =>
+          issue.kind === "read-failure"
+            ? `${issue.layer}: ${issue.summary}`
+            : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
+        ).join("; ")
+      }`,
+    );
+  }
+  if (config.config.autoMirror === "off") return;
+  const entries = readIntentRegistry(pd, space).filter((entry) =>
+    recordDirMatches(entry, intent)
+  );
+  if (entries.length !== 1) {
+    error("Prepared workflow completion must resolve exactly one Intent registry row.");
+  }
+  const parsed = parseMirrorStateDocument(content);
+  if (parsed.kind === "invalid") {
+    error(`Prepared workflow completion has invalid mirror state: ${parsed.issues.join("; ")}`);
+  }
+  if (parsed.snapshot.auditOutbox !== null && parsed.snapshot.auditOutbox !== undefined) {
+    error("Prepared workflow completion still has a pending mirror audit outbox.");
+  }
+  const settlement = workflowCompletionSettlement({
+    intentUuid: entries[0].uuid,
+    boundary: {
+      kind: "workflow-completed",
+      instance: prepared.instance,
+    },
+    state: parsed.snapshot,
+  });
+  if (settlement.kind !== "settled") {
+    const detail = settlement.kind === "pending"
+      ? `operation "${settlement.operation}" is still pending`
+      : `operation "${settlement.operation}" is ${settlement.status}`;
+    error(
+      `Prepared workflow completion cannot commit before its mirror boundary settles: ${detail}.`,
+    );
+  }
 }
 
 // --- Utility ---

@@ -2,19 +2,27 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   EMPTY_MIRROR_STATE,
+  parseMirrorStateDocument,
   renderMirrorStateBlock,
 } from "../../dist/claude/.claude/tools/amadeus-mirror-state-codec.ts";
 import {
+  mirrorEventIdentity,
+  mirrorEventKey,
+} from "../../dist/claude/.claude/tools/amadeus-mirror-policy.ts";
+import {
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
   seedStateFile,
@@ -72,6 +80,9 @@ const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
 });
 
 let project = "";
+
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
 
 function run(tool: string, args: string[]) {
   const result = spawnSync(
@@ -185,5 +196,226 @@ describe("t265 mirror boundary distribution", () => {
     expect(routed.kind).toBe("run-stage");
     state = readFileSync(seededStateFile(project), "utf-8");
     expect(state).toContain('{"inception":"completed"}');
+  });
+
+  test("final report keeps a multi-intent workflow addressable until completion mirror settles", () => {
+    project = createTestProject();
+    seedStateFile(
+      project,
+      join(FIXTURES_DIR, "state-bugfix-final-construction.md"),
+    );
+    const statePath = seededStateFile(project);
+    writeFileSync(
+      statePath,
+      readFileSync(statePath, "utf-8")
+        .replace(
+          "- [-] build-and-test — EXECUTE",
+          "- [?] build-and-test — EXECUTE",
+        )
+        .replace("## Current Status", `## Current Status\n${MIRROR_ISSUE_BLOCK}`),
+    );
+    writeFileSync(
+      join(project, "amadeus", "config.json"),
+      '{"auto-mirror":"auto"}',
+    );
+    const record = join(
+      project,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      DEFAULT_RECORD_DIR,
+    );
+    mkdirSync(join(record, "construction", "build-and-test"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(
+        record,
+        "construction",
+        "build-and-test",
+        "build-and-test-summary.md",
+      ),
+      "# Build and Test Summary\n",
+    );
+    mkdirSync(join(record, "verification"), { recursive: true });
+    writeFileSync(
+      join(record, "verification", "phase-check-construction.md"),
+      "# Construction Phase Check\n",
+    );
+
+    const intents = join(
+      project,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+    );
+    const registryPath = join(intents, "intents.json");
+    const registry = JSON.parse(
+      readFileSync(registryPath, "utf-8"),
+    ) as Array<Record<string, unknown>>;
+    registry.push({
+      uuid: "00000000-0000-7000-8000-000000000002",
+      slug: "other",
+      status: "in-flight",
+    });
+    writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
+    mkdirSync(join(intents, "other-8000000000000002"), { recursive: true });
+    writeFileSync(
+      join(intents, "other-8000000000000002", "amadeus-state.md"),
+      "# Other active workflow\n",
+    );
+
+    const report = run(CLAUDE_ENGINE, [
+      "report",
+      "--stage",
+      "build-and-test",
+      "--result",
+      "approved",
+      "--user-input",
+      "approved",
+    ]);
+    expect(report).toMatchObject({ kind: "print" });
+
+    const afterRegistry = JSON.parse(
+      readFileSync(registryPath, "utf-8"),
+    ) as Array<{ uuid: string; status: string }>;
+    expect(
+      afterRegistry.find((entry) =>
+        entry.uuid === "00000000-0000-7000-8000-000000000001"
+      )?.status,
+    ).toBe("in-flight");
+    expect(
+      readFileSync(join(intents, "active-intent"), "utf-8").trim(),
+    ).toBe(DEFAULT_RECORD_DIR);
+    expect(existsSync(join(intents, "active-intent"))).toBe(true);
+    const prepared = readFileSync(statePath, "utf-8");
+    expect(prepared).toContain("- **Status**: Running");
+    expect(prepared).toContain("- **Workflow Completion Instance**:");
+    const auditDir = join(record, "audit");
+    const preparedAudit = readdirSync(auditDir)
+      .filter((name) => name.endsWith(".jsonl"))
+      .map((name) => readFileSync(join(auditDir, name), "utf-8"))
+      .join("");
+    expect(preparedAudit).not.toContain("STAGE_COMPLETED");
+    expect(report.message).toContain(
+      "amadeus-mirror-lifecycle.ts boundary completion",
+    );
+
+    const completionInstance = prepared.match(
+      /- \*\*Workflow Completion Instance\*\*: ([^\n]+)/,
+    )?.[1];
+    expect(completionInstance).toBeDefined();
+    const missingIdentity = spawnSync(
+      process.execPath,
+      [
+        amadeusToolTarget(CLAUDE_STATE),
+        "complete-workflow",
+        "build-and-test",
+        "--project-dir",
+        project,
+      ],
+      { encoding: "utf-8" },
+    );
+    expect(missingIdentity.status).not.toBe(0);
+    expect(missingIdentity.stderr).toContain("requires --completion-instance");
+    const premature = spawnSync(
+      process.execPath,
+      [
+        amadeusToolTarget(CLAUDE_STATE),
+        "complete-workflow",
+        "build-and-test",
+        "--completion-instance",
+        completionInstance ?? "",
+        "--project-dir",
+        project,
+      ],
+      { encoding: "utf-8" },
+    );
+    expect(premature.status).not.toBe(0);
+    expect(premature.stderr).toContain("mirror boundary settles");
+    expect(existsSync(join(intents, "active-intent"))).toBe(true);
+    expect(
+      (JSON.parse(readFileSync(registryPath, "utf-8")) as Array<{
+        uuid: string;
+        status: string;
+      }>).find((entry) =>
+        entry.uuid === "00000000-0000-7000-8000-000000000001"
+      )?.status,
+    ).toBe("in-flight");
+    const parsed = parseMirrorStateDocument(prepared);
+    if (parsed.kind !== "ok" || parsed.block === null || !completionInstance) {
+      throw new Error("prepared completion mirror state is unavailable");
+    }
+    const completedAt = "2026-07-29T10:00:00Z";
+    const syncEvent = mirrorEventIdentity(
+      "00000000-0000-7000-8000-000000000001",
+      { kind: "workflow-completed", instance: completionInstance },
+      "sync",
+    );
+    const closeEvent = mirrorEventIdentity(
+      "00000000-0000-7000-8000-000000000001",
+      { kind: "workflow-completed", instance: completionInstance },
+      "close",
+    );
+    const syncKey = mirrorEventKey(syncEvent);
+    const closeKey = mirrorEventKey(closeEvent);
+    const settledBlock = renderMirrorStateBlock({
+      ...parsed.snapshot,
+      revision: 2,
+      receipts: {
+        [syncKey]: {
+          key: syncKey,
+          event: syncEvent,
+          operationId: "sync-op",
+          createdRevision: 1,
+          status: "succeeded",
+          preparedAt: completedAt,
+          attemptedAt: completedAt,
+          completedAt,
+        },
+        [closeKey]: {
+          key: closeKey,
+          event: closeEvent,
+          operationId: "close-op",
+          createdRevision: 2,
+          status: "succeeded",
+          preparedAt: completedAt,
+          attemptedAt: completedAt,
+          completedAt,
+        },
+      },
+      auditOutbox: null,
+    });
+    writeFileSync(
+      statePath,
+      prepared.slice(0, parsed.block.start) +
+        settledBlock +
+        prepared.slice(parsed.block.end),
+    );
+    run(CLAUDE_STATE, [
+      "complete-workflow",
+      "build-and-test",
+      "--completion-instance",
+      completionInstance,
+    ]);
+    const terminalRegistry = JSON.parse(
+      readFileSync(registryPath, "utf-8"),
+    ) as Array<{ uuid: string; status: string }>;
+    expect(
+      terminalRegistry.find((entry) =>
+        entry.uuid === "00000000-0000-7000-8000-000000000001"
+      )?.status,
+    ).toBe("complete");
+    expect(existsSync(join(intents, "active-intent"))).toBe(false);
+    expect(readFileSync(statePath, "utf-8")).toContain(
+      "- **Status**: Completed",
+    );
+    const terminalAudit = readdirSync(auditDir)
+      .filter((name) => name.endsWith(".jsonl"))
+      .map((name) => readFileSync(join(auditDir, name), "utf-8"))
+      .join("");
+    expect(terminalAudit.match(/STAGE_COMPLETED/g)).toHaveLength(1);
   });
 });

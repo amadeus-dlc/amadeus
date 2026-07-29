@@ -192,6 +192,31 @@ describe("t265 engine boundary four quadrants", () => {
 });
 
 describe("t265 receipt recovery and reports", () => {
+  test("completion identity is not suppressed by a completed construction receipt", () => {
+    seedBoundary("construction", {
+      auto: true,
+      mirror: true,
+      receipts: '{"construction":"completed"}',
+    });
+    const statePath = seededStateFile(project);
+    writeFileSync(
+      statePath,
+      readFileSync(statePath, "utf-8").replace(
+        "## Runtime State",
+        "## Runtime State\n" +
+          "- **Workflow Completion Instance**: completion-instance-1\n" +
+          "- **Workflow Completion Stage**: build-and-test",
+      ),
+    );
+    const first = parseDirective(run(ENGINE, ["next"]));
+    expect(first.kind).toBe("print");
+    expect(first.message).toContain(
+      'boundary completion --instance "completion-instance-1"',
+    );
+    const second = parseDirective(run(ENGINE, ["next"]));
+    expect(second).toEqual(first);
+  });
+
   test("off suppresses a pending boundary and falls through without mutation", () => {
     seedBoundary("inception", {
       mode: "off",

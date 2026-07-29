@@ -107,6 +107,37 @@ function completedSyncState(
 }
 
 describe("t346 completion gate", () => {
+  test("a prepared in-flight completion reaches Done and close before registry seal", async () => {
+    const fx = fixture({
+      lifecyclePhase: "CONSTRUCTION",
+      registryStatus: "in-flight",
+      completionInstance: "completion-gate",
+      state: linkedState(),
+    });
+    const gateway = new ProjectGateway(markerBody());
+    gateway.items = [memberItem(BOARD_A, "Construction")];
+
+    await drive(fx, gateway, {
+      kind: "workflow-completed",
+      instance: "completion-gate",
+    });
+
+    expect(rowFor(fx.state(), BOARD_A)?.lastAppliedStatus).toBe("Done");
+    expect(gateway.issue.state).toBe("CLOSED");
+    const syncKey = mirrorEventKey(
+      mirrorEventIdentity(
+        INTENT_UUID,
+        { kind: "workflow-completed", instance: "completion-gate" },
+        "sync",
+      ),
+    );
+    expect(fx.state().receipts[syncKey]?.authorization?.landing).toEqual({
+      registryStatus: "in-flight",
+      workflowStatus: "Running",
+      completionInstance: "completion-gate",
+    });
+  });
+
   test("a pre-marker final sync is re-queried before close", async () => {
     const fx = fixture({
       lifecyclePhase: "OPERATION",

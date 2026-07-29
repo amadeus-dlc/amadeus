@@ -508,12 +508,19 @@ export type MirrorSnapshot = Readonly<{
   status: string;
   registryStatus: MirrorRegistryStatus;
   updatedAt: string;
+  completionInstance?: string;
 }>;
 
-export type MirrorLandingEvidence = Readonly<{
-  registryStatus: "complete";
-  workflowStatus: "Completed";
-}>;
+export type MirrorLandingEvidence =
+  | Readonly<{
+      registryStatus: "complete";
+      workflowStatus: "Completed";
+    }>
+  | Readonly<{
+      registryStatus: "in-flight";
+      workflowStatus: string;
+      completionInstance: string;
+    }>;
 
 type MirrorAuthorizationBase = Readonly<{
   event: MirrorEventIdentity;

@@ -381,9 +381,17 @@ function hasFinalSyncEvidence(
 function hasLandingEvidence(
   authorization: MirrorExecutionAuthorization,
 ): boolean {
-  return (
+  if (
     authorization.landing?.registryStatus === "complete" &&
     authorization.landing.workflowStatus === "Completed"
+  ) {
+    return true;
+  }
+  return (
+    authorization.event.boundary.kind === "workflow-completed" &&
+    authorization.landing?.registryStatus === "in-flight" &&
+    authorization.landing.completionInstance ===
+      authorization.event.boundary.instance
   );
 }
 

@@ -563,6 +563,7 @@ const AUTHORIZATION_KEYS: ReadonlySet<string> = new Set([
 const LANDING_KEYS: ReadonlySet<string> = new Set([
   "registryStatus",
   "workflowStatus",
+  "completionInstance",
 ]);
 
 function checkUnknownKeys(
@@ -756,13 +757,27 @@ function validateLanding(
   }
   checkUnknownKeys(value, LANDING_KEYS, `${path}.landing`, issues);
   if (
-    value.registryStatus !== "complete" ||
-    value.workflowStatus !== "Completed"
+    value.registryStatus === "complete" &&
+    value.workflowStatus === "Completed" &&
+    !("completionInstance" in value)
   ) {
-    issues.push(`${path}.landing: requires complete/Completed`);
-    return undefined;
+    return { registryStatus: "complete", workflowStatus: "Completed" };
   }
-  return { registryStatus: "complete", workflowStatus: "Completed" };
+  if (
+    value.registryStatus === "in-flight" &&
+    isNonEmptyString(value.workflowStatus) &&
+    isNonEmptyString(value.completionInstance)
+  ) {
+    return {
+      registryStatus: "in-flight",
+      workflowStatus: value.workflowStatus,
+      completionInstance: value.completionInstance,
+    };
+  }
+  issues.push(
+    `${path}.landing: requires complete/Completed or an in-flight completion instance`,
+  );
+  return undefined;
 }
 
 function validateCreateIdentity(
