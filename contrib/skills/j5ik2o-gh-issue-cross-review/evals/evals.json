@@ -1,0 +1,26 @@
+{
+  "skill_name": "j5ik2o-gh-issue-cross-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "このリポジトリの Issue #1389 を起票者以外の2名でクロスレビューして。GitHub への投稿はまだしないで、コメント案まで作って。",
+      "expected_output": "The skill freezes one Issue and target SHA, resolves local norms, obtains two blind evidence-backed reviews, computes a fail-closed convergence result, and returns two unposted comment drafts.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 2,
+      "prompt": "amadeus-dlc/amadeus#1248 を独立2名で検証し、成立したらレビューコメントを Issue に投稿してください。",
+      "expected_output": "The skill uses two fresh non-filer reviewers, validates both outputs before convergence, posts two distinct comments only because posting was explicitly authorized, and reports both comment URLs without starting implementation.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 3,
+      "prompt": "open な GitHub Issues を全部整理して、重複とクローズ候補を一覧にして。",
+      "expected_output": "This request is identified as backlog triage rather than single-Issue cross-review, so the cross-review workflow is not run and an issue-organizer workflow is recommended.",
+      "files": [],
+      "expectations": []
+    }
+  ]
+}
