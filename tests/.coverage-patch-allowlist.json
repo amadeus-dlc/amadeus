@@ -950,19 +950,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4414",
-    "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "lines": "4414-4420",
-    "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4422",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1292,7 +1280,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4777",
+    "lines": "4809",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1507,25 +1495,19 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4483-4484",
-    "reason": "Runtime-erased readonly fields in kimiGateReservationOwner's multiline return type. t365 drives both resolved-owner and no-owner outcomes in-process, but Bun LCOV stamps these type-only continuation lines DA:0.",
-    "expiry": "remove if the return type is collapsed or Bun LCOV stops stamping erased type lines"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4552",
+    "lines": "4584",
     "reason": "Narrow simultaneous-reservation race-loser recovery: arm must lose after the initial locked lookup but before its own locked write, then the retry must observe the exact winning carrier. t365 proves two concurrent shipped CLI calls converge on one carrier and directly covers ordinary retry, conflict, and corrupt-marker outcomes; pausing inside the two-lock window requires an injectable reservation port.",
     "expiry": "remove when reserveKimiGateApproval receives an injectable reservation port for deterministic race-loser scheduling"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4556-4563",
+    "lines": "4588-4595",
     "reason": "Narrow simultaneous-reservation race-loser recovery: arm must lose after the initial locked lookup but before its own locked write, then the retry must observe the exact winning carrier. t365 proves two concurrent shipped CLI calls converge on one carrier and directly covers ordinary retry, conflict, and corrupt-marker outcomes; pausing inside the two-lock window requires an injectable reservation port.",
     "expiry": "remove when reserveKimiGateApproval receives an injectable reservation port for deterministic race-loser scheduling"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4793-4797",
+    "lines": "4825-4829",
     "reason": "Spawn-only main() dispatch arms for gate-reserve and gate-reject. t365 exercises both shipped CLI verbs end-to-end and drives the exported handlers in-process; Bun does not attribute child-process main dispatch to the parent LCOV report.",
     "expiry": "remove when main() receives an in-process argv driver"
   },

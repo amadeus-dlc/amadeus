@@ -166,6 +166,7 @@ import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   armPresenceReservation,
   cancelArmedPresenceReservation,
+  consumePresenceReservation,
   findActivePresenceReservation,
   type PresenceReservation,
   readPresenceReservation,
@@ -4479,10 +4480,12 @@ export function openGateForKimiReservation(
   );
 }
 
-function kimiGateReservationOwner(pd: string): {
+type KimiGateReservationOwner = {
   readonly space: string;
   readonly uuid: string;
-} | null {
+};
+
+function kimiGateReservationOwner(pd: string): KimiGateReservationOwner | null {
   const space = activeSpace(pd);
   const intent = activeIntent(pd, space);
   if (intent === null) return null;
@@ -4503,7 +4506,7 @@ type KimiGateReservationResult =
 function matchingKimiGateReservation(
   pd: string,
   sessionId: string,
-  owner: { readonly space: string; readonly uuid: string },
+  owner: KimiGateReservationOwner,
   slug: string,
 ): PresenceReservation | null {
   const active = findActivePresenceReservation(pd, sessionId);
@@ -4524,7 +4527,7 @@ function matchingKimiGateReservation(
 function reserveKimiGateApproval(
   pd: string,
   sessionId: string,
-  owner: { readonly space: string; readonly uuid: string },
+  owner: KimiGateReservationOwner,
   slug: string,
 ): KimiGateReservationResult {
   try {
@@ -4535,7 +4538,36 @@ function reserveKimiGateApproval(
       slug,
     );
     if (active !== null) {
-      return { kind: "reserved", reservation: active, newlyArmed: false };
+      const state = loadStateFileIfPresent(
+        pd,
+        active.targetIntentDir,
+        active.space,
+      );
+      const interruptedRejection =
+        active.state === "minted" &&
+        state !== null &&
+        checkboxForSlug(state, slug)?.state === "revising";
+      if (!interruptedRejection) {
+        // A concurrent retry may have retired this snapshot while the owner
+        // state was read. Linearize the return under the reservation lock and
+        // converge on the current carrier instead of returning stale authority.
+        const winner = withAuditLock(pd, () =>
+          matchingKimiGateReservation(pd, sessionId, owner, slug)
+        );
+        if (winner === null) {
+          throw new Error("Trusted session reservation changed during retry");
+        }
+        return { kind: "reserved", reservation: winner, newlyArmed: false };
+      }
+      // The rejection state and audit committed before the old carrier's
+      // consume write. Retire that exact residue before re-presenting the gate.
+      consumePresenceReservation({
+        projectDir: pd,
+        sessionId,
+        reservationId: active.reservationId,
+        targetIntentId: active.targetIntentId,
+        stage: slug,
+      });
     }
     const reservationId = randomUUID();
     try {

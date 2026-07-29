@@ -5,6 +5,7 @@
 // size: medium
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   mkdirSync,
   mkdtempSync,
@@ -21,6 +22,7 @@ import {
 import {
   armPresenceReservation,
   cancelArmedPresenceReservation,
+  consumePresenceReservation,
   findActivePresenceReservation,
   hostSessionCapability,
   mintArmedPresenceReservation,
@@ -30,6 +32,7 @@ import {
 import {
   handleGateReject,
   handleGateReserve,
+  handleReport,
   openGateForKimiReservation,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
@@ -444,6 +447,23 @@ describe("Kimi reviewer boundary and gate provenance", () => {
 
   test("in-process gate-reserve covers happy retry, owner, and fail-closed routes", () => {
     const root = freshWorkflow();
+    const unreservedApproval = withHarness("kimi", () =>
+      captureDirective(() =>
+        handleReport([
+          "--stage",
+          "requirements-analysis",
+          "--result",
+          "approved",
+          "--user-input",
+          "Approve",
+        ], root)
+      )
+    );
+    expect(unreservedApproval.kind).toBe("error");
+    expect(String(unreservedApproval.message)).toContain(
+      "requires the stage reservation carrier",
+    );
+
     const first = reserveInProcess(root);
     if (first.kind !== "await-approval") {
       throw new Error(JSON.stringify(first));
@@ -1513,6 +1533,300 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       .toBe(first.presence_reservation_id);
     expect(auditBlockField(approvedBlock ?? "", "Presence Reservation Id"))
       .toBe(second.presence_reservation_id);
+  });
+
+  test("an interrupted Request Changes retry retires the stale carrier before approval", () => {
+    const root = freshWorkflow();
+    const ownerIntent = seededRecordDir(root).split("/").at(-1)!;
+    const nonOwnerState = addSecondIntentAndSelectIt(root);
+    writeFileSync(
+      join(
+        root,
+        "amadeus",
+        "spaces",
+        "default",
+        "intents",
+        "active-intent",
+      ),
+      `${ownerIntent}\n`,
+    );
+    const nonOwnerBefore = readFileSync(nonOwnerState, "utf-8");
+
+    const first = reserveInProcess(root);
+    if (first.kind !== "await-approval") {
+      throw new Error(JSON.stringify(first));
+    }
+    const firstReservationId = String(first.presence_reservation_id);
+    expect(
+      mintArmedPresenceReservation({
+        projectDir: root,
+        sessionId: "main-session",
+        requireRouteBinding: true,
+        route: {
+          eventName: "PostToolUse",
+          toolName: "AskUserQuestion",
+          purposeText: `Request Changes ${firstReservationId}`,
+        },
+      }).kind,
+    ).toBe("minted");
+    const mintedBeforeReject = readPresenceReservation(
+      root,
+      firstReservationId,
+    )!;
+
+    const rejected = withStateProject(root, () =>
+      captureDirective(() =>
+        handleReject([
+          "requirements-analysis",
+          "--feedback",
+          "Modify the error handling",
+          "--target-intent-id",
+          DEFAULT_INTENT_UUID,
+          "--presence-reservation-id",
+          firstReservationId,
+          "--intent",
+          ownerIntent,
+          "--space",
+          "default",
+        ])
+      )
+    );
+    expect(rejected.new_state).toBe("revising");
+
+    // Reconstruct the durable crash boundary: state and audit committed, but
+    // the exact minted reservation did not reach its final consume write.
+    writeFileSync(
+      join(
+        root,
+        "amadeus",
+        ".amadeus-sessions",
+        "presence-reservations",
+        `${firstReservationId}.json`,
+      ),
+      `${JSON.stringify(mintedBeforeReject, null, 2)}\n`,
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toContain(
+      "- [R] requirements-analysis",
+    );
+    expect(readPresenceReservation(root, firstReservationId)?.state)
+      .toBe("minted");
+
+    const second = reserveInProcess(root);
+    if (second.kind !== "await-approval") {
+      throw new Error(JSON.stringify(second));
+    }
+    const secondReservationId = String(second.presence_reservation_id);
+    expect(secondReservationId).not.toBe(firstReservationId);
+    expect(readPresenceReservation(root, firstReservationId)?.state)
+      .toBe("consumed");
+    expect(readFileSync(seededStateFile(root), "utf-8")).toContain(
+      "- [?] requirements-analysis",
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toContain(
+      "- **Revision Count**: 1",
+    );
+
+    const afterRetry = splitAuditRecords(readAllAuditShards(root));
+    expect(
+      afterRetry.filter((block) =>
+        auditBlockField(block, "Event") === "GATE_REJECTED"
+      ),
+    ).toHaveLength(1);
+    expect(
+      afterRetry.filter((block) =>
+        auditBlockField(block, "Event") === "STAGE_REVISING"
+      ),
+    ).toHaveLength(1);
+    expect(readFileSync(nonOwnerState, "utf-8")).toBe(nonOwnerBefore);
+
+    expect(mintGateQuestion(root, secondReservationId).exitCode).toBe(0);
+    const previousArtifactGuard = process.env.AMADEUS_SKIP_ARTIFACT_GUARD;
+    process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+    let approved: Record<string, unknown>;
+    try {
+      approved = withStateProject(root, () =>
+        captureDirective(() =>
+          handleApprove([
+            "requirements-analysis",
+            "--user-input",
+            "Approve",
+            "--target-intent-id",
+            DEFAULT_INTENT_UUID,
+            "--presence-reservation-id",
+            secondReservationId,
+            "--intent",
+            ownerIntent,
+            "--space",
+            "default",
+          ])
+        )
+      );
+    } finally {
+      if (previousArtifactGuard === undefined) {
+        delete process.env.AMADEUS_SKIP_ARTIFACT_GUARD;
+      } else {
+        process.env.AMADEUS_SKIP_ARTIFACT_GUARD = previousArtifactGuard;
+      }
+    }
+    expect(approved.kind).toBe("approved");
+    const freshTurns = splitAuditRecords(readAllAuditShards(root)).filter(
+      (block) =>
+        auditBlockField(block, "Event") === "HUMAN_TURN" &&
+        auditBlockField(block, "Presence Reservation Id") ===
+          secondReservationId,
+    );
+    expect(freshTurns).toHaveLength(1);
+    expect(readFileSync(nonOwnerState, "utf-8")).toBe(nonOwnerBefore);
+  });
+
+  test("a preempted Request Changes retry converges on the fresh carrier", () => {
+    const root = freshWorkflow();
+    const ownerIntent = seededRecordDir(root).split("/").at(-1)!;
+    const first = reserveInProcess(root);
+    if (first.kind !== "await-approval") {
+      throw new Error(JSON.stringify(first));
+    }
+    const firstReservationId = String(first.presence_reservation_id);
+    expect(
+      mintArmedPresenceReservation({
+        projectDir: root,
+        sessionId: "main-session",
+        requireRouteBinding: true,
+        route: {
+          eventName: "PostToolUse",
+          toolName: "AskUserQuestion",
+          purposeText: `Request Changes ${firstReservationId}`,
+        },
+      }).kind,
+    ).toBe("minted");
+    const mintedBeforeReject = readPresenceReservation(
+      root,
+      firstReservationId,
+    )!;
+
+    const rejected = withStateProject(root, () =>
+      captureDirective(() =>
+        handleReject([
+          "requirements-analysis",
+          "--feedback",
+          "Modify the error handling",
+          "--target-intent-id",
+          DEFAULT_INTENT_UUID,
+          "--presence-reservation-id",
+          firstReservationId,
+          "--intent",
+          ownerIntent,
+          "--space",
+          "default",
+        ])
+      )
+    );
+    expect(rejected.new_state).toBe("revising");
+    writeFileSync(
+      join(
+        root,
+        "amadeus",
+        ".amadeus-sessions",
+        "presence-reservations",
+        `${firstReservationId}.json`,
+      ),
+      `${JSON.stringify(mintedBeforeReject, null, 2)}\n`,
+    );
+
+    const statePath = seededStateFile(root);
+    const realReadFileSync = fs.readFileSync;
+    let preempted = false;
+    let winningReservationId = "";
+    const stateRead = spyOn(fs, "readFileSync").mockImplementation(
+      ((path, options) => {
+        if (!preempted && path === statePath) {
+          preempted = true;
+          const winner = runTool(root, ENGINE, [
+            "gate-reserve",
+            "--stage",
+            "requirements-analysis",
+          ]);
+          expect(winner.code).toBe(0);
+          const directive = JSON.parse(winner.stdout) as {
+            readonly kind: string;
+            readonly presence_reservation_id: string;
+          };
+          expect(directive.kind).toBe("await-approval");
+          winningReservationId = directive.presence_reservation_id;
+        }
+        return realReadFileSync(path, options);
+      }) as typeof fs.readFileSync,
+    );
+
+    let raced: Record<string, unknown>;
+    try {
+      raced = reserveInProcess(root);
+    } finally {
+      stateRead.mockRestore();
+    }
+
+    expect(preempted).toBe(true);
+    expect(winningReservationId).not.toBe(firstReservationId);
+    expect(raced.presence_reservation_id).toBe(winningReservationId);
+    expect(readPresenceReservation(root, firstReservationId)?.state)
+      .toBe("consumed");
+    expect(readPresenceReservation(root, winningReservationId)?.state)
+      .toBe("armed");
+  });
+
+  test("a preempted retry fails closed when its active carrier disappears", () => {
+    const root = freshWorkflow();
+    const first = reserveInProcess(root);
+    if (first.kind !== "await-approval") {
+      throw new Error(JSON.stringify(first));
+    }
+    const reservationId = String(first.presence_reservation_id);
+    expect(
+      mintArmedPresenceReservation({
+        projectDir: root,
+        sessionId: "main-session",
+        requireRouteBinding: true,
+        route: {
+          eventName: "PostToolUse",
+          toolName: "AskUserQuestion",
+          purposeText: `Approve ${reservationId}`,
+        },
+      }).kind,
+    ).toBe("minted");
+
+    const statePath = seededStateFile(root);
+    const realReadFileSync = fs.readFileSync;
+    let preempted = false;
+    const stateRead = spyOn(fs, "readFileSync").mockImplementation(
+      ((path, options) => {
+        if (!preempted && path === statePath) {
+          preempted = true;
+          consumePresenceReservation({
+            projectDir: root,
+            sessionId: "main-session",
+            reservationId,
+            targetIntentId: DEFAULT_INTENT_UUID,
+            stage: "requirements-analysis",
+          });
+        }
+        return realReadFileSync(path, options);
+      }) as typeof fs.readFileSync,
+    );
+
+    let raced: Record<string, unknown>;
+    try {
+      raced = reserveInProcess(root);
+    } finally {
+      stateRead.mockRestore();
+    }
+
+    expect(preempted).toBe(true);
+    expect(raced.kind).toBe("error");
+    expect(String(raced.message)).toContain(
+      "Trusted session reservation changed during retry",
+    );
+    expect(readPresenceReservation(root, reservationId)?.state)
+      .toBe("consumed");
   });
 
   test("reviewer READY and unrelated human turns cannot replace the reserved gate carrier", () => {
