@@ -240,6 +240,17 @@ function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
   return PHASE_KEYS.has(lower) ? (lower as MirrorPhaseKey) : null;
 }
 
+function isPendingCompletionLanding(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+): boolean {
+  return (
+    boundaryKind === "workflow-completed" &&
+    snapshot.registryStatus === "in-flight" &&
+    snapshot.completionInstance !== undefined
+  );
+}
+
 // Derive the Status a boundary expects. Ordered rules:
 //   1. parked (boundary kind or registry status) or archived -> keep: the
 //      column is left exactly as the human left it (FR-4).
@@ -259,6 +270,9 @@ export function expectedProjectStatus(
   });
   const phase = phaseKeyOf(snapshot.lifecyclePhase);
   const currentPhase = phase === null ? KEEP : named(phase);
+  if (isPendingCompletionLanding(snapshot, boundaryKind)) {
+    return named("done");
+  }
   switch (snapshot.registryStatus) {
     case "in-flight":
       return currentPhase;
@@ -280,6 +294,12 @@ function expectedAuxiliaryProjectStatus(
   boundaryKind: MirrorBoundary["kind"],
 ): ExpectedProjectStatus {
   if (boundaryKind === "parked") return KEEP;
+  if (isPendingCompletionLanding(snapshot, boundaryKind)) {
+    return {
+      kind: "status",
+      name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.complete,
+    };
+  }
   switch (snapshot.registryStatus) {
     case "in-flight":
       return {
@@ -380,6 +400,41 @@ export function nextCompletionOperation(
   if (close === "in-progress") return "close";
   if (close === "terminal-block" || close === "succeeded") return null;
   return "close";
+}
+
+export type WorkflowCompletionSettlement =
+  | { kind: "settled"; evidence: "close" | "explicit-skip" }
+  | { kind: "pending"; operation: MirrorOperation }
+  | { kind: "blocked"; operation: MirrorOperation; status: MirrorReceiptStatus };
+
+export function workflowCompletionSettlement(
+  input: CompletionPolicyInput,
+): WorkflowCompletionSettlement {
+  const { intentUuid, boundary, state } = input;
+  const receiptFor = (operation: MirrorOperation): MirrorOperationReceipt | undefined =>
+    state.receipts[mirrorEventKey(mirrorEventIdentity(intentUuid, boundary, operation))];
+  for (const operation of APPLICABLE_OPERATIONS["workflow-completed"]) {
+    const receipt = receiptFor(operation);
+    if (receipt?.status === "safety-blocked" || receipt?.status === "abandoned") {
+      return { kind: "blocked", operation, status: receipt.status };
+    }
+  }
+  if (
+    APPLICABLE_OPERATIONS["workflow-completed"].some((operation) =>
+      receiptFor(operation)?.status === "skipped-for-event"
+    )
+  ) {
+    return { kind: "settled", evidence: "explicit-skip" };
+  }
+  const close = receiptFor("close");
+  const next = nextCompletionOperation(input);
+  if (next === null && close?.status === "succeeded") {
+    return { kind: "settled", evidence: "close" };
+  }
+  return {
+    kind: "pending",
+    operation: next ?? "close",
+  };
 }
 
 // --- Completion gate (U3) -----------------------------------------------------

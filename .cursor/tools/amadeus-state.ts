@@ -64,6 +64,7 @@ import {
   readAllAuditShards,
   readIntentRegistry,
   readStateFile,
+  recordDirMatches,
   recoverBoltDag,
   recoverGateRevision,
   type GateRevisionRecovery,
@@ -124,6 +125,14 @@ import {
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
+import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
+import {
+  prepareWorkflowCompletion,
+  type WorkflowCompletionPreparation,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -457,6 +466,107 @@ function hasStageAuditEvent(
     }
     return auditField(ev.block, "Stage") === stageSlug;
   });
+}
+
+const COMPLETION_AUDIT_EVENT_TYPES: ReadonlySet<string> = new Set([
+  "STAGE_COMPLETED",
+  "PHASE_COMPLETED",
+  "PHASE_VERIFIED",
+  "WORKFLOW_COMPLETED",
+]);
+
+function completionAuditEvents(
+  projectDir: string,
+  completionInstance: string,
+): ReadonlySet<string> {
+  const eventTypes = new Set<string>();
+  for (const block of splitAuditRecords(operationReadAudit(projectDir))) {
+    const eventType = auditField(block, "Event");
+    if (
+      eventType !== null &&
+      COMPLETION_AUDIT_EVENT_TYPES.has(eventType) &&
+      auditField(block, "Completion Instance") === completionInstance
+    ) {
+      eventTypes.add(eventType);
+    }
+  }
+  return eventTypes;
+}
+
+function injectWorkflowCompletionCrash(point: string): void {
+  if (process.env.AMADEUS_TEST_COMPLETE_WORKFLOW_CRASH_AT !== point) return;
+  process.stderr.write(`Injected complete-workflow crash at ${point}\n`);
+  process.exit(86);
+}
+
+function emitWorkflowCompletionAuditRows(input: {
+  pd: string;
+  content: string;
+  completedSlug: string;
+  completedStageName: string;
+  completedPhase: string;
+  completedCount: number;
+  completionInstance: string;
+  alreadyMarkedCompleted: boolean;
+  stageCompletedAlreadyAudited: boolean;
+  reason?: string;
+}): void {
+  const scope = getField(input.content, "Scope");
+  if (!scope) {
+    error(
+      "State file has no Scope field. Refusing to complete workflow — fix the state file first.",
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+    );
+  }
+  try {
+    const existingEvents = completionAuditEvents(
+      input.pd,
+      input.completionInstance,
+    );
+    const stageMissing = !existingEvents.has("STAGE_COMPLETED");
+    const stageNeedsEmission =
+      !input.alreadyMarkedCompleted || !input.stageCompletedAlreadyAudited;
+    if (stageMissing && stageNeedsEmission) {
+      emitAudit(input.pd, "STAGE_COMPLETED", {
+        Stage: input.completedSlug,
+        Details: `Final stage ${input.completedStageName} completed`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-stage-completed-audit");
+    if (!existingEvents.has("PHASE_COMPLETED")) {
+      emitAudit(input.pd, "PHASE_COMPLETED", {
+        "From phase": input.completedPhase,
+        "To phase": "(end)",
+        "Stages completed": String(input.completedCount),
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-completed-audit");
+    if (!existingEvents.has("PHASE_VERIFIED")) {
+      emitAudit(input.pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${input.completedPhase} → end`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-verified-audit");
+    const workflowFields: Record<string, string> = {
+      Scope: scope,
+      Details: `Scope: ${scope}, ${input.completedCount} stages completed`,
+      "Completion Instance": input.completionInstance,
+    };
+    if (input.reason) workflowFields.Reason = input.reason;
+    if (!existingEvents.has("WORKFLOW_COMPLETED")) {
+      emitAudit(input.pd, "WORKFLOW_COMPLETED", workflowFields);
+    }
+    injectWorkflowCompletionCrash("after-workflow-completed-audit");
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
 }
 
 // --- Slug + small helpers (used by fork/merge handlers below; declared
@@ -2081,15 +2191,40 @@ export function handleFinalize(args: string[]): void {
 }
 
 export function handleCompleteWorkflow(args: string[]): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  const pd = resolveProjectDir(projectDir);
+  if (intent === undefined && space === undefined) {
+    completeWorkflowForTarget(rest, pd);
+    return;
+  }
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  if (resolvedIntent === undefined) {
+    error("complete-workflow could not resolve the selected Intent.");
+  }
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    completeWorkflowForTarget.bind(null, rest, pd),
+  );
+}
+
+function completeWorkflowForTarget(args: string[], pd: string): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
   const reasonIdx = args.indexOf("--reason");
   const reasonValueIdx = reasonIdx !== -1 ? reasonIdx + 1 : -1;
+  const completionInstanceIdx = args.indexOf("--completion-instance");
+  const completionInstanceValueIdx =
+    completionInstanceIdx !== -1 ? completionInstanceIdx + 1 : -1;
   const positional = args.filter(
-    (a, i) => !a.startsWith("--") && i !== reasonValueIdx,
+    (a, i) =>
+      !a.startsWith("--") &&
+      i !== reasonValueIdx &&
+      i !== completionInstanceValueIdx,
   );
   if (positional.length < 1)
-    error("Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]");
+    error(
+      "Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>] [--completion-instance <instance>] [--intent <record>] [--space <name>]",
+    );
   const completedSlug = positional[0];
 
   // Optional --reason flag for recording why the workflow completed early
@@ -2097,17 +2232,26 @@ export function handleCompleteWorkflow(args: string[]): void {
   if (reasonIdx !== -1 && reasonIdx + 1 < args.length) {
     reason = args[reasonIdx + 1];
   }
+  const requestedInstance =
+    completionInstanceIdx !== -1 && completionInstanceIdx + 1 < args.length
+      ? args[completionInstanceIdx + 1]
+      : undefined;
 
-  const pd = resolveProjectDir(projectDir);
-  // C2b lost-update safety: read→decide→emit-audit (4 rows)→write under one
-  // lock so the 4 audit rows and the completion state commit atomically against
-  // a single snapshot (audit-first / decide-inside-lock). emitAudit uses the
-  // unlocked variant because the lock is held.
+  // C2b lost-update safety: read→decide→emit-audit→write under one lock and one
+  // snapshot. Each persisted step is replay-safe, so a crash between steps can
+  // resume without duplicating the completion audit rows.
   operationWithLock(pd, () => {
   let content = operationReadState(pd);
+  const completion = workflowCompletionPreparation(content);
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+  verifyPreparedWorkflowCompletion(
+    pd,
+    content,
+    completedSlug,
+    requestedInstance,
+  );
 
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
@@ -2117,6 +2261,10 @@ export function handleCompleteWorkflow(args: string[]): void {
     "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
+  const completionInstance = completion?.instance ??
+    `terminal:${completedSlug}`;
+  const stateAlreadyCompleted =
+    getField(content, "Status")?.trim() === "Completed";
 
   // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
   // it is a completing transition too. Guard only when the slug is not already
@@ -2133,72 +2281,66 @@ export function handleCompleteWorkflow(args: string[]): void {
     verifyPhaseCheckArtifact(pd, completedStage.phase);
   }
 
-  // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
-
-  // 2. Sync Completed counter
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-
-  // 3. Update all fields atomically for workflow completion
   const timestamp = isoTimestamp();
-  content = setField(content, "Status", "Completed");
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "In Progress", "none");
-  content = setField(content, "Next Stage", "none");
-  content = setField(content, "Next Action", "Workflow complete");
-  // Phase Progress roll-up: the final stage's phase is now complete → Verified,
-  // in the same transaction as Status: Completed and the PHASE_VERIFIED audit
-  // below (#836). Earlier phases were flipped Verified/Skipped by their own
-  // boundary transitions (advance / init pre-cross); this closes the last one.
-  content = markPhaseVerified(content, completedStage.phase);
-
-  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
+  if (!stateAlreadyCompleted) {
+    // Mark the final stage and every terminal field in one state-file rename.
+    content = setCheckbox(content, completedSlug, "completed");
+    content = setField(
+      content,
+      "Completed",
+      String(countCheckboxes(content, "completed")),
     );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-  try {
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        Details: `Final stage ${completedStage.name} completed`,
-      });
+    content = setField(content, "Status", "Completed");
+    if (completion !== null) {
+      content = setOrInsertField(
+        content,
+        "## Runtime State",
+        "Workflow Completion Status",
+        "completed",
+      );
     }
-    emitAudit(pd, "PHASE_COMPLETED", {
-      "From phase": completedStage.phase,
-      "To phase": "(end)",
-      "Stages completed": String(completedCount),
-    });
-    emitAudit(pd, "PHASE_VERIFIED", {
-      "Phase boundary": `${completedStage.phase} → end`,
-    });
-    const workflowFields: Record<string, string> = {
-      Scope: scope,
-      Details: `Scope: ${scope}, ${completedCount} stages completed`,
-    };
-    if (reason) workflowFields.Reason = reason;
-    emitAudit(pd, "WORKFLOW_COMPLETED", workflowFields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "In Progress", "none");
+    content = setField(content, "Next Stage", "none");
+    content = setField(content, "Next Action", "Workflow complete");
+    content = markPhaseVerified(content, completedStage.phase);
   }
+  const completedCount = countCheckboxes(content, "completed");
 
-  operationWriteState(pd, content);
+  emitWorkflowCompletionAuditRows({
+    pd,
+    content,
+    completedSlug,
+    completedStageName: completedStage.name,
+    completedPhase: completedStage.phase,
+    completedCount,
+    completionInstance,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
+    ...(reason ? { reason } : {}),
+  });
+
+  if (!stateAlreadyCompleted) {
+    operationWriteState(pd, content);
+  }
+  injectWorkflowCompletionCrash("after-state-completed");
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
   // automatic inference from state, so a crashed run never self-completes. Runs
   // under the workspace lock already held (every intents.json mutation takes the
   // sentinel bucket). No-op for the legacy flat record (no registry row).
-  completeIntentRegistryRow(pd);
+  const completedIntentDir = completeIntentRegistryRow(pd);
+  injectWorkflowCompletionCrash("after-registry-complete");
+  if (completedIntentDir !== null) {
+    clearActiveIntentCursor(
+      pd,
+      completedIntentDir,
+      stateOperationTarget?.space,
+    );
+  }
+  injectWorkflowCompletionCrash("after-cursor-clear");
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -2211,25 +2353,20 @@ export function handleCompleteWorkflow(args: string[]): void {
   });
 }
 
-// Terminal completion flips the target intent's registry row to "complete", then
-// releases the active-intent cursor (#1248) so the finished intent stops being
-// the audit-append target and a fresh /amadeus resolves a new intent rather than
-// re-attaching to the completed record. The cursor is only released for the
-// ambient (untargeted) operation — a targeted repair leaves the caller's cursor
-// alone. No-op for the legacy flat record (no registry row). Must run under the
-// workspace lock the caller already holds.
-function completeIntentRegistryRow(pd: string): void {
+// Terminal completion flips the target intent's registry row to "complete".
+// Cursor release happens later, after every completion row and the state file
+// commit have landed. No-op for the legacy flat record (no registry row). Must
+// run under the workspace lock the caller already holds.
+function completeIntentRegistryRow(pd: string): string | null {
   const completedIntentDir = stateOperationTarget?.intent ?? activeIntent(pd);
-  if (!completedIntentDir) return;
+  if (!completedIntentDir) return null;
   withLockedIntentRegistry(
     pd,
     (context) =>
       transitionIntentStatusLocked(context, completedIntentDir, "complete"),
     stateOperationTarget?.space,
   );
-  if (stateOperationTarget === null) {
-    clearActiveIntentCursor(pd, completedIntentDir);
-  }
+  return completedIntentDir;
 }
 
 function appendLifecycleEvent(
@@ -2892,6 +3029,7 @@ type ApprovalAuditInput = {
   readonly userInput?: string;
   readonly authorization: ApprovalAuthorization;
   readonly recovery: GateRevisionRecovery | null;
+  readonly deferStageCompletion: boolean;
 };
 
 function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
@@ -2917,7 +3055,7 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     if (auditPrefix === "none") {
       emitAudit(pd, "GATE_APPROVED", gateFields);
     }
-    if (auditPrefix !== "completed") {
+    if (auditPrefix !== "completed" && !input.deferStageCompletion) {
       emitAudit(pd, "STAGE_COMPLETED", {
         Stage: input.slug,
         Details: `Stage ${input.stageName} approved by gate`,
@@ -2966,6 +3104,7 @@ function approveUnderLock(
   slug: string,
   userInput: string | undefined,
   override?: ApprovalAuthorizationOverride,
+  deferWorkflowCompletion = false,
 ): void {
   let content = operationReadState(pd);
 
@@ -2980,6 +3119,9 @@ function approveUnderLock(
 
   const approveScope = getField(content, "Scope")!;
   const nextForPhaseGate = nextInScopeStage(slug, approveScope, content);
+  if (deferWorkflowCompletion && nextForPhaseGate !== null) {
+    error("--defer-workflow-completion is valid only for the final in-scope stage.");
+  }
   if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
     verifyPhaseCheckArtifact(pd, stage.phase);
   }
@@ -2996,6 +3138,9 @@ function approveUnderLock(
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
+  if (deferWorkflowCompletion) {
+    content = prepareWorkflowCompletion(content, slug, timestamp);
+  }
 
   const nextStateIssue = approvalNextStateIssue(content, slug, timestamp, recoveredRevision);
   if (nextStateIssue !== null) failApprovalCommitValidation(nextStateIssue);
@@ -3007,6 +3152,7 @@ function approveUnderLock(
     ...(userInput ? { userInput } : {}),
     authorization,
     recovery,
+    deferStageCompletion: deferWorkflowCompletion,
   });
   operationWriteState(pd, content);
   const scope = approveScope;
@@ -3014,6 +3160,12 @@ function approveUnderLock(
   const next = nextInScopeStage(slug, scope, content);
   if (next) {
     handleAdvance([slug]);
+  } else if (deferWorkflowCompletion) {
+    console.log(JSON.stringify({
+      completed: slug,
+      status: "completion-pending",
+      completion_instance: timestamp,
+    }));
   } else {
     handleCompleteWorkflow([slug]);
   }
@@ -3086,7 +3238,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
             runWithoutTransitionOutput(() => {
               approveUnderLock(pd, slug, undefined, {
                 grantId: authority.grantId,
-              });
+              }, flags.deferWorkflowCompletion);
             });
             console.log(JSON.stringify({ kind: "approved" }));
           });
@@ -3163,7 +3315,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
               approveUnderLock(pd, slug, authority.userInput, {
                 grantId: null,
                 auditPrefix,
-              });
+              }, flags.deferWorkflowCompletion);
             });
           } else if (stageState === "completed") {
             if (prefix.gateApproved !== 1 || prefix.stageCompleted !== 1) {
@@ -3196,7 +3348,13 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-    approveUnderLock(pd, slug, authority.userInput);
+    approveUnderLock(
+      pd,
+      slug,
+      authority.userInput,
+      undefined,
+      flags.deferWorkflowCompletion,
+    );
   });
 }
 
@@ -3224,6 +3382,7 @@ type ApproveFlags = {
   readonly standingGrantRouteId?: string;
   readonly targetIntentId?: string;
   readonly presenceReservationId?: string;
+  readonly deferWorkflowCompletion: boolean;
 };
 
 function parseApproveFlags(args: string[]): ApproveFlags {
@@ -3233,6 +3392,7 @@ function parseApproveFlags(args: string[]): ApproveFlags {
     standingGrantRouteId: getFlagValue(args, "--standing-grant-route-id"),
     targetIntentId: getFlagValue(args, "--target-intent-id"),
     presenceReservationId: getFlagValue(args, "--presence-reservation-id"),
+    deferWorkflowCompletion: args.includes("--defer-workflow-completion"),
   };
 }
 
@@ -4868,6 +5028,86 @@ export function handleSetConstructionIteration(args: string[]): void {
     writeStateFile(pd, updated);
     console.log(JSON.stringify({ updated: true, construction_iteration: value }));
   });
+}
+
+function verifyPreparedCompletionIdentity(
+  prepared: WorkflowCompletionPreparation,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  if (prepared.stage !== completedSlug) {
+    error(
+      `Workflow completion was prepared for "${prepared.stage}", not "${completedSlug}".`,
+    );
+  }
+  if (requestedInstance === undefined) {
+    error(
+      `Prepared workflow completion requires --completion-instance "${prepared.instance}".`,
+    );
+  }
+  if (requestedInstance !== prepared.instance) {
+    error(
+      `Workflow completion instance mismatch: expected "${prepared.instance}", got "${requestedInstance}".`,
+    );
+  }
+}
+
+function verifyPreparedWorkflowCompletion(
+  pd: string,
+  content: string,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  const prepared = workflowCompletionPreparation(content);
+  if (prepared === null) return;
+  verifyPreparedCompletionIdentity(prepared, completedSlug, requestedInstance);
+  const space = stateOperationTarget?.space ?? activeSpace(pd);
+  const intent =
+    stateOperationTarget?.intent ?? activeIntent(pd, space);
+  if (!intent) {
+    error("Prepared workflow completion cannot resolve its Intent.");
+  }
+  const config = resolveMirrorConfig(pd, intent, space);
+  if (config.kind === "invalid") {
+    const details = config.issues.map((issue) =>
+      issue.kind === "read-failure"
+        ? `${issue.layer}: ${issue.summary}`
+        : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
+    ).join("; ");
+    error(
+      `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
+    );
+  }
+  if (config.config.autoMirror === "off") return;
+  const entries = readIntentRegistry(pd, space).filter((entry) =>
+    recordDirMatches(entry, intent)
+  );
+  if (entries.length !== 1) {
+    error("Prepared workflow completion must resolve exactly one Intent registry row.");
+  }
+  const parsed = parseMirrorStateDocument(content);
+  if (parsed.kind === "invalid") {
+    error(`Prepared workflow completion has invalid mirror state: ${parsed.issues.join("; ")}`);
+  }
+  if (parsed.snapshot.auditOutbox !== null && parsed.snapshot.auditOutbox !== undefined) {
+    error("Prepared workflow completion still has a pending mirror audit outbox.");
+  }
+  const settlement = workflowCompletionSettlement({
+    intentUuid: entries[0].uuid,
+    boundary: {
+      kind: "workflow-completed",
+      instance: prepared.instance,
+    },
+    state: parsed.snapshot,
+  });
+  if (settlement.kind !== "settled") {
+    const detail = settlement.kind === "pending"
+      ? `operation "${settlement.operation}" is still pending`
+      : `operation "${settlement.operation}" is ${settlement.status}`;
+    error(
+      `Prepared workflow completion cannot commit before its mirror boundary settles: ${detail}.`,
+    );
+  }
 }
 
 // --- Utility ---

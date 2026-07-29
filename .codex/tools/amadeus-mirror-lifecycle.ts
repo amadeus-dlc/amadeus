@@ -65,6 +65,7 @@ import type {
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 import { observeSubprocess } from "./amadeus-observability.ts";
+import { workflowCompletionPreparation } from "./amadeus-workflow-completion.ts";
 
 export type MirrorLifecycleRequest = Readonly<{
   projectDir: string;
@@ -260,20 +261,98 @@ type SnapshotSource = Readonly<{
   slug: string;
 }>;
 
+const LIFECYCLE_PHASES = new Set([
+  "INITIALIZATION",
+  "IDEATION",
+  "INCEPTION",
+  "CONSTRUCTION",
+  "OPERATION",
+]);
+
+function snapshotLifecyclePhase(content: string): string {
+  const value = getField(content, "Lifecycle Phase")?.trim();
+  if (value && LIFECYCLE_PHASES.has(value)) return value;
+  throw new Error(
+    `lifecycle snapshot Lifecycle Phase is missing or invalid: ${value || "(missing)"}`,
+  );
+}
+
+function snapshotWorkflowStatus(content: string): "Running" | "Completed" {
+  const value = getField(content, "Status")?.trim();
+  if (value === "Running" || value === "Completed") return value;
+  throw new Error(
+    `lifecycle snapshot Status must be Running or Completed; received ${value || "(missing)"}`,
+  );
+}
+
+function snapshotCurrentStage(content: string): string {
+  const value = getField(content, "Current Stage")?.trim();
+  if (value && (value === "none" || /^[a-z][a-z0-9-]*$/u.test(value))) {
+    return value;
+  }
+  throw new Error(
+    `lifecycle snapshot Current Stage is missing or invalid: ${value || "(missing)"}`,
+  );
+}
+
+function assertSnapshotConsistency(
+  status: "Running" | "Completed",
+  currentStage: string,
+  completion: ReturnType<typeof workflowCompletionPreparation>,
+): void {
+  const workflowMismatch =
+    (status === "Running" && currentStage === "none") ||
+    (status === "Completed" && currentStage !== "none");
+  if (workflowMismatch) {
+    throw new Error(
+      `lifecycle snapshot Status ${status} is inconsistent with Current Stage ${currentStage}`,
+    );
+  }
+  const completionMismatch = completion?.status === "pending" &&
+    (status !== "Running" || completion.stage !== currentStage);
+  if (completionMismatch) {
+    throw new Error(
+      `lifecycle snapshot pending completion stage ${completion.stage} does not match Current Stage ${currentStage}`,
+    );
+  }
+}
+
 function lifecycleSnapshot(
   target: SnapshotSource,
   now: () => string,
 ): MirrorSnapshot {
+  const lifecyclePhase = snapshotLifecyclePhase(target.stateContent);
+  const status = snapshotWorkflowStatus(target.stateContent);
+  const currentStage = snapshotCurrentStage(target.stateContent);
+  const completion = workflowCompletionPreparation(target.stateContent);
+  assertSnapshotConsistency(status, currentStage, completion);
   return {
     intentUuid: target.intentUuid,
     intentDir: target.intentDir,
     projectSummary: getField(target.stateContent, "Project") ?? target.slug,
-    lifecyclePhase: getField(target.stateContent, "Lifecycle Phase") ?? "?",
-    currentStage: getField(target.stateContent, "Current Stage") ?? "?",
-    status: getField(target.stateContent, "Status") ?? "?",
+    lifecyclePhase,
+    currentStage,
+    status,
     registryStatus: target.registryStatus,
     updatedAt: getField(target.stateContent, "Last Updated") ?? now(),
+    ...(completion?.status === "pending"
+      ? { completionInstance: completion.instance }
+      : {}),
   };
+}
+
+function resolvedLifecycleSnapshot(
+  target: SnapshotSource,
+  now: () => string,
+): { kind: "ok"; snapshot: MirrorSnapshot } | { kind: "error"; message: string } {
+  try {
+    return { kind: "ok", snapshot: lifecycleSnapshot(target, now) };
+  } catch (cause) {
+    return {
+      kind: "error",
+      message: cause instanceof Error ? cause.message : String(cause),
+    };
+  }
 }
 
 // The read-only record view the `status` verb diagnoses against. It reuses the
@@ -316,7 +395,9 @@ export function buildMirrorStatusRecordView(
   if (read.kind === "invalid")
     return { kind: "error", message: `Mirror state is invalid: ${read.issues.join("; ")}` };
   const state = read.snapshot;
-  const snapshot = lifecycleSnapshot(target, resolved.now);
+  const snapshotResult = resolvedLifecycleSnapshot(target, resolved.now);
+  if (snapshotResult.kind === "error") return snapshotResult;
+  const snapshot = snapshotResult.snapshot;
   const identity = markerCreateIdentity(state, target, snapshot.updatedAt);
   const expectedBody = renderMirrorIssueContent({
     snapshot,
@@ -368,6 +449,8 @@ export async function runMirrorLifecycleBoundary(
   const target = resolveLifecycleTarget(request);
   if (target.kind === "error") return target;
   const resolvedRuntime = lifecycleRuntime(request, target, runtime);
+  const snapshot = resolvedLifecycleSnapshot(target, resolvedRuntime.now);
+  if (snapshot.kind === "error") return snapshot;
   const outcome = await driveMirrorBoundary({
     context: {
       projectDir: request.projectDir,
@@ -377,7 +460,7 @@ export async function runMirrorLifecycleBoundary(
       intentDir: target.intentDir,
       repository: target.repository,
       boundary: request.boundary,
-      snapshot: lifecycleSnapshot(target, resolvedRuntime.now),
+      snapshot: snapshot.snapshot,
     },
     ports: resolvedRuntime.ports,
     gateway: resolvedRuntime.gateway,
@@ -697,7 +780,7 @@ function repairSnapshot(
   } catch {
     return null;
   }
-  return lifecycleSnapshot(
+  const snapshot = resolvedLifecycleSnapshot(
     {
       intentUuid: entry.uuid,
       intentDir: entry.intentDir,
@@ -707,6 +790,7 @@ function repairSnapshot(
     },
     runtime.now ?? (() => new Date().toISOString()),
   );
+  return snapshot.kind === "ok" ? snapshot.snapshot : null;
 }
 
 function resolveRepairTarget(

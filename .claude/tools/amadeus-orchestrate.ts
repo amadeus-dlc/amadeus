@@ -153,6 +153,7 @@ import {
 } from "./amadeus-lib.ts";
 import {
   classifyApprovalAuthority,
+  findStandingGrantRouteReceiptById,
   type GrantApprovalProcessResult,
   parseGrantApprovalProcessResult,
   routeSoloStandingGrantDirective,
@@ -161,6 +162,7 @@ import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   armPresenceReservation,
   type PresenceReservation,
+  readPresenceReservation,
 } from "./amadeus-presence-reservation.ts";
 import {
   type Consume,
@@ -181,6 +183,11 @@ import {
   type MirrorBoundaryReceipts,
   parseMirrorBoundaryReceipts,
 } from "./amadeus-state.ts";
+import {
+  type WorkflowCompletionPreparation,
+  completionMirrorDisposition,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
 // registry) - importing it keeps `next` read-only. The audit-emitting
 // detect-scope verb remains the conductor's separate recording move; the
@@ -203,8 +210,11 @@ import {
 // Read the workflow state file if it exists, else null. The engine's `next` is
 // a pure read: an absent state file is a legitimate branch (no workflow yet),
 // not an error to throw. Composes stateFilePath() for the canonical location.
-function loadStateFileIfPresent(projectDir: string): string | null {
-  const path = stateFilePath(projectDir);
+function loadStateFileIfPresent(
+  projectDir: string,
+  intent?: string,
+): string | null {
+  const path = stateFilePath(projectDir, intent);
   if (!existsSync(path)) return null;
   return readFileSync(path, "utf-8");
 }
@@ -252,96 +262,155 @@ function currentMirrorBoundaryPhase(
   return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
 }
 
+type MirrorSyncTarget =
+  | Readonly<{
+      kind: "completion";
+      instance: string;
+      stage: string;
+    }>
+  | Readonly<{
+      kind: "phase";
+      phase: MirrorBoundaryPhase;
+      instance: string;
+      isPending: boolean;
+    }>;
+
 function mirrorSyncPrint(
-  phase: MirrorBoundaryPhase,
-  isPending: boolean,
-  instance: string,
-  workflowCompleted: boolean,
+  target: MirrorSyncTarget,
+  intent: string,
+  space: string,
 ): PrintDirective {
+  const selector =
+    ` --intent ${JSON.stringify(intent)} --space ${JSON.stringify(space)}`;
   const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
-  const boundaryArgs = workflowCompleted
-    ? `completion --instance ${JSON.stringify(instance)}`
-    : `phase --phase ${phase} --instance ${JSON.stringify(instance)}`;
+  const boundaryArgs = target.kind === "completion"
+    ? `completion --instance ${JSON.stringify(target.instance)}`
+    : `phase --phase ${target.phase} --instance ${JSON.stringify(target.instance)}`;
   const syncTool =
-    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}`;
-  const prepare = isPending
+    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}${selector}`;
+  if (target.kind === "completion") {
+    const terminalTool =
+      `bun ${harnessDir()}/tools/amadeus-state.ts complete-workflow ` +
+      `${JSON.stringify(target.stage)} --completion-instance ` +
+      `${JSON.stringify(target.instance)}${selector}`;
+    return printDirective(
+      `Run \`${syncTool}\`. Only after the completion boundary settles, run ` +
+        `\`${terminalTool}\`, then re-run \`next\`. If the mirror operation or ` +
+        `terminal commit fails, stop; the durable completion instance makes a later retry safe.`,
+    );
+  }
+  const prepare = target.isPending
     ? ""
-    : `First run \`${stateTool} ${phase} pending --from absent\`. `;
+    : `First run \`${stateTool} ${target.phase} pending --from absent${selector}\`. `;
   return printDirective(
     `${prepare}Run \`${syncTool}\`. Only after sync succeeds, run ` +
-      `\`${stateTool} ${phase} completed --from pending\`, then re-run \`next\`. ` +
+      `\`${stateTool} ${target.phase} completed --from pending${selector}\`, then re-run \`next\`. ` +
       `If sync or the receipt update fails, stop; the pending receipt makes a later next retry safely.`,
   );
 }
 
-function emitMirrorBoundaryIfNeeded(
-  projectDir: string,
+type PersistedMirrorBoundary = Readonly<{
+  completion: WorkflowCompletionPreparation | null;
+  pendingPhase: MirrorBoundaryPhase | undefined;
+  phase: MirrorBoundaryPhase | null;
+  phaseInstance: string;
+  receipts: MirrorBoundaryReceipts;
+}>;
+
+function persistedMirrorBoundary(
   stateContent: string,
-): boolean {
-  let receipts: MirrorBoundaryReceipts;
-  try {
-    receipts = parseMirrorBoundaryReceipts(
-      getField(stateContent, "Mirror Boundary Receipts"),
-    );
-  } catch (cause) {
-    emit(errorDirective(errorMessage(cause)));
-    return true;
-  }
+): PersistedMirrorBoundary {
+  const receipts = parseMirrorBoundaryReceipts(
+    getField(stateContent, "Mirror Boundary Receipts"),
+  );
+  const prepared = workflowCompletionPreparation(stateContent);
+  const completion = prepared?.status === "completed" ? null : prepared;
   const pendingPhase = MIRROR_BOUNDARY_PHASES.find(
     (candidate) => receipts[candidate] === "pending",
   );
   const phase = currentMirrorBoundaryPhase(stateContent);
-  const boundaryInstance =
+  const phaseInstance =
     (getField(stateContent, "Last Updated") ?? "").trim() ||
     `${phase ?? pendingPhase ?? "mirror"}:persisted`;
-  const workflowCompleted =
-    getField(stateContent, "Status")?.trim() === "Completed";
-  if (
-    pendingPhase === undefined &&
-    (phase === null || receipts[phase] === "completed")
-  )
-    return false;
-  const space = activeSpace(projectDir);
-  const intent = activeIntent(projectDir, space);
-  if (intent === null) {
-    emit(errorDirective("Mirror boundary cannot resolve the active intent."));
+  return { completion, pendingPhase, phase, phaseInstance, receipts };
+}
+
+function hasPersistedMirrorBoundary(
+  boundary: PersistedMirrorBoundary,
+): boolean {
+  if (boundary.pendingPhase !== undefined || boundary.completion !== null) {
     return true;
   }
-  const resolved = resolveMirrorConfig(projectDir, intent);
-  if (resolved.kind === "invalid") {
-    const details = resolved.issues
-      .map((issue) =>
-        issue.kind === "read-failure"
-          ? `${issue.layer} (${issue.path}): ${issue.summary}`
-          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
-      )
-      .join(" | ");
-    emit(errorDirective(`Invalid mirror configuration: ${details}`));
+  return boundary.phase !== null &&
+    boundary.receipts[boundary.phase] !== "completed";
+}
+
+function emitConfiguredMirrorBoundary(
+  stateContent: string,
+  boundary: PersistedMirrorBoundary,
+  mode: "off" | "prompt" | "auto",
+  intent: string,
+  space: string,
+): boolean {
+  const { completion, pendingPhase, phase, phaseInstance } = boundary;
+  if (mode === "off") {
+    if (completion === null) return false;
+    emit(
+      printDirective(
+        `Intent Mirror is off. Run \`bun ${harnessDir()}/tools/amadeus-state.ts ` +
+          `complete-workflow ${JSON.stringify(completion.stage)} --completion-instance ` +
+          `${JSON.stringify(completion.instance)} --intent ${JSON.stringify(intent)} ` +
+          `--space ${JSON.stringify(space)}\`, then re-run \`next\`.`,
+      ),
+    );
     return true;
   }
-  if (resolved.config.autoMirror === "off") return false;
   if (pendingPhase !== undefined) {
     emit(
       mirrorSyncPrint(
-        pendingPhase,
-        true,
-        boundaryInstance,
-        workflowCompleted && pendingPhase === "construction",
+        {
+          kind: "phase",
+          phase: pendingPhase,
+          instance: phaseInstance,
+          isPending: true,
+        },
+        intent,
+        space,
+      ),
+    );
+    return true;
+  }
+  if (completion !== null) {
+    emit(
+      mirrorSyncPrint(
+        {
+          kind: "completion",
+          instance: completion.instance,
+          stage: completion.stage,
+        },
+        intent,
+        space,
       ),
     );
     return true;
   }
   if (phase === null) return false;
-  const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;
-  const decision = decideMirrorBoundary(resolved.config.autoMirror, hasMirrorIssue);
+  const decision = decideMirrorBoundary(
+    mode,
+    mirrorIssueNumberFromDocument(stateContent) !== null,
+  );
   if (decision.kind === "suppress") return false;
   if (decision.kind === "auto-sync") {
     emit(
       mirrorSyncPrint(
-        phase,
-        false,
-        boundaryInstance,
-        workflowCompleted && phase === "construction",
+        {
+          kind: "phase",
+          phase,
+          instance: phaseInstance,
+          isPending: false,
+        },
+        intent,
+        space,
       ),
     );
     return true;
@@ -357,6 +426,62 @@ function emitMirrorBoundaryIfNeeded(
     ),
   );
   return true;
+}
+
+function emitMirrorBoundaryIfNeeded(
+  projectDir: string,
+  stateContent: string,
+  intentOverride?: string,
+): boolean {
+  let boundary: PersistedMirrorBoundary;
+  try {
+    boundary = persistedMirrorBoundary(stateContent);
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return true;
+  }
+  if (!hasPersistedMirrorBoundary(boundary)) return false;
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space, intentOverride);
+  if (intent === null) {
+    emit(errorDirective("Mirror boundary cannot resolve the active intent."));
+    return true;
+  }
+  const resolved = resolveMirrorConfig(projectDir, intent, space);
+  if (resolved.kind === "invalid") {
+    const details = resolved.issues
+      .map((issue) =>
+        issue.kind === "read-failure"
+          ? `${issue.layer} (${issue.path}): ${issue.summary}`
+          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
+      )
+      .join(" | ");
+    emit(errorDirective(`Invalid mirror configuration: ${details}`));
+    return true;
+  }
+  return emitConfiguredMirrorBoundary(
+    stateContent,
+    boundary,
+    resolved.config.autoMirror,
+    intent,
+    space,
+  );
+}
+
+function emitDeferredCompletionBoundary(
+  projectDir: string,
+  stage: string,
+  intentOverride?: string,
+): void {
+  const preparedState = loadStateFileIfPresent(projectDir, intentOverride);
+  if (
+    preparedState === null ||
+    !emitMirrorBoundaryIfNeeded(projectDir, preparedState, intentOverride)
+  ) {
+    emit(errorDirective(
+      `Workflow completion for "${stage}" was prepared but no mirror boundary directive was available.`,
+    ));
+  }
 }
 
 function appendOrchestrateLifecycleEvent(
@@ -3610,9 +3735,14 @@ function checkboxForSlug(
   return parseCheckboxes(stateContent).find((c) => c.slug === slug);
 }
 
-function approveArgs(slug: string, flags: ReportFlags): string[] {
+function approveArgs(
+  slug: string,
+  flags: ReportFlags,
+  deferWorkflowCompletion = false,
+): string[] {
   const args = ["approve", slug];
   if (flags.userInput) args.push("--user-input", flags.userInput);
+  if (deferWorkflowCompletion) args.push("--defer-workflow-completion");
   return args;
 }
 
@@ -3624,12 +3754,87 @@ type CarrierApprovalAuthority = Exclude<
   { readonly kind: "normal" } | { readonly kind: "invalid" }
 >;
 
+function authorizedApprovalIntent(
+  pd: string,
+  slug: string,
+  authority: CarrierApprovalAuthority,
+): string | null {
+  if (authority.kind === "grant-backed") {
+    const selected = findStandingGrantRouteReceiptById(pd, authority.routeId);
+    return selected?.receipt.stage === slug &&
+        selected.receipt.grantId === authority.grantId
+      ? selected.intent
+      : null;
+  }
+  try {
+    const selected = readPresenceReservation(pd, authority.reservationId);
+    return selected?.targetIntentId === authority.targetIntentId &&
+        selected.stage === slug &&
+        selected.space === activeSpace(pd)
+      ? selected.targetIntentDir
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
   authority: CarrierApprovalAuthority,
 ): void {
+  const approvalIntent = authorizedApprovalIntent(pd, slug, authority);
+  if (approvalIntent === null) {
+    emit(errorDirective(
+      "Approval authorization does not match exactly one workflow and stage.",
+    ));
+    return;
+  }
+  const stateContent = loadStateFileIfPresent(
+    pd,
+    approvalIntent,
+  );
+  if (stateContent === null) {
+    emit(errorDirective("Approval authorization requires an active workflow."));
+    return;
+  }
+  const scope = getField(stateContent, "Scope");
+  const isFinal =
+    scope !== null && nextInScopeStage(slug, scope, stateContent) === null;
+  const stageCheckbox = checkboxForSlug(stateContent, slug);
+  let prepared: ReturnType<typeof workflowCompletionPreparation>;
+  try {
+    prepared = workflowCompletionPreparation(stateContent);
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return;
+  }
+  if (
+    stageCheckbox?.state === "completed" &&
+    isFinal &&
+    prepared?.status === "pending" &&
+    prepared.stage === slug
+  ) {
+    if (!emitMirrorBoundaryIfNeeded(pd, stateContent, approvalIntent)) {
+      emit(errorDirective(
+        `Workflow completion for "${slug}" is pending but no mirror boundary directive was available.`,
+      ));
+    }
+    return;
+  }
+  const completionDisposition = isFinal
+    ? completionMirrorDisposition(pd, approvalIntent)
+    : { kind: "immediate" as const };
+  if (completionDisposition.kind === "error") {
+    emit(errorDirective(completionDisposition.message));
+    return;
+  }
+  const deferWorkflowCompletion =
+    isFinal && completionDisposition.kind === "defer";
   const approve = ["approve", slug];
+  if (deferWorkflowCompletion) {
+    approve.push("--defer-workflow-completion");
+  }
   if (authority.kind === "grant-backed") {
     approve.push(
       "--standing-grant-id",
@@ -3697,6 +3902,10 @@ function handleAuthorizedApprovalReport(
       presence_reservation_id: reservation.reservationId,
     };
     emit(directive);
+    return;
+  }
+  if (deferWorkflowCompletion) {
+    emitDeferredCompletionBoundary(pd, slug, approvalIntent);
     return;
   }
   const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
@@ -4008,6 +4217,15 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Finality — is there an in-scope stage after this one? (state-override aware,
   // so EXECUTE/SKIP suffixes and prior [x]/[S] checkboxes are honoured.)
   const isFinal = nextInScopeStage(slug, scope, stateContent) === null;
+  const completionDisposition = isFinal
+    ? completionMirrorDisposition(pd)
+    : { kind: "immediate" as const };
+  if (completionDisposition.kind === "error") {
+    emit(errorDirective(completionDisposition.message));
+    return;
+  }
+  const deferWorkflowCompletion =
+    isFinal && completionDisposition.kind === "defer";
 
   const status = getField(stateContent, "Status") ?? "";
 
@@ -4036,6 +4254,23 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 
   if (stageCheckbox.state === "completed") {
     if (isFinal) {
+      let prepared: ReturnType<typeof workflowCompletionPreparation>;
+      try {
+        prepared = workflowCompletionPreparation(stateContent);
+      } catch (cause) {
+        emit(errorDirective(errorMessage(cause)));
+        return;
+      }
+      if (prepared !== null) {
+        if (prepared.status === "pending") {
+          if (!emitMirrorBoundaryIfNeeded(pd, stateContent)) {
+            emit(errorDirective(
+              `Workflow completion for "${slug}" is pending but no mirror boundary directive was available.`,
+            ));
+          }
+          return;
+        }
+      }
       if (status === "Completed") {
         emit({
           kind: "done",
@@ -4084,7 +4319,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       // tell the engine-opened gate from an organic gate-start.
       sequence.push(["gate-start", slug, "--recovered"]);
     }
-    sequence.push(approveArgs(slug, flags));
+    sequence.push(approveArgs(slug, flags, deferWorkflowCompletion));
   } else if (isFinal) {
     const completeArgs = ["complete-workflow", slug];
     if (flags.reason) completeArgs.push("--reason", flags.reason);
@@ -4115,6 +4350,10 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       kind: "error",
       message: `Internal: no transition selected for "${slug}".`,
     });
+    return;
+  }
+  if (deferWorkflowCompletion) {
+    emitDeferredCompletionBoundary(pd, slug);
     return;
   }
 

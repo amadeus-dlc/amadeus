@@ -686,6 +686,44 @@ describe("t279 sync and close convergence", () => {
     expect(gateway.history).toEqual(["view"]);
   });
 
+  test("workflow completion rejects non-running in-flight landing evidence", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewed = issue();
+    const event = mirrorEventIdentity(
+      "intent-1",
+      { kind: "workflow-completed", instance: "complete-current" },
+      "sync",
+    );
+    const executionContext: MirrorExecutionContext = {
+      ...context("sync", gateway),
+      triggerEvent: event,
+      event,
+      authorization: {
+        ...authorization(event, "sync"),
+        landing: {
+          registryStatus: "in-flight",
+          workflowStatus: "Completed",
+          completionInstance: "complete-current",
+        },
+      },
+    };
+    const initial = linkedState();
+    const outcome = await executeMirrorOperation({
+      context: executionContext,
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "sync",
+      warning: {
+        summary: "workflow completion landing is not verified",
+      },
+    });
+    expect(gateway.history).not.toContain("edit");
+  });
+
   test("close of an open verified Issue retries through one close call", async () => {
     const gateway = new FakeGateway();
     gateway.viewed = issue();
