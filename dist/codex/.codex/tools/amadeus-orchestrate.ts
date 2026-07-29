@@ -222,14 +222,14 @@ function loadStateFileIfPresent(
 export type MirrorBoundaryDecision =
   | { kind: "suppress" }
   | { kind: "ask"; includeCreate: boolean }
-  | { kind: "auto-sync" };
+  | { kind: "auto-lifecycle" };
 
 export function decideMirrorBoundary(
   mode: MirrorMode,
   hasMirrorIssue: boolean,
 ): MirrorBoundaryDecision {
   if (mode === "off") return { kind: "suppress" };
-  if (mode === "auto" && hasMirrorIssue) return { kind: "auto-sync" };
+  if (mode === "auto") return { kind: "auto-lifecycle" };
   return { kind: "ask", includeCreate: !hasMirrorIssue };
 }
 
@@ -262,7 +262,7 @@ function currentMirrorBoundaryPhase(
   return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
 }
 
-type MirrorSyncTarget =
+type MirrorLifecycleTarget =
   | Readonly<{
       kind: "completion";
       instance: string;
@@ -275,8 +275,8 @@ type MirrorSyncTarget =
       isPending: boolean;
     }>;
 
-function mirrorSyncPrint(
-  target: MirrorSyncTarget,
+function mirrorLifecyclePrint(
+  target: MirrorLifecycleTarget,
   intent: string,
   space: string,
 ): PrintDirective {
@@ -286,7 +286,7 @@ function mirrorSyncPrint(
   const boundaryArgs = target.kind === "completion"
     ? `completion --instance ${JSON.stringify(target.instance)}`
     : `phase --phase ${target.phase} --instance ${JSON.stringify(target.instance)}`;
-  const syncTool =
+  const lifecycleTool =
     `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}${selector}`;
   if (target.kind === "completion") {
     const terminalTool =
@@ -294,7 +294,7 @@ function mirrorSyncPrint(
       `${JSON.stringify(target.stage)} --completion-instance ` +
       `${JSON.stringify(target.instance)}${selector}`;
     return printDirective(
-      `Run \`${syncTool}\`. Only after the completion boundary settles, run ` +
+      `Run \`${lifecycleTool}\`. Only after the completion boundary settles, run ` +
         `\`${terminalTool}\`, then re-run \`next\`. If the mirror operation or ` +
         `terminal commit fails, stop; the durable completion instance makes a later retry safe.`,
     );
@@ -303,9 +303,10 @@ function mirrorSyncPrint(
     ? ""
     : `First run \`${stateTool} ${target.phase} pending --from absent${selector}\`. `;
   return printDirective(
-    `${prepare}Run \`${syncTool}\`. Only after sync succeeds, run ` +
-      `\`${stateTool} ${target.phase} completed --from pending${selector}\`, then re-run \`next\`. ` +
-      `If sync or the receipt update fails, stop; the pending receipt makes a later next retry safely.`,
+    `${prepare}Run \`${lifecycleTool}\`. After it succeeds, run ` +
+      `\`${stateTool} ${target.phase} completed --from pending${selector}\`. ` +
+      `Only after both the mirror operation and receipt update succeed, re-run \`next\`. ` +
+      `If either fails, stop without re-running \`next\`; the pending receipt makes a later retry safe.`,
   );
 }
 
@@ -367,7 +368,7 @@ function emitConfiguredMirrorBoundary(
   }
   if (pendingPhase !== undefined) {
     emit(
-      mirrorSyncPrint(
+      mirrorLifecyclePrint(
         {
           kind: "phase",
           phase: pendingPhase,
@@ -382,7 +383,7 @@ function emitConfiguredMirrorBoundary(
   }
   if (completion !== null) {
     emit(
-      mirrorSyncPrint(
+      mirrorLifecyclePrint(
         {
           kind: "completion",
           instance: completion.instance,
@@ -400,9 +401,9 @@ function emitConfiguredMirrorBoundary(
     mirrorIssueNumberFromDocument(stateContent) !== null,
   );
   if (decision.kind === "suppress") return false;
-  if (decision.kind === "auto-sync") {
+  if (decision.kind === "auto-lifecycle") {
     emit(
-      mirrorSyncPrint(
+      mirrorLifecyclePrint(
         {
           kind: "phase",
           phase,

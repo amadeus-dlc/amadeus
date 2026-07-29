@@ -30,8 +30,8 @@ describe("t265 mirror boundary decision", () => {
     ["off", true, { kind: "suppress" }],
     ["prompt", false, { kind: "ask", includeCreate: true }],
     ["prompt", true, { kind: "ask", includeCreate: false }],
-    ["auto", false, { kind: "ask", includeCreate: true }],
-    ["auto", true, { kind: "auto-sync" }],
+    ["auto", false, { kind: "auto-lifecycle" }],
+    ["auto", true, { kind: "auto-lifecycle" }],
   ] as const)("maps mode=%s mirror=%s", (mode, mirror, expected) => {
     expect(decideMirrorBoundary(mode, mirror)).toEqual(expected);
   });
