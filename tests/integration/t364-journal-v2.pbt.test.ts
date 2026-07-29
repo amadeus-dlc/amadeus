@@ -528,8 +528,13 @@ describe("patch-gate edge coverage — validator and reader tie-breaks", () => {
     expect(() => serializeJournalEntryV2(entry)).toThrow(JournalCodecError);
   });
 
-  test("parse rejects a non-integer traceFlags (journal.ts:242)", () => {
+  test("parse rejects a non-integer traceFlags (journal.ts:398-399)", () => {
     expect(() => parseJournalLine(JSON.stringify({ ...edgeBase, traceFlags: 1.5 }))).toThrow(/traceFlags/);
+  });
+
+  test("serialize rejects a non-boolean canonical flag (journal.ts:242)", () => {
+    const entry = { ...edgeBase, canonical: "yes" as unknown as boolean };
+    expect(() => serializeJournalEntryV2(entry)).toThrow(/canonical must be a boolean/);
   });
 
   test("readJournalRecords wraps a torn line with its 1-based position (journal.ts:483-485)", () => {

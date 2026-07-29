@@ -1420,5 +1420,11 @@
     "lines": "174",
     "reason": "Git init failure throw in initializeCodexExecProject; the success path is exercised by t-codex-exec-live-helper integration.",
     "expiry": "remove when project initialization receives an injectable git port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-journal.ts",
+    "lines": "211",
+    "reason": "isJsonValue's switch default clause (typeof undefined/function/symbol/bigint) is reachable but Bun emits no DA stamp for this line at all, so the patch gate cannot measure it; the branch is driven by the serialize rejection test for BigInt attributes.",
+    "expiry": "remove if Bun stamps switch default clauses in LCOV or the validator is restructured"
   }
 ]
