@@ -32,6 +32,10 @@ migration／installed doctor subprocessへfixture固有の`.git/amadeus-test-aud
 - 対象5件: 5 PASS / 0 FAIL / 41 expects
 - t224全体: 62 PASS / 0 FAIL / 576 expects
 - coverage runner（並列4）: 62 PASS / 0 FAIL / 576 expects
+- CI追補: subprocess argvを静的分類器が追跡できる配列定数へ戻し、診断fixtureの旧framework接頭辞を中立名へ変更した。
+- CIで失敗したmechanism ratchetとgenerated-prefix contract: 10 PASS / 0 FAIL / 53 expects
+- CI追補後の対象4件: 4 PASS / 0 FAIL / 33 expects
+- CI追補後のt224全体: 62 PASS / 0 FAIL / 576 expects
 - typecheck: PASS
 - lint: PASS（既存baseline warningのみ）
 - `git diff --check`: PASS
@@ -39,4 +43,5 @@ migration／installed doctor subprocessへfixture固有の`.git/amadeus-test-aud
 fixture cleanupはmigration subprocessがresultを返した後の`afterEach`で走るため、今回のstatus 1経路には関与しない。symlink target内容、symlink種別、clone-id安定性、Git workspace／index rollback、doctor audit append契約はt224全体で維持した。
 
 - 対象: [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664)
+- Draft [PR #1687](https://github.com/amadeus-dlc/amadeus/pull/1687)
 - timeout延長、serial化、推測的なproduct変更は行っていない。

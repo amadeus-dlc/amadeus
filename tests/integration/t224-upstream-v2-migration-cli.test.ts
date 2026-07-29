@@ -140,16 +140,16 @@ function runInstalledDoctor(
   project: UpstreamV2Fixture,
   extraEnv: NodeJS.ProcessEnv = {},
 ): CliResult {
-  const command = [
-    process.execPath,
+  const doctorArgs = [
     join(project.projectDir, ".claude", "tools", "amadeus-utility.ts"),
     "doctor",
     "--project-dir",
     project.projectDir,
   ];
+  const command = [process.execPath, ...doctorArgs];
   const result = spawnSync(
-    command[0],
-    command.slice(1),
+    process.execPath,
+    doctorArgs,
     {
       cwd: project.projectDir,
       encoding: "utf-8",
@@ -178,8 +178,7 @@ function runMigrationProcess(
   extraEnv: NodeJS.ProcessEnv = {},
   tool = MIGRATE_TOOL,
 ): CliResult {
-  const command = [
-    process.execPath,
+  const migrateArgs = [
     tool,
     "--project-dir",
     project.projectDir,
@@ -188,9 +187,10 @@ function runMigrationProcess(
     "--json",
     ...args,
   ];
+  const command = [process.execPath, ...migrateArgs];
   const result = spawnSync(
-    command[0],
-    command.slice(1),
+    process.execPath,
+    migrateArgs,
     {
       cwd: project.projectDir,
       encoding: "utf-8",
@@ -317,7 +317,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
         stderr: "doctor failed\n",
       };
       const context = {
-        cloneIdLogicalPath: "aidlc/.aidlc-clone-id",
+        cloneIdLogicalPath: "workspace/.clone-id",
         cloneIdTargetPath: "/tmp/fixture/sentinel.txt",
       };
 
@@ -327,7 +327,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       } catch (error) {
         message = error instanceof Error ? error.message : String(error);
       }
-      expect(message).toContain('clone-id logical path: "aidlc/.aidlc-clone-id"');
+      expect(message).toContain('clone-id logical path: "workspace/.clone-id"');
       expect(message).toContain('clone-id target path: "/tmp/fixture/sentinel.txt"');
       expect(message).toContain('command: "/usr/bin/bun" "amadeus-migrate.ts" "--apply"');
       expect(message).toContain(`exit path: ${exitPath}`);
