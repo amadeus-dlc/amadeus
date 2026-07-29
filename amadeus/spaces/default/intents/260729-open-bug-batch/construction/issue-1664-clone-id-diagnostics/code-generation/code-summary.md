@@ -2,11 +2,13 @@
 
 ## 根因と修正
 
-`t224` fixtureのmigration／doctor subprocessが、他の並列test processとOS一時領域のaudit-lock namespaceを共有していた。生存中processのlockを同じnamespaceへ配置する制御fixtureでは、修正前にdoctorが5秒の再試行後に`Failed to acquire audit lock after retries`となり、2026-07-28のCIと同じmigration `status=1`へ決定的に到達した。
+`t224` fixtureのmigration／doctor subprocessが、他の並列test processとOS一時領域のaudit-lock namespaceを共有していた。lock名は`projectDir`を含むidentityのMD5先頭32bitである。制御testは異なる2つの`projectDir`を探索し、実際に同じlock pathへ解決されるpairを作る。別identityの生存processがその共有lockを占有すると、doctorは5秒の再試行後に`Failed to acquire audit lock after retries`となり、2026-07-28のCIと同じmigration `status=1`へ決定的に到達し、workspaceをrollbackした。
 
 migration／installed doctor subprocessへfixture固有の`.git/amadeus-test-audit-locks`を`AMADEUS_LOCK_BASE_DIR`として渡した。明示的な`extraEnv`は後勝ちのままなので、lock failureを注入する既存・将来testは上書きできる。製品のclone-id導出、migration、doctor、lock timeoutは変更していない。
 
-過去CIはsubprocess出力を保存していなかったため、その1回が同じlock競合だったことを事後に証明することはできない。一方、共有namespaceが同じstatus 1を起こす実在の非決定性と、その隔離によるGreenは制御fixtureで固定した。
+過去CIはsubprocess出力を保存していなかったため、その1回が同じlock競合だったことを事後に証明することはできない。一方、異なるfixture identityの実在する32bit衝突、共有baseでの同じstatus 1、専用baseでのGreenは同一test内で固定した。
+
+当初要件が探索対象にしたsymlink解決、clone-id導出、process起動、fixture cleanupではなく、実測根因はdoctorのaudit-lock取得だった。FR-CROSS-2に従い、4候補への汎用failure hook追加ではなく、実測lock境界のRed→Greenを受け入れテストへ採用した。broken symlink、doctor差替え、rollback、cleanupの既存integration testsは非退行確認として維持している。
 
 ## 診断
 
@@ -23,12 +25,13 @@ migration／installed doctor subprocessへfixture固有の`.git/amadeus-test-aud
 ## 検証証拠
 
 - exit-status、signal、spawn-errorの各制御結果: 3 PASS
-- 共有audit-lock占有Red: migration `status=1`、doctor `Failed to acquire audit lock after retries`
+- 異なるfixture identityが同じ32bit lock pathへ解決されることを実測
+- 共有audit-lock占有Red: migration `status=1`、doctor `Failed to acquire audit lock after retries`、rollback成功
 - fixture固有lock base適用後の同条件: PASS
 - symlink clone-id対象case: PASS
-- 対象5件: 5 PASS / 0 FAIL / 36 expects
-- t224全体: 62 PASS / 0 FAIL / 571 expects
-- coverage runner（並列4）: 62 PASS / 0 FAIL / 571 expects
+- 対象5件: 5 PASS / 0 FAIL / 41 expects
+- t224全体: 62 PASS / 0 FAIL / 576 expects
+- coverage runner（並列4）: 62 PASS / 0 FAIL / 576 expects
 - typecheck: PASS
 - lint: PASS（既存baseline warningのみ）
 - `git diff --check`: PASS

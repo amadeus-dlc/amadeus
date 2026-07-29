@@ -17,6 +17,7 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -25,7 +26,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { auditLockDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   createUpstreamV2Fixture,
@@ -121,6 +122,18 @@ function isolatedAuditLockBase(project: UpstreamV2Fixture): string {
   const lockBase = join(project.projectDir, ".git", "amadeus-test-audit-locks");
   mkdirSync(lockBase, { recursive: true });
   return lockBase;
+}
+
+function findWorkspaceLockCollision(root: string): readonly [string, string] {
+  const projectByLockName = new Map<string, string>();
+  for (let index = 0; index < 500_000; index++) {
+    const candidate = join(root, `project-${index}`);
+    const lockName = basename(auditLockDir(candidate));
+    const prior = projectByLockName.get(lockName);
+    if (prior !== undefined) return [prior, candidate];
+    projectByLockName.set(lockName, candidate);
+  }
+  throw new Error("could not find a workspace audit-lock collision");
 }
 
 function runInstalledDoctor(
@@ -1313,8 +1326,12 @@ describe("t224 upstream-v2 migration public CLI", () => {
     }
   });
 
-  test("symlink clone-id migration is isolated from an unrelated shared audit lock", () => {
-    const project = fixture();
+  test("symlink clone-id migration isolates distinct fixture identities that share a lock path", () => {
+    const collisionRoot = realpathSync(
+      mkdtempSync(join(tmpdir(), "amadeus-lock-collision-")),
+    );
+    const [projectDir, collidingProjectDir] = findWorkspaceLockCollision(collisionRoot);
+    const project = fixture({ projectDir });
     const installedMigrator = installClaudeHarness(project, {
       validSettings: true,
     });
@@ -1329,13 +1346,28 @@ describe("t224 upstream-v2 migration public CLI", () => {
       symlinkSync(target, cloneId);
 
       process.env.AMADEUS_LOCK_BASE_DIR = sharedLockBase;
-      const occupiedLock = auditLockDir(project.projectDir);
+      const projectLock = auditLockDir(project.projectDir);
+      const occupiedLock = auditLockDir(collidingProjectDir);
+      expect(collidingProjectDir).not.toBe(project.projectDir);
+      expect(occupiedLock).toBe(projectLock);
       mkdirSync(occupiedLock);
       writeFileSync(
         join(occupiedLock, "owner.json"),
         JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin) }),
         "utf-8",
       );
+
+      const collided = migrateWithEnv(
+        project,
+        { AMADEUS_LOCK_BASE_DIR: sharedLockBase },
+        "--apply",
+      );
+      expect(collided.status).toBe(1);
+      expect(collided.stdout).toContain("Failed to acquire audit lock after retries");
+      expect(parseReport(collided).evidence.rollback).toEqual({
+        attempted: true,
+        restored: true,
+      });
 
       const result = migrateWithTool(project, installedMigrator, "--apply");
 
@@ -1352,6 +1384,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       }
       rmSync(external, { recursive: true, force: true });
       rmSync(sharedLockBase, { recursive: true, force: true });
+      rmSync(collisionRoot, { recursive: true, force: true });
     }
   });
 
