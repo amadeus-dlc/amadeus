@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2001,22 +2001,70 @@ export function listIntents(projectDir: string, space?: string): IntentInfo[] {
 }
 
 // Write the active-intent cursor for a space (gitignored per-user pointer).
-// Best-effort: the cursor dir is created if absent; a write failure is swallowed
-// (the cursor is per-user state, never the source of truth — the registry is).
-export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+// Callers that require a completed switch check the result; bootstrap callers
+// may deliberately keep the cursor best-effort because the registry remains
+// the source of truth.
+function activeIntentCursorMatches(path: string, dirName: string): boolean {
+  let fd: number | null = null;
+  try {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return false;
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    if (
+      !opened.isFile()
+      || after.isSymbolicLink()
+      || !after.isFile()
+      || before.dev !== opened.dev
+      || before.ino !== opened.ino
+      || opened.dev !== after.dev
+      || opened.ino !== after.ino
+    ) {
+      return false;
+    }
+    return readFileSync(fd, "utf-8").trim() === dirName;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* Read-back is already fail-closed. */ }
+    }
+  }
+}
+
+export function setActiveIntentCursor(
+  projectDir: string,
+  dirName: string,
+  space?: string,
+  writeHooks: AtomicWriteHooks = {},
+): boolean {
   const dir = intentsDir(projectDir, space);
+  const cursor = join(dir, ACTIVE_INTENT_POINTER);
+  let renamed = false;
   try {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
+    writeFileAtomic(cursor, `${dirName}\n`, {
+      beforeTempFsync: writeHooks.beforeTempFsync,
+      beforeRename: writeHooks.beforeRename,
+      beforeDirectoryFsync: () => {
+        renamed = true;
+        writeHooks.beforeDirectoryFsync?.();
+      },
+    });
+    return true;
   } catch {
-    /* per-user cursor; best-effort */
+    return renamed && activeIntentCursorMatches(cursor, dirName);
   }
 }
 
 // Clear the active-intent cursor when it still points at `dirName` (#1248). Read-
 // then-conditional-delete so a cursor already moved to another intent is left
 // untouched — only the exact intent that is completing releases its own pointer.
-// Best-effort and swallowed, mirroring setActiveIntentCursor: the cursor is
+// Best-effort and swallowed, mirroring bootstrap cursor writes: the cursor is
 // per-user state, never the source of truth (the registry is).
 export function clearActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
   const cursor = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
@@ -2215,7 +2263,7 @@ export function birthIntent(
     { uuid, slug, dirName, scope, repos: repos && repos.length > 0 ? repos : undefined, status: "in-flight" },
     space,
   );
-  setActiveIntentCursor(projectDir, dirName, space);
+  void setActiveIntentCursor(projectDir, dirName, space);
   return { uuid, slug, dirName, recordDir: recordPath, space };
 }
 
@@ -5087,6 +5135,29 @@ export function isAutonomousMode(stateContent: string | null): boolean {
   return !!stateContent && getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() === "autonomous";
 }
 
+// --- Gated swarm batch approvals ---
+//
+// The state field recording which swarm batches the human already approved at
+// their batch-end gate under `Construction Autonomy Mode: gated` (issue #1612).
+// A comma-separated list of 1-origin batch numbers, appended by
+// `amadeus-bolt approve-batch --batch <n>`; the engine only ever READS it.
+export const SWARM_BATCH_APPROVALS_FIELD = "Swarm Gated Batch Approvals";
+
+// Parse the recorded approvals into ascending 1-origin batch numbers. Numeric
+// parse, not string compare (verification-numeric-parse): a token that is not a
+// positive integer is dropped, so a malformed ledger can only ever WITHHOLD an
+// approval (fail closed), never manufacture one. One definition for both the
+// writer (amadeus-bolt approve-batch) and the reader (the engine's batch gate).
+export function parseApprovedSwarmBatches(stateContent: string | null): number[] {
+  const raw = stateContent ? getField(stateContent, SWARM_BATCH_APPROVALS_FIELD) : null;
+  if (!raw) return [];
+  const parsed = raw
+    .split(",")
+    .map((token) => Number(token.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return [...new Set(parsed)].sort((a, b) => a - b);
+}
+
 // Deterministic off-switch for the human-presence gate (mirrors
 // artifactGuardDisabled in amadeus-state.ts). The suite sets this globally (the
 // dedicated guard test clears it), and it is the documented bypass for
@@ -5391,14 +5462,14 @@ function ownerStampPath(lockDir: string): string {
 // the same 32-bit-hashed path is never robbed). Cleared on release.
 const AUDIT_LOCK_OWNED_STAMPS = new Map<string, LockOwner>();
 
-function writeOwnerStamp(lockDir: string, key: string): void {
+function writeOwnerStamp(lockDir: string, key: string): boolean {
   const owner: LockOwner = { pid: process.pid, startedAtMs: lockAcquireEpochMs() };
   try {
     writeFileSync(ownerStampPath(lockDir), JSON.stringify(owner), "utf-8");
     AUDIT_LOCK_OWNED_STAMPS.set(key, owner);
+    return true;
   } catch {
-    // Best-effort: a missing stamp degrades the reaper to age-only on the next
-    // waiter (it can't read a PID), never to incorrectness.
+    return false;
   }
 }
 
@@ -5541,9 +5612,9 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
   return now.pid === judged.pid && now.startedAtMs === judged.startedAtMs;
 }
 
-// Reclaim a lock iff it is provably dead (owner gone) OR stale (over-age). A
-// live, under-threshold holder is left alone (returns false). Returns true iff
-// THIS call freed the dir.
+// Reclaim a lock when its owner is gone, and optionally when a live owner is
+// over-age. Unbounded async sections use dead-owner-only so duration can never
+// break mutual exclusion. Returns true iff THIS call freed the dir.
 //
 // MUTUAL-EXCLUSION SAFETY (compare-and-swap steal): the staleness DECISION (read
 // stamp, judge dead/over-age) and the steal are not one OS-atomic operation, so
@@ -5587,10 +5658,10 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
 // stampMatches verify in step 2 is kept as defense-in-depth. A reaper killed
 // while holding the mutex is recovered by age (reapMutexStaleMs) via the same
 // CAS-rename idiom, and mutex loss is fail-safe: the waiter just retries.
-function reapStaleLock(lockDir: string): boolean {
+function reapStaleLock(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
   if (!acquireReapMutex(lockDir)) return false; // another reaper is mid-steal — let it finish
   try {
-    return reapStaleLockUnderMutex(lockDir);
+    return reapStaleLockUnderMutex(lockDir, reapPolicy);
   } finally {
     try {
       rmSync(reapMutexPath(lockDir), { recursive: true, force: true });
@@ -5658,7 +5729,17 @@ function acquireReapMutex(lockDir: string): boolean {
   }
 }
 
-function reapStaleLockUnderMutex(lockDir: string): boolean {
+function liveOwnerMayBeReaped(
+  owner: LockOwner,
+  reapPolicy: AuditLockReapPolicy,
+): boolean {
+  return (
+    reapPolicy === "dead-or-over-age" &&
+    lockAcquireEpochMs() - owner.startedAtMs > lockStaleMs()
+  );
+}
+
+function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
   const owner = readOwnerStamp(lockDir);
   if (owner === null) {
     // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
@@ -5672,8 +5753,8 @@ function reapStaleLockUnderMutex(lockDir: string): boolean {
     // else: an old unstamped dir → genuine leak, fall through to steal.
   } else if (ownerAlive(owner)) {
     // Live owner: only reclaim if its stamp is over-age (a wedged-but-running
-    // holder). A fresh, live holder is never robbed.
-    if (lockAcquireEpochMs() - owner.startedAtMs <= lockStaleMs()) return false;
+    // holder) when the caller's critical section has a bounded duration.
+    if (!liveOwnerMayBeReaped(owner, reapPolicy)) return false;
   }
   // STEP 1 — CAS swap: move the dir to a reaper-private nonce path. This is the
   // atomic arbiter; only one process wins the rename of a given dir.
@@ -5707,29 +5788,53 @@ function reapStaleLockUnderMutex(lockDir: string): boolean {
   return true;
 }
 
+export type AuditLockReapPolicy =
+  | "dead-or-over-age"
+  | "dead-owner-only";
+
+function finalizeAuditLockAcquire(
+  lockDir: string,
+  key: string,
+  reapPolicy: AuditLockReapPolicy,
+): boolean {
+  // Bounded audit sections may degrade to age-only. Unbounded sections require
+  // a live PID stamp and fail closed before entering their critical section.
+  if (writeOwnerStamp(lockDir, key)) return true;
+  if (reapPolicy === "dead-or-over-age") return true;
+  removeLockDirIfOwned(lockDir, key);
+  if (existsSync(lockDir)) {
+    try {
+      chmodSync(lockDir, 0o700);
+    } catch {
+      // The acquire still fails closed; a later dead/unstamped reap can retry.
+    }
+    removeLockDirIfOwned(lockDir, key);
+  }
+  return false;
+}
+
 export function acquireAuditLock(
   projectDir: string,
   maxRetries = 50,
   retryMs = 100,
   intent?: string,
   space?: string,
+  reapPolicy: AuditLockReapPolicy = "dead-or-over-age",
 ): boolean {
   const lockDir = auditLockDir(projectDir, intent, space);
   const key = auditLockIdentity(projectDir, intent, space);
   for (let i = 0; i <= maxRetries; i++) {
     try {
       mkdirSync(lockDir);
-      writeOwnerStamp(lockDir, key);
-      return true;
+      return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
     } catch {
       // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale
       // holder so a SIGKILL'd owner doesn't wedge every waiter for the full
       // retry budget. If we reap, retry the mkdir immediately (next loop turn).
-      if (reapStaleLock(lockDir)) {
+      if (reapStaleLock(lockDir, reapPolicy)) {
         try {
           mkdirSync(lockDir);
-          writeOwnerStamp(lockDir, key);
-          return true;
+          return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
         } catch {
           // another waiter beat us to the freed dir — fall through to sleep
         }

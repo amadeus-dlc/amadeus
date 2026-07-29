@@ -32,14 +32,12 @@ describe("t152 Windows portability guard", () => {
     expect(ts).not.toContain("jq is required");
   });
 
-  test("run-all.ps1 runs --all through Bun and forces live Windows TUI env", () => {
+  test("run-all.ps1 runs --all through Bun and excludes unsupported live TUI", () => {
     const ps = readFileSync(join(WINDOWS, "run-all.ps1"), "utf8");
-    expect(ps).toContain('$env:AMADEUS_NODE_BIN = $NodeExe');
-    expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "1"');
+    expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "0"');
     expect(ps).toContain('-ArgumentList @("tests/run-tests.ts", "--all", "--debug", "-P", "$Parallel")');
     expect(ps).toContain("$Runner = Start-Process");
     expect(ps).toContain("exit $Runner.ExitCode");
-    expect(ps).toContain("require('node-pty'); require('@xterm/headless')");
     expect(ps).not.toContain("run-tests.sh");
   });
 
@@ -49,7 +47,7 @@ describe("t152 Windows portability guard", () => {
     expect(yaml).toContain("AmazonSSMManagedInstanceCore");
     expect(yaml).toContain("SecurityGroupIngress: []");
     expect(yaml).toContain("Git-2.49.0-64-bit.exe");
-    expect(yaml).toContain("node-v22.14.0-x64.msi");
+    expect(yaml).not.toContain("nodejs.org");
     expect(yaml).toContain("https://bun.sh/install.ps1");
     expect(yaml).toContain("https://claude.ai/install.ps1");
   });
@@ -104,14 +102,10 @@ describe("t152 Windows portability guard", () => {
     // interpreter so bashisms don't regress to dash) and shell:true otherwise
     // (cmd.exe on win32, /bin/sh on bash-less POSIX).
     //
-    // The needles below are split (`"spawn" + "Sync("`) on purpose: a verbatim
-    // `spawnSync(` token co-occurring with the amadeus-swarm.ts literal and a
-    // runtime launcher would make the coverage generator's body-derived
-    // mechanism predicate (drivesCliSurface) misread THIS pure file-reading
-    // guard as a deterministic CLI spawner. It spawns nothing — it greps source
-    // — so the split keeps the honesty ratchet (gen-coverage-registry) accurate.
+    // The AST-based mechanism classifier ignores this string literal, so the
+    // source assertion can use the production token directly.
     const swarm = read("dist/claude/.claude/tools/amadeus-swarm.ts");
-    const spawnCall = "spawn" + "Sync(";
+    const spawnCall = "spawnSync(";
     // The convergence spawn no longer hardcodes a bash -c argv.
     expect(swarm).not.toContain(`${spawnCall}"bash", ["-c", checkCmd]`);
     // It passes the check command as the command and runs it under a shell.

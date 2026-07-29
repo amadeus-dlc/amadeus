@@ -153,20 +153,22 @@ class FakeGateway implements MirrorGitHubGateway {
   ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
     throw new Error("FakeGateway must not query Project items");
   }
-  async resolveProjectStatusField(
-    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
-  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
-    throw new Error("FakeGateway must not resolve a Project Status field");
+  async resolveProjectFields(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
+    throw new Error("FakeGateway must not resolve Project fields");
   }
   async addProjectItem(
     ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
   ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
     throw new Error("FakeGateway must not add a Project item");
   }
-  async updateProjectItemStatus(
-    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
-  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
-    throw new Error("FakeGateway must not update a Project item status");
+  async updateProjectItemSingleSelectField(
+    ..._args: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemSingleSelectField"]> {
+    throw new Error("FakeGateway must not update a Project item field");
   }
 }
 
@@ -441,6 +443,34 @@ describe("t279 create", () => {
     expect(gateway.history).toEqual(["readiness", "find"]);
   });
 
+  test("marker search persistence failure surfaces state-write without creating", async () => {
+    const store = memoryStore();
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    const gateway = new FakeGateway();
+    gateway.findResult = failure("no-effect-confirmed");
+    let writes = 0;
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          if (writes === 3) {
+            return { kind: "io-failure", summary: "disk full" };
+          }
+          return writeDocumentAtomic(text);
+        },
+      },
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: { classification: "state-write" },
+    });
+    expect(writes).toBe(3);
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
   test.each([
     ["not-started", "safety-blocked"],
     ["no-effect-confirmed", "pending"],
@@ -660,30 +690,45 @@ describe("t279 sync and close convergence", () => {
     const gateway = new FakeGateway();
     gateway.viewed = issue();
     const base = context("close", gateway);
+    const closeEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "manual", instance: "manual-close" },
+      "close",
+    );
     const syncEvent = mirrorEventIdentity(
       "intent-1",
       { kind: "workflow-completed", instance: "complete-1" },
       "sync",
     );
     const syncKey = mirrorEventKey(syncEvent);
+    const closeAuthorization = {
+      kind: "manual" as const,
+      event: closeEvent,
+      operation: "close" as const,
+      boundaryInstance: closeEvent.boundary.instance,
+      receiptRevision: 1,
+      invocationId: closeEvent.boundary.instance,
+      finalSyncReceiptKey: syncKey,
+    };
     const closeContext = {
       ...base,
-      authorization: authorization(base.event, "close", syncKey),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
     };
-    const event = base.event;
     const initial = {
       ...linkedState(),
       receipts: {
-        [mirrorEventKey(event)]: {
-          key: mirrorEventKey(event),
-          event,
+        [mirrorEventKey(closeEvent)]: {
+          key: mirrorEventKey(closeEvent),
+          event: closeEvent,
           operationId: "op-close",
           status: "pending" as const,
           preparedAt: NOW,
           attemptedAt: NOW,
           lastEffect: "outcome-unknown" as const,
           failureClass: "network" as const,
-          authorization: authorization(event, "close", syncKey),
+          authorization: closeAuthorization,
         },
         [syncKey]: {
           key: syncKey,
@@ -706,5 +751,85 @@ describe("t279 sync and close convergence", () => {
     });
     expect(outcome.kind).toBe("completed");
     expect(gateway.history).toEqual(["view", "readiness", "close"]);
+  });
+
+  test("close rejects Project evidence from a different completion instance", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewed = issue();
+    const oldSyncEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "workflow-completed", instance: "complete-old" },
+      "sync",
+    );
+    const oldSyncKey = mirrorEventKey(oldSyncEvent);
+    const closeEvent = mirrorEventIdentity(
+      "intent-1",
+      { kind: "workflow-completed", instance: "complete-current" },
+      "close",
+    );
+    const closeAuthorization = {
+      ...authorization(closeEvent, "close", oldSyncKey),
+      landing: {
+        registryStatus: "complete" as const,
+        workflowStatus: "Completed" as const,
+      },
+    };
+    const snapshot = {
+      intentUuid: "intent-1",
+      intentDir: INTENT_DIR,
+      projectSummary: "Mirror",
+      lifecyclePhase: "Operation",
+      currentStage: "workflow-completed",
+      status: "Completed",
+      registryStatus: "complete" as const,
+      updatedAt: NOW,
+    };
+    const closeContext: MirrorExecutionContext = {
+      ...context("close", gateway),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
+      projectSync: {
+        targets: [
+          {
+            project: { owner: "acme", number: 5 },
+            phaseField: "Intent Phase",
+            statusNames: {},
+          },
+        ],
+        snapshot,
+      },
+    };
+    const initial: MirrorStateSnapshot = {
+      ...linkedState(),
+      revision: 1,
+      receipts: {
+        [oldSyncKey]: {
+          key: oldSyncKey,
+          event: oldSyncEvent,
+          operationId: "op-old-sync",
+          status: "succeeded",
+          preparedAt: NOW,
+          attemptedAt: NOW,
+          completedAt: NOW,
+          projectSyncVerified: true,
+          authorization: authorization(oldSyncEvent, "sync"),
+        },
+      },
+    };
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: {
+        summary: "close requires final sync success for the same completion instance",
+      },
+    });
+    expect(gateway.history).not.toContain("close");
   });
 });

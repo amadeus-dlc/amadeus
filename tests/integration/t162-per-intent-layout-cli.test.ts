@@ -43,6 +43,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
@@ -89,7 +90,7 @@ interface Run {
 
 /** Spawn a tool against `proj` FROM `proj` (cwd contract — see header). */
 function runIn(proj: string, tool: string, args: string[]): Run {
-  const res = spawnSync(BUN, [tool, "--project-dir", proj, ...args], {
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), "--project-dir", proj, ...args], {
     cwd: proj,
     encoding: "utf-8",
     env: process.env,

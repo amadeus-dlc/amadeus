@@ -26,6 +26,11 @@ import {
 } from "node:fs";
 import { join, relative, resolve as resolvePath, sep } from "node:path";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  mirrorProjectKey,
+  normalizeMirrorProjectIdentity,
+} from "./amadeus-mirror-project-contract.ts";
 import type {
   MirrorMode,
   MirrorPhaseKey,
@@ -66,7 +71,7 @@ const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
 
 const MODE_EXPECTED = "off | prompt | auto";
 const PROJECTS_EXPECTED =
-  'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }';
+  'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }';
 const BOOLEAN_EXPECTED = "boolean";
 
 export type ConfigLayer = "global" | "space" | "intent";
@@ -375,8 +380,14 @@ function parseProjectRef(value: unknown): MirrorProjectRef | null {
   const match = PROJECT_REF_RE.exec(value);
   if (match === null) return null;
   const number = Number(match[2]);
-  if (!Number.isSafeInteger(number) || number <= 0) return null;
-  return { owner: match[1], number };
+  if (
+    !Number.isSafeInteger(number) ||
+    number <= 0 ||
+    match[2] !== String(number)
+  ) {
+    return null;
+  }
+  return normalizeMirrorProjectIdentity({ owner: match[1], number });
 }
 
 type StatusNamesParse =
@@ -422,7 +433,8 @@ function parseProjectTarget(element: unknown): ProjectsParse {
     return { ok: false, actualType: `element is ${valueKind(element)}` };
   }
   const unknown = Object.keys(element).filter(
-    (key) => key !== "project" && key !== "status-names",
+    (key) =>
+      key !== "project" && key !== "phase-field" && key !== "status-names",
   );
   if (unknown.length > 0) {
     return {
@@ -437,9 +449,23 @@ function parseProjectTarget(element: unknown): ProjectsParse {
       actualType: `project is ${valueKind(element.project)} (expected "<owner>/<number>")`,
     };
   }
+  const rawPhaseField = element["phase-field"];
+  if (
+    rawPhaseField !== undefined &&
+    (typeof rawPhaseField !== "string" || rawPhaseField.length === 0)
+  ) {
+    return {
+      ok: false,
+      actualType: `phase-field is ${valueKind(rawPhaseField)}`,
+    };
+  }
+  const phaseField = rawPhaseField ?? DEFAULT_PROJECT_PHASE_FIELD;
   const statusNames = parseStatusNames(element["status-names"]);
   if (!statusNames.ok) return statusNames;
-  return { ok: true, projects: [{ project, statusNames: statusNames.statusNames }] };
+  return {
+    ok: true,
+    projects: [{ project, phaseField, statusNames: statusNames.statusNames }],
+  };
 }
 
 // Any number of Projects may be configured: the list is the complete set of
@@ -450,10 +476,21 @@ function parseProjects(value: unknown): ProjectsParse {
     return { ok: false, actualType: valueKind(value) };
   }
   const projects: MirrorProjectTarget[] = [];
+  const seen = new Set<string>();
   for (const element of value) {
     const parsed = parseProjectTarget(element);
     if (!parsed.ok) return parsed;
-    projects.push(...parsed.projects);
+    for (const target of parsed.projects) {
+      const identity = mirrorProjectKey(target.project);
+      if (seen.has(identity)) {
+        return {
+          ok: false,
+          actualType: `duplicate project ${identity}`,
+        };
+      }
+      seen.add(identity);
+      projects.push(target);
+    }
   }
   return { ok: true, projects };
 }

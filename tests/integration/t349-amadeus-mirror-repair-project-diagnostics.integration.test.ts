@@ -1,6 +1,6 @@
 // t349 — the read-only Project diagnostics `repair status` reports over a real
 // record on disk: drift against the column the sync itself would apply, an
-// unreachable Status field, a missing option with the board's own vocabulary, a
+// unreachable Intent Phase field, a missing option with the board's own vocabulary, a
 // credential without the `project` scope, the partial-success view a ledger of
 // several boards produces, and the negative assertion that diagnosing mutates
 // nothing at all.
@@ -31,7 +31,7 @@ import type {
   MirrorProjectItem,
   MirrorProjectItemsView,
   MirrorProjectRef,
-  MirrorProjectStatusField,
+  MirrorResolvedProjectFields,
   MirrorProjectSyncEntry,
   MirrorStateSnapshot,
   RemoteMirrorIssue,
@@ -50,6 +50,7 @@ const INTENT_UUID = "intent-t349";
 const ISSUE = 91;
 const BOARD_A: MirrorProjectRef = { owner: "acme", number: 5 };
 const BOARD_B: MirrorProjectRef = { owner: "acme", number: 6 };
+const BOARD_C: MirrorProjectRef = { owner: "acme", number: 7 };
 
 // A credential leaks through a raw response, never through a diagnostic: this
 // token is injected into the gateway's failure summaries and must not surface.
@@ -83,6 +84,17 @@ function failure<T>(
   };
 }
 
+function deferredSignal(): Readonly<{
+  promise: Promise<void>;
+  resolve: () => void;
+}> {
+  let signal = (): void => {};
+  const promise = new Promise<void>((resolve) => {
+    signal = resolve;
+  });
+  return { promise, resolve: () => signal() };
+}
+
 function canonical(project: MirrorProjectRef): string {
   return `${project.owner}/${project.number}`;
 }
@@ -103,6 +115,14 @@ function identity(): MirrorCreateIdentity {
 // so an accidental call fails loudly rather than being counted after the fact.
 class DiagnosticGateway implements MirrorGitHubGateway {
   readonly history: string[] = [];
+  readonly resolvedPhaseFields: string[] = [];
+  readonly fieldReadStartOrder: number[] = [];
+  readonly fieldReadCompletionOrder: number[] = [];
+  fieldReadsInFlight = 0;
+  maxFieldReadsInFlight = 0;
+  fieldReadWaits = new Map<number, Promise<void>>();
+  onFieldReadStarted: ((projectNumber: number) => void) | null = null;
+  onFieldReadCompleted: ((projectNumber: number) => void) | null = null;
   items: MirrorProjectItem[] = [];
   membershipFailure: GatewayFailureClass | null = null;
   fieldFailures = new Map<number, GatewayFailureClass>();
@@ -145,27 +165,48 @@ class DiagnosticGateway implements MirrorGitHubGateway {
     }
     return ok({ issueNodeId: "I_issue", items: [...this.items] });
   }
-  async resolveProjectStatusField(
+  async resolveProjectFields(
     project: MirrorProjectRef,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>> {
+    phaseField: string,
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>> {
     this.history.push(`field:${canonical(project)}`);
-    const injected = this.fieldFailures.get(project.number);
-    if (injected !== undefined) {
-      return failure(injected, `GraphQL errors: [{"message":"${SECRET}"}]`);
+    this.resolvedPhaseFields.push(phaseField);
+    this.fieldReadsInFlight += 1;
+    this.maxFieldReadsInFlight = Math.max(
+      this.maxFieldReadsInFlight,
+      this.fieldReadsInFlight,
+    );
+    this.fieldReadStartOrder.push(project.number);
+    this.onFieldReadStarted?.(project.number);
+    try {
+      const wait = this.fieldReadWaits.get(project.number);
+      if (wait !== undefined) await wait;
+      const injected = this.fieldFailures.get(project.number);
+      if (injected !== undefined) {
+        return failure(injected, `GraphQL errors: [{"message":"${SECRET}"}]`);
+      }
+      return ok({
+        projectId: `PVT_${project.number}`,
+        lifecycle: {
+          fieldId: `PVTSSF_${project.number}`,
+          fieldName: phaseField,
+          options: this.options,
+        },
+        auxiliaryStatus: null,
+      });
+    } finally {
+      this.fieldReadsInFlight -= 1;
+      this.fieldReadCompletionOrder.push(project.number);
+      this.onFieldReadCompleted?.(project.number);
     }
-    return ok({
-      projectId: `PVT_${project.number}`,
-      fieldId: `PVTSSF_${project.number}`,
-      options: this.options,
-    });
   }
   async addProjectItem(): Promise<GatewayOutcome<{ itemId: string }>> {
     this.history.push("add");
     throw new Error("repair status must not add a Project item");
   }
-  async updateProjectItemStatus(): Promise<GatewayOutcome<void>> {
+  async updateProjectItemSingleSelectField(): Promise<GatewayOutcome<void>> {
     this.history.push("update");
-    throw new Error("repair status must not update a Project item status");
+    throw new Error("repair status must not update a Project item field");
   }
 }
 
@@ -173,12 +214,14 @@ function memberItem(
   project: MirrorProjectRef,
   currentStatus: string | null,
 ): MirrorProjectItem {
+  const lifecycleFieldId = `PVTSSF_${project.number}`;
   return {
     projectId: `PVT_${project.number}`,
     projectNumber: project.number,
     projectOwner: project.owner,
     itemId: `PVTI_${project.number}`,
-    currentStatus,
+    singleSelectValuesByFieldId:
+      currentStatus === null ? {} : { [lifecycleFieldId]: currentStatus },
   };
 }
 
@@ -186,11 +229,13 @@ function ledgerEntry(
   project: MirrorProjectRef,
   state: MirrorProjectSyncEntry["state"],
   lastAppliedStatus: string | null,
+  phaseField = "Intent Phase",
 ): MirrorProjectSyncEntry {
   return {
     project: canonical(project),
     projectId: `PVT_${project.number}`,
     itemId: `PVTI_${project.number}`,
+    phaseField,
     lastAppliedStatus,
     state,
     updatedAt: NOW,
@@ -217,7 +262,11 @@ type FixtureOptions = Readonly<{
   lifecyclePhase?: string;
   registryStatus?: "in-flight" | "parked" | "complete";
   boards?: ReadonlyArray<
-    Readonly<{ project: MirrorProjectRef; statusNames?: Record<string, string> }>
+    Readonly<{
+      project: MirrorProjectRef;
+      phaseField?: string;
+      statusNames?: Record<string, string>;
+    }>
   >;
   state?: MirrorStateSnapshot;
 }>;
@@ -265,6 +314,7 @@ function fixture(options: FixtureOptions = {}) {
       "auto-mirror": "auto",
       "mirror-projects": (options.boards ?? [{ project: BOARD_A }]).map((board) => ({
         project: canonical(board.project),
+        ...(board.phaseField ? { "phase-field": board.phaseField } : {}),
         ...(board.statusNames ? { "status-names": board.statusNames } : {}),
       })),
     }),
@@ -306,6 +356,53 @@ function mutations(gateway: DiagnosticGateway): string[] {
 }
 
 describe("t349 drift", () => {
+  test("owner casing produces one diagnosis with the configured field and vocabulary", async () => {
+    const configured = { owner: "ACME", number: BOARD_A.number };
+    const fx = fixture({
+      boards: [
+        {
+          project: configured,
+          phaseField: "Lifecycle",
+          statusNames: { construction: "Building" },
+        },
+      ],
+      state: linkedState([
+        ledgerEntry(configured, "synced", "Building", "Lifecycle"),
+      ]),
+    });
+    fx.gateway.options = [...OPTIONS, { id: "opt-building", name: "Building" }];
+    fx.gateway.items = [memberItem(BOARD_A, "Building")];
+
+    expect(await diagnose(fx)).toEqual([
+      {
+        project: "acme/5",
+        membership: "member",
+        currentStatus: "Building",
+        expectedStatus: "Building",
+        drift: false,
+        resolution: "resolved",
+        summary: 'this board is already in "Building".',
+      },
+    ]);
+    expect(fx.gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
+    expect(fx.gateway.history.filter((entry) => entry === "field:acme/5")).toHaveLength(
+      1,
+    );
+  });
+
+  test("a configured phase-field drives read-only drift diagnosis", async () => {
+    const fx = fixture({
+      boards: [{ project: BOARD_A, phaseField: "Lifecycle" }],
+    });
+    fx.gateway.items = [memberItem(BOARD_A, "Construction")];
+
+    const [row] = await diagnose(fx);
+
+    expect(row.currentStatus).toBe("Construction");
+    expect(row.drift).toBe(false);
+    expect(fx.gateway.resolvedPhaseFields).toEqual(["Lifecycle"]);
+  });
+
   test("a board sitting in the expected column reports no drift", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Construction")];
@@ -385,10 +482,95 @@ describe("t349 drift", () => {
       ["acme/6", "not-member"],
     ]);
   });
+
+  test("a ledger-only board keeps the phase field used by its last sync", async () => {
+    const fx = fixture({
+      boards: [],
+      state: linkedState([
+        ledgerEntry(BOARD_B, "synced", "Construction", "Lifecycle Phase"),
+      ]),
+    });
+    fx.gateway.items = [memberItem(BOARD_B, "Construction")];
+
+    await diagnose(fx);
+
+    expect(fx.gateway.resolvedPhaseFields).toEqual(["Lifecycle Phase"]);
+  });
+});
+
+describe("t349 bounded concurrency", () => {
+  test("at most two field reads run together while rows keep target order", async () => {
+    const fx = fixture({
+      boards: [
+        { project: BOARD_A },
+        { project: BOARD_B },
+        { project: BOARD_C },
+      ],
+    });
+    fx.gateway.items = [
+      memberItem(BOARD_A, "Construction"),
+      memberItem(BOARD_B, "Construction"),
+      memberItem(BOARD_C, "Construction"),
+    ];
+    const releaseA = deferredSignal();
+    const releaseB = deferredSignal();
+    const releaseC = deferredSignal();
+    const firstPairStarted = deferredSignal();
+    const thirdStarted = deferredSignal();
+    const thirdCompleted = deferredSignal();
+    fx.gateway.fieldReadWaits.set(BOARD_A.number, releaseA.promise);
+    fx.gateway.fieldReadWaits.set(BOARD_B.number, releaseB.promise);
+    fx.gateway.fieldReadWaits.set(BOARD_C.number, releaseC.promise);
+    fx.gateway.onFieldReadStarted = () => {
+      if (fx.gateway.fieldReadStartOrder.length === 2) {
+        firstPairStarted.resolve();
+      }
+      if (fx.gateway.fieldReadStartOrder.length === 3) thirdStarted.resolve();
+    };
+    fx.gateway.onFieldReadCompleted = (number) => {
+      if (number === BOARD_C.number) thirdCompleted.resolve();
+    };
+
+    const pending = diagnose(fx);
+    await firstPairStarted.promise;
+
+    expect(fx.gateway.fieldReadStartOrder).toEqual([
+      BOARD_A.number,
+      BOARD_B.number,
+    ]);
+    expect(fx.gateway.fieldReadsInFlight).toBe(2);
+    expect(fx.gateway.maxFieldReadsInFlight).toBeGreaterThan(1);
+
+    releaseB.resolve();
+    await thirdStarted.promise;
+    expect(fx.gateway.fieldReadStartOrder).toEqual([
+      BOARD_A.number,
+      BOARD_B.number,
+      BOARD_C.number,
+    ]);
+    expect(fx.gateway.fieldReadsInFlight).toBe(2);
+
+    releaseC.resolve();
+    await thirdCompleted.promise;
+    releaseA.resolve();
+    const rows = await pending;
+
+    expect(fx.gateway.maxFieldReadsInFlight).toBeLessThanOrEqual(2);
+    expect(fx.gateway.fieldReadCompletionOrder).toEqual([
+      BOARD_B.number,
+      BOARD_C.number,
+      BOARD_A.number,
+    ]);
+    expect(rows.map((row) => row.project)).toEqual([
+      canonical(BOARD_A),
+      canonical(BOARD_B),
+      canonical(BOARD_C),
+    ]);
+  });
 });
 
 describe("t349 unresolved boards", () => {
-  test("an unreachable Status field reports field-missing", async () => {
+  test("an unreachable Intent Phase field reports field-missing", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
     fx.gateway.fieldFailures.set(BOARD_A.number, "api");
@@ -528,14 +710,14 @@ describe("t349 summaries", () => {
     for (const option of OPTIONS) expect(row.summary).not.toContain(option.name);
   });
 
-  test("an unreachable Status field says so without blaming permissions", async () => {
+  test("an unreachable Intent Phase field says so without blaming permissions", async () => {
     const fx = fixture();
     fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
     fx.gateway.fieldFailures.set(BOARD_A.number, "api");
     const [row] = await diagnose(fx);
     expect(row.resolution).toBe("field-missing");
     expect(row.summary).toContain("acme/5");
-    expect(row.summary).toContain("Status");
+    expect(row.summary).toContain("Intent Phase");
     expect(row.summary).not.toContain("scope");
   });
 

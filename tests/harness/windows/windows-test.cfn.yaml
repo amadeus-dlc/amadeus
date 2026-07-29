@@ -33,11 +33,6 @@ Parameters:
     Type: String
     Default: https://github.com/git-for-windows/git/releases/download/v2.49.0.windows.1/Git-2.49.0-64-bit.exe
     Description: Git for Windows installer. Provides Git Bash and GNU coreutils for compatibility checks.
-  NodeMsiUrl:
-    Type: String
-    Default: https://nodejs.org/dist/v22.14.0/node-v22.14.0-x64.msi
-    Description: Node.js MSI used by the Windows TUI driver for node-pty.
-
 Resources:
   WindowsTestRole:
     Type: AWS::IAM::Role
@@ -131,11 +126,6 @@ Resources:
           Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT","/NORESTART","/NOCANCEL","/SP-" -Wait
           Add-MachinePath "C:\Program Files\Git\bin"
           Add-MachinePath "C:\Program Files\Git\usr\bin"
-
-          $nodeInstaller = "C:\Windows\Temp\amadeus-bootstrap\node.msi"
-          Invoke-WebRequest -Uri "${NodeMsiUrl}" -OutFile $nodeInstaller
-          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i","$nodeInstaller","/qn","/norestart" -Wait
-          Add-MachinePath "C:\Program Files\nodejs"
 
           $env:BUN_INSTALL = "C:\bun"
           Invoke-Expression (Invoke-RestMethod "https://bun.sh/install.ps1")

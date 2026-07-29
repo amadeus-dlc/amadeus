@@ -114,11 +114,10 @@ On Windows, use *either* PowerShell *or* CMD, not both — your prompt shows `PS
 
 ### Install a harness
 
-`@amadeus-dlc/setup` fetches the tagged distribution from GitHub and copies it into your project — no manual `dist/` copying needed. Two equivalent invocations (`npx` works with any Node.js ≥ 18.3; no bun required for this one command):
+`@amadeus-dlc/setup` requires Bun 1.3.13 or later. It fetches the tagged distribution from GitHub and copies it into your project — no manual `dist/` copying needed:
 
 ```bash
-bunx @amadeus-dlc/setup install     # bun
-npx @amadeus-dlc/setup install      # npm/node
+bunx @amadeus-dlc/setup install
 ```
 
 Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`), then a target directory. For scripts and CI, skip the wizard with explicit flags:

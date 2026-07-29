@@ -70,6 +70,7 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -171,7 +172,7 @@ function fire(json: string, p: string, hookPath = HOOK, setEnv = true): FireResu
   else delete env.CLAUDE_PROJECT_DIR;
   const t0 = performance.now();
   const r = Bun.spawnSync({
-    cmd: [BUN, hookPath],
+    cmd: [BUN, amadeusToolTarget(hookPath)],
     stdin: new TextEncoder().encode(json),
     stdout: "ignore",
     stderr: "ignore",
@@ -307,6 +308,14 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     copyFileSync(
       join(AMADEUS_SRC, "tools", "amadeus-mirror-config.ts"),
       join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
+    );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-mirror-policy.ts"),
+      join(proj, ".claude", "tools", "amadeus-mirror-policy.ts"),
+    );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-mirror-project-contract.ts"),
+      join(proj, ".claude", "tools", "amadeus-mirror-project-contract.ts"),
     );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
     const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");

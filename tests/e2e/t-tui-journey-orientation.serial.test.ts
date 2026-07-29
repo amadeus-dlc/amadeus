@@ -46,50 +46,20 @@
 // pass. (P10 hazard: the live-TUI legs are flaky-by-nature; re-run a flake ~5x
 // watched before calling it red.)
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
-// subprocess — node on Windows so node-pty never loads under bun (#748), bun
-// elsewhere. The driver auto-selects its backend by os.platform().
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts.
 
 import { describe, expect, test } from "bun:test";
+import {
+  runTuiDriver,
+  waitForTui,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { AMADEUS_SRC, cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
-const IS_WIN = os.platform() === "win32";
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const [bin, prefix] = IS_WIN
-    ? [WIN_NODE as string, ["--experimental-strip-types", DRIVER]]
-    : [process.execPath, [DRIVER]];
-  const res = spawnSync(bin, [...prefix, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
 
 // Gate: the watched live-TUI tier (AMADEUS_TUI_LIVE) + the substrate. On POSIX the
 // substrate is tmux; claude is needed on every platform; the distributable +
@@ -99,15 +69,8 @@ function absentReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live Claude TUI orientation render (watched tier)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -134,7 +97,7 @@ function captureOrientationStatusline(): string {
       '"statusLine"',
     );
 
-    const started = drive([
+    const started = runTuiDriver([
       "start",
       "--session",
       session,
@@ -151,19 +114,19 @@ function captureOrientationStatusline(): string {
     expect(started.rc).toBe(0);
 
     // Clear the two startup modals (idempotent — only act if present).
-    if (waitFor(session, "trust this folder", 60000, 600)) {
-      drive(["send", "--session", session, "--keys", "1"]);
+    if (waitForTui(session, "trust this folder", 60000, 600)) {
+      runTuiDriver(["send", "--session", session, "--keys", "1"]);
     }
-    if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-      drive(["send", "--session", session, "--keys", "2"]);
+    if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+      runTuiDriver(["send", "--session", session, "--keys", "2"]);
     }
 
     // Wait for the FULL orientation prefix to paint: `default · fixture ·`
     // immediately before IDEATION. This is the net-new assertion — a single-space
     // fixture would paint only `fixture · IDEATION` (no space token), so matching
     // the space segment proves the >1-space rule fired live in the pane.
-    const sawMarker = waitFor(session, "default · fixture · IDEATION", 45000, 1000);
-    const pane = drive(["capture", "--session", session]).stdout;
+    const sawMarker = waitForTui(session, "default · fixture · IDEATION", 45000, 1000);
+    const pane = runTuiDriver(["capture", "--session", session]).stdout;
     if (!sawMarker) {
       throw new Error(
         `orientation statusline "default · fixture · IDEATION" never painted.\n` +
@@ -172,7 +135,7 @@ function captureOrientationStatusline(): string {
     }
     return pane;
   } finally {
-    drive(["kill", "--session", session]);
+    runTuiDriver(["kill", "--session", session]);
     cleanupTuiProject(sandbox);
   }
 }

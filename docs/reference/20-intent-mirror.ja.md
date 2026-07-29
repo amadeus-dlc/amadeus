@@ -53,16 +53,18 @@ receiptはnot-started、no-effect-confirmed、outcome-unknownを区別します�
 Pull Request、release、deploy、background daemon、pollingのauthorityを与えません。
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror"} -->
+<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
 ## Project設定schema
 
-`mirror-projects`は`{ project, status-names? }`の配列です。`project`は`"<owner>/<number>"`に一致し、numberは正の整数です。ゼロ埋め・小数・その他の不正値はcoerceせず拒否します。`status-names`のキーはclosedなphase語彙`ideation | inception | construction | operation | done`で、値は空でない文字列です。未知の要素キー、未知のphaseキー、あるいは1要素の不正は、部分的なリストを作らずその層全体を拒否します。`auto-mirror`と`mirror-projects`は独立に解決され、キーごとに有効な値を持つ最後の層が勝ち、勝った`mirror-projects`は前の層の対象リストを全置換します。
+`mirror-projects`は`{ project, phase-field?, status-names? }`の配列です。`project`は`"<owner>/<number>"`に一致し、numberは正の整数です。ゼロ埋め・小数・その他の不正値はcoerceせず拒否します。`phase-field`は空でないfield名で、既定値は`Intent Phase`です。`status-names`のキーはclosedなphase語彙`ideation | inception | construction | operation | done`で、値は空でない文字列です。未知の要素キー、未知のphaseキー、あるいは1要素の不正は、部分的なリストを作らずその層全体を拒否します。`auto-mirror`と`mirror-projects`は独立に解決され、キーごとに有効な値を持つ最後の層が勝ち、勝った`mirror-projects`は前の層の対象リストを全置換します。
+
+`phase-field`が指すfieldをlifecycle reconcileとcompletion gateの正本とします。`Status`は補助同期であり、進行中は`In progress`、完了時は`Done`、parkedまたはarchived中は現在値を維持し、補助同期の失敗はreconcileやcloseを阻害しません。
 
 <!-- amadeus-topic:auth -->
 <!-- amadeus-contract:auth {"scope":"project","credentialStore":"gh","automaticScopeChange":false} -->
 ## Projectのauthorization
 
-ProjectV2の読取(item一覧、Status fieldの解決)と2つのmutation(item追加、Status更新)はいずれも`project` token scopeを必要とします。credentialは`gh`へ委譲し、token値の読取・保存・ログ出力・描画テキストへの混入は行わず、scopeの自動変更・自動再認証もしません。scopeを欠くcredentialは、board名と必要scopeのみを述べる`permission-denied`診断として現れます。
+ProjectV2のitem・field読取、item追加、field更新はいずれも`project` token scopeを必要とします。credentialは`gh`へ委譲し、token値の読取・保存・ログ出力・描画テキストへの混入は行わず、scopeの自動変更・自動再認証もしません。scopeを欠くcredentialは、board名と必要scopeのみを述べる`permission-denied`診断として現れます。
 
 <!-- amadeus-topic:diagnostics -->
 <!-- amadeus-contract:diagnostics {"command":["repair","status"],"resolutions":["resolved","field-missing","option-missing","permission-denied"],"availableOptionsOn":"option-missing","mutatesRemote":false} -->

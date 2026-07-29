@@ -121,11 +121,14 @@ import {
   intentNotFoundRejection,
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
+  type IntentInfo,
   type IntentLifecycleAuditEvent,
+  type LockedIntentRegistryContext,
   withIntentLifecyclePreflight,
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
+import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
 import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 import {
   buildDoctorPluginSection,
@@ -4736,13 +4739,21 @@ function delegateIntentLifecycle(
   if (run.exitCode !== 0) process.exit(run.exitCode);
 }
 
-function selectIntentLocked(
-  context: import("./amadeus-lib.ts").LockedIntentRegistryContext,
-  target: string,
-) {
+type SelectedIntent = {
+  uuid: string;
+  dirName: string;
+};
+
+type SelectIntentLocked = (context: LockedIntentRegistryContext) => SelectedIntent;
+
+function selectIntentCandidateLocked(
+  context: LockedIntentRegistryContext,
+  selected: Pick<IntentInfo, "uuid" | "dirName" | "status">,
+): SelectedIntent {
   const { projectDir, space } = context;
-  const selected = resolveIntentSelector(projectDir, space, target);
-  if (!selected.dirName) refuseWithoutAudit(`Intent "${target}" has no record directory.`);
+  if (!selected.dirName) {
+    refuseWithoutAudit("The selected intent has no record directory.");
+  }
   const guard = guardIntentOperation(
     resolveIntentOperationTargetLocked(context, selected),
     "select",
@@ -4750,8 +4761,25 @@ function selectIntentLocked(
   if (guard.kind === "rejected") {
     refuseWithoutAudit(renderIntentOperationRejection(guard.error));
   }
-  setActiveIntentCursor(projectDir, selected.dirName, space);
-  return selected;
+  if (!setActiveIntentCursor(projectDir, selected.dirName, space)) {
+    refuseWithoutAudit(
+      `Failed to write the active-intent cursor for "${selected.dirName}" in space "${space}".`,
+    );
+  }
+  return {
+    uuid: selected.uuid,
+    dirName: selected.dirName,
+  };
+}
+
+function selectIntentLocked(
+  context: LockedIntentRegistryContext,
+  target: string,
+): SelectedIntent {
+  return selectIntentCandidateLocked(
+    context,
+    resolveIntentSelector(context.projectDir, context.space, target),
+  );
 }
 
 function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
@@ -4775,11 +4803,24 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
     delegateIntentLifecycle(projectDir, target, resolved);
     return;
   }
+  function selectExplicitIntent(
+    context: LockedIntentRegistryContext,
+  ): SelectedIntent {
+    return selectIntentLocked(context, target);
+  }
+  selectIntent(projectDir, selectExplicitIntent);
+}
+
+function selectIntent(
+  projectDir: string,
+  selectLocked: SelectIntentLocked,
+): void {
+  const space = activeSpace(projectDir);
   const match = withIntentLifecyclePreflight(
     projectDir,
     space,
     appendUtilityLifecycleEvent,
-    (context) => selectIntentLocked(context, target),
+    selectLocked,
   );
   // Re-stamp the LIVE conversation's session→intent record to the switched-to
   // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
@@ -4797,6 +4838,33 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
   const sid = readCurrentSessionId(projectDir);
   if (sid && match.uuid) writeSessionIntentUuid(projectDir, sid, match.uuid);
   process.stdout.write(`Active intent → ${match.dirName} (space: ${space})\n`);
+}
+
+export function handleIntentSelectionResponse(
+  projectDir: string,
+  positional: string[],
+): void {
+  const selectionToken = positional[1];
+  const response = positional[2];
+  if (selectionToken === undefined || response === undefined || positional.length !== 3) {
+    refuseWithoutAudit(
+      "Usage: amadeus-utility.ts intent-select-response <selection-token> <human-response>",
+    );
+  }
+  function selectCurrentResponse(
+    context: LockedIntentRegistryContext,
+  ): SelectedIntent {
+    const intents = listIntents(context.projectDir, context.space);
+    const resolution = resolveCurrentIntentSelectionResponse(
+      context.space,
+      intents,
+      selectionToken,
+      response,
+    );
+    if (resolution.kind === "rejected") refuseWithoutAudit(resolution.message);
+    return selectIntentCandidateLocked(context, resolution.target);
+  }
+  selectIntent(projectDir, selectCurrentResponse);
 }
 
 // `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space
@@ -6047,6 +6115,9 @@ export function runUtilityMain(): void {
     case "intent":
       handleIntent(projectDir, positional, flags);
       break;
+    case "intent-select-response":
+      handleIntentSelectionResponse(projectDir, positional);
+      break;
     case "space":
       handleSpace(projectDir, positional, flags);
       break;
@@ -6107,7 +6178,7 @@ export function runUtilityMain(): void {
       break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|intent-select-response|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }

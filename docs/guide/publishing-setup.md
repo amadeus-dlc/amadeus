@@ -117,7 +117,7 @@ Inspect the tarball contents before publishing anything:
 
 ```bash
 cd packages/setup
-npm pack --dry-run
+bun pm pack --dry-run
 ```
 
 Expected output lists exactly 5 entries: `dist/cli.js`, `LICENSE-MIT`,
@@ -129,10 +129,10 @@ caught this, but this is the last visual check before a real publish).
 Then install the actual tarball locally and smoke-test it:
 
 ```bash
-npm pack
+bun pm pack
 mkdir -p /tmp/amadeus-setup-smoke && cd /tmp/amadeus-setup-smoke
-npm install /path/to/packages/setup/amadeus-dlc-setup-<version>.tgz
-npx amadeus-setup --help
+bun add /path/to/packages/setup/amadeus-dlc-setup-<version>.tgz
+bunx amadeus-setup --help
 ```
 
 (`bun link` from `packages/setup` is an acceptable substitute for the tarball
@@ -155,7 +155,8 @@ the bump level (patch / minor / major). One run does everything:
 3. `dist/cli.js` is built fresh and published with
    `npm publish --provenance --access public` (a prerelease version is
    automatically published with `--tag next` and never touches `latest`)
-4. a retrying `npx @amadeus-dlc/setup@<version>` smoke check closes the run
+4. post-publish verification is performed manually with Bun after registry
+   propagation completes
 
 The release does not re-run tests: every commit on `main` already passed
 the five CI quality gates at PR time, and the bump commit itself is
@@ -166,7 +167,7 @@ repo, the dispatch skips the bump and releases the committed version as-is
 (`release-it --no-increment`, tag only). Pushing a `vX.Y.Z` tag manually
 remains a fallback entry point — it skips the bump (the tag must match the
 committed package version and point at `main`) and runs notes → build →
-publish → smoke.
+publish.
 
 To rehearse without releasing, dispatch with `dry-run: true` —
 release-it runs with `--dry-run` (no commit/tag/push) and `npm publish
@@ -194,11 +195,11 @@ npm publish --access public --tag next
 
 ## 6. Post-publish verification
 
-Verify manually (the workflow intentionally has no in-run npx smoke —
+Verify manually (the workflow intentionally has no in-run bunx smoke —
 registry propagation lag right after publish made it a false-alarm source):
 
 ```bash
-npx @amadeus-dlc/setup@<version> --help
+bunx @amadeus-dlc/setup@<version> --help
 ```
 
 Then check the package page at

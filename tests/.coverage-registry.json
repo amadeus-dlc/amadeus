@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 542,
+    "total": 546,
     "enumeratedByClass": {
-      "function": 304,
+      "function": 306,
       "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 12,
-      "subcommand": 99,
+      "subcommand": 101,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 10,
       "stage": 8,
       "hook": 12,
-      "subcommand": 80,
+      "subcommand": 82,
       "render-surface": 7
     }
   },
@@ -859,7 +859,7 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
@@ -2495,7 +2495,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -2634,6 +2634,13 @@
     {
       "unitClass": "function",
       "unitId": "function:ownPhase",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseApprovedSwarmBatches",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3297,7 +3304,7 @@
         },
         {
           "file": "tests/unit/t202-hook-project-dir-worktree-marker.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -3663,6 +3670,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:SWARM_BATCH_APPROVALS_FIELD",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:templateEligibleArtifacts",
       "minMechanism": "none",
       "coveredBy": [
@@ -3837,7 +3851,7 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
@@ -3961,7 +3975,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4088,7 +4102,7 @@
         },
         {
           "file": "tests/integration/t91.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
@@ -4882,6 +4896,18 @@
         },
         {
           "file": "tests/unit/t77-bolt-worktree-flags.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt approve-batch",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -6132,7 +6158,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",
@@ -6173,6 +6199,18 @@
         {
           "file": "tests/unit/t249-workspace-inspection.test.ts",
           "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-utility intent-select-response",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t171-birth-gate-registry.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -6291,7 +6329,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",
@@ -6315,7 +6353,7 @@
         },
         {
           "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
-          "mechanism": "cli"
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t-journey-workspace.sdk.test.ts",

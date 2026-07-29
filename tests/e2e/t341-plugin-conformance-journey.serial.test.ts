@@ -39,6 +39,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PLUGIN_SOURCE_DIR_NAME } from "../../packages/framework/core/tools/amadeus-plugin.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SHIPPED_FACE = join(REPO_ROOT, "dist", "claude");
@@ -69,7 +70,27 @@ function run(command: string, args: readonly string[], extraEnv: NodeJS.ProcessE
   return { status: res.status, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
 
-const cli = (...args: string[]): Run => run("bun", [join(hostRoot, "tools", "amadeus-plugin.ts"), ...args]);
+const cli = (...args: string[]): Run => {
+  const res = spawnSync(
+    "bun",
+    [
+      amadeusToolTarget(join(hostRoot, "tools", "amadeus-plugin.ts")),
+      ...args,
+    ],
+    {
+      cwd: ws,
+      encoding: "utf-8",
+      timeout: 180_000,
+      env: { ...process.env },
+      input: "{}",
+    },
+  );
+  return {
+    status: res.status,
+    stdout: res.stdout ?? "",
+    stderr: res.stderr ?? "",
+  };
+};
 
 // Every path under `root` with its content digest — DIRECTORIES INCLUDED (a
 // trailing separator marks one), so empty-directory residue is visible. The

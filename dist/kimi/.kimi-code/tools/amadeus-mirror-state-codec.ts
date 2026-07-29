@@ -4,8 +4,9 @@
 // duplicate-key-aware JSON tokenizer, entity validation, canonical rendering,
 // and byte-preserving splice. It NEVER re-serialises bytes outside the Mirror
 // block, and it parses only the Mirror JSON (the surrounding document is kept
-// as substrings). Imports C0 types + the C2 canonical event-key function only;
-// no filesystem, process, GitHub, reducer, or store dependency.
+// as substrings). Imports C0 types plus the pure canonical event-key and
+// timestamp helpers only; no filesystem, process, GitHub, reducer, or store
+// dependency.
 //
 // Wire contract (business-logic-model.md:27) — a single block:
 //   <!-- amadeus:mirror-state:v1:start -->
@@ -36,6 +37,7 @@ import type {
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
+import { mirrorTimestampEpoch } from "./amadeus-mirror-timestamp.ts";
 
 export const MIRROR_STATE_SENTINEL_START =
   "<!-- amadeus:mirror-state:v1:start -->";
@@ -343,11 +345,21 @@ function isNonEmptyString(v: JsonValue): v is string {
   return typeof v === "string" && v.length > 0;
 }
 
-const RFC3339_RE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+function optionalPositiveInt(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): number | undefined {
+  if (!(key in obj)) return undefined;
+  const value = obj[key];
+  if (isPositiveInt(value)) return value;
+  issues.push(`${path}.${key}: must be a positive safe integer`);
+  return undefined;
+}
 
 function isTimestamp(v: JsonValue): v is string {
-  return typeof v === "string" && RFC3339_RE.test(v);
+  return typeof v === "string" && mirrorTimestampEpoch(v) !== null;
 }
 
 // Typed field extractors: push a path-scoped issue on failure and return
@@ -449,6 +461,7 @@ const PROJECT_ENTRY_KEYS: ReadonlySet<string> = new Set([
   "project",
   "projectId",
   "itemId",
+  "phaseField",
   "lastAppliedStatus",
   "state",
   "updatedAt",
@@ -480,6 +493,8 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "key",
   "event",
   "operationId",
+  "createdRevision",
+  "projectSyncRevision",
   "status",
   "preparedAt",
   "attemptedAt",
@@ -489,6 +504,7 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "createIdentity",
   "authorization",
   "projectSyncHold",
+  "projectSyncVerified",
 ]);
 const PROJECT_SYNC_HOLD_KEYS: ReadonlySet<string> = new Set(["reason", "heldAt"]);
 const PROJECT_SYNC_HOLD_REASONS: ReadonlySet<MirrorProjectSyncHold["reason"]> =
@@ -799,7 +815,18 @@ type ReceiptOptionals = {
   failureClass: MirrorFailureClass | undefined;
   lastEffect: MirrorMutationEffect | undefined;
   projectSyncHold: MirrorProjectSyncHold | null | undefined;
+  projectSyncVerified: true | null | undefined;
 };
+
+function validateProjectSyncVerified(
+  value: JsonValue,
+  path: string,
+  issues: string[],
+): true | null {
+  if (value === true) return true;
+  issues.push(`${path}: must be true when present`);
+  return null;
+}
 
 // The Project-sync hold that parks an otherwise-succeeded receipt at `pending`
 // (E-U2CG). `null` signals a malformed value, distinct from `undefined` = absent.
@@ -824,6 +851,65 @@ function validateProjectSyncHold(
   const heldAt = reqTimestamp(v, "heldAt", path, issues);
   if (reason === undefined || heldAt === undefined) return null;
   return { reason, heldAt };
+}
+
+function validateReceiptOptionals(
+  value: { [key: string]: JsonValue },
+  path: string,
+  issues: string[],
+): ReceiptOptionals {
+  return {
+    attemptedAt: optTimestamp(value, "attemptedAt", path, issues),
+    completedAt: optTimestamp(value, "completedAt", path, issues),
+    failureClass: optEnum(
+      value,
+      "failureClass",
+      FAILURE_CLASSES,
+      "failure class",
+      path,
+      issues,
+    ),
+    lastEffect: optEnum(
+      value,
+      "lastEffect",
+      MUTATION_EFFECTS,
+      "mutation effect",
+      path,
+      issues,
+    ),
+    projectSyncHold:
+      "projectSyncHold" in value
+        ? validateProjectSyncHold(
+            value.projectSyncHold,
+            `${path}.projectSyncHold`,
+            issues,
+          )
+        : undefined,
+    projectSyncVerified:
+      "projectSyncVerified" in value
+        ? validateProjectSyncVerified(
+            value.projectSyncVerified,
+            `${path}.projectSyncVerified`,
+            issues,
+          )
+        : undefined,
+  };
+}
+
+function checkReceiptVerificationOperation(
+  event: MirrorEventIdentity | null,
+  optionals: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  if (
+    optionals.projectSyncVerified === true &&
+    event?.operation === "close"
+  ) {
+    issues.push(
+      `${path}.projectSyncVerified: not allowed for operation 'close'`,
+    );
+  }
 }
 
 function checkReceiptKey(
@@ -876,6 +962,11 @@ function checkReceiptHoldInvariants(
     issues.push(`${path}.lastEffect: required for status 'pending'`);
   if (held && status !== "pending")
     issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
+  if (o.projectSyncVerified === true && status !== "succeeded") {
+    issues.push(
+      `${path}.projectSyncVerified: only allowed for status 'succeeded'`,
+    );
+  }
 }
 
 function checkReceiptStatusInvariants(
@@ -901,20 +992,23 @@ function validateReceipt(
   checkUnknownKeys(v, RECEIPT_KEYS, path, issues);
   const key = reqNonEmptyString(v, "key", path, issues);
   const operationId = reqNonEmptyString(v, "operationId", path, issues);
+  const createdRevision = optionalPositiveInt(
+    v,
+    "createdRevision",
+    path,
+    issues,
+  );
+  const projectSyncRevision = optionalPositiveInt(
+    v,
+    "projectSyncRevision",
+    path,
+    issues,
+  );
   const status = reqEnum(v, "status", RECEIPT_STATUSES, "receipt status", path, issues);
   const preparedAt = reqTimestamp(v, "preparedAt", path, issues);
   const event = validateEvent(v.event, `${path}.event`, issues);
   checkReceiptKey(event, key, mapKey, path, issues);
-  const o: ReceiptOptionals = {
-    attemptedAt: optTimestamp(v, "attemptedAt", path, issues),
-    completedAt: optTimestamp(v, "completedAt", path, issues),
-    failureClass: optEnum(v, "failureClass", FAILURE_CLASSES, "failure class", path, issues),
-    lastEffect: optEnum(v, "lastEffect", MUTATION_EFFECTS, "mutation effect", path, issues),
-    projectSyncHold:
-      "projectSyncHold" in v
-        ? validateProjectSyncHold(v.projectSyncHold, `${path}.projectSyncHold`, issues)
-        : undefined,
-  };
+  const o = validateReceiptOptionals(v, path, issues);
   const createIdentity =
     "createIdentity" in v
       ? validateCreateIdentity(v.createIdentity, `${path}.createIdentity`, issues)
@@ -924,6 +1018,7 @@ function validateReceipt(
       ? validateAuthorization(v.authorization, `${path}.authorization`, issues)
       : undefined;
   if (status !== undefined) checkReceiptStatusInvariants(status, o, path, issues);
+  checkReceiptVerificationOperation(event, o, path, issues);
 
   if (
     key === undefined ||
@@ -933,11 +1028,12 @@ function validateReceipt(
     event === null ||
     createIdentity === null ||
     authorization === null ||
-    o.projectSyncHold === null
+    o.projectSyncHold === null ||
+    o.projectSyncVerified === null
   ) {
     return null;
   }
-  return buildReceipt({
+  const receipt = buildReceipt({
     key,
     event,
     operationId,
@@ -947,6 +1043,11 @@ function validateReceipt(
     createIdentity,
     authorization,
   });
+  return {
+    ...receipt,
+    ...(createdRevision === undefined ? {} : { createdRevision }),
+    ...(projectSyncRevision === undefined ? {} : { projectSyncRevision }),
+  };
 }
 
 function buildReceipt(input: {
@@ -979,6 +1080,9 @@ function buildReceipt(input: {
       : { lastEffect: input.optionals.lastEffect }),
     ...(input.optionals.projectSyncHold
       ? { projectSyncHold: input.optionals.projectSyncHold }
+      : {}),
+    ...(input.optionals.projectSyncVerified === true
+      ? { projectSyncVerified: true as const }
       : {}),
     ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
     ...(input.authorization ? { authorization: input.authorization } : {}),
@@ -1175,7 +1279,8 @@ function validateAuditOutbox(
 
 // One projectSync ledger row. `projectId`, `itemId` and `lastAppliedStatus` are
 // nullable-required: the key must be present and either a non-empty string or
-// null, so an absent key is a defect rather than an implied null.
+// null, so an absent key is a defect rather than an implied null. `phaseField`
+// was added after v1 shipped, so an absent legacy key normalizes to null.
 function validateProjectEntry(
   v: JsonValue,
   path: string,
@@ -1191,6 +1296,10 @@ function validateProjectEntry(
   const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
   const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
   const itemId = nullableString(v.itemId, "itemId", path, issues);
+  const phaseField =
+    "phaseField" in v
+      ? nullableString(v.phaseField, "phaseField", path, issues)
+      : null;
   const lastAppliedStatus = nullableString(
     v.lastAppliedStatus,
     "lastAppliedStatus",
@@ -1203,11 +1312,20 @@ function validateProjectEntry(
     state === undefined ||
     updatedAt === undefined ||
     itemId === undefined ||
+    phaseField === undefined ||
     lastAppliedStatus === undefined
   ) {
     return null;
   }
-  return { project, projectId, itemId, lastAppliedStatus, state, updatedAt };
+  return {
+    project,
+    projectId,
+    itemId,
+    phaseField,
+    lastAppliedStatus,
+    state,
+    updatedAt,
+  };
 }
 
 // The ledger is keyed by canonical "owner/number" through the entry's own
@@ -1312,6 +1430,66 @@ function validateReceiptMap(
   return receipts;
 }
 
+function checkProjectSyncRevisionInvariants(
+  receipt: MirrorOperationReceipt,
+  snapshotRevision: number,
+  path: string,
+  issues: string[],
+): void {
+  const projectSyncRevision = receipt.projectSyncRevision;
+  if (projectSyncRevision === undefined) return;
+  if (projectSyncRevision > snapshotRevision) {
+    issues.push(`${path}.projectSyncRevision: must not exceed $.revision`);
+  }
+  if (
+    receipt.createdRevision !== undefined &&
+    projectSyncRevision < receipt.createdRevision
+  ) {
+    issues.push(
+      `${path}.projectSyncRevision: must not precede createdRevision`,
+    );
+  }
+}
+
+function checkReceiptRevisionInvariants(
+  receipts: Readonly<Record<string, MirrorOperationReceipt>>,
+  snapshotRevision: number | undefined,
+  issues: string[],
+): void {
+  if (snapshotRevision === undefined) return;
+  for (const [key, receipt] of Object.entries(receipts)) {
+    const path = `$.receipts["${key}"]`;
+    const authorizationRevision = receipt.authorization?.receiptRevision;
+    if (
+      receipt.createdRevision !== undefined &&
+      receipt.createdRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.createdRevision: must not exceed $.revision`);
+    }
+    checkProjectSyncRevisionInvariants(
+      receipt,
+      snapshotRevision,
+      path,
+      issues,
+    );
+    if (
+      authorizationRevision !== undefined &&
+      authorizationRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.authorization.receiptRevision: must not exceed $.revision`);
+    }
+    if (
+      receipt.createdRevision !== undefined &&
+      authorizationRevision !== undefined &&
+      receipt.createdRevision !== authorizationRevision
+    ) {
+      issues.push(
+        `${path}.createdRevision: must equal authorization.receiptRevision`,
+      );
+    }
+  }
+}
+
 function validateWarningList(raw: JsonValue, issues: string[]): MirrorWarning[] {
   const warnings: MirrorWarning[] = [];
   if (raw === undefined) return warnings;
@@ -1409,6 +1587,7 @@ function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapsho
   checkIssueNumberConsistency(root, issueNumber ?? null, provenance, issues);
 
   const receipts = validateReceiptMap(root.receipts, issues);
+  checkReceiptRevisionInvariants(receipts, revision, issues);
   const warnings = validateWarningList(root.warnings, issues);
   const repairChallenges = validateChallengeMap(root.repairChallenges, issues);
   const expectedPrompt = parseOptionalPrompt(root.expectedPrompt, issues);
@@ -1567,6 +1746,12 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
     key: r.key,
     event: renderEvent(r.event),
     operationId: r.operationId,
+    ...(r.createdRevision === undefined
+      ? {}
+      : { createdRevision: r.createdRevision }),
+    ...(r.projectSyncRevision === undefined
+      ? {}
+      : { projectSyncRevision: r.projectSyncRevision }),
     status: r.status,
     preparedAt: r.preparedAt,
   };
@@ -1575,6 +1760,8 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
   if (r.failureClass !== undefined) out.failureClass = r.failureClass;
   if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
   if (r.projectSyncHold !== undefined) out.projectSyncHold = r.projectSyncHold;
+  if (r.projectSyncVerified !== undefined)
+    out.projectSyncVerified = r.projectSyncVerified;
   if (r.createIdentity !== undefined)
     out.createIdentity = renderCreateIdentity(r.createIdentity);
   if (r.authorization !== undefined)
@@ -1664,6 +1851,7 @@ function renderProjectSync(ledger: MirrorProjectSyncLedger): unknown {
       project: entry.project,
       projectId: entry.projectId,
       itemId: entry.itemId,
+      phaseField: entry.phaseField,
       lastAppliedStatus: entry.lastAppliedStatus,
       state: entry.state,
       updatedAt: entry.updatedAt,

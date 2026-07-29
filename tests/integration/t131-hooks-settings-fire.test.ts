@@ -92,6 +92,7 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -278,6 +279,8 @@ function makeProject(withState: boolean): string {
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
     "amadeus-mirror-config.ts",
+    "amadeus-mirror-policy.ts",
+    "amadeus-mirror-project-contract.ts",
   ]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }
@@ -312,7 +315,7 @@ interface HookResult {
 
 /** run_hook (t131:91-92, 119-120): pipe PostToolUse JSON on stdin, CLAUDE_PROJECT_DIR set. */
 function runHook(hookPath: string, proj: string, json: string): HookResult {
-  const res = spawnSync(BUN, [hookPath], {
+  const res = spawnSync(BUN, [amadeusToolTarget(hookPath)], {
     input: json,
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: proj },

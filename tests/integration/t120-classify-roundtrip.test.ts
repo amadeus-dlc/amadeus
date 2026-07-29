@@ -86,8 +86,9 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -125,7 +126,7 @@ interface CliResult {
 }
 
 function run(tool: string, args: string[]): CliResult {
-  const res = spawnSync(BUN, [tool, ...args], { encoding: "utf-8" });
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args], { encoding: "utf-8" });
   const stdout = res.stdout ?? "";
   return {
     status: res.status ?? -1,
@@ -240,6 +241,13 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
   // ===========================================================================
   test("backward-compat: a non-skeleton construction stage emits boolean gate:true, never the sentinel", () => {
     const p = projWithState("state-construction.md");
+    // Record the autonomy grant the fixture pre-dates: past a COMPLETED walking
+    // skeleton an unset grant makes the engine re-fire the ladder as an `ask`
+    // (issue #1612), which would pre-empt the gate projection under test here.
+    writeFileSync(
+      statePath(p),
+      `${readFileSync(statePath(p), "utf-8")}\n- **Construction Autonomy Mode**: gated\n`,
+    );
     const d = directive(run(ORCHESTRATE, ["next", "--project-dir", p]));
     // STRONGER than the .sh (which only checked the value): assert the gate is a
     // BOOLEAN true (not the string sentinel), and it is not on functional-design.

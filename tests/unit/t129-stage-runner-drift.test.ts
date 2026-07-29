@@ -98,6 +98,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -175,7 +176,7 @@ function newSandbox(): { proj: string; gen: string; skills: string } {
 
 /** Run a sandbox amadeus-runner-gen subcommand, capturing status + combined output. */
 function runGen(gen: string, args: string[]): SandboxRun {
-  const r = spawnSync(BUN, [gen, ...args], { encoding: "utf-8" });
+  const r = spawnSync(BUN, [amadeusToolTarget(gen), ...args], { encoding: "utf-8" });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 

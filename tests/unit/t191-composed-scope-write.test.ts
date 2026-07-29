@@ -30,6 +30,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   setupIntegrationProject,
@@ -92,10 +93,14 @@ function run(
 ): { status: number; out: string } {
   const childEnv: Record<string, string | undefined> = { ...process.env };
   delete childEnv.AMADEUS_SCOPE_MAPPING;
-  const res = spawnSync(BUN, [utilityIn(proj), ...args, "--project-dir", proj], {
-    encoding: "utf-8",
-    env: childEnv as Record<string, string>,
-  });
+  const res = spawnSync(
+    BUN,
+    [amadeusToolTarget(utilityIn(proj)), ...args, "--project-dir", proj],
+    {
+      encoding: "utf-8",
+      env: childEnv as Record<string, string>,
+    },
+  );
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 

@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -53,7 +54,7 @@ let project = "";
 
 function run(tool: string, args: string[]) {
   const result = spawnSync(process.execPath, [
-    tool,
+    amadeusToolTarget(tool),
     ...args,
     "--project-dir",
     project,

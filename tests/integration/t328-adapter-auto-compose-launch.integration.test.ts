@@ -23,6 +23,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createNodeBackend } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
@@ -67,7 +68,7 @@ function fireSessionStart(face: (typeof FACES)[number]): ReturnType<typeof spawn
   // because the staging dir lives inside the harness root.
   cpSync(FIXTURE, join(hostRootOf(face), ".amadeus-plugin-src", PLUGIN), { recursive: true });
   const adapter = join(host, face.harnessDir, "hooks", face.adapter);
-  return spawnSync("bun", [adapter, "session-start"], {
+  return spawnSync("bun", [amadeusToolTarget(adapter), "session-start"], {
     encoding: "utf-8",
     input: "{}",
     cwd: host,

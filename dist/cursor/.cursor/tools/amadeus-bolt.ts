@@ -45,11 +45,13 @@ import {
   emitError,
   errorMessage,
   getField,
+  parseApprovedSwarmBatches,
   relativeRecordDir,
   readStateFile,
   resolveProjectDir,
   setFieldStrict,
   setOrInsertField,
+  SWARM_BATCH_APPROVALS_FIELD,
   worktreePath,
   worktreeStateFilePath,
   writeStateFile,
@@ -832,6 +834,72 @@ function handleSetAutonomy(args: string[]): void {
   );
 }
 
+// --- Subcommand: approve-batch ---
+// Usage: amadeus-bolt approve-batch --batch <n>
+//
+// Records the human's approval at a gated swarm's BATCH-END gate (issue #1612).
+// Under `Construction Autonomy Mode: gated` the engine fans a parallel batch out
+// and then refuses the NEXT batch until the finished one is approved here — one
+// gate per batch, not one per Bolt (stage-protocol.md § "Subsequent Bolt gate").
+// The approval is appended to the `Swarm Gated Batch Approvals` state field (a
+// comma-separated list of 1-origin batch numbers, inserted under
+// `## Current Status` on first use so the state template needs no bump — the
+// Merge-Held precedent) and audited with the EXISTING GATE_APPROVED event; no
+// new taxonomy is minted. The field name and its parser live in amadeus-lib so
+// this writer and the engine's reader cannot drift.
+//
+// Idempotent: re-approving a batch already on the ledger is a no-op that emits
+// NO second GATE_APPROVED, so a replayed command cannot inflate the audit trail.
+// Validation is numeric (parse, don't validate) and runs BEFORE any emission, so
+// a rejected batch number leaves neither an orphan audit row nor a state edit.
+function handleApproveBatch(args: string[]): void {
+  const flags = parseFlags(args);
+  if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
+  const batch = Number(flags.batch.trim());
+  if (!Number.isInteger(batch) || batch < 1) {
+    error(`Invalid --batch: ${flags.batch}. Must be a positive integer (batch numbers are 1-origin).`);
+  }
+
+  const pd = resolveProjectDir(projectDir);
+  const content = readStateFile(pd);
+  const approved = parseApprovedSwarmBatches(content);
+  if (approved.includes(batch)) {
+    console.log(JSON.stringify({ batch, already_approved: true, state_updated: false }));
+    return;
+  }
+
+  const next = [...approved, batch].sort((a, b) => a - b);
+  const updated = setOrInsertField(
+    content,
+    "## Current Status",
+    SWARM_BATCH_APPROVALS_FIELD,
+    next.join(", "),
+  );
+
+  // Audit-first (the handleSetAutonomy precedent): the state edit is already
+  // computed, so an audit failure aborts before the ledger diverges from it.
+  try {
+    emitAudit(pd, "GATE_APPROVED", {
+      Stage: getField(content, "Current Stage") ?? "code-generation",
+      "Swarm batch": String(batch),
+      "User Input": `approve-batch --batch ${batch}`,
+    });
+  } catch (e) {
+    error(`Audit emission failed: ${errorMessage(e)}`);
+  }
+
+  writeStateFile(pd, updated);
+
+  console.log(
+    JSON.stringify({
+      emitted: "GATE_APPROVED",
+      batch,
+      approved_batches: next,
+      state_updated: true,
+    })
+  );
+}
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
@@ -877,6 +945,9 @@ function main(): void {
       case "set-autonomy":
         handleSetAutonomy(filteredArgs.slice(1));
         break;
+      case "approve-batch":
+        handleApproveBatch(filteredArgs.slice(1));
+        break;
       case "dispatch-event":
         handleDispatchEvent(filteredArgs.slice(1));
         break;
@@ -888,7 +959,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge`
+          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, approve-batch, dispatch-event, hold-merge, release-merge`
         );
     }
   } catch (e) {

@@ -5,8 +5,13 @@
 // It owns NO filesystem, `gh`, or state write, and it does NOT evaluate the
 // provenance / repository / landing / candidate safety guards — those are C6's
 // mandatory precondition for every operation, manual included. This module
-// imports only the C0 domain types.
+// imports only the import-free C0 Project contract and C0 domain types.
 
+import {
+  DEFAULT_PROJECT_PHASE_FIELD,
+  MIRROR_PROJECT_FIELD_CONTRACT,
+  mirrorProjectKey,
+} from "./amadeus-mirror-project-contract.ts";
 import type {
   ExpectedProjectStatus,
   MirrorBoundary,
@@ -17,7 +22,7 @@ import type {
   MirrorOperation,
   MirrorOperationReceipt,
   MirrorPhaseKey,
-  MirrorProjectStatusField,
+  MirrorProjectSingleSelectField,
   MirrorProjectStatusNames,
   MirrorProjectSyncEntry,
   MirrorProjectSyncState,
@@ -236,7 +241,7 @@ function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
 }
 
 // Derive the Status a boundary expects. Ordered rules:
-//   1. parked (boundary kind or registry status) -> keep: a parked Intent's
+//   1. parked (boundary kind or registry status) or archived -> keep: the
 //      column is left exactly as the human left it (FR-4).
 //   2. landed (registry complete + workflow Completed) -> the `done` column.
 //   3. otherwise the current Lifecycle Phase's column.
@@ -247,21 +252,64 @@ export function expectedProjectStatus(
   boundaryKind: MirrorBoundary["kind"],
   statusNames: MirrorProjectStatusNames,
 ): ExpectedProjectStatus {
-  if (boundaryKind === "parked" || snapshot.registryStatus === "parked") {
-    return KEEP;
-  }
+  if (boundaryKind === "parked") return KEEP;
   const named = (phase: MirrorPhaseKey): ExpectedProjectStatus => ({
     kind: "status",
     name: statusNames[phase] ?? DEFAULT_PROJECT_STATUS_NAMES[phase],
   });
-  if (
-    snapshot.registryStatus === "complete" &&
-    snapshot.status === "Completed"
-  ) {
-    return named("done");
-  }
   const phase = phaseKeyOf(snapshot.lifecyclePhase);
-  return phase === null ? KEEP : named(phase);
+  const currentPhase = phase === null ? KEEP : named(phase);
+  switch (snapshot.registryStatus) {
+    case "in-flight":
+      return currentPhase;
+    case "complete":
+      return snapshot.status === "Completed" ? named("done") : currentPhase;
+    case "parked":
+    case "archived":
+      return KEEP;
+  }
+}
+
+export type ExpectedProjectFieldValues = Readonly<{
+  lifecycle: ExpectedProjectStatus;
+  auxiliaryStatus: ExpectedProjectStatus;
+}>;
+
+function expectedAuxiliaryProjectStatus(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+): ExpectedProjectStatus {
+  if (boundaryKind === "parked") return KEEP;
+  switch (snapshot.registryStatus) {
+    case "in-flight":
+      return {
+        kind: "status",
+        name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.active,
+      };
+    case "complete":
+      return snapshot.status === "Completed"
+        ? {
+            kind: "status",
+            name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.complete,
+          }
+        : KEEP;
+    case "parked":
+    case "archived":
+      return KEEP;
+  }
+}
+
+// Decide every Project field from the same snapshot in the pure policy layer.
+// The executor applies this plan but never invents workflow-state mappings.
+export function expectedProjectFieldValues(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+  statusNames: MirrorProjectStatusNames,
+): ExpectedProjectFieldValues {
+  return {
+    lifecycle: expectedProjectStatus(snapshot, boundaryKind, statusNames),
+    auxiliaryStatus: expectedAuxiliaryProjectStatus(snapshot, boundaryKind),
+  };
 }
 
 // Classify one Project reconciliation failure into the ledger state it earns.
@@ -299,7 +347,7 @@ export function classifyProjectFailure(
 // fuzzy fallback. A name that does not appear verbatim in the remote Project's
 // own option list is unresolved, and the caller reports it as a diagnostic.
 export function selectProjectStatusOption(
-  field: MirrorProjectStatusField,
+  field: MirrorProjectSingleSelectField,
   name: string,
 ): Readonly<{ id: string; name: string }> | null {
   return field.options.find((option) => option.name === name) ?? null;
@@ -336,11 +384,10 @@ export function nextCompletionOperation(
 
 // --- Completion gate (U3) -----------------------------------------------------
 
-// The gate reads the Project ledger and nothing else: no board is re-queried, so
-// a completion evaluates the same way offline as online. `snapshot` and
-// `targets` are not a second source of truth — they are the two arguments
-// `expectedProjectStatus` needs to name the `done` column, which stays that
-// function's sole definition rather than a literal restated here.
+// The gate reads the Project ledger and configured target identities without
+// re-querying a board, so a completion evaluates the same way offline as
+// online. `snapshot` and target status names feed `expectedProjectStatus`,
+// which remains the sole definition of the `done` column.
 export type CompletionProjectGateInput = Readonly<{
   state: MirrorStateSnapshot;
   snapshot: MirrorSnapshot;
@@ -354,37 +401,59 @@ export type CompletionProjectGate = Readonly<{
 
 function projectBlocker(
   entry: MirrorProjectSyncEntry,
+  project: string,
   expected: ExpectedProjectStatus,
+  expectedPhaseField: string,
 ): string | null {
-  if (expected.kind !== "status") return `${entry.project}: not-landed`;
-  if (entry.state !== "synced") return `${entry.project}: ${entry.state}`;
+  if (entry.state !== "synced") return `${project}: ${entry.state}`;
+  if (entry.phaseField !== expectedPhaseField)
+    return `${project}: phase-field-mismatch`;
+  if (expected.kind !== "status") return `${project}: not-landed`;
   return entry.lastAppliedStatus === expected.name
     ? null
-    : `${entry.project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
+    : `${project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
 }
 
-// Is every Project this Intent syncs to actually sitting in the `done` column?
-// `blocking` names each row that is not, so a withheld close explains itself
-// instead of stalling silently. An Intent with no ledger row has no board to
-// wait for and is ready by definition.
+// Is every Project this Intent syncs to actually sitting in the `done` column
+// on the authoritative field? The ledger/config union prevents a newly
+// configured Project with no sync evidence from disappearing from the gate.
+// Existing membership-only rows use the default phase field contract.
 export function completionProjectGate(
   input: CompletionProjectGateInput,
 ): CompletionProjectGate {
-  const statusNamesOf = (project: string): MirrorProjectStatusNames =>
-    input.targets.find(
-      (target) => `${target.project.owner}/${target.project.number}` === project,
-    )?.statusNames ?? {};
-  const blocking = (input.state.projectSync?.projects ?? [])
-    .map((entry) =>
-      projectBlocker(
+  // An empty target set disables Project synchronization. Ledger rows are
+  // historical evidence, not active completion requirements once every board
+  // has been removed from configuration.
+  if (input.targets.length === 0) return { ready: true, blocking: [] };
+
+  const targets = new Map(
+    input.targets.map((target) => [
+      mirrorProjectKey(target.project),
+      target,
+    ]),
+  );
+  const rows = input.state.projectSync?.projects ?? [];
+  const blocking = rows
+    .map((entry) => {
+      const project = mirrorProjectKey(entry.project);
+      const target = targets.get(project);
+      return projectBlocker(
         entry,
+        project,
         expectedProjectStatus(
           input.snapshot,
           "workflow-completed",
-          statusNamesOf(entry.project),
+          target?.statusNames ?? {},
         ),
-      ),
-    )
+        target?.phaseField ?? DEFAULT_PROJECT_PHASE_FIELD,
+      );
+    })
     .filter((blocker): blocker is string => blocker !== null);
+  const projectsWithRows = new Set(
+    rows.map((entry) => mirrorProjectKey(entry.project)),
+  );
+  for (const [project] of targets) {
+    if (!projectsWithRows.has(project)) blocking.push(`${project}: missing`);
+  }
   return { ready: blocking.length === 0, blocking };
 }

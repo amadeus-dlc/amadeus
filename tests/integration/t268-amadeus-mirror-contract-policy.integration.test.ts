@@ -1,5 +1,5 @@
 // t268 — C0->C1->C2 contract flow, filesystem security, and dependency purity.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts, amadeus-mirror-policy.ts, amadeus-mirror-types.ts
+// covers: packages/framework/core/tools/amadeus-mirror-config.ts, amadeus-mirror-policy.ts, amadeus-mirror-project-contract.ts, amadeus-mirror-types.ts
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -143,12 +143,25 @@ describe("t268 filesystem security", () => {
 });
 
 describe("t268 dependency purity", () => {
+  test("C0 Project contract imports nothing", () => {
+    expect(importSources("amadeus-mirror-project-contract.ts")).toEqual([]);
+  });
+
   test("C0 types module imports nothing at runtime", () => {
     expect(importSources("amadeus-mirror-types.ts")).toEqual([]);
   });
 
-  test("C2 policy imports only the C0 types module", () => {
-    expect(importSources("amadeus-mirror-policy.ts")).toEqual(["./amadeus-mirror-types.ts"]);
+  test("C2 policy imports only C0 modules", () => {
+    expect(importSources("amadeus-mirror-policy.ts")).toEqual([
+      "./amadeus-mirror-project-contract.ts",
+      "./amadeus-mirror-types.ts",
+    ]);
+  });
+
+  test("C1 config does not import C2 policy", () => {
+    const imports = importSources("amadeus-mirror-config.ts");
+    expect(imports).toContain("./amadeus-mirror-project-contract.ts");
+    expect(imports).not.toContain("./amadeus-mirror-policy.ts");
   });
 
   test("C1 config module exposes no filesystem write API", () => {

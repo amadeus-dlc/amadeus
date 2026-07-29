@@ -18,7 +18,15 @@
 //   WORKSPACE_LOCK_SENTINEL / DEFAULT_LOCK_STALE_MS (AMADEUS_LOCK_STALE_MS env).
 
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -190,6 +198,66 @@ describe("t161 stale-lock reaper", () => {
       // The lock dir is "held" by the fake stamp; clean it.
       rmSync(auditLockDir(PD, INTENT, "default"), { recursive: true, force: true });
       delete process.env.AMADEUS_LOCK_STALE_MS;
+    }
+  });
+
+  test("dead-owner-only policy never reclaims a live over-age holder", () => {
+    process.env.AMADEUS_LOCK_STALE_MS = "1";
+    try {
+      stampOwner(process.pid, 60_000);
+      expect(
+        acquireAuditLock(
+          PD,
+          0,
+          1,
+          INTENT,
+          "default",
+          "dead-owner-only",
+        ),
+      ).toBe(false);
+      rmSync(auditLockDir(PD, INTENT, "default"), {
+        recursive: true,
+        force: true,
+      });
+
+      stampOwner(2_000_000_000, 0);
+      expect(
+        acquireAuditLock(
+          PD,
+          0,
+          1,
+          INTENT,
+          "default",
+          "dead-owner-only",
+        ),
+      ).toBe(true);
+      releaseAuditLock(PD, INTENT, "default");
+    } finally {
+      delete process.env.AMADEUS_LOCK_STALE_MS;
+    }
+  });
+
+  test("dead-owner-only policy fails closed when its owner stamp cannot be written", () => {
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    const previousUmask = process.umask(0o666);
+    try {
+      expect(
+        acquireAuditLock(
+          PD,
+          0,
+          1,
+          INTENT,
+          "default",
+          "dead-owner-only",
+        ),
+      ).toBe(false);
+      expect(existsSync(lockDir)).toBe(false);
+    } finally {
+      process.umask(previousUmask);
+      if (existsSync(lockDir)) {
+        chmodSync(lockDir, 0o700);
+        rmSync(lockDir, { recursive: true, force: true });
+      }
     }
   });
 

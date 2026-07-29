@@ -43,9 +43,14 @@ Reply with a number (or just tell me).
 
 ## Answer capture
 
-- Before every structured question, record the options with
+- For ordinary questions, resolve a numeric reply to the option that the user
+  saw before invoking any tool. The `select-intent` directive is the one
+  exception: pass its exact human response only to the dedicated
+  `intent-select-response` resolver, never to the engine or an audit command.
+- Before every stage or interview structured question, record the options with
   `bun .codex/tools/amadeus-log.ts decision --stage <slug> ...` as required by
-  the shared stage protocol.
+  the shared stage protocol. Do not call `amadeus-log.ts` for `select-intent`:
+  it is a pre-workflow interaction and has no active stage or resolvable intent.
 - After an ordinary stage/interview question, record the exact human response
   with `bun .codex/tools/amadeus-log.ts answer --stage <slug> --details
   "<exact answer>"` before presenting another question.
@@ -71,7 +76,14 @@ Reply with a number (or just tell me).
   then re-ask for a final pick).
 - Preserve the exact option label or free text in audit and `--user-input`;
   never summarize User Input.
-- Gate semantics live in the ENGINE — rendering never decides. For an `ask`
-  directive, the user's answer rides back with exactly
+- Gate semantics live in the ENGINE — rendering never decides. For an ordinary
+  `ask` directive, the resolved answer rides back with exactly
   `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<exact label>"`;
   do not add `--result` or `--stage`.
+- For a `select-intent` directive, render exactly `directive.options`, then pass
+  the untouched reply to
+  `bun .codex/tools/amadeus-utility.ts intent-select-response "<selection token>" "<exact human response>"`,
+  passing `directive.selection_token` unchanged, and re-run `next`. The utility
+  verifies the opaque token against the current registry identity snapshot,
+  normalizes full-width digits, and owns the semantic selection; the conductor
+  must not pre-resolve it or call `report`.

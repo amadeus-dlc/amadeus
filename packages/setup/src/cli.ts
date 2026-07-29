@@ -1,11 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // amadeus-setup: fetches a tagged Amadeus distribution from GitHub and
 // installs it into a target project (CLI Contract, FR-003/004/007/010/011/
 // 013/016). This is the only place ports are wired together (nfr-design
 // logical-components.md) and the only place exit codes are produced
 // (BR-I06: 0=success, 1=runtime failure, 2=usage error).
 
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InstallInputs, ParsedCommand, UsageError } from "./domain/command.ts";
@@ -391,23 +391,9 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   });
 }
 
-// Guarded by comparing the running script's own path, not `import.meta.main`
-// (Bun-only): tests import { main, createDefaultPorts } from this same file
-// with fake ports, and that import must not also trigger a real CLI run.
-// Both sides go through realpath: npm/bunx invoke the CLI through a
-// node_modules/.bin symlink shim, and a plain path comparison never matches
-// it — the 0.1.0 release silently did nothing under npx because of exactly
-// that (see tests/e2e/setup-bin-shim.test.ts).
-function isEntryPoint(): boolean {
-  const argv1 = process.argv[1];
-  if (argv1 === undefined) return false;
-  try {
-    return realpathSync(argv1) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false; // argv[1] does not exist on disk — not this script
-  }
-}
-if (isEntryPoint()) {
+// Tests import { main, createDefaultPorts } from this module with fake ports;
+// Bun's entrypoint flag prevents those imports from triggering a real CLI run.
+if (import.meta.main) {
   const exitCode = await main(process.argv.slice(2));
   process.exit(exitCode);
 }

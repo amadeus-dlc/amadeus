@@ -76,6 +76,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
@@ -107,7 +108,7 @@ interface CliResult {
 
 /** Spawn `bun <tool> ... --project-dir <proj>` from inside the project dir. */
 function run(tool: string, args: string[], proj: string): CliResult {
-  const res = spawnSync(BUN, [tool, ...args, "--project-dir", proj], {
+  const res = spawnSync(BUN, [amadeusToolTarget(tool), ...args, "--project-dir", proj], {
     cwd: proj,
     encoding: "utf-8",
   });

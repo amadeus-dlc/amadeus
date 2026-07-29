@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { delimiter, dirname, isAbsolute, join, relative } from "node:path";
 import { consumeMigrationStopLatch } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   createUpstreamV2Fixture,
   projectSnapshot,
@@ -75,7 +76,7 @@ function runBun(
   args: readonly string[],
   input?: string,
 ): CommandResult {
-  const run = spawnSync(process.execPath, args, {
+  const run = spawnSync(process.execPath, [amadeusToolTarget(args[0]), ...args.slice(1)], {
     cwd: project.projectDir,
     encoding: "utf-8",
     env: codexEnv(project),

@@ -62,34 +62,29 @@
 // AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
 // distributable absence also SKIPs with a reason — never a hollow pass.
 //
-// SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts (node on
-// Windows so node-pty never loads under bun, #748; bun elsewhere). The
-// answer-gate loop lives in the driver — one implementation, both backends. The
-// tui-drive.ts spawn is what DERIVES the `tui` mechanism (Phase 0) — no filename
-// mechanism segment. We import ONLY resolveWinNode from the driver.
+// SPAWN, not import (D-TUI-7): Bun spawns the tmux-backed tui-drive.ts. The
+// answer-gate loop lives in the driver. The
+// runTuiDriver() is what DERIVES the `tui` mechanism (Phase 0) — no filename
+// mechanism segment.
 
 import { describe, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  runTuiDriver,
+  waitForTui,
+  runTuiDriverToExit,
+  tmuxUnavailableReason,
+} from "../harness/tui-client.ts";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import * as os from "node:os";
 import { join } from "node:path";
-import { resolveWinNode } from "../harness/tui-drive.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const IS_WIN = os.platform() === "win32";
-// node on Windows (#748), resolved because the box's node is off PATH; the .ts
-// entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
-// (runs .ts natively, no flag — byte-identical to the spike).
-const WIN_NODE = IS_WIN ? resolveWinNode() : null;
-// Driver spawn prefix: on win32 the resolved node + strip-types flag + driver;
-// elsewhere bun + driver. The answer-gate child spawn (below) reuses this so the
+// Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
+// (below) reuses this so the
 // long-lived subprocess hits the same runtime.
-const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
-const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration
 // tier sets 600). A full intent-capture run-through is a few minutes of real LLM
@@ -97,49 +92,14 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
-interface Run {
-  rc: number;
-  stdout: string;
-  stderr: string;
-}
-function drive(args: string[]): Run {
-  const res = spawnSync(DRIVE_BIN, [...DRIVE_PREFIX, ...args], { encoding: "utf-8" });
-  return { rc: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
-}
-function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: number): boolean {
-  return (
-    drive([
-      "wait",
-      "--session",
-      session,
-      "--pattern",
-      pattern,
-      "--timeout-ms",
-      String(timeoutMs),
-      "--stable-ms",
-      String(stableMs),
-    ]).rc === 0
-  );
-}
-
 // ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
   if (process.env.AMADEUS_TUI_LIVE !== "1") {
     return "set AMADEUS_TUI_LIVE=1 to run the live intent-capture journey (uses Bedrock tokens)";
   }
-  if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
-    return "tmux not found";
-  }
-  if (IS_WIN) {
-    // node may be off PATH (proven on the EC2 box) — resolve a concrete binary
-    // and test node-pty resolvability with IT, not a bare `node`. Both absent ->
-    // clean SKIP (capability absent).
-    if (!WIN_NODE) return "node not found (required to run tui-drive on Windows — #748)";
-    if (spawnSync(WIN_NODE, ["-e", "require('node-pty')"], { encoding: "utf-8" }).status !== 0) {
-      return "node-pty not node-resolvable (npm install node-pty so node can require it)";
-    }
-  }
+  const tmuxReason = tmuxUnavailableReason();
+  if (tmuxReason !== null) return tmuxReason;
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
@@ -187,7 +147,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
       let pollTimer: ReturnType<typeof setInterval> | undefined;
       try {
         // --- launch the claude TUI in the seeded sandbox ----------------------
-        expect(drive([
+        expect(runTuiDriver([
           "start",
           "--session",
           session,
@@ -203,15 +163,15 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
         ]).rc).toBe(0);
 
         // clear the two startup modals (idempotent — only act if present)
-        if (waitFor(session, "trust this folder", 60000, 600)) {
-          drive(["send", "--session", session, "--keys", "1"]);
+        if (waitForTui(session, "trust this folder", 60000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "1"]);
         }
-        if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
-          drive(["send", "--session", session, "--keys", "2"]);
+        if (waitForTui(session, "Bypass Permissions mode", 15000, 600)) {
+          runTuiDriver(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded state => the workflow statusline paints the live IDEATION phase
         // (not the no-workflow "ready" line). Wait for it before driving.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
 
         // --- submit the stage-jump WITH a build description -------------------
         // intent-capture.md Step 2 reads the project description from "$ARGUMENTS
@@ -222,7 +182,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
         // lands it in $ARGUMENTS, so the stage proceeds straight to its clarifying
         // questions (verified live: the description was honoured, no re-ask). Send
         // literally (spaces) with no auto-Enter, then Enter as a named key.
-        drive([
+        runTuiDriver([
           "send",
           "--session",
           session,
@@ -231,18 +191,18 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
           "--literal",
           "--no-enter",
         ]);
-        drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
+        runTuiDriver(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Confirm the stage actually started running (the statusline stays in a
         // live IDEATION phase while turns stream). --stable-ms 0: the screen is
         // streaming (token counter / spinner), so match the instant it appears.
-        expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 120000, 0)).toBe(true);
+        expect(waitForTui(session, "\\[AIDLC\\].*IDEATION", 120000, 0)).toBe(true);
 
         // Begin tailing the grid for the render assertion BEFORE answer-gate runs,
         // so we catch the AUQ select footer + multi-tab Submit strip while the
         // gate is up.
         pollTimer = setInterval(() => {
-          const grid = drive(["capture", "--session", session]).stdout;
+          const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (grid.includes("Enter to select")) sawSelectFooter = true;
           if (grid.includes("Submit")) sawSubmitStrip = true;
         }, 1000);
@@ -267,31 +227,22 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
         // checks disk first each iteration, so it terminates the instant the
         // approval writes the field, before the auto-advanced market-research stage
         // can raise its own gate.
-        const gateRc = await new Promise<number>((resolve) => {
-          const child = spawn(
-            DRIVE_BIN,
-            [
-              ...DRIVE_PREFIX,
-              "answer-gate",
-              "--session",
-              session,
-              "--project-dir",
-              sandbox,
-              "--per-gate-timeout-ms",
-              "200000",
-              "--overall-timeout-ms",
-              String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
-              // Terminate when the stage has completed + been approved: the approve
-              // tool writes `- **Last Completed Stage**: intent-capture` atomically
-              // with STAGE_COMPLETED. Anchored so only the literal stage matches.
-              "--until-state-field",
-              "Last Completed Stage=^intent-capture$",
-            ],
-            { stdio: "inherit" },
-          );
-          child.on("exit", (code) => resolve(code ?? -1));
-          child.on("error", () => resolve(-1));
-        });
+        const gateRc = await runTuiDriverToExit([
+          "answer-gate",
+          "--session",
+          session,
+          "--project-dir",
+          sandbox,
+          "--per-gate-timeout-ms",
+          "200000",
+          "--overall-timeout-ms",
+          String(Math.max(60000, TEST_TIMEOUT_MS - 30000)),
+          // Terminate when the stage has completed + been approved: the approve
+          // tool writes `- **Last Completed Stage**: intent-capture` atomically
+          // with STAGE_COMPLETED. Anchored so only the literal stage matches.
+          "--until-state-field",
+          "Last Completed Stage=^intent-capture$",
+        ]);
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = undefined;
         expect(gateRc).toBe(0);
@@ -361,7 +312,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
         expect(sawSelectFooter || sawSubmitStrip).toBe(true);
       } finally {
         if (pollTimer) clearInterval(pollTimer);
-        drive(["kill", "--session", session]);
+        runTuiDriver(["kill", "--session", session]);
         cleanupTuiProject(sandbox);
       }
     },

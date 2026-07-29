@@ -718,6 +718,18 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(r.out).toBe("");
   }, 30000);
 
+  test.each(["ask", "select-intent"])(
+    "(b1) %s directive waits for the human without a forwarding-loop block",
+    (kind) => {
+      const proj = makeProject();
+      seedActive(proj, "requirements-analysis");
+      const r = runHook(proj, '{"stop_hook_active":false}', kind);
+      expect(r.rc).toBe(0);
+      expect(r.out).toBe("");
+    },
+    30000,
+  );
+
   // =========================================================================
   // (b2) `parked` directive -> stop ALLOWED (no block), like `done` (#367).
   // The intentional multi-session exit: the hook must let the turn end rather

@@ -6,11 +6,11 @@
 // replaces, with structured fields (idempotency key, trace context hooks,
 // schema version) carried natively instead of via regex-parsed Markdown.
 //
-// This module is PURE CODEC: serialize / parse / identity helpers. It owns
-// no filesystem access and is intentionally unwired — nothing imports it
-// until the switchover lands (PR-3). The Markdown-side renderer stays in
-// amadeus-audit.ts (formatAuditRecord); the converter
-// (amadeus-journal-convert.ts) bridges the two during migration.
+// This module is the shared canonical JSONL codec: serialize / parse /
+// identity helpers with no filesystem access. The live audit and state
+// paths, migration converter, and OTLP projector all share this codec. The
+// Markdown-side renderer stays in amadeus-audit.ts (formatAuditRecord);
+// amadeus-journal-convert.ts bridges the two formats during migration.
 //
 // Field-value invariant: values are stored exactly as the Markdown ledger
 // stored them — CR/LF already collapsed to the literal two-character "\n"
