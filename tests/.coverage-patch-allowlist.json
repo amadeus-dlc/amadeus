@@ -145,6 +145,12 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "309",
+    "reason": "Lifecycle-operation failure prose is asserted through generated-CLI stdout and the restart journey in tests/integration/t265-engine-boundary.integration.test.ts; child-process execution is invisible to parent LCOV.",
+    "expiry": "remove when directive emission gains an injected in-process sink"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "lines": "437-442",
     "reason": "Malformed Receipt rejection is exercised through the generated CLI in tests/integration/t265-engine-boundary.integration.test.ts; the spawned error-directive branch is not attributed by Bun coverage.",
     "expiry": "remove when mirror boundary routing has an in-process engine port"
