@@ -171,7 +171,7 @@ export function safetyWaitReadyPath(runRecord: string, role: string): string {
   return join(runRecord, "members", safetyWaitMemberName(role), "safety-wait.ready");
 }
 
-function writeSafetyWaitReadyEvidence(
+export function writeSafetyWaitReadyEvidence(
   runRecord: string,
   evidence: SafetyWaitReadyEvidence,
 ): void {

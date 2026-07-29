@@ -32,6 +32,7 @@
 - Green: readyを通知せず生存し続けるe3を1秒timeoutにし、role付きtimeout診断と全7 roleのrollback cleanupを確認した。
 - Green: stale ready markerを起動前に除去し、run-001・e3・実PIDの新しい証拠だけが残ることを確認した。
 - Green: fresh、resume、killで全7 roleのexact readyと重複起動なし、kill後のPID・lock・ready除去を確認した。
+- Green: ready証拠の原子的発行を実ファイルで直接実行し、最終JSON内容とrename後の一時ファイル消失を確認した。
 
 ## 検証結果
 
@@ -45,6 +46,10 @@
 - `git diff --check`: 成功。
 - `bun scripts/package.ts --check`: 7 harnessすべて成功。
 - `bun run promote:self:check`: 5 self-install面すべて成功。
+- ready証拠の直接unit test追加後、対象suiteは21 tests / 90 expects / 0 fail。
+- `bun run coverage:ci -- -P 4`: 652ファイル中1ファイル、8998 assertions中1 assertion失敗。runnerの保存ログに失敗対象が残らず特定不能だったが、変更対象unit testはGreenでcoverage report生成まで完了した。
+- project coverage gate: current 87.5478%、baseline 40.9395%、PASS。
+- patch coverage gate: 追加86行中86行covered、allowlist 0、uncovered 0、PASS。
 - `bun run test:ci`: 変更対象のteam-up統合テストは56 tests / 619 expects / 0 fail。全体は652ファイル中1ファイル、8997 assertions中1 assertion失敗で非0だった。
 - `bun tests/run-tests.ts --all --verbose`: 全体737ファイル中1ファイル、9237 assertions中2 assertions失敗で非0だった。失敗は変更範囲外の`tests/e2e/t341-plugin-conformance-journey.serial.test.ts`で、plugin drop後の`tools/data/stage-graph.json`ハッシュ復元不一致と、先行失敗による計測値0だった。単独120秒timeoutでも同じ2 assertionsが再現したため、CPU timeoutではなく既存の別障害として切り分けた。
 
@@ -60,4 +65,4 @@
 
 - 実Herdr・実Codexを用いたlive E2Eは、CI fixtureによる決定的検証を対象とするBoltであり、外部process substrateを要求するため実行していない。
 - Linux実機では実行していない。実装は既存のBash/Bun移植境界に限定し、macOSでshell構文、型、対象統合、全配布面のドリフトを検証した。
-- 本Boltではpushおよび[Pull Request](https://github.com/amadeus-dlc/amadeus/pulls)作成を行っていない。
+- 本BoltはDraft [PR #1685](https://github.com/amadeus-dlc/amadeus/pull/1685)として公開し、CIのpatch coverage指摘へ上記の直接unit testを追加した。

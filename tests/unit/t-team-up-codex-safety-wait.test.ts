@@ -1,4 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import testOnlyPositive from "../fixtures/team-up-codex-safety-wait/test-only-positive.json";
 import {
   createSafetyWaitReadyEvidence,
@@ -14,6 +23,7 @@ import {
   safetyWaitRunIsActive,
   SafetyWaitSupervisor,
   type SafetyWaitFingerprint,
+  writeSafetyWaitReadyEvidence,
 } from "../../packages/framework/core/tools/team-up-codex-safety-wait.ts";
 
 function readFingerprint(): SafetyWaitFingerprint {
@@ -65,6 +75,24 @@ describe("team-up Codex safety-wait activation", () => {
       "/state/runs/run-001/members/engineer-3/safety-wait.ready",
     );
     expect(() => safetyWaitReadyPath("/state/runs/run-001", "e7")).toThrow();
+  });
+
+  test("ready evidence is published atomically and removes its temporary file", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-safety-wait-ready-"));
+    const runRecord = join(root, "run-001");
+    const evidence = createSafetyWaitReadyEvidence("run-001", "e3", 1234);
+    const readyPath = safetyWaitReadyPath(runRecord, evidence.role);
+    const tempPath = `${readyPath}.${evidence.pid}.tmp`;
+    mkdirSync(join(runRecord, "members", "engineer-3"), { recursive: true });
+
+    try {
+      writeSafetyWaitReadyEvidence(runRecord, evidence);
+
+      expect(readFileSync(readyPath, "utf8")).toBe(`${JSON.stringify(evidence)}\n`);
+      expect(existsSync(tempPath)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("the test fingerprint schema rejects missing and additional fields", () => {
