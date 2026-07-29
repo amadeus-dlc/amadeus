@@ -231,7 +231,29 @@ export function renderSummary(result: PatchGateResult): string {
 // exits non-zero on violations. Fail-closed: a missing lcov is an error, not a
 // pass — a gate that silently passes when its input vanished is theater.
 // ---------------------------------------------------------------------------
-export function runCheck(): number {
+export function runCheck(repoRoot: string = REPO_ROOT): number {
+  const status = spawnSync(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: process.env,
+    },
+  );
+  if (status.status !== 0) {
+    console.error(
+      `coverage-patch-gate: git status failed; cannot verify that the committed diff and LCOV describe the same snapshot: ${status.stderr}`,
+    );
+    return 1;
+  }
+  if (status.stdout.trim().length > 0) {
+    console.error(
+      "coverage-patch-gate: working tree is dirty; cannot verify that the committed diff and LCOV describe the same source snapshot. Commit or stash the changes, or rerun from a clean worktree.",
+    );
+    return 1;
+  }
+
   const lcovFile = lcovPath();
   if (!existsSync(lcovFile)) {
     console.error(`coverage-patch-gate: lcov not found at ${lcovFile} (run \`bun run coverage:ci\` first)`);
@@ -283,12 +305,12 @@ export function runCheck(): number {
   return result.violations.length === 0 ? 0 : 1;
 }
 
-export function main(argv: string[]): number {
+export function main(argv: string[], repoRoot: string = REPO_ROOT): number {
   if (argv[0] !== "--check") {
     console.error("Usage: bun tests/coverage-patch-gate.ts --check");
     return 2;
   }
-  return runCheck();
+  return runCheck(repoRoot);
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));
