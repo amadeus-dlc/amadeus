@@ -32,7 +32,7 @@
 - Green: readyを通知せず生存し続けるe3を1秒timeoutにし、role付きtimeout診断と全7 roleのrollback cleanupを確認した。
 - Green: stale ready markerを起動前に除去し、run-001・e3・実PIDの新しい証拠だけが残ることを確認した。
 - Green: fresh、resume、killで全7 roleのexact readyと重複起動なし、kill後のPID・lock・ready除去を確認した。
-- Green: ready証拠の原子的発行を実ファイルで直接実行し、最終JSON内容とrename後の一時ファイル消失を確認した。
+- Green: ready証拠の原子的発行を専用integrationで実ファイルへ直接実行し、最終JSON内容とrename後の一時ファイル消失を確認した。
 
 ## 検証結果
 
@@ -46,7 +46,11 @@
 - `git diff --check`: 成功。
 - `bun scripts/package.ts --check`: 7 harnessすべて成功。
 - `bun run promote:self:check`: 5 self-install面すべて成功。
-- ready証拠の直接unit test追加後、対象suiteは21 tests / 90 expects / 0 fail。
+- ready証拠のfilesystem testをunitから専用integrationへ移し、unit allowlistを増やさずtest-size purityを回復した。
+- 対象unitと専用integration: 21 tests / 90 expects / 0 fail。
+- 既存team-up lifecycle integration: 56 tests / 619 expects / 0 fail。
+- test-size drift: 16 tests / 19 expects / 0 fail。
+- coverage registry: fresh、anti-rot guards Green、ratchet維持。
 - `bun run coverage:ci -- -P 4`: 652ファイル中1ファイル、8998 assertions中1 assertion失敗。runnerの保存ログに失敗対象が残らず特定不能だったが、変更対象unit testはGreenでcoverage report生成まで完了した。
 - project coverage gate: current 87.5478%、baseline 40.9395%、PASS。
 - patch coverage gate: 追加86行中86行covered、allowlist 0、uncovered 0、PASS。
@@ -56,7 +60,7 @@
 ## 生成物と変更範囲
 
 - 正本: `packages/framework/core/tools/team-up-codex-safety-wait.ts`、`packages/framework/core/tools/team-up.sh`
-- テスト: `tests/unit/t-team-up-codex-safety-wait.test.ts`、`tests/integration/t-team-up-codex-resume.serial.test.ts`
+- テスト: `tests/unit/t-team-up-codex-safety-wait.test.ts`、`tests/integration/t-team-up-codex-safety-wait-ready-evidence.test.ts`、`tests/integration/t-team-up-codex-resume.serial.test.ts`
 - 配布生成物: `dist`の7 harness面へ正本2ファイルを同期した。
 - self-install生成物: `.claude`、`.codex`、`.cursor`、`.opencode`、`.kimi-code`の5面へ正本2ファイルを同期した。
 - 記録: 本`code-summary.md`と`code-generation-plan.md`
@@ -65,4 +69,4 @@
 
 - 実Herdr・実Codexを用いたlive E2Eは、CI fixtureによる決定的検証を対象とするBoltであり、外部process substrateを要求するため実行していない。
 - Linux実機では実行していない。実装は既存のBash/Bun移植境界に限定し、macOSでshell構文、型、対象統合、全配布面のドリフトを検証した。
-- 本BoltはDraft [PR #1685](https://github.com/amadeus-dlc/amadeus/pull/1685)として公開し、CIのpatch coverage指摘へ上記の直接unit testを追加した。
+- 本Boltは既存の[PR #1685](https://github.com/amadeus-dlc/amadeus/pull/1685)として公開し、承認済みCI修正では上記の直接filesystem testを専用integrationへ配置した。
