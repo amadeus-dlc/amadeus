@@ -3716,15 +3716,23 @@ type CarrierApprovalAuthority = Exclude<
 
 function authorizedApprovalIntent(
   pd: string,
+  slug: string,
   authority: CarrierApprovalAuthority,
 ): string | null {
   if (authority.kind === "grant-backed") {
-    return findStandingGrantRouteReceiptById(pd, authority.routeId)?.intent ??
-      null;
+    const selected = findStandingGrantRouteReceiptById(pd, authority.routeId);
+    return selected?.receipt.stage === slug &&
+        selected.receipt.grantId === authority.grantId
+      ? selected.intent
+      : null;
   }
   try {
-    return readPresenceReservation(pd, authority.reservationId)
-      ?.targetIntentDir ?? null;
+    const selected = readPresenceReservation(pd, authority.reservationId);
+    return selected?.targetIntentId === authority.targetIntentId &&
+        selected.stage === slug &&
+        selected.space === activeSpace(pd)
+      ? selected.targetIntentDir
+      : null;
   } catch {
     return null;
   }
@@ -3735,10 +3743,16 @@ function handleAuthorizedApprovalReport(
   slug: string,
   authority: CarrierApprovalAuthority,
 ): void {
-  const approvalIntent = authorizedApprovalIntent(pd, authority);
+  const approvalIntent = authorizedApprovalIntent(pd, slug, authority);
+  if (approvalIntent === null) {
+    emit(errorDirective(
+      "Approval authorization does not match exactly one workflow and stage.",
+    ));
+    return;
+  }
   const stateContent = loadStateFileIfPresent(
     pd,
-    approvalIntent ?? undefined,
+    approvalIntent,
   );
   if (stateContent === null) {
     emit(errorDirective("Approval authorization requires an active workflow."));
@@ -3747,8 +3761,29 @@ function handleAuthorizedApprovalReport(
   const scope = getField(stateContent, "Scope");
   const isFinal =
     scope !== null && nextInScopeStage(slug, scope, stateContent) === null;
+  const stageCheckbox = checkboxForSlug(stateContent, slug);
+  let prepared: ReturnType<typeof workflowCompletionPreparation>;
+  try {
+    prepared = workflowCompletionPreparation(stateContent);
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return;
+  }
+  if (
+    stageCheckbox?.state === "completed" &&
+    isFinal &&
+    prepared?.status === "pending" &&
+    prepared.stage === slug
+  ) {
+    if (!emitMirrorBoundaryIfNeeded(pd, stateContent, approvalIntent)) {
+      emit(errorDirective(
+        `Workflow completion for "${slug}" is pending but no mirror boundary directive was available.`,
+      ));
+    }
+    return;
+  }
   const completionDisposition = isFinal
-    ? completionMirrorDisposition(pd, approvalIntent ?? undefined)
+    ? completionMirrorDisposition(pd, approvalIntent)
     : { kind: "immediate" as const };
   if (completionDisposition.kind === "error") {
     emit(errorDirective(completionDisposition.message));
@@ -3832,14 +3867,14 @@ function handleAuthorizedApprovalReport(
   if (deferWorkflowCompletion) {
     const preparedState = loadStateFileIfPresent(
       pd,
-      approvalIntent ?? undefined,
+      approvalIntent,
     );
     if (
       preparedState === null ||
       !emitMirrorBoundaryIfNeeded(
         pd,
         preparedState,
-        approvalIntent ?? undefined,
+        approvalIntent,
       )
     ) {
       emit(errorDirective(

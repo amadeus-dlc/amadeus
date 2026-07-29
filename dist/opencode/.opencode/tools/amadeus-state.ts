@@ -5079,14 +5079,13 @@ function verifyPreparedWorkflowCompletion(
   }
   const config = resolveMirrorConfig(pd, intent, space);
   if (config.kind === "invalid") {
+    const details = config.issues.map((issue) =>
+      issue.kind === "read-failure"
+        ? `${issue.layer}: ${issue.summary}`
+        : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
+    ).join("; ");
     error(
-      `Prepared workflow completion cannot resolve mirror configuration: ${
-        config.issues.map((issue) =>
-          issue.kind === "read-failure"
-            ? `${issue.layer}: ${issue.summary}`
-            : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
-        ).join("; ")
-      }`,
+      `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
     );
   }
   if (config.config.autoMirror === "off") return;

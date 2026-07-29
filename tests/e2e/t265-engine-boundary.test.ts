@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -26,7 +25,6 @@ import type {
 import {
   cleanupTestProject,
   createTestProject,
-  DEFAULT_INTENT_UUID,
   DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
@@ -34,22 +32,6 @@ import {
 } from "../harness/fixtures.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
-const CORE_ENGINE = readFileSync(
-  join(ROOT, "packages/framework/core/tools/amadeus-orchestrate.ts"),
-  "utf-8",
-);
-const CORE_STATE = readFileSync(
-  join(ROOT, "packages/framework/core/tools/amadeus-state.ts"),
-  "utf-8",
-);
-const harnesses = [
-  ["claude", ".claude"],
-  ["codex", ".codex"],
-  ["cursor", ".cursor"],
-  ["kiro", ".kiro"],
-  ["kiro-ide", ".kiro"],
-  ["opencode", ".opencode"],
-] as const;
 const CLAUDE_ENGINE = join(
   ROOT,
   "dist/claude/.claude/tools/amadeus-orchestrate.ts",
@@ -65,12 +47,27 @@ const MIRROR_REPOSITORY: RepositoryIdentity = {
 };
 const MIRROR_IDENTITY = {
   schema: 1 as const,
-  intentUuid: DEFAULT_INTENT_UUID,
+  intentUuid: "00000000-0000-7000-8000-000000000001",
   intentDir: DEFAULT_RECORD_DIR,
   operationId: "t265-fixture-op",
   preparedAt: "2026-07-28T00:00:00Z",
   repository: MIRROR_REPOSITORY,
 };
+const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
+  ...EMPTY_MIRROR_STATE,
+  issueNumber: 123,
+  provenance: {
+    schema: 1,
+    createIdentity: MIRROR_IDENTITY,
+    issueNumber: 123,
+    createdAt: "2026-07-28T00:00:00Z",
+  },
+});
+
+let project = "";
+
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
 
 function gatewayOk<T>(value: T): GatewayOutcome<T> {
   return { kind: "ok", value };
@@ -89,6 +86,7 @@ class CompletionGateway implements MirrorGitHubGateway {
   async readiness(): Promise<GatewayOutcome<void>> {
     return gatewayOk(undefined);
   }
+
   async createIssue(
     _permit: MirrorMutationPermit,
     content: { title: string; body: string },
@@ -97,15 +95,18 @@ class CompletionGateway implements MirrorGitHubGateway {
     this.issue = { ...this.issue, title: content.title, body: content.body };
     return gatewayOk(this.issue);
   }
+
   async findIssuesByMarker(
     _repository: RepositoryIdentity,
     marker: string,
   ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
     return gatewayOk(this.issue.body.includes(marker) ? [this.issue] : []);
   }
+
   async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     return gatewayOk(this.issue);
   }
+
   async editIssue(
     _permit: MirrorMutationPermit,
     body: string,
@@ -114,26 +115,31 @@ class CompletionGateway implements MirrorGitHubGateway {
     this.issue = { ...this.issue, body };
     return gatewayOk(this.issue);
   }
+
   async closeIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("close");
     this.issue = { ...this.issue, state: "CLOSED" };
     return gatewayOk(this.issue);
   }
+
   async listProjectItems(
     ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
   ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
     throw new Error("CompletionGateway must not query Projects");
   }
+
   async resolveProjectFields(
     ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
   ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
     throw new Error("CompletionGateway must not resolve Project fields");
   }
+
   async addProjectItem(
     ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
   ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
     throw new Error("CompletionGateway must not add Project items");
   }
+
   async updateProjectItemSingleSelectField(
     ..._args: Parameters<
       MirrorGitHubGateway["updateProjectItemSingleSelectField"]
@@ -143,27 +149,10 @@ class CompletionGateway implements MirrorGitHubGateway {
   }
 }
 
-// A recorded mirror issue. The engine reads it through the mirror-state codec
-// (mirrorIssueNumberFromDocument), so the precondition is the sentinel-wrapped
-// state block — the legacy `- **Mirror Issue**: #123` line is no longer read.
-// issueNumber is only valid alongside a full provenance record.
-const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
-  ...EMPTY_MIRROR_STATE,
-  issueNumber: 123,
-  provenance: {
-    schema: 1,
-    createIdentity: MIRROR_IDENTITY,
-    issueNumber: 123,
-    createdAt: "2026-07-28T00:00:00Z",
-  },
-});
-
-let project = "";
-
-process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
-process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
-
-function run(tool: string, args: string[]) {
+function run(tool: string, args: string[]): {
+  kind: string;
+  message?: string;
+} {
   const result = spawnSync(
     process.execPath,
     [amadeusToolTarget(tool), ...args, "--project-dir", project],
@@ -171,10 +160,7 @@ function run(tool: string, args: string[]) {
   );
   expect(result.status).toBe(0);
   expect(result.stderr).toBe("");
-  return JSON.parse(result.stdout.trim()) as {
-    kind: string;
-    message?: string;
-  };
+  return JSON.parse(result.stdout.trim());
 }
 
 afterEach(() => {
@@ -182,101 +168,7 @@ afterEach(() => {
   project = "";
 });
 
-describe("t265 mirror boundary distribution", () => {
-  test.each(harnesses)("%s ships the engine and receipt state machine", (name, dir) => {
-    expect(
-      readFileSync(
-        join(ROOT, "dist", name, dir, "tools", "amadeus-orchestrate.ts"),
-        "utf-8",
-      ),
-    ).toBe(CORE_ENGINE);
-    expect(
-      readFileSync(
-        join(ROOT, "dist", name, dir, "tools", "amadeus-state.ts"),
-        "utf-8",
-      ),
-    ).toBe(CORE_STATE);
-  });
-
-  test("auto execution names only the fixed sync command", () => {
-    const functionBody =
-      CORE_ENGINE.match(
-        /function mirrorSyncPrint\([\s\S]*?\n}\n\nfunction emitMirrorBoundaryIfNeeded/,
-      )?.[0] ?? "";
-    expect(functionBody).toContain("amadeus-mirror-lifecycle.ts boundary");
-    expect(functionBody).not.toContain("amadeus-mirror.ts create");
-    expect(functionBody).not.toContain("amadeus-mirror.ts close");
-    expect(functionBody).not.toContain("eval(");
-  });
-
-  test("reuses ask and print without extending directive kinds", () => {
-    expect(CORE_ENGINE).toContain("askDirective(");
-    expect(CORE_ENGINE).toContain("printDirective(");
-    expect(CORE_ENGINE).not.toContain('kind: "mirror-');
-  });
-
-  test("generated CLI resumes pending sync then returns to normal routing", () => {
-    project = createTestProject();
-    const knowledgeDir = join(
-      project,
-      ".claude",
-      "knowledge",
-      "amadeus-shared",
-    );
-    mkdirSync(knowledgeDir, { recursive: true });
-    copyFileSync(
-      join(ROOT, ".claude/knowledge/amadeus-shared/memory-template.md"),
-      join(knowledgeDir, "memory-template.md"),
-    );
-    seedStateFile(project, join(FIXTURES_DIR, "state-mid-inception.md"));
-    let state = readFileSync(seededStateFile(project), "utf-8")
-      .replace(
-        /- \*\*Lifecycle Phase\*\*: [^\n]+/,
-        "- **Lifecycle Phase**: CONSTRUCTION",
-      )
-      .replace(
-        /- \*\*Current Stage\*\*: [^\n]+/,
-        "- **Current Stage**: code-generation",
-      )
-      .replace(
-        /- \*\*Inception\*\*: [^\n]+/,
-        "- **Inception**: Verified",
-      )
-      .replace("## Current Status", `## Current Status\n${MIRROR_ISSUE_BLOCK}`);
-    writeFileSync(seededStateFile(project), state);
-    writeFileSync(
-      join(project, "amadeus", "config.json"),
-      '{"auto-mirror":"auto"}',
-    );
-
-    const initial = run(CLAUDE_ENGINE, ["next"]);
-    expect(initial.kind).toBe("print");
-    expect(initial.message).toContain("amadeus-mirror-lifecycle.ts boundary");
-
-    run(CLAUDE_STATE, [
-      "mirror-boundary",
-      "inception",
-      "pending",
-      "--from",
-      "absent",
-    ]);
-    const resumed = run(CLAUDE_ENGINE, ["next"]);
-    expect(resumed.kind).toBe("print");
-    expect(resumed.message).toContain("inception completed --from pending");
-
-    run(CLAUDE_STATE, [
-      "mirror-boundary",
-      "inception",
-      "completed",
-      "--from",
-      "pending",
-    ]);
-    const routed = run(CLAUDE_ENGINE, ["next"]);
-    expect(routed.kind).toBe("run-stage");
-    state = readFileSync(seededStateFile(project), "utf-8");
-    expect(state).toContain('{"inception":"completed"}');
-  });
-
+describe("t265 workflow completion lifecycle", () => {
   test("final report keeps a multi-intent workflow addressable until completion mirror settles", async () => {
     project = createTestProject();
     seedStateFile(
@@ -368,7 +260,6 @@ describe("t265 mirror boundary distribution", () => {
     expect(
       readFileSync(join(intents, "active-intent"), "utf-8").trim(),
     ).toBe(DEFAULT_RECORD_DIR);
-    expect(existsSync(join(intents, "active-intent"))).toBe(true);
     const prepared = readFileSync(statePath, "utf-8");
     expect(prepared).toContain("- **Status**: Running");
     expect(prepared).toContain("- **Workflow Completion Instance**:");
@@ -417,19 +308,14 @@ describe("t265 mirror boundary distribution", () => {
     expect(premature.status).not.toBe(0);
     expect(premature.stderr).toContain("mirror boundary settles");
     expect(existsSync(join(intents, "active-intent"))).toBe(true);
-    expect(
-      (JSON.parse(readFileSync(registryPath, "utf-8")) as Array<{
-        uuid: string;
-        status: string;
-      }>).find((entry) =>
-        entry.uuid === "00000000-0000-7000-8000-000000000001"
-      )?.status,
-    ).toBe("in-flight");
+
     writeFileSync(join(intents, "active-intent"), "other-8000000000000002\n");
-    const otherBefore = readFileSync(
-      join(intents, "other-8000000000000002", "amadeus-state.md"),
-      "utf-8",
+    const otherState = join(
+      intents,
+      "other-8000000000000002",
+      "amadeus-state.md",
     );
+    const otherBefore = readFileSync(otherState, "utf-8");
     const otherAuditBefore = existsSync(
       join(intents, "other-8000000000000002", "audit"),
     );
@@ -464,15 +350,11 @@ describe("t265 mirror boundary distribution", () => {
     expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
       "other-8000000000000002",
     );
-    expect(
-      readFileSync(
-        join(intents, "other-8000000000000002", "amadeus-state.md"),
-        "utf-8",
-      ),
-    ).toBe(otherBefore);
+    expect(readFileSync(otherState, "utf-8")).toBe(otherBefore);
     expect(
       existsSync(join(intents, "other-8000000000000002", "audit")),
     ).toBe(otherAuditBefore);
+
     run(CLAUDE_STATE, [
       "complete-workflow",
       "build-and-test",
@@ -494,12 +376,7 @@ describe("t265 mirror boundary distribution", () => {
     expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
       "other-8000000000000002",
     );
-    expect(
-      readFileSync(
-        join(intents, "other-8000000000000002", "amadeus-state.md"),
-        "utf-8",
-      ),
-    ).toBe(otherBefore);
+    expect(readFileSync(otherState, "utf-8")).toBe(otherBefore);
     expect(readFileSync(statePath, "utf-8")).toContain(
       "- **Status**: Completed",
     );

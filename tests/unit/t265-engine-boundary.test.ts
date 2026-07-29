@@ -175,6 +175,24 @@ describe("t265 workflow completion identity", () => {
     ).toThrow("status is missing");
   });
 
+  test.each([
+    [
+      "instance",
+      `${STATE}- **Workflow Completion Instance**: completion-1\n`,
+    ],
+    [
+      "stage",
+      `${STATE}- **Workflow Completion Stage**: build-and-test\n`,
+    ],
+  ])(
+    "rejects a completion identity whose durable %s peer is missing",
+    (_field, content) => {
+      expect(() => workflowCompletionPreparation(content)).toThrow(
+        "instance and stage must both be present",
+      );
+    },
+  );
+
   test("rejects an invalid durable completion stage", () => {
     expect(() =>
       workflowCompletionPreparation(
@@ -183,6 +201,16 @@ describe("t265 workflow completion identity", () => {
           "- **Workflow Completion Status**: pending\n",
       ),
     ).toThrow("stage is invalid");
+  });
+
+  test("rejects an invalid durable completion status", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: build-and-test\n" +
+          "- **Workflow Completion Status**: running\n",
+      ),
+    ).toThrow("status is invalid");
   });
 
   test("does not reuse receipts from another completion instance", () => {
@@ -270,4 +298,101 @@ describe("t265 workflow completion identity", () => {
       status: "safety-blocked",
     });
   });
+
+  test.each([
+    ["safety-blocked", "safety-blocked"],
+    ["abandoned", "abandoned"],
+  ] as const)(
+    "returns blocked for a %s completion receipt",
+    (status, expectedStatus) => {
+      const intentUuid = "00000000-0000-7000-8000-000000000001";
+      const boundary = {
+        kind: "workflow-completed" as const,
+        instance: "completion-blocked",
+      };
+      const event = mirrorEventIdentity(intentUuid, boundary, "sync");
+      const key = mirrorEventKey(event);
+      expect(
+        workflowCompletionSettlement({
+          intentUuid,
+          boundary,
+          state: {
+            ...EMPTY_MIRROR_STATE,
+            issueNumber: 123,
+            receipts: {
+              [key]: {
+                key,
+                event,
+                operationId: "op-sync",
+                createdRevision: 1,
+                status,
+                preparedAt: "2026-07-29T10:00:00Z",
+                completedAt: "2026-07-29T10:00:00Z",
+              },
+            },
+          },
+        }),
+      ).toEqual({
+        kind: "blocked",
+        operation: "sync",
+        status: expectedStatus,
+      });
+    },
+  );
+
+  test.each([
+    ["skipped-for-event", { kind: "settled", evidence: "explicit-skip" }],
+    ["succeeded", { kind: "settled", evidence: "close" }],
+  ] as const)(
+    "settles completion from a %s close receipt",
+    (status, expected) => {
+      const intentUuid = "00000000-0000-7000-8000-000000000001";
+      const boundary = {
+        kind: "workflow-completed" as const,
+        instance: "completion-settled",
+      };
+      const syncEvent = mirrorEventIdentity(intentUuid, boundary, "sync");
+      const syncKey = mirrorEventKey(syncEvent);
+      const closeEvent = mirrorEventIdentity(intentUuid, boundary, "close");
+      const closeKey = mirrorEventKey(closeEvent);
+      expect(
+        workflowCompletionSettlement({
+          intentUuid,
+          boundary,
+          state: {
+            ...EMPTY_MIRROR_STATE,
+            issueNumber: 123,
+            receipts: {
+              [syncKey]: {
+                key: syncKey,
+                event: syncEvent,
+                operationId: "op-sync",
+                createdRevision: 1,
+                status: "succeeded",
+                preparedAt: "2026-07-29T10:00:00Z",
+                attemptedAt: "2026-07-29T10:00:00Z",
+                completedAt: "2026-07-29T10:00:00Z",
+              },
+              [closeKey]: {
+                key: closeKey,
+                event: closeEvent,
+                operationId: "op-close",
+                createdRevision: 2,
+                status,
+                preparedAt: "2026-07-29T10:00:00Z",
+                ...(status === "succeeded"
+                  ? {
+                      attemptedAt: "2026-07-29T10:00:00Z",
+                      completedAt: "2026-07-29T10:00:00Z",
+                    }
+                  : {
+                      completedAt: "2026-07-29T10:00:00Z",
+                    }),
+              },
+            },
+          },
+        }),
+      ).toEqual(expected);
+    },
+  );
 });
