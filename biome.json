@@ -24,7 +24,7 @@
     }
   },
   "files": {
-    "includes": ["**", "!tests/fixtures/**", "!dist/**", "!packages/setup/dist/**"]
+    "includes": ["**", "!tests/fixtures/**", "!dist/**", "!packages/setup/dist/**", "!packages/framework/core/vendor/**"]
   },
   "overrides": [
     {

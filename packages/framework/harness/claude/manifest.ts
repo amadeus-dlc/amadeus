@@ -51,6 +51,10 @@ const manifest: HarnessManifest = {
   // mentions other core files carry, so it stays.
   coreDirs: [
     { src: "tools", dst: "tools" },
+    // U1 (otel-walking-skeleton, FR-DST-2): the OTel provider layer and the
+    // vendored OTel API ship to every harness (FR-DST-1 bundle incorporation).
+    { src: "otel", dst: "otel" },
+    { src: "vendor", dst: "vendor" },
     { src: "amadeus-common", dst: "amadeus-common" },
     { src: "knowledge", dst: "knowledge" },
     { src: "sensors", dst: "sensors" },

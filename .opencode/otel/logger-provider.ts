@@ -1,0 +1,137 @@
+// logger-provider.ts — Amadeus Logger Provider (FR-EXP-1, FR-EVT-2).
+//
+// canonical Events are emitted through here and dispatched IMMEDIATELY to the
+// synchronous AuditLogExporter — never batched, never waiting on span end
+// (FR-EVT-2). Telemetry-classified events and free-form diagnostic logs go to
+// the fail-open LocalLogExporter and never mix into the audit journal
+// (FR-EXP-4).
+//
+// The provider also registers an api-logs bridge so code holding an OTel
+// Logger (`logs.getLogger().emit({eventName, attributes, context})`) lands on
+// the same path (the Logs API viability spike, Phase 1 ADR).
+
+import { context, trace } from "../vendor/opentelemetry/api/index.js";
+import { logs } from "../vendor/opentelemetry/api-logs/index.js";
+import type { Logger, LoggerProvider, LogRecord } from "../vendor/opentelemetry/api-logs/index.js";
+import { activeIntent, activeSpace, auditCloneId } from "../tools/amadeus-lib.ts";
+import type { AuditLogExporter, CanonicalEventRecord } from "./audit-log-exporter.ts";
+import { getEventDef } from "./event-registry.ts";
+import type { LocalLogExporter } from "./local-log-exporter.ts";
+import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
+import type { RedactionPolicy } from "./redaction.ts";
+
+type Registered = {
+  readonly projectDir: string;
+  readonly auditExporter: AuditLogExporter;
+  readonly logExporter: LocalLogExporter;
+  readonly policy: RedactionPolicy;
+};
+
+let registered: Registered | null = null;
+
+function requireRegistered(): Registered {
+  if (registered === null) {
+    throw new Error("emit before registerLoggerProvider — invariant violation");
+  }
+  return registered;
+}
+
+// canonical emit. Throws synchronously on write failure (the exporter has
+// already set the fatal latch by then — FR-EVT-3). Registry and required-
+// attribute violations throw WITHOUT latching: they are caller bugs, not
+// journal write failures (BR-9).
+export function emitEvent(name: string, attrs: Record<string, unknown>): void {
+  const reg = requireRegistered();
+  const def = getEventDef(name);
+  const missing = def.requiredAttributes.filter((key) => !(key in attrs));
+  if (missing.length > 0) {
+    throw new Error(`missing required attribute(s) for ${name}: ${missing.join(", ")} — invariant violation (BR-9)`);
+  }
+  const clean = redactAttributes(attrs, reg.policy);
+  if (def.durability === "telemetry") {
+    // Telemetry never reaches the audit journal (FR-EXP-4). Fail-open path.
+    reg.logExporter.exportLog({ name, timestamp: new Date().toISOString(), attributes: clean, traceId: null, spanId: null });
+    return;
+  }
+  const spanCtx = trace.getSpan(context.active())?.spanContext();
+  const space = activeSpace(reg.projectDir);
+  const record: CanonicalEventRecord = {
+    schemaVersion: 1,
+    eventId: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    eventName: name,
+    attributes: clean,
+    intentId: activeIntent(reg.projectDir, space) ?? "workspace",
+    space,
+    cloneId: auditCloneId(reg.projectDir),
+    traceId: spanCtx?.traceId ?? null,
+    spanId: spanCtx?.spanId ?? null,
+    traceFlags: spanCtx?.traceFlags ?? 0,
+    idempotencyKey: crypto.randomUUID(),
+    durability: "canonical",
+  };
+  reg.auditExporter.exportCanonicalEvent(record);
+}
+
+// Free-form diagnostic log. Always fail-open (FR-EVT-6).
+export function emitDiagnostic(name: string, attrs: Record<string, unknown>): void {
+  const reg = requireRegistered();
+  const spanCtx = trace.getSpan(context.active())?.spanContext();
+  reg.logExporter.exportLog({
+    name,
+    timestamp: new Date().toISOString(),
+    attributes: redactAttributes(attrs, reg.policy),
+    traceId: spanCtx?.traceId ?? null,
+    spanId: spanCtx?.spanId ?? null,
+  });
+}
+
+// api-logs bridge: OTel Logger.emit lands on the same routing as emitEvent.
+class AmadeusLogsBridge implements LoggerProvider {
+  getLogger(_name: string, _version?: string, _options?: unknown): Logger {
+    return {
+      enabled(): boolean {
+        return true;
+      },
+      emit(record: LogRecord): void {
+        const attrs = (record.attributes ?? {}) as Record<string, unknown>;
+        const name = record.eventName ?? record.severityText ?? "log";
+        try {
+          emitEvent(name, attrs);
+        } catch (cause) {
+          // An unregistered eventName through the generic Logger surface is a
+          // diagnostic, not an invariant breach of the typed emitEvent path.
+          if (cause instanceof Error && cause.message.includes("unregistered")) {
+            emitDiagnostic(name, attrs);
+            return;
+          }
+          throw cause;
+        }
+      },
+    };
+  }
+}
+
+export function registerLoggerProvider(options: {
+  projectDir: string;
+  auditExporter: AuditLogExporter;
+  logExporter: LocalLogExporter;
+  redaction?: RedactionPolicy;
+}): void {
+  if (registered !== null) {
+    throw new Error("registerLoggerProvider called twice — invariant violation (NFR-3)");
+  }
+  registered = {
+    projectDir: options.projectDir,
+    auditExporter: options.auditExporter,
+    logExporter: options.logExporter,
+    policy: options.redaction ?? DEFAULT_REDACTION_POLICY,
+  };
+  logs.setGlobalLoggerProvider(new AmadeusLogsBridge());
+}
+
+// Test seam: drop the registration between fixtures.
+export function resetLoggerProviderForTests(): void {
+  logs.disable();
+  registered = null;
+}

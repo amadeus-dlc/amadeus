@@ -371,6 +371,8 @@ describe("cursor manifest — the distribution row", () => {
   test("projects the shared core dirs plus the session skills", () => {
     expect(manifest.coreDirs.map((d) => `${d.src}->${d.dst}`)).toEqual([
       "tools->tools",
+      "otel->otel",
+      "vendor->vendor",
       "amadeus-common->amadeus-common",
       "knowledge->knowledge",
       "rules->amadeus-rules",

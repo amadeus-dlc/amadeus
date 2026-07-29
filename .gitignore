@@ -74,3 +74,6 @@ amadeus/spaces/*/intents/.amadeus-*
 # directory anywhere in the repo (root, dist/, tools/, etc.) is ignored.
 **/.pi-lens/
 .pi-lens/
+
+# Vendored OTel API (negates global vendor/ ignore rules; tracked deliberately, FR-DST-1)
+!**/vendor/
