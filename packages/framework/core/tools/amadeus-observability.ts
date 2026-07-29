@@ -28,12 +28,6 @@ import {
   recordDir,
 } from "./amadeus-lib.ts";
 import { readMirrorConfigLayers } from "./amadeus-mirror-config.ts";
-import {
-  attachIntentContext,
-  attachRemoteParentFromEnv,
-  ensureContextManager,
-  restoreIntentContext,
-} from "../otel/context.ts";
 
 // --- config -----------------------------------------------------------------
 
@@ -302,15 +296,19 @@ export function observe<T>(projectDir: string, name: string, fn: () => T): T {
 // Fail-open end to end: any failure leaves the process to start a new root
 // trace, with the diagnostic note written by the context layer (BR-5).
 // Disabled config -> pure no-op beyond the memoized config read.
-export function attachProcessTraceContext(projectDir: string): void {
+export async function attachProcessTraceContext(projectDir: string): Promise<void> {
   if (!observabilityEnabled(projectDir)) return;
   try {
-    ensureContextManager();
+    // Lazy import: the otel layer loads only when observability is enabled,
+    // keeping the vendored API out of the module graph of every tool that
+    // imports this seam (and of partial test-fixture trees that lack otel/).
+    const ctx = await import("../otel/context.ts");
+    ctx.ensureContextManager();
     const root = recordDir(projectDir);
-    if (attachRemoteParentFromEnv(process.env, { diagDir: root })) return;
+    if (ctx.attachRemoteParentFromEnv(process.env, { diagDir: root })) return;
     const intent = activeIntent(projectDir);
     if (root === null || intent === null) return;
-    attachIntentContext(restoreIntentContext(root, intent));
+    ctx.attachIntentContext(ctx.restoreIntentContext(root, intent));
   } catch {
     // fail-open: trace attach never blocks the caller
   }
