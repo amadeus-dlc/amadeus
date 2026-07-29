@@ -23,6 +23,12 @@ reviews:
 
   path_filters:
     - "!dist/**"
+    - "!.agents/**"
+    - "!.claude/**"
+    - "!.codex/**"
+    - "!.cursor/**"
+    - "!.opencode/**"
+    - "!.kimi-code/**"
 
   auto_review:
     enabled: true
