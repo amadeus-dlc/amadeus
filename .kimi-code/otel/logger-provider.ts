@@ -16,6 +16,7 @@ import type { Logger, LoggerProvider, LogRecord } from "../vendor/opentelemetry/
 import { activeIntent, activeSpace, auditCloneId } from "../tools/amadeus-lib.ts";
 import type { AuditLogExporter, CanonicalEventRecord } from "./audit-log-exporter.ts";
 import { getEventDef } from "./event-registry.ts";
+import type { RegisteredEventName } from "./event-registry.ts";
 import type { LocalLogExporter } from "./local-log-exporter.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
@@ -40,7 +41,7 @@ function requireRegistered(): Registered {
 // already set the fatal latch by then — FR-EVT-3). Registry and required-
 // attribute violations throw WITHOUT latching: they are caller bugs, not
 // journal write failures (BR-9).
-export function emitEvent(name: string, attrs: Record<string, unknown>): void {
+export function emitEvent(name: RegisteredEventName, attrs: Record<string, unknown>): void {
   const reg = requireRegistered();
   const def = getEventDef(name);
   const missing = def.requiredAttributes.filter((key) => !(key in attrs));
@@ -97,7 +98,10 @@ class AmadeusLogsBridge implements LoggerProvider {
         const attrs = (record.attributes ?? {}) as Record<string, unknown>;
         const name = record.eventName ?? record.severityText ?? "log";
         try {
-          emitEvent(name, attrs);
+          // The generic Logger surface accepts arbitrary strings; the cast is
+          // safe because getEventDef re-validates at runtime and the bridge
+          // degrades unregistered names to diagnostics below.
+          emitEvent(name as RegisteredEventName, attrs);
         } catch (cause) {
           // An unregistered eventName through the generic Logger surface is a
           // diagnostic, not an invariant breach of the typed emitEvent path.
