@@ -10,7 +10,8 @@
 // Provenance: amadeus-dlc/amadeus#643 (ruling), PR #1339 (pack landing).
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,13 +20,30 @@ const REPO_ROOT = resolve(TESTS_DIR, "..", "..");
 const VERIFY_SH = join(REPO_ROOT, "book-pack", "scripts", "verify-dummy.sh");
 const VERIFIER_TIMEOUT_MS = 180_000;
 const CLEANUP_RESERVE_MS = 30_000;
+const OLD_TEST_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = VERIFIER_TIMEOUT_MS + CLEANUP_RESERVE_MS;
+const PROBE_VERIFIER_TIMEOUT_MS = 1_000;
+const PROBE_CLEANUP_RESERVE_MS = 500;
+const PROBE_TEST_TIMEOUT_MS = 1_500;
+
+type LifecycleEvent = {
+  event: "child-start" | "child-complete" | "cleanup-start" | "cleanup-complete";
+  elapsedMs: number;
+};
+
+function hasConsistentTimeoutBudget(
+  verifierTimeoutMs: number,
+  cleanupReserveMs: number,
+  outerTimeoutMs: number,
+): boolean {
+  return verifierTimeoutMs + cleanupReserveMs <= outerTimeoutMs;
+}
 
 function runVerifier(
   command: string,
   args: string[],
   timeout: number,
-): ReturnType<typeof spawnSync> & { durationMs: number } {
+): SpawnSyncReturns<string> & { durationMs: number } {
   const startedAt = performance.now();
   const result = spawnSync(command, args, {
     encoding: "utf-8",
@@ -37,9 +55,69 @@ function runVerifier(
   return { ...result, durationMs: performance.now() - startedAt };
 }
 
+function parseLifecycleEvents(stdout: string): LifecycleEvent[] {
+  return stdout
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as LifecycleEvent);
+}
+
 describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
-  test("the outer test budget contains the verifier deadline and cleanup reserve", () => {
-    expect(VERIFIER_TIMEOUT_MS + CLEANUP_RESERVE_MS).toBeLessThanOrEqual(TEST_TIMEOUT_MS);
+  test("the old outer deadline rejects the verifier plus cleanup budget and the new deadline accepts it", () => {
+    expect(
+      hasConsistentTimeoutBudget(
+        VERIFIER_TIMEOUT_MS,
+        CLEANUP_RESERVE_MS,
+        OLD_TEST_TIMEOUT_MS,
+      ),
+    ).toBe(false);
+    expect(
+      hasConsistentTimeoutBudget(
+        VERIFIER_TIMEOUT_MS,
+        CLEANUP_RESERVE_MS,
+        TEST_TIMEOUT_MS,
+      ),
+    ).toBe(true);
+  });
+
+  test("a controlled lifecycle completes child work and cleanup inside one measured outer budget", () => {
+    const script = `
+      const startedAt = performance.now();
+      const emit = (event) => console.log(JSON.stringify({
+        event,
+        elapsedMs: performance.now() - startedAt,
+      }));
+      emit("child-start");
+      setTimeout(() => {
+        emit("child-complete");
+        emit("cleanup-start");
+        setTimeout(() => emit("cleanup-complete"), 10);
+      }, 20);
+    `;
+    const result = runVerifier(
+      process.execPath,
+      ["-e", script],
+      PROBE_VERIFIER_TIMEOUT_MS,
+    );
+    const events = parseLifecycleEvents(result.stdout);
+
+    expect(result.status).toBe(0);
+    expect(events.map(({ event }) => event)).toEqual([
+      "child-start",
+      "child-complete",
+      "cleanup-start",
+      "cleanup-complete",
+    ]);
+    expect(events.at(-1)?.elapsedMs).toBeLessThan(PROBE_VERIFIER_TIMEOUT_MS);
+    expect(result.durationMs).toBeLessThan(PROBE_TEST_TIMEOUT_MS);
+    expect(
+      hasConsistentTimeoutBudget(
+        PROBE_VERIFIER_TIMEOUT_MS,
+        PROBE_CLEANUP_RESERVE_MS,
+        PROBE_TEST_TIMEOUT_MS,
+      ),
+    ).toBe(true);
   });
 
   test("a controlled child delay is reported as a verifier timeout", () => {
@@ -64,5 +142,8 @@ describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
     }
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("ALL CHECKS PASSED");
+    const workspace = r.stdout.match(/^dummy workspace: (.+)$/m)?.[1];
+    expect(workspace).toBeDefined();
+    expect(existsSync(workspace ?? "")).toBe(false);
   }, TEST_TIMEOUT_MS);
 });

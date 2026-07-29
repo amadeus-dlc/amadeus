@@ -20,9 +20,9 @@
 
 ## 実装手順
 
-- [x] **Step 1 — timeout budgetを計測可能にする**: FR-1667-1へ追跡し、外側test上限、`spawnSync`上限、cleanup開始／完了を同じ測定単位で記録できるtest-side seamを用意する。成功時ログは増やさない。
-- [x] **Step 2 — 修正前Redを確立する**: 制御したchild遅延とbudget関係のtestで、修正前の内側180秒が外側120秒を超える矛盾を決定的に示す。cleanup競合についてはStep 3の所有権照合で共有資産がないことを確認する。
-- [x] **Step 3 — temp資産の所有権を照合する**: verifierが作る一時directory名、trap、削除順序を棚卸しし、worker間共有または親子の二重cleanupが`rm: fts_read failed`を起こす場合だけ、worker固有資産と冪等cleanupへ最小修正する。
+- [x] **Step 1 — timeout budgetを計測可能にする**: FR-1667-1へ追跡し、外側test上限、`spawnSync`上限、cleanup開始／完了を同じms単位で記録する制御lifecycleを用意する。成功時ログは増やさない。
+- [x] **Step 2 — 修正前Redを確立する**: 同じ純粋budget判定へ旧値と新値を入力し、旧`180000 + 30000 <= 120000`をfalse、新`180000 + 30000 <= 210000`をtrueと固定する。
+- [x] **Step 3 — temp資産の所有権を照合する**: verifierの`mktemp -d ...XXXXXX`とprocess-local `EXIT` trapを確認し、実verifier終了後に出力workspaceが消えていることを回帰testで固定する。共有cleanupの証拠がないためscriptは変更しない。
 - [x] **Step 4 — budget契約を最小修正する**: child最大時間＋cleanup bufferが外側上限内へ収まる定数関係をコードまたはtest説明で固定する。実測が120秒内の安定完了を否定する場合だけ、根拠付きで分類または外側上限を変更し、内外矛盾を残さない。
 - [x] **Step 5 — 失敗診断を保つ**: child非0、signal／timeout、stdout、stderrを失敗時だけ提示し、実際のpack検証失敗とcleanup noiseを区別する。
 - [x] **Step 6 — Greenを検証する**: 制御遅延Red、対象test単独、runnerのserial／parallel境界を実行する。wall-clock反復だけを合格根拠にせず、決定的fixtureを必須とする。
@@ -31,7 +31,7 @@
 
 ## 完了条件
 
-- timeout、resource contention、cleanup競合のどれが原因かを制御証拠で区別できる。
+- 確定したtimeout budget矛盾と、直接原因を断定しないresource contention／cleanup noiseを区別して記録している。
 - child timeoutと外側test timeoutに論理矛盾がなく、cleanup bufferを含む。
 - resource-intensive verifierをrunnerの並列帯から分離し、cleanup noiseが偽赤を作らない。
 - timeout延長、serial化、診断追加の単独対策ではなく、budget契約・実行分類・失敗診断を一体で固定している。

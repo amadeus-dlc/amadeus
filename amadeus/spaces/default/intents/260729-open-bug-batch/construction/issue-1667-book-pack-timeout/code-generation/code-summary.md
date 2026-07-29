@@ -2,33 +2,36 @@
 
 ## 結論
 
-`book-pack-verify`の間欠timeoutは、次の2条件が重なった偽赤だった。
+`book-pack-verify`には、子processへ180秒を許可しているのに外側のBun testが120秒で先に終了する、決定的なtimeout budgetの矛盾があった。
 
-1. 子processへ180秒を許可しているのに、外側のBun testが120秒で先に終了するtimeout budgetの矛盾
-2. filesystemコピー、pack適用、全checkを行うresource-intensive testが、coverage時のparallel integration帯へ分類されていたこと
+CIではcoverage並列実行時に127.55秒で失敗し、単独再実行は65.14秒で成功した。この差はresource contentionが再現条件を増幅した証拠だが、単独の直接原因としては断定しない。修正は、確定したbudget矛盾を除去したうえで、filesystemコピー、pack適用、全checkを行うresource-intensive testを既存runnerのserial帯へ分類する。
 
-`rm: fts_read failed`は、verifier自身が共有一時directoryを削除した証拠ではない。`verify-dummy.sh`は呼び出しごとに`mktemp -d ...XXXXXX`で固有directoryを確保し、同じprocessの`EXIT` trapだけがそのdirectoryを削除する。外側testが子processより先に終了し得る旧budgetでは、削除中のprocess terminationがcleanup noiseとして現れ得た。
+`rm: fts_read failed`は、verifier自身が共有一時directoryを削除した証拠ではない。`verify-dummy.sh`は呼び出しごとに`mktemp -d ...XXXXXX`で固有directoryを確保し、同じprocessの`EXIT` trapだけがそのdirectoryを削除する。実verifierの終了後に出力されたworkspace pathが存在しないことも回帰testで確認した。旧外側timeoutによるprocess terminationがcleanup noiseを発生させた可能性はあるが、直接原因とは断定しない。
 
 ## 実装
 
 - test fileを`book-pack-verify.serial.test.ts`へ変更し、既存runnerの`.serial.`契約でcoverage時もparallel integration帯から分離した。
 - `VERIFIER_TIMEOUT_MS = 180_000`、`CLEANUP_RESERVE_MS = 30_000`、`TEST_TIMEOUT_MS = 210_000`を同じ場所へ定義した。
-- 外側budgetが子process上限とcleanup reserveの合計以上であることを回帰testで固定した。
+- 純粋なbudget判定へ旧値`180000 / 30000 / 120000`と新値`180000 / 30000 / 210000`を同時入力し、旧値を不整合、新値を整合と固定した。
+- 制御lifecycleで`child-start → child-complete → cleanup-start → cleanup-complete`を同一のms単位で観測し、子deadlineと外側deadlineの内側でcleanupまで完了することを確認した。
 - 10msの制御timeoutを注入し、`status=null`、`signal=SIGTERM`、`error.code=ETIMEDOUT`を決定的に確認した。
 - 実verifierの失敗時だけ、status、signal、error、duration、stdout、stderrを出力するようにした。成功時ログは増やしていない。
+- 実verifierが出力した一時workspace pathがprocess終了後に消えていることを確認した。
 - verifier scriptと製品コードは変更していない。共有temp資産や二重cleanupの証拠がなく、仮説だけでcleanup実装を変更しないためである。
 
 ## Red → Green
 
 ### Red
 
-修正前定数を固定したbudget回帰testは、`180000 + 30000 <= 120000`を満たさず失敗した。これにより、子processのdeadlineより外側testが60秒早く終了し、cleanup用の余裕もないことをwall-clock反復なしで再現した。
+同じ純粋判定で、旧組合せ`180000 + 30000 <= 120000`は`false`、新組合せ`180000 + 30000 <= 210000`は`true`となる。これにより、子processのdeadlineより外側testが60秒早く終了し、cleanup用の余裕もない旧Redをwall-clock反復なしで固定した。
 
 ### Green
 
-- 対象test: 3 PASS / 0 FAIL / 6 expects
+- 対象test: 4 PASS / 0 FAIL / 14 expects
+- 制御lifecycle: child処理とcleanup完了を同一clockで観測し、outer budget内の完了を確認
 - 制御timeout: `SIGTERM`かつ`ETIMEDOUT`を確認
-- 対象runner（非coverage、parallel=4指定）: serial帯で実行され3 PASS / 0 FAIL
+- 実verifier cleanup: 出力された一時workspaceがprocess終了後に不存在
+- 対象runner（非coverage、parallel=4指定）: serial帯で実行され4 PASS / 0 FAIL
 - `bun run typecheck`: PASS
 - `bun run lint`: PASS（既存baselineのwarningのみ）
 - `git diff --check`: PASS
