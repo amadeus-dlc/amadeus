@@ -529,6 +529,12 @@ describe("t265 mirror boundary distribution", () => {
     const resumed = parseDirective(run(ENGINE, ["next"]));
     expect(resumed.kind).toBe("print");
     expect(resumed.message).toContain("inception completed --from pending");
+    expect(resumed.message).toContain(
+      "Only after both the mirror operation and receipt update succeed, re-run `next`.",
+    );
+    expect(resumed.message).toContain(
+      "If either fails, stop without re-running `next`",
+    );
 
     expect(
       run(STATE_TOOL, [

@@ -262,7 +262,7 @@ function currentMirrorBoundaryPhase(
   return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
 }
 
-type MirrorSyncTarget =
+type MirrorLifecycleTarget =
   | Readonly<{
       kind: "completion";
       instance: string;
@@ -276,7 +276,7 @@ type MirrorSyncTarget =
     }>;
 
 function mirrorLifecyclePrint(
-  target: MirrorSyncTarget,
+  target: MirrorLifecycleTarget,
   intent: string,
   space: string,
 ): PrintDirective {
@@ -303,9 +303,10 @@ function mirrorLifecyclePrint(
     ? ""
     : `First run \`${stateTool} ${target.phase} pending --from absent${selector}\`. `;
   return printDirective(
-    `${prepare}Run \`${lifecycleTool}\`. Only after the mirror operation succeeds, run ` +
-      `\`${stateTool} ${target.phase} completed --from pending${selector}\`, then re-run \`next\`. ` +
-      `If the mirror operation or receipt update fails, stop; the pending receipt makes a later next retry safely.`,
+    `${prepare}Run \`${lifecycleTool}\`. After it succeeds, run ` +
+      `\`${stateTool} ${target.phase} completed --from pending${selector}\`. ` +
+      `Only after both the mirror operation and receipt update succeed, re-run \`next\`. ` +
+      `If either fails, stop without re-running \`next\`; the pending receipt makes a later retry safe.`,
   );
 }
 

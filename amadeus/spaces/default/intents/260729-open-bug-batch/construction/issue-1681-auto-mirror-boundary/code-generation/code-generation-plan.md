@@ -36,4 +36,4 @@
 - FR-1681-1〜3 の6セル、guarded create/sync、prompt、off、retry-safe/idempotent の回帰テストが通る。
 - `bun scripts/package.ts --check` と `bun run promote:self:check` が通る。
 - `bun run typecheck`、`bun run lint`、対象 suite、`bun run test:ci` が通る。
-- Issue #1681 に直接対応する変更だけを Conventional Commit として記録する。
+- ユーザーから明示的に依頼された場合に限り、Issue #1681 に直接対応する変更だけを Conventional Commit として記録する。
