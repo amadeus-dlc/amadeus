@@ -1,4 +1,4 @@
-# skill-forge-source-sha256: c5e3972c679708b697a944e55539e2c8d7a379bb7bedb8de5ad0badb98f00481
+# skill-forge-source-sha256: 230f9964715b1fa4a3623995ffaa90c2d22946eff4afe779446a768a50007391
 interface:
   display_name: "GitHub Issue Cross-Review"
   short_description: "Cross-review GitHub issues with two independent reviewers"
