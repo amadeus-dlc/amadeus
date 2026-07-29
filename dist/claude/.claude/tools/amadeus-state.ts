@@ -468,6 +468,116 @@ function hasStageAuditEvent(
   });
 }
 
+function hasCompletionAuditEvent(
+  projectDir: string,
+  eventType: string,
+  completionInstance: string,
+): boolean {
+  const events = findAllEvents(operationReadAudit(projectDir), eventType);
+  for (const event of events) {
+    if (
+      auditField(event.block, "Completion Instance") === completionInstance
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function injectWorkflowCompletionCrash(point: string): void {
+  if (process.env.AMADEUS_TEST_COMPLETE_WORKFLOW_CRASH_AT !== point) return;
+  process.stderr.write(`Injected complete-workflow crash at ${point}\n`);
+  process.exit(86);
+}
+
+function emitWorkflowCompletionAuditRows(input: {
+  pd: string;
+  content: string;
+  completedSlug: string;
+  completedStageName: string;
+  completedPhase: string;
+  completedCount: number;
+  completionInstance: string;
+  alreadyMarkedCompleted: boolean;
+  stageCompletedAlreadyAudited: boolean;
+  reason?: string;
+}): void {
+  const scope = getField(input.content, "Scope");
+  if (!scope) {
+    error(
+      "State file has no Scope field. Refusing to complete workflow — fix the state file first.",
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+    );
+  }
+  try {
+    const stageMissing = !hasCompletionAuditEvent(
+      input.pd,
+      "STAGE_COMPLETED",
+      input.completionInstance,
+    );
+    const stageNeedsEmission =
+      !input.alreadyMarkedCompleted || !input.stageCompletedAlreadyAudited;
+    if (stageMissing && stageNeedsEmission) {
+      emitAudit(input.pd, "STAGE_COMPLETED", {
+        Stage: input.completedSlug,
+        Details: `Final stage ${input.completedStageName} completed`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-stage-completed-audit");
+    if (
+      !hasCompletionAuditEvent(
+        input.pd,
+        "PHASE_COMPLETED",
+        input.completionInstance,
+      )
+    ) {
+      emitAudit(input.pd, "PHASE_COMPLETED", {
+        "From phase": input.completedPhase,
+        "To phase": "(end)",
+        "Stages completed": String(input.completedCount),
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-completed-audit");
+    if (
+      !hasCompletionAuditEvent(
+        input.pd,
+        "PHASE_VERIFIED",
+        input.completionInstance,
+      )
+    ) {
+      emitAudit(input.pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${input.completedPhase} → end`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-verified-audit");
+    const workflowFields: Record<string, string> = {
+      Scope: scope,
+      Details: `Scope: ${scope}, ${input.completedCount} stages completed`,
+      "Completion Instance": input.completionInstance,
+    };
+    if (input.reason) workflowFields.Reason = input.reason;
+    if (
+      !hasCompletionAuditEvent(
+        input.pd,
+        "WORKFLOW_COMPLETED",
+        input.completionInstance,
+      )
+    ) {
+      emitAudit(input.pd, "WORKFLOW_COMPLETED", workflowFields);
+    }
+    injectWorkflowCompletionCrash("after-workflow-completed-audit");
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
+}
+
 // --- Slug + small helpers (used by fork/merge handlers below; declared
 // before main() so they're initialised before dispatch fires) ---
 
@@ -2090,6 +2200,23 @@ export function handleFinalize(args: string[]): void {
 }
 
 export function handleCompleteWorkflow(args: string[]): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  const pd = resolveProjectDir(projectDir);
+  if (intent === undefined && space === undefined) {
+    completeWorkflowForTarget(rest, pd);
+    return;
+  }
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  if (resolvedIntent === undefined) {
+    error("complete-workflow could not resolve the selected Intent.");
+  }
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    completeWorkflowForTarget.bind(null, rest, pd),
+  );
+}
+
+function completeWorkflowForTarget(args: string[], pd: string): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
   const reasonIdx = args.indexOf("--reason");
@@ -2104,7 +2231,9 @@ export function handleCompleteWorkflow(args: string[]): void {
       i !== completionInstanceValueIdx,
   );
   if (positional.length < 1)
-    error("Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]");
+    error(
+      "Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>] [--intent <record>] [--space <name>]",
+    );
   const completedSlug = positional[0];
 
   // Optional --reason flag for recording why the workflow completed early
@@ -2117,13 +2246,12 @@ export function handleCompleteWorkflow(args: string[]): void {
       ? args[completionInstanceIdx + 1]
       : undefined;
 
-  const pd = resolveProjectDir(projectDir);
-  // C2b lost-update safety: read→decide→emit-audit (4 rows)→write under one
-  // lock so the 4 audit rows and the completion state commit atomically against
-  // a single snapshot (audit-first / decide-inside-lock). emitAudit uses the
-  // unlocked variant because the lock is held.
+  // C2b lost-update safety: read→decide→emit-audit→write under one lock and one
+  // snapshot. Each persisted step is replay-safe, so a crash between steps can
+  // resume without duplicating the completion audit rows.
   operationWithLock(pd, () => {
   let content = operationReadState(pd);
+  const completion = workflowCompletionPreparation(content);
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
@@ -2142,6 +2270,10 @@ export function handleCompleteWorkflow(args: string[]): void {
     "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
+  const completionInstance = completion?.instance ??
+    `terminal:${completedSlug}`;
+  const stateAlreadyCompleted =
+    getField(content, "Status")?.trim() === "Completed";
 
   // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
   // it is a completing transition too. Guard only when the slug is not already
@@ -2158,80 +2290,66 @@ export function handleCompleteWorkflow(args: string[]): void {
     verifyPhaseCheckArtifact(pd, completedStage.phase);
   }
 
-  // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
-
-  // 2. Sync Completed counter
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-
-  // 3. Update all fields atomically for workflow completion
   const timestamp = isoTimestamp();
-  content = setField(content, "Status", "Completed");
-  if (workflowCompletionPreparation(content) !== null) {
-    content = setOrInsertField(
+  if (!stateAlreadyCompleted) {
+    // Mark the final stage and every terminal field in one state-file rename.
+    content = setCheckbox(content, completedSlug, "completed");
+    content = setField(
       content,
-      "## Runtime State",
-      "Workflow Completion Status",
-      "completed",
+      "Completed",
+      String(countCheckboxes(content, "completed")),
     );
-  }
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "In Progress", "none");
-  content = setField(content, "Next Stage", "none");
-  content = setField(content, "Next Action", "Workflow complete");
-  // Phase Progress roll-up: the final stage's phase is now complete → Verified,
-  // in the same transaction as Status: Completed and the PHASE_VERIFIED audit
-  // below (#836). Earlier phases were flipped Verified/Skipped by their own
-  // boundary transitions (advance / init pre-cross); this closes the last one.
-  content = markPhaseVerified(content, completedStage.phase);
-
-  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-  try {
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        Details: `Final stage ${completedStage.name} completed`,
-      });
+    content = setField(content, "Status", "Completed");
+    if (completion !== null) {
+      content = setOrInsertField(
+        content,
+        "## Runtime State",
+        "Workflow Completion Status",
+        "completed",
+      );
     }
-    emitAudit(pd, "PHASE_COMPLETED", {
-      "From phase": completedStage.phase,
-      "To phase": "(end)",
-      "Stages completed": String(completedCount),
-    });
-    emitAudit(pd, "PHASE_VERIFIED", {
-      "Phase boundary": `${completedStage.phase} → end`,
-    });
-    const workflowFields: Record<string, string> = {
-      Scope: scope,
-      Details: `Scope: ${scope}, ${completedCount} stages completed`,
-    };
-    if (reason) workflowFields.Reason = reason;
-    emitAudit(pd, "WORKFLOW_COMPLETED", workflowFields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "In Progress", "none");
+    content = setField(content, "Next Stage", "none");
+    content = setField(content, "Next Action", "Workflow complete");
+    content = markPhaseVerified(content, completedStage.phase);
   }
+  const completedCount = countCheckboxes(content, "completed");
 
-  operationWriteState(pd, content);
+  emitWorkflowCompletionAuditRows({
+    pd,
+    content,
+    completedSlug,
+    completedStageName: completedStage.name,
+    completedPhase: completedStage.phase,
+    completedCount,
+    completionInstance,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
+    ...(reason ? { reason } : {}),
+  });
+
+  if (!stateAlreadyCompleted) {
+    operationWriteState(pd, content);
+  }
+  injectWorkflowCompletionCrash("after-state-completed");
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
   // automatic inference from state, so a crashed run never self-completes. Runs
   // under the workspace lock already held (every intents.json mutation takes the
   // sentinel bucket). No-op for the legacy flat record (no registry row).
-  completeIntentRegistryRow(pd);
+  const completedIntentDir = completeIntentRegistryRow(pd);
+  injectWorkflowCompletionCrash("after-registry-complete");
+  if (completedIntentDir !== null) {
+    clearActiveIntentCursor(
+      pd,
+      completedIntentDir,
+      stateOperationTarget?.space,
+    );
+  }
+  injectWorkflowCompletionCrash("after-cursor-clear");
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -2245,24 +2363,20 @@ export function handleCompleteWorkflow(args: string[]): void {
 }
 
 // Terminal completion flips the target intent's registry row to "complete", then
-// releases the active-intent cursor (#1248) so the finished intent stops being
-// the audit-append target and a fresh /amadeus resolves a new intent rather than
-// re-attaching to the completed record. The cursor is only released for the
-// ambient (untargeted) operation — a targeted repair leaves the caller's cursor
-// alone. No-op for the legacy flat record (no registry row). Must run under the
-// workspace lock the caller already holds.
-function completeIntentRegistryRow(pd: string): void {
+// compare-and-clears the active-intent cursor (#1248). A cursor that still names
+// the completed target is released; a cursor moved to another intent is
+// preserved. No-op for the legacy flat record (no registry row). Must run under
+// the workspace lock the caller already holds.
+function completeIntentRegistryRow(pd: string): string | null {
   const completedIntentDir = stateOperationTarget?.intent ?? activeIntent(pd);
-  if (!completedIntentDir) return;
+  if (!completedIntentDir) return null;
   withLockedIntentRegistry(
     pd,
     (context) =>
       transitionIntentStatusLocked(context, completedIntentDir, "complete"),
     stateOperationTarget?.space,
   );
-  if (stateOperationTarget === null) {
-    clearActiveIntentCursor(pd, completedIntentDir);
-  }
+  return completedIntentDir;
 }
 
 function appendLifecycleEvent(

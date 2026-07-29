@@ -11,7 +11,10 @@ import {
   serializeMirrorBoundaryReceipts,
   transitionMirrorBoundaryReceipt,
 } from "../../packages/framework/core/tools/amadeus-state.ts";
-import { prepareWorkflowCompletion } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
+import {
+  prepareWorkflowCompletion,
+  workflowCompletionPreparation,
+} from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
 
 const STATE = `# State
 
@@ -161,6 +164,25 @@ describe("t265 workflow completion identity", () => {
         "completion-2",
       ),
     ).toThrow("completion-1");
+  });
+
+  test("rejects a completion identity whose durable status is missing", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: build-and-test\n",
+      ),
+    ).toThrow("status is missing");
+  });
+
+  test("rejects an invalid durable completion stage", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: not a stage\n" +
+          "- **Workflow Completion Status**: pending\n",
+      ),
+    ).toThrow("stage is invalid");
   });
 
   test("does not reuse receipts from another completion instance", () => {

@@ -4,7 +4,15 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { runMirrorLifecycleBoundary } from "../../packages/framework/core/tools/amadeus-mirror-lifecycle.ts";
 import {
@@ -13,6 +21,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import type { MirrorStateStorePorts } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
 import type { MirrorStateSnapshot } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
+import { renderMirrorStateBlock } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import {
   BOARD_A,
   BOARD_B,
@@ -36,6 +45,15 @@ import {
 } from "./t346-amadeus-mirror-lifecycle-projects.fixture.ts";
 
 const roots: string[] = [];
+const ROOT = join(import.meta.dir, "..", "..");
+const STATE_TOOL = join(
+  ROOT,
+  "dist",
+  "claude",
+  ".claude",
+  "tools",
+  "amadeus-state.ts",
+);
 afterEach(() => {
   for (const root of roots.splice(0))
     rmSync(root, { recursive: true, force: true });
@@ -45,6 +63,140 @@ function fixture(options: FixtureOptions = {}) {
   const result = createProjectFixture(options);
   roots.push(result.root);
   return result;
+}
+
+const TERMINAL_CRASH_POINTS = [
+  "after-stage-completed-audit",
+  "after-phase-completed-audit",
+  "after-phase-verified-audit",
+  "after-workflow-completed-audit",
+  "after-state-completed",
+  "after-registry-complete",
+  "after-cursor-clear",
+];
+
+function terminalFixture() {
+  const fx = fixture({
+    lifecyclePhase: "CONSTRUCTION",
+    registryStatus: "in-flight",
+    completionInstance: "completion-terminal",
+    state: linkedState(),
+  });
+  const fixtureState = readFileSync(
+    join(ROOT, "tests", "fixtures", "state-bugfix-final-construction.md"),
+    "utf-8",
+  );
+  writeFileSync(
+    fx.statePath,
+    `${fixtureState.replace(
+      "## Runtime State",
+      "## Runtime State\n" +
+        "- **Workflow Completion Instance**: completion-terminal\n" +
+        "- **Workflow Completion Stage**: build-and-test\n" +
+        "- **Workflow Completion Status**: pending",
+    )}\n${renderMirrorStateBlock(linkedState())}\n`,
+  );
+  const intents = join(
+    fx.root,
+    "amadeus",
+    "spaces",
+    fx.space,
+    "intents",
+  );
+  writeFileSync(join(intents, "active-intent"), `${INTENT_DIR}\n`);
+  return { fx, intents };
+}
+
+function runTerminal(
+  fx: ReturnType<typeof fixture>,
+  crashAt?: string,
+) {
+  return spawnSync(
+    process.execPath,
+    [
+      STATE_TOOL,
+      "complete-workflow",
+      "build-and-test",
+      "--completion-instance",
+      "completion-terminal",
+      "--intent",
+      INTENT_DIR,
+      "--space",
+      fx.space,
+      "--project-dir",
+      fx.root,
+    ],
+    {
+      encoding: "utf-8",
+      env: {
+        ...process.env,
+        AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+        AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        ...(crashAt
+          ? { AMADEUS_TEST_COMPLETE_WORKFLOW_CRASH_AT: crashAt }
+          : {}),
+      },
+    },
+  );
+}
+
+function terminalEventCounts(fx: ReturnType<typeof fixture>) {
+  const auditDir = join(
+    fx.root,
+    "amadeus",
+    "spaces",
+    fx.space,
+    "intents",
+    INTENT_DIR,
+    "audit",
+  );
+  const counts = new Map<string, number>();
+  if (!existsSync(auditDir)) return counts;
+  for (const name of readdirSync(auditDir)) {
+    if (!name.endsWith(".jsonl")) continue;
+    for (const line of readFileSync(join(auditDir, name), "utf-8").split("\n")) {
+      if (!line.startsWith("{")) continue;
+      const event = (JSON.parse(line) as { event?: string }).event;
+      if (event) counts.set(event, (counts.get(event) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function installLifecycleCrash(
+  fx: ReturnType<typeof fixture>,
+  point: "before-final-sync" | "after-project-done" | "before-close",
+): () => boolean {
+  const write = fx.ports.writeDocumentAtomic;
+  let injected = false;
+  fx.ports = {
+    ...fx.ports,
+    writeDocumentAtomic(text: string) {
+      const syncPending =
+        text.includes('"operation":"sync"') &&
+        text.includes('"status":"prepared"');
+      const closePrepared =
+        text.includes('"operation":"close"') &&
+        text.includes('"status":"prepared"');
+      const closeAttempted =
+        text.includes('"operation":"close"') &&
+        text.includes('"status":"attempted"');
+      const shouldFail =
+        !injected &&
+        ((point === "before-final-sync" && syncPending) ||
+          (point === "after-project-done" && closePrepared) ||
+          (point === "before-close" && closeAttempted));
+      if (shouldFail) {
+        injected = true;
+        return {
+          kind: "io-failure" as const,
+          summary: `injected ${point} failure`,
+        };
+      }
+      return write(text);
+    },
+  } satisfies MirrorStateStorePorts;
+  return () => injected;
 }
 
 // A completion whose sync receipt already succeeded but whose ledger still owes
@@ -136,6 +288,216 @@ describe("t346 completion gate", () => {
       workflowStatus: "Running",
       completionInstance: "completion-gate",
     });
+  });
+
+  test.each(TERMINAL_CRASH_POINTS)(
+    "terminal commit resumes after %s without duplicate terminal audit",
+    async (crashAt) => {
+      const { fx, intents } = terminalFixture();
+      const gateway = new ProjectGateway(markerBody());
+      gateway.items = [memberItem(BOARD_A, "Construction")];
+      await drive(
+        fx,
+        gateway,
+        { kind: "workflow-completed", instance: "completion-terminal" },
+      );
+      expect(gateway.issue.state).toBe("CLOSED");
+      expect(
+        gateway.history.filter((entry) =>
+          entry === `update:${canonical(BOARD_A)}`
+        ),
+      ).toHaveLength(1);
+      expect(gateway.history.filter((entry) => entry === "edit")).toHaveLength(
+        1,
+      );
+      expect(gateway.history.filter((entry) => entry === "close")).toHaveLength(
+        1,
+      );
+
+      const crashed = runTerminal(fx, crashAt);
+      expect(crashed.status).toBe(86);
+      expect(crashed.stderr).toContain(crashAt);
+      const recovered = runTerminal(fx);
+      expect(recovered.status).toBe(0);
+      const recoveredState = readFileSync(fx.statePath, "utf-8");
+
+      expect(recoveredState).toContain(
+        "- **Status**: Completed",
+      );
+      expect(recoveredState).toContain(
+        "- **Workflow Completion Instance**: completion-terminal",
+      );
+      const registry = JSON.parse(
+        readFileSync(join(intents, "intents.json"), "utf-8"),
+      ) as Array<{ dirName: string; status: string }>;
+      expect(
+        registry.find((entry) => entry.dirName === INTENT_DIR)?.status,
+      ).toBe("complete");
+      expect(existsSync(join(intents, "active-intent"))).toBe(false);
+      const counts = terminalEventCounts(fx);
+      for (
+        const event of [
+          "STAGE_COMPLETED",
+          "PHASE_COMPLETED",
+          "PHASE_VERIFIED",
+          "WORKFLOW_COMPLETED",
+        ]
+      ) {
+        expect(counts.get(event)).toBe(1);
+      }
+      const replay = runTerminal(fx);
+      expect(replay.status).toBe(0);
+      expect(readFileSync(fx.statePath, "utf-8")).toBe(recoveredState);
+      expect(terminalEventCounts(fx)).toEqual(counts);
+    },
+    120_000,
+  );
+
+  test.each([
+    "before-final-sync",
+    "after-project-done",
+    "before-close",
+  ] as const)(
+    "the same completion boundary resumes after %s without repeating remote mutations",
+    async (point) => {
+      const { fx, intents } = terminalFixture();
+      const gateway = new ProjectGateway(markerBody());
+      const injected = installLifecycleCrash(fx, point);
+      gateway.items = [memberItem(BOARD_A, "Construction")];
+      const boundary = {
+        kind: "workflow-completed" as const,
+        instance: "completion-terminal",
+      };
+
+      await drive(fx, gateway, boundary);
+      expect(injected()).toBe(true);
+      expect(readFileSync(fx.statePath, "utf-8")).toContain(
+        "- **Workflow Completion Instance**: completion-terminal",
+      );
+      const registryAfterFailure = JSON.parse(
+        readFileSync(join(intents, "intents.json"), "utf-8"),
+      ) as Array<{ dirName: string; status: string }>;
+      expect(
+        registryAfterFailure.find((entry) => entry.dirName === INTENT_DIR)
+          ?.status,
+      ).toBe("in-flight");
+      expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
+        INTENT_DIR,
+      );
+      const failedSnapshot = fx.state();
+      expect(failedSnapshot.auditOutbox ?? null).toBeNull();
+      expect(failedSnapshot.expectedPrompt).toBeUndefined();
+      expect(terminalEventCounts(fx).size).toBe(0);
+      expect(gateway.issue.state).toBe("OPEN");
+      const syncReceipt = Object.values(failedSnapshot.receipts).find(
+        (receipt) =>
+          receipt.event.boundary.kind === "workflow-completed" &&
+          receipt.event.boundary.instance === "completion-terminal" &&
+          receipt.event.operation === "sync",
+      );
+      const closeReceipt = Object.values(failedSnapshot.receipts).find(
+        (receipt) =>
+          receipt.event.boundary.kind === "workflow-completed" &&
+          receipt.event.boundary.instance === "completion-terminal" &&
+          receipt.event.operation === "close",
+      );
+      if (point === "before-final-sync") {
+        expect(syncReceipt).toBeUndefined();
+        expect(gateway.history).not.toContain("edit");
+        expect(fieldMutations(gateway)).toEqual([]);
+      } else {
+        expect(syncReceipt).toBeDefined();
+        expect(rowFor(failedSnapshot, BOARD_A)?.lastAppliedStatus).toBe("Done");
+        expect(fieldMutations(gateway)).toHaveLength(1);
+      }
+      if (point === "before-close") {
+        expect(syncReceipt?.status).toBe("succeeded");
+        expect(closeReceipt?.status).toBe("prepared");
+      } else if (point === "after-project-done") {
+        expect(closeReceipt).toBeUndefined();
+      }
+      expect(gateway.history).not.toContain("close");
+
+      await drive(fx, gateway, boundary);
+      expect(gateway.issue.state).toBe("CLOSED");
+      expect(
+        gateway.history.filter((entry) => entry === "edit"),
+      ).toHaveLength(1);
+      expect(
+        gateway.history.filter((entry) =>
+          entry === `update:${canonical(BOARD_A)}`
+        ),
+      ).toHaveLength(1);
+      expect(
+        gateway.history.filter((entry) => entry === "close"),
+      ).toHaveLength(1);
+      expect(runTerminal(fx).status).toBe(0);
+      expect(readFileSync(fx.statePath, "utf-8")).toContain(
+        "- **Status**: Completed",
+      );
+    },
+    120_000,
+  );
+
+  test("a moved cursor keeps the original Intent pinned through lifecycle and terminal commit", async () => {
+    const { fx, intents } = terminalFixture();
+    const otherIntent = "260727-other-d4c3b2a1";
+    const otherPath = join(intents, otherIntent);
+    mkdirSync(otherPath, { recursive: true });
+    const otherState = "# Other Intent\n- **Status**: Running\n";
+    writeFileSync(join(otherPath, "amadeus-state.md"), otherState);
+    const registryPath = join(intents, "intents.json");
+    const registry = JSON.parse(
+      readFileSync(registryPath, "utf-8"),
+    ) as Array<Record<string, unknown>>;
+    registry.push({
+      uuid: "00000000-0000-7000-8000-00000000f00d",
+      slug: "other",
+      dirName: otherIntent,
+      scope: "bugfix",
+      repos: [REPO.canonical],
+      status: "in-flight",
+    });
+    writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
+    writeFileSync(join(intents, "active-intent"), `${otherIntent}\n`);
+    const otherRegistryBefore = (
+      JSON.parse(readFileSync(registryPath, "utf-8")) as Array<{
+        dirName: string;
+        status: string;
+      }>
+    ).find((entry) => entry.dirName === otherIntent);
+
+    const gateway = new ProjectGateway(markerBody());
+    gateway.items = [memberItem(BOARD_A, "Construction")];
+    await drive(
+      fx,
+      gateway,
+      { kind: "workflow-completed", instance: "completion-terminal" },
+    );
+    expect(gateway.issue.state).toBe("CLOSED");
+    expect(readFileSync(join(otherPath, "amadeus-state.md"), "utf-8")).toBe(
+      otherState,
+    );
+    expect(existsSync(join(otherPath, "audit"))).toBe(false);
+
+    const terminal = runTerminal(fx);
+    expect(terminal.status).toBe(0);
+    expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
+      otherIntent,
+    );
+    expect(readFileSync(join(otherPath, "amadeus-state.md"), "utf-8")).toBe(
+      otherState,
+    );
+    expect(existsSync(join(otherPath, "audit"))).toBe(false);
+    const afterRegistry = JSON.parse(
+      readFileSync(registryPath, "utf-8"),
+    ) as Array<{ dirName: string; status: string }>;
+    expect(
+      afterRegistry.find((entry) => entry.dirName === otherIntent),
+    ).toEqual(otherRegistryBefore);
+    expect(
+      afterRegistry.find((entry) => entry.dirName === INTENT_DIR)?.status,
+    ).toBe("complete");
   });
 
   test("a pre-marker final sync is re-queried before close", async () => {

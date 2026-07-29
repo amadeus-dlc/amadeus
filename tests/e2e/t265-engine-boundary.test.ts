@@ -12,16 +12,21 @@ import { join } from "node:path";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   EMPTY_MIRROR_STATE,
-  parseMirrorStateDocument,
   renderMirrorStateBlock,
 } from "../../dist/claude/.claude/tools/amadeus-mirror-state-codec.ts";
-import {
-  mirrorEventIdentity,
-  mirrorEventKey,
-} from "../../dist/claude/.claude/tools/amadeus-mirror-policy.ts";
+import { renderMirrorMarker } from "../../dist/claude/.claude/tools/amadeus-mirror-provenance.ts";
+import { runMirrorLifecycleBoundary } from "../../packages/framework/core/tools/amadeus-mirror-lifecycle.ts";
+import type {
+  GatewayOutcome,
+  MirrorGitHubGateway,
+  MirrorMutationPermit,
+  RemoteMirrorIssue,
+  RepositoryIdentity,
+} from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
 import {
   cleanupTestProject,
   createTestProject,
+  DEFAULT_INTENT_UUID,
   DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
@@ -53,6 +58,91 @@ const CLAUDE_STATE = join(
   ROOT,
   "dist/claude/.claude/tools/amadeus-state.ts",
 );
+const MIRROR_REPOSITORY: RepositoryIdentity = {
+  owner: "amadeus-dlc",
+  name: "amadeus",
+  canonical: "amadeus-dlc/amadeus",
+};
+const MIRROR_IDENTITY = {
+  schema: 1 as const,
+  intentUuid: DEFAULT_INTENT_UUID,
+  intentDir: DEFAULT_RECORD_DIR,
+  operationId: "t265-fixture-op",
+  preparedAt: "2026-07-28T00:00:00Z",
+  repository: MIRROR_REPOSITORY,
+};
+
+function gatewayOk<T>(value: T): GatewayOutcome<T> {
+  return { kind: "ok", value };
+}
+
+class CompletionGateway implements MirrorGitHubGateway {
+  readonly history: string[] = [];
+  issue: RemoteMirrorIssue = {
+    repository: MIRROR_REPOSITORY,
+    number: 123,
+    title: "Mirror",
+    body: renderMirrorMarker(MIRROR_IDENTITY),
+    state: "OPEN",
+  };
+
+  async readiness(): Promise<GatewayOutcome<void>> {
+    return gatewayOk(undefined);
+  }
+  async createIssue(
+    _permit: MirrorMutationPermit,
+    content: { title: string; body: string },
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
+    this.history.push("create");
+    this.issue = { ...this.issue, title: content.title, body: content.body };
+    return gatewayOk(this.issue);
+  }
+  async findIssuesByMarker(
+    _repository: RepositoryIdentity,
+    marker: string,
+  ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
+    return gatewayOk(this.issue.body.includes(marker) ? [this.issue] : []);
+  }
+  async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
+    return gatewayOk(this.issue);
+  }
+  async editIssue(
+    _permit: MirrorMutationPermit,
+    body: string,
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
+    this.history.push("edit");
+    this.issue = { ...this.issue, body };
+    return gatewayOk(this.issue);
+  }
+  async closeIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
+    this.history.push("close");
+    this.issue = { ...this.issue, state: "CLOSED" };
+    return gatewayOk(this.issue);
+  }
+  async listProjectItems(
+    ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
+  ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
+    throw new Error("CompletionGateway must not query Projects");
+  }
+  async resolveProjectFields(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectFields"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectFields"]> {
+    throw new Error("CompletionGateway must not resolve Project fields");
+  }
+  async addProjectItem(
+    ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
+  ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
+    throw new Error("CompletionGateway must not add Project items");
+  }
+  async updateProjectItemSingleSelectField(
+    ..._args: Parameters<
+      MirrorGitHubGateway["updateProjectItemSingleSelectField"]
+    >
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemSingleSelectField"]> {
+    throw new Error("CompletionGateway must not update Project fields");
+  }
+}
+
 // A recorded mirror issue. The engine reads it through the mirror-state codec
 // (mirrorIssueNumberFromDocument), so the precondition is the sentinel-wrapped
 // state block — the legacy `- **Mirror Issue**: #123` line is no longer read.
@@ -62,18 +152,7 @@ const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
   issueNumber: 123,
   provenance: {
     schema: 1,
-    createIdentity: {
-      schema: 1,
-      intentUuid: "11111111-1111-4111-8111-111111111111",
-      intentDir: "fixture-8000000000000001",
-      operationId: "t265-fixture-op",
-      preparedAt: "2026-07-28T00:00:00Z",
-      repository: {
-        owner: "amadeus-dlc",
-        name: "amadeus",
-        canonical: "amadeus-dlc/amadeus",
-      },
-    },
+    createIdentity: MIRROR_IDENTITY,
     issueNumber: 123,
     createdAt: "2026-07-28T00:00:00Z",
   },
@@ -198,7 +277,7 @@ describe("t265 mirror boundary distribution", () => {
     expect(state).toContain('{"inception":"completed"}');
   });
 
-  test("final report keeps a multi-intent workflow addressable until completion mirror settles", () => {
+  test("final report keeps a multi-intent workflow addressable until completion mirror settles", async () => {
     project = createTestProject();
     seedStateFile(
       project,
@@ -302,6 +381,8 @@ describe("t265 mirror boundary distribution", () => {
     expect(report.message).toContain(
       "amadeus-mirror-lifecycle.ts boundary completion",
     );
+    expect(report.message).toContain(`--intent "${DEFAULT_RECORD_DIR}"`);
+    expect(report.message).toContain('--space "default"');
 
     const completionInstance = prepared.match(
       /- \*\*Workflow Completion Instance\*\*: ([^\n]+)/,
@@ -344,61 +425,63 @@ describe("t265 mirror boundary distribution", () => {
         entry.uuid === "00000000-0000-7000-8000-000000000001"
       )?.status,
     ).toBe("in-flight");
-    const parsed = parseMirrorStateDocument(prepared);
-    if (parsed.kind !== "ok" || parsed.block === null || !completionInstance) {
-      throw new Error("prepared completion mirror state is unavailable");
+    writeFileSync(join(intents, "active-intent"), "other-8000000000000002\n");
+    const otherBefore = readFileSync(
+      join(intents, "other-8000000000000002", "amadeus-state.md"),
+      "utf-8",
+    );
+    const otherAuditBefore = existsSync(
+      join(intents, "other-8000000000000002", "audit"),
+    );
+    if (!completionInstance) {
+      throw new Error("prepared completion identity is unavailable");
     }
-    const completedAt = "2026-07-29T10:00:00Z";
-    const syncEvent = mirrorEventIdentity(
-      "00000000-0000-7000-8000-000000000001",
-      { kind: "workflow-completed", instance: completionInstance },
-      "sync",
-    );
-    const closeEvent = mirrorEventIdentity(
-      "00000000-0000-7000-8000-000000000001",
-      { kind: "workflow-completed", instance: completionInstance },
-      "close",
-    );
-    const syncKey = mirrorEventKey(syncEvent);
-    const closeKey = mirrorEventKey(closeEvent);
-    const settledBlock = renderMirrorStateBlock({
-      ...parsed.snapshot,
-      revision: 2,
-      receipts: {
-        [syncKey]: {
-          key: syncKey,
-          event: syncEvent,
-          operationId: "sync-op",
-          createdRevision: 1,
-          status: "succeeded",
-          preparedAt: completedAt,
-          attemptedAt: completedAt,
-          completedAt,
-        },
-        [closeKey]: {
-          key: closeKey,
-          event: closeEvent,
-          operationId: "close-op",
-          createdRevision: 2,
-          status: "succeeded",
-          preparedAt: completedAt,
-          attemptedAt: completedAt,
-          completedAt,
+    const gateway = new CompletionGateway();
+    const lifecycle = await runMirrorLifecycleBoundary(
+      {
+        projectDir: project,
+        space: "default",
+        intentDir: DEFAULT_RECORD_DIR,
+        repository: MIRROR_REPOSITORY,
+        boundary: {
+          kind: "workflow-completed",
+          instance: completionInstance,
         },
       },
-      auditOutbox: null,
-    });
-    writeFileSync(
-      statePath,
-      prepared.slice(0, parsed.block.start) +
-        settledBlock +
-        prepared.slice(parsed.block.end),
+      {
+        gateway,
+        now: () => "2026-07-29T10:00:00Z",
+        newOperationId: (() => {
+          let sequence = 0;
+          return () => `t265-operation-${++sequence}`;
+        })(),
+      },
     );
+    expect(lifecycle.kind).toBe("ok");
+    expect(gateway.history.filter((entry) => entry === "edit")).toHaveLength(1);
+    expect(gateway.history.filter((entry) => entry === "close")).toHaveLength(1);
+    expect(gateway.issue.state).toBe("CLOSED");
+    expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
+      "other-8000000000000002",
+    );
+    expect(
+      readFileSync(
+        join(intents, "other-8000000000000002", "amadeus-state.md"),
+        "utf-8",
+      ),
+    ).toBe(otherBefore);
+    expect(
+      existsSync(join(intents, "other-8000000000000002", "audit")),
+    ).toBe(otherAuditBefore);
     run(CLAUDE_STATE, [
       "complete-workflow",
       "build-and-test",
       "--completion-instance",
       completionInstance,
+      "--intent",
+      DEFAULT_RECORD_DIR,
+      "--space",
+      "default",
     ]);
     const terminalRegistry = JSON.parse(
       readFileSync(registryPath, "utf-8"),
@@ -408,7 +491,15 @@ describe("t265 mirror boundary distribution", () => {
         entry.uuid === "00000000-0000-7000-8000-000000000001"
       )?.status,
     ).toBe("complete");
-    expect(existsSync(join(intents, "active-intent"))).toBe(false);
+    expect(readFileSync(join(intents, "active-intent"), "utf-8").trim()).toBe(
+      "other-8000000000000002",
+    );
+    expect(
+      readFileSync(
+        join(intents, "other-8000000000000002", "amadeus-state.md"),
+        "utf-8",
+      ),
+    ).toBe(otherBefore);
     expect(readFileSync(statePath, "utf-8")).toContain(
       "- **Status**: Completed",
     );

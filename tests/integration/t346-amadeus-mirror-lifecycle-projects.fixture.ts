@@ -238,7 +238,13 @@ export function createProjectFixture(options: FixtureOptions = {}) {
       "",
       "- **Project**: Project status sync",
       `- **Lifecycle Phase**: ${options.lifecyclePhase ?? "IDEATION"}`,
-      "- **Current Stage**: intent-capture",
+      `- **Current Stage**: ${
+        registryStatus === "complete"
+          ? "none"
+          : options.completionInstance
+            ? "build-and-test"
+            : "intent-capture"
+      }`,
       `- **Status**: ${registryStatus === "complete" ? "Completed" : "Running"}`,
       `- **Last Updated**: ${NOW}`,
       ...(options.completionInstance

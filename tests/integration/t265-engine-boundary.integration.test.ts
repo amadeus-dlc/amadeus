@@ -205,7 +205,8 @@ describe("t265 receipt recovery and reports", () => {
         "## Runtime State",
         "## Runtime State\n" +
           "- **Workflow Completion Instance**: completion-instance-1\n" +
-          "- **Workflow Completion Stage**: build-and-test",
+          "- **Workflow Completion Stage**: build-and-test\n" +
+          "- **Workflow Completion Status**: pending",
       ),
     );
     const first = parseDirective(run(ENGINE, ["next"]));
@@ -213,6 +214,8 @@ describe("t265 receipt recovery and reports", () => {
     expect(first.message).toContain(
       'boundary completion --instance "completion-instance-1"',
     );
+    expect(first.message).toContain(`--intent "fixture-8000000000000001"`);
+    expect(first.message).toContain('--space "default"');
     const second = parseDirective(run(ENGINE, ["next"]));
     expect(second).toEqual(first);
   });

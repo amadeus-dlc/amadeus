@@ -24,14 +24,19 @@ export function workflowCompletionPreparation(
       "Workflow completion preparation is incomplete: instance and stage must both be present",
     );
   }
+  if (!/^[a-z][a-z0-9-]*$/u.test(stage)) {
+    throw new Error(`Workflow completion stage is invalid: ${stage}`);
+  }
+  if (status === undefined) {
+    throw new Error("Workflow completion status is missing");
+  }
   if (
-    status !== undefined &&
     status !== "pending" &&
     status !== "completed"
   ) {
     throw new Error(`Workflow completion status is invalid: ${status}`);
   }
-  return { instance, stage, status: status ?? "pending" };
+  return { instance, stage, status };
 }
 
 export function prepareWorkflowCompletion(

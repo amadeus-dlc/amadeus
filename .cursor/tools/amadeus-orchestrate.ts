@@ -267,19 +267,23 @@ function mirrorSyncPrint(
   isPending: boolean,
   instance: string,
   workflowCompleted: boolean,
+  intent: string,
+  space: string,
   completionStage?: string,
 ): PrintDirective {
+  const selector =
+    ` --intent ${JSON.stringify(intent)} --space ${JSON.stringify(space)}`;
   const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
   const boundaryArgs = workflowCompleted
     ? `completion --instance ${JSON.stringify(instance)}`
     : `phase --phase ${phase} --instance ${JSON.stringify(instance)}`;
   const syncTool =
-    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}`;
+    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}${selector}`;
   if (workflowCompleted) {
     const terminalTool =
       `bun ${harnessDir()}/tools/amadeus-state.ts complete-workflow ` +
       `${JSON.stringify(completionStage ?? "unknown")} --completion-instance ` +
-      `${JSON.stringify(instance)}`;
+      `${JSON.stringify(instance)}${selector}`;
     return printDirective(
       `Run \`${syncTool}\`. Only after the completion boundary settles, run ` +
         `\`${terminalTool}\`, then re-run \`next\`. If the mirror operation or ` +
@@ -288,10 +292,10 @@ function mirrorSyncPrint(
   }
   const prepare = isPending
     ? ""
-    : `First run \`${stateTool} ${phase} pending --from absent\`. `;
+    : `First run \`${stateTool} ${phase} pending --from absent${selector}\`. `;
   return printDirective(
     `${prepare}Run \`${syncTool}\`. Only after sync succeeds, run ` +
-      `\`${stateTool} ${phase} completed --from pending\`, then re-run \`next\`. ` +
+      `\`${stateTool} ${phase} completed --from pending${selector}\`, then re-run \`next\`. ` +
       `If sync or the receipt update fails, stop; the pending receipt makes a later next retry safely.`,
   );
 }
@@ -336,6 +340,8 @@ function emitConfiguredMirrorBoundary(
   stateContent: string,
   boundary: PersistedMirrorBoundary,
   mode: "off" | "prompt" | "auto",
+  intent: string,
+  space: string,
 ): boolean {
   const { completion, pendingPhase, phase, phaseInstance } = boundary;
   if (mode === "off") {
@@ -344,13 +350,21 @@ function emitConfiguredMirrorBoundary(
       printDirective(
         `Intent Mirror is off. Run \`bun ${harnessDir()}/tools/amadeus-state.ts ` +
           `complete-workflow ${JSON.stringify(completion.stage)} --completion-instance ` +
-          `${JSON.stringify(completion.instance)}\`, then re-run \`next\`.`,
+          `${JSON.stringify(completion.instance)} --intent ${JSON.stringify(intent)} ` +
+          `--space ${JSON.stringify(space)}\`, then re-run \`next\`.`,
       ),
     );
     return true;
   }
   if (pendingPhase !== undefined) {
-    emit(mirrorSyncPrint(pendingPhase, true, phaseInstance, false));
+    emit(mirrorSyncPrint(
+      pendingPhase,
+      true,
+      phaseInstance,
+      false,
+      intent,
+      space,
+    ));
     return true;
   }
   if (completion !== null) {
@@ -360,6 +374,8 @@ function emitConfiguredMirrorBoundary(
         false,
         completion.instance,
         true,
+        intent,
+        space,
         completion.stage,
       ),
     );
@@ -372,7 +388,7 @@ function emitConfiguredMirrorBoundary(
   );
   if (decision.kind === "suppress") return false;
   if (decision.kind === "auto-sync") {
-    emit(mirrorSyncPrint(phase, false, phaseInstance, false));
+    emit(mirrorSyncPrint(phase, false, phaseInstance, false, intent, space));
     return true;
   }
   const choices = decision.includeCreate
@@ -423,6 +439,8 @@ function emitMirrorBoundaryIfNeeded(
     stateContent,
     boundary,
     resolved.config.autoMirror,
+    intent,
+    space,
   );
 }
 

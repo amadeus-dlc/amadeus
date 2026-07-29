@@ -212,6 +212,8 @@ function adapterFixture(
   const statePath = join(recordPath, "amadeus-state.md");
   const workflowStatus =
     registryStatus === "complete" ? "Completed" : "Running";
+  const currentStage =
+    registryStatus === "complete" ? "none" : "scope-definition";
   writeFileSync(
     statePath,
     [
@@ -219,7 +221,7 @@ function adapterFixture(
       "",
       "- **Project**: Adapter lifecycle",
       "- **Lifecycle Phase**: INCEPTION",
-      "- **Current Stage**: scope-definition",
+      `- **Current Stage**: ${currentStage}`,
       `- **Status**: ${workflowStatus}`,
       `- **Last Updated**: ${NOW}`,
       "",
@@ -552,6 +554,67 @@ describe("t282 boundary isolation and completion chain", () => {
 });
 
 describe("t282 awaitable production lifecycle adapter", () => {
+  test.each([
+    ["missing workflow status", "- **Status**: Running\n", "- **Status**: Running\n"],
+    ["invalid workflow status", "- **Status**: Running\n", "- **Status**: Unknown\n"],
+    [
+      "missing current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: \n",
+    ],
+    [
+      "invalid current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: not a stage\n",
+    ],
+    [
+      "missing lifecycle phase",
+      "- **Lifecycle Phase**: INCEPTION\n",
+      "- **Lifecycle Phase**: \n",
+    ],
+    [
+      "invalid lifecycle phase",
+      "- **Lifecycle Phase**: INCEPTION\n",
+      "- **Lifecycle Phase**: UNKNOWN\n",
+    ],
+    [
+      "running workflow without a current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: none\n",
+    ],
+    [
+      "completed workflow with a current stage",
+      "- **Status**: Running\n",
+      "- **Status**: Completed\n",
+    ],
+  ])("fails closed on %s in the lifecycle snapshot", async (_name, from, to) => {
+    const fx = adapterFixture();
+    const original = readFileSync(fx.statePath, "utf-8");
+    writeFileSync(
+      fx.statePath,
+      from === to
+        ? original.replace(from, "")
+        : original.replace(from, to),
+    );
+    const result = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: { kind: "phase-verified", phase: "inception", instance: "invalid-snapshot" },
+      },
+      {
+        gateway: new LifecycleGateway(),
+        ports: fx.ports,
+        now: () => NOW,
+      },
+    );
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("lifecycle snapshot"),
+    });
+  });
+
   test("fails closed when lifecycle target metadata is incomplete", async () => {
     const unresolvedRoot = mkdtempSync(join(tmpdir(), "mirror-unresolved-"));
     roots.push(unresolvedRoot);
