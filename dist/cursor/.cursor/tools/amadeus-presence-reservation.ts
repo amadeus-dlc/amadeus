@@ -392,15 +392,11 @@ export function mintArmedPresenceReservation(
 ): MintReservationResult {
   const sessionDigest = digestSessionId(input.sessionId);
   return withAuditLock(input.projectDir, () => {
-    const active = listReservations(input.projectDir).filter(
-      (marker) =>
-        marker.sessionDigest === sessionDigest && marker.state !== "consumed",
+    const observed = findActivePresenceReservation(
+      input.projectDir,
+      input.sessionId,
     );
-    if (active.length === 0) return { kind: "none" };
-    if (active.length !== 1) {
-      throw new Error("Trusted session has ambiguous presence reservations");
-    }
-    const observed = active[0]!;
+    if (observed === null) return { kind: "none" };
     resolveTargetIntent(
       input.projectDir,
       observed.space,

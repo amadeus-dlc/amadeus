@@ -607,13 +607,18 @@ function emit(directive: Directive, recordError = true): void {
   // asymmetry). Recording is best-effort and happens BEFORE the stdout print so
   // the directive JSON stays the sole stdout output and the exit code is
   // untouched. Every workflow `emit(errorDirective(...))` call site is covered
-  // by this aggregation point. The sole opt-out is emitMigrationError below:
-  // workspace migration is outside the Intent lifecycle and must not annotate
-  // an unrelated active record.
+  // by this aggregation point. State-neutral validation commands and workspace
+  // migration opt out because neither may annotate an unrelated active record.
   if (directive.kind === "error" && recordError) {
     recordEngineError(directive.message, _handlerProjectDir);
   }
   console.log(JSON.stringify(result.data));
+}
+
+function emitStateNeutralError(message: string): void {
+  // Gate command validation must leave state and audit byte-unchanged; the
+  // ordinary error path records ERROR_LOGGED before printing.
+  emit(errorDirective(message), false);
 }
 
 // Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
@@ -4165,7 +4170,11 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     return;
   }
   const isGated = node.phase !== "initialization";
-  if (isGated && detectHarnessType() === "kimi") {
+  if (
+    isGated &&
+    stageCheckbox.state !== "completed" &&
+    detectHarnessType() === "kimi"
+  ) {
     emit(errorDirective(
       `Kimi gate approval for "${slug}" requires the stage reservation carrier from gate-reserve.`,
     ));
@@ -4583,8 +4592,9 @@ function reserveKimiGateApproval(
       return { kind: "reserved", reservation, newlyArmed: true };
     } catch (cause) {
       // Another simultaneous retry may have won between the initial lookup
-      // and arm. Re-read under the reservation lock and converge on that exact
-      // route; unrelated or corrupt markers still fail loudly.
+      // and arm. Re-read through matchingKimiGateReservation, whose active
+      // lookup owns the reservation lock, and converge on that exact route;
+      // unrelated or corrupt markers still fail loudly.
       const winner = matchingKimiGateReservation(
         pd,
         sessionId,
@@ -4641,33 +4651,29 @@ export function handleGateReserve(
   const stageIndex = args.indexOf("--stage");
   const slug = stageIndex === -1 ? undefined : args[stageIndex + 1];
   if (!slug || slug.startsWith("--")) {
-    console.log(JSON.stringify(errorDirective("gate-reserve requires --stage <slug>.")));
+    emitStateNeutralError("gate-reserve requires --stage <slug>.");
     return;
   }
   if (detectHarnessType() !== "kimi") {
-    console.log(JSON.stringify(
-      errorDirective("gate-reserve is available only on the Kimi harness."),
-    ));
+    emitStateNeutralError("gate-reserve is available only on the Kimi harness.");
     return;
   }
   const sessionId = trustedHostSessionId(projectDir);
   if (!sessionId) {
-    console.log(JSON.stringify(
-      errorDirective("gate-reserve requires a trusted Kimi conductor session."),
-    ));
+    emitStateNeutralError(
+      "gate-reserve requires a trusted Kimi conductor session.",
+    );
     return;
   }
   const pd = resolveProjectDir(projectDir);
   const owner = kimiGateReservationOwner(pd);
   if (owner === null) {
-    console.log(JSON.stringify(
-      errorDirective("gate-reserve could not resolve one active intent."),
-    ));
+    emitStateNeutralError("gate-reserve could not resolve one active intent.");
     return;
   }
   const reserved = reserveKimiGateApproval(pd, sessionId, owner, slug);
   if (reserved.kind === "error") {
-    console.log(JSON.stringify(errorDirective(reserved.message)));
+    emitStateNeutralError(reserved.message);
     return;
   }
   const openError = openGateForKimiReservation(
@@ -4685,7 +4691,7 @@ export function handleGateReserve(
         reserved.newlyArmed,
       )
     ) {
-      console.log(JSON.stringify(errorDirective(openError)));
+      emitStateNeutralError(openError);
       return;
     }
   }
@@ -4714,21 +4720,19 @@ export function handleGateReject(
   const reservationId = value("--presence-reservation-id");
   const feedback = value("--feedback");
   if (!slug || !targetIntentId || !reservationId) {
-    console.log(JSON.stringify(errorDirective(
+    emitStateNeutralError(
       "gate-reject requires --stage, --target-intent-id, and --presence-reservation-id.",
-    )));
+    );
     return;
   }
   if (detectHarnessType() !== "kimi") {
-    console.log(JSON.stringify(
-      errorDirective("gate-reject is available only on the Kimi harness."),
-    ));
+    emitStateNeutralError("gate-reject is available only on the Kimi harness.");
     return;
   }
   if (!trustedHostSessionId(projectDir)) {
-    console.log(JSON.stringify(
-      errorDirective("gate-reject requires a trusted Kimi conductor session."),
-    ));
+    emitStateNeutralError(
+      "gate-reject requires a trusted Kimi conductor session.",
+    );
     return;
   }
   const pd = resolveProjectDir(projectDir);
@@ -4736,9 +4740,9 @@ export function handleGateReject(
   try {
     marker = readPresenceReservation(pd, reservationId);
   } catch (cause) {
-    console.log(JSON.stringify(
-      errorDirective(`Invalid presence reservation: ${errorMessage(cause)}`),
-    ));
+    emitStateNeutralError(
+      `Invalid presence reservation: ${errorMessage(cause)}`,
+    );
     return;
   }
   if (
@@ -4746,9 +4750,9 @@ export function handleGateReject(
     marker.targetIntentId !== targetIntentId ||
     marker.stage !== slug
   ) {
-    console.log(JSON.stringify(
-      errorDirective("Presence reservation does not match the gate rejection."),
-    ));
+    emitStateNeutralError(
+      "Presence reservation does not match the gate rejection.",
+    );
     return;
   }
   const rejectArgs = [
@@ -4767,10 +4771,10 @@ export function handleGateReject(
   const rejected = spawnState(pd, rejectArgs);
   if (rejected.exitCode !== 0) {
     const detail = (rejected.stderr || rejected.stdout).trim();
-    console.log(JSON.stringify(errorDirective(
+    emitStateNeutralError(
       `Transition rejected by amadeus-state.ts reject for "${slug}"` +
         (detail ? `: ${detail}` : "."),
-    )));
+    );
     return;
   }
   emit(printDirective(

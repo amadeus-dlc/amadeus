@@ -42,4 +42,4 @@
 - runtime role認証の残課題と Issue #1700 への分離をPR要約に明記する。
 - 関連 test、typecheck、lint、complexity gate が成功する。
 - `bun scripts/package.ts --check` と `bun run promote:self:check` が成功する。
-- 変更を Conventional Commit で1 commitにまとめ、push／PR作成は行わない。
+- VCS操作はユーザーの明示依頼に従い、1 Bolt＝1 PRとしてConventional Commit、push、PR作成まで行う。

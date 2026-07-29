@@ -379,15 +379,6 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       expect(tools).not.toContain("Write");
       expect(tools).not.toContain("Edit");
     }
-
-    // Both mutation entry points require Kimi's exact-cased Bash tool, which
-    // the profile allowlist excludes and Kimi re-checks before execution.
-    expect(["Bash", "Bash"]).toEqual(
-      [
-        `bun .kimi-code/tools/amadeus-orchestrate.ts next`,
-        `bun .kimi-code/tools/amadeus-state.ts park`,
-      ].map(() => "Bash"),
-    );
   });
 
   test("main and reviewer Stop shapes are both silent observation-only no-ops", () => {
@@ -463,6 +454,27 @@ describe("Kimi reviewer boundary and gate provenance", () => {
     expect(String(unreservedApproval.message)).toContain(
       "requires the stage reservation carrier",
     );
+
+    const completedRoot = freshWorkflow();
+    const completedStatePath = seededStateFile(completedRoot);
+    const completedState = readFileSync(completedStatePath, "utf-8")
+      .replace("- **In Progress**: requirements-analysis", "- **In Progress**: code-generation")
+      .replace("- [-] requirements-analysis — EXECUTE", "- [x] requirements-analysis — EXECUTE")
+      .replace("- [ ] code-generation — EXECUTE", "- [-] code-generation — EXECUTE")
+      .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation");
+    writeFileSync(completedStatePath, completedState);
+    const completedReplay = withHarness("kimi", () =>
+      captureDirective(() =>
+        handleReport([
+          "--stage",
+          "requirements-analysis",
+          "--result",
+          "approved",
+        ], completedRoot)
+      )
+    );
+    expect(completedReplay.kind).toBe("done");
+    expect(String(completedReplay.reason)).toContain("idempotent re-report");
 
     const first = reserveInProcess(root);
     if (first.kind !== "await-approval") {
@@ -1533,6 +1545,70 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       .toBe(first.presence_reservation_id);
     expect(auditBlockField(approvedBlock ?? "", "Presence Reservation Id"))
       .toBe(second.presence_reservation_id);
+  });
+
+  test("targeted rejection consumes with the session identity it verified", () => {
+    const root = freshWorkflow();
+    const ownerIntent = seededRecordDir(root).split("/").at(-1)!;
+    const reserved = reserveInProcess(root);
+    const reservationId = String(reserved.presence_reservation_id);
+    expect(
+      mintArmedPresenceReservation({
+        projectDir: root,
+        sessionId: "main-session",
+        requireRouteBinding: true,
+        route: {
+          eventName: "PostToolUse",
+          toolName: "AskUserQuestion",
+          purposeText: `Request Changes ${reservationId}`,
+        },
+      }).kind,
+    ).toBe("minted");
+
+    const currentSessionPath = join(
+      root,
+      "amadeus",
+      ".amadeus-sessions",
+      ".current-session",
+    );
+    const realReadFileSync = fs.readFileSync;
+    let sessionReads = 0;
+    const sessionRead = spyOn(fs, "readFileSync").mockImplementation(
+      ((path, options) => {
+        const value = realReadFileSync(path, options);
+        if (path === currentSessionPath && sessionReads++ === 0) {
+          writeFileSync(currentSessionPath, "replacement-session\n");
+        }
+        return value;
+      }) as typeof fs.readFileSync,
+    );
+
+    let rejected: Record<string, unknown>;
+    try {
+      rejected = withStateProject(root, () =>
+        captureDirective(() =>
+          handleReject([
+            "requirements-analysis",
+            "--feedback",
+            "Modify the error handling",
+            "--target-intent-id",
+            DEFAULT_INTENT_UUID,
+            "--presence-reservation-id",
+            reservationId,
+            "--intent",
+            ownerIntent,
+            "--space",
+            "default",
+          ])
+        )
+      );
+    } finally {
+      sessionRead.mockRestore();
+    }
+
+    expect(sessionReads).toBe(1);
+    expect(rejected.new_state).toBe("revising");
+    expect(readPresenceReservation(root, reservationId)?.state).toBe("consumed");
   });
 
   test("an interrupted Request Changes retry retires the stale carrier before approval", () => {

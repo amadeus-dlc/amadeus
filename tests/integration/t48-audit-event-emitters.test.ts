@@ -318,11 +318,12 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
       const auditWriter = functionBody("emitApprovalAudit", file);
       if (auditWriter !== null) live += `\n${decommented(auditWriter)}`;
     }
-    const targetedGateHandler = {
+    const targetedGateHandlers: Readonly<Record<string, string | undefined>> = {
       handleGateStart: "gateStartForTarget",
       handleReject: "rejectForTarget",
       handleRevise: "reviseForTarget",
-    }[handler];
+    };
+    const targetedGateHandler = targetedGateHandlers[handler];
     if (
       targetedGateHandler !== undefined &&
       new RegExp(`\\b${targetedGateHandler}\\b`).test(live)

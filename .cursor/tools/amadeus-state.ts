@@ -3938,33 +3938,38 @@ function rejectForTarget(args: string[], pd: string): void {
   validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
   const gateWasMissing = getSlugState(content, slug) === "in-progress";
 
-  let targetedReservation: PresenceReservation | null = null;
+  let targeted:
+    | { readonly reservation: PresenceReservation; readonly sessionId: string }
+    | null = null;
   if (targetIntentId !== undefined && reservationId !== undefined) {
     const sessionId = trustedHostSessionId();
     if (!sessionId) {
       error("Targeted rejection requires a trusted session identity");
     }
     try {
-      targetedReservation = verifyMintedPresenceReservation({
-        projectDir: pd,
+      targeted = {
+        reservation: verifyMintedPresenceReservation({
+          projectDir: pd,
+          sessionId,
+          reservationId,
+          targetIntentId,
+          stage: slug,
+        }),
         sessionId,
-        reservationId,
-        targetIntentId,
-        stage: slug,
-      });
+      };
     } catch (cause) {
       error(`Invalid targeted human presence: ${errorMessage(cause)}`);
     }
     if (
-      targetedReservation.targetIntentDir !== stateOperationTarget?.intent ||
-      targetedReservation.space !== stateOperationTarget?.space
+      targeted.reservation.targetIntentDir !== stateOperationTarget?.intent ||
+      targeted.reservation.space !== stateOperationTarget?.space
     ) {
       error("Presence reservation does not match the targeted rejection owner");
     }
     if (
       !targetedApprovalEvidence(
         operationReadAudit(pd),
-        targetedReservation,
+        targeted.reservation,
       ).humanTurnIsFresh
     ) {
       error("Targeted HUMAN_TURN is not fresh for the open gate");
@@ -3999,20 +4004,20 @@ function rejectForTarget(args: string[], pd: string): void {
     }
     const rejFields: Record<string, string> = { Stage: slug };
     if (feedback) rejFields.Feedback = feedback;
-    if (targetedReservation !== null) {
+    if (targeted !== null) {
       rejFields["Presence Reservation Id"] =
-        targetedReservation.reservationId;
+        targeted.reservation.reservationId;
     }
     emitAudit(pd, "GATE_REJECTED", rejFields);
     emitAudit(pd, "STAGE_REVISING", {
       Stage: slug,
       "Revision count": String(revCount),
       ...(feedback ? { Feedback: feedback } : {}),
-      ...(targetedReservation === null
+      ...(targeted === null
         ? {}
         : {
             "Presence Reservation Id":
-              targetedReservation.reservationId,
+              targeted.reservation.reservationId,
           }),
     });
   } catch (e) {
@@ -4020,12 +4025,12 @@ function rejectForTarget(args: string[], pd: string): void {
   }
 
   operationWriteState(pd, content);
-  if (targetedReservation !== null) {
+  if (targeted !== null) {
     consumePresenceReservation({
       projectDir: pd,
-      sessionId: trustedHostSessionId()!,
-      reservationId: targetedReservation.reservationId,
-      targetIntentId: targetedReservation.targetIntentId,
+      sessionId: targeted.sessionId,
+      reservationId: targeted.reservation.reservationId,
+      targetIntentId: targeted.reservation.targetIntentId,
       stage: slug,
     });
   }
