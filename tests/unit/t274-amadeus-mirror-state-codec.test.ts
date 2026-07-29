@@ -149,6 +149,59 @@ describe("codec rejection", () => {
     ).toBe("invalid");
   });
 
+  test("projectSyncRevision must be a positive safe integer when present", () => {
+    const event = ev("sync");
+    const snapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 1,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          projectSyncRevision: 0,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("projectSyncRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 1,
+          projectSyncRevision: 3,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("projectSyncRevision cannot precede createdRevision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 3,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 2,
+          projectSyncRevision: 1,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
   test("authorization receiptRevision cannot exceed the snapshot revision", () => {
     const event = ev("sync");
     const snapshot: MirrorStateSnapshot = {

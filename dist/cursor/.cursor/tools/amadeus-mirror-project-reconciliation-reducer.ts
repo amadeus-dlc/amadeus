@@ -302,6 +302,7 @@ function reduceHoldForProjectSync(
   const held: MirrorOperationReceipt = {
     ...receipt,
     status: "pending",
+    projectSyncRevision: snapshot.revision + 1,
     projectSyncHold: {
       reason: "project-sync-unsettled",
       heldAt: transition.heldAt,
@@ -311,8 +312,9 @@ function reduceHoldForProjectSync(
   return changed(withReceipt(snapshot, key, held));
 }
 
-// Disabling every configured Project retires the barrier without claiming that
-// a Project query converged.
+// Disabling every configured Project, or transferring responsibility to a
+// newer receipt, retires the barrier without claiming that this receipt's
+// Project query converged.
 function reduceRetireProjectSyncHold(
   snapshot: MirrorStateSnapshot,
   transition: RetireProjectSyncHoldTransition,

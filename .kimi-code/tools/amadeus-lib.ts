@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5414,14 +5414,14 @@ function ownerStampPath(lockDir: string): string {
 // the same 32-bit-hashed path is never robbed). Cleared on release.
 const AUDIT_LOCK_OWNED_STAMPS = new Map<string, LockOwner>();
 
-function writeOwnerStamp(lockDir: string, key: string): void {
+function writeOwnerStamp(lockDir: string, key: string): boolean {
   const owner: LockOwner = { pid: process.pid, startedAtMs: lockAcquireEpochMs() };
   try {
     writeFileSync(ownerStampPath(lockDir), JSON.stringify(owner), "utf-8");
     AUDIT_LOCK_OWNED_STAMPS.set(key, owner);
+    return true;
   } catch {
-    // Best-effort: a missing stamp degrades the reaper to age-only on the next
-    // waiter (it can't read a PID), never to incorrectness.
+    return false;
   }
 }
 
@@ -5564,9 +5564,9 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
   return now.pid === judged.pid && now.startedAtMs === judged.startedAtMs;
 }
 
-// Reclaim a lock iff it is provably dead (owner gone) OR stale (over-age). A
-// live, under-threshold holder is left alone (returns false). Returns true iff
-// THIS call freed the dir.
+// Reclaim a lock when its owner is gone, and optionally when a live owner is
+// over-age. Unbounded async sections use dead-owner-only so duration can never
+// break mutual exclusion. Returns true iff THIS call freed the dir.
 //
 // MUTUAL-EXCLUSION SAFETY (compare-and-swap steal): the staleness DECISION (read
 // stamp, judge dead/over-age) and the steal are not one OS-atomic operation, so
@@ -5610,10 +5610,10 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
 // stampMatches verify in step 2 is kept as defense-in-depth. A reaper killed
 // while holding the mutex is recovered by age (reapMutexStaleMs) via the same
 // CAS-rename idiom, and mutex loss is fail-safe: the waiter just retries.
-function reapStaleLock(lockDir: string): boolean {
+function reapStaleLock(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
   if (!acquireReapMutex(lockDir)) return false; // another reaper is mid-steal — let it finish
   try {
-    return reapStaleLockUnderMutex(lockDir);
+    return reapStaleLockUnderMutex(lockDir, reapPolicy);
   } finally {
     try {
       rmSync(reapMutexPath(lockDir), { recursive: true, force: true });
@@ -5681,7 +5681,17 @@ function acquireReapMutex(lockDir: string): boolean {
   }
 }
 
-function reapStaleLockUnderMutex(lockDir: string): boolean {
+function liveOwnerMayBeReaped(
+  owner: LockOwner,
+  reapPolicy: AuditLockReapPolicy,
+): boolean {
+  return (
+    reapPolicy === "dead-or-over-age" &&
+    lockAcquireEpochMs() - owner.startedAtMs > lockStaleMs()
+  );
+}
+
+function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
   const owner = readOwnerStamp(lockDir);
   if (owner === null) {
     // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
@@ -5695,8 +5705,8 @@ function reapStaleLockUnderMutex(lockDir: string): boolean {
     // else: an old unstamped dir → genuine leak, fall through to steal.
   } else if (ownerAlive(owner)) {
     // Live owner: only reclaim if its stamp is over-age (a wedged-but-running
-    // holder). A fresh, live holder is never robbed.
-    if (lockAcquireEpochMs() - owner.startedAtMs <= lockStaleMs()) return false;
+    // holder) when the caller's critical section has a bounded duration.
+    if (!liveOwnerMayBeReaped(owner, reapPolicy)) return false;
   }
   // STEP 1 — CAS swap: move the dir to a reaper-private nonce path. This is the
   // atomic arbiter; only one process wins the rename of a given dir.
@@ -5730,29 +5740,53 @@ function reapStaleLockUnderMutex(lockDir: string): boolean {
   return true;
 }
 
+export type AuditLockReapPolicy =
+  | "dead-or-over-age"
+  | "dead-owner-only";
+
+function finalizeAuditLockAcquire(
+  lockDir: string,
+  key: string,
+  reapPolicy: AuditLockReapPolicy,
+): boolean {
+  // Bounded audit sections may degrade to age-only. Unbounded sections require
+  // a live PID stamp and fail closed before entering their critical section.
+  if (writeOwnerStamp(lockDir, key)) return true;
+  if (reapPolicy === "dead-or-over-age") return true;
+  removeLockDirIfOwned(lockDir, key);
+  if (existsSync(lockDir)) {
+    try {
+      chmodSync(lockDir, 0o700);
+    } catch {
+      // The acquire still fails closed; a later dead/unstamped reap can retry.
+    }
+    removeLockDirIfOwned(lockDir, key);
+  }
+  return false;
+}
+
 export function acquireAuditLock(
   projectDir: string,
   maxRetries = 50,
   retryMs = 100,
   intent?: string,
   space?: string,
+  reapPolicy: AuditLockReapPolicy = "dead-or-over-age",
 ): boolean {
   const lockDir = auditLockDir(projectDir, intent, space);
   const key = auditLockIdentity(projectDir, intent, space);
   for (let i = 0; i <= maxRetries; i++) {
     try {
       mkdirSync(lockDir);
-      writeOwnerStamp(lockDir, key);
-      return true;
+      return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
     } catch {
       // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale
       // holder so a SIGKILL'd owner doesn't wedge every waiter for the full
       // retry budget. If we reap, retry the mkdir immediately (next loop turn).
-      if (reapStaleLock(lockDir)) {
+      if (reapStaleLock(lockDir, reapPolicy)) {
         try {
           mkdirSync(lockDir);
-          writeOwnerStamp(lockDir, key);
-          return true;
+          return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
         } catch {
           // another waiter beat us to the freed dir — fall through to sleep
         }

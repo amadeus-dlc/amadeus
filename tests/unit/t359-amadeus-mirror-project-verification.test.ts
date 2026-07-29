@@ -7,6 +7,7 @@ import {
   currentFinalSyncEvidenceKey,
   finalSyncEvidenceReady,
   finalSyncReceiptKey,
+  latestProjectReconciliationReceiptKey,
   prepareCompletionProjectVerification,
   selectCompletionSyncReconciliation,
 } from "../../packages/framework/core/tools/amadeus-mirror-project-verification.ts";
@@ -189,6 +190,99 @@ describe("t359 exact completion verification selection", () => {
         manual,
       ),
     ).toBe(causallyNewer.key);
+  });
+
+  test("Project reconciliation follows receipt revision and ignores close", () => {
+    const olderPhase = createdAtRevision(
+      receipt(
+        {
+          kind: "phase-verified",
+          phase: "ideation",
+          instance: "older-phase",
+        },
+        "sync",
+        "pending",
+        LATER,
+      ),
+      10,
+    );
+    const newerCompletion = createdAtRevision(
+      receipt(completion("newer-completion"), "sync", "succeeded", NOW),
+      20,
+    );
+    const latestClose = createdAtRevision(
+      receipt(completion("newer-completion"), "close", "succeeded", LATER),
+      30,
+    );
+
+    expect(
+      latestProjectReconciliationReceiptKey(
+        withReceipts(olderPhase, newerCompletion, latestClose),
+        INTENT,
+      ),
+    ).toBe(newerCompletion.key);
+    expect(
+      latestProjectReconciliationReceiptKey(
+        withReceipts(latestClose, newerCompletion, olderPhase),
+        INTENT,
+      ),
+    ).toBe(newerCompletion.key);
+  });
+
+  test("a re-held completion becomes the newest Project reconciler", () => {
+    const reheldCompletion = {
+      ...createdAtRevision(
+        receipt(completion("older-completion"), "sync", "pending", NOW),
+        10,
+      ),
+      projectSyncRevision: 30,
+    };
+    const laterPhase = createdAtRevision(
+      receipt(
+        {
+          kind: "phase-verified",
+          phase: "construction",
+          instance: "later-phase",
+        },
+        "sync",
+        "succeeded",
+        LATER,
+      ),
+      20,
+    );
+    const state = {
+      ...withReceipts(reheldCompletion, laterPhase),
+      revision: 30,
+    };
+
+    expect(
+      latestProjectReconciliationReceiptKey(state, INTENT),
+    ).toBe(reheldCompletion.key);
+  });
+
+  test("a Project re-hold does not change completion receipt ordering", () => {
+    const olderReheld = {
+      ...createdAtRevision(
+        receipt(completion("older"), "sync", "succeeded", LATER),
+        10,
+      ),
+      projectSyncRevision: 30,
+    };
+    const newer = createdAtRevision(
+      receipt(completion("newer"), "sync", "succeeded", NOW),
+      20,
+    );
+    const manual = mirrorEventIdentity(
+      INTENT,
+      { kind: "manual", instance: "manual-close" },
+      "close",
+    );
+    const state = {
+      ...withReceipts(olderReheld, newer),
+      revision: 30,
+    };
+
+    expect(finalSyncReceiptKey(state, manual)).toBe(newer.key);
   });
 
   test("legacy evidence makes wall clock the common migration order", () => {

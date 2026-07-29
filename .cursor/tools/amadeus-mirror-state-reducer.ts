@@ -305,6 +305,7 @@ type CompletionTransition =
 function completedReceipt(
   receipt: MirrorOperationReceipt,
   transition: CompletionTransition,
+  nextRevision: number,
 ): MirrorOperationReceipt {
   if (transition.kind === "complete") {
     const succeeded: MirrorOperationReceipt = {
@@ -329,6 +330,7 @@ function completedReceipt(
       reason: "project-sync-unsettled",
       heldAt: transition.heldAt,
     },
+    projectSyncRevision: nextRevision,
   };
   delete (held as { failureClass?: MirrorFailureClass }).failureClass;
   delete (held as { lastEffect?: MirrorMutationEffect }).lastEffect;
@@ -446,7 +448,7 @@ function reduceComplete(
     snapshot,
     transition,
     receipt,
-    completedReceipt(receipt, transition),
+    completedReceipt(receipt, transition, snapshot.revision + 1),
   );
 }
 

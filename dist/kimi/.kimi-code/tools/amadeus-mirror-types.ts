@@ -79,6 +79,10 @@ export type MirrorOperationReceipt = Readonly<{
   // State revision that first created this receipt. Older persisted receipts
   // omit it; authorization.receiptRevision remains their migration fallback.
   createdRevision?: number;
+  // State revision that most recently placed this receipt in charge of
+  // Project reconciliation. Re-holding an older completion receipt advances
+  // this independently from its immutable creation revision.
+  projectSyncRevision?: number;
   status: MirrorReceiptStatus;
   preparedAt: string;
   attemptedAt?: string;

@@ -727,20 +727,32 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "lines": "1428-1432",
+    "reason": "The held receipt was parsed from the same valid snapshot and necessarily participates in latestProjectReconciliationReceiptKey for its intent. Invalid timestamps fail during state parsing before this defensive fail-closed branch; t359 covers the selector's none and invalid outcomes directly.",
+    "expiry": "remove if held receipts can be excluded from Project reconciliation ordering or the selector returns a typed invariant result"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "953-960",
+    "lines": "954-961",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1128-1135",
+    "lines": "1137-1144",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1421-1429",
+    "lines": "1430-1431",
+    "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "lines": "1454-1459",
     "reason": "state codec unit and integration suites exercise strict JSON controls, schema validation, splice, and round-trip behavior; these residual rows are multiline document-copy construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -764,55 +776,55 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "369-371",
+    "lines": "371-373",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "418-420",
+    "lines": "420-422",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "422-424",
+    "lines": "424-426",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "426-428",
+    "lines": "428-430",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "447-448",
+    "lines": "449-450",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "492",
+    "lines": "494",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "567-570",
+    "lines": "569-572",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "578-587",
+    "lines": "580-589",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "817",
+    "lines": "819",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },

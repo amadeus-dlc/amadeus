@@ -125,9 +125,7 @@ export class ProjectGateway implements MirrorGitHubGateway {
     return ok(this.issue);
   }
 
-  async findIssuesByMarker(): Promise<
-    GatewayOutcome<readonly RemoteMirrorIssue[]>
-  > {
+  async findIssuesByMarker(): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
     this.history.push("find");
     return ok([]);
   }

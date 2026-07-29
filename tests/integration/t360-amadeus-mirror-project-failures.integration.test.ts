@@ -531,30 +531,31 @@ describe("t342 failure containment", () => {
       },
     });
     const phaseLocalState = store.state();
-    const phaseOutcome = await (async () => {
-      try {
-        return await executeMirrorOperation({
-          context: {
-            ...phaseContext,
-            authorization: {
-              ...phaseContext.authorization,
-              receiptRevision: phaseLocalState.revision + 1,
-            },
-          },
-          ports: store.ports,
-          localState: phaseLocalState,
-        });
-      } finally {
-        releaseCompletion.resolve();
-      }
-    })();
-    const completionOutcome = await completion;
-
-    expect(phaseOutcome).toEqual({
-      kind: "completed",
-      operation: "sync",
-      issueNumber: 7,
+    const authorizedPhaseContext = {
+      ...phaseContext,
+      authorization: {
+        ...phaseContext.authorization,
+        receiptRevision: phaseLocalState.revision + 1,
+      },
+    };
+    const blockedPhaseOutcome = await executeMirrorOperation({
+      context: authorizedPhaseContext,
+      ports: store.ports,
+      localState: phaseLocalState,
     });
+
+    expect(blockedPhaseOutcome).toMatchObject({
+      kind: "pending",
+      operation: "sync",
+      warning: {
+        classification: "state-write",
+        summary: "Project reconciliation lock is unavailable",
+      },
+    });
+    expect(projectCalls(phaseGateway)).toEqual([]);
+
+    releaseCompletion.resolve();
+    const completionOutcome = await completion;
     expect(completionOutcome).toMatchObject({
       kind: "pending",
       operation: "sync",
@@ -563,6 +564,18 @@ describe("t342 failure containment", () => {
         summary:
           "Project reconciliation could not be committed atomically: state compare-and-set conflict",
       },
+    });
+
+    const phaseOutcome = await executeMirrorOperation({
+      context: authorizedPhaseContext,
+      ports: store.ports,
+      localState: store.state(),
+    });
+
+    expect(phaseOutcome).toEqual({
+      kind: "completed",
+      operation: "sync",
+      issueNumber: 7,
     });
     expect(remoteBoard.phase).toBe("Ideation");
     expect(completionGateway.history).toContain("option:opt-done");

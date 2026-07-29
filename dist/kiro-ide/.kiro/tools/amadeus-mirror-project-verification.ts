@@ -67,25 +67,26 @@ function compareNumbersNewestFirst(left: number, right: number): number {
   return left < right ? 1 : left > right ? -1 : 0;
 }
 
-type CompletionSyncSelection =
+type OrderedReceiptSelection =
   | { kind: "none" }
   | { kind: "invalid" }
   | {
       kind: "receipt";
       key: string;
       receipt: MirrorOperationReceipt;
+      orderRevision: number | undefined;
       effectiveAt: number;
       preparedAt: number;
     };
 
-type SelectedCompletionReceipt = Extract<
-  CompletionSyncSelection,
+type SelectedOrderedReceipt = Extract<
+  OrderedReceiptSelection,
   { kind: "receipt" }
 >;
 
 function compareReceiptTimes(
-  left: SelectedCompletionReceipt,
-  right: SelectedCompletionReceipt,
+  left: SelectedOrderedReceipt,
+  right: SelectedOrderedReceipt,
 ): number {
   return (
     compareNumbersNewestFirst(left.effectiveAt, right.effectiveAt) ||
@@ -96,13 +97,13 @@ function compareReceiptTimes(
   );
 }
 
-function compareCompletionReceipts(
-  left: SelectedCompletionReceipt,
-  right: SelectedCompletionReceipt,
+function compareOrderedReceipts(
+  left: SelectedOrderedReceipt,
+  right: SelectedOrderedReceipt,
   legacyRevisionOrdered: boolean,
 ): number {
-  const leftCurrentRevision = left.receipt.createdRevision;
-  const rightCurrentRevision = right.receipt.createdRevision;
+  const leftCurrentRevision = left.orderRevision;
+  const rightCurrentRevision = right.orderRevision;
   if (leftCurrentRevision !== undefined || rightCurrentRevision !== undefined) {
     if (leftCurrentRevision === undefined) return 1;
     if (rightCurrentRevision === undefined) return -1;
@@ -129,18 +130,12 @@ function compareCompletionReceipts(
   return compareReceiptTimes(left, right);
 }
 
-function latestCompletionSyncReceipt(
-  state: MirrorStateSnapshot,
-  intentUuid: string,
-): CompletionSyncSelection {
-  const candidates = Object.entries(state.receipts).filter(
-    ([, receipt]) =>
-      receipt.event.intentUuid === intentUuid &&
-      receipt.event.boundary.kind === "workflow-completed" &&
-      receipt.event.operation === "sync",
-  );
+function latestOrderedReceipt(
+  candidates: readonly (readonly [string, MirrorOperationReceipt])[],
+  orderRevision: (receipt: MirrorOperationReceipt) => number | undefined,
+): OrderedReceiptSelection {
   if (candidates.length === 0) return { kind: "none" };
-  const ordered: SelectedCompletionReceipt[] = [];
+  const ordered: SelectedOrderedReceipt[] = [];
   for (const [key, receipt] of candidates) {
     const effectiveAt = mirrorTimestampEpoch(
       receipt.completedAt ?? receipt.preparedAt,
@@ -153,19 +148,55 @@ function latestCompletionSyncReceipt(
       kind: "receipt",
       key,
       receipt,
+      orderRevision: orderRevision(receipt),
       effectiveAt,
       preparedAt,
     });
   }
   const legacyRevisionOrdered = ordered
-    .filter(({ receipt }) => receipt.createdRevision === undefined)
+    .filter(({ orderRevision }) => orderRevision === undefined)
     .every(
       ({ receipt }) => receipt.authorization?.receiptRevision !== undefined,
-    );
+  );
   ordered.sort((left, right) =>
-    compareCompletionReceipts(left, right, legacyRevisionOrdered)
+    compareOrderedReceipts(left, right, legacyRevisionOrdered)
   );
   return ordered[0];
+}
+
+function latestCompletionSyncReceipt(
+  state: MirrorStateSnapshot,
+  intentUuid: string,
+): OrderedReceiptSelection {
+  return latestOrderedReceipt(
+    Object.entries(state.receipts).filter(
+      ([, receipt]) =>
+        receipt.event.intentUuid === intentUuid &&
+        receipt.event.boundary.kind === "workflow-completed" &&
+        receipt.event.operation === "sync",
+    ),
+    (receipt) => receipt.createdRevision,
+  );
+}
+
+// Project create/sync receipts are causally ordered by the state revision that
+// most recently assigned reconciliation responsibility. A re-held receipt may
+// therefore outrank events created after it; legacy receipts retain the same
+// creation/timestamp fallback used by completion verification.
+export function latestProjectReconciliationReceiptKey(
+  state: MirrorStateSnapshot,
+  intentUuid: string,
+): string | undefined {
+  const latest = latestOrderedReceipt(
+    Object.entries(state.receipts).filter(
+      ([, receipt]) =>
+        receipt.event.intentUuid === intentUuid &&
+        (receipt.event.operation === "create" ||
+          receipt.event.operation === "sync"),
+    ),
+    (receipt) => receipt.projectSyncRevision ?? receipt.createdRevision,
+  );
+  return latest.kind === "receipt" ? latest.key : undefined;
 }
 
 function closeVerificationRequested(

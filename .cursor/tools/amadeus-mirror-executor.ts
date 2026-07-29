@@ -6,7 +6,10 @@
 import { createMirrorMutationPermit } from "./amadeus-mirror-capability.ts";
 import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
 import { syncProjects as reconcileProjects } from "./amadeus-mirror-project-executor.ts";
-import { finalSyncEvidenceReady } from "./amadeus-mirror-project-verification.ts";
+import {
+  finalSyncEvidenceReady,
+  latestProjectReconciliationReceiptKey,
+} from "./amadeus-mirror-project-verification.ts";
 import {
   classifyCandidates,
   createIdentityMatchesContext,
@@ -15,6 +18,8 @@ import {
 } from "./amadeus-mirror-provenance.ts";
 import type { MirrorTransition } from "./amadeus-mirror-state-reducer.ts";
 import {
+  createMirrorProjectReconciliationLock,
+  type MirrorProjectReconciliationLock,
   type MirrorStateStorePorts,
   mutateMirrorStateAtomic,
   readMirrorState,
@@ -36,10 +41,13 @@ import type {
 
 export type { ProjectReconcileResult } from "./amadeus-mirror-project-executor.ts";
 
+export type ProjectReconciliationLock = MirrorProjectReconciliationLock;
+
 export type ExecuteMirrorOperationInput = Readonly<{
   context: MirrorExecutionContext;
   ports: MirrorStateStorePorts;
   localState: MirrorStateSnapshot;
+  projectReconciliationLock?: ProjectReconciliationLock;
 }>;
 
 type StateResult =
@@ -1403,7 +1411,7 @@ function loadHeldProjectSyncBarrier(
 // rows, any board-wide warning, and the receipt decision as one state
 // transition. A failed commit leaves the durable hold untouched; the next
 // boundary re-queries GitHub and rebuilds the whole plan.
-async function reconcileHeldProjects(
+async function reconcileHeldProjectsUnderLock(
   input: ExecuteMirrorOperationInput,
   outcome: Extract<MirrorOperationOutcome, { kind: "completed" }>,
 ): Promise<MirrorOperationOutcome> {
@@ -1411,6 +1419,43 @@ async function reconcileHeldProjects(
   const barrier = loadHeldProjectSyncBarrier(input, outcome);
   if (barrier.kind === "outcome") return barrier.outcome;
   const { snapshot, receipt } = barrier;
+
+  const latestReceiptKey = latestProjectReconciliationReceiptKey(
+    snapshot,
+    input.context.intentUuid,
+  );
+  if (latestReceiptKey === undefined) {
+    return pendingProjectSync(
+      input,
+      "state-write",
+      "Project reconciliation receipt order could not be established",
+      snapshot,
+    );
+  }
+  if (latestReceiptKey !== receipt.key) {
+    const retired = applyTransition(
+      ports,
+      context,
+      snapshot,
+      {
+        kind: "retire-project-sync-hold",
+        event: context.event,
+        operationId: receipt.operationId,
+      },
+      receipt.operationId,
+      true,
+      undefined,
+      true,
+    );
+    return retired.kind === "ok"
+      ? outcome
+      : pendingProjectSync(
+          input,
+          "state-write",
+          `Superseded Project reconciliation could not be retired atomically: ${retired.summary}`,
+          snapshot,
+        );
+  }
 
   const projects = await reconcileProjects(context, outcome.issueNumber);
   if (projects.kind === "not-required") {
@@ -1481,4 +1526,28 @@ async function reconcileHeldProjects(
     "Project reconciliation committed without durable receipt verification",
     result.snapshot,
   );
+}
+
+async function reconcileHeldProjects(
+  input: ExecuteMirrorOperationInput,
+  outcome: Extract<MirrorOperationOutcome, { kind: "completed" }>,
+): Promise<MirrorOperationOutcome> {
+  const initialBarrier = loadHeldProjectSyncBarrier(input, outcome);
+  if (initialBarrier.kind === "outcome") return initialBarrier.outcome;
+
+  const lock = input.projectReconciliationLock ??
+    createMirrorProjectReconciliationLock(input.context.statePath);
+  if (!lock.acquire()) {
+    return pendingProjectSync(
+      input,
+      "state-write",
+      "Project reconciliation lock is unavailable",
+      initialBarrier.snapshot,
+    );
+  }
+  try {
+    return await reconcileHeldProjectsUnderLock(input, outcome);
+  } finally {
+    lock.release();
+  }
 }

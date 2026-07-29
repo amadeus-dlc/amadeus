@@ -494,6 +494,7 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "event",
   "operationId",
   "createdRevision",
+  "projectSyncRevision",
   "status",
   "preparedAt",
   "attemptedAt",
@@ -997,6 +998,12 @@ function validateReceipt(
     path,
     issues,
   );
+  const projectSyncRevision = optionalPositiveInt(
+    v,
+    "projectSyncRevision",
+    path,
+    issues,
+  );
   const status = reqEnum(v, "status", RECEIPT_STATUSES, "receipt status", path, issues);
   const preparedAt = reqTimestamp(v, "preparedAt", path, issues);
   const event = validateEvent(v.event, `${path}.event`, issues);
@@ -1036,9 +1043,11 @@ function validateReceipt(
     createIdentity,
     authorization,
   });
-  return createdRevision === undefined
-    ? receipt
-    : { ...receipt, createdRevision };
+  return {
+    ...receipt,
+    ...(createdRevision === undefined ? {} : { createdRevision }),
+    ...(projectSyncRevision === undefined ? {} : { projectSyncRevision }),
+  };
 }
 
 function buildReceipt(input: {
@@ -1421,6 +1430,27 @@ function validateReceiptMap(
   return receipts;
 }
 
+function checkProjectSyncRevisionInvariants(
+  receipt: MirrorOperationReceipt,
+  snapshotRevision: number,
+  path: string,
+  issues: string[],
+): void {
+  const projectSyncRevision = receipt.projectSyncRevision;
+  if (projectSyncRevision === undefined) return;
+  if (projectSyncRevision > snapshotRevision) {
+    issues.push(`${path}.projectSyncRevision: must not exceed $.revision`);
+  }
+  if (
+    receipt.createdRevision !== undefined &&
+    projectSyncRevision < receipt.createdRevision
+  ) {
+    issues.push(
+      `${path}.projectSyncRevision: must not precede createdRevision`,
+    );
+  }
+}
+
 function checkReceiptRevisionInvariants(
   receipts: Readonly<Record<string, MirrorOperationReceipt>>,
   snapshotRevision: number | undefined,
@@ -1436,6 +1466,12 @@ function checkReceiptRevisionInvariants(
     ) {
       issues.push(`${path}.createdRevision: must not exceed $.revision`);
     }
+    checkProjectSyncRevisionInvariants(
+      receipt,
+      snapshotRevision,
+      path,
+      issues,
+    );
     if (
       authorizationRevision !== undefined &&
       authorizationRevision > snapshotRevision
@@ -1713,6 +1749,9 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
     ...(r.createdRevision === undefined
       ? {}
       : { createdRevision: r.createdRevision }),
+    ...(r.projectSyncRevision === undefined
+      ? {}
+      : { projectSyncRevision: r.projectSyncRevision }),
     status: r.status,
     preparedAt: r.preparedAt,
   };

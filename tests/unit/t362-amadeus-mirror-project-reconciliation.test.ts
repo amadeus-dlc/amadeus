@@ -145,6 +145,7 @@ describe("t344 receipt hold", () => {
     expect(completed).toMatchObject({
       status: "pending",
       completedAt: NOW,
+      projectSyncRevision: 1,
       projectSyncHold: {
         reason: "project-sync-unsettled",
         heldAt: LATER,
@@ -209,7 +210,25 @@ describe("t344 receipt hold", () => {
       reason: "project-sync-unsettled",
       heldAt: LATER,
     });
+    expect(held.projectSyncRevision).toBe(1);
     expect(held.projectSyncVerified).toBeUndefined();
+  });
+
+  test("re-holding an older receipt records the new reconciliation revision", () => {
+    const snapshot = {
+      ...withReceipt(
+        receipt("succeeded", {
+          createdRevision: 2,
+          projectSyncRevision: 5,
+        }),
+      ),
+      revision: 12,
+    };
+
+    const held = heldReceipt(reduce(snapshot, HOLD));
+
+    expect(held.createdRevision).toBe(2);
+    expect(held.projectSyncRevision).toBe(13);
   });
 
   test("the hold makes no claim about the Issue mutation", () => {
@@ -247,6 +266,7 @@ describe("t344 receipt hold", () => {
     expect(settled.status).toBe("succeeded");
     expect(settled.projectSyncHold).toBeUndefined();
     expect(settled.projectSyncVerified).toBe(true);
+    expect(settled.projectSyncRevision).toBe(1);
   });
 
   test("an unheld receipt cannot mint Project verification", () => {
@@ -298,6 +318,7 @@ describe("t344 receipt hold", () => {
     });
     expect(settled.projectSyncHold).toBeUndefined();
     expect(settled.projectSyncVerified).toBeUndefined();
+    expect(settled.projectSyncRevision).toBe(1);
     expect(retired.kind === "changed" && retired.snapshot.warnings).toEqual([]);
     expect(retired.kind === "changed" && retired.snapshot.issueNumber).toBe(7);
     expect(retired.kind === "changed" && retired.snapshot.provenance).toEqual(
@@ -515,6 +536,7 @@ describe("t344 atomic Project reconciliation", () => {
     expect(result.snapshot.receipts[KEY]).toMatchObject({
       status: "succeeded",
       completedAt: NOW,
+      projectSyncRevision: 1,
       projectSyncVerified: true,
     });
     expect(result.snapshot.receipts[KEY].projectSyncHold).toBeUndefined();
@@ -788,7 +810,10 @@ describe("t344 hold survives the state document", () => {
     const once = reduce(withReceipt(receipt("succeeded")), HOLD);
     if (once.kind !== "changed") throw new Error("expected changed");
     const parsed = parseMirrorStateDocument(
-      `# State\n\n${renderMirrorStateBlock(once.snapshot)}\n`,
+      `# State\n\n${renderMirrorStateBlock({
+        ...once.snapshot,
+        revision: 1,
+      })}\n`,
     );
     if (parsed.kind !== "ok") {
       throw new Error(`unexpected invalid parse: ${parsed.issues.join("; ")}`);
@@ -797,6 +822,7 @@ describe("t344 hold survives the state document", () => {
       reason: "project-sync-unsettled",
       heldAt: LATER,
     });
+    expect(parsed.snapshot.receipts[KEY].projectSyncRevision).toBe(1);
     expect(parsed.snapshot.receipts[KEY].failureClass).toBeUndefined();
   });
 
