@@ -182,6 +182,7 @@ describe("standing grant gate eligibility", () => {
     ["off", "amadeus-feature", "eligible"],
     ["scope-dependent", "amadeus-feature", "ineligible"],
     [undefined, "amadeus-feature", "ineligible"],
+    ["scope-dependent", "amadeus-fix", "eligible"],
     ["scope-dependent", "amadeus-bugfix", "eligible"],
     [undefined, "unknown-scope", "ineligible"],
   ] as const)("resolves stance %p and scope %s fail-closed", (stance, scope, expected) => {

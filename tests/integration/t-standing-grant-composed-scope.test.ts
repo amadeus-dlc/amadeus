@@ -1,7 +1,7 @@
 // covers: function:standingGrantSatisfiesGate, function:evaluateStandingGrantGateEligibility
 //
 // Issue #1497: a standing delegation grant must classify gates the same way for
-// a COMPOSED workflow scope (amadeus-feature / amadeus-bugfix / …) as it does
+// a COMPOSED workflow scope (amadeus-feature / amadeus-fix / …) as it does
 // for a stock scope. Composed scopes exist ONLY in the compiled scope-grid —
 // stage frontmatter carries the stock vocabulary — so the pre-fix predicate,
 // which read stage.scopes directly, saw every stage as out-of-scope under a
@@ -93,6 +93,28 @@ function stateContent(scope: string, stance?: string): string {
 function executePath(scope: string): StageEntry[] {
   return GRAPH.filter((stage) => GRID[scope]?.stages[stage.slug] === "EXECUTE");
 }
+
+describe("amadeus-fix canonical scope and compatibility alias", () => {
+  test("the deprecated amadeus-bugfix alias preserves the canonical route", () => {
+    expect(GRID["amadeus-fix"]).toEqual(GRID["amadeus-bugfix"]);
+    expect(loadScopeMapping()["amadeus-fix"]?.depth).toBe("Minimal");
+    expect(loadScopeMapping()["amadeus-bugfix"]?.depth).toBe("Minimal");
+  });
+
+  test("the canonical scope participates in composed-scope gate classification", () => {
+    expect(executePath("amadeus-fix").map((stage) => stage.slug)).toContain(
+      "reverse-engineering",
+    );
+    expect(
+      standingGrantSatisfiesGate(
+        grantWith(false),
+        "reverse-engineering",
+        stateContent("amadeus-fix"),
+        GRAPH,
+      ),
+    ).toBe(true);
+  });
+});
 
 describe("#1497 FR-1: composed-scope gate classification (symptom A)", () => {
   test("RED: an opt-out grant covers an ordinary same-phase gate under amadeus-bugfix", () => {

@@ -29,7 +29,7 @@ then intent-capture, reverse-engineering, requirements-analysis,
 functional-design, code-generation, and build-and-test.
 
 **intent-capture** executes because the target document set is the
-genuinely open question. The sibling incremental scopes (`amadeus-bugfix`,
+genuinely open question. The sibling incremental scopes (`amadeus-fix`,
 `amadeus-refactor`) skip it since their subject is already fixed by an
 Issue or a named module; documentation work arrives with "update the
 docs", and which pages, for which reader, to what depth has to be pinned

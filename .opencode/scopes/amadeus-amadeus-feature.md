@@ -15,7 +15,7 @@ out, while the requirements, architecture, NFR, implementation, and
 release-quality verification spine remains.
 
 Use this scope for substantial new behavior or cross-component changes. Use
-`amadeus-bugfix` for a bounded defect and `amadeus-refactor` for a
-behavior-preserving structural change.
+`amadeus-fix` for a bounded correction to an existing contract and
+`amadeus-refactor` for a behavior-preserving structural change.
 
 Not inferable by keyword; select it explicitly with `--scope amadeus-feature`.

@@ -4029,6 +4029,7 @@ const SKELETON_OFF_SCOPES: ReadonlySet<string> = new Set([
   "refactor",
   "security-patch",
   "chore",
+  "amadeus-fix",
   "amadeus-bugfix",
   "amadeus-refactor",
   "amadeus-security-patch",
@@ -4093,7 +4094,7 @@ export function evaluateStandingGrantGateEligibility(
 // be resolved. Same source the engine's own walk uses (loadScopeMapping →
 // compiled scope-grid), so the grant classifier and `next`/`advance` can never
 // disagree about which stages a scope runs. Composed scopes (amadeus-feature,
-// amadeus-bugfix, …) live ONLY in the grid — stage frontmatter carries the
+// amadeus-fix, …) live ONLY in the grid — stage frontmatter carries the
 // stock vocabulary — which is why stage.scopes must never be read here (#1497).
 // FAIL-CLOSED: an unreadable grid, a missing scopes dir or an unknown scope
 // yields null and the caller then refuses to cover the gate (the human-approval
