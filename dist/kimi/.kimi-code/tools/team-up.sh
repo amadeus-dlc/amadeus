@@ -1373,7 +1373,8 @@ handle_exit() {
 }
 
 create_run() {
-  local base_commit base_ref m wt branch pending registered missing resolved
+  local base_commit base_ref m wt branch pending pending_pids checkout_pid
+  local member_record registered_path registered_resolved resolved missing stage
   base_ref="${BASE_REF:-HEAD}"
   if [ -z "$BASE_REF" ] && [ -n "$(git -C "$REPO" status --porcelain)" ]; then
     echo "ERROR: repository is dirty: $REPO" >&2
@@ -1425,20 +1426,38 @@ create_run() {
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
+    member_record="$RUN_RECORD/members/$m"
     if ! git -C "$REPO" worktree add -q --no-checkout -b "$branch" "$wt" "$base_commit"; then
       echo "ERROR: worktree registration failed for $m: $wt" >&2
+      return 1
+    fi
+    if ! registered_path="$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)"; then
+      echo "ERROR: worktree registration verification failed for $m: $wt" >&2
+      return 1
+    fi
+    resolved="$(cd "$wt" 2>/dev/null && pwd -P)" || resolved=""
+    registered_resolved="$(cd "$registered_path" 2>/dev/null && pwd -P)" || registered_resolved=""
+    if [ -z "$resolved" ] || [ "$registered_resolved" != "$resolved" ]; then
+      echo "ERROR: worktree registration verification failed for $m: $wt" >&2
+      return 1
+    fi
+    # Registration remains inside the serial section until its per-member
+    # evidence is durable. The next add must not start before this postprocessing.
+    if ! mkdir -p "$member_record" || ! printf 'registered\n' >"$member_record/registered"; then
+      echo "ERROR: worktree registration record failed for $m: $wt" >&2
       return 1
     fi
   done
 
   # Each checkout writes only inside its own worktree, so these do not contend
-  # for .git/worktrees/ the way add does. The record files are written by the
-  # subshell that checked the member out, so their presence means that member's
-  # checkout finished -- which the completion check below relies on.
+  # for .git/worktrees/ the way add does. Each subshell records its own checkout
+  # and only writes ready after both metadata files are durable.
   pending=0
+  pending_pids=""
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
+    member_record="$RUN_RECORD/members/$m"
     (
       if ! git -C "$wt" checkout -q; then
         # One line, self-contained: several subshells write to the same stderr
@@ -1447,37 +1466,46 @@ create_run() {
         echo "ERROR: worktree checkout failed for $m: $wt" >&2
         exit 1
       fi
-      mkdir -p "$RUN_RECORD/members/$m"
-      printf '%s\n' "$wt" >"$RUN_RECORD/members/$m/path"
-      printf '%s\n' "$branch" >"$RUN_RECORD/members/$m/branch"
+      if ! {
+        printf 'checked-out\n' >"$member_record/checked-out" &&
+          printf '%s\n' "$wt" >"$member_record/path" &&
+          printf '%s\n' "$branch" >"$member_record/branch" &&
+          printf 'ready\n' >"$member_record/ready"
+      }; then
+        echo "ERROR: worktree record failed for $m: $wt" >&2
+        exit 1
+      fi
     ) &
+    pending_pids="$pending_pids $!"
     pending=$((pending + 1))
     if [ "$pending" -ge "$WORKTREE_PARALLELISM" ]; then
-      wait
+      for checkout_pid in $pending_pids; do
+        wait "$checkout_pid" || true
+      done
       pending=0
+      pending_pids=""
     fi
   done
-  wait
+  for checkout_pid in $pending_pids; do
+    wait "$checkout_pid" || true
+  done
 
-  # Completion is decided by observing two things, not by collecting subshell
-  # exit codes and not by testing for directories:
-  #
-  #   git registration  -- the worktree is real, not a husk. A directory can
-  #                        exist without git knowing about it.
-  #   the record files  -- the checkout finished. Registration alone no longer
-  #                        implies a populated worktree now that --no-checkout
-  #                        splits the two, so checking only the registry would
-  #                        score an empty worktree as a success.
-  registered="$(git -C "$REPO" worktree list --porcelain | sed -n 's/^worktree //p')"
+  # Aggregate durable per-member evidence rather than reconstructing completion
+  # from a single whole-registry snapshot. A missing stage is attributed to the
+  # member that stopped there.
   missing=""
   for m in $(members_for "$TEAM_SIZE"); do
-    resolved="$(cd "$RUN_ROOT/$m" 2>/dev/null && pwd -P)" || resolved=""
-    if [ -z "$resolved" ] || ! printf '%s\n' "$registered" | grep -qxF -- "$resolved"; then
-      missing="$missing $m"
-      continue
+    member_record="$RUN_RECORD/members/$m"
+    stage=""
+    if [ ! -f "$member_record/registered" ]; then
+      stage="registration"
+    elif [ ! -f "$member_record/checked-out" ]; then
+      stage="checkout"
+    elif [ ! -f "$member_record/path" ] || [ ! -f "$member_record/branch" ] || [ ! -f "$member_record/ready" ]; then
+      stage="record"
     fi
-    if [ ! -f "$RUN_RECORD/members/$m/path" ] || [ ! -f "$RUN_RECORD/members/$m/branch" ]; then
-      missing="$missing $m"
+    if [ -n "$stage" ]; then
+      missing="$missing $m($stage)"
     fi
   done
   if [ -n "$missing" ]; then
