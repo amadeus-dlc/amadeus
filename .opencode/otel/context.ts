@@ -104,7 +104,9 @@ export function restoreIntentContext(dir: string, intentId: string): IntentTrace
   try {
     const lines = readFileSync(path, "utf-8").split("\n").filter((l) => l.trim() !== "");
     for (let i = lines.length - 1; i >= 0; i--) {
-      const raw: unknown = JSON.parse(lines[i]!);
+      const line = lines[i];
+      if (line === undefined) continue;
+      const raw: unknown = JSON.parse(line);
       if (
         raw !== null &&
         typeof raw === "object" &&
@@ -147,5 +149,7 @@ export function extractTraceparent(
   if (raw === undefined) return null;
   const match = TRACEPARENT_RE.exec(raw);
   if (match === null) return null;
-  return { traceId: match[1]!, spanId: match[2]!, traceFlags: parseInt(match[3]!, 16) };
+  const [, traceId, spanId, flags] = match;
+  if (traceId === undefined || spanId === undefined || flags === undefined) return null;
+  return { traceId, spanId, traceFlags: parseInt(flags, 16) };
 }

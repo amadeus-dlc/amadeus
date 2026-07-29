@@ -47,6 +47,23 @@ function defaultWrite(path: string, line: string): void {
   appendFileSync(path, line, "utf-8");
 }
 
+
+// Fail-open all the way down (FR-EVT-6): best-effort diagnostics only.
+function noteStoreFailure(options: LocalSpanExporterOptions, cause: unknown): void {
+  try {
+    const dir = options.storeDir ?? telemetryDir(options.projectDir);
+    if (dir === null || dir === undefined) return;
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(
+      join(dir, "diagnostics.log"),
+      `${new Date().toISOString()} span-store write failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+      "utf-8"
+    );
+  } catch {
+    // silent
+  }
+}
+
 export function createLocalSpanExporter(options: LocalSpanExporterOptions): LocalSpanExporter {
   const write = options.write ?? defaultWrite;
   const storePath = (): string | null => {
@@ -61,20 +78,7 @@ export function createLocalSpanExporter(options: LocalSpanExporterOptions): Loca
         if (path === null) return; // no resolvable record -> drop, stay silent
         write(path, `${JSON.stringify(record)}\n`);
       } catch (cause) {
-        // fail-open all the way down (FR-EVT-6): best-effort diagnostics only.
-        try {
-          const dir = options.storeDir ?? telemetryDir(options.projectDir);
-          if (dir !== null && dir !== undefined) {
-            mkdirSync(dir, { recursive: true });
-            appendFileSync(
-              join(dir, "diagnostics.log"),
-              `${new Date().toISOString()} span-store write failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
-              "utf-8"
-            );
-          }
-        } catch {
-          // silent
-        }
+        noteStoreFailure(options, cause);
       }
     },
   };

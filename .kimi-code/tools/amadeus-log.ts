@@ -56,7 +56,6 @@ const OTEL_EVENT_NAMES: Record<string, string> = {
 };
 
 function emitAudit(
-  pd: string,
   eventType: string,
   fields: Record<string, string>
 ): void {
@@ -130,8 +129,10 @@ function handleDecision(args: string[]): void {
   if (!flags.stage) error("Missing --stage <slug>");
   if (!flags.decision) error("Missing --decision <text>");
 
-  const pd = resolveActiveProjectDir(projectDir);
-  assertMutationAllowed(); // FR-EVT-4: refuse when a prior canonical write failed
+  // The active-workflow guard already ran in main (bootstrapOtel resolves
+  // the project dir with the same refusal). The latch check is the
+  // FR-EVT-4 mutation gate for this entrypoint.
+  assertMutationAllowed();
   const fields: Record<string, string> = {
     Stage: flags.stage,
     Decision: flags.decision,
@@ -140,7 +141,7 @@ function handleDecision(args: string[]): void {
   if (flags.rationale) fields.Rationale = flags.rationale;
 
   try {
-    emitAudit(pd, "DECISION_RECORDED", fields);
+    emitAudit("DECISION_RECORDED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -193,7 +194,7 @@ function handleAnswer(args: string[]): void {
   }
 
   try {
-    emitAudit(pd, "QUESTION_ANSWERED", fields);
+    emitAudit("QUESTION_ANSWERED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }

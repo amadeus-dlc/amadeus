@@ -43,33 +43,35 @@ export function assertMutationAllowed(): void {
   }
 }
 
-// Non-destructive journal health probe (FR-EVT-5): acquire the audit lock,
-// verify read consistency (every line parses, sequence strictly monotonic),
-// release. It NEVER appends — a trial write would dirty the canonical
-// journal, so Phase 1 keeps the probe read-only (Phase 1 ADR).
+// Read consistency over one shard: every line parses and the sequence is
+// strictly monotonic. The first inconsistency short-circuits with a detail.
+function checkShardConsistency(buffer: string): HealthResult {
+  let lastSeq = 0;
+  for (const rawLine of buffer.split("\n")) {
+    if (rawLine.trim() === "") continue;
+    try {
+      const entry = parseJournalLine(rawLine);
+      if (entry.seq <= lastSeq) {
+        return { ok: false, detail: `sequence regression at seq ${entry.seq} after ${lastSeq}` };
+      }
+      lastSeq = entry.seq;
+    } catch (cause) {
+      return { ok: false, detail: `unparseable journal line: ${cause instanceof Error ? cause.message : String(cause)}` };
+    }
+  }
+  return { ok: true };
+}
+
+// Non-destructive journal health probe (FR-EVT-5, ADR-9): an audit-lock
+// round-trip plus read consistency. It NEVER appends — a trial write would
+// dirty the canonical journal, so Phase 1 keeps the probe read-only.
 export function verifyJournalHealth(probe: HealthProbe): HealthResult {
   if (!existsSync(probe.shardPath)) {
     return { ok: false, detail: `shard not found: ${probe.shardPath}` };
   }
-  // The lock round-trip proves the lock surface itself is operational. The
-  // probe is per-shard-path; the project-level lock guards concurrent probes.
   const locked = acquireAuditLock(probe.projectDir, 5, 50);
   try {
-    const buffer = readFileSync(probe.shardPath, "utf-8");
-    let lastSeq = 0;
-    for (const rawLine of buffer.split("\n")) {
-      if (rawLine.trim() === "") continue;
-      try {
-        const entry = parseJournalLine(rawLine);
-        if (entry.seq <= lastSeq) {
-          return { ok: false, detail: `sequence regression at seq ${entry.seq} after ${lastSeq}` };
-        }
-        lastSeq = entry.seq;
-      } catch (cause) {
-        return { ok: false, detail: `unparseable journal line: ${cause instanceof Error ? cause.message : String(cause)}` };
-      }
-    }
-    return { ok: true };
+    return checkShardConsistency(readFileSync(probe.shardPath, "utf-8"));
   } catch (cause) {
     return { ok: false, detail: `probe read failed: ${cause instanceof Error ? cause.message : String(cause)}` };
   } finally {

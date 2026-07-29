@@ -20,21 +20,27 @@ export type ShadowReport = {
   readonly missingInOld: string[];
 };
 
+function nameFromLine(line: string): string | null {
+  if (line.trim() === "") return null;
+  try {
+    const record: unknown = JSON.parse(line);
+    if (record !== null && typeof record === "object" && typeof (record as { name?: unknown }).name === "string") {
+      return (record as { name: string }).name;
+    }
+  } catch {
+    // a torn line is skipped, never fatal to the comparison
+  }
+  return null;
+}
+
 function readJsonlNames(dir: string, prefix: string): string[] {
   if (!existsSync(dir)) return [];
   const names: string[] = [];
   for (const file of readdirSync(dir)) {
     if (!file.startsWith(prefix) || !file.endsWith(".jsonl")) continue;
     for (const line of readFileSync(join(dir, file), "utf-8").split("\n")) {
-      if (line.trim() === "") continue;
-      try {
-        const record: unknown = JSON.parse(line);
-        if (record !== null && typeof record === "object" && typeof (record as { name?: unknown }).name === "string") {
-          names.push((record as { name: string }).name);
-        }
-      } catch {
-        // a torn line is skipped, never fatal to the comparison
-      }
+      const name = nameFromLine(line);
+      if (name !== null) names.push(name);
     }
   }
   return names;
