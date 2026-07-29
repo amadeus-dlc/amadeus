@@ -3,6 +3,7 @@
 // The renderers accept already-resolved, secret-free domain snapshots. They do
 // not read files or GitHub and never derive local state from remote Issue text.
 
+import { MIRROR_PROJECT_FIELD_CONTRACT } from "./amadeus-mirror-project-contract.ts";
 import type {
   MirrorEventIdentity,
   MirrorIssueContent,
@@ -132,10 +133,23 @@ export const MIRROR_USER_CONTRACT = {
   projectConfig: {
     key: "mirror-projects",
     shape:
-      'array of { project: "<owner>/<number>", status-names?: { <phase>: string } }',
+      'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }',
     phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
     layerResolution: "last-layer-with-a-value-replaces",
     independentOf: "auto-mirror",
+    phaseField: {
+      key: "phase-field",
+      default: MIRROR_PROJECT_FIELD_CONTRACT.lifecycle.defaultField,
+    },
+    authoritativeField: "phase-field",
+    auxiliaryStatus: {
+      field: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.field,
+      active: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.active,
+      complete: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.complete,
+      parked: "keep",
+      archived: "keep",
+      failureMode: "non-blocking",
+    },
   },
   // Reading and setting a Project column needs one extra token scope. The
   // credential itself stays with gh: this tool never changes a scope and never

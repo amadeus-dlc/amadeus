@@ -76,6 +76,13 @@ export type MirrorOperationReceipt = Readonly<{
   key: string;
   event: MirrorEventIdentity;
   operationId: string;
+  // State revision that first created this receipt. Older persisted receipts
+  // omit it; authorization.receiptRevision remains their migration fallback.
+  createdRevision?: number;
+  // State revision that most recently placed this receipt in charge of
+  // Project reconciliation. Re-holding an older completion receipt advances
+  // this independently from its immutable creation revision.
+  projectSyncRevision?: number;
   status: MirrorReceiptStatus;
   preparedAt: string;
   attemptedAt?: string;
@@ -90,6 +97,10 @@ export type MirrorOperationReceipt = Readonly<{
   // Issue mutation, and reusing them here would record a failure that did not
   // happen. `completedAt` stays set, because the Issue side really did complete.
   projectSyncHold?: MirrorProjectSyncHold;
+  // Durable proof that every configured Project and its ledger entry converged
+  // for this exact operation receipt. Older states omit the marker and are
+  // deliberately re-verified before a workflow-completion close.
+  projectSyncVerified?: true;
 }>;
 
 export type MirrorProjectSyncHold = Readonly<{
@@ -285,7 +296,7 @@ export type MirrorMutationPermit = Readonly<{
 // every consumer downstream carries this proven shape.
 export type MirrorProjectRef = Readonly<{ owner: string; number: number }>;
 
-// The phase vocabulary a Project Status column can be derived from. Closed to
+// The phase vocabulary a configured Project lifecycle option can be derived from. Closed to
 // these five keys: an unknown phase name in configuration is a configuration
 // error, never coerced.
 export type MirrorPhaseKey =
@@ -299,6 +310,7 @@ export type MirrorProjectStatusNames = Partial<Record<MirrorPhaseKey, string>>;
 
 export type MirrorProjectTarget = Readonly<{
   project: MirrorProjectRef;
+  phaseField: string;
   statusNames: MirrorProjectStatusNames;
 }>;
 
@@ -306,16 +318,18 @@ export type MirrorProjectTarget = Readonly<{
 // `project`. `state` records the outcome of the most recent reconciliation of
 // that one Project: `synced` when the board matches the expected column,
 // `pending` when a retryable failure left it unknown, and `safety-blocked` when
-// the board's own shape (no Status field, no matching option) or our permissions
+// the board's own shape (no configured lifecycle field, no matching option) or our permissions
 // make it unreachable without a human.
 //
-// `projectId` is nullable because a Project whose Status field could not be
-// resolved has no node id to record; `lastAppliedStatus` is the last column this
-// tool actually applied, and a later failure does not erase that history.
+// `projectId` is nullable because a Project whose lifecycle field could not be
+// resolved has no node id to record; `phaseField` and `lastAppliedStatus`
+// identify the authoritative field and column from the last successful sync,
+// and a later failure does not erase that history.
 export type MirrorProjectSyncEntry = Readonly<{
   project: string; // canonical "owner/number"
   projectId: string | null;
   itemId: string | null;
+  phaseField: string | null;
   lastAppliedStatus: string | null;
   state: MirrorProjectSyncState;
   updatedAt: string;
@@ -327,13 +341,18 @@ export type MirrorProjectSyncLedger = Readonly<{
   projects: readonly MirrorProjectSyncEntry[];
 }>;
 
-// The resolved Status single-select field of one Project. `options` holds only
-// the options the remote Project actually declares — never a synthesized name,
-// because the option-missing diagnostic lists this set verbatim.
-export type MirrorProjectStatusField = Readonly<{
-  projectId: string;
+export type MirrorProjectSingleSelectField = Readonly<{
   fieldId: string;
+  fieldName: string;
   options: ReadonlyArray<Readonly<{ id: string; name: string }>>;
+}>;
+
+// The Project fields resolved for one sync. The configured lifecycle field is
+// authoritative; GitHub's built-in Status field is optional and best-effort.
+export type MirrorResolvedProjectFields = Readonly<{
+  projectId: string;
+  lifecycle: MirrorProjectSingleSelectField;
+  auxiliaryStatus: MirrorProjectSingleSelectField | null;
 }>;
 
 export type MirrorProjectItem = Readonly<{
@@ -341,7 +360,7 @@ export type MirrorProjectItem = Readonly<{
   projectNumber: number;
   projectOwner: string;
   itemId: string;
-  currentStatus: string | null;
+  singleSelectValuesByFieldId: Readonly<Record<string, string>>;
 }>;
 
 // The identity the membership query needs: a Project lookup resolves the Issue
@@ -376,7 +395,7 @@ declare const mirrorProjectPermitBrand: unique symbol;
 
 export type MirrorProjectMutation =
   | "add-project-item"
-  | "update-project-item-status";
+  | "update-project-item-field";
 
 export type MirrorProjectMutationPermit = Readonly<{
   [mirrorProjectPermitBrand]: true;
@@ -416,15 +435,16 @@ export interface MirrorGitHubGateway {
   listProjectItems(
     issue: MirrorIssueRef,
   ): Promise<GatewayOutcome<MirrorProjectItemsView>>;
-  resolveProjectStatusField(
+  resolveProjectFields(
     project: MirrorProjectRef,
-  ): Promise<GatewayOutcome<MirrorProjectStatusField>>;
+    phaseField: string,
+  ): Promise<GatewayOutcome<MirrorResolvedProjectFields>>;
   addProjectItem(
     permit: MirrorProjectMutationPermit,
     projectId: string,
     issueNodeId: string,
   ): Promise<GatewayOutcome<{ itemId: string }>>;
-  updateProjectItemStatus(
+  updateProjectItemSingleSelectField(
     permit: MirrorProjectMutationPermit,
     projectId: string,
     itemId: string,
@@ -473,6 +493,12 @@ export type MirrorProjectDiagnostic = Readonly<{
   summary: string;
 }>;
 
+export type MirrorRegistryStatus =
+  | "in-flight"
+  | "parked"
+  | "complete"
+  | "archived";
+
 export type MirrorSnapshot = Readonly<{
   intentUuid: string;
   intentDir: string;
@@ -480,7 +506,7 @@ export type MirrorSnapshot = Readonly<{
   lifecyclePhase: string;
   currentStage: string;
   status: string;
-  registryStatus: string;
+  registryStatus: MirrorRegistryStatus;
   updatedAt: string;
 }>;
 

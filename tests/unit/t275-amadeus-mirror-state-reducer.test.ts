@@ -67,6 +67,7 @@ describe("prepare", () => {
     const s = apply(EMPTY, prepareCreate);
     const r = s.receipts[mirrorEventKey(ev("create"))];
     expect(r.status).toBe("prepared");
+    expect(r.createdRevision).toBe(1);
     expect(r.createIdentity?.repository.canonical).toBe("acme/app");
   });
 
@@ -79,6 +80,30 @@ describe("prepare", () => {
     const s = apply(EMPTY, prepareCreate);
     const r = reduceMirrorState(s, { ...prepareCreate, operationId: "op-2" }, NOW);
     expect(r.kind).toBe("invalid");
+  });
+
+  test("prepare rejects an authorization bound to another state revision", () => {
+    const event = ev("sync");
+    const result = reduceMirrorState(
+      EMPTY,
+      {
+        kind: "prepare",
+        event,
+        operationId: "op-sync",
+        preparedAt: NOW,
+        authorization: {
+          kind: "manual",
+          event,
+          operation: "sync",
+          boundaryInstance: event.boundary.instance,
+          receiptRevision: 2,
+          invocationId: "manual-sync",
+        },
+      },
+      NOW,
+    );
+
+    expect(result.kind).toBe("invalid");
   });
 });
 
@@ -174,6 +199,34 @@ describe("skip / warning / terminal", () => {
       completedAt: NOW,
     });
     expect(s.receipts[mirrorEventKey(ev("sync"))].status).toBe("skipped-for-event");
+    expect(s.receipts[mirrorEventKey(ev("sync"))].createdRevision).toBe(1);
+  });
+
+  test("skip preserves the creation era of an existing legacy receipt", () => {
+    const event = ev("sync");
+    const key = mirrorEventKey(event);
+    const legacy: MirrorStateSnapshot = {
+      ...EMPTY,
+      revision: 4,
+      receipts: {
+        [key]: {
+          key,
+          event,
+          operationId: "op-legacy",
+          status: "prepared",
+          preparedAt: NOW,
+        },
+      },
+    };
+    const skipped = apply(legacy, {
+      kind: "skip-for-event",
+      event,
+      operationId: "op-legacy",
+      preparedAt: NOW,
+      completedAt: NOW,
+    });
+
+    expect(skipped.receipts[key].createdRevision).toBeUndefined();
   });
 
   test("set-warning on prepared keeps status and requires effect=not-started", () => {
@@ -244,6 +297,21 @@ describe("warning coalesce + capacity", () => {
       const capacity = r.snapshot.warnings.filter((w) => w.summary.startsWith("state-capacity"));
       expect(capacity.length).toBe(1);
     }
+  });
+});
+
+describe("closed transition surface", () => {
+  test("an unknown runtime transition fails closed", () => {
+    const result = reduceMirrorState(
+      EMPTY,
+      { kind: "unknown-transition" } as unknown as MirrorTransition,
+      NOW,
+    );
+
+    expect(result).toEqual({
+      kind: "invalid",
+      issues: ["unknown transition unknown-transition"],
+    });
   });
 });
 

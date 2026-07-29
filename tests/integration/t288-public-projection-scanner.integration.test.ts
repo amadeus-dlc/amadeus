@@ -14,6 +14,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  MIRROR_DOC_PROJECTIONS,
+  MIRROR_PROJECTIONS,
+} from "../../packages/framework/harness/projections.ts";
+import {
   publicProjectionPaths,
   scanPublicProjections,
 } from "../../scripts/scan-public-projections.ts";
@@ -36,7 +40,22 @@ function projectionFixture(): string {
 
 describe("t288 public scanner", () => {
   test("enumerates every registered public payload and document", () => {
-    expect(publicProjectionPaths()).toHaveLength(234);
+    const registeredPaths = new Set([
+      ...MIRROR_PROJECTIONS.flatMap((projection) =>
+        projection.artifacts.flatMap((artifact) =>
+          artifact.scan
+            ? [
+                artifact.source,
+                ...(artifact.distPath ? [artifact.distPath] : []),
+                ...(artifact.selfPath ? [artifact.selfPath] : []),
+              ]
+            : [],
+        ),
+      ),
+      ...MIRROR_DOC_PROJECTIONS,
+    ]);
+    expect(new Set(publicProjectionPaths())).toEqual(registeredPaths);
+    expect(publicProjectionPaths()).toEqual([...registeredPaths].sort());
     expect(scanPublicProjections(process.cwd())).toEqual([]);
   });
 

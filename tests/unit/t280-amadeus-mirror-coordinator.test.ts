@@ -7,6 +7,7 @@ import {
   driveMirrorBoundary,
   selectMirrorReconciliation,
   selectNextCompletion,
+  type DriveMirrorBoundaryInput,
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import { mirrorEventIdentity, mirrorEventKey } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import {
@@ -82,7 +83,7 @@ function input(
   store: ReturnType<typeof memoryStore>,
   mode: "off" | "prompt" | "auto",
   kind: "phase" | "completion" = "phase",
-) {
+): DriveMirrorBoundaryInput {
   return {
     context: {
       projectDir: "/project",
@@ -314,6 +315,9 @@ describe("t280 prompt answers and completion", () => {
     expect(store.state().receipts[mirrorEventKey(asked.event)]?.status).toBe(
       "skipped-for-event",
     );
+    expect(
+      store.state().receipts[mirrorEventKey(asked.event)]?.createdRevision,
+    ).toBe(store.state().revision);
   });
 
   test("approve executes only the persisted event binding", async () => {
@@ -440,6 +444,66 @@ describe("t280 prompt answers and completion", () => {
         manualOperation: "create",
       }),
     ).rejects.toThrow("manual execution requires an invocationId");
+  });
+
+  test("manual close bypasses obsolete completion-sync holds once the newest sync succeeded", async () => {
+    const oldBoundary = {
+      kind: "workflow-completed",
+      instance: "complete-old",
+    } as const;
+    const newestBoundary = {
+      kind: "workflow-completed",
+      instance: "complete-newest",
+    } as const;
+    const oldHeld = {
+      ...receipt("sync", "pending", oldBoundary),
+      operationId: "op-old",
+      completedAt: NOW,
+      projectSyncHold: {
+        reason: "project-sync-unsettled" as const,
+        heldAt: NOW,
+      },
+    };
+    const newestSucceeded = {
+      ...receipt("sync", "succeeded", newestBoundary),
+      operationId: "op-newest",
+      preparedAt: "2026-07-26T00:00:00Z",
+      attemptedAt: "2026-07-26T00:00:00Z",
+      completedAt: "2026-07-26T00:00:00Z",
+    };
+    const store = memoryStore({
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [oldHeld.key]: oldHeld,
+        [newestSucceeded.key]: newestSucceeded,
+      },
+    });
+    const base = input(store, "auto");
+    const executed: MirrorOperation[] = [];
+
+    await driveMirrorBoundary({
+      ...base,
+      context: {
+        ...base.context,
+        boundary: { kind: "manual", instance: "manual-close" },
+      },
+      manualOperation: "close",
+      invocationId: "manual-close",
+      dependencies: {
+        ...base.dependencies,
+        execute: async ({ context }) => {
+          executed.push(context.operation);
+          return {
+            kind: "completed",
+            operation: context.operation,
+            issueNumber: 7,
+          };
+        },
+      },
+    });
+
+    expect(executed).toEqual(["close"]);
   });
 
   test("completion driver selects create, sync, close, then terminal", () => {

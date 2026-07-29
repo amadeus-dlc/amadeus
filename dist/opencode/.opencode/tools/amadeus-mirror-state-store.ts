@@ -1,7 +1,7 @@
 // amadeus-mirror-state-store.ts — S3 Atomic File Store + S4 Audit Outbox (C3).
 //
-// Owns the state lock, the compare-and-set atomic transition, and the
-// transactional audit outbox. The transition coordinator (`mutateMirrorStateAtomic`)
+// Owns state and Project-reconciliation locks, the compare-and-set atomic
+// transition, and the transactional audit outbox. `mutateMirrorStateAtomic`
 // is pure over an injected `MirrorStateStorePorts` so every commit/audit
 // boundary is deterministically failure-injectable in tests without a test
 // branch in production. `createMirrorStateStorePorts` is the real seam that
@@ -427,5 +427,28 @@ export function createMirrorStateStorePorts(
     writeDocumentAtomic: (text: string) => atomicWrite(config.statePath, text),
     appendArtifactUpdated: (outbox: MirrorAuditOutbox) =>
       idempotentAppend(config, outbox),
+  };
+}
+
+export type MirrorProjectReconciliationLock = Readonly<{
+  acquire(): boolean;
+  release(): void;
+}>;
+
+export function createMirrorProjectReconciliationLock(
+  statePath: string,
+): MirrorProjectReconciliationLock {
+  const identity = `${statePath}:mirror-project-reconciliation`;
+  return {
+    acquire: () =>
+      acquireAuditLock(
+        identity,
+        0,
+        0,
+        undefined,
+        undefined,
+        "dead-owner-only",
+      ),
+    release: () => releaseAuditLock(identity),
   };
 }

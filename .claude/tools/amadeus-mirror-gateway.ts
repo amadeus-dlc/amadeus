@@ -16,22 +16,28 @@
 //   G7 Failure Normalizer    — classification, effect certainty, redaction
 //   G8 Gateway               — orchestration returning C0 GatewayOutcome
 
-import {
-  validateMirrorMutationPermit,
-  validateMirrorProjectMutationPermit,
-} from "./amadeus-mirror-capability.ts";
+import { validateMirrorMutationPermit } from "./amadeus-mirror-capability.ts";
+import { createMirrorProjectGatewayMethods } from "./amadeus-mirror-project-gateway.ts";
+export {
+  ADD_PROJECT_ITEM_MUTATION,
+  addProjectItemArgv,
+  graphqlArgv,
+  LIST_PROJECT_ITEMS_QUERY,
+  listProjectItemsArgv,
+  parseProjectFields,
+  parseProjectItemsView,
+  PROJECT_ITEMS_PER_PAGE,
+  RESOLVE_PROJECT_FIELDS_QUERY,
+  resolveProjectFieldsArgv,
+  UPDATE_PROJECT_ITEM_FIELD_MUTATION,
+  updateProjectItemSingleSelectFieldArgv,
+} from "./amadeus-mirror-project-gateway.ts";
 import type {
   CreateMirrorIssueInput,
   GatewayOutcome,
   MirrorGitHubGateway,
   MirrorMutationEffect,
   MirrorMutationPermit,
-  MirrorIssueRef,
-  MirrorProjectItem,
-  MirrorProjectItemsView,
-  MirrorProjectMutationPermit,
-  MirrorProjectRef,
-  MirrorProjectStatusField,
   RemoteMirrorIssue,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
@@ -194,106 +200,6 @@ export function closeArgv(
     "-f",
     "state=closed",
   ];
-}
-
-// --- G3 Argv Builder: GraphQL (Project status sync) --------------------------
-
-// Page size for the Issue's current Project memberships. An Issue belonging to
-// more Projects than this is out of U1's scope (single configured target); the
-// walk is deliberately not paginated because the membership check only needs to
-// find the one configured Project.
-export const PROJECT_ITEMS_PER_PAGE = 50;
-
-// Exactly one query answers both "what is this Issue's node id" and "which
-// Projects is it already on" — the node id has no other in-budget source, since
-// addProjectV2ItemById needs it for an Issue that is not yet a member.
-export const LIST_PROJECT_ITEMS_QUERY =
-  "query($owner:String!,$name:String!,$number:Int!,$first:Int!){" +
-  "repository(owner:$owner,name:$name){issue(number:$number){id " +
-  "projectItems(first:$first){nodes{id " +
-  "project{id number owner{__typename ... on Organization{login} ... on User{login}}} " +
-  'fieldValueByName(name:"Status"){... on ProjectV2ItemFieldSingleSelectValue{name}}' +
-  "}}}}}";
-
-// Organization-owned Projects only (E-U1CG ruling 2): no user-owner fallback, so
-// the per-Project query budget stays at one. An unresolved organization or
-// Project is a loud failure the executor answers with skip + diagnostic.
-export const RESOLVE_PROJECT_STATUS_FIELD_QUERY =
-  "query($owner:String!,$number:Int!){" +
-  "organization(login:$owner){projectV2(number:$number){id " +
-  'field(name:"Status"){... on ProjectV2SingleSelectField{id options{id name}}}' +
-  "}}}";
-
-export const ADD_PROJECT_ITEM_MUTATION =
-  "mutation($projectId:ID!,$contentId:ID!){" +
-  "addProjectV2ItemById(input:{projectId:$projectId,contentId:$contentId})" +
-  "{item{id}}}";
-
-export const UPDATE_PROJECT_ITEM_STATUS_MUTATION =
-  "mutation($projectId:ID!,$itemId:ID!,$fieldId:ID!,$optionId:String!){" +
-  "updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId," +
-  "fieldId:$fieldId,value:{singleSelectOptionId:$optionId}})" +
-  "{projectV2Item{id}}}";
-
-// `-f` sends a literal string; `-F` is used ONLY for numbers this module formats
-// itself. That split matters: `-F` also interprets `@file`, `true`, and `null`,
-// so routing caller strings through it would let a configured value reach the
-// filesystem. Numbers are required because the GraphQL variables are `Int!`.
-export function graphqlArgv(
-  query: string,
-  variables: Readonly<Record<string, string | number>>,
-): readonly string[] {
-  const args: string[] = ["api", "graphql", "--include", "-f", `query=${query}`];
-  for (const key of Object.keys(variables)) {
-    const value = variables[key];
-    args.push(
-      typeof value === "number" ? "-F" : "-f",
-      `${key}=${String(value)}`,
-    );
-  }
-  return args;
-}
-
-export function listProjectItemsArgv(issue: MirrorIssueRef): readonly string[] {
-  return graphqlArgv(LIST_PROJECT_ITEMS_QUERY, {
-    owner: issue.repository.owner,
-    name: issue.repository.name,
-    number: issue.number,
-    first: PROJECT_ITEMS_PER_PAGE,
-  });
-}
-
-export function resolveProjectStatusFieldArgv(
-  project: MirrorProjectRef,
-): readonly string[] {
-  return graphqlArgv(RESOLVE_PROJECT_STATUS_FIELD_QUERY, {
-    owner: project.owner,
-    number: project.number,
-  });
-}
-
-export function addProjectItemArgv(
-  projectId: string,
-  issueNodeId: string,
-): readonly string[] {
-  return graphqlArgv(ADD_PROJECT_ITEM_MUTATION, {
-    projectId,
-    contentId: issueNodeId,
-  });
-}
-
-export function updateProjectItemStatusArgv(
-  projectId: string,
-  itemId: string,
-  fieldId: string,
-  optionId: string,
-): readonly string[] {
-  return graphqlArgv(UPDATE_PROJECT_ITEM_STATUS_MUTATION, {
-    projectId,
-    itemId,
-    fieldId,
-    optionId,
-  });
 }
 
 // --- G5 HTTP Envelope Parser -------------------------------------------------
@@ -794,104 +700,6 @@ function parseSingleIssue(
   return issue === null ? invalidResponse(op) : ok(issue);
 }
 
-type GraphqlRun =
-  | { kind: "ok"; data: Record<string, unknown> }
-  | { kind: "failure"; failure: Failure };
-
-// --- GraphQL response parsers ------------------------------------------------
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function nonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-// One `projectItems` node -> MirrorProjectItem. A node whose Project identity is
-// incomplete is rejected (null) rather than defaulted, so a partial response can
-// never be read as "not a member of the configured Project".
-function parseProjectItemNode(node: unknown): MirrorProjectItem | null {
-  const record = asRecord(node);
-  if (record === null) return null;
-  const itemId = nonEmptyString(record.id);
-  const project = asRecord(record.project);
-  if (itemId === null || project === null) return null;
-  const projectId = nonEmptyString(project.id);
-  const owner = asRecord(project.owner);
-  const projectNumber = project.number;
-  if (projectId === null || owner === null) return null;
-  if (typeof projectNumber !== "number" || !Number.isSafeInteger(projectNumber)) {
-    return null;
-  }
-  const projectOwner = nonEmptyString(owner.login);
-  if (projectOwner === null) return null;
-  const fieldValue = asRecord(record.fieldValueByName);
-  const currentStatus =
-    fieldValue === null ? null : nonEmptyString(fieldValue.name);
-  return { projectId, projectNumber, projectOwner, itemId, currentStatus };
-}
-
-export function parseProjectItemsView(
-  data: Record<string, unknown>,
-): MirrorProjectItemsView | null {
-  const repository = asRecord(data.repository);
-  const issue = repository === null ? null : asRecord(repository.issue);
-  if (issue === null) return null;
-  const issueNodeId = nonEmptyString(issue.id);
-  const projectItems = asRecord(issue.projectItems);
-  if (issueNodeId === null || projectItems === null) return null;
-  const nodes = projectItems.nodes;
-  if (!Array.isArray(nodes)) return null;
-  const items: MirrorProjectItem[] = [];
-  for (const node of nodes) {
-    const item = parseProjectItemNode(node);
-    if (item === null) return null;
-    items.push(item);
-  }
-  return { issueNodeId, items };
-}
-
-// An unresolved organization / Project / Status field all return null: the
-// executor answers every one of them with skip + diagnostic, never a mutation.
-export function parseProjectStatusField(
-  data: Record<string, unknown>,
-): MirrorProjectStatusField | null {
-  const organization = asRecord(data.organization);
-  const project =
-    organization === null ? null : asRecord(organization.projectV2);
-  if (project === null) return null;
-  const projectId = nonEmptyString(project.id);
-  const field = asRecord(project.field);
-  if (projectId === null || field === null) return null;
-  const fieldId = nonEmptyString(field.id);
-  const rawOptions = field.options;
-  if (fieldId === null || !Array.isArray(rawOptions)) return null;
-  const options: { id: string; name: string }[] = [];
-  for (const raw of rawOptions) {
-    const option = asRecord(raw);
-    const id = option === null ? null : nonEmptyString(option.id);
-    const name = option === null ? null : nonEmptyString(option.name);
-    if (id === null || name === null) return null;
-    options.push({ id, name });
-  }
-  return { projectId, fieldId, options };
-}
-
-function parseAddedItemId(data: Record<string, unknown>): string | null {
-  const added = asRecord(data.addProjectV2ItemById);
-  const item = added === null ? null : asRecord(added.item);
-  return item === null ? null : nonEmptyString(item.id);
-}
-
-function parseUpdatedItemId(data: Record<string, unknown>): string | null {
-  const updated = asRecord(data.updateProjectV2ItemFieldValue);
-  const item = updated === null ? null : asRecord(updated.projectV2Item);
-  return item === null ? null : nonEmptyString(item.id);
-}
-
 export function createMirrorGitHubGateway(
   runner: MirrorProcessRunner,
 ): MirrorGitHubGateway {
@@ -920,41 +728,27 @@ export function createMirrorGitHubGateway(
   ): Promise<MirrorProcessResult> =>
     runner.run({ executable: "gh", args, profile });
 
-  const requireValidProjectPermit = (
-    permit: MirrorProjectMutationPermit,
-    expected: Parameters<typeof validateMirrorProjectMutationPermit>[1],
-  ): void => {
-    if (!validateMirrorProjectMutationPermit(permit, expected)) {
-      throw new Error(
-        "mirror gateway: rejected Project mutation permit (forged or mismatched binding)",
-      );
-    }
-  };
-
   // Run one GraphQL operation and reduce it to `data` or a typed failure. The
   // HTTP envelope is judged first (transport / status), then the body's own
   // `errors` array, because GraphQL reports operation failure inside a 200.
   const runGraphql = async (
     args: readonly string[],
     op: OpKind,
-  ): Promise<GraphqlRun> => {
+  ): Promise<GatewayOutcome<Record<string, unknown>>> => {
     const result = await runApi(args, "single");
     if (result.kind !== "exited") {
-      return { kind: "failure", failure: processFailure(result, op) };
+      return processFailure(result, op);
     }
     const envelope = parseHttpEnvelope(result.stdout, "single");
     if (envelope.kind === "http-error") {
       const { classification, retryable } = classifyHttpStatus(envelope.status);
-      return {
-        kind: "failure",
-        failure: failure(
-          classification,
-          retryable,
-          effectForOp(op, true),
-          result.exitCode,
-          envelope.status,
-        ),
-      };
+      return failure(
+        classification,
+        retryable,
+        effectForOp(op, true),
+        result.exitCode,
+        envelope.status,
+      );
     }
     if (envelope.kind === "malformed" || result.exitCode !== 0) {
       const classification: Classification =
@@ -963,35 +757,34 @@ export function createMirrorGitHubGateway(
         hasNetworkSignal(result.stderrTail)
           ? "network"
           : "invalid-response";
-      return {
-        kind: "failure",
-        failure: failure(
-          classification,
-          classification === "network",
-          effectForOp(op, true),
-          result.exitCode,
-          null,
-        ),
-      };
+      return failure(
+        classification,
+        classification === "network",
+        effectForOp(op, true),
+        result.exitCode,
+        null,
+      );
     }
     const body = interpretGraphqlResult(envelope);
     if (body.kind === "errors") {
-      return {
-        kind: "failure",
-        failure: failure(
-          body.classification,
-          body.retryable,
-          effectForOp(op, true),
-          result.exitCode,
-          null,
-        ),
-      };
+      return failure(
+        body.classification,
+        body.retryable,
+        effectForOp(op, true),
+        result.exitCode,
+        null,
+      );
     }
     if (body.kind === "malformed") {
-      return { kind: "failure", failure: invalidResponse(op) };
+      return invalidResponse(op);
     }
-    return { kind: "ok", data: body.data };
+    return ok(body.data);
   };
+
+  const projectMethods = createMirrorProjectGatewayMethods({
+    run: runGraphql,
+    invalidResponse,
+  });
 
   return {
     async readiness(repository) {
@@ -1110,47 +903,6 @@ export function createMirrorGitHubGateway(
       if (interp.kind === "failure") return interp.failure;
       return parseSingleIssue(interp, repository, "mutation");
     },
-
-    async listProjectItems(issue) {
-      const run = await runGraphql(listProjectItemsArgv(issue), "read-only");
-      if (run.kind === "failure") return run.failure;
-      const view = parseProjectItemsView(run.data);
-      return view === null ? invalidResponse("read-only") : ok(view);
-    },
-
-    async resolveProjectStatusField(project) {
-      const run = await runGraphql(
-        resolveProjectStatusFieldArgv(project),
-        "read-only",
-      );
-      if (run.kind === "failure") return run.failure;
-      const field = parseProjectStatusField(run.data);
-      return field === null ? invalidResponse("read-only") : ok(field);
-    },
-
-    async addProjectItem(permit, projectId, issueNodeId) {
-      requireValidProjectPermit(permit, { mutation: "add-project-item" });
-      const run = await runGraphql(
-        addProjectItemArgv(projectId, issueNodeId),
-        "mutation",
-      );
-      if (run.kind === "failure") return run.failure;
-      const itemId = parseAddedItemId(run.data);
-      return itemId === null ? invalidResponse("mutation") : ok({ itemId });
-    },
-
-    async updateProjectItemStatus(permit, projectId, itemId, fieldId, optionId) {
-      requireValidProjectPermit(permit, {
-        mutation: "update-project-item-status",
-      });
-      const run = await runGraphql(
-        updateProjectItemStatusArgv(projectId, itemId, fieldId, optionId),
-        "mutation",
-      );
-      if (run.kind === "failure") return run.failure;
-      return parseUpdatedItemId(run.data) === null
-        ? invalidResponse("mutation")
-        : ok<void>(undefined);
-    },
+    ...projectMethods,
   };
 }

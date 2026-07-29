@@ -90,6 +90,161 @@ describe("codec rejection", () => {
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
 
+  test("createdRevision must be a positive safe integer when present", () => {
+    const event = ev("sync");
+    const snapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 1,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 0,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("createdRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 3,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("createdRevision must match its authorization binding", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 3,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 2,
+          authorization: {
+            kind: "manual",
+            event,
+            operation: "sync",
+            boundaryInstance: event.boundary.instance,
+            receiptRevision: 3,
+            invocationId: "manual-sync",
+          },
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("projectSyncRevision must be a positive safe integer when present", () => {
+    const event = ev("sync");
+    const snapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 1,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          projectSyncRevision: 0,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("projectSyncRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 1,
+          projectSyncRevision: 3,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("projectSyncRevision cannot precede createdRevision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 3,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          createdRevision: 2,
+          projectSyncRevision: 1,
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("authorization receiptRevision cannot exceed the snapshot revision", () => {
+    const event = ev("sync");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 2,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared", {
+          authorization: {
+            kind: "manual",
+            event,
+            operation: "sync",
+            boundaryInstance: event.boundary.instance,
+            receiptRevision: 3,
+            invocationId: "manual-sync",
+          },
+        }),
+      },
+    };
+
+    expect(
+      parseMirrorStateDocument(wrap(renderMirrorStateJson(snapshot))).kind,
+    ).toBe("invalid");
+  });
+
+  test("Project verification cannot be attached to a close receipt", () => {
+    const event = ev("close");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "succeeded", {
+          attemptedAt: TS,
+          completedAt: TS,
+          projectSyncVerified: true,
+        }),
+      },
+    };
+    expect(
+      parseMirrorStateDocument(
+        wrap(renderMirrorStateJson(snapshot)),
+      ).kind,
+    ).toBe("invalid");
+  });
+
   test("two start sentinels are rejected", () => {
     const doc = `${MIRROR_STATE_SENTINEL_START}\n${renderMirrorStateJson(EMPTY_MIRROR_STATE)}\n${MIRROR_STATE_SENTINEL_END}\n${MIRROR_STATE_SENTINEL_START}\n`;
     expect(parseMirrorStateDocument(doc).kind).toBe("invalid");

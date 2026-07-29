@@ -1,6 +1,7 @@
 // t340 — C5 Project GraphQL family via a fake process runner: exact argv, the
 // -f/-F variable split, envelope + body interpretation, response parsing,
 // permit enforcement, and the absence of out-of-scope mutation paths.
+// covers: packages/framework/core/tools/amadeus-mirror-project-gateway.ts
 // covers: packages/framework/core/tools/amadeus-mirror-gateway.ts
 // size: small
 
@@ -9,19 +10,22 @@ import {
   createMirrorMutationPermit,
   createMirrorProjectMutationPermit,
 } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
-import * as gateway from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import {
+  createMirrorGitHubGateway,
+  interpretGraphqlResult,
+  parseHttpEnvelope,
+} from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import * as publicGateway from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import * as gateway from "../../packages/framework/core/tools/amadeus-mirror-project-gateway.ts";
 import {
   ADD_PROJECT_ITEM_MUTATION,
-  createMirrorGitHubGateway,
   graphqlArgv,
-  interpretGraphqlResult,
   LIST_PROJECT_ITEMS_QUERY,
-  parseHttpEnvelope,
   parseProjectItemsView,
-  parseProjectStatusField,
+  parseProjectFields,
   PROJECT_ITEMS_PER_PAGE,
-  RESOLVE_PROJECT_STATUS_FIELD_QUERY,
-  UPDATE_PROJECT_ITEM_STATUS_MUTATION,
+  RESOLVE_PROJECT_FIELDS_QUERY,
+  UPDATE_PROJECT_ITEM_FIELD_MUTATION,
 } from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
 import type {
   MirrorProjectMutation,
@@ -45,6 +49,31 @@ const PROJECT: MirrorProjectRef = { owner: "amadeus-dlc", number: 5 };
 // The real Project node id measured on the target board during the ruling probe.
 const PROJECT_NODE_ID = "PVT_kwDOEcw2nM4BeiIO";
 const ISSUE_NODE_ID = "I_kwDOEcw2nM6abcde";
+const PHASE_FIELD_ID = "PVTSSF_intent_phase";
+const STATUS_FIELD_ID = "PVTSSF_status";
+const LEGACY_PROJECT_EXPORT_PAIRS = [
+  [publicGateway.PROJECT_ITEMS_PER_PAGE, gateway.PROJECT_ITEMS_PER_PAGE],
+  [publicGateway.LIST_PROJECT_ITEMS_QUERY, gateway.LIST_PROJECT_ITEMS_QUERY],
+  [
+    publicGateway.RESOLVE_PROJECT_FIELDS_QUERY,
+    gateway.RESOLVE_PROJECT_FIELDS_QUERY,
+  ],
+  [publicGateway.ADD_PROJECT_ITEM_MUTATION, gateway.ADD_PROJECT_ITEM_MUTATION],
+  [
+    publicGateway.UPDATE_PROJECT_ITEM_FIELD_MUTATION,
+    gateway.UPDATE_PROJECT_ITEM_FIELD_MUTATION,
+  ],
+  [publicGateway.graphqlArgv, gateway.graphqlArgv],
+  [publicGateway.listProjectItemsArgv, gateway.listProjectItemsArgv],
+  [publicGateway.resolveProjectFieldsArgv, gateway.resolveProjectFieldsArgv],
+  [publicGateway.addProjectItemArgv, gateway.addProjectItemArgv],
+  [
+    publicGateway.updateProjectItemSingleSelectFieldArgv,
+    gateway.updateProjectItemSingleSelectFieldArgv,
+  ],
+  [publicGateway.parseProjectItemsView, gateway.parseProjectItemsView],
+  [publicGateway.parseProjectFields, gateway.parseProjectFields],
+] as const;
 
 const ISSUE: RemoteMirrorIssue = {
   repository: REPO,
@@ -98,9 +127,34 @@ function itemNode(
     number: number;
     login: string;
     status: string | null;
+    workflowStatus: string | null;
+    phaseFieldId: string;
   }> = {},
 ): unknown {
   const status = overrides.status === undefined ? "Ideation" : overrides.status;
+  const workflowStatus =
+    overrides.workflowStatus === undefined ? "In progress" : overrides.workflowStatus;
+  const phaseFieldId = overrides.phaseFieldId ?? PHASE_FIELD_ID;
+  const fieldValues = [
+    ...(status === null
+      ? []
+      : [
+          {
+            __typename: "ProjectV2ItemFieldSingleSelectValue",
+            name: status,
+            field: { id: phaseFieldId },
+          },
+        ]),
+    ...(workflowStatus === null
+      ? []
+      : [
+          {
+            __typename: "ProjectV2ItemFieldSingleSelectValue",
+            name: workflowStatus,
+            field: { id: STATUS_FIELD_ID },
+          },
+        ]),
+  ];
   return {
     id: overrides.id ?? "PVTI_item1",
     project: {
@@ -109,7 +163,9 @@ function itemNode(
       __typename: "Organization",
       owner: { __typename: "Organization", login: overrides.login ?? "amadeus-dlc" },
     },
-    fieldValueByName: status === null ? null : { name: status },
+    fieldValues: {
+      nodes: [{ __typename: "ProjectV2ItemFieldTextValue" }, ...fieldValues],
+    },
   };
 }
 
@@ -129,7 +185,19 @@ function statusFieldBody(options: unknown[]): unknown {
       organization: {
         projectV2: {
           id: PROJECT_NODE_ID,
-          field: { id: "PVTSSF_status", options },
+          intentPhase: {
+            id: PHASE_FIELD_ID,
+            name: "Intent Phase",
+            options,
+          },
+          workflowStatus: {
+            id: STATUS_FIELD_ID,
+            name: "Status",
+            options: [
+              { id: "opt-in-progress", name: "In progress" },
+              { id: "opt-done", name: "Done" },
+            ],
+          },
         },
       },
     },
@@ -150,6 +218,14 @@ function projectPermit(
     project: PROJECT,
   });
 }
+
+describe("t340 public facade", () => {
+  test("preserves every pre-extraction Project named export", () => {
+    for (const [facadeExport, implementationExport] of LEGACY_PROJECT_EXPORT_PAIRS) {
+      expect(facadeExport).toBe(implementationExport);
+    }
+  });
+});
 
 describe("t340 graphqlArgv", () => {
   test("strings use -f and numbers use -F, after the query field", () => {
@@ -219,27 +295,45 @@ describe("t340 exact argv", () => {
     ]);
   });
 
-  test("resolveProjectStatusField binds the organization login and number", async () => {
+  test("resolveProjectFields binds the organization, number, and configured phase field", async () => {
     const { runner, requests } = fakeRunner([
       exited(0, envelope(200, statusFieldBody([]))),
     ]);
-    await createMirrorGitHubGateway(runner).resolveProjectStatusField(PROJECT);
+    await createMirrorGitHubGateway(runner).resolveProjectFields(
+      PROJECT,
+      "Lifecycle",
+    );
     expect(requests[0].args).toEqual([
       "api",
       "graphql",
       "--include",
       "-f",
-      `query=${RESOLVE_PROJECT_STATUS_FIELD_QUERY}`,
+      `query=${RESOLVE_PROJECT_FIELDS_QUERY}`,
       "-f",
       "owner=amadeus-dlc",
       "-F",
       "number=5",
+      "-f",
+      "phaseField=Lifecycle",
     ]);
   });
 
   test("the Project resolution query is organization-scoped with no user fallback", () => {
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).toContain("organization(login:$owner)");
-    expect(RESOLVE_PROJECT_STATUS_FIELD_QUERY).not.toContain("user(");
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain("organization(login:$owner)");
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).not.toContain("user(");
+  });
+
+  test("Project reads target Intent Phase and auxiliary Status fields", () => {
+    expect(LIST_PROJECT_ITEMS_QUERY).toContain("fieldValues(first:");
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
+      "intentPhase:field(name:$phaseField)",
+    );
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
+      'workflowStatus:field(name:"Status")',
+    );
+    expect(RESOLVE_PROJECT_FIELDS_QUERY).toContain(
+      "... on ProjectV2SingleSelectField{id name options{id name}}",
+    );
   });
 
   test("addProjectItem binds the project and issue node ids", async () => {
@@ -269,7 +363,7 @@ describe("t340 exact argv", () => {
     ]);
   });
 
-  test("updateProjectItemStatus binds every id as a literal string", async () => {
+  test("updateProjectItemSingleSelectField binds every id as a literal string", async () => {
     const { runner, requests } = fakeRunner([
       exited(
         0,
@@ -278,8 +372,8 @@ describe("t340 exact argv", () => {
         }),
       ),
     ]);
-    await createMirrorGitHubGateway(runner).updateProjectItemStatus(
-      projectPermit("update-project-item-status"),
+    await createMirrorGitHubGateway(runner).updateProjectItemSingleSelectField(
+      projectPermit("update-project-item-field"),
       PROJECT_NODE_ID,
       "PVTI_item1",
       "PVTSSF_status",
@@ -290,7 +384,7 @@ describe("t340 exact argv", () => {
       "graphql",
       "--include",
       "-f",
-      `query=${UPDATE_PROJECT_ITEM_STATUS_MUTATION}`,
+      `query=${UPDATE_PROJECT_ITEM_FIELD_MUTATION}`,
       "-f",
       `projectId=${PROJECT_NODE_ID}`,
       "-f",
@@ -319,18 +413,34 @@ describe("t340 response parsing", () => {
             projectNumber: 5,
             projectOwner: "amadeus-dlc",
             itemId: "PVTI_item1",
-            currentStatus: "Ideation",
+            singleSelectValuesByFieldId: {
+              [PHASE_FIELD_ID]: "Ideation",
+              [STATUS_FIELD_ID]: "In progress",
+            },
           },
         ],
       },
     });
   });
 
-  test("an item with no Status value reports a null current status", () => {
+  test("an item with no Intent Phase value reports a null current phase", () => {
     const parsed = parseProjectItemsView(
       (itemsBody([itemNode({ status: null })]) as { data: Record<string, unknown> }).data,
     );
-    expect(parsed?.items[0].currentStatus).toBeNull();
+    expect(
+      parsed?.items[0].singleSelectValuesByFieldId[PHASE_FIELD_ID],
+    ).toBeUndefined();
+  });
+
+  test("membership parsing preserves a custom phase field id and value", () => {
+    const parsed = parseProjectItemsView(
+      (itemsBody([itemNode({ phaseFieldId: "PVTSSF_lifecycle" })]) as {
+        data: Record<string, unknown>;
+      }).data,
+    );
+    expect(
+      parsed?.items[0].singleSelectValuesByFieldId.PVTSSF_lifecycle,
+    ).toBe("Ideation");
   });
 
   test("an empty membership list still yields the issue node id", () => {
@@ -363,8 +473,8 @@ describe("t340 response parsing", () => {
     expect(parseProjectItemsView(data)).toBeNull();
   });
 
-  test("the Status field query yields the project id, field id, and options", () => {
-    const parsed = parseProjectStatusField(
+  test("the field query yields Intent Phase and auxiliary Status metadata", () => {
+    const parsed = parseProjectFields(
       (statusFieldBody([
         { id: "opt-a", name: "Ideation" },
         { id: "opt-b", name: "Done" },
@@ -372,27 +482,73 @@ describe("t340 response parsing", () => {
     );
     expect(parsed).toEqual({
       projectId: PROJECT_NODE_ID,
-      fieldId: "PVTSSF_status",
-      options: [
-        { id: "opt-a", name: "Ideation" },
-        { id: "opt-b", name: "Done" },
-      ],
+      lifecycle: {
+        fieldId: PHASE_FIELD_ID,
+        fieldName: "Intent Phase",
+        options: [
+          { id: "opt-a", name: "Ideation" },
+          { id: "opt-b", name: "Done" },
+        ],
+      },
+      auxiliaryStatus: {
+        fieldId: STATUS_FIELD_ID,
+        fieldName: "Status",
+        options: [
+          { id: "opt-in-progress", name: "In progress" },
+          { id: "opt-done", name: "Done" },
+        ],
+      },
     });
+  });
+
+  test("an invalid auxiliary Status field does not invalidate Intent Phase", () => {
+    const data = (statusFieldBody([]) as { data: Record<string, unknown> }).data;
+    const organization = data.organization as {
+      projectV2: Record<string, unknown>;
+    };
+    organization.projectV2.workflowStatus = { id: "not-single-select" };
+
+    expect(parseProjectFields(data)).toEqual({
+      projectId: PROJECT_NODE_ID,
+      lifecycle: {
+        fieldId: PHASE_FIELD_ID,
+        fieldName: "Intent Phase",
+        options: [],
+      },
+      auxiliaryStatus: null,
+    });
+  });
+
+  test("rejects a malformed single-select value instead of treating it as absent", () => {
+    const malformed = itemNode() as {
+      fieldValues: { nodes: Array<Record<string, unknown>> };
+    };
+    malformed.fieldValues.nodes[1] = {
+      __typename: "ProjectV2ItemFieldSingleSelectValue",
+    };
+    const data = (itemsBody([malformed]) as {
+      data: Record<string, unknown>;
+    }).data;
+    expect(parseProjectItemsView(data)).toBeNull();
   });
 
   test.each([
     ["an unresolved organization", { organization: null }],
     ["an unresolved project", { organization: { projectV2: null } }],
     [
-      "an absent Status field",
-      { organization: { projectV2: { id: PROJECT_NODE_ID, field: null } } },
+      "an absent Intent Phase field",
+      { organization: { projectV2: { id: PROJECT_NODE_ID, intentPhase: null } } },
     ],
     [
-      "a Status field that is not single-select",
-      { organization: { projectV2: { id: PROJECT_NODE_ID, field: { id: "F" } } } },
+      "an Intent Phase field that is not single-select",
+      {
+        organization: {
+          projectV2: { id: PROJECT_NODE_ID, intentPhase: { id: "F" } },
+        },
+      },
     ],
   ])("rejects %s", (_label, data) => {
-    expect(parseProjectStatusField(data as Record<string, unknown>)).toBeNull();
+    expect(parseProjectFields(data as Record<string, unknown>)).toBeNull();
   });
 
   test("a mutation response without the expected node is an invalid response", async () => {
@@ -547,8 +703,10 @@ describe("t340 interpretGraphqlResult", () => {
 
   test("a mutation that failed to spawn reports not-started", async () => {
     const { runner } = fakeRunner([{ kind: "spawn-error" }]);
-    const outcome = await createMirrorGitHubGateway(runner).updateProjectItemStatus(
-      projectPermit("update-project-item-status"),
+    const outcome = await createMirrorGitHubGateway(
+      runner,
+    ).updateProjectItemSingleSelectField(
+      projectPermit("update-project-item-field"),
       PROJECT_NODE_ID,
       "PVTI_item1",
       "PVTSSF_status",
@@ -605,7 +763,7 @@ describe("t340 permit enforcement", () => {
     const { runner, requests } = fakeRunner([]);
     await expect(
       createMirrorGitHubGateway(runner).addProjectItem(
-        projectPermit("update-project-item-status"),
+        projectPermit("update-project-item-field"),
         PROJECT_NODE_ID,
         ISSUE_NODE_ID,
       ),
@@ -642,7 +800,7 @@ describe("t340 permit enforcement", () => {
     ]);
     const gh = createMirrorGitHubGateway(runner);
     await gh.listProjectItems(ISSUE);
-    await gh.resolveProjectStatusField(PROJECT);
+    await gh.resolveProjectFields(PROJECT, "Intent Phase");
     expect(requests).toHaveLength(2);
     for (const request of requests) {
       expect(request.args).not.toContain("--method");
@@ -654,7 +812,7 @@ describe("t340 permit enforcement", () => {
 });
 
 // BR-U1-10: the gateway offers no path to remove, archive, or otherwise reach
-// beyond adding an Issue to a board and setting its Status. This asserts over
+// beyond adding an Issue to a board and setting its single-select fields. This asserts over
 // every exported argv builder and every embedded query, so a future builder that
 // reintroduces one of these verbs fails here rather than in review.
 describe("t340 out-of-scope mutations are absent", () => {
@@ -682,10 +840,12 @@ describe("t340 out-of-scope mutations are absent", () => {
       if (typeof value === "string") strings.push(value);
     }
     strings.push(...gateway.listProjectItemsArgv(ISSUE));
-    strings.push(...gateway.resolveProjectStatusFieldArgv(PROJECT));
+    strings.push(
+      ...gateway.resolveProjectFieldsArgv(PROJECT, "Intent Phase"),
+    );
     strings.push(...gateway.addProjectItemArgv(PROJECT_NODE_ID, ISSUE_NODE_ID));
     strings.push(
-      ...gateway.updateProjectItemStatusArgv(
+      ...gateway.updateProjectItemSingleSelectFieldArgv(
         PROJECT_NODE_ID,
         "PVTI_item1",
         "PVTSSF_status",
@@ -714,7 +874,7 @@ describe("t340 out-of-scope mutations are absent", () => {
     });
     expect(mutationQueries.sort()).toEqual([
       "ADD_PROJECT_ITEM_MUTATION",
-      "UPDATE_PROJECT_ITEM_STATUS_MUTATION",
+      "UPDATE_PROJECT_ITEM_FIELD_MUTATION",
     ]);
   });
 });

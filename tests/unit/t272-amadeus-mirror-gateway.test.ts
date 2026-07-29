@@ -593,6 +593,23 @@ describe("editIssue / closeIssue", () => {
     ).rejects.toThrow(/permit/);
     expect(requests).toHaveLength(0);
   });
+
+  test("edit and close reject non-positive issue numbers before spawning gh", async () => {
+    const { runner, requests } = fakeRunner([]);
+    const gateway = createMirrorGitHubGateway(runner);
+
+    await expect(gateway.editIssue(permit("sync", -1), "x")).resolves.toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+      effect: "not-started",
+    });
+    await expect(gateway.closeIssue(permit("close", 0))).resolves.toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+      effect: "not-started",
+    });
+    expect(requests).toHaveLength(0);
+  });
 });
 
 // --- real `gh` envelope bytes across every verb (#1498) ----------------------

@@ -71,10 +71,19 @@ describe("t348 many targets", () => {
     ).toEqual([
       {
         project: { owner: "acme", number: 5 },
+        phaseField: "Intent Phase",
         statusNames: { construction: "Building" },
       },
-      { project: { owner: "acme", number: 6 }, statusNames: {} },
-      { project: { owner: "other", number: 12 }, statusNames: { done: "Shipped" } },
+      {
+        project: { owner: "acme", number: 6 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
+      {
+        project: { owner: "other", number: 12 },
+        phaseField: "Intent Phase",
+        statusNames: { done: "Shipped" },
+      },
     ]);
   });
 
@@ -125,7 +134,13 @@ describe("t348 layer replacement", () => {
         }),
         layer("intent", { "mirror-projects": [{ project: "acme/5" }] }),
       ]),
-    ).toEqual([{ project: { owner: "acme", number: 5 }, statusNames: {} }]);
+    ).toEqual([
+      {
+        project: { owner: "acme", number: 5 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
+    ]);
   });
 
   test("a layer that only sets auto-mirror leaves the winning target list intact", () => {

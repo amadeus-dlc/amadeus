@@ -309,6 +309,14 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-mirror-config.ts"),
       join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
     );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-mirror-policy.ts"),
+      join(proj, ".claude", "tools", "amadeus-mirror-policy.ts"),
+    );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-mirror-project-contract.ts"),
+      join(proj, ".claude", "tools", "amadeus-mirror-project-contract.ts"),
+    );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
     const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);

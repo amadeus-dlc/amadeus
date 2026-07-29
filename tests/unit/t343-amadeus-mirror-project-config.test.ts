@@ -93,9 +93,50 @@ describe("t343 project parse", () => {
       layer("space", { "mirror-projects": [{ project: "amadeus-dlc/5" }] }),
     ]);
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "amadeus-dlc", number: 5 }, statusNames: {} },
+      {
+        project: { owner: "amadeus-dlc", number: 5 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
     expect(outcome.sources).toEqual(["space/config.json"]);
+  });
+
+  test("GitHub owner casing is normalized at the configuration boundary", () => {
+    const [target] = resolved([
+      layer("space", {
+        "mirror-projects": [{ project: "AmAdEuS-DlC/5" }],
+      }),
+    ]).config.projects;
+
+    expect(target.project).toEqual({ owner: "amadeus-dlc", number: 5 });
+  });
+
+  test("phase-field overrides the authoritative field name", () => {
+    const [target] = resolved([
+      layer("space", {
+        "mirror-projects": [
+          { project: "amadeus-dlc/5", "phase-field": "Lifecycle" },
+        ],
+      }),
+    ]).config.projects;
+
+    expect(target.phaseField).toBe("Lifecycle");
+  });
+
+  test.each([
+    ["an empty phase-field", ""],
+    ["a non-string phase-field", 5],
+    ["a null phase-field", null],
+  ])("rejects %s", (_label, phaseField) => {
+    const reported = issues([
+      layer("global", {
+        "mirror-projects": [
+          { project: "a/1", "phase-field": phaseField },
+        ],
+      }),
+    ]);
+    expect(reported[0].key).toBe("mirror-projects");
   });
 
   test("an empty array is valid and configures no Project", () => {
@@ -125,6 +166,7 @@ describe("t343 project parse", () => {
     ["a missing slash", "amadeus-dlc"],
     ["a non-numeric number", "amadeus-dlc/five"],
     ["a zero number", "amadeus-dlc/0"],
+    ["a zero-padded number", "amadeus-dlc/005"],
     ["a negative number", "amadeus-dlc/-1"],
     ["a fractional number", "amadeus-dlc/1.5"],
     ["an empty owner", "/5"],
@@ -164,6 +206,23 @@ describe("t343 project parse", () => {
       { owner: "a", number: 1 },
       { owner: "a", number: 2 },
     ]);
+  });
+
+  test("duplicate Project identities in one layer are rejected", () => {
+    const reported = issues([
+      layer("space", {
+        "mirror-projects": [
+          { project: "acme/5", "phase-field": "Intent Phase" },
+          { project: "ACME/5", "phase-field": "Lifecycle" },
+        ],
+      }),
+    ]);
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatchObject({
+      key: "mirror-projects",
+      actualType: "duplicate project acme/5",
+    });
   });
 
   test("an unknown key inside a target is rejected", () => {
@@ -229,7 +288,13 @@ describe("t343 allowlist", () => {
       ]).config,
     ).toEqual({
       autoMirror: "auto",
-      projects: [{ project: { owner: "a", number: 1 }, statusNames: {} }],
+      projects: [
+        {
+          project: { owner: "a", number: 1 },
+          phaseField: "Intent Phase",
+          statusNames: {},
+        },
+      ],
       autoSoloElection: false,
     });
   });
@@ -256,7 +321,11 @@ describe("t343 layer precedence", () => {
       layer("intent", { "mirror-projects": [{ project: "b/2" }] }),
     ]);
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "b", number: 2 }, statusNames: {} },
+      {
+        project: { owner: "b", number: 2 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
   });
 
@@ -276,7 +345,11 @@ describe("t343 layer precedence", () => {
     ]);
     expect(outcome.config.autoMirror).toBe("auto");
     expect(outcome.config.projects).toEqual([
-      { project: { owner: "a", number: 1 }, statusNames: {} },
+      {
+        project: { owner: "a", number: 1 },
+        phaseField: "Intent Phase",
+        statusNames: {},
+      },
     ]);
     expect(outcome.sources).toEqual(["global/config.json", "intent/config.json"]);
   });
