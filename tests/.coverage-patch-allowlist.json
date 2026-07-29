@@ -1366,5 +1366,59 @@
     "file": "packages/framework/core/tools/amadeus-otel-projector.ts",
     "lines": "600-608",
     "reason": "import.meta.main CLI wiring for the projector 'export' verb. The decision logic (parseCliArgs, runExport) is fully covered in-process by tests/integration/t358; the main block runs only in the spawned CLI, which Bun coverage does not attribute. Spawn-only wiring lines per spawn-blindspot-two-step (ii)."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "389-420",
+    "reason": "Orphaned-active-intent guard and unselectable-intent error construction are exercised through the generated orchestrator CLI by t171 birth-gate integration; spawned main-path lines are not attributed by Bun.",
+    "expiry": "remove when intent selection and archived-next routing receive injectable in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "875",
+    "reason": "The unselectable-intent birth-gate error arm is exercised through the generated orchestrator CLI by t171 integration; spawned main-path lines are not attributed by Bun.",
+    "expiry": "remove when intentPickPromptIfRecordsExist is injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4749-4771",
+    "reason": "Intent selection cursor write and lifecycle guard are exercised through the shipped utility CLI intent-select-response path by t171 integration; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility intent selection receives an injectable in-process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4854-4865",
+    "reason": "The intent-select-response resolver callback is exercised through the shipped utility CLI by t171 integration, including token verification and rejection; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility intent selection receives an injectable in-process port"
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "lines": "49-66",
+    "reason": "Codex version and auth preflight arms are covered by t-codex-exec-live-gate for the GitHub Actions skip path; local codex/auth probe arms require AMADEUS_CODEX_EXEC_LIVE and are disabled on CI.",
+    "expiry": "remove when the requirements helper receives an injectable probe port or live E2E runs on CI"
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "lines": "71",
+    "reason": "Missing-auth fail-closed throw in installCodexExecAuth; success path is exercised by t-codex-exec-live-helper integration.",
+    "expiry": "remove when auth installation is injectable for in-process failure injection"
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "lines": "95-97",
+    "reason": "setupCodexExecHome cleanup on auth-install failure; the success path is exercised by t-codex-exec-live-helper integration.",
+    "expiry": "remove when home setup receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "lines": "123-126",
+    "reason": "Optional AMADEUS_RULES_DIR shell_environment_policy branch in writeCodexExecHomeConfig; the default path without rulesDir is exercised by t-codex-exec-live-helper integration.",
+    "expiry": "remove when helper tests cover the rulesDir branch in-process"
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "lines": "174",
+    "reason": "Git init failure throw in initializeCodexExecProject; the success path is exercised by t-codex-exec-live-helper integration.",
+    "expiry": "remove when project initialization receives an injectable git port"
   }
 ]
