@@ -187,7 +187,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "2435",
+    "lines": "2440",
     "reason": "The handleNext early return after a mirror directive is covered by strict single-JSON generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
     "expiry": "remove when handleNext can be driven with an injected in-process emitter"
   },
@@ -265,7 +265,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5145-5148",
+    "lines": "5150-5153",
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
@@ -950,7 +950,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4414-4420",
+    "lines": "4423-4429",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1196,13 +1196,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4138",
+    "lines": "4143",
     "reason": "Resume-payload compaction flag is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the resume verb gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4192",
+    "lines": "4197",
     "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when acknowledge-compaction gains an in-process seam test"
   },
@@ -1280,7 +1280,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4809",
+    "lines": "4813",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
