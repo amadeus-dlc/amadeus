@@ -57,6 +57,9 @@ RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 HERDR="${HERDR:-herdr}"
 SAFETY_WAIT_HELPER="${SAFETY_WAIT_HELPER:-$TOOL_DIR/team-up-codex-safety-wait.ts}"
+# Maximum time to wait for each Codex safety-wait supervisor to publish exact
+# run/role/PID readiness. Tests shorten this bounded wait through the env seam.
+SAFETY_WAIT_READY_TIMEOUT_SECONDS="${SAFETY_WAIT_READY_TIMEOUT_SECONDS:-10}"
 TEAM_PREREQUISITE_TOOLS="herdr agmsg"
 HERDR_INSTALL_URL="https://herdr.dev"
 AGMSG_INSTALL_URL="https://github.com/j5ik2o/agmsg"
@@ -305,6 +308,41 @@ safety_wait_role_for_member() {
   fi
 }
 
+safety_wait_cleanup_files() {
+  local member_record="$1"
+  rm -f "$member_record/safety-wait.pid"
+  rm -f "$member_record/safety-wait.ready" "$member_record"/safety-wait.ready.*.tmp
+  rm -rf -- "$member_record/safety-wait.lock"
+}
+
+safety_wait_ready_matches() {
+  local pid="$1" run_record="$2" role="$3" session run_id
+  session="$(cat "$run_record/session" 2>/dev/null)" || return 1
+  run_id="$(basename "$run_record")"
+  bun "$SAFETY_WAIT_HELPER" ready-valid \
+    --session "$session" --run "$run_id" --role "$role" \
+    --run-record "$run_record" --pid "$pid" >/dev/null 2>&1
+}
+
+wait_for_safety_wait_ready() {
+  local pid="$1" run_record="$2" role="$3" deadline
+  deadline=$((SECONDS + SAFETY_WAIT_READY_TIMEOUT_SECONDS))
+  while true; do
+    if ! safety_wait_process_matches "$pid" "$run_record" "$role"; then
+      echo "ERROR: safety-wait supervisor early-exit while waiting for ready for $role" >&2
+      return 1
+    fi
+    if safety_wait_ready_matches "$pid" "$run_record" "$role"; then
+      return 0
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "ERROR: safety-wait supervisor timeout while waiting for ready for $role" >&2
+      return 1
+    fi
+    sleep 0.05
+  done
+}
+
 stop_safety_wait_supervisors() {
   local run_record="$1" m role member_record owner state i
   [ -d "$run_record/members" ] || return 0
@@ -320,20 +358,20 @@ stop_safety_wait_supervisors() {
   for m in $(members_for "$(record_size "$run_record")"); do
     role="$(safety_wait_role_for_member "$m")"
     member_record="$run_record/members/$m"
-    [ -f "$member_record/safety-wait.lock/owner" ] || continue
-    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
-    if safety_wait_process_matches "$owner" "$run_record" "$role"; then
-      kill "$owner" 2>/dev/null || true
-      for i in $(seq 1 20); do
-        kill -0 "$owner" 2>/dev/null || break
-        sleep 0.05
-      done
+    if [ -f "$member_record/safety-wait.lock/owner" ]; then
+      owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
       if safety_wait_process_matches "$owner" "$run_record" "$role"; then
-        kill -KILL "$owner" 2>/dev/null || true
+        kill "$owner" 2>/dev/null || true
+        for i in $(seq 1 20); do
+          kill -0 "$owner" 2>/dev/null || break
+          sleep 0.05
+        done
+        if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+          kill -KILL "$owner" 2>/dev/null || true
+        fi
       fi
     fi
-    rm -f "$member_record/safety-wait.pid"
-    rm -rf -- "$member_record/safety-wait.lock"
+    safety_wait_cleanup_files "$member_record"
   done
   return 0
 }
@@ -393,22 +431,34 @@ safety_wait_start_state() {
 }
 
 rollback_safety_wait_starts() {
-  local run_record="$1" acquired="$2" m role member_record owner
+  local run_record="$1" acquired="$2" m role member_record owner i
   for m in $acquired; do
     role="$(safety_wait_role_for_member "$m")"
     member_record="$run_record/members/$m"
     owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
     if safety_wait_process_matches "$owner" "$run_record" "$role"; then
       kill "$owner" 2>/dev/null || true
+      for i in $(seq 1 20); do
+        kill -0 "$owner" 2>/dev/null || break
+        sleep 0.05
+      done
+      if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+        kill -KILL "$owner" 2>/dev/null || true
+      fi
     fi
-    rm -f "$member_record/safety-wait.pid"
-    rm -rf -- "$member_record/safety-wait.lock"
+    safety_wait_cleanup_files "$member_record"
   done
 }
 
 start_safety_wait_supervisors() {
-  local m role member_record pid lock_dir state acquired=""
+  local m role member_record pid lock_dir state owner acquired=""
   [ "$RUNTIME" = "codex" ] || return 0
+  case "$SAFETY_WAIT_READY_TIMEOUT_SECONDS" in
+  "" | *[!0-9]* | 0)
+    echo "ERROR: SAFETY_WAIT_READY_TIMEOUT_SECONDS must be a positive integer" >&2
+    return 1
+    ;;
+  esac
   [ -f "$SAFETY_WAIT_HELPER" ] || {
     echo "ERROR: missing Codex safety-wait helper: $SAFETY_WAIT_HELPER" >&2
     return 1
@@ -423,7 +473,8 @@ start_safety_wait_supervisors() {
       return 1
     fi
     if [ "$state" != "owned-live" ] && ! bun "$SAFETY_WAIT_HELPER" role-ready \
-      --session "$S" --role "$role" --herdr "$HERDR" >/dev/null 2>&1; then
+      --session "$S" --run "$RUN_ID" --role "$role" --run-record "$RUN_RECORD" \
+      --herdr "$HERDR" >/dev/null 2>&1; then
       echo "ERROR: safety-wait role pane is not ready for $role" >&2
       return 1
     fi
@@ -435,9 +486,9 @@ start_safety_wait_supervisors() {
     state="$(safety_wait_start_state "$member_record" "$RUN_RECORD" "$role")"
     [ "$state" = "owned-live" ] && continue
     if [ "$state" = "owner-dead" ]; then
-      rm -f "$member_record/safety-wait.pid"
-      rm -rf -- "$lock_dir"
+      safety_wait_cleanup_files "$member_record"
     fi
+    rm -f "$member_record/safety-wait.ready" "$member_record"/safety-wait.ready.*.tmp
     if ! mkdir "$lock_dir" 2>/dev/null; then
       echo "ERROR: safety-wait owner is ambiguous for $role" >&2
       rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
@@ -456,9 +507,18 @@ start_safety_wait_supervisors() {
     disown 2>/dev/null || true
     printf '%s\n' "$pid" >"$member_record/safety-wait.pid"
     printf '%s\n' "$pid" >"$lock_dir/owner"
-    sleep 0.05
-    if ! safety_wait_process_matches "$pid" "$RUN_RECORD" "$role"; then
-      echo "ERROR: safety-wait supervisor failed to start for $role" >&2
+    if ! wait_for_safety_wait_ready "$pid" "$RUN_RECORD" "$role"; then
+      rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
+      return 1
+    fi
+  done
+  for m in $(members_for "$TEAM_SIZE"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$RUN_RECORD/members/$m"
+    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
+    if ! safety_wait_process_matches "$owner" "$RUN_RECORD" "$role" ||
+      ! safety_wait_ready_matches "$owner" "$RUN_RECORD" "$role"; then
+      echo "ERROR: safety-wait supervisor lost exact ready evidence for $role" >&2
       rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
       return 1
     fi
