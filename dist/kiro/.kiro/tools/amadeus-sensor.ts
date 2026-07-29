@@ -57,7 +57,8 @@ import {
 	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { injectToSubprocess } from "../otel/context.ts";
 
 // --- Constants ---
 
@@ -360,6 +361,12 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// the detail-file path in step 3.
 	const projectDir = resolveProjectDir(projectDirArg);
 
+	// Re-attach to the intent trace (FR-TRC-4/5): the sensor-fire hook injected
+	// the W3C carrier into this process's env; a direct human invocation falls
+	// back to the persisted anchor. The per-sensor script spawn below re-injects
+	// it so the whole sensor path stays on one trace (BR-3).
+	attachProcessTraceContext(projectDir);
+
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
 	// upstream-coverage additionally takes --consumes "art1,art2,..." sourced
@@ -460,6 +467,8 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 				encoding: "utf-8",
 				timeout: timeoutMs,
 				cwd: projectDir,
+				// W3C carrier into the per-sensor script env (FR-TRC-5).
+				env: injectToSubprocess({ ...process.env }),
 			}),
 		),
 	);

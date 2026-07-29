@@ -28,6 +28,12 @@ import {
   recordDir,
 } from "./amadeus-lib.ts";
 import { readMirrorConfigLayers } from "./amadeus-mirror-config.ts";
+import {
+  attachIntentContext,
+  attachRemoteParentFromEnv,
+  ensureContextManager,
+  restoreIntentContext,
+} from "../otel/context.ts";
 
 // --- config -----------------------------------------------------------------
 
@@ -284,6 +290,29 @@ export function observe<T>(projectDir: string, name: string, fn: () => T): T {
     return result;
   } finally {
     appendTelemetryEvent(projectDir, { kind: "operation", name, startMs, endMs: Date.now(), ok });
+  }
+}
+
+// --- trace context attach (FR-TRC-4/5) ---------------------------------------
+
+// Re-attach this short-lived process to the intent trace before it spawns
+// children or starts spans: the W3C env carrier first (FR-TRC-5 — present
+// when an Amadeus parent process injected it), else the persisted intent
+// anchor (FR-TRC-4; BR-6 mints a fresh anchor for pre-migration intents).
+// Fail-open end to end: any failure leaves the process to start a new root
+// trace, with the diagnostic note written by the context layer (BR-5).
+// Disabled config -> pure no-op beyond the memoized config read.
+export function attachProcessTraceContext(projectDir: string): void {
+  if (!observabilityEnabled(projectDir)) return;
+  try {
+    ensureContextManager();
+    const root = recordDir(projectDir);
+    if (attachRemoteParentFromEnv(process.env, { diagDir: root })) return;
+    const intent = activeIntent(projectDir);
+    if (root === null || intent === null) return;
+    attachIntentContext(restoreIntentContext(root, intent));
+  } catch {
+    // fail-open: trace attach never blocks the caller
   }
 }
 
