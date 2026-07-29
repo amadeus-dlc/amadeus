@@ -44,19 +44,18 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  cpSync,
   existsSync,
-  mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { codexExecLiveSkipReason } from "../harness/codex-exec-live.ts";
+import {
+  codexExecChildEnvironment,
+  codexExecLiveRequirementsSkipReason,
+  setupCodexExecProject,
+} from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = process.env.AMADEUS_CODEX_DIST ?? join(REPO_ROOT, "dist", "codex");
@@ -71,76 +70,20 @@ const PER_BEAT_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 100
 // all plus slack.
 const TEST_TIMEOUT_MS = PER_BEAT_TIMEOUT_MS * 3 + 30_000;
 
-function codexVersionOk(): boolean {
-  const r = spawnSync(CODEX_BIN, ["--version"], { encoding: "utf-8" });
-  const m = (r.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
-  if (r.status !== 0 || !m) return false;
-  const [maj, min] = [Number(m[1]), Number(m[2])];
-  return maj > 0 || min >= 139;
-}
+const SKIP_REASON = codexExecLiveRequirementsSkipReason({
+  env: process.env,
+  codexBin: CODEX_BIN,
+  distributionDir: CODEX_DIST,
+});
 
-function skipReason(): string | null {
-  const environmentReason = codexExecLiveSkipReason(process.env);
-  if (environmentReason !== null) return environmentReason;
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
-  if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
-  if (AUTH_HOME === undefined) {
-    return "set AMADEUS_CODEX_EXEC_AUTH_HOME to a Codex auth directory";
-  }
-  if (!existsSync(join(AUTH_HOME, "auth.json"))) {
-    return `Codex auth missing: ${join(AUTH_HOME, "auth.json")}`;
-  }
-  return null;
-}
-const SKIP_REASON = skipReason();
-
-// Same scratch-install shape as t-exec-codex-status (dist/codex verbatim,
-// git-initialized, normal Codex auth + project trust + hook trust pre-seed).
-function setupCodexProject(): { proj: string; home: string; root: string } {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "codex-exec-")));
-  const proj = join(root, "proj");
-  const home = join(root, "codex-home");
-  mkdirSync(home, { recursive: true });
-  cpSync(join(CODEX_DIST, ".codex"), join(proj, ".codex"), { recursive: true });
-  cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
-  cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
-  cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
-  cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
-  if (AUTH_HOME === undefined) throw new Error("AMADEUS_CODEX_EXEC_AUTH_HOME is required");
-  cpSync(join(AUTH_HOME, "auth.json"), join(home, "auth.json"));
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "install"],
-  ]) {
-    const r = spawnSync("git", args, { cwd: proj, encoding: "utf-8" });
-    if (r.status !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr}`);
-  }
-  const trust = spawnSync(
-    "bun",
-    [join(REPO_ROOT, "scripts", "package.ts"), "codex", "trust", "--project", proj],
-    { encoding: "utf-8", cwd: REPO_ROOT },
-  );
-  if (trust.status !== 0) throw new Error(`trust emit failed: ${trust.stderr}`);
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `model = "${OPENAI_MODEL}"`,
-      `model_context_window = 1000000`,
-      `model_reasoning_effort = "low"`,
-      ``,
-      `[shell_environment_policy]`,
-      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
-      ``,
-      `[projects."${proj}"]`,
-      `trust_level = "trusted"`,
-      ``,
-      trust.stdout,
-    ].join("\n"),
-    "utf-8",
-  );
-  return { proj, home, root };
-}
+const PROJECT_SETUP = {
+  prefix: "codex-exec-",
+  authHome: AUTH_HOME,
+  distributionDir: CODEX_DIST,
+  repositoryRoot: REPO_ROOT,
+  model: OPENAI_MODEL,
+  rulesDir: ".codex/amadeus-rules",
+};
 
 // One codex turn. `resume: true` continues the newest recorded session for
 // this cwd (`codex exec resume --last "<prompt>"`) instead of starting fresh.
@@ -157,7 +100,7 @@ function codexTurn(
     cwd: proj,
     encoding: "utf-8",
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, CODEX_HOME: home },
+    env: codexExecChildEnvironment(home),
     timeout: PER_BEAT_TIMEOUT_MS,
   });
   return { rc: r.status ?? -1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
@@ -220,7 +163,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
   test.skipIf(SKIP_REASON !== null)(
     `beat 1 stops at the gate with nothing written; beat 2 resume-approves into birth${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
-      const { proj, home, root } = setupCodexProject();
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
       try {
         // Beat 1: the compose front. The turn must END at a human question
         // (the proposal gate, or - conductor-forwarding variance - the
@@ -274,7 +217,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
           .join("\n");
         expect(audit).toContain("**Event**: WORKFLOW_STARTED");
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        cleanup();
       }
     },
     TEST_TIMEOUT_MS,
@@ -283,7 +226,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
   test.skipIf(SKIP_REASON !== null)(
     `a full-width ordinal selects the visible intent instead of reaching report as raw input${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
-      const { proj, home, root } = setupCodexProject();
+      const { proj, home, cleanup } = setupCodexExecProject(PROJECT_SETUP);
       try {
         const firstRecord = seedCompletedIntent(proj, "first-intent");
         seedCompletedIntent(proj, "second-intent");
@@ -315,7 +258,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         expect(readFileSync(cursor, "utf-8").trim()).toBe(firstRecord);
         expect(`${b2.stdout}\n${b2.stderr}`).not.toContain("report requires --result");
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        cleanup();
       }
     },
     TEST_TIMEOUT_MS,
