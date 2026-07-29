@@ -12,7 +12,7 @@
 # the session's project directory as cwd, so the relative path resolves in an
 # installed project, and the adapter is fail-open where the project is not
 # installed. Event/matcher finalization against live payloads is a Bolt 2
-# concern (the 7 event kinds below wire the adapter's 9 targets; one event
+# concern (the 9 event kinds below wire the adapter's 10 targets; one event
 # kind may drive more than one target).
 
 # >>> amadeus-kimi-hooks >>>
@@ -63,16 +63,15 @@ command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts log-subagent"
 event = "Stop"
 command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts stop"
 
-# Permission pre-allows (existing-harness idiom): the deterministic core runs
-# via these exact command prefixes, plus the git verbs the Bolt worktree flow
-# needs. First match wins, so these narrow allows stay ahead of any broad ask.
+# Permission rules use first-match semantics. The hook-path deny is
+# defense-in-depth only; it is not a caller-authentication boundary.
 [[permission.rules]]
-decision = "allow"
-pattern = "Bash(bun .kimi-code/tools/*)"
+decision = "deny"
+pattern = "Bash(*.kimi-code/hooks/*)"
 
 [[permission.rules]]
 decision = "allow"
-pattern = "Bash(bun .kimi-code/hooks/*)"
+pattern = "Bash(bun .kimi-code/tools/*)"
 
 [[permission.rules]]
 decision = "allow"

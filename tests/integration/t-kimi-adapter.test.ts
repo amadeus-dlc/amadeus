@@ -9,17 +9,18 @@
 // covers: file:packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts,
 //         file:packages/framework/harness/kimi/manifest.ts
 //
-// FIXTURES: tests/fixtures/kimi-hooks/<event>.json are REAL live captures off
-// Kimi Code CLI 0.28.1 (2026-07-26, the Bolt 2 probe wiring) — never
-// hand-synthesized (business-logic-model.md §契約テスト, BR-5). The mapping
+// FIXTURES: tests/fixtures/kimi-hooks/<event>.json are live captures from Kimi
+// Code CLI 0.28.1 (2026-07-26, the Bolt 2 probe wiring), except the two
+// subagent lifecycle fixtures (Kimi 0.29.0 bundle-derived external-runner
+// contract). Those two are contract fixtures, not claimed live captures. The mapping
 // table and output contracts they pin:
 //   - Write/Edit tool_input.path → Claude tool_input.file_path
 //   - UserPromptSubmit prompt is a content-block ARRAY → joined to a string
 //   - TodoList {todos:[{status,title}]} → TaskUpdate {status, activeForm}
 //   - SubagentStop agent_name → agent_type (no agent_id on Kimi)
-//   - Stop block relay: core {"decision":"block","reason"} → exit 2 + reason
-//     verbatim on stderr (verified live); SessionStart stdout is discarded
-//     (context injection does not exist on Kimi 0.28.1 — probed 3 formats).
+//   - Stop is always observation-only because its payload has no trustworthy
+//     caller identity; SessionStart stdout is discarded (context injection
+//     does not exist on Kimi 0.28.1 — probed 3 formats).
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -33,7 +34,6 @@ import {
   runAdapter,
   runCli,
   translateSessionStartOutput,
-  translateStopOutput,
 } from "../../packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts";
 import manifest from "../../packages/framework/harness/kimi/manifest.ts";
 
@@ -112,8 +112,13 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
 
   test("SessionEnd capture → session-end {reason}", () => {
     const calls = routeTarget("session-end", fixtureEnv("session-end"));
+    expect(calls).toHaveLength(1);
     expect(calls[0].hookPath).toBe("amadeus-session-end.ts");
-    expect(JSON.parse(calls[0].stdin)).toEqual({ hook_event_name: "SessionEnd", reason: "exit" });
+    expect(JSON.parse(calls[0].stdin)).toEqual({
+      hook_event_name: "SessionEnd",
+      reason: "exit",
+      session_id: "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
+    });
   });
 
   test("session-end defaults an absent reason to unknown", () => {
@@ -129,13 +134,26 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
     expect(JSON.parse(calls[0].stdin)).toEqual({
       hook_event_name: "UserPromptSubmit",
       prompt: "Reply with exactly one word: ok",
+      session_id: "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
     });
   });
 
-  test("PostToolUse(AskUserQuestion) capture → mint with an empty prompt (core mints fail-open)", () => {
+  test("PostToolUse(AskUserQuestion) capture preserves the route purpose payload", () => {
     const calls = routeTarget("mint", fixtureEnv("post-tool-use-ask-user-question"));
     expect(calls[0].hookPath).toBe("amadeus-mint-presence.ts");
-    expect(JSON.parse(calls[0].stdin)).toEqual({ hook_event_name: "UserPromptSubmit", prompt: "" });
+    expect(JSON.parse(calls[0].stdin)).toEqual({
+      hook_event_name: "PostToolUse",
+      session_id: "session_c3c01d5d-0286-4d36-a6e4-ae028b3aabe1",
+      tool_name: "AskUserQuestion",
+      tool_input: {
+        questions: [
+          {
+            options: [{ label: "red" }, { label: "blue" }],
+            question: "Pick red or blue?",
+          },
+        ],
+      },
+    });
   });
 
   test("PostToolUse(Write) capture → audit THEN sensors, path renamed to file_path", () => {
@@ -193,8 +211,9 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
     expect(calls).toEqual([{ hookPath: "amadeus-validate-state.ts", stdin: "{}", translate: "none" }]);
   });
 
-  test("SubagentStop capture → log-subagent maps agent_name → agent_type, agent_id absent → \"\"", () => {
+  test("SubagentStop 0.29.0 contract → role mapping without a session identity", () => {
     const calls = routeTarget("log-subagent", fixtureEnv("subagent-stop"));
+    expect(calls).toHaveLength(1);
     expect(calls[0].hookPath).toBe("amadeus-log-subagent.ts");
     expect(JSON.parse(calls[0].stdin)).toEqual({
       hook_event_name: "SubagentStop",
@@ -203,16 +222,8 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
     });
   });
 
-  test("Stop capture → stop relays stop_hook_active + session_id", () => {
-    const calls = routeTarget("stop", fixtureEnv("stop"));
-    expect(calls).toHaveLength(1);
-    expect(calls[0].hookPath).toBe("amadeus-stop.ts");
-    expect(calls[0].translate).toBe("stop");
-    expect(JSON.parse(calls[0].stdin)).toEqual({
-      hook_event_name: "Stop",
-      stop_hook_active: false,
-      session_id: "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
-    });
+  test("Stop capture → observation-only with no core-hook call", () => {
+    expect(routeTarget("stop", fixtureEnv("stop"))).toEqual([]);
   });
 
   test("unknown target → fail-open empty call list", () => {
@@ -236,23 +247,6 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
         expect(call.stdin).not.toContain("token_count");
       }
     }
-  });
-});
-
-describe("translateStopOutput — the verbatim block relay (BR-3)", () => {
-  test('well-formed {"decision":"block","reason"} → exit 2 + reason verbatim on stderr, no stdout', () => {
-    const r = translateStopOutput('{"decision":"block","reason":"workflow incomplete: [x] stages remain"}');
-    expect(r.exitCode).toBe(2);
-    expect(r.stderr).toBe("workflow incomplete: [x] stages remain\n");
-    expect(r.stdout).toBe("");
-  });
-  test("non-block decision → silent exit 0", () => {
-    expect(translateStopOutput('{"decision":"approve"}')).toEqual({ stdout: "", exitCode: 0, stderr: "" });
-  });
-  test("empty / malformed core output → fail-open silent exit 0", () => {
-    expect(translateStopOutput("")).toEqual({ stdout: "", exitCode: 0, stderr: "" });
-    expect(translateStopOutput("not json")).toEqual({ stdout: "", exitCode: 0, stderr: "" });
-    expect(translateStopOutput('{"decision":"block"}')).toEqual({ stdout: "", exitCode: 0, stderr: "" });
   });
 });
 
@@ -288,20 +282,23 @@ describe("runAdapter — end-to-end with the spawn spy", () => {
     expect(spy.calls).toHaveLength(0);
   });
 
-  test("stop: core block decision → exit 2 with the reason verbatim on stderr", () => {
-    const spy = spySpawn('{"decision":"block","reason":"finish stage 3 first"}');
-    const res = runAdapter("stop", fixture("stop"), "/proj", spy.fn);
-    expect(res.exitCode).toBe(2);
-    expect(res.stderr).toBe("finish stage 3 first\n");
-    expect(res.stdout).toBe("");
-    expect(spy.calls.map((c) => c.hookFile)).toEqual(["amadeus-stop.ts"]);
-  });
-
-  test("stop: core prints no block → exit 0 and the Claude-schema stdout NEVER leaks", () => {
-    const spy = spySpawn('{"decision":"approve"}');
-    const res = runAdapter("stop", fixture("stop"), "/proj", spy.fn);
-    expect(res.exitCode).toBe(0);
-    expect(res.stdout).toBe("");
+  test.each([
+    ["main", fixture("stop")],
+    [
+      "subagent",
+      JSON.stringify({
+        hook_event_name: "Stop",
+        session_id: "",
+        cwd: "/proj",
+        agent_name: "amadeus-architecture-reviewer-agent",
+        stop_hook_active: false,
+      }),
+    ],
+  ])("stop: %s caller shape is always a silent no-op", (_caller, payload) => {
+    const spy = spySpawn('{"decision":"block","reason":"must not run"}');
+    const result = runAdapter("stop", payload, "/proj", spy.fn);
+    expect(result).toEqual({ stdout: "", exitCode: 0, stderr: "" });
+    expect(spy.calls).toEqual([]);
   });
 
   test("session-start: core context JSON is dropped (observation-only), exit 0", () => {
@@ -382,16 +379,35 @@ describe("defaultSpawn — real Bun.spawnSync wiring", () => {
 });
 
 describe("kimi manifest — the distribution row", () => {
-  test("carries the adapter entrypoint + logic lib in harnessFiles (Bolt 1 open issue)", () => {
+  test("carries the Kimi adapter and logic lib in harnessFiles", () => {
     const files = manifest.harnessFiles.map((f) => `${f.src}->${f.dst}`);
     expect(files).toContain("hooks/amadeus-kimi-adapter.ts->hooks/amadeus-kimi-adapter.ts");
     expect(files).toContain("hooks/amadeus-kimi-lib.ts->hooks/amadeus-kimi-lib.ts");
   });
 
-  test("exempts the authored kimi adapter files from the orphan scan", () => {
+  test("exempts the authored Kimi hook files from the orphan scan", () => {
     expect(manifest.authoredExempt).toHaveLength(1);
     expect(manifest.authoredExempt[0].test("hooks/amadeus-kimi-adapter.ts")).toBe(true);
     expect(manifest.authoredExempt[0].test("hooks/amadeus-kimi-lib.ts")).toBe(true);
     expect(manifest.authoredExempt[0].test("hooks/amadeus-audit-logger.ts")).toBe(false);
+  });
+
+  test("projects a read-only Kimi tool allowlist only onto dispatched reviewers", () => {
+    expect(manifest.frontmatterAdditions).toEqual([
+      {
+        file: "agents/amadeus-product-lead-agent.md",
+        lines: ["tools: [Read, Grep, Glob]"],
+      },
+      {
+        file: "agents/amadeus-architecture-reviewer-agent.md",
+        lines: ["tools: [Read, Grep, Glob]"],
+      },
+    ]);
+    const restricted = new Set(
+      manifest.frontmatterAdditions?.map(({ file }) => file),
+    );
+    expect(restricted.has("agents/amadeus-developer-agent.md")).toBe(false);
+    expect(restricted.has("agents/amadeus-architect-agent.md")).toBe(false);
+    expect(restricted.has("agents/amadeus-composer-agent.md")).toBe(false);
   });
 });

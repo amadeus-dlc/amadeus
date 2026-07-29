@@ -130,6 +130,9 @@ import {
   relativeCodekbDir,
   relativeRecordDir,
   relativeSpaceRecordPrefix,
+  readIntentRegistry,
+  readCurrentSessionId,
+  recordDirMatches,
   recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
@@ -158,9 +161,13 @@ import {
   parseGrantApprovalProcessResult,
   routeSoloStandingGrantDirective,
 } from "./amadeus-grant-authorization.ts";
+import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   armPresenceReservation,
+  cancelArmedPresenceReservation,
+  consumePresenceReservation,
+  findActivePresenceReservation,
   type PresenceReservation,
   readPresenceReservation,
 } from "./amadeus-presence-reservation.ts";
@@ -207,14 +214,22 @@ import {
   recordActivationVerdict,
 } from "./amadeus-plugin-activation.ts";
 
+function trustedHostSessionId(projectDir: string | undefined): string | undefined {
+  const pd = resolveProjectDir(projectDir);
+  return detectHarnessType() === "kimi"
+    ? readCurrentSessionId(pd) ?? undefined
+    : process.env.AMADEUS_TRUSTED_SESSION_ID;
+}
+
 // Read the workflow state file if it exists, else null. The engine's `next` is
 // a pure read: an absent state file is a legitimate branch (no workflow yet),
 // not an error to throw. Composes stateFilePath() for the canonical location.
 function loadStateFileIfPresent(
   projectDir: string,
   intent?: string,
+  space?: string,
 ): string | null {
-  const path = stateFilePath(projectDir, intent);
+  const path = stateFilePath(projectDir, intent, space);
   if (!existsSync(path)) return null;
   return readFileSync(path, "utf-8");
 }
@@ -592,13 +607,18 @@ function emit(directive: Directive, recordError = true): void {
   // asymmetry). Recording is best-effort and happens BEFORE the stdout print so
   // the directive JSON stays the sole stdout output and the exit code is
   // untouched. Every workflow `emit(errorDirective(...))` call site is covered
-  // by this aggregation point. The sole opt-out is emitMigrationError below:
-  // workspace migration is outside the Intent lifecycle and must not annotate
-  // an unrelated active record.
+  // by this aggregation point. State-neutral validation commands and workspace
+  // migration opt out because neither may annotate an unrelated active record.
   if (directive.kind === "error" && recordError) {
     recordEngineError(directive.message, _handlerProjectDir);
   }
   console.log(JSON.stringify(result.data));
+}
+
+function emitStateNeutralError(message: string): void {
+  // Gate command validation must leave state and audit byte-unchanged; the
+  // ordinary error path records ERROR_LOGGED before printing.
+  emit(errorDirective(message), false);
 }
 
 // Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
@@ -3872,7 +3892,7 @@ function handleAuthorizedApprovalReport(
       emit(errorDirective(`Unexpected await-approval outcome for "${slug}".`));
       return;
     }
-    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    const sessionId = trustedHostSessionId(pd);
     if (!sessionId) {
       emit(errorDirective(
         "Cannot arm human continuation without trusted host session identity.",
@@ -4150,6 +4170,16 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     return;
   }
   const isGated = node.phase !== "initialization";
+  if (
+    isGated &&
+    stageCheckbox.state !== "completed" &&
+    detectHarnessType() === "kimi"
+  ) {
+    emit(errorDirective(
+      `Kimi gate approval for "${slug}" requires the stage reservation carrier from gate-reserve.`,
+    ));
+    return;
+  }
 
   // Per-unit coverage gate (issue #368), DETERMINISTIC enforcement on the
   // approve path. The engine only PRESENTS the stage's real gate once every unit
@@ -4416,6 +4446,342 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
   ));
 }
 
+export function openGateForKimiReservation(
+  pd: string,
+  slug: string,
+  reservation: PresenceReservation,
+): string | null {
+  const stateContent = loadStateFileIfPresent(
+    pd,
+    reservation.targetIntentDir,
+    reservation.space,
+  );
+  const currentStage = stateContent === null
+    ? null
+    : getField(stateContent, "Current Stage");
+  const checkbox = stateContent === null
+    ? undefined
+    : checkboxForSlug(stateContent, slug);
+  if (
+    currentStage !== slug ||
+    (checkbox?.state !== "in-progress" &&
+      checkbox?.state !== "awaiting-approval" &&
+      checkbox?.state !== "revising")
+  ) {
+    return `gate-reserve requires current stage "${slug}" to be in-progress, revising, or awaiting-approval.`;
+  }
+  if (checkbox.state === "awaiting-approval") return null;
+  const transition = checkbox.state === "revising" ? "revise" : "gate-start";
+  const opened = spawnState(pd, [
+    transition,
+    slug,
+    ...(transition === "gate-start" ? ["--recovered"] : []),
+    "--intent",
+    reservation.targetIntentDir,
+    "--space",
+    reservation.space,
+  ]);
+  if (opened.exitCode === 0) return null;
+  const detail = (opened.stderr || opened.stdout).trim();
+  return (
+    `Transition rejected by amadeus-state.ts ${transition} for "${slug}"` +
+    (detail ? `: ${detail}` : ".")
+  );
+}
+
+type KimiGateReservationOwner = {
+  readonly space: string;
+  readonly uuid: string;
+};
+
+function kimiGateReservationOwner(pd: string): KimiGateReservationOwner | null {
+  const space = activeSpace(pd);
+  const intent = activeIntent(pd, space);
+  if (intent === null) return null;
+  const owner = readIntentRegistry(pd, space).find((entry) =>
+    recordDirMatches(entry, intent)
+  );
+  return owner === undefined ? null : { space, uuid: owner.uuid };
+}
+
+type KimiGateReservationResult =
+  | {
+    readonly kind: "reserved";
+    readonly reservation: PresenceReservation;
+    readonly newlyArmed: boolean;
+  }
+  | { readonly kind: "error"; readonly message: string };
+
+function matchingKimiGateReservation(
+  pd: string,
+  sessionId: string,
+  owner: KimiGateReservationOwner,
+  slug: string,
+): PresenceReservation | null {
+  const active = findActivePresenceReservation(pd, sessionId);
+  if (active === null) return null;
+  if (
+    active.space !== owner.space ||
+    active.targetIntentId !== owner.uuid ||
+    active.stage !== slug ||
+    active.routeId !== active.reservationId
+  ) {
+    throw new Error(
+      "Trusted session already has a reservation for another approval route",
+    );
+  }
+  return active;
+}
+
+function reserveKimiGateApproval(
+  pd: string,
+  sessionId: string,
+  owner: KimiGateReservationOwner,
+  slug: string,
+): KimiGateReservationResult {
+  try {
+    const active = matchingKimiGateReservation(
+      pd,
+      sessionId,
+      owner,
+      slug,
+    );
+    if (active !== null) {
+      const state = loadStateFileIfPresent(
+        pd,
+        active.targetIntentDir,
+        active.space,
+      );
+      const interruptedRejection =
+        active.state === "minted" &&
+        state !== null &&
+        checkboxForSlug(state, slug)?.state === "revising";
+      if (!interruptedRejection) {
+        // A concurrent retry may have retired this snapshot while the owner
+        // state was read. Linearize the return under the reservation lock and
+        // converge on the current carrier instead of returning stale authority.
+        const winner = withAuditLock(pd, () =>
+          matchingKimiGateReservation(pd, sessionId, owner, slug)
+        );
+        if (winner === null) {
+          throw new Error("Trusted session reservation changed during retry");
+        }
+        return { kind: "reserved", reservation: winner, newlyArmed: false };
+      }
+      // The rejection state and audit committed before the old carrier's
+      // consume write. Retire that exact residue before re-presenting the gate.
+      consumePresenceReservation({
+        projectDir: pd,
+        sessionId,
+        reservationId: active.reservationId,
+        targetIntentId: active.targetIntentId,
+        stage: slug,
+      });
+    }
+    const reservationId = randomUUID();
+    try {
+      const reservation = armPresenceReservation({
+        projectDir: pd,
+        sessionId,
+        space: owner.space,
+        targetIntentId: owner.uuid,
+        stage: slug,
+        routeId: reservationId,
+        reservationIdFactory: () => reservationId,
+      });
+      return { kind: "reserved", reservation, newlyArmed: true };
+    } catch (cause) {
+      // Another simultaneous retry may have won between the initial lookup
+      // and arm. Re-read through matchingKimiGateReservation, whose active
+      // lookup owns the reservation lock, and converge on that exact route;
+      // unrelated or corrupt markers still fail loudly.
+      const winner = matchingKimiGateReservation(
+        pd,
+        sessionId,
+        owner,
+        slug,
+      );
+      if (winner !== null) {
+        return { kind: "reserved", reservation: winner, newlyArmed: false };
+      }
+      throw cause;
+    }
+  } catch (cause) {
+    return {
+      kind: "error",
+      message:
+        `Cannot reserve Kimi approval for "${slug}": ${errorMessage(cause)}`,
+    };
+  }
+}
+
+function gateOpenedAfterReservation(
+  pd: string,
+  sessionId: string,
+  slug: string,
+  reservation: PresenceReservation,
+  newlyArmed: boolean,
+): boolean {
+  const state = loadStateFileIfPresent(
+    pd,
+    reservation.targetIntentDir,
+    reservation.space,
+  );
+  const awaiting =
+    state !== null && checkboxForSlug(state, slug)?.state === "awaiting-approval";
+  if (!awaiting && newlyArmed) {
+    try {
+      cancelArmedPresenceReservation(
+        pd,
+        sessionId,
+        reservation.reservationId,
+      );
+    } catch {
+      // The command still returns no carrier. A later retry resolves the
+      // exact marker or rejects it; it can never authorize another route.
+    }
+  }
+  return awaiting;
+}
+
+export function handleGateReserve(
+  args: string[],
+  projectDir: string | undefined,
+): void {
+  const stageIndex = args.indexOf("--stage");
+  const slug = stageIndex === -1 ? undefined : args[stageIndex + 1];
+  if (!slug || slug.startsWith("--")) {
+    emitStateNeutralError("gate-reserve requires --stage <slug>.");
+    return;
+  }
+  if (detectHarnessType() !== "kimi") {
+    emitStateNeutralError("gate-reserve is available only on the Kimi harness.");
+    return;
+  }
+  const sessionId = trustedHostSessionId(projectDir);
+  if (!sessionId) {
+    emitStateNeutralError(
+      "gate-reserve requires a trusted Kimi conductor session.",
+    );
+    return;
+  }
+  const pd = resolveProjectDir(projectDir);
+  const owner = kimiGateReservationOwner(pd);
+  if (owner === null) {
+    emitStateNeutralError("gate-reserve could not resolve one active intent.");
+    return;
+  }
+  const reserved = reserveKimiGateApproval(pd, sessionId, owner, slug);
+  if (reserved.kind === "error") {
+    emitStateNeutralError(reserved.message);
+    return;
+  }
+  const openError = openGateForKimiReservation(
+    pd,
+    slug,
+    reserved.reservation,
+  );
+  if (openError !== null) {
+    if (
+      !gateOpenedAfterReservation(
+        pd,
+        sessionId,
+        slug,
+        reserved.reservation,
+        reserved.newlyArmed,
+      )
+    ) {
+      emitStateNeutralError(openError);
+      return;
+    }
+  }
+  emit({
+    kind: "await-approval",
+    stage: slug,
+    reason: "kimi-human-approval-required",
+    target_intent_id: owner.uuid,
+    presence_reservation_id: reserved.reservation.reservationId,
+  });
+}
+
+export function handleGateReject(
+  args: string[],
+  projectDir: string | undefined,
+): void {
+  const value = (name: string): string | undefined => {
+    const index = args.indexOf(name);
+    const candidate = index === -1 ? undefined : args[index + 1];
+    return candidate === undefined || candidate.startsWith("--")
+      ? undefined
+      : candidate;
+  };
+  const slug = value("--stage");
+  const targetIntentId = value("--target-intent-id");
+  const reservationId = value("--presence-reservation-id");
+  const feedback = value("--feedback");
+  if (!slug || !targetIntentId || !reservationId) {
+    emitStateNeutralError(
+      "gate-reject requires --stage, --target-intent-id, and --presence-reservation-id.",
+    );
+    return;
+  }
+  if (detectHarnessType() !== "kimi") {
+    emitStateNeutralError("gate-reject is available only on the Kimi harness.");
+    return;
+  }
+  if (!trustedHostSessionId(projectDir)) {
+    emitStateNeutralError(
+      "gate-reject requires a trusted Kimi conductor session.",
+    );
+    return;
+  }
+  const pd = resolveProjectDir(projectDir);
+  let marker: PresenceReservation | null;
+  try {
+    marker = readPresenceReservation(pd, reservationId);
+  } catch (cause) {
+    emitStateNeutralError(
+      `Invalid presence reservation: ${errorMessage(cause)}`,
+    );
+    return;
+  }
+  if (
+    marker === null ||
+    marker.targetIntentId !== targetIntentId ||
+    marker.stage !== slug
+  ) {
+    emitStateNeutralError(
+      "Presence reservation does not match the gate rejection.",
+    );
+    return;
+  }
+  const rejectArgs = [
+    "reject",
+    slug,
+    "--target-intent-id",
+    targetIntentId,
+    "--presence-reservation-id",
+    reservationId,
+    "--intent",
+    marker.targetIntentDir,
+    "--space",
+    marker.space,
+  ];
+  if (feedback) rejectArgs.push("--feedback", feedback);
+  const rejected = spawnState(pd, rejectArgs);
+  if (rejected.exitCode !== 0) {
+    const detail = (rejected.stderr || rejected.stdout).trim();
+    emitStateNeutralError(
+      `Transition rejected by amadeus-state.ts reject for "${slug}"` +
+        (detail ? `: ${detail}` : "."),
+    );
+    return;
+  }
+  emit(printDirective(
+    `Request Changes recorded for "${slug}". Complete the Keep/Modify/Redo revision, then run gate-reserve again to mint a new approval carrier.`,
+  ));
+}
+
 // --- CLI entry point ---
 
 function main(): void {
@@ -4460,12 +4826,18 @@ function main(): void {
     case "park":
       handlePark(subArgs, projectDir);
       break;
+    case "gate-reserve":
+      handleGateReserve(subArgs, projectDir);
+      break;
+    case "gate-reject":
+      handleGateReject(subArgs, projectDir);
+      break;
     default: {
       // Unknown / missing subcommand — usage to stderr, exit 1. Mirror the
       // sibling tools (amadeus-state.ts default -> error()): record an
       // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
       // evidence, not just a stderr line (Issue #878). No-op pre-init.
-      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`;
+      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park, gate-reserve, gate-reject`;
       recordEngineError(usage, projectDir);
       console.error(usage);
       process.exit(1);

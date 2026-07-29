@@ -2,7 +2,7 @@
 // against the REAL snippet master and REAL fs ports under a mkdtemp KimiHome
 // (never the user's real ~/.kimi-code). The pure merge logic's table-driven
 // cases live in tests/unit/setup-kimi-hooks-domain.test.ts; this file pins:
-//   - renderManagedBlock on the shipped master (10 hooks + 5 pre-allows)
+//   - renderManagedBlock on the shipped master (10 hooks + 4 allows + 1 deny)
 //   - the Bolt 2 live finding at full fidelity: a marker-stripped config
 //     (kimi CLI 0.28.1 drops comments) plans "replace", never a duplicate add
 //   - the module flow (FR-3b/3c): plan report -> confirm -> backup -> atomic
@@ -78,9 +78,18 @@ describe("renderManagedBlock — the shipped snippet master", () => {
     expect(lines[lines.length - 1]).toBe(MANAGED_BLOCK_END);
     expect(block).toContain("amadeus-kimi-adapter.ts");
     expect(block).not.toContain("single source of truth"); // preamble stays out
-    // The master wires 10 hook entries and 5 permission pre-allows.
+    // The master wires 10 hook entries and 5 permission rules.
     expect(block.split("[[hooks]]").length - 1).toBe(10);
     expect(block.split("[[permission.rules]]").length - 1).toBe(5);
+    const hookDeny =
+      'decision = "deny"\npattern = "Bash(*.kimi-code/hooks/*)"';
+    const toolAllow =
+      'decision = "allow"\npattern = "Bash(bun .kimi-code/tools/*)"';
+    expect(block).toContain(hookDeny);
+    expect(block.indexOf(hookDeny)).toBeLessThan(block.indexOf(toolAllow));
+    expect(block).not.toContain(
+      'decision = "allow"\npattern = "Bash(bun .kimi-code/hooks/*)"',
+    );
   });
 });
 

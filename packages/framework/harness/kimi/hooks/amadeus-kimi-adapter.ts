@@ -14,11 +14,9 @@
 //                  state-sync | runtime-compile | validate-state |
 //                  log-subagent | stop
 //
-// Fail-open everywhere (BR-2): the only non-zero exit this shim can produce is
-// the Stop block relay (exit 2 + the core hook's reason verbatim on stderr),
-// and even that fires only on a well-formed core block decision. See
-// amadeus-kimi-lib.ts for the 2026-07-26 live-capture measurement (Kimi Code
-// CLI 0.28.1) these contracts are derived from.
+// Fail-open everywhere (BR-2). Stop is intentionally observation-only because
+// Kimi does not expose a trustworthy main-vs-subagent caller identity. See
+// amadeus-kimi-lib.ts for the measured contracts and rationale.
 
 import { runCli } from "./amadeus-kimi-lib.ts";
 

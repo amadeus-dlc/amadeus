@@ -12,11 +12,15 @@ never hand-edit it (the drift guard fails CI).
 
 ## Prerequisites
 
-- **Kimi Code CLI ≥ 0.28.1** — the measured floor. The hook event/matcher
-  payload contract (every hook event kind captured against a live 0.28.1),
-  `.kimi-code/skills/` discovery, and `AskUserQuestion` were all verified
-  against this release. `/skill:amadeus --doctor` enforces the pin. Check with
-  `kimi --version`.
+- **Kimi Code CLI ≥ 0.29.0** — the hard floor. Version 0.29.0 introduced
+  Markdown custom-agent definitions and per-agent tool permissions; Amadeus
+  uses that contract for its read-only reviewer profiles. Kimi checks an
+  agent's `tools` allowlist before execution. Releases in the 0.28.x line
+  predate that boundary and are unsupported, so `/skill:amadeus --doctor`
+  rejects them. See the official
+  [0.29.0 changelog](https://www.kimi.com/code/docs/en/kimi-code-cli/release-notes/changelog.html#0290-2026-07-22)
+  and [custom-agent file format](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html#agent-file-format).
+  Check with `kimi --version`.
 - **bun** on your PATH — every tool and hook runs via bun.
 - **A working Kimi CLI setup** — kimi refuses to start a session unless its
   config carries `default_model`, a managed provider, and a models table, and
@@ -53,9 +57,13 @@ wiring covers every project on the machine.
   `dist/kimi/.kimi-code/hooks/amadeus-hooks.snippet.toml`). This guide
   deliberately references the snippet instead of transcribing it — read the
   file itself for the exact entries. Its marker-fenced block routes Kimi's
-  hook events through the `.kimi-code/hooks/amadeus-kimi-adapter.ts` adapter
-  and adds `[[permission.rules]]` pre-allows for the deterministic core's
-  exact command prefixes and the git verbs the Bolt worktree flow needs.
+  hook events through the `.kimi-code/hooks/amadeus-kimi-adapter.ts` adapter.
+  It also denies agent-composed hook-path Bash commands as defense in depth
+  and pre-allows the deterministic core's exact tool prefixes and the git
+  verbs the Bolt worktree flow needs. These global permission rules are not
+  caller authentication. The product-lead and architecture-reviewer profiles
+  instead use Kimi's native `tools: [Read, Grep, Glob]` allowlist; other
+  custom agents retain the tools required by their roles.
 - **How the installer merges it.** The installer shows the merge plan as a
   diff report, asks for an explicit interactive confirmation, backs the
   existing config up (a timestamped copy beside it), and writes the merged
@@ -105,9 +113,10 @@ The kimi arm checks four things:
    flags managed-style git pre-allow rules left behind with no managed block
    detected (possible residue from an incompletely removed block — review
    manually).
-3. **Version floor** — `kimi` on PATH at ≥ 0.28.1. A missing binary fails the
+3. **Version floor** — `kimi` on PATH at ≥ 0.29.0. A missing binary fails the
    `kimi CLI on PATH` row with an install hint; an older version fails with an
-   upgrade hint.
+   upgrade hint. In particular, 0.28.x fails because it cannot enforce the
+   custom reviewer tool policy.
 4. **Hook probe (advisory)** — fires the adapter directly. "Adapter fired" or
    "unverified … (advisory; hooks are auxiliary, the workflow still runs)" —
    a probe failure never blocks the workflow.
@@ -137,8 +146,15 @@ skills (`/skill:amadeus-session-cost`, `/skill:amadeus-replay`,
   form probed went undelivered). UserPromptSubmit stdout is the only working
   injection channel, so resume/context text rides it; the session-start hook
   is side-effects only.
-- **Stop block = exit 2 + stderr** (measured: the reason reaches the model
-  verbatim).
+- **Stop is a silent observation-only no-op.** The external hook payload does
+  not carry a trustworthy main-versus-subagent caller identity. The adapter
+  therefore never forwards `Stop` to the stateful core hook, for either caller
+  shape, and always returns empty stdout/stderr with exit 0.
+- **Read-only reviewers use Kimi's native custom-agent tool policy.** The
+  product-lead and architecture-reviewer profiles expose only `Read`, `Grep`,
+  and `Glob`; Kimi 0.29.0+ checks that allowlist before tool execution. The
+  hook-path permission deny remains defense in depth, not an authorization
+  boundary.
 - **Skills, agents, and scopes are discovered from
   `.kimi-code/{skills,agents,scopes}/`** — no separate `.agents/` tree.
 - **No statusline and no welcome message** — stage visibility rides the
