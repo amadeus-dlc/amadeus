@@ -1,5 +1,5 @@
 // covers: function:serializeJournalEntryV2, function:parseJournalLine, function:readJournalRecords, function:mergeShards, function:convertV1ToV2, function:renderJournalView
-// size: small
+// size: medium
 //
 // Property-based + example tests for the Journal Module schema v2 surface
 // (FR-JRN-1/2/5, intent 260729-otel-upstream U3): the v2 codec, the
