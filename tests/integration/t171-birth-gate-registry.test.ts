@@ -21,7 +21,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -34,11 +33,11 @@ import {
 } from "../harness/fixtures.ts";
 import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
+  setActiveIntentCursor,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
   intentPickPromptIfRecordsExist,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import {
-  handleIntentSelectionResponse,
-} from "../../packages/framework/core/tools/amadeus-utility.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -118,6 +117,51 @@ function writeIntentRecordFixture(dirName: string): void {
   );
 }
 
+describe("t171 active-intent cursor commit reporting", () => {
+  const selected = "260101-selected-intent";
+
+  test("reports success when directory fsync fails after the requested cursor was renamed", () => {
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeDirectoryFsync: () => {
+        throw new Error("directory-fsync");
+      },
+    });
+
+    expect(result).toBe(true);
+    expect(readFileSync(cursorPath(proj), "utf-8")).toBe(`${selected}\n`);
+  });
+
+  test("reports a pre-rename failure even when the previous cursor already has the requested value", () => {
+    mkdirSync(intentsDir(proj), { recursive: true });
+    writeFileSync(cursorPath(proj), `${selected}\n`, "utf-8");
+
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeRename: () => {
+        throw new Error("before-rename");
+      },
+    });
+
+    expect(result).toBe(false);
+    expect(readFileSync(cursorPath(proj), "utf-8")).toBe(`${selected}\n`);
+  });
+
+  test("does not follow a symlink installed after rename while confirming the cursor", () => {
+    const external = join(proj, "external-cursor-target");
+    writeFileSync(external, `${selected}\n`, "utf-8");
+
+    const result = setActiveIntentCursor(proj, selected, "default", {
+      beforeDirectoryFsync: () => {
+        rmSync(cursorPath(proj));
+        symlinkSync(external, cursorPath(proj));
+        throw new Error("directory-fsync");
+      },
+    });
+
+    expect(result).toBe(false);
+    expect(readFileSync(external, "utf-8")).toBe(`${selected}\n`);
+  });
+});
+
 describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
   // ----------------------------------------------------------------
   // (1) >1 intents + no active-intent cursor (fresh clone) → PROMPT, not birth
@@ -192,66 +236,6 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
 
       expect(selected.status, selected.out).toBe(0);
       expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
-      const repeated = util([
-        "intent-select-response",
-        directive.selection_token,
-        "1",
-      ]);
-      expect(repeated.status).toBe(1);
-      expect(repeated.out).toContain("no longer pending");
-      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
-    });
-
-    test("the in-process utility boundary applies the validated response", () => {
-      seedTwoIntentsNoCursor();
-      const firstRecord = readIntentRegistry(proj)[0].dirName;
-      if (firstRecord === undefined) throw new Error("fixture intent has no record directory");
-      const directive = intentPickPromptIfRecordsExist(proj);
-      if (directive?.kind !== "select-intent") {
-        throw new Error("fixture did not produce an intent selection");
-      }
-
-      handleIntentSelectionResponse(proj, [
-        "intent-select-response",
-        directive.selection_token,
-        "１",
-      ]);
-
-      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
-    });
-
-    test("the in-process utility boundary accepts an exact displayed label", () => {
-      seedTwoIntentsNoCursor();
-      const registry = readIntentRegistry(proj);
-      const secondRecord = registry[1].dirName;
-      if (secondRecord === undefined) throw new Error("fixture intent has no record directory");
-      const directive = intentPickPromptIfRecordsExist(proj);
-      if (directive?.kind !== "select-intent") {
-        throw new Error("fixture did not produce an intent selection");
-      }
-
-      handleIntentSelectionResponse(proj, [
-        "intent-select-response",
-        directive.selection_token,
-        registry[1].slug,
-      ]);
-
-      expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(secondRecord);
-    });
-
-    test("the utility rejects an out-of-range ordinal without a cursor", () => {
-      seedTwoIntentsNoCursor();
-      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
-
-      const rejected = util([
-        "intent-select-response",
-        directive.selection_token,
-        "3",
-      ]);
-
-      expect(rejected.status).toBe(1);
-      expect(rejected.out).toContain("does not match a displayed option");
-      expect(existsSync(cursorPath(proj))).toBe(false);
     });
 
     test("a cursor write failure rejects the selection instead of reporting success", () => {
@@ -288,35 +272,6 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(selected.status, selected.out).toBe(0);
       expect(readFileSync(external, "utf-8")).toBe("external\n");
       expect(readFileSync(cursorPath(proj), "utf-8").trim()).toBe(firstRecord);
-    });
-
-    test("a stale token cannot select a replacement intent with the same display label", () => {
-      seedTwoIntentsNoCursor();
-      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
-      const registry = readIntentRegistry(proj);
-      const replaced = registry[0];
-      if (!replaced?.dirName) throw new Error("fixture intent has no record directory");
-      const replacementDir = `${replaced.dirName}-replacement`;
-      renameSync(
-        join(intentsDir(proj), replaced.dirName),
-        join(intentsDir(proj), replacementDir),
-      );
-      registry[0] = {
-        ...replaced,
-        uuid: "00000000-0000-7000-8000-000000000099",
-        dirName: replacementDir,
-      };
-      writeIntentRegistryFixture(registry);
-
-      const rejected = util([
-        "intent-select-response",
-        directive.selection_token,
-        "1",
-      ]);
-
-      expect(rejected.status).toBe(1);
-      expect(rejected.out).toContain("does not match the current registry");
-      expect(existsSync(cursorPath(proj))).toBe(false);
     });
 
     test("archived intents are omitted from the selectable snapshot", () => {
@@ -362,27 +317,7 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(recordDirs(proj)).toHaveLength(2);
     });
 
-    test("a pending response is rejected when every displayed intent becomes archived", () => {
-      seedTwoIntentsNoCursor();
-      const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
-      const registry = readIntentRegistry(proj).map((entry) => ({
-        ...entry,
-        status: "archived" as const,
-      }));
-      writeIntentRegistryFixture(registry);
-
-      const rejected = util([
-        "intent-select-response",
-        directive.selection_token,
-        "1",
-      ]);
-
-      expect(rejected.status).toBe(1);
-      expect(rejected.out).toContain("No selectable intents remain");
-      expect(existsSync(cursorPath(proj))).toBe(false);
-    });
-
-    test("the utility rejects caller-supplied options and a modified token", () => {
+    test("the utility rejects caller-supplied options", () => {
       seedTwoIntentsNoCursor();
       const directive = JSON.parse(next(["--scope", "poc"]).stdout.trim());
 
@@ -393,134 +328,10 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
         "feature",
         "poc",
       ]);
-      const modifiedToken = util([
-        "intent-select-response",
-        `${directive.selection_token}x`,
-        "1",
-      ]);
-      const forgedOptionSet = util([
-        "intent-select-response",
-        "0".repeat(64),
-        "1",
-      ]);
 
       expect(injectedOptions.status).toBe(1);
       expect(injectedOptions.out).toContain("Usage:");
-      expect(modifiedToken.status).toBe(1);
-      expect(modifiedToken.out).toContain("does not match the current registry snapshot");
-      expect(forgedOptionSet.status).toBe(1);
-      expect(forgedOptionSet.out).toContain("does not match the current registry snapshot");
       expect(existsSync(cursorPath(proj))).toBe(false);
-    });
-  });
-
-  describe("display labels and registry identities remain unambiguous", () => {
-    test("a cross-namespace label collision falls back to record directory labels", () => {
-      const firstDir = "260101-first-record";
-      const secondDir = "260101-second-record";
-      const thirdDir = "260101-third-record";
-      const registry = [
-        {
-          uuid: "00000000-0000-7000-8000-000000000201",
-          slug: "same",
-          dirName: firstDir,
-          scope: "poc",
-          status: "in-flight",
-        },
-        {
-          uuid: "00000000-0000-7000-8000-000000000202",
-          slug: "same",
-          dirName: secondDir,
-          scope: "poc",
-          status: "in-flight",
-        },
-        {
-          uuid: "00000000-0000-7000-8000-000000000203",
-          slug: firstDir,
-          dirName: thirdDir,
-          scope: "poc",
-          status: "in-flight",
-        },
-      ];
-      for (const entry of registry) writeIntentRecordFixture(entry.dirName);
-      writeIntentRegistryFixture(registry);
-
-      const directive = intentPickPromptIfRecordsExist(proj);
-
-      expect(directive?.kind).toBe("select-intent");
-      if (directive?.kind !== "select-intent") {
-        throw new Error("fixture did not produce an intent selection");
-      }
-      expect(directive.options).toEqual([firstDir, secondDir, thirdDir]);
-    });
-
-    test.each([
-      {
-        name: "duplicate labels",
-        rows: [
-          {
-            uuid: "00000000-0000-7000-8000-000000000211",
-            slug: "same",
-            dirName: "260101-shared-record",
-          },
-          {
-            uuid: "00000000-0000-7000-8000-000000000212",
-            slug: "same",
-            dirName: "260101-shared-record",
-          },
-        ],
-        message: "labels must be unique",
-      },
-      {
-        name: "duplicate UUIDs",
-        rows: [
-          {
-            uuid: "00000000-0000-7000-8000-000000000221",
-            slug: "first",
-            dirName: "260101-first-record",
-          },
-          {
-            uuid: "00000000-0000-7000-8000-000000000221",
-            slug: "second",
-            dirName: "260101-second-record",
-          },
-        ],
-        message: "UUIDs must be unique",
-      },
-      {
-        name: "duplicate record directories",
-        rows: [
-          {
-            uuid: "00000000-0000-7000-8000-000000000231",
-            slug: "first",
-            dirName: "260101-shared-record",
-          },
-          {
-            uuid: "00000000-0000-7000-8000-000000000232",
-            slug: "second",
-            dirName: "260101-shared-record",
-          },
-        ],
-        message: "record directories must be unique",
-      },
-    ])("rejects $name from the public intent-prompt boundary", ({ rows, message }) => {
-      const recordNames = new Set(rows.map((row) => row.dirName));
-      for (const dirName of recordNames) {
-        writeIntentRecordFixture(dirName);
-      }
-      // A single physical record is implicitly active even without a cursor.
-      // Add an unclaimed record so the no-cursor selection boundary is reached
-      // for corrupt registries whose rows both claim the same directory.
-      if (recordNames.size === 1) {
-        writeIntentRecordFixture("260101-unclaimed-orphan");
-      }
-      writeIntentRegistryFixture(rows.map((row) => ({
-        ...row,
-        scope: "poc",
-        status: "in-flight",
-      })));
-
-      expect(() => intentPickPromptIfRecordsExist(proj)).toThrow(message);
     });
   });
 

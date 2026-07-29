@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2004,14 +2004,60 @@ export function listIntents(projectDir: string, space?: string): IntentInfo[] {
 // Callers that require a completed switch check the result; bootstrap callers
 // may deliberately keep the cursor best-effort because the registry remains
 // the source of truth.
-export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): boolean {
-  const dir = intentsDir(projectDir, space);
+function activeIntentCursorMatches(path: string, dirName: string): boolean {
+  let fd: number | null = null;
   try {
-    mkdirSync(dir, { recursive: true });
-    writeFileAtomic(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`);
-    return true;
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return false;
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    if (
+      !opened.isFile()
+      || after.isSymbolicLink()
+      || !after.isFile()
+      || before.dev !== opened.dev
+      || before.ino !== opened.ino
+      || opened.dev !== after.dev
+      || opened.ino !== after.ino
+    ) {
+      return false;
+    }
+    return readFileSync(fd, "utf-8").trim() === dirName;
   } catch {
     return false;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* Read-back is already fail-closed. */ }
+    }
+  }
+}
+
+export function setActiveIntentCursor(
+  projectDir: string,
+  dirName: string,
+  space?: string,
+  writeHooks: AtomicWriteHooks = {},
+): boolean {
+  const dir = intentsDir(projectDir, space);
+  const cursor = join(dir, ACTIVE_INTENT_POINTER);
+  let renamed = false;
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileAtomic(cursor, `${dirName}\n`, {
+      beforeTempFsync: writeHooks.beforeTempFsync,
+      beforeRename: writeHooks.beforeRename,
+      beforeDirectoryFsync: () => {
+        renamed = true;
+        writeHooks.beforeDirectoryFsync?.();
+      },
+    });
+    return true;
+  } catch {
+    return renamed && activeIntentCursorMatches(cursor, dirName);
   }
 }
 

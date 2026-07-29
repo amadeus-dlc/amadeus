@@ -1366,29 +1366,5 @@
     "file": "packages/framework/core/tools/amadeus-otel-projector.ts",
     "lines": "600-608",
     "reason": "import.meta.main CLI wiring for the projector 'export' verb. The decision logic (parseCliArgs, runExport) is fully covered in-process by tests/integration/t358; the main block runs only in the spawned CLI, which Bun coverage does not attribute. Spawn-only wiring lines per spawn-blindspot-two-step (ii)."
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-selection.ts",
-    "lines": "134-136",
-    "reason": "Invalid and out-of-range human responses are exercised through the shipped intent-select-response utility CLI by t171, including exit status, error text, and an unchanged cursor. refuseWithoutAudit exits the child process, so Bun does not attribute this rejection object to the parent LCOV run.",
-    "expiry": "remove when intent-select-response rejection can be driven through an injected non-exiting utility boundary or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-selection.ts",
-    "lines": "147-150",
-    "reason": "Replay after a successful selection is exercised through the shipped intent-select-response utility CLI by t171, which asserts the active-intent rejection and unchanged selected cursor. The rejecting utility exits its child process, outside parent LCOV attribution.",
-    "expiry": "remove when intent-select-response rejection can be driven through an injected non-exiting utility boundary or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-selection.ts",
-    "lines": "154-158",
-    "reason": "The no-selectable-intents race is exercised through the shipped intent-select-response utility CLI by t171 after every displayed row becomes archived; the test asserts a loud rejection and no cursor write. The child-process exit path is not parent-LCOV resident.",
-    "expiry": "remove when intent-select-response rejection can be driven through an injected non-exiting utility boundary or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-selection.ts",
-    "lines": "161-165",
-    "reason": "Stale, modified, and forged snapshot fingerprints are exercised through the shipped intent-select-response utility CLI by t171, which asserts rejection and no cursor write. refuseWithoutAudit exits the child process, so Bun cannot attribute the rejection object to the parent LCOV run.",
-    "expiry": "remove when intent-select-response rejection can be driven through an injected non-exiting utility boundary or Bun merges child-process coverage"
   }
 ]
