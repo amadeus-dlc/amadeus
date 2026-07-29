@@ -1426,5 +1426,11 @@
     "lines": "799-800",
     "reason": "Defensive cardinality invariant over the const REGISTERED_EVENTS table: unreachable without editing the registry source itself, at which point this throw is the guard that fires. No test path can reach it through the public API.",
     "expiry": "remove if the registry table becomes runtime-composable (making cardinality genuinely variable)"
+  },
+  {
+    "file": "packages/framework/core/otel/event-registry.ts",
+    "lines": "805-829",
+    "reason": "assertDefConsistent/assertCanonicalDefConsistent defensive invariants over the const REGISTERED_EVENTS table (duplicate name/audit mapping, telemetry-with-mapping, canonical-without-mapping, misclassified category): unreachable without editing the registry source itself, at which point these throws are the guards that fire.",
+    "expiry": "remove if the registry table becomes runtime-composable"
   }
 ]
