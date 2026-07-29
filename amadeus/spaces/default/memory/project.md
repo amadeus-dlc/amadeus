@@ -9,13 +9,16 @@
 
 実装時は `packages/framework/core/` または `packages/framework/harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
 
+- 大規模な initiative を規模だけを理由に複数 intent へ分割しない。1 intent が監査・状態機械・trace の anchor なので、論理的に1つの取り組みを分断すると intent anchor・横断削除ゲート・audit trail が分断される。並行化は intent 分割ではなく units-generation の Unit 設計と Construction Bolt の swarm 並行実装(team.md の parallel-bolts 既定)で実現する。Phase 間が直列依存の場合、並行化の実益は Phase 内 module 分割から得るため、unit 設計ゲートで依存グラフを人が確認する (learned 2026-07-29) <!-- cid:intent-capture:c4-2 -->
+- read-only 目的で dispatch するサブエージェント（証拠スキャン・コードスキャン等）への prompt には、engine 操作（amadeus-orchestrate.ts の next/report/park、state tool の直接呼出し）を実行しないことと、finding を最終メッセージとして返すことだけを明示する。スキャナが report を試みると gate が早期オープンし QUESTION_ANSWERED が拒否され、park を試みると workflow が停止する（260729-otel-upstream practices-discovery で両方を実測）。調査系サブエージェントはループの制御を持たず、状態遷移は conductor のみが行う (learned 2026-07-29) <!-- cid:practices-discovery:c2-engine-mutation-ban -->
+- サブエージェントへの engine 操作禁止は prompt 明示だけに依存しない（c2-engine-mutation-ban の強化）。prompt 明示は practices-discovery・requirements-analysis・functional-design で3度破られた実測がある。構造対策: (1) 調査・レビュー等の read-only 作業は explore（書込不可）サブエージェントに限定する、(2) drafting 等で coder を使う場合は1エージェント=1成果物パスに固定し、完了後に conductor が成果物の実在・単一著者性を検証してから reviewer へ進める、(3) gate が早期オープンした場合の復旧手順（unpark/resume・ゲート再提示）を conductor 側の定型として持つ。違反が起きても audit 上の回復は常に conductor が行う (learned 2026-07-29) <!-- cid:functional-design:c4-subagent-structural-guard -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci`。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
@@ -90,6 +93,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
 ## Mandated
 
+- ALWAYS telemetry の export 境界(Local Exporter／OTLP Relay の送出点)でも redaction filter を通す — write-time のみの redaction に留めない。「機微情報を Signal Stores へ流さない」制約は書込時と送出時の二層で担保する (affirmed 2026-07-29、260729-otel-upstream practices-discovery) <!-- cid:practices-discovery:export-boundary-redaction -->
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
 - ALWAYS `packages/framework/core/` または `packages/framework/harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)

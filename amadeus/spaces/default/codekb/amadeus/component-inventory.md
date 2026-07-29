@@ -1,6 +1,38 @@
 # コンポーネント棚卸し
 
-## Slop cleanup 対象コンポーネント（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## OTel/observability 面コンポーネント（260729-otel-upstream、現在、observed `22ee27dbe`）
+
+行数は HEAD の `wc -l` 実測値、消費者数は `grep -l` の import 実測値（測定 ref: observed `22ee27dbe`）。正本はすべて `packages/framework/core/` 配下。
+
+### C-O1. JSONL journal codec（`tools/amadeus-journal.ts`、236 行）
+
+serialize / parse / identity ヘルパのみを持つ pure codec（FS 非依存）。消費者は 5 モジュール（audit / state / lib / journal-convert / otel-projector）。`JOURNAL_SCHEMA_VERSION = 1` の wire 契約と `(cloneId, seq)` べき等キー、fork lineage token 採番を所有する。テストは `tests/unit/t352-journal-codec.pbt.test.ts`（fast-check PBT）。
+
+### C-O2. Audit writer（`tools/amadeus-audit.ts`、1094 行）
+
+append-only 監査台帳の writer。JSONL 化済みで codec を共有し、`initProcessObservability` でプロセス区間 telemetry も emit する。Markdown renderer `formatAuditRecord` は converter の lossless proof 専用に残存（`:323` コメント）。**#1672 で OTel EventRecord → AuditLogExporter 経路へ置換予定のコンポーネント**。
+
+### C-O3. 移行 converter（`tools/amadeus-journal-convert.ts`、298 行）
+
+Markdown shard → JSONL shard の one-shot 移行橋渡し。switchover 後に legacy Markdown block を parse してよい唯一のモジュールで、byte-exact round-trip 自己検証の fail-closed 設計。テストは `t356-journal-convert.test.ts`。
+
+### C-O4. Observability seam（`tools/amadeus-observability.ts`、325 行）
+
+Core 向け telemetry seam（Issue #1628 Phase 2）。消費者は tools 17 + hooks 12 = 計 29 モジュール。layered config 解決、default-deny の meta redaction、fail-open の buffer append、process / operation / subprocess の 3 種の区間計測を所有する。区間で未使用 `registered` フィールドが削除され、登録状態は `_processObservation !== null` に一本化。**#1672 で `observe()` / `observeSubprocess()` が Trace API spans へ置換予定**。テストは `t357-observability-seam.test.ts`。
+
+### C-O5. OTLP projector（`tools/amadeus-otel-projector.ts`、609 行）
+
+journal + buffer → OTLP/HTTP JSON の投影器（Phase 3）。依存ゼロで ResourceSpans/ResourceMetrics を自前構築し fetch POST する、OTel を話す唯一のモジュール。消費者は `hooks/amadeus-session-end.ts` と CLI のみで、Core からは import されない。**#1672 で pure OTLP relay へ縮小予定**。テストは `t358-otel-projector.test.ts`。
+
+### C-O6. Session-end hook（`hooks/amadeus-session-end.ts`）
+
+projector の piggyback 起動点（session 終了時の export 駆動）。
+
+### 配布増幅と区間の新設コンポーネント
+
+正本モジュールは 7 `dist` 面 + 5 self-install 面へ同期される（計 13 コピー、`git diff --name-status` で確認）。区間の新設コンポーネント（focus 外）: mirror-project 系 9 モジュール（project-executor 486 / project-verification 483 / reconciliation-reducer 385 / project-gateway 344 / project-diagnostics 314 / ledger-reducer 254 / warning-reducer 91 / timestamp 81 / contract 46 行）と純粋ロジック分離の `amadeus-intent-selection.ts`（168 行）。周辺テストに `t355-audit-merge-info-seams.test.ts`（audit マージ境界）と `t315-doctor-plugin-observability.integration.test.ts`（doctor の observability section）。
+
+## Slop cleanup 対象コンポーネント（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 | コンポーネント | 責務 | 現状 | 最小修正 |
 | --- | --- | --- | --- |

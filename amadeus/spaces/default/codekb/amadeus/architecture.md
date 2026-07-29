@@ -1,6 +1,71 @@
 # アーキテクチャ
 
-## Slop cleanup の修正境界と相互作用（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## OTel/observability 面の現行アーキテクチャ（260729-otel-upstream、現在、observed `22ee27dbe`）
+
+差分リフレッシュ（2026-07-29、observed `22ee27dbef9027203658a6cd98bf97501c4b222c`（= 現 HEAD、`git rev-parse HEAD` 実測）、base `ca8ff0af40d6250edffe42246d3f5538819c22af`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **13**、全区間 `git diff --shortstat` = **624 files changed, 71100 insertions(+), 26206 deletions(-)**、うち正本面（`packages/framework/core` + `packages/framework/harness` + `scripts` + `package.json` + `bun.lock`）は **40 files / +4433 / -1559**）。上流入力: Developer スキャン結果（差分サマリ、全文読了）+ Architect 段での focus モジュール直読による独立検証。
+
+### Issue #1628 の 3 層構造（現行、#1672 置換対象の基点）
+
+OTel/observability 面は Issue #1628 の Phase 1–3 が生んだモジュール群で構成され、設計裁定 Q8/Q9/Q12/Q18 の「Core stays OTel-free」を今も守る。行数は HEAD の `wc -l` 実測値。
+
+| 層 | 正本モジュール | 行数 | 責務 | 区間 |
+| --- | --- | --- | --- | --- |
+| Journal codec（Phase 1 PR-2） | `packages/framework/core/tools/amadeus-journal.ts` | 236 | JSONL journal の serialize / parse / identity ヘルパ。FS アクセスなし | コメントのみ更新 |
+| Audit writer | `packages/framework/core/tools/amadeus-audit.ts` | 1094 | append-only 監査台帳の writer。JSONL 化済み | 無変更 |
+| 移行 converter | `packages/framework/core/tools/amadeus-journal-convert.ts` | 298 | Markdown shard → JSONL shard の one-shot 変換（fail-closed 自己検証） | 無変更 |
+| Observability seam（Phase 2） | `packages/framework/core/tools/amadeus-observability.ts` | 325 | Core 向け telemetry seam。`.amadeus-otel/buffer-<clone>.jsonl` への fail-open 1 行 JSON append | dead field 削除 |
+| OTLP projector（Phase 3） | `packages/framework/core/tools/amadeus-otel-projector.ts` | 609 | journal + buffer → OTLP/HTTP JSON 投影。**依存ゼロ**で ResourceSpans/ResourceMetrics を自前構築し fetch POST | 無変更 |
+
+#1672 の将来構造（未着手）との対応: audit writer は OTel EventRecord → AuditLogExporter 経路へ、`observe()` / `observeSubprocess()` は Trace API spans へ、otel-projector は pure OTLP relay へ縮小される計画。現行コードに `@opentelemetry` 依存はゼロ（`package.json` / `bun.lock` grep 実測 0）で、本節はその置換 diff の基点断面である。
+
+### 区間で変化した面
+
+- **Journal codec の配線記述の是正**（前 intent 260728-slop-cleanup の着地分）: ヘッダコメントが「PR-3 まで未配線」という失効記述から、現行 5 消費者（`amadeus-audit.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-journal-convert.ts` / `amadeus-otel-projector.ts`、`grep -l 'from "./amadeus-journal.ts"'` 実測）を説明する記述へ更新された。wire format・export 面は不変。なお配線自体は base 時点で既に存在し（base 版 `amadeus-audit.ts` が codec を import、audit は区間無変更）、区間で変わったのはコメントのみである。
+- **Observability の状態二重表現の解消**（同上）: `ProcessObservation.registered`（宣言と `true` 初期化のみで読取なし）が削除され、登録状態の唯一の表現は `_processObservation !== null` に一本化。公開 export・first-caller-wins / flush / idempotence 契約は不変。
+- **mirror-project サブシステムの新設**（focus 外、区間の主系統）: GitHub Projects ボード連携として 9 モジュール（`amadeus-mirror-project-{contract 46, diagnostics 314, executor 486, gateway 344, ledger-reducer 254, reconciliation-reducer 385, verification 483}.ts`、`amadeus-mirror-timestamp.ts` 81、`amadeus-mirror-warning-reducer.ts` 91、`wc -l` 実測）が追加され、`amadeus-mirror-executor.ts`（1553 行）/ `amadeus-mirror-gateway.ts`（908 行）/ `amadeus-mirror-lifecycle.ts`（1185 行）が大再編された。設定面では `amadeus/config.json` が新設され `mirror-projects` キーを持つ。
+- **intent 選択ロジックの分離**: 純粋ロジック `amadeus-intent-selection.ts`（168 行）が新設され、`amadeus-orchestrate.ts`（4257 行、+289）/ `amadeus-lib.ts`（7975 行、+153）/ `amadeus-utility.ts`（6186 行、+91）が対応変更。
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+  J["amadeus-journal.ts<br/>JSONL codec (236)"]
+  J --> A["amadeus-audit.ts<br/>writer (1094)"]
+  J --> S["amadeus-state.ts"]
+  J --> L["amadeus-lib.ts"]
+  J --> C["amadeus-journal-convert.ts<br/>converter (298)"]
+  J --> P["amadeus-otel-projector.ts<br/>OTLP projection (609)"]
+  O["amadeus-observability.ts<br/>seam (325)"] --> B[".amadeus-otel/<br/>buffer-*.jsonl"]
+  A --> SH["journal shards<br/>(JSONL)"]
+  SH --> P
+  B --> P
+  P --> OTLP["OTLP/HTTP JSON<br/>fetch POST (依存ゼロ)"]
+```
+
+テキスト代替: JSONL codec は 5 モジュール（audit / state / lib / journal-convert / otel-projector）から直接 import される。observability seam は machine-local な telemetry buffer に 1 行 JSON を追記し、projector は journal shard と buffer の両方を読んで OTLP/HTTP JSON を fetch で POST する。Core は projector を import せず、projector は session-end hook と CLI から起動される。
+
+```mermaid
+sequenceDiagram
+  participant E as Entrypoint (tool/hook)
+  participant O as amadeus-observability.ts
+  participant B as telemetry buffer (jsonl)
+  participant H as amadeus-session-end.ts
+  participant P as amadeus-otel-projector.ts
+  participant X as OTLP endpoint
+  E->>O: initProcessObservability(name, projectDir)
+  Note over O: process exit で flushProcessObservation
+  O->>B: appendTelemetryEvent (process span)
+  E->>O: observe / observeSubprocess
+  O->>B: appendTelemetryEvent (operation/subprocess span)
+  H->>P: runExport (session-end / CLI)
+  P->>B: buffer 読取 (torn line は drop)
+  P->>P: journal shard 読取 + span 構築
+  P->>X: OTLP/HTTP POST (fail-open)
+```
+
+テキスト代替: entrypoint は `initProcessObservability` でプロセス区間を登録し（first-caller-wins、exit handler から flush）、`observe` / `observeSubprocess` が同期区間を包む。すべての telemetry は fail-open で buffer へ 1 行 JSON 追記される。session-end hook（または CLI）が projector を起動し、buffer と journal shard を読んで決定論的 trace/span ID（sha256）で OTLP へ POST する。POST 失敗はワークフローを止めず、stderr 1 行と machine-local の diagnostics 記録に留まる。
+
+## Slop cleanup の修正境界と相互作用（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 本 intent は Bun/TypeScript の単一リポジトリ、ハーネス中立 core、7 ハーネスの生成 `dist`、5 面の self-install という既存トポロジーを変更しない。修正は次の 3 境界に閉じる。
 

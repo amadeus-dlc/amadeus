@@ -1,6 +1,10 @@
 # ビジネス概要
 
-## Slop cleanup の業務境界（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## OTel/observability upstream イニシアチブの業務境界（260729-otel-upstream、現在、observed `22ee27dbe`）
+
+Amadeus の業務目的・利用者ジャーニー・公開機能に変更はない。本 intent は [GitHub #1672](https://github.com/amadeus-dlc/amadeus/issues/1672) の OTel/observability upstream イニシアチブを扱い、長期的な利用者価値は「監査・観測データを OpenTelemetry の標準エコシステム（OTLP collector / Jaeger / 任意の OTLP バックエンド）へ一本化して届ける」ことにある。ただし現行コード（observed `22ee27dbef9027203658a6cd98bf97501c4b222c`、base `ca8ff0af40d6250edffe42246d3f5538819c22af`（祖先 exit 0）、距離 **13**）では **OTel API ファミリはまだ一切導入されていない**（`package.json` / `bun.lock` の `@opentelemetry` grep ヒット 0）— 現状は Issue #1628 の 3 Phase が築いた「ゼロ依存 OTLP/HTTP JSON」構成であり、#1672 の置換（audit writer → OTel EventRecord→AuditLogExporter、`observe()` / `observeSubprocess()` → Trace API spans、otel-projector の pure OTLP relay 化）は**すべて未着手の将来計画**である。本 scan は将来差分の基点として現行断面を固定するもので、コード変更を伴わない。区間では別系統の価値として GitHub Projects ボード連携（mirror-project サブシステム 9 モジュール新設）と intent 選択ロジックの分離（`amadeus-intent-selection.ts`）が着地し、前 intent `260728-slop-cleanup` の修正（journal コメント是正・未使用フィールド削除）も本 HEAD に含まれる。直後の `260728-slop-cleanup` 断面は履歴として保持する。
+
+## Slop cleanup の業務境界（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 Amadeus の業務目的・利用者ジャーニー・公開機能に変更はない。本 intent は、現行挙動を変えずに、誤った移行コメント、状態を二重表現する未使用フィールド、Markdown の空白ノイズを除く内部品質修正である。対象は 5 パス・3 カテゴリに限定し、新機能、API 変更、データ移行、外部サービス操作を伴わない。`v0.1.6`（`68f2d6699ccb8148c0427b1ff56d37116e565f89`）から observed `ca8ff0af40d6250edffe42246d3f5538819c22af` までの 47 コミットを現行断面の確認材料としたが、旧 codekb observed `afb93a825...` は現 HEAD の祖先ではないため差分 base には採用していない。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 
