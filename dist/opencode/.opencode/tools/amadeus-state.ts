@@ -468,20 +468,29 @@ function hasStageAuditEvent(
   });
 }
 
-function hasCompletionAuditEvent(
+const COMPLETION_AUDIT_EVENT_TYPES: ReadonlySet<string> = new Set([
+  "STAGE_COMPLETED",
+  "PHASE_COMPLETED",
+  "PHASE_VERIFIED",
+  "WORKFLOW_COMPLETED",
+]);
+
+function completionAuditEvents(
   projectDir: string,
-  eventType: string,
   completionInstance: string,
-): boolean {
-  const events = findAllEvents(operationReadAudit(projectDir), eventType);
-  for (const event of events) {
+): ReadonlySet<string> {
+  const eventTypes = new Set<string>();
+  for (const block of splitAuditRecords(operationReadAudit(projectDir))) {
+    const eventType = auditField(block, "Event");
     if (
-      auditField(event.block, "Completion Instance") === completionInstance
+      eventType !== null &&
+      COMPLETION_AUDIT_EVENT_TYPES.has(eventType) &&
+      auditField(block, "Completion Instance") === completionInstance
     ) {
-      return true;
+      eventTypes.add(eventType);
     }
   }
-  return false;
+  return eventTypes;
 }
 
 function injectWorkflowCompletionCrash(point: string): void {
@@ -514,11 +523,11 @@ function emitWorkflowCompletionAuditRows(input: {
     );
   }
   try {
-    const stageMissing = !hasCompletionAuditEvent(
+    const existingEvents = completionAuditEvents(
       input.pd,
-      "STAGE_COMPLETED",
       input.completionInstance,
     );
+    const stageMissing = !existingEvents.has("STAGE_COMPLETED");
     const stageNeedsEmission =
       !input.alreadyMarkedCompleted || !input.stageCompletedAlreadyAudited;
     if (stageMissing && stageNeedsEmission) {
@@ -529,13 +538,7 @@ function emitWorkflowCompletionAuditRows(input: {
       });
     }
     injectWorkflowCompletionCrash("after-stage-completed-audit");
-    if (
-      !hasCompletionAuditEvent(
-        input.pd,
-        "PHASE_COMPLETED",
-        input.completionInstance,
-      )
-    ) {
+    if (!existingEvents.has("PHASE_COMPLETED")) {
       emitAudit(input.pd, "PHASE_COMPLETED", {
         "From phase": input.completedPhase,
         "To phase": "(end)",
@@ -544,13 +547,7 @@ function emitWorkflowCompletionAuditRows(input: {
       });
     }
     injectWorkflowCompletionCrash("after-phase-completed-audit");
-    if (
-      !hasCompletionAuditEvent(
-        input.pd,
-        "PHASE_VERIFIED",
-        input.completionInstance,
-      )
-    ) {
+    if (!existingEvents.has("PHASE_VERIFIED")) {
       emitAudit(input.pd, "PHASE_VERIFIED", {
         "Phase boundary": `${input.completedPhase} → end`,
         "Completion Instance": input.completionInstance,
@@ -563,13 +560,7 @@ function emitWorkflowCompletionAuditRows(input: {
       "Completion Instance": input.completionInstance,
     };
     if (input.reason) workflowFields.Reason = input.reason;
-    if (
-      !hasCompletionAuditEvent(
-        input.pd,
-        "WORKFLOW_COMPLETED",
-        input.completionInstance,
-      )
-    ) {
+    if (!existingEvents.has("WORKFLOW_COMPLETED")) {
       emitAudit(input.pd, "WORKFLOW_COMPLETED", workflowFields);
     }
     injectWorkflowCompletionCrash("after-workflow-completed-audit");
@@ -2232,7 +2223,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   );
   if (positional.length < 1)
     error(
-      "Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>] [--intent <record>] [--space <name>]",
+      "Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>] [--completion-instance <instance>] [--intent <record>] [--space <name>]",
     );
   const completedSlug = positional[0];
 
@@ -2362,11 +2353,10 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   });
 }
 
-// Terminal completion flips the target intent's registry row to "complete", then
-// compare-and-clears the active-intent cursor (#1248). A cursor that still names
-// the completed target is released; a cursor moved to another intent is
-// preserved. No-op for the legacy flat record (no registry row). Must run under
-// the workspace lock the caller already holds.
+// Terminal completion flips the target intent's registry row to "complete".
+// Cursor release happens later, after every completion row and the state file
+// commit have landed. No-op for the legacy flat record (no registry row). Must
+// run under the workspace lock the caller already holds.
 function completeIntentRegistryRow(pd: string): string | null {
   const completedIntentDir = stateOperationTarget?.intent ?? activeIntent(pd);
   if (!completedIntentDir) return null;

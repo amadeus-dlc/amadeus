@@ -240,6 +240,17 @@ function phaseKeyOf(lifecyclePhase: string): MirrorPhaseKey | null {
   return PHASE_KEYS.has(lower) ? (lower as MirrorPhaseKey) : null;
 }
 
+function isPendingCompletionLanding(
+  snapshot: MirrorSnapshot,
+  boundaryKind: MirrorBoundary["kind"],
+): boolean {
+  return (
+    boundaryKind === "workflow-completed" &&
+    snapshot.registryStatus === "in-flight" &&
+    snapshot.completionInstance !== undefined
+  );
+}
+
 // Derive the Status a boundary expects. Ordered rules:
 //   1. parked (boundary kind or registry status) or archived -> keep: the
 //      column is left exactly as the human left it (FR-4).
@@ -259,11 +270,7 @@ export function expectedProjectStatus(
   });
   const phase = phaseKeyOf(snapshot.lifecyclePhase);
   const currentPhase = phase === null ? KEEP : named(phase);
-  if (
-    boundaryKind === "workflow-completed" &&
-    snapshot.registryStatus === "in-flight" &&
-    snapshot.completionInstance !== undefined
-  ) {
+  if (isPendingCompletionLanding(snapshot, boundaryKind)) {
     return named("done");
   }
   switch (snapshot.registryStatus) {
@@ -287,11 +294,7 @@ function expectedAuxiliaryProjectStatus(
   boundaryKind: MirrorBoundary["kind"],
 ): ExpectedProjectStatus {
   if (boundaryKind === "parked") return KEEP;
-  if (
-    boundaryKind === "workflow-completed" &&
-    snapshot.registryStatus === "in-flight" &&
-    snapshot.completionInstance !== undefined
-  ) {
+  if (isPendingCompletionLanding(snapshot, boundaryKind)) {
     return {
       kind: "status",
       name: MIRROR_PROJECT_FIELD_CONTRACT.auxiliaryStatus.complete,

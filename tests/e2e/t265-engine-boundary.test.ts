@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -65,9 +65,16 @@ const MIRROR_ISSUE_BLOCK = renderMirrorStateBlock({
 });
 
 let project = "";
+let previousArtifactGuard: string | undefined;
+let previousHumanPresenceGuard: string | undefined;
 
-process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
-process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+beforeEach(() => {
+  previousArtifactGuard = process.env.AMADEUS_SKIP_ARTIFACT_GUARD;
+  previousHumanPresenceGuard =
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+  process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+});
 
 function gatewayOk<T>(value: T): GatewayOutcome<T> {
   return { kind: "ok", value };
@@ -166,6 +173,17 @@ function run(tool: string, args: string[]): {
 afterEach(() => {
   cleanupTestProject(project);
   project = "";
+  if (previousArtifactGuard === undefined) {
+    delete process.env.AMADEUS_SKIP_ARTIFACT_GUARD;
+  } else {
+    process.env.AMADEUS_SKIP_ARTIFACT_GUARD = previousArtifactGuard;
+  }
+  if (previousHumanPresenceGuard === undefined) {
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  } else {
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD =
+      previousHumanPresenceGuard;
+  }
 });
 
 describe("t265 workflow completion lifecycle", () => {

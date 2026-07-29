@@ -390,6 +390,7 @@ function hasLandingEvidence(
   return (
     authorization.event.boundary.kind === "workflow-completed" &&
     authorization.landing?.registryStatus === "in-flight" &&
+    authorization.landing.workflowStatus === "Running" &&
     authorization.landing.completionInstance ===
       authorization.event.boundary.instance
   );

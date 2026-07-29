@@ -1175,7 +1175,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     }
   });
 
-  test("carrier replay rejects a mismatched grant, intent, stage, or corrupt reservation", () => {
+  test("carrier replay rejects a mismatched grant", () => {
     const now = Date.now();
     const { root, owner } = setup(
       new Date(now + 60_000).toISOString(),
@@ -1184,84 +1184,125 @@ describe("t265 in-process completion and carrier boundaries", () => {
     useSoloEnv(root);
     try {
       const before = readFileSync(join(owner, "amadeus-state.md"), "utf-8");
-      for (const args of [
-        [
-          "--stage",
-          STAGE,
-          "--result",
-          "approved",
-          "--standing-grant-id",
-          "deadbeef",
-          "--standing-grant-route-id",
-          ROUTE_ID,
-        ],
-        [
-          "--stage",
-          "application-design",
-          "--result",
-          "approved",
-          "--standing-grant-id",
-          GRANT_ID,
-          "--standing-grant-route-id",
-          ROUTE_ID,
-        ],
-      ]) {
-        const directive = JSON.parse(
-          captureStdout(() => handleReport(args, root)),
-        ) as { kind: string; message?: string };
-        expect(directive).toEqual({
-          kind: "error",
-          message:
-            "Approval authorization does not match exactly one workflow and stage.",
-        });
-      }
+      const directive = JSON.parse(
+        captureStdout(() => {
+          handleReport(
+            [
+              "--stage",
+              STAGE,
+              "--result",
+              "approved",
+              "--standing-grant-id",
+              "deadbeef",
+              "--standing-grant-route-id",
+              ROUTE_ID,
+            ],
+            root,
+          );
+        }),
+      ) as { kind: string; message?: string };
+      expect(directive).toEqual({
+        kind: "error",
+        message:
+          "Approval authorization does not match exactly one workflow and stage.",
+      });
       expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8")).toBe(
         before,
       );
     } finally {
       restoreSoloEnv();
     }
+  });
 
+  test("carrier replay rejects a mismatched stage", () => {
+    const now = Date.now();
+    const { root, owner } = setup(
+      new Date(now + 60_000).toISOString(),
+      now,
+    );
+    useSoloEnv(root);
+    try {
+      const before = readFileSync(join(owner, "amadeus-state.md"), "utf-8");
+      const directive = JSON.parse(
+        captureStdout(() => {
+          handleReport(
+            [
+              "--stage",
+              "application-design",
+              "--result",
+              "approved",
+              "--standing-grant-id",
+              GRANT_ID,
+              "--standing-grant-route-id",
+              ROUTE_ID,
+            ],
+            root,
+          );
+        }),
+      ) as { kind: string; message?: string };
+      expect(directive).toEqual({
+        kind: "error",
+        message:
+          "Approval authorization does not match exactly one workflow and stage.",
+      });
+      expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8")).toBe(
+        before,
+      );
+    } finally {
+      restoreSoloEnv();
+    }
+  });
+
+  test("carrier replay rejects a mismatched intent", () => {
     const expiredAt = Date.now() - 1_000;
-    const expired = setup(
+    const { root } = setup(
       new Date(expiredAt).toISOString(),
       expiredAt - 1_000,
     );
-    useSoloEnv(expired.root);
+    useSoloEnv(root);
     try {
-      const fallback = carrierReport(expired.root);
+      const fallback = carrierReport(root);
       expect(fallback.kind).toBe("await-approval");
-      const targetedArgs = [
-        "--stage",
-        STAGE,
-        "--result",
-        "approved",
-        "--user-input",
-        "1",
-        "--target-intent-id",
-        fallback.target_intent_id ?? "",
-        "--presence-reservation-id",
-        fallback.presence_reservation_id ?? "",
-      ];
       const wrongIntent = JSON.parse(
         captureStdout(() => {
           handleReport(
-            targetedArgs.map((arg) =>
-              arg === fallback.target_intent_id
-                ? "00000000-0000-7000-8000-000000000002"
-                : arg
-            ),
-            expired.root,
+            [
+              "--stage",
+              STAGE,
+              "--result",
+              "approved",
+              "--user-input",
+              "1",
+              "--target-intent-id",
+              "00000000-0000-7000-8000-000000000002",
+              "--presence-reservation-id",
+              fallback.presence_reservation_id ?? "",
+            ],
+            root,
           );
         }),
       ) as { kind: string; message?: string };
       expect(wrongIntent.message).toContain(
         "does not match exactly one workflow and stage",
       );
+    } finally {
+      restoreSoloEnv();
+    }
+  });
 
+  test("carrier replay rejects a corrupt reservation", () => {
+    const expiredAt = Date.now() - 1_000;
+    const { root } = setup(
+      new Date(expiredAt).toISOString(),
+      expiredAt - 1_000,
+    );
+    useSoloEnv(root);
+    try {
+      const fallback = carrierReport(root);
+      expect(fallback.kind).toBe("await-approval");
       writeFileSync(
         join(
-          expired.root,
+          root,
           "amadeus",
           ".amadeus-sessions",
           "presence-reservations",
@@ -1270,7 +1311,23 @@ describe("t265 in-process completion and carrier boundaries", () => {
         "{ malformed\n",
       );
       const corrupt = JSON.parse(
-        captureStdout(() => handleReport(targetedArgs, expired.root)),
+        captureStdout(() =>
+          handleReport(
+            [
+              "--stage",
+              STAGE,
+              "--result",
+              "approved",
+              "--user-input",
+              "1",
+              "--target-intent-id",
+              fallback.target_intent_id ?? "",
+              "--presence-reservation-id",
+              fallback.presence_reservation_id ?? "",
+            ],
+            root,
+          )
+        ),
       ) as { kind: string; message?: string };
       expect(corrupt.message).toContain(
         "does not match exactly one workflow and stage",
