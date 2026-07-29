@@ -31,6 +31,7 @@ const DEFAULT_INTENT_SLUG = "checkout";
 const DEFAULT_SPACE = "default";
 
 export interface UpstreamV2FixtureOptions {
+  projectDir?: string;
   stateVersion?: number;
   intentSlug?: string;
   withInstallerSeed?: boolean;
@@ -179,7 +180,12 @@ function installProjectHarness(projectDir: string, sourceRoot: string): void {
 export function createUpstreamV2Fixture(
   options: UpstreamV2FixtureOptions = {},
 ): UpstreamV2Fixture {
-  let projectDir = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-upstream-v2-"));
+  let projectDir =
+    options.projectDir ??
+    mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-upstream-v2-"));
+  if (options.projectDir !== undefined) {
+    mkdirSync(projectDir);
+  }
   try {
     projectDir = realpathSync(projectDir);
   } catch {
