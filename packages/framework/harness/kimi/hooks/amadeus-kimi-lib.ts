@@ -7,9 +7,12 @@
 // ClaudeCodeHookInput shape each named core hook consumes, subprocess-pipe
 // into it, and relay stdout/exit per the Kimi contract.
 //
-// ── live-capture measurement (Kimi Code CLI 0.28.1, captured 2026-07-26) ────
-// Fixtures: tests/fixtures/kimi-hooks/<event>.json (real captures only).
-// Base envelope for every event: {hook_event_name, session_id, cwd} —
+// ── measured and bundle-derived Kimi contracts ─────────────────────────────
+// Most fixtures are Kimi Code CLI 0.28.1 live captures (2026-07-26).
+// PreToolUse is an official-contract fixture. SubagentStart/SubagentStop are
+// derived from the Kimi 0.29.0 external hook runner: it supplies agent_name
+// but an empty session_id, so these are not claimed live captures.
+// Session/tool envelopes otherwise use {hook_event_name, session_id, cwd} in
 // snake_case, near-isomorphic to Claude Code. The load-bearing differences:
 //   1. UserPromptSubmit.prompt is a CONTENT-BLOCK ARRAY
 //      ([{type:"text",text:"..."}]), not a plain string. The core mint hook's
@@ -22,21 +25,18 @@
 //   3. The plan tool is TodoList ({todos:[{status,title}]}), not TaskUpdate —
 //      the first in_progress todo maps to the {status, activeForm} shape the
 //      statusline-sync hook keys on (same idiom as codex's update_plan).
-//   4. Subagent identity is `agent_name` (SubagentStart/SubagentStop); there
-//      is no agent_id field. Maps to the core log-subagent hook's agent_type,
-//      agent_id defaults to "".
+//   4. Subagent identity is only `agent_name`; there is no agent_id and the
+//      0.29.0 external runner emits an empty session_id. Maps to agent_type
+//      for observation only; it cannot establish a trustworthy caller role.
 //   5. PostToolUse carries tool_call_id + tool_output (string) — neither is
 //      read by any core hook; dropped (unknown fields are not forwarded).
 //
 // Output contracts — all three verified LIVE on 0.28.1 (BR-3/BR-5):
-//   - Stop block: exit 2 + stderr. The stderr text is delivered to the model
-//     as a continue message (observed: the model quoted the reason verbatim
-//     and continued the turn). The core stop hook emits Claude-schema
-//     {"decision":"block","reason"} on stdout with exit 0 — the shim parses
-//     that and relays the reason VERBATIM on stderr with exit 2. Stop did NOT
-//     re-fire after the block (single fire per turn observed). Core stdout is
-//     never forwarded on Stop: with exit 0 Kimi may append hook stdout to
-//     context, so a stray Claude-schema JSON must not leak.
+//   - Stop is observation-only. Kimi's external hook runner does not expose a
+//     trustworthy main-vs-subagent caller identity, so forwarding Stop to the
+//     stateful core hook could let a reviewer drive the conductor loop. The
+//     adapter therefore never invokes amadeus-stop.ts for either caller shape
+//     and always returns empty stdout/stderr with exit 0.
 //   - SessionStart context injection: NONE. Three candidate formats were
 //     probed and none reached the model's context (plain-text stdout,
 //     {"hookSpecificOutput":{...,"additionalContext"}}, and bare
@@ -44,7 +44,8 @@
 //     translateSessionStartOutput therefore always returns "".
 //   - fail-open: exit 0 = allow (stdout MAY be appended to context on
 //     blockable events); exit 2 = block; other non-zero / error / timeout =
-//     allow. This shim exits 0 on every path except the Stop block relay.
+//     allow. This shim exits 0 on every path; Stop is observation-only and is
+//     never relayed to the stateful core hook.
 //     (Observed for completeness, not wired: UserPromptSubmit stdout plain
 //     text IS appended to context — the only injection channel that works
 //     on 0.28.1.)
@@ -82,7 +83,7 @@ export interface KimiEnvelope {
 export interface CoreHookCall {
   hookPath: string;
   stdin: string;
-  translate: "none" | "session-start" | "stop";
+  translate: "none" | "session-start";
 }
 
 export interface AdapterResult {
@@ -136,12 +137,27 @@ export function normalizePayload(target: string, env: KimiEnvelope): string | nu
       return JSON.stringify(payload);
     }
     case "session-end":
-      return JSON.stringify({ hook_event_name: "SessionEnd", reason: env.reason ?? "unknown" });
-    case "mint":
-      // Both wirings land here: UserPromptSubmit (real prompt text) and
-      // PostToolUse(AskUserQuestion) (no prompt field → "" → the core hook
-      // mints fail-open, its exact contract for a prompt-absent payload).
-      return JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: promptText(env.prompt) });
+      return JSON.stringify({
+        hook_event_name: "SessionEnd",
+        reason: env.reason ?? "unknown",
+        ...(env.session_id ? { session_id: env.session_id } : {}),
+      });
+    case "mint": {
+      const payload: Record<string, unknown> = {
+        hook_event_name: env.hook_event_name ?? "",
+        ...(env.tool_name ? { tool_name: env.tool_name } : {}),
+        ...(env.tool_input ? { tool_input: env.tool_input } : {}),
+        ...(env.session_id ? { session_id: env.session_id } : {}),
+      };
+      // UserPromptSubmit carries the human text in `prompt`; PostToolUse
+      // (AskUserQuestion) carries the rendered question in `tool_input`.
+      // Omitting a synthetic empty prompt lets the core choose tool_input as
+      // the reservation-binding purpose for that primary gate path.
+      if (env.hook_event_name === "UserPromptSubmit") {
+        payload.prompt = promptText(env.prompt);
+      }
+      return JSON.stringify(payload);
+    }
     case "audit-and-sensors": {
       // Write|Edit matcher (snippet). Kimi tool_input.path → Claude file_path.
       const payload: Record<string, unknown> = {
@@ -182,21 +198,16 @@ export function normalizePayload(target: string, env: KimiEnvelope): string | nu
         hook_event_name: "SubagentStop",
         agent_type: env.agent_name ?? "",
         agent_id: "",
+        ...(env.session_id ? { session_id: env.session_id } : {}),
       });
-    case "stop": {
-      const payload: Record<string, unknown> = {
-        hook_event_name: "Stop",
-        stop_hook_active: env.stop_hook_active ?? false,
-      };
-      if (env.session_id) payload.session_id = env.session_id;
-      return JSON.stringify(payload);
-    }
+    case "stop":
+      return "{}";
     default:
       return null;
   }
 }
 
-// routeTarget — the 9-target dispatch table (domain-entities.md
+// routeTarget — the dispatch table (domain-entities.md
 // §AdapterTarget). Unknown target / unmappable payload → empty call list
 // (fail-open: nothing to pipe, exit 0).
 export function routeTarget(target: string, env: KimiEnvelope): CoreHookCall[] {
@@ -233,29 +244,10 @@ export function routeTarget(target: string, env: KimiEnvelope): CoreHookCall[] {
     case "log-subagent":
       return [{ hookPath: "amadeus-log-subagent.ts", stdin, translate: "none" }];
     case "stop":
-      return [{ hookPath: "amadeus-stop.ts", stdin, translate: "stop" }];
+      return [];
     default:
       return [];
   }
-}
-
-// translateStopOutput — the ONE verbatim relay (BR-3). The core stop hook's
-// block decision arrives as Claude-schema {"decision":"block","reason"} on
-// stdout (exit 0). Kimi's block contract (verified live on 0.28.1) is exit 2
-// with the reason on stderr. Only a well-formed block decision is relayed;
-// anything else (no block, malformed output) fails open with exit 0 and NO
-// stdout — Kimi may append a blockable event's exit-0 stdout to context, so
-// the Claude-schema JSON must never leak through.
-export function translateStopOutput(coreStdout: string): AdapterResult {
-  try {
-    const parsed = JSON.parse(coreStdout.trim()) as { decision?: unknown; reason?: unknown };
-    if (parsed.decision === "block" && typeof parsed.reason === "string") {
-      return { stdout: "", exitCode: 2, stderr: `${parsed.reason}\n` };
-    }
-  } catch {
-    // unparseable core output — cannot relay a block contract; fail open
-  }
-  return { stdout: "", exitCode: 0, stderr: "" };
 }
 
 // translateSessionStartOutput — Kimi 0.28.1 discards SessionStart hook stdout
@@ -314,9 +306,8 @@ export function defaultSpawn(hookFile: string, input: string, projectDir: string
 // Pure of process.exit so it drives in-process under test; the CLI entrypoint
 // owns the actual exit. Fail-open EVERYWHERE (BR-2): unparseable stdin,
 // unknown target, missing core hook, or a core hook's non-zero exit all
-// resolve to exit 0 — the user's Kimi session is never trapped. The single
-// exception is the Stop block relay (exit 2), and even that only fires on a
-// well-formed core block decision.
+// resolve to exit 0 — the user's Kimi session is never trapped. Stop is a
+// deliberate no-op because Kimi does not expose a trustworthy caller role.
 export function runAdapter(target: string, raw: string, projectDir: string, spawn: SpawnFn = defaultSpawn): AdapterResult {
   try {
     const env = parseKimiEnvelope(raw);
@@ -333,8 +324,7 @@ export function runAdapter(target: string, raw: string, projectDir: string, spaw
       } catch {
         continue; // core hook missing / spawn failure — fail open (BR-2)
       }
-      if (call.translate === "stop") last = translateStopOutput(r.stdout);
-      else if (call.translate === "session-start") last = { stdout: translateSessionStartOutput(r.stdout), exitCode: 0, stderr: "" };
+      if (call.translate === "session-start") last = { stdout: translateSessionStartOutput(r.stdout), exitCode: 0, stderr: "" };
       // translate "none": advisory — core stdout/exit are deliberately dropped.
     }
     return last;

@@ -62,6 +62,7 @@ import {
   parseRefsList,
   parseStateStageSuffixes,
   readAllAuditShards,
+  readCurrentSessionId,
   readIntentRegistry,
   readStateFile,
   recordDirMatches,
@@ -125,6 +126,7 @@ import {
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
+import { detectHarnessType } from "./amadeus-harness.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
@@ -661,18 +663,18 @@ function resolveSelectedIntent(
 
 let projectDir: string | undefined;
 
-// Active per-intent lock context for the in-transaction error path. handleFork/
-// handleMerge resolve their intent and hold a PER-INTENT audit lock across the
-// whole transaction (withAuditLock(pd, fn, resolvedIntent, space)). When an
-// errorWithSlug fires mid-transaction it routes through error() -> emitError,
+// Active per-intent lock context for the in-transaction error path. Targeted
+// state operations plus handleFork/handleMerge resolve their intent and hold a
+// PER-INTENT audit lock across the whole transaction. When an error fires
+// mid-transaction it routes through error() -> emitError,
 // whose holdsAuditLock probe must key the SAME per-intent bucket the caller
 // holds — a bare holdsAuditLock(pd) keys the __workspace__ sentinel, returns
 // false mid per-intent transaction, and takes emitError's 5s blocking-acquire
 // branch writing ERROR_LOGGED to the wrong bucket. These mirror the resolved
 // intent+space into error() so emitError keys lock==write. Set immediately
 // before the lock, cleared after; on the happy path no error fires and they are
-// harmless. All OTHER handlers lock the sentinel bucket and leave these unset
-// (undefined), so error() keys the sentinel for them — correct.
+// harmless. All untargeted handlers lock the sentinel bucket and leave these
+// unset (undefined), so error() keys the sentinel for them — correct.
 let lockIntent: string | undefined;
 let lockSpace: string | undefined;
 
@@ -754,12 +756,39 @@ function withStateOperationTarget<T>(
   fn: TargetedOperation<T>,
 ): T {
   const previous = stateOperationTarget;
+  const previousLockIntent = lockIntent;
+  const previousLockSpace = lockSpace;
   stateOperationTarget = target;
+  lockIntent = target.intent;
+  lockSpace = target.space;
   try {
     return fn();
   } finally {
     stateOperationTarget = previous;
+    lockIntent = previousLockIntent;
+    lockSpace = previousLockSpace;
   }
+}
+
+type SelectedIntentOperation = (args: string[], pd: string) => void;
+
+function runSelectedIntentOperation(
+  args: string[],
+  operation: SelectedIntentOperation,
+  unresolvedMessage: string,
+): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  const pd = resolveProjectDir(projectDir);
+  if (intent === undefined && space === undefined) {
+    operation(rest, pd);
+    return;
+  }
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  if (resolvedIntent === undefined) error(unresolvedMessage);
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    operation.bind(null, rest, pd),
+  );
 }
 
 // Telemetry process span (opt-in; no-op unless observability.enabled).
@@ -771,6 +800,13 @@ function observeToolRun(subcommand: string | undefined): void {
   } catch {
     // no resolvable workflow -> nothing to observe
   }
+}
+
+function trustedHostSessionId(): string | undefined {
+  const pd = resolveProjectDir(projectDir);
+  return detectHarnessType() === "kimi"
+    ? readCurrentSessionId(pd) ?? undefined
+    : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }
 
 function main(): void {
@@ -2191,19 +2227,10 @@ export function handleFinalize(args: string[]): void {
 }
 
 export function handleCompleteWorkflow(args: string[]): void {
-  const { intent, space, rest } = extractIntentSelector(args);
-  const pd = resolveProjectDir(projectDir);
-  if (intent === undefined && space === undefined) {
-    completeWorkflowForTarget(rest, pd);
-    return;
-  }
-  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
-  if (resolvedIntent === undefined) {
-    error("complete-workflow could not resolve the selected Intent.");
-  }
-  withStateOperationTarget(
-    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
-    completeWorkflowForTarget.bind(null, rest, pd),
+  runSelectedIntentOperation(
+    args,
+    completeWorkflowForTarget,
+    "complete-workflow could not resolve the selected Intent.",
   );
 }
 
@@ -2483,7 +2510,19 @@ function validateSlugInState(
 // conductor skipped, e.g. report's explicit-stage recovery) with
 // Recovered=true so audit consumers can tell backfills from organic opens.
 export function handleGateStart(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered]");
+  runSelectedIntentOperation(
+    args,
+    gateStartForTarget,
+    "gate-start could not resolve the selected Intent.",
+  );
+}
+
+function gateStartForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered] [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
   let artifacts: string | undefined;
   const artifactsIdx = args.indexOf("--artifacts");
@@ -2492,11 +2531,10 @@ export function handleGateStart(args: string[]): void {
   }
   const recovered = args.includes("--recovered");
 
-  const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: validate→transition→emit-audit→write under one
   // lock (the state-precondition check and the write see one snapshot).
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
@@ -2506,7 +2544,7 @@ export function handleGateStart(args: string[]): void {
   // stage's questions file carries a filled [Answer] without ruling/approval
   // evidence. Fail-closed via error() BEFORE any transition is written, so a
   // refusal leaves the checkbox untouched and STAGE_AWAITING_APPROVAL unemitted.
-  const rd = recordDir(pd);
+  const rd = operationRecordDir(pd);
   // Enforcement cutoff (reviewer catch, PR #1106): 59/111 questions files in
   // the live corpus predate the E-OC1 evidence-header convention, so applying
   // the guard to pre-guard intents would hard-block unpark -> gate-start on
@@ -2898,6 +2936,7 @@ type RecoveredApprovalBatchInput = {
   readonly revisionCount: number;
   readonly userInput?: string;
   readonly grantId?: string;
+  readonly presenceReservationId?: string;
 };
 
 function buildRecoveredApprovalBatch(
@@ -2937,13 +2976,22 @@ function buildRecoveredApprovalBatch(
         ...common,
         ...(input.userInput ? { "User Input": input.userInput } : {}),
         ...(input.grantId ? { "Grant Id": input.grantId } : {}),
+        ...(input.presenceReservationId
+          ? { "Presence Reservation Id": input.presenceReservationId }
+          : {}),
       },
     },
     {
       heading: "Stage Completion",
       event: "STAGE_COMPLETED",
       timestamp: input.timestamp,
-      fields: { ...common, Details: `Stage ${input.stageName} approved by gate` },
+      fields: {
+        ...common,
+        Details: `Stage ${input.stageName} approved by gate`,
+        ...(input.presenceReservationId
+          ? { "Presence Reservation Id": input.presenceReservationId }
+          : {}),
+      },
     },
   ];
   return inputs.map((entry, offset) => approvalAuditBlock(entry, identity, offset));
@@ -2979,6 +3027,7 @@ type ApprovalAuthorization = {
 type ApprovalAuthorizationOverride = {
   readonly grantId: string | null;
   readonly auditPrefix?: "none" | "gate-approved" | "completed";
+  readonly presenceReservationId?: string;
 };
 
 function authorizeApproval(
@@ -3043,6 +3092,7 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
         revisionCount: input.recovery.nextRevisionCount,
         ...(input.userInput ? { userInput: input.userInput } : {}),
         ...(input.authorization.grantId ? { grantId: input.authorization.grantId } : {}),
+        presenceReservationId: input.authorization.override?.presenceReservationId,
       });
       return;
     }
@@ -3051,15 +3101,24 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     const gateFields: Record<string, string> = { Stage: input.slug };
     if (input.userInput) gateFields["User Input"] = input.userInput;
     if (input.authorization.grantId) gateFields["Grant Id"] = input.authorization.grantId;
+    if (input.authorization.override?.presenceReservationId) {
+      gateFields["Presence Reservation Id"] =
+        input.authorization.override.presenceReservationId;
+    }
     const auditPrefix = input.authorization.override?.auditPrefix ?? "none";
     if (auditPrefix === "none") {
       emitAudit(pd, "GATE_APPROVED", gateFields);
     }
     if (auditPrefix !== "completed" && !input.deferStageCompletion) {
-      emitAudit(pd, "STAGE_COMPLETED", {
+      const completionFields: Record<string, string> = {
         Stage: input.slug,
         Details: `Stage ${input.stageName} approved by gate`,
-      });
+      };
+      if (input.authorization.override?.presenceReservationId) {
+        completionFields["Presence Reservation Id"] =
+          input.authorization.override.presenceReservationId;
+      }
+      emitAudit(pd, "STAGE_COMPLETED", completionFields);
     }
   } catch (e) {
     if (input.recovery?.kind === "recovered") {
@@ -3251,7 +3310,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   }
 
   if (authority.kind === "targeted-human") {
-    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    const sessionId = trustedHostSessionId();
     if (!sessionId) {
       rejectApprovalProtocol("Trusted session identity is unavailable");
     }
@@ -3315,6 +3374,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
               approveUnderLock(pd, slug, authority.userInput, {
                 grantId: null,
                 auditPrefix,
+                presenceReservationId: authority.reservationId,
               }, flags.deferWorkflowCompletion);
             });
           } else if (stageState === "completed") {
@@ -3840,31 +3900,80 @@ export function handleRevokeStandingDelegation(args: string[]): void {
 // rejection may arrive with no open gate. The reject self-heals by emitting
 // the missing STAGE_AWAITING_APPROVAL (tagged Recovered=true) ahead of the
 // rejection pair — mirroring report's approve-side gate backfill.
-function handleReject(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts reject <slug> [--feedback <text>]");
+export function handleReject(args: string[]): void {
+  runSelectedIntentOperation(
+    args,
+    rejectForTarget,
+    "reject could not resolve the selected Intent.",
+  );
+}
+
+function rejectForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts reject <slug> [--feedback <text>] [--target-intent-id <uuid>] [--presence-reservation-id <uuid>] [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
   const feedback = getFlagValue(args.slice(1), "--feedback");
-
-  const pd = resolveProjectDir(projectDir);
+  const targetIntentId = getFlagValue(args.slice(1), "--target-intent-id");
+  const reservationId = getFlagValue(
+    args.slice(1),
+    "--presence-reservation-id",
+  );
+  if ((targetIntentId === undefined) !== (reservationId === undefined)) {
+    error("Targeted rejection requires both target intent and presence reservation ids");
+  }
   // C2b lost-update safety: validate→increment Revision Count→emit-audit→write
   // under one lock. The Revision Count read-modify-write is the exposed bit —
   // two concurrent rejects must not both read N and both write N+1 (one
   // increment lost). emit-then-write stays idempotent on retry: the lock
   // serialises, and re-running the same input recomputes from the locked
   // snapshot rather than double-incrementing a stale value.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
   const gateWasMissing = getSlugState(content, slug) === "in-progress";
 
-  // Human-presence guard (#675): shared with handleApprove via
-  // assertHumanPresentForGateResolution. Runs BEFORE any mutation (Revision
-  // Count increment, [R] transition, GATE_REJECTED emit) so a refusal
-  // (error() -> exit) leaves state untouched.
-  assertHumanPresentForGateResolution(pd, content, slug, "reject");
+  let targetedReservation: PresenceReservation | null = null;
+  if (targetIntentId !== undefined && reservationId !== undefined) {
+    const sessionId = trustedHostSessionId();
+    if (!sessionId) {
+      error("Targeted rejection requires a trusted session identity");
+    }
+    try {
+      targetedReservation = verifyMintedPresenceReservation({
+        projectDir: pd,
+        sessionId,
+        reservationId,
+        targetIntentId,
+        stage: slug,
+      });
+    } catch (cause) {
+      error(`Invalid targeted human presence: ${errorMessage(cause)}`);
+    }
+    if (
+      targetedReservation.targetIntentDir !== stateOperationTarget?.intent ||
+      targetedReservation.space !== stateOperationTarget?.space
+    ) {
+      error("Presence reservation does not match the targeted rejection owner");
+    }
+    if (
+      !targetedApprovalEvidence(
+        operationReadAudit(pd),
+        targetedReservation,
+      ).humanTurnIsFresh
+    ) {
+      error("Targeted HUMAN_TURN is not fresh for the open gate");
+    }
+  } else {
+    // Human-presence guard (#675): shared with handleApprove. Runs BEFORE any
+    // mutation so a refusal leaves state and audit untouched.
+    assertHumanPresentForGateResolution(pd, content, slug, "reject");
+  }
 
   // Increment Revision Count. Guard against non-numeric values (missing field,
   // manual edits, legacy state files) by coercing non-integers to 0.
@@ -3890,30 +3999,60 @@ function handleReject(args: string[]): void {
     }
     const rejFields: Record<string, string> = { Stage: slug };
     if (feedback) rejFields.Feedback = feedback;
+    if (targetedReservation !== null) {
+      rejFields["Presence Reservation Id"] =
+        targetedReservation.reservationId;
+    }
     emitAudit(pd, "GATE_REJECTED", rejFields);
     emitAudit(pd, "STAGE_REVISING", {
       Stage: slug,
       "Revision count": String(revCount),
       ...(feedback ? { Feedback: feedback } : {}),
+      ...(targetedReservation === null
+        ? {}
+        : {
+            "Presence Reservation Id":
+              targetedReservation.reservationId,
+          }),
     });
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
+  if (targetedReservation !== null) {
+    consumePresenceReservation({
+      projectDir: pd,
+      sessionId: trustedHostSessionId()!,
+      reservationId: targetedReservation.reservationId,
+      targetIntentId: targetedReservation.targetIntentId,
+      stage: slug,
+    });
+  }
   console.log(JSON.stringify({ slug, new_state: "revising", revision_count: revCount, timestamp }));
   });
 }
 
 // revise <slug> — transition [R] → [?] (re-enter gate after revision work)
-function handleRevise(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts revise <slug>");
+export function handleRevise(args: string[]): void {
+  runSelectedIntentOperation(
+    args,
+    reviseForTarget,
+    "revise could not resolve the selected Intent.",
+  );
+}
+
+function reviseForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts revise <slug> [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
 
-  const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
@@ -3932,7 +4071,7 @@ function handleRevise(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
   });
 }

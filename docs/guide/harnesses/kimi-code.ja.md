@@ -12,11 +12,14 @@
 
 ## 前提条件
 
-- **Kimi Code CLI ≥ 0.28.1** — 実測されたフロアです。フックイベント/マッチャーの
-  ペイロード契約(実機の 0.28.1 に対して全フックイベント種をキャプチャ)、
-  `.kimi-code/skills/` のディスカバリ、`AskUserQuestion` はすべてこのリリースで
-  検証されています。`/skill:amadeus --doctor` がこのピンを強制します。
-  `kimi --version` で確認してください。
+- **Kimi Code CLI ≥ 0.29.0** — ハードフロアです。0.29.0 で Markdown の
+  カスタムエージェント定義とエージェント単位のツール権限が導入され、Amadeus は
+  その契約を読み取り専用レビュー担当プロファイルに使用します。Kimi は
+  エージェントの `tools` allowlist を実行前に検査します。この境界が存在しない
+  0.28.x は非対応であり、`/skill:amadeus --doctor` が拒否します。公式の
+  [0.29.0 changelog](https://www.kimi.com/code/docs/en/kimi-code-cli/release-notes/changelog.html#0290-2026-07-22)
+  と [カスタムエージェントのファイル形式](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html#agent-file-format)
+  を参照してください。`kimi --version` で確認できます。
 - **bun** が PATH 上にあること — すべてのツールとフックは bun 経由で実行されます。
 - **動作する Kimi CLI のセットアップ** — kimi は config に `default_model`、
   managed provider、models テーブルが無いとセッションを開始しません。また
@@ -53,9 +56,13 @@ Kimi Code には **プロジェクトレベルの config ファイルがあり�
   `dist/kimi/.kimi-code/hooks/amadeus-hooks.snippet.toml`)。本ガイドは snippet を
   転記せず参照とします — 正確なエントリはファイル自体を読んでください。
   マーカーで囲まれたブロックは、Kimi のフックイベントを
-  `.kimi-code/hooks/amadeus-kimi-adapter.ts` アダプタ経由で配線し、決定論的コアの
-  厳密なコマンドプレフィックスと Bolt worktree フローが必要とする git 動詞の
-  `[[permission.rules]]` 事前許可を追加します。
+  `.kimi-code/hooks/amadeus-kimi-adapter.ts` アダプタ経由で配線します。また、
+  エージェントが組み立てた hook パスへの Bash 呼び出しを多層防御として deny し、
+  決定論的コアの厳密なツールプレフィックスと Bolt worktree フローが必要とする
+  git 動詞を事前許可します。これらのグローバル permission rule は caller 認証では
+  ありません。product-lead と architecture-reviewer のプロファイルは代わりに
+  Kimi ネイティブの `tools: [Read, Grep, Glob]` allowlist を使用し、ほかの
+  カスタムエージェントは役割に必要なツールを保持します。
 - **インストーラのマージ方法。** インストーラはマージ計画を差分レポートとして
   表示し、明示的な対話確認を求め、既存の config をバックアップし(隣に
   タイムスタンプ付きコピー)、マージ結果をアトミックに書き込みます。既存の
@@ -101,9 +108,10 @@ kimi アームは 4 つのことを検査します:
    マーカーは loud fail です。別の advisory スキャンは、managed block が検出
    されない状態で残っている managed 流の git 事前許可ルールを指摘します
    (不完全に除去されたブロックの残留の可能性 — 手動で確認してください)。
-3. **バージョンフロア** — PATH 上の `kimi` が ≥ 0.28.1 であること。バイナリが
+3. **バージョンフロア** — PATH 上の `kimi` が ≥ 0.29.0 であること。バイナリが
    見つからない場合はインストールのヒント付きで `kimi CLI on PATH` 行が失敗し、
-   古いバージョンはアップグレードのヒント付きで失敗します。
+   古いバージョンはアップグレードのヒント付きで失敗します。特に 0.28.x は
+   カスタムレビュー担当のツールポリシーを強制できないため失敗します。
 4. **フック probe(advisory)** — アダプタを直接発火させます。「adapter fired」
    または「unverified … (advisory; hooks are auxiliary, the workflow still runs)」
    — probe の失敗がワークフローをブロックすることはありません。
@@ -133,8 +141,15 @@ kimi アームは 4 つのことを検査します:
   すべての注入形式が不達でした)。UserPromptSubmit の stdout が唯一の動作する注入
   チャネルなので、resume/コンテキストのテキストはそれに乗ります。session-start
   フックは副作用のみです。
-- **Stop ブロック = exit 2 + stderr**(実測: reason がモデルに verbatim で
-  届きます)。
+- **Stop は無出力の観測専用 no-op です。** 外部 hook payload には main と
+  subagent を信頼して識別できる caller identity がありません。そのため adapter は
+  どちらの caller shape でも `Stop` を stateful core hook に転送せず、常に
+  stdout/stderr を空にして exit 0 を返します。
+- **読み取り専用レビュー担当は Kimi ネイティブのカスタムエージェント
+  ツールポリシーを使います。** product-lead と architecture-reviewer の
+  プロファイルが公開するのは `Read`、`Grep`、`Glob` だけで、Kimi 0.29.0 以降が
+  tool 実行前に allowlist を検査します。hook パスへの permission deny は
+  多層防御であり、認可境界ではありません。
 - **skills、agents、scopes は `.kimi-code/{skills,agents,scopes}/` から
   ディスカバーされます** — 別途の `.agents/` ツリーはありません。
 - **ステータスラインもウェルカムメッセージもありません** — ステージの可視性は

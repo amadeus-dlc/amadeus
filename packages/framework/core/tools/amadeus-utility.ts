@@ -1069,9 +1069,11 @@ export function kimiGitResidueDoctorCheck(kimiHomeDir: string): DoctorCheck {
   };
 }
 
-// Minimum Kimi Code CLI version floor. The adapter's hook event/matcher payload
-// contract was measured live against 0.28.1; older versions are unverified.
-const MIN_KIMI_VERSION = [0, 28, 1] as const;
+// Minimum Kimi Code CLI version floor. Markdown custom-agent tool permissions
+// first shipped in 0.29.0; 0.28.x ignores the reviewer `tools` allowlist and
+// therefore cannot provide the required read-only reviewer boundary. The hook
+// event/matcher payload contract was measured live against 0.28.1 separately.
+const MIN_KIMI_VERSION = [0, 29, 0] as const;
 
 // Pure over the resolved binary path (undefined ⇒ not on PATH) and the raw
 // `--version` output, so both fail branches are driven in-process while the
@@ -1084,7 +1086,7 @@ export function classifyKimiCliVersionCheck(kimiPath: string | undefined, versio
     return {
       pass: false,
       label: "kimi CLI not installed (not on PATH)",
-      fix: "install Kimi Code CLI >= 0.28.1 (see docs/guide/harnesses/kimi-code.md)",
+      fix: "install Kimi Code CLI >= 0.29.0 (see docs/guide/harnesses/kimi-code.md)",
     };
   }
   const match = versionText.match(/(\d+)\.(\d+)\.(\d+)/);
@@ -1092,7 +1094,7 @@ export function classifyKimiCliVersionCheck(kimiPath: string | undefined, versio
     return {
       pass: false,
       label: `kimi CLI on PATH (${kimiPath}) but its --version output is not parseable as a semver`,
-      fix: "ensure `kimi --version` prints a version >= 0.28.1, or upgrade Kimi Code CLI",
+      fix: "ensure `kimi --version` prints a version >= 0.29.0, or upgrade Kimi Code CLI",
     };
   }
   const v = [Number(match[1]), Number(match[2]), Number(match[3])];
@@ -1102,8 +1104,8 @@ export function classifyKimiCliVersionCheck(kimiPath: string | undefined, versio
       (v[1] > MIN_KIMI_VERSION[1] || (v[1] === MIN_KIMI_VERSION[1] && v[2] >= MIN_KIMI_VERSION[2])));
   return {
     pass: ok,
-    label: `kimi CLI version ${match[0]} >= 0.28.1 (measured hook payload contract)`,
-    fix: "upgrade Kimi Code CLI to 0.28.1 or later",
+    label: `kimi CLI version ${match[0]} >= 0.29.0 (custom-agent tool policy contract)`,
+    fix: "upgrade Kimi Code CLI to 0.29.0 or later",
   };
 }
 
@@ -1732,10 +1734,11 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     // advisory by contract).
     results.push(kimiManagedBlockDoctorCheck(kimiHomeDir, projectDir));
     results.push(kimiGitResidueDoctorCheck(kimiHomeDir));
-    // Minimum Kimi Code version pin: the hook event/matcher payload contract
-    // the adapter translates was measured live against 0.28.1. The spawn stays
-    // here; the three-way classification (not installed / unparseable / floor
-    // compare) is the pure classifyKimiCliVersionCheck seam, driven in-process.
+    // Minimum Kimi Code version pin: 0.29.0 introduced the Markdown
+    // custom-agent tool policy used by the read-only reviewer profiles. The
+    // spawn stays here; the three-way classification (not installed /
+    // unparseable / floor compare) is the pure classifyKimiCliVersionCheck
+    // seam, driven in-process.
     const kimiPath = Bun.which("kimi");
     const kimiVerText = kimiPath
       ? (Bun.spawnSync([kimiPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "").trim()

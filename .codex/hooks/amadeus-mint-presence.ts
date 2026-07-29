@@ -45,6 +45,7 @@ import {
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
+import { detectHarnessType } from "../tools/amadeus-harness.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   hostSessionCapability,
@@ -60,29 +61,49 @@ type PromptContext = {
   readonly machineInjected: boolean;
   readonly sessionId: string | null;
   readonly cwd: string | null;
+  readonly route: {
+    readonly eventName: string;
+    readonly toolName: string | null;
+    readonly purposeText: string;
+  } | null;
 };
 
 async function readPromptContext(): Promise<PromptContext> {
   // A TTY yields empty text here (readHookStdin never blocks on a terminal) —
   // treat as unclassifiable (fail-open -> mint).
   const stdin = await readHookStdin();
-  const blank = { machineInjected: false, sessionId: null, cwd: stdin.cwd };
+  const blank = {
+    machineInjected: false,
+    sessionId: null,
+    cwd: stdin.cwd,
+    route: null,
+  };
   try {
     if (stdin.text.length === 0) return blank;
     const raw: unknown = JSON.parse(stdin.text);
     if (!isClaudeCodeHookInput(raw)) return blank;
     const prompt = raw.prompt;
     const sessionId =
-      typeof raw.session_id === "string" && raw.session_id.length > 0
+      typeof raw.session_id === "string" &&
+        raw.session_id.length > 0 &&
+        raw.session_id === raw.session_id.trim()
         ? raw.session_id
         : null;
+    const eventName =
+      typeof raw.hook_event_name === "string" ? raw.hook_event_name : "";
+    const toolName = typeof raw.tool_name === "string" ? raw.tool_name : null;
+    const purposeText = typeof prompt === "string"
+      ? prompt
+      : JSON.stringify(raw.tool_input ?? {});
+    const route = { eventName, toolName, purposeText };
     if (typeof prompt !== "string") {
-      return { machineInjected: false, sessionId, cwd: stdin.cwd };
+      return { machineInjected: false, sessionId, cwd: stdin.cwd, route };
     }
     return {
       machineInjected: isMachineInjectedTurnText(prompt),
       sessionId,
       cwd: stdin.cwd,
+      route,
     };
   } catch {
     return blank;
@@ -98,6 +119,8 @@ try {
     mintHumanPresence({
       projectDir,
       capability: hostSessionCapability(context.sessionId),
+      requireReservationRoute: detectHarnessType() === "kimi",
+      ...(context.route === null ? {} : { route: context.route }),
     });
   }
 } catch {
