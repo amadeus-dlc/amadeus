@@ -93,9 +93,6 @@ function canonicalNameVocabulary(): Set<string> {
     names.add(def.name);
     if (def.auditEvent !== null) names.add(def.auditEvent);
   }
-  if (names.size === 0) {
-    throw new Error("canonical name vocabulary is empty — guard would pass vacuously (BR-6)");
-  }
   return names;
 }
 
@@ -109,11 +106,15 @@ const DIAGNOSTIC_CALL_RE = /emitDiagnostic\(\s*(["'`])([^"'`]*)\1/g;
 // the stores even though only one is auditable. This is enforced statically,
 // not at runtime: the diagnostic path is fail-open by contract (BR-2), so it
 // must never throw at its caller. Returns one finding per violating call site
-// (empty = clean).
+// (empty = clean). An emptied vocabulary fails closed rather than reporting a
+// vacuously clean sweep.
 export function findDiagnosticNameMisuse(
-  sources: readonly { readonly path: string; readonly source: string }[]
+  sources: readonly { readonly path: string; readonly source: string }[],
+  canonical: ReadonlySet<string> = canonicalNameVocabulary()
 ): string[] {
-  const canonical = canonicalNameVocabulary();
+  if (canonical.size === 0) {
+    throw new Error("canonical name vocabulary is empty — the sweep would pass vacuously (BR-6)");
+  }
   const findings: string[] = [];
   for (const { path, source } of sources) {
     for (const match of source.matchAll(DIAGNOSTIC_CALL_RE)) {

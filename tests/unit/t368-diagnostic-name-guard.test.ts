@@ -46,6 +46,17 @@ describe("findDiagnosticNameMisuse — canonical names are off limits for diagno
     expect(findDiagnosticNameMisuse([{ path: "z.ts", source }]).length).toBe(2);
   });
 
+  test("an empty vocabulary fails closed instead of sweeping vacuously clean", () => {
+    expect(() => findDiagnosticNameMisuse([{ path: "a.ts", source: call("anything") }], new Set())).toThrow(
+      /vacuous/i
+    );
+  });
+
+  test("the default vocabulary is the canonical registry, not an injected stub", () => {
+    // Same call site, judged against the registry-derived default.
+    expect(findDiagnosticNameMisuse([{ path: "a.ts", source: call("amadeus.workflow.started") }]).length).toBe(1);
+  });
+
   test("a source with no diagnostic call sites at all is clean (no false positives)", () => {
     expect(findDiagnosticNameMisuse([{ path: "q.ts", source: 'emitEvent("amadeus.workflow.started", {});' }])).toEqual(
       []
