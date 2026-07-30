@@ -5945,19 +5945,73 @@ export function writeFileAtomic(
 // callers are all sync (compile, state.ts fork/merge); future async-locked
 // transactions need a separate `withAuditLockAsync` that awaits before
 // release. The compile-time guard catches the footgun at the call site.
+//
+// `retry` overrides the acquire budget for the OUTERMOST call (a reentrant
+// inner call takes no OS lock, so it has no budget to spend). Sections sized
+// for parallel-Bolt contention — audit-merge's env-tunable 200 x 100ms = 20s —
+// pass their own budget rather than inheriting the 5s default.
+export type AuditLockRetryBudget = {
+  readonly maxRetries?: number;
+  readonly retryMs?: number;
+};
+
+// A spent acquire budget, distinguishable from anything the locked section
+// throws. A CLI that reports lock contention in its own output shape (the
+// audit-merge JSON error) catches this rather than pattern-matching a message.
+// The message keeps the "Failed to acquire audit lock" prefix the existing
+// consumers branch on (amadeus-state.ts, amadeus-learnings.ts).
+export class AuditLockAcquireError extends Error {
+  constructor(key: string, maxRetries: number, retryMs: number) {
+    super(
+      `Failed to acquire audit lock for ${key} after ${maxRetries} × ${retryMs}ms = ` +
+        `${((maxRetries * retryMs) / 1000).toFixed(1)}s retries`,
+    );
+    this.name = "AuditLockAcquireError";
+  }
+}
+
 export function withAuditLock<T>(
   projectDir: string,
   fn: () => T extends Promise<unknown> ? never : T,
   intent?: string,
   space?: string,
+  retry?: AuditLockRetryBudget,
 ): T extends Promise<unknown> ? never : T {
+  if (!enterAuditLock(projectDir, intent, space, retry)) {
+    const key = auditLockIdentity(projectDir, intent, space);
+    throw new AuditLockAcquireError(key, retry?.maxRetries ?? 50, retry?.retryMs ?? 100);
+  }
+  try {
+    return fn();
+  } finally {
+    exitAuditLock(projectDir, intent, space);
+  }
+}
+
+// enterAuditLock / exitAuditLock — the two-phase form of withAuditLock, for the
+// ONE case that cannot take a callback: a lock reached through an injected
+// two-phase port (MirrorStateStorePorts.acquireLock/releaseLock, whose shape is
+// what lets failure injection replace an implementation instead of branching
+// production code). Every other call site uses withAuditLock, which cannot leak
+// the lock on an early return or a throw. Reaching for these directly gives up
+// that guarantee for nothing.
+//
+// withAuditLock is implemented on top of this pair, so there is exactly ONE
+// depth counter and one acquire path: a section entered through either form
+// re-enters the other.
+export function enterAuditLock(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+  retry?: AuditLockRetryBudget,
+): boolean {
   const key = auditLockIdentity(projectDir, intent, space);
   const currentDepth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
   if (currentDepth === 0) {
-    if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
-      throw new Error(`Failed to acquire audit lock for ${key} after retries`);
-    }
-    // Safety net: if the body calls process.exit (Bun skips `finally` in that
+    const maxRetries = retry?.maxRetries ?? 50;
+    const retryMs = retry?.retryMs ?? 100;
+    if (!acquireAuditLock(projectDir, maxRetries, retryMs, intent, space)) return false;
+    // Safety net: if the section calls process.exit (Bun skips `finally` in that
     // case), the on-exit handler releases the lock dir so the project isn't
     // poisoned for ~5s on the next invocation.
     // Same owner-stamp guard as releaseAuditLock (via removeLockDirIfOwned):
@@ -5967,17 +6021,23 @@ export function withAuditLock<T>(
     process.on("exit", onExit);
   }
   AUDIT_LOCK_DEPTH.set(key, currentDepth + 1);
-  try {
-    return fn();
-  } finally {
-    const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
-    if (depth <= 1) {
-      AUDIT_LOCK_DEPTH.delete(key);
-      releaseAuditLock(projectDir, intent, space);
-    } else {
-      AUDIT_LOCK_DEPTH.set(key, depth - 1);
-    }
+  return true;
+}
+
+// Unpairs one enterAuditLock. An exit with no matching enter — depth 0, which a
+// bare acquireAuditLock holder also reads as — releases NOTHING: the counter
+// never saw that acquisition, so there is none of ours to undo, and releasing
+// anyway would strip a lock its own holder still believes it owns.
+export function exitAuditLock(projectDir: string, intent?: string, space?: string): void {
+  const key = auditLockIdentity(projectDir, intent, space);
+  const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
+  if (depth === 0) return;
+  if (depth === 1) {
+    AUDIT_LOCK_DEPTH.delete(key);
+    releaseAuditLock(projectDir, intent, space);
+    return;
   }
+  AUDIT_LOCK_DEPTH.set(key, depth - 1);
 }
 
 // True iff THIS process currently holds the audit lock for the given identity

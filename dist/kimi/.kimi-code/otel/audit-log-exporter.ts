@@ -48,12 +48,30 @@ export type CanonicalEventRecord = {
   readonly durability: "canonical";
 };
 
+// Which ledger a single export writes to, overriding the exporter's registered
+// target (E-U8PRE O-T1). Absent fields fall back to the registered options, and
+// absent options fall back to the active cursor inside the append — the
+// pre-target behaviour, unchanged.
+//
+// The target selects the SHARD only. The row's own identity (intentId/space)
+// travels on the record and MUST already agree with this target: a row landing
+// in the target ledger while claiming the issuer's intent is the defect
+// migration-adapter.ts fails closed over. emitEvent is what keeps the two in
+// step, resolving identity from the same target it passes here.
+export type CanonicalEventTarget = {
+  readonly intent?: string;
+  readonly space?: string;
+};
+
 export type AuditLogExporter = {
   // Synchronous. Throws (after setting the fatal latch) on ANY write failure.
   // Returns whether the append landed: the post-complete seal SUPPRESSES
   // without throwing, so that outcome is only knowable from the return value
   // (E-U7CG-Q3B ruling A'). Callers that do not care may ignore it.
-  exportCanonicalEvent(record: CanonicalEventRecord): JournalAppendOutcome;
+  exportCanonicalEvent(
+    record: CanonicalEventRecord,
+    target?: CanonicalEventTarget
+  ): JournalAppendOutcome;
 };
 
 // The append seam: the default is the real locked journal append (lock →
@@ -107,7 +125,10 @@ export function createAuditLogExporter(options: AuditLogExporterOptions): AuditL
     options.append ??
     ((record, projectDir, intent, space) => appendJournalRecordV2(toJournalRow(record), projectDir, intent, space));
   return {
-    exportCanonicalEvent(record: CanonicalEventRecord): JournalAppendOutcome {
+    exportCanonicalEvent(
+      record: CanonicalEventRecord,
+      target?: CanonicalEventTarget
+    ): JournalAppendOutcome {
       // Accept-set validation (BR-10): invariant violations — caller bugs —
       // throw WITHOUT touching the fatal latch.
       const def = getEventDef(record.eventName);
@@ -140,7 +161,14 @@ export function createAuditLogExporter(options: AuditLogExporterOptions): AuditL
       serializeJournalEntryV2({ ...toJournalRow({ ...record, attributes: redacted }), seq: 1 });
       try {
         // An injected seam that returns nothing modelled a landed write.
-        return append({ ...record, attributes: redacted }, options.projectDir, options.intent, options.space) ?? { appended: true };
+        return (
+          append(
+            { ...record, attributes: redacted },
+            options.projectDir,
+            target?.intent ?? options.intent,
+            target?.space ?? options.space
+          ) ?? { appended: true }
+        );
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause);
         latch.setFatal(`canonical event write failed (${record.eventName}): ${message}`);

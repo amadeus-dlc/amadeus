@@ -11,6 +11,7 @@ import {
 import {
   acquireAuditLock,
   activeIntent,
+  AuditLockAcquireError,
   auditBlockField,
   auditCloneId,
   auditFilePath,
@@ -23,6 +24,7 @@ import {
   releaseAuditLock,
   resolveProjectDir,
   validateBoltSlug,
+  withAuditLock,
   writeFileAtomic,
   worktreeAuditFilePath,
   worktreePath,
@@ -397,33 +399,41 @@ export type JournalAppendOutcome =
   | { readonly appended: true }
   | { readonly appended: false; readonly reason: "intent-complete" };
 
+// Locked via withAuditLock, NOT a bare acquire (E-U8PRE O-L1). The canonical
+// emit path reaches this from arbitrary depth, including from inside a section
+// that already holds the lock for the same identity. A bare acquire hits EEXIST
+// against the caller's OWN lock: it burns the retry budget and throws, and once
+// the holder has been in its section past DEFAULT_LOCK_STALE_MS the reaper
+// judges that live lock stale and steals it — leaving the outer critical section
+// running with no lock at all, silently. withAuditLock's per-identity depth
+// counter makes the nested append re-enter instead.
 export function appendJournalRecordV2(
   record: Omit<JournalEntryV2, "seq">,
   projectDir: string,
   intent?: string,
   space?: string
 ): JournalAppendOutcome {
-  if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
-    throw new Error("Failed to acquire audit lock after retries");
-  }
-  try {
-    // Post-complete audit stop (#1248): the v2 append honours the same seal as
-    // the v1 writer — once the target intent's registry row is "complete", the
-    // ledger is sealed and the append is suppressed. Gated on the definite
-    // "complete" only; "unknown" falls through to the append.
-    if (intentStatusForAudit(projectDir, intent, space) === "complete") {
-      const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
-      process.stderr.write(
-        `amadeus-audit: suppressed ${record.eventName} v2 append — target intent ${targetDir} is complete (#1248)\n`
-      );
-      return { appended: false, reason: "intent-complete" };
-    }
-    const path = ensureAuditFile(projectDir, intent, space);
-    appendFileSync(path, serializeJournalEntryV2({ ...record, seq: nextShardSeq(path) }), "utf-8");
-    return { appended: true };
-  } finally {
-    releaseAuditLock(projectDir, intent, space);
-  }
+  return withAuditLock(
+    projectDir,
+    () => {
+      // Post-complete audit stop (#1248): the v2 append honours the same seal as
+      // the v1 writer — once the target intent's registry row is "complete", the
+      // ledger is sealed and the append is suppressed. Gated on the definite
+      // "complete" only; "unknown" falls through to the append.
+      if (intentStatusForAudit(projectDir, intent, space) === "complete") {
+        const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
+        process.stderr.write(
+          `amadeus-audit: suppressed ${record.eventName} v2 append — target intent ${targetDir} is complete (#1248)\n`
+        );
+        return { appended: false, reason: "intent-complete" } as JournalAppendOutcome;
+      }
+      const path = ensureAuditFile(projectDir, intent, space);
+      appendFileSync(path, serializeJournalEntryV2({ ...record, seq: nextShardSeq(path) }), "utf-8");
+      return { appended: true } as JournalAppendOutcome;
+    },
+    intent,
+    space
+  );
 }
 
 // Lock-already-held variant for callers that need to hold the audit lock
@@ -925,82 +935,99 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
     process.env.AMADEUS_AUDIT_LOCK_RETRY_MS ?? "100",
     10,
   );
-  if (!acquireAuditLock(projectDir, lockRetries, lockRetryMs, intent, space)) {
-    jsonError(
-      `Failed to acquire audit lock after ${lockRetries} × ${lockRetryMs}ms = ${(lockRetries * lockRetryMs / 1000).toFixed(1)}s retries; another merge in flight?`
-    );
-  }
-
   // Atomic critical section: delta-append + AUDIT_MERGED emit run under a
-  // single lock acquisition. We use appendAuditEntryUnlocked for the
-  // AUDIT_MERGED row so we don't double-acquire the lock — an earlier
-  // design released-and-reacquired across the boundary, which
-  // worked but left a brief window where another merger could interleave.
-  // The catch path also uses the unlocked variant for the same reason: we
-  // already hold the lock when the throw lands, so re-acquiring would either
-  // deadlock or create a release-reacquire race in the error path.
+  // single lock acquisition, held by withAuditLock so a nested canonical emit
+  // re-enters instead of self-colliding (E-U8PRE O-L1). The extended budget
+  // above is passed through explicitly — withAuditLock's own default is the 5s
+  // one, and inheriting it would silently shrink this section's 20s window.
+  // We use appendAuditEntryUnlocked for the AUDIT_MERGED row so we don't
+  // double-acquire the lock — an earlier design released-and-reacquired across
+  // the boundary, which worked but left a brief window where another merger
+  // could interleave. The catch path also uses the unlocked variant for the same
+  // reason: we already hold the lock when the throw lands.
   //
   // Failure-mode worth flagging for doctor: if appendAuditEntryUnlocked
   // throws AFTER appendFileSync (delta) succeeded, main audit has the delta
   // but no matching AUDIT_MERGED row. The catch path emits ERROR_LOGGED with
   // [slug=<slug>] [fork-emitted:<forkTs>] correlation tags so doctor can
   // detect the orphan-delta case (delta in main, AUDIT_FORKED present, no
-  // AUDIT_MERGED, ERROR_LOGGED with matching forkTs).
-  let entriesMerged = 0;
-  let result: AppendAuditResult;
+  // AUDIT_MERGED, ERROR_LOGGED with matching forkTs). The process.exit there
+  // skips withAuditLock's finally, which is exactly what its exit-handler
+  // safety net covers.
+  let merged: { entriesMerged: number; result: AppendAuditResult };
   try {
-    const trimmed = delta.trim();
-    if (trimmed !== "") {
+    merged = withAuditLock(
+      projectDir,
+      () => mergeDeltaUnderLock(projectDir, mainAuditPath, delta, { slug, sourceHash, boundary, forkTs }, intent, space),
+      intent,
+      space,
+      { maxRetries: lockRetries, retryMs: lockRetryMs },
+    );
+  } catch (e) {
+    if (!(e instanceof AuditLockAcquireError)) throw e;
+    jsonError(`${e.message}; another merge in flight?`);
+  }
+
+  jsonSuccess({
+    emitted: "AUDIT_MERGED",
+    slug,
+    entries_merged: merged.entriesMerged,
+    source_audit_hash: sourceHash,
+    fork_boundary: boundary,
+    audit_timestamp: merged.result.timestamp,
+  });
+}
+
+// The audit-merge critical section, called with the audit lock already held.
+// Exported as a seam: the orphan-delta failure arm below needs the delta append
+// to fail while the ERROR_LOGGED append still lands, which through the handler
+// is impossible (both write the same shard) and through a spawned CLI is
+// unmeasurable.
+export function mergeDeltaUnderLock(
+  projectDir: string,
+  mainAuditPath: string,
+  delta: string,
+  coords: { slug: string; sourceHash: string; boundary: number; forkTs: string },
+  intent?: string,
+  space?: string,
+): { entriesMerged: number; result: AppendAuditResult } {
+  let entriesMerged = 0;
+  try {
+    if (delta.trim() !== "") {
       // Delta is already a sequence of well-formed journal records (one
       // JSONL line each). Append verbatim — running it through
       // appendAuditEntry would re-mint each record's identity.
       appendFileSync(mainAuditPath, delta, "utf-8");
       entriesMerged = countDeltaRecords(delta);
     }
-    result = appendAuditEntryUnlocked(
+    const result = appendAuditEntryUnlocked(
       "AUDIT_MERGED",
       {
-        "Bolt slug": slug,
+        "Bolt slug": coords.slug,
         "Entries Merged": String(entriesMerged),
-        "Source Audit Hash": sourceHash,
-        "Fork Boundary": String(boundary),
+        "Source Audit Hash": coords.sourceHash,
+        "Fork Boundary": String(coords.boundary),
       },
       projectDir,
       intent,
       space,
     );
+    return { entriesMerged, result };
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
-    // We still hold the outer lock in the catch path. Use the unlocked
-    // variant so we don't release-and-reacquire (which would race against
-    // any concurrent merger waiting for our lock). Release in finally below.
-    try {
-      appendAuditEntryUnlocked(
-        "ERROR_LOGGED",
-        {
-          Tool: "amadeus-audit",
-          Command: "audit-merge",
-          Error: `[slug=${slug}] [fork-emitted:${forkTs}] ${message}`,
-        },
-        projectDir,
-        intent,
-        space,
-      );
-    } finally {
-      releaseAuditLock(projectDir, intent, space);
-    }
+    appendAuditEntryUnlocked(
+      "ERROR_LOGGED",
+      {
+        Tool: "amadeus-audit",
+        Command: "audit-merge",
+        Error: `[slug=${coords.slug}] [fork-emitted:${coords.forkTs}] ${message}`,
+      },
+      projectDir,
+      intent,
+      space,
+    );
     process.exit(1);
   }
-  releaseAuditLock(projectDir, intent, space);
-
-  jsonSuccess({
-    emitted: "AUDIT_MERGED",
-    slug,
-    entries_merged: entriesMerged,
-    source_audit_hash: sourceHash,
-    fork_boundary: boundary,
-    audit_timestamp: result.timestamp,
-  });
 }
 
 // --- Presence/provenance CLI minting guard ---

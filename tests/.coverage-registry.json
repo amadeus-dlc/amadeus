@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 546,
+    "total": 549,
     "enumeratedByClass": {
-      "function": 306,
+      "function": 309,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 151,
+      "function": 154,
       "audit": 33,
       "scope": 10,
       "stage": 8,
@@ -1073,6 +1073,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:AuditLockAcquireError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:auditLockDir",
       "minMechanism": "none",
       "coveredBy": [
@@ -1640,6 +1652,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:enterAuditLock",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:errorMessage",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1675,6 +1699,18 @@
         },
         {
           "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:exitAuditLock",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3865,6 +3901,10 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         },
         {
