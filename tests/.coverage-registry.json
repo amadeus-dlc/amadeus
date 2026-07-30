@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 546,
+    "total": 547,
     "enumeratedByClass": {
-      "function": 306,
+      "function": 307,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 151,
+      "function": 152,
       "audit": 33,
       "scope": 10,
       "stage": 8,
@@ -1066,6 +1066,18 @@
         },
         {
           "file": "tests/unit/t160-workspace-record-resolution.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:AuditLockAcquireError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3865,6 +3877,10 @@
         },
         {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         },
         {

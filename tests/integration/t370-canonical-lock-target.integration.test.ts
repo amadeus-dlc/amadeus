@@ -1,4 +1,4 @@
-// covers: tools:amadeus-lib tools:amadeus-audit otel:logger-provider otel:audit-log-exporter
+// covers: function:withAuditLock, function:AuditLockAcquireError, function:appendJournalRecordV2
 // size: medium
 //
 // Pre-U8 Bolt P1 (E-U8PRE, composite ruling B):
