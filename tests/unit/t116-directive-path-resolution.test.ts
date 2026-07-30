@@ -78,7 +78,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
   cleanupTestProject,
@@ -135,6 +135,13 @@ interface RunStageDirective {
   consumes: string[];
   consumes_absent?: Array<{ path: string; expected: boolean }>;
   produces: string[];
+}
+
+interface SensorInvocationScope {
+  version: number;
+  stage: string;
+  produces: string[];
+  optional_produces: string[];
 }
 
 /**
@@ -364,6 +371,26 @@ describe("t116 brownfield application-design (migrated from t116-directive-path-
       p.startsWith(`${RP}/inception/application-design/`),
     );
     expect(selfKeyed).toEqual([]);
+  });
+});
+
+describe("t116 run-stage sensor invocation projection", () => {
+  test("next projects the exact resolved output candidates for the emitted run-stage", () => {
+    const directive = emitFor("state-construction.md", "requirements-analysis");
+    const proj = tempDirs[tempDirs.length - 1];
+    const scope = JSON.parse(
+      readFileSync(
+        join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-invocation.json"),
+        "utf-8",
+      ),
+    ) as SensorInvocationScope;
+
+    expect(scope).toEqual({
+      version: 1,
+      stage: "requirements-analysis",
+      produces: directive.produces,
+      optional_produces: [],
+    });
   });
 });
 
