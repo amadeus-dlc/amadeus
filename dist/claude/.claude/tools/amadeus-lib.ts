@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { type JournalEntry, isJournalEntryV2, parseJournalLine } from "./amadeus-journal.ts";
+import { type JournalRecord, isJournalEntryV2, journalRecordField, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -4210,55 +4210,34 @@ export function humanActedSinceLastAnswer(projectDir: string): boolean {
 // leading `- ` so it serves both audit blocks and the state file). Mirrors the
 // per-tool private auditField readers; shared here for humanActedSinceGate.
 export function auditBlockField(block: string, fieldName: string): string | null {
-  // JSONL journal record (one JSON object per line). Envelope keys are served
-  // under their historical Markdown field names; payload fields come from the
-  // entry's fields map; a raw record's body is scanned like the legacy format
-  // (converted append-raw bodies keep their `**Key**: value` lines verbatim).
-  const entry = tryParseJournalRecord(block);
-  if (entry !== null) {
-    if (fieldName === "Timestamp") return entry.timestamp;
-    if (entry.event !== null) {
-      if (fieldName === "Event") return entry.event;
-      const value = entry.fields?.[fieldName];
-      return value !== undefined ? value.trim() : null;
+  // JSONL journal record (one JSON object per line, v1 or v2 — the common
+  // reader decodes both). Envelope keys are served under their historical
+  // Markdown field names; payload fields come from the normalized accessor
+  // (journalRecordField), so consumers never branch on the schema version.
+  const record = tryParseJournalRecord(block);
+  if (record !== null) {
+    if (!isJournalEntryV2(record) && record.event === null) {
+      // Raw v1 record: the Timestamp rides the envelope; every other field is
+      // scanned from the preserved body exactly like the legacy reader did
+      // (an append-raw body may carry `**Event**:` / field lines of its own;
+      // the write-time presence guard already vets what can land there).
+      if (fieldName === "Timestamp") return record.timestamp;
+      return legacyLineField(record.rawBody ?? "", fieldName);
     }
-    // Raw record: scan the preserved body exactly like the legacy reader did
-    // (an append-raw body may carry `**Event**:` / field lines of its own;
-    // the write-time presence guard already vets what can land there).
-    return legacyLineField(entry.rawBody ?? "", fieldName);
+    return journalRecordField(record, fieldName);
   }
   // Legacy line-scan: still the accessor for the Markdown STATE file (the
   // `- **Field**:` shape) and for raw bodies above.
   return legacyLineField(block, fieldName);
 }
 
-function tryParseJournalRecord(block: string): JournalEntry | null {
+function tryParseJournalRecord(block: string): JournalRecord | null {
   if (!block.startsWith("{")) return null;
   try {
-    const record = parseJournalLine(block.trim());
-    if (isJournalEntryV2(record)) {
-      // Mixed-shard interop (U4 writer lands before the U6 reader swap):
-      // normalize a v2 row onto the v1 shape so every auditBlockField
-      // consumer — the presence ledger, findAllEvents, gate predicates —
-      // keeps seeing events the OTel emit path writes. The v1 event type
-      // rides in the `Event` attribute the AuditLogExporter stamps; a v2
-      // row without it degrades to event: null (skipped, never misparsed).
-      const fields: Record<string, string> = {};
-      for (const [key, value] of Object.entries(record.attributes)) {
-        fields[key] = typeof value === "string" ? value : JSON.stringify(value);
-      }
-      return {
-        schemaVersion: record.schemaVersion,
-        seq: record.seq,
-        cloneId: record.cloneId,
-        intentId: record.intentId,
-        timestamp: record.timestamp,
-        heading: record.eventName,
-        event: fields.Event ?? null,
-        fields,
-      };
-    }
-    return record;
+    // The common reader (U3): v1/v2 dispatch by schemaVersion. A line that
+    // fails to decode is not a journal record — the caller falls back to the
+    // legacy line-scan (state file, raw bodies).
+    return parseJournalLine(block.trim());
   } catch {
     return null;
   }
