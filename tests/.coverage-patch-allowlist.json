@@ -1492,5 +1492,101 @@
     "lines": "283",
     "reason": "The import.meta.main dispatch is exercised through the spawned CLI integration suite; all command behavior is covered through runFindingCli in-process.",
     "expiry": "remove when Bun attributes spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "41-45",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "47-49",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "51-55",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "57-58",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "63",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "65-70",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "73-77",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "81",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "83-90",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "96-100",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "117",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "200-202",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "204",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "215-217",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "219",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "lines": "282",
+    "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   }
 ]
