@@ -33,6 +33,7 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  seededRecordDir,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
@@ -168,6 +169,25 @@ describe("t-batch3 seam: handler drives (#744 / #749 / #750 call sites)", () => 
     const r = captureRun(() => handleNext(["--stage", "code-generation", "--single"], proj));
     expect(r.stdout).not.toContain('"gate":"unresolved"');
     expect(r.stdout).toContain('"kind":"run-stage"');
+  });
+
+  test("run-stage emission fails closed when its sensor projection cannot be written", () => {
+    seedStateFile(proj, MID_INCEPTION);
+    writeFileSync(
+      join(seededRecordDir(proj), ".amadeus-hooks-health"),
+      "blocks projection directory creation\n",
+      "utf-8",
+    );
+
+    const r = captureRun(() =>
+      handleNext(["--stage", "code-generation", "--single"], proj)
+    );
+
+    expect(r.exited).toBe(true);
+    expect(r.stdout).toBe("");
+    expect(r.stderr).toContain(
+      "refusing to emit run-stage without sensor invocation projection",
+    );
   });
 
   test("jump resolve --phase constructor is rejected as unknown (#744 call site)", () => {

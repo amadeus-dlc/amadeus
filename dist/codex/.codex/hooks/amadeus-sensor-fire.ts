@@ -22,6 +22,10 @@ import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
+  readSensorInvocationScope,
+  sensorAllowsInvocationOutput,
+} from "../tools/amadeus-sensor-invocation.ts";
+import {
   type ClaudeCodeHookInput,
   getField,
   hasActiveWorkflowAudit,
@@ -161,10 +165,14 @@ if (!existsSync(firstFiredMarker)) {
   }
 }
 
-// Step 9 — Active stage lookup (C3). The compile-resolved
-// `sensors_applicable` list is keyed on the stage slug; we read it
-// from state. Missing or "none" → no active stage → no-op.
-const currentStage = getField(stateContent, "Current Stage") ?? "";
+// Step 9 — Active invocation lookup (C3). A run-stage emission projects its
+// exact stage + resolved output candidates beside the hook heartbeat. That
+// projection is authoritative when present so isolated `--single` runs do not
+// accidentally inherit the main workflow's Current Stage. State remains the
+// fallback for non-artifact sensors and pre-projection compatibility.
+const stateStage = getField(stateContent, "Current Stage") ?? "";
+const invocationScope = readSensorInvocationScope(projectDir);
+const currentStage = invocationScope?.stage ?? stateStage;
 if (!currentStage || currentStage === "none") process.exit(0);
 
 // Step 10 — Stage-graph read (C4). loadGraph() returns GraphStage[]
@@ -194,12 +202,21 @@ if (applicableSensors.length === 0) process.exit(0);
 // `amadeus-docs/` arm stays so a pre-migration artifact still matches). The
 // relaxed `**/<seg>/**` form (vs `**/<seg>/**/*.md`) is load-bearing: the
 // upstream dispatcher's bespoke globToRegex rejects the *.md form even though
-// Bun.Glob accepts both — both engines agree on the relaxed form.
+// Bun.Glob accepts both — both engines agree on the relaxed form. Document-shape
+// and governance entries have a second, exact-path filter: only outputs from the
+// latest run-stage projection dispatch. Code-quality and framework-integrity
+// entries retain their workspace-wide glob contract.
 const sensorTs = join(projectDir, harnessDir(), "tools", "amadeus-sensor.ts");
 for (const entry of applicableSensors) {
   if (!entry.matches) continue;
   const glob = new Bun.Glob(entry.matches);
   if (!glob.match(filePathNorm)) continue;
+  if (!sensorAllowsInvocationOutput(
+    entry.category,
+    projectDir,
+    invocationScope,
+    filePath,
+  )) continue;
 
   // Spawn dispatcher (C1). Bare-script form (`bun <script> ...`)
   // matches the upstream dispatcher manifest's `command:` convention.

@@ -164,6 +164,7 @@ import {
 } from "./amadeus-grant-authorization.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import { projectSensorInvocation } from "./amadeus-sensor-invocation.ts";
 import {
   armPresenceReservation,
   cancelArmedPresenceReservation,
@@ -616,6 +617,19 @@ function emit(directive: Directive, recordError = true): void {
   // migration opt out because neither may annotate an unrelated active record.
   if (directive.kind === "error" && recordError) {
     recordEngineError(directive.message, _handlerProjectDir);
+  }
+  if (result.data.kind === "run-stage") {
+    try {
+      projectSensorInvocation(
+        resolveProjectDir(_handlerProjectDir),
+        result.data,
+      );
+    } catch (error) {
+      console.error(
+        `amadeus-orchestrate: refusing to emit run-stage without sensor invocation projection: ${errorMessage(error)}`,
+      );
+      process.exit(1);
+    }
   }
   console.log(JSON.stringify(result.data));
 }
