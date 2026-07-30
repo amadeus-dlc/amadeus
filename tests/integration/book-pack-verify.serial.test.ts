@@ -56,10 +56,11 @@ function writeExecutable(path: string, body: string): void {
 
 describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
   test("async verifier captures stderr separately from stdout", async () => {
-    const result = await runVerifierAsync("sh", [
-      "-c",
-      'printf "async stdout\\n"; printf "async stderr\\n" >&2',
-    ]);
+    const result = await runVerifierAsync(
+      "sh",
+      ["-c", 'printf "async stdout\\n"; printf "async stderr\\n" >&2'],
+      5_000,
+    );
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("async stdout\n");
@@ -130,6 +131,13 @@ describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
     expect((result.error as NodeJS.ErrnoException | undefined)?.code).toBe("ETIMEDOUT");
   });
 
+  test("a stalled async verifier is killed at its timeout budget", async () => {
+    const result = await runVerifierAsync("bash", ["-c", "sleep 1"], 10);
+
+    expect(result.status).toBeNull();
+    expect(result.signal).toBe("SIGTERM");
+  });
+
   test("controlled parallel load keeps every verifier on a distinct owned workspace", async () => {
     const scratch = mkdtempSync(join(tmpdir(), "book-pack-parallel-load-"));
     const shimDir = join(scratch, "bin");
@@ -167,7 +175,7 @@ exec ${JSON.stringify(realCp)} "$@"
 
       const results = await Promise.all(
         Array.from({ length: workerCount }, () =>
-          runVerifierAsync("bash", [VERIFY_SH, REPO_ROOT], env),
+          runVerifierAsync("bash", [VERIFY_SH, REPO_ROOT], VERIFIER_TIMEOUT_MS, env),
         ),
       );
       const workspaces = results.map((result) => verifierWorkspace(result.stdout));
@@ -181,7 +189,7 @@ exec ${JSON.stringify(realCp)} "$@"
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, TEST_TIMEOUT_MS);
 
   test("the same cleanup-race fixture is red for a raw trap and green for idempotent verifier cleanup", () => {
     const scratch = mkdtempSync(join(tmpdir(), "book-pack-cleanup-race-"));

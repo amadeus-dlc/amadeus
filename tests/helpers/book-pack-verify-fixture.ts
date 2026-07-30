@@ -39,11 +39,13 @@ export function runVerifier(
 export async function runVerifierAsync(
   command: string,
   args: readonly string[],
+  timeout: number,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<AsyncProcessResult> {
   const startedAt = performance.now();
   const child = spawn(command, args, {
     env,
+    timeout,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
