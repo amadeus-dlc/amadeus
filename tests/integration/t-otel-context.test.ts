@@ -7,8 +7,8 @@
 // (FR-TRC-5 minimal).
 
 import { describe, expect, test } from "bun:test";
-import { context, trace } from "../../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
-import type { Span } from "../../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
+import { context, trace } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
+import type { Span } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
 import {
   attachIntentContext,
   clearIntentContextForTests,
@@ -18,13 +18,13 @@ import {
   injectToSubprocess,
   persistIntentContext,
   restoreIntentContext,
-} from "../../../dist/claude/.claude/otel/context.ts";
+} from "../../dist/claude/.claude/otel/context.ts";
 import {
   getAmadeusTracer,
   registerTracerProvider,
   resetTracerProviderForTests,
-} from "../../../dist/claude/.claude/otel/tracer-provider.ts";
-import { createLocalSpanExporter } from "../../../dist/claude/.claude/otel/local-span-exporter.ts";
+} from "../../dist/claude/.claude/otel/tracer-provider.ts";
+import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

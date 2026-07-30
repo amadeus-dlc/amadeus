@@ -10,8 +10,8 @@ import { describe, expect, test } from "bun:test";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { context, trace } from "../../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
-import type { Span } from "../../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
+import { context, trace } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
+import type { Span } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
 import {
   attachIntentContext,
   attachRemoteParentFromEnv,
@@ -23,17 +23,17 @@ import {
   INTENT_CONTEXT_SCHEMA_VERSION,
   persistIntentContext,
   restoreIntentContext,
-} from "../../../dist/claude/.claude/otel/context.ts";
-import { createLocalSpanExporter } from "../../../dist/claude/.claude/otel/local-span-exporter.ts";
+} from "../../dist/claude/.claude/otel/context.ts";
+import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
 import {
   getAmadeusTracer,
   registerTracerProvider,
   resetTracerProviderForTests,
-} from "../../../dist/claude/.claude/otel/tracer-provider.ts";
+} from "../../dist/claude/.claude/otel/tracer-provider.ts";
 
 const BUN = process.execPath;
-const CHAIN_CHILD = join(__dirname, "..", "..", "helpers", "otel-trace-chain-child.ts");
-const RESTORE_CHILD = join(__dirname, "..", "..", "helpers", "otel-restore-child.ts");
+const CHAIN_CHILD = join(__dirname, "..", "helpers", "otel-trace-chain-child.ts");
+const RESTORE_CHILD = join(__dirname, "..", "helpers", "otel-restore-child.ts");
 
 type SpanRecord = { name: string; traceId: string; spanId: string; parentSpanId: string | null };
 

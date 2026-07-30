@@ -10,18 +10,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { birthIntent } from "../../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { appendTelemetryEvent } from "../../../dist/claude/.claude/tools/amadeus-observability.ts";
-import { createAuditLogExporter } from "../../../dist/claude/.claude/otel/audit-log-exporter.ts";
-import { ensureContextManager } from "../../../dist/claude/.claude/otel/context.ts";
-import { createLocalLogExporter } from "../../../dist/claude/.claude/otel/local-log-exporter.ts";
-import { createLocalSpanExporter } from "../../../dist/claude/.claude/otel/local-span-exporter.ts";
-import { registerLoggerProvider } from "../../../dist/claude/.claude/otel/logger-provider.ts";
-import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../../dist/claude/.claude/otel/tracer-provider.ts";
-import { resetLoggerProviderForTests } from "../../../dist/claude/.claude/otel/logger-provider.ts";
-import { resetFatalLatchForTests } from "../../../dist/claude/.claude/otel/fatal-latch.ts";
-import { buildShadowReport, writeShadowReport } from "../../../dist/claude/.claude/otel/shadow-compare.ts";
-import { cleanupTestProject, createTestProject } from "../../harness/fixtures.ts";
+import { birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { appendTelemetryEvent } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
+import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
+import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
+import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
+import { registerLoggerProvider } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../dist/claude/.claude/otel/tracer-provider.ts";
+import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { buildShadowReport, writeShadowReport } from "../../dist/claude/.claude/otel/shadow-compare.ts";
+import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 let proj: string;
 beforeEach(() => {

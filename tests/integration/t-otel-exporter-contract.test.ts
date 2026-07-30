@@ -12,21 +12,21 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SpanKind, trace } from "../../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
-import { birthIntent, docsRoot } from "../../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { createAuditLogExporter } from "../../../dist/claude/.claude/otel/audit-log-exporter.ts";
-import { ensureContextManager } from "../../../dist/claude/.claude/otel/context.ts";
-import { createLocalLogExporter } from "../../../dist/claude/.claude/otel/local-log-exporter.ts";
-import { createLocalSpanExporter } from "../../../dist/claude/.claude/otel/local-span-exporter.ts";
-import { createLocalMetricExporter } from "../../../dist/claude/.claude/otel/local-metric-exporter.ts";
-import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../../dist/claude/.claude/otel/logger-provider.ts";
-import { getAmadeusMeter, registerMeterProvider, resetMeterProviderForTests } from "../../../dist/claude/.claude/otel/meter-provider.ts";
-import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../../dist/claude/.claude/otel/tracer-provider.ts";
-import { resetFatalLatchForTests } from "../../../dist/claude/.claude/otel/fatal-latch.ts";
-import { cleanupTestProject, createTestProject } from "../../harness/fixtures.ts";
+import { SpanKind, trace } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
+import { birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
+import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
+import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
+import { createLocalMetricExporter } from "../../dist/claude/.claude/otel/local-metric-exporter.ts";
+import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { getAmadeusMeter, registerMeterProvider, resetMeterProviderForTests } from "../../dist/claude/.claude/otel/meter-provider.ts";
+import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../dist/claude/.claude/otel/tracer-provider.ts";
+import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const CHILD = join(__dirname, "..", "..", "helpers", "otel-emit-child.ts");
+const CHILD = join(__dirname, "..", "helpers", "otel-emit-child.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -157,7 +157,7 @@ describe("immediate process exit leaves records behind (NFR-2)", () => {
 
 describe("no network dependency in the shipped exporter path (FR-EXP-2/6, BR-6)", () => {
   test("otel modules import no network builtins", () => {
-    const otelDir = join(__dirname, "..", "..", "..", "packages", "framework", "core", "otel");
+    const otelDir = join(__dirname, "..", "..", "packages", "framework", "core", "otel");
     for (const name of readdirSync(otelDir)) {
       if (!name.endsWith(".ts")) continue;
       const src = readFileSync(join(otelDir, name), "utf-8");
@@ -169,7 +169,7 @@ describe("no network dependency in the shipped exporter path (FR-EXP-2/6, BR-6)"
 
 describe("API singleton inside the bundle (NFR-3)", () => {
   test("exactly one vendored api copy exists under the framework source tree", () => {
-    const coreDir = join(__dirname, "..", "..", "..", "packages", "framework", "core");
+    const coreDir = join(__dirname, "..", "..", "packages", "framework", "core");
     const hits: string[] = [];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
