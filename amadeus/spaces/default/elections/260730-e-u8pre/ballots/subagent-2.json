@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U8PRE",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "withAuditLock は retry budget を 50×100ms に固定している(amadeus-lib.ts:5957)一方、audit.ts:928 は env 可変 200×100ms=20s を使うため、素 acquire 保持者2 site を withAuditLock へ寄せる際は retry パラメータ化等で既存 budget を保存すること(無言の 20s→5s 縮退を禁止)。",
+  "rationale": "独立実測: appendJournalRecordV2 の生 acquire(amadeus-audit.ts:406)と acquireAuditLock の非再入(state.ts:392/utility.ts:189 のコメントも同旨)を確認。v1 は appendAuditEntryUnlocked(:436)を持ち、holdsAuditLock のコメント(amadeus-lib.ts)が『保持中の emit は unlocked variant を使わなければならない』と明文化 — コードベース既習の規律は明示 unlocked 対であり、案 B の depth 依存はこの規律から逸脱し v1/v2 非対称(symmetric-pair-review 対象)を残す。案 A の抽出は機械的で、exporter の latch 経路(audit-log-exporter.ts:141-148 の try/catch→setFatal→rethrow)実在と seam の (record, projectDir, intent?, space?) 受けも実測確認済み。O-T1 の :70/:81 同時修正は v1 auditIntentId のターゲット優先(:289-291)との対称回復として必須。lifecycle 4 site の別裁定送りも seal 意味論差(:498 の意図的バイパス)を実読して妥当。",
+  "submittedAt": "2026-07-30T12:00:57Z"
+}
