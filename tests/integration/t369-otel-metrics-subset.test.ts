@@ -20,8 +20,10 @@ import { context, trace } from "../../dist/claude/.claude/vendor/opentelemetry/a
 import { activeIntent, birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { isFatalSet, resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
 import { createLocalMetricExporter } from "../../dist/claude/.claude/otel/local-metric-exporter.ts";
-import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
 import { getAmadeusMeter, registerMeterProvider, resetMeterProviderForTests } from "../../dist/claude/.claude/otel/meter-provider.ts";
 import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../dist/claude/.claude/otel/tracer-provider.ts";
 import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
@@ -40,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanupTestProject(proj);
   resetFatalLatchForTests();
+  resetLoggerProviderForTests();
   resetTracerProviderForTests();
   resetMeterProviderForTests();
 });
@@ -159,5 +162,104 @@ describe("arbitrary aggregation is outside the subset (FR-EXP-5, BR-1)", () => {
     const meter = getAmadeusMeter();
     expect(() => meter.createCounter("amadeus.events.total", { unit: "1", description: "emitted events" })).not.toThrow();
     expect(() => meter.createHistogram("amadeus.span.duration", { unit: "ms" })).not.toThrow();
+  });
+});
+
+describe("the instrument subset is closed (FR-EXP-5, BR-1)", () => {
+  // Every creation path outside Counter/Histogram, enumerated against the
+  // Meter interface — a path that silently returned a no-op instrument would
+  // drop measurements without any signal.
+  test("no instrument outside Counter/Histogram can be created", () => {
+    bootMeter();
+    const meter = getAmadeusMeter();
+    expect(() => meter.createUpDownCounter("x")).toThrow(/subset/i);
+    expect(() => meter.createGauge("x")).toThrow(/subset/i);
+    expect(() => meter.createObservableCounter("x")).toThrow(/subset/i);
+    expect(() => meter.createObservableGauge("x")).toThrow(/subset/i);
+    expect(() => meter.createObservableUpDownCounter("x")).toThrow(/subset/i);
+  });
+
+  test("batch observable callbacks cannot be registered or removed", () => {
+    bootMeter();
+    const meter = getAmadeusMeter();
+    expect(() => meter.addBatchObservableCallback(() => {}, [])).toThrow(/subset/i);
+    expect(() => meter.removeBatchObservableCallback(() => {}, [])).toThrow(/subset/i);
+  });
+});
+
+describe("registration is an invariant, not a fail-open path (BR-10, NFR-3)", () => {
+  test("registering the Meter Provider twice throws", () => {
+    bootMeter();
+    expect(() => bootMeter()).toThrow(/twice|invariant/i);
+  });
+
+  test("acquiring a Meter before registration throws", () => {
+    expect(() => getAmadeusMeter()).toThrow(/invariant/i);
+  });
+});
+
+describe("measurement is fail-open (BR-2, BR-7, FR-EVT-6)", () => {
+  test("a store write failure never throws, never latches, and never blocks the next measurement", () => {
+    let attempts = 0;
+    bootMeter(() => {
+      attempts += 1;
+      throw new Error("store unavailable");
+    });
+    const counter = getAmadeusMeter().createCounter("amadeus.events.total");
+    expect(() => counter.add(1)).not.toThrow();
+    expect(isFatalSet()).toBe(false);
+    // The dropped record is not retried or queued (BR-7) — the next
+    // measurement is simply attempted on its own.
+    expect(() => counter.add(1)).not.toThrow();
+    expect(attempts).toBe(2);
+    expect(isFatalSet()).toBe(false);
+  });
+});
+
+describe("measured attributes pass the export-boundary redaction (BR-9, FR-DST-3)", () => {
+  test("a sensitive attribute supplied at the measurement call never reaches the store", () => {
+    bootMeter();
+    getAmadeusMeter()
+      .createCounter("amadeus.events.total")
+      .add(1, { Prompt: "secret prompt text", Stage: "code-generation" });
+    const body = JSON.stringify(metricRecords()[0]!);
+    expect(body).not.toContain("secret prompt text");
+    // The safe attribute survives, so the absence above is redaction rather
+    // than the whole attribute bag being dropped.
+    expect(body).toContain("code-generation");
+  });
+});
+
+describe("Metric records stay out of the canonical journal (BR-5)", () => {
+  function auditBody(): string {
+    const dir = join(docsRoot(proj), "audit");
+    let names: string[] = [];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return "";
+    }
+    return names
+      .filter((n) => n.endsWith(".jsonl"))
+      .sort()
+      .map((n) => readFileSync(join(dir, n), "utf-8"))
+      .join("\n");
+  }
+
+  test("a measurement lands in the Metric Store while the populated audit journal never sees it", () => {
+    bootMeter();
+    registerLoggerProvider({
+      projectDir: proj,
+      auditExporter: createAuditLogExporter({ projectDir: proj }),
+      logExporter: createLocalLogExporter({ projectDir: proj }),
+    });
+    // A real canonical event first, so the journal is populated: an empty
+    // journal would satisfy the absence assertion for the wrong reason.
+    emitEvent("amadeus.decision.recorded", { Stage: "code-generation", Decision: "approve" });
+    getAmadeusMeter().createCounter("amadeus.events.total").add(1);
+
+    expect(metricRecords()).toHaveLength(1);
+    expect(auditBody()).toContain("amadeus.decision.recorded");
+    expect(auditBody()).not.toContain("amadeus.events.total");
   });
 });
