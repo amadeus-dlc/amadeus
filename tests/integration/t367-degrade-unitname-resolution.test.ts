@@ -63,6 +63,7 @@ const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 interface Directive {
   unit?: string;
+  gate?: unknown;
   kind: string;
   stage?: string;
   message?: string;
@@ -125,6 +126,18 @@ function fixScopeState(): string {
 `;
 }
 
+// An `infra`-scope Construction state pivoted to nfr-requirements. `infra` also
+// SKIPs units-generation, and nfr-requirements is BOTH its first construction
+// stage (hence the recorded stance, as above) and one of the four stages that
+// declare produces_kinds — the only way to reach the kind-sensitive arm of the
+// coverage predicate from this branch.
+function infraScopeState(): string {
+  return fixScopeState()
+    .replace("**Scope**: fix", "**Scope**: infra")
+    .replaceAll("code-generation", "nfr-requirements")
+    .replace("build-and-test", "nfr-design");
+}
+
 /** A fresh `fix`-scope project with NO compiled Bolt DAG. */
 function seedFixProject(): string {
   const proj = createTestProject();
@@ -138,6 +151,47 @@ function seedUnitDir(proj: string, unit: string): void {
   mkdirSync(join(seededRecordDir(proj), "construction", unit), {
     recursive: true,
   });
+}
+
+/** Write `files` under <record>/construction/<unit>/<stage>/. */
+function seedUnitArtifacts(
+  proj: string,
+  unit: string,
+  stage: string,
+  files: string[],
+): void {
+  const dir = join(seededRecordDir(proj), "construction", unit, stage);
+  mkdirSync(dir, { recursive: true });
+  for (const name of files) {
+    writeFileSync(join(dir, name), `# ${unit} ${name}\n`);
+  }
+}
+
+/**
+ * Create a unit directory that already holds code-generation's REQUIRED
+ * artifacts, i.e. a unit this stage has nothing left to do for. That is what
+ * lets the engine subtract it when several directories exist (issue #1769).
+ */
+function seedCoveredUnitDir(proj: string, unit: string): void {
+  seedUnitArtifacts(proj, unit, "code-generation", [
+    "code-generation-plan.md",
+    "code-summary.md",
+  ]);
+}
+
+/**
+ * A runtime snapshot carrying unit rows but no usable batches — the shape that
+ * survives when the canonical unit-of-work-dependency doc is gone. `next` then
+ * takes the degrade branch while readUnitKinds still resolves kinds.
+ */
+function seedRuntimeUnitKinds(
+  proj: string,
+  units: { name: string; kind?: string }[],
+): void {
+  writeFileSync(
+    join(seededRecordDir(proj), "runtime-graph.json"),
+    JSON.stringify({ bolt_dag: { units, batches: [] } }),
+  );
 }
 
 function runNext(proj: string): Directive {
@@ -300,6 +354,104 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.kind).toBe("error");
     expect(d.message).toContain("unit-alpha");
     expect(d.message).toContain("unit-beta");
+  }, 30000);
+
+  // 10-13 pin the #1769 refinement: several unit directories no longer refuse
+  // outright. A record that accumulated a finished unit from an earlier Bolt
+  // leaves exactly one unit with work outstanding, and that one is the answer.
+  test("10: a finished unit is subtracted, resolving the one still outstanding", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "fix-1711-unitname");
+    seedUnitDir(proj, "fix-1769-degrade-multiunit");
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("fix-1769-degrade-multiunit");
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    expect(
+      (d.produces ?? []).some((p) =>
+        p.startsWith(`${RP}/construction/fix-1769-degrade-multiunit/code-generation/`),
+      ),
+    ).toBe(true);
+  }, 30000);
+
+  test("11: in-process, the outstanding unit is resolved the same way", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-beta");
+  }, 30000);
+
+  test("12: two outstanding units are refused, naming the outstanding ones", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    seedCoveredUnitDir(proj, "unit-done");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("2 of them are still missing this stage's required artifacts: unit-alpha, unit-beta");
+    // The finished unit is named among the candidates but not among the
+    // outstanding ones — the message must not send the conductor after it.
+    expect(d.message).toContain("unit-done");
+    expect(d.message).toContain("Narrow this stage to one unit");
+    expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  test("13: several units with nothing outstanding are refused, asking for a new one", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "unit-alpha");
+    seedCoveredUnitDir(proj, "unit-beta");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("Every one of them already holds this stage's required artifacts");
+    expect(d.message).toContain("Create the unit directory for this piece of work");
+    expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  // 14 pins the asymmetry E-OBB2-CG1 ruled INTENTIONAL: a LONE unit resolves
+  // whether or not its artifacts already exist, because the resulting directive
+  // is how the conductor reaches the stage gate — the same move the compiled-DAG
+  // path makes on its all-covered re-entry. Several finished units (test 13) are
+  // refused for ambiguity, not because finished work is off limits.
+  test("14: a lone finished unit still resolves, carrying the stage gate", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "fix-1711-unitname");
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("fix-1711-unitname");
+    expect(d.gate).toBeDefined();
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+  }, 30000);
+
+  // 15 pins the unit-KIND arm of the coverage predicate on this branch. A stage
+  // with produces_kinds requires only the artifacts its unit's kind declares, so
+  // a kindless lookup would hold a finished unit to the full matrix, report it
+  // uncovered, and refuse a listing the engine can in fact resolve.
+  //
+  // The fixture is the state that makes kinds reachable here: the canonical
+  // unit-of-work-dependency doc is absent (so recoverBoltDag returns "none" and
+  // there is no DAG to iterate) while a runtime snapshot from an earlier compile
+  // still carries the unit rows readUnitKinds reads.
+  test("15: unit kinds decide coverage on the degrade path too", () => {
+    const proj = createTestProject();
+    tempDirs.push(proj);
+    writeFileSync(seededStateFile(proj), infraScopeState());
+    seedRuntimeUnitKinds(proj, [
+      { name: "unit-lib", kind: "library" },
+      { name: "unit-svc" },
+    ]);
+    // `library` prunes performance/scalability/reliability from nfr-requirements,
+    // so these two files are the whole required set for unit-lib — and only a
+    // fraction of the kindless matrix unit-svc is still held to.
+    seedUnitArtifacts(proj, "unit-lib", "nfr-requirements", [
+      "security-requirements.md",
+      "tech-stack-decisions.md",
+    ]);
+    seedUnitDir(proj, "unit-svc");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-svc");
   }, 30000);
 
   test("6: a construction stage's own diary dir is not mistaken for a unit", () => {

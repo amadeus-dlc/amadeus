@@ -2987,16 +2987,18 @@ function unitDirsUnderConstruction(
     .sort();
 }
 
-// Fail-closed refusal when the degrade path cannot name exactly one Unit of
-// Work. Emitting the {unit-name} placeholder instead would hand the conductor
-// a directive whose produces/consumes paths do not exist and cannot be created
-// under that literal name, and the reviewer runtime rejects it downstream. The
-// message names the unmet condition and the conductor's move, so the refusal is
-// actionable rather than a dead end.
+// Fail-closed refusal when the degrade path cannot name one Unit of Work.
+// Emitting the {unit-name} placeholder instead would hand the conductor a
+// directive whose produces/consumes paths do not exist and cannot be created
+// under that literal name, and the reviewer runtime rejects it downstream.
+// Each of the three unmet conditions (no directory at all, several units still
+// unwritten, every unit already written) names a DIFFERENT move, so the refusal
+// tells the conductor what to do rather than only what went wrong.
 function degradeUnitResolutionError(
   slug: string,
   recordPrefix: string | null,
   candidates: string[],
+  uncovered: string[],
 ): ErrorDirective {
   // Each message part is bound to its own const rather than written as a
   // multi-line `+` concatenation: Bun's LCOV stamps continuation lines of a
@@ -3010,8 +3012,14 @@ function degradeUnitResolutionError(
     return errorDirective(`${preamble} and no unit directory exists under ${where}. ${move}`);
   }
   const found = `${candidates.length} unit directories exist under ${where}: ${candidates.join(", ")}.`;
-  const move = "The engine cannot choose between them. Keep exactly one unit directory for this stage's work, then re-run `next`.";
-  return errorDirective(`${preamble} and ${found} ${move}`);
+  if (uncovered.length === 0) {
+    const done = "Every one of them already holds this stage's required artifacts, so no unit is left to run.";
+    const move = "Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`.";
+    return errorDirective(`${preamble} and ${found} ${done} ${move}`);
+  }
+  const pending = `${uncovered.length} of them are still missing this stage's required artifacts: ${uncovered.join(", ")}.`;
+  const move = "The engine cannot choose between them. Narrow this stage to one unit — finish the other unfinished units' artifacts first, or, when their work has not started, hold off creating their directories — then re-run `next`.";
+  return errorDirective(`${preamble} and ${found} ${pending} ${move}`);
 }
 
 // True when `unit` is COVERED for `node`: every REQUIRED artifact in
@@ -3045,6 +3053,50 @@ function unitCovered(
     if (!existsSync(abs)) return false;
   }
   return true;
+}
+
+// Resolve the Unit of Work for a per-unit stage on the DEGRADE path — the one
+// taken when there is no compiled Bolt DAG, so the directory listing under
+// <recordPrefix>/construction/ is the only ledger there is (issue #1711).
+//
+// A single directory names itself. When several exist the listing alone is
+// ambiguous, but the stage's own coverage is not: a unit whose REQUIRED
+// produces are already on disk has no work left for this stage, so it cannot be
+// the unit being asked for. Subtracting those leaves the units still to write,
+// and when exactly ONE remains it is the answer (issue #1769) — a multi-unit
+// record that grew from an earlier Bolt no longer blocks the current one.
+// Otherwise `unit` is null and `uncovered` carries the ambiguity for the
+// refusal message to name.
+//
+// The single-candidate arm deliberately resolves WITHOUT consulting coverage,
+// so a lone unit whose artifacts already exist still yields a directive
+// (E-OBB2-CG1). That is not a re-run instruction: it is the same move the
+// compiled-DAG path makes on its all-covered re-entry (pickUnit === null
+// below), where the covered unit carries the stage's REAL gate so the human
+// approves once. The asymmetry with the all-covered MULTI-unit arm, which
+// refuses, is the presence of ambiguity rather than a different policy on
+// finished work — with several finished units the engine cannot say which one
+// the gate belongs to.
+//
+// `unitKinds` mirrors the compiled-DAG call: a stage with produces_kinds
+// requires only the artifacts its unit's kind declares, so a kindless lookup
+// would hold a finished unit to the full matrix and report it uncovered. The
+// map is empty whenever the runtime snapshot carries no unit rows, which is
+// the common degrade case, and then coverage falls back to the full matrix.
+function resolveDegradeUnit(
+  projectDir: string,
+  node: GraphStage,
+  candidates: string[],
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+): { unit: string | null; uncovered: string[] } {
+  const uncovered = candidates.filter(
+    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+  );
+  if (candidates.length === 1) return { unit: candidates[0], uncovered };
+  if (uncovered.length === 1) return { unit: uncovered[0], uncovered };
+  return { unit: null, uncovered };
 }
 
 // Walk the ordered unit list and find the units whose artifacts are not all
@@ -3123,15 +3175,20 @@ function emitPerUnitRunStage(
   // security-patch / infra / fix / poc, or a pre-compile moment). There is no
   // DAG to iterate, but the stage is still per-unit, so its artifacts still
   // belong under construction/<unit>/. The unit directory on disk is the ledger
-  // (issue #1711): resolve it and emit REAL paths. A directory listing that does
-  // not name exactly one unit is refused rather than papered over with the
-  // {unit-name} placeholder — an unresolved placeholder path can neither be
-  // produced nor consumed, and the reviewer runtime rejects it downstream.
+  // (issue #1711): resolve it through resolveDegradeUnit and emit REAL paths. A
+  // listing the coverage cannot narrow to one unit is refused rather than
+  // papered over with the {unit-name} placeholder — an unresolved placeholder
+  // path can neither be produced nor consumed, and the reviewer runtime rejects
+  // it downstream.
   const units = orderedUnits(projectDir);
+  const unitKinds = readUnitKinds(projectDir);
   if (units.length === 0) {
     const degradeUnits = unitDirsUnderConstruction(projectDir, recordPrefix);
-    if (degradeUnits.length !== 1) {
-      emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits));
+    const picked = resolveDegradeUnit(
+      projectDir, node, degradeUnits, recordPrefix, codekbCtx, unitKinds,
+    );
+    if (picked.unit === null) {
+      emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered));
       return;
     }
     emitRunStageForSlug(
@@ -3141,12 +3198,11 @@ function emitPerUnitRunStage(
       stateContent,
       recordPrefix,
       codekbCtx,
-      degradeUnits[0],
+      picked.unit,
     );
     return;
   }
 
-  const unitKinds = readUnitKinds(projectDir);
   // Delegate the next-unit selection to the canonical construction-iteration
   // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The
   // coverage ledger is the per-unit artifacts on disk (unitCovered), passed as
