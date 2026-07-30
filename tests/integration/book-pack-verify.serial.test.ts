@@ -55,6 +55,17 @@ function writeExecutable(path: string, body: string): void {
 }
 
 describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
+  test("async verifier captures stderr separately from stdout", async () => {
+    const result = await runVerifierAsync("sh", [
+      "-c",
+      'printf "async stdout\\n"; printf "async stderr\\n" >&2',
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("async stdout\n");
+    expect(result.stderr).toBe("async stderr\n");
+  });
+
   test("the old outer deadline rejects the verifier plus cleanup budget and the new deadline accepts it", () => {
     expect(
       hasConsistentTimeoutBudget(
