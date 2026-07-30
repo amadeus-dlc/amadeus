@@ -238,7 +238,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
         runTuiDriver(["kill", "--session", cleanSession]);
 
         // CLEAN sanity: it reached the milestone with NO rejection.
-        expect(clean.scope).toMatch(/fix/i);
+        expect(clean.scope).toBe("fix");
         expect(clean.completedCounter).toBeGreaterThanOrEqual(5);
         expect(clean.completedCounter).toBe(clean.completedGrid); // counter==grid sync
         expect(clean.revisionCount).toBe(0); // clean path never rejected

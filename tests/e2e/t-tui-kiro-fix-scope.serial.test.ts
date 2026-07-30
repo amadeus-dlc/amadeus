@@ -1,7 +1,7 @@
 // covers: scope:fix
 //
 // t-tui-kiro-fix-scope.serial.test.ts — the Kiro twin of
-// t-tui-t50-fix-scope: drive the BUGFIX-scope workflow through a REAL
+// t-tui-t50-fix-scope: drive the fix-scope workflow through a REAL
 // keystroke-driven `kiro-cli chat` on the shipped dist/kiro tree, answering
 // every numbered-prose gate with "1" (the recommended option per the Kiro
 // question-rendering annex), and TERMINATE on the on-disk Completed counter
@@ -137,7 +137,7 @@ describe("t-tui-kiro-fix-scope (brownfield fix journey, numbered-prose gates)", 
         // loose scope/brownfield matches (live init writes vary the field
         // wording), strict counter-vs-grid consistency.
         const state = readFileSync(stateFilePathFor(sandbox), "utf-8");
-        expect(state).toMatch(/fix/i);
+        expect(state).toMatch(/^- \*\*Scope\*\*: fix$/m);
         expect(state).toMatch(/brownfield/i);
         const xCount = (state.match(/^- \[x\]/gm) ?? []).length;
         expect(completedCount(sandbox)).toBe(xCount);

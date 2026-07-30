@@ -3,12 +3,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  EXPECTED_SELF_SCOPES,
+  SELF_HARNESSES,
   evaluateSelfScopeConsistency,
   main,
 } from "../../packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts";
 
-const HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code"];
-const SCOPES = ["self-document", "self-feature", "self-fix", "self-refactor"];
+const HARNESSES: readonly string[] = SELF_HARNESSES;
+const SCOPES: readonly string[] = EXPECTED_SELF_SCOPES;
 const roots: string[] = [];
 
 function fixtureRoot(): string {

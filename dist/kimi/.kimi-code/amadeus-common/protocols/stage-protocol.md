@@ -226,7 +226,7 @@ Where `S` = total stages for the current scope. Reference scope stage counts:
 |-------|---------------------|
 | mvp | ~18 |
 | poc | ~8 |
-| fix | ~8 |
+| fix | 7 |
 | chore | ~5 |
 | refactor | ~9 |
 | infra | ~13 |
@@ -669,13 +669,14 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 | feature | Standard | All 32 |
 | mvp | Standard | ~25 (skip late Operation) |
 | poc | Minimal | ~8 (Ideation + core Inception) |
-| fix | Minimal | ~8 (targeted) |
+| fix | Minimal | 7 (targeted) |
 | chore | Minimal | ~5 (tweak-sized: init + code-gen + build) |
 | refactor | Minimal | ~9 (targeted) |
 | infra | Standard | ~13 (infra-focused) |
 | security-patch | Minimal | ~10 (security-focused) |
 
 ### Depth levels
+
 - **Minimal** (poc, fix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
 - **Standard** (feature, mvp, infra): ~5-8 questions per stage, full artifacts at moderate detail
 - **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute

@@ -1,6 +1,6 @@
 // covers: scope:fix
 //
-// t-tui-t50-fix-scope.serial.tui.test.ts — drive the BUGFIX-scope workflow
+// t-tui-t50-fix-scope.serial.tui.test.ts — drive the fix-scope workflow
 // through a REAL claude TUI and prove that answering its rendered AskUserQuestion
 // gates by keystroke advances the fix lifecycle to a real on-disk milestone
 // (§5.1). A REWRITE (not a port) of tests/e2e/t50-workflow-fix-scope.sh,
@@ -148,7 +148,7 @@ describe("t-tui-t50-fix-scope (answering gates advances fix lifecycle on disk)",
   test.skipIf(SKIP_REASON !== null)(
     `fix run-through reaches the post-init milestone (Completed>=5) on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `amadeus_tui_t50_bugfix_${process.pid}`;
+      const session = `amadeus_tui_t50_fix_${process.pid}`;
       // brownfieldStub + noAidlcDocs: a brand-new brownfield workspace (a React/Vite
       // Todo app) the fix workflow scaffolds itself, driving workspace-detection
       // to Brownfield + reverse-engineering (mirrors the .sh's
@@ -269,8 +269,9 @@ describe("t-tui-t50-fix-scope (answering gates advances fix lifecycle on disk)",
         // .sh tests 1 + 2: state + audit files created (readFileSync throws if not).
         const stateMd = readFileSync(stateFilePathFor(sandbox), "utf8");
 
-        // .sh test 3: fix scope recorded ([Bb]ugfix).
-        expect(stateMd).toMatch(/fix/i);
+        // .sh test 3: fix scope recorded. Exact Scope field, not a substring
+        // match — "bugfix" would also satisfy /fix/i.
+        expect(stateMd).toMatch(/^- \*\*Scope\*\*: fix$/m);
         // .sh test 16: state classifies the project as brownfield.
         expect(stateMd).toMatch(/brownfield/i);
         // .sh test 12: State Version is 7.

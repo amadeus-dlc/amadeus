@@ -65,9 +65,9 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 | feature          | All 2.1--2.8                                                   |
 | mvp              | 2.1 (if brownfield), 2.2, 2.3, 2.4, 2.5 (if UI), 2.6, 2.7, 2.8 |
 | poc              | 2.1 (if brownfield), 2.3 (minimal)                             |
-| fix           | 2.1 (always -- find the bug), 2.3 (minimal -- bug description) |
+| fix           | 2.1 (if brownfield -- find the bug), 2.3 (minimal -- bug description) |
 | chore            | None (Inception skipped entirely)                             |
-| refactor         | 2.1 (always -- understand current code), 2.3 (minimal)         |
+| refactor         | 2.1 (if brownfield -- understand current code), 2.3 (minimal)  |
 | infra            | 2.2, 2.3 (infra requirements)                                  |
 | security-patch   | 2.1 (find vulnerability context), 2.3 (minimal)                 |
 | workshop         | 2.1--2.8                                                       |
@@ -193,9 +193,10 @@ Standard 2-option gate: **Approve** (continue to Requirements Analysis) /
   artifacts. This separation ensures the scan is thorough (developer
   perspective) and the synthesis is architecturally informed (architect
   perspective).
-- For fix and refactor scopes, this stage always executes (even for what
-  might be borderline greenfield) because understanding existing code is
-  essential.
+- For fix and refactor scopes, this stage executes whenever the project is
+  brownfield because understanding existing code is essential; greenfield
+  projects skip it (there is no existing code to scan) and route straight to
+  Requirements Analysis (2.3).
 - For security-patch scope, this stage executes to find vulnerability context.
 - The 9 artifacts produced here are consumed by Requirements Analysis (2.3),
   User Stories (2.4), Application Design (2.6), and Units Generation (2.7).

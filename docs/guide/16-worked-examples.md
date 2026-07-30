@@ -18,7 +18,7 @@ This example fixes a null pointer exception in a user profile API. The **fix** s
 
 ### Invocation
 
-```
+```text
 /amadeus fix
 ```
 

@@ -96,7 +96,7 @@ Each is identical to passing `--scope` to the orchestrator:
 
 You can pass a description and flags straight through, exactly as you would to `/amadeus`:
 
-```
+```text
 /amadeus-fix The profile API returns 500 when display_name is null
 /amadeus-feature --status
 ```

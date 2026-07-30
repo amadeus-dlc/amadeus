@@ -46,7 +46,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "plugins");
 const STAGE_LANDING = `plugins/${ACTIVATION_PLUGIN}/stages/${ACTIVATION_PLUGIN}.md`;
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
-const BUGFIX_BUILD_STAGE = join(FIXTURES_DIR, "state-fix-final-construction.md");
+const FIX_BUILD_STAGE = join(FIXTURES_DIR, "state-fix-final-construction.md");
 
 let host = "";
 let proj = "";
@@ -147,7 +147,7 @@ describe("t322 flow 4: verdict recorded on formal-model-check completion", () =>
   test("report --single --stage formal-model-check --result completed writes SpecHashState", () => {
     composeAndCompile();
     proj = createTestProject();
-    seedStateFile(proj, BUGFIX_BUILD_STAGE); // an active intent so the audit shard resolves
+    seedStateFile(proj, FIX_BUILD_STAGE); // an active intent so the audit shard resolves
     handleReport(["--single", "--stage", ACTIVATION_PLUGIN, "--result", "completed"], proj);
     expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(true);
     const current = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
@@ -175,7 +175,7 @@ describe("t322 flow 2: advisory before build-and-test", () => {
     __resetGraphCache();
     _resetStageGraphForTests();
     proj = createTestProject();
-    seedStateFile(proj, BUGFIX_BUILD_STAGE); // Current Stage = build-and-test, in-flight
+    seedStateFile(proj, FIX_BUILD_STAGE); // Current Stage = build-and-test, in-flight
     handleNext([], proj);
 
     expect(logs.join("\n")).toContain('"stage":"build-and-test"'); // directive still emitted
@@ -199,7 +199,7 @@ describe("t322 flow 2: advisory before build-and-test", () => {
     __resetGraphCache();
     _resetStageGraphForTests();
     proj = createTestProject();
-    seedStateFile(proj, BUGFIX_BUILD_STAGE);
+    seedStateFile(proj, FIX_BUILD_STAGE);
     handleNext([], proj);
 
     expect(logs.join("\n")).toContain('"stage":"build-and-test"');

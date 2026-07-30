@@ -118,9 +118,9 @@ flowchart TD
 
 **例:**
 
-```
-/amadeus Fix the null pointer in ProfileSerializer
-> Detected scope: fix (Minimal depth, Minimal test strategy, 8 stages)
+```text
+/amadeus Fix the ProfileSerializer null pointer
+> Detected scope: fix (Minimal depth, Minimal test strategy, 7 stages)
 > Approve scope? [Yes / Change scope / Change depth / Change test strategy]
 ```
 

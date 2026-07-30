@@ -117,7 +117,7 @@ Composable with `--scope` (to set/override scope), `--depth` (to override depth 
 
 ### `/amadeus --scope <scope>` -- Set/Override Scope
 
-Sets the workflow scope. When used alone (`/amadeus --scope fix`), behaves like `/amadeus fix`. When combined with `--stage` or `--phase`, provides the scope for jump operations. Can be combined with `--depth` and `--test-strategy` to override defaults.
+Sets the workflow scope. When used alone (`/amadeus --scope fix`), behaves like `/amadeus fix`. When combined with `--stage` or `--phase`, provides the scope for jump operations. It can be combined with `--depth` and `--test-strategy` to override defaults.
 
 ### `/amadeus --depth <level>` -- Override Depth
 

@@ -94,7 +94,7 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 // Known-answer literals from the SHIPPED init handler (see header for file:line).
 const SCOPE = "fix";
 const DEPTH_OVERRIDE = "Comprehensive"; // VALID_DEPTHS["comprehensive"] (utility.ts:1941)
-const BUGFIX_DEFAULT_DEPTH = "Minimal"; // the fix scope default the override beats
+const FIX_DEFAULT_DEPTH = "Minimal"; // the fix scope default the override beats
 const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
@@ -141,7 +141,7 @@ describe("t59 /amadeus --init --scope fix --depth comprehensive depth override (
         // Exact field equality (stronger than `grep "Depth.*Comprehensive"`), AND
         // prove it is NOT the scope default Minimal — the override is the subject.
         expect(readStateField(state, "Depth")).toBe(DEPTH_OVERRIDE);
-        expect(readStateField(state, "Depth")).not.toBe(BUGFIX_DEFAULT_DEPTH);
+        expect(readStateField(state, "Depth")).not.toBe(FIX_DEFAULT_DEPTH);
 
         // .sh test 3: fix scope recorded. Exact field (stronger than [Bb]ugfix).
         expect(readStateField(state, "Scope")).toBe(SCOPE);

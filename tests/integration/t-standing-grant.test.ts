@@ -37,6 +37,7 @@ import {
 import {
   auditShardName,
   DEFAULT_STANDING_GRANT_TTL_MS,
+  evaluateStandingGrantGateEligibility,
   findActiveStandingGrant,
   firstInScopeStageOfPhase,
   loadStageGraph,
@@ -957,5 +958,25 @@ describe("skeleton exclusion honours un-normalized stance (e3 Major-1)", () => {
       // phase-boundary rule may deny (and grantWith(true) opts in), so true.
       expect(verdict).toBe(true);
     }
+  });
+
+  test("WHITE: scope-dependent stance on self-document (docs-only) stays covered", () => {
+    // self-document must resolve to skeleton-off: a docs-only scope has no
+    // walking skeleton to gate. Before the SKELETON_OFF_SCOPES entry the
+    // stance resolved to null and the first construction gate was wrongly
+    // excluded. Composed self-* scopes live only in the workspace grid, so
+    // exercise the classifier directly instead of the grid-backed
+    // standingGrantSatisfiesGate path.
+    expect(SKELETON_ON_SCOPES.has("self-document")).toBe(false);
+    const verdict = evaluateStandingGrantGateEligibility(grantWith(true), {
+      gateRequired: true,
+      isPhaseBoundary: false,
+      isFirstConstructionGate: true,
+      isPerUnitStage: false,
+      isPerUnitFinalGate: false,
+      scope: "self-document",
+      walkingSkeletonStance: "scope-dependent",
+    });
+    expect(verdict.kind).toBe("eligible");
   });
 });

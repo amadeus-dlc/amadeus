@@ -4031,6 +4031,7 @@ const SKELETON_OFF_SCOPES: ReadonlySet<string> = new Set([
   "chore",
   "self-fix",
   "self-refactor",
+  "self-document",
   "amadeus-security-patch",
   "amadeus-chore",
 ]);

@@ -8,8 +8,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-const SELF_HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code"] as const;
-const EXPECTED_SELF_SCOPES = [
+export const SELF_HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code"] as const;
+export const EXPECTED_SELF_SCOPES = [
   "self-document",
   "self-feature",
   "self-fix",
@@ -110,6 +110,7 @@ function readScopeFiles(harness: string, scopesDir: string): SurfaceSnapshot {
 function readGridScopes(harness: string, gridPath: string): SurfaceSnapshot {
   const findings: Finding[] = [];
   const scopes = new Set<string>();
+  if (!existsSync(gridPath)) return { scopes, findings };
   try {
     const grid = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<string, unknown>;
     for (const scope of Object.keys(grid)) {

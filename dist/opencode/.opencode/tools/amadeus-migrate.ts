@@ -171,8 +171,10 @@ const KNOWN_STAGE_RUNNERS = [
   "user-stories",
 ] as const;
 
+// Upstream vocabulary, frozen at v2.2.0: the upstream distribution ships
+// `aidlc-bugfix`; the local scope rename to `fix` never changes this roster.
 const KNOWN_SCOPE_NAMES = [
-  "fix",
+  "bugfix",
   "enterprise",
   "feature",
   "infra",
@@ -184,7 +186,7 @@ const KNOWN_SCOPE_NAMES = [
 ] as const;
 
 const KNOWN_BARE_SCOPE_NAMES = [
-  "fix",
+  "bugfix",
   "feature",
   "mvp",
   "security-patch",

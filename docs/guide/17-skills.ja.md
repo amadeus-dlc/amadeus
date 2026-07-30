@@ -110,7 +110,7 @@ basename だけを受け入れ、単一引数として渡します。basename �
 
 `/amadeus` に対するのと全く同じように、説明とフラグをそのまま通せます:
 
-```
+```text
 /amadeus-fix The profile API returns 500 when display_name is null
 /amadeus-feature --status
 ```

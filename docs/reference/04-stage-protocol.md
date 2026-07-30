@@ -737,7 +737,7 @@ and problem complexity.
 | feature | Standard | Standard | 32 | All stages |
 | mvp | Standard | Standard | 22 | Skip all Operation |
 | poc | Minimal | Minimal | ~8 | Initialization + Ideation + core Inception |
-| fix | Minimal | Minimal | ~8 | Targeted |
+| fix | Minimal | Minimal | 7 | Targeted |
 | chore | Minimal | Minimal | 5 | Small self-contained tweak |
 | refactor | Minimal | Minimal | 8 | Targeted |
 | infra | Standard | Standard | ~13 | Infra-focused |

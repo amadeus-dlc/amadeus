@@ -630,7 +630,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | feature | Standard | Standard | 32 | 全ステージ |
 | mvp | Standard | Standard | 22 | Operation を全スキップ |
 | poc | Minimal | Minimal | ~8 | Initialization + Ideation + コア Inception |
-| fix | Minimal | Minimal | ~8 | 対象を絞る |
+| fix | Minimal | Minimal | 7 | 対象を絞る |
 | chore | Minimal | Minimal | 5 | 小さな自己完結の修正 |
 | refactor | Minimal | Minimal | 8 | 対象を絞る |
 | infra | Standard | Standard | ~13 | インフラ重視 |

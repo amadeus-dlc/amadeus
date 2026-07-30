@@ -102,7 +102,7 @@ flowchart TD
     S12 -.->|"skip if no\nfeasibility needed"| S14
     S13 -.->|CONDITIONAL| S14
     S14 ==>|ALWAYS| S15
-    S14 -.->|"skip: poc,\nbugfix, chore, refactor"| S17
+    S14 -.->|"skip: poc,\nfix, chore, refactor"| S17
     S15 -.->|CONDITIONAL| S16
     S15 -.->|"skip if no UI"| S17
     S16 -.->|CONDITIONAL| S17

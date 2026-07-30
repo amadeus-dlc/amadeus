@@ -148,7 +148,7 @@ function countEvent(seq: string[], type: string): number {
 // from the born intent's shards via readAllAuditShards(proj)). Bootstrap via
 // init (emits WORKFLOW_STARTED + init phase + 2x PHASE_SKIPPED and pre-completes
 // the 3 init stages), then walk the remaining EXECUTE stages.
-function driveBugfixToCompletion(): { proj: string } {
+function driveFixToCompletion(): { proj: string } {
   const proj = createTestProject();
   const init = run(
     UTIL,
@@ -183,7 +183,7 @@ describe("complete-workflow terminal-event ordering (fix, no claude)", () => {
   let seq: string[];
 
   beforeAll(() => {
-    const { proj } = driveBugfixToCompletion();
+    const { proj } = driveFixToCompletion();
     projects.push(proj);
     seq = eventSequence(proj);
   }, DRIVE_TIMEOUT_MS);
@@ -244,7 +244,7 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
   let proj: string;
 
   beforeAll(() => {
-    const driven = driveBugfixToCompletion();
+    const driven = driveFixToCompletion();
     proj = driven.proj;
     projects.push(proj);
   }, DRIVE_TIMEOUT_MS);

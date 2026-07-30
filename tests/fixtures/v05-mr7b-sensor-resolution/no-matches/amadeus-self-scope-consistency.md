@@ -16,9 +16,9 @@ output_schema:
     - harness: string
       surface: string
       reason: string
-      scope: string
+      scope: string (optional — absent when the finding is not scope-specific)
       path: string
-  skipped: string
+  skipped: string | null
 timeout_seconds: 5
 ---
 

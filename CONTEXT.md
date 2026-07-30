@@ -18,3 +18,8 @@ _Avoid_: enhancement, improvement
 **Self Refactor**:
 A behavior-preserving change to Amadeus's internal structure.
 _Avoid_: cleanup, rewrite
+
+**Self Document**:
+A change that writes or updates Amadeus documentation (`README*.md` and
+`docs/`) grounded in measured implementation facts.
+_Avoid_: Amadeus Document, docs chore

@@ -229,14 +229,14 @@ You can request different depth or test strategy at any approval gate.
 
 ### Scope with description
 
-```
+```text
 /amadeus fix Fix the login timeout issue
 /amadeus poc Build a quick prototype for the search feature
 ```
 
 ### Override scope with utility command
 
-```
+```text
 /amadeus --scope fix
 /amadeus --scope enterprise --stage code-generation
 ```

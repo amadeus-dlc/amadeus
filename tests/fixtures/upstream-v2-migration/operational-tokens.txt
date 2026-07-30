@@ -18,8 +18,8 @@ aidlc-aws-platform-agent.md
 aidlc-aws-platform-agent.toml
 aidlc-block.kiro.hook
 aidlc-bolt.ts
-aidlc-fix
-aidlc-fix.md
+aidlc-bugfix
+aidlc-bugfix.md
 aidlc-build-and-test
 aidlc-ci-pipeline
 aidlc-code-generation

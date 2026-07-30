@@ -254,7 +254,7 @@ Examples:
   /amadeus                                        Resume or begin
   /amadeus --stage code-generation                Jump to code-generation stage
   /amadeus --phase construction --scope fix    Jump to construction with fix scope
-  /amadeus --scope fix --depth comprehensive  Bugfix with comprehensive depth
+  /amadeus --scope fix --depth comprehensive  Fix with comprehensive depth
   /amadeus --depth minimal                       Change depth of active workflow
   /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
 
