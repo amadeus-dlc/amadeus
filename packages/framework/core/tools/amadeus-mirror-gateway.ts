@@ -16,6 +16,11 @@
 //   G7 Failure Normalizer    — classification, effect certainty, redaction
 //   G8 Gateway               — orchestration returning C0 GatewayOutcome
 
+import { validateFindingMutationPermit } from "./amadeus-finding-capability.ts";
+import type {
+  FindingGitHubGateway,
+  FindingMutationPermit,
+} from "./amadeus-finding-types.ts";
 import { validateMirrorMutationPermit } from "./amadeus-mirror-capability.ts";
 import { createMirrorProjectGatewayMethods } from "./amadeus-mirror-project-gateway.ts";
 export {
@@ -702,7 +707,7 @@ function parseSingleIssue(
 
 export function createMirrorGitHubGateway(
   runner: MirrorProcessRunner,
-): MirrorGitHubGateway {
+): MirrorGitHubGateway & FindingGitHubGateway {
   const requireValidPermit = (
     permit: MirrorMutationPermit,
     expected: Parameters<typeof validateMirrorMutationPermit>[1],
@@ -721,6 +726,11 @@ export function createMirrorGitHubGateway(
 
   const permitIssueNumber = (permit: MirrorMutationPermit): number | null =>
     (permit as unknown as { issueNumber: number | null }).issueNumber;
+
+  const findingPermitRepo = (
+    permit: FindingMutationPermit,
+  ): RepositoryIdentity =>
+    (permit as unknown as { repository: RepositoryIdentity }).repository;
 
   const runApi = (
     args: readonly string[],
@@ -830,6 +840,25 @@ export function createMirrorGitHubGateway(
         repository,
         issueNumber: null,
       });
+      const result = await runApi(createArgv(repository, input), "single");
+      const interp = interpretApiResult(result, "single", "mutation");
+      if (interp.kind === "failure") return interp.failure;
+      return parseSingleIssue(interp, repository, "mutation");
+    },
+
+    async createFindingIssue(permit, input) {
+      const repository = findingPermitRepo(permit);
+      const marker = input.body.match(
+        /^(<!-- amadeus-finding:[a-f0-9]{64} -->)(?:\r?\n|$)/,
+      )?.[1];
+      if (
+        marker === undefined ||
+        !validateFindingMutationPermit(permit, { repository, marker })
+      ) {
+        throw new Error(
+          "mirror gateway: rejected finding mutation permit (forged or mismatched marker)",
+        );
+      }
       const result = await runApi(createArgv(repository, input), "single");
       const interp = interpretApiResult(result, "single", "mutation");
       if (interp.kind === "failure") return interp.failure;

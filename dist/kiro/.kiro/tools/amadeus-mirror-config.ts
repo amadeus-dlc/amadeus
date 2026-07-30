@@ -3,6 +3,7 @@
 // Resolves the supported settings from the three git-shared layers
 // (global -> space -> intent, later layers winning per key). `auto-mirror`
 // accepts exactly `off | prompt | auto` and defaults to `prompt`;
+// `auto-file-findings` uses the same modes and default;
 // `auto-solo-election` accepts only a boolean and defaults to `false`.
 // Invalid values are configuration errors and are never coerced.
 //
@@ -51,6 +52,7 @@ const LAYER_ORDER: readonly ConfigLayer[] = ["global", "space", "intent"];
 const AUTO_MIRROR_KEY = "auto-mirror";
 const MIRROR_PROJECTS_KEY = "mirror-projects";
 const AUTO_SOLO_ELECTION_KEY = "auto-solo-election";
+const AUTO_FILE_FINDINGS_KEY = "auto-file-findings";
 // "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
 // the mirror parser must tolerate the key so both subsystems can share the
 // layered config.json files, but it never interprets the value.
@@ -58,6 +60,7 @@ const ALLOWED_KEYS: readonly string[] = [
   AUTO_MIRROR_KEY,
   MIRROR_PROJECTS_KEY,
   AUTO_SOLO_ELECTION_KEY,
+  AUTO_FILE_FINDINGS_KEY,
   "observability",
 ];
 
@@ -79,12 +82,14 @@ export type ConfigLayer = "global" | "space" | "intent";
 export type MirrorConfigKey =
   | "auto-mirror"
   | "mirror-projects"
-  | "auto-solo-election";
+  | "auto-solo-election"
+  | "auto-file-findings";
 
 export type MirrorConfig = Readonly<{
   autoMirror: MirrorMode;
   projects: readonly MirrorProjectTarget[];
   autoSoloElection: boolean;
+  autoFileFindings: MirrorMode;
 }>;
 
 export type MirrorConfigLayerInput = Readonly<{
@@ -505,8 +510,33 @@ type LayerClassification = Readonly<{
   mode?: MirrorMode;
   projects?: readonly MirrorProjectTarget[];
   autoSoloElection?: boolean;
+  autoFileFindings?: MirrorMode;
   issues: readonly LayerIssue[];
 }>;
+
+type ResolvedLayerValues = {
+  mode?: MirrorMode;
+  projects?: readonly MirrorProjectTarget[];
+  autoSoloElection?: boolean;
+  autoFileFindings?: MirrorMode;
+};
+
+function parseOptionalMode(
+  rawValue: unknown,
+  key: Extract<MirrorConfigKey, "auto-mirror" | "auto-file-findings">,
+  issues: LayerIssue[],
+): MirrorMode | undefined {
+  if (rawValue === undefined) return undefined;
+  if (VALID_MODES.includes(rawValue as MirrorMode)) {
+    return rawValue as MirrorMode;
+  }
+  issues.push({
+    key,
+    actualType: valueKind(rawValue),
+    expected: MODE_EXPECTED,
+  });
+  return undefined;
+}
 
 // Judge one present layer's raw value. The whole config object is validated: a
 // non-object root, an unknown property, or an invalid value for either key is
@@ -541,19 +571,11 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
   }
 
   const issues: LayerIssue[] = [];
-  let mode: MirrorMode | undefined;
-  const rawMode = rawValue[AUTO_MIRROR_KEY];
-  if (rawMode !== undefined) {
-    if (VALID_MODES.includes(rawMode as MirrorMode)) {
-      mode = rawMode as MirrorMode;
-    } else {
-      issues.push({
-        key: AUTO_MIRROR_KEY,
-        actualType: valueKind(rawMode),
-        expected: MODE_EXPECTED,
-      });
-    }
-  }
+  const mode = parseOptionalMode(
+    rawValue[AUTO_MIRROR_KEY],
+    AUTO_MIRROR_KEY,
+    issues,
+  );
 
   let projects: readonly MirrorProjectTarget[] | undefined;
   const rawProjects = rawValue[MIRROR_PROJECTS_KEY];
@@ -584,12 +606,57 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     }
   }
 
+  const autoFileFindings = parseOptionalMode(
+    rawValue[AUTO_FILE_FINDINGS_KEY],
+    AUTO_FILE_FINDINGS_KEY,
+    issues,
+  );
+
   return {
     issues,
     ...(mode === undefined ? {} : { mode }),
     ...(projects === undefined ? {} : { projects }),
     ...(autoSoloElection === undefined ? {} : { autoSoloElection }),
+    ...(autoFileFindings === undefined ? {} : { autoFileFindings }),
   };
+}
+
+function mergeLayerValues(
+  target: ResolvedLayerValues,
+  classified: LayerClassification,
+): boolean {
+  let contributed = false;
+  if (classified.mode !== undefined) {
+    target.mode = classified.mode;
+    contributed = true;
+  }
+  if (classified.projects !== undefined) {
+    target.projects = classified.projects;
+    contributed = true;
+  }
+  if (classified.autoSoloElection !== undefined) {
+    target.autoSoloElection = classified.autoSoloElection;
+    contributed = true;
+  }
+  if (classified.autoFileFindings !== undefined) {
+    target.autoFileFindings = classified.autoFileFindings;
+    contributed = true;
+  }
+  return contributed;
+}
+
+function layerConfigIssues(
+  layer: MirrorConfigLayerInput,
+  classified: LayerClassification,
+): MirrorConfigIssue[] {
+  return classified.issues.map((issue) => ({
+    kind: "invalid-value",
+    layer: layer.layer,
+    path: layer.path,
+    key: issue.key,
+    actualType: issue.actualType,
+    expected: issue.expected,
+  }));
 }
 
 // Pure schema + precedence over collected layers. Every invalid layer is
@@ -608,48 +675,25 @@ export function parseMirrorConfigLayers(
 
   const issues: MirrorConfigIssue[] = [];
   const sources: string[] = [];
-  let mode: MirrorMode | undefined;
-  let projects: readonly MirrorProjectTarget[] | undefined;
-  let autoSoloElection: boolean | undefined;
+  const resolved: ResolvedLayerValues = {};
   for (const layer of ordered) {
     const classified = classifyRawValue(layer.rawValue);
-    for (const issue of classified.issues) {
-      issues.push({
-        kind: "invalid-value",
-        layer: layer.layer,
-        path: layer.path,
-        key: issue.key,
-        actualType: issue.actualType,
-        expected: issue.expected,
-      });
-    }
+    issues.push(...layerConfigIssues(layer, classified));
     if (classified.issues.length > 0) continue;
     // Each key resolves independently: the last layer carrying a valid value for
     // that key wins, and `mirror-projects` fully replaces the previous layer's
     // target list rather than merging into it.
-    let contributed = false;
-    if (classified.mode !== undefined) {
-      mode = classified.mode;
-      contributed = true;
-    }
-    if (classified.projects !== undefined) {
-      projects = classified.projects;
-      contributed = true;
-    }
-    if (classified.autoSoloElection !== undefined) {
-      autoSoloElection = classified.autoSoloElection;
-      contributed = true;
-    }
-    if (contributed) sources.push(layer.path);
+    if (mergeLayerValues(resolved, classified)) sources.push(layer.path);
   }
 
   if (issues.length > 0) return { kind: "invalid", issues };
   return {
     kind: "resolved",
     config: {
-      autoMirror: mode ?? "prompt",
-      projects: projects ?? [],
-      autoSoloElection: autoSoloElection ?? false,
+      autoMirror: resolved.mode ?? "prompt",
+      projects: resolved.projects ?? [],
+      autoSoloElection: resolved.autoSoloElection ?? false,
+      autoFileFindings: resolved.autoFileFindings ?? "prompt",
     },
     sources,
   };

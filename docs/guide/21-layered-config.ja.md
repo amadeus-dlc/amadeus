@@ -52,10 +52,25 @@ opt-in できます。
 | `auto-mirror` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | 検証済みフェーズ境界でのミラー同期を制御する |
 | `mirror-projects` | Project target の配列 | `[]` | intent と GitHub Project target、任意の status 名を対応付ける |
 | `auto-solo-election` | boolean | `false` | 設計逸脱・ブロッカー・§13 学習選定でソロ選挙を自動発動する |
+| `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | 確認済みの Amadeus の不具合・懸念を `amadeus-dlc/amadeus` に起票する |
 
 `auto-solo-election` が制御するのは自動発動だけです。未設定または `false` でも、
 ユーザーは選挙を明示的に要求できます。仕様変更などのユーザー専権事項は、この設定で
 選挙対象になりません。
+
+`auto-file-findings` の対象は、Amadeus に原因があり、実行中の intent のスコープ外にある、
+確認済みで対処可能な不具合・懸念だけです。決定論的な起票ツールは、作成前に安定した
+`marker` を使って open・closed 両方の Issue を検索します。秘密情報、非公開 workspace の
+情報、推測段階のアイデア、対象アプリケーション側の問題は起票しません。
+
+```json
+{
+  "auto-file-findings": "auto"
+}
+```
+
+候補ごとに承認する場合は `"prompt"`、自動起票を止める場合は `"off"` を指定します。
+`"off"` でも、人が明示的に承認した1件は起票できます。
 
 ## 検証と失敗時の動作
 

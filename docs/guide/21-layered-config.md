@@ -52,11 +52,27 @@ value. Other spaces continue to use `false`.
 | `auto-mirror` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls mirror synchronization at verified phase boundaries |
 | `mirror-projects` | project target array | `[]` | Maps an intent to GitHub Project targets and optional status names |
 | `auto-solo-election` | boolean | `false` | Enables automatic solo elections for design deviations, blockers, and §13 learning selection |
+| `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls filing confirmed Amadeus defects and concerns to `amadeus-dlc/amadeus` |
 
 `auto-solo-election` controls automatic activation only. When it is absent or
 `false`, a user can still explicitly request an election. Specification
 changes and other human-only escalation decisions never become election
 eligible.
+
+`auto-file-findings` applies only to confirmed, actionable findings owned by
+Amadeus and not already covered by the active intent. The deterministic filer
+searches open and closed Issues by a stable marker before creating anything.
+It never files secrets, private workspace information, speculative ideas, or
+application-project findings.
+
+```json
+{
+  "auto-file-findings": "auto"
+}
+```
+
+Use `"prompt"` to require approval for each candidate or `"off"` to disable
+automatic filing. An explicit human request can still approve one filing.
 
 ## Validation and failure behavior
 

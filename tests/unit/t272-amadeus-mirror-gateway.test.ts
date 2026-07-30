@@ -4,6 +4,8 @@
 // size: small
 
 import { describe, expect, test } from "bun:test";
+import { createFindingMutationPermit } from "../../packages/framework/core/tools/amadeus-finding-capability.ts";
+import type { FindingMutationPermit } from "../../packages/framework/core/tools/amadeus-finding-types.ts";
 import { createMirrorMutationPermit } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
 import {
   createMirrorGitHubGateway,
@@ -278,6 +280,71 @@ describe("createIssue", () => {
       classification: "command",
       effect: "outcome-unknown",
     });
+  });
+});
+
+describe("createFindingIssue", () => {
+  test("accepts only a finding permit bound to the body marker", async () => {
+    const marker = `<!-- amadeus-finding:${"a".repeat(64)} -->`;
+    const { runner, requests } = fakeRunner([
+      exited(0, singleEnvelope(201, issue(12, { body: `${marker}\n\nEvidence` }))),
+    ]);
+    const permit = createFindingMutationPermit({
+      repository: REPO,
+      marker,
+    });
+
+    const outcome = await createMirrorGitHubGateway(runner).createFindingIssue(
+      permit,
+      {
+        title: "Finding",
+        body: `${marker}\n\nEvidence`,
+        labels: [],
+      },
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(outcome).toMatchObject({
+      kind: "ok",
+      value: { number: 12 },
+    });
+  });
+
+  test("rejects a body marker that differs from the permit", async () => {
+    const permittedMarker = `<!-- amadeus-finding:${"a".repeat(64)} -->`;
+    const replacedMarker = `<!-- amadeus-finding:${"b".repeat(64)} -->`;
+    const { runner, requests } = fakeRunner([]);
+    const permit = createFindingMutationPermit({
+      repository: REPO,
+      marker: permittedMarker,
+    });
+
+    await expect(
+      createMirrorGitHubGateway(runner).createFindingIssue(permit, {
+        title: "Finding",
+        body: `${replacedMarker}\n\nEvidence`,
+        labels: [],
+      }),
+    ).rejects.toThrow(/permit/);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("rejects a forged finding permit before spawning", async () => {
+    const marker = `<!-- amadeus-finding:${"a".repeat(64)} -->`;
+    const { runner, requests } = fakeRunner([]);
+    const forged = {
+      repository: REPO,
+      marker,
+    } as unknown as FindingMutationPermit;
+
+    await expect(
+      createMirrorGitHubGateway(runner).createFindingIssue(forged, {
+        title: "Finding",
+        body: `${marker}\n\nEvidence`,
+        labels: [],
+      }),
+    ).rejects.toThrow(/permit/);
+    expect(requests).toHaveLength(0);
   });
 });
 

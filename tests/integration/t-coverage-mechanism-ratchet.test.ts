@@ -168,6 +168,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t356-journal-convert.test.ts",
     "integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts",
     "integration/t365-kimi-reviewer-boundary.integration.test.ts",
+    "integration/t366-amadeus-finding-cli.integration.test.ts",
     "integration/t367-degrade-unitname-resolution.test.ts",
     "integration/t39.test.ts",
     "integration/t45.test.ts",
