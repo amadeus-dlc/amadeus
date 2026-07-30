@@ -48,6 +48,7 @@ class AmadeusSpan implements Span {
   private readonly startMs: number;
   private attributes: Attributes = {};
   private events: { name: string; timeMs: number; attributes?: Record<string, unknown> }[] = [];
+  private links: { traceId: string; spanId: string; attributes?: Record<string, unknown> }[] = [];
   private status: SpanStatus = { code: 0 };
   private ended = false;
 
@@ -102,10 +103,16 @@ class AmadeusSpan implements Span {
     this.events.push({ name, timeMs: toMs(time), attributes: attrs });
     return this;
   }
-  addLink(_link: Link): this {
-    return this; // links recorded in U4 hardening; U1 keeps the surface
+  addLink(link: Link): this {
+    this.links.push({
+      traceId: link.context.traceId,
+      spanId: link.context.spanId,
+      ...(link.attributes !== undefined ? { attributes: link.attributes as Record<string, unknown> } : {}),
+    });
+    return this;
   }
-  addLinks(_links: Link[]): this {
+  addLinks(links: Link[]): this {
+    for (const link of links) this.addLink(link);
     return this;
   }
   setStatus(status: SpanStatus): this {
@@ -126,6 +133,7 @@ class AmadeusSpan implements Span {
       status: { code: String(this.status.code), ...(this.status.message !== undefined ? { message: this.status.message } : {}) },
       attributes: { ...this.attributes },
       events: this.events,
+      links: this.links,
       resource: { "service.name": "amadeus", "telemetry.sdk.language": "typescript" },
       instrumentationScope: { name: this.scopeName },
     };

@@ -51,7 +51,7 @@ import {
 } from "../harness/fixtures.ts";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
@@ -119,13 +119,10 @@ function field(proj: string, name: string): string {
   return guarded(proj, ["get", name]).out.trim();
 }
 
-// Count audit blocks with `**Event**: <ev>` in the merged shard buffer.
+// Count audit blocks with `**Event**: <ev> in the merged shard buffer, using
+// the production ledger reader so v1 and v2 (OTel emit path, U4) rows count.
 function eventCount(proj: string, ev: string): number {
-  return readAllAuditShards(proj)
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === ev).length;
+  return findAllEvents(readAllAuditShards(proj), ev).length;
 }
 
 // Append the autonomy field to the seeded state file (the mid-ideation fixture

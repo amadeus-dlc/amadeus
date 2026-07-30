@@ -41,7 +41,7 @@ const line = (seq: number, event: string) =>
 
 function canonicalRecord() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2, // U4: canonical records persist through the schema v2 codec (BR-13)
     eventId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     eventName: "amadeus.decision.recorded" as const,

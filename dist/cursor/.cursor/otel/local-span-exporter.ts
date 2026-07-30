@@ -5,13 +5,29 @@
 // fatal latch, and never stops the workflow: spans are telemetry, the journal
 // owns the durability contract. Failures are noted best-effort in a
 // machine-local diagnostics file (the existing telemetry practice).
+//
+// U4 hardening: the persisted record carries the FULL FR-EXP-3 field set
+// (ids, name/kind, timestamps, status, attributes, events, links, resource,
+// instrumentation scope — BR-7), and the export-boundary redaction layer
+// (FR-DST-3 layer 2) filters attributes, event attributes, and link
+// attributes immediately before the append.
 
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { auditCloneId } from "../tools/amadeus-lib.ts";
 import { telemetryDir } from "../tools/amadeus-observability.ts";
+import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
+import type { RedactionPolicy } from "./redaction.ts";
 
-// The completed-span record (FR-EXP-3 field inventory).
+// A recorded span link (FR-EXP-3): the linked span's context plus optional
+// attributes, redacted at the export boundary like any other attribute bag.
+export type CompletedSpanLink = {
+  readonly traceId: string;
+  readonly spanId: string;
+  readonly attributes?: Record<string, unknown>;
+};
+
+// The completed-span record (FR-EXP-3 field inventory, BR-7).
 export type CompletedSpanRecord = {
   readonly traceId: string;
   readonly spanId: string;
@@ -23,6 +39,7 @@ export type CompletedSpanRecord = {
   readonly status: { code: string; message?: string };
   readonly attributes: Record<string, unknown>;
   readonly events: readonly { name: string; timeMs: number; attributes?: Record<string, unknown> }[];
+  readonly links: readonly CompletedSpanLink[];
   readonly resource: Record<string, unknown>;
   readonly instrumentationScope: { name: string; version?: string };
 };
@@ -40,6 +57,7 @@ export type LocalSpanExporterOptions = {
   // .amadeus-otel telemetry dir.
   readonly storeDir?: string;
   readonly write?: StoreWrite;
+  readonly redaction?: RedactionPolicy;
 };
 
 function defaultWrite(path: string, line: string): void {
@@ -64,8 +82,25 @@ function noteStoreFailure(options: LocalSpanExporterOptions, cause: unknown): vo
   }
 }
 
+// Export-boundary redaction (FR-DST-3 layer 2): attributes, per-event
+// attributes, and per-link attributes are filtered immediately before append,
+// so a producer that skipped the write-time layer cannot reach the store.
+function redactRecord(record: CompletedSpanRecord, policy: RedactionPolicy): CompletedSpanRecord {
+  return {
+    ...record,
+    attributes: redactAttributes(record.attributes, policy),
+    events: record.events.map((event) =>
+      event.attributes === undefined ? event : { ...event, attributes: redactAttributes(event.attributes, policy) }
+    ),
+    links: record.links.map((link) =>
+      link.attributes === undefined ? link : { ...link, attributes: redactAttributes(link.attributes, policy) }
+    ),
+  };
+}
+
 export function createLocalSpanExporter(options: LocalSpanExporterOptions): LocalSpanExporter {
   const write = options.write ?? defaultWrite;
+  const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
   const storePath = (): string | null => {
     const dir = options.storeDir ?? telemetryDir(options.projectDir);
     if (dir === null || dir === undefined) return null;
@@ -76,7 +111,7 @@ export function createLocalSpanExporter(options: LocalSpanExporterOptions): Loca
       try {
         const path = storePath();
         if (path === null) return; // no resolvable record -> drop, stay silent
-        write(path, `${JSON.stringify(record)}\n`);
+        write(path, `${JSON.stringify(redactRecord(record, policy))}\n`);
       } catch (cause) {
         noteStoreFailure(options, cause);
       }

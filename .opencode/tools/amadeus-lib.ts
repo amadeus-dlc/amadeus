@@ -4236,8 +4236,29 @@ function tryParseJournalRecord(block: string): JournalEntry | null {
   if (!block.startsWith("{")) return null;
   try {
     const record = parseJournalLine(block.trim());
-    // This accessor reads v1 state-file records; v2 lines are not its shape.
-    return isJournalEntryV2(record) ? null : record;
+    if (isJournalEntryV2(record)) {
+      // Mixed-shard interop (U4 writer lands before the U6 reader swap):
+      // normalize a v2 row onto the v1 shape so every auditBlockField
+      // consumer — the presence ledger, findAllEvents, gate predicates —
+      // keeps seeing events the OTel emit path writes. The v1 event type
+      // rides in the `Event` attribute the AuditLogExporter stamps; a v2
+      // row without it degrades to event: null (skipped, never misparsed).
+      const fields: Record<string, string> = {};
+      for (const [key, value] of Object.entries(record.attributes)) {
+        fields[key] = typeof value === "string" ? value : JSON.stringify(value);
+      }
+      return {
+        schemaVersion: record.schemaVersion,
+        seq: record.seq,
+        cloneId: record.cloneId,
+        intentId: record.intentId,
+        timestamp: record.timestamp,
+        heading: record.eventName,
+        event: fields.Event ?? null,
+        fields,
+      };
+    }
+    return record;
   } catch {
     return null;
   }

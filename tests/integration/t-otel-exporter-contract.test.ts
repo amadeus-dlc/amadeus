@@ -75,7 +75,9 @@ describe("canonical emit is synchronously observable (FR-JRN-3)", () => {
     bootAll();
     emitEvent("amadeus.decision.recorded", { Stage: "code-generation", Decision: "approve" });
     const body = readShards(join(docsRoot(proj), "audit"));
-    expect(body).toContain("DECISION_RECORDED");
+    // U4: canonical records persist through the schema v2 codec (BR-13) —
+    // the OTel event name, not the v1 audit event type.
+    expect(body).toContain("amadeus.decision.recorded");
     expect(body).toContain("code-generation");
   });
 
@@ -98,7 +100,7 @@ describe("canonical emit is synchronously observable (FR-JRN-3)", () => {
     bootAll();
     emitEvent("amadeus.question.answered", { Stage: "s", Details: "d", Prompt: "secret prompt text" });
     const body = readShards(join(docsRoot(proj), "audit"));
-    expect(body).toContain("QUESTION_ANSWERED");
+    expect(body).toContain("amadeus.question.answered");
     expect(body).not.toContain("secret prompt text");
   });
 });
@@ -150,7 +152,7 @@ describe("immediate process exit leaves records behind (NFR-2)", () => {
       env: { ...process.env },
     });
     expect(r.exitCode).toBe(0);
-    expect(readShards(join(docsRoot(proj), "audit"))).toContain("DECISION_RECORDED");
+    expect(readShards(join(docsRoot(proj), "audit"))).toContain("amadeus.decision.recorded");
     expect(readShards(storeDir())).toContain("child-operation");
   });
 });
