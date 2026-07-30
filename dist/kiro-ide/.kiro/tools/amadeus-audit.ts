@@ -979,7 +979,11 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
 }
 
 // The audit-merge critical section, called with the audit lock already held.
-function mergeDeltaUnderLock(
+// Exported as a seam: the orphan-delta failure arm below needs the delta append
+// to fail while the ERROR_LOGGED append still lands, which through the handler
+// is impossible (both write the same shard) and through a spawned CLI is
+// unmeasurable.
+export function mergeDeltaUnderLock(
   projectDir: string,
   mainAuditPath: string,
   delta: string,
