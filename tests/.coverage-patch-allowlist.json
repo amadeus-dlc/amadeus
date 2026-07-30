@@ -1494,6 +1494,12 @@
     "expiry": "remove when Bun attributes spawned CLI coverage"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-contained-file.ts",
+    "lines": "99",
+    "reason": "O_NOFOLLOW is available on every supported CI platform; this fail-closed portability guard can execute only on a runtime that does not expose the constant.",
+    "expiry": "remove when unsupported filesystems are dropped or the filesystem constants port becomes injectable"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-process-runner.ts",
     "lines": "41-45",
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",

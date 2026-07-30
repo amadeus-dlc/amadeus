@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  defaultFindingDependencies,
   type FindingCoordinatorDependencies,
   runFindingCli,
 } from "../../packages/framework/core/tools/amadeus-finding.ts";
@@ -72,6 +73,23 @@ afterEach(() => {
 });
 
 describe("runFindingCli", () => {
+  test("adapts the layered config to the finding-only policy shape", () => {
+    const { root } = project();
+    expect(defaultFindingDependencies.resolveConfig(root)).toEqual({
+      kind: "resolved",
+      autoFileFindings: "prompt",
+    });
+
+    writeFileSync(
+      join(root, "amadeus", "config.json"),
+      `${JSON.stringify({ "auto-file-findings": "sometimes" })}\n`,
+      "utf-8",
+    );
+    expect(defaultFindingDependencies.resolveConfig(root)).toEqual({
+      kind: "invalid",
+    });
+  });
+
   test.each([
     ["unknown argument", (args: string[]) => [...args, "--unknown"]],
     ["missing value", (args: string[]) => args.slice(0, -1)],
@@ -156,5 +174,37 @@ describe("runFindingCli", () => {
       kind: "approval-required",
     });
     expect(result.stderr).toBe("");
+  });
+
+  test("explicit approval bypasses prompt mode and reaches readiness", async () => {
+    const { root, body } = project();
+    let readinessCalls = 0;
+    const result = await runFindingCli([...argv(root, body), "--approved"], {
+      resolveConfig: () => ({
+        kind: "resolved",
+        autoFileFindings: "prompt",
+      }),
+      gateway: {
+        readiness: async () => {
+          readinessCalls += 1;
+          return {
+            kind: "failure",
+            classification: "api",
+            summary: "unavailable",
+            retryable: true,
+            effect: "no-effect-confirmed",
+          };
+        },
+        findIssuesByMarker: unreachableDependencies.gateway.findIssuesByMarker,
+        createFindingIssue: unreachableDependencies.gateway.createFindingIssue,
+      },
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(readinessCalls).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      kind: "failure",
+      reason: "github",
+    });
   });
 });

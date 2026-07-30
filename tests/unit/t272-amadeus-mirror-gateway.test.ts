@@ -177,6 +177,19 @@ describe("readiness", () => {
     });
   });
 
+  test("a non-zero version probe yields not-installed with the observed exit", async () => {
+    const { runner } = fakeRunner([exited(127)]);
+    const outcome = await createMirrorGitHubGateway(runner).readiness(REPO);
+    expect(outcome).toEqual({
+      kind: "failure",
+      classification: "not-installed",
+      retryable: false,
+      effect: "no-effect-confirmed",
+      summary:
+        "GitHub unavailable (not-installed; no-effect-confirmed; exit=127; http=none)",
+    });
+  });
+
   test("auth failure yields unauthenticated", async () => {
     const { runner } = fakeRunner([exited(0), exited(1)]);
     const outcome = await createMirrorGitHubGateway(runner).readiness(REPO);

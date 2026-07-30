@@ -148,26 +148,24 @@ export type AmadeusConfigReadHooks = Readonly<{
   beforeOpen?: (path: string) => void;
 }>;
 
+type ConfigReadFailureMap = Readonly<
+  Record<ContainedFileFailureReason, string>
+>;
+
+const CONFIG_READ_FAILURES: ConfigReadFailureMap = {
+  "no-nofollow": "configuration cannot be verified without O_NOFOLLOW",
+  symlink: "configuration path must not be a symlink",
+  "outside-root": "configuration path escapes the workspace root",
+  "not-regular": "configuration path is not a regular file",
+  "too-large": "configuration exceeds the size limit",
+  "changed-before-open": "configuration changed before open",
+  "changed-during-read": "configuration changed during read",
+  empty: NOT_READABLE,
+  "not-readable": NOT_READABLE,
+};
+
 function configReadFailure(reason: ContainedFileFailureReason): string {
-  switch (reason) {
-    case "no-nofollow":
-      return "configuration cannot be verified without O_NOFOLLOW";
-    case "symlink":
-      return "configuration path must not be a symlink";
-    case "outside-root":
-      return "configuration path escapes the workspace root";
-    case "not-regular":
-      return "configuration path is not a regular file";
-    case "too-large":
-      return "configuration exceeds the size limit";
-    case "changed-before-open":
-      return "configuration changed before open";
-    case "changed-during-read":
-      return "configuration changed during read";
-    case "empty":
-    case "not-readable":
-      return NOT_READABLE;
-  }
+  return CONFIG_READ_FAILURES[reason];
 }
 
 // Read a single config path safely. Absence is the common, non-failure case.

@@ -152,6 +152,11 @@ type FileCommand = Readonly<{
   approved: boolean;
 }>;
 
+type CollectedFileFlags = Readonly<{
+  values: Map<string, string>;
+  approved: boolean;
+}>;
+
 const FILE_VALUE_FLAGS = new Set([
   "--project-dir",
   "--kind",
@@ -160,10 +165,7 @@ const FILE_VALUE_FLAGS = new Set([
   "--fingerprint",
 ]);
 
-function collectFileFlags(argv: readonly string[]): {
-  values: Map<string, string>;
-  approved: boolean;
-} {
+function collectFileFlags(argv: readonly string[]): CollectedFileFlags {
   const values = new Map<string, string>();
   let approved = false;
   for (let index = 1; index < argv.length; index += 1) {

@@ -502,10 +502,14 @@ function failure(
   };
 }
 
-function classifyHttpStatus(status: number): {
+type HttpStatusClassification = Readonly<{
   classification: Classification;
   retryable: boolean;
-} {
+}>;
+
+function classifyHttpStatus(
+  status: number,
+): HttpStatusClassification {
   if (status === 429) return { classification: "rate-limit", retryable: true };
   if (status === 401) {
     return { classification: "unauthenticated", retryable: false };
@@ -729,15 +733,10 @@ function createCombinedGitHubGateway(
   const permitIssueNumber = (permit: MirrorMutationPermit): number | null =>
     (permit as unknown as { issueNumber: number | null }).issueNumber;
 
-  const findingPermitRepo = (
-    permit: FindingMutationPermit,
-  ): GitHubRepository =>
+  const findingPermitRepo = (permit: FindingMutationPermit): GitHubRepository =>
     (permit as unknown as { repository: GitHubRepository }).repository;
 
-  const runApi = (
-    args: readonly string[],
-    profile: MirrorOperationProfile,
-  ): Promise<MirrorProcessResult> =>
+  const runApi = (args: readonly string[], profile: MirrorOperationProfile): Promise<MirrorProcessResult> =>
     runner.run({ executable: "gh", args, profile });
 
   // Run one GraphQL operation and reduce it to `data` or a typed failure. The
