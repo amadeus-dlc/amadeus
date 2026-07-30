@@ -22,7 +22,7 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type JournalEntry, parseJournalShard } from "./amadeus-journal.ts";
+import { type JournalEntry, type JournalRecord, isJournalEntryV2, readJournalRecords } from "./amadeus-journal.ts";
 import {
   activeIntent,
   activeSpace,
@@ -91,11 +91,46 @@ function readBufferEvents(projectDir: string): BufferEvent[] {
   return events.sort((a, b) => a.startMs - b.startMs);
 }
 
+// Span-input view of one journal record (FR-JRN-4): the span builders consume
+// the v1 shape (event + string fields), so a v2 record is normalized onto it —
+// Event attribute (fallback eventName) -> event, eventName -> heading, typed
+// attributes -> string fields (JSON text for non-strings, null dropped). The
+// v2 trace/span correlation IDs are NOT
+// consulted: span identity stays deterministic (Q3/Q10), and a v1 record's
+// missing correlation is tolerated, never synthesized into an edge (BR-8/BR-16).
+export function journalSpanInput(record: JournalRecord): JournalEntry {
+  if (!isJournalEntryV2(record)) return record;
+  const fields: Record<string, string> = {};
+  for (const [key, value] of Object.entries(record.attributes)) {
+    if (value === null) continue;
+    // Trim to match journalRecordField: span builders compare these values
+    // (Stage/Phase names) against what audit readers return, so padded v2
+    // attributes must normalize the same way.
+    fields[key] = (typeof value === "string" ? value : JSON.stringify(value)).trim();
+  }
+  return {
+    schemaVersion: record.schemaVersion,
+    seq: record.seq,
+    cloneId: record.cloneId,
+    intentId: record.intentId,
+    timestamp: record.timestamp,
+    heading: record.eventName,
+    // The v1 audit event type: the AuditLogExporter stamps it into the
+    // `Event` attribute (eventName is the registry's OTel name); converted
+    // rows carry no Event attribute and eventName IS the audit event —
+    // same precedence as journalRecordField.
+    event: fields.Event ?? record.eventName,
+    fields,
+  };
+}
+
 function readJournalEntries(projectDir: string, intent: string, space: string): JournalEntry[] {
   const entries: JournalEntry[] = [];
   for (const shard of auditShards(projectDir, intent, space)) {
     try {
-      entries.push(...parseJournalShard(readFileSync(shard, "utf-8")));
+      // The common mixed-version reader (U3): v1/v2 mixed shards decode line
+      // by line; each record is normalized onto the span-input view.
+      entries.push(...readJournalRecords(readFileSync(shard, "utf-8")).map(journalSpanInput));
     } catch {
       // A malformed shard is the doctor's business; the projector projects
       // what parses and never blocks the workflow (fail-open).

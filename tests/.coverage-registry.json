@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 149,
+      "function": 151,
       "audit": 33,
       "scope": 10,
       "stage": 8,
@@ -1040,8 +1040,13 @@
       "unitClass": "function",
       "unitId": "function:auditBlockField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -1725,6 +1730,10 @@
         {
           "file": "tests/integration/t164-shard-ordering-and-lock-bucket.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -3548,8 +3557,13 @@
       "unitClass": "function",
       "unitId": "function:splitAuditRecords",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

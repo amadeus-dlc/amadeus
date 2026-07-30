@@ -28,6 +28,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
+import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
 import { observeSubprocess } from "./amadeus-observability.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
@@ -3023,28 +3024,6 @@ function auditFileBytes(root: string): Map<string, Buffer> {
     files.set(entry.relative, readFileSync(entry.absolute));
   }
   return files;
-}
-
-function parseDoctorAuditSuffix(input: string, _allowHeader: boolean): string[] | null {
-  // Doctor appends are JSONL journal records (one per line) since the Issue
-  // #1628 switchover. Every non-empty line must parse as a record whose event
-  // is one of the doctor health events — anything else means the doctor wrote
-  // something it must not, and the migration evidence refuses.
-  const events: string[] = [];
-  for (const line of input.split("\n")) {
-    if (line === "") continue;
-    let record: unknown;
-    try {
-      record = JSON.parse(line);
-    } catch {
-      return null;
-    }
-    if (record === null || typeof record !== "object" || Array.isArray(record)) return null;
-    const event = (record as { event?: unknown }).event;
-    if (event !== "GUARDRAIL_LOADED" && event !== "HEALTH_CHECKED") return null;
-    events.push(event);
-  }
-  return events;
 }
 
 type AuditAppendEvidence = NonNullable<MigrationEvidence["auditAppends"]>[number];

@@ -1262,7 +1262,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-audit.ts",
-    "lines": "1045-1047",
+    "lines": "1083-1085",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1435,7 +1435,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-journal.ts",
-    "lines": "211",
+    "lines": "271",
     "reason": "isJsonValue's switch default clause (typeof undefined/function/symbol/bigint) is reachable but Bun emits no DA stamp for this line at all, so the patch gate cannot measure it; the branch is driven by the serialize rejection test for BigInt attributes.",
     "expiry": "remove if Bun stamps switch default clauses in LCOV or the validator is restructured"
   },
