@@ -151,6 +151,10 @@ describe("self-scope-consistency sensor", () => {
     const gridScopes = [...SCOPES, "self-extra", "amadeus-bugfix"];
     const grid = Object.fromEntries(gridScopes.map((scope) => [scope, { stages: {} }]));
     writeFileSync(gridPath, `${JSON.stringify(grid)}\n`);
+    // A grid that EXISTS but cannot be parsed must surface as unreadable —
+    // the existsSync guard only silences the not-yet-set-up (missing) case.
+    const codexGridPath = join(root, ".codex", "tools", "data", "scope-grid.json");
+    writeFileSync(codexGridPath, "{ not json\n");
 
     const result = evaluateSelfScopeConsistency(root);
     expect(result.findings).toContainEqual({
@@ -180,6 +184,12 @@ describe("self-scope-consistency sensor", () => {
       reason: "unexpected",
       scope: "self-extra",
       path: claudeScopes,
+    });
+    expect(result.findings).toContainEqual({
+      harness: ".codex",
+      surface: "scope-grid",
+      reason: "unreadable",
+      path: codexGridPath,
     });
   });
 
