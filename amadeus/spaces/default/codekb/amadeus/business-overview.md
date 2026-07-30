@@ -1,6 +1,34 @@
 # ビジネス概要
 
-## SKILL/reviewer 2件の業務境界（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の業務境界（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+5件は「フレームワークが自らの文書・契約どおりに動かない」という共通テーマを持つ一方、所有機構と同期対象ファイル集合が互いに重ならないため、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる。
+
+### 利用者影響
+
+| Issue | 誰が困るか | どう困るか | 深刻度の性質 |
+| --- | --- | --- | --- |
+| #1750 | `auto-mirror: auto` かつ Ideation を SKIP するスコープ（`self-fix` 等）で intent を回す利用者 | 共有面（mirror Issue）が Inception 完了まで作られず、intent 進行中の可視性が失われる。intent-first 運用（record を正本・Issue を共有ビューとする team.md ノルム）が最初の業務ステージ中は成立しない | 可視性の欠落。データ喪失はない |
+| #1749 | phase boundary を書くすべての利用者・エージェント | governance protocol の指示どおり `[phase-boundary]-verification.md` を書くと engine が fail-closed で拒否する。正しい名前は運用知識（既決ノルム）でしか得られず、新規参加者・他ハーネス利用者ほど踏みやすい | 指示と実装の矛盾。約3週間、運用回避で迂回されていた |
+| #1742 | 全ステージの実行者 | 非成果物（`memory.md`・`learnings-selections.json`）に対してセンサーが FAILED を出し、宣言済み成果物（`codekb/` 配下）には発火しない。**偽の赤と偽の緑が同時に出る** | 検証信頼性。advisory 契約のため exit code は 0 で、ワークフローは止まらないが判断を誤らせる |
+| #1735 | codex ハーネスのソロモード利用者（`auto-solo-election: true` 設定済み） | 設定したはずの自動選挙が一度も発動しない。設計逸脱・ブロッカー・§13 学習選定の3類型が独立検証（P1）を経ずに単独判断で進む | ガバナンスの静かな不成立。設定が効いていないことが無音 |
+| #1734 | `bun run promote:self` を実行する開発者（自己開発のみ） | self-install の scope-grid に無関係な144行 churn が出る。`promote:self:check` は sync と判定するため、churn の発生を事前検知できない | 差分ノイズ。現 HEAD では再現しないが潜在欠陥は残存 |
+
+### 業務上の優先度所見
+
+- #1742 は**偽の緑を含む**点で最も性質が悪い。宣言済み成果物への発火 0 は「センサーが通った」ではなく「センサーが対象外だった」であり、ゲート報告の verdict 判定を誤らせる（`cid:requirements-analysis:manual-sensor-fire-before-gate-report` の追補2が扱う既知ハザードの構造的原因）。
+- #1735 は**ガバナンス層の不成立**であり、コードの正しさではなくチーム規範の執行に効く。auto-solo が発動しないまま進んだ intent では、本来独立検証されるべき判断が単独判断で確定している。
+- #1749 は影響範囲が広い（全 phase boundary）が、既決ノルムによる運用回避が確立しているため実害は封じ込め済み。ただし運用回避の存在自体が負債である。
+- #1750 は Issue 受入条件に「日英リファレンス + 全 harness 配布物同期」が含まれ、配布面の同期コストが最も大きい。
+- #1734 は自己開発面のみに閉じ、利用者配布物に影響しない。
+
+### Delivery boundary
+
+5件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+`packages/framework/core/` を触るのは #1735（protocol md）・#1742（hook ts）・#1750（tools ts）の3件で、いずれも `bun scripts/package.ts` による dist 7ハーネス再生成と `bun run promote:self` による self-install 同期を伴う。ファイル単位では非交差だが生成面の再生成が競合するため、着地順は実 diff で再評価する（`cid:code-generation:c6`）。#1749（散文のみ）と #1734（`scripts/` のみ）は独立で先行着地できる。
+
+## SKILL/reviewer 2件の業務境界（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 測定 ref: observed `278d61d8e`。
 

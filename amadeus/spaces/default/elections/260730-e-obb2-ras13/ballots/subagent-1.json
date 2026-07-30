@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB2-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "本件は『引用しても踏む』失敗であり、同型の prose 追補は期待効果がほぼゼロ(規範を目前に置いた状態で違反したという事実自体が prose 無効の実測)。同クラスが3例目に達した場合は prose ではなく機械チェック(enhancement Issue)として昇格することを条件に 0 件へ同意する。診断記録は diary(memory.md:9)に残っており、失われない。",
+  "rationale": "実測: (1) requirements.md:31 が exemption-clause-must-not-substitute を明示引用しており、同 FR の初稿がその規範を踏んだ = c2 の事実主張は実在(memory.md:9 Deviations、requirements.md:73 の §12a Major 指摘)。(2) 既存 cid:requirements-analysis:exemption-clause-must-not-substitute(project.md:224)は 260725-teamup-launch-hardening の同一ステージ(requirements-analysis)・同一検出経路(§12a product-lead reviewer)で learned されたもので、本件はその2例目。すなわち新規クラスではなく既存 cid の再演である。(3) 決定的に、両例とも §12a reviewer が iteration 1 で捕捉し閉包している(requirements.md:85 で Major×2・Minor×1 の閉包を確認)— 既存ゲートが設計どおり機能しており、防止機構の欠落は実測されていない。(4) c1 は intent-capture:c1 / election-answer-after-ruling の再演で新規性なしという提案どおり。以上より persist 不要(0件)を支持する。",
+  "submittedAt": "2026-07-30T15:59:38Z"
+}

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-CG1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "B 採用にあたり、(1) CodeRabbit への却下返信では「単一 dir 全充足で発行される directive は再実行指示ではなくステージゲートの提示であり、DAG 経路の全充足分岐(emitPerUnitRunStage の pickUnit === null、amadeus-orchestrate.ts:3198-3216)と同義」であることを機構引用付きで示すこと、(2) 「単一 dir 全充足 → ゲート付き directive(kind: run-stage、gate 真)」を t367 に固定テストとして追加し、FR-1769c の意図が再係争されないようにすること、を条件とする。",
+      "rationale": "実測3点で B を支持する。(1) エンジン自身の全充足セマンティクスはエラーではなくゲート提示である: DAG 経路 emitPerUnitRunStage の pickUnit === null 分岐(amadeus-orchestrate.ts:3198-3216)は全 unit covered のとき最終 unit で実ゲート付き directive を emit する(コメント実文『There is nothing left to PRODUCE, so present the stage gate now (its REAL computed gate)』)。A は degrade 経路の単一 dir 全充足を degradeUnitResolutionError(:3013-3016『Create the unit directory for this piece of work』)へ落とすため、同一状況で DAG 経路と逆の挙動になり、かつ「作業が完了しゲートだけが残っている」conductor に新規 unit dir 作成という誤った指示を返す。A は uncovered 件数規則の内部一貫性を得る代わりに、エンジンの全充足契約との一貫性を壊す。(2) B の emit は再実行指示ではない: degrade 経路は emitRunStageForSlug(:2924-2934)を通り、per-unit ループのような directive.gate = false 抑止(:3225 付近)を一切行わないため、node の実ゲートを載せた directive が出る — DAG 全充足分岐と構造的に同一。CodeRabbit Major の『完了済み単一候補の再実行』という読みは、この directive を作業指示と解した誤読であり、意図的相違として却下できる。(3) 単一/複数の非対称は実在する差を追跡しており恣意ではない: 複数 dir 全充足(t367 test 13、:360-369)が fail-closed なのは engine がどの unit を指しているか名指しできない真の曖昧性があるためで、単一 dir にはその曖昧性が存在しない(resolveDegradeUnit 直上のコメント実文『A single directory names itself』)。t367 test 1(:224-239)は uncovered 単一の解決を固定しており、いずれの案でも不変。加えて A の緩和策『conductor が build 時 directive を保存して再利用』は、エンジンが所有すべきループ制御を人間手順の帯域外状態へ移すもので、degrade 経路でのみゲートを next 経由で到達不能にする点が運用上の退行である。",
+      "submittedAt": "2026-07-30T16:35:58Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-CG1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "B 採用にあたり、単一 dir covered が意図的に解決される契約を t367 へ回帰テストとして固定し(現状 test 1 は uncovered のみ、covered 単一を張る test が無い)、複数 dir 全充足(test 13)との非対称が『曖昧性の有無』に由来する意図的相違であることをコード注記と CodeRabbit 返信の両方に明記すること。",
+      "rationale": "実測3点により B を支持する。(1) degrade 経路は gate を抑止しない — scratch probe(worktree の handleNext を in-process 駆動)で単一 dir covered / bare のいずれも kind=run-stage, gate=true, next_stage=build-and-test を実測。DAG 経路(amadeus-orchestrate.ts:3223-3238)のように uncovered で gate:false → 全充足で再入してゲート提示、というサイクルが degrade 経路には存在せず、run-stage directive が build 用と gate 用を兼ねる唯一の経路である。A を採ると成果物書込後の next が『Create the unit directory for this piece of work』というエラーを返し、bugfix/fix/refactor/poc など degrade スコープの最頻ケースで誤った指示を出し、かつ §12a reviewer scope 用 directive を再取得する in-band 手段が消える(保存 directive の再利用はセッション再起動・コンテキスト喪失に対して脆い)。(2) 一様性の議論は実は B 側に立つ — DAG 経路の全充足分岐(:3198-3215)は fail-closed ではなく最終 unit に対して REAL gate 付き directive を再発行する。A は degrade 経路だけを DAG 経路と異なる挙動へ分岐させる。(3) test 13 の fail-closed は『完了しているから』ではなく『複数候補を一意に指名できないから』強制されるものであり、単一 dir には曖昧性が無い。#1769 における coverage は曖昧性解消の道具であって完了ゲートではない、という読みで resolveDegradeUnit(:3075-3080)は一貫している。加えて FR-1769c 原文は『単一 dir の挙動は不変』と明記し、変更前実装(git show 828a57f33 の pre-image: `if (degradeUnits.length !== 1)`)は coverage に関わらず単一 dir を解決していたため、A は承認済み要件の読み替え = 仕様変更に当たる。t367 test 1 は uncovered fixture のため A でも緑であり、テスト側からは A/B を決定できない点も確認済み。",
+      "submittedAt": "2026-07-30T16:37:53Z"
+    }
+  ],
+  "late": []
+}

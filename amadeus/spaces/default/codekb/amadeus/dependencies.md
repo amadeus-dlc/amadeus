@@ -1,6 +1,14 @@
 # 依存関係
 
-## SKILL/reviewer 2件の依存関係（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の依存関係（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+**判断: 外部依存の変化なし。Bolt 間の順序制約もなし。** 区間 `8b8016f62..c42ef4d77` で `package.json` の依存追加・削除・更新はない。5件は所有機構が互いに独立で、実装上の依存関係を持たない。
+
+ただし**投影チェーンの競合**が1点ある: #1735（`stage-protocol.md`）・#1742（`amadeus-sensor-fire.ts`）・#1750（`amadeus-mirror-lifecycle.ts` / `amadeus-orchestrate.ts`）はいずれも `packages/framework/core/` を正本とし、`bun scripts/package.ts` → `dist/` 7ハーネス → `bun run promote:self` → self-install 5面という同一の再生成チェーンを通る。ファイル単位では非交差だが生成面が競合するため、並行実装時は着地順を実 diff で再評価する（`cid:code-generation:c6`）。#1749（散文のみ、同じチェーンだが正本1行）と #1734（`scripts/` のみ、チェーン外）は独立。
+
+なお #1742 の修正が `{unit-name}` 解決を要する場合、hook から `amadeus-orchestrate.ts` への依存が新設されうる（現状そのような依存は無い）。`amadeus-lib.ts` への seam 抽出であれば依存方向は既存のまま保てる（**仮説** — 修正方式は未裁定）。
+
+## SKILL/reviewer 2件の依存関係（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 測定 ref: observed `278d61d8e`。新規外部パッケージは追加しない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
 
