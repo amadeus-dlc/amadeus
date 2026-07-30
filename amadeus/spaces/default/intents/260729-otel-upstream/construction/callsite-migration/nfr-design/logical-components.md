@@ -19,3 +19,13 @@ NFR 設計（performance/security/scalability/reliability 各 design）の決定
 - shadow 比較のゲート判定は U8 の責務。本 Unit は harness と report 生成までで、判定ロジックを持たない（business-logic-model.md § shadow 比較ハーネス 3）
 - audit CLI append verbs（FR-MIG-3）の公開互換方針は Phase 4 ADR 管轄であり、本 Unit のコンポーネントはその決定に依存しない
 - Adapter・guard は `packages/framework/core/` 変更のため FR-DST-2 を適用: manifest マッピング登録、`bun scripts/package.ts` で全生成面（dist 7 面＋self-install 5 面）を再生成し `package.ts --check`／`promote:self:check` を通過する（VER-6）
+
+> **申告付き読み替え（E-U7CG-Q1 裁定、choice 1、2-0、GoA 2x2、2026-07-30）**
+>
+> 直上の「Adapter・guard は `packages/framework/core/` 変更のため FR-DST-2 を適用」という記述は、**Adapter にのみ妥当**であり **guard には過大一般化**であるとして読み替える。裁定どおり guard 本体（`tests/callsite-guard.ts`）と allowlist（`tests/.callsite-allowlist.json`）は `tests/` に置き、既存兄弟テンプレート（`tests/coverage-project-gate.ts`・`tests/complexity-gate.ts`＋`tests/.complexity-baseline.json`）へ揃えた。CI は `nfr-requirements/tech-stack-decisions.md` どおり lint ジョブ内の1ステップ。
+>
+> 読み替えの根拠（実測）: guard は repo 専用の CI 検査であり、`packages/framework/core/` 配下に置くと全ハーネス manifest の `coreDirs` 投影により dist 7 面＋self-install 5 面へ出荷され、利用者のワークスペースに repo 専用 lint が混入する（`cid:code-generation:harness-tools-placement` と同型の漏出）。加えて guard は走査対象として repo パスを参照するため、出荷 `core/tools` が repo パスを参照しない境界契約（t258）と衝突する。本文が引く「committed baseline JSON＋`--check` 単調非減少」テンプレートの実体自体が `tests/` 配下にある。
+>
+> FR-DST-2 は Adapter（`packages/framework/core/otel/migration-adapter.ts`）に対して従来どおり全面適用しており、`dist:check`／`promote:self:check` はいずれも exit 0 で通過している。
+>
+> allowlist は t258 の allowlist とは**別台帳**（別ファイル）とし、台帳先頭の `description` と `direction: "shrink-only"` フィールドで shrink-only 契約を明記している（追加を含む差分は CI 拒否）。
