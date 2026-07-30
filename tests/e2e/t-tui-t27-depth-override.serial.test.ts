@@ -38,15 +38,15 @@
 //     which is strictly stronger than an md5 hash match.
 //
 // CASE B OMITTED (deliberately, not a weakening): the .sh's Test B
-// (`/amadeus bugfix --depth comprehensive`) creates a NEW workflow from a
+// (`/amadeus fix --depth comprehensive`) creates a NEW workflow from a
 // brownfield stub and overrides the scope default depth. That is a SCOPE-START
 // journey, not a depth-OVERRIDE journey — `--depth` arriving WITH `--scope`
 // routes through the init/start path (SKILL.md:531 `init ... --depth`), a
 // different surface that runs the 3 init stages and lands a workflow. Per the
 // driver-split invariant + Pattern A's "lands deterministically, does NOT run to
 // completion" framing, the depth-DEFAULT-override-at-scope-start belongs with the
-// scope-start journeys. Case B's exact surface — `bugfix --depth comprehensive`
-// overriding the bugfix Minimal default at workflow start, asserted on the Depth
+// scope-start journeys. Case B's exact surface — `fix --depth comprehensive`
+// overriding the fix Minimal default at workflow start, asserted on the Depth
 // state field — is owned by tests/e2e/t59-workflow-depth-override.test.ts
 // (sdk), which drives that literal journey. Folding it here would mix two
 // journeys in one file and pull in answer-gate territory. The config-change

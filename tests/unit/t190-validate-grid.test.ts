@@ -263,7 +263,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
   // A mapping fixture with two scopes claiming known keywords, riding the
   // AMADEUS_SCOPE_MAPPING seam (fresh process per spawn, no cache leak).
   const MAPPING = {
-    bugfix: {
+    fix: {
       depth: "Minimal",
       stages: {},
       keywords: ["fix", "bug", "broken"],
@@ -290,7 +290,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     expect(body.valid).toBe(false);
     const collision = body.errors.find((e) => e.includes('Keyword "fix"'));
     expect(collision).toBeDefined();
-    expect(collision).toContain("bugfix");
+    expect(collision).toContain("fix");
     // The non-colliding keyword in the same grant raises no error.
     expect(body.errors.some((e) => e.includes('"tune-up"'))).toBe(false);
   });
@@ -304,7 +304,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(1);
-    expect(r.out).toContain("bugfix");
+    expect(r.out).toContain("fix");
   });
 
   test("non-colliding keywords pass (exit 0, valid:true, no errors)", () => {

@@ -132,7 +132,7 @@ This jumps to the first stage of the specified phase. The same warnings about sk
 For projects without a state file, you can combine `--stage` or `--phase` with `--scope`:
 
 ```
-/amadeus --stage code-generation --scope bugfix
+/amadeus --stage code-generation --scope fix
 ```
 
 This creates a new workflow with the specified scope and jumps directly to the target stage.

@@ -11,7 +11,7 @@ description: Small self-contained tweak
 
 The lightest incremental scope, for a small self-contained tweak — a
 one-to-few-file change to a dev script, docs, or CI config that touches no
-user-visible contract. It is even leaner than `bugfix`: it skips
+user-visible contract. It is even leaner than `fix`: it skips
 reverse-engineering and requirements-analysis, running only bootstrap
 initialization, code-generation, and build-and-test.
 
@@ -24,12 +24,12 @@ is self-evident from the task itself. It still needs to bootstrap the record
 (build-and-test). Everything else — ideation, the rest of inception,
 functional-design, and the operation phase — is SKIP, because there is no new
 product, no behaviour to pin down beyond the task, and no new deployment
-surface. Like `bugfix`, `refactor`, and `security-patch` it is an incremental
+surface. Like `fix`, `refactor`, and `security-patch` it is an incremental
 scope that skips the walking-skeleton ceremony, since there is nothing to
 bootstrap.
 
 Reach for a heavier scope when the change grows past a self-contained tweak:
-`bugfix` when you are fixing a defect that needs the current code understood,
+`fix` when you are fixing a defect that needs the current code understood,
 `refactor` when you are reshaping structure, `feature` when you are adding
 user-visible behaviour.
 

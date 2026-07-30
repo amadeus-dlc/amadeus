@@ -1,8 +1,8 @@
-// covers: scope:bugfix
+// covers: scope:fix
 //
 // t-tui-t139-revision-loop-idempotency.serial.tui.test.ts — METAMORPHIC INVARIANT
 // (§5-D, Phase 4): revision-loop idempotency, as a TUI JOURNEY. Drive the REAL
-// claude TUI by keystroke through TWO bugfix run-throughs and assert that a
+// claude TUI by keystroke through TWO fix run-throughs and assert that a
 // reject->revise->approve cycle leaves the SAME terminal on-disk state as a clean
 // approve, MODULO Revision Count.
 //
@@ -46,15 +46,15 @@
 //   - selecting "Request changes" -> amadeus-state.ts handleReject (:769): emits
 //     GATE_REJECTED + STAGE_REVISING, marks [?]->[R], Revision Count++ (:786).
 //     The orchestrator then re-runs the stage and re-presents the SAME gate.
-//   - bugfix scope: Ideation entirely SKIP; first post-init EXECUTE gate is
+//   - fix scope: Ideation entirely SKIP; first post-init EXECUTE gate is
 //     requirements-analysis on a brownfield workspace (reverse-engineering runs
-//     first; scope-mapping.json "bugfix" + amadeus-utility.ts greenfield downgrade).
+//     first; scope-mapping.json "fix" + amadeus-utility.ts greenfield downgrade).
 //   - Completed counter == `- [x]` grid count (amadeus-state.ts:256-258 sync); the
 //     terminator + the cross-run comparison both read this field.
 //   - the AUQ gate footer + caret signal is gridHasMenu (tui-drive.ts).
 //
 // SERIAL (.serial. in the filename): two full back-to-back TUI run-throughs in one
-// test, each its own claude session, sequential. SPENDS REAL TOKENS (two bugfix
+// test, each its own claude session, sequential. SPENDS REAL TOKENS (two fix
 // workflows on Opus/Bedrock — the heaviest journey in the §5-D set). Gated behind
 // AMADEUS_TUI_LIVE=1; tmux/claude/distributable absence SKIPs with a reason —
 // never a hollow pass.
@@ -171,8 +171,8 @@ function readTerminal(sandbox: string): Terminal {
   };
 }
 
-/** Launch claude on a fresh brownfield bugfix project, clear modals, submit the
- *  bugfix command. Returns the session name (caller drives gates + reads disk). */
+/** Launch claude on a fresh brownfield fix project, clear modals, submit the
+ *  fix command. Returns the session name (caller drives gates + reads disk). */
 function launchBugfix(session: string, sandbox: string): void {
   expect(
     runTuiDriver([
@@ -198,7 +198,7 @@ function launchBugfix(session: string, sandbox: string): void {
   }
   expect(waitForTui(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
-  // Explicit `--scope bugfix` (not the bare keyword) so the shipped
+  // Explicit `--scope fix` (not the bare keyword) so the shipped
   // AMADEUS_DEFAULT_SCOPE=workshop env-default does NOT trigger a scope-
   // disambiguation gate at START (the t50 lesson, SKILL.md:105 "explicit CLI flag
   // wins"). The trailing description satisfies the step-6 "what to build?" prompt
@@ -208,7 +208,7 @@ function launchBugfix(session: string, sandbox: string): void {
     "--session",
     session,
     "--keys",
-    "/amadeus --scope bugfix the todo checkbox state is not persisted after page reload",
+    "/amadeus --scope fix the todo checkbox state is not persisted after page reload",
     "--literal",
     "--no-enter",
   ]);
@@ -238,7 +238,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
         runTuiDriver(["kill", "--session", cleanSession]);
 
         // CLEAN sanity: it reached the milestone with NO rejection.
-        expect(clean.scope).toMatch(/bugfix/i);
+        expect(clean.scope).toBe("fix");
         expect(clean.completedCounter).toBeGreaterThanOrEqual(5);
         expect(clean.completedCounter).toBe(clean.completedGrid); // counter==grid sync
         expect(clean.revisionCount).toBe(0); // clean path never rejected

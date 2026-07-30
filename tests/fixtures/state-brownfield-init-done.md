@@ -3,7 +3,7 @@
 ## Project Information
 - **Project**: Todo app bug fix
 - **Project Type**: Brownfield
-- **Scope**: bugfix
+- **Scope**: fix
 - **Start Date**: 2025-07-15T10:00:00Z
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
@@ -48,42 +48,42 @@
 - [x] state-init — EXECUTE
 
 ### IDEATION PHASE
-- [S] intent-capture — SKIP (bugfix scope)
-- [S] market-research — SKIP (bugfix scope)
-- [S] feasibility — SKIP (bugfix scope)
-- [S] scope-definition — SKIP (bugfix scope)
-- [S] team-formation — SKIP (bugfix scope)
-- [S] rough-mockups — SKIP (bugfix scope)
-- [S] approval-handoff — SKIP (bugfix scope)
+- [S] intent-capture — SKIP (fix scope)
+- [S] market-research — SKIP (fix scope)
+- [S] feasibility — SKIP (fix scope)
+- [S] scope-definition — SKIP (fix scope)
+- [S] team-formation — SKIP (fix scope)
+- [S] rough-mockups — SKIP (fix scope)
+- [S] approval-handoff — SKIP (fix scope)
 
 ### INCEPTION PHASE
 - [-] reverse-engineering — EXECUTE
-- [S] practices-discovery — SKIP (bugfix scope)
+- [S] practices-discovery — SKIP (fix scope)
 - [ ] requirements-analysis — EXECUTE
-- [S] user-stories — SKIP (bugfix scope)
-- [S] refined-mockups — SKIP (bugfix scope)
-- [S] application-design — SKIP (bugfix scope)
-- [S] units-generation — SKIP (bugfix scope)
-- [S] delivery-planning — SKIP (bugfix scope)
+- [S] user-stories — SKIP (fix scope)
+- [S] refined-mockups — SKIP (fix scope)
+- [S] application-design — SKIP (fix scope)
+- [S] units-generation — SKIP (fix scope)
+- [S] delivery-planning — SKIP (fix scope)
 
 ### CONSTRUCTION PHASE
 Per unit: [unit-name]
-- [S] functional-design — SKIP (bugfix scope)
-- [S] nfr-requirements — SKIP (bugfix scope)
-- [S] nfr-design — SKIP (bugfix scope)
-- [S] infrastructure-design — SKIP (bugfix scope)
+- [S] functional-design — SKIP (fix scope)
+- [S] nfr-requirements — SKIP (fix scope)
+- [S] nfr-design — SKIP (fix scope)
+- [S] infrastructure-design — SKIP (fix scope)
 - [ ] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
-- [S] ci-pipeline — SKIP (bugfix scope)
+- [S] ci-pipeline — SKIP (fix scope)
 
 ### OPERATION PHASE
-- [S] deployment-pipeline — SKIP (bugfix scope)
-- [S] environment-provisioning — SKIP (bugfix scope)
-- [S] deployment-execution — SKIP (bugfix scope)
-- [S] observability-setup — SKIP (bugfix scope)
-- [S] incident-response — SKIP (bugfix scope)
-- [S] performance-validation — SKIP (bugfix scope)
-- [S] feedback-optimization — SKIP (bugfix scope)
+- [S] deployment-pipeline — SKIP (fix scope)
+- [S] environment-provisioning — SKIP (fix scope)
+- [S] deployment-execution — SKIP (fix scope)
+- [S] observability-setup — SKIP (fix scope)
+- [S] incident-response — SKIP (fix scope)
+- [S] performance-validation — SKIP (fix scope)
+- [S] feedback-optimization — SKIP (fix scope)
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION

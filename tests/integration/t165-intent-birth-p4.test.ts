@@ -224,7 +224,7 @@ describe("t164 concurrent-birth integrity", () => {
         stderr: "ignore",
         env,
       });
-    const procs = [spawnBirth("poc"), spawnBirth("bugfix")];
+    const procs = [spawnBirth("poc"), spawnBirth("fix")];
     const codes = await Promise.all(procs.map((c) => c.exited));
     expect(codes).toEqual([0, 0]);
 
@@ -320,8 +320,8 @@ describe("t164 intent status lifecycle", () => {
 
     // Birth a SECOND intent and leave it (abandon) — it stays in-flight, never
     // self-completes.
-    expect(util(["intent-birth", "--scope", "bugfix"]).status).toBe(0);
-    const abandoned = readIntentRegistry(proj).find((e) => e.scope === "bugfix");
+    expect(util(["intent-birth", "--scope", "fix"]).status).toBe(0);
+    const abandoned = readIntentRegistry(proj).find((e) => e.scope === "fix");
     expect(abandoned?.status).toBe("in-flight");
   });
 });

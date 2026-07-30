@@ -248,13 +248,13 @@ Other:
 
 Examples:
   /amadeus feature                                Start a feature workflow
-  /amadeus Fix the login timeout bug              Auto-detected as bugfix scope
+  /amadeus Fix the login timeout bug              Auto-detected as fix scope
   /amadeus compose "harden the deploy pipeline"   Composer proposes a tailored plan
   /amadeus --migrate                              Preview migration from the default upstream workspace
   /amadeus                                        Resume or begin
   /amadeus --stage code-generation                Jump to code-generation stage
-  /amadeus --phase construction --scope bugfix    Jump to construction with bugfix scope
-  /amadeus --scope bugfix --depth comprehensive  Bugfix with comprehensive depth
+  /amadeus --phase construction --scope fix    Jump to construction with fix scope
+  /amadeus --scope fix --depth comprehensive  Fix with comprehensive depth
   /amadeus --depth minimal                       Change depth of active workflow
   /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
 
@@ -3084,7 +3084,7 @@ function countFilesByLang(
 // Recurse language counts into every non-excluded, non-dot top-level directory
 // (capped depth). Issue #840: the old walk covered only SCAN_SOURCE_DIRS, so a
 // codebase whose sources live elsewhere (packages/, this very repo) counted zero
-// files and fell through to Greenfield / Unknown, downgrading bugfix
+// files and fell through to Greenfield / Unknown, downgrading fix
 // reverse-engineering to SKIP. Dot-directories stay excluded — they are
 // config/harness space, and counting them would flip a harness-only empty
 // project to Brownfield. `topSet` is already SCAN_EXCLUDE-filtered by the caller.
@@ -5399,7 +5399,7 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
 
     // --- Build the proposed effective grid and validate STRICT --------------
     // Strictness is a DIFF against the pre-flip baseline: a stock scope may be
-    // BORN with structural advisories (e.g. bugfix's code-generation consumes
+    // BORN with structural advisories (e.g. fix's code-generation consumes
     // unit-of-work from the skipped units-generation - the scope author owns
     // that upstream work), and those must not veto an unrelated flip. What the
     // recompose validator hard-rejects is NEW starvation the flips introduce:

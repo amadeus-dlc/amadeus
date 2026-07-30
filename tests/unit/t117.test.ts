@@ -241,7 +241,7 @@ describe("t117 jump-direction delegation (migrated from t117-orchestrate-branche
   });
 
   // --- Test 4: jump to a SKIP-for-scope stage → error (verbatim resolve wording) ---
-  // state-mid-inception is bugfix scope; intent-capture is SKIP. The engine
+  // state-mid-inception is fix scope; intent-capture is SKIP. The engine
   // relays resolve's VERBATIM `is skipped for scope` message (amadeus-jump.ts:117-119).
   test("4: jump to SKIP-for-scope stage → error carrying resolve's verbatim wording", () => {
     const p = proj("state-mid-inception.md");

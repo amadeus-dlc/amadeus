@@ -2,7 +2,7 @@
 //
 // t54-workflow-audit-completeness.test.ts — SDK-harness port of
 // tests/e2e/t54-workflow-audit-completeness.sh (plan 10). Drives the real
-// `/amadeus --init --scope bugfix` on a fresh project through the Claude Agent SDK and
+// `/amadeus --init --scope fix` on a fresh project through the Claude Agent SDK and
 // asserts ONLY on deterministic surfaces — the on-disk audit.md structure (the
 // AI-DLC Audit Log header, the canonical **Event**:/**Timestamp**: field shapes,
 // the `---` block separators, ISO timestamps, no duplicate SESSION_STARTED) and
@@ -21,8 +21,8 @@
 // coverage: the field is gone from the engine entirely.
 //
 // THE JOURNEY (verified against the SHIPPED tool). `/amadeus --init --scope
-// bugfix` on a fresh `--no-amadeus-docs` project routes through
-// `amadeus-utility.ts init --scope bugfix` (SKILL.md). init bootstraps audit.md
+// fix` on a fresh `--no-amadeus-docs` project routes through
+// `amadeus-utility.ts init --scope fix` (SKILL.md). init bootstraps audit.md
 // with the `# AI-DLC Audit Log`
 // header (utility.ts:1777), then appends WORKFLOW_STARTED + the init-phase events
 // (PHASE_STARTED, STAGE_STARTED/COMPLETED ×3, WORKSPACE_*), each a canonical
@@ -55,7 +55,7 @@
 //       -> assertAuditEvent(r,"WORKFLOW_STARTED").
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
-//   - init dispatch:            SKILL.md -> `amadeus-utility.ts init --scope bugfix`
+//   - init dispatch:            SKILL.md -> `amadeus-utility.ts init --scope fix`
 //   - audit header bootstrap:   amadeus-utility.ts:1777 ("# AI-DLC Audit Log")
 //   - no bootstrap SESSION_STARTED: amadeus-utility.ts:1770-1774
 //   - WORKFLOW_STARTED emit:    amadeus-utility.ts:1784
@@ -90,7 +90,7 @@ function countEvent(events: string[], event: string): number {
   return events.filter((e) => e === event).length;
 }
 
-describe("t54 /amadeus --init --scope bugfix audit completeness (sdk)", () => {
+describe("t54 /amadeus --init --scope fix audit completeness (sdk)", () => {
   // -------------------------------------------------------------------------
   // Fresh project: the audit.md structure lands at explicit init. Assert the header,
   // canonical field shapes, separators, ISO timestamps, no duplicate
@@ -101,7 +101,7 @@ describe("t54 /amadeus --init --scope bugfix audit completeness (sdk)", () => {
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        const r = await driveAidlc("/amadeus --init --scope bugfix", {
+        const r = await driveAidlc("/amadeus --init --scope fix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,

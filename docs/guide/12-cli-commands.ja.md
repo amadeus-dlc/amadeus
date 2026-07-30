@@ -85,7 +85,7 @@ flowchart TD
 /amadeus feature
 /amadeus mvp
 /amadeus poc
-/amadeus bugfix
+/amadeus fix
 /amadeus refactor
 /amadeus infra
 /amadeus security-patch
@@ -96,7 +96,7 @@ flowchart TD
 **例:**
 
 ```
-/amadeus bugfix
+/amadeus fix
 > What would you like to fix?
 > The login API returns 500 when email contains a plus sign
 ```
@@ -114,13 +114,13 @@ flowchart TD
 /amadeus Fix the login timeout bug
 ```
 
-**挙動:** エンジンは説明内のキーワードを分析します(例: "fix" は bugfix を示唆)。明確にマッチした場合は、マッチしたスコープを示す 1 行の確認を尋ねます。豊富または未マッチな散文には、サイレントなデフォルトではなく compose の提案(下記 `/amadeus compose` 参照)が出ます。ワークフローが始まる前に、確認または上書きします。
+**挙動:** エンジンは説明内のキーワードを分析します(例: "fix" は fix を示唆)。明確にマッチした場合は、マッチしたスコープを示す 1 行の確認を尋ねます。豊富または未マッチな散文には、サイレントなデフォルトではなく compose の提案(下記 `/amadeus compose` 参照)が出ます。ワークフローが始まる前に、確認または上書きします。
 
 **例:**
 
-```
-/amadeus Fix the null pointer in ProfileSerializer
-> Detected scope: bugfix (Minimal depth, Minimal test strategy, 8 stages)
+```text
+/amadeus Fix the ProfileSerializer null pointer
+> Detected scope: fix (Minimal depth, Minimal test strategy, 7 stages)
 > Approve scope? [Yes / Change scope / Change depth / Change test strategy]
 ```
 
@@ -297,7 +297,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 **挙動:** ワークフローがアクティブな場合、ターゲットステージへジャンプします(間のステージを警告付きでスキップ)。ワークフローが存在しない場合は `--scope` と組み合わせられます。
 
 ```
-/amadeus --stage code-generation --scope bugfix
+/amadeus --stage code-generation --scope fix
 ```
 
 ---
@@ -345,7 +345,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 **構文:**
 
 ```
-/amadeus --scope bugfix
+/amadeus --scope fix
 /amadeus --scope enterprise
 ```
 
@@ -375,7 +375,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 
 ```
 /amadeus --depth minimal                            アクティブなワークフローの深度を変更
-/amadeus --scope bugfix --depth comprehensive        包括的な分析を伴う bugfix
+/amadeus --scope fix --depth comprehensive        包括的な分析を伴う fix
 /amadeus --stage code-generation --depth minimal     最小限の深度でジャンプ
 ```
 
@@ -409,7 +409,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 ```
 /amadeus --test-strategy minimal                         アクティブなワークフローの最小テスト
 /amadeus --depth standard --test-strategy minimal        フル成果物、最小テスト
-/amadeus --scope bugfix --test-strategy comprehensive    徹底的なテストを伴う bugfix
+/amadeus --scope fix --test-strategy comprehensive    徹底的なテストを伴う fix
 ```
 
 ---
@@ -537,7 +537,7 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 }
 ```
 
-**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。
+**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`fix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。
 
 **優先順位:** 明示的な CLI フラグ > キーワード検出 > `AMADEUS_DEFAULT_SCOPE` > ハードコードされたフォールバック。
 

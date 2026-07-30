@@ -1,8 +1,8 @@
-// covers: subcommand:amadeus-utility:init, scope:bugfix
+// covers: subcommand:amadeus-utility:init, scope:fix
 //
 // t55-workflow-init-then-resume.test.ts — SDK-harness port of
 // tests/e2e/t55-workflow-init-then-resume.sh (plan 8). Drives TWO real
-// sequential SDK turns — `/amadeus --init` then `/amadeus --scope bugfix` — against
+// sequential SDK turns — `/amadeus --init` then `/amadeus --scope fix` — against
 // ONE fresh project and asserts ONLY on deterministic surfaces (the on-disk
 // state-file fields/stage markers across both turns, the audit growth) — NEVER on
 // assistantText. The subject is SESSION CONTINUITY: the 2nd turn RESUMES from the
@@ -11,14 +11,14 @@
 // ⛔ TRAP 2 (no headless auto-approve). The phase-2 subject is
 // RESUME continuity (the 2nd session reads the 1st session's state and the
 // workflow advances), which is deterministic at the resume DISPATCH: a `--scope
-// bugfix` on a project that ALREADY has state does NOT re-init (init refuses on
+// fix` on a project that ALREADY has state does NOT re-init (init refuses on
 // existing state without --force, utility.ts:1746) — it resumes. We drive the two
 // turns, stop each at its first deterministic landed signal, and assert the
 // continuity on disk: the 1st turn's init stages survive into the 2nd turn's
 // state, and the audit GREW across the two sessions. The DEEP multi-stage
 // progression (the .sh's test 4 ">4 completed" / test 5
-// "bugfix stages progressed") is the live tui bugfix journey's surface
-// (t-tui-t50-bugfix-scope, gate-by-gate to Completed>=5); deep
+// "fix stages progressed") is the live tui fix journey's surface
+// (t-tui-t50-fix-scope, gate-by-gate to Completed>=5); deep
 // progression is NOT chased here (the moving-target lesson).
 //
 // THE ONE DROPPED .sh ASSERTION (faithfully, not weakened). The .sh's test 8
@@ -28,11 +28,11 @@
 //
 // THE JOURNEY (verified against the SHIPPED tool). Turn 1 `/amadeus --init` on a
 // fresh `--no-amadeus-docs` project writes amadeus-state.md with the 3 init stages [x]
-// + audit WORKFLOW_STARTED/init events. Turn 2 `/amadeus --scope bugfix` on the
+// + audit WORKFLOW_STARTED/init events. Turn 2 `/amadeus --scope fix` on the
 // now-stateful project resumes (no re-init — init would refuse without --force):
 // the 1st turn's init [x] markers persist, and the audit grows with the 2nd
-// session's events. (We use the explicit `--scope bugfix` flag rather than a bare
-// `bugfix` to avoid the workshop-env disambiguation gate — t29 case 3's surface,
+// session's events. (We use the explicit `--scope fix` flag rather than a bare
+// `fix` to avoid the workshop-env disambiguation gate — t29 case 3's surface,
 // not this test's; SKILL.md:105 "explicit CLI flag wins".)
 //
 // ASSERTION MAP (.sh test -> deterministic SDK surface, equal-or-stronger):
@@ -48,7 +48,7 @@
 //                                           the init [x] markers PERSIST, proving
 //                                           resume not re-init: STRONGER than a byte
 //                                           count, which a re-init would also satisfy).
-//   4/5 (>4 completed / bugfix stages progressed): NOT asserted — those needed
+//   4/5 (>4 completed / fix stages progressed): NOT asserted — those needed
 //       a full workflow run; deep progression is the tui t50 surface.
 //       The continuity floor (init stages survive into turn 2) IS asserted.
 //   8 (state field): DROPPED, the field is gone from the engine (see header).
@@ -93,11 +93,11 @@ const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
 
-describe("t55 /amadeus birth (--scope bugfix) then resume continuity (sdk)", () => {
+describe("t55 /amadeus birth (--scope fix) then resume continuity (sdk)", () => {
   // -------------------------------------------------------------------------
   // Two sequential turns against one fresh project: turn 1 births the workflow
   // from a scope (P4 retired --init — a scope on a clean workspace auto-births),
-  // turn 2 a --scope bugfix turn RESUMES from it (init [x] markers persist, audit
+  // turn 2 a --scope fix turn RESUMES from it (init [x] markers persist, audit
   // grows). Deep progression is the tui t50 journey's surface.
   // -------------------------------------------------------------------------
   test(
@@ -113,13 +113,13 @@ describe("t55 /amadeus birth (--scope bugfix) then resume continuity (sdk)", () 
         const statePath = () => stateFilePathFor(proj);
         const auditDir = () => auditDirFor(proj);
 
-        // ---- Turn 1: /amadeus --scope bugfix (BIRTH the workflow) ----
+        // ---- Turn 1: /amadeus --scope fix (BIRTH the workflow) ----
         // P4 retired `/amadeus --init`: on a fresh workspace the engine auto-births
         // the first intent from a resolved scope (the old --init had no scope and
         // now errors directing the user to a scope/description). A named scope on a
         // clean workspace NAMES intent-birth, which scaffolds state + marks the 3
         // init stages [x] — the birth this journey starts from.
-        const r1 = await driveAidlc("/amadeus --scope bugfix", {
+        const r1 = await driveAidlc("/amadeus --scope fix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -141,11 +141,11 @@ describe("t55 /amadeus birth (--scope bugfix) then resume continuity (sdk)", () 
         const initEventCount = eventsAfterInit.length;
         expect(initEventCount).toBeGreaterThan(0);
 
-        // ---- Turn 2: /amadeus --scope bugfix (RESUME from the init state) ----
+        // ---- Turn 2: /amadeus --scope fix (RESUME from the init state) ----
         // A --scope on an already-stateful project resumes (init refuses re-init
         // without --force, utility.ts:1746). Stop at the first orchestrator
         // directive (run-stage) so we don't chase the LLM-paced continuation.
-        const r2 = await driveAidlc("/amadeus --scope bugfix", {
+        const r2 = await driveAidlc("/amadeus --scope fix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,

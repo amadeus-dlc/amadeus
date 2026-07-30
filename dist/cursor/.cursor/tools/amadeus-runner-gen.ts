@@ -405,13 +405,13 @@ function handleCheck(): void {
 // =========================================================================
 
 // The first batch of scopes that ship a typeable runner skill. Author-decided
-// (high-traffic + the named bugfix): `bugfix` (the spec's headline example),
+// (high-traffic + the named fix): `fix` (the spec's headline example),
 // `feature` (the highest-traffic standard greenfield scope), `mvp` (the common
 // greenfield starting point), and `security-patch` (high-value incremental).
 // Every other scope still runs via `/amadeus --scope <name>` — runners are
 // packaging, not definition. Pass `--all` to emit a runner per shipped scope.
 export const FIRST_BATCH: readonly string[] = [
-  "bugfix",
+  "fix",
   "feature",
   "mvp",
   "security-patch",

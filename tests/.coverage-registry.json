@@ -300,7 +300,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -4373,62 +4373,6 @@
     },
     {
       "unitClass": "scope",
-      "unitId": "bugfix",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/e2e/t-tui-kiro-bugfix-scope.serial.test.ts",
-          "mechanism": "tui"
-        },
-        {
-          "file": "tests/e2e/t-tui-t139-revision-loop-idempotency.serial.test.ts",
-          "mechanism": "tui"
-        },
-        {
-          "file": "tests/e2e/t-tui-t50-bugfix-scope.serial.test.ts",
-          "mechanism": "tui"
-        },
-        {
-          "file": "tests/e2e/t52-workflow-state-progression.test.ts",
-          "mechanism": "sdk"
-        },
-        {
-          "file": "tests/e2e/t53.test.ts",
-          "mechanism": "sdk"
-        },
-        {
-          "file": "tests/e2e/t55-workflow-init-then-resume.test.ts",
-          "mechanism": "sdk"
-        },
-        {
-          "file": "tests/e2e/t59-workflow-depth-override.test.ts",
-          "mechanism": "sdk"
-        },
-        {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
-          "mechanism": "cli"
-        },
-        {
-          "file": "tests/integration/t130-scope-runners.test.ts",
-          "mechanism": "cli"
-        },
-        {
-          "file": "tests/integration/t143-scope-start-birth.test.ts",
-          "mechanism": "sdk"
-        },
-        {
-          "file": "tests/integration/t30-scope-stage-mapping.test.ts",
-          "mechanism": "none"
-        },
-        {
-          "file": "tests/smoke/t130-scope-runners.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "scope",
       "unitId": "chore",
       "minMechanism": "none",
       "coveredBy": [
@@ -4463,6 +4407,62 @@
         {
           "file": "tests/integration/t130-scope-runners.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/smoke/t130-scope-runners.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "fix",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/e2e/t-tui-kiro-fix-scope.serial.test.ts",
+          "mechanism": "tui"
+        },
+        {
+          "file": "tests/e2e/t-tui-t139-revision-loop-idempotency.serial.test.ts",
+          "mechanism": "tui"
+        },
+        {
+          "file": "tests/e2e/t-tui-t50-fix-scope.serial.test.ts",
+          "mechanism": "tui"
+        },
+        {
+          "file": "tests/e2e/t52-workflow-state-progression.test.ts",
+          "mechanism": "sdk"
+        },
+        {
+          "file": "tests/e2e/t53.test.ts",
+          "mechanism": "sdk"
+        },
+        {
+          "file": "tests/e2e/t55-workflow-init-then-resume.test.ts",
+          "mechanism": "sdk"
+        },
+        {
+          "file": "tests/e2e/t59-workflow-depth-override.test.ts",
+          "mechanism": "sdk"
+        },
+        {
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t130-scope-runners.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t143-scope-start-birth.test.ts",
+          "mechanism": "sdk"
+        },
+        {
+          "file": "tests/integration/t30-scope-stage-mapping.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/smoke/t130-scope-runners.test.ts",
@@ -4959,7 +4959,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         },
         {
@@ -6101,7 +6101,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/e2e/t65-construction-worktrees-bugfix.test.ts",
+          "file": "tests/e2e/t65-construction-worktrees-fix.test.ts",
           "mechanism": "cli"
         },
         {

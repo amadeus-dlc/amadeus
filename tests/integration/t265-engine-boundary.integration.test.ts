@@ -279,7 +279,7 @@ function seedFinalCompletionProject(
   project = createTestProject();
   seedStateFile(
     project,
-    join(FIXTURES_DIR, "state-bugfix-final-construction.md"),
+    join(FIXTURES_DIR, "state-fix-final-construction.md"),
   );
   const statePath = seededStateFile(project);
   writeFileSync(

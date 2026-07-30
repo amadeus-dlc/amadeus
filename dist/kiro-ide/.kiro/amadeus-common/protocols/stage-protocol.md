@@ -226,14 +226,14 @@ Where `S` = total stages for the current scope. Reference scope stage counts:
 |-------|---------------------|
 | mvp | ~18 |
 | poc | ~8 |
-| bugfix | ~8 |
+| fix | 7 |
 | chore | ~5 |
 | refactor | ~9 |
 | infra | ~13 |
 | security-patch | ~10 |
 
 Example (enterprise): "Progress: 13/32 overall | 3/7 IDEATION stages complete. Next: Approval & Handoff"
-Example (bugfix): "Progress: 5/8 in-scope stages complete (7/32 overall) | 2/3 CONSTRUCTION. Next: Build & Test"
+Example (fix): "Progress: 5/8 in-scope stages complete (7/32 overall) | 2/3 CONSTRUCTION. Next: Build & Test"
 
 Count only stages in the current phase (INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, or OPERATION). Include both completed and skipped stages in the numerator.
 
@@ -287,7 +287,7 @@ Stage files list **topic areas and example questions** — they are guidance, no
 | Comprehensive | ~8-12+ per stage | Cover all topic areas in depth. Generate additional context-aware questions beyond the reference set — edge cases, compliance, scale, failure modes, cross-cutting concerns. Actively seek unknowns the user hasn't considered. |
 
 **These are guidelines, not hard caps.** The agent MUST use judgment:
-- A Minimal bugfix with a vague one-line description warrants more questions — don't blindly cap at 2.
+- A Minimal fix with a vague one-line description warrants more questions — don't blindly cap at 2.
 - A Comprehensive enterprise feature with crystal-clear requirements warrants fewer — don't pad with noise.
 - Prior stage outputs reduce what needs asking. If requirements-analysis already captured NFR targets, construction stages shouldn't re-ask.
 - Follow-up questions are always justified regardless of depth — ambiguity must be resolved.
@@ -669,25 +669,26 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 | feature | Standard | All 32 |
 | mvp | Standard | ~25 (skip late Operation) |
 | poc | Minimal | ~8 (Ideation + core Inception) |
-| bugfix | Minimal | ~8 (targeted) |
+| fix | Minimal | 7 (targeted) |
 | chore | Minimal | ~5 (tweak-sized: init + code-gen + build) |
 | refactor | Minimal | ~9 (targeted) |
 | infra | Standard | ~13 (infra-focused) |
 | security-patch | Minimal | ~10 (security-focused) |
 
 ### Depth levels
-- **Minimal** (poc, bugfix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
+
+- **Minimal** (poc, fix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
 - **Standard** (feature, mvp, infra): ~5-8 questions per stage, full artifacts at moderate detail
 - **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute
 
 The orchestrator determines appropriate depth based on scope selection. Users can override at three points:
-1. Via the `--depth` flag: `/amadeus --scope bugfix --depth comprehensive` or `/amadeus --depth minimal`
+1. Via the `--depth` flag: `/amadeus --scope fix --depth comprehensive` or `/amadeus --depth minimal`
 2. At scope confirmation — choose "Change depth"
 3. At any approval gate — request a different depth level
 
 ### Depth-Level Examples
 
-**Minimal project** (e.g., bugfix, single-page internal tool):
+**Minimal project** (e.g., fix, single-page internal tool):
 - Questions: ~2-4 per stage, essentials only, skip what's inferable from code/context
 - Requirements Analysis: 5-10 requirements, brief descriptions, minimal NFR coverage
 - Application Design: Single component diagram, basic data model, no ADRs needed
@@ -716,7 +717,7 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 - Happy-path floor: every component gets at least 1 happy-path unit test regardless of requirement mapping
 - Unit tests ONLY — skip integration, E2E, performance, security
 - ~5-15 tests total for a typical project
-- Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical bugfix)
+- Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical fix)
 
 **Standard — per-component model:**
 - 5-8 tests per component
@@ -735,7 +736,7 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 ```
 /amadeus --test-strategy minimal                          Minimal testing for active workflow
 /amadeus --depth standard --test-strategy minimal         Full artifacts, minimal tests
-/amadeus --scope bugfix --test-strategy comprehensive     Bugfix with thorough testing
+/amadeus --scope fix --test-strategy comprehensive     Bugfix with thorough testing
 ```
 
 ---
@@ -748,7 +749,7 @@ Key terms used throughout AI-DLC documentation:
 |------|-----------|
 | **Phase** | Top-level grouping: INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, OPERATION |
 | **Stage** | A discrete step within a phase (e.g., Intent Capture, Requirements Analysis, Code Generation, Observability Setup) |
-| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.kiro/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, bugfix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
+| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.kiro/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, fix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
 | **Bolt** | One execution of Construction stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run **once** after all Bolts complete, not per-Bolt. The first Bolt is the **walking skeleton** — the thinnest end-to-end slice that proves the architecture. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
 | **Walking skeleton** | The first Bolt in Construction — smallest end-to-end slice that exercises every integration point. Always gated and interactive so humans can confirm the shape before the rest of Construction runs. |
 | **Ladder prompt** | The single prompt that fires after the walking-skeleton gate asking the user to choose between "continue autonomously" and "gate every Bolt". The choice is recorded in state (`Construction Autonomy Mode`) and governs the rest of Construction. |

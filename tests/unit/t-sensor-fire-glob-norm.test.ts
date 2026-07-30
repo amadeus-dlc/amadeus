@@ -110,8 +110,8 @@ function makeProjectActive(): string {
     [
       "# AI-DLC State (glob-norm fixture)",
       "",
-      "- **Workflow**: bugfix",
-      "- **Scope**: bugfix",
+      "- **Workflow**: fix",
+      "- **Scope**: fix",
       "- **Phase**: inception",
       "- **Current Stage**: requirements-analysis",
       "",
@@ -132,7 +132,7 @@ function makeProjectActive(): string {
       timestamp: "2026-07-11T10:00:00Z",
       heading: "Workflow Start",
       event: "WORKFLOW_STARTED",
-      fields: { Scope: "bugfix" },
+      fields: { Scope: "fix" },
     })}\n`,
     "utf-8",
   );

@@ -133,7 +133,7 @@ function seedCompletedIntent(proj: string, label: string): string {
   packagedTool(proj, "amadeus-utility.ts", [
     "intent-birth",
     "--scope",
-    "bugfix",
+    "fix",
     "--arguments",
     `${label} fixture`,
     "--label",
@@ -243,7 +243,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         const b1 = codexTurn(
           proj,
           home,
-          'Use the $amadeus skill. Run exactly `bun .codex/tools/amadeus-orchestrate.ts next --scope bugfix "fix a parser regression"` and follow the returned directive.',
+          'Use the $amadeus skill. Run exactly `bun .codex/tools/amadeus-orchestrate.ts next --scope fix "fix a parser regression"` and follow the returned directive.',
         );
         expect(b1.rc, `${b1.stdout}\n${b1.stderr}`).toBe(0);
         const session = sessionIdOf(b1.stderr);

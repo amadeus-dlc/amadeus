@@ -88,11 +88,11 @@ my-project/
 
 ```
 ▸ This looks like new work, separate from "inventory-api". Start a second intent?
-  (1) Yes — start a second intent (scope: bugfix)
+  (1) Yes — start a second intent (scope: fix)
   (2) No — this continues the inventory-api work
 ```
 
-- **Yes** を選ぶと、AI-DLC は 2 つ目の intent(ここでは `bugfix`)を誕生させ、それに切り替え、最初のステージを開始します。あなたの inventory-api の intent は手つかずです — そのレコードディレクトリ、状態、進捗はすべて、あなたが離れた場所に正確に保存されています。
+- **Yes** を選ぶと、AI-DLC は 2 つ目の intent(ここでは `fix`)を誕生させ、それに切り替え、最初のステージを開始します。あなたの inventory-api の intent は手つかずです — そのレコードディレクトリ、状態、進捗はすべて、あなたが離れた場所に正確に保存されています。
 - **No** を選ぶと、AI-DLC はあなたのメッセージをアクティブな intent の一部として扱います。
 
 AI-DLC は尋ねずに 2 つ目の intent を誕生させることは決してありません。プロンプトが本当に現在の作業のフォローアップ — ゲートへの回答、要求の訂正 — であれば、それはアクティブな intent にとどまります。提案は、作業が明らかに別物であるときにのみ現れます。

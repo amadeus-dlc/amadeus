@@ -71,7 +71,7 @@ const APPROVE_ALL = {
 };
 
 const STOCK_SCOPES = new Set([
-  "bugfix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
+  "fix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
   "security-patch", "workshop",
 ]);
 

@@ -36,12 +36,12 @@
 //
 // PARITY NOTES (every .sh `ok` line maps to an expect() below; STRONGER adds noted):
 //   §1 scope-table emission shape (5 asserts) -> Tests 1-5:
-//     - BEGIN marker / END marker / "| Scope" header / "| bugfix" row /
+//     - BEGIN marker / END marker / "| Scope" header / "| fix" row /
 //       "| workshop" row — all preserved as stdout .toContain() + STRONGER
 //       res.status===0 pin (the .sh discarded $? on the bare emission call).
 //   §2 deterministic + alphabetical (2 asserts) -> Tests 6-7:
 //     - two emissions byte-equal (Test 6); row names == alphabetical EXPECTED
-//       "bugfix enterprise feature infra mvp poc refactor security-patch
+//       "fix enterprise feature infra mvp poc refactor security-patch
 //       workshop" (Test 7), parsed by the same `^| <name>` regex the .sh awk'd.
 //   §3 row count == scopes/*.md count (1 assert) -> Test 8: the .sh pinned
 //       rows matching `^| <name>` === `ls scopes/amadeus-*.md | wc -l`. v0.6.0
@@ -54,13 +54,13 @@
 //   §4 --check clean exit 0 on real SKILL.md (1 assert) -> Test 9: res.status===0
 //       (no AMADEUS_SKILL_MD_PATH override -> the shipped SKILL.md).
 //   §5 --check exit 1 on drifted SKILL.md (2 asserts) -> Tests 10-11: copy the
-//       real SKILL.md to a temp file, sed the bugfix row to bogus, point
+//       real SKILL.md to a temp file, sed the fix row to bogus, point
 //       AMADEUS_SKILL_MD_PATH at it; res.status===1 (Test 10) + stderr contains
 //       "out of date" (Test 11). Never mutates the real SKILL.md (env seam).
 //   §6 --check exit 1 on missing markers (1 assert) -> Test 12: marker-less temp
 //       file -> res.status===1 AND stderr "missing scope-table markers"
 //       (the .sh AND'd rc==1 with the grep; both asserted here).
-//   §7 keyword matching (7 asserts) -> Tests 13-19: fix->bugfix, refactor,
+//   §7 keyword matching (7 asserts) -> Tests 13-19: fix->fix, refactor,
 //       CVE->security-patch, workshop, spike->poc, mvp, infra — each asserts
 //       JSON-ack "scope" AND audit **Detected scope** (STRONGER: the .sh only
 //       compared inferScopeFromText().scope; we also pin the audit side effect).
@@ -73,7 +73,7 @@
 //       flow quickly today" -> feature.
 //   §10 empty input (1 assert) -> Test 24: --input "" -> feature.
 //   §11 detect-scope --from-text emits SCOPE_DETECTED keyword + Matched keywords
-//       (2 asserts) -> Tests 25-26: scope=bugfix + Source=keyword (Test 25,
+//       (2 asserts) -> Tests 25-26: scope=fix + Source=keyword (Test 25,
 //       STRONGER: exact block-scoped field values + event count===1) and
 //       "Matched keywords" row present (Test 26).
 //   §12 backward-compat --scope path (1 assert) -> Test 27: detect-scope --scope
@@ -272,7 +272,7 @@ function rowNames(tableOut: string): string[] {
 }
 
 const EXPECTED_ROW_ORDER =
-  "bugfix chore enterprise feature infra mvp poc refactor security-patch workshop";
+  "chore enterprise feature fix infra mvp poc refactor security-patch workshop";
 
 // ============================================================
 // scope-table — emission shape (.sh §1)
@@ -294,8 +294,8 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
     expect(scopeTable().out).toContain("| Scope");
   });
 
-  test("4: scope-table output includes bugfix row", () => {
-    expect(scopeTable().out).toContain("| bugfix");
+  test("4: scope-table output includes fix row", () => {
+    expect(scopeTable().out).toContain("| fix");
   });
 
   test("5: scope-table output includes workshop row", () => {
@@ -357,7 +357,7 @@ describe("t67 scope-table --check drift guard (migrated from t67 §4-6)", () => 
     tempFiles.push(drift);
     let raw = readFileSync(SKILL, "utf-8");
     raw = raw.replace(
-      "| bugfix         | Minimal",
+      "| fix            | Minimal",
       "| bogus          | Minimal",
     );
     writeFileSync(drift, raw, "utf-8");
@@ -370,7 +370,7 @@ describe("t67 scope-table --check drift guard (migrated from t67 §4-6)", () => 
     tempFiles.push(drift);
     let raw = readFileSync(SKILL, "utf-8");
     raw = raw.replace(
-      "| bugfix         | Minimal",
+      "| fix            | Minimal",
       "| bogus          | Minimal",
     );
     writeFileSync(drift, raw, "utf-8");
@@ -408,7 +408,7 @@ describe("t67 detect-scope --from-text keyword inference (migrated from t67 §7)
     );
   };
 
-  test('13: "fix the login bug" -> bugfix', keywordCase("fix the login bug", "bugfix"));
+  test('13: "fix the login bug" -> fix', keywordCase("fix the login bug", "fix"));
   test('14: "refactor this code" -> refactor', keywordCase("refactor this code", "refactor"));
   test('15: "CVE patch" -> security-patch', keywordCase("CVE patch", "security-patch"));
   test('16: "run workshop today" -> workshop', keywordCase("run workshop today", "workshop"));
@@ -432,8 +432,8 @@ describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §
     );
   };
 
-  test('20: "debug this issue" -> feature (word-boundary, no bugfix)', fallbackCase("debug this issue", "feature"));
-  test('21: "fixture scope testing" -> feature (word-boundary, no bugfix)', fallbackCase("fixture scope testing", "feature"));
+  test('20: "debug this issue" -> feature (word-boundary, no fix)', fallbackCase("debug this issue", "feature"));
+  test('21: "fixture scope testing" -> feature (word-boundary, no fix)', fallbackCase("fixture scope testing", "feature"));
 
   // §8b multi-word keyword matches despite extra whitespace.
   test('22: "minimum  viable" (double-space) -> mvp', () => {
@@ -475,15 +475,15 @@ describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §
 // ============================================================
 
 describe("t67 detect-scope audit + backward-compat + collision (migrated from t67 §11-13)", () => {
-  // §11: --from-text keyword match emits SCOPE_DETECTED with scope=bugfix,
+  // §11: --from-text keyword match emits SCOPE_DETECTED with scope=fix,
   // Source=keyword, and a Matched keywords row.
-  test("25: --from-text emits SCOPE_DETECTED scope=bugfix + Source=keyword", () => {
+  test("25: --from-text emits SCOPE_DETECTED scope=fix + Source=keyword", () => {
     const p = proj();
     const r = detectFromText("fix the login bug", p);
     expect(r.status).toBe(0);
     const f = readAudit(p);
     expect(auditEventCount(f, "SCOPE_DETECTED")).toBe(1); // STRONGER: exact count
-    expect(auditField(f, "SCOPE_DETECTED", "Detected scope")).toBe("bugfix");
+    expect(auditField(f, "SCOPE_DETECTED", "Detected scope")).toBe("fix");
     expect(auditField(f, "SCOPE_DETECTED", "Source")).toBe("keyword");
   });
 

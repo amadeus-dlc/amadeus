@@ -54,11 +54,11 @@
 //     already-Completed Status would make that path idempotent too; this test
 //     would not break (it asserts only the approve seam).
 //
-// TECHNIQUE: invariant. Drive the SHORTEST scope (bugfix, 6 EXECUTE stages) from
+// TECHNIQUE: invariant. Drive the SHORTEST scope (fix, 6 EXECUTE stages) from
 // init to completion with NO claude — `amadeus-utility.ts init` to bootstrap, then
 // gate-start -> approve per remaining stage (approve auto-advances; the final
 // approve reaches handleCompleteWorkflow). Same seam t51 uses. Then parse the
-// resulting audit.md and assert on the FILE bytes (never prose). bugfix has 3
+// resulting audit.md and assert on the FILE bytes (never prose). fix has 3
 // PHASE_VERIFIED (initialization, inception, construction); we assert the FINAL
 // phase's terminal ordering and the singleton WORKFLOW_COMPLETED.
 
@@ -144,21 +144,21 @@ function countEvent(seq: string[], type: string): number {
   return seq.filter((e) => e === type).length;
 }
 
-// Drive a complete bugfix workflow once; return the project dir (audit is read
+// Drive a complete fix workflow once; return the project dir (audit is read
 // from the born intent's shards via readAllAuditShards(proj)). Bootstrap via
 // init (emits WORKFLOW_STARTED + init phase + 2x PHASE_SKIPPED and pre-completes
 // the 3 init stages), then walk the remaining EXECUTE stages.
-function driveBugfixToCompletion(): { proj: string } {
+function driveFixToCompletion(): { proj: string } {
   const proj = createTestProject();
   const init = run(
     UTIL,
-    ["init", "--scope", "bugfix"],
+    ["init", "--scope", "fix"],
     proj,
     { AMADEUS_WORKFLOW_INTENT: "t113 terminal-ordering test" },
   );
   expect(init.status).toBe(0);
 
-  // bugfix post-init EXECUTE stages, in order (reverse-engineering is
+  // fix post-init EXECUTE stages, in order (reverse-engineering is
   // SKIP-overridden on greenfield; init pre-completes the 3 init stages).
   walkStage("requirements-analysis", proj);
   walkStage("code-generation", proj);
@@ -172,18 +172,18 @@ afterAll(() => {
   for (const p of projects) cleanupTestProject(p);
 });
 
-// Each `bun <tool>.ts` cold-start costs ~hundreds of ms and a full bugfix drive
+// Each `bun <tool>.ts` cold-start costs ~hundreds of ms and a full fix drive
 // is ~9 spawns; driving once per test blows bun:test's default 5s per-test
 // timeout. So drive the workflow ONCE per describe in a beforeAll (the walk is
 // deterministic) and share the resulting audit across the assertions. Generous
 // explicit timeouts on the drives keep this honest on a cold/loaded machine.
 const DRIVE_TIMEOUT_MS = 60_000;
 
-describe("complete-workflow terminal-event ordering (bugfix, no claude)", () => {
+describe("complete-workflow terminal-event ordering (fix, no claude)", () => {
   let seq: string[];
 
   beforeAll(() => {
-    const { proj } = driveBugfixToCompletion();
+    const { proj } = driveFixToCompletion();
     projects.push(proj);
     seq = eventSequence(proj);
   }, DRIVE_TIMEOUT_MS);
@@ -222,7 +222,7 @@ describe("complete-workflow terminal-event ordering (bugfix, no claude)", () => 
   });
 
   test("the FINAL phase's closure ordering holds: the last PHASE_VERIFIED is immediately followed by WORKFLOW_COMPLETED, with PHASE_COMPLETED before it", () => {
-    // bugfix crosses 3 phase boundaries -> 3 PHASE_VERIFIED / 3 PHASE_COMPLETED.
+    // fix crosses 3 phase boundaries -> 3 PHASE_VERIFIED / 3 PHASE_COMPLETED.
     // We pin the FINAL phase's ordering specifically (the others are mid-stream
     // boundaries emitted by handleAdvance; this one is the terminal handler).
     expect(countEvent(seq, "PHASE_VERIFIED")).toBe(3);
@@ -244,7 +244,7 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
   let proj: string;
 
   beforeAll(() => {
-    const driven = driveBugfixToCompletion();
+    const driven = driveFixToCompletion();
     proj = driven.proj;
     projects.push(proj);
   }, DRIVE_TIMEOUT_MS);

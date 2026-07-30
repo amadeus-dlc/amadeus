@@ -30,7 +30,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 チームがまず制御したいのは、Construction がどれだけの手取り足取りを要求するかです。同梱のデフォルトは、あなたが `packages/framework/core/memory/org.md` の `## Walking Skeleton` 見出しの下に執筆する org ルール(`org.md:28-42`)に存在します。フレームワークのスタンスとして読んでください:
 
 - グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独・ゲート付きで、残りの Bolt が実行される前にユーザーがそれを承認します。
-- インクリメンタルなスコープ — `bugfix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
+- インクリメンタルなスコープ — `fix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
 - Bolt 1 の出荷後、**ラダープロンプト** が一度発火します: 「残りの Bolt はどう実行しますか?」に2つの選択肢 — 自律的に続行、またはすべての Bolt をゲート。選ばれた回答は intent の `amadeus-state.md`(そのレコードディレクトリ配下)に `Construction Autonomy Mode` として永続化されます。エンジンはこのプロンプトを強制します: walking skeleton 完了後に付与が unset のままなら、`next` は次の Bolt を実行せずラダーを `ask` として再提示します。
 - `gated` が選ぶのは承認の **頻度** であって実行の形ではありません。`gated` でも並列バッチはスウォームとしてファンアウトし、エンジンは **バッチ末尾ゲート** — 完了したバッチ全体をカバーする1つの `ask`、`amadeus-bolt approve-batch --batch <n>` で解除 — で停止してから次のバッチを提示します。最終バッチにバッチ末尾ゲートは不要です: ステージ本体のゲートがそれを兼ねるため、ゲートが二重になることはありません。
 
@@ -75,7 +75,7 @@ checks have proven reliable.
 
 (残る2つの Construction ステージ `build-and-test` と `ci-pipeline` は、最後に全体に対して1回実行されるので、Unit ごとのファンアウトの一部ではありません。)
 
-**この並列面は `units-generation` が実行されるスコープ — `enterprise`、`feature`、`mvp`、`workshop` — にのみ存在します。** インクリメンタルなスコープ(`bugfix`、`chore`、`refactor`、`security-patch`)と `poc`/`infra` は `units-generation` を実行しないので、エッジブロックを生成せず、`bolt_dag` を持たず、スウォームがファンアウトするものが何もない単一パスで Construction を実行します。作業が真にマルチ Unit である場所でスウォームを形づくり、手放しの Construction をすべてのスコープではなくマルチ Unit のグリーンフィールドスコープの性質として扱ってください。
+**この並列面は `units-generation` が実行されるスコープ — `enterprise`、`feature`、`mvp`、`workshop` — にのみ存在します。** インクリメンタルなスコープ(`fix`、`chore`、`refactor`、`security-patch`)と `poc`/`infra` は `units-generation` を実行しないので、エッジブロックを生成せず、`bolt_dag` を持たず、スウォームがファンアウトするものが何もない単一パスで Construction を実行します。作業が真にマルチ Unit である場所でスウォームを形づくり、手放しの Construction をすべてのスコープではなくマルチ Unit のグリーンフィールドスコープの性質として扱ってください。
 
 ここでのハーネスのレバーは間接的ですが実在します: **あなたは `units-generation` が捉える依存構造を形づくることで、何が並列化されるかを形づくります。** クロス依存の少ない粗い Unit を好むチームガイダンスを執筆すると、より多くの Unit が同じバッチに入り並行実行されます。タイトで深く連鎖した依存は、作業を多数の小さなバッチへと直列化します。あなたはこれに、`units-generation` ステージの散文と、アーキテクトエージェントが分解時に読むルールを通じて影響を与えます — 分解そのものはエージェントが人間とともに行う知識の判断であり、それが書くトポロジーこそコンパイラがバッチに変えるものです。
 

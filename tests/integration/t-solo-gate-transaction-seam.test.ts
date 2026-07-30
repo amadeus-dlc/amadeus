@@ -311,7 +311,7 @@ describe("presence reservation state machine", () => {
 });
 
 // Stage frontmatter carries the STOCK scope vocabulary only; the composed
-// scope the fixture state declares (amadeus-feature) is resolved from the
+// scope the fixture state declares (self-feature) is resolved from the
 // compiled scope-grid via useRealScopeData above (#1497 FR-4b).
 const ROUTE_GRAPH: StageEntry[] = [
   {
@@ -407,7 +407,7 @@ function routeFixture(extraAudit: ReadonlyArray<{
   mkdirSync(join(record, "audit"), { recursive: true });
   writeFileSync(
     join(record, "amadeus-state.md"),
-    "# AI-DLC State\n\n- **Scope**: amadeus-feature\n- **Skeleton Stance**: off\n",
+    "# AI-DLC State\n\n- **Scope**: self-feature\n- **Skeleton Stance**: off\n",
   );
   writeFileSync(join(root, "amadeus", "active-space"), "default\n");
   writeFileSync(join(intents, "active-intent"), `${intent}\n`);

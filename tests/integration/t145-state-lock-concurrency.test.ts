@@ -34,7 +34,7 @@
 //     appendAuditEntry (no lock), so an in-transaction emit can't self-deadlock.
 //
 // FIXTURE DISCIPLINE: each test gets a fresh createTestProject() (temp dir with
-// amadeus-docs/) seeded by a REAL `amadeus-utility init --scope bugfix` run, so the
+// amadeus-docs/) seeded by a REAL `amadeus-utility init --scope fix` run, so the
 // state file is the genuine v7 template the handlers expect (Revision Count,
 // checkbox slugs, Scope, the lot). cleanup rm -rf's the temp dir; the audit
 // lock lives under tmpdir() and is asserted-then-removed (afterEach safety).
@@ -156,11 +156,11 @@ async function fireParallel(p: string, argSets: string[][]): Promise<number[]> {
 describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spawn)", () => {
   beforeEach(() => {
     proj = createTestProject();
-    // Seed a genuine v7 state file via the real init path (Scope=bugfix gives a
+    // Seed a genuine v7 state file via the real init path (Scope=fix gives a
     // running INCEPTION workflow at requirements-analysis with code-generation
     // next — the shape the gate handlers expect).
     const init = Bun.spawnSync({
-      cmd: [BUN, UTIL_TOOL, "init", "--scope", "bugfix", "--project-dir", proj],
+      cmd: [BUN, UTIL_TOOL, "init", "--scope", "fix", "--project-dir", proj],
       stdout: "ignore",
       stderr: "ignore",
       env: { ...process.env },

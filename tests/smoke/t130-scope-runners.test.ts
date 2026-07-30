@@ -1,11 +1,11 @@
-// covers: scope:bugfix, scope:feature, scope:mvp, scope:security-patch
+// covers: scope:fix, scope:feature, scope:mvp, scope:security-patch
 //
 // Structural-conformance port of tests/smoke/t130-scope-runners.sh (TAP plan
 // 24), mechanism = mixed. The .sh carried NO `# covers:` header (its subject is
 // the GENERATED scope-runner skills, and amadeus-runner-gen.ts enumerates no
 // registry unit of its own — confirmed: tests/.coverage-registry.json has no
 // function/subcommand id for amadeus-runner-gen). So this twin credits the four
-// `scope:` units it genuinely exercises — bugfix / feature / mvp / security-patch,
+// `scope:` units it genuinely exercises — fix / feature / mvp / security-patch,
 // the FIRST_BATCH the generator ships a runner for (the same four registered
 // scope units the feature-tier t130 twin credits; this smoke twin co-covers them
 // through their on-disk packaging surface, a DIFFERENT subject from the feature
@@ -23,7 +23,7 @@
 //     (d) it carries NO `hooks:` block (the six spine hooks live project-wide in
 //         settings.json post-move — Fork 2->B; a runner inherits, never copies),
 //     (e) the body is within the 500-line Agent-Skills ceiling.
-//   Plus 4 more: (f) bugfix's shell drives the engine with `--scope bugfix`,
+//   Plus 4 more: (f) fix's shell drives the engine with `--scope fix`,
 //   (g) `amadeus-runner-gen.ts scopes --check` is drift-clean, (h) a non-batch
 //   scope (`refactor`) has no runner dir, (i) the generator emits a runner for a
 //   newly-dropped scope file via the AMADEUS_SCOPES_DIR + `--all --out` env seams.
@@ -45,7 +45,7 @@
 //     process.exit drift contract and the env-seam isolation. spawnsShippedTool.
 //
 // SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-runner-gen.ts):
-//   :307 FIRST_BATCH = ["bugfix","feature","mvp","security-patch"] — the curated
+//   :307 FIRST_BATCH = ["fix","feature","mvp","security-patch"] — the curated
 //        set that ships a typeable runner; every other scope runs via --scope.
 //   :384 renderRunner(scope, description) — emits the SKILL.md body: `name:
 //        amadeus-<scope>` frontmatter, a `description: >` folded block, NO `hooks:`
@@ -65,7 +65,7 @@
 //   .sh "<scope>: has description"                  -> per-scope "description present"
 //   .sh "<scope>: carries no hooks: block"          -> per-scope "no hooks: block"
 //   .sh "<scope>: body <= 500 lines"                -> per-scope "body <= 500 lines"
-//   .sh "amadeus-bugfix: shell drives --scope bugfix" -> "bugfix runner drives the engine with --scope bugfix"
+//   .sh "amadeus-fix: shell drives --scope fix" -> "fix runner drives the engine with --scope fix"
 //   .sh "scopes --check is drift-clean"             -> CLI "scopes --check exits 0 on the shipped tree"
 //   .sh "non-batch scope (refactor) has no runner"  -> "non-batch scope refactor ships no runner dir"
 //   .sh "generator emits a runner for a new scope"  -> CLI "AMADEUS_SCOPES_DIR + --all --out emits a runner for a dropped scope file"
@@ -170,15 +170,15 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
 
   // ===========================================================================
   // The shell drives the engine with the baked scope (1 test).
-  // Spot-check bugfix carries the engine forwarding-loop call with its scope —
-  // the .sh's substring grep for "amadeus-orchestrate.ts next --scope bugfix".
+  // Spot-check fix carries the engine forwarding-loop call with its scope —
+  // the .sh's substring grep for "amadeus-orchestrate.ts next --scope fix".
   // ===========================================================================
-  test("amadeus-bugfix: shell drives the engine with --scope bugfix [.sh test f]", () => {
-    const body = readFileSync(runnerPath("bugfix"), "utf-8");
-    expect(body).toContain("amadeus-orchestrate.ts next --scope bugfix");
+  test("amadeus-fix: shell drives the engine with --scope fix [.sh test f]", () => {
+    const body = readFileSync(runnerPath("fix"), "utf-8");
+    expect(body).toContain("amadeus-orchestrate.ts next --scope fix");
     // STRONGER: the generator renders the same forwarding-loop call.
-    const rendered = renderRunner("bugfix", DISCOVERED.bugfix?.description ?? "");
-    expect(rendered).toContain("amadeus-orchestrate.ts next --scope bugfix");
+    const rendered = renderRunner("fix", DISCOVERED.fix?.description ?? "");
+    expect(rendered).toContain("amadeus-orchestrate.ts next --scope fix");
   });
 
   // ===========================================================================
@@ -221,7 +221,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
     const tmpOut = mkdtempSync(join(tmpdir(), "t130-out-"));
     tempDirs.push(tmpScopes, tmpOut);
 
-    // Byte-for-byte the .sh's hotfix heredoc (:82-92): a leaner-than-bugfix
+    // Byte-for-byte the .sh's hotfix heredoc (:82-92): a leaner-than-fix
     // urgent-patch scope file with a name/description the generator reads.
     writeFileSync(
       join(tmpScopes, "amadeus-hotfix.md"),
@@ -234,7 +234,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
         "description: Urgent production patch",
         "---",
         "# hotfix scope",
-        "A leaner-than-bugfix urgent patch path.",
+        "A leaner-than-fix urgent patch path.",
         "",
       ].join("\n"),
       "utf-8",

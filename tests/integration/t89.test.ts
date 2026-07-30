@@ -134,11 +134,10 @@ afterEach(() => {
 // =========================================================================
 
 describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () => {
-  // Case 1 (.sh:64-66): basic-import — code-generation resolves 3 sensors
-  // (linter, type-check + answer-evidence since the E-OC1 evidence guard).
-  test("basic-import: code-generation has 3 resolved sensors", () => {
+  // Case 1 (.sh:64-66): basic-import — code-generation resolves 4 sensors.
+  test("basic-import: code-generation has 4 resolved sensors", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
-    expect(stageBySlug(stages, "code-generation").sensors_applicable).toHaveLength(3);
+    expect(stageBySlug(stages, "code-generation").sensors_applicable).toHaveLength(4);
   });
 
   // Case 2 (.sh:68-70): resolved entries carry id and .claude/... path.
@@ -338,12 +337,12 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
     expect(keys[idx + 1]).toBe("sensors_applicable");
   });
 
-  // Case 19 (.sh:230-241): per-stage matrix — code-generation=3, build-and-test=4,
+  // Case 19 (.sh:230-241): per-stage matrix — code-generation=4, build-and-test=4,
   // workspace-scaffold=0 (initialization stays sensors: [] — E-APG-AD-DEV
   // re-ruling (i): 29 participating stages, init 3 excluded), functional-design=5.
-  test("per-stage matrix: CG=3, BT=4, WS=0, FD=5", () => {
+  test("per-stage matrix: CG=4, BT=4, WS=0, FD=5", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
-    expect(stageBySlug(stages, "code-generation").sensors_applicable.length).toBe(3);
+    expect(stageBySlug(stages, "code-generation").sensors_applicable.length).toBe(4);
     expect(stageBySlug(stages, "build-and-test").sensors_applicable.length).toBe(4);
     expect(stageBySlug(stages, "workspace-scaffold").sensors_applicable.length).toBe(0);
     expect(stageBySlug(stages, "functional-design").sensors_applicable.length).toBe(5);
@@ -360,6 +359,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "answer-evidence",
       "linter",
       "required-sections",
+      "self-scope-consistency",
       "type-check",
       "upstream-coverage",
     ]);

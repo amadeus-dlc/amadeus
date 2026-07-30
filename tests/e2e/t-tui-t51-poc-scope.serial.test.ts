@@ -15,13 +15,13 @@
 //   - the answer-gate clears the Initialization + early-Ideation gates by taking
 //     the Recommended default per menu, with NO auto-approve,
 //   - answering advances REAL state on disk — the milestone the .sh asserted
-//     (POC, unlike bugfix, includes Ideation, so intent-capture runs):
+//     (POC, unlike fix, includes Ideation, so intent-capture runs):
 //       * the intent-capture intent-statement artifact exists & is non-empty,
 //       * the born intent's amadeus-state.md records the `poc` scope and a greenfield
 //         classification,
 //       * <record>/ideation/ exists with a questions file carrying filled
 //         [Answer]: lines and at least one structured (heading-bearing) artifact,
-//       * MORE than 6 stages are marked complete `- [x]` (POC > bugfix; the .sh's
+//       * MORE than 6 stages are marked complete `- [x]` (POC > fix; the .sh's
 //         test 10 — 3 init + Ideation stages),
 //       * audit.md has substantial content,
 //   - RENDER (the tui-only value-add): the captured grid showed a gate menu
@@ -238,7 +238,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         // .sh test 13: state classifies greenfield.
         expect(stateMd).toMatch(/greenfield/i);
         // .sh test 10: MORE than 6 completed stages (POC includes Ideation, so it
-        // produces strictly more than bugfix). Count `- [x]` lines.
+        // produces strictly more than fix). Count `- [x]` lines.
         const completed = stateMd.split("\n").filter((l) => /^- \[x\]/.test(l)).length;
         expect(completed).toBeGreaterThan(6);
 

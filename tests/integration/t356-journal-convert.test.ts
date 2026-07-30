@@ -41,14 +41,14 @@ describe("convertShardText — lossless conversion", () => {
     });
     const shard =
       HEADER +
-      record("WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "amadeus-feature" }) +
+      record("WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "self-feature" }) +
       record("HUMAN_TURN", "2026-07-28T10:01:00Z") +
       raw;
     const { entries, jsonl } = convertShardText(shard, IDENTITY);
     expect(entries.length).toBe(3);
     expect(entries.map((e) => e.seq)).toEqual([1, 2, 3]);
     expect(entries[0]!.event).toBe("WORKFLOW_STARTED");
-    expect(entries[0]!.fields).toEqual({ Scope: "amadeus-feature" });
+    expect(entries[0]!.fields).toEqual({ Scope: "self-feature" });
     expect(entries[1]!.fields).toEqual({});
     expect(entries[2]!.event).toBeNull();
     expect(entries[2]!.rawBody).toBe("free-form line 1\nfree-form line 2");

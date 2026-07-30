@@ -2,7 +2,7 @@
 
 > 言語: [English](04-scopes.md) | **日本語**
 
-スコープは、ある種類の作業に対してフレームワークの32ステージのうち*どれ*を実行し、どれを実行しないかを決めるダイヤルです。bugfix には市場調査やデプロイパイプラインは不要ですし、規制対象のエンタープライズ機能にはそのすべてが必要になります。毎回ユーザーにステージを手作業で選ばせるのではなく、AI-DLC は10個の名前付きスコープを同梱しています。各スコープは全ステージ集合に対する EXECUTE/SKIP の判定を丁寧にキュレーションしたもので、デフォルトの深さ(depth)とテスト戦略(test strategy)が対になっています。スコープを選べば、あとは連鎖的に決まります。
+スコープは、ある種類の作業に対してフレームワークの32ステージのうち*どれ*を実行し、どれを実行しないかを決めるダイヤルです。fix には市場調査やデプロイパイプラインは不要ですし、規制対象のエンタープライズ機能にはそのすべてが必要になります。毎回ユーザーにステージを手作業で選ばせるのではなく、AI-DLC は10個の名前付きスコープを同梱しています。各スコープは全ステージ集合に対する EXECUTE/SKIP の判定を丁寧にキュレーションしたもので、デフォルトの深さ(depth)とテスト戦略(test strategy)が対になっています。スコープを選べば、あとは連鎖的に決まります。
 
 ハーネスエンジニアにとって、スコープは他のすべてのプリミティブと同じ方法で — ファイルとして — 記述される純粋なデータです。スコープは2つの半分から成ります。1つは `packages/framework/core/scopes/amadeus-<name>.md` ファイル(そのアイデンティティ — 名前、深さ、キーワード、説明)、もう1つはステージごとのメンバーシップタグ(各ステージのフロントマターの `scopes:` リストが、そのステージが実行されるスコープを列挙する)です。スコープの追加やチューニングに TypeScript は不要です。この章ではワークフローを追っていきます。スコープが何で構成されるか、チームスコープをどう追加するか、既存のものをどうチューニングするか、そしてツールが何を検証してくれて何をあなたに委ねるか。
 
@@ -39,6 +39,8 @@ Prose intent: why these stages, why skip those.
 | `keywords` | No | `/amadeus <freeform text>` の自動検出のための自然言語トリガー。空リストはオプトアウト。 |
 | `description` | No | `/amadeus --help` に表示される1行説明。(SKILL.md のコンパイル済みスコープテーブルは Scope / Depth / TestStrategy / EXECUTE / Total のみを表示し、description は含めない。) |
 
+プロジェクトローカルなスコープ名には、フレームワーク接頭辞を重ねず、その役割を表す名前を使います。Amadeus の自己開発では `self-feature`、`self-fix`、`self-refactor`、`self-document` を使用し、ファイル名は `amadeus-self-fix.md` のようにします。`amadeus-amadeus-*.md` という二重接頭辞は使用しません。
+
 **2. メンバーシップタグ — 各ステージの `scopes:` フロントマター。** ステージは、`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` にある自身のフロントマターで、自分が実行されるスコープを列挙します。
 
 ```yaml
@@ -68,11 +70,11 @@ scopes:
 
 ## チームスコープを追加する
 
-チームが `hotfix` スコープを欲しがっているとしましょう — `bugfix` より無駄をそぎ落とし、リグレッションテストとデプロイだけが欲しい緊急の本番パッチ向けです。変更は、新しいスコープファイル、実行すべき各ステージへの `scopes:` タグ、そして再コンパイルです。以下の作法をまねてください。検証手順と完全なコマンド行は [Contributing § Adding a Scope](../reference/11-contributing.ja.md#adding-a-scope) にあります。
+チームが `hotfix` スコープを欲しがっているとしましょう — `fix` より無駄をそぎ落とし、リグレッションテストとデプロイだけが欲しい緊急の本番パッチ向けです。変更は、新しいスコープファイル、実行すべき各ステージへの `scopes:` タグ、そして再コンパイルです。以下の作法をまねてください。検証手順と完全なコマンド行は [Contributing § Adding a Scope](../reference/11-contributing.ja.md#adding-a-scope) にあります。
 
 ### 手順
 
-1. **`packages/framework/core/scopes/amadeus-hotfix.md` を作成する。** `amadeus-bugfix.md`(最も近い既存スコープ)をコピーし、フロントマターを編集します。`name: hotfix` を設定し、`depth` を選び、フリーフォームの自動検出が欲しければ `keywords`(`[hotfix, urgent]`)を追加し、ヘルプテキスト用の `description` を、そして `depth` と分岐させたい場合のみ `testStrategy` を追加します。意図を説明する短い散文の本文を書きます。
+1. **`packages/framework/core/scopes/amadeus-hotfix.md` を作成する。** `amadeus-fix.md`(最も近い既存スコープ)をコピーし、フロントマターを編集します。`name: hotfix` を設定し、`depth` を選び、フリーフォームの自動検出が欲しければ `keywords`(`[hotfix, urgent]`)を追加し、ヘルプテキスト用の `description` を、そして `depth` と分岐させたい場合のみ `testStrategy` を追加します。意図を説明する短い散文の本文を書きます。
 
 2. **`hotfix` で実行すべきステージにタグを付ける。** `EXECUTE` にしたい各ステージ(`packages/framework/core/amadeus-common/stages/<phase>/` 配下)で、そのフロントマターの `scopes:` リストに `hotfix` を追加します。タグを付けないステージはそのスコープで `SKIP` です。3つの initialization ステージはこれを含まなければなりません(常に実行されるため)。
 

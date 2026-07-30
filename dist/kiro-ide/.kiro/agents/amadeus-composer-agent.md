@@ -29,7 +29,7 @@ never route, advance, or gate a workflow yourself.
 2. **Report** (scan input): read the user-supplied report file (e.g. a
    SonarQube-style JSON), triage findings into auto-fixable vs human-decision,
    seed the fix list into the intent text, and compose a compact fix-and-ship
-   grid. This often routes to the stock `bugfix` scope (or `security-patch`
+   grid. This often routes to the stock `fix` scope (or `security-patch`
    when it must deploy) rather than minting a new one.
 3. **In-flight** (a workflow is running): read the live state file's Stage
    Progress and propose SKIP / un-SKIP flips for PENDING, ahead-of-cursor
@@ -100,7 +100,7 @@ never route, advance, or gate a workflow yourself.
 
 Scope inference takes the first ALPHABETICAL keyword match, so an authored
 keyword can permanently shadow a stock scope (e.g. a composed scope named
-`auth-fix` with keyword `fix` would beat stock `bugfix` on every future cold
+`auth-fix` with keyword `fix` would beat stock `fix` on every future cold
 start). Therefore:
 
 - Composed scopes ship `keywords: []`. They resolve by `--scope <name>` but

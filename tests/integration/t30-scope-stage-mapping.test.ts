@@ -1,4 +1,4 @@
-// covers: scope:bugfix, scope:workshop, subcommand:amadeus-utility:scope-table
+// covers: scope:fix, scope:workshop, subcommand:amadeus-utility:scope-table
 //
 // t30 — Scope-to-Stage Mapping consistency. Migrated from
 // tests/integration/t30-scope-stage-mapping.sh (TAP plan 17). The .sh had no
@@ -7,7 +7,7 @@
 // `amadeus-utility.ts scope-table`), scope-grid.json (the transpose), and
 // stage-graph.json (phase membership) — so the covers ids name the
 // scope-table subcommand that emits the table and the two scopes whose
-// phase-presence shape the .sh load-bears on (bugfix, workshop).
+// phase-presence shape the .sh load-bears on (fix, workshop).
 //
 // Mechanism: none. Every assertion is a pure structural / data check —
 // read the SHIPPED files (dist/claude/.claude/...), parse JSON / slice the
@@ -44,12 +44,12 @@
 //     .sh 5 (row count == JSON keys)     -> "B: region row count matches scope-grid.json key count"
 //   Section C (per-scope EXECUTE, 10 asserts):
 //     .sh 6-14 (one per scope, alpha)    -> "C: <scope> EXECUTE cell matches scope-grid.json"
-//       (one test() per scope: bugfix, chore, enterprise, feature, infra, mvp,
+//       (one test() per scope: fix, chore, enterprise, feature, infra, mvp,
 //        poc, refactor, security-patch, workshop — same 10, same order)
 //   Section D (phase-presence semantics, 3 asserts):
-//     .sh 15 (bugfix 0 ideation EXEC)    -> "D1: bugfix executes zero ideation-phase stages"
+//     .sh 15 (fix 0 ideation EXEC)    -> "D1: fix executes zero ideation-phase stages"
 //     .sh 16 (workshop 0 ideation EXEC)  -> "D2: workshop executes zero ideation-phase stages"
-//     .sh 17 (bugfix 0 operation EXEC)   -> "D3: bugfix executes zero operation-phase stages"
+//     .sh 17 (fix 0 operation EXEC)   -> "D3: fix executes zero operation-phase stages"
 //
 // STRONGER than the .sh (kept, not weakened):
 //   - Section A/B/C are additionally proven by a single byte-equality of the
@@ -82,7 +82,7 @@ const END = "<!-- END: compiled scope grid -->";
 
 // The ten scopes the .sh iterated, in the SAME alphabetical order.
 const SCOPES = [
-  "bugfix",
+  "fix",
   "chore",
   "enterprise",
   "feature",
@@ -211,7 +211,7 @@ describe("t30 — committed SKILL.md table is byte-identical to the rendered tra
 // Section D — phase-presence semantics preserved from pre-milestone-10 t30 (3 asserts)
 // =============================================================================
 describe("t30 Section D — scope phase-presence semantics (read JSON directly)", () => {
-  test("D1: bugfix executes zero ideation-phase stages [.sh 15]", () => {
+  test("D1: fix executes zero ideation-phase stages [.sh 15]", () => {
     const grid = readGrid();
     const graph = readGraph();
     const ideationSlugs = graph
@@ -221,7 +221,7 @@ describe("t30 Section D — scope phase-presence semantics (read JSON directly)"
     // EXECUTE among ideation stages" is trivially true.
     expect(ideationSlugs.length).toBeGreaterThan(0);
     const execCount = ideationSlugs.filter(
-      (s) => grid.bugfix.stages[s] === "EXECUTE",
+      (s) => grid.fix.stages[s] === "EXECUTE",
     ).length;
     expect(execCount).toBe(0);
   });
@@ -239,7 +239,7 @@ describe("t30 Section D — scope phase-presence semantics (read JSON directly)"
     expect(execCount).toBe(0);
   });
 
-  test("D3: bugfix executes zero operation-phase stages [.sh 17]", () => {
+  test("D3: fix executes zero operation-phase stages [.sh 17]", () => {
     const grid = readGrid();
     const graph = readGraph();
     const operationSlugs = graph
@@ -247,7 +247,7 @@ describe("t30 Section D — scope phase-presence semantics (read JSON directly)"
       .map((s) => s.slug);
     expect(operationSlugs.length).toBeGreaterThan(0);
     const execCount = operationSlugs.filter(
-      (s) => grid.bugfix.stages[s] === "EXECUTE",
+      (s) => grid.fix.stages[s] === "EXECUTE",
     ).length;
     expect(execCount).toBe(0);
   });

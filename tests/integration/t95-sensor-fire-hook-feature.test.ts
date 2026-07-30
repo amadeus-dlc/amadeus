@@ -166,7 +166,7 @@ function makeProjectActive(slug = "requirements-analysis"): string {
   mkdirSync(seededRecordDir(proj), { recursive: true });
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: bugfix\n- **Current Stage**: ${slug}\n`,
+    `- **Workflow**: fix\n- **Current Stage**: ${slug}\n`,
     "utf-8",
   );
   const auditDir = seededAuditDir(proj);
