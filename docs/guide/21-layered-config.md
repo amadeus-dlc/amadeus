@@ -73,6 +73,7 @@ application-project findings.
 
 Use `"prompt"` to require approval for each candidate or `"off"` to disable
 automatic filing. An explicit human request can still approve one filing.
+Filed defects use the existing `bug` label and concerns use `enhancement`.
 
 ## Validation and failure behavior
 

@@ -7,13 +7,21 @@ import {
   type FindingCoordinatorDependencies,
 } from "../../packages/framework/core/tools/amadeus-finding.ts";
 import type {
-  GatewayOutcome,
-  RemoteMirrorIssue,
-} from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
+  GitHubGatewayOutcome,
+  RemoteGitHubIssue,
+} from "../../packages/framework/core/tools/amadeus-github-types.ts";
 
-function ok<T>(value: T): GatewayOutcome<T> {
+function ok<T>(value: T): GitHubGatewayOutcome<T> {
   return { kind: "ok", value };
 }
+
+const githubFailure: Extract<GitHubGatewayOutcome<unknown>, { kind: "failure" }> = {
+  kind: "failure",
+  classification: "api",
+  summary: "GitHub request failed",
+  retryable: false,
+  effect: "no-effect-confirmed",
+};
 
 describe("fileAmadeusFinding", () => {
   test("invalid configuration fails closed without accessing GitHub", async () => {
@@ -65,13 +73,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          config: {
-            autoMirror: "prompt",
-            projects: [],
-            autoSoloElection: false,
-            autoFileFindings: mode,
-          },
-          sources: ["/project/amadeus/config.json"],
+          autoFileFindings: mode,
         }),
         gateway: {
           readiness: unexpected,
@@ -85,19 +87,13 @@ describe("fileAmadeusFinding", () => {
   });
 
   test("auto mode creates once and reuses the marker match on retry", async () => {
-    const issues: RemoteMirrorIssue[] = [];
+    const issues: RemoteGitHubIssue[] = [];
     let createCalls = 0;
     let createLabels: readonly string[] = [];
     const dependencies: FindingCoordinatorDependencies = {
       resolveConfig: () => ({
         kind: "resolved",
-        config: {
-          autoMirror: "prompt",
-          projects: [],
-          autoSoloElection: false,
-          autoFileFindings: "auto",
-        },
-        sources: ["/project/amadeus/config.json"],
+        autoFileFindings: "auto",
       }),
       gateway: {
         readiness: async () => ok(undefined),
@@ -106,7 +102,7 @@ describe("fileAmadeusFinding", () => {
         createFindingIssue: async (_permit, input) => {
           createCalls += 1;
           createLabels = input.labels;
-          const issue: RemoteMirrorIssue = {
+          const issue: RemoteGitHubIssue = {
             repository: {
               owner: "amadeus-dlc",
               name: "amadeus",
@@ -144,12 +140,98 @@ describe("fileAmadeusFinding", () => {
       issueUrl: "https://github.com/amadeus-dlc/amadeus/issues/42",
     });
     expect(createCalls).toBe(1);
-    expect(createLabels).toEqual(["defect"]);
+    expect(createLabels).toEqual(["bug"]);
   });
+
+  test("maps an actionable concern to the existing enhancement label", async () => {
+    let createLabels: readonly string[] = [];
+    const outcome = await fileAmadeusFinding(
+      {
+        projectDir: "/project",
+        kind: "concern",
+        title: "Finding",
+        body: "Evidence",
+        fingerprint: "concern-label",
+      },
+      {
+        resolveConfig: () => ({
+          kind: "resolved",
+          autoFileFindings: "auto",
+        }),
+        gateway: {
+          readiness: async () => ok(undefined),
+          findIssuesByMarker: async () => ok([]),
+          createFindingIssue: async (_permit, input) => {
+            createLabels = input.labels;
+            return ok({
+              repository: {
+                owner: "amadeus-dlc",
+                name: "amadeus",
+                canonical: "amadeus-dlc/amadeus",
+              },
+              number: 43,
+              title: input.title,
+              body: input.body,
+              state: "OPEN",
+            });
+          },
+        },
+      },
+    );
+
+    expect(outcome.kind).toBe("created");
+    expect(createLabels).toEqual(["enhancement"]);
+  });
+
+  test.each(["readiness", "search", "create"] as const)(
+    "maps a %s failure to the typed GitHub outcome",
+    async (failureAt) => {
+      const outcome = await fileAmadeusFinding(
+        {
+          projectDir: "/project",
+          kind: "defect",
+          title: "Finding",
+          body: "Evidence",
+          fingerprint: `github-failure:${failureAt}`,
+        },
+        {
+          resolveConfig: () => ({
+            kind: "resolved",
+            autoFileFindings: "auto",
+          }),
+          gateway: {
+            readiness: async () =>
+              failureAt === "readiness" ? githubFailure : ok(undefined),
+            findIssuesByMarker: async () =>
+              failureAt === "search" ? githubFailure : ok([]),
+            createFindingIssue: async (_permit, input) =>
+              failureAt === "create"
+                ? githubFailure
+                : ok({
+                    repository: {
+                      owner: "amadeus-dlc",
+                      name: "amadeus",
+                      canonical: "amadeus-dlc/amadeus",
+                    },
+                    number: 44,
+                    title: input.title,
+                    body: input.body,
+                    state: "OPEN",
+                  }),
+          },
+        },
+      );
+
+      expect(outcome).toMatchObject({
+        kind: "failure",
+        reason: "github",
+      });
+    },
+  );
 
   test("auto mode fails closed when more than one issue has the marker", async () => {
     let createCalls = 0;
-    const duplicate = (number: number): RemoteMirrorIssue => ({
+    const duplicate = (number: number): RemoteGitHubIssue => ({
       repository: {
         owner: "amadeus-dlc",
         name: "amadeus",
@@ -171,13 +253,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          config: {
-            autoMirror: "prompt",
-            projects: [],
-            autoSoloElection: false,
-            autoFileFindings: "auto",
-          },
-          sources: ["/project/amadeus/config.json"],
+          autoFileFindings: "auto",
         }),
         gateway: {
           readiness: async () => ok(undefined),

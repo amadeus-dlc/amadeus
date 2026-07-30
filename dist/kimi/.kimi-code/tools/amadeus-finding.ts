@@ -1,31 +1,24 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { readContainedFile } from "./amadeus-contained-file.ts";
 import { createFindingMutationPermit } from "./amadeus-finding-capability.ts";
 import type {
   FindingGitHubGateway,
   FindingKind,
 } from "./amadeus-finding-types.ts";
+import type { GitHubRepository } from "./amadeus-github-types.ts";
 import {
-  type MirrorConfigOutcome,
-  resolveMirrorConfig,
-} from "./amadeus-mirror-config.ts";
+  resolveAmadeusConfig,
+} from "./amadeus-layered-config.ts";
 import {
-  createMirrorGitHubGateway,
-  parseRepositoryIdentity,
-} from "./amadeus-mirror-gateway.ts";
-import { createMirrorProcessRunner } from "./amadeus-mirror-runner.ts";
-import type { RepositoryIdentity } from "./amadeus-mirror-types.ts";
+  createFindingGitHubGatewayAdapter,
+} from "./amadeus-github-gateway.ts";
+import { createGitHubProcessRunner } from "./amadeus-process-runner.ts";
 
-function canonicalAmadeusRepository(): RepositoryIdentity {
-  const repository = parseRepositoryIdentity("amadeus-dlc", "amadeus");
-  if (repository === null) {
-    throw new Error("invalid canonical Amadeus repository identity");
-  }
-  return repository;
-}
-
-const AMADEUS_REPOSITORY = canonicalAmadeusRepository();
+const AMADEUS_REPOSITORY = Object.freeze({
+  owner: "amadeus-dlc",
+  name: "amadeus",
+  canonical: "amadeus-dlc/amadeus",
+}) satisfies GitHubRepository;
 
 export type AmadeusFindingInput = Readonly<{
   projectDir: string;
@@ -37,9 +30,16 @@ export type AmadeusFindingInput = Readonly<{
 }>;
 
 export type FindingCoordinatorDependencies = Readonly<{
-  resolveConfig: (projectDir: string) => MirrorConfigOutcome;
+  resolveConfig: (projectDir: string) => FindingConfigOutcome;
   gateway: FindingGitHubGateway;
 }>;
+
+export type FindingConfigOutcome =
+  | Readonly<{
+      kind: "resolved";
+      autoFileFindings: "off" | "prompt" | "auto";
+    }>
+  | Readonly<{ kind: "invalid" }>;
 
 export type FindingFileOutcome =
   | Readonly<{
@@ -63,6 +63,10 @@ export function findingMarker(fingerprint: string): string {
   return `<!-- amadeus-finding:${digest} -->`;
 }
 
+function findingLabel(kind: FindingKind): "bug" | "enhancement" {
+  return kind === "defect" ? "bug" : "enhancement";
+}
+
 function issueUrl(issueNumber: number): string {
   return `https://github.com/${AMADEUS_REPOSITORY.canonical}/issues/${issueNumber}`;
 }
@@ -76,10 +80,10 @@ export async function fileAmadeusFinding(
   if (resolved.kind === "invalid") {
     return { kind: "failure", reason: "invalid-config", marker };
   }
-  if (!input.approved && resolved.config.autoFileFindings === "off") {
+  if (!input.approved && resolved.autoFileFindings === "off") {
     return { kind: "disabled", marker };
   }
-  if (!input.approved && resolved.config.autoFileFindings === "prompt") {
+  if (!input.approved && resolved.autoFileFindings === "prompt") {
     return { kind: "approval-required", marker };
   }
 
@@ -114,7 +118,7 @@ export async function fileAmadeusFinding(
   const created = await dependencies.gateway.createFindingIssue(permit, {
     title: input.title,
     body: `${marker}\n\n${input.body}`,
-    labels: [input.kind],
+    labels: [findingLabel(input.kind)],
   });
   if (created.kind === "failure") {
     return { kind: "failure", reason: "github", marker };
@@ -128,8 +132,15 @@ export async function fileAmadeusFinding(
 }
 
 export const defaultFindingDependencies = {
-  resolveConfig: (projectDir: string): MirrorConfigOutcome =>
-    resolveMirrorConfig(projectDir),
+  resolveConfig: (projectDir: string): FindingConfigOutcome => {
+    const outcome = resolveAmadeusConfig(projectDir);
+    return outcome.kind === "invalid"
+      ? { kind: "invalid" }
+      : {
+          kind: "resolved",
+          autoFileFindings: outcome.config.autoFileFindings,
+        };
+  },
 } satisfies Pick<FindingCoordinatorDependencies, "resolveConfig">;
 
 type FileCommand = Readonly<{
@@ -211,24 +222,26 @@ function parseFileCommand(argv: readonly string[]): FileCommand {
 }
 
 function readFindingBody(projectDir: string, bodyFile: string): string {
-  const projectReal = realpathSync(projectDir);
-  const bodyReal = realpathSync(
-    isAbsolute(bodyFile) ? bodyFile : resolve(projectReal, bodyFile),
-  );
-  const rel = relative(projectReal, bodyReal);
-  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
-    throw new Error("finding body must be inside the workspace");
-  }
-  const stat = lstatSync(bodyReal);
-  if (!stat.isFile() || stat.size > 64 * 1024) {
-    throw new Error("finding body must be a regular file no larger than 64 KiB");
-  }
-  const body = readFileSync(bodyReal, "utf-8");
-  if (body.length === 0) throw new Error("finding body must not be empty");
-  return body;
+  const outcome = readContainedFile({
+    rootDir: projectDir,
+    path: bodyFile,
+    maxBytes: 64 * 1024,
+    allowEmpty: false,
+  });
+  if (outcome.kind !== "text") throw new Error("invalid finding body");
+  return outcome.text;
 }
 
-export async function runFindingMain(argv = process.argv.slice(2)): Promise<void> {
+export type FindingCliResult = Readonly<{
+  exitCode: 0 | 1 | 2;
+  stdout: string;
+  stderr: string;
+}>;
+
+export async function runFindingCli(
+  argv: readonly string[],
+  dependencies: FindingCoordinatorDependencies,
+): Promise<FindingCliResult> {
   try {
     const command = parseFileCommand(argv);
     const outcome = await fileAmadeusFinding(
@@ -240,17 +253,30 @@ export async function runFindingMain(argv = process.argv.slice(2)): Promise<void
         fingerprint: command.fingerprint,
         approved: command.approved,
       },
-      {
-        resolveConfig: defaultFindingDependencies.resolveConfig,
-        gateway: createMirrorGitHubGateway(createMirrorProcessRunner()),
-      },
+      dependencies,
     );
-    process.stdout.write(`${JSON.stringify(outcome)}\n`);
-    if (outcome.kind === "failure") process.exitCode = 1;
+    return {
+      exitCode: outcome.kind === "failure" ? 1 : 0,
+      stdout: `${JSON.stringify(outcome)}\n`,
+      stderr: "",
+    };
   } catch {
-    process.stderr.write("amadeus-finding: invalid input\n");
-    process.exitCode = 2;
+    return {
+      exitCode: 2,
+      stdout: "",
+      stderr: "amadeus-finding: invalid input\n",
+    };
   }
+}
+
+export async function runFindingMain(argv = process.argv.slice(2)): Promise<void> {
+  const result = await runFindingCli(argv, {
+    resolveConfig: defaultFindingDependencies.resolveConfig,
+    gateway: createFindingGitHubGatewayAdapter(createGitHubProcessRunner()),
+  });
+  if (result.stdout.length > 0) process.stdout.write(result.stdout);
+  if (result.stderr.length > 0) process.stderr.write(result.stderr);
+  process.exitCode = result.exitCode;
 }
 
 if (import.meta.main) {

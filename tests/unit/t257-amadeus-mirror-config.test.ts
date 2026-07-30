@@ -1,37 +1,37 @@
 // t257 — pure three-mode mirror configuration parsing and precedence.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts (parseMirrorConfigLayers)
+// covers: packages/framework/core/tools/amadeus-layered-config.ts (parseAmadeusConfigLayers)
 // size: small
 
 import { describe, expect, test } from "bun:test";
 import {
   type ConfigLayer,
-  type MirrorConfigLayerInput,
-  parseMirrorConfigLayers,
-} from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+  type AmadeusConfigLayerInput,
+  parseAmadeusConfigLayers,
+} from "../../packages/framework/core/tools/amadeus-layered-config.ts";
 
-function present(layer: ConfigLayer, rawValue: unknown): MirrorConfigLayerInput {
+function present(layer: ConfigLayer, rawValue: unknown): AmadeusConfigLayerInput {
   return { layer, path: `amadeus/${layer}.json`, present: true, rawValue };
 }
 
-function absent(layer: ConfigLayer): MirrorConfigLayerInput {
+function absent(layer: ConfigLayer): AmadeusConfigLayerInput {
   return { layer, path: `amadeus/${layer}.json`, present: false, rawValue: undefined };
 }
 
-function mode(rawValue: string): MirrorConfigLayerInput {
+function mode(rawValue: string): AmadeusConfigLayerInput {
   return present("global", { "auto-mirror": rawValue });
 }
 
 describe("t257 pure config resolution", () => {
   test("defaults to prompt when no layer is present", () => {
     expect(
-      parseMirrorConfigLayers([absent("global"), absent("space"), absent("intent")]),
+      parseAmadeusConfigLayers([absent("global"), absent("space"), absent("intent")]),
     ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" }, sources: [] });
   });
 
   test.each(["off", "prompt", "auto"] as const)(
     "accepts the exact mode string %s",
     (value) => {
-      expect(parseMirrorConfigLayers([mode(value)])).toEqual({
+      expect(parseAmadeusConfigLayers([mode(value)])).toEqual({
         kind: "resolved",
         config: { autoMirror: value, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
         sources: ["amadeus/global.json"],
@@ -42,7 +42,7 @@ describe("t257 pure config resolution", () => {
   test.each(["off", "prompt", "auto"] as const)(
     "accepts auto-file-findings mode %s",
     (value) => {
-      const outcome = parseMirrorConfigLayers([
+      const outcome = parseAmadeusConfigLayers([
         present("global", { "auto-file-findings": value }),
       ]);
 
@@ -54,7 +54,7 @@ describe("t257 pure config resolution", () => {
   );
 
   test("auto-file-findings follows Global < Space < Intent precedence", () => {
-    const outcome = parseMirrorConfigLayers([
+    const outcome = parseAmadeusConfigLayers([
       present("global", { "auto-file-findings": "off" }),
       present("space", { "auto-file-findings": "prompt" }),
       present("intent", { "auto-file-findings": "auto" }),
@@ -68,7 +68,7 @@ describe("t257 pure config resolution", () => {
 
   test("a present but empty object contributes no mode", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         present("global", {}),
         present("space", {}),
         present("intent", {}),
@@ -83,7 +83,7 @@ describe("t257 pure config resolution", () => {
     layer: ConfigLayer,
     has: boolean,
     value: string,
-  ): MirrorConfigLayerInput {
+  ): AmadeusConfigLayerInput {
     return has ? present(layer, { "auto-mirror": value }) : absent(layer);
   }
 
@@ -107,12 +107,12 @@ describe("t257 pure config resolution", () => {
   test.each(combinations)(
     "highest present layer wins for global=%s space=%s intent=%s",
     (hasGlobal, hasSpace, hasIntent, expectedMode, expectedSources) => {
-      const layers: MirrorConfigLayerInput[] = [
+      const layers: AmadeusConfigLayerInput[] = [
         layerFor("global", hasGlobal, "off"),
         layerFor("space", hasSpace, "prompt"),
         layerFor("intent", hasIntent, "auto"),
       ];
-      expect(parseMirrorConfigLayers(layers)).toEqual({
+      expect(parseAmadeusConfigLayers(layers)).toEqual({
         kind: "resolved",
         config: { autoMirror: expectedMode, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
         sources: expectedSources,
@@ -122,7 +122,7 @@ describe("t257 pure config resolution", () => {
 
   test("intent overrides space and global (Global < Space < Intent)", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         present("global", { "auto-mirror": "auto" }),
         present("space", { "auto-mirror": "off" }),
         present("intent", { "auto-mirror": "prompt" }),
@@ -136,7 +136,7 @@ describe("t257 pure config resolution", () => {
 
   test("resolution is independent of input layer order", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         present("intent", { "auto-mirror": "auto" }),
         present("global", { "auto-mirror": "off" }),
         present("space", { "auto-mirror": "off" }),
@@ -150,7 +150,7 @@ describe("t257 pure config resolution", () => {
 
   test("ignores layers marked not present", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         absent("global"),
         present("space", { "auto-mirror": "auto" }),
         absent("intent"),
@@ -166,7 +166,7 @@ describe("t257 pure config resolution", () => {
 describe("t257 pure config rejection", () => {
   test("rejects an invalid auto-file-findings value without coercion", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         present("global", { "auto-file-findings": true }),
       ]),
     ).toEqual({
@@ -186,7 +186,7 @@ describe("t257 pure config rejection", () => {
 
   test("rejects both boolean values without coercion", () => {
     for (const value of [true, false]) {
-      expect(parseMirrorConfigLayers([present("space", { "auto-mirror": value })])).toEqual(
+      expect(parseAmadeusConfigLayers([present("space", { "auto-mirror": value })])).toEqual(
         {
           kind: "invalid",
           issues: [
@@ -211,7 +211,7 @@ describe("t257 pure config rejection", () => {
     [["auto"], "array"],
     [{ nested: true }, "object"],
   ])("rejects a %p auto-mirror value as %s", (value, actualType) => {
-    expect(parseMirrorConfigLayers([present("intent", { "auto-mirror": value })])).toEqual({
+    expect(parseAmadeusConfigLayers([present("intent", { "auto-mirror": value })])).toEqual({
       kind: "invalid",
       issues: [
         {
@@ -233,7 +233,7 @@ describe("t257 pure config rejection", () => {
     ["null root", null, "null"],
     ["boolean root", true, "boolean"],
   ])("rejects a malformed %s", (_name, rawValue, actualType) => {
-    expect(parseMirrorConfigLayers([present("global", rawValue)])).toEqual({
+    expect(parseAmadeusConfigLayers([present("global", rawValue)])).toEqual({
       kind: "invalid",
       issues: [
         {
@@ -250,7 +250,7 @@ describe("t257 pure config rejection", () => {
 
   test("rejects an object carrying an unknown property", () => {
     expect(
-      parseMirrorConfigLayers([
+      parseAmadeusConfigLayers([
         present("global", { "auto-mirror": "auto", extra: 1, other: 2 }),
       ]),
     ).toEqual({
@@ -269,7 +269,7 @@ describe("t257 pure config rejection", () => {
   });
 
   test("aggregates every invalid layer in precedence order and returns no config", () => {
-    const outcome = parseMirrorConfigLayers([
+    const outcome = parseAmadeusConfigLayers([
       present("intent", { "auto-mirror": "nope" }),
       present("global", { "auto-mirror": true }),
       present("space", { "auto-mirror": "auto" }),

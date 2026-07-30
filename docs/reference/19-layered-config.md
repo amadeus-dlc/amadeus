@@ -6,11 +6,11 @@
 
 The layered configuration resolver is a read-only component shared by mirror
 routing, solo-election activation, and Amadeus finding filing. Its source of truth is
-`packages/framework/core/tools/amadeus-mirror-config.ts`.
+`packages/framework/core/tools/amadeus-layered-config.ts`.
 
 ## Contract
 
-`resolveMirrorConfig(projectDir, intentDir?, space?, hooks?)` derives and reads
+`resolveAmadeusConfig(projectDir, intentDir?, space?, hooks?)` derives and reads
 these paths:
 
 ```text
@@ -72,6 +72,10 @@ stable fingerprint into a body marker, searches open and closed Issues through
 the GitHub Gateway, and creates only after a zero-match result. One match is
 reused; multiple matches fail closed. The create call requires a
 coordinator-minted permit bound to the repository and exact body marker.
+Defects use the repository's existing `bug` label; concerns use `enhancement`.
+The Issue body is read through the shared descriptor-based contained-file
+reader, which rejects symlinks, workspace escapes, non-regular files, growth
+beyond 64 KiB, and identity changes before or during the read.
 
 ## Phase-boundary integration
 
@@ -107,6 +111,10 @@ The contract is covered by:
   marker idempotency, and duplicate handling;
 - `tests/integration/t366-amadeus-finding-cli.integration.test.ts` for the
   public CLI boundary;
+- `tests/integration/t368-amadeus-finding-cli.integration.test.ts` for invalid arguments, unsafe
+  body files, and exit-code behavior;
+- `tests/integration/t368-safe-contained-file.integration.test.ts` for
+  descriptor-bound containment and size enforcement;
 - `tests/integration/t367-amadeus-finding-protocol.integration.test.ts` for the
   all-stage finding admission contract.
 

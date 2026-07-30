@@ -1,9 +1,9 @@
 import type {
-  CreateMirrorIssueInput,
-  GatewayOutcome,
-  RemoteMirrorIssue,
-  RepositoryIdentity,
-} from "./amadeus-mirror-types.ts";
+  CreateGitHubIssueInput,
+  GitHubGatewayOutcome,
+  GitHubRepository,
+  RemoteGitHubIssue,
+} from "./amadeus-github-types.ts";
 
 export type FindingKind = "defect" | "concern";
 
@@ -11,18 +11,18 @@ declare const findingMutationPermitBrand: unique symbol;
 
 export type FindingMutationPermit = Readonly<{
   [findingMutationPermitBrand]: true;
-  repository: RepositoryIdentity;
+  repository: GitHubRepository;
   marker: string;
 }>;
 
 export interface FindingGitHubGateway {
-  readiness(repository: RepositoryIdentity): Promise<GatewayOutcome<void>>;
+  readiness(repository: GitHubRepository): Promise<GitHubGatewayOutcome<void>>;
   findIssuesByMarker(
-    repository: RepositoryIdentity,
+    repository: GitHubRepository,
     marker: string,
-  ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>>;
+  ): Promise<GitHubGatewayOutcome<readonly RemoteGitHubIssue[]>>;
   createFindingIssue(
     permit: FindingMutationPermit,
-    input: CreateMirrorIssueInput,
-  ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
+    input: CreateGitHubIssueInput,
+  ): Promise<GitHubGatewayOutcome<RemoteGitHubIssue>>;
 }

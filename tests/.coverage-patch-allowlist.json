@@ -1603,50 +1603,14 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "23",
-    "reason": "Defensive invariant for the fixed canonical repository literal; parseRepositoryIdentity is covered independently and these constants cannot produce null.",
-    "expiry": "remove if the canonical repository becomes runtime input"
+    "lines": "272-278",
+    "reason": "The process-I/O adapter is exercised through the spawned CLI integration suite; all parsing, file-safety, output selection, and exit-code behavior is covered in-process by t368.",
+    "expiry": "remove when Bun attributes spawned CLI coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "88",
-    "reason": "Readiness failure propagation to the single typed github outcome; gateway failure classification and no-mutation effects are covered by the gateway suite.",
-    "expiry": "remove when coordinator failure injection covers readiness"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "95",
-    "reason": "Marker-search failure propagation to the single typed github outcome; paginated gateway failures are covered by the gateway suite.",
-    "expiry": "remove when coordinator failure injection covers marker search"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "120",
-    "reason": "Issue-create failure propagation to the single typed github outcome; mutation failure effects are covered by the gateway suite.",
-    "expiry": "remove when coordinator failure injection covers issue creation"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "131-132",
-    "reason": "The production dependency adapter is exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
-    "expiry": "remove when the CLI receives an in-process dependency adapter or Bun attributes child coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "152-251",
-    "reason": "The production dependency adapter and public CLI parsing, body containment, output, and exit-code paths are exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
-    "expiry": "remove when the CLI receives an in-process process/filesystem adapter or Bun attributes child coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "257",
-    "reason": "The import.meta.main dispatch is exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
-    "expiry": "remove when Bun attributes child coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "732",
-    "reason": "Multiline return-type row for the finding permit repository accessor; gateway tests exercise the accessor through valid, forged, marker-mismatch, and mutated-binding cases.",
-    "expiry": "remove when Bun LCOV attributes multiline function signatures consistently"
+    "lines": "283",
+    "reason": "The import.meta.main dispatch is exercised through the spawned CLI integration suite; all command behavior is covered through runFindingCli in-process.",
+    "expiry": "remove when Bun attributes spawned CLI coverage"
   }
 ]

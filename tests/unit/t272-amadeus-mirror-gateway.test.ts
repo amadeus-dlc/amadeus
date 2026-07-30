@@ -1,11 +1,12 @@
 // t272 — G3/G5/G6/G7/G8 gateway matrix via a fake process runner: exact argv,
 // envelope grammar, PR exclusion, marker filter, redaction, effect, permits.
-// covers: packages/framework/core/tools/amadeus-mirror-gateway.ts
+// covers: packages/framework/core/tools/amadeus-github-gateway.ts
 // size: small
 
 import { describe, expect, test } from "bun:test";
 import { createFindingMutationPermit } from "../../packages/framework/core/tools/amadeus-finding-capability.ts";
 import type { FindingMutationPermit } from "../../packages/framework/core/tools/amadeus-finding-types.ts";
+import { createFindingGitHubGatewayAdapter } from "../../packages/framework/core/tools/amadeus-github-gateway.ts";
 import { createMirrorMutationPermit } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
 import {
   createMirrorGitHubGateway,
@@ -303,7 +304,7 @@ describe("createFindingIssue", () => {
       exited(0, singleEnvelope(201, issue(12, { body: `${marker}\n\nEvidence` }))),
     ]);
 
-    await createMirrorGitHubGateway(runner).createFindingIssue(permit, {
+    await createFindingGitHubGatewayAdapter(runner).createFindingIssue(permit, {
       title: "Finding",
       body: `${marker}\n\nEvidence`,
       labels: [],
@@ -323,7 +324,7 @@ describe("createFindingIssue", () => {
       marker,
     });
 
-    const outcome = await createMirrorGitHubGateway(runner).createFindingIssue(
+    const outcome = await createFindingGitHubGatewayAdapter(runner).createFindingIssue(
       permit,
       {
         title: "Finding",
@@ -349,7 +350,7 @@ describe("createFindingIssue", () => {
     });
 
     await expect(
-      createMirrorGitHubGateway(runner).createFindingIssue(permit, {
+      createFindingGitHubGatewayAdapter(runner).createFindingIssue(permit, {
         title: "Finding",
         body: `${replacedMarker}\n\nEvidence`,
         labels: [],
@@ -367,7 +368,7 @@ describe("createFindingIssue", () => {
     } as unknown as FindingMutationPermit;
 
     await expect(
-      createMirrorGitHubGateway(runner).createFindingIssue(forged, {
+      createFindingGitHubGatewayAdapter(runner).createFindingIssue(forged, {
         title: "Finding",
         body: `${marker}\n\nEvidence`,
         labels: [],

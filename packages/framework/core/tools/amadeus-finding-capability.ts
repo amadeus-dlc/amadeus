@@ -1,8 +1,8 @@
 import type { FindingMutationPermit } from "./amadeus-finding-types.ts";
-import type { RepositoryIdentity } from "./amadeus-mirror-types.ts";
+import type { GitHubRepository } from "./amadeus-github-types.ts";
 
 export type FindingPermitBinding = Readonly<{
-  repository: RepositoryIdentity;
+  repository: GitHubRepository;
   marker: string;
 }>;
 

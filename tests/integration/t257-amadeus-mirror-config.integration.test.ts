@@ -1,5 +1,5 @@
 // t257 — real-filesystem three-mode mirror configuration resolution.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts (readMirrorConfigLayers, resolveMirrorConfig)
+// covers: packages/framework/core/tools/amadeus-layered-config.ts (readAmadeusConfigLayers, resolveAmadeusConfig)
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { resolveMirrorConfig } from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "../../packages/framework/core/tools/amadeus-layered-config.ts";
 
 const INTENT = "260719-mirror-productization";
 const roots: string[] = [];
@@ -68,7 +68,7 @@ function snapshot(root: string): string[] {
 
 describe("t257 resolve against real files", () => {
   test("all three absent resolves to the default prompt mode", () => {
-    expect(resolveMirrorConfig(project(), INTENT)).toEqual({
+    expect(resolveAmadeusConfig(project(), INTENT)).toEqual({
       kind: "resolved",
       config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
       sources: [],
@@ -81,7 +81,7 @@ describe("t257 resolve against real files", () => {
     writeConfig(p.global, { "auto-mirror": "off" });
     writeConfig(p.space, { "auto-mirror": "off" });
     writeConfig(p.intent, { "auto-mirror": "auto" });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
   });
@@ -91,7 +91,7 @@ describe("t257 resolve against real files", () => {
     const p = paths(root, "default", INTENT);
     writeConfig(p.global, { "auto-mirror": "off" });
     writeConfig(p.space, { "auto-mirror": "auto" });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
   });
@@ -99,7 +99,7 @@ describe("t257 resolve against real files", () => {
   test("an explicit intent directory is read", () => {
     const root = project();
     writeConfig(paths(root, "default", INTENT).intent, { "auto-mirror": "auto" });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
       expect(outcome.config.autoMirror).toBe("auto");
@@ -113,7 +113,7 @@ describe("t257 resolve against real files", () => {
     const root = project();
     setActiveSpace(root, "team");
     writeConfig(paths(root, "team", INTENT).intent, { "auto-mirror": "auto" });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
   });
@@ -124,7 +124,7 @@ describe("t257 resolve against real files", () => {
     writeConfig(p.global, { "auto-mirror": "auto" });
     writeConfig(p.space, { "auto-mirror": "auto" });
     writeConfig(p.intent, { "auto-mirror": true });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       expect(outcome.issues).toHaveLength(1);
@@ -140,7 +140,7 @@ describe("t257 resolve against real files", () => {
     const p = paths(root, "default", INTENT);
     mkdirSync(dirname(p.global), { recursive: true });
     symlinkSync(join(root, "amadeus", "does-not-exist.json"), p.global);
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       expect(outcome.issues[0]?.kind).toBe("read-failure");
@@ -151,7 +151,7 @@ describe("t257 resolve against real files", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
     mkdirSync(p.space, { recursive: true });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       expect(outcome.issues[0]?.layer).toBe("space");
@@ -165,12 +165,12 @@ describe("t257 resolve against real files", () => {
     writeConfig(p.global, { "auto-mirror": "auto" });
     const outside = join(project(), "outside.json");
     writeConfig(outside, { "auto-mirror": "off" });
-    const resolveWithHook = resolveMirrorConfig as unknown as (
+    const resolveWithHook = resolveAmadeusConfig as unknown as (
       projectDir: string,
       explicitIntentDir: string,
       explicitSpace: string | undefined,
       hooks: { beforeOpen(path: string): void },
-    ) => ReturnType<typeof resolveMirrorConfig>;
+    ) => ReturnType<typeof resolveAmadeusConfig>;
     let swapped = false;
 
     const outcome = resolveWithHook(root, INTENT, undefined, {
@@ -196,7 +196,7 @@ describe("t257 resolve against real files", () => {
     writeConfig(target, { "auto-mirror": "auto" });
     symlinkSync(target, p.global);
 
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
 
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
@@ -211,7 +211,7 @@ describe("t257 resolve against real files", () => {
     const replacement = join(root, "amadeus", "replacement.json");
     writeConfig(replacement, { "auto-mirror": "off" });
 
-    const outcome = resolveMirrorConfig(root, INTENT, undefined, {
+    const outcome = resolveAmadeusConfig(root, INTENT, undefined, {
       beforeOpen(path) {
         if (path !== p.global) return;
         renameSync(p.global, `${p.global}.original`);
@@ -236,7 +236,7 @@ describe("t257 resolve against real files", () => {
     writeConfig(p.space, {});
     writeConfig(p.intent, { "auto-mirror": "auto" });
     const before = snapshot(root);
-    expect(resolveMirrorConfig(root, INTENT).kind).toBe("resolved");
+    expect(resolveAmadeusConfig(root, INTENT).kind).toBe("resolved");
     expect(snapshot(root)).toEqual(before);
   });
 });

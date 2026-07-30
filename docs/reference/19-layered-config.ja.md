@@ -6,11 +6,11 @@
 
 階層設定リゾルバーは、ミラールーティング、ソロ選挙の自動発動、Amadeus に関する
 発見事項の起票が共有する読み取り専用コンポーネントです。正本は
-`packages/framework/core/tools/amadeus-mirror-config.ts` です。
+`packages/framework/core/tools/amadeus-layered-config.ts` です。
 
 ## 契約
 
-`resolveMirrorConfig(projectDir, intentDir?, space?, hooks?)` は、次のパスを導出して読み取ります。
+`resolveAmadeusConfig(projectDir, intentDir?, space?, hooks?)` は、次のパスを導出して読み取ります。
 
 ```text
 <workspace>/amadeus/config.json
@@ -67,6 +67,10 @@
 検索します。0件の場合だけ作成し、1件なら既存 Issue を再利用し、複数件なら
 fail-closed で停止します。作成には、`repository` と本文の `marker` に結び付いた、
 起票コーディネーター発行の `permit` が必要です。
+不具合には既存の `bug` ラベル、懸念事項には `enhancement` ラベルを付与します。
+Issue 本文は共通の descriptor ベースの contained-file reader で読み取り、symlink、
+workspace 外への逸脱、通常ファイル以外、64 KiB を超える増大、読込前後の identity
+変更を拒否します。
 
 ## フェーズ境界との統合
 
@@ -93,6 +97,8 @@ Issue に収束します。
 - `tests/e2e/t265-engine-boundary.test.ts`: 自動 lifecycle 委譲と receipt による復旧
 - `tests/unit/t366-amadeus-finding-coordinator.test.ts`: mode routing、`marker` による冪等性、重複処理
 - `tests/integration/t366-amadeus-finding-cli.integration.test.ts`: 公開 CLI 境界
+- `tests/integration/t368-amadeus-finding-cli.integration.test.ts`: 不正な引数、安全でない本文ファイル、終了コード
+- `tests/integration/t368-safe-contained-file.integration.test.ts`: descriptor に結び付いた containment とサイズ上限
 - `tests/integration/t367-amadeus-finding-protocol.integration.test.ts`: 全 stage 共通の発見事項受け入れ契約
 
 配置と利用例については
