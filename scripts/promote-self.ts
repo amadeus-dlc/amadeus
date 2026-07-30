@@ -137,17 +137,24 @@ export function scopeGridInSync(got: Buffer, want: Buffer): boolean {
 // entries carried over, serialised in canonical key order so re-applying is a
 // no-op. Byte-identical to dist when no composed scope exists; unparseable dst
 // content is overwritten with dist.
+//
+// Membership is Object.hasOwn and assembly is fromEntries because a scope may
+// legitimately be named `constructor`, `toString` or `__proto__`: `in` would
+// resolve those against Object.prototype and drop the entry as non-composed,
+// and plain assignment of `__proto__` would set the prototype instead of a
+// data key. Both lose the scope silently.
 export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
   if (got === null) return want;
   try {
     const g = JSON.parse(got.toString("utf-8")) as Record<string, unknown>;
     const w = JSON.parse(want.toString("utf-8")) as Record<string, unknown>;
-    const extras = Object.keys(g).filter((k) => !(k in w));
+    const extras = Object.keys(g).filter((k) => !Object.hasOwn(w, k));
     if (extras.length === 0) return want;
-    const merged: Record<string, unknown> = {};
-    for (const k of [...Object.keys(w), ...extras].sort()) {
-      merged[k] = k in w ? w[k] : g[k];
-    }
+    const merged = Object.fromEntries(
+      [...Object.keys(w), ...extras]
+        .sort()
+        .map((k) => [k, Object.hasOwn(w, k) ? w[k] : g[k]]),
+    );
     return Buffer.from(`${JSON.stringify(merged, null, 2)}\n`, "utf-8");
   } catch {
     return want;

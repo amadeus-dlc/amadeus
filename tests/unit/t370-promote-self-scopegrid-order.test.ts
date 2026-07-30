@@ -19,6 +19,11 @@
 //   2. --apply is idempotent: re-merging its own output is byte-identical.
 //   3. A grid with no composed entry stays byte-identical to dist (the
 //      byte-stability guarantee t200 pins is not weakened by canonicalisation).
+//   4. Composed scopes named after Object.prototype members survive. `in`
+//      membership resolved `constructor`/`toString` against the prototype and
+//      classified them as non-composed, so --apply DROPPED them; assigning
+//      `__proto__` set the prototype rather than a data key, dropping that one
+//      too. All three vanished silently while the check reported in-sync.
 
 import { describe, expect, test } from "bun:test";
 import { mergeScopeGrid, scopeGridInSync } from "../../scripts/promote-self.ts";
@@ -75,6 +80,38 @@ describe("t370 promote-self scope-grid ordering", () => {
     const parsed = JSON.parse(merged.toString("utf-8")) as Record<string, unknown>;
     expect(parsed["team-custom"]).toEqual({ stages: { "intent-capture": "EXECUTE" } });
     for (const key of Object.keys(STOCK)) expect(parsed[key]).toEqual(STOCK[key]);
+  });
+
+  // Written as JSON text, not an object literal: `{ __proto__: ... }` in
+  // source sets the prototype, so a literal cannot express the on-disk shape.
+  const PROTO_NAMED = Buffer.from(
+    `{"__proto__":{"stages":{"a":"1"}},"constructor":{"stages":{"a":"2"}},` +
+      `"toString":{"stages":{"a":"3"}},` +
+      `"mvp":{"stages":{"intent-capture":"EXECUTE"}}}\n`,
+    "utf-8",
+  );
+  const PROTO_DIST = grid({ mvp: STOCK.mvp });
+
+  test("composed scopes named after Object.prototype members are preserved", () => {
+    const merged = mergeScopeGrid(PROTO_NAMED, PROTO_DIST);
+    const parsed = JSON.parse(merged.toString("utf-8")) as Record<string, unknown>;
+    expect(Object.keys(parsed).sort()).toEqual(["__proto__", "constructor", "mvp", "toString"]);
+    // Read through own descriptors: plain member access would resolve these
+    // three to Object.prototype and hide a dropped entry behind a builtin.
+    const own = (key: string): unknown => {
+      expect(Object.hasOwn(parsed, key)).toBe(true);
+      return Object.getOwnPropertyDescriptor(parsed, key)?.value;
+    };
+    expect(own("__proto__")).toEqual({ stages: { a: "1" } });
+    expect(own("constructor")).toEqual({ stages: { a: "2" } });
+    expect(own("toString")).toEqual({ stages: { a: "3" } });
+  });
+
+  test("prototype-named composed scopes are idempotent and check-symmetric", () => {
+    const once = mergeScopeGrid(PROTO_NAMED, PROTO_DIST);
+    expect(mergeScopeGrid(once, PROTO_DIST).equals(once)).toBe(true);
+    expect(scopeGridInSync(once, PROTO_DIST)).toBe(true);
+    expect(scopeGridInSync(PROTO_NAMED, PROTO_DIST)).toBe(false);
   });
 
   test("a grid with no composed entry is byte-unchanged and stays in sync", () => {
