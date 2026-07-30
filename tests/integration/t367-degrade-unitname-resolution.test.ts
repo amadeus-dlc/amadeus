@@ -140,6 +140,19 @@ function seedUnitDir(proj: string, unit: string): void {
   });
 }
 
+/**
+ * Create a unit directory that already holds code-generation's REQUIRED
+ * artifacts, i.e. a unit this stage has nothing left to do for. That is what
+ * lets the engine subtract it when several directories exist (issue #1769).
+ */
+function seedCoveredUnitDir(proj: string, unit: string): void {
+  const dir = join(seededRecordDir(proj), "construction", unit, "code-generation");
+  mkdirSync(dir, { recursive: true });
+  for (const name of ["code-generation-plan.md", "code-summary.md"]) {
+    writeFileSync(join(dir, name), `# ${unit} ${name}\n`);
+  }
+}
+
 function runNext(proj: string): Directive {
   const r = spawnSync(BUN, [ORCH, "next", "--project-dir", proj], {
     encoding: "utf-8",
@@ -300,6 +313,59 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.kind).toBe("error");
     expect(d.message).toContain("unit-alpha");
     expect(d.message).toContain("unit-beta");
+  }, 30000);
+
+  // 10-13 pin the #1769 refinement: several unit directories no longer refuse
+  // outright. A record that accumulated a finished unit from an earlier Bolt
+  // leaves exactly one unit with work outstanding, and that one is the answer.
+  test("10: a finished unit is subtracted, resolving the one still outstanding", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "fix-1711-unitname");
+    seedUnitDir(proj, "fix-1769-degrade-multiunit");
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("fix-1769-degrade-multiunit");
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    expect(
+      (d.produces ?? []).some((p) =>
+        p.startsWith(`${RP}/construction/fix-1769-degrade-multiunit/code-generation/`),
+      ),
+    ).toBe(true);
+  }, 30000);
+
+  test("11: in-process, the outstanding unit is resolved the same way", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-beta");
+  }, 30000);
+
+  test("12: two outstanding units are refused, naming the outstanding ones", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    seedCoveredUnitDir(proj, "unit-done");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("2 of them are still missing this stage's required artifacts: unit-alpha, unit-beta");
+    // The finished unit is named among the candidates but not among the
+    // outstanding ones — the message must not send the conductor after it.
+    expect(d.message).toContain("unit-done");
+    expect(d.message).toContain("Narrow this stage to one unit");
+    expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  test("13: several units with nothing outstanding are refused, asking for a new one", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "unit-alpha");
+    seedCoveredUnitDir(proj, "unit-beta");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("Every one of them already holds this stage's required artifacts");
+    expect(d.message).toContain("Create the unit directory for this piece of work");
+    expect(d.message).not.toContain("{unit-name}");
   }, 30000);
 
   test("6: a construction stage's own diary dir is not mistaken for a unit", () => {
