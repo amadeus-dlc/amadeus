@@ -1,0 +1,21 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "metrics-pr-conflicts-c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "main commit ごとの履歴を保持する自動 PR では、不変な追記データと可変な projection／retention を同じ変更集合へ束ねない。追記側は固有データだけ、projection／retention 側は単一 maintenance 所有者へ分離する。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "metrics-pr-conflicts-c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "per-SHA PR で履歴完全性を保つ場合、共有 index や retention 削除を各 PR へ同乗させず、完全 SHA で冪等化した JSON-only PR と、安定 branch／PR を upsert する単一 maintenance 経路に分ける。",
+      "source": "orchestrator"
+    }
+  ]
+}

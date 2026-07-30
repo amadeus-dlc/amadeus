@@ -1482,6 +1482,18 @@
     "expiry": "remove when the Stop trust matrix gains an in-process driver"
   },
   {
+    "file": "scripts/metrics-publication-domain.ts",
+    "lines": "373-375",
+    "reason": "Runtime-erased inline object type fields for classifyDeadline. t222 calls the function in-process for ready, pending, and timeout outcomes, but Bun's full-suite LCOV merge stamps the type-only rows DA:0.",
+    "expiry": "remove if the parameter type is named or Bun LCOV stops marking erased type fields as executable and uncovered"
+  },
+  {
+    "file": "scripts/metrics-publication.ts",
+    "lines": "113",
+    "reason": "Spawn-only import.meta.main CLI exit wrapper. t222 calls publicationMain in-process for success, validation failure, and operation failure; Bun does not attribute spawned entrypoint execution to the parent LCOV report.",
+    "expiry": "remove when the CLI wrapper gains an in-process process-exit seam"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
     "lines": "284-287",
     "reason": "The process-I/O adapter is exercised through the spawned CLI integration suite; all parsing, file-safety, output selection, and exit-code behavior is covered in-process by t368.",
