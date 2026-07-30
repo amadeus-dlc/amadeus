@@ -3065,15 +3065,32 @@ function unitCovered(
 // record that grew from an earlier Bolt no longer blocks the current one.
 // Otherwise `unit` is null and `uncovered` carries the ambiguity for the
 // refusal message to name.
+//
+// The single-candidate arm deliberately resolves WITHOUT consulting coverage,
+// so a lone unit whose artifacts already exist still yields a directive
+// (E-OBB2-CG1). That is not a re-run instruction: it is the same move the
+// compiled-DAG path makes on its all-covered re-entry (pickUnit === null
+// below), where the covered unit carries the stage's REAL gate so the human
+// approves once. The asymmetry with the all-covered MULTI-unit arm, which
+// refuses, is the presence of ambiguity rather than a different policy on
+// finished work — with several finished units the engine cannot say which one
+// the gate belongs to.
+//
+// `unitKinds` mirrors the compiled-DAG call: a stage with produces_kinds
+// requires only the artifacts its unit's kind declares, so a kindless lookup
+// would hold a finished unit to the full matrix and report it uncovered. The
+// map is empty whenever the runtime snapshot carries no unit rows, which is
+// the common degrade case, and then coverage falls back to the full matrix.
 function resolveDegradeUnit(
   projectDir: string,
   node: GraphStage,
   candidates: string[],
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
 ): { unit: string | null; uncovered: string[] } {
   const uncovered = candidates.filter(
-    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
   );
   if (candidates.length === 1) return { unit: candidates[0], uncovered };
   if (uncovered.length === 1) return { unit: uncovered[0], uncovered };
@@ -3162,9 +3179,12 @@ function emitPerUnitRunStage(
   // path can neither be produced nor consumed, and the reviewer runtime rejects
   // it downstream.
   const units = orderedUnits(projectDir);
+  const unitKinds = readUnitKinds(projectDir);
   if (units.length === 0) {
     const degradeUnits = unitDirsUnderConstruction(projectDir, recordPrefix);
-    const picked = resolveDegradeUnit(projectDir, node, degradeUnits, recordPrefix, codekbCtx);
+    const picked = resolveDegradeUnit(
+      projectDir, node, degradeUnits, recordPrefix, codekbCtx, unitKinds,
+    );
     if (picked.unit === null) {
       emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered));
       return;
@@ -3181,7 +3201,6 @@ function emitPerUnitRunStage(
     return;
   }
 
-  const unitKinds = readUnitKinds(projectDir);
   // Delegate the next-unit selection to the canonical construction-iteration
   // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The
   // coverage ledger is the per-unit artifacts on disk (unitCovered), passed as
