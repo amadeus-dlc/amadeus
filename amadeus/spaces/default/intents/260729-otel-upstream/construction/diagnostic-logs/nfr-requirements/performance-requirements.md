@@ -11,6 +11,14 @@
 | fail-open 遅延 | Store 書込失敗時の復帰は例外握りつぶしのみ。retry・queue・二次 emit を行わない（BR-2・BR-10）ため、失敗経路の追加遅延は catch 処理の定数時間に留まる | 強制失敗テストで復帰までの追加操作がないことを固定 |
 | 相関採取コスト | traceId／spanId は active Context からの参照取得のみ（ID 生成・sha256 計算・Span 終了待ちを行わない、BR-3） | 実装検査（emit 経路に ID 生成がないこと） |
 
+## 「1 回の同期 append」の明確化（申告付き追記）
+
+上表「emit レイテンシ」の「1 回の同期 append のみ」は、**record あたりの append 書込が 1 回・同期・バッファ／タイマー／リトライ経路なし**を指す。`mkdirSync` 等の**冪等な ensure-dir セットアップ FS 操作は append に数えない**。
+
+- 根拠: U4 hardening 済み `local-log-exporter.ts` の `defaultWrite` は `mkdirSync(recursive)` + `appendFileSync` の 2 FS 操作で構成される（実測）。BR-11 により本 Unit は当該 Exporter を複製・改変しないため、U4 実装を正とし要件表現を明確化する
+- 検証の対応: 注入 seam 経由の append 呼出し回数 = 1 と、emit 経路の timer 不在（静的検査）で固定する（`tests/integration/t368-diagnostic-logs.test.ts`）
+- 出典: 2026-07-30 conductor 執行裁定（U10 builder の観測 → U4 `defaultWrite` 実測による裁定。U4 コードは無改変）
+
 ## 制約
 
 - hot path にネットワーク I/O・Collector 依存を導入しない（FR-EXP-2 系統、NFR-2 準拠）
