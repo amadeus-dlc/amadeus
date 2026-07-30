@@ -20,6 +20,7 @@ import { join } from "node:path";
 import {
   type Evidence,
   GATE_CONDITIONS,
+  gatherEvidence,
   MIXED_JOURNAL_TESTS,
   REPO_ROOT_FOR_TEST,
   runBunTests,
@@ -184,4 +185,28 @@ describe("declared suite paths are verified, not assumed", () => {
     expect(outcome.ran).toBe(true);
     expect(outcome.detail).toContain(`across ${MIXED_JOURNAL_TESTS.length} file`);
   });
+});
+
+// --- the gathering layer, driven for real -----------------------------------
+//
+// The measurement layer is the half a spawned CLI run would hide from coverage,
+// so it is driven once in process here. It really does run the mixed-journal
+// suites and both distribution guards, which is the point: these are the
+// conditions whose evidence comes from a subprocess, and an evaluator that
+// mis-wires them would still look fine against injected evidence.
+
+describe("gatherEvidence — every condition's evidence is actually collected", () => {
+  test("returns a measured value for all six conditions", () => {
+    const evidence = gatherEvidence();
+    // (a) and (f) shell out; both must report that they ran.
+    expect(evidence.mixedJournal?.ran).toBe(true);
+    expect(evidence.distribution?.ran).toBe(true);
+    expect(evidence.distribution?.sources.length).toBeGreaterThan(0);
+    expect(typeof evidence.callsites).toBe("number");
+    expect(Array.isArray(evidence.registryDrift)).toBe(true);
+    expect(evidence.relay).not.toBeNull();
+    // No shadow report path was given, so (d) is unmeasured — the UNKNOWN arm.
+    expect(evidence.shadow).toBeNull();
+    expect(resultsFromEvidence(evidence)).toHaveLength(6);
+  }, 300_000);
 });
