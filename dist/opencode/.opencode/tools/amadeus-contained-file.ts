@@ -27,6 +27,7 @@ export type ContainedFileReadOutcome =
   | Readonly<{ kind: "failure"; reason: ContainedFileFailureReason }>;
 
 export type ContainedFileReadHooks = Readonly<{
+  beforeCanonicalize?: (path: string) => void;
   beforeOpen?: (path: string) => void;
   beforeRead?: (path: string) => void;
 }>;
@@ -83,6 +84,7 @@ function resolveCandidate(input: ContainedFileReadInput): ResolvedCandidate {
       : { kind: "failure", reason: "not-readable" };
   }
 
+  input.hooks?.beforeCanonicalize?.(candidate);
   try {
     if (!contained(rootReal, realpathSync(candidate))) {
       return { kind: "failure", reason: "outside-root" };

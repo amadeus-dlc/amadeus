@@ -7,6 +7,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -66,6 +67,25 @@ describe("readContainedFile", () => {
     expect(
       readContainedFile({ rootDir: root, path, maxBytes: 64 * 1024 }),
     ).toEqual({ kind: "failure", reason: "symlink" });
+  });
+
+  test("rejects a candidate removed between inspection and canonicalization", () => {
+    const root = temporaryRoot("amadeus-contained-file-");
+    const path = join(root, "finding.md");
+    writeFileSync(path, "Evidence", "utf-8");
+
+    expect(
+      readContainedFile({
+        rootDir: root,
+        path,
+        maxBytes: 64 * 1024,
+        hooks: {
+          beforeCanonicalize() {
+            unlinkSync(path);
+          },
+        },
+      }),
+    ).toEqual({ kind: "failure", reason: "not-readable" });
   });
 
   test("rejects a path swapped to an outside symlink before open", () => {

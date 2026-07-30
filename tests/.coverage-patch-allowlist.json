@@ -1489,8 +1489,8 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "280",
-    "reason": "The stderr process-I/O adapter is exercised through the spawned CLI integration suite; diagnostic selection is covered through runFindingCli in-process.",
+    "lines": "279-280",
+    "reason": "The stdout/stderr process-I/O adapters are exercised through the spawned CLI integration suite; output selection is covered through runFindingCli in-process.",
     "expiry": "remove when Bun attributes spawned CLI coverage"
   },
   {
@@ -1501,7 +1501,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-contained-file.ts",
-    "lines": "99",
+    "lines": "101",
     "reason": "O_NOFOLLOW is available on every supported CI platform; this fail-closed portability guard can execute only on a runtime that does not expose the constant.",
     "expiry": "remove when unsupported filesystems are dropped or the filesystem constants port becomes injectable"
   },
