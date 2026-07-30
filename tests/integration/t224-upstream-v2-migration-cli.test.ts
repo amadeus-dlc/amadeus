@@ -27,7 +27,11 @@ import {
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { auditLockDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  _resetCloneIdForTests,
+  auditCloneId,
+  auditLockDir,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   createUpstreamV2Fixture,
   projectSnapshot,
@@ -1298,6 +1302,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const sentinel = "CLONE_ID_SENTINEL_MUST_NOT_CHANGE\n";
     try {
       writeFileSync(target, sentinel, "utf-8");
+      const targetBefore = statSync(target);
       const cloneId = join(project.sourceRoot, `.${UPSTREAM_FILE_PREFIX}clone-id`);
       rmSync(cloneId, { force: true });
       symlinkSync(target, cloneId);
@@ -1316,11 +1321,52 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "GUARDRAIL_LOADED",
         "HEALTH_CHECKED",
       ]);
-      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+
+      _resetCloneIdForTests();
+      const firstCloneId = auditCloneId(project.projectDir);
+      _resetCloneIdForTests();
+      const secondCloneId = auditCloneId(project.projectDir);
+      expect(firstCloneId).toMatch(/^[a-f0-9]{12}$/);
+      expect(secondCloneId).toBe(firstCloneId);
+
+      rmSync(
+        join(project.destinationRoot, relative(project.sourceRoot, project.auditPath)),
+        { force: true },
+      );
+      project.commitAll("test: remove the legacy markdown audit fixture");
       const migratedCloneId = join(project.destinationRoot, ".amadeus-clone-id");
+      const firstDoctor = runInstalledDoctor(project);
+      const secondDoctor = runInstalledDoctor(project);
+      expectSuccessfulMigration(firstDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expectSuccessfulMigration(secondDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+      const targetAfter = statSync(target);
+      expect({
+        mode: targetAfter.mode,
+        uid: targetAfter.uid,
+        gid: targetAfter.gid,
+        size: targetAfter.size,
+        mtimeMs: targetAfter.mtimeMs,
+        ino: targetAfter.ino,
+      }).toEqual({
+        mode: targetBefore.mode,
+        uid: targetBefore.uid,
+        gid: targetBefore.gid,
+        size: targetBefore.size,
+        mtimeMs: targetBefore.mtimeMs,
+        ino: targetBefore.ino,
+      });
       expect(lstatSync(migratedCloneId).isSymbolicLink()).toBe(true);
       expect(readlinkSync(migratedCloneId)).toBe(target);
-      expect(project.git(["diff", "--name-only"])).toBe("");
+      const changedPaths = project.git(["diff", "--name-only"]).trim().split("\n");
+      expect(changedPaths).toHaveLength(1);
+      expect(changedPaths[0]).toMatch(/\/audit\/[^/]+\.jsonl$/);
     } finally {
       rmSync(external, { recursive: true, force: true });
     }
