@@ -4674,6 +4674,7 @@ export function handleGateReserve(
   args: string[],
   projectDir: string | undefined,
 ): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const stageIndex = args.indexOf("--stage");
   const slug = stageIndex === -1 ? undefined : args[stageIndex + 1];
   if (!slug || slug.startsWith("--")) {
@@ -4734,6 +4735,7 @@ export function handleGateReject(
   args: string[],
   projectDir: string | undefined,
 ): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const value = (name: string): string | undefined => {
     const index = args.indexOf(name);
     const candidate = index === -1 ? undefined : args[index + 1];

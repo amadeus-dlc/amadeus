@@ -7,8 +7,10 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
@@ -527,6 +529,43 @@ describe("Kimi reviewer boundary and gate provenance", () => {
     expect(readAllAuditShards(root)).toBe(auditBefore);
   });
 
+  test("ambient Kimi subagent cannot retrieve an existing gate reservation", () => {
+    const root = freshWorkflow();
+    const reserved = runTool(root, ENGINE, [
+      "gate-reserve",
+      "--stage",
+      "requirements-analysis",
+    ]);
+    expect(reserved.code).toBe(0);
+    expect(JSON.parse(reserved.stdout).kind).toBe("await-approval");
+
+    const roleStarted = runAdapter(
+      "role-start",
+      JSON.stringify({
+        hook_event_name: "SubagentStart",
+        session_id: "",
+        cwd: root,
+        agent_name: "amadeus-architecture-reviewer-agent",
+      }),
+      root,
+    );
+    expect(roleStarted.exitCode).toBe(0);
+
+    const stateBefore = readFileSync(seededStateFile(root), "utf-8");
+    const auditBefore = readAllAuditShards(root);
+    const denied = runTool(root, ENGINE, [
+      "gate-reserve",
+      "--stage",
+      "requirements-analysis",
+    ]);
+
+    expect(denied.stdout || denied.stderr).toContain(
+      "is not the main conductor",
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
+    expect(readAllAuditShards(root)).toBe(auditBefore);
+  });
+
   test.each([
     "amadeus-architecture-reviewer-agent",
     "support",
@@ -549,6 +588,15 @@ describe("Kimi reviewer boundary and gate provenance", () => {
 
       const stateBefore = readFileSync(seededStateFile(root), "utf-8");
       const auditBefore = readAllAuditShards(root);
+      const reservationsDir = join(
+        root,
+        "amadeus",
+        ".amadeus-sessions",
+        "presence-reservations",
+      );
+      const reservationsBefore = existsSync(reservationsDir)
+        ? readdirSync(reservationsDir).sort()
+        : [];
       for (const [tool, args] of [
         [ENGINE, ["next"]],
         [
@@ -564,6 +612,22 @@ describe("Kimi reviewer boundary and gate provenance", () => {
           ],
         ],
         [ENGINE, ["park"]],
+        [
+          ENGINE,
+          ["gate-reserve", "--stage", "requirements-analysis"],
+        ],
+        [
+          ENGINE,
+          [
+            "gate-reject",
+            "--stage",
+            "requirements-analysis",
+            "--target-intent-id",
+            "00000000-0000-7000-8000-000000000001",
+            "--presence-reservation-id",
+            "00000000-0000-4000-8000-000000000001",
+          ],
+        ],
         [STATE, ["set", "Current Status=COMPLETE"]],
       ] as const) {
         const denied = runTool(root, tool, [...args]);
@@ -572,6 +636,11 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       }
       expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
       expect(readAllAuditShards(root)).toBe(auditBefore);
+      expect(
+        existsSync(reservationsDir)
+          ? readdirSync(reservationsDir).sort()
+          : [],
+      ).toEqual(reservationsBefore);
       expect(stopResult(root, "main").calls).toEqual([]);
 
       runAdapter(
