@@ -158,8 +158,14 @@ let caseCounter = 0;
  * env at the fixture, and import the hook with a cache-busting query so its
  * top-level script re-executes. Returns the exit code the hook terminated with.
  */
-async function driveHook(proj: string, filePath: string): Promise<number> {
-  seedSensorInvocation(proj, "requirements-analysis", [filePath]);
+async function driveHook(
+  proj: string,
+  filePath: string,
+  produces: string[] | null = [filePath],
+): Promise<number> {
+  if (produces !== null) {
+    seedSensorInvocation(proj, "requirements-analysis", produces);
+  }
   const json = JSON.stringify({
     tool_name: "Write",
     tool_input: { file_path: filePath },
@@ -265,6 +271,41 @@ describe("sensor-fire glob normalization (#757) — in-process hook drive", () =
       join(tmpdir(), "scratch-glob-norm", "notes.txt").replace(/\//g, "\\"),
     );
     expect(status).toBe(0);
+    expect(existsSync(spawnLogPath(proj))).toBe(false);
+  });
+
+  test("document sensors stay silent when no run-stage scope exists", async () => {
+    const proj = makeProjectActive();
+    const filePath = join(
+      proj,
+      "amadeus-docs",
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+
+    expect(await driveHook(proj, filePath, null)).toBe(0);
+    expect(existsSync(spawnLogPath(proj))).toBe(false);
+  });
+
+  test("document sensors reject a matching path outside the declared outputs", async () => {
+    const proj = makeProjectActive();
+    const filePath = join(
+      proj,
+      "amadeus-docs",
+      "inception",
+      "requirements-analysis",
+      "memory.md",
+    );
+    const declared = join(
+      proj,
+      "amadeus-docs",
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+
+    expect(await driveHook(proj, filePath, [declared])).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(false);
   });
 });

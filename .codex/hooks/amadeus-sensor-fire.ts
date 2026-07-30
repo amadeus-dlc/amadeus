@@ -22,9 +22,8 @@ import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
-  invocationDeclaresOutput,
   readSensorInvocationScope,
-  sensorUsesDeclaredOutputScope,
+  sensorAllowsInvocationOutput,
 } from "../tools/amadeus-sensor-invocation.ts";
 import {
   type ClaudeCodeHookInput,
@@ -212,16 +211,12 @@ for (const entry of applicableSensors) {
   if (!entry.matches) continue;
   const glob = new Bun.Glob(entry.matches);
   if (!glob.match(filePathNorm)) continue;
-  if (
-    sensorUsesDeclaredOutputScope(entry.category) &&
-    (
-      invocationScope === null ||
-      invocationScope.stage !== currentStage ||
-      !invocationDeclaresOutput(projectDir, invocationScope, filePath)
-    )
-  ) {
-    continue;
-  }
+  if (!sensorAllowsInvocationOutput(
+    entry.category,
+    projectDir,
+    invocationScope,
+    filePath,
+  )) continue;
 
   // Spawn dispatcher (C1). Bare-script form (`bun <script> ...`)
   // matches the upstream dispatcher manifest's `command:` convention.

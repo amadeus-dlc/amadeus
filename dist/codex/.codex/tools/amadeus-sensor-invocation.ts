@@ -94,3 +94,14 @@ export function projectSensorInvocation(
 export function sensorUsesDeclaredOutputScope(category: string | undefined): boolean {
   return category === "document-shape" || category === "governance";
 }
+
+/** Apply exact invocation scoping only to document and governance sensors. */
+export function sensorAllowsInvocationOutput(
+  category: string | undefined,
+  projectDir: string,
+  scope: SensorInvocationScope | null,
+  filePath: string,
+): boolean {
+  if (!sensorUsesDeclaredOutputScope(category)) return true;
+  return scope !== null && invocationDeclaresOutput(projectDir, scope, filePath);
+}
