@@ -186,7 +186,7 @@ import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
 import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
@@ -468,7 +468,7 @@ function emitMirrorBoundaryIfNeeded(
     emit(errorDirective("Mirror boundary cannot resolve the active intent."));
     return true;
   }
-  const resolved = resolveMirrorConfig(projectDir, intent, space);
+  const resolved = resolveAmadeusConfig(projectDir, intent, space);
   if (resolved.kind === "invalid") {
     const details = resolved.issues
       .map((issue) =>

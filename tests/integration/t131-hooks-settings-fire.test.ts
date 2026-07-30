@@ -279,6 +279,8 @@ function makeProject(withState: boolean): string {
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
     "amadeus-mirror-config.ts",
+    "amadeus-layered-config.ts",
+    "amadeus-contained-file.ts",
     "amadeus-mirror-policy.ts",
     "amadeus-mirror-project-contract.ts",
   ]) {

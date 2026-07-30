@@ -142,6 +142,14 @@ function makeProject(): string {
     join(proj, ".claude", "tools", "amadeus-mirror-config.ts"),
   );
   copyFileSync(
+    join(SRC_TOOLS, "amadeus-layered-config.ts"),
+    join(proj, ".claude", "tools", "amadeus-layered-config.ts"),
+  );
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-contained-file.ts"),
+    join(proj, ".claude", "tools", "amadeus-contained-file.ts"),
+  );
+  copyFileSync(
     join(SRC_TOOLS, "amadeus-mirror-policy.ts"),
     join(proj, ".claude", "tools", "amadeus-mirror-policy.ts"),
   );
