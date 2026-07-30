@@ -140,13 +140,13 @@ describe("checkShadowEquivalence — condition (d)", () => {
 
 describe("checkRelayProof — condition (e)", () => {
   test("proof tests present and passing is PASS", () => {
-    expect(checkRelayProof({ moduleExists: true, proofTests: ["t369"], outcome: ran(true) }).verdict).toBe("PASS");
+    expect(checkRelayProof({ moduleExists: true, proofTests: ["tests/integration/relay-no-span-proof.test.ts"], outcome: ran(true) }).verdict).toBe("PASS");
   });
   test("module present but proof tests absent is FAIL (BR-10)", () => {
     expect(checkRelayProof({ moduleExists: true, proofTests: [], outcome: null }).verdict).toBe("FAIL");
   });
   test("module present and proof tests failing is FAIL", () => {
-    expect(checkRelayProof({ moduleExists: true, proofTests: ["t369"], outcome: ran(false) }).verdict).toBe("FAIL");
+    expect(checkRelayProof({ moduleExists: true, proofTests: ["tests/integration/relay-no-span-proof.test.ts"], outcome: ran(false) }).verdict).toBe("FAIL");
   });
   test("Relay module not delivered yet is UNKNOWN, not FAIL (BR-12)", () => {
     expect(checkRelayProof({ moduleExists: false, proofTests: [], outcome: null }).verdict).toBe("UNKNOWN");

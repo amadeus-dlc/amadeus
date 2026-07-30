@@ -48,7 +48,7 @@ const ALL_PASS: Evidence = {
     allowedAttributes: { performed: true, equivalent: true, detail: "" },
     unexplainedDiffs: [],
   },
-  relay: { moduleExists: true, proofTests: ["t369"], outcome: { ran: true, passed: true, detail: "", sources: [] } },
+  relay: { moduleExists: true, proofTests: ["tests/integration/relay-no-span-proof.test.ts"], outcome: { ran: true, passed: true, detail: "", sources: [] } },
   distribution: { ran: true, passed: true, detail: "", sources: ["dist:check"] },
 };
 
