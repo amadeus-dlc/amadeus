@@ -271,7 +271,7 @@ jobs:
           pattern: mirror-distribution-benchmark-*
           path: benchmark-replicas
 
-      - name: Enforce image, completeness, dispersion, p95, and RSS budgets
+      - name: Enforce runtime compatibility, completeness, dispersion, p95, and RSS budgets
         run: |
           mapfile -t replicas < <(find benchmark-replicas -name distribution-benchmark.json -type f | sort)
           bun run distribution:benchmark:aggregate -- "${replicas[@]}"
