@@ -137,6 +137,8 @@ When a Bolt's code-generation returns failure, **always halt and present the hal
 - Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.
 - Abort: stop Construction; user can resume later. Worktree at `<path>` is preserved.
 
+In solo mode, when the layered config resolves `"auto-solo-election": true`, put the blocker's options to an election first with `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo`; on `{"opened":null,"reason":"auto-solo-election-disabled"}` no election is created and the halt-and-ask prompt above is the user's ruling.
+
 The orchestrator runs `bun .cursor/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
 
 ```question
@@ -1001,6 +1003,14 @@ Trigger after Step N-1 (completion message rendered) and before Step N (approval
    The tool parses memory.md and emits structured JSON: one candidate per non-blank entry under **Interpretations / Deviations / Tradeoffs** (surfaced verbatim — no paraphrase, no "interesting" filtering), plus a read-only `parked_open_questions[]` list. Open questions are research items, not learnings to install — they never become candidates. Most runs surface nothing worth keeping; that's the most common outcome.
 
 3. **Render the structured question + free-text channel.** For each candidate, render one option whose `label` is the candidate `summary` (verbatim) and whose `description` names the routed destination (e.g. `→ project.md ## Corrections`) plus a "promote to team?" affordance. Never label an option with only the candidate id — `❌ "Persist c5 only (Recommended)"` is a protocol violation: the human cannot judge what `c5` is from the label, so the `summary` (not the id) must be the visible `label`. After `multiSelect` returns, correlate each kept label back to its candidate `id` + `source_heading`. Then **always** ask "Anything to add for next time?"; for any non-empty response, ask the user to pick one of the four diary headings (Interpretation / Deviation / Tradeoff / Open question). **The diary-heading pick is the only classification asked of the user.** From it, the orchestrator routes the learning to the fitting practice heading in the method file (KNOWLEDGE): a testing learning → `## Testing Posture`, a prohibition → `## Forbidden`, anything general → `## Corrections` (the default). The user never picks the destination heading directly — the orchestrator routes by fit, and the tool ensure-exists the heading before it writes.
+
+   **Solo auto-election hook.** In solo mode, when the layered config
+   (`amadeus/config.json` → space → intent) resolves `"auto-solo-election": true`,
+   do not settle the kept set alone — put the selection (including a zero-candidate
+   proposal) to an election with
+   `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo`. If the CLI
+   answers `{"opened":null,"reason":"auto-solo-election-disabled"}`, no election is
+   created: fall back to the user's ruling on the same selection.
 
 4. **Admission conflict-check (before any write).** For each kept learning candidate, compare the proposed practice line against `org.md`'s matching `## <section>` (matched by the routed heading — the single-line variant of the §5 admission gate). This comparison is a section-level LLM check (knowledge → orchestrator-LLM). If the practice contradicts an org guardrail, surface the conflicting org sentence inline; the user **revises, skips this candidate, or escalates** (judgement → user; there is no user-override path). Only conflict-clear or user-escalated selections proceed to the write. Sensor manifests have no org-section analogue and skip this check.
 
