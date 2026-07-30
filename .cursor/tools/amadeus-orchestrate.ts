@@ -2156,7 +2156,9 @@ function freshReadonlyLatchLabel(projectDir: string | undefined): string | null 
   return null;
 }
 
-// The `next` handler — pure read, emits exactly one directive.
+// The `next` handler — pure read of workflow state, emits exactly one
+// directive. Its only write is the machine-local sensor-invocation projection
+// emit() drops beside the hooks-health heartbeat for run-stage directives.
 export function handleNext(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
