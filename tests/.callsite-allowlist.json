@@ -1,0 +1,91 @@
+{
+  "description": "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
+  "direction": "shrink-only",
+  "total": 66,
+  "sites": {
+    "packages/framework/core/hooks/amadeus-audit-logger.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/hooks/amadeus-log-subagent.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/hooks/amadeus-session-end.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/hooks/amadeus-session-start.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/hooks/amadeus-validate-state.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-audit.ts": {
+      "appendAuditEntryUnlocked": 3,
+      "appendAuditEntry": 3
+    },
+    "packages/framework/core/tools/amadeus-bolt.ts": {
+      "appendAuditEntry": 1,
+      "observeSubprocess": 1
+    },
+    "packages/framework/core/tools/amadeus-grant-authorization.ts": {
+      "appendAuditEntryUnlocked": 1
+    },
+    "packages/framework/core/tools/amadeus-jump.ts": {
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-learnings.ts": {
+      "appendAuditEntryUnlocked": 2
+    },
+    "packages/framework/core/tools/amadeus-lib.ts": {
+      "appendAuditEntryUnlocked": 1,
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-migrate.ts": {
+      "observeSubprocess": 2
+    },
+    "packages/framework/core/tools/amadeus-mirror-lifecycle.ts": {
+      "observeSubprocess": 1
+    },
+    "packages/framework/core/tools/amadeus-mirror-state-store.ts": {
+      "appendAuditEntryUnlocked": 1
+    },
+    "packages/framework/core/tools/amadeus-orchestrate.ts": {
+      "appendAuditEntry": 1,
+      "observeSubprocess": 3
+    },
+    "packages/framework/core/tools/amadeus-plugin.ts": {
+      "observeSubprocess": 2
+    },
+    "packages/framework/core/tools/amadeus-presence-reservation.ts": {
+      "appendAuditEntryUnlocked": 1,
+      "appendAuditEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-runtime.ts": {
+      "appendAuditEntryUnlocked": 1
+    },
+    "packages/framework/core/tools/amadeus-sensor.ts": {
+      "appendAuditEntryUnlocked": 4,
+      "observeSubprocess": 1
+    },
+    "packages/framework/core/tools/amadeus-state.ts": {
+      "appendAuditEntryUnlocked": 3,
+      "appendAuditEntry": 3,
+      "observeSubprocess": 1
+    },
+    "packages/framework/core/tools/amadeus-swarm.ts": {
+      "observeSubprocess": 5,
+      "appendAuditEntry": 6
+    },
+    "packages/framework/core/tools/amadeus-utility.ts": {
+      "appendAuditEntryUnlocked": 1,
+      "appendAuditEntry": 1,
+      "observeSubprocess": 5
+    },
+    "packages/framework/core/tools/amadeus-worktree.ts": {
+      "appendAuditEntry": 1,
+      "observeSubprocess": 1
+    },
+    "scripts/otel-phase1-measure.ts": {
+      "appendAuditEntry": 2
+    }
+  }
+}
