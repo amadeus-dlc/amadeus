@@ -16,7 +16,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import {
   type Evidence,
   GATE_CONDITIONS,
@@ -179,6 +179,21 @@ describe("declared suite paths are verified, not assumed", () => {
     const outcome = runBunTests(["tests/unit/t000-does-not-exist.test.ts"]);
     expect(outcome.ran).toBe(false);
     expect(outcome.detail).toContain("t000-does-not-exist");
+  });
+
+  // The proof suite is DISCOVERED (by marker) rather than declared, so its
+  // paths arrive from a directory walk while runBunTests resolves against the
+  // repo root. Absolute paths survive existsSync on their own and only fail
+  // after the join, which reads as "condition (e) has no proof" — a silent
+  // UNKNOWN on evidence that is right there (Refs: #1783).
+  test("the Relay proof's paths are the repo-relative form runBunTests resolves", () => {
+    const proof = measureRelayProof();
+    expect(proof?.proofTests.length ?? 0).toBeGreaterThan(0);
+    for (const path of proof?.proofTests ?? []) {
+      expect(isAbsolute(path)).toBe(false);
+      expect(existsSync(join(REPO_ROOT_FOR_TEST, path))).toBe(true);
+    }
+    expect(proof?.outcome?.ran).toBe(true);
   });
 
   test("the run reports the file count it actually executed", () => {

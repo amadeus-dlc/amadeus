@@ -27,7 +27,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 // The drift checker is read from the SHIPPED tree, the same source the sibling
 // registry-drift suite reads, so the gate judges what is distributed rather
@@ -376,11 +376,15 @@ export type Evidence = {
   readonly distribution: RunOutcome | null;
 };
 
-// Condition (a): the mixed v1/v2 journal behaviour-equivalence suites (U6).
-export const MIXED_JOURNAL_TESTS = [
-  "tests/unit/t365-journal-reader-swap.test.ts",
-  "tests/integration/t366-journal-reader-swap-projector.test.ts",
-] as const;
+// Condition (a): the mixed v1/v2 journal behaviour-equivalence suite (U6).
+//
+// U11 removed the projector, and with it t366 — the suite that checked the
+// projector built an identical span graph from v1-only, v2-only and mixed
+// journals. Nothing consumes the journal that way any more (the Relay reads
+// the Signal Stores, FR-RLY-2), so the condition rests on t365, which covers
+// the readers this condition is actually named for: doctor, recovery,
+// presence, grant, shard merge, the runtime-graph compile input and learnings.
+export const MIXED_JOURNAL_TESTS = ["tests/unit/t365-journal-reader-swap.test.ts"] as const;
 
 // Exported for the path-existence test: the gate's own constants are the thing
 // most likely to rot, and a test that resolved paths its own way would not be
@@ -431,7 +435,13 @@ export function measureRelayProof(): RelayProof | null {
     const moduleExists = existsSync(join(REPO_ROOT, RELAY_MODULE));
     const sources: string[] = [];
     listTestSources(join(REPO_ROOT, "tests"), sources);
-    const proofTests = sources.filter((path) => readFileSync(path, "utf-8").includes(RELAY_PROOF_MARKER)).sort();
+    // Repo-relative, because runBunTests resolves against REPO_ROOT: an
+    // absolute path would join into a second repo root and read as a missing
+    // proof (Refs: #1783).
+    const proofTests = sources
+      .filter((path) => readFileSync(path, "utf-8").includes(RELAY_PROOF_MARKER))
+      .map((path) => relative(REPO_ROOT, path))
+      .sort();
     if (!moduleExists || proofTests.length === 0) return { moduleExists, proofTests, outcome: null };
     return { moduleExists, proofTests, outcome: runBunTests(proofTests) };
   } catch {
