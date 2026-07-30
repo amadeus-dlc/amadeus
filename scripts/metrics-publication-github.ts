@@ -129,7 +129,7 @@ function loadRemoteBranch(
     `+refs/heads/${remote.name}:refs/remotes/origin/${remote.name}`,
   ]);
   const files = parseNameStatus(
-    command(context, ["git", "diff", "--no-renames", "--name-status", "origin/main", remote.oid, "--", "metrics/"]),
+    command(context, ["git", "diff", "--no-renames", "--name-status", `origin/main...${remote.oid}`, "--", "metrics/"]),
   ).map((file) => ({
     ...file,
     text: mode === "snapshot" && file.status !== "D" ? readGitFile(context, remote.oid, file.path) : undefined,
@@ -585,7 +585,7 @@ export class MaintenanceCliPort implements MaintenancePublisherPort {
     if (files.length === 0) {
       return { kind: "rejected", receipts: [], problem: "maintenance publish requested with no diff" };
     }
-    command(this.#context, ["git", "add", "-A", "--", "metrics/"]);
+    command(this.#context, ["git", "add", "--update", "--", "metrics/"]);
     command(this.#context, ["git", "commit", "-m", `chore(metrics): maintain snapshots at ${preparation.cutoffSha}`]);
     const push = [
       "git",

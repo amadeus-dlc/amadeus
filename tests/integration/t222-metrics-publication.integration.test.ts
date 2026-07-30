@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { publicationMain } from "../../scripts/metrics-publication.ts";
 import {
   MaintenanceCliPort,
+  SnapshotCliPort,
   systemCommandRunner,
 } from "../../scripts/metrics-publication-github.ts";
 
@@ -216,6 +217,16 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     run(repository, ["git", "fetch", "origin", "main"]);
   }
 
+  function pushSnapshotBranch(commitSha: string): string {
+    run(repository, ["git", "switch", "--detach", commitSha]);
+    run(repository, ["bun", "scripts/metrics-snapshot.ts", "--write"]);
+    run(repository, ["git", "add", "metrics/"]);
+    run(repository, ["git", "commit", "-m", `snapshot branch ${commitSha}`]);
+    const branch = `metrics/snapshot-${commitSha}`;
+    run(repository, ["git", "push", "origin", `HEAD:refs/heads/${branch}`]);
+    return branch;
+  }
+
   test("same SHA three times stays one JSON and resends maintenance dispatch", async () => {
     const sha = headSha();
     expect(await publishSnapshot(sha)).toBe(0);
@@ -309,5 +320,50 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     const observation = await port.reconcile(cutoffSha);
     expect(observation.inventory.hasDiff).toBe(false);
     expect(observation.mainSha).not.toBe(cutoffSha);
+  }, 30_000);
+
+  test("snapshot branch ownership ignores snapshots added to main after the branch point", async () => {
+    const targetSha = addMainCommit("snapshot-branch-target");
+    const branch = pushSnapshotBranch(targetSha);
+    const laterTarget = addMainCommit("snapshot-after-branch");
+    addSnapshotJson(laterTarget);
+
+    const port = new SnapshotCliPort({
+      repoRoot: repository,
+      repository: REPOSITORY,
+      botLogin: BOT_LOGIN,
+      targetSha,
+      runner: systemCommandRunner,
+    });
+    const inventory = await port.inventory();
+    expect(inventory.problems).toEqual([]);
+    expect(inventory.branches).toHaveLength(1);
+    expect(inventory.branches[0]).toMatchObject({
+      name: branch,
+      ownership: { ok: true },
+      files: [{ status: "A" }],
+    });
+  }, 30_000);
+
+  test("maintenance publish never stages an untracked snapshot JSON", async () => {
+    const targetSha = addMainCommit("maintenance-untracked-target");
+    addSnapshotJson(targetSha);
+    const port = new MaintenanceCliPort({
+      repoRoot: repository,
+      repository: REPOSITORY,
+      botLogin: BOT_LOGIN,
+      runner: systemCommandRunner,
+    });
+    const preparation = await port.prepare();
+    expect(preparation.inventory.hasDiff).toBe(true);
+    writeFileSync(join(repository, "metrics/untracked.json"), "{}\n");
+
+    const result = await port.publish(preparation);
+    expect(result.kind).toBe("published");
+    const staged = spawnSync("git", ["cat-file", "-e", "HEAD:metrics/untracked.json"], {
+      cwd: repository,
+      encoding: "utf8",
+    });
+    expect(staged.status).not.toBe(0);
   }, 30_000);
 });

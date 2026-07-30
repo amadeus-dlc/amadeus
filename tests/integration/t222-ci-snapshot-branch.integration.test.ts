@@ -204,6 +204,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(snapshotJob).toContain("group: metrics-snapshot-main");
     expect(snapshotJob).toContain("cancel-in-progress: false");
     expect(snapshotJob).toContain("timeout-minutes: 5");
+    expect(snapshotJob).toContain("shell: bash");
     expect(snapshotJob).toContain("name: amadeus-coverage-report");
     expect(snapshotJob).toContain("uses: actions/create-github-app-token@v3");
     expect(snapshotJob).toContain(`client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}`);
@@ -222,6 +223,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(maintenanceConcurrency).toContain("group: metrics-maintenance");
     expect(maintenanceConcurrency).toContain("cancel-in-progress: false");
     expect(maintenanceJob).toContain("timeout-minutes: 5");
+    expect(maintenanceJob).toContain("shell: bash");
     expect(maintenanceJob).toContain("bun scripts/metrics-publication.ts maintenance");
     expect(maintenanceJob).toContain("permission-contents: write");
     expect(maintenanceJob).toContain("permission-pull-requests: write");

@@ -532,6 +532,7 @@ jobs:
       - name: Publish immutable snapshot
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
         run: |
           bun scripts/metrics-publication.ts snapshot \
             --target-sha "$GITHUB_SHA" \

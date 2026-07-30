@@ -187,6 +187,24 @@ describe("t222 snapshot ownership is an AND contract", () => {
       ownership: { ok: true },
     });
   });
+
+  test("transient OPEN merge states remain pollable", () => {
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    for (const mergeStateStatus of ["UNKNOWN", "BEHIND", "BLOCKED"]) {
+      const parsed = parseSnapshotCandidate({ ...valid, mergeStateStatus });
+      expect(parsed).toMatchObject({
+        kind: "pull-request",
+        state: "open",
+        mergeability: "pending",
+        ownership: { ok: true },
+      });
+      if (parsed.kind !== "pull-request" || branch.kind !== "branch") throw new Error("fixture");
+      expect(decideSnapshotPublication(snapshotInventory({ pullRequests: [parsed], branches: [branch] }))).toMatchObject({
+        action: "reuse",
+        stickyFailure: false,
+      });
+    }
+  });
 });
 
 describe("t222 maintenance publication decision", () => {
@@ -428,7 +446,6 @@ describe("t222 maintenance publisher orchestration", () => {
     const nextSha = "d".repeat(40);
     const hasDiff = maintenanceInventory();
     const noDiff = maintenanceInventory({ hasDiff: false });
-    let calls = 0;
     const { implementation, receipts } = port(
       [
         { cutoffSha: TARGET_SHA, inventory: hasDiff },
@@ -436,7 +453,7 @@ describe("t222 maintenance publisher orchestration", () => {
       ],
       [noDiff],
       {
-        currentMainSha: async () => (calls++ === 0 ? nextSha : nextSha),
+        currentMainSha: async () => nextSha,
       },
     );
     expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({ code: 0 });
@@ -462,6 +479,53 @@ describe("t222 maintenance publisher orchestration", () => {
     );
     expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({ code: 0 });
     expect(publishCalls).toBe(2);
+  });
+
+  test("repeated cleanup stops at the publisher deadline", async () => {
+    const pr = parseMaintenanceCandidate(maintenancePr(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    const branch = parseMaintenanceCandidate(maintenanceBranch(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    if (pr.kind !== "pull-request" || branch.kind !== "branch") throw new Error("fixture");
+    const abnormal = maintenanceInventory({ hasDiff: false, pullRequests: [pr], branches: [branch] });
+    let preparations = 0;
+    const { implementation } = port(
+      [{ cutoffSha: TARGET_SHA, inventory: abnormal }],
+      [],
+      {
+        prepare: async () => {
+          preparations += 1;
+          if (preparations > 3) throw new Error("deadline was ignored");
+          return { cutoffSha: TARGET_SHA, inventory: abnormal };
+        },
+        nowMs: () => preparations * 10,
+      },
+    );
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 20, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+    });
+  });
+
+  test("repeated publish retries stop at the publisher deadline", async () => {
+    const hasDiff = maintenanceInventory();
+    let preparations = 0;
+    const { implementation } = port(
+      [{ cutoffSha: TARGET_SHA, inventory: hasDiff }],
+      [],
+      {
+        prepare: async () => {
+          preparations += 1;
+          if (preparations > 3) throw new Error("deadline was ignored");
+          return { cutoffSha: TARGET_SHA, inventory: hasDiff };
+        },
+        publish: async () => ({ kind: "retry", receipts: [] }),
+        currentMainSha: async () => TARGET_SHA,
+        nowMs: () => preparations * 10,
+      },
+    );
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 20, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+    });
   });
 
   test("recovered no-diff plus OPEN remains sticky failure", async () => {

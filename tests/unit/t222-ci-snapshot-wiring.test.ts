@@ -27,6 +27,7 @@ jobs:
     permission-contents: write
     permission-pull-requests: write
     token: \${{ steps.app-token.outputs.token }}
+    shell: bash
     run: |
       bun scripts/metrics-publication.ts snapshot \\
         --target-sha "$GITHUB_SHA" \\
@@ -51,6 +52,7 @@ jobs:
     permission-contents: write
     permission-pull-requests: write
     token: \${{ steps.app-token.outputs.token }}
+    shell: bash
     run: |
       bun scripts/metrics-publication.ts maintenance \\
         --repository "$GITHUB_REPOSITORY" \\
@@ -71,6 +73,7 @@ describe("t222 metrics publication workflow wiring", () => {
     expect(wiring.snapshotJob).toContain("group: metrics-snapshot-main");
     expect(wiring.snapshotJob).toContain("cancel-in-progress: false");
     expect(wiring.snapshotJob).toContain("timeout-minutes: 5");
+    expect(wiring.snapshotJob).toContain("shell: bash");
   });
 
   test("snapshot delegates full-SHA publication to the JSON-only publisher", () => {
@@ -99,6 +102,7 @@ describe("t222 metrics publication workflow wiring", () => {
     expect(wiring.maintenanceConcurrency).toContain("group: metrics-maintenance");
     expect(wiring.maintenanceConcurrency).toContain("cancel-in-progress: false");
     expect(wiring.maintenanceJob).toContain("timeout-minutes: 5");
+    expect(wiring.maintenanceJob).toContain("shell: bash");
   });
 
   test("maintenance delegates to the single maintenance publisher", () => {

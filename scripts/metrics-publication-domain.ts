@@ -23,7 +23,7 @@ export type PublicationPullRequest = {
   number: number;
   url: string;
   state: "open" | "closed";
-  mergeability: "mergeable" | "conflicting" | "not-applicable";
+  mergeability: "mergeable" | "pending" | "conflicting" | "not-applicable";
   mergedAt: string | null;
   branch: string;
   headOid: string;
@@ -237,9 +237,10 @@ export function verifyMaintenanceOwnership(rawValue: unknown, context: Ownership
   ]);
 }
 
-function parseMergeability(value: unknown): "mergeable" | "conflicting" {
+function parseMergeability(value: unknown): "mergeable" | "pending" | "conflicting" {
   const status = requireString(value, "mergeStateStatus").toUpperCase();
   if (["CLEAN", "HAS_HOOKS", "MERGEABLE", "UNSTABLE"].includes(status)) return "mergeable";
+  if (["BEHIND", "BLOCKED", "DRAFT", "UNKNOWN"].includes(status)) return "pending";
   if (["CONFLICTING", "DIRTY"].includes(status)) return "conflicting";
   throw new Error(`mergeStateStatus ${JSON.stringify(status)} is unsupported`);
 }
@@ -333,7 +334,7 @@ export function decideSnapshotPublication(
     inventory.pullRequests.length === 1 &&
     inventory.branches.length === 1 &&
     inventory.pullRequests[0].state === "open" &&
-    inventory.pullRequests[0].mergeability === "mergeable" &&
+    inventory.pullRequests[0].mergeability !== "conflicting" &&
     inventory.pullRequests[0].branch === inventory.branches[0].name &&
     inventory.pullRequests[0].headOid === inventory.branches[0].oid;
   return isSingleReusable
@@ -661,7 +662,7 @@ export async function runMaintenancePublisher(
   let stickyFailure = false;
   let preparation = await port.prepare();
 
-  while (true) {
+  while (port.nowMs() < options.deadlineMs) {
     const decision = decideMaintenancePublication(preparation.inventory);
     stickyFailure ||= decision.stickyFailure;
     if (decision.action === "fail-closed") {
@@ -672,6 +673,7 @@ export async function runMaintenancePublisher(
       receipts.push(...cleanupReceipts);
       const cleanupProblems = rejectedReceiptProblems(cleanupReceipts);
       if (cleanupProblems.length > 0) return failedRun("cleanup-rejected", true, receipts, cleanupProblems);
+      await port.sleep(options.pollIntervalMs);
       preparation = await port.prepare();
       continue;
     }
@@ -689,9 +691,11 @@ export async function runMaintenancePublisher(
       decision.reasons,
     );
     if (attempt.kind === "retry") {
+      await port.sleep(options.pollIntervalMs);
       preparation = await port.prepare();
       continue;
     }
     return attempt.result;
   }
+  return failedRun("timeout", stickyFailure, receipts, ["maintenance publication did not converge before deadline"]);
 }
