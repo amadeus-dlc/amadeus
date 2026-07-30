@@ -115,17 +115,25 @@ export function journalRecordKey(record: JournalRecord): string {
 // Field lookup over a mixed-version record under the historical audit field
 // names — the NormalizedJournalRecord view (domain-entities.md) the tool
 // readers consume so they never branch on the schema version. The envelope
-// serves "Timestamp" on both versions and "Event" maps to the v1 event / v2
-// eventName; payload fields come from the v1 fields map or the v2 attributes.
-// v2 typed attributes normalize to the string form v1 carried (JSON text for
-// non-strings; a null attribute reads as absent), matching the trimming the
-// legacy accessor applied to v1 field values. Returns null when the field is
-// absent. A v1 raw record (event: null) has no payload fields here — its
-// preserved body is the caller's concern (auditBlockField scans it).
+// serves "Timestamp" on both versions. "Event" serves the v1 audit event
+// type: on a v2 row the AuditLogExporter stamps it into the `Event`
+// attribute (eventName carries the registry's OTel name, e.g.
+// "amadeus.question.answered"), so the attribute wins and eventName is the
+// fallback for converted rows (convertV1ToV2 sets eventName to the audit
+// event and carries no Event attribute). Payload fields come from the v1
+// fields map or the v2 attributes. v2 typed attributes normalize to the
+// string form v1 carried (JSON text for non-strings; a null attribute reads
+// as absent), matching the trimming the legacy accessor applied to v1 field
+// values. Returns null when the field is absent. A v1 raw record
+// (event: null) has no payload fields here — its preserved body is the
+// caller's concern (auditBlockField scans it).
 export function journalRecordField(record: JournalRecord, fieldName: string): string | null {
   if (fieldName === "Timestamp") return record.timestamp;
   if (isJournalEntryV2(record)) {
-    if (fieldName === "Event") return record.eventName;
+    if (fieldName === "Event") {
+      const stamped = record.attributes.Event;
+      return typeof stamped === "string" ? stamped.trim() : record.eventName;
+    }
     const value = record.attributes[fieldName];
     if (value === undefined || value === null) return null;
     return (typeof value === "string" ? value : JSON.stringify(value)).trim();

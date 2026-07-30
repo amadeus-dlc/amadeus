@@ -1435,7 +1435,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-journal.ts",
-    "lines": "237",
+    "lines": "245",
     "reason": "isJsonValue's switch default clause (typeof undefined/function/symbol/bigint) is reachable but Bun emits no DA stamp for this line at all, so the patch gate cannot measure it; the branch is driven by the serialize rejection test for BigInt attributes.",
     "expiry": "remove if Bun stamps switch default clauses in LCOV or the validator is restructured"
   },

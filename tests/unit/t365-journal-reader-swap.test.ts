@@ -156,6 +156,33 @@ describe("auditBlockField — normalized field access across schema versions", (
     expect(field(record, "Note")).toBeNull();
     expect(field(record, "Missing")).toBeNull();
   });
+
+  test("journalRecordField serves the stamped Event attribute on a live-exporter v2 row", () => {
+    // The AuditLogExporter writes eventName = the registry's OTel name and
+    // stamps the v1 audit event type into the Event attribute — the accessor
+    // must serve the attribute, not the OTel name (findAllEvents matches on
+    // v1 event types like QUESTION_ANSWERED).
+    const record = parseJournalLine(
+      serializeJournalEntryV2({
+        schemaVersion: journal.JOURNAL_SCHEMA_VERSION_V2,
+        eventId: "evt-live-1",
+        seq: 2,
+        timestamp: TS(1),
+        eventName: "amadeus.question.answered",
+        attributes: { Event: "QUESTION_ANSWERED", Stage: "intent-capture", Details: "ok" },
+        intentId: INTENT,
+        space: "default",
+        cloneId: CLONE,
+        traceId: null,
+        spanId: null,
+        traceFlags: 0,
+        idempotencyKey: `${INTENT}:${CLONE}:2`,
+        canonical: true,
+      }).trim(),
+    );
+    const field = journal.journalRecordField as (r: journal.JournalRecord, name: string) => string | null;
+    expect(field(record, "Event")).toBe("QUESTION_ANSWERED");
+  });
 });
 
 describe("findAllEvents — the doctor / learnings / runtime-graph event scan", () => {

@@ -29,6 +29,7 @@ const { runExport } = projector;
 // failure, not a module-load error.
 const journalSpanInput = projector.journalSpanInput as (record: unknown) => {
   event: string | null;
+  heading: string | null;
   timestamp: string;
   intentId: string;
   cloneId: string;
@@ -175,6 +176,32 @@ describe("journalSpanInput — v2 normalization onto the span-input view", () =>
     expect(view.intentId).toBe(DEFAULT_RECORD_DIR);
     expect(view.cloneId).toBe(CLONE);
     expect(view.fields).toEqual({ Stage: "intent-capture", Attempt: "2" });
+  });
+
+  test("serves the stamped Event attribute as the span-input event on a live-exporter v2 row", () => {
+    // Live rows carry eventName = the registry OTel name and the v1 audit
+    // event type in the Event attribute — span builders match on the v1
+    // event type, so the attribute wins (fallback: eventName, the converted
+    // rows' shape).
+    const v2: JournalEntryV2 = {
+      schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+      eventId: "evt-live",
+      seq: 9,
+      timestamp: "2026-07-29T10:00:04Z",
+      eventName: "amadeus.stage.started",
+      attributes: { Event: "STAGE_STARTED", Stage: "intent-capture" },
+      intentId: DEFAULT_RECORD_DIR,
+      space: "default",
+      cloneId: CLONE,
+      traceId: "a".repeat(32),
+      spanId: "b".repeat(16),
+      traceFlags: 1,
+      idempotencyKey: `${DEFAULT_RECORD_DIR}:${CLONE}:9`,
+      canonical: true,
+    };
+    const view = journalSpanInput(v2);
+    expect(view.event).toBe("STAGE_STARTED");
+    expect(view.heading).toBe("amadeus.stage.started");
   });
 
   test("trims padded v2 string attributes to match journalRecordField (stage/phase matching)", () => {

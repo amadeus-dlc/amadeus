@@ -93,8 +93,9 @@ function readBufferEvents(projectDir: string): BufferEvent[] {
 
 // Span-input view of one journal record (FR-JRN-4): the span builders consume
 // the v1 shape (event + string fields), so a v2 record is normalized onto it —
-// eventName -> event/heading, typed attributes -> string fields (JSON text for
-// non-strings, null dropped). The v2 trace/span correlation IDs are NOT
+// Event attribute (fallback eventName) -> event, eventName -> heading, typed
+// attributes -> string fields (JSON text for non-strings, null dropped). The
+// v2 trace/span correlation IDs are NOT
 // consulted: span identity stays deterministic (Q3/Q10), and a v1 record's
 // missing correlation is tolerated, never synthesized into an edge (BR-8/BR-16).
 export function journalSpanInput(record: JournalRecord): JournalEntry {
@@ -114,7 +115,11 @@ export function journalSpanInput(record: JournalRecord): JournalEntry {
     intentId: record.intentId,
     timestamp: record.timestamp,
     heading: record.eventName,
-    event: record.eventName,
+    // The v1 audit event type: the AuditLogExporter stamps it into the
+    // `Event` attribute (eventName is the registry's OTel name); converted
+    // rows carry no Event attribute and eventName IS the audit event —
+    // same precedence as journalRecordField.
+    event: fields.Event ?? record.eventName,
     fields,
   };
 }
