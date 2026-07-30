@@ -63,17 +63,31 @@
 
 ## センサー適用性と代替検証
 
-RE ステージは `required-sections` / `upstream-coverage` / `answer-evidence` を宣言するが、共有 codekb 出力パスは既存 sensor filter に構造的に適合しない。このため sensor 成功として記録せず、次の代替検証を実行する。
+RE ステージは `required-sections` / `upstream-coverage` / `answer-evidence` を宣言するが、共有 codekb 出力パスは既存 sensor filter に構造的に適合しない。このため sensor 成功として記録せず、初回実装 commit `9144c3f61` の current-layer manifest から再生成した次の12ファイルを代替検証対象とする。
 
-- 更新した共有 9 成果物と本 re-scan の全10ファイルで H2 見出しが 2 個以上。
-- 正準 conflict marker（`<<<<<<<` / `=======` / `>>>>>>>`）が 0 件。
-- body 8 成果物と共有 timestamp の「現在」マーカーが `260730-metrics-pr-conflicts` を指す。
-- `architecture.md` の Mermaid block をローカルで利用可能な parser / CLI の範囲で構文確認し、各図に日本語のテキスト代替を併記。
-- 対象10ファイル限定の `git diff --check` が成功。
+```text
+amadeus/spaces/default/codekb/amadeus/re-scans/260730-metrics-pr-conflicts.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/amadeus-state.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/audit/j5ik2o-mac-studio-lan-0ac18f6e5802.jsonl
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/construction/code-generation/memory.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/construction/metrics-publication-convergence/code-generation/code-generation-plan.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/construction/metrics-publication-convergence/code-generation/code-summary.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/inception/requirements-analysis/memory.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/inception/requirements-analysis/requirements-analysis-questions.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/inception/requirements-analysis/requirements.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/inception/reverse-engineering/learnings-selections.json
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/inception/reverse-engineering/memory.md
+amadeus/spaces/default/intents/260730-metrics-pr-conflicts/verification/phase-check-inception.md
+```
+
+- Markdown 10ファイルはすべて H2 見出しが2個以上。
+- 正準 conflict marker の行が0件。
+- JSON 1ファイルと JSONL 1ファイルは全レコードを `jq` で構文確認。
+- 上記12ファイル限定の `git diff --check` が成功。
 
 ## Delivery boundary
 
-本スキャンの成果物は、共有 CodeKB 9 件と本 per-intent re-scan 記録だけである。コード、テスト、CI workflow、metrics データ、intent state / audit、GitHub PR / branch は変更しない。修正実装では Snapshot Publisher と Maintenance Publisher の ownership、完全 SHA 冪等性、PR 状態 reconciliation をこの境界から逸脱させない。
+本 re-scan 固有の CodeKB 成果物は本記録1件であり、同じ current layer には後続ステージが生成した intent state / audit / memory / requirements / code-generation 記録11件が含まれる。`architecture.md` を含む共有 CodeKB 本文は参照入力であり、この manifest では更新していない。修正実装では Snapshot Publisher と Maintenance Publisher の ownership、完全 SHA 冪等性、PR 状態 reconciliation をこの境界から逸脱させない。
 
 ## 次工程への引き渡し
 
