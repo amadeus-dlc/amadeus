@@ -55,13 +55,13 @@ describe("attribute values keep their type on the wire", () => {
       }),
     ]);
     const attributes = spans(body)[0]?.attributes as { key: string; value: Record<string, unknown> }[];
-    const valueOf = (key: string) => attributes.find((entry) => entry.key === key)?.value;
+    const attributeValue = (key: string) => attributes.find((entry) => entry.key === key)?.value;
 
-    expect(valueOf("Stage")).toEqual({ stringValue: "code-generation" });
-    expect(valueOf("Outcome")).toEqual({ boolValue: true });
-    expect(valueOf("ExitCode")).toEqual({ intValue: "0" });
-    expect(valueOf("Options")).toEqual({ doubleValue: 1.5 });
-    expect(valueOf("Note")).toEqual({ stringValue: '["a","b"]' });
+    expect(attributeValue("Stage")).toEqual({ stringValue: "code-generation" });
+    expect(attributeValue("Outcome")).toEqual({ boolValue: true });
+    expect(attributeValue("ExitCode")).toEqual({ intValue: "0" });
+    expect(attributeValue("Options")).toEqual({ doubleValue: 1.5 });
+    expect(attributeValue("Note")).toEqual({ stringValue: '["a","b"]' });
   });
 
   test("resource attributes keep their keys and are credential-scrubbed", () => {
