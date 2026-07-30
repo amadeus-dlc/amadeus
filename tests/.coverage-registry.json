@@ -5447,7 +5447,7 @@
         },
         {
           "file": "tests/unit/t-sensor-fire-seam.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

@@ -195,6 +195,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "unit/t-graph-dispatch-seam.test.ts",
     "unit/t-batch3-orchestrate-spawn.test.ts",
     "unit/t-memory-seed.test.ts",
+    "unit/t-sensor-fire-seam.test.ts",
     "unit/t209-worktree-read-anchor.test.ts",
     "unit/t210-adapter-mint-classifier.test.ts",
     "unit/t210-doctor-worktree-anchor.test.ts",
