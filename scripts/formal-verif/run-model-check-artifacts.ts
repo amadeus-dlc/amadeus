@@ -54,6 +54,7 @@ export interface ModelCheckManifest {
   readonly artifacts: readonly ModelCheckArtifactEntry[];
   readonly partial: boolean;
   readonly errorCode: string | null;
+  readonly errorDetail: string | null;
 }
 
 export interface PublishedModelCheckArtifacts {
@@ -207,6 +208,7 @@ export function publishModelCheckArtifacts(
       artifacts,
       partial: input.outcome.kind === "HARNESS_ERROR",
       errorCode: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.code : null,
+      errorDetail: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.detail : null,
     };
     writeDurable(
       join(workspace.temporaryDir, "manifest.json"),

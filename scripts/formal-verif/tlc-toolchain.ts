@@ -209,7 +209,7 @@ type EnvelopeRead = { ok: true; envelope: TlcEnvelope; next: number; repeat: boo
 
 function readEnvelope(lines: string[], startIndex: number): EnvelopeRead {
   const start = START.exec(lines[startIndex]!);
-  if (start === null) return { ok: false, error: failed("GRAMMAR", `unframed output at line ${startIndex + 1}`) };
+  if (start === null) return { ok: false, error: failed("GRAMMAR", `unframed output at line ${startIndex + 1}: ${lines[startIndex]!.slice(0, 200)}`) };
   const code = Number(start[1]);
   const severity = Number(start[2]);
   const spec = ALLOWED_CODES.get(code);
