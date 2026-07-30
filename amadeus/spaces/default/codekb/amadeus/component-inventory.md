@@ -1,6 +1,31 @@
 # コンポーネント棚卸し
 
-## Open bug 6件の対象コンポーネント（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の対象コンポーネント（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736) | harness SKILL.md（new-work offer 節） | 稼働中 intent と並行する new-work の CONFIRM 経路を conductor に指示する | 実行ツール名の誤り。`amadeus-utility.ts next --new-intent` を指示するが、`next` verb は utility に存在せず（`amadeus-utility.ts:6088` の `switch (subcommand)` に `case "next"` が 0 件）`default:`（`:6182`）で die する。実装は `amadeus-orchestrate.ts:2405` 側にある | 正本5 + dist 5 + self-install 3 = **13ファイル**（`git ls-files \| xargs grep -n 'amadeus-utility\.ts next'` = 13）。cursor / opencode は SKILL.md を持たず、command 面（`:23`）は正しく orchestrate を指すため患部外 |
+| [#1711](https://github.com/amadeus-dlc/amadeus/issues/1711) | orchestrate degrade 分岐 / reviewer-runtime scope / reviewer 実在検査 | units-generation を SKIP するスコープでの run-stage directive 発行と reviewer 読取スコープ確定 | produces に `{unit-name}` プレースホルダが残ったまま reviewer へ渡り、実在検査（`amadeus-reviewer.ts:74`）が `required review artifact is missing` で throw する。consumes 側には exempt（`amadeus-orchestrate.ts:1771-1774`）があるが produces 側には無い **非対称** | core 正本の変更となるため 7 dist + 5 self-install の再生成対象。テスト契約 `t186:351` / `t186:492` / `t116:380-403` が現挙動をピン |
+
+### 共有コンポーネントと変更競合
+
+- 2件は所有コンポーネントが完全に分離している（#1736 = harness SKILL.md の散文、#1711 = core engine + reviewer 層）。ファイル単位で非交差のため並行実装が可能（`cid:code-generation:c6` の非交差判定）。
+- ただし #1711 は core 正本を触るため 13コピー同期を伴い、#1736 も SKILL.md の 13ファイル同期を伴う。両者の同期対象ファイル集合は重ならない（前者 = `tools/`、後者 = `skills/amadeus/SKILL.md`）。
+- 本 intent 自身が `self-fix` スコープで走り、`self-fix` は units-generation を SKIP するため **#1711 の患部経路を自ら通る**。code-generation ステージで reviewer scope が exit 1 する場合、既知の運用回避（conductor が実 unit 名へ解決した directive JSON を渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）を適用する。
+
+### 区間で増えた主要コンポーネント
+
+`22ee27dbe..278d61d8e`（34コミット）で `packages/framework/core/tools/` に**3件**の新規モジュールが追加された（base 76 → observed 79。`git diff --name-status 22ee27dbe 278d61d8e -- packages/framework/core/tools/ \| grep '^A'` の実測）。下表の3件はいずれも本 intent の患部ではない。
+
+| コンポーネント | 行数 | 責務 | 消費側 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-caller-authorization.ts` | 122 | subagent role による engine state 変更経路の拒否判定（`MainConductorAuthorization` = `:27-29`） | `amadeus-orchestrate.ts:2108`、`amadeus-state.ts:828` / `:831` の2箇所のみ |
+| `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts` | 231 | `self-*` スコープと scope-grid の整合検査（manifest `packages/framework/core/sensors/amadeus-self-scope-consistency.md` 38行、`matches` = `:8`） | センサー発火経路 |
+| `packages/framework/core/tools/amadeus-workflow-completion.ts` | 110 | ワークフロー完了の2相化によるクラッシュ回復（`WorkflowCompletionPreparation` = `:9-13`） | orchestrate の完了経路 |
+
+`amadeus-mirror-policy.ts`（現在514行）と `team-up-codex-safety-wait.ts`（現在689行）は **本区間の新設ではなく既存コンポーネントの変更**である（`git diff --name-status` で両者 `M`、base `22ee27dbe` にも実在）。後者は本棚卸しの `:634` に既収載。
+
+## Open bug 6件の対象コンポーネント（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 | Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
 | --- | --- | --- | --- | --- |

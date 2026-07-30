@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260729-open-bug-batch）
+## 実行メタデータ（現在: 260730-skill-reviewer-fixes）
+
+- Date: `2026-07-30T12:39:53Z`
+- Base commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`（observed の祖先、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `278d61d8efcea278bfefd2b384c22fcf72e717ab`
+- Distance: `34 commits`
+- 区間規模: `951 files changed, 54850 insertions(+), 8428 deletions(-)`。生成面（`dist/`）・self-install 面・record を除く比較断面は `340 files changed, 16513 insertions(+), 2547 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 2件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736)（SKILL.md が new-work 経路で `amadeus-utility.ts next --new-intent` を指示するツール名誤り）、[#1711](https://github.com/amadeus-dlc/amadeus/issues/1711)（units-generation SKIP スコープで `{unit-name}` が未解決のまま reviewer-runtime へ渡り produces 実在検査で落ちる）
+- Scan mode: Developer の静的差分スキャンを上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 区間の主要変化: `bugfix` → `fix` スコープ改名と `self-*` スコープ4種の dogfood 5ハーネス自己インストール面への集約（新センサー `amadeus-self-scope-consistency` 付き）、Kimi subagent の caller-authorization 拒否層の新設、mirror boundary 自動発火とワークフロー完了の2相化。core tools は base 76 → observed 79（新規3件）、sensors は 6 → 7。
+- 引用再確認の相違: Developer 報告の3点を observed で訂正した — (a) `amadeus-utility.ts` の `default:` は `:6182`（報告の `:6179` は不一致、`switch (subcommand)` = `:6088` は一致） (b) `stage-protocol.md` の「unchanged directive JSON」規定は `:898`（報告の `:897` は不一致） (c) `amadeus-mirror-policy.ts` と `team-up-codex-safety-wait.ts` は **新設ではなく既存の変更**（`git diff --name-status 22ee27dbe 278d61d8e` で両者 `M`、base にも実在）。本区間の新規 core tool は `amadeus-caller-authorization.ts`（122行）、`amadeus-sensor-self-scope-consistency.ts`（231行）、`amadeus-workflow-completion.ts`（110行）の3件のみ。
+- 現在マーカーの降格: 直前の現在断面 `260729-open-bug-batch`（observed `22ee27dbe`）を本節の新設に伴い履歴へ降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Updated artifacts: `technology-stack.md`、`component-inventory.md`、`architecture.md`、`api-documentation.md`、`code-structure.md`、`business-overview.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、および per-intent `re-scans/260730-skill-reviewer-fixes.md`。
+- Per-intent record: `re-scans/260730-skill-reviewer-fixes.md`。
+
+## 実行メタデータ（履歴: 260729-open-bug-batch）
 
 - Date: `2026-07-29T07:06:38Z`
 - Base commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`（observed の祖先、`git merge-base --is-ancestor` exit 0）

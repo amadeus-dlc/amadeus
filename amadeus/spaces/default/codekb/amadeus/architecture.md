@@ -1,6 +1,104 @@
 # アーキテクチャ
 
-## Open bug 6件の修正境界と相互作用（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の対象機構（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。base `22ee27dbe`、距離 34 commits。
+
+### 機構 A: SKILL new-work 経路と utility / orchestrate の verb 所有権（#1736）
+
+**verb 所有権の実装事実**
+
+`next` verb は `amadeus-orchestrate.ts` が単独で所有する。`amadeus-utility.ts` の main dispatch は `:6088` の `switch (subcommand) {` で始まり、受理 verb は `:6089-6181` の `help` / `version` / `status` / `doctor` / `migrate` / `intent-birth` / `intent` / `intent-select-response` / `space` / `space-create` / `codekb-path` / `detect` / `init` / `state-init` / `scope-change` / `recompose` / `config-change` / `set-status` / `detect-scope` / `resolve-env-scope` / `scope-table` / `plugin` である。`grep -c 'case "next"' packages/framework/core/tools/amadeus-utility.ts` = **0**。よって `next` は `:6182` の `default:` に落ち、直後の `die()` が verb 一覧付き Usage を出して終了する（一覧自体にも `next` は現れない）。実行プローブは行っていない（既知 mutating verb への探り実行を避ける `cid:code-generation:no-help-probe-on-mutating-verbs` に従い、switch の静的読解を根拠とした）。
+
+`--new-intent` は orchestrate 側に完全実装されている。
+
+- フラグ型宣言: `amadeus-orchestrate.ts:818` `newIntent?: boolean;`
+- 引数パース: `:877-878` `} else if (a === "--new-intent") {` / `flags.newIntent = true;`
+- 許可オプション集合: `:1995` `"--new-intent",`（`MIGRATION_WORKFLOW_OPTIONS`）
+- 分岐本体: `:2405` `if (flags.newIntent) {` → `:2412` `emit(birthPrintDirective(flags.scope ?? scope, flags, flags.intent));` → `:2413` `return;`。直上コメント（`:2400-2404`）が「あらゆる継続分岐より前に置くことで、稼働中 intent の state が new-work birth を『現ステージを進める』へ迂回させない」旨を明記する。
+
+**欠陥の形状**: 単一箇所のツール名誤りであり、経路設計そのものは正しい。同じ SKILL.md 内の通常の `next`（claude 面 `:40` `1. directive = bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`）と PLAN-RESHAPE（`:118` `amadeus-orchestrate.ts next compose`）は正しく orchestrate を指しており、new-work offer の CONFIRM 行だけが utility を指す。
+
+**投影経路と患部の全数（13ファイル）**
+
+SKILL.md は core からの投影ではなく harness ごとに authored された独立ファイルである。`packages/framework/harness/claude/manifest.ts:73` の `{ src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },` を `scripts/package.ts:396` の `for (const { src, dst, projectRoot } of m.harnessFiles) {` が `harness/<name>/<src>` → `dist/<name>/<harnessDir>/<dst>` へコピーし、変換は `{{HARNESS_DIR}}` 置換のみ（`scripts/package.ts:11-14`）。
+
+`git ls-files -z | xargs -0 grep -ln 'amadeus-utility\.ts next'` の全数 = **13ファイル**、各1箇所（同一文）:
+
+| 面 | file:line |
+| --- | --- |
+| 正本 harness | `packages/framework/harness/claude/skills/amadeus/SKILL.md:116` |
+| 正本 harness | `packages/framework/harness/codex/skills/amadeus/SKILL.md:112` |
+| 正本 harness | `packages/framework/harness/kimi/skills/amadeus/SKILL.md:116` |
+| 正本 harness | `packages/framework/harness/kiro/skills/amadeus/SKILL.md:118` |
+| 正本 harness | `packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md:118` |
+| 生成物 dist | `dist/claude/.claude/skills/amadeus/SKILL.md:116` |
+| 生成物 dist | `dist/codex/.agents/skills/amadeus/SKILL.md:112` |
+| 生成物 dist | `dist/kimi/.kimi-code/skills/amadeus/SKILL.md:116` |
+| 生成物 dist | `dist/kiro/.kiro/skills/amadeus/SKILL.md:118` |
+| 生成物 dist | `dist/kiro-ide/.kiro/skills/amadeus/SKILL.md:118` |
+| 自己インストール | `.claude/skills/amadeus/SKILL.md:116` |
+| 自己インストール | `.agents/skills/amadeus/SKILL.md:112` |
+| 自己インストール | `.kimi-code/skills/amadeus/SKILL.md:116` |
+
+cursor / opencode は SKILL.md を持たず、薄い command 面（`packages/framework/harness/{cursor,opencode}/commands/amadeus.md:23`）のみで、そこは `amadeus-orchestrate.ts next` を指すため患部外。修正は正本5面の編集 → `bun scripts/package.ts`（7ハーネス全数再生成、`cid:build-and-test:bt-dist-regen-seven-harnesses`）→ `bun run promote:self` の3段。
+
+**テスト面**: `tests/integration/t176-new-work-offer-second-intent.test.ts` はヘッダ `:1` に `// covers: subcommand:amadeus-utility:intent-birth, file:skills/amadeus/SKILL.md`、`:12-13` に「on CONFIRM the prose routes through `next --new-intent`」を持ち、SDK ドライバでライブに offer→birth を検証する。しかし assert は `:143` の `reg.length === 2` と `:157-166` の label 形状であり、**conductor がどのツールへ `next` を打つかは検査していない**。現行テストはこの誤りを構造的に検出しない。
+
+### 機構 B: per-unit degrade と reviewer-runtime の produces 実在検査の非対称（#1711）
+
+**degrade 分岐（発生源）**
+
+`amadeus-orchestrate.ts:3050-3057`:
+
+```
+  // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
+  // security-patch / infra / fix / poc, or a pre-compile moment): degrade to
+  // today's single {unit-name} directive. Zero behaviour change off this path.
+  const units = orderedUnits(projectDir);
+  if (units.length === 0) {
+    emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+    return;
+  }
+```
+
+`emitRunStageForSlug`（定義 `:2888-2894`）は `:2904-2912` で `buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, stateContent, recordPrefix, codekbCtx)` を呼び、`directive.unit` を一切設定しない。`unit` を設定するのは per-unit 経路の `:3086` `directive.unit = lastUnit;` と `:3110` `directive.unit = pickUnit;` のみである。
+
+**プレースホルダがパスに残る経路**
+
+- 定義: `:1588` `const UNIT_NAME_PLACEHOLDER = "{unit-name}";`（コメント `:1583-1587` が「unit が不在のときの忠実な発行形は文書化された `{unit-name}` プレースホルダ形状」と規定）
+- 既定引数: `buildRunStageDirective`（`:1909`）の `:1912` `unit: string = UNIT_NAME_PLACEHOLDER,`
+- パス注入: `resolveArtifactPath`（`:1645`）の `:1661-1663` — `if (isPerUnit(owner)) { return \`${prefix}/construction/${unit}/${owner.slug}/${name}.md\`; }`。consumes 側も `resolveConsumePath`（`:1687`）経由で同関数に入る。
+- **非対称の核心**: `splitConsumesByPresence`（`:1762`）の `:1771-1774` が consumes を実在検査から明示除外する — `if (c.path.includes(UNIT_NAME_PLACEHOLDER)) { present.push(c.path); continue; }`（コメント `:1759-1760`「プレースホルダを残すパスは Bolt 前には実在が知りようがない → `consumes` に留まる」）。**produces 側にはこの逃がしが存在しない。**
+
+**reviewer 側の拒否点**
+
+`amadeus-reviewer-runtime.ts` の `runScope`（`:611-621`）→ `scopeForDirective`（`:224-246`）が directive の produces を `onDisk` 判定つきで `reviewerReadScope` に渡す（`:232-244`）。実際の throw は `packages/framework/core/tools/amadeus-reviewer.ts:71-75`:
+
+```
+  for (const artifact of unit.produces) {
+    if (!artifact.present) {
+      if (artifact.optional) continue;
+      throw new Error(`required review artifact is missing: ${artifact.path}`);
+    }
+```
+
+> **所在の訂正**: missing throw は `amadeus-reviewer.ts:74` にある（`amadeus-reviewer-runtime.ts:74` ではない。reviewer-runtime は `:232` でこれを呼ぶ側）。project.md の `cid:code-generation:degrade-scope-unit-dir-layout` 追補が挙げる `amadeus-reviewer.ts:74` と一致する。
+
+同関数 `:76-78` の unit 帰属チェック `if (unit.unit && !belongsToUnit(artifact.path, unit.unit))` は degrade 経路では `directive.unit` が undefined のため発火せず、返り値も `:87` `return unit.unit ? { unit: unit.unit, paths } : { paths };` の後者になる。すなわちプレースホルダパスは「unit 不明のまま存在しないファイル」として `:74` で落ちる。`runReviewerCommand`（`:623-641`）が throw を `:637-639` で捕捉し stderr 1行 + `exitCode = 1` にするため、conductor からは `exit 1` + `required review artifact is missing: …/construction/{unit-name}/code-generation/….md` として観測される。
+
+**影響範囲**: units-generation を SKIP する全スコープの per-unit construction ステージ。`.claude/tools/data/scope-grid.json` 実測で `self-fix.stages` = `units-generation: SKIP` / `code-generation: EXECUTE`。同型は `fix` / `refactor` / `chore` / `security-patch` / `infra` / `poc` / `self-refactor` / `self-document` に及ぶ。
+
+**修正候補と制約（評価は要件段の裁定に属する。ここでは所在と制約の実測のみ）**
+
+| 候補 | 変更点 | テスト契約への影響 |
+| --- | --- | --- |
+| A: engine 側で degrade 時に実 unit 名へ解決 | `amadeus-orchestrate.ts:3053-3057` の degrade 分岐。実 unit ディレクトリは `<recordPrefix>/construction/<slug>/` に conductor が作るためそこを列挙して解決する形 | **現挙動をピンする複数テストの変更を伴う** — `tests/unit/t186-foreach-per-unit-iteration.test.ts:351-361`（test 5、`expect(d.unit).toBeUndefined()` と `{unit-name}` 入り produces を verbatim 期待）、同 `:490-503`（test 11、skeleton-unresolved）、`tests/unit/t116-directive-path-resolution.test.ts:380-403`（test 9/10/11）。さらに直上コメント `:3052` が「Zero behaviour change off this path」と明示する |
+| B: reviewer-runtime 側で未解決テンプレートを検出・解決 | `amadeus-reviewer-runtime.ts:224-246`（`scopeForDirective`）。produces を `onDisk` にかける前にプレースホルダを実 unit へ解決するか、consumes と同じ exempt 扱い（`amadeus-orchestrate.ts:1771-1774`）へ寄せる | t186 / t116 は engine の directive 形状のみを見るため**無傷**。ただし reviewer-runtime は `directive.produces` を「解決済みパス」として受ける前提で書かれており、解決責務をここに置くと層の逆転になる |
+
+**プロトコル面の制約（どちらの候補でも効く事実）**: `packages/framework/core/amadeus-common/protocols/stage-protocol.md:898` は「Before spawning the reviewer, pass the **unchanged** current `run-stage` directive JSON on stdin」と規定する。現行の運用回避（conductor が実 unit 名へ解決した directive JSON を渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）はこの「unchanged」契約からの逸脱であり、プロトコル文言との整合という観点では engine 側解決が筋になる、というのが実測から言える構図である。
+
+## Open bug 6件の修正境界と相互作用（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 Amadeus は常駐サービスやデータベースを持たない、Bun/TypeScript ESM のモジュラーモノリスである。ハーネス中立の正本 `packages/framework/core/`、repo-local の build/test `scripts/`・`tests/`、7ハーネスの生成 `dist/`、5面の self-install が主要境界となる。本 intent の6件は新しいコンポーネント境界を要求せず、既存の「実行結果を観測して成功を確定する」契約の欠落を各責務内で修復する。
 

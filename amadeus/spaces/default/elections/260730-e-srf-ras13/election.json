@@ -1,0 +1,24 @@
+{
+  "electionId": "E-SRF-RAS13",
+  "kind": "s13-learning-selection",
+  "question": "intent 260730-skill-reviewer-fixes / requirements-analysis の §13 学習選定。候補4件(diary: amadeus/spaces/default/intents/260730-skill-reviewer-fixes/inception/requirements-analysis/memory.md、成果物: 同ディレクトリ requirements.md の Review 節):\n\n[c1] §12a iteration 1 で product-lead が Major を実測捕捉: FR-1b の repo 全域 grep AC は、修正対象外の記録面(codekb 散文引用3件)により正しい修正後も恒久的に偽になる欠陥だった(実測16件 vs 患部13件)。AC を検査対象面(SKILL.md 群)限定へスコープして解消。\n\n[c2] 真に未決の判断1点への質問絞り込み(既存 intent-capture:c1 規範の実践)。\n\n[c3] stale SENSOR_FAILED は最新 fire の verdict で読む(既存 manual-sensor-fire 追補の実践)。\n\n[c4] [Answer] 先記入の自己捕捉(既存 election-answer-after-ruling のヒヤリハット再演)。\n\n問い: memory 層へ persist する採用集合。判断材料: c2/c3/c4 は既存 cid の実践記録で新規性なし。c1 は既存 cid:code-generation:corpus-sweep-for-new-guards(新設ガードの述語を実 corpus 全数へ適用し「正当な既存データで赤くならないこと」を実測する)の『受け入れ基準の grep 述語』面への拡張として新規性があるか — それとも同 cid の適用例にすぎないか。実在根拠を requirements.md Review 節と codekb 3ファイルの実引用で確認して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件採用 — c1 は corpus-sweep-for-new-guards の適用例であり新規 persist 不要、c2〜c4 は既存規範の実践記録"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1 のみ採用 — 「grep 述語の AC・検査は、修正対象面と修正対象外の記録面(codekb・履歴文書の散文引用)を分離してスコープし、全域 grep を AC にする前に残存見込みを実測する」を corpus-sweep-for-new-guards への追補として project 層へ persist"
+    },
+    {
+      "internalNo": 3,
+      "label": "c1〜c4 全採用"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

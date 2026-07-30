@@ -701,5 +701,12 @@
     "dirName": "260729-open-bug-batch",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
+    "slug": "skill-reviewer-fixes",
+    "dirName": "260730-skill-reviewer-fixes",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

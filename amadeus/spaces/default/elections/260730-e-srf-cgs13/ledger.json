@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRF-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 文は独立規則として書かず、cid:code-generation:disk-evidence-early-takeover への追補として『並行 Bolt 中の conductor スケジューリング』に適用範囲を限定して書く — 両者は『ディスク上の実在証拠を待機ループより優先する』同一ファミリであり、無限定の独立規則にすると『任意の報告が任意の待機に割り込む』へ過剰一般化する。",
+      "rationale": "独立実測: (1) diary Deviations 2026-07-30T13:48:00Z が c4 の事象を実測記録 — bolt-1736-report.md(PR #1753 URL 含む)がディスクに実在したのに Bolt 2 完了同期待ちへ先に入り、ユーザー指摘で発覚。自己捕捉でなくユーザー指摘が契機である点が既存 norm の実践不足では説明しきれない構造欠落を示す。(2) 既存 cid 原文を team.md で直読: resource-efficiency(:76)は『leader は逐次のピンポンを避けて作業をバッチで委任し並行割当を維持する』= leader のディスパッチ配分規則であり、conductor が到着済み成果をどの順で処理するかを規定しない。merge-approval-latency(:87)は (a)-(d) いずれも承認伺い後の待ち・鮮度再実測・一括再提示を規定し、伺いを出す前のスケジューリング順序を規定しない。よって choice 1(0件)は不成立。(3) c1 は intent 固有の実装事実(diary Interpretations に記録済み)、c2 は surgical/N-1 の既存実践、c3 は diary 自身が spawned-agent-result-delivery / disk-evidence-early-takeover の再演と明記しており、いずれも新規 norm 不要 — よって choice 3(全採用)も不成立。c4 のみが真の隙間。",
+      "submittedAt": "2026-07-30T14:29:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRF-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "適用対象を「builder の PR 発行報告(報告ファイルの実在・PR URL の出現)」に限定し、一般の進捗報告・中間報告全般への割込み処理義務へ拡大しないことを persist 文に明記すること。",
+      "rationale": "実測確認: diary(construction/code-generation/memory.md)の Deviations 2026-07-30T13:48:00Z に、bolt-1736-report.md(PR #1753 URL 含む)がディスク実在のまま Bolt 2 完了同期待ちへ先に入り、ユーザー指摘で発覚した記録あり — 自己捕捉されていない。既存 cid 原文を team.md で直読して隙間を確認: resource-efficiency(:76)は leader のディスパッチ面(バッチ委任・並行割当維持)、merge-approval-latency(:87)(a) は「承認待ちをブロッカー扱いしない/非依存作業は並行継続」= 承認待ち中に他作業を進める方向であり、逆向きの「他 Bolt 完了待ちに入る前に到着済み PR 発行報告を掃く」順序規則は不在。disk-evidence-early-takeover(:223)は同一 subagent の報告待ち bounded wait を対象とし、Bolt 間のスケジューリング優先度は規定しない。よって c4 は真の隙間。c1 は intent 固有の実装事実で record に既在、c2 は #1734 既知バグに対する surgical 実践の再演、c3 は spawned-agent-result-delivery(:163)/disk-evidence-early-takeover(:223)の再演であり、いずれも新規則不要。",
+      "submittedAt": "2026-07-30T14:29:48Z"
+    }
+  ],
+  "late": []
+}

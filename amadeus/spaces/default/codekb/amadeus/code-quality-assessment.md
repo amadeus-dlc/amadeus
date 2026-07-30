@@ -1,6 +1,47 @@
 # コード品質評価
 
-## Open bug 6件の品質評価（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の品質評価（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。本 scan は静的解析であり、テスト・full suite は未実行。
+
+### 根因確度と修正境界
+
+| Issue | 根因確度 | 根拠 | 主対象 | 欠落テスト |
+| --- | --- | --- | --- | --- |
+| #1736 | **100%** | `grep -c 'case "next"' amadeus-utility.ts` = 0、`default:` = `:6182` の die。`--new-intent` 実装は orchestrate `:2405` / `:2412` に実在。単一箇所のツール名誤りで、経路設計は健全 | 正本 SKILL.md 5面 → dist 5面 → self-install 3面 = 13ファイル | **SKILL.md の指示ツール名を検査するテストが存在しない** |
+| #1711 | **100%**（機序）／修正方式は未裁定 | degrade 分岐 `:3050-3057` が unit を設定せず、produces に `{unit-name}` が残り `amadeus-reviewer.ts:74` で throw。consumes には exempt（`:1771-1774`）があり produces には無い非対称を実測 | 候補 A = `amadeus-orchestrate.ts:3053-3057`、候補 B = `amadeus-reviewer-runtime.ts:224-246`。**方式の裁定は要件段に属する** | degrade スコープでの reviewer scope 成立を貫通検査するテストが存在しない |
+
+### 品質上の主要所見
+
+**Q-1: #1736 はテストが構造的に検出できない形状（S3 相当）**
+
+`tests/integration/t176-new-work-offer-second-intent.test.ts` はこの経路の専用テストで、ヘッダ `:1` に `// covers: subcommand:amadeus-utility:intent-birth, file:skills/amadeus/SKILL.md`、`:12-13` に「on CONFIRM the prose routes through `next --new-intent`」と明記する。しかし実際の assert は `:143` の `reg.length === 2`（registry エントリ数）と `:157-166`（label 形状）であり、**conductor がどのツールバイナリへ `next` を打つかは一切検査していない**。SDK ドライバでライブに走るテストが存在するにもかかわらず欠陥が生存したのは、assert が「結果として2つの intent ができたか」だけを見て「指示どおりの経路を通ったか」を見ていないためである。修正時は指示ツール名を固定する検査を加えるべき（`cid:code-generation:corpus-sweep-for-new-guards` の両側実測を満たす形で）。
+
+**Q-2: #1711 は現挙動が複数テストで verbatim にピンされている（修正方式の制約）**
+
+`tests/unit/t186-foreach-per-unit-iteration.test.ts:351-361`（test 5）は `expect(d.unit).toBeUndefined()` と `{unit-name}` 入り produces を verbatim 期待し、テスト名自体が `"5: no compiled unit DAG degrades to the single {unit-name} placeholder, no unit field"` である。同型は `t186:490-503`（test 11）と `t116:380-403`（test 9/10/11）にもある。さらに degrade 分岐の直上コメント `amadeus-orchestrate.ts:3052` が `Zero behaviour change off this path.` と明示する。
+
+すなわち **現挙動は「バグ」としてではなく「意図された忠実な発行形」として設計・文書化・テスト固定されている**。候補 A（engine 側解決）はこれらの設計意図とテスト契約の**明示的改訂**を伴うため、実装者が単独で判断せず要件段で裁定すべき事項である（`cid:code-generation:cg-invariant-conflict-explicit-revision` / `cid:requirements-analysis:implementation-deviation-election`）。
+
+**Q-3: 運用回避がプロトコル違反を固定している(負債)**
+
+現行の回避策（conductor が実 unit 名へ解決した directive JSON を reviewer へ渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）は、`stage-planning` ではなく `stage-protocol.md:898` の「pass the **unchanged** current `run-stage` directive JSON on stdin」規定からの逸脱である。この回避は intent ごとに手作業で再演されており、負債として恒久化している。engine 側で解決すればこの逸脱は解消するが、Q-2 のテスト契約変更を伴う。
+
+**Q-4: 非対称の再発クラスタ**
+
+produces / consumes の実在検査扱いの分岐は、`cid:requirements-analysis:symmetric-pair-review`（対操作の対称性を明示観点にする）が対象とするクラスタに該当する。同 cid は「bootstrap 由来バグ14件の過半が片側だけ実装された非対称だった」という実測に基づく。本件は produces 側の exempt 欠落という同型であり、修正時は他の対（write⇔check、resolve⇔commit）にも同型の片側実装がないか棚卸しすべき（`cid:code-generation:same-root-inventory`）。
+
+### 検証順序
+
+1. #1736 を先に着地させてよい（散文のみ、engine 挙動に触れない）。ただし正本5面の編集後は `bun scripts/package.ts` + `bun run promote:self` を実行し、`bun run dist:check` / `bun run promote:self:check` の緑を確認する（7ハーネス全数再生成 — `cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+2. #1711 は要件段で修正方式（候補 A / B）を裁定してから実装する。方式によって変更するテストが変わるため、実装着手前に確定が必要。
+3. 両 Bolt でファイル交差はないが、最終検証では `bash tests/run-tests.sh --ci` を横断で回す。
+
+### 本 intent 自身への影響
+
+本 intent は `self-fix` スコープ（units-generation = SKIP、scope-grid 実測）で走るため、**自らの code-generation ステージが #1711 の患部経路を通る**。レビュー段が exit 1 する場合は既知の運用回避を適用し、その適用自体を diary に記録する。
+
+## Open bug 6件の品質評価（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 ### 現行の品質基盤
 

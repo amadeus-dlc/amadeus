@@ -1,6 +1,66 @@
 # コード構造
 
-## Open bug 6件の対象配置（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の対象配置（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。base `22ee27dbe`、距離 34 commits、区間 `951 files changed, 54850 insertions(+), 8428 deletions(-)`（生成面・record を除く比較断面は `340 files changed, 16513 insertions(+), 2547 deletions(-)`）。
+
+### #1736 の患部配置（散文層、13ファイル）
+
+正本は `packages/framework/harness/<name>/skills/amadeus/SKILL.md` で、core からの投影ではなく **harness ごとに authored された独立ファイル**である。したがって「1箇所直せば全面に波及する」構造にはなっておらず、正本5面を個別編集する必要がある。
+
+| 層 | パス | 行 |
+| --- | --- | --- |
+| 正本 | `packages/framework/harness/claude/skills/amadeus/SKILL.md` | 116 |
+| 正本 | `packages/framework/harness/codex/skills/amadeus/SKILL.md` | 112 |
+| 正本 | `packages/framework/harness/kimi/skills/amadeus/SKILL.md` | 116 |
+| 正本 | `packages/framework/harness/kiro/skills/amadeus/SKILL.md` | 118 |
+| 正本 | `packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md` | 118 |
+| dist | `dist/claude/.claude/skills/amadeus/SKILL.md` | 116 |
+| dist | `dist/codex/.agents/skills/amadeus/SKILL.md` | 112 |
+| dist | `dist/kimi/.kimi-code/skills/amadeus/SKILL.md` | 116 |
+| dist | `dist/kiro/.kiro/skills/amadeus/SKILL.md` | 118 |
+| dist | `dist/kiro-ide/.kiro/skills/amadeus/SKILL.md` | 118 |
+| self-install | `.claude/skills/amadeus/SKILL.md` | 116 |
+| self-install | `.agents/skills/amadeus/SKILL.md` | 112 |
+| self-install | `.kimi-code/skills/amadeus/SKILL.md` | 116 |
+
+投影は `packages/framework/harness/claude/manifest.ts:73` の `harnessFiles` エントリを `scripts/package.ts:396` が処理する経路で、変換は `{{HARNESS_DIR}}` 置換のみ（`scripts/package.ts:11-14`）。self-install 面は `.cursor` / `.opencode` を含めて5面あるが、cursor / opencode は SKILL.md を持たないため患部は3面のみ。
+
+### #1711 の患部配置（core engine + reviewer 層）
+
+| 役割 | パス | 行 |
+| --- | --- | --- |
+| degrade 分岐（発生源） | `packages/framework/core/tools/amadeus-orchestrate.ts` | 3050-3057 |
+| unit なし発行 | 同上 `emitRunStageForSlug` | 2888-2894、2904-2912 |
+| プレースホルダ定義 | 同上 `UNIT_NAME_PLACEHOLDER` | 1588 |
+| 既定引数 | 同上 `buildRunStageDirective` | 1909、1912 |
+| パス注入 | 同上 `resolveArtifactPath` / `resolveConsumePath` | 1645、1661-1663 / 1687 |
+| consumes exempt（非対称の片側） | 同上 `splitConsumesByPresence` | 1762、1771-1774 |
+| unit 設定（per-unit 経路のみ） | 同上 | 3086、3110 |
+| reviewer スコープ確定 | `packages/framework/core/tools/amadeus-reviewer-runtime.ts` | 224-246、611-621 |
+| エラー→exit 1 変換 | 同上 `runReviewerCommand` | 623-641（捕捉 637-639） |
+| **missing throw の実所在** | `packages/framework/core/tools/amadeus-reviewer.ts` | 71-75（throw は 74） |
+| unit 帰属チェック | 同上 | 76-78、87 |
+| プロトコル規定 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md` | 898 |
+| skeleton 免除集合 | `packages/framework/core/tools/amadeus-lib.ts` | 4027-4035（`self-fix` = 4032）、判定 4069 |
+
+core 正本の変更となるため、`bun scripts/package.ts`（7 dist）+ `bun run promote:self`（5 self-install）の再生成対象。
+
+### テスト面の配置
+
+| パス | 役割 |
+| --- | --- |
+| `tests/unit/t186-foreach-per-unit-iteration.test.ts` | degrade 現挙動を verbatim にピン（test 5 = `:351-361`、test 11 = `:490-503`） |
+| `tests/unit/t116-directive-path-resolution.test.ts` | `{unit-name}` 注入（test 9 = `:380`、test 10 = `:390`、test 11 = `:401`）と consumes exempt（test 16 = `:468`） |
+| `tests/unit/t245-reviewer-protocol-seams.test.ts` | `reviewerReadScope` の純関数シーム |
+| `tests/integration/t245-reviewer-protocol-production-path.test.ts` | reviewer-runtime の production 経路 |
+| `tests/integration/t176-new-work-offer-second-intent.test.ts` | #1736 の関連テスト。offer→birth をライブ検証するが打つツール名は assert せず（`:143` / `:157-166`） |
+
+### 区間の構造変化
+
+`packages/framework/core/tools/` に新規3ファイル（`amadeus-caller-authorization.ts` 122行 / `amadeus-sensor-self-scope-consistency.ts` 231行 / `amadeus-workflow-completion.ts` 110行）、`packages/framework/core/sensors/` に新規1ファイル（`amadeus-self-scope-consistency.md`）。`packages/framework/core/scopes/amadeus-bugfix.md` → `amadeus-fix.md` の改名。`self-*` スコープ4種は core にも dist にも置かれず、dogfood 5ハーネスの自己インストール面のみに存在する（tracked 20ファイル = 4 × 5）。
+
+## Open bug 6件の対象配置（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 本 intent は既存モジュールの責務内で6件を修正し、新規 package や汎用 framework を追加しない。正本と生成面の境界は次のとおりである。
 

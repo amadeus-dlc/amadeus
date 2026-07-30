@@ -1,0 +1,24 @@
+{
+  "electionId": "E-SRF-RES13",
+  "kind": "s13-learning-selection",
+  "question": "intent 260730-skill-reviewer-fixes / reverse-engineering ステージの §13 学習選定。diary(amadeus/spaces/default/intents/260730-skill-reviewer-fixes/inception/reverse-engineering/memory.md)から surface された候補は次の4件。\n\n[c1](Interpretations) #1711 の現挙動は t186:351/t116:380 の verbatim ピン+amadeus-orchestrate.ts:3052「Zero behaviour change」コメントで仕様として3重固定されており、engine 側修正(候補A)はテスト契約の明示改訂を要する。方式裁定は requirements 段へ送る(implementation-deviation-election 準拠)。\n\n[c2](Interpretations) 差分リフレッシュを base 22ee27dbe(祖先性 exit 0)→ observed 278d61d8e(34 commits)で実施。Developer scan → Architect 合成の直列2サブエージェント(c3 準拠)。Architect が Developer 引用の相違5件を独立再実測で是正して反映。\n\n[c3](Deviations) intent birth 時に engine の select-intent 後、SKILL 記載の amadeus-utility.ts next --new-intent が #1736 のとおり Usage エラーになる経路を目視確認し、正所有者 amadeus-orchestrate.ts next --new-intent で回避して birth 成功(#1736 のライブ再現)。\n\n[c4](Deviations) 宣言センサー3種は codekb 出力が sensor filter に構造不適合のため発火不能(既存 cid:reverse-engineering:re-sensors-codekb-filter-mismatch のとおり)。代替検証を conductor が実施。\n\n問い: memory 層(project.md 等)へ persist する採用集合はどれか。判断材料: 既存 cid との重複は persist しない(c4 は既存 cid の再演。c2 は既存 c3/c1 規範の実践記録。c3 は #1736 の Issue/requirements 材料であり intent record に記録済み。c1 は本 intent の requirements で裁定される intent 固有事項か、それとも「テストで仕様ピンされた挙動の変更はテスト契約の明示改訂を伴う」級の一般則として persist に値するか)。各候補の実在根拠は diary と codekb(architecture.md / code-quality-assessment.md の現在節)で実測確認すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件採用 — 4候補すべて既存 cid の重複・既存規範の実践記録・intent 固有記録であり、memory 層への persist は不要(record への記録で足りる)"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1 のみ採用 — 「テスト verbatim ピン+設計コメントで固定された挙動の変更は、仕様裁定とテスト契約改訂を要件段で明示してから行う」を project 層へ persist"
+    },
+    {
+      "internalNo": 3,
+      "label": "c1〜c4 全採用 — 4件すべてを project 層へ persist"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
