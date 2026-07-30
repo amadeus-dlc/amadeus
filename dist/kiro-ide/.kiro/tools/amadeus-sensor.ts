@@ -99,6 +99,37 @@ interface FireContext {
 	timeoutMs: number;
 }
 
+type SensorTraceContext = {
+	injectToSubprocess(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+};
+
+type SensorTraceDependencies = {
+	attach(projectDir: string): Promise<void>;
+	loadContext(): Promise<SensorTraceContext>;
+};
+
+const SENSOR_TRACE_DEPENDENCIES: SensorTraceDependencies = {
+	attach: attachProcessTraceContext,
+	loadContext: () => import("../otel/context.ts"),
+};
+
+// Prepare the per-sensor child environment only after this process has joined
+// the intent trace. Both boundaries are injected so ordering and fail-open
+// behavior stay deterministic under test.
+export async function prepareSensorChildEnv(
+	projectDir: string,
+	env: NodeJS.ProcessEnv,
+	dependencies: SensorTraceDependencies = SENSOR_TRACE_DEPENDENCIES,
+): Promise<NodeJS.ProcessEnv> {
+	await dependencies.attach(projectDir);
+	try {
+		const context = await dependencies.loadContext();
+		return context.injectToSubprocess({ ...env });
+	} catch {
+		return { ...env };
+	}
+}
+
 // --- Argv helpers ---
 
 function parseFlags(args: string[]): Record<string, string> {
@@ -360,23 +391,10 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// the detail-file path in step 3.
 	const projectDir = resolveProjectDir(projectDirArg);
 
-	// Re-attach to the intent trace (FR-TRC-4/5): the sensor-fire hook injected
-	// the W3C carrier into this process's env; a direct human invocation falls
-	// back to the persisted anchor. The per-sensor script spawn below re-injects
-	// it so the whole sensor path stays on one trace (BR-3).
-	await attachProcessTraceContext(projectDir);
-
-	// W3C carrier for the per-sensor script env (FR-TRC-5). Keep the otel
-	// dependency out of the dispatcher's static module graph: partial fixture
-	// trees may omit otel/, and tracing must remain fail-open (BR-5).
-	const childEnv = await (async () => {
-		try {
-			const { injectToSubprocess } = await import("../otel/context.ts");
-			return injectToSubprocess({ ...process.env });
-		} catch {
-			return { ...process.env };
-		}
-	})();
+	// Re-attach to the intent trace, then inject its W3C carrier into the
+	// per-sensor script environment (FR-TRC-4/5, BR-3). The OTel layer is
+	// lazy-loaded and fail-open for partial fixture trees (BR-5).
+	const childEnv = await prepareSensorChildEnv(projectDir, process.env);
 
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
@@ -919,6 +937,11 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
 // Guard the CLI entry so the module can be imported (exported seams are driven
 // in-process by tests) without executing main() / process.exit at load time.
 // Matches the sibling tools (amadeus-jump, amadeus-state).
-if (import.meta.main) {
-	await main();
+export async function runCliIfMain(
+	isMain: boolean,
+	argv: string[] = process.argv.slice(2),
+): Promise<void> {
+	if (isMain) await main(argv);
 }
+
+await runCliIfMain(import.meta.main);

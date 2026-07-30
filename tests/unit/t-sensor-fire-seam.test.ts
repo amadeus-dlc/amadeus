@@ -18,8 +18,8 @@
 //                                      so SENSOR_FIRED always pairs with a terminal.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import type { SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sensorsDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -27,6 +27,8 @@ import {
   decideOutcomeOrScriptError,
   handleFire,
   main,
+  prepareSensorChildEnv,
+  runCliIfMain,
   scriptErrorOutcome,
   stripProjectDir,
 } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
@@ -254,13 +256,76 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     expect(await driveExit(() => main(["list"]))).toBe(0);
   });
 
-  test("fire awaits trace attachment and lazy-loads subprocess injection", () => {
-    const source = readFileSync(
-      join(import.meta.dir, "../../packages/framework/core/tools/amadeus-sensor.ts"),
-      "utf-8",
+  test("child env waits for trace attachment before injecting TRACEPARENT", async () => {
+    let releaseAttach: (() => void) | undefined;
+    let attached = false;
+    let loadCalled = false;
+    const childEnv = prepareSensorChildEnv(
+      proj,
+      { FOO: "bar" },
+      {
+        attach: () =>
+          new Promise<void>((resolve) => {
+            releaseAttach = () => {
+              attached = true;
+              resolve();
+            };
+          }),
+        loadContext: async () => {
+          loadCalled = true;
+          expect(attached).toBe(true);
+          return {
+            injectToSubprocess: (env) => ({
+              ...env,
+              TRACEPARENT: "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+            }),
+          };
+        },
+      },
     );
-    expect(source).toContain("await attachProcessTraceContext(projectDir)");
-    expect(source).toContain('await import("../otel/context.ts")');
-    expect(source).not.toMatch(/^import .*["']\.\.\/otel\/context\.ts["'];$/m);
+
+    await Promise.resolve();
+    expect(loadCalled).toBe(false);
+    expect(releaseAttach).toBeDefined();
+    releaseAttach!();
+    expect(await childEnv).toEqual({
+      FOO: "bar",
+      TRACEPARENT: "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+    });
+  });
+
+  test("child env fails open when the OTel context cannot be loaded", async () => {
+    const input = { FOO: "bar" };
+    const childEnv = await prepareSensorChildEnv(proj, input, {
+      attach: async () => {},
+      loadContext: async () => {
+        throw new Error("otel tree unavailable");
+      },
+    });
+    expect(childEnv).toEqual(input);
+    expect(childEnv).not.toBe(input);
+  });
+
+  test("partial tool tree without otel still starts the sensor CLI", () => {
+    const partialRoot = mkdtempSync(join(tmpdir(), "amadeus-sensor-partial-"));
+    try {
+      const toolsDir = join(partialRoot, "tools");
+      cpSync(join(import.meta.dir, "../../dist/claude/.claude/tools"), toolsDir, {
+        recursive: true,
+      });
+      expect(existsSync(join(partialRoot, "otel"))).toBe(false);
+      const result = spawnSync("bun", [join(toolsDir, "amadeus-sensor.ts"), "--help"], {
+        encoding: "utf-8",
+      });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("Usage: amadeus-sensor");
+    } finally {
+      cleanupTestProject(partialRoot);
+    }
+  });
+
+  test("CLI entry wrapper dispatches only when import.meta.main is true", async () => {
+    expect(await driveExit(() => runCliIfMain(false, []))).toBe(0);
+    expect(await driveExit(() => runCliIfMain(true, ["list"]))).toBe(0);
   });
 });
