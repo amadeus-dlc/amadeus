@@ -2125,7 +2125,8 @@ function freshReadonlyLatchLabel(projectDir: string | undefined): string | null 
     let label = "the read-only command";
     if (existsSync(counterPath)) {
       const raw = readFileSync(counterPath, "utf-8").trim();
-      if (/^\d+$/.test(raw)) counter = Number.parseInt(raw, 10);
+      const parsed = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : Number.NaN;
+      if (Number.isSafeInteger(parsed)) counter = parsed;
     }
     if (existsSync(latchPath)) {
       const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
