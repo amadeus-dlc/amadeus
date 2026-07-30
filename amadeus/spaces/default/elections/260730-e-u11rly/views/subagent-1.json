@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U11RLY",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "案C"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "案A"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "案B"
+    }
+  ]
+}
