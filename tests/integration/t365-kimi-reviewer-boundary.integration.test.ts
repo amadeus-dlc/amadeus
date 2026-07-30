@@ -7,14 +7,14 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import {
+  existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   appendAuditEntry,
@@ -49,6 +49,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   runAdapter,
+  updateKimiSubagentRole,
 } from "../../packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts";
 import {
   createTestProject,
@@ -66,6 +67,14 @@ const ENGINE = join(
   "core",
   "tools",
   "amadeus-orchestrate.ts",
+);
+const STATE = join(
+  ROOT,
+  "packages",
+  "framework",
+  "core",
+  "tools",
+  "amadeus-state.ts",
 );
 const MINT = join(
   ROOT,
@@ -133,17 +142,21 @@ function alignSeededRegistry(root: string): void {
 
 function startKimiSession(root: string): void {
   mkdirSync(join(root, ".kimi-code", "tools"), { recursive: true });
+  const payload = JSON.stringify({
+    hook_event_name: "SessionStart",
+    source: "startup",
+    session_id: "main-session",
+    cwd: root,
+  });
+  runAdapter(
+    "session-start",
+    payload,
+    root,
+    () => ({ stdout: "", code: 0 }),
+  );
   const child = Bun.spawnSync([process.execPath, SESSION_START], {
     cwd: root,
-    stdin: Buffer.from(
-      JSON.stringify({
-        hook_event_name: "SessionStart",
-        source: "startup",
-        session_id: "main-session",
-        cwd: root,
-      }),
-      "utf-8",
-    ),
+    stdin: Buffer.from(payload, "utf-8"),
     stdout: "pipe",
     stderr: "pipe",
     env: environment(),
@@ -381,14 +394,304 @@ describe("Kimi reviewer boundary and gate provenance", () => {
     }
   });
 
-  test("main and reviewer Stop shapes are both silent observation-only no-ops", () => {
-    const root = mkdtempSync(join(tmpdir(), "amadeus-t365-kimi-stop-"));
-    roots.push(root);
-    for (const caller of ["main", "reviewer"] as const) {
-      const { result, calls } = stopResult(root, caller);
-      expect(result).toEqual({ stdout: "", exitCode: 0, stderr: "" });
-      expect(calls).toEqual([]);
-    }
+  test("only the host-stamped main Stop forwards to the stateful core hook", () => {
+    const root = freshWorkflow();
+    const main = stopResult(root, "main");
+    expect(main.result).toEqual({
+      stdout: '{"decision":"block","reason":"must not run"}',
+      exitCode: 0,
+      stderr: "",
+    });
+    expect(main.calls).toEqual(["amadeus-stop.ts"]);
+
+    const reviewer = stopResult(root, "reviewer");
+    expect(reviewer.result).toEqual({ stdout: "", exitCode: 0, stderr: "" });
+    expect(reviewer.calls).toEqual([]);
+
+    runAdapter(
+      "role-start",
+      JSON.stringify({
+        hook_event_name: "SubagentStart",
+        session_id: "",
+        cwd: root,
+        agent_name: "explore",
+      }),
+      root,
+      () => ({ stdout: "", code: 0 }),
+    );
+    const mainDuringSubagent = stopResult(root, "main");
+    expect(mainDuringSubagent.result).toEqual({
+      stdout: "",
+      exitCode: 0,
+      stderr: "",
+    });
+    expect(mainDuringSubagent.calls).toEqual([]);
+
+    runAdapter(
+      "log-subagent",
+      JSON.stringify({
+        hook_event_name: "SubagentStop",
+        session_id: "",
+        cwd: root,
+        agent_name: "explore",
+      }),
+      root,
+      () => ({ stdout: "", code: 0 }),
+    );
+    expect(stopResult(root, "main").calls).toEqual(["amadeus-stop.ts"]);
+  });
+
+  test.each([
+    "missing",
+    "malformed",
+    "locked",
+    "session-end-lock-race",
+  ] as const)(
+    "%s Kimi baseline denies mutation without changing state or audit",
+    (carrierState) => {
+      const root = freshWorkflow();
+      const markerPath = join(
+        root,
+        "amadeus",
+        ".amadeus-sessions",
+        "kimi-active-subagents.json",
+      );
+      if (carrierState === "missing") {
+        unlinkSync(markerPath);
+      } else if (carrierState === "malformed") {
+        writeFileSync(markerPath, '{"version":1,"roles":{}}\n');
+      } else if (carrierState === "locked") {
+        mkdirSync(`${markerPath}.lock`);
+      } else {
+        mkdirSync(`${markerPath}.lock`);
+        runAdapter(
+          "session-end",
+          JSON.stringify({
+            hook_event_name: "SessionEnd",
+            session_id: "main-session",
+            cwd: root,
+            reason: "exit",
+          }),
+          root,
+          () => ({ stdout: "", code: 0 }),
+        );
+        expect(
+          readFileSync(
+            join(
+              root,
+              "amadeus",
+              ".amadeus-sessions",
+              "kimi-session-ended-deny",
+            ),
+            "utf-8",
+          ),
+        ).toContain("session-ended");
+      }
+
+      const stateBefore = readFileSync(seededStateFile(root), "utf-8");
+      const auditBefore = readAllAuditShards(root);
+      const denied = runTool(root, ENGINE, ["next"]);
+      expect(denied.stdout || denied.stderr).toContain(
+        "is not the main conductor",
+      );
+      expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
+      expect(readAllAuditShards(root)).toBe(auditBefore);
+    },
+  );
+
+  test("failed SubagentStart persistence leaves a deny latch and state/audit unchanged", () => {
+    const root = freshWorkflow();
+    updateKimiSubagentRole(
+      root,
+      "amadeus-architecture-reviewer-agent",
+      "start",
+      () => {
+        throw new Error("injected marker persistence failure");
+      },
+    );
+
+    const denyPath = join(
+      root,
+      "amadeus",
+      ".amadeus-sessions",
+      "kimi-subagent-transition-deny",
+    );
+    expect(readFileSync(denyPath, "utf-8")).toContain("subagent-start");
+    const stateBefore = readFileSync(seededStateFile(root), "utf-8");
+    const auditBefore = readAllAuditShards(root);
+    const denied = runTool(root, STATE, [
+      "set",
+      "Test Strategy=Comprehensive",
+    ]);
+    expect(denied.stdout || denied.stderr).toContain(
+      "is not the main conductor",
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
+    expect(readAllAuditShards(root)).toBe(auditBefore);
+  });
+
+  test("ambient Kimi subagent cannot retrieve an existing gate reservation", () => {
+    const root = freshWorkflow();
+    const reserved = runTool(root, ENGINE, [
+      "gate-reserve",
+      "--stage",
+      "requirements-analysis",
+    ]);
+    expect(reserved.code).toBe(0);
+    expect(JSON.parse(reserved.stdout).kind).toBe("await-approval");
+
+    const roleStarted = runAdapter(
+      "role-start",
+      JSON.stringify({
+        hook_event_name: "SubagentStart",
+        session_id: "",
+        cwd: root,
+        agent_name: "amadeus-architecture-reviewer-agent",
+      }),
+      root,
+    );
+    expect(roleStarted.exitCode).toBe(0);
+
+    const stateBefore = readFileSync(seededStateFile(root), "utf-8");
+    const auditBefore = readAllAuditShards(root);
+    const denied = runTool(root, ENGINE, [
+      "gate-reserve",
+      "--stage",
+      "requirements-analysis",
+    ]);
+
+    expect(denied.stdout || denied.stderr).toContain(
+      "is not the main conductor",
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
+    expect(readAllAuditShards(root)).toBe(auditBefore);
+  });
+
+  test.each([
+    "amadeus-architecture-reviewer-agent",
+    "support",
+    "explore",
+  ])(
+    "ambient Kimi %s presence blocks even main-looking engine/state mutations",
+    (role) => {
+      const root = freshWorkflow();
+      const roleStarted = runAdapter(
+        "role-start",
+        JSON.stringify({
+          hook_event_name: "SubagentStart",
+          session_id: "",
+          cwd: root,
+          agent_name: role,
+        }),
+        root,
+        () => ({ stdout: "", code: 0 }),
+      );
+      expect(roleStarted.exitCode).toBe(0);
+
+      const stateBefore = readFileSync(seededStateFile(root), "utf-8");
+      const auditBefore = readAllAuditShards(root);
+      const reservationsDir = join(
+        root,
+        "amadeus",
+        ".amadeus-sessions",
+        "presence-reservations",
+      );
+      const reservationsBefore = existsSync(reservationsDir)
+        ? readdirSync(reservationsDir).sort()
+        : [];
+      for (const [tool, args] of [
+        [ENGINE, ["next"]],
+        [
+          ENGINE,
+          [
+            "report",
+            "--stage",
+            "requirements-analysis",
+            "--result",
+            "approved",
+            "--user-input",
+            "Approve",
+          ],
+        ],
+        [ENGINE, ["park"]],
+        [
+          ENGINE,
+          ["gate-reserve", "--stage", "requirements-analysis"],
+        ],
+        [
+          ENGINE,
+          [
+            "gate-reject",
+            "--stage",
+            "requirements-analysis",
+            "--target-intent-id",
+            "00000000-0000-7000-8000-000000000001",
+            "--presence-reservation-id",
+            "00000000-0000-4000-8000-000000000001",
+          ],
+        ],
+        [STATE, ["set", "Current Status=COMPLETE"]],
+      ] as const) {
+        const denied = runTool(root, tool, [...args]);
+        const output = denied.stdout || denied.stderr;
+        expect(output).toContain("is not the main conductor");
+      }
+      expect(readFileSync(seededStateFile(root), "utf-8")).toBe(stateBefore);
+      expect(readAllAuditShards(root)).toBe(auditBefore);
+      expect(
+        existsSync(reservationsDir)
+          ? readdirSync(reservationsDir).sort()
+          : [],
+      ).toEqual(reservationsBefore);
+      expect(stopResult(root, "main").calls).toEqual([]);
+
+      runAdapter(
+        "log-subagent",
+        JSON.stringify({
+          hook_event_name: "SubagentStop",
+          session_id: "",
+          cwd: root,
+          agent_name: role,
+        }),
+        root,
+        () => ({ stdout: "", code: 0 }),
+      );
+      const mainNext = runTool(root, ENGINE, ["next"]);
+      expect(mainNext.stdout).not.toContain("is not the main conductor");
+      expect(JSON.parse(mainNext.stdout).kind).toBe("run-stage");
+    },
+  );
+
+  test("host-stamped main retains next, report, park, and direct state compatibility", () => {
+    const nextRoot = freshWorkflow();
+    const next = runTool(nextRoot, ENGINE, ["next"]);
+    expect(JSON.parse(next.stdout).kind).toBe("run-stage");
+
+    const reportRoot = freshWorkflow();
+    const report = runTool(reportRoot, ENGINE, [
+      "report",
+      "--stage",
+      "requirements-analysis",
+      "--result",
+      "approved",
+      "--user-input",
+      "Approve",
+    ]);
+    expect(report.stdout).not.toContain("is not the main conductor");
+
+    const parkRoot = freshWorkflow();
+    const park = runTool(parkRoot, ENGINE, ["park"]);
+    expect(JSON.parse(park.stdout).kind).toBe("parked");
+
+    const stateRoot = freshWorkflow();
+    const state = runTool(stateRoot, STATE, [
+      "set",
+      "Test Strategy=Comprehensive",
+    ]);
+    expect(state.code).toBe(0);
+    expect(readFileSync(seededStateFile(stateRoot), "utf-8")).toContain(
+      "**Test Strategy**: Comprehensive",
+    );
   });
 
   test("gate-reserve leaves state and audit unchanged for corrupt or conflicting reservations", () => {
@@ -1974,6 +2277,45 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       carrier.presence_reservation_id,
     );
     expect(readAllAuditShards(root)).toBe(auditAfterFirstReservation);
+
+    const stateBeforeSubagentStop = readFileSync(
+      seededStateFile(root),
+      "utf-8",
+    );
+    const auditBeforeSubagentStop = readAllAuditShards(root);
+    runAdapter(
+      "role-start",
+      JSON.stringify({
+        hook_event_name: "SubagentStart",
+        session_id: "",
+        cwd: root,
+        agent_name: "amadeus-architecture-reviewer-agent",
+      }),
+      root,
+    );
+    const subagentStop = stopResult(root, "reviewer");
+    expect(subagentStop.result).toEqual({
+      stdout: "",
+      exitCode: 0,
+      stderr: "",
+    });
+    expect(subagentStop.calls).toEqual([]);
+    runAdapter(
+      "log-subagent",
+      JSON.stringify({
+        hook_event_name: "SubagentStop",
+        session_id: "",
+        cwd: root,
+        agent_name: "amadeus-architecture-reviewer-agent",
+      }),
+      root,
+      () => ({ stdout: "", code: 0 }),
+    );
+    expect(readFileSync(seededStateFile(root), "utf-8")).toBe(
+      stateBeforeSubagentStop,
+    );
+    expect(readAllAuditShards(root)).toBe(auditBeforeSubagentStop);
+    expect(readAllAuditShards(root)).not.toContain("GATE_APPROVED");
 
     const unrelatedTurn = runTool(
       root,

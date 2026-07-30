@@ -127,6 +127,10 @@ import {
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
+import {
+  authorizeMainConductor,
+  callerAuthorizationError,
+} from "./amadeus-caller-authorization.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
@@ -809,6 +813,26 @@ function trustedHostSessionId(): string | undefined {
     : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }
 
+function enforceCallerAuthorization(subcommand: string | undefined): void {
+  // Only read-only subcommands pass through. On denial, do not use error():
+  // writing ERROR_LOGGED would change the state/audit bytes, violating the
+  // invariant that a denial leaves both untouched, so write to stderr and exit.
+  if (
+    subcommand === undefined ||
+    subcommand === "get" ||
+    subcommand === "count" ||
+    subcommand === "lookup"
+  ) {
+    return;
+  }
+  const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
+  if (authorization.kind === "authorized") return;
+  process.stderr.write(
+    `${JSON.stringify({ error: callerAuthorizationError(authorization.role) })}\n`,
+  );
+  process.exit(1);
+}
+
 function main(): void {
   const args = process.argv.slice(2);
 
@@ -820,6 +844,7 @@ function main(): void {
   }
 
   const subcommand = args[0];
+  enforceCallerAuthorization(subcommand);
 
   observeToolRun(subcommand);
 

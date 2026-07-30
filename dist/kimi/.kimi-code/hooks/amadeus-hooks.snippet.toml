@@ -12,8 +12,8 @@
 # the session's project directory as cwd, so the relative path resolves in an
 # installed project, and the adapter is fail-open where the project is not
 # installed. Event/matcher finalization against live payloads is a Bolt 2
-# concern (the 9 event kinds below wire the adapter's 10 targets; one event
-# kind may drive more than one target).
+# concern (the 10 event kinds below wire the adapter targets; one event kind
+# may drive more than one target).
 
 # >>> amadeus-kimi-hooks >>>
 [[hooks]]
@@ -54,6 +54,10 @@ command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts runtime-compile"
 event = "PreCompact"
 matcher = "manual|auto"
 command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts validate-state"
+
+[[hooks]]
+event = "SubagentStart"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts role-start"
 
 [[hooks]]
 event = "SubagentStop"

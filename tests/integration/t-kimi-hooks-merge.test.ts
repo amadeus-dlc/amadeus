@@ -2,7 +2,7 @@
 // against the REAL snippet master and REAL fs ports under a mkdtemp KimiHome
 // (never the user's real ~/.kimi-code). The pure merge logic's table-driven
 // cases live in tests/unit/setup-kimi-hooks-domain.test.ts; this file pins:
-//   - renderManagedBlock on the shipped master (10 hooks + 4 allows + 1 deny)
+//   - renderManagedBlock on the shipped master (11 hooks + 4 allows + 1 deny)
 //   - the Bolt 2 live finding at full fidelity: a marker-stripped config
 //     (kimi CLI 0.28.1 drops comments) plans "replace", never a duplicate add
 //   - the module flow (FR-3b/3c): plan report -> confirm -> backup -> atomic
@@ -78,8 +78,8 @@ describe("renderManagedBlock — the shipped snippet master", () => {
     expect(lines[lines.length - 1]).toBe(MANAGED_BLOCK_END);
     expect(block).toContain("amadeus-kimi-adapter.ts");
     expect(block).not.toContain("single source of truth"); // preamble stays out
-    // The master wires 10 hook entries and 5 permission rules.
-    expect(block.split("[[hooks]]").length - 1).toBe(10);
+    // The master wires 11 hook entries and 5 permission rules.
+    expect(block.split("[[hooks]]").length - 1).toBe(11);
     expect(block.split("[[permission.rules]]").length - 1).toBe(5);
     const hookDeny =
       'decision = "deny"\npattern = "Bash(*.kimi-code/hooks/*)"';
@@ -101,14 +101,14 @@ describe("planMerge + applyMerge — marker-stripped real master (Bolt 2 finding
     const plan = mustPlan(config, block);
     expect(plan.action).toBe("replace");
     const merged = applyMerge(config, plan);
-    // Exactly one managed block afterwards: 10 adapter command lines, markers restored.
-    expect(merged.split("amadeus-kimi-adapter.ts").length - 1).toBe(10);
+    // Exactly one managed block afterwards: 11 adapter command lines, markers restored.
+    expect(merged.split("amadeus-kimi-adapter.ts").length - 1).toBe(11);
     expect(merged.split(MANAGED_BLOCK_BEGIN).length - 1).toBe(1);
     expect(merged.split(MANAGED_BLOCK_END).length - 1).toBe(1);
     expect(merged).toContain(block);
     // The user's own hooks and sections survive byte-for-byte.
     expect(merged.startsWith(userConfigText())).toBe(true);
-    expect(merged.split("[[hooks]]").length - 1).toBe(24); // 14 user + 10 managed
+    expect(merged.split("[[hooks]]").length - 1).toBe(25); // 14 user + 11 managed
     expect(merged.split("[[permission.rules]]").length - 1).toBe(5);
     Bun.TOML.parse(merged);
     // And the repaired config is a stable noop from then on.
@@ -126,7 +126,7 @@ describe("planMerge + applyMerge — marker-stripped real master (Bolt 2 finding
     const plan = mustPlan(config, block);
     expect(plan.action).toBe("replace");
     const merged = applyMerge(config, plan);
-    expect(merged.split("amadeus-kimi-adapter.ts").length - 1).toBe(10);
+    expect(merged.split("amadeus-kimi-adapter.ts").length - 1).toBe(11);
     expect(merged.split(MANAGED_BLOCK_BEGIN).length - 1).toBe(1);
     expect(merged).toContain('[providers.default]\nbase_url = "https://example.invalid"');
     Bun.TOML.parse(merged);

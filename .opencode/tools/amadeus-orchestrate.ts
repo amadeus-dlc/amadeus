@@ -181,6 +181,10 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
+import {
+  authorizeMainConductor,
+  callerAuthorizationError,
+} from "./amadeus-caller-authorization.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
@@ -2098,11 +2102,51 @@ function isBareAdvancingNext(
   return true;
 }
 
+function refuseUnauthorizedKimiCaller(
+  projectDir: string | undefined,
+): boolean {
+  const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
+  if (authorization.kind === "authorized") return false;
+  emitStateNeutralError(callerAuthorizationError(authorization.role));
+  return true;
+}
+
+// Reads the Kiro readonly latch and turn counter; returns the command label
+// when the latch is fresh (stamped for the CURRENT turn), null otherwise.
+// Advisory: any failure returns null so a real `next` is never blocked. Inert
+// on Claude/Codex: the latch files are never written there (no seam).
+function freshReadonlyLatchLabel(projectDir: string | undefined): string | null {
+  try {
+    const pdLatch = resolveProjectDir(projectDir);
+    const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
+    const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
+    let counter = -1;
+    let latchTurn = -2;
+    let label = "the read-only command";
+    if (existsSync(counterPath)) {
+      const raw = readFileSync(counterPath, "utf-8").trim();
+      const parsed = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : Number.NaN;
+      if (Number.isSafeInteger(parsed)) counter = parsed;
+    }
+    if (existsSync(latchPath)) {
+      const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
+      if (typeof lr.turn === "number") latchTurn = lr.turn;
+      if (typeof lr.flag === "string") {
+        // read-only flags render with a leading `--`; workspace verbs are bare.
+        label = lr.source === "workspace-verb" ? `\`${lr.flag}\`` : `--${lr.flag}`;
+      }
+    }
+    if (counter >= 0 && latchTurn === counter) return label;
+  } catch { /* advisory: guard is best-effort, never blocks a real next */ }
+  return null;
+}
+
 // The `next` handler — pure read, emits exactly one directive.
 export function handleNext(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
@@ -2113,40 +2157,18 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // turn), rolling the active workflow forward. The seam stamps
   // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
   // state inspection, a TRULY BARE advancing next (none of its own flags set)
-  // checks the latch: when latch.turn === the current counter (the SAME turn) we
-  // emit `done` instead of routing to a run-stage. Turn-scoped — a legitimate
-  // advancing next in a LATER turn (counter bumped, latch now stale) is never
-  // swallowed. Inert on Claude/Codex: the latch files are never written there (no
-  // seam) → fresh is always false → falls through. Advisory: any failure fails
-  // open to the normal `next`.
+  // checks the latch: when the latch is fresh (same turn) we emit `done` instead
+  // of routing to a run-stage. Turn-scoped — a legitimate advancing next in a
+  // LATER turn (counter bumped, latch now stale) is never swallowed.
   if (isBareAdvancingNext(flags, migration)) {
-    try {
-      const pdLatch = resolveProjectDir(projectDir);
-      const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
-      const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
-      let counter = -1;
-      let latchTurn = -2;
-      let label = "the read-only command";
-      if (existsSync(counterPath)) {
-        const n = Number.parseInt(readFileSync(counterPath, "utf-8").trim(), 10);
-        if (Number.isFinite(n)) counter = n;
-      }
-      if (existsSync(latchPath)) {
-        const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
-        if (typeof lr.turn === "number") latchTurn = lr.turn;
-        if (typeof lr.flag === "string") {
-          // read-only flags render with a leading `--`; workspace verbs are bare.
-          label = lr.source === "workspace-verb" ? `\`${lr.flag}\`` : `--${lr.flag}`;
-        }
-      }
-      if (counter >= 0 && latchTurn === counter) {
-        emit({
-          kind: "done",
-          reason: `The read-only/navigation command (${label}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
-        });
-        return;
-      }
-    } catch { /* advisory: guard is best-effort, never blocks a real next */ }
+    const latchLabel = freshReadonlyLatchLabel(projectDir);
+    if (latchLabel !== null) {
+      emit({
+        kind: "done",
+        reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
+      });
+      return;
+    }
   }
 
   // Branch 1 — read-only utility flags dispatch FIRST, before any state
@@ -3942,6 +3964,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseReportFlags(args);
   const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
   const authority = classifyApprovalAuthority({
@@ -4422,6 +4445,8 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
 function handlePark(_args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const pd = resolveProjectDir(projectDir);
   const res = spawnState(pd, ["park"]);
   if (res.exitCode !== 0) {
@@ -4648,6 +4673,7 @@ export function handleGateReserve(
   args: string[],
   projectDir: string | undefined,
 ): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const stageIndex = args.indexOf("--stage");
   const slug = stageIndex === -1 ? undefined : args[stageIndex + 1];
   if (!slug || slug.startsWith("--")) {
@@ -4708,6 +4734,7 @@ export function handleGateReject(
   args: string[],
   projectDir: string | undefined,
 ): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const value = (name: string): string | undefined => {
     const index = args.indexOf(name);
     const candidate = index === -1 ? undefined : args[index + 1];

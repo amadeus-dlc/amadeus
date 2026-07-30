@@ -18,12 +18,21 @@
 //   - UserPromptSubmit prompt is a content-block ARRAY → joined to a string
 //   - TodoList {todos:[{status,title}]} → TaskUpdate {status, activeForm}
 //   - SubagentStop agent_name → agent_type (no agent_id on Kimi)
-//   - Stop is always observation-only because its payload has no trustworthy
-//     caller identity; SessionStart stdout is discarded (context injection
-//     does not exist on Kimi 0.28.1 — probed 3 formats).
+//   - The live Kimi 0.28.1 Stop capture has a host-stamped non-empty session_id
+//     and no agent_name. Kimi 0.29.0's installed bundle constructs Stop with
+//     stopHookActive only and emits agentName on separate Subagent lifecycle
+//     events. Forwarding additionally requires the matching SessionStart
+//     baseline and zero active subagents; unknown/ambiguous callers no-op.
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   defaultSpawn,
@@ -222,8 +231,25 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
     });
   });
 
-  test("Stop capture → observation-only with no core-hook call", () => {
+  test("Stop routing requires an explicit trusted-main decision", () => {
+    const stop = fixtureEnv("stop");
+    expect(stop.session_id).toBe(
+      "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
+    );
+    expect(stop.agent_name).toBeUndefined();
     expect(routeTarget("stop", fixtureEnv("stop"))).toEqual([]);
+    expect(routeTarget("stop", fixtureEnv("stop"), true)).toEqual([
+      {
+        hookPath: "amadeus-stop.ts",
+        stdin: JSON.stringify({
+          hook_event_name: "Stop",
+          session_id: "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
+          cwd: "/private/tmp/kimi-hook-capture/cwd-a",
+          stop_hook_active: false,
+        }),
+        translate: "stop",
+      },
+    ]);
   });
 
   test("unknown target → fail-open empty call list", () => {
@@ -282,19 +308,49 @@ describe("runAdapter — end-to-end with the spawn spy", () => {
     expect(spy.calls).toHaveLength(0);
   });
 
-  test.each([
-    ["main", fixture("stop")],
-    [
-      "subagent",
-      JSON.stringify({
-        hook_event_name: "Stop",
-        session_id: "",
-        cwd: "/proj",
-        agent_name: "amadeus-architecture-reviewer-agent",
-        stop_hook_active: false,
-      }),
-    ],
-  ])("stop: %s caller shape is always a silent no-op", (_caller, payload) => {
+  test("stop: a host-stamped main session receives the core forwarding decision", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-kimi-main-stop-"));
+    try {
+      const sessionsDir = join(root, "amadeus", ".amadeus-sessions");
+      mkdirSync(sessionsDir, { recursive: true });
+      writeFileSync(
+        join(sessionsDir, ".current-session"),
+        "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56\n",
+      );
+      runAdapter(
+        "session-start",
+        JSON.stringify({
+          hook_event_name: "SessionStart",
+          session_id: "session_d1ae88d0-ccfd-4244-b470-b30b0d7d8f56",
+          cwd: root,
+          source: "startup",
+        }),
+        root,
+        () => ({ stdout: "", code: 0 }),
+      );
+      const payload = JSON.parse(fixture("stop"));
+      payload.cwd = root;
+      const spy = spySpawn('{"decision":"block","reason":"continue"}');
+      const result = runAdapter("stop", JSON.stringify(payload), root, spy.fn);
+      expect(result).toEqual({
+        stdout: '{"decision":"block","reason":"continue"}',
+        exitCode: 0,
+        stderr: "",
+      });
+      expect(spy.calls.map((call) => call.hookFile)).toEqual(["amadeus-stop.ts"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("stop: an unknown/reviewer caller remains a silent no-op", () => {
+    const payload = JSON.stringify({
+      hook_event_name: "Stop",
+      session_id: "",
+      cwd: "/proj",
+      agent_name: "amadeus-architecture-reviewer-agent",
+      stop_hook_active: false,
+    });
     const spy = spySpawn('{"decision":"block","reason":"must not run"}');
     const result = runAdapter("stop", payload, "/proj", spy.fn);
     expect(result).toEqual({ stdout: "", exitCode: 0, stderr: "" });
