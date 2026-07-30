@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 546,
+    "total": 547,
     "enumeratedByClass": {
       "function": 306,
       "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 12,
-      "subcommand": 101,
+      "subcommand": 102,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 10,
       "stage": 8,
       "hook": 12,
-      "subcommand": 82,
+      "subcommand": 83,
       "render-surface": 7
     }
   },
@@ -5715,6 +5715,18 @@
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state mirror-initial-create",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t371-intent-initialized-boundary.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "subcommand",

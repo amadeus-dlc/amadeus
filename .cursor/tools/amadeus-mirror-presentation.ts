@@ -24,6 +24,7 @@ export const MIRROR_USER_CONTRACT = {
     intent: "active-intent",
   },
   boundaries: [
+    "intent-initialized",
     "intent-capture-approved",
     "phase-verified",
     "parked",
@@ -33,6 +34,12 @@ export const MIRROR_USER_CONTRACT = {
   completionOrder: ["create", "sync", "close"],
   operations: ["create", "sync", "close"],
   boundaryCommands: [
+    {
+      path: ["boundary", "intent-initialized"],
+      requiredOptions: ["--instance"],
+      optionalOptions: ["--repo", "--space", "--intent", "--project-dir"],
+      positionalArguments: "forbidden",
+    },
     {
       path: ["boundary", "intent-capture"],
       requiredOptions: ["--instance"],
