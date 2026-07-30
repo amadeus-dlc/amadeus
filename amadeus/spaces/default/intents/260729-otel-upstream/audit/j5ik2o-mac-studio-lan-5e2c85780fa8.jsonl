@@ -1591,3 +1591,5 @@
 {"schemaVersion":1,"seq":1591,"cloneId":"5e2c85780fa8","intentId":"260729-otel-upstream","timestamp":"2026-07-29T22:25:32Z","heading":"Human Turn","event":"HUMAN_TURN","fields":{}}
 {"schemaVersion":1,"seq":1592,"cloneId":"5e2c85780fa8","intentId":"260729-otel-upstream","timestamp":"2026-07-29T23:24:34Z","heading":"Human Turn","event":"HUMAN_TURN","fields":{}}
 {"schemaVersion":1,"seq":1593,"cloneId":"5e2c85780fa8","intentId":"260729-otel-upstream","timestamp":"2026-07-30T00:37:13Z","heading":"Human Turn","event":"HUMAN_TURN","fields":{}}
+{"schemaVersion":1,"seq":1594,"cloneId":"5e2c85780fa8","intentId":"260729-otel-upstream","timestamp":"2026-07-30T00:58:20Z","heading":"Human Turn","event":"HUMAN_TURN","fields":{}}
+{"schemaVersion":1,"seq":1595,"cloneId":"5e2c85780fa8","intentId":"260729-otel-upstream","timestamp":"2026-07-30T01:14:20Z","heading":"Bolt Completed","event":"BOLT_COMPLETED","fields":{"Bolt names":"event-registry,journal-v2","Batch number":"2"}}

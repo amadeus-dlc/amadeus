@@ -34,6 +34,7 @@ import {
   parseJournalLine,
   serializeJournalEntry,
 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
+import { isJournalEntryV2 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import { readFileSync } from "node:fs";
@@ -127,7 +128,9 @@ describe("four-set equality (FR-EVT-1)", () => {
         event: auditEvent,
         fields: {},
       });
-      expect(parseJournalLine(lineOut).event).toBe(auditEvent);
+      const parsed = parseJournalLine(lineOut);
+      expect(isJournalEntryV2(parsed)).toBe(false);
+      if (!isJournalEntryV2(parsed)) expect(parsed.event).toBe(auditEvent);
     }
   });
 });

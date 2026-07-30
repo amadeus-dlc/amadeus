@@ -13,7 +13,7 @@ import { join } from "node:path";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
-} from "../../../dist/claude/.claude/tools/amadeus-journal.ts";
+} from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import {
   assertMutationAllowed,
   fatalReason,
@@ -21,19 +21,19 @@ import {
   resetFatalLatchForTests,
   setFatal,
   verifyJournalHealth,
-} from "../../../dist/claude/.claude/otel/fatal-latch.ts";
-import { createAuditLogExporter } from "../../../dist/claude/.claude/otel/audit-log-exporter.ts";
-import { createLocalLogExporter } from "../../../dist/claude/.claude/otel/local-log-exporter.ts";
-import type { RegisteredEventName } from "../../../dist/claude/.claude/otel/event-registry.ts";
+} from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
+import type { RegisteredEventName } from "../../dist/claude/.claude/otel/event-registry.ts";
 import {
   emitEvent,
   registerLoggerProvider,
   resetLoggerProviderForTests,
-} from "../../../dist/claude/.claude/otel/logger-provider.ts";
+} from "../../dist/claude/.claude/otel/logger-provider.ts";
 import {
   cleanupTestProject,
   createTestProject,
-} from "../../harness/fixtures.ts";
+} from "../harness/fixtures.ts";
 
 const IDENTITY = { schemaVersion: JOURNAL_SCHEMA_VERSION, cloneId: "abc123def456", intentId: "260729-demo-1234abcd" };
 const line = (seq: number, event: string) =>

@@ -7,13 +7,13 @@
 // validation (BR-4).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { createAuditLogExporter } from "../../../dist/claude/.claude/otel/audit-log-exporter.ts";
-import { createLocalLogExporter } from "../../../dist/claude/.claude/otel/local-log-exporter.ts";
-import type { CompletedSpanRecord } from "../../../dist/claude/.claude/otel/local-span-exporter.ts";
-import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../../dist/claude/.claude/otel/logger-provider.ts";
-import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../../dist/claude/.claude/otel/tracer-provider.ts";
-import { resetFatalLatchForTests } from "../../../dist/claude/.claude/otel/fatal-latch.ts";
-import { cleanupTestProject, createTestProject } from "../../harness/fixtures.ts";
+import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
+import type { CompletedSpanRecord } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
+import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { getAmadeusTracer, registerTracerProvider, resetTracerProviderForTests } from "../../dist/claude/.claude/otel/tracer-provider.ts";
+import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 let proj: string;
 beforeEach(() => {
