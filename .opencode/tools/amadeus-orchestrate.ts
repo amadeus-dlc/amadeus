@@ -181,6 +181,10 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
+import {
+  authorizeMainConductor,
+  callerAuthorizationError,
+} from "./amadeus-caller-authorization.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
@@ -2098,8 +2102,17 @@ function isBareAdvancingNext(
   return true;
 }
 
+function refuseUnauthorizedKimiCaller(
+  projectDir: string | undefined,
+): boolean {
+  const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
+  if (authorization.kind === "authorized") return false;
+  emitStateNeutralError(callerAuthorizationError(authorization.role));
+  return true;
+}
+
 // The `next` handler — pure read, emits exactly one directive.
-export function handleNext(args: string[], projectDir: string | undefined): void {
+function handleNext(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
@@ -3933,6 +3946,16 @@ function handleAuthorizedApprovalReport(
   emit({ kind: "done", reason: approvedReason });
 }
 
+function guardedHandleNext(
+  args: string[],
+  projectDir: string | undefined,
+): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
+  handleNext(args, projectDir);
+}
+
+export { guardedHandleNext as handleNext };
+
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a terminal `done` directive on success or an
@@ -3942,6 +3965,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseReportFlags(args);
   const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
   const authority = classifyApprovalAuthority({
@@ -4422,6 +4446,8 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
 function handlePark(_args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const pd = resolveProjectDir(projectDir);
   const res = spawnState(pd, ["park"]);
   if (res.exitCode !== 0) {
@@ -4818,7 +4844,7 @@ function main(): void {
 
   switch (subcommand) {
     case "next":
-      handleNext(subArgs, projectDir);
+      guardedHandleNext(subArgs, projectDir);
       break;
     case "report":
       handleReport(subArgs, projectDir);

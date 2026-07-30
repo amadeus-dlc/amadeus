@@ -12,11 +12,12 @@
 //   bun .kimi-code/hooks/amadeus-kimi-adapter.ts <target>
 // where <target> ∈ session-start | session-end | mint | audit-and-sensors |
 //                  state-sync | runtime-compile | validate-state |
-//                  log-subagent | stop
+//                  role-start | log-subagent | stop
 //
-// Fail-open everywhere (BR-2). Stop is intentionally observation-only because
-// Kimi does not expose a trustworthy main-vs-subagent caller identity. See
-// amadeus-kimi-lib.ts for the measured contracts and rationale.
+// Fail-open everywhere (BR-2). Stop forwards only for a host-stamped main
+// session with a valid baseline and no ambient subagent presence; unknown and
+// delegated callers remain observation-only. See amadeus-kimi-lib.ts for the
+// carrier contract, primary evidence, and caller-identity limitation.
 
 import { runCli } from "./amadeus-kimi-lib.ts";
 
