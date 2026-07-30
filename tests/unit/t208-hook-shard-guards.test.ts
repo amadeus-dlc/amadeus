@@ -43,6 +43,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const BUN = process.execPath;
 const HOOK_DIR = join(AMADEUS_SRC, "hooks");
@@ -143,25 +144,6 @@ function seedForeignShardOnly(proj: string, withDispatcher = false): void {
   }
 }
 
-function seedSensorInvocation(proj: string, outputPath: string): void {
-  const healthDir = join(seededRecordDir(proj), ".amadeus-hooks-health");
-  mkdirSync(healthDir, { recursive: true });
-  writeFileSync(
-    join(healthDir, "sensor-invocation.json"),
-    `${JSON.stringify(
-      {
-        version: 1,
-        stage: "requirements-analysis",
-        produces: [outputPath],
-        optional_produces: [],
-      },
-      null,
-      2,
-    )}\n`,
-    "utf-8",
-  );
-}
-
 let proj: string;
 beforeEach(() => {
   proj = createTestProject();
@@ -209,7 +191,7 @@ describe("t208 hook active-workflow guard resolves ANY shard, not the self shard
     seedForeignShardOnly(proj, true);
     const spawnLog = join(proj, ".spawn.log");
     const artifact = join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md");
-    seedSensorInvocation(proj, artifact);
+    seedSensorInvocation(proj, "requirements-analysis", [artifact]);
     const res = spawnSync(BUN, [SENSOR_FIRE], {
       input: JSON.stringify({ tool_name: "Write", tool_input: { file_path: artifact } }),
       encoding: "utf-8",

@@ -50,6 +50,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
 const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
@@ -143,25 +144,6 @@ function spawnLogPath(proj: string): string {
   return join(proj, ".spawn.log");
 }
 
-function seedSensorInvocation(proj: string, outputPath: string): void {
-  const healthDir = join(seededRecordDir(proj), ".amadeus-hooks-health");
-  mkdirSync(healthDir, { recursive: true });
-  writeFileSync(
-    join(healthDir, "sensor-invocation.json"),
-    `${JSON.stringify(
-      {
-        version: 1,
-        stage: "requirements-analysis",
-        produces: [outputPath],
-        optional_produces: [],
-      },
-      null,
-      2,
-    )}\n`,
-    "utf-8",
-  );
-}
-
 class ExitSignal extends Error {
   constructor(public readonly code: number) {
     super(`exit ${code}`);
@@ -177,7 +159,7 @@ let caseCounter = 0;
  * top-level script re-executes. Returns the exit code the hook terminated with.
  */
 async function driveHook(proj: string, filePath: string): Promise<number> {
-  seedSensorInvocation(proj, filePath);
+  seedSensorInvocation(proj, "requirements-analysis", [filePath]);
   const json = JSON.stringify({
     tool_name: "Write",
     tool_input: { file_path: filePath },

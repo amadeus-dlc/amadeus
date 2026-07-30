@@ -98,6 +98,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -210,26 +211,6 @@ function spawnLogPath(proj: string): string {
 }
 function heartbeatPath(proj: string): string {
   return join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.last");
-}
-
-function seedSensorInvocation(
-  proj: string,
-  stage: string,
-  produces: string[],
-  optionalProduces: string[] = [],
-): void {
-  const scopeDir = join(seededRecordDir(proj), ".amadeus-hooks-health");
-  mkdirSync(scopeDir, { recursive: true });
-  writeFileSync(
-    join(scopeDir, "sensor-invocation.json"),
-    JSON.stringify({
-      version: 1,
-      stage,
-      produces,
-      optional_produces: optionalProduces,
-    }),
-    "utf-8",
-  );
 }
 
 interface HookRun {

@@ -75,11 +75,10 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { hostname, tmpdir } from "node:os";
+import { hostname } from "node:os";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -89,6 +88,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -222,29 +222,20 @@ function runHook(
     graph?: string;
     mode?: string;
     timeoutMs?: string;
-    declared?: boolean;
     produces?: string[];
     optionalProduces?: string[];
     scopeStage?: string;
   } = {},
 ): HookRun {
-  if (opts.declared !== false) {
-    const state = readFileSync(seededStateFile(proj), "utf-8");
-    const stage = state.match(/^- \*\*Current Stage\*\*:\s*(.+)$/m)?.[1]?.trim();
-    if (stage) {
-      const scopeDir = join(seededRecordDir(proj), ".amadeus-hooks-health");
-      mkdirSync(scopeDir, { recursive: true });
-      writeFileSync(
-        join(scopeDir, "sensor-invocation.json"),
-        JSON.stringify({
-          version: 1,
-          stage: opts.scopeStage ?? stage,
-          produces: opts.produces ?? [filePath],
-          optional_produces: opts.optionalProduces ?? [],
-        }),
-        "utf-8",
-      );
-    }
+  const state = readFileSync(seededStateFile(proj), "utf-8");
+  const stage = state.match(/^- \*\*Current Stage\*\*:\s*(.+)$/m)?.[1]?.trim();
+  if (stage) {
+    seedSensorInvocation(
+      proj,
+      opts.scopeStage ?? stage,
+      opts.produces ?? [filePath],
+      opts.optionalProduces ?? [],
+    );
   }
   const json = JSON.stringify({
     tool_name: "Write",
@@ -392,8 +383,14 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
       "requirements-analysis",
       "memory.md",
     );
+    const declared = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
 
-    expect(runHook(proj, memory, { declared: false }).status).toBe(0);
+    expect(runHook(proj, memory, { produces: [declared] }).status).toBe(0);
     expect(spawnArgvs(proj)).toEqual([]);
   });
 
@@ -405,8 +402,17 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
       "reverse-engineering",
       "learnings-selections.json",
     );
+    const declared = join(
+      proj,
+      "amadeus",
+      "spaces",
+      "default",
+      "codekb",
+      "repo",
+      "architecture.md",
+    );
 
-    expect(runHook(proj, replay, { declared: false }).status).toBe(0);
+    expect(runHook(proj, replay, { produces: [declared] }).status).toBe(0);
     expect(spawnArgvs(proj)).toEqual([]);
   });
 
@@ -418,8 +424,14 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
       "requirements-analysis",
       "rogue-questions.md",
     );
+    const declared = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
 
-    expect(runHook(proj, questions, { declared: false }).status).toBe(0);
+    expect(runHook(proj, questions, { produces: [declared] }).status).toBe(0);
     expect(spawnArgvs(proj)).toEqual([]);
   });
 
