@@ -2112,10 +2112,11 @@ function refuseUnauthorizedKimiCaller(
 }
 
 // The `next` handler — pure read, emits exactly one directive.
-function handleNext(args: string[], projectDir: string | undefined): void {
+export function handleNext(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
@@ -3946,16 +3947,6 @@ function handleAuthorizedApprovalReport(
   emit({ kind: "done", reason: approvedReason });
 }
 
-function guardedHandleNext(
-  args: string[],
-  projectDir: string | undefined,
-): void {
-  if (refuseUnauthorizedKimiCaller(projectDir)) return;
-  handleNext(args, projectDir);
-}
-
-export { guardedHandleNext as handleNext };
-
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a terminal `done` directive on success or an
@@ -4846,7 +4837,7 @@ function main(): void {
 
   switch (subcommand) {
     case "next":
-      guardedHandleNext(subArgs, projectDir);
+      handleNext(subArgs, projectDir);
       break;
     case "report":
       handleReport(subArgs, projectDir);

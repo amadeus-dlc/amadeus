@@ -152,7 +152,9 @@ function withRoleMarkerLock(
   const lockPath = `${markerPath}.lock`;
   for (let attempt = 0; attempt < ROLE_LOCK_RETRIES; attempt++) {
     // Only the lock acquisition sits in this try: an error thrown by
-    // operation() must not be mistaken for lock contention and retried.
+    // operation() must not be mistaken for lock contention and retried, and
+    // it must reach the caller's own fail-closed path instead of collapsing
+    // into the same `false` a lock-acquisition failure returns.
     try {
       mkdirSync(lockPath);
     } catch (cause) {
@@ -172,8 +174,6 @@ function withRoleMarkerLock(
     try {
       operation();
       return true;
-    } catch {
-      return false;
     } finally {
       rmSync(lockPath, { recursive: true, force: true });
     }
