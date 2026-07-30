@@ -34,6 +34,7 @@ import type { AppendAuditResult } from "../tools/amadeus-audit.ts";
 import { getEventDefByAuditEvent } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
 import { emitEvent } from "./logger-provider.ts";
+import type { EmitOutcome } from "./logger-provider.ts";
 
 // The legacy `appendAuditEntry` parameter shape. projectDir is accepted for
 // call-shape compatibility but the write target comes from the registered
@@ -60,17 +61,29 @@ export function appendAuditEntryViaEvents(
   }
   // Reverse registry lookup: an unmapped legacy eventType throws here (BR-3).
   const def = getEventDefByAuditEvent(eventType);
-  const outcome = emitEvent(def.name as RegisteredEventName, fields);
+  return appendAuditResultFromOutcome(eventType, def.name, emitEvent(def.name as RegisteredEventName, fields));
+}
+
+// The emit outcome -> legacy result mapping, exported as a pure seam so the
+// telemetry-invariant arm is reachable from a test: through the public function
+// it is unreachable by construction (getEventDefByAuditEvent only ever resolves
+// canonical defs, since a telemetry def carries auditEvent: null), and an
+// unreachable throw is exactly the kind of guard that rots untested.
+export function appendAuditResultFromOutcome(
+  eventType: string,
+  eventName: string,
+  outcome: EmitOutcome
+): AppendAuditResult {
   if (outcome.appended) {
     return { appended: true, event: eventType, timestamp: outcome.timestamp };
   }
   if (outcome.reason === "intent-complete") {
     return { appended: false, reason: "intent-complete", event: eventType, timestamp: outcome.timestamp };
   }
-  // getEventDefByAuditEvent only ever resolves canonical defs (a telemetry def
-  // carries auditEvent: null), so a telemetry outcome here means the registry
-  // and this adapter disagree about durability.
+  // A telemetry outcome means the registry and this adapter disagree about
+  // durability — the legacy eventType resolved to a def that never reaches the
+  // audit journal, so there is no honest AppendAuditResult to return.
   throw new Error(
-    `legacy eventType ${eventType} resolved to telemetry-classified ${def.name} — invariant violation (BR-3)`
+    `legacy eventType ${eventType} resolved to telemetry-classified ${eventName} — invariant violation (BR-3)`
   );
 }

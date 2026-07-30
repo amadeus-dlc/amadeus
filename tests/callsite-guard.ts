@@ -265,19 +265,15 @@ export function parseAllowlist(body: string): LoadedAllowlist {
   return { kind: "loaded", doc: { description: String(doc.description ?? ""), direction: "shrink-only", total: Number(doc.total ?? 0), sites: doc.sites as Census } };
 }
 
+// Module scope, not inline: a `+`-concatenated value inside a multi-line call
+// argument leaves its continuation lines at DA:0 in bun's lcov, which reads as
+// uncovered patch lines (cid:code-generation:bun-multiline-arg-da0).
+const ALLOWLIST_DESCRIPTION =
+  "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update";
+
 export function renderAllowlist(census: Census): string {
-  return `${JSON.stringify(
-    {
-      description:
-        "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). " +
-        "Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
-      direction: "shrink-only",
-      total: totalSites(census),
-      sites: census,
-    },
-    null,
-    2
-  )}\n`;
+  const doc = { description: ALLOWLIST_DESCRIPTION, direction: "shrink-only", total: totalSites(census), sites: census };
+  return `${JSON.stringify(doc, null, 2)}\n`;
 }
 
 // The residual report BR-9 keeps visible on every run: the same shape all the

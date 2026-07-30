@@ -34,7 +34,10 @@ import {
   registerLoggerProvider,
   resetLoggerProviderForTests,
 } from "../../dist/claude/.claude/otel/logger-provider.ts";
-import { appendAuditEntryViaEvents } from "../../dist/claude/.claude/otel/migration-adapter.ts";
+import {
+  appendAuditEntryViaEvents,
+  appendAuditResultFromOutcome,
+} from "../../dist/claude/.claude/otel/migration-adapter.ts";
 import { findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -118,6 +121,27 @@ describe("per-call intent/space targeting is refused fail-closed (E-U7CG-Q3A)", 
     expect(() =>
       appendAuditEntryViaEvents("DECISION_RECORDED", { Stage: "s", Decision: "d" }, proj, undefined, "other-space")
     ).toThrow(/per-call intent\/space targeting/);
+  });
+});
+
+describe("the outcome -> legacy result mapping (pure seam)", () => {
+  test("an appended outcome carries the emit's own timestamp, not a freshly minted one", () => {
+    expect(appendAuditResultFromOutcome("DECISION_RECORDED", "amadeus.decision.recorded", {
+      appended: true,
+      timestamp: "2026-07-30T00:00:00Z",
+    })).toEqual({ appended: true, event: "DECISION_RECORDED", timestamp: "2026-07-30T00:00:00Z" });
+  });
+
+  test("a telemetry outcome throws — there is no honest AppendAuditResult for it", () => {
+    // Unreachable through the public function (getEventDefByAuditEvent resolves
+    // canonical defs only), which is why the invariant is exercised here.
+    expect(() =>
+      appendAuditResultFromOutcome("DECISION_RECORDED", "amadeus.diagnostic.note", {
+        appended: false,
+        reason: "telemetry",
+        timestamp: "2026-07-30T00:00:00Z",
+      })
+    ).toThrow(/telemetry-classified/);
   });
 });
 

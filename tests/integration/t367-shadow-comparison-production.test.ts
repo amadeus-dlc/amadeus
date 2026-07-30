@@ -83,6 +83,55 @@ function writeNewSpans(...spans: Record<string, unknown>[]): void {
   writeFileSync(join(storeDir(), "spans-testclone.jsonl"), body, "utf-8");
 }
 
+describe("shadow comparison — status and allowed attributes (BR-10)", () => {
+  test("a failure on the old path with no ERROR on the new path is a status diff", () => {
+    writeOldEvents({ name: "decision", startMs: 1, endMs: 4, ok: false });
+    writeNewSpans({ name: "decision", startMs: 1, endMs: 4, status: { code: "OK" } });
+
+    const report = buildShadowComparisonReport(proj);
+
+    expect(performed(report.status).equivalent).toBe(false);
+    expect(report.unexplainedDiffs.join(" ")).toContain("old failures 1 / new ERROR 0");
+  });
+
+  test("matching failure counts are equivalent — UNSET counts as non-error", () => {
+    writeOldEvents({ name: "a", startMs: 1, endMs: 2, ok: false }, { name: "b", startMs: 1, endMs: 2, ok: true });
+    writeNewSpans(
+      { name: "a", startMs: 1, endMs: 2, status: { code: "ERROR" } },
+      { name: "b", startMs: 1, endMs: 2, status: { code: "UNSET" } }
+    );
+
+    expect(performed(buildShadowComparisonReport(proj).status).equivalent).toBe(true);
+  });
+
+  test("an allowed attribute key present on the old path but not the new is a diff", () => {
+    writeOldEvents({ name: "decision", startMs: 1, endMs: 4, meta: { stage: "code-generation" } });
+    writeNewSpans({ name: "decision", startMs: 1, endMs: 4, attributes: {} });
+
+    const report = buildShadowComparisonReport(proj);
+
+    expect(performed(report.allowedAttributes).equivalent).toBe(false);
+    expect(report.unexplainedDiffs.join(" ")).toContain("old key stage absent on the new path");
+  });
+
+  test("a superset of keys on the new path is equivalent — 同等以上 is allowed", () => {
+    writeOldEvents({ name: "decision", startMs: 1, endMs: 4, meta: { stage: "s" } });
+    writeNewSpans({ name: "decision", startMs: 1, endMs: 4, attributes: { stage: "s", extra: 1 } });
+
+    expect(performed(buildShadowComparisonReport(proj).allowedAttributes).equivalent).toBe(true);
+  });
+
+  test("a new-path record without a well-formed trace/span id is a linkage diff", () => {
+    writeOldEvents({ name: "decision", startMs: 1, endMs: 4 });
+    writeNewSpans({ name: "decision", startMs: 1, endMs: 4, traceId: "not-hex", spanId: "short" });
+
+    const report = buildShadowComparisonReport(proj);
+
+    expect(performed(report.linkage).equivalent).toBe(false);
+    expect(report.unexplainedDiffs.join(" ")).toContain("without a well-formed trace/span id");
+  });
+});
+
 describe("shadow comparison — store census and event count (BR-10)", () => {
   test("an absent store is COMPARISON NOT PERFORMED, never silent equivalence", () => {
     // Neither path wrote anything: the prototype would have compared 0 with 0
@@ -127,6 +176,17 @@ describe("shadow comparison — store census and event count (BR-10)", () => {
 
     expect(report.oldPath.tornLines).toBe(1);
     expect(report.unexplainedDiffs.join(" ")).toContain("torn");
+  });
+
+  test("a torn line on the NEW path is surfaced too", () => {
+    writeOldEvents({ name: "decision", startMs: 1, endMs: 4 });
+    writeNewSpans({ name: "decision", startMs: 1, endMs: 4 });
+    writeFileSync(join(storeDir(), "spans-torn.jsonl"), "{oops\n", "utf-8");
+
+    const report = buildShadowComparisonReport(proj);
+
+    expect(report.newPath.tornLines).toBe(1);
+    expect(report.unexplainedDiffs.join(" ")).toContain("newPath");
   });
 
   test("the report persists as machine-readable JSON", () => {

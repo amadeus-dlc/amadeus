@@ -143,4 +143,19 @@ describe("main — argument handling", () => {
     expect(main(["--nope"])).toBe(2);
     expect(main(["--check", "--report"])).toBe(2);
   });
+
+  test("--check --report <path> writes the residual report", () => {
+    const path = join(tempDir(), "residual.json");
+
+    expect(main(["--check", "--report", path])).toBe(0);
+
+    const parsed = JSON.parse(readFileSync(path, "utf-8"));
+    expect(parsed.total).toBeGreaterThan(0);
+  });
+
+  test("an unexpected error is reported and fails closed rather than escaping", () => {
+    // An unwritable report path makes writeFileSync throw inside runCheck; main
+    // must translate that into exit 1, not an unhandled stack trace.
+    expect(main(["--check", "--report", join(tempDir(), "no-such-dir", "residual.json")])).toBe(1);
+  });
 });
