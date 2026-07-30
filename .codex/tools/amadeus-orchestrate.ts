@@ -192,9 +192,12 @@ import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
+  MIRROR_INITIAL_CREATE_FIELD,
   type MirrorBoundaryPhase,
+  type MirrorBoundaryReceiptStatus,
   type MirrorBoundaryReceipts,
   parseMirrorBoundaryReceipts,
+  parseMirrorInitialCreateReceipt,
 } from "./amadeus-state.ts";
 import {
   type WorkflowCompletionPreparation,
@@ -294,7 +297,31 @@ type MirrorLifecycleTarget =
       phase: MirrorBoundaryPhase;
       instance: string;
       isPending: boolean;
+    }>
+  | Readonly<{
+      kind: "initial";
+      instance: string;
+      isPending: boolean;
     }>;
+
+// The lifecycle CLI's boundary sub-verb for each target, and the state verb that
+// carries its receipt. The initial create settles on its own receipt axis
+// (mirror-initial-create), so the two never write the same field.
+function boundaryArgsFor(target: MirrorLifecycleTarget): string {
+  const instance = JSON.stringify(target.instance);
+  if (target.kind === "completion") return `completion --instance ${instance}`;
+  if (target.kind === "initial")
+    return `intent-initialized --instance ${instance}`;
+  return `phase --phase ${target.phase} --instance ${instance}`;
+}
+
+function receiptVerbFor(
+  target: Exclude<MirrorLifecycleTarget, { kind: "completion" }>,
+): string {
+  return target.kind === "initial"
+    ? "mirror-initial-create"
+    : `mirror-boundary ${target.phase}`;
+}
 
 function mirrorLifecyclePrint(
   target: MirrorLifecycleTarget,
@@ -303,10 +330,8 @@ function mirrorLifecyclePrint(
 ): PrintDirective {
   const selector =
     ` --intent ${JSON.stringify(intent)} --space ${JSON.stringify(space)}`;
-  const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
-  const boundaryArgs = target.kind === "completion"
-    ? `completion --instance ${JSON.stringify(target.instance)}`
-    : `phase --phase ${target.phase} --instance ${JSON.stringify(target.instance)}`;
+  const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts`;
+  const boundaryArgs = boundaryArgsFor(target);
   const lifecycleTool =
     `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}${selector}`;
   if (target.kind === "completion") {
@@ -320,12 +345,13 @@ function mirrorLifecyclePrint(
         `terminal commit fails, stop; the durable completion instance makes a later retry safe.`,
     );
   }
+  const receiptVerb = receiptVerbFor(target);
   const prepare = target.isPending
     ? ""
-    : `First run \`${stateTool} ${target.phase} pending --from absent${selector}\`. `;
+    : `First run \`${stateTool} ${receiptVerb} pending --from absent${selector}\`. `;
   return printDirective(
     `${prepare}Run \`${lifecycleTool}\`. After it succeeds, run ` +
-      `\`${stateTool} ${target.phase} completed --from pending${selector}\`. ` +
+      `\`${stateTool} ${receiptVerb} completed --from pending${selector}\`. ` +
       `Only after both the mirror operation and receipt update succeed, re-run \`next\`. ` +
       `If either fails, stop without re-running \`next\`; the pending receipt makes a later retry safe.`,
   );
@@ -337,7 +363,19 @@ type PersistedMirrorBoundary = Readonly<{
   phase: MirrorBoundaryPhase | null;
   phaseInstance: string;
   receipts: MirrorBoundaryReceipts;
+  initialCreate: MirrorBoundaryReceiptStatus | undefined;
+  hasMirrorIssue: boolean;
 }>;
+
+// Is the scope-independent first create still outstanding? Settled means either
+// the receipt says so or an Issue is already recorded; a pending receipt stays
+// live so an interrupted attempt is reissued for an idempotent retry.
+function initialCreateIsOutstanding(
+  boundary: PersistedMirrorBoundary,
+): boolean {
+  if (boundary.initialCreate === "completed") return false;
+  return boundary.initialCreate === "pending" || !boundary.hasMirrorIssue;
+}
 
 function persistedMirrorBoundary(
   stateContent: string,
@@ -354,7 +392,18 @@ function persistedMirrorBoundary(
   const phaseInstance =
     (getField(stateContent, "Last Updated") ?? "").trim() ||
     `${phase ?? pendingPhase ?? "mirror"}:persisted`;
-  return { completion, pendingPhase, phase, phaseInstance, receipts };
+  const initialCreate = parseMirrorInitialCreateReceipt(
+    getField(stateContent, MIRROR_INITIAL_CREATE_FIELD),
+  );
+  return {
+    completion,
+    pendingPhase,
+    phase,
+    phaseInstance,
+    receipts,
+    initialCreate,
+    hasMirrorIssue: mirrorIssueNumberFromDocument(stateContent) !== null,
+  };
 }
 
 function hasPersistedMirrorBoundary(
@@ -363,12 +412,21 @@ function hasPersistedMirrorBoundary(
   if (boundary.pendingPhase !== undefined || boundary.completion !== null) {
     return true;
   }
-  return boundary.phase !== null &&
-    boundary.receipts[boundary.phase] !== "completed";
+  if (
+    boundary.phase !== null &&
+    boundary.receipts[boundary.phase] !== "completed"
+  ) {
+    return true;
+  }
+  return initialCreateIsOutstanding(boundary);
 }
 
+// A fixed instance: the boundary occurs once per Intent and the event key
+// already carries the Intent UUID, so a constant keeps every retry on the same
+// receipt instead of minting a new identity per attempt.
+const INITIAL_CREATE_INSTANCE = "intent-initialized";
+
 function emitConfiguredMirrorBoundary(
-  stateContent: string,
   boundary: PersistedMirrorBoundary,
   mode: "off" | "prompt" | "auto",
   intent: string,
@@ -416,11 +474,32 @@ function emitConfiguredMirrorBoundary(
     );
     return true;
   }
-  if (phase === null) return false;
-  const decision = decideMirrorBoundary(
-    mode,
-    mirrorIssueNumberFromDocument(stateContent) !== null,
-  );
+  // Evaluated only where the phase branch used to return false — an absent
+  // phase or one whose receipt is already completed — so the established
+  // boundaries keep both their precedence and their exact behaviour.
+  //
+  // The FIRST firing is an `auto`-only move: `prompt` keeps asking exactly
+  // where it already did. A `pending` receipt is not a first firing but the
+  // recovery of an operation that already started, so it is reissued in
+  // `prompt` too — the same treatment the pendingPhase branch above gives a
+  // pending phase receipt. `off` reaches neither: it returned at the top.
+  if (phase === null || boundary.receipts[phase] === "completed") {
+    if (!initialCreateIsOutstanding(boundary)) return false;
+    if (mode !== "auto" && boundary.initialCreate !== "pending") return false;
+    emit(
+      mirrorLifecyclePrint(
+        {
+          kind: "initial",
+          instance: INITIAL_CREATE_INSTANCE,
+          isPending: boundary.initialCreate === "pending",
+        },
+        intent,
+        space,
+      ),
+    );
+    return true;
+  }
+  const decision = decideMirrorBoundary(mode, boundary.hasMirrorIssue);
   if (decision.kind === "suppress") return false;
   if (decision.kind === "auto-lifecycle") {
     emit(
@@ -482,7 +561,6 @@ function emitMirrorBoundaryIfNeeded(
     return true;
   }
   return emitConfiguredMirrorBoundary(
-    stateContent,
     boundary,
     resolved.config.autoMirror,
     intent,

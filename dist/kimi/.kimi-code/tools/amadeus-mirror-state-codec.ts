@@ -92,6 +92,7 @@ const OPERATIONS: ReadonlySet<MirrorOperation> = new Set([
 ]);
 
 const BOUNDARY_KINDS: ReadonlySet<MirrorBoundary["kind"]> = new Set([
+  "intent-initialized",
   "intent-capture-approved",
   "phase-verified",
   "parked",

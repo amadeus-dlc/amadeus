@@ -59,6 +59,10 @@ export type CompletionPolicyInput = Readonly<{
 const APPLICABLE_OPERATIONS: Readonly<
   Record<MirrorBoundary["kind"], readonly MirrorOperation[]>
 > = {
+  // `sync` is applicable alongside `create` so a retry after a partial failure
+  // (Issue created, receipt not yet recorded) converges on sync through the
+  // coordinator's issueNumber rule instead of creating a second Issue.
+  "intent-initialized": ["create", "sync"],
   "intent-capture-approved": ["create"],
   "phase-verified": ["create", "sync"],
   parked: ["create", "sync"],

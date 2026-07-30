@@ -19,11 +19,29 @@ runs only eligible lifecycle-boundary work. Legacy booleans are rejected.
 Intent overrides Space, which overrides Global.
 
 <!-- amadeus-topic:boundaries -->
-<!-- amadeus-contract:boundaries {"boundaries":["intent-capture-approved","phase-verified","parked","workflow-completed","manual"]} -->
+<!-- amadeus-contract:boundaries {"boundaries":["intent-initialized","intent-capture-approved","phase-verified","parked","workflow-completed","manual"]} -->
 ## Boundaries
 
-Automation is bounded to approved Intent Capture, verified phases, park,
-completion, and explicit manual invocations. There is no daemon or polling.
+Automation is bounded to an initialized Intent, approved Intent Capture,
+verified phases, park, completion, and explicit manual invocations. There is no
+daemon or polling.
+
+In `auto`, the first Issue is created at the `intent-initialized` boundary, on
+the first `next` after the Intent exists and before the first business stage
+runs. That boundary does not depend on the scope: a scope that SKIPs Ideation
+gets its Issue at the same point as one that runs Intent Capture.
+
+The boundary settles once its receipt is completed, or when no attempt was ever
+recorded and an Issue already exists — a later Intent Capture or phase boundary
+then synchronizes that Issue rather than creating a second one. A recorded Issue
+does not settle a receipt that is still `pending`: an attempt that started but
+never finished is reissued until the receipt completes, and because the issue
+number is already recorded the retry resolves to a sync, never a second create.
+
+Only that first firing is exclusive to `auto`. A `pending` receipt is reissued
+in `prompt` as well, exactly as a pending phase receipt is — leaving a started
+operation unreconciled is not something a mode choice should decide. `off`
+suppresses both.
 
 <!-- amadeus-topic:completion -->
 <!-- amadeus-contract:completion {"completionOrder":["create","sync","close"]} -->
@@ -47,7 +65,7 @@ Close requires verified provenance, the same repository, a landed workflow,
 and a successful final sync. Repair requires a one-time phrase-bound challenge.
 
 <!-- amadeus-topic:cli -->
-<!-- amadeus-contract:cli {"commands":[{"path":["boundary","intent-capture"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","phase"],"requiredOptions":["--instance","--phase"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","park"],"requiredOptions":["--instance","--stage"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","completion"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","create"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","sync"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","close"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["repair","status"],"requiredOptions":[],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false},{"path":["repair","relink"],"requiredOptions":["--issue"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false},{"path":["repair","abandon"],"requiredOptions":["--operation"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false}],"selectorDefaults":{"space":"active-space","intent":"active-intent"},"positionalArguments":"forbidden"} -->
+<!-- amadeus-contract:cli {"commands":[{"path":["boundary","intent-initialized"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","intent-capture"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","phase"],"requiredOptions":["--instance","--phase"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","park"],"requiredOptions":["--instance","--stage"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["boundary","completion"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","create"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","sync"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["manual","close"],"requiredOptions":["--instance"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden"},{"path":["repair","status"],"requiredOptions":[],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false},{"path":["repair","relink"],"requiredOptions":["--issue"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false},{"path":["repair","abandon"],"requiredOptions":["--operation"],"optionalOptions":["--repo","--space","--intent","--project-dir"],"positionalArguments":"forbidden","mutatesRemote":false}],"selectorDefaults":{"space":"active-space","intent":"active-intent"},"positionalArguments":"forbidden"} -->
 ## CLI
 
 Use `repair status`, `repair relink --issue <n>`, or

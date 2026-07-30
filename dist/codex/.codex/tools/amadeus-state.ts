@@ -310,6 +310,53 @@ export function transitionMirrorBoundaryReceipt(
   );
 }
 
+// --- Initial-create receipt (Issue #1750) -----------------------------------
+//
+// The scope-independent first create settles on its OWN axis rather than inside
+// Mirror Boundary Receipts: that field's vocabulary is exactly the three phases
+// (MIRROR_BOUNDARY_PHASES), and parseMirrorBoundaryReceipts rejects any other
+// key. The two axes are read together by the engine but never share a slot, so
+// a phase receipt can never be mistaken for the initial-create receipt.
+export const MIRROR_INITIAL_CREATE_FIELD = "Mirror Initial Create Receipt";
+
+export function parseMirrorInitialCreateReceipt(
+  raw: string | null,
+): MirrorBoundaryReceiptStatus | undefined {
+  const value = raw?.trim();
+  if (value === undefined || value === "") return undefined;
+  if (value !== "pending" && value !== "completed") {
+    throw new Error(
+      `${MIRROR_INITIAL_CREATE_FIELD} must be pending or completed; received ${value}`,
+    );
+  }
+  return value;
+}
+
+export function transitionMirrorInitialCreateReceipt(
+  content: string,
+  expected: "absent" | MirrorBoundaryReceiptStatus,
+  next: MirrorBoundaryReceiptStatus,
+): string {
+  const current = parseMirrorInitialCreateReceipt(
+    getField(content, MIRROR_INITIAL_CREATE_FIELD),
+  );
+  if (current === next) return content;
+  if (
+    (expected === "absent" && current !== undefined) ||
+    (expected !== "absent" && current !== expected)
+  ) {
+    throw new Error(
+      `Mirror initial create expected ${expected}, found ${current ?? "absent"}`,
+    );
+  }
+  return setOrInsertField(
+    content,
+    "## Runtime State",
+    MIRROR_INITIAL_CREATE_FIELD,
+    next,
+  );
+}
+
 // Refuse a phase-boundary completion when `phase` requires a phase-check
 // artifact and it is missing. No-op for phases outside
 // PHASE_CHECK_REQUIRED_PHASES. Honors the same AMADEUS_SKIP_ARTIFACT_GUARD
@@ -863,6 +910,9 @@ function main(): void {
       case "mirror-boundary":
         handleMirrorBoundary(args.slice(1));
         break;
+      case "mirror-initial-create":
+        handleMirrorInitialCreate(args.slice(1));
+        break;
       case "set-construction-iteration":
         handleSetConstructionIteration(args.slice(1));
         break;
@@ -949,7 +999,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -1096,6 +1146,35 @@ export function handleMirrorBoundary(args: string[]): void {
     if (updated !== content) writeStateFile(pd, updated);
     console.log(
       JSON.stringify({ updated: updated !== content, phase, status: next }),
+    );
+  });
+}
+
+export function handleMirrorInitialCreate(args: string[]): void {
+  const next = args[0] as MirrorBoundaryReceiptStatus | undefined;
+  const fromIndex = args.indexOf("--from");
+  const expected = fromIndex >= 0 ? args[fromIndex + 1] : undefined;
+  if (
+    (next !== "pending" && next !== "completed") ||
+    (expected !== "absent" && expected !== "pending" && expected !== "completed")
+  ) {
+    error("Usage: amadeus-state.ts mirror-initial-create <pending|completed> --from <absent|pending|completed>");
+  }
+  const pd = resolveProjectDir(projectDir);
+  // A NAMED function expression rather than an arrow: the complexity baseline
+  // matches anonymous functions by ordinal, so an added arrow renumbers every
+  // later one in this file into a false NEW_VIOLATION.
+  withAuditLock(pd, function writeInitialCreateReceipt() {
+    const content = readStateFile(pd);
+    let updated: string;
+    try {
+      updated = transitionMirrorInitialCreateReceipt(content, expected, next);
+    } catch (cause) {
+      error(errorMessage(cause));
+    }
+    if (updated !== content) writeStateFile(pd, updated);
+    console.log(
+      JSON.stringify({ updated: updated !== content, status: next }),
     );
   });
 }

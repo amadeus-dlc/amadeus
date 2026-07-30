@@ -643,6 +643,8 @@ function parseBoundaryArgs(
 ): CliArgs {
   const boundaryKind = args[1];
   let boundary: MirrorBoundary | null = null;
+  if (boundaryKind === "intent-initialized")
+    boundary = { kind: "intent-initialized", instance: common.instance };
   if (boundaryKind === "intent-capture")
     boundary = { kind: "intent-capture-approved", instance: common.instance };
   if (boundaryKind === "phase") {
