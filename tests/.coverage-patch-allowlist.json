@@ -1420,5 +1420,11 @@
     "lines": "174",
     "reason": "Git init failure throw in initializeCodexExecProject; the success path is exercised by t-codex-exec-live-helper integration.",
     "expiry": "remove when project initialization receives an injectable git port"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
+    "lines": "130, 248",
+    "reason": "The lazy childEnv block (fail-open fallback and dispatcher env) is exercised by t95's spawned-hook drive (subprocess bun hook in fixture projects, including otel-absent ones); spawned main paths are not attributed to the parent Bun LCOV process (same class as the orchestrate.ts entries).",
+    "expiry": "remove when the sensor-fire hook dispatch is driven in-process"
   }
 ]
