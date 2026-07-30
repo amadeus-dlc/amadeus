@@ -26,6 +26,7 @@
 //   3  counter=N, latch{turn:N}  next --status    -> {kind:"print"}  (readOnly exempts Branch 0)
 //   4  counter=N, latch{turn:N}  next --single ...  -> NOT done       (single exempts Branch 0 — the Phase-1 parity fix)
 //   5  NO counter/latch files     bare next        -> NOT done        (guard inert on the Claude/Codex path)
+//   7  counter file corrupted     bare next        -> NOT done        (full-string integer acceptance, fail-open)
 //
 // Source cites (core/tools/amadeus-orchestrate.ts):
 //   :900 the exemption gate — Branch 0 runs ONLY when none of readOnly/
@@ -204,6 +205,25 @@ describe("t179 Branch 0 inert: no latch files -> not done", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
     // Deliberately seed NO latch/counter — the Claude/Codex (no-seam) shape.
+    const out = runNext(proj, []).out;
+    expect(out).not.toContain('"kind":"done"');
+    expect(out).not.toContain("nothing to advance");
+    expect(out).toContain('"kind":"run-stage"');
+  });
+});
+
+// ===========================================================================
+// Branch 0 — a CORRUPTED counter file is rejected wholesale, never partially
+// parsed. Number.parseInt("3corrupt") would return 3 and, matching latch.turn,
+// wrongly swallow a real advancing next; the guard accepts only a full-string
+// integer, so a corrupt counter falls through to run-stage (fail-open).
+// ===========================================================================
+describe("t179 Branch 0 fail-open: corrupted counter -> not done", () => {
+  test("7: counter file '3corrupt', latch{turn:3}, bare next -> run-stage, NOT done", () => {
+    proj = createTestProject();
+    seedStateFile(proj, MID_IDEATION);
+    seedLatch(proj, 3, 3);
+    writeFileSync(join(proj, "amadeus", ".amadeus-turn-counter"), "3corrupt\n", "utf-8");
     const out = runNext(proj, []).out;
     expect(out).not.toContain('"kind":"done"');
     expect(out).not.toContain("nothing to advance");

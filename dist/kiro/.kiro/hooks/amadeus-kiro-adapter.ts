@@ -362,8 +362,8 @@ if (target === "pretool-block") {
   try {
     const cp = join(cwd, "amadeus", ".amadeus-turn-counter");
     if (existsSync(cp)) {
-      const n = Number.parseInt(readFileSync(cp, "utf-8").trim(), 10);
-      if (Number.isFinite(n)) counter = n;
+      const raw = readFileSync(cp, "utf-8").trim();
+      if (/^\d+$/.test(raw)) counter = Number.parseInt(raw, 10);
     }
     const lp = join(cwd, "amadeus", ".amadeus-readonly-latch");
     if (existsSync(lp)) {
