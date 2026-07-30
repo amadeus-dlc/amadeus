@@ -1555,7 +1555,7 @@
   },
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "lines": "163-166",
+    "lines": "163-168",
     "reason": "Stale role-marker lock retire arm in withRoleMarkerLock: reaching it needs a lock directory older than ROLE_LOCK_STALE_MS left by a crashed holder. The lock-contention behavior is asserted through the spawned hook boundary in t365; deterministic stale-lock timing requires an injectable clock/lock port.",
     "expiry": "remove when withRoleMarkerLock receives an injectable stale-lock fixture"
   },
@@ -1573,8 +1573,8 @@
   },
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "lines": "266-268",
-    "reason": "Lock-acquisition-failure cleanup arm (best-effort marker unlink after withRoleMarkerLock exhausts retries). Requires sustained lock contention beyond the retry budget; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
+    "lines": "266-274",
+    "reason": "Lock-acquisition-failure cleanup arm (best-effort marker unlink after withRoleMarkerLock exhausts retries) and the outer catch that performs the same unlink when the locked write itself throws. Requires sustained lock contention or injected write failure; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
     "expiry": "remove when the role-marker lock gains an injectable contention fixture"
   },
   {
@@ -1591,8 +1591,8 @@
   },
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "lines": "344-364",
-    "reason": "Wholly-unwritable storage fallback and the outer role-transition catch that re-arms the deny latch on failed persistence. Requires injected write failures past the deny-latch write; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
+    "lines": "342-364",
+    "reason": "Deny-latch re-arm on a failed subagent-start transition, wholly-unwritable storage fallback, and the outer role-transition catch that re-arms the deny latch on failed persistence. Requires injected write failures past the deny-latch write; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
     "expiry": "remove when the hook receives an injectable storage-failure port"
   },
   {
