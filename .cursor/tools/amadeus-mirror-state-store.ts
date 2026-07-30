@@ -31,6 +31,8 @@ import { dirname, join } from "node:path";
 import {
   acquireAuditLock,
   auditBlockField,
+  enterAuditLock,
+  exitAuditLock,
   readAllAuditShards,
   splitAuditRecords,
   releaseAuditLock,
@@ -419,10 +421,15 @@ export function createMirrorStateStorePorts(
   config: RealStorePortsConfig,
 ): MirrorStateStorePorts {
   return {
-    acquireLock: () =>
-      acquireAuditLock(config.projectDir, 50, 100, config.intent, config.space),
-    releaseLock: () =>
-      releaseAuditLock(config.projectDir, config.intent, config.space),
+    // The reentrant pair, not a bare acquire (E-U8PRE O-L1): a canonical emit
+    // issued from inside this section reaches appendJournalRecordV2, which
+    // locks the same identity. A bare acquire would collide with the lock this
+    // very port is holding — burning the retry budget, and once the section has
+    // outlived the stale threshold, letting the reaper steal a live lock out
+    // from under it. The port keeps its two-phase shape so failure injection
+    // stays a replaced implementation rather than a branch in this file.
+    acquireLock: () => enterAuditLock(config.projectDir, config.intent, config.space),
+    releaseLock: () => exitAuditLock(config.projectDir, config.intent, config.space),
     readDocument: () => readFileSync(config.statePath, "utf-8"),
     writeDocumentAtomic: (text: string) => atomicWrite(config.statePath, text),
     appendArtifactUpdated: (outbox: MirrorAuditOutbox) =>

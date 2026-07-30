@@ -5977,15 +5977,41 @@ export function withAuditLock<T>(
   space?: string,
   retry?: AuditLockRetryBudget,
 ): T extends Promise<unknown> ? never : T {
+  if (!enterAuditLock(projectDir, intent, space, retry)) {
+    const key = auditLockIdentity(projectDir, intent, space);
+    throw new AuditLockAcquireError(key, retry?.maxRetries ?? 50, retry?.retryMs ?? 100);
+  }
+  try {
+    return fn();
+  } finally {
+    exitAuditLock(projectDir, intent, space);
+  }
+}
+
+// enterAuditLock / exitAuditLock — the two-phase form of withAuditLock, for the
+// ONE case that cannot take a callback: a lock reached through an injected
+// two-phase port (MirrorStateStorePorts.acquireLock/releaseLock, whose shape is
+// what lets failure injection replace an implementation instead of branching
+// production code). Every other call site uses withAuditLock, which cannot leak
+// the lock on an early return or a throw. Reaching for these directly gives up
+// that guarantee for nothing.
+//
+// withAuditLock is implemented on top of this pair, so there is exactly ONE
+// depth counter and one acquire path: a section entered through either form
+// re-enters the other.
+export function enterAuditLock(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+  retry?: AuditLockRetryBudget,
+): boolean {
   const key = auditLockIdentity(projectDir, intent, space);
   const currentDepth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
   if (currentDepth === 0) {
     const maxRetries = retry?.maxRetries ?? 50;
     const retryMs = retry?.retryMs ?? 100;
-    if (!acquireAuditLock(projectDir, maxRetries, retryMs, intent, space)) {
-      throw new AuditLockAcquireError(key, maxRetries, retryMs);
-    }
-    // Safety net: if the body calls process.exit (Bun skips `finally` in that
+    if (!acquireAuditLock(projectDir, maxRetries, retryMs, intent, space)) return false;
+    // Safety net: if the section calls process.exit (Bun skips `finally` in that
     // case), the on-exit handler releases the lock dir so the project isn't
     // poisoned for ~5s on the next invocation.
     // Same owner-stamp guard as releaseAuditLock (via removeLockDirIfOwned):
@@ -5995,17 +6021,23 @@ export function withAuditLock<T>(
     process.on("exit", onExit);
   }
   AUDIT_LOCK_DEPTH.set(key, currentDepth + 1);
-  try {
-    return fn();
-  } finally {
-    const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
-    if (depth <= 1) {
-      AUDIT_LOCK_DEPTH.delete(key);
-      releaseAuditLock(projectDir, intent, space);
-    } else {
-      AUDIT_LOCK_DEPTH.set(key, depth - 1);
-    }
+  return true;
+}
+
+// Unpairs one enterAuditLock. An exit with no matching enter — depth 0, which a
+// bare acquireAuditLock holder also reads as — releases NOTHING: the counter
+// never saw that acquisition, so there is none of ours to undo, and releasing
+// anyway would strip a lock its own holder still believes it owns.
+export function exitAuditLock(projectDir: string, intent?: string, space?: string): void {
+  const key = auditLockIdentity(projectDir, intent, space);
+  const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
+  if (depth === 0) return;
+  if (depth === 1) {
+    AUDIT_LOCK_DEPTH.delete(key);
+    releaseAuditLock(projectDir, intent, space);
+    return;
   }
+  AUDIT_LOCK_DEPTH.set(key, depth - 1);
 }
 
 // True iff THIS process currently holds the audit lock for the given identity

@@ -1,4 +1,5 @@
-// covers: function:withAuditLock, function:AuditLockAcquireError, function:appendJournalRecordV2
+// covers: function:withAuditLock, function:AuditLockAcquireError, function:enterAuditLock,
+//   function:exitAuditLock, function:appendJournalRecordV2
 // size: medium
 //
 // Pre-U8 Bolt P1 (E-U8PRE, composite ruling B):
@@ -22,13 +23,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  acquireAuditLock,
   auditLockDir,
   birthIntent,
+  enterAuditLock,
+  exitAuditLock,
   holdsAuditLock,
   releaseAuditLock,
   withAuditLock,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { appendJournalRecordV2 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { createMirrorStateStorePorts } from "../../dist/claude/.claude/tools/amadeus-mirror-state-store.ts";
 import {
   isJournalEntryV2,
   type JournalEntryV2,
@@ -167,6 +172,100 @@ describe("O-L1 — withAuditLock retry budget is a parameter", () => {
     withAuditLock(proj, () => { ran += 1; }, undefined, undefined, { maxRetries: 2, retryMs: 1 });
     expect(ran).toBe(1);
     expect(existsSync(auditLockDir(proj))).toBe(false);
+  });
+});
+
+// The mirror store's lock is taken through an injected two-phase port
+// (acquireLock/releaseLock), by design: failure injection replaces the
+// implementations rather than branching production code. So its real
+// implementation moves onto the SAME depth counter withAuditLock uses, via the
+// enter/exit pair, instead of onto withAuditLock's callback form (E-U8PRE O-L1,
+// team-lead ruling 案B).
+describe("O-L1 — one depth counter behind both lock forms", () => {
+  test("enterAuditLock re-enters a lock taken by withAuditLock", () => {
+    birthIntent(proj, "depth-shared-a", "default", "feature");
+    let reentered = false;
+    let heldAfterExit = false;
+    withAuditLock(proj, () => {
+      reentered = enterAuditLock(proj);
+      exitAuditLock(proj);
+      heldAfterExit = holdsAuditLock(proj);
+    });
+    expect(reentered).toBe(true);
+    expect(heldAfterExit).toBe(true);
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  });
+
+  test("withAuditLock re-enters a lock taken by enterAuditLock", () => {
+    birthIntent(proj, "depth-shared-b", "default", "feature");
+    expect(enterAuditLock(proj)).toBe(true);
+    try {
+      const appended = withAuditLock(proj, () => appendJournalRecordV2(journalRow(), proj));
+      expect(appended).toEqual({ appended: true });
+      expect(holdsAuditLock(proj)).toBe(true);
+    } finally {
+      exitAuditLock(proj);
+    }
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  });
+
+  test("an unbalanced exit releases nothing", () => {
+    birthIntent(proj, "depth-unbalanced", "default", "feature");
+    // No enter: the depth counter has no entry, so there is no acquisition of
+    // ours to undo. Must be a no-op rather than an unpaired release.
+    expect(() => exitAuditLock(proj)).not.toThrow();
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+
+    // And it must not release a lock taken by a BARE acquire, which the depth
+    // counter never saw either.
+    expect(acquireAuditLock(proj, 0, 0)).toBe(true);
+    try {
+      exitAuditLock(proj);
+      expect(existsSync(auditLockDir(proj))).toBe(true);
+    } finally {
+      releaseAuditLock(proj);
+    }
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  });
+});
+
+describe("O-L1 — the mirror store port re-enters through the same counter", () => {
+  test("acquireLock succeeds inside a held section and leaves it held", () => {
+    const born = birthIntent(proj, "mirror-port-reentry", "default", "feature");
+    const ports = createMirrorStateStorePorts({
+      projectDir: proj,
+      statePath: join(born.recordDir, "amadeus-state.md"),
+    });
+    let acquired = false;
+    let heldAfterRelease = false;
+    const startedAt = performance.now();
+    withAuditLock(proj, () => {
+      acquired = ports.acquireLock();
+      ports.releaseLock();
+      heldAfterRelease = holdsAuditLock(proj);
+    });
+    expect(acquired).toBe(true);
+    expect(heldAfterRelease).toBe(true);
+    // A bare acquire would have collided with our own lock and burned ~5s.
+    expect(performance.now() - startedAt).toBeLessThan(1_000);
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  });
+
+  test("a canonical v2 append lands from inside a port-held section", () => {
+    const born = birthIntent(proj, "mirror-port-append", "default", "feature");
+    const ports = createMirrorStateStorePorts({
+      projectDir: proj,
+      statePath: join(born.recordDir, "amadeus-state.md"),
+    });
+    expect(ports.acquireLock()).toBe(true);
+    try {
+      expect(appendJournalRecordV2(journalRow(), proj)).toEqual({ appended: true });
+      expect(holdsAuditLock(proj)).toBe(true);
+    } finally {
+      ports.releaseLock();
+    }
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+    expect(shardRecords(born.recordDir)).toHaveLength(1);
   });
 });
 
