@@ -24,14 +24,20 @@ Each receipt binds the full Intent UUID, boundary instance, and operation.
 
 `intent-initialized` is the scope-independent first-create boundary. The engine
 evaluates it on a bare advancing `next` only after no phase or completion
-boundary is live, and only in `auto`. It is outstanding while the
-`Mirror Initial Create Receipt` field — an axis of its own, separate from the
-three-phase `Mirror Boundary Receipts` — is not `completed` and either reads
-`pending` or no Issue is recorded in the v1 mirror block. Its instance is fixed,
-so every retry converges on one receipt, and a retry after a partial failure
-resolves to `sync` through the recorded issue number instead of creating a
-second Issue. A phase boundary remains a later synchronization opportunity, not
-the fallback that carries the first create.
+boundary is live. It is outstanding while the `Mirror Initial Create Receipt`
+field — an axis of its own, separate from the three-phase
+`Mirror Boundary Receipts` — is not `completed` and either reads `pending` or no
+Issue is recorded in the v1 mirror block. A recorded Issue therefore does not
+settle a `pending` receipt. Its instance is fixed, so every retry converges on
+one receipt, and a retry after a partial failure resolves to `sync` through the
+recorded issue number instead of creating a second Issue. A phase boundary
+remains a later synchronization opportunity, not the fallback that carries the
+first create.
+
+Mode gates the first firing, not the retry. Emitting the boundary when the
+receipt is absent is exclusive to `auto`; a `pending` receipt is reissued in
+`prompt` as well, matching the precedence a pending phase receipt already has.
+`off` returns before either, so it suppresses both.
 
 <!-- amadeus-topic:completion -->
 <!-- amadeus-contract:completion {"completionOrder":["create","sync","close"]} -->

@@ -476,11 +476,16 @@ function emitConfiguredMirrorBoundary(
   }
   // Evaluated only where the phase branch used to return false — an absent
   // phase or one whose receipt is already completed — so the established
-  // boundaries keep both their precedence and their exact behaviour. It fires
-  // for `auto` alone: `prompt` and `off` keep asking, or staying silent,
-  // exactly where they already did.
+  // boundaries keep both their precedence and their exact behaviour.
+  //
+  // The FIRST firing is an `auto`-only move: `prompt` keeps asking exactly
+  // where it already did. A `pending` receipt is not a first firing but the
+  // recovery of an operation that already started, so it is reissued in
+  // `prompt` too — the same treatment the pendingPhase branch above gives a
+  // pending phase receipt. `off` reaches neither: it returned at the top.
   if (phase === null || boundary.receipts[phase] === "completed") {
-    if (mode !== "auto" || !initialCreateIsOutstanding(boundary)) return false;
+    if (!initialCreateIsOutstanding(boundary)) return false;
+    if (mode !== "auto" && boundary.initialCreate !== "pending") return false;
     emit(
       mirrorLifecyclePrint(
         {

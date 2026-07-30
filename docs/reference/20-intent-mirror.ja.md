@@ -22,7 +22,9 @@ Global、Space、Intentの順に解決し、最後に存在する値が優先さ
 
 各receiptは完全なIntent UUID、boundary instance、operationへbindします。
 
-`intent-initialized`はscope非依存の初回create boundaryです。engineは通常の前進`next`において、phase boundaryとcompletion boundaryのいずれも成立していない場合に限り、かつ`auto`のときだけ評価します。未決の条件は、3 phase用の`Mirror Boundary Receipts`とは別軸のフィールド`Mirror Initial Create Receipt`が`completed`でなく、かつ`pending`であるかv1 mirror blockにIssueが記録されていないことです。instanceは固定であるため再試行は常に同一receiptへ収束し、部分失敗後の再試行は記録済みissue numberにより`sync`へ解決されるので2件目のIssueを作りません。phase boundaryは初回createのfallbackではなく、以後のsync機会です。
+`intent-initialized`はscope非依存の初回create boundaryです。engineは通常の前進`next`において、phase boundaryとcompletion boundaryのいずれも成立していない場合に限り評価します。未決の条件は、3 phase用の`Mirror Boundary Receipts`とは別軸のフィールド`Mirror Initial Create Receipt`が`completed`でなく、かつ`pending`であるかv1 mirror blockにIssueが記録されていないことです。したがってIssueが記録済みでも`pending` receiptは決着しません。instanceは固定であるため再試行は常に同一receiptへ収束し、部分失敗後の再試行は記録済みissue numberにより`sync`へ解決されるので2件目のIssueを作りません。phase boundaryは初回createのfallbackではなく、以後のsync機会です。
+
+modeが決めるのは初回発火であり、再試行ではありません。receiptが不在の状態でboundaryをemitするのは`auto`専用ですが、`pending` receiptは`prompt`でも再発行され、pending phase receiptと同じ precedence になります。`off`はいずれの分岐にも到達しないため両方を抑止します。
 
 <!-- amadeus-topic:completion -->
 <!-- amadeus-contract:completion {"completionOrder":["create","sync","close"]} -->

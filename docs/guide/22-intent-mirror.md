@@ -29,10 +29,19 @@ daemon or polling.
 In `auto`, the first Issue is created at the `intent-initialized` boundary, on
 the first `next` after the Intent exists and before the first business stage
 runs. That boundary does not depend on the scope: a scope that SKIPs Ideation
-gets its Issue at the same point as one that runs Intent Capture. Once an Issue
-is recorded the boundary is settled, so a later Intent Capture or phase boundary
-synchronizes it rather than creating a second one. `prompt` and `off` keep
-asking, or staying silent, exactly where they already did.
+gets its Issue at the same point as one that runs Intent Capture.
+
+The boundary settles once its receipt is completed, or when no attempt was ever
+recorded and an Issue already exists — a later Intent Capture or phase boundary
+then synchronizes that Issue rather than creating a second one. A recorded Issue
+does not settle a receipt that is still `pending`: an attempt that started but
+never finished is reissued until the receipt completes, and because the issue
+number is already recorded the retry resolves to a sync, never a second create.
+
+Only that first firing is exclusive to `auto`. A `pending` receipt is reissued
+in `prompt` as well, exactly as a pending phase receipt is — leaving a started
+operation unreconciled is not something a mode choice should decide. `off`
+suppresses both.
 
 <!-- amadeus-topic:completion -->
 <!-- amadeus-contract:completion {"completionOrder":["create","sync","close"]} -->

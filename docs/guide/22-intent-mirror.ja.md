@@ -22,7 +22,11 @@ IntentがSpaceを、SpaceがGlobalを上書きします。
 
 自動化はIntent初期化、Intent Capture承認、phase検証、park、completion、明示manual invocationに限定されます。daemon／pollingはありません。
 
-`auto`では、最初のIssueは`intent-initialized` boundaryで作成されます。発火点はIntent成立後の最初の`next`であり、最初の業務stage開始より前です。このboundaryはscopeに依存しません。Ideationを SKIP するscopeでも、Intent Captureを実行するscopeと同じ時点でIssueが作成されます。Issueが記録済みならboundaryは決着済みとなるため、後続のIntent Captureやphase boundaryは2件目を作らずsyncします。`prompt`と`off`の発火点は従来どおりです。
+`auto`では、最初のIssueは`intent-initialized` boundaryで作成されます。発火点はIntent成立後の最初の`next`であり、最初の業務stage開始より前です。このboundaryはscopeに依存しません。Ideationを SKIP するscopeでも、Intent Captureを実行するscopeと同じ時点でIssueが作成されます。
+
+boundaryが決着するのは、receiptが`completed`のとき、または試行が一度も記録されないままIssueが既に存在するときです。この場合、後続のIntent Captureやphase boundaryは2件目を作らずsyncします。**Issueが記録済みでも、receiptが`pending`のままなら決着しません。** 開始したが完了しなかった試行はreceiptが完了するまで再発行され、issue numberが記録済みであるため再試行は`sync`へ解決されます(2件目のcreateにはなりません)。
+
+`auto`専用なのは初回発火だけです。`pending` receiptは`prompt`でも再発行されます — pending phase receiptと同じ扱いであり、開始済みの操作を未決のまま残すかどうかはmodeの選択で決めるべき事項ではないためです。`off`は両方とも抑止します。
 
 <!-- amadeus-topic:completion -->
 <!-- amadeus-contract:completion {"completionOrder":["create","sync","close"]} -->

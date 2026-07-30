@@ -269,6 +269,30 @@ describe("t371 initial-create idempotency", () => {
     );
   });
 
+  // A pending receipt is not a first firing: an operation already started, so it
+  // is reissued wherever a pending PHASE receipt would be. Only the first firing
+  // is auto-only.
+  test("a pending receipt is reissued in prompt, like a pending phase receipt", () => {
+    const project = seedIntent({ mode: "prompt", receipt: "pending" });
+    const directive = nextDirective(project);
+    expect(directive.kind).toBe("print");
+    expect(directive.message).toContain("boundary intent-initialized");
+    expect(directive.message).toContain(
+      "mirror-initial-create completed --from pending",
+    );
+  });
+
+  test("prompt still does not fire the first create itself", () => {
+    expect(nextDirective(seedIntent({ mode: "prompt" })).kind).toBe("run-stage");
+  });
+
+  test("off suppresses a pending receipt, as it does a pending phase receipt", () => {
+    const project = seedIntent({ mode: "off", receipt: "pending" });
+    const before = readFileSync(seededStateFile(project), "utf-8");
+    expect(nextDirective(project).kind).toBe("run-stage");
+    expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
+  });
+
   test("a pending receipt over a recorded Issue still resolves to no new create", () => {
     const project = seedIntent({
       mode: "auto",
