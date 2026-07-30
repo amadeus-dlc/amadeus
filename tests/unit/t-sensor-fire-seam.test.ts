@@ -36,6 +36,11 @@ import {
   FIXTURES_DIR,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
+import {
+  clearIntentContextForTests,
+  currentIntentContext,
+} from "../../dist/claude/.claude/otel/context.ts";
 
 describe("amadeus-sensor fire seam — stripProjectDir (FR-8)", () => {
   test("pulls --project-dir out of the middle of the argv, keeps the rest in order", () => {
@@ -252,5 +257,35 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     setStubManifest("amadeus-sensor-stub-pass.ts");
     // list returns without process.exit; driveExit sees status 0 (no throw).
     expect(driveExit(() => main(["list"]))).toBe(0);
+  });
+
+  test("handleFire completes trace attachment before dispatching the sensor script (FR-TRC-5 ordering)", async () => {
+    setStubManifest("amadeus-sensor-stub-pass.ts");
+    // Enable the attach seam (default is disabled) with a resolvable intent
+    // record so attachProcessTraceContext restores an anchor.
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      `${JSON.stringify({ observability: { enabled: true, otlp: { endpoint: "http://g:4318" } } })}\n`,
+      "utf-8",
+    );
+    resetObservabilityConfigCache();
+    clearIntentContextForTests();
+    let status = 0;
+    const origExit = process.exit.bind(process);
+    process.exit = ((code?: number) => {
+      throw new ExitSignal(code ?? 0);
+    }) as typeof process.exit;
+    try {
+      await handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]);
+    } catch (e) {
+      if (e instanceof ExitSignal) status = e.code;
+      else throw e;
+    } finally {
+      process.exit = origExit;
+    }
+    expect(status).toBe(0);
+    // Ordering contract: when handleFire has dispatched, the process must have
+    // joined the intent trace — the attach cannot still be floating.
+    expect(currentIntentContext()).not.toBeNull();
   });
 });
