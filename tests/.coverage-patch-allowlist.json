@@ -1444,5 +1444,35 @@
     "lines": "248",
     "reason": "The lazy childEnv block (fail-open fallback and dispatcher env) is exercised by t95's spawned-hook drive (subprocess bun hook in fixture projects, including otel-absent ones); spawned main paths are not attributed to the parent Bun LCOV process (same class as the orchestrate.ts entries).",
     "expiry": "remove when the sensor-fire hook dispatch is driven in-process"
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "lines": "405-405",
+    "reason": "Fail-soft catch of measureCallsites: the scan throwing is what turns condition (c) into UNKNOWN. Reaching it needs an unreadable source tree; the behaviour it produces (checkCallsitesZero(null) -> UNKNOWN) is tested directly in t371-deletion-gate.",
+    "expiry": "remove if the scan roots become injectable, which would make the throw reachable in process"
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "lines": "413-414",
+    "reason": "Fail-soft catch of measureRegistryDrift: same shape as 364, for condition (b). collectDriftSets throws only on an unreadable shipped tree; the resulting UNKNOWN is tested via checkRegistryComplete(null).",
+    "expiry": "remove if the harness dir becomes injectable"
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "lines": "436-437",
+    "reason": "The relay-present arm and its catch: condition (e) can only run its proof tests once U11 lands otel/relay.ts, and until then measureRelayProof returns before this line. Both verdicts it can produce are tested via checkRelayProof.",
+    "expiry": "remove when U11 lands the Relay module and the proof tests exist"
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "lines": "481-487",
+    "reason": "runDistributionGuards shells out to package.ts/promote-self.ts --check, and bun --coverage does not instrument a spawned subprocess. It is deliberately NOT driven from the suite: nesting those guards under the suite's own parallelism caused a load-induced false red. It runs on every real gate invocation including the CI step, and its wiring into condition (f) is tested with an injected runner.",
+    "expiry": "remove if the guards gain in-process entry points"
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "lines": "624-627",
+    "reason": "main's try/catch wraps the gathering path, so reaching it from the suite would require running the real measurements (a full nested test run plus both distribution guards). The argv arms that do not gather are tested; the CLI itself is exercised by the CI step.",
+    "expiry": "remove if gathering becomes cheap enough to drive from a test"
   }
 ]

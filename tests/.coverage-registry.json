@@ -2454,6 +2454,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t371-deletion-gate-cli.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }
