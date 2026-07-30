@@ -172,8 +172,49 @@ export function checkCallsitesZero(total: number | null): ConditionResult {
 
 const SHADOW_DIMENSIONS = ["eventCount", "linkage", "status", "allowedAttributes"] as const;
 
-export function checkShadowEquivalence(report: ShadowReportShape | null): ConditionResult {
-  if (report === null) return unknownResult("d", "no shadow comparison report was supplied");
+// The shadow report is the one piece of gate evidence that arrives as a file
+// another Unit wrote, so its shape is parsed rather than assumed: a dimension
+// that is absent, or one that claims `performed` without carrying a boolean
+// `equivalent`, would otherwise either throw mid-judgement or slip past an
+// `=== false` test and read as agreement. Parsing first makes the malformed
+// case a verdict (UNKNOWN, BR-12) instead of a crash or a false PASS.
+function parseShadowDimension(value: unknown): ShadowDimension | null {
+  if (value === null || typeof value !== "object") return null;
+  const dimension = value as Record<string, unknown>;
+  if (dimension.performed === false) return { performed: false, reason: String(dimension.reason ?? "") };
+  if (dimension.performed !== true) return null;
+  if (typeof dimension.equivalent !== "boolean") return null;
+  return { performed: true, equivalent: dimension.equivalent, detail: String(dimension.detail ?? "") };
+}
+
+export function parseShadowReport(value: unknown): ShadowReportShape | null {
+  if (value === null || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  if (typeof source.generatedAt !== "string") return null;
+  if (!Array.isArray(source.unexplainedDiffs)) return null;
+  if (source.unexplainedDiffs.some((diff) => typeof diff !== "string")) return null;
+  const dimensions: Record<string, ShadowDimension> = {};
+  for (const name of SHADOW_DIMENSIONS) {
+    const parsed = parseShadowDimension(source[name]);
+    if (parsed === null) return null;
+    dimensions[name] = parsed;
+  }
+  return {
+    generatedAt: source.generatedAt,
+    eventCount: dimensions.eventCount as ShadowDimension,
+    linkage: dimensions.linkage as ShadowDimension,
+    status: dimensions.status as ShadowDimension,
+    allowedAttributes: dimensions.allowedAttributes as ShadowDimension,
+    unexplainedDiffs: source.unexplainedDiffs as readonly string[],
+  };
+}
+
+export function checkShadowEquivalence(supplied: ShadowReportShape | null): ConditionResult {
+  if (supplied === null) return unknownResult("d", "no shadow comparison report was supplied");
+  const report = parseShadowReport(supplied);
+  if (report === null) {
+    return unknownResult("d", "shadow comparison report is malformed — the comparison cannot be judged");
+  }
   const evidence = `shadow-report@${report.generatedAt}`;
   const unperformed = SHADOW_DIMENSIONS.filter((name) => !report[name].performed);
   if (unperformed.length > 0) {
@@ -184,10 +225,10 @@ export function checkShadowEquivalence(report: ShadowReportShape | null): Condit
       detail: `comparison not performed for: ${unperformed.join(", ")}`,
     };
   }
-  // Every dimension ran, so each carries `equivalent`. BR-9 reads "equivalent
-  // or better" as "no regression": one worse dimension, or one diff nobody
-  // explained, blocks.
-  const worse = SHADOW_DIMENSIONS.filter((name) => (report[name] as { equivalent: boolean }).equivalent === false);
+  // Parsing guarantees a boolean `equivalent` on every performed dimension, so
+  // agreement is asserted positively. BR-9 reads "equivalent or better" as "no
+  // regression": one worse dimension, or one diff nobody explained, blocks.
+  const worse = SHADOW_DIMENSIONS.filter((name) => (report[name] as { equivalent: boolean }).equivalent !== true);
   if (worse.length > 0 || report.unexplainedDiffs.length > 0) {
     const parts = [
       worse.length > 0 ? `not equivalent: ${worse.join(", ")}` : "",
@@ -398,12 +439,14 @@ export function measureRelayProof(): RelayProof | null {
   }
 }
 
+// A file that is absent, unparseable or wrongly shaped all mean the same thing
+// to the gate: condition (d) has no evidence, so it is UNKNOWN rather than
+// agreement. Shape checking happens here, at the boundary, so nothing malformed
+// travels further in.
 export function readShadowReport(path: string | undefined): ShadowReportShape | null {
   if (path === undefined || !existsSync(path)) return null;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8")) as ShadowReportShape;
-    if (parsed === null || typeof parsed !== "object" || typeof parsed.generatedAt !== "string") return null;
-    return parsed;
+    return parseShadowReport(JSON.parse(readFileSync(path, "utf-8")));
   } catch {
     return null;
   }

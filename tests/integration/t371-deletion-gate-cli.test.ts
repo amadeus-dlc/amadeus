@@ -262,3 +262,62 @@ describe("the report is validated before it is written, not after", () => {
     expect(code).toBe(1);
   });
 });
+
+// --- a malformed shadow report is a verdict, not a crash ---------------------
+//
+// PR #1766 review: a report file missing a dimension or unexplainedDiffs threw
+// while being judged, so the gate exited through its UNEXPECTED arm instead of
+// producing the BLOCKED report BR-12 asks for. The evidence is now parsed at
+// the file boundary, so a wrongly-shaped file reads as no evidence at all.
+
+describe("a wrongly-shaped shadow report blocks rather than crashes", () => {
+  const writeShadow = (body: unknown): string => {
+    const path = join(scratch(), "shadow.json");
+    writeFileSync(path, JSON.stringify(body), "utf-8");
+    return path;
+  };
+
+  test("a report missing a dimension reads as no evidence", () => {
+    const { linkage: _dropped, ...missingDimension } = ALL_PASS.shadow as Record<string, unknown>;
+    expect(readShadowReport(writeShadow(missingDimension))).toBeNull();
+  });
+
+  test("a report missing unexplainedDiffs reads as no evidence", () => {
+    const { unexplainedDiffs: _dropped, ...missingDiffs } = ALL_PASS.shadow as Record<string, unknown>;
+    expect(readShadowReport(writeShadow(missingDiffs))).toBeNull();
+  });
+
+  test("a performed dimension with no equivalent field reads as no evidence", () => {
+    const shadow = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
+    delete (shadow.status as Record<string, unknown>).equivalent;
+    expect(readShadowReport(writeShadow(shadow))).toBeNull();
+  });
+
+  test("a well-formed report still reads back", () => {
+    expect(readShadowReport(writeShadow(ALL_PASS.shadow))?.generatedAt).toBe("2026-07-30T00:00:00.000Z");
+  });
+
+  test("evaluating a malformed report yields a schema-valid BLOCKED report and exit 0", () => {
+    const dir = scratch();
+    const reportPath = join(dir, "gate.json");
+    const malformed = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
+    delete malformed.unexplainedDiffs;
+    const code = runCheck({
+      reportPath,
+      evidence: { ...ALL_PASS, shadow: malformed as never },
+    });
+    expect(code).toBe(0);
+    const written = JSON.parse(readFileSync(reportPath, "utf-8"));
+    expect(validateReportShape(written)).toEqual([]);
+    expect(written.overall).toBe("BLOCKED");
+    const d = written.results.find((r: { condition: string }) => r.condition === "d");
+    expect(d.verdict).toBe("UNKNOWN");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("require-green refuses to authorise deletion on a malformed report", () => {
+    const malformed = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
+    delete malformed.eventCount;
+    expect(runRequireGreen({ evidence: { ...ALL_PASS, shadow: malformed as never } })).toBe(1);
+  });
+});

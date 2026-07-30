@@ -280,3 +280,107 @@ describe("evaluateGate — conflicting reports are not silently resolved", () =>
     expect(report.overall).toBe("BLOCKED");
   });
 });
+
+// --- malformed shadow reports ------------------------------------------------
+//
+// The shadow report is the one piece of gate evidence that arrives as a file
+// written by another Unit, so it is the one input that can be shaped wrongly
+// without anybody noticing. Two ways that went wrong (PR #1766 review):
+//
+//   - a dimension marked performed but carrying no `equivalent` slipped past a
+//     `=== false` test and read as agreement — a fail-open on the exact field
+//     the condition is about;
+//   - a report missing a dimension, or missing unexplainedDiffs, threw while
+//     being judged, which surfaced as an UNEXPECTED gate crash rather than as
+//     the BLOCKED verdict BR-12 asks for.
+//
+// Both now land on UNKNOWN: the report cannot be judged, so it does not pass.
+
+const malformed = (mutate: (r: Record<string, unknown>) => void) => {
+  const base = JSON.parse(JSON.stringify(shadow(true))) as Record<string, unknown>;
+  mutate(base);
+  return base as never;
+};
+
+describe("checkShadowEquivalence — a report that cannot be judged is UNKNOWN", () => {
+  test("a performed dimension with no equivalent field does not read as agreement", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        delete (r.linkage as Record<string, unknown>).equivalent;
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("a non-boolean equivalent is rejected rather than coerced", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        (r.status as Record<string, unknown>).equivalent = "yes";
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("a missing dimension is UNKNOWN, not a crash", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        delete r.eventCount;
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("missing unexplainedDiffs is UNKNOWN, not a crash", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        delete r.unexplainedDiffs;
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("unexplainedDiffs that is not a list of strings is rejected", () => {
+    expect(
+      checkShadowEquivalence(
+        malformed((r) => {
+          r.unexplainedDiffs = "one diff";
+        })
+      ).verdict
+    ).toBe("UNKNOWN");
+    expect(
+      checkShadowEquivalence(
+        malformed((r) => {
+          r.unexplainedDiffs = [{ note: "structured" }];
+        })
+      ).verdict
+    ).toBe("UNKNOWN");
+  });
+
+  test("a dimension with a non-boolean performed flag is rejected", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        (r.linkage as Record<string, unknown>).performed = "true";
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("a missing generatedAt is rejected", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        delete r.generatedAt;
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+  });
+
+  test("an unperformed dimension still needs no equivalent field", () => {
+    const result = checkShadowEquivalence(
+      malformed((r) => {
+        r.linkage = { performed: false, reason: "new store absent" };
+      })
+    );
+    expect(result.verdict).toBe("UNKNOWN");
+    expect(result.detail).toContain("linkage");
+  });
+});
