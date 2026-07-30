@@ -1609,6 +1609,24 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "88",
+    "reason": "Readiness failure propagation to the single typed github outcome; gateway failure classification and no-mutation effects are covered by the gateway suite.",
+    "expiry": "remove when coordinator failure injection covers readiness"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "95",
+    "reason": "Marker-search failure propagation to the single typed github outcome; paginated gateway failures are covered by the gateway suite.",
+    "expiry": "remove when coordinator failure injection covers marker search"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "120",
+    "reason": "Issue-create failure propagation to the single typed github outcome; mutation failure effects are covered by the gateway suite.",
+    "expiry": "remove when coordinator failure injection covers issue creation"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
     "lines": "131-132",
     "reason": "The production dependency adapter is exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
     "expiry": "remove when the CLI receives an in-process dependency adapter or Bun attributes child coverage"
