@@ -8,4 +8,4 @@
 
 ## 実測
 
-実装5 Bolt の worktree で exit 0 を実測、全6 PR の CI(Dist and self-install drift ジョブ)でも exit 0(#1742 は引き取り型のため PR CI のみが検証面)。
+実装5 Bolt の worktree で exit 0 を実測、全6 PR の CI(Dist and self-install drift ジョブ)でも exit 0(#1742 は引き取り型のため PR CI のみが検証面)。実測証跡の所在: worktree 実測の exit code 表は各 unit の `construction/<unit>/code-generation/code-summary.md`(検証節)、PR 別の CI 結果と落ちる実証は `build-test-results.md` の Bolt 別表、CI run へのリンクは各 PR(#1774/#1776/#1781/#1782/#1758/#1791)の checks タブが一次記録。
