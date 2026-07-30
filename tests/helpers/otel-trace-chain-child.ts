@@ -29,6 +29,7 @@ if (!storeFile || !name) {
 ensureContextManager();
 attachRemoteParentFromEnv(process.env);
 registerTracerProvider({
+  projectDir: dirname(storeFile),
   spanExporter: createLocalSpanExporter({
     projectDir: dirname(storeFile),
     storeDir: storeFile,

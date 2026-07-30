@@ -36,6 +36,7 @@ function boot() {
   const spans: { name: string; traceId: string; spanId: string; parentSpanId: string | null }[] = [];
   const storeDir = mkdtempSync(join(tmpdir(), "otel-span-store-"));
   registerTracerProvider({
+    projectDir: storeDir,
     spanExporter: createLocalSpanExporter({
       projectDir: storeDir,
       storeDir,

@@ -41,7 +41,7 @@ beforeEach(() => {
     auditExporter: createAuditLogExporter({ projectDir: proj }),
     logExporter: createLocalLogExporter({ projectDir: proj }),
   });
-  registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+  registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
 });
 afterEach(() => {
   cleanupTestProject(proj);

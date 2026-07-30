@@ -91,7 +91,7 @@ describe("Metric records carry the intent identity (Signal Store identity policy
 
 describe("Trace Context correlation (FR-MLM-1, BR-4/BR-6)", () => {
   function bootTracer() {
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+    registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
   }
 
   test("a measurement inside an active span carries that span's trace and span ids", () => {

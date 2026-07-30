@@ -73,7 +73,7 @@ if (observabilityEnabled(projectDir)) {
     // child environment (FR-TRC-5 minimal). The callback does NOT auto-end
     // the span — finally { span.end(); } (FR-TRC-2).
     ensureContextManager();
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir }) });
+    registerTracerProvider({ projectDir, spanExporter: createLocalSpanExporter({ projectDir }) });
     const tracer = getAmadeusTracer();
     const recordRoot = docsRoot(projectDir);
     const intent = activeIntent(projectDir);

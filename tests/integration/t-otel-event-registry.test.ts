@@ -50,7 +50,7 @@ describe("recordException's exception span event is telemetry (FR-EVT-7)", () =>
     const appended: string[] = [];
     bootLogger(appended);
     const spans: CompletedSpanRecord[] = [];
-    registerTracerProvider({ spanExporter: { exportSpan: (r) => void spans.push(r) } });
+    registerTracerProvider({ projectDir: proj, spanExporter: { exportSpan: (r) => void spans.push(r) } });
 
     const tracer = getAmadeusTracer();
     await tracer.startActiveSpan("operation", async (span) => {

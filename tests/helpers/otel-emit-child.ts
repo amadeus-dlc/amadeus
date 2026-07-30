@@ -26,7 +26,7 @@ registerLoggerProvider({
   auditExporter: createAuditLogExporter({ projectDir }),
   logExporter: createLocalLogExporter({ projectDir }),
 });
-registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir }) });
+registerTracerProvider({ projectDir, spanExporter: createLocalSpanExporter({ projectDir }) });
 
 const tracer = getAmadeusTracer();
 const span = tracer.startSpan("child-operation");

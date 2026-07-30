@@ -193,20 +193,32 @@ class AmadeusTracerProvider implements TracerProvider {
   }
 }
 
-let registered = false;
+let registeredProjectDir: string | null = null;
 
 // Global registration. Double registration is an invariant violation
-// (NFR-3: the API singleton must hold exactly one Amadeus provider).
-export function registerTracerProvider(options: { spanExporter: LocalSpanExporter }): void {
-  if (registered) {
+// (NFR-3: the API singleton must hold exactly one Amadeus provider). The
+// project dir is recorded rather than left implicit in the exporter's closure:
+// it is what lets a bootstrap seam tell "already standing" apart from
+// "standing for a DIFFERENT workspace".
+export function registerTracerProvider(options: {
+  projectDir: string;
+  spanExporter: LocalSpanExporter;
+}): void {
+  if (registeredProjectDir !== null) {
     throw new Error("registerTracerProvider called twice — invariant violation (NFR-3)");
   }
   trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter));
-  registered = true;
+  registeredProjectDir = options.projectDir;
+}
+
+// The project dir this process's provider was registered for, or null when
+// nothing is registered.
+export function registeredTracerProjectDir(): string | null {
+  return registeredProjectDir;
 }
 
 export function getAmadeusTracer(name = "amadeus"): Tracer {
-  if (!registered) {
+  if (registeredProjectDir === null) {
     throw new Error("getAmadeusTracer before registerTracerProvider — invariant violation");
   }
   return trace.getTracer(name);
@@ -215,5 +227,5 @@ export function getAmadeusTracer(name = "amadeus"): Tracer {
 // Test seam: drop the global registration between fixtures.
 export function resetTracerProviderForTests(): void {
   trace.disable();
-  registered = false;
+  registeredProjectDir = null;
 }
