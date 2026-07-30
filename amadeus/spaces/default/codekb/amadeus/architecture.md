@@ -37,7 +37,7 @@ drift guard（Issue 受入条件）の所在は**未確認**。本契約を検�
 
 `packages/framework/core/hooks/amadeus-sensor-fire.ts`（280行）は active stage の `sensors_applicable` を引き（`:174-187`）、フィルタを `matches` glob 1本で決める。`:199-202` verbatim:
 
-```
+```text
 for (const entry of applicableSensors) {
   if (!entry.matches) continue;
   const glob = new Bun.Glob(entry.matches);
@@ -133,7 +133,7 @@ cursor / opencode は SKILL.md を持たず、薄い command 面（`packages/fra
 
 `amadeus-orchestrate.ts:3050-3057`:
 
-```
+```text
   // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
   // security-patch / infra / fix / poc, or a pre-compile moment): degrade to
   // today's single {unit-name} directive. Zero behaviour change off this path.
@@ -157,7 +157,7 @@ cursor / opencode は SKILL.md を持たず、薄い command 面（`packages/fra
 
 `amadeus-reviewer-runtime.ts` の `runScope`（`:611-621`）→ `scopeForDirective`（`:224-246`）が directive の produces を `onDisk` 判定つきで `reviewerReadScope` に渡す（`:232-244`）。実際の throw は `packages/framework/core/tools/amadeus-reviewer.ts:71-75`:
 
-```
+```text
   for (const artifact of unit.produces) {
     if (!artifact.present) {
       if (artifact.optional) continue;
@@ -539,7 +539,7 @@ flowchart TD
 
 mirror lifecycle の answer は **adapter 層**（`amadeus-mirror-lifecycle.ts`）と **coordinator 層**（`amadeus-mirror-coordinator.ts`）の 2 段で処理される。adapter 冒頭の manual guard は coordinator 到達より前に置かれており、ここで弾かれると正規の answer 処理へ一切入れない。
 
-```
+```text
 runMirrorLifecycleAnswer(:938-)          — CLI answer verb のエントリ
   └─ runMirrorLifecycleBoundary(:253-)   — adapter 共通境界
         ├─ [guard :257-265] boundary.kind==="manual" && (!manualOperation || !invocationId) → error
@@ -724,7 +724,7 @@ malformed は `:495` `const env = parseHttpEnvelope(result.stdout, mode);` → `
 
 実測（`labels`, `per_page=20` で P=2、read-only）: 先頭 20 バイト `b'[HTTP/2.0 200 OK\nAcc'`、ブロック offset `[1, 6438]`、offset 6438 の直前は `b'…"}]\n,'`、EOF last 8 は `b'd on"}]]'`。実文法は
 
-```
+```text
 '[' <HTTPブロック> <ページ配列> ( '\n' ',' <HTTPブロック> <ページ配列> )* ']'
 ```
 

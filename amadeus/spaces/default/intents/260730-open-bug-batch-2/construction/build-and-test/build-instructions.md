@@ -8,4 +8,4 @@
 
 ## 実測
 
-全6 Bolt の worktree と各 PR CI(Dist and self-install drift ジョブ)で exit 0 を実測済み。
+実装5 Bolt の worktree で exit 0 を実測、全6 PR の CI(Dist and self-install drift ジョブ)でも exit 0(#1742 は引き取り型のため PR CI のみが検証面)。

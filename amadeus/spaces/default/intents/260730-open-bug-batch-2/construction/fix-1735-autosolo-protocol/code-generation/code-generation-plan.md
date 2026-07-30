@@ -17,4 +17,4 @@ PR #1782 merged/#1735 closed; stage-protocol.md 5 hits + conductor.md 3 hits for
 
 ### Findings
 
-- code-summary states live codex e2e verification ('t-exec-codex-autosolo-s13') was only exercised up to seed construction and not run against a real codex binary in this Bolt ('次回 codex セッションで観測'). Thi
+- low(followup): code-summary の live codex e2e(t-exec-codex-autosolo-s13)は本 Bolt では seed 構築+surface exit 0 までで、実 codex バイナリに対する実走は未実施(『次回セッションで観測』)。既承認の SKIP ガード様式(t-exec-codex-memory-include)に一致し、RA iteration 2 と B&T 条件付き READY で明示引き継ぎ済みのため非ブロッキング — 実走可能になり次第 probe を実行し、不発なら #1735 を reopen する(record 修正: 転記時の切断を全文へ復元、2026-07-30)。
