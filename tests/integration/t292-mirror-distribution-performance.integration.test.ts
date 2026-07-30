@@ -99,6 +99,13 @@ describe("t292 distribution performance protocol", () => {
       replica(12),
       replica(15),
     ])).toEqual([]);
+    // A weekly runner image version roll across replicas is not a mismatch
+    // (GitHub-hosted runners update mid-flight; comparability rides os/arch/bun).
+    expect(aggregateMirrorBenchmarks([
+      replica(10, "20260720.247.2"),
+      replica(12, "20260726.254.1"),
+      replica(15, "20260720.247.2"),
+    ])).toEqual([]);
     const lowLatencyReplicas = [28, 116, 123].map((p95Ms) => {
       const base = replica(100);
       return {
@@ -139,7 +146,7 @@ describe("t292 distribution performance protocol", () => {
     ])).toContain("packageWrite: missing or incomplete workload");
     expect(aggregateMirrorBenchmarks([
       replica(10),
-      replica(40, "other"),
+      { ...replica(40), image: { ...replica(40).image, bun: "1.3.14" } },
       replica(250),
     ])).toEqual(expect.arrayContaining([
       "benchmark runner image mismatch",

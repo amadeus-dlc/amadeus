@@ -15,6 +15,15 @@ type Replica = Readonly<{
   >>;
 }>;
 
+// Comparability is decided by os/arch/bun only. The runner image VERSION is a
+// weekly GitHub snapshot roll (e.g. ubuntu24 20260720.247.2 → 20260726.254.1):
+// during a rollout the three replica jobs legitimately land on adjacent
+// versions, and that difference does not make benchmark numbers incomparable —
+// the dispersion and budget gates below remain the environment-outlier guard.
+function comparableImage(image: Readonly<Record<string, string>>): string {
+  return JSON.stringify({ os: image.os, arch: image.arch, bun: image.bun });
+}
+
 // A ratio is not meaningful when the absolute spread is below 10% of the
 // workload budget. The authoritative median p95 budget remains unchanged.
 const DISPERSION_NOISE_FLOOR_FRACTION = 0.1;
@@ -50,10 +59,10 @@ export function aggregateMirrorBenchmarks(
   const findings: string[] = [];
   if (replicas.length !== 3)
     return [`missing benchmark replica: expected 3, received ${replicas.length}`];
-  const image = JSON.stringify(replicas[0].image);
+  const image = comparableImage(replicas[0].image);
   if (replicas.some((replica) => replica.schema !== 2))
     findings.push("benchmark schema mismatch");
-  if (replicas.some((replica) => JSON.stringify(replica.image) !== image))
+  if (replicas.some((replica) => comparableImage(replica.image) !== image))
     findings.push("benchmark runner image mismatch");
   for (const [name, budget] of Object.entries(
     MIRROR_BENCHMARK_PROTOCOL.workloads,
