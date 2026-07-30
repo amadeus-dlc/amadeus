@@ -232,3 +232,33 @@ describe("gatherEvidence — each condition draws on its own source", () => {
     expect(typeof DEFAULT_RUNNERS.runGuards).toBe("function");
   });
 });
+
+// --- the CLI's failure arms --------------------------------------------------
+
+describe("the report is validated before it is written, not after", () => {
+  test("a report that fails its own schema is refused rather than persisted", () => {
+    const dir = scratch();
+    const reportPath = join(dir, "gate.json");
+    // A condition id outside (a)-(f) reaches the writer only through a corrupted
+    // checker, which is precisely the case the pre-write check exists for.
+    const corrupt: Evidence = { ...ALL_PASS, callsites: 0 };
+    const code = runCheck({
+      reportPath,
+      evidence: corrupt,
+      now: "2026-07-30T00:00:00.000Z",
+      commitRef: "Authorization: Bearer sk-ant-not-a-real-key",
+    });
+    expect(code).toBe(1);
+    expect(existsSync(reportPath)).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("require-green surfaces the same refusal instead of authorising deletion", () => {
+    const code = runRequireGreen({
+      reportPath: join(scratch(), "gate.json"),
+      evidence: ALL_PASS,
+      commitRef: "Authorization: Bearer sk-ant-not-a-real-key",
+    });
+    expect(code).toBe(1);
+  });
+});

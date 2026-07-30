@@ -232,3 +232,51 @@ describe("validateReportShape — the report is checkable, not merely present", 
     expect(validateReportShape("GREEN").length).toBeGreaterThan(0);
   });
 });
+
+// --- the schema validator's remaining rejection arms -------------------------
+//
+// Each arm below is a way a report could be malformed. They are tested rather
+// than waived because this validator is what stands between a tampered or
+// truncated report and a deletion that believes it was authorised.
+
+describe("validateReportShape — every malformation is named", () => {
+  const wellFormed = () => evaluateGate(["a", "b", "c", "d", "e", "f"].map(pass), AT, REF);
+
+  test("a result that is not an object is rejected", () => {
+    const report = wellFormed();
+    const tampered = { ...report, results: ["GREEN", ...report.results.slice(1)] };
+    expect(validateReportShape(tampered).join(" ")).toContain("must be an object");
+  });
+
+  test("a condition outside (a)-(f) is rejected", () => {
+    const report = wellFormed();
+    const tampered = { ...report, results: [{ ...report.results[0], condition: "g" }, ...report.results.slice(1)] };
+    expect(validateReportShape(tampered).join(" ")).toContain("is not a gate condition");
+  });
+
+  test("an overall outside GREEN/BLOCKED is rejected", () => {
+    expect(validateReportShape({ ...wellFormed(), overall: "MAYBE" }).join(" ")).toContain("not GREEN/BLOCKED");
+  });
+
+  test("results that are not an array are rejected", () => {
+    expect(validateReportShape({ ...wellFormed(), results: {} }).join(" ")).toContain("must be an array");
+  });
+
+  test("the wrong number of results is rejected", () => {
+    const report = wellFormed();
+    expect(validateReportShape({ ...report, results: report.results.slice(0, 5) }).join(" ")).toContain(
+      "must hold 6 results"
+    );
+  });
+});
+
+describe("evaluateGate — conflicting reports are not silently resolved", () => {
+  test("two results for one condition make it UNKNOWN rather than picking one", () => {
+    const duplicated = [...["a", "b", "c", "d", "e", "f"].map(pass), pass("c")];
+    const report = evaluateGate(duplicated, AT, REF);
+    const c = report.results.find((r) => r.condition === "c");
+    expect(c?.verdict).toBe("UNKNOWN");
+    expect(c?.detail).toContain("conflicting");
+    expect(report.overall).toBe("BLOCKED");
+  });
+});
