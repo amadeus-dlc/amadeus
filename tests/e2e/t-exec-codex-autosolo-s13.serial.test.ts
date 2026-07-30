@@ -17,6 +17,13 @@
 // a real `open`; the disabled envelope writes nothing. Its presence, plus the
 // `--trigger auto-solo` invocation in the transcript, is the execution proof.
 //
+// PREREQUISITES. The fixture comes from tests/harness/autosolo-s13-fixture.ts,
+// which seeds the whole chain `amadeus-learnings.ts surface` walks (cursors +
+// registry + state + runtime-graph + diary). t369 drives that same seeder
+// through `surface` under `--ci`, where this live file does not run, so a
+// fixture that stops satisfying the ritual's preconditions reds there rather
+// than silently turning this probe into a measurement of a broken setup.
+//
 // LIVE GATE: disabled on GitHub Actions. Locally, requires
 // AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary (AMADEUS_CODEX_BIN or
 // PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a normal Codex auth.json.
@@ -24,8 +31,16 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import {
+  CODEX_DIST,
+  DIARY_REL,
+  ELECTIONS_REL,
+  PAYLOAD_NAME,
+  seedAutoSoloS13Project,
+  STAGE_SLUG,
+} from "../harness/autosolo-s13-fixture.ts";
 import {
   codexExecChildEnvironment,
   codexExecLiveRequirementsSkipReason,
@@ -33,19 +48,12 @@ import {
 } from "../harness/codex-exec-live.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
-const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
 const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
 const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
-
-const STAGE_SLUG = "functional-design";
-const RECORD_DIR = join("amadeus", "spaces", "default", "intents", "s13-probe-0000abcd");
-const DIARY_DIR = join(RECORD_DIR, "construction", STAGE_SLUG);
-const PAYLOAD_NAME = "s13-payload.json";
-const ELECTIONS_DIR = join("amadeus", "spaces", "default", "elections");
 
 const SKIP_REASON = codexExecLiveRequirementsSkipReason({
   env: process.env,
@@ -59,63 +67,12 @@ const PROJECT_SETUP = {
   distributionDir: CODEX_DIST,
   repositoryRoot: REPO_ROOT,
   model: OPENAI_MODEL,
-  prepareProject: (proj: string): void => {
-    mkdirSync(join(proj, DIARY_DIR), { recursive: true });
-    mkdirSync(join(proj, ELECTIONS_DIR), { recursive: true });
-
-    // Solo auto-election is opt-in; this is the layered config the §13 hook reads.
-    writeFileSync(
-      join(proj, "amadeus", "config.json"),
-      `${JSON.stringify({ "auto-solo-election": true }, null, 2)}\n`,
-      "utf-8",
-    );
-
-    // One candidate for the ritual to surface — a Deviation entry in the diary.
-    writeFileSync(
-      join(proj, DIARY_DIR, "memory.md"),
-      [
-        "# Stage memory",
-        "",
-        "## Interpretations",
-        "",
-        "## Deviations",
-        "",
-        "- 2026-07-30T00:00:00Z — Kept the port interface in the domain module;" +
-          " splitting it would have broken the adapter's import path.",
-        "",
-        "## Tradeoffs",
-        "",
-        "## Open questions",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-
-    // A ready-made payload so the turn is not spent authoring a store schema.
-    // Deliberately named and described without election vocabulary: what is
-    // under test is whether the protocol routes the selection to an election at
-    // all, not whether the model can compose the store's JSON.
-    writeFileSync(
-      join(proj, PAYLOAD_NAME),
-      `${JSON.stringify(
-        {
-          electionId: "E-S13-PROBE",
-          kind: "zero-confirm",
-          question: "この学習候補を採用してよいか",
-          choices: [{ internalNo: 1, label: "採用" }],
-          voters: ["subagent-1", "subagent-2"],
-        },
-        null,
-        2,
-      )}\n`,
-      "utf-8",
-    );
-  },
+  prepareProject: seedAutoSoloS13Project,
 };
 
 const PROMPT = [
   `You are the AI-DLC conductor and you have just finished the ${STAGE_SLUG} stage`,
-  `of this project, working solo. Its diary is at ${join(DIARY_DIR, "memory.md")}.`,
+  `of this project, working solo. Its diary is at ${DIARY_REL}.`,
   "Run the learnings ritual that .codex/amadeus-common/protocols/stage-protocol.md",
   "section 13 mandates, following that section exactly and to the letter.",
   `If any step needs a prepared JSON payload as a --file argument, use ./${PAYLOAD_NAME}.`,
@@ -144,7 +101,7 @@ describe("t-exec-codex-autosolo-s13 — §13 reaches the auto-solo election with
         expect(r.rc).toBe(0);
         // The transcript shows the invocation; the store shows it took effect.
         expect(r.out).toContain("--trigger auto-solo");
-        expect(existsSync(join(proj, ELECTIONS_DIR, "elections.json"))).toBe(true);
+        expect(existsSync(join(proj, ELECTIONS_REL, "elections.json"))).toBe(true);
         // The disabled envelope writes nothing — seeing it would mean the hook
         // fired but the config layer was not read.
         expect(r.out).not.toContain("auto-solo-election-disabled");
