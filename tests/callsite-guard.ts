@@ -84,9 +84,14 @@ export type CallsiteMatch = {
 // immediately followed by `(`. `\b` on the left would match the tail of a
 // longer identifier, so the boundary is spelled out as "not an identifier
 // character, and not a dot-free longer name".
+//
+// The `g` flag is load-bearing: a line can hold MORE than one legacy call, and
+// counting only the first would let a legacy call appended to an
+// already-allowlisted line slip past the shrink-only ratchet (PR #1733 Bugbot,
+// Medium). matchAll is used rather than `test`, which reports presence only.
 const CALL_RES: readonly { symbol: GuardedSymbol; re: RegExp }[] = GUARDED_SYMBOLS.map((symbol) => ({
   symbol,
-  re: new RegExp(`(?<![A-Za-z0-9_$])${symbol}\\s*\\(`),
+  re: new RegExp(`(?<![A-Za-z0-9_$])${symbol}\\s*\\(`, "g"),
 }));
 
 // Lines that mention a guarded symbol without being a call site: the import
@@ -114,7 +119,8 @@ export function detectCallsites(file: string, source: string): CallsiteMatch[] {
     const line = lines[i] as string;
     if (!isCallsiteLine(line)) continue;
     for (const { symbol, re } of CALL_RES_LONGEST_FIRST) {
-      if (re.test(line)) found.push({ file, line: i + 1, symbol });
+      // matchAll over a fresh iterator each line; one entry per OCCURRENCE.
+      for (const _match of line.matchAll(re)) found.push({ file, line: i + 1, symbol });
     }
   }
   return found;

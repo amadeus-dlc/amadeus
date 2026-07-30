@@ -35,7 +35,7 @@
 
 1. **guard 配置の申告付き読み替え（E-U7CG-Q1 裁定どおり）** — `nfr-design/logical-components.md` の「Adapter・guard は core/ 変更のため FR-DST-2 を適用」は Adapter に妥当・guard には過大一般化として読み替え、guard を `tests/` に置いた。裁定の留保に従い、当該設計文にも申告付き追記を残した（record 内の矛盾文を無修正で放置しない）。根拠は同追記に実測付きで記載。
 
-2. **Adapter の関数名を `appendAuditEntryViaEvents` にした（申告）** — `component-methods.md` は Adapter を literal に `appendAuditEntry` と描いているが、旧名を再利用すると **VER-4 guard が移行済み site と未移行 site を区別できなくなり**、guard が測るはずのカウントダウンが成立しない。BR-2 が要求するのは signature（引数・戻り値の形）であり、それは維持している（call-site 書換えは1行スワップ）。
+2. **Adapter の関数名を `appendAuditEntryViaEvents` にした（執行裁定 2026-07-30 で conductor 承認済み）** — `component-methods.md` は Adapter を literal に `appendAuditEntry` と描いているが、旧名を再利用すると **VER-4 guard が移行済み site と未移行 site を区別できなくなり**、guard が測るはずのカウントダウンが成立しない。BR-2 の「シグネチャを維持」は**引数形状の互換**と読み替える（引数・戻り値の形は維持しており、call-site 書換えは1行スワップのまま）。裁定の指示に従い、同じ申告を `functional-design/business-rules.md` の BR-2 直下にも追記した（record 内の矛盾文を無修正で放置しない）。
 
 3. **第1弾の実書換え batch を実施できず停止（E-U7CG-Q2 の必須項目が未達）** — 裁定は「core/ 内の第1弾実書換え+ratchet 両側実証」を必須としたが、**その前提（機械的増分で移行可能）が2つの独立した機構で成立しない**ことを実測で確認した。詳細と再エスカレーション事項は下記。
 
@@ -70,6 +70,16 @@
 - guard の落ちる実証（不可分1セット）: `otel/shadow-compare.ts` に `appendAuditEntry` 呼出しを1件注入 → `--check` exit 1 で `packages/framework/core/otel/shadow-compare.ts: appendAuditEntry — allowlist 0, measured 1` を名指し → revert で exit 0・ファイル byte 一致（`diff -q` 確認）。
 - corpus 側の実証: 既存 66 site すべてに対して gate は exit 0（正当な既存データを誤拒否しない）。
 - allowlist 過大計上時に green（縮小方向が通ること）は `t367-callsite-guard-cli.test.ts` で実証。
+
+## レビュー対応: PR #1733 Bugbot 指摘（Medium、同一行の複数呼出しの undercount）
+
+**指摘**: `detectCallsites` が1行×1シンボルにつき `RegExp.test` 1回だったため、同一行の2つ目以降の legacy 呼出しを数えなかった。guard は (file, symbol) 件数比較なので、**allowlist 済みの行に legacy 呼出しを追記すると CI が検出できない**（shrink-only ratchet の実カウント漏れ）。
+
+**対応**:
+1. 修正 — 各シンボルの regex に `g` フラグを付け、`RegExp.test`（存在判定）から `String.matchAll`（出現ごとに1件）へ変更。
+2. 回帰テスト — 同一行に同一シンボル2回（count=2）、および1行に2シンボルが混在して各々反復するケースを `t367-callsite-guard.test.ts` に固定。修正前に Red を実測（2 fail）してから修正で Green（12 pass）。
+3. **census 再実測 — 66 site / 24 file から変化なし**。実 corpus に同一シンボルを同一行で2回呼ぶ行は存在せず、記録済み baseline は正確だった（`--check` が「0 new / 66 remaining」を返し、measured 合計が 66 と一致）。したがって allowlist の再初期化は不要で、本書の実測値も据え置き。欠陥は将来の編集に対する検出穴（latent）だった。
+4. **落ちる実証の再実行（当該穴に対して、不可分1セット）** — allowlist が `appendAuditEntry: 1` を持つ `amadeus-jump.ts:53` の**同一行に2つ目の呼出しを追記** → `--check` exit 1 で `packages/framework/core/tools/amadeus-jump.ts: appendAuditEntry — allowlist 1, measured 2` を名指し → revert で exit 0・ファイル byte 一致（`diff -q` 確認）。修正前はこの注入が exit 0 で通っていた。
 
 ## 残存 call site の実測値（Task #2 への入力）
 

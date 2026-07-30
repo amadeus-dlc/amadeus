@@ -11,6 +11,14 @@
 - BR-5: 移行は batch 単位の段階実施とし、各 batch は変換前 backup を必須とする。rollback 手段は git revert＋backup 復元に限定する（FR-MIG-2）
 - BR-6: 移行期間中の canonical 書き込み経路は常に単一（Event API → AuditLogExporter）。新旧混在は「未変換 site の Adapter 経由」としてのみ存在する（FR-MIG-1/2）
 
+> **申告付き読み替え: BR-2 の「シグネチャを維持」（執行裁定 2026-07-30、conductor 承認）**
+>
+> BR-2 と `component-methods.md` は Adapter を literal に `appendAuditEntry(...)` と描いているが、実装では **関数名を `appendAuditEntryViaEvents` とし、引数形状・戻り値形状（`AppendAuditResult`）のみを維持**した。BR-2 の「シグネチャを維持」は**引数形状の互換**と読み替える。
+>
+> 根拠は既決契約からの一意導出: 本 Unit が VER-4 で実装した call-site guard は (file, symbol) 件数キーで残存を可視化するため、Adapter を legacy と同名にすると **移行済み site と未移行 site が構造的に区別不能**になり、VER-4 の残存可視化（既決）が空文化する。引数形状が同一である限り call-site 書換えは1行スワップのままで、FR-MIG-2 の段階移行の機械性は損なわれない。
+>
+> 実装: `packages/framework/core/otel/migration-adapter.ts`。同じ申告は `code-generation/code-summary.md` § Deviations にも記録している（record 内の矛盾文を無修正で放置しない — E-U7CG-Q1 裁定の留保と同じ扱い）。
+
 ## 条件付き振る舞い
 
 - BR-7: allowlist 外で `appendAuditEntry` 直接呼出しまたは旧 `observe()`／`observeSubprocess()` 利用を検出した場合、CI はこれを拒否する（VER-4）

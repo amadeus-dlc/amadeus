@@ -62,6 +62,29 @@ describe("detectCallsites — what counts as a call site", () => {
   test("a bare identifier without a call is not a call site", () => {
     expect(detectCallsites("core/x.ts", "const fn = appendAuditEntry;")).toEqual([]);
   });
+
+  // Regression (PR #1733 Bugbot, Medium): one `RegExp.test` per line counted a
+  // line with two legacy calls as ONE site, so a legacy call appended to an
+  // already-allowlisted line was invisible to the shrink-only ratchet.
+  test("every call on a line is counted, not just the first", () => {
+    const source = 'appendAuditEntry("A", f, pd); appendAuditEntry("B", f, pd);';
+
+    expect(detectCallsites("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, symbol: "appendAuditEntry" },
+      { file: "core/x.ts", line: 1, symbol: "appendAuditEntry" },
+    ]);
+    expect(buildCensus(detectCallsites("core/x.ts", source))).toEqual({
+      "core/x.ts": { appendAuditEntry: 2 },
+    });
+  });
+
+  test("counts each distinct symbol's repeats on a shared line independently", () => {
+    const source = "observeSubprocess(a); observeSubprocess(b); appendAuditEntryUnlocked(c);";
+
+    expect(buildCensus(detectCallsites("core/x.ts", source))).toEqual({
+      "core/x.ts": { observeSubprocess: 2, appendAuditEntryUnlocked: 1 },
+    });
+  });
 });
 
 describe("buildCensus / totalSites", () => {
