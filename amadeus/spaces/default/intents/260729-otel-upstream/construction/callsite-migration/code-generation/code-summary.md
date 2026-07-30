@@ -87,6 +87,30 @@
 3. **census 再実測 — 66 site / 24 file から変化なし**。実 corpus に同一シンボルを同一行で2回呼ぶ行は存在せず、記録済み baseline は正確だった（`--check` が「0 new / 66 remaining」を返し、measured 合計が 66 と一致）。したがって allowlist の再初期化は不要で、本書の実測値も据え置き。欠陥は将来の編集に対する検出穴（latent）だった。
 4. **落ちる実証の再実行（当該穴に対して、不可分1セット）** — allowlist が `appendAuditEntry: 1` を持つ `amadeus-jump.ts:53` の**同一行に2つ目の呼出しを追記** → `--check` exit 1 で `packages/framework/core/tools/amadeus-jump.ts: appendAuditEntry — allowlist 1, measured 2` を名指し → revert で exit 0・ファイル byte 一致（`diff -q` 確認）。修正前はこの注入が exit 0 で通っていた。
 
+## CI 是正（PR #1733、2026-07-30）
+
+**1. ci.yml 構造ピンの再 baseline。** `t-formal-verif-ci-workflow.integration.test.ts` が「changes outside the three permitted U4 edits」で赤。機構は**許可ステップの列挙ではなく、`normalizedCiBaseline` が3領域（formal job ブロック・`workflow_dispatch` 行・empty-base 分岐）を除去した残り全体の SHA-256 ピン**（`tests/formal-verif/support/ci-workflow-contract.ts`）。したがって「許可集合へステップを追加」は機構上不可能で、正しい保守経路は **fixture の再 baseline**（`260725-mirror-review-fixes` が Mirror CI ジョブ追加時に取った経路と同一 — 当該 code-summary に前例記録あり）。
+
+- 新 hash は手計算せず `normalizedCiBaseline` の実出力から導出（`b0a68bbf...`）
+- describe / 第1 test 名を "U4" から一般化（ピンの対象が U4 の編集に留まらなくなったため）
+- **落ちる実証を追加**: 未承認の ci.yml 編集で hash が今も反転することを test で固定。これがないと stale baseline の更新が vacuous に通り、hash ピンの目的が空文化する
+- 両 re-baseline の経緯を describe 直上コメントに記録（E-U7CG-Q1 裁定参照込み）
+
+**2. patch coverage gate の 10 行未被覆。** `local-lcov-pre-push` を怠り push 後の CI で検出（手順違反として申告）。allowlist ではなく seam-refactor-first の順序どおり全件を実挙動のテストで被覆:
+
+- shadow-compare 4行 — status 不一致 / 属性欠落 / linkage 不正 / new 側 torn line の findings 行。**BR-10 の4次元のうち3次元が equivalent 側だけしか被覆されていなかった実ギャップ**で、各々にテストを追加
+- migration-adapter 2行 — outcome→`AppendAuditResult` の写像を `appendAuditResultFromOutcome` として export された純粋 seam に抽出。telemetry arm は公開関数経由では構造的に到達不能（`getEventDefByAuditEvent` は canonical def のみ解決）なため、元の位置では不変条件が恒久未検証で腐る構造だった
+- callsite-guard 4行 — `main` の `--check --report` 形と catch arm を in-process 駆動。allowlist の description を module scope へ移動（多行呼出し引数内の `+` 連結は継続行が DA:0 に残る — `cid:code-generation:bun-multiline-arg-da0`）
+
+再測定: **measured added lines 409 / covered 409 / uncovered 0**（`AMADEUS_PATCH_LCOV` + `AMADEUS_PATCH_ALLOWLIST` の env seam で push 前にローカル実測）。
+
+**3. t259-guard-corpus（107s）・t258-lifecycle-transaction（147s）の再帰属。** どちらも自変更起因ではないと確定:
+- ローカル単独実行で green（t259 10.4s / t258 34.3s、いずれも timing assertion 通過）
+- **t259 の corpus root は `packages/framework/core/tools`**（`t259-guard-corpus.test.ts:9`）で、本 Unit の guard は `tests/` 配下にあるため**構造的に corpus へ入らない**
+- push 後の CI 再実行で Tests ジョブ green（8m34s）を実測
+
+最終 CI: run 30537546000 が全ジョブ green（`CI Success` ✓、`gh run watch --exit-status` exit 0）。
+
 ## 残存 call site の実測値（Task #2 への入力）
 
 走査範囲（正本 `packages/framework/core/` + `scripts/`）の実測 = **66 site / 24 file**:
