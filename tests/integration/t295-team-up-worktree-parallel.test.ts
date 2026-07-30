@@ -28,7 +28,15 @@
 // a throwaway git repo. Real FS and real git, hence the integration layer
 // (cid:code-generation:fs-tests-integration-first).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -45,6 +53,15 @@ let shimDir: string;
 /** Absolute path a member's worktree is expected at, for run id "testrun". */
 function memberPath(member: string): string {
   return join(base, "runs", "testrun", member);
+}
+
+function expectReadinessEvidence(record: string, member: string, stage: string): void {
+  expect(JSON.parse(readFileSync(join(record, stage), "utf8"))).toEqual({
+    schemaVersion: 1,
+    run: "testrun",
+    member,
+    stage,
+  });
 }
 
 function git(args: string[], cwd: string) {
@@ -218,9 +235,10 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
       const record = join(state, "instances/default/runs/testrun/members", m);
       expect(readFileSync(join(record, "path"), "utf8").trim(), m).toBe(memberPath(m));
       expect(readFileSync(join(record, "branch"), "utf8").trim(), m).toBe(`team/testrun/${m}`);
-      expect(readFileSync(join(record, "registered"), "utf8").trim(), m).toBe("registered");
-      expect(readFileSync(join(record, "checked-out"), "utf8").trim(), m).toBe("checked-out");
-      expect(readFileSync(join(record, "ready"), "utf8").trim(), m).toBe("ready");
+      expectReadinessEvidence(record, m, "registered");
+      expectReadinessEvidence(record, m, "checked-out");
+      expectReadinessEvidence(record, m, "ready");
+      expect(readdirSync(record).filter((name) => name.startsWith(".")), m).toEqual([]);
       expect(registered, m).toContain(`${m}\n`);
     }
   });
@@ -300,15 +318,52 @@ describe("team-up aggregates member readiness (Issue #1663)", () => {
     expect(result.exitCode, result.stderr.toString()).toBe(0);
 
     const memberRecord = join(state, "instances/default/runs/testrun/members/engineer-4");
-    expect(readFileSync(join(memberRecord, "registered"), "utf8").trim()).toBe("registered");
-    expect(readFileSync(join(memberRecord, "checked-out"), "utf8").trim()).toBe("checked-out");
-    expect(readFileSync(join(memberRecord, "ready"), "utf8").trim()).toBe("ready");
+    expectReadinessEvidence(memberRecord, "engineer-4", "registered");
+    expectReadinessEvidence(memberRecord, "engineer-4", "checked-out");
+    expectReadinessEvidence(memberRecord, "engineer-4", "ready");
 
     // The shim only delayed the aggregate observer. Real git and the record
     // confirm engineer-4 completed, so a failure would be a false negative.
     expect(git(["worktree", "list", "--porcelain"], repo)).toContain("engineer-4\n");
     expect(readFileSync(join(memberRecord, "path"), "utf8").trim()).toBe(memberPath("engineer-4"));
     expect(readFileSync(join(memberRecord, "branch"), "utf8").trim()).toBe("team/testrun/engineer-4");
+  });
+
+  test("tampered identity-bound readiness is rejected with member-stage diagnostics", () => {
+    const result = runLib(`TEAM_SIZE=2; create_run
+printf '%s\\n' '{"schemaVersion":1,"run":"old-run","member":"engineer-2","stage":"ready"}' >"$RUN_RECORD/members/engineer-2/ready"
+verify_member_readiness`);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("engineer-2(record)");
+  });
+
+  test("a crash temporary or partial final marker is not completion evidence", () => {
+    const result = runLib(`TEAM_SIZE=2; create_run
+member_record="$RUN_RECORD/members/engineer-2"
+rm -f "$member_record/ready"
+member_readiness_payload "$RUN_ID" engineer-2 ready >"$member_record/.ready.crash.tmp"
+printf '%s' '{"schemaVersion":1' >"$member_record/ready"
+verify_member_readiness`);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("engineer-2(record)");
+  });
+
+  test("a crashed run record is refused instead of reusing stale member evidence", () => {
+    const staleRecord = join(state, "instances/default/runs/testrun/members/leader");
+    mkdirSync(staleRecord, { recursive: true });
+    writeFileSync(
+      join(staleRecord, "ready"),
+      '{"schemaVersion":1,"run":"testrun","member":"leader","stage":"ready"}\n',
+    );
+
+    const result = runLib(`TEAM_SIZE=2; create_run`);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain(
+      "run metadata already exists; refusing stale member readiness evidence",
+    );
+    expect(existsSync(join(staleRecord, "ready"))).toBe(true);
   });
 });
 

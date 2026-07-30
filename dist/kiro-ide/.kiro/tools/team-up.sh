@@ -674,6 +674,51 @@ valid_run_id() {
   esac
 }
 
+valid_member_readiness_identity() {
+  valid_run_id "$1" || return 1
+  case "$2" in
+  leader | engineer-[1-6]) ;;
+  *) return 1 ;;
+  esac
+  case "$3" in
+  registered | checked-out | ready) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+member_readiness_payload() {
+  valid_member_readiness_identity "$1" "$2" "$3" || return 1
+  printf '{"schemaVersion":1,"run":"%s","member":"%s","stage":"%s"}\n' "$1" "$2" "$3"
+}
+
+member_readiness_payload_matches() {
+  local raw="$1" expected
+  expected="$(member_readiness_payload "$2" "$3" "$4")" || return 1
+  [ "$raw" = "$expected" ]
+}
+
+member_readiness_evidence_matches() {
+  local member_record="$1" run_id="$2" member="$3" stage="$4" raw
+  raw="$(cat "$member_record/$stage" 2>/dev/null)" || return 1
+  member_readiness_payload_matches "$raw" "$run_id" "$member" "$stage"
+}
+
+# Write completion evidence beside its target and rename it into place. A crash
+# can leave only a dot-prefixed temporary file, which the verifier ignores; a
+# final marker is accepted only when its exact run/member/stage payload matches.
+write_member_readiness_evidence() {
+  local member_record="$1" run_id="$2" member="$3" stage="$4" target temp
+  valid_member_readiness_identity "$run_id" "$member" "$stage" || return 1
+  target="$member_record/$stage"
+  temp="$(mktemp "$member_record/.$stage.XXXXXX")" || return 1
+  if member_readiness_payload "$run_id" "$member" "$stage" >"$temp" &&
+    mv -f -- "$temp" "$target"; then
+    return 0
+  fi
+  rm -f -- "$temp"
+  return 1
+}
+
 run_owns_branch() {
   local run_record="$1" candidate="$2" m managed_branch
   for m in $(members_for "$(record_size "$run_record")"); do
@@ -1358,6 +1403,32 @@ rollback_prepared_run() {
   rm -rf -- "$RUN_ROOT" "$RUN_RECORD"
 }
 
+verify_member_readiness() {
+  local m member_record wt branch missing="" stage
+  for m in $(members_for "$TEAM_SIZE"); do
+    member_record="$RUN_RECORD/members/$m"
+    wt="$RUN_ROOT/$m"
+    branch="team/$RUN_ID/$m"
+    stage=""
+    if ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" registered; then
+      stage="registration"
+    elif ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" checked-out; then
+      stage="checkout"
+    elif [ "$(cat "$member_record/path" 2>/dev/null || true)" != "$wt" ] ||
+      [ "$(cat "$member_record/branch" 2>/dev/null || true)" != "$branch" ] ||
+      ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" ready; then
+      stage="record"
+    fi
+    if [ -n "$stage" ]; then
+      missing="$missing $m($stage)"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    echo "ERROR: worktree creation incomplete:$missing" >&2
+    return 1
+  fi
+}
+
 handle_exit() {
   local rc=$?
   trap - EXIT
@@ -1374,7 +1445,7 @@ handle_exit() {
 
 create_run() {
   local base_commit base_ref m wt branch pending pending_pids checkout_pid
-  local member_record registered_path registered_resolved resolved missing stage
+  local member_record registered_path registered_resolved resolved
   base_ref="${BASE_REF:-HEAD}"
   if [ -z "$BASE_REF" ] && [ -n "$(git -C "$REPO" status --porcelain)" ]; then
     echo "ERROR: repository is dirty: $REPO" >&2
@@ -1388,8 +1459,14 @@ create_run() {
   valid_run_id "$RUN_ID" || { echo "ERROR: invalid run ID: $RUN_ID" >&2; return 1; }
   RUN_ROOT="$BASE/runs/$RUN_ID"
   RUN_RECORD="$INSTANCE_DIR/runs/$RUN_ID"
-  [ ! -e "$RUN_ROOT" ] || { echo "ERROR: run worktree directory already exists: $RUN_ROOT" >&2; return 1; }
-  [ ! -e "$RUN_RECORD" ] || { echo "ERROR: run metadata already exists: $RUN_RECORD" >&2; return 1; }
+  [ ! -e "$RUN_ROOT" ] || {
+    echo "ERROR: run worktree directory already exists; refusing stale member readiness evidence: $RUN_ROOT" >&2
+    return 1
+  }
+  [ ! -e "$RUN_RECORD" ] || {
+    echo "ERROR: run metadata already exists; refusing stale member readiness evidence: $RUN_RECORD" >&2
+    return 1
+  }
 
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
@@ -1443,7 +1520,8 @@ create_run() {
     fi
     # Registration remains inside the serial section until its per-member
     # evidence is durable. The next add must not start before this postprocessing.
-    if ! mkdir -p "$member_record" || ! printf 'registered\n' >"$member_record/registered"; then
+    if ! mkdir -p "$member_record" ||
+      ! write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" registered; then
       echo "ERROR: worktree registration record failed for $m: $wt" >&2
       return 1
     fi
@@ -1467,10 +1545,10 @@ create_run() {
         exit 1
       fi
       if ! {
-        printf 'checked-out\n' >"$member_record/checked-out" &&
+        write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" checked-out &&
           printf '%s\n' "$wt" >"$member_record/path" &&
           printf '%s\n' "$branch" >"$member_record/branch" &&
-          printf 'ready\n' >"$member_record/ready"
+          write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" ready
       }; then
         echo "ERROR: worktree record failed for $m: $wt" >&2
         exit 1
@@ -1490,28 +1568,9 @@ create_run() {
     wait "$checkout_pid" || true
   done
 
-  # Aggregate durable per-member evidence rather than reconstructing completion
-  # from a single whole-registry snapshot. A missing stage is attributed to the
-  # member that stopped there.
-  missing=""
-  for m in $(members_for "$TEAM_SIZE"); do
-    member_record="$RUN_RECORD/members/$m"
-    stage=""
-    if [ ! -f "$member_record/registered" ]; then
-      stage="registration"
-    elif [ ! -f "$member_record/checked-out" ]; then
-      stage="checkout"
-    elif [ ! -f "$member_record/path" ] || [ ! -f "$member_record/branch" ] || [ ! -f "$member_record/ready" ]; then
-      stage="record"
-    fi
-    if [ -n "$stage" ]; then
-      missing="$missing $m($stage)"
-    fi
-  done
-  if [ -n "$missing" ]; then
-    echo "ERROR: worktree creation incomplete:$missing" >&2
-    return 1
-  fi
+  # Aggregate durable, identity-bound per-member evidence rather than
+  # reconstructing completion from a single whole-registry snapshot.
+  verify_member_readiness
 }
 
 load_run() {

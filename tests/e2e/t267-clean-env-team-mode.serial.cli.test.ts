@@ -99,6 +99,7 @@ function installIsolatedCommands(env: CleanEnv): void {
     "head",
     "mkdir",
     "mktemp",
+    "mv",
     "nohup",
     "pwd",
     "readlink",
