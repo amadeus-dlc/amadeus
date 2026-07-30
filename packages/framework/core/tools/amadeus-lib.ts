@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
+import { type JournalEntry, isJournalEntryV2, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -4235,7 +4235,9 @@ export function auditBlockField(block: string, fieldName: string): string | null
 function tryParseJournalRecord(block: string): JournalEntry | null {
   if (!block.startsWith("{")) return null;
   try {
-    return parseJournalLine(block.trim());
+    const record = parseJournalLine(block.trim());
+    // This accessor reads v1 state-file records; v2 lines are not its shape.
+    return isJournalEntryV2(record) ? null : record;
   } catch {
     return null;
   }
