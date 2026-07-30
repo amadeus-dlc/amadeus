@@ -173,6 +173,33 @@ describe("t222 snapshot ownership is an AND contract", () => {
     expect(() => parseSnapshotCandidate({ ...valid, author: undefined })).toThrow("author is missing");
   });
 
+  test("malformed scalar fields fail closed", () => {
+    expect(() => parseSnapshotCandidate({ ...valid, title: "" })).toThrow("title is missing or is not a string");
+    expect(() => parseSnapshotCandidate({ ...valid, number: 42.5 })).toThrow("number is missing or is not an integer");
+    expect(() =>
+      parseSnapshotCandidate({
+        ...valid,
+        files: [{ path: SNAPSHOT_PATH, additions: 0.5, deletions: 0, text: validSnapshotText() }],
+      }),
+    ).toThrow("files[0].additions is missing or is not an integer");
+  });
+
+  test("closed pull request timestamps are validated", () => {
+    expect(parseSnapshotCandidate({ ...valid, state: "CLOSED", mergedAt: "2026-07-30T00:00:00Z" })).toMatchObject({
+      state: "closed",
+      mergedAt: "2026-07-30T00:00:00Z",
+    });
+  });
+
+  test("terminal and unsupported OPEN merge states are distinguished", () => {
+    expect(parseSnapshotCandidate({ ...valid, mergeStateStatus: "DIRTY" })).toMatchObject({
+      mergeability: "conflicting",
+    });
+    expect(() => parseSnapshotCandidate({ ...valid, mergeStateStatus: "FUTURE_STATE" })).toThrow(
+      'mergeStateStatus "FUTURE_STATE" is unsupported',
+    );
+  });
+
   test("a closed unmerged PR does not require a live mergeability verdict", () => {
     const parsed = parseSnapshotCandidate({
       ...valid,
@@ -381,6 +408,53 @@ describe("t222 snapshot publisher orchestration", () => {
       finalState: "dispatch-rejected",
     });
   });
+
+  test("a terminal pull request fails without polling", async () => {
+    const owned = parseSnapshotCandidate(snapshotPr({ mergeStateStatus: "DIRTY" }));
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    if (owned.kind !== "pull-request" || branch.kind !== "branch") throw new Error("fixture");
+    const pending = snapshotInventory({ pullRequests: [owned], branches: [branch] });
+    const { implementation } = port([snapshotInventory(), pending]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "publication-not-converged",
+    });
+  });
+
+  test("a landed snapshot with the wrong SHA never satisfies the postcondition", async () => {
+    const wrong = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: OTHER_SHA }] });
+    const { implementation } = port([snapshotInventory(), wrong], { nowMs: () => 100 });
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+      problems: expect.arrayContaining(["landed snapshot SHA does not match target"]),
+    });
+  });
+
+  test("dispatch verifies the final postcondition", async () => {
+    const landed = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }] });
+    const wrong = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: OTHER_SHA }] });
+    const { implementation } = port([landed, wrong]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "postcondition-failed",
+    });
+  });
+
+  test("auto-merge rejection fails immediately", async () => {
+    const { implementation } = port([snapshotInventory()], {
+      enableAutoMerge: async (url) => ({
+        operation: "auto-merge",
+        target: url,
+        status: "rejected",
+        detail: "merge disabled",
+      }),
+    });
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "auto-merge-rejected",
+    });
+  });
 });
 
 describe("t222 maintenance publisher orchestration", () => {
@@ -545,6 +619,57 @@ describe("t222 maintenance publisher orchestration", () => {
       code: 1,
       finalState: "converged-with-recovery",
       stickyFailure: true,
+    });
+  });
+
+  test("invalid inventory fails closed before mutation", async () => {
+    const invalid = maintenanceInventory({ problems: ["invalid candidate"] });
+    const { implementation } = port([{ cutoffSha: TARGET_SHA, inventory: invalid }], []);
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "fail-closed",
+    });
+  });
+
+  test("publish rejection is terminal", async () => {
+    const hasDiff = maintenanceInventory();
+    const { implementation } = port([{ cutoffSha: TARGET_SHA, inventory: hasDiff }], [], {
+      publish: async () => ({ kind: "rejected", receipts: [], problem: "no owned diff" }),
+    });
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "publish-rejected",
+    });
+  });
+
+  test("auto-merge rejection is terminal", async () => {
+    const hasDiff = maintenanceInventory();
+    const { implementation } = port([{ cutoffSha: TARGET_SHA, inventory: hasDiff }], [], {
+      enableAutoMerge: async (url) => ({
+        operation: "auto-merge",
+        target: url,
+        status: "rejected",
+        detail: "merge disabled",
+      }),
+    });
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "auto-merge-rejected",
+    });
+  });
+
+  test("terminal maintenance pull request fails without polling", async () => {
+    const pr = parseMaintenanceCandidate(maintenancePr({ mergeStateStatus: "DIRTY" }), {
+      repository: REPOSITORY,
+      botLogin: BOT_LOGIN,
+    });
+    const branch = parseMaintenanceCandidate(maintenanceBranch(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    if (pr.kind !== "pull-request" || branch.kind !== "branch") throw new Error("fixture");
+    const terminal = maintenanceInventory({ pullRequests: [pr], branches: [branch] });
+    const { implementation } = port([{ cutoffSha: TARGET_SHA, inventory: maintenanceInventory() }], [terminal]);
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "publication-not-converged",
     });
   });
 });

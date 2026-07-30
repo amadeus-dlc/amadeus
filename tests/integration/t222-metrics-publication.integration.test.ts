@@ -12,7 +12,14 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { publicationMain } from "../../scripts/metrics-publication.ts";
+import type {
+  MaintenanceInventory,
+  PublicationBranch,
+  PublicationPullRequest,
+  SnapshotInventory,
+} from "../../scripts/metrics-publication-domain.ts";
 import {
+  type CommandRunner,
   MaintenanceCliPort,
   SnapshotCliPort,
   systemCommandRunner,
@@ -117,6 +124,238 @@ writeFileSync(path, JSON.stringify({ schema_version: 1, captured_at: "2026-07-30
 console.log("OK 0 collectors " + path);
 `;
 }
+
+function candidatePullRequest(
+  branch: string,
+  oid: string,
+  number: number,
+  state: "open" | "closed" = "open",
+): PublicationPullRequest {
+  return {
+    kind: "pull-request",
+    number,
+    url: `https://example.test/pull/${number}`,
+    state,
+    mergeability: state === "open" ? "mergeable" : "not-applicable",
+    mergedAt: null,
+    branch,
+    headOid: oid,
+    repository: REPOSITORY,
+    author: BOT_LOGIN,
+    title: "candidate",
+    body: "candidate",
+    files: [],
+    ownership: { ok: true },
+  };
+}
+
+function candidateBranch(name: string, oid: string): PublicationBranch {
+  return {
+    kind: "branch",
+    name,
+    oid,
+    tipAuthor: BOT_LOGIN,
+    files: [],
+    ownership: { ok: true },
+  };
+}
+
+describe("t222 metrics publication adapters", () => {
+  const targetSha = "a".repeat(40);
+  const branchOid = "b".repeat(40);
+  const snapshotBranch = `metrics/snapshot-${targetSha}`;
+  const context = {
+    repoRoot: ROOT,
+    repository: REPOSITORY,
+    botLogin: BOT_LOGIN,
+  };
+
+  test("snapshot inventory loads pull-request file content", async () => {
+    const snapshotPath = `metrics/2026-07-30T00-00-00-000Z-${targetSha.slice(0, 12)}.json`;
+    const snapshotText = JSON.stringify({
+      schema_version: 1,
+      captured_at: "2026-07-30T00:00:00.000Z",
+      commit: targetSha,
+      collectors: {},
+    });
+    const rawPullRequest = {
+      number: 1,
+      url: "https://example.test/pull/1",
+      state: "OPEN",
+      mergeStateStatus: "CLEAN",
+      mergedAt: null,
+      headRefName: snapshotBranch,
+      headRefOid: branchOid,
+      headRepository: { nameWithOwner: REPOSITORY },
+      author: { login: BOT_LOGIN },
+      title: `[amadeus:metrics-snapshot:v1] ${targetSha}`,
+      body: `<!-- amadeus:metrics-snapshot:v1 sha=${targetSha} -->`,
+      files: [{ path: snapshotPath, additions: 1, deletions: 0 }],
+    };
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "gh") return { stdout: JSON.stringify([rawPullRequest]), stderr: "" };
+        if (command.includes("ls-remote")) return { stdout: "", stderr: "" };
+        if (command.includes("ls-tree")) return { stdout: "", stderr: "" };
+        if (command[1] === "show" && command[2] === `${branchOid}:${snapshotPath}`) {
+          return { stdout: snapshotText, stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const inventory = await new SnapshotCliPort({ ...context, targetSha, runner }).inventory();
+    expect(inventory.problems).toEqual([]);
+    expect(inventory.pullRequests[0]?.files).toEqual([
+      { path: snapshotPath, additions: 1, deletions: 0, text: snapshotText },
+    ]);
+  });
+
+  test("malformed pull-request file fields become inventory problems", async () => {
+    const rawPullRequest = {
+      number: 1,
+      url: "https://example.test/pull/1",
+      state: "OPEN",
+      mergeStateStatus: "CLEAN",
+      mergedAt: null,
+      headRefName: snapshotBranch,
+      headRefOid: branchOid,
+      headRepository: { nameWithOwner: REPOSITORY },
+      author: { login: BOT_LOGIN },
+      title: `[amadeus:metrics-snapshot:v1] ${targetSha}`,
+      body: `<!-- amadeus:metrics-snapshot:v1 sha=${targetSha} -->`,
+      files: [{ path: "", additions: 1, deletions: 0 }],
+    };
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "gh") return { stdout: JSON.stringify([rawPullRequest]), stderr: "" };
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const inventory = await new SnapshotCliPort({ ...context, targetSha, runner }).inventory();
+    expect(inventory.problems).toEqual([
+      expect.stringContaining("pull request file.path is missing or is not a string"),
+    ]);
+  });
+
+  test("snapshot cleanup records accepted and rejected mutations", async () => {
+    const commands: string[][] = [];
+    const runner: CommandRunner = {
+      run(command) {
+        commands.push(command);
+        if (command[0] === "gh" && command.at(-1)?.endsWith("/2")) throw new Error("close failed");
+        if (command.includes("ls-remote")) {
+          const branch = command.at(-1)?.replace("refs/heads/", "") ?? "";
+          const oid = branch.endsWith("-changed") ? "c".repeat(40) : branchOid;
+          return { stdout: `${oid}\trefs/heads/${branch}`, stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const inventory: SnapshotInventory = {
+      targetSha,
+      landed: [],
+      pullRequests: [
+        candidatePullRequest(snapshotBranch, branchOid, 1),
+        candidatePullRequest(`${snapshotBranch}-2`, branchOid, 2),
+        candidatePullRequest(`${snapshotBranch}-3`, branchOid, 3, "closed"),
+      ],
+      branches: [
+        candidateBranch(snapshotBranch, branchOid),
+        candidateBranch(`${snapshotBranch}-changed`, branchOid),
+      ],
+      problems: [],
+    };
+    const receipts = await new SnapshotCliPort({ ...context, targetSha, runner }).cleanup(inventory);
+    expect(receipts.map(({ operation, status }) => [operation, status])).toEqual([
+      ["close-pr", "accepted"],
+      ["close-pr", "rejected"],
+      ["delete-branch", "accepted"],
+      ["delete-branch", "rejected"],
+    ]);
+    expect(commands.some((command) => command[0] === "git" && command[1] === "push")).toBe(true);
+  });
+
+  test("maintenance cleanup records accepted and rejected mutations", async () => {
+    const maintenanceBranch = "metrics/maintenance";
+    let closeCalls = 0;
+    let remoteCalls = 0;
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "gh" && ++closeCalls === 2) throw new Error("close failed");
+        if (command.includes("ls-remote")) {
+          remoteCalls += 1;
+          const oid = remoteCalls === 1 ? branchOid : "c".repeat(40);
+          return { stdout: `${oid}\trefs/heads/${maintenanceBranch}`, stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const inventory: MaintenanceInventory = {
+      hasDiff: false,
+      pullRequests: [
+        candidatePullRequest(maintenanceBranch, branchOid, 1),
+        candidatePullRequest(maintenanceBranch, branchOid, 2),
+        candidatePullRequest(maintenanceBranch, branchOid, 3, "closed"),
+      ],
+      branches: [
+        candidateBranch(maintenanceBranch, branchOid),
+        candidateBranch(maintenanceBranch, branchOid),
+      ],
+      problems: [],
+    };
+    const receipts = await new MaintenanceCliPort({ ...context, runner }).cleanup(inventory);
+    expect(receipts.map(({ operation, status }) => [operation, status])).toEqual([
+      ["close-pr", "accepted"],
+      ["close-pr", "rejected"],
+      ["delete-branch", "accepted"],
+      ["delete-branch", "rejected"],
+    ]);
+  });
+
+  test("clock and sleep adapters are callable", async () => {
+    const runner: CommandRunner = { run: () => ({ stdout: "", stderr: "" }) };
+    const snapshot = new SnapshotCliPort({ ...context, targetSha, runner });
+    const maintenance = new MaintenanceCliPort({ ...context, runner });
+    expect(snapshot.nowMs()).toBeGreaterThan(0);
+    expect(maintenance.nowMs()).toBeGreaterThan(0);
+    await snapshot.sleep(1);
+    await maintenance.sleep(1);
+  });
+
+  test("CLI validation and operation failures return stable exit codes", async () => {
+    expect(await publicationMain(["invalid"])).toBe(2);
+    expect(
+      await publicationMain([
+        "snapshot",
+        "--target-sha",
+        "invalid",
+        "--repository",
+        REPOSITORY,
+        "--bot-login",
+        BOT_LOGIN,
+      ]),
+    ).toBe(2);
+    const runner: CommandRunner = {
+      run() {
+        throw "runner failed";
+      },
+    };
+    expect(
+      await publicationMain(
+        [
+          "snapshot",
+          "--target-sha",
+          targetSha,
+          "--repository",
+          REPOSITORY,
+          "--bot-login",
+          BOT_LOGIN,
+        ],
+        { runner, repoRoot: ROOT, nowMs: () => 0 },
+      ),
+    ).toBe(1);
+  });
+});
 
 describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
   let temporaryRoot = "";

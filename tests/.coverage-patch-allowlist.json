@@ -1612,5 +1612,23 @@
     "lines": "404-405",
     "reason": "Fail-closed catch in the Stop trust check (unreadable current-session carrier). t365 asserts the missing-carrier state is a silent no-op through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
     "expiry": "remove when the Stop trust matrix gains an in-process driver"
+  },
+  {
+    "file": "scripts/metrics-publication-domain.ts",
+    "lines": "465",
+    "reason": "Bun stamps the closing brace of waitForSnapshotPostcondition as DA:0 even though t222 drives the loop through pending, timeout, terminal, and converged outcomes in-process.",
+    "expiry": "remove when Bun LCOV stops marking the exercised loop-closing brace as executable and uncovered"
+  },
+  {
+    "file": "scripts/metrics-publication-domain.ts",
+    "lines": "594",
+    "reason": "Bun stamps the closing brace of waitForMaintenancePostcondition as DA:0 even though t222 drives the loop through pending, timeout, terminal, and converged outcomes in-process.",
+    "expiry": "remove when Bun LCOV stops marking the exercised loop-closing brace as executable and uncovered"
+  },
+  {
+    "file": "scripts/metrics-publication.ts",
+    "lines": "113",
+    "reason": "Spawn-only import.meta.main CLI exit wrapper. t222 calls publicationMain in-process for success, validation failure, and operation failure; Bun does not attribute spawned entrypoint execution to the parent LCOV report.",
+    "expiry": "remove when the CLI wrapper gains an in-process process-exit seam"
   }
 ]
