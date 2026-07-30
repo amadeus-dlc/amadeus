@@ -5945,17 +5945,45 @@ export function writeFileAtomic(
 // callers are all sync (compile, state.ts fork/merge); future async-locked
 // transactions need a separate `withAuditLockAsync` that awaits before
 // release. The compile-time guard catches the footgun at the call site.
+//
+// `retry` overrides the acquire budget for the OUTERMOST call (a reentrant
+// inner call takes no OS lock, so it has no budget to spend). Sections sized
+// for parallel-Bolt contention — audit-merge's env-tunable 200 x 100ms = 20s —
+// pass their own budget rather than inheriting the 5s default.
+export type AuditLockRetryBudget = {
+  readonly maxRetries?: number;
+  readonly retryMs?: number;
+};
+
+// A spent acquire budget, distinguishable from anything the locked section
+// throws. A CLI that reports lock contention in its own output shape (the
+// audit-merge JSON error) catches this rather than pattern-matching a message.
+// The message keeps the "Failed to acquire audit lock" prefix the existing
+// consumers branch on (amadeus-state.ts, amadeus-learnings.ts).
+export class AuditLockAcquireError extends Error {
+  constructor(key: string, maxRetries: number, retryMs: number) {
+    super(
+      `Failed to acquire audit lock for ${key} after ${maxRetries} × ${retryMs}ms = ` +
+        `${((maxRetries * retryMs) / 1000).toFixed(1)}s retries`,
+    );
+    this.name = "AuditLockAcquireError";
+  }
+}
+
 export function withAuditLock<T>(
   projectDir: string,
   fn: () => T extends Promise<unknown> ? never : T,
   intent?: string,
   space?: string,
+  retry?: AuditLockRetryBudget,
 ): T extends Promise<unknown> ? never : T {
   const key = auditLockIdentity(projectDir, intent, space);
   const currentDepth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
   if (currentDepth === 0) {
-    if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
-      throw new Error(`Failed to acquire audit lock for ${key} after retries`);
+    const maxRetries = retry?.maxRetries ?? 50;
+    const retryMs = retry?.retryMs ?? 100;
+    if (!acquireAuditLock(projectDir, maxRetries, retryMs, intent, space)) {
+      throw new AuditLockAcquireError(key, maxRetries, retryMs);
     }
     // Safety net: if the body calls process.exit (Bun skips `finally` in that
     // case), the on-exit handler releases the lock dir so the project isn't

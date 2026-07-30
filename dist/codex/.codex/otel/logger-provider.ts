@@ -15,7 +15,11 @@ import { logs } from "../vendor/opentelemetry/api-logs/index.js";
 import type { Logger, LoggerProvider, LogRecord } from "../vendor/opentelemetry/api-logs/index.js";
 import { activeIntent, activeSpace, auditCloneId, isoTimestamp } from "../tools/amadeus-lib.ts";
 import { JOURNAL_SCHEMA_VERSION_V2 } from "../tools/amadeus-journal.ts";
-import type { AuditLogExporter, CanonicalEventRecord } from "./audit-log-exporter.ts";
+import type {
+  AuditLogExporter,
+  CanonicalEventRecord,
+  CanonicalEventTarget,
+} from "./audit-log-exporter.ts";
 import { getEventDef } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
 import type { LocalLogExporter } from "./local-log-exporter.ts";
@@ -52,7 +56,19 @@ export type EmitOutcome =
 // already set the fatal latch by then — FR-EVT-3). Registry and required-
 // attribute violations throw WITHOUT latching: they are caller bugs, not
 // journal write failures (BR-10).
-export function emitEvent(name: RegisteredEventName, attrs: Record<string, unknown>): EmitOutcome {
+//
+// `target` names a ledger other than the active cursor's (E-U8PRE O-T1). It
+// drives BOTH halves of the write: the shard the row lands in (passed to the
+// exporter) and the row's own identity fields, resolved below from the same
+// target with the explicit-wins precedence the v1 writer already uses
+// (auditIntentId → activeIntent(pd, space, intent)). Honouring it for the shard
+// alone would write a row into the target's ledger that claims the ISSUER's
+// intent — the shape migration-adapter.ts refuses to produce.
+export function emitEvent(
+  name: RegisteredEventName,
+  attrs: Record<string, unknown>,
+  target?: CanonicalEventTarget
+): EmitOutcome {
   const reg = requireRegistered();
   const def = getEventDef(name);
   const missing = def.requiredAttributes.filter((key) => !(key in attrs));
@@ -67,7 +83,7 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
     return { appended: false, reason: "telemetry", timestamp };
   }
   const spanCtx = trace.getSpan(context.active())?.spanContext();
-  const space = activeSpace(reg.projectDir);
+  const space = target?.space ?? activeSpace(reg.projectDir);
   const record: CanonicalEventRecord = {
     schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
     eventId: crypto.randomUUID(),
@@ -78,7 +94,7 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
     timestamp: isoTimestamp(),
     eventName: name,
     attributes: clean,
-    intentId: activeIntent(reg.projectDir, space) ?? "workspace",
+    intentId: activeIntent(reg.projectDir, space, target?.intent) ?? "workspace",
     space,
     cloneId: auditCloneId(reg.projectDir),
     traceId: spanCtx?.traceId ?? null,
@@ -87,7 +103,7 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
     idempotencyKey: crypto.randomUUID(),
     durability: "canonical",
   };
-  const outcome = reg.auditExporter.exportCanonicalEvent(record);
+  const outcome = reg.auditExporter.exportCanonicalEvent(record, target);
   return outcome.appended
     ? { appended: true, timestamp: record.timestamp }
     : { appended: false, reason: outcome.reason, timestamp: record.timestamp };
