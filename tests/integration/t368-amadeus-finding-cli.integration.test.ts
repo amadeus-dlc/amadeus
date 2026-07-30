@@ -91,21 +91,32 @@ describe("runFindingCli", () => {
   });
 
   test.each([
-    ["unknown argument", (args: string[]) => [...args, "--unknown"]],
-    ["missing value", (args: string[]) => args.slice(0, -1)],
+    [
+      "unknown argument",
+      (args: string[]) => [...args, "--unknown"],
+      "unknown argument: --unknown",
+    ],
+    [
+      "missing value",
+      (args: string[]) => args.slice(0, -1),
+      "missing value for --fingerprint",
+    ],
     [
       "invalid kind",
       (args: string[]) => args.map((value, index) => (index === 4 ? "incident" : value)),
+      "invalid --kind",
     ],
     [
       "oversized title",
       (args: string[]) => args.map((value, index) => (index === 6 ? "T".repeat(257) : value)),
+      "invalid or missing --title",
     ],
     [
       "oversized fingerprint",
       (args: string[]) => args.map((value, index) => (index === 10 ? "F".repeat(513) : value)),
+      "invalid or missing --fingerprint",
     ],
-  ] as const)("rejects %s as invalid input", async (_name, mutate) => {
+  ] as const)("rejects %s as invalid input", async (_name, mutate, reason) => {
     const { root, body } = project();
 
     const result = await runFindingCli(
@@ -116,7 +127,7 @@ describe("runFindingCli", () => {
     expect(result).toEqual({
       exitCode: 2,
       stdout: "",
-      stderr: "amadeus-finding: invalid input\n",
+      stderr: `amadeus-finding: ${reason}\n`,
     });
   });
 

@@ -863,6 +863,12 @@ function createCombinedGitHubGateway(
       return parseSingleIssue(interp, repository, "mutation");
     },
 
+    // Deliberate full walk of every issue (state=all) with a client-side
+    // marker filter, NOT the Search API: search indexing lags writes, so a
+    // just-created issue can be invisible to search and the dedup guard would
+    // file a duplicate. The cost is linear in the repository's issue count
+    // (FIND_PER_PAGE-sized sequential requests) and is accepted for the
+    // consistency guarantee.
     async findIssuesByMarker(repository, marker) {
       const issues: RemoteGitHubIssue[] = [];
       for (let page = 1; ; page++) {

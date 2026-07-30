@@ -1060,6 +1060,10 @@ owned by Amadeus itself, route it through the deterministic finding filer. The
 layered setting is `"auto-file-findings": "off" | "prompt" | "auto"` and its
 default is `"prompt"`. The fixed remote target is
 `amadeus-dlc/amadeus`; this setting never files application-project issues.
+The upstream target is deliberate: an Amadeus-owned defect observed in ANY
+workspace — including forks and end-user projects — belongs to the framework's
+own tracker, exactly like a crash reporter. That is why the admission rules
+below insist the public body carries no workspace-private information.
 
 ### Admission
 
@@ -1101,6 +1105,12 @@ creates only when there is no existing Issue. One match returns that Issue;
 multiple matches stop safely without another mutation. The GitHub Gateway
 accepts a create only with a coordinator-minted permit bound to the exact body
 marker.
+
+When the single match is a CLOSED Issue (`issueState: "CLOSED"` in the
+outcome), do not treat the finding as settled: the same fingerprint was fixed
+once before, so a fresh observation is a possible regression. Surface the
+closed Issue link and the new evidence to the human instead of recording it as
+an existing filing.
 
 - `"auto"` — run the command immediately.
 - `"prompt"` — present the candidate to the human. On approval, rerun the same

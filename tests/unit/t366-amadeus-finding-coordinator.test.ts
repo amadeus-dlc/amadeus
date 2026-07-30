@@ -133,14 +133,66 @@ describe("fileAmadeusFinding", () => {
       kind: "created",
       issueNumber: 42,
       issueUrl: "https://github.com/amadeus-dlc/amadeus/issues/42",
+      issueState: "OPEN",
     });
     expect(retried).toMatchObject({
       kind: "existing",
       issueNumber: 42,
       issueUrl: "https://github.com/amadeus-dlc/amadeus/issues/42",
+      issueState: "OPEN",
     });
     expect(createCalls).toBe(1);
     expect(createLabels).toEqual(["bug"]);
+  });
+
+  test("a closed marker match is reported as CLOSED, never re-created", async () => {
+    let createCalls = 0;
+    const outcome = await fileAmadeusFinding(
+      {
+        projectDir: "/project",
+        kind: "defect" as const,
+        title: "Regression of a previously fixed defect",
+        body: "The fixed symptom is observable again.",
+        fingerprint: "tests:regression-fingerprint",
+      },
+      {
+        resolveConfig: () => ({
+          kind: "resolved",
+          autoFileFindings: "auto",
+        }),
+        gateway: {
+          readiness: async () => ok(undefined),
+          findIssuesByMarker: async () =>
+            ok([
+              {
+                repository: {
+                  owner: "amadeus-dlc",
+                  name: "amadeus",
+                  canonical: "amadeus-dlc/amadeus",
+                },
+                number: 7,
+                title: "Original defect",
+                body: "<!-- marker -->",
+                state: "CLOSED",
+              },
+            ] as const),
+          createFindingIssue: async () => {
+            createCalls += 1;
+            throw new Error("a closed match must not trigger a create");
+          },
+        },
+      },
+    );
+
+    // The protocol treats a CLOSED match as a possible regression to surface
+    // to the human; the coordinator's job is to expose the state faithfully
+    // while still never re-creating the fingerprint.
+    expect(outcome).toMatchObject({
+      kind: "existing",
+      issueNumber: 7,
+      issueState: "CLOSED",
+    });
+    expect(createCalls).toBe(0);
   });
 
   test("maps an actionable concern to the existing enhancement label", async () => {

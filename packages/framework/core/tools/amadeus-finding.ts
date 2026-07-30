@@ -47,6 +47,10 @@ export type FindingFileOutcome =
       issueNumber: number;
       issueUrl: string;
       marker: string;
+      // "CLOSED" on an existing match means the identical fingerprint was
+      // already fixed once: a re-observation is a possible regression, and the
+      // protocol surfaces it to the human instead of treating it as settled.
+      issueState: "OPEN" | "CLOSED";
     }>
   | Readonly<{
       kind: "disabled" | "approval-required";
@@ -108,6 +112,7 @@ export async function fileAmadeusFinding(
       issueNumber: existing.number,
       issueUrl: issueUrl(existing.number),
       marker,
+      issueState: existing.state,
     };
   }
 
@@ -128,6 +133,7 @@ export async function fileAmadeusFinding(
     issueNumber: created.value.number,
     issueUrl: issueUrl(created.value.number),
     marker,
+    issueState: created.value.state,
   };
 }
 
@@ -262,11 +268,15 @@ export async function runFindingCli(
       stdout: `${JSON.stringify(outcome)}\n`,
       stderr: "",
     };
-  } catch {
+  } catch (cause) {
+    // Every throw on this path is a locally-minted fixed string (argv / body
+    // validation) — never remote output — so the reason is safe to surface and
+    // tells the conductor which input to correct.
+    const reason = cause instanceof Error ? cause.message : "invalid input";
     return {
       exitCode: 2,
       stdout: "",
-      stderr: "amadeus-finding: invalid input\n",
+      stderr: `amadeus-finding: ${reason}\n`,
     };
   }
 }
