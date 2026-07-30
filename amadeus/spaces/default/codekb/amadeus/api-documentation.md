@@ -1,6 +1,26 @@
 # API ドキュメント
 
-## Slop cleanup の API 影響（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件が修復する内部契約（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+Amadeus に常駐 REST/GraphQL service や database API はない。公開境界は短命 CLI、Shell command、directive JSON、監査 journal、生成ファイルである。本 intent は原則として verb・flag・schema を追加せず、既存契約の成功判定と診断 envelope を修復する。
+
+| Issue | 現行契約 | 欠落 | 修正後に必要な契約 |
+| --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | Bun test case 120秒、内部 `spawnSync` 180秒 | 外側の期限が内側より短く、child の完了結果を観測できない | outer timeout が verifier timeout を包含し、timeout 時も child 診断を返す |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | `migrateWithTool` は status/stdout/stderr を返す | assertion が status だけを表示し診断 payload を捨てる | 非0終了時に stdout/stderr/exit/timeout を同一 failure envelope で提示する |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | checkout worker は exit status と stderr を持つ | 親 Shell が個別 status を保持せず、registry + record の最終走査へ圧縮 | member ごとの status/log を収集し、集約失敗に member identity を保存する |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | `git diff <base>...HEAD` と LCOV を突合 | diff は committed HEAD、LCOV は dirty working tree を含みうる | 両入力へ同じ source snapshot identity を結び、dirty 状態を拒否または明示取得する |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | supervisor PID を保存し、50ms後に `kill -0` / `ps` で確認 | process alive と role-ready を同一視 | supervisor が初期化完了を readiness receipt として返し、親が期限付きで待つ |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | final `report` → `complete-workflow` → `done`、次の `next` で completion boundary | registry complete と audit seal 後は mirror receipt を append できない | completion boundary の結果を final commit に含め、再試行 token と同一 completion instance を維持する |
+
+### CLI・journal 互換性
+
+- #1667 / #1664 / #1663 / #1662 / #1336 はテスト・内部 Shell/TypeScript seam の修正であり、既存 CLI の動詞集合と exit code の意味を変更しない。
+- #1607 は `report` / `next` の順序と terminal `done` の意味に関わる。新しい公開 verb を足す前に、既存 `mirror-boundary completion` と `complete-workflow` のどちらが transaction coordinator を所有するかを要件で裁定する。
+- audit journal の post-complete seal、mirror operation receipt の idempotency、Intent cursor の ownership は後方互換シムで二重化せず、単一の正準完了経路へ統合する。
+- 進行中の OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は journal entry と state/audit projection を消費するため、#1607 と #1664 の契約確定前にその Construction を重ねない。
+
+## Slop cleanup の API 影響（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 外部 API、CLI 動詞、exit code、JSON/Markdown wire format、関数シグネチャに変更はない。`amadeus-journal.ts` はコメントのみの更新、`ProcessObservation.registered` はモジュール内部の未使用型フィールドであり公開 export ではない。`initProcessObservability` / `flushProcessObservation` の first-caller-wins、flush、再 flush no-op 契約は維持する。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 

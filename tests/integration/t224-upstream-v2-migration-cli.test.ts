@@ -17,6 +17,7 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -25,7 +26,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import {
+  _resetCloneIdForTests,
+  auditCloneId,
+  auditLockDir,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   createUpstreamV2Fixture,
   projectSnapshot,
@@ -53,7 +59,10 @@ const OPERATIONAL_TOKEN_FIXTURE = join(
 const fixtures: UpstreamV2Fixture[] = [];
 
 interface CliResult {
+  command: string[];
   status: number;
+  signal: NodeJS.Signals | null;
+  error: string | null;
   stdout: string;
   stderr: string;
 }
@@ -113,26 +122,54 @@ function migrateWithTool(
   return runMigrationProcess(project, project.sourceRoot, args, {}, tool);
 }
 
+function isolatedAuditLockBase(project: UpstreamV2Fixture): string {
+  const lockBase = join(project.projectDir, ".git", "amadeus-test-audit-locks");
+  mkdirSync(lockBase, { recursive: true });
+  return lockBase;
+}
+
+function findWorkspaceLockCollision(root: string): readonly [string, string] {
+  const projectByLockName = new Map<string, string>();
+  for (let index = 0; index < 500_000; index++) {
+    const candidate = join(root, `project-${index}`);
+    const lockName = basename(auditLockDir(candidate));
+    const prior = projectByLockName.get(lockName);
+    if (prior !== undefined) return [prior, candidate];
+    projectByLockName.set(lockName, candidate);
+  }
+  throw new Error("could not find a workspace audit-lock collision");
+}
+
 function runInstalledDoctor(
   project: UpstreamV2Fixture,
   extraEnv: NodeJS.ProcessEnv = {},
 ): CliResult {
+  const doctorArgs = [
+    join(project.projectDir, ".claude", "tools", "amadeus-utility.ts"),
+    "doctor",
+    "--project-dir",
+    project.projectDir,
+  ];
+  const command = [process.execPath, ...doctorArgs];
   const result = spawnSync(
     process.execPath,
-    [
-      join(project.projectDir, ".claude", "tools", "amadeus-utility.ts"),
-      "doctor",
-      "--project-dir",
-      project.projectDir,
-    ],
+    doctorArgs,
     {
       cwd: project.projectDir,
       encoding: "utf-8",
-      env: { ...process.env, ...extraEnv, AMADEUS_HARNESS_DIR: ".claude" },
+      env: {
+        ...process.env,
+        AMADEUS_LOCK_BASE_DIR: isolatedAuditLockBase(project),
+        ...extraEnv,
+        AMADEUS_HARNESS_DIR: ".claude",
+      },
     },
   );
   return {
+    command,
     status: result.status ?? -1,
+    signal: result.signal,
+    error: result.error?.message ?? null,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
@@ -145,28 +182,62 @@ function runMigrationProcess(
   extraEnv: NodeJS.ProcessEnv = {},
   tool = MIGRATE_TOOL,
 ): CliResult {
+  const migrateArgs = [
+    tool,
+    "--project-dir",
+    project.projectDir,
+    "--from",
+    source,
+    "--json",
+    ...args,
+  ];
+  const command = [process.execPath, ...migrateArgs];
   const result = spawnSync(
     process.execPath,
-    [
-      tool,
-      "--project-dir",
-      project.projectDir,
-      "--from",
-      source,
-      "--json",
-      ...args,
-    ],
+    migrateArgs,
     {
       cwd: project.projectDir,
       encoding: "utf-8",
-      env: { ...process.env, ...extraEnv },
+      env: {
+        ...process.env,
+        AMADEUS_LOCK_BASE_DIR: isolatedAuditLockBase(project),
+        ...extraEnv,
+      },
     },
   );
   return {
+    command,
     status: result.status ?? -1,
+    signal: result.signal,
+    error: result.error?.message ?? null,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
+}
+
+function expectSuccessfulMigration(
+  result: CliResult,
+  context?: { cloneIdLogicalPath: string; cloneIdTargetPath: string },
+): void {
+  if (result.status === 0) return;
+  throw new Error(
+    [
+      "migration subprocess failed",
+      ...(context === undefined
+        ? []
+        : [
+            `clone-id logical path: ${JSON.stringify(context.cloneIdLogicalPath)}`,
+            `clone-id target path: ${JSON.stringify(context.cloneIdTargetPath)}`,
+          ]),
+      `command: ${result.command.map((part) => JSON.stringify(part)).join(" ")}`,
+      `exit path: ${result.error !== null ? "spawn-error" : result.signal !== null ? "signal" : "exit-status"}`,
+      `status: ${result.status}`,
+      `signal: ${result.signal ?? "(none)"}`,
+      `error: ${result.error ?? "(none)"}`,
+      `stdout:\n${result.stdout.trimEnd() || "(empty)"}`,
+      `stderr:\n${result.stderr.trimEnd() || "(empty)"}`,
+    ].join("\n"),
+  );
 }
 
 function installClaudeHarness(
@@ -236,6 +307,42 @@ afterEach(() => {
 });
 
 describe("t224 upstream-v2 migration public CLI", () => {
+  test.each([
+    ["exit-status", { status: 1, signal: null, error: null }],
+    ["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],
+    ["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],
+  ] as const)(
+    "migration success diagnostics preserve the %s subprocess exit channel",
+    (exitPath, outcome) => {
+      const result: CliResult = {
+        command: ["/usr/bin/bun", "amadeus-migrate.ts", "--apply"],
+        ...outcome,
+        stdout: '{"status":"failed"}\n',
+        stderr: "doctor failed\n",
+      };
+      const context = {
+        cloneIdLogicalPath: "workspace/.clone-id",
+        cloneIdTargetPath: "/tmp/fixture/sentinel.txt",
+      };
+
+      let message = "";
+      try {
+        expectSuccessfulMigration(result, context);
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toContain('clone-id logical path: "workspace/.clone-id"');
+      expect(message).toContain('clone-id target path: "/tmp/fixture/sentinel.txt"');
+      expect(message).toContain('command: "/usr/bin/bun" "amadeus-migrate.ts" "--apply"');
+      expect(message).toContain(`exit path: ${exitPath}`);
+      expect(message).toContain(`status: ${outcome.status}`);
+      expect(message).toContain(`signal: ${outcome.signal ?? "(none)"}`);
+      expect(message).toContain(`error: ${outcome.error ?? "(none)"}`);
+      expect(message).toContain('stdout:\n{"status":"failed"}');
+      expect(message).toContain("stderr:\ndoctor failed");
+    },
+  );
+
   test("dry-run reports a sorted eligible plan and leaves Git and the filesystem unchanged", () => {
     const project = fixture();
     const beforeSnapshot = projectSnapshot(project.projectDir);
@@ -1195,13 +1302,17 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const sentinel = "CLONE_ID_SENTINEL_MUST_NOT_CHANGE\n";
     try {
       writeFileSync(target, sentinel, "utf-8");
+      const targetBefore = statSync(target);
       const cloneId = join(project.sourceRoot, `.${UPSTREAM_FILE_PREFIX}clone-id`);
       rmSync(cloneId, { force: true });
       symlinkSync(target, cloneId);
 
       const result = migrateWithTool(project, installedMigrator, "--apply");
 
-      expect(result.status).toBe(0);
+      expectSuccessfulMigration(result, {
+        cloneIdLogicalPath: relative(project.projectDir, cloneId),
+        cloneIdTargetPath: target,
+      });
       const report = parseReport(result);
       expect(report.status).toBe("applied");
       expect(report.mode).toBe("apply");
@@ -1210,13 +1321,116 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "GUARDRAIL_LOADED",
         "HEALTH_CHECKED",
       ]);
-      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+
+      _resetCloneIdForTests();
+      const firstCloneId = auditCloneId(project.projectDir);
+      _resetCloneIdForTests();
+      const secondCloneId = auditCloneId(project.projectDir);
+      expect(firstCloneId).toMatch(/^[a-f0-9]{12}$/);
+      expect(secondCloneId).toBe(firstCloneId);
+
+      rmSync(
+        join(project.destinationRoot, relative(project.sourceRoot, project.auditPath)),
+        { force: true },
+      );
+      project.commitAll("test: remove the legacy markdown audit fixture");
       const migratedCloneId = join(project.destinationRoot, ".amadeus-clone-id");
+      const firstDoctor = runInstalledDoctor(project);
+      const secondDoctor = runInstalledDoctor(project);
+      expectSuccessfulMigration(firstDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expectSuccessfulMigration(secondDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+      const targetAfter = statSync(target);
+      expect({
+        mode: targetAfter.mode,
+        uid: targetAfter.uid,
+        gid: targetAfter.gid,
+        size: targetAfter.size,
+        mtimeMs: targetAfter.mtimeMs,
+        ino: targetAfter.ino,
+      }).toEqual({
+        mode: targetBefore.mode,
+        uid: targetBefore.uid,
+        gid: targetBefore.gid,
+        size: targetBefore.size,
+        mtimeMs: targetBefore.mtimeMs,
+        ino: targetBefore.ino,
+      });
       expect(lstatSync(migratedCloneId).isSymbolicLink()).toBe(true);
       expect(readlinkSync(migratedCloneId)).toBe(target);
-      expect(project.git(["diff", "--name-only"])).toBe("");
+      const changedPaths = project.git(["diff", "--name-only"]).trim().split("\n");
+      expect(changedPaths).toHaveLength(1);
+      expect(changedPaths[0]).toMatch(/\/audit\/[^/]+\.jsonl$/);
     } finally {
       rmSync(external, { recursive: true, force: true });
+    }
+  });
+
+  test("symlink clone-id migration isolates distinct fixture identities that share a lock path", () => {
+    const collisionRoot = realpathSync(
+      mkdtempSync(join(tmpdir(), "amadeus-lock-collision-")),
+    );
+    const [projectDir, collidingProjectDir] = findWorkspaceLockCollision(collisionRoot);
+    const project = fixture({ projectDir });
+    const installedMigrator = installClaudeHarness(project, {
+      validSettings: true,
+    });
+    const external = mkdtempSync(join(tmpdir(), "amadeus-clone-id-target-"));
+    const sharedLockBase = mkdtempSync(join(tmpdir(), "amadeus-shared-lock-base-"));
+    const previousLockBase = process.env.AMADEUS_LOCK_BASE_DIR;
+    const target = join(external, "sentinel.txt");
+    try {
+      writeFileSync(target, "CLONE_ID_SENTINEL_MUST_NOT_CHANGE\n", "utf-8");
+      const cloneId = join(project.sourceRoot, `.${UPSTREAM_FILE_PREFIX}clone-id`);
+      rmSync(cloneId, { force: true });
+      symlinkSync(target, cloneId);
+
+      process.env.AMADEUS_LOCK_BASE_DIR = sharedLockBase;
+      const projectLock = auditLockDir(project.projectDir);
+      const occupiedLock = auditLockDir(collidingProjectDir);
+      expect(collidingProjectDir).not.toBe(project.projectDir);
+      expect(occupiedLock).toBe(projectLock);
+      mkdirSync(occupiedLock);
+      writeFileSync(
+        join(occupiedLock, "owner.json"),
+        JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin) }),
+        "utf-8",
+      );
+
+      const collided = migrateWithEnv(
+        project,
+        { AMADEUS_LOCK_BASE_DIR: sharedLockBase },
+        "--apply",
+      );
+      expect(collided.status).toBe(1);
+      expect(collided.stdout).toContain("Failed to acquire audit lock after retries");
+      expect(parseReport(collided).evidence.rollback).toEqual({
+        attempted: true,
+        restored: true,
+      });
+
+      const result = migrateWithTool(project, installedMigrator, "--apply");
+
+      expectSuccessfulMigration(result, {
+        cloneIdLogicalPath: relative(project.projectDir, cloneId),
+        cloneIdTargetPath: target,
+      });
+      expect(parseReport(result).evidence.doctor?.status).toBe("passed");
+    } finally {
+      if (previousLockBase === undefined) {
+        delete process.env.AMADEUS_LOCK_BASE_DIR;
+      } else {
+        process.env.AMADEUS_LOCK_BASE_DIR = previousLockBase;
+      }
+      rmSync(external, { recursive: true, force: true });
+      rmSync(sharedLockBase, { recursive: true, force: true });
+      rmSync(collisionRoot, { recursive: true, force: true });
     }
   });
 

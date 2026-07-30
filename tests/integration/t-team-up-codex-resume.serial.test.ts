@@ -121,6 +121,7 @@ function createCliFixture() {
   const bin = join(root, "bin");
   const joinLog = join(root, "join.log");
   const herdrState = join(root, "herdr-state");
+  const safetyWaitBarrierDir = join(root, "safety-wait-barrier");
   // agmsg readiness stub for the Issue #1384 watcher verification that runs on
   // the claude + agmsg launch path: a self-contained agmsg_ready_path and a run
   // dir the fake herdr `pane run` touches to simulate each watcher arming.
@@ -130,6 +131,7 @@ function createCliFixture() {
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
   mkdirSync(herdrState, { recursive: true });
+  mkdirSync(safetyWaitBarrierDir, { recursive: true });
   mkdirSync(readyDir, { recursive: true });
   mkdirSync(join(repo, "tools"), { recursive: true });
   // Role-only stub (drops the team key) so a member's sentinel is independent of
@@ -146,15 +148,73 @@ function createCliFixture() {
   writeFileSync(join(repo, "README.md"), "fixture\n");
   writeFileSync(
     join(repo, "tools", "team-up-codex-safety-wait.ts"),
-    `const args = process.argv.slice(2);
+    `import { renameSync } from "node:fs";
+import { join } from "node:path";
+
+const args = process.argv.slice(2);
 if (args[0] === "production-enabled") process.exit(0);
 const roleIndex = args.indexOf("--role");
 const role = roleIndex >= 0 ? args[roleIndex + 1] : "";
+const runIndex = args.indexOf("--run");
+const run = runIndex >= 0 ? args[runIndex + 1] : "";
+const recordIndex = args.indexOf("--run-record");
+const runRecord = recordIndex >= 0 ? args[recordIndex + 1] : "";
+const member = role === "leader" ? "leader" : \`engineer-\${role.slice(1)}\`;
+const memberRecord = join(runRecord, "members", member);
+const readyPath = join(memberRecord, "safety-wait.ready");
 if (args[0] === "role-ready") {
+  if (process.env.FAKE_SAFETY_WAIT_CREATE_STALE_ROLE === role) {
+    await Bun.write(
+      readyPath,
+      \`\${JSON.stringify({ schemaVersion: 1, run: "stale-run", role, pid: 42 })}\\n\`,
+    );
+  }
   process.exit(process.env.FAKE_SAFETY_WAIT_ROLE_READY_FAIL_ROLE === role ? 9 : 0);
 }
+if (args[0] === "ready-valid") {
+  const pidIndex = args.indexOf("--pid");
+  const pid = pidIndex >= 0 ? Number(args[pidIndex + 1]) : Number.NaN;
+  try {
+    const evidence = await Bun.file(readyPath).json();
+    process.exit(
+      evidence.schemaVersion === 1 &&
+        evidence.run === run &&
+        evidence.role === role &&
+        evidence.pid === pid
+        ? 0
+        : 3,
+    );
+  } catch {
+    process.exit(3);
+  }
+}
 if (args[0] !== "supervise") process.exit(2);
-if (process.env.FAKE_SAFETY_WAIT_FAIL_ROLE === role) process.exit(9);
+if (process.env.FAKE_SAFETY_WAIT_FAIL_ROLE === role) {
+  const barrier = process.env.FAKE_SAFETY_WAIT_BARRIER_DIR;
+  if (!barrier) process.exit(9);
+  await Bun.write(join(barrier, \`\${role}.alive\`), "");
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await Bun.file(join(barrier, \`\${role}.release\`)).exists()) process.exit(9);
+    await Bun.sleep(25);
+  }
+  process.exit(9);
+}
+if (process.env.FAKE_SAFETY_WAIT_NEVER_READY_ROLE === role) {
+  process.on("SIGTERM", () => process.exit(0));
+  await new Promise(() => {});
+}
+if (
+  process.env.FAKE_SAFETY_WAIT_REQUIRE_STALE_REMOVED_ROLE === role &&
+  (await Bun.file(readyPath).exists())
+) {
+  process.exit(8);
+}
+const readyTemp = \`\${readyPath}.\${process.pid}.tmp\`;
+await Bun.write(
+  readyTemp,
+  \`\${JSON.stringify({ schemaVersion: 1, run, role, pid: process.pid })}\\n\`,
+);
+renameSync(readyTemp, readyPath);
 process.on("SIGTERM", () => process.exit(0));
 setInterval(() => {}, 1_000);
 `,
@@ -228,6 +288,26 @@ esac
   );
   chmodSync(herdr, 0o755);
 
+  const ps = join(bin, "ps");
+  writeFileSync(
+    ps,
+    `#!/usr/bin/env bash
+set -eu
+output=$(/bin/ps "$@")
+printf '%s\n' "$output"
+role="\${FAKE_SAFETY_WAIT_FAIL_ROLE:-}"
+barrier="\${FAKE_SAFETY_WAIT_BARRIER_DIR:-}"
+if [ -n "$role" ] && [ -n "$barrier" ] && printf '%s' "$output" | grep -F -- "--role $role" >/dev/null; then
+  if [ -e "$barrier/$role.probed" ]; then
+    : >"$barrier/$role.release"
+  else
+    : >"$barrier/$role.probed"
+  fi
+fi
+`,
+  );
+  chmodSync(ps, 0o755);
+
   const open = join(bin, "open");
   writeFileSync(open, "#!/usr/bin/env bash\nexit 0\n");
   chmodSync(open, 0o755);
@@ -267,6 +347,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     TEAM_SESSION: "amadeus-team-test",
     FAKE_JOIN_LOG: joinLog,
     FAKE_HERDR_STATE: herdrState,
+    FAKE_SAFETY_WAIT_BARRIER_DIR: safetyWaitBarrierDir,
     // Pin the launch backend to the fake herdr by absolute path (variable
     // injection, not PATH order) so the suite never touches a real herdr and
     // is insensitive to the host's TEAM_MUX/HERDR (#1020).
@@ -285,7 +366,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     PATH: `${bin}:${process.env.PATH}`,
   };
 
-  return { base, env, herdrState, joinLog, repo, state };
+  return { base, env, herdrState, joinLog, repo, safetyWaitBarrierDir, state };
 }
 
 describe("team-up run lifecycle", () => {
@@ -557,6 +638,22 @@ printf '{"result":{"agents":[]}}\\n'
       const freshPids = readPids();
       expect(new Set(freshPids).size).toBe(7);
       for (const pid of freshPids) expect(() => process.kill(pid, 0)).not.toThrow();
+      for (const [index, member] of members.entries()) {
+        const role = index === 0 ? "leader" : `e${index}`;
+        expect(
+          JSON.parse(
+            readFileSync(
+              join(runRecord, "members", member, "safety-wait.ready"),
+              "utf8",
+            ),
+          ),
+        ).toEqual({
+          schemaVersion: 1,
+          run: "run-001",
+          role,
+          pid: freshPids[index],
+        });
+      }
 
       const resumed = Bun.spawnSync({
         cmd: ["bash", TEAM_UP, "-c"],
@@ -576,8 +673,42 @@ printf '{"result":{"agents":[]}}\\n'
       expect(killed.exitCode, killed.stderr.toString()).toBe(0);
       for (const pid of freshPids) expect(() => process.kill(pid, 0)).toThrow();
       for (const member of members) {
-        expect(existsSync(join(runRecord, "members", member, "safety-wait.pid"))).toBe(false);
+        const memberRecord = join(runRecord, "members", member);
+        expect(existsSync(join(memberRecord, "safety-wait.pid"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.ready"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.lock"))).toBe(false);
       }
+    } finally {
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  test("a stale safety-wait ready marker is removed before supervisor startup", () => {
+    const fixture = createCliFixture();
+    const runRecord = join(fixture.state, "runs", "run-001");
+    const memberRecord = join(runRecord, "members", "engineer-3");
+
+    try {
+      const result = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--codex"],
+        env: {
+          ...fixture.env,
+          FAKE_SAFETY_WAIT_CREATE_STALE_ROLE: "e3",
+          FAKE_SAFETY_WAIT_REQUIRE_STALE_REMOVED_ROLE: "e3",
+        },
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(result.exitCode, result.stderr.toString()).toBe(0);
+      const pid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
+      expect(
+        JSON.parse(readFileSync(join(memberRecord, "safety-wait.ready"), "utf8")),
+      ).toEqual({
+        schemaVersion: 1,
+        run: "run-001",
+        role: "e3",
+        pid,
+      });
     } finally {
       Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
     }
@@ -653,7 +784,7 @@ printf '{"result":{"agents":[]}}\\n'
     expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
     const ownedPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
     const foreign = Bun.spawn({
-      cmd: ["bun", join(fixture.repo, "tools", "team-up-codex-safety-wait.ts"), "supervise", "--role", "leader"],
+      cmd: ["bun", "-e", "setInterval(() => {}, 1_000)"],
       env: fixture.env,
       stderr: "ignore",
       stdout: "ignore",
@@ -729,7 +860,7 @@ printf '{"result":{"agents":[]}}\\n'
     }
   });
 
-  test("a safety-wait launch failure cleans every started supervisor", () => {
+  test("a safety-wait exit after the liveness probe fails launch and cleans every started supervisor", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP, "--codex"],
@@ -738,19 +869,65 @@ printf '{"result":{"agents":[]}}\\n'
       stdout: "pipe",
     });
 
-    expect(result.exitCode).not.toBe(0);
-    expect(result.stderr.toString()).toContain("failed to start for e3");
-    const runRecord = join(fixture.state, "runs", "run-001");
-    for (const member of [
-      "leader",
-      "engineer-1",
-      "engineer-2",
-      "engineer-3",
-      "engineer-4",
-      "engineer-5",
-      "engineer-6",
-    ]) {
-      expect(existsSync(join(runRecord, "members", member, "safety-wait.pid"))).toBe(false);
+    try {
+      expect(existsSync(join(fixture.safetyWaitBarrierDir, "e3.probed"))).toBe(true);
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.toString()).toContain("early-exit");
+      expect(result.stderr.toString()).toContain("waiting for ready");
+      const runRecord = join(fixture.state, "runs", "run-001");
+      for (const member of [
+        "leader",
+        "engineer-1",
+        "engineer-2",
+        "engineer-3",
+        "engineer-4",
+        "engineer-5",
+        "engineer-6",
+      ]) {
+        const memberRecord = join(runRecord, "members", member);
+        expect(existsSync(join(memberRecord, "safety-wait.pid"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.lock"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.ready"))).toBe(false);
+      }
+    } finally {
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  test("a safety-wait readiness timeout identifies the role and cleans every startup asset", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: {
+        ...fixture.env,
+        FAKE_SAFETY_WAIT_NEVER_READY_ROLE: "e3",
+        SAFETY_WAIT_READY_TIMEOUT_SECONDS: "1",
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    try {
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.toString()).toContain("timeout");
+      expect(result.stderr.toString()).toContain("waiting for ready for e3");
+      const runRecord = join(fixture.state, "runs", "run-001");
+      for (const member of [
+        "leader",
+        "engineer-1",
+        "engineer-2",
+        "engineer-3",
+        "engineer-4",
+        "engineer-5",
+        "engineer-6",
+      ]) {
+        const memberRecord = join(runRecord, "members", member);
+        expect(existsSync(join(memberRecord, "safety-wait.pid"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.lock"))).toBe(false);
+        expect(existsSync(join(memberRecord, "safety-wait.ready"))).toBe(false);
+      }
+    } finally {
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
     }
   });
 

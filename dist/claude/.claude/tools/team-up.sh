@@ -57,6 +57,9 @@ RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 HERDR="${HERDR:-herdr}"
 SAFETY_WAIT_HELPER="${SAFETY_WAIT_HELPER:-$TOOL_DIR/team-up-codex-safety-wait.ts}"
+# Maximum time to wait for each Codex safety-wait supervisor to publish exact
+# run/role/PID readiness. Tests shorten this bounded wait through the env seam.
+SAFETY_WAIT_READY_TIMEOUT_SECONDS="${SAFETY_WAIT_READY_TIMEOUT_SECONDS:-10}"
 TEAM_PREREQUISITE_TOOLS="herdr agmsg"
 HERDR_INSTALL_URL="https://herdr.dev"
 AGMSG_INSTALL_URL="https://github.com/j5ik2o/agmsg"
@@ -305,6 +308,41 @@ safety_wait_role_for_member() {
   fi
 }
 
+safety_wait_cleanup_files() {
+  local member_record="$1"
+  rm -f "$member_record/safety-wait.pid"
+  rm -f "$member_record/safety-wait.ready" "$member_record"/safety-wait.ready.*.tmp
+  rm -rf -- "$member_record/safety-wait.lock"
+}
+
+safety_wait_ready_matches() {
+  local pid="$1" run_record="$2" role="$3" session run_id
+  session="$(cat "$run_record/session" 2>/dev/null)" || return 1
+  run_id="$(basename "$run_record")"
+  bun "$SAFETY_WAIT_HELPER" ready-valid \
+    --session "$session" --run "$run_id" --role "$role" \
+    --run-record "$run_record" --pid "$pid" >/dev/null 2>&1
+}
+
+wait_for_safety_wait_ready() {
+  local pid="$1" run_record="$2" role="$3" deadline
+  deadline=$((SECONDS + SAFETY_WAIT_READY_TIMEOUT_SECONDS))
+  while true; do
+    if ! safety_wait_process_matches "$pid" "$run_record" "$role"; then
+      echo "ERROR: safety-wait supervisor early-exit while waiting for ready for $role" >&2
+      return 1
+    fi
+    if safety_wait_ready_matches "$pid" "$run_record" "$role"; then
+      return 0
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "ERROR: safety-wait supervisor timeout while waiting for ready for $role" >&2
+      return 1
+    fi
+    sleep 0.05
+  done
+}
+
 stop_safety_wait_supervisors() {
   local run_record="$1" m role member_record owner state i
   [ -d "$run_record/members" ] || return 0
@@ -320,20 +358,20 @@ stop_safety_wait_supervisors() {
   for m in $(members_for "$(record_size "$run_record")"); do
     role="$(safety_wait_role_for_member "$m")"
     member_record="$run_record/members/$m"
-    [ -f "$member_record/safety-wait.lock/owner" ] || continue
-    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
-    if safety_wait_process_matches "$owner" "$run_record" "$role"; then
-      kill "$owner" 2>/dev/null || true
-      for i in $(seq 1 20); do
-        kill -0 "$owner" 2>/dev/null || break
-        sleep 0.05
-      done
+    if [ -f "$member_record/safety-wait.lock/owner" ]; then
+      owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
       if safety_wait_process_matches "$owner" "$run_record" "$role"; then
-        kill -KILL "$owner" 2>/dev/null || true
+        kill "$owner" 2>/dev/null || true
+        for i in $(seq 1 20); do
+          kill -0 "$owner" 2>/dev/null || break
+          sleep 0.05
+        done
+        if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+          kill -KILL "$owner" 2>/dev/null || true
+        fi
       fi
     fi
-    rm -f "$member_record/safety-wait.pid"
-    rm -rf -- "$member_record/safety-wait.lock"
+    safety_wait_cleanup_files "$member_record"
   done
   return 0
 }
@@ -393,22 +431,34 @@ safety_wait_start_state() {
 }
 
 rollback_safety_wait_starts() {
-  local run_record="$1" acquired="$2" m role member_record owner
+  local run_record="$1" acquired="$2" m role member_record owner i
   for m in $acquired; do
     role="$(safety_wait_role_for_member "$m")"
     member_record="$run_record/members/$m"
     owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
     if safety_wait_process_matches "$owner" "$run_record" "$role"; then
       kill "$owner" 2>/dev/null || true
+      for i in $(seq 1 20); do
+        kill -0 "$owner" 2>/dev/null || break
+        sleep 0.05
+      done
+      if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+        kill -KILL "$owner" 2>/dev/null || true
+      fi
     fi
-    rm -f "$member_record/safety-wait.pid"
-    rm -rf -- "$member_record/safety-wait.lock"
+    safety_wait_cleanup_files "$member_record"
   done
 }
 
 start_safety_wait_supervisors() {
-  local m role member_record pid lock_dir state acquired=""
+  local m role member_record pid lock_dir state owner acquired=""
   [ "$RUNTIME" = "codex" ] || return 0
+  case "$SAFETY_WAIT_READY_TIMEOUT_SECONDS" in
+  "" | *[!0-9]* | 0)
+    echo "ERROR: SAFETY_WAIT_READY_TIMEOUT_SECONDS must be a positive integer" >&2
+    return 1
+    ;;
+  esac
   [ -f "$SAFETY_WAIT_HELPER" ] || {
     echo "ERROR: missing Codex safety-wait helper: $SAFETY_WAIT_HELPER" >&2
     return 1
@@ -423,7 +473,8 @@ start_safety_wait_supervisors() {
       return 1
     fi
     if [ "$state" != "owned-live" ] && ! bun "$SAFETY_WAIT_HELPER" role-ready \
-      --session "$S" --role "$role" --herdr "$HERDR" >/dev/null 2>&1; then
+      --session "$S" --run "$RUN_ID" --role "$role" --run-record "$RUN_RECORD" \
+      --herdr "$HERDR" >/dev/null 2>&1; then
       echo "ERROR: safety-wait role pane is not ready for $role" >&2
       return 1
     fi
@@ -435,9 +486,9 @@ start_safety_wait_supervisors() {
     state="$(safety_wait_start_state "$member_record" "$RUN_RECORD" "$role")"
     [ "$state" = "owned-live" ] && continue
     if [ "$state" = "owner-dead" ]; then
-      rm -f "$member_record/safety-wait.pid"
-      rm -rf -- "$lock_dir"
+      safety_wait_cleanup_files "$member_record"
     fi
+    rm -f "$member_record/safety-wait.ready" "$member_record"/safety-wait.ready.*.tmp
     if ! mkdir "$lock_dir" 2>/dev/null; then
       echo "ERROR: safety-wait owner is ambiguous for $role" >&2
       rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
@@ -456,9 +507,18 @@ start_safety_wait_supervisors() {
     disown 2>/dev/null || true
     printf '%s\n' "$pid" >"$member_record/safety-wait.pid"
     printf '%s\n' "$pid" >"$lock_dir/owner"
-    sleep 0.05
-    if ! safety_wait_process_matches "$pid" "$RUN_RECORD" "$role"; then
-      echo "ERROR: safety-wait supervisor failed to start for $role" >&2
+    if ! wait_for_safety_wait_ready "$pid" "$RUN_RECORD" "$role"; then
+      rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
+      return 1
+    fi
+  done
+  for m in $(members_for "$TEAM_SIZE"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$RUN_RECORD/members/$m"
+    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
+    if ! safety_wait_process_matches "$owner" "$RUN_RECORD" "$role" ||
+      ! safety_wait_ready_matches "$owner" "$RUN_RECORD" "$role"; then
+      echo "ERROR: safety-wait supervisor lost exact ready evidence for $role" >&2
       rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
       return 1
     fi
@@ -612,6 +672,51 @@ valid_run_id() {
   "" | "." | ".." | [!A-Za-z0-9]* | *[!A-Za-z0-9._-]*) return 1 ;;
   *) return 0 ;;
   esac
+}
+
+valid_member_readiness_identity() {
+  valid_run_id "$1" || return 1
+  case "$2" in
+  leader | engineer-[1-6]) ;;
+  *) return 1 ;;
+  esac
+  case "$3" in
+  registered | checked-out | ready) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+member_readiness_payload() {
+  valid_member_readiness_identity "$1" "$2" "$3" || return 1
+  printf '{"schemaVersion":1,"run":"%s","member":"%s","stage":"%s"}\n' "$1" "$2" "$3"
+}
+
+member_readiness_payload_matches() {
+  local raw="$1" expected
+  expected="$(member_readiness_payload "$2" "$3" "$4")" || return 1
+  [ "$raw" = "$expected" ]
+}
+
+member_readiness_evidence_matches() {
+  local member_record="$1" run_id="$2" member="$3" stage="$4" raw
+  raw="$(cat "$member_record/$stage" 2>/dev/null)" || return 1
+  member_readiness_payload_matches "$raw" "$run_id" "$member" "$stage"
+}
+
+# Write completion evidence beside its target and rename it into place. A crash
+# can leave only a dot-prefixed temporary file, which the verifier ignores; a
+# final marker is accepted only when its exact run/member/stage payload matches.
+write_member_readiness_evidence() {
+  local member_record="$1" run_id="$2" member="$3" stage="$4" target temp
+  valid_member_readiness_identity "$run_id" "$member" "$stage" || return 1
+  target="$member_record/$stage"
+  temp="$(mktemp "$member_record/.$stage.XXXXXX")" || return 1
+  if member_readiness_payload "$run_id" "$member" "$stage" >"$temp" &&
+    mv -f -- "$temp" "$target"; then
+    return 0
+  fi
+  rm -f -- "$temp"
+  return 1
 }
 
 run_owns_branch() {
@@ -1298,6 +1403,32 @@ rollback_prepared_run() {
   rm -rf -- "$RUN_ROOT" "$RUN_RECORD"
 }
 
+verify_member_readiness() {
+  local m member_record wt branch missing="" stage
+  for m in $(members_for "$TEAM_SIZE"); do
+    member_record="$RUN_RECORD/members/$m"
+    wt="$RUN_ROOT/$m"
+    branch="team/$RUN_ID/$m"
+    stage=""
+    if ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" registered; then
+      stage="registration"
+    elif ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" checked-out; then
+      stage="checkout"
+    elif [ "$(cat "$member_record/path" 2>/dev/null || true)" != "$wt" ] ||
+      [ "$(cat "$member_record/branch" 2>/dev/null || true)" != "$branch" ] ||
+      ! member_readiness_evidence_matches "$member_record" "$RUN_ID" "$m" ready; then
+      stage="record"
+    fi
+    if [ -n "$stage" ]; then
+      missing="$missing $m($stage)"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    echo "ERROR: worktree creation incomplete:$missing" >&2
+    return 1
+  fi
+}
+
 handle_exit() {
   local rc=$?
   trap - EXIT
@@ -1313,7 +1444,8 @@ handle_exit() {
 }
 
 create_run() {
-  local base_commit base_ref m wt branch pending registered missing resolved
+  local base_commit base_ref m wt branch pending pending_pids checkout_pid
+  local member_record registered_path registered_resolved resolved
   base_ref="${BASE_REF:-HEAD}"
   if [ -z "$BASE_REF" ] && [ -n "$(git -C "$REPO" status --porcelain)" ]; then
     echo "ERROR: repository is dirty: $REPO" >&2
@@ -1327,8 +1459,14 @@ create_run() {
   valid_run_id "$RUN_ID" || { echo "ERROR: invalid run ID: $RUN_ID" >&2; return 1; }
   RUN_ROOT="$BASE/runs/$RUN_ID"
   RUN_RECORD="$INSTANCE_DIR/runs/$RUN_ID"
-  [ ! -e "$RUN_ROOT" ] || { echo "ERROR: run worktree directory already exists: $RUN_ROOT" >&2; return 1; }
-  [ ! -e "$RUN_RECORD" ] || { echo "ERROR: run metadata already exists: $RUN_RECORD" >&2; return 1; }
+  [ ! -e "$RUN_ROOT" ] || {
+    echo "ERROR: run worktree directory already exists; refusing stale member readiness evidence: $RUN_ROOT" >&2
+    return 1
+  }
+  [ ! -e "$RUN_RECORD" ] || {
+    echo "ERROR: run metadata already exists; refusing stale member readiness evidence: $RUN_RECORD" >&2
+    return 1
+  }
 
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
@@ -1365,20 +1503,39 @@ create_run() {
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
+    member_record="$RUN_RECORD/members/$m"
     if ! git -C "$REPO" worktree add -q --no-checkout -b "$branch" "$wt" "$base_commit"; then
       echo "ERROR: worktree registration failed for $m: $wt" >&2
+      return 1
+    fi
+    if ! registered_path="$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)"; then
+      echo "ERROR: worktree registration verification failed for $m: $wt" >&2
+      return 1
+    fi
+    resolved="$(cd "$wt" 2>/dev/null && pwd -P)" || resolved=""
+    registered_resolved="$(cd "$registered_path" 2>/dev/null && pwd -P)" || registered_resolved=""
+    if [ -z "$resolved" ] || [ "$registered_resolved" != "$resolved" ]; then
+      echo "ERROR: worktree registration verification failed for $m: $wt" >&2
+      return 1
+    fi
+    # Registration remains inside the serial section until its per-member
+    # evidence is durable. The next add must not start before this postprocessing.
+    if ! mkdir -p "$member_record" ||
+      ! write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" registered; then
+      echo "ERROR: worktree registration record failed for $m: $wt" >&2
       return 1
     fi
   done
 
   # Each checkout writes only inside its own worktree, so these do not contend
-  # for .git/worktrees/ the way add does. The record files are written by the
-  # subshell that checked the member out, so their presence means that member's
-  # checkout finished -- which the completion check below relies on.
+  # for .git/worktrees/ the way add does. Each subshell records its own checkout
+  # and only writes ready after both metadata files are durable.
   pending=0
+  pending_pids=""
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
+    member_record="$RUN_RECORD/members/$m"
     (
       if ! git -C "$wt" checkout -q; then
         # One line, self-contained: several subshells write to the same stderr
@@ -1387,43 +1544,33 @@ create_run() {
         echo "ERROR: worktree checkout failed for $m: $wt" >&2
         exit 1
       fi
-      mkdir -p "$RUN_RECORD/members/$m"
-      printf '%s\n' "$wt" >"$RUN_RECORD/members/$m/path"
-      printf '%s\n' "$branch" >"$RUN_RECORD/members/$m/branch"
+      if ! {
+        write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" checked-out &&
+          printf '%s\n' "$wt" >"$member_record/path" &&
+          printf '%s\n' "$branch" >"$member_record/branch" &&
+          write_member_readiness_evidence "$member_record" "$RUN_ID" "$m" ready
+      }; then
+        echo "ERROR: worktree record failed for $m: $wt" >&2
+        exit 1
+      fi
     ) &
+    pending_pids="$pending_pids $!"
     pending=$((pending + 1))
     if [ "$pending" -ge "$WORKTREE_PARALLELISM" ]; then
-      wait
+      for checkout_pid in $pending_pids; do
+        wait "$checkout_pid" || true
+      done
       pending=0
+      pending_pids=""
     fi
   done
-  wait
+  for checkout_pid in $pending_pids; do
+    wait "$checkout_pid" || true
+  done
 
-  # Completion is decided by observing two things, not by collecting subshell
-  # exit codes and not by testing for directories:
-  #
-  #   git registration  -- the worktree is real, not a husk. A directory can
-  #                        exist without git knowing about it.
-  #   the record files  -- the checkout finished. Registration alone no longer
-  #                        implies a populated worktree now that --no-checkout
-  #                        splits the two, so checking only the registry would
-  #                        score an empty worktree as a success.
-  registered="$(git -C "$REPO" worktree list --porcelain | sed -n 's/^worktree //p')"
-  missing=""
-  for m in $(members_for "$TEAM_SIZE"); do
-    resolved="$(cd "$RUN_ROOT/$m" 2>/dev/null && pwd -P)" || resolved=""
-    if [ -z "$resolved" ] || ! printf '%s\n' "$registered" | grep -qxF -- "$resolved"; then
-      missing="$missing $m"
-      continue
-    fi
-    if [ ! -f "$RUN_RECORD/members/$m/path" ] || [ ! -f "$RUN_RECORD/members/$m/branch" ]; then
-      missing="$missing $m"
-    fi
-  done
-  if [ -n "$missing" ]; then
-    echo "ERROR: worktree creation incomplete:$missing" >&2
-    return 1
-  fi
+  # Aggregate durable, identity-bound per-member evidence rather than
+  # reconstructing completion from a single whole-registry snapshot.
+  verify_member_readiness
 }
 
 load_run() {

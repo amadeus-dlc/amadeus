@@ -1,0 +1,13 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c3-260729-open-bug-batch",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Reverse Engineering承認後に新しいIssueをIntentへ追加する場合、承認済みCodeKBを遡及変更せず、そのIssue本文の要求を現行stageの質問票へ正本として固定し、reviewer scope内で追跡可能にする。",
+      "source": "orchestrator"
+    }
+  ]
+}

@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import testOnlyPositive from "../fixtures/team-up-codex-safety-wait/test-only-positive.json";
 import {
+  createSafetyWaitReadyEvidence,
   evaluateFingerprint,
   evaluateProductionFingerprint,
   HerdrSafetyWaitAdapter,
   parseSafetyWaitFingerprint,
+  parseSafetyWaitReadyEvidence,
   productionActivationEnabled,
   roleToAgentLabel,
+  safetyWaitReadyEvidenceMatches,
+  safetyWaitReadyPath,
   safetyWaitRunIsActive,
   SafetyWaitSupervisor,
   type SafetyWaitFingerprint,
@@ -21,6 +25,48 @@ function readFingerprint(): SafetyWaitFingerprint {
 const TEST_CONFIRMED_ABSENT_TEXT = "test-only confirmed absence";
 
 describe("team-up Codex safety-wait activation", () => {
+  test("ready evidence is bound to the exact run, role, and supervisor pid", () => {
+    const evidence = createSafetyWaitReadyEvidence("run-001", "e3", 1234);
+
+    expect(evidence).toEqual({
+      schemaVersion: 1,
+      run: "run-001",
+      role: "e3",
+      pid: 1234,
+    });
+    expect(parseSafetyWaitReadyEvidence(evidence)).toEqual(evidence);
+    expect(safetyWaitReadyEvidenceMatches(evidence, "run-001", "e3", 1234)).toBe(true);
+    expect(safetyWaitReadyEvidenceMatches(evidence, "run-002", "e3", 1234)).toBe(false);
+    expect(safetyWaitReadyEvidenceMatches(evidence, "run-001", "e2", 1234)).toBe(false);
+    expect(safetyWaitReadyEvidenceMatches(evidence, "run-001", "e3", 1235)).toBe(false);
+  });
+
+  test("ready evidence rejects incomplete payloads and unsafe identities", () => {
+    expect(parseSafetyWaitReadyEvidence({ schemaVersion: 1, run: "run-001", role: "e3" })).toBeNull();
+    expect(
+      parseSafetyWaitReadyEvidence({
+        schemaVersion: 1,
+        run: "run-001",
+        role: "e3",
+        pid: 1234,
+        extra: true,
+      }),
+    ).toBeNull();
+    expect(() => createSafetyWaitReadyEvidence("../escape", "e3", 1234)).toThrow();
+    expect(() => createSafetyWaitReadyEvidence("run-001", "e7", 1234)).toThrow();
+    expect(() => createSafetyWaitReadyEvidence("run-001", "e3", 0)).toThrow();
+  });
+
+  test("ready evidence path stays inside the exact member record", () => {
+    expect(safetyWaitReadyPath("/state/runs/run-001", "leader")).toBe(
+      "/state/runs/run-001/members/leader/safety-wait.ready",
+    );
+    expect(safetyWaitReadyPath("/state/runs/run-001", "e3")).toBe(
+      "/state/runs/run-001/members/engineer-3/safety-wait.ready",
+    );
+    expect(() => safetyWaitReadyPath("/state/runs/run-001", "e7")).toThrow();
+  });
+
   test("the test fingerprint schema rejects missing and additional fields", () => {
     const valid = testOnlyPositive as Record<string, unknown>;
     expect(parseSafetyWaitFingerprint(valid)?.id).toBe("test-only-positive");

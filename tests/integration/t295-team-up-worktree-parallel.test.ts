@@ -28,7 +28,15 @@
 // a throwaway git repo. Real FS and real git, hence the integration layer
 // (cid:code-generation:fs-tests-integration-first).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -45,6 +53,15 @@ let shimDir: string;
 /** Absolute path a member's worktree is expected at, for run id "testrun". */
 function memberPath(member: string): string {
   return join(base, "runs", "testrun", member);
+}
+
+function expectReadinessEvidence(record: string, member: string, stage: string): void {
+  expect(JSON.parse(readFileSync(join(record, stage), "utf8"))).toEqual({
+    schemaVersion: 1,
+    run: "testrun",
+    member,
+    stage,
+  });
 }
 
 function git(args: string[], cwd: string) {
@@ -98,6 +115,32 @@ if [ "\${3:-}" = "checkout" ]; then
   WT="\${2:-}"
   MEMBER="\${WT##*/}"
   ${body}
+fi
+exec ${REAL_GIT} "$@"
+`,
+    { mode: 0o755 },
+  );
+}
+
+/**
+ * Delay one member's visibility in the first whole-registry observation.
+ * Every `worktree add` and checkout still runs through real git; only the first
+ * `worktree list --porcelain` omits the selected member. A second observation
+ * sees the complete registry.
+ */
+function installDelayedRegistryObservationShim(member: string) {
+  const observed = join(work, "registry-observed");
+  writeFileSync(
+    join(shimDir, "git"),
+    `#!/usr/bin/env bash
+if [ "\${3:-}" = "worktree" ] && [ "\${4:-}" = "list" ] && [ ! -e "${observed}" ]; then
+  : >"${observed}"
+  set -o pipefail
+  ${REAL_GIT} "$@" | awk -v member="${member}" '
+    BEGIN { RS = ""; ORS = "\\n\\n" }
+    index("\\n" $0 "\\n", "\\nbranch refs/heads/team/testrun/" member "\\n") == 0 { print }
+  '
+  exit $?
 fi
 exec ${REAL_GIT} "$@"
 `,
@@ -192,6 +235,10 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
       const record = join(state, "instances/default/runs/testrun/members", m);
       expect(readFileSync(join(record, "path"), "utf8").trim(), m).toBe(memberPath(m));
       expect(readFileSync(join(record, "branch"), "utf8").trim(), m).toBe(`team/testrun/${m}`);
+      expectReadinessEvidence(record, m, "registered");
+      expectReadinessEvidence(record, m, "checked-out");
+      expectReadinessEvidence(record, m, "ready");
+      expect(readdirSync(record).filter((name) => name.startsWith(".")), m).toEqual([]);
       expect(registered, m).toContain(`${m}\n`);
     }
   });
@@ -263,6 +310,63 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
   });
 });
 
+describe("team-up aggregates member readiness (Issue #1663)", () => {
+  test("a delayed registry observation cannot erase completed member evidence (FR-1663-1, FR-1663-2)", () => {
+    installDelayedRegistryObservationShim("engineer-4");
+
+    const result = runLib(`TEAM_SIZE=6; create_run`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+
+    const memberRecord = join(state, "instances/default/runs/testrun/members/engineer-4");
+    expectReadinessEvidence(memberRecord, "engineer-4", "registered");
+    expectReadinessEvidence(memberRecord, "engineer-4", "checked-out");
+    expectReadinessEvidence(memberRecord, "engineer-4", "ready");
+
+    // The shim only delayed the aggregate observer. Real git and the record
+    // confirm engineer-4 completed, so a failure would be a false negative.
+    expect(git(["worktree", "list", "--porcelain"], repo)).toContain("engineer-4\n");
+    expect(readFileSync(join(memberRecord, "path"), "utf8").trim()).toBe(memberPath("engineer-4"));
+    expect(readFileSync(join(memberRecord, "branch"), "utf8").trim()).toBe("team/testrun/engineer-4");
+  });
+
+  test("tampered identity-bound readiness is rejected with member-stage diagnostics", () => {
+    const result = runLib(`TEAM_SIZE=2; create_run
+printf '%s\\n' '{"schemaVersion":1,"run":"old-run","member":"engineer-2","stage":"ready"}' >"$RUN_RECORD/members/engineer-2/ready"
+verify_member_readiness`);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("engineer-2(record)");
+  });
+
+  test("a crash temporary or partial final marker is not completion evidence", () => {
+    const result = runLib(`TEAM_SIZE=2; create_run
+member_record="$RUN_RECORD/members/engineer-2"
+rm -f "$member_record/ready"
+member_readiness_payload "$RUN_ID" engineer-2 ready >"$member_record/.ready.crash.tmp"
+printf '%s' '{"schemaVersion":1' >"$member_record/ready"
+verify_member_readiness`);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("engineer-2(record)");
+  });
+
+  test("a crashed run record is refused instead of reusing stale member evidence", () => {
+    const staleRecord = join(state, "instances/default/runs/testrun/members/leader");
+    mkdirSync(staleRecord, { recursive: true });
+    writeFileSync(
+      join(staleRecord, "ready"),
+      '{"schemaVersion":1,"run":"testrun","member":"leader","stage":"ready"}\n',
+    );
+
+    const result = runLib(`TEAM_SIZE=2; create_run`);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain(
+      "run metadata already exists; refusing stale member readiness evidence",
+    );
+    expect(existsSync(join(staleRecord, "ready"))).toBe(true);
+  });
+});
+
 describe("team-up completion is judged by git registration (Issue #1478)", () => {
   // BR-P13 / BR-P14: a failed member makes create_run return non-zero, and the
   // stderr line names both the member and its path on one line — several
@@ -275,7 +379,7 @@ describe("team-up completion is judged by git registration (Issue #1478)", () =>
     const stderr = result.stderr.toString();
     expect(stderr).toContain(`ERROR: worktree checkout failed for engineer-2: ${memberPath("engineer-2")}`);
     expect(stderr).toContain("worktree creation incomplete");
-    expect(stderr).toContain("engineer-2");
+    expect(stderr).toContain("engineer-2(checkout)");
   });
 
   // Registration is serial, so its failure stops the loop rather than being
@@ -294,21 +398,19 @@ describe("team-up completion is judged by git registration (Issue #1478)", () =>
   // finished, so the completion check reads the record files too — git's
   // registry alone no longer proves a member is done.
   //
-  // Injected by putting a *file* where engineer-3's record directory belongs:
-  // the mkdir -p fails, so the record writes fail, while the worktree itself is
-  // registered and populated exactly like every other member.
+  // Injected by putting a directory where engineer-3's path file belongs, so
+  // that metadata write fails while registration and checkout both succeed.
   test("registration alone is not success without the record files (D-R4)", () => {
     const members = join(state, "instances/default/runs/testrun/members");
     installCheckoutShim(`if [ "$MEMBER" = "engineer-3" ]; then
-    mkdir -p "${members}"
-    : >"${members}/engineer-3"
+    mkdir -p "${members}/engineer-3/path"
   fi`);
 
     const result = runLib(`TEAM_SIZE=6; create_run`);
     expect(result.exitCode).not.toBe(0);
     const stderr = result.stderr.toString();
     expect(stderr).toContain("worktree creation incomplete");
-    expect(stderr).toContain("engineer-3");
+    expect(stderr).toContain("engineer-3(record)");
     // The worktree really was created and registered — the failure is the
     // missing completion evidence, not a missing worktree.
     expect(git(["worktree", "list", "--porcelain"], repo)).toContain("engineer-3\n");

@@ -63,13 +63,17 @@ Ordinary `open` remains the explicit activation path.
 phase boundary and before choosing the mirror directive.
 
 - Invalid resolution emits an error directive and stops routing.
-- `autoMirror: "auto"` plus an existing Mirror Issue emits a print directive
-  that runs `sync` and records the boundary receipt.
-- Otherwise the engine emits an ask directive. When no Mirror Issue exists,
-  `create` is included as a choice.
+- `autoMirror: "auto"` emits a print directive that runs the fixed lifecycle
+  boundary command. The mirror coordinator selects guarded `create` when no
+  Mirror Issue exists and guarded `sync` when one does.
+- `autoMirror: "prompt"` is the only mode that emits an ask directive. When no
+  Mirror Issue exists, `create` is included alongside `sync` and `skip`.
+- `autoMirror: "off"` emits neither a mirror question nor a GitHub mutation.
 
-The receipt protocol makes interrupted automatic synchronization retry-safe:
-`pending` is recorded before synchronization and `completed` after success.
+The durable identity and receipt protocol makes interrupted automatic create
+or sync retry-safe: `pending` is recorded before the lifecycle operation and
+`completed` after success. If remote create succeeds but local persistence
+fails, retry converges on the same Issue instead of creating a duplicate.
 
 ## Tests
 
@@ -79,8 +83,10 @@ The contract is covered by:
   defaults, path derivation, and reader behavior;
 - `tests/integration/t257-amadeus-mirror-config.integration.test.ts` for real
   filesystem precedence and failure cases;
-- `tests/e2e/t265-engine-boundary.test.ts` for phase-boundary automatic
-  synchronization and receipt recovery.
+- `tests/integration/t265-engine-boundary.integration.test.ts` for all six
+  mode-by-Issue boundary combinations;
+- `tests/e2e/t265-engine-boundary.test.ts` for automatic lifecycle delegation
+  and receipt recovery.
 
 For placement and user examples, see
 [Layered Configuration](../guide/21-layered-config.md).

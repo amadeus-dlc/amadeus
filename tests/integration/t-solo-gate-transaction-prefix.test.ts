@@ -132,7 +132,12 @@ describe("targeted approval prefix arms", () => {
 
   // Append raw audit blocks dated after the reservation's HUMAN_TURN, which is
   // what the prefix counter measures.
-  function appendBlocks(root: string, owner: string, blocks: string[]): void {
+  function appendBlocks(
+    root: string,
+    owner: string,
+    blocks: string[],
+    reservationId: string,
+  ): void {
     const shard = join(owner, "audit", auditShardName(root));
     const later = new Date(Date.now() + 30_000).toISOString();
     const lines = readFileSync(shard, "utf-8")
@@ -154,7 +159,10 @@ describe("targeted approval prefix arms", () => {
           timestamp: new Date(Date.parse(later) + index).toISOString(),
           heading: event,
           event,
-          fields: { Stage: STAGE },
+          fields: {
+            Stage: STAGE,
+            "Presence Reservation Id": reservationId,
+          },
         }),
       );
     }
@@ -176,7 +184,12 @@ describe("targeted approval prefix arms", () => {
 
   test("refuses an ambiguous prefix of two gate approvals", () => {
     const { root, owner, ids } = fallbackFixture();
-    appendBlocks(root, owner, ["GATE_APPROVED", "GATE_APPROVED"]);
+    appendBlocks(
+      root,
+      owner,
+      ["GATE_APPROVED", "GATE_APPROVED"],
+      ids.reservationId,
+    );
     const before = stateFile(owner);
 
     const result = approve(ids);
@@ -211,7 +224,7 @@ describe("targeted approval prefix arms", () => {
     ["a gate approval and a stage completion", ["GATE_APPROVED", "STAGE_COMPLETED"]],
   ] as const)("resumes an open gate that already carries %s", (_label, blocks) => {
     const { root, owner, ids } = fallbackFixture();
-    appendBlocks(root, owner, [...blocks]);
+    appendBlocks(root, owner, [...blocks], ids.reservationId);
 
     const result = approve(ids);
 
@@ -219,6 +232,41 @@ describe("targeted approval prefix arms", () => {
     expect(JSON.parse(result.stdout)).toEqual({ kind: "approved" });
     expect(stateFile(owner)).toContain(`- [x] ${STAGE}`);
     expect(readPresenceReservation(root, ids.reservationId)?.state).toBe("consumed");
+  });
+
+  test("does not reuse unrelated same-stage approval records as a prefix", () => {
+    const { root, owner, ids } = fallbackFixture();
+    appendBlocks(
+      root,
+      owner,
+      ["GATE_APPROVED", "STAGE_COMPLETED"],
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    const result = approve(ids);
+
+    expect(result.exited).toBe(false);
+    const audit = readFileSync(
+      join(owner, "audit", auditShardName(root)),
+      "utf-8",
+    );
+    const own = audit
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line) as {
+        event: string;
+        fields?: Record<string, string>;
+      })
+      .filter(
+        (record) =>
+          record.fields?.["Presence Reservation Id"] === ids.reservationId,
+      );
+    expect(own.filter((record) => record.event === "GATE_APPROVED")).toHaveLength(
+      1,
+    );
+    expect(own.filter((record) => record.event === "STAGE_COMPLETED")).toHaveLength(
+      1,
+    );
   });
 
   test("refuses a completed gate whose approval prefix is not unique", () => {

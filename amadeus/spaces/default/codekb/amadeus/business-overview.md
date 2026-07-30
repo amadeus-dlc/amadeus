@@ -1,6 +1,26 @@
 # ビジネス概要
 
-## Slop cleanup の業務境界（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の業務境界（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+Amadeus は、AI-DLC の Intent を決定的なステージ遷移、監査証跡、隔離された Bolt、複数ハーネスへの同等配布で実行する Bun/TypeScript の CLI 製品である。本 intent は新機能を追加せず、開発者と運用者が「成功」と判断する6つの信頼境界を修復する。6件は1つの `amadeus-bugfix` Intent で追跡する一方、変更・回帰テスト・レビュー可能性を分離するため **1 Issue = 1 Bolt = 1 GitHub Pull Request** とする。作成後の各 Pull Request は [amadeus-dlc/amadeus の Pull Requests](https://github.com/amadeus-dlc/amadeus/pulls) から個別に追跡する。
+
+| Issue | 利用者が失っている信頼 | 回復する業務成果 |
+| --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | book-pack の検証が並列 CI 負荷下でテスト自身の制限時間に先に殺される | pack drift guard の成否を verifier の実結果で判断できる |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 の間欠失敗が status しか示さず、原因調査に必要な stdout/stderr を失う | migration/doctor 境界の失敗を再現時に診断できる |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | Team Mode の並列 checkout が個別失敗を集約せず、最終走査だけで成功判定する | 失敗メンバーと失敗理由を欠落なく報告できる |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | patch coverage の diff と LCOV が異なるソース断面を測りうる | 同一 snapshot に対する coverage 判定を保証できる |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | safety-wait の起動完了を固定50msと PID 生存で推定し、初期化前終了を成功扱いしうる | supervisor の readiness を明示的に確認できる |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | final report が Intent を complete・audit seal・cursor release した後に mirror completion boundary が走るため、最終同期を永続化できない | workflow 完了、mirror 最終同期、audit seal を単一の完了トランザクションとして閉じられる |
+
+### 価値境界と順序制約
+
+- #1667 / #1664 / #1663 は「間欠失敗の原因を推測で閉じない」ことが価値である。診断出力の追加だけで製品根因を修正済みとは扱わず、再現テストから原因を確定する。
+- #1662 / #1336 / #1607 は成功判定の原子性・同一性・readiness を回復する整合性修正であり、成功条件を最終ファイル存在や固定 sleep で代用しない。
+- #1336 と #1663 は同じ `team-up.sh` を変更するため直列に扱い、readiness の基盤を先に直す。#1662 と #1667 は主ファイルが分離しており、独立 Bolt として並行可能である。
+- 進行中の OTel Intent [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は audit/journal/state の完了経路と交差する。#1607 は Construction 前の必須前提、#1664 は Journal v2 の診断契約確定前に着地させるのが安全である。
+
+## Slop cleanup の業務境界（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 Amadeus の業務目的・利用者ジャーニー・公開機能に変更はない。本 intent は、現行挙動を変えずに、誤った移行コメント、状態を二重表現する未使用フィールド、Markdown の空白ノイズを除く内部品質修正である。対象は 5 パス・3 カテゴリに限定し、新機能、API 変更、データ移行、外部サービス操作を伴わない。`v0.1.6`（`68f2d6699ccb8148c0427b1ff56d37116e565f89`）から observed `ca8ff0af40d6250edffe42246d3f5538819c22af` までの 47 コミットを現行断面の確認材料としたが、旧 codekb observed `afb93a825...` は現 HEAD の祖先ではないため差分 base には採用していない。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 

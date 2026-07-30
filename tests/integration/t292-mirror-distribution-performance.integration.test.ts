@@ -3,6 +3,9 @@
 // size: medium
 
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import {
   benchmarkWorkloads,
@@ -93,12 +96,54 @@ describe("t292 distribution performance protocol", () => {
     }
   });
 
-  test("requires three same-image complete replicas and enforces dispersion and budgets", () => {
+  test("keeps rolling runner image versions advisory at the aggregate and CLI seams", () => {
+    const replicas = [
+      replica(10, "20260726.254.1"),
+      replica(10, "20260720.247.2"),
+      replica(10, "20260720.247.2"),
+    ];
+    expect(aggregateMirrorBenchmarks(replicas)).toEqual({
+      findings: [],
+      warnings: [
+        "benchmark runner image version mismatch: 20260720.247.2, 20260726.254.1",
+      ],
+    });
+
+    const root = mkdtempSync(join(tmpdir(), "mirror-benchmark-aggregate-"));
+    try {
+      const paths = replicas.map((current, index) => {
+        const path = join(root, `replica-${index + 1}.json`);
+        writeFileSync(path, JSON.stringify(current));
+        return path;
+      });
+      const result = Bun.spawnSync({
+        cmd: [
+          process.execPath,
+          "scripts/mirror-distribution-benchmark-aggregate.ts",
+          ...paths,
+        ],
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.toString()).toContain(
+        "mirror-distribution-benchmark-aggregate: OK",
+      );
+      expect(result.stderr.toString()).toContain(
+        "warning: benchmark runner image version mismatch: 20260720.247.2, 20260726.254.1",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("requires three runtime-compatible complete replicas and enforces dispersion and budgets", () => {
     expect(aggregateMirrorBenchmarks([
       replica(10),
       replica(12),
       replica(15),
-    ])).toEqual([]);
+    ]).findings).toEqual([]);
     const lowLatencyReplicas = [28, 116, 123].map((p95Ms) => {
       const base = replica(100);
       return {
@@ -109,7 +154,7 @@ describe("t292 distribution performance protocol", () => {
         },
       };
     });
-    expect(aggregateMirrorBenchmarks(lowLatencyReplicas)).toEqual([]);
+    expect(aggregateMirrorBenchmarks(lowLatencyReplicas).findings).toEqual([]);
     const hostedRunnerNoiseReplicas = [
       [27, 36, 3],
       [115, 39, 4],
@@ -126,33 +171,63 @@ describe("t292 distribution performance protocol", () => {
         },
       };
     });
-    expect(aggregateMirrorBenchmarks(hostedRunnerNoiseReplicas)).toEqual([]);
-    expect(aggregateMirrorBenchmarks([replica(), replica()])[0]).toContain(
-      "missing benchmark replica",
-    );
+    expect(
+      aggregateMirrorBenchmarks(hostedRunnerNoiseReplicas).findings,
+    ).toEqual([]);
+    expect(
+      aggregateMirrorBenchmarks([replica(), replica()]).findings[0],
+    ).toContain("missing benchmark replica");
     const incomplete = replica();
     incomplete.workloads.packageWrite.runs = 19;
     expect(aggregateMirrorBenchmarks([
       incomplete,
       replica(),
       replica(),
-    ])).toContain("packageWrite: missing or incomplete workload");
-    expect(aggregateMirrorBenchmarks([
+    ]).findings).toContain("packageWrite: missing or incomplete workload");
+    const mixedVersionWithDispersion = aggregateMirrorBenchmarks([
       replica(10),
       replica(40, "other"),
       replica(250),
-    ])).toEqual(expect.arrayContaining([
-      "benchmark runner image mismatch",
+    ]);
+    expect(mixedVersionWithDispersion.findings).toEqual(expect.arrayContaining([
       expect.stringContaining("dispersion"),
     ]));
+    expect(mixedVersionWithDispersion.findings).not.toContain(
+      "benchmark runner image mismatch",
+    );
+    expect(mixedVersionWithDispersion.warnings).toEqual([
+      "benchmark runner image version mismatch: 20260720.1, other",
+    ]);
     expect(aggregateMirrorBenchmarks([
       replica(3_000),
       replica(3_000),
       replica(3_000),
-    ])).toEqual(expect.arrayContaining([
+    ]).findings).toEqual(expect.arrayContaining([
       expect.stringContaining("docsParity: median p95"),
       expect.stringContaining("digestMatrix: median p95"),
     ]));
+  });
+
+  test("keeps os, arch, and bun mismatches fatal", () => {
+    for (
+      const [field, value] of [
+        ["os", "ubuntu22"],
+        ["arch", "ARM64"],
+        ["bun", "1.3.12"],
+      ] as const
+    ) {
+      const incompatible = replica();
+      incompatible.image[field] = value;
+      const aggregate = aggregateMirrorBenchmarks([
+        replica(),
+        incompatible,
+        replica(),
+      ]);
+      expect(aggregate.findings, field).toContain(
+        "benchmark runner image mismatch",
+      );
+      expect(aggregate.warnings, field).toEqual([]);
+    }
   });
 
   // Series measured on PR #1487, where one replica spiked and the other two
@@ -168,9 +243,9 @@ describe("t292 distribution performance protocol", () => {
         ["packageWrite", [35.0, 542.5, 66.9]],
       ] as [MirrorBenchmarkWorkload, number[]][]
     ) {
-      expect(aggregateMirrorBenchmarks(replicasFor(name, p95Series))).toEqual(
-        [],
-      );
+      expect(
+        aggregateMirrorBenchmarks(replicasFor(name, p95Series)).findings,
+      ).toEqual([]);
     }
   });
 
@@ -184,9 +259,9 @@ describe("t292 distribution performance protocol", () => {
         ["digestMatrix", [47.3, 107.6, 215.4]],
       ] as [MirrorBenchmarkWorkload, number[]][]
     ) {
-      expect(aggregateMirrorBenchmarks(replicasFor(name, p95Series))).toEqual(
-        [],
-      );
+      expect(
+        aggregateMirrorBenchmarks(replicasFor(name, p95Series)).findings,
+      ).toEqual([]);
     }
   });
 
@@ -195,12 +270,14 @@ describe("t292 distribution performance protocol", () => {
   // as the single-replica jitter measured on PR #1487.
   test("still reports dispersion and uniform degradation across every replica", () => {
     expect(
-      aggregateMirrorBenchmarks(replicasFor("digestMatrix", [40, 100, 250])),
+      aggregateMirrorBenchmarks(
+        replicasFor("digestMatrix", [40, 100, 250]),
+      ).findings,
     ).toContain("digestMatrix: replica dispersion around the median exceeds 2.0");
     expect(
       aggregateMirrorBenchmarks(
         replicasFor("digestMatrix", [2_200, 2_400, 2_600]),
-      ),
+      ).findings,
     ).toContain("digestMatrix: median p95 exceeds 2000ms");
   });
 });

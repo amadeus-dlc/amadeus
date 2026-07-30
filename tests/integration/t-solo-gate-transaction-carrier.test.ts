@@ -267,6 +267,9 @@ describe("in-process carrier approval commits", () => {
     expect(ownerState(owner)).toContain(`- [x] ${STAGE}`);
     expect(readFileSync(join(nonOwner, "amadeus-state.md"), "utf-8")).toBe(nonOwnerBefore);
     expect(readPresenceReservation(root, ids.reservationId)?.state).toBe("consumed");
+    expect(ownerAudit(root, owner)).toContain(
+      `"Presence Reservation Id":"${ids.reservationId}"`,
+    );
 
     // Replay: the gate is already completed, so the recovery arm must re-emit
     // "approved" without appending a second GATE_APPROVED.

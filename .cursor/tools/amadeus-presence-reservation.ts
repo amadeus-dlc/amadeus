@@ -1,9 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+} from "node:fs";
 import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
+  activeIntent,
   auditBlockField,
+  getField,
   splitAuditRecords,
   auditShardName,
   auditShards,
@@ -50,6 +58,12 @@ export type ArmReservationInput = {
 export type MintReservationInput = {
   readonly projectDir: string;
   readonly sessionId: string;
+  readonly requireRouteBinding?: boolean;
+  readonly route?: {
+    readonly eventName: string;
+    readonly toolName: string | null;
+    readonly purposeText: string;
+  };
 };
 
 export type MintReservationResult =
@@ -218,6 +232,47 @@ function listReservations(projectDir: string): PresenceReservation[] {
     );
 }
 
+function secureKimiRouteMatches(
+  input: MintReservationInput,
+  marker: PresenceReservation,
+): boolean {
+  // The Kimi capability path always requires an exact carrier-bearing host
+  // event, including human continuations created after a standing grant
+  // becomes invalid. Other harnesses retain the historical route-less
+  // reservation behavior until they opt into the same host contract.
+  if (input.requireRouteBinding !== true) return true;
+  const route = input.route;
+  const isCarrierBearingHostEvent =
+    route !== undefined &&
+    ((route.eventName === "PostToolUse" &&
+      route.toolName === "AskUserQuestion") ||
+      (route.eventName === "UserPromptSubmit" && route.toolName === null));
+  if (
+    route === undefined ||
+    !isCarrierBearingHostEvent ||
+    !route.purposeText.includes(marker.reservationId)
+  ) {
+    return false;
+  }
+  if (activeIntent(input.projectDir, marker.space) !== marker.targetIntentDir) {
+    return false;
+  }
+  const statePath = join(
+    workspaceRoot(input.projectDir),
+    "spaces",
+    marker.space,
+    "intents",
+    marker.targetIntentDir,
+    "amadeus-state.md",
+  );
+  if (!existsSync(statePath)) return false;
+  const state = readFileSync(statePath, "utf-8");
+  return (
+    getField(state, "Current Stage") === marker.stage &&
+    state.includes(`- [?] ${marker.stage}`)
+  );
+}
+
 export function readPresenceReservation(
   projectDir: string,
   reservationId: string,
@@ -225,6 +280,42 @@ export function readPresenceReservation(
   const path = reservationPath(projectDir, reservationId);
   if (!existsSync(path)) return null;
   return parseReservation(readFileSync(path, "utf-8"));
+}
+
+export function findActivePresenceReservation(
+  projectDir: string,
+  sessionId: string,
+): PresenceReservation | null {
+  const sessionDigest = digestSessionId(sessionId);
+  return withAuditLock(projectDir, () => {
+    const active = listReservations(projectDir).filter(
+      (marker) =>
+        marker.sessionDigest === sessionDigest && marker.state !== "consumed",
+    );
+    if (active.length > 1) {
+      throw new Error("Trusted session has ambiguous presence reservations");
+    }
+    return active[0] ?? null;
+  });
+}
+
+export function cancelArmedPresenceReservation(
+  projectDir: string,
+  sessionId: string,
+  reservationId: string,
+): void {
+  const sessionDigest = digestSessionId(sessionId);
+  withAuditLock(projectDir, () => {
+    const marker = readPresenceReservation(projectDir, reservationId);
+    if (marker === null) return;
+    if (
+      marker.sessionDigest !== sessionDigest ||
+      marker.state !== "armed"
+    ) {
+      throw new Error("Only the owning session may cancel an armed reservation");
+    }
+    unlinkSync(reservationPath(projectDir, reservationId));
+  });
 }
 
 // The "at most one active reservation per trusted session" invariant is the
@@ -300,56 +391,71 @@ export function mintArmedPresenceReservation(
   input: MintReservationInput,
 ): MintReservationResult {
   const sessionDigest = digestSessionId(input.sessionId);
-  const active = listReservations(input.projectDir).filter(
-    (marker) =>
-      marker.sessionDigest === sessionDigest && marker.state !== "consumed",
-  );
-  if (active.length === 0) return { kind: "none" };
-  if (active.length !== 1) {
-    throw new Error("Trusted session has ambiguous presence reservations");
-  }
-  const marker = active[0];
-  if (marker.state === "minted") {
-    return { kind: "already-minted", reservation: marker };
-  }
-  resolveTargetIntent(input.projectDir, marker.space, marker.targetIntentId);
-  const minted = withAuditLock(
-    input.projectDir,
-    () => {
-      const matches = reservationHumanTurns(input.projectDir, marker);
-      if (matches.length > 1) {
-        throw new Error("Presence reservation has multiple HUMAN_TURN events");
-      }
-      let provenance = matches[0];
-      if (provenance === undefined) {
-        const result = appendAuditEntryUnlocked(
-          "HUMAN_TURN",
-          { "Presence Reservation Id": marker.reservationId },
+  return withAuditLock(input.projectDir, () => {
+    const observed = findActivePresenceReservation(
+      input.projectDir,
+      input.sessionId,
+    );
+    if (observed === null) return { kind: "none" };
+    resolveTargetIntent(
+      input.projectDir,
+      observed.space,
+      observed.targetIntentId,
+    );
+    return withAuditLock(
+      input.projectDir,
+      () => {
+        const marker = readPresenceReservation(
           input.projectDir,
-          marker.targetIntentDir,
-          marker.space,
+          observed.reservationId,
         );
-        if (!result.appended) {
-          throw new Error("Cannot mint HUMAN_TURN for a completed target intent");
+        if (
+          marker === null ||
+          marker.sessionDigest !== sessionDigest ||
+          marker.state === "consumed" ||
+          !secureKimiRouteMatches(input, marker)
+        ) {
+          return { kind: "none" };
         }
-        provenance = {
-          timestamp: result.timestamp,
-          shard: auditShardName(input.projectDir),
+        if (marker.state === "minted") {
+          return { kind: "already-minted", reservation: marker };
+        }
+        const matches = reservationHumanTurns(input.projectDir, marker);
+        if (matches.length > 1) {
+          throw new Error("Presence reservation has multiple HUMAN_TURN events");
+        }
+        let provenance = matches[0];
+        if (provenance === undefined) {
+          const result = appendAuditEntryUnlocked(
+            "HUMAN_TURN",
+            { "Presence Reservation Id": marker.reservationId },
+            input.projectDir,
+            marker.targetIntentDir,
+            marker.space,
+          );
+          if (!result.appended) {
+            throw new Error(
+              "Cannot mint HUMAN_TURN for a completed target intent",
+            );
+          }
+          provenance = {
+            timestamp: result.timestamp,
+            shard: auditShardName(input.projectDir),
+          };
+        }
+        const next: PresenceReservation = {
+          ...marker,
+          state: "minted",
+          humanTurnTimestamp: provenance.timestamp,
+          humanTurnShard: provenance.shard,
         };
-      }
-      const next: PresenceReservation = {
-        ...marker,
-        state: "minted",
-        humanTurnTimestamp: provenance.timestamp,
-        humanTurnShard: provenance.shard,
-      };
-      writeReservation(input.projectDir, next);
-      return next;
-    },
-    marker.targetIntentDir,
-    marker.space,
-  );
-  return { kind: "minted", reservation: minted };
+        writeReservation(input.projectDir, next);
+        return { kind: "minted", reservation: next };
+      },
+      observed.targetIntentDir,
+      observed.space,
+    );
+  });
 }
 
 export function consumePresenceReservation(
@@ -448,6 +554,8 @@ export function hostSessionCapability(
 export type MintHumanPresenceInput = {
   readonly projectDir: string;
   readonly capability: HostSessionCapability;
+  readonly requireReservationRoute?: boolean;
+  readonly route?: MintReservationInput["route"];
 };
 
 // The canonical presence mint. `available` sessions first try their own armed
@@ -459,6 +567,8 @@ export function mintHumanPresence(input: MintHumanPresenceInput): void {
     const reservation = mintArmedPresenceReservation({
       projectDir: input.projectDir,
       sessionId: input.capability.sessionId,
+      requireRouteBinding: input.requireReservationRoute === true,
+      ...(input.route === undefined ? {} : { route: input.route }),
     });
     // Only the turn that actually mints the owner-targeted HUMAN_TURN skips the
     // ordinary append. `already-minted` falls through: the reservation holds its
@@ -504,9 +614,17 @@ export function targetedApprovalEvidence(
       continue;
     }
     if (timestamp === null || Date.parse(timestamp) < humanAt) continue;
-    if (event === "GATE_APPROVED" && auditBlockField(block, "Grant Id") === null) {
+    if (
+      event === "GATE_APPROVED" &&
+      auditBlockField(block, "Presence Reservation Id") ===
+        marker.reservationId
+    ) {
       gateApproved++;
-    } else if (event === "STAGE_COMPLETED") {
+    } else if (
+      event === "STAGE_COMPLETED" &&
+      auditBlockField(block, "Presence Reservation Id") ===
+        marker.reservationId
+    ) {
       stageCompleted++;
     }
   }

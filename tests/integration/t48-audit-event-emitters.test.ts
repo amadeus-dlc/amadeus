@@ -318,6 +318,33 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
       const auditWriter = functionBody("emitApprovalAudit", file);
       if (auditWriter !== null) live += `\n${decommented(auditWriter)}`;
     }
+    const targetedGateHandlers: Readonly<Record<string, string | undefined>> = {
+      handleGateStart: "gateStartForTarget",
+      handleReject: "rejectForTarget",
+      handleRevise: "reviseForTarget",
+    };
+    const targetedGateHandler = targetedGateHandlers[handler];
+    if (
+      targetedGateHandler !== undefined &&
+      new RegExp(`\\b${targetedGateHandler}\\b`).test(live)
+    ) {
+      const transaction = functionBody(targetedGateHandler, file);
+      if (transaction !== null) live += `\n${decommented(transaction)}`;
+    }
+    if (
+      handler === "handleCompleteWorkflow" &&
+      /\bcompleteWorkflowForTarget\b/.test(live)
+    ) {
+      const transaction = functionBody("completeWorkflowForTarget", file);
+      if (transaction !== null) live += `\n${decommented(transaction)}`;
+    }
+    if (
+      handler === "handleCompleteWorkflow" &&
+      /\bemitWorkflowCompletionAuditRows\(/.test(live)
+    ) {
+      const auditWriter = functionBody("emitWorkflowCompletionAuditRows", file);
+      if (auditWriter !== null) live += `\n${decommented(auditWriter)}`;
+    }
     const missing: string[] = [];
     for (const event of events) {
       // .sh allows the event literal anywhere inside the emission call (multi-

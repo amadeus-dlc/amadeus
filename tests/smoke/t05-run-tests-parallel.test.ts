@@ -76,7 +76,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 import {
@@ -90,6 +90,7 @@ import { normalizeCoverageReport } from "../lib/coverage-normalize.ts";
 // in the test path, and `bash <script>` is the runner's documented entrypoint.
 const TESTS_ROOT = join(REPO_ROOT, "tests");
 const RUNNER = join(TESTS_ROOT, "run-tests.sh");
+const JAPANESE_TESTING_GUIDE = join(REPO_ROOT, "docs/reference/09-testing.ja.md");
 
 interface RunResult {
   status: number;
@@ -381,6 +382,23 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     const banner =
       r.out.split("\n").find((l) => l.startsWith("## Integration Tests")) ?? "";
     expect(banner).toContain("(parallel=4)");
+  }, PER_TEST_TIMEOUT);
+
+  test("default parallelism agrees with the Japanese testing guide", () => {
+    const expectedParallel = Math.min(availableParallelism(), 4);
+    const r = run(["--integration", "--filter", "t104"]);
+    const banner =
+      r.out.split("\n").find((line) => line.startsWith("## Integration Tests")) ?? "";
+    const guide = readFileSync(JAPANESE_TESTING_GUIDE, "utf-8");
+
+    expect(r.status).toBe(0);
+    if (expectedParallel > 1) {
+      expect(banner).toEndWith(`(parallel=${expectedParallel})`);
+    } else {
+      expect(banner).not.toContain("(parallel=");
+    }
+    expect(guide).toContain("デフォルト: 利用可能な CPU 数と 4 のうち小さい方");
+    expect(guide).toContain("利用可能な CPU 数と `4` のうち小さい方");
   }, PER_TEST_TIMEOUT);
 
   // --- 6. Interleaving observed under --parallel 4 -------------------------

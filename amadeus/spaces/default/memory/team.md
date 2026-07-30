@@ -86,6 +86,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - PR マージの執行手順: leader が PR ごとに CI green・レビュー READY を実測確認してユーザーへ「これをマージしますか?」と確認し、承認を得たら leader が gh pr merge(スカッシュ)を実行する。人間が GitHub のマージボタンを押す運用はしない。Forbidden の no-AI-merge ルールは「承認なしの自発マージ禁止」の意味であり、この承認後執行と両立する(長期保留時の鮮度再実測は cid:merge-approval-latency) (user decision 2026-07-09) <!-- cid:requirements-analysis:leader-executes-merge -->
 - マージ承認の長期保留(就寝・不在跨ぎ等)は正常系として扱う: (a) 承認伺い済み PR は leader が承認待ち台帳(PR 番号・伺い日時・依存関係・伺い時点の head SHA)で管理し、チームは承認待ちをブロッカー扱いしない — 当該 PR に依存する作業は待機(rate-limit-idle-allowance の手空き許容に合流)、非依存の作業は並行度枠内で継続する。 (b) 承認到着後、leader はマージ実行前に鮮度を再実測する: main 前進の有無・GitHub mergeable 状態・現 head の CI green・base 前進で diff が実質変化した場合のレビュー有効性。stale なら update-branch/rebase → CI 再 green を確認し、diff が実質変化した場合はレビュアーへ増分再確認を依頼してからマージする(builder 側の再接地は cid:code-generation:code-generation:base-advance-regrounding に従う)。承認の効力は伺い時点の head に対するものとみなし、diff が実質変化した場合は原則ユーザーへ再伺いする(正準リスト(2)に合流。rebase/update-branch による機械的な衝突解消のみで内容が実質不変の場合に限り、leader は元承認の範囲内として執行してよい)。 (c) 複数 PR の承認伺いはまとめて1回で諮り、PR ごとの散発的な催促をしない — pending-decision-tracking の催促は「忘れられている兆候があるとき」に限り発動し、その場合も承認待ち一覧の一括再提示で行う。 (d) 本項は no-AI-merge(承認なき自発マージ禁止)と leader-executes-merge(承認後執行は leader)を変更しない (user decision 2026-07-11) <!-- cid:requirements-analysis:merge-approval-latency -->
 - PR を作成したら、作成者(conductor/メンバー)は即座に実装者以外の空いているメンバーへレビューを依頼し、leader への PR 報告にはレビュアー名を含める。複数 PR が並ぶときは利用可能なレビュアーへ分散する。レビュー観点の既定: 完全性(grep 等の実測)、dist/self-install 同期、surgical、落ちる実証、検証エビデンスの実測 exit code、**要件・設計からの無申告の逸脱がないこと**(実装を requirements.md / design / plan と突き合わせ、宣言なき逸脱は差し戻す — cid:implementation-deviation-election と対) (user decision 2026-07-09) (updated 2026-07-10 user decision) <!-- cid:requirements-analysis:independent-review-on-pr -->
+- PR を作成したら、作成者は `j5ik2o-gh-pr-converge-loop` スキルを実行する。base branch との競合を最初に解消し、未解決の actionable review thread、失敗・保留中の必須 check を順に処理する。push のたびに mergeability から再確認し、競合なし・actionable thread なし・必須 check 全件 green が同時に成立するまで収束ループを継続する。外部変更・レビュー返信・thread 解決・push は同スキルの承認境界に従い、収束確認はマージ承認を代替しない (user decision 2026-07-30) <!-- cid:requirements-analysis:pr-converge-loop-required -->
 
 ### バグとスコープ
 
@@ -305,7 +306,11 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-TypeScript のテストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。厳格な全変更 TDD は要求しないが、欠陥と新規ゲートは regression-first／落ちる実証を必須とし、相対 coverage ratchet、patch coverage、complexity、dist・self-install drift を blocking gate として維持する。
+TypeScript のテストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。実行可能な振る舞いの追加・変更・欠陥修正は TDD を既定かつ必須とする。実装前に合意済みの公開 seam へ失敗テストを1件追加して Red を実測し、そのテストを通す最小実装で Green にする。この vertical slice を1件ずつ反復し、テストの一括先行、実装後のテスト追加、実装後の落ちる実証だけでは TDD 実施とみなさない。
+
+TDD の適用外は、(1) 実行時の振る舞いを持たない文書・コメント・書式だけの変更、(2) 振る舞い不変のリファクタリング、(3) 正本から機械生成される投影物だけの同期、(4) マージ・出荷せず破棄する探索的 spike に限定する。適用外でも無検証にはせず、変更種別に応じて既存テストの前後 Green、公開 seam の characterization test、drift check、文書検査を行う。spike を採用するときは、そのコードを正本へ流用せず TDD で実装し直す。挙動変更を含むリファクタリング、正本・generator・投影規則の変更、機械的に消費される文書は適用外にしない。
+
+変更が小さい、急ぎである、テストが難しい、既存テストや seam がないことは TDD の適用外理由にしない。seam が未確定なら実装前に停止して合意を取り、適用判断に迷う場合は TDD に倒す。新規ゲート・検証スクリプト・チェックは TDD に加えて失敗ケースを注入し、実際に赤くなる落ちる実証を必須とする。相対 coverage ratchet、patch coverage、complexity、dist・self-install drift は blocking gate として維持する (user decision 2026-07-30) <!-- cid:code-generation:tdd-default-with-narrow-exceptions -->
 
 <!-- amadeus:practices-promote:END -->
 

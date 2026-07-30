@@ -69,12 +69,30 @@ const manifest: HarnessManifest = {
     // The managed-block source of truth (ADR-4): installer merge, doctor
     // inspection, and the docs' manual procedure all read this one snippet.
     { src: "hooks/amadeus-hooks.snippet.toml", dst: "hooks/amadeus-hooks.snippet.toml" },
-    // The Bolt 2 hook adapter the snippet routes to: thin shim + logic lib
-    // (the cursor-lib split idiom). They land inside the core-copied hooks/
-    // dir, so the orphan scan exemption below stays.
+    // The Kimi hooks the snippet routes to: adapter shim and logic lib. They
+    // land inside the core-copied hooks/ dir, so the orphan
+    // scan exemption below stays.
     { src: "hooks/amadeus-kimi-adapter.ts", dst: "hooks/amadeus-kimi-adapter.ts" },
     { src: "hooks/amadeus-kimi-lib.ts", dst: "hooks/amadeus-kimi-lib.ts" },
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
+  ],
+
+  // Kimi re-checks an agent profile's tool allowlist immediately before each
+  // execution. The two reviewer profiles are the only stock read-only custom
+  // agents dispatched by the conductor, so expose only Kimi's exact-cased
+  // discovery tools. Bash is consequently unavailable to reviewers, while
+  // composer/developer/architect workers retain it for their declared work.
+  // Stage support_agents are loaded inline, and built-in explore is already
+  // read-only, so neither needs a projected custom-agent restriction.
+  frontmatterAdditions: [
+    {
+      file: "agents/amadeus-product-lead-agent.md",
+      lines: ["tools: [Read, Grep, Glob]"],
+    },
+    {
+      file: "agents/amadeus-architecture-reviewer-agent.md",
+      lines: ["tools: [Read, Grep, Glob]"],
+    },
   ],
 
   // AGENTS.md renders from the shared skeleton with Kimi's fills, at the

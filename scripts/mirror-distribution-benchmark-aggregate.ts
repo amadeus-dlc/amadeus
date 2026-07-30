@@ -15,6 +15,18 @@ type Replica = Readonly<{
   >>;
 }>;
 
+export type MirrorBenchmarkAggregate = Readonly<{
+  findings: readonly string[];
+  warnings: readonly string[];
+}>;
+
+// Comparability is decided by os/arch/bun only. The runner image VERSION is a
+// weekly GitHub snapshot roll (e.g. ubuntu24 20260720.247.2 → 20260726.254.1):
+// during a rollout the three replica jobs legitimately land on adjacent
+// versions, and that difference does not make benchmark numbers incomparable —
+// the dispersion and budget gates below remain the environment-outlier guard.
+const COMPATIBILITY_IMAGE_FIELDS = ["os", "arch", "bun"] as const;
+
 // A ratio is not meaningful when the absolute spread is below 10% of the
 // workload budget. The authoritative median p95 budget remains unchanged.
 const DISPERSION_NOISE_FLOOR_FRACTION = 0.1;
@@ -46,15 +58,34 @@ function exceedsDispersionLimit(
 
 export function aggregateMirrorBenchmarks(
   replicas: readonly Replica[],
-): readonly string[] {
+): MirrorBenchmarkAggregate {
   const findings: string[] = [];
+  const warnings: string[] = [];
   if (replicas.length !== 3)
-    return [`missing benchmark replica: expected 3, received ${replicas.length}`];
-  const image = JSON.stringify(replicas[0].image);
+    return {
+      findings: [
+        `missing benchmark replica: expected 3, received ${replicas.length}`,
+      ],
+      warnings,
+    };
+  const image = replicas[0].image;
   if (replicas.some((replica) => replica.schema !== 2))
     findings.push("benchmark schema mismatch");
-  if (replicas.some((replica) => JSON.stringify(replica.image) !== image))
+  if (
+    replicas.some((replica) =>
+      COMPATIBILITY_IMAGE_FIELDS.some(
+        (field) => replica.image[field] !== image[field],
+      )
+    )
+  )
     findings.push("benchmark runner image mismatch");
+  const versions = [
+    ...new Set(replicas.map((replica) => replica.image.version)),
+  ].sort();
+  if (versions.length > 1)
+    warnings.push(
+      `benchmark runner image version mismatch: ${versions.join(", ")}`,
+    );
   for (const [name, budget] of Object.entries(
     MIRROR_BENCHMARK_PROTOCOL.workloads,
   ) as [MirrorBenchmarkWorkload, {
@@ -74,7 +105,7 @@ export function aggregateMirrorBenchmarks(
     if (median(samples.map((sample) => sample.rssBytes)) > budget.rssBudgetBytes)
       findings.push(`${name}: median RSS exceeds ${budget.rssBudgetBytes}`);
   }
-  return findings;
+  return { findings, warnings };
 }
 
 if (import.meta.main) {
@@ -87,7 +118,8 @@ if (import.meta.main) {
     console.error(`benchmark aggregate input failure: ${String(error)}`);
     process.exit(1);
   }
-  const findings = aggregateMirrorBenchmarks(replicas);
+  const { findings, warnings } = aggregateMirrorBenchmarks(replicas);
+  for (const warning of warnings) console.warn(`warning: ${warning}`);
   for (const finding of findings) console.error(finding);
   if (findings.length > 0) process.exit(1);
   console.log("mirror-distribution-benchmark-aggregate: OK (3 replicas, 5 workloads)");

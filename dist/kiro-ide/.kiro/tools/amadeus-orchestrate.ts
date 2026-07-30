@@ -130,6 +130,9 @@ import {
   relativeCodekbDir,
   relativeRecordDir,
   relativeSpaceRecordPrefix,
+  readIntentRegistry,
+  readCurrentSessionId,
+  recordDirMatches,
   recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
@@ -153,14 +156,20 @@ import {
 } from "./amadeus-lib.ts";
 import {
   classifyApprovalAuthority,
+  findStandingGrantRouteReceiptById,
   type GrantApprovalProcessResult,
   parseGrantApprovalProcessResult,
   routeSoloStandingGrantDirective,
 } from "./amadeus-grant-authorization.ts";
+import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   armPresenceReservation,
+  cancelArmedPresenceReservation,
+  consumePresenceReservation,
+  findActivePresenceReservation,
   type PresenceReservation,
+  readPresenceReservation,
 } from "./amadeus-presence-reservation.ts";
 import {
   type Consume,
@@ -172,6 +181,10 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
+import {
+  authorizeMainConductor,
+  callerAuthorizationError,
+} from "./amadeus-caller-authorization.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
@@ -181,6 +194,11 @@ import {
   type MirrorBoundaryReceipts,
   parseMirrorBoundaryReceipts,
 } from "./amadeus-state.ts";
+import {
+  type WorkflowCompletionPreparation,
+  completionMirrorDisposition,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
 // registry) - importing it keeps `next` read-only. The audit-emitting
 // detect-scope verb remains the conductor's separate recording move; the
@@ -200,11 +218,22 @@ import {
   recordActivationVerdict,
 } from "./amadeus-plugin-activation.ts";
 
+function trustedHostSessionId(projectDir: string | undefined): string | undefined {
+  const pd = resolveProjectDir(projectDir);
+  return detectHarnessType() === "kimi"
+    ? readCurrentSessionId(pd) ?? undefined
+    : process.env.AMADEUS_TRUSTED_SESSION_ID;
+}
+
 // Read the workflow state file if it exists, else null. The engine's `next` is
 // a pure read: an absent state file is a legitimate branch (no workflow yet),
 // not an error to throw. Composes stateFilePath() for the canonical location.
-function loadStateFileIfPresent(projectDir: string): string | null {
-  const path = stateFilePath(projectDir);
+function loadStateFileIfPresent(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): string | null {
+  const path = stateFilePath(projectDir, intent, space);
   if (!existsSync(path)) return null;
   return readFileSync(path, "utf-8");
 }
@@ -212,14 +241,14 @@ function loadStateFileIfPresent(projectDir: string): string | null {
 export type MirrorBoundaryDecision =
   | { kind: "suppress" }
   | { kind: "ask"; includeCreate: boolean }
-  | { kind: "auto-sync" };
+  | { kind: "auto-lifecycle" };
 
 export function decideMirrorBoundary(
   mode: MirrorMode,
   hasMirrorIssue: boolean,
 ): MirrorBoundaryDecision {
   if (mode === "off") return { kind: "suppress" };
-  if (mode === "auto" && hasMirrorIssue) return { kind: "auto-sync" };
+  if (mode === "auto") return { kind: "auto-lifecycle" };
   return { kind: "ask", includeCreate: !hasMirrorIssue };
 }
 
@@ -252,96 +281,156 @@ function currentMirrorBoundaryPhase(
   return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
 }
 
-function mirrorSyncPrint(
-  phase: MirrorBoundaryPhase,
-  isPending: boolean,
-  instance: string,
-  workflowCompleted: boolean,
+type MirrorLifecycleTarget =
+  | Readonly<{
+      kind: "completion";
+      instance: string;
+      stage: string;
+    }>
+  | Readonly<{
+      kind: "phase";
+      phase: MirrorBoundaryPhase;
+      instance: string;
+      isPending: boolean;
+    }>;
+
+function mirrorLifecyclePrint(
+  target: MirrorLifecycleTarget,
+  intent: string,
+  space: string,
 ): PrintDirective {
+  const selector =
+    ` --intent ${JSON.stringify(intent)} --space ${JSON.stringify(space)}`;
   const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
-  const boundaryArgs = workflowCompleted
-    ? `completion --instance ${JSON.stringify(instance)}`
-    : `phase --phase ${phase} --instance ${JSON.stringify(instance)}`;
-  const syncTool =
-    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}`;
-  const prepare = isPending
+  const boundaryArgs = target.kind === "completion"
+    ? `completion --instance ${JSON.stringify(target.instance)}`
+    : `phase --phase ${target.phase} --instance ${JSON.stringify(target.instance)}`;
+  const lifecycleTool =
+    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}${selector}`;
+  if (target.kind === "completion") {
+    const terminalTool =
+      `bun ${harnessDir()}/tools/amadeus-state.ts complete-workflow ` +
+      `${JSON.stringify(target.stage)} --completion-instance ` +
+      `${JSON.stringify(target.instance)}${selector}`;
+    return printDirective(
+      `Run \`${lifecycleTool}\`. Only after the completion boundary settles, run ` +
+        `\`${terminalTool}\`, then re-run \`next\`. If the mirror operation or ` +
+        `terminal commit fails, stop; the durable completion instance makes a later retry safe.`,
+    );
+  }
+  const prepare = target.isPending
     ? ""
-    : `First run \`${stateTool} ${phase} pending --from absent\`. `;
+    : `First run \`${stateTool} ${target.phase} pending --from absent${selector}\`. `;
   return printDirective(
-    `${prepare}Run \`${syncTool}\`. Only after sync succeeds, run ` +
-      `\`${stateTool} ${phase} completed --from pending\`, then re-run \`next\`. ` +
-      `If sync or the receipt update fails, stop; the pending receipt makes a later next retry safely.`,
+    `${prepare}Run \`${lifecycleTool}\`. After it succeeds, run ` +
+      `\`${stateTool} ${target.phase} completed --from pending${selector}\`. ` +
+      `Only after both the mirror operation and receipt update succeed, re-run \`next\`. ` +
+      `If either fails, stop without re-running \`next\`; the pending receipt makes a later retry safe.`,
   );
 }
 
-function emitMirrorBoundaryIfNeeded(
-  projectDir: string,
+type PersistedMirrorBoundary = Readonly<{
+  completion: WorkflowCompletionPreparation | null;
+  pendingPhase: MirrorBoundaryPhase | undefined;
+  phase: MirrorBoundaryPhase | null;
+  phaseInstance: string;
+  receipts: MirrorBoundaryReceipts;
+}>;
+
+function persistedMirrorBoundary(
   stateContent: string,
-): boolean {
-  let receipts: MirrorBoundaryReceipts;
-  try {
-    receipts = parseMirrorBoundaryReceipts(
-      getField(stateContent, "Mirror Boundary Receipts"),
-    );
-  } catch (cause) {
-    emit(errorDirective(errorMessage(cause)));
-    return true;
-  }
+): PersistedMirrorBoundary {
+  const receipts = parseMirrorBoundaryReceipts(
+    getField(stateContent, "Mirror Boundary Receipts"),
+  );
+  const prepared = workflowCompletionPreparation(stateContent);
+  const completion = prepared?.status === "completed" ? null : prepared;
   const pendingPhase = MIRROR_BOUNDARY_PHASES.find(
     (candidate) => receipts[candidate] === "pending",
   );
   const phase = currentMirrorBoundaryPhase(stateContent);
-  const boundaryInstance =
+  const phaseInstance =
     (getField(stateContent, "Last Updated") ?? "").trim() ||
     `${phase ?? pendingPhase ?? "mirror"}:persisted`;
-  const workflowCompleted =
-    getField(stateContent, "Status")?.trim() === "Completed";
-  if (
-    pendingPhase === undefined &&
-    (phase === null || receipts[phase] === "completed")
-  )
-    return false;
-  const space = activeSpace(projectDir);
-  const intent = activeIntent(projectDir, space);
-  if (intent === null) {
-    emit(errorDirective("Mirror boundary cannot resolve the active intent."));
+  return { completion, pendingPhase, phase, phaseInstance, receipts };
+}
+
+function hasPersistedMirrorBoundary(
+  boundary: PersistedMirrorBoundary,
+): boolean {
+  if (boundary.pendingPhase !== undefined || boundary.completion !== null) {
     return true;
   }
-  const resolved = resolveMirrorConfig(projectDir, intent);
-  if (resolved.kind === "invalid") {
-    const details = resolved.issues
-      .map((issue) =>
-        issue.kind === "read-failure"
-          ? `${issue.layer} (${issue.path}): ${issue.summary}`
-          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
-      )
-      .join(" | ");
-    emit(errorDirective(`Invalid mirror configuration: ${details}`));
+  return boundary.phase !== null &&
+    boundary.receipts[boundary.phase] !== "completed";
+}
+
+function emitConfiguredMirrorBoundary(
+  stateContent: string,
+  boundary: PersistedMirrorBoundary,
+  mode: "off" | "prompt" | "auto",
+  intent: string,
+  space: string,
+): boolean {
+  const { completion, pendingPhase, phase, phaseInstance } = boundary;
+  if (mode === "off") {
+    if (completion === null) return false;
+    emit(
+      printDirective(
+        `Intent Mirror is off. Run \`bun ${harnessDir()}/tools/amadeus-state.ts ` +
+          `complete-workflow ${JSON.stringify(completion.stage)} --completion-instance ` +
+          `${JSON.stringify(completion.instance)} --intent ${JSON.stringify(intent)} ` +
+          `--space ${JSON.stringify(space)}\`, then re-run \`next\`.`,
+      ),
+    );
     return true;
   }
-  if (resolved.config.autoMirror === "off") return false;
   if (pendingPhase !== undefined) {
     emit(
-      mirrorSyncPrint(
-        pendingPhase,
-        true,
-        boundaryInstance,
-        workflowCompleted && pendingPhase === "construction",
+      mirrorLifecyclePrint(
+        {
+          kind: "phase",
+          phase: pendingPhase,
+          instance: phaseInstance,
+          isPending: true,
+        },
+        intent,
+        space,
+      ),
+    );
+    return true;
+  }
+  if (completion !== null) {
+    emit(
+      mirrorLifecyclePrint(
+        {
+          kind: "completion",
+          instance: completion.instance,
+          stage: completion.stage,
+        },
+        intent,
+        space,
       ),
     );
     return true;
   }
   if (phase === null) return false;
-  const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;
-  const decision = decideMirrorBoundary(resolved.config.autoMirror, hasMirrorIssue);
+  const decision = decideMirrorBoundary(
+    mode,
+    mirrorIssueNumberFromDocument(stateContent) !== null,
+  );
   if (decision.kind === "suppress") return false;
-  if (decision.kind === "auto-sync") {
+  if (decision.kind === "auto-lifecycle") {
     emit(
-      mirrorSyncPrint(
-        phase,
-        false,
-        boundaryInstance,
-        workflowCompleted && phase === "construction",
+      mirrorLifecyclePrint(
+        {
+          kind: "phase",
+          phase,
+          instance: phaseInstance,
+          isPending: false,
+        },
+        intent,
+        space,
       ),
     );
     return true;
@@ -357,6 +446,62 @@ function emitMirrorBoundaryIfNeeded(
     ),
   );
   return true;
+}
+
+function emitMirrorBoundaryIfNeeded(
+  projectDir: string,
+  stateContent: string,
+  intentOverride?: string,
+): boolean {
+  let boundary: PersistedMirrorBoundary;
+  try {
+    boundary = persistedMirrorBoundary(stateContent);
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return true;
+  }
+  if (!hasPersistedMirrorBoundary(boundary)) return false;
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space, intentOverride);
+  if (intent === null) {
+    emit(errorDirective("Mirror boundary cannot resolve the active intent."));
+    return true;
+  }
+  const resolved = resolveMirrorConfig(projectDir, intent, space);
+  if (resolved.kind === "invalid") {
+    const details = resolved.issues
+      .map((issue) =>
+        issue.kind === "read-failure"
+          ? `${issue.layer} (${issue.path}): ${issue.summary}`
+          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
+      )
+      .join(" | ");
+    emit(errorDirective(`Invalid mirror configuration: ${details}`));
+    return true;
+  }
+  return emitConfiguredMirrorBoundary(
+    stateContent,
+    boundary,
+    resolved.config.autoMirror,
+    intent,
+    space,
+  );
+}
+
+function emitDeferredCompletionBoundary(
+  projectDir: string,
+  stage: string,
+  intentOverride?: string,
+): void {
+  const preparedState = loadStateFileIfPresent(projectDir, intentOverride);
+  if (
+    preparedState === null ||
+    !emitMirrorBoundaryIfNeeded(projectDir, preparedState, intentOverride)
+  ) {
+    emit(errorDirective(
+      `Workflow completion for "${stage}" was prepared but no mirror boundary directive was available.`,
+    ));
+  }
 }
 
 function appendOrchestrateLifecycleEvent(
@@ -466,13 +611,18 @@ function emit(directive: Directive, recordError = true): void {
   // asymmetry). Recording is best-effort and happens BEFORE the stdout print so
   // the directive JSON stays the sole stdout output and the exit code is
   // untouched. Every workflow `emit(errorDirective(...))` call site is covered
-  // by this aggregation point. The sole opt-out is emitMigrationError below:
-  // workspace migration is outside the Intent lifecycle and must not annotate
-  // an unrelated active record.
+  // by this aggregation point. State-neutral validation commands and workspace
+  // migration opt out because neither may annotate an unrelated active record.
   if (directive.kind === "error" && recordError) {
     recordEngineError(directive.message, _handlerProjectDir);
   }
   console.log(JSON.stringify(result.data));
+}
+
+function emitStateNeutralError(message: string): void {
+  // Gate command validation must leave state and audit byte-unchanged; the
+  // ordinary error path records ERROR_LOGGED before printing.
+  emit(errorDirective(message), false);
 }
 
 // Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
@@ -1952,11 +2102,51 @@ function isBareAdvancingNext(
   return true;
 }
 
+function refuseUnauthorizedKimiCaller(
+  projectDir: string | undefined,
+): boolean {
+  const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
+  if (authorization.kind === "authorized") return false;
+  emitStateNeutralError(callerAuthorizationError(authorization.role));
+  return true;
+}
+
+// Reads the Kiro readonly latch and turn counter; returns the command label
+// when the latch is fresh (stamped for the CURRENT turn), null otherwise.
+// Advisory: any failure returns null so a real `next` is never blocked. Inert
+// on Claude/Codex: the latch files are never written there (no seam).
+function freshReadonlyLatchLabel(projectDir: string | undefined): string | null {
+  try {
+    const pdLatch = resolveProjectDir(projectDir);
+    const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
+    const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
+    let counter = -1;
+    let latchTurn = -2;
+    let label = "the read-only command";
+    if (existsSync(counterPath)) {
+      const raw = readFileSync(counterPath, "utf-8").trim();
+      const parsed = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : Number.NaN;
+      if (Number.isSafeInteger(parsed)) counter = parsed;
+    }
+    if (existsSync(latchPath)) {
+      const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
+      if (typeof lr.turn === "number") latchTurn = lr.turn;
+      if (typeof lr.flag === "string") {
+        // read-only flags render with a leading `--`; workspace verbs are bare.
+        label = lr.source === "workspace-verb" ? `\`${lr.flag}\`` : `--${lr.flag}`;
+      }
+    }
+    if (counter >= 0 && latchTurn === counter) return label;
+  } catch { /* advisory: guard is best-effort, never blocks a real next */ }
+  return null;
+}
+
 // The `next` handler — pure read, emits exactly one directive.
 export function handleNext(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
@@ -1967,40 +2157,18 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // turn), rolling the active workflow forward. The seam stamps
   // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
   // state inspection, a TRULY BARE advancing next (none of its own flags set)
-  // checks the latch: when latch.turn === the current counter (the SAME turn) we
-  // emit `done` instead of routing to a run-stage. Turn-scoped — a legitimate
-  // advancing next in a LATER turn (counter bumped, latch now stale) is never
-  // swallowed. Inert on Claude/Codex: the latch files are never written there (no
-  // seam) → fresh is always false → falls through. Advisory: any failure fails
-  // open to the normal `next`.
+  // checks the latch: when the latch is fresh (same turn) we emit `done` instead
+  // of routing to a run-stage. Turn-scoped — a legitimate advancing next in a
+  // LATER turn (counter bumped, latch now stale) is never swallowed.
   if (isBareAdvancingNext(flags, migration)) {
-    try {
-      const pdLatch = resolveProjectDir(projectDir);
-      const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
-      const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
-      let counter = -1;
-      let latchTurn = -2;
-      let label = "the read-only command";
-      if (existsSync(counterPath)) {
-        const n = Number.parseInt(readFileSync(counterPath, "utf-8").trim(), 10);
-        if (Number.isFinite(n)) counter = n;
-      }
-      if (existsSync(latchPath)) {
-        const lr = JSON.parse(readFileSync(latchPath, "utf-8")) as { turn?: number; flag?: string; source?: string };
-        if (typeof lr.turn === "number") latchTurn = lr.turn;
-        if (typeof lr.flag === "string") {
-          // read-only flags render with a leading `--`; workspace verbs are bare.
-          label = lr.source === "workspace-verb" ? `\`${lr.flag}\`` : `--${lr.flag}`;
-        }
-      }
-      if (counter >= 0 && latchTurn === counter) {
-        emit({
-          kind: "done",
-          reason: `The read-only/navigation command (${label}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
-        });
-        return;
-      }
-    } catch { /* advisory: guard is best-effort, never blocks a real next */ }
+    const latchLabel = freshReadonlyLatchLabel(projectDir);
+    if (latchLabel !== null) {
+      emit({
+        kind: "done",
+        reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
+      });
+      return;
+    }
   }
 
   // Branch 1 — read-only utility flags dispatch FIRST, before any state
@@ -3611,9 +3779,14 @@ function checkboxForSlug(
   return parseCheckboxes(stateContent).find((c) => c.slug === slug);
 }
 
-function approveArgs(slug: string, flags: ReportFlags): string[] {
+function approveArgs(
+  slug: string,
+  flags: ReportFlags,
+  deferWorkflowCompletion = false,
+): string[] {
   const args = ["approve", slug];
   if (flags.userInput) args.push("--user-input", flags.userInput);
+  if (deferWorkflowCompletion) args.push("--defer-workflow-completion");
   return args;
 }
 
@@ -3625,12 +3798,87 @@ type CarrierApprovalAuthority = Exclude<
   { readonly kind: "normal" } | { readonly kind: "invalid" }
 >;
 
+function authorizedApprovalIntent(
+  pd: string,
+  slug: string,
+  authority: CarrierApprovalAuthority,
+): string | null {
+  if (authority.kind === "grant-backed") {
+    const selected = findStandingGrantRouteReceiptById(pd, authority.routeId);
+    return selected?.receipt.stage === slug &&
+        selected.receipt.grantId === authority.grantId
+      ? selected.intent
+      : null;
+  }
+  try {
+    const selected = readPresenceReservation(pd, authority.reservationId);
+    return selected?.targetIntentId === authority.targetIntentId &&
+        selected.stage === slug &&
+        selected.space === activeSpace(pd)
+      ? selected.targetIntentDir
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
   authority: CarrierApprovalAuthority,
 ): void {
+  const approvalIntent = authorizedApprovalIntent(pd, slug, authority);
+  if (approvalIntent === null) {
+    emit(errorDirective(
+      "Approval authorization does not match exactly one workflow and stage.",
+    ));
+    return;
+  }
+  const stateContent = loadStateFileIfPresent(
+    pd,
+    approvalIntent,
+  );
+  if (stateContent === null) {
+    emit(errorDirective("Approval authorization requires an active workflow."));
+    return;
+  }
+  const scope = getField(stateContent, "Scope");
+  const isFinal =
+    scope !== null && nextInScopeStage(slug, scope, stateContent) === null;
+  const stageCheckbox = checkboxForSlug(stateContent, slug);
+  let prepared: ReturnType<typeof workflowCompletionPreparation>;
+  try {
+    prepared = workflowCompletionPreparation(stateContent);
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return;
+  }
+  if (
+    stageCheckbox?.state === "completed" &&
+    isFinal &&
+    prepared?.status === "pending" &&
+    prepared.stage === slug
+  ) {
+    if (!emitMirrorBoundaryIfNeeded(pd, stateContent, approvalIntent)) {
+      emit(errorDirective(
+        `Workflow completion for "${slug}" is pending but no mirror boundary directive was available.`,
+      ));
+    }
+    return;
+  }
+  const completionDisposition = isFinal
+    ? completionMirrorDisposition(pd, approvalIntent)
+    : { kind: "immediate" as const };
+  if (completionDisposition.kind === "error") {
+    emit(errorDirective(completionDisposition.message));
+    return;
+  }
+  const deferWorkflowCompletion =
+    isFinal && completionDisposition.kind === "defer";
   const approve = ["approve", slug];
+  if (deferWorkflowCompletion) {
+    approve.push("--defer-workflow-completion");
+  }
   if (authority.kind === "grant-backed") {
     approve.push(
       "--standing-grant-id",
@@ -3667,7 +3915,7 @@ function handleAuthorizedApprovalReport(
       emit(errorDirective(`Unexpected await-approval outcome for "${slug}".`));
       return;
     }
-    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    const sessionId = trustedHostSessionId(pd);
     if (!sessionId) {
       emit(errorDirective(
         "Cannot arm human continuation without trusted host session identity.",
@@ -3700,6 +3948,10 @@ function handleAuthorizedApprovalReport(
     emit(directive);
     return;
   }
+  if (deferWorkflowCompletion) {
+    emitDeferredCompletionBoundary(pd, slug, approvalIntent);
+    return;
+  }
   const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
   emit({ kind: "done", reason: approvedReason });
 }
@@ -3713,6 +3965,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseReportFlags(args);
   const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
   const authority = classifyApprovalAuthority({
@@ -3941,6 +4194,16 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     return;
   }
   const isGated = node.phase !== "initialization";
+  if (
+    isGated &&
+    stageCheckbox.state !== "completed" &&
+    detectHarnessType() === "kimi"
+  ) {
+    emit(errorDirective(
+      `Kimi gate approval for "${slug}" requires the stage reservation carrier from gate-reserve.`,
+    ));
+    return;
+  }
 
   // Per-unit coverage gate (issue #368), DETERMINISTIC enforcement on the
   // approve path. The engine only PRESENTS the stage's real gate once every unit
@@ -4009,6 +4272,15 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Finality — is there an in-scope stage after this one? (state-override aware,
   // so EXECUTE/SKIP suffixes and prior [x]/[S] checkboxes are honoured.)
   const isFinal = nextInScopeStage(slug, scope, stateContent) === null;
+  const completionDisposition = isFinal
+    ? completionMirrorDisposition(pd)
+    : { kind: "immediate" as const };
+  if (completionDisposition.kind === "error") {
+    emit(errorDirective(completionDisposition.message));
+    return;
+  }
+  const deferWorkflowCompletion =
+    isFinal && completionDisposition.kind === "defer";
 
   const status = getField(stateContent, "Status") ?? "";
 
@@ -4037,6 +4309,23 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 
   if (stageCheckbox.state === "completed") {
     if (isFinal) {
+      let prepared: ReturnType<typeof workflowCompletionPreparation>;
+      try {
+        prepared = workflowCompletionPreparation(stateContent);
+      } catch (cause) {
+        emit(errorDirective(errorMessage(cause)));
+        return;
+      }
+      if (prepared !== null) {
+        if (prepared.status === "pending") {
+          if (!emitMirrorBoundaryIfNeeded(pd, stateContent)) {
+            emit(errorDirective(
+              `Workflow completion for "${slug}" is pending but no mirror boundary directive was available.`,
+            ));
+          }
+          return;
+        }
+      }
       if (status === "Completed") {
         emit({
           kind: "done",
@@ -4085,7 +4374,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       // tell the engine-opened gate from an organic gate-start.
       sequence.push(["gate-start", slug, "--recovered"]);
     }
-    sequence.push(approveArgs(slug, flags));
+    sequence.push(approveArgs(slug, flags, deferWorkflowCompletion));
   } else if (isFinal) {
     const completeArgs = ["complete-workflow", slug];
     if (flags.reason) completeArgs.push("--reason", flags.reason);
@@ -4116,6 +4405,10 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       kind: "error",
       message: `Internal: no transition selected for "${slug}".`,
     });
+    return;
+  }
+  if (deferWorkflowCompletion) {
+    emitDeferredCompletionBoundary(pd, slug);
     return;
   }
 
@@ -4153,6 +4446,8 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
 function handlePark(_args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const pd = resolveProjectDir(projectDir);
   const res = spawnState(pd, ["park"]);
   if (res.exitCode !== 0) {
@@ -4174,6 +4469,344 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
   emit(parkedDirective(
     `Workflow parked at "${parkedAt}". Run \`${mirrorCommand}\`, then resume with /amadeus --resume.`,
     parkedAt,
+  ));
+}
+
+export function openGateForKimiReservation(
+  pd: string,
+  slug: string,
+  reservation: PresenceReservation,
+): string | null {
+  const stateContent = loadStateFileIfPresent(
+    pd,
+    reservation.targetIntentDir,
+    reservation.space,
+  );
+  const currentStage = stateContent === null
+    ? null
+    : getField(stateContent, "Current Stage");
+  const checkbox = stateContent === null
+    ? undefined
+    : checkboxForSlug(stateContent, slug);
+  if (
+    currentStage !== slug ||
+    (checkbox?.state !== "in-progress" &&
+      checkbox?.state !== "awaiting-approval" &&
+      checkbox?.state !== "revising")
+  ) {
+    return `gate-reserve requires current stage "${slug}" to be in-progress, revising, or awaiting-approval.`;
+  }
+  if (checkbox.state === "awaiting-approval") return null;
+  const transition = checkbox.state === "revising" ? "revise" : "gate-start";
+  const opened = spawnState(pd, [
+    transition,
+    slug,
+    ...(transition === "gate-start" ? ["--recovered"] : []),
+    "--intent",
+    reservation.targetIntentDir,
+    "--space",
+    reservation.space,
+  ]);
+  if (opened.exitCode === 0) return null;
+  const detail = (opened.stderr || opened.stdout).trim();
+  return (
+    `Transition rejected by amadeus-state.ts ${transition} for "${slug}"` +
+    (detail ? `: ${detail}` : ".")
+  );
+}
+
+type KimiGateReservationOwner = {
+  readonly space: string;
+  readonly uuid: string;
+};
+
+function kimiGateReservationOwner(pd: string): KimiGateReservationOwner | null {
+  const space = activeSpace(pd);
+  const intent = activeIntent(pd, space);
+  if (intent === null) return null;
+  const owner = readIntentRegistry(pd, space).find((entry) =>
+    recordDirMatches(entry, intent)
+  );
+  return owner === undefined ? null : { space, uuid: owner.uuid };
+}
+
+type KimiGateReservationResult =
+  | {
+    readonly kind: "reserved";
+    readonly reservation: PresenceReservation;
+    readonly newlyArmed: boolean;
+  }
+  | { readonly kind: "error"; readonly message: string };
+
+function matchingKimiGateReservation(
+  pd: string,
+  sessionId: string,
+  owner: KimiGateReservationOwner,
+  slug: string,
+): PresenceReservation | null {
+  const active = findActivePresenceReservation(pd, sessionId);
+  if (active === null) return null;
+  if (
+    active.space !== owner.space ||
+    active.targetIntentId !== owner.uuid ||
+    active.stage !== slug ||
+    active.routeId !== active.reservationId
+  ) {
+    throw new Error(
+      "Trusted session already has a reservation for another approval route",
+    );
+  }
+  return active;
+}
+
+function reserveKimiGateApproval(
+  pd: string,
+  sessionId: string,
+  owner: KimiGateReservationOwner,
+  slug: string,
+): KimiGateReservationResult {
+  try {
+    const active = matchingKimiGateReservation(
+      pd,
+      sessionId,
+      owner,
+      slug,
+    );
+    if (active !== null) {
+      const state = loadStateFileIfPresent(
+        pd,
+        active.targetIntentDir,
+        active.space,
+      );
+      const interruptedRejection =
+        active.state === "minted" &&
+        state !== null &&
+        checkboxForSlug(state, slug)?.state === "revising";
+      if (!interruptedRejection) {
+        // A concurrent retry may have retired this snapshot while the owner
+        // state was read. Linearize the return under the reservation lock and
+        // converge on the current carrier instead of returning stale authority.
+        const winner = withAuditLock(pd, () =>
+          matchingKimiGateReservation(pd, sessionId, owner, slug)
+        );
+        if (winner === null) {
+          throw new Error("Trusted session reservation changed during retry");
+        }
+        return { kind: "reserved", reservation: winner, newlyArmed: false };
+      }
+      // The rejection state and audit committed before the old carrier's
+      // consume write. Retire that exact residue before re-presenting the gate.
+      consumePresenceReservation({
+        projectDir: pd,
+        sessionId,
+        reservationId: active.reservationId,
+        targetIntentId: active.targetIntentId,
+        stage: slug,
+      });
+    }
+    const reservationId = randomUUID();
+    try {
+      const reservation = armPresenceReservation({
+        projectDir: pd,
+        sessionId,
+        space: owner.space,
+        targetIntentId: owner.uuid,
+        stage: slug,
+        routeId: reservationId,
+        reservationIdFactory: () => reservationId,
+      });
+      return { kind: "reserved", reservation, newlyArmed: true };
+    } catch (cause) {
+      // Another simultaneous retry may have won between the initial lookup
+      // and arm. Re-read through matchingKimiGateReservation, whose active
+      // lookup owns the reservation lock, and converge on that exact route;
+      // unrelated or corrupt markers still fail loudly.
+      const winner = matchingKimiGateReservation(
+        pd,
+        sessionId,
+        owner,
+        slug,
+      );
+      if (winner !== null) {
+        return { kind: "reserved", reservation: winner, newlyArmed: false };
+      }
+      throw cause;
+    }
+  } catch (cause) {
+    return {
+      kind: "error",
+      message:
+        `Cannot reserve Kimi approval for "${slug}": ${errorMessage(cause)}`,
+    };
+  }
+}
+
+function gateOpenedAfterReservation(
+  pd: string,
+  sessionId: string,
+  slug: string,
+  reservation: PresenceReservation,
+  newlyArmed: boolean,
+): boolean {
+  const state = loadStateFileIfPresent(
+    pd,
+    reservation.targetIntentDir,
+    reservation.space,
+  );
+  const awaiting =
+    state !== null && checkboxForSlug(state, slug)?.state === "awaiting-approval";
+  if (!awaiting && newlyArmed) {
+    try {
+      cancelArmedPresenceReservation(
+        pd,
+        sessionId,
+        reservation.reservationId,
+      );
+    } catch {
+      // The command still returns no carrier. A later retry resolves the
+      // exact marker or rejects it; it can never authorize another route.
+    }
+  }
+  return awaiting;
+}
+
+export function handleGateReserve(
+  args: string[],
+  projectDir: string | undefined,
+): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
+  const stageIndex = args.indexOf("--stage");
+  const slug = stageIndex === -1 ? undefined : args[stageIndex + 1];
+  if (!slug || slug.startsWith("--")) {
+    emitStateNeutralError("gate-reserve requires --stage <slug>.");
+    return;
+  }
+  if (detectHarnessType() !== "kimi") {
+    emitStateNeutralError("gate-reserve is available only on the Kimi harness.");
+    return;
+  }
+  const sessionId = trustedHostSessionId(projectDir);
+  if (!sessionId) {
+    emitStateNeutralError(
+      "gate-reserve requires a trusted Kimi conductor session.",
+    );
+    return;
+  }
+  const pd = resolveProjectDir(projectDir);
+  const owner = kimiGateReservationOwner(pd);
+  if (owner === null) {
+    emitStateNeutralError("gate-reserve could not resolve one active intent.");
+    return;
+  }
+  const reserved = reserveKimiGateApproval(pd, sessionId, owner, slug);
+  if (reserved.kind === "error") {
+    emitStateNeutralError(reserved.message);
+    return;
+  }
+  const openError = openGateForKimiReservation(
+    pd,
+    slug,
+    reserved.reservation,
+  );
+  if (openError !== null) {
+    if (
+      !gateOpenedAfterReservation(
+        pd,
+        sessionId,
+        slug,
+        reserved.reservation,
+        reserved.newlyArmed,
+      )
+    ) {
+      emitStateNeutralError(openError);
+      return;
+    }
+  }
+  emit({
+    kind: "await-approval",
+    stage: slug,
+    reason: "kimi-human-approval-required",
+    target_intent_id: owner.uuid,
+    presence_reservation_id: reserved.reservation.reservationId,
+  });
+}
+
+export function handleGateReject(
+  args: string[],
+  projectDir: string | undefined,
+): void {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return;
+  const value = (name: string): string | undefined => {
+    const index = args.indexOf(name);
+    const candidate = index === -1 ? undefined : args[index + 1];
+    return candidate === undefined || candidate.startsWith("--")
+      ? undefined
+      : candidate;
+  };
+  const slug = value("--stage");
+  const targetIntentId = value("--target-intent-id");
+  const reservationId = value("--presence-reservation-id");
+  const feedback = value("--feedback");
+  if (!slug || !targetIntentId || !reservationId) {
+    emitStateNeutralError(
+      "gate-reject requires --stage, --target-intent-id, and --presence-reservation-id.",
+    );
+    return;
+  }
+  if (detectHarnessType() !== "kimi") {
+    emitStateNeutralError("gate-reject is available only on the Kimi harness.");
+    return;
+  }
+  if (!trustedHostSessionId(projectDir)) {
+    emitStateNeutralError(
+      "gate-reject requires a trusted Kimi conductor session.",
+    );
+    return;
+  }
+  const pd = resolveProjectDir(projectDir);
+  let marker: PresenceReservation | null;
+  try {
+    marker = readPresenceReservation(pd, reservationId);
+  } catch (cause) {
+    emitStateNeutralError(
+      `Invalid presence reservation: ${errorMessage(cause)}`,
+    );
+    return;
+  }
+  if (
+    marker === null ||
+    marker.targetIntentId !== targetIntentId ||
+    marker.stage !== slug
+  ) {
+    emitStateNeutralError(
+      "Presence reservation does not match the gate rejection.",
+    );
+    return;
+  }
+  const rejectArgs = [
+    "reject",
+    slug,
+    "--target-intent-id",
+    targetIntentId,
+    "--presence-reservation-id",
+    reservationId,
+    "--intent",
+    marker.targetIntentDir,
+    "--space",
+    marker.space,
+  ];
+  if (feedback) rejectArgs.push("--feedback", feedback);
+  const rejected = spawnState(pd, rejectArgs);
+  if (rejected.exitCode !== 0) {
+    const detail = (rejected.stderr || rejected.stdout).trim();
+    emitStateNeutralError(
+      `Transition rejected by amadeus-state.ts reject for "${slug}"` +
+        (detail ? `: ${detail}` : "."),
+    );
+    return;
+  }
+  emit(printDirective(
+    `Request Changes recorded for "${slug}". Complete the Keep/Modify/Redo revision, then run gate-reserve again to mint a new approval carrier.`,
   ));
 }
 
@@ -4221,12 +4854,18 @@ function main(): void {
     case "park":
       handlePark(subArgs, projectDir);
       break;
+    case "gate-reserve":
+      handleGateReserve(subArgs, projectDir);
+      break;
+    case "gate-reject":
+      handleGateReject(subArgs, projectDir);
+      break;
     default: {
       // Unknown / missing subcommand — usage to stderr, exit 1. Mirror the
       // sibling tools (amadeus-state.ts default -> error()): record an
       // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
       // evidence, not just a stderr line (Issue #878). No-op pre-init.
-      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`;
+      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park, gate-reserve, gate-reject`;
       recordEngineError(usage, projectDir);
       console.error(usage);
       process.exit(1);

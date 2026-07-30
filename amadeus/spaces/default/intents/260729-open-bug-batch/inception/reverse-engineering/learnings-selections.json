@@ -1,0 +1,13 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "free_text_1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "依存関係と共有ファイル競合がないIssueの調査・実装・検証は可能な限り並行化し、依存順序や同一ファイルの競合がある作業だけを直列化する。1 Issue = 1 Bolt = 1 PRの境界は維持する。",
+      "source": "user_addition"
+    }
+  ]
+}

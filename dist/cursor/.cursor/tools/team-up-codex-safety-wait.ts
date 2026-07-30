@@ -1,3 +1,6 @@
+import { renameSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 export type SafetyWaitSnapshot = {
   herdrVersion: string;
   codexVersion: string;
@@ -64,6 +67,13 @@ export type SafetyWaitRunIdentity = {
   recordedStatus: string;
 };
 
+export type SafetyWaitReadyEvidence = {
+  schemaVersion: 1;
+  run: string;
+  role: string;
+  pid: number;
+};
+
 const PRODUCTION_FINGERPRINTS: readonly SafetyWaitFingerprint[] = Object.freeze([
   Object.freeze({
     schemaVersion: 1,
@@ -93,6 +103,86 @@ export function roleToAgentLabel(role: string): string | null {
   if (role === "leader") return "leader";
   const match = /^e([1-6])$/.exec(role);
   return match === null ? null : `engineer-${match[1]}`;
+}
+
+function isRunId(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value);
+}
+
+export function createSafetyWaitReadyEvidence(
+  run: string,
+  role: string,
+  pid: number,
+): SafetyWaitReadyEvidence {
+  if (!isRunId(run) || roleToAgentLabel(role) === null || !Number.isSafeInteger(pid) || pid <= 0) {
+    throw new Error("invalid safety-wait ready identity");
+  }
+  return { schemaVersion: 1, run, role, pid };
+}
+
+export function parseSafetyWaitReadyEvidence(raw: unknown): SafetyWaitReadyEvidence | null {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (
+    keys.length !== 4 ||
+    !["schemaVersion", "run", "role", "pid"].every((key) => key in record)
+  ) {
+    return null;
+  }
+  if (
+    record.schemaVersion !== 1 ||
+    typeof record.run !== "string" ||
+    typeof record.role !== "string" ||
+    typeof record.pid !== "number"
+  ) {
+    return null;
+  }
+  try {
+    return createSafetyWaitReadyEvidence(record.run, record.role, record.pid);
+  } catch {
+    return null;
+  }
+}
+
+export function safetyWaitReadyEvidenceMatches(
+  raw: unknown,
+  run: string,
+  role: string,
+  pid: number,
+): boolean {
+  const evidence = parseSafetyWaitReadyEvidence(raw);
+  return (
+    evidence !== null &&
+    evidence.run === run &&
+    evidence.role === role &&
+    evidence.pid === pid
+  );
+}
+
+function safetyWaitMemberName(role: string): string {
+  if (role === "leader") return "leader";
+  const label = roleToAgentLabel(role);
+  if (label === null) throw new Error("invalid safety-wait role");
+  return label;
+}
+
+export function safetyWaitReadyPath(runRecord: string, role: string): string {
+  return join(runRecord, "members", safetyWaitMemberName(role), "safety-wait.ready");
+}
+
+export function writeSafetyWaitReadyEvidence(
+  runRecord: string,
+  evidence: SafetyWaitReadyEvidence,
+): void {
+  const readyPath = safetyWaitReadyPath(runRecord, evidence.role);
+  const tempPath = `${readyPath}.${evidence.pid}.tmp`;
+  try {
+    writeFileSync(tempPath, `${JSON.stringify(evidence)}\n`, { flag: "wx" });
+    renameSync(tempPath, readyPath);
+  } finally {
+    rmSync(tempPath, { force: true });
+  }
 }
 
 export function safetyWaitRunIsActive(identity: SafetyWaitRunIdentity): boolean {
@@ -525,6 +615,11 @@ async function supervise(
     return 3;
   }
 
+  if (!(await runRecordIsActive(runRecord, run, session))) {
+    console.error(`[safety-wait] role=${role} result=inactive-run`);
+    return 3;
+  }
+
   const supervisor = new SafetyWaitSupervisor({
     session,
     role,
@@ -532,6 +627,19 @@ async function supervise(
     confirmedAbsentVisibleTexts: PRODUCTION_CONFIRMED_ABSENT_VISIBLE_TEXTS,
   });
   const adapter = createAdapter(argv, session);
+  if ((await checkRoleReady(adapter, role)) !== 0) {
+    console.error(`[safety-wait] role=${role} result=role-not-unique`);
+    return 3;
+  }
+  try {
+    writeSafetyWaitReadyEvidence(
+      runRecord,
+      createSafetyWaitReadyEvidence(run, role, process.pid),
+    );
+  } catch {
+    console.error(`[safety-wait] role=${role} result=ready-write-failed`);
+    return 3;
+  }
   while (await runRecordIsActive(runRecord, run, session)) {
     const result = await supervisor.poll(adapter);
     const reason = result.kind === "no-input" ? result.reason : result.kind;
@@ -557,6 +665,20 @@ export async function main(argv: readonly string[]): Promise<number> {
   if (session === null || role === null || roleToAgentLabel(role) === null) return 2;
   if (argv[0] === "role-ready") {
     return checkRoleReady(createAdapter(argv, session), role);
+  }
+  if (argv[0] === "ready-valid") {
+    const run = option(argv, "--run");
+    const runRecord = option(argv, "--run-record");
+    const pid = Number(option(argv, "--pid"));
+    if (run === null || runRecord === null || !Number.isSafeInteger(pid) || pid <= 0) {
+      return 2;
+    }
+    try {
+      const raw: unknown = await Bun.file(safetyWaitReadyPath(runRecord, role)).json();
+      return safetyWaitReadyEvidenceMatches(raw, run, role, pid) ? 0 : 3;
+    } catch {
+      return 3;
+    }
   }
   if (argv[0] !== "supervise") return 2;
   return supervise(argv, session, role);

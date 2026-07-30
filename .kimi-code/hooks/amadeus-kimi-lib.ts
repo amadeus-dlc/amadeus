@@ -7,9 +7,12 @@
 // ClaudeCodeHookInput shape each named core hook consumes, subprocess-pipe
 // into it, and relay stdout/exit per the Kimi contract.
 //
-// ── live-capture measurement (Kimi Code CLI 0.28.1, captured 2026-07-26) ────
-// Fixtures: tests/fixtures/kimi-hooks/<event>.json (real captures only).
-// Base envelope for every event: {hook_event_name, session_id, cwd} —
+// ── measured and bundle-derived Kimi contracts ─────────────────────────────
+// Most fixtures are Kimi Code CLI 0.28.1 live captures (2026-07-26).
+// PreToolUse is an official-contract fixture. SubagentStart/SubagentStop are
+// derived from the Kimi 0.29.0 external hook runner: it supplies agent_name
+// but an empty session_id, so these are not claimed live captures.
+// Session/tool envelopes otherwise use {hook_event_name, session_id, cwd} in
 // snake_case, near-isomorphic to Claude Code. The load-bearing differences:
 //   1. UserPromptSubmit.prompt is a CONTENT-BLOCK ARRAY
 //      ([{type:"text",text:"..."}]), not a plain string. The core mint hook's
@@ -22,21 +25,20 @@
 //   3. The plan tool is TodoList ({todos:[{status,title}]}), not TaskUpdate —
 //      the first in_progress todo maps to the {status, activeForm} shape the
 //      statusline-sync hook keys on (same idiom as codex's update_plan).
-//   4. Subagent identity is `agent_name` (SubagentStart/SubagentStop); there
-//      is no agent_id field. Maps to the core log-subagent hook's agent_type,
-//      agent_id defaults to "".
+//   4. Subagent identity is only `agent_name`; there is no agent_id and the
+//      0.29.0 external runner emits an empty session_id. Maps to agent_type
+//      for observation only; it cannot establish a trustworthy caller role.
 //   5. PostToolUse carries tool_call_id + tool_output (string) — neither is
 //      read by any core hook; dropped (unknown fields are not forwarded).
 //
-// Output contracts — all three verified LIVE on 0.28.1 (BR-3/BR-5):
-//   - Stop block: exit 2 + stderr. The stderr text is delivered to the model
-//     as a continue message (observed: the model quoted the reason verbatim
-//     and continued the turn). The core stop hook emits Claude-schema
-//     {"decision":"block","reason"} on stdout with exit 0 — the shim parses
-//     that and relays the reason VERBATIM on stderr with exit 2. Stop did NOT
-//     re-fire after the block (single fire per turn observed). Core stdout is
-//     never forwarded on Stop: with exit 0 Kimi may append hook stdout to
-//     context, so a stray Claude-schema JSON must not leak.
+// Output contracts — the base shapes were verified LIVE on 0.28.1 (BR-3/BR-5):
+//   - Stop forwards only when the payload's non-empty session_id matches both
+//     the host-stamped `.current-session` and the SessionStart baseline, no
+//     agent_name is present, and no subagent lifecycle is active. Empty,
+//     mismatched, delegated-agent, and ambiguous payloads remain silent no-ops.
+//     A live 0.28.1 Stop capture has no agent_name. The installed 0.29.0
+//     bundle constructs Stop with only stopHookActive and reports delegated
+//     lifecycle separately through SubagentStart/SubagentStop agentName.
 //   - SessionStart context injection: NONE. Three candidate formats were
 //     probed and none reached the model's context (plain-text stdout,
 //     {"hookSpecificOutput":{...,"additionalContext"}}, and bare
@@ -44,11 +46,20 @@
 //     translateSessionStartOutput therefore always returns "".
 //   - fail-open: exit 0 = allow (stdout MAY be appended to context on
 //     blockable events); exit 2 = block; other non-zero / error / timeout =
-//     allow. This shim exits 0 on every path except the Stop block relay.
+//     allow. This shim exits 0 on every path.
 //     (Observed for completeness, not wired: UserPromptSubmit stdout plain
 //     text IS appended to context — the only injection channel that works
 //     on 0.28.1.)
 
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -89,6 +100,358 @@ export interface AdapterResult {
   stdout: string;
   exitCode: number;
   stderr: string;
+}
+
+const KIMI_ROLE_MARKER_RELATIVE_PATH = join(
+  "amadeus",
+  ".amadeus-sessions",
+  "kimi-active-subagents.json",
+);
+const KIMI_ROLE_DENY_RELATIVE_PATH = join(
+  "amadeus",
+  ".amadeus-sessions",
+  "kimi-subagent-transition-deny",
+);
+const KIMI_SESSION_ENDED_DENY_RELATIVE_PATH = join(
+  "amadeus",
+  ".amadeus-sessions",
+  "kimi-session-ended-deny",
+);
+
+interface KimiRoleMarker {
+  version: 1;
+  mainSessionId: string;
+  roles: Record<string, number>;
+}
+
+export type KimiRoleMarkerWriter = (
+  markerPath: string,
+  marker: KimiRoleMarker,
+) => void;
+
+const ROLE_LOCK_STALE_MS = 30_000;
+const ROLE_LOCK_RETRIES = 100;
+const ROLE_LOCK_WAIT_MS = 5;
+
+function roleMarkerPath(projectDir: string): string {
+  return join(projectDir, KIMI_ROLE_MARKER_RELATIVE_PATH);
+}
+
+function roleDenyPath(projectDir: string): string {
+  return join(projectDir, KIMI_ROLE_DENY_RELATIVE_PATH);
+}
+
+function sessionEndedDenyPath(projectDir: string): string {
+  return join(projectDir, KIMI_SESSION_ENDED_DENY_RELATIVE_PATH);
+}
+
+function withRoleMarkerLock(
+  markerPath: string,
+  operation: () => void,
+): boolean {
+  const lockPath = `${markerPath}.lock`;
+  for (let attempt = 0; attempt < ROLE_LOCK_RETRIES; attempt++) {
+    // Only the lock acquisition sits in this try: an error thrown by
+    // operation() must not be mistaken for lock contention and retried, and
+    // it must reach the caller's own fail-closed path instead of collapsing
+    // into the same `false` a lock-acquisition failure returns.
+    try {
+      mkdirSync(lockPath);
+    } catch (cause) {
+      const code = (cause as NodeJS.ErrnoException).code;
+      if (code !== "EEXIST") return false;
+      try {
+        if (Date.now() - statSync(lockPath).mtimeMs > ROLE_LOCK_STALE_MS) {
+          rmSync(lockPath, { recursive: true, force: true });
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      Bun.sleepSync(ROLE_LOCK_WAIT_MS);
+      continue;
+    }
+    try {
+      operation();
+      return true;
+    } finally {
+      rmSync(lockPath, { recursive: true, force: true });
+    }
+  }
+  return false;
+}
+
+function readRoleMarker(projectDir: string): KimiRoleMarker | null {
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(roleMarkerPath(projectDir), "utf-8"),
+    );
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      (parsed as { version?: unknown }).version !== 1
+    ) {
+      return null;
+    }
+    const mainSessionId = (parsed as { mainSessionId?: unknown }).mainSessionId;
+    const roles = (parsed as { roles?: unknown }).roles;
+    if (
+      typeof mainSessionId !== "string" ||
+      mainSessionId.trim().length === 0 ||
+      roles === null ||
+      typeof roles !== "object" ||
+      Array.isArray(roles)
+    ) {
+      return null;
+    }
+    for (const [role, count] of Object.entries(roles)) {
+      if (
+        role.trim().length === 0 ||
+        typeof count !== "number" ||
+        !Number.isSafeInteger(count) ||
+        count < 1
+      ) {
+        return null;
+      }
+    }
+    return {
+      version: 1,
+      mainSessionId,
+      roles: roles as Record<string, number>,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeRoleMarkerAtomic(
+  markerPath: string,
+  marker: KimiRoleMarker,
+): void {
+  const temporaryPath = `${markerPath}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(marker)}\n`, "utf-8");
+  renameSync(temporaryPath, markerPath);
+}
+
+function establishKimiMainBaseline(
+  projectDir: string,
+  sessionId: string,
+): void {
+  const markerPath = roleMarkerPath(projectDir);
+  const normalizedSessionId = sessionId.trim();
+  try {
+    mkdirSync(dirname(markerPath), { recursive: true });
+    if (normalizedSessionId.length === 0) {
+      unlinkSync(markerPath);
+      return;
+    }
+    const updated = withRoleMarkerLock(markerPath, () => {
+      writeRoleMarkerAtomic(markerPath, {
+        version: 1,
+        mainSessionId: normalizedSessionId,
+        roles: {},
+      });
+      try {
+        unlinkSync(roleDenyPath(projectDir));
+      } catch {
+        // An absent transition latch is the intended baseline state.
+      }
+      try {
+        unlinkSync(sessionEndedDenyPath(projectDir));
+      } catch {
+        // A new valid baseline retires the prior session's tombstone.
+      }
+    });
+    if (!updated) {
+      try {
+        unlinkSync(markerPath);
+      } catch {
+        // A missing baseline is fail-closed in the engine guard.
+      }
+    }
+  } catch {
+    try {
+      unlinkSync(markerPath);
+    } catch {
+      // A missing baseline is fail-closed in the engine guard.
+    }
+  }
+}
+
+function clearKimiRoleCarrier(projectDir: string): void {
+  const markerPath = roleMarkerPath(projectDir);
+  try {
+    mkdirSync(dirname(markerPath), { recursive: true });
+    writeFileSync(sessionEndedDenyPath(projectDir), "session-ended\n", "utf-8");
+    writeFileSync(roleDenyPath(projectDir), "session-ended\n", "utf-8");
+    const cleared = withRoleMarkerLock(markerPath, () => {
+      try {
+        unlinkSync(markerPath);
+      } catch {
+        // A missing baseline is the intended post-session state.
+      }
+    });
+    if (cleared) return;
+  } catch {
+    // Fall through to a best-effort baseline removal. A retained latch or a
+    // missing marker both keep the engine fail-closed until SessionStart.
+  }
+  try {
+    unlinkSync(markerPath);
+  } catch {
+    // Runtime cleanup is best-effort and remains fail-closed.
+  }
+}
+
+export function updateKimiSubagentRole(
+  projectDir: string,
+  agentName: string,
+  action: "start" | "stop",
+  writeMarker: KimiRoleMarkerWriter = writeRoleMarkerAtomic,
+): void {
+  const markerPath = roleMarkerPath(projectDir);
+
+  try {
+    mkdirSync(dirname(markerPath), { recursive: true });
+    if (action === "start") {
+      writeFileSync(roleDenyPath(projectDir), "subagent-start\n", "utf-8");
+    }
+    const updated = withRoleMarkerLock(markerPath, () => {
+      const role = agentName.trim() || "unknown";
+      const marker = readRoleMarker(projectDir);
+      if (marker === null) {
+        throw new Error("Kimi main-session baseline is missing or malformed");
+      }
+      const current = marker.roles[role] ?? 0;
+      if (action === "start") {
+        marker.roles[role] = current + 1;
+      } else if (current <= 1) {
+        delete marker.roles[role];
+      } else {
+        marker.roles[role] = current - 1;
+      }
+      writeMarker(markerPath, marker);
+      if (Object.keys(marker.roles).length > 0) return;
+      try {
+        unlinkSync(roleDenyPath(projectDir));
+      } catch {
+        // An absent transition latch is the intended idle state.
+      }
+    });
+    if (!updated && action === "start") {
+      try {
+        writeFileSync(roleDenyPath(projectDir), "subagent-start-failed\n", "utf-8");
+      } catch {
+        try {
+          unlinkSync(markerPath);
+        } catch {
+          // If storage is wholly unwritable, the adapter cannot strengthen
+          // the filesystem carrier; the engine still rejects lock/malformed
+          // and missing baseline states.
+        }
+      }
+    }
+  } catch {
+    // Role-start creates the deny latch before updating the counted carrier,
+    // so a failed persistence remains denied. A failed role-stop leaves the
+    // prior active marker or latch in place.
+    if (action === "start") {
+      try {
+        writeFileSync(roleDenyPath(projectDir), "subagent-start-failed\n", "utf-8");
+      } catch {
+        try {
+          unlinkSync(markerPath);
+        } catch {
+          // See the wholly-unwritable storage limitation above.
+        }
+      }
+    }
+  }
+}
+
+export function isTrustedMainStop(
+  env: KimiEnvelope,
+  projectDir: string,
+): boolean {
+  if (typeof env.session_id !== "string" || env.session_id.length === 0) {
+    return false;
+  }
+  if (typeof env.agent_name === "string" && env.agent_name.length > 0) {
+    return false;
+  }
+  const markerPath = roleMarkerPath(projectDir);
+  if (
+    statExists(roleDenyPath(projectDir)) ||
+    statExists(sessionEndedDenyPath(projectDir)) ||
+    statExists(`${markerPath}.lock`)
+  ) {
+    return false;
+  }
+  try {
+    const marker = readRoleMarker(projectDir);
+    if (
+      marker === null ||
+      marker.mainSessionId !== env.session_id ||
+      Object.keys(marker.roles).length > 0
+    ) {
+      return false;
+    }
+    const trustedSessionId = readFileSync(
+      join(projectDir, "amadeus", ".amadeus-sessions", ".current-session"),
+      "utf-8",
+    ).trim();
+    return trustedSessionId.length > 0 && trustedSessionId === env.session_id;
+  } catch {
+    return false;
+  }
+}
+
+function statExists(path: string): boolean {
+  try {
+    statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function trackKimiRoleLifecycle(
+  target: string,
+  env: KimiEnvelope,
+  projectDir: string,
+): void {
+  switch (target) {
+    case "session-start":
+      establishKimiMainBaseline(projectDir, env.session_id ?? "");
+      break;
+    case "session-end":
+      clearKimiRoleCarrier(projectDir);
+      break;
+    case "role-start":
+      updateKimiSubagentRole(projectDir, env.agent_name ?? "", "start");
+      break;
+    case "log-subagent":
+      updateKimiSubagentRole(projectDir, env.agent_name ?? "", "stop");
+      break;
+  }
+}
+
+function translateCoreResult(
+  call: CoreHookCall,
+  result: { stdout: string; code: number },
+  previous: AdapterResult,
+): AdapterResult {
+  if (call.translate === "session-start") {
+    return {
+      stdout: translateSessionStartOutput(result.stdout),
+      exitCode: 0,
+      stderr: "",
+    };
+  }
+  if (call.translate === "stop" && result.code === 0) {
+    return { stdout: result.stdout, exitCode: 0, stderr: "" };
+  }
+  return previous;
 }
 
 // parse-don't-validate: JSON text → envelope object, or null for anything that
@@ -136,12 +499,27 @@ export function normalizePayload(target: string, env: KimiEnvelope): string | nu
       return JSON.stringify(payload);
     }
     case "session-end":
-      return JSON.stringify({ hook_event_name: "SessionEnd", reason: env.reason ?? "unknown" });
-    case "mint":
-      // Both wirings land here: UserPromptSubmit (real prompt text) and
-      // PostToolUse(AskUserQuestion) (no prompt field → "" → the core hook
-      // mints fail-open, its exact contract for a prompt-absent payload).
-      return JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: promptText(env.prompt) });
+      return JSON.stringify({
+        hook_event_name: "SessionEnd",
+        reason: env.reason ?? "unknown",
+        ...(env.session_id ? { session_id: env.session_id } : {}),
+      });
+    case "mint": {
+      const payload: Record<string, unknown> = {
+        hook_event_name: env.hook_event_name ?? "",
+        ...(env.tool_name ? { tool_name: env.tool_name } : {}),
+        ...(env.tool_input ? { tool_input: env.tool_input } : {}),
+        ...(env.session_id ? { session_id: env.session_id } : {}),
+      };
+      // UserPromptSubmit carries the human text in `prompt`; PostToolUse
+      // (AskUserQuestion) carries the rendered question in `tool_input`.
+      // Omitting a synthetic empty prompt lets the core choose tool_input as
+      // the reservation-binding purpose for that primary gate path.
+      if (env.hook_event_name === "UserPromptSubmit") {
+        payload.prompt = promptText(env.prompt);
+      }
+      return JSON.stringify(payload);
+    }
     case "audit-and-sensors": {
       // Write|Edit matcher (snippet). Kimi tool_input.path → Claude file_path.
       const payload: Record<string, unknown> = {
@@ -182,24 +560,28 @@ export function normalizePayload(target: string, env: KimiEnvelope): string | nu
         hook_event_name: "SubagentStop",
         agent_type: env.agent_name ?? "",
         agent_id: "",
+        ...(env.session_id ? { session_id: env.session_id } : {}),
       });
-    case "stop": {
-      const payload: Record<string, unknown> = {
+    case "stop":
+      return JSON.stringify({
         hook_event_name: "Stop",
-        stop_hook_active: env.stop_hook_active ?? false,
-      };
-      if (env.session_id) payload.session_id = env.session_id;
-      return JSON.stringify(payload);
-    }
+        ...(env.session_id ? { session_id: env.session_id } : {}),
+        ...(env.cwd ? { cwd: env.cwd } : {}),
+        stop_hook_active: env.stop_hook_active === true,
+      });
     default:
       return null;
   }
 }
 
-// routeTarget — the 9-target dispatch table (domain-entities.md
+// routeTarget — the dispatch table (domain-entities.md
 // §AdapterTarget). Unknown target / unmappable payload → empty call list
 // (fail-open: nothing to pipe, exit 0).
-export function routeTarget(target: string, env: KimiEnvelope): CoreHookCall[] {
+export function routeTarget(
+  target: string,
+  env: KimiEnvelope,
+  trustedMainStop = false,
+): CoreHookCall[] {
   const stdin = normalizePayload(target, env);
   if (stdin === null) return [];
   switch (target) {
@@ -233,29 +615,12 @@ export function routeTarget(target: string, env: KimiEnvelope): CoreHookCall[] {
     case "log-subagent":
       return [{ hookPath: "amadeus-log-subagent.ts", stdin, translate: "none" }];
     case "stop":
-      return [{ hookPath: "amadeus-stop.ts", stdin, translate: "stop" }];
+      return trustedMainStop
+        ? [{ hookPath: "amadeus-stop.ts", stdin, translate: "stop" }]
+        : [];
     default:
       return [];
   }
-}
-
-// translateStopOutput — the ONE verbatim relay (BR-3). The core stop hook's
-// block decision arrives as Claude-schema {"decision":"block","reason"} on
-// stdout (exit 0). Kimi's block contract (verified live on 0.28.1) is exit 2
-// with the reason on stderr. Only a well-formed block decision is relayed;
-// anything else (no block, malformed output) fails open with exit 0 and NO
-// stdout — Kimi may append a blockable event's exit-0 stdout to context, so
-// the Claude-schema JSON must never leak through.
-export function translateStopOutput(coreStdout: string): AdapterResult {
-  try {
-    const parsed = JSON.parse(coreStdout.trim()) as { decision?: unknown; reason?: unknown };
-    if (parsed.decision === "block" && typeof parsed.reason === "string") {
-      return { stdout: "", exitCode: 2, stderr: `${parsed.reason}\n` };
-    }
-  } catch {
-    // unparseable core output — cannot relay a block contract; fail open
-  }
-  return { stdout: "", exitCode: 0, stderr: "" };
 }
 
 // translateSessionStartOutput — Kimi 0.28.1 discards SessionStart hook stdout
@@ -314,9 +679,10 @@ export function defaultSpawn(hookFile: string, input: string, projectDir: string
 // Pure of process.exit so it drives in-process under test; the CLI entrypoint
 // owns the actual exit. Fail-open EVERYWHERE (BR-2): unparseable stdin,
 // unknown target, missing core hook, or a core hook's non-zero exit all
-// resolve to exit 0 — the user's Kimi session is never trapped. The single
-// exception is the Stop block relay (exit 2), and even that only fires on a
-// well-formed core block decision.
+// resolve to exit 0 — the user's Kimi session is never trapped. Stop is a
+// no-op unless the host-stamped session carriers and empty ambient-role set
+// establish the main Stop contract. This does not authenticate an arbitrary
+// process caller; the conductor must not mutate while a subagent is active.
 export function runAdapter(target: string, raw: string, projectDir: string, spawn: SpawnFn = defaultSpawn): AdapterResult {
   try {
     const env = parseKimiEnvelope(raw);
@@ -324,7 +690,8 @@ export function runAdapter(target: string, raw: string, projectDir: string, spaw
       return { stdout: "", exitCode: 0, stderr: `amadeus-kimi-adapter: unparseable stdin for target '${target}'\n` };
     }
     const dir = env.cwd ?? projectDir;
-    const calls = routeTarget(target, env);
+    trackKimiRoleLifecycle(target, env, dir);
+    const calls = routeTarget(target, env, target === "stop" && isTrustedMainStop(env, dir));
     let last: AdapterResult = { stdout: "", exitCode: 0, stderr: "" };
     for (const call of calls) {
       let r: { stdout: string; code: number };
@@ -333,8 +700,7 @@ export function runAdapter(target: string, raw: string, projectDir: string, spaw
       } catch {
         continue; // core hook missing / spawn failure — fail open (BR-2)
       }
-      if (call.translate === "stop") last = translateStopOutput(r.stdout);
-      else if (call.translate === "session-start") last = { stdout: translateSessionStartOutput(r.stdout), exitCode: 0, stderr: "" };
+      last = translateCoreResult(call, r, last);
       // translate "none": advisory — core stdout/exit are deliberately dropped.
     }
     return last;

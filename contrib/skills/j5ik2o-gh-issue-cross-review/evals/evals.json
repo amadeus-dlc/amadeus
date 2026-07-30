@@ -1,0 +1,76 @@
+{
+  "skill_name": "j5ik2o-gh-issue-cross-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "このリポジトリの Issue #1389 を起票者以外の2名でクロスレビューして。GitHub への投稿はまだしないで、コメント案まで作って。",
+      "expected_output": "The skill freezes one Issue and target SHA, resolves local norms, obtains two blind evidence-backed reviews, computes a fail-closed convergence result, and returns two unposted comment drafts.",
+      "files": [],
+      "expectations": [
+        "The response resolves and verifies Issue #1389 as an explicit Issue target.",
+        "The response uses two fresh non-filer execution subjects and preserves blind review independence.",
+        "The response computes a fail-closed convergence result from two validated verdicts.",
+        "The response prepares two distinct comment drafts and does not post them."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "amadeus-dlc/amadeus#1248 を独立2名で検証し、成立したらレビューコメントを Issue に投稿してください。",
+      "expected_output": "The skill uses two fresh non-filer reviewers, validates both outputs before convergence, posts two distinct comments only because posting was explicitly authorized, and reports both comment URLs without starting implementation.",
+      "files": [],
+      "expectations": [
+        "The response verifies that amadeus-dlc/amadeus#1248 is an Issue rather than a pull request.",
+        "The response binds two fresh reviewers to distinct native execution subject IDs.",
+        "The response posts only after both reports pass validation and convergence is computed.",
+        "The response reports two distinct Issue comment URLs without starting implementation."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "open な GitHub Issues を全部整理して、重複とクローズ候補を一覧にして。",
+      "expected_output": "This request is identified as backlog triage rather than single-Issue cross-review, so the cross-review workflow is not run and an issue-organizer workflow is recommended.",
+      "files": [],
+      "expectations": [
+        "The response identifies the request as backlog triage rather than a single-Issue cross-review.",
+        "The response does not dispatch cross-reviewers or mutate GitHub state.",
+        "The response recommends an Issue-organizer workflow."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "次の2ターンだけが同じ未完了タスクの会話コンテキストです。\n\n[直前のユーザーターン]\nhttps://github.com/amadeus-dlc/amadeus/issues/1389 をクロスレビュー対象にしたい。\n\n[現在のユーザーターン]\n$j5ik2o-gh-issue-cross-review を実行して。\n\nこのfixtureでは URL は open Issue #1389 に解決され、PRではありません。",
+      "expected_output": "The skill auto-resolves Issue #1389 from user-authored conversation context, announces the inferred target without asking for its number again, freezes the manifest, and starts two blind reviews.",
+      "files": [],
+      "expectations": [
+        "The resolver selects Tier 1 and canonicalizes the URL as Issue #1389.",
+        "The response records AUTO_RESOLVED with the Tier 1 candidate and evidence.",
+        "The response announces the inferred target and does not ask for confirmation or repeat the Issue number.",
+        "The response proceeds to freeze the review manifest and dispatch two blind reviewers."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Issue番号を指定せずにクロスレビューして。\n\nGitHub fixture:\n- current repository: amadeus-dlc/amadeus\n- current branch PR: https://github.com/amadeus-dlc/amadeus/pull/1702\n- structured closingIssuesReferences: [{\"url\":\"https://github.com/amadeus-dlc/amadeus/issues/1389\",\"number\":1389,\"state\":\"OPEN\"}]\n- the conversation contains no explicit Issue reference outside this fixture\n- no other open closing Issue is linked",
+      "expected_output": "The skill obtains structured closingIssuesReferences from the current PR, verifies the sole open Issue, records AUTO_RESOLVED with tier-2 evidence, and proceeds without asking the user to repeat the number.",
+      "files": [],
+      "expectations": [
+        "The resolver records Tier 1 as empty and selects Tier 2 from structured closingIssuesReferences.",
+        "The sole candidate is canonical Issue #1389 and the result is AUTO_RESOLVED.",
+        "The response does not infer the target from PR prose, title text, or commit subjects.",
+        "The response announces the target and proceeds without a confirmation question."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "対象番号は省略してクロスレビューして。\n\nGitHub fixture:\n- current repository: example/repo\n- there is no current-branch PR\n- the exhaustive paginated label inventory contains cross-review-pending with description \"Awaiting Issue cross-review\"\n- the exhaustive paginated open-Issue inventory has exactly three matching Issues: https://github.com/example/repo/issues/11, https://github.com/example/repo/issues/12, and https://github.com/example/repo/issues/13\n- all three objects are Issues, not pull requests\n- pagination and JSON parsing completed successfully",
+      "expected_output": "The skill returns AMBIGUOUS, presents the three candidates as clickable Issue links, and asks the user to choose without selecting by recency, number, or priority.",
+      "files": [],
+      "expectations": [
+        "The resolver records the earlier tiers as empty and selects Tier 3.",
+        "The resolver records all three canonical candidates and returns AMBIGUOUS with selected_url null.",
+        "The response presents all three candidates as clickable Issue links.",
+        "The response asks the user to choose and does not break ambiguity by recency, number, or priority."
+      ]
+    }
+  ]
+}
