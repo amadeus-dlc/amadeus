@@ -1,4 +1,4 @@
-// covers: function:journalRecordField function:auditBlockField function:splitAuditRecords function:findAllEvents function:findForkAnchor function:compactionPendingFromAudit function:targetedApprovalEvidence
+// covers: function:journalRecordField function:auditBlockField function:splitAuditRecords function:findAllEvents function:findForkAnchor function:compactionPendingFromAudit function:targetedApprovalEvidence function:parseDoctorAuditSuffix
 //
 // Behavior-equivalence tests for the journal reader swap (FR-JRN-4, intent
 // 260729-otel-upstream U6): every journal/audit reader in tools + hooks —
@@ -23,6 +23,7 @@ import {
   findAllEvents,
   splitAuditRecords,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import * as migrate from "../../dist/claude/.claude/tools/amadeus-migrate.ts";
 import {
   type PresenceReservation,
   targetedApprovalEvidence,
@@ -253,5 +254,36 @@ describe("targetedApprovalEvidence — the presence reservation read", () => {
     expect(expected).toEqual({ gateApproved: 1, stageCompleted: 1, humanTurnIsFresh: false });
     expect(targetedApprovalEvidence(V2_BUFFER, marker)).toEqual(expected);
     expect(targetedApprovalEvidence(MIXED_BUFFER, marker)).toEqual(expected);
+  });
+});
+
+describe("parseDoctorAuditSuffix — the doctor migration-evidence read", () => {
+  const suffix = () =>
+    v1Line(1, "GUARDRAIL_LOADED", TS(0)) + v1Line(2, "HEALTH_CHECKED", TS(1));
+  const parse = migrate.parseDoctorAuditSuffix as
+    | ((input: string, allowHeader: boolean) => string[] | null)
+    | undefined;
+
+  test("accepts the doctor health events from v1, v2, and mixed appends", () => {
+    expect(typeof parse).toBe("function");
+    const v1 = suffix();
+    const v2 = v1
+      .split("\n")
+      .filter((l) => l !== "")
+      .map(v2LineOf)
+      .join("");
+    expect(parse!(v1, false)).toEqual(["GUARDRAIL_LOADED", "HEALTH_CHECKED"]);
+    expect(parse!(v2, false)).toEqual(["GUARDRAIL_LOADED", "HEALTH_CHECKED"]);
+    expect(parse!(v1 + v2, false)).toEqual([
+      "GUARDRAIL_LOADED",
+      "HEALTH_CHECKED",
+      "GUARDRAIL_LOADED",
+      "HEALTH_CHECKED",
+    ]);
+  });
+
+  test("non-doctor events and non-journal lines stay a refusal", () => {
+    expect(parse!(v1Line(1, "STAGE_STARTED", TS(0)), false)).toBeNull();
+    expect(parse!("not json\n", false)).toBeNull();
   });
 });
