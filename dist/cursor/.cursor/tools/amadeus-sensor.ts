@@ -58,7 +58,6 @@ import {
 	withAuditLock,
 } from "./amadeus-lib.ts";
 import { attachProcessTraceContext, initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
-import { injectToSubprocess } from "../otel/context.ts";
 
 // --- Constants ---
 
@@ -291,7 +290,7 @@ function stageTemplateEligibleArtifacts(stage: {
 // Step 4-8 — emit FIRED, spawn, decide outcome, write detail (if FAILED),
 //            emit terminal row.
 // Step 9 — exit 0.
-export function handleFire(args: string[], projectDirArg?: string): void {
+export async function handleFire(args: string[], projectDirArg?: string): Promise<void> {
 	const id = args[0];
 	if (!id || id.startsWith("--")) {
 		dispatchError("fire requires a sensor id as first positional arg");
@@ -365,7 +364,19 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// the W3C carrier into this process's env; a direct human invocation falls
 	// back to the persisted anchor. The per-sensor script spawn below re-injects
 	// it so the whole sensor path stays on one trace (BR-3).
-	attachProcessTraceContext(projectDir);
+	await attachProcessTraceContext(projectDir);
+
+	// W3C carrier for the per-sensor script env (FR-TRC-5). Keep the otel
+	// dependency out of the dispatcher's static module graph: partial fixture
+	// trees may omit otel/, and tracing must remain fail-open (BR-5).
+	const childEnv = await (async () => {
+		try {
+			const { injectToSubprocess } = await import("../otel/context.ts");
+			return injectToSubprocess({ ...process.env });
+		} catch {
+			return { ...process.env };
+		}
+	})();
 
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
@@ -468,7 +479,7 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 				timeout: timeoutMs,
 				cwd: projectDir,
 				// W3C carrier into the per-sensor script env (FR-TRC-5).
-				env: injectToSubprocess({ ...process.env }),
+				env: childEnv,
 			}),
 		),
 	);
@@ -864,7 +875,7 @@ Subcommands:
 // so every subcommand sees a clean argv and fire can honour the flag. argv is a
 // parameter (defaulting to the real process args) so the dispatch can be driven
 // in-process by tests without a spawn (the exported seams register in lcov).
-export function main(argv: string[] = process.argv.slice(2)): void {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 	const { projectDirArg, rest } = stripProjectDir(argv);
 	const [cmd, ...args] = rest;
 
@@ -895,7 +906,7 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 			handleDescribe(args);
 			return;
 		case "fire":
-			handleFire(args, projectDirArg);
+			await handleFire(args, projectDirArg);
 			return;
 		default:
 			process.stderr.write(
@@ -909,5 +920,5 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 // in-process by tests) without executing main() / process.exit at load time.
 // Matches the sibling tools (amadeus-jump, amadeus-state).
 if (import.meta.main) {
-	main();
+	await main();
 }

@@ -19,7 +19,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sensorsDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -145,7 +145,7 @@ class ExitSignal extends Error {
 // handleFire always ends via process.exit; in-process we convert that into a
 // throwable so the drive returns the exit code. stdout is silenced (the fire
 // prints a status line) so it does not pollute the test log.
-function driveExit(fn: () => void): number {
+async function driveExit(fn: () => void | Promise<void>): Promise<number> {
   const origExit = process.exit.bind(process);
   const origLog = console.log;
   process.exit = ((code?: number) => {
@@ -154,7 +154,7 @@ function driveExit(fn: () => void): number {
   console.log = () => {};
   let status = 0;
   try {
-    fn();
+    await fn();
   } catch (e) {
     if (e instanceof ExitSignal) status = e.code;
     else throw e;
@@ -226,15 +226,15 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     cleanupTestProject(manifestDir);
   });
 
-  test("main dispatches `fire` and the passing fire path exits 0", () => {
+  test("main dispatches `fire` and the passing fire path exits 0", async () => {
     setStubManifest("amadeus-sensor-stub-pass.ts");
-    const status = driveExit(() =>
+    const status = await driveExit(() =>
       main(["fire", SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
   });
 
-  test("a FAILED fire whose detail write cannot mkdir folds to script-error and still exits 0", () => {
+  test("a FAILED fire whose detail write cannot mkdir folds to script-error and still exits 0", async () => {
     setStubManifest("amadeus-sensor-stub-fail.ts");
     // Plant a regular FILE where the detail dir must be created so step 7's
     // mkdirSync throws → the detail-write-failed catch runs (finalOutcome folds
@@ -242,15 +242,25 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     const detailDir = join(sensorsDir(proj), STAGE);
     mkdirSync(sensorsDir(proj), { recursive: true });
     writeFileSync(detailDir, "not a directory\n", "utf-8");
-    const status = driveExit(() =>
+    const status = await driveExit(() =>
       handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
   });
 
-  test("main dispatches `list` in-process (own argv, no exit)", () => {
+  test("main dispatches `list` in-process (own argv, no exit)", async () => {
     setStubManifest("amadeus-sensor-stub-pass.ts");
     // list returns without process.exit; driveExit sees status 0 (no throw).
-    expect(driveExit(() => main(["list"]))).toBe(0);
+    expect(await driveExit(() => main(["list"]))).toBe(0);
+  });
+
+  test("fire awaits trace attachment and lazy-loads subprocess injection", () => {
+    const source = readFileSync(
+      join(import.meta.dir, "../../packages/framework/core/tools/amadeus-sensor.ts"),
+      "utf-8",
+    );
+    expect(source).toContain("await attachProcessTraceContext(projectDir)");
+    expect(source).toContain('await import("../otel/context.ts")');
+    expect(source).not.toMatch(/^import .*["']\.\.\/otel\/context\.ts["'];$/m);
   });
 });
