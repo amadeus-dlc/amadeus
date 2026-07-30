@@ -1,5 +1,5 @@
 // covers: none (documentation-contract guard; the engine side is
-// packages/framework/core/tools/amadeus-state.ts requirePhaseCheckArtifact)
+// packages/framework/core/tools/amadeus-state.ts verifyPhaseCheckArtifact)
 //
 // t368 (integration) — phase-boundary artifact name contract (Issue #1749).
 //
@@ -29,7 +29,10 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 // would then need to exempt itself. The exclusion scope stays exactly the
 // record layer.
 const LEGACY_NAME = `[phase-${"boundary"}]-verification`;
-const CANONICAL_PREFIX = "phase-check-";
+// The whole template the engine resolves, not just the stem: a bare
+// `phase-check-` prefix would also accept a wrong directory or a wrong
+// extension, neither of which the engine ever looks for.
+const CANONICAL_TEMPLATE = "verification/phase-check-<phase>.md";
 const RECORD_SCOPE = "amadeus/spaces/";
 const GOVERNANCE_REL = "amadeus-common/protocols/stage-protocol-governance.md";
 
@@ -68,14 +71,14 @@ describe("t368 phase-check artifact name contract", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("every governance copy instructs the canonical phase-check name", () => {
+  test("every governance copy instructs the canonical phase-check template", () => {
     const copies = governanceCopies();
     // The canonical source plus at least the generated surfaces — a collapsed
     // corpus would make the predicate above vacuous.
     expect(copies.length).toBeGreaterThan(1);
     expect(copies).toContain(`packages/framework/core/${GOVERNANCE_REL}`);
 
-    const res = git(["grep", "-lF", CANONICAL_PREFIX, "--", ...copies]);
+    const res = git(["grep", "-lF", CANONICAL_TEMPLATE, "--", ...copies]);
     expect(res.status).toBe(0);
     expect(lines(res.stdout).sort()).toEqual([...copies].sort());
   });
