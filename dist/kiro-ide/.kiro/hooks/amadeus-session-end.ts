@@ -62,13 +62,13 @@ try {
   process.exit(0);
 }
 
-// Projector piggyback (設計裁定 Q19: on-demand, no daemon): fire-and-forget a
-// telemetry export at session end. Detached, output ignored, failures never
-// reach the hook — the projector owns its own lock, cursor, and fail-open
+// Relay piggyback (設計裁定 Q19: on-demand, no daemon): fire-and-forget a
+// telemetry flush at session end. Detached, output ignored, failures never
+// reach the hook — the Relay owns its own lock, cursor, and fail-open
 // diagnostics. Guarded by the same opt-in every other telemetry surface uses.
 if (observabilityEnabled(projectDir)) {
   try {
-    // U1 representative subprocess wiring: the session-end -> projector spawn
+    // U1 representative subprocess wiring: the session-end -> relay spawn
     // is wrapped in a span (FR-TRC-1) with W3C context injected into the
     // child environment (FR-TRC-5 minimal). The callback does NOT auto-end
     // the span — finally { span.end(); } (FR-TRC-2).
@@ -77,7 +77,7 @@ if (observabilityEnabled(projectDir)) {
     const tracer = getAmadeusTracer();
     const recordRoot = docsRoot(projectDir);
     const intent = activeIntent(projectDir);
-    tracer.startActiveSpan("session-end->projector", (span) => {
+    tracer.startActiveSpan("session-end->relay", (span) => {
       try {
         if (recordRoot !== null && intent !== null) {
           // Persist the intent anchor so a later short-lived process can
@@ -89,9 +89,9 @@ if (observabilityEnabled(projectDir)) {
             schemaVersion: INTENT_CONTEXT_SCHEMA_VERSION,
           });
         }
-        const projector = new URL("../tools/amadeus-otel-projector.ts", import.meta.url).pathname;
+        const relay = new URL("../otel/relay.ts", import.meta.url).pathname;
         Bun.spawn({
-          cmd: ["bun", "run", projector, "export", "--project-dir", projectDir],
+          cmd: ["bun", "run", relay, "flush", "--project-dir", projectDir],
           stdout: "ignore",
           stderr: "ignore",
           stdin: "ignore",
