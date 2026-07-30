@@ -93,16 +93,19 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
   section-by-section against `amadeus-org.md`; a narrower rule that contradicts
   broader policy is rejected at the memory gate.
 - **Design deviations** — when the approved requirements or design have to be
-  departed from, stop *before* implementing the deviation. In solo mode, when the
-  layered config (`amadeus/config.json` → space → intent) resolves
-  `"auto-solo-election": true`, put the deviation to an election: write a
-  definition JSON carrying `electionId`, `kind`, `question`, `choices` (one per
-  way forward) and `voters`, then run
-  `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`
-  — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger is
-  evaluated). On `{"opened":null,"reason":"auto-solo-election-disabled"}` no
-  election is created and the deviation goes to the user for a ruling. A
-  user-visible spec change is always the user's call, whatever the config says.
+  departed from, stop *before* implementing the deviation, then classify it.
+  Exactly one of these two branches runs, and the first one that applies wins:
+  1. The deviation amounts to a user-visible spec change → it is ALWAYS the
+     user's call, whatever the config says. Do not open an election; take it
+     to the user for a ruling.
+  2. Otherwise, in solo mode, when the layered config (`amadeus/config.json`
+     → space → intent) resolves `"auto-solo-election": true`, put the
+     deviation to an election: write a definition JSON carrying `electionId`,
+     `kind`, `question`, `choices` (one per way forward) and `voters`, then run
+     `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`
+     — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger
+     is evaluated). On `{"opened":null,"reason":"auto-solo-election-disabled"}`
+     no election is created and the deviation goes to the user for a ruling.
 - **Keep / Modify / Redo** — when the user requests changes at a gate, decide
   with them whether to keep the artifact as-is, modify it in place, or redo the
   stage from scratch (discard partial artifacts), then re-run the relevant part
