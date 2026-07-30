@@ -239,6 +239,17 @@ function coverUnit(
   }
 }
 
+/**
+ * Create a bare Unit-of-Work directory under construction/ with no artifacts.
+ * On the degrade path (no compiled Bolt DAG) this listing IS the unit ledger,
+ * so an empty dir is enough to name the unit.
+ */
+function seedUnitDir(proj: string, unit: string): void {
+  mkdirSync(join(seededRecordDir(proj), "construction", unit), {
+    recursive: true,
+  });
+}
+
 /** Seed a fresh Construction project pivoted to `current`. Returns the proj dir. */
 function seedProject(current: string, skeletonStance?: string): string {
   const proj = createTestProject();
@@ -345,19 +356,37 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.gate).toBe(false);
   }, 30000);
 
-  // 5: degrade with no DAG, no runtime-graph.json -> the engine emits today's
-  // single {unit-name} placeholder directive with NO `unit` field (unchanged
-  // single-iteration behaviour).
-  test("5: no compiled unit DAG degrades to the single {unit-name} placeholder, no unit field", () => {
+  // 5: degrade with no DAG, no runtime-graph.json -> the stage is still
+  // per-unit, so the engine resolves the unit from the ONLY ledger it has on
+  // that path: the unit directory under construction/. The emitted produces are
+  // REAL paths, not the {unit-name} placeholder shape this test pinned before
+  // issue #1711. CONTRACT CHANGE (intent 260730-skill-reviewer-fixes Q1=A).
+  test("5: no compiled unit DAG resolves the unit from construction/ and emits real paths", () => {
     const proj = seedProject("functional-design", "on");
     // Deliberately NO seedBoltDag, there is no runtime-graph.json.
+    seedUnitDir(proj, "solo-unit");
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");
-    expect(d.unit).toBeUndefined();
     expect(d.produces).toContain(
-      `${RP}/construction/{unit-name}/functional-design/business-logic-model.md`,
+      `${RP}/construction/solo-unit/functional-design/business-logic-model.md`,
     );
+    expect(
+      (d.produces ?? []).filter((p) => p.includes("{unit-name}")),
+    ).toEqual([]);
+  }, 30000);
+
+  // 5b: the fail-closed half of the same contract. No DAG and NO unit directory
+  // -> the engine refuses rather than emitting a placeholder path that can be
+  // neither produced nor consumed. The message names the missing condition and
+  // the conductor's move.
+  test("5b: no compiled unit DAG and no unit directory is refused, not placeholdered", () => {
+    const proj = seedProject("functional-design", "on");
+    const d = runNext(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("functional-design");
+    expect(d.message).toContain("no unit directory exists");
+    expect(d.message).not.toContain("{unit-name}");
   }, 30000);
 
   // 6: coverage guard on report, approve with alpha + beta both uncovered ->

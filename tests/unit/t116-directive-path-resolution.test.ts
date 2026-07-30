@@ -86,6 +86,7 @@ import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   resetAidlcEnv,
+  seededRecordDir,
   seededStateFile,
   seedStateFile,
   sedReplaceInFile,
@@ -150,6 +151,7 @@ function emitFor(
   fixture: string,
   slug: string,
   seedArtifacts?: (proj: string) => void,
+  skeletonStance?: string,
 ): RunStageDirective {
   const proj = createTestProject();
   tempDirs.push(proj);
@@ -172,10 +174,15 @@ function emitFor(
   // COMPLETED walking skeleton an unset grant makes the engine re-fire the
   // ladder as an `ask` (issue #1612), which would pre-empt the path projection
   // under test. No compiled unit DAG here, so the grant changes nothing else.
+  // `skeletonStance`, when set, records the resolved walking-skeleton stance so
+  // the feature-scope skeleton-gate stage (functional-design) falls through to
+  // the per-unit routing under test instead of returning early on the
+  // unresolved-gate classify round-trip.
   sedReplaceInFile(
     state,
     /^- \*\*Status\*\*: .*$/m,
-    "- **Status**: Running\n- **Construction Autonomy Mode**: gated",
+    "- **Status**: Running\n- **Construction Autonomy Mode**: gated" +
+      (skeletonStance ? `\n- **Skeleton Stance**: ${skeletonStance}` : ""),
   );
   // This suite exercises path projection after routing. Mark prior mirror
   // boundaries handled so the U4 boundary prompt does not preempt Branch 10.
@@ -203,6 +210,42 @@ function emitFor(
   }
   // Sanity: the vehicle must land a run-stage for the target (else the path
   // arrays below assert against the wrong directive kind — fail loudly).
+  expect(dir.kind).toBe("run-stage");
+  expect(dir.stage).toBe(slug);
+  return dir;
+}
+
+/**
+ * emitFor's sibling for the ISOLATED single-stage run (`--stage <slug>
+ * --single`). It needs no Current Stage pivot or checkbox flip — the flag names
+ * the stage directly — and it builds the directive with no unit context at all,
+ * so per-unit paths keep the {unit-name} placeholder shape.
+ */
+function emitSingleFor(fixture: string, slug: string): RunStageDirective {
+  const proj = createTestProject();
+  tempDirs.push(proj);
+  seedStateFile(proj, join(FIXTURES_DIR, fixture));
+  const res = spawnSync(
+    BUN,
+    [ORCH, "next", "--stage", slug, "--single", "--project-dir", proj],
+    {
+      encoding: "utf-8",
+      env: (() => {
+        const e = { ...process.env };
+        delete e.AMADEUS_DEFAULT_SCOPE;
+        return e;
+      })(),
+    },
+  );
+  let dir: RunStageDirective;
+  try {
+    dir = JSON.parse((res.stdout ?? "").trim());
+  } catch {
+    throw new Error(
+      `emitSingleFor(${fixture}, ${slug}) did not emit parseable JSON. ` +
+        `status=${res.status}\n${res.stdout ?? ""}${res.stderr ?? ""}`,
+    );
+  }
   expect(dir.kind).toBe("run-stage");
   expect(dir.stage).toBe(slug);
   return dir;
@@ -363,36 +406,53 @@ describe("t116 greenfield application-design — conditional_on drop", () => {
 // Per-unit Construction stages (for_each: unit-of-work) inject {unit-name}.
 // (.sh tests 9-11)
 // ============================================================================
-describe("t116 per-unit {unit-name} injection", () => {
+describe("t116 per-unit unit-segment injection", () => {
+  // The fixtures carry no compiled Bolt DAG, so the per-unit stages reach the
+  // degrade path, where the engine resolves the unit from the directory under
+  // construction/ (issue #1711). Seeding one names it. Before #1711 these two
+  // tests pinned the literal {unit-name} placeholder in the emitted paths;
+  // CONTRACT CHANGE (intent 260730-skill-reviewer-fixes Q1=A): the segment is
+  // now the resolved unit, and an unresolvable unit is refused outright.
+  const UNIT = "solo-unit";
+  const seedUnit = (proj: string) => {
+    mkdirSync(join(seededRecordDir(proj), "construction", UNIT), {
+      recursive: true,
+    });
+  };
   let FD: RunStageDirective;
   let CG: RunStageDirective;
   let AD: RunStageDirective;
   beforeAll(() => {
-    FD = emitFor("state-construction.md", "functional-design");
-    CG = emitFor("state-construction.md", "code-generation");
+    // functional-design is feature scope's skeleton-gate stage: without a
+    // recorded stance it returns on the classify round-trip before per-unit
+    // routing, so the stance is seeded to reach the resolution under test.
+    FD = emitFor("state-construction.md", "functional-design", seedUnit, "on");
+    CG = emitFor("state-construction.md", "code-generation", seedUnit);
     // application-design here is only used for the test-11 negative; greenfield
     // fixture so it EXECUTEs and is non-per-unit (inception phase).
     AD = emitFor("state-construction.md", "application-design");
   });
 
   // .sh test 9: functional-design (per-unit) resolves a produces name to the
-  // per-unit shape construction/{unit-name}/functional-design/<name>.md.
-  test("9: per-unit functional-design injects {unit-name}: construction/{unit-name}/functional-design/business-logic-model.md", () => {
+  // per-unit shape construction/<unit>/functional-design/<name>.md.
+  test("9: per-unit functional-design injects the resolved unit: construction/solo-unit/functional-design/business-logic-model.md", () => {
     expect(FD.produces).toContain(
-      `${RP}/construction/{unit-name}/functional-design/business-logic-model.md`,
+      `${RP}/construction/${UNIT}/functional-design/business-logic-model.md`,
     );
+    expect(FD.produces.filter((p) => p.includes("{unit-name}"))).toEqual([]);
   });
 
   // .sh test 10: code-generation (per-unit) also resolves under
-  // construction/{unit-name}/code-generation/. STRONGER: assert at least one
+  // construction/<unit>/code-generation/. STRONGER: assert at least one
   // produces path begins with the per-unit code-generation prefix (the .sh
   // grepped the joined string for the prefix).
-  test("10: per-unit code-generation resolves under construction/{unit-name}/code-generation/", () => {
+  test("10: per-unit code-generation resolves under construction/solo-unit/code-generation/", () => {
     expect(
       CG.produces.some((p) =>
-        p.startsWith(`${RP}/construction/{unit-name}/code-generation/`),
+        p.startsWith(`${RP}/construction/${UNIT}/code-generation/`),
       ),
     ).toBe(true);
+    expect(CG.produces.filter((p) => p.includes("{unit-name}"))).toEqual([]);
   });
 
   // .sh test 11 (negative): a non-per-unit stage (application-design) does NOT
@@ -465,8 +525,14 @@ describe("t116 consumes presence split (consumes_absent)", () => {
   // paths keep the {unit-name} placeholder, so they must stay in `consumes`
   // (existence is unknowable), while the resolvable-but-unseeded requirements
   // consume still splits to consumes_absent.
+  //
+  // VEHICLE: the --single route, not bare `next`. Since issue #1711 the main
+  // workflow's degrade path resolves the unit off disk and no longer emits a
+  // placeholder at all, so bare `next` can no longer reach this branch. The
+  // isolated single-stage run has no unit context by design and still emits the
+  // placeholder shape — the escape hatch this test owns is unchanged there.
   test("16: {unit-name}-placeholder consume paths are exempt from the split (stay in consumes)", () => {
-    const dir = emitFor("state-construction.md", "nfr-requirements");
+    const dir = emitSingleFor("state-construction.md", "nfr-requirements");
     const placeholder = dir.consumes.filter((p) =>
       p.includes("{unit-name}"),
     );
