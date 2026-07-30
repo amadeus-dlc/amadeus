@@ -27,7 +27,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { canonicalAuditEvents, EXPECTED_CANONICAL_COUNT } from "./event-registry.ts";
+import { canonicalAuditEvents, EXPECTED_CANONICAL_COUNT, REGISTERED_EVENTS } from "./event-registry.ts";
 
 export type DriftSets = {
   // VALID_EVENT_TYPES — the v1 writer's closed vocabulary (78, #1672).
@@ -81,6 +81,48 @@ export function extractStateMachineReferences(sources: readonly string[], vocabu
     }
   }
   return found;
+}
+
+// The names a diagnostic may not borrow (U10 BR-6): every canonical def's OTel
+// event name AND its v1 audit event type. Derived from the registry table, so
+// a new canonical event is off limits to diagnostics the moment it lands.
+function canonicalNameVocabulary(): Set<string> {
+  const names = new Set<string>();
+  for (const def of REGISTERED_EVENTS) {
+    if (def.durability !== "canonical") continue;
+    names.add(def.name);
+    if (def.auditEvent !== null) names.add(def.auditEvent);
+  }
+  if (names.size === 0) {
+    throw new Error("canonical name vocabulary is empty — guard would pass vacuously (BR-6)");
+  }
+  return names;
+}
+
+// Literal first argument of a diagnostic emit call, in any of the three quote
+// forms. Interpolated names are outside the static reach of this guard and are
+// left to the reviewer.
+const DIAGNOSTIC_CALL_RE = /emitDiagnostic\(\s*(["'`])([^"'`]*)\1/g;
+
+// BR-6 (U10 diagnostic-logs): a diagnostic must never be named after a
+// canonical Registry event — the two paths would become indistinguishable in
+// the stores even though only one is auditable. This is enforced statically,
+// not at runtime: the diagnostic path is fail-open by contract (BR-2), so it
+// must never throw at its caller. Returns one finding per violating call site
+// (empty = clean).
+export function findDiagnosticNameMisuse(
+  sources: readonly { readonly path: string; readonly source: string }[]
+): string[] {
+  const canonical = canonicalNameVocabulary();
+  const findings: string[] = [];
+  for (const { path, source } of sources) {
+    for (const match of source.matchAll(DIAGNOSTIC_CALL_RE)) {
+      const name = match[2];
+      if (name === undefined || !canonical.has(name)) continue;
+      findings.push(`${path}: emitDiagnostic names the canonical event ${name} — classification boundary misuse (BR-6)`);
+    }
+  }
+  return findings;
 }
 
 function listTsFiles(dir: string): string[] {

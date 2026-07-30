@@ -12,6 +12,9 @@
 //      (BR-2, BR-4, BR-10)
 //   4. cross-process correlation — a child process that attached the W3C
 //      carrier (U5) emits diagnostics on the parent's trace
+// plus the BR-6 corpus sweep: no shipped call site names a diagnostic after a
+// canonical Registry event (the guard's own falling proof lives in
+// tests/unit/t368-diagnostic-name-guard.test.ts)
 // plus BR-8 (synchronously observable) and the performance-design invariant
 // that emit performs exactly one store append and no timer.
 
@@ -23,6 +26,7 @@ import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log
 import { ensureContextManager, injectToSubprocess } from "../../dist/claude/.claude/otel/context.ts";
 import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
 import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
+import { findDiagnosticNameMisuse } from "../../dist/claude/.claude/otel/event-registry-drift.ts";
 import {
   emitDiagnostic,
   registerLoggerProvider,
@@ -243,6 +247,28 @@ describe("fail-open on store failure (FR-EVT-6, BR-2/BR-4/BR-10)", () => {
     expect(note).not.toContain(GH_TOKEN);
     expect(note).not.toContain("secret prompt text");
     expect(scanForCredentials(note)).toEqual([]);
+  });
+});
+
+describe("no diagnostic borrows a canonical event name (BR-6)", () => {
+  test("the whole shipped framework source sweeps clean", () => {
+    const coreDir = join(__dirname, "..", "..", "packages", "framework", "core");
+    const sources: { path: string; source: string }[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "vendor" || entry.name === "node_modules") continue;
+          walk(p);
+        } else if (entry.name.endsWith(".ts")) {
+          sources.push({ path: p, source: readFileSync(p, "utf-8") });
+        }
+      }
+    };
+    walk(coreDir);
+    // Not vacuous: the sweep really read the tree.
+    expect(sources.length).toBeGreaterThan(0);
+    expect(findDiagnosticNameMisuse(sources)).toEqual([]);
   });
 });
 
