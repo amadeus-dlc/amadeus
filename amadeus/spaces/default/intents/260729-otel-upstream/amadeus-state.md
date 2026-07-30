@@ -8,11 +8,10 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: kimi
-- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-journal-reader-swap
+- **Worktree Path**:
 - **Bolt Refs**: [context-propagation, event-registry, journal-v2]
 - **Practices Affirmed Timestamp**:
 
-- **Merge-Held**: false
 ## Scope Configuration
 - **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.3, 1.4, 1.7, 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.5, 3.6
 - **Stages to Skip**: 1.2 (market-research), 1.5 (team-formation), 1.6 (rough-mockups), 2.4 (user-stories), 2.5 (refined-mockups), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
@@ -96,9 +95,9 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-07-30T05:39:54Z
+- **Last Updated**: 2026-07-30T09:18:43Z
 
-- **Swarm Gated Batch Approvals**: 1, 2
+- **Swarm Gated Batch Approvals**: 1, 2, 3
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
