@@ -4,6 +4,7 @@
 .cursor/** linguist-generated
 .opencode/** linguist-generated
 .kimi-code/** linguist-generated
+dist/** linguist-generated
 
 # Keep project-local configuration visible for review.
 .claude/CLAUDE.md -linguist-generated
