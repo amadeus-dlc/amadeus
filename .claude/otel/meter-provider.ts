@@ -14,6 +14,7 @@ import type {
   Histogram,
   Meter,
   MeterProvider,
+  MetricOptions,
   ObservableCounter,
   ObservableGauge,
   ObservableUpDownCounter,
@@ -27,13 +28,22 @@ function outOfSubset(what: string): never {
   throw new Error(`${what} is outside the initial metrics subset (FR-EXP-5) — invariant violation`);
 }
 
+// Aggregation advice configures a non-default aggregation, which the subset
+// does not carry (FR-EXP-5). Accepting and dropping it would silently produce
+// records whose aggregation is not what the caller asked for; descriptive
+// options (unit, description, valueType) are unaffected.
+function rejectAggregationAdvice(options?: MetricOptions): void {
+  if (options?.advice !== undefined) outOfSubset("arbitrary aggregation (metric advice)");
+}
+
 class AmadeusMeter implements Meter {
   constructor(private readonly exporter: LocalMetricExporter) {}
   private correlation(): { traceId: string | null; spanId: string | null } {
     const spanCtx = trace.getSpan(context.active())?.spanContext();
     return { traceId: spanCtx?.traceId ?? null, spanId: spanCtx?.spanId ?? null };
   }
-  createCounter(name: string, _options?: unknown): Counter {
+  createCounter(name: string, options?: MetricOptions): Counter {
+    rejectAggregationAdvice(options);
     return {
       add: (value: number, attributes?: Attributes) => {
         this.exporter.exportMetric({
@@ -47,7 +57,8 @@ class AmadeusMeter implements Meter {
       },
     };
   }
-  createHistogram(name: string, _options?: unknown): Histogram {
+  createHistogram(name: string, options?: MetricOptions): Histogram {
+    rejectAggregationAdvice(options);
     return {
       record: (value: number, attributes?: Attributes) => {
         this.exporter.exportMetric({

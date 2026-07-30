@@ -84,3 +84,26 @@ describe("Metric records carry the intent identity (Signal Store identity policy
     expect(record.intentId).toBe(activeIntent(proj));
   });
 });
+
+describe("arbitrary aggregation is outside the subset (FR-EXP-5, BR-1)", () => {
+  test("bucket-boundary advice on a histogram is an invariant exception, not a silent drop", () => {
+    bootMeter();
+    const meter = getAmadeusMeter();
+    expect(() => meter.createHistogram("amadeus.span.duration", { advice: { explicitBucketBoundaries: [1, 5, 10] } })).toThrow(
+      /subset/i
+    );
+  });
+
+  test("aggregation advice on a counter is rejected the same way", () => {
+    bootMeter();
+    const meter = getAmadeusMeter();
+    expect(() => meter.createCounter("amadeus.events.total", { advice: { explicitBucketBoundaries: [1] } })).toThrow(/subset/i);
+  });
+
+  test("plain descriptive options (unit, description) stay accepted", () => {
+    bootMeter();
+    const meter = getAmadeusMeter();
+    expect(() => meter.createCounter("amadeus.events.total", { unit: "1", description: "emitted events" })).not.toThrow();
+    expect(() => meter.createHistogram("amadeus.span.duration", { unit: "ms" })).not.toThrow();
+  });
+});
