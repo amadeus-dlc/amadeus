@@ -1,6 +1,28 @@
 # コンポーネント棚卸し
 
-## Slop cleanup 対象コンポーネント（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の対象コンポーネント（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | book-pack verify test / verifier / test runner | engine coupling drift guard | 120秒の test timeout が180秒 child timeout を包含しない | Bash、Bun test。repo-local |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 migration fixture / migrate / doctor / clone-id / audit | upstream workspace conversion と health evidence | subprocess の status 以外の診断が assertion から失われる | core を触る場合13コピー同期 |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | `team-up.sh` worktree creator | serial registration + parallel checkout | worker exit status を保持せず最終走査へ圧縮 | git worktree、Shell jobs、13コピー同期 |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | coverage patch gate | changed measurable line と LCOV hit の照合 | committed diff と dirty LCOV の source identity が不一致 | git、LCOV、repo-local |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | Team Mode launcher / safety-wait supervisor | Codex pane の自動安全応答 | fixed sleep + PID liveness を readiness に代用 | Bun child、herdr、Shell、13コピー同期 |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | orchestrator / state transaction / audit journal / mirror coordinator-executor-store-policy | workflow finalization と GitHub mirror completion | registry complete と audit seal が mirror receipt より先に着地 | GitHub mirror、journal codec、workspace lock、13コピー同期 |
+
+### 共有コンポーネントと変更競合
+
+- `team-up.sh` は #1336 と #1663 の共有正本である。#1336 の readiness protocol を先に確定し、その後 #1663 の worker result aggregation を載せる。
+- audit/journal/state は #1607 と OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) の Critical 共有境界である。`amadeus-mirror-state-store.ts` の audit outbox と `amadeus-audit.ts` の post-complete seal を別々の Bolt が独立改変すると、local state durable / audit retained の不変条件が分裂する。
+- t224 は #1664 の診断面であると同時に OTel の journal/audit expectation を観測する。テストを「通す」ために期待値を緩めず、診断追加後の実再現から製品根因を確定する。
+- #1667 と #1662 は source 所有が分離している。並列実装は可能だが、coverage job の負荷が book-pack timeout を再現する環境条件になりうるため、最終検証では同一 CI 帯でも実行する。
+
+### 区間で増えた主要コンポーネント
+
+`ca8ff0af4..22ee27dbe` では Intent Mirror の Project 同期面として contract、diagnostics、executor、gateway、ledger reducer、reconciliation reducer、verification が `packages/framework/core/tools/` に追加された。テスト面では CLI/SDK/TUI mechanism と live Codex helper が追加された。これにより core tools は実測78ファイルとなり、#1607 の修正対象は旧 mirror lifecycle だけでなく Project ledger の完了ゲートまで含めた現行スタックで評価する必要がある。
+
+## Slop cleanup 対象コンポーネント（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 | コンポーネント | 責務 | 現状 | 最小修正 |
 | --- | --- | --- | --- |

@@ -1,6 +1,101 @@
 # アーキテクチャ
 
-## Slop cleanup の修正境界と相互作用（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の修正境界と相互作用（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+Amadeus は常駐サービスやデータベースを持たない、Bun/TypeScript ESM のモジュラーモノリスである。ハーネス中立の正本 `packages/framework/core/`、repo-local の build/test `scripts/`・`tests/`、7ハーネスの生成 `dist/`、5面の self-install が主要境界となる。本 intent の6件は新しいコンポーネント境界を要求せず、既存の「実行結果を観測して成功を確定する」契約の欠落を各責務内で修復する。
+
+| 境界 | 主コンポーネント | 欠陥クラス | 修正時に保存する不変条件 |
+| --- | --- | --- | --- |
+| Test execution | `tests/run-tests.ts`、book-pack verifier、t224 | timeout 包含関係と診断 envelope の欠落 | 親 runner が child の stdout/stderr/exit/timeout を失わない |
+| Team launcher | `team-up.sh`、`team-up-codex-safety-wait.ts` | readiness の固定 sleep 推定、並列 worker status の未集約 | メンバー単位の結果が run 全体の成功条件へ伝播する |
+| Coverage gate | `tests/coverage-patch-gate.ts` | diff と LCOV の snapshot identity 分裂 | diff と coverage が同一ソース断面を測る |
+| Workflow completion | orchestrate/state/audit/mirror store | complete→seal→boundary の順序逆転 | 最終 mirror sync の receipt と audit が seal 前に耐久化される |
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+  subgraph TestBand["CI test band"]
+    Runner["tests/run-tests.ts"]
+    Book["book-pack verify test<br/>#1667"]
+    Migrate["t224 migration/doctor<br/>#1664"]
+    Coverage["patch coverage gate<br/>#1662"]
+    Runner --> Book
+    Runner --> Migrate
+    Runner --> Coverage
+  end
+  subgraph TeamMode["Team Mode launcher"]
+    Launch["team-up.sh"]
+    Ready["safety-wait supervisor<br/>#1336"]
+    Checkout["parallel checkout workers<br/>#1663"]
+    Launch --> Ready
+    Launch --> Checkout
+  end
+  subgraph Completion["Workflow completion"]
+    Report["orchestrate report"]
+    State["state complete-workflow"]
+    Mirror["mirror completion boundary"]
+    Ledger["audit journal and mirror store"]
+    Report --> State
+    State --> Mirror
+    Mirror --> Ledger
+  end
+```
+<!-- Text fallback: CI runner は book-pack、t224、patch coverage の3検証を駆動する。Team Mode launcher は safety-wait と並列 checkout を起動する。workflow completion は現状 report、complete-workflow、mirror boundary、ledger の順に進み、最後の経路が #1607 の破断点になる。 -->
+
+```mermaid
+sequenceDiagram
+  participant C as Conductor
+  participant O as Orchestrate report
+  participant S as State transaction
+  participant M as Mirror completion
+  participant A as Audit and registry
+  C->>O: final stage result
+  O->>S: complete-workflow
+  S->>A: WORKFLOW_COMPLETED
+  S->>A: registry complete and cursor clear
+  O-->>C: done
+  C->>O: next
+  O->>M: completion boundary
+  M->>A: append receipt
+  A-->>M: refused because audit is sealed
+```
+<!-- Text fallback: 現行は final report 内で state 完了、WORKFLOW_COMPLETED、registry complete、cursor clear が先に確定する。次の next で mirror completion を実行すると audit ledger が既に sealed のため receipt append が拒否される。 -->
+
+### 修正後に必要な完了トランザクション境界
+
+#1607 の修正では「final stage の成果物確認」「mirror の最終 sync/skip/close 判定」「mirror state と audit receipt の耐久化」「WORKFLOW_COMPLETED」「registry complete」「cursor release」を、再試行可能な単一の完了プロトコルとして順序付ける必要がある。単純に audit seal を緩和する案は post-complete append 禁止を壊し、mirror を完了後の特例として書く案は state/audit の真実源を二重化するため採らない。候補は次の2系統で、最終裁定は後続 Requirements Analysis が行う。
+
+1. `report` 内で completion boundary を先行実行し、その receipt 成功後だけ `complete-workflow` を commit する。
+2. state の completion transaction に mirror completion の prepare/commit を統合し、同一 lock と recovery token で再開する。
+
+いずれも、remote GitHub 操作そのものと local durable commit の失敗を区別し、既存の fail-closed・idempotent receipt・post-complete audit seal を保存しなければならない。
+
+### Bolt/PR 分離と依存トポロジー
+
+```mermaid
+flowchart TD
+  B1607["Bolt #1607"] --> OTel["OTel Intent #1679 Construction"]
+  B1664["Bolt #1664"] --> OTel
+  B1336["Bolt #1336"] --> B1663["Bolt #1663"]
+  B1662["Bolt #1662"] --> Final["横断 build and test"]
+  B1667["Bolt #1667"] --> Final
+  B1663 --> Final
+  B1607 --> Final
+  B1664 --> Final
+```
+<!-- Text fallback: #1607 と #1664 は OTel #1679 の Construction より先に置く。Team Mode 系は #1336 の後に #1663 を直列化する。全6 Bolt は個別検証後、最後に横断 build/test へ合流する。 -->
+
+| 組合せ | 衝突度 | アーキテクチャ上の扱い |
+| --- | --- | --- |
+| #1336 ↔ #1663 | 高 | 同一 `team-up.sh` の起動・worker 制御面。#1336 → #1663 の順で直列 |
+| #1664 ↔ #1607 | 中 | doctor/audit の terminal behavior。audit/journal 契約の逐語照合が必要 |
+| #1667 ↔ #1662 | 低 | 主ファイルは分離。ただし coverage 実行負荷が book-pack timeout の観測条件に影響 |
+| #1607 ↔ OTel #1679 | Critical | audit/journal/state entry と audit seal transaction が同一 |
+| #1664 ↔ OTel #1679 | High | t224 の journal/audit expectation と診断 envelope が交差 |
+| #1336 ↔ OTel #1679 | Medium | child context と launcher の起動契約が交差 |
+
+## Slop cleanup の修正境界と相互作用（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 本 intent は Bun/TypeScript の単一リポジトリ、ハーネス中立 core、7 ハーネスの生成 `dist`、5 面の self-install という既存トポロジーを変更しない。修正は次の 3 境界に閉じる。
 

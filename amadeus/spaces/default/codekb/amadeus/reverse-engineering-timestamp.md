@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260728-slop-cleanup）
+## 実行メタデータ（現在: 260729-open-bug-batch）
+
+- Date: `2026-07-29T07:06:38Z`
+- Base commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`（observed の祖先、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`
+- Distance: `13 commits`
+- 区間規模: `624 files changed, 71100 insertions(+), 26206 deletions(-)`。生成面・record・metrics等を除く比較断面は `215 files changed, 16982 insertions(+), 7844 deletions(-)`。
+- Scope: `amadeus-bugfix`、Brownfield、単一 repo `amadeus`、Depth `Minimal`、Test Strategy `Comprehensive`
+- Delivery boundary: 6件を1 Intentで追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667)、[#1664](https://github.com/amadeus-dlc/amadeus/issues/1664)、[#1663](https://github.com/amadeus-dlc/amadeus/issues/1663)、[#1662](https://github.com/amadeus-dlc/amadeus/issues/1662)、[#1336](https://github.com/amadeus-dlc/amadeus/issues/1336)、[#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)、および進行中 OTel Intent [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) との衝突。
+- Scan mode: Developer の静的 live-code scan を完全な上流入力として使った differential refresh。Architect は主要引用（timeout 120/180秒、t224診断欠落、parallel checkout status、coverage diff、safety-wait 50ms、completion→audit seal）と区間/件数を observed commit で再確認した。テストは未実行。
+- 区間の主要変化: Intent Mirror Project 同期スタック、Bun-only test runner 契約、CLI/SDK/TUI test mechanisms、gated/unset swarm routing、番号回答の意味解決。#1607 / #1664 はこの最新 mirror/journal 断面を基準にする。
+- OTel 分離: 別 worktree `otel-improvement` は source 未変更で、未コミットの CodeKB は latest reachable trunk ではない。内容を読まず、本 scan へ混ぜていない。衝突評価は Developer scan の source-level 分析だけを採用した。
+- Working tree: 本 scan 開始時点で `amadeus/spaces/default/intents/intents.json` と `260729-open-bug-batch/` に別作業の未コミット変更が存在した。これらを変更・復元せず、CodeKB 9成果物と本 intent の re-scan 記録だけを更新した。
+- Updated artifacts: `business-overview.md`、`architecture.md`、`code-structure.md`、`api-documentation.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、`reverse-engineering-timestamp.md`。
+- Per-intent record: `re-scans/260729-open-bug-batch.md`。
+
+## 実行メタデータ（履歴: 260728-slop-cleanup）
 
 - Date: `2026-07-28`
 - Base commit: `none`（既存 codekb の最新 observed `afb93a825...` は現 HEAD の祖先ではなく、差分 base として不適格。現 HEAD の実測を正とした）

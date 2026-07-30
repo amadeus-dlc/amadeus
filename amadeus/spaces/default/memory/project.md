@@ -261,6 +261,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - FD/AD 契約に主経路の実行必須入力(id 供給元等)が不在で実装が開始不能な場合、builder は実装前停止し、conductor が read-only 実測(GraphQL 照会等)でギャップを埋める最小契約追記を執行裁定して FD/AD へ申告付きで反映してから再開する(実測: 260727-mirror-project-status u1 CG の E-U1CG — addProjectItem の projectId/issueNodeId 供給元不在を listProjectItems 戻り拡張で解消、案 A 一意採用) (learned 2026-07-27) <!-- cid:code-generation:cg-contract-gap-readonly-probe-ruling --> (learned 2026-07-27) <!-- cid:code-generation:c3-mps -->
 - ワークフロー完了の確定は、stage body の全 Steps 実行・mirror boundary の全 receipt 完結・Bolt 配送(PR 発行)の確認を経てからのみ行う — state ポインタの前進(approve 報告の積み上げ)を実体完了と同一視しない。誤って complete へ進めた場合は履歴 rewrite せず前進 revert(state フィールドと intents.json のみ、audit 無改変)で回復する — complete 状態は audit append 抑止(#1248)により mirror boundary 再試行を構造的に塞ぐため放置不可(実測: 260727-mirror-project-status で早期完了→ユーザー指摘→前進 revert f653860fb→boundary 再試行成功の全経路。verify-before-notify の workflow 完了面への拡張) (learned 2026-07-28) <!-- cid:build-and-test:bt-workflow-completion-substance-gate --> (learned 2026-07-27) <!-- cid:build-and-test:bt-premature-completion -->
 
+- 依存関係と共有ファイル競合がないIssueの調査・実装・検証は可能な限り並行化し、依存順序や同一ファイルの競合がある作業だけを直列化する。1 Issue = 1 Bolt = 1 PRの境界は維持する。 (learned 2026-07-29) <!-- cid:reverse-engineering:free_text_1 -->
+- Reverse Engineering承認後に新しいIssueをIntentへ追加する場合、承認済みCodeKBを遡及変更せず、そのIssue本文の要求を現行stageの質問票へ正本として固定し、reviewer scope内で追跡可能にする。 (learned 2026-07-29) <!-- cid:requirements-analysis:c3-260729-open-bug-batch -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
@@ -295,3 +297,15 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 ## Reliability
 - Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する (learned 2026-07-23) <!-- cid:nfr-design:c3 -->
+
+## Interpretations
+- The already-reserved path of `gate-reserve` is in scope for FR-1680-2: returning the existing `presence_reservation_id` to a non-main caller discloses the approval capability, so it is an "engine mutation" boundary even though no state write occurs on that path. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-1 -->
+
+- For a brownfield bugfix batch, treat per-unit focused suites plus a full baseline run on the main worktree as the Comprehensive-strategy execution; re-running full test:ci in every bolt worktree duplicates what each unit's CI evidence already proves. (learned 2026-07-30) <!-- cid:build-and-test:bt-20260730-1 -->
+- Classify environment-sensitive test failures as out-of-scope only after reproducing the byte-identical failure set on the unmodified base; otherwise they must be fixed inside the intent. (learned 2026-07-30) <!-- cid:build-and-test:bt-20260730-2 -->
+## Deviations
+- When the custom reviewer profile is undiscoverable and the §12a reviewer is dispatched via a built-in subagent, the Stop hook can inject the forwarding-loop reminder into the subagent's turn and drive it to self-approve gates (live FR-1680-1 repro on unpatched worktrees). On worktrees without the #1680 fix, every subagent prompt must warn that Stop-hook loop injections do not apply to it. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-2 -->
+- A fresh READY review may be unappendable when the unit's reviewer iteration budget was exhausted by development-time reviews whose last recorded verdict predates the final implementation. Proceed per protocol (iterations exhausted → gate) and disclose the fresh review outcome at the gate. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-3 -->
+
+## Tradeoffs
+- Guard `handleGateReject` as well as `handleGateReserve`: FR-1680-2 names only next/report/park/state mutation, but reservation marker files are disk-readable by the reviewer role (Read/Grep/Glob), so an unguarded gate-reject would let a subagent reject a gate with a read-off carrier. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-4 -->

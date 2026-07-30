@@ -1,6 +1,27 @@
 # 技術スタック
 
-## Slop cleanup の技術断面（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の技術断面（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+技術選定は Bun-only の TypeScript/ESM モノレポである。常駐 service、database、application server はなく、短命 CLI・Shell・Git/GitHub・OTLP が外部境界となる。本 intent は既存スタックだけで修正し、新規 runtime/development dependency を導入しない。
+
+| 項目 | 現行値 / 技術 | 本 intent との関係 |
+| --- | --- | --- |
+| Runtime | Bun `1.3.13` 以上 | test runner、core CLI、safety-wait child、setup build |
+| Language | TypeScript `^6.0.3`、ESM | #1662 / #1664 / #1607 の正本 |
+| Shell | POSIX Shell / Bash、git worktree | #1336 / #1663、book-pack verifier |
+| Lint / format | Biome `2.5.5`、formatter 無効 | `bun run lint` |
+| Property test | fast-check `^4.9.0` | 既存テスト依存。追加不要 |
+| Agent integration | `@anthropic-ai/claude-agent-sdk` `0.3.158` | 本 intent の直接対象外 |
+| Release | release-it `^20.2.1`、setup `0.1.6` | 本 intent では version bump しない |
+| Test runner | `bun:test` + `tests/run-tests.ts` | smoke 15 / unit 323 / integration 314 / e2e 85、合計739 |
+| Coverage | Bun coverage → LCOV → project/patch gates | #1662 の source snapshot identity |
+| Distribution | core → `scripts/package.ts` → 7 dist、core → `promote-self.ts` → 5 self-install | #1336 / #1663 / #1607、および製品根因が core にある場合の #1664 |
+
+### 区間のスタック変化
+
+`ca8ff0af4..22ee27dbe` で `packages/setup` は `engines.bun >=1.3.13` と `bun build --target=bun` を明示し、テスト・CI 文書も `tests/run-tests.ts` を正準 runner とする Bun-only 契約へ統一された。ルート依存は Bun types、TypeScript、Biome、fast-check、Agent SDK、release-it の既存集合で、6件の修正に追加ライブラリは不要である。
+
+## Slop cleanup の技術断面（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 技術選定に変更はない。現行は Bun `1.3.13`、TypeScript `6.0.3`、Biome `2.5.5`、TypeScript/ESM の CLI フレームワークで、HTTP server と database を持たない。外部境界は CLI、GitHub、OTLP/HTTP JSON。framework core は 66 tools、12 hooks、38 stage/protocol、14 persona、60 knowledge、10 scopes、6 sensors、7 packaged skills、7 harness 面で構成される。setup npm package は `0.1.6`。今回、新規 runtime / development dependency は追加しない。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 
