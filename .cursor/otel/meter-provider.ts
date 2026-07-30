@@ -10,6 +10,7 @@
 import { context, metrics, trace } from "../vendor/opentelemetry/api/index.js";
 import type {
   Attributes,
+  Context,
   Counter,
   Histogram,
   Meter,
@@ -38,21 +39,25 @@ function rejectAggregationAdvice(options?: MetricOptions): void {
 
 class AmadeusMeter implements Meter {
   constructor(private readonly exporter: LocalMetricExporter) {}
-  private correlation(): { traceId: string | null; spanId: string | null } {
-    const spanCtx = trace.getSpan(context.active())?.spanContext();
+  // The measurement Context: the one the caller passes explicitly, else the
+  // active one (FR-MLM-1). A caller-supplied Context is the only correlation
+  // source when the measurement happens outside the span's active scope, so
+  // dropping it would lose the correlation the caller asked for.
+  private correlation(ctx?: Context): { traceId: string | null; spanId: string | null } {
+    const spanCtx = trace.getSpan(ctx ?? context.active())?.spanContext();
     return { traceId: spanCtx?.traceId ?? null, spanId: spanCtx?.spanId ?? null };
   }
   createCounter(name: string, options?: MetricOptions): Counter {
     rejectAggregationAdvice(options);
     return {
-      add: (value: number, attributes?: Attributes) => {
+      add: (value: number, attributes?: Attributes, ctx?: Context) => {
         this.exporter.exportMetric({
           name,
           kind: "counter",
           value,
           timestamp: new Date().toISOString(),
           attributes: (attributes ?? {}) as Record<string, unknown>,
-          ...this.correlation(),
+          ...this.correlation(ctx),
         });
       },
     };
@@ -60,14 +65,14 @@ class AmadeusMeter implements Meter {
   createHistogram(name: string, options?: MetricOptions): Histogram {
     rejectAggregationAdvice(options);
     return {
-      record: (value: number, attributes?: Attributes) => {
+      record: (value: number, attributes?: Attributes, ctx?: Context) => {
         this.exporter.exportMetric({
           name,
           kind: "histogram",
           value,
           timestamp: new Date().toISOString(),
           attributes: (attributes ?? {}) as Record<string, unknown>,
-          ...this.correlation(),
+          ...this.correlation(ctx),
         });
       },
     };

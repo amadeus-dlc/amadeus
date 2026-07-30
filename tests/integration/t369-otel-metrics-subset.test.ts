@@ -16,6 +16,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { context, trace } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
 import { activeIntent, birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { isFatalSet, resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -82,6 +83,59 @@ describe("Metric records carry the intent identity (Signal Store identity policy
     const record = metricRecords()[0]!;
     expect(record.kind).toBe("histogram");
     expect(record.intentId).toBe(activeIntent(proj));
+  });
+});
+
+describe("Trace Context correlation (FR-MLM-1, BR-4/BR-6)", () => {
+  function bootTracer() {
+    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+  }
+
+  test("a measurement inside an active span carries that span's trace and span ids", () => {
+    bootMeter();
+    bootTracer();
+    const span = getAmadeusTracer().startSpan("gate-wait");
+    try {
+      context.with(trace.setSpan(context.active(), span), () => {
+        getAmadeusMeter().createCounter("amadeus.events.total").add(1);
+        getAmadeusMeter().createHistogram("amadeus.span.duration").record(7);
+      });
+    } finally {
+      span.end();
+    }
+    const records = metricRecords();
+    expect(records).toHaveLength(2);
+    for (const record of records) {
+      expect(record.traceId).toBe(span.spanContext().traceId);
+      expect(record.spanId).toBe(span.spanContext().spanId);
+    }
+  });
+
+  test("with no span in scope the correlation fields stay empty and the measurement still lands (BR-6)", () => {
+    bootMeter();
+    getAmadeusMeter().createCounter("amadeus.events.total").add(1);
+    const record = metricRecords()[0]!;
+    expect(record.traceId).toBeNull();
+    expect(record.spanId).toBeNull();
+    expect(record.value).toBe(1);
+  });
+
+  test("a Context passed explicitly to add/record is honoured rather than dropped", () => {
+    bootMeter();
+    bootTracer();
+    const span = getAmadeusTracer().startSpan("subprocess-run");
+    const ctx = trace.setSpan(context.active(), span);
+    span.end();
+    // Measured OUTSIDE the span's active scope: the explicit Context is the
+    // only correlation source available.
+    getAmadeusMeter().createCounter("amadeus.events.total").add(1, {}, ctx);
+    getAmadeusMeter().createHistogram("amadeus.span.duration").record(3, {}, ctx);
+    const records = metricRecords();
+    expect(records).toHaveLength(2);
+    for (const record of records) {
+      expect(record.traceId).toBe(span.spanContext().traceId);
+      expect(record.spanId).toBe(span.spanContext().spanId);
+    }
   });
 });
 
