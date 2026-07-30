@@ -8,10 +8,16 @@
 // and the export-boundary redaction layer (FR-DST-3 layer 2).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { auditBlockField, findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  activeIntent,
+  intentStatusForAudit,
+  transitionIntentStatusLocked,
+  withLockedIntentRegistry,
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   isJournalEntryV2,
   type JournalEntryV2,
@@ -203,6 +209,26 @@ describe("export-boundary redaction (FR-DST-3 layer 2)", () => {  test("denied k
     expect(record.eventName).toBe("amadeus.operation.failed");
     expect(typeof record.attributes.Command).toBe("string");
     expect(JSON.stringify(record.attributes)).not.toContain(token);
+  });
+});
+
+describe("post-complete seal (#1248) on the v2 append path", () => {
+  test("an emit to a complete intent's sealed ledger is suppressed — no record, no throw, no latch", () => {
+    // Flip the birthed intent's registry row to "complete": the v2 locked
+    // append must honour the same post-complete stop as the v1 writer.
+    const dir = activeIntent(proj)!;
+    withLockedIntentRegistry(proj, (context) => transitionIntentStatusLocked(context, dir, "complete"));
+    expect(intentStatusForAudit(proj)).toBe("complete");
+
+    registerLoggerProvider({
+      projectDir: proj,
+      auditExporter: createAuditLogExporter({ projectDir: proj }),
+      logExporter: createLocalLogExporter({ projectDir: proj }),
+    });
+    expect(() => emitEvent("amadeus.decision.recorded", { Stage: "s", Decision: "d" })).not.toThrow();
+    expect(isFatalSet()).toBe(false);
+    // Nothing was written: the audit dir was never even created by this emit.
+    expect(existsSync(join(docsRoot(proj), "audit"))).toBe(false);
   });
 });
 
