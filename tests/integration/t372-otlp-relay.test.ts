@@ -196,6 +196,52 @@ describe("degraded inputs never stop a flush", () => {
     expect(second.posted).toHaveLength(0);
   });
 
+  test("a batch filled entirely by torn lines still lets the flush make progress", async () => {
+    // batchSize 1 makes the stall decisive: the single line the read is allowed
+    // to consume is unparseable, so a flush that only advanced on delivery
+    // would re-read that same line forever and never reach the record behind it.
+    writeFileSync(
+      join(storeDir(), "spans-clone01.jsonl"),
+      `{ torn\n${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "behind the torn line"))}\n`,
+      "utf-8"
+    );
+    const first = collector();
+    const skipped = await flushSignals({
+      projectDir: proj,
+      endpoint: "http://127.0.0.1:4318",
+      post: first.post,
+      batchSize: 1,
+    });
+    expect(skipped.diagnostics.join(" ")).toContain("unparseable");
+
+    const second = collector();
+    const result = await flushSignals({
+      projectDir: proj,
+      endpoint: "http://127.0.0.1:4318",
+      post: second.post,
+      batchSize: 1,
+    });
+    expect(result.sent).toBe(1);
+    expect(postedSpans(second.posted[0]?.body).map((span) => span.name)).toEqual(["behind the torn line"]);
+  });
+
+  test("a half-written final line is left pending, not skipped past", async () => {
+    // The tail of a store can be a record mid-append. Skipping it would drop a
+    // real record, so only a malformed line with a successor is passed over.
+    const partial = JSON.stringify(spanRecord("bbbbbbbbbbbbbbbb", "still being written")).slice(0, 40);
+    writeFileSync(join(storeDir(), "spans-clone01.jsonl"), `${partial}\n`, "utf-8");
+    const first = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: first.post });
+    expect(result.sent).toBe(0);
+
+    // The writer finishes the line; the record must still be delivered.
+    writeStore("spans-clone01.jsonl", [spanRecord("bbbbbbbbbbbbbbbb", "finished")]);
+    const second = collector();
+    const retry = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: second.post });
+    expect(retry.sent).toBe(1);
+    expect(postedSpans(second.posted[0]?.body).map((span) => span.name)).toEqual(["finished"]);
+  });
+
   test("with no endpoint configured nothing is sent and nothing is lost", async () => {
     writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
     const result = await flushSignals({ projectDir: proj });
@@ -231,9 +277,12 @@ describe("degraded inputs never stop a flush", () => {
   });
 
   test("a torn line inside the delivered prefix is compacted away with it", async () => {
+    // The torn line needs a successor to BE inside the delivered prefix: a
+    // trailing malformed line is deliberately left pending (it may be a record
+    // mid-append), which the tail test above pins.
     writeFileSync(
       join(storeDir(), "spans-clone01.jsonl"),
-      `${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "delivered"))}\n{ torn\n`,
+      `${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "delivered"))}\n{ torn\n${JSON.stringify(spanRecord("cccccccccccccccc", "also delivered"))}\n`,
       "utf-8"
     );
     const sink = collector();

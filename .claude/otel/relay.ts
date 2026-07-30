@@ -125,36 +125,49 @@ export type SignalStoreRecord = {
   readonly payload: Record<string, unknown>;
 };
 
-// Reads up to `room` lines past `from`, returning the records that parsed AND
-// the number of lines consumed. The two differ whenever a line is torn, and
-// the cursor must move by the SECOND: advancing by records parsed would leave
-// it one line short per torn line and re-send the tail on every later flush.
+// Reads up to `room` lines past `from`, returning the records that parsed, the
+// number of lines consumed, and how many of those lines were unparseable. The
+// three differ whenever a line is torn, and each is load-bearing: the cursor
+// must move by lines consumed (advancing by records parsed would leave it one
+// line short per torn line), and the malformed count is what makes a skipped
+// line visible instead of silent.
+//
+// A malformed line with NO successor is left unconsumed: the tail of a store
+// can be a record mid-append, and passing over it would drop a real record
+// rather than a broken one. It is reconsidered on the next flush, by which
+// time the writer has either finished the line or died.
 function parseStoreLines(
   raw: string,
   kind: SignalKind,
   file: string,
   from: number,
   room: number
-): { readonly records: SignalStoreRecord[]; readonly consumed: number } {
+): { readonly records: SignalStoreRecord[]; readonly consumed: number; readonly malformed: number } {
+  const lines = raw.split("\n").filter((line) => line.trim() !== "");
   const records: SignalStoreRecord[] = [];
-  let index = 0;
   let consumed = 0;
-  for (const line of raw.split("\n")) {
-    if (line.trim() === "") continue;
-    index += 1;
-    if (index <= from) continue;
-    if (consumed >= room) break;
-    consumed += 1;
-    try {
-      const parsed: unknown = JSON.parse(line);
-      if (parsed !== null && typeof parsed === "object") {
-        records.push({ storeId: kind, file, payload: parsed as Record<string, unknown> });
-      }
-    } catch {
-      // a torn line is dropped; a half-written record is not a Relay failure
+  let malformed = 0;
+  for (let index = from; index < lines.length && consumed < room; index += 1) {
+    const parsed = parseStoreLine(lines[index] as string);
+    if (parsed === null) {
+      const isLastLine = index === lines.length - 1;
+      if (isLastLine) break;
+      malformed += 1;
+    } else {
+      records.push({ storeId: kind, file, payload: parsed });
     }
+    consumed += 1;
   }
-  return { records, consumed };
+  return { records, consumed, malformed };
+}
+
+function parseStoreLine(line: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(line);
+    return parsed !== null && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
 }
 
 // Reads at most `batchSize` records past the cursor, in file order, and
@@ -165,11 +178,17 @@ export function readPending(
   kind: SignalKind,
   cursor: Cursor | undefined,
   batchSize: number
-): { readonly records: readonly SignalStoreRecord[]; readonly consumed: Record<string, number> } {
+): {
+  readonly records: readonly SignalStoreRecord[];
+  readonly consumed: Record<string, number>;
+  readonly malformed: number;
+} {
   const records: SignalStoreRecord[] = [];
   const consumed: Record<string, number> = {};
+  let malformed = 0;
+  let room = batchSize;
   for (const file of storeFiles(dir, kind)) {
-    if (records.length >= batchSize) break;
+    if (room <= 0) break;
     let raw: string;
     try {
       raw = readFileSync(join(dir, file), "utf-8");
@@ -177,12 +196,14 @@ export function readPending(
       continue; // an unreadable shard never blocks the other shards
     }
     const from = cursor?.position[file] ?? 0;
-    const pending = parseStoreLines(raw, kind, file, from, batchSize - records.length);
+    const pending = parseStoreLines(raw, kind, file, from, room);
     if (pending.consumed === 0) continue;
     records.push(...pending.records);
     consumed[file] = pending.consumed;
+    malformed += pending.malformed;
+    room -= pending.consumed;
   }
-  return { records, consumed };
+  return { records, consumed, malformed };
 }
 
 // --- OTLP mapping -----------------------------------------------------------
@@ -626,14 +647,24 @@ async function flushKind(
   options: FlushOptions,
   at: string
 ): Promise<KindOutcome> {
-  const { records, consumed } = readPending(dir, kind, cursor, options.batchSize ?? DEFAULT_BATCH_SIZE);
-  if (records.length === 0) return NOTHING_PENDING;
+  const { records, consumed, malformed } = readPending(dir, kind, cursor, options.batchSize ?? DEFAULT_BATCH_SIZE);
+  const skippedNote =
+    malformed > 0 ? [`${kind}: ${malformed} unparseable store line(s) skipped`] : ([] as readonly string[]);
+  if (records.length === 0) {
+    // Nothing deliverable, but lines WERE consumed: they are unparseable, so no
+    // retry can ever turn them into records. The cursor moves past them — a
+    // batch filled by torn lines would otherwise be re-read on every flush and
+    // stall the store behind it — while the at-least-once contract is untouched
+    // because a line that cannot parse was never a record to deliver (BR-8).
+    if (malformed === 0) return NOTHING_PENDING;
+    return { sent: 0, skipped: 0, cursor: advanced(cursor, kind, consumed, at), diagnostics: skippedNote };
+  }
   if (options.endpoint === undefined) {
     return {
       sent: 0,
       skipped: records.length,
       cursor: null,
-      diagnostics: [`${kind}: no collector endpoint configured — ${records.length} record(s) left pending`],
+      diagnostics: [...skippedNote, `${kind}: no collector endpoint configured — ${records.length} record(s) left pending`],
     };
   }
   const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
@@ -645,15 +676,17 @@ async function flushKind(
     // batch is retried next flush (BR-3/BR-7/BR-10).
     const note = `${kind}: collector unreachable (${outcome.detail}) — ${records.length} record(s) retried next flush`;
     noteDiagnostics(dir, note);
-    return { sent: 0, skipped: records.length, cursor: null, diagnostics: [note] };
+    return { sent: 0, skipped: records.length, cursor: null, diagnostics: [...skippedNote, note] };
   }
   const repeats = trackDelivered(records, tracked, at);
   return {
     sent: records.length,
     skipped: 0,
     cursor: advanced(cursor, kind, consumed, at),
-    diagnostics:
-      repeats > 0 ? [`${kind}: ${repeats} record(s) delivered a second time (duplicate, at-least-once)`] : [],
+    diagnostics: [
+      ...skippedNote,
+      ...(repeats > 0 ? [`${kind}: ${repeats} record(s) delivered a second time (duplicate, at-least-once)`] : []),
+    ],
   };
 }
 
