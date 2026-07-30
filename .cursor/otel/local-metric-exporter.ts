@@ -7,7 +7,7 @@
 
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { auditCloneId } from "../tools/amadeus-lib.ts";
+import { activeIntent, activeSpace, auditCloneId } from "../tools/amadeus-lib.ts";
 import { telemetryDir } from "../tools/amadeus-observability.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
@@ -21,6 +21,11 @@ export type MetricRecord = {
   readonly traceId: string | null;
   readonly spanId: string | null;
 };
+
+// The persisted line: the measured record plus the intent identity, resolved
+// here rather than by the producer — the same "identity fields are resolved at
+// the write boundary" policy the canonical journal follows (audit-log-exporter).
+export type PersistedMetricRecord = MetricRecord & { readonly intentId: string };
 
 export type LocalMetricExporter = {
   exportMetric(record: MetricRecord): void;
@@ -43,6 +48,14 @@ function defaultWrite(path: string, line: string): void {
 export function createLocalMetricExporter(options: LocalMetricExporterOptions): LocalMetricExporter {
   const write = options.write ?? defaultWrite;
   const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
+  // Resolved once per exporter: measurement is a hot path (no per-record
+  // cursor read), and a short-lived CLI process keeps one identity for its
+  // whole life (BR-3).
+  let identity: string | null = null;
+  const intentId = (): string => {
+    identity ??= activeIntent(options.projectDir, activeSpace(options.projectDir)) ?? "workspace";
+    return identity;
+  };
   const storePath = (): string | null => {
     const dir = options.storeDir ?? telemetryDir(options.projectDir);
     if (dir === null || dir === undefined) return null;
@@ -53,8 +66,12 @@ export function createLocalMetricExporter(options: LocalMetricExporterOptions): 
       try {
         const path = storePath();
         if (path === null) return;
-        const redacted = { ...record, attributes: redactAttributes(record.attributes, policy) };
-        write(path, `${JSON.stringify(redacted)}\n`);
+        const persisted: PersistedMetricRecord = {
+          ...record,
+          attributes: redactAttributes(record.attributes, policy),
+          intentId: intentId(),
+        };
+        write(path, `${JSON.stringify(persisted)}\n`);
       } catch {
         // fail-open (FR-EVT-6)
       }
