@@ -5,17 +5,12 @@
 // these because they fire per-question, not per state transition.
 
 import { existsSync, readFileSync } from "node:fs";
-import { createAuditLogExporter } from "../otel/audit-log-exporter.ts";
-import { attachIntentContext, ensureContextManager, restoreIntentContext } from "../otel/context.ts";
-import { createLocalLogExporter } from "../otel/local-log-exporter.ts";
-import { emitEvent, registerLoggerProvider } from "../otel/logger-provider.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
 import type { RegisteredEventName } from "../otel/event-registry.ts";
-import { assertMutationAllowed, setFatal, verifyJournalHealth } from "../otel/fatal-latch.ts";
+import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
-  activeIntent,
-  auditFilePath,
-  docsRoot,
   emitError,
   errorMessage,
   hasOpenGate,
@@ -68,34 +63,6 @@ function emitAudit(
   emitEvent((OTEL_EVENT_NAMES[eventType] ?? eventType) as RegisteredEventName, fields);
 }
 
-// One-time OTel bootstrap for this short-lived CLI process (FR-EXP-1):
-// register the Amadeus Logger Provider against the synchronous
-// AuditLogExporter, restore the persisted intent anchor (FR-TRC-4), and run
-// the non-destructive journal health probe — an unhealthy journal latches
-// the process so no later canonical mutation proceeds (FR-EVT-5).
-function bootstrapOtel(pd: string): void {
-  ensureContextManager();
-  registerLoggerProvider({
-    projectDir: pd,
-    auditExporter: createAuditLogExporter({ projectDir: pd }),
-    logExporter: createLocalLogExporter({ projectDir: pd }),
-  });
-  const intent = activeIntent(pd);
-  const root = docsRoot(pd);
-  if (intent !== null && root !== null) {
-    // BR-6: restore mints and persists a fresh anchor when the record is
-    // absent, so the attach is unconditional.
-    attachIntentContext(restoreIntentContext(root, intent));
-  }
-  const shard = auditFilePath(pd);
-  if (existsSync(shard)) {
-    const health = verifyJournalHealth({ shardPath: shard, projectDir: pd });
-    if (!health.ok) {
-      setFatal(`journal health probe failed: ${health.detail}`);
-    }
-  }
-}
-
 // --- Flag parsing ---
 
 function parseFlags(
@@ -132,7 +99,7 @@ function handleDecision(args: string[]): void {
   if (!flags.stage) error("Missing --stage <slug>");
   if (!flags.decision) error("Missing --decision <text>");
 
-  // The active-workflow guard already ran in main (bootstrapOtel resolves
+  // The active-workflow guard already ran in main (the bootstrap resolves
   // the project dir with the same refusal). The latch check is the
   // FR-EVT-4 mutation gate for this entrypoint.
   assertMutationAllowed();
@@ -236,7 +203,7 @@ function main(): void {
   }
 
   try {
-    bootstrapOtel(resolveActiveProjectDir(projectDir));
+    ensureOtelBootstrap(resolveActiveProjectDir(projectDir));
     switch (subcommand) {
       case "decision":
         handleDecision(filteredArgs.slice(1));

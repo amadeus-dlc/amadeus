@@ -205,6 +205,12 @@ export function registerTracerProvider(options: { spanExporter: LocalSpanExporte
   registered = true;
 }
 
+// Whether this process already holds a provider. Registration is a once-only
+// invariant, so a bootstrap seam asks before registering rather than guessing.
+export function isTracerProviderRegistered(): boolean {
+  return registered;
+}
+
 export function getAmadeusTracer(name = "amadeus"): Tracer {
   if (!registered) {
     throw new Error("getAmadeusTracer before registerTracerProvider — invariant violation");

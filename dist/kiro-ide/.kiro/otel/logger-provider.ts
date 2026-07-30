@@ -169,6 +169,12 @@ export function registerLoggerProvider(options: {
   logs.setGlobalLoggerProvider(new AmadeusLogsBridge());
 }
 
+// Whether this process already holds a provider. Registration is a once-only
+// invariant, so a bootstrap seam asks before registering rather than guessing.
+export function isLoggerProviderRegistered(): boolean {
+  return registered !== null;
+}
+
 // Test seam: drop the registration between fixtures.
 export function resetLoggerProviderForTests(): void {
   logs.disable();
