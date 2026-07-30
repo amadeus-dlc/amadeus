@@ -32,6 +32,37 @@ afterEach(() => {
   cleanupTestProject(proj);
 });
 
+function seedMetricAndLog(): void {
+  const dir = join(docsRoot(proj), ".amadeus-otel");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "metrics-clone01.jsonl"),
+    `${JSON.stringify({
+      name: "amadeus.stage.executions",
+      kind: "counter",
+      value: 1,
+      timestamp: new Date().toISOString(),
+      attributes: { Stage: "code-generation" },
+      traceId: "0123456789abcdef0123456789abcdef",
+      spanId: "aaaaaaaaaaaaaaaa",
+      intentId: "fixture",
+    })}\n`,
+    "utf-8"
+  );
+  writeFileSync(
+    join(dir, "logs-clone01.jsonl"),
+    `${JSON.stringify({
+      name: "hook drop",
+      body: "session-end hook dropped",
+      timestamp: new Date().toISOString(),
+      attributes: {},
+      traceId: null,
+      spanId: null,
+    })}\n`,
+    "utf-8"
+  );
+}
+
 function seedSpan(): void {
   const dir = join(docsRoot(proj), ".amadeus-otel");
   mkdirSync(dir, { recursive: true });
@@ -79,6 +110,29 @@ describe("posting to a Collector on loopback", () => {
       expect(seen[0]?.headers["content-type"]).toBe("application/json");
       expect(seen[0]?.headers.authorization).toBeUndefined();
       expect(seen[0]?.body).toContain("0123456789abcdef0123456789abcdef");
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("posts each signal to its own OTLP path in one flush", async () => {
+    // The projector suite this replaces asserted traces AND metrics reach a
+    // live endpoint; the Relay carries a third signal, so all three paths are
+    // pinned here rather than only the trace one.
+    seedSpan();
+    seedMetricAndLog();
+    const paths: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch: (request) => {
+        paths.push(new URL(request.url).pathname);
+        return new Response("{}", { status: 200 });
+      },
+    });
+    try {
+      const result = await flushSignals({ projectDir: proj, endpoint: `http://127.0.0.1:${server.port}` });
+      expect(result.sent).toBe(3);
+      expect(paths.sort()).toEqual(["/v1/logs", "/v1/metrics", "/v1/traces"]);
     } finally {
       server.stop(true);
     }

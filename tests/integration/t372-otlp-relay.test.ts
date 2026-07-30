@@ -119,9 +119,16 @@ describe("the session-end entry point", () => {
     expect(resolveEndpoint(proj, { OTEL_EXPORTER_OTLP_ENDPOINT: "http://env:4318" })).toBe("http://env:4318");
   });
 
-  test("reports what it did without throwing when observability is off", async () => {
-    const summary = await runRelay(proj, { post: collector().post });
+  test("refuses when observability is off without touching the store dir", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    const sink = collector();
+    const summary = await runRelay(proj, { post: sink.post });
     expect(summary.status).toBe("disabled");
+    expect(sink.posted).toHaveLength(0);
+    // Nothing was read, sent, compacted or recorded: the opt-in is checked
+    // before any store work happens.
+    expect(existsSync(join(storeDir(), "relay-cursor.json"))).toBe(false);
+    expect(existsSync(join(storeDir(), "relay-idempotency.json"))).toBe(false);
   });
 
   test("stops at no-endpoint when observability is on but no Collector is configured", async () => {

@@ -1357,11 +1357,6 @@
     "expiry": "remove if readMirrorConfigLayers gains a throwing path or the belt is dropped"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-otel-projector.ts",
-    "lines": "600-608",
-    "reason": "import.meta.main CLI wiring for the projector 'export' verb. The decision logic (parseCliArgs, runExport) is fully covered in-process by tests/integration/t358; the main block runs only in the spawned CLI, which Bun coverage does not attribute. Spawn-only wiring lines per spawn-blindspot-two-step (ii)."
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "lines": "389-420",
     "reason": "Orphaned-active-intent guard and unselectable-intent error construction are exercised through the generated orchestrator CLI by t171 birth-gate integration; spawned main-path lines are not attributed by Bun.",

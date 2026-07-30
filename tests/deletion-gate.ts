@@ -376,11 +376,15 @@ export type Evidence = {
   readonly distribution: RunOutcome | null;
 };
 
-// Condition (a): the mixed v1/v2 journal behaviour-equivalence suites (U6).
-export const MIXED_JOURNAL_TESTS = [
-  "tests/unit/t365-journal-reader-swap.test.ts",
-  "tests/integration/t366-journal-reader-swap-projector.test.ts",
-] as const;
+// Condition (a): the mixed v1/v2 journal behaviour-equivalence suite (U6).
+//
+// U11 removed the projector, and with it t366 — the suite that checked the
+// projector built an identical span graph from v1-only, v2-only and mixed
+// journals. Nothing consumes the journal that way any more (the Relay reads
+// the Signal Stores, FR-RLY-2), so the condition rests on t365, which covers
+// the readers this condition is actually named for: doctor, recovery,
+// presence, grant, shard merge, the runtime-graph compile input and learnings.
+export const MIXED_JOURNAL_TESTS = ["tests/unit/t365-journal-reader-swap.test.ts"] as const;
 
 // Exported for the path-existence test: the gate's own constants are the thing
 // most likely to rot, and a test that resolved paths its own way would not be
