@@ -13,9 +13,10 @@
 // precedent).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
 import { flushSignals, resolveEndpoint, runRelay } from "../../dist/claude/.claude/otel/relay.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -28,7 +29,18 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanupTestProject(proj);
+  resetObservabilityConfigCache();
 });
+
+// The workspace opt-in every telemetry surface is guarded by (t358 precedent).
+function enableObservability(endpoint?: string): void {
+  writeFileSync(
+    join(proj, "amadeus", "config.json"),
+    `${JSON.stringify({ observability: { enabled: true, ...(endpoint !== undefined ? { otlp: { endpoint } } : {}) } })}\n`,
+    "utf-8"
+  );
+  resetObservabilityConfigCache();
+}
 
 function storeDir(): string {
   const dir = join(docsRoot(proj), ".amadeus-otel");
@@ -103,17 +115,29 @@ describe("relay flush over empty stores", () => {
 
 describe("the session-end entry point", () => {
   test("takes the endpoint from the environment ahead of the observability config", () => {
-    writeFileSync(
-      join(docsRoot(proj), "..", "..", "..", "config.json"),
-      JSON.stringify({ observability: { enabled: true, otlp: { endpoint: "http://config:4318" } } }),
-      "utf-8"
-    );
+    enableObservability("http://config:4318");
     expect(resolveEndpoint(proj, { OTEL_EXPORTER_OTLP_ENDPOINT: "http://env:4318" })).toBe("http://env:4318");
   });
 
   test("reports what it did without throwing when observability is off", async () => {
     const summary = await runRelay(proj, { post: collector().post });
     expect(summary.status).toBe("disabled");
+  });
+
+  test("stops at no-endpoint when observability is on but no Collector is configured", async () => {
+    enableObservability();
+    const summary = await runRelay(proj, { post: collector().post, env: {} });
+    expect(summary.status).toBe("no-endpoint");
+  });
+
+  test("flushes when observability and an endpoint are both configured", async () => {
+    enableObservability("http://127.0.0.1:4318");
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    const sink = collector();
+    const summary = await runRelay(proj, { post: sink.post, env: {} });
+    expect(summary.status).toBe("flushed");
+    expect(summary.result?.sent).toBe(1);
+    expect(sink.posted[0]?.url).toBe("http://127.0.0.1:4318/v1/traces");
   });
 });
 
@@ -147,6 +171,24 @@ describe("degraded inputs never stop a flush", () => {
     expect(postedSpans(sink.posted[0]?.body).map((span) => span.name)).toEqual(["before", "after"]);
   });
 
+  test("a torn line does not shift the cursor onto a record that already travelled", async () => {
+    writeFileSync(
+      join(storeDir(), "spans-clone01.jsonl"),
+      `${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "before"))}\n{ torn\n${JSON.stringify(spanRecord("bbbbbbbbbbbbbbbb", "after"))}\n`,
+      "utf-8"
+    );
+    const first = collector();
+    await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: first.post });
+
+    // The cursor has to count what it CONSUMED, not what it parsed: counting
+    // records would leave it one line short for every torn line and re-send
+    // the tail on the next flush.
+    const second = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: second.post });
+    expect(result.sent).toBe(0);
+    expect(second.posted).toHaveLength(0);
+  });
+
   test("with no endpoint configured nothing is sent and nothing is lost", async () => {
     writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
     const result = await flushSignals({ projectDir: proj });
@@ -154,6 +196,48 @@ describe("degraded inputs never stop a flush", () => {
     expect(result.skipped).toBe(1);
     expect(result.cursorAdvanced).toBe(false);
     expect(result.diagnostics.join(" ")).toContain("no collector endpoint");
+  });
+
+  test("a store shard that cannot be read is skipped while its siblings travel", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "readable")]);
+    // A dangling symlink is the portable way to make the read throw: the name
+    // is listed by readdir, and the open fails with ENOENT on every platform
+    // (cid:code-generation:bun-readfilesync-dir-platform-divergence).
+    symlinkSync(join(storeDir(), "nowhere.jsonl"), join(storeDir(), "spans-broken.jsonl"));
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(1);
+  });
+
+  test("a cursor naming a store file that is gone does not break the retention pass", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    writeFileSync(
+      join(storeDir(), "relay-cursor.json"),
+      JSON.stringify({
+        span: { storeId: "span", position: { "spans-vanished.jsonl": 3 }, updatedAt: "2026-07-30T00:00:00.000Z" },
+      }),
+      "utf-8"
+    );
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(1);
+  });
+
+  test("a torn line inside the delivered prefix is compacted away with it", async () => {
+    writeFileSync(
+      join(storeDir(), "spans-clone01.jsonl"),
+      `${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "delivered"))}\n{ torn\n`,
+      "utf-8"
+    );
+    const sink = collector();
+    await flushSignals({
+      projectDir: proj,
+      endpoint: "http://127.0.0.1:4318",
+      post: sink.post,
+      retentionMs: 0,
+      now: Date.now() + 1000,
+    });
+    expect(readFileSync(join(storeDir(), "spans-clone01.jsonl"), "utf-8").trim()).toBe("");
   });
 
   test("a record with no usable timestamp is kept by the retention pass", async () => {

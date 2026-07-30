@@ -125,13 +125,26 @@ export type SignalStoreRecord = {
   readonly payload: Record<string, unknown>;
 };
 
-function parseStoreLines(raw: string, kind: SignalKind, file: string, from: number): SignalStoreRecord[] {
+// Reads up to `room` lines past `from`, returning the records that parsed AND
+// the number of lines consumed. The two differ whenever a line is torn, and
+// the cursor must move by the SECOND: advancing by records parsed would leave
+// it one line short per torn line and re-send the tail on every later flush.
+function parseStoreLines(
+  raw: string,
+  kind: SignalKind,
+  file: string,
+  from: number,
+  room: number
+): { readonly records: SignalStoreRecord[]; readonly consumed: number } {
   const records: SignalStoreRecord[] = [];
   let index = 0;
+  let consumed = 0;
   for (const line of raw.split("\n")) {
     if (line.trim() === "") continue;
     index += 1;
     if (index <= from) continue;
+    if (consumed >= room) break;
+    consumed += 1;
     try {
       const parsed: unknown = JSON.parse(line);
       if (parsed !== null && typeof parsed === "object") {
@@ -141,7 +154,7 @@ function parseStoreLines(raw: string, kind: SignalKind, file: string, from: numb
       // a torn line is dropped; a half-written record is not a Relay failure
     }
   }
-  return records;
+  return { records, consumed };
 }
 
 // Reads at most `batchSize` records past the cursor, in file order, and
@@ -164,11 +177,10 @@ export function readPending(
       continue; // an unreadable shard never blocks the other shards
     }
     const from = cursor?.position[file] ?? 0;
-    const room = batchSize - records.length;
-    const pending = parseStoreLines(raw, kind, file, from).slice(0, room);
-    if (pending.length === 0) continue;
-    records.push(...pending);
-    consumed[file] = pending.length;
+    const pending = parseStoreLines(raw, kind, file, from, batchSize - records.length);
+    if (pending.consumed === 0) continue;
+    records.push(...pending.records);
+    consumed[file] = pending.consumed;
   }
   return { records, consumed };
 }
