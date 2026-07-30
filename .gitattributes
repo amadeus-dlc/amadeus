@@ -1,0 +1,14 @@
+# Collapse generated harness projections in GitHub diffs by default.
+.claude/** linguist-generated
+.codex/** linguist-generated
+.cursor/** linguist-generated
+.opencode/** linguist-generated
+.kimi-code/** linguist-generated
+
+# Keep project-local configuration visible for review.
+.claude/CLAUDE.md -linguist-generated
+.claude/settings.json -linguist-generated
+.codex/config.toml -linguist-generated
+.codex/hooks.json -linguist-generated
+.cursor/hooks.json -linguist-generated
+.opencode/opencode.json -linguist-generated
