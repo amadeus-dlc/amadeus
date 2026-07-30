@@ -417,6 +417,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
         agent_name: "explore",
       }),
       root,
+      () => ({ stdout: "", code: 0 }),
     );
     const mainDuringSubagent = stopResult(root, "main");
     expect(mainDuringSubagent.result).toEqual({
@@ -583,6 +584,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
           agent_name: role,
         }),
         root,
+        () => ({ stdout: "", code: 0 }),
       );
       expect(roleStarted.exitCode).toBe(0);
 

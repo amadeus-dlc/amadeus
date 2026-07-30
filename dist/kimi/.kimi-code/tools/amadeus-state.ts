@@ -814,6 +814,9 @@ function trustedHostSessionId(): string | undefined {
 }
 
 function enforceCallerAuthorization(subcommand: string | undefined): void {
+  // Only read-only subcommands pass through. On denial, do not use error():
+  // writing ERROR_LOGGED would change the state/audit bytes, violating the
+  // invariant that a denial leaves both untouched, so write to stderr and exit.
   if (
     subcommand === undefined ||
     subcommand === "get" ||

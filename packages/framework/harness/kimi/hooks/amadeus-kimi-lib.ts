@@ -132,7 +132,6 @@ export type KimiRoleMarkerWriter = (
 const ROLE_LOCK_STALE_MS = 30_000;
 const ROLE_LOCK_RETRIES = 100;
 const ROLE_LOCK_WAIT_MS = 5;
-const ROLE_LOCK_WAIT = new Int32Array(new SharedArrayBuffer(4));
 
 function roleMarkerPath(projectDir: string): string {
   return join(projectDir, KIMI_ROLE_MARKER_RELATIVE_PATH);
@@ -152,14 +151,10 @@ function withRoleMarkerLock(
 ): boolean {
   const lockPath = `${markerPath}.lock`;
   for (let attempt = 0; attempt < ROLE_LOCK_RETRIES; attempt++) {
+    // Only the lock acquisition sits in this try: an error thrown by
+    // operation() must not be mistaken for lock contention and retried.
     try {
       mkdirSync(lockPath);
-      try {
-        operation();
-        return true;
-      } finally {
-        rmSync(lockPath, { recursive: true, force: true });
-      }
     } catch (cause) {
       const code = (cause as NodeJS.ErrnoException).code;
       if (code !== "EEXIST") return false;
@@ -171,7 +166,16 @@ function withRoleMarkerLock(
       } catch {
         continue;
       }
-      Atomics.wait(ROLE_LOCK_WAIT, 0, 0, ROLE_LOCK_WAIT_MS);
+      Bun.sleepSync(ROLE_LOCK_WAIT_MS);
+      continue;
+    }
+    try {
+      operation();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      rmSync(lockPath, { recursive: true, force: true });
     }
   }
   return false;
