@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
+import { extractMetricsPublicationWiring } from "../lib/ci-snapshot-wiring.ts";
 
-const yaml = `on:
+const ciYaml = `on:
   push:
     branches: [main]
     paths-ignore:
@@ -9,89 +9,119 @@ const yaml = `on:
   pull_request:
 
 concurrency:
-  coverage:
+  group: ci
+jobs:
+  coverage-head:
       - name: Upload coverage artifact
         name: amadeus-coverage-report
         path: |
           coverage/coverage-totals.json
           coverage/tests-totals.json
-      - name: Upload coverage to Codecov
   metrics-snapshot:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     concurrency:
       group: metrics-snapshot-main
-      queue: max
       cancel-in-progress: false
     timeout-minutes: 5
-    name: amadeus-coverage-report
     uses: actions/create-github-app-token@v3
-    client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}
-    private-key: \${{ secrets.METRICS_BOT_PRIVATE_KEY }}
     permission-contents: write
     permission-pull-requests: write
     token: \${{ steps.app-token.outputs.token }}
-    branch="metrics/snapshot-\${GITHUB_SHA:0:12}-\${GITHUB_RUN_ATTEMPT}"
-    git push origin "HEAD:refs/heads/$branch"
-    pr_url=$(gh pr create
-    --base main
-    --head "$branch"
-    gh pr merge --auto --squash --delete-branch "$pr_url"
-      - name: Generate snapshot
-        run: bun scripts/metrics-snapshot.ts --write
-      - name: Prune old snapshots
-        run: bun scripts/metrics-retention.ts --apply
-      - name: Commit snapshot
-        run: |
-          git add -A metrics/
-          git commit -m "chore(metrics): record snapshot"
+    run: |
+      bun scripts/metrics-publication.ts snapshot \\
+        --target-sha "$GITHUB_SHA" \\
+        --repository "$GITHUB_REPOSITORY" \\
+        --bot-login '\${{ steps.app-token.outputs.app-slug }}[bot]'
   ci-success:
     needs: [coverage]
 `;
-const { trigger, job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
-describe("t222 CI snapshot wiring", () => {
+
+const maintenanceYaml = `on:
+  repository_dispatch:
+    types: [metrics-maintenance]
+permissions:
+  contents: read
+concurrency:
+  group: metrics-maintenance
+  cancel-in-progress: false
+jobs:
+  publish:
+    timeout-minutes: 5
+    uses: actions/create-github-app-token@v3
+    permission-contents: write
+    permission-pull-requests: write
+    token: \${{ steps.app-token.outputs.token }}
+    run: |
+      bun scripts/metrics-publication.ts maintenance \\
+        --repository "$GITHUB_REPOSITORY" \\
+        --bot-login '\${{ steps.app-token.outputs.app-slug }}[bot]'
+`;
+
+const wiring = extractMetricsPublicationWiring(ciYaml, maintenanceYaml);
+
+describe("t222 metrics publication workflow wiring", () => {
   test("metrics-only main pushes do not recurse while pull requests still run", () => {
-    expect(trigger).toContain("push:\n    branches: [main]");
-    expect(trigger).toContain("paths-ignore:\n      - metrics/**");
-    expect(trigger).toContain("pull_request:");
+    expect(wiring.trigger).toContain("push:\n    branches: [main]");
+    expect(wiring.trigger).toContain("paths-ignore:\n      - metrics/**");
+    expect(wiring.trigger).toContain("pull_request:");
   });
-  test("main push guard", () => expect(job).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'"));
-  test("fixed concurrency queue", () => { expect(job).toContain("group: metrics-snapshot-main"); expect(job).toContain("queue: max"); expect(job).toContain("cancel-in-progress: false"); });
-  test("five minute timeout", () => expect(job).toContain("timeout-minutes: 5"));
-  test("named artifact", () => expect(job).toContain("name: amadeus-coverage-report"));
-  test("uses the metrics GitHub App with least privilege", () => {
-    expect(job).toContain("uses: actions/create-github-app-token@v3");
-    expect(job).toContain("client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}");
-    expect(job).toContain("private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}");
-    expect(job).toContain("permission-contents: write");
-    expect(job).toContain("permission-pull-requests: write");
-    expect(job).toContain("token: ${{ steps.app-token.outputs.token }}");
+
+  test("snapshot is main-push-only, fixed-concurrency, and bounded to five minutes", () => {
+    expect(wiring.snapshotJob).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+    expect(wiring.snapshotJob).toContain("group: metrics-snapshot-main");
+    expect(wiring.snapshotJob).toContain("cancel-in-progress: false");
+    expect(wiring.snapshotJob).toContain("timeout-minutes: 5");
   });
-  test("publishes snapshots through an automatically merged pull request", () => {
-    expect(job).toContain('branch="metrics/snapshot-${GITHUB_SHA:0:12}-${GITHUB_RUN_ATTEMPT}"');
-    expect(job).toContain('git push origin "HEAD:refs/heads/$branch"');
-    expect(job).toContain("pr_url=$(gh pr create");
-    expect(job).toContain("--base main");
-    expect(job).toContain('--head "$branch"');
-    expect(job).toContain('gh pr merge --auto --squash --delete-branch "$pr_url"');
-    expect(job).not.toContain("HEAD:main");
+
+  test("snapshot delegates full-SHA publication to the JSON-only publisher", () => {
+    expect(wiring.snapshotJob).toContain("bun scripts/metrics-publication.ts snapshot");
+    expect(wiring.snapshotJob).toContain('--target-sha "$GITHUB_SHA"');
+    expect(wiring.snapshotJob).toContain('--repository "$GITHUB_REPOSITORY"');
+    expect(wiring.snapshotJob).not.toContain("metrics-retention.ts");
+    expect(wiring.snapshotJob).not.toContain("metrics-visualize.ts");
+    expect(wiring.snapshotJob).not.toContain("git add -A metrics/");
+    expect(wiring.snapshotJob).not.toContain("GITHUB_RUN_ATTEMPT");
   });
-  test("prunes old snapshots after generating and before committing (Issue #1121)", () => {
-    const generate = job.indexOf("- name: Generate snapshot");
-    const prune = job.indexOf("- name: Prune old snapshots");
-    const commit = job.indexOf("- name: Commit snapshot");
-    expect(generate).toBeGreaterThanOrEqual(0);
-    expect(prune).toBeGreaterThan(generate);
-    expect(commit).toBeGreaterThan(prune);
-    expect(job).toContain("run: bun scripts/metrics-retention.ts --apply");
+
+  test("snapshot uses only the existing GitHub App write grants", () => {
+    expect(wiring.snapshotJob).toContain("uses: actions/create-github-app-token@v3");
+    expect(wiring.snapshotJob).toContain("permission-contents: write");
+    expect(wiring.snapshotJob).toContain("permission-pull-requests: write");
+    expect(wiring.snapshotJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
   });
-  test("commit stages deletions with git add -A so pruned snapshots are removed (Issue #1121)", () => {
-    expect(job).toContain("git add -A metrics/");
-    expect(job).not.toContain("git add metrics/*.json");
+
+  test("maintenance starts only from explicit dispatch", () => {
+    expect(wiring.maintenanceTrigger).toContain("repository_dispatch:");
+    expect(wiring.maintenanceTrigger).toContain("types: [metrics-maintenance]");
   });
-  test("ci-success does not depend on snapshot", () => expect(ciSuccess).not.toContain("metrics-snapshot"));
-  test("totals belong to the named coverage artifact upload step", () => {
-    expect(uploadStep).toContain("name: amadeus-coverage-report");
-    expect(uploadStep).toContain("coverage/coverage-totals.json");
-    expect(uploadStep).toContain("coverage/tests-totals.json");
+
+  test("maintenance has one stable concurrency group and five-minute bound", () => {
+    expect(wiring.maintenanceConcurrency).toContain("group: metrics-maintenance");
+    expect(wiring.maintenanceConcurrency).toContain("cancel-in-progress: false");
+    expect(wiring.maintenanceJob).toContain("timeout-minutes: 5");
+  });
+
+  test("maintenance delegates to the single maintenance publisher", () => {
+    expect(wiring.maintenanceJob).toContain("bun scripts/metrics-publication.ts maintenance");
+    expect(wiring.maintenanceJob).toContain('--repository "$GITHUB_REPOSITORY"');
+    expect(wiring.maintenanceJob).not.toContain("metrics-snapshot.ts");
+  });
+
+  test("maintenance uses only the existing GitHub App write grants", () => {
+    expect(wiring.maintenanceJob).toContain("uses: actions/create-github-app-token@v3");
+    expect(wiring.maintenanceJob).toContain("permission-contents: write");
+    expect(wiring.maintenanceJob).toContain("permission-pull-requests: write");
+    expect(wiring.maintenanceJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
+  });
+
+  test("ci-success remains independent from both publishers", () => {
+    expect(wiring.ciSuccess).not.toContain("metrics-snapshot");
+    expect(wiring.ciSuccess).not.toContain("metrics-maintenance");
+  });
+
+  test("coverage totals remain in the named artifact upload step", () => {
+    expect(wiring.uploadStep).toContain("name: amadeus-coverage-report");
+    expect(wiring.uploadStep).toContain("coverage/coverage-totals.json");
+    expect(wiring.uploadStep).toContain("coverage/tests-totals.json");
   });
 });

@@ -484,7 +484,6 @@ jobs:
       contents: read
     concurrency:
       group: metrics-snapshot-main
-      queue: max
       cancel-in-progress: false
     steps:
       - name: Create GitHub App token
@@ -519,49 +518,27 @@ jobs:
           name: amadeus-coverage-report
           path: coverage
 
-      - name: Generate snapshot
-        run: bun scripts/metrics-snapshot.ts --write
-
-      - name: Prune old snapshots
-        run: bun scripts/metrics-retention.ts --apply
-
-      # After retention (so the dashboard reflects the pruned set) and before
-      # the commit step, whose `git add -A metrics/` picks index.html up into
-      # the same snapshot PR. No continue-on-error: a render failure must turn
-      # this job red (loud-fail; still outside the ci-success aggregation).
-      - name: Render metrics dashboard
-        run: bun scripts/metrics-visualize.ts --write
-
       - name: Get GitHub App user ID
         id: app-user
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
 
-      - name: Commit snapshot
+      - name: Configure GitHub App identity
         run: |
           git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
           git config user.email '${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
-          git add -A metrics/
-          git commit -m "chore(metrics): record snapshot"
 
-      - name: Publish snapshot pull request
+      - name: Publish immutable snapshot
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          branch="metrics/snapshot-${GITHUB_SHA:0:12}-${GITHUB_RUN_ATTEMPT}"
-          git push origin "HEAD:refs/heads/$branch"
-          pr_url=$(gh pr create \
-            --base main \
-            --head "$branch" \
-            --title "メトリクススナップショットを記録する" \
-            --body "main の ${GITHUB_SHA:0:12} に対応するコードメトリクスを自動記録します。")
-          gh pr merge --auto --squash --delete-branch "$pr_url"
-          {
-            echo "## Metrics snapshot pull request"
-            echo
-            echo "[$pr_url]($pr_url)"
-          } >> "$GITHUB_STEP_SUMMARY"
+          bun scripts/metrics-publication.ts snapshot \
+            --target-sha "$GITHUB_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --bot-login '${{ steps.app-token.outputs.app-slug }}[bot]' \
+            --deadline-seconds 270 \
+            --poll-seconds 5 | tee -a "$GITHUB_STEP_SUMMARY"
 
   # U4 formal-model-check begin
   formal-model-check:

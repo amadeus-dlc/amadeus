@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
+import { extractMetricsPublicationWiring } from "../lib/ci-snapshot-wiring.ts";
 
 const CHANGE_DETECTOR = join(import.meta.dir, "../../scripts/detect-ci-changes.sh");
 
@@ -138,13 +138,13 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(headJob).toContain("bun tests/coverage-patch-gate.ts --check");
     expect(headJob).toContain("bun run coverage:ci -- -P 4");
     expect(headJob).toContain("fetch-depth: 0");
-    expect(headJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
+    expect(headJob).toContain(`AMADEUS_PATCH_BASE_REF: origin/\${{ github.event.pull_request.base.ref }}`);
     // relative gate (E-CV2): live merge-base measurement compared through the
     // project-gate baseline seam, verdict-independent base run, cache keyed by
     // merge-base sha, artifact completeness verified before comparison
     expect(coverageJob).toContain("Relative coverage gate (head vs merge-base)");
     expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
-    expect(baseJob).toContain("key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}");
+    expect(baseJob).toContain(`key: relative-coverage-base-\${{ steps.merge-base.outputs.sha }}`);
     expect(baseJob).toContain("base coverage artifacts incomplete");
     expect(coverageJob).toContain("- coverage-head\n      - coverage-base");
     expect(headJob).toContain("needs.changes.outputs.coverage == 'true'");
@@ -182,32 +182,52 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(ciSuccessJob).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
   });
 
-  test("repository workflow publishes snapshots through auto-merged pull requests", () => {
+  test("repository workflows separate immutable snapshots from single-owner maintenance", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
-    const { trigger, job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
+    const maintenanceYaml = readFileSync(
+      join(import.meta.dir, "../../.github/workflows/metrics-maintenance.yml"),
+      "utf8",
+    );
+    const {
+      trigger,
+      snapshotJob,
+      uploadStep,
+      ciSuccess,
+      maintenanceTrigger,
+      maintenanceConcurrency,
+      maintenanceJob,
+    } = extractMetricsPublicationWiring(yaml, maintenanceYaml);
     expect(trigger).toContain("push:\n    branches: [main]");
     expect(trigger).toContain("paths-ignore:\n      - metrics/**");
     expect(trigger).toContain("pull_request:");
-    expect(job).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
-    expect(job).toContain("group: metrics-snapshot-main");
-    expect(job).toContain("queue: max");
-    expect(job).toContain("cancel-in-progress: false");
-    expect(job).toContain("timeout-minutes: 5");
-    expect(job).toContain("name: amadeus-coverage-report");
-    expect(job).toContain("uses: actions/create-github-app-token@v3");
-    expect(job).toContain("client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}");
-    expect(job).toContain("private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}");
-    expect(job).toContain("permission-contents: write");
-    expect(job).toContain("permission-pull-requests: write");
-    expect(job).toContain("token: ${{ steps.app-token.outputs.token }}");
-    expect(job).toContain('branch="metrics/snapshot-${GITHUB_SHA:0:12}-${GITHUB_RUN_ATTEMPT}"');
-    expect(job).toContain('git push origin "HEAD:refs/heads/$branch"');
-    expect(job).toContain("pr_url=$(gh pr create");
-    expect(job).toContain("--base main");
-    expect(job).toContain('--head "$branch"');
-    expect(job).toContain('gh pr merge --auto --squash --delete-branch "$pr_url"');
-    expect(job).not.toContain("HEAD:main");
+    expect(snapshotJob).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+    expect(snapshotJob).toContain("group: metrics-snapshot-main");
+    expect(snapshotJob).toContain("cancel-in-progress: false");
+    expect(snapshotJob).toContain("timeout-minutes: 5");
+    expect(snapshotJob).toContain("name: amadeus-coverage-report");
+    expect(snapshotJob).toContain("uses: actions/create-github-app-token@v3");
+    expect(snapshotJob).toContain(`client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}`);
+    expect(snapshotJob).toContain(`private-key: \${{ secrets.METRICS_BOT_PRIVATE_KEY }}`);
+    expect(snapshotJob).toContain("permission-contents: write");
+    expect(snapshotJob).toContain("permission-pull-requests: write");
+    expect(snapshotJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
+    expect(snapshotJob).toContain("bun scripts/metrics-publication.ts snapshot");
+    expect(snapshotJob).toContain('--target-sha "$GITHUB_SHA"');
+    expect(snapshotJob).not.toContain("GITHUB_RUN_ATTEMPT");
+    expect(snapshotJob).not.toContain("metrics-retention.ts");
+    expect(snapshotJob).not.toContain("metrics-visualize.ts");
+    expect(snapshotJob).not.toContain("git add -A metrics/");
+    expect(maintenanceTrigger).toContain("repository_dispatch:");
+    expect(maintenanceTrigger).toContain("types: [metrics-maintenance]");
+    expect(maintenanceConcurrency).toContain("group: metrics-maintenance");
+    expect(maintenanceConcurrency).toContain("cancel-in-progress: false");
+    expect(maintenanceJob).toContain("timeout-minutes: 5");
+    expect(maintenanceJob).toContain("bun scripts/metrics-publication.ts maintenance");
+    expect(maintenanceJob).toContain("permission-contents: write");
+    expect(maintenanceJob).toContain("permission-pull-requests: write");
+    expect(maintenanceJob).not.toContain("metrics-snapshot.ts");
     expect(ciSuccess).not.toContain("metrics-snapshot");
+    expect(ciSuccess).not.toContain("metrics-maintenance");
     expect(uploadStep).toContain("name: amadeus-coverage-report");
     expect(uploadStep).toContain("coverage/coverage-totals.json");
     expect(uploadStep).toContain("coverage/tests-totals.json");
