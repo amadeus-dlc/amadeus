@@ -169,10 +169,14 @@ export function registerLoggerProvider(options: {
   logs.setGlobalLoggerProvider(new AmadeusLogsBridge());
 }
 
-// Whether this process already holds a provider. Registration is a once-only
-// invariant, so a bootstrap seam asks before registering rather than guessing.
-export function isLoggerProviderRegistered(): boolean {
-  return registered !== null;
+// The project dir this process's provider was registered for, or null when
+// nothing is registered. Registration is a once-only invariant, so a bootstrap
+// seam asks before registering rather than guessing — and the ANSWER has to
+// name the workspace, not just say "yes": adopting a provider registered for
+// another workspace would send exports and intent resolution there while the
+// caller believes its own is in force.
+export function registeredLoggerProjectDir(): string | null {
+  return registered === null ? null : registered.projectDir;
 }
 
 // Test seam: drop the registration between fixtures.

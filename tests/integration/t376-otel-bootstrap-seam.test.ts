@@ -32,8 +32,10 @@ import {
   registerLoggerProvider,
   resetLoggerProviderForTests,
 } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { createLocalSpanExporter } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
 import {
   getAmadeusTracer,
+  registerTracerProvider,
   resetTracerProviderForTests,
 } from "../../dist/claude/.claude/otel/tracer-provider.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
@@ -114,6 +116,36 @@ describe("ensureOtelBootstrap — the canonical emit path stands up", () => {
       cleanupTestProject(other);
     }
   });
+
+  // The reuse path has to police the SAME invariant as the repeat-call path.
+  // Adopting a provider registered for another workspace would leave exports
+  // and intent resolution pointed at that workspace while the caller believes
+  // its own is in force — the silent misattribution this migration exists to
+  // rule out.
+  test("a provider registered for a DIFFERENT project dir is refused, not adopted", () => {
+    const other = createTestProject();
+    try {
+      registerLoggerProvider({
+        projectDir: other,
+        auditExporter: createAuditLogExporter({ projectDir: other }),
+        logExporter: createLocalLogExporter({ projectDir: other }),
+      });
+      expect(() => ensureOtelBootstrap(proj)).toThrow(/project/i);
+    } finally {
+      cleanupTestProject(other);
+    }
+  });
+
+  // Registration state lives in the API singleton, not in this module: a memo
+  // that short-circuits ahead of the query reports "already bootstrapped" for
+  // a process that no longer holds a provider, and the next emit throws.
+  test("a provider dropped after bootstrap is re-registered on the next call", () => {
+    ensureOtelBootstrap(proj);
+    resetLoggerProviderForTests();
+    ensureOtelBootstrap(proj);
+    expect(() => emitEvent("amadeus.decision.recorded", { Stage: "s", Decision: "re-registered" })).not.toThrow();
+    expect(journalText()).toContain("re-registered");
+  });
 });
 
 describe("ensureOtelBootstrap — the amadeus-log behaviour it replaces", () => {
@@ -146,5 +178,25 @@ describe("ensureTracerBootstrap", () => {
     const span = getAmadeusTracer().startSpan("probe");
     span.end();
     expect(span.spanContext().traceId).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  test("a tracer registered for a DIFFERENT project dir is refused, not adopted", () => {
+    const other = createTestProject();
+    try {
+      registerTracerProvider({
+        projectDir: other,
+        spanExporter: createLocalSpanExporter({ projectDir: other }),
+      });
+      expect(() => ensureTracerBootstrap(proj)).toThrow(/project/i);
+    } finally {
+      cleanupTestProject(other);
+    }
+  });
+
+  test("a tracer dropped after bootstrap is re-registered on the next call", () => {
+    ensureTracerBootstrap(proj);
+    resetTracerProviderForTests();
+    ensureTracerBootstrap(proj);
+    expect(() => getAmadeusTracer()).not.toThrow();
   });
 });

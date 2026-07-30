@@ -59,7 +59,7 @@ const GH_TOKEN = "ghp_abcdefghijklmnopqrstuvwxyz012345";
 
 describe("completed Span store — full field set (FR-EXP-3, BR-7)", () => {
   test("span.end() persists links alongside ids, name/kind, timestamps, status, attributes, events, resource, scope", async () => {
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+    registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
     const tracer = getAmadeusTracer();
     let linkedContext: SpanContext | undefined;
     await tracer.startActiveSpan("upstream", async (upstream) => {
@@ -92,7 +92,7 @@ describe("completed Span store — full field set (FR-EXP-3, BR-7)", () => {
 
 describe("export-boundary redaction on telemetry stores (FR-DST-3 layer 2)", () => {
   test("the span store drops denied keys and scrubs credential values in span and event attributes", async () => {
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+    registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
     const tracer = getAmadeusTracer();
     await tracer.startActiveSpan("redact-me", async (span) => {
       span.setAttribute("Prompt", "secret prompt text");

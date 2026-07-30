@@ -28,15 +28,15 @@ import { attachIntentContext, ensureContextManager, restoreIntentContext } from 
 import { setFatal, verifyJournalHealth } from "./fatal-latch.ts";
 import { createLocalLogExporter } from "./local-log-exporter.ts";
 import { createLocalSpanExporter } from "./local-span-exporter.ts";
-import { isLoggerProviderRegistered, registerLoggerProvider } from "./logger-provider.ts";
-import { isTracerProviderRegistered, registerTracerProvider } from "./tracer-provider.ts";
+import { registerLoggerProvider, registeredLoggerProjectDir } from "./logger-provider.ts";
+import { registerTracerProvider, registeredTracerProjectDir } from "./tracer-provider.ts";
 
-// The project dir each arm was bootstrapped for. A process serves exactly one
-// workspace: a second bootstrap naming a different dir would leave the
-// providers pointed at the first one while the caller believes otherwise, so
-// it is refused loudly rather than silently ignored.
-let logsProjectDir: string | null = null;
-let tracesProjectDir: string | null = null;
+// Whether THIS module already ran the logs arm's side effects (anchor restore
+// and the health probe) and for which workspace. It is deliberately NOT the
+// idempotency source for registration — that lives in the API singletons and
+// is queried on every call, so a process whose provider was dropped gets a
+// fresh registration instead of a memo saying it is still standing.
+let logsSideEffectsFor: string | null = null;
 
 function assertSameProject(bootstrapped: string, requested: string, arm: string): void {
   if (bootstrapped !== requested) {
@@ -68,20 +68,27 @@ function probeJournal(projectDir: string): void {
 
 // Stand up the canonical emit path for this process. Safe to call from every
 // entry point, in any order, however many times.
+//
+// Both the registered provider's workspace and this module's own record are
+// checked BEFORE anything is registered: a mismatch on either is refused with
+// nothing mutated. The two are separate questions — "is a provider standing,
+// and for whom" and "did the side effects already run here" — and collapsing
+// them is what let a dropped provider read as bootstrapped.
 export function ensureOtelBootstrap(projectDir: string): void {
-  if (logsProjectDir !== null) {
-    assertSameProject(logsProjectDir, projectDir, "logs");
-    return;
-  }
+  const registeredFor = registeredLoggerProjectDir();
+  if (registeredFor !== null) assertSameProject(registeredFor, projectDir, "logs");
+  if (logsSideEffectsFor !== null) assertSameProject(logsSideEffectsFor, projectDir, "logs");
+
   ensureContextManager();
-  if (!isLoggerProviderRegistered()) {
+  if (registeredFor === null) {
     registerLoggerProvider({
       projectDir,
       auditExporter: createAuditLogExporter({ projectDir }),
       logExporter: createLocalLogExporter({ projectDir }),
     });
   }
-  logsProjectDir = projectDir;
+  if (logsSideEffectsFor !== null) return;
+  logsSideEffectsFor = projectDir;
   attachAnchor(projectDir);
   probeJournal(projectDir);
 }
@@ -89,21 +96,20 @@ export function ensureOtelBootstrap(projectDir: string): void {
 // Stand up the Trace API for this process. Separate from the logs arm because
 // spans are telemetry: a process that only writes audit rows never needs a
 // Tracer, and a span wrapper must not drag the journal probe in behind it.
+// This arm has no side effects beyond the registration, so the singleton's
+// recorded workspace is the whole state it needs.
 export function ensureTracerBootstrap(projectDir: string): void {
-  if (tracesProjectDir !== null) {
-    assertSameProject(tracesProjectDir, projectDir, "traces");
+  const registeredFor = registeredTracerProjectDir();
+  if (registeredFor !== null) {
+    assertSameProject(registeredFor, projectDir, "traces");
     return;
   }
   ensureContextManager();
-  if (!isTracerProviderRegistered()) {
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir }) });
-  }
-  tracesProjectDir = projectDir;
+  registerTracerProvider({ projectDir, spanExporter: createLocalSpanExporter({ projectDir }) });
 }
 
-// Test seam: the memo is per-process by design, so fixtures drop it the same
+// Test seam: the record is per-process by design, so fixtures drop it the same
 // way they drop the provider registrations.
 export function resetOtelBootstrapForTests(): void {
-  logsProjectDir = null;
-  tracesProjectDir = null;
+  logsSideEffectsFor = null;
 }

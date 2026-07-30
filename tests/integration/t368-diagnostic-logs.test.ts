@@ -91,7 +91,7 @@ function bootReal(): void {
     auditExporter: createAuditLogExporter({ projectDir: proj }),
     logExporter: createLocalLogExporter({ projectDir: proj }),
   });
-  registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+  registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
 }
 
 describe("routing: diagnostics reach the log store only (FR-EXP-4, BR-1)", () => {

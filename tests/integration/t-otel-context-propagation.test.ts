@@ -52,6 +52,7 @@ function bootInProcess(projectDir: string, storeFile: string) {
   clearIntentContextForTests();
   ensureContextManager();
   registerTracerProvider({
+    projectDir,
     spanExporter: createLocalSpanExporter({
       projectDir,
       storeDir: storeFile,

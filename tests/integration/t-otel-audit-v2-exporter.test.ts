@@ -117,7 +117,7 @@ describe("schema v2 codec persistence (BR-13) and emit-complete observability (F
       auditExporter: createAuditLogExporter({ projectDir: proj }),
       logExporter: createLocalLogExporter({ projectDir: proj }),
     });
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+    registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
     const tracer = getAmadeusTracer();
     await tracer.startActiveSpan("gate-wait", async (span) => {
       try {

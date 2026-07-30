@@ -71,7 +71,7 @@ describe("credential-free gate (VER-2)", () => {
       auditExporter: createAuditLogExporter({ projectDir: proj }),
       logExporter: createLocalLogExporter({ projectDir: proj }),
     });
-    registerTracerProvider({ spanExporter: createLocalSpanExporter({ projectDir: proj }) });
+    registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
     registerMeterProvider({ metricExporter: createLocalMetricExporter({ projectDir: proj }) });
 
     // Canonical path: denied key, opt-in Command with an embedded token, and
