@@ -111,6 +111,13 @@ jobs:
       - name: Lint (biome)
         run: bun run lint
 
+      # VER-4: the legacy audit writer and the pre-OTel observe() wrapper are
+      # being retired call site by call site. The allowlist ratchets down only,
+      # and the residual count is printed on every run so the walk to zero (the
+      # FR-MIG-4(c) deletion-gate condition) stays visible in the job log.
+      - name: Call-site guard (legacy emit path, shrink-only ratchet)
+        run: bun tests/callsite-guard.ts --check
+
       - name: Install lizard (CCN measurement, pinned)
         run: pip install lizard==1.23.0
 

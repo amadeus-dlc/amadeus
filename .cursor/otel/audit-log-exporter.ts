@@ -20,6 +20,7 @@
 //     without the other.
 
 import { appendJournalRecordV2 } from "../tools/amadeus-audit.ts";
+import type { JournalAppendOutcome } from "../tools/amadeus-audit.ts";
 import type { JournalEntryV2 } from "../tools/amadeus-journal.ts";
 import { JOURNAL_SCHEMA_VERSION_V2, serializeJournalEntryV2 } from "../tools/amadeus-journal.ts";
 import { getEventDef } from "./event-registry.ts";
@@ -49,18 +50,25 @@ export type CanonicalEventRecord = {
 
 export type AuditLogExporter = {
   // Synchronous. Throws (after setting the fatal latch) on ANY write failure.
-  exportCanonicalEvent(record: CanonicalEventRecord): void;
+  // Returns whether the append landed: the post-complete seal SUPPRESSES
+  // without throwing, so that outcome is only knowable from the return value
+  // (E-U7CG-Q3B ruling A'). Callers that do not care may ignore it.
+  exportCanonicalEvent(record: CanonicalEventRecord): JournalAppendOutcome;
 };
 
 // The append seam: the default is the real locked journal append (lock →
 // sequence → v2 codec encode → synchronous append). Tests inject a failing
 // seam to drive the failure contract without corrupting a real journal.
+// A seam that returns nothing is read as a successful append: the only void
+// producers are test doubles modelling a landed write (a failing double
+// throws). Keeping `void` in the union is what makes the E-U7CG-Q3B change a
+// minimal diff — the existing injected seams stay type-compatible unchanged.
 export type AuditAppend = (
   record: CanonicalEventRecord,
   projectDir: string,
   intent?: string,
   space?: string
-) => void;
+) => JournalAppendOutcome | void;
 
 export type AuditLogExporterOptions = {
   readonly projectDir: string;
@@ -97,11 +105,9 @@ export function createAuditLogExporter(options: AuditLogExporterOptions): AuditL
   const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
   const append: AuditAppend =
     options.append ??
-    ((record, projectDir, intent, space) => {
-      appendJournalRecordV2(toJournalRow(record), projectDir, intent, space);
-    });
+    ((record, projectDir, intent, space) => appendJournalRecordV2(toJournalRow(record), projectDir, intent, space));
   return {
-    exportCanonicalEvent(record: CanonicalEventRecord): void {
+    exportCanonicalEvent(record: CanonicalEventRecord): JournalAppendOutcome {
       // Accept-set validation (BR-10): invariant violations — caller bugs —
       // throw WITHOUT touching the fatal latch.
       const def = getEventDef(record.eventName);
@@ -133,7 +139,8 @@ export function createAuditLogExporter(options: AuditLogExporterOptions): AuditL
       // throw WITHOUT the latch (not write failures).
       serializeJournalEntryV2({ ...toJournalRow({ ...record, attributes: redacted }), seq: 1 });
       try {
-        append({ ...record, attributes: redacted }, options.projectDir, options.intent, options.space);
+        // An injected seam that returns nothing modelled a landed write.
+        return append({ ...record, attributes: redacted }, options.projectDir, options.intent, options.space) ?? { appended: true };
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause);
         latch.setFatal(`canonical event write failed (${record.eventName}): ${message}`);

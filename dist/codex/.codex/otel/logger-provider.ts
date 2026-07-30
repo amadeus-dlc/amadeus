@@ -38,11 +38,21 @@ function requireRegistered(): Registered {
   return registered;
 }
 
+// What an emit did. `appended: false` is never a failure — a failure throws.
+// It reports the two ways an emit legitimately does not reach the audit
+// journal: the post-complete seal (#1248, E-U7CG-Q3B ruling A') and a
+// telemetry-classified event, which never touches the journal by design
+// (FR-EXP-4). The timestamp is the one the emit actually stamped, so a caller
+// reporting on the emit quotes a real value rather than minting its own.
+export type EmitOutcome =
+  | { readonly appended: true; readonly timestamp: string }
+  | { readonly appended: false; readonly reason: "intent-complete" | "telemetry"; readonly timestamp: string };
+
 // canonical emit. Throws synchronously on write failure (the exporter has
 // already set the fatal latch by then — FR-EVT-3). Registry and required-
 // attribute violations throw WITHOUT latching: they are caller bugs, not
 // journal write failures (BR-10).
-export function emitEvent(name: RegisteredEventName, attrs: Record<string, unknown>): void {
+export function emitEvent(name: RegisteredEventName, attrs: Record<string, unknown>): EmitOutcome {
   const reg = requireRegistered();
   const def = getEventDef(name);
   const missing = def.requiredAttributes.filter((key) => !(key in attrs));
@@ -52,8 +62,9 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
   const clean = redactAttributes(attrs, reg.policy);
   if (def.durability === "telemetry") {
     // Telemetry never reaches the audit journal (FR-EXP-4). Fail-open path.
-    reg.logExporter.exportLog({ name, timestamp: new Date().toISOString(), attributes: clean, traceId: null, spanId: null });
-    return;
+    const timestamp = new Date().toISOString();
+    reg.logExporter.exportLog({ name, timestamp, attributes: clean, traceId: null, spanId: null });
+    return { appended: false, reason: "telemetry", timestamp };
   }
   const spanCtx = trace.getSpan(context.active())?.spanContext();
   const space = activeSpace(reg.projectDir);
@@ -76,7 +87,10 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
     idempotencyKey: crypto.randomUUID(),
     durability: "canonical",
   };
-  reg.auditExporter.exportCanonicalEvent(record);
+  const outcome = reg.auditExporter.exportCanonicalEvent(record);
+  return outcome.appended
+    ? { appended: true, timestamp: record.timestamp }
+    : { appended: false, reason: outcome.reason, timestamp: record.timestamp };
 }
 
 // Free-form diagnostic log. Always fail-open (FR-EVT-6).

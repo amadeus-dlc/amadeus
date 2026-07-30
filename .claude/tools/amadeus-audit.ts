@@ -388,12 +388,21 @@ export function appendAuditEntry(
 // sequence is assigned here, inside the lock. Appends to a sealed ledger
 // (registry row "complete") are suppressed with the same post-complete stop
 // as the v1 writer (#1248).
+// Whether the locked v2 append actually wrote. The post-complete seal is a
+// SUPPRESSION, not a failure — it throws nothing — so a caller that needs to
+// distinguish "written" from "sealed" can only learn it from this return value
+// (E-U7CG-Q3B ruling A'). The migration Adapter needs exactly that to keep the
+// legacy `appended:false` arm honest instead of asserting an unverified write.
+export type JournalAppendOutcome =
+  | { readonly appended: true }
+  | { readonly appended: false; readonly reason: "intent-complete" };
+
 export function appendJournalRecordV2(
   record: Omit<JournalEntryV2, "seq">,
   projectDir: string,
   intent?: string,
   space?: string
-): void {
+): JournalAppendOutcome {
   if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
     throw new Error("Failed to acquire audit lock after retries");
   }
@@ -407,10 +416,11 @@ export function appendJournalRecordV2(
       process.stderr.write(
         `amadeus-audit: suppressed ${record.eventName} v2 append — target intent ${targetDir} is complete (#1248)\n`
       );
-      return;
+      return { appended: false, reason: "intent-complete" };
     }
     const path = ensureAuditFile(projectDir, intent, space);
     appendFileSync(path, serializeJournalEntryV2({ ...record, seq: nextShardSeq(path) }), "utf-8");
+    return { appended: true };
   } finally {
     releaseAuditLock(projectDir, intent, space);
   }
