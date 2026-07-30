@@ -83,7 +83,7 @@ function terminalFixture() {
     state: linkedState(),
   });
   const fixtureState = readFileSync(
-    join(ROOT, "tests", "fixtures", "state-bugfix-final-construction.md"),
+    join(ROOT, "tests", "fixtures", "state-fix-final-construction.md"),
     "utf-8",
   );
   writeFileSync(
@@ -454,7 +454,7 @@ describe("t346 completion gate", () => {
       uuid: "00000000-0000-7000-8000-00000000f00d",
       slug: "other",
       dirName: otherIntent,
-      scope: "bugfix",
+      scope: "fix",
       repos: [REPO.canonical],
       status: "in-flight",
     });
