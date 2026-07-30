@@ -456,6 +456,38 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
 
   test("latest isolated invocation stage overrides the main workflow stage", () => {
     const proj = makeProjectActive("requirements-analysis");
+    const graph = join(proj, "isolated-stage-graph.json");
+    const stageNode = (slug: string, sensorId: string) => ({
+      slug,
+      number: "1.0",
+      name: slug,
+      phase: "inception",
+      execution: "ALWAYS",
+      lead_agent: "amadeus-product-agent",
+      support_agents: [],
+      mode: "inline",
+      produces: [],
+      consumes: [],
+      requires_stage: [],
+      inputs: "",
+      outputs: "",
+      rules_in_context: [],
+      sensors_applicable: [
+        {
+          id: sensorId,
+          path: `.claude/sensors/amadeus-${sensorId}.md`,
+          matches: "**/codekb/**",
+        },
+      ],
+    });
+    writeFileSync(
+      graph,
+      JSON.stringify([
+        stageNode("requirements-analysis", "main-stage-only"),
+        stageNode("reverse-engineering", "isolated-stage-only"),
+      ]),
+      "utf-8",
+    );
     const output = join(
       proj,
       "amadeus",
@@ -466,12 +498,20 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
       "architecture.md",
     );
 
+    expect(runHook(proj, output, { graph }).status).toBe(0);
+    expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
+      "main-stage-only",
+    ]);
+    writeFileSync(spawnLog(proj), "", "utf-8");
+
     expect(
-      runHook(proj, output, { scopeStage: "reverse-engineering" }).status,
+      runHook(proj, output, {
+        graph,
+        scopeStage: "reverse-engineering",
+      }).status,
     ).toBe(0);
     expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
-      "required-sections",
-      "upstream-coverage",
+      "isolated-stage-only",
     ]);
   });
 
