@@ -170,6 +170,14 @@ function parseStoreLine(line: string): Record<string, unknown> | null {
   }
 }
 
+// What one read past the cursor yielded: the records to forward, how far each
+// store file was consumed, and how many consumed lines were unparseable.
+export type PendingRead = {
+  readonly records: readonly SignalStoreRecord[];
+  readonly consumed: Record<string, number>;
+  readonly malformed: number;
+};
+
 // Reads at most `batchSize` records past the cursor, in file order, and
 // reports how many of each file they came from so a delivered batch can move
 // exactly that far (BR-7).
@@ -178,11 +186,7 @@ export function readPending(
   kind: SignalKind,
   cursor: Cursor | undefined,
   batchSize: number
-): {
-  readonly records: readonly SignalStoreRecord[];
-  readonly consumed: Record<string, number>;
-  readonly malformed: number;
-} {
+): PendingRead {
   const records: SignalStoreRecord[] = [];
   const consumed: Record<string, number> = {};
   let malformed = 0;

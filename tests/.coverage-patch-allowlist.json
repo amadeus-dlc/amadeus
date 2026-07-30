@@ -1472,13 +1472,13 @@
   },
   {
     "file": "packages/framework/core/otel/relay.ts",
-    "lines": "394-403",
+    "lines": "419-428",
     "reason": "The default fetch sender is driven on a real loopback Collector by tests/e2e/t375-relay-collector-endpoint.test.ts (delivery, 5xx refusal, connection refused). The --ci coverage run measures smoke+unit+integration only, so the e2e tier that exercises these lines is outside the measured set; every non-wire path through the sender is covered via the post port.",
     "expiry": "remove if the coverage run starts including the e2e tier, or if the sender moves behind an in-process seam"
   },
   {
     "file": "packages/framework/core/otel/relay.ts",
-    "lines": "734-742",
+    "lines": "771-779",
     "reason": "The import.meta.main CLI block only runs in a spawned process (session-end spawns `relay.ts flush`), which bun --coverage does not measure (cid:code-generation:bun-coverage-spawn-blindspot). Its two callees are covered in-process: parseCliArgs by tests/unit/t374-relay-otlp-mapping.test.ts and runRelay by tests/integration/t372-otlp-relay.test.ts across all four summary arms.",
     "expiry": "remove if bun measures spawned children, or if the dispatch moves into an exported handler"
   }
