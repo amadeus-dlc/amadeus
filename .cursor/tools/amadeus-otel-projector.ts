@@ -102,7 +102,10 @@ export function journalSpanInput(record: JournalRecord): JournalEntry {
   const fields: Record<string, string> = {};
   for (const [key, value] of Object.entries(record.attributes)) {
     if (value === null) continue;
-    fields[key] = typeof value === "string" ? value : JSON.stringify(value);
+    // Trim to match journalRecordField: span builders compare these values
+    // (Stage/Phase names) against what audit readers return, so padded v2
+    // attributes must normalize the same way.
+    fields[key] = (typeof value === "string" ? value : JSON.stringify(value)).trim();
   }
   return {
     schemaVersion: record.schemaVersion,

@@ -177,6 +177,26 @@ describe("journalSpanInput — v2 normalization onto the span-input view", () =>
     expect(view.fields).toEqual({ Stage: "intent-capture", Attempt: "2" });
   });
 
+  test("trims padded v2 string attributes to match journalRecordField (stage/phase matching)", () => {
+    const v2: JournalEntryV2 = {
+      schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+      eventId: "evt-2",
+      seq: 8,
+      timestamp: "2026-07-29T10:00:03Z",
+      eventName: "STAGE_STARTED",
+      attributes: { Stage: "  intent-capture  " },
+      intentId: DEFAULT_RECORD_DIR,
+      space: "default",
+      cloneId: CLONE,
+      traceId: "a".repeat(32),
+      spanId: "b".repeat(16),
+      traceFlags: 1,
+      idempotencyKey: `${DEFAULT_RECORD_DIR}:${CLONE}:8`,
+      canonical: true,
+    };
+    expect(journalSpanInput(v2).fields).toEqual({ Stage: "intent-capture" });
+  });
+
   test("passes v1 records through unchanged (correlation IDs never synthesized)", () => {
     const v1 = parseJournalLine(
       v1Line(1, "STAGE_STARTED", "2026-07-29T10:00:02Z", { Stage: "intent-capture" }).trim(),
