@@ -457,14 +457,27 @@ export type GateOptions = {
   readonly evidence?: Evidence;
 };
 
-export function gatherEvidence(options: GateOptions = {}): Evidence {
+// The two subprocess-driven measurements are injectable so the wiring — which
+// condition draws on which source — is checkable without nesting a full test
+// run and two distribution guards inside the suite. Nested spawns under the
+// suite's own parallelism are a known source of load-induced false reds
+// (cid:code-generation:fanout-load-settle-before-integration), and this file is
+// run by every CI build. The real runners still execute on every gate run.
+export type EvidenceRunners = {
+  readonly runTests: (paths: readonly string[]) => RunOutcome;
+  readonly runGuards: () => RunOutcome;
+};
+
+export const DEFAULT_RUNNERS: EvidenceRunners = { runTests: runBunTests, runGuards: runDistributionGuards };
+
+export function gatherEvidence(options: GateOptions = {}, runners: EvidenceRunners = DEFAULT_RUNNERS): Evidence {
   return {
-    mixedJournal: runBunTests(MIXED_JOURNAL_TESTS),
+    mixedJournal: runners.runTests(MIXED_JOURNAL_TESTS),
     registryDrift: measureRegistryDrift(),
     callsites: measureCallsites(),
     shadow: readShadowReport(options.shadowReportPath),
     relay: measureRelayProof(),
-    distribution: runDistributionGuards(),
+    distribution: runners.runGuards(),
   };
 }
 

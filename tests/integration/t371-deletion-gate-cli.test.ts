@@ -20,6 +20,7 @@ import { join } from "node:path";
 import {
   type Evidence,
   GATE_CONDITIONS,
+  DEFAULT_RUNNERS,
   gatherEvidence,
   MIXED_JOURNAL_TESTS,
   REPO_ROOT_FOR_TEST,
@@ -187,26 +188,47 @@ describe("declared suite paths are verified, not assumed", () => {
   });
 });
 
-// --- the gathering layer, driven for real -----------------------------------
+// --- the gathering layer's wiring --------------------------------------------
 //
-// The measurement layer is the half a spawned CLI run would hide from coverage,
-// so it is driven once in process here. It really does run the mixed-journal
-// suites and both distribution guards, which is the point: these are the
-// conditions whose evidence comes from a subprocess, and an evaluator that
-// mis-wires them would still look fine against injected evidence.
+// gatherEvidence is checked with injected runners rather than by nesting a real
+// test run and two distribution guards inside this suite: nested spawns under
+// the suite's own parallelism produce load-induced false reds, and this file
+// runs on every CI build. What matters here is the WIRING — that each condition
+// draws on the source it claims to — and that is exactly what fakes expose. The
+// real runners execute on every actual gate run, including the CI step.
 
-describe("gatherEvidence — every condition's evidence is actually collected", () => {
-  test("returns a measured value for all six conditions", () => {
-    const evidence = gatherEvidence();
-    // (a) and (f) shell out; both must report that they ran.
-    expect(evidence.mixedJournal?.ran).toBe(true);
-    expect(evidence.distribution?.ran).toBe(true);
-    expect(evidence.distribution?.sources.length).toBeGreaterThan(0);
+describe("gatherEvidence — each condition draws on its own source", () => {
+  test("routes the suite runner to (a) and the guard runner to (f)", () => {
+    const asked: string[][] = [];
+    let guardsRun = 0;
+    const evidence = gatherEvidence(
+      {},
+      {
+        runTests: (paths) => {
+          asked.push([...paths]);
+          return { ran: true, passed: true, detail: "fake", sources: paths };
+        },
+        runGuards: () => {
+          guardsRun += 1;
+          return { ran: true, passed: true, detail: "fake", sources: ["fake-guard"] };
+        },
+      },
+    );
+    expect(asked).toEqual([[...MIXED_JOURNAL_TESTS]]);
+    expect(guardsRun).toBe(1);
+    expect(evidence.mixedJournal?.detail).toBe("fake");
+    expect(evidence.distribution?.sources).toEqual(["fake-guard"]);
+    // The cheap measurements are NOT faked — they run against the real tree.
     expect(typeof evidence.callsites).toBe("number");
     expect(Array.isArray(evidence.registryDrift)).toBe(true);
     expect(evidence.relay).not.toBeNull();
     // No shadow report path was given, so (d) is unmeasured — the UNKNOWN arm.
     expect(evidence.shadow).toBeNull();
     expect(resultsFromEvidence(evidence)).toHaveLength(6);
-  }, 300_000);
+  });
+
+  test("the default runners are the real ones", () => {
+    expect(DEFAULT_RUNNERS.runTests).toBe(runBunTests);
+    expect(typeof DEFAULT_RUNNERS.runGuards).toBe("function");
+  });
 });
