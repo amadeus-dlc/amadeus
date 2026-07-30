@@ -37,7 +37,13 @@
 
 2. **Adapter の関数名を `appendAuditEntryViaEvents` にした（執行裁定 2026-07-30 で conductor 承認済み）** — `component-methods.md` は Adapter を literal に `appendAuditEntry` と描いているが、旧名を再利用すると **VER-4 guard が移行済み site と未移行 site を区別できなくなり**、guard が測るはずのカウントダウンが成立しない。BR-2 の「シグネチャを維持」は**引数形状の互換**と読み替える（引数・戻り値の形は維持しており、call-site 書換えは1行スワップのまま）。裁定の指示に従い、同じ申告を `functional-design/business-rules.md` の BR-2 直下にも追記した（record 内の矛盾文を無修正で放置しない）。
 
-3. **第1弾の実書換え batch を実施できず停止（E-U7CG-Q2 の必須項目が未達）** — 裁定は「core/ 内の第1弾実書換え+ratchet 両側実証」を必須としたが、**その前提（機械的増分で移行可能）が2つの独立した機構で成立しない**ことを実測で確認した。詳細と再エスカレーション事項は下記。
+3. **第1弾の実書換え batch は実施せず、実測報告に置き換え（E-U7CG-Q2R 裁定で充足と確定）** — E-U7CG-Q2 は「core/ 内の第1弾実書換え+ratchet 両側実証」を必須としたが、**その前提（機械的増分で移行可能）が2つの独立した機構で成立しない**ことを実測で確認し、実装せず停止して再エスカレーションした（下記「実測: 第1弾 batch が機械的増分にならない2つの機構」）。
+
+   **E-U7CG-Q2R 裁定（ソロ選挙 choice 1、2-0、GoA 2x2、2026-07-30。record: `amadeus/spaces/default/elections/260730-e-u7cg-q2r/record.md`）**: U7 Bolt は機構一式（Adapter + guard + shadow 比較、Q1/Q3A/Q3B 込み）+ 前提不成立の実測報告をもって**充足**とし、PR #1733 を完成扱いとする。両投票者が独立に再現した根拠は本書に記録の2機構 — (1) `otel/logger-provider.ts:36` の throw と production の bootstrap 2件のみ、(2) `amadeus-jump.ts` の 3 event の属性不足。前提解消（entrypoint bootstrap 方針 + 全 event の requiredAttributes 実 call site 突き合わせ）と実書換え batch は U8 前の追加 Bolt 群へ送る。
+
+   **裁定の留保（転記）**:
+   - 追加 Bolt での requiredAttributes 突き合わせにおいて、不足属性値の決定が **audit 意味論の変更（仕様変更）に及ぶ場合は builder・選挙のいずれでも決めず、ユーザーエスカレーションへ倒す**（エスカレーション正準リスト(4)）
+   - 前提解消 Bolt 群は**本 intent 内・U8 前に必ず編成する**（conductor 追跡、Task #1/#2 に統合済み）
 
 ## 実測: 第1弾 batch が機械的増分にならない2つの機構
 
