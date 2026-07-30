@@ -502,10 +502,7 @@ function failure(
   };
 }
 
-type HttpStatusClassification = Readonly<{
-  classification: Classification;
-  retryable: boolean;
-}>;
+type HttpStatusClassification = Readonly<{ classification: Classification; retryable: boolean }>;
 
 function classifyHttpStatus(
   status: number,

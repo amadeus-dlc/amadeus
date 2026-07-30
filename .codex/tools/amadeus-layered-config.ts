@@ -148,9 +148,7 @@ export type AmadeusConfigReadHooks = Readonly<{
   beforeOpen?: (path: string) => void;
 }>;
 
-type ConfigReadFailureMap = Readonly<
-  Record<ContainedFileFailureReason, string>
->;
+type ConfigReadFailureMap = Readonly<Record<ContainedFileFailureReason, string>>;
 
 const CONFIG_READ_FAILURES: ConfigReadFailureMap = {
   "no-nofollow": "configuration cannot be verified without O_NOFOLLOW",
