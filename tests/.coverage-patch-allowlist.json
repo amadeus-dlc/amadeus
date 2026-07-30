@@ -1609,9 +1609,21 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "131-132,152-251,257",
+    "lines": "131-132",
+    "reason": "The production dependency adapter is exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
+    "expiry": "remove when the CLI receives an in-process dependency adapter or Bun attributes child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "152-251",
     "reason": "The production dependency adapter and public CLI parsing, body containment, output, and exit-code paths are exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
     "expiry": "remove when the CLI receives an in-process process/filesystem adapter or Bun attributes child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "257",
+    "reason": "The import.meta.main dispatch is exercised through the spawned CLI integration suite; spawned Bun execution is not attributed to the parent LCOV report.",
+    "expiry": "remove when Bun attributes child coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
