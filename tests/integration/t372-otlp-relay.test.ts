@@ -13,7 +13,7 @@
 // precedent).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
@@ -238,6 +238,27 @@ describe("degraded inputs never stop a flush", () => {
       now: Date.now() + 1000,
     });
     expect(readFileSync(join(storeDir(), "spans-clone01.jsonl"), "utf-8").trim()).toBe("");
+  });
+
+  test("a store file that cannot be rewritten keeps its records and its cursor", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "delivered")]);
+    const sink = collector();
+    const path = join(storeDir(), "spans-clone01.jsonl");
+    chmodSync(path, 0o444);
+    try {
+      // Retention wants this record gone, but the rewrite fails: the store is
+      // left exactly as it was rather than half-written.
+      await flushSignals({
+        projectDir: proj,
+        endpoint: "http://127.0.0.1:4318",
+        post: sink.post,
+        retentionMs: 0,
+        now: Date.now() + 1000,
+      });
+      expect(readFileSync(path, "utf-8").trim().split("\n")).toHaveLength(1);
+    } finally {
+      chmodSync(path, 0o644);
+    }
   });
 
   test("a record with no usable timestamp is kept by the retention pass", async () => {

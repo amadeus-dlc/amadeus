@@ -12,6 +12,7 @@ import { describe, expect, test } from "bun:test";
 import {
   type SignalStoreRecord,
   idempotencyKey,
+  parseCliArgs,
   toOtlpLogs,
   toOtlpMetrics,
   toOtlpTraces,
@@ -173,5 +174,17 @@ describe("the idempotency key is the record's own identity", () => {
   test("a record carrying no identity of its own is not given a synthetic one", () => {
     expect(idempotencyKey(record("span", { traceId: "0".repeat(32) }))).toBeNull();
     expect(idempotencyKey(record("log", { name: "l" }))).toBeNull();
+  });
+});
+
+describe("the CLI argument reader", () => {
+  test("finds the project dir wherever it sits in argv", () => {
+    expect(parseCliArgs(["--project-dir", "/tmp/x"]).projectDir).toBe("/tmp/x");
+    expect(parseCliArgs(["--other", "y", "--project-dir", "/tmp/z"]).projectDir).toBe("/tmp/z");
+  });
+
+  test("reports no project dir when the flag is absent or has no value", () => {
+    expect(parseCliArgs([]).projectDir).toBeUndefined();
+    expect(parseCliArgs(["--project-dir"]).projectDir).toBeUndefined();
   });
 });
