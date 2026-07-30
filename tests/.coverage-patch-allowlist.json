@@ -1516,5 +1516,101 @@
     "lines": "442",
     "reason": "Fail-closed owner-completion race after the in-flight registry row was resolved and the owner lock acquired but before HUMAN_TURN append. t365 directly covers route, owner, stage, state, duplicate-turn, ambiguous-marker, mint, and replay outcomes; reaching this row deterministically requires an injectable registry/audit interleaving.",
     "expiry": "remove when mintArmedPresenceReservation receives an injectable registry/audit port for the post-resolution completion race"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
+    "lines": "38-67",
+    "reason": "parseActiveSubagents malformed-carrier rejection arms (wrong version, missing or blank mainSessionId, non-object roles, invalid role counts, unparseable JSON). t365 asserts the malformed-carrier outcomes behaviorally (fail-closed no-op and mutation denial) through the spawned Kimi hook and CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the Kimi boundary tests gain an in-process driver for the malformed-carrier matrix"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
+    "lines": "84-85",
+    "reason": "Deny-latch presence arm (subagent-transition deny, session-ended deny, or in-flight role-marker lock). t365 asserts each latch state denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the latch-denial matrix gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
+    "lines": "104-105",
+    "reason": "Current-session mismatch arm (empty or differing .current-session carrier). t365 asserts the mismatch denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the session-mismatch case gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "816-831",
+    "reason": "enforceCallerAuthorization runs only inside the spawned state CLI main path; t365 drives the authorized and denied outcomes end-to-end through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the state CLI main() receives an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "847",
+    "reason": "Call site of enforceCallerAuthorization inside the spawn-only state CLI main path; same boundary attribution blind spot as the function body (see lines 816-831).",
+    "expiry": "remove when the state CLI main() receives an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "4449-4450",
+    "reason": "handlePark project-dir binding and Kimi caller guard run only inside the spawned orchestrator CLI; t365 drives park's authorized and unauthorized outcomes through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the orchestrator CLI main() receives an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "163-166",
+    "reason": "Stale role-marker lock retire arm in withRoleMarkerLock: reaching it needs a lock directory older than ROLE_LOCK_STALE_MS left by a crashed holder. The lock-contention behavior is asserted through the spawned hook boundary in t365; deterministic stale-lock timing requires an injectable clock/lock port.",
+    "expiry": "remove when withRoleMarkerLock receives an injectable stale-lock fixture"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "193-223",
+    "reason": "readRoleMarker malformed-marker rejection arms (wrong version, missing or blank mainSessionId, non-object roles, invalid role counts). t365 asserts malformed-marker outcomes behaviorally (silent Stop no-op and mutation denial) through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the malformed-marker matrix gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "245-246",
+    "reason": "Empty-session baseline clear arm (unlink of the role marker when the session id is blank). Exercised through the spawned SessionStart boundary in t365; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the baseline lifecycle gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "266-268",
+    "reason": "Lock-acquisition-failure cleanup arm (best-effort marker unlink after withRoleMarkerLock exhausts retries). Requires sustained lock contention beyond the retry budget; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
+    "expiry": "remove when the role-marker lock gains an injectable contention fixture"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "287-290",
+    "reason": "Session-end marker clear inside the role-marker lock, including the missing-baseline catch. Exercised through the spawned SessionEnd boundary in t365; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the session-end lifecycle gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "323-330",
+    "reason": "Role-transition arms: missing/malformed baseline throw and last-role removal from the counted carrier. t365 asserts both outcomes (deny latch on missing baseline; role count returns to empty) through the spawned SubagentStart/SubagentStop boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the role-transition matrix gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "344-364",
+    "reason": "Wholly-unwritable storage fallback and the outer role-transition catch that re-arms the deny latch on failed persistence. Requires injected write failures past the deny-latch write; the fail-closed outcome is asserted through the spawned hook boundary in t365.",
+    "expiry": "remove when the hook receives an injectable storage-failure port"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "380",
+    "reason": "Delegated-caller rejection arm in the Stop trust check (non-empty agent_name). t365 asserts a delegated Stop is a silent no-op through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the Stop trust matrix gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "396-397",
+    "reason": "Session-mismatch or active-roles rejection arm in the Stop trust check. t365 asserts both states are silent no-ops through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the Stop trust matrix gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "lines": "404-405",
+    "reason": "Fail-closed catch in the Stop trust check (unreadable current-session carrier). t365 asserts the missing-carrier state is a silent no-op through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
+    "expiry": "remove when the Stop trust matrix gains an in-process driver"
   }
 ]
