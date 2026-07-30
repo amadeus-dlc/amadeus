@@ -12,7 +12,7 @@
 
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { getEventDef } from "./event-registry.ts";
-import type { EventDef } from "./event-registry.ts";
+import type { EventDef, RegisteredEventName } from "./event-registry.ts";
 import { setFatal } from "./fatal-latch.ts";
 
 // The canonical durability record (domain-entities.md §CanonicalEventRecord,
@@ -22,7 +22,7 @@ export type CanonicalEventRecord = {
   readonly schemaVersion: number;
   readonly eventId: string;
   readonly timestamp: string;
-  readonly eventName: string;
+  readonly eventName: RegisteredEventName;
   readonly attributes: Record<string, unknown>;
   readonly intentId: string;
   readonly space: string;

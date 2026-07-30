@@ -40,6 +40,7 @@ sensors:
   - linter
   - type-check
   - answer-evidence
+  - event-registry-drift
 scopes:
   - enterprise
   - feature
@@ -199,6 +200,11 @@ The imported sensors check the code outputs:
 - **`type-check`** wraps the project's configured type-checker (tsc by
   default). Fires on `**/*.{ts,tsx}`. Failure mode: type errors emit
   `SENSOR_FAILED` with similar detail.
+- **`event-registry-drift`** re-runs the VER-1 four-set extraction against
+  the harness's shipped event registry and audit vocabulary. Fires on
+  `**/{event-registry,amadeus-audit}.ts`. Failure mode: each divergence
+  (unregistered canonical, telemetry misclassification, cardinality drift)
+  lands as a `SENSOR_FAILED` audit row.
 
 The two universal markdown-shape sensors (`required-sections`,
 `upstream-coverage`) are NOT imported here — code-generation produces

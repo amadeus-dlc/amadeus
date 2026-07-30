@@ -2090,7 +2090,8 @@
     "sensors": [
       "linter",
       "type-check",
-      "answer-evidence"
+      "answer-evidence",
+      "event-registry-drift"
     ],
     "scopes": [
       "enterprise",
@@ -2140,6 +2141,11 @@
         "id": "answer-evidence",
         "path": ".claude/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md"
+      },
+      {
+        "id": "event-registry-drift",
+        "path": ".claude/sensors/amadeus-event-registry-drift.md",
+        "matches": "**/{event-registry,amadeus-audit}.ts"
       }
     ]
   },
