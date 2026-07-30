@@ -68,4 +68,45 @@ describe("amadeus-finding file", () => {
     });
     expect(readFileSync(bodyFile, "utf-8")).toBe("Observed evidence.");
   });
+
+  test("resolves a relative body file from the project directory", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-finding-cli-"));
+    const runnerRoot = mkdtempSync(join(tmpdir(), "amadeus-finding-runner-"));
+    roots.push(root, runnerRoot);
+    mkdirSync(join(root, "amadeus"), { recursive: true });
+    writeFileSync(
+      join(root, "amadeus", "config.json"),
+      `${JSON.stringify({ "auto-file-findings": "prompt" })}\n`,
+      "utf-8",
+    );
+    writeFileSync(join(root, "finding.md"), "Observed evidence.", "utf-8");
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        TOOL,
+        "file",
+        "--project-dir",
+        root,
+        "--kind",
+        "defect",
+        "--title",
+        "A reproducible Amadeus defect",
+        "--body-file",
+        "finding.md",
+        "--fingerprint",
+        "orchestrator:relative-body-file",
+      ],
+      {
+        cwd: runnerRoot,
+        encoding: "utf-8",
+        env: { ...process.env, PATH: "" },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      kind: "approval-required",
+    });
+  });
 });

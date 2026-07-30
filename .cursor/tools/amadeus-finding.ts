@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { isAbsolute, relative, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { createFindingMutationPermit } from "./amadeus-finding-capability.ts";
 import type {
   FindingGitHubGateway,
@@ -212,7 +212,9 @@ function parseFileCommand(argv: readonly string[]): FileCommand {
 
 function readFindingBody(projectDir: string, bodyFile: string): string {
   const projectReal = realpathSync(projectDir);
-  const bodyReal = realpathSync(bodyFile);
+  const bodyReal = realpathSync(
+    isAbsolute(bodyFile) ? bodyFile : resolve(projectReal, bodyFile),
+  );
   const rel = relative(projectReal, bodyReal);
   if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     throw new Error("finding body must be inside the workspace");
