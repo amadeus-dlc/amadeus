@@ -137,14 +137,24 @@ describe("t292 distribution performance protocol", () => {
       replica(),
       replica(),
     ])).toContain("packageWrite: missing or incomplete workload");
+    // Different platform (os/arch/bun) across replicas is still an image
+    // mismatch; genuine environment variance also shows up as dispersion.
+    const otherBun = { ...replica(40), image: { ...replica(40).image, bun: "1.3.12" } };
     expect(aggregateMirrorBenchmarks([
       replica(10),
-      replica(40, "other"),
+      otherBun,
       replica(250),
     ])).toEqual(expect.arrayContaining([
       "benchmark runner image mismatch",
       expect.stringContaining("dispersion"),
     ]));
+    // A different runner image VERSION alone (GitHub rollout mixed fleet)
+    // is not a mismatch: the dispersion check owns environment variance.
+    expect(aggregateMirrorBenchmarks([
+      replica(10),
+      replica(10, "other-version"),
+      replica(10),
+    ])).toEqual([]);
     expect(aggregateMirrorBenchmarks([
       replica(3_000),
       replica(3_000),

@@ -25,6 +25,7 @@ import type {
 } from "../vendor/opentelemetry/api/index.js";
 import { processParentSpanContext } from "./context.ts";
 import type { CompletedSpanRecord, LocalSpanExporter } from "./local-span-exporter.ts";
+import { EXCEPTION_SPAN_EVENT_NAME, getEventDef } from "./event-registry.ts";
 
 function hexId(bytes: number): string {
   const buf = new Uint8Array(bytes);
@@ -135,9 +136,16 @@ class AmadeusSpan implements Span {
   }
   recordException(exception: Exception, time?: TimeInput): void {
     // Exception span events are TELEMETRY (FR-EVT-7): they ride the span
-    // record, never the audit journal.
+    // record, never the audit journal. The registry def pins the
+    // classification — reclassifying it canonical trips the invariant here
+    // AND the drift guard (BR-3). Canonical failures are emitted separately
+    // as amadeus.operation.failed.
+    const def = getEventDef(EXCEPTION_SPAN_EVENT_NAME);
+    if (def.durability !== "telemetry") {
+      throw new Error(`exception span event misclassified as ${def.durability} — drift guard violation (FR-EVT-7)`);
+    }
     const message = exception instanceof Error ? exception.message : String(exception);
-    this.addEvent("exception", { "exception.message": message }, time);
+    this.addEvent(EXCEPTION_SPAN_EVENT_NAME, { "exception.message": message }, time);
   }
 }
 

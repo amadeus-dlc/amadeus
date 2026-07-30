@@ -23,8 +23,8 @@ import {
   verifyJournalHealth,
 } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
-import { getEventDef } from "../../dist/claude/.claude/otel/event-registry.ts";
 import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
+import type { RegisteredEventName } from "../../dist/claude/.claude/otel/event-registry.ts";
 import {
   emitEvent,
   registerLoggerProvider,
@@ -40,12 +40,11 @@ const line = (seq: number, event: string) =>
   serializeJournalEntry({ ...IDENTITY, seq, timestamp: "2026-07-29T10:00:00Z", heading: event, event, fields: {} });
 
 function canonicalRecord() {
-  const def = getEventDef("amadeus.decision.recorded");
   return {
     schemaVersion: 1,
     eventId: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
-    eventName: def.name,
+    eventName: "amadeus.decision.recorded" as const,
     attributes: { Stage: "code-generation", Decision: "approve" },
     intentId: IDENTITY.intentId,
     space: "default",
@@ -198,7 +197,9 @@ describe("emitEvent failure contract through the logger provider", () => {
       auditExporter: createAuditLogExporter({ projectDir: proj, append: () => {} }),
       logExporter: createLocalLogExporter({ projectDir: proj }),
     });
-    expect(() => emitEvent("amadeus.unregistered.event", { Stage: "s" })).toThrow(/unregistered|unknown/i);
+    // The cast exercises the runtime backstop for non-typed callers — typed
+    // call sites cannot name an unregistered event (compile-time layer, BR-2).
+    expect(() => emitEvent("amadeus.unregistered.event" as RegisteredEventName, { Stage: "s" })).toThrow(/unregistered|unknown/i);
     expect(isFatalSet()).toBe(false);
   });
 

@@ -9,6 +9,7 @@ import { createAuditLogExporter } from "../otel/audit-log-exporter.ts";
 import { attachIntentContext, ensureContextManager, restoreIntentContext } from "../otel/context.ts";
 import { createLocalLogExporter } from "../otel/local-log-exporter.ts";
 import { emitEvent, registerLoggerProvider } from "../otel/logger-provider.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
 import { assertMutationAllowed, setFatal, verifyJournalHealth } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
@@ -50,7 +51,7 @@ function resolveActiveProjectDir(explicit?: string): string {
 }
 
 // v1 audit event type -> OTel event name for the representative U1 pair.
-const OTEL_EVENT_NAMES: Record<string, string> = {
+const OTEL_EVENT_NAMES: Record<string, RegisteredEventName> = {
   DECISION_RECORDED: "amadeus.decision.recorded",
   QUESTION_ANSWERED: "amadeus.question.answered",
 };
@@ -63,7 +64,8 @@ function emitAudit(
   // Logger Provider (emitEvent -> AuditLogExporter), never through a direct
   // appendAuditEntry call site (BR-1). The failure contract is unchanged:
   // a write failure throws synchronously here AND sets the fatal latch.
-  emitEvent(OTEL_EVENT_NAMES[eventType] ?? eventType, fields);
+  // An unmapped eventType is rejected at runtime by getEventDef (BR-2).
+  emitEvent((OTEL_EVENT_NAMES[eventType] ?? eventType) as RegisteredEventName, fields);
 }
 
 // One-time OTel bootstrap for this short-lived CLI process (FR-EXP-1):

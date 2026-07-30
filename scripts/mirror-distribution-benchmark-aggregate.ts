@@ -50,10 +50,18 @@ export function aggregateMirrorBenchmarks(
   const findings: string[] = [];
   if (replicas.length !== 3)
     return [`missing benchmark replica: expected 3, received ${replicas.length}`];
-  const image = JSON.stringify(replicas[0].image);
+  // Platform identity is (os, arch, bun) — the fields that actually affect
+  // benchmark comparability. The runner image VERSION is deliberately not
+  // compared: GitHub's hosted fleet is durably mixed-version during image
+  // rollouts, which failed every replica set for hours without any real
+  // environment change. Genuine environment variance is still caught by the
+  // per-workload dispersion check below (ratio limit 2.0 with a noise floor).
+  const platformKey = (image: Readonly<Record<string, string>>): string =>
+    JSON.stringify({ os: image.os, arch: image.arch, bun: image.bun });
+  const image = platformKey(replicas[0].image);
   if (replicas.some((replica) => replica.schema !== 2))
     findings.push("benchmark schema mismatch");
-  if (replicas.some((replica) => JSON.stringify(replica.image) !== image))
+  if (replicas.some((replica) => platformKey(replica.image) !== image))
     findings.push("benchmark runner image mismatch");
   for (const [name, budget] of Object.entries(
     MIRROR_BENCHMARK_PROTOCOL.workloads,

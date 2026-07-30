@@ -99,6 +99,7 @@ function listRows(out: string): string[][] {
 
 const EXPECTED_IDS = [
   "answer-evidence",
+  "event-registry-drift",
   "linter",
   "model-completeness",
   "required-sections",
@@ -111,10 +112,10 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 6 framework sensors", () => {
+  test("1: list emits exactly 7 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(6);
+    expect(listRows(r.out)).toHaveLength(7);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
@@ -132,7 +133,7 @@ describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, pl
     expect(ids).toEqual([...ids].sort());
   });
 
-  test("4: list returns exactly the 6 framework sensor ids", () => {
+  test("4: list returns exactly the 7 framework sensor ids", () => {
     const r = sensor("list");
     const ids = listRows(r.out).map((cols) => cols[0]);
     // .sh sentinel set — flags drift if a sensor is renamed/added/removed.
