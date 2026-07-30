@@ -27,7 +27,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 // The drift checker is read from the SHIPPED tree, the same source the sibling
 // registry-drift suite reads, so the gate judges what is distributed rather
@@ -435,7 +435,13 @@ export function measureRelayProof(): RelayProof | null {
     const moduleExists = existsSync(join(REPO_ROOT, RELAY_MODULE));
     const sources: string[] = [];
     listTestSources(join(REPO_ROOT, "tests"), sources);
-    const proofTests = sources.filter((path) => readFileSync(path, "utf-8").includes(RELAY_PROOF_MARKER)).sort();
+    // Repo-relative, because runBunTests resolves against REPO_ROOT: an
+    // absolute path would join into a second repo root and read as a missing
+    // proof (Refs: #1783).
+    const proofTests = sources
+      .filter((path) => readFileSync(path, "utf-8").includes(RELAY_PROOF_MARKER))
+      .map((path) => relative(REPO_ROOT, path))
+      .sort();
     if (!moduleExists || proofTests.length === 0) return { moduleExists, proofTests, outcome: null };
     return { moduleExists, proofTests, outcome: runBunTests(proofTests) };
   } catch {

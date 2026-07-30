@@ -1454,19 +1454,19 @@
   },
   {
     "file": "tests/deletion-gate.ts",
-    "lines": "440-441",
+    "lines": "446-447",
     "reason": "The relay-present arm and its catch: condition (e) can only run its proof tests once U11 lands otel/relay.ts, and until then measureRelayProof returns before this line. Both verdicts it can produce are tested via checkRelayProof.",
     "expiry": "remove when U11 lands the Relay module and the proof tests exist"
   },
   {
     "file": "tests/deletion-gate.ts",
-    "lines": "485-491",
+    "lines": "491-497",
     "reason": "runDistributionGuards shells out to package.ts/promote-self.ts --check, and bun --coverage does not instrument a spawned subprocess. It is deliberately NOT driven from the suite: nesting those guards under the suite's own parallelism caused a load-induced false red. It runs on every real gate invocation including the CI step, and its wiring into condition (f) is tested with an injected runner.",
     "expiry": "remove if the guards gain in-process entry points"
   },
   {
     "file": "tests/deletion-gate.ts",
-    "lines": "628-631",
+    "lines": "634-637",
     "reason": "main's try/catch wraps the gathering path, so reaching it from the suite would require running the real measurements (a full nested test run plus both distribution guards). The argv arms that do not gather are tested; the CLI itself is exercised by the CI step.",
     "expiry": "remove if gathering becomes cheap enough to drive from a test"
   },
