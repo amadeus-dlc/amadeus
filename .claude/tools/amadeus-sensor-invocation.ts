@@ -14,6 +14,17 @@ const SENSOR_INVOCATION_FILE = "sensor-invocation.json";
 // The hook consumes this exact-path allowlist instead of reconstructing artifact
 // paths from stage names, which keeps per-unit and optional resolution local to
 // the orchestrator's existing path-resolution seam.
+//
+// Two deliberate limits of the single projection file:
+// - Absent projection (fresh upgrade, or a session whose last engine call
+//   predates this seam): document/governance sensors stay silent until the
+//   next run-stage emission. Advisory sensors fail silent by design; the
+//   conductor's manual `amadeus-sensor.ts fire` path is not gated and remains
+//   the authoritative gate-preparation check.
+// - Last writer wins: interleaving the main workflow with a `--single` run in
+//   the SAME tree re-projects the scope, so a write for the earlier directive
+//   is judged against the newer projection (silent side). Parallel Bolts are
+//   unaffected — each worktree carries its own hooks-health projection.
 export interface SensorInvocationScope {
   version: typeof SENSOR_INVOCATION_VERSION;
   stage: string;

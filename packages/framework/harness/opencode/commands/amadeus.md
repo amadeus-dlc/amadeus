@@ -28,7 +28,7 @@ Loop:
 ```
 
 Each `next` reads the workflow state and the compiled stage graph and returns
-**exactly one** typed directive (JSON) on stdout. It mutates nothing. Make the
+**exactly one** typed directive (JSON) on stdout. It mutates no workflow state (its only write is the machine-local sensor-invocation projection under the gitignored hooks-health runtime). Make the
 one move it names, then `report` commits the transition so the next `next` reads
 fresh state. **Report once per directive; never call the state tools
 (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report`
