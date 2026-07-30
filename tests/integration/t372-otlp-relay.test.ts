@@ -117,7 +117,79 @@ describe("the session-end entry point", () => {
   });
 });
 
+describe("degraded inputs never stop a flush", () => {
+  test("an unreadable cursor file replays instead of failing", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    writeFileSync(join(storeDir(), "relay-cursor.json"), "{ not json", "utf-8");
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(1);
+  });
+
+  test("an unreadable duplicate-tracking file is rebuilt rather than fatal", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    writeFileSync(join(storeDir(), "relay-idempotency.json"), "{ not json", "utf-8");
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(1);
+    expect(Object.keys(JSON.parse(readFileSync(join(storeDir(), "relay-idempotency.json"), "utf-8")))).toHaveLength(1);
+  });
+
+  test("a torn store line is skipped and its neighbours still travel", async () => {
+    writeFileSync(
+      join(storeDir(), "spans-clone01.jsonl"),
+      `${JSON.stringify(spanRecord("aaaaaaaaaaaaaaaa", "before"))}\n{ torn\n${JSON.stringify(spanRecord("bbbbbbbbbbbbbbbb", "after"))}\n`,
+      "utf-8"
+    );
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(2);
+    expect(postedSpans(sink.posted[0]?.body).map((span) => span.name)).toEqual(["before", "after"]);
+  });
+
+  test("with no endpoint configured nothing is sent and nothing is lost", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    const result = await flushSignals({ projectDir: proj });
+    expect(result.sent).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.cursorAdvanced).toBe(false);
+    expect(result.diagnostics.join(" ")).toContain("no collector endpoint");
+  });
+
+  test("a record with no usable timestamp is kept by the retention pass", async () => {
+    writeStore("spans-clone01.jsonl", [{ traceId: "0".repeat(32), spanId: "1".repeat(16), name: "timeless" }]);
+    const sink = collector();
+    await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post, retentionMs: 0 });
+    expect(readFileSync(join(storeDir(), "spans-clone01.jsonl"), "utf-8").trim().split("\n")).toHaveLength(1);
+  });
+});
+
 describe("the flush lock", () => {
+  test("reclaims a lock whose owner is long gone", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    const lock = join(storeDir(), ".relay-lock");
+    mkdirSync(lock, { recursive: true });
+    writeFileSync(
+      join(lock, "owner.json"),
+      JSON.stringify({ pid: 999_999, startedAtMs: Date.now() - 60 * 60 * 1000 }),
+      "utf-8"
+    );
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(1);
+  });
+
+  test("treats a lock with an unreadable owner stamp as held", async () => {
+    writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
+    mkdirSync(join(storeDir(), ".relay-lock"), { recursive: true });
+    const sink = collector();
+    const result = await flushSignals({ projectDir: proj, endpoint: "http://127.0.0.1:4318", post: sink.post });
+    expect(result.sent).toBe(0);
+    expect(sink.posted).toHaveLength(0);
+  });
+});
+
+describe("the flush lock, continued", () => {
   test("a held lock ends the flush at once instead of waiting or forcing it", async () => {
     writeStore("spans-clone01.jsonl", [spanRecord("aaaaaaaaaaaaaaaa", "stage one")]);
     mkdirSync(join(storeDir(), ".relay-lock"), { recursive: true });
