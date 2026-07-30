@@ -530,12 +530,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "207",
-    "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
     "lines": "216",
     "reason": "t268 and the config integration suite exercise valid, invalid, containment, symlink, size, and I/O outcomes in-process; these residual rows are multiline type/diagnostic construction or narrow filesystem-race guards that Bun stamps DA:0.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1138,12 +1132,6 @@
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
     "lines": "261",
     "reason": "Catch entry for a realpath failure after lstat succeeded. Normal missing and symlink outcomes are covered; reaching this row requires a filesystem replacement in the narrow lstat-to-realpath window.",
-    "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
-    "lines": "279",
-    "reason": "Dangling-after-lstat ENOENT recovery inside the lstat-to-realpath race window; ordinary absent and symlinked files are covered in-process.",
     "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
   },
   {
