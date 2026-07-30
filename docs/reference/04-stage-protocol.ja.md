@@ -814,7 +814,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 1. `.claude/knowledge/amadeus-shared/verification.md` から方法論を読む
 2. フェーズ固有のトレーサビリティチェックを実行
-3. 結果を `<record>/verification/[phase-boundary]-verification.md` に書く
+3. 結果を `<record>/verification/phase-check-<phase>.md` に書く
 4. 失敗した場合: 進む前に問題(リンク欠落、孤立した成果物、不整合)を提示
 5. `PHASE_VERIFIED` を `audit/` シャードにログ
 

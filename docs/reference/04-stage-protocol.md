@@ -963,7 +963,7 @@ Ritual, which is `stage-protocol.md` Section 13)*
 
 1. Read methodology from `.claude/knowledge/amadeus-shared/verification.md`
 2. Run phase-specific traceability checks
-3. Write results to `<record>/verification/[phase-boundary]-verification.md`
+3. Write results to `<record>/verification/phase-check-<phase>.md`
 4. If failed: present issues (missing links, orphaned artifacts,
    inconsistencies) before proceeding
 5. Log `PHASE_VERIFIED` to the `audit/` shards
