@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRF-RAS13",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "c1〜c4 全採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "c1 のみ採用 — 「grep 述語の AC・検査は、修正対象面と修正対象外の記録面(codekb・履歴文書の散文引用)を分離してスコープし、全域 grep を AC にする前に残存見込みを実測する」を corpus-sweep-for-new-guards への追補として project 層へ persist"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "0件採用 — c1 は corpus-sweep-for-new-guards の適用例であり新規 persist 不要、c2〜c4 は既存規範の実践記録"
+    }
+  ]
+}

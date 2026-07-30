@@ -1,6 +1,35 @@
 # API ドキュメント
 
-## Open bug 6件が修復する内部契約（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件が修復する内部契約（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。
+
+### CLI verb 所有権の契約（#1736）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| `next` verb の所有 | `amadeus-orchestrate.ts` が単独所有。`amadeus-utility.ts:6088` の `switch (subcommand)` に `case "next"` は **0件**（`grep -c` 実測）、`:6182` の `default:` → `die()` で Usage を出して終了する。その Usage 文字列の verb 一覧にも `next` は現れない | harness SKILL.md（13ファイル）の new-work CONFIRM 行が `amadeus-utility.ts next --new-intent` を指示する。conductor が字義どおり実行すると未知 verb として die する |
+| `--new-intent` フラグ | `amadeus-orchestrate.ts:818` で型宣言、`:877-878` でパース、`:1995` で `MIGRATION_WORKFLOW_OPTIONS` に許可、`:2405` `if (flags.newIntent) {` → `:2412` `emit(birthPrintDirective(flags.scope ?? scope, flags, flags.intent));` で fresh-start と同一の birth directive を発行 | 契約自体は健全。誤りは呼び出し先ツール名のみ |
+| scope 解決の優先順 | `:2412` は `flags.scope ?? scope` — 明示 `--scope` を優先し、稼働中 intent の state scope を勝たせない（`:2406-2411` のコメントが根拠を明記） | 変化なし |
+
+### reviewer 読取スコープの契約（#1711）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| directive の `unit` フィールド | per-unit 経路のみ設定（`amadeus-orchestrate.ts:3086` `directive.unit = lastUnit;` / `:3110` `directive.unit = pickUnit;`）。degrade 経路（`:3050-3057` → `emitRunStageForSlug` `:2888-2894`）は **設定しない** | reviewer の unit 帰属チェック（`amadeus-reviewer.ts:76-78`）が発火せず、`:87` の返り値も unit なし形になる |
+| produces パスの解決済み前提 | `amadeus-reviewer-runtime.ts:224-246`（`scopeForDirective`）は `directive.produces` を解決済みパスとして受け、`onDisk` 判定つきで `reviewerReadScope` へ渡す（`:232-244`） | degrade 経路では `{unit-name}` プレースホルダ入りパスが渡り、`amadeus-reviewer.ts:74` が `required review artifact is missing: <path>` を throw する |
+| consumes の placeholder exempt | `amadeus-orchestrate.ts:1771-1774` が `if (c.path.includes(UNIT_NAME_PLACEHOLDER)) { present.push(c.path); continue; }` で実在検査を明示除外（コメント `:1759-1760`） | **produces 側に対応する exempt が存在しない**（非対称） |
+| reviewer への directive 受け渡し | `stage-protocol.md:898`「Before spawning the reviewer, pass the **unchanged** current `run-stage` directive JSON on stdin」 | 現行の運用回避（conductor が実 unit 名へ解決した JSON を渡す）はこの「unchanged」規定からの逸脱 |
+| エラーの外部形状 | `amadeus-reviewer-runtime.ts:623-641` の `runReviewerCommand` が throw を `:637-639` で捕捉し stderr 1行 + `exitCode = 1` へ変換 | conductor からは `exit 1` + missing artifact メッセージとして観測される（project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補の実測と整合） |
+
+### 区間で追加された内部契約（本 intent の患部外）
+
+| 契約 | 所在 |
+| --- | --- |
+| `MainConductorAuthorization` = `\| { kind: "authorized" } \| { kind: "denied"; role: string }` | `amadeus-caller-authorization.ts:27-29`。消費側は `amadeus-orchestrate.ts:2108` と `amadeus-state.ts:828` / `:831` の2箇所のみ |
+| `WorkflowCompletionPreparation` = `Readonly<{ instance: string; stage: string; status: "pending" \| "completed" }>` | `amadeus-workflow-completion.ts:9-13`。完了を2相化しクラッシュ回復を可能にする |
+
+## Open bug 6件が修復する内部契約（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 Amadeus に常駐 REST/GraphQL service や database API はない。公開境界は短命 CLI、Shell command、directive JSON、監査 journal、生成ファイルである。本 intent は原則として verb・flag・schema を追加せず、既存契約の成功判定と診断 envelope を修復する。
 

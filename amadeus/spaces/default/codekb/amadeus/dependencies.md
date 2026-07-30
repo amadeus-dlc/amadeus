@@ -1,6 +1,60 @@
 # 依存関係
 
-## Open bug 6件の依存関係（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の依存関係（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: observed `278d61d8e`。新規外部パッケージは追加しない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
+
+### 内部依存（#1711 の修正が触る方向）
+
+```
+amadeus-orchestrate.ts  (directive 発行 — degrade 分岐 :3050-3057)
+        │  produces: 解決済みパスの配列（degrade 時は {unit-name} 入り）
+        ▼
+amadeus-reviewer-runtime.ts  (:224-246 scopeForDirective → onDisk 判定付与)
+        │  unit.produces: { path, present, optional }
+        ▼
+amadeus-reviewer.ts  (:71-75 実在検査 → :74 throw)
+        │  throw
+        ▼
+amadeus-reviewer-runtime.ts  (:623-641 runReviewerCommand → stderr 1行 + exitCode 1)
+```
+
+依存方向は一方向で、reviewer 層は「produces は解決済み」という前提に立つ。この前提を破っているのは上流の degrade 分岐であり、修正候補 A（engine 側解決）はこの依存方向を保つ。候補 B（reviewer-runtime 側解決）は解決責務を下流へ移すため層の逆転になる。
+
+`stage-protocol.md:898` の「unchanged directive JSON」規定は、conductor が中間で directive を書き換えないことを要求する。すなわちプロトコルもこの一方向依存を前提としている。
+
+### 依存の非対称（#1711 の核心）
+
+`amadeus-orchestrate.ts` 内部で、consumes と produces が同じ `resolveArtifactPath`（`:1645`、注入は `:1661-1663`）を通るにもかかわらず、実在検査の扱いが分かれる:
+
+- consumes → `splitConsumesByPresence`（`:1762`）が `:1771-1774` でプレースホルダを exempt
+- produces → exempt なし。そのまま下流の reviewer 実在検査に到達する
+
+### #1736 の依存（投影チェーン）
+
+```
+packages/framework/harness/<name>/skills/amadeus/SKILL.md   (正本5面、互いに独立)
+        │  manifest.ts:73 の harnessFiles エントリ
+        ▼
+scripts/package.ts:396  ({{HARNESS_DIR}} 置換のみ — :11-14)
+        ▼
+dist/<name>/<harnessDir>/skills/amadeus/SKILL.md   (5面)
+        │  bun run promote:self
+        ▼
+.claude / .agents / .kimi-code の各 skills/amadeus/SKILL.md   (3面)
+```
+
+正本間に共有はないため、5面すべてを個別に編集しなければ全ハーネスへ波及しない。
+
+### Bolt 間の順序制約
+
+**なし**。2件はファイル単位で非交差（#1736 = `skills/amadeus/SKILL.md`、#1711 = `tools/` + `amadeus-common/protocols/`）であり、`cid:code-generation:c6` の非交差判定を満たすため並行実装可能。ただし両件とも 13コピー同期（#1736 は SKILL.md 13ファイル、#1711 は core tools の正本1 + dist 7 + self-install 5）を伴うため、`dist:check` / `promote:self:check` の緑は各 Bolt で個別に確認する。
+
+### 外部依存
+
+CLI・Shell・Git/GitHub の既存境界のみ。本 intent は HTTP・database・常駐 service に触れない。
+
+## Open bug 6件の依存関係（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 ### 外部依存
 

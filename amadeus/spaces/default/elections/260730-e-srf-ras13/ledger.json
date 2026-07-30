@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRF-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 先の層: 親 cid:code-generation:corpus-sweep-for-new-guards とその既存追補 cid:code-generation:transient-state-fixtures はいずれも team.md に在るため、追補を project 層へ置くと親子が層を跨いで参照整合が追いにくくなる — codekb は Amadeus 固有構造なので project 層も defensible だが、persist 時に層の選択根拠を1行明記することを条件に支持する。",
+      "rationale": "実測(observed HEAD): git grep -ln 'amadeus-utility\\.ts next' = 16ファイル / git ls-files -z -- '*skills/amadeus/SKILL.md' | xargs -0 grep -ln = 13ファイル。差分3件は amadeus/spaces/default/codekb/amadeus/{component-inventory.md:7, api-documentation.md:11, reverse-engineering-timestamp.md:12} で、いずれも当該文字列を『#1736 の欠陥内容の説明散文』として引用しており(3行を直読確認)、修正後も恒久残存する。よって FR-1b が当初置いた repo 全域 0件 AC は正しい修正後も恒久的に偽になる真の欠陥で、product-lead の Major 捕捉は実在する。新規性の判定: 親 cid corpus-sweep-for-new-guards の適用面は『検査ガード新設のレビュー』(実装済みガード・code-generation 段)であり、c1 の対象は『requirements の受け入れ基準に書く grep 述語』(RA 段・実装前)で段と対象物が異なる。さらに memory 層全4ファイル(org/team/project/phases)を 記録面|修正対象外|履歴記録 で grep して 0 hit — 『記録・履歴文書が欠陥文字列を恒久引用するため述語スコープから分離する』という盲点クラスは既存規範に不在。同型の先例 transient-state-fixtures(corpus sweep の中間状態盲点)が独立 cid として persist されている前例と形が一致するため、c1 は適用例でなく追補として persist に足る。c2/c3/c4: diary 実文が自ら既存 cid 名(intent-capture:c1 / manual-sensor-fire 追補 / election-answer-after-ruling・ruling-dependent-placeholder)を引いて『実践』『ヒヤリハット再演』と記述しており、いずれも新機構・新盲点を含まないため persist 不要。よって displayNo 3(全採用)は c2-c4 でノルムを膨張させ、displayNo 1(0件)は c1 の実在する盲点クラスを取り落とす。",
+      "submittedAt": "2026-07-30T13:09:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRF-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "採用は独立 cid でなく cid:code-generation:corpus-sweep-for-new-guards への追補として persist し、新規性の核を2点に限定して明記すること: (a) 適用段が受け入れ基準の起草時(requirements-analysis)であること (b) 修正対象面と修正対象外の記録面(codekb・履歴文書の散文引用)を面クラスで分離してスコープする救済形。既存 cid の『正当な既存データで赤くならないことの実測』自体は再定義しない。",
+      "rationale": "独立実測: (1) `git ls-files -z | xargs -0 grep -l 'amadeus-utility\\.ts next'` = 16件、`git ls-files -z -- '*skills/amadeus/SKILL.md' | xargs -0 grep -ln` = 13件。差分3件は codekb/amadeus/{component-inventory.md:7, api-documentation.md:11, reverse-engineering-timestamp.md:12} で、各行を直読し本バグを説明する散文引用(修正対象外の履歴記録)と確認。FR-1b の repo 全域 grep=0件 AC が正しい修正後も恒久的に偽になるという c1 の主張は実在する。(2) requirements.md:12 の是正後 AC が tracked SKILL.md 群へスコープされ FR-1c と同一スコープであること、:60 の Major 指摘と :70 の是正確認を実読。(3) memory 層 grep で corpus-sweep-for-new-guards(team.md:239)を実文確認 — 適用面は『検査ガード新設のレビュー』= 実装済みガードの corpus sweep であり、要件 AC 起草段および『記録面という恒久的な偽陽性生成源を面クラスで分離する』救済形は射程外。よって c1 は単なる適用例ではなく追補として persist する価値がある。(4) c2/c3/c4 は diary memory.md:6/:10/:11 を直読し、それぞれ intent-capture:c1、manual-sensor-fire 追補、election-answer-after-ruling / ruling-dependent-placeholder の実践記録で新規規範内容を含まないと確認 — 全採用は週次蒸留の趣旨に反し重複ノルムを増やす。0件採用は (3) の射程差を取りこぼす。",
+      "submittedAt": "2026-07-30T13:09:53Z"
+    }
+  ],
+  "late": []
+}

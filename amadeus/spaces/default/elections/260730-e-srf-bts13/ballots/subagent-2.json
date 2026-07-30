@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRF-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1 の実在根拠を独立実測して全数確認した: origin/main:packages/framework/core/tools/amadeus-orchestrate.ts:2960 に unitDirsUnderConstruction が実在し、:3116 で degrade 経路(units.length === 0)から呼ばれ、解決が一意でないときは degradeUnitResolutionError で fail-closed に refuse、一意なら emitRunStageForSlug へ実 unit 名を渡して REAL パスで emit する。gh 実測で PR #1760 は MERGED(2026-07-30T14:59:25Z)、Issue #1711 は CLOSED。配布面も 13 ファイル(core 正本 + 6 self-install + 6 dist)全てに着地しており、conductor が実際に実行する .claude/tools/ 経由でも修正が効く。よって E-TPRCGS13 追補の conductor 手動解決は失効しており、暫定手順を残すと後任が不要な手作業を再演する。c2(比例選定 N/A の再判定条件明記)は既存 cid:build-and-test:bt-proportional-selection が『生成しなかった検査は根拠付きで成果物に明記』を既に規定しており、c3(H2 floor 初回 FAILED→是正)も required-sections 系の既存様式規範の実践にすぎない。既決ノルムの実践を新規 cid として重複 persist するのは prose の肥大であり、weekly-distillation-round が縮約対象とするクラスに自ら足す行為になる。したがって c1 のみを既存 cid への追補として persist するのが正しい。",
+  "submittedAt": "2026-07-30T15:02:41Z"
+}
