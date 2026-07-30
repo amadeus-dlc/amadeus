@@ -2,22 +2,35 @@
 // same-process append (FR-EXP-2, FR-JRN-3).
 //
 // The append path deliberately reuses the existing locked journal append
-// (lock → sequence → append → idempotency, the exact appendAuditEntry
-// structure) so NFR-1 holds by construction and every current reader keeps
-// understanding the records (the canonical name maps to the v1 vocabulary in
-// the registry). U4 hardens this into the schema-v2 codec (U3); the failure
-// contract is already final here: ANY append failure sets the process-local
-// fatal latch AND rethrows synchronously (FR-EVT-3, ADR-3) — never one
-// without the other.
+// structure (lock → sequence → append → idempotency, the exact
+// appendAuditEntry structure, via appendJournalRecordV2) so NFR-1 holds by
+// construction. U4 hardening over the U1 skeleton:
+//   - records encode through the U3 schema v2 codec — no private serialize
+//     format (BR-13);
+//   - the accept set is registry-validated HERE (BR-10): unregistered names,
+//     missing required attributes, and telemetry-classified defs are refused
+//     BEFORE append, as invariant violations that throw WITHOUT the latch
+//     (caller bugs, not write failures);
+//   - the export-boundary redaction layer (FR-DST-3 layer 2) applies to the
+//     attributes immediately before encode, so a caller that bypassed the
+//     write-time layer still cannot reach the journal unfiltered;
+//   - the failure contract is unified across ALL failure paths (BR-4/BR-14):
+//     lock failure, disk failure, ANY append failure sets the process-local
+//     fatal latch AND rethrows synchronously (FR-EVT-3, ADR-3) — never one
+//     without the other.
 
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { appendJournalRecordV2 } from "../tools/amadeus-audit.ts";
+import type { JournalEntryV2 } from "../tools/amadeus-journal.ts";
+import { JOURNAL_SCHEMA_VERSION_V2, serializeJournalEntryV2 } from "../tools/amadeus-journal.ts";
 import { getEventDef } from "./event-registry.ts";
-import type { EventDef, RegisteredEventName } from "./event-registry.ts";
+import type { RegisteredEventName } from "./event-registry.ts";
 import { setFatal } from "./fatal-latch.ts";
+import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
+import type { RedactionPolicy } from "./redaction.ts";
 
 // The canonical durability record (domain-entities.md §CanonicalEventRecord,
-// schema v2 minimal shape). The v1 mapping below flattens attributes into
-// journal fields; the v2 codec (U3) will carry this shape natively.
+// schema v2). Identity fields (intentId/space/cloneId) are resolved at emit
+// time; the shard-local sequence is assigned inside the locked append.
 export type CanonicalEventRecord = {
   readonly schemaVersion: number;
   readonly eventId: string;
@@ -39,12 +52,11 @@ export type AuditLogExporter = {
   exportCanonicalEvent(record: CanonicalEventRecord): void;
 };
 
-// The append seam: the default is the existing locked journal append. Tests
-// inject a failing seam to drive the failure contract without corrupting a
-// real journal.
+// The append seam: the default is the real locked journal append (lock →
+// sequence → v2 codec encode → synchronous append). Tests inject a failing
+// seam to drive the failure contract without corrupting a real journal.
 export type AuditAppend = (
-  def: EventDef,
-  fields: Record<string, string>,
+  record: CanonicalEventRecord,
   projectDir: string,
   intent?: string,
   space?: string
@@ -56,29 +68,72 @@ export type AuditLogExporterOptions = {
   readonly space?: string;
   readonly latch?: { setFatal(reason: string): void };
   readonly append?: AuditAppend;
+  readonly redaction?: RedactionPolicy;
 };
+
+// Map a canonical record onto the v2 journal row. The shard-local sequence is
+// assigned inside the locked append; the exporter's dry-run encode adds a
+// placeholder.
+function toJournalRow(record: CanonicalEventRecord): Omit<JournalEntryV2, "seq"> {
+  return {
+    schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+    eventId: record.eventId,
+    timestamp: record.timestamp,
+    eventName: record.eventName,
+    attributes: record.attributes,
+    intentId: record.intentId,
+    space: record.space,
+    cloneId: record.cloneId,
+    traceId: record.traceId,
+    spanId: record.spanId,
+    traceFlags: record.traceFlags,
+    idempotencyKey: record.idempotencyKey,
+    canonical: record.durability === "canonical",
+  };
+}
 
 export function createAuditLogExporter(options: AuditLogExporterOptions): AuditLogExporter {
   const latch = options.latch ?? { setFatal };
+  const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
   const append: AuditAppend =
     options.append ??
-    ((def, fields, projectDir, intent, space) => {
-      // canonical defs always carry an auditEvent mapping (registry invariant).
-      appendAuditEntry(def.auditEvent as string, fields, projectDir, intent, space);
+    ((record, projectDir, intent, space) => {
+      appendJournalRecordV2(toJournalRow(record), projectDir, intent, space);
     });
   return {
     exportCanonicalEvent(record: CanonicalEventRecord): void {
+      // Accept-set validation (BR-10): invariant violations — caller bugs —
+      // throw WITHOUT touching the fatal latch.
       const def = getEventDef(record.eventName);
-      const fields: Record<string, string> = {};
-      for (const [key, value] of Object.entries(record.attributes)) {
-        fields[key] = typeof value === "string" ? value : JSON.stringify(value);
+      if (record.schemaVersion !== JOURNAL_SCHEMA_VERSION_V2) {
+        throw new Error(
+          `canonical record schemaVersion must be ${JOURNAL_SCHEMA_VERSION_V2}, got ${record.schemaVersion} — invariant violation (BR-13)`
+        );
       }
-      // Correlation ids ride as ordinary v1 fields so current readers can
-      // already join an audit record to its trace (FR-TRC-6).
-      if (record.traceId !== null) fields.TraceId = record.traceId;
-      if (record.spanId !== null) fields.SpanId = record.spanId;
+      if (def.durability !== "canonical") {
+        throw new Error(
+          `telemetry-classified event ${record.eventName} refused by the audit exporter — canonical accept set only (FR-EXP-4)`
+        );
+      }
+      const missing = def.requiredAttributes.filter((key) => !(key in record.attributes));
+      if (missing.length > 0) {
+        throw new Error(
+          `missing required attribute(s) for ${record.eventName}: ${missing.join(", ")} — invariant violation (BR-10)`
+        );
+      }
+      // Export-boundary redaction (FR-DST-3 layer 2), applied immediately
+      // before encode even when the write-time layer already ran. The v1
+      // audit event type rides as an `Event` attribute so the legacy ledger
+      // readers (auditBlockField, findAllEvents, the presence scan) keep
+      // seeing the record while shards are mixed v1/v2 — until U6 swaps
+      // those readers onto the Journal Module's mixed reader.
+      const redacted = { ...redactAttributes(record.attributes, policy), Event: def.auditEvent as string };
+      // Dry-run encode: malformed records (non-JSON attributes, bad shape)
+      // fail here as codec invariant violations — before any I/O, so they
+      // throw WITHOUT the latch (not write failures).
+      serializeJournalEntryV2({ ...toJournalRow({ ...record, attributes: redacted }), seq: 1 });
       try {
-        append(def, fields, options.projectDir, options.intent, options.space);
+        append({ ...record, attributes: redacted }, options.projectDir, options.intent, options.space);
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause);
         latch.setFatal(`canonical event write failed (${record.eventName}): ${message}`);

@@ -3,7 +3,9 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync } fro
 import { basename, dirname, join } from "node:path";
 import {
   JOURNAL_SCHEMA_VERSION,
+  type JournalEntryV2,
   serializeJournalEntry,
+  serializeJournalEntryV2,
   splitJournalLines,
 } from "./amadeus-journal.ts";
 import {
@@ -373,6 +375,29 @@ export function appendAuditEntry(
 
   try {
     return appendAuditEntryUnlocked(eventType, fields, projectDir, intent, space);
+  } finally {
+    releaseAuditLock(projectDir, intent, space);
+  }
+}
+
+// Locked v2 journal append — the SAME structure as appendAuditEntry (lock →
+// sequence → encode → synchronous append), encoding through the schema v2
+// codec instead of the v1 writer (FR-JRN-1, BR-13). The caller (the
+// AuditLogExporter) owns accept-set validation and the failure contract; this
+// function throws on lock/disk failure and never swallows. The shard-local
+// sequence is assigned here, inside the lock.
+export function appendJournalRecordV2(
+  record: Omit<JournalEntryV2, "seq">,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): void {
+  if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
+    throw new Error("Failed to acquire audit lock after retries");
+  }
+  try {
+    const path = ensureAuditFile(projectDir, intent, space);
+    appendFileSync(path, serializeJournalEntryV2({ ...record, seq: nextShardSeq(path) }), "utf-8");
   } finally {
     releaseAuditLock(projectDir, intent, space);
   }

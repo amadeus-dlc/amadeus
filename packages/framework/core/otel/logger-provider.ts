@@ -13,7 +13,8 @@
 import { context, trace } from "../vendor/opentelemetry/api/index.js";
 import { logs } from "../vendor/opentelemetry/api-logs/index.js";
 import type { Logger, LoggerProvider, LogRecord } from "../vendor/opentelemetry/api-logs/index.js";
-import { activeIntent, activeSpace, auditCloneId } from "../tools/amadeus-lib.ts";
+import { activeIntent, activeSpace, auditCloneId, isoTimestamp } from "../tools/amadeus-lib.ts";
+import { JOURNAL_SCHEMA_VERSION_V2 } from "../tools/amadeus-journal.ts";
 import type { AuditLogExporter, CanonicalEventRecord } from "./audit-log-exporter.ts";
 import { getEventDef } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
@@ -40,7 +41,7 @@ function requireRegistered(): Registered {
 // canonical emit. Throws synchronously on write failure (the exporter has
 // already set the fatal latch by then — FR-EVT-3). Registry and required-
 // attribute violations throw WITHOUT latching: they are caller bugs, not
-// journal write failures (BR-9).
+// journal write failures (BR-10).
 export function emitEvent(name: RegisteredEventName, attrs: Record<string, unknown>): void {
   const reg = requireRegistered();
   const def = getEventDef(name);
@@ -57,9 +58,13 @@ export function emitEvent(name: RegisteredEventName, attrs: Record<string, unkno
   const spanCtx = trace.getSpan(context.active())?.spanContext();
   const space = activeSpace(reg.projectDir);
   const record: CanonicalEventRecord = {
-    schemaVersion: 1,
+    schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
     eventId: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
+    // Second-granular ISO — the SAME format the v1 writer stamps
+    // (isoTimestamp). The presence ledger's ordering predicates compare
+    // timestamp strings, so a millisecond-bearing v2 row would misorder
+    // against same-second v1 rows and silently reopen the human-turn gate.
+    timestamp: isoTimestamp(),
     eventName: name,
     attributes: clean,
     intentId: activeIntent(reg.projectDir, space) ?? "workspace",

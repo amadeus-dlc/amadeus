@@ -90,18 +90,22 @@ describe("four-set equality (FR-EVT-1)", () => {
     const appended: string[] = [];
     const exporter = createAuditLogExporter({
       projectDir: "/nonexistent",
-      append: (def) => {
-        appended.push(def.auditEvent as string);
+      append: (record) => {
+        // U4 seam: the exporter hands over the canonical record; map back to
+        // the v1 audit event name to compare against the vocabulary set.
+        appended.push(getEventDef(record.eventName).auditEvent as string);
       },
     });
     for (const def of REGISTERED_EVENTS) {
       if (def.durability !== "canonical") continue;
       exporter.exportCanonicalEvent({
-        schemaVersion: 1,
+        schemaVersion: 2, // v2 codec persistence (BR-13)
         eventId: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         eventName: def.name,
-        attributes: {},
+        // The accept set validates registry-required attributes (BR-10), so
+        // the fixture supplies every one of them.
+        attributes: Object.fromEntries(def.requiredAttributes.map((key) => [key, "x"])),
         intentId: "intent",
         space: "default",
         cloneId: "clone",

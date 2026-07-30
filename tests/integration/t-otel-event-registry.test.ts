@@ -8,6 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
+import { getEventDef } from "../../dist/claude/.claude/otel/event-registry.ts";
 import { createLocalLogExporter } from "../../dist/claude/.claude/otel/local-log-exporter.ts";
 import type { CompletedSpanRecord } from "../../dist/claude/.claude/otel/local-span-exporter.ts";
 import { emitEvent, registerLoggerProvider, resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
@@ -34,8 +35,10 @@ function bootLogger(appended: string[]) {
     projectDir: proj,
     auditExporter: createAuditLogExporter({
       projectDir: proj,
-      append: (def) => {
-        appended.push(def.auditEvent as string);
+      append: (record) => {
+        // The U4 seam hands over the canonical record; map back to the v1
+        // audit event name so these assertions stay on the v1 vocabulary.
+        appended.push(getEventDef(record.eventName).auditEvent as string);
       },
     }),
     logExporter: createLocalLogExporter({ projectDir: proj }),
