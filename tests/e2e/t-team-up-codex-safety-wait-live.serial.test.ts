@@ -78,8 +78,16 @@ function startHerdrSession(): Bun.Subprocess {
 function sessionIsRunning(): boolean {
   if (HERDR === null) return false;
   const result = run([HERDR, "session", "list", "--json"]);
-  return result.exitCode === 0 && result.stdout.includes(`"name":"${session}"`) &&
-    result.stdout.includes(`"running":true`);
+  if (result.exitCode !== 0) return false;
+  try {
+    const list = JSON.parse(result.stdout) as {
+      sessions?: Array<{ name?: string; running?: boolean }>;
+    };
+    const entry = (list.sessions ?? []).find((item) => item.name === session);
+    return entry?.running === true;
+  } catch {
+    return false;
+  }
 }
 
 function liveCodexRoleIsReady(): boolean {
@@ -142,7 +150,7 @@ describe("team-up Codex safety-wait live readiness (Issue #1336)", () => {
         "--no-alt-screen",
       ]);
       expect(started.exitCode, started.stderr).toBe(0);
-      await waitUntil(liveCodexRoleIsReady);
+      await waitUntil(liveCodexRoleIsReady, 90_000);
 
       const runId = `run-${process.pid}`;
       const runRecord = join(scratch, runId);
