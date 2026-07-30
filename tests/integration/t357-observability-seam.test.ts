@@ -11,6 +11,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { join } from "node:path";
 import {
   appendTelemetryEvent,
+  attachProcessTraceContext,
   flushProcessObservation,
   initProcessObservability,
   observabilityEnabled,
@@ -20,6 +21,11 @@ import {
   resolveObservabilityConfig,
   telemetryDir,
 } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
+import {
+  clearIntentContextForTests,
+  currentIntentContext,
+  processParentSpanContext,
+} from "../../dist/claude/.claude/otel/context.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -250,5 +256,69 @@ describe("disabled and fail-open contracts", () => {
       chmodSync(dir, 0o700);
     }
     expect(bufferGlobRead(proj)).toBe("");
+  });
+});
+
+describe("attachProcessTraceContext (FR-TRC-4/5 seam)", () => {
+  test("disabled config is a pure no-op (BR-5)", async () => {
+    const p = seedProject();
+    proj = p;
+    clearIntentContextForTests();
+    await attachProcessTraceContext(p);
+    expect(currentIntentContext()).toBeNull();
+    expect(processParentSpanContext()).toBeNull();
+  });
+
+  test("enabled with no carrier: restores (mints) the intent anchor from the record (FR-TRC-4, BR-6)", async () => {
+    const p = seedProject();
+    proj = p;
+    writeConfig(p, "global", { observability: { enabled: true, otlp: { endpoint: "http://g:4318" } } });
+    resetObservabilityConfigCache();
+    clearIntentContextForTests();
+    try {
+      await attachProcessTraceContext(p);
+      expect(currentIntentContext()).not.toBeNull();
+    } finally {
+      clearIntentContextForTests();
+    }
+  });
+
+  test("enabled with an injected traceparent: the remote parent from the env wins (FR-TRC-5)", async () => {
+    const p = seedProject();
+    proj = p;
+    writeConfig(p, "global", { observability: { enabled: true, otlp: { endpoint: "http://g:4318" } } });
+    resetObservabilityConfigCache();
+    clearIntentContextForTests();
+    process.env.TRACEPARENT = "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01";
+    try {
+      await attachProcessTraceContext(p);
+      expect(processParentSpanContext()).toEqual({
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
+        traceFlags: 1,
+        isRemote: true,
+      });
+      expect(currentIntentContext()).toBeNull();
+    } finally {
+      delete process.env.TRACEPARENT;
+      clearIntentContextForTests();
+    }
+  });
+
+  test("enabled with a malformed traceparent: fail-open to the record path (BR-5)", async () => {
+    const p = seedProject();
+    proj = p;
+    writeConfig(p, "global", { observability: { enabled: true, otlp: { endpoint: "http://g:4318" } } });
+    resetObservabilityConfigCache();
+    clearIntentContextForTests();
+    process.env.TRACEPARENT = "not-a-traceparent";
+    try {
+      await attachProcessTraceContext(p);
+      // Malformed carrier -> diagnostic + fall through to the record restore (BR-6 mints).
+      expect(currentIntentContext()).not.toBeNull();
+    } finally {
+      delete process.env.TRACEPARENT;
+      clearIntentContextForTests();
+    }
   });
 });
