@@ -1483,13 +1483,19 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "272-278",
+    "lines": "274-277",
     "reason": "The process-I/O adapter is exercised through the spawned CLI integration suite; all parsing, file-safety, output selection, and exit-code behavior is covered in-process by t368.",
     "expiry": "remove when Bun attributes spawned CLI coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
-    "lines": "283",
+    "lines": "280",
+    "reason": "The stderr process-I/O adapter is exercised through the spawned CLI integration suite; diagnostic selection is covered through runFindingCli in-process.",
+    "expiry": "remove when Bun attributes spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "lines": "285",
     "reason": "The import.meta.main dispatch is exercised through the spawned CLI integration suite; all command behavior is covered through runFindingCli in-process.",
     "expiry": "remove when Bun attributes spawned CLI coverage"
   },
