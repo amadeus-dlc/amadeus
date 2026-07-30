@@ -16,6 +16,37 @@ function ok<T>(value: T): GatewayOutcome<T> {
 }
 
 describe("fileAmadeusFinding", () => {
+  test("invalid configuration fails closed without accessing GitHub", async () => {
+    const unexpected = async (): Promise<never> => {
+      throw new Error("GitHub must not be accessed");
+    };
+    const outcome = await fileAmadeusFinding(
+      {
+        projectDir: "/project",
+        kind: "defect",
+        title: "Finding",
+        body: "Evidence",
+        fingerprint: "invalid-config",
+      },
+      {
+        resolveConfig: () => ({
+          kind: "invalid",
+          issues: [],
+        }),
+        gateway: {
+          readiness: unexpected,
+          findIssuesByMarker: unexpected,
+          createFindingIssue: unexpected,
+        },
+      },
+    );
+
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      reason: "invalid-config",
+    });
+  });
+
   test.each([
     ["off", "disabled"],
     ["prompt", "approval-required"],
@@ -56,6 +87,7 @@ describe("fileAmadeusFinding", () => {
   test("auto mode creates once and reuses the marker match on retry", async () => {
     const issues: RemoteMirrorIssue[] = [];
     let createCalls = 0;
+    let createLabels: readonly string[] = [];
     const dependencies: FindingCoordinatorDependencies = {
       resolveConfig: () => ({
         kind: "resolved",
@@ -73,6 +105,7 @@ describe("fileAmadeusFinding", () => {
           ok(issues.filter((issue) => issue.body.includes(marker))),
         createFindingIssue: async (_permit, input) => {
           createCalls += 1;
+          createLabels = input.labels;
           const issue: RemoteMirrorIssue = {
             repository: {
               owner: "amadeus-dlc",
@@ -111,6 +144,7 @@ describe("fileAmadeusFinding", () => {
       issueUrl: "https://github.com/amadeus-dlc/amadeus/issues/42",
     });
     expect(createCalls).toBe(1);
+    expect(createLabels).toEqual(["defect"]);
   });
 
   test("auto mode fails closed when more than one issue has the marker", async () => {

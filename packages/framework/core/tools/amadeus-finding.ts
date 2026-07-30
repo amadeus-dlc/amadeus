@@ -114,7 +114,7 @@ export async function fileAmadeusFinding(
   const created = await dependencies.gateway.createFindingIssue(permit, {
     title: input.title,
     body: `${marker}\n\n${input.body}`,
-    labels: [],
+    labels: [input.kind],
   });
   if (created.kind === "failure") {
     return { kind: "failure", reason: "github", marker };

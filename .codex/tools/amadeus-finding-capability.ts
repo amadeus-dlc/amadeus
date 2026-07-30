@@ -11,8 +11,9 @@ const mintedPermits = new WeakSet<object>();
 export function createFindingMutationPermit(
   binding: FindingPermitBinding,
 ): FindingMutationPermit {
+  const repository = Object.freeze({ ...binding.repository });
   const permit = Object.freeze({
-    repository: binding.repository,
+    repository,
     marker: binding.marker,
   });
   mintedPermits.add(permit);

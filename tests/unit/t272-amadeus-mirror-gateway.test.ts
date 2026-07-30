@@ -284,6 +284,35 @@ describe("createIssue", () => {
 });
 
 describe("createFindingIssue", () => {
+  test("copies the repository binding before minting a permit", async () => {
+    const marker = `<!-- amadeus-finding:${"a".repeat(64)} -->`;
+    const repository: {
+      owner: string;
+      name: string;
+      canonical: `${string}/${string}`;
+    } = {
+      owner: "amadeus-dlc",
+      name: "amadeus",
+      canonical: "amadeus-dlc/amadeus",
+    };
+    const permit = createFindingMutationPermit({ repository, marker });
+    repository.owner = "attacker";
+    repository.name = "elsewhere";
+    repository.canonical = "attacker/elsewhere";
+    const { runner, requests } = fakeRunner([
+      exited(0, singleEnvelope(201, issue(12, { body: `${marker}\n\nEvidence` }))),
+    ]);
+
+    await createMirrorGitHubGateway(runner).createFindingIssue(permit, {
+      title: "Finding",
+      body: `${marker}\n\nEvidence`,
+      labels: [],
+    });
+
+    expect(requests[0]?.args).toContain("repos/amadeus-dlc/amadeus/issues");
+    expect(requests[0]?.args).not.toContain("repos/attacker/elsewhere/issues");
+  });
+
   test("accepts only a finding permit bound to the body marker", async () => {
     const marker = `<!-- amadeus-finding:${"a".repeat(64)} -->`;
     const { runner, requests } = fakeRunner([
