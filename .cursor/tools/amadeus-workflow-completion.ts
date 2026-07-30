@@ -4,7 +4,7 @@ import {
   getField,
   setOrInsertField,
 } from "./amadeus-lib.ts";
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
 
 export type WorkflowCompletionPreparation = Readonly<{
   instance: string;
@@ -92,7 +92,7 @@ export function completionMirrorDisposition(
       message: "Workflow completion cannot resolve the active Intent.",
     };
   }
-  const resolved = resolveMirrorConfig(projectDir, intent);
+  const resolved = resolveAmadeusConfig(projectDir, intent);
   if (resolved.kind === "invalid") {
     const details = resolved.issues.map((issue) =>
       issue.kind === "read-failure"

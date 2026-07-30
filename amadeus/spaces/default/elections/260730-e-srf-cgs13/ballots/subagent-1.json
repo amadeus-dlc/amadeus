@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRF-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "適用対象を「builder の PR 発行報告(報告ファイルの実在・PR URL の出現)」に限定し、一般の進捗報告・中間報告全般への割込み処理義務へ拡大しないことを persist 文に明記すること。",
+  "rationale": "実測確認: diary(construction/code-generation/memory.md)の Deviations 2026-07-30T13:48:00Z に、bolt-1736-report.md(PR #1753 URL 含む)がディスク実在のまま Bolt 2 完了同期待ちへ先に入り、ユーザー指摘で発覚した記録あり — 自己捕捉されていない。既存 cid 原文を team.md で直読して隙間を確認: resource-efficiency(:76)は leader のディスパッチ面(バッチ委任・並行割当維持)、merge-approval-latency(:87)(a) は「承認待ちをブロッカー扱いしない/非依存作業は並行継続」= 承認待ち中に他作業を進める方向であり、逆向きの「他 Bolt 完了待ちに入る前に到着済み PR 発行報告を掃く」順序規則は不在。disk-evidence-early-takeover(:223)は同一 subagent の報告待ち bounded wait を対象とし、Bolt 間のスケジューリング優先度は規定しない。よって c4 は真の隙間。c1 は intent 固有の実装事実で record に既在、c2 は #1734 既知バグに対する surgical 実践の再演、c3 は spawned-agent-result-delivery(:163)/disk-evidence-early-takeover(:223)の再演であり、いずれも新規則不要。",
+  "submittedAt": "2026-07-30T14:29:48Z"
+}

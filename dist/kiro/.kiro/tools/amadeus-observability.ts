@@ -27,7 +27,7 @@ import {
   detectHarnessType,
   recordDir,
 } from "./amadeus-lib.ts";
-import { readMirrorConfigLayers } from "./amadeus-mirror-config.ts";
+import { readAmadeusConfigLayers } from "./amadeus-layered-config.ts";
 
 // --- config -----------------------------------------------------------------
 
@@ -98,7 +98,7 @@ export function resolveObservabilityConfig(projectDir: string): ObservabilityCon
   if (cached !== undefined) return cached;
   let resolved: ObservabilityConfig = DISABLED;
   try {
-    const outcome = readMirrorConfigLayers(projectDir);
+    const outcome = readAmadeusConfigLayers(projectDir);
     if (outcome.kind !== "ok") {
       _configByProject.set(projectDir, DISABLED);
       return DISABLED;

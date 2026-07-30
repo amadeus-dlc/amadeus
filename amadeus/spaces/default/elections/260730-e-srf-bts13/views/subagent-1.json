@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRF-BTS13",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c1 のみ採用 — degrade-scope-unit-dir-layout cid への追補として project 層へ persist(暫定手順の失効を明文化)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c1〜c3 全採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "0件採用"
+    }
+  ]
+}

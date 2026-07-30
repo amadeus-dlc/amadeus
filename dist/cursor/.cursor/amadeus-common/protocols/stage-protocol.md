@@ -20,6 +20,7 @@ Before and during EVERY stage, verify:
 4. [ ] **Task transitions + state sync** — Mark previous task `completed`, then `TaskUpdate({ ..., status: "in_progress", activeForm: "Running [Stage] [slug]" })`. The `[slug]` suffix triggers the PostToolUse hook that syncs the state file. `amadeus-orchestrate.ts report --stage <slug> --result approved` auto-advances to the next in-scope stage (or completes the workflow on the final stage) — do NOT call `advance` separately after approval. (§4)
 5. [ ] **Stage ritual is ATOMIC** — once a stage starts, EVERY step in its protocol fires: questions → artifact → reviewer (if declared) → learnings → gate. No step is skippable based on inferred user intent. "Skip to stage X" means skip INTERMEDIATE stages, NOT shortcut the TARGET stage's ritual. If a user jumps forward from a stage at its gate, the current stage's learnings ritual (§13) MUST fire before the jump executes.
 6. [ ] **Autonomy is NEVER inferred** — a user saying "go with recommended" or "pick the best answers" for one stage is a ONE-TIME instruction for THAT stage only. It does NOT create a standing rule. The next stage starts fresh with its declared autonomy mode. The ONLY way to get autonomous mode is: (a) the directive explicitly carries `autonomy: autonomous`, OR (b) the human explicitly says "run this autonomous" for the specific stage being proposed. NEVER carry forward an autonomy inference from a previous stage. NEVER self-answer questions without explicit permission for THIS stage.
+7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic finding filer and the resolved `"auto-file-findings"` mode. Never improvise a direct GitHub mutation. (§14)
 
 ---
 
@@ -1049,6 +1050,77 @@ Is the improvement a verification check?
 ### Why stage files stay immutable
 
 Two reasons: (1) framework upgrades to a stage file would conflict with workflow-time edits; (2) the same stage runs in many projects, so stage-file body mutations would mean every workflow drifts the framework's methodology in incompatible directions. The harness layer (rules, learnings, sensors) is designed to compose — many small additions accumulate without conflicts. Stage-file bodies are not. The sensor-binding frontmatter edit is the one sanctioned exception: it grows the `sensors:` import list (immutable in shape, not in contents), never the `## Steps` / `## Sensors` / `## Learn` body.
+
+---
+
+## 14. Automatic Amadeus Finding Filing
+
+When stage work exposes a confirmed defect or actionable engineering concern
+owned by Amadeus itself, route it through the deterministic finding filer. The
+layered setting is `"auto-file-findings": "off" | "prompt" | "auto"` and its
+default is `"prompt"`. The fixed remote target is
+`amadeus-dlc/amadeus`; this setting never files application-project issues.
+The upstream target is deliberate: an Amadeus-owned defect observed in ANY
+workspace — including forks and end-user projects — belongs to the framework's
+own tracker, exactly like a crash reporter. That is why the admission rules
+below insist the public body carries no workspace-private information.
+
+### Admission
+
+File only when all of these are true:
+
+- evidence demonstrates an Amadeus-owned defect or a concrete, actionable risk;
+- the work is not already in the active intent's scope;
+- the finding is not a speculative idea, transient environment failure, or
+  configuration mistake;
+- the public body contains no secrets or private workspace information.
+
+Security-sensitive findings, private repository details, and uncertain
+ownership are never auto-filed. Surface them to the human instead. Work already
+in scope is fixed and tested in the active intent rather than duplicated as a
+new Issue.
+
+### Deterministic filing
+
+Create a concise public body file under the current stage's artifact directory.
+It must include summary, evidence or reproduction, expected-versus-actual
+behaviour (or the concrete risk), affected revision, and acceptance criteria.
+Choose a stable fingerprint from the finding's kind, owning module, and failure
+signature; never include timestamps, worktree paths, or secrets.
+
+Run:
+
+```bash
+bun .cursor/tools/amadeus-finding.ts file \
+  --project-dir <workspace-root> \
+  --kind <defect|concern> \
+  --title "<concise title>" \
+  --body-file <stage-artifact-path> \
+  --fingerprint "<kind>:<module>:<failure-signature>"
+```
+
+The coordinator resolves all three config layers fail-closed, checks GitHub
+readiness, searches every open or closed Issue for its SHA-256 marker, and
+creates only when there is no existing Issue. One match returns that Issue;
+multiple matches stop safely without another mutation. The GitHub Gateway
+accepts a create only with a coordinator-minted permit bound to the exact body
+marker.
+
+When the single match is a CLOSED Issue (`issueState: "CLOSED"` in the
+outcome), do not treat the finding as settled: the same fingerprint was fixed
+once before, so a fresh observation is a possible regression. Surface the
+closed Issue link and the new evidence to the human instead of recording it as
+an existing filing.
+
+- `"auto"` — run the command immediately.
+- `"prompt"` — present the candidate to the human. On approval, rerun the same
+  command with `--approved`.
+- `"off"` — do not file automatically. An explicit human filing request may run
+  the command with `--approved`.
+
+A filing failure does not invent a fallback mutation. Surface the typed failure
+and the retained body artifact at the stage gate. Record the created or existing
+Issue link in the stage artifact and completion message.
 
 ---
 

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRF-RES13",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c1 のみ採用 — 「テスト verbatim ピン+設計コメントで固定された挙動の変更は、仕様裁定とテスト契約改訂を要件段で明示してから行う」を project 層へ persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件採用 — 4候補すべて既存 cid の重複・既存規範の実践記録・intent 固有記録であり、memory 層への persist は不要(record への記録で足りる)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c1〜c4 全採用 — 4件すべてを project 層へ persist"
+    }
+  ]
+}

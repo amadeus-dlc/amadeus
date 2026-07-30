@@ -1,6 +1,25 @@
 # ビジネス概要
 
-## Open bug 6件の業務境界（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の業務境界（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+測定 ref: observed `278d61d8e`。
+
+本 intent は2件のバグ修正であり、業務ドメイン・利用者集合・提供価値の境界そのものに変更はない。両件はいずれも「フレームワークが自分の指示どおりに動かない」クラスの欠陥で、利用者から見た影響面が異なる。
+
+| Issue | 利用者から見た症状 | 影響を受ける利用者 | 修復される価値 |
+| --- | --- | --- | --- |
+| [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736) | 稼働中の intent と並行して新しい作業を始めたいと申し出て CONFIRM したとき、SKILL.md の指示どおりに実行すると未知 verb でコマンドが失敗する（`amadeus-utility.ts` に `next` は存在しない） | claude / codex / kimi / kiro / kiro-ide の5ハーネス利用者。cursor / opencode は SKILL.md を持たず command 面が正しいツールを指すため影響なし | new-work offer から2本目の intent を birth する経路が指示どおりに通ること。経路の実装（`amadeus-orchestrate.ts:2405`）は既に健全で、直すのは散文のツール名のみ |
+| [#1711](https://github.com/amadeus-dlc/amadeus/issues/1711) | units-generation を SKIP するスコープ（`fix` / `refactor` / `chore` / `security-patch` / `infra` / `poc` および dogfood の `self-*`）で code-generation のレビュー段が `required review artifact is missing: …/construction/{unit-name}/…` で exit 1 する | 上記スコープを使う全利用者。軽量スコープ（バグ修正・リファクタ）は最も日常的に選ばれる経路であるため影響は広い | レビューゲートが構造的に成立すること。現状は conductor の手作業回避（実 unit 名へ解決した directive を渡す）に依存しており、その回避自体が `stage-protocol.md:898` の「unchanged directive JSON」規定からの逸脱である |
+
+### Delivery boundary
+
+2件を1 Intent で追跡し、**1 Issue = 1 Bolt = 1 GitHub Pull Request**とする。両件は所有コンポーネントが完全に分離しており（#1736 = harness SKILL.md の散文、#1711 = core engine + reviewer 層）、同期対象ファイル集合も重ならないため並行実装が可能である。
+
+### 本 intent 自身が当事者である点
+
+本 intent は `self-fix` スコープで走る。`self-fix` は units-generation を SKIP する（scope-grid 実測）ため、**#1711 の患部経路を自ら通る**。すなわち本 intent の code-generation ステージのレビューは、修正対象のバグの影響下で実行される。
+
+## Open bug 6件の業務境界（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 Amadeus は、AI-DLC の Intent を決定的なステージ遷移、監査証跡、隔離された Bolt、複数ハーネスへの同等配布で実行する Bun/TypeScript の CLI 製品である。本 intent は新機能を追加せず、開発者と運用者が「成功」と判断する6つの信頼境界を修復する。6件は1つの `amadeus-bugfix` Intent で追跡する一方、変更・回帰テスト・レビュー可能性を分離するため **1 Issue = 1 Bolt = 1 GitHub Pull Request** とする。作成後の各 Pull Request は [amadeus-dlc/amadeus の Pull Requests](https://github.com/amadeus-dlc/amadeus/pulls) から個別に追跡する。
 

@@ -131,7 +131,7 @@ import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {
@@ -5236,7 +5236,7 @@ function verifyPreparedWorkflowCompletion(
   if (!intent) {
     error("Prepared workflow completion cannot resolve its Intent.");
   }
-  const config = resolveMirrorConfig(pd, intent, space);
+  const config = resolveAmadeusConfig(pd, intent, space);
   if (config.kind === "invalid") {
     const details = config.issues.map((issue) =>
       issue.kind === "read-failure"

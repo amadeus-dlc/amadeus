@@ -58,9 +58,9 @@ import {
   writeStoreFile,
 } from "./amadeus-election-store";
 import {
-  type MirrorConfigIssue,
-  resolveMirrorConfig,
-} from "./amadeus-mirror-config";
+  type AmadeusConfigIssue,
+  resolveAmadeusConfig,
+} from "./amadeus-layered-config.ts";
 
 const USAGE =
   "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger explicit|auto-solo] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
@@ -334,7 +334,7 @@ export function handleOpen(root: string, filePath: string): number {
   return 0;
 }
 
-function configIssueSummary(issue: MirrorConfigIssue): string {
+function configIssueSummary(issue: AmadeusConfigIssue): string {
   return issue.kind === "read-failure"
     ? `${issue.layer} (${issue.path}): ${issue.summary}`
     : `${issue.layer} (${issue.path}): ${issue.key} expected ${issue.expected}, got ${issue.actualType}`;
@@ -350,7 +350,7 @@ export function handleTriggeredOpen(
   if (trigger !== "auto-solo") {
     return fail(`open: unknown trigger "${trigger}"`);
   }
-  const resolved = resolveMirrorConfig(projectDir);
+  const resolved = resolveAmadeusConfig(projectDir);
   if (resolved.kind === "invalid") {
     return fail(
       `open: invalid configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,

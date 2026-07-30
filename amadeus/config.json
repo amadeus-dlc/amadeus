@@ -1,5 +1,6 @@
 {
   "auto-mirror": "auto",
+  "auto-file-findings": "auto",
   "auto-solo-election": true,
   "mirror-projects": [
     {

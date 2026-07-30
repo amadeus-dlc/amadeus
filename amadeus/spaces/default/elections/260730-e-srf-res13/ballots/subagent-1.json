@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRF-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "persist 文は適用条件を『現挙動がテストの verbatim ピンや設計コメントで明示的な契約として固定されている場合』に限定し、brownfield 修正一般へテスト契約改訂セレモニーを義務化しない範囲限定を明記すること。",
+  "rationale": "4候補すべての事実主張を独立実測で確認した。c1 の3重固定は実在: tests/unit/t186-foreach-per-unit-iteration.test.ts:358-360 が `construction/{unit-name}/functional-design/business-logic-model.md` を verbatim assert、tests/unit/t116-directive-path-resolution.test.ts:381-383 が同一リテラルを assert、packages/framework/core/tools/amadeus-orchestrate.ts:3052 に 'degrade to today's single {unit-name} directive. Zero behaviour change off this path.' が実在。c4 は既存 cid:reverse-engineering:re-sensors-codekb-filter-mismatch (project.md:144) と cid:reverse-engineering:c3-codekb-sensor (project.md:294) の二重重複で persist 不要。c2 は既存 cid:reverse-engineering:c1 (project.md:118)・c3 (project.md:120)・team.md:190 rescan-base-ancestry の実践記録に留まり新規知識なし。c3 は本 intent が修正対象とする #1736 自身の回避策であり、修正着地で即失効する transient かつ intent record に記録済み。c1 のみが未カバー: 'テスト契約' '仕様ピン' 'verbatim ピン' の memory 層全域 grep は 0 hit、最近接の team.md:66 implementation-deviation-election は『実装時に既存テストが壊れると気づいた場合』の停止則であり、要件段で先にテスト契約改訂を明示する前倒し面を縛らない。この一般則は #1711 の方式裁定(候補A/B)がどちらに決着しても成立するため、裁定未了の現時点で persist して差し支えない。",
+  "submittedAt": "2026-07-30T12:56:00Z"
+}

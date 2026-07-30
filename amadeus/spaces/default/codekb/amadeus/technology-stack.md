@@ -1,6 +1,28 @@
 # 技術スタック
 
-## Open bug 6件の技術断面（260729-open-bug-batch、現在、observed `22ee27dbe`）
+## SKILL/reviewer 2件の技術断面（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+
+技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1736 / #1711）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない。
+
+**構成カウント（測定 ref: observed `278d61d8e`。すべて `ls` / `git ls-files` / `git ls-tree` 出力からの転記）**
+
+| 面 | 実測値 | 測定コマンド | 区間の変化 |
+| --- | --- | --- | --- |
+| core tools トップレベル `*.ts` | `79` | `ls packages/framework/core/tools/*.ts \| wc -l` | base `22ee27dbe` は `76`（`git ls-tree -r --name-only 22ee27dbe packages/framework/core/tools/ \| grep -c '^packages/framework/core/tools/[^/]*\.ts$'`）。新規3件 |
+| core sensors | `7` | `ls packages/framework/core/sensors/*.md \| wc -l` | base は `6`（`git ls-tree -r --name-only 22ee27dbe packages/framework/core/sensors \| wc -l`）。`amadeus-self-scope-consistency.md` 新設 |
+| core hooks | `12` | `ls packages/framework/core/hooks/*.ts \| wc -l` | 変化なし |
+| core scopes | `10` | `ls packages/framework/core/scopes/*.md \| wc -l` | 件数は不変だが `amadeus-bugfix.md` → `amadeus-fix.md` へ改名（#1683 `dd8532d1c`）。現行10件は `chore` / `enterprise` / `feature` / `fix` / `infra` / `mvp` / `poc` / `refactor` / `security-patch` / `workshop` |
+| `self-*` スコープファイル（tracked） | `20` | `git ls-files \| grep -c "scopes/amadeus-self-"` | 4スコープ（`self-document` / `self-feature` / `self-fix` / `self-refactor`）× dogfood 5ハーネス自己インストール面（`.claude` / `.agents` / `.cursor` / `.opencode` / `.kimi-code`）。**core・dist には出荷されない** |
+
+`self-*` の4スコープは自己開発専用であり、`packages/framework/core/scopes/` にも `dist/<harness>/` にも存在しない。したがって配布物の利用者から見えるスコープ集合は上表の10件で、`self-*` はこのリポジトリの dogfood 面のみに存在する非出荷面である。
+
+**本 intent が交差するスタック面**
+
+- **13コピー同期境界（#1736）**: 患部は `packages/framework/harness/<name>/skills/amadeus/SKILL.md` で、core からの投影ではなく harness ごとに authored された独立ファイルである。`packages/framework/harness/claude/manifest.ts:73` の `{ src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },` を `scripts/package.ts:396` の `for (const { src, dst, projectRoot } of m.harnessFiles) {` が `dist/<name>/<harnessDir>/<dst>` へコピーする。正本5面（claude / codex / kimi / kiro / kiro-ide）を個別編集 → `bun scripts/package.ts` で dist 7ハーネス再生成 → `bun run promote:self` の3段が必須（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+- **`self-fix` スコープ自体が #1711 の直撃経路**: `.claude/tools/data/scope-grid.json` の実測で `self-fix.stages` は `units-generation` = `SKIP` / `code-generation` = `EXECUTE`。加えて `self-fix` は `packages/framework/core/tools/amadeus-lib.ts:4032` の `SKELETON_OFF_SCOPES` に含まれ（判定は `:4069` `if (SKELETON_OFF_SCOPES.has(scope)) return false;`）skeleton-gate も通らない。本 intent は自身が患部経路を走る当事者である。
+- **新規 core tool 3件（区間追加、いずれも本 intent の患部ではない）**: `amadeus-caller-authorization.ts`（122行、Kimi subagent role の state 変更拒否層）、`amadeus-sensor-self-scope-consistency.ts`（231行、上記センサーの実装）、`amadeus-workflow-completion.ts`（110行、ワークフロー完了の2相化）。
+
+## Open bug 6件の技術断面（260729-open-bug-batch、履歴、observed `22ee27dbe`）
 
 技術選定は Bun-only の TypeScript/ESM モノレポである。常駐 service、database、application server はなく、短命 CLI・Shell・Git/GitHub・OTLP が外部境界となる。本 intent は既存スタックだけで修正し、新規 runtime/development dependency を導入しない。
 
