@@ -7,6 +7,8 @@
 ### Meter Provider の登録と Meter 取得
 
 1. process 起動時に `meter-provider.ts`（components.md どおり OTel Metrics API subset）を global へ登録し、U4 hardened `local-metric-exporter.ts` を配線する
+
+   > **申告（2026-07-30 conductor 執行裁定）**: 本 Unit（U9）は Meter Provider の実装と登録契約までを担い、**global 登録の配線自体は metric 計測 callsite を導入する Unit へ委譲する**。根拠は production 側の計測 callsite ゼロの実測（`grep -rn "getAmadeusMeter" --include='*.ts' packages/framework/core scripts | grep -v vendor` → 定義行を除き 0 件、`registerMeterProvider` も同 0 件、tests 側のみ 22 件）。計測 callsite の無い登録は観測手段を持たない dead wiring となり、org.md Forbidden（検証劇場）と construction phase 規範（どのコードも消費しない配線を持たせない）に抵触する。対照として logger/tracer は production 配線を持つ（`amadeus-log.ts:78`、`amadeus-session-end.ts:76`）。本 Unit の登録契約は t369 で固定済み（BR-10 二重登録例外・登録前取得例外）。
 2. 二重登録は不変条件違反として例外（tracer-provider と同じ登録契約に揃える）
 3. 計測側は global から Meter を取得し、Counter／Histogram のみを生成する。Observable callback・任意 aggregation は生成経路自体を持たない（FR-EXP-5）
 
