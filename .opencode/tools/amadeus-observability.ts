@@ -287,6 +287,33 @@ export function observe<T>(projectDir: string, name: string, fn: () => T): T {
   }
 }
 
+// --- trace context attach (FR-TRC-4/5) ---------------------------------------
+
+// Re-attach this short-lived process to the intent trace before it spawns
+// children or starts spans: the W3C env carrier first (FR-TRC-5 — present
+// when an Amadeus parent process injected it), else the persisted intent
+// anchor (FR-TRC-4; BR-6 mints a fresh anchor for pre-migration intents).
+// Fail-open end to end: any failure leaves the process to start a new root
+// trace, with the diagnostic note written by the context layer (BR-5).
+// Disabled config -> pure no-op beyond the memoized config read.
+export async function attachProcessTraceContext(projectDir: string): Promise<void> {
+  if (!observabilityEnabled(projectDir)) return;
+  try {
+    // Lazy import: the otel layer loads only when observability is enabled,
+    // keeping the vendored API out of the module graph of every tool that
+    // imports this seam (and of partial test-fixture trees that lack otel/).
+    const ctx = await import("../otel/context.ts");
+    ctx.ensureContextManager();
+    const root = recordDir(projectDir);
+    if (ctx.attachRemoteParentFromEnv(process.env, { diagDir: root })) return;
+    const intent = activeIntent(projectDir);
+    if (root === null || intent === null) return;
+    ctx.attachIntentContext(ctx.restoreIntentContext(root, intent));
+  } catch {
+    // fail-open: trace attach never blocks the caller
+  }
+}
+
 // Subprocess-boundary span (裁定 Q18 tier 2): wrap a spawnSync-style call.
 // The command NAME is recorded (a safe token the caller chooses), never the
 // argv (paths/prompts stay out of telemetry by default — Q5). Works with both

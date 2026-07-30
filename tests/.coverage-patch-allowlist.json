@@ -1438,5 +1438,17 @@
     "lines": "211",
     "reason": "isJsonValue's switch default clause (typeof undefined/function/symbol/bigint) is reachable but Bun emits no DA stamp for this line at all, so the patch gate cannot measure it; the branch is driven by the serialize rejection test for BigInt attributes.",
     "expiry": "remove if Bun stamps switch default clauses in LCOV or the validator is restructured"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
+    "lines": "130",
+    "reason": "The lazy childEnv block (fail-open fallback and dispatcher env) is exercised by t95's spawned-hook drive (subprocess bun hook in fixture projects, including otel-absent ones); spawned main paths are not attributed to the parent Bun LCOV process (same class as the orchestrate.ts entries).",
+    "expiry": "remove when the sensor-fire hook dispatch is driven in-process"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
+    "lines": "248",
+    "reason": "The lazy childEnv block (fail-open fallback and dispatcher env) is exercised by t95's spawned-hook drive (subprocess bun hook in fixture projects, including otel-absent ones); spawned main paths are not attributed to the parent Bun LCOV process (same class as the orchestrate.ts entries).",
+    "expiry": "remove when the sensor-fire hook dispatch is driven in-process"
   }
 ]

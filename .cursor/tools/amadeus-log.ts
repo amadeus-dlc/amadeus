@@ -83,8 +83,9 @@ function bootstrapOtel(pd: string): void {
   const intent = activeIntent(pd);
   const root = docsRoot(pd);
   if (intent !== null && root !== null) {
-    const restored = restoreIntentContext(root, intent);
-    if (restored !== null) attachIntentContext(restored);
+    // BR-6: restore mints and persists a fresh anchor when the record is
+    // absent, so the attach is unconditional.
+    attachIntentContext(restoreIntentContext(root, intent));
   }
   const shard = auditFilePath(pd);
   if (existsSync(shard)) {

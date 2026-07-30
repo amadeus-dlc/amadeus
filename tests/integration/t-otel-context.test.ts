@@ -186,17 +186,22 @@ describe("startActiveSpan contract (FR-TRC-2) and completed-span export", () => 
 describe("Intent Trace Context persist/restore (FR-TRC-4)", () => {
   test("attach + current round-trip in-process", () => {
     clearIntentContextForTests();
-    attachIntentContext({ traceId: "t-1", anchorSpanId: "s-1", intentId: "260729-demo" });
-    expect(currentIntentContext()).toEqual({ traceId: "t-1", anchorSpanId: "s-1", intentId: "260729-demo" });
+    attachIntentContext({ traceId: "t-1", anchorSpanId: "s-1", intentId: "260729-demo", schemaVersion: 1 });
+    expect(currentIntentContext()).toEqual({ traceId: "t-1", anchorSpanId: "s-1", intentId: "260729-demo", schemaVersion: 1 });
   });
 
   test("persist then restore connects a later short-lived process to the remote parent", () => {
     const dir = mkdtempSync(join(tmpdir(), "otel-ctx-"));
     try {
-      persistIntentContext(dir, { traceId: "t-9", anchorSpanId: "s-9", intentId: "260729-demo" });
+      persistIntentContext(dir, { traceId: "t-9", anchorSpanId: "s-9", intentId: "260729-demo", schemaVersion: 1 });
       const restored = restoreIntentContext(dir, "260729-demo");
-      expect(restored).toEqual({ traceId: "t-9", anchorSpanId: "s-9", intentId: "260729-demo" });
-      expect(restoreIntentContext(dir, "other-intent")).toBeNull();
+      expect(restored).toEqual({ traceId: "t-9", anchorSpanId: "s-9", intentId: "260729-demo", schemaVersion: 1 });
+      // BR-6: an unknown intent has no record, so restore mints and persists a
+      // fresh anchor for it rather than returning null.
+      const minted = restoreIntentContext(dir, "other-intent");
+      expect(minted.intentId).toBe("other-intent");
+      expect(minted.traceId).not.toBe("t-9");
+      expect(restoreIntentContext(dir, "other-intent")).toEqual(minted);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -222,7 +227,7 @@ describe("W3C Trace Context subprocess injection (FR-TRC-5 minimal)", () => {
 
   test("with no active span, the attached intent anchor is used (FR-TRC-4 linkage)", () => {
     boot();
-    attachIntentContext({ traceId: "0123456789abcdef0123456789abcdef", anchorSpanId: "0123456789abcdef", intentId: "i" });
+    attachIntentContext({ traceId: "0123456789abcdef0123456789abcdef", anchorSpanId: "0123456789abcdef", intentId: "i", schemaVersion: 1 });
     const env = injectToSubprocess({});
     const extracted = extractTraceparent(env);
     expect(extracted!.traceId).toBe("0123456789abcdef0123456789abcdef");

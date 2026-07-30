@@ -57,7 +57,7 @@ import {
 	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
 
 // --- Constants ---
 
@@ -97,6 +97,37 @@ interface FireContext {
 	scriptArgs: string[]; // CLI args appended to the script invocation
 	scriptAbsPath: string; // sibling-resolved absolute path
 	timeoutMs: number;
+}
+
+type SensorTraceContext = {
+	injectToSubprocess(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+};
+
+type SensorTraceDependencies = {
+	attach(projectDir: string): Promise<void>;
+	loadContext(): Promise<SensorTraceContext>;
+};
+
+const SENSOR_TRACE_DEPENDENCIES: SensorTraceDependencies = {
+	attach: attachProcessTraceContext,
+	loadContext: () => import("../otel/context.ts"),
+};
+
+// Prepare the per-sensor child environment only after this process has joined
+// the intent trace. Both boundaries are injected so ordering and fail-open
+// behavior stay deterministic under test.
+export async function prepareSensorChildEnv(
+	projectDir: string,
+	env: NodeJS.ProcessEnv,
+	dependencies: SensorTraceDependencies = SENSOR_TRACE_DEPENDENCIES,
+): Promise<NodeJS.ProcessEnv> {
+	await dependencies.attach(projectDir);
+	try {
+		const context = await dependencies.loadContext();
+		return context.injectToSubprocess({ ...env });
+	} catch {
+		return { ...env };
+	}
 }
 
 // --- Argv helpers ---
@@ -290,7 +321,7 @@ function stageTemplateEligibleArtifacts(stage: {
 // Step 4-8 — emit FIRED, spawn, decide outcome, write detail (if FAILED),
 //            emit terminal row.
 // Step 9 — exit 0.
-export function handleFire(args: string[], projectDirArg?: string): void {
+export async function handleFire(args: string[], projectDirArg?: string): Promise<void> {
 	const id = args[0];
 	if (!id || id.startsWith("--")) {
 		dispatchError("fire requires a sensor id as first positional arg");
@@ -359,6 +390,11 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// Resolve the project dir once — used by the consume filter in step 2 and
 	// the detail-file path in step 3.
 	const projectDir = resolveProjectDir(projectDirArg);
+
+	// Re-attach to the intent trace, then inject its W3C carrier into the
+	// per-sensor script environment (FR-TRC-4/5, BR-3). The OTel layer is
+	// lazy-loaded and fail-open for partial fixture trees (BR-5).
+	const childEnv = await prepareSensorChildEnv(projectDir, process.env);
 
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
@@ -460,6 +496,8 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 				encoding: "utf-8",
 				timeout: timeoutMs,
 				cwd: projectDir,
+				// W3C carrier into the per-sensor script env (FR-TRC-5).
+				env: childEnv,
 			}),
 		),
 	);
@@ -855,7 +893,7 @@ Subcommands:
 // so every subcommand sees a clean argv and fire can honour the flag. argv is a
 // parameter (defaulting to the real process args) so the dispatch can be driven
 // in-process by tests without a spawn (the exported seams register in lcov).
-export function main(argv: string[] = process.argv.slice(2)): void {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 	const { projectDirArg, rest } = stripProjectDir(argv);
 	const [cmd, ...args] = rest;
 
@@ -886,7 +924,7 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 			handleDescribe(args);
 			return;
 		case "fire":
-			handleFire(args, projectDirArg);
+			await handleFire(args, projectDirArg);
 			return;
 		default:
 			process.stderr.write(
@@ -899,6 +937,11 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 // Guard the CLI entry so the module can be imported (exported seams are driven
 // in-process by tests) without executing main() / process.exit at load time.
 // Matches the sibling tools (amadeus-jump, amadeus-state).
-if (import.meta.main) {
-	main();
+export async function runCliIfMain(
+	isMain: boolean,
+	argv: string[] = process.argv.slice(2),
+): Promise<void> {
+	if (isMain) await main(argv);
 }
+
+await runCliIfMain(import.meta.main);

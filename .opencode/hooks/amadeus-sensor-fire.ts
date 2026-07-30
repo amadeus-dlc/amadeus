@@ -20,7 +20,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
-import { initProcessObservability } from "../tools/amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   type ClaudeCodeHookInput,
   getField,
@@ -117,6 +117,20 @@ if (!existsSync(stateFilePath(projectDir))) process.exit(0);
 
 // Telemetry process span (opt-in; no-op unless observability.enabled)
 initProcessObservability("hook:sensor-fire", projectDir);
+// Re-attach to the intent trace (FR-TRC-4/5) so the dispatcher spawn below
+// carries the W3C carrier and the sensor path joins the same trace (BR-3).
+await attachProcessTraceContext(projectDir);
+
+// W3C carrier for the dispatcher env (FR-TRC-5). Lazy import with fail-open
+// fallback to the plain env when the otel layer is absent (fixture trees).
+const childEnv = await (async () => {
+  try {
+    const { injectToSubprocess } = await import("../otel/context.ts");
+    return injectToSubprocess({ ...process.env });
+  } catch {
+    return { ...process.env };
+  }
+})();
 
 let stateContent: string;
 try {
@@ -229,6 +243,9 @@ for (const entry of applicableSensors) {
         cwd: projectDir,
         timeout: SUBPROCESS_TIMEOUT_MS,
         stdio: ["ignore", "pipe", "pipe"],
+        // W3C carrier into the dispatcher env (FR-TRC-5); no-op keys absent
+        // when no trace context is attached.
+        env: childEnv,
       }
     );
     // Sensor outcomes stay inside the dispatcher (paired audit rows by

@@ -23,7 +23,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { initProcessObservability } from "../tools/amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeIntent,
   activeSpace,
@@ -124,6 +124,21 @@ if (audit.length === 0) process.exit(0);
 
 // Telemetry process span (opt-in; no-op unless observability.enabled)
 initProcessObservability("hook:runtime-compile", projectDir);
+// Re-attach to the intent trace (FR-TRC-4/5) so the compile subprocess below
+// carries the W3C carrier and joins the same trace (BR-3).
+await attachProcessTraceContext(projectDir);
+
+// W3C carrier for the compile subprocess env (FR-TRC-5). Lazy import: the
+// otel layer is absent from partial fixture trees — fall back to the plain
+// env (fail-open) rather than failing module load.
+const childEnv = await (async () => {
+  try {
+    const { injectToSubprocess } = await import("../otel/context.ts");
+    return injectToSubprocess({ ...process.env });
+  } catch {
+    return { ...process.env };
+  }
+})();
 
 // 5. Heartbeat — doctor reads this file's mtime to detect silent-hook failure.
 //    Kept at the bare (workspace-level) health dir to match where --doctor reads
@@ -191,6 +206,7 @@ try {
     cwd: projectDir,
     timeout: 30_000,
     stdio: ["ignore", "pipe", "pipe"],
+    env: childEnv,
   });
   if (result.status !== 0) {
     recordHookDrop(
