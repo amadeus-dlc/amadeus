@@ -20,6 +20,11 @@ const BASELINE_SHA = readFileSync(
 //     the lint job per the E-U7CG-Q1 ruling (guard lives in tests/, CI runs it
 //     as one lint step). The pin's protective property is unchanged — an
 //     UNSANCTIONED ci.yml edit still flips the hash (proven below).
+//   - 260729-otel-upstream U8: the lint job's deletion-gate step and its report
+//     upload (FR-MIG-4 asks for the gate to be machine-verified in CI, BR-16
+//     for the report to be retrievable). Placed beside the callsite-guard step
+//     for the same reason — the gate lives in tests/ and CI runs it as one
+//     lint step.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
