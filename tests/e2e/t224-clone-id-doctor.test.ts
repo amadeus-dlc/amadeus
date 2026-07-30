@@ -79,7 +79,11 @@ describe("symlink clone-id installed doctor journey", () => {
       "--json",
       "--apply",
     ]);
-    expect(migrated.status).toBe(0);
+    if (migrated.status !== 0) {
+      throw new Error(
+        `migrate subprocess failed (status=${migrated.status}): ${migrated.stderr}`,
+      );
+    }
 
     rmSync(join(project.destinationRoot, relative(project.sourceRoot, project.auditPath)), {
       force: true,
@@ -95,8 +99,16 @@ describe("symlink clone-id installed doctor journey", () => {
       "--project-dir",
       project.projectDir,
     ]);
-    expect(firstDoctor.status).toBe(0);
-    expect(secondDoctor.status).toBe(0);
+    if (firstDoctor.status !== 0) {
+      throw new Error(
+        `first doctor subprocess failed (status=${firstDoctor.status}): ${firstDoctor.stderr}`,
+      );
+    }
+    if (secondDoctor.status !== 0) {
+      throw new Error(
+        `second doctor subprocess failed (status=${secondDoctor.status}): ${secondDoctor.stderr}`,
+      );
+    }
 
     _resetCloneIdForTests();
     const firstCloneId = auditCloneId(project.projectDir);

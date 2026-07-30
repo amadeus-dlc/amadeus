@@ -116,6 +116,28 @@ describe("clone-id doctor boundary fixture", () => {
     expect((failure as Error).message).toContain("injected fixture-cleanup");
   });
 
+  test("keeps the primary boundary failure even when cleanup also fails", () => {
+    let failure: unknown;
+    try {
+      runCloneIdDoctorBoundaries({
+        resolveSymlink: () => "/tmp/target",
+        deriveCloneId: () => {
+          throw new Error("injected clone-id-derivation");
+        },
+        launchProcess: () => ({ status: 0 }),
+        cleanup: () => {
+          throw new Error("injected fixture-cleanup");
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(CloneIdDoctorBoundaryError);
+    expect((failure as CloneIdDoctorBoundaryError).boundary).toBe("clone-id-derivation");
+    expect((failure as Error).message).toContain("injected clone-id-derivation");
+  });
+
   test("a symlink clone id is stable across cache resets without changing target metadata", () => {
     const projectDir = mkdtempSync(join(tmpdir(), "clone-id-boundary-unit-"));
     scratchDirs.push(projectDir);
