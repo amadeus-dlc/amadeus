@@ -694,5 +694,12 @@
     "dirName": "260728-slop-cleanup",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019faca9-5a73-7de1-a97b-c2a85f22349a",
+    "slug": "open-bug-batch",
+    "dirName": "260729-open-bug-batch",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]

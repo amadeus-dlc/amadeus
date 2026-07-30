@@ -1,6 +1,50 @@
 # コード品質評価
 
-## 確定 Slop 5 パスの品質評価（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の品質評価（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+### 現行の品質基盤
+
+テストは739ファイル（smoke 15 / unit 323 / integration 314 / e2e 85）で、`bun:test`、型検査、Biome、distribution drift、coverage project/patch gate を CI で組み合わせる。ドキュメントと配布同期の守りは厚い一方、child process の間欠失敗では stdout/stderr/member status の保持が一貫せず、固定 sleep・最終 filesystem scan・別 snapshot の比較が成功証拠を代用している。本 scan は静的解析であり、テストは実行していない。
+
+### 欠陥確度と不足する回帰面
+
+| Issue | 確定している欠陥 | 製品根因の確度 | 不足する回帰テスト | 完了判定 |
+| --- | --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | `spawnSync` 180秒に対し test case 120秒 | 95%。`rm` が直接原因かは未確定 | 並列負荷下で verifier を駆動し timeout envelope を観測 | 単独と通常並列帯の双方で verifier の実結果を得る |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 assertion が既存 stdout/stderr を診断に含めない | 診断欠陥100%、製品根因20% | nonzero/timeout 時の stdout/stderr 保存 | 診断追加後に再現し、migrate/doctor/clone-id/audit の原因を確定して修正 |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | checkout worker の個別 status を親が保持しない | 観測性95%、欠損根因35% | 複数 worker の個別 status/log 集約 | 失敗 member と原因が最終エラーに残り、partial run がrollbackされる |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | committed diff と dirty LCOV の断面不一致 | 100% | line shift / dirty working tree の process-boundary test | mismatch を fail-closed で拒否し、clean snapshot は従来どおり判定 |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | 50ms後の PID 生存を readiness に代用 | 99% | 遅延初期化後に exit 9 する決定的 fixture | readiness 前終了を確実に失敗扱いし全 supervisor をcleanup |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | registry complete/audit seal後に completion boundary | 100% | multi-intent final report→sync/skip→close→cursor release の貫通 | mirror receipt、WORKFLOW_COMPLETED、registry/cursor が同一 completion instance で一度だけ着地 |
+
+### Observed commit での根拠断面
+
+| Issue | live code 根拠 |
+| --- | --- |
+| #1667 | `tests/integration/book-pack-verify.test.ts:23-36` は child timeout 180秒、test timeout 120秒。`tests/run-tests.ts:850-872` は parallel band を `Promise.race` / `Promise.all` で駆動 |
+| #1664 | `tests/integration/t224-upstream-v2-migration-cli.test.ts:1188-1208` は `migrateWithTool` 後の status assertion に stdout/stderr message を付けない。`amadeus-migrate.ts:2901-2919` が doctor subprocess を起動 |
+| #1663 | `team-up.sh:1382-1400` は background checkout 後に裸の `wait`、`:1411-1425` は registry + record 走査で incomplete を判定。`t295:270-279` は最終 stderr と missing member を検証 |
+| #1662 | `tests/coverage-patch-gate.ts:234-264` は既存 LCOV を読み、別途 `git diff <base>...HEAD` を取得。`t229-coverage-patch-gate-check.test.ts:100-108` は clean `HEAD...HEAD` のみを process-boundary で固定 |
+| #1336 | `team-up.sh:452-463` は supervisor 起動後50ms sleepし、PID/process matchだけを確認。`t-team-up-codex-resume.serial.test.ts:732-754` は即時 launch failure cleanup を固定するが遅延初期化失敗を持たない |
+| #1607 | `amadeus-orchestrate.ts:4037-4143` は final report 内で `complete-workflow` を commitして `done` を返す。`amadeus-state.ts:2143-2201` は audit emit→state write→registry complete、`amadeus-audit.ts:401-411` は complete intentへのappendを封鎖、`amadeus-mirror-state-store.ts:383-410` はその封鎖を outbox failure として保持 |
+
+### 技術的負債
+
+- **成功条件の分散**: fixed sleep、PID liveness、registry+record scan、test timeout が個別に成功を定義している。各 Bolt は結果型または耐久 receipt に成功条件を集約する。
+- **診断 envelope の不統一**: subprocess は stdout/stderr/status を持つが assertion・Shell worker・member ledger で欠落する。間欠失敗を直す前に観測情報を失わない。
+- **completion transaction の跨ぎ**: state、registry、cursor、audit、mirror outbox の commit point が別々で、#1607 と OTel #1679 の最大リスクとなる。
+- **coverage snapshot identity 未定義**: LCOV と diff に共通の commit/dirty identity がないため、patch coverage が緑でも反証不能である。
+- **巨大ファイルの変更リスク**: `amadeus-orchestrate.ts`、`amadeus-state.ts`、`amadeus-lib.ts`、`team-up.sh` は高変更密度で、局所修正でも認知負荷が高い。新しい汎用抽象化より既存 seam と focused regression を優先する。
+
+### 衝突と検証順序
+
+1. #1607 を OTel #1679 の Construction 前に解決し、完了 transaction の正準を固定する。
+2. #1664 の診断を先に着地させ、Journal v2 が t224 の失敗証拠を隠さないようにする。
+3. #1336 → #1663 の順に `team-up.sh` を直列変更する。
+4. #1662 と #1667 は独立 Bolt として並行可能だが、最後に `bun run typecheck`、`bun run lint`、対象 test、`bun run test:ci`、distribution drift を observed main 上で再確認する。
+5. core 正本を触る Bolt は `bun scripts/package.ts` と `bun run promote:self` で生成面を同期し、`dist:check` / `promote:self:check` を通す。
+
+## 確定 Slop 5 パスの品質評価（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 確定 finding は 5 パス・3 カテゴリで、いずれも外部挙動を変えない surgical cleanup で閉包できる。
 

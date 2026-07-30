@@ -1,6 +1,34 @@
 # コード構造
 
-## Slop cleanup の対象配置（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の対象配置（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+本 intent は既存モジュールの責務内で6件を修正し、新規 package や汎用 framework を追加しない。正本と生成面の境界は次のとおりである。
+
+| Issue | 正本の主対象 | 回帰テストの主対象 | 配布波及 |
+| --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | `tests/integration/book-pack-verify.test.ts`、必要時 `book-pack/scripts/verify-dummy.sh`、`tests/run-tests.ts` | book-pack verifier の並列負荷・timeout 包含関係 | repo-local、dist なし |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | `tests/integration/t224-upstream-v2-migration-cli.test.ts`、再現後に `packages/framework/core/tools/amadeus-migrate.ts` / doctor / clone-id / audit | t224 の subprocess stdout/stderr/exit/timeout 診断 | core 修正時のみ7 dist + 5 self-install |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | `packages/framework/core/tools/team-up.sh` | `tests/integration/t295-team-up-worktree-parallel.test.ts` | 7 dist + 5 self-install |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | `tests/coverage-patch-gate.ts` | unit `t229` + integration `t229-coverage-patch-gate-check` | repo-local、dist なし |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | `packages/framework/core/tools/team-up.sh`、`team-up-codex-safety-wait.ts` | `tests/integration/t-team-up-codex-resume.serial.test.ts` | 7 dist + 5 self-install |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | `amadeus-orchestrate.ts`、`amadeus-state.ts`、`amadeus-audit.ts`、`amadeus-mirror-{coordinator,executor,state-store,policy}.ts` | mirror completion / solo gate transaction / transition guard integration 群 | 7 dist + 5 self-install |
+
+### 現行ディレクトリ断面
+
+- ルート package `amadeus-claude-code-dev`: build、distribution、test、coverage の開発用 orchestration。
+- `packages/framework/core/`: ハーネス中立の tools/hooks/stages/knowledge/skills 正本。tools は実測78ファイル、hooksは12ファイル。
+- `packages/framework/harness/{claude,codex,cursor,kimi,kiro,kiro-ide,opencode}/`: 7ハーネス固有の投影・設定・表層。
+- `packages/setup/`: `@amadeus-dlc/setup` の Bun-only installer CLI。
+- `scripts/`: package/promote/distribution/metrics 等の repo-local CLI。
+- `book-pack/`: engine coupling を検証する受動データ pack と verifier。
+- `tests/{smoke,unit,integration,e2e}/`: 15 / 323 / 314 / 85、合計739 `*.test.ts`。
+- `dist/` とルートの `.claude/`・`.codex/` 等: 生成面。独立正本として編集しない。
+
+### `ca8ff0af4..22ee27dbe` の構造差分
+
+区間13コミットは624ファイル、71,100 insertions / 26,206 deletionsで、生成面・record・metricsを除く断面でも215ファイル、16,982 insertions / 7,844 deletionsである。主な構造変化は Intent Mirror Project 同期スタック（`amadeus-mirror-project-{contract,diagnostics,executor,gateway,ledger-reducer,reconciliation-reducer,verification}.ts`）とテスト駆動機構（`tests/harness/{cli-target,codex-exec-live,tui-client}.ts`、`tests/lib/{cli-mechanism,sdk-mechanism,tui-mechanism,typescript-source}.ts`）の追加である。これらは #1607 / #1664 と交差するため、対象 Bolt は observed commit の現行構造を正本として差分を作る。
+
+## Slop cleanup の対象配置（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 構造変更、新規モジュール、新規ディレクトリはない。対象は core tools 2 ファイルと Markdown 3 ファイルである。`amadeus-journal.ts` と `amadeus-observability.ts` は `packages/framework/core/tools/` の正本であり、修正後は既存 packaging / self-promotion 経路で 7 `dist` 面と 5 self-install 面へ同期する。Markdown hygiene は `amadeus/spaces/default/intents/260727-solo-election/.../code-generation-plan.md` と `docs/reference/18-workspace-layout.{md,ja.md}` に閉じる。
 

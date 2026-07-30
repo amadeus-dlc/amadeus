@@ -1,6 +1,38 @@
 # 依存関係
 
-## Slop cleanup の依存断面（260728-slop-cleanup、現在、observed `ca8ff0af4`）
+## Open bug 6件の依存関係（260729-open-bug-batch、現在、observed `22ee27dbe`）
+
+### 外部依存
+
+| 依存 | 消費境界 | 関連 Issue | 制約 |
+| --- | --- | --- | --- |
+| Bun | CLI/test execution、child spawn、coverage | 全件 | 1.3.13以上。Node runtime fallback は追加しない |
+| git | worktree registration/checkout、three-dot diff | #1663 / #1662 | worktree add は直列、checkout は個別結果を集約。coverage は snapshot identity を固定 |
+| Bash / POSIX process | book-pack verifier、Team Mode launcher | #1667 / #1336 / #1663 | `wait`・PID 生存だけを成功証拠にしない |
+| herdr | Team Mode pane/session | #1336 | role-ready と supervisor-ready を分離 |
+| GitHub / `gh` | Intent Mirror remote operation | #1607 | remote effect と local durable receipt を別結果として扱う |
+| filesystem / LCOV | coverage measurement | #1662 | diff と coverage を同一 working-tree/commit 断面へ結ぶ |
+
+### 内部依存グラフ
+
+- `tests/run-tests.ts` → individual `bun test` child → `book-pack-verify.test.ts` → `book-pack/scripts/verify-dummy.sh`。#1667 は外側から内側へ timeout budget が単調増加する必要がある。
+- `team-up.sh` → `team-up-codex-safety-wait.ts` → herdr pane。#1336 の readiness receipt は launcher が所有し、#1663 の worktree worker result ledger と混同しない。
+- coverage runner → `coverage/lcov.info`、`coverage-patch-gate.ts` → `git diff <base>...HEAD`。#1662 はこの2入力へ共通 snapshot identity を導入する。
+- orchestrate `report` → state `complete-workflow` → audit journal / intent registry → mirror completion boundary → mirror state store。#1607 は現状の依存順序を「mirror durable commit が audit seal より前」に組み替える。
+- mirror coordinator → Project completion gate → executor → state store/outbox。区間で Project 同期スタックが増えたため、#1607 は単一 Issue の close だけでなく全 Project row の done 条件も保持する。
+
+### Bolt 間・並行 Intent 間の依存
+
+| 先行 | 後続 | 理由 |
+| --- | --- | --- |
+| #1336 | #1663 | `team-up.sh` の起動・並行 worker 制御を同時編集しない |
+| #1607 | OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) Construction | completion transaction と audit seal が Critical 共有境界 |
+| #1664 | OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) Journal v2 | t224 の journal/audit expectation を診断可能にしてから変更 |
+| #1662 / #1667 | 横断 Build and Test | 実装は分離可能だが CI 負荷と coverage 生成を同じ最終条件で検証 |
+
+各 Issue は独立 Bolt とし、個別の [GitHub Pull Request](https://github.com/amadeus-dlc/amadeus/pulls) に閉じる。共有ファイルの変更は stack せず、先行 Bolt 着地後の observed main へ rebase してから後続を作る。
+
+## Slop cleanup の依存断面（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 外部依存・パッケージ依存・モジュール依存の追加や削除はない。Journal codec の現行依存をコメントへ正しく反映するだけで、実コード上の 5 import edge（audit / state / lib / journal-convert / otel-projector）は不変である。Observability の `registered` は依存されないフィールドで、削除後も `_processObservation !== null` が登録状態の唯一の判定となる。core 正本変更の生成依存として 7 `dist` 面と 5 self-install 面の同期が必要である。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。
 

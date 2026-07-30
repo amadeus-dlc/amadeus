@@ -3,6 +3,7 @@
 ## 対象と追跡
 
 - 対象Issue: [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)
+- 入力fallback: `unit-of-work.md`とuser storiesは`amadeus-bugfix`スコープでexpected absentのため補完せず、`requirements.md`とbrownfieldの既存Bolt証跡からスコープした。
 - 対応要件: FR-1607-1〜5、FR-CROSS-1〜4、NFR-1、NFR-4〜6
 - 配送単位: 1 Issue = 1 Bolt = 1 [GitHub Pull Request](https://github.com/amadeus-dlc/amadeus/pulls)
 - 変更方針: 最終`report`、mirror completion、`WORKFLOW_COMPLETED`、registry seal、cursor clearを既存receipt／outbox／workspace lock境界の中で順序付け直す。complete後audit appendの例外、新しい公開verb、汎用transaction frameworkは追加しない。
@@ -44,13 +45,47 @@
 - [x] **Step 9 — RedをGreenにし隣接不変条件を確認する**: Step 2〜4の同一testをGreenにし、t113でterminal eventが一度だけ正順序で着地すること、t243でcomplete後appendが引き続き抑止されること、t342／t346／t360／t364でProject Done／close gate、failure containment、freshnessが不変であることを確認する。本番GitHub Issueへのmutationは行わない。
 - [x] **Step 10 — 正本から配布面を再生成する**: FR-CROSS-3へ追跡し、変更は`packages/framework/core/`正本とtestsに限定する。既存generatorで7つの`dist/`面と5つのself-install面を再生成し、生成物の独立編集や一部面だけの手修正を行わない。
 - [x] **Step 11 — 全Greenとdrift guardを実行する**: `bun run typecheck`、`bun run lint`、対象10 testファイル、`bun scripts/package.ts --check`、`bun run promote:self:check`、`git diff --check`を通す。統合後に`bun run test:ci`を実行し、cold-compile timeoutだけが出た場合は該当ファイルを`bun test --timeout 120000 <file>`で再検証して本Issueのretry失敗と区別する。
-- [x] **Step 12 — 1 Issue = 1 Bolt = 1 PRの証拠をまとめる**: FR-CROSS-1／4へ追跡し、code-summaryと[#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)専用PR本文へ、確定根因、修正前Red、最小seamの裁定、修正後Green、crash matrix、実行検証、未実行項目と理由を記録する。他Issueの修正や一般的mirror refactorを同じPRへ含めない。
+- [x] **Step 12 — 1 Issue = 1 Bolt = 1変更提案の証拠をまとめる**: FR-CROSS-1／4へ追跡し、code-summaryと[#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)専用変更提案本文へ、確定根因、修正前Red、最小seamの裁定、修正後Green、crash matrix、実行検証、未実行項目と理由を記録する。他Issueの修正や一般的mirror refactorを同じ変更提案へ含めない。
+
+- [x] **Step 13 — テスト構成を確認する**: 既存のBun test runnerと`package.json`の設定を再利用し、新しいtest configが不要であることを確認する。
 
 ## 完了条件
 
 - construction phase receiptとは独立したworkflow-completed identityが、再試行を通じて同一instanceで耐久化される。
 - multi-intent workspaceの最終`report`から、final sync／明示skip、Project Done、close、mirror receipt／audit、`WORKFLOW_COMPLETED`、registry complete、cursor clearがこの順で完了する。
-- remote 3点とterminal commit 7点のcrash pointから同じcompletion identity／receipt／ledger／outboxを使って再開し、外部mutation、terminal audit、registry transitionを重複させず単一状態へ収束する。
+- 要求上の5失敗点をremote 3点とterminal 7点の注入位置へ具体化し、同じcompletion identity／receipt／ledger／outboxを使って再開し、外部mutation、terminal audit、registry transitionを重複させず単一状態へ収束する。
 - complete後audit appendと`ARTIFACT_UPDATED`は引き続き拒否され、landing evidenceのためにsealを緩和していない。
 - 対象／関連suite、typecheck、lint、package／promote drift、統合`test:ci`がGreenであり、未実行検証を成功扱いしていない。
-- [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)だけをcloseする1 Bolt／1 PRとして配送される。
+- [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)だけをcloseする1 Bolt／1変更提案として配送される。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-29T23:57:01Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+code-summaryの変更台帳と検証証拠が具体性を欠き、要件どおりの完了境界・再試行収束を実装成果物から監査できない。
+
+### Findings
+
+- code-summaryの変更ファイルがbasenameと「関連state codec／types」「全dist／self-install面」という曖昧な集合で示され、作成・変更した全パスを特定できないため、stageが要求するファイル台帳および正本から生成面までの配布同期を検証できない。
+- FR-1607-1〜5が要求する同一completion instance、5か所のcrash/retry、外部mutation・receipt・auditの重複防止、別Intentへ移動したcursorの保護について、対応テスト名と各結果の双方向トレーサビリティがcode-summaryにない。
+- 完了条件で必須としたbun run test:ciの実行結果が明記されず、「integration tier」の実行コマンド・対象・test:ciとの関係も不明なため、統合検証を成功扱いしてよいか判断できない。
+- 新設したamadeus-workflow-completion.tsの責務、公開境界、既存state・receipt・ledger・outboxとの依存方向が記述されておらず、循環依存や二重の真実源を作っていないという設計判断を検証できない。
+- 逸脱欄はlive Claude substrateのSKIPだけで、計画Step 5で要求したcoordinator先行案とprepare／commit案の比較および不採用理由が記録されていない。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-30T00:05:29Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1の全指摘が具体的な変更台帳、要件・テスト双方向追跡、最終test:ci証拠、依存方向とtruth source、設計案の比較裁定によって解消され、要件どおりの完了境界と再試行収束を実装成果物から監査できる。
+
+### Findings
+
+- None

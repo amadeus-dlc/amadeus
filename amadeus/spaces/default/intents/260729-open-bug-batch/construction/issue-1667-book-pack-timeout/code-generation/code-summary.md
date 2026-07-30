@@ -1,46 +1,79 @@
-# #1667 Code Generationサマリー
+# Issue #1667 Code Generationサマリー
 
 ## 結論
 
-`book-pack-verify`には、子processへ180秒を許可しているのに外側のBun testが120秒で先に終了する、決定的なtimeout budgetの矛盾があった。
+[PR #1684](https://github.com/amadeus-dlc/amadeus/pull/1684)で外側120秒が子process 180秒より先に切れるtimeout先後矛盾を解消し、2026-07-30 revisionで残っていた並列負荷／cleanup競合／Comprehensive不足を閉じた。merge SHA `47fe37ab059a131cfe80fb6971293a6e8fb0017c`を土台に、`verify-dummy.sh`のcleanupを冪等化し、unit 6件、integration 6件、E2E 2件を追加・拡張した。
 
-CIではcoverage並列実行時に127.55秒で失敗し、単独再実行は65.14秒で成功した。この差はresource contentionが再現条件を増幅した証拠だが、単独の直接原因としては断定しない。修正は、確定したbudget矛盾を除去したうえで、filesystemコピー、pack適用、全checkを行うresource-intensive testを既存runnerのserial帯へ分類する。
+同一PATH-shim fixtureではraw cleanupが`fts_read failed`／status 1となり、修正後の実verifierはstatus 0／stderr空／workspace不存在となる。3 worker barrier fixtureも全workerを同じ`cp`境界へ到達させたうえで相異なるworkspaceを所有し、全件Greenとなった。
 
-`rm: fts_read failed`は、verifier自身が共有一時directoryを削除した証拠ではない。`verify-dummy.sh`は呼び出しごとに`mktemp -d ...XXXXXX`で固有directoryを確保し、同じprocessの`EXIT` trapだけがそのdirectoryを削除する。実verifierの終了後に出力されたworkspace pathが存在しないことも回帰testで確認した。旧外側timeoutによるprocess terminationがcleanup noiseを発生させた可能性はあるが、直接原因とは断定しない。
+## 入力と変更面
 
-## 実装
+`unit-of-work.md`とuser storiesは`amadeus-bugfix`スコープでexpected absentのため補完せず、`requirements.md`のFR-1667-1〜3、FR-CROSS-1〜4、NFR-1〜2、NFR-6と既存brownfield証拠からスコープした。今回のrevisionは`book-pack/scripts/verify-dummy.sh`、test helper、unit／integration／E2Eだけを変更し、framework coreとgenerated distributionは変更していない。
 
-- test fileを`book-pack-verify.serial.test.ts`へ変更し、既存runnerの`.serial.`契約でcoverage時もparallel integration帯から分離した。
-- `VERIFIER_TIMEOUT_MS = 180_000`、`CLEANUP_RESERVE_MS = 30_000`、`TEST_TIMEOUT_MS = 210_000`を同じ場所へ定義した。
-- 純粋なbudget判定へ旧値`180000 / 30000 / 120000`と新値`180000 / 30000 / 210000`を同時入力し、旧値を不整合、新値を整合と固定した。
-- 制御lifecycleで`child-start → child-complete → cleanup-start → cleanup-complete`を同一のms単位で観測し、子deadlineと外側deadlineの内側でcleanupまで完了することを確認した。
-- 10msの制御timeoutを注入し、`status=null`、`signal=SIGTERM`、`error.code=ETIMEDOUT`を決定的に確認した。
-- 実verifierの失敗時だけ、status、signal、error、duration、stdout、stderrを出力するようにした。成功時ログは増やしていない。
-- 実verifierが出力した一時workspace pathがprocess終了後に消えていることを確認した。
-- verifier scriptと製品コードは変更していない。共有temp資産や二重cleanupの証拠がなく、仮説だけでcleanup実装を変更しないためである。
+## 実装済みの証拠
 
-## Red → Green
+- 旧budget `180000 + 30000 <= 120000`をfalse、新budget `180000 + 30000 <= 210000`をtrueとする判定を固定した。
+- 10msの制御child timeoutで`status=null`、`signal=SIGTERM`、`error.code=ETIMEDOUT`を固定した。
+- 制御lifecycleで`child-start → child-complete → cleanup-start → cleanup-complete`を同一clockで観測した。
+- 実verifierの成功、失敗時だけのstatus／signal／duration／stdout／stderr診断、process終了後のworkspace不存在を検証した。
+- `.serial.` filename契約により、runnerの`-P 4`でも対象fileをserial帯で実行した。
 
-### Red
+## Comprehensive戦略
 
-同じ純粋判定で、旧組合せ`180000 + 30000 <= 120000`は`false`、新組合せ`180000 + 30000 <= 210000`は`true`となる。これにより、子processのdeadlineより外側testが60秒早く終了し、cleanup用の余裕もない旧Redをwall-clock反復なしで固定した。
+Active Test StrategyはComprehensiveであり、stage契約はcomponentごと10〜15件を目安にunit・integration・E2E fileを求める。初回実装の4件縮小は不足だったため、revisionで要件駆動の計14件へ拡張した。
 
-### Green
+| test種別 | 実績 | 判定 |
+|---|---|---|
+| unit | `tests/unit/book-pack-verify-fixture.test.ts`のbudget境界4件、lifecycle parse、workspace parse | 6件Green |
+| integration | `book-pack-verify.serial.test.ts`のbudget、lifecycle、child timeout、3 worker parallel、同一cleanup race、real verifier | 6件Green |
+| E2E | `tests/e2e/book-pack-verify.test.ts`のshipped verifier成功journeyと実pack失敗journey | 2件Green |
+| performance | 3 workerがfake `cp` barrierへ揃うまで待機し、同時負荷を制御 | 全worker status 0、workspace identity 3件が相異なる |
+| security | 認証・認可・入力境界・依存の変更なし | NFR非該当 |
 
-- 対象test: 4 PASS / 0 FAIL / 14 expects
-- 制御lifecycle: child処理とcleanup完了を同一clockで観測し、outer budget内の完了を確認
-- 制御timeout: `SIGTERM`かつ`ETIMEDOUT`を確認
-- 実verifier cleanup: 出力された一時workspaceがprocess終了後に不存在
-- 対象runner（非coverage、parallel=4指定）: serial帯で実行され4 PASS / 0 FAIL
-- `bun run typecheck`: PASS
-- `bun run lint`: PASS（既存baselineのwarningのみ）
-- `git diff --check`: PASS
-- `bun run test:ci`: 652 files、8,994 assertions中、#1667対象はPASS。全体結果は1件FAILで、旧baseの[#1336](https://github.com/amadeus-dlc/amadeus/issues/1336)安全待機ケースだけが失敗した。#1667変更面とは独立し、#1336 Boltでは対象suite 76 PASS / 0 FAILへ修正済み。
-- `bun run coverage:ci`: coverage reportを正常生成し、#1667対象はserial帯で3 PASS / 0 FAIL、#1664のsymlink clone-id対象もPASS。全体結果は652 files、8,994 assertions中、旧baseの#1336安全待機ケース1件だけがFAIL。
+合計14件を3層へ分離した。securityは認証・認可・入力境界・依存を変更しないためN/Aである。
 
-coverageを対象fileだけにfilterしたrunnerでは、子processだけを検証するfileからLCOV partが生成されないため、対象test自体は3 PASSだがcoverage集約が「no LCOV reports」で非0になった。この結果を対象test失敗とは扱っていない。全fileを含む`coverage:ci`ではLCOV生成と対象testのGreenを確認した。
+## 並列負荷とcleanup競合
 
-## 追跡
+- 並列負荷fixtureは3 workerの最初の`.claude` copyをbarrierで同期し、偶然のwall-clock重複ではなく同時実行を保証する。各workerの`book-pack-dummy.*`は相異なり、別worker資産を所有しない。
+- cleanup競合fixtureはfake `rm`が対象workspaceを実際に削除した後、元症状と同じ`fts_read failed`／exit 1を返す。raw cleanupはstatus 1となり、修正後の実scriptはpath消失を冪等成功としてstatus 0／stderr空へ収束する。
+- owned pathが残る場合はcleanup errorをstderrへ戻し非0を維持するため、実pack／cleanup失敗を隠さない。E2Eのmissing framework caseでも実pack失敗は非0のまま、workspaceだけが除去される。
+
+## timeout budgetのclock境界
+
+outer Bun testの210秒はtest callback開始からsetup、同期child待機、失敗診断、assertionまでを測る。`spawnSync`の180秒はbash childの全lifecycleを測り、`verify-dummy.sh`の`EXIT` trapはchild終了前、すなわち`spawnSync`復帰前にcleanupする。
+
+このため実際の関係は「child本体180秒 + child外cleanup 30秒 = outer 210秒」ではない。cleanupは180秒のchild clock内で、outerとの差30秒がprocess終了伝播と親側処理のmarginである。制御lifecycleでもcleanup完了をchild deadline内で確認している。
+
+後続push CIではreal verifierがTests job 457ms／Coverage job 472.01ms、file全体が各539ms／553msだった。Issue観測の127.55秒でもouter 210秒まで82.45秒ある。これらの実値とclock境界は旧「outerがchildより先に切れる」問題の解消を支えるが、並列負荷・cleanup競合の決定的証拠には流用しない。
+
+## 後続CIの再現可能なGreen証拠
+
+後続push CI [run 30455247375](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375)は、merge SHA `47fe37ab059a131cfe80fb6971293a6e8fb0017c`をcheckoutして全体`SUCCESS`となった。
+
+| 必須command／証拠 | job | 結果 |
+|---|---|---|
+| `bun run typecheck` | [Typecheck 90587098720](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375/job/90587098720) | Green |
+| `bun run lint` | [Lint and complexity 90587098678](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375/job/90587098678) | Green |
+| `bun run test:ci -- -P 4` | [Tests 90587098589](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375/job/90587098589) | 652 filesでGreen。対象は4 pass／0 fail／14 expects |
+| `bun run coverage:ci -- -P 4` | [Coverage Report (head) 90587098684](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375/job/90587098684) | 652 filesでGreen。対象は4 pass／0 fail／14 expects |
+| `bun run dist:check`、`bun run promote:self:check` | [Dist and self-install drift 90587098523](https://github.com/amadeus-dlc/amadeus/actions/runs/30455247375/job/90587098523) | Green |
+
+対象test、typecheck、lint、統合後`test:ci`というNFR-6の必須commandは同一SHA／同一runでGreenである。dist/self-install driftは本Boltがcore／harnessを変更しないためNFR-6上の条件付き必須ではないが、Comprehensiveなframework parity証拠として同一runでGreenを確認した。
+
+## 配送状態
 
 - close対象: [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667)
-- 変更提案には他Issueの修正を含めない。
+- [PR #1684](https://github.com/amadeus-dlc/amadeus/pull/1684)は2026-07-29T13:16:19Zにmerge済み。
+- 今回のrevisionはcommit `1a560764ddf5779da5ae31e1457d623f2ccfb3ef`としてpushし、[PR #1715](https://github.com/amadeus-dlc/amadeus/pull/1715)をdraftで作成した。既存merge済みPRの状態は変更していない。
+
+## Revision 3 検証
+
+- `bun test --timeout 240000 tests/unit/book-pack-verify-fixture.test.ts tests/integration/book-pack-verify.serial.test.ts tests/e2e/book-pack-verify.test.ts` → 14 pass／0 fail／42 expects
+- `bun run typecheck` → exit 0
+- `bun run lint` → exit 0。既存cognitive-complexity warningのみ。
+- residual risk: Linux CIでrevision後のparallel fixtureは未実行。fixtureはPOSIX `bash`／`mktemp`／PATH shimを使用し、macOSでは決定的Greenを確認した。
+
+## Revision 2 follow-up配送
+
+- 最新`main`上で14 pass／42 expects、`bash -n book-pack/scripts/verify-dummy.sh`、`bun run typecheck`、`bun run lint`が成功した。
+- [PR #1715](https://github.com/amadeus-dlc/amadeus/pull/1715)は#1667だけを含む1 commitのdraftである。Linux CIはPR checkで確認する。
