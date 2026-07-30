@@ -76,6 +76,7 @@ import {
   fstatSync,
   lstatSync,
   openSync,
+  readdirSync,
   readFileSync,
   readSync,
   realpathSync,
@@ -2885,6 +2886,10 @@ function tryEmitSwarm(
 // projectType threads through to the consumes conditional_on filter; scope +
 // stateContent thread through to the gate computation (skeleton round-trip) and
 // the first-run-stage persona delivery (D-E).
+// `unit` defaults to the {unit-name} placeholder — the faithful emission for
+// every caller that has no concrete Unit of Work. The degrade path (a scope that
+// SKIPs units-generation) passes the unit directory it resolved off disk so the
+// emitted paths are real, not placeholder-shaped.
 function emitRunStageForSlug(
   slug: string,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -2892,6 +2897,7 @@ function emitRunStageForSlug(
   stateContent: string | null = null,
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
+  unit: string = UNIT_NAME_PLACEHOLDER,
 ): void {
   const node = nodeForSlug(slug);
   if (!node) {
@@ -2904,12 +2910,13 @@ function emitRunStageForSlug(
   const directive = buildRunStageDirective(
     node,
     projectType,
-    UNIT_NAME_PLACEHOLDER,
+    unit,
     scope,
     stateContent,
     recordPrefix,
     codekbCtx,
   );
+  if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
 }
 
@@ -2940,6 +2947,55 @@ function orderedUnits(projectDir: string): string[] {
   const batches = readBoltDagBatches(projectDir);
   if (!batches) return [];
   return batches.flat();
+}
+
+// The Unit-of-Work directories under <recordPrefix>/construction/, for a scope
+// that SKIPs units-generation and therefore has no compiled Bolt DAG to read.
+// The directory listing is the ONLY ledger on that path, and it mixes two kinds
+// of child: the unit dirs (construction/<unit>/<stage>/) and one diary dir per
+// construction stage (construction/<slug>/memory.md, written for every stage
+// whether or not it is per-unit). Subtracting the graph's slugs leaves the unit
+// set — a unit is never named after a stage. Sorted so the resolution is
+// deterministic across filesystems.
+function unitDirsUnderConstruction(
+  projectDir: string,
+  recordPrefix: string | null,
+): string[] {
+  const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
+  const root = join(projectDir, ...`${prefix}/construction`.split("/"));
+  if (!existsSync(root)) return [];
+  const stageSlugs = new Set(loadGraph().map((s) => s.slug));
+  return readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !stageSlugs.has(e.name))
+    .map((e) => e.name)
+    .sort();
+}
+
+// Fail-closed refusal when the degrade path cannot name exactly one Unit of
+// Work. Emitting the {unit-name} placeholder instead would hand the conductor
+// a directive whose produces/consumes paths do not exist and cannot be created
+// under that literal name, and the reviewer runtime rejects it downstream. The
+// message names the unmet condition and the conductor's move, so the refusal is
+// actionable rather than a dead end.
+function degradeUnitResolutionError(
+  slug: string,
+  recordPrefix: string | null,
+  candidates: string[],
+): ErrorDirective {
+  // Each message part is bound to its own const rather than written as a
+  // multi-line `+` concatenation: Bun's LCOV stamps continuation lines of a
+  // concatenated expression DA:0, which would report these lines as uncovered
+  // however thoroughly they run.
+  const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
+  const where = `${prefix}/construction/`;
+  const preamble = `Stage "${slug}" runs once per Unit of Work, but this workflow has no compiled unit DAG (the scope SKIPs units-generation, or the runtime graph has not been compiled since units-generation shipped)`;
+  if (candidates.length === 0) {
+    const move = "For a scope that runs units-generation, recompile the runtime graph (bun <harness>/tools/amadeus-runtime.ts compile) to restore the Bolt DAG. For a scope that SKIPs units-generation, create the unit directory for this piece of work (its name becomes the unit segment of every artifact path). Then re-run `next`.";
+    return errorDirective(`${preamble} and no unit directory exists under ${where}. ${move}`);
+  }
+  const found = `${candidates.length} unit directories exist under ${where}: ${candidates.join(", ")}.`;
+  const move = "The engine cannot choose between them. Keep exactly one unit directory for this stage's work, then re-run `next`.";
+  return errorDirective(`${preamble} and ${found} ${move}`);
 }
 
 // True when `unit` is COVERED for `node`: every REQUIRED artifact in
@@ -3048,11 +3104,29 @@ function emitPerUnitRunStage(
   }
 
   // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
-  // security-patch / infra / fix / poc, or a pre-compile moment): degrade to
-  // today's single {unit-name} directive. Zero behaviour change off this path.
+  // security-patch / infra / fix / poc, or a pre-compile moment). There is no
+  // DAG to iterate, but the stage is still per-unit, so its artifacts still
+  // belong under construction/<unit>/. The unit directory on disk is the ledger
+  // (issue #1711): resolve it and emit REAL paths. A directory listing that does
+  // not name exactly one unit is refused rather than papered over with the
+  // {unit-name} placeholder — an unresolved placeholder path can neither be
+  // produced nor consumed, and the reviewer runtime rejects it downstream.
   const units = orderedUnits(projectDir);
   if (units.length === 0) {
-    emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+    const degradeUnits = unitDirsUnderConstruction(projectDir, recordPrefix);
+    if (degradeUnits.length !== 1) {
+      emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits));
+      return;
+    }
+    emitRunStageForSlug(
+      node.slug,
+      projectType,
+      scope,
+      stateContent,
+      recordPrefix,
+      codekbCtx,
+      degradeUnits[0],
+    );
     return;
   }
 

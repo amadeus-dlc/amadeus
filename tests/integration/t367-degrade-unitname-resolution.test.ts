@@ -1,0 +1,321 @@
+// covers: subcommand:amadeus-orchestrate:next
+//
+// Issue #1711. A scope that SKIPs units-generation (`fix` here) reaches
+// Construction with no compiled Bolt DAG, so the engine's per-unit routing
+// takes its DEGRADE branch. That branch used to emit the literal `{unit-name}`
+// placeholder in every resolved produces/consumes path. Nothing downstream can
+// consume such a path: the artifacts are written under the REAL unit directory,
+// so `amadeus-reviewer-runtime.ts scope` looks for the placeholder path, finds
+// nothing, and dies with "required review artifact is missing" — the §12a
+// reviewer gate is unreachable for the whole degrade family of scopes.
+//
+// CONTRACT (intent 260730-skill-reviewer-fixes Q1=A): on that branch the engine
+// resolves the unit from the only ledger it has — the unit directory under
+// <record>/construction/ — and emits real paths. When it cannot name exactly
+// one unit it refuses with an `error` directive rather than emitting a
+// placeholder that is guaranteed to fail downstream (fail-closed).
+//
+// MECHANISM = cli + cross-tool integration. Both sides are pinned end to end:
+//   (i)  ONE unit dir  -> run-stage with resolved paths, and the emitted
+//        directive drives `amadeus-reviewer-runtime.ts scope` to exit 0 once the
+//        artifacts exist at those paths. This is the closure of the reported
+//        symptom, not just a string assertion on the directive.
+//   (ii) ZERO or MANY unit dirs -> `error`, naming the unmet condition (and the
+//        candidates when the listing is ambiguous), with no placeholder leaking
+//        into the message.
+//
+// The cross-tool half SPAWNS the shipped copies (dist/claude/.claude/tools/),
+// the surface the engine and the reviewer runtime actually run from. Spawned
+// work is invisible to the parent LCOV, so the routing decision itself is ALSO
+// driven in-process through the exported `handleNext` (the seam t198/t211/t213
+// already use) — same branch, real line attribution.
+
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  AMADEUS_SRC,
+  cleanupTestProject,
+  createTestProject,
+  DEFAULT_RECORD_DIR,
+  DEFAULT_SPACE,
+  resetAidlcEnv,
+  seededRecordDir,
+  seededStateFile,
+} from "../harness/fixtures.ts";
+import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+
+// The core source has no co-located compiled graph — point the in-process
+// engine at the packaged dist copy (regenerated from the same core here).
+process.env.AMADEUS_STAGE_GRAPH ??= join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+resetAidlcEnv();
+
+const BUN = process.execPath;
+const REPO_ROOT = join(import.meta.dir, "..", "..");
+const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
+const ORCH = join(TOOLS, "amadeus-orchestrate.ts");
+const REVIEWER = join(TOOLS, "amadeus-reviewer-runtime.ts");
+
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
+
+interface Directive {
+  unit?: string;
+  kind: string;
+  stage?: string;
+  message?: string;
+  consumes?: string[];
+  produces?: string[];
+  optional_produces?: string[];
+  stage_file?: string;
+}
+
+const tempDirs: string[] = [];
+afterEach(() => {
+  while (tempDirs.length) cleanupTestProject(tempDirs.pop());
+});
+
+// A `fix`-scope Construction state pivoted to code-generation. `fix` SKIPs
+// units-generation (verified in scope-grid.json), which is precisely how a
+// workflow arrives at Construction with no Bolt DAG to iterate.
+//
+// `Skeleton Stance` is recorded because code-generation is ALSO the first
+// Construction stage for `fix`, i.e. its walking-skeleton gate stage. With no
+// stance the engine returns on the classify round-trip before any per-unit
+// routing; a live workflow records the stance and re-enters, which is the
+// moment under test here.
+function fixScopeState(): string {
+  return `# AI-DLC State Tracking
+
+## Project Information
+- **Project**: degrade unit resolution test
+- **Project Type**: Brownfield
+- **Scope**: fix
+- **State Version**: 7
+- **Skeleton Stance**: off
+
+## Scope Configuration
+- **Stages to Execute**: all
+- **Stages to Skip**: none
+- **Depth**: Standard
+- **Test Strategy**: Standard
+
+## Execution Plan Summary
+- **Total Stages**: 2
+- **Completed**: 0
+- **In Progress**: code-generation
+
+## Stage Progress
+
+### CONSTRUCTION PHASE
+- [-] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+
+## Current Status
+- **Lifecycle Phase**: CONSTRUCTION
+- **Current Stage**: code-generation
+- **Status**: Running
+- **Construction Autonomy Mode**: gated
+- **Last Updated**: 2026-07-30T00:00:00Z
+
+## Session Resume Point
+- **Last Completed Stage**: requirements-analysis
+`;
+}
+
+/** A fresh `fix`-scope project with NO compiled Bolt DAG. */
+function seedFixProject(): string {
+  const proj = createTestProject();
+  tempDirs.push(proj);
+  writeFileSync(seededStateFile(proj), fixScopeState());
+  return proj;
+}
+
+/** Create a bare Unit-of-Work directory — the degrade path's whole ledger. */
+function seedUnitDir(proj: string, unit: string): void {
+  mkdirSync(join(seededRecordDir(proj), "construction", unit), {
+    recursive: true,
+  });
+}
+
+function runNext(proj: string): Directive {
+  const r = spawnSync(BUN, [ORCH, "next", "--project-dir", proj], {
+    encoding: "utf-8",
+    env: (() => {
+      const e = { ...process.env };
+      delete e.AMADEUS_DEFAULT_SCOPE;
+      return e;
+    })(),
+  });
+  try {
+    return JSON.parse((r.stdout ?? "").trim());
+  } catch {
+    throw new Error(
+      `next did not emit parseable JSON. status=${r.status}\n${r.stdout ?? ""}${r.stderr ?? ""}`,
+    );
+  }
+}
+
+/**
+ * Materialise everything `scope` reads: the stage definition and every REQUIRED
+ * produces file (optional_produces are legitimately absent).
+ *
+ * The artifact paths are rebuilt under the REAL unit directory rather than
+ * copied from the directive — that is where a conductor actually writes them,
+ * and it is what makes this a regression test. Seeding the directive's own
+ * paths would create literal `{unit-name}` directories on the pre-fix engine
+ * and let `scope` pass against the very bug under test.
+ */
+function materialiseReviewSurface(proj: string, d: Directive, unit: string): void {
+  const optional = new Set(d.optional_produces ?? []);
+  const artifacts = (d.produces ?? [])
+    .filter((p) => !optional.has(p))
+    .map((p) => `${RP}/construction/${unit}/code-generation/${p.split("/").pop()}`);
+  for (const rel of [d.stage_file, ...artifacts]) {
+    if (!rel) continue;
+    const abs = join(proj, ...rel.split("/"));
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, `# ${rel}\n`);
+  }
+}
+
+/** Drive `next` IN-PROCESS and return the emitted directive. */
+function runNextInProcess(proj: string): Directive {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleNext([], proj);
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw) as Directive;
+}
+
+function runReviewerScope(
+  proj: string,
+  d: Directive,
+): { status: number | null; stderr: string } {
+  const r = spawnSync(BUN, [REVIEWER, "scope"], {
+    encoding: "utf-8",
+    cwd: proj,
+    input: JSON.stringify(d),
+  });
+  return { status: r.status, stderr: r.stderr ?? "" };
+}
+
+describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
+  test("1: one unit directory resolves into the emitted produces paths", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "fix-1711-unitname");
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.stage).toBe("code-generation");
+    expect(
+      (d.produces ?? []).some((p) =>
+        p.startsWith(`${RP}/construction/fix-1711-unitname/code-generation/`),
+      ),
+    ).toBe(true);
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    // The resolved unit rides the directive itself so downstream consumers
+    // (reviewer-runtime unit-belonging checks) see the same resolution.
+    expect(d.unit).toBe("fix-1711-unitname");
+  }, 30000);
+
+  test("2: consumes are resolved with the same unit (produces/consumes symmetry)", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "fix-1711-unitname");
+    const d = runNext(proj);
+    const everywhere = [...(d.consumes ?? []), ...(d.produces ?? [])];
+    expect(everywhere.filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    // Any per-unit consume that survives the presence split carries the SAME
+    // resolved unit segment as produces — one unit per directive, both sides.
+    for (const p of d.consumes ?? []) {
+      if (!p.includes("/construction/")) continue;
+      expect(p).toContain("/construction/fix-1711-unitname/");
+    }
+  }, 30000);
+
+  test("3: the emitted directive drives reviewer-runtime scope to exit 0", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "fix-1711-unitname");
+    const d = runNext(proj);
+    materialiseReviewSurface(proj, d, "fix-1711-unitname");
+    const r = runReviewerScope(proj, d);
+    expect(r.stderr).toBe("");
+    expect(r.status).toBe(0);
+  }, 30000);
+
+  test("4: no unit directory is refused with an actionable error", () => {
+    const proj = seedFixProject();
+    const d = runNext(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("code-generation");
+    expect(d.message).toContain("no unit directory exists");
+    expect(d.message).toContain(`${RP}/construction/`);
+    expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  test("5: several unit directories are refused, naming the candidates", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    const d = runNext(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("unit-alpha");
+    expect(d.message).toContain("unit-beta");
+    expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  // 7-9 drive the SAME branch in-process. Spawned runs prove the shipped
+  // surface; these prove the decision with the lines actually attributed.
+  test("7: in-process, one unit directory resolves into the produces paths", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "fix-1711-unitname");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    expect(
+      (d.produces ?? []).some((p) =>
+        p.includes("/construction/fix-1711-unitname/code-generation/"),
+      ),
+    ).toBe(true);
+  }, 30000);
+
+  test("8: in-process, no unit directory is refused", () => {
+    const proj = seedFixProject();
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("no unit directory exists");
+  }, 30000);
+
+  test("9: in-process, several unit directories are refused with the candidates", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "unit-alpha");
+    seedUnitDir(proj, "unit-beta");
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("error");
+    expect(d.message).toContain("unit-alpha");
+    expect(d.message).toContain("unit-beta");
+  }, 30000);
+
+  test("6: a construction stage's own diary dir is not mistaken for a unit", () => {
+    const proj = seedFixProject();
+    seedUnitDir(proj, "fix-1711-unitname");
+    // Every construction stage writes <record>/construction/<slug>/memory.md.
+    // Those dirs sit beside the unit dirs and must not count as units, or the
+    // listing would be ambiguous on every real workflow.
+    seedUnitDir(proj, "code-generation");
+    seedUnitDir(proj, "build-and-test");
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(
+      (d.produces ?? []).some((p) =>
+        p.includes("/construction/fix-1711-unitname/"),
+      ),
+    ).toBe(true);
+  }, 30000);
+});
