@@ -23,7 +23,6 @@ import {
   findAllEvents,
   splitAuditRecords,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import * as migrate from "../../dist/claude/.claude/tools/amadeus-migrate.ts";
 import {
   type PresenceReservation,
   targetedApprovalEvidence,
@@ -287,7 +286,7 @@ describe("targetedApprovalEvidence — the presence reservation read", () => {
 describe("parseDoctorAuditSuffix — the doctor migration-evidence read", () => {
   const suffix = () =>
     v1Line(1, "GUARDRAIL_LOADED", TS(0)) + v1Line(2, "HEALTH_CHECKED", TS(1));
-  const parse = migrate.parseDoctorAuditSuffix as
+  const parse = journal.parseDoctorAuditSuffix as
     | ((input: string, allowHeader: boolean) => string[] | null)
     | undefined;
 

@@ -143,6 +143,32 @@ export function journalRecordField(record: JournalRecord, fieldName: string): st
   return value !== undefined ? value.trim() : null;
 }
 
+// Doctor migration-evidence read (FR-JRN-4): doctor appends are JSONL journal
+// records (one per line) since the Issue #1628 switchover. Every non-empty
+// line must decode through the common reader (v1 or v2) as a record whose
+// event is one of the doctor health events — anything else means the doctor
+// wrote something it must not, and the migration evidence refuses. Lives in
+// the journal codec module (not amadeus-migrate.ts, its only caller) so the
+// in-process tests (t365) never import the spawn-only migrate CLI — importing
+// it would 0-stamp its whole module in LCOV (seam placement in a measured
+// module).
+export function parseDoctorAuditSuffix(input: string, _allowHeader: boolean): string[] | null {
+  const events: string[] = [];
+  for (const line of input.split("\n")) {
+    if (line === "") continue;
+    let record: JournalRecord;
+    try {
+      record = parseJournalLine(line);
+    } catch {
+      return null;
+    }
+    const event = journalRecordField(record, "Event");
+    if (event !== "GUARDRAIL_LOADED" && event !== "HEALTH_CHECKED") return null;
+    events.push(event);
+  }
+  return events;
+}
+
 // Stable global idempotency key for exactly-once projection / merge dedup.
 export function journalEntryId(entry: JournalEntry): string {
   return `${entry.intentId}:${entry.cloneId}:${entry.seq}`;

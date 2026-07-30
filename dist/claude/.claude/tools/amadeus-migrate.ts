@@ -28,7 +28,7 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
-import { type JournalRecord, isJournalEntryV2, parseJournalLine } from "./amadeus-journal.ts";
+import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
 import { observeSubprocess } from "./amadeus-observability.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
@@ -3024,31 +3024,6 @@ function auditFileBytes(root: string): Map<string, Buffer> {
     files.set(entry.relative, readFileSync(entry.absolute));
   }
   return files;
-}
-
-// Exported for the in-process behavior-equivalence tests (t365): the doctor
-// evidence read is one of the journal consumers swapped onto the common
-// reader (FR-JRN-4).
-export function parseDoctorAuditSuffix(input: string, _allowHeader: boolean): string[] | null {
-  // Doctor appends are JSONL journal records (one per line) since the Issue
-  // #1628 switchover. Every non-empty line must decode through the common
-  // reader (v1 or v2) as a record whose event is one of the doctor health
-  // events — anything else means the doctor wrote something it must not, and
-  // the migration evidence refuses.
-  const events: string[] = [];
-  for (const line of input.split("\n")) {
-    if (line === "") continue;
-    let record: JournalRecord;
-    try {
-      record = parseJournalLine(line);
-    } catch {
-      return null;
-    }
-    const event = isJournalEntryV2(record) ? record.eventName : record.event;
-    if (event !== "GUARDRAIL_LOADED" && event !== "HEALTH_CHECKED") return null;
-    events.push(event);
-  }
-  return events;
 }
 
 type AuditAppendEvidence = NonNullable<MigrationEvidence["auditAppends"]>[number];
