@@ -2916,6 +2916,7 @@ function emitRunStageForSlug(
     recordPrefix,
     codekbCtx,
   );
+  if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
 }
 
@@ -2987,9 +2988,9 @@ function degradeUnitResolutionError(
   // however thoroughly they run.
   const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
   const where = `${prefix}/construction/`;
-  const preamble = `Stage "${slug}" runs once per Unit of Work, but this scope SKIPs units-generation`;
+  const preamble = `Stage "${slug}" runs once per Unit of Work, but this workflow has no compiled unit DAG (the scope SKIPs units-generation, or the runtime graph has not been compiled since units-generation shipped)`;
   if (candidates.length === 0) {
-    const move = "Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`.";
+    const move = "For a scope that runs units-generation, recompile the runtime graph (bun <harness>/tools/amadeus-runtime.ts compile) to restore the Bolt DAG. For a scope that SKIPs units-generation, create the unit directory for this piece of work (its name becomes the unit segment of every artifact path). Then re-run `next`.";
     return errorDirective(`${preamble} and no unit directory exists under ${where}. ${move}`);
   }
   const found = `${candidates.length} unit directories exist under ${where}: ${candidates.join(", ")}.`;

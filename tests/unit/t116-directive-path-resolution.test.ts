@@ -199,20 +199,7 @@ function emitFor(
       return e;
     })(),
   });
-  const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
-  let dir: RunStageDirective;
-  try {
-    dir = JSON.parse((res.stdout ?? "").trim());
-  } catch {
-    throw new Error(
-      `emitFor(${fixture}, ${slug}) did not emit parseable JSON. status=${res.status}\n${out}`,
-    );
-  }
-  // Sanity: the vehicle must land a run-stage for the target (else the path
-  // arrays below assert against the wrong directive kind — fail loudly).
-  expect(dir.kind).toBe("run-stage");
-  expect(dir.stage).toBe(slug);
-  return dir;
+  return parseRunStageOutput(res, `emitFor(${fixture}, ${slug})`, slug);
 }
 
 /**
@@ -237,13 +224,23 @@ function emitSingleFor(fixture: string, slug: string): RunStageDirective {
       })(),
     },
   );
+  return parseRunStageOutput(res, `emitSingleFor(${fixture}, ${slug})`, slug);
+}
+
+// Shared JSON-parse + sanity tail for the two emit vehicles above: the vehicle
+// must land a parseable run-stage for the target slug, else every path
+// assertion below would run against the wrong directive kind — fail loudly.
+function parseRunStageOutput(
+  res: { status: number | null; stdout: string | null; stderr: string | null },
+  label: string,
+  slug: string,
+): RunStageDirective {
   let dir: RunStageDirective;
   try {
     dir = JSON.parse((res.stdout ?? "").trim());
   } catch {
     throw new Error(
-      `emitSingleFor(${fixture}, ${slug}) did not emit parseable JSON. ` +
-        `status=${res.status}\n${res.stdout ?? ""}${res.stderr ?? ""}`,
+      `${label} did not emit parseable JSON. status=${res.status}\n${res.stdout ?? ""}${res.stderr ?? ""}`,
     );
   }
   expect(dir.kind).toBe("run-stage");

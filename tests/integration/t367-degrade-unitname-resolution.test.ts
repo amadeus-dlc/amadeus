@@ -62,6 +62,7 @@ const REVIEWER = join(TOOLS, "amadeus-reviewer-runtime.ts");
 const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 interface Directive {
+  unit?: string;
   kind: string;
   stage?: string;
   message?: string;
@@ -219,6 +220,9 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
       ),
     ).toBe(true);
     expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+    // The resolved unit rides the directive itself so downstream consumers
+    // (reviewer-runtime unit-belonging checks) see the same resolution.
+    expect(d.unit).toBe("fix-1711-unitname");
   }, 30000);
 
   test("2: consumes are resolved with the same unit (produces/consumes symmetry)", () => {
