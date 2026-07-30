@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U7CG-Q3B",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "appendJournalRecordV2 を「抑止したか」を返す形に拡張し、AuditLogExporter.exportCanonicalEvent → emitEvent へ伝播させる(U3/U4 所有コードの cross-unit 契約変更を本 Bolt で実施、3消費者が移行可能になる)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "Adapter の戻り型を縮小契約として明示し、appended:false を要する3消費者は移行対象外として allowlist に恒久保持する"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "logical-components.md:21 の読み替えは code-summary の Deviation 申告に加え、当該設計文へも申告付き追記(Adapter のみ FR-DST-2 適用)を残し、record 内の矛盾文を無修正のまま残さないこと",
+  "rationale": "実測: (1) 兄弟テンプレート tests/coverage-project-gate.ts / tests/complexity-gate.ts / tests/.complexity-baseline.json は tests/ 実在、CI は ci.yml:118/:323 のジョブ内ステップ、packages/framework/core/ と dist/ への投影 grep 0 hit。(2) t258 実契約 tests/lib/boundary-guard.ts SCAN_ROOTS は packages/framework ソース含む配布ツリーの scripts/ 参照を blocking 検出し、core/ 配置 guard は repo パス参照で構造衝突。project.md 既決 harness-tools-placement により core/tools は全ハーネス dist へ構造的に漏出し、repo 専用 CI lint の出荷は core 中立層契約に反する。(3) tech-stack-decisions.md:12/:20 自身が lint ジョブ内1ステップ・coverage ratchet/CCN baseline 同型踏襲と規定しており、その同型実体は tests/ 配置 — logical-components.md:21 の一括文は Adapter に妥当で guard には過大一般化。choice 2 の受容度: 7(既決 harness-tools-placement と t258 契約に反する出荷を作るため重大な不同意)",
+  "submittedAt": "2026-07-30T10:08:12Z"
+}

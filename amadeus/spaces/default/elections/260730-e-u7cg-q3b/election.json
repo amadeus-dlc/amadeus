@@ -1,0 +1,24 @@
+{
+  "electionId": "E-U7CG-Q3B",
+  "kind": "design-deviation",
+  "question": "U7 互換 Adapter の AppendAuditResult 忠実性(post-complete の appended:false arm)。旧 writer は完了済み intent への append を抑止し {appended:false, reason:\"intent-complete\"} を返す(amadeus-audit.ts:426 付近、#1248)。実消費者3箇所(amadeus-grant-authorization.ts:787、amadeus-presence-reservation.ts:332、amadeus-mirror-state-store.ts:407 — いずれも if (!result.appended) 分岐)。canonical 経路では appendJournalRecordV2(amadeus-audit.ts:390 付近)が同じ seal を見て抑止するが void を返すため、emitEvent 経由の Adapter には抑止が観測できない。制約: 無条件 appended:true は実行結果から導出しない偽の成功報告(org.md Forbidden 検証劇場)に該当。Adapter 側での intentStatusForAudit 先読みは performance-design「委譲経路に I/O・ロック・動的 import を追加しない」に反する。各自 上記 file:line、appendJournalRecordV2 の実装、3消費者の分岐実文を実測して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "appendJournalRecordV2 を「抑止したか」を返す形に拡張し、AuditLogExporter.exportCanonicalEvent → emitEvent へ伝播させる(U3/U4 所有コードの cross-unit 契約変更を本 Bolt で実施、3消費者が移行可能になる)"
+    },
+    {
+      "internalNo": 2,
+      "label": "Adapter の戻り型を縮小契約として明示し、appended:false を要する3消費者は移行対象外として allowlist に恒久保持する"
+    },
+    {
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

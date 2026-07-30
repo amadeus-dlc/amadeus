@@ -1,0 +1,24 @@
+{
+  "electionId": "E-U7CG-Q1",
+  "kind": "design-deviation",
+  "question": "U7 callsite-migration の call-site guard(VER-4: 直接呼出し・旧 observe 利用の CI 拒否+allowlist shrink-only ratchet)の配置。設計内に矛盾がある: (a) nfr-design/logical-components.md 末尾は「Adapter・guard は packages/framework/core/ 変更のため FR-DST-2 を適用(manifest 登録、dist 7面+self-install 再生成)」と guard を core/ に置くと読める。(b) nfr-requirements/tech-stack-decisions.md は「既存の committed baseline JSON+--check 単調非減少テンプレート(coverage ratchet・CCN baseline と同型)を踏襲」とし、その同型実体 tests/coverage-project-gate.ts / tests/complexity-gate.ts + tests/.complexity-baseline.json は repo 専用 dev ツールで dist へ投影されない。実測上の対立点: core/ 配置は repo 専用 CI lint を全ハーネス利用者へ出荷し、guard が tests/ 等の repo パスを参照するため t258 boundary guard(出荷 core/tools は repo パス非参照、blocking)と衝突しうる。各自 t258 の実契約・兄弟テンプレートの実配置・logical-components.md / tech-stack-decisions.md の当該文を実測して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "guard 本体+allowlist JSON は tests/ に置き既存兄弟テンプレート(coverage/complexity gate)へ揃える。CI は lint ジョブ内の1ステップ。Adapter のみ core/ で FR-DST-2 適用。logical-components.md の当該文は Adapter に妥当・guard には過大一般化として申告付きで読み替える"
+    },
+    {
+      "internalNo": 2,
+      "label": "設計文言どおり guard も packages/framework/core/ に置き FR-DST-2 を適用する(t258 との衝突は allowlist 追加等で回避)"
+    },
+    {
+      "internalNo": 3,
+      "label": "どちらでもなく実装前停止のままユーザー裁定へエスカレーションする"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q3B",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "留保: 案1は実測で前提不成立(3消費者は withAuditLock 内 lock-held 呼出しかつ明示 intent 指定であり、emitEvent は非再入 acquireAuditLock 自前取得+intent 引数なしのため、戻り値伝播だけでは移行不能)、案2の恒久 allowlist 保持は BR-8 shrink-only ratchet / BR-9 残存ゼロ=U8 削除ゲート FR-MIG-4(c) / BR-1 恒久 dual-write 禁止の承認済み要件変更に該当するため、正準リスト(4)によりユーザー裁定が必要。",
+  "rationale": "実測: appendAuditEntryUnlocked(amadeus-audit.ts:436-455)は seal 時 {appended:false, reason:\"intent-complete\"} を返し、3消費者(amadeus-grant-authorization.ts:787 throw / amadeus-presence-reservation.ts:332 throw / amadeus-mirror-state-store.ts:407 io-failure 保持)は if (!result.appended) の実制御分岐を持つ。appendJournalRecordV2(amadeus-audit.ts:391-418)は同じ seal を void で抑止。案1の主張「3消費者が移行可能になる」は不成立 — (a)3消費者は withAuditLock クリティカルセクション内で lock-held 変種を呼ぶ(grant-authorization.ts:765-776 の入れ子 withAuditLock、presence-reservation.ts:316-325)のに対し、emitEvent 経路の appendJournalRecordV2 は生 acquireAuditLock(mkdir 非再入、amadeus-lib.ts:5818)を自前取得するため lock 内呼出しはタイムアウト throw、(b)emitEvent(logger-provider.ts:45-81)は intent/space 引数を持たず activeIntent を解決するが3消費者は明示 intent(marker.targetIntentDir / config.intent)を指定 — 戻り値伝播に加え lock 再入と intent 指定の契約拡張が必要で、案の記載範囲(戻り値伝播)を超える。案2の「恒久保持」は U7 FD business-rules.md の BR-8(allowlist shrink-only)/BR-9(残存ゼロ=U8 削除ゲート FR-MIG-4(c) 条件)/BR-1(恒久 dual-write 禁止)と矛盾し、承認済み要件の変更に該当。Adapter 側 intentStatusForAudit 先読みは performance-design.md:15(BR-2: I/O・ロック・動的 import 追加禁止)で禁止済み、無条件 appended:true は検証劇場 Forbidden。残る解空間はいずれも承認済み要件・cross-unit 契約の調整を伴うためユーザー専権(エスカレーション正準リスト(4)仕様変更)。",
+  "submittedAt": "2026-07-30T10:15:41Z"
+}

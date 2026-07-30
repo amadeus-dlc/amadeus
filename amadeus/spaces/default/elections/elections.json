@@ -46,5 +46,35 @@
     "dirName": "260724-e-tlacg13",
     "createdAt": "2026-07-24T16:01:57Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-U7CG-Q1",
+    "dirName": "260730-e-u7cg-q1",
+    "createdAt": "2026-07-30T10:06:00Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-U7CG-Q2",
+    "dirName": "260730-e-u7cg-q2",
+    "createdAt": "2026-07-30T10:06:00Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-U7CG-Q3A",
+    "dirName": "260730-e-u7cg-q3a",
+    "createdAt": "2026-07-30T10:11:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-U7CG-Q3B",
+    "dirName": "260730-e-u7cg-q3b",
+    "createdAt": "2026-07-30T10:11:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-U7CG-Q2R",
+    "dirName": "260730-e-u7cg-q2r",
+    "createdAt": "2026-07-30T10:34:25Z",
+    "status": "recorded"
   }
 ]
