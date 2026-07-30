@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "両候補の前提を独立実測して成立を確認した。c1: `gh pr list --search \"1742 in:body\" --state all` は PR #1758 (OPEN, 'fix(sensor): scope artifact checks to declared outputs') を1件返し、本文が Issue #1742 を対象と明記。ノルム面のギャップも実測 — pre-filing-dup-and-branch-check (team.md:97) は `gh issue list` による起票前の重複検査であり着手時の PR 棚卸しではない。priority-vs-dependency (team.md:96) の (3)「進行中 PR と同じ層を触る修正は…非交差を実測確認してから着手」は進行中 PR の把握を前提とするが、その把握手順自体を規定していない。resume-ledger-rebuild (team.md:259) は leader の resume 時の承認待ち台帳再構築で、バグ batch 起動時の Issue 別 PR 検査ではない。memory 層全体の `gh pr list` grep も 0 hit。c1 はこの空白を埋め、priority-vs-dependency (3) が前提とする入力を供給する補完関係にある。c2: 前回・前々回 observed (278d61d8e, 22ee27dbe) はいずれも `git rev-list --parents -n1` が 3語 = ローカル merge コミット (subject も 'Merge remote-tracking branch origin/main' / 'Merge branch main of ...') で、HEAD・origin/main の双方に対し `merge-base --is-ancestor` exit 1。実際に採用された base 8b8016f62 は非 merge (parents 2語) かつ origin/main の祖先 (exit 0)。さらに今回の observed c42ef4d77 も 3語 = ローカル merge かつ origin/main 非祖先 (exit 1) — すなわち c2 が指摘する欠陥は現断面でも現存し、次回 RE で再び非祖先化することが予測される。既存 rescan-base-ancestry は読み手側 (base 採用前の祖先性判定) を縛るが書き手側 (observed に何を記録するか) を縛っておらず、c2 はその対称面を埋める。3/3 の observed が同一様式で失敗している再現性から、単なる実践再記録ではなく原因側の追補価値があると判断する。",
+      "submittedAt": "2026-07-30T15:45:44Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "c2 の追補文言は『HEAD 祖先であること』ではなく『origin/main の祖先であるコミット(または merge-base)を observed に記録する』と書くこと。実測では現 observed c42ef4d77 は HEAD 祖先(exit 0)だが origin/main には未達(NOT-IN-ORIGIN-MAIN)であり、HEAD 祖先性だけを書き手側基準にすると同じ失敗が次回も再現する。また c2 は独立 cid を新設せず rescan-base-ancestry への追補として統合し、c1 は priority-vs-dependency (3)(進行中 PR と同層の修正は着地待ちか非交差実測)との重複を避けて『発見手順(着手時の gh pr list 棚卸し)と Bolt 形状(再実装でなく収束)』の面に限定して書くこと。",
+      "rationale": "独立実測: (1) c1 — gh pr view 1758 で PR #1758 が OPEN(draft)・head fix/1742-sensor-artifact-selection・本文に Closes #1742 を確認。変更ファイルは amadeus-orchestrate.ts / amadeus-graph.ts / stage-graph.json ほか全ハーネス dist に及び、#1750 との交差直列化の判断根拠が実在する。既存ノルムの空白も確認: memory 層に `gh pr list` の記載は 0 件、pre-filing-dup-and-branch-check は起票前の Issue 重複検査であって着手時の既存 PR 棚卸しではない(team.md:97 実読)。priority-vs-dependency (3) は交差時の扱いを定めるが、既存 PR を発見する手順と『再実装でなく収束へ Bolt 編成』は定めていない。よって c1 は実在の空白を埋める。 (2) c2 — reverse-engineering-timestamp.md の直近3 observed を実測: 278d61d8e(2親 merge, NOT-ANCESTOR, origin/main 未達)、22ee27dbe(2親 merge, NOT-ANCESTOR, origin/main 未達)、c42ef4d77(2親 merge, ANCESTOR だが origin/main 未達)。3件とも未 push のローカル merge コミットであり、非祖先化は偶発でなく構造的に反復している。既存 rescan-base-ancestry は読み手側(base 選択)のみを縛り、書き手側(何を observed に記録するか)は無規定なので、原因側の追補には実効がある。以上より c1+c2 採用(choice 2)。",
+      "submittedAt": "2026-07-30T15:46:34Z"
+    }
+  ],
+  "late": []
+}

@@ -1,6 +1,10 @@
 # API ドキュメント
 
-## SKILL/reviewer 2件が修復する内部契約（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件が触れる内部契約（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+**判断: 現時点で実質更新なし（修正方式の裁定後に要再訪）。** 区間 `8b8016f62..c42ef4d77` で公開 CLI verb・型・戻り値の契約変化はない。ただし5件のうち3件は**修正時に内部契約を変える可能性がある** — #1750 は `MirrorBoundary` 型への新種別追加と `MIRROR_BOUNDARY_PHASES`（`amadeus-state.ts:221`）の receipt 表現、#1742 は sensor-fire hook の対象決定契約（`matches` 単独 → `matches` × 宣言 produces）、#1734 は `scopeGridInSync` / `mergeScopeGrid`（`scripts/promote-self.ts:130-142` / `:147-160`）の write⇔check 対称性。いずれも修正方式が未裁定のため、契約面の記述は Requirements / Functional Design での裁定後に更新する。
+
+## SKILL/reviewer 2件が修復する内部契約（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 測定 ref: すべて observed `278d61d8e`。
 

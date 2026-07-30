@@ -708,5 +708,12 @@
     "dirName": "260730-skill-reviewer-fixes",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fb39f-6bc0-7944-a4c6-153a150895a8",
+    "slug": "open-bug-batch-2",
+    "dirName": "260730-open-bug-batch-2",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

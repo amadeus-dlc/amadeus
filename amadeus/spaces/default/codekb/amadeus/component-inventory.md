@@ -1,6 +1,10 @@
 # コンポーネント棚卸し
 
-## SKILL/reviewer 2件の対象コンポーネント（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の対象コンポーネント（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+**判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77` で新規コンポーネント（core tool / sensor / hook / scope）の追加・削除はない。5件の患部はいずれも既存コンポーネント内にあり、所有関係も不変 — #1750 = `amadeus-mirror-lifecycle.ts` + `amadeus-orchestrate.ts`、#1749 = `stage-protocol-governance.md`、#1742 = `amadeus-sensor-fire.ts`、#1735 = `amadeus-election/SKILL.md` + `stage-protocol.md`、#1734 = `scripts/promote-self.ts`。個別の配置と行番号は `code-structure.md` の対応節を参照。
+
+## SKILL/reviewer 2件の対象コンポーネント（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 | Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
 | --- | --- | --- | --- | --- |

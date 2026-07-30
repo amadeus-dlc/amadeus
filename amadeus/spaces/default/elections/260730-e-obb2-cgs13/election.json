@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OBB2-CGS13",
+  "kind": "s13-learning-selection",
+  "question": "intent 260730-open-bug-batch-2 / code-generation の §13 学習選定。候補1件(diary: construction/code-generation/memory.md):\n\n[c1] 複数 unit を並行 worktree で batch 実装した degrade intent では、build 時に engine 解決 directive を捕捉していないため、全 unit covered 後の §12a で engine emit が裁定 B どおり fail-closed になり、conductor の手動解決 directive が再び必要になった(B&T §13 追補の退行条項に形式該当するが、engine 欠陥ではなく運用ギャップ)。persist 候補文: 「複数 Bolt の degrade intent を並行実装するときは、各 unit の実装開始前に unit dir を1つずつ遅延作成し、その時点の engine 解決 directive(uncovered-unique で当該 unit へ解決される)を record 外 scratch へ保存して §12a で再利用する — 全 unit covered 後の engine emit は設計どおり fail-closed のため、build 時捕捉が唯一の in-band 経路」。\n\n問い: persist するか。実在根拠(diary、E-OBB2-CG1 record、engine の fail-closed 実装)を実測確認して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1 を採用 — project 層 Corrections へ persist(degrade batch 実装の directive 捕捉手順)"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件採用 — intent record の記録で足りる"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

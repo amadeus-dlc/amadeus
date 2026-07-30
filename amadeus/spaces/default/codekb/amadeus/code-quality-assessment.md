@@ -1,6 +1,43 @@
 # コード品質評価
 
-## SKILL/reviewer 2件の品質評価（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の品質評価（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+本節の file:line はすべて observed `c42ef4d77` 時点。
+
+### 根因確度
+
+| Issue | 根因 | 確度 | 未裁定事項 |
+| --- | --- | --- | --- |
+| #1750 | boundary 種別集合に intent 誕生時点が無く、初回 create が `intent-capture` の EXECUTE に暗黙依存（`amadeus-mirror-lifecycle.ts:640-661` / `amadeus-orchestrate.ts:4492`） | 機序 100% | 新種別追加 vs 既存 phase 経路への条件追加。receipt 表現（`MIRROR_BOUNDARY_PHASES` 拡張 vs `createIdentity` をべき等キーに使う）も未裁定 |
+| #1749 | governance protocol 正本1行の誤記が生成面12 + docs 2へ機械投影（`stage-protocol-governance.md:22`） | 100% | drift guard の実装形。既存に本契約の検査テストがあるかは**未確認**（不在主張ではない） |
+| #1742 | 発火対象の決定が `matches` glob のみで、宣言 produces との照合が無い（`amadeus-sensor-fire.ts:199-202`、`produces` 参照 = 0） | 100% | `{unit-name}` 解決の seam をどこへ置くか（`amadeus-lib.ts` への抽出 vs directive 解決結果の受け渡し） |
+| #1735 | auto-solo 発動指示がハーネス依存のアンビエント層と選挙 SKILL にしか無い（唯一の所在 = `SKILL.md:28`） | 機序 高（設計ギャップとして確定）／ codex 実行時の非投入は Issue の一次証拠（選挙0件）と AGENTS.md の on-demand 記述からの推論 | 中立層（stage-protocol §13）への焼き込み vs ハーネス固有追記 |
+| #1734 | apply（`mergeScopeGrid` `:147-160`）が書く順序を check（`scopeGridInSync` `:130-142`）が検分しない write⇔check 非対称 | 100%（read-only シミュレーションで決定的再現） | 書込側の正準化（キー名ソート）vs 検査側の対称化。既存センサーとの責務重複の整理 |
+
+### 品質所見
+
+**1. write⇔check 非対称クラスタ（#1734、`cid:requirements-analysis:symmetric-pair-review`）** — `mergeScopeGrid` は「dist キー順 → extras 順」というオブジェクト挿入順に依存したバイト列を書き、`scopeGridInSync` は JSON 意味比較（dist キーの包含 + 値一致）しか行わない。**check は apply の出力を検分していない**ため、apply が churn を出す状態を check は sync と判定する。この形状は前 intent（260730-skill-reviewer-fixes）の #1711 で観測された produces/consumes の片側実装と同型であり、bootstrap 由来バグの過半を占める非対称クラスタが継続していることを示す。修正時は他の対操作（resolve⇔commit、emit⇔terminal、fork⇔merge）にも同型が無いか棚卸しする（`cid:code-generation:same-root-inventory`）。
+
+**2. Issue 本文の「削除」誤読 — 訂正済み（#1734）** — Issue は「amadeus-bugfix / amadeus-feature / amadeus-refactor のエントリが self-install ツリーから削除される」と記述するが、read-only シミュレーション（Issue 記載の base `c48877451` の実バイトへ `mergeScopeGrid` 相当を適用）では insertions 144 / deletions 144 で **extras 4件は全て merged に保存されている**。144行の正体は削除ではなく**末尾への移動**（4エントリ × 36行）であり、Issue の記述は移動 diff の削除側半分の誤読である。この訂正は修正スコープの縮小に直結する（データ喪失バグではなく順序安定性バグ）。要件段でこの訂正を明示的に引き継がないと、存在しないデータ喪失への対策が設計に入る。
+
+**3. 現 HEAD では #1734 の症状が再現しない** — `.codex` の現状は dist 10キー + extras 4キー（`self-*`）が既に dist 順 → extras 順に並んでおり、`mergeScopeGrid` 相当の再適用結果は現ファイルと**バイト一致**（16673 bytes 同士、difflines 0）。#1683 `dd8532d1c` で `amadeus-*` → `self-*` 改名と全ハーネス統一が着地し、一度 apply された結果が commit されたため。**潜在欠陥は残存**（dist に無い extras が dist キーより前に並ぶ状態が再び生じれば発火する）が、落ちる実証には状態の再構成が要る。修正の受け入れ基準を「現状で churn が出ないこと」に置くと検証劇場になる（org.md Forbidden）— 前状態を再構成した回帰テストが必要。
+
+**4. ハーネス依存の文脈投入ギャップ（#1735）** — 発動ノルムがハーネス非依存層に無いことは、codex 固有の不具合ではなく**設計上の単一障害点**である。claude で動いていたのは `@`-import スタブによる常時投入という偶然の投入方式に依存していたためで、kimi / kiro / cursor / opencode でも同じ穴が開いている可能性がある（**未実測** — 他ハーネスの include 方式は本スキャンで確認していない）。codex 固有面への追記のみで閉じると同型が他ハーネスで再発する。あわせて、`stage-protocol.md` §13 が選挙に一切言及しない（`election|選挙` grep ヒット 0）ことは、engine 指令駆動ループの外に置かれた規範が実行されないという既知パターン（`cid:code-generation:code-generation:bolt-pr-taskization`）の再現である。
+
+**5. テスト契約の構造的盲点（#1742）** — `t94:298-306` と `t95` の11箇所が**非宣言成果物 `intent.md` への発火を正の期待値として固定している**。すなわち現行のバグ挙動がテストでピンされており、修正は必然的にテスト契約の明示的改訂を伴う。実装者の単独判断で期待値を書き換えず、要件・設計段で改訂を宣言してから進める（`cid:requirements-analysis:implementation-deviation-election`）。逆に、`codekb/` 配下の宣言済み成果物が発火 0 である欠落側は既存テストで一切カバーされていない（過剰発火のみが検査対象になっている非対称）。
+
+**6. fail-closed 側が正しく、指示側が誤っている（#1749）** — engine（`amadeus-state.ts:330-334`）とステージファイル（`approval-handoff.md:98` ほか）は正準名で一貫しており、誤っているのは governance protocol 1行のみ。既決ノルム `cid:approval-handoff:c2`（project.md:127）は2026-07-08 時点でこの不一致を認識し「ステージファイル準拠を優先する」と運用回避を宣言していた。**約3週間、正本の誤記を運用知識で迂回し続けていた**ことになる。運用回避をノルムに書いた時点で正本修正の Issue 化が起きていれば、生成面12ファイルへの投影を待たずに閉じられた。
+
+### 検証順序の推奨
+
+1. #1749（散文のみ、engine 挙動に触れない）— 先行着地して差し支えない。
+2. #1734（scripts のみ、配布面に触れない）— 独立。ただし回帰テストは前状態の再構成を要する。
+3. #1735（protocol 正本 → 全ハーネス投影）、#1742（hook 正本 → 全ハーネス投影）— どちらも `packages/framework/core/` を触り `dist:check` / `promote:self:check` の再生成を伴う。**ファイル単位では非交差**（protocol md と hook ts）だが、生成面の再生成が競合するため PR の着地順に注意する（`cid:code-generation:c6` の実 diff 再評価）。
+4. #1750（mirror 層 + receipt スキーマの可能性）— 最も設計裁定が重い。receipt 表現の選択次第で影響面が変わる。
+
+なお本 intent は `self-fix` スコープで走るため units-generation を SKIP する。自らの code-generation ステージが degrade 経路を通るが、本区間で着地した #1760（`e839b20ce`）が `{unit-name}` 解決を実装済みのため、前 intent で必要だった運用回避（`cid:code-generation:degrade-scope-unit-dir-layout`）は不要になっている可能性がある（**未検証** — 実行時に確認する）。
+
+## SKILL/reviewer 2件の品質評価（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 測定 ref: すべて observed `278d61d8e`。本 scan は静的解析であり、テスト・full suite は未実行。
 

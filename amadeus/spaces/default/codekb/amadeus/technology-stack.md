@@ -1,6 +1,10 @@
 # 技術スタック
 
-## SKILL/reviewer 2件の技術断面（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の技術断面（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+**判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77`（12コミット）で core tools・sensors・hooks・scopes のいずれも件数変化がなく、ランタイム・依存・ツールチェーンの構成も不変。5件のバグはすべて既存構成内の欠陥であり、技術スタックの断面としては直前節（`260730-skill-reviewer-fixes`、observed `278d61d8e`）の記述がそのまま有効である。区間の変化は `amadeus-orchestrate.ts` への関数追加（#1760）・SKILL.md の文言修正（#1753）・`scripts/formal-verif/` の parse 修正（#1745）に留まる。
+
+## SKILL/reviewer 2件の技術断面（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1736 / #1711）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない。
 

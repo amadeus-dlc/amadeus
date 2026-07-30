@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "0件採用にあたり、本件の再発時に conductor が「未記録の運用ギャップ」と誤認しないよう、当該 intent の diary(construction/code-generation/memory.md:8 Deviations)へ既存 cid:code-generation:degrade-scope-unit-dir-layout(E-TPRCGS13 追補)への参照を1行追記し、解決手順が既決であることを record 側で辿れるようにすることを条件とする。",
+      "rationale": "実測3点により c1 の persist に反対し 0件採用を支持する。(1) c1 の中核主張『build 時捕捉が唯一の in-band 経路』は反証される — 既存ノルム cid:code-generation:degrade-scope-unit-dir-layout の E-TPRCGS13 追補(amadeus/spaces/default/memory/project.md:163、実文『conductor は実 unit ディレクトリ名(fix slug)で produces/consumes を解決した directive JSON を scope へ渡してから §12a を開始する』)が、degrade スコープで engine directive の {unit-name} が解決されない場合の手順を既に定めている。本 intent の conductor が実際に採ったのはこの既決手順であり(diary construction/code-generation/memory.md:8『conductor が実 unit 名で解決した directive を scope へ渡す』)、§12a は成立している。すなわち解決経路は既に存在し既にノルム化済みで、c1 は未決ギャップではなく既決手順の再発見にあたる。既決ノルムを新 cid として重複 persist することは team.md の no-election-for-decided-norms(既決規範はそのまま適用)および norm-consistency-review(重複の棚卸し)に反する。(2) c1 が提案する代替機構は、直前の裁定 E-OBB2-CG1 で両投票者が明示的に退けた形である — subagent-1 rationale 実文『エンジンが所有すべきループ制御を人間手順の帯域外状態へ移すもの』、subagent-2 rationale 実文『保存 directive の再利用はセッション再起動・コンテキスト喪失に対して脆い』(ledger.json、両票 2026-07-30T16:35:58Z / 16:37:53Z)。同一セッションの直近裁定で fragile と判定された機構を、その翌ステージで推奨手順として persist するのはノルム内の矛盾を新規に作る。(3) c1 の手順は実コストを伴い便益がない — 『各 unit の実装開始前に unit dir を1つずつ遅延作成』は unit dir 作成の直列化を要求し、team.md parallel-bolts(最大4 builder の並行実装)および本 intent が実際に採った6 unit 並行 worktree batch と構造的に衝突する。他方、既存手順(実 unit 名で directive JSON を手解決)は coverage 状態・並行度・セッション再起動のいずれにも依存せず成立する。なお c1 の事実記述自体は正しい — resolveDegradeUnit(packages/framework/core/tools/amadeus-orchestrate.ts:3086-3100)は candidates.length !== 1 かつ uncovered.length !== 1 のとき unit: null を返し、6 unit 全 covered では uncovered.length === 0 のため fail-closed になる。これは :3076-3079 のコメント実文『The asymmetry with the all-covered MULTI-unit arm, which refuses, is the presence of ambiguity』のとおり設計どおりの挙動であり engine 欠陥ではない(diary の自己判定と一致)。事実が正しいことと、新規ノルムとして persist すべきことは別であり、本件は既存 cid の適用で閉じる。",
+      "submittedAt": "2026-07-30T21:11:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB2-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の persist にあたり次の2点を条件とする。(1) 独立した新規 Corrections 項として立てず、cid:code-generation:degrade-scope-unit-dir-layout 系(具体的には project.md:269 の cid:build-and-test:c1-degrade-interim-retired)への追補として書き、その退行条項『手動解決が再び必要になった場合は退行として扱い Issue 起票する』の適用範囲を明示的に狭めること — 複数 unit dir が全 covered の degrade batch は amadeus-orchestrate.ts:3015-3018 の設計どおりの fail-closed であり退行ではない(Issue 起票不要)。狭めずに c1 だけを足すと、既存条項と『設計どおりだから起票しない』という c1 の前提が正面から矛盾したまま残る(cid:requirements-analysis:norm-consistency-review)。(2) 『unit dir を1つずつ遅延作成』はディレクトリ作成の順序付けのみを指し、並行 worktree 実装そのものを直列化する指示ではないことを本文に明記すること — 無条件に読むと cid:requirements-analysis:parallel-bolts(1 intent あたり最大4 builder の並行実装)と衝突する。あわせて、保存 directive がセッション再起動・コンテキスト喪失で失われた場合の復旧手段(unit dir 名と node.produces から conductor が手動解決する従来手順)を fallback として1行残すこと — 私自身が E-OBB2-CG1 の票で『保存 directive の再利用はセッション再起動・コンテキスト喪失に対して脆い』と述べた懸念は c1 採用後も消えないため。",
+      "rationale": "実測3点により c1 の persist(選択肢1)を支持する。(1) 候補の機構記述は正確である: resolveDegradeUnit(amadeus-orchestrate.ts:3086-3099)は candidates.length===1 なら coverage を見ずに解決(E-OBB2-CG1 裁定 B)、そうでなければ uncovered.length===1 のときだけ当該 unit へ解決し、それ以外は unit:null を返す。本 intent は construction/ 配下に fix-* の unit dir が実測6件存在し全て covered のため、:3015-3018 の uncovered.length===0 分岐に落ちて『Every one of them already holds this stage's required artifacts ... Create the unit directory for this piece of work』というエラーになる — ゲート提示を求めている conductor に対して誤った指示を返す。よって『各 unit の実装開始前に dir を1つずつ作れば uncovered-unique で当該 unit へ解決される(:3098)』『全 covered 後の engine emit は設計どおり fail-closed』という候補文の2主張はいずれもコードで裏が取れる。diary(construction/code-generation/memory.md:8、2026-07-30T21:04:50Z)の記述とも一致する。(2) 現行ノルムに実在のギャップがある: project.md:269 の E-SRF-BTS13 追補2 は #1711 修正着地をもって『conductor の手動解決は不要、再び必要になったら退行として Issue 起票』と宣言しているが、その退行条項は multi-unit 全 covered という設計上の fail-closed ケースを射程から外していない。本 intent はまさにそのケースで手動解決を要したため、条項を字面どおり適用すると engine 欠陥でないものに Issue を起票することになる。0件採用(選択肢2)を選ぶと、この既知の反例を持ったまま過大な条項が memory 層に残る。(3) 既存ノルムでは代替できない: cid:code-generation:degrade-scope-unit-dir-layout の E-TPRCGS13 追補(手動解決手順)は 269 行の追補2 で明示的に退役済みであり、『退役した手順を使え』は現行ノルムからは導けない。したがって記録は intent record 内に留めず memory 層へ上げる必要がある。ただし c1 が定める『build 時に scratch へ保存して再利用』は保存物の生存に依存する運用であり、単独では復旧経路を持たない — この点を留保として付す。",
+      "submittedAt": "2026-07-30T21:12:45Z"
+    }
+  ],
+  "late": []
+}

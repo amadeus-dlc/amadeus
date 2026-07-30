@@ -1,6 +1,88 @@
 # アーキテクチャ
 
-## SKILL/reviewer 2件の対象機構（260730-skill-reviewer-fixes、現在、observed `278d61d8e`）
+## オープンバグ5件の対象機構（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+
+本節の file:line はすべて observed `c42ef4d77` 時点。5件は所有機構が互いに独立しており、1 Issue = 1 Bolt = 1 PR で並行実装できる（`cid:code-generation:c6` の非交差判定を満たす）。
+
+### 機構 A — mirror boundary の種別集合に「intent 誕生」が無い（#1750）
+
+初回 mirror create の発火は boundary 種別の受理集合に閉じている。`packages/framework/core/tools/amadeus-mirror-lifecycle.ts` の `parseBoundaryArgs`（`:640-661`）が受理するのは4種のみ:
+
+| 引数 | 生成される boundary | 所在 |
+| --- | --- | --- |
+| `intent-capture` | `{ kind: "intent-capture-approved" }` | `:647` |
+| `phase --phase <p>` | `{ kind: "phase-verified", phase }` | `:651` |
+| `park --stage <s>` | `{ kind: "parked", stage }` | `:655` |
+| `completion` | `{ kind: "workflow-completed" }` | `:658` |
+
+加えて `manual`（`:633`）。**intent 誕生に対応する種別は存在しない。**
+
+発行側は2経路。(1) `intent-capture` boundary の発行元は report ハンドラ内の1箇所のみで、`amadeus-orchestrate.ts:4492` の `const intentCaptureMirror = slug === "intent-capture" ? … : ""` が唯一 — **`intent-capture` が SKIP されると発行機会が構造的に消える**（実装の不発ではなく契約上の不在）。(2) phase boundary は `currentMirrorBoundaryPhase()`（`:263`）が `PREVIOUS_BOUNDARY_BY_PHASE`（`:256`、`{ inception: "ideation", construction: "inception", operation: "construction" }`）を引き、「次フェーズの最初の in-scope ステージに立った瞬間」だけを boundary と見なす。
+
+`self-fix` スコープの ideation は全 SKIP（`.codex/tools/data/scope-grid.json` の `self-fix` = EXECUTE が `workspace-scaffold` / `workspace-detection` / `state-init` / `reverse-engineering` / `requirements-analysis` / `code-generation` / `build-and-test` の7ステージのみ。`intent-capture` / `approval-handoff` はいずれも `SKIP`）。したがって最初の eligible boundary は Inception 完了時の `phase-verified` となり、Issue の症状と整合する。
+
+**根因**: 初回 create の発火契約が「Ideation に `intent-capture` が EXECUTE で存在すること」に暗黙依存している。
+
+**修正候補の挿入点**: 新種別 `intent-initialized` を `parseBoundaryArgs`（`:640-661`）と `MirrorBoundary` 型・受理側 contract に追加し、発行は `emitMirrorBoundaryIfNeeded`（`:452`）／`persistedMirrorBoundary`（`:341`）／`hasPersistedMirrorBoundary`（宣言 `:359`、呼び出し `:464`）の経路へ「初回 create 未実施」条件として足す。receipt 面は `MIRROR_BOUNDARY_PHASES`（`amadeus-state.ts:221`）が phase 3値の列挙であり intent 誕生 boundary は枠外のため、receipt スキーマを変えずに済ませるなら `provenance.createIdentity`（`amadeus-mirror-lifecycle.ts:423-425`）を初回 create のべき等キーに使う案が候補（**仮説** — 未検証）。
+
+### 機構 B — phase boundary 成果物名の正本誤記（#1749）
+
+engine は fail-closed で正準名を要求する。`packages/framework/core/tools/amadeus-state.ts:330` verbatim: `const artifactPath = join(rec, "verification", \`phase-check-${phase}.md\`);`、拒否メッセージは `:332`（同ファイル `:211` のコメント、`:327` / `:334` のメッセージも同名）。ステージファイル側も正準名を指示する（`approval-handoff.md:98` / `delivery-planning.md:127` / `ci-pipeline.md:81`、`knowledge/amadeus-shared/verification.md:25`）。
+
+誤記 `[phase-boundary]-verification.md` は governance protocol 1行に由来し、生成面へ機械投影されている。**根因は正本1行**（`packages/framework/core/amadeus-common/protocols/stage-protocol-governance.md:22`）で、修正は正本1行 + `bun scripts/package.ts` + `bun run promote:self` + docs 2ファイルの日英同期。配置の全数は `code-structure.md` の対応節を参照。
+
+drift guard（Issue 受入条件）の所在は**未確認**。本契約を検査する既存テストは grep で確認できておらず、不在主張ではない（`cid:requirements-analysis:absence-claim-grep-verify`）。
+
+### 機構 C — センサー発火の対象決定が `matches` glob のみ（#1742）
+
+`packages/framework/core/hooks/amadeus-sensor-fire.ts`（280行）は active stage の `sensors_applicable` を引き（`:174-187`）、フィルタを `matches` glob 1本で決める。`:199-202` verbatim:
+
+```
+for (const entry of applicableSensors) {
+  if (!entry.matches) continue;
+  const glob = new Bun.Glob(entry.matches);
+  if (!glob.match(filePathNorm)) continue;
+```
+
+`:192` のコメントが `G1 lock-in: matches IS the filter.` と設計意図を明示する。**全280行に `produces` / `optional_produces` の参照は 0**（`grep -c 'produces'` = `0`）。
+
+manifest の glob（`.claude/sensors/`、正本 `packages/framework/core/sensors/` と同値、いずれも `:8`）: `amadeus-required-sections` / `amadeus-upstream-coverage` = `**/{amadeus-docs,intents}/**`、`amadeus-answer-evidence` = `**/*-questions.md`、`amadeus-linter` = `**/*.{ts,js}`、`amadeus-type-check` = `**/*.{ts,tsx}`。
+
+→ record 配下の `memory.md`・`learnings-selections.json` は `**/intents/**` に一致して発火し、`codekb/` 配下の宣言済み成果物は一致せず発火しない。**過剰発火と欠落は同一機序**であり、宣言 produces との照合が無いことに帰着する。
+
+**修正候補の挿入点**: `:186-202` の間に解決済み produces 集合との照合を挿入する。`GraphStage` は既に `produces: string[]`（`amadeus-graph.ts:144`）と `optional_produces?: string[]`（`:147`）を持つため、hook は追加ロードなしに宣言集合へ到達できる。ただし per-unit ステージの `{unit-name}` 解決が要り、**本区間で着地した #1760（`e839b20ce`）の `degradeUnitDirectories()` / `emitRunStageForSlug(…, unit)` がその解決ロジックの既存所在**である。hook が `amadeus-orchestrate.ts` を import する形は現状無いため、`amadeus-lib.ts` 側への seam 抽出が自然（**仮説**）。代替案（directive が解決した produces を一時ファイル/state へ落として hook が読む）は、Issue 受入条件「stage 遷移・resume・`--single` で過去 invocation の解決結果を再利用しない」を満たす失効管理を要する。
+
+### 機構 D — auto-solo 発動指示がハーネス依存層にしか無い（#1735）
+
+CLI 側は健全: `packages/framework/core/tools/amadeus-election.ts:350` `if (trigger !== "auto-solo")`、`:360` `out({ opened: null, reason: "auto-solo-election-disabled" })`。設定キーは `amadeus-mirror-config.ts:53` / `:82`。
+
+「3類型（設計逸脱・ブロッカー・§13 学習選定）で自動発動せよ」の**唯一の指示所在は `packages/framework/core/skills/amadeus-election/SKILL.md:28`**（`grep -rn 'auto-solo' packages/framework/core/ packages/framework/harness/` のヒットは `amadeus-election.ts:66/350/360`、`amadeus-mirror-config.ts:6/53/82`、この SKILL.md の計7行のみ）。codex 固有面に同等物は無いが、**claude 固有面にも無い** — 差はハーネス固有ファイルの有無ではなく、メソッド層（team.md）の文脈投入方式にある。
+
+- claude: `@`-import スタブが `org/team/project.md` 等を列挙し、**アンビエントに常時投入**。
+- codex: `dist/codex/AGENTS.md:62` verbatim — 「Codex auto-merges the root `AGENTS.md` and the orchestrator injects an `@amadeus/spaces/default/memory/…` prompt mention to pull specific method files into context **on demand**」→ モデル駆動の `@`-mention 解決。conductor が読みに行かない限り team.md の発動ノルムが文脈に入らない。
+
+加えて `stage-protocol.md` §13 には選挙への言及が皆無（同ファイル全域の `election|選挙` grep がヒット 0。手順は memory.md → surface → 構造化質問 → admission conflict-check → persist で完結し選挙フックが無い）。
+
+**根因**: auto-solo 発動を、ハーネス非依存で必ず文脈に入る層（stage-protocol / engine directive）ではなく、ハーネス依存のアンビエント規範と「開くと決めた後にしか読まれない」選挙 SKILL にのみ置いた設計ギャップ。第一候補は stage-protocol §13 への明文化（全ハーネス配布面へ機械投影されるため codex 固有追記が不要になる）。codex 固有面への追記のみの単独採用は、他ハーネスで同じ穴が再発しうるため非推奨（**仮説** — 他ハーネスの include 方式は未実測）。
+
+### 機構 E — promote:self の write⇔check 非対称（#1734）
+
+`scripts/promote-self.ts`:
+
+- `:125` — `export const SCOPE_GRID_RE = /^\.[^/]+\/tools\/data\/scope-grid\.json$/;`
+- `:147-160` `mergeScopeGrid` — dist キーを先に置き、self 側だけの extras を末尾へ付ける。`const merged: Record<string, unknown> = { ...w }; for (const k of extras) merged[k] = g[k];` → **キー順の由来は JS のオブジェクト挿入順**（dist キー → extras）。ソートは無い。`extras.length === 0` なら `return want`。
+- `:130-142` `scopeGridInSync` — `for (const key of Object.keys(w)) { if (!(key in g)) return false; if (JSON.stringify(g[key]) !== JSON.stringify(w[key])) return false; } return true;` → **比較は dist キーの包含+値一致のみの JSON 意味比較**。キー順も extras の有無も見ない。
+- 適用側 `:504`、比較側 `:479`。
+
+→ apply が書く順序を check が検分しない**非対称（write⇔check）**であり、Issue の指摘(b)は成立する。
+
+**重要な訂正 — 「削除」ではなく「移動」**: Issue 本文の「amadeus-bugfix / amadeus-feature / amadeus-refactor のエントリが self-install ツリーから削除される」は、移動 diff の削除側半分の誤読である。Issue 記載の base `c48877451` の実バイトへ `mergeScopeGrid` 相当を適用した read-only シミュレーションでは insertions 144 / deletions 144、**extras 4件は全て merged に保存されている**。`.codex` 側で amadeus-* 4件が先頭（アルファベット順）にあり merge 後は末尾へ回るため、4エントリ × 36行 = 144行が移動する。修正スコープの縮小に直結する訂正。
+
+**現 HEAD では churn は再現しない（実測）**: `.codex` = dist 10キー（`chore` / `enterprise` / `feature` / `fix` / `infra` / `mvp` / `poc` / `refactor` / `security-patch` / `workshop`）+ extras 4キー（`self-document` / `self-feature` / `self-fix` / `self-refactor`）で、既に dist 順 → extras 順に並ぶ。`mergeScopeGrid` 相当の再適用結果は現ファイルと**バイト一致**（16673 bytes 同士）。#1683 `dd8532d1c` で `amadeus-*` → `self-*` 改名と全ハーネス統一が着地し、一度 apply された結果が commit されているため。churn は「dist に無い extras が dist キーより前に並んでいる」状態でのみ発火する。
+
+**修正候補**: (a) 書込側の正準化 = `mergeScopeGrid`（`:147-160`）で `merged` をキー名ソートして直列化する（冪等な正準順）。(b) 検査側の対称化 = `scopeGridInSync`（`:130-142`）を `mergeScopeGrid(got, want)` の出力と `got` の比較にすれば write⇔check が定義上対称になる。既存センサー `.claude/sensors/amadeus-self-scope-consistency.md:8`（`matches: "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}"`、#1683 で新設）が本ファイルを既に監視対象にしているため、修正時は責務の重複／相補を確認する。
+
+## SKILL/reviewer 2件の対象機構（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
 
 測定 ref: すべて observed `278d61d8e`。base `22ee27dbe`、距離 34 commits。
 

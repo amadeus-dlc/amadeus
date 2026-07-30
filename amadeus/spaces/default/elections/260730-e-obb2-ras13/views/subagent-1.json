@@ -1,0 +1,16 @@
+{
+  "electionId": "E-OBB2-RAS13",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c2 のみ採用 — 「規範を引用する成果物の編纂では、引用した規範を同一文書の自分の記述へ自己適用チェックする」を追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件採用 — 両候補とも既存 cid の実践記録で persist 不要"
+    }
+  ]
+}

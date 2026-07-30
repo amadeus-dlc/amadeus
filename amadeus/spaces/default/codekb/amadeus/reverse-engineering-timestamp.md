@@ -1,6 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260730-skill-reviewer-fixes）
+## 実行メタデータ（現在: 260730-open-bug-batch-2）
+
+- Date: `2026-07-30T15:34:39Z`
+- Base commit: `8b8016f62`（observed の祖先、`git merge-base --is-ancestor 8b8016f62 HEAD` exit 0）
+- Observed commit: `c42ef4d77ef79d4230efe4fdac5d0d7abf7155f2`
+- Distance: `12 commits`
+- 区間規模: `116 files changed, 4276 insertions(+), 181 deletions(-)`。生成面（`dist/`）・self-install 面・`amadeus/` record を除く比較断面は `26 files changed, 997 insertions(+), 81 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 5件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1750](https://github.com/amadeus-dlc/amadeus/issues/1750)（Ideation SKIP スコープで初回 auto-mirror create が Inception 完了まで遅延）、[#1749](https://github.com/amadeus-dlc/amadeus/issues/1749)（phase boundary 成果物名の不一致）、[#1742](https://github.com/amadeus-dlc/amadeus/issues/1742)（非成果物へのステージセンサー発火）、[#1735](https://github.com/amadeus-dlc/amadeus/issues/1735)（codex ハーネスで auto-solo-election が不発）、[#1734](https://github.com/amadeus-dlc/amadeus/issues/1734)（promote:self の scope-grid キー順 churn）
+- Scan mode: Developer の静的差分スキャンを上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 区間の主要変化: degrade スコープの per-unit directive で `{unit-name}` を実ディレクトリへ解決（#1760 `e839b20ce`、`degradeUnitDirectories()` / `degradeUnitResolutionError()` 新設）、SKILL.md の new-work 経路ツール名修正（#1753 `042237263`）、TLC 標準モジュール parse の tmpdir 追従（#1745 `8bb81c2e7`）。残りは前 intent の record 同期・dist 畳み込み・metrics スナップショット。
+- 引用再確認の相違: Developer 報告の主要引用は**全件一致**（boundary 4種・intent-capture 発行元・phase-check 正準名・誤記18ファイル・センサー matches-only フィルタ・election 2箇所・SKILL.md 唯一所在・promote-self 非対称・HEAD churn 非再現）。関数の行**範囲**表記に3点の軽微な精密化 — (a) `scopeGridInSync` は `:130-142`（報告 `:130-144`） (b) `mergeScopeGrid` は `:147-160`（報告 `:147-159`） (c) `hasPersistedMirrorBoundary` は宣言 `:359`・呼び出し `:464`（報告は `:458-465` として呼び出し側のみを指していた）。いずれも所在・意味論は一致し、結論に影響しない。
+- 現在マーカーの降格: 直前の現在断面 `260730-skill-reviewer-fixes`（observed `278d61d8e`）を本節の新設に伴い履歴へ降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 直前の現在節が宣言する observed `278d61d8e` は現 HEAD の**祖先ではない**（`git merge-base --is-ancestor` exit 1）。その前の `22ee27dbe` も同様に非祖先（exit 1）。squash マージ運用で record ブランチの observed が `main` に残らない既知現象であり、`cid:reverse-engineering:rescan-base-ancestry`（祖先性を判定してから base を採用）に従い、HEAD の祖先である `8b8016f62` を差分 base として採用した。
+- Updated artifacts: 実質更新4件 = `architecture.md`（5バグの機構節）、`code-structure.md`（患部配置と区間の構造変化）、`code-quality-assessment.md`（根因確度と品質所見6件）、`business-overview.md`（利用者影響と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md` — 本区間で構成カウント・コンポーネント集合・公開契約・依存方向のいずれも変化がなく、5バグはすべて既存構成内の欠陥のため、現在マーカーの整合（`cid:reverse-engineering:c3-relabel`）を保つ目的で判断1行の現在節のみを置いた。加えて本ファイルと per-intent `re-scans/260730-open-bug-batch-2.md`。
+- Per-intent record: `re-scans/260730-open-bug-batch-2.md`。
+
+## 実行メタデータ（履歴: 260730-skill-reviewer-fixes）
 
 - Date: `2026-07-30T12:39:53Z`
 - Base commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`（observed の祖先、`git merge-base --is-ancestor` exit 0）
