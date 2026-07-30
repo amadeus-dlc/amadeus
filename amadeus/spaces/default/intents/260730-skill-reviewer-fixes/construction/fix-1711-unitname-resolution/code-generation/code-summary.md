@@ -20,7 +20,7 @@
 
 - builder が worktree 内でフルスイート `coverage:ci` を完走(実測観測: coverage/.parts 601件生成)。
 - 配送工程(push/PR)は builder 停止のため conductor が引き取り(diff stat 検分のうえ push、PR 作成)。最終判定は PR #1760 の CI(typecheck / lint / dist:check / promote:self:check / Tests / Coverage)green とする。
-- 落ちる実証は t367 の fail-closed 側・解決側の両テストが新設時に旧実装で赤であることをテスト契約の改訂自体が構成する(t186/t116 旧期待の置換 = 旧挙動では新テストが通らない)。
+- 落ちる実証(builder 遅着報告 2026-07-30T14:44Z の吸収で確定): fix コミット後に canonical+dist 両面へ pre-fix 挙動を checkout 注入し t367 が 0 pass / 9 fail(test 3 の失敗文言が Issue 症状 `required review artifact is missing: …/construction/{unit-name}/…` と逐語一致)→ 復元で 9/9 green・fix コミットと差分ゼロ(stash 不使用・1セット完結)。
 
 ## 逸脱
 
