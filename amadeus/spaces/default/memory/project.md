@@ -299,3 +299,6 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 ## Reliability
 - Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する (learned 2026-07-23) <!-- cid:nfr-design:c3 -->
+
+## swarm 経路の unit 成果物は conductor が finalize 後に事後作成する
+- gated swarm 経路の code-generation では、engine の per-unit 完了判定は record の unit 成果物(code-generation-plan.md / code-summary.md)の実在で行われる(unitCovered = amadeus-orchestrate.ts:2787-2808 の existsSync 判定、firstUncoveredBatch :2590-2606、tryEmitSwarm :2666-2710 — 承認状態は参照しない)。swarm worker は record を書かないため、batch merge・approve-batch 後も成果物が不在なら next が同一 batch の invoke-swarm を再発出し続ける。conductor は finalize 後の定型手順として、実績(着地 PR・裁定・検証結果)に基づく unit 成果物の事後作成を行う(実測: 260729-otel-upstream batch 5 で SWARM_COMPLETED(seq 2900)→ GATE_APPROVED(seq 2924)後も invoke-swarm 再発出 → 2 unit の成果物作成で run-stage gate:true へ遷移。E-OTELCG-S13 採用 2-0、GoA 1x2。cid:code-generation:degrade-scope-unit-dir-layout の swarm 経路面の補完) (learned 2026-07-31) (learned 2026-07-30) <!-- cid:code-generation:swarm-unit-artifact-backfill -->
