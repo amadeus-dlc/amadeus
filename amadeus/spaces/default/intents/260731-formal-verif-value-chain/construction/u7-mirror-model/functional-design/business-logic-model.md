@@ -55,3 +55,19 @@ docs/ 配下(既存 formal-verif 文書の並び)へ英語で: (a) モデル追�
 ## テスト設計
 
 formal-verif 系 named テスト流儀(t-formal-verif-*)で: (1) v2 スキーマの parse/validate(v1 拒否含む) (2) FormalElection 機械移行の等価性 (3) MirrorLifecycle エントリの SOURCE_DRIFT 検出(**4ファイル**のどれかを触ると赤 — reconciliation reducer 含む) (4) TLC 実行系は既存 CI ジョブ(workflow_dispatch)の run/verify が MirrorLifecycle を含む形へ拡張
+
+## Review — Iteration 2
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-31T13:38:09Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 2 NOT-READY(Critical: ProjectSyncTransition 3遷移の status 変更が列挙・ピン集合から漏れ)。予算消化後: 14遷移+4ファイルピンへ是正(ADR-4 改訂・申告付き)→ E-LSSADS13 準拠の閉包確認追加イテレーション(runtime 予算外・record 非搬送)で reviewer が 14遷移の独立再列挙一致・7除外の非 status 変更を閉包確認、残余の同根未伝播2箇所(T6/テスト設計)は conductor が是正し全域 grep 残存 0 で機械閉包。FD ステージゲートで本経緯を開示する。UTC 2026-07-31T13:21:04Z
+
+### Findings
+
+- iteration2 Critical: ProjectSyncTransition 3遷移(:114/:304/:354 の status 変更)の列挙・ピン漏れ — 14遷移+4ファイルピン(ADR-4 改訂)で是正
+- 閉包確認(予算外): 14遷移=実装の status 変更遷移全数と一致、21−14=7 除外は全て非 status 変更(reviewer 独立再列挙)
+- 残余2箇所(T6/テスト設計の旧3ファイル表現)— conductor 是正+grep 残存 0 で機械閉包(E-LSSADS13 機械クラス受理)
