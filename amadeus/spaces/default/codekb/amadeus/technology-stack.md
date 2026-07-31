@@ -1,6 +1,63 @@
 # 技術スタック
 
-## オープンバグ4件の技術断面（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## formal-verif 価値チェーンの技術断面（260731-formal-verif-value-chain、現在、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。
+
+### 形式検証層のスタック
+
+| 層 | 技術 | 所在 |
+| --- | --- | --- |
+| 仕様 | TLA+ / TLC | `specs/tla/FormalElection.tla`（identity `742b7785…`）+ `FormalElection.cfg`（`92656a5c…`） |
+| 仕様と実装の結合 | 自作 model-map（`schemaVersion 1`、entries 5 件の `{implPath, sha256}`） | `specs/tla/model-map.json` |
+| 実行器 | TypeScript / Bun 直接実行、54 ファイル | `scripts/formal-verif/` |
+| toolchain 取得 | `fs-tlc-toolchain.ts`（98,472 B、群 A 最大） | 同上 |
+| CI 実行 | GitHub Actions `ubuntu-latest`、`workflow_dispatch` 限定 | `.github/workflows/ci.yml:545`（`:547` if 条件） |
+| 配布 | Amadeus plugin（compose / projection） | `plugins/formal-model-check/` |
+| 発火 | engine の stderr advisory | `amadeus-orchestrate.ts:1293`（stage = `build-and-test`） |
+| 整合検査 | 決定的センサー `model-completeness` | `.claude/sensors/amadeus-model-completeness.md` |
+
+日常 CI からは切り離されている（`ci.yml:547` `if: github.event_name == 'workflow_dispatch'`）— `cid:build-and-test:two-layer-verification-posture` の「並行プロトコルの spec 変更時のみ専用ジョブ」という姿勢が配線として実現している。
+
+### plugin 技術面の断面
+
+- manifest は JSON 3 フィールド（`stages` / `seams` / `fragments`）。`tools` 語彙は型（`amadeus-plugin-compose.ts:105-110`）にも parser（`:330-334`）にも存在しない
+- stage は Markdown + frontmatter。`plugins/formal-model-check/stages/formal-model-check.md` の activation policy: `execution: CONDITIONAL` / `scopes: []` / `sensors: [model-completeness]` / lead `amadeus-quality-agent` / mode `inline` / phase `construction`
+- `scopes: []` は「stock workflow に所属しない opt-in ステージ」を意味する（`cid:code-generation:c9-tla-plugin-optin-grid`）
+- compile 済み表現は `.claude/tools/data/stage-graph.json`（stage 本文の `scripts/formal-verif/run-model-check.ts` 文字列が `:2436` に埋まる）
+- 配布形は 8 変種 / 38 ファイル。claude のみ `.claude-plugin/plugin.json` + `hooks/hooks.json`、他5面は `hooks/auto-compose.snippet`、opencode は hooks 面なし
+
+### 検証・計測ツールの断面
+
+| ツール | 本 intent での効き方 |
+| --- | --- |
+| `bun test` 自作ランナー（unit / integration / e2e） | formal-verif を参照する `.test.ts` 72 本（unit 29 / integration 35 / e2e 8）。e2e は CI coverage profile 外 |
+| `bun --coverage`（lcov） | spawn 盲点により formal-verif support ハーネスが計測不能 → allowlist waiver（`tests/.coverage-patch-allowlist.json:303-324`）。`cid:requirements-analysis:bun-coverage-spawn-blindspot` |
+| complexity ratchet | `tests/.complexity-baseline.json` に formal-verif 22 件（`:210-341`）。移設・削除で ordinal 照合が要る（`cid:code-generation:complexity-baseline-ordinal`） |
+| coverage patch gate | 移設で行ピンが一斉シフト → 機械 remap 必須（`cid:code-generation:c1-allowlist-mechanical-remap`） |
+| dist / self-install drift guard | plugin 正本を触ると `dist/plugins/formal-model-check/` 8 変種と self-install 面が同時に動く（`bun run dist:check` / `promote:self:check`） |
+
+### mirror 題材の技術断面（#1738 の新モデル）
+
+TypeScript の判別ユニオンで有限ドメインが表現されており、**TLA+ のモデル値へそのまま写せる**:
+
+- `amadeus-mirror-types.ts`（608 行）に 10 種の string literal union が集中（Mode 3 / Operation 3 / Boundary.kind 6 / FailureClass 14 / ReceiptStatus 7 / MutationEffect 3 / PhaseKey 5 / ProjectSyncState 3 / ProjectMutation 2 / RegistryStatus 4）
+- `amadeus-mirror-state-reducer.ts`（823 行）に遷移 21 種（inline 18 + `:113` の入れ子 `ProjectSyncTransition` 3）、終端集合 4（`:127-132`）、ガード 4（`:692-715`）、統合口 `:814`
+- 可変長要素は receipts のみ（上限 `:42` `MAX_RECEIPTS = 1000`）— TLA モデル化ではここだけが有限化パラメータになる
+
+規模: `amadeus-mirror*.ts` 25 ファイル / 12,174 行。骨格（types + reducer）は 1,431 行で全体の 12%。
+
+### 区間の技術面変化（`6e7a9d701..HEAD`、12 コミット）
+
+`126 files changed, 4214 insertions(+), 102 deletions(-)`。ソース面は 9 files / +550 / −67（amadeus/ record を除く全体は 37 files / +993 / −93）。
+
+- mirror presentation: completion 境界後の Issue Status を Completed で描画（`amadeus-mirror-presentation.ts` / `-lifecycle.ts` + dist 同期、新規 integration テスト1本）
+- テスト堅牢化3件（t259 単一プロセス交互計測 / t224 spawn 枯渇リトライ / team-up supervisor reap）
+- metrics スナップショット、coverage-patch-allowlist の微修正
+
+**formal-verif / plugin / model-map / ci.yml の実装面は区間内で一切変わっていない**（`git diff --name-only` のヒット6件はすべて本 intent 自身の record）。技術前提は前回 RE から不変。
+
+## オープンバグ4件の技術断面（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line と件数はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

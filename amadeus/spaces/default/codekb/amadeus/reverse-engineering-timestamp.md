@@ -1,6 +1,27 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260731-open-bug-batch-4）
+## 実行メタデータ（現在: 260731-formal-verif-value-chain）
+
+- Date: `2026-07-31T09:06:44Z`
+- Base commit: `6e7a9d701`（observed の祖先、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0、距離 `12`）
+- Observed commit: `da51af37533c31a9c3f4ed46bf71b5b15988b0d6`（`origin/main` head。`record: sync intent 260731-open-bug-batch-4 (4 bug fixes) with elections and §13 learning (#1834)`）
+- 作業断面: HEAD `16486d3c715eec6566a18ba03898b43e5bc3dcdc`（observed + 本 intent の record コミット1本のみ。ソース面は observed と同一）
+- Distance: `12 commits`（base→HEAD）／ observed→HEAD は `1 commit`
+- 区間規模: `126 files changed, 4214 insertions(+), 102 deletions(-)`（`git diff --shortstat 6e7a9d701..HEAD`、測定 ref = HEAD `16486d3c`）。面別内訳（`git diff --numstat` の機械集計）は `amadeus/` record `89 files / +3221 / −9`、`dist/` `14 files / +133 / −14`、self-install `10 files / +95 / −10`、`metrics/` `4 files / +215 / −2`、**ソース面 `9 files / +550 / −67`**（`amadeus/` を除く合計 `37 files / +993 / −93`）。
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 3件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1738](https://github.com/amadeus-dlc/amadeus/issues/1738)（formal-model-check の価値チェーン貫通 — advisory 発火点と新規モデル題材、多ハーネス compose）、[#1829](https://github.com/amadeus-dlc/amadeus/issues/1829)（実行器の配布自立化 — `scripts/formal-verif/` 54 本の plugin 移設と manifest スキーマ拡張）、[#1510](https://github.com/amadeus-dlc/amadeus/issues/1510)（model-map の正規更新経路 — MODEL_UNCHANGED と SOURCE_DRIFT の詰み解消）
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が確約級引用を HEAD 断面で独立再確認する直列構成（`cid:reverse-engineering:c3`）。テスト未実行、TLC 未実行。
+- 判定: **3件とも現存し、いずれも「片側だけ実装された非対称」クラス**。#1829 = projection（ディスク駆動・全走査）と compose（宣言駆動・`stageCopies` ∪ `sharedWrites` のみ）の非対称で、manifest に `tools` 語彙が存在しない。#1738 = advisory が `build-and-test` 1点・stderr 1行に閉じ、compose も `.claude/` 1面のみ（`.amadeus-plugin-src` の実在は `.claude/` だけ）。#1510 = 読取側（`tla-model-loader-internal.ts:232`）が impl-hash を照合するのに書込側（`amadeus-sensor-model-completeness.ts:650-659`）は model/cfg identity しか見ず、impl だけの変更に正規更新経路が無い。
+- 区間の主要変化: mirror presentation の completion 境界後 Status を `Completed` で描画（`9008141df`、`amadeus-mirror-presentation.ts` / `-lifecycle.ts` + dist 同期、新規 integration テスト1本 + t281 拡張）、テスト堅牢化3件（`20230b90d` t259 単一プロセス交互計測 / `7ec3e0eae` t224 spawn 枯渇リトライ / `1a3087508` team-up supervisor reap）、metrics スナップショット3件、`v0.1.7` リリース。**`git diff --name-only 6e7a9d701..HEAD | grep "formal-verif\|plugins/\|model-map\|ci.yml"` のヒット6件はすべて本 intent 自身の record ファイルであり、対象実装面（`scripts/formal-verif/` / `plugins/` / `specs/tla/` / `.github/workflows/ci.yml`）への変更はゼロ。** 本 intent の技術・依存前提は前回 RE から不変。
+- 引用再確認の相違: Developer 報告の**所在・機序・結論は全件一致**。相違・精密化は4点 — (a) mirror の遷移種数は 16 ではなく **21**（`amadeus-mirror-state-reducer.ts:55` の inline 18 種 + `:113` `| ProjectSyncTransition;` の入れ子 3 種。報告の「16」は warning 系3種を1群に畳んだ数え） (b) `tests/` の formal-verif 参照は `grep -rl` で **93 パス**（報告 82）、うち `.test.ts` は **72**（内訳 unit **29** / integration **35** / e2e 8。報告は unit 30 / integration 34） (c) `dist` の plugin 変種ファイル数は `find -type f` で **38**（報告 39。変種数 8 は一致） (d) `ci.yml` の job キーは `:545`（`:544` は `# U4 formal-model-check begin` マーカー行）、reducer の実ファイル名は `amadeus-mirror-state-reducer.ts`（報告の「reducer」略記）。いずれも実測を正とし、要件段の判断には影響しない。
+- 現在マーカーの降格: 直前の現在断面 `260731-open-bug-batch-4`（observed `6e7a9d701`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 記録済み observed のうち HEAD の祖先かつ距離最小は `6e7a9d701`（exit 0、距離 12）。前々 intent の `3f73823b1` も祖先だが距離が大きいため不採用（`cid:reverse-engineering:rescan-base-ancestry`）。merge-base 復元は不要。本 intent の observed は `origin/main` 系譜の `da51af375` を記録し、ローカル record コミット `16486d3c` は observed にしない（`cid:reverse-engineering:c2-observed-mainline-commit`）。
+- Updated artifacts: 実質更新8件 = `architecture.md`（3機構 A–E の対象機構節と相互作用表）、`code-structure.md`（54 ファイル 3+1 分類の配置・dist 8 変種・台帳2面）、`component-inventory.md`（対象コンポーネント 14 + mirror 骨格 2）、`api-documentation.md`（manifest / projection / advisory / model-map / 非対称 / mirror 遷移の6契約）、`dependencies.md`（推移閉包・台帳の直列化点・model-map の閉路）、`code-quality-assessment.md`（非対称4クラスと良い面5点）、`technology-stack.md`（形式検証層スタックと検証ツール断面）、`business-overview.md`（価値チェーンの3切断点と出荷単位）。加えて本ファイルと per-intent `re-scans/260731-formal-verif-value-chain.md`。
+- Per-intent record: `re-scans/260731-formal-verif-value-chain.md`。
+
+
+## 実行メタデータ（履歴: 260731-open-bug-batch-4）
 
 - Date: `2026-07-31T05:31:35Z`
 - Base commit: `3f73823b1`（observed の祖先、`git merge-base --is-ancestor 3f73823b1 HEAD` exit 0）
