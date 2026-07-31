@@ -1,7 +1,7 @@
 {
   "description": "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
   "direction": "shrink-only",
-  "total": 34,
+  "total": 32,
   "sites": {
     "packages/framework/core/tools/amadeus-audit.ts": {
       "appendAuditEntryUnlocked": 3,
@@ -15,15 +15,9 @@
       "appendAuditEntryUnlocked": 1,
       "appendAuditEntry": 1
     },
-    "packages/framework/core/tools/amadeus-mirror-state-store.ts": {
-      "appendAuditEntryUnlocked": 1
-    },
     "packages/framework/core/tools/amadeus-orchestrate.ts": {
       "appendAuditEntry": 1,
       "observeSubprocess": 3
-    },
-    "packages/framework/core/tools/amadeus-presence-reservation.ts": {
-      "appendAuditEntryUnlocked": 1
     },
     "packages/framework/core/tools/amadeus-state.ts": {
       "appendAuditEntryUnlocked": 3,
