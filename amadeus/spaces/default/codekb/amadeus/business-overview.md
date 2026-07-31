@@ -1,6 +1,34 @@
 # ビジネス概要
 
-## オープンバグ4件の業務境界（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 解こうとしている問題
+
+perf/ベンチマーク検証が PR ブロッキングの日常 CI に同居しているため、(a) 負荷感受性のある予算が競合ランナー上で評価され偽赤を生み、(b) 同じ integration tier が1 PR あたり最大3回（`tests` / `coverage-head` / `coverage-base`）実行されて perf コストが多重に支払われる。直近の #1797（t259 の窓分離由来の偽赤、`20230b90d` で交互計測へ是正）と #1800（spawn 枯渇のリトライ seam、`7ec3e0eae`）は、いずれもこの同居がもたらした症状である。
+
+### 利用者影響
+
+| 利用者 | 現在の影響 |
+| --- | --- |
+| PR を出す全開発者 | 負荷起因の perf 偽赤で再実行・切り分けコストが発生する。最厳予算は `t269...performance.integration.test.ts:102` の 1ms 判定で、ランナー負荷に直接晒される |
+| CI 資源の管理者 | integration tier が最大3回、加えて mirror ベンチマークが replica 3本 + aggregate（+ release gate）を消費する |
+| perf 退行を検知したい人 | 現状の予算は日常 CI の許容ノイズに合わせて緩められる圧力を受ける。分離すれば専用条件下で厳しく保てる |
+
+### 既に分離済みの境界（意思決定に効く事実）
+
+- **e2e tier は既に PR ブロック外**: `tests/run-tests.ts:197-202` の `--ci` は smoke / unit / integration のみを立て、e2e は `--release` / `--all`（`:203-211`）にしか含まれない。
+- **mirror distribution ベンチマーク鎖は既に非ブロッキング**: `distribution-release-gate`（`ci.yml:279`）は `ci-success` の `needs`（`:651-659`）に含まれず、さらに GitHub ruleset `18843917`（name `main`）の required status check は **`CI Success` 1件のみ**（2026-07-31 実測）。したがって de jure でもブロックしない。
+
+この2点から、本 intent の実質的な対象は**スイート内 perf テスト**（t258 / t257 / t259 / t269 / t292 / t-plugin-stage-discovery）に絞られる。mirror ベンチマーク鎖については、残る論点は「ブロックするか」ではなく「毎 PR でランナー時間を使い続けるか」である。
+
+### 出荷境界
+
+`self-feature` スコープ。Bolt 単位で PR を切り、`main` へスカッシュマージする。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+
+## オープンバグ4件の業務境界（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

@@ -1,6 +1,38 @@
 # 技術スタック
 
-## オープンバグ4件の技術断面（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 分離の技術断面（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line と件数はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### ランナーとテスト層
+
+| 面 | 技術 | 実測根拠 |
+| --- | --- | --- |
+| テストランナー | Bun 直実行の自作ランナー `tests/run-tests.ts`。tier は `type Level = "smoke" \| "unit" \| "integration" \| "e2e";` `:71` の4値 | ディレクトリ列挙 `levelFiles` `:839-850` |
+| 並列度 | `DEFAULT_PARALLEL = Math.min(availableParallelism(), 4)` `:45`。smoke / unit は強制直列（`:881` / `:901`）、integration / e2e は `-P N` 帯 | CI は `-P 4`（`ci.yml:189` / `:320` / `:395`） |
+| 直列ピン | basename に `.serial.` を含むファイルは帯内で直列 | `runFilesPartitioned` `:875-880` |
+| サイズ分類 | `tests/lib/test-size.ts`。注記 regex `:282` `/^\s*(?:\/\/\|#)\s*size:\s*(\S+)/i`、先頭40行走査 | `// @test-size` 綴りは**不一致**（t258 `:2` / t259 `:2`） |
+| 計測時間の報告 | `reportDynamicSizes` `:952` → `tests/logs/test-size-report.json`、標準出力 `:984-990` | `printSummary` の try/catch 内 = advisory |
+
+### perf 計測が使う時間軸
+
+- **実 subprocess 計測**: `Bun.spawnSync` ベースの子プロセスを warmup + 測定ラウンドで多数生成（t258 / t257）。ホスト負荷に直接晒される。区間で入った `t224` の `RETRYABLE_SPAWN_ERROR = /\b(?:EAGAIN|EMFILE|ENOMEM)\b/` `:90` は、この層が既に資源枯渇に触れていることの実証である。
+- **単一プロセス交互計測**: t259 が #1822 で採用した様式。両条件が同一時間窓を共有するため窓分離由来の系統誤差を消す。予算は `:121` `}, 180_000);`。
+- **in-process `performance.now()`**: t269（`:102` 1ms / `:162` 50ms）、t292（`:84` 10s）、t-plugin-stage-discovery（`:34` `COMPILE_LIMIT_MS = 10_000`）。プロセス生成コストは無いが、**絶対 ms 予算は CPU 競合をそのまま拾う**。
+
+### CI プラットフォーム面
+
+- ランナー: `ubuntu-latest`（主要 job）/ `ubuntu-24.04`（distribution 系 `:224` / `:255` / `:279`）。Bun は `oven-sh/setup-bun@v2`、`bun-version: 1.3.13`。
+- タイムアウト: `tests` `:172` 20分、`coverage-head` `:298` 20分、`coverage-base` `:358` 20分、`coverage` `:426` 5分、`typecheck` `:77` / `lint` `:98` / `distribution-contract` `:125` / `plugin-conformance-e2e` `:151` / `drift-check` `:205` 各10分、`formal-model-check` `:549` 30分、`metrics-snapshot` `:482` 5分。**`distribution-benchmark` / `-aggregate` / `-release-gate` は `timeout-minutes` を宣言しない**。
+- ブロッキング境界: `ci-success` `:648`（name `CI Success`）の `needs` `:651-659` 8件。GitHub ruleset `18843917`（name `main`）の required status check は `CI Success` の1件のみ（`gh api`、2026-07-31 実測）。
+- トリガ様式: `push` / `pull_request`（ci.yml）、`repository_dispatch`（`metrics-maintenance.yml:3-5`）、`workflow_dispatch` + tag push（`release.yml`）。**`schedule:` トリガはリポジトリ内に存在しない**（`grep -rn '^\s*schedule:' .github/workflows/` 0 hit、2026-07-31 実測）— 定期実行を導入する場合は本リポジトリ初の様式になる。
+
+### mirror ベンチマークのプロトコル
+
+`scripts/mirror-distribution-benchmark.ts:11-20` の `MIRROR_BENCHMARK_PROTOCOL`: `warmups: 3` / `runs: 20`、workload 別に `packageWrite` `packageCheck` = p95 30_000ms・RSS 512MiB、`promote` = 20_000ms・512MiB、`docsParity` = 2_000ms・512MiB、`digestMatrix` = 2_000ms・128MiB。集約側は分散（dispersion）と `median(p95) > budget` を判定する。
+
+
+## オープンバグ4件の技術断面（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line と件数はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

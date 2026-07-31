@@ -1,6 +1,35 @@
 # 依存関係
 
-## オープンバグ4件の依存関係（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 分離の依存関係（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 分離手段ごとの波及チェーン
+
+分離には性質の異なる3手段があり、**波及先が根本的に異なる**。
+
+| 手段 | coverage registry | project gate | patch gate | residency guard |
+| --- | --- | --- | --- | --- |
+| A. 実行から除外（`excludes` 経由） | **不変**（宇宙はディスク列挙、`discoverClaims` `:771-774`） | **必ず低下** → baseline 再カット必須 | 該当ファイルが LCOV から消えると既存行ピンが stale hard-fail | 不変 |
+| B. tier 外ディレクトリへ移動 | `covers:` claim が落ち units が `UNCOVERED` → `--check` が registry drift で失敗 | 低下 | 同上 | 新 scope は `scopeOf` `:34` が `"other"` を返す |
+| C. 別 workflow へ（ファイルは据置、job だけ分離） | 不変 | 実行有無次第 | 実行有無次第 | 不変 |
+
+### 依存関係の詳細
+
+- **`tests/gen-coverage-registry.ts`** — テスト宇宙は実行ではなく**ディスク**から列挙される（`CLAIMS_TESTS_DIR` `:74` = `AMADEUS_COVERAGE_TESTS_DIR ?? TESTS_DIR`、`discoverClaims` `:771` が `join(CLAIMS_TESTS_DIR, tier)` を走査し `covers:` ヘッダ持ちのみ保持）。**帰結: 実行除外は registry に何も起こさない。ディレクトリ移動・削除だけが claim を落とす。**
+- **`tests/coverage-project-gate.ts`** — `coverage/coverage-totals.json`（`:48`）を `tests/.coverage-project-baseline.json`（`:52`）と比較する行率ラチェット。perf テストを `coverage:ci` の実行から外せばその行ヒットが消え、プロジェクト % が下がってゲートが落ちる。**baseline 再カットが分離の最大の機械的帰結**であり、分離 PR と同一変更で行う必要がある。
+- **`tests/coverage-patch-gate.ts`** — LCOV ∩ `git diff` 追加行。allowlist は `tests/.coverage-patch-allowlist.json`（`:56`）で、`:295` verbatim `coverage-patch-gate: STALE allowlist entries (range matches no measurable line — remove or update)` の stale 拒否がある。除外したファイルが LCOV から消えると、そこを指す既存行ピンが hard-fail する（`cid:code-generation:allowlist-line-pin-stale` および同 cid の機械 remap 追補 `cid:code-generation:c1-allowlist-mechanical-remap` の対象）。
+- **`tests/integration/t257-ci-residency-marker-guard.integration.test.ts`** — `:32` verbatim: `const CI_SCOPES = new Set(["smoke", "unit", "integration"]);`。`CI-resident` マーカーを持つファイルはこの3 scope に居なければならない。**現時点でマーカーを持つのは2ファイルのみ**（当ガード自身と `t241-election-machine-executor.integration.test.ts`、`grep -rln 'CI-resident' tests/` 実測）で、perf テストはいずれも含まれない。したがって手段 B で `tests/e2e/` へ移してもこのガードは発火しない。ただし新ディレクトリを新設すると `scopeOf` `:34` が `"other"` を返すため、そこに将来 CI-resident を主張した瞬間に落ちる。
+- **`tests/unit/t-test-size-drift.test.ts`** — ディスク上の全 `*.test.ts` を走査し、declared が measured より**小さい**場合と注記値不正で落ちる。size は scope から独立なのでディレクトリ移動では発火しない。`// size: large` の追加は安全、spawn するファイルへの `// size: small` は致命的。
+- **drift 報告の縮退（見落としやすい副作用）** — `reportDynamicSizes` `:952` は**この invocation で実際に走ったファイル**のみを対象にする。perf テストを `--ci` から外すと drift 報告が静かに縮み、t258 の現在の `drift=wall-clock` エントリが CI 出力から**修正されずに消える**。アップロード artifact は `amadeus-test-size-report`。
+- **`tests/smoke/t05-run-tests-parallel.test.ts`** — ランナー CLI 契約のピン（`PER_TEST_TIMEOUT` `:163`）。新フラグ・新 tier はこの挙動を byte 一致で保つこと。
+
+### CI ジョブ依存
+
+`distribution-benchmark`（`:224`、matrix 3）→ `distribution-benchmark-aggregate`（`:255`、`if:` なし・`needs` のみ）→ `distribution-release-gate`（`:279`）。この鎖は `ci-success` の `needs`（`:651-659`）に**入っていない**。`coverage-head` / `coverage-base` → `coverage`（`:418`）→ `ci-success` および `metrics-snapshot`（`:475`）。**`metrics-snapshot` は `coverage` の成功に依存する**ため、coverage 側の構成変更はメトリクス鎖にも波及する（`tests/run-tests.ts` が書く `coverage/tests-totals.json` のファイル数・アサーション数も可視に減る）。
+
+
+## オープンバグ4件の依存関係（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

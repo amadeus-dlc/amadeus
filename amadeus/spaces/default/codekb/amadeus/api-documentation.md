@@ -1,6 +1,40 @@
 # API ドキュメント
 
-## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 分離が触れる内部契約（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### ランナー CLI 契約（変更に最も慎重を要する面）
+
+`tests/run-tests.ts` の外形は `tests/smoke/t05-run-tests-parallel.test.ts` が byte 単位でピンしている: 不正な `--parallel` → exit 2 と定型メッセージ、smoke バナーが `(parallel=N)` を省くこと、直列と `-P 4` のサマリ同値性、planted-failure の伝播。`PER_TEST_TIMEOUT = 120000` `:163`。**新フラグ・新 tier を足す場合もこれらの挙動を byte 一致で保つ必要がある**。
+
+新フラグを足す場合の接続点は3つ: `ParsedArgs` フィールド定義、`parseArgs` の `case` 追加（`--parallel` の検証様式は `:233` 以降）、そして除外集合の受け渡し（integration は `:1161-1166` の `runFilesPartitioned` 呼び出しが既存の口）。
+
+| 内部関数 | 行 | 契約 | 改訂の要否 |
+| --- | --- | --- | --- |
+| `levelFiles(level, excludes)` | `:839-850` | ディレクトリ列挙 + **basename** 除外集合 | 改訂不要。既存の口をそのまま使える |
+| `runFilesPartitioned(level, effectiveParallel, collector, excludes)` | `:875-880` | `excludes` を受け取る唯一の実行経路 | 改訂不要 |
+| `runTier(level, label, collector)` | `:900-909` | **`excludes` を受け取らない** | smoke / unit を除外対象にするならシグネチャ変更が必要 |
+| `reportDynamicSizes(collector)` | `:952`、出力 `:984-990` | 実行したファイルのみから drift を報告。`printSummary` の try/catch 内にあり **exit code に影響しない**（advisory） | 改訂不要だが副作用あり（下記） |
+
+### 判定述語の契約（分離後もブロッキング側に残すべき面）
+
+- `tests/lib/latency-median-budget-gate.ts` — `exceedsMedianLatencyBudget` / `median`。消費側は t258 `:524-525` と t257 `:255-256`。落ちる実証は `tests/unit/latency-median-budget-gate.test.ts`（純・合成）。
+- `tests/lib/plugin-discovery-overhead-gate.ts` — `exceedsDiscoveryOverhead`。消費側は `t-plugin-stage-discovery-performance.integration.test.ts:213` 近傍。落ちる実証は `tests/unit/plugin-discovery-overhead-gate.test.ts`。
+
+**述語の検証（純・安価）と計測の実行（実時間・負荷感受）は分離可能な2契約である** — 前者を日常 CI に残し後者だけを別面へ移せば、ゲートの落ちる実証は失われない。
+
+### CI 側の契約
+
+- `ci-success`（`ci.yml:648`、name `CI Success`）の `needs` = `:651-659` の8件。この集合が PR ブロックの唯一の定義であり、GitHub ruleset `18843917`（name `main`）の required status check は `CI Success` のみ（2026-07-31 実測）。**新 job を PR ブロック対象にしたい／したくない判断は、この `needs` への出入りだけで決まる**。
+- `scripts/detect-ci-changes.sh` の3分類（`:9-32`）: `*.ts` / `tests/*` は `full=true` かつ `coverage=true`。`packages/framework/*` などは `drift=true`。新 workflow を足す場合、`.github/workflows/ci.yml` 自身は `full` にも `coverage` にも該当するが、**他の workflow ファイルはどの分類にも該当しない**。
+
+### 変更の無い契約
+
+区間内で `.github/`、`scripts/`、`package.json`、`tests/run-tests.ts` の変更はゼロ。区間で新設された唯一の本番契約は `mirrorSnapshotStatus(snapshot)`（`packages/framework/core/tools/amadeus-mirror-presentation.ts:250-252`）であり、本 intent とは無関係である。
+
+
+## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

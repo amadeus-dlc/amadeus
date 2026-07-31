@@ -34,6 +34,7 @@
 - ソロモードの Construction でも Bolt 実装は最初から git worktree 分離で行い、本線ツリーのブランチ切替で実装しない — 本線ツリーは並行セッション・ユーザー操作と共有され、ブランチ占有は WIP コミット・checkout 混線を実測で起こす(org.md Construction worktree 規範のソロ適用明文化。実測: 260726-metrics-visualization Bolt 2 で本線ツリー実装中に外部の WIP コミット+main checkout と衝突 → worktree 移行後は無事故) (learned 2026-07-26) <!-- cid:code-generation:solo-bolt-worktree-required -->
 - GitHub の pull_request CI は PR が CONFLICTING の間は発火しない(merge commit を構築できないため)— PR の CI 不発を見たら第一容疑は merge conflict とし、gh pr view --json mergeable と git merge-tree の非破壊プローブで確定してから解消する(実測: PR #1500 が codekb 並行更新の衝突中 CI 0 run → 解消 push 直後に発火。merge-tree-nondestructive-conflict-probe / closed-pr-state-first の PR-CI 面追補) (learned 2026-07-26) <!-- cid:code-generation:conflicting-pr-suppresses-ci -->
 
+- 同一 worktree での coverage 計測(coverage:ci / --coverage 付き run-tests)は branch ごとに単独所有者を決めて直列化する — runner が起動時に coverageRoot を rmSync するため並行実行は相互破壊し、どちらの gate verdict も信頼不能になる(偽 stale allowlist・22pp 級の偽 % スイングを双方向で実測)。cid:code-generation:c5 引き取りの発動条件は「無音経過時間」でなく (a) live プロセス実測(run-tests --coverage の実在確認) (b) 事前 ping を先行させる — 長時間フォアグラウンド検証こそ第二の書き手が最も破壊的(実測: 260731-perf-ci-separation Bolt 1 で conductor/builder の並行 coverage:ci が相互破壊、builder の loud 警告と単独再実行で回収) (learned 2026-08-01) <!-- cid:code-generation:c1-coverage-single-owner --> (learned 2026-07-31) <!-- cid:code-generation:c3 -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
