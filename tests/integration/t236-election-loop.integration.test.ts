@@ -7,7 +7,11 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../packages/framework/core/tools/amadeus-election";
-import { electionsRoot, resolveElectionDir } from "../../packages/framework/core/tools/amadeus-election-store";
+import {
+  electionsRoot,
+  resolveElectionDir,
+  Store,
+} from "../../packages/framework/core/tools/amadeus-election-store";
 
 const DEF = {
   electionId: "E-LOOP1",
@@ -659,13 +663,20 @@ describe("t236 election directive loop", () => {
       submittedAt: "2026-07-19T00:02:00Z",
     });
     expect(run(["vote", "--election", "E-LOOP1", "--file", aliceAmend])).toBe(0);
-    // closure: the amend is recorded on the ledger as kind=amend, coexisting
-    // with the original (ADR-5) — both rows present, original untouched
+    // closure: the amend is recorded as kind=amend, coexisting with the original
+    // (ADR-5) — both rows present, original untouched. #1773 moved the STORAGE
+    // of a still-collecting ballot to the gitignored pending lane, so the
+    // accepted set is read through the store; the shared ledger.json stays empty
+    // until tally (asserted below).
     const ledgerPath = electionPath("ledger.json");
-    const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
-    expect(ledger.ballots.length).toBe(2);
-    expect(ledger.ballots[0].kind).toBe("original");
-    expect(ledger.ballots[1].kind).toBe("amend");
+    expect(JSON.parse(readFileSync(ledgerPath, "utf8")).ballots).toEqual([]);
+    const accepted = Store.ledger(electionsRoot(projectDir), "E-LOOP1");
+    expect(accepted.ok).toBe(true);
+    if (accepted.ok) {
+      expect(accepted.value.ballots.length).toBe(2);
+      expect(accepted.value.ballots[0]?.kind).toBe("original");
+      expect(accepted.value.ballots[1]?.kind).toBe("amend");
+    }
     // bob votes choice 2
     const bob = writeJson("b.json", {
       electionId: "E-LOOP1",
@@ -679,6 +690,14 @@ describe("t236 election directive loop", () => {
     // tally counts each voter once (per-voter resolved): alice's superseded
     // original (choice 1) is NOT counted — choice 1 has 0 votes, choice 2 has 2
     expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    // #1773: tally is where the pending lane is folded into the shared ledger —
+    // all three accepted rows land, in arrival order.
+    const tallied = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    expect(tallied.ballots.map((b: { voter: string; kind: string }) => `${b.voter}:${b.kind}`)).toEqual([
+      "alice:original",
+      "alice:amend",
+      "bob:original",
+    ]);
     const result = lastJson().result as {
       kind: string;
       winner?: { internalNo: number };

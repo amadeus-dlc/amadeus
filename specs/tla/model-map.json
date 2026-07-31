@@ -19,7 +19,7 @@
     },
     {
       "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-      "sha256": "7ab15cf22dce24401272942d84eb8f58f88ed101b7d427915c14d7d0b86297c3"
+      "sha256": "4dd2a6c215abd3ca784697d19358885c45dd9e2c2fb30313f01ade2fb942427b"
     },
     {
       "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
