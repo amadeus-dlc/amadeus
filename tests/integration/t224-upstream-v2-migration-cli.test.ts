@@ -463,8 +463,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     expect(attempts).toBe(3);
     expect(retries.map((retry) => retry.attempt)).toEqual([1, 2]);
     expect(retries.every((retry) => retry.error === error)).toBe(true);
-    expect(sleeps.length).toBe(2);
-    expect(sleeps.every((ms) => ms > 0)).toBe(true);
+    expect(sleeps).toEqual([SPAWN_RETRY_BACKOFF_MS, SPAWN_RETRY_BACKOFF_MS * 2]);
     expect(result.status).toBe(0);
     expect(result.error).toBeNull();
   });
