@@ -566,25 +566,25 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "246-246",
+    "lines": "254-254",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "252-252",
+    "lines": "260-260",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "254-255",
+    "lines": "262-263",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "274-279",
+    "lines": "282-287",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },

@@ -38,6 +38,7 @@ import {
 } from "./amadeus-mirror-provenance.ts";
 import {
   MIRROR_USER_CONTRACT,
+  mirrorSnapshotStatus,
   renderMirrorIssueContent,
   renderMirrorLifecycleHelp,
 } from "./amadeus-mirror-presentation.ts";
@@ -407,7 +408,7 @@ export function buildMirrorStatusRecordView(
     kind: "ok",
     intentDir: target.intentDir,
     issueNumber: state.issueNumber,
-    currentStatus: snapshot.status,
+    currentStatus: mirrorSnapshotStatus(snapshot),
     expectedBody,
   };
 }
