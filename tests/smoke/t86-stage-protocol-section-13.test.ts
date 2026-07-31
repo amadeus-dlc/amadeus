@@ -60,6 +60,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AMADEUS_SRC, cleanupTestProject, createTestProject, REPO_ROOT, seededAuditDir, seedStateFile } from "../harness/fixtures.ts";
+import { countAuditEvent } from "../harness/audit-rows.ts";
 
 const BUN = process.execPath; // the bun running this test
 const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
@@ -191,7 +192,10 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
         .filter((f) => f.endsWith(".jsonl"))
         .map((f) => read(join(auditDir, f)))
         .join("\n");
-      expect(body.includes('"event":"MEMORY_EMPTY"')).toBe(true);
+      // Read through the mixed v1/v2 view: the CLI append writes through the
+      // canonical path, which carries the audit event type as an `Event`
+      // attribute rather than a top-level `event` key.
+      expect(countAuditEvent(body, "MEMORY_EMPTY")).toBe(1);
 
       // Negative control: an unregistered event is REJECTED, proving the gate
       // is real and MEMORY_EMPTY's acceptance above is meaningful (not vacuous).

@@ -437,7 +437,15 @@ describe("audit CLI presence/provenance minting guard (#685 review)", () => {
 
   test("an ordinary event still appends via the CLI (guard is not over-broad)", () => {
     const { root } = scaffold();
-    const r = runAudit(root, ["append", "STAGE_STARTED", "--field", "Stage=market-research"]);
+    const r = runAudit(root, [
+      "append",
+      "STAGE_STARTED",
+      // Both required attributes, as every production emitter supplies them.
+      "--field",
+      "Stage=market-research",
+      "--field",
+      "Agent=product",
+    ]);
     expect(r.rc).toBe(0);
   });
 
