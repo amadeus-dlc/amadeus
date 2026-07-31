@@ -1,6 +1,47 @@
 # コンポーネント棚卸し
 
-## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 分離の対象コンポーネント（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 分離候補（スイート内 perf）
+
+| コンポーネント | 種別 | 実時間性 | 分離した場合の主な波及 |
+| --- | --- | --- | --- |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | 実 subprocess ベンチ | 高（`:529` timeout 120s、ローカル 30.01s） | project coverage 低下、registry claim の移動、drift 報告から消える |
+| `tests/integration/t257-status-registry-migration.test.ts` | 実 subprocess ベンチ | 高（`:260` timeout 120s、ローカル 6.70s） | 同上 |
+| `tests/integration/t259-guard-corpus.test.ts` | 交互計測 + 孫 spawn | 中（`:121` timeout 180s、ローカル 12.28s） | 同上 |
+| `tests/integration/t269-amadeus-mirror-contract-policy-performance.integration.test.ts` | in-process マイクロベンチ | 低いが**予算が最厳**（`:102` 1ms / `:162` 50ms） | 同上 |
+| `tests/integration/t292-mirror-distribution-performance.integration.test.ts` | 主体は純アグリゲータ検証 + 実時間1点（`:84` 10s） | 低 | 純部分まで一緒に外すと検証力を失う。**分割検討の対象** |
+| `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts` | 実 compile 10 対 | 中（`:34` `COMPILE_LIMIT_MS = 10_000`） | 同上 |
+
+### 分離してはならないコンポーネント
+
+| コンポーネント | 理由 |
+| --- | --- |
+| `tests/unit/latency-median-budget-gate.test.ts`（`// size: small`） | `exceedsMedianLatencyBudget` / `median` の落ちる実証。合成データのみでコストゼロ |
+| `tests/unit/plugin-discovery-overhead-gate.test.ts`（`// size: small`） | `exceedsDiscoveryOverhead` の落ちる実証。同上 |
+| `tests/lib/latency-median-budget-gate.ts` / `tests/lib/plugin-discovery-overhead-gate.ts` | 判定述語の正本。計測側と消費側の両方から参照される |
+
+### 触れることになる周辺機構
+
+| コンポーネント | 行 | 分離との関係 |
+| --- | --- | --- |
+| `tests/run-tests.ts` | `:839-850` / `:875-880` / `:900-909` / `:1161-1166` | 除外集合の口。`runTier` のみ `excludes` 非対応 |
+| `tests/gen-coverage-registry.ts` | `discoverClaims` `:771-774`、`CLAIMS_TESTS_DIR` `:74` | 宇宙は**ディスク列挙**。実行からの除外では不変、ディレクトリ移動では claim が落ちる |
+| `tests/coverage-project-gate.ts` | totals `:48`、baseline `:52` | 行率ラチェット。実行除外で必ず低下 → baseline 再カット必須 |
+| `tests/coverage-patch-gate.ts` | allowlist `:56`、stale 拒否 `:295` | LCOV から消えたファイルを指す既存 allowlist 行ピンが hard-fail する |
+| `tests/integration/t257-ci-residency-marker-guard.integration.test.ts` | `CI_SCOPES` `:32`、`scopeOf` `:34` | 新ディレクトリを作ると `scopeOf` は `"other"` を返す |
+| `tests/unit/t-test-size-drift.test.ts` | — | ディスク上の全 `*.test.ts` を走査。ディレクトリ移動では発火しないが、注記値の誤りは fatal |
+| `tests/smoke/t05-run-tests-parallel.test.ts` | `PER_TEST_TIMEOUT` `:163` | ランナー CLI 契約のピン |
+| `.github/workflows/ci.yml` | `:167` / `:293` / `:353` / `:224` / `:255` / `:279` / `:475` / `:648` | ジョブグラフとブロッキング境界 |
+
+### 区間で変化したコンポーネント（本 intent 外）
+
+`amadeus-mirror-presentation.ts`（`mirrorSnapshotStatus` `:250-252` 新設）、`amadeus-mirror-lifecycle.ts`、`t224`（spawn 診断層）、`t259`（交互計測化）、`t-team-up-codex-resume.serial.test.ts`（supervisor reap）、`tests/.coverage-patch-allowlist.json`（上記に伴う churn）。
+
+
+## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

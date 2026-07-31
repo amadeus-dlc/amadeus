@@ -1,6 +1,52 @@
 # コード構造
 
-## オープンバグ4件の患部配置（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 検証面の配置（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 区間の機械集計（`6e7a9d701` → `da51af375`）
+
+`git diff --shortstat 6e7a9d701..da51af375` = `120 files changed, 3939 insertions(+), 102 deletions(-)`、`git rev-list --count` = `11 commits`（測定 ref = observed `da51af375`）。ソース面を触るのは4コミットのみで、残りは `record:` / `chore(metrics):` のスナップショット往来（#1824–#1832、#1834）。
+
+**`.github/`、`scripts/`、`package.json`、`tests/run-tests.ts` は区間内で無変更** — 本 intent の対象構造は base 断面から動いていない。
+
+### perf テストの所在と予算定数
+
+| ファイル | 予算定数の行 | 予算 | timeout | 実時間性 |
+| --- | --- | --- | --- | --- |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | `:491-492` | `ARCHIVE_LATENCY_BUDGET_MS = 500` / `RECOVERY_LATENCY_BUDGET_MS = 750`、RSS `:526` `toBeLessThanOrEqual(96)` MiB | `:529` `}, 120_000);` | 実 subprocess 多数。スイート内で最重 |
+| `tests/integration/t257-status-registry-migration.test.ts` | `:200-201` | `STRICT_READ_LATENCY_BUDGET_MS = 100` / `MIGRATION_LATENCY_BUDGET_MS = 250`（判定 `:255-256`） | `:260` `}, 120_000);` | 実 subprocess。t258 の構造的双子 |
+| `tests/integration/t259-guard-corpus.test.ts` | `:104-105` | 比 2.5 の2本（`twoMedianMs / oneMedianMs` と `rssMultiplier` `:103`） | `:121` `}, 180_000);` | 単一プロセス交互計測 + `--rss` 孫プロセス |
+| `tests/integration/t269-amadeus-mirror-contract-policy-performance.integration.test.ts` | `:102` / `:162` | `toBeLessThanOrEqual(1)` ms / `toBeLessThanOrEqual(50)` ms | 既定 | `performance.now()` のみ。**スイート最厳の絶対予算（1ms）で最も負荷感受性が高い** |
+| `tests/integration/t292-mirror-distribution-performance.integration.test.ts` | `:84` | `toBeLessThan(10_000)` ms | 既定 | 主体は合成 fixture の純アグリゲータ検証。実時間はこの1点のみ |
+| `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts` | `:33-35` | `MEASURED_RUNS = 10` / `COMPILE_LIMIT_MS = 10_000` / `CAPACITY_BYTES = 64 * 1024 * 1024`（判定 `:213` / `:220`） | 既定 | 実 compile 10 対 |
+
+**ブロッキング側に残すべき純テスト**: `tests/unit/latency-median-budget-gate.test.ts` と `tests/unit/plugin-discovery-overhead-gate.test.ts`（いずれも `// size: small`）は合成データのみで、判定述語（`exceedsMedianLatencyBudget` / `exceedsDiscoveryOverhead` / `median`、正本は `tests/lib/latency-median-budget-gate.ts` と `tests/lib/plugin-discovery-overhead-gate.ts`）の落ちる実証を担う。コストゼロで、分離対象ではない。
+
+### サイズ注記の罠
+
+`tests/lib/test-size.ts:282` verbatim: `const m = raw.match(/^\s*(?:\/\/|#)\s*size:\s*(\S+)/i);`。一方 `t258-lifecycle-transaction.test.ts:2` と `t259-guard-corpus.test.ts:2` はいずれも `// @test-size medium` を持つ — この綴りは上記 regex に**一致しない**ため両ファイルは実質**未注記**であり、declared は静的分類へフォールバックする。t258 が drift 報告に `declared=None ... drift=wall-clock` として現れるのはこのためである。
+
+### 同じ並列帯を奪い合う非 perf の重量ファイル
+
+ローカル実測（`tests/logs/test-size-report.json`、650 files / `driftCount: 3`、ローカル1回走のため桁の目安として扱う）:
+
+```
+105.54s  tests/integration/t-team-up-codex-resume.serial.test.ts
+ 64.19s  tests/integration/t224-upstream-v2-migration-cli.test.ts
+ 34.19s  tests/integration/t-codex-hooks-migration.test.ts        (drift=wall-clock)
+ 33.35s  tests/integration/t225-upstream-v2-migration-preflight.test.ts (drift=wall-clock)
+ 30.01s  tests/integration/t258-lifecycle-transaction.test.ts     (drift=wall-clock)
+ 29.45s  tests/smoke/t05-run-tests-parallel.test.ts
+ 12.28s  tests/integration/t259-guard-corpus.test.ts
+  6.70s  tests/integration/t257-status-registry-migration.test.ts
+  6.49s  tests/integration/t292-mirror-distribution-performance.integration.test.ts
+```
+
+perf テストは絶対時間で最上位ではない — 分離の論拠は所要時間そのものではなく、**負荷感受性のある予算が競合並列帯で最大3回評価されること**にある。
+
+
+## オープンバグ4件の患部配置（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

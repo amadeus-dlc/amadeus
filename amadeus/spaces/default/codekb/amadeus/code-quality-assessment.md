@@ -1,6 +1,44 @@
 # コード品質評価
 
-## オープンバグ4件の品質評価（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 分離に関わる品質評価（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 現状の品質所見
+
+| 所見 | 確度 | 根拠 |
+| --- | --- | --- |
+| integration tier は1 PR あたり最大3回実行される | **100%** | `ci.yml:189` `tests`、`:320` `coverage-head`、`:395` `coverage-base` がいずれも `--ci` の3 tier を回す（`package.json:19-20`）。`coverage-base` はキャッシュヒット時のみスキップ |
+| テストファイルを1つ触ると3ジョブすべてが起動する | **100%** | `scripts/detect-ci-changes.sh` `:9-32` — `tests/*` と `*.ts` は `full=true` かつ `coverage=true` |
+| mirror ベンチマーク鎖は既に PR ブロックしない | **100%**（de facto と de jure の両方） | `distribution-release-gate` `:279` が `ci-success` の `needs` `:651-659` に不在、かつ ruleset `18843917` の required check は `CI Success` のみ（2026-07-31 実測） |
+| e2e は既に `--ci` の外 | **100%** | `tests/run-tests.ts:197-202` |
+| perf テストが偽赤を起こす機序は実証済み | **100%** | #1797（t259 の窓分離）は `20230b90d` で交互計測へ是正済み。#1800（spawn 枯渇）は `7ec3e0eae` でリトライ seam 導入済み |
+| perf テストの絶対所要時間は分離の主因ではない | **高** | ローカル実測でスイート最遅3件はいずれも非 perf（105.54s / 64.19s / 34.19s）。t257 6.70s・t292 6.49s は軽量 |
+
+### 分離が新たに作りうる品質リスク
+
+| リスク | 機序 | 予防 |
+| --- | --- | --- |
+| **project coverage ゲートの赤** | perf テストの行ヒットが消えプロジェクト % が低下（`coverage-project-gate.ts` `:48` vs `:52`） | 分離と同一 PR で baseline 再カット。`cid:code-generation:corpus-sweep-for-new-guards` の両側実測（落ちる／正当ケースで落ちない）を適用 |
+| **patch allowlist の stale hard-fail** | 除外ファイルが LCOV から消え既存行ピンが `:295` の stale 拒否に掛かる | `cid:code-generation:c1-allowlist-mechanical-remap` に従い全エントリを機械 remap し、reason と現行行内容の直読照合を併用 |
+| **registry drift（手段 B のみ）** | tier 外へ移すと `covers:` claim が落ち units が `UNCOVERED` に反転（`discoverClaims` `:771-774`） | ディレクトリ移動を選ぶなら registry 再生成を同一 PR に含める |
+| **drift 報告の無音縮退** | `reportDynamicSizes` `:952` は実行したファイルのみ対象。t258 の現在の `drift=wall-clock` が**修正されずに出力から消える** | 分離前に t258 / t259 の `// @test-size` 綴り（regex `test-size.ts:282` に不一致）を正しい `// size:` 形へ是正し、drift を消す前に直す |
+| **「立っているが走らない証明」の再生産** | perf 検証を別面へ移したまま実行トリガを与えないと、ゲートが形式上存在するだけになる | `t257-ci-residency-marker-guard.integration.test.ts` のヘッダが記述する失敗モードそのもの。分離先の実行条件を要件で数値固定する |
+| **ランナー CLI 契約の破壊** | 新フラグ・新 tier が t05 のピン（exit 2 メッセージ、バナー、直列/並列サマリ同値性）を動かす | `t05-run-tests-parallel.test.ts` を先に読み、byte 一致を受け入れ基準に置く |
+
+### 検証劇場になりやすい点（`org.md` Forbidden の適用）
+
+perf 検証を非ブロッキング面へ移す変更は、**「ゲートは存在するが誰も結果を見ない」**状態を作りやすい。既存の非ブロッキング様式のうち `metrics-maintenance.yml` は loud-fail 姿勢（job 自体が可視に失敗し `$GITHUB_STEP_SUMMARY` へ tee）を採っており、これが参照すべき先例である。分離先が赤くなったときに誰がいつ気づくかを、要件段で明示する必要がある。
+
+### 未決事項（RA へ送るべき判断）
+
+1. 分離の手段（A 実行除外 / B ディレクトリ移動 / C job 分離）— 波及先が大きく異なる。
+2. 分離先の実行トリガ — `schedule:` は本リポジトリに前例がなく、既存様式は `repository_dispatch` と `workflow_dispatch` のみ。
+3. t292 のような**純部分と実時間部分が同居するファイル**を分割するか、丸ごと移すか。
+4. mirror ベンチマーク鎖（既に非ブロッキング）を毎 PR 実行のまま残すか、トリガを絞るか。
+
+
+## オープンバグ4件の品質評価（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

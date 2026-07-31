@@ -1,6 +1,65 @@
 # アーキテクチャ
 
-## オープンバグ4件の対象機構（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+## perf 検証の CI 分離が触れる機構（260731-perf-ci-separation、現在、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 区間の構造変化（`6e7a9d701` → `da51af375`、11 commits / 120 files / +3939 −102）
+
+ソース面を触るのは4コミットのみで、いずれも**テスト側**（本番 core 正本の変更は #1823 の mirror 表示層1件のみ）。`.github/`・`scripts/`・`package.json`・`tests/run-tests.ts` は**区間内で無変更**であり、本 intent が対象とする CI/ランナー構造は base 時点から不変である。
+
+| commit | 面 | 構造上の意味 |
+| --- | --- | --- |
+| `7ec3e0eae`（#1820） | `tests/integration/t224-upstream-v2-migration-cli.test.ts` | subprocess 終了チャネル3分類（`EXIT_CHANNEL_CASES` `:72`）と spawn 枯渇リトライ seam（`RETRYABLE_SPAWN_ERROR` `:90` = `/\b(?:EAGAIN\|EMFILE\|ENOMEM)\b/`、`SPAWN_RETRY_LIMIT` `:91`、`SPAWN_RETRY_BACKOFF_MS` `:92`、`runWithSpawnRetry` `:206`）。**integration tier が既に spawn 競合下にあることの直接証拠** |
+| `20230b90d`（#1822） | `tests/integration/t259-guard-corpus.test.ts` | 2回の逐次 child spawn を単一プロセス内の交互計測へ集約。時間窓分離由来の偽赤を除去。テスト予算 `}, 90_000)` → `}, 180_000)`（`:121`、base 時点は `:125` で `90_000`） |
+| `9008141df`（#1823） | `packages/framework/core/tools/amadeus-mirror-presentation.ts` | `mirrorSnapshotStatus` `:250-252` 新設（`return snapshot.completionInstance === undefined ? snapshot.status : "Completed";`）。表示層の canonical 1定義化 |
+| `1a3087508`（#1821） | `tests/integration/t-team-up-codex-resume.serial.test.ts` | fixture の safety-wait supervisor を reap する。当該ファイルはスイート最遅（ローカル実測 105.54s） |
+
+### 機構 A — テスト tier はディレクトリのみが軸で、除外は basename 集合で入る
+
+`tests/run-tests.ts:71` verbatim: `type Level = "smoke" | "unit" | "integration" | "e2e";`。tier ごとのファイル集合は `levelFiles(level, excludes)` `:839-850` が `join(SCRIPT_DIR, level)` + `readdirSync` で**ディスクから列挙**する。ファイル単位の tier メタデータは存在せず、**ディレクトリが唯一の tier 軸**である。
+
+除外の唯一の口は `levelFiles` 第2引数の `excludes`（basename 集合）で、`runFilesPartitioned(level, effectiveParallel, collector, excludes)` `:875-880` 経由で渡る。既存の利用例は t19 preflight（`:1161-1166`）と e2e TUI 分割（`:1186` / `:1204`）。**`runTier` `:900-909` は `excludes` を受け取らない**ため、smoke / unit を除外対象にするならシグネチャ変更が要る。integration / e2e は `runFilesPartitioned` を直接呼ぶ経路が既にある。
+
+### 機構 B — `--ci` は smoke+unit+integration であり e2e は既に PR ブロック外
+
+`tests/run-tests.ts:197-202` の `case "--ci"` は `runSmoke` / `runUnit` / `runIntegration` を立てるのみ。`--release` / `--all`（`:203-211`）だけが `runE2e` + `fullProfile` を追加する。したがって **e2e は既に PR ブロック対象外**であり、最小コストの分離レバーは新フラグではなく**ディレクトリ residency**である。
+
+並列度は `DEFAULT_PARALLEL = Math.min(availableParallelism(), 4)` `:45`。smoke / unit は強制直列（`:881` `const pinnedSerial = level === "smoke" || level === "unit";`、`:901` `const effectiveParallel = level === "smoke" || level === "unit" ? 1 : args.parallel;`）で、integration は `-P 4` 帯で並列に走る — **perf テストはこの並列帯に同居している**。
+
+### 機構 C — ci.yml のジョブグラフと2系統の perf
+
+`.github/workflows/ci.yml` には性質の異なる2系統の perf 検証がある。
+
+**(1) スイート内 perf（PR ブロックする、最大3回実行）**
+
+| job | 行 | 条件 | timeout | perf 関連コマンド |
+| --- | --- | --- | --- | --- |
+| `tests` | `:167` | `full == 'true'` | 20分 | `:189` `run: bun run test:ci -- -P 4` |
+| `coverage-head` | `:293` | `coverage == 'true'` | 20分 | `:320` `run: bun run coverage:ci -- -P 4` |
+| `coverage-base` | `:353` | `coverage == 'true'` | 20分 | `:395` merge-base で `bun run coverage:ci -- -P 4` |
+
+`package.json:19-20` verbatim: `"test:ci": "bun tests/run-tests.ts --ci"` と `"coverage:ci": "bun tests/run-tests.ts --ci --coverage --coverage-dir coverage"` — **両者は同じ3 tier を実行し、差は `--coverage` の有無だけである**。`scripts/detect-ci-changes.sh:19-32` は `tests/*` と `*.ts` を `full=true` かつ `coverage=true` に分類するため、テストファイルを1つ触るだけで3ジョブすべてが起動する。**integration tier は1 PR あたり最大3回走り、上記の perf 予算はそのたびに競合ランナー上で支払われる**（`coverage-base` はキャッシュヒット時にスキップ）。
+
+**(2) mirror distribution ベンチマーク（既に `ci-success` の外）**
+
+`distribution-benchmark` `:224`（matrix `replica: [1, 2, 3]`、`fail-fast: false`、timeout 宣言なし）→ `distribution-benchmark-aggregate` `:255`（**`if:` を一切持たず** `needs: distribution-benchmark` だけで走る）→ `distribution-release-gate` `:279`（`:290-291` verbatim `test "${CONTRACT_RESULT}" = "success"` / `test "${PERFORMANCE_RESULT}" = "success"`）。
+
+`ci-success`（`:648`、name `CI Success`）の `needs` は `:651-659` の8件 = changes / typecheck / lint / distribution-contract / plugin-conformance-e2e / tests / drift-check / coverage であり、**`distribution-release-gate` は含まれない**。
+
+さらに GitHub ruleset `18843917`（name `main`）の required status check は **`CI Success` の1件のみ**（`gh api repos/amadeus-dlc/amadeus/rulesets/18843917`、2026-07-31 実測）。したがって mirror ベンチマーク鎖は **de jure でも既に非ブロッキング**である。ただしランナー時間は依然として replica 3本 + aggregate（+ release gate）を消費する。
+
+予算は `scripts/mirror-distribution-benchmark.ts:11-20` の `MIRROR_BENCHMARK_PROTOCOL`（warmups 3 / runs 20、`packageWrite` `packageCheck` p95 30_000ms、`promote` 20_000ms、`docsParity` `digestMatrix` 2_000ms、RSS 512MiB / digestMatrix のみ 128MiB）。
+
+### 機構 D — 非ブロッキング／別トリガ workflow の既存様式
+
+- `.github/workflows/metrics-maintenance.yml:3-5` verbatim: `on:` / `repository_dispatch:` / `types: [metrics-maintenance]`。`concurrency: group: metrics-maintenance` / `cancel-in-progress: false` `:10-12`。別 workflow のため `ci-success` に入らない。
+- `ci.yml` `metrics-snapshot` `:475`、`:480` verbatim: `if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.coverage == 'true' && needs.coverage.result == 'success' }}` — 「main でだけ走り PR を塞がない」の in-CI 既存テンプレート。
+- `release.yml` は `workflow_dispatch`（`bump` / `dry-run` 入力）による operator 起動様式。
+- **`schedule:` トリガはリポジトリ内に1件も存在しない**（`grep -rn '^\s*schedule:' .github/workflows/` が 0 hit、2026-07-31 実測）。既存様式は `repository_dispatch` と `workflow_dispatch` の2つである。
+
+
+## オープンバグ4件の対象機構（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。4件は所有機構が「テストハーネスのプロセス寿命」「テストの診断設計」「ベンチマークの計測設計」「mirror の表示層」に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。**3件（#1811 / #1800 / #1797）は患部がテスト側にあり本番コードを触らない**という共通性質を持つ。
 
