@@ -3,7 +3,7 @@
 ## Project Information
 - **Project**: OTel APIファミリーを唯一の上流Interfaceとして監査と可観測性を統合する（親Issue #1672、Phase 1 #1678 のwalking skeletonから開始。Phase 1不合格なら撤回するhard gate付き）
 - **Project Type**: Brownfield
-- **Scope**: amadeus-feature
+- **Scope**: self-feature
 - **Start Date**: 2026-07-29T05:38:14Z
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
