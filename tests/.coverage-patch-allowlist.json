@@ -43,15 +43,9 @@
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "803-804",
-    "reason": "Defensive cardinality invariant over the const REGISTERED_EVENTS table: unreachable without editing the registry source itself, at which point this throw is the guard that fires. No test path can reach it through the public API.",
-    "expiry": "remove if the registry table becomes runtime-composable (making cardinality genuinely variable)"
-  },
-  {
-    "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "809-833",
-    "reason": "assertDefConsistent/assertCanonicalDefConsistent defensive invariants over the const REGISTERED_EVENTS table (duplicate name/audit mapping, telemetry-with-mapping, canonical-without-mapping, misclassified category): unreachable without editing the registry source itself, at which point these throws are the guards that fire.",
-    "expiry": "remove if the registry table becomes runtime-composable"
+    "lines": "842",
+    "reason": "`export type RegisteredEventName = (typeof REGISTERED_EVENTS)[number][\"name\"]` is a type-only declaration erased before runtime; Bun stamps DA:0 on the line and nothing can ever execute it. The union it derives is enforced by tsc and by the registry drift guard (tests/integration/event-registry-drift.test.ts).",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   },
   {
     "file": "packages/framework/core/otel/relay.ts",
@@ -175,9 +169,9 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-journal.ts",
-    "lines": "271",
-    "reason": "isJsonValue's switch default clause (typeof undefined/function/symbol/bigint) is reachable but Bun emits no DA stamp for this line at all, so the patch gate cannot measure it; the branch is driven by the serialize rejection test for BigInt attributes.",
-    "expiry": "remove if Bun stamps switch default clauses in LCOV or the validator is restructured"
+    "lines": "270",
+    "reason": "isJsonValue's `default:` switch label carries no executable statement, so Bun stamps DA:0 on it permanently. The arm's body (the `return false;` beneath it) is driven in-process by the serialize rejection test for a non-JSON attribute value in tests/integration/t-otel-core-plumbing.test.ts.",
+    "expiry": "remove if Bun stops stamping switch labels in LCOV or the validator is restructured"
   },
   {
     "file": "packages/framework/core/tools/amadeus-jump.ts",
@@ -1978,7 +1972,7 @@
   },
   {
     "file": "tests/deletion-gate.ts",
-    "lines": "623-626",
+    "lines": "628-631",
     "reason": "main's try/catch wraps the gathering path, so reaching it from the suite would require running the real measurements (a full nested test run plus both distribution guards). The argv arms that do not gather are tested; the CLI itself is exercised by the CI step.",
     "expiry": "remove if gathering becomes cheap enough to drive from a test"
   },
