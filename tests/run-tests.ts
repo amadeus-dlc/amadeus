@@ -110,13 +110,12 @@ LEVEL FLAGS (combinable, each selects exactly its level):
   --unit          Single-component isolation (hooks, frontmatter, knowledge)
   --integration   Cross-component contracts and live stage/CLI utilities
   --e2e           Full lifecycle, worktree, and rendered terminal journeys
-  --perf          Real-time performance benchmarks. Excluded from --ci (and
-                  from the default profile); included by --release / --all.
+  --perf          Real-time performance benchmarks (wall-clock measurement)
 
 PROFILE FLAGS (shortcuts -- map to test pyramid layers):
   (default)       smoke + unit + integration
   --ci            smoke + unit + integration
-  --release       smoke + unit + integration + e2e
+  --release       smoke + unit + integration + e2e + perf
   --all           Same as --release
 
 OUTPUT MODIFIERS (combinable with any tier/profile):
@@ -1114,18 +1113,11 @@ async function main(): Promise<number> {
   }
 
   // Real-time benchmarks (#1830 FR-1). Held out of --ci so a loaded shared
-  // runner cannot turn wall-clock measurement into a red build; runs parallel
-  // like integration/e2e (only smoke and unit are pinned serial).
+  // runner cannot turn wall-clock measurement into a red build. No exclude set,
+  // so the plain runTier path applies: parallel like integration/e2e (only
+  // smoke and unit are pinned serial).
   if (args.runPerf) {
-    process.stdout.write("\n");
-    process.stdout.write(
-      args.parallel > 1
-        ? `## Performance Tests (real-time benchmarks) (parallel=${args.parallel})\n`
-        : "## Performance Tests (real-time benchmarks)\n",
-    );
-    await runFilesPartitioned("perf", args.parallel, sizeCollector);
-    await withStdoutLock(() => undefined);
-    aggregateTierResults();
+    await runTier("perf", "Performance Tests (real-time benchmarks)", sizeCollector);
   }
 
   writeVerboseSummary();

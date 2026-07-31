@@ -15,6 +15,7 @@ import {
   exceedsMedianLatencyBudget,
   median,
 } from "../lib/latency-median-budget-gate.ts";
+import { nearestRankP95 } from "../lib/percentile.ts";
 
 const BENCHMARK_CHILD = join(import.meta.dir, "../helpers/lifecycle-transaction-benchmark-child.ts");
 
@@ -31,12 +32,7 @@ function benchmarkChild(mode: LifecycleBenchmarkSample["mode"]): LifecycleBenchm
     encoding: "utf-8",
   });
   if (result.status !== 0) throw new Error(result.stderr);
-  return JSON.parse(result.stdout);
-}
-
-function p95(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.ceil(sorted.length * 0.95) - 1];
+  return JSON.parse(result.stdout) as LifecycleBenchmarkSample;
 }
 
 // Absolute latency budgets (#1424). Unchanged in value; the verdict now gates
@@ -66,11 +62,11 @@ describe("intent lifecycle transaction performance contract", () => {
     const result = {
       samples: 100,
       warmups: 10,
-      archiveP95Ms: p95(archiveLatencies),
-      recoveryP95Ms: p95(recoveryLatencies),
+      archiveP95Ms: nearestRankP95(archiveLatencies),
+      recoveryP95Ms: nearestRankP95(recoveryLatencies),
       archiveMedianMs: median(archiveLatencies),
       recoveryMedianMs: median(recoveryLatencies),
-      rssDifferenceP95MiB: p95(rss) / (1024 * 1024),
+      rssDifferenceP95MiB: nearestRankP95(rss) / (1024 * 1024),
       fixtureSha256: archive[0].fixtureSha256,
       gitSha: currentGitSha(),
       bunVersion: Bun.version,

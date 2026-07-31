@@ -15,6 +15,7 @@ import {
   exceedsMedianLatencyBudget,
   median,
 } from "../lib/latency-median-budget-gate.ts";
+import { nearestRankP95 } from "../lib/percentile.ts";
 
 const BENCHMARK_CHILD = join(
   import.meta.dir,
@@ -41,11 +42,6 @@ function benchmarkChild(size: number, mode: "active" | "noop"): BenchmarkSample 
     throw new Error(`benchmark child failed: ${result.stderr}`);
   }
   return JSON.parse(result.stdout) as BenchmarkSample;
-}
-
-function nearestRankP95(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Number.NaN;
 }
 
 // Absolute latency budgets (#1424). Unchanged in value; the verdict now gates

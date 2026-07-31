@@ -14,19 +14,17 @@ import {
   GUARD_CORPUS_FILES as FILES,
   GUARD_CORPUS_TOOLS_DIR as TOOLS,
 } from "../lib/guard-corpus-ast.ts";
+import { median } from "../lib/latency-median-budget-gate.ts";
 
 const BENCHMARK_CHILD = join(import.meta.dir, "../helpers/guard-corpus-benchmark-child.ts");
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.floor(sorted.length / 2)];
-}
 
 describe("archived guard AST corpus performance", () => {
   test("AST traversal grows linearly over a duplicated corpus", () => {
     const source = FILES.map((name) => readFileSync(join(TOOLS, name), "utf-8")).join("\n");
-    const one = callNames(source).length;
-    const two = callNames(`${source}\n${source}`).length;
+    const oneNames = callNames(source);
+    const twoNames = callNames(`${source}\n${source}`);
+    const one = oneNames.length;
+    const two = twoNames.length;
     expect(two).toBe(one * 2);
     const sinks = [
       "setActiveIntentCursor",
@@ -34,8 +32,6 @@ describe("archived guard AST corpus performance", () => {
       "removeField",
       "transitionIntentStatusLocked",
     ];
-    const oneNames = callNames(source);
-    const twoNames = callNames(`${source}\n${source}`);
     const oneSinkCounts = Object.fromEntries(
       sinks.map((sink) => [sink, oneNames.filter((name) => name === sink).length]),
     );
