@@ -43,6 +43,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # No authenticated git operation runs after checkout, so the token
+          # need not be persisted into .git/config.
+          persist-credentials: false
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -93,6 +97,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # No authenticated git operation runs after checkout, so the token
+          # need not be persisted into .git/config.
+          persist-credentials: false
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -105,7 +113,9 @@ jobs:
       - name: Measure fixed distribution workload
         run: |
           set -o pipefail
-          bun run distribution:benchmark | tee distribution-benchmark.json
+          # stdout stays the pure JSON artifact stream; diagnostics go to a
+          # separate log so the failure summary has something to show.
+          bun run distribution:benchmark 2> benchmark-stderr.log | tee distribution-benchmark.json
 
       - name: Upload benchmark evidence
         uses: actions/upload-artifact@v4
@@ -113,6 +123,19 @@ jobs:
           name: mirror-distribution-benchmark-${{ matrix.replica }}
           path: distribution-benchmark.json
           retention-days: 14
+
+      - name: Summarise failure
+        if: failure()
+        run: |
+          {
+            echo "### Intent Mirror benchmark (replica ${{ matrix.replica }}) failed"
+            echo
+            echo 'Last 50 lines of `bun run distribution:benchmark` diagnostics:'
+            echo
+            echo '```'
+            tail -n 50 benchmark-stderr.log 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   distribution-benchmark-aggregate:
     name: Intent Mirror benchmark aggregate
@@ -123,6 +146,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # No authenticated git operation runs after checkout, so the token
+          # need not be persisted into .git/config.
+          persist-credentials: false
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
