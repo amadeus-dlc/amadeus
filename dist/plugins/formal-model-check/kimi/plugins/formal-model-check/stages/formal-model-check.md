@@ -9,7 +9,7 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-inputs: the externalised TLA+ model + config under specs/tla/ (FormalElection.tla / FormalElection.cfg) and the run-model-check CLI (scripts/formal-verif/run-model-check.ts).
+inputs: the externalised TLA+ model + config under specs/tla/ (FormalElection.tla / FormalElection.cfg) and the run-model-check CLI (plugins/formal-model-check/tools/run-model-check.ts).
 outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors:
   - model-completeness
@@ -38,7 +38,7 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
    environment (see the README for the local vs CI dependency contract):
 
    ```
-   bun scripts/formal-verif/run-model-check.ts \
+   bun plugins/formal-model-check/tools/run-model-check.ts \
      --model specs/tla/FormalElection.tla \
      --cfg   specs/tla/FormalElection.cfg \
      --out   <out-dir>

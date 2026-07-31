@@ -16,16 +16,16 @@ import {
   type TlcChildProcessPort,
   type TlcProcessPort,
   type TlcProcessRequest,
-} from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
   createDefaultModelCheckToolchain,
   runModelCheck,
-} from "../../scripts/formal-verif/run-model-check.ts";
-import { beginModelCheckArtifacts } from "../../scripts/formal-verif/run-model-check-artifacts.ts";
-import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../scripts/formal-verif/run-model-check-execution.ts";
-import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../scripts/formal-verif/run-model-check-paths.ts";
-import { StderrModelCheckReporter } from "../../scripts/formal-verif/run-model-check-reporter.ts";
-import { NodePlannerEnvironmentPort } from "../../scripts/formal-verif/tlc-spawn-planner.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check.ts";
+import { beginModelCheckArtifacts } from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
+import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../plugins/formal-model-check/tools/run-model-check-execution.ts";
+import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../plugins/formal-model-check/tools/run-model-check-paths.ts";
+import { StderrModelCheckReporter } from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
+import { NodePlannerEnvironmentPort } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 
 const REAL_TLC_AVAILABLE = process.env.AMADEUS_RUN_REAL_TLC === "1"
   && process.platform === "darwin"

@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
   TlaModelHarnessError,
   toTlaModelHarnessError,
-} from "../../scripts/formal-verif/tla-arm.ts";
-import type { ModelLoadErrorCode } from "../../scripts/formal-verif/tla-model-loader.ts";
-import * as productionLoader from "../../scripts/formal-verif/tla-model-loader.ts";
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import type { ModelLoadErrorCode } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
+import * as productionLoader from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import {
   diffModelMap,
   parseTlaModelMap,
-} from "../../scripts/formal-verif/tla-model-map.ts";
+} from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);

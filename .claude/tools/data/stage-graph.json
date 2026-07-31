@@ -2433,7 +2433,7 @@
       "model-completeness"
     ],
     "scopes": [],
-    "inputs": "the externalised TLA+ model + config under specs/tla/ (FormalElection.tla / FormalElection.cfg) and the run-model-check CLI (scripts/formal-verif/run-model-check.ts).",
+    "inputs": "the externalised TLA+ model + config under specs/tla/ (FormalElection.tla / FormalElection.cfg) and the run-model-check CLI (plugins/formal-model-check/tools/run-model-check.ts).",
     "outputs": "the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.",
     "rules_in_context": [
       {

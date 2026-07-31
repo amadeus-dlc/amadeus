@@ -4,9 +4,9 @@ import {
   validateCiAcceptanceEvidence,
   type CiAcceptanceEvidence,
   type CiTerminalInputs,
-} from "../../scripts/formal-verif/ci-model-check-domain.ts";
-import { FIXED_DOCKER_IMAGE } from "../../scripts/formal-verif/tlc-spawn-planner.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/ci-model-check-domain.ts";
+import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const SHA = "a".repeat(64);
 

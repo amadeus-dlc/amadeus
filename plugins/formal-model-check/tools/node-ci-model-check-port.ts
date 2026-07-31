@@ -195,7 +195,7 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
     const result = this.dependencies.command(
       process.execPath,
       [
-        "scripts/formal-verif/run-model-check.ts",
+        "plugins/formal-model-check/tools/run-model-check.ts",
         "--model",
         "specs/tla/FormalElection.tla",
         "--cfg",

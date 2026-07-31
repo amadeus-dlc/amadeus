@@ -16,7 +16,7 @@
 // (DarwinSandboxExecProvider), network for the sha-pinned TLC fetch (cached
 // after the first acquire under <output>/cache).
 //
-// Usage: bun scripts/formal-verif/run-skeleton-ci.ts <output-directory>
+// Usage: bun plugins/formal-model-check/tools/run-skeleton-ci.ts <output-directory>
 
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
@@ -39,7 +39,7 @@ if (!configuredJdkRoot) throw new Error("JAVA_HOME is required and must point to
 const JDK_ROOT = realpathSync(configuredJdkRoot);
 
 const outputRoot = process.argv[2];
-if (!outputRoot) throw new Error("usage: bun scripts/formal-verif/run-skeleton-ci.ts <output-directory>");
+if (!outputRoot) throw new Error("usage: bun plugins/formal-model-check/tools/run-skeleton-ci.ts <output-directory>");
 const root = resolve(outputRoot);
 mkdirSync(root, { recursive: true });
 

@@ -10,4 +10,4 @@ export {
   TLA_CFG_PATH,
   TLA_MODEL_MAP_PATH,
   TLA_MODEL_PATH,
-} from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+} from "./amadeus-formal-verif-model-map.ts";

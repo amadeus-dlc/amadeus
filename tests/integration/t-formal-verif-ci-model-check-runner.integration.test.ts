@@ -5,18 +5,18 @@ import { join } from "node:path";
 import {
   executeCiModelCheckAcceptance,
   type CiAcceptancePort,
-} from "../../scripts/formal-verif/ci-model-check-runner.ts";
+} from "../../plugins/formal-model-check/tools/ci-model-check-runner.ts";
 import {
   beginModelCheckArtifacts,
   publishModelCheckArtifacts,
-} from "../../scripts/formal-verif/run-model-check-artifacts.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
 import {
   buildEnvReceipt,
   notApplicableInspection,
   passedInspection,
-} from "../../scripts/formal-verif/run-model-check-domain.ts";
-import { FIXED_DOCKER_IMAGE } from "../../scripts/formal-verif/tlc-spawn-planner.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const roots: string[] = [];
 const HEAD = "a".repeat(40);

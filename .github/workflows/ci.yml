@@ -581,7 +581,7 @@ jobs:
             exit 2
           fi
           set +e
-          bun scripts/formal-verif/run-model-check-ci.ts run --root "${EVIDENCE_ROOT}"
+          bun plugins/formal-model-check/tools/run-model-check-ci.ts run --root "${EVIDENCE_ROOT}"
           status=$?
           set -e
           echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"
@@ -597,7 +597,7 @@ jobs:
         run: |
           set -euo pipefail
           test "${ACCEPTANCE_EXIT:-2}" -eq 0
-          bun scripts/formal-verif/run-model-check-ci.ts verify --root "${EVIDENCE_ROOT}"
+          bun plugins/formal-model-check/tools/run-model-check-ci.ts verify --root "${EVIDENCE_ROOT}"
 
       - name: Upload formal model-check evidence
         id: formal-upload

@@ -129,7 +129,7 @@ describe("U4 CI event behavior", () => {
     const verified = command(
       process.cwd(),
       process.execPath,
-      ["scripts/formal-verif/run-model-check-ci.ts", "verify", "--root", root],
+      ["plugins/formal-model-check/tools/run-model-check-ci.ts", "verify", "--root", root],
     );
     expect(verified.status).toBe(2);
     expect(verified.stderr).toContain('"code":"CI_ARTIFACTS_INVALID"');

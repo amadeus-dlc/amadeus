@@ -26,10 +26,10 @@ import {
   FsTlcToolchain,
   NodePhysicalReservationPort,
   type FsTlcToolchainDependencies,
-} from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
-import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "../../scripts/formal-verif/tla-arm.ts";
-import type { PreparedTlcRun } from "../../scripts/formal-verif/tlc-toolchain.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR, MAX_TLC_STREAM_BYTES } from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
+import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import type { PreparedTlcRun } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR, MAX_TLC_STREAM_BYTES } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const artifactBytes = new TextEncoder().encode("fixed-tlc-1.7.4-runtime-artifact");
 const sha256 = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");

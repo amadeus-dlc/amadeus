@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 
 describe("formal verification canonical identity", () => {
   test("ignores object insertion order", () => expect(canonicalIdentity({ b: 2, a: 1 }).sha256).toBe(canonicalIdentity({ a: 1, b: 2 }).sha256));

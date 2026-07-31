@@ -783,6 +783,57 @@ export function checkHarness(name: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Generated plugin sources — modules under plugins/ that are MACHINE COPIES of a
+// canonical module under packages/framework/core. A plugin tool tree must resolve
+// its imports inside its own directory (it is projected into hosts that carry no
+// packages/framework/), so a canonical module a plugin depends on is duplicated
+// rather than reached across the tree boundary.
+//
+// The copy is generator-owned with exactly the dist/ contract: never hand-edited,
+// byte-identical to its source, rewritten by `bun scripts/package.ts` and
+// byte-diffed by `--check`. That drift guard is what makes the duplication safe —
+// a hand edit on either side turns dist:check red instead of silently forking the
+// two copies.
+// ---------------------------------------------------------------------------
+type GeneratedPluginSource = { readonly from: string; readonly to: string };
+
+// Repo-relative POSIX source → destination pairs. Data, not code: a further
+// duplicate is one row here and nothing else.
+const GENERATED_PLUGIN_SOURCES: readonly GeneratedPluginSource[] = [
+  {
+    from: "packages/framework/core/tools/amadeus-formal-verif-model-map.ts",
+    to: "plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts",
+  },
+];
+
+// `root` is a seam (defaults to the repo) so a test can drive write and check
+// against a temp tree in-process — bun --coverage does not instrument spawned
+// subprocesses.
+export function writeGeneratedPluginSources(root: string = REPO_ROOT): void {
+  for (const { from, to } of GENERATED_PLUGIN_SOURCES) {
+    const outPath = join(root, ...to.split("/"));
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, readFileSync(join(root, ...from.split("/"))));
+  }
+}
+
+// MISSING / DIFFERS, matching the packager's existing drift vocabulary.
+export function checkGeneratedPluginSources(root: string = REPO_ROOT): string[] {
+  const problems: string[] = [];
+  for (const { from, to } of GENERATED_PLUGIN_SOURCES) {
+    const outPath = join(root, ...to.split("/"));
+    if (!existsSync(outPath)) {
+      problems.push(`MISSING generated plugin source: ${to} (copy of ${from})`);
+      continue;
+    }
+    if (!readFileSync(outPath).equals(readFileSync(join(root, ...from.split("/"))))) {
+      problems.push(`DIFFERS: ${to} is not byte-identical to ${from}`);
+    }
+  }
+  return problems.sort();
+}
+
+// ---------------------------------------------------------------------------
 // Harness-neutral plugin bundle at dist/plugins/<name>/ — the source-of-record
 // U10 composes from. Written ONCE (not per harness): verbatim source bytes, no
 // {{HARNESS_DIR}} token. Fully generator-owned, so write clean-sweeps it and
@@ -879,6 +930,9 @@ export function runCli(argv: string[]): number {
       for (const n of present) problems = problems.concat(checkHarness(n));
       // The harness-neutral bundle is diffed once alongside the harness trees.
       problems = problems.concat(checkNeutralBundle());
+      // Generated plugin sources are diffed against their canonical module, so a
+      // hand edit to either copy is drift here rather than a silent fork.
+      problems = problems.concat(checkGeneratedPluginSources());
     } finally {
       session.close();
     }
@@ -890,6 +944,9 @@ export function runCli(argv: string[]): number {
     console.log("package --check: all harness trees in sync with packages/framework/core + harness.");
     return 0;
   }
+  // Refresh generated plugin sources FIRST: the harness trees and the neutral
+  // bundle both project plugins/, so they must observe the current copy.
+  writeGeneratedPluginSources();
   for (const n of present) writeHarness(n);
   writeNeutralBundle();
   return 0;

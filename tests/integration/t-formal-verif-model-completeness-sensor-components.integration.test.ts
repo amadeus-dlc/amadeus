@@ -9,12 +9,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
   diffModelMap,
   parseTlaModelMap,
   type ModelMapEntry,
-} from "../../scripts/formal-verif/tla-model-map.ts";
+} from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 import {
   checkModelCompleteness,
   main,
