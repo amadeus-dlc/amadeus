@@ -11,8 +11,8 @@
 
 ## FR-A: 配布自立化(#1829、WS-A — 先行)
 
-- **FR-A1(移設)**: `scripts/formal-verif/` の分類 A(16)+B(7)+C(1)= 24 ファイルをプラグイン所有ツリー `plugins/formal-model-check/tools/` へ移設する(Q1=A 全移設)。移設後、`scripts/formal-verif/` ディレクトリは存在しない。
-  - AC: `test -d scripts/formal-verif` が exit 1。移設 24 ファイルがプラグイン配下に実在し、`bun` で runner が実行可能。
+- **FR-A1(移設)**: `scripts/formal-verif/` の分類 A(16)+B(7)+C(1)= 24 ファイルをプラグイン所有ツリー `plugins/formal-model-check/tools/` へ移設する(Q1=A 全移設)。ディレクトリの完全消滅は FR-A5(残骸削除)完了時に成立する(units-generation reviewer 指摘による帰属精密化 2026-07-31 — intent 全体の終状態は不変)。
+  - AC: 移設 24 ファイルがプラグイン配下に実在し、`bun` で runner が実行可能。`test -d scripts/formal-verif` exit 1 は FR-A5 の AC へ帰属。
 - **FR-A2(stage 参照書き換え)**: stage 本文の `scripts/formal-verif/` 参照 2 箇所(`plugins/formal-model-check/stages/formal-model-check.md:12` / `:41`)をプラグイン相対パスへ書き換え、compose 済みコピー・staging・stage-graph.json・dist 全変種へ同一変更で伝播する。
   - AC: `grep -rn "scripts/formal-verif" plugins/ dist/plugins/ .claude/plugins/ .claude/.amadeus-plugin-src/` が 0 件(検査面は plugin 配布面に限定 — codekb・record の説明散文は対象外: cid:requirements-analysis:c1-ac-grep-surface-scope)。
 - **FR-A3(tools 配布経路)**: compose がプラグイン tools を host へ配布できる機構を新設する(現状 manifest に tools 語彙なし・composeWriteSet は stage/seam/fragment のみ — 実測 amadeus-plugin-compose.ts:330-334 / :1021-1037)。スキーマの具体形(`tools` フィールド新設か別形)は設計段判断。
@@ -20,7 +20,7 @@
 - **FR-A4(CI 付け替え)**: `.github/workflows/ci.yml`(job キー :545、消費 :584/:600)を移設後パスへ付け替える。ジョブの検証意味論(run→verify、evidence upload、exit 分岐)は不変。
   - AC: workflow_dispatch での formal-model-check ジョブが移設後パスで green(または等価のローカル再現で run/verify exit 0)。
 - **FR-A5(残骸削除)**: 分類 D 30 ファイル+参照テスト・fixture・support を削除する(Q2=A 全削除)。complexity-baseline の該当 20 件(分類 D 分)、coverage-patch-allowlist の該当エントリ(:303-324 / :339-378)を同一変更で整理する。分類 A(移設・非削除)の台帳エントリ — allowlist の fs-tlc-toolchain.ts(:327-341)と complexity-baseline の contract.ts 2 件 — はパス書き換え+機械 remap の対象に含める(cid:code-generation:c1-allowlist-mechanical-remap)。
-  - AC: 削除後に `bash tests/run-tests.sh --ci` green、baseline/allowlist に stale エントリ 0(stale 検査+reason 直読照合)。
+  - AC: 削除後に `bash tests/run-tests.sh --ci` green、baseline/allowlist に stale エントリ 0(stale 検査+reason 直読照合)、`test -d scripts/formal-verif` が exit 1(FR-A1 から帰属移動)。
 - **FR-A6(境界ガード)**: 配布 plugin(dist/plugins/ 全変種+plugins/ 正本)が repo-only パス(`scripts/` 等)を参照したら赤になる検査を t258 同型で新設する。落ちる実証(注入→赤→revert の1セット、falling-proof-injection-one-set)必須。
   - AC: ガードテストが CI に載り、`scripts/` 参照の注入で実際に赤くなる実証記録が record に残る。
 
