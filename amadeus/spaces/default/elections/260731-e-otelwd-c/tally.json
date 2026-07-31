@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "C-1: scripts/otel-phase1-measure.ts を削除"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "C-1: scripts/otel-phase1-measure.ts を削除",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "C-2: (c) を『恒久例外を除いてゼロ』へ再定義",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-31T10:15:02Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OTELWD-C",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測4点で C-1 を支持。(1) tests/.callsite-allowlist.json は total 3 = amadeus-audit.ts appendAuditEntryUnlocked 1 + otel-phase1-measure.ts appendAuditEntry 2。guard --check 実行も 3 remaining across 2 files を出力。(2) scripts/otel-phase1-measure.ts:62/:76 の 2 site は timeSync(() => appendAuditEntry(...)) の『current 側』計測そのもので、旧 writer と同時にしか存在できない。ファイルは 99 行の一回性ハーネスで、grep の結果 CI workflow・run-tests・他テストからの実行参照はゼロ(参照は allowlist と t385 除外エントリのみ)。(3) t385:36-38 のコメントが既に『is never migrated, and dies with the writer it measures』と明記しており、code-summary.md:68/:134 の『設計上の恒久例外』は移行(migration)に対する恒久であって削除(deletion)に対する恒久ではない。両者は矛盾せず、C-1 は既決判断の趣旨に沿う。(4) 前提裁定で (d) 再定義縮退が確定した以上、新旧比較の消費者自体が消えるため残置の存在理由が無い。C-2 は checkCallsitesZero(tests/deletion-gate.ts:161-176 の total===0 のみ PASS)に例外リストを持ち込んで fail-closed 性を弱め、さらに仕様変更としてユーザー裁定を要するコストを払いながら、得られるのは既に用途を失ったハーネスの残置のみで便益がゼロ。",
+      "submittedAt": "2026-07-31T10:00:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OTELWD-C",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "削除コミットには Phase 1 計測値の provenance(cold 現行 2.01ms/新 0.92ms、warm p95 現行 0.92ms/新 0.99ms、bundle 237,933 bytes — otel-walking-skeleton/code-generation/code-summary.md:30、ADR-11 で NFR-1 予算確定)を明記し、ハーネス削除が NFR-1 予算の導出根拠を孤児化しないようにすること。あわせて callsite-migration/code-summary.md:68・:134 の『設計上の恒久例外として allowlist 残置が正しい』という既決記述は本裁定で失効するため、record 側に失効の申告(本選挙 E-OTELWD-C と (d) 再定義の前提裁定への参照)を残し、後続が旧記述を現行契約と誤読しないようにすること。",
+      "rationale": "独立実測により C-1 を支持する(GoA 2、留保は記録面のみで方式には異議なし)。(1) 契約側: tests/deletion-gate.ts の checkCallsitesZero は total===0 のみ PASS、それ以外は FAIL('N legacy call site(s) still call the writer directly')で、例外の余地を持たない fail-closed 述語である。C-2 はこの述語に例外リストを持ち込むため fail-closed 性を恒久に弱め、かつ選挙文どおり別途ユーザー裁定(仕様変更)を要する。(2) 現況実測: tests/.callsite-allowlist.json は total 3(amadeus-audit.ts の appendAuditEntryUnlocked 1 + otel-phase1-measure.ts の appendAuditEntry 2)、bun tests/callsite-guard.ts --check も 'OK — 0 new call sites, 3 remaining' を出力。amadeus-audit.ts の残 1 site は appendAuditEntry 本体が lock 取得後に appendAuditEntryUnlocked を呼ぶ自己参照(:417)で、writer ペア削除と同時に消える。よって phase1-measure の 2 site を消せば total 0 → (c) PASS が機械的に成立する。(3) 維持不能性: scripts/otel-phase1-measure.ts:15 は appendAuditEntry を直 import し :62/:76 で 'current 側' として呼ぶため、writer 削除後はそもそも解決不能になる。code-summary.md:68 の『移行すると比較対象が消えて計測が無意味』という恒久例外の根拠は、旧経路自体が消える本 Bolt では成立せず、前提裁定((d) 再定義で shadow 比較の旧経路計測が存在理由を失った)とも整合する。(4) 削除コスト: phase1-measure は 99 行の一回性ハーネスで、package.json / .github / tests/run-tests.sh のいずれからも参照されない(grep 0 件)。参照は tests/.callsite-allowlist.json:9、t385-emitter-registry-admission.test.ts:36(コメント)・:57(EXCLUDED_FILES)、および record 文書のみで、C-1 の記述どおり同一変更で整理可能。t385:36 のコメント自身が『dies with the writer it measures』と削除前提を明記している。以上より C-1 はゲート契約を無改変のまま (c) を真に閉包する唯一の方式であり、C-2 は消滅予定のファイルのために恒久的な契約緩和を導入する点で不適当である。",
+      "submittedAt": "2026-07-31T10:00:13Z"
+    }
+  ],
+  "resolutions": []
+}

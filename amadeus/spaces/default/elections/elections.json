@@ -196,5 +196,11 @@
     "dirName": "260730-e-otelcg-s13",
     "createdAt": "2026-07-30T22:23:56Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELWD-C",
+    "dirName": "260731-e-otelwd-c",
+    "createdAt": "2026-07-31T09:58:14Z",
+    "status": "recorded"
   }
 ]

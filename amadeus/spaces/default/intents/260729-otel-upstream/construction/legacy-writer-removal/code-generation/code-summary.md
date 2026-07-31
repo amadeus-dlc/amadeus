@@ -28,6 +28,8 @@
 
 ## 残作業（後続 Bolt へ委譲、ユーザー裁定準拠）
 
-1. 66 call site の OTel 経路移行（追加 Bolt — (c) の解消）
-2. shadow 比較 report の運用供給（(d) の解消）
-3. ゲート GREEN 後の旧 writer 削除 + retention 判定器（= ゲート GREEN 同期）+ v1 reader 削除
+〔訂正 2026-07-31: 項目 2・3 を後続ユーザー裁定へ追随して改訂。旧文面 — 「2. shadow 比較 report の運用供給（(d) の解消）」「3. …+ v1 reader 削除」— は失効。根拠: FR-MIG-4(d) の再定義（shadow report → `[migration-equivalence]` マーカー付きテスト群、requirements.md:73 改訂 2026-07-31 ユーザー裁定）と FR-MIG-5 適用範囲確定（v1 reader は保持、退役は Issue #1819 の別 intent へ委譲、requirements.md:74）〕
+
+1. 66 call site の OTel 経路移行（追加 Bolt — (c) の解消）→ Bolt G1/G2/G3 で完了（#1810/#1828/#1801）
+2. (d) checker の再定義実装（shadow report 検査 → `[migration-equivalence]` テスト群+registry スイープの機械消費。FR-MIG-4 改訂準拠）
+3. ゲート GREEN 後の旧 writer 削除 + retention 判定器（= ゲート GREEN 同期）。v1 reader は削除しない（FR-MIG-5、#1819 委譲）

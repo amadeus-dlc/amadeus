@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OTELWD-C",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測4点で C-1 を支持。(1) tests/.callsite-allowlist.json は total 3 = amadeus-audit.ts appendAuditEntryUnlocked 1 + otel-phase1-measure.ts appendAuditEntry 2。guard --check 実行も 3 remaining across 2 files を出力。(2) scripts/otel-phase1-measure.ts:62/:76 の 2 site は timeSync(() => appendAuditEntry(...)) の『current 側』計測そのもので、旧 writer と同時にしか存在できない。ファイルは 99 行の一回性ハーネスで、grep の結果 CI workflow・run-tests・他テストからの実行参照はゼロ(参照は allowlist と t385 除外エントリのみ)。(3) t385:36-38 のコメントが既に『is never migrated, and dies with the writer it measures』と明記しており、code-summary.md:68/:134 の『設計上の恒久例外』は移行(migration)に対する恒久であって削除(deletion)に対する恒久ではない。両者は矛盾せず、C-1 は既決判断の趣旨に沿う。(4) 前提裁定で (d) 再定義縮退が確定した以上、新旧比較の消費者自体が消えるため残置の存在理由が無い。C-2 は checkCallsitesZero(tests/deletion-gate.ts:161-176 の total===0 のみ PASS)に例外リストを持ち込んで fail-closed 性を弱め、さらに仕様変更としてユーザー裁定を要するコストを払いながら、得られるのは既に用途を失ったハーネスの残置のみで便益がゼロ。",
+  "submittedAt": "2026-07-31T10:00:07Z"
+}
