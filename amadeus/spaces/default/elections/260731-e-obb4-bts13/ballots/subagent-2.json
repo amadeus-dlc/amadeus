@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "diary memory.md:5 の候補 c1 は project.md:312 の cid:build-and-test:bt-20260730-1(brownfield bugfix batch は per-unit focused suite+main worktree フルベースラインを Comprehensive 実行とする)の適用実例そのもので、build-and-test-summary.md:5-7 も同 cid 準拠を明記し 674 files/9398 assertions/0 failed の実測のみを追加している。新規の規範・手順・例外は含まれないため persist 不要の 0 件が妥当。",
+  "submittedAt": "2026-07-31T08:06:41Z"
+}

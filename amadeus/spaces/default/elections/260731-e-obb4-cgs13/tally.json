@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "案1: 候補Aのみ採用(c1-degrade-batch-directive-capture への並行運用追補として persist)、B/C 不採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "案1: 候補Aのみ採用(c1-degrade-batch-directive-capture への並行運用追補として persist)、B/C 不採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "案2: 採用0件 — 候補Aも既存 cid+E-SRF-CGS13 の組合せ実践に過ぎず追補不要",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-31T07:53:03Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB4-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文には既存 cid の「実装開始前に directive 捕捉→捕捉後に実装開始」順序との関係(完了順の record 側直列処理は FR 全文焼き込み前提の許容代替形であること)を明示し、同一 cid 内の矛盾読みを残さないこと。",
+      "rationale": "project.md:272 の現行 cid は『各 unit の実装開始前に unit dir を遅延作成し directive を保存、実装は保存済み directive 取得後に開始』と定めるが、diary memory.md:6 の実測運用は『worktree 並行ディスパッチ(FR 全文焼き込み)を先行し、record 側(unit dir 作成→directive 捕捉→成果物→§12a)を builder 完了順に直列処理』という別シーケンシングで、既存文面に未記載。4 unit の code-summary.md(fix-1811 PR#1821 / fix-1800 PR#1820 / fix-1797 PR#1822 / fix-1816 PR#1823)が全 §12a READY・全マージ着地の実測を裏付ける。候補B は deviation-stop-before-implement / c2 追補 resume 再掲等の既存 cid の実践実例(memory.md:7,11)で新規規範なし、候補C(memory.md:15)は運用記録であり不採用が妥当。",
+      "submittedAt": "2026-07-31T07:52:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB4-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補は既存 cid の順序規定(『並行 Bolt の実装自体は保存済み directive の取得後に開始』)との関係を明文化し、FR 全文焼き込み時は directive 捕捉を完了順の record 側処理へ後置してよい条件形として書くこと。",
+      "rationale": "既存 cid 文面(project.md:272)は unit dir 遅延作成+directive 捕捉を実装開始前の直列前提と定めるが、diary(construction/code-generation/memory.md:6)の実測運用は FR 全文焼き込みにより実装を directive 非依存で並行ディスパッチし、record 側(unit dir 作成→directive 捕捉→成果物→§12a)を builder 完了順に直列処理する分離形で、既存文面に未記載の新規組合せ。4 unit の code-summary.md(fix-1797/fix-1800/fix-1811/fix-1816)全てに PR 着地・§12a READY・検証 exit code の実測が揃い、E-SRF-CGS13 の PR 発行報告割込みとの併用も memory.md:6 に記録されている。候補B は deviation-stop-before-implement 等の既存 cid 実践例(memory.md:7,11)、候補C は運用記録(memory.md:15)で新規規範なしとの不採用提案に同意。",
+      "submittedAt": "2026-07-31T07:51:47Z"
+    }
+  ],
+  "resolutions": []
+}

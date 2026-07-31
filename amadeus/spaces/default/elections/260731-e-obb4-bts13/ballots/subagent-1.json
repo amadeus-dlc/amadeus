@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "diary(construction/build-and-test/memory.md:5)の c1 は検証構成の記述のみで、project.md:312 の cid:build-and-test:bt-20260730-1 の文面(per-unit focused suites + main worktree full baseline = Comprehensive execution)と機序・構成が一致する適用実例。build-and-test-summary.md:5-7 も同 cid 準拠を明記し、:22 の書き分けは c4-conditional-ready の既存実践。新規規範・新規機序は含まれないため persist 0件で可。",
+  "submittedAt": "2026-07-31T08:06:34Z"
+}

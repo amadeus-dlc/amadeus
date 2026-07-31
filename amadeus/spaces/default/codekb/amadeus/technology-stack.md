@@ -1,6 +1,70 @@
 # 技術スタック
 
-## オープンバグ3件の技術断面（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の技術断面（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line と件数はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 4件が触れる技術面
+
+| Issue | 技術面 | ランタイム機構 |
+| --- | --- | --- |
+| #1811 | Bun のプロセス生成（`Bun.spawnSync`）と POSIX シグナル / event loop | `setInterval` による event loop 保持、`process.on("SIGTERM")`、`nohup` + `disown` による detach（`team-up.sh:503-507`）、PID ファイル（`:508`） |
+| #1800 | `Bun.spawnSync` の終了チャネル（`status` / `signal` / `error`）とその正規化 | `result.status ?? -1` センチネル（`:170` / `:210`）。`EAGAIN` / `EMFILE` / `ENOMEM` は `error` チャネルへ現れる |
+| #1797 | Bun のベンチマーク計測（子プロセス spawn による時間・RSS 測定） | `measure` 宣言 `:89`、逐次 spawn `:101` / `:102`、`median` `:46` |
+| #1816 | TypeScript の判別 union と markdown レンダリング | `renderMirrorIssueContent`（`:239`）の配列 join、`snapshot.status` の逐語描画（`:259-260`） |
+
+### ランタイム上の注意点
+
+**#1811 — event loop 保持と孤児プロセス**: `setInterval(() => {}, 1_000);`（`:219`）は Bun の event loop を無期限に保持する。親が先に終了すると PPID=1 の孤児となる（ライブ実測で84本、全 PPID=1）。本番側は `nohup` + `disown` で意図的に detach しているため（`team-up.sh:503-507`）、掃引は PID ファイル（`:508`）経由でしか成立しない。
+
+**期限付き kill/reap** が要件になる（`cid:code-generation:c3-doctor-seam` — 並列負荷下の child watcher は固定回数 polling や本番 injection ではなく READY/START handshake と期限付き kill/reap を使う）。
+
+**#1800 — Bun spawn の資源制約エラー**: 高並列下で `spawn EAGAIN`（プロセステーブル枯渇）が発生しうる。これは exit status を持たない終了であり `status` は `null` → センチネル `-1` に正規化される。テストは既にこの3分類を `:311-313` で契約固定している。
+
+**#1797 — 計測の時間窓**: Bun の子プロセス計測は spawn ごとに別プロセス・別時間窓となる。ホスト負荷が窓の間で変動すると比が系統的にずれる。交互計測（1プロセス内で `A, B, A, B`）は時間窓の共有を構造的に保証する。
+
+**#1816 — 判別 union と表示層の分離**: `snapshot.completionInstance`（型 `amadeus-mirror-types.ts:516` / `:527`）は presentation 層で**未消費**である。表示層が完了を知るには型上の参照を新設する必要がある。`parse-don't-validate` の観点では、completion を持つ snapshot と持たない snapshot が表示層で同一に扱われている状態である。
+
+### 構成カウント（測定 ref = base `3f73823b1` / observed `6e7a9d701`）
+
+| 面 | base `3f73823b1` | observed `6e7a9d701` |
+| --- | --- | --- |
+| core tools `*.ts` | `88` | `88`（**不変**） |
+| core sensors | `7` | `7`（不変） |
+| core hooks | `12` | `12`（不変） |
+| core scopes | `10` | `10`（不変） |
+| dist ハーネス | `7` | `7`（不変） |
+
+**本区間では core tools への新規モジュール追加が 0件**である。前区間（`a38a1f4d3..3f73823b1`）が +9モジュールだったのと対照的に、本区間は既存モジュールへの機能追加と修正に終始している。
+
+### 区間 `3f73823b1..6e7a9d701` の技術的変化
+
+13コミット。ソース面 `26 files / +1040 / −118`（`git diff --numstat` の面別機械集計）。
+
+| 変化 | 技術面 |
+| --- | --- |
+| 選挙 ballot の格納分離（#1773 修正 `25f54b066`） | ファイルシステム分離（voter 単位の `pending/<voter>.json`）+ git 非追跡化。`amadeus-election-store.ts` `+168/−10`。`mkdirSync(..., { recursive: true })`（`:167`）、`rmSync(..., { recursive: true, force: true })`（`:220`）による lane のライフサイクル管理 |
+| pending lane の gitignore（8面） | ルート `.gitignore` `+5` + 7ハーネス `dot-gitignore` 各 `+5`。パターンは `amadeus/spaces/*/elections/*/pending/`（末尾スラッシュのディレクトリ限定パターン — symlink にはマッチしない点に注意、`cid:requirements-analysis:scratch-script-discipline` の追補） |
+| 選挙 view の型拡張（#1772 修正 `75367ba67`） | `amadeus-election-model.ts` `+36/−9`。ホワイトリスト再構成型 parse へのフィールド追加 |
+| mirror create 判定の receipt 化（#1752 修正 `8a8abf567`） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）— state document から成功 receipt の存在を判定する純関数。`amadeus-orchestrate.ts:193`（import）/ `:4249`（消費） |
+| release workflow の分割（#1799 `b488466b8`） | GitHub Actions のジョブ分割による再実行可能性の獲得。`.github/workflows/release.yml` `+68/−22` |
+| リリース | `v0.1.7`（`e06b8f601`）。`release-it` による version 同期・タグ・GitHub Release・npm publish は `workflow_dispatch` 一本のまま不変 |
+
+### 検証ツールチェーンの断面
+
+本 intent が通す検証は不変（project.md § Testing Posture）:
+
+| コマンド | 対象 |
+| --- | --- |
+| `bun run typecheck` | `tsc --noEmit`（strict） |
+| `bun run lint` | Biome 2.4系（フォーマッタ無効） |
+| `bun run dist:check` | 7ハーネス dist のドリフトガード（**#1816 のみ実質差分**） |
+| `bun run promote:self:check` | self-install ツリーのドリフトガード（同上） |
+| `bash tests/run-tests.sh --ci` | smoke / unit / integration / e2e の4層 |
+
+**#1797 は追加で負荷スイープ実測**、**#1811 は追加でプロセス残留の `ps` 実測**を要する。いずれも既存ツールチェーンで賄え、新規ツールの導入は不要である。
+
+## オープンバグ3件の技術断面（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1773 / #1772 / #1752）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない（区間内の `package.json` 依存変化も 0）。
 

@@ -1,6 +1,95 @@
 # コード品質評価
 
-## オープンバグ3件の品質評価（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の品質評価（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 根因確度と判定
+
+| Issue | P/S | 判定 | 根因確度 | 患部の層 | 未決事項 |
+| --- | --- | --- | --- | --- | --- |
+| #1811 | P1/S2 | **現存**（ライブ実測あり: 残留84プロセス、全 PPID=1） | 100% | テスト fixture | 修正案 A/B/C の選択（推奨 C） |
+| #1800 | P3/S3 | **現存**（患部行は静的に確定。発火は負荷条件依存） | 機序 90%（`EAGAIN` が第一容疑、実測未確定）／患部所在 100% | テスト診断 | 再現不能時の受理条件 |
+| #1797 | P3/S4 | **現存**（実測 `2.5065` vs 閾値 `2.5`、マージン 0.26%） | 100% | テスト計測 | 修正案の選択と、スイープ実測から導く数値 |
+| #1816 | P3/S4 | **現存**（2機序が残存） | 100% | 本番（表示層） | `## Stage` / `## Phase` の終端化可否、仕様裁定部分の切り分け |
+
+### 品質所見
+
+#### 所見1: 3件が「テストの設計欠陥」クラスタを構成する
+
+#1811 / #1800 / #1797 はいずれも**本番コードが正しく、テスト側が本番契約を写せていない**という同型である。
+
+| Issue | 本番側の状態 | テスト側の欠落 |
+| --- | --- | --- |
+| #1811 | supervisor は run record 消滅で自律終了する fail-closed 実装（`team-up-codex-safety-wait.ts:643`、`:561-582` の `catch` → `false`） | stub は SIGTERM だけを終了条件にし（`:218-219`）、掃引の受け皿も無い（`afterEach` `:39-41`） |
+| #1800 | — | 3分類の診断設計（`:311-313` / `:218`）を持ちながら失敗系の一箇所（`:1411`）だけがそれを通らない |
+| #1797 | — | median 化（`:46-48`）は済んでいるが、計測が逐次別プロセス（`:101` / `:102`）で時間窓を共有しない |
+
+これは `cid:reverse-engineering:seam-writer-mode-precondition`（信号の書き手側の起動条件を実測せよ）と同じファミリの欠陥である — テストが本番の終了契約・診断契約・計測契約を部分的にしか写していない。
+
+#### 所見2: 診断の非対称は「片側実装」クラスタの再発である
+
+#1800 の患部（`:1411` の素の等値比較）と #1816 の患部（close が body を書かない `:1156-1159`、収束判定も同型 `:1038-1041`）は、いずれも `cid:requirements-analysis:symmetric-pair-review`（write⇔check / sync⇔close の対称性を明示観点にする）が対象とするクラスタに属する。bootstrap 由来バグの過半が同クラスタだった実測（`cid:requirements-analysis:symmetric-pair-review` の元根拠）と一致する。
+
+**#1800 は特に、正しい実装（`expectSuccessfulMigration` `:218`）が同一ファイル内に既存する**ため、修正は新機構の導入ではなく既存様式への合流である。
+
+#### 所見3: #1797 は「性能ゲート設計の第2層」である
+
+median 化は `#1424` 起点の t258 裁定で既に適用済みであり、本件はその**先に残った別機序**である。`cid:code-generation:c1-narrow-fix-post-apply-remeasure`（ガード通過 = 症状解消と仮定せず、修正適用後に元症状まで再実測する）の実例に当たる — 前回の median 化は正しかったが、閉包していなかった。
+
+**重要な区別**: 本件は `cid:code-generation:c1-benchmark-baseline-correlation-verify` が禁じる「空ウィンドウ baseline」型では**ない**。`measure(1)` は `measure(2)` と同じ計算を1倍量で行うため負荷相関は健全である。破れているのは**時間窓の共有**であり、別の設計面である。この区別を誤ると誤った修正（baseline の差し替え）へ向かう。
+
+#### 所見4: #1816 は「仕様裁定」と「実装欠陥」が混在する
+
+| 部分 | 分類 | 根拠 |
+| --- | --- | --- |
+| close が body を書かない（`executor:1156-1159`） | 実装欠陥 | sync との対称性が破れている |
+| completion 境界の最終 body が `Running` を表示する（`lifecycle:311-312` × `presentation:259-260`） | 実装欠陥（表示層） | `completionInstance` が presentation で未消費のため、表示層が完了を知る手段を持たない |
+| record の main 着地前に close する | **仕様裁定マター** | PR #1689 の設計帰結であり `t361:262` で契約固定済み |
+
+`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い、契約固定された挙動の変更は実装段で着手せず要件段で裁定する。実装スコープを**表示層に限定する**旨を要件段で申告する（無申告のスコープ縮小を避ける — `cid:build-and-test:no-silent-scope-narrowing`）。
+
+#### 所見5: 検査可能性の欠落
+
+| Issue | 退行を検知するテスト | 状態 |
+| --- | --- | --- |
+| #1811 | プロセス残留を assert するテスト | **0件** — 修正しても退行が検知されない |
+| #1800 | 3分類の診断（`:311-313`） | **存在する**が失敗系に適用されていない |
+| #1797 | 比 assert（`:108-109`） | 存在するが計測設計自体が患部 |
+| #1816 | body の Status を assert するテスト | `t281:55` / `t232:35` に存在するが、いずれも `completionInstance` を持たない fixture のため完了断面を検査していない |
+
+#1811 と #1816 は新規テストによる閉包の実証が必須である。
+
+#### 所見6: allowlist 行ピンの脆弱性が再び顕在化する
+
+`tests/.coverage-patch-allowlist.json` は本区間（`3f73823b1..6e7a9d701`）で `+38/−38` の全面 remap を受けたばかりである。#1816 が `amadeus-mirror-presentation.ts` へ行を挿入すると、presentation 行ピン5件（`193-194` / `230-234` / `237-239` / `245-247` / `266-271`）が再度 stale 化しうる。
+
+**機械 remap + 直読照合の併用が必須**（`cid:code-generation:c1-allowlist-mechanical-remap`）。stale 検査は存在検査のみで意味一致を見ないため、検出に映らないまま別の測定可能行へ無音転位する事例が実測されている（`cid:code-generation:allowlist-line-pin-stale` の追補）。
+
+#### 所見7: 修正の交差リスクは低い
+
+4件のうち **3件がテスト面に閉じる**ため、生成面（7 dist + self-install）の再生成チェーンを通るのは #1816 のみである。ファイル単位の交差も無い。条件は2点のみ:
+
+1. #1811 の**本番非改変を確定**すること（`team-up-codex-safety-wait.ts` / `team-up.sh` を触ると生成面で #1816 と交差する）
+2. `tests/.coverage-patch-allowlist.json` へ触れるのは #1816 のみとすること
+
+#### 所見8: #1811 の着地が #1800 / #1797 の再現条件を変える
+
+#1811 の残留プロセス（実測84本）はホスト負荷そのものである。これを解消すると、#1800（spawn `EAGAIN` が第一容疑）と #1797（負荷変動による比のずれ）の**再現条件が変わる**。
+
+負荷スイープ実測を #1811 の着地**前**に取るか**後**に取るかは要件段で固定する。前に取ると「残留込みの最悪条件」を、後に取ると「本来あるべき条件」を測ることになり、導出される数値が変わる。
+
+### 本区間で解消された品質課題（本 intent の患部外）
+
+| 課題 | 解消 |
+| --- | --- |
+| 未開票中の票本文が共有 tracked ファイルに載る（#1773） | pending lane 新設（`amadeus-election-store.ts` 6関数）+ `.gitignore` 8面で非追跡化。新規テスト `t373-election-ballot-blind-storage.integration.test.ts`（`+323`）で blind 性を assert |
+| 配布ビューに設問文・選択肢説明が無い（#1772） | `amadeus-election-model.ts` `+36/−9` で view へ搬送。`t234-election-model.test.ts` `+66/−2` でキー集合の契約を改訂 |
+| mirror create 拒否条件の自己矛盾（#1752） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）による receipt ベース判定へ反転。`t265-engine-boundary.integration.test.ts` `+120/−17` で fixture を分岐 |
+
+いずれも「検知テスト 0件」だった面に新規テストが付いており、前 intent の品質所見が閉包されている。
+
+## オープンバグ3件の品質評価（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 本節の file:line はすべて observed `3f73823b1` 時点。3件とも**現存**を実測確認した。
 

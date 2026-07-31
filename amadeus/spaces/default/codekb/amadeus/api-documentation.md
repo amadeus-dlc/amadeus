@@ -1,6 +1,101 @@
 # API ドキュメント
 
-## オープンバグ3件が触れる内部契約（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 触れる契約の一覧
+
+| Issue | 契約 | 種別 | 改訂の要否 |
+| --- | --- | --- | --- |
+| #1811 | supervisor の終了契約（run record 消滅で自律終了） | 本番契約（fixture 側が写せていない） | 本番は**改訂不要**。fixture が契約へ寄る |
+| #1800 | subprocess 終了チャネルの3分類（`exit-status` / `signal` / `spawn-error`） | テスト内契約 | **改訂不要**。失敗系へ適用を延長するだけ |
+| #1797 | corpus スケーリングの比 `2.5` 契約 | テスト内契約 | 数値の改訂可否は負荷スイープ実測から導く |
+| #1816 | mirror Issue body の描画契約（`## Status` が snapshot 逐語） | 本番契約（ユーザー可視） | **改訂を要する**（要件段で裁定） |
+
+### #1811 — supervisor の終了契約
+
+本番の契約は「run record が生きている間だけ supervise する」である。
+
+- `packages/framework/core/tools/team-up-codex-safety-wait.ts:643` verbatim: `while (await runRecordIsActive(runRecord, run, session)) {`
+- `runRecordIsActive`（宣言 `:561`）は run record 配下の `session` / `runtime` / `status` 3ファイルを読み、読取失敗時は `:580-582` の `catch` で `false` を返す
+
+**fixture 側はこの契約を写していない** — `tests/integration/t-team-up-codex-resume.serial.test.ts:218` の SIGTERM ハンドラのみが終了経路であり、`:219` の `setInterval` が event loop を無期限に保持する。
+
+**PID 追跡の契約**は既に存在する: `packages/framework/core/tools/team-up.sh:508` verbatim: `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"`。掃引はこの契約に乗れる。ただし `afterEach`（`:39-41`）の `rmSync` が同ディレクトリを消すため**掃引は `rmSync` より前**という順序契約が加わる。
+
+fixture が本番契約を写す場合（案 A）、述語は**「run record ディレクトリの実在のみ」に弱める**のが安全である。本番の3ファイル読取まで写すと fixture が本番の内部構造へ過剰結合する。
+
+### #1800 — subprocess 終了チャネルの3分類契約
+
+`tests/integration/t224-upstream-v2-migration-cli.test.ts` は終了状態を `-1` センチネルで正規化する契約を持つ。
+
+- `:170` / `:210` verbatim: `status: result.status ?? -1,`
+
+`-1` は「exit status を持たない終了」を意味し、`signal` と `error` の組で3分類へ解決される。この分類は `:311-313` の `test.each` で契約として固定されている。
+
+- `:311` verbatim: `["exit-status", { status: 1, signal: null, error: null }],`
+- `:312` verbatim: `["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],`
+- `:313` verbatim: `["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],`
+
+成功系の診断ヘルパー `expectSuccessfulMigration`（宣言 `:218`）はこの分類を消費して多行メッセージを組む（`:225-238`）。
+
+**契約の改訂は不要である** — `:1411` を同型ヘルパー経由へ寄せるだけで既存契約の適用範囲が失敗系へ延びる。新機構の導入ではなく既存様式への合流である。
+
+### #1797 — corpus スケーリングの比契約
+
+`tests/integration/t259-guard-corpus.test.ts` は「入力2倍で時間・RSS が 2.5倍以内」を契約として持つ。
+
+- `:108` verbatim: `expect(twoMedianMs / oneMedianMs).toBeLessThanOrEqual(2.5);`
+- `:109` verbatim: `expect(rssMultiplier).toBeLessThanOrEqual(2.5);`
+
+閾値 `2.5` は初出（`2e157d7fe`、#1424）以来不変。median 化（`median` 宣言 `:46`）は t258 裁定の反映として適用済みである。
+
+**契約の破れは数値ではなく計測設計にある** — `measure(1)`（`:101`）と `measure(2)`（`:102`）が逐次に別プロセスを spawn するため、両者は異なる時間窓で測られる。交互計測（案 (i)）を採る場合、契約の意味論は変わらず**計測手続きだけが変わる**。
+
+閾値そのものを改訂する場合は、負荷スイープの実測から数値を導出する（`cid:code-generation:c1-benchmark-baseline-correlation-verify`）。要件段では数値を固定せず「実測で決める」と書く。
+
+### #1816 — mirror Issue body の描画契約（ユーザー可視）
+
+body の描画契約は `packages/framework/core/tools/amadeus-mirror-presentation.ts` の `renderMirrorIssueContent`（宣言 `:239`）が持つ。body 組立は `:245-267` で、セクション順は `## Intent UUID` / `## Summary` / `## Phase` / `## Stage` / `## Status` / `## Updated At` / `## Mirror Marker` である。
+
+- `:259-260` verbatim: `"## Status",` / `snapshot.status,`
+
+**`snapshot.status` は逐語で描画される。** completion 境界では lifecycle 側の assert が `Running` を強制するため（`amadeus-mirror-lifecycle.ts:311-312` verbatim: `const completionMismatch = completion?.status === "pending" &&` / `(status !== "Running" || completion.stage !== currentStage);`）、最終 body は構造的に `Running` になる。
+
+**close 側は body 契約を一切持たない。** `packages/framework/core/tools/amadeus-mirror-executor.ts:1156-1159` の分岐で、`sync` は `editIssue(permit, context.issueContent.body)`、`close` は `closeIssue(permit)` と body を渡さない。収束判定も同じ非対称である（`:1038-1041` — sync = body 一致、close = `state === "CLOSED"`）。
+
+**改訂設計（案 (a)）の契約面**:
+
+| 項目 | 内容 |
+| --- | --- |
+| 導出キー | `snapshot.completionInstance` の**存在**。boundary をキーにすると `renderMirrorStatus`（`:298`）が組む drift 診断が close 後に恒久的な偽 drift を報告する |
+| `## Status` の終端値 | 要件段で確定 |
+| `## Stage` / `## Phase` の終端化 | 要件段の確定事項（`:253-257`） |
+| lifecycle assert（`:311-316`） | **改訂不要** — record 断面の整合検査であり表示層の関心ではない |
+
+`completionInstance` は presentation で未消費である（同ファイル内 `grep` 0ヒット）。型は `amadeus-mirror-types.ts:516` / `:527`、codec は `amadeus-mirror-state-codec.ts:567` / `:763` / `:770` / `:775`、lifecycle での供給は `:339`。
+
+**テスト契約への影響**:
+
+| ファイル | 契約 | 改訂 |
+| --- | --- | --- |
+| `tests/unit/t281-amadeus-mirror-presentation.test.ts` | body の逐語 assert（`:52` `## Stage` / `:55` `## Status`） | 既存2ケースは `completionInstance` を持たないため**改訂不要**。新規ケース追加のみ |
+| `tests/unit/t232-amadeus-mirror.test.ts` | body の `## Status` assert（`:35`） | 影響確認の対象 |
+| `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts` | close 順序の契約（`:262` `a prepared in-flight completion reaches Done and close before registry seal`） | **改訂不要**（body assert を持たない） |
+
+**仕様裁定マター**: 「record の main 着地前に close する」挙動は PR #1689 の設計帰結であり `t361:262` で契約固定されている。本 intent の実装スコープは**表示層に限定する**旨を要件段で申告する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+### 本区間で変化した契約（本 intent の患部外）
+
+| 契約 | 変化 | 由来 |
+| --- | --- | --- |
+| 選挙 ballot の格納契約 | collecting 中は `pending/<voter>.json` へ voter 単位で隔離し、tally 時に ledger へ統合する。`pendingDir` `:113` / `integratePending` `:205`。pending lane は git 非追跡（`.gitignore` + 7ハーネス `dot-gitignore`） | #1773 修正 |
+| 選挙配布ビューのキー集合 | `question` と選択肢 `description` を搬送するよう拡張（`amadeus-election-model.ts` `+36/−9`）。`t234-election-model.test.ts` `+66/−2` で契約を改訂 | #1772 修正 |
+| mirror boundary report の create 受理契約 | 「Issue が存在するなら拒否」から「成功 create receipt が存在すれば受理」へ反転。`succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）を `amadeus-orchestrate.ts:4249` で `createRan` として消費 | #1752 修正 |
+| release workflow のジョブ契約 | 再実行可能なジョブへ分割（`.github/workflows/release.yml` `+68/−22`） | #1799 |
+
+## オープンバグ3件が触れる内部契約（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 本節の file:line はすべて observed `3f73823b1` 時点。**公開 CLI verb の契約変化は区間内になし**（`amadeus-finding.ts` の新 CLI 1本は本 intent の患部外の新機能）。ただし3件はいずれも**修正時に内部契約を変える**。
 

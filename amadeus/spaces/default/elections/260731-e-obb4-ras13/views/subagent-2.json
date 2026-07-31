@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OBB4-RAS13",
+  "voter": "subagent-2",
+  "question": "260731-open-bug-batch-4 / requirements-analysis §13学習選定。surface 候補2件: c1=質問絞り込み判定(cid:requirements-analysis:c5 と E-OC1 既定手順+c1-benchmark-baseline-correlation-verify の既決参照による質問省略)、c2=#1800 の再現不能時受理条件の検証形置換(no-silent-scope-narrowing / exemption-clause-must-not-substitute の適用実例)。conductor 提案は0件採用 — 両候補とも既存 cid の適用実例。各自 memory.md(amadeus/spaces/default/intents/260731-open-bug-batch-4/inception/requirements-analysis/memory.md)と requirements.md の FR-2c / Review 節を実測し GoA 付きで投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件不可 — persist すべき新規学習がある"
+    }
+  ]
+}

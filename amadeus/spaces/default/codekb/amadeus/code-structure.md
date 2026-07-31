@@ -1,6 +1,97 @@
 # コード構造
 
-## オープンバグ3件の患部配置（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の患部配置（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 患部の配置
+
+| Issue | ファイル | 行 | 患部 |
+| --- | --- | --- | --- |
+| #1811 | `tests/integration/t-team-up-codex-resume.serial.test.ts` | `:218` / `:219` | SIGTERM のみの終了ハンドラと `setInterval` による不死化 |
+| #1811 | 同上 | `:39-41` | `afterEach` に kill/reap 掃引が無い |
+| #1811 | 同上 | `:590` / `:973` / `:1004` | `--kill` を通らずに終端する3テスト |
+| #1800 | `tests/integration/t224-upstream-v2-migration-cli.test.ts` | `:1411` | `expect(collided.status).toBe(1);` — 素の等値比較 |
+| #1797 | `tests/integration/t259-guard-corpus.test.ts` | `:108` / `:109` | 比 `2.5` の assert |
+| #1797 | 同上 | `:101` / `:102` | `measure(1)` / `measure(2)` の逐次別プロセス spawn |
+| #1816 | `packages/framework/core/tools/amadeus-mirror-presentation.ts` | `:259-260` | `"## Status",` / `snapshot.status,` の逐語レンダリング |
+| #1816 | `packages/framework/core/tools/amadeus-mirror-executor.ts` | `:1156-1159` | sync/close の body 書込非対称 |
+
+### ディレクトリ別の分布
+
+| ディレクトリ | 触れる Issue | 生成面の再生成 |
+| --- | --- | --- |
+| `tests/integration/` | #1811 / #1800 / #1797 | 不要 |
+| `tests/helpers/` | #1797（`guard-corpus-benchmark-child.ts`） | 不要 |
+| `tests/unit/` | #1816（`t281-amadeus-mirror-presentation.test.ts` へケース追加） | 不要 |
+| `tests/.coverage-patch-allowlist.json` | #1816 のみ | 不要 |
+| `packages/framework/core/tools/` | **#1816 のみ** | **必要**（7 dist + self-install） |
+
+**3件がテスト面に閉じる**という配置が、本 intent の並行実装可能性を構造的に支えている。
+
+### ファイル規模（`wc -l` 実測、測定 ref = observed `6e7a9d701`）
+
+| ファイル | 行数 |
+| --- | --- |
+| `tests/integration/t-team-up-codex-resume.serial.test.ts` | 1,813 |
+| `tests/integration/t224-upstream-v2-migration-cli.test.ts` | 1,830 |
+| `tests/integration/t259-guard-corpus.test.ts` | 126 |
+| `packages/framework/core/tools/team-up-codex-safety-wait.ts` | 689 |
+
+### 区間 `3f73823b1..6e7a9d701` の機械集計
+
+13コミット（`git rev-list --count 3f73823b1..HEAD` = 13）。全体は `188 files changed, 6355 insertions(+), 424 deletions(-)`（`git diff --shortstat`）。
+
+面別内訳（`git diff --numstat` からのパス分類集計 — `cid:requirements-analysis:numbers-from-command-output-only`）:
+
+| 面 | files | insertions | deletions |
+| --- | --- | --- | --- |
+| `dist/` | 52 | 1661 | 171 |
+| `amadeus/` record | 72 | 2204 | 10 |
+| self-install 8面 | 33 | 1164 | 123 |
+| `metrics/` | 5 | 286 | 2 |
+| **ソース面** | **26** | **1040** | **118** |
+
+ソース面のディレクトリ別内訳:
+
+| ディレクトリ | files | insertions | deletions |
+| --- | --- | --- | --- |
+| `tests/integration/` | 4 | 574 | 26 |
+| `packages/framework/` | 13 | 268 | 24 |
+| `.github/workflows/` | 1 | 68 | 22 |
+| `tests/unit/` | 1 | 66 | 2 |
+| `tests/.coverage-patch-allowlist.json` | 1 | 38 | 38 |
+| `docs/guide/` | 2 | 17 | 2 |
+| `.gitignore` | 1 | 5 | 0 |
+| その他（`specs/tla`、`README.md`、`packages/setup`） | 3 | 4 | 4 |
+
+### テスト番号の在庫
+
+`ls tests/unit tests/integration tests/e2e tests/smoke` の実測で、既存の最大番号は **`t373`**。`t372` は**欠番**（本区間で `t373` のみ新設されたため）。
+
+| 番号 | 用途 |
+| --- | --- |
+| `t374` | #1811（プロセス残留の閉包テスト） |
+| `t375` | #1800（診断対称化の閉包テスト） |
+| `t376` | #1797（計測設計の閉包テスト） |
+| — | #1816 は `tests/unit/t281-amadeus-mirror-presentation.test.ts` へケース追加（新規採番なし） |
+
+`t372` の欠番は埋めない。並行 Bolt 実装時は本予約をディスパッチプロンプトへ明記する（`cid:code-generation:swarm-test-number-reservation`）。テスト引用は `tNNN` 短形でなくフルパスで書く（`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補 — 同一番号の複数ファイル共存が実在する。実測: `t224` は4ファイル、`t232` は2ファイル）。
+
+### 本区間で追加・変更されたテスト（本 intent の患部外）
+
+| ファイル | 変化 | 由来 |
+| --- | --- | --- |
+| `tests/integration/t373-election-ballot-blind-storage.integration.test.ts` | 新規 `+323` | #1773 修正 |
+| `tests/integration/t265-engine-boundary.integration.test.ts` | `+120/−17` | #1752 修正 |
+| `tests/integration/t223-release-bot-bypass.integration.test.ts` | `+76/−1` | #1799 |
+| `tests/unit/t234-election-model.test.ts` | `+66/−2` | #1772 修正 |
+| `tests/integration/t236-election-loop.integration.test.ts` | `+55/−8` | #1773 / #1772 修正 |
+| `tests/.coverage-patch-allowlist.json` | `+38/−38` | 行ピンの全面 remap |
+
+本区間では**テスト番号の重複は発生していない**（前区間の3組と対照的）。
+
+## オープンバグ3件の患部配置（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 本節の file:line はすべて observed `3f73823b1` 時点。
 
