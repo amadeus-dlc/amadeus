@@ -6,7 +6,7 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-07-31T08:29:21Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
 - **Bolt Refs**:
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 15
-- **Completed**: 11
-- **In Progress**: nfr-design
+- **Completed**: 12
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -75,9 +75,9 @@
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
 - [ ] nfr-requirements — SKIP
-- [-] nfr-design — EXECUTE
+- [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [ ] code-generation — EXECUTE
+- [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — EXECUTE
@@ -93,15 +93,15 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: nfr-design
-- **Next Stage**: code-generation
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-07-31T20:27:51Z
+- **Last Updated**: 2026-07-31T21:49:58Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design
-- **Next Action**: Execute Nfr Design
+- **Last Completed Stage**: nfr-design
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
