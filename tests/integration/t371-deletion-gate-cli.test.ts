@@ -1,4 +1,4 @@
-// covers: function:runCheck function:runRequireGreen function:main function:measureCallsites function:measureRegistryDrift function:measureRelayProof function:readShadowReport function:resultsFromEvidence
+// covers: function:runCheck function:runRequireGreen function:main function:measureCallsites function:measureRegistryDrift function:measureRelayProof function:measureMigrationEquivalence function:discoverMigrationEquivalenceTests function:resultsFromEvidence
 //
 // U8 (legacy-writer-removal) — the deletion gate's CLI and its evidence
 // gathering (FR-MIG-4, BR-2, BR-16).
@@ -14,7 +14,7 @@
 // ever observed in one state is not a gate.
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import {
@@ -22,14 +22,17 @@ import {
   GATE_CONDITIONS,
   DEFAULT_RUNNERS,
   gatherEvidence,
+  MIGRATION_EQUIVALENCE_MIN_FILES,
   MIXED_JOURNAL_TESTS,
+  REGISTRY_SWEEP_TEST,
   REPO_ROOT_FOR_TEST,
+  discoverMigrationEquivalenceTests,
   runBunTests,
   main,
   measureCallsites,
+  measureMigrationEquivalence,
   measureRegistryDrift,
   measureRelayProof,
-  readShadowReport,
   resultsFromEvidence,
   runCheck,
   runRequireGreen,
@@ -42,13 +45,15 @@ const ALL_PASS: Evidence = {
   mixedJournal: { ran: true, passed: true, detail: "", sources: ["t365"] },
   registryDrift: [],
   callsites: 0,
-  shadow: {
-    generatedAt: "2026-07-30T00:00:00.000Z",
-    eventCount: { performed: true, equivalent: true, detail: "" },
-    linkage: { performed: true, equivalent: true, detail: "" },
-    status: { performed: true, equivalent: true, detail: "" },
-    allowedAttributes: { performed: true, equivalent: true, detail: "" },
-    unexplainedDiffs: [],
+  migrationEquivalence: {
+    markerFiles: [
+      REGISTRY_SWEEP_TEST,
+      "tests/integration/t379-swarm-canonical-emit.test.ts",
+      "tests/integration/t382-sensor-canonical-emit.test.ts",
+      "tests/integration/t383-targeted-canonical-emit.test.ts",
+      "tests/integration/t390-migration-equivalence.test.ts",
+    ],
+    outcome: { ran: true, passed: true, detail: "", sources: [] },
   },
   relay: { moduleExists: true, proofTests: ["tests/integration/relay-no-span-proof.test.ts"], outcome: { ran: true, passed: true, detail: "", sources: [] } },
   distribution: { ran: true, passed: true, detail: "", sources: ["dist:check"] },
@@ -72,25 +77,30 @@ describe("evidence gathering measures the real tree", () => {
     expect(typeof proof?.moduleExists).toBe("boolean");
   });
 
-  test("an absent shadow report reads as null rather than as agreement", () => {
-    expect(readShadowReport(undefined)).toBeNull();
-    expect(readShadowReport(join(scratch(), "nope.json"))).toBeNull();
+  test("the migration-equivalence suites are discovered by marker, not assumed", () => {
+    const found = discoverMigrationEquivalenceTests();
+    expect(found).not.toBeNull();
+    expect((found ?? []).length).toBeGreaterThanOrEqual(MIGRATION_EQUIVALENCE_MIN_FILES);
+    expect(found).toContain(REGISTRY_SWEEP_TEST);
+    // Repo-relative, for the same reason condition (e)'s proof paths are: an
+    // absolute path survives existsSync and then fails after the join.
+    for (const path of found ?? []) {
+      expect(isAbsolute(path)).toBe(false);
+      expect(existsSync(join(REPO_ROOT_FOR_TEST, path))).toBe(true);
+    }
   });
 
-  test("a malformed shadow report reads as null rather than as agreement", () => {
-    const dir = scratch();
-    const path = join(dir, "shadow.json");
-    writeFileSync(path, "{ not json", "utf-8");
-    expect(readShadowReport(path)).toBeNull();
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  test("a well-formed shadow report is read back", () => {
-    const dir = scratch();
-    const path = join(dir, "shadow.json");
-    writeFileSync(path, JSON.stringify(ALL_PASS.shadow), "utf-8");
-    expect(readShadowReport(path)?.generatedAt).toBe("2026-07-30T00:00:00.000Z");
-    rmSync(dir, { recursive: true, force: true });
+  test("the measurement hands the discovered set to the suite runner", () => {
+    // The runner is faked: the marked suites are the ones this file's own CI
+    // run already executes, and nesting them under it is the load-induced
+    // false-red shape (cid:code-generation:fanout-load-settle-before-integration).
+    const asked: string[][] = [];
+    const measured = measureMigrationEquivalence((paths) => {
+      asked.push([...paths]);
+      return { ran: true, passed: true, detail: "fake", sources: paths };
+    });
+    expect(measured?.markerFiles).toEqual(asked[0] as string[]);
+    expect(measured?.outcome?.detail).toBe("fake");
   });
 
   test("evidence maps onto exactly the six conditions", () => {
@@ -123,7 +133,7 @@ describe("runCheck — always reports, never forces", () => {
         mixedJournal: null,
         registryDrift: measureRegistryDrift(),
         callsites: measureCallsites(),
-        shadow: null,
+        migrationEquivalence: null,
         relay: measureRelayProof(),
         distribution: null,
       },
@@ -229,7 +239,9 @@ describe("gatherEvidence — each condition draws on its own source", () => {
         },
       },
     );
-    expect(asked).toEqual([[...MIXED_JOURNAL_TESTS]]);
+    expect(asked[0]).toEqual([...MIXED_JOURNAL_TESTS]);
+    expect(asked[1]).toContain(REGISTRY_SWEEP_TEST);
+    expect(asked).toHaveLength(2);
     expect(guardsRun).toBe(1);
     expect(evidence.mixedJournal?.detail).toBe("fake");
     expect(evidence.distribution?.sources).toEqual(["fake-guard"]);
@@ -237,8 +249,9 @@ describe("gatherEvidence — each condition draws on its own source", () => {
     expect(typeof evidence.callsites).toBe("number");
     expect(Array.isArray(evidence.registryDrift)).toBe(true);
     expect(evidence.relay).not.toBeNull();
-    // No shadow report path was given, so (d) is unmeasured — the UNKNOWN arm.
-    expect(evidence.shadow).toBeNull();
+    // (d) draws on the marker discovery plus the same injected suite runner.
+    expect(evidence.migrationEquivalence?.markerFiles).toContain(REGISTRY_SWEEP_TEST);
+    expect(evidence.migrationEquivalence?.outcome?.detail).toBe("fake");
     expect(resultsFromEvidence(evidence)).toHaveLength(6);
   });
 
@@ -278,61 +291,40 @@ describe("the report is validated before it is written, not after", () => {
   });
 });
 
-// --- a malformed shadow report is a verdict, not a crash ---------------------
+// --- condition (d) blocks rather than passes on a thinned evidence base ------
 //
-// PR #1766 review: a report file missing a dimension or unexplainedDiffs threw
-// while being judged, so the gate exited through its UNEXPECTED arm instead of
-// producing the BLOCKED report BR-12 asks for. The evidence is now parsed at
-// the file boundary, so a wrongly-shaped file reads as no evidence at all.
+// The floor and the named registry sweep are what stop a green run over fewer
+// suites from reading like a green run over all of them.
 
-describe("a wrongly-shaped shadow report blocks rather than crashes", () => {
-  const writeShadow = (body: unknown): string => {
-    const path = join(scratch(), "shadow.json");
-    writeFileSync(path, JSON.stringify(body), "utf-8");
-    return path;
-  };
-
-  test("a report missing a dimension reads as no evidence", () => {
-    const { linkage: _dropped, ...missingDimension } = ALL_PASS.shadow as Record<string, unknown>;
-    expect(readShadowReport(writeShadow(missingDimension))).toBeNull();
-  });
-
-  test("a report missing unexplainedDiffs reads as no evidence", () => {
-    const { unexplainedDiffs: _dropped, ...missingDiffs } = ALL_PASS.shadow as Record<string, unknown>;
-    expect(readShadowReport(writeShadow(missingDiffs))).toBeNull();
-  });
-
-  test("a performed dimension with no equivalent field reads as no evidence", () => {
-    const shadow = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
-    delete (shadow.status as Record<string, unknown>).equivalent;
-    expect(readShadowReport(writeShadow(shadow))).toBeNull();
-  });
-
-  test("a well-formed report still reads back", () => {
-    expect(readShadowReport(writeShadow(ALL_PASS.shadow))?.generatedAt).toBe("2026-07-30T00:00:00.000Z");
-  });
-
-  test("evaluating a malformed report yields a schema-valid BLOCKED report and exit 0", () => {
+describe("a thinned migration-equivalence base blocks rather than passes", () => {
+  test("evaluating a short marker set yields a schema-valid BLOCKED report and exit 0", () => {
     const dir = scratch();
     const reportPath = join(dir, "gate.json");
-    const malformed = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
-    delete malformed.unexplainedDiffs;
-    const code = runCheck({
-      reportPath,
-      evidence: { ...ALL_PASS, shadow: malformed as never },
-    });
+    const thinned = {
+      ...ALL_PASS,
+      migrationEquivalence: {
+        markerFiles: ALL_PASS.migrationEquivalence?.markerFiles.slice(0, 2) ?? [],
+        outcome: { ran: true, passed: true, detail: "", sources: [] },
+      },
+    };
+    const code = runCheck({ reportPath, evidence: thinned });
     expect(code).toBe(0);
     const written = JSON.parse(readFileSync(reportPath, "utf-8"));
     expect(validateReportShape(written)).toEqual([]);
     expect(written.overall).toBe("BLOCKED");
     const d = written.results.find((r: { condition: string }) => r.condition === "d");
-    expect(d.verdict).toBe("UNKNOWN");
+    expect(d.verdict).toBe("FAIL");
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("require-green refuses to authorise deletion on a malformed report", () => {
-    const malformed = JSON.parse(JSON.stringify(ALL_PASS.shadow)) as Record<string, unknown>;
-    delete malformed.eventCount;
-    expect(runRequireGreen({ evidence: { ...ALL_PASS, shadow: malformed as never } })).toBe(1);
+  test("require-green refuses to authorise deletion when the marked suites are red", () => {
+    const red = {
+      ...ALL_PASS,
+      migrationEquivalence: {
+        markerFiles: ALL_PASS.migrationEquivalence?.markerFiles ?? [],
+        outcome: { ran: true, passed: false, detail: "1 fail", sources: [] },
+      },
+    };
+    expect(runRequireGreen({ evidence: red })).toBe(1);
   });
 });

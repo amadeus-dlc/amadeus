@@ -27,12 +27,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  appendAuditEntry,
   handleAppend,
   handleAppendRaw,
   presenceMintRejection,
   rawPresenceMintRejection,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   auditShardName,
   humanActedSinceGate,
@@ -78,7 +78,7 @@ function delegationBlock(fields: Record<string, string>): string {
 describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
   test("accepts a delegation grounded in a real HUMAN_TURN in the issuer shard", () => {
     const { root, issuer } = scaffold();
-    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
     const block = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -91,7 +91,7 @@ describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
 
   test("rejects a delegation referencing a shard that does not exist (forged)", () => {
     const { root, issuer } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
     const block = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -105,7 +105,7 @@ describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
   test("rejects when the issuer shard exists but holds no HUMAN_TURN", () => {
     const { root, issuer } = scaffold();
     // A shard with a non-HUMAN_TURN event only.
-    const started = appendAuditEntry("STAGE_STARTED", { Stage: "market-research" }, root, issuer);
+    const started = plantV1AuditRow("STAGE_STARTED", { Stage: "market-research" }, root, issuer);
     const block = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -118,7 +118,7 @@ describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
 
   test("rejects a tampered timestamp that no HUMAN_TURN in the shard matches", () => {
     const { root, issuer } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
     const block = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -131,7 +131,7 @@ describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
 
   test("rejects path-traversal in the issuer shard / intent fields", () => {
     const { root, issuer } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
     const traversalShard = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -161,10 +161,10 @@ describe("humanActedSinceGate — delegated approval opens the conductor gate (#
   test("a verified delegation after the last resolution counts as a human act", () => {
     const { root, conductor, issuer } = scaffold();
     // A prior resolution on the conductor sets the freshness boundary.
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
     // Leader's real human turn, then the delegation into the conductor dir.
-    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_APPROVAL",
       {
         Stage: "market-research",
@@ -181,9 +181,9 @@ describe("humanActedSinceGate — delegated approval opens the conductor gate (#
 
   test("a forged delegation after the last resolution does NOT open the gate", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
-    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_APPROVAL",
       {
         Stage: "market-research",
@@ -211,9 +211,9 @@ describe("humanActedSinceGate — delegated approval opens the conductor gate (#
 describe("humanActedSinceGate — verb-scoped delegated rejection opens the conductor REJECT gate (#685)", () => {
   test("AC-1a: a verified DELEGATED_REJECTION after the last resolution opens the REJECT gate", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
-    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_REJECTION",
       {
         Stage: "market-research",
@@ -231,9 +231,9 @@ describe("humanActedSinceGate — verb-scoped delegated rejection opens the cond
 
   test("AC-1c: a verified DELEGATED_APPROVAL does NOT open the REJECT gate (no verb mixing)", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
-    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_APPROVAL",
       {
         Stage: "market-research",
@@ -252,9 +252,9 @@ describe("humanActedSinceGate — verb-scoped delegated rejection opens the cond
 
   test("AC-1c: a verified DELEGATED_REJECTION does NOT open the APPROVE gate (no verb mixing)", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
-    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_REJECTION",
       {
         Stage: "market-research",
@@ -271,9 +271,9 @@ describe("humanActedSinceGate — verb-scoped delegated rejection opens the cond
 
   test("AC-1b: a forged DELEGATED_REJECTION (unverifiable shard) does NOT open the REJECT gate", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
-    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-    appendAuditEntry(
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
       "DELEGATED_REJECTION",
       {
         Stage: "market-research",

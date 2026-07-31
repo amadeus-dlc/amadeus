@@ -1,4 +1,4 @@
-// covers: function:evaluateGate function:checkMixedJournal function:checkRegistryComplete function:checkCallsitesZero function:checkShadowEquivalence function:checkRelayProof function:checkDistributionGuards
+// covers: function:evaluateGate function:checkMixedJournal function:checkRegistryComplete function:checkCallsitesZero function:checkMigrationEquivalence function:checkRelayProof function:checkDistributionGuards
 //
 // U8 (legacy-writer-removal) — the deletion gate's pure core (FR-MIG-4).
 //
@@ -13,11 +13,13 @@ import {
   type ConditionResult,
   checkCallsitesZero,
   checkDistributionGuards,
+  checkMigrationEquivalence,
   checkMixedJournal,
   checkRegistryComplete,
   checkRelayProof,
-  checkShadowEquivalence,
   evaluateGate,
+  MIGRATION_EQUIVALENCE_MIN_FILES,
+  REGISTRY_SWEEP_TEST,
   validateReportShape,
 } from "../deletion-gate.ts";
 
@@ -108,33 +110,53 @@ describe("checkCallsitesZero — condition (c)", () => {
   });
 });
 
-const performed = (equivalent: boolean) => ({ performed: true as const, equivalent, detail: "" });
-const shadow = (equivalent: boolean, unexplainedDiffs: string[] = []) => ({
-  generatedAt: AT,
-  eventCount: performed(equivalent),
-  linkage: performed(equivalent),
-  status: performed(equivalent),
-  allowedAttributes: performed(equivalent),
-  unexplainedDiffs,
-});
+// Condition (d) is migration-equivalence evidence: the `[migration-equivalence]`
+// suites that compare a migrated site's field set against the legacy one, plus
+// the registry sweep. The evidence base may grow, never shrink — a suite that
+// disappears takes its proof with it, so falling under the floor blocks.
+const MARKER_FILES = [
+  REGISTRY_SWEEP_TEST,
+  "tests/integration/t379-swarm-canonical-emit.test.ts",
+  "tests/integration/t382-sensor-canonical-emit.test.ts",
+  "tests/integration/t383-targeted-canonical-emit.test.ts",
+  "tests/integration/t390-migration-equivalence.test.ts",
+];
 
-describe("checkShadowEquivalence — condition (d)", () => {
-  test("all four dimensions equivalent with no unexplained diff is PASS", () => {
-    expect(checkShadowEquivalence(shadow(true)).verdict).toBe("PASS");
+describe("checkMigrationEquivalence — condition (d)", () => {
+  test("the full marker set, green, is PASS", () => {
+    const result = checkMigrationEquivalence({ markerFiles: MARKER_FILES, outcome: ran(true) });
+    expect(result.verdict).toBe("PASS");
   });
-  test("a non-equivalent dimension is FAIL", () => {
-    expect(checkShadowEquivalence(shadow(false)).verdict).toBe("FAIL");
+
+  test("a red marker suite is FAIL", () => {
+    expect(
+      checkMigrationEquivalence({ markerFiles: MARKER_FILES, outcome: ran(false, "1 fail") }).verdict
+    ).toBe("FAIL");
   });
-  test("an unexplained diff is FAIL even when every dimension is equivalent", () => {
-    expect(checkShadowEquivalence(shadow(true, ["oldPath: 2 torn store line(s)"])).verdict).toBe("FAIL");
+
+  test("fewer marker suites than the floor is FAIL, not a pass on a thinner proof", () => {
+    const thinned = MARKER_FILES.slice(0, MIGRATION_EQUIVALENCE_MIN_FILES - 1);
+    const result = checkMigrationEquivalence({ markerFiles: thinned, outcome: ran(true) });
+    expect(result.verdict).toBe("FAIL");
+    expect(result.detail).toContain(String(MIGRATION_EQUIVALENCE_MIN_FILES));
   });
-  test("a comparison that did not run is UNKNOWN, never agreement", () => {
-    const unperformed = {
-      ...shadow(true),
-      linkage: { performed: false as const, reason: "new store absent" },
-    };
-    expect(checkShadowEquivalence(unperformed).verdict).toBe("UNKNOWN");
-    expect(checkShadowEquivalence(null).verdict).toBe("UNKNOWN");
+
+  test("losing the registry sweep is FAIL even at full count", () => {
+    const swapped = [...MARKER_FILES.filter((p) => p !== REGISTRY_SWEEP_TEST), "tests/integration/t999-other.test.ts"];
+    const result = checkMigrationEquivalence({ markerFiles: swapped, outcome: ran(true) });
+    expect(result.verdict).toBe("FAIL");
+    expect(result.detail).toContain("registry sweep");
+  });
+
+  test("evidence that was never gathered, or gathered but never run, is UNKNOWN", () => {
+    expect(checkMigrationEquivalence(null).verdict).toBe("UNKNOWN");
+    expect(checkMigrationEquivalence({ markerFiles: MARKER_FILES, outcome: null }).verdict).toBe("UNKNOWN");
+    expect(
+      checkMigrationEquivalence({
+        markerFiles: MARKER_FILES,
+        outcome: { ran: false, passed: false, detail: "runner absent", sources: [] },
+      }).verdict
+    ).toBe("UNKNOWN");
   });
 });
 
@@ -278,109 +300,5 @@ describe("evaluateGate — conflicting reports are not silently resolved", () =>
     expect(c?.verdict).toBe("UNKNOWN");
     expect(c?.detail).toContain("conflicting");
     expect(report.overall).toBe("BLOCKED");
-  });
-});
-
-// --- malformed shadow reports ------------------------------------------------
-//
-// The shadow report is the one piece of gate evidence that arrives as a file
-// written by another Unit, so it is the one input that can be shaped wrongly
-// without anybody noticing. Two ways that went wrong (PR #1766 review):
-//
-//   - a dimension marked performed but carrying no `equivalent` slipped past a
-//     `=== false` test and read as agreement — a fail-open on the exact field
-//     the condition is about;
-//   - a report missing a dimension, or missing unexplainedDiffs, threw while
-//     being judged, which surfaced as an UNEXPECTED gate crash rather than as
-//     the BLOCKED verdict BR-12 asks for.
-//
-// Both now land on UNKNOWN: the report cannot be judged, so it does not pass.
-
-const malformed = (mutate: (r: Record<string, unknown>) => void) => {
-  const base = JSON.parse(JSON.stringify(shadow(true))) as Record<string, unknown>;
-  mutate(base);
-  return base as never;
-};
-
-describe("checkShadowEquivalence — a report that cannot be judged is UNKNOWN", () => {
-  test("a performed dimension with no equivalent field does not read as agreement", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        delete (r.linkage as Record<string, unknown>).equivalent;
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("a non-boolean equivalent is rejected rather than coerced", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        (r.status as Record<string, unknown>).equivalent = "yes";
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("a missing dimension is UNKNOWN, not a crash", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        delete r.eventCount;
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("missing unexplainedDiffs is UNKNOWN, not a crash", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        delete r.unexplainedDiffs;
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("unexplainedDiffs that is not a list of strings is rejected", () => {
-    expect(
-      checkShadowEquivalence(
-        malformed((r) => {
-          r.unexplainedDiffs = "one diff";
-        })
-      ).verdict
-    ).toBe("UNKNOWN");
-    expect(
-      checkShadowEquivalence(
-        malformed((r) => {
-          r.unexplainedDiffs = [{ note: "structured" }];
-        })
-      ).verdict
-    ).toBe("UNKNOWN");
-  });
-
-  test("a dimension with a non-boolean performed flag is rejected", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        (r.linkage as Record<string, unknown>).performed = "true";
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("a missing generatedAt is rejected", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        delete r.generatedAt;
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-  });
-
-  test("an unperformed dimension still needs no equivalent field", () => {
-    const result = checkShadowEquivalence(
-      malformed((r) => {
-        r.linkage = { performed: false, reason: "new store absent" };
-      })
-    );
-    expect(result.verdict).toBe("UNKNOWN");
-    expect(result.detail).toContain("linkage");
   });
 });

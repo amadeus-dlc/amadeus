@@ -7,8 +7,11 @@
 // t204-audit-escape.pbt.test.ts. This file verifies the extraction is WIRED —
 // each seam is driven through its real call site and the effect is observed on
 // disk:
-//   - write path: appendAuditEntryUnlocked applies escapeAuditValue per field
-//     value (the forged-audit-entry defence);
+//   - write path: appendLifecycleAuditEntryUnlocked applies escapeAuditValue
+//     per field value (the forged-audit-entry defence). It is the v1 write path
+//     that survives the legacy writer's deletion (FR-MIG-5 / U8) and it shares
+//     the same escapeFieldValues helper the deleted pair used, so the seam this
+//     file exists to pin is driven through the call site that still has it;
 //   - read path: handleAppendRaw applies unescapeAuditBody to the raw body
 //     (literal `\n` tokens expand to real newlines).
 // It writes to an isolated per-file temp projectDir (torn down in afterAll), so
@@ -21,7 +24,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  appendAuditEntryUnlocked,
+  appendLifecycleAuditEntryUnlocked,
   handleAppendRaw,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -71,11 +74,18 @@ afterAll(() => {
 });
 
 describe("audit escape seams wired at their call sites", () => {
-  test("write path: appendAuditEntryUnlocked collapses a field value's CR/LF via escapeAuditValue", () => {
+  test("write path: the v1 lifecycle writer collapses a field value's CR/LF via escapeAuditValue", () => {
     const proj = freshProject();
     // Embedded newline + a forged **Event** marker must NOT create a second
     // physical line — the escape seam collapses it to the two-char "\\n".
-    appendAuditEntryUnlocked("ERROR_LOGGED", { Path: "/tmp/x\n**Event**: FAKE\nmore" }, proj);
+    appendLifecycleAuditEntryUnlocked(
+      "INTENT_ARCHIVED",
+      { Path: "/tmp/x\n**Event**: FAKE\nmore" },
+      proj,
+      "t205-fixture-deadbeef",
+      "default",
+      "t205.jsonl",
+    );
     const content = readAllAuditShards(proj);
     // One physical JSONL line — the forged marker never became a record of its own.
     const rows = content.split("\n").filter((l) => l.trim() !== "");
@@ -87,7 +97,7 @@ describe("audit escape seams wired at their call sites", () => {
     // The field value keeps the two-char "\n" escape, not a real newline.
     expect(rec.fields?.Path).toBe(String.raw`/tmp/x\n**Event**: FAKE\nmore`);
     // Exactly one real event survives (the legitimate one).
-    expect(rec.event).toBe("ERROR_LOGGED");
+    expect(rec.event).toBe("INTENT_ARCHIVED");
   });
 
   test("read path: handleAppendRaw expands literal backslash-n in the body via unescapeAuditBody", () => {

@@ -32,10 +32,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  appendAuditEntry,
   handleAppend,
   presenceMintRejection,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   auditShardName,
   DEFAULT_STANDING_GRANT_TTL_MS,
@@ -132,9 +132,9 @@ function seedGrant(
   const grantId = opts.grantId ?? "aabbccdd";
   let humanTs = "2026-07-09T09:00:00.000Z";
   if (opts.groundHumanTurn !== false) {
-    humanTs = appendAuditEntry("HUMAN_TURN", {}, root, intent).timestamp;
+    humanTs = plantV1AuditRow("HUMAN_TURN", {}, root, intent).timestamp;
   }
-  appendAuditEntry(
+  plantV1AuditRow(
     "GRANT_ISSUED",
     {
       "Grant Id": grantId,
@@ -298,7 +298,7 @@ describe("findActiveStandingGrant — corpus scan", () => {
   test("RED: a revoked grant is not returned even before expiry", () => {
     const { root, intent } = scaffold();
     const id = seedGrant(root, intent, { grantId: "33334444" });
-    appendAuditEntry(
+    plantV1AuditRow(
       "GRANT_REVOKED",
       {
         "Grant Id": id,
@@ -379,7 +379,7 @@ describe("R-8: the CLI cannot mint grant events (presence-protected)", () => {
 describe("verb refusals (spawned amadeus-state.ts)", () => {
   test("grant-standing-delegation succeeds in solo mode (env unset)", () => {
     const { root, intent } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, intent);
+    plantV1AuditRow("HUMAN_TURN", {}, root, intent);
     const r = runState(root, ["grant-standing-delegation"], {
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1", // isolate the team-mode refusal
     });
@@ -399,7 +399,7 @@ describe("verb refusals (spawned amadeus-state.ts)", () => {
 
   test("revoke-standing-delegation succeeds in solo mode (env unset)", () => {
     const { root, intent } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, intent);
+    plantV1AuditRow("HUMAN_TURN", {}, root, intent);
     const r = runState(root, ["revoke-standing-delegation", "--grant-id", "aabbccdd"], {
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
     });
@@ -626,7 +626,7 @@ describe("in-process handler seams (coverage)", () => {
   // Seed a HUMAN_TURN (grounds grants + makes humanActedSinceGate true) into the
   // active intent shard. Returns its timestamp.
   function seedHumanTurn(proj: string): string {
-    return appendAuditEntry("HUMAN_TURN", {}, proj).timestamp;
+    return plantV1AuditRow("HUMAN_TURN", {}, proj).timestamp;
   }
 
   beforeEach(saveEnv);
@@ -695,7 +695,7 @@ describe("in-process handler seams (coverage)", () => {
     const proj = seamProject();
     // A resolution with no outstanding HUMAN_TURN after it → humanActedSinceGate
     // is false (not the empty-ledger fail-open) → the grounding gate fires.
-    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "x" }, proj);
     process.env.AMADEUS_OPERATING_MODE = "team";
     delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
     const r = captureIO(() => handleCanonicalGrantStandingDelegation([]));
@@ -780,9 +780,9 @@ describe("in-process handler seams (coverage)", () => {
     const proj = seamProject();
     const ht = seedHumanTurn(proj);
     // A resolution AFTER the turn → humanActedSinceGate is false → grant path.
-    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "x" }, proj);
     // Seed a covering grant grounded in the same HUMAN_TURN.
-    appendAuditEntry(
+    plantV1AuditRow(
       "GRANT_ISSUED",
       {
         "Grant Id": "cafe0001",
@@ -813,7 +813,7 @@ describe("in-process handler seams (coverage)", () => {
   test("handleDelegateApproval: refuses when no grant covers and no human turn (solo)", () => {
     const proj = seamProject();
     seedHumanTurn(proj);
-    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "x" }, proj);
     const target = "target-intent-00000002";
     const targetDir = join(seededRecordDir(proj), "..", target);
     mkdirSync(targetDir, { recursive: true });
@@ -830,7 +830,7 @@ describe("in-process handler seams (coverage)", () => {
   test("handleDelegateApproval: refuses when the target intent record is missing", () => {
     const proj = seamProject();
     seedHumanTurn(proj);
-    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "x" }, proj);
     process.env.AMADEUS_OPERATING_MODE = "team";
     delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
     const r = captureIO(() =>
@@ -842,7 +842,7 @@ describe("in-process handler seams (coverage)", () => {
 
   test("handleRevokeStandingDelegation: refuses when no fresh human turn backs the call", () => {
     const proj = seamProject();
-    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj); // resolution, no outstanding turn
+    plantV1AuditRow("GATE_APPROVED", { Stage: "x" }, proj); // resolution, no outstanding turn
     process.env.AMADEUS_OPERATING_MODE = "team";
     delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
     const r = captureIO(() =>
@@ -865,12 +865,12 @@ describe("in-process handler seams (coverage)", () => {
     else delete process.env.AMADEUS_OPERATING_MODE;
     captureIO(() => handleGateStart(["requirements-analysis"]));
     const ht = seedHumanTurn(proj);
-    appendAuditEntry("GATE_APPROVED", { Stage: "prior" }, proj); // resolution → gate not fresh
+    plantV1AuditRow("GATE_APPROVED", { Stage: "prior" }, proj); // resolution → gate not fresh
     const vdir = join(seededRecordDir(proj), "verification");
     mkdirSync(vdir, { recursive: true });
     writeFileSync(join(vdir, "phase-check-inception.md"), "# phase-check inception\n", "utf-8");
     if (opts.grant === "opt-in") {
-      appendAuditEntry(
+      plantV1AuditRow(
         "GRANT_ISSUED",
         {
           "Grant Id": "beef0002",

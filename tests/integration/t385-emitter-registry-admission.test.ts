@@ -33,9 +33,6 @@
 //     `amadeus-state.ts practices-event`) have no static key set at all. Those
 //     sites are enumerated in UNRESOLVED_SITES so a NEW unanalyzable site
 //     shows up as a test failure rather than as silent non-coverage.
-//   - `scripts/otel-phase1-measure.ts` is excluded: it drives the LEGACY
-//     writer on purpose to benchmark it against the canonical path, is never
-//     migrated, and dies with the writer it measures.
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
@@ -52,10 +49,7 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SCAN_ROOTS = ["packages/framework/core", "scripts"] as const;
 
 // The registry describes itself; scanning it would read the table as call sites.
-const EXCLUDED_FILES = new Set([
-  "packages/framework/core/otel/event-registry.ts",
-  "scripts/otel-phase1-measure.ts",
-]);
+const EXCLUDED_FILES = new Set(["packages/framework/core/otel/event-registry.ts"]);
 
 // Every function that carries (event name, fields) to a writer — the legacy
 // writer, the migration adapter, the canonical emit, and the per-tool wrappers

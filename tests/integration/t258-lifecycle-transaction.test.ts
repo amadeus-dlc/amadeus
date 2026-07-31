@@ -526,7 +526,14 @@ describe("intent lifecycle transaction performance contract", () => {
     expect(result.rssDifferenceP95MiB).toBeLessThanOrEqual(96);
     expect(new Set(archive.map((sample) => sample.fixtureSha256)).size).toBe(1);
     expect(new Set(recovery.map((sample) => sample.fixtureSha256)).size).toBe(1);
-  }, 120_000);
+    // The inline timeout is a hang guard, not a performance assertion — the
+    // performance surface is the median budgets and RSS ceiling above. 120s
+    // sat just under the measured wall-clock of the 330-spawn run on GitHub
+    // runners (123-152s across #1830's evidence and PR #1844's four
+    // consecutive reds, all with every budget assertion green), turning
+    // runner-class variance into a false red. 300s keeps the guard while
+    // clearing the measured range (#1830 path A).
+  }, 300_000);
 
   // FR-4 wiring proof: a genuine across-the-board regression, fed through the
   // exact predicate and budget constant the benchmark asserts against above,

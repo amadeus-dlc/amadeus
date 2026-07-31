@@ -1,13 +1,6 @@
 {
   "description": "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
   "direction": "shrink-only",
-  "total": 3,
-  "sites": {
-    "packages/framework/core/tools/amadeus-audit.ts": {
-      "appendAuditEntryUnlocked": 1
-    },
-    "scripts/otel-phase1-measure.ts": {
-      "appendAuditEntry": 2
-    }
-  }
+  "total": 0,
+  "sites": {}
 }

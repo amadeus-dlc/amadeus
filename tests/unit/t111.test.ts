@@ -1,35 +1,30 @@
-// covers: function:appendAuditEntry, function:appendAuditEntryUnlocked, function:handleAppend
+// covers: function:handleAppend
 //
 // t111 — P0 deterministic floor. Mechanism = none (pure file I/O, zero LLM,
-// zero tokens). Exercises the audit-append core in amadeus-audit.ts:
-//   appendAuditEntry          (:199) — validate → lock → delegate → unlock
-//   appendAuditEntryUnlocked  (:228) — block format, CR/LF escaping, append
-//   handleAppend              (:266) — thin wrapper, prints JSON to stdout
+// zero tokens). Exercises the audit CLI's append entry in amadeus-audit.ts:
+// handleAppend — the thin wrapper that guards, emits, and prints JSON to
+// stdout.
+//
+// WHAT USED TO BE HERE. This file also held the contract of the legacy writer
+// pair (appendAuditEntry / appendAuditEntryUnlocked): block format, CR/LF
+// escaping, append-not-overwrite, and a mirrored copy of the 78-entry accept
+// set. That writer was deleted (FR-MIG-5 / U8) and those cases went with it.
+// The claims did not vanish with them:
+//   - the accept set is now registry-sourced and pinned in t389, against the
+//     CLI-entry guard that decides it today;
+//   - the CR/LF escape seam is pinned in t205, against the v1 write path that
+//     still exists (the lifecycle writer);
+//   - append-not-overwrite and record shape are pinned in t18.
 //
 // Test design note (house style, see tests/unit/t69-worktree-path.sh): assert
-// the OBSERVABLE CONTRACT, not implementation parity. We never recompute the
-// block string the way the source does and diff it — that only catches
-// deletion. Instead we pin the things a real reader of audit.md relies on:
-//   - the exact field order and literal markers in an appended block
-//   - that a CR/LF inside a field value is collapsed to the two-char "\n"
-//     escape (the forged-audit-entry defence the source comments on at :248)
-//   - that appending twice keeps BOTH blocks (append-not-overwrite invariant)
-//   - that an invalid event type is rejected by throw, before any disk write
-//   - that EVERY one of the 78 VALID_EVENT_TYPES is accepted
-// A regression that dropped escaping, overwrote prior history, reordered the
-// header fields, or narrowed the accepted event set would turn one of these
-// red.
+// the OBSERVABLE CONTRACT, not implementation parity.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  appendAuditEntry,
-  appendAuditEntryUnlocked,
-  handleAppend,
-} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { handleAppend } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import {
   auditFilePath,
   readAllAuditShards,
@@ -72,21 +67,7 @@ function freshProject(seedAuditShard = false): string {
   return root;
 }
 
-// A project with NO intent record — the #1377 shape (a cursor-less worktree, or
-// a shell before auto-birth).
-function projectWithoutIntent(): string {
-  const root = mkdtempSync(join(tmpdir(), "amadeus-t111-noint-"));
-  tmpRoots.push(root);
-  mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
-  return root;
-}
 
-// Read the whole audit trail (the per-clone shards merged). For these
-// single-clone fixtures it resolves to the one shard the tool wrote, so the
-// returned bytes equal that shard's contents (seed header + appended blocks).
-function readAudit(projectDir: string): string {
-  return readAllAuditShards(projectDir);
-}
 
 // One parsed JSONL audit record.
 interface AuditRecord {
@@ -122,11 +103,6 @@ function readRecords(projectDir: string, intent?: string): AuditRecord[] {
   );
 }
 
-// Whether the resolved audit shard exists on disk (the per-intent successor to
-// "is there an amadeus-docs/audit.md?").
-function auditShardExists(projectDir: string): boolean {
-  return existsSync(auditFilePath(projectDir));
-}
 
 afterAll(() => {
   for (const root of tmpRoots) {
@@ -135,321 +111,6 @@ afterAll(() => {
     } catch {
       // best-effort cleanup; a leaked temp dir is harmless to the suite
     }
-  }
-});
-
-// The 78 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
-// Kept as an explicit literal (not re-derived from the source) so that a silent
-// addition/removal in the source surfaces here as a count mismatch worth a look.
-const VALID_EVENT_TYPES = [
-  "STAGE_STARTED",
-  "STAGE_AWAITING_APPROVAL",
-  "STAGE_REVISING",
-  "STAGE_COMPLETED",
-  "STAGE_JUMPED",
-  "STAGE_SKIPPED",
-  "GUARD_EXEMPTED",
-  "PHASE_STARTED",
-  "PHASE_COMPLETED",
-  "PHASE_VERIFIED",
-  "PHASE_SKIPPED",
-  "WORKFLOW_STARTED",
-  "WORKFLOW_COMPLETED",
-  "WORKFLOW_PARKED",
-  "WORKFLOW_UNPARKED",
-  "INTENT_ARCHIVED",
-  "INTENT_UNARCHIVED",
-  "SESSION_STARTED",
-  "SESSION_RESUMED",
-  "SESSION_COMPACTED",
-  "SESSION_ENDED",
-  "HUMAN_TURN",
-  "WORKSPACE_SCAFFOLDED",
-  "WORKSPACE_SCANNED",
-  "WORKSPACE_INITIALISED",
-  "DECISION_RECORDED",
-  "GATE_APPROVED",
-  "GATE_REJECTED",
-  "QUESTION_ANSWERED",
-  "DELEGATED_APPROVAL",
-  "DELEGATED_REJECTION",
-  "GRANT_ISSUED",
-  "GRANT_REVOKED",
-  "GATE_AUTHORIZATION_SELECTED",
-  "ARTIFACT_CREATED",
-  "ARTIFACT_UPDATED",
-  "ARTIFACT_REUSED",
-  "SUBAGENT_COMPLETED",
-  "HEALTH_CHECKED",
-  "SCOPE_DETECTED",
-  "SCOPE_CHANGED",
-  "DEPTH_CHANGED",
-  "TEST_STRATEGY_CHANGED",
-  "RECOMPOSED",
-  "ERROR_LOGGED",
-  "RECOVERY_COMPLETED",
-  "BOLT_STARTED",
-  "BOLT_COMPLETED",
-  "BOLT_FAILED",
-  "AUTONOMY_MODE_SET",
-  "WORKTREE_CREATED",
-  "WORKTREE_MERGED",
-  "WORKTREE_DISCARDED",
-  "STATE_FORKED",
-  "STATE_MERGED",
-  "AUDIT_FORKED",
-  "AUDIT_MERGED",
-  "PRACTICES_DISCOVERED",
-  "PRACTICES_AFFIRMED",
-  "PRACTICES_OVERRIDE",
-  "PRACTICES_SECTION_EMPTY",
-  "MERGE_DISPATCH_INVOKED",
-  "MERGE_DISPATCH_RETURNED",
-  "MERGE_DISPATCH_FALLBACK",
-  "SENSOR_FIRED",
-  "SENSOR_PASSED",
-  "SENSOR_FAILED",
-  "SENSOR_BUDGET_OVERRIDE",
-  "GUARDRAIL_LOADED",
-  "MEMORY_EMPTY",
-  "RULE_LEARNED",
-  "SENSOR_PROPOSED",
-  "SWARM_STARTED",
-  "SWARM_UNIT_CONVERGED",
-  "SWARM_UNIT_FAILED",
-  "SWARM_BATON_RETURNED",
-  "SWARM_COMPLETED",
-  "SWARM_DEGRADED",
-];
-
-describe("appendAuditEntry — locked variant", () => {
-  test("appends a block with the exact header field order and a valid event", () => {
-    const proj = freshProject();
-    const result = appendAuditEntry(
-      "STAGE_STARTED",
-      { Stage: "1.1-intent", Phase: "ideation" },
-      proj,
-    );
-
-    // Return contract: appended flag, echoed event, and the timestamp that
-    // was written into the block.
-    expect(result.appended).toBe(true);
-    expect(result.event).toBe("STAGE_STARTED");
-    expect(typeof result.timestamp).toBe("string");
-    expect(result.timestamp.length).toBeGreaterThan(0);
-
-    const content = readAudit(proj);
-
-    // The trail carries no header line — the first append IS the first byte.
-    const records = parseRecords(content);
-    expect(records.length).toBe(1);
-
-    // The full record, field-for-field. STAGE_STARTED maps to heading
-    // "Stage Start" (EVENT_HEADINGS); the custom fields keep insertion order.
-    const rec = records[0]!;
-    expect(rec.schemaVersion).toBe(1);
-    expect(rec.seq).toBe(1);
-    expect(rec.intentId).toBe(FIXTURE_INTENT);
-    expect(rec.heading).toBe("Stage Start");
-    expect(rec.event).toBe("STAGE_STARTED");
-    expect(rec.timestamp).toBe(result.timestamp);
-    expect(rec.fields).toEqual({ Stage: "1.1-intent", Phase: "ideation" });
-    expect(Object.keys(rec.fields ?? {})).toEqual(["Stage", "Phase"]);
-
-    // The append is one whole line and nothing else — nothing injected around
-    // it. Pins that the append is a pure suffix on an empty shard.
-    expect(content).toBe(`${JSON.stringify(rec)}\n`);
-  });
-
-  test("uses the raw event type as heading when no EVENT_HEADINGS mapping exists", () => {
-    // Every one of the 68 valid types IS mapped today; to exercise the
-    // `EVENT_HEADINGS[eventType] || eventType` fallback branch we'd need an
-    // unmapped-but-valid type, which cannot exist. Instead we positively pin
-    // that a mapped type does NOT fall through to the raw token as a heading.
-    const proj = freshProject();
-    appendAuditEntry("SESSION_ENDED", {}, proj);
-    const rec = readRecords(proj)[0]!;
-    expect(rec.heading).toBe("Session End");
-    expect(rec.heading).not.toBe("SESSION_ENDED");
-    expect(rec.event).toBe("SESSION_ENDED");
-  });
-
-  test("rejects an invalid event type by throwing, with the offending token in the message", () => {
-    const proj = freshProject();
-    expect(() => appendAuditEntry("NOT_A_REAL_EVENT", {}, proj)).toThrow(
-      /Invalid event type: NOT_A_REAL_EVENT\. Must be one of:/,
-    );
-  });
-
-  test("validation fires before any disk write — no audit shard is created on rejection", () => {
-    // A fresh project has no audit shard. If validation ran AFTER
-    // ensureAuditFile, the rejected call would still leave a seeded shard
-    // behind. Assert the shard is absent, proving validate-then-write order.
-    const proj = freshProject();
-    expect(() => appendAuditEntry("bogus", {}, proj)).toThrow();
-    expect(auditShardExists(proj)).toBe(false); // shard never created
-  });
-
-  // #1377 regression. Before the fix, an emitter that threads no --intent on a
-  // clone where none resolves (a fresh worktree with no active-intent cursor)
-  // reported {"appended":true} and dropped its shard into the BARE intents root
-  // — orphaning the events from any intent. Both variants must now refuse, and
-  // refuse BEFORE ensureAuditFile()'s recursive mkdir touches disk.
-  test("refuses to append when no intent resolves — never writes intents/audit/", () => {
-    const proj = projectWithoutIntent();
-    const bareAuditDir = join(proj, "amadeus", "spaces", "default", "intents", "audit");
-
-    expect(() => appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj)).toThrow(
-      /bare intents root/,
-    );
-    expect(existsSync(bareAuditDir)).toBe(false);
-
-    expect(() => appendAuditEntryUnlocked("RULE_LEARNED", { Stage: "x" }, proj)).toThrow(
-      /bare intents root/,
-    );
-    expect(existsSync(bareAuditDir)).toBe(false);
-  });
-
-  test("naming the intent explicitly still appends on a cursor-less project", () => {
-    // The refusal is about an UNRESOLVED intent, not about the cursor: an
-    // explicit selector is a resolution, so the append proceeds normally.
-    const proj = projectWithoutIntent();
-    const record = join(proj, "amadeus", "spaces", "default", "intents", "explicit-11111111");
-    mkdirSync(join(record, "sub"), { recursive: true });
-    writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
-    // A second record keeps lone-intent resolution from kicking in.
-    const other = join(proj, "amadeus", "spaces", "default", "intents", "other-22222222");
-    mkdirSync(other, { recursive: true });
-    writeFileSync(join(other, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
-
-    expect(() => appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj)).toThrow();
-    appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj, "explicit-11111111");
-    expect(readRecords(proj, "explicit-11111111").map((r) => r.event)).toEqual([
-      "RULE_LEARNED",
-    ]);
-  });
-});
-
-describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () => {
-  test("collapses CR/LF inside a field value to the literal two-char escape", () => {
-    const proj = freshProject();
-    // A value carrying a forged-audit-entry payload: an embedded newline plus
-    // a fake **Event** marker. The source escapes \r?\n so the forgery cannot
-    // create a second parseable block.
-    const malicious = "/tmp/x\n**Event**: FAKE_FORGED\nmore";
-    const result = appendAuditEntryUnlocked(
-      "ERROR_LOGGED",
-      { Path: malicious },
-      proj,
-    );
-    const content = readAudit(proj);
-    const records = parseRecords(content);
-
-    // The value is stored with newlines escaped to a literal backslash-n.
-    expect(records.length).toBe(1);
-    expect(records[0]!.fields).toEqual({
-      Path: "/tmp/x\\n**Event**: FAKE_FORGED\\nmore",
-    });
-    // A literal newline must NOT survive inside the value — the whole record
-    // is one physical line, so there is exactly one event (the legitimate
-    // ERROR_LOGGED); a forged FAKE_FORGED can never become its own record.
-    expect(content.split("\n").filter((l) => l.length > 0).length).toBe(1);
-    expect(records.map((r) => r.event)).toEqual(["ERROR_LOGGED"]);
-    expect(content).not.toContain(`"event":"FAKE_FORGED"`);
-
-    // Sanity: the returned event echoes the real type, not the forged one.
-    expect(result.event).toBe("ERROR_LOGGED");
-  });
-
-  test("collapses CRLF to one escape; a lone CR is refused fail-closed by the codec", () => {
-    // Source escape is value.replace(/\r?\n/g, "\\n"): a CRLF pair becomes a
-    // single "\n" escape, and a bare carriage return (CR not followed by LF)
-    // is NOT matched. Under JSONL the codec's assertSingleLine then rejects
-    // any surviving raw CR/LF, so a lone CR aborts the append instead of being
-    // written verbatim. Pinning both halves catches a regression that either
-    // widened the escape regex or loosened the codec's single-line guard.
-    const proj = freshProject();
-    appendAuditEntryUnlocked("DECISION_RECORDED", { CrLf: "p\r\nq" }, proj);
-    const fields = readRecords(proj)[0]!.fields!;
-    // CRLF -> single \n escape (one char each in the \r and \n collapsing).
-    expect(fields.CrLf).toBe("p\\nq");
-
-    // A lone CR reaches the codec unescaped and is refused — nothing is
-    // appended, so the shard still holds only the first record.
-    expect(() =>
-      appendAuditEntryUnlocked("DECISION_RECORDED", { LoneCr: "x\ry" }, proj),
-    ).toThrow(/must not contain raw newlines/);
-    expect(readRecords(proj).length).toBe(1);
-  });
-
-  test("a second append preserves the first block (append, never overwrite)", () => {
-    // Pre-seed the file the way the source expects, then append twice. Both
-    // blocks plus the original seed must all survive.
-    const proj = freshProject(true);
-    const first = appendAuditEntryUnlocked(
-      "BOLT_STARTED",
-      { "Bolt slug": "alpha" },
-      proj,
-    );
-    const second = appendAuditEntryUnlocked(
-      "BOLT_COMPLETED",
-      { "Bolt slug": "alpha" },
-      proj,
-    );
-
-    const records = readRecords(proj);
-
-    // Both event rows present, in chronological order — the second append did
-    // not overwrite the first.
-    expect(records.map((r) => r.event)).toEqual(["BOLT_STARTED", "BOLT_COMPLETED"]);
-    expect(records.map((r) => r.heading)).toEqual(["Bolt Started", "Bolt Completed"]);
-
-    // Sequence numbers are dense and 1-based across the appends.
-    expect(records.map((r) => r.seq)).toEqual([1, 2]);
-
-    expect(first.appended).toBe(true);
-    expect(second.appended).toBe(true);
-
-    // Exactly two records were appended (one per call), no more.
-    expect(records.length).toBe(2);
-  });
-
-  test("an empty fields object writes only the timestamp + event header lines", () => {
-    const proj = freshProject();
-    const result = appendAuditEntryUnlocked("HEALTH_CHECKED", {}, proj);
-    const rec = readRecords(proj)[0]!;
-    expect(rec.heading).toBe("Health Check");
-    expect(rec.timestamp).toBe(result.timestamp);
-    expect(rec.event).toBe("HEALTH_CHECKED");
-    // No custom fields at all — an empty map, not a dropped key.
-    expect(rec.fields).toEqual({});
-  });
-
-  test("rejects an invalid event type the same way as the locked variant", () => {
-    const proj = freshProject();
-    expect(() =>
-      appendAuditEntryUnlocked("definitely_not_valid", {}, proj),
-    ).toThrow(/Invalid event type: definitely_not_valid\. Must be one of:/);
-  });
-});
-
-describe("VALID_EVENT_TYPES — every canonical type is accepted", () => {
-  test("the mirrored list has 78 entries with no duplicates", () => {
-    expect(VALID_EVENT_TYPES.length).toBe(78);
-    expect(new Set(VALID_EVENT_TYPES).size).toBe(78);
-  });
-
-  // Loop over ALL 68 valid types: each must append a block whose **Event**
-  // line carries that exact token, and the return must echo it. A regression
-  // that dropped a type from the Set would throw here and fail its case.
-  for (const eventType of VALID_EVENT_TYPES) {
-    test(`accepts ${eventType}`, () => {
-      const proj = freshProject();
-      const result = appendAuditEntry(eventType, { K: "v" }, proj);
-      expect(result.appended).toBe(true);
-      expect(result.event).toBe(eventType);
-      expect(readRecords(proj).map((r) => r.event)).toEqual([eventType]);
-    });
   }
 });
 

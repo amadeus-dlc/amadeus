@@ -13,7 +13,7 @@
 // So the assertions below compare CONTENT, not liveness, and they compare it
 // against the legacy writer's own output in the same process:
 //
-//   legacy:    appendAuditEntry(...)  -> schema v1 row { event, fields }
+//   legacy:    recorded rows          -> schema v1 row { event, fields }
 //   migrated:  emitAuditEvent(...)    -> schema v2 row { eventName, attributes }
 //
 // normalizeAuditRecord puts both into one view, so `event` and `fields` are
@@ -23,18 +23,25 @@
 // silently stopped happening every field-set comparison here would gain a
 // phantom key and these tests would be comparing the wrong thing.
 //
-// WHY THIS IS NOT CIRCULAR. Both sides are driven from the same inputs and
-// compared field-for-field, but neither side is computed from the other: the
-// legacy row comes from the legacy writer that is still present, and the
-// migrated row from the canonical emit path. When the legacy writer is deleted,
-// the recorded expectations here become the fixture that outlives it.
+// THE LEGACY SIDE IS NOW A FIXTURE. It used to be driven live, next to the
+// migrated one, while the legacy writer was still in the tree. The writer has
+// since been deleted (FR-MIG-5 / U8), so the legacy rows come from
+// tests/harness/legacy-audit-rows.ts — recorded off the real writer at the last
+// commit that had it, through this same normaliser. That is what the original
+// note here anticipated: "the recorded expectations become the fixture that
+// outlives it".
+//
+// WHY THIS IS NOT CIRCULAR. Neither side is computed from the other. The
+// migrated row is measured live on every run; the legacy row is a recording
+// that nothing in this repository can regenerate, so it cannot drift toward the
+// implementation it is judging.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { auditFilePath, birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEvent } from "../../dist/claude/.claude/otel/audit-emit.ts";
 import { auditRowsFrom, normalizeAuditRecord, type NormalizedAuditRecord } from "../harness/audit-records.ts";
+import { LEGACY_AUDIT_ROWS, type LegacyAuditRow } from "../harness/legacy-audit-rows.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -64,54 +71,46 @@ function rowsFor(intent: string, event: string): NormalizedAuditRecord[] {
   return auditRowsFrom(readFileSync(path, "utf-8")).filter((r) => r.event === event);
 }
 
-// One event's worth of audit content, written BOTH ways into two intents that
-// differ only in which writer produced the row.
-function bothWays(
-  event: string,
-  fields: Record<string, string>
-): { legacy: NormalizedAuditRecord; migrated: NormalizedAuditRecord } {
-  const legacyIntent = birthIntent(proj, "equiv-legacy", "default", "feature").dirName;
-  const migratedIntent = birthIntent(proj, "equiv-migrated", "default", "feature").dirName;
+// One recorded case: the legacy row as the writer produced it, and the row the
+// canonical path produces NOW from the same inputs.
+function bothWays(caseName: string): { legacy: LegacyAuditRow["legacy"]; migrated: NormalizedAuditRecord } {
+  const recorded = LEGACY_AUDIT_ROWS[caseName];
+  if (recorded === undefined) throw new Error(`no recorded legacy row for ${caseName}`);
+  const { event, fields } = recorded.input;
 
-  appendAuditEntry(event, fields, proj, legacyIntent, "default");
+  const migratedIntent = birthIntent(proj, "equiv-migrated", "default", "feature").dirName;
   emitAuditEvent(event, fields, proj, migratedIntent, "default");
 
-  const legacy = rowsFor(legacyIntent, event);
   const migrated = rowsFor(migratedIntent, event);
-  expect(legacy.length).toBe(1);
   expect(migrated.length).toBe(1);
-  return { legacy: legacy[0] as NormalizedAuditRecord, migrated: migrated[0] as NormalizedAuditRecord };
+  return { legacy: recorded.legacy, migrated: migrated[0] as NormalizedAuditRecord };
+}
+
+// The inputs a case was recorded with, so an assertion can still name what the
+// caller passed rather than only what the two writers agreed on.
+function inputsFor(caseName: string): Record<string, string> {
+  const recorded = LEGACY_AUDIT_ROWS[caseName];
+  if (recorded === undefined) throw new Error(`no recorded legacy row for ${caseName}`);
+  return recorded.input.fields;
 }
 
 describe("[migration-equivalence] a migrated row carries the legacy row's audit content", () => {
   // A plain event: every field required, nothing conditional.
   test("AUDIT_MERGED — identical event type and field set", () => {
-    const fields = {
-      "Bolt slug": "bolt-otel-migrate-g2",
-      "Entries Merged": "3",
-      "Source Audit Hash": "a".repeat(64),
-      "Fork Boundary": "2",
-    };
-    const { legacy, migrated } = bothWays("AUDIT_MERGED", fields);
+    const { legacy, migrated } = bothWays("AUDIT_MERGED");
 
     expect(migrated.event).toBe(legacy.event);
-    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated)).toEqual(legacy.fields);
     // ...and both equal what the caller actually passed, so a mutation applied
-    // to BOTH writers could not hide inside a legacy-vs-migrated comparison.
-    expect(auditContent(migrated)).toEqual(fields);
+    // to the canonical path could not hide behind a recording of itself.
+    expect(auditContent(migrated)).toEqual(inputsFor("AUDIT_MERGED"));
   });
 
   // The case the registry sweep existed for: an optional attribute present.
   test("AUDIT_FORKED with Reentrant — an OPTIONAL attribute survives the emit", () => {
-    const fields = {
-      "Bolt slug": "bolt-otel-migrate-g2",
-      "Source Audit Hash": "b".repeat(64),
-      "Fork Boundary": "2",
-      Reentrant: "true",
-    };
-    const { legacy, migrated } = bothWays("AUDIT_FORKED", fields);
+    const { legacy, migrated } = bothWays("AUDIT_FORKED_reentrant");
 
-    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated)).toEqual(legacy.fields);
     // Named explicitly: redaction is default-deny, and `Reentrant` only clears
     // it because the registry declares it optional and the policy's safe keys
     // are derived from required + optional. A registry edit that dropped it
@@ -121,47 +120,26 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
 
   // The same event WITHOUT the optional attribute: absence stays absence.
   test("AUDIT_FORKED without Reentrant — no phantom key appears", () => {
-    const fields = {
-      "Bolt slug": "bolt-otel-migrate-g2",
-      "Source Audit Hash": "c".repeat(64),
-      "Fork Boundary": "0",
-    };
-    const { legacy, migrated } = bothWays("AUDIT_FORKED", fields);
+    const { legacy, migrated } = bothWays("AUDIT_FORKED_plain");
 
-    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated)).toEqual(legacy.fields);
     expect("Reentrant" in auditContent(migrated)).toBe(false);
   });
 
   // The delegation events, whose conditional keys were the reason these sites
   // could not migrate until required/optional was re-drawn.
   test("DELEGATED_APPROVAL under a standing grant — no User Input, still equivalent", () => {
-    const fields = {
-      Stage: "code-generation",
-      "Issuer Space": "default",
-      "Issuer Intent": "260729-otel-upstream",
-      "Issuer Shard": "issuer.jsonl",
-      "Issuer Human Ts": "2026-07-31T00:00:00Z",
-      "Grant Id": "grant-0001",
-    };
-    const { legacy, migrated } = bothWays("DELEGATED_APPROVAL", fields);
+    const { legacy, migrated } = bothWays("DELEGATED_APPROVAL_standing_grant");
 
-    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated)).toEqual(legacy.fields);
     expect("User Input" in auditContent(migrated)).toBe(false);
     expect(auditContent(migrated)["Grant Id"]).toBe("grant-0001");
   });
 
   test("DELEGATED_REJECTION with Feedback — the optional key round-trips", () => {
-    const fields = {
-      Stage: "code-generation",
-      "Issuer Space": "default",
-      "Issuer Intent": "260729-otel-upstream",
-      "Issuer Shard": "issuer.jsonl",
-      "Issuer Human Ts": "2026-07-31T00:00:00Z",
-      Feedback: "needs a falling proof",
-    };
-    const { legacy, migrated } = bothWays("DELEGATED_REJECTION", fields);
+    const { legacy, migrated } = bothWays("DELEGATED_REJECTION_feedback");
 
-    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated)).toEqual(legacy.fields);
     expect(auditContent(migrated).Feedback).toBe("needs a falling proof");
   });
 });
@@ -173,12 +151,7 @@ describe("[migration-equivalence] the human-readable heading survives the migrat
   // from the same EVENT_HEADINGS table the legacy writer stamped, rather than
   // handing back the OTel name and quietly changing what the field means.
   test("a migrated row reports the same heading string as the legacy row", () => {
-    const { legacy, migrated } = bothWays("AUDIT_MERGED", {
-      "Bolt slug": "bolt-otel-migrate-g2",
-      "Entries Merged": "2",
-      "Source Audit Hash": "e".repeat(64),
-      "Fork Boundary": "1",
-    });
+    const { legacy, migrated } = bothWays("AUDIT_MERGED_heading");
 
     expect(legacy.heading).toBe("Audit Merged");
     expect(migrated.heading).toBe(legacy.heading);

@@ -17,9 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import {
-  appendAuditEntry,
-} from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   armPresenceReservation,
   cancelArmedPresenceReservation,
@@ -1549,7 +1547,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
         "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
     });
     for (let i = 0; i < 2; i += 1) {
-      appendAuditEntry(
+      plantV1AuditRow(
         "HUMAN_TURN",
         { "Presence Reservation Id": duplicateTurn.reservationId },
         duplicateTurnRoot,

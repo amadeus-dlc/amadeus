@@ -10,7 +10,7 @@ import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "./v1-audit-fixture.ts";
 import {
   directiveSelfCheckExamples,
   type RunStageDirective,
@@ -114,8 +114,8 @@ export function appendGrant(
   grantId: string = GRANT_ID,
 ): string {
   const intent = seededRecordDir(root).split("/").at(-1)!;
-  const human = appendAuditEntry("HUMAN_TURN", {}, root, intent);
-  appendAuditEntry(
+  const human = plantV1AuditRow("HUMAN_TURN", {}, root, intent);
+  plantV1AuditRow(
     "GRANT_ISSUED",
     {
       "Grant Id": grantId,
@@ -219,7 +219,7 @@ export function padAuditFixture(
 
 export function revokeGrant(root: string, humanTs: string, grantId: string): void {
   const intent = seededRecordDir(root).split("/").at(-1)!;
-  appendAuditEntry(
+  plantV1AuditRow(
     "GRANT_REVOKED",
     {
       "Grant Id": grantId,

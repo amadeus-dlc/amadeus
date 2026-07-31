@@ -22,8 +22,8 @@
 // executable rather than a matter of someone's word.
 //
 // Run:
-//   bun tests/deletion-gate.ts --check [--report <path>] [--shadow-report <path>]
-//   bun tests/deletion-gate.ts --require-green [--report <path>] [--shadow-report <path>]
+//   bun tests/deletion-gate.ts --check [--report <path>]
+//   bun tests/deletion-gate.ts --require-green [--report <path>]
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -68,7 +68,7 @@ export const CONDITION_TITLES: Readonly<Record<GateCondition, string>> = {
   a: "v1/v2 mixed Journal: doctor/recovery/merge pass",
   b: "every canonical event is registered",
   c: "zero direct legacy call sites",
-  d: "shadow comparison equivalent or better",
+  d: "migrated sites carry the legacy field set",
   e: "Relay generates no Span from the Journal",
   f: "all harness distribution drift guards pass",
 };
@@ -105,21 +105,6 @@ export type RunOutcome = {
   readonly passed: boolean;
   readonly detail: string;
   readonly sources: readonly string[];
-};
-
-// Only the shape this gate reads, so the module stays free of a runtime import
-// of the shadow comparator (structural typing keeps it compatible).
-export type ShadowDimension =
-  | { readonly performed: true; readonly equivalent: boolean; readonly detail: string }
-  | { readonly performed: false; readonly reason: string };
-
-export type ShadowReportShape = {
-  readonly generatedAt: string;
-  readonly eventCount: ShadowDimension;
-  readonly linkage: ShadowDimension;
-  readonly status: ShadowDimension;
-  readonly allowedAttributes: ShadowDimension;
-  readonly unexplainedDiffs: readonly string[];
 };
 
 export type RelayProof = {
@@ -170,73 +155,63 @@ export function checkCallsitesZero(total: number | null): ConditionResult {
   };
 }
 
-const SHADOW_DIMENSIONS = ["eventCount", "linkage", "status", "allowedAttributes"] as const;
+// Condition (d): migration equivalence.
+//
+// The claim a call-site migration makes is that a MIGRATED site lands the same
+// audit content the legacy writer landed — same event type, same field set,
+// same values, same ledger. The suites that prove it carry the
+// `[migration-equivalence]` marker in their case titles, so the evidence is
+// DISCOVERED by marker rather than named in a list this file would have to keep
+// in step with the suite (the same shape condition (e) uses for the Relay
+// proof).
+//
+// Two things beyond "the suites are green" are checked, because a green run
+// over a shrunken evidence base looks identical to a green run over the whole
+// of it:
+//
+//   - a FLOOR on how many suites carry the marker, so deleting one blocks
+//     instead of quietly thinning the proof;
+//   - the REGISTRY SWEEP by name, because it is the only case that walks the
+//     whole registered taxonomy rather than a hand-picked event, and losing it
+//     would leave the count intact while removing the breadth.
+export type MigrationEquivalenceEvidence = {
+  readonly markerFiles: readonly string[];
+  readonly outcome: RunOutcome | null;
+};
 
-// The shadow report is the one piece of gate evidence that arrives as a file
-// another Unit wrote, so its shape is parsed rather than assumed: a dimension
-// that is absent, or one that claims `performed` without carrying a boolean
-// `equivalent`, would otherwise either throw mid-judgement or slip past an
-// `=== false` test and read as agreement. Parsing first makes the malformed
-// case a verdict (UNKNOWN, BR-12) instead of a crash or a false PASS.
-function parseShadowDimension(value: unknown): ShadowDimension | null {
-  if (value === null || typeof value !== "object") return null;
-  const dimension = value as Record<string, unknown>;
-  if (dimension.performed === false) return { performed: false, reason: String(dimension.reason ?? "") };
-  if (dimension.performed !== true) return null;
-  if (typeof dimension.equivalent !== "boolean") return null;
-  return { performed: true, equivalent: dimension.equivalent, detail: String(dimension.detail ?? "") };
-}
+// Matched against a case TITLE, not anywhere in the file: prose that merely
+// mentions the marker (this comment, for one) is not evidence of anything.
+const MIGRATION_EQUIVALENCE_TITLE_RE = /^\s*(?:test|describe)\(\s*[`"']\[migration-equivalence\]/m;
 
-export function parseShadowReport(value: unknown): ShadowReportShape | null {
-  if (value === null || typeof value !== "object") return null;
-  const source = value as Record<string, unknown>;
-  if (typeof source.generatedAt !== "string") return null;
-  if (!Array.isArray(source.unexplainedDiffs)) return null;
-  if (source.unexplainedDiffs.some((diff) => typeof diff !== "string")) return null;
-  const dimensions: Record<string, ShadowDimension> = {};
-  for (const name of SHADOW_DIMENSIONS) {
-    const parsed = parseShadowDimension(source[name]);
-    if (parsed === null) return null;
-    dimensions[name] = parsed;
-  }
-  return {
-    generatedAt: source.generatedAt,
-    eventCount: dimensions.eventCount as ShadowDimension,
-    linkage: dimensions.linkage as ShadowDimension,
-    status: dimensions.status as ShadowDimension,
-    allowedAttributes: dimensions.allowedAttributes as ShadowDimension,
-    unexplainedDiffs: source.unexplainedDiffs as readonly string[],
-  };
-}
+// The count measured when condition (d) was re-drawn onto the marker
+// (2026-07-31 ruling on FR-MIG-4(d)): t379, t381, t382, t383, t390. Shrink-only
+// in the same sense as the call-site allowlist — the base may grow, and a drop
+// below this is a regression in the proof, not a smaller job.
+export const MIGRATION_EQUIVALENCE_MIN_FILES = 5;
 
-export function checkShadowEquivalence(supplied: ShadowReportShape | null): ConditionResult {
-  if (supplied === null) return unknownResult("d", "no shadow comparison report was supplied");
-  const report = parseShadowReport(supplied);
-  if (report === null) {
-    return unknownResult("d", "shadow comparison report is malformed — the comparison cannot be judged");
-  }
-  const evidence = `shadow-report@${report.generatedAt}`;
-  const unperformed = SHADOW_DIMENSIONS.filter((name) => !report[name].performed);
-  if (unperformed.length > 0) {
+export const REGISTRY_SWEEP_TEST = "tests/integration/t381-registry-emitter-parity.test.ts";
+
+export function checkMigrationEquivalence(evidence: MigrationEquivalenceEvidence | null): ConditionResult {
+  if (evidence === null) return unknownResult("d", "migration-equivalence evidence was not gathered");
+  const found = evidence.markerFiles.length;
+  const evidenceRef = `migration-equivalence:${found} suite(s)`;
+  if (found < MIGRATION_EQUIVALENCE_MIN_FILES) {
     return {
       condition: "d",
-      verdict: "UNKNOWN",
-      evidence,
-      detail: `comparison not performed for: ${unperformed.join(", ")}`,
+      verdict: "FAIL",
+      evidence: evidenceRef,
+      detail: `${found} suite(s) carry the marker, below the floor of ${MIGRATION_EQUIVALENCE_MIN_FILES}`,
     };
   }
-  // Parsing guarantees a boolean `equivalent` on every performed dimension, so
-  // agreement is asserted positively. BR-9 reads "equivalent or better" as "no
-  // regression": one worse dimension, or one diff nobody explained, blocks.
-  const worse = SHADOW_DIMENSIONS.filter((name) => (report[name] as { equivalent: boolean }).equivalent !== true);
-  if (worse.length > 0 || report.unexplainedDiffs.length > 0) {
-    const parts = [
-      worse.length > 0 ? `not equivalent: ${worse.join(", ")}` : "",
-      report.unexplainedDiffs.length > 0 ? `${report.unexplainedDiffs.length} unexplained diff(s)` : "",
-    ].filter((part) => part !== "");
-    return { condition: "d", verdict: "FAIL", evidence, detail: parts.join("; ") };
+  if (!evidence.markerFiles.includes(REGISTRY_SWEEP_TEST)) {
+    return {
+      condition: "d",
+      verdict: "FAIL",
+      evidence: evidenceRef,
+      detail: `the registry sweep (${REGISTRY_SWEEP_TEST}) is not among the marked suites`,
+    };
   }
-  return { condition: "d", verdict: "PASS", evidence, detail: "" };
+  return fromRunOutcome("d", evidence.outcome, "the marked suites were found but not run");
 }
 
 export function checkRelayProof(proof: RelayProof | null): ConditionResult {
@@ -371,7 +346,7 @@ export type Evidence = {
   readonly mixedJournal: RunOutcome | null;
   readonly registryDrift: readonly string[] | null;
   readonly callsites: number | null;
-  readonly shadow: ShadowReportShape | null;
+  readonly migrationEquivalence: MigrationEquivalenceEvidence | null;
   readonly relay: RelayProof | null;
   readonly distribution: RunOutcome | null;
 };
@@ -449,17 +424,34 @@ export function measureRelayProof(): RelayProof | null {
   }
 }
 
-// A file that is absent, unparseable or wrongly shaped all mean the same thing
-// to the gate: condition (d) has no evidence, so it is UNKNOWN rather than
-// agreement. Shape checking happens here, at the boundary, so nothing malformed
-// travels further in.
-export function readShadowReport(path: string | undefined): ShadowReportShape | null {
-  if (path === undefined || !existsSync(path)) return null;
+// The marked suites, repo-relative, because runBunTests resolves against
+// REPO_ROOT. A walk that threw means the evidence was not gathered at all
+// (null -> UNKNOWN), which is not the same as "no suite carries the marker"
+// (an empty list -> FAIL under the floor).
+export function discoverMigrationEquivalenceTests(): readonly string[] | null {
   try {
-    return parseShadowReport(JSON.parse(readFileSync(path, "utf-8")));
+    const sources: string[] = [];
+    listTestSources(join(REPO_ROOT, "tests"), sources);
+    return sources
+      .filter((path) => MIGRATION_EQUIVALENCE_TITLE_RE.test(readFileSync(path, "utf-8")))
+      .map((path) => relative(REPO_ROOT, path))
+      .sort();
   } catch {
     return null;
   }
+}
+
+// A base that is already short of the floor, or missing the registry sweep, is
+// not run: the checker blocks on that alone, and a green over the thinned set
+// would only add a number nobody should read as agreement.
+export function measureMigrationEquivalence(
+  runTests: (paths: readonly string[]) => RunOutcome
+): MigrationEquivalenceEvidence | null {
+  const markerFiles = discoverMigrationEquivalenceTests();
+  if (markerFiles === null) return null;
+  const judgeable =
+    markerFiles.length >= MIGRATION_EQUIVALENCE_MIN_FILES && markerFiles.includes(REGISTRY_SWEEP_TEST);
+  return { markerFiles, outcome: judgeable ? runTests(markerFiles) : null };
 }
 
 function spawn(command: readonly string[]): { readonly ok: boolean; readonly detail: string } {
@@ -500,7 +492,6 @@ function runDistributionGuards(): RunOutcome {
 
 export type GateOptions = {
   readonly reportPath?: string;
-  readonly shadowReportPath?: string;
   readonly now?: string;
   readonly commitRef?: string;
   // The injection seam that lets a test drive BOTH gate states. It is reachable
@@ -528,7 +519,7 @@ export function gatherEvidence(options: GateOptions = {}, runners: EvidenceRunne
     mixedJournal: runners.runTests(MIXED_JOURNAL_TESTS),
     registryDrift: measureRegistryDrift(),
     callsites: measureCallsites(),
-    shadow: readShadowReport(options.shadowReportPath),
+    migrationEquivalence: measureMigrationEquivalence(runners.runTests),
     relay: measureRelayProof(),
     distribution: runners.runGuards(),
   };
@@ -539,7 +530,7 @@ export function resultsFromEvidence(evidence: Evidence): ConditionResult[] {
     checkMixedJournal(evidence.mixedJournal),
     checkRegistryComplete(evidence.registryDrift),
     checkCallsitesZero(evidence.callsites),
-    checkShadowEquivalence(evidence.shadow),
+    checkMigrationEquivalence(evidence.migrationEquivalence),
     checkRelayProof(evidence.relay),
     checkDistributionGuards(evidence.distribution),
   ];
@@ -604,7 +595,7 @@ export function runRequireGreen(options: GateOptions = {}): number {
 }
 
 const USAGE =
-  "usage: bun tests/deletion-gate.ts <--check | --require-green> [--report <path>] [--shadow-report <path>]\n" +
+  "usage: bun tests/deletion-gate.ts <--check | --require-green> [--report <path>]\n" +
   "  --check          evaluate and write the report; exit 0 whenever the evaluation itself succeeded\n" +
   "  --require-green  the deletion precondition: exit 1 unless every condition PASSes";
 
@@ -614,15 +605,13 @@ function parseArgs(args: readonly string[]): ParsedArgs {
   const mode = args[0] === "--check" ? "check" : args[0] === "--require-green" ? "require-green" : null;
   if (mode === null) return null;
   let reportPath: string | undefined;
-  let shadowReportPath: string | undefined;
   for (let i = 1; i < args.length; i += 2) {
     const value = args[i + 1];
     if (value === undefined) return null;
     if (args[i] === "--report") reportPath = value;
-    else if (args[i] === "--shadow-report") shadowReportPath = value;
     else return null;
   }
-  return { mode, options: { reportPath, shadowReportPath } };
+  return { mode, options: { reportPath } };
 }
 
 export function main(args: string[]): number {

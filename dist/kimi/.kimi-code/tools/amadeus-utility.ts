@@ -18,11 +18,7 @@ import type { Stats } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  appendAuditEntry,
-  appendAuditEntryUnlocked,
-  appendLifecycleAuditEntryUnlocked,
-} from "./amadeus-audit.ts";
+import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
