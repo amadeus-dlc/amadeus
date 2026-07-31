@@ -65,6 +65,22 @@ const ORCHESTRATE = join(
   "amadeus-orchestrate.ts",
 );
 
+// The fixtures below spawn real tools out of a temp `.claude/tools` copy. A
+// tool's module graph is not confined to that directory: the ones on the
+// canonical emit path import `../otel/`, which in turn imports the vendored
+// OTel API — both are siblings of `tools/` in every shipped harness tree. A
+// copy of `tools/` alone is therefore not an installable tree, and the spawn
+// dies on a module resolution error instead of exercising the routing under
+// test.
+function seedToolSiblings(toolsDir: string): void {
+  const harnessDir = join(toolsDir, "..");
+  for (const sibling of ["otel", "vendor"]) {
+    cpSync(join(REPO_ROOT, "packages", "framework", "core", sibling), join(harnessDir, sibling), {
+      recursive: true,
+    });
+  }
+}
+
 function migrationLatchPath(projectDir: string, sessionId: string): string {
   const key = createHash("sha256")
     .update(resolve(projectDir))
@@ -512,6 +528,7 @@ describe("migration utility adapter", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       writeFileSync(
         join(tools, "amadeus-migrate.ts"),
         "process.stdout.write(JSON.stringify(process.argv.slice(2)));\n",
@@ -554,6 +571,7 @@ describe("migration utility adapter", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       writeFileSync(
         join(tools, "amadeus-migrate.ts"),
         "process.stdout.write(JSON.stringify(process.argv.slice(2)));\n",
@@ -593,6 +611,7 @@ describe("migration utility adapter", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       writeFileSync(
         join(tools, "amadeus-migrate.ts"),
         "process.stdout.write('migrator invoked');\n",
@@ -627,6 +646,7 @@ describe("migration utility adapter", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       writeFileSync(
         join(tools, "amadeus-migrate.ts"),
         "process.stdout.write('migrator invoked');\n",
@@ -1020,6 +1040,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       cpSync(join(REPO_ROOT, "packages", "framework", "harness", "kiro", "hooks"), hooks, {
         recursive: true,
       });
@@ -1052,6 +1073,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       cpSync(join(REPO_ROOT, "packages", "framework", "harness", "kiro", "hooks"), hooks, {
         recursive: true,
       });
@@ -1085,6 +1107,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "hooks"), hooks, {
         recursive: true,
       });
@@ -1182,6 +1205,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       cpSync(join(REPO_ROOT, "packages", "framework", "harness", "kiro", "hooks"), hooks, {
         recursive: true,
       });
@@ -1220,6 +1244,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       cpSync(join(REPO_ROOT, "packages", "framework", "harness", "kiro", "hooks"), hooks, {
         recursive: true,
       });
@@ -1280,6 +1305,7 @@ describe("Kiro advancing guard parity", () => {
       cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), tools, {
         recursive: true,
       });
+      seedToolSiblings(tools);
       const run = spawnSync(
         process.execPath,
         [join(tools, "amadeus-orchestrate.ts"), "next", "--migrate", "--project-dir", project],
