@@ -136,23 +136,16 @@ export function createTestProject(): string {
  * resetting there would erase the condition under test. Suites opt in from their
  * own beforeEach.
  *
- * Import failures are ignored: fixtures also serve suites running against tool
- * trees with no otel/ directory (the BR-5 partial-install cases).
+ * Loaded lazily rather than imported at module scope so that importing these
+ * fixtures does not drag the OTel vendor chain into every suite that uses them.
  */
 export function resetOtelProcessState(): void {
-  try {
-    for (const [mod, fn] of [
-      ["../../dist/claude/.claude/otel/logger-provider.ts", "resetLoggerProviderForTests"],
-      ["../../dist/claude/.claude/otel/tracer-provider.ts", "resetTracerProviderForTests"],
-      ["../../dist/claude/.claude/otel/bootstrap.ts", "resetOtelBootstrapForTests"],
-    ] as const) {
-      const loaded = require(mod) as Record<string, () => void>;
-      loaded[fn]?.();
-    }
-  } catch {
-    /* no otel tree in this fixture's tool set */
-  }
+  const otel = join(AMADEUS_SRC, "otel");
+  (require(join(otel, "logger-provider.ts")) as { resetLoggerProviderForTests(): void }).resetLoggerProviderForTests();
+  (require(join(otel, "tracer-provider.ts")) as { resetTracerProviderForTests(): void }).resetTracerProviderForTests();
+  (require(join(otel, "bootstrap.ts")) as { resetOtelBootstrapForTests(): void }).resetOtelBootstrapForTests();
 }
+
 
 /**
  * The absolute intents dir for a space: `<proj>/amadeus/spaces/<space>/intents`.
