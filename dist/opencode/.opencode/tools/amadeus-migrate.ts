@@ -29,7 +29,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
 import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
-import { observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
 const DESTINATION_NAMESPACE = "amadeus";
@@ -440,7 +440,7 @@ function git(projectDir: string, args: readonly string[]): {
   stdout: string;
   stderr: string;
 } {
-  const result = observeSubprocess(projectDir, "git", () =>
+  const result = observeSubprocessSpan(projectDir, "git", () =>
     spawnSync("git", ["-C", projectDir, ...args], {
       encoding: "utf-8",
       env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
@@ -2916,7 +2916,7 @@ function runDoctor(inspection: Inspection): {
       const restoreTestUtility = injectDoctorUtilitySymlinkForTest(inspection);
       try {
         assertDoctorUtilityStable(inspection);
-        return observeSubprocess(inspection.projectDir, "amadeus-utility:doctor", () =>
+        return observeSubprocessSpan(inspection.projectDir, "amadeus-utility:doctor", () =>
           spawnSync(
             process.execPath,
             [doctorUtility, "doctor", "--project-dir", inspection.projectDir],
