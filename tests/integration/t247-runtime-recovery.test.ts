@@ -1,6 +1,7 @@
 // covers: runtime-recovery:production-paths
 // @test-size medium
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import * as nodeFs from "node:fs";
@@ -194,7 +195,7 @@ function parseRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+    .map((line) => normalizeAuditRecord(JSON.parse(line)) as unknown as AuditRecord);
 }
 
 function readRecords(shardPath: string): AuditRecord[] {

@@ -51,6 +51,7 @@
 // 15 .sh asserts -> 15 expect()-bearing test() cases (the ordering case adds a
 // stronger second expect within the same case; no observable dropped).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -153,7 +154,7 @@ function auditRecords(content: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>);
 }
 
 /** Count audit records whose `event` is <ev> in audit CONTENT (shard-concat). Mirrors the .sh count_event grep (L99-101). */

@@ -54,6 +54,7 @@
 //   .sh test 9  (detect-scope --from-text resolves keyword)  -> "detect-scope --from-text resolves a dropped scope's keyword from its .md (CLI audit)"
 //   .sh test 10 (grid columns subset of authored .md names)  -> "every scope-grid column has a matching .claude/scopes/*.md file"
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -316,7 +317,7 @@ describe("dropped-file scope dynamics (AMADEUS_SCOPES_DIR seam)", () => {
     const records = audit
       .split("\n")
       .filter((l) => l.trim() !== "")
-      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> });
     const detected = records.filter((r) => r.event === "SCOPE_DETECTED");
     // STRONGER: it landed as a SCOPE_DETECTED event sourced from the keyword,
     // and stdout echoes the resolved scope.

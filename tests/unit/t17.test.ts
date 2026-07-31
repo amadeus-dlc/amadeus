@@ -35,6 +35,7 @@
 // gate row is never tagged; a terminal-state slug still rejects. Test 51 now
 // uses a [ ] pending slug (reject accepts [?] AND [-]).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -187,7 +188,7 @@ function auditRecords(text: string): AuditRecord[] {
   return text
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 
 // Count records of one event type (the .sh's `grep -c "^\*\*Event\*\*: X"`).

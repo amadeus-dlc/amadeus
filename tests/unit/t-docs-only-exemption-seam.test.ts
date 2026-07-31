@@ -15,6 +15,7 @@
 //   - verifyStageArtifacts workspace_requires branch: exempted (GUARD_EXEMPTED
 //     emitted, finalize proceeds) and refused (no declaration → loud error).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -251,7 +252,7 @@ describe("t-docs-only-exemption-seam: verifyStageArtifacts workspace_requires br
     const records = readFileSync(seededAuditShard(proj), "utf-8")
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> });
     // Record-scoped: the Stage rides on the SAME record as the exemption event.
     expect(
       records.some(

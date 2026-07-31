@@ -68,6 +68,7 @@
 // The original 24-assert shape is retained where compatible, with managed-block
 // preservation, update, and malformed-marker regressions added below.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -295,7 +296,7 @@ function auditRecords(file: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>);
 }
 
 /** Count audit records whose `event` is exactly <ev>. Mirrors the .sh's PRACTICES_* grep, as a count. */

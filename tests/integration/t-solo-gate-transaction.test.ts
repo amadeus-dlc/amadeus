@@ -4,6 +4,7 @@
 // state CLI across a real process boundary. The in-process arms of the same
 // transaction live in the sibling t-solo-gate-transaction-*.test.ts files.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -64,7 +65,7 @@ function auditRecords(shardBody: string): AuditRecord[] {
   return shardBody
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+    .map((line) => normalizeAuditRecord(JSON.parse(line)) as unknown as AuditRecord);
 }
 
 describe("solo gate approval transaction", () => {

@@ -24,6 +24,7 @@
 //   - dist/claude/.claude/tools/amadeus-audit.ts   : presenceMintRejection, handleAppend
 //   - dist/claude/.claude/tools/amadeus-state.ts   : grant-standing-delegation /
 //       revoke-standing-delegation / delegate-approval (spawned)
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -83,7 +84,7 @@ function records(shardBody: string): AuditRecord[] {
   return shardBody
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 
 const tmpRoots: string[] = [];

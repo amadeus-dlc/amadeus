@@ -45,6 +45,7 @@
 // this port pins the stronger fact — the returned body is whitespace-only
 // (trims to "") — covering both shapes the .sh allowed.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -235,7 +236,7 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l.length > 0)
-      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>)
       .find((r) => r.event === "PRACTICES_SECTION_EMPTY");
     expect(record).toBeDefined();
     const fields = (record?.fields ?? {}) as Record<string, string>;

@@ -53,6 +53,7 @@
 // release-merge (the .sh's prose pin "second call same outcome") is also
 // exercised inside T1/T2 setup implicitly and asserted explicitly in T1.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
@@ -168,7 +169,7 @@ function hasAuditEvent(proj: string, ev: string): boolean {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>)
     .some((r) => r.event === ev);
 }
 

@@ -1,4 +1,5 @@
 // size: medium
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -250,7 +251,7 @@ describe("t257 doctor audit and cleanup side effects", () => {
     const events = audit
       .split("\n")
       .filter((l) => l.trim() !== "")
-      .map((l) => (JSON.parse(l) as { event: string | null }).event);
+      .map((l) => (normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null }).event);
     const guardrailIndex = events.lastIndexOf("GUARDRAIL_LOADED");
     const healthIndex = events.lastIndexOf("HEALTH_CHECKED");
 

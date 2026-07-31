@@ -33,6 +33,7 @@
 // (createTestProject / seedAuditFile / seedStateFile / cleanupTestProject) and
 // per-case mkdtemp dirs. NOTHING is written under tests/fixtures/**.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -112,7 +113,7 @@ function auditRecords(proj: string): AuditRecord[] {
   return readAudit(proj)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 /** Fields of the FIRST record carrying <ev> ({} when absent). */
 function auditFields(proj: string, ev: string): Record<string, string> {
