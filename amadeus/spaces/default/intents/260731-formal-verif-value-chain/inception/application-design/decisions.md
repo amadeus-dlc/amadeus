@@ -8,7 +8,7 @@ requirements.md「設計段への委譲」4件+advisories 形状の計5件を AD
 
 - **Context**: compose の host 書込は stage/seam/fragment のみ(amadeus-plugin-compose.ts:330-334 / :1021-1037 実測)。plugin tools を配布する語彙がない(FR-A3)。
 - **Decision**: manifest に `tools: ["tools/<file>.ts", ...]` フィールドを新設する。compose は宣言された tools を verbatim コピーし(prose 変換なし — projection の「.json/.ts are verbatim」流儀と整合)、`ownedPaths` へ含めて drop で対称に削除する。
-- **Consequences**: 宣言駆動を維持(compose の既存原則)。tools 追加時は manifest 更新が必要。coverage-patch-allowlist の「trusted path は plugins/<plugin>/stages/ 始まり」制約(allowlist :35-36 実測)は tools パスを含む形へ拡張が必要 — 実装時に該当検査の trusted path 集合へ `plugins/<plugin>/tools/` を追加する。
+- **Consequences**: 宣言駆動を維持(compose の既存原則)。tools 追加時は manifest 更新が必要。~~coverage-patch-allowlist の trusted path 制約(:35-36)の tools 拡張~~ — **FD u4 reviewer の実測(2026-07-31)により不適用と確定し撤回**: 当該制約の実体(trustedPluginStageFile — orchestrate:1204-1225 / graph:1997-2030)は stageIndex 検証専用で tools パスの呼出しが存在しない。将来 tools の実行時信頼検査が必要になれば実在の呼出し元を特定して導入する(FD u4 I2 の訂正記録参照)。
 - **Alternatives Rejected**: (a) projection 同様の全ファイル走査 — compose の宣言駆動原則を崩し、意図しないファイル(README 等)の host 汚染を招く。(b) `stages` の一般化(kind 属性付き)— 既存 manifest 全消費側の改修を要し surgical でない。
 
 ## ADR-2: canonical.ts の外部依存は同伴複製+drift guard

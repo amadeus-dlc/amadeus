@@ -6,7 +6,7 @@ components.md の C1〜C10 のうち、公開 seam が変わる箇所のメソ�
 
 ## C2: amadeus-plugin-compose.ts
 
-- `parseTools(manifest): string[]` — `tools` フィールドの検証(相対パス・`plugins/<name>/tools/` 配下限定・isUnsafeRelativePath 拒否の既存流儀を再利用)。欠落時は `[]`(後方互換 — tools なし plugin は従来どおり)。
+- `parseTools(manifest): string[]` — `tools` フィールドの検証(相対パス・`plugins/<name>/tools/` 配下限定・`expectRelPath`(amadeus-plugin-compose.ts:1470-1478)拒否の既存流儀を再利用。旧記載 isUnsafeRelativePath は scripts/plugin-projection.ts:192 の projection 時安全検査(別文脈のシンボル)で本文脈不適用 — FD u4 reviewer 実測により訂正 2026-07-31)。欠落時は `[]`(後方互換 — tools なし plugin は従来どおり)。
 - `PluginManifest` 型へ `tools: readonly string[]` を追加。
 - `composeWriteSet(plan)` — `plan.toolsCopies` を hostWrites へ合流。`ownedPaths` に tools パスを含める(drop の削除対称)。
 - **digest 面の対称拡張(必須)**: `ownedStageDigests`(amadeus-plugin-compose.ts:584-586 — 現状 `plugin.manifest.stages` のみ走査)を stages+tools を走査する形へ拡張(例: `ownedRecordDigests`)し、`ownedContentDigests`(:558)の算出元とする。これを欠くと `planPluginDrop`(:703-718)が tools パスを `expectedDigest === undefined` の「trust grant からの drift」として rejections に積み、drop で tools が削除されない — 書込集合(ownedPaths)と digest 集合(ownedContentDigests)は対で拡張する(symmetric-pair-review)。

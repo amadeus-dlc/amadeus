@@ -8,8 +8,8 @@
 
 | Verb | 変更 | FR |
 |---|---|---|
-| `bun .claude/tools/amadeus-plugin.ts compose <plugin>` | 不変(tools 配布が加わる — manifest 宣言駆動) | FR-A3 |
-| 一括 compose verb(compose-all 系、命名は FD で確定) | 新設 — 現存全ハーネスツリーへ順次 compose、fail-closed 集計 | FR-B1 |
+| `bun .claude/tools/amadeus-plugin.ts compose [--if-stale] [--project-root <dir>]`(plugin 名の positional なし — staging 内 plugin 群が対象) | 不変(tools 配布が加わる — manifest 宣言駆動) | FR-A3 |
+| `compose --all-harnesses`(FD u4 で確定 2026-07-31 — 既存 verb への明示フラグ、新 verb なし。対象 hostRoot 集合を検出済み全ハーネスへ拡大) | 新設 — 現存全ハーネスツリーへ順次 compose、fail-closed 集計 | FR-B1 |
 | `bun .claude/tools/amadeus-orchestrate.ts next` | directive JSON へ advisories フィールド追加(空時省略)、発火点3点+ラッチ | FR-B2/B3 |
 | `bun .claude/tools/amadeus-sensor-model-completeness.ts updateModelMap` | 不変(MODEL_UNCHANGED detail に正規手順追記) | FR-D2 |
 | 同 `updateModelMap --impl-only` | 新設 — impl-hash-only refresh、宣言必須+監査行 | FR-D1 |
