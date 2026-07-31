@@ -33,3 +33,11 @@
 1. 66 call site の OTel 経路移行（追加 Bolt — (c) の解消）→ Bolt G1/G2/G3 で完了（#1810/#1828/#1801）
 2. (d) checker の再定義実装（shadow report 検査 → `[migration-equivalence]` テスト群+registry スイープの機械消費。FR-MIG-4 改訂準拠）
 3. ゲート GREEN 後の旧 writer 削除 + retention 判定器（= ゲート GREEN 同期）。v1 reader は削除しない（FR-MIG-5、#1819 委譲）
+
+## 追記: writer-deletion Bolt 着地(2026-07-31)
+
+- **#1844** feat(otel): 旧 audit writer を削除し削除ゲート6条件 GREEN を達成(squash `5d912e0dd`)
+- 裁定準拠: FR-MIG-4(d) 再定義(`[migration-equivalence]` 証拠、下限5 suite)/ FR-MIG-5(v1 reader 保持、#1819 委譲)/ E-OTELWD-C(C-1: phase1-measure 削除、2-0)
+- 削除ゲート実測(着地 `5d912e0dd`): **(a)〜(f) 全 PASS、overall GREEN、`--require-green` exit 0**
+- 逸脱2件受理(bolt.ts 未使用 import 4件目 / callsite-guard census 注入シーム)、フォローアップ: #1841(v1 書込3経路)、#1845(VALID_EVENT_TYPES)、#1830 経路B(残)
+- t258 hang guard 120s→300s 同乗(#1830 経路A解消、性能アサーション無改変)

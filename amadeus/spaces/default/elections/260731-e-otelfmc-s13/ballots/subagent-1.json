@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OTELFMC-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測4点。(1) spec 無変更: git diff --stat origin/main...HEAD -- specs/tla/ が空、git status --porcelain specs/tla/ も空。origin/main..HEAD で specs/tla を touch する log は merge commit df15541ab のみで実 diff はゼロ。FormalElection.tla / .cfg / model-map.json のいずれも本 intent で改変されていない以上、モデル設計・不変量・探索境界に関する新規知見が生じる余地がない。(2) 実行結果は既決契約の充足に尽きる: manifest.json は outcome NOT_DETECTED / exitCode 0 / partial false、completion-marker.json は complete true(runId b5e891aa-51f4-4307-b7f3-241e104deebc)、tlc-stdout.bin 末尾は 'Model checking completed. No error has been found.' と '5203730 states generated, 529692 distinct states found, 0 states left on queue.'、depth 9 で完全状態グラフ探索。これは cid:application-design:finite-exploration-not-detected-proof が要求する『固定点まで完走した completion marker と state 統計が揃う場合にのみ NOT_DETECTED を主張できる』の充足実例であり、既存 cid の再適用であって新規則を導かない。(3) 環境検証も既決どおり: env-receipt.json の inspections は jar-sha256 / network-deny / jdk-snapshot / sandbox-profile が全て passed、image-digest のみ Darwin sandbox-exec のため not-applicable。tlc-stderr.bin は 0 バイト。是正ループが一度も発生していない。(4) 学習材料の不在を監査と diary の両面で確認: 監査シャードで本ステージに対応するのは model-completeness の SENSOR_FIRED(seq 3844)→SENSOR_PASSED(seq 3845, Duration 53ms, Output path specs/tla/FormalElection.tla)のみで SENSOR_FAILED は0件。construction/formal-model-check/memory.md は未編集テンプレートで Interpretations / Deviations / Tradeoffs / Open questions の4節すべて実エントリ0。以上より、決定的 CLI の単発実行がすべて第一手で通過し、逸脱・裁定・トレードオフ・手続き是正のいずれも発生していないため、本ステージ固有の persist 候補は実在しないと判断する。自案非採用時の受容度: 選択肢1(異議)が採られる場合、候補文が本ステージ由来かつ既存 cid 未被覆であることを file:line で示せるなら受容度6。",
+  "submittedAt": "2026-07-31T13:05:00Z"
+}

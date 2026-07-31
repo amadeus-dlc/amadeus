@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OTELBT-S13",
+  "voter": "subagent-2",
+  "question": "260729-otel-upstream build-and-test ステージの §13 学習選定。conductor 提案: 0件(本ステージは着地済み実測の編纂と fresh 再実行が主で、t258 hang-guard 300s 化は既存ノルム(bt-timeout-verification-shape / observability-setup:c3 の timeout≠SLO)の適用であり新規規則を生まない。stage diary のエントリも0件)。各自、construction/build-and-test/ の7成果物と diary(memory.md)を独立確認し、独自の学習候補が実在しないかを検分して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文を書くこと)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "候補1を採用(persist)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "候補1を採用(persist)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件(不採用)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-31T12:33:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OTELCG-S13B",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "候補文の二重閉塞のうち第2アーム(store を埋めても name 空間が互いに素で FAIL)は、buffer-*.jsonl / spans-*.jsonl がともに作業ツリーに 0 件で実データ照合ができず、設計上の推論としてしか確認できなかった。ただし第1アーム(書き手 0 件 → present:false → COMPARISON NOT PERFORMED = 恒久 UNKNOWN)だけで規則本体(比較窓の消滅を設計時に検証せよ)は一意に成立するため、採否には影響しない。persist 時は候補文の第2アーム部分を『実測』でなく設計上の帰結として読める表現に留めるのが望ましい。",
+      "rationale": "候補1を採用(GoA 2)。3点を独立実測して機序を確認した。(1) 比較窓の実装: packages/framework/core/otel/shadow-compare.ts:271-272 が readStore(dir, \"buffer-\") と readStore(dir, \"spans-\") で旧/新 store を読み、readStore(:79-)は該当 prefix のファイルが 0 件なら census.present=false を返す。型定義 ComparisonVerdict(:37-39)は performed:false のアームに equivalent フィールドを持たない判別ユニオンで、ヘッダコメント(:12-15)どおり未実行は同等性として読めない — すなわち書き手消滅は構造的に UNKNOWN へ落ちる。(2) 書き手の消滅: 旧側 store の唯一の書き手は appendTelemetryEvent(packages/framework/core/tools/amadeus-observability.ts:212、:232 で bufferPath へ append)であり、その production 呼出しは observe(:277→:286)と observeSubprocess(:330→:343)の 2 経路。packages/ scripts/ .claude/ を横断 grep した結果、この 2 関数の呼出しは定義ファイルと tests/(callsite-guard.ts, t367, t357)以外に 0 件(唯一の grep ヒットは vendor/opentelemetry/api/metrics/Metric.d.ts:127,142 の ObservableResult.observe で無関係)。よって条件 (c)(直接 call site ゼロ)の充足がそのまま旧 store の書き手を消し、比較窓を閉じるという候補文の因果は実装から一意に導かれる。(3) 帰結の record 反映: requirements.md の FR-MIG-4(d) は『移行同等性証拠 — [migration-equivalence] マーカー付きテスト群+registry スイープ検証』へ改訂済みで、改訂注記に旧定義(shadow 比較)が BR-1(dual-write 禁止)と構造的に両立不能である旨と承認系譜(scout 実測→conductor 提案→ユーザー承認)が明記されている — 候補文の解決経路と一致する。一般性: 規則は『移行が旧側の書き手を消す限り、shadow/dual-run をゲート契約に置くと比較窓が構造的に閉じる』という時間軸上の非対称であり、本 intent 固有ではなく他の移行系 intent へ転用可能。既存ノルムとの重複なし: cid:requirements-analysis:symmetric-pair-review は write/check 等の対の同時実装を扱うが、片側が時間経過(移行完了)で消えることは射程外であり、候補文の『時間軸面の補完』という位置づけは妥当。cid:code-generation:ruling-premise-closure-verification は裁定前提の事後閉包確認で、設計時の窓存在検証という予防面は空白。",
+      "submittedAt": "2026-07-31T12:33:44Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OTELCG-S13B",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1を採用(1)。独立実測で二重閉塞の両アームを再現確認した。(i) requirements.md:73 FR-MIG-4(d) の改訂文と承認系譜(scout実測→conductor提案→ユーザー承認)を verbatim 確認。(ii) shadow-compare.ts:271-272 が readStore(dir,'buffer-') / readStore(dir,'spans-') の二系統読みであることを確認。(iii) 旧 buffer- store の書き手 observe()/observeSubprocess() の production 呼出しは packages/ 配下で 0 件(grep ヒットは vendor/opentelemetry/api/metrics/Metric.d.ts:127,142 の無関係な ObservableResult.observe と tests/ のみ)。amadeus-observability.ts:149 が buffer- パスの唯一の生成元であり、その writer に production caller がない。(iv) 閉塞アーム1: absentStoreReason(:252-254)→notPerformed(:243-249)により old store 不在で eventCount/linkage/status/allowedAttributes の4次元すべてが performed:false の恒久 UNKNOWN に落ちる。(v) 閉塞アーム2: compareEventCount(:134-148)は operationNames(:112-114)の union キーで突合するため、name 空間が互いに素なら全 name が old N/new 0 または old 0/new N の finding を生み FAIL 確定 — 「store を埋めても FAIL」も成立。(vi) tests/callsite-guard.ts:345 が legacy observe()/observeSubprocess() の retirement を FR-MIG-1/FR-TRC-1 として明示しており、条件(c)充足が構造的に比較窓を閉じる因果と整合。よって『比較窓が移行完了後も存在するか』を設計時に検証せよという知見は実測に接地し、cid:requirements-analysis:symmetric-pair-review の時間軸面(write⇔check の対を時間で分断する移行系特有の欠陥)を埋める新規性がある。留保なし。",
+      "submittedAt": "2026-07-31T12:33:42Z"
+    }
+  ],
+  "resolutions": []
+}

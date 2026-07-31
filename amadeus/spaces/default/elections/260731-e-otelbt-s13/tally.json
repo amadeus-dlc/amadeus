@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "異議(候補あり)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-31T12:49:21Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OTELBT-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測: (1) diary は construction/build-and-test/memory.md がテンプレート素の状態(Interpretations/Deviations/Tradeoffs/Open questions の4節すべて HTML コメントの例示のみ、実エントリ0)で、逸脱・裁定・トレードオフの記録はない。(2) 7成果物(build-and-test-summary / build-test-results / build-instructions / unit / integration / performance / security の各 instructions)を全読したが、記載内容はいずれも既存 cid の適用宣言であり新規規則を導出していない — bt-proportional-selection(performance/security の比例選定と E2E 非追加の根拠明記)、verdict-names-unverified-facets(Relay 実 collector 疎通を未検証面として明示)、bt-dist-regen-seven-harnesses(build-instructions のトラブルシュート)、fs-tests-integration-first(unit-test-instructions の配置規律)、two-layer-verification-posture(formal-model-check 発火条件外)。(3) t258 の 300s 化は tests/integration/t258-lifecycle-transaction.test.ts:536 の `}, 300_000);` と :529 のコメント『The inline timeout is a hang guard, not a performance assertion』を直読して確認した。この『実行タイムアウトは停止 guard であって性能契約ではない』という判断は既存の observability-setup:c3(Execution timeout や処理上限は個別実行の停止guardでありservice SLOではない)と build-and-test:bt-timeout-verification-shape の適用であり、新 cid を要さない。(4) 監査シャード末尾を確認したところ本ステージ(STAGE_STARTED seq 3806, 2026-07-31T12:35:18Z)以降は SENSOR_FIRED/SENSOR_PASSED のみで SENSOR_FAILED は0件、是正ループ由来の学習材料も存在しない。以上より独自候補は実在しない。非採用時の受容度: 選択肢2(異議)が採られる場合、実在根拠のある候補文が提示されるなら受容度6(候補の実在確認を条件に支持)。",
+      "submittedAt": "2026-07-31T12:47:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OTELBT-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "t258 の inline timeout を 120s→300s とした際の知見、すなわち『hang guard の値を実測 wall-clock レンジ(GitHub runner 実測 123-152s)の直上に置くと、全予算アサーションが green のまま timeout だけが発火し、性能退行と区別不能な偽赤を作る — hang guard は丸め値でなく実測レンジから離して定める』は、既存の bt-timeout-verification-shape(timeout 要件の検証形)にも observability-setup:c3(timeout≠SLO)にも rerun-red-reattribution(赤の再帰属)にも被覆されない実ギャップだと考える(tests/integration/t258-lifecycle-transaction.test.ts:529-536 のコメントが #1830 経路A・PR #1844 の4連続赤を根拠として明記)。ただし当該変更は本ステージではなく writer-deletion Bolt の code-generation(着地 5d912e0dd / PR #1844)で行われたもので、その §13 は E-OTELCG-S13B として 2026-07-31T12:33:59Z に既に閉じている。build-and-test の学習として persist するとステージ帰属を誤るため本選挙では 0件を支持し、この知見は週次蒸留ラウンドで独立に諮ることを推奨する。採否には影響しない。",
+      "rationale": "0件で可(choice 1、GoA 2)。4点を独立実測した。(1) stage diary(construction/build-and-test/memory.md)は未編集テンプレートで、Interpretations/Deviations/Tradeoffs/Open questions の4節すべて実エントリ 0 件 — 監査側の amadeus.memory.empty と整合し、ステージ実行中に観測された解釈・逸脱・トレードオフ・未決事項が存在しない。(2) stage.started(seq 3806、2026-07-31T12:35:18Z)以降の audit イベントを機械集計すると sensor.fired 14 / sensor.passed 14 / memory.empty 1 / stage.started 1 で、SENSOR_FAILED は 0 件。是正ループ由来の手続き学習(センサー不発・様式違反・upstream-coverage 是正等、過去 intent で §13 候補の主要供給源となってきたクラス)がそもそも発生していない。(3) 7成果物を全読した結果、記載内容は既決ノルムの適用に尽きる — performance/security の比例選定は bt-proportional-selection、formal-model-check を発火条件外と判定したのは two-layer-verification-posture、未検証面(実 collector 疎通)の明示は verdict-names-unverified-facets、テスト配置規律は fs-tests-integration-first、dist 7ハーネス再生成は bt-dist-regen-seven-harnesses。いずれも新規規則を生まず、既存 cid の再適用である。(4) 成果物の実測主張が検証劇場でないことを裏取りするため bun tests/deletion-gate.ts --check を自分の Bash で実行し、overall GREEN・(a)〜(f) 全 PASS(mixed Journal 159 expect / migration-equivalence 52 tests 5 files / Relay 非生成 30 expect)・評価 SHA 5d912e0ddf9d130446e26c4e4ea8341cac30a5d4 を確認 — build-test-results.md の記載と SHA・内訳とも一致し、実行から導かれた記録であることを確認した。以上より、本ステージ固有の新規学習は実在しないと判断する。",
+      "submittedAt": "2026-07-31T12:52:00Z"
+    }
+  ],
+  "resolutions": []
+}

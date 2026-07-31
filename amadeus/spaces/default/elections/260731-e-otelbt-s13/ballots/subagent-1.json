@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OTELBT-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測: (1) diary は construction/build-and-test/memory.md がテンプレート素の状態(Interpretations/Deviations/Tradeoffs/Open questions の4節すべて HTML コメントの例示のみ、実エントリ0)で、逸脱・裁定・トレードオフの記録はない。(2) 7成果物(build-and-test-summary / build-test-results / build-instructions / unit / integration / performance / security の各 instructions)を全読したが、記載内容はいずれも既存 cid の適用宣言であり新規規則を導出していない — bt-proportional-selection(performance/security の比例選定と E2E 非追加の根拠明記)、verdict-names-unverified-facets(Relay 実 collector 疎通を未検証面として明示)、bt-dist-regen-seven-harnesses(build-instructions のトラブルシュート)、fs-tests-integration-first(unit-test-instructions の配置規律)、two-layer-verification-posture(formal-model-check 発火条件外)。(3) t258 の 300s 化は tests/integration/t258-lifecycle-transaction.test.ts:536 の `}, 300_000);` と :529 のコメント『The inline timeout is a hang guard, not a performance assertion』を直読して確認した。この『実行タイムアウトは停止 guard であって性能契約ではない』という判断は既存の observability-setup:c3(Execution timeout や処理上限は個別実行の停止guardでありservice SLOではない)と build-and-test:bt-timeout-verification-shape の適用であり、新 cid を要さない。(4) 監査シャード末尾を確認したところ本ステージ(STAGE_STARTED seq 3806, 2026-07-31T12:35:18Z)以降は SENSOR_FIRED/SENSOR_PASSED のみで SENSOR_FAILED は0件、是正ループ由来の学習材料も存在しない。以上より独自候補は実在しない。非採用時の受容度: 選択肢2(異議)が採られる場合、実在根拠のある候補文が提示されるなら受容度6(候補の実在確認を条件に支持)。",
+  "submittedAt": "2026-07-31T12:47:51Z"
+}

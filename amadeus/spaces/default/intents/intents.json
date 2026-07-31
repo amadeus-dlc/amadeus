@@ -735,6 +735,6 @@
     "slug": "otel-upstream",
     "dirName": "260729-otel-upstream",
     "scope": "self-feature",
-    "status": "in-flight"
+    "status": "complete"
   }
 ]

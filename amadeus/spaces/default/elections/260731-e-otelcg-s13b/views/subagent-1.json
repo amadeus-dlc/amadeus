@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OTELCG-S13B",
+  "voter": "subagent-1",
+  "question": "260729-otel-upstream code-generation ステージ §13 学習選定(第2回 — writer-deletion Bolt 分)。候補1(採用案): 『新旧比較(shadow/dual-run)を移行系 intent のゲート契約に置くときは、「比較窓が移行完了後も存在するか」を設計時に検証する — 移行そのものが旧側の書き手を削除するため、call-site 移行の完了(=条件 (c) 充足)は比較窓を構造的に閉じ、比較条件は恒久 UNKNOWN/FAIL に落ちる。二重書き禁止(BR-1 類)の方針下では両立不能が確定的で、比較系条件は「移行前に取得して固定する証拠」か「移行後も生成可能な証拠(migration-equivalence テスト等)」のどちらかへ設計時に倒す』(実測: 260729-otel-upstream 削除ゲート条件 (d) — 旧 telemetry buffer の書き手(observe/observeSubprocess)が G Bolt 移行で 0 件になり、shadow 比較が「store 空= UNKNOWN / 埋めても name 空間が互いに素で FAIL」の二重閉塞と確定 → FR-MIG-4(d) をユーザー裁定で migration-equivalence 証拠へ再定義して解消。cid:requirements-analysis:symmetric-pair-review の時間軸面の補完)。選択肢: 候補1を採用(project.md へ persist)/ 0件(不採用)。各自、requirements.md:73 の改訂文と packages/framework/core/otel/shadow-compare.ts の store 読み(buffer-/spans-)、observe/observeSubprocess の production 呼出し数を独立実測して投票せよ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件(不採用)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "候補1を採用(persist)"
+    }
+  ]
+}
