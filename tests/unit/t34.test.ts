@@ -78,6 +78,7 @@
 // deliberately seeds NEITHER. All temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -144,19 +145,9 @@ function run(tool: string, args: string[], p: string): CliResult {
   };
 }
 
-type AuditRecord = { event: string | null; fields?: Record<string, string> };
-
-/** Parse a JSONL audit buffer into records. */
-function auditRecords(body: string): AuditRecord[] {
-  return body
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
-}
-
 /** Count ERROR_LOGGED records in a buffer. */
 function errorLoggedCount(body: string): number {
-  return auditRecords(body).filter((r) => r.event === "ERROR_LOGGED").length;
+  return countAuditEvent(body, "ERROR_LOGGED");
 }
 
 /**
@@ -164,7 +155,7 @@ function errorLoggedCount(body: string): number {
  * Record-scoped, so a key that belongs to another record returns "".
  */
 function auditField(body: string, ev: string, key: string): string {
-  return auditRecords(body).find((r) => r.event === ev)?.fields?.[key] ?? "";
+  return auditRowsFrom(body).find((r) => r.event === ev)?.fields[key] ?? "";
 }
 
 // ============================================================

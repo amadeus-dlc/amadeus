@@ -227,6 +227,8 @@ describe("opencode manifest — the distribution row", () => {
     const dsts = manifest.coreDirs.map((d) => `${d.src}->${d.dst}`);
     expect(dsts).toEqual([
       "tools->tools",
+      "otel->otel",
+      "vendor->vendor",
       "amadeus-common->amadeus-common",
       "knowledge->knowledge",
       "rules->amadeus-rules",

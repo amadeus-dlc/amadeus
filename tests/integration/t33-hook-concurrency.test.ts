@@ -120,12 +120,25 @@ type AuditRecord = {
   fields?: Record<string, string>;
 };
 
-/** Parse the JSONL audit buffer into records (one per non-blank line). */
+/**
+ * Parse the JSONL audit buffer into records (one per non-blank line),
+ * normalizing BOTH journal schemas. The audit-logger now writes through the
+ * canonical Event path, so its rows are schema v2: the legacy audit event type
+ * rides as the `Event` attribute rather than the top-level `event` key. The
+ * envelope fields the concurrency assertions lean on (seq, timestamp) are
+ * present in both shapes.
+ */
 function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      const record = raw as unknown as AuditRecord;
+      if (raw.schemaVersion !== 2) return record;
+      const attributes = (raw.attributes ?? {}) as Record<string, string>;
+      return { ...record, event: attributes.Event ?? null, fields: attributes };
+    });
 }
 
 /** Count records carrying event <type>. */
@@ -230,7 +243,11 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     // The seeded trail (3 records) plus five parallel appends = 8 intact records.
     expect(records.length).toBe(SEEDED_RECORDS + 5);
     for (const record of records) {
-      expect(record.schemaVersion).toBe(1);
+      // Mixed by design while the migration runs: the seeded trail is v1, the
+      // five parallel appends travel the canonical path and land as v2. What
+      // the concurrency contract needs is that each line carries a COMPLETE
+      // envelope, whichever schema stamped it.
+      expect([1, 2]).toContain(record.schemaVersion as number);
       expect(typeof record.seq).toBe("number");
       expect(typeof record.timestamp).toBe("string");
       expect(record.timestamp).not.toBe("");

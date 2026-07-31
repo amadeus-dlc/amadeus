@@ -1,0 +1,24 @@
+{
+  "electionId": "E-U11RLY",
+  "kind": "design-deviation",
+  "question": "U11 (otlp-relay) の設計衝突裁定: components.md の Module 処置表は tools/amadeus-otel-projector.ts を「縮退 → otel/relay.ts へ責務移譲後削除(FR-RLY-1)」と定め、BR-1 は「Journal からの Span 再構築・時刻包含・ID 生成・timing event 合成は旧 Projector とともに削除され、復活させない」と規定する。一方、U8 の削除ゲート tests/deletion-gate.ts:380-383 の MIXED_JOURNAL_TESTS(条件 (a) の証拠)は tests/unit/t365-journal-reader-swap.test.ts と tests/integration/t366-journal-reader-swap-projector.test.ts の2本を実行し、後者は dist/claude/.claude/tools/amadeus-otel-projector.ts から runExport / journalSpanInput を import して「Projector が v1/v2/mixed Journal から同一の Span グラフを組む」ことを検証する(t366:1-36)。旧 Projector を削除するとこの検証対象が消滅し、runBunTests(deletion-gate.ts:472-479)はパス不在を ran:false → UNKNOWN として扱うため条件 (a) が構造的にブロックされる。tests/integration/t358-otel-projector.test.ts と tests/e2e/t358-otel-otlp-endpoint.test.ts も旧 Projector の公開 seam を直接 import しており削除と同時に失効する。条件 (a) のタイトルは v1/v2 mixed Journal: doctor/recovery/merge pass であり、doctor・recovery・presence・grant・shard merge・runtime graph・learnings の reader 等価性は t365 が単独で全面カバー(t365:1-14)、t366 は Projector 固有面の追加証拠である。各自 上記 file:line を独立実測して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "案A"
+    },
+    {
+      "internalNo": 2,
+      "label": "案B"
+    },
+    {
+      "internalNo": 3,
+      "label": "案C"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

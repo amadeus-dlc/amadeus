@@ -53,6 +53,7 @@
 // which created bare projects and let init populate both. All temp dirs
 // cleaned in afterAll. Nothing is written under tests/fixtures/**.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -147,7 +148,7 @@ function auditRecords(content: string): AuditRecord[] {
   return content
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 
 /**

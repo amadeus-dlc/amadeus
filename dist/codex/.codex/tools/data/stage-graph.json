@@ -2156,6 +2156,7 @@
       "linter",
       "type-check",
       "answer-evidence",
+      "event-registry-drift",
       "self-scope-consistency"
     ],
     "scopes": [
@@ -2209,6 +2210,12 @@
         "path": ".codex/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
+      },
+      {
+        "id": "event-registry-drift",
+        "path": ".codex/sensors/amadeus-event-registry-drift.md",
+        "matches": "**/{event-registry,amadeus-audit}.ts",
+        "category": "code-quality"
       },
       {
         "id": "self-scope-consistency",

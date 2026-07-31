@@ -18,6 +18,8 @@
 // cursor-release asserts throw. Both surfaces are demonstrated in the report.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import {
   existsSync,
   mkdirSync,
@@ -30,10 +32,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  appendAuditEntry,
   handleAuditFork,
   handleAuditMerge,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { emitAuditEvent } from "../../dist/claude/.claude/otel/audit-emit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   activeIntent,
   clearActiveIntentCursor,
@@ -49,6 +52,11 @@ interface SeedIntent {
   dirName: string;
   status: string;
 }
+
+// SENSOR_FIRED's full required set: the canonical path refuses a short field
+// bag, and a refusal there would be indistinguishable from the seal this file
+// is about.
+const SENSOR_FIELDS = { "Fire id": "f1", "Sensor ID": "x", "Stage slug": "code-generation", "Output path": "out.md" };
 
 const INTENTS_REL = ["amadeus", "spaces", "default", "intents"];
 
@@ -146,9 +154,11 @@ function track(proj: string): string {
 }
 
 beforeEach(() => {
+  resetOtelPerProject();
   projects = [];
 });
 afterEach(() => {
+  resetOtelPerProject();
   for (const p of projects) rmSync(p, { recursive: true, force: true });
 });
 
@@ -198,9 +208,9 @@ describe("t243 post-complete audit stop (#1248)", () => {
 
     expect(intentStatusForAudit(proj, dir)).toBe("complete");
 
-    let result!: ReturnType<typeof appendAuditEntry>;
+    let result!: ReturnType<typeof emitAuditEvent>;
     const stderr = withStderrCapture(() => {
-      result = appendAuditEntry("SENSOR_FIRED", { Sensor: "x" }, proj, dir);
+      result = emitAuditEvent("SENSOR_FIRED", SENSOR_FIELDS, proj, dir);
     });
 
     expect(result.appended).toBe(false);
@@ -208,7 +218,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
     expect(result.event).toBe("SENSOR_FIRED");
     // Nothing was written: the shard file was never even created by this append.
     expect(shardEventCount(proj, dir)).toBe(-1);
-    expect(stderr).toContain("suppressed SENSOR_FIRED append");
+    expect(stderr).toContain("suppressed amadeus.sensor.fired v2 append");
     expect(stderr).toContain(dir);
     expect(stderr).toContain("#1248");
   });
@@ -220,7 +230,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
 
     expect(activeIntent(proj)).toBe(dir);
 
-    const result = appendAuditEntry("STAGE_COMPLETED", { Stage: "s" }, proj);
+    const result = emitAuditEvent("STAGE_COMPLETED", { Stage: "s", Details: "d" }, proj);
 
     expect(result.appended).toBe(false);
     expect(shardEventCount(proj, dir)).toBe(-1);
@@ -245,7 +255,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
     const unregistered = track(buildWorkspace([{ dirName: dir, status: "in-flight" }], dir));
     writeFileSync(join(intentsDirOf(unregistered), "intents.json"), "[]\n", "utf-8");
     expect(intentStatusForAudit(unregistered, dir)).toBe("unknown");
-    expect(appendAuditEntry("SENSOR_FIRED", { Sensor: "x" }, unregistered, dir).appended).toBe(true);
+    expect(emitAuditEvent("SENSOR_FIRED", SENSOR_FIELDS, unregistered, dir).appended).toBe(true);
   });
 
   test("in-flight intent keeps appending (append lands, shard grows)", () => {
@@ -253,7 +263,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
     const proj = track(buildWorkspace([{ dirName: dir, status: "in-flight" }], dir));
 
     const before = shardEventCount(proj, dir);
-    const result = appendAuditEntry("SENSOR_FIRED", { Sensor: "x" }, proj, dir);
+    const result = emitAuditEvent("SENSOR_FIRED", SENSOR_FIELDS, proj, dir);
     const after = shardEventCount(proj, dir);
 
     expect(result.appended).toBe(true);
@@ -270,7 +280,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
 
     // Seed the main audit shard, then create the (non-git) worktree dir the fork
     // only existsSync-checks, so fork copies main→worktree and merge folds it back.
-    appendAuditEntry("WORKFLOW_STARTED", { Scope: "fix" }, proj, dir);
+    plantV1AuditRow("WORKFLOW_STARTED", { Scope: "fix" }, proj, dir);
     mkdirSync(worktreePath(proj, slug), { recursive: true });
 
     const out = withStdoutCapture(() => {
@@ -285,6 +295,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
     const shard = readdirSync(auditDir)
       .map((n) => readFileSync(join(auditDir, n), "utf-8"))
       .join("\n");
-    expect(shard).toContain('"event":"AUDIT_MERGED"');
+    // AUDIT_MERGED is migrated onto the canonical path, so the row is schema v2.
+    expect(countAuditEvent(shard, "AUDIT_MERGED")).toBeGreaterThan(0);
   });
 });

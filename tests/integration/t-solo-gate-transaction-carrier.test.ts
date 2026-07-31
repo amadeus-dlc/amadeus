@@ -4,6 +4,7 @@
 // arms driven through handleApprove directly, so every rejection is asserted
 // on the state file and the audit ledger rather than on an exit code alone.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -182,7 +183,7 @@ describe("in-process carrier approval commits", () => {
       ownerAudit(root, owner)
         .split("\n")
         .filter((l) => l.trim().length > 0)
-        .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+        .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> })
         .some((r) => r.event === "GATE_APPROVED" && r.fields?.["Grant Id"] === GRANT_ID),
     ).toBe(true);
   });

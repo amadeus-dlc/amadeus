@@ -74,6 +74,7 @@
 // the .sh's inject_session_compacted heredoc. All temp dirs cleaned
 // in afterAll. NOTHING is written under tests/fixtures/**.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync } from "node:fs";
@@ -213,7 +214,7 @@ function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 
 /** Count audit records with event <ev> in a buffer. */

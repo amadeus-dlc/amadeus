@@ -92,6 +92,22 @@
 - Updated artifacts: `business-overview.md`、`architecture.md`、`code-structure.md`、`api-documentation.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、`reverse-engineering-timestamp.md`。
 - Per-intent record: `re-scans/260729-open-bug-batch.md`。
 
+## 実行メタデータ（履歴: 260729-otel-upstream）
+
+- Date: `2026-07-29`
+- Base commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`（前 intent `260728-slop-cleanup` の observed。`git merge-base --is-ancestor` **exit 0 = 祖先**、`git rev-list --count ca8ff0af..HEAD` = **13**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`（= 現 HEAD、`git rev-parse HEAD` 実測）
+- 区間規模: `git diff --shortstat ca8ff0af..HEAD` = **624 files changed, 71100 insertions(+), 26206 deletions(-)**（生成 dist / テスト / docs / record を含む全面）。正本面（`packages/framework/core` + `packages/framework/harness` + `scripts` + `package.json` + `bun.lock`）は **40 files / +4433 / -1559**
+- Scope: `amadeus-feature`（intent `260729-otel-upstream`、intents.json 実測）、Brownfield、単一 repo `amadeus`
+- Focus: OTel/observability upstream イニシアチブ（[GitHub #1672](https://github.com/amadeus-dlc/amadeus/issues/1672)）の基点断面 — `amadeus-audit.ts` / `amadeus-journal.ts` / `amadeus-journal-convert.ts` / `amadeus-observability.ts` / `amadeus-otel-projector.ts` の現行構造と、base からの差分
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。差分区間 + focus 5 モジュールに限定して走査した。上流入力は Developer スキャン結果（差分サマリ）、Architect 段で focus モジュール全読 + import 関係 grep + 区間 diff 実測により独立検証した
+- 主要な確定事項: (A) **focus 面の区間変更は 2 件のみ** — `amadeus-journal.ts` ヘッダコメントの是正（「PR-3 まで未配線」の失効記述を現行 5 消費者の記述へ）と `ProcessObservation.registered` の削除で、いずれも前 intent `260728-slop-cleanup` の修正着地分。`amadeus-audit.ts` / `amadeus-journal-convert.ts` / `amadeus-otel-projector.ts` は区間無変更 (B) journal codec の消費者は import 実測で **5 モジュール**（audit / state / lib / journal-convert / otel-projector）。`amadeus-utility.ts` は doctor fix-hint 文字列中の言及のみで import edge ではない (C) **`@opentelemetry` 依存は `package.json` / `bun.lock` で grep 0** — #1672 の OTel API 化（audit writer → EventRecord→AuditLogExporter、`observe()`/`observeSubprocess()` → Trace API spans、projector の pure relay 化）は現 HEAD では未着手 (D) 区間の主系統は focus 外 — mirror-project サブシステム新設（9 モジュール、`amadeus-mirror-project-*.ts` 7 本 + `amadeus-mirror-timestamp.ts` + `amadeus-mirror-warning-reducer.ts`）と executor / gateway / lifecycle の大再編、`amadeus-intent-selection.ts`（168 行）新設、`amadeus/config.json`（`mirror-projects` キー）新設 (E) devDependencies から `@xterm/headless` / `node-pty`（連鎖して `node-addon-api`）が削除
+- 上流スキャンとの差異（訂正 1 件）: Developer サマリの「codec is now wired (PR-3 switchover landed)」は表現として過大 — 配線（5 モジュールからの import）は base 時点で既に存在し（base 版 `amadeus-audit.ts:8` が codec を import、audit は区間無変更）、区間で変わったのは stale コメントの除去のみ。サマリの括弧内記述（stale コメントが除去された）は正確
+- 更新した成果物（9 件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md`（OTel/observability 面の現行構造 + Interaction Diagrams 新節）/ `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` / `api-documentation.md` / `business-overview.md` / `technology-stack.md` / `dependencies.md` + per-intent `re-scans/260729-otel-upstream.md`。旧「現在」マーカー（`260728-slop-cleanup`）は 9 件すべてで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel）。**履歴節の当時記述は削除せず保存**する
+- 測定 ref: 本節および本 scan で更新した全成果物の数値・SHA・行数は observed `22ee27dbe` での `git rev-parse` / `git merge-base --is-ancestor` / `git rev-list --count` / `git diff --shortstat` / `git diff --name-status` / `wc -l` / `grep -n` / `grep -c` / `grep -l` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only、cid:reverse-engineering:measurement-ref-in-artifacts）
+- Sensors: RE ステージが宣言する 3 センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch）。**センサー成功として扱わず**、代替として更新 9 成果物 + 本 re-scan への `grep -c '^## '`（H2 ≥ 2）、conflict マーカー grep（ヒット 0）、現在マーカー grep（`260729-otel-upstream` が各 1 件、旧 `260728-slop-cleanup` の「現在」0 件）、`architecture.md` 新規 Mermaid 2 図の構文検証（Mermaid `11.12.2` parser）を機械実行した
+- Delivery boundary: 本 scan は codekb 9 成果物と per-intent re-scan のみを変更し、コード・テスト・state・audit・memory・他 intent record には一切触れない。#1672 の置換設計（EventRecord / AuditLogExporter 化、Trace API spans、relay 縮小）は後続ステージで裁定する
+
 ## 実行メタデータ（履歴: 260728-slop-cleanup）
 
 - Date: `2026-07-28`

@@ -12,6 +12,7 @@ import { describe, expect, test } from "bun:test";
 import fc from "fast-check";
 import {
   JOURNAL_SCHEMA_VERSION,
+  JOURNAL_SCHEMA_VERSION_MAX,
   type JournalEntry,
   JournalCodecError,
   forkLineageCloneId,
@@ -136,7 +137,7 @@ describe("journal codec — refusals (parse, don't validate)", () => {
     expect(() => parseJournalLine("not json")).toThrow(JournalCodecError);
     expect(() => parseJournalLine("[1,2]")).toThrow(JournalCodecError);
     expect(() => parseJournalLine(JSON.stringify({ ...base, schemaVersion: 0, seq: 1, event: null, rawBody: "" }))).toThrow(JournalCodecError);
-    expect(() => parseJournalLine(JSON.stringify({ ...base, schemaVersion: JOURNAL_SCHEMA_VERSION + 1, event: null, rawBody: "" }))).toThrow(/newer than supported/);
+    expect(() => parseJournalLine(JSON.stringify({ ...base, schemaVersion: JOURNAL_SCHEMA_VERSION_MAX + 1, event: null, rawBody: "" }))).toThrow(/newer than supported/);
     expect(() => parseJournalLine(JSON.stringify({ ...base, event: null }))).toThrow(/rawBody/);
     expect(() => parseJournalLine(JSON.stringify({ ...base, event: "STAGE_STARTED" }))).toThrow(/fields/);
     expect(() => parseJournalLine(JSON.stringify({ ...base, event: "STAGE_STARTED", fields: { K: 1 } }))).toThrow(JournalCodecError);

@@ -7,7 +7,11 @@ import {
   unlinkSync,
 } from "node:fs";
 import { basename, join } from "node:path";
-import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { getEventDefByAuditEvent } from "../otel/event-registry.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
   activeIntent,
   auditBlockField,
@@ -426,12 +430,16 @@ export function mintArmedPresenceReservation(
         }
         let provenance = matches[0];
         if (provenance === undefined) {
-          const result = appendAuditEntryUnlocked(
-            "HUMAN_TURN",
+          // emitEvent, not the Adapter: this write names the reservation's
+          // target ledger, which the Adapter fails closed on (E-U7CG-Q3A). The
+          // enclosing withAuditLock holds the SAME (projectDir, intent, space)
+          // identity, so the emit's own acquire re-enters rather than collides.
+          ensureOtelBootstrap(input.projectDir);
+          const def = getEventDefByAuditEvent("HUMAN_TURN");
+          const result = emitEvent(
+            def.name as RegisteredEventName,
             { "Presence Reservation Id": marker.reservationId },
-            input.projectDir,
-            marker.targetIntentDir,
-            marker.space,
+            { intent: marker.targetIntentDir, space: marker.space },
           );
           if (!result.appended) {
             throw new Error(
@@ -579,7 +587,8 @@ export function mintHumanPresence(input: MintHumanPresenceInput): void {
     // — and reservations never expire on time alone.
     if (reservation.kind === "minted") return;
   }
-  appendAuditEntry("HUMAN_TURN", {}, input.projectDir);
+  ensureOtelBootstrap(input.projectDir);
+  appendAuditEntryViaEvents("HUMAN_TURN", {}, input.projectDir);
 }
 
 export type TargetedApprovalEvidence = {

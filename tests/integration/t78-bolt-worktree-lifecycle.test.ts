@@ -69,6 +69,7 @@
 // NOTHING is written under tests/fixtures/**; all temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { auditRowsFrom, normalizeAuditRecord, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -186,7 +187,10 @@ function readMainAudit(proj: string): string {
       const line = raw.trim();
       if (!line.startsWith("{")) continue;
       const rec = JSON.parse(line) as Record<string, unknown>;
-      if (typeof rec.event !== "string") continue;
+      // Keep BOTH journal shapes: a v2 row carries its event type as the
+      // `Event` attribute, so a bare `rec.event` filter drops every migrated
+      // row before the normaliser downstream ever sees it.
+      if (normalizeAuditRecord(rec).event === null) continue;
       blocks.push({ ts: (rec.timestamp as string) ?? "", text: line });
     }
   }
@@ -195,11 +199,9 @@ function readMainAudit(proj: string): string {
 }
 
 /** The timestamp-sorted JSONL records of main's audit shards. */
-function mainAuditRecords(proj: string): Array<Record<string, unknown>> {
-  return readMainAudit(proj)
-    .split("\n")
-    .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+// Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+function mainAuditRecords(proj: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(readMainAudit(proj));
 }
 
 /** The single `Bolt Refs` line from main's state (the .sh's `grep "Bolt Refs" | head -1`). */

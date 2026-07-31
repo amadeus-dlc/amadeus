@@ -156,7 +156,13 @@ function terminalEventCounts(fx: ReturnType<typeof fixture>) {
     if (!name.endsWith(".jsonl")) continue;
     for (const line of readFileSync(join(auditDir, name), "utf-8").split("\n")) {
       if (!line.startsWith("{")) continue;
-      const event = (JSON.parse(line) as { event?: string }).event;
+      // Shards are mixed-schema: v1 rows carry `event`, canonical v2 rows
+      // carry the audit event name in `attributes.Event`.
+      const row = JSON.parse(line) as {
+        event?: string;
+        attributes?: { Event?: string };
+      };
+      const event = row.event ?? row.attributes?.Event;
       if (event) counts.set(event, (counts.get(event) ?? 0) + 1);
     }
   }

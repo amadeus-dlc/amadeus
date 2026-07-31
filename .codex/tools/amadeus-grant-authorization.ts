@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { basename } from "node:path";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { getEventDefByAuditEvent } from "../otel/event-registry.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
 import type { RunStageDirective } from "./amadeus-directive.ts";
 import {
   activeIntent,
@@ -773,16 +776,20 @@ export function routeSoloStandingGrantDirective(
       withAuditLock(
         options.projectDir,
         () => {
-          const appended = appendAuditEntryUnlocked(
-            "GATE_AUTHORIZATION_SELECTED",
+          // emitEvent, not the Adapter: the route receipt names the ledger it
+          // belongs to, and the Adapter fails closed on per-call targeting
+          // (E-U7CG-Q3A). The enclosing withAuditLock holds the same identity,
+          // so the emit's acquire re-enters.
+          ensureOtelBootstrap(options.projectDir);
+          const def = getEventDefByAuditEvent("GATE_AUTHORIZATION_SELECTED");
+          const appended = emitEvent(
+            def.name as RegisteredEventName,
             {
               "Route Id": routeId,
               Stage: options.directive.stage,
               "Grant Id": grant.grantId,
             },
-            options.projectDir,
-            intent,
-            space,
+            { intent, space },
           );
           if (!appended.appended) {
             throw new Error(

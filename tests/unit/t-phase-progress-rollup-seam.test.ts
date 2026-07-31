@@ -17,6 +17,7 @@
 // in-process against seeded state. The suite-wide guards are also set here so
 // the file passes when run bare.
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,6 +58,13 @@ function phaseField(state: string, phase: string): string {
   const m = state.match(new RegExp(`^- \\*\\*${phase}\\*\\*: (\\w+)$`, "m"));
   return m ? m[1] : "(missing)";
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t-phase-progress-rollup-seam: advance across a phase boundary (#836)", () => {
   let proj: string;

@@ -6,6 +6,7 @@
 // they live in the integration layer (test-size purity). The pure directive and
 // classifier assertions stay in tests/unit/t-solo-gate-transaction.test.ts.
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -343,12 +344,24 @@ interface AuditRecord {
   fields?: Record<string, string>;
 }
 
-/** Parse the merged JSONL shards into records (blank lines skipped). */
+/**
+ * Parse the merged JSONL shards into records, normalizing BOTH journal
+ * schemas. The untargeted HUMAN_TURN now travels the canonical Event path, so
+ * it lands as schema v2: the legacy audit event type rides as the `Event`
+ * attribute and the payload lives under `attributes` rather than `fields`.
+ * Production readers (auditBlockField) already serve both shapes under the
+ * historical names.
+ */
 function auditRecords(root: string): AuditRecord[] {
   return auditText(root)
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) return raw as unknown as AuditRecord;
+      const attributes = (raw.attributes ?? {}) as Record<string, string>;
+      return { event: attributes.Event ?? null, fields: attributes } as AuditRecord;
+    });
 }
 
 function humanTurnCount(root: string): number {
@@ -401,6 +414,8 @@ function routeFixture(extraAudit: ReadonlyArray<{
 }> = []): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-solo-route-"));
   TEMP_ROOTS.push(root);
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   const intent = "solo-intent-abcd1234";
   const intents = join(root, "amadeus", "spaces", "default", "intents");
   const record = join(intents, intent);

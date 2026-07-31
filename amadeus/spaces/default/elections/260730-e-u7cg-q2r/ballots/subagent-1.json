@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q2R",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追加 Bolt での requiredAttributes 突き合わせで不足属性値の決定が audit 意味論の変更(仕様変更)に及ぶ場合は、正準リスト(4)に従いユーザーエスカレーションへ倒すこと。",
+  "rationale": "独立実測で前提不成立を確認: (1) registerLoggerProvider の production 呼出しは packages/framework/core/tools/amadeus-log.ts:78 と scripts/otel-phase1-measure.ts:65 のみで、logger-provider.ts:36 の requireRegistered が未 bootstrap の emit を throw する — 他 tool/hook への canonical 化は 1 行スワップでは成立しない。(2) emitEvent(logger-provider.ts:47-50)は requiredAttributes 欠落で throw し、amadeus-jump.ts の実 emit(:126-141)と event-registry.ts:125-157 の突き合わせで PHASE_VERIFIED(要求 Phase boundary/Pass/fail/Issues に対し emit は Phase boundary+Details)、PHASE_SKIPPED(Scope 欠落)、PHASE_STARTED(Stage count 欠落)の 3 種の throw を確認 — builder 報告と一致。不足属性値の発明は独断の audit 意味論決定で P3 違反となるため、本 Bolt 内での強行(choice 2)は Bolt 肥大と設計未裁定の実装を招く。安全に移行可能な call site がゼロである以上、機構一式+実測報告で U7 を充足し、bootstrap 方針設計と全 event 突き合わせを専用 Bolt へ送る choice 1 が 1 Unit/Bolt/PR 境界と deviation-stop-before-implement に整合する。非採用時受容度: choice 2 は 7、choice 3 は 6。",
+  "submittedAt": "2026-07-30T10:36:52Z"
+}

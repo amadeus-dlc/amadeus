@@ -7,7 +7,8 @@
 // relevant" behaviour.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   type ClaudeCodeHookInput,
@@ -128,7 +129,11 @@ if (tool === "Edit") {
 }
 
 try {
-  appendAuditEntry(eventType, {
+  // Stand up the canonical emit path before the first emit (emitEvent
+  // throws with no Logger Provider registered). Inside the try so a
+  // bootstrap failure lands on the SAME fail-open drop as an append failure.
+  ensureOtelBootstrap(projectDir);
+  appendAuditEntryViaEvents(eventType, {
     Tool: tool,
     File: auditFileValue,
     Context: context,

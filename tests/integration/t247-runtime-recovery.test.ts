@@ -1,7 +1,9 @@
 // covers: runtime-recovery:production-paths
 // @test-size medium
 
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import * as nodeFs from "node:fs";
 import {
@@ -194,7 +196,7 @@ function parseRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+    .map((line) => normalizeAuditRecord(JSON.parse(line)) as unknown as AuditRecord);
 }
 
 function readRecords(shardPath: string): AuditRecord[] {
@@ -314,6 +316,13 @@ function seedPhaseCheck(project: string, phase: string): void {
   mkdirSync(verification, { recursive: true });
   writeFileSync(join(verification, `phase-check-${phase}.md`), `# ${phase} verification\n`);
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t247 Bolt DAG recovery production path", () => {
   test("stale runtime cache heals read-side and routes the canonical first unit", () => {
@@ -759,6 +768,11 @@ describe("t247 recovery in-process coverage seams", () => {
     tempDirs.push(sandbox);
     const toolsDir = join(sandbox, "tools");
     cpSync(join(ROOT, "packages/framework/core/tools"), toolsDir, { recursive: true });
+    // The tools reach the canonical emit path, whose module graph lives in
+    // otel/ over the vendored OTel API. Both are siblings of tools/ in the real
+    // tree, so the sandbox mirrors that layout rather than a tools-only slice.
+    cpSync(join(ROOT, "packages/framework/core/otel"), join(sandbox, "otel"), { recursive: true });
+    cpSync(join(ROOT, "packages/framework/core/vendor"), join(sandbox, "vendor"), { recursive: true });
     const stateTool = join(toolsDir, "amadeus-state.ts");
     const source = readFileSync(stateTool, "utf-8");
     const mutated = mutate(source);
@@ -851,6 +865,11 @@ describe("t247 recovery in-process coverage seams", () => {
     tempDirs.push(sandbox);
     const toolsDir = join(sandbox, "tools");
     cpSync(join(ROOT, "packages/framework/core/tools"), toolsDir, { recursive: true });
+    // The tools reach the canonical emit path, whose module graph lives in
+    // otel/ over the vendored OTel API. Both are siblings of tools/ in the real
+    // tree, so the sandbox mirrors that layout rather than a tools-only slice.
+    cpSync(join(ROOT, "packages/framework/core/otel"), join(sandbox, "otel"), { recursive: true });
+    cpSync(join(ROOT, "packages/framework/core/vendor"), join(sandbox, "vendor"), { recursive: true });
     const stateTool = join(toolsDir, "amadeus-state.ts");
     const source = readFileSync(stateTool, "utf-8");
     const mutated = source.replace(

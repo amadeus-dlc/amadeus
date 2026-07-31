@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q2",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "core/ 内 99 行 batch が Bolt 規模を圧迫する場合は batch の分割を許容するが、shrink-only ratchet の実効実証(allowlist 縮小が実際に green で通り、site 追加が赤になる両側実測)を伴う非ゼロの実書換え batch を同一 Bolt に必ず含めること。また残 batch(tests 192 行・scripts 4 行を含む正味 295 行、self-install/dist は再生成で追従)を U8 前の追加 Bolt 群として明示編成し、宙に浮かせないこと。",
+  "rationale": "独立実測: appendAuditEntry 参照は core/ 99 行(選挙前提と一致)、tests 192 行、scripts 4 行、self-install 5 ツリー×99 行=495 行(生成物)。手書き対象の正味は 295 行であり、1085/1600 という字義規模は生成物込みの数字。それでも全書換え(選択肢3=internalNo 3)は L サイズと 1 PR レビュー実効性を超え、mega-PR リスク(cid:mega-pr-three-stage-review)に該当するため不採用。FR-MIG-2 実文(requirements.md:70-71)は「段階移行」を明記し、BR-7/BR-8(business-rules.md:16-17)は allowlist 全 site 初期化→shrink-only ratchet を構造前提とするため、段階編成自体は既決契約からの逸脱ではない。選択肢1(機構のみ)は、新設 ratchet の縮小方向が同一 Bolt 内で一度も行使されず「落ちる実証」「両側実測」(org.md Mandated / cid:corpus-sweep-for-new-guards / cid:comparative-gate-injection-sizing)を欠く — allowlist 初期化だけでは shrink が機能する証拠がない。選択肢2 は core/ 99 行の有界 batch で ratchet 縮小の実効を同一 PR で実証し、Adapter→guard→shadow→実書換えの end-to-end を貫通させる walking-skeleton 整合の編成であるため採用。選択肢4(エスカレーション)は、FD が段階移行を既に構造前提としており一次証拠から編成が導出可能なため不要。受容度: 選択肢1 なら 6(不本意だが支持)、選択肢3 は 7、選択肢4 は 7。",
+  "submittedAt": "2026-07-30T10:09:10Z"
+}

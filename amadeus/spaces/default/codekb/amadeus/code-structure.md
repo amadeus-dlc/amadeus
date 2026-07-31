@@ -360,6 +360,22 @@ core 正本の変更となるため、`bun scripts/package.ts`（7 dist）+ `bun
 
 区間13コミットは624ファイル、71,100 insertions / 26,206 deletionsで、生成面・record・metricsを除く断面でも215ファイル、16,982 insertions / 7,844 deletionsである。主な構造変化は Intent Mirror Project 同期スタック（`amadeus-mirror-project-{contract,diagnostics,executor,gateway,ledger-reducer,reconciliation-reducer,verification}.ts`）とテスト駆動機構（`tests/harness/{cli-target,codex-exec-live,tui-client}.ts`、`tests/lib/{cli-mechanism,sdk-mechanism,tui-mechanism,typescript-source}.ts`）の追加である。これらは #1607 / #1664 と交差するため、対象 Bolt は observed commit の現行構造を正本として差分を作る。
 
+## OTel/observability 面の対象配置（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+Focus 5 モジュールはいずれも `packages/framework/core/tools/` の正本で、区間内の配置変化はない。行数は HEAD の `wc -l` 実測値（測定 ref: observed `22ee27dbe`）。
+
+| モジュール | 行数 | 区間の変化 |
+| --- | --- | --- |
+| `amadeus-journal.ts` | 236 | ヘッダコメントのみ（「PR-3 まで未配線」の失効記述を現行 5 消費者の記述へ） |
+| `amadeus-audit.ts` | 1094 | 無変更 |
+| `amadeus-journal-convert.ts` | 298 | 無変更 |
+| `amadeus-observability.ts` | 325 | `ProcessObservation` 型と初期化子から未使用の `registered` を削除 |
+| `amadeus-otel-projector.ts` | 609 | 無変更 |
+
+テストの配置（`ls tests/` 実測）: codec は `tests/unit/t352-journal-codec.pbt.test.ts`（fast-check PBT）、converter は `tests/integration/t356-journal-convert.test.ts`、seam は `tests/integration/t357-observability-seam.test.ts`、projector は `tests/integration/t358-otel-projector.test.ts`。周辺に `tests/integration/t355-audit-merge-info-seams.test.ts`（audit マージ境界）と `tests/integration/t315-doctor-plugin-observability.integration.test.ts`。telemetry buffer の出力先は `<record>/.amadeus-otel/buffer-<clone>.jsonl` で、出荷 `.gitignore` の `.amadeus-*` グロブに覆われる machine-local 領域である。
+
+区間の新規配置（focus 外、正本面 40 files / +4433 / -1559 の主系統）: mirror-project 系 9 モジュール（`amadeus-mirror-project-{contract,diagnostics,executor,gateway,ledger-reducer,reconciliation-reducer,verification}.ts` + `amadeus-mirror-timestamp.ts` + `amadeus-mirror-warning-reducer.ts`）と `amadeus-intent-selection.ts`（168 行）が `packages/framework/core/tools/` に追加され、ワークスペース設定 `amadeus/config.json`（`mirror-projects` キー）が新設された。正本の変更は既存 packaging / self-promotion 経路で 7 `dist` 面と 5 self-install 面へ同期済み（`git diff --name-status` で全 13 面に同名コピーがあることを確認）。
+
 ## Slop cleanup の対象配置（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 構造変更、新規モジュール、新規ディレクトリはない。対象は core tools 2 ファイルと Markdown 3 ファイルである。`amadeus-journal.ts` と `amadeus-observability.ts` は `packages/framework/core/tools/` の正本であり、修正後は既存 packaging / self-promotion 経路で 7 `dist` 面と 5 self-install 面へ同期する。Markdown hygiene は `amadeus/spaces/default/intents/260727-solo-election/.../code-generation-plan.md` と `docs/reference/18-workspace-layout.{md,ja.md}` に閉じる。

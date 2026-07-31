@@ -353,12 +353,26 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
 // (3-6) THE REFEREE — prepare/finalize batch-level audit + baton return.
 // ---------------------------------------------------------------------------
 
-/** The JSONL audit records read back off the merged shard body. */
+/**
+ * The JSONL audit records read back off the merged shard body, normalizing
+ * BOTH journal schemas. The referee emits through the canonical Event path, so
+ * its rows are schema v2: the legacy audit event type rides as the `Event`
+ * attribute and the payload lives under `attributes` rather than `fields`.
+ * Production readers (auditBlockField) already serve both shapes under the
+ * historical names.
+ */
 function auditRecords(): { event: string | null; fields?: Record<string, string> }[] {
   return auditBody
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) {
+        return raw as unknown as { event: string | null; fields?: Record<string, string> };
+      }
+      const attributes = (raw.attributes ?? {}) as Record<string, string>;
+      return { event: attributes.Event ?? null, fields: attributes };
+    });
 }
 
 describe("t135 referee — batch-level swarm audit taxonomy + baton return (the lying-conductor guard)", () => {

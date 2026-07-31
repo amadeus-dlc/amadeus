@@ -26,6 +26,7 @@
 // The commands here are read out of the shipped settings.json.example rather
 // than retyped, so the test cannot drift from what actually ships.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -103,7 +104,7 @@ function humanTurnCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
     .filter((line) => line.trim() !== "")
-    .filter((line) => (JSON.parse(line) as { event: string | null }).event === "HUMAN_TURN").length;
+    .filter((line) => normalizeAuditRecord(JSON.parse(line)).event === "HUMAN_TURN").length;
 }
 
 const projects: string[] = [];

@@ -1,0 +1,24 @@
+{
+  "electionId": "E-U7CG-Q3A",
+  "kind": "design-deviation",
+  "question": "U7 互換 Adapter の per-call intent/space ターゲティング。BR-2 は「旧 appendAuditEntry() のシグネチャを維持」とするが、旧シグネチャ appendAuditEntry(eventType, fields, projectDir, intent?, space?)(packages/framework/core/tools/amadeus-audit.ts:357-362)は呼出しごとに書込先 intent/space を切替可能で、cross-worktree delegate 配送(DELEGATED_APPROVAL を他 intent の shard へ書く)がこれに依存している。一方 canonical 経路の emitEvent(name, attrs)(otel/logger-provider.ts:44)は書込先を registerLoggerProvider 登録時の projectDir/intent/space に固定し(otel/audit-log-exporter.ts の AuditLogExporterOptions)、per-call 上書き経路がない。intent/space 引数を無視して既定 intent へ書くと delegate が誤 intent へ着地する(silent fallback 禁止 BR-3 に反する)。なお U8 legacy-writer-removal は「call site ゼロ」を削除ゲート条件に持つため、移行不能 site を恒久に残す選択はゲートとの整合も考慮すること。各自 amadeus-audit.ts:357-362、logger-provider.ts:44、audit-log-exporter.ts の options、cross-worktree delegate 配送の実消費箇所を実測して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "Adapter は intent/space が渡された場合 fail-closed で throw(invariant violation)。per-call ターゲティングを要する site は当面 allowlist に残し、その扱い(canonical 経路拡張 or 別機構)は後続裁定へ送る"
+    },
+    {
+      "internalNo": 2,
+      "label": "canonical 経路を拡張し、emitEvent / AuditLogExporter に per-call の intent/space override を追加する(U3/U4 所有コードの cross-unit 契約変更を本 Bolt で実施)"
+    },
+    {
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

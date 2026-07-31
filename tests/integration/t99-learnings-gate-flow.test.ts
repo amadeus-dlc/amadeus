@@ -70,6 +70,7 @@
 //   .sh assert 15 (Glue: candidate field contract)                  -> "Glue: candidate carries {id, summary, source_heading, default_scope}"
 //   .sh assert 16 (§13 fossil sweep)                                 -> "§13 rewrite carries zero sensor-protocol.md / applies_to / pre-v3 PR-doctor fossils"
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -197,7 +198,7 @@ function auditRecords(pd: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as Record<string, unknown>);
 }
 
 function ruleLearnedRows(pd: string): number {

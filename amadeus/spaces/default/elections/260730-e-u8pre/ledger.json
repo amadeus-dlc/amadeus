@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-U8PRE",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "withAuditLock は retry budget を 50×100ms に固定している(amadeus-lib.ts:5957)一方、audit.ts:928 は env 可変 200×100ms=20s を使うため、素 acquire 保持者2 site を withAuditLock へ寄せる際は retry パラメータ化等で既存 budget を保存すること(無言の 20s→5s 縮退を禁止)。",
+      "rationale": "独立実測: appendJournalRecordV2 の生 acquire(amadeus-audit.ts:406)と acquireAuditLock の非再入(state.ts:392/utility.ts:189 のコメントも同旨)を確認。v1 は appendAuditEntryUnlocked(:436)を持ち、holdsAuditLock のコメント(amadeus-lib.ts)が『保持中の emit は unlocked variant を使わなければならない』と明文化 — コードベース既習の規律は明示 unlocked 対であり、案 B の depth 依存はこの規律から逸脱し v1/v2 非対称(symmetric-pair-review 対象)を残す。案 A の抽出は機械的で、exporter の latch 経路(audit-log-exporter.ts:141-148 の try/catch→setFatal→rethrow)実在と seam の (record, projectDir, intent?, space?) 受けも実測確認済み。O-T1 の :70/:81 同時修正は v1 auditIntentId のターゲット優先(:289-291)との対称回復として必須。lifecycle 4 site の別裁定送りも seal 意味論差(:498 の意図的バイパス)を実読して妥当。",
+      "submittedAt": "2026-07-30T12:00:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-U8PRE",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "audit.ts:928 は env 可変 retry(AMADEUS_AUDIT_LOCK_RETRIES=200×100ms)を持つが withAuditLock は 50×100ms 固定(amadeus-lib.ts:5957)— 寄せる際は retry 予算をパラメータ化して保存すること。また withAuditLock は sync 専用(戻り型で Promise 排除, :5948)のため mirror-store port 呼出側の sync 性を移行前に実測すること。",
+      "rationale": "独立実測: appendJournalRecordV2 の生 acquire(amadeus-audit.ts:406)、depth 再入は withAuditLock のみ(amadeus-lib.ts:5886/:5954-5981)、live-owner over-age steal(:5756-5759, DEFAULT_LOCK_STALE_MS :5405)、exporter latch 単一経路(audit-log-exporter.ts:141-148)、emitEvent identity 解決(logger-provider.ts:70/:81)を全て確認。B 採用理由: 生 acquire 保持者2 site を withAuditLock へ寄せた後は同一 identity のネストが depth で構造的に救われ、unlocked 対が不要になる。A の unlocked 抽出+exporter lock-held 入口は (1) lock 非保持で unlocked 入口を誤用する新しい無音 lost-update ハザードを作る (2) 新入口の latch 通過をレビュー人手で固定する追加リスク (3) v1 idiom の前提(非再入 acquire)が再入可能化で消えるため意味論不適合(citation-semantics-check)。P5 最小変更・二重実装回避にも B が整合。B は単一入口を保つため落ちる実証(latch 経路・O-T1 のシャード正/intentId 発行者注入赤)もそのまま成立。非採用時受容度: 複合方針A が採用される場合は 6(不本意だが支持 — 対称復元は正しいが入口誤用ハザードの分だけ重い)、エスカレーション採用なら 6。",
+      "submittedAt": "2026-07-30T12:01:06Z"
+    }
+  ],
+  "late": []
+}

@@ -14,6 +14,7 @@
 // transitionIntentStatusLocked) is asserted in-process against the dist lib (pure reads/
 // transforms), then cross-checked against the spawned `intent`/`space --json`.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -116,7 +117,7 @@ describe("t164 auto-birth (intent-birth) on an empty workspace", () => {
       shards
         .split("\n")
         .filter((l) => l.trim() !== "")
-        .some((l) => (JSON.parse(l) as { event: string | null }).event === "WORKFLOW_STARTED"),
+        .some((l) => (normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null }).event === "WORKFLOW_STARTED"),
     ).toBe(true);
   });
 

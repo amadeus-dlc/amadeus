@@ -4,7 +4,8 @@
 //         file:dist/kimi/.kimi-code/agents/amadeus-architecture-reviewer-agent.md
 // size: medium
 
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import * as fs from "node:fs";
 import {
   existsSync,
@@ -16,9 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import {
-  appendAuditEntry,
-} from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   armPresenceReservation,
   cancelArmedPresenceReservation,
@@ -118,6 +117,10 @@ function environment(): Record<string, string | undefined> {
 }
 
 function freshWorkflow(): string {
+  // Each fixture project is a distinct workspace; the canonical emit path
+  // registers OTel providers for one workspace per process, so drop the
+  // per-process registrations whenever a new fixture project is minted.
+  resetOtelPerProject();
   const root = createTestProject();
   roots.push(root);
   seedStateFile(root, "state-mid-inception.md");
@@ -380,6 +383,12 @@ function mintGateQuestion(root: string, reservationId: string) {
 }
 
 describe("Kimi reviewer boundary and gate provenance", () => {
+  // Each case builds its own fixture project; the canonical emit path registers
+  // a Logger Provider for one workspace per process, so drop it between cases.
+  beforeEach(() => {
+    resetOtelPerProject();
+  });
+
   test("projected reviewer profiles expose only the Kimi 0.29 read-tool allowlist", () => {
     for (const profile of REVIEWER_PROFILES) {
       const text = readFileSync(
@@ -1538,7 +1547,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
         "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
     });
     for (let i = 0; i < 2; i += 1) {
-      appendAuditEntry(
+      plantV1AuditRow(
         "HUMAN_TURN",
         { "Presence Reservation Id": duplicateTurn.reservationId },
         duplicateTurnRoot,

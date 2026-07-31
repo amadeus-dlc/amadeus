@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U7CG-Q1",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "guard 本体+allowlist JSON は tests/ に置き既存兄弟テンプレート(coverage/complexity gate)へ揃える。CI は lint ジョブ内の1ステップ。Adapter のみ core/ で FR-DST-2 適用。logical-components.md の当該文は Adapter に妥当・guard には過大一般化として申告付きで読み替える"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "どちらでもなく実装前停止のままユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "設計文言どおり guard も packages/framework/core/ に置き FR-DST-2 を適用する(t258 との衝突は allowlist 追加等で回避)"
+    }
+  ]
+}

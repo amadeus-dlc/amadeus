@@ -35,7 +35,6 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve as pathResolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
 	frameworkTemplatesDir,
 	loadGraph,
@@ -57,7 +56,7 @@ import {
 	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "./amadeus-observability.ts";
 
 // --- Constants ---
 
@@ -97,6 +96,80 @@ interface FireContext {
 	scriptArgs: string[]; // CLI args appended to the script invocation
 	scriptAbsPath: string; // sibling-resolved absolute path
 	timeoutMs: number;
+}
+
+type SensorTraceContext = {
+	injectToSubprocess(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+};
+
+type SensorTraceDependencies = {
+	attach(projectDir: string): Promise<void>;
+	loadContext(): Promise<SensorTraceContext>;
+};
+
+const SENSOR_TRACE_DEPENDENCIES: SensorTraceDependencies = {
+	attach: attachProcessTraceContext,
+	loadContext: () => import("../otel/context.ts"),
+};
+
+// The canonical emitter, resolved the same lazy way the trace context is and
+// for the same reason: BR-5 requires this CLI to START on a tool tree that
+// ships no otel/ directory, so the emit path must not be a top-level import.
+//
+// The two lazy loads differ in their failure contract. The trace context is
+// telemetry and fails OPEN (prepareSensorChildEnv swallows and returns the env
+// unchanged). An audit row is not optional — a fire that cannot record itself
+// must not report success — so this one fails CLOSED: the import error travels
+// to the caller untouched.
+//
+// Resolved ONCE per fire rather than per row, which is also what lets the four
+// emitters stay synchronous inside their audit-lock windows.
+type SensorCanonicalEmit = (
+	eventType: string,
+	fields: Record<string, string>,
+	projectDir: string,
+) => void;
+
+async function loadCanonicalEmit(projectDir: string): Promise<SensorCanonicalEmit> {
+	const [{ ensureOtelBootstrap }, { appendAuditEntryViaEvents }] = await Promise.all([
+		import("../otel/bootstrap.ts"),
+		import("../otel/migration-adapter.ts"),
+	]);
+	ensureOtelBootstrap(projectDir);
+	return appendAuditEntryViaEvents;
+}
+
+// The spawn-span wrapper, lazily resolved for the same BR-5 reason. No fallback
+// arm: by the time a fire reaches this, loadCanonicalEmit has already resolved
+// the same otel/ tree and failed closed if it was absent, so a catch here would
+// be unreachable. The fail-open the span side needs is inside the wrapper —
+// observeSubprocessSpan runs the callback untraced when observability is off.
+type SensorSpawnObserver = <T extends { status: number | null }>(
+	projectDir: string,
+	command: string,
+	fn: () => T,
+) => T;
+
+async function loadSpawnObserver(): Promise<SensorSpawnObserver> {
+	const { observeSubprocessSpan } = await import("../otel/subprocess-span.ts");
+	return observeSubprocessSpan;
+}
+
+// Prepare the per-sensor child environment only after this process has joined
+// the intent trace. Both boundaries are injected so ordering and fail-open
+// behavior stay deterministic under test.
+export async function prepareSensorChildEnv(
+	projectDir: string,
+	env: NodeJS.ProcessEnv,
+	dependencies: SensorTraceDependencies = SENSOR_TRACE_DEPENDENCIES,
+): Promise<NodeJS.ProcessEnv> {
+	await dependencies.attach(projectDir);
+	try {
+		const context = await dependencies.loadContext();
+		return context.injectToSubprocess({ ...env });
+	} catch {
+		return { ...env };
+	}
 }
 
 // --- Argv helpers ---
@@ -290,7 +363,7 @@ function stageTemplateEligibleArtifacts(stage: {
 // Step 4-8 — emit FIRED, spawn, decide outcome, write detail (if FAILED),
 //            emit terminal row.
 // Step 9 — exit 0.
-export function handleFire(args: string[], projectDirArg?: string): void {
+export async function handleFire(args: string[], projectDirArg?: string): Promise<void> {
 	const id = args[0];
 	if (!id || id.startsWith("--")) {
 		dispatchError("fire requires a sensor id as first positional arg");
@@ -359,6 +432,11 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// Resolve the project dir once — used by the consume filter in step 2 and
 	// the detail-file path in step 3.
 	const projectDir = resolveProjectDir(projectDirArg);
+
+	// Re-attach to the intent trace, then inject its W3C carrier into the
+	// per-sensor script environment (FR-TRC-4/5, BR-3). The OTel layer is
+	// lazy-loaded and fail-open for partial fixture trees (BR-5).
+	const childEnv = await prepareSensorChildEnv(projectDir, process.env);
 
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
@@ -439,8 +517,11 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	};
 
 	// --- 4. Lock window A — emit SENSOR_FIRED ---
+	// Resolved before the lock: the import is async and the lock window is not.
+	const emitCanonical = await loadCanonicalEmit(projectDir);
+	const observeSpawn = await loadSpawnObserver();
 	withAuditLock(projectDir, () => {
-		appendAuditEntryUnlocked(
+		emitCanonical(
 			"SENSOR_FIRED",
 			{
 				"Fire id": fireId,
@@ -455,11 +536,13 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
 	const startedAt = Date.now();
 	const outcome = decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
-		observeSubprocess(projectDir, `sensor:${ctx.sensor.id}`, () =>
+		observeSpawn(projectDir, `sensor:${ctx.sensor.id}`, () =>
 			spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
 				encoding: "utf-8",
 				timeout: timeoutMs,
 				cwd: projectDir,
+				// W3C carrier into the per-sensor script env (FR-TRC-5).
+				env: childEnv,
 			}),
 		),
 	);
@@ -484,7 +567,7 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 
 	// --- 8. Lock window B — emit terminal row ---
 	withAuditLock(projectDir, () => {
-		emitTerminal(ctx, finalOutcome, projectDir);
+		emitTerminal(ctx, finalOutcome, projectDir, emitCanonical);
 	});
 
 	// --- 9. Process exit 0 ---
@@ -735,6 +818,7 @@ function emitTerminal(
 	ctx: FireContext,
 	outcome: FireOutcome,
 	projectDir: string,
+	emitCanonical: SensorCanonicalEmit,
 ): void {
 	const { sensor, stageSlug, outputPath, fireId, detailPath } = ctx;
 	const id = sensor.id;
@@ -753,7 +837,7 @@ function emitTerminal(
 		if (outcome.note) {
 			fields.Note = outcome.note;
 		}
-		appendAuditEntryUnlocked("SENSOR_PASSED", fields, projectDir);
+		emitCanonical("SENSOR_PASSED", fields, projectDir);
 		return;
 	}
 	if (outcome.kind === "failed") {
@@ -765,7 +849,7 @@ function emitTerminal(
 			"Detail path": relativizePath(detailPath, projectDir),
 			"Findings count": String(outcome.findingsCount),
 		};
-		appendAuditEntryUnlocked("SENSOR_FAILED", fields, projectDir);
+		emitCanonical("SENSOR_FAILED", fields, projectDir);
 		return;
 	}
 	// budget-override
@@ -775,7 +859,7 @@ function emitTerminal(
 		"Cap value": String(outcome.capValue),
 		"Observed value": String(outcome.observedSeconds),
 	};
-	appendAuditEntryUnlocked("SENSOR_BUDGET_OVERRIDE", fields, projectDir);
+	emitCanonical("SENSOR_BUDGET_OVERRIDE", fields, projectDir);
 }
 
 // --- Glob matcher (capability filter) ---
@@ -855,7 +939,7 @@ Subcommands:
 // so every subcommand sees a clean argv and fire can honour the flag. argv is a
 // parameter (defaulting to the real process args) so the dispatch can be driven
 // in-process by tests without a spawn (the exported seams register in lcov).
-export function main(argv: string[] = process.argv.slice(2)): void {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 	const { projectDirArg, rest } = stripProjectDir(argv);
 	const [cmd, ...args] = rest;
 
@@ -886,7 +970,7 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 			handleDescribe(args);
 			return;
 		case "fire":
-			handleFire(args, projectDirArg);
+			await handleFire(args, projectDirArg);
 			return;
 		default:
 			process.stderr.write(
@@ -899,6 +983,11 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 // Guard the CLI entry so the module can be imported (exported seams are driven
 // in-process by tests) without executing main() / process.exit at load time.
 // Matches the sibling tools (amadeus-jump, amadeus-state).
-if (import.meta.main) {
-	main();
+export async function runCliIfMain(
+	isMain: boolean,
+	argv: string[] = process.argv.slice(2),
+): Promise<void> {
+	if (isMain) await main(argv);
 }
+
+await runCliIfMain(import.meta.main);

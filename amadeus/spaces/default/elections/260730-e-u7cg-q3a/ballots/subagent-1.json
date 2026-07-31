@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q3A",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "allowlist 残置は暫定に限る — U8 の call-site ゼロゲートと衝突するため、per-call ターゲティング site(amadeus-state.ts:3402/3496 の delegate 配送等)の canonical 化方針の後続裁定を U8 着手前に必ず実施すること",
+  "rationale": "実測: appendAuditEntry(amadeus-audit.ts:357-362)は per-call intent/space で lock と shard を同一 pin し切替可能。DELEGATED_APPROVAL/DELEGATED_REJECTION(amadeus-state.ts:3402/3496)が toIntent/toSpace への cross-intent 書込に実依存。canonical 側は emitEvent(logger-provider.ts:45)に override なしで、intentId が emit 時 activeIntent 解決(:70)、AuditLogExporterOptions(audit-log-exporter.ts)は生成時固定(:136 で options.intent/space を append へ)。案2 は U3/U4 所有契約の cross-unit 変更+record identity 解決と presence ledger timestamp 順序制約への波及があり本 Bolt では過大(P5)。案1 は BR-3 の silent fallback 禁止を fail-closed throw で満たし、実依存 site は legacy allowlist で無事故維持、未決部は後続裁定へ明示送付する最小・安全解。仕様変更(ユーザー可視契約)には当たらないため案3 は不要。",
+  "submittedAt": "2026-07-30T10:13:42Z"
+}

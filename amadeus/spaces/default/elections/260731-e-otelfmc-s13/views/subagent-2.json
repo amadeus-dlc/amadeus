@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OTELFMC-S13",
+  "voter": "subagent-2",
+  "question": "260729-otel-upstream formal-model-check ステージの §13 学習選定。conductor 提案: 0件(決定的 CLI の単発実行 — TLC 完全探索 NOT_DETECTED/exit 0、model-completeness センサー PASSED。本 intent は TLA+ spec を変更しておらず、stage diary エントリも0件)。各自、scratchpad の fmc-out 出力(runId b5e891aa-51f4-4307-b7f3-241e104deebc)と specs/tla/ の git 無変更を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

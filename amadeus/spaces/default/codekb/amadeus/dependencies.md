@@ -225,6 +225,17 @@ CLI・Shell・Git/GitHub の既存境界のみ。本 intent は HTTP・database�
 
 各 Issue は独立 Bolt とし、個別の [GitHub Pull Request](https://github.com/amadeus-dlc/amadeus/pulls) に閉じる。共有ファイルの変更は stack せず、先行 Bolt 着地後の observed main へ rebase してから後続を作る。
 
+## OTel/observability 面の依存グラフ（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+内部依存は `grep -l 'from "./amadeus-<module>.ts"'` の import 実測値（`packages/framework/core/` 正本）。
+
+- `amadeus-journal.ts`（JSONL codec）← **5 モジュール**: `amadeus-audit.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-journal-convert.ts` / `amadeus-otel-projector.ts`。codec 自身の依存は `node:crypto` のみで FS に触れない。なお `amadeus-utility.ts` は doctor fix-hint の文字列中にファイル名を持つだけで import edge ではない。
+- `amadeus-observability.ts`（telemetry seam）← **tools 17 + hooks 12 = 計 29 モジュール**（全 tools 中 `amadeus-audit.ts` / `amadeus-bolt.ts` / `amadeus-jump.ts` / `amadeus-learnings.ts` / `amadeus-log.ts` / `amadeus-migrate.ts` / `amadeus-mirror-lifecycle.ts` / `amadeus-mirror.ts` / `amadeus-orchestrate.ts` / `amadeus-otel-projector.ts` / `amadeus-plugin.ts` / `amadeus-runtime.ts` / `amadeus-sensor.ts` / `amadeus-state.ts` / `amadeus-swarm.ts` / `amadeus-utility.ts` / `amadeus-worktree.ts` と 12 hooks）。依存先は `amadeus-lib.ts`（`activeIntent` / `activeSpace` / `auditCloneId` / `detectHarnessType` / `recordDir`）と `amadeus-mirror-config.ts`（layered config 読取）。
+- `amadeus-otel-projector.ts` ← `hooks/amadeus-session-end.ts`（session-end piggyback）+ CLI 直接実行のみ。依存先は journal codec + `amadeus-lib.ts` + observability（`resolveObservabilityConfig` / `telemetryDir`）。**Core → projector 方向の依存はゼロ**（設計裁定どおり）。
+- `amadeus-journal-convert.ts` → `amadeus-audit.ts` の `formatAuditRecord`（lossless proof 用の Markdown renderer）+ journal codec。
+
+外部依存: focus 5 モジュールが使うのは `node:crypto` / `node:fs` / `node:path` と global `fetch` のみで、`@opentelemetry` を含むサードパーティ依存はゼロ（`package.json` / `bun.lock` grep 実測 0）。区間では devDependencies から `@xterm/headless` / `node-pty`（連鎖して `node-addon-api`）が外れた。区間の新規内部依存（focus 外）: mirror-project 系は `amadeus-mirror-capability.ts`（mutation permit）と import-free な `amadeus-mirror-project-contract.ts`（field vocabulary）へ依存し、新設の `amadeus/config.json` の `mirror-projects` キーを入力とする。直後の `260728-slop-cleanup` 断面は履歴として保持する。
+
 ## Slop cleanup の依存断面（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 外部依存・パッケージ依存・モジュール依存の追加や削除はない。Journal codec の現行依存をコメントへ正しく反映するだけで、実コード上の 5 import edge（audit / state / lib / journal-convert / otel-projector）は不変である。Observability の `registered` は依存されないフィールドで、削除後も `_processObservation !== null` が登録状態の唯一の判定となる。core 正本変更の生成依存として 7 `dist` 面と 5 self-install 面の同期が必要である。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。

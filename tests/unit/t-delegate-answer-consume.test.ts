@@ -24,7 +24,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   auditShardName,
   humanActedSinceGate,
@@ -69,8 +69,8 @@ function landVerifiedDelegation(
   issuer: string,
   verb: "approve" | "reject",
 ): void {
-  const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
-  appendAuditEntry(
+  const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+  plantV1AuditRow(
     verb === "approve" ? "DELEGATED_APPROVAL" : "DELEGATED_REJECTION",
     {
       Stage: "market-research",
@@ -91,7 +91,7 @@ describe("gate predicate — QUESTION_ANSWERED does not consume the delegate's G
   test("(a) DELEGATED_APPROVAL -> QUESTION_ANSWERED -> approve gate is OPEN", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(humanActedSinceGate(root, "approve")).toBe(true);
   });
 
@@ -99,7 +99,7 @@ describe("gate predicate — QUESTION_ANSWERED does not consume the delegate's G
   test("(c) DELEGATED_REJECTION -> QUESTION_ANSWERED -> reject gate is OPEN", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "reject");
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(humanActedSinceGate(root, "reject")).toBe(true);
   });
 });
@@ -112,7 +112,7 @@ describe("per-delegate slots — each resolution kind consumes only its own slot
     landVerifiedDelegation(root, conductor, issuer, "approve");
     // Answer slot open (no answer yet).
     expect(humanActedSinceLastAnswer(root)).toBe(true);
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     // Answer consumed the ANSWER slot.
     expect(humanActedSinceLastAnswer(root)).toBe(false);
   });
@@ -122,7 +122,7 @@ describe("per-delegate slots — each resolution kind consumes only its own slot
     landVerifiedDelegation(root, conductor, issuer, "approve");
     // Gate slot open (no gate resolution yet).
     expect(humanActedSinceGate(root, "approve")).toBe(true);
-    appendAuditEntry("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
     // Gate resolution consumed the GATE slot.
     expect(humanActedSinceGate(root, "approve")).toBe(false);
   });
@@ -130,7 +130,7 @@ describe("per-delegate slots — each resolution kind consumes only its own slot
   test("(b3) cross-kind independence: a GATE_APPROVED does NOT consume the ANSWER slot", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
-    appendAuditEntry("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
     // The gate slot is spent, but the answer slot is still open.
     expect(humanActedSinceGate(root, "approve")).toBe(false);
     expect(humanActedSinceLastAnswer(root)).toBe(true);
@@ -139,7 +139,7 @@ describe("per-delegate slots — each resolution kind consumes only its own slot
   test("(b4) cross-kind independence: a QUESTION_ANSWERED does NOT consume the GATE slot", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     // The answer slot is spent, but the gate slot is still open (the #736 fix).
     expect(humanActedSinceLastAnswer(root)).toBe(false);
     expect(humanActedSinceGate(root, "approve")).toBe(true);
@@ -151,8 +151,8 @@ describe("non-regression — existing refusals stay refused (#736)", () => {
   test("(d1) HUMAN_TURN -> QUESTION_ANSWERED -> approve gate is CLOSED (local one-act-per-turn, t188)", () => {
     const { root, conductor } = scaffold();
     // A local human turn on the conductor itself, then it answers.
-    appendAuditEntry("HUMAN_TURN", {}, root, conductor);
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("HUMAN_TURN", {}, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     // The turn was spent on the answer — it cannot also approve.
     expect(humanActedSinceGate(root, "approve")).toBe(false);
   });
@@ -160,7 +160,7 @@ describe("non-regression — existing refusals stay refused (#736)", () => {
   test("(d2) a forged delegation opens NEITHER the gate NOR the answer slot", () => {
     const { root, conductor } = scaffold();
     // Unverifiable grounding (shard does not exist) — dropped by the scan.
-    appendAuditEntry(
+    plantV1AuditRow(
       "DELEGATED_APPROVAL",
       {
         Stage: "market-research",
@@ -194,7 +194,7 @@ describe("general predicate — verb-less uniform boundary is unchanged (#736 Q3
   test("(e) DELEGATED_APPROVAL -> QUESTION_ANSWERED -> verb-less predicate is CLOSED", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     // A QUESTION_ANSWERED still consumes the uniform boundary for the general
     // predicate — only the verb-scoped gate predicate exempts the GATE slot.
     expect(humanActedSinceGate(root)).toBe(false);
@@ -225,17 +225,17 @@ describe("core-module mirror — same contracts against packages/framework/core 
   test("gate predicate: delegate -> QA -> approve stays open; GATE_APPROVED consumes it", () => {
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(coreHumanActedSinceGate(root, "approve")).toBe(true);
-    appendAuditEntry("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
     expect(coreHumanActedSinceGate(root, "approve")).toBe(false);
   });
 
   test("gate predicate: local HUMAN_TURN branch and reject verb mirror", () => {
     const { root, conductor, issuer } = scaffold();
-    appendAuditEntry("HUMAN_TURN", {}, root, conductor);
+    plantV1AuditRow("HUMAN_TURN", {}, root, conductor);
     expect(coreHumanActedSinceGate(root, "approve")).toBe(true);
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(coreHumanActedSinceGate(root, "approve")).toBe(false);
     landVerifiedDelegation(root, conductor, issuer, "reject");
     expect(coreHumanActedSinceGate(root, "reject")).toBe(true);
@@ -245,7 +245,7 @@ describe("core-module mirror — same contracts against packages/framework/core 
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
     expect(coreHumanActedSinceGate(root)).toBe(true);
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(coreHumanActedSinceGate(root)).toBe(false);
   });
 
@@ -253,7 +253,7 @@ describe("core-module mirror — same contracts against packages/framework/core 
     const { root, conductor, issuer } = scaffold();
     landVerifiedDelegation(root, conductor, issuer, "approve");
     expect(coreHumanActedSinceLastAnswer(root)).toBe(true);
-    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    plantV1AuditRow("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
     expect(coreHumanActedSinceLastAnswer(root)).toBe(false);
   });
 });

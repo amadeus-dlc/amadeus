@@ -137,6 +137,17 @@
 
 `ca8ff0af4..22ee27dbe` で `packages/setup` は `engines.bun >=1.3.13` と `bun build --target=bun` を明示し、テスト・CI 文書も `tests/run-tests.ts` を正準 runner とする Bun-only 契約へ統一された。ルート依存は Bun types、TypeScript、Biome、fast-check、Agent SDK、release-it の既存集合で、6件の修正に追加ライブラリは不要である。
 
+## OTel/observability 面の技術断面（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+ランタイム・言語の選定に変更はない（Bun `1.3.13`、TypeScript `6.0.3`、Biome `2.5.5` の Bun-only TypeScript monorepo、HTTP server / database なし）。観測面の技術的事実を以下に固定する（測定 ref: observed `22ee27dbe`）。
+
+- **`@opentelemetry` 依存はゼロ**（`grep -c opentelemetry package.json bun.lock` = 0 / 0）。OTLP projector は OTLP/HTTP の安定 JSON wire format を自前で組み立てて `fetch` で POST する（Issue #1628 Phase 0 で Jaeger / otel-collector 相手に PoC 検証済み、モジュールヘッダ転記）。#1672 はこの「ゼロ依存自作」方針を OTel API ファミリへの一本化で転換する計画だが、現 HEAD では未着手である。
+- 決定論的 ID は `node:crypto` — trace/span ID は sha256（`traceIdFor` / `spanIdFor`）、fork lineage clone token は md5 先頭 12 hex（`forkLineageCloneId`）。
+- telemetry buffer は `<record>/.amadeus-otel/buffer-<clone>.jsonl` への lockless O_APPEND 1 行書込で、行粒度の interleave を projector が許容する。設定は layered `config.json` の `observability` 値（`observability.enabled` で opt-in、無効時は全 API が no-op）。
+- 区間の依存変化: devDependencies から `@xterm/headless` と `node-pty` が削除され（`bun.lock` から `node-addon-api` も消滅）、TUI テストは新設の `tests/harness/tui-client.ts` 系へ移行した。`package.json` description のインストール導線案内は `npx` → `bunx @amadeus-dlc/setup install` へ更新。
+
+直後の `260728-slop-cleanup` 断面は履歴として保持する。
+
 ## Slop cleanup の技術断面（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 
 技術選定に変更はない。現行は Bun `1.3.13`、TypeScript `6.0.3`、Biome `2.5.5`、TypeScript/ESM の CLI フレームワークで、HTTP server と database を持たない。外部境界は CLI、GitHub、OTLP/HTTP JSON。framework core は 66 tools、12 hooks、38 stage/protocol、14 persona、60 knowledge、10 scopes、6 sensors、7 packaged skills、7 harness 面で構成される。setup npm package は `0.1.6`。今回、新規 runtime / development dependency は追加しない。直後の `260727-plugin-verb-skills` 断面は履歴として保持する。

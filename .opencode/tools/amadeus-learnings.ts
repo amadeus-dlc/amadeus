@@ -35,7 +35,8 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { compile } from "./amadeus-runtime.ts";
@@ -529,8 +530,15 @@ export function handlePersist(args: string[], projectDir: string): void {
   );
   assertNoDuplicateCandidateIds(learnings);
 
+  // Stand the canonical emit path up BEFORE the lock: the registration is
+  // process-wide and does its own journal probe, so it has no business running
+  // inside a critical section that must stay short.
+  ensureOtelBootstrap(projectDir);
+
   // ONE withAuditLock body — decide-inside-lock (plan §0.4). Re-read the
-  // audit fresh INSIDE the lock; never reuse a pre-lock read.
+  // audit fresh INSIDE the lock; never reuse a pre-lock read. The emits below
+  // reach appendJournalRecordV2, which re-enters THIS lock: same identity
+  // (projectDir, no intent/space override), so the nested acquire matches.
   let lockResult: { rule_learned: number; sensor_proposed: number; bound_stages: string[] };
   try {
     lockResult = withAuditLock(projectDir, () => {
@@ -623,7 +631,7 @@ export function handlePersist(args: string[], projectDir: string): void {
 
         // Emit only when this is fresh (no prior audit row).
         if (!hasRow) {
-          appendAuditEntryUnlocked(
+          appendAuditEntryViaEvents(
             "RULE_LEARNED",
             {
               Stage: stageSlug,
@@ -685,7 +693,7 @@ export function handlePersist(args: string[], projectDir: string): void {
         if (bound) boundStages.push(sel.origin_stage);
 
         if (!hasRow) {
-          appendAuditEntryUnlocked(
+          appendAuditEntryViaEvents(
             "SENSOR_PROPOSED",
             {
               Stage: stageSlug,

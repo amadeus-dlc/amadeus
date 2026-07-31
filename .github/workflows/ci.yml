@@ -111,6 +111,31 @@ jobs:
       - name: Lint (biome)
         run: bun run lint
 
+      # VER-4: the legacy audit writer and the pre-OTel observe() wrapper are
+      # being retired call site by call site. The allowlist ratchets down only,
+      # and the residual count is printed on every run so the walk to zero (the
+      # FR-MIG-4(c) deletion-gate condition) stays visible in the job log.
+      - name: Call-site guard (legacy emit path, shrink-only ratchet)
+        run: bun tests/callsite-guard.ts --check
+
+      # FR-MIG-4: the six-condition deletion gate for the legacy audit writer.
+      # --check does not fail the job — BLOCKED is the expected state for the
+      # whole migration period, and a permanently red job gets ignored. What CI
+      # carries away is the machine-readable report (BR-16); it is the only
+      # admissible evidence that deletion may begin, and the deletion procedure
+      # runs `--require-green`, which does exit 1 unless every condition PASSes.
+      - name: Deletion gate (legacy writer, six-condition machine verification)
+        run: bun tests/deletion-gate.ts --check --report deletion-gate-report.json
+
+      - name: Upload deletion gate report (FR-MIG-4 evidence, BR-16)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amadeus-deletion-gate-report
+          path: deletion-gate-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Install lizard (CCN measurement, pinned)
         run: pip install lizard==1.23.0
 

@@ -729,5 +729,12 @@
     "dirName": "260731-open-bug-batch-4",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
+    "slug": "otel-upstream",
+    "dirName": "260729-otel-upstream",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

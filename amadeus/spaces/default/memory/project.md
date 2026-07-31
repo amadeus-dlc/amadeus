@@ -9,13 +9,16 @@
 
 実装時は `packages/framework/core/` または `packages/framework/harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
 
+- 大規模な initiative を規模だけを理由に複数 intent へ分割しない。1 intent が監査・状態機械・trace の anchor なので、論理的に1つの取り組みを分断すると intent anchor・横断削除ゲート・audit trail が分断される。並行化は intent 分割ではなく units-generation の Unit 設計と Construction Bolt の swarm 並行実装(team.md の parallel-bolts 既定)で実現する。Phase 間が直列依存の場合、並行化の実益は Phase 内 module 分割から得るため、unit 設計ゲートで依存グラフを人が確認する (learned 2026-07-29) <!-- cid:intent-capture:c4-2 -->
+- read-only 目的で dispatch するサブエージェント（証拠スキャン・コードスキャン等）への prompt には、engine 操作（amadeus-orchestrate.ts の next/report/park、state tool の直接呼出し）を実行しないことと、finding を最終メッセージとして返すことだけを明示する。スキャナが report を試みると gate が早期オープンし QUESTION_ANSWERED が拒否され、park を試みると workflow が停止する（260729-otel-upstream practices-discovery で両方を実測）。調査系サブエージェントはループの制御を持たず、状態遷移は conductor のみが行う (learned 2026-07-29) <!-- cid:practices-discovery:c2-engine-mutation-ban -->
+- サブエージェントへの engine 操作禁止は prompt 明示だけに依存しない（c2-engine-mutation-ban の強化）。prompt 明示は practices-discovery・requirements-analysis・functional-design で3度破られた実測がある。構造対策: (1) 調査・レビュー等の read-only 作業は explore（書込不可）サブエージェントに限定する、(2) drafting 等で coder を使う場合は1エージェント=1成果物パスに固定し、完了後に conductor が成果物の実在・単一著者性を検証してから reviewer へ進める、(3) gate が早期オープンした場合の復旧手順（unpark/resume・ゲート再提示）を conductor 側の定型として持つ。違反が起きても audit 上の回復は常に conductor が行う (learned 2026-07-29) <!-- cid:functional-design:c4-subagent-structural-guard -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci`。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
@@ -90,6 +93,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
 ## Mandated
 
+- ALWAYS telemetry の export 境界(Local Exporter／OTLP Relay の送出点)でも redaction filter を通す — write-time のみの redaction に留めない。「機微情報を Signal Stores へ流さない」制約は書込時と送出時の二層で担保する (affirmed 2026-07-29、260729-otel-upstream practices-discovery) <!-- cid:practices-discovery:export-boundary-redaction -->
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
 - ALWAYS `packages/framework/core/` または `packages/framework/harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)
@@ -305,6 +309,12 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 ## Reliability
 - Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する (learned 2026-07-23) <!-- cid:nfr-design:c3 -->
+
+## swarm 経路の unit 成果物は conductor が finalize 後に事後作成する
+- gated swarm 経路の code-generation では、engine の per-unit 完了判定は record の unit 成果物(code-generation-plan.md / code-summary.md)の実在で行われる(unitCovered = amadeus-orchestrate.ts:2787-2808 の existsSync 判定、firstUncoveredBatch :2590-2606、tryEmitSwarm :2666-2710 — 承認状態は参照しない)。swarm worker は record を書かないため、batch merge・approve-batch 後も成果物が不在なら next が同一 batch の invoke-swarm を再発出し続ける。conductor は finalize 後の定型手順として、実績(着地 PR・裁定・検証結果)に基づく unit 成果物の事後作成を行う(実測: 260729-otel-upstream batch 5 で SWARM_COMPLETED(seq 2900)→ GATE_APPROVED(seq 2924)後も invoke-swarm 再発出 → 2 unit の成果物作成で run-stage gate:true へ遷移。E-OTELCG-S13 採用 2-0、GoA 1x2。cid:code-generation:degrade-scope-unit-dir-layout の swarm 経路面の補完) (learned 2026-07-31) (learned 2026-07-30) <!-- cid:code-generation:swarm-unit-artifact-backfill -->
+
+## 移行系 intent の比較条件は「比較窓の生存」を設計時に検証する
+- 新旧比較(shadow/dual-run)を移行系 intent のゲート契約に置くときは、「比較窓が移行完了後も存在するか」を設計時に検証する — 移行そのものが旧側の書き手を削除するため、call-site 移行の完了は比較窓を構造的に閉じ、比較条件は恒久 UNKNOWN に落ちる(二重書き禁止の方針下では両立不能が確定的。加えて両経路の name 空間が互いに素な設計では、仮に store を埋めても同等比較は設計上 FAIL 側へ帰結する — 留保転記(subagent-1, GoA2): この第2アームは store 実データ 0 件のため設計上の帰結であり実測ではない)。比較系条件は「移行前に取得して固定する証拠」か「移行後も生成可能な証拠(migration-equivalence テスト等)」のどちらかへ設計時に倒す(実測: 260729-otel-upstream 削除ゲート条件 (d) — 旧 telemetry buffer の書き手(observe/observeSubprocess)が G Bolt 移行で production 0 件になり shadow 比較が恒久 UNKNOWN と確定 → FR-MIG-4(d) をユーザー裁定で migration-equivalence 証拠へ再定義して解消。cid:requirements-analysis:symmetric-pair-review の時間軸面の補完。票タイムライン: 配信 2026-07-31T12:31:56Z → subagent-2 12:33:42Z(受理 12:33:49Z) → subagent-1 12:33:44Z(受理 12:33:47Z) → 開票 12:33:59Z。GoA[E-OTELCG-S13B]: 1x1 2x1) (learned 2026-07-31) <!-- cid:code-generation:migration-comparison-window-survival -->
 
 ## Interpretations
 - The already-reserved path of `gate-reserve` is in scope for FR-1680-2: returning the existing `presence_reservation_id` to a non-main caller discloses the approval capability, so it is an "engine mutation" boundary even though no state write occurs on that path. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-1 -->

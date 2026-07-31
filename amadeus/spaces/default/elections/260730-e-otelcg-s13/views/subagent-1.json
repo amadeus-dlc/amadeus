@@ -1,0 +1,16 @@
+{
+  "electionId": "E-OTELCG-S13",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件(候補1も persist しない)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "候補1を採用(swarm 経路の unit 成果物事後作成を project.md へ persist)"
+    }
+  ]
+}

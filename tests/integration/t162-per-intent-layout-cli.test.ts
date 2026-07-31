@@ -28,7 +28,8 @@
 // per-intent record paths and process exit codes. cwd contract mirrors t49: every
 // worktree/bolt spawn runs with `cwd: proj` (resolveWorktreeAnchor checks CWD).
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -200,12 +201,23 @@ function makeNewLayoutProj(recordA: string, recordB: string): string {
     for (const [k, v] of fields) flagArgs.push("--field", `${k}=${v}`);
     runIn(proj, AUDIT_TOOL, ["append", event, ...flagArgs]);
   };
-  seed("WORKFLOW_STARTED", [["Workflow ID", `t162-${recordA}`], ["Scope", "feature"], ["Intent", recordA]]);
-  seed("STAGE_STARTED", [["Stage", "code-generation"]]);
+  // Field sets match what production emits: the registry marks Scope+Request
+  // required on WORKFLOW_STARTED and Stage+Agent on STAGE_STARTED, and the CLI
+  // append entry rejects an incomplete set. The old seed also carried
+  // "Workflow ID" and "Intent", which no emitter sets and nothing here reads.
+  seed("WORKFLOW_STARTED", [["Scope", "feature"], ["Request", `/amadeus ${recordA}`]]);
+  seed("STAGE_STARTED", [["Stage", "code-generation"], ["Agent", "developer"]]);
   return proj;
 }
 
 const TEST_TIMEOUT = 120_000;
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t162 — real tools against a per-intent (new-layout) project", () => {
   const RECORD_A = "auth-aaaaaaaa";

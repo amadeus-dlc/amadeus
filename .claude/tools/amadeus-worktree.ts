@@ -16,7 +16,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { appendAuditEntry } from "./amadeus-audit.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
 import {
   auditBlockField,
   emitError,
@@ -33,7 +33,8 @@ import {
   worktreePath,
   worktreeStateFilePath,
 } from "./amadeus-lib.js";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 // kebab-case slug shape: lowercase letter, then lowercase letters / digits /
 // hyphens. Mirrors stage-schema.ts:95+:101 — the codebase already duplicates
@@ -85,7 +86,12 @@ function emitAudit(
   intent?: string,
   space?: string
 ): string {
-  const result = appendAuditEntry(eventType, fields, pd, intent, space);
+  // The canonical path, targeted: --intent/--space name the ledger this
+  // worktree operation belongs to, and the target drives BOTH the shard the
+  // row lands in and the row's own identity fields (E-U8PRE O-T1). The
+  // returned timestamp is the one the emit actually stamped, so the caller's
+  // correlation tag quotes a real value rather than minting its own.
+  const result = emitAuditEvent(eventType, fields, pd, intent, space);
   return result.timestamp;
 }
 
@@ -110,7 +116,7 @@ function telemetryProjectDir(): string {
 }
 
 function runGit(args: string[], cwd?: string): GitResult {
-  const r = observeSubprocess(telemetryProjectDir(), "git", () =>
+  const r = observeSubprocessSpan(telemetryProjectDir(), "git", () =>
     spawnSync("git", args, {
       cwd,
       encoding: "utf-8",

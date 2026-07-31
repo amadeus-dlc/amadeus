@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U7CG-Q2R",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "U7 Bolt を open のまま維持し、前提解消(bootstrap 方針の設計+requiredAttributes 全数突き合わせ)まで本 Bolt 内で実施してから実書換え第1弾を行う"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "U7 Bolt は機構一式+前提不成立の実測報告をもって充足とし PR #1733 を完成扱いにする。前提解消(entrypoint bootstrap 方針+全 event の requiredAttributes 実 call site 突き合わせ)と実書換え batch は U8 前の追加 Bolt 群へ送る(既存 Task #1/#2 に統合)"
+    }
+  ]
+}
