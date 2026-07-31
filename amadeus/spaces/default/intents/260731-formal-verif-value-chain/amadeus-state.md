@@ -8,8 +8,8 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
-- **Worktree Path**:
-- **Bolt Refs**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-u5-advisories-channel
+- **Bolt Refs**: [u1-runner-relocation]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
