@@ -28,7 +28,7 @@ requirements.md「設計段への委譲」4件+advisories 形状の計5件を AD
 ## ADR-4: mirror model-map エントリの正準 impl 集合は3ファイル
 
 - **Context**: model-map エントリはモデルと実装の対応をピンし、SOURCE_DRIFT 追従検出の監視面を定義する(FR-C1)。RE は reducer+types を第一候補とした。
-- **Decision**: `amadeus-mirror-state-reducer.ts`(遷移・ガード・不変条件)+`amadeus-mirror-types.ts`(有限ドメイン語彙)+`amadeus-mirror-coordinator.ts`(boundary→operation 写像 — NoDuplicateCreate invariant の患部 :235 `if (context.boundary.kind === "intent-capture-approved") return "create";`(issueNumber を見ない無条件 create)を含む。対照: :243 `return state.issueNumber === null ? "create" : "sync";` は他境界の正しい状態依存写像)の3ファイル。
+- **Decision**(2026-07-31 FD u7 reviewer 実測により4ファイルへ改訂 — ProjectSyncTransition 3遷移の status 変更ロジックが `amadeus-mirror-project-reconciliation-reducer.ts` に実在するため同ファイルを追加。本 ADR の根拠「検査する意味論の全所在が監視面に入る」の機械適用): `amadeus-mirror-state-reducer.ts`(遷移・ガード・不変条件)+`amadeus-mirror-types.ts`(有限ドメイン語彙)+`amadeus-mirror-project-reconciliation-reducer.ts`(project-sync 3遷移の status 変更)+`amadeus-mirror-coordinator.ts`(boundary→operation 写像 — NoDuplicateCreate invariant の患部 :235 `if (context.boundary.kind === "intent-capture-approved") return "create";`(issueNumber を見ない無条件 create)を含む。対照: :243 `return state.issueNumber === null ? "create" : "sync";` は他境界の正しい状態依存写像)の3ファイル。
 - **Consequences**: モデルが検査する意味論の全所在が監視面に入る。coordinator は 1004 行と大きいがモデル化対象は operationForBoundary 系に限る — モデル化範囲と監視面の差は .tla コメントに明記。
 - **Alternatives Rejected**: (a) reducer+types の2ファイル — #1838 の患部(coordinator の固定写像)が監視面から漏れ、写像変更がドリフト検出されない。(b) mirror 25 ファイル全部 — presentation 等モデル外の変更で SOURCE_DRIFT が頻発し、--impl-only 運用の負荷だけ増える。
 
