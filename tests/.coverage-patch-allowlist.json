@@ -409,6 +409,11 @@
     "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
   },
   {
+    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+    "lines": "1861",
+    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
     "lines": "151-154",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
