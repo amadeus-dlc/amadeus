@@ -86,20 +86,16 @@ describe("archived guard AST corpus", () => {
     const twoSinkCounts = Object.fromEntries(
       sinks.map((sink) => [sink, twoNames.filter((name) => name === sink).length]),
     );
-    const measure = (copies: number) => {
-      const result = spawnSync(process.execPath, [BENCHMARK_CHILD, String(copies)], {
-        encoding: "utf-8",
-      });
-      expect(result.status, result.stderr).toBe(0);
-      return JSON.parse(result.stdout) as Array<{
-        calls: number;
-        elapsedMs: number;
-        rssDeltaBytes: number;
-        rssBytes: number;
-      }>;
+    // One spawn measures both corpus sizes interleaved, so they share a time
+    // window and host load cannot bias the ratio between them (issue #1797).
+    const result = spawnSync(process.execPath, [BENCHMARK_CHILD], { encoding: "utf-8" });
+    expect(result.status, result.stderr).toBe(0);
+    const measured = JSON.parse(result.stdout) as {
+      one: Array<{ calls: number; elapsedMs: number; rssBytes: number }>;
+      two: Array<{ calls: number; elapsedMs: number; rssBytes: number }>;
     };
-    const oneSamples = measure(1);
-    const twoSamples = measure(2);
+    const oneSamples = measured.one;
+    const twoSamples = measured.two;
     const oneMedianMs = median(oneSamples.map((sample) => sample.elapsedMs));
     const twoMedianMs = median(twoSamples.map((sample) => sample.elapsedMs));
     const oneRssBytes = median(oneSamples.map((sample) => sample.rssBytes));
@@ -122,5 +118,5 @@ describe("archived guard AST corpus", () => {
       twoRssBytes,
       rssMultiplier,
     }));
-  }, 90_000);
+  }, 180_000);
 });
