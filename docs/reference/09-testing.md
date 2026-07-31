@@ -53,8 +53,9 @@ lets the suite stay fast without lying about coverage.
 
 - **Scope / tier** — the directory a test lives in (`smoke`, `unit`,
   `integration`, `e2e`, `perf`). It answers *how much of the system is wired
-  together*. Only the first four are graded on the purity axis below; `perf`
-  falls into the guard's `other` bucket and carries no size ceiling.
+  together*. Only `unit`, `integration`, and `e2e` are graded on the purity axis
+  below: `smoke` is explicitly exempted from it, and `perf` falls into the
+  guard's `other` bucket — neither carries a size ceiling.
 - **Size** — a test's dynamic runtime behaviour (`small`, `medium`, `large`):
   does it stay in-process, or does it spawn a process, touch the filesystem,
   wait on a timer, or open a socket. Size — **not** the directory — is the true
