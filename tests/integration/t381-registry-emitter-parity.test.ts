@@ -204,6 +204,55 @@ const EMITTER_FIELD_SETS: readonly (readonly [string, Record<string, string>, st
     { "Bolt slug": "u1", "Source Audit Hash": "abc", "Fork Boundary": "12", Reentrant: "true" },
     "tools/amadeus-audit.ts:793-799 ('Reentrant' only on a re-entry fork)",
   ],
+  // The four below came from the STATIC admission scan
+  // (t385-emitter-registry-admission.test.ts) rather than from either the
+  // corpus or a hand audit: each key had been supplied by its emitter for as
+  // long as the event existed, and default-deny redaction would have dropped
+  // it on migration without a throw. Cursor Bugbot found the first one on
+  // PR #1810; the scan found the other three.
+  [
+    "PHASE_COMPLETED",
+    {
+      "From phase": "inception",
+      "To phase": "construction",
+      "Stages completed": "7",
+      Details: "Phase boundary crossed via forward jump",
+    },
+    "tools/amadeus-jump.ts:126-132 (state.ts advance omits 'Details')",
+  ],
+  [
+    "BOLT_FAILED",
+    {
+      "Failed Bolt": "U1",
+      "Bolt slug": "u1",
+      "Error summary": "aborted: user halt",
+      Reason: "aborted",
+    },
+    "tools/amadeus-bolt.ts:585-590 ('Reason' marks an abort, not a run failure)",
+  ],
+  [
+    "BOLT_FAILED",
+    {
+      "Failed Bolt": "U2",
+      "Error summary": "tests failed",
+      "Succeeded siblings": "u1, u3",
+    },
+    "tools/amadeus-bolt.ts:508-517 ('Succeeded siblings' is a halt-and-ask flag)",
+  ],
+  [
+    "STAGE_STARTED",
+    { Stage: "code-generation", Agent: "developer", Workflow: "single-code-generation" },
+    "tools/amadeus-orchestrate.ts:3566-3570 (single-stage runs only)",
+  ],
+  [
+    "STAGE_COMPLETED",
+    {
+      Stage: "code-generation",
+      Details: "Single-stage run of code-generation completed",
+      Workflow: "single-code-generation",
+    },
+    "tools/amadeus-orchestrate.ts:3579-3583 (single-stage runs only)",
+  ],
 ];
 
 describe("every real emitter's field set survives the canonical path", () => {

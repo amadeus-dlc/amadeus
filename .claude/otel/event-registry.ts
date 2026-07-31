@@ -154,7 +154,8 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "phase-lifecycle",
     requiredAttributes: ["From phase", "To phase", "Stages completed"],
-    optionalAttributes: [],
+    // A forward jump names the crossing it recorded (tools/amadeus-jump.ts).
+    optionalAttributes: ["Details"],
     schemaVersion: 1,
   },
   {
@@ -182,7 +183,8 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Agent"],
-    optionalAttributes: [],
+    // `Workflow` is the synthetic id a --single stage run is recorded under.
+    optionalAttributes: ["Workflow"],
     schemaVersion: 1,
   },
   {
@@ -209,7 +211,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Details"],
-    optionalAttributes: ["Artifacts", "Transaction Id"],
+    optionalAttributes: ["Artifacts", "Transaction Id", "Workflow"],
     schemaVersion: 1,
   },
   {
@@ -536,7 +538,9 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Failed Bolt", "Error summary"],
-    optionalAttributes: ["Bolt slug"],
+    // `Reason` distinguishes an explicit abort from a run failure; `Succeeded
+    // siblings` is carried by halt-and-ask flows (tools/amadeus-bolt.ts fail).
+    optionalAttributes: ["Bolt slug", "Reason", "Succeeded siblings"],
     schemaVersion: 1,
   },
   {

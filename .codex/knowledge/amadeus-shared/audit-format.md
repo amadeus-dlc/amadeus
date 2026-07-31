@@ -47,7 +47,7 @@ is.
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | ✓ `PHASE_STARTED` | Phase begins (first in-scope stage about to run) | Phase, Scope | Stage count | `tools/amadeus-utility.ts init` (Init phase), `tools/amadeus-state.ts advance` (phase boundary) |
-| ✓ `PHASE_COMPLETED` | Crossed a phase boundary | From phase, To phase, Stages completed | — | `tools/amadeus-state.ts advance`, `tools/amadeus-state.ts complete-workflow` |
+| ✓ `PHASE_COMPLETED` | Crossed a phase boundary | From phase, To phase, Stages completed | Details | `tools/amadeus-state.ts advance`, `tools/amadeus-state.ts complete-workflow`, `tools/amadeus-jump.ts` (forward crossing) |
 | `PHASE_VERIFIED` | Traceability check at boundary | Phase boundary | Details, Pass/fail, Issues | `tools/amadeus-state.ts advance`, `tools/amadeus-state.ts complete-workflow` |
 | `PHASE_SKIPPED` | Scope excludes phase | Phase, Reason | Scope | `tools/amadeus-utility.ts init` (per-phase scope eval) |
 
@@ -55,10 +55,10 @@ is.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| ✓ `STAGE_STARTED` | Stage enters `[-]` Active | Stage, Agent | — | `tools/amadeus-state.ts advance`, `tools/amadeus-utility.ts init` (init stages) |
+| ✓ `STAGE_STARTED` | Stage enters `[-]` Active | Stage, Agent | Workflow | `tools/amadeus-state.ts advance`, `tools/amadeus-utility.ts init` (init stages), `tools/amadeus-orchestrate.ts` (single-stage runs) |
 | `STAGE_AWAITING_APPROVAL` | Stage enters `[?]` (gate open) | Stage | Artifacts, Details, Recovered, Transaction Id | `tools/amadeus-state.ts gate-start` (organic, or `--recovered` backfill), `tools/amadeus-state.ts revise` (gate re-entry), `tools/amadeus-state.ts reject` (backfill when gate-start was skipped) |
 | `STAGE_REVISING` | Stage enters `[R]` (user rejected gate) | Stage, Revision count | Feedback, Recovered, Transaction Id | `tools/amadeus-state.ts reject` |
-| ✓ `STAGE_COMPLETED` | Stage finishes (`[x]`) | Stage, Details | Artifacts, Transaction Id | `tools/amadeus-state.ts approve` (gated stages; also auto-advances to next), `tools/amadeus-state.ts advance` (non-gated stages), `tools/amadeus-utility.ts init` (init stages) |
+| ✓ `STAGE_COMPLETED` | Stage finishes (`[x]`) | Stage, Details | Artifacts, Transaction Id, Workflow | `tools/amadeus-state.ts approve` (gated stages; also auto-advances to next), `tools/amadeus-state.ts advance` (non-gated stages), `tools/amadeus-utility.ts init` (init stages), `tools/amadeus-orchestrate.ts` (single-stage runs) |
 | `STAGE_JUMPED` | Forward/backward/redo jump target reached | Direction, Source, Target, Scope | Details | `tools/amadeus-jump.ts execute` |
 | `STAGE_SKIPPED` | Stage skipped during jump (`[S]`) | Stage | Reason | `tools/amadeus-jump.ts execute`, `tools/amadeus-state.ts skip` |
 | `GUARD_EXEMPTED` | A `workspace_requires` stage-completion guard refusal was exempted by a registry docs-only declaration (Issue #499/#848) | Stage, Evidence | — | `tools/amadeus-state.ts` `verifyStageArtifacts` (via `approve`/`advance`/`finalize`/`complete-workflow`) |
@@ -147,7 +147,7 @@ Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.
 |-------|------|----------|----------|---------|
 | `BOLT_STARTED` | Orchestrator begins a Bolt (or parallel batch of Bolts) | Bolt names, Batch number, Walking skeleton | Bolt slug | `tools/amadeus-bolt.ts start` |
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Bolt names, Batch number | Bolt slug | `tools/amadeus-bolt.ts complete` |
-| `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
+| `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug, Reason, Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
 | `AUTONOMY_MODE_SET` | User answered the ladder prompt after the walking skeleton | Mode | — | `tools/amadeus-bolt.ts set-autonomy` |
 
 ### Worktree (7 events)
