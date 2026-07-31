@@ -189,7 +189,11 @@ const VALID_EVENT_TYPES = new Set([
 
 // --- Event type to human-readable heading ---
 
-const EVENT_HEADINGS: Record<string, string> = {
+// Exported so the one table that maps an audit event type to its prose heading
+// stays the single definition: a v2 row stores the OTel eventName instead of the
+// heading, and readers resolve the heading back through here rather than
+// restating the mapping.
+export const EVENT_HEADINGS: Record<string, string> = {
   STAGE_STARTED: "Stage Start",
   STAGE_AWAITING_APPROVAL: "Stage Awaiting Approval",
   STAGE_REVISING: "Stage Revising",

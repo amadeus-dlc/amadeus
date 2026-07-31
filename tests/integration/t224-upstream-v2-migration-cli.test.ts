@@ -5,7 +5,8 @@
 // migration. Every assertion crosses the real process seam and observes only
 // exit status, JSON, Git, or filesystem state.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -300,6 +301,13 @@ function expectReadOnlyRefusal(
 
 afterEach(() => {
   for (const project of fixtures.splice(0)) project.cleanup();
+});
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
 });
 
 describe("t224 upstream-v2 migration public CLI", () => {

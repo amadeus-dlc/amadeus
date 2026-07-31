@@ -34,7 +34,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { auditFilePath, birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEvent } from "../../dist/claude/.claude/otel/audit-emit.ts";
-import { auditRowsFrom, type NormalizedAuditRecord } from "../harness/audit-records.ts";
+import { auditRowsFrom, normalizeAuditRecord, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -163,6 +163,33 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
 
     expect(auditContent(migrated)).toEqual(auditContent(legacy));
     expect(auditContent(migrated).Feedback).toBe("needs a falling proof");
+  });
+});
+
+describe("[migration-equivalence] the human-readable heading survives the migration", () => {
+  // A v1 row carries `heading` as prose ("Audit Merged"); a v2 row carries the
+  // OTel `eventName` instead. The heading is not decoration — readers and
+  // migrated .sh-era assertions group on it — so the normalised view resolves it
+  // from the same EVENT_HEADINGS table the legacy writer stamped, rather than
+  // handing back the OTel name and quietly changing what the field means.
+  test("a migrated row reports the same heading string as the legacy row", () => {
+    const { legacy, migrated } = bothWays("AUDIT_MERGED", {
+      "Bolt slug": "bolt-otel-migrate-g2",
+      "Entries Merged": "2",
+      "Source Audit Hash": "e".repeat(64),
+      "Fork Boundary": "1",
+    });
+
+    expect(legacy.heading).toBe("Audit Merged");
+    expect(migrated.heading).toBe(legacy.heading);
+  });
+
+  test("an eventName outside the table falls back to the name rather than empty", () => {
+    // Defensive: an unmapped canonical name must not normalise to "" or
+    // undefined, which would read as "this row has no heading" instead of
+    // "this heading is not in the table".
+    expect(normalizeAuditRecord({ schemaVersion: 2, eventName: "amadeus.not.registered", attributes: {} }).heading)
+      .toBe("amadeus.not.registered");
   });
 });
 

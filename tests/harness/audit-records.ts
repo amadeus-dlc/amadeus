@@ -12,6 +12,11 @@
 // v1 records pass through untouched, so a shard mixing both schemas — which is
 // exactly what a workspace looks like mid-migration — reads uniformly.
 
+// The heading table is imported from the SHIPPED copy rather than the canonical
+// source: this harness is copied into sandboxes that carry dist + docs + tests
+// only, and a packages/ import would not resolve there.
+import { EVENT_HEADINGS } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+
 export type NormalizedAuditRecord = {
   event: string | null;
   fields: Record<string, string>;
@@ -22,10 +27,17 @@ export function normalizeAuditRecord(raw: unknown): NormalizedAuditRecord {
   const record = raw as Record<string, unknown>;
   if (record.schemaVersion !== 2) return record as NormalizedAuditRecord;
   const attributes = (record.attributes ?? {}) as Record<string, string>;
+  const event = attributes.Event ?? null;
   return {
     ...record,
-    event: attributes.Event ?? null,
-    heading: String(record.eventName ?? ""),
+    event,
+    // The prose heading, resolved through the same table the legacy writer
+    // stamped it from. A v2 row stores the OTel eventName instead, but the
+    // heading is a field readers group on — handing back the eventName would
+    // silently change what `heading` means. An event outside the table falls
+    // back to the eventName, so an unmapped row reads as "heading not in the
+    // table" rather than as having none.
+    heading: (event !== null ? EVENT_HEADINGS[event] : undefined) ?? String(record.eventName ?? ""),
     fields: attributes,
   };
 }

@@ -50,8 +50,9 @@
 //   .sh (7) fragment-merge fails after audit-merge     -> "7: soft-gap — fragment-merge fails after audit-merge => AUDIT_MERGED + BOLT_FAILED(fragment-merge-failed)"
 //   .sh (8) determinism: re-compile byte-equivalent    -> "8: determinism (L11) — re-compile after BOLT_FAILED + recovery is byte-equivalent"
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -300,6 +301,13 @@ function countEvent(proj: string, event: string): number {
 }
 
 const TEST_TIMEOUT = 120_000; // real git + multiple bun spawns per case
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-bolt-sensor-failures.sh, plan 8)", () => {
   // ===========================================================================
