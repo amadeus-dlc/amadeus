@@ -166,6 +166,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t328-adapter-auto-compose-launch.integration.test.ts",
     "integration/t33-hook-concurrency.test.ts",
     "integration/t356-journal-convert.test.ts",
+    "integration/t378-hook-canonical-emit.test.ts",
     "integration/t384-otel-callsite-migration-subprocess.test.ts",
     "integration/t39.test.ts",
     "integration/t45.test.ts",
