@@ -19,7 +19,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sensorsDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -36,9 +36,11 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  seededRecordDir,
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   clearIntentContextForTests,
   currentIntentContext,
@@ -152,7 +154,12 @@ class ExitSignal extends Error {
 // handleFire always ends via process.exit; in-process we convert that into a
 // throwable so the drive returns the exit code. stdout is silenced (the fire
 // prints a status line) so it does not pollute the test log.
-function driveExit(fn: () => void): number {
+// handleFire is async, and since the dispatcher resolves its canonical emitter
+// through a lazy import the FIRST await now precedes the audit emit. Driving it
+// without awaiting would leave the emit running in a floating promise that
+// outlives the case — bootstrapping the Logger Provider for a temp project the
+// next case's afterEach has already deleted. So the drive awaits.
+async function driveExit(fn: () => void | Promise<void>): Promise<number> {
   const origExit = process.exit.bind(process);
   const origLog = console.log;
   process.exit = ((code?: number) => {
@@ -161,7 +168,7 @@ function driveExit(fn: () => void): number {
   console.log = () => {};
   let status = 0;
   try {
-    fn();
+    await fn();
   } catch (e) {
     if (e instanceof ExitSignal) status = e.code;
     else throw e;
@@ -179,7 +186,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
   let outPath: string;
   const prevEnv: Record<string, string | undefined> = {};
 
-  function setStubManifest(stubBasename: string): void {
+  function setStubManifest(stubBasename: string, timeoutSeconds = 5): void {
     writeFileSync(
       join(manifestDir, `amadeus-${SENSOR_ID}.md`),
       [
@@ -189,7 +196,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
         `command: bun .claude/tools/${stubBasename}`,
         "default_severity: advisory",
         "description: fire-seam fork manifest",
-        "timeout_seconds: 5",
+        `timeout_seconds: ${timeoutSeconds}`,
         "---",
         "# stub",
         "",
@@ -200,12 +207,19 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
 
   beforeEach(() => {
     proj = createTestProject();
+    // The dispatcher emits through the canonical path now, and BOTH the Logger
+    // Provider registration and the bootstrap record are per-PROCESS. Without
+    // this reset a case inherits the registration a previous case made for its
+    // own (since-deleted) temp project, and the emit resolves a shard under a
+    // workspace that no longer exists.
+    resetOtelPerProject();
     seedStateFile(proj, "state-construction-bolt1.md");
     scriptDir = mkdtempSync(join(tmpdir(), "amadeus-fire-seam-scripts-"));
     manifestDir = mkdtempSync(join(tmpdir(), "amadeus-fire-seam-manifests-"));
     for (const stub of [
       "amadeus-sensor-stub-pass.ts",
       "amadeus-sensor-stub-fail.ts",
+      "amadeus-sensor-stub-slow.ts",
     ]) {
       copyFileSync(join(STUB_SRC_DIR, stub), join(scriptDir, stub));
     }
@@ -224,6 +238,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
   });
 
   afterEach(() => {
+    resetOtelPerProject();
     for (const [k, v] of Object.entries(prevEnv)) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
@@ -233,15 +248,15 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     cleanupTestProject(manifestDir);
   });
 
-  test("main dispatches `fire` and the passing fire path exits 0", () => {
+  test("main dispatches `fire` and the passing fire path exits 0", async () => {
     setStubManifest("amadeus-sensor-stub-pass.ts");
-    const status = driveExit(() =>
+    const status = await driveExit(() =>
       main(["fire", SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
   });
 
-  test("a FAILED fire whose detail write cannot mkdir folds to script-error and still exits 0", () => {
+  test("a FAILED fire whose detail write cannot mkdir folds to script-error and still exits 0", async () => {
     setStubManifest("amadeus-sensor-stub-fail.ts");
     // Plant a regular FILE where the detail dir must be created so step 7's
     // mkdirSync throws → the detail-write-failed catch runs (finalOutcome folds
@@ -249,16 +264,46 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     const detailDir = join(sensorsDir(proj), STAGE);
     mkdirSync(sensorsDir(proj), { recursive: true });
     writeFileSync(detailDir, "not a directory\n", "utf-8");
-    const status = driveExit(() =>
+    const status = await driveExit(() =>
       handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
   });
 
-  test("main dispatches `list` in-process (own argv, no exit)", () => {
+  // The canonical event names the fire appended to this project's shard.
+  function shardEvents(projectDir: string): string[] {
+    const dir = join(seededRecordDir(projectDir), "audit");
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((n) => n.endsWith(".jsonl"))
+      .flatMap((n) => readFileSync(join(dir, n), "utf-8").split("\n"))
+      .filter((l) => l.startsWith("{"))
+      .map((l) => (JSON.parse(l) as { eventName?: string }).eventName ?? "");
+  }
+
+  // The three terminal rows leave emitTerminal by different arms, and only the
+  // passing one had an in-process driver — so the FAILED and BUDGET_OVERRIDE
+  // emits were dark to coverage even though handleFire reaches them here.
+  test("a genuinely failing fire emits the SENSOR_FAILED terminal row", async () => {
+    setStubManifest("amadeus-sensor-stub-fail.ts");
+    expect(await driveExit(() => handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]))).toBe(0);
+    const events = shardEvents(proj);
+    expect(events).toContain("amadeus.sensor.fired");
+    expect(events).toContain("amadeus.sensor.failed");
+  });
+
+  test("a fire that outruns its budget emits the SENSOR_BUDGET_OVERRIDE terminal row", async () => {
+    // The slow stub sleeps 5s; a 1s manifest budget makes the dispatcher SIGTERM
+    // it and take branch a.
+    setStubManifest("amadeus-sensor-stub-slow.ts", 1);
+    expect(await driveExit(() => handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]))).toBe(0);
+    expect(shardEvents(proj)).toContain("amadeus.sensor.budget.override");
+  });
+
+  test("main dispatches `list` in-process (own argv, no exit)", async () => {
     setStubManifest("amadeus-sensor-stub-pass.ts");
     // list returns without process.exit; driveExit sees status 0 (no throw).
-    expect(driveExit(() => main(["list"]))).toBe(0);
+    expect(await driveExit(() => main(["list"]))).toBe(0);
   });
 
   test("handleFire completes trace attachment before dispatching the sensor script (FR-TRC-5 ordering)", async () => {

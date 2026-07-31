@@ -134,12 +134,29 @@ interface AuditRecord {
   fields?: Record<string, string>;
 }
 
-/** Parse a JSONL shard buffer into records (blank lines skipped). */
+/**
+ * Parse a JSONL shard buffer into records, normalizing BOTH journal schemas.
+ * The hook now writes through the canonical Event path, so its rows are schema
+ * v2: the legacy audit event type rides as the `Event` attribute and the
+ * payload lives under `attributes` rather than `fields`. Production readers
+ * (auditBlockField) already serve both shapes under the historical names; this
+ * does the same so every assertion below keeps its original meaning.
+ */
 function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) return raw as unknown as AuditRecord;
+      const attributes = (raw.attributes ?? {}) as Record<string, string>;
+      return {
+        event: attributes.Event ?? null,
+        heading: String(raw.eventName ?? ""),
+        timestamp: String(raw.timestamp ?? ""),
+        fields: attributes,
+      };
+    });
 }
 
 function heartbeatPath(p: string): string {

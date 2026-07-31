@@ -54,18 +54,25 @@ export type RedactionPolicy = {
   readonly scrubPatterns: readonly CredentialPattern[];
 };
 
-// The registry's required-attribute vocabulary is the production safe-key
-// baseline (U1's representative list hardened to the full 78-event
-// vocabulary): those keys are the audit fields by design, so a policy that
-// dropped one would silently strip mandated attributes. `Command` is carved
-// out into the opt-in tier (FR-DST-4).
-const REGISTRY_REQUIRED_KEYS: readonly string[] = [
-  ...new Set(REGISTERED_EVENTS.flatMap((def) => def.requiredAttributes).filter((key) => key !== "Command")),
+// The registry's whole attribute vocabulary — required AND optional — is the
+// production safe-key baseline: those keys are the audit fields by design, so a
+// policy that dropped one would silently strip a mandated attribute. Taking
+// only the required half is what made an optional key (a conditionally-spread
+// field, or one owned by a second emitter) vanish from the stored row while the
+// append still reported success. `Command` is carved out into the opt-in tier
+// (FR-DST-4). Derived, never hand-listed, so a registry entry cannot add a key
+// the policy then silently eats.
+const REGISTRY_ATTRIBUTE_KEYS: readonly string[] = [
+  ...new Set(
+    REGISTERED_EVENTS.flatMap((def) => [...def.requiredAttributes, ...def.optionalAttributes]).filter(
+      (key) => key !== "Command"
+    )
+  ),
 ];
 
 export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
   safeKeys: [
-    ...REGISTRY_REQUIRED_KEYS,
+    ...REGISTRY_ATTRIBUTE_KEYS,
     // Low-cardinality operational keys predating the registry vocabulary plus
     // the correlation ids the AuditLogExporter itself may add as attributes.
     "Options",

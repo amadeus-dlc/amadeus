@@ -6,7 +6,8 @@
 // signal — matches session-start.ts and the plan definition).
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability, observabilityEnabled } from "../tools/amadeus-observability.ts";
 import { ensureContextManager, INTENT_CONTEXT_SCHEMA_VERSION, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
 import { createLocalSpanExporter } from "../otel/local-span-exporter.ts";
@@ -56,7 +57,11 @@ try {
 }
 
 try {
-  appendAuditEntry("SESSION_ENDED", { Reason: reason }, projectDir);
+  // Stand up the canonical emit path before the first emit (emitEvent
+  // throws with no Logger Provider registered). Inside the try so a
+  // bootstrap failure lands on the SAME fail-open drop as an append failure.
+  ensureOtelBootstrap(projectDir);
+  appendAuditEntryViaEvents("SESSION_ENDED", { Reason: reason }, projectDir);
 } catch (e) {
   recordHookDrop(projectDir, "session-end", errorMessage(e));
   process.exit(0);

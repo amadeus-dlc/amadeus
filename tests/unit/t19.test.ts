@@ -108,6 +108,7 @@ import {
   createTestProject,
   seededStateFile,
   seedStateFile,
+  parseAuditRecords,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
@@ -191,10 +192,9 @@ interface AuditRecord {
 
 /** Every JSONL audit record in a merged shard buffer, in file order. */
 function auditRecords(body: string): AuditRecord[] {
-  return body
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+  // Normalized across both journal schemas: jump emits on the canonical path
+  // now, so its rows are v2 and carry the event type as an attribute.
+  return parseAuditRecords(body);
 }
 
 /** Count audit records of one event type (the .sh's grep, as a count). */

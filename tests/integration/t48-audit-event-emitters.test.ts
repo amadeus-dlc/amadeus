@@ -70,7 +70,25 @@ const UTIL_TS = join(TOOLS_DIR, "amadeus-utility.ts");
 const AUDIT_FORMAT = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 
-const EMITTERS = "(emitAudit|appendAuditEntry|appendAuditEntryUnlocked|appendAuditEvent)";
+// The emission vocabulary, LONGEST-FIRST so a prefix alternative cannot claim
+// a longer name's call. `appendAuditEntryViaEvents` and `emitSwarmAudit` are
+// the migration-era emitters: a call site that moved onto the canonical Event
+// path is still a live emission, and the guard's question is whether the doc's
+// (event, emitter) row still names a file that emits it.
+// Two names beyond the writer family:
+//
+//   emitCanonical — the sensor dispatcher's lazily-resolved binding of
+//   appendAuditEntryViaEvents. The dispatcher cannot import the emit path at
+//   module scope (BR-5: the CLI must start on a tool tree with no otel/
+//   directory), so its call sites read through the resolved local.
+//
+//   getEventDefByAuditEvent — how a TARGETED site names its event. Those sites
+//   call emitEvent directly (the Adapter fails closed on per-call intent/space,
+//   E-U7CG-Q3A), and emitEvent takes the registry's OTel name rather than the v1
+//   type — so the legacy literal this check looks for lives in the registry
+//   lookup that resolves it, one line above the emit.
+const EMITTERS =
+  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|appendAuditEntry|appendAuditEvent|emitSwarmAudit|emitAudit|emitCanonical|getEventDefByAuditEvent)";
 
 /** Strip line comments so a commented-out emission does not count.
  *  Mirrors the .sh decommented(): drop //-prefixed lines and JSDoc *-lines. */

@@ -122,6 +122,8 @@ export function createTestProject(): string {
   return proj;
 }
 
+
+
 /**
  * The absolute intents dir for a space: `<proj>/amadeus/spaces/<space>/intents`.
  */
@@ -677,4 +679,53 @@ export function cleanupWorkspaceJourney(journey: WorkspaceJourney | undefined): 
     return;
   }
   if (existsSync(journey.root)) removeTreeWithRetry(journey.root);
+}
+
+/**
+ * The shape a test assertion wants from an audit shard, regardless of which
+ * journal schema the emitter used.
+ */
+export interface NormalizedAuditRecord {
+  /** The v1 audit event type. Null for a record that carries none. */
+  event: string | null;
+  timestamp?: string;
+  /** The payload under its historical field names. */
+  fields: Record<string, string>;
+}
+
+/**
+ * Parse concatenated JSONL shard bytes into records, normalizing BOTH journal
+ * schemas onto the v1 field names.
+ *
+ * A migrated call site writes schema v2: the legacy audit event type rides as
+ * the `Event` ATTRIBUTE and the payload lives under `attributes` rather than
+ * `fields`. Production readers (auditBlockField) already serve both shapes
+ * under the historical names, so a test that hand-parses `{ event, fields }`
+ * silently stops seeing rows the moment its emitter migrates — it reads zero
+ * events and asserts happily against an empty set.
+ *
+ * `Event` is dropped from the normalized payload: in v1 it was an envelope key,
+ * not a field, so leaving it in would add one to every field count a test pins.
+ */
+export function parseAuditRecords(shardText: string): NormalizedAuditRecord[] {
+  return shardText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("{"))
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) {
+        return {
+          event: (raw.event as string | null) ?? null,
+          timestamp: raw.timestamp as string | undefined,
+          fields: (raw.fields ?? {}) as Record<string, string>,
+        };
+      }
+      const { Event, ...fields } = (raw.attributes ?? {}) as Record<string, string>;
+      return {
+        event: Event ?? null,
+        timestamp: raw.timestamp as string | undefined,
+        fields,
+      };
+    });
 }

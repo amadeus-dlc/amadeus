@@ -58,7 +58,17 @@ export type EventDef = {
   readonly auditEvent: string | null;
   readonly durability: Durability;
   readonly category: EventCategory;
+  // Keys EVERY emitter of this event supplies. emitEvent THROWS when one is
+  // absent, so a key that only SOME emitter supplies must not live here: it
+  // would turn a working legacy write into a crash the moment its call site
+  // migrates. Derived per event from the intersection over the real emitters.
   readonly requiredAttributes: readonly string[];
+  // Keys an emitter MAY supply — conditionally-spread fields, keys owned by one
+  // of several emitters, and the documented vocabulary a CLI passthrough
+  // (`--field "Key: Value"`) can carry. Never validated, but admitted through
+  // redaction: the policy is default-deny, so a supplied-but-unlisted key would
+  // be dropped from the stored row without a word.
+  readonly optionalAttributes: readonly string[];
   readonly schemaVersion: number;
 };
 
@@ -80,6 +90,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Scope", "Request"],
+    optionalAttributes: ["Repos"],
     schemaVersion: 1,
   },
   {
@@ -88,6 +99,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Scope", "Details"],
+    optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
   {
@@ -96,6 +108,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Stage"],
+    optionalAttributes: ["Timestamp"],
     schemaVersion: 1,
   },
   {
@@ -104,6 +117,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: [],
+    optionalAttributes: ["Timestamp"],
     schemaVersion: 1,
   },
   {
@@ -112,6 +126,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Intent", "From Status", "To Status", "Operation Id", "User Input", "Human Turn Timestamp"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -120,6 +135,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Intent", "From Status", "To Status", "Operation Id", "User Input", "Human Turn Timestamp"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Phase Lifecycle (4) ---
@@ -128,7 +144,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PHASE_STARTED",
     durability: "canonical",
     category: "phase-lifecycle",
-    requiredAttributes: ["Phase", "Stage count", "Scope"],
+    requiredAttributes: ["Phase", "Scope"],
+    optionalAttributes: ["Stage count"],
     schemaVersion: 1,
   },
   {
@@ -137,6 +154,8 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "phase-lifecycle",
     requiredAttributes: ["From phase", "To phase", "Stages completed"],
+    // A forward jump names the crossing it recorded (tools/amadeus-jump.ts).
+    optionalAttributes: ["Details"],
     schemaVersion: 1,
   },
   {
@@ -144,7 +163,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PHASE_VERIFIED",
     durability: "canonical",
     category: "phase-lifecycle",
-    requiredAttributes: ["Phase boundary", "Pass/fail", "Issues"],
+    requiredAttributes: ["Phase boundary"],
+    optionalAttributes: ["Details", "Pass/fail", "Issues"],
     schemaVersion: 1,
   },
   {
@@ -152,7 +172,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PHASE_SKIPPED",
     durability: "canonical",
     category: "phase-lifecycle",
-    requiredAttributes: ["Phase", "Scope", "Reason"],
+    requiredAttributes: ["Phase", "Reason"],
+    optionalAttributes: ["Scope"],
     schemaVersion: 1,
   },
   // --- Stage Lifecycle (7) ---
@@ -162,6 +183,8 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Agent"],
+    // `Workflow` is the synthetic id a --single stage run is recorded under.
+    optionalAttributes: ["Workflow"],
     schemaVersion: 1,
   },
   {
@@ -169,7 +192,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "STAGE_AWAITING_APPROVAL",
     durability: "canonical",
     category: "stage-lifecycle",
-    requiredAttributes: ["Stage", "Artifacts"],
+    requiredAttributes: ["Stage"],
+    optionalAttributes: ["Artifacts", "Details", "Recovered", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -177,7 +201,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "STAGE_REVISING",
     durability: "canonical",
     category: "stage-lifecycle",
-    requiredAttributes: ["Stage", "Revision count", "Feedback"],
+    requiredAttributes: ["Stage", "Revision count"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -185,7 +210,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "STAGE_COMPLETED",
     durability: "canonical",
     category: "stage-lifecycle",
-    requiredAttributes: ["Stage", "Details", "Artifacts"],
+    requiredAttributes: ["Stage", "Details"],
+    optionalAttributes: ["Artifacts", "Transaction Id", "Workflow"],
     schemaVersion: 1,
   },
   {
@@ -194,6 +220,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Direction", "Source", "Target", "Scope"],
+    optionalAttributes: ["Details"],
     schemaVersion: 1,
   },
   {
@@ -201,7 +228,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "STAGE_SKIPPED",
     durability: "canonical",
     category: "stage-lifecycle",
-    requiredAttributes: ["Stage", "Reason"],
+    requiredAttributes: ["Stage"],
+    optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
   {
@@ -210,6 +238,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Evidence"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Session Events (5) ---
@@ -219,6 +248,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: ["Source"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -227,6 +257,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: ["Source"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -235,6 +266,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: ["Current Stage", "State Validity"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -243,6 +275,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: ["Reason"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -251,6 +284,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: [],
+    optionalAttributes: ["Presence Reservation Id"],
     schemaVersion: 1,
   },
   // --- Initialization Events (3) ---
@@ -260,6 +294,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "initialization",
     requiredAttributes: ["Details"],
+    optionalAttributes: ["Request"],
     schemaVersion: 1,
   },
   {
@@ -267,7 +302,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "WORKSPACE_SCANNED",
     durability: "canonical",
     category: "initialization",
-    requiredAttributes: ["Project type", "Details"],
+    requiredAttributes: ["Project Type", "Details"],
+    optionalAttributes: ["Languages", "Frameworks", "Build System", "Nested Root", "Nested Candidates", "Submodules"],
     schemaVersion: 1,
   },
   {
@@ -276,6 +312,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "initialization",
     requiredAttributes: ["Details"],
+    optionalAttributes: ["Request", "Scope", "Project Type", "Languages", "Frameworks", "Build System"],
     schemaVersion: 1,
   },
   // --- Navigation Events (5) ---
@@ -284,7 +321,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "SCOPE_CHANGED",
     durability: "canonical",
     category: "navigation",
-    requiredAttributes: ["Old scope", "New scope"],
+    requiredAttributes: ["Old Scope", "New Scope"],
+    optionalAttributes: ["Stage Count Delta", "Stages in Scope", "Depth"],
     schemaVersion: 1,
   },
   {
@@ -292,7 +330,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "DEPTH_CHANGED",
     durability: "canonical",
     category: "navigation",
-    requiredAttributes: ["Old depth", "New depth"],
+    requiredAttributes: ["Old Depth", "New Depth"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -300,7 +339,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "TEST_STRATEGY_CHANGED",
     durability: "canonical",
     category: "navigation",
-    requiredAttributes: ["Old strategy", "New strategy"],
+    requiredAttributes: ["Old Strategy", "New Strategy"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -309,6 +349,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "navigation",
     requiredAttributes: ["Detected scope", "Input text", "Source"],
+    optionalAttributes: ["Matched keywords"],
     schemaVersion: 1,
   },
   {
@@ -317,6 +358,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "navigation",
     requiredAttributes: ["Scope", "Stages skipped", "Stages added", "Stages in Scope"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Interaction Events (6) ---
@@ -326,6 +368,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage", "Decision"],
+    optionalAttributes: ["Options", "Rationale"],
     schemaVersion: 1,
   },
   {
@@ -333,7 +376,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "GATE_APPROVED",
     durability: "canonical",
     category: "interaction",
-    requiredAttributes: ["Stage", "User Input"],
+    requiredAttributes: ["Stage"],
+    optionalAttributes: ["User Input", "Grant Id", "Swarm batch", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -341,7 +385,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "GATE_REJECTED",
     durability: "canonical",
     category: "interaction",
-    requiredAttributes: ["Stage", "Feedback"],
+    requiredAttributes: ["Stage"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -350,6 +395,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage", "Details"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -357,7 +403,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "DELEGATED_APPROVAL",
     durability: "canonical",
     category: "interaction",
-    requiredAttributes: ["Stage", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts", "User Input"],
+    requiredAttributes: ["Stage", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts"],
+    optionalAttributes: ["User Input", "Grant Id"],
     schemaVersion: 1,
   },
   {
@@ -365,7 +412,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "DELEGATED_REJECTION",
     durability: "canonical",
     category: "interaction",
-    requiredAttributes: ["Stage", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts", "Feedback"],
+    requiredAttributes: ["Stage", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts"],
+    optionalAttributes: ["Feedback"],
     schemaVersion: 1,
   },
   // --- Standing Delegation Grants (3) ---
@@ -374,16 +422,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "GRANT_ISSUED",
     durability: "canonical",
     category: "grant",
-    requiredAttributes: [
-      "Grant Id",
-      "Scope",
-      "Expires At",
-      "Includes Phase Boundary",
-      "Issuer Space",
-      "Issuer Intent",
-      "Issuer Shard",
-      "Issuer Human Ts",
-    ],
+    requiredAttributes: ["Grant Id", "Scope", "Expires At", "Includes Phase Boundary", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts"],
+    optionalAttributes: ["User Input"],
     schemaVersion: 1,
   },
   {
@@ -392,6 +432,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "grant",
     requiredAttributes: ["Grant Id", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -400,6 +441,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "grant",
     requiredAttributes: ["Route Id", "Stage", "Grant Id"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Artifact Events (3) ---
@@ -409,6 +451,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "artifact",
     requiredAttributes: ["Tool", "File", "Context"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -416,7 +459,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "ARTIFACT_UPDATED",
     durability: "canonical",
     category: "artifact",
-    requiredAttributes: ["Tool", "File", "Context"],
+    requiredAttributes: [],
+    optionalAttributes: ["Tool", "File", "Context", "Artifact", "TransactionId", "Revision", "TransitionKind", "Digest", "TriggerBoundary", "Reconciliation", "OperationId", "Classification", "coalescedWarning", "repairProof"],
     schemaVersion: 1,
   },
   {
@@ -425,6 +469,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "artifact",
     requiredAttributes: ["Stage", "Decision", "Artifacts"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Subagent Events (1) ---
@@ -434,6 +479,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "subagent",
     requiredAttributes: ["Agent Type"],
+    optionalAttributes: ["Agent ID", "Message"],
     schemaVersion: 1,
   },
   // --- Utility Events (1) ---
@@ -443,6 +489,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "utility",
     requiredAttributes: ["Request", "Details"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Error/Recovery Events (2) ---
@@ -454,6 +501,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "error-recovery",
     requiredAttributes: ["Tool", "Command", "Error"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -462,6 +510,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "error-recovery",
     requiredAttributes: ["Choice", "Current Stage"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Construction Bolt Events (4) ---
@@ -471,6 +520,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Bolt names", "Batch number", "Walking skeleton"],
+    optionalAttributes: ["Bolt slug"],
     schemaVersion: 1,
   },
   {
@@ -479,6 +529,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Bolt names", "Batch number"],
+    optionalAttributes: ["Bolt slug"],
     schemaVersion: 1,
   },
   {
@@ -487,6 +538,9 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Failed Bolt", "Error summary"],
+    // `Reason` distinguishes an explicit abort from a run failure; `Succeeded
+    // siblings` is carried by halt-and-ask flows (tools/amadeus-bolt.ts fail).
+    optionalAttributes: ["Bolt slug", "Reason", "Succeeded siblings"],
     schemaVersion: 1,
   },
   {
@@ -495,6 +549,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Mode"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Worktree (7) ---
@@ -504,6 +559,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Branch name", "Base branch"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -512,6 +568,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Target branch", "Strategy"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -520,6 +577,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Reason"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -528,6 +586,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Source state hash", "Target state hash"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -536,6 +595,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Source state hash", "Target state hash", "Conflict resolution"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -544,6 +604,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Source Audit Hash", "Fork Boundary"],
+    optionalAttributes: ["Reentrant"],
     schemaVersion: 1,
   },
   {
@@ -552,6 +613,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Entries Merged", "Source Audit Hash", "Fork Boundary"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Practices (4) ---
@@ -560,7 +622,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PRACTICES_DISCOVERED",
     durability: "canonical",
     category: "practices",
-    requiredAttributes: ["sources scanned", "drafts produced"],
+    requiredAttributes: [],
+    optionalAttributes: ["Sources Scanned", "Drafts"],
     schemaVersion: 1,
   },
   {
@@ -568,7 +631,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PRACTICES_AFFIRMED",
     durability: "canonical",
     category: "practices",
-    requiredAttributes: ["affirming user", "sections written", "mandated/forbidden rules appended"],
+    requiredAttributes: [],
+    optionalAttributes: ["Affirming User", "Sections Written", "Mandated Rules Appended", "Forbidden Rules Appended", "Timestamp"],
     schemaVersion: 1,
   },
   {
@@ -577,6 +641,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "practices",
     requiredAttributes: ["Reason"],
+    optionalAttributes: ["Timestamp", "Practices Stance", "Bolt-Plan Marker", "Bolt slug"],
     schemaVersion: 1,
   },
   {
@@ -584,7 +649,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PRACTICES_SECTION_EMPTY",
     durability: "canonical",
     category: "practices",
-    requiredAttributes: ["Section name", "Fallback source"],
+    requiredAttributes: [],
+    optionalAttributes: ["Section name", "Fallback source"],
     schemaVersion: 1,
   },
   // --- Merge Dispatch (3) ---
@@ -594,6 +660,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "merge-dispatch",
     requiredAttributes: ["Bolt slug", "Practices section excerpt"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -602,6 +669,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "merge-dispatch",
     requiredAttributes: ["Bolt slug", "Strategy", "Target branch", "Confidence", "Notes"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -610,6 +678,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "merge-dispatch",
     requiredAttributes: ["Bolt slug", "Fallback reason", "Defaults applied"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Sensor Events (5) ---
@@ -619,6 +688,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -627,6 +697,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Duration ms"],
+    optionalAttributes: ["Note"],
     schemaVersion: 1,
   },
   {
@@ -635,6 +706,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Detail path", "Findings count"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -643,6 +715,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Cap layer", "Cap value", "Observed value"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -651,6 +724,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Scope", "Path", "Rule count"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Learning Loop (3) ---
@@ -660,6 +734,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "learning",
     requiredAttributes: ["Stage"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -668,6 +743,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "learning",
     requiredAttributes: ["Stage", "Candidate-ID", "Destination", "Heading", "Source"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -676,6 +752,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "learning",
     requiredAttributes: ["Stage", "Candidate-ID", "Sensor ID", "Manifest path", "Matches", "Destinations", "Source"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Swarm (6) ---
@@ -685,6 +762,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit names", "Concurrency cap"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -693,6 +771,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -701,6 +780,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name", "Reason"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -709,6 +789,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name", "Reason"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -717,6 +798,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Converged count", "Failed count"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -725,6 +807,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Requested driver", "Fallback driver"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   // --- Telemetry (never the audit journal, FR-EXP-4) ---
@@ -734,6 +817,7 @@ export const REGISTERED_EVENTS = [
     durability: "telemetry",
     category: "telemetry",
     requiredAttributes: [],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -744,6 +828,7 @@ export const REGISTERED_EVENTS = [
     durability: "telemetry",
     category: "telemetry",
     requiredAttributes: ["exception.message"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
 ] as const satisfies readonly EventDef[];

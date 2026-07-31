@@ -69,6 +69,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -157,6 +158,11 @@ function makeProject(): string {
     join(SRC_HOOKS, "amadeus-runtime-compile.ts"),
     join(proj, ".claude", "hooks", "amadeus-runtime-compile.ts"),
   );
+  // compile emits MEMORY_EMPTY through the canonical Event path, so its module
+  // graph reaches the otel/ tree and the vendored OTel API. Both ship beside
+  // tools/ in a real install — copied whole rather than chased file by file.
+  cpSync(join(SRC_TOOLS, "..", "otel"), join(proj, ".claude", "otel"), { recursive: true });
+  cpSync(join(SRC_TOOLS, "..", "vendor"), join(proj, ".claude", "vendor"), { recursive: true });
   // P9: write the minimal state into the default record so the active-intent
   // cursor resolves → the hook reads the record's audit shards (readAllAuditShards)
   // and writes runtime-graph.json under the record (runtimeGraphPath).

@@ -11,6 +11,7 @@
 // (`runtime-graph.json not found`, exit 1) broke §13 surface structurally there.
 // This file exists so the self-heal lines register in lcov (local-lcov-pre-push).
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -81,6 +82,10 @@ const MEMORY_MD = `## Interpretations
 function mkproj(stateSlug = SLUG, auditSlug = stateSlug): string {
   const pd = createTestProject();
   projects.push(pd);
+  // A new workspace begins here. surface's self-heal re-compiles in-process, and
+  // compile bootstraps the canonical emit path, which refuses a SECOND workspace
+  // per process by design.
+  resetOtelPerProject();
   writeFileSync(
     seededStateFile(pd),
     `# AI-DLC State Tracking\n- **Current Stage**: ${stateSlug}\n- **Scope**: feature\n`,

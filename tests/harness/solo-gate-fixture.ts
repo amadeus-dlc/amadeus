@@ -4,6 +4,8 @@
 // grant, and a routed carrier — so that construction lives here once and each
 // suite stays a single responsibility.
 
+import { parseAuditRecords } from "./fixtures.ts";
+import { resetOtelPerProject } from "./otel-reset.ts";
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -141,17 +143,16 @@ export const SCAN_PASSES = [
   "owner-revalidation",
 ] as const;
 
+// Count the rows the standing-grant SCANNER counts, across both journal
+// schemas. This has to agree with amadeus-grant-authorization.ts's own
+// predicate (auditBlockField(block, "Event") !== null), which decodes v1 and v2
+// alike: a v1-only count here silently under-reports once a grant emitter
+// migrates, so padAuditFixture lays one filler too many and the shard ends up
+// holding E_owner + 1 scanner-visible events — the scan-budget assertion then
+// fails by exactly one, blaming the production scan for a fixture arithmetic
+// error.
 function auditEventCount(content: string): number {
-  return content
-    .split("\n")
-    .filter((line) => {
-      if (!line.startsWith("{")) return false;
-      try {
-        return typeof (JSON.parse(line) as { event?: unknown }).event === "string";
-      } catch {
-        return false;
-      }
-    }).length;
+  return parseAuditRecords(content).filter((record) => record.event !== null).length;
 }
 
 function fillerEvents(count: number): string {
@@ -261,6 +262,8 @@ export function setup(expiresAt: string, routeNow: number): {
 } {
   const root = createTestProject();
   roots.push(root);
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   seedStateFile(root, "state-mid-inception.md");
   const registryPath = join(
     root,

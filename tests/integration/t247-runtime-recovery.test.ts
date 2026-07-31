@@ -751,6 +751,11 @@ describe("t247 recovery in-process coverage seams", () => {
     tempDirs.push(sandbox);
     const toolsDir = join(sandbox, "tools");
     cpSync(join(ROOT, "packages/framework/core/tools"), toolsDir, { recursive: true });
+    // The tools reach the canonical emit path, whose module graph lives in
+    // otel/ over the vendored OTel API. Both are siblings of tools/ in the real
+    // tree, so the sandbox mirrors that layout rather than a tools-only slice.
+    cpSync(join(ROOT, "packages/framework/core/otel"), join(sandbox, "otel"), { recursive: true });
+    cpSync(join(ROOT, "packages/framework/core/vendor"), join(sandbox, "vendor"), { recursive: true });
     const stateTool = join(toolsDir, "amadeus-state.ts");
     const source = readFileSync(stateTool, "utf-8");
     const mutated = mutate(source);
@@ -843,6 +848,11 @@ describe("t247 recovery in-process coverage seams", () => {
     tempDirs.push(sandbox);
     const toolsDir = join(sandbox, "tools");
     cpSync(join(ROOT, "packages/framework/core/tools"), toolsDir, { recursive: true });
+    // The tools reach the canonical emit path, whose module graph lives in
+    // otel/ over the vendored OTel API. Both are siblings of tools/ in the real
+    // tree, so the sandbox mirrors that layout rather than a tools-only slice.
+    cpSync(join(ROOT, "packages/framework/core/otel"), join(sandbox, "otel"), { recursive: true });
+    cpSync(join(ROOT, "packages/framework/core/vendor"), join(sandbox, "vendor"), { recursive: true });
     const stateTool = join(toolsDir, "amadeus-state.ts");
     const source = readFileSync(stateTool, "utf-8");
     const mutated = source.replace(
