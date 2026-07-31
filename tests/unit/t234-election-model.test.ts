@@ -186,15 +186,70 @@ describe("t234 election-model", () => {
     const order1 = v1.ordered.map((o) => o.internalNo);
     const order2 = v2.ordered.map((o) => o.internalNo);
     expect(order1.sort()).toEqual(order2.slice().sort()); // same members
-    // BR-2 structural blind: exactly the declared keys, nothing else
-    expect(Object.keys(v1).sort()).toEqual(["electionId", "ordered", "voter"]);
+    // BR-2 structural blind: exactly the declared keys, nothing else. #1772
+    // widened the key set to carry the question and the per-choice description
+    // (a voter must be able to read what they are voting on); the BR-2 core ban
+    // is unchanged and this exhaustive key set is what enforces it — a
+    // recommendation marker, a prior-vote list or peer status cannot appear
+    // without failing this assertion.
+    expect(Object.keys(v1).sort()).toEqual(["electionId", "ordered", "question", "voter"]);
     for (const entry of v1.ordered) {
+      // description is absent here (the fixture declares none) — see the
+      // description round-trip test for the present-key shape.
       expect(Object.keys(entry).sort()).toEqual(["displayNo", "internalNo", "label"]);
     }
     // identity mapping: displayNo -> internalNo is a bijection over choices —
     // membership fixed, not just cardinality (PR #1231 review minor 2)
     const mapped = [...new Set(v1.ordered.map((o) => o.internalNo))].sort();
     expect(mapped).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  // #1772: a voter used to receive labels only — the definition's per-choice
+  // description was dropped by the parser's whitelist rebuild and the question
+  // was never carried at all, so voters could not read what they voted on.
+  test("Election.parse keeps choices[].description and shuffleView carries question + description", () => {
+    const withDesc = Election.parse({
+      ...DEF,
+      choices: [
+        { internalNo: 1, label: "A案", description: "現行踏襲。移行コストなし。" },
+        { internalNo: 2, label: "B案", description: "全面刷新。移行コスト大。" },
+      ],
+    });
+    if (!withDesc.ok) throw new Error("definition must parse");
+    expect(withDesc.value.choices.map((c) => c.description)).toEqual([
+      "現行踏襲。移行コストなし。",
+      "全面刷新。移行コスト大。",
+    ]);
+    const view = shuffleView(withDesc.value, "alice");
+    expect(view.question).toBe(DEF.question);
+    for (const entry of view.ordered) {
+      expect(Object.keys(entry).sort()).toEqual([
+        "description",
+        "displayNo",
+        "internalNo",
+        "label",
+      ]);
+    }
+    const byNo = new Map(view.ordered.map((o) => [o.internalNo, o.description]));
+    expect(byNo.get(1)).toBe("現行踏襲。移行コストなし。");
+    expect(byNo.get(2)).toBe("全面刷新。移行コスト大。");
+  });
+
+  // Acceptance criterion 3: a definition without description stays acceptable,
+  // and the absent-description shape is a pinned contract (key absent, not null).
+  test("Election.parse accepts a definition without description; absence omits the key", () => {
+    const noDesc = Election.parse(DEF);
+    if (!noDesc.ok) throw new Error("definition must parse");
+    expect(Object.keys(noDesc.value.choices[0] as object).sort()).toEqual(["internalNo", "label"]);
+    const entry = shuffleView(noDesc.value, "alice").ordered[0] as object;
+    expect(Object.keys(entry).sort()).toEqual(["displayNo", "internalNo", "label"]);
+    expect("description" in entry).toBe(false);
+    // fail-closed on a non-string description (parse-don't-validate: a malformed
+    // body must not reach the voter as a silently dropped field — the #1772
+    // mechanism).
+    expect(
+      Election.parse({ ...DEF, choices: [{ internalNo: 1, label: "x", description: 42 }] }).ok,
+    ).toBe(false);
   });
 
   test("shuffleView: two voters can see different orders under a fixed seed pair", () => {

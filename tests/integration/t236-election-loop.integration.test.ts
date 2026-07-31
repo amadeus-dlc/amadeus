@@ -385,12 +385,40 @@ describe("t236 election directive loop", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
     const viewPath = electionPath("views", "alice.json");
     const view = JSON.parse(readFileSync(viewPath, "utf8"));
-    expect(Object.keys(view).sort()).toEqual(["electionId", "ordered", "voter"]); // blind keys
+    // blind keys — #1772 added question (and per-choice description) so a voter
+    // can read the motion; the BR-2 core ban is unchanged.
+    expect(Object.keys(view).sort()).toEqual(["electionId", "ordered", "question", "voter"]);
     expect(run(["notify", "--election", "E-LOOP1"])).toBe(0);
     const outJson = lastJson();
     const deliveries = outJson.deliveries as Array<{ kind: string }>;
     expect(deliveries.length).toBe(2);
     expect(deliveries.every((d) => d.kind === "directive")).toBe(true);
+  });
+
+  // #1772: open used to write views that carried neither the question nor the
+  // per-choice description, so a voter reading only their view could not tell
+  // what the motion was or what each choice meant.
+  test("#1772: open writes the question and per-choice description into each blind view", () => {
+    const def = {
+      ...DEF,
+      choices: [
+        { internalNo: 1, label: "0件で可", description: "候補なしを確定する。" },
+        { internalNo: 2, label: "追加議論", description: "候補を再募集する。" },
+      ],
+    };
+    expect(run(["open", "--file", writeJson("def.json", def)])).toBe(0);
+    for (const voter of ["alice", "bob"]) {
+      const view = JSON.parse(readFileSync(electionPath("views", `${voter}.json`), "utf8"));
+      expect(view.question).toBe(def.question);
+      const byNo = new Map(
+        (view.ordered as Array<{ internalNo: number; description?: string }>).map((o) => [
+          o.internalNo,
+          o.description,
+        ]),
+      );
+      expect(byNo.get(1)).toBe("候補なしを確定する。");
+      expect(byNo.get(2)).toBe("候補を再募集する。");
+    }
   });
 
   test("Bolt 4: notify --transport agmsg delivers via the injected send script and books timeline entries", () => {

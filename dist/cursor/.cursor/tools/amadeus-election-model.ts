@@ -45,7 +45,10 @@ export type ElectionState =
   | "recorded"
   | "hold";
 
-export type Choice = { internalNo: number; label: string };
+// `description` is the choice's body text (#1772): the label alone is a handle,
+// not the motion. Optional — a definition without it stays valid and the key is
+// then absent (never null), which is the pinned shape downstream.
+export type Choice = { internalNo: number; label: string; description?: string };
 
 export type Election = {
   electionId: string;
@@ -77,7 +80,16 @@ function parseChoices(raw: unknown): Choice[] | null {
     if (typeof c !== "object" || c === null) return null;
     const cc = c as Record<string, unknown>;
     if (typeof cc.internalNo !== "number" || typeof cc.label !== "string") return null;
-    choices.push({ internalNo: cc.internalNo, label: cc.label });
+    // #1772: the whitelist rebuild used to drop choices[].description silently
+    // (fail-open — the definition author saw exit 0 and the voter saw nothing).
+    // A present-but-malformed description now fails closed like every other
+    // field; an absent one leaves the key off.
+    if (cc.description !== undefined && typeof cc.description !== "string") return null;
+    choices.push(
+      cc.description === undefined
+        ? { internalNo: cc.internalNo, label: cc.label }
+        : { internalNo: cc.internalNo, label: cc.label, description: cc.description },
+    );
   }
   if (hasDuplicates(choices.map((c) => c.internalNo))) return null;
   return choices;
@@ -302,11 +314,22 @@ export function resolveBallots(ballots: Ballot[]): Ballot[] {
 // --- distribution view (FR-1b/1c, ADR-4) -----------------------------------
 
 // Structurally blind: exactly these fields exist — no recommendation marker,
-// no prior votes, no peer status (BR-2 pins the key set).
+// no prior votes, no peer status (BR-2 pins the key set). #1772 widened the set
+// to the motion itself — `question` and each choice's `description` — because a
+// voter who receives only labels cannot read what they are voting on; the BR-2
+// core ban is untouched, and none of the added fields carry peer signal.
+// `description` is present only when the definition declared one (key absent
+// otherwise — never null), mirroring Choice.
 export type DistributionView = {
   electionId: string;
   voter: string;
-  ordered: Array<{ displayNo: number; internalNo: number; label: string }>;
+  question: string;
+  ordered: Array<{
+    displayNo: number;
+    internalNo: number;
+    label: string;
+    description?: string;
+  }>;
 };
 
 // FNV-1a 32-bit — deterministic, non-cryptographic (the seed only orders a
@@ -347,11 +370,13 @@ export function shuffleView(election: Election, voter: string): DistributionView
   return {
     electionId: election.electionId,
     voter,
-    ordered: order.map((choice, idx) => ({
-      displayNo: idx + 1,
-      internalNo: choice.internalNo,
-      label: choice.label,
-    })),
+    question: election.question,
+    ordered: order.map((choice, idx) => {
+      const base = { displayNo: idx + 1, internalNo: choice.internalNo, label: choice.label };
+      return choice.description === undefined
+        ? base
+        : { ...base, description: choice.description };
+    }),
   };
 }
 
