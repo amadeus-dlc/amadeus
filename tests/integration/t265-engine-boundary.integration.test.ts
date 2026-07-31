@@ -32,11 +32,13 @@ import {
 } from "../harness/fixtures.ts";
 import {
   EMPTY_MIRROR_STATE,
+  parseMirrorStateDocument,
   renderMirrorStateBlock,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import type {
   MirrorOperation,
   MirrorOperationReceipt,
+  MirrorReceiptStatus,
   RepositoryIdentity,
 } from "../../packages/framework/core/tools/amadeus-mirror-types.ts";
 import {
@@ -51,26 +53,66 @@ import {
   useSoloEnv,
 } from "../harness/solo-gate-fixture.ts";
 
+const SEEDED_CREATE_IDENTITY = {
+  schema: 1 as const,
+  intentUuid: "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
+  intentDir: "amadeus/spaces/default/intents/seed",
+  repository: {
+    owner: "acme",
+    name: "app",
+    canonical: "acme/app" as const,
+  },
+  operationId: "op-seed",
+  preparedAt: "2026-07-26T00:00:00Z",
+};
+
 // A recorded mirror lives in the v1 mirror-state block (issueNumber +
 // provenance), which is the authority the boundary decision reads — never the
-// legacy "Mirror Issue" field. Seed the block the way a real create writes it.
-const SEEDED_MIRROR_BLOCK = renderMirrorStateBlock({
-  ...EMPTY_MIRROR_STATE,
-  issueNumber: 123,
-  provenance: {
-    schema: 1,
-    createIdentity: {
-      schema: 1,
-      intentUuid: "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
-      intentDir: "amadeus/spaces/default/intents/seed",
-      repository: { owner: "acme", name: "app", canonical: "acme/app" },
-      operationId: "op-seed",
+// legacy "Mirror Issue" field. Seed the block the way a real create writes it,
+// optionally with the create receipt that create wrote: that receipt is the
+// evidence the boundary report reads for `--user-input create` (Issue #1752).
+function seededMirrorBlock(createReceipt?: MirrorReceiptStatus): string {
+  const receipts: Record<string, MirrorOperationReceipt> = {};
+  if (createReceipt !== undefined) {
+    const event = mirrorEventIdentity(
+      DEFAULT_INTENT_UUID,
+      { kind: "phase-verified", phase: "inception", instance: "t265-seed" },
+      "create",
+    );
+    const key = mirrorEventKey(event);
+    receipts[key] = {
+      key,
+      event,
+      operationId: "t265-create-receipt",
+      status: createReceipt,
       preparedAt: "2026-07-26T00:00:00Z",
-    },
+      attemptedAt: "2026-07-26T00:00:01Z",
+      ...(createReceipt === "succeeded"
+        ? { completedAt: "2026-07-26T00:00:02Z" }
+        : {}),
+    };
+  }
+  const block = renderMirrorStateBlock({
+    ...EMPTY_MIRROR_STATE,
     issueNumber: 123,
-    createdAt: "2026-07-26T00:00:00Z",
-  },
-});
+    provenance: {
+      schema: 1,
+      createIdentity: SEEDED_CREATE_IDENTITY,
+      issueNumber: 123,
+      createdAt: "2026-07-26T00:00:00Z",
+    },
+    receipts,
+  });
+  // An invalid block parses as "no mirror recorded", which would make a
+  // rejection test pass for the wrong reason. Fail the fixture instead.
+  const parsed = parseMirrorStateDocument(block);
+  if (parsed.kind !== "ok") {
+    throw new Error(`seeded mirror block is invalid: ${JSON.stringify(parsed)}`);
+  }
+  return block;
+}
+
+const SEEDED_MIRROR_BLOCK = seededMirrorBlock();
 
 const ROOT = join(import.meta.dir, "..", "..");
 const CORE_ENGINE = readFileSync(
@@ -148,6 +190,7 @@ function seedBoundary(
     auto?: boolean;
     mode?: "off" | "prompt" | "auto";
     mirror?: boolean;
+    mirrorCreateReceipt?: MirrorReceiptStatus;
     receipts?: string;
   } = {},
 ): void {
@@ -197,7 +240,8 @@ function seedBoundary(
     );
   }
   if (options.mirror) {
-    state = `${state.trimEnd()}\n\n${SEEDED_MIRROR_BLOCK}\n`;
+    const block = seededMirrorBlock(options.mirrorCreateReceipt);
+    state = `${state.trimEnd()}\n\n${block}\n`;
   }
   if (options.receipts) {
     state = state.replace(
@@ -788,8 +832,67 @@ describe("t265 receipt recovery and reports", () => {
     expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
   });
 
+  // Issue #1752: the answer `create` is accepted on the evidence that a create
+  // ran — a succeeded create receipt — not on the absence of an Issue. Doing a
+  // manual create as the ask instructs records the Issue, so re-reading the
+  // Issue at report time made a successful create reject its own report.
+  test("ask report accepts create backed by a succeeded create receipt", () => {
+    seedBoundary("inception", {
+      auto: false,
+      mirror: true,
+      mirrorCreateReceipt: "succeeded",
+    });
+    const directive = JSON.parse(
+      captureStdout(() => {
+        handleReport(
+          [
+            "--mirror-boundary",
+            "inception",
+            "--result",
+            "completed",
+            "--user-input",
+            "create",
+          ],
+          project,
+        );
+      }),
+    ) as { kind: string };
+    expect(directive.kind).toBe("print");
+    expect(readFileSync(seededStateFile(project), "utf-8")).toContain(
+      '{"inception":"completed"}',
+    );
+  });
+
+  test("ask report rejects create whose receipt has not succeeded", () => {
+    seedBoundary("inception", {
+      auto: false,
+      mirror: true,
+      mirrorCreateReceipt: "attempted",
+    });
+    const before = readFileSync(seededStateFile(project), "utf-8");
+    const directive = JSON.parse(
+      captureStdout(() => {
+        handleReport(
+          [
+            "--mirror-boundary",
+            "inception",
+            "--result",
+            "completed",
+            "--user-input",
+            "create",
+          ],
+          project,
+        );
+      }),
+    ) as { kind: string };
+    expect(directive.kind).toBe("error");
+    expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
+  });
+
   test.each([
     ["phase mismatch", "ideation", "sync"],
+    // An Issue is recorded but no create receipt exists, so `create` was never
+    // offered and stays rejected (Issue #1752 keeps this half unchanged).
     ["unoffered create", "inception", "create"],
     ["free-form answer", "inception", "please sync"],
   ] as const)("ask report rejects %s", (_, phase, answer) => {

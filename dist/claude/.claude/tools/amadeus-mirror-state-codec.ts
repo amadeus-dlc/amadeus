@@ -1722,6 +1722,21 @@ export function mirrorIssueNumberFromDocument(document: string): number | null {
   return parsed.kind === "ok" ? parsed.snapshot.issueNumber : null;
 }
 
+// The "did a create actually run?" derivation from a state document: a create
+// receipt at `succeeded`, in the receipt vocabulary classifyReceipt reads. It
+// is the evidence the boundary report accepts for `--user-input create`, so a
+// manual create that recorded its Issue no longer rejects its own report
+// (Issue #1752). The boundary instance is deliberately not matched: the answer
+// reports that a create ran, not which ask offered it.
+export function succeededMirrorCreateExists(document: string): boolean {
+  const parsed = parseMirrorStateDocument(document);
+  if (parsed.kind !== "ok") return false;
+  return Object.values(parsed.snapshot.receipts).some(
+    (receipt) =>
+      receipt.event.operation === "create" && receipt.status === "succeeded",
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Canonical rendering (ordered objects -> whitespace-free JSON).
 // ---------------------------------------------------------------------------
