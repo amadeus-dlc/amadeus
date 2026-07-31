@@ -25,8 +25,8 @@ import {
   seededStateFile,
   seedStateFile,
   parseAuditRecords,
-  resetOtelProcessState,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 // Concatenate every audit shard under the seeded record's audit/ dir — readers
 // glob audit/*.jsonl and merge, so a single read reflects the tool's own appends.
@@ -67,7 +67,7 @@ describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () =>
 
   beforeEach(() => {
     proj = createTestProject();
-    resetOtelProcessState();
+    resetOtelPerProject();
     // scope=feature, Current Stage=feasibility (ideation). Ideation has [x]
     // stages (intent-capture, market-research); inception has none.
     seedStateFile(proj, "state-mid-ideation.md");
@@ -125,7 +125,7 @@ describe("t-jump-phase-events-seam: backward jump emits no phase events (#842 FR
 
   beforeEach(() => {
     proj = createTestProject();
-    resetOtelProcessState();
+    resetOtelPerProject();
     // scope=feature, Current Stage=functional-design (construction); ideation
     // and inception are already Verified.
     seedStateFile(proj, "state-construction-bolt1.md");

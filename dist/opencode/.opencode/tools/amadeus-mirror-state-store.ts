@@ -37,7 +37,10 @@ import {
   splitAuditRecords,
   releaseAuditLock,
 } from "./amadeus-lib.ts";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { getEventDefByAuditEvent } from "../otel/event-registry.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
 import type {
   MirrorAuditContext,
   MirrorAuditOutbox,
@@ -399,12 +402,21 @@ function idempotentAppend(
     return { kind: "already-present" };
   }
   try {
-    const result = appendAuditEntryUnlocked(
-      "ARTIFACT_UPDATED",
+    // emitEvent, not the migration Adapter: this write NAMES its ledger, and
+    // the Adapter fails closed on per-call targeting by design (E-U7CG-Q3A)
+    // because it can only route to the registered provider's target. The target
+    // here drives both the shard and the row's own intentId (E-U8PRE O-T1), so
+    // the row cannot end up filed under one intent while claiming another.
+    //
+    // The enclosing section holds the REENTRANT lock for this same identity
+    // (see createMirrorStateStorePorts below), which is what lets the emit's
+    // own acquire pass through rather than collide.
+    ensureOtelBootstrap(config.projectDir);
+    const def = getEventDefByAuditEvent("ARTIFACT_UPDATED");
+    const result = emitEvent(
+      def.name as RegisteredEventName,
       { ...outbox.fields },
-      config.projectDir,
-      config.intent,
-      config.space,
+      { intent: config.intent, space: config.space },
     );
     if (!result.appended) {
       // The intent registry has sealed the ledger (post-complete). The business

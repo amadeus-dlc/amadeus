@@ -282,7 +282,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "session",
     requiredAttributes: [],
-    optionalAttributes: [],
+    optionalAttributes: ["Presence Reservation Id"],
     schemaVersion: 1,
   },
   // --- Initialization Events (3) ---

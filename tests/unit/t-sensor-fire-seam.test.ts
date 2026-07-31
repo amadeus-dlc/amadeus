@@ -39,9 +39,7 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
-import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
-import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
-import { resetTracerProviderForTests } from "../../dist/claude/.claude/otel/tracer-provider.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   clearIntentContextForTests,
   currentIntentContext,
@@ -213,9 +211,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     // this reset a case inherits the registration a previous case made for its
     // own (since-deleted) temp project, and the emit resolves a shard under a
     // workspace that no longer exists.
-    resetLoggerProviderForTests();
-    resetTracerProviderForTests();
-    resetOtelBootstrapForTests();
+    resetOtelPerProject();
     seedStateFile(proj, "state-construction-bolt1.md");
     scriptDir = mkdtempSync(join(tmpdir(), "amadeus-fire-seam-scripts-"));
     manifestDir = mkdtempSync(join(tmpdir(), "amadeus-fire-seam-manifests-"));
@@ -240,9 +236,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
   });
 
   afterEach(() => {
-    resetLoggerProviderForTests();
-    resetTracerProviderForTests();
-    resetOtelBootstrapForTests();
+    resetOtelPerProject();
     for (const [k, v] of Object.entries(prevEnv)) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;

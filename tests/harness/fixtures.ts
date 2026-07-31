@@ -122,29 +122,6 @@ export function createTestProject(): string {
   return proj;
 }
 
-/**
- * Drop the per-process OTel registrations and the bootstrap's own record.
- *
- * The bootstrap is one-workspace-per-PROCESS: a second ensureOtelBootstrap for
- * a different project dir is refused, not adopted. A suite whose subject emits
- * on the canonical path therefore has to re-arm that invariant between cases,
- * or a case inherits the registration its predecessor made for a since-deleted
- * temp project and every emit fails with "already bootstrapped for project dir".
- *
- * Deliberately NOT called from createTestProject: minting a second workspace in
- * one process is exactly what t376's invariant-violation cases assert about, so
- * resetting there would erase the condition under test. Suites opt in from their
- * own beforeEach.
- *
- * Loaded lazily rather than imported at module scope so that importing these
- * fixtures does not drag the OTel vendor chain into every suite that uses them.
- */
-export function resetOtelProcessState(): void {
-  const otel = join(AMADEUS_SRC, "otel");
-  (require(join(otel, "logger-provider.ts")) as { resetLoggerProviderForTests(): void }).resetLoggerProviderForTests();
-  (require(join(otel, "tracer-provider.ts")) as { resetTracerProviderForTests(): void }).resetTracerProviderForTests();
-  (require(join(otel, "bootstrap.ts")) as { resetOtelBootstrapForTests(): void }).resetOtelBootstrapForTests();
-}
 
 
 /**
