@@ -195,6 +195,21 @@ describe("t378 directive contract: advisories field", () => {
     expect(result.valid === false && result.errors.join("; ")).toContain("advisories[0].code");
   });
 
+  test("each of plugin/message/stage must be a string, and every offender is named", () => {
+    const result = validateDirective(
+      runStageFixture({
+        advisories: [{ plugin: 1, code: "changed", message: null, stage: [] }],
+      }),
+    );
+    expect(result.valid).toBe(false);
+    const errors = result.valid === false ? result.errors.join("; ") : "";
+    // All three are reported in one pass — a validator that stopped at the
+    // first offender would hide the rest behind a fix-and-rerun loop.
+    expect(errors).toContain("advisories[0].plugin must be string, got number");
+    expect(errors).toContain("advisories[0].message must be string, got null");
+    expect(errors).toContain("advisories[0].stage must be string, got array");
+  });
+
   test("a non-object entry is rejected", () => {
     const result = validateDirective(runStageFixture({ advisories: ["nope"] }));
     expect(result.valid).toBe(false);

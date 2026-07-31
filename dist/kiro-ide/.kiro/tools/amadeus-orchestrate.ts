@@ -1386,16 +1386,17 @@ function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
 // per-session leaf is what makes the latch RUN-scoped rather than permanent —
 // the placement's lifecycle IS the run boundary (business-logic-model L4). The
 // whole tree is machine-local and gitignored (`.amadeus-*` under the record), so
-// the latch never reaches a commit (invariant I4). Returns null when no record
-// resolves, which disables the latch (fail-open — BR-U5-3: a missed nudge is
-// worse than a repeated one).
-function advisoryLatchDirForRun(projectDir: string): string | null {
-  try {
-    const session = readCurrentSessionId(projectDir) ?? "no-session";
-    return join(advisoryLatchDir(projectDir), session.replace(/[^A-Za-z0-9._-]+/g, "-"));
-  } catch {
-    return null;
-  }
+// the latch never reaches a commit (invariant I4).
+//
+// Total by construction, so it carries no guard of its own: readCurrentSessionId
+// already absorbs its own read failures (returning null, which the "no-session"
+// leaf covers) and advisoryLatchDir is a path join over docsRoot, called
+// unguarded by every sibling path helper. The fail-open guarantee of BR-U5-3
+// lives where the actual I/O is — unlatchedAdvisories, whose read and write are
+// each individually fail-open.
+function advisoryLatchDirForRun(projectDir: string): string {
+  const session = readCurrentSessionId(projectDir) ?? "no-session";
+  return join(advisoryLatchDir(projectDir), session.replace(/[^A-Za-z0-9._-]+/g, "-"));
 }
 
 // FR-7(a) — a compose-installed plugin stage is reachable via `--stage <slug>`
