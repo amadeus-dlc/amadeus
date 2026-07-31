@@ -132,7 +132,7 @@ Claude Code はコンテキストウィンドウが一杯になると、それ�
 状態ファイルのないプロジェクトでは、`--stage` または `--phase` を `--scope` と組み合わせられます。
 
 ```
-/amadeus --stage code-generation --scope bugfix
+/amadeus --stage code-generation --scope fix
 ```
 
 これは指定したスコープで新しいワークフローを作成し、ターゲットステージへ直接ジャンプします。

@@ -24,7 +24,7 @@ Ideation フェーズは AI-DLC ライフサイクルにおける5フェーズ�
 | feature          | 1.1-1.7 すべて                            |
 | mvp              | 1.1, 1.3 (light), 1.4, 1.6                  |
 | poc              | 1.1 (最小限)                               |
-| bugfix           | なし(Ideation は完全にスキップ)          |
+| fix           | なし(Ideation は完全にスキップ)          |
 | chore            | なし(Ideation は完全にスキップ)          |
 | refactor         | なし(Ideation は完全にスキップ)          |
 | infra            | なし(Ideation は完全にスキップ)          |
@@ -247,7 +247,7 @@ Intent Capture はすべての AI-DLC ワークフローのエントリポイン
 
 ### 備考
 
-- スキップ条件: ソロ開発者プロジェクト、小規模チーム、poc、bugfix、refactor スコープ。
+- スキップ条件: ソロ開発者プロジェクト、小規模チーム、poc、fix、refactor スコープ。
 - ステージ2.8 Delivery Planning に供給される。
 
 ---

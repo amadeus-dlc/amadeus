@@ -125,7 +125,7 @@ No rule is installed yet — this is just the agent's diary.
 
 **4. The current workflow continues unchanged.** The stage approves and the workflow advances to `user-stories`. The new lines are on disk but don't enter this workflow's compiled view — Sam already corrected the agent in-stage for this run.
 
-**5. The next workflow picks them up.** Later that day Sam runs `/amadeus bugfix`. The compile at workflow start walks the space memory layer, picks up `memory/project.md`, and includes it in every stage's context. From stage one of the bugfix workflow, the agent knows "transaction" means a payment and the customer entity is the "ANZ customer."
+**5. The next workflow picks them up.** Later that day Sam runs `/amadeus fix`. The compile at workflow start walks the space memory layer, picks up `memory/project.md`, and includes it in every stage's context. From stage one of the fix workflow, the agent knows "transaction" means a payment and the customer entity is the "ANZ customer."
 
 The cost was paid once — one gate confirmation, one file write — and it pays back on every future workflow for the price of one more file in the directory walk.
 

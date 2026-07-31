@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c1 のみ採用 — degrade-scope-unit-dir-layout cid への追補として project 層へ persist(暫定手順の失効を明文化)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1 のみ採用 — degrade-scope-unit-dir-layout cid への追補として project 層へ persist(暫定手順の失効を明文化)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件採用",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "c1〜c3 全採用",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-30T15:02:50Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRF-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) git grep origin/main で packages/framework/core/tools/amadeus-orchestrate.ts:2960 unitDirsUnderConstruction 定義と :3116 の degrade 経路呼び出しを確認。:3105-3125 の実装は units.length===0 のとき unit ディレクトリを列挙し、ちょうど1件のときだけ emitRunStageForSlug へ実 unit 名を渡し、0件/複数件は degradeUnitResolutionError で fail-closed。つまり engine 側で {unit-name} が解決済みとなり、E-TPRCGS13 追補が定める conductor の手動解決は不要化する — c1 の主張は実装で裏取りできた。(2) gh pr view 1760 = MERGED (mergedAt 2026-07-30T14:59:25Z)、gh issue view 1711 = CLOSED (closedAt 2026-07-30T14:59:26Z)。(3) 既存 cid 原文を project.md:163 で確認し、追補先が正しいことを照合。(4) c2/c3 は既存規範の実践であり新規知識を含まない — bt-proportional-selection は project.md に、H2 floor 系は team.md/project.md に既存(grep で各1件ヒット)。既決ノルムの再記述は蒸留対象を増やすだけなので不採用が妥当。よって c1 のみ採用を支持する。",
+      "submittedAt": "2026-07-30T15:02:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRF-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 の実在根拠を独立実測して全数確認した: origin/main:packages/framework/core/tools/amadeus-orchestrate.ts:2960 に unitDirsUnderConstruction が実在し、:3116 で degrade 経路(units.length === 0)から呼ばれ、解決が一意でないときは degradeUnitResolutionError で fail-closed に refuse、一意なら emitRunStageForSlug へ実 unit 名を渡して REAL パスで emit する。gh 実測で PR #1760 は MERGED(2026-07-30T14:59:25Z)、Issue #1711 は CLOSED。配布面も 13 ファイル(core 正本 + 6 self-install + 6 dist)全てに着地しており、conductor が実際に実行する .claude/tools/ 経由でも修正が効く。よって E-TPRCGS13 追補の conductor 手動解決は失効しており、暫定手順を残すと後任が不要な手作業を再演する。c2(比例選定 N/A の再判定条件明記)は既存 cid:build-and-test:bt-proportional-selection が『生成しなかった検査は根拠付きで成果物に明記』を既に規定しており、c3(H2 floor 初回 FAILED→是正)も required-sections 系の既存様式規範の実践にすぎない。既決ノルムの実践を新規 cid として重複 persist するのは prose の肥大であり、weekly-distillation-round が縮約対象とするクラスに自ら足す行為になる。したがって c1 のみを既存 cid への追補として persist するのが正しい。",
+      "submittedAt": "2026-07-30T15:02:41Z"
+    }
+  ],
+  "resolutions": []
+}

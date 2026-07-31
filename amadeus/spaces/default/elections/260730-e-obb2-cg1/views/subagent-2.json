@@ -1,0 +1,16 @@
+{
+  "electionId": "E-OBB2-CG1",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B: 単一 dir 常時解決(現実装維持、CodeRabbit 指摘は意図的相違として却下返信)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A: 一様な uncovered-unique(単一 covered も fail-closed、FR-1769c は uncovered 単一に限定読み替え)"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 > 言語: [English](16-worked-examples.md) | **日本語**
 
-AI-DLC の動作を示す 2 つの完全なウォークスルー: bugfix と feature。各々は、
+AI-DLC の動作を示す 2 つの完全なウォークスルー: fix と feature。各々は、
 コマンドの起動、ステージの進行、承認ゲート、成果物の出力を実演します。
 
 > **ハーネスに関する注記。** これらのトランスクリプトは **Claude Code** 上で
@@ -16,13 +16,13 @@ AI-DLC の動作を示す 2 つの完全なウォークスルー: bugfix と fea
 
 ## Bugfix ウォークスルー
 
-この例はユーザープロファイル API の null ポインタ例外を修正します。**bugfix**
+この例はユーザープロファイル API の null ポインタ例外を修正します。**fix**
 スコープは Minimal 深さで 7 ステージ(Initialization 3 + ドメイン 4)を実行します。
 
 ### 起動
 
 ```
-/amadeus bugfix
+/amadeus fix
 ```
 
 コンダクターは何を修正したいかを尋ねます:
@@ -57,7 +57,7 @@ AI-DLC の動作を示す 2 つの完全なウォークスルー: bugfix と fea
   エッセンスです。正典的な id は `intents.json` レジストリ行に持たれる UUIDv7 です
 - **0.2 Workspace Detection** — ルールベースのスキャンで Java 17、Spring Boot 3.2、
   Maven、brownfield プロジェクトを識別します
-- **0.3 State Init** — `amadeus-state.md` をスコープ `bugfix`、深さ `Minimal`、
+- **0.3 State Init** — `amadeus-state.md` をスコープ `fix`、深さ `Minimal`、
   実行対象のドメインステージのマーク付きで初期化します
 
 > 進捗: 全体 3/7 | INITIALIZATION ステージ 3/3 完了。次: Reverse Engineering
@@ -170,7 +170,7 @@ amadeus/spaces/default/intents/260624-null-display-fix/
     reverse-engineering/       # 9 個の RE 成果物
     requirements-analysis/     # requirements.md + 質問
   construction/
-    bugfix-null-display-name/
+    fix-null-display-name/
       code-generation/         # プラン + サマリー
     build-and-test/            # 手順 + テスト結果
 ```
@@ -395,7 +395,7 @@ lint、build、test、セキュリティスキャンのステージを持つ CI 
 
 > 進捗: 全体 32/32 | OPERATION 完了。feature ワークフロー完了。
 
-### bugfix との主な違い
+### fix との主な違い
 
 | 側面 | Bugfix | Feature |
 |--------|--------|---------|
@@ -403,7 +403,7 @@ lint、build、test、セキュリティスキャンのステージを持つ CI 
 | 深さ | Minimal | Standard |
 | フェーズ | Initialization + Inception + Construction | 全 5 |
 | 作業単位 | 1 | 3 |
-| Bolt ごとの Construction | いいえ(bugfix は単一 Bolt) | はい — 2 Bolt(walking skeleton + 1 並列バッチ) |
+| Bolt ごとの Construction | いいえ(fix は単一 Bolt) | はい — 2 Bolt(walking skeleton + 1 並列バッチ) |
 | 条件付きステージ | ほとんどスキップ | ほとんど実行 |
 | 承認ゲート | 4 | walking skeleton + ラダープロンプト。残りの Bolt は autonomy mode 次第 |
 

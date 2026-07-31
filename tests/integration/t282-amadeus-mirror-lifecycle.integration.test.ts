@@ -30,6 +30,7 @@ import {
   createMirrorStateStorePorts,
   type MirrorStateStorePorts,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
+import { completionMirrorDisposition } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
 import type {
   GatewayOutcome,
   MirrorGitHubGateway,
@@ -44,6 +45,13 @@ afterEach(() => {
 });
 
 const NOW = "2026-07-25T00:00:00Z";
+const COMPLETION_STATE = `# State
+
+## Runtime State
+
+## Current Status
+- **Lifecycle Phase**: CONSTRUCTION
+`;
 const REPO: RepositoryIdentity = {
   owner: "acme",
   name: "app",
@@ -199,6 +207,25 @@ function fixture(): {
   };
 }
 
+function completionProject(
+  config: unknown = { "auto-mirror": "prompt" },
+): string {
+  const root = mkdtempSync(join(tmpdir(), "t282-completion-"));
+  roots.push(root);
+  const amadeus = join(root, "amadeus");
+  const record = join(
+    amadeus,
+    "spaces",
+    "default",
+    "intents",
+    "completion-00000001",
+  );
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), COMPLETION_STATE);
+  writeFileSync(join(amadeus, "config.json"), JSON.stringify(config));
+  return root;
+}
+
 function adapterFixture(
   space = "platform",
   intentDir = "260725-demo-a1b2c3d4",
@@ -212,6 +239,8 @@ function adapterFixture(
   const statePath = join(recordPath, "amadeus-state.md");
   const workflowStatus =
     registryStatus === "complete" ? "Completed" : "Running";
+  const currentStage =
+    registryStatus === "complete" ? "none" : "scope-definition";
   writeFileSync(
     statePath,
     [
@@ -219,7 +248,7 @@ function adapterFixture(
       "",
       "- **Project**: Adapter lifecycle",
       "- **Lifecycle Phase**: INCEPTION",
-      "- **Current Stage**: scope-definition",
+      `- **Current Stage**: ${currentStage}`,
       `- **Status**: ${workflowStatus}`,
       `- **Last Updated**: ${NOW}`,
       "",
@@ -298,7 +327,7 @@ function boundaryInput(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [], autoSoloElection: false },
+        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
         sources: [],
       }),
     },
@@ -433,6 +462,50 @@ async function seedManualSyncReconciliationPrompt(
   return reconcileManualPrompt(fx, runtime, "sync");
 }
 
+describe("t282 workflow completion disposition", () => {
+  test("reports an unresolved active Intent before reading mirror configuration", () => {
+    const root = mkdtempSync(join(tmpdir(), "t282-completion-empty-"));
+    roots.push(root);
+    expect(completionMirrorDisposition(root)).toEqual({
+      kind: "error",
+      message: "Workflow completion cannot resolve the active Intent.",
+    });
+  });
+
+  test("reports invalid mirror value and read-failure configuration branches", () => {
+    const invalidValue = completionProject({ "auto-mirror": true });
+    expect(completionMirrorDisposition(invalidValue)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining(
+        "expected off | prompt | auto, got boolean",
+      ),
+    });
+
+    const readFailure = completionProject();
+    rmSync(join(readFailure, "amadeus", "config.json"));
+    mkdirSync(join(readFailure, "amadeus", "config.json"));
+    expect(completionMirrorDisposition(readFailure)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("global (amadeus/config.json)"),
+    });
+  });
+
+  test.each([
+    ["off", { kind: "immediate" }],
+    ["prompt", { kind: "defer" }],
+    ["auto", { kind: "defer" }],
+  ] as const)(
+    "maps auto-mirror=%s to the completion disposition",
+    (mode, expected) => {
+      expect(
+        completionMirrorDisposition(
+          completionProject({ "auto-mirror": mode }),
+        ),
+      ).toEqual(expected);
+    },
+  );
+});
+
 describe("t282 walking-skeleton reconciliation", () => {
   test("remote create success plus one local completion failure converges to the same Issue", async () => {
     const fx = fixture();
@@ -552,6 +625,106 @@ describe("t282 boundary isolation and completion chain", () => {
 });
 
 describe("t282 awaitable production lifecycle adapter", () => {
+  test.each([
+    ["missing workflow status", "- **Status**: Running\n", "- **Status**: Running\n"],
+    ["invalid workflow status", "- **Status**: Running\n", "- **Status**: Unknown\n"],
+    [
+      "missing current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: \n",
+    ],
+    [
+      "invalid current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: not a stage\n",
+    ],
+    [
+      "missing lifecycle phase",
+      "- **Lifecycle Phase**: INCEPTION\n",
+      "- **Lifecycle Phase**: \n",
+    ],
+    [
+      "invalid lifecycle phase",
+      "- **Lifecycle Phase**: INCEPTION\n",
+      "- **Lifecycle Phase**: UNKNOWN\n",
+    ],
+    [
+      "running workflow without a current stage",
+      "- **Current Stage**: scope-definition\n",
+      "- **Current Stage**: none\n",
+    ],
+    [
+      "completed workflow with a current stage",
+      "- **Status**: Running\n",
+      "- **Status**: Completed\n",
+    ],
+  ])("fails closed on %s in the lifecycle snapshot", async (_name, from, to) => {
+    const fx = adapterFixture();
+    const original = readFileSync(fx.statePath, "utf-8");
+    writeFileSync(
+      fx.statePath,
+      from === to
+        ? original.replace(from, "")
+        : original.replace(from, to),
+    );
+    const result = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: { kind: "phase-verified", phase: "inception", instance: "invalid-snapshot" },
+      },
+      {
+        gateway: new LifecycleGateway(),
+        ports: fx.ports,
+        now: () => NOW,
+      },
+    );
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("lifecycle snapshot"),
+    });
+  });
+
+  test("fails closed when a pending completion stage differs from Current Stage", async () => {
+    const fx = adapterFixture();
+    const original = readFileSync(fx.statePath, "utf-8");
+    const mismatched = original.replace(
+      `- **Last Updated**: ${NOW}`,
+      `- **Last Updated**: ${NOW}\n` +
+        "- **Workflow Completion Instance**: completion-stage-mismatch\n" +
+        "- **Workflow Completion Stage**: build-and-test\n" +
+        "- **Workflow Completion Status**: pending",
+    );
+    writeFileSync(fx.statePath, mismatched);
+    const gateway = new LifecycleGateway();
+
+    const result = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: {
+          kind: "workflow-completed",
+          instance: "completion-stage-mismatch",
+        },
+      },
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => NOW,
+      },
+    );
+
+    expect(result).toEqual({
+      kind: "error",
+      message:
+        "lifecycle snapshot pending completion stage build-and-test does not match Current Stage scope-definition",
+    });
+    expect(gateway.history).toEqual([]);
+    expect(readFileSync(fx.statePath, "utf-8")).toBe(mismatched);
+  });
+
   test("fails closed when lifecycle target metadata is incomplete", async () => {
     const unresolvedRoot = mkdtempSync(join(tmpdir(), "mirror-unresolved-"));
     roots.push(unresolvedRoot);

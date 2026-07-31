@@ -99,7 +99,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Scope", "Details"],
-    optionalAttributes: ["Reason"],
+    optionalAttributes: ["Reason", "Completion Instance"],
     schemaVersion: 1,
   },
   {
@@ -155,7 +155,7 @@ export const REGISTERED_EVENTS = [
     category: "phase-lifecycle",
     requiredAttributes: ["From phase", "To phase", "Stages completed"],
     // A forward jump names the crossing it recorded (tools/amadeus-jump.ts).
-    optionalAttributes: ["Details"],
+    optionalAttributes: ["Details", "Completion Instance"],
     schemaVersion: 1,
   },
   {
@@ -164,7 +164,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "phase-lifecycle",
     requiredAttributes: ["Phase boundary"],
-    optionalAttributes: ["Details", "Pass/fail", "Issues"],
+    optionalAttributes: ["Details", "Pass/fail", "Issues", "Completion Instance"],
     schemaVersion: 1,
   },
   {
@@ -202,7 +202,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Revision count"],
-    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id", "Presence Reservation Id"],
     schemaVersion: 1,
   },
   {
@@ -211,7 +211,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "stage-lifecycle",
     requiredAttributes: ["Stage", "Details"],
-    optionalAttributes: ["Artifacts", "Transaction Id", "Workflow"],
+    optionalAttributes: ["Artifacts", "Transaction Id", "Workflow", "Completion Instance", "Presence Reservation Id"],
     schemaVersion: 1,
   },
   {
@@ -377,7 +377,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage"],
-    optionalAttributes: ["User Input", "Grant Id", "Swarm batch", "Transaction Id"],
+    optionalAttributes: ["User Input", "Grant Id", "Swarm batch", "Transaction Id", "Presence Reservation Id"],
     schemaVersion: 1,
   },
   {
@@ -386,7 +386,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage"],
-    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id", "Presence Reservation Id"],
     schemaVersion: 1,
   },
   {

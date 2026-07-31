@@ -85,7 +85,7 @@
 
 import { afterAll, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
@@ -95,6 +95,7 @@ import {
   FIXTURES_DIR,
   removeWorkspaceRecord,
   seededAuditDir,
+  seededRecordDir,
   seededStateFile,
   seedStateFile,
   resetAidlcEnv,
@@ -142,11 +143,22 @@ function run(tool: string, args: string[]): CliResult {
   };
 }
 
-/** Fresh temp project seeded from a FIXTURES_DIR state fixture. */
+/**
+ * Fresh temp project seeded from a FIXTURES_DIR state fixture.
+ *
+ * The fixtures carry no compiled Bolt DAG, so a Construction stage reaches the
+ * engine's no-DAG path, where the unit is resolved from the directory under
+ * construction/ (issue #1711). One is seeded here so the walks below keep
+ * landing the run-stage whose ROUTING they assert; the fail-closed refusal for
+ * an unresolvable unit is owned by t367.
+ */
 function projWithState(fixtureName: string): string {
   const p = createTestProject();
   tempDirs.push(p);
   seedStateFile(p, join(FIXTURES_DIR, fixtureName));
+  mkdirSync(join(seededRecordDir(p), "construction", "solo-unit"), {
+    recursive: true,
+  });
   return p;
 }
 

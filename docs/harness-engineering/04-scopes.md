@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](04-scopes.ja.md)
 
-A scope is the dial that decides *which* of the framework's 32 stages run for a given kind of work, and which sit out. A bugfix doesn't need market research or a deployment pipeline; a regulated enterprise feature needs all of it. Rather than asking the user to hand-pick stages every time, AI-DLC ships ten named scopes — each one a curated EXECUTE/SKIP verdict over the full stage set, paired with a default depth and test strategy. Pick the scope and the rest cascades.
+A scope is the dial that decides *which* of the framework's 32 stages run for a given kind of work, and which sit out. A fix doesn't need market research or a deployment pipeline; a regulated enterprise feature needs all of it. Rather than asking the user to hand-pick stages every time, AI-DLC ships ten named scopes — each one a curated EXECUTE/SKIP verdict over the full stage set, paired with a default depth and test strategy. Pick the scope and the rest cascades.
 
 For a harness engineer, a scope is pure data, authored the same way every other primitive is — as a file. It is two halves: one `packages/framework/core/scopes/amadeus-<name>.md` file (its identity — name, depth, keywords, description) plus a per-stage membership tag (each stage's frontmatter `scopes:` list naming the scopes it runs under). Adding or tuning a scope requires no TypeScript. This chapter walks the workflow: what a scope is made of, how to add a team scope, how to tune an existing one, and what the tooling checks for you versus what it leaves to you.
 
@@ -39,6 +39,11 @@ The frontmatter fields divide into one required field and three optional knobs:
 | `keywords` | No | Natural-language triggers for `/amadeus <freeform text>` auto-detection. Empty list opts out. |
 | `description` | No | The one-liner rendered in `/amadeus --help`. (The compiled scope-table in SKILL.md shows only Scope / Depth / TestStrategy / EXECUTE / Total, leaving the description out.) |
 
+Project-local scope names should describe their role without repeating the
+framework prefix. Amadeus self-development therefore uses `self-feature`,
+`self-fix`, `self-refactor`, and `self-document`, producing filenames such as
+`amadeus-self-fix.md`; do not use the doubled `amadeus-amadeus-*.md` form.
+
 **2. The membership tag — each stage's `scopes:` frontmatter.** A stage names the scopes it runs under in its own frontmatter, in `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`:
 
 ```yaml
@@ -68,11 +73,11 @@ That separation is the same data-versus-code line the rest of this guide rests o
 
 ## Adding a team scope
 
-Suppose your team wants a `hotfix` scope — leaner than `bugfix`, for the urgent production patch where you want a regression test and a deploy, nothing else. The change is a new scope file, a `scopes:` tag on each stage that should run, and a recompile. Mirror the discipline below; the verification steps and the full command lines are in [Contributing § Adding a Scope](../reference/11-contributing.md#adding-a-scope).
+Suppose your team wants a `hotfix` scope — leaner than `fix`, for the urgent production patch where you want a regression test and a deploy, nothing else. The change is a new scope file, a `scopes:` tag on each stage that should run, and a recompile. Mirror the discipline below; the verification steps and the full command lines are in [Contributing § Adding a Scope](../reference/11-contributing.md#adding-a-scope).
 
 ### Steps
 
-1. **Drop `packages/framework/core/scopes/amadeus-hotfix.md`.** Copy `amadeus-bugfix.md` (the closest existing scope) and edit the frontmatter: set `name: hotfix`, pick `depth`, add `keywords` if you want freeform auto-detection (`[hotfix, urgent]`), a `description` for the help text, and `testStrategy` only if it should diverge from `depth`. Write a short prose body explaining the intent.
+1. **Drop `packages/framework/core/scopes/amadeus-hotfix.md`.** Copy `amadeus-fix.md` (the closest existing scope) and edit the frontmatter: set `name: hotfix`, pick `depth`, add `keywords` if you want freeform auto-detection (`[hotfix, urgent]`), a `description` for the help text, and `testStrategy` only if it should diverge from `depth`. Write a short prose body explaining the intent.
 
 2. **Tag the stages that should run under `hotfix`.** In each stage you want `EXECUTE` (under `packages/framework/core/amadeus-common/stages/<phase>/`), add `hotfix` to its frontmatter `scopes:` list. A stage you don't tag is `SKIP` for the scope. The 3 initialization stages must include it (they always run).
 

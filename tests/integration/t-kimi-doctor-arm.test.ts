@@ -281,16 +281,18 @@ describe("classifyKimiCliVersionCheck (pure version-floor seam)", () => {
     expect(result.fix).not.toContain("install Kimi Code CLI");
   });
 
-  test("version below the 0.28.1 floor → fail", () => {
-    const result = classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi 0.27.9");
+  test("0.28.x predates Markdown custom-agent tool policies → fail closed", () => {
+    const result = classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi 0.28.1");
     expect(result.pass).toBe(false);
-    expect(result.label).toContain("0.28.1");
+    expect(result.label).toContain("0.29.0");
+    expect(result.label).toContain("custom-agent tool policy");
     expect(result.fix).toContain("upgrade");
+    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi 0.28.99").pass).toBe(false);
   });
 
   test("version at or above the floor → pass", () => {
-    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi version 0.28.1").pass).toBe(true);
     expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "0.29.0").pass).toBe(true);
+    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "0.29.1").pass).toBe(true);
     expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "1.0.0").pass).toBe(true);
   });
 });
@@ -341,7 +343,7 @@ describe("handleDoctor — kimi arm wiring (real shipped .kimi-code tree)", () =
     expect(result.output).toContain(`kimi managed block: present in ${join(kimiHome, "config.toml")}`);
     expect(result.output).toContain("kimi git pre-allows: no residue (advisory)");
     expect(result.output).toMatch(
-      /kimi CLI (version \d+\.\d+\.\d+ >= 0\.28\.1|not installed \(not on PATH\)|on PATH \()/,
+      /kimi CLI (version \d+\.\d+\.\d+ >= 0\.29\.0|not installed \(not on PATH\)|on PATH \()/,
     );
     expect(result.output).toContain("kimi hook probe: adapter fired (advisory)");
   });

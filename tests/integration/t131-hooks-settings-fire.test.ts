@@ -50,7 +50,7 @@
 // a fresh temp project with amadeus-docs/ + a self-contained .claude/ skeleton
 // holding the three tool files (amadeus-runtime.ts, amadeus-lib.ts, amadeus-audit.ts)
 // + data/stage-graph.json + the two driven hooks copied in, plus a minimal
-// amadeus-state.md ("- **Scope**: bugfix"). The COPY (not symlink) matters: the
+// amadeus-state.md ("- **Scope**: fix"). The COPY (not symlink) matters: the
 // runtime-compile hook spawns <proj>/.claude/tools/amadeus-runtime.ts, whose
 // amadeus-lib.ts resolves data/stage-graph.json relative to its own location —
 // the data file must sit beside the copied lib for the compile to read it.
@@ -280,6 +280,8 @@ function makeProject(withState: boolean): string {
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
     "amadeus-mirror-config.ts",
+    "amadeus-layered-config.ts",
+    "amadeus-contained-file.ts",
     "amadeus-mirror-policy.ts",
     "amadeus-mirror-project-contract.ts",
   ]) {
@@ -302,7 +304,7 @@ function makeProject(withState: boolean): string {
     // State into the record so the active-intent cursor resolves → the hooks
     // anchor under the record (docsRoot/auditFilePath/runtimeGraphPath).
     mkdirSync(seededRecordDir(proj), { recursive: true });
-    writeFileSync(seededStateFile(proj), "- **Scope**: bugfix", "utf-8");
+    writeFileSync(seededStateFile(proj), "- **Scope**: fix", "utf-8");
   }
   return proj;
 }

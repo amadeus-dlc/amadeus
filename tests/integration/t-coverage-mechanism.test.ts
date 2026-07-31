@@ -62,7 +62,7 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
       "// covers: audit:STAGE_STARTED",
       'import { driveAidlc } from "../harness/sdk-drive.ts";',
       "test('x', async () => {",
-      '  const r = await driveAidlc("/amadeus bugfix");',
+      '  const r = await driveAidlc("/amadeus fix");',
       "  expect(r).toBeDefined();",
       "});",
     ].join("\n");
@@ -72,7 +72,7 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
   test("SDK detection requires a called canonical imported binding", () => {
     const alias = [
       'import { driveAidlc as drive } from "../harness/sdk-drive.ts";',
-      'drive("/amadeus bugfix");',
+      'drive("/amadeus fix");',
     ].join("\n");
     const importOnly =
       'import { driveAidlc } from "../harness/sdk-drive.ts";';
@@ -111,7 +111,7 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
     for (const callee of calleeForms("driveAidlc")) {
       const src = [
         'import { driveAidlc } from "../harness/sdk-drive.ts";',
-        `${callee}("/amadeus bugfix");`,
+        `${callee}("/amadeus fix");`,
       ].join("\n");
       expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["sdk"]);
       expect(claudeDependenciesOf("t99.none.test.ts", src)).toEqual(["sdk"]);
@@ -123,7 +123,7 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
       {
         source: [
           'import { driveAidlc } from "../harness/sdk\\x2ddrive.ts";',
-          'driveAidlc("/amadeus bugfix");',
+          'driveAidlc("/amadeus fix");',
         ].join("\n"),
         mechanism: "sdk",
       },
@@ -147,7 +147,7 @@ describe("mechanismsOf is statically body-classified (milestone 3)", () => {
   test("classification is syntactic, not call-graph reachability analysis", () => {
     const unusedSdkCall = [
       'import { driveAidlc } from "../harness/sdk-drive.ts";',
-      "function notRun() { driveAidlc('/amadeus bugfix'); }",
+      "function notRun() { driveAidlc('/amadeus fix'); }",
     ].join("\n");
     const unusedTuiCall = [
       'import { runTuiDriver } from "../harness/tui-client.ts";',

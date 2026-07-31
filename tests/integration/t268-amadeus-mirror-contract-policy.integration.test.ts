@@ -159,13 +159,16 @@ describe("t268 dependency purity", () => {
   });
 
   test("C1 config does not import C2 policy", () => {
-    const imports = importSources("amadeus-mirror-config.ts");
+    expect(importSources("amadeus-mirror-config.ts")).toEqual([
+      "./amadeus-layered-config.ts",
+    ]);
+    const imports = importSources("amadeus-layered-config.ts");
     expect(imports).toContain("./amadeus-mirror-project-contract.ts");
     expect(imports).not.toContain("./amadeus-mirror-policy.ts");
   });
 
   test("C1 config module exposes no filesystem write API", () => {
-    const text = readFileSync(join(TOOLS, "amadeus-mirror-config.ts"), "utf-8");
+    const text = readFileSync(join(TOOLS, "amadeus-layered-config.ts"), "utf-8");
     for (const forbidden of [
       "writeFileSync",
       "appendFileSync",

@@ -33,7 +33,7 @@ Bolt 1 is solo, gated, and the user explicitly approves before remaining
 Bolts run.
 
 We **skip the skeleton ceremony** when our scope is incremental work on
-an existing codebase (`bugfix`, `refactor`, `security-patch`). The first
+an existing codebase (`fix`, `refactor`, `security-patch`). The first
 Bolt runs like any other — there's nothing to bootstrap.
 
 After Bolt 1 ships (when it runs), the orchestrator fires the **ladder
@@ -50,7 +50,7 @@ testing-strategy stage when it ships.
 Until then, our default per scope is:
 - `mvp`, `enterprise`, `feature`, `infra` → tests written alongside
   code; minimum 80% line coverage; tests run in CI before merge.
-- `bugfix`, `security-patch` → regression test for the specific
+- `fix`, `security-patch` → regression test for the specific
   bug/vulnerability; existing test suite must remain green.
 - `poc`, `refactor`, `workshop` → existing test suite remains green;
   no new test floor required.

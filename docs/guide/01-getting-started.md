@@ -183,7 +183,7 @@ Or specify a scope directly:
 
 ```
 /amadeus feature
-/amadeus bugfix Fix the login timeout issue
+/amadeus fix Fix the login timeout issue
 ```
 
 See [Your First Workflow](02-your-first-workflow.md) for a step-by-step walkthrough of what happens next.

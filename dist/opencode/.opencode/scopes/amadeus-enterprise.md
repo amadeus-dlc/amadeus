@@ -15,7 +15,7 @@ construction, and operation all run end to end, so the artifact chain
 ## Why every stage
 
 Enterprise work carries compliance, security-review, and sign-off
-obligations that the skipped-stage scopes (`mvp`, `poc`, `bugfix`) are
+obligations that the skipped-stage scopes (`mvp`, `poc`, `fix`) are
 willing to trade away for speed. Here the cost of an undocumented decision
 is higher than the cost of running the stage, so the scope keeps the whole
 spine: market-research and team-formation up front, the full design pass,

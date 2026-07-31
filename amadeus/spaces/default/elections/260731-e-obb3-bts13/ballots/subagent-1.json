@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB3-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memory.md の2候補と build-test-results.md を実読し、引用4 cid の実在を grep で確認(project.md:279/311/312、team.md:155)。c1(B&T 実行形踏襲+t258 flake の assertion 実文帰属)は bt-20260730-1/bt-20260730-2/local-ci-red-assertion-verbatim の、c2(比例選定不生成+type-check センサー md 非適用の代替実測)は bt-proportional-selection と manual-sensor-fire 系の適用実例であり、新規機序・新規規範は含まれない — 0件で可。",
+  "submittedAt": "2026-07-31T04:34:46Z"
+}

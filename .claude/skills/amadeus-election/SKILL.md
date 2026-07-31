@@ -15,7 +15,9 @@ compatibility: Requires bun; the CLI is bundled at .claude/tools/amadeus-electio
 
 ## 起動
 
-選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する:
+選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する。
+`choices[]` は `internalNo`・`label` に加えて任意の `description`(その選択肢の本文)を持てる。
+`question` と `description` は投票者ごとの blind view にそのまま搬送されるため、選択肢に説明を要する選挙では `description` を付ける:
 
 ```
 bun .claude/tools/amadeus-election.ts open --file <definition.json>

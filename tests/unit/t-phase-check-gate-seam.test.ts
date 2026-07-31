@@ -160,7 +160,7 @@ describe("t-phase-check-gate-seam: advance boundary gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
     resetOtelPerProject();
-    // scope=bugfix, Current=requirements-analysis (inception); advance derives
+    // scope=fix, Current=requirements-analysis (inception); advance derives
     // code-generation (construction) → an inception→construction boundary.
     seedStateFile(proj, "state-mid-inception.md");
     saveEnv();

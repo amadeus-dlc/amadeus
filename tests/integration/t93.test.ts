@@ -16,7 +16,7 @@
 // (dist/claude/.claude/sensors/), resolved by loadSensors() as
 // __FILE_DIR/../sensors (amadeus-graph.ts:168) — independent of cwd, so no temp
 // project, no fixtures, no audit.md. This port therefore writes NOTHING to disk
-// and seeds nothing; it doubles as a forward-check that the 4 shipped manifests
+// and seeds nothing; it doubles as a forward-check that the 7 shipped manifests
 // stay parseable, exactly as the .sh comment (t93:17-19) states.
 //
 // COVERS ID: this .cli file credits the `amadeus-sensor list` subcommand unit
@@ -26,8 +26,8 @@
 //
 // PARITY NOTES (every .sh `ok`/`assert_eq` line maps to an expect() below;
 // several are STRONGER than the original grep/awk):
-//   - .sh Case 1  list emits the framework sensors (now 5 with answer-evidence) -> Test 1:
-//       rows.length === 4 (same observable: count of tab-bearing rows).
+//   - .sh Case 1  list emits the framework sensors (now 7) -> Test 1:
+//       rows.length === 7 (same observable: count of tab-bearing rows).
 //   - .sh Case 2  every row column 2 == "deterministic" (awk != count) -> Test 2:
 //       every row's cols[1] === "deterministic" (same observable, per-row).
 //   - .sh Case 3  list is alpha-sorted by id (IDS == sort IDS)        -> Test 3:
@@ -36,7 +36,7 @@
 //       ids === ["linter","required-sections","type-check","upstream-coverage"]
 //       (same sentinel set, exact).
 //   - .sh Case 5  describe required-sections: id, kind=deterministic,
-//       command, default_severity=advisory, matches: **/{amadeus-docs,intents}/**  -> Test 5:
+//       command, default_severity=advisory, matches: **/{amadeus-docs,intents,codekb}/**  -> Test 5:
 //       all five field lines asserted (STRONGER: the .sh grep'd 5 anchored
 //       lines; here each is an exact line-membership check plus we also assert
 //       the description line, which the .sh's handleDescribe contract emits).
@@ -103,6 +103,7 @@ const EXPECTED_IDS = [
   "linter",
   "model-completeness",
   "required-sections",
+  "self-scope-consistency",
   "type-check",
   "upstream-coverage",
 ];
@@ -112,10 +113,10 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 7 framework sensors", () => {
+  test("1: list emits exactly 8 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(7);
+    expect(listRows(r.out)).toHaveLength(8);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
@@ -151,7 +152,7 @@ describe("t93 amadeus-sensor describe (migrated from t93-sensor-list-describe.sh
     return out.split("\n").includes(line);
   }
 
-  test("5: describe required-sections lists canonical fields incl. matches: **/{amadeus-docs,intents}/**", () => {
+  test("5: describe required-sections lists canonical fields incl. matches: **/{amadeus-docs,intents,codekb}/**", () => {
     const r = sensor("describe", "required-sections");
     expect(r.status).toBe(0);
     expect(hasLine(r.out, "id: required-sections")).toBe(true);
@@ -163,10 +164,10 @@ describe("t93 amadeus-sensor describe (migrated from t93-sensor-list-describe.sh
       ),
     ).toBe(true);
     expect(hasLine(r.out, "default_severity: advisory")).toBe(true);
-    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents}/**")).toBe(true);
+    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents,codekb}/**")).toBe(true);
   });
 
-  test("6: describe upstream-coverage lists canonical fields incl. matches: **/{amadeus-docs,intents}/**", () => {
+  test("6: describe upstream-coverage lists canonical fields incl. matches: **/{amadeus-docs,intents,codekb}/**", () => {
     const r = sensor("describe", "upstream-coverage");
     expect(r.status).toBe(0);
     expect(hasLine(r.out, "id: upstream-coverage")).toBe(true);
@@ -176,7 +177,7 @@ describe("t93 amadeus-sensor describe (migrated from t93-sensor-list-describe.sh
         "command: bun .claude/tools/amadeus-sensor-upstream-coverage.ts",
       ),
     ).toBe(true);
-    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents}/**")).toBe(true);
+    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents,codekb}/**")).toBe(true);
   });
 
   test("7: describe linter includes matches: **/*.{ts,js} and canonical fields", () => {

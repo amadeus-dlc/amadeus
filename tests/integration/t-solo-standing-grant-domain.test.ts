@@ -42,12 +42,12 @@ const GRAPH: StageEntry[] = [
   stage("nfr-requirements", "3.2", "construction"),
 ];
 const ORDINARY_STAGE = "application-design";
-const STATE = "# AI-DLC State\n\n- **Scope**: amadeus-feature\n- **Skeleton Stance**: off\n";
+const STATE = "# AI-DLC State\n\n- **Scope**: self-feature\n- **Skeleton Stance**: off\n";
 const HUMAN_TS = "2026-07-25T00:00:00.000Z";
 const SHARD = "fixture-clone.jsonl";
 
 // Stage frontmatter carries the STOCK scope vocabulary only — the composed
-// scope this fixture's state file declares (amadeus-feature) is resolved from
+// scope this fixture's state file declares (self-feature) is resolved from
 // the compiled scope-grid instead, which is why the suite reads the real data
 // files below (#1497 FR-4b).
 function stage(slug: string, number: string, phase: string): StageEntry {

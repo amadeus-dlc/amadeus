@@ -410,6 +410,10 @@ describe("t115 non-gated phase-boundary advance (report -> amadeus-state advance
 describe("t115 final gated approve -> complete-workflow (report -> amadeus-state approve)", () => {
   test("16-18: final gated approve completes the workflow, in order, Status=Completed", () => {
     const p = projWithState("state-final-stage.md");
+    writeFileSync(
+      join(p, "amadeus", "config.json"),
+      '{"auto-mirror":"off"}\n',
+    );
 
     const gs = state(["gate-start", "feedback-optimization"], p);
     expect(gs.status).toBe(0);
@@ -474,6 +478,10 @@ describe("t115 advance replay guard (amadeus-state advance double-commit)", () =
 describe("t115 re-report on a completed workflow", () => {
   test("22: re-report on a completed workflow is an idempotent done, not another transition", () => {
     const p = projWithState("state-final-stage.md");
+    writeFileSync(
+      join(p, "amadeus", "config.json"),
+      '{"auto-mirror":"off"}\n',
+    );
 
     const gs = state(["gate-start", "feedback-optimization"], p);
     expect(gs.status).toBe(0);

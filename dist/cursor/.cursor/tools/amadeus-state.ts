@@ -62,8 +62,10 @@ import {
   parseRefsList,
   parseStateStageSuffixes,
   readAllAuditShards,
+  readCurrentSessionId,
   readIntentRegistry,
   readStateFile,
+  recordDirMatches,
   recoverBoltDag,
   recoverGateRevision,
   type GateRevisionRecovery,
@@ -126,6 +128,19 @@ import {
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
+import { detectHarnessType } from "./amadeus-harness.ts";
+import {
+  authorizeMainConductor,
+  callerAuthorizationError,
+} from "./amadeus-caller-authorization.ts";
+import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
+import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
+import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
+import {
+  prepareWorkflowCompletion,
+  type WorkflowCompletionPreparation,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -297,6 +312,53 @@ export function transitionMirrorBoundaryReceipt(
   );
 }
 
+// --- Initial-create receipt (Issue #1750) -----------------------------------
+//
+// The scope-independent first create settles on its OWN axis rather than inside
+// Mirror Boundary Receipts: that field's vocabulary is exactly the three phases
+// (MIRROR_BOUNDARY_PHASES), and parseMirrorBoundaryReceipts rejects any other
+// key. The two axes are read together by the engine but never share a slot, so
+// a phase receipt can never be mistaken for the initial-create receipt.
+export const MIRROR_INITIAL_CREATE_FIELD = "Mirror Initial Create Receipt";
+
+export function parseMirrorInitialCreateReceipt(
+  raw: string | null,
+): MirrorBoundaryReceiptStatus | undefined {
+  const value = raw?.trim();
+  if (value === undefined || value === "") return undefined;
+  if (value !== "pending" && value !== "completed") {
+    throw new Error(
+      `${MIRROR_INITIAL_CREATE_FIELD} must be pending or completed; received ${value}`,
+    );
+  }
+  return value;
+}
+
+export function transitionMirrorInitialCreateReceipt(
+  content: string,
+  expected: "absent" | MirrorBoundaryReceiptStatus,
+  next: MirrorBoundaryReceiptStatus,
+): string {
+  const current = parseMirrorInitialCreateReceipt(
+    getField(content, MIRROR_INITIAL_CREATE_FIELD),
+  );
+  if (current === next) return content;
+  if (
+    (expected === "absent" && current !== undefined) ||
+    (expected !== "absent" && current !== expected)
+  ) {
+    throw new Error(
+      `Mirror initial create expected ${expected}, found ${current ?? "absent"}`,
+    );
+  }
+  return setOrInsertField(
+    content,
+    "## Runtime State",
+    MIRROR_INITIAL_CREATE_FIELD,
+    next,
+  );
+}
+
 // Refuse a phase-boundary completion when `phase` requires a phase-check
 // artifact and it is missing. No-op for phases outside
 // PHASE_CHECK_REQUIRED_PHASES. Honors the same AMADEUS_SKIP_ARTIFACT_GUARD
@@ -448,6 +510,107 @@ function hasStageAuditEvent(
   });
 }
 
+const COMPLETION_AUDIT_EVENT_TYPES: ReadonlySet<string> = new Set([
+  "STAGE_COMPLETED",
+  "PHASE_COMPLETED",
+  "PHASE_VERIFIED",
+  "WORKFLOW_COMPLETED",
+]);
+
+function completionAuditEvents(
+  projectDir: string,
+  completionInstance: string,
+): ReadonlySet<string> {
+  const eventTypes = new Set<string>();
+  for (const block of splitAuditRecords(operationReadAudit(projectDir))) {
+    const eventType = auditField(block, "Event");
+    if (
+      eventType !== null &&
+      COMPLETION_AUDIT_EVENT_TYPES.has(eventType) &&
+      auditField(block, "Completion Instance") === completionInstance
+    ) {
+      eventTypes.add(eventType);
+    }
+  }
+  return eventTypes;
+}
+
+function injectWorkflowCompletionCrash(point: string): void {
+  if (process.env.AMADEUS_TEST_COMPLETE_WORKFLOW_CRASH_AT !== point) return;
+  process.stderr.write(`Injected complete-workflow crash at ${point}\n`);
+  process.exit(86);
+}
+
+function emitWorkflowCompletionAuditRows(input: {
+  pd: string;
+  content: string;
+  completedSlug: string;
+  completedStageName: string;
+  completedPhase: string;
+  completedCount: number;
+  completionInstance: string;
+  alreadyMarkedCompleted: boolean;
+  stageCompletedAlreadyAudited: boolean;
+  reason?: string;
+}): void {
+  const scope = getField(input.content, "Scope");
+  if (!scope) {
+    error(
+      "State file has no Scope field. Refusing to complete workflow — fix the state file first.",
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+    );
+  }
+  try {
+    const existingEvents = completionAuditEvents(
+      input.pd,
+      input.completionInstance,
+    );
+    const stageMissing = !existingEvents.has("STAGE_COMPLETED");
+    const stageNeedsEmission =
+      !input.alreadyMarkedCompleted || !input.stageCompletedAlreadyAudited;
+    if (stageMissing && stageNeedsEmission) {
+      emitAudit(input.pd, "STAGE_COMPLETED", {
+        Stage: input.completedSlug,
+        Details: `Final stage ${input.completedStageName} completed`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-stage-completed-audit");
+    if (!existingEvents.has("PHASE_COMPLETED")) {
+      emitAudit(input.pd, "PHASE_COMPLETED", {
+        "From phase": input.completedPhase,
+        "To phase": "(end)",
+        "Stages completed": String(input.completedCount),
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-completed-audit");
+    if (!existingEvents.has("PHASE_VERIFIED")) {
+      emitAudit(input.pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${input.completedPhase} → end`,
+        "Completion Instance": input.completionInstance,
+      });
+    }
+    injectWorkflowCompletionCrash("after-phase-verified-audit");
+    const workflowFields: Record<string, string> = {
+      Scope: scope,
+      Details: `Scope: ${scope}, ${input.completedCount} stages completed`,
+      "Completion Instance": input.completionInstance,
+    };
+    if (input.reason) workflowFields.Reason = input.reason;
+    if (!existingEvents.has("WORKFLOW_COMPLETED")) {
+      emitAudit(input.pd, "WORKFLOW_COMPLETED", workflowFields);
+    }
+    injectWorkflowCompletionCrash("after-workflow-completed-audit");
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
+}
+
 // --- Slug + small helpers (used by fork/merge handlers below; declared
 // before main() so they're initialised before dispatch fires) ---
 
@@ -540,18 +703,18 @@ function resolveSelectedIntent(
 
 let projectDir: string | undefined;
 
-// Active per-intent lock context for the in-transaction error path. handleFork/
-// handleMerge resolve their intent and hold a PER-INTENT audit lock across the
-// whole transaction (withAuditLock(pd, fn, resolvedIntent, space)). When an
-// errorWithSlug fires mid-transaction it routes through error() -> emitError,
+// Active per-intent lock context for the in-transaction error path. Targeted
+// state operations plus handleFork/handleMerge resolve their intent and hold a
+// PER-INTENT audit lock across the whole transaction. When an error fires
+// mid-transaction it routes through error() -> emitError,
 // whose holdsAuditLock probe must key the SAME per-intent bucket the caller
 // holds — a bare holdsAuditLock(pd) keys the __workspace__ sentinel, returns
 // false mid per-intent transaction, and takes emitError's 5s blocking-acquire
 // branch writing ERROR_LOGGED to the wrong bucket. These mirror the resolved
 // intent+space into error() so emitError keys lock==write. Set immediately
 // before the lock, cleared after; on the happy path no error fires and they are
-// harmless. All OTHER handlers lock the sentinel bucket and leave these unset
-// (undefined), so error() keys the sentinel for them — correct.
+// harmless. All untargeted handlers lock the sentinel bucket and leave these
+// unset (undefined), so error() keys the sentinel for them — correct.
 let lockIntent: string | undefined;
 let lockSpace: string | undefined;
 
@@ -633,12 +796,39 @@ function withStateOperationTarget<T>(
   fn: TargetedOperation<T>,
 ): T {
   const previous = stateOperationTarget;
+  const previousLockIntent = lockIntent;
+  const previousLockSpace = lockSpace;
   stateOperationTarget = target;
+  lockIntent = target.intent;
+  lockSpace = target.space;
   try {
     return fn();
   } finally {
     stateOperationTarget = previous;
+    lockIntent = previousLockIntent;
+    lockSpace = previousLockSpace;
   }
+}
+
+type SelectedIntentOperation = (args: string[], pd: string) => void;
+
+function runSelectedIntentOperation(
+  args: string[],
+  operation: SelectedIntentOperation,
+  unresolvedMessage: string,
+): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  const pd = resolveProjectDir(projectDir);
+  if (intent === undefined && space === undefined) {
+    operation(rest, pd);
+    return;
+  }
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  if (resolvedIntent === undefined) error(unresolvedMessage);
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    operation.bind(null, rest, pd),
+  );
 }
 
 // Telemetry process span (opt-in; no-op unless observability.enabled).
@@ -652,6 +842,33 @@ function observeToolRun(subcommand: string | undefined): void {
   }
 }
 
+function trustedHostSessionId(): string | undefined {
+  const pd = resolveProjectDir(projectDir);
+  return detectHarnessType() === "kimi"
+    ? readCurrentSessionId(pd) ?? undefined
+    : process.env.AMADEUS_TRUSTED_SESSION_ID;
+}
+
+function enforceCallerAuthorization(subcommand: string | undefined): void {
+  // Only read-only subcommands pass through. On denial, do not use error():
+  // writing ERROR_LOGGED would change the state/audit bytes, violating the
+  // invariant that a denial leaves both untouched, so write to stderr and exit.
+  if (
+    subcommand === undefined ||
+    subcommand === "get" ||
+    subcommand === "count" ||
+    subcommand === "lookup"
+  ) {
+    return;
+  }
+  const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
+  if (authorization.kind === "authorized") return;
+  process.stderr.write(
+    `${JSON.stringify({ error: callerAuthorizationError(authorization.role) })}\n`,
+  );
+  process.exit(1);
+}
+
 function main(): void {
   const args = process.argv.slice(2);
 
@@ -663,6 +880,7 @@ function main(): void {
   }
 
   const subcommand = args[0];
+  enforceCallerAuthorization(subcommand);
 
   observeToolRun(subcommand);
 
@@ -680,6 +898,9 @@ function main(): void {
         break;
       case "mirror-boundary":
         handleMirrorBoundary(args.slice(1));
+        break;
+      case "mirror-initial-create":
+        handleMirrorInitialCreate(args.slice(1));
         break;
       case "set-construction-iteration":
         handleSetConstructionIteration(args.slice(1));
@@ -767,7 +988,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -914,6 +1135,35 @@ export function handleMirrorBoundary(args: string[]): void {
     if (updated !== content) writeStateFile(pd, updated);
     console.log(
       JSON.stringify({ updated: updated !== content, phase, status: next }),
+    );
+  });
+}
+
+export function handleMirrorInitialCreate(args: string[]): void {
+  const next = args[0] as MirrorBoundaryReceiptStatus | undefined;
+  const fromIndex = args.indexOf("--from");
+  const expected = fromIndex >= 0 ? args[fromIndex + 1] : undefined;
+  if (
+    (next !== "pending" && next !== "completed") ||
+    (expected !== "absent" && expected !== "pending" && expected !== "completed")
+  ) {
+    error("Usage: amadeus-state.ts mirror-initial-create <pending|completed> --from <absent|pending|completed>");
+  }
+  const pd = resolveProjectDir(projectDir);
+  // A NAMED function expression rather than an arrow: the complexity baseline
+  // matches anonymous functions by ordinal, so an added arrow renumbers every
+  // later one in this file into a false NEW_VIOLATION.
+  withAuditLock(pd, function writeInitialCreateReceipt() {
+    const content = readStateFile(pd);
+    let updated: string;
+    try {
+      updated = transitionMirrorInitialCreateReceipt(content, expected, next);
+    } catch (cause) {
+      error(errorMessage(cause));
+    }
+    if (updated !== content) writeStateFile(pd, updated);
+    console.log(
+      JSON.stringify({ updated: updated !== content, status: next }),
     );
   });
 }
@@ -2070,15 +2320,31 @@ export function handleFinalize(args: string[]): void {
 }
 
 export function handleCompleteWorkflow(args: string[]): void {
+  runSelectedIntentOperation(
+    args,
+    completeWorkflowForTarget,
+    "complete-workflow could not resolve the selected Intent.",
+  );
+}
+
+function completeWorkflowForTarget(args: string[], pd: string): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
   const reasonIdx = args.indexOf("--reason");
   const reasonValueIdx = reasonIdx !== -1 ? reasonIdx + 1 : -1;
+  const completionInstanceIdx = args.indexOf("--completion-instance");
+  const completionInstanceValueIdx =
+    completionInstanceIdx !== -1 ? completionInstanceIdx + 1 : -1;
   const positional = args.filter(
-    (a, i) => !a.startsWith("--") && i !== reasonValueIdx,
+    (a, i) =>
+      !a.startsWith("--") &&
+      i !== reasonValueIdx &&
+      i !== completionInstanceValueIdx,
   );
   if (positional.length < 1)
-    error("Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]");
+    error(
+      "Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>] [--completion-instance <instance>] [--intent <record>] [--space <name>]",
+    );
   const completedSlug = positional[0];
 
   // Optional --reason flag for recording why the workflow completed early
@@ -2086,17 +2352,26 @@ export function handleCompleteWorkflow(args: string[]): void {
   if (reasonIdx !== -1 && reasonIdx + 1 < args.length) {
     reason = args[reasonIdx + 1];
   }
+  const requestedInstance =
+    completionInstanceIdx !== -1 && completionInstanceIdx + 1 < args.length
+      ? args[completionInstanceIdx + 1]
+      : undefined;
 
-  const pd = resolveProjectDir(projectDir);
-  // C2b lost-update safety: read→decide→emit-audit (4 rows)→write under one
-  // lock so the 4 audit rows and the completion state commit atomically against
-  // a single snapshot (audit-first / decide-inside-lock). emitAudit uses the
-  // unlocked variant because the lock is held.
+  // C2b lost-update safety: read→decide→emit-audit→write under one lock and one
+  // snapshot. Each persisted step is replay-safe, so a crash between steps can
+  // resume without duplicating the completion audit rows.
   operationWithLock(pd, () => {
   let content = operationReadState(pd);
+  const completion = workflowCompletionPreparation(content);
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
+  verifyPreparedWorkflowCompletion(
+    pd,
+    content,
+    completedSlug,
+    requestedInstance,
+  );
 
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
@@ -2106,6 +2381,10 @@ export function handleCompleteWorkflow(args: string[]): void {
     "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
+  const completionInstance = completion?.instance ??
+    `terminal:${completedSlug}`;
+  const stateAlreadyCompleted =
+    getField(content, "Status")?.trim() === "Completed";
 
   // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
   // it is a completing transition too. Guard only when the slug is not already
@@ -2122,72 +2401,66 @@ export function handleCompleteWorkflow(args: string[]): void {
     verifyPhaseCheckArtifact(pd, completedStage.phase);
   }
 
-  // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
-
-  // 2. Sync Completed counter
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-
-  // 3. Update all fields atomically for workflow completion
   const timestamp = isoTimestamp();
-  content = setField(content, "Status", "Completed");
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Last Completed Stage", completedSlug);
-  content = setField(content, "In Progress", "none");
-  content = setField(content, "Next Stage", "none");
-  content = setField(content, "Next Action", "Workflow complete");
-  // Phase Progress roll-up: the final stage's phase is now complete → Verified,
-  // in the same transaction as Status: Completed and the PHASE_VERIFIED audit
-  // below (#836). Earlier phases were flipped Verified/Skipped by their own
-  // boundary transitions (advance / init pre-cross); this closes the last one.
-  content = markPhaseVerified(content, completedStage.phase);
-
-  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
+  if (!stateAlreadyCompleted) {
+    // Mark the final stage and every terminal field in one state-file rename.
+    content = setCheckbox(content, completedSlug, "completed");
+    content = setField(
+      content,
+      "Completed",
+      String(countCheckboxes(content, "completed")),
     );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-  try {
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        Details: `Final stage ${completedStage.name} completed`,
-      });
+    content = setField(content, "Status", "Completed");
+    if (completion !== null) {
+      content = setOrInsertField(
+        content,
+        "## Runtime State",
+        "Workflow Completion Status",
+        "completed",
+      );
     }
-    emitAudit(pd, "PHASE_COMPLETED", {
-      "From phase": completedStage.phase,
-      "To phase": "(end)",
-      "Stages completed": String(completedCount),
-    });
-    emitAudit(pd, "PHASE_VERIFIED", {
-      "Phase boundary": `${completedStage.phase} → end`,
-    });
-    const workflowFields: Record<string, string> = {
-      Scope: scope,
-      Details: `Scope: ${scope}, ${completedCount} stages completed`,
-    };
-    if (reason) workflowFields.Reason = reason;
-    emitAudit(pd, "WORKFLOW_COMPLETED", workflowFields);
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "Last Completed Stage", completedSlug);
+    content = setField(content, "In Progress", "none");
+    content = setField(content, "Next Stage", "none");
+    content = setField(content, "Next Action", "Workflow complete");
+    content = markPhaseVerified(content, completedStage.phase);
   }
+  const completedCount = countCheckboxes(content, "completed");
 
-  operationWriteState(pd, content);
+  emitWorkflowCompletionAuditRows({
+    pd,
+    content,
+    completedSlug,
+    completedStageName: completedStage.name,
+    completedPhase: completedStage.phase,
+    completedCount,
+    completionInstance,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
+    ...(reason ? { reason } : {}),
+  });
+
+  if (!stateAlreadyCompleted) {
+    operationWriteState(pd, content);
+  }
+  injectWorkflowCompletionCrash("after-state-completed");
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
   // automatic inference from state, so a crashed run never self-completes. Runs
   // under the workspace lock already held (every intents.json mutation takes the
   // sentinel bucket). No-op for the legacy flat record (no registry row).
-  completeIntentRegistryRow(pd);
+  const completedIntentDir = completeIntentRegistryRow(pd);
+  injectWorkflowCompletionCrash("after-registry-complete");
+  if (completedIntentDir !== null) {
+    clearActiveIntentCursor(
+      pd,
+      completedIntentDir,
+      stateOperationTarget?.space,
+    );
+  }
+  injectWorkflowCompletionCrash("after-cursor-clear");
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -2200,25 +2473,20 @@ export function handleCompleteWorkflow(args: string[]): void {
   });
 }
 
-// Terminal completion flips the target intent's registry row to "complete", then
-// releases the active-intent cursor (#1248) so the finished intent stops being
-// the audit-append target and a fresh /amadeus resolves a new intent rather than
-// re-attaching to the completed record. The cursor is only released for the
-// ambient (untargeted) operation — a targeted repair leaves the caller's cursor
-// alone. No-op for the legacy flat record (no registry row). Must run under the
-// workspace lock the caller already holds.
-function completeIntentRegistryRow(pd: string): void {
+// Terminal completion flips the target intent's registry row to "complete".
+// Cursor release happens later, after every completion row and the state file
+// commit have landed. No-op for the legacy flat record (no registry row). Must
+// run under the workspace lock the caller already holds.
+function completeIntentRegistryRow(pd: string): string | null {
   const completedIntentDir = stateOperationTarget?.intent ?? activeIntent(pd);
-  if (!completedIntentDir) return;
+  if (!completedIntentDir) return null;
   withLockedIntentRegistry(
     pd,
     (context) =>
       transitionIntentStatusLocked(context, completedIntentDir, "complete"),
     stateOperationTarget?.space,
   );
-  if (stateOperationTarget === null) {
-    clearActiveIntentCursor(pd, completedIntentDir);
-  }
+  return completedIntentDir;
 }
 
 function appendLifecycleEvent(
@@ -2335,7 +2603,19 @@ function validateSlugInState(
 // conductor skipped, e.g. report's explicit-stage recovery) with
 // Recovered=true so audit consumers can tell backfills from organic opens.
 export function handleGateStart(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered]");
+  runSelectedIntentOperation(
+    args,
+    gateStartForTarget,
+    "gate-start could not resolve the selected Intent.",
+  );
+}
+
+function gateStartForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered] [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
   let artifacts: string | undefined;
   const artifactsIdx = args.indexOf("--artifacts");
@@ -2344,11 +2624,10 @@ export function handleGateStart(args: string[]): void {
   }
   const recovered = args.includes("--recovered");
 
-  const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: validate→transition→emit-audit→write under one
   // lock (the state-precondition check and the write see one snapshot).
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
@@ -2358,7 +2637,7 @@ export function handleGateStart(args: string[]): void {
   // stage's questions file carries a filled [Answer] without ruling/approval
   // evidence. Fail-closed via error() BEFORE any transition is written, so a
   // refusal leaves the checkbox untouched and STAGE_AWAITING_APPROVAL unemitted.
-  const rd = recordDir(pd);
+  const rd = operationRecordDir(pd);
   // Enforcement cutoff (reviewer catch, PR #1106): 59/111 questions files in
   // the live corpus predate the E-OC1 evidence-header convention, so applying
   // the guard to pre-guard intents would hard-block unpark -> gate-start on
@@ -2750,6 +3029,7 @@ type RecoveredApprovalBatchInput = {
   readonly revisionCount: number;
   readonly userInput?: string;
   readonly grantId?: string;
+  readonly presenceReservationId?: string;
 };
 
 function buildRecoveredApprovalBatch(
@@ -2789,13 +3069,22 @@ function buildRecoveredApprovalBatch(
         ...common,
         ...(input.userInput ? { "User Input": input.userInput } : {}),
         ...(input.grantId ? { "Grant Id": input.grantId } : {}),
+        ...(input.presenceReservationId
+          ? { "Presence Reservation Id": input.presenceReservationId }
+          : {}),
       },
     },
     {
       heading: "Stage Completion",
       event: "STAGE_COMPLETED",
       timestamp: input.timestamp,
-      fields: { ...common, Details: `Stage ${input.stageName} approved by gate` },
+      fields: {
+        ...common,
+        Details: `Stage ${input.stageName} approved by gate`,
+        ...(input.presenceReservationId
+          ? { "Presence Reservation Id": input.presenceReservationId }
+          : {}),
+      },
     },
   ];
   return inputs.map((entry, offset) => approvalAuditBlock(entry, identity, offset));
@@ -2831,6 +3120,7 @@ type ApprovalAuthorization = {
 type ApprovalAuthorizationOverride = {
   readonly grantId: string | null;
   readonly auditPrefix?: "none" | "gate-approved" | "completed";
+  readonly presenceReservationId?: string;
 };
 
 function authorizeApproval(
@@ -2881,6 +3171,7 @@ type ApprovalAuditInput = {
   readonly userInput?: string;
   readonly authorization: ApprovalAuthorization;
   readonly recovery: GateRevisionRecovery | null;
+  readonly deferStageCompletion: boolean;
 };
 
 function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
@@ -2894,6 +3185,7 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
         revisionCount: input.recovery.nextRevisionCount,
         ...(input.userInput ? { userInput: input.userInput } : {}),
         ...(input.authorization.grantId ? { grantId: input.authorization.grantId } : {}),
+        presenceReservationId: input.authorization.override?.presenceReservationId,
       });
       return;
     }
@@ -2902,15 +3194,24 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     const gateFields: Record<string, string> = { Stage: input.slug };
     if (input.userInput) gateFields["User Input"] = input.userInput;
     if (input.authorization.grantId) gateFields["Grant Id"] = input.authorization.grantId;
+    if (input.authorization.override?.presenceReservationId) {
+      gateFields["Presence Reservation Id"] =
+        input.authorization.override.presenceReservationId;
+    }
     const auditPrefix = input.authorization.override?.auditPrefix ?? "none";
     if (auditPrefix === "none") {
       emitAudit(pd, "GATE_APPROVED", gateFields);
     }
-    if (auditPrefix !== "completed") {
-      emitAudit(pd, "STAGE_COMPLETED", {
+    if (auditPrefix !== "completed" && !input.deferStageCompletion) {
+      const completionFields: Record<string, string> = {
         Stage: input.slug,
         Details: `Stage ${input.stageName} approved by gate`,
-      });
+      };
+      if (input.authorization.override?.presenceReservationId) {
+        completionFields["Presence Reservation Id"] =
+          input.authorization.override.presenceReservationId;
+      }
+      emitAudit(pd, "STAGE_COMPLETED", completionFields);
     }
   } catch (e) {
     if (input.recovery?.kind === "recovered") {
@@ -2955,6 +3256,7 @@ function approveUnderLock(
   slug: string,
   userInput: string | undefined,
   override?: ApprovalAuthorizationOverride,
+  deferWorkflowCompletion = false,
 ): void {
   let content = operationReadState(pd);
 
@@ -2969,6 +3271,9 @@ function approveUnderLock(
 
   const approveScope = getField(content, "Scope")!;
   const nextForPhaseGate = nextInScopeStage(slug, approveScope, content);
+  if (deferWorkflowCompletion && nextForPhaseGate !== null) {
+    error("--defer-workflow-completion is valid only for the final in-scope stage.");
+  }
   if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
     verifyPhaseCheckArtifact(pd, stage.phase);
   }
@@ -2985,6 +3290,9 @@ function approveUnderLock(
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
+  if (deferWorkflowCompletion) {
+    content = prepareWorkflowCompletion(content, slug, timestamp);
+  }
 
   const nextStateIssue = approvalNextStateIssue(content, slug, timestamp, recoveredRevision);
   if (nextStateIssue !== null) failApprovalCommitValidation(nextStateIssue);
@@ -2996,6 +3304,7 @@ function approveUnderLock(
     ...(userInput ? { userInput } : {}),
     authorization,
     recovery,
+    deferStageCompletion: deferWorkflowCompletion,
   });
   operationWriteState(pd, content);
   const scope = approveScope;
@@ -3003,6 +3312,12 @@ function approveUnderLock(
   const next = nextInScopeStage(slug, scope, content);
   if (next) {
     handleAdvance([slug]);
+  } else if (deferWorkflowCompletion) {
+    console.log(JSON.stringify({
+      completed: slug,
+      status: "completion-pending",
+      completion_instance: timestamp,
+    }));
   } else {
     handleCompleteWorkflow([slug]);
   }
@@ -3075,7 +3390,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
             runWithoutTransitionOutput(() => {
               approveUnderLock(pd, slug, undefined, {
                 grantId: authority.grantId,
-              });
+              }, flags.deferWorkflowCompletion);
             });
             console.log(JSON.stringify({ kind: "approved" }));
           });
@@ -3088,7 +3403,7 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   }
 
   if (authority.kind === "targeted-human") {
-    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    const sessionId = trustedHostSessionId();
     if (!sessionId) {
       rejectApprovalProtocol("Trusted session identity is unavailable");
     }
@@ -3152,7 +3467,8 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
               approveUnderLock(pd, slug, authority.userInput, {
                 grantId: null,
                 auditPrefix,
-              });
+                presenceReservationId: authority.reservationId,
+              }, flags.deferWorkflowCompletion);
             });
           } else if (stageState === "completed") {
             if (prefix.gateApproved !== 1 || prefix.stageCompleted !== 1) {
@@ -3185,7 +3501,13 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-    approveUnderLock(pd, slug, authority.userInput);
+    approveUnderLock(
+      pd,
+      slug,
+      authority.userInput,
+      undefined,
+      flags.deferWorkflowCompletion,
+    );
   });
 }
 
@@ -3213,6 +3535,7 @@ type ApproveFlags = {
   readonly standingGrantRouteId?: string;
   readonly targetIntentId?: string;
   readonly presenceReservationId?: string;
+  readonly deferWorkflowCompletion: boolean;
 };
 
 function parseApproveFlags(args: string[]): ApproveFlags {
@@ -3222,6 +3545,7 @@ function parseApproveFlags(args: string[]): ApproveFlags {
     standingGrantRouteId: getFlagValue(args, "--standing-grant-route-id"),
     targetIntentId: getFlagValue(args, "--target-intent-id"),
     presenceReservationId: getFlagValue(args, "--presence-reservation-id"),
+    deferWorkflowCompletion: args.includes("--defer-workflow-completion"),
   };
 }
 
@@ -3678,31 +4002,85 @@ export function handleRevokeStandingDelegation(args: string[]): void {
 // rejection may arrive with no open gate. The reject self-heals by emitting
 // the missing STAGE_AWAITING_APPROVAL (tagged Recovered=true) ahead of the
 // rejection pair — mirroring report's approve-side gate backfill.
-function handleReject(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts reject <slug> [--feedback <text>]");
+export function handleReject(args: string[]): void {
+  runSelectedIntentOperation(
+    args,
+    rejectForTarget,
+    "reject could not resolve the selected Intent.",
+  );
+}
+
+function rejectForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts reject <slug> [--feedback <text>] [--target-intent-id <uuid>] [--presence-reservation-id <uuid>] [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
   const feedback = getFlagValue(args.slice(1), "--feedback");
-
-  const pd = resolveProjectDir(projectDir);
+  const targetIntentId = getFlagValue(args.slice(1), "--target-intent-id");
+  const reservationId = getFlagValue(
+    args.slice(1),
+    "--presence-reservation-id",
+  );
+  if ((targetIntentId === undefined) !== (reservationId === undefined)) {
+    error("Targeted rejection requires both target intent and presence reservation ids");
+  }
   // C2b lost-update safety: validate→increment Revision Count→emit-audit→write
   // under one lock. The Revision Count read-modify-write is the exposed bit —
   // two concurrent rejects must not both read N and both write N+1 (one
   // increment lost). emit-then-write stays idempotent on retry: the lock
   // serialises, and re-running the same input recomputes from the locked
   // snapshot rather than double-incrementing a stale value.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
   const gateWasMissing = getSlugState(content, slug) === "in-progress";
 
-  // Human-presence guard (#675): shared with handleApprove via
-  // assertHumanPresentForGateResolution. Runs BEFORE any mutation (Revision
-  // Count increment, [R] transition, GATE_REJECTED emit) so a refusal
-  // (error() -> exit) leaves state untouched.
-  assertHumanPresentForGateResolution(pd, content, slug, "reject");
+  let targeted:
+    | { readonly reservation: PresenceReservation; readonly sessionId: string }
+    | null = null;
+  if (targetIntentId !== undefined && reservationId !== undefined) {
+    const sessionId = trustedHostSessionId();
+    if (!sessionId) {
+      error("Targeted rejection requires a trusted session identity");
+    }
+    try {
+      targeted = {
+        reservation: verifyMintedPresenceReservation({
+          projectDir: pd,
+          sessionId,
+          reservationId,
+          targetIntentId,
+          stage: slug,
+        }),
+        sessionId,
+      };
+    } catch (cause) {
+      error(`Invalid targeted human presence: ${errorMessage(cause)}`);
+    }
+    if (
+      targeted.reservation.targetIntentDir !== stateOperationTarget?.intent ||
+      targeted.reservation.space !== stateOperationTarget?.space
+    ) {
+      error("Presence reservation does not match the targeted rejection owner");
+    }
+    if (
+      !targetedApprovalEvidence(
+        operationReadAudit(pd),
+        targeted.reservation,
+      ).humanTurnIsFresh
+    ) {
+      error("Targeted HUMAN_TURN is not fresh for the open gate");
+    }
+  } else {
+    // Human-presence guard (#675): shared with handleApprove. Runs BEFORE any
+    // mutation so a refusal leaves state and audit untouched.
+    assertHumanPresentForGateResolution(pd, content, slug, "reject");
+  }
 
   // Increment Revision Count. Guard against non-numeric values (missing field,
   // manual edits, legacy state files) by coercing non-integers to 0.
@@ -3728,30 +4106,60 @@ function handleReject(args: string[]): void {
     }
     const rejFields: Record<string, string> = { Stage: slug };
     if (feedback) rejFields.Feedback = feedback;
+    if (targeted !== null) {
+      rejFields["Presence Reservation Id"] =
+        targeted.reservation.reservationId;
+    }
     emitAudit(pd, "GATE_REJECTED", rejFields);
     emitAudit(pd, "STAGE_REVISING", {
       Stage: slug,
       "Revision count": String(revCount),
       ...(feedback ? { Feedback: feedback } : {}),
+      ...(targeted === null
+        ? {}
+        : {
+            "Presence Reservation Id":
+              targeted.reservation.reservationId,
+          }),
     });
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
+  if (targeted !== null) {
+    consumePresenceReservation({
+      projectDir: pd,
+      sessionId: targeted.sessionId,
+      reservationId: targeted.reservation.reservationId,
+      targetIntentId: targeted.reservation.targetIntentId,
+      stage: slug,
+    });
+  }
   console.log(JSON.stringify({ slug, new_state: "revising", revision_count: revCount, timestamp }));
   });
 }
 
 // revise <slug> — transition [R] → [?] (re-enter gate after revision work)
-function handleRevise(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts revise <slug>");
+export function handleRevise(args: string[]): void {
+  runSelectedIntentOperation(
+    args,
+    reviseForTarget,
+    "revise could not resolve the selected Intent.",
+  );
+}
+
+function reviseForTarget(args: string[], pd: string): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts revise <slug> [--intent <record>] [--space <name>]",
+    );
+  }
   const slug = args[0];
 
-  const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
@@ -3770,7 +4178,7 @@ function handleRevise(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
   });
 }
@@ -4869,6 +5277,86 @@ export function handleSetConstructionIteration(args: string[]): void {
     writeStateFile(pd, updated);
     console.log(JSON.stringify({ updated: true, construction_iteration: value }));
   });
+}
+
+function verifyPreparedCompletionIdentity(
+  prepared: WorkflowCompletionPreparation,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  if (prepared.stage !== completedSlug) {
+    error(
+      `Workflow completion was prepared for "${prepared.stage}", not "${completedSlug}".`,
+    );
+  }
+  if (requestedInstance === undefined) {
+    error(
+      `Prepared workflow completion requires --completion-instance "${prepared.instance}".`,
+    );
+  }
+  if (requestedInstance !== prepared.instance) {
+    error(
+      `Workflow completion instance mismatch: expected "${prepared.instance}", got "${requestedInstance}".`,
+    );
+  }
+}
+
+function verifyPreparedWorkflowCompletion(
+  pd: string,
+  content: string,
+  completedSlug: string,
+  requestedInstance: string | undefined,
+): void {
+  const prepared = workflowCompletionPreparation(content);
+  if (prepared === null) return;
+  verifyPreparedCompletionIdentity(prepared, completedSlug, requestedInstance);
+  const space = stateOperationTarget?.space ?? activeSpace(pd);
+  const intent =
+    stateOperationTarget?.intent ?? activeIntent(pd, space);
+  if (!intent) {
+    error("Prepared workflow completion cannot resolve its Intent.");
+  }
+  const config = resolveAmadeusConfig(pd, intent, space);
+  if (config.kind === "invalid") {
+    const details = config.issues.map((issue) =>
+      issue.kind === "read-failure"
+        ? `${issue.layer}: ${issue.summary}`
+        : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
+    ).join("; ");
+    error(
+      `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
+    );
+  }
+  if (config.config.autoMirror === "off") return;
+  const entries = readIntentRegistry(pd, space).filter((entry) =>
+    recordDirMatches(entry, intent)
+  );
+  if (entries.length !== 1) {
+    error("Prepared workflow completion must resolve exactly one Intent registry row.");
+  }
+  const parsed = parseMirrorStateDocument(content);
+  if (parsed.kind === "invalid") {
+    error(`Prepared workflow completion has invalid mirror state: ${parsed.issues.join("; ")}`);
+  }
+  if (parsed.snapshot.auditOutbox !== null && parsed.snapshot.auditOutbox !== undefined) {
+    error("Prepared workflow completion still has a pending mirror audit outbox.");
+  }
+  const settlement = workflowCompletionSettlement({
+    intentUuid: entries[0].uuid,
+    boundary: {
+      kind: "workflow-completed",
+      instance: prepared.instance,
+    },
+    state: parsed.snapshot,
+  });
+  if (settlement.kind !== "settled") {
+    const detail = settlement.kind === "pending"
+      ? `operation "${settlement.operation}" is still pending`
+      : `operation "${settlement.operation}" is ${settlement.status}`;
+    error(
+      `Prepared workflow completion cannot commit before its mirror boundary settles: ${detail}.`,
+    );
+  }
 }
 
 // --- Utility ---

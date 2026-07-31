@@ -23,7 +23,7 @@ production.
 A security patch is urgent, incremental, and must deploy. It skips the
 whole design ceremony (ideation, application-design, units-generation,
 nfr-design, infrastructure-design) because the change is targeted, but
-unlike `bugfix` it keeps deployment-pipeline and deployment-execution
+unlike `fix` it keeps deployment-pipeline and deployment-execution
 EXECUTE — a patch that never deploys does not close the vulnerability.
 requirements-analysis runs so there is an auditable statement of the
 vulnerability and its remediation criteria (the `requirements` artifact

@@ -3,7 +3,7 @@
 // CLI-contract port of tests/integration/t39-per-scope-phase-sequence.sh (TAP
 // plan 27), mechanism = cli. Equal-or-stronger migration: the .sh is a
 // data-driven sweep over all 10 canonical scopes (enterprise, feature, mvp,
-// poc, bugfix, chore, refactor, infra, security-patch, workshop), running `bun
+// poc, fix, chore, refactor, infra, security-patch, workshop), running `bun
 // amadeus-utility.ts init --scope <s> --project-dir <p>` once per
 // scope and asserting 3 observables per scope (30 total). Every one of those
 // observables is preserved here by SPAWNING the real CLI via
@@ -205,7 +205,7 @@ const EXPECTED_SKIPPED: Record<string, string[]> = {
   feature: [],
   mvp: ["operation"],
   poc: ["operation"],
-  bugfix: ["ideation", "operation"],
+  fix: ["ideation", "operation"],
   chore: ["ideation", "inception", "operation"],
   refactor: ["ideation", "operation"],
   infra: ["ideation"],
@@ -218,7 +218,7 @@ const SCOPES = [
   "feature",
   "mvp",
   "poc",
-  "bugfix",
+  "fix",
   "chore",
   "refactor",
   "infra",

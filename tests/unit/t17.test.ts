@@ -361,8 +361,8 @@ describe("t17 lookup", () => {
     );
   });
 
-  test("18: lookup stages-in-scope bugfix has SKIP stages", () => {
-    expect(runStateBare(["lookup", "stages-in-scope", "bugfix"]).combined).toContain(
+  test("18: lookup stages-in-scope fix has SKIP stages", () => {
+    expect(runStateBare(["lookup", "stages-in-scope", "fix"]).combined).toContain(
       '"action":"SKIP"',
     );
   });
@@ -553,8 +553,8 @@ describe("t17 advance validation", () => {
 
   test("32: 2-arg advance rejects SKIP-stamped next slug", () => {
     proj = createTestProject();
-    // Init a bugfix workflow — user-stories stamped SKIP (bugfix excludes it).
-    runInit(proj, "bugfix");
+    // Init a fix workflow — user-stories stamped SKIP (fix excludes it).
+    runInit(proj, "fix");
     const r = runState(proj, ["advance", "requirements-analysis", "user-stories"]);
     expect(r.rc).toBe(1);
     expect(r.combined).toContain("SKIP");
@@ -562,7 +562,7 @@ describe("t17 advance validation", () => {
 
   test("33: init emits PHASE_COMPLETED + PHASE_VERIFIED + PHASE_STARTED(inception)", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     const audit = readAudit(proj);
     expect(hasEvent(audit, "PHASE_COMPLETED")).toBe(true);
     expect(hasEvent(audit, "PHASE_VERIFIED")).toBe(true);
@@ -573,16 +573,16 @@ describe("t17 advance validation", () => {
   test("34: advance past last in-scope stage exits 1, mentions complete-workflow", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
-    runState(proj, ["set", "Scope=bugfix"]);
-    // bugfix's last in-scope stage is build-and-test.
+    runState(proj, ["set", "Scope=fix"]);
+    // fix's last in-scope stage is build-and-test.
     const r = runState(proj, ["advance", "build-and-test"]);
     expect(r.rc).toBe(1);
     expect(r.combined).toContain("complete-workflow");
   });
 
-  test("35: Greenfield bugfix lands on requirements-analysis (RE was SKIP)", () => {
+  test("35: Greenfield fix lands on requirements-analysis (RE was SKIP)", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     expect(runState(proj, ["get", "Current Stage"]).combined.trim()).toBe(
       "requirements-analysis",
     );
@@ -596,7 +596,7 @@ describe("t17 advance validation", () => {
 describe("t17 resume", () => {
   test("36: resume returns structured JSON snapshot", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     const out = runState(proj, ["resume"]).combined;
     expect(out).toContain('"resumed":true');
     expect(out).toContain('"current_stage":"requirements-analysis"');
@@ -606,7 +606,7 @@ describe("t17 resume", () => {
 
   test("37: resume detects pending compaction", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     appendFileSync(
       auditMd(proj),
       `${JSON.stringify({
@@ -626,7 +626,7 @@ describe("t17 resume", () => {
 
   test("38: resume compaction_pending=false after stage activity", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     appendFileSync(
       auditMd(proj),
       `${[
@@ -661,7 +661,7 @@ describe("t17 resume", () => {
 
   test("39: resume reports awaiting-approval gate_state", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     runState(proj, ["gate-start", "requirements-analysis"]);
     expect(runState(proj, ["resume"]).combined).toContain('"gate_state":"awaiting-approval"');
   });
@@ -1101,7 +1101,7 @@ describe("t17 reuse-artifact", () => {
 describe("t17 cross-phase advance idempotency", () => {
   test("74: advance replay does not double-emit PHASE_* events", () => {
     proj = createTestProject();
-    runInit(proj, "bugfix");
+    runInit(proj, "fix");
     // After init, Current Stage is requirements-analysis. Walk it, then replay
     // advance and assert no double PHASE_COMPLETED / PHASE_VERIFIED / PHASE_STARTED.
     runState(proj, ["gate-start", "requirements-analysis"]);

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-OBB2-RES13",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "0件採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c1 のみ採用(着手時の既存 PR 棚卸しを project 層へ)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c1+c2 採用(c2 は rescan-base-ancestry への「observed は origin/main 系譜で記録する」追補として)"
+    }
+  ]
+}

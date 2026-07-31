@@ -27,7 +27,7 @@
 //         `## Current Status` block; only the `## Stage Progress` checkbox
 //         section + the numbered fields are rebuilt. (Mirrors .sh Test 6.)
 //   - The 10 canonical scopes are exactly the keys of
-//     data/scope-mapping.json: enterprise, feature, mvp, poc, bugfix,
+//     data/scope-mapping.json: enterprise, feature, mvp, poc, fix,
 //     chore, refactor, infra, security-patch, workshop (verified by reading
 //     the JSON keys) — identical to the .sh's Test-3 loop list.
 //   - Audit row shape (amadeus-audit.ts:256-267): a `## Scope Changed` heading,
@@ -122,7 +122,7 @@ const CANONICAL_SCOPES = [
   "feature",
   "mvp",
   "poc",
-  "bugfix",
+  "fix",
   "chore",
   "refactor",
   "infra",
@@ -222,7 +222,7 @@ describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-u
   // --- .sh Test 2: SCOPE_CHANGED audit event is emitted ---
   test("2: scope-change emits SCOPE_CHANGED", () => {
     const p = proj();
-    const r = scopeChange(["--scope", "bugfix"], p);
+    const r = scopeChange(["--scope", "fix"], p);
     expect(r.status).toBe(0);
     // STRONGER: count against the seeded baseline (audit-sample.jsonl has none).
     expect(scopeChangedCount(readAllAuditShards(p))).toBe(1);
@@ -265,7 +265,7 @@ describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-u
     const p = proj();
     const before = stateField(statePath(p), "Current Stage");
     expect(before).toBe("feasibility"); // fixture sanity (state-mid-ideation.md)
-    scopeChange(["--scope", "bugfix"], p);
+    scopeChange(["--scope", "fix"], p);
     const after = stateField(statePath(p), "Current Stage");
     expect(after).toBe(before); // same observable as the .sh's before==after
   });

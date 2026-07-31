@@ -20,6 +20,11 @@ export type MirrorArtifactKind =
   | "registration";
 
 export const MIRROR_TOOL_FILES = [
+  "amadeus-contained-file.ts",
+  "amadeus-github-gateway.ts",
+  "amadeus-github-types.ts",
+  "amadeus-layered-config.ts",
+  "amadeus-process-runner.ts",
   "amadeus-mirror-capability.ts",
   "amadeus-mirror-config.ts",
   "amadeus-mirror-coordinator.ts",

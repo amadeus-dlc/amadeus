@@ -37,7 +37,7 @@ import {
 const grid = (obj: Record<string, unknown>): Buffer =>
   Buffer.from(`${JSON.stringify(obj, null, 2)}\n`, "utf-8");
 
-const STOCK = { bugfix: { stages: { "intent-capture": "SKIP" } } };
+const STOCK = { fix: { stages: { "intent-capture": "SKIP" } } };
 const WITH_COMPOSED = {
   ...STOCK,
   "team-custom": { stages: { "intent-capture": "EXECUTE" } },
@@ -72,7 +72,7 @@ describe("t200 promote-self composed-scope preservation", () => {
   });
 
   test("scopeGridInSync still fails on a drifted stock key", () => {
-    const drifted = { bugfix: { stages: { "intent-capture": "EXECUTE" } } };
+    const drifted = { fix: { stages: { "intent-capture": "EXECUTE" } } };
     expect(scopeGridInSync(grid(drifted), grid(STOCK))).toBe(false);
   });
 
@@ -91,7 +91,7 @@ describe("t200 promote-self composed-scope preservation", () => {
   test("mergeScopeGrid carries composed entries over and round-trips the check", () => {
     const merged = mergeScopeGrid(grid(WITH_COMPOSED), grid(STOCK));
     const parsed = JSON.parse(merged.toString("utf-8")) as Record<string, unknown>;
-    expect(Object.keys(parsed)).toEqual(["bugfix", "team-custom"]);
+    expect(Object.keys(parsed)).toEqual(["fix", "team-custom"]);
     expect(scopeGridInSync(merged, grid(STOCK))).toBe(true);
   });
 

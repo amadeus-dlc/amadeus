@@ -9,7 +9,7 @@
 //     carrying a bolt_dag batch. With `Construction Autonomy Mode: autonomous`
 //     the engine emits {"kind":"invoke-swarm","units":[...]} naming the batch;
 //     with the grant gated/unset it falls back to a run-stage for
-//     code-generation. (7) the structural skeleton guard: under bugfix scope —
+//     code-generation. (7) the structural skeleton guard: under fix scope —
 //     where code-generation IS the walking-skeleton gate stage — the engine
 //     NEVER swarms even with autonomy granted (Bolt 1 is always human-gated).
 //
@@ -57,7 +57,7 @@
 //   .sh (1) kind == invoke-swarm                 -> "1: autonomy granted + eligible batch -> engine emits invoke-swarm"
 //   .sh (1) units == ["a","b"]                    -> "1b: invoke-swarm names the batch units off the compiled bolt_dag"
 //   .sh (2) kind|stage == run-stage|code-generation -> "2: gated autonomy -> engine falls back to run-stage (no swarm)"
-//   .sh (7) kind == run-stage (bugfix skeleton)   -> "7: skeleton-gate stage is never swarmed even under autonomy"
+//   .sh (7) kind == run-stage (fix skeleton)   -> "7: skeleton-gate stage is never swarmed even under autonomy"
 //   .sh (3) SWARM_STARTED in audit                -> "3: SWARM_STARTED emitted at batch start (prepare)"
 //   .sh (4) SWARM_COMPLETED + converged/failed tally -> "4: SWARM_COMPLETED emitted with converged/failed tally"
 //   .sh (5) SWARM_BATON_RETURNED naming lose       -> "5: SWARM_BATON_RETURNED emitted for the failed unit (lose)"
@@ -150,7 +150,7 @@ function seedCodegenProject(autonomy: string): string {
   return proj;
 }
 
-/** Flip the seeded fixture's scope (e.g. feature -> bugfix). */
+/** Flip the seeded fixture's scope (e.g. feature -> fix). */
 function setScope(proj: string, scope: string): void {
   const statePath = seededStateFile(proj);
   const state = readFileSync(statePath, "utf-8").replace(
@@ -327,12 +327,12 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
   }, 30000);
 
   test("7: skeleton-gate stage is never swarmed even under autonomy (structural guard)", () => {
-    // bugfix scope: code-generation IS the walking-skeleton gate stage (the
+    // fix scope: code-generation IS the walking-skeleton gate stage (the
     // first Construction EXECUTE stage). Even WITH autonomy granted, the engine
     // must NOT swarm it — Bolt 1 is always human-gated. Defense-in-depth that
     // does not rest on conductor ordering (tryEmitSwarm:isSkeletonGateStage).
     const proj = seedCodegenProject("autonomous");
-    setScope(proj, "bugfix");
+    setScope(proj, "fix");
     const { directive } = runNext(proj);
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("invoke-swarm");
@@ -342,7 +342,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
   // swarm trigger to `gated` must not widen it past the skeleton-gate stage.
   test("7b: skeleton-gate stage is never swarmed under a gated grant either", () => {
     const proj = seedCodegenProject("gated");
-    setScope(proj, "bugfix");
+    setScope(proj, "fix");
     const { directive } = runNext(proj);
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("invoke-swarm");

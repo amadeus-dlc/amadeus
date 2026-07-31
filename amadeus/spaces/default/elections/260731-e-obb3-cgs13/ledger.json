@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補は fix 系 intent の AC 起草時の棚卸し手順に限定し、新規独立 cid でなく c1-pinned-behavior-ruling への追補統合とすること。",
+      "rationale": "既存 cid(project.md:266)は RE 段でピンを検知してから要件段裁定へ送る機序で、検知されなかった場合の AC 起草時能動棚卸しは未規定。実測では requirements.md AC-3 の汎用「既存グリーン維持」が t236 の欠陥ピン(code-summary.md 申告済み判断節)と構造衝突し実装段申告で回収された — c1-ac-grep-surface-scope と同族の AC 起草前実測面として追補価値あり。",
+      "submittedAt": "2026-07-31T04:25:37Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補は fix スコープの AC 起草時(既存テストグリーン維持系 AC を書く場面)に適用限定し、全要件への一律棚卸し義務へ肥大させない。",
+      "rationale": "code-summary.md:17 実測で t236 が FR-1a の禁じた欠陥状態そのものをピンし AC-3「既存テストグリーン維持」と構造的両立不能 → 実装段で builder 申告・conductor 受理の1往復を消費。既存 cid:reverse-engineering:c1-pinned-behavior-ruling(project.md:266)は「仕様ピンの意図的変更に要件段裁定」を縛る RE 検知面であり、「欠陥ピンテストが汎用グリーン維持 AC と衝突するクラスの AC 起草時棚卸し」は既存テキストから導出不能な要件側予防面 — 追補価値あり。",
+      "submittedAt": "2026-07-31T04:25:36Z"
+    }
+  ],
+  "late": []
+}

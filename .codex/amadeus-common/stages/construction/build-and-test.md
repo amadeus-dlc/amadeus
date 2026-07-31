@@ -32,7 +32,7 @@ scopes:
   - feature
   - mvp
   - poc
-  - bugfix
+  - fix
   - refactor
   - security-patch
   - workshop

@@ -46,7 +46,7 @@
 //   .sh test 1  (10 shipped scope files)                     -> "exactly 10 shipped amadeus-*.md scope files exist"
 //   .sh test 2  (frontmatter name == filename stem)          -> "every shipped scope file's frontmatter name == its slug"
 //   .sh test 3  (validScopes() == 10 names, alphabetical)     -> "validScopes() == the 10 .md-derived names, alphabetical"
-//   .sh test 4  (loadScopeMetadata bugfix depth/kw/desc)     -> "loadScopeMetadata reads bugfix depth/keywords/description from .md"
+//   .sh test 4  (loadScopeMetadata fix depth/kw/desc)     -> "loadScopeMetadata reads fix depth/keywords/description from .md"
 //   .sh test 5  (workshop testStrategy override)             -> "loadScopeMetadata reads workshop's testStrategy override from .md"
 //   .sh test 6  (loadScopeMapping poc derived fields)        -> "loadScopeMapping poc depth/keywords/description derive from .md"
 //   .sh test 7  (dropping a new .md makes it valid)          -> "dropping amadeus-dropscope.md makes 'dropscope' a valid scope (no code change)"
@@ -97,10 +97,10 @@ const UTIL = amadeusToolTarget(
 // The 10 scopes the framework ships, alphabetical — the .sh's hard-coded
 // expectation (t125:62). Each is a literal independent of source iteration.
 const SHIPPED_SCOPES = [
-  "bugfix",
   "chore",
   "enterprise",
   "feature",
+  "fix",
   "infra",
   "mvp",
   "poc",
@@ -159,11 +159,11 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     expect([...validScopes()]).toEqual(SHIPPED_SCOPES);
   });
 
-  test("loadScopeMetadata reads bugfix depth/keywords/description from .md [.sh test 4]", () => {
+  test("loadScopeMetadata reads fix depth/keywords/description from .md [.sh test 4]", () => {
     const m = loadScopeMetadata();
-    expect(m.bugfix.depth).toBe("Minimal");
-    expect(m.bugfix.keywords).toEqual(["fix", "bug", "broken"]);
-    expect(m.bugfix.description).toBe("Fix a specific bug");
+    expect(m.fix.depth).toBe("Minimal");
+    expect(m.fix.keywords).toEqual(["fix", "bug", "broken"]);
+    expect(m.fix.description).toBe("Fix a specific bug");
   });
 
   test("loadScopeMetadata reads workshop's testStrategy override from .md [.sh test 5]", () => {

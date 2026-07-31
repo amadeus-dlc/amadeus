@@ -1,0 +1,24 @@
+{
+  "electionId": "E-SRF-CGS13",
+  "kind": "s13-learning-selection",
+  "question": "intent 260730-skill-reviewer-fixes / code-generation の §13 学習選定。候補4件(diary: amadeus/spaces/default/intents/260730-skill-reviewer-fixes/construction/code-generation/memory.md):\n\n[c1] Bolt 2 実装の機構記録(unitDirsUnderConstruction の slug 減算、fail-closed、allowlist 38 remap、§12a 両 unit READY)— intent 固有の実装事実。\n\n[c2] .codex scope-grid キー順 churn(#1734 既知)の PR 同乗を Bolt 1/2 とも surgical 基準で除外 — 既存 N-1/既知バグの実践。\n\n[c3] builder subagent が実装コミット後・配送(push/PR/報告)前に停止し、conductor が disk-evidence-early-takeover で引き取り — 既存 cid(spawned-agent-result-delivery / disk-evidence-early-takeover)の再演。\n\n[c4] 並行 Bolt 実行中、builder の PR 発行報告がディスクに実在したのに他 Bolt の完了同期待ちへ先に入り、merge-ready PR の処理がユーザー指摘まで遅延した。既存 norm(resource-efficiency / merge-approval-latency)は「承認待ちを直列化点にしない」ことは定めるが、「PR 発行報告の受領を他 Bolt 完了待ちより先に処理する割込みイベントとして扱う」conductor スケジューリング規則は未明文 — persist 候補文: 「並行 Bolt 中、builder の PR 発行報告(報告ファイル/PR URL の出現)を受領したら、他 Bolt の完了待ちに入る前に当該 PR の収束確認と承認伺いを処理する。完了待ちの同期ループは未処理の PR 発行報告が無いことを確認してから張る」。\n\n問い: persist する採用集合。判断材料: c1〜c3 は intent record/既存 cid で足りるか。c4 は既存 norm との重複か真の隙間か — diary の実測(ユーザー指摘で発覚)と既存 cid 原文を確認して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件採用 — c4 も既存 resource-efficiency / merge-approval-latency の実践不足であり新規則不要"
+    },
+    {
+      "internalNo": 2,
+      "label": "c4 のみ採用 — 上記候補文を project 層 Corrections へ persist(conductor スケジューリングの割込み規則として新規)"
+    },
+    {
+      "internalNo": 3,
+      "label": "c1〜c4 全採用"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

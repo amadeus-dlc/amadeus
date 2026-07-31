@@ -105,7 +105,7 @@ describe("t213 parked cursor + --new-intent (#834, spawn)", () => {
     // print (which names `intent-birth`).
     seedStateFile(proj, MID_IDEATION);
     park(proj);
-    const out = runNext(["--new-intent", "--scope", "bugfix"]);
+    const out = runNext(["--new-intent", "--scope", "fix"]);
     expect(out).not.toContain('"kind":"parked"');
     expect(out).toContain('"kind":"print"');
     expect(out).toContain("intent-birth");
@@ -135,7 +135,7 @@ describe("t213 parked cursor + --new-intent (#834, in-process seam)", () => {
   test("handleNext(--new-intent) over a parked state prints birth, not parked", () => {
     seedStateFile(proj, MID_IDEATION);
     park(proj);
-    const r = captureRun(() => handleNext(["--new-intent", "--scope", "bugfix"], proj));
+    const r = captureRun(() => handleNext(["--new-intent", "--scope", "fix"], proj));
     expect(r.stdout).not.toContain('"kind":"parked"');
     expect(r.stdout).toContain("intent-birth");
   });

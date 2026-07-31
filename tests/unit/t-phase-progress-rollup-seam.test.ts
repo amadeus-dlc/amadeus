@@ -4,7 +4,7 @@
 // The advance / finalize / complete-workflow transitions crossed phase
 // boundaries and emitted PHASE_COMPLETED/PHASE_VERIFIED/PHASE_STARTED into the
 // append-only ledger, but never flipped the roll-up field — so a completed
-// bugfix workflow (gate-start → approve → advance, where approve delegates to
+// fix workflow (gate-start → approve → advance, where approve delegates to
 // handleAdvance/handleCompleteWorkflow) ended at Status: Completed with the
 // roll-up frozen at its init values (Initialization: Active / Construction:
 // Pending). The fix flips the roll-up in the SAME content transaction as the
@@ -72,7 +72,7 @@ describe("t-phase-progress-rollup-seam: advance across a phase boundary (#836)",
 
   beforeEach(() => {
     proj = createTestProject();
-    // scope=bugfix, Current Stage=requirements-analysis (inception, Active);
+    // scope=fix, Current Stage=requirements-analysis (inception, Active);
     // reverse-engineering already [x]. Advancing derives code-generation
     // (construction) → an inception→construction boundary crossing.
     seedStateFile(proj, "state-mid-inception.md");
@@ -106,10 +106,10 @@ describe("t-phase-progress-rollup-seam: complete-workflow verifies the final pha
 
   beforeEach(() => {
     proj = createTestProject();
-    // scope=bugfix at the final construction stage (build-and-test [-]),
+    // scope=fix at the final construction stage (build-and-test [-]),
     // Construction Active. complete-workflow must flip it Verified in lock-step
     // with Status: Completed — the direct closure of the #836 symptom.
-    seedStateFile(proj, "state-bugfix-final-construction.md");
+    seedStateFile(proj, "state-fix-final-construction.md");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -138,7 +138,7 @@ describe("t-phase-progress-rollup-seam: finalize verifies the final phase (#836)
 
   beforeEach(() => {
     proj = createTestProject();
-    seedStateFile(proj, "state-bugfix-final-construction.md");
+    seedStateFile(proj, "state-fix-final-construction.md");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -187,15 +187,15 @@ describe("t-phase-progress-rollup-seam: finalize across a phase boundary (#836)"
   });
 });
 
-describe("t-phase-progress-rollup-seam: full bugfix drive leaves no Active/Pending residue (#836 closure)", () => {
+describe("t-phase-progress-rollup-seam: full fix drive leaves no Active/Pending residue (#836 closure)", () => {
   let proj: string;
   let prev: string | undefined;
 
   beforeEach(() => {
     proj = createTestProject();
-    // A faithful bugfix roll-up right after init (with the init fix applied):
+    // A faithful fix roll-up right after init (with the init fix applied):
     // Initialization Verified, Ideation/Operation Skipped, Inception Active.
-    seedStateFile(proj, "state-bugfix-postinit.md");
+    seedStateFile(proj, "state-fix-postinit.md");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -239,11 +239,11 @@ describe("t-phase-progress-rollup-seam: init writes a pre-crossed roll-up in-pro
     cleanupTestProject(proj);
   });
 
-  test("bugfix birth stamps Initialization Verified (not Active) and Inception Active", () => {
+  test("fix birth stamps Initialization Verified (not Active) and Inception Active", () => {
     // Drive the real birth handler in-process (t39/t20 spawn it, which bun's
     // coverage cannot see — this seam registers the init phaseStatus wiring in
-    // lcov). Birth pre-crosses initialization → inception for bugfix.
-    handleIntentBirth(proj, { scope: "bugfix" });
+    // lcov). Birth pre-crosses initialization → inception for fix.
+    handleIntentBirth(proj, { scope: "fix" });
     const state = readFileSync(bornStateFile(proj), "utf-8");
     expect(phaseField(state, "Initialization")).toBe("Verified");
     expect(phaseField(state, "Ideation")).toBe("Skipped");

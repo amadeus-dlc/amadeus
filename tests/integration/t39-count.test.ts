@@ -29,7 +29,7 @@
 //   - .sh Test 2  assert_eq "$FEAT" "32"     -> Test 2: execCount("feature") === 32 (exact).
 //   - .sh Test 3  mvp in 15..25              -> Test 3: 15 <= execCount("mvp") <= 25.
 //   - .sh Test 4  poc in 5..12               -> Test 4: 5 <= execCount("poc") <= 12.
-//   - .sh Test 5  assert_eq "$BUGFIX" "7"    -> Test 5: execCount("bugfix") === 7 (exact).
+//   - .sh Test 5  assert_eq "$BUGFIX" "7"    -> Test 5: execCount("fix") === 7 (exact).
 //   - .sh Test 6  refactor in 7..12          -> Test 6: 7 <= execCount("refactor") <= 12.
 //   - .sh Test 7  infra in 9..16             -> Test 7: 9 <= execCount("infra") <= 16.
 //   - .sh Test 8  security-patch deployment-pipeline=yes AND deployment-execution=yes
@@ -83,7 +83,7 @@ describe("t39 scope EXECUTE-count validation — loadScopeMapping (migrated from
   test("0a: loadScopeMapping returns the ten canonical scopes (S3)", () => {
     expect(Object.keys(MAPPING).sort()).toEqual(
       [
-        "bugfix",
+        "fix",
         "chore",
         "enterprise",
         "feature",
@@ -138,8 +138,8 @@ describe("t39 scope EXECUTE-count validation — loadScopeMapping (migrated from
   });
 
   // 5. Bugfix: exactly 7 (init+RE+req+codegen+build).
-  test("5: bugfix executes exactly 7 stages", () => {
-    expect(execCount("bugfix")).toBe(7);
+  test("5: fix executes exactly 7 stages", () => {
+    expect(execCount("fix")).toBe(7);
   });
 
   // 5b. Chore: exactly 5 (init×3 + codegen + build; no RE, no req). #993

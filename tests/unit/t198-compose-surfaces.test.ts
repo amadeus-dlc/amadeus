@@ -40,6 +40,7 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { classifyTerminalCommand } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 const BUN = process.execPath;
 const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
@@ -72,6 +73,32 @@ function directiveOf(out: string): Record<string, unknown> {
   const line = out.split("\n").find((l) => l.trim().startsWith("{"));
   expect(line).toBeDefined();
   return JSON.parse(line as string) as Record<string, unknown>;
+}
+
+function runNextInProcess(proj: string, args: string[]): Record<string, unknown> {
+  const originalLog = console.log;
+  const originalStageGraph = process.env.AMADEUS_STAGE_GRAPH;
+  const originalScopeGrid = process.env.AMADEUS_SCOPE_GRID;
+  const originalScopesDir = process.env.AMADEUS_SCOPES_DIR;
+  let output = "";
+  process.env.AMADEUS_STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+  process.env.AMADEUS_SCOPE_GRID = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
+  process.env.AMADEUS_SCOPES_DIR = join(AMADEUS_SRC, "scopes");
+  console.log = (...values: unknown[]) => {
+    output += `${values.map(String).join(" ")}\n`;
+  };
+  try {
+    handleNext(args, proj);
+  } finally {
+    console.log = originalLog;
+    if (originalStageGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+    else process.env.AMADEUS_STAGE_GRAPH = originalStageGraph;
+    if (originalScopeGrid === undefined) delete process.env.AMADEUS_SCOPE_GRID;
+    else process.env.AMADEUS_SCOPE_GRID = originalScopeGrid;
+    if (originalScopesDir === undefined) delete process.env.AMADEUS_SCOPES_DIR;
+    else process.env.AMADEUS_SCOPES_DIR = originalScopesDir;
+  }
+  return directiveOf(output);
 }
 
 let proj = "";
@@ -132,6 +159,12 @@ describe("t198 cold-start compose surfaces -> composer dispatch", () => {
     expect(String(d.message)).not.toContain('for: "sonar.json"');
   });
 
+  test("in-process report dispatch names the fix-oriented triage route", () => {
+    proj = createTestProject();
+    const d = runNextInProcess(proj, ["compose", "--report", "sonar.json"]);
+    expect(String(d.message)).toContain("stock fix or security-patch scope");
+  });
+
   test("--new-scope forces synthesis wording and dispatches without the verb", () => {
     proj = createTestProject();
     const d = directiveOf(
@@ -185,8 +218,8 @@ describe("t198 Branch 8: inference confirm + compose offer", () => {
     proj = createTestProject();
     const d = directiveOf(runNext(proj, ["fix login bug"]).out);
     expect(d.kind).toBe("ask");
-    // bugfix carries keyword "fix"; the old code would have said "feature".
-    expect(String(d.question)).toContain('"bugfix"');
+    // fix carries keyword "fix"; the old code would have said "feature".
+    expect(String(d.question)).toContain('"fix"');
     expect(String(d.question)).toContain("compose");
   });
 
@@ -200,15 +233,23 @@ describe("t198 Branch 8: inference confirm + compose offer", () => {
     expect(String(d.question)).not.toContain('"feature" workflow');
   });
 
+  test("in-process rich prose offers canonical fix among the direct scope choices", () => {
+    proj = createTestProject();
+    const d = runNextInProcess(proj, [
+      "build a distributed cache layer with consistency guarantees",
+    ]);
+    expect(String(d.question)).toContain("e.g. fix, feature, poc");
+  });
+
   test("known-scope positional still births (Branch 7b untouched)", () => {
     proj = createTestProject();
     // The birth path needs a GENUINELY empty workspace (zero intents), else the
     // engine asks to select the seeded record instead of birthing (t118's
     // pattern).
     removeWorkspaceRecord(proj);
-    const d = directiveOf(runNext(proj, ["bugfix"]).out);
+    const d = directiveOf(runNext(proj, ["fix"]).out);
     expect(d.kind).toBe("print");
-    expect(String(d.message)).toContain("intent-birth --scope bugfix");
+    expect(String(d.message)).toContain("intent-birth --scope fix");
   });
 });
 
@@ -226,7 +267,7 @@ describe("t198 detect --json is a pure read that names the write target", () => 
     expect(typeof payload.languages).toBe("string");
     expect(String(payload.scopesDir)).toContain("scopes");
     expect(String(payload.scopeGridPath)).toContain("scope-grid.json");
-    expect(payload.scopes as string[]).toContain("bugfix");
+    expect(payload.scopes as string[]).toContain("fix");
     const after = readdirSync(proj).sort().join(",");
     expect(after).toBe(before); // no dir created, no file written
   });

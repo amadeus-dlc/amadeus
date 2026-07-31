@@ -19,7 +19,7 @@ At each phase transition (Ideation→Inception (approval-handoff→reverse-engin
 ### Verification process
 1. Read the verification methodology from `.cursor/knowledge/amadeus-shared/verification.md`
 2. Run the phase-specific traceability checks
-3. Write results to `<record>/verification/[phase-boundary]-verification.md`
+3. Write results to `<record>/verification/phase-check-<phase>.md`
 4. If verification fails, present issues to the user before proceeding:
    - Missing traceability links (e.g., requirement without a design)
    - Orphaned artifacts (design without a requirement)

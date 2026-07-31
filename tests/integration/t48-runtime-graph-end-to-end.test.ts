@@ -33,8 +33,8 @@
 //        memory_entries:null (NOT 0), so no MEMORY_EMPTY fires — the .sh's
 //        "backfill, file absent" guarantee.
 //
-// First-stage fact: `init --scope bugfix` puts requirements-analysis in [-]
-// (in-progress) as the first stage of the bugfix scope (verified against a
+// First-stage fact: `init --scope fix` puts requirements-analysis in [-]
+// (in-progress) as the first stage of the fix scope (verified against a
 // real init: state.md `- [-] requirements-analysis — EXECUTE`). The twin
 // extracts the first stage from state.md exactly as the .sh did
 // (grep '^- [-]' | head -1) rather than hard-coding it, so a scope-spine
@@ -43,7 +43,7 @@
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1  (compile produced runtime-graph.json)                  -> test 1
 //   .sh test 2  (graph has workflow_id, scope, started_at, stages)     -> test 2
-//   .sh test 3  (scope reflects init scope == "bugfix")                -> test 3
+//   .sh test 3  (scope reflects init scope == "fix")                -> test 3
 //   .sh test 4  (first stage row outcome: pending pre-approve)         -> test 4
 //   .sh test 5  (stage 1 outcome flips to approved post-approve)       -> test 5
 //   .sh test 6  (stage 1 has non-null completed_at)                    -> test 6
@@ -180,10 +180,10 @@ function rowFor(graph: RuntimeGraphShape, slug: string): RuntimeStageRow | undef
 beforeAll(() => {
   proj = createTestProject();
 
-  // Init the bugfix scope — fastest scope, smallest stage list (.sh:40-42).
+  // Init the fix scope — fastest scope, smallest stage list (.sh:40-42).
   const init = run(
     UTIL,
-    ["init", "--scope", "bugfix", "--project-dir", proj],
+    ["init", "--scope", "fix", "--project-dir", proj],
     { AMADEUS_WORKFLOW_INTENT: "runtime-graph e2e" },
   );
   initOk = init.status === 0;
@@ -252,8 +252,8 @@ describe("t48 runtime-graph compile end-to-end (migrated from t48-runtime-graph-
     expect(g.stages.length).toBeGreaterThan(0);
   });
 
-  test("3: scope reflects the init scope (bugfix) [.sh test 3]", () => {
-    expect(graphAfterInit.scope).toBe("bugfix");
+  test("3: scope reflects the init scope (fix) [.sh test 3]", () => {
+    expect(graphAfterInit.scope).toBe("fix");
   });
 
   test("4: first stage row has outcome 'pending' pre-approve [.sh test 4]", () => {

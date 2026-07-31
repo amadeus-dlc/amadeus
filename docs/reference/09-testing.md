@@ -146,7 +146,7 @@ Runs full workflows and verifies the experience: beyond state transitions, it ch
 **Levels:** e2e
 
 **What it tests:**
-- Full bugfix lifecycle with brownfield stub + artifact assertions
+- Full fix lifecycle with brownfield stub + artifact assertions
 - Full POC lifecycle with greenfield stub + artifact assertions
 - State progression, scope routing, audit completeness, jump mechanics
 - LLM semantic review of stage instruction quality (clarity, logical flow, ambiguity detection)
@@ -360,13 +360,13 @@ Contents: 1 minimal .md file (functional-design) describing the todo-core unit's
 |---------|-------------|-------|-------|---------|
 | `state-pre-workspace-detection.md` | -- | feature | Welcome+scaffold done, workspace-detection next | t70, t71 |
 | `state-initialization-done.md` | Greenfield | feature | Init done, intent-capture next | t73 |
-| `state-brownfield-init-done.md` | Brownfield | bugfix | Init done, RE next | t72 |
-| `state-mid-inception.md` | Brownfield | bugfix | RE done, requirements-analysis next | t74 |
+| `state-brownfield-init-done.md` | Brownfield | fix | Init done, RE next | t72 |
+| `state-mid-inception.md` | Brownfield | fix | RE done, requirements-analysis next | t74 |
 | `state-mid-ideation.md` | Greenfield | feature | Intent+market done, feasibility next | t08, t10, t11, t12, t20, t22, t24, t25, t37 |
 | `state-construction.md` | -- | -- | Construction phase | t07, t10, t11, t26, t57 |
 | `state-operation.md` | -- | -- | Operation phase | t07, t10, t11 |
 | `state-completed.md` | -- | -- | All stages done | t08, t11 |
-| `state-jumped.md` | Brownfield | bugfix | Mid-workflow with jump history | t11, t37, t42 |
+| `state-jumped.md` | Brownfield | fix | Mid-workflow with jump history | t11, t37, t42 |
 | `state-corrupted.md` | -- | -- | Invalid/corrupted state | t08, t10 |
 
 ## How to Add a Stage Test

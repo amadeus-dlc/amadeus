@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OBB2-RAS13",
+  "kind": "s13-learning-selection",
+  "question": "intent 260730-open-bug-batch-2 / requirements-analysis の §13 学習選定。候補2件(diary: inception/requirements-analysis/memory.md):\n\n[c1] 質問絞り込み+裁定転記の実践記録(既存 intent-capture:c1 / election-answer-after-ruling の再演、新規性なし)。\n\n[c2] FR-1735c 初稿が『困難なら followup Issue へ』の免責付きで、本 intent の requirements 自身が引用する exemption-clause-must-not-substitute をその場で踏み、§12a reviewer が捕捉した(既存規範の再演 — ただし『規範を引用しながら同じ文書内で踏む』という編纂時の自己適用漏れクラスと見るなら追補価値の判断余地あり)。\n\n問い: persist する採用集合。0件(両方とも既存規範の実践記録)が既定仮説 — 0件でよいかも含めて、diary と requirements.md Review 節を実測確認して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件採用 — 両候補とも既存 cid の実践記録で persist 不要"
+    },
+    {
+      "internalNo": 2,
+      "label": "c2 のみ採用 — 「規範を引用する成果物の編纂では、引用した規範を同一文書の自分の記述へ自己適用チェックする」を追補として persist"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

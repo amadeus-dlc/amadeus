@@ -62,6 +62,7 @@ import {
   errorMessage,
   isMarkerArtifact,
   loadAgents,
+  loadScopeMetadata,
   loadScopeMapping,
   harnessDir,
   PHASES,
@@ -115,14 +116,15 @@ export interface RuleResolution {
 // Per-sensor resolution row baked into each stage's sensors_applicable.
 // Pull authoring: the stage's frontmatter `sensors: [<id>]` declares the
 // import; the resolver looks the manifest up by id and copies its
-// capability filter (matches) verbatim. matches is omitted when the
-// manifest declares no path filter (e.g., required-sections,
-// upstream-coverage). The PostToolUse hook reads the snapshotted matches
-// off the graph node — never re-opens the manifest at fire time.
+// capability filter (matches) and category verbatim. The PostToolUse hook reads
+// both snapshotted values off the graph node — never re-opens the manifest at
+// fire time. Category distinguishes declared-output document/governance sensors
+// from workspace-wide code-quality/framework-integrity sensors.
 export interface SensorResolution {
   id: string;
   path: string;
   matches?: string;
+  category?: string;
 }
 
 // Authoritative graph stage shape — fully-populated, no optionals
@@ -746,6 +748,9 @@ export function resolveSensorsForStage(
     const entry: SensorResolution = { id: sensor.id, path: sensor.path };
     if (sensor.manifest.matches !== undefined) {
       entry.matches = sensor.manifest.matches;
+    }
+    if (sensor.manifest.category !== undefined) {
+      entry.category = sensor.manifest.category;
     }
     out.push(entry);
   }
@@ -1371,11 +1376,15 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  cells are filtered through it, so a stage that has left the graph (a
  *  dropped plugin, a deleted core stage) does not leave a dangling cell
  *  addressing a slug no router can resolve — the fold preserves the composed
- *  scope, not a stale snapshot of the stage list it was authored against. */
+ *  scope, not a stale snapshot of the stage list it was authored against.
+ *  When `registeredScopes` is provided, only folded rows that still have a
+ *  scope metadata file survive; this removes renamed stock scopes without
+ *  treating their old grid rows as composed scopes. */
 export function mergeComposedScopes(
   fresh: ScopeGrid,
   onDiskJson: string | null,
   knownSlugs: ReadonlySet<string>,
+  registeredScopes?: ReadonlySet<string>,
 ): ScopeGrid {
   if (!onDiskJson) return fresh;
   let onDisk: unknown;
@@ -1388,6 +1397,7 @@ export function mergeComposedScopes(
   const merged: ScopeGrid = { ...fresh };
   for (const [name, entry] of Object.entries(onDisk as Record<string, unknown>)) {
     if (name in merged) continue;
+    if (registeredScopes !== undefined && !registeredScopes.has(name)) continue;
     if (
       typeof entry === "object" && entry !== null && !Array.isArray(entry) &&
       typeof (entry as { stages?: unknown }).stages === "object"
@@ -2369,7 +2379,12 @@ export function compileStageGraph(): {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
       applyPluginScopeOptIns(
-        mergeComposedScopes(transposeScopeGrid(stockScopeStages), onDiskGrid, knownSlugs),
+        mergeComposedScopes(
+          transposeScopeGrid(stockScopeStages),
+          onDiskGrid,
+          knownSlugs,
+          new Set(Object.keys(loadScopeMetadata())),
+        ),
         pluginScopeStages,
       ),
     ),

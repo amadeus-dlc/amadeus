@@ -696,10 +696,45 @@
     "status": "complete"
   },
   {
+    "uuid": "019faca9-5a73-7de1-a97b-c2a85f22349a",
+    "slug": "open-bug-batch",
+    "dirName": "260729-open-bug-batch",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
+    "slug": "skill-reviewer-fixes",
+    "dirName": "260730-skill-reviewer-fixes",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb39f-6bc0-7944-a4c6-153a150895a8",
+    "slug": "open-bug-batch-2",
+    "dirName": "260730-open-bug-batch-2",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb55c-3116-7019-a7be-53c3fdae228a",
+    "slug": "open-bug-batch-3",
+    "dirName": "260730-open-bug-batch-3",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb69c-0dca-7eae-86b4-68be91ed9242",
+    "slug": "open-bug-batch-4",
+    "dirName": "260731-open-bug-batch-4",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
     "slug": "otel-upstream",
     "dirName": "260729-otel-upstream",
-    "scope": "amadeus-feature",
+    "scope": "self-feature",
     "status": "in-flight"
   }
 ]

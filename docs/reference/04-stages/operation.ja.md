@@ -6,7 +6,7 @@
 
 Operation フェーズは AI-DLC ライフサイクルにおける5フェーズのうち5番目のフェーズです。Construction で構築・テストされたソフトウェアを受け取り、デプロイ、監視、インシデント対応準備、パフォーマンス検証、継続的最適化を通じて動かします。パイプライン設定、環境プロビジョニング、デプロイ実行、可観測性、インシデント対応、パフォーマンス検証、フィードバック収集にまたがる7つのステージ(4.1から4.7)をカバーします。
 
-7つの Operation ステージはすべて **CONDITIONAL** です — スコープと実行計画に基づいて実行されます。たとえば、mvp、poc、bugfix、chore、refactor スコープは Operation を完全にスキップします。infra と security-patch スコープはサブセット(デプロイと環境のステージ)を実行します。
+7つの Operation ステージはすべて **CONDITIONAL** です — スコープと実行計画に基づいて実行されます。たとえば、mvp、poc、fix、chore、refactor スコープは Operation を完全にスキップします。infra と security-patch スコープはサブセット(デプロイと環境のステージ)を実行します。
 
 すべてのステージは **インライン** で実行されます(Operation フェーズにサブエージェントはありません)。すべてのステージは承認ゲート、質問フォーマット、完了メッセージ、状態追跡について `stage-protocol.md` に従います。
 
@@ -278,7 +278,7 @@ SLO コンプライアンスレビュー、コスト最適化分析、インフ�
 - enterprise / feature / workshop: 全7ステージ
 - infra: ステージ4.1-4.4(deployment-pipeline、environment-provisioning、deployment-execution、observability-setup)
 - security-patch: ステージ4.1、4.3(deployment-pipeline、deployment-execution)
-- mvp / poc / bugfix / chore / refactor: Operation フェーズは完全にスキップ
+- mvp / poc / fix / chore / refactor: Operation フェーズは完全にスキップ
 
 ## 相互参照
 

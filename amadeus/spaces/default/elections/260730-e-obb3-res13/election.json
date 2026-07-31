@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OBB3-RES13",
+  "kind": "s13-adoption",
+  "question": "260730-open-bug-batch-3 / reverse-engineering §13学習選定。surface は候補2件を返した: c1=差分 base の merge-base 復元採用(記録済み observed 3件が全て HEAD 非祖先 → cid:reverse-engineering:rescan-base-ancestry の既定手順を適用、observed は origin/main 系譜 3f73823b1 = cid:reverse-engineering:c2-observed-mainline-commit 準拠)、c2=宣言センサー3種の codekb filter 構造不適合による不発火と機械検査代替(cid:reverse-engineering:re-sensors-codekb-filter-mismatch と cid:reverse-engineering:c3-codekb-sensor の適用)。conductor 提案は0件採用 — 両候補とも既存 cid が定める手順の適用実例であり、新規の横断学習を含まない(persist すると既存規範の重複規定になる)。各自 memory.md(amadeus/spaces/default/intents/260730-open-bug-batch-3/inception/reverse-engineering/memory.md)と codekb 成果物(amadeus/spaces/default/codekb/amadeus/re-scans/260730-open-bug-batch-3.md ほか)を実測し、GoA(1-8)と留保を付けて投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件不可 — c1 または c2 に新規学習価値があり persist すべき"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

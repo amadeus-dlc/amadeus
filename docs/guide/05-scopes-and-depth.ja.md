@@ -42,7 +42,7 @@
 - **デフォルト深度:** Minimal
 - **スキップ:** Market Research、Feasibility、Team Formation、Mockups、User Stories、ほとんどの Operation ステージ
 
-### bugfix
+### fix
 
 **使う場面:** 特定のバグを修正するとき。intent の把握からコード生成とテストまでの合理化されたパスです。
 
@@ -64,7 +64,7 @@
 
 - **ステージ:** 32 のうち 8
 - **デフォルト深度:** Minimal
-- **スキップ:** bugfix と同様 — コード分析、設計、実装に焦点を当てる
+- **スキップ:** fix と同様 — コード分析、設計、実装に焦点を当てる
 
 ### infra
 
@@ -105,7 +105,7 @@
 | `feature` | 32 / 32 | Standard | Standard | 新機能のデフォルト |
 | `mvp` | 22 / 32 | Standard | Standard | グリーンフィールド、後段の運用をスキップ |
 | `poc` | 8 / 32 | Minimal | Minimal | 実現可能性を素早く実証 |
-| `bugfix` | 7 / 32 | Minimal | Minimal | 特定のバグを修正 |
+| `fix` | 7 / 32 | Minimal | Minimal | 特定のバグを修正 |
 | `chore` | 5 / 32 | Minimal | Minimal | 小さな自己完結の修正 |
 | `refactor` | 8 / 32 | Minimal | Minimal | 既存コードをクリーンアップ |
 | `infra` | 13 / 32 | Standard | Standard | インフラ変更 |
@@ -129,7 +129,7 @@
 
 | キーワード | 検出されるスコープ |
 |----------|---------------|
-| "fix"、"bug"、"broken" | `bugfix` |
+| "fix"、"bug"、"broken" | `fix` |
 | "chore"、"tweak" | `chore` |
 | "refactor"、"clean up"、"simplify" | `refactor` |
 | "infrastructure"、"deploy"、"infra" | `infra` |
@@ -144,7 +144,7 @@
 明確なキーワード一致の後、一致した(MATCHED)スコープ名を示す一行確認が表示されます:
 
 ```
-Starting a "bugfix" workflow for: "fix login bug". Confirm to proceed,
+Starting a "fix" workflow for: "fix login bug". Confirm to proceed,
 name a different scope, or say "compose" for a tailored plan.
 ```
 
@@ -165,7 +165,7 @@ name a different scope, or say "compose" for a tailored plan.
 
 コンポーザーエージェントはあなたのタスクとワークスペースのスキャン(brownfield/greenfield、言語)を読み取り、合致する EXECUTE/SKIP グリッドを、スキップされる各ステージの理由とともに提案します。あなたはゲートで承認、編集、または却下します。明示的な承認の前には何も書き込まれず、ワークフローも開始されません。承認時:
 
-- 提案が既製のスコープに一致(MATCHED)した場合、ワークフローはそのスコープで直接誕生します(コードレベルの発見でいっぱいのスキャンレポートは、通常この方法で `bugfix` または `security-patch` にルーティングされます)。
+- 提案が既製のスコープに一致(MATCHED)した場合、ワークフローはそのスコープで直接誕生します(コードレベルの発見でいっぱいのスキャンレポートは、通常この方法で `fix` または `security-patch` にルーティングされます)。
 - カスタムグリッドの場合、コンポーザーは実際のスコープ(`scopes/amadeus-<name>.md` と `scope-grid.json` エントリ)を作成し、同じターンでワークフローがそれに基づいて誕生します。作成されたスコープは、その後は既製のスコープと同様に解決され(`/amadeus --scope <name>`)、グラフの再コンパイルにも耐えます: `amadeus-graph.ts compile` は、ステージフロントマターだけからグリッドを再構築するのではなく、作成されたグリッドエントリを再生成された `scope-grid.json` に折り込み直します。
 
 **キーワード衛生:** 作成されたスコープは `keywords: []` で出荷されるため、一度きりの計画がキーワード自動検出に参加することは決してありません。作成されたスコープを将来のプロンプトで推論可能にするかどうかは、ゲートでの明示的な質問であり、副作用ではありません。
@@ -201,7 +201,7 @@ name a different scope, or say "compose" for a tailored plan.
 1. **`--depth` CLI フラグ経由** — 呼び出し時に深度を上書き:
    ```
    /amadeus --depth comprehensive
-   /amadeus --scope bugfix --depth standard
+   /amadeus --scope fix --depth standard
    /amadeus --stage code-generation --depth minimal
    ```
 2. **スコープ確認時** — オーケストレーターが検出されたスコープを確認するとき、単に確認するのではなく `--depth <level>` で応答します
@@ -223,21 +223,21 @@ You can request different depth or test strategy at any approval gate.
 
 ```
 /amadeus feature
-/amadeus bugfix
+/amadeus fix
 /amadeus enterprise
 ```
 
 ### 説明付きのスコープ
 
 ```
-/amadeus bugfix Fix the login timeout issue
+/amadeus fix Fix the login timeout issue
 /amadeus poc Build a quick prototype for the search feature
 ```
 
 ### ユーティリティコマンドでスコープを上書き
 
 ```
-/amadeus --scope bugfix
+/amadeus --scope fix
 /amadeus --scope enterprise --stage code-generation
 ```
 
@@ -247,7 +247,7 @@ You can request different depth or test strategy at any approval gate.
 
 ```
 /amadeus --depth minimal
-/amadeus --scope bugfix --depth comprehensive
+/amadeus --scope fix --depth comprehensive
 /amadeus --scope enterprise --depth standard --stage code-generation
 ```
 
@@ -321,7 +321,7 @@ You can request different depth or test strategy at any approval gate.
    ```
    /amadeus --test-strategy minimal
    /amadeus --depth standard --test-strategy minimal
-   /amadeus --scope bugfix --test-strategy comprehensive
+   /amadeus --scope fix --test-strategy comprehensive
    ```
 2. **ワークフロー途中** — アクティブなワークフローのテスト戦略を変更:
    ```
@@ -349,7 +349,7 @@ You can request different depth or test strategy at any approval gate.
 | 本番アプリケーションの新機能 | `feature` |
 | ゼロからのグリーンフィールド製品 | `mvp` または `feature` |
 | アプローチの素早い検証 | `poc` |
-| 既知のバグの修正 | `bugfix` |
+| 既知のバグの修正 | `fix` |
 | 小さな自己完結の修正 — 開発スクリプト・docs・CI 設定などユーザー可視契約に触れない1〜数ファイルの変更 | `chore` |
 | 挙動を変えないコードクリーンアップ | `refactor` |
 | 新しい AWS 環境または CDK 変更 | `infra` |
@@ -365,6 +365,6 @@ You can request different depth or test strategy at any approval gate.
 
 - [フェーズとステージ](04-phases-and-stages.ja.md) — 各ステージが何をするか
 - [エージェント](06-agents.ja.md) — どのエージェントがどのスコープに参加するか
-- [スキルとランナーコマンド](17-skills.ja.md) — bugfix、feature、mvp、security-patch 向けの一語 `/amadeus-<scope>` ランナー
+- [スキルとランナーコマンド](17-skills.ja.md) — fix、feature、mvp、security-patch 向けの一語 `/amadeus-<scope>` ランナー
 - [CLI コマンド](12-cli-commands.ja.md) — 完全なコマンドリファレンス
 - [用語集](glossary.ja.md) — 用語リファレンス

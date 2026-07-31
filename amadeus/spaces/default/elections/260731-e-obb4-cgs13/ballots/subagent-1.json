@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は既存 cid の順序規定(『並行 Bolt の実装自体は保存済み directive の取得後に開始』)との関係を明文化し、FR 全文焼き込み時は directive 捕捉を完了順の record 側処理へ後置してよい条件形として書くこと。",
+  "rationale": "既存 cid 文面(project.md:272)は unit dir 遅延作成+directive 捕捉を実装開始前の直列前提と定めるが、diary(construction/code-generation/memory.md:6)の実測運用は FR 全文焼き込みにより実装を directive 非依存で並行ディスパッチし、record 側(unit dir 作成→directive 捕捉→成果物→§12a)を builder 完了順に直列処理する分離形で、既存文面に未記載の新規組合せ。4 unit の code-summary.md(fix-1797/fix-1800/fix-1811/fix-1816)全てに PR 着地・§12a READY・検証 exit code の実測が揃い、E-SRF-CGS13 の PR 発行報告割込みとの併用も memory.md:6 に記録されている。候補B は deviation-stop-before-implement 等の既存 cid 実践例(memory.md:7,11)、候補C は運用記録(memory.md:15)で新規規範なしとの不採用提案に同意。",
+  "submittedAt": "2026-07-31T07:51:47Z"
+}

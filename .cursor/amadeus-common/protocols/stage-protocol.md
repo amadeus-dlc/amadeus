@@ -20,6 +20,7 @@ Before and during EVERY stage, verify:
 4. [ ] **Task transitions + state sync** — Mark previous task `completed`, then `TaskUpdate({ ..., status: "in_progress", activeForm: "Running [Stage] [slug]" })`. The `[slug]` suffix triggers the PostToolUse hook that syncs the state file. `amadeus-orchestrate.ts report --stage <slug> --result approved` auto-advances to the next in-scope stage (or completes the workflow on the final stage) — do NOT call `advance` separately after approval. (§4)
 5. [ ] **Stage ritual is ATOMIC** — once a stage starts, EVERY step in its protocol fires: questions → artifact → reviewer (if declared) → learnings → gate. No step is skippable based on inferred user intent. "Skip to stage X" means skip INTERMEDIATE stages, NOT shortcut the TARGET stage's ritual. If a user jumps forward from a stage at its gate, the current stage's learnings ritual (§13) MUST fire before the jump executes.
 6. [ ] **Autonomy is NEVER inferred** — a user saying "go with recommended" or "pick the best answers" for one stage is a ONE-TIME instruction for THAT stage only. It does NOT create a standing rule. The next stage starts fresh with its declared autonomy mode. The ONLY way to get autonomous mode is: (a) the directive explicitly carries `autonomy: autonomous`, OR (b) the human explicitly says "run this autonomous" for the specific stage being proposed. NEVER carry forward an autonomy inference from a previous stage. NEVER self-answer questions without explicit permission for THIS stage.
+7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic finding filer and the resolved `"auto-file-findings"` mode. Never improvise a direct GitHub mutation. (§14)
 
 ---
 
@@ -128,13 +129,18 @@ For Bolts after the walking skeleton, the Bolt-level gate is presented only if `
 
 **Halt-and-ask on failure**
 
-When a Bolt's code-generation returns failure, **always halt and present the halt-and-ask prompt regardless of autonomy mode**. This is the one case where `autonomous` mode stops to consult the user.
+When a Bolt's code-generation returns failure, **always halt regardless of autonomy mode** — the Bolt never proceeds on its own. This is the one case where `autonomous` mode stops to consult. Halting is unconditional; who rules on the halt is decided by the solo auto-election hook below, which names the one branch that does not present the prompt.
 
 - Solo Bolt failure: halt immediately, emit `BOLT_FAILED` (with `--slug` for halt-and-ask correlation), present retry / skip / abort.
 - Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts, emit `BOLT_FAILED` for the failed Bolt with `Succeeded=[names]`, present `"Bolts [X, Y] succeeded, Bolt [Z] failed with: [error]. Options: retry Z, skip Z, abort Construction."`
 - Retry: re-run the failed Bolt only inside the existing worktree.
 - Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.
 - Abort: stop Construction; user can resume later. Worktree at `<path>` is preserved.
+
+**Solo auto-election hook — which branch rules the halt.** Exactly one of these two branches runs, and the first one that applies wins:
+
+1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `"auto-solo-election": true`** — the blocker goes to an election INSTEAD OF the prompt below. Write a definition JSON carrying `electionId`, `kind`, `question`, `choices` (one per option above — retry / skip / abort) and `voters`, then run `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. The election's ruling selects the option to take, and the prompt below is not presented.
+2. **Every other case** — team mode, config absent or `false`, or the CLI answering `{"opened":null,"reason":"auto-solo-election-disabled"}` (which writes nothing) — present the halt-and-ask prompt below exactly as written. This is the default branch.
 
 The orchestrator runs `bun .cursor/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
 
@@ -226,14 +232,14 @@ Where `S` = total stages for the current scope. Reference scope stage counts:
 |-------|---------------------|
 | mvp | ~18 |
 | poc | ~8 |
-| bugfix | ~8 |
+| fix | 7 |
 | chore | ~5 |
 | refactor | ~9 |
 | infra | ~13 |
 | security-patch | ~10 |
 
 Example (enterprise): "Progress: 13/32 overall | 3/7 IDEATION stages complete. Next: Approval & Handoff"
-Example (bugfix): "Progress: 5/8 in-scope stages complete (7/32 overall) | 2/3 CONSTRUCTION. Next: Build & Test"
+Example (fix): "Progress: 5/8 in-scope stages complete (7/32 overall) | 2/3 CONSTRUCTION. Next: Build & Test"
 
 Count only stages in the current phase (INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, or OPERATION). Include both completed and skipped stages in the numerator.
 
@@ -287,7 +293,7 @@ Stage files list **topic areas and example questions** — they are guidance, no
 | Comprehensive | ~8-12+ per stage | Cover all topic areas in depth. Generate additional context-aware questions beyond the reference set — edge cases, compliance, scale, failure modes, cross-cutting concerns. Actively seek unknowns the user hasn't considered. |
 
 **These are guidelines, not hard caps.** The agent MUST use judgment:
-- A Minimal bugfix with a vague one-line description warrants more questions — don't blindly cap at 2.
+- A Minimal fix with a vague one-line description warrants more questions — don't blindly cap at 2.
 - A Comprehensive enterprise feature with crystal-clear requirements warrants fewer — don't pad with noise.
 - Prior stage outputs reduce what needs asking. If requirements-analysis already captured NFR targets, construction stages shouldn't re-ask.
 - Follow-up questions are always justified regardless of depth — ambiguity must be resolved.
@@ -669,25 +675,26 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 | feature | Standard | All 32 |
 | mvp | Standard | ~25 (skip late Operation) |
 | poc | Minimal | ~8 (Ideation + core Inception) |
-| bugfix | Minimal | ~8 (targeted) |
+| fix | Minimal | 7 (targeted) |
 | chore | Minimal | ~5 (tweak-sized: init + code-gen + build) |
 | refactor | Minimal | ~9 (targeted) |
 | infra | Standard | ~13 (infra-focused) |
 | security-patch | Minimal | ~10 (security-focused) |
 
 ### Depth levels
-- **Minimal** (poc, bugfix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
+
+- **Minimal** (poc, fix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
 - **Standard** (feature, mvp, infra): ~5-8 questions per stage, full artifacts at moderate detail
 - **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute
 
 The orchestrator determines appropriate depth based on scope selection. Users can override at three points:
-1. Via the `--depth` flag: `/amadeus --scope bugfix --depth comprehensive` or `/amadeus --depth minimal`
+1. Via the `--depth` flag: `/amadeus --scope fix --depth comprehensive` or `/amadeus --depth minimal`
 2. At scope confirmation — choose "Change depth"
 3. At any approval gate — request a different depth level
 
 ### Depth-Level Examples
 
-**Minimal project** (e.g., bugfix, single-page internal tool):
+**Minimal project** (e.g., fix, single-page internal tool):
 - Questions: ~2-4 per stage, essentials only, skip what's inferable from code/context
 - Requirements Analysis: 5-10 requirements, brief descriptions, minimal NFR coverage
 - Application Design: Single component diagram, basic data model, no ADRs needed
@@ -716,7 +723,7 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 - Happy-path floor: every component gets at least 1 happy-path unit test regardless of requirement mapping
 - Unit tests ONLY — skip integration, E2E, performance, security
 - ~5-15 tests total for a typical project
-- Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical bugfix)
+- Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical fix)
 
 **Standard — per-component model:**
 - 5-8 tests per component
@@ -735,7 +742,7 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 ```
 /amadeus --test-strategy minimal                          Minimal testing for active workflow
 /amadeus --depth standard --test-strategy minimal         Full artifacts, minimal tests
-/amadeus --scope bugfix --test-strategy comprehensive     Bugfix with thorough testing
+/amadeus --scope fix --test-strategy comprehensive     Bugfix with thorough testing
 ```
 
 ---
@@ -748,7 +755,7 @@ Key terms used throughout AI-DLC documentation:
 |------|-----------|
 | **Phase** | Top-level grouping: INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, OPERATION |
 | **Stage** | A discrete step within a phase (e.g., Intent Capture, Requirements Analysis, Code Generation, Observability Setup) |
-| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.cursor/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, bugfix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
+| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.cursor/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, fix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
 | **Bolt** | One execution of Construction stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run **once** after all Bolts complete, not per-Bolt. The first Bolt is the **walking skeleton** — the thinnest end-to-end slice that proves the architecture. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
 | **Walking skeleton** | The first Bolt in Construction — smallest end-to-end slice that exercises every integration point. Always gated and interactive so humans can confirm the shape before the rest of Construction runs. |
 | **Ladder prompt** | The single prompt that fires after the walking-skeleton gate asking the user to choose between "continue autonomously" and "gate every Bolt". The choice is recorded in state (`Construction Autonomy Mode`) and governs the rest of Construction. |
@@ -1000,6 +1007,17 @@ Trigger after Step N-1 (completion message rendered) and before Step N (approval
 
 3. **Render the structured question + free-text channel.** For each candidate, render one option whose `label` is the candidate `summary` (verbatim) and whose `description` names the routed destination (e.g. `→ project.md ## Corrections`) plus a "promote to team?" affordance. Never label an option with only the candidate id — `❌ "Persist c5 only (Recommended)"` is a protocol violation: the human cannot judge what `c5` is from the label, so the `summary` (not the id) must be the visible `label`. After `multiSelect` returns, correlate each kept label back to its candidate `id` + `source_heading`. Then **always** ask "Anything to add for next time?"; for any non-empty response, ask the user to pick one of the four diary headings (Interpretation / Deviation / Tradeoff / Open question). **The diary-heading pick is the only classification asked of the user.** From it, the orchestrator routes the learning to the fitting practice heading in the method file (KNOWLEDGE): a testing learning → `## Testing Posture`, a prohibition → `## Forbidden`, anything general → `## Corrections` (the default). The user never picks the destination heading directly — the orchestrator routes by fit, and the tool ensure-exists the heading before it writes.
 
+   **Solo auto-election hook.** In solo mode, when the layered config
+   (`amadeus/config.json` → space → intent) resolves `"auto-solo-election": true`,
+   do not settle the kept set alone — put the selection (including a zero-candidate
+   proposal) to an election. Write a definition JSON carrying `electionId`, `kind`,
+   `question`, `choices` (one per candidate, or the single "0 件で可" choice for a
+   zero-candidate proposal) and `voters`, then run
+   `bun .cursor/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`.
+   `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is
+   evaluated. If the CLI answers `{"opened":null,"reason":"auto-solo-election-disabled"}`,
+   no election is created: fall back to the user's ruling on the same selection.
+
 4. **Admission conflict-check (before any write).** For each kept learning candidate, compare the proposed practice line against `org.md`'s matching `## <section>` (matched by the routed heading — the single-line variant of the §5 admission gate). This comparison is a section-level LLM check (knowledge → orchestrator-LLM). If the practice contradicts an org guardrail, surface the conflicting org sentence inline; the user **revises, skips this candidate, or escalates** (judgement → user; there is no user-override path). Only conflict-clear or user-escalated selections proceed to the write. Sensor manifests have no org-section analogue and skip this check.
 
 5. **Persist (the tool writes + emits audit).** Build the selections file and call:
@@ -1048,6 +1066,77 @@ Is the improvement a verification check?
 ### Why stage files stay immutable
 
 Two reasons: (1) framework upgrades to a stage file would conflict with workflow-time edits; (2) the same stage runs in many projects, so stage-file body mutations would mean every workflow drifts the framework's methodology in incompatible directions. The harness layer (rules, learnings, sensors) is designed to compose — many small additions accumulate without conflicts. Stage-file bodies are not. The sensor-binding frontmatter edit is the one sanctioned exception: it grows the `sensors:` import list (immutable in shape, not in contents), never the `## Steps` / `## Sensors` / `## Learn` body.
+
+---
+
+## 14. Automatic Amadeus Finding Filing
+
+When stage work exposes a confirmed defect or actionable engineering concern
+owned by Amadeus itself, route it through the deterministic finding filer. The
+layered setting is `"auto-file-findings": "off" | "prompt" | "auto"` and its
+default is `"prompt"`. The fixed remote target is
+`amadeus-dlc/amadeus`; this setting never files application-project issues.
+The upstream target is deliberate: an Amadeus-owned defect observed in ANY
+workspace — including forks and end-user projects — belongs to the framework's
+own tracker, exactly like a crash reporter. That is why the admission rules
+below insist the public body carries no workspace-private information.
+
+### Admission
+
+File only when all of these are true:
+
+- evidence demonstrates an Amadeus-owned defect or a concrete, actionable risk;
+- the work is not already in the active intent's scope;
+- the finding is not a speculative idea, transient environment failure, or
+  configuration mistake;
+- the public body contains no secrets or private workspace information.
+
+Security-sensitive findings, private repository details, and uncertain
+ownership are never auto-filed. Surface them to the human instead. Work already
+in scope is fixed and tested in the active intent rather than duplicated as a
+new Issue.
+
+### Deterministic filing
+
+Create a concise public body file under the current stage's artifact directory.
+It must include summary, evidence or reproduction, expected-versus-actual
+behaviour (or the concrete risk), affected revision, and acceptance criteria.
+Choose a stable fingerprint from the finding's kind, owning module, and failure
+signature; never include timestamps, worktree paths, or secrets.
+
+Run:
+
+```bash
+bun .cursor/tools/amadeus-finding.ts file \
+  --project-dir <workspace-root> \
+  --kind <defect|concern> \
+  --title "<concise title>" \
+  --body-file <stage-artifact-path> \
+  --fingerprint "<kind>:<module>:<failure-signature>"
+```
+
+The coordinator resolves all three config layers fail-closed, checks GitHub
+readiness, searches every open or closed Issue for its SHA-256 marker, and
+creates only when there is no existing Issue. One match returns that Issue;
+multiple matches stop safely without another mutation. The GitHub Gateway
+accepts a create only with a coordinator-minted permit bound to the exact body
+marker.
+
+When the single match is a CLOSED Issue (`issueState: "CLOSED"` in the
+outcome), do not treat the finding as settled: the same fingerprint was fixed
+once before, so a fresh observation is a possible regression. Surface the
+closed Issue link and the new evidence to the human instead of recording it as
+an existing filing.
+
+- `"auto"` — run the command immediately.
+- `"prompt"` — present the candidate to the human. On approval, rerun the same
+  command with `--approved`.
+- `"off"` — do not file automatically. An explicit human filing request may run
+  the command with `--approved`.
+
+A filing failure does not invent a fallback mutation. Surface the typed failure
+and the retained body artifact at the stage gate. Record the created or existing
+Issue link in the stage artifact and completion message.
 
 ---
 

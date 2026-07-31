@@ -248,7 +248,9 @@ export interface ParkedDirective {
 export interface AwaitApprovalDirective {
   kind: "await-approval";
   stage: string;
-  reason: "standing-grant-no-longer-authorizes";
+  reason:
+    | "standing-grant-no-longer-authorizes"
+    | "kimi-human-approval-required";
   target_intent_id: string;
   presence_reservation_id: string;
 }
@@ -541,9 +543,12 @@ function checkAwaitApproval(
   checkString(o, "reason", "await-approval", errors);
   checkString(o, "target_intent_id", "await-approval", errors);
   checkString(o, "presence_reservation_id", "await-approval", errors);
-  if (o.reason !== "standing-grant-no-longer-authorizes") {
+  if (
+    o.reason !== "standing-grant-no-longer-authorizes" &&
+    o.reason !== "kimi-human-approval-required"
+  ) {
     errors.push(
-      'await-approval: reason must be "standing-grant-no-longer-authorizes"',
+      "await-approval: reason must be a recognized approval fallback",
     );
   }
   if (typeof o.target_intent_id === "string" && !UUID_V7_RE.test(o.target_intent_id)) {

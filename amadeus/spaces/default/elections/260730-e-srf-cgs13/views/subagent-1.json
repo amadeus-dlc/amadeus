@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRF-CGS13",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c4 のみ採用 — 上記候補文を project 層 Corrections へ persist(conductor スケジューリングの割込み規則として新規)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c1〜c4 全採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "0件採用 — c4 も既存 resource-efficiency / merge-approval-latency の実践不足であり新規則不要"
+    }
+  ]
+}

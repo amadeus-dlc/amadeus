@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memory.md と re-scans/260731-open-bug-batch-4.md を実測: c1(base 3f73823b1 祖先 exit 0・距離13採用、open PR 4件とも0件)は rescan-base-ancestry(team.md:190)/c2-observed-mainline-commit(project.md:271)/c1-preexisting-pr-inventory(project.md:270)の名指し引用付き適用実例、c2(センサー filter 不適合→機械検査代替、Architect 再実測での数値4クラス是正)は re-sensors-codekb-filter-mismatch(project.md:144)/c3-codekb-sensor(project.md:301)/ledger-count-mechanical-recalc(team.md:198)の適用実例。いずれも既存 cid がカバーする手順の実践であり新規機序なし — 0件で可。",
+  "submittedAt": "2026-07-31T05:44:22Z"
+}

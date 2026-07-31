@@ -96,7 +96,7 @@ const SCOPES = [
   "feature",
   "mvp",
   "poc",
-  "bugfix",
+  "fix",
   "chore",
   "refactor",
   "infra",
@@ -259,12 +259,12 @@ describe("t66 findCycles (in-process)", () => {
 
 describe("t66 subgraphForScope (in-process)", () => {
   // .sh:153-159 — subset of full graph
-  test("subgraphForScope returns subset of full graph (bugfix < 32)", () => {
-    expect(subgraphForScope("bugfix").length).toBeLessThan(loadGraph().length);
+  test("subgraphForScope returns subset of full graph (fix < 32)", () => {
+    expect(subgraphForScope("fix").length).toBeLessThan(loadGraph().length);
   });
   // .sh:162-173 — numeric order
   test("subgraphForScope returns path in numeric order", () => {
-    const nums = subgraphForScope("bugfix").map((s) => s.number);
+    const nums = subgraphForScope("fix").map((s) => s.number);
     const sorted = [...nums].sort(numericOrder);
     expect(nums).toEqual(sorted);
   });
@@ -403,9 +403,9 @@ describe("t66 graph traversal — per-scope sub-DAG (in-process)", () => {
   test("enterprise sub-DAG equals full graph", () => {
     expect(subgraphForScope("enterprise").length).toBe(loadGraph().length);
   });
-  // .sh:344-356 — bugfix sub-DAG has sawed-off edges (producers off-path)
-  test("bugfix sub-DAG has sawed-off edges (producers off-path)", () => {
-    const path = subgraphForScope("bugfix");
+  // .sh:344-356 — fix sub-DAG has sawed-off edges (producers off-path)
+  test("fix sub-DAG has sawed-off edges (producers off-path)", () => {
+    const path = subgraphForScope("fix");
     const onPath = new Set(path.map((s) => s.slug));
     let sawed = 0;
     for (const s of path) {
@@ -613,15 +613,15 @@ describe("t66 nextInScopeStage state-file semantics (in-process)", () => {
     expect(next ? next.slug : "null").toBe("market-research");
   });
 
-  // .sh:521-533 — EXECUTE override promotes a scope-SKIP stage (bugfix intent-capture)
-  test("nextInScopeStage honours EXECUTE override for scope-SKIP intent-capture in bugfix", () => {
+  // .sh:521-533 — EXECUTE override promotes a scope-SKIP stage (fix intent-capture)
+  test("nextInScopeStage honours EXECUTE override for scope-SKIP intent-capture in fix", () => {
     const state = `# Workflow State
 
 ## Stage Progress
 
 - [ ] intent-capture — EXECUTE
 `;
-    const next = nextInScopeStage("state-init", "bugfix", state);
+    const next = nextInScopeStage("state-init", "fix", state);
     expect(next ? next.slug : "null").toBe("intent-capture");
   });
 });
@@ -723,9 +723,9 @@ describe("t66 validateScope (in-process)", () => {
     const shape = "valid" in r && Array.isArray(r.errors) && Array.isArray(r.advisories);
     expect(`${shape}:${r.valid}`).toBe("true:true");
   });
-  // .sh:618-623 — bugfix produces advisories (off-path producers)
-  test("validateScope produces advisories for bugfix (off-path producers)", () => {
-    expect(validateScope("bugfix").advisories.length).toBeGreaterThan(0);
+  // .sh:618-623 — fix produces advisories (off-path producers)
+  test("validateScope produces advisories for fix (off-path producers)", () => {
+    expect(validateScope("fix").advisories.length).toBeGreaterThan(0);
   });
   // .sh:632-640 — projectType filter reduces advisories (<=)
   test("validateScope projectType filter reduces advisories", () => {
@@ -740,9 +740,9 @@ describe("t66 validateScope (in-process)", () => {
   // The .sh header lists "validateScope (5)"; the fifth distinct contract the .sh
   // exercises across cases is the errors-vs-advisories split: an off-path producer is
   // an advisory (not an error). Pin it directly so all five validateScope semantics
-  // are represented (the bugfix advisory exists while errors stay empty).
-  test("validateScope: off-path producer is an advisory, not an error (bugfix)", () => {
-    const r = validateScope("bugfix");
+  // are represented (the fix advisory exists while errors stay empty).
+  test("validateScope: off-path producer is an advisory, not an error (fix)", () => {
+    const r = validateScope("fix");
     expect(r.errors.length).toBe(0);
     expect(r.advisories.length).toBeGreaterThan(0);
   });
@@ -758,7 +758,7 @@ describe("t66 validateScope (in-process)", () => {
   // baseline is updated consciously in the same commit.
   test("validateScope: the per-scope advisory edge sets are exactly the accepted baseline", () => {
     const EXPECTED: Record<string, string[]> = {
-      bugfix: ["code-generation->unit-of-work"],
+      fix: ["code-generation->unit-of-work"],
       enterprise: [],
       feature: [],
       infra: [

@@ -1,19 +1,19 @@
-// covers: scope:bugfix
+// covers: scope:fix
 //
 // t143-scope-start-birth.test.ts — the restored explicit-scope workflow-birth
-// journey (sdk). Drives a REAL `/amadeus --scope bugfix` on a fresh project
+// journey (sdk). Drives a REAL `/amadeus --scope fix` on a fresh project
 // (no amadeus-docs/amadeus-state.md) through the Claude Agent SDK and proves the
 // birth seam end-to-end:
 //
-//   engine: `next --scope bugfix` over no state emits the run-then-continue
-//           workflow-birth `print` naming `intent-birth --scope bugfix` (the
+//   engine: `next --scope fix` over no state emits the run-then-continue
+//           workflow-birth `print` naming `intent-birth --scope fix` (the
 //           explicit-scope arm of the no-state split — the engine names the
 //           mutating move, never performs it);
-//   conductor: ACTS on the print — runs `amadeus-utility.ts intent-birth --scope bugfix`
+//   conductor: ACTS on the print — runs `amadeus-utility.ts intent-birth --scope fix`
 //           and re-enters the loop;
 //   disk:   the born intent's amadeus-state.md (under amadeus/spaces/<space>/intents/
 //           <slug>-<id8>/, resolved by sdk-drive's per-intent readers) lands with
-//           Scope: bugfix and a populated Current Stage — the workflow started.
+//           Scope: fix and a populated Current Stage — the workflow started.
 //
 // The deterministic halves of this seam are pinned by the t118 unit trio
 // (birth print shape) and t117/t114 (branch routing); this journey proves the
@@ -44,7 +44,7 @@ import {
 } from "../harness/fixtures.ts";
 import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 
-const SCOPE = "bugfix";
+const SCOPE = "fix";
 
 // Timeout budget — same convention as t52/t141: honour AMADEUS_TEST_TIMEOUT and
 // abort the drive a hair early so a stuck run surfaces a partial DriveResult.
@@ -55,9 +55,9 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const INIT_STATE_SUMMARY = "State initialized:";
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 
-describe("t143 explicit-scope workflow birth (/amadeus --scope bugfix, sdk live)", () => {
+describe("t143 explicit-scope workflow birth (/amadeus --scope fix, sdk live)", () => {
   test(
-    "naming a scope on a fresh project births the workflow: engine print -> conductor intent-birth -> Scope=bugfix state on disk",
+    "naming a scope on a fresh project births the workflow: engine print -> conductor intent-birth -> Scope=fix state on disk",
     async () => {
       const proj = setupIntegrationProject({
         noAidlcDocs: true,

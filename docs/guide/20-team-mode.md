@@ -100,10 +100,18 @@ and `voters`, then open it:
   "electionId": "E-EXAMPLE-1",
   "kind": "zero-confirm",
   "question": "Approve the proposal?",
-  "choices": [{ "internalNo": 1, "label": "approve" }],
+  "choices": [
+    { "internalNo": 1, "label": "approve", "description": "Adopt the proposal as written." }
+  ],
   "voters": ["e1"]
 }
 ```
+
+Each choice may carry an optional `description` — the body text of that option.
+The per-voter blind view repeats the election's `question` and each choice's
+`description`, so a voter reading only their own view can tell what the motion
+is and what each choice means. A choice without a `description` is still valid;
+the key is then simply absent from the view.
 
 ```bash
 bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --file election.json

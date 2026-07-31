@@ -1,4 +1,4 @@
-// covers: scope:bugfix, scope:feature, scope:mvp, scope:security-patch, scope:infra, scope:refactor
+// covers: scope:fix, scope:feature, scope:mvp, scope:security-patch, scope:infra, scope:refactor
 //
 // CLI-contract port of tests/integration/t130-scope-runners.sh (TAP plan 12),
 // mechanism = cli. The .sh carried NO `# covers:` header (it predates the
@@ -16,7 +16,7 @@
 // identical assertion shape (run-stage + first-EXECUTE stage + baked persona)
 // over the same real `amadeus-orchestrate next --scope <s>` drive, so it covers
 // the scope at the same cli strength, not by a weaker mention. enterprise/poc/
-// workshop are covered by their own tui scope run-throughs; bugfix/feature/mvp/
+// workshop are covered by their own tui scope run-throughs; fix/feature/mvp/
 // security-patch/infra/refactor are the cli-routed set this corpus owns.
 //
 // WHAT THE .sh PROVED (t130-scope-runners.sh:1-12 prose + the loop at :42-70):
@@ -50,7 +50,7 @@
 //     stage = resolved graph node slug; bakes conductor_persona on the FIRST
 //     run-stage (isFirstRunStageOfWorkflow, :385 -> readConductorPersona, :357).
 //   - The per-scope first-EXECUTE-stage routing the engine derives from the
-//     compiled scope grid (verified live: bugfix->requirements-analysis,
+//     compiled scope grid (verified live: fix->requirements-analysis,
 //     feature->intent-capture, mvp->intent-capture, security-patch->
 //     requirements-analysis).
 //
@@ -91,7 +91,7 @@ resetAidlcEnv();
 // greenfield init. Mirrors the .sh's CASES at :26. Measured live
 // against the shipped engine before authoring (see the SOURCE UNDER TEST note).
 const CASES: ReadonlyArray<{ scope: string; wantStage: string }> = [
-  { scope: "bugfix", wantStage: "requirements-analysis" },
+  { scope: "fix", wantStage: "requirements-analysis" },
   { scope: "feature", wantStage: "intent-capture" },
   { scope: "mvp", wantStage: "intent-capture" },
   // security-patch's first EXECUTE is reverse-engineering, but that brownfield

@@ -66,6 +66,7 @@ These manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 | `amadeus-linter.md` | `.ts` / `.js` code output | Wraps your configured linter (ESLint by default) |
 | `amadeus-type-check.md` | `.ts` / `.tsx` code output | Wraps your configured type-checker (`tsc` by default) |
 | `amadeus-model-completeness.md` | the TLA model and its canonical implementation files | Drift between the `FormalElection` TLA model and the election implementation |
+| `amadeus-self-scope-consistency.md` | Amadeus self-scope files and compiled grids | Self-development only: parity of the four `self-*` scopes across the five dogfood harnesses |
 
 Every one of them is gated by a `matches:` glob (more on that below): the first two
 document-shape checks scope to the artifact tree (the shipped manifests carry
@@ -73,7 +74,8 @@ document-shape checks scope to the artifact tree (the shipped manifests carry
 `amadeus-docs/` arm kept for a pre-migration project), the two code-quality checks
 to their language globs (`**/*.{ts,js}`, `**/*.{ts,tsx}`), the answer-evidence
 check to the questions file (`**/*-questions.md`), and the model check to the
-spec and implementation paths it compares.
+spec and implementation paths it compares. The self-scope check is dormant in
+ordinary projects and activates only when a `self-*` scope exists.
 Read `amadeus-required-sections.md` end to end before authoring your own — it is
 the smallest of them and shows the whole shape, frontmatter plus prose body.
 

@@ -70,8 +70,8 @@
 | FR-MIG-1 | 移行互換 Adapter（旧 `appendAuditEntry()` 呼出しを Event API へ委譲）は移行期間限定とし、恒久 dual-write/dual-read を行わない | 移行方針 |
 | FR-MIG-2 | 約1600 call site を段階移行し、直接 call site ゼロ後に旧 writer を削除する。rollback は git revert と変換前 backup | 移行方針・実装順序 |
 | FR-MIG-3 | audit CLI append verbs は互換 Adapter として一時維持し、公開互換方針を Phase 4 ADR で決定する | Module 処置表 |
-| FR-MIG-4 | 削除ゲート: (a) v1/v2 mixed Journal で doctor/recovery/merge が通る、(b) 全 canonical event が registry 登録済み、(c) 直接 call site ゼロ、(d) 新旧 shadow 比較で event count・linkage・status・許可属性が同等以上で機械可読 report に未説明差分なし、(e) Relay が Journal から Span 生成していないことのテスト証明、(f) 全 harness の distribution drift guards 通過 — をすべて満たすまで旧実装を削除しない | 削除ゲート |
-| FR-MIG-5 | 旧 reader は既存 Intent の retention 条件達成後に削除する | 移行方針 |
+| FR-MIG-4 | 削除ゲート: (a) v1/v2 mixed Journal で doctor/recovery/merge が通る、(b) 全 canonical event が registry 登録済み、(c) 直接 call site ゼロ、(d) **移行同等性証拠 — `[migration-equivalence]` マーカー付きテスト群(各移行 site の移行前後フィールド集合一致)+ registry スイープ検証を機械消費し、全 green かつ証拠ファイル数が下限以上**、(e) Relay が Journal から Span 生成していないことのテスト証明、(f) 全 harness の distribution drift guards 通過 — をすべて満たすまで旧実装を削除しない。〔改訂 2026-07-31 ユーザー裁定: (d) の旧定義「新旧 shadow 比較(store 件数突き合わせ)」は BR-1(dual-write 禁止)と構造的に両立不能((c) 充足で旧 store の書き手が消滅し恒久 UNKNOWN)と実測確定したため、移行同等性証拠へ再定義。承認系譜: scout 実測 → conductor 提案 → ユーザー承認「OK。そういう懸念がなければ推奨で」〕 | 削除ゲート |
+| FR-MIG-5 | 旧 reader は既存 Intent の retention 条件達成後に削除する。〔適用範囲の確定 2026-07-31 ユーザー裁定: 「retention 条件 = 削除ゲート全条件 GREEN」(2026-07-31 裁定)は**旧 writer 削除のみに適用**。v1 reader は既存データ(実測 v1 行 90,567)保持期間中維持し、退役は v1→v2 一括変換器を前提とする別 intent(Issue #1819)へ委譲 — 今削除するとゲート条件 (a) 自体が FAIL に転じる自己矛盾を実測確認済み〕 | 移行方針 |
 
 ## FR-DST: 配布と redaction
 
@@ -100,7 +100,7 @@
 | VER-2 | telemetry 成果物（audit JSONL・Span/Metric/Log Stores）が credential-free であることを検査するゲートを配線する | devsecops ギャップ (c) |
 | VER-3 | 失敗契約のテスト先行（同期例外＋latch、例外を握りつぶす中間層、health probe の非破壊性、telemetry 失敗の fail-open、Collector 停止を別々に検証） | #1678 テスト先行順序・テスト移行表 |
 | VER-4 | call-site guard が `appendAuditEntry()` 直接呼出しと旧 observe 利用を CI で拒否し、残存 call site を可視化する | テスト移行表 |
-| VER-5 | 新旧 Trace の shadow 比較が機械可読 report を生成し、削除ゲート FR-MIG-4(d) へ接続する | 段階状態 C・削除ゲート |
+| VER-5 | ~~新旧 Trace の shadow 比較が機械可読 report を生成し、削除ゲート FR-MIG-4(d) へ接続する~~ **移行同等性証拠(`[migration-equivalence]` マーカー付きテスト群)が削除ゲート FR-MIG-4(d) へ機械接続される**〔改訂 2026-07-31 ユーザー裁定 — FR-MIG-4(d) の再定義に追随。shadow-compare 機構は診断用として存置可だがゲート非接続〕 | 段階状態 C・削除ゲート |
 | VER-6 | 全 harness 生成面に Provider／Exporter／Relay が同期されることを distribution tests で検証する | テスト移行表 |
 
 ## Intent Analysis

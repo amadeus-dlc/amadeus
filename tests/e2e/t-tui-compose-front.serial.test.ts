@@ -39,7 +39,7 @@ const TASK =
   "harden the deployment pipeline and add observability for our existing service - no new features, compose a custom plan for exactly this";
 
 const STOCK_SCOPES = new Set([
-  "bugfix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
+  "fix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
   "security-patch", "workshop",
 ]);
 

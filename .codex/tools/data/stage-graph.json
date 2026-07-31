@@ -18,7 +18,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -64,7 +64,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -110,7 +110,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -189,17 +189,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -261,17 +264,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -350,17 +356,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -433,17 +442,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -513,17 +525,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -598,17 +613,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -703,17 +721,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -754,7 +775,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop"
@@ -783,17 +804,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -889,17 +913,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -960,7 +987,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -992,17 +1019,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1083,17 +1113,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1178,17 +1211,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1277,17 +1313,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1378,17 +1417,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1483,17 +1525,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1607,27 +1652,32 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1729,27 +1779,32 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -1860,27 +1915,32 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2006,27 +2066,32 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2091,14 +2156,15 @@
       "linter",
       "type-check",
       "answer-evidence",
-      "event-registry-drift"
+      "event-registry-drift",
+      "self-scope-consistency"
     ],
     "scopes": [
       "enterprise",
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop",
@@ -2130,22 +2196,32 @@
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       },
       {
         "id": "event-registry-drift",
         "path": ".codex/sensors/amadeus-event-registry-drift.md",
-        "matches": "**/{event-registry,amadeus-audit}.ts"
+        "matches": "**/{event-registry,amadeus-audit}.ts",
+        "category": "code-quality"
+      },
+      {
+        "id": "self-scope-consistency",
+        "path": ".codex/sensors/amadeus-self-scope-consistency.md",
+        "matches": "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}",
+        "category": "framework-integrity"
       }
     ]
   },
@@ -2194,7 +2270,7 @@
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "security-patch",
       "workshop",
@@ -2224,22 +2300,26 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2313,27 +2393,32 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "linter",
         "path": ".codex/sensors/amadeus-linter.md",
-        "matches": "**/*.{ts,js}"
+        "matches": "**/*.{ts,js}",
+        "category": "code-quality"
       },
       {
         "id": "type-check",
         "path": ".codex/sensors/amadeus-type-check.md",
-        "matches": "**/*.{ts,tsx}"
+        "matches": "**/*.{ts,tsx}",
+        "category": "code-quality"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2411,17 +2496,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2496,17 +2584,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2586,17 +2677,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2681,17 +2775,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2770,17 +2867,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2861,17 +2961,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   },
@@ -2960,17 +3063,20 @@
       {
         "id": "required-sections",
         "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
         "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
+        "matches": "**/{amadeus-docs,intents,codekb}/**",
+        "category": "document-shape"
       },
       {
         "id": "answer-evidence",
         "path": ".codex/sensors/amadeus-answer-evidence.md",
-        "matches": "**/*-questions.md"
+        "matches": "**/*-questions.md",
+        "category": "governance"
       }
     ]
   }

@@ -1,6 +1,6 @@
 // Point the in-process scope resolver at the REAL shipped data files.
 //
-// Composed scopes (amadeus-feature, amadeus-bugfix, …) exist only in the
+// Composed scopes (self-feature, self-fix, …) exist only in the
 // compiled scope-grid plus their per-scope .md metadata — never in stage
 // frontmatter — so any test whose subject resolves a composed scope must read
 // a face that carries both. The .codex face is that face (the canonical
