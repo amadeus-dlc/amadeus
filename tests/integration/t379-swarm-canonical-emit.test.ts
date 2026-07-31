@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { emitSwarmAudit } from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
+import { emitSwarmAudit, handleFinalize } from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -133,5 +133,65 @@ describe("the referee's subprocess boundaries are Trace API spans", () => {
         throw new Error("spawn failed");
       })
     ).toThrow(/spawn failed/);
+  });
+});
+
+describe("finalize drives the taxonomy through the seam", () => {
+  // The six emitters are one-line delegations to emitSwarmAudit, and finalize is
+  // what reaches them. Driving the CLI handler in-process (rather than spawning
+  // it) is what puts those lines under coverage — bun does not instrument a
+  // spawned process. finalize ends in process.exit, so the exit is intercepted
+  // the same way the learnings persist seam does it.
+  class ExitSignal extends Error {
+    constructor(readonly code: number) {
+      super(`exit ${code}`);
+    }
+  }
+
+  function callFinalize(args: string[]): number {
+    const origExit = process.exit.bind(process);
+    const origLog = console.log;
+    process.exit = ((code?: number) => {
+      throw new ExitSignal(code ?? 0);
+    }) as typeof process.exit;
+    console.log = () => {};
+    try {
+      handleFinalize(args);
+      return 0;
+    } catch (e) {
+      if (e instanceof ExitSignal) return e.code;
+      throw e;
+    } finally {
+      process.exit = origExit;
+      console.log = origLog;
+    }
+  }
+
+  test("a claimed unit with no worktree fails, returns the baton and closes the batch", () => {
+    // No prepare ran, so the unit has no worktree: finalize refuses the merge
+    // and writes the failure trio. Exit 2 is the "conductor takes the baton"
+    // signal, which is what makes this the honest driver for those emitters.
+    const code = callFinalize([
+      "--batch",
+      "1",
+      "--units",
+      "u1",
+      "--claimed",
+      "u1",
+      "--check-cmd",
+      "true",
+      "--project-dir",
+      proj,
+    ]);
+    expect(code).toBe(2);
+
+    const emitted = shardRecords()
+      .filter((r) => r.schemaVersion === 2)
+      .map((r) => r.eventName);
+    expect(emitted).toContain("amadeus.swarm.unit.failed");
+    expect(emitted).toContain("amadeus.swarm.baton.returned");
+    expect(emitted).toContain("amadeus.swarm.completed");
+    // Never a converged row for a unit that did not land on the trunk.
+    expect(emitted).not.toContain("amadeus.swarm.unit.converged");
   });
 });

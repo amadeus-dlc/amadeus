@@ -20,11 +20,14 @@
 // lock identity — would break the pair without failing loudly.
 
 import { beforeEach, afterEach, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
-import { _resetCloneIdForTests, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { _resetCloneIdForTests, auditFilePath, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { compile } from "../../dist/claude/.claude/tools/amadeus-runtime.ts";
 import { handlePersist } from "../../dist/claude/.claude/tools/amadeus-learnings.ts";
+import { mintHumanPresence } from "../../dist/claude/.claude/tools/amadeus-presence-reservation.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -34,7 +37,9 @@ import {
   createTestProject,
   seededAuditShard,
   seededStateFile,
+  toPortablePath,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 let pd: string;
 
@@ -173,5 +178,136 @@ describe("learnings/persist emits RULE_LEARNED through the canonical path", () =
     callPersist(sel);
     callPersist(sel);
     expect(allRecords().filter((e) => e.record.eventName === "amadeus.rule.learned").length).toBe(1);
+  });
+});
+
+describe("the sensor half of persist emits through the same seam", () => {
+  // SENSOR_PROPOSED rides the OTHER emit in persist's locked body, and its two
+  // writes (the manifest and the stage frontmatter) are atomic with the row.
+  test("a sensor selection emits amadeus.sensor.proposed with its seven attributes", () => {
+    const sel = join(pd, "sel-sensor.json");
+    writeFileSync(
+      sel,
+      JSON.stringify({
+        stage_slug: "user-stories",
+        selections: [
+          {
+            candidate_id: "s1",
+            type: "sensor",
+            origin_stage: "user-stories",
+            manifest_fields: {
+              id: "acceptance-format",
+              kind: "deterministic",
+              command: "bun .claude/tools/amadeus-sensor.ts fire acceptance-format",
+              default_severity: "advisory",
+              description: "Checks AC format",
+              matches: "**/inception/user-stories/**",
+              timeout_seconds: 30,
+            },
+            source: "orchestrator",
+          },
+        ],
+      }),
+    );
+    callPersist(sel);
+
+    const proposed = allRecords()
+      .map((r) => r.record)
+      .filter((r) => r.schemaVersion === 2 && r.eventName === "amadeus.sensor.proposed");
+    expect(proposed.length).toBe(1);
+    expect(proposed[0]?.attributes?.Event).toBe("SENSOR_PROPOSED");
+    expect(proposed[0]?.attributes?.["Sensor ID"]).toBe("acceptance-format");
+    expect(proposed[0]?.attributes?.["Candidate-ID"]).toBe("s1");
+    expect(proposed[0]?.attributes?.Destinations).toBe(JSON.stringify(["user-stories"]));
+  });
+});
+
+describe("the untargeted human turn travels the canonical path", () => {
+  // mintHumanPresence's ordinary append — the one the human-presence gate reads
+  // on every turn. The owner-targeted mint beside it stays on the legacy writer
+  // (its Presence Reservation Id is not a required attribute, and the
+  // default-deny redaction policy would drop the field the reservation reads
+  // back to find its own row), so this is the half that moved.
+  test("mintHumanPresence appends amadeus.human.turn", () => {
+    mintHumanPresence({ projectDir: pd, capability: { kind: "unavailable", reason: "no trusted session identity in this test" } });
+    const turns = allRecords()
+      .map((r) => r.record)
+      .filter((r) => r.schemaVersion === 2 && r.eventName === "amadeus.human.turn");
+    expect(turns.length).toBe(1);
+    expect(turns[0]?.attributes?.Event).toBe("HUMAN_TURN");
+  });
+});
+
+describe("compile emits MEMORY_EMPTY through the canonical path", () => {
+  // The MEMORY_EMPTY rows and the runtime-graph write share ONE locked section
+  // (audit-first: rows, then artefact). The emit reaches appendJournalRecordV2,
+  // which re-enters that same lock identity. Driven in-process because bun's
+  // coverage does not instrument the spawned compile the CLI twins use.
+  const REPO_ROOT = join(import.meta.dir, "..", "..");
+  const RECORD_REL = join("amadeus", "spaces", "default", "intents", "memempty-fixture-deadbeef");
+
+  function seedApprovedZeroEntryStage(): string {
+    const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-memempty-")));
+    const record = join(proj, RECORD_REL);
+    mkdirSync(record, { recursive: true });
+    writeFileSync(
+      join(record, "amadeus-state.md"),
+      readFileSync(join(REPO_ROOT, "tests", "fixtures", "state-construction.md")),
+    );
+    const shard = auditFilePath(proj);
+    mkdirSync(dirname(shard), { recursive: true });
+    writeFileSync(
+      shard,
+      readFileSync(
+        join(REPO_ROOT, "tests", "fixtures", "v05-mr12-learnings", "audit-instance-learnings-approved.jsonl"),
+      ),
+    );
+    // A stage counts as zero-entry only when its memory.md EXISTS and holds no
+    // entries — an absent file reads as "no memory to judge", not as empty.
+    const stageMemory = join(record, "construction", "code-generation");
+    mkdirSync(stageMemory, { recursive: true });
+    writeFileSync(
+      join(stageMemory, "memory.md"),
+      readFileSync(join(REPO_ROOT, ".claude", "knowledge", "amadeus-shared", "memory-template.md")),
+    );
+    return proj;
+  }
+
+  function memoryEmptyRows(proj: string): ShardRecord[] {
+    const dir = join(proj, RECORD_REL, "audit");
+    return readdirSync(dir)
+      .filter((n) => n.endsWith(".jsonl"))
+      .flatMap((n) => readFileSync(join(dir, n), "utf-8").split("\n"))
+      .filter((line) => line.startsWith("{"))
+      .map((line) => JSON.parse(line) as ShardRecord)
+      .filter((r) => r.schemaVersion === 2 && r.eventName === "amadeus.memory.empty");
+  }
+
+  test("an approved stage whose memory carries no entries emits amadeus.memory.empty", () => {
+    resetOtelPerProject();
+    const proj = seedApprovedZeroEntryStage();
+    try {
+      expect(compile({ projectDir: proj }).written).toBeDefined();
+      const rows = memoryEmptyRows(proj);
+      expect(rows.length).toBe(1);
+      expect(rows[0]?.attributes?.Event).toBe("MEMORY_EMPTY");
+      expect(rows[0]?.attributes?.Stage).toBe("code-generation");
+      // The artefact from the same locked section landed too.
+      expect(existsSync(join(proj, RECORD_REL, "runtime-graph.json"))).toBe(true);
+    } finally {
+      rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("a re-compile suppresses the re-emit — the in-lock re-read sees the v2 row", () => {
+    resetOtelPerProject();
+    const proj = seedApprovedZeroEntryStage();
+    try {
+      compile({ projectDir: proj });
+      compile({ projectDir: proj });
+      expect(memoryEmptyRows(proj).length).toBe(1);
+    } finally {
+      rmSync(proj, { recursive: true, force: true });
+    }
   });
 });
