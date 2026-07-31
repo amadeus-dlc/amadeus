@@ -14,10 +14,10 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
-  appendAuditEntry,
   handleAuditMerge,
   mergeDeltaUnderLock,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
@@ -241,7 +241,7 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
 describe("worktree info in-process (field reads over the shared accessor)", () => {
   test("happy path: emits path, branch, and merge_held=false", () => {
     proj = seedProject();
-    appendAuditEntry(
+    plantV1AuditRow(
       "WORKTREE_CREATED",
       {
         "Bolt slug": SLUG,
@@ -261,7 +261,7 @@ describe("worktree info in-process (field reads over the shared accessor)", () =
 
   test("malformed WORKTREE_CREATED (missing Branch name) exits with an error", () => {
     proj = seedProject();
-    appendAuditEntry(
+    plantV1AuditRow(
       "WORKTREE_CREATED",
       { "Bolt slug": SLUG, "Worktree path": `${proj}/.amadeus-worktrees/${SLUG}` },
       proj,

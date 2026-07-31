@@ -100,10 +100,7 @@ import {
   buildIntentSelectionSnapshot,
   type IntentSelectionSnapshot,
 } from "./amadeus-intent-selection.ts";
-import {
-  appendAuditEntryUnlocked,
-  appendLifecycleAuditEntryUnlocked,
-} from "./amadeus-audit.ts";
+import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeSpace,
   activeIntent,

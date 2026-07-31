@@ -392,42 +392,12 @@ export function formatAuditRecord(input: AuditRecordInput): string {
 
 // --- Subcommand: append ---
 
-// Core append logic — throws on error instead of exiting. Safe for library callers.
-// CLI caller (main) wraps this in try/catch and translates to jsonError.
-export function appendAuditEntry(
-  eventType: string,
-  fields: Record<string, string>,
-  projectDir: string,
-  intent?: string,
-  space?: string
-): AppendAuditResult {
-  if (!VALID_EVENT_TYPES.has(eventType)) {
-    throw new Error(
-      `Invalid event type: ${eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`
-    );
-  }
-
-  // Lock + audit shard both pin to the same (intent, space) record so a fork/
-  // merge pair targets ONE intent end-to-end; omitted -> default-resolution.
-  if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
-    throw new Error("Failed to acquire audit lock after retries");
-  }
-
-  try {
-    return appendAuditEntryUnlocked(eventType, fields, projectDir, intent, space);
-  } finally {
-    releaseAuditLock(projectDir, intent, space);
-  }
-}
-
-// Locked v2 journal append — the SAME structure as appendAuditEntry (lock →
-// sequence → encode → synchronous append), encoding through the schema v2
-// codec instead of the v1 writer (FR-JRN-1, BR-13). The caller (the
+// Locked v2 journal append: lock → sequence → encode → synchronous append,
+// through the schema v2 codec (FR-JRN-1, BR-13). The caller (the
 // AuditLogExporter) owns accept-set validation and the failure contract; this
 // function throws on lock/disk failure and never swallows; the shard-local
 // sequence is assigned here, inside the lock. Appends to a sealed ledger
-// (registry row "complete") are suppressed with the same post-complete stop
-// as the v1 writer (#1248).
+// (registry row "complete") are suppressed by the post-complete stop (#1248).
 // Whether the locked v2 append actually wrote. The post-complete seal is a
 // SUPPRESSION, not a failure — it throws nothing — so a caller that needs to
 // distinguish "written" from "sealed" can only learn it from this return value
@@ -454,10 +424,9 @@ export function appendJournalRecordV2(
   return withAuditLock(
     projectDir,
     () => {
-      // Post-complete audit stop (#1248): the v2 append honours the same seal as
-      // the v1 writer — once the target intent's registry row is "complete", the
-      // ledger is sealed and the append is suppressed. Gated on the definite
-      // "complete" only; "unknown" falls through to the append.
+      // Post-complete audit stop (#1248): once the target intent's registry row
+      // is "complete", the ledger is sealed and the append is suppressed. Gated
+      // on the definite "complete" only; "unknown" falls through to the append.
       if (intentStatusForAudit(projectDir, intent, space) === "complete") {
         const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
         process.stderr.write(
@@ -472,60 +441,6 @@ export function appendJournalRecordV2(
     intent,
     space
   );
-}
-
-// Lock-already-held variant for callers that need to hold the audit lock
-// across multiple operations (e.g., amadeus-state.ts fork/merge, which read
-// state, decide on a write, emit audit, and write state — all inside one
-// critical section). The caller MUST have acquired the audit lock via
-// acquireAuditLock(projectDir) and MUST release it (via releaseAuditLock or
-// equivalent) regardless of how this function returns. Validates the event
-// type the same way as the locked variant; everything else is identical.
-export function appendAuditEntryUnlocked(
-  eventType: string,
-  fields: Record<string, string>,
-  projectDir: string,
-  intent?: string,
-  space?: string
-): AppendAuditResult {
-  if (!VALID_EVENT_TYPES.has(eventType)) {
-    throw new Error(
-      `Invalid event type: ${eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`
-    );
-  }
-
-  // Post-complete audit stop (#1248): once the target intent's registry row is
-  // "complete", the audit ledger is sealed — refuse the append and report it so
-  // the caller never records events past the workflow's terminal marker. Gated on
-  // the definite "complete" only; "unknown" (unresolved/read failure) falls
-  // through to the append, preserving pre-#1248 behaviour.
-  if (intentStatusForAudit(projectDir, intent, space) === "complete") {
-    const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
-    process.stderr.write(
-      `amadeus-audit: suppressed ${eventType} append — target intent ${targetDir} is complete (#1248)\n`
-    );
-    return { appended: false, reason: "intent-complete", event: eventType, timestamp: isoTimestamp() };
-  }
-
-  const heading = EVENT_HEADINGS[eventType] || eventType;
-  const ts = isoTimestamp();
-
-  const path = ensureAuditFile(projectDir, intent, space);
-
-  const line = serializeJournalEntry({
-    schemaVersion: JOURNAL_SCHEMA_VERSION,
-    seq: nextShardSeq(path),
-    cloneId: auditCloneId(projectDir),
-    intentId: auditIntentId(projectDir, intent, space),
-    timestamp: ts,
-    heading,
-    event: eventType,
-    fields: escapeFieldValues(fields),
-  });
-
-  appendFileSync(path, line, "utf-8");
-
-  return { appended: true, event: eventType, timestamp: ts };
 }
 
 // The forgery guard escapeAuditValue applied across a field map — CR/LF in a
@@ -581,9 +496,9 @@ export function appendLifecycleAuditEntryUnlocked(
 //
 // CLI minting guard (#685 review): the general `append` entry must NOT mint a
 // presence/provenance event. It is enforced HERE (the CLI's append handler), not
-// in appendAuditEntry, so the trusted in-process writers (mint hook,
-// delegate-approval/rejection) that call appendAuditEntry directly are
-// unaffected. A throw matches the invalid-event contract main() already surfaces.
+// in the emit path, so the trusted in-process writers (mint hook,
+// delegate-approval/rejection) that emit directly are unaffected. A throw
+// matches the invalid-event contract main() already surfaces.
 export function handleAppend(
   eventType: string,
   fields: Record<string, string>,
@@ -907,12 +822,11 @@ export function handleAuditFork(args: string[], projectDir: string): void {
 // (200 retries × 100ms) to absorb N=4-8 Bolt-merge contention in workshop
 // scenarios.
 //
-// Nested-lock pattern: the outer lock guards prefix-hash check + delta
-// append. AUDIT_MERGED emits via appendAuditEntry which acquires its own
-// lock — outer lock is released first to avoid deadlock. Brief release-
-// reacquire window is benign because deltas are append-only and AUDIT_MERGED
-// is a trailing marker; merged-audit chronological order is preserved by the
-// order in which deltas were appended, not by AUDIT_MERGED timestamps.
+// Lock pattern: one withAuditLock section covers the prefix-hash check, the
+// delta append and the AUDIT_MERGED emit. The canonical emit re-enters that
+// section rather than taking a second acquire, so there is no release-reacquire
+// window; merged-audit chronological order is preserved by the order in which
+// deltas were appended, not by AUDIT_MERGED timestamps.
 
 export function handleAuditMerge(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-merge");
@@ -987,13 +901,11 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   // re-enters instead of self-colliding (E-U8PRE O-L1). The extended budget
   // above is passed through explicitly — withAuditLock's own default is the 5s
   // one, and inheriting it would silently shrink this section's 20s window.
-  // We use appendAuditEntryUnlocked for the AUDIT_MERGED row so we don't
-  // double-acquire the lock — an earlier design released-and-reacquired across
-  // the boundary, which worked but left a brief window where another merger
-  // could interleave. The catch path also uses the unlocked variant for the same
-  // reason: we already hold the lock when the throw lands.
+  // The AUDIT_MERGED row goes through emitCanonicalAuditEvent, which re-enters
+  // this section rather than double-acquiring; the catch path emits the same
+  // way, for the same reason — we already hold the lock when the throw lands.
   //
-  // Failure-mode worth flagging for doctor: if appendAuditEntryUnlocked
+  // Failure-mode worth flagging for doctor: if the AUDIT_MERGED emit
   // throws AFTER appendFileSync (delta) succeeded, main audit has the delta
   // but no matching AUDIT_MERGED row. The catch path emits ERROR_LOGGED with
   // [slug=<slug>] [fork-emitted:<forkTs>] correlation tags so doctor can
@@ -1042,8 +954,8 @@ export function mergeDeltaUnderLock(
   try {
     if (delta.trim() !== "") {
       // Delta is already a sequence of well-formed journal records (one
-      // JSONL line each). Append verbatim — running it through
-      // appendAuditEntry would re-mint each record's identity.
+      // JSONL line each). Append verbatim — running it back through an emit
+      // would re-mint each record's identity.
       appendFileSync(mainAuditPath, delta, "utf-8");
       entriesMerged = countDeltaRecords(delta);
     }
@@ -1085,10 +997,10 @@ export function mergeDeltaUnderLock(
 // conductor's ledger. Their integrity rests entirely on WHO may write them: only
 // the UserPromptSubmit mint hook (HUMAN_TURN) and amadeus-state's delegate-approval
 // / delegate-rejection writers (the delegations), all via the IN-PROCESS
-// appendAuditEntry. The general audit CLI (`append` / `append-raw`) is a
+// canonical emit. The general audit CLI (`append` / `append-raw`) is a
 // general-purpose entry a model can invoke, so it must NOT be able to mint these
 // — otherwise a model could fabricate presence and open a gate it never earned.
-// The refusal lives at the CLI entry ONLY; appendAuditEntry itself stays open for
+// The refusal lives at the CLI entry ONLY; the emit path itself stays open for
 // the trusted in-process writers. (This closes the CLI hole but not direct file
 // writes — see the residual-threat note near verifyDelegatedProvenance.)
 const PRESENCE_PROTECTED_EVENTS = new Set([
@@ -1161,12 +1073,11 @@ function registeredAuditEventTypes(): Set<string> {
 // `append` guard: refuse an event outside the registered vocabulary. Returns the
 // error message to surface, or null when clean.
 //
-// This duplicates what appendAuditEntry checks against VALID_EVENT_TYPES, and
-// deliberately so: that check lives in the LEGACY writer, which the
-// legacy-writer-removal Bolt deletes. Validating at the CLI entry instead keeps
-// the rejection readable and attributable to the CLI once the canonical path is
-// the only writer left — otherwise an unregistered event would travel to
-// emitEvent's registry lookup and throw from inside the emit.
+// The legacy writer used to check this against VALID_EVENT_TYPES; it was deleted
+// with the writer. Validating at the CLI entry keeps the rejection readable and
+// attributable to the CLI now that the canonical path is the only writer left —
+// otherwise an unregistered event would travel to emitEvent's registry lookup
+// and throw from inside the emit.
 export function unregisteredEventRejection(eventType: string): string | null {
   const registered = registeredAuditEventTypes();
   if (registered.has(eventType)) return null;

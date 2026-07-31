@@ -15,6 +15,7 @@ import { join } from "node:path";
 import {
   buildCensus,
   buildResidualReport,
+  detectCallsites,
   main,
   parseAllowlist,
   renderAllowlist,
@@ -35,15 +36,21 @@ afterEach(() => {
 });
 
 describe("scanRepository — the live corpus", () => {
-  test("the real scan is non-vacuous and every match names a scanned root", () => {
-    const matches = scanRepository();
+  // The corpus is empty now: the migration finished and the legacy writer is
+  // deleted (FR-MIG-5 / U8). That makes the detector the only thing standing
+  // between "no legacy call sites left" and "the scanner stopped matching" —
+  // the two look identical from the census alone. So emptiness is asserted
+  // together with the detector's own non-vacuity, against planted source.
+  test("the live corpus is empty, and the detector that says so is not vacuous", () => {
+    expect(scanRepository()).toEqual([]);
 
-    // A guard that measures nothing would pass vacuously forever.
-    expect(matches.length).toBeGreaterThan(0);
-    for (const match of matches) {
-      expect(match.file.startsWith("packages/framework/core/") || match.file.startsWith("scripts/")).toBe(true);
-      expect(match.line).toBeGreaterThan(0);
-    }
+    const planted = detectCallsites(
+      "packages/framework/core/tools/planted.ts",
+      ["const x = 1;", 'appendAuditEntry("STAGE_STARTED", {}, pd);'].join("\n")
+    );
+    expect(planted.length).toBe(1);
+    expect(planted[0]?.symbol).toBe("appendAuditEntry");
+    expect(planted[0]?.line).toBe(2);
   });
 
   test("the committed allowlist matches the live corpus (no drift)", () => {
@@ -57,10 +64,15 @@ describe("runCheck — verdicts and the residual report", () => {
     const dir = tempDir();
     const allowlist = join(dir, "allowlist.json");
     const report = join(dir, "residual.json");
-    // An empty allowlist cannot admit the live corpus: every measured site is new.
+    // An empty allowlist cannot admit a census that holds a site. The census is
+    // injected because the live one is empty now — see the `census` seam.
     writeFileSync(allowlist, renderAllowlist({}), "utf-8");
 
-    const code = runCheck({ allowlistPath: allowlist, reportPath: report });
+    const code = runCheck({
+      allowlistPath: allowlist,
+      reportPath: report,
+      census: { "packages/framework/core/tools/planted.ts": { appendAuditEntry: 1 } },
+    });
 
     expect(code).toBe(1);
     const parsed = JSON.parse(readFileSync(report, "utf-8"));
@@ -72,7 +84,7 @@ describe("runCheck — verdicts and the residual report", () => {
     const dir = tempDir();
     const allowlist = join(dir, "allowlist.json");
     const census = buildCensus(scanRepository());
-    const inflated = { ...census, "packages/framework/core/does-not-exist.ts": { appendAuditEntry: 5 } };
+    const inflated = { ...census, "packages/framework/core/tools/planted.ts": { appendAuditEntry: 5 } };
     writeFileSync(allowlist, renderAllowlist(inflated), "utf-8");
 
     expect(runCheck({ allowlistPath: allowlist })).toBe(0);
@@ -150,7 +162,10 @@ describe("main — argument handling", () => {
     expect(main(["--check", "--report", path])).toBe(0);
 
     const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    expect(parsed.total).toBeGreaterThan(0);
+    // Zero is the terminal state, not an absent measurement — the report is
+    // still written, and its shape is still the report's.
+    expect(parsed.total).toBe(0);
+    expect(typeof parsed.generatedAt).toBe("string");
   });
 
   test("an unexpected error is reported and fails closed rather than escaping", () => {

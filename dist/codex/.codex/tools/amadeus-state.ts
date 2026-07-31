@@ -2,12 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import {
-  appendAuditEntry,
-  appendAuditEntryUnlocked,
-  appendLifecycleAuditEntryUnlocked,
-  escapeAuditValue,
-} from "./amadeus-audit.ts";
+import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,

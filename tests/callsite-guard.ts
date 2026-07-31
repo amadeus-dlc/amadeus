@@ -318,6 +318,13 @@ function loadAllowlistOrFail(path: string): LoadedAllowlist {
 export type CheckOptions = {
   readonly allowlistPath?: string;
   readonly reportPath?: string;
+  // The census to judge, for tests. It defaults to a live scan, and argv has no
+  // way to set it — `main` only ever measures. The seam exists because the
+  // migration finished: with zero legacy call sites left in the tree, the live
+  // corpus can no longer produce a NEW_CALLSITE, and the arm that rejects one
+  // would be unreachable from a test. A ratchet observed only in its passing
+  // state is not a ratchet. (Same shape as the deletion gate's `evidence` seam.)
+  readonly census?: Census;
 };
 
 export function runCheck(options: CheckOptions = {}): number {
@@ -326,7 +333,7 @@ export function runCheck(options: CheckOptions = {}): number {
   if (loaded.kind === "failed") {
     return fail("ALLOWLIST_UNREADABLE", [loaded.detail, "Regenerate with: bun tests/callsite-guard.ts --update"]);
   }
-  const census = buildCensus(scanRepository());
+  const census = options.census ?? buildCensus(scanRepository());
   const report = buildResidualReport(census, new Date().toISOString());
   if (reportPath !== undefined) writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf-8");
   const verdict = diffAgainstAllowlist(census, loaded.doc);

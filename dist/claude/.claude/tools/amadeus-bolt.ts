@@ -40,7 +40,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
   emitError,
   errorMessage,
@@ -705,14 +704,14 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 //                                  --reason <enum> --defaults <text>
 //
 // Wires the three MERGE_DISPATCH_* events by emitting via
-// `appendAuditEntry` per event variant. Orchestrator (SKILL.md per-Bolt
+// `emitAudit` per event variant. Orchestrator (SKILL.md per-Bolt
 // loop) brackets each amadeus-pipeline-deploy-agent dispatch: pre-call INVOKED,
 // post-call RETURNED on successful parse, FALLBACK on timeout/malformed-YAML.
 //
 // Emit-only contract: no state mutation, no spawn. Pure audit emission so
 // doctor can reconcile orphan INVOKED rows (slug + timestamp window).
 //
-// t48 emitter-pairing requires LITERAL `appendAuditEntry("EVENT_NAME")` per
+// t48 emitter-pairing requires a LITERAL `emitAudit(pd, "EVENT_NAME")` per
 // case branch — Map indirection on the --event flag breaks the grep at
 // tests/feature/t48-audit-event-emitters.sh:46-57. Three cases, three literal
 // emit calls.

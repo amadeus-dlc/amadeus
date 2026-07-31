@@ -1,4 +1,4 @@
-// covers: function:appendAuditEntry, function:appendAuditEntryUnlocked, function:handleAppend, cli:amadeus-audit(append-error,append-json,append-raw)
+// covers: function:emitAuditEvent, function:handleAppend, cli:amadeus-audit(append-error,append-json,append-raw)
 //
 // t18 — amadeus-audit.ts audit-append behaviour. Migrated from
 // tests/unit/t18-tool-audit.sh (13 TAP assertions, 16 bun spawns).
@@ -8,26 +8,18 @@
 // are kept as Bun.spawnSync env-seam cases (flagged inline) so no guarantee
 // is lost.
 //
-// Source under test (dist/claude/.claude/tools/amadeus-audit.ts):
-//   :199 appendAuditEntry(eventType, fields, projectDir)
-//          => { appended: true; event: string; timestamp: string }
-//          - throws Error on invalid event type (before any disk side effect)
-//          - throws Error on lock-acquire failure
-//          - acquires + releases the audit lock around the write
-//   :228 appendAuditEntryUnlocked(eventType, fields, projectDir)
-//          => same return; lock-already-held variant (no lock acquisition)
-//   :266 handleAppend(eventType, fields, projectDir): void
-//          - calls appendAuditEntry, writes JSON.stringify(result)+"\n" to stdout
-//   :277 handleAppendRaw(heading, body, projectDir): void   (NOT exported — CLI only)
-//
-// File-format contract written by appendAuditEntry / appendAuditEntryUnlocked
-// (amadeus-audit.ts:239-257), exercised below against the real bytes on disk:
-//   - first write to a missing file prepends "# AI-DLC Audit Log\n"
-//     (ensureAuditFile, :174)
-//   - each entry: "\n## <heading>\n**Timestamp**: <ts>\n**Event**: <type>\n"
-//     then one "**<key>**: <value>\n" per field, then "\n---\n"
-//   - heading is EVENT_HEADINGS[eventType] || eventType (:108, :239)
-//   - timestamp is isoTimestamp(): YYYY-MM-DDTHH:MM:SSZ (amadeus-lib.ts:1441)
+// Source under test: the canonical emit (otel/audit-emit.ts emitAuditEvent) and
+// the audit CLI's append entry (amadeus-audit.ts handleAppend). The cases below
+// were written against the legacy writer pair, which has since been deleted
+// (FR-MIG-5 / U8); they now drive the path that writes today. What they assert
+// is unchanged, because it was never about the writer's identity:
+//   - a shard is created on first write
+//   - the shard is JSONL with no header, one record per line, dense 1-based seq
+//   - the audit event type and every field survive the round trip
+//   - a second append keeps the first record
+// The records are read through the shared normaliser, which serves both schemas
+// under their historical field names, so the assertions read the same whichever
+// schema stamped the row.
 //
 // Test-design note (house style): assert the OBSERVABLE behavioural contract
 // the .sh asserted — return values, thrown errors, and the literal bytes
@@ -55,10 +47,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
-import {
-  appendAuditEntry,
-  handleAppend,
-} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { handleAppend } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { emitAuditEvent } from "../../dist/claude/.claude/otel/audit-emit.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { auditFilePath, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
@@ -104,7 +95,7 @@ function records(proj: string): AuditRecord[] {
   return readFileSync(auditPath(proj), "utf-8")
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l) as Record<string, unknown>) as unknown as AuditRecord);
 }
 
 function withProject(fn: (proj: string) => void): void {
@@ -119,20 +110,20 @@ function withProject(fn: (proj: string) => void): void {
   }
 }
 
-describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
+describe("canonical emit — file creation + bytes (in-process)", () => {
   test("creates audit.md when missing [.sh test 1]", () => {
     withProject((proj) => {
       // audit.md does not exist yet (makeProject only creates the dir). The
       // .sh did `rm -f audit.md` first; here it never existed, same precondition.
       expect(existsSync(auditPath(proj))).toBe(false);
-      appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
+      emitAuditEvent("STAGE_COMPLETED", { Stage: "workspace-scaffold", Details: "done" }, proj);
       expect(existsSync(auditPath(proj))).toBe(true);
     });
   });
 
   test("first write starts the shard at the first JSONL record (no header) [.sh test 2]", () => {
     withProject((proj) => {
-      appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
+      emitAuditEvent("STAGE_COMPLETED", { Stage: "workspace-scaffold", Details: "done" }, proj);
       const body = readFileSync(auditPath(proj), "utf-8");
       // JSONL shards carry NO header — the first byte opens the first record,
       // whose seq starts the shard's 1-based dense sequence.
@@ -144,7 +135,7 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
 
   test("writes the event type into the record's `event` key [.sh test 3]", () => {
     withProject((proj) => {
-      appendAuditEntry(
+      emitAuditEvent(
         "STAGE_COMPLETED",
         { Stage: "workspace-scaffold", Details: "Done" },
         proj,
@@ -155,7 +146,7 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
 
   test("writes each field into the record's fields map [.sh test 4a + 4b]", () => {
     withProject((proj) => {
-      appendAuditEntry(
+      emitAuditEvent(
         "STAGE_COMPLETED",
         { Stage: "intent-capture", Details: "Q&A done" },
         proj,
@@ -170,7 +161,7 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
 
   test("writes an ISO timestamp (...Z, no millis) [.sh test 5]", () => {
     withProject((proj) => {
-      const result = appendAuditEntry("HEALTH_CHECKED", { Details: "All pass" }, proj);
+      const result = emitAuditEvent("HEALTH_CHECKED", { Request: "doctor", Details: "All pass" }, proj);
       // Same regex the .sh grepped for: YYYY-MM-DDTHH:MM:SSZ (isoTimestamp
       // strips millis). Assert on the record on disk AND the returned timestamp.
       const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
@@ -181,8 +172,8 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
 
   test("two appends produce exactly two records [.sh test 8]", () => {
     withProject((proj) => {
-      appendAuditEntry("STAGE_STARTED", { Stage: "workspace-scaffold" }, proj);
-      appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
+      emitAuditEvent("STAGE_STARTED", { Stage: "workspace-scaffold", Agent: "developer" }, proj);
+      emitAuditEvent("STAGE_COMPLETED", { Stage: "workspace-scaffold", Details: "done" }, proj);
       // The .sh counted the `---` block separators; the JSONL equivalent is the
       // record count — one line per append, with a dense 1-based seq.
       const rows = records(proj);
@@ -194,7 +185,7 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
 
   test("terminates each record with a newline (one record per line) [.sh test 10]", () => {
     withProject((proj) => {
-      appendAuditEntry("STAGE_COMPLETED", { Stage: "workspace-scaffold" }, proj);
+      emitAuditEvent("STAGE_COMPLETED", { Stage: "workspace-scaffold", Details: "done" }, proj);
       const body = readFileSync(auditPath(proj), "utf-8");
       // The .sh's `---` separator became the JSONL line boundary: exactly one
       // trailing newline, and no embedded newline inside the record.
@@ -204,10 +195,10 @@ describe("appendAuditEntry() — file creation + bytes (in-process)", () => {
   });
 });
 
-describe("appendAuditEntry() — event-type heading + validation (in-process)", () => {
+describe("emitAuditEvent() — event-type heading + validation (in-process)", () => {
   test("maps WORKSPACE_SCANNED to the 'Workspace Scanned' heading [.sh test 11]", () => {
     withProject((proj) => {
-      appendAuditEntry("WORKSPACE_SCANNED", { Details: "Greenfield" }, proj);
+      emitAuditEvent("WORKSPACE_SCANNED", { "Project Type": "greenfield", Details: "Greenfield" }, proj);
       // EVENT_HEADINGS["WORKSPACE_SCANNED"] === "Workspace Scanned" — now the
       // record's `heading` key rather than a `## ` Markdown line.
       expect(records(proj)[0].heading).toBe("Workspace Scanned");
@@ -216,23 +207,24 @@ describe("appendAuditEntry() — event-type heading + validation (in-process)", 
 
   test("accepts the WORKSPACE_SCANNED initialization event [.sh test 12]", () => {
     withProject((proj) => {
-      const result = appendAuditEntry("WORKSPACE_SCANNED", { Details: "test" }, proj);
-      // Event type is in VALID_EVENT_TYPES, so it lands without throwing and
-      // the record's `event` key carries it.
+      const result = emitAuditEvent("WORKSPACE_SCANNED", { "Project Type": "brownfield", Details: "test" }, proj);
+      // The event is in the registry, so it lands without throwing and the
+      // record's `event` key carries it.
       expect(result.appended).toBe(true);
       expect(result.event).toBe("WORKSPACE_SCANNED");
       expect(records(proj)[0].event).toBe("WORKSPACE_SCANNED");
     });
   });
 
-  test("appendAuditEntry throws on an invalid event type [.sh test 6 — logic half]", () => {
+  test("the append entry throws on an invalid event type [.sh test 6 — logic half]", () => {
     withProject((proj) => {
       // The .sh asserted the CLI prints "error"; the underlying contract is
-      // that the core function REJECTS an unknown event. Verify the throw
-      // AND that nothing was written (validate-before-emit: the guard runs
-      // before ensureAuditFile / appendFileSync).
+      // that an unknown event is REJECTED before anything is written. The
+      // rejection used to live in the legacy writer's accept set; it now lives
+      // at the CLI entry, against the registry (t389), so the throw is asserted
+      // there — still validate-before-emit, still nothing on disk.
       expect(() =>
-        appendAuditEntry("INVALID_EVENT", {}, proj),
+        handleAppend("INVALID_EVENT", {}, proj),
       ).toThrow(/Invalid event type: INVALID_EVENT/);
       expect(existsSync(auditPath(proj))).toBe(false);
     });

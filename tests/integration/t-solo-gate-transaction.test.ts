@@ -9,9 +9,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  appendAuditEntry,
-} from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   handleReport,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
@@ -485,7 +483,7 @@ describe("solo gate approval transaction", () => {
       Date.now(),
     );
     const other = switchCursorToNonOwner(root);
-    appendAuditEntry(
+    plantV1AuditRow(
       "GATE_AUTHORIZATION_SELECTED",
       {
         "Route Id": ROUTE_ID,
