@@ -29,3 +29,19 @@ u1 は「scripts/formal-verif/ の実行器をプラグイン所有ツリーへ�
 2. T5(stage 本文)→ dist 再生成 → 検証一式(PR-2 想定)
 
 順序の根拠: T4 を T1 と同一 PR に置かないと中間コミットで CI が構造赤になる(risk-and-sequencing R 系、intra-bolt-order-as-risk-control)。
+
+## Review — Iteration 2
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-31T12:26:26Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 Major(台帳 remap 過小列挙)是正 → iteration 2 で Critical 2 件(u1/u2 帰属矛盾・intersect 欠落)。予算消化後、帰属矛盾は implementation-deviation-election 準拠のユーザー裁定(分類 A/B/C remap は FR-A1/u1 へ改訂)で閉包し requirements/unit-of-work/FD の3層へ申告付き伝播、intersect 規則を T7 へ明記。conductor が伝播4ファイルを grep 検証(E-LSSADS13 の機械クラス受理)。FD ステージゲートで本経緯を開示する。UTC 2026-07-31T12:15:42Z
+
+### Findings
+
+- iteration1 Major: allowlist remap 対象 7 ファイル 14 件中 5 ファイル 11 件が未列挙 — 列挙規則化で是正
+- iteration2 Critical1: 台帳 remap の u1/u2 帰属矛盾 — ユーザー裁定で FR-A1/u1 へ帰属改訂(3層伝播)
+- iteration2 Critical2: 列挙コマンドの intersect 欠落(分類 D 誤対象化)— E1 リストとの intersect 規則を明記
