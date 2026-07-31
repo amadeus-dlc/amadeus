@@ -37,6 +37,11 @@ import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
 // registeredAuditEventTypes), so this erases at compile time.
 import type { EventDef as RegistryEventDef } from "../otel/event-registry.ts";
 
+// The lazily-required registry module's shape, named here so the require below
+// is a ONE-LINE cast: the annotation lines of a multi-line cast are erased at
+// runtime and stay permanently DA:0 in bun's lcov.
+type EventRegistryModule = { REGISTERED_EVENTS: readonly RegistryEventDef[] };
+
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
 // write from a post-complete suppression. Both arms carry event + timestamp so
@@ -1137,9 +1142,7 @@ export function presenceMintRejection(eventType: string): string | null {
 let registeredAuditEventMap: Map<string, RegistryEventDef> | null = null;
 function registeredAuditEventDefs(): Map<string, RegistryEventDef> {
   if (registeredAuditEventMap === null) {
-    const { REGISTERED_EVENTS } = require("../otel/event-registry.ts") as {
-      REGISTERED_EVENTS: readonly RegistryEventDef[];
-    };
+    const { REGISTERED_EVENTS } = require("../otel/event-registry.ts") as EventRegistryModule;
     registeredAuditEventMap = new Map(
       REGISTERED_EVENTS.flatMap((def) =>
         def.durability === "canonical" && def.auditEvent !== null

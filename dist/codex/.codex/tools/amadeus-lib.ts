@@ -7335,6 +7335,13 @@ import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
 // has to be threaded through unchanged: it is both the lock identity to
 // re-enter on and the shard the row belongs in, and omitting it writes to the
 // workspace sentinel bucket — the wrong ledger, silently.
+//
+// The otel import is LAZY to break the lib.ts <-> otel cycle at load time: the
+// canonical emit path reaches back into lib.ts (activeIntent, auditFilePath),
+// and a top-level import here would close the loop at module-init time.
+// require() is synchronous under Bun, the same idiom this file already uses for
+// amadeus-audit.ts. (Stated here rather than in the body: a standalone comment
+// line inside a function body is a permanent DA:0 in bun's lcov.)
 export function emitErrorAuditRow(
   projectDir: string,
   tool: string,
@@ -7343,17 +7350,18 @@ export function emitErrorAuditRow(
   intent?: string,
   space?: string
 ): void {
-  // Lazy import to break the lib.ts <-> otel cycle at load time: the canonical
-  // emit path reaches back into lib.ts (activeIntent, auditFilePath), and a
-  // top-level import here would close the loop at module-init time. Dynamic
-  // import is synchronous via require under Bun, the same idiom this file
-  // already used for amadeus-audit.ts.
   const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
   otel.emitAuditEvent("ERROR_LOGGED", { Tool: tool, Command: command, Error: msg }, projectDir, intent, space);
 }
 
 // Failures are swallowed — we're already exiting, the caller gets the JSON
 // error on stderr regardless.
+//
+// The caller threads its RESOLVED intent+space (fork/merge hold a PER-INTENT
+// lock — amadeus-state.ts error()/lockIntent), and both the shard and the
+// re-entered lock identity come from that pair. Omitted intent/space -> the
+// workspace sentinel, which is correct for every sentinel-locked caller (the
+// common case).
 export function emitError(
   projectDir: string,
   tool: string,
@@ -7366,11 +7374,6 @@ export function emitError(
     _errorEmitInProgress = true;
     try {
       if (existsSync(stateFilePath(projectDir))) {
-        // The caller threads its RESOLVED intent+space (fork/merge hold a
-        // PER-INTENT lock — amadeus-state.ts error()/lockIntent), and both the
-        // shard and the re-entered lock identity come from that pair. Omitted
-        // intent/space -> the workspace sentinel, which is correct for every
-        // sentinel-locked caller (the common case).
         emitErrorAuditRow(projectDir, tool, command, msg, intent, space);
       }
     } catch {

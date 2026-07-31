@@ -200,6 +200,38 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     expect(mainForkedRows(proj as string).length).toBe(0);
   });
 
+  test("(iv) post-emit copy failure: the orphan AUDIT_FORKED is correlated, then exit 1", () => {
+    // The arm after the emit: AUDIT_FORKED is already on the main shard, and the
+    // disk copy then fails. That ordering is the audit-of-intent contract — the
+    // row is written BEFORE the side effect — so the failure cannot un-write it.
+    // What it must do instead is leave a correlated ERROR_LOGGED carrying the
+    // emitted row's timestamp, which is how doctor pairs the orphan with its
+    // fork, and exit non-zero.
+    //
+    // The copy is made to fail by putting a FILE where the worktree's audit
+    // DIRECTORY belongs: the handler's mkdirSync(recursive) raises EEXIST on it.
+    // That is a real failure of the real call, not an injected throw.
+    proj = seedProject();
+    const wtShard = wtShardPath(proj as string);
+    mkdirSync(dirname(dirname(wtShard)), { recursive: true });
+    writeFileSync(dirname(wtShard), "not a directory\n", "utf-8");
+
+    const run = captureRun(() => handleAuditFork(["--slug", SLUG], proj as string));
+
+    expect(run.exited).toBe(true);
+    // The fork row landed (emit precedes the copy) ...
+    const forked = mainForkedRows(proj as string);
+    expect(forked.length).toBe(1);
+    // ... and the failure is recorded against it, quoting its timestamp.
+    const errors = auditRowsFrom(readFileSync(auditFilePath(proj as string), "utf-8")).filter(
+      (r) => r.event === "ERROR_LOGGED"
+    );
+    expect(errors.length).toBe(1);
+    expect(errors[0]?.fields.Command).toBe("audit-fork");
+    expect(errors[0]?.fields.Error).toContain(`[fork-emitted:${forked[0]?.timestamp}]`);
+    expect(errors[0]?.fields.Error).toContain(`[slug=${SLUG}]`);
+  });
+
   test("(iii) first fork: no wt shard -> allow, plain AUDIT_FORKED (no Reentrant)", () => {
     proj = seedProject();
     // Ensure the worktree DIR exists but no shard (non-regression path).
