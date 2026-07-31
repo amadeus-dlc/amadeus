@@ -60,9 +60,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const contractJob =
       yaml.split("  distribution-contract:")[1]?.split("\n  tests:")[0] ?? "";
     const testsJob = yaml.split("  tests:")[1]?.split("\n  drift-check:")[0] ?? "";
-    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  distribution-benchmark:")[0] ?? "";
-    const releaseGateJob =
-      yaml.split("  distribution-release-gate:")[1]?.split("\n  coverage-head:")[0] ?? "";
+    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  coverage-head:")[0] ?? "";
 
     expect(changesJob).toContain(`full: \${{ steps.filter.outputs.full }}`);
     expect(changesJob).toContain(`drift: \${{ steps.filter.outputs.drift }}`);
@@ -88,12 +86,27 @@ describe("t222 CI snapshot publication boundary", () => {
     );
     expect(driftJob).toContain("bun run dist:check");
     expect(driftJob).toContain("bun run promote:self:check");
-    expect(releaseGateJob).toContain(
-      "needs: [changes, distribution-contract, distribution-benchmark-aggregate]",
+  });
+
+  test("performance verification stays out of the blocking pipeline", () => {
+    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const jobs = Object.keys(
+      (Bun.YAML.parse(yaml) as { jobs?: Record<string, unknown> }).jobs ?? {},
     );
-    expect(releaseGateJob).toContain(
-      `CONTRACT_RESULT: \${{ needs.distribution-contract.result }}`,
-    );
+
+    for (const retired of [
+      "distribution-benchmark",
+      "distribution-benchmark-aggregate",
+      "distribution-release-gate",
+    ]) {
+      expect(jobs).not.toContain(retired);
+    }
+    expect(yaml).not.toContain("distribution:benchmark");
+
+    const ciSuccessNeeds =
+      yaml.split("  ci-success:")[1]?.split("\n    if:")[0] ?? "";
+    expect(ciSuccessNeeds).toContain("- distribution-contract");
+    expect(ciSuccessNeeds).not.toContain("benchmark");
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
