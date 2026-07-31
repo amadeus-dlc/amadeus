@@ -7317,10 +7317,40 @@ let _errorEmitInProgress = false;
 // Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
 // pattern as amadeus-graph.ts above — the runtime cycle is broken by
 // require() below; type erases at compile time.
-import type {
-  appendAuditEntry as AppendAuditEntry,
-  appendAuditEntryUnlocked as AppendAuditEntryUnlocked,
-} from "./amadeus-audit.ts";
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
+
+// The ERROR_LOGGED row emitError writes, exported as its own seam.
+//
+// It is separate from emitError for two reasons: emitError ends in
+// process.exit, so the write is otherwise only observable through a spawned
+// CLI; and the write is the whole of what the OTel migration changed here,
+// so the migrated behaviour deserves a name a test can call.
+//
+// ONE PATH, LOCK HELD OR NOT. The pre-migration site chose between
+// appendAuditEntryUnlocked and appendAuditEntry on holdsAuditLock, because
+// appendAuditEntry's bare acquire is not reentrant and would have spent its
+// full 50 x 100ms budget against the caller's OWN lock. The canonical path
+// locks through withAuditLock, whose per-identity depth counter re-enters, so
+// the branch has no work left to do. The caller's RESOLVED intent+space still
+// has to be threaded through unchanged: it is both the lock identity to
+// re-enter on and the shard the row belongs in, and omitting it writes to the
+// workspace sentinel bucket — the wrong ledger, silently.
+export function emitErrorAuditRow(
+  projectDir: string,
+  tool: string,
+  command: string,
+  msg: string,
+  intent?: string,
+  space?: string
+): void {
+  // Lazy import to break the lib.ts <-> otel cycle at load time: the canonical
+  // emit path reaches back into lib.ts (activeIntent, auditFilePath), and a
+  // top-level import here would close the loop at module-init time. Dynamic
+  // import is synchronous via require under Bun, the same idiom this file
+  // already used for amadeus-audit.ts.
+  const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+  otel.emitAuditEvent("ERROR_LOGGED", { Tool: tool, Command: command, Error: msg }, projectDir, intent, space);
+}
 
 // Failures are swallowed — we're already exiting, the caller gets the JSON
 // error on stderr regardless.
@@ -7336,44 +7366,12 @@ export function emitError(
     _errorEmitInProgress = true;
     try {
       if (existsSync(stateFilePath(projectDir))) {
-        // Lazy import to break the lib.ts ↔ amadeus-audit.ts cycle at load time.
-        // amadeus-audit.ts imports from lib.ts, and importing it at top of lib.ts
-        // would create a circular dependency. Dynamic import is synchronous via
-        // require under Bun and keeps the dependency one-way at module-init time.
-        const audit = require("./amadeus-audit.ts") as {
-          appendAuditEntry: typeof AppendAuditEntry;
-          appendAuditEntryUnlocked: typeof AppendAuditEntryUnlocked;
-        };
-        // If we're inside a withAuditLock-held critical section (e.g., the
-        // caller is amadeus-state.ts fork/merge mid-transaction), the audit
-        // lock is already held by us. Use the unlocked variant directly so
-        // the ERROR_LOGGED row lands without the 5s acquire timeout. The
-        // exit-handler safety net releases the lock dir on process.exit.
-        // NOTE: holdsAuditLock keys on the COMPOSITE lock identity (per-intent
-        // keying, P3) — a bare `AUDIT_LOCK_EXIT_HANDLERS.has(projectDir)` would
-        // miss the workspace-bucket / per-intent handler keys and re-introduce
-        // the 5s self-deadlock on every in-transaction error emit.
-        //
         // The caller threads its RESOLVED intent+space (fork/merge hold a
-        // PER-INTENT lock — amadeus-state.ts error()/lockIntent). We MUST probe and
-        // emit on the SAME bucket: a bare holdsAuditLock(projectDir) keys the
-        // __workspace__ sentinel, returns false mid per-intent transaction, takes
-        // the 5s blocking-acquire branch, and writes ERROR_LOGGED to the wrong
-        // shard. Omitted intent/space -> sentinel, which is correct for every
+        // PER-INTENT lock — amadeus-state.ts error()/lockIntent), and both the
+        // shard and the re-entered lock identity come from that pair. Omitted
+        // intent/space -> the workspace sentinel, which is correct for every
         // sentinel-locked caller (the common case).
-        if (holdsAuditLock(projectDir, intent, space)) {
-          audit.appendAuditEntryUnlocked("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
-        } else {
-          audit.appendAuditEntry("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
-        }
+        emitErrorAuditRow(projectDir, tool, command, msg, intent, space);
       }
     } catch {
       // Audit write failed — we're already in an error path, swallow.
