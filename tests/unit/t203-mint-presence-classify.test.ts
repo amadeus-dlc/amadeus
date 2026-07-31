@@ -32,6 +32,7 @@
 // CLAUDE_PROJECT_DIR and feed the UserPromptSubmit JSON on stdin, then read back
 // the fixture's audit shard — exactly the path Claude Code drives.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
@@ -101,7 +102,7 @@ function humanTurnCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as { event: string | null })
     .filter((r) => r.event === "HUMAN_TURN").length;
 }
 
