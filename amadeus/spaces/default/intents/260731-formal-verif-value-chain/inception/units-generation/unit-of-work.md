@@ -2,7 +2,7 @@
 
 上流入力(consumes 全数): components, component-methods, services, component-dependency, decisions, requirements
 
-components.md の C1〜C10 を、1 Unit = 単独 deployable な Bolt = 1 PR の境界(units-generation:c1)で 8 Unit へ編成する。依存は component-dependency.md の依存グラフを継承し、規模見積りは components.md の数値を按分する。
+components.md の C1〜C10 を、**単独 deployable** の境界(units-generation:c1)で 8 Unit へ編成する。各 Unit の PR 粒度は Bolt 層が決める(1 Unit = 1..N Bolt / 1 Bolt = 1 PR — 2026-07-31 のノルム改訂 PR #1843 着地に伴う表現追従。Unit 分割自体は不変)。依存は component-dependency.md の依存グラフを継承し、規模見積りは components.md の数値を按分する。
 
 ## u1-runner-relocation(walking skeleton)
 
