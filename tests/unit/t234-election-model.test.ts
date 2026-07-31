@@ -250,6 +250,15 @@ describe("t234 election-model", () => {
     expect(
       Election.parse({ ...DEF, choices: [{ internalNo: 1, label: "x", description: 42 }] }).ok,
     ).toBe(false);
+    // An explicit undefined reads as absent (the same reading parseKindRef gives
+    // `kind`), so a `{...choice, description: maybeUndefined}` spread stays
+    // valid; JSON cannot express it, so no definition file reaches this branch.
+    const explicitUndef = Election.parse({
+      ...DEF,
+      choices: [{ internalNo: 1, label: "x", description: undefined }],
+    });
+    if (!explicitUndef.ok) throw new Error("explicit undefined must read as absent");
+    expect("description" in (explicitUndef.value.choices[0] as object)).toBe(false);
   });
 
   test("shuffleView: two voters can see different orders under a fixed seed pair", () => {

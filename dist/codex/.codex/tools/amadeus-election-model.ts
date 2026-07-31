@@ -82,8 +82,10 @@ function parseChoices(raw: unknown): Choice[] | null {
     if (typeof cc.internalNo !== "number" || typeof cc.label !== "string") return null;
     // #1772: the whitelist rebuild used to drop choices[].description silently
     // (fail-open — the definition author saw exit 0 and the voter saw nothing).
-    // A present-but-malformed description now fails closed like every other
-    // field; an absent one leaves the key off.
+    // A description that is present with a non-string value now fails closed
+    // like every other field. `undefined` counts as absent and leaves the key
+    // off — the same reading `kind` gets below, and JSON (the only production
+    // input) cannot express it anyway.
     if (cc.description !== undefined && typeof cc.description !== "string") return null;
     choices.push(
       cc.description === undefined
