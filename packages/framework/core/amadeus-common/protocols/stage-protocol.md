@@ -891,6 +891,24 @@ If a Task tool call fails (timeout, error, or returns truncated/incomplete outpu
 
 ---
 
+## 11a. Directive Advisories
+
+If the `run-stage` / `dispatch-subagent` directive carries an `advisories`
+array, **surface every entry to the user before starting the stage body**. The
+field is present only when the engine actually raised something (it is omitted,
+never empty), and each entry is `{plugin, code, message, stage}` — relay the
+`message` verbatim and name the `plugin` it came from.
+
+An advisory is a **nudge, not a gate**: it never blocks the stage, never starts
+another stage on its own, and is never acted on silently. The human decides
+whether to follow it (typically by running the named stage) and the stage
+proceeds either way. The same text is also written to stderr for the human
+channel; relaying it is what makes it reach a user who only sees the directive.
+
+The engine raises these at `requirements-analysis`, `functional-design` and
+`build-and-test`, at most once per advisory per run, so a repeat is a signal
+worth reporting rather than expected noise.
+
 ## 12. Phase Boundary Verification
 
 > See `stage-protocol-governance.md` §13 — load at phase transitions to run traceability verification. Capturing corrections as durable rules is the §13 Learnings Ritual below, not a separate guardrail flow.
