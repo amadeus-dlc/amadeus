@@ -33,6 +33,9 @@ import { initProcessObservability } from "./amadeus-observability.ts";
 // Type-only: the runtime binding is required lazily (see
 // emitCanonicalAuditEvent below), so this import erases at compile time.
 import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
+// Type-only, like the emit import above: the registry is required lazily (see
+// registeredAuditEventTypes), so this erases at compile time.
+import type { EventDef as RegistryEventDef } from "../otel/event-registry.ts";
 
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
@@ -579,6 +582,8 @@ export function handleAppend(
 ): void {
   const rejection = presenceMintRejection(eventType);
   if (rejection) throw new Error(rejection);
+  const unregistered = unregisteredEventRejection(eventType);
+  if (unregistered) throw new Error(unregistered);
   const result = appendAuditEntry(eventType, fields, projectDir);
   jsonSuccess(result);
 }
@@ -1102,6 +1107,53 @@ const PRESENCE_PROTECTED_HEADINGS = new Set(
 export function presenceMintRejection(eventType: string): string | null {
   if (!PRESENCE_PROTECTED_EVENTS.has(eventType)) return null;
   return `Refusing to append "${eventType}" via the general audit CLI: presence/provenance events are minted only by their trusted in-process writers (HUMAN_TURN by the UserPromptSubmit hook; DELEGATED_APPROVAL/DELEGATED_REJECTION by amadeus-state delegate-approval/delegate-rejection).`;
+}
+
+// The event vocabulary the audit journal accepts, read from the registry lazily
+// and memoised. Telemetry defs carry `auditEvent: null` and so are absent by
+// construction — FR-EXP-4's "telemetry never reaches the journal" needs no
+// separate check.
+//
+// Lazy for the same reason emitCanonicalAuditEvent is, but a different hazard:
+// not a cycle (event-registry.ts is pure data and imports nothing) — module
+// FOOTPRINT. The hooks import this module, and a hook runs inside sandboxes
+// that copy tools/ alone; an eager `../otel/...` import makes every such
+// sandbox fail to load the hook before it reaches the behaviour under test.
+// Keeping the reference lazy leaves this module's load-time contract as the
+// hooks already rely on it.
+//
+// Widened to Set<string> deliberately: the registry is `as const`, so the
+// inferred element type is the 78-name literal union — but this guard's input
+// is untrusted CLI text, and narrowing it there would make the check
+// untypeable.
+let registeredAuditEvents: Set<string> | null = null;
+function registeredAuditEventTypes(): Set<string> {
+  if (registeredAuditEvents === null) {
+    const { REGISTERED_EVENTS } = require("../otel/event-registry.ts") as {
+      REGISTERED_EVENTS: readonly RegistryEventDef[];
+    };
+    registeredAuditEvents = new Set(
+      REGISTERED_EVENTS.flatMap((def) =>
+        def.durability === "canonical" && def.auditEvent !== null ? [def.auditEvent] : []
+      )
+    );
+  }
+  return registeredAuditEvents;
+}
+
+// `append` guard: refuse an event outside the registered vocabulary. Returns the
+// error message to surface, or null when clean.
+//
+// This duplicates what appendAuditEntry checks against VALID_EVENT_TYPES, and
+// deliberately so: that check lives in the LEGACY writer, which the
+// legacy-writer-removal Bolt deletes. Validating at the CLI entry instead keeps
+// the rejection readable and attributable to the CLI once the canonical path is
+// the only writer left — otherwise an unregistered event would travel to
+// emitEvent's registry lookup and throw from inside the emit.
+export function unregisteredEventRejection(eventType: string): string | null {
+  const registered = registeredAuditEventTypes();
+  if (registered.has(eventType)) return null;
+  return `Invalid event type: ${eventType}. Must be one of: ${[...registered].join(", ")}`;
 }
 
 // `append-raw` guard: the block is a free-form heading + body, so a forger can
