@@ -49,7 +49,7 @@ import {
   type JournalEntryV2,
   serializeJournalEntryV2,
 } from "../../packages/framework/core/tools/amadeus-journal.ts";
-import { context, ROOT_CONTEXT } from "../../packages/framework/core/vendor/opentelemetry/api/index.js";
+import { context, createContextKey, ROOT_CONTEXT } from "../../packages/framework/core/vendor/opentelemetry/api/index.js";
 import { logs } from "../../packages/framework/core/vendor/opentelemetry/api-logs/index.js";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -174,11 +174,20 @@ describe("context manager — bind and teardown", () => {
   });
 
   test("disable tears the manager down; a fresh one can be stood back up", () => {
+    // Propagation through with() is what tells a live manager from the Noop one
+    // the API falls back to: both run the callback, only a live manager makes
+    // the value visible on the active context inside it.
+    const key = createContextKey("core-plumbing");
+    const propagated = (): unknown =>
+      context.with(ROOT_CONTEXT.setValue(key, "carried"), () => context.active().getValue(key));
+    expect(propagated()).toBe("carried");
+
     context.disable();
-    expect(context.active()).toBe(ROOT_CONTEXT);
+    expect(propagated()).toBeUndefined();
+
     resetContextManagerForTests();
     ensureContextManager();
-    expect(context.active()).toBe(ROOT_CONTEXT);
+    expect(propagated()).toBe("carried");
   });
 });
 
