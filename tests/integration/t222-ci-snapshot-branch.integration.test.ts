@@ -60,9 +60,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const contractJob =
       yaml.split("  distribution-contract:")[1]?.split("\n  tests:")[0] ?? "";
     const testsJob = yaml.split("  tests:")[1]?.split("\n  drift-check:")[0] ?? "";
-    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  distribution-benchmark:")[0] ?? "";
-    const releaseGateJob =
-      yaml.split("  distribution-release-gate:")[1]?.split("\n  coverage-head:")[0] ?? "";
+    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  coverage-head:")[0] ?? "";
 
     expect(changesJob).toContain(`full: \${{ steps.filter.outputs.full }}`);
     expect(changesJob).toContain(`drift: \${{ steps.filter.outputs.drift }}`);
@@ -88,12 +86,39 @@ describe("t222 CI snapshot publication boundary", () => {
     );
     expect(driftJob).toContain("bun run dist:check");
     expect(driftJob).toContain("bun run promote:self:check");
-    expect(releaseGateJob).toContain(
-      "needs: [changes, distribution-contract, distribution-benchmark-aggregate]",
+  });
+
+  test("performance verification stays out of the blocking pipeline", () => {
+    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const jobs = (Bun.YAML.parse(yaml) as { jobs?: Record<string, { needs?: unknown }> }).jobs
+      ?? {};
+
+    for (const retired of [
+      "distribution-benchmark",
+      "distribution-benchmark-aggregate",
+      "distribution-release-gate",
+    ]) {
+      expect(Object.keys(jobs)).not.toContain(retired);
+    }
+    expect(yaml).not.toContain("distribution:benchmark");
+
+    // The full blocking dependency set: dropping any entry must be as loud as
+    // re-introducing a benchmark job.
+    const ciSuccessNeeds = jobs["ci-success"]?.needs;
+    expect(Array.isArray(ciSuccessNeeds)).toBe(true);
+    expect(new Set(ciSuccessNeeds as string[])).toEqual(
+      new Set([
+        "changes",
+        "typecheck",
+        "lint",
+        "distribution-contract",
+        "plugin-conformance-e2e",
+        "tests",
+        "drift-check",
+        "coverage",
+      ]),
     );
-    expect(releaseGateJob).toContain(
-      `CONTRACT_RESULT: \${{ needs.distribution-contract.result }}`,
-    );
+    expect(Object.keys(jobs)).toContain("distribution-contract");
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
