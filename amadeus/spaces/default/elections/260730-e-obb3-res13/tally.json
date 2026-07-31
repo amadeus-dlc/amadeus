@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件不可 — c1 または c2 に新規学習価値があり persist すべき",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-30T23:55:40Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 は rescan-base-ancestry(team.md:190)と c2-observed-mainline-commit(project.md:271)の、c2 は re-sensors-codekb-filter-mismatch(project.md:144)と c3-codekb-sensor(project.md:301)の既定規範の準拠適用であり、memory.md と codekb re-scan(:7-28)の双方が各 cid を明示引用している — 新規の一般化可能な知見は含まれない。",
+      "submittedAt": "2026-07-30T23:54:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 は rescan-base-ancestry(祖先性実測)と c2-observed-mainline-commit(merge-base 復元退行の機序・origin/main 系譜 observed、E-OBB2-RES13 既採用)の明示引用付き適用実例、c2 は re-sensors-codekb-filter-mismatch(知識クラス)と c3-codekb-sensor(diary への代替証拠記録)の規定どおりの執行であることを memory.md:6/:13・codekb :16-28・project.md:144/:271/:301 の実読で確認した。両候補とも既存 cid が規定する内容を超える新規機序・新規規律を含まず、0件が妥当。",
+      "submittedAt": "2026-07-30T23:55:08Z"
+    }
+  ],
+  "resolutions": []
+}

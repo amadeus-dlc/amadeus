@@ -65,6 +65,11 @@ amadeus/spaces/*/intents/*/.amadeus-*
 # No-intent fallback root: before the first intent is born, hooks write their
 # health beats to spaces/<space>/intents/ directly.
 amadeus/spaces/*/intents/.amadeus-*
+# Ballots accepted while an election is still collecting live per voter under
+# amadeus/spaces/<space>/elections/<election>/pending/ until tally folds them
+# into ledger.json. Untracked so a not-yet-voted voter cannot read a peer's
+# choice/GoA/rationale through `git status` / `git diff` (Issue #1773).
+amadeus/spaces/*/elections/*/pending/
 
 # Local-only — pins shfmt formatting to project style via a local
 # auto-format tool. Not committed; contributors who do not use it do not need it.

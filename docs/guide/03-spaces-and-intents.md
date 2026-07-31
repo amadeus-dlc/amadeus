@@ -128,11 +128,11 @@ second intent alongside the first:
 
 ```
 ▸ This looks like new work, separate from "inventory-api". Start a second intent?
-  (1) Yes — start a second intent (scope: bugfix)
+  (1) Yes — start a second intent (scope: fix)
   (2) No — this continues the inventory-api work
 ```
 
-- Choose **Yes** and AI-DLC births a second intent (here, a `bugfix`), switches to
+- Choose **Yes** and AI-DLC births a second intent (here, a `fix`), switches to
   it, and begins its first stage. Your inventory-api intent is untouched — its
   record dir, state, and progress are all preserved exactly where you left them.
 - Choose **No** and AI-DLC treats your message as part of the active intent.

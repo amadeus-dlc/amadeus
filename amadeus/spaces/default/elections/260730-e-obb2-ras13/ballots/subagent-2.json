@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB2-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2 の『自己適用チェック』観点自体は無価値ではないため、同型(引用した規範を同一文書内で踏む)が別 intent で再発したら、その時点で独立 cid 化を再提案する条件付き不採用とする。",
+  "rationale": "実測: (1) diary Deviations 2026-07-30T15:57:29Z と requirements.md:31 / :73(Review Iteration 1 Major)で、FR-1735c 初稿の免責付き記述と reviewer 捕捉、:85 の iteration 2 閉包を確認した。(2) 既存 cid:requirements-analysis:exemption-clause-must-not-substitute(project.md:224)は、260725-teamup-launch-hardening の requirements-analysis FR-5 で §12a product-lead reviewer が同一の抜け道を指摘した実測から立てられたものであり、今回は stage・reviewer 役・失敗形状のすべてが一致する完全な再演で、新しい機序も新しい検査手順も生じていない。(3) c2 の提案文『引用した規範を自分の記述へ自己適用する』は、規範は引用の有無にかかわらず全適用という既決前提の言い換えに留まり、既存規範が持たない検査手順を追加しない(cf. fix-diff-independent-reverify は『是正 diff が無ゲート』という構造的な無検査面を埋めるため成立したが、本件の編纂面は §12a レビューでゲート済みで、実際に iteration 1 で捕捉・iteration 2 で閉包した)。(4) team.md cid:requirements-analysis:norm-consistency-review / weekly-distillation-round の趣旨に照らし、既存規範の再演に対する重複ノルム追加は蒸留コストを増やす側に働く。以上より 0 件採用が妥当。",
+  "submittedAt": "2026-07-30T15:59:10Z"
+}

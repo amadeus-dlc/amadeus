@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB2-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "両候補の前提を独立実測して成立を確認した。c1: `gh pr list --search \"1742 in:body\" --state all` は PR #1758 (OPEN, 'fix(sensor): scope artifact checks to declared outputs') を1件返し、本文が Issue #1742 を対象と明記。ノルム面のギャップも実測 — pre-filing-dup-and-branch-check (team.md:97) は `gh issue list` による起票前の重複検査であり着手時の PR 棚卸しではない。priority-vs-dependency (team.md:96) の (3)「進行中 PR と同じ層を触る修正は…非交差を実測確認してから着手」は進行中 PR の把握を前提とするが、その把握手順自体を規定していない。resume-ledger-rebuild (team.md:259) は leader の resume 時の承認待ち台帳再構築で、バグ batch 起動時の Issue 別 PR 検査ではない。memory 層全体の `gh pr list` grep も 0 hit。c1 はこの空白を埋め、priority-vs-dependency (3) が前提とする入力を供給する補完関係にある。c2: 前回・前々回 observed (278d61d8e, 22ee27dbe) はいずれも `git rev-list --parents -n1` が 3語 = ローカル merge コミット (subject も 'Merge remote-tracking branch origin/main' / 'Merge branch main of ...') で、HEAD・origin/main の双方に対し `merge-base --is-ancestor` exit 1。実際に採用された base 8b8016f62 は非 merge (parents 2語) かつ origin/main の祖先 (exit 0)。さらに今回の observed c42ef4d77 も 3語 = ローカル merge かつ origin/main 非祖先 (exit 1) — すなわち c2 が指摘する欠陥は現断面でも現存し、次回 RE で再び非祖先化することが予測される。既存 rescan-base-ancestry は読み手側 (base 採用前の祖先性判定) を縛るが書き手側 (observed に何を記録するか) を縛っておらず、c2 はその対称面を埋める。3/3 の observed が同一様式で失敗している再現性から、単なる実践再記録ではなく原因側の追補価値があると判断する。",
+  "submittedAt": "2026-07-30T15:45:44Z"
+}

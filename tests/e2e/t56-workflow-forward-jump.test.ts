@@ -3,12 +3,12 @@
 // t56-workflow-forward-jump.test.ts — SDK-harness port of
 // tests/e2e/t56-workflow-forward-jump.sh (plan 8). Drives the real
 // `/amadeus --stage requirements-analysis` through the Claude Agent SDK from a
-// brownfield bugfix workflow seeded at init-done and asserts ONLY on
+// brownfield fix workflow seeded at init-done and asserts ONLY on
 // deterministic surfaces — the jump tool's verbatim stdout JSON, the on-disk
 // state fields, and the parsed audit events — NEVER on assistantText.
 //
 // ⛔ TRAP 2 (no headless auto-approve). The .sh drove `--stage reverse-engineering
-// --scope bugfix` to completion under a headless auto-approve mode the refactor
+// --scope fix` to completion under a headless auto-approve mode the refactor
 // kills. We assert the deterministic jump EMISSION
 // (the tool's own stdout JSON + the audit bytes + the post-jump state the tool
 // wrote), stopping the SDK the instant the jump JSON lands — so the
@@ -16,7 +16,7 @@
 // terminal-stop is needed.
 //
 // ⚠️ JOURNEY RE-BASED ON v0.6.x (FINDING, surfaced not softened). The .sh ran
-// `--stage reverse-engineering --scope bugfix` against a STATELESS project and
+// `--stage reverse-engineering --scope fix` against a STATELESS project and
 // expected auto-init + jump. That journey NO LONGER EXISTS on the v0.6.x
 // engine: with no state, `next --stage <slug>` emits a run-stage directive
 // DIRECTLY off the graph — read-only, no init, no amadeus-jump execute, no
@@ -27,7 +27,7 @@
 // forward-JUMP semantics the .sh actually asserted ([S] skip markers,
 // STAGE_JUMPED, phase rewrite, scope) require existing state, so this port
 // seeds the brownfield init-done fixture (Current Stage=reverse-engineering,
-// Scope=bugfix, Completed=3) and jumps FORWARD to requirements-analysis. The
+// Scope=fix, Completed=3) and jumps FORWARD to requirements-analysis. The
 // .sh's auto-init slice (amadeus-docs created, state written, scope recorded at
 // init) is owned by the fresh-init twins t52/t54/t59 — no coverage is lost.
 //
@@ -36,7 +36,7 @@
 // 2.1), `--stage requirements-analysis` (idx 2.3) resolves direction=forward
 // (amadeus-jump.ts:142-145). With state present the engine names the mutation:
 // a print directive carrying `amadeus-jump.ts execute --target
-// requirements-analysis --direction forward --scope bugfix`; the conductor
+// requirements-analysis --direction forward --scope fix`; the conductor
 // runs it via Bash and the tool's stdout JSON lands in a tool_result.
 // executeJump's forward branch marks the in-flight intermediate
 // reverse-engineering `[S]` (jump.ts:242-264), pivots Current Stage to
@@ -61,9 +61,9 @@
 //          re-base note. Here amadeus-docs/ is the seeded precondition.
 //   3 state file created
 //       -> r.stateFile !== undefined (sdk-drive reads amadeus-state.md off disk).
-//   4 scope is bugfix
-//       -> readStateField(state,"Scope") === "bugfix" (exact field, stronger
-//          than the .sh's loose `grep bugfix`; carried by the fixture and
+//   4 scope is fix
+//       -> readStateField(state,"Scope") === "fix" (exact field, stronger
+//          than the .sh's loose `grep fix`; carried by the fixture and
 //          untouched by the jump).
 //   5 skipped stages marked [S]
 //       -> the jump stdout JSON `stages_skipped` is exactly
@@ -92,7 +92,7 @@
 //   - Lifecycle Phase write:  amadeus-jump.ts:312 (target phase uppercased)
 //   - STAGE_JUMPED emit:      amadeus-jump.ts:374; Direction :375; Target :377
 //   - jump stdout JSON:       amadeus-jump.ts:406-420
-//   - fixture: state-brownfield-init-done.md (Scope=bugfix, Current Stage=
+//   - fixture: state-brownfield-init-done.md (Scope=fix, Current Stage=
 //     reverse-engineering, Completed=3, Lifecycle Phase=INCEPTION)
 //
 // It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock (the
@@ -128,7 +128,7 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const TARGET_SLUG = "requirements-analysis"; // jump target (inception 2.3)
 const SKIPPED_SLUG = "reverse-engineering"; // the in-flight stage the jump skips (2.1)
 const TARGET_PHASE = "INCEPTION"; // jump.ts:312/410
-const SCOPE = "bugfix"; // carried by the fixture
+const SCOPE = "fix"; // carried by the fixture
 const JUMP_TARGET_JSON = `"target":"${TARGET_SLUG}"`; // jump.ts:409
 const JUMP_DIRECTION_JSON = '"direction":"forward"'; // jump.ts:407
 const JUMP_TARGET_PHASE_JSON = `"target_phase":"${TARGET_PHASE}"`; // jump.ts:410
@@ -144,7 +144,7 @@ const AUDIT_TARGET_LINE = `**Target**: ${TARGET_SLUG}`; // jump.ts:377
 
 describe("t56 /amadeus --stage requirements-analysis forward jump (sdk)", () => {
   // -------------------------------------------------------------------------
-  // Brownfield bugfix workflow seeded at init-done (Current Stage=
+  // Brownfield fix workflow seeded at init-done (Current Stage=
   // reverse-engineering). `--stage requirements-analysis` is a genuine forward
   // jump: the in-flight intermediate is marked [S], the pointer pivots, and
   // STAGE_JUMPED/FORWARD lands in the audit. All eight .sh assertions
@@ -160,7 +160,7 @@ describe("t56 /amadeus --stage requirements-analysis forward jump (sdk)", () => 
       });
       try {
         // Precondition: the seed truly starts AT reverse-engineering with
-        // Scope=bugfix (no vacuous pass on a pre-jumped state).
+        // Scope=fix (no vacuous pass on a pre-jumped state).
         const seed = readFileSync(seededStateFile(proj), "utf8");
         expect(readStateField(seed, "Current Stage")).toBe(SKIPPED_SLUG);
         expect(readStateField(seed, "Scope")).toBe(SCOPE);
@@ -197,7 +197,7 @@ describe("t56 /amadeus --stage requirements-analysis forward jump (sdk)", () => 
         expect(r.stateFile).toBeDefined();
         const state = r.stateFile as string;
 
-        // .sh test 4: scope is bugfix. Exact field (stronger than `grep bugfix`).
+        // .sh test 4: scope is fix. Exact field (stronger than `grep fix`).
         expect(readStateField(state, "Scope")).toBe(SCOPE);
 
         // .sh test 5 (state half): the skipped stage carries the [S] marker on

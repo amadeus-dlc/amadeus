@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memory.md の Interpretations 2件を実測: c1 は cid:requirements-analysis:c5(project.md:248)と c1-benchmark-baseline-correlation-verify(:3)の既決参照による質問省略、c2 は FR-2c(requirements.md:36)が no-silent-scope-narrowing(:243)/exemption-clause-must-not-substitute(:224)へ明示回答した適用実例で、いずれも既存 cid が既に規定する規律の実践であり新規の一般化可能な学習を含まない。",
+  "submittedAt": "2026-07-31T05:51:48Z"
+}

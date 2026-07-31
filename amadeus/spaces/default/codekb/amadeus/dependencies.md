@@ -1,6 +1,231 @@
 # 依存関係
 
-## OTel/observability 面の依存グラフ（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の依存関係（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### Bolt 間の交差判定
+
+**4件とも並行可**（`cid:code-generation:c6` — 交差判定は静的目録でなく実 diff で再評価する。本節は着手前の静的目録であり、着地順は実 diff で再評価する）。
+
+| 組 | ファイル交差 | 生成面交差 | 判定 |
+| --- | --- | --- | --- |
+| #1811 × #1800 | なし（別テストファイル） | なし（両方テスト面） | **並行可** |
+| #1811 × #1797 | なし | なし | **並行可** |
+| #1811 × #1816 | なし | **条件付き** — #1811 が本番非改変なら交差なし | **並行可（条件1）** |
+| #1800 × #1797 | なし | なし | **並行可** |
+| #1800 × #1816 | なし | なし | **並行可** |
+| #1797 × #1816 | **条件付き** — `tests/.coverage-patch-allowlist.json` は #1816 のみが触れる | なし | **並行可（条件2）** |
+
+### 並行の条件（2点）
+
+**条件1: #1811 の本番非改変を確定する。**
+
+`packages/framework/core/tools/team-up-codex-safety-wait.ts` または `packages/framework/core/tools/team-up.sh` を触ると、`bun scripts/package.ts` → 7 dist → `bun run promote:self` → self-install の再生成チェーンを通る。#1816 は同チェーンを必ず通るため、**生成面で交差する**。
+
+本番側は既に fail-closed 実装済み（`:643` の `runRecordIsActive` ループ、`:561-582` の `catch` → `false`）であり、患部はテスト fixture 側に限局する。本番非改変が成立する限り交差は生じない。
+
+**条件2: `tests/.coverage-patch-allowlist.json` へ触れるのは #1816 のみとする。**
+
+同ファイルは本区間（`3f73823b1..6e7a9d701`）で `+38/−38` の全面 remap を受けたばかりである。#1816 は `amadeus-mirror-presentation.ts` へ行を挿入するため presentation 行ピン5件（`193-194` / `230-234` / `237-239` / `245-247` / `266-271`）の機械 remap を要する（`cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+#1797 の対象である `t259` エントリ群は**別テスト由来**であり本件では触らない。この境界を守れば共有台帳の挿入衝突（`cid:code-generation:shared-ledger-insert-collision`）は発生しない。
+
+### 順序依存（交差とは別軸）
+
+**#1811 の着地は #1800 / #1797 の再現条件を変える。**
+
+| Issue | 依存の内容 |
+| --- | --- |
+| #1800 | 第一容疑は負荷条件下の spawn `EAGAIN`。#1811 の残留プロセス（実測84本）が解消されるとホスト負荷が下がり、再現確率が変わる |
+| #1797 | 比のずれは負荷変動由来。同様に再現条件が変わる |
+
+**負荷スイープ実測を #1811 の着地前に取るか後に取るかを要件段で固定する。**
+
+- **前**に取る → 残留込みの最悪条件を測る（保守的な閾値になる）
+- **後**に取る → 本来あるべき条件を測る（実運用に即した閾値になる）
+
+どちらを選ぶかで導出される数値が変わるため、実装段の裁量に委ねない。これは交差（同時実行の可否）ではなく**測定条件の依存**であり、並行実装自体は妨げない。
+
+### 外部依存
+
+本 intent の4件はいずれも**新規の外部依存を導入しない**。
+
+| Issue | 依存する既存機構 |
+| --- | --- |
+| #1811 | `packages/framework/core/tools/team-up.sh:508` の PID 追跡（`safety-wait.pid`）。掃引は `afterEach`（`:39-41`）の `rmSync` より**前**に行う順序依存あり |
+| #1800 | 同一ファイル内の既存診断ヘルパー `expectSuccessfulMigration`（`:218`）と3分類契約（`:311-313`）。新機構の導入ではなく既存様式への合流 |
+| #1797 | `tests/helpers/guard-corpus-benchmark-child.ts`（子プロセス側）。交互計測を採る場合の主改修面 |
+| #1816 | `snapshot.completionInstance`（型 `amadeus-mirror-types.ts:516` / `:527`、codec `amadeus-mirror-state-codec.ts:567` / `:763` / `:770` / `:775`、供給 `amadeus-mirror-lifecycle.ts:339`）。presentation では**未消費**のため参照を新設する |
+
+### 再生成チェーンの依存
+
+`packages/framework/core/` を触る変更（**#1816 のみ**）は以下を同一変更で同期する（project.md § Mandated）:
+
+1. `bun scripts/package.ts` → `dist/` 7ハーネス（`claude` / `codex` / `cursor` / `opencode` / `kimi` / `kiro` / `kiro-ide`）
+2. `bun run promote:self` → self-install ツリー
+3. `bun run dist:check` / `bun run promote:self:check` で一致を検証
+
+他3件はテスト面に閉じるためこのチェーンを通らない。
+
+### 検証コマンドの依存
+
+全 Bolt 共通（project.md § Testing Posture）:
+
+- `bun run typecheck`
+- `bun run lint`
+- `bun run dist:check`（#1816 のみ実質的な差分を持つ）
+- `bun run promote:self:check`（同上）
+- `bash tests/run-tests.sh --ci`
+
+**#1797 は追加で負荷スイープ実測を要する**（並列度を振った計測 — `cid:feasibility:parallelism-sweep-before-commit` の系譜）。**#1811 は追加でプロセス残留の実測**（launch → テスト終了 → `ps` でのゼロ確認）を要する。
+
+### 本区間で変化した依存関係（本 intent の患部外）
+
+| 変化 | 内容 |
+| --- | --- |
+| 選挙ストアの新規内部依存 | `amadeus-election-store.ts` が pending lane 6関数（`pendingDir` `:113` / `readPending` `:139` / `appendPending` `:161` / `ballotKey` `:187` / `pendingNotOnLedger` `:197` / `integratePending` `:205`）を持ち、tally 経路（`:535` / `:540` / `:601` / `:619` / `:663`）から消費する |
+| orchestrate → mirror codec の新規依存 | `amadeus-orchestrate.ts:193` が `succeededMirrorCreateExists` を import し、`:4249` で消費（実装は `amadeus-mirror-state-codec.ts:1731`） |
+| `.gitignore` 面の拡張 | ルート + 7ハーネス `dot-gitignore` へ `amadeus/spaces/*/elections/*/pending/` を追加（各 `+5`） |
+
+**外部パッケージ依存の追加・削除は本区間で 0件**。core tools への新規モジュール追加も 0件（前区間の +9件と対照的）。
+
+## オープンバグ3件の依存関係（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+**判断: 外部依存の変化なし。ただし Bolt 間にファイル交差が1組ある。** 区間 `a38a1f4d3..3f73823b1` で `package.json` の依存追加・削除・更新はない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
+
+### Bolt 間の交差判定
+
+前 intent までと異なり、**3件すべてが非交差ではない**。
+
+| 組 | 交差 | 判定 |
+| --- | --- | --- |
+| #1773 × #1772 | **交差する** — 両者とも `packages/framework/core/tools/amadeus-election-model.ts` を触る（#1773 は `OriginalBallot` の `:134-136`、#1772 は `Choice` `:48` と `DistributionView` `:306-310`） | 直列化するか、実 diff で行レンジの非交差を確認してから並行させる（`cid:code-generation:c6`。静的目録でなく実 diff で再評価する） |
+| #1773 × #1752 | 非交差（`amadeus-election-*.ts` vs `amadeus-orchestrate.ts`） | 並行可 |
+| #1772 × #1752 | 非交差 | 並行可 |
+
+3件とも `packages/framework/core/` を正本とするため、`bun scripts/package.ts` → `dist/` 7ハーネス → `bun run promote:self` → self-install 5面という**同一の再生成チェーン**を通る。ファイル単位で非交差でも生成面が競合するため、着地順は実 diff で再評価する。
+
+### 内部依存（#1773 / #1772 の修正が触る方向）
+
+```
+amadeus-election-model.ts   (型 — Choice :48 / DistributionView :306-310 / OriginalBallot :134-136)
+        │  型定義を供給
+        ▼
+amadeus-election-store.ts   (格納 — appendBallot :464-465 / materialize :500 / timeline :468-472)
+        │  ledger.json / timeline.json / ballots/<voter>.json
+        ▼
+選挙ディレクトリ（git tracked、非 ignore）
+        │  voter subagent が直接読む運用（SKILL.md:51）
+        ▼
+配布ビュー（shuffleView :338 — 設計上は健全な唯一の配布面）
+```
+
+依存方向は model → store の一方向。#1772（model の型拡張）は store・tally（`choiceCounts` `:488-496`）・record render へ**下流伝播**する。#1773 の格納分離案は store 層に閉じるが、`.gitignore` という **core の外側**へ影響が出る唯一の経路を持つ。
+
+### #1752 の依存
+
+`amadeus-orchestrate.ts` 内で閉じる。修正候補 (b)（ask 時 binding の永続化）を採る場合、`amadeus-mirror-coordinator.ts` の `expectedPrompt` 照合様式（`:320` / `:560` / `:622` / `:742-746`）を参照するが、これは**既存様式の踏襲であり新規依存の追加ではない**。候補 (a)（create receipt の存在判定）は `classifyReceipt` 語彙の再利用で同様に閉じる。
+
+### 区間で変化した依存方向（本 intent の患部外）
+
+`gh` の呼出依存が**集約された**。従来 mirror 系3モジュールに分散していた GitHub 呼出が `amadeus-github-gateway.ts` へ、プロセス起動が `amadeus-process-runner.ts` へ移り、抽出元は `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310 と縮小した。`hooks/amadeus-sensor-fire.ts` は新たに `tools/amadeus-sensor-invocation.ts` へ依存する（`:27` の import）— hook → tools 方向の依存であり既存の層順を保つ。
+
+## オープンバグ5件の依存関係（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+**判断: 外部依存の変化なし。Bolt 間の順序制約もなし。** 区間 `8b8016f62..c42ef4d77` で `package.json` の依存追加・削除・更新はない。5件は所有機構が互いに独立で、実装上の依存関係を持たない。
+
+ただし**投影チェーンの競合**が1点ある: #1735（`stage-protocol.md`）・#1742（`amadeus-sensor-fire.ts`）・#1750（`amadeus-mirror-lifecycle.ts` / `amadeus-orchestrate.ts`）はいずれも `packages/framework/core/` を正本とし、`bun scripts/package.ts` → `dist/` 7ハーネス → `bun run promote:self` → self-install 5面という同一の再生成チェーンを通る。ファイル単位では非交差だが生成面が競合するため、並行実装時は着地順を実 diff で再評価する（`cid:code-generation:c6`）。#1749（散文のみ、同じチェーンだが正本1行）と #1734（`scripts/` のみ、チェーン外）は独立。
+
+なお #1742 の修正が `{unit-name}` 解決を要する場合、hook から `amadeus-orchestrate.ts` への依存が新設されうる（現状そのような依存は無い）。`amadeus-lib.ts` への seam 抽出であれば依存方向は既存のまま保てる（**仮説** — 修正方式は未裁定）。
+
+## SKILL/reviewer 2件の依存関係（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+測定 ref: observed `278d61d8e`。新規外部パッケージは追加しない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
+
+### 内部依存（#1711 の修正が触る方向）
+
+```
+amadeus-orchestrate.ts  (directive 発行 — degrade 分岐 :3050-3057)
+        │  produces: 解決済みパスの配列（degrade 時は {unit-name} 入り）
+        ▼
+amadeus-reviewer-runtime.ts  (:224-246 scopeForDirective → onDisk 判定付与)
+        │  unit.produces: { path, present, optional }
+        ▼
+amadeus-reviewer.ts  (:71-75 実在検査 → :74 throw)
+        │  throw
+        ▼
+amadeus-reviewer-runtime.ts  (:623-641 runReviewerCommand → stderr 1行 + exitCode 1)
+```
+
+依存方向は一方向で、reviewer 層は「produces は解決済み」という前提に立つ。この前提を破っているのは上流の degrade 分岐であり、修正候補 A（engine 側解決）はこの依存方向を保つ。候補 B（reviewer-runtime 側解決）は解決責務を下流へ移すため層の逆転になる。
+
+`stage-protocol.md:898` の「unchanged directive JSON」規定は、conductor が中間で directive を書き換えないことを要求する。すなわちプロトコルもこの一方向依存を前提としている。
+
+### 依存の非対称（#1711 の核心）
+
+`amadeus-orchestrate.ts` 内部で、consumes と produces が同じ `resolveArtifactPath`（`:1645`、注入は `:1661-1663`）を通るにもかかわらず、実在検査の扱いが分かれる:
+
+- consumes → `splitConsumesByPresence`（`:1762`）が `:1771-1774` でプレースホルダを exempt
+- produces → exempt なし。そのまま下流の reviewer 実在検査に到達する
+
+### #1736 の依存（投影チェーン）
+
+```
+packages/framework/harness/<name>/skills/amadeus/SKILL.md   (正本5面、互いに独立)
+        │  manifest.ts:73 の harnessFiles エントリ
+        ▼
+scripts/package.ts:396  ({{HARNESS_DIR}} 置換のみ — :11-14)
+        ▼
+dist/<name>/<harnessDir>/skills/amadeus/SKILL.md   (5面)
+        │  bun run promote:self
+        ▼
+.claude / .agents / .kimi-code の各 skills/amadeus/SKILL.md   (3面)
+```
+
+正本間に共有はないため、5面すべてを個別に編集しなければ全ハーネスへ波及しない。
+
+### Bolt 間の順序制約
+
+**なし**。2件はファイル単位で非交差（#1736 = `skills/amadeus/SKILL.md`、#1711 = `tools/` + `amadeus-common/protocols/`）であり、`cid:code-generation:c6` の非交差判定を満たすため並行実装可能。ただし両件とも 13コピー同期（#1736 は SKILL.md 13ファイル、#1711 は core tools の正本1 + dist 7 + self-install 5）を伴うため、`dist:check` / `promote:self:check` の緑は各 Bolt で個別に確認する。
+
+### 外部依存
+
+CLI・Shell・Git/GitHub の既存境界のみ。本 intent は HTTP・database・常駐 service に触れない。
+
+## Open bug 6件の依存関係（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+### 外部依存
+
+| 依存 | 消費境界 | 関連 Issue | 制約 |
+| --- | --- | --- | --- |
+| Bun | CLI/test execution、child spawn、coverage | 全件 | 1.3.13以上。Node runtime fallback は追加しない |
+| git | worktree registration/checkout、three-dot diff | #1663 / #1662 | worktree add は直列、checkout は個別結果を集約。coverage は snapshot identity を固定 |
+| Bash / POSIX process | book-pack verifier、Team Mode launcher | #1667 / #1336 / #1663 | `wait`・PID 生存だけを成功証拠にしない |
+| herdr | Team Mode pane/session | #1336 | role-ready と supervisor-ready を分離 |
+| GitHub / `gh` | Intent Mirror remote operation | #1607 | remote effect と local durable receipt を別結果として扱う |
+| filesystem / LCOV | coverage measurement | #1662 | diff と coverage を同一 working-tree/commit 断面へ結ぶ |
+
+### 内部依存グラフ
+
+- `tests/run-tests.ts` → individual `bun test` child → `book-pack-verify.test.ts` → `book-pack/scripts/verify-dummy.sh`。#1667 は外側から内側へ timeout budget が単調増加する必要がある。
+- `team-up.sh` → `team-up-codex-safety-wait.ts` → herdr pane。#1336 の readiness receipt は launcher が所有し、#1663 の worktree worker result ledger と混同しない。
+- coverage runner → `coverage/lcov.info`、`coverage-patch-gate.ts` → `git diff <base>...HEAD`。#1662 はこの2入力へ共通 snapshot identity を導入する。
+- orchestrate `report` → state `complete-workflow` → audit journal / intent registry → mirror completion boundary → mirror state store。#1607 は現状の依存順序を「mirror durable commit が audit seal より前」に組み替える。
+- mirror coordinator → Project completion gate → executor → state store/outbox。区間で Project 同期スタックが増えたため、#1607 は単一 Issue の close だけでなく全 Project row の done 条件も保持する。
+
+### Bolt 間・並行 Intent 間の依存
+
+| 先行 | 後続 | 理由 |
+| --- | --- | --- |
+| #1336 | #1663 | `team-up.sh` の起動・並行 worker 制御を同時編集しない |
+| #1607 | OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) Construction | completion transaction と audit seal が Critical 共有境界 |
+| #1664 | OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) Journal v2 | t224 の journal/audit expectation を診断可能にしてから変更 |
+| #1662 / #1667 | 横断 Build and Test | 実装は分離可能だが CI 負荷と coverage 生成を同じ最終条件で検証 |
+
+各 Issue は独立 Bolt とし、個別の [GitHub Pull Request](https://github.com/amadeus-dlc/amadeus/pulls) に閉じる。共有ファイルの変更は stack せず、先行 Bolt 着地後の observed main へ rebase してから後続を作る。
+
+## OTel/observability 面の依存グラフ（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 内部依存は `grep -l 'from "./amadeus-<module>.ts"'` の import 実測値（`packages/framework/core/` 正本）。
 

@@ -1,13 +1,13 @@
-// covers: subcommand:amadeus-utility:init, scope:bugfix
+// covers: subcommand:amadeus-utility:init, scope:fix
 //
 // t52-workflow-state-progression.test.ts — SDK-harness port of
 // tests/e2e/t52-workflow-state-progression.sh (plan 10). Drives the real
-// `/amadeus --init --scope bugfix` on a fresh project through the Claude Agent SDK and
+// `/amadeus --init --scope fix` on a fresh project through the Claude Agent SDK and
 // asserts ONLY on deterministic surfaces — the on-disk state-file structure +
 // fields the init tool wrote, and the framework's counter↔checkbox invariant —
 // NEVER on assistantText.
 //
-// ⛔ TRAP 2 (no headless auto-approve). The .sh drove the whole bugfix workflow to
+// ⛔ TRAP 2 (no headless auto-approve). The .sh drove the whole fix workflow to
 // COMPLETION and asserted on the FINAL state (checkbox counts, ordering, fields)
 // under a headless auto-approve mode the refactor kills. The .sh's subject is
 // "state file INTEGRITY: checkbox counts, stage ordering, field updates" — and the
@@ -18,14 +18,14 @@
 // counter↔checkbox invariant on the landed file. The FULL multi-stage progression
 // (the .sh's tests 2-3 "Current Stage advanced past init" / ">4 completed") is an
 // LLM-paced run-to-milestone journey — that surface is owned by the live tui
-// bugfix journey t-tui-t50-bugfix-scope (which drives the gates by keystroke to
+// fix journey t-tui-t50-fix-scope (which drives the gates by keystroke to
 // Completed>=5). FINDING surfaced, not weakened: deep
 // progression lives in the tui tier; state INTEGRITY at the deterministic init
 // landing lives here.
 //
 // THE JOURNEY (verified against the SHIPPED tool). `/amadeus --init --scope
-// bugfix` on a fresh `--no-amadeus-docs` project routes through
-// `amadeus-utility.ts init --scope bugfix` (SKILL.md), which writes the full
+// fix` on a fresh `--no-amadeus-docs` project routes through
+// `amadeus-utility.ts init --scope fix` (SKILL.md), which writes the full
 // State-Version-7 amadeus-state.md: the 3
 // init stages marked [x], every other in-scope stage [ ], the Completed counter
 // synced to the [x] count, and the Lifecycle Phase / Status / Last Updated /
@@ -52,7 +52,7 @@
 //       a populated field (asserted via test 3's surface as "present + non-empty").
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
-//   - init dispatch:           SKILL.md -> `amadeus-utility.ts init --scope bugfix`
+//   - init dispatch:           SKILL.md -> `amadeus-utility.ts init --scope fix`
 //   - State-Version-7 template: amadeus-utility.ts:2044-2097 (all the fields above)
 //   - State Version literal 7:  amadeus-utility.ts:2051
 //   - init-stage [x] markers:   amadeus-utility.ts:1995-1998
@@ -87,7 +87,7 @@ function completedCount(stateText: string): number {
   return (stateText.match(/^- \[x\]/gm) ?? []).length;
 }
 
-describe("t52 /amadeus --init --scope bugfix state-file integrity (sdk)", () => {
+describe("t52 /amadeus --init --scope fix state-file integrity (sdk)", () => {
   // -------------------------------------------------------------------------
   // Fresh project: the full State-Version-7 file lands at explicit init. Assert its
   // structure (counter↔checkbox invariant, ordering, every field) on the landed
@@ -98,7 +98,7 @@ describe("t52 /amadeus --init --scope bugfix state-file integrity (sdk)", () => 
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        const r = await driveAidlc("/amadeus --init --scope bugfix", {
+        const r = await driveAidlc("/amadeus --init --scope fix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,

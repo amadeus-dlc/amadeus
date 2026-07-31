@@ -1661,6 +1661,7 @@ class FsPlannedTlcRuntime {
   #parseExploration(
     prepared: PreparedPlannedTlcRun,
     raw: RawTlcOutcome,
+    spawnedStandardModuleDirectory: string,
   ): TlcExploration {
     if (raw.outputLimitExceeded) {
       return {
@@ -1683,7 +1684,7 @@ class FsPlannedTlcRuntime {
       timedOut: raw.timedOut,
       expectedModuleName: basename(prepared.modulePath, ".tla"),
       expectedModulePath: prepared.modulePath,
-      expectedStandardModuleDirectory: prepared.scratchRoot,
+      expectedStandardModuleDirectory: spawnedStandardModuleDirectory,
       verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
       modelReceipt: prepared.modelReceipt,
     });
@@ -1728,6 +1729,24 @@ class FsPlannedTlcRuntime {
           "planner must return an absolute shell-free executable",
         );
       }
+      // TLC extracts the standard modules into java.io.tmpdir and echoes that
+      // directory in its unframed "Parsing file" lines. Planners may rewrite
+      // the tmpdir argument (the Docker planner substitutes the scratch root),
+      // so the parser's expected directory must follow the argv actually
+      // spawned, never a re-derived value (#1737).
+      const tmpdirArgument = argv.find((argument) =>
+        argument.startsWith("-Djava.io.tmpdir=")
+      );
+      if (tmpdirArgument === undefined) {
+        toolchainAbort(
+          "InvocationError",
+          "ARGV",
+          "planner argv must carry the java.io.tmpdir standard-module directory",
+        );
+      }
+      const spawnedStandardModuleDirectory = tmpdirArgument.slice(
+        "-Djava.io.tmpdir=".length,
+      );
       const raw = await this.#execute(
         processes,
         argv,
@@ -1737,7 +1756,11 @@ class FsPlannedTlcRuntime {
       );
       if (!raw.ok) return raw;
       this.#verifySourceIdentities(prepared, "NormalizationError");
-      const exploration = this.#parseExploration(prepared, raw.value);
+      const exploration = this.#parseExploration(
+        prepared,
+        raw.value,
+        spawnedStandardModuleDirectory,
+      );
       return {
         ok: true,
         value: {

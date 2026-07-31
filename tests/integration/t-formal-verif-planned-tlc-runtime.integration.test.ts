@@ -30,7 +30,12 @@ const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest(
 const envelope = (code: number, payload: string) =>
   `@!@!@STARTMSG ${code}:0 @!@!@\n${payload}\n@!@!@ENDMSG ${code} @!@!@\n`;
 
-function completeOutput(modelPath: string, scratchRoot: string): Uint8Array {
+// Real TLC 2.19 extracts the standard modules into java.io.tmpdir — the
+// manifest points that at `<scratchRoot>/.tlc-stdlib`, and the Parsing lines
+// echo THAT directory, not the scratch root itself (#1737: a fixture shaped
+// after the parser's expectation instead of real TLC output kept the
+// wired-expectation mismatch green).
+function completeOutput(modelPath: string, standardModuleDirectory: string): Uint8Array {
   return new TextEncoder().encode([
     envelope(2262, "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)"),
     envelope(2187, "Running breadth-first search Model-Checking with fp 33 and seed 1 with 1 worker."),
@@ -38,7 +43,7 @@ function completeOutput(modelPath: string, scratchRoot: string): Uint8Array {
     [
       `Parsing file ${modelPath}`,
       ...["Naturals", "Sequences", "FiniteSets", "TLC"].map(
-        (module) => `Parsing file ${join(scratchRoot, `${module}.tla`)}`,
+        (module) => `Parsing file ${join(standardModuleDirectory, `${module}.tla`)}`,
       ),
       ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElection"].map(
         (module) => `Semantic processing of module ${module}`,
@@ -141,7 +146,10 @@ describe("planned TLC filesystem runtime", () => {
                 })()
               : mode === "complete"
                 ? (async function* () {
-                    yield completeOutput(realpathSync(modelPath), realpathSync(scratch));
+                    yield completeOutput(
+                      realpathSync(modelPath),
+                      join(realpathSync(scratch), ".tlc-stdlib"),
+                    );
                   })()
                 : (async function* () {})(),
             stderr: (async function* () {})(),

@@ -3273,7 +3273,7 @@ export function migrateFlatLayout(projectDir: string): FlatMigrationResult | nul
 
     // Slug from the existing state's most slug-worthy field, else "default".
     // Prefer an explicit intent/workflow name, then the human project name; the
-    // bare scope token (feature/bugfix/…) is the last resort before "default".
+    // bare scope token (feature/fix/…) is the last resort before "default".
     let slug = "default";
     try {
       const content = readFileSync(flatState, "utf-8");
@@ -4018,19 +4018,20 @@ export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
   "enterprise",
   "mvp",
   "feature",
-  "amadeus-feature",
+  "self-feature",
   "poc",
   "workshop",
   "infra",
 ]);
 
 const SKELETON_OFF_SCOPES: ReadonlySet<string> = new Set([
-  "bugfix",
+  "fix",
   "refactor",
   "security-patch",
   "chore",
-  "amadeus-bugfix",
-  "amadeus-refactor",
+  "self-fix",
+  "self-refactor",
+  "self-document",
   "amadeus-security-patch",
   "amadeus-chore",
 ]);
@@ -4092,8 +4093,8 @@ export function evaluateStandingGrantGateEligibility(
 // The EXECUTE/SKIP row a workflow scope claims, or null when the scope cannot
 // be resolved. Same source the engine's own walk uses (loadScopeMapping →
 // compiled scope-grid), so the grant classifier and `next`/`advance` can never
-// disagree about which stages a scope runs. Composed scopes (amadeus-feature,
-// amadeus-bugfix, …) live ONLY in the grid — stage frontmatter carries the
+// disagree about which stages a scope runs. Composed scopes (self-feature,
+// self-fix, …) live ONLY in the grid — stage frontmatter carries the
 // stock vocabulary — which is why stage.scopes must never be read here (#1497).
 // FAIL-CLOSED: an unreadable grid, a missing scopes dir or an unknown scope
 // yields null and the caller then refuses to cover the gate (the human-approval
@@ -7161,7 +7162,7 @@ export function stageIndex(slug: string): number {
 
 // When stateContent is provided, the state file's per-stage EXECUTE/SKIP
 // suffix and checkbox state override the scope-mapping.json defaults. This
-// matters for Greenfield bugfix flows where handleInit stamps
+// matters for Greenfield fix flows where handleInit stamps
 // reverse-engineering SKIP (even though scope-mapping.json maps it EXECUTE)
 // and for jumps that skipped stages via `[S]`. Without the override the
 // state tool would try to activate a stage the state file said was done.

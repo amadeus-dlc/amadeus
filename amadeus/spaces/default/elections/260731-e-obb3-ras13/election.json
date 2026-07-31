@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OBB3-RAS13",
+  "kind": "s13-adoption",
+  "question": "260730-open-bug-batch-3 / requirements-analysis §13学習選定。surface 候補2件: c1=質問票を仕様裁定3問のみに絞った(cid:requirements-analysis:c5 と E-OC1 既定手順の適用)、c2=reviewer Minor 指摘の引用3点を conductor が HEAD 直読で実在確認して閉じた(cid:requirements-analysis:historical-section-cite-check-at-observed / mechanism-cite-verify-at-draft の適用)。conductor 提案は0件採用 — 両候補とも既存 cid の適用実例で新規の横断学習を含まない。各自 memory.md(amadeus/spaces/default/intents/260730-open-bug-batch-3/inception/requirements-analysis/memory.md)と requirements.md の Review 節を実測し、GoA(1-8)と留保を付けて投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件不可 — 新規学習価値があり persist すべき"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

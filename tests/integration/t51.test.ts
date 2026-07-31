@@ -1,7 +1,7 @@
 // covers: subcommand:amadeus-state:approve
 //
-// CLI-contract port of tests/integration/t51-bugfix-event-parity.sh (TAP plan 15),
-// mechanism = cli. End-to-end event-parity walk of the bugfix scope on a
+// CLI-contract port of tests/integration/t51-fix-event-parity.sh (TAP plan 15),
+// mechanism = cli. End-to-end event-parity walk of the fix scope on a
 // greenfield project, driven entirely by SPAWNING the real binaries via
 // node:child_process spawnSync — `amadeus-utility.ts init` to bootstrap, then
 // `amadeus-state.ts gate-start` / `amadeus-state.ts approve` per gated stage. The
@@ -119,11 +119,11 @@ function readAudit(p: string): string {
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
-/** init --scope bugfix (mirrors the .sh bootstrap, L78-79). */
+/** init --scope fix (mirrors the .sh bootstrap, L78-79). */
 function runInit(proj: string): void {
-  const res = spawnSync(BUN, [UTIL, "init", "--scope", "bugfix", "--project-dir", proj], {
+  const res = spawnSync(BUN, [UTIL, "init", "--scope", "fix", "--project-dir", proj], {
     encoding: "utf-8",
-    env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "bugfix parity test" },
+    env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "fix parity test" },
   });
   if ((res.status ?? -1) !== 0) {
     throw new Error(`init failed (status ${res.status}): ${res.stdout ?? ""}${res.stderr ?? ""}`);
@@ -169,7 +169,7 @@ function eventStream(content: string): string[] {
     .filter((e): e is string => typeof e === "string");
 }
 
-// One project, walked once — the multi-process bugfix walk is expensive, and
+// One project, walked once — the multi-process fix walk is expensive, and
 // the .sh asserts on the single accumulated audit, so we share it.
 let PROJ: string;
 
@@ -178,7 +178,7 @@ beforeAll(() => {
   // Bootstrap via init (emits WORKFLOW_STARTED + init phase + 2x PHASE_SKIPPED,
   // and init pre-completes the 3 init stages: workspace-scaffold,
   // workspace-detection, state-init). The first post-init EXECUTE stage for
-  // bugfix-on-greenfield is requirements-analysis (reverse-engineering is
+  // fix-on-greenfield is requirements-analysis (reverse-engineering is
   // SKIP-greenfield). Walk the 3 gated EXECUTE stages; approve auto-advances /
   // auto-completes.
   runInit(PROJ);
@@ -191,7 +191,7 @@ afterAll(() => {
   cleanupTestProject(PROJ);
 });
 
-describe("t51 bugfix event parity — CLI contract (migrated from t51-bugfix-event-parity.sh, plan 15)", () => {
+describe("t51 fix event parity — CLI contract (migrated from t51-fix-event-parity.sh, plan 15)", () => {
   // ============================================================
   // Event counts (.sh L104-118)
   // ============================================================

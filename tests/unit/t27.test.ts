@@ -320,7 +320,7 @@ describe("t27 amadeus-utility help (migrated from t27-tool-utility.sh, plan 81)"
       "feature",
       "mvp",
       "poc",
-      "bugfix",
+      "fix",
       "refactor",
       "infra",
       "security-patch",
@@ -376,7 +376,7 @@ describe("t27 amadeus-utility status", () => {
 
   test("67: status shows Awaiting your approval for [?] stage", () => {
     const p = bareProj();
-    util(["init", "--scope", "bugfix"], p);
+    util(["init", "--scope", "fix"], p);
     state(["advance", "workspace-scaffold"], p);
     state(["advance", "workspace-detection"], p);
     state(["advance", "state-init"], p);
@@ -388,7 +388,7 @@ describe("t27 amadeus-utility status", () => {
 
   test("68: status shows Revising and revision count for [R] stage", () => {
     const p = bareProj();
-    util(["init", "--scope", "bugfix"], p);
+    util(["init", "--scope", "fix"], p);
     state(["advance", "workspace-scaffold"], p);
     state(["advance", "workspace-detection"], p);
     state(["advance", "state-init"], p);
@@ -577,9 +577,9 @@ describe("t27 amadeus-utility init", () => {
     expect(readFileSync(statePath(p), "utf-8")).toContain("workspace-scaffold");
   });
 
-  test("45: init with --depth overrides bugfix default (Standard)", () => {
+  test("45: init with --depth overrides fix default (Standard)", () => {
     const p = emptyDir();
-    util(["init", "--scope", "bugfix", "--depth", "standard"], p);
+    util(["init", "--scope", "fix", "--depth", "standard"], p);
     expect(stateField(p, "Depth")).toBe("Standard");
   });
 
@@ -591,7 +591,7 @@ describe("t27 amadeus-utility init", () => {
 
   test("69: init emits WORKFLOW_STARTED as the first audit event", () => {
     const p = bareProj();
-    util(["init", "--scope", "bugfix"], p);
+    util(["init", "--scope", "fix"], p);
     // P4: audit is sharded under the born record's audit/ dir; read via readAudit.
     // The first record of the JSONL ledger.
     const firstEvent = auditRecordsIn(readAudit(p))[0]?.event;
@@ -853,7 +853,7 @@ describe("t27 amadeus-utility config-change", () => {
 describe("t27 amadeus-utility detect-scope", () => {
   test("65: detect-scope emits exactly one SCOPE_DETECTED + JSON ack", () => {
     const p = bareProj();
-    util(["init", "--scope", "bugfix"], p);
+    util(["init", "--scope", "fix"], p);
     const r = util(
       ["detect-scope", "--scope", "feature", "--input", "build a todo app", "--source", "freeform"],
       p,
@@ -870,7 +870,7 @@ describe("t27 amadeus-utility detect-scope", () => {
 
   test("66: detect-scope rejects invalid scope (exit 1)", () => {
     const p = bareProj();
-    util(["init", "--scope", "bugfix"], p);
+    util(["init", "--scope", "fix"], p);
     const r = util(["detect-scope", "--scope", "bogus", "--input", "x"], p);
     expect(r.status).toBe(1);
   }, 30000);

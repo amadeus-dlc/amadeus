@@ -1,6 +1,487 @@
 # アーキテクチャ
 
-## OTel/observability 面の現行アーキテクチャ（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の対象機構（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。4件は所有機構が「テストハーネスのプロセス寿命」「テストの診断設計」「ベンチマークの計測設計」「mirror の表示層」に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。**3件（#1811 / #1800 / #1797）は患部がテスト側にあり本番コードを触らない**という共通性質を持つ。
+
+### 機構 A — fake supervisor stub が不死設計でテスト後もプロセスが残留する（#1811 P1/S2）
+
+患部は本番コードではなく**テスト fixture の stub 設計**にある。`tests/integration/t-team-up-codex-resume.serial.test.ts` が生成する fake safety-wait supervisor は、終了条件を SIGTERM ひとつだけに委ねている。
+
+- `:218` verbatim: `process.on("SIGTERM", () => process.exit(0));`
+- `:219` verbatim: `setInterval(() => {}, 1_000);`
+
+`setInterval` が event loop を無期限に保持するため、SIGTERM を明示的に送らない限りプロセスは終わらない。掃引の受け皿も無い — `afterEach`（`:39-41`）は一時ディレクトリの `rmSync` のみで、生成したプロセスの kill/reap を一切行わない。
+
+**漏洩する経路は3本**（いずれも `--kill` を通らずに終端する）:
+
+| 行 | テスト | 漏洩の理由 |
+| --- | --- | --- |
+| `:590` | `a fresh Codex launch pre-registers every role with agmsg` | launch のみで `--kill` を呼ばない |
+| `:973` | `continue reuses the current run worktrees and restores its runtime` | `--kill` 後に `-c` で再開し、再開した supervisor を kill しない |
+| `:1004` | `the first legacy resume requires a runtime and adopts fixed worktrees in place` | adopt 後に kill しない |
+
+**本番側は fail-closed で実装済みである。** `packages/framework/core/tools/team-up-codex-safety-wait.ts` の supervise ループは run record の生存を毎周確認する — `:643` verbatim: `while (await runRecordIsActive(runRecord, run, session)) {`。`runRecordIsActive`（宣言 `:561`）は run record 3ファイルの読取に失敗すれば `:580-582` の `catch` で `false` を返し、ループを抜けて終了する。すなわち**実運用の supervisor は run record が消えれば自律終了する**のに対し、テスト stub はその契約を写していない。
+
+**PID の追跡経路は既に存在する。** `packages/framework/core/tools/team-up.sh:508` verbatim: `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"` が member record 配下へ PID を残すため、テスト側の掃引はこのファイルを読めば成立する。ただし `afterEach` の `rmSync` がディレクトリごと削除するため、**掃引は `rmSync` より前に行う必要がある**（順序が要件）。
+
+**修正方式候補**:
+
+| 案 | 内容 | 影響 |
+| --- | --- | --- |
+| A | stub へ record 実在ポーリングを付与し本番契約を写す | `:717` / `:774` / `:823` の3テストへの影響検証が必須。述語は「record ディレクトリ実在のみ」に弱めるのが安全（本番の3ファイル読取まで写すと fixture が過剰結合する） |
+| B | `afterEach` に期限付き kill/reap 掃引を追加する | 既存テストへの影響なし |
+| **C**（推奨） | A + B | 契約の写しと安全網の両立 |
+
+**本番非改変を推奨する** — `packages/framework/core/` を触ると 7 dist + self-install の再生成が発生し、他3件の Bolt と生成面で交差する。
+
+**同族の非該当**: `t267` の `nohup` は PATH リンク一覧の一要素（claude runtime 向け）であり本機構と無関係。ライブ実測では残留プロセス84本（全 PPID=1、1 launch = 7 role）を観測した。
+
+### 機構 B — 診断の非対称がテスト失敗の原因特定を阻む（#1800 P3/S3）
+
+`tests/integration/t224-upstream-v2-migration-cli.test.ts` は subprocess の終了チャネルを3種に分類する設計を**既に持っている**。ヘルパーは終了状態を `:170` / `:210` の同型行 verbatim: `status: result.status ?? -1,` で正規化し、`-1` を「exit status を持たない終了」（signal 終了 または spawn 失敗）のセンチネルとして使う。この3分類は `:311-313` の `test.each` で契約として固定済みである。
+
+- `:311` verbatim: `["exit-status", { status: 1, signal: null, error: null }],`
+- `:312` verbatim: `["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],`
+- `:313` verbatim: `["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],`
+
+成功系にはこの分類を活かす診断ヘルパー `expectSuccessfulMigration`（宣言 `:218`）があり、失敗時に exit path / status / signal / error / stdout / stderr を並べた多行メッセージを投げる（`:225-238`）。
+
+**患部は、失敗系の一箇所だけがこのヘルパーを通らないことである。** `:1411` verbatim: `expect(collided.status).toBe(1);` — 素の等値比較のため、`-1` が返ったときの出力は `expected 1, received -1` に留まり、signal 終了なのか spawn 失敗なのかが**構造的に読めない**。第一容疑は負荷条件下の spawn `EAGAIN`（`:313` が既に固定している分類）である。
+
+**修正候補**:
+
+| # | 内容 | 位置づけ |
+| --- | --- | --- |
+| (i) | 診断の対称化 — `expectSuccessfulMigration`（`:218`）と同型のヘルパー経由へ寄せる | **必須**。既存の3分類設計を失敗系へ延長するだけで新規機構を要さない |
+| (ii) | spawn-error 限定リトライ（`EAGAIN` / `EMFILE` / `ENOMEM` のみ・上限2回） | signal 終了と exit status はリトライしない。リトライ範囲の限定が要件 |
+| (iii) | 並列度制御 | **スコープ外** |
+
+再現不能な場合の扱い（修正の受理条件）は要件段で明示する — 「再現しなかったので閉じる」は無申告のスコープ縮小に当たる（`cid:build-and-test:no-silent-scope-narrowing`）。
+
+### 機構 C — 逐次計測の別時間窓が比 assert を系統的にずらす（#1797 P3/S4）
+
+`tests/integration/t259-guard-corpus.test.ts` は corpus のスケーリング特性を「2倍の入力で時間・RSS が 2.5倍以内」で検査する。
+
+- `:101` verbatim: `const oneSamples = measure(1);`
+- `:102` verbatim: `const twoSamples = measure(2);`
+- `:108` verbatim: `expect(twoMedianMs / oneMedianMs).toBeLessThanOrEqual(2.5);`
+- `:109` verbatim: `expect(rssMultiplier).toBeLessThanOrEqual(2.5);`
+
+**median 化は既に適用済みである**（`median` 宣言 `:46`、本体 `:47-48`）。これは `#1424` 起点の t258 裁定の反映であり、本件はその先に残った別機序である。
+
+**機序**: `measure(1)` と `measure(2)` は**逐次に別プロセスを spawn する**（`measure` 宣言 `:89`）。両者は異なる時間窓で計測されるため、窓の間にホスト負荷が変動すると比が系統的にずれる。実測 `2.5065` に対し閾値 `2.5` のマージンは **0.26%** しかない。閾値 `2.5` は初出（`2e157d7fe`、#1424）以来不変である。
+
+**これは `cid:code-generation:c1-benchmark-baseline-correlation-verify` が禁じる「空ウィンドウ baseline」型ではない** — baseline（`measure(1)`）は対象（`measure(2)`）と同じ計算を1倍量で行うため負荷との相関は健全である。破れているのは相関ではなく**時間窓の共有**である。
+
+**修正候補**:
+
+| # | 内容 | 判定 |
+| --- | --- | --- |
+| (i) | 交互計測（interleave）— 子プロセス1本で `A, B, A, B` の順に計測し時間窓の共有を構造的に保証する | **推奨** |
+| (ii) | 閾値の引上げ単独 | `cid` の要求（相関の健全性ではなく計測設計）を満たさない |
+| (iii) | 環境係数の導入 | 検証劇場に近く非推奨（org.md Forbidden） |
+
+**いずれの案でも、採用前に負荷スイープの実測で数値を導出する**（`cid:code-generation:c1-benchmark-baseline-correlation-verify`）。要件段では数値を固定せず「実測で決める」と書く。
+
+**修正面**: `tests/integration/t259-guard-corpus.test.ts` と `tests/helpers/guard-corpus-benchmark-child.ts`。`tests/.coverage-patch-allowlist.json` の `t259` エントリ群は**別テスト由来のため触らない**。
+
+### 機構 D — close 経路が body を書かず completion 境界の Status が構造的に Running のまま残る（#1816 P3/S4）
+
+2つの独立した機序が重なっている。
+
+**機序 D-1: close が body を書かない。** `packages/framework/core/tools/amadeus-mirror-executor.ts` の mutation 分岐は operation で二分される。
+
+- `:1156` verbatim: `const mutated =`
+- `:1157-1158` verbatim: `context.operation === "sync"` / `? await context.gateway.editIssue(permit, context.issueContent.body)`
+- `:1159` verbatim: `: await context.gateway.closeIssue(permit);`
+
+`closeIssue` は body を受け取らない。収束判定も同じ非対称を持つ（`:1038-1041` — sync は `issue.body === context.issueContent.body`、close は `issue.state === "CLOSED"`）。すなわち **close は状態遷移のみで、表示内容を一切更新しない**。
+
+**機序 D-2: completion 境界の最終 body は Status が構造的に `Running` になる。** 完了時の最後の body 書込は `sync` operation で行われるが、その時点の lifecycle snapshot は `Running` を強制される — `packages/framework/core/tools/amadeus-mirror-lifecycle.ts:311-312` verbatim: `const completionMismatch = completion?.status === "pending" &&` / `(status !== "Running" || completion.stage !== currentStage);` — pending completion を持つ snapshot が `Running` 以外なら例外を投げる assert である。
+
+表示層はこの `status` を逐語でレンダリングする — `packages/framework/core/tools/amadeus-mirror-presentation.ts:259-260` verbatim: `"## Status",` / `snapshot.status,`。
+
+**`completionInstance` は presentation で未消費である**（`grep -rn 'completionInstance' packages/framework/core/tools/*.ts` の実測: executor `:394` / coordinator `:279` `:284` / policy `:254` / lifecycle `:339` / state-codec `:567` `:763` `:770` `:775` / types `:516` `:527` / state `:533` ほか — presentation は **0ヒット**）。したがって表示層は完了を知る手段を持たない。
+
+**修正方式（案 (a) = 表示層での終端化）の実装面**:
+
+- **導出キーは `snapshot.completionInstance` の存在**とする。boundary をキーにすると `buildMirrorStatusRecordView` の drift 診断が close 後に恒久的な偽 drift を報告する。
+- `## Stage` / `## Phase` 行も終端化するかは**要件段の確定事項**。
+- `amadeus-mirror-lifecycle.ts:311-316` の assert は**改訂不要** — これは record 断面の整合検査であり表示層の関心ではない。
+
+**テスト契約**:
+
+| ファイル | 判定 |
+| --- | --- |
+| `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts` | **改訂不要**（body assert を持たない。`:262` の `a prepared in-flight completion reaches Done and close before registry seal` は close 順序の契約） |
+| `tests/unit/t281-amadeus-mirror-presentation.test.ts` | 既存2ケースは改訂不要（いずれも `completionInstance` を持たない fixture。body assert は `:52` `## Stage` / `:55` `## Status`）。**新規ケースの追加のみ** |
+| `tests/unit/t232-amadeus-mirror.test.ts` | body assert あり（`:35` `## Status`）。影響確認の対象 |
+
+**`tests/.coverage-patch-allowlist.json` の presentation 行ピン5件は機械 remap が必須**（`cid:code-generation:c1-allowlist-mechanical-remap`）: `193-194` / `230-234` / `237-239` / `245-247` / `266-271`。`renderMirrorIssueContent` は `:239-273` に位置するため、body 組立（`:245-267`）への挿入は `245-247`（直撃）と `266-271`（下方シフト）に効く。`193-194` / `230-234` / `237-239` は同関数より上方にあり、挿入位置が `:239` より下であれば不変である。remap 後は reason 記述と現行行内容の直読照合を併用する（`cid:code-generation:e-fspbts13` の趣旨）。
+
+**ノルム乖離部分の切り分け**: 「record の main 着地前に close する」挙動は PR #1689 の設計帰結であり `t361:262` で契約として固定されている。これは**仕様裁定マター**であり、本 intent の実装スコープは**表示層に限定する**旨を要件段で申告する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+### 区間 `3f73823b1..6e7a9d701` の構造変化（本 intent の患部外）
+
+13コミット。ソース面は `26 files / +1040 / −118`（`git diff --numstat` の面別機械集計、測定 ref = observed `6e7a9d701`）。
+
+| 変化 | 内容 |
+| --- | --- |
+| 選挙ストアの pending ballot lane（#1773 修正 `25f54b066`） | `amadeus-election-store.ts` `+168/−10`。collecting 中の票を voter ごとの `pending/<voter>.json` へ隔離し、tally 時に ledger へ統合する。`pendingDir` `:113` / `readPending` `:139` / `appendPending` `:161` / `ballotKey` `:187` / `pendingNotOnLedger` `:197` / `integratePending` `:205`、統合点 `:535` `:540` / `:601` / `:619` / `:663` |
+| pending lane の非追跡化 | ルート `.gitignore` `+5`（`amadeus/spaces/*/elections/*/pending/`、コメントに Issue #1773 を明記）+ 7ハーネス `dot-gitignore` 各 `+5` |
+| 選挙 view への question / description 搬送（#1772 修正 `75367ba67`） | `amadeus-election-model.ts` `+36/−9`。`DistributionView` のキー集合と `Choice` 型を拡張し、`SKILL.md` / docs を対訳同期 |
+| mirror create 受理判定の反転（#1752 修正 `8a8abf567`） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）を新設し、`amadeus-orchestrate.ts:4249` で `const createRan = succeededMirrorCreateExists(stateContent);` として消費。従来の「Issue が存在するなら create を拒否」から「create receipt が成功していれば受理」へ判定を反転 |
+| `release.yml` の再実行可能ジョブ分割（#1799 `b488466b8`） | `.github/workflows/release.yml` `+68/−22` |
+| テスト | `t373-election-ballot-blind-storage.integration.test.ts` 新規 `+323`、`t265-engine-boundary.integration.test.ts` `+120/−17`、`t223-release-bot-bypass.integration.test.ts` `+76/−1`、`t234-election-model.test.ts` `+66/−2`、`t236-election-loop.integration.test.ts` `+55/−8`、`tests/.coverage-patch-allowlist.json` `+38/−38`（行ピン remap） |
+| リリース | `v0.1.7`（`e06b8f601`）、model-map ±4、`metrics/` スナップショット4件 |
+
+**含意**: 本区間は前 intent（260730-open-bug-batch-3）の3件（#1773 / #1772 / #1752）が**全件着地した**断面である。本 intent の4件はいずれもこれらと機構が重ならない。ただし `tests/.coverage-patch-allowlist.json` は本区間で全面 remap されており、#1816 が同ファイルへ再度触れる点だけが接触面である。
+
+## オープンバグ3件の対象機構（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。3件は所有機構が選挙層と mirror/engine 層に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。
+
+### 機構 A — 未開票中の票本文が単一共有 tracked ファイルに平文で載る（#1773）
+
+投票の受理は ledger への追記で完結する。`packages/framework/core/tools/amadeus-election-store.ts` の `appendBallot` が `:464` で `const next: LedgerFile = { ballots: [...ledger.ballots, ballot], late: ledger.late };` を組み、`:465` の `writeStoreFile(ledgerPath, …)` で選挙ディレクトリ直下の `ledger.json` へ**票オブジェクトそのまま**を書く。票の内容は `amadeus-election-model.ts` の `OriginalBallot` が持つ `goa`（`:134`）・`reservation`（`:135`）・`rationale`（`:136`）であり、選択と留保と根拠の全文が含まれる。
+
+blind の保護は**開票時にしか働かない**。`Store.materialize`（宣言 `:500`、コメント `:498` verbatim: `// Materialize the full ballot set at tally time (blind lift) and fix the`）が tally 時に `ballots/<voter>.json` へ展開する設計であり、collecting 中の `ledger.json` は blind lift の対象外である。
+
+露出面は2つある。
+
+| 面 | 機序 | 実測 |
+| --- | --- | --- |
+| 直接読取 | voter subagent は選挙ディレクトリを直接触る運用。`packages/framework/core/skills/amadeus-election/SKILL.md:51` verbatim: `手順: 配布ビューを読む → 独立に証拠を実測する → ballot JSON(voterKind: "subagent", voter: <指定名>)を作成する → vote verb を自分の Bash で実行する` | 配布ビュー経由が指示だが、同一ディレクトリ内の `ledger.json` への到達を構造的に妨げるものが無い |
+| git 露出 | `ledger.json` は git tracked（`git check-ignore` exit 1 = 非 ignore、tracked な `ledger.json` は **183件**） | `git status` / `git diff` に未開票の票本文が現れる |
+
+`timeline.json` にも投票済み者が可視（`:468` `kind: "ballot"`、`:472` `voter: ballot.voter`）。これは「誰が投票済みか」の露出であり、票**内容**の露出とは別レイヤだが、独立性の観点では同じ方向に効く。
+
+**Amadeus 側の寄与因子は格納設計と配置の2点に限られる。** 設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全であり、`.claude/hooks/` に election ledger を配信する機構は **0件**（`grep -rn 'ledger' .claude/hooks/` の3ヒットはいずれも監査シャードの append-only ledger を指す語彙であり、選挙 ledger とは無関係）。流入 vector 自体はハーネス側にある。
+
+**blind 性を assert するテストは 0件** — 退行が検知されない。
+
+**修正面候補**: `amadeus-election-store.ts`（`appendBallot` / `ledger` / `materialize` / `status`）、`LedgerFile` 型、`.gitignore`、`SKILL.md`、および 13配布面の同期。**方式裁定（格納分離 vs 通知抑制）が未決**であり、修正面の広さが裁定で変わる。
+
+### 機構 B — 配布ビューが設問文と選択肢説明を運ばない（#1772）
+
+型そのものが情報を持たない。`amadeus-election-model.ts:48` verbatim: `export type Choice = { internalNo: number; label: string };` — description フィールドが存在しない。
+
+parse はホワイトリスト再構成であり、**未知フィールドを無音で捨てる**。`parseChoices`（`:73`）は `:79` で `if (typeof cc.internalNo !== "number" || typeof cc.label !== "string") return null;` と型検査したうえで、`:80` verbatim: `choices.push({ internalNo: cc.internalNo, label: cc.label });` と2フィールドだけを再構成する。起草者が `description` を書いても exit 0 のまま消える（fail-open）。
+
+配布ビューには設問文すら無い。`DistributionView`（`:306-310`）のフィールドは `electionId` / `voter` / `ordered`（`{ displayNo, internalNo, label }` の配列）の3つのみで、`question` は含まれない。この閉じた集合は**意図的な設計**として `:304-305` にコメントされている（verbatim: `// Structurally blind: exactly these fields exist — no recommendation marker,` / `// no prior votes, no peer status (BR-2 pins the key set).`）。
+
+**3重固定**: 型宣言（`:306-310`）・設計コメント（`:304-305`）・テスト（`tests/unit/t234-election-model.test.ts:190` verbatim: `expect(Object.keys(v1).sort()).toEqual(["electionId", "ordered", "voter"]);`）。BR-2 は「推薦マーカー・先行票・peer status を載せない」ための blind 契約であり、question / description の追加がこの契約を破るかは**別の判断**である。要件段での仕様裁定とテスト契約の明示改訂をセットで行う（`cid:reverse-engineering:c1-pinned-behavior-ruling`、`cid:code-generation:cg-invariant-conflict-explicit-revision`）。
+
+**同根パターン（`cid:code-generation:same-root-inventory` の棚卸し対象）**: Ballot 側にも write⇔read 非対称がある — `reservation` / `rationale` は書き込まれるが配布ビューには現れない。空 `label` の通過、未知フィールドの無音 drop は `Election.parse` 全体の方針であり、#1772 単体の欠陥ではなく設計方針の帰結である。
+
+**修正面候補**: 型 / parse / view render（`shuffleView` `:338`）/ record render / tally の `choiceCounts`（`:488-496`）/ docs / `SKILL.md:18`（verbatim: `選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する:` — question は入力契約に既に存在する）/ 13配布面同期。
+
+### 機構 C — mirror boundary report の create 拒否条件が自己矛盾（#1752）
+
+report 側は**実行時点の state を再評価**して受理可否を決める。`amadeus-orchestrate.ts:4242` verbatim: `const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;` を読み、`:4252-4256` の拒否条件のうち `:4255` verbatim: `(answer === "create" && hasMirrorIssue)` が発火する。
+
+ask 側は「先に create を実行してから report せよ」と指示する（`:519-529` の prompt 経路）。したがって**指示に従って create を実行した利用者は、自分の成功（= Issue が作られたこと）によって report を拒否される**。offered choices との照合が、offer 時点ではなく report 実行時点の state で行われていることが機序である。
+
+**#1791（本区間 `ffb68c484` で着地）の後も再現経路は温存される。** 新設された初回 create 分岐（`:486-500`）は `:487` で `if (!initialCreateIsOutstanding(boundary)) return false;`、`:488` verbatim: `if (mode !== "auto" && boundary.initialCreate !== "pending") return false;` と **auto モード優先**で構成されている。prompt モードで `initialCreate` が pending でなければ `false` を返して従来の ask 経路へ落ちるため、機構 C の自己矛盾はそのまま残る。
+
+**非対称**: `sync` / `skip` の answer には対応する state 照合が無い。拒否条件が `create` にだけ付いている片側実装であり、`cid:requirements-analysis:symmetric-pair-review` の対象クラスタに属する。
+
+**修正面候補**: `:4219-4278` の report 分岐。方式は (a) create receipt の存在判定（`classifyReceipt` 語彙の再利用）か (b) ask 時の binding 永続化 — 後者は `amadeus-mirror-coordinator.ts` の `expectedPrompt` 照合（`:320` / `:560` / `:622` / `:742-746`）が既習様式として存在する。
+
+**テスト契約の制約**: `tests/integration/t265-engine-boundary.integration.test.ts:793` verbatim: `["unoffered create", "inception", "create"],` の fixture は「offer されていない create」と「offer された create を実行済み」の2ケースを区別できない。修正には fixture の分岐が要る。
+
+### 区間 `a38a1f4d3..3f73823b1` の構造変化（本 intent の患部外）
+
+25コミット。core tools は base `79` → observed `88`（+9モジュール、`git diff --name-status` の `^A` 実測）。sensors `7` / hooks `12` / scopes `10` はいずれも不変。
+
+| 変化 | 内容 |
+| --- | --- |
+| 自動起票 finding capability（#1744 `d56e76ddd`） | GitHub 汎用ゲートウェイ（`amadeus-github-gateway.ts` +953）と階層設定リゾルバ（`amadeus-layered-config.ts` +610）を mirror 専用実装から抽出。`gh` spawn の唯一の不純エッジを `amadeus-process-runner.ts`（+306）へ集約。新キー `auto-file-findings`（`:51`、`auto-mirror` と同一モード語彙・既定値）。mirror 側は `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310 と縮小 |
+| sensor 発火 scope の限定（#1758 / #1770） | `amadeus-sensor-invocation.ts`（+118）が宣言 outputs を `sensor-invocation.json` へ投影し、`hooks/amadeus-sensor-fire.ts:27` が exact-path allowlist として消費。前 intent の #1742（`matches` 単独判定）に対する構造的解決 |
+| degrade unit 一意解決（#1774） | `unitDirsUnderConstruction`（`amadeus-orchestrate.ts:3054`、呼び出し `:3264`）による engine 側 `{unit-name}` 解決・非一意 fail-closed・`directive.unit` 搬送 |
+| mirror initial-create boundary（#1791） | 新 boundary kind `intent-initialized`（`amadeus-mirror-types.ts:28`）、policy `"intent-initialized": ["create", "sync"]`（`amadeus-mirror-policy.ts:65`）、新 state フィールド `Mirror Initial Create Receipt`（`amadeus-state.ts:320`）と新サブコマンド `mirror-initial-create`（`:913`）。前 intent の #1750 に対応 |
+| metrics 公開パイプライン（#1761） | `scripts/metrics-publication{,-domain,-github}.ts`（+114 / +701 / +656）、`metrics-maintenance.yml` 新設 |
+| 契約の焼き込み（#1776 / #1782） | phase-check 正名化（protocol / docs 各1行 + 契約テスト `t368`）、auto-solo 選挙フックの `stage-protocol.md` への焼き込み（`:140-143` halt 2分岐 / `:1010-1019` §13 側、コード変更ゼロ）。いずれも前 intent（#1749 / #1735）に対応 |
+
+**含意**: 本区間は前 intent（260730-open-bug-batch-2）の5件のうち #1750 / #1749 / #1742 / #1735 の4件が構造的に解決された断面である。本 intent の3件はいずれもこれらと機構が重ならない。
+
+## オープンバグ5件の対象機構（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+本節の file:line はすべて observed `c42ef4d77` 時点。5件は所有機構が互いに独立しており、1 Issue = 1 Bolt = 1 PR で並行実装できる（`cid:code-generation:c6` の非交差判定を満たす）。
+
+### 機構 A — mirror boundary の種別集合に「intent 誕生」が無い（#1750）
+
+初回 mirror create の発火は boundary 種別の受理集合に閉じている。`packages/framework/core/tools/amadeus-mirror-lifecycle.ts` の `parseBoundaryArgs`（`:640-661`）が受理するのは4種のみ:
+
+| 引数 | 生成される boundary | 所在 |
+| --- | --- | --- |
+| `intent-capture` | `{ kind: "intent-capture-approved" }` | `:647` |
+| `phase --phase <p>` | `{ kind: "phase-verified", phase }` | `:651` |
+| `park --stage <s>` | `{ kind: "parked", stage }` | `:655` |
+| `completion` | `{ kind: "workflow-completed" }` | `:658` |
+
+加えて `manual`（`:633`）。**intent 誕生に対応する種別は存在しない。**
+
+発行側は2経路。(1) `intent-capture` boundary の発行元は report ハンドラ内の1箇所のみで、`amadeus-orchestrate.ts:4492` の `const intentCaptureMirror = slug === "intent-capture" ? … : ""` が唯一 — **`intent-capture` が SKIP されると発行機会が構造的に消える**（実装の不発ではなく契約上の不在）。(2) phase boundary は `currentMirrorBoundaryPhase()`（`:263`）が `PREVIOUS_BOUNDARY_BY_PHASE`（`:256`、`{ inception: "ideation", construction: "inception", operation: "construction" }`）を引き、「次フェーズの最初の in-scope ステージに立った瞬間」だけを boundary と見なす。
+
+`self-fix` スコープの ideation は全 SKIP（`.codex/tools/data/scope-grid.json` の `self-fix` = EXECUTE が `workspace-scaffold` / `workspace-detection` / `state-init` / `reverse-engineering` / `requirements-analysis` / `code-generation` / `build-and-test` の7ステージのみ。`intent-capture` / `approval-handoff` はいずれも `SKIP`）。したがって最初の eligible boundary は Inception 完了時の `phase-verified` となり、Issue の症状と整合する。
+
+**根因**: 初回 create の発火契約が「Ideation に `intent-capture` が EXECUTE で存在すること」に暗黙依存している。
+
+**修正候補の挿入点**: 新種別 `intent-initialized` を `parseBoundaryArgs`（`:640-661`）と `MirrorBoundary` 型・受理側 contract に追加し、発行は `emitMirrorBoundaryIfNeeded`（`:452`）／`persistedMirrorBoundary`（`:341`）／`hasPersistedMirrorBoundary`（宣言 `:359`、呼び出し `:464`）の経路へ「初回 create 未実施」条件として足す。receipt 面は `MIRROR_BOUNDARY_PHASES`（`amadeus-state.ts:221`）が phase 3値の列挙であり intent 誕生 boundary は枠外のため、receipt スキーマを変えずに済ませるなら `provenance.createIdentity`（`amadeus-mirror-lifecycle.ts:423-425`）を初回 create のべき等キーに使う案が候補（**仮説** — 未検証）。
+
+### 機構 B — phase boundary 成果物名の正本誤記（#1749）
+
+engine は fail-closed で正準名を要求する。`packages/framework/core/tools/amadeus-state.ts:330` verbatim: `const artifactPath = join(rec, "verification", \`phase-check-${phase}.md\`);`、拒否メッセージは `:332`（同ファイル `:211` のコメント、`:327` / `:334` のメッセージも同名）。ステージファイル側も正準名を指示する（`approval-handoff.md:98` / `delivery-planning.md:127` / `ci-pipeline.md:81`、`knowledge/amadeus-shared/verification.md:25`）。
+
+誤記 `[phase-boundary]-verification.md` は governance protocol 1行に由来し、生成面へ機械投影されている。**根因は正本1行**（`packages/framework/core/amadeus-common/protocols/stage-protocol-governance.md:22`）で、修正は正本1行 + `bun scripts/package.ts` + `bun run promote:self` + docs 2ファイルの日英同期。配置の全数は `code-structure.md` の対応節を参照。
+
+drift guard（Issue 受入条件）の所在は**未確認**。本契約を検査する既存テストは grep で確認できておらず、不在主張ではない（`cid:requirements-analysis:absence-claim-grep-verify`）。
+
+### 機構 C — センサー発火の対象決定が `matches` glob のみ（#1742）
+
+`packages/framework/core/hooks/amadeus-sensor-fire.ts`（280行）は active stage の `sensors_applicable` を引き（`:174-187`）、フィルタを `matches` glob 1本で決める。`:199-202` verbatim:
+
+```text
+for (const entry of applicableSensors) {
+  if (!entry.matches) continue;
+  const glob = new Bun.Glob(entry.matches);
+  if (!glob.match(filePathNorm)) continue;
+```
+
+`:192` のコメントが `G1 lock-in: matches IS the filter.` と設計意図を明示する。**全280行に `produces` / `optional_produces` の参照は 0**（`grep -c 'produces'` = `0`）。
+
+manifest の glob（`.claude/sensors/`、正本 `packages/framework/core/sensors/` と同値、いずれも `:8`）: `amadeus-required-sections` / `amadeus-upstream-coverage` = `**/{amadeus-docs,intents}/**`、`amadeus-answer-evidence` = `**/*-questions.md`、`amadeus-linter` = `**/*.{ts,js}`、`amadeus-type-check` = `**/*.{ts,tsx}`。
+
+→ record 配下の `memory.md`・`learnings-selections.json` は `**/intents/**` に一致して発火し、`codekb/` 配下の宣言済み成果物は一致せず発火しない。**過剰発火と欠落は同一機序**であり、宣言 produces との照合が無いことに帰着する。
+
+**修正候補の挿入点**: `:186-202` の間に解決済み produces 集合との照合を挿入する。`GraphStage` は既に `produces: string[]`（`amadeus-graph.ts:144`）と `optional_produces?: string[]`（`:147`）を持つため、hook は追加ロードなしに宣言集合へ到達できる。ただし per-unit ステージの `{unit-name}` 解決が要り、**本区間で着地した #1760（`e839b20ce`）の `degradeUnitDirectories()` / `emitRunStageForSlug(…, unit)` がその解決ロジックの既存所在**である。hook が `amadeus-orchestrate.ts` を import する形は現状無いため、`amadeus-lib.ts` 側への seam 抽出が自然（**仮説**）。代替案（directive が解決した produces を一時ファイル/state へ落として hook が読む）は、Issue 受入条件「stage 遷移・resume・`--single` で過去 invocation の解決結果を再利用しない」を満たす失効管理を要する。
+
+### 機構 D — auto-solo 発動指示がハーネス依存層にしか無い（#1735）
+
+CLI 側は健全: `packages/framework/core/tools/amadeus-election.ts:350` `if (trigger !== "auto-solo")`、`:360` `out({ opened: null, reason: "auto-solo-election-disabled" })`。設定キーは `amadeus-mirror-config.ts:53` / `:82`。
+
+「3類型（設計逸脱・ブロッカー・§13 学習選定）で自動発動せよ」の**唯一の指示所在は `packages/framework/core/skills/amadeus-election/SKILL.md:28`**（`grep -rn 'auto-solo' packages/framework/core/ packages/framework/harness/` のヒットは `amadeus-election.ts:66/350/360`、`amadeus-mirror-config.ts:6/53/82`、この SKILL.md の計7行のみ）。codex 固有面に同等物は無いが、**claude 固有面にも無い** — 差はハーネス固有ファイルの有無ではなく、メソッド層（team.md）の文脈投入方式にある。
+
+- claude: `@`-import スタブが `org/team/project.md` 等を列挙し、**アンビエントに常時投入**。
+- codex: `dist/codex/AGENTS.md:62` verbatim — 「Codex auto-merges the root `AGENTS.md` and the orchestrator injects an `@amadeus/spaces/default/memory/…` prompt mention to pull specific method files into context **on demand**」→ モデル駆動の `@`-mention 解決。conductor が読みに行かない限り team.md の発動ノルムが文脈に入らない。
+
+加えて `stage-protocol.md` §13 には選挙への言及が皆無（同ファイル全域の `election|選挙` grep がヒット 0。手順は memory.md → surface → 構造化質問 → admission conflict-check → persist で完結し選挙フックが無い）。
+
+**根因**: auto-solo 発動を、ハーネス非依存で必ず文脈に入る層（stage-protocol / engine directive）ではなく、ハーネス依存のアンビエント規範と「開くと決めた後にしか読まれない」選挙 SKILL にのみ置いた設計ギャップ。第一候補は stage-protocol §13 への明文化（全ハーネス配布面へ機械投影されるため codex 固有追記が不要になる）。codex 固有面への追記のみの単独採用は、他ハーネスで同じ穴が再発しうるため非推奨（**仮説** — 他ハーネスの include 方式は未実測）。
+
+### 機構 E — promote:self の write⇔check 非対称（#1734）
+
+`scripts/promote-self.ts`:
+
+- `:125` — `export const SCOPE_GRID_RE = /^\.[^/]+\/tools\/data\/scope-grid\.json$/;`
+- `:147-160` `mergeScopeGrid` — dist キーを先に置き、self 側だけの extras を末尾へ付ける。`const merged: Record<string, unknown> = { ...w }; for (const k of extras) merged[k] = g[k];` → **キー順の由来は JS のオブジェクト挿入順**（dist キー → extras）。ソートは無い。`extras.length === 0` なら `return want`。
+- `:130-142` `scopeGridInSync` — `for (const key of Object.keys(w)) { if (!(key in g)) return false; if (JSON.stringify(g[key]) !== JSON.stringify(w[key])) return false; } return true;` → **比較は dist キーの包含+値一致のみの JSON 意味比較**。キー順も extras の有無も見ない。
+- 適用側 `:504`、比較側 `:479`。
+
+→ apply が書く順序を check が検分しない**非対称（write⇔check）**であり、Issue の指摘(b)は成立する。
+
+**重要な訂正 — 「削除」ではなく「移動」**: Issue 本文の「amadeus-bugfix / amadeus-feature / amadeus-refactor のエントリが self-install ツリーから削除される」は、移動 diff の削除側半分の誤読である。Issue 記載の base `c48877451` の実バイトへ `mergeScopeGrid` 相当を適用した read-only シミュレーションでは insertions 144 / deletions 144、**extras 4件は全て merged に保存されている**。`.codex` 側で amadeus-* 4件が先頭（アルファベット順）にあり merge 後は末尾へ回るため、4エントリ × 36行 = 144行が移動する。修正スコープの縮小に直結する訂正。
+
+**現 HEAD では churn は再現しない（実測）**: `.codex` = dist 10キー（`chore` / `enterprise` / `feature` / `fix` / `infra` / `mvp` / `poc` / `refactor` / `security-patch` / `workshop`）+ extras 4キー（`self-document` / `self-feature` / `self-fix` / `self-refactor`）で、既に dist 順 → extras 順に並ぶ。`mergeScopeGrid` 相当の再適用結果は現ファイルと**バイト一致**（16673 bytes 同士）。#1683 `dd8532d1c` で `amadeus-*` → `self-*` 改名と全ハーネス統一が着地し、一度 apply された結果が commit されているため。churn は「dist に無い extras が dist キーより前に並んでいる」状態でのみ発火する。
+
+**修正候補**: (a) 書込側の正準化 = `mergeScopeGrid`（`:147-160`）で `merged` をキー名ソートして直列化する（冪等な正準順）。(b) 検査側の対称化 = `scopeGridInSync`（`:130-142`）を `mergeScopeGrid(got, want)` の出力と `got` の比較にすれば write⇔check が定義上対称になる。既存センサー `.claude/sensors/amadeus-self-scope-consistency.md:8`（`matches: "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}"`、#1683 で新設）が本ファイルを既に監視対象にしているため、修正時は責務の重複／相補を確認する。
+
+## SKILL/reviewer 2件の対象機構（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。base `22ee27dbe`、距離 34 commits。
+
+### 機構 A: SKILL new-work 経路と utility / orchestrate の verb 所有権（#1736）
+
+**verb 所有権の実装事実**
+
+`next` verb は `amadeus-orchestrate.ts` が単独で所有する。`amadeus-utility.ts` の main dispatch は `:6088` の `switch (subcommand) {` で始まり、受理 verb は `:6089-6181` の `help` / `version` / `status` / `doctor` / `migrate` / `intent-birth` / `intent` / `intent-select-response` / `space` / `space-create` / `codekb-path` / `detect` / `init` / `state-init` / `scope-change` / `recompose` / `config-change` / `set-status` / `detect-scope` / `resolve-env-scope` / `scope-table` / `plugin` である。`grep -c 'case "next"' packages/framework/core/tools/amadeus-utility.ts` = **0**。よって `next` は `:6182` の `default:` に落ち、直後の `die()` が verb 一覧付き Usage を出して終了する（一覧自体にも `next` は現れない）。実行プローブは行っていない（既知 mutating verb への探り実行を避ける `cid:code-generation:no-help-probe-on-mutating-verbs` に従い、switch の静的読解を根拠とした）。
+
+`--new-intent` は orchestrate 側に完全実装されている。
+
+- フラグ型宣言: `amadeus-orchestrate.ts:818` `newIntent?: boolean;`
+- 引数パース: `:877-878` `} else if (a === "--new-intent") {` / `flags.newIntent = true;`
+- 許可オプション集合: `:1995` `"--new-intent",`（`MIGRATION_WORKFLOW_OPTIONS`）
+- 分岐本体: `:2405` `if (flags.newIntent) {` → `:2412` `emit(birthPrintDirective(flags.scope ?? scope, flags, flags.intent));` → `:2413` `return;`。直上コメント（`:2400-2404`）が「あらゆる継続分岐より前に置くことで、稼働中 intent の state が new-work birth を『現ステージを進める』へ迂回させない」旨を明記する。
+
+**欠陥の形状**: 単一箇所のツール名誤りであり、経路設計そのものは正しい。同じ SKILL.md 内の通常の `next`（claude 面 `:40` `1. directive = bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`）と PLAN-RESHAPE（`:118` `amadeus-orchestrate.ts next compose`）は正しく orchestrate を指しており、new-work offer の CONFIRM 行だけが utility を指す。
+
+**投影経路と患部の全数（13ファイル）**
+
+SKILL.md は core からの投影ではなく harness ごとに authored された独立ファイルである。`packages/framework/harness/claude/manifest.ts:73` の `{ src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },` を `scripts/package.ts:396` の `for (const { src, dst, projectRoot } of m.harnessFiles) {` が `harness/<name>/<src>` → `dist/<name>/<harnessDir>/<dst>` へコピーし、変換は `{{HARNESS_DIR}}` 置換のみ（`scripts/package.ts:11-14`）。
+
+`git ls-files -z | xargs -0 grep -ln 'amadeus-utility\.ts next'` の全数 = **13ファイル**、各1箇所（同一文）:
+
+| 面 | file:line |
+| --- | --- |
+| 正本 harness | `packages/framework/harness/claude/skills/amadeus/SKILL.md:116` |
+| 正本 harness | `packages/framework/harness/codex/skills/amadeus/SKILL.md:112` |
+| 正本 harness | `packages/framework/harness/kimi/skills/amadeus/SKILL.md:116` |
+| 正本 harness | `packages/framework/harness/kiro/skills/amadeus/SKILL.md:118` |
+| 正本 harness | `packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md:118` |
+| 生成物 dist | `dist/claude/.claude/skills/amadeus/SKILL.md:116` |
+| 生成物 dist | `dist/codex/.agents/skills/amadeus/SKILL.md:112` |
+| 生成物 dist | `dist/kimi/.kimi-code/skills/amadeus/SKILL.md:116` |
+| 生成物 dist | `dist/kiro/.kiro/skills/amadeus/SKILL.md:118` |
+| 生成物 dist | `dist/kiro-ide/.kiro/skills/amadeus/SKILL.md:118` |
+| 自己インストール | `.claude/skills/amadeus/SKILL.md:116` |
+| 自己インストール | `.agents/skills/amadeus/SKILL.md:112` |
+| 自己インストール | `.kimi-code/skills/amadeus/SKILL.md:116` |
+
+cursor / opencode は SKILL.md を持たず、薄い command 面（`packages/framework/harness/{cursor,opencode}/commands/amadeus.md:23`）のみで、そこは `amadeus-orchestrate.ts next` を指すため患部外。修正は正本5面の編集 → `bun scripts/package.ts`（7ハーネス全数再生成、`cid:build-and-test:bt-dist-regen-seven-harnesses`）→ `bun run promote:self` の3段。
+
+**テスト面**: `tests/integration/t176-new-work-offer-second-intent.test.ts` はヘッダ `:1` に `// covers: subcommand:amadeus-utility:intent-birth, file:skills/amadeus/SKILL.md`、`:12-13` に「on CONFIRM the prose routes through `next --new-intent`」を持ち、SDK ドライバでライブに offer→birth を検証する。しかし assert は `:143` の `reg.length === 2` と `:157-166` の label 形状であり、**conductor がどのツールへ `next` を打つかは検査していない**。現行テストはこの誤りを構造的に検出しない。
+
+### 機構 B: per-unit degrade と reviewer-runtime の produces 実在検査の非対称（#1711）
+
+**degrade 分岐（発生源）**
+
+`amadeus-orchestrate.ts:3050-3057`:
+
+```text
+  // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
+  // security-patch / infra / fix / poc, or a pre-compile moment): degrade to
+  // today's single {unit-name} directive. Zero behaviour change off this path.
+  const units = orderedUnits(projectDir);
+  if (units.length === 0) {
+    emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
+    return;
+  }
+```
+
+`emitRunStageForSlug`（定義 `:2888-2894`）は `:2904-2912` で `buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, stateContent, recordPrefix, codekbCtx)` を呼び、`directive.unit` を一切設定しない。`unit` を設定するのは per-unit 経路の `:3086` `directive.unit = lastUnit;` と `:3110` `directive.unit = pickUnit;` のみである。
+
+**プレースホルダがパスに残る経路**
+
+- 定義: `:1588` `const UNIT_NAME_PLACEHOLDER = "{unit-name}";`（コメント `:1583-1587` が「unit が不在のときの忠実な発行形は文書化された `{unit-name}` プレースホルダ形状」と規定）
+- 既定引数: `buildRunStageDirective`（`:1909`）の `:1912` `unit: string = UNIT_NAME_PLACEHOLDER,`
+- パス注入: `resolveArtifactPath`（`:1645`）の `:1661-1663` — `if (isPerUnit(owner)) { return \`${prefix}/construction/${unit}/${owner.slug}/${name}.md\`; }`。consumes 側も `resolveConsumePath`（`:1687`）経由で同関数に入る。
+- **非対称の核心**: `splitConsumesByPresence`（`:1762`）の `:1771-1774` が consumes を実在検査から明示除外する — `if (c.path.includes(UNIT_NAME_PLACEHOLDER)) { present.push(c.path); continue; }`（コメント `:1759-1760`「プレースホルダを残すパスは Bolt 前には実在が知りようがない → `consumes` に留まる」）。**produces 側にはこの逃がしが存在しない。**
+
+**reviewer 側の拒否点**
+
+`amadeus-reviewer-runtime.ts` の `runScope`（`:611-621`）→ `scopeForDirective`（`:224-246`）が directive の produces を `onDisk` 判定つきで `reviewerReadScope` に渡す（`:232-244`）。実際の throw は `packages/framework/core/tools/amadeus-reviewer.ts:71-75`:
+
+```text
+  for (const artifact of unit.produces) {
+    if (!artifact.present) {
+      if (artifact.optional) continue;
+      throw new Error(`required review artifact is missing: ${artifact.path}`);
+    }
+```
+
+> **所在の訂正**: missing throw は `amadeus-reviewer.ts:74` にある（`amadeus-reviewer-runtime.ts:74` ではない。reviewer-runtime は `:232` でこれを呼ぶ側）。project.md の `cid:code-generation:degrade-scope-unit-dir-layout` 追補が挙げる `amadeus-reviewer.ts:74` と一致する。
+
+同関数 `:76-78` の unit 帰属チェック `if (unit.unit && !belongsToUnit(artifact.path, unit.unit))` は degrade 経路では `directive.unit` が undefined のため発火せず、返り値も `:87` `return unit.unit ? { unit: unit.unit, paths } : { paths };` の後者になる。すなわちプレースホルダパスは「unit 不明のまま存在しないファイル」として `:74` で落ちる。`runReviewerCommand`（`:623-641`）が throw を `:637-639` で捕捉し stderr 1行 + `exitCode = 1` にするため、conductor からは `exit 1` + `required review artifact is missing: …/construction/{unit-name}/code-generation/….md` として観測される。
+
+**影響範囲**: units-generation を SKIP する全スコープの per-unit construction ステージ。`.claude/tools/data/scope-grid.json` 実測で `self-fix.stages` = `units-generation: SKIP` / `code-generation: EXECUTE`。同型は `fix` / `refactor` / `chore` / `security-patch` / `infra` / `poc` / `self-refactor` / `self-document` に及ぶ。
+
+**修正候補と制約（評価は要件段の裁定に属する。ここでは所在と制約の実測のみ）**
+
+| 候補 | 変更点 | テスト契約への影響 |
+| --- | --- | --- |
+| A: engine 側で degrade 時に実 unit 名へ解決 | `amadeus-orchestrate.ts:3053-3057` の degrade 分岐。実 unit ディレクトリは `<recordPrefix>/construction/<slug>/` に conductor が作るためそこを列挙して解決する形 | **現挙動をピンする複数テストの変更を伴う** — `tests/unit/t186-foreach-per-unit-iteration.test.ts:351-361`（test 5、`expect(d.unit).toBeUndefined()` と `{unit-name}` 入り produces を verbatim 期待）、同 `:490-503`（test 11、skeleton-unresolved）、`tests/unit/t116-directive-path-resolution.test.ts:380-403`（test 9/10/11）。さらに直上コメント `:3052` が「Zero behaviour change off this path」と明示する |
+| B: reviewer-runtime 側で未解決テンプレートを検出・解決 | `amadeus-reviewer-runtime.ts:224-246`（`scopeForDirective`）。produces を `onDisk` にかける前にプレースホルダを実 unit へ解決するか、consumes と同じ exempt 扱い（`amadeus-orchestrate.ts:1771-1774`）へ寄せる | t186 / t116 は engine の directive 形状のみを見るため**無傷**。ただし reviewer-runtime は `directive.produces` を「解決済みパス」として受ける前提で書かれており、解決責務をここに置くと層の逆転になる |
+
+**プロトコル面の制約（どちらの候補でも効く事実）**: `packages/framework/core/amadeus-common/protocols/stage-protocol.md:898` は「Before spawning the reviewer, pass the **unchanged** current `run-stage` directive JSON on stdin」と規定する。現行の運用回避（conductor が実 unit 名へ解決した directive JSON を渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）はこの「unchanged」契約からの逸脱であり、プロトコル文言との整合という観点では engine 側解決が筋になる、というのが実測から言える構図である。
+
+## Open bug 6件の修正境界と相互作用（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+Amadeus は常駐サービスやデータベースを持たない、Bun/TypeScript ESM のモジュラーモノリスである。ハーネス中立の正本 `packages/framework/core/`、repo-local の build/test `scripts/`・`tests/`、7ハーネスの生成 `dist/`、5面の self-install が主要境界となる。本 intent の6件は新しいコンポーネント境界を要求せず、既存の「実行結果を観測して成功を確定する」契約の欠落を各責務内で修復する。
+
+| 境界 | 主コンポーネント | 欠陥クラス | 修正時に保存する不変条件 |
+| --- | --- | --- | --- |
+| Test execution | `tests/run-tests.ts`、book-pack verifier、t224 | timeout 包含関係と診断 envelope の欠落 | 親 runner が child の stdout/stderr/exit/timeout を失わない |
+| Team launcher | `team-up.sh`、`team-up-codex-safety-wait.ts` | readiness の固定 sleep 推定、並列 worker status の未集約 | メンバー単位の結果が run 全体の成功条件へ伝播する |
+| Coverage gate | `tests/coverage-patch-gate.ts` | diff と LCOV の snapshot identity 分裂 | diff と coverage が同一ソース断面を測る |
+| Workflow completion | orchestrate/state/audit/mirror store | complete→seal→boundary の順序逆転 | 最終 mirror sync の receipt と audit が seal 前に耐久化される |
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+  subgraph TestBand["CI test band"]
+    Runner["tests/run-tests.ts"]
+    Book["book-pack verify test<br/>#1667"]
+    Migrate["t224 migration/doctor<br/>#1664"]
+    Coverage["patch coverage gate<br/>#1662"]
+    Runner --> Book
+    Runner --> Migrate
+    Runner --> Coverage
+  end
+  subgraph TeamMode["Team Mode launcher"]
+    Launch["team-up.sh"]
+    Ready["safety-wait supervisor<br/>#1336"]
+    Checkout["parallel checkout workers<br/>#1663"]
+    Launch --> Ready
+    Launch --> Checkout
+  end
+  subgraph Completion["Workflow completion"]
+    Report["orchestrate report"]
+    State["state complete-workflow"]
+    Mirror["mirror completion boundary"]
+    Ledger["audit journal and mirror store"]
+    Report --> State
+    State --> Mirror
+    Mirror --> Ledger
+  end
+```
+<!-- Text fallback: CI runner は book-pack、t224、patch coverage の3検証を駆動する。Team Mode launcher は safety-wait と並列 checkout を起動する。workflow completion は現状 report、complete-workflow、mirror boundary、ledger の順に進み、最後の経路が #1607 の破断点になる。 -->
+
+```mermaid
+sequenceDiagram
+  participant C as Conductor
+  participant O as Orchestrate report
+  participant S as State transaction
+  participant M as Mirror completion
+  participant A as Audit and registry
+  C->>O: final stage result
+  O->>S: complete-workflow
+  S->>A: WORKFLOW_COMPLETED
+  S->>A: registry complete and cursor clear
+  O-->>C: done
+  C->>O: next
+  O->>M: completion boundary
+  M->>A: append receipt
+  A-->>M: refused because audit is sealed
+```
+<!-- Text fallback: 現行は final report 内で state 完了、WORKFLOW_COMPLETED、registry complete、cursor clear が先に確定する。次の next で mirror completion を実行すると audit ledger が既に sealed のため receipt append が拒否される。 -->
+
+### 修正後に必要な完了トランザクション境界
+
+#1607 の修正では「final stage の成果物確認」「mirror の最終 sync/skip/close 判定」「mirror state と audit receipt の耐久化」「WORKFLOW_COMPLETED」「registry complete」「cursor release」を、再試行可能な単一の完了プロトコルとして順序付ける必要がある。単純に audit seal を緩和する案は post-complete append 禁止を壊し、mirror を完了後の特例として書く案は state/audit の真実源を二重化するため採らない。候補は次の2系統で、最終裁定は後続 Requirements Analysis が行う。
+
+1. `report` 内で completion boundary を先行実行し、その receipt 成功後だけ `complete-workflow` を commit する。
+2. state の completion transaction に mirror completion の prepare/commit を統合し、同一 lock と recovery token で再開する。
+
+いずれも、remote GitHub 操作そのものと local durable commit の失敗を区別し、既存の fail-closed・idempotent receipt・post-complete audit seal を保存しなければならない。
+
+### Bolt/PR 分離と依存トポロジー
+
+```mermaid
+flowchart TD
+  B1607["Bolt #1607"] --> OTel["OTel Intent #1679 Construction"]
+  B1664["Bolt #1664"] --> OTel
+  B1336["Bolt #1336"] --> B1663["Bolt #1663"]
+  B1662["Bolt #1662"] --> Final["横断 build and test"]
+  B1667["Bolt #1667"] --> Final
+  B1663 --> Final
+  B1607 --> Final
+  B1664 --> Final
+```
+<!-- Text fallback: #1607 と #1664 は OTel #1679 の Construction より先に置く。Team Mode 系は #1336 の後に #1663 を直列化する。全6 Bolt は個別検証後、最後に横断 build/test へ合流する。 -->
+
+| 組合せ | 衝突度 | アーキテクチャ上の扱い |
+| --- | --- | --- |
+| #1336 ↔ #1663 | 高 | 同一 `team-up.sh` の起動・worker 制御面。#1336 → #1663 の順で直列 |
+| #1664 ↔ #1607 | 中 | doctor/audit の terminal behavior。audit/journal 契約の逐語照合が必要 |
+| #1667 ↔ #1662 | 低 | 主ファイルは分離。ただし coverage 実行負荷が book-pack timeout の観測条件に影響 |
+| #1607 ↔ OTel #1679 | Critical | audit/journal/state entry と audit seal transaction が同一 |
+| #1664 ↔ OTel #1679 | High | t224 の journal/audit expectation と診断 envelope が交差 |
+| #1336 ↔ OTel #1679 | Medium | child context と launcher の起動契約が交差 |
+
+## OTel/observability 面の現行アーキテクチャ（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 差分リフレッシュ（2026-07-29、observed `22ee27dbef9027203658a6cd98bf97501c4b222c`（= 現 HEAD、`git rev-parse HEAD` 実測）、base `ca8ff0af40d6250edffe42246d3f5538819c22af`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **13**、全区間 `git diff --shortstat` = **624 files changed, 71100 insertions(+), 26206 deletions(-)**、うち正本面（`packages/framework/core` + `packages/framework/harness` + `scripts` + `package.json` + `bun.lock`）は **40 files / +4433 / -1559**）。上流入力: Developer スキャン結果（差分サマリ、全文読了）+ Architect 段での focus モジュール直読による独立検証。
 
@@ -329,7 +810,7 @@ flowchart TD
 
 mirror lifecycle の answer は **adapter 層**（`amadeus-mirror-lifecycle.ts`）と **coordinator 層**（`amadeus-mirror-coordinator.ts`）の 2 段で処理される。adapter 冒頭の manual guard は coordinator 到達より前に置かれており、ここで弾かれると正規の answer 処理へ一切入れない。
 
-```
+```text
 runMirrorLifecycleAnswer(:938-)          — CLI answer verb のエントリ
   └─ runMirrorLifecycleBoundary(:253-)   — adapter 共通境界
         ├─ [guard :257-265] boundary.kind==="manual" && (!manualOperation || !invocationId) → error
@@ -514,7 +995,7 @@ malformed は `:495` `const env = parseHttpEnvelope(result.stdout, mode);` → `
 
 実測（`labels`, `per_page=20` で P=2、read-only）: 先頭 20 バイト `b'[HTTP/2.0 200 OK\nAcc'`、ブロック offset `[1, 6438]`、offset 6438 の直前は `b'…"}]\n,'`、EOF last 8 は `b'd on"}]]'`。実文法は
 
-```
+```text
 '[' <HTTPブロック> <ページ配列> ( '\n' ',' <HTTPブロック> <ページ配列> )* ']'
 ```
 

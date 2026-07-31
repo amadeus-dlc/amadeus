@@ -170,7 +170,7 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
 
     // An intent must exist before the engine will emit any directive; birth it
     // FIRST so the baseline snapshot covers a fully initialised workspace.
-    const birth = run("bun", [join(hostRoot, "tools", "amadeus-utility.ts"), "intent-birth", "--scope", "bugfix"]);
+    const birth = run("bun", [join(hostRoot, "tools", "amadeus-utility.ts"), "intent-birth", "--scope", "fix"]);
     expect(birth.status).toBe(0);
 
     const baseline = snapshot(hostRoot);

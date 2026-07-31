@@ -1,6 +1,182 @@
 # コンポーネント棚卸し
 
-## OTel/observability 面コンポーネント（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 修正面の目録
+
+| Issue | 主対象コンポーネント | 種別 | 補助対象 | 本番コード変更 |
+| --- | --- | --- | --- | --- |
+| #1811 P1/S2 | `tests/integration/t-team-up-codex-resume.serial.test.ts`（1,813行） | テスト fixture | なし | **不要（推奨: 非改変）** |
+| #1800 P3/S3 | `tests/integration/t224-upstream-v2-migration-cli.test.ts`（1,830行） | テスト診断 | なし | 不要 |
+| #1797 P3/S4 | `tests/integration/t259-guard-corpus.test.ts`（126行） | テスト計測 | `tests/helpers/guard-corpus-benchmark-child.ts` | 不要 |
+| #1816 P3/S4 | `packages/framework/core/tools/amadeus-mirror-presentation.ts` | 本番（表示層） | `tests/.coverage-patch-allowlist.json`（行ピン5件の remap）、`tests/unit/t281-amadeus-mirror-presentation.test.ts`（ケース追加） | **必要** → 7 dist + self-install 再生成 |
+
+**#1816 のみが `packages/framework/core/` を触る。** 他3件はテスト面に閉じるため、生成面（`dist/` 7ハーネス + self-install）の再生成チェーンを通らない。
+
+### コンポーネント別の詳細
+
+#### `tests/integration/t-team-up-codex-resume.serial.test.ts`（#1811）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| fake supervisor stub の終了ハンドラ | `:218` | `process.on("SIGTERM", () => process.exit(0));` — 唯一の終了経路 |
+| fake supervisor stub の event loop 保持 | `:219` | `setInterval(() => {}, 1_000);` — 不死化の直接原因 |
+| `afterEach` | `:39-41` | 一時ディレクトリの `rmSync` のみ。プロセス掃引なし。**掃引を追加する場合は `rmSync` より前**（PID ファイルが同ディレクトリ配下にある） |
+| 漏洩テスト | `:590` / `:973` / `:1004` | いずれも `--kill` を通らずに終端 |
+| 案 A の影響検証対象 | `:717` / `:774` / `:823` | stub へ record ポーリングを付与した場合に挙動が変わりうる3テスト |
+
+**関連する本番コンポーネント（改変対象ではない — 契約の参照元）**:
+
+| コンポーネント | 行 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up-codex-safety-wait.ts` | `:643` | `while (await runRecordIsActive(runRecord, run, session)) {` — run record 消滅で自律終了する fail-closed ループ |
+| 同上 | `:561`（宣言）/ `:580-582` | `runRecordIsActive` の `catch` → `return false` |
+| `packages/framework/core/tools/team-up.sh` | `:508` | `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"` — 掃引に使える PID 追跡面 |
+
+#### `tests/integration/t224-upstream-v2-migration-cli.test.ts`（#1800）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| 終了状態の正規化（2箇所の同型ヘルパー） | `:170` / `:210` | `status: result.status ?? -1,` — `-1` は signal 終了 or spawn 失敗のセンチネル |
+| 診断ヘルパー | `:218`（宣言）/ `:225-238`（メッセージ配列） | `expectSuccessfulMigration` — exit path / status / signal / error / stdout / stderr を並べる |
+| 3分類の契約固定 | `:311-313` | `exit-status` / `signal` / `spawn-error` の `test.each` |
+| **患部** | `:1411` | `expect(collided.status).toBe(1);` — 素の等値比較で診断が非対称 |
+
+#### `tests/integration/t259-guard-corpus.test.ts`（#1797）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| `median` | `:46`（宣言）/ `:47-48` | t258 裁定の反映として適用済み |
+| 計測呼び出し | `:89`（`measure` 宣言）/ `:101` / `:102` | `measure(1)` と `measure(2)` を**逐次に別プロセスで** spawn |
+| **患部** | `:108` / `:109` | 時間比・RSS 比の `toBeLessThanOrEqual(2.5)` |
+| 子プロセス | `tests/helpers/guard-corpus-benchmark-child.ts` | 交互計測（案 (i)）を採る場合の主改修面 |
+
+`tests/.coverage-patch-allowlist.json` の `t259` エントリ群は**別テスト由来**であり本件では触らない。
+
+#### `packages/framework/core/tools/amadeus-mirror-presentation.ts`（#1816）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| `renderMirrorIssueContent` | `:239`（宣言）〜`:273` | body 組立は `:245-267` |
+| **患部** | `:259-260` | `"## Status",` / `snapshot.status,` — snapshot の逐語レンダリング |
+| `## Stage` / `## Phase` | `:253-257` | 終端化の対象にするかは要件段の確定事項 |
+| `renderMirrorStatus` | `:298`（宣言） | `buildMirrorStatusRecordView` の drift 診断が偽 drift を出さないよう導出キーの選定に注意 |
+
+**`completionInstance` は本ファイルで未消費**（`grep` 0ヒット）。消費側は executor `:394` / coordinator `:279` `:284` / policy `:254` / lifecycle `:339` / state-codec `:567` `:763` `:770` `:775` / types `:516` `:527` / `amadeus-state.ts:533` ほか。
+
+**関連する本番コンポーネント**:
+
+| コンポーネント | 行 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-mirror-executor.ts` | `:1156-1159` | sync → `editIssue(permit, body)` / close → `closeIssue(permit)` の非対称（close は body を書かない） |
+| 同上 | `:1038-1041` | 収束判定も同じ非対称（sync = body 一致 / close = state CLOSED） |
+| `packages/framework/core/tools/amadeus-mirror-lifecycle.ts` | `:311-312` | pending completion を持つ snapshot に `Running` を強制する assert（`:311-316` が assert ブロック）。**改訂不要** |
+
+**`tests/.coverage-patch-allowlist.json` の presentation 行ピン**: `193-194` / `230-234` / `237-239` / `245-247` / `266-271` の5件。`renderMirrorIssueContent`（`:239-273`）と交差するのは `245-247`（直撃）と `266-271`（下方シフト）。機械 remap 必須（`cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+### 本区間で変化したコンポーネント（本 intent の患部外）
+
+| コンポーネント | 変化 | 由来 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-election-store.ts` | `+168/−10` — pending ballot lane 6関数を新設 | #1773 修正（`25f54b066`） |
+| `packages/framework/core/tools/amadeus-election-model.ts` | `+36/−9` — view へ question / choice description を搬送 | #1772 修正（`75367ba67`） |
+| `packages/framework/core/tools/amadeus-mirror-state-codec.ts` | `succeededMirrorCreateExists` を `:1731` に新設 | #1752 修正（`8a8abf567`） |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `+10/−3` — `:4249` で `createRan` を導出 | 同上 |
+| `.github/workflows/release.yml` | `+68/−22` — 再実行可能ジョブへ分割 | #1799（`b488466b8`） |
+| ルート `.gitignore` + 7ハーネス `dot-gitignore` | 各 `+5/−0` — pending lane 除外 | #1773 修正 |
+
+sensors / hooks / scopes の構成は不変。core tools への**新規モジュール追加は 0件**（前区間の +9件と対照的）。
+
+## オープンバグ3件の対象コンポーネント（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1773](https://github.com/amadeus-dlc/amadeus/issues/1773) | `packages/framework/core/tools/amadeus-election-store.ts`（格納層）+ `amadeus-election-model.ts`（票の型）+ `skills/amadeus-election/SKILL.md`（運用手順） | 選挙の受理・永続化・blind lift・状態照会 | 未開票中の全票本文が単一共有 tracked ファイル `ledger.json` に平文で載る（書込 `:464-465`）。blind lift（`materialize` `:500`、コメント `:498`）は tally 時のみで collecting 中は保護対象外。voter subagent は選挙ディレクトリを直接触る（`SKILL.md:51`）。git tracked のため `git status` / `git diff` が第2の露出面（tracked `ledger.json` は 183件） | core 正本のため 7 dist + 5 self-install 再生成。`.gitignore` も修正面候補。**blind 性を assert するテストは 0件** |
+| [#1772](https://github.com/amadeus-dlc/amadeus/issues/1772) | `packages/framework/core/tools/amadeus-election-model.ts`（型 / parse / view render / tally） | 選挙定義の parse と blind 配布ビューの構築 | `Choice`（`:48`）が `{ internalNo, label }` のみで description を持たず、`parseChoices`（`:73`、再構成 `:80`）が未知フィールドを exit 0 のまま無音 drop（fail-open）。`DistributionView`（`:306-310`）に `question` が無い | core 正本。**テスト契約が3重固定**（型 `:306-310` / 設計コメント `:304-305` / `tests/unit/t234-election-model.test.ts:190` `:192`）— 要件段の仕様裁定が前提 |
+| [#1752](https://github.com/amadeus-dlc/amadeus/issues/1752) | `packages/framework/core/tools/amadeus-orchestrate.ts`（mirror boundary report 分岐） | boundary の offer と report 受理 | `:4255` の `(answer === "create" && hasMirrorIssue)` が report 実行時点の state 再評価（`:4241-4242`）に立つため、ask の指示（`:519-529`）に従って create した利用者が拒否される自己矛盾。`sync` / `skip` には対応する照合が無い片側実装 | core 正本。#1791 の初回 create 分岐（`:486-500`）は auto 優先（`:488`）のため prompt 経路の再現は温存。fixture `tests/integration/t265-engine-boundary.integration.test.ts:793` は2ケースを区別できず分岐が要る |
+
+### 共有コンポーネントと変更競合
+
+- **#1773 と #1772 は同一ファイル群を共有する。** 両者とも `amadeus-election-model.ts` を触る（#1773 は票の型 `:134-136`、#1772 は選択肢の型 `:48` と view `:306-310`）。ファイル単位で**交差する**ため、`cid:code-generation:c6` の非交差判定を満たさない — **直列化するか、実 diff で行レンジの非交差を確認してから並行させる**。前 intent までの「全件並行可」とは条件が異なる点に注意。
+- **#1752 は他2件と完全に非交差**（`amadeus-orchestrate.ts` のみ）。先行着地できる。
+- 3件とも `packages/framework/core/` を正本とするため、`bun scripts/package.ts` → dist 7ハーネス → `bun run promote:self` → self-install 5面の同一チェーンを通る。生成面が競合するため着地順は実 diff で再評価する。
+
+### 区間で増えた主要コンポーネント（本 intent の患部外）
+
+`a38a1f4d3..3f73823b1`（25コミット）で `packages/framework/core/tools/` に **9件**の新規モジュールが追加された（base `79` → observed `88`。`git diff --name-status a38a1f4d3 HEAD -- packages/framework/core/tools/ \| grep '^A'` の実測）。
+
+| コンポーネント | 責務 | 出自 |
+| --- | --- | --- |
+| `amadeus-github-gateway.ts` | GitHub 汎用ゲートウェイ（mirror 専用実装からの抽出、+953） | #1744 `d56e76ddd` |
+| `amadeus-github-types.ts` | 上記の型（+44） | 同上 |
+| `amadeus-layered-config.ts` | 階層設定リゾルバ（global → space → intent、+610）。`auto-mirror` / `auto-file-findings` / `auto-solo-election` を解決 | 同上 |
+| `amadeus-process-runner.ts` | `gh` spawn の唯一の不純エッジ（+306） | 同上 |
+| `amadeus-contained-file.ts` | ファイル境界の封じ込め（+175） | 同上 |
+| `amadeus-finding.ts` | finding CLI 本体（+296） | 同上 |
+| `amadeus-finding-types.ts` | 上記の型（+28） | 同上 |
+| `amadeus-finding-capability.ts` | capability 宣言（+33） | 同上 |
+| `amadeus-sensor-invocation.ts` | 宣言 outputs を `sensor-invocation.json` へ投影（+118）。`hooks/amadeus-sensor-fire.ts:27` が exact-path allowlist として消費 | #1758 / #1770 |
+
+**縮小したコンポーネント**（抽出元）: `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310。`scripts/projections.ts` の `MIRROR_TOOL_FILES` に新5ファイルが追加されている。
+
+**件数不変の面**: core sensors `7` / core hooks `12` / core scopes `10`（いずれも `ls` 実測。base からの変化なし）。
+
+## オープンバグ5件の対象コンポーネント（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+**判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77` で新規コンポーネント（core tool / sensor / hook / scope）の追加・削除はない。5件の患部はいずれも既存コンポーネント内にあり、所有関係も不変 — #1750 = `amadeus-mirror-lifecycle.ts` + `amadeus-orchestrate.ts`、#1749 = `stage-protocol-governance.md`、#1742 = `amadeus-sensor-fire.ts`、#1735 = `amadeus-election/SKILL.md` + `stage-protocol.md`、#1734 = `scripts/promote-self.ts`。個別の配置と行番号は `code-structure.md` の対応節を参照。
+
+## SKILL/reviewer 2件の対象コンポーネント（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736) | harness SKILL.md（new-work offer 節） | 稼働中 intent と並行する new-work の CONFIRM 経路を conductor に指示する | 実行ツール名の誤り。`amadeus-utility.ts next --new-intent` を指示するが、`next` verb は utility に存在せず（`amadeus-utility.ts:6088` の `switch (subcommand)` に `case "next"` が 0 件）`default:`（`:6182`）で die する。実装は `amadeus-orchestrate.ts:2405` 側にある | 正本5 + dist 5 + self-install 3 = **13ファイル**（`git ls-files \| xargs grep -n 'amadeus-utility\.ts next'` = 13）。cursor / opencode は SKILL.md を持たず、command 面（`:23`）は正しく orchestrate を指すため患部外 |
+| [#1711](https://github.com/amadeus-dlc/amadeus/issues/1711) | orchestrate degrade 分岐 / reviewer-runtime scope / reviewer 実在検査 | units-generation を SKIP するスコープでの run-stage directive 発行と reviewer 読取スコープ確定 | produces に `{unit-name}` プレースホルダが残ったまま reviewer へ渡り、実在検査（`amadeus-reviewer.ts:74`）が `required review artifact is missing` で throw する。consumes 側には exempt（`amadeus-orchestrate.ts:1771-1774`）があるが produces 側には無い **非対称** | core 正本の変更となるため 7 dist + 5 self-install の再生成対象。テスト契約 `t186:351` / `t186:492` / `t116:380-403` が現挙動をピン |
+
+### 共有コンポーネントと変更競合
+
+- 2件は所有コンポーネントが完全に分離している（#1736 = harness SKILL.md の散文、#1711 = core engine + reviewer 層）。ファイル単位で非交差のため並行実装が可能（`cid:code-generation:c6` の非交差判定）。
+- ただし #1711 は core 正本を触るため 13コピー同期を伴い、#1736 も SKILL.md の 13ファイル同期を伴う。両者の同期対象ファイル集合は重ならない（前者 = `tools/`、後者 = `skills/amadeus/SKILL.md`）。
+- 本 intent 自身が `self-fix` スコープで走り、`self-fix` は units-generation を SKIP するため **#1711 の患部経路を自ら通る**。code-generation ステージで reviewer scope が exit 1 する場合、既知の運用回避（conductor が実 unit 名へ解決した directive JSON を渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）を適用する。
+
+### 区間で増えた主要コンポーネント
+
+`22ee27dbe..278d61d8e`（34コミット）で `packages/framework/core/tools/` に**3件**の新規モジュールが追加された（base 76 → observed 79。`git diff --name-status 22ee27dbe 278d61d8e -- packages/framework/core/tools/ \| grep '^A'` の実測）。下表の3件はいずれも本 intent の患部ではない。
+
+| コンポーネント | 行数 | 責務 | 消費側 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-caller-authorization.ts` | 122 | subagent role による engine state 変更経路の拒否判定（`MainConductorAuthorization` = `:27-29`） | `amadeus-orchestrate.ts:2108`、`amadeus-state.ts:828` / `:831` の2箇所のみ |
+| `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts` | 231 | `self-*` スコープと scope-grid の整合検査（manifest `packages/framework/core/sensors/amadeus-self-scope-consistency.md` 38行、`matches` = `:8`） | センサー発火経路 |
+| `packages/framework/core/tools/amadeus-workflow-completion.ts` | 110 | ワークフロー完了の2相化によるクラッシュ回復（`WorkflowCompletionPreparation` = `:9-13`） | orchestrate の完了経路 |
+
+`amadeus-mirror-policy.ts`（現在514行）と `team-up-codex-safety-wait.ts`（現在689行）は **本区間の新設ではなく既存コンポーネントの変更**である（`git diff --name-status` で両者 `M`、base `22ee27dbe` にも実在）。後者は本棚卸しの `:634` に既収載。
+
+## Open bug 6件の対象コンポーネント（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | book-pack verify test / verifier / test runner | engine coupling drift guard | 120秒の test timeout が180秒 child timeout を包含しない | Bash、Bun test。repo-local |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 migration fixture / migrate / doctor / clone-id / audit | upstream workspace conversion と health evidence | subprocess の status 以外の診断が assertion から失われる | core を触る場合13コピー同期 |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | `team-up.sh` worktree creator | serial registration + parallel checkout | worker exit status を保持せず最終走査へ圧縮 | git worktree、Shell jobs、13コピー同期 |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | coverage patch gate | changed measurable line と LCOV hit の照合 | committed diff と dirty LCOV の source identity が不一致 | git、LCOV、repo-local |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | Team Mode launcher / safety-wait supervisor | Codex pane の自動安全応答 | fixed sleep + PID liveness を readiness に代用 | Bun child、herdr、Shell、13コピー同期 |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | orchestrator / state transaction / audit journal / mirror coordinator-executor-store-policy | workflow finalization と GitHub mirror completion | registry complete と audit seal が mirror receipt より先に着地 | GitHub mirror、journal codec、workspace lock、13コピー同期 |
+
+### 共有コンポーネントと変更競合
+
+- `team-up.sh` は #1336 と #1663 の共有正本である。#1336 の readiness protocol を先に確定し、その後 #1663 の worker result aggregation を載せる。
+- audit/journal/state は #1607 と OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) の Critical 共有境界である。`amadeus-mirror-state-store.ts` の audit outbox と `amadeus-audit.ts` の post-complete seal を別々の Bolt が独立改変すると、local state durable / audit retained の不変条件が分裂する。
+- t224 は #1664 の診断面であると同時に OTel の journal/audit expectation を観測する。テストを「通す」ために期待値を緩めず、診断追加後の実再現から製品根因を確定する。
+- #1667 と #1662 は source 所有が分離している。並列実装は可能だが、coverage job の負荷が book-pack timeout を再現する環境条件になりうるため、最終検証では同一 CI 帯でも実行する。
+
+### 区間で増えた主要コンポーネント
+
+`ca8ff0af4..22ee27dbe` では Intent Mirror の Project 同期面として contract、diagnostics、executor、gateway、ledger reducer、reconciliation reducer、verification が `packages/framework/core/tools/` に追加された。テスト面では CLI/SDK/TUI mechanism と live Codex helper が追加された。これにより core tools は実測78ファイルとなり、#1607 の修正対象は旧 mirror lifecycle だけでなく Project ledger の完了ゲートまで含めた現行スタックで評価する必要がある。
+
+## OTel/observability 面コンポーネント（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 行数は HEAD の `wc -l` 実測値、消費者数は `grep -l` の import 実測値（測定 ref: observed `22ee27dbe`）。正本はすべて `packages/framework/core/` 配下。
 

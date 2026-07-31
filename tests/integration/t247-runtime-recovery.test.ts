@@ -415,6 +415,14 @@ describe("t247 recovery in-process coverage seams", () => {
       "unit-of-work-dependency.md",
     );
     rmSync(canonicalPath);
+    // With the canonical DAG source gone the engine degrades to the no-DAG
+    // path, where it resolves the unit from the directory under construction/
+    // (issue #1711). Seed that directory so the degraded emission is a
+    // run-stage — the graceful degradation this test is about — rather than the
+    // fail-closed refusal that an unresolvable unit correctly produces.
+    mkdirSync(join(seededRecordDir(project), "construction", "solo-unit"), {
+      recursive: true,
+    });
     const absent = inProject(project, () => handleNext([], project));
     expect(absent.code).toBeNull();
     expect(JSON.parse(absent.stdout)).toMatchObject({ kind: "run-stage", stage: "functional-design" });

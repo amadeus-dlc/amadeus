@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補文には既存 cid の「実装開始前に directive 捕捉→捕捉後に実装開始」順序との関係(完了順の record 側直列処理は FR 全文焼き込み前提の許容代替形であること)を明示し、同一 cid 内の矛盾読みを残さないこと。",
+  "rationale": "project.md:272 の現行 cid は『各 unit の実装開始前に unit dir を遅延作成し directive を保存、実装は保存済み directive 取得後に開始』と定めるが、diary memory.md:6 の実測運用は『worktree 並行ディスパッチ(FR 全文焼き込み)を先行し、record 側(unit dir 作成→directive 捕捉→成果物→§12a)を builder 完了順に直列処理』という別シーケンシングで、既存文面に未記載。4 unit の code-summary.md(fix-1811 PR#1821 / fix-1800 PR#1820 / fix-1797 PR#1822 / fix-1816 PR#1823)が全 §12a READY・全マージ着地の実測を裏付ける。候補B は deviation-stop-before-implement / c2 追補 resume 再掲等の既存 cid の実践実例(memory.md:7,11)で新規規範なし、候補C(memory.md:15)は運用記録であり不採用が妥当。",
+  "submittedAt": "2026-07-31T07:52:11Z"
+}

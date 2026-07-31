@@ -105,7 +105,7 @@ Hardcoded defaults are:
 | Topic | Default |
 |---|---|
 | Way of Working | trunk-based development; base `main`, target `main`; squash-merge |
-| Walking Skeleton | always run on greenfield scopes (mvp, enterprise, feature); skip on bugfix, refactor, security-patch |
+| Walking Skeleton | always run on greenfield scopes (mvp, enterprise, feature); skip on fix, refactor, security-patch |
 | Testing Posture | TDD encouraged but not enforced; the test-strategy axis governs volume |
 | Deployment | trunk-based with on-merge staging deploy; production gate is human-approved |
 | Code Style | defer to project linter/formatter configuration |

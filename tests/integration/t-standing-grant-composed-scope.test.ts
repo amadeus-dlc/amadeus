@@ -1,7 +1,7 @@
 // covers: function:standingGrantSatisfiesGate, function:evaluateStandingGrantGateEligibility
 //
 // Issue #1497: a standing delegation grant must classify gates the same way for
-// a COMPOSED workflow scope (amadeus-feature / amadeus-bugfix / …) as it does
+// a COMPOSED workflow scope (self-feature / self-fix / …) as it does
 // for a stock scope. Composed scopes exist ONLY in the compiled scope-grid —
 // stage frontmatter carries the stock vocabulary — so the pre-fix predicate,
 // which read stage.scopes directly, saw every stage as out-of-scope under a
@@ -47,7 +47,7 @@ const GRID = JSON.parse(readFileSync(GRID_PATH, "utf-8")) as Record<
 >;
 
 const STOCK_SCOPES = [
-  "bugfix",
+  "fix",
   "chore",
   "enterprise",
   "feature",
@@ -94,67 +94,97 @@ function executePath(scope: string): StageEntry[] {
   return GRAPH.filter((stage) => GRID[scope]?.stages[stage.slug] === "EXECUTE");
 }
 
+describe("self-fix canonical scope", () => {
+  test("the removed legacy scope is not registered", () => {
+    expect(loadScopeMapping()["self-fix"]?.depth).toBe("Minimal");
+    for (const legacy of [
+      "amadeus-bugfix",
+      "amadeus-feature",
+      "amadeus-fix",
+      "amadeus-refactor",
+      "amadeus-document",
+    ]) {
+      expect(GRID[legacy]).toBeUndefined();
+      expect(loadScopeMapping()[legacy]).toBeUndefined();
+    }
+  });
+
+  test("the canonical scope participates in composed-scope gate classification", () => {
+    expect(executePath("self-fix").map((stage) => stage.slug)).toContain(
+      "reverse-engineering",
+    );
+    expect(
+      standingGrantSatisfiesGate(
+        grantWith(false),
+        "reverse-engineering",
+        stateContent("self-fix"),
+        GRAPH,
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("#1497 FR-1: composed-scope gate classification (symptom A)", () => {
-  test("RED: an opt-out grant covers an ordinary same-phase gate under amadeus-bugfix", () => {
+  test("RED: an opt-out grant covers an ordinary same-phase gate under self-fix", () => {
     // reverse-engineering (inception) → requirements-analysis (inception).
-    const path = executePath("amadeus-bugfix").map((s) => s.slug);
+    const path = executePath("self-fix").map((s) => s.slug);
     expect(path).toContain("reverse-engineering");
     expect(
       standingGrantSatisfiesGate(
         grantWith(false),
         "reverse-engineering",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       ),
     ).toBe(true);
   });
 
-  test("an opt-out grant still refuses a real phase-boundary gate under amadeus-bugfix", () => {
+  test("an opt-out grant still refuses a real phase-boundary gate under self-fix", () => {
     // requirements-analysis (inception) → code-generation (construction).
     expect(
       standingGrantSatisfiesGate(
         grantWith(false),
         "requirements-analysis",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       ),
     ).toBe(false);
   });
 
-  test("an opt-out grant still refuses the terminal gate under amadeus-bugfix", () => {
-    const path = executePath("amadeus-bugfix");
+  test("an opt-out grant still refuses the terminal gate under self-fix", () => {
+    const path = executePath("self-fix");
     const terminal = path[path.length - 1].slug;
     expect(terminal).toBe("build-and-test");
     expect(
       standingGrantSatisfiesGate(
         grantWith(false),
         terminal,
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       ),
     ).toBe(false);
   });
 
-  test("an opt-in grant covers the phase-boundary gate under amadeus-bugfix", () => {
+  test("an opt-in grant covers the phase-boundary gate under self-fix", () => {
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "requirements-analysis",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       ),
     ).toBe(true);
   });
 
   test("a stage the composed scope SKIPs is not treated as the next in-scope stage", () => {
-    // application-design is SKIP for amadeus-bugfix: were it counted in-scope,
+    // application-design is SKIP for self-fix: were it counted in-scope,
     // requirements-analysis would stop being a phase boundary.
-    expect(GRID["amadeus-bugfix"].stages["application-design"]).toBe("SKIP");
+    expect(GRID["self-fix"].stages["application-design"]).toBe("SKIP");
     expect(
       standingGrantSatisfiesGate(
         grantWith(false),
         "requirements-analysis",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       ),
     ).toBe(false);
@@ -223,64 +253,64 @@ describe("#1497 FR-1d: stock-scope parity", () => {
 });
 
 describe("#1497 FR-2: walking-skeleton exclusion under a composed scope (symptom B)", () => {
-  test("RED: stance=on excludes the first construction gate under amadeus-feature", () => {
+  test("RED: stance=on excludes the first construction gate under self-feature", () => {
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "functional-design",
-        stateContent("amadeus-feature", "on"),
+        stateContent("self-feature", "on"),
         GRAPH,
       ),
     ).toBe(false);
   });
 
-  test("RED: an absent stance on amadeus-feature still excludes the skeleton gate", () => {
+  test("RED: an absent stance on self-feature still excludes the skeleton gate", () => {
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "functional-design",
-        stateContent("amadeus-feature"),
+        stateContent("self-feature"),
         GRAPH,
       ),
     ).toBe(false);
   });
 
-  test("RED: a scope-dependent stance on amadeus-feature still excludes it", () => {
+  test("RED: a scope-dependent stance on self-feature still excludes it", () => {
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "functional-design",
-        stateContent("amadeus-feature", "scope-dependent"),
+        stateContent("self-feature", "scope-dependent"),
         GRAPH,
       ),
     ).toBe(false);
   });
 
-  test("an explicit stance=off clears the exclusion under amadeus-feature", () => {
+  test("an explicit stance=off clears the exclusion under self-feature", () => {
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "functional-design",
-        stateContent("amadeus-feature", "off"),
+        stateContent("self-feature", "off"),
         GRAPH,
       ),
     ).toBe(true);
   });
 
   test("the first construction stage itself is grid-derived, not stock-derived", () => {
-    // amadeus-feature SKIPs nothing before functional-design; amadeus-bugfix
+    // self-feature SKIPs nothing before functional-design; self-fix
     // SKIPs functional-design entirely, so ITS skeleton gate is code-generation.
-    expect(executePath("amadeus-feature").find((s) => s.phase === "construction")?.slug).toBe(
+    expect(executePath("self-feature").find((s) => s.phase === "construction")?.slug).toBe(
       "functional-design",
     );
-    expect(executePath("amadeus-bugfix").find((s) => s.phase === "construction")?.slug).toBe(
+    expect(executePath("self-fix").find((s) => s.phase === "construction")?.slug).toBe(
       "code-generation",
     );
     expect(
       standingGrantSatisfiesGate(
         grantWith(true),
         "code-generation",
-        stateContent("amadeus-bugfix", "on"),
+        stateContent("self-fix", "on"),
         GRAPH,
       ),
     ).toBe(false);
@@ -288,7 +318,7 @@ describe("#1497 FR-2: walking-skeleton exclusion under a composed scope (symptom
       standingGrantSatisfiesGate(
         grantWith(true),
         "build-and-test",
-        stateContent("amadeus-bugfix", "on"),
+        stateContent("self-fix", "on"),
         GRAPH,
       ),
     ).toBe(true);
@@ -305,7 +335,7 @@ describe("#1497 FR-3: per-unit axis equivalence at the final gate", () => {
     gateRequired: true,
     isPhaseBoundary: false,
     isFirstConstructionGate: false,
-    scope: "amadeus-bugfix",
+    scope: "self-fix",
     walkingSkeletonStance: "off" as WalkingSkeletonStance,
   };
 
@@ -363,7 +393,7 @@ describe("#1497 FR-5 / NFR-2: fail-closed on unavailable scope data", () => {
         standingGrantSatisfiesGate(
           grantWith(true),
           "reverse-engineering",
-          stateContent("amadeus-bugfix"),
+          stateContent("self-fix"),
           GRAPH,
         ),
       ).toBe(false);
@@ -383,14 +413,14 @@ describe("#1497 NFR-1: the predicate is shared by the solo and team callers", ()
       const team = standingGrantSatisfiesGate(
         grantWith(false),
         "reverse-engineering",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       );
       process.env.AMADEUS_OPERATING_MODE = "solo";
       const solo = standingGrantSatisfiesGate(
         grantWith(false),
         "reverse-engineering",
-        stateContent("amadeus-bugfix"),
+        stateContent("self-fix"),
         GRAPH,
       );
       expect(team).toBe(solo);

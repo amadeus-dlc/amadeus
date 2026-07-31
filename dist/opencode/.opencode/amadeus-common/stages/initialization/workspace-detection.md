@@ -16,7 +16,7 @@ scopes:
   - feature
   - mvp
   - poc
-  - bugfix
+  - fix
   - refactor
   - infra
   - security-patch

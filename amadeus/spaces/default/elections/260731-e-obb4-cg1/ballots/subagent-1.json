@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB4-CG1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "FR-4a の表示層限定文言との衝突は本選挙裁定を申告根拠として requirements へ FR-4a スコープ精密化(lifecycle:410 の currentStatus 導出追加)を明記して解消すること。",
+  "rationale": "実測: mirror.ts:143 は sectionValue(body,'Status') と view.currentStatus を比較し、lifecycle.ts:410 は snapshot.status 生値のまま — 現 PR の導出 body(Completed)と currentStatus(Running)が completion 窓で必ず不一致となり stale-status-line で diverged(exit 1)になる機序をコード読解で確認。FR-4b は buildMirrorStatusRecordView の偽 drift 防止を明文の趣旨としており、currentStatus の同一導出はその趣旨内の精密化。",
+  "submittedAt": "2026-07-31T06:51:40Z"
+}

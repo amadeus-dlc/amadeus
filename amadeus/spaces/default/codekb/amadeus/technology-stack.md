@@ -1,6 +1,143 @@
 # 技術スタック
 
-## OTel/observability 面の技術断面（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の技術断面（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line と件数はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 4件が触れる技術面
+
+| Issue | 技術面 | ランタイム機構 |
+| --- | --- | --- |
+| #1811 | Bun のプロセス生成（`Bun.spawnSync`）と POSIX シグナル / event loop | `setInterval` による event loop 保持、`process.on("SIGTERM")`、`nohup` + `disown` による detach（`team-up.sh:503-507`）、PID ファイル（`:508`） |
+| #1800 | `Bun.spawnSync` の終了チャネル（`status` / `signal` / `error`）とその正規化 | `result.status ?? -1` センチネル（`:170` / `:210`）。`EAGAIN` / `EMFILE` / `ENOMEM` は `error` チャネルへ現れる |
+| #1797 | Bun のベンチマーク計測（子プロセス spawn による時間・RSS 測定） | `measure` 宣言 `:89`、逐次 spawn `:101` / `:102`、`median` `:46` |
+| #1816 | TypeScript の判別 union と markdown レンダリング | `renderMirrorIssueContent`（`:239`）の配列 join、`snapshot.status` の逐語描画（`:259-260`） |
+
+### ランタイム上の注意点
+
+**#1811 — event loop 保持と孤児プロセス**: `setInterval(() => {}, 1_000);`（`:219`）は Bun の event loop を無期限に保持する。親が先に終了すると PPID=1 の孤児となる（ライブ実測で84本、全 PPID=1）。本番側は `nohup` + `disown` で意図的に detach しているため（`team-up.sh:503-507`）、掃引は PID ファイル（`:508`）経由でしか成立しない。
+
+**期限付き kill/reap** が要件になる（`cid:code-generation:c3-doctor-seam` — 並列負荷下の child watcher は固定回数 polling や本番 injection ではなく READY/START handshake と期限付き kill/reap を使う）。
+
+**#1800 — Bun spawn の資源制約エラー**: 高並列下で `spawn EAGAIN`（プロセステーブル枯渇）が発生しうる。これは exit status を持たない終了であり `status` は `null` → センチネル `-1` に正規化される。テストは既にこの3分類を `:311-313` で契約固定している。
+
+**#1797 — 計測の時間窓**: Bun の子プロセス計測は spawn ごとに別プロセス・別時間窓となる。ホスト負荷が窓の間で変動すると比が系統的にずれる。交互計測（1プロセス内で `A, B, A, B`）は時間窓の共有を構造的に保証する。
+
+**#1816 — 判別 union と表示層の分離**: `snapshot.completionInstance`（型 `amadeus-mirror-types.ts:516` / `:527`）は presentation 層で**未消費**である。表示層が完了を知るには型上の参照を新設する必要がある。`parse-don't-validate` の観点では、completion を持つ snapshot と持たない snapshot が表示層で同一に扱われている状態である。
+
+### 構成カウント（測定 ref = base `3f73823b1` / observed `6e7a9d701`）
+
+| 面 | base `3f73823b1` | observed `6e7a9d701` |
+| --- | --- | --- |
+| core tools `*.ts` | `88` | `88`（**不変**） |
+| core sensors | `7` | `7`（不変） |
+| core hooks | `12` | `12`（不変） |
+| core scopes | `10` | `10`（不変） |
+| dist ハーネス | `7` | `7`（不変） |
+
+**本区間では core tools への新規モジュール追加が 0件**である。前区間（`a38a1f4d3..3f73823b1`）が +9モジュールだったのと対照的に、本区間は既存モジュールへの機能追加と修正に終始している。
+
+### 区間 `3f73823b1..6e7a9d701` の技術的変化
+
+13コミット。ソース面 `26 files / +1040 / −118`（`git diff --numstat` の面別機械集計）。
+
+| 変化 | 技術面 |
+| --- | --- |
+| 選挙 ballot の格納分離（#1773 修正 `25f54b066`） | ファイルシステム分離（voter 単位の `pending/<voter>.json`）+ git 非追跡化。`amadeus-election-store.ts` `+168/−10`。`mkdirSync(..., { recursive: true })`（`:167`）、`rmSync(..., { recursive: true, force: true })`（`:220`）による lane のライフサイクル管理 |
+| pending lane の gitignore（8面） | ルート `.gitignore` `+5` + 7ハーネス `dot-gitignore` 各 `+5`。パターンは `amadeus/spaces/*/elections/*/pending/`（末尾スラッシュのディレクトリ限定パターン — symlink にはマッチしない点に注意、`cid:requirements-analysis:scratch-script-discipline` の追補） |
+| 選挙 view の型拡張（#1772 修正 `75367ba67`） | `amadeus-election-model.ts` `+36/−9`。ホワイトリスト再構成型 parse へのフィールド追加 |
+| mirror create 判定の receipt 化（#1752 修正 `8a8abf567`） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）— state document から成功 receipt の存在を判定する純関数。`amadeus-orchestrate.ts:193`（import）/ `:4249`（消費） |
+| release workflow の分割（#1799 `b488466b8`） | GitHub Actions のジョブ分割による再実行可能性の獲得。`.github/workflows/release.yml` `+68/−22` |
+| リリース | `v0.1.7`（`e06b8f601`）。`release-it` による version 同期・タグ・GitHub Release・npm publish は `workflow_dispatch` 一本のまま不変 |
+
+### 検証ツールチェーンの断面
+
+本 intent が通す検証は不変（project.md § Testing Posture）:
+
+| コマンド | 対象 |
+| --- | --- |
+| `bun run typecheck` | `tsc --noEmit`（strict） |
+| `bun run lint` | Biome 2.4系（フォーマッタ無効） |
+| `bun run dist:check` | 7ハーネス dist のドリフトガード（**#1816 のみ実質差分**） |
+| `bun run promote:self:check` | self-install ツリーのドリフトガード（同上） |
+| `bash tests/run-tests.sh --ci` | smoke / unit / integration / e2e の4層 |
+
+**#1797 は追加で負荷スイープ実測**、**#1811 は追加でプロセス残留の `ps` 実測**を要する。いずれも既存ツールチェーンで賄え、新規ツールの導入は不要である。
+
+## オープンバグ3件の技術断面（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1773 / #1772 / #1752）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない（区間内の `package.json` 依存変化も 0）。
+
+**構成カウント（測定 ref: observed `3f73823b1`。すべて `ls` / `git ls-files` / `git ls-tree` 出力からの転記 — `cid:requirements-analysis:numbers-from-command-output-only`）**
+
+| 面 | 実測値 | 測定コマンド | 区間の変化 |
+| --- | --- | --- | --- |
+| core tools トップレベル `*.ts` | `88` | `ls packages/framework/core/tools/*.ts \| wc -l` | base `a38a1f4d3` は `79`（`git ls-tree -r --name-only a38a1f4d3 packages/framework/core/tools/ \| grep -c '^packages/framework/core/tools/[^/]*\.ts$'`）。**新規9件** |
+| core sensors | `7` | `ls packages/framework/core/sensors/*.md \| wc -l` | 変化なし |
+| core hooks | `12` | `ls packages/framework/core/hooks/*.ts \| wc -l` | 変化なし |
+| core scopes | `10` | `ls packages/framework/core/scopes/*.md \| wc -l` | 変化なし |
+| tracked な `ledger.json` | `183` | `git ls-files \| grep -c 'ledger\.json'` | #1773 の git 露出面の規模。選挙ディレクトリは非 ignore（`git check-ignore` exit 1） |
+
+**本 intent が交差するスタック面**
+
+- **選挙層は core tools 内で閉じている（#1773 / #1772）**: 患部は `amadeus-election-store.ts`（格納）と `amadeus-election-model.ts`（型 / parse / view / tally）で、いずれも `packages/framework/core/tools/` 配下。core 正本の変更となるため 7 dist + 5 self-install の再生成対象（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。運用面の `skills/amadeus-election/SKILL.md` は harness ごとの authored ファイルではなく core からの投影である点が SKILL.md 系の患部（前 intent #1736）と異なる。
+- **`.gitignore` が修正面候補になりうる（#1773）**: 選挙 ledger を version control 面から外す方式を採る場合、tracked な 183件の扱い（履歴からの除去 vs 以後の非追跡）が設計判断になる。`packages/framework/core/` の外側を触る唯一の候補面である。
+- **engine 層は単一ファイル（#1752）**: `amadeus-orchestrate.ts` の `:4219-4278` のみ。同ファイルは本区間で `unitDirsUnderConstruction`（`:3054`）と初回 create 分岐（`:486-500`）の追加を受けており、**行番号が base から大きくシフトしている** — Issue 起票時点の行引用を HEAD で照合しない（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。
+- **テスト採番の衝突帯**: 本区間で `t366` / `t367` / `t368` に番号重複が生じている（各3 / 2 / 3ファイル）。新規テストの採番は `t371` より後を使う（詳細は `code-structure.md` の対応節）。
+
+**区間で導入された技術面（本 intent の患部外）**
+
+- **GitHub 連携層の一般化**: mirror 専用だった GitHub 呼出を `amadeus-github-gateway.ts`（+953）へ抽出し、`gh` の spawn を `amadeus-process-runner.ts`（+306）という**単一の不純エッジ**へ集約。階層設定は `amadeus-layered-config.ts`（+610）が global → space → intent の順で解決する（`:48` `auto-mirror` / `:50` `auto-solo-election` / `:51` `auto-file-findings`）。
+- **CI 面**: `metrics-maintenance.yml` 新設と `ci.yml` 更新（`.github/` は 2ファイル `+74 / -31`）。メトリクス公開は `scripts/metrics-publication{,-domain,-github}.ts`（`scripts/` 全体で `+1492 / -19`）。
+
+## オープンバグ5件の技術断面（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+**判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77`（12コミット）で core tools・sensors・hooks・scopes のいずれも件数変化がなく、ランタイム・依存・ツールチェーンの構成も不変。5件のバグはすべて既存構成内の欠陥であり、技術スタックの断面としては直前節（`260730-skill-reviewer-fixes`、observed `278d61d8e`）の記述がそのまま有効である。区間の変化は `amadeus-orchestrate.ts` への関数追加（#1760）・SKILL.md の文言修正（#1753）・`scripts/formal-verif/` の parse 修正（#1745）に留まる。
+
+## SKILL/reviewer 2件の技術断面（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1736 / #1711）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない。
+
+**構成カウント（測定 ref: observed `278d61d8e`。すべて `ls` / `git ls-files` / `git ls-tree` 出力からの転記）**
+
+| 面 | 実測値 | 測定コマンド | 区間の変化 |
+| --- | --- | --- | --- |
+| core tools トップレベル `*.ts` | `79` | `ls packages/framework/core/tools/*.ts \| wc -l` | base `22ee27dbe` は `76`（`git ls-tree -r --name-only 22ee27dbe packages/framework/core/tools/ \| grep -c '^packages/framework/core/tools/[^/]*\.ts$'`）。新規3件 |
+| core sensors | `7` | `ls packages/framework/core/sensors/*.md \| wc -l` | base は `6`（`git ls-tree -r --name-only 22ee27dbe packages/framework/core/sensors \| wc -l`）。`amadeus-self-scope-consistency.md` 新設 |
+| core hooks | `12` | `ls packages/framework/core/hooks/*.ts \| wc -l` | 変化なし |
+| core scopes | `10` | `ls packages/framework/core/scopes/*.md \| wc -l` | 件数は不変だが `amadeus-bugfix.md` → `amadeus-fix.md` へ改名（#1683 `dd8532d1c`）。現行10件は `chore` / `enterprise` / `feature` / `fix` / `infra` / `mvp` / `poc` / `refactor` / `security-patch` / `workshop` |
+| `self-*` スコープファイル（tracked） | `20` | `git ls-files \| grep -c "scopes/amadeus-self-"` | 4スコープ（`self-document` / `self-feature` / `self-fix` / `self-refactor`）× dogfood 5ハーネス自己インストール面（`.claude` / `.agents` / `.cursor` / `.opencode` / `.kimi-code`）。**core・dist には出荷されない** |
+
+`self-*` の4スコープは自己開発専用であり、`packages/framework/core/scopes/` にも `dist/<harness>/` にも存在しない。したがって配布物の利用者から見えるスコープ集合は上表の10件で、`self-*` はこのリポジトリの dogfood 面のみに存在する非出荷面である。
+
+**本 intent が交差するスタック面**
+
+- **13コピー同期境界（#1736）**: 患部は `packages/framework/harness/<name>/skills/amadeus/SKILL.md` で、core からの投影ではなく harness ごとに authored された独立ファイルである。`packages/framework/harness/claude/manifest.ts:73` の `{ src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },` を `scripts/package.ts:396` の `for (const { src, dst, projectRoot } of m.harnessFiles) {` が `dist/<name>/<harnessDir>/<dst>` へコピーする。正本5面（claude / codex / kimi / kiro / kiro-ide）を個別編集 → `bun scripts/package.ts` で dist 7ハーネス再生成 → `bun run promote:self` の3段が必須（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+- **`self-fix` スコープ自体が #1711 の直撃経路**: `.claude/tools/data/scope-grid.json` の実測で `self-fix.stages` は `units-generation` = `SKIP` / `code-generation` = `EXECUTE`。加えて `self-fix` は `packages/framework/core/tools/amadeus-lib.ts:4032` の `SKELETON_OFF_SCOPES` に含まれ（判定は `:4069` `if (SKELETON_OFF_SCOPES.has(scope)) return false;`）skeleton-gate も通らない。本 intent は自身が患部経路を走る当事者である。
+- **新規 core tool 3件（区間追加、いずれも本 intent の患部ではない）**: `amadeus-caller-authorization.ts`（122行、Kimi subagent role の state 変更拒否層）、`amadeus-sensor-self-scope-consistency.ts`（231行、上記センサーの実装）、`amadeus-workflow-completion.ts`（110行、ワークフロー完了の2相化）。
+
+## Open bug 6件の技術断面（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+技術選定は Bun-only の TypeScript/ESM モノレポである。常駐 service、database、application server はなく、短命 CLI・Shell・Git/GitHub・OTLP が外部境界となる。本 intent は既存スタックだけで修正し、新規 runtime/development dependency を導入しない。
+
+| 項目 | 現行値 / 技術 | 本 intent との関係 |
+| --- | --- | --- |
+| Runtime | Bun `1.3.13` 以上 | test runner、core CLI、safety-wait child、setup build |
+| Language | TypeScript `^6.0.3`、ESM | #1662 / #1664 / #1607 の正本 |
+| Shell | POSIX Shell / Bash、git worktree | #1336 / #1663、book-pack verifier |
+| Lint / format | Biome `2.5.5`、formatter 無効 | `bun run lint` |
+| Property test | fast-check `^4.9.0` | 既存テスト依存。追加不要 |
+| Agent integration | `@anthropic-ai/claude-agent-sdk` `0.3.158` | 本 intent の直接対象外 |
+| Release | release-it `^20.2.1`、setup `0.1.6` | 本 intent では version bump しない |
+| Test runner | `bun:test` + `tests/run-tests.ts` | smoke 15 / unit 323 / integration 314 / e2e 85、合計739 |
+| Coverage | Bun coverage → LCOV → project/patch gates | #1662 の source snapshot identity |
+| Distribution | core → `scripts/package.ts` → 7 dist、core → `promote-self.ts` → 5 self-install | #1336 / #1663 / #1607、および製品根因が core にある場合の #1664 |
+
+### 区間のスタック変化
+
+`ca8ff0af4..22ee27dbe` で `packages/setup` は `engines.bun >=1.3.13` と `bun build --target=bun` を明示し、テスト・CI 文書も `tests/run-tests.ts` を正準 runner とする Bun-only 契約へ統一された。ルート依存は Bun types、TypeScript、Biome、fast-check、Agent SDK、release-it の既存集合で、6件の修正に追加ライブラリは不要である。
+
+## OTel/observability 面の技術断面（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 ランタイム・言語の選定に変更はない（Bun `1.3.13`、TypeScript `6.0.3`、Biome `2.5.5` の Bun-only TypeScript monorepo、HTTP server / database なし）。観測面の技術的事実を以下に固定する（測定 ref: observed `22ee27dbe`）。
 

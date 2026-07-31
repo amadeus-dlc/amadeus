@@ -1,6 +1,247 @@
 # コード品質評価
 
-## OTel/observability 面の品質評価（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の品質評価（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 根因確度と判定
+
+| Issue | P/S | 判定 | 根因確度 | 患部の層 | 未決事項 |
+| --- | --- | --- | --- | --- | --- |
+| #1811 | P1/S2 | **現存**（ライブ実測あり: 残留84プロセス、全 PPID=1） | 100% | テスト fixture | 修正案 A/B/C の選択（推奨 C） |
+| #1800 | P3/S3 | **現存**（患部行は静的に確定。発火は負荷条件依存） | 機序 90%（`EAGAIN` が第一容疑、実測未確定）／患部所在 100% | テスト診断 | 再現不能時の受理条件 |
+| #1797 | P3/S4 | **現存**（実測 `2.5065` vs 閾値 `2.5`、マージン 0.26%） | 100% | テスト計測 | 修正案の選択と、スイープ実測から導く数値 |
+| #1816 | P3/S4 | **現存**（2機序が残存） | 100% | 本番（表示層） | `## Stage` / `## Phase` の終端化可否、仕様裁定部分の切り分け |
+
+### 品質所見
+
+#### 所見1: 3件が「テストの設計欠陥」クラスタを構成する
+
+#1811 / #1800 / #1797 はいずれも**本番コードが正しく、テスト側が本番契約を写せていない**という同型である。
+
+| Issue | 本番側の状態 | テスト側の欠落 |
+| --- | --- | --- |
+| #1811 | supervisor は run record 消滅で自律終了する fail-closed 実装（`team-up-codex-safety-wait.ts:643`、`:561-582` の `catch` → `false`） | stub は SIGTERM だけを終了条件にし（`:218-219`）、掃引の受け皿も無い（`afterEach` `:39-41`） |
+| #1800 | — | 3分類の診断設計（`:311-313` / `:218`）を持ちながら失敗系の一箇所（`:1411`）だけがそれを通らない |
+| #1797 | — | median 化（`:46-48`）は済んでいるが、計測が逐次別プロセス（`:101` / `:102`）で時間窓を共有しない |
+
+これは `cid:reverse-engineering:seam-writer-mode-precondition`（信号の書き手側の起動条件を実測せよ）と同じファミリの欠陥である — テストが本番の終了契約・診断契約・計測契約を部分的にしか写していない。
+
+#### 所見2: 診断の非対称は「片側実装」クラスタの再発である
+
+#1800 の患部（`:1411` の素の等値比較）と #1816 の患部（close が body を書かない `:1156-1159`、収束判定も同型 `:1038-1041`）は、いずれも `cid:requirements-analysis:symmetric-pair-review`（write⇔check / sync⇔close の対称性を明示観点にする）が対象とするクラスタに属する。bootstrap 由来バグの過半が同クラスタだった実測（`cid:requirements-analysis:symmetric-pair-review` の元根拠）と一致する。
+
+**#1800 は特に、正しい実装（`expectSuccessfulMigration` `:218`）が同一ファイル内に既存する**ため、修正は新機構の導入ではなく既存様式への合流である。
+
+#### 所見3: #1797 は「性能ゲート設計の第2層」である
+
+median 化は `#1424` 起点の t258 裁定で既に適用済みであり、本件はその**先に残った別機序**である。`cid:code-generation:c1-narrow-fix-post-apply-remeasure`（ガード通過 = 症状解消と仮定せず、修正適用後に元症状まで再実測する）の実例に当たる — 前回の median 化は正しかったが、閉包していなかった。
+
+**重要な区別**: 本件は `cid:code-generation:c1-benchmark-baseline-correlation-verify` が禁じる「空ウィンドウ baseline」型では**ない**。`measure(1)` は `measure(2)` と同じ計算を1倍量で行うため負荷相関は健全である。破れているのは**時間窓の共有**であり、別の設計面である。この区別を誤ると誤った修正（baseline の差し替え）へ向かう。
+
+#### 所見4: #1816 は「仕様裁定」と「実装欠陥」が混在する
+
+| 部分 | 分類 | 根拠 |
+| --- | --- | --- |
+| close が body を書かない（`executor:1156-1159`） | 実装欠陥 | sync との対称性が破れている |
+| completion 境界の最終 body が `Running` を表示する（`lifecycle:311-312` × `presentation:259-260`） | 実装欠陥（表示層） | `completionInstance` が presentation で未消費のため、表示層が完了を知る手段を持たない |
+| record の main 着地前に close する | **仕様裁定マター** | PR #1689 の設計帰結であり `t361:262` で契約固定済み |
+
+`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い、契約固定された挙動の変更は実装段で着手せず要件段で裁定する。実装スコープを**表示層に限定する**旨を要件段で申告する（無申告のスコープ縮小を避ける — `cid:build-and-test:no-silent-scope-narrowing`）。
+
+#### 所見5: 検査可能性の欠落
+
+| Issue | 退行を検知するテスト | 状態 |
+| --- | --- | --- |
+| #1811 | プロセス残留を assert するテスト | **0件** — 修正しても退行が検知されない |
+| #1800 | 3分類の診断（`:311-313`） | **存在する**が失敗系に適用されていない |
+| #1797 | 比 assert（`:108-109`） | 存在するが計測設計自体が患部 |
+| #1816 | body の Status を assert するテスト | `t281:55` / `t232:35` に存在するが、いずれも `completionInstance` を持たない fixture のため完了断面を検査していない |
+
+#1811 と #1816 は新規テストによる閉包の実証が必須である。
+
+#### 所見6: allowlist 行ピンの脆弱性が再び顕在化する
+
+`tests/.coverage-patch-allowlist.json` は本区間（`3f73823b1..6e7a9d701`）で `+38/−38` の全面 remap を受けたばかりである。#1816 が `amadeus-mirror-presentation.ts` へ行を挿入すると、presentation 行ピン5件（`193-194` / `230-234` / `237-239` / `245-247` / `266-271`）が再度 stale 化しうる。
+
+**機械 remap + 直読照合の併用が必須**（`cid:code-generation:c1-allowlist-mechanical-remap`）。stale 検査は存在検査のみで意味一致を見ないため、検出に映らないまま別の測定可能行へ無音転位する事例が実測されている（`cid:code-generation:allowlist-line-pin-stale` の追補）。
+
+#### 所見7: 修正の交差リスクは低い
+
+4件のうち **3件がテスト面に閉じる**ため、生成面（7 dist + self-install）の再生成チェーンを通るのは #1816 のみである。ファイル単位の交差も無い。条件は2点のみ:
+
+1. #1811 の**本番非改変を確定**すること（`team-up-codex-safety-wait.ts` / `team-up.sh` を触ると生成面で #1816 と交差する）
+2. `tests/.coverage-patch-allowlist.json` へ触れるのは #1816 のみとすること
+
+#### 所見8: #1811 の着地が #1800 / #1797 の再現条件を変える
+
+#1811 の残留プロセス（実測84本）はホスト負荷そのものである。これを解消すると、#1800（spawn `EAGAIN` が第一容疑）と #1797（負荷変動による比のずれ）の**再現条件が変わる**。
+
+負荷スイープ実測を #1811 の着地**前**に取るか**後**に取るかは要件段で固定する。前に取ると「残留込みの最悪条件」を、後に取ると「本来あるべき条件」を測ることになり、導出される数値が変わる。
+
+### 本区間で解消された品質課題（本 intent の患部外）
+
+| 課題 | 解消 |
+| --- | --- |
+| 未開票中の票本文が共有 tracked ファイルに載る（#1773） | pending lane 新設（`amadeus-election-store.ts` 6関数）+ `.gitignore` 8面で非追跡化。新規テスト `t373-election-ballot-blind-storage.integration.test.ts`（`+323`）で blind 性を assert |
+| 配布ビューに設問文・選択肢説明が無い（#1772） | `amadeus-election-model.ts` `+36/−9` で view へ搬送。`t234-election-model.test.ts` `+66/−2` でキー集合の契約を改訂 |
+| mirror create 拒否条件の自己矛盾（#1752） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）による receipt ベース判定へ反転。`t265-engine-boundary.integration.test.ts` `+120/−17` で fixture を分岐 |
+
+いずれも「検知テスト 0件」だった面に新規テストが付いており、前 intent の品質所見が閉包されている。
+
+## オープンバグ3件の品質評価（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。3件とも**現存**を実測確認した。
+
+### 根因確度
+
+| Issue | 根因 | 確度 | 未裁定事項 |
+| --- | --- | --- | --- |
+| #1773 | 票の格納が blind の保護境界の外にある。`appendBallot`（`:464-465`）が票オブジェクトを無加工で単一共有ファイルへ書き、blind lift（`materialize` `:500`、コメント `:498`）は tally 時にしか働かない | **機序 100%**（格納面・git 面とも実測） | **方式裁定が未決** — 格納分離（票ごとの分割 / 暗号化 / 非 tracked 化）vs 通知抑制（読取経路の遮断）。修正面の広さが裁定で変わる |
+| #1772 | 型が情報を持たず（`Choice` `:48`）、parse がホワイトリスト再構成で未知フィールドを無音 drop する（`parseChoices` `:80`）。配布ビュー（`:306-310`）に `question` が無い | **100%** | BR-2 blind 契約（`:304-305`）と question / description 追加の両立可否。テスト契約（`t234:190` `:192`）の改訂範囲 |
+| #1752 | 受理判定が offer 時点でなく report 実行時点の state 再評価（`:4241-4242`）に立つため、`:4255` の `(answer === "create" && hasMirrorIssue)` が「指示に従った利用者」を拒否する | **100%**（#1791 着地後も再現経路の温存を `:486-500` の実読で確認） | 修正方式 — (a) create receipt の存在判定 vs (b) ask 時 binding の永続化。fixture（`t265:793`）の分岐設計 |
+
+### 品質所見
+
+**1. blind の保護が「配布」に閉じ「格納」に及んでいない（#1773）** — Amadeus 側の寄与因子は**格納設計と配置の2点だけ**である。設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全で、`shuffleView`（`:338`）による構造的 blind も設計どおり機能し、`.claude/hooks/` に election ledger の配信機構は 0件（`grep -rn 'ledger' .claude/hooks/` の3ヒットはすべて**監査シャードの append-only ledger** を指す語彙で、実読により選挙 ledger と無関係と確定 — `cid:requirements-analysis:absence-claim-grep-verify`）。すなわち「守る仕組みを作ったが、守る対象を守っていない場所に置いた」形状であり、機構の不在ではなく**境界の設定誤り**である。修正の受け入れ基準を「配布面が blind であること」に置くと、既に真である命題を検証することになり検証劇場になる（org.md Forbidden）— 基準は collecting 中の格納面と git 面に置く。
+
+**2. blind 性を assert するテストが 0件（#1773）** — 退行が構造的に検知されない。BR-2 の blind 契約は配布ビューのキー集合（`t234:190`）でピンされているが、**collecting 中に票内容が他の投票者から到達不能であること**を検査するテストは存在しない。修正時は「落ちる実証」（org.md Mandated）を格納面へ注入して行う必要がある。注入面は `cid:code-generation:injection-surface-verify` に従い、テストが実際に読む面（core 正本か dist か）を注入前に実測確認する。
+
+**3. fail-open な無音 drop（#1772、`cid:code-generation:verification-numeric-parse` の同族）** — `parseChoices`（`:73`）は `internalNo` / `label` の型不正では `null` を返して fail-closed に振る舞う一方、**未知フィールドは exit 0 のまま黙って捨てる**。起草者は description が失われたことに気付けず、投票者は説明の存在自体を知らない。「検証して証明を捨てる」のではなく「検証済みであることを型で運ぶ」（parse-don't-validate）という construction.md の原則からは、捨てるなら loud に、運ぶなら型にという二択であり、現行はどちらでもない。
+
+**4. write⇔read 非対称クラスタの継続（#1772 / #1752、`cid:requirements-analysis:symmetric-pair-review`）** — 3件のうち2件が非対称クラスタに属する。#1772 は `OriginalBallot` の `reservation`（`:135`）/ `rationale`（`:136`）が書かれるが配布ビューに現れない write⇔read 非対称。#1752 は `create` にだけ state 照合があり `sync` / `skip` には無い片側実装。前 intent（260730-open-bug-batch-2）の #1734（apply⇔check 非対称）・#1711（produces⇔consumes 非対称）に続き、**3 intent 連続で同型が観測されている**。修正時は他の対操作（resolve⇔commit、emit⇔terminal、fork⇔merge）にも同型が無いか棚卸しする（`cid:code-generation:same-root-inventory`）。
+
+**5. 3重固定は「バグでない」ことの証明ではない（#1772）** — `DistributionView` のキー集合は型（`:306-310`）・設計コメント（`:304-305`）・テスト（`t234:190`）の3重で固定されている。ただし BR-2 が禁じているのは「推薦マーカー・先行票・peer status」であって設問文ではない。3重固定は**変更に裁定が要ることの証明**であり、実装段で着手せず要件段で仕様裁定とテスト契約の明示改訂をセットで確定してから行う（`cid:reverse-engineering:c1-pinned-behavior-ruling`、`cid:code-generation:cg-invariant-conflict-explicit-revision`）。
+
+**6. 新機能の着地を修正の完了と混同しない（#1752）** — #1791（`ffb68c484`、本区間で着地）は `intent-initialized` boundary を新設し初回 create の遅延を解消したが、その分岐（`:486-500`）は `:488` verbatim: `if (mode !== "auto" && boundary.initialCreate !== "pending") return false;` と **auto モード優先**であり、prompt モードは従来 ask 経路へ落ちる。#1752 の自己矛盾は温存されている。関連機能の着地を根拠に Issue を閉じない（`cid:requirements-analysis:close-after-landing-verification` — 着地面の実読が要る）。
+
+**7. テスト番号の重複採番（本 intent の患部外・プロセス所見）** — 本区間で `t366`（3ファイル）・`t367`（2ファイル）・`t368`（3ファイル）の番号重複が生じている。`cid:code-generation:swarm-test-number-reservation`（並列ディスパッチ時の事前予約）が守られなかった実測であり、`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補（テスト引用は `tNNN` 短形でなくフルパス）の適用必要性が高まっている。本 intent の新規テスト採番は `t371` より後を使う。
+
+**8. 行番号シフトへの注意（全件）** — `amadeus-orchestrate.ts` は本区間で `unitDirsUnderConstruction`（`:3054`）と初回 create 分岐（`:486-500`）の追加を受け、行番号が base から大きくシフトしている。Issue 起票時点（base 以前）の行引用を HEAD で照合すると偽陽性になる（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`、`cid:requirements-analysis:historical-section-cite-check-at-observed`）。本 codekb の履歴節に含まれる file:line も当時の observed 断面に固定されているため、参照時は当該 observed で照合する。
+
+## オープンバグ5件の品質評価（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+本節の file:line はすべて observed `c42ef4d77` 時点。
+
+### 根因確度
+
+| Issue | 根因 | 確度 | 未裁定事項 |
+| --- | --- | --- | --- |
+| #1750 | boundary 種別集合に intent 誕生時点が無く、初回 create が `intent-capture` の EXECUTE に暗黙依存（`amadeus-mirror-lifecycle.ts:640-661` / `amadeus-orchestrate.ts:4492`） | 機序 100% | 新種別追加 vs 既存 phase 経路への条件追加。receipt 表現（`MIRROR_BOUNDARY_PHASES` 拡張 vs `createIdentity` をべき等キーに使う）も未裁定 |
+| #1749 | governance protocol 正本1行の誤記が生成面12 + docs 2へ機械投影（`stage-protocol-governance.md:22`） | 100% | drift guard の実装形。既存に本契約の検査テストがあるかは**未確認**（不在主張ではない） |
+| #1742 | 発火対象の決定が `matches` glob のみで、宣言 produces との照合が無い（`amadeus-sensor-fire.ts:199-202`、`produces` 参照 = 0） | 100% | `{unit-name}` 解決の seam をどこへ置くか（`amadeus-lib.ts` への抽出 vs directive 解決結果の受け渡し） |
+| #1735 | auto-solo 発動指示がハーネス依存のアンビエント層と選挙 SKILL にしか無い（唯一の所在 = `SKILL.md:28`） | 機序 高（設計ギャップとして確定）／ codex 実行時の非投入は Issue の一次証拠（選挙0件）と AGENTS.md の on-demand 記述からの推論 | 中立層（stage-protocol §13）への焼き込み vs ハーネス固有追記 |
+| #1734 | apply（`mergeScopeGrid` `:147-160`）が書く順序を check（`scopeGridInSync` `:130-142`）が検分しない write⇔check 非対称 | 100%（read-only シミュレーションで決定的再現） | 書込側の正準化（キー名ソート）vs 検査側の対称化。既存センサーとの責務重複の整理 |
+
+### 品質所見
+
+**1. write⇔check 非対称クラスタ（#1734、`cid:requirements-analysis:symmetric-pair-review`）** — `mergeScopeGrid` は「dist キー順 → extras 順」というオブジェクト挿入順に依存したバイト列を書き、`scopeGridInSync` は JSON 意味比較（dist キーの包含 + 値一致）しか行わない。**check は apply の出力を検分していない**ため、apply が churn を出す状態を check は sync と判定する。この形状は前 intent（260730-skill-reviewer-fixes）の #1711 で観測された produces/consumes の片側実装と同型であり、bootstrap 由来バグの過半を占める非対称クラスタが継続していることを示す。修正時は他の対操作（resolve⇔commit、emit⇔terminal、fork⇔merge）にも同型が無いか棚卸しする（`cid:code-generation:same-root-inventory`）。
+
+**2. Issue 本文の「削除」誤読 — 訂正済み（#1734）** — Issue は「amadeus-bugfix / amadeus-feature / amadeus-refactor のエントリが self-install ツリーから削除される」と記述するが、read-only シミュレーション（Issue 記載の base `c48877451` の実バイトへ `mergeScopeGrid` 相当を適用）では insertions 144 / deletions 144 で **extras 4件は全て merged に保存されている**。144行の正体は削除ではなく**末尾への移動**（4エントリ × 36行）であり、Issue の記述は移動 diff の削除側半分の誤読である。この訂正は修正スコープの縮小に直結する（データ喪失バグではなく順序安定性バグ）。要件段でこの訂正を明示的に引き継がないと、存在しないデータ喪失への対策が設計に入る。
+
+**3. 現 HEAD では #1734 の症状が再現しない** — `.codex` の現状は dist 10キー + extras 4キー（`self-*`）が既に dist 順 → extras 順に並んでおり、`mergeScopeGrid` 相当の再適用結果は現ファイルと**バイト一致**（16673 bytes 同士、difflines 0）。#1683 `dd8532d1c` で `amadeus-*` → `self-*` 改名と全ハーネス統一が着地し、一度 apply された結果が commit されたため。**潜在欠陥は残存**（dist に無い extras が dist キーより前に並ぶ状態が再び生じれば発火する）が、落ちる実証には状態の再構成が要る。修正の受け入れ基準を「現状で churn が出ないこと」に置くと検証劇場になる（org.md Forbidden）— 前状態を再構成した回帰テストが必要。
+
+**4. ハーネス依存の文脈投入ギャップ（#1735）** — 発動ノルムがハーネス非依存層に無いことは、codex 固有の不具合ではなく**設計上の単一障害点**である。claude で動いていたのは `@`-import スタブによる常時投入という偶然の投入方式に依存していたためで、kimi / kiro / cursor / opencode でも同じ穴が開いている可能性がある（**未実測** — 他ハーネスの include 方式は本スキャンで確認していない）。codex 固有面への追記のみで閉じると同型が他ハーネスで再発する。あわせて、`stage-protocol.md` §13 が選挙に一切言及しない（`election|選挙` grep ヒット 0）ことは、engine 指令駆動ループの外に置かれた規範が実行されないという既知パターン（`cid:code-generation:code-generation:bolt-pr-taskization`）の再現である。
+
+**5. テスト契約の構造的盲点（#1742）** — `t94:298-306` と `t95` の11箇所が**非宣言成果物 `intent.md` への発火を正の期待値として固定している**。すなわち現行のバグ挙動がテストでピンされており、修正は必然的にテスト契約の明示的改訂を伴う。実装者の単独判断で期待値を書き換えず、要件・設計段で改訂を宣言してから進める（`cid:requirements-analysis:implementation-deviation-election`）。逆に、`codekb/` 配下の宣言済み成果物が発火 0 である欠落側は既存テストで一切カバーされていない（過剰発火のみが検査対象になっている非対称）。
+
+**6. fail-closed 側が正しく、指示側が誤っている（#1749）** — engine（`amadeus-state.ts:330-334`）とステージファイル（`approval-handoff.md:98` ほか）は正準名で一貫しており、誤っているのは governance protocol 1行のみ。既決ノルム `cid:approval-handoff:c2`（project.md:127）は2026-07-08 時点でこの不一致を認識し「ステージファイル準拠を優先する」と運用回避を宣言していた。**約3週間、正本の誤記を運用知識で迂回し続けていた**ことになる。運用回避をノルムに書いた時点で正本修正の Issue 化が起きていれば、生成面12ファイルへの投影を待たずに閉じられた。
+
+### 検証順序の推奨
+
+1. #1749（散文のみ、engine 挙動に触れない）— 先行着地して差し支えない。
+2. #1734（scripts のみ、配布面に触れない）— 独立。ただし回帰テストは前状態の再構成を要する。
+3. #1735（protocol 正本 → 全ハーネス投影）、#1742（hook 正本 → 全ハーネス投影）— どちらも `packages/framework/core/` を触り `dist:check` / `promote:self:check` の再生成を伴う。**ファイル単位では非交差**（protocol md と hook ts）だが、生成面の再生成が競合するため PR の着地順に注意する（`cid:code-generation:c6` の実 diff 再評価）。
+4. #1750（mirror 層 + receipt スキーマの可能性）— 最も設計裁定が重い。receipt 表現の選択次第で影響面が変わる。
+
+なお本 intent は `self-fix` スコープで走るため units-generation を SKIP する。自らの code-generation ステージが degrade 経路を通るが、本区間で着地した #1760（`e839b20ce`）が `{unit-name}` 解決を実装済みのため、前 intent で必要だった運用回避（`cid:code-generation:degrade-scope-unit-dir-layout`）は不要になっている可能性がある（**未検証** — 実行時に確認する）。
+
+## SKILL/reviewer 2件の品質評価（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。本 scan は静的解析であり、テスト・full suite は未実行。
+
+### 根因確度と修正境界
+
+| Issue | 根因確度 | 根拠 | 主対象 | 欠落テスト |
+| --- | --- | --- | --- | --- |
+| #1736 | **100%** | `grep -c 'case "next"' amadeus-utility.ts` = 0、`default:` = `:6182` の die。`--new-intent` 実装は orchestrate `:2405` / `:2412` に実在。単一箇所のツール名誤りで、経路設計は健全 | 正本 SKILL.md 5面 → dist 5面 → self-install 3面 = 13ファイル | **SKILL.md の指示ツール名を検査するテストが存在しない** |
+| #1711 | **100%**（機序）／修正方式は未裁定 | degrade 分岐 `:3050-3057` が unit を設定せず、produces に `{unit-name}` が残り `amadeus-reviewer.ts:74` で throw。consumes には exempt（`:1771-1774`）があり produces には無い非対称を実測 | 候補 A = `amadeus-orchestrate.ts:3053-3057`、候補 B = `amadeus-reviewer-runtime.ts:224-246`。**方式の裁定は要件段に属する** | degrade スコープでの reviewer scope 成立を貫通検査するテストが存在しない |
+
+### 品質上の主要所見
+
+**Q-1: #1736 はテストが構造的に検出できない形状（S3 相当）**
+
+`tests/integration/t176-new-work-offer-second-intent.test.ts` はこの経路の専用テストで、ヘッダ `:1` に `// covers: subcommand:amadeus-utility:intent-birth, file:skills/amadeus/SKILL.md`、`:12-13` に「on CONFIRM the prose routes through `next --new-intent`」と明記する。しかし実際の assert は `:143` の `reg.length === 2`（registry エントリ数）と `:157-166`（label 形状）であり、**conductor がどのツールバイナリへ `next` を打つかは一切検査していない**。SDK ドライバでライブに走るテストが存在するにもかかわらず欠陥が生存したのは、assert が「結果として2つの intent ができたか」だけを見て「指示どおりの経路を通ったか」を見ていないためである。修正時は指示ツール名を固定する検査を加えるべき（`cid:code-generation:corpus-sweep-for-new-guards` の両側実測を満たす形で）。
+
+**Q-2: #1711 は現挙動が複数テストで verbatim にピンされている（修正方式の制約）**
+
+`tests/unit/t186-foreach-per-unit-iteration.test.ts:351-361`（test 5）は `expect(d.unit).toBeUndefined()` と `{unit-name}` 入り produces を verbatim 期待し、テスト名自体が `"5: no compiled unit DAG degrades to the single {unit-name} placeholder, no unit field"` である。同型は `t186:490-503`（test 11）と `t116:380-403`（test 9/10/11）にもある。さらに degrade 分岐の直上コメント `amadeus-orchestrate.ts:3052` が `Zero behaviour change off this path.` と明示する。
+
+すなわち **現挙動は「バグ」としてではなく「意図された忠実な発行形」として設計・文書化・テスト固定されている**。候補 A（engine 側解決）はこれらの設計意図とテスト契約の**明示的改訂**を伴うため、実装者が単独で判断せず要件段で裁定すべき事項である（`cid:code-generation:cg-invariant-conflict-explicit-revision` / `cid:requirements-analysis:implementation-deviation-election`）。
+
+**Q-3: 運用回避がプロトコル違反を固定している(負債)**
+
+現行の回避策（conductor が実 unit 名へ解決した directive JSON を reviewer へ渡す — project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補）は、`stage-planning` ではなく `stage-protocol.md:898` の「pass the **unchanged** current `run-stage` directive JSON on stdin」規定からの逸脱である。この回避は intent ごとに手作業で再演されており、負債として恒久化している。engine 側で解決すればこの逸脱は解消するが、Q-2 のテスト契約変更を伴う。
+
+**Q-4: 非対称の再発クラスタ**
+
+produces / consumes の実在検査扱いの分岐は、`cid:requirements-analysis:symmetric-pair-review`（対操作の対称性を明示観点にする）が対象とするクラスタに該当する。同 cid は「bootstrap 由来バグ14件の過半が片側だけ実装された非対称だった」という実測に基づく。本件は produces 側の exempt 欠落という同型であり、修正時は他の対（write⇔check、resolve⇔commit）にも同型の片側実装がないか棚卸しすべき（`cid:code-generation:same-root-inventory`）。
+
+### 検証順序
+
+1. #1736 を先に着地させてよい（散文のみ、engine 挙動に触れない）。ただし正本5面の編集後は `bun scripts/package.ts` + `bun run promote:self` を実行し、`bun run dist:check` / `bun run promote:self:check` の緑を確認する（7ハーネス全数再生成 — `cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+2. #1711 は要件段で修正方式（候補 A / B）を裁定してから実装する。方式によって変更するテストが変わるため、実装着手前に確定が必要。
+3. 両 Bolt でファイル交差はないが、最終検証では `bash tests/run-tests.sh --ci` を横断で回す。
+
+### 本 intent 自身への影響
+
+本 intent は `self-fix` スコープ（units-generation = SKIP、scope-grid 実測）で走るため、**自らの code-generation ステージが #1711 の患部経路を通る**。レビュー段が exit 1 する場合は既知の運用回避を適用し、その適用自体を diary に記録する。
+
+## Open bug 6件の品質評価（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+### 現行の品質基盤
+
+テストは739ファイル（smoke 15 / unit 323 / integration 314 / e2e 85）で、`bun:test`、型検査、Biome、distribution drift、coverage project/patch gate を CI で組み合わせる。ドキュメントと配布同期の守りは厚い一方、child process の間欠失敗では stdout/stderr/member status の保持が一貫せず、固定 sleep・最終 filesystem scan・別 snapshot の比較が成功証拠を代用している。本 scan は静的解析であり、テストは実行していない。
+
+### 欠陥確度と不足する回帰面
+
+| Issue | 確定している欠陥 | 製品根因の確度 | 不足する回帰テスト | 完了判定 |
+| --- | --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | `spawnSync` 180秒に対し test case 120秒 | 95%。`rm` が直接原因かは未確定 | 並列負荷下で verifier を駆動し timeout envelope を観測 | 単独と通常並列帯の双方で verifier の実結果を得る |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 assertion が既存 stdout/stderr を診断に含めない | 診断欠陥100%、製品根因20% | nonzero/timeout 時の stdout/stderr 保存 | 診断追加後に再現し、migrate/doctor/clone-id/audit の原因を確定して修正 |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | checkout worker の個別 status を親が保持しない | 観測性95%、欠損根因35% | 複数 worker の個別 status/log 集約 | 失敗 member と原因が最終エラーに残り、partial run がrollbackされる |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | committed diff と dirty LCOV の断面不一致 | 100% | line shift / dirty working tree の process-boundary test | mismatch を fail-closed で拒否し、clean snapshot は従来どおり判定 |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | 50ms後の PID 生存を readiness に代用 | 99% | 遅延初期化後に exit 9 する決定的 fixture | readiness 前終了を確実に失敗扱いし全 supervisor をcleanup |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | registry complete/audit seal後に completion boundary | 100% | multi-intent final report→sync/skip→close→cursor release の貫通 | mirror receipt、WORKFLOW_COMPLETED、registry/cursor が同一 completion instance で一度だけ着地 |
+
+### Observed commit での根拠断面
+
+| Issue | live code 根拠 |
+| --- | --- |
+| #1667 | `tests/integration/book-pack-verify.test.ts:23-36` は child timeout 180秒、test timeout 120秒。`tests/run-tests.ts:850-872` は parallel band を `Promise.race` / `Promise.all` で駆動 |
+| #1664 | `tests/integration/t224-upstream-v2-migration-cli.test.ts:1188-1208` は `migrateWithTool` 後の status assertion に stdout/stderr message を付けない。`amadeus-migrate.ts:2901-2919` が doctor subprocess を起動 |
+| #1663 | `team-up.sh:1382-1400` は background checkout 後に裸の `wait`、`:1411-1425` は registry + record 走査で incomplete を判定。`t295:270-279` は最終 stderr と missing member を検証 |
+| #1662 | `tests/coverage-patch-gate.ts:234-264` は既存 LCOV を読み、別途 `git diff <base>...HEAD` を取得。`t229-coverage-patch-gate-check.test.ts:100-108` は clean `HEAD...HEAD` のみを process-boundary で固定 |
+| #1336 | `team-up.sh:452-463` は supervisor 起動後50ms sleepし、PID/process matchだけを確認。`t-team-up-codex-resume.serial.test.ts:732-754` は即時 launch failure cleanup を固定するが遅延初期化失敗を持たない |
+| #1607 | `amadeus-orchestrate.ts:4037-4143` は final report 内で `complete-workflow` を commitして `done` を返す。`amadeus-state.ts:2143-2201` は audit emit→state write→registry complete、`amadeus-audit.ts:401-411` は complete intentへのappendを封鎖、`amadeus-mirror-state-store.ts:383-410` はその封鎖を outbox failure として保持 |
+
+### 技術的負債
+
+- **成功条件の分散**: fixed sleep、PID liveness、registry+record scan、test timeout が個別に成功を定義している。各 Bolt は結果型または耐久 receipt に成功条件を集約する。
+- **診断 envelope の不統一**: subprocess は stdout/stderr/status を持つが assertion・Shell worker・member ledger で欠落する。間欠失敗を直す前に観測情報を失わない。
+- **completion transaction の跨ぎ**: state、registry、cursor、audit、mirror outbox の commit point が別々で、#1607 と OTel #1679 の最大リスクとなる。
+- **coverage snapshot identity 未定義**: LCOV と diff に共通の commit/dirty identity がないため、patch coverage が緑でも反証不能である。
+- **巨大ファイルの変更リスク**: `amadeus-orchestrate.ts`、`amadeus-state.ts`、`amadeus-lib.ts`、`team-up.sh` は高変更密度で、局所修正でも認知負荷が高い。新しい汎用抽象化より既存 seam と focused regression を優先する。
+
+### 衝突と検証順序
+
+1. #1607 を OTel #1679 の Construction 前に解決し、完了 transaction の正準を固定する。
+2. #1664 の診断を先に着地させ、Journal v2 が t224 の失敗証拠を隠さないようにする。
+3. #1336 → #1663 の順に `team-up.sh` を直列変更する。
+4. #1662 と #1667 は独立 Bolt として並行可能だが、最後に `bun run typecheck`、`bun run lint`、対象 test、`bun run test:ci`、distribution drift を observed main 上で再確認する。
+5. core 正本を触る Bolt は `bun scripts/package.ts` と `bun run promote:self` で生成面を同期し、`dist:check` / `promote:self:check` を通す。
+
+## OTel/observability 面の品質評価（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 ### 現存判定
 

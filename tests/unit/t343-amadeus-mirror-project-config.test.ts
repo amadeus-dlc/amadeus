@@ -35,19 +35,19 @@ function issues(layers: MirrorConfigLayerInput[]) {
 
 describe("t343 defaults", () => {
   test("no layer yields prompt mode and no configured Project", () => {
-    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false });
+    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" });
   });
 
   test("a layer with only auto-mirror leaves projects empty", () => {
     expect(resolved([layer("global", { "auto-mirror": "auto" })]).config).toEqual({
       autoMirror: "auto",
-      projects: [], autoSoloElection: false,
+      projects: [], autoSoloElection: false, autoFileFindings: "prompt",
     });
   });
 
   test("an empty object contributes nothing and is not a source", () => {
     const outcome = resolved([layer("global", {})]);
-    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false });
+    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" });
     expect(outcome.sources).toEqual([]);
   });
 
@@ -296,6 +296,7 @@ describe("t343 allowlist", () => {
         },
       ],
       autoSoloElection: false,
+      autoFileFindings: "prompt",
     });
   });
 

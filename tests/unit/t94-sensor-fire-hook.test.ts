@@ -98,6 +98,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -179,8 +180,8 @@ function makeProjectActive(): string {
     [
       "# AI-DLC State (t94 fixture)",
       "",
-      "- **Workflow**: bugfix",
-      "- **Scope**: bugfix",
+      "- **Workflow**: fix",
+      "- **Scope**: fix",
       "- **Phase**: inception",
       "- **Current Stage**: requirements-analysis",
       "",
@@ -301,8 +302,9 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
       "amadeus-docs",
       "inception",
       "requirements-analysis",
-      "intent.md",
+      "requirements.md",
     );
+    seedSensorInvocation(proj, "requirements-analysis", [filePath]);
     const r = runHook(proj, filePath);
     expect(r.status).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(true);
@@ -424,7 +426,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
   test("missing Current Stage -> no spawn [.sh case 12]", () => {
     const proj = makeProject();
     seedAudit(proj);
-    seedState(proj, "- **Workflow**: bugfix\n");
+    seedState(proj, "- **Workflow**: fix\n");
     const r = runHook(proj, inceptionMd(proj));
     expect(r.status).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(false);
@@ -515,5 +517,59 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const r = runHook(proj, inceptionMd(proj), synGraph);
     expect(r.status).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(false);
+  });
+
+  test("document artifact sensor fires only for the current invocation's declared output", () => {
+    const proj = makeProjectActive();
+    const graph = join(proj, "declared-output-graph.json");
+    writeFileSync(
+      graph,
+      JSON.stringify([
+        {
+          slug: "requirements-analysis",
+          number: "2.3",
+          name: "Requirements Analysis",
+          phase: "inception",
+          execution: "ALWAYS",
+          lead_agent: "amadeus-product-agent",
+          support_agents: [],
+          mode: "inline",
+          produces: ["requirements"],
+          consumes: [],
+          requires_stage: [],
+          inputs: "",
+          outputs: "",
+          rules_in_context: [],
+          sensors_applicable: [
+            {
+              id: "required-sections",
+              path: ".claude/sensors/amadeus-required-sections.md",
+              matches: "**/{amadeus-docs,intents}/**",
+              category: "document-shape",
+            },
+          ],
+        },
+      ]),
+      "utf-8",
+    );
+    const declared = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+    const memory = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "memory.md",
+    );
+    seedSensorInvocation(proj, "requirements-analysis", [declared]);
+
+    expect(runHook(proj, memory, graph).status).toBe(0);
+    expect(existsSync(spawnLogPath(proj))).toBe(false);
+
+    expect(runHook(proj, declared, graph).status).toBe(0);
+    expect(readFileSync(spawnLogPath(proj), "utf-8").split("\n").filter(Boolean)).toHaveLength(1);
   });
 });

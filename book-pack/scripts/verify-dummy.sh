@@ -11,7 +11,22 @@ echo "dummy workspace: $TMP"
 # The dummy is disposable: remove it on exit (pass or fail) unless the
 # caller sets KEEP_DUMMY=1 to inspect it.
 if [ "${KEEP_DUMMY:-0}" != "1" ]; then
-  trap 'rm -rf "$TMP"' EXIT
+  cleanup_dummy() {
+    local cleanup_output=""
+    local cleanup_status=0
+    cleanup_output=$(rm -rf -- "$TMP" 2>&1) || cleanup_status=$?
+
+    # Another cleanup owner may have removed the same disposable workspace
+    # between rm's directory walk and its final read. Treat that race as the
+    # idempotent state it represents, but preserve a real failure while the
+    # owned path still exists.
+    if [ "$cleanup_status" -eq 0 ] || { [ ! -e "$TMP" ] && [ ! -L "$TMP" ]; }; then
+      return 0
+    fi
+    printf '%s\n' "$cleanup_output" >&2
+    return "$cleanup_status"
+  }
+  trap cleanup_dummy EXIT
 fi
 
 cp -R "$SRC/.claude" "$TMP/.claude"

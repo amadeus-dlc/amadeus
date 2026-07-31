@@ -21,6 +21,11 @@ export type RepositoryIdentity = Readonly<{
 }>;
 
 export type MirrorBoundary =
+  // The scope-independent first-create boundary. It exists because
+  // `intent-capture-approved` is the only other create opportunity before a
+  // phase is verified, and a scope that SKIPs Ideation never reaches it, which
+  // delayed the first Issue until Inception closed.
+  | { kind: "intent-initialized"; instance: string }
   | { kind: "intent-capture-approved"; instance: string }
   | { kind: "phase-verified"; phase: string; instance: string }
   | { kind: "parked"; stage: string; instance: string }
@@ -508,12 +513,19 @@ export type MirrorSnapshot = Readonly<{
   status: string;
   registryStatus: MirrorRegistryStatus;
   updatedAt: string;
+  completionInstance?: string;
 }>;
 
-export type MirrorLandingEvidence = Readonly<{
-  registryStatus: "complete";
-  workflowStatus: "Completed";
-}>;
+export type MirrorLandingEvidence =
+  | Readonly<{
+      registryStatus: "complete";
+      workflowStatus: "Completed";
+    }>
+  | Readonly<{
+      registryStatus: "in-flight";
+      workflowStatus: string;
+      completionInstance: string;
+    }>;
 
 type MirrorAuthorizationBase = Readonly<{
   event: MirrorEventIdentity;

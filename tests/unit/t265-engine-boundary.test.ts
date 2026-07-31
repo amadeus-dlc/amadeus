@@ -1,10 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import { decideMirrorBoundary } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { EMPTY_MIRROR_STATE } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
+import {
+  mirrorEventIdentity,
+  mirrorEventKey,
+  workflowCompletionSettlement,
+} from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import {
   parseMirrorBoundaryReceipts,
   serializeMirrorBoundaryReceipts,
   transitionMirrorBoundaryReceipt,
 } from "../../packages/framework/core/tools/amadeus-state.ts";
+import {
+  prepareWorkflowCompletion,
+  workflowCompletionPreparation,
+} from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
 
 const STATE = `# State
 
@@ -20,8 +30,8 @@ describe("t265 mirror boundary decision", () => {
     ["off", true, { kind: "suppress" }],
     ["prompt", false, { kind: "ask", includeCreate: true }],
     ["prompt", true, { kind: "ask", includeCreate: false }],
-    ["auto", false, { kind: "ask", includeCreate: true }],
-    ["auto", true, { kind: "auto-sync" }],
+    ["auto", false, { kind: "auto-lifecycle" }],
+    ["auto", true, { kind: "auto-lifecycle" }],
   ] as const)("maps mode=%s mirror=%s", (mode, mirror, expected) => {
     expect(decideMirrorBoundary(mode, mirror)).toEqual(expected);
   });
@@ -113,4 +123,276 @@ describe("t265 mirror boundary receipts", () => {
       ),
     ).toThrow("expected absent, found pending");
   });
+});
+
+describe("t265 workflow completion identity", () => {
+  test("persists one completion instance independently of construction receipts", () => {
+    const prepared = prepareWorkflowCompletion(
+      `${STATE}- **Mirror Boundary Receipts**: {"construction":"completed"}\n`,
+      "build-and-test",
+      "completion-1",
+    );
+    expect(prepared).toContain(
+      '- **Mirror Boundary Receipts**: {"construction":"completed"}',
+    );
+    expect(prepared).toContain(
+      "- **Workflow Completion Instance**: completion-1",
+    );
+    expect(prepared).toContain(
+      "- **Workflow Completion Stage**: build-and-test",
+    );
+    expect(prepared).toContain("- **Workflow Completion Status**: pending");
+    expect(
+      prepareWorkflowCompletion(
+        prepared,
+        "build-and-test",
+        "completion-1",
+      ),
+    ).toBe(prepared);
+  });
+
+  test("refuses to replace a durable completion instance", () => {
+    const prepared = prepareWorkflowCompletion(
+      STATE,
+      "build-and-test",
+      "completion-1",
+    );
+    expect(() =>
+      prepareWorkflowCompletion(
+        prepared,
+        "build-and-test",
+        "completion-2",
+      ),
+    ).toThrow("completion-1");
+  });
+
+  test("rejects a completion identity whose durable status is missing", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: build-and-test\n",
+      ),
+    ).toThrow("status is missing");
+  });
+
+  test.each([
+    [
+      "instance",
+      `${STATE}- **Workflow Completion Instance**: completion-1\n`,
+    ],
+    [
+      "stage",
+      `${STATE}- **Workflow Completion Stage**: build-and-test\n`,
+    ],
+  ])(
+    "rejects a completion identity whose durable %s peer is missing",
+    (_field, content) => {
+      expect(() => workflowCompletionPreparation(content)).toThrow(
+        "instance and stage must both be present",
+      );
+    },
+  );
+
+  test("rejects an invalid durable completion stage", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: not a stage\n" +
+          "- **Workflow Completion Status**: pending\n",
+      ),
+    ).toThrow("stage is invalid");
+  });
+
+  test("rejects an invalid durable completion status", () => {
+    expect(() =>
+      workflowCompletionPreparation(
+        `${STATE}- **Workflow Completion Instance**: completion-1\n` +
+          "- **Workflow Completion Stage**: build-and-test\n" +
+          "- **Workflow Completion Status**: running\n",
+      ),
+    ).toThrow("status is invalid");
+  });
+
+  test("does not reuse receipts from another completion instance", () => {
+    const intentUuid = "00000000-0000-7000-8000-000000000001";
+    const oldBoundary = {
+      kind: "workflow-completed" as const,
+      instance: "completion-old",
+    };
+    const receipts = Object.fromEntries(
+      (["sync", "close"] as const).map((operation, index) => {
+        const event = mirrorEventIdentity(intentUuid, oldBoundary, operation);
+        const key = mirrorEventKey(event);
+        return [
+          key,
+          {
+            key,
+            event,
+            operationId: `op-${operation}`,
+            createdRevision: index + 1,
+            status: "succeeded" as const,
+            preparedAt: "2026-07-29T10:00:00Z",
+            attemptedAt: "2026-07-29T10:00:00Z",
+            completedAt: "2026-07-29T10:00:00Z",
+          },
+        ];
+      }),
+    );
+    expect(
+      workflowCompletionSettlement({
+        intentUuid,
+        boundary: {
+          kind: "workflow-completed",
+          instance: "completion-new",
+        },
+        state: {
+          ...EMPTY_MIRROR_STATE,
+          issueNumber: 123,
+          receipts,
+        },
+      }),
+    ).toEqual({ kind: "pending", operation: "sync" });
+  });
+
+  test("does not let an explicit skip hide a blocked completion receipt", () => {
+    const intentUuid = "00000000-0000-7000-8000-000000000001";
+    const boundary = {
+      kind: "workflow-completed" as const,
+      instance: "completion-1",
+    };
+    const receipt = (
+      operation: "sync" | "close",
+      status: "skipped-for-event" | "safety-blocked",
+    ) => {
+      const event = mirrorEventIdentity(intentUuid, boundary, operation);
+      const key = mirrorEventKey(event);
+      return [
+        key,
+        {
+          key,
+          event,
+          operationId: `op-${operation}`,
+          createdRevision: operation === "sync" ? 1 : 2,
+          status,
+          preparedAt: "2026-07-29T10:00:00Z",
+          completedAt: "2026-07-29T10:00:00Z",
+        },
+      ] as const;
+    };
+    expect(
+      workflowCompletionSettlement({
+        intentUuid,
+        boundary,
+        state: {
+          ...EMPTY_MIRROR_STATE,
+          issueNumber: 123,
+          receipts: Object.fromEntries([
+            receipt("sync", "skipped-for-event"),
+            receipt("close", "safety-blocked"),
+          ]),
+        },
+      }),
+    ).toEqual({
+      kind: "blocked",
+      operation: "close",
+      status: "safety-blocked",
+    });
+  });
+
+  test.each([
+    ["safety-blocked", "safety-blocked"],
+    ["abandoned", "abandoned"],
+  ] as const)(
+    "returns blocked for a %s completion receipt",
+    (status, expectedStatus) => {
+      const intentUuid = "00000000-0000-7000-8000-000000000001";
+      const boundary = {
+        kind: "workflow-completed" as const,
+        instance: "completion-blocked",
+      };
+      const event = mirrorEventIdentity(intentUuid, boundary, "sync");
+      const key = mirrorEventKey(event);
+      expect(
+        workflowCompletionSettlement({
+          intentUuid,
+          boundary,
+          state: {
+            ...EMPTY_MIRROR_STATE,
+            issueNumber: 123,
+            receipts: {
+              [key]: {
+                key,
+                event,
+                operationId: "op-sync",
+                createdRevision: 1,
+                status,
+                preparedAt: "2026-07-29T10:00:00Z",
+                completedAt: "2026-07-29T10:00:00Z",
+              },
+            },
+          },
+        }),
+      ).toEqual({
+        kind: "blocked",
+        operation: "sync",
+        status: expectedStatus,
+      });
+    },
+  );
+
+  test.each([
+    ["skipped-for-event", { kind: "settled", evidence: "explicit-skip" }],
+    ["succeeded", { kind: "settled", evidence: "close" }],
+  ] as const)(
+    "settles completion from a %s close receipt",
+    (status, expected) => {
+      const intentUuid = "00000000-0000-7000-8000-000000000001";
+      const boundary = {
+        kind: "workflow-completed" as const,
+        instance: "completion-settled",
+      };
+      const syncEvent = mirrorEventIdentity(intentUuid, boundary, "sync");
+      const syncKey = mirrorEventKey(syncEvent);
+      const closeEvent = mirrorEventIdentity(intentUuid, boundary, "close");
+      const closeKey = mirrorEventKey(closeEvent);
+      expect(
+        workflowCompletionSettlement({
+          intentUuid,
+          boundary,
+          state: {
+            ...EMPTY_MIRROR_STATE,
+            issueNumber: 123,
+            receipts: {
+              [syncKey]: {
+                key: syncKey,
+                event: syncEvent,
+                operationId: "op-sync",
+                createdRevision: 1,
+                status: "succeeded",
+                preparedAt: "2026-07-29T10:00:00Z",
+                attemptedAt: "2026-07-29T10:00:00Z",
+                completedAt: "2026-07-29T10:00:00Z",
+              },
+              [closeKey]: {
+                key: closeKey,
+                event: closeEvent,
+                operationId: "op-close",
+                createdRevision: 2,
+                status,
+                preparedAt: "2026-07-29T10:00:00Z",
+                ...(status === "succeeded"
+                  ? {
+                      attemptedAt: "2026-07-29T10:00:00Z",
+                      completedAt: "2026-07-29T10:00:00Z",
+                    }
+                  : {
+                      completedAt: "2026-07-29T10:00:00Z",
+                    }),
+              },
+            },
+          },
+        }),
+      ).toEqual(expected);
+    },
+  );
 });

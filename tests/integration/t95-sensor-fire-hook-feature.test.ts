@@ -75,11 +75,10 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { hostname, tmpdir } from "node:os";
+import { hostname } from "node:os";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -89,6 +88,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -166,7 +166,7 @@ function makeProjectActive(slug = "requirements-analysis"): string {
   mkdirSync(seededRecordDir(proj), { recursive: true });
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: bugfix\n- **Current Stage**: ${slug}\n`,
+    `- **Workflow**: fix\n- **Current Stage**: ${slug}\n`,
     "utf-8",
   );
   const auditDir = seededAuditDir(proj);
@@ -222,8 +222,21 @@ function runHook(
     graph?: string;
     mode?: string;
     timeoutMs?: string;
+    produces?: string[];
+    optionalProduces?: string[];
+    scopeStage?: string;
   } = {},
 ): HookRun {
+  const state = readFileSync(seededStateFile(proj), "utf-8");
+  const stage = state.match(/^- \*\*Current Stage\*\*:\s*(.+)$/m)?.[1]?.trim();
+  if (stage) {
+    seedSensorInvocation(
+      proj,
+      opts.scopeStage ?? stage,
+      opts.produces ?? [filePath],
+      opts.optionalProduces ?? [],
+    );
+  }
   const json = JSON.stringify({
     tool_name: "Write",
     tool_input: { file_path: filePath },
@@ -269,7 +282,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
     );
     expect(r.status).toBe(0);
     // requirements-analysis ships required-sections + upstream-coverage, both
@@ -287,7 +300,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
       proj,
-      join(seededRecordDir(proj), "inception", "requirements-analysis", "intent.md"),
+      join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md"),
     );
     expect(r.status).toBe(0);
     expect(spawnArgvs(proj).length).toBe(2);
@@ -297,7 +310,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
     );
     const argv = spawnArgvs(proj)[0];
     // STRONGER than the .sh's substring grep: "fire" is the argv element right
@@ -309,7 +322,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
     );
     const argv = spawnArgvs(proj)[0];
     // STRONGER: the flag and its value are adjacent (ordered pair), not merely
@@ -326,7 +339,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
       "amadeus-docs",
       "inception",
       "requirements-analysis",
-      "intent.md",
+      "requirements.md",
     );
     runHook(proj, fp);
     const argv = spawnArgvs(proj)[0];
@@ -359,6 +372,195 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     expect(argvs[0][3]).toBe("sensor-a");
     expect(argvs[1][3]).toBe("sensor-b");
   }, 30000);
+});
+
+describe("t95 sensor-fire hook — resolved artifact selection", () => {
+  test("requirements-analysis memory is not a declared output and fires no sensor", () => {
+    const proj = makeProjectActive("requirements-analysis");
+    const memory = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "memory.md",
+    );
+    const declared = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+
+    expect(runHook(proj, memory, { produces: [declared] }).status).toBe(0);
+    expect(spawnArgvs(proj)).toEqual([]);
+  });
+
+  test("reverse-engineering learnings replay JSON fires no document sensor", () => {
+    const proj = makeProjectActive("reverse-engineering");
+    const replay = join(
+      seededRecordDir(proj),
+      "inception",
+      "reverse-engineering",
+      "learnings-selections.json",
+    );
+    const declared = join(
+      proj,
+      "amadeus",
+      "spaces",
+      "default",
+      "codekb",
+      "repo",
+      "architecture.md",
+    );
+
+    expect(runHook(proj, replay, { produces: [declared] }).status).toBe(0);
+    expect(spawnArgvs(proj)).toEqual([]);
+  });
+
+  test("undeclared questions file fires no answer-evidence sensor", () => {
+    const proj = makeProjectActive("requirements-analysis");
+    const questions = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "rogue-questions.md",
+    );
+    const declared = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+
+    expect(runHook(proj, questions, { produces: [declared] }).status).toBe(0);
+    expect(spawnArgvs(proj)).toEqual([]);
+  });
+
+  test("reverse-engineering declared codekb output fires document sensors", () => {
+    const proj = makeProjectActive("reverse-engineering");
+    const output = join(
+      proj,
+      "amadeus",
+      "spaces",
+      "default",
+      "codekb",
+      "repo",
+      "architecture.md",
+    );
+
+    expect(runHook(proj, output).status).toBe(0);
+    expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
+      "required-sections",
+      "upstream-coverage",
+    ]);
+  });
+
+  test("latest isolated invocation stage overrides the main workflow stage", () => {
+    const proj = makeProjectActive("requirements-analysis");
+    const graph = join(proj, "isolated-stage-graph.json");
+    const stageNode = (slug: string, sensorId: string) => ({
+      slug,
+      number: "1.0",
+      name: slug,
+      phase: "inception",
+      execution: "ALWAYS",
+      lead_agent: "amadeus-product-agent",
+      support_agents: [],
+      mode: "inline",
+      produces: [],
+      consumes: [],
+      requires_stage: [],
+      inputs: "",
+      outputs: "",
+      rules_in_context: [],
+      sensors_applicable: [
+        {
+          id: sensorId,
+          path: `.claude/sensors/amadeus-${sensorId}.md`,
+          matches: "**/codekb/**",
+        },
+      ],
+    });
+    writeFileSync(
+      graph,
+      JSON.stringify([
+        stageNode("requirements-analysis", "main-stage-only"),
+        stageNode("reverse-engineering", "isolated-stage-only"),
+      ]),
+      "utf-8",
+    );
+    const output = join(
+      proj,
+      "amadeus",
+      "spaces",
+      "default",
+      "codekb",
+      "repo",
+      "architecture.md",
+    );
+
+    expect(runHook(proj, output, { graph }).status).toBe(0);
+    expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
+      "main-stage-only",
+    ]);
+    writeFileSync(spawnLog(proj), "", "utf-8");
+
+    expect(
+      runHook(proj, output, {
+        graph,
+        scopeStage: "reverse-engineering",
+      }).status,
+    ).toBe(0);
+    expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
+      "isolated-stage-only",
+    ]);
+  });
+
+  test("optional output fires only after the resolved candidate exists", () => {
+    const proj = makeProjectActive("functional-design");
+    const optional = join(
+      seededRecordDir(proj),
+      "construction",
+      "checkout",
+      "functional-design",
+      "frontend-components.md",
+    );
+    const options = {
+      produces: [optional],
+      optionalProduces: [optional],
+    };
+
+    expect(runHook(proj, optional, options).status).toBe(0);
+    expect(spawnArgvs(proj)).toEqual([]);
+
+    mkdirSync(join(optional, ".."), { recursive: true });
+    writeFileSync(optional, "# Optional output\n", "utf-8");
+    expect(runHook(proj, optional, options).status).toBe(0);
+    expect(spawnArgvs(proj).map((argv) => argv[3])).toEqual([
+      "required-sections",
+      "upstream-coverage",
+    ]);
+  });
+
+  test("per-unit scope rejects a declared artifact path from a sibling unit", () => {
+    const proj = makeProjectActive("functional-design");
+    const current = join(
+      seededRecordDir(proj),
+      "construction",
+      "checkout",
+      "functional-design",
+      "business-logic-model.md",
+    );
+    const sibling = join(
+      seededRecordDir(proj),
+      "construction",
+      "catalog",
+      "functional-design",
+      "business-logic-model.md",
+    );
+
+    expect(runHook(proj, sibling, { produces: [current] }).status).toBe(0);
+    expect(spawnArgvs(proj)).toEqual([]);
+  });
 });
 
 describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mechanism cli — spawnSync)", () => {
@@ -428,7 +630,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     // 5000ms (T95_STUB_MODE=slow) so the spawn is SIGTERM'd.
     const r = runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
       { mode: "slow", timeoutMs: "2000" },
     );
     expect(r.status).toBe(0);
@@ -438,7 +640,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
       { mode: "slow", timeoutMs: "2000" },
     );
     // The failure event must ACTUALLY FIRE (§6-E): the drops file exists and
@@ -452,7 +654,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
       { mode: "fail-exit-1" },
     );
     expect(r.status).toBe(0);
@@ -462,7 +664,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
       { mode: "fail-exit-1" },
     );
     // The failure event must ACTUALLY FIRE (§6-E): the drop names the non-zero
@@ -484,7 +686,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
           "amadeus-docs",
           "inception",
           "requirements-analysis",
-          "intent.md",
+          "requirements.md",
         ),
       },
     });
@@ -513,7 +715,7 @@ describe("t95 sensor-fire hook — heartbeat & skipped-file accounting (mechanis
       "amadeus-docs",
       "inception",
       "requirements-analysis",
-      "intent.md",
+      "requirements.md",
     );
     runHook(proj, fp);
     const hb = join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.last");

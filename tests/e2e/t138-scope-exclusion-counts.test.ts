@@ -7,15 +7,15 @@
 // {sdk} mechanism (the property is audit-count data, not a rendered choice).
 //
 // WHY THIS IS METAMORPHIC, NOT A t53 CLONE. t53 (tests/e2e/t53.test.ts)
-// proves the same family for `bugfix` by HARD-CODING IDEATION_STAGES /
+// proves the same family for `fix` by HARD-CODING IDEATION_STAGES /
 // OPERATION_STAGES literals. This test is the metamorphic generalisation: it
 // DERIVES the SKIP set for its scope FROM scope-grid.json at test time (the
 // shipped source of truth, dist/.../tools/data/scope-grid.json), so the
 // invariant tracks the data — if a future scope edit moves a stage EXECUTE->SKIP,
 // this test's expectation moves with it, automatically. And it runs a DIFFERENT
-// scope: `security-patch` (Minimal; its SKIP set differs from bugfix — e.g.
-// the deployment stages are EXECUTE for security-patch but SKIP for bugfix), so it
-// exercises a distinct exclusion shape rather than re-proving bugfix's.
+// scope: `security-patch` (Minimal; its SKIP set differs from fix — e.g.
+// the deployment stages are EXECUTE for security-patch but SKIP for fix), so it
+// exercises a distinct exclusion shape rather than re-proving fix's.
 //
 // THE INVARIANT (stated as data): let SKIP(scope) = { stage : scope-grid.json
 // marks it "SKIP" } (minus the greenfield reverse-engineering downgrade, which is

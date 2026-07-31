@@ -75,7 +75,7 @@ function buildWorkspace(intents: SeedIntent[], cursor?: string): string {
     mkdirSync(join(intentsDir, it.dirName), { recursive: true });
     writeFileSync(
       join(intentsDir, it.dirName, "amadeus-state.md"),
-      "# AI-DLC State\n\n- **Scope**: bugfix\n",
+      "# AI-DLC State\n\n- **Scope**: fix\n",
       "utf-8",
     );
   }
@@ -274,7 +274,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
 
     // Seed the main audit shard, then create the (non-git) worktree dir the fork
     // only existsSync-checks, so fork copies main→worktree and merge folds it back.
-    appendAuditEntry("WORKFLOW_STARTED", { Scope: "bugfix" }, proj, dir);
+    appendAuditEntry("WORKFLOW_STARTED", { Scope: "fix" }, proj, dir);
     mkdirSync(worktreePath(proj, slug), { recursive: true });
 
     const out = withStdoutCapture(() => {

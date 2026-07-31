@@ -124,35 +124,37 @@ const preserved = [
 export const COMPOSED_SCOPE_RE = /^\.[^/]+\/scopes\/amadeus-[^/]+\.md$/;
 export const SCOPE_GRID_RE = /^\.[^/]+\/tools\/data\/scope-grid\.json$/;
 
-// True when the grid at `got` carries every dist key with identical value.
-// Extra keys (composed scopes) are tolerated. Unparseable content falls back
-// to the strict byte compare — never weaker than the plain check.
+// True when the grid at `got` already holds the bytes --apply would write.
+// Defined as the write path itself so check and apply cannot disagree: a
+// per-key comparison accepted any key ORDER, while --apply re-serialises in
+// canonical order, so a grid whose composed keys sat before the dist keys
+// passed the check yet churned the whole file on the next --apply.
 export function scopeGridInSync(got: Buffer, want: Buffer): boolean {
-  try {
-    const g = JSON.parse(got.toString("utf-8")) as Record<string, unknown>;
-    const w = JSON.parse(want.toString("utf-8")) as Record<string, unknown>;
-    for (const key of Object.keys(w)) {
-      if (!(key in g)) return false;
-      if (JSON.stringify(g[key]) !== JSON.stringify(w[key])) return false;
-    }
-    return true;
-  } catch {
-    return got.equals(want);
-  }
+  return mergeScopeGrid(got, want).equals(got);
 }
 
 // The grid bytes --apply writes: dist content plus any composed (dst-only)
-// entries carried over, in dist key order first. Byte-identical to dist when
-// no composed scope exists; unparseable dst content is overwritten with dist.
+// entries carried over, serialised in canonical key order so re-applying is a
+// no-op. Byte-identical to dist when no composed scope exists; unparseable dst
+// content is overwritten with dist.
+//
+// Membership is Object.hasOwn and assembly is fromEntries because a scope may
+// legitimately be named `constructor`, `toString` or `__proto__`: `in` would
+// resolve those against Object.prototype and drop the entry as non-composed,
+// and plain assignment of `__proto__` would set the prototype instead of a
+// data key. Both lose the scope silently.
 export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
   if (got === null) return want;
   try {
     const g = JSON.parse(got.toString("utf-8")) as Record<string, unknown>;
     const w = JSON.parse(want.toString("utf-8")) as Record<string, unknown>;
-    const extras = Object.keys(g).filter((k) => !(k in w));
+    const extras = Object.keys(g).filter((k) => !Object.hasOwn(w, k));
     if (extras.length === 0) return want;
-    const merged: Record<string, unknown> = { ...w };
-    for (const k of extras) merged[k] = g[k];
+    const merged = Object.fromEntries(
+      [...Object.keys(w), ...extras]
+        .sort()
+        .map((k) => [k, Object.hasOwn(w, k) ? w[k] : g[k]]),
+    );
     return Buffer.from(`${JSON.stringify(merged, null, 2)}\n`, "utf-8");
   } catch {
     return want;

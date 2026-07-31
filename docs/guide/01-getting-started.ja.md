@@ -161,7 +161,7 @@ cd your-project
 
 ```
 /amadeus feature
-/amadeus bugfix Fix the login timeout issue
+/amadeus fix Fix the login timeout issue
 ```
 
 次に何が起こるかのステップバイステップのウォークスルーは [Your First Workflow](02-your-first-workflow.ja.md) を参照してください。

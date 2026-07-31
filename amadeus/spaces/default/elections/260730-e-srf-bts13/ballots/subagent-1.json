@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRF-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) git grep origin/main で packages/framework/core/tools/amadeus-orchestrate.ts:2960 unitDirsUnderConstruction 定義と :3116 の degrade 経路呼び出しを確認。:3105-3125 の実装は units.length===0 のとき unit ディレクトリを列挙し、ちょうど1件のときだけ emitRunStageForSlug へ実 unit 名を渡し、0件/複数件は degradeUnitResolutionError で fail-closed。つまり engine 側で {unit-name} が解決済みとなり、E-TPRCGS13 追補が定める conductor の手動解決は不要化する — c1 の主張は実装で裏取りできた。(2) gh pr view 1760 = MERGED (mergedAt 2026-07-30T14:59:25Z)、gh issue view 1711 = CLOSED (closedAt 2026-07-30T14:59:26Z)。(3) 既存 cid 原文を project.md:163 で確認し、追補先が正しいことを照合。(4) c2/c3 は既存規範の実践であり新規知識を含まない — bt-proportional-selection は project.md に、H2 floor 系は team.md/project.md に既存(grep で各1件ヒット)。既決ノルムの再記述は蒸留対象を増やすだけなので不採用が妥当。よって c1 のみ採用を支持する。",
+  "submittedAt": "2026-07-30T15:02:09Z"
+}

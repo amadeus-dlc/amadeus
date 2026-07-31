@@ -20,7 +20,7 @@
 //
 // THE JOURNEY (verified against the SHIPPED stage). Seed state-brownfield-init-done
 // (Lifecycle Phase=INCEPTION, Current Stage=reverse-engineering [-] in-progress,
-// Scope=bugfix, Completed=3) + the brownfield-todo stub (a React/Vite/TypeScript Todo
+// Scope=fix, Completed=3) + the brownfield-todo stub (a React/Vite/TypeScript Todo
 // app). Plain `/amadeus` resumes that current stage directly; jump routing for
 // `--stage` is covered by t25/t26. The RE stage: step 2 delegates a developer
 // code scan, step 3 the architect synthesises 9 artifacts into the SPACE-LEVEL
@@ -59,7 +59,7 @@
 //   - RE outputs (9 artifacts):   reverse-engineering.md:36, written :78-89
 //   - approval gate (step 5):     reverse-engineering.md:97-103 (AskUserQuestion)
 //   - fixture init-done state:     state-brownfield-init-done.md (Phase=INCEPTION,
-//                                  Current Stage=reverse-engineering, Scope=bugfix)
+//                                  Current Stage=reverse-engineering, Scope=fix)
 //   - brownfield-todo stub:        tests/fixtures/brownfield-todo (React/Vite/TS Todo)
 //
 // It SPENDS TOKENS — driveAidlc drives the real multi-agent RE stage (developer

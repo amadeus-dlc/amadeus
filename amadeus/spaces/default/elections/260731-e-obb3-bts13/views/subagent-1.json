@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OBB3-BTS13",
+  "voter": "subagent-1",
+  "question": "260730-open-bug-batch-3 / build-and-test §13学習選定。surface 候補2件: c1=B&T 実行形の踏襲と t258 flake の帰属(cid:build-and-test:bt-20260730-1 / bt-20260730-2 / local-ci-red-assertion-verbatim の適用実例)、c2=比例選定の不生成判断と type-check センサー md 非適用の代替実測(cid:build-and-test:bt-proportional-selection と manual-sensor-fire 系既存規範の適用実例)。conductor 提案は0件採用 — 両候補とも既存 cid の適用実例で新規機序なし。各自 memory.md(amadeus/spaces/default/intents/260730-open-bug-batch-3/construction/build-and-test/memory.md)と build-test-results.md を実測して投票する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件不可 — persist すべき新規学習がある"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    }
+  ]
+}

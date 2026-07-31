@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB4-CG1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追加スコープは buildMirrorStatusRecordView の currentStatus 導出(lifecycle:410)の view フィールド限定に留め、close 順序・状態機械(FR-4c 不変)へ波及させないこと。",
+      "rationale": "実測: amadeus-mirror.ts:143 は body Status 節を view.currentStatus と比較し、lifecycle:410 は snapshot.status 生値を返すため、PR #1823 の body 導出化後は completion 窓で stale-status-line による偽 diverged が構造的に発生する。FR-4b の明文趣旨(drift 診断に偽 drift を生ませない)は currentStatus の同一導出で初めて充足され、read-only view の導出整合は表示層の一部であり FR-4c の close 順序・状態機械には触れない。",
+      "submittedAt": "2026-07-31T06:51:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB4-CG1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "FR-4a の表示層限定文言との衝突は本選挙裁定を申告根拠として requirements へ FR-4a スコープ精密化(lifecycle:410 の currentStatus 導出追加)を明記して解消すること。",
+      "rationale": "実測: mirror.ts:143 は sectionValue(body,'Status') と view.currentStatus を比較し、lifecycle.ts:410 は snapshot.status 生値のまま — 現 PR の導出 body(Completed)と currentStatus(Running)が completion 窓で必ず不一致となり stale-status-line で diverged(exit 1)になる機序をコード読解で確認。FR-4b は buildMirrorStatusRecordView の偽 drift 防止を明文の趣旨としており、currentStatus の同一導出はその趣旨内の精密化。",
+      "submittedAt": "2026-07-31T06:51:40Z"
+    }
+  ],
+  "late": []
+}

@@ -85,10 +85,10 @@
 //     a fresh workspace BIRTHS the workflow (a run-then-continue print naming
 //     `init --scope <scope>`) rather than relaying the old circular no-state
 //     error; the trio's cases:
-//       (1) `next bugfix` — bare KNOWN-SCOPE positional, NOT freeform: kind ===
-//           "print" AND message names `intent-birth --scope bugfix` (the engine
-//           recognises bugfix as the scope, finding 2, and emits the SAME
-//           workflow-birth print `next --scope bugfix` emits; pre-finding-2 it
+//       (1) `next fix` — bare KNOWN-SCOPE positional, NOT freeform: kind ===
+//           "print" AND message names `intent-birth --scope fix` (the engine
+//           recognises fix as the scope, finding 2, and emits the SAME
+//           workflow-birth print `next --scope fix` emits; pre-finding-2 it
 //           mis-read the literal scope as prose and emitted an `ask` defaulting
 //           to "feature"). P4: the named birth move is `intent-birth`, not the
 //           retired `init`. One test() bundles both observables.
@@ -106,7 +106,7 @@
 //     reds.
 //
 //   38 .sh asserts -> 38 .sh `ok` lines -> 9 + 7 + 1 + 1 + 3 = 21 test() cases
-//   here (the 7 diff-B cases + the no-state-bugfix case each bundle 2 ok lines
+//   here (the 7 diff-B cases + the no-state-fix case each bundle 2 ok lines
 //   for one observable group). Total expect() assertions exceed 38.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_state_file +
@@ -216,7 +216,7 @@ function emitScopeStage(scope: string, stage: string): EmitResult {
   // fixture was authored for the feature scope; since the adaptive-composer
   // work the jump path honours the state's per-stage suffixes as the live
   // plan (they override the static grid, matching the router), so a state
-  // whose Scope says bugfix but whose suffixes still carry feature's plan is
+  // whose Scope says fix but whose suffixes still carry feature's plan is
   // internally inconsistent - a shape the real tools (init/scope-change/
   // recompose, which all rebuild suffixes) never produce. Rebuilding keeps
   // this diff's intent intact: the target IS off the seeded plan.
@@ -315,7 +315,7 @@ function emitNext(fixtureFile: string): EmitResult {
 // emitNextNoState (t118.sh:289-315): spawn `next [...args]` against a FRESH
 // project that has amadeus-docs/ but NO amadeus-state.md (createTestProject seeds
 // neither) — the no-state workflow-birth paths of the trio. Pass zero args for
-// bare `next`, one for a known-scope positional (`next bugfix`), or several for
+// bare `next`, one for a known-scope positional (`next fix`), or several for
 // freeform intent (`next add dark mode toggle`). Mirrors the .sh's bare
 // `bun "$TOOL" next <args> --project-dir "$proj"` over an unseeded project.
 function emitNextNoState(...args: string[]): EmitResult {
@@ -365,7 +365,7 @@ const GOLDEN: GoldenRow[] = [
   { scope: "feature", fingerprint: "intent-capture", phase: "ideation", skip: null },
   { scope: "mvp", fingerprint: "intent-capture", phase: "ideation", skip: "approval-handoff" },
   { scope: "poc", fingerprint: "intent-capture", phase: "ideation", skip: "feasibility" },
-  { scope: "bugfix", fingerprint: "reverse-engineering", phase: "inception", skip: "intent-capture" },
+  { scope: "fix", fingerprint: "reverse-engineering", phase: "inception", skip: "intent-capture" },
   { scope: "refactor", fingerprint: "reverse-engineering", phase: "inception", skip: "market-research" },
   { scope: "infra", fingerprint: "practices-discovery", phase: "inception", skip: "reverse-engineering" },
   { scope: "security-patch", fingerprint: "reverse-engineering", phase: "inception", skip: "user-stories" },
@@ -484,23 +484,23 @@ describe("t118 engine differential corpus — amadeus-orchestrate next (migrated
   // findings 2 & 3) slipped through. Each pins the resolved scope / directive
   // kind the engine emits for a fresh workspace.
   describe("no-state workflow-birth trio — fresh workspace, no amadeus-state.md", () => {
-    // (1) Bare KNOWN-SCOPE positional: `next bugfix` — the literal scope name is
+    // (1) Bare KNOWN-SCOPE positional: `next fix` — the literal scope name is
     // NOT freeform intent. The engine recognises it as the scope (finding 2) and
-    // emits the SAME workflow-birth print `next --scope bugfix` emits: a
-    // run-then-continue directive naming `init --scope bugfix` (an explicitly
+    // emits the SAME workflow-birth print `next --scope fix` emits: a
+    // run-then-continue directive naming `init --scope fix` (an explicitly
     // named scope on a fresh workspace is a request to START a workflow; the
     // pre-hardening engine relayed a circular no-state error here that told the
     // user to do exactly what they had just done). Pre-finding-2 this mis-read
     // the scope as prose and emitted an `ask` defaulting to "feature".
-    test("no-state bare known-scope 'bugfix' -> birth print naming intent-birth (recognised as scope, not freeform) [finding 2]", () => {
-      const r = emitNextNoState("bugfix");
+    test("no-state bare known-scope 'fix' -> birth print naming intent-birth (recognised as scope, not freeform) [finding 2]", () => {
+      const r = emitNextNoState("fix");
       expect(r.directive.kind).toBe("print");
       // The print names the intent-birth move for the EXPLICITLY NAMED scope
       // (P4: --init retired; the engine NAMES the deterministic birth handler).
-      expect(r.directive.message ?? "").toContain("intent-birth --scope bugfix");
+      expect(r.directive.message ?? "").toContain("intent-birth --scope fix");
       // Run-then-continue shape: the conductor births, then re-enters the loop.
       expect(r.directive.message ?? "").toContain("re-run `next` to continue");
-      // STRONGER: a regression that mis-read bugfix as freeform would emit an
+      // STRONGER: a regression that mis-read fix as freeform would emit an
       // `ask` (the pre-fix bug) — assert it is NOT an ask, pinning finding 2.
       expect(r.directive.kind).not.toBe("ask");
     });
@@ -537,15 +537,15 @@ describe("t118 engine differential corpus — amadeus-orchestrate next (migrated
       );
     });
 
-    // (4) Conflicting explicit namings: `next bugfix --scope mvp` names TWO
+    // (4) Conflicting explicit namings: `next fix --scope mvp` names TWO
     // scopes at once. The precedence ladder's top rung is the explicit --scope
     // flag, so the birth must name the FLAG's scope — a positional that silently
     // outranked the flag would birth a workflow the user didn't ask for.
     test("no-state positional+flag conflict -> birth print names the FLAG's scope", () => {
-      const r = emitNextNoState("bugfix", "--scope", "mvp");
+      const r = emitNextNoState("fix", "--scope", "mvp");
       expect(r.directive.kind).toBe("print");
       expect(r.directive.message ?? "").toContain("intent-birth --scope mvp");
-      expect(r.directive.message ?? "").not.toContain("intent-birth --scope bugfix");
+      expect(r.directive.message ?? "").not.toContain("intent-birth --scope fix");
     });
 
     // (5) --resume never births: resuming is a claim that a workflow already

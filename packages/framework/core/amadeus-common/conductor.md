@@ -92,6 +92,23 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
 - **The §13 conflict-check** — before a learning reaches disk, compare it
   section-by-section against `amadeus-org.md`; a narrower rule that contradicts
   broader policy is rejected at the memory gate.
+- **Design deviations** — when the approved requirements or design have to be
+  departed from, stop *before* implementing the deviation, then classify it.
+  Exactly one of these three branches runs, and the first one that applies wins:
+  1. The deviation amounts to a user-visible spec change → it is ALWAYS the
+     user's call, whatever the config says. Do not open an election; take it
+     to the user for a ruling.
+  2. Otherwise, in solo mode, when the layered config (`amadeus/config.json`
+     → space → intent) resolves `"auto-solo-election": true`, put the
+     deviation to an election: write a definition JSON carrying `electionId`,
+     `kind`, `question`, `choices` (one per way forward) and `voters`, then run
+     `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`
+     — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger
+     is evaluated). On `{"opened":null,"reason":"auto-solo-election-disabled"}`
+     no election is created and the deviation goes to the user for a ruling.
+  3. Otherwise (team mode, or the config is unset or `false`): do not open an
+     election from this hook; stop and take the deviation to the user for a
+     ruling (in team mode, through the team's own decision protocol).
 - **Keep / Modify / Redo** — when the user requests changes at a gate, decide
   with them whether to keep the artifact as-is, modify it in place, or redo the
   stage from scratch (discard partial artifacts), then re-run the relevant part
@@ -118,7 +135,7 @@ fed back to the engine — the engine still owns the transition:
    - prose says **"scope-dependent"** / is unspecified / the team layer is
      empty → `scope-dependent` (the engine then falls back to the
      scope-mapping defaults: skeleton-on for `enterprise`/`mvp`/`feature`/
-     `poc`/`workshop`, off for `bugfix`/`chore`/`refactor`/`security-patch`).
+     `poc`/`workshop`, off for `fix`/`chore`/`refactor`/`security-patch`).
 3. Hand the stance back: `report --skeleton-stance <on|off|scope-dependent>`.
    The engine records it; the next `next` re-emits the same stage with the now
    determined boolean gate.

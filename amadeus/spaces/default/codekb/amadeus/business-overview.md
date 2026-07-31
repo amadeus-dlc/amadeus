@@ -1,6 +1,167 @@
 # ビジネス概要
 
-## OTel/observability upstream イニシアチブの業務境界（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件の業務境界（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 利用者影響
+
+| Issue | P/S | 影響を受ける利用者 | 症状 |
+| --- | --- | --- | --- |
+| #1811 | P1/S2 | テストスイートを回す全開発者（ローカル・CI 双方） | テスト終了後もプロセスが残留し、ホストのプロセス表と資源を蝕む。ライブ実測で**84本の残留**（全 PPID=1、1 launch = 7 role）。累積するとホスト負荷を押し上げ、他のテストを負荷起因で不安定にする |
+| #1800 | P3/S3 | テスト失敗を調査する開発者 | 失敗時の出力が `expected 1, received -1` に留まり、signal 終了なのか spawn 失敗なのかが読めない。切り分けコストが直接発生する |
+| #1797 | P3/S4 | CI を待つ全開発者 | 負荷変動で比 assert が偽赤になり、無関係な PR が塞がれる。実測 `2.5065` vs 閾値 `2.5`（マージン 0.26%） |
+| #1816 | P3/S4 | mirror Issue を共有面として読むチーム・ステークホルダー | 完了した Intent の mirror Issue が `## Status: Running` のまま close される。**外部から見える面の情報が事実と食い違う** |
+
+### 影響の質的な差
+
+**#1811 は他3件の前提条件でもある。** 残留プロセスはホスト負荷そのものであり、#1800（spawn `EAGAIN` が第一容疑）と #1797（負荷変動による比のずれ）の発火確率を押し上げている。P1 の位置づけはこの波及効果を含む。
+
+**#1816 だけがエンドユーザー可視である。** 他3件は開発者体験（DX）と CI 安定性の問題だが、#1816 は GitHub Issue という**共有面の正確性**の問題である。record を正本、Issue を一方向の共有ビューとする設計（`cid:requirements-analysis:intent-first-mirror-issue`）において、共有ビューが正本と食い違うことは設計意図の破れに当たる。
+
+### Delivery boundary
+
+4件を1 Intent で追跡し、**1 Issue = 1 Bolt = 1 GitHub Pull Request**とする。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+| Issue | Bolt | 既存 open PR |
+| --- | --- | --- |
+| [#1811](https://github.com/amadeus-dlc/amadeus/issues/1811) | Bolt 1 | なし（conductor が起動前に実測、0件） |
+| [#1800](https://github.com/amadeus-dlc/amadeus/issues/1800) | Bolt 2 | なし |
+| [#1797](https://github.com/amadeus-dlc/amadeus/issues/1797) | Bolt 3 | なし |
+| [#1816](https://github.com/amadeus-dlc/amadeus/issues/1816) | Bolt 4 | なし |
+
+既存 open PR の棚卸しは `cid:reverse-engineering:c1-preexisting-pr-inventory`（バグ修正 intent の起動時に対象 Issue ごとの既存 PR を検査する）に従い実施済みで、**4件とも 0件**。前 intent（260730-open-bug-batch-2）で発生した「既存 PR を見落として再実装する」経路は本 intent では発生しない。
+
+`self-fix` スコープのため walking-skeleton のセレモニーは適用しない（org.md § Walking Skeleton — 既存コードベースへのインクリメンタルな作業）。
+
+### スコープ境界
+
+**スコープ内**:
+
+- #1811: テスト fixture の stub 設計と `afterEach` 掃引（本番非改変を推奨）
+- #1800: 失敗系診断の対称化（必須）と spawn-error 限定リトライ（要件段で確定）
+- #1797: 計測設計の是正。数値は負荷スイープ実測から導出
+- #1816: **表示層に限定した**終端化
+
+**スコープ外（要件段で明示的に申告する）**:
+
+| 事項 | 理由 |
+| --- | --- |
+| #1800 の並列度制御 | 別課題。診断の是正で切り分け可能になった後に判断する |
+| #1816 の「record 着地前 close」挙動 | PR #1689 の設計帰結であり `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts:262` で契約固定済み。**仕様裁定マター**（`cid:reverse-engineering:c1-pinned-behavior-ruling`） |
+| #1811 の本番 supervisor 改変 | 本番は既に fail-closed 実装済み（`team-up-codex-safety-wait.ts:643`、`:561-582`）。改変すると生成面で #1816 と交差する |
+
+**「再現しなかったので閉じる」は認めない** — #1800 は負荷条件依存で発火するため、再現不能時の受理条件を要件段で明示する（`cid:build-and-test:no-silent-scope-narrowing` — 要件・RAID が規定した検証項目を conductor 判断で先送りしない）。
+
+### 前 intent からの継続
+
+本区間（`3f73823b1..6e7a9d701`）で前 intent（260730-open-bug-batch-3）の3件が**全件着地した**。
+
+| Issue | 着地 | 業務上の意味 |
+| --- | --- | --- |
+| #1773 | `25f54b066` | 未開票中の票が共有ファイル・`git status` から読めた blind 性の破れを解消。選挙の独立性という第一原理 P1 の実装面が回復 |
+| #1772 | `75367ba67` | 投票者が設問文すら受け取れなかった状態を解消。判断に必要な情報が投票者へ届く |
+| #1752 | `8a8abf567` | 指示に従った利用者が自分の成功で拒否される自己矛盾を解消 |
+
+本 intent の4件はいずれもこれらと機構が重ならない。共有面の正確性（#1816）は #1752 と同じ mirror 領域だが、患部は表示層であり boundary 判定層ではない。
+
+## オープンバグ3件の業務境界（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+3件は「選挙の情報設計が投票者・非投票者の双方に対して誤っている（#1773 / #1772）」と「mirror の指示と受理条件が矛盾する（#1752）」の2系統に分かれる。所有機構は選挙層（`amadeus-election-*`）と mirror/engine 層（`amadeus-orchestrate.ts`）で完全に分離しており、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる（`cid:code-generation:c6` の非交差判定）。
+
+### 利用者影響
+
+| Issue | 誰が困るか | どう困るか | 深刻度の性質 |
+| --- | --- | --- | --- |
+| #1773 | 選挙を運用する全チーム（ソロモードの subagent 選挙を含む） | 未開票（collecting）中の全票本文 — 選択・GoA・留保・根拠 — が単一の共有ファイル `ledger.json` に平文で載る。voter subagent は選挙ディレクトリを直接読む運用のため、先行票が後続投票者から構造的に到達可能。さらに同ファイルは git tracked のため `git status` / `git diff` にも現れる（第2の露出面） | **独立性（P1・アンカリング防止）の基盤が崩れる**。blind 配布そのものは設計どおり機能しているのに、格納面から迂回できる |
+| #1772 | 選挙の全投票者 | 配布ビュー（`DistributionView`）に設問文（question）が無く、選択肢は `label` のみ。起草者が書いた選択肢の説明（description）は parse 時に無音で捨てられる。投票者は「何を問われているか」も「各案が何を意味するか」も配布物から得られない | **投票の情報基盤の欠落**。無音 drop（fail-open、exit 0）のため起草者は説明が消えたことに気付けない |
+| #1752 | `auto-mirror` を prompt モードで運用する利用者 | ask が「先に create を実行せよ」と指示するのに、その指示に従って create を実行してから report すると「offered choices と一致しない」と拒否される。自分の成功が拒否条件になる自己矛盾 | **指示と受理の矛盾**。boundary が前進せず、利用者は迂回手順を自力で発見する必要がある |
+
+### 業務上の優先度所見
+
+- **#1773 が最も性質が悪い。** 設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全であり、blind lift（開票時の materialize）も設計どおり機能している。破れているのは**格納設計と配置**の2点だけで、ガバナンス上の「独立検証（P1）」がその2点で無音に空文化する。加えて blind 性を assert するテストが 0件のため、退行が検知されない。
+- **#1772 と #1773 は同じ選挙層の情報設計だが方向が逆。** #1773 は「見えてはいけないものが見える」、#1772 は「見えるべきものが見えない」。同一 intent で扱うと `Election.parse` の write⇔read 対称性という共通の設計面を1度で棚卸しできる。
+- **#1752 は #1791（本区間で着地）の後も残る。** 初回 create boundary の新設（`intent-initialized`）は auto モード優先の分岐であり、prompt モードは従来 ask 経路へ落ちるため再現経路がそのまま温存されている。「新機能が着地したから直った」と扱わない。
+
+### Delivery boundary
+
+3件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+`packages/framework/core/` を触るのは3件すべてで、いずれも `bun scripts/package.ts` による dist 7ハーネス再生成と `bun run promote:self` による self-install 面同期を伴う。ファイル単位では非交差（#1773 / #1772 = `amadeus-election-*.ts`、#1752 = `amadeus-orchestrate.ts`）だが生成面が競合するため、着地順は静的目録でなく実 diff で再評価する。
+
+### 仕様裁定を要する2件（要件段へ持ち越し）
+
+- **#1772 はテスト契約の明示改訂を伴う。** `tests/unit/t234-election-model.test.ts:190` が配布ビューのキー集合を verbatim 固定しており、`amadeus-election-model.ts:304-305` のコメント（`BR-2 pins the key set`）と型宣言と合わせて3重に固定されている。3重固定は「バグでない」ことの証明ではなく「変更に裁定が要る」ことの証明である（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+- **#1773 は方式裁定（格納分離 vs 通知抑制）が未決。** 修正面が大きく変わるため、実装着手前に確定する。
+
+## オープンバグ5件の業務境界（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+5件は「フレームワークが自らの文書・契約どおりに動かない」という共通テーマを持つ一方、所有機構と同期対象ファイル集合が互いに重ならないため、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる。
+
+### 利用者影響
+
+| Issue | 誰が困るか | どう困るか | 深刻度の性質 |
+| --- | --- | --- | --- |
+| #1750 | `auto-mirror: auto` かつ Ideation を SKIP するスコープ（`self-fix` 等）で intent を回す利用者 | 共有面（mirror Issue）が Inception 完了まで作られず、intent 進行中の可視性が失われる。intent-first 運用（record を正本・Issue を共有ビューとする team.md ノルム）が最初の業務ステージ中は成立しない | 可視性の欠落。データ喪失はない |
+| #1749 | phase boundary を書くすべての利用者・エージェント | governance protocol の指示どおり `[phase-boundary]-verification.md` を書くと engine が fail-closed で拒否する。正しい名前は運用知識（既決ノルム）でしか得られず、新規参加者・他ハーネス利用者ほど踏みやすい | 指示と実装の矛盾。約3週間、運用回避で迂回されていた |
+| #1742 | 全ステージの実行者 | 非成果物（`memory.md`・`learnings-selections.json`）に対してセンサーが FAILED を出し、宣言済み成果物（`codekb/` 配下）には発火しない。**偽の赤と偽の緑が同時に出る** | 検証信頼性。advisory 契約のため exit code は 0 で、ワークフローは止まらないが判断を誤らせる |
+| #1735 | codex ハーネスのソロモード利用者（`auto-solo-election: true` 設定済み） | 設定したはずの自動選挙が一度も発動しない。設計逸脱・ブロッカー・§13 学習選定の3類型が独立検証（P1）を経ずに単独判断で進む | ガバナンスの静かな不成立。設定が効いていないことが無音 |
+| #1734 | `bun run promote:self` を実行する開発者（自己開発のみ） | self-install の scope-grid に無関係な144行 churn が出る。`promote:self:check` は sync と判定するため、churn の発生を事前検知できない | 差分ノイズ。現 HEAD では再現しないが潜在欠陥は残存 |
+
+### 業務上の優先度所見
+
+- #1742 は**偽の緑を含む**点で最も性質が悪い。宣言済み成果物への発火 0 は「センサーが通った」ではなく「センサーが対象外だった」であり、ゲート報告の verdict 判定を誤らせる（`cid:requirements-analysis:manual-sensor-fire-before-gate-report` の追補2が扱う既知ハザードの構造的原因）。
+- #1735 は**ガバナンス層の不成立**であり、コードの正しさではなくチーム規範の執行に効く。auto-solo が発動しないまま進んだ intent では、本来独立検証されるべき判断が単独判断で確定している。
+- #1749 は影響範囲が広い（全 phase boundary）が、既決ノルムによる運用回避が確立しているため実害は封じ込め済み。ただし運用回避の存在自体が負債である。
+- #1750 は Issue 受入条件に「日英リファレンス + 全 harness 配布物同期」が含まれ、配布面の同期コストが最も大きい。
+- #1734 は自己開発面のみに閉じ、利用者配布物に影響しない。
+
+### Delivery boundary
+
+5件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+`packages/framework/core/` を触るのは #1735（protocol md）・#1742（hook ts）・#1750（tools ts）の3件で、いずれも `bun scripts/package.ts` による dist 7ハーネス再生成と `bun run promote:self` による self-install 同期を伴う。ファイル単位では非交差だが生成面の再生成が競合するため、着地順は実 diff で再評価する（`cid:code-generation:c6`）。#1749（散文のみ）と #1734（`scripts/` のみ）は独立で先行着地できる。
+
+## SKILL/reviewer 2件の業務境界（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+測定 ref: observed `278d61d8e`。
+
+本 intent は2件のバグ修正であり、業務ドメイン・利用者集合・提供価値の境界そのものに変更はない。両件はいずれも「フレームワークが自分の指示どおりに動かない」クラスの欠陥で、利用者から見た影響面が異なる。
+
+| Issue | 利用者から見た症状 | 影響を受ける利用者 | 修復される価値 |
+| --- | --- | --- | --- |
+| [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736) | 稼働中の intent と並行して新しい作業を始めたいと申し出て CONFIRM したとき、SKILL.md の指示どおりに実行すると未知 verb でコマンドが失敗する（`amadeus-utility.ts` に `next` は存在しない） | claude / codex / kimi / kiro / kiro-ide の5ハーネス利用者。cursor / opencode は SKILL.md を持たず command 面が正しいツールを指すため影響なし | new-work offer から2本目の intent を birth する経路が指示どおりに通ること。経路の実装（`amadeus-orchestrate.ts:2405`）は既に健全で、直すのは散文のツール名のみ |
+| [#1711](https://github.com/amadeus-dlc/amadeus/issues/1711) | units-generation を SKIP するスコープ（`fix` / `refactor` / `chore` / `security-patch` / `infra` / `poc` および dogfood の `self-*`）で code-generation のレビュー段が `required review artifact is missing: …/construction/{unit-name}/…` で exit 1 する | 上記スコープを使う全利用者。軽量スコープ（バグ修正・リファクタ）は最も日常的に選ばれる経路であるため影響は広い | レビューゲートが構造的に成立すること。現状は conductor の手作業回避（実 unit 名へ解決した directive を渡す）に依存しており、その回避自体が `stage-protocol.md:898` の「unchanged directive JSON」規定からの逸脱である |
+
+### Delivery boundary
+
+2件を1 Intent で追跡し、**1 Issue = 1 Bolt = 1 GitHub Pull Request**とする。両件は所有コンポーネントが完全に分離しており（#1736 = harness SKILL.md の散文、#1711 = core engine + reviewer 層）、同期対象ファイル集合も重ならないため並行実装が可能である。
+
+### 本 intent 自身が当事者である点
+
+本 intent は `self-fix` スコープで走る。`self-fix` は units-generation を SKIP する（scope-grid 実測）ため、**#1711 の患部経路を自ら通る**。すなわち本 intent の code-generation ステージのレビューは、修正対象のバグの影響下で実行される。
+
+## Open bug 6件の業務境界（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+Amadeus は、AI-DLC の Intent を決定的なステージ遷移、監査証跡、隔離された Bolt、複数ハーネスへの同等配布で実行する Bun/TypeScript の CLI 製品である。本 intent は新機能を追加せず、開発者と運用者が「成功」と判断する6つの信頼境界を修復する。6件は1つの `amadeus-bugfix` Intent で追跡する一方、変更・回帰テスト・レビュー可能性を分離するため **1 Issue = 1 Bolt = 1 GitHub Pull Request** とする。作成後の各 Pull Request は [amadeus-dlc/amadeus の Pull Requests](https://github.com/amadeus-dlc/amadeus/pulls) から個別に追跡する。
+
+| Issue | 利用者が失っている信頼 | 回復する業務成果 |
+| --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | book-pack の検証が並列 CI 負荷下でテスト自身の制限時間に先に殺される | pack drift guard の成否を verifier の実結果で判断できる |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | t224 の間欠失敗が status しか示さず、原因調査に必要な stdout/stderr を失う | migration/doctor 境界の失敗を再現時に診断できる |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | Team Mode の並列 checkout が個別失敗を集約せず、最終走査だけで成功判定する | 失敗メンバーと失敗理由を欠落なく報告できる |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | patch coverage の diff と LCOV が異なるソース断面を測りうる | 同一 snapshot に対する coverage 判定を保証できる |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | safety-wait の起動完了を固定50msと PID 生存で推定し、初期化前終了を成功扱いしうる | supervisor の readiness を明示的に確認できる |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | final report が Intent を complete・audit seal・cursor release した後に mirror completion boundary が走るため、最終同期を永続化できない | workflow 完了、mirror 最終同期、audit seal を単一の完了トランザクションとして閉じられる |
+
+### 価値境界と順序制約
+
+- #1667 / #1664 / #1663 は「間欠失敗の原因を推測で閉じない」ことが価値である。診断出力の追加だけで製品根因を修正済みとは扱わず、再現テストから原因を確定する。
+- #1662 / #1336 / #1607 は成功判定の原子性・同一性・readiness を回復する整合性修正であり、成功条件を最終ファイル存在や固定 sleep で代用しない。
+- #1336 と #1663 は同じ `team-up.sh` を変更するため直列に扱い、readiness の基盤を先に直す。#1662 と #1667 は主ファイルが分離しており、独立 Bolt として並行可能である。
+- 進行中の OTel Intent [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は audit/journal/state の完了経路と交差する。#1607 は Construction 前の必須前提、#1664 は Journal v2 の診断契約確定前に着地させるのが安全である。
+
+## OTel/observability upstream イニシアチブの業務境界（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 Amadeus の業務目的・利用者ジャーニー・公開機能に変更はない。本 intent は [GitHub #1672](https://github.com/amadeus-dlc/amadeus/issues/1672) の OTel/observability upstream イニシアチブを扱い、長期的な利用者価値は「監査・観測データを OpenTelemetry の標準エコシステム（OTLP collector / Jaeger / 任意の OTLP バックエンド）へ一本化して届ける」ことにある。ただし現行コード（observed `22ee27dbef9027203658a6cd98bf97501c4b222c`、base `ca8ff0af40d6250edffe42246d3f5538819c22af`（祖先 exit 0）、距離 **13**）では **OTel API ファミリはまだ一切導入されていない**（`package.json` / `bun.lock` の `@opentelemetry` grep ヒット 0）— 現状は Issue #1628 の 3 Phase が築いた「ゼロ依存 OTLP/HTTP JSON」構成であり、#1672 の置換（audit writer → OTel EventRecord→AuditLogExporter、`observe()` / `observeSubprocess()` → Trace API spans、otel-projector の pure OTLP relay 化）は**すべて未着手の将来計画**である。本 scan は将来差分の基点として現行断面を固定するもので、コード変更を伴わない。区間では別系統の価値として GitHub Projects ボード連携（mirror-project サブシステム 9 モジュール新設）と intent 選択ロジックの分離（`amadeus-intent-selection.ts`）が着地し、前 intent `260728-slop-cleanup` の修正（journal コメント是正・未使用フィールド削除）も本 HEAD に含まれる。直後の `260728-slop-cleanup` 断面は履歴として保持する。
 

@@ -2,7 +2,7 @@
 //
 // CLI-contract port of tests/integration/t122-revision-loop.sh (renumbered to t136 for milestone 2; TAP plan 10),
 // mechanism = cli. The .sh exercises the gate → reject → revise → gate cycle
-// end-to-end on a real bugfix workflow by SHELLING OUT to `bun amadeus-state.ts
+// end-to-end on a real fix workflow by SHELLING OUT to `bun amadeus-state.ts
 // gate-start|reject|revise|approve ...`. This port preserves that PROCESS
 // boundary: every transition is the real `amadeus-state.ts` subprocess spawned
 // via node:child_process spawnSync (BUN + the tool .ts), and the observables
@@ -22,7 +22,7 @@
 // the reject cycle is the sole emitter of in this test.
 //
 // SHARED-PROJECT DISCIPLINE (mirrors the .sh exactly): the .sh runs ONE
-// create_test_project + ONE `init --scope bugfix`, then mutates
+// create_test_project + ONE `init --scope fix`, then mutates
 // that single project through an ordered sequence of state-tool calls. The
 // observables are inherently positional (Revision Count after the 1st/2nd/3rd
 // reject; the checkbox glyph after each transition). So this port also uses a
@@ -33,7 +33,7 @@
 // of create_test_project and toPortablePath-converts on Windows so the
 // audit.md the tool writes via forward-slash helpers round-trips when read
 // back. The init emits NONE of the four asserted events (probe-verified:
-// init bugfix audit = WORKFLOW_STARTED/WORKSPACE_*/PHASE_*/STAGE_STARTED/
+// init fix audit = WORKFLOW_STARTED/WORKSPACE_*/PHASE_*/STAGE_STARTED/
 // STAGE_COMPLETED only), so every post-cycle count is unambiguous — exactly
 // the .sh's clean-baseline assumption.
 //
@@ -231,7 +231,7 @@ function auditBlocks(p: string, ev: string): Record<string, string>[] {
 let proj: string;
 
 beforeAll(() => {
-  // create_test_project + `init --scope bugfix` (t122.sh:30-34).
+  // create_test_project + `init --scope fix` (t122.sh:30-34).
   proj = createTestProject();
   const init = spawnSync(
     BUN,
@@ -239,7 +239,7 @@ beforeAll(() => {
       UTIL_TS,
       "init",
       "--scope",
-      "bugfix",
+      "fix",
       "--project-dir",
       proj,
     ],
@@ -250,7 +250,7 @@ beforeAll(() => {
   );
   if ((init.status ?? -1) !== 0) {
     throw new Error(
-      `init --scope bugfix failed (rc=${init.status}): ${init.stderr}`,
+      `init --scope fix failed (rc=${init.status}): ${init.stderr}`,
     );
   }
   // Sanity: init leaves requirements-analysis [-] ready to gate (probe-verified).

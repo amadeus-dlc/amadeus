@@ -144,7 +144,7 @@ LLM を呼び出さずにオーケストレーターの構造的正しさを検�
 **レベル:** e2e
 
 **テスト対象:**
-- brownfield スタブ + 成果物アサーションによる完全な bugfix ライフサイクル
+- brownfield スタブ + 成果物アサーションによる完全な fix ライフサイクル
 - greenfield スタブ + 成果物アサーションによる完全な POC ライフサイクル
 - 状態進行、スコープルーティング、監査の完全性、ジャンプ機構
 - ステージ指示品質の LLM 意味的レビュー(明確さ、論理的流れ、曖昧さ検出)
@@ -356,13 +356,13 @@ construction 中盤のステージ(例: code-generation)にジャンプするテ
 |---------|-------------|-------|------|--------|
 | `state-pre-workspace-detection.md` | -- | feature | Welcome+scaffold 完了、次は workspace-detection | t70, t71 |
 | `state-initialization-done.md` | Greenfield | feature | Init 完了、次は intent-capture | t73 |
-| `state-brownfield-init-done.md` | Brownfield | bugfix | Init 完了、次は RE | t72 |
-| `state-mid-inception.md` | Brownfield | bugfix | RE 完了、次は requirements-analysis | t74 |
+| `state-brownfield-init-done.md` | Brownfield | fix | Init 完了、次は RE | t72 |
+| `state-mid-inception.md` | Brownfield | fix | RE 完了、次は requirements-analysis | t74 |
 | `state-mid-ideation.md` | Greenfield | feature | Intent+market 完了、次は feasibility | t08, t10, t11, t12, t20, t22, t24, t25, t37 |
 | `state-construction.md` | -- | -- | Construction フェーズ | t07, t10, t11, t26, t57 |
 | `state-operation.md` | -- | -- | Operation フェーズ | t07, t10, t11 |
 | `state-completed.md` | -- | -- | 全ステージ完了 | t08, t11 |
-| `state-jumped.md` | Brownfield | bugfix | ジャンプ履歴を持つワークフロー中盤 | t11, t37, t42 |
+| `state-jumped.md` | Brownfield | fix | ジャンプ履歴を持つワークフロー中盤 | t11, t37, t42 |
 | `state-corrupted.md` | -- | -- | 無効/破損した状態 | t08, t10 |
 
 ## ステージテストの追加方法
@@ -426,7 +426,7 @@ bash tests/run-tests.sh       # POSIX 互換ラッパー
                 # ドライバトレースを tests/logs/ に書き込む
 --filter PAT    # ファイル名が拡張正規表現 PAT にマッチするテストのみ実行
 --parallel N    # 層内で最大 N 個のテストファイルを並行実行(エイリアス: -P N)。
-                # デフォルト: 1(直列)。smoke と unit 層は常に直列。
+                # デフォルト: 利用可能な CPU 数と 4 のうち小さい方。smoke と unit 層は常に直列。
 ```
 
 ライブ SDK および TUI ハーネスドライバは、デフォルトで project-only の Claude 設定ソースを使います。
@@ -443,7 +443,7 @@ bash tests/run-tests.sh       # POSIX 互換ラッパー
 
 ## 並列実行
 
-`--parallel N`(または `-P N`)は、層内で最大 N 個のテストファイルを並行実行します。デフォルトは直列(`1`)です。
+`--parallel N`(または `-P N`)は、層内で最大 N 個のテストファイルを並行実行します。デフォルトでは、利用可能な CPU 数と `4` のうち小さい方を使います。直列でデバッグするときは `-P 1` を指定します。
 
 **役立つ場合。** integration と e2e レベルは、それぞれ壁時計時間の大半を `claude -p` サブプロセスの起動と LLM ターンに費やします。これらのテストは既にファイルシステム的に分離されており — `setup_integration_project` がテストごとに新しい `$PROJ` を足場にする — そのため互いに干渉することなく並んで実行できます。
 

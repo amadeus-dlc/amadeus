@@ -1,0 +1,22 @@
+{
+  "electionId": "E-OBB4-CG1",
+  "voter": "subagent-2",
+  "question": "260731-open-bug-batch-4 / fix-1816 の設計逸脱裁定。builder が実装前停止で報告: FR-4a は表示層(amadeus-mirror-presentation.ts)限定だが、Bugbot 指摘を builder が repo 外 scratch で再現確認 — compareMirrorStatus は body Status 節と view.currentStatus の2面を比較し、currentStatus は amadeus-mirror-lifecycle.ts:410 で snapshot.status 生値のまま。body だけ導出化した現 PR #1823 では completion 窓で repair status が diverged(exit 1)を返す write⇔check 非対称が残る(実測ログ: body=Completed / currentStatus=Running / outcome: diverged)。FR-4b の趣旨(buildMirrorStatusRecordView に偽 drift を生ませない)には currentStatus の同一導出が必要。選択肢: (1) 同一 PR 内で lifecycle:410 を同じ導出に揃える追加スコープを承認(TDD 実装・builder 推奨。FR-4b 趣旨内の精密化) (2) 別 Issue 起票し本 PR は現状でマージ判断へ(completion 窓の偽 diverged は残存) (3) 指摘却下(非推奨 — 実測再現済み)。各自 PR #1823 の diff・builder 報告の実測ログ・requirements.md FR-4b・amadeus-mirror-lifecycle.ts:405-415 / amadeus-mirror.ts:143 を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "案3: 指摘却下"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "案2: 別 Issue 起票、本 PR は現状のまま"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "案1: 同一 PR で currentStatus を同じ導出に揃える(FR-4b 趣旨内の精密化として承認)"
+    }
+  ]
+}

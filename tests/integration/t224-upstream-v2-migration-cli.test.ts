@@ -5,8 +5,8 @@
 // migration. Every assertion crosses the real process seam and observes only
 // exit status, JSON, Git, or filesystem state.
 
-import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -28,7 +28,11 @@ import {
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { auditLockDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  _resetCloneIdForTests,
+  auditCloneId,
+  auditLockDir,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   createUpstreamV2Fixture,
   projectSnapshot,
@@ -63,6 +67,37 @@ interface CliResult {
   stdout: string;
   stderr: string;
 }
+
+// The three ways a spawned subprocess can end, as observed through CliResult:
+// a real exit status, a terminating signal, or a failure to spawn at all.
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
+
+const EXIT_CHANNEL_CASES = [
+  ["exit-status", { status: 2, signal: null, error: null }],
+  ["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],
+  ["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],
+] as const;
+
+const SPAWN_FAILURE_RESULT: CliResult = {
+  command: ["/usr/bin/bun", "amadeus-migrate.ts", "--apply"],
+  status: -1,
+  signal: null,
+  error: null,
+  stdout: "",
+  stderr: "",
+};
+
+// Resource-exhaustion spawn failures are transient under parallel test load;
+// every other outcome (signal, non-zero exit, other spawn errors) is a real
+// verdict and must never be retried.
+const RETRYABLE_SPAWN_ERROR = /\b(?:EAGAIN|EMFILE|ENOMEM)\b/;
+const SPAWN_RETRY_LIMIT = 2;
+const SPAWN_RETRY_BACKOFF_MS = 50;
 
 interface MigrationReport {
   schemaVersion: number;
@@ -172,6 +207,34 @@ function runInstalledDoctor(
   };
 }
 
+function isRetryableSpawnError(result: CliResult): boolean {
+  return result.error !== null && RETRYABLE_SPAWN_ERROR.test(result.error);
+}
+
+function runWithSpawnRetry(
+  attempt: () => CliResult,
+  hooks: {
+    onRetry?: (info: { attempt: number; error: string }) => void;
+    sleep?: (ms: number) => void;
+  } = {},
+): CliResult {
+  const onRetry = hooks.onRetry ?? reportSpawnRetry;
+  const sleep = hooks.sleep ?? ((ms: number) => Bun.sleepSync(ms));
+  let result = attempt();
+  for (let retry = 1; retry <= SPAWN_RETRY_LIMIT && isRetryableSpawnError(result); retry++) {
+    onRetry({ attempt: retry, error: result.error ?? "" });
+    sleep(SPAWN_RETRY_BACKOFF_MS * retry);
+    result = attempt();
+  }
+  return result;
+}
+
+function reportSpawnRetry(info: { attempt: number; error: string }): void {
+  console.warn(
+    `t224: retrying migration subprocess after spawn error (${info.attempt}/${SPAWN_RETRY_LIMIT}): ${info.error}`,
+  );
+}
+
 function runMigrationProcess(
   project: UpstreamV2Fixture,
   source: string,
@@ -189,37 +252,48 @@ function runMigrationProcess(
     ...args,
   ];
   const command = [process.execPath, ...migrateArgs];
-  const result = spawnSync(
-    process.execPath,
-    migrateArgs,
-    {
-      cwd: project.projectDir,
-      encoding: "utf-8",
-      env: {
-        ...process.env,
-        AMADEUS_LOCK_BASE_DIR: isolatedAuditLockBase(project),
-        ...extraEnv,
+  return runWithSpawnRetry(() => {
+    const result = spawnSync(
+      process.execPath,
+      migrateArgs,
+      {
+        cwd: project.projectDir,
+        encoding: "utf-8",
+        env: {
+          ...process.env,
+          AMADEUS_LOCK_BASE_DIR: isolatedAuditLockBase(project),
+          ...extraEnv,
+        },
       },
-    },
-  );
-  return {
-    command,
-    status: result.status ?? -1,
-    signal: result.signal,
-    error: result.error?.message ?? null,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
+    );
+    return {
+      command,
+      status: result.status ?? -1,
+      signal: result.signal,
+      error: result.error?.message ?? null,
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+    };
+  });
 }
 
 function expectSuccessfulMigration(
   result: CliResult,
   context?: { cloneIdLogicalPath: string; cloneIdTargetPath: string },
 ): void {
-  if (result.status === 0) return;
+  expectMigrationExit(result, 0, context);
+}
+
+function expectMigrationExit(
+  result: CliResult,
+  expectedStatus: number,
+  context?: { cloneIdLogicalPath: string; cloneIdTargetPath: string },
+): void {
+  if (result.status === expectedStatus) return;
   throw new Error(
     [
-      "migration subprocess failed",
+      "migration subprocess exit status mismatch",
+      `expected exit status: ${expectedStatus}`,
       ...(context === undefined
         ? []
         : [
@@ -303,19 +377,8 @@ afterEach(() => {
   for (const project of fixtures.splice(0)) project.cleanup();
 });
 
-// Each case builds its own fixture project, and the canonical emit path
-// registers a Logger Provider for one workspace per process — so the
-// registration is dropped between cases.
-beforeEach(() => {
-  resetOtelPerProject();
-});
-
 describe("t224 upstream-v2 migration public CLI", () => {
-  test.each([
-    ["exit-status", { status: 1, signal: null, error: null }],
-    ["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],
-    ["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],
-  ] as const)(
+  test.each(EXIT_CHANNEL_CASES)(
     "migration success diagnostics preserve the %s subprocess exit channel",
     (exitPath, outcome) => {
       const result: CliResult = {
@@ -346,6 +409,107 @@ describe("t224 upstream-v2 migration public CLI", () => {
       expect(message).toContain("stderr:\ndoctor failed");
     },
   );
+
+  test.each(EXIT_CHANNEL_CASES)(
+    "migration exit-code diagnostics preserve the %s subprocess exit channel",
+    (exitPath, outcome) => {
+      const result: CliResult = {
+        command: ["/usr/bin/bun", "amadeus-migrate.ts", "--apply"],
+        ...outcome,
+        stdout: '{"status":"failed"}\n',
+        stderr: "doctor failed\n",
+      };
+
+      let message = "";
+      try {
+        expectMigrationExit(result, 1);
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toContain("expected exit status: 1");
+      expect(message).toContain('command: "/usr/bin/bun" "amadeus-migrate.ts" "--apply"');
+      expect(message).toContain(`exit path: ${exitPath}`);
+      expect(message).toContain(`status: ${outcome.status}`);
+      expect(message).toContain(`signal: ${outcome.signal ?? "(none)"}`);
+      expect(message).toContain(`error: ${outcome.error ?? "(none)"}`);
+      expect(message).toContain('stdout:\n{"status":"failed"}');
+      expect(message).toContain("stderr:\ndoctor failed");
+    },
+  );
+
+  test("a matching exit status raises no exit-code diagnostic", () => {
+    const result: CliResult = {
+      command: ["/usr/bin/bun", "amadeus-migrate.ts", "--apply"],
+      status: 1,
+      signal: null,
+      error: null,
+      stdout: "",
+      stderr: "",
+    };
+    expect(() => expectMigrationExit(result, 1)).not.toThrow();
+  });
+
+  test.each([
+    ["EAGAIN", "spawn EAGAIN"],
+    ["EMFILE", "spawn EMFILE"],
+    ["ENOMEM", "spawn ENOMEM"],
+  ] as const)("a %s spawn error is retried until the subprocess starts", (_code, error) => {
+    let attempts = 0;
+    const retries: Array<{ attempt: number; error: string }> = [];
+    const sleeps: number[] = [];
+
+    const result = runWithSpawnRetry(
+      () => {
+        attempts++;
+        return attempts < 3
+          ? { ...SPAWN_FAILURE_RESULT, error }
+          : { ...SPAWN_FAILURE_RESULT, status: 0, error: null };
+      },
+      { onRetry: (info) => retries.push(info), sleep: (ms) => sleeps.push(ms) },
+    );
+
+    expect(attempts).toBe(3);
+    expect(retries.map((retry) => retry.attempt)).toEqual([1, 2]);
+    expect(retries.every((retry) => retry.error === error)).toBe(true);
+    expect(sleeps).toEqual([SPAWN_RETRY_BACKOFF_MS, SPAWN_RETRY_BACKOFF_MS * 2]);
+    expect(result.status).toBe(0);
+    expect(result.error).toBeNull();
+  });
+
+  test("spawn-error retries stop at the retry limit", () => {
+    let attempts = 0;
+    const result = runWithSpawnRetry(
+      () => {
+        attempts++;
+        return { ...SPAWN_FAILURE_RESULT, error: "spawn EAGAIN" };
+      },
+      { onRetry: () => {}, sleep: () => {} },
+    );
+
+    expect(attempts).toBe(1 + SPAWN_RETRY_LIMIT);
+    expect(result.error).toBe("spawn EAGAIN");
+  });
+
+  test.each([
+    ["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],
+    ["exit-status", { status: 1, signal: null, error: null }],
+    ["non-retryable spawn error", { status: -1, signal: null, error: "spawn ENOENT" }],
+  ] as const)("a %s outcome is not retried", (_exitPath, outcome) => {
+    let attempts = 0;
+    let retries = 0;
+
+    const result = runWithSpawnRetry(
+      () => {
+        attempts++;
+        return { ...SPAWN_FAILURE_RESULT, ...outcome };
+      },
+      { onRetry: () => retries++, sleep: () => {} },
+    );
+
+    expect(attempts).toBe(1);
+    expect(retries).toBe(0);
+    expect(result.status).toBe(outcome.status);
+  });
 
   test("dry-run reports a sorted eligible plan and leaves Git and the filesystem unchanged", () => {
     const project = fixture();
@@ -1306,6 +1470,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const sentinel = "CLONE_ID_SENTINEL_MUST_NOT_CHANGE\n";
     try {
       writeFileSync(target, sentinel, "utf-8");
+      const targetBefore = statSync(target);
       const cloneId = join(project.sourceRoot, `.${UPSTREAM_FILE_PREFIX}clone-id`);
       rmSync(cloneId, { force: true });
       symlinkSync(target, cloneId);
@@ -1324,11 +1489,52 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "GUARDRAIL_LOADED",
         "HEALTH_CHECKED",
       ]);
-      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+
+      _resetCloneIdForTests();
+      const firstCloneId = auditCloneId(project.projectDir);
+      _resetCloneIdForTests();
+      const secondCloneId = auditCloneId(project.projectDir);
+      expect(firstCloneId).toMatch(/^[a-f0-9]{12}$/);
+      expect(secondCloneId).toBe(firstCloneId);
+
+      rmSync(
+        join(project.destinationRoot, relative(project.sourceRoot, project.auditPath)),
+        { force: true },
+      );
+      project.commitAll("test: remove the legacy markdown audit fixture");
       const migratedCloneId = join(project.destinationRoot, ".amadeus-clone-id");
+      const firstDoctor = runInstalledDoctor(project);
+      const secondDoctor = runInstalledDoctor(project);
+      expectSuccessfulMigration(firstDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expectSuccessfulMigration(secondDoctor, {
+        cloneIdLogicalPath: relative(project.projectDir, migratedCloneId),
+        cloneIdTargetPath: target,
+      });
+      expect(readFileSync(target, "utf-8")).toBe(sentinel);
+      const targetAfter = statSync(target);
+      expect({
+        mode: targetAfter.mode,
+        uid: targetAfter.uid,
+        gid: targetAfter.gid,
+        size: targetAfter.size,
+        mtimeMs: targetAfter.mtimeMs,
+        ino: targetAfter.ino,
+      }).toEqual({
+        mode: targetBefore.mode,
+        uid: targetBefore.uid,
+        gid: targetBefore.gid,
+        size: targetBefore.size,
+        mtimeMs: targetBefore.mtimeMs,
+        ino: targetBefore.ino,
+      });
       expect(lstatSync(migratedCloneId).isSymbolicLink()).toBe(true);
       expect(readlinkSync(migratedCloneId)).toBe(target);
-      expect(project.git(["diff", "--name-only"])).toBe("");
+      const changedPaths = project.git(["diff", "--name-only"]).trim().split("\n");
+      expect(changedPaths).toHaveLength(1);
+      expect(changedPaths[0]).toMatch(/\/audit\/[^/]+\.jsonl$/);
     } finally {
       rmSync(external, { recursive: true, force: true });
     }
@@ -1370,7 +1576,10 @@ describe("t224 upstream-v2 migration public CLI", () => {
         { AMADEUS_LOCK_BASE_DIR: sharedLockBase },
         "--apply",
       );
-      expect(collided.status).toBe(1);
+      expectMigrationExit(collided, 1, {
+        cloneIdLogicalPath: relative(project.projectDir, cloneId),
+        cloneIdTargetPath: target,
+      });
       // The canonical emit locks through withAuditLock, which raises the typed
       // AuditLockAcquireError naming the bucket and the exhausted budget, where
       // the legacy writer raised a bare "after retries". What this case pins is
@@ -1398,10 +1607,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       rmSync(sharedLockBase, { recursive: true, force: true });
       rmSync(collisionRoot, { recursive: true, force: true });
     }
-    // The collision arm deliberately spends the whole acquire budget
-    // (50 x 100ms = 5.0s) before the failure it asserts on, so the case cannot
-    // fit inside bun's 5s default — that is the scenario, not slowness.
-  }, 60_000);
+  });
 
   test("a real doctor failure rolls the workspace and Git index back", () => {
     const project = fixture();

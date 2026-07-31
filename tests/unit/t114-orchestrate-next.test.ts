@@ -42,7 +42,7 @@
 //   .sh 1  in-flight current stage -> run-stage           -> "1: in-flight current stage -> run-stage directive"
 //   .sh 2  run-stage names current stage (feasibility)     -> "2: run-stage names the current stage (feasibility)"
 //   .sh 3  run-stage carries lead_agent off the node       -> "3: run-stage carries lead_agent from the graph node"
-//   .sh 4  brownfield bugfix active stage                  -> "4: brownfield bugfix active stage -> run-stage reverse-engineering"
+//   .sh 4  brownfield fix active stage                  -> "4: brownfield fix active stage -> run-stage reverse-engineering"
 //   .sh 5  invalid --scope errors over valid state (x2)    -> "5: invalid --scope errors unconditionally over valid state" (kind:error + Unknown scope)
 //   .sh 6  --scope flag beats env                          -> "6: --scope flag beats AMADEUS_DEFAULT_SCOPE env"
 //   .sh 7  env beats default                               -> "7: env scope beats default (poc resolved)"
@@ -152,7 +152,7 @@ describe("t114 happy path: in-flight current stage -> run-stage", () => {
     expect(runNext(proj, []).out).toContain('"lead_agent":"amadeus-architect-agent"');
   });
 
-  test("4: brownfield bugfix active stage -> run-stage reverse-engineering", () => {
+  test("4: brownfield fix active stage -> run-stage reverse-engineering", () => {
     proj = createTestProject();
     seedStateFile(proj, BROWNFIELD_INIT_DONE);
     const statePath = seededStateFile(proj);
@@ -172,7 +172,7 @@ describe("t114 happy path: in-flight current stage -> run-stage", () => {
 // ===========================================================================
 describe("t114 scope precedence + validation", () => {
   test("5: invalid --scope errors unconditionally over valid state [finding 4]", () => {
-    // state-mid-inception has a valid Scope (bugfix); an explicit bad --scope is
+    // state-mid-inception has a valid Scope (fix); an explicit bad --scope is
     // validated regardless of the state scope and errors with the verbatim
     // `Unknown scope "..."` wording — never swallowed into a current-stage run.
     proj = createTestProject();
@@ -188,7 +188,7 @@ describe("t114 scope precedence + validation", () => {
     proj = createTestProject();
     const out = runNext(
       proj,
-      ["--scope", "bugfix", "--stage", "requirements-analysis"],
+      ["--scope", "fix", "--stage", "requirements-analysis"],
       { AMADEUS_DEFAULT_SCOPE: "bogusscope" },
     ).out;
     expect(out).toContain('"kind":"run-stage"');

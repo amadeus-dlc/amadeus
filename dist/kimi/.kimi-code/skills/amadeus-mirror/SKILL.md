@@ -48,6 +48,7 @@ The lifecycle CLI accepts exactly these option-bearing forms. Positional
 arguments are forbidden.
 
 ```text
+boundary intent-initialized --instance <value> [--repo <value>] [--space <value>] [--intent <value>] [--project-dir <value>]
 boundary intent-capture --instance <value> [--repo <value>] [--space <value>] [--intent <value>] [--project-dir <value>]
 boundary phase --instance <value> --phase <value> [--repo <value>] [--space <value>] [--intent <value>] [--project-dir <value>]
 boundary park --instance <value> --stage <value> [--repo <value>] [--space <value>] [--intent <value>] [--project-dir <value>]

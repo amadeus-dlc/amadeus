@@ -24,7 +24,7 @@ import {
   handleConvert,
   intentIdFromShardPath,
 } from "../../dist/claude/.claude/tools/amadeus-journal-convert.ts";
-import { parseJournalShard } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
+import { parseJournalShard, readJournalRecords } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 
 const HEADER = "# AI-DLC Audit Log\n";
 const IDENTITY = { cloneId: "abc123def456", intentId: "260728-demo-1234abcd" };
@@ -41,14 +41,14 @@ describe("convertShardText — lossless conversion", () => {
     });
     const shard =
       HEADER +
-      record("WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "amadeus-feature" }) +
+      record("WORKFLOW_STARTED", "2026-07-28T10:00:00Z", { Scope: "self-feature" }) +
       record("HUMAN_TURN", "2026-07-28T10:01:00Z") +
       raw;
     const { entries, jsonl } = convertShardText(shard, IDENTITY);
     expect(entries.length).toBe(3);
     expect(entries.map((e) => e.seq)).toEqual([1, 2, 3]);
     expect(entries[0]!.event).toBe("WORKFLOW_STARTED");
-    expect(entries[0]!.fields).toEqual({ Scope: "amadeus-feature" });
+    expect(entries[0]!.fields).toEqual({ Scope: "self-feature" });
     expect(entries[1]!.fields).toEqual({});
     expect(entries[2]!.event).toBeNull();
     expect(entries[2]!.rawBody).toBe("free-form line 1\nfree-form line 2");
@@ -233,7 +233,9 @@ describe("committed corpus — post-switchover invariants", () => {
       for await (const p of new Glob(g).scan(root)) {
         count += 1;
         try {
-          parseJournalShard(readFileSync(join(root, p), "utf-8"));
+          // Committed shards are mixed v1/v2 once the canonical OTel emitter
+          // starts writing v2 rows; the shared normalizer owns that read.
+          readJournalRecords(readFileSync(join(root, p), "utf-8"));
         } catch (e) {
           fails.push(`${p}: ${(e as Error).message}`);
         }

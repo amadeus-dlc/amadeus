@@ -48,7 +48,7 @@
 // EXECUTE set is small (init×3 + reverse-engineering[->SKIP on greenfield] +
 // requirements-analysis + code-generation + build-and-test) so the run reaches
 // terminal WORKFLOW_COMPLETED within a generous budget while still crossing >=1
-// phase boundary (Ideation present for poc, unlike bugfix) — exercising
+// phase boundary (Ideation present for poc, unlike fix) — exercising
 // handleCompleteWorkflow's PHASE_COMPLETED + WORKFLOW_COMPLETED pair.
 //
 // IRON RULE: a missing partner is a real audit-integrity DEFECT (the trail would

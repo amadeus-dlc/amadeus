@@ -215,6 +215,7 @@ export function memberItem(
 export type FixtureOptions = Readonly<{
   lifecyclePhase?: string;
   registryStatus?: "in-flight" | "parked" | "complete";
+  completionInstance?: string;
   mode?: "auto" | "prompt" | "off";
   boards?: readonly MirrorProjectRef[];
   phaseField?: string;
@@ -237,9 +238,22 @@ export function createProjectFixture(options: FixtureOptions = {}) {
       "",
       "- **Project**: Project status sync",
       `- **Lifecycle Phase**: ${options.lifecyclePhase ?? "IDEATION"}`,
-      "- **Current Stage**: intent-capture",
+      `- **Current Stage**: ${
+        registryStatus === "complete"
+          ? "none"
+          : options.completionInstance
+            ? "build-and-test"
+            : "intent-capture"
+      }`,
       `- **Status**: ${registryStatus === "complete" ? "Completed" : "Running"}`,
       `- **Last Updated**: ${NOW}`,
+      ...(options.completionInstance
+        ? [
+            `- **Workflow Completion Instance**: ${options.completionInstance}`,
+            "- **Workflow Completion Stage**: build-and-test",
+            "- **Workflow Completion Status**: pending",
+          ]
+        : []),
       "",
       renderMirrorStateBlock(options.state ?? EMPTY_MIRROR_STATE),
       "",

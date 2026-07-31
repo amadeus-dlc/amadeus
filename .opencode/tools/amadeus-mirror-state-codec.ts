@@ -92,6 +92,7 @@ const OPERATIONS: ReadonlySet<MirrorOperation> = new Set([
 ]);
 
 const BOUNDARY_KINDS: ReadonlySet<MirrorBoundary["kind"]> = new Set([
+  "intent-initialized",
   "intent-capture-approved",
   "phase-verified",
   "parked",
@@ -563,6 +564,7 @@ const AUTHORIZATION_KEYS: ReadonlySet<string> = new Set([
 const LANDING_KEYS: ReadonlySet<string> = new Set([
   "registryStatus",
   "workflowStatus",
+  "completionInstance",
 ]);
 
 function checkUnknownKeys(
@@ -756,13 +758,27 @@ function validateLanding(
   }
   checkUnknownKeys(value, LANDING_KEYS, `${path}.landing`, issues);
   if (
-    value.registryStatus !== "complete" ||
-    value.workflowStatus !== "Completed"
+    value.registryStatus === "complete" &&
+    value.workflowStatus === "Completed" &&
+    !("completionInstance" in value)
   ) {
-    issues.push(`${path}.landing: requires complete/Completed`);
-    return undefined;
+    return { registryStatus: "complete", workflowStatus: "Completed" };
   }
-  return { registryStatus: "complete", workflowStatus: "Completed" };
+  if (
+    value.registryStatus === "in-flight" &&
+    isNonEmptyString(value.workflowStatus) &&
+    isNonEmptyString(value.completionInstance)
+  ) {
+    return {
+      registryStatus: "in-flight",
+      workflowStatus: value.workflowStatus,
+      completionInstance: value.completionInstance,
+    };
+  }
+  issues.push(
+    `${path}.landing: requires complete/Completed or an in-flight completion instance`,
+  );
+  return undefined;
 }
 
 function validateCreateIdentity(
@@ -1704,6 +1720,21 @@ export function parseMirrorStateDocument(document: string): MirrorStateParse {
 export function mirrorIssueNumberFromDocument(document: string): number | null {
   const parsed = parseMirrorStateDocument(document);
   return parsed.kind === "ok" ? parsed.snapshot.issueNumber : null;
+}
+
+// The "did a create actually run?" derivation from a state document: a create
+// receipt at `succeeded`, in the receipt vocabulary classifyReceipt reads. It
+// is the evidence the boundary report accepts for `--user-input create`, so a
+// manual create that recorded its Issue no longer rejects its own report
+// (Issue #1752). The boundary instance is deliberately not matched: the answer
+// reports that a create ran, not which ask offered it.
+export function succeededMirrorCreateExists(document: string): boolean {
+  const parsed = parseMirrorStateDocument(document);
+  if (parsed.kind !== "ok") return false;
+  return Object.values(parsed.snapshot.receipts).some(
+    (receipt) =>
+      receipt.event.operation === "create" && receipt.status === "succeeded",
+  );
 }
 
 // ---------------------------------------------------------------------------

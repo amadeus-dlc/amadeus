@@ -47,12 +47,12 @@ With this set, bare `/amadeus` invocations use `workshop` as the default scope. 
 
 **Precedence (highest to lowest):**
 
-1. Explicit CLI flag: `/amadeus feature` or `/amadeus --scope bugfix` wins.
-2. Keyword detection in freeform text: `/amadeus fix the login bug` still maps to `bugfix`. Users can override the detected scope at the existing confirmation prompt.
+1. Explicit CLI flag: `/amadeus feature` or `/amadeus --scope fix` wins.
+2. Keyword detection in freeform text: `/amadeus fix the login bug` still maps to `fix`. Users can override the detected scope at the existing confirmation prompt.
 3. `AMADEUS_DEFAULT_SCOPE` env var from `.claude/settings.json`.
 4. Hard-coded fallback (`poc` at intent birth, `feature` for unmatched freeform).
 
-**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/amadeus-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
+**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `fix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/amadeus-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
 
 **Verifying the config:** run `/amadeus --doctor` to confirm the env var is set and valid:
 
@@ -79,7 +79,7 @@ Specify explicitly or let the orchestrator auto-detect:
 ```
 /amadeus enterprise       # Explicit scope
 /amadeus Build a payments API  # Auto-detects "feature"
-/amadeus Fix the login bug     # Auto-detects "bugfix"
+/amadeus Fix the login bug     # Auto-detects "fix"
 ```
 
 ### Overriding at runtime

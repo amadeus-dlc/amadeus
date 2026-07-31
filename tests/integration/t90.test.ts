@@ -320,7 +320,7 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 
   // --- Case 11: re-init -> latest WORKFLOW_STARTED wins, prior rows filtered ---
   test("11: re-init -> workflow_id is latest WORKFLOW_STARTED, 1 row, pending", () => {
-    const auditReinit = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"bugfix"}}
+    const auditReinit = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"fix"}}
 {"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:01:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
 {"schemaVersion":1,"seq":3,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T08:05:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
 {"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2026-05-27T10:00:00Z","heading":"Workflow Start","event":"WORKFLOW_STARTED","fields":{"Scope":"feature"}}

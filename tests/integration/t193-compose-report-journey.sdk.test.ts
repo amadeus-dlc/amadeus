@@ -6,18 +6,18 @@
 // the report-triage instruction; the dispatched composer reads the file,
 // triages findings (auto-fixable vs human-decision), and composes a compact
 // fix-and-ship grid - which for a bug-shaped scan should ROUTE TO THE STOCK
-// `bugfix` SCOPE rather than minting a new one (the persona's prefer-stock
+// `fix` SCOPE rather than minting a new one (the persona's prefer-stock
 // rule; the fixture is 5 code-level findings on a brownfield Todo app, the
-// canonical bugfix shape).
+// canonical fix shape).
 //
 // Journey (one interactive run, stopped at the birth):
 //   drive:     `/amadeus compose --report scan-report-sample.json` on a fresh
 //              BROWNFIELD project (the fixture stub) with the report copied in.
-//   conductor: dispatch -> triage -> proposal (matched: bugfix) -> gate
+//   conductor: dispatch -> triage -> proposal (matched: fix) -> gate
 //              (answerScript approves) -> NO scope write (stock match) ->
-//              same-turn birth on bugfix.
+//              same-turn birth on fix.
 //   disk:      NO new scope file (still 9 + 9 - the matched path skips the
-//              write); a born intent whose state carries Scope: bugfix.
+//              write); a born intent whose state carries Scope: fix.
 //
 // The deterministic halves are pinned by t198 (the --report flag parses,
 // value not leaked). This proves the LIVE triage->route->birth arc.
@@ -52,7 +52,7 @@ const APPROVE_ALL = {
 
 describe("t193 report composer journey (/amadeus compose --report, sdk live)", () => {
   test(
-    "a bug-shaped scan triages to the stock bugfix scope: no scope write, same-turn birth on bugfix",
+    "a bug-shaped scan triages to the stock fix scope: no scope write, same-turn birth on fix",
     async () => {
       const proj = setupIntegrationProject({
         noAidlcDocs: true,
@@ -100,11 +100,11 @@ describe("t193 report composer journey (/amadeus compose --report, sdk live)", (
         expect(Object.keys(grid).length).toBe(10);
 
         // The born workflow rides the triaged route: a compact incremental
-        // scope (bugfix, or security-patch if the composer judged the hotspot
+        // scope (fix, or security-patch if the composer judged the hotspot
         // must deploy) - never the full-arc feature default.
         const stateText = readStateFile(proj) ?? "";
         const scope = readStateField(stateText, "Scope");
-        expect(["bugfix", "security-patch"]).toContain(scope ?? "");
+        expect(["fix", "security-patch"]).toContain(scope ?? "");
       } finally {
         cleanupTestProject(proj);
       }

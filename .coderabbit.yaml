@@ -68,6 +68,9 @@ knowledge_base:
       - ".agents/rules/*.md"
       - ".agents/skills/*/SKILL.md"
       - "amadeus/spaces/default/memory/**/*.md"
+      - "amadeus/spaces/default/knowledge/amadeus-shared/domain-language.md"
+      - "amadeus/spaces/default/knowledge/amadeus-shared/software-design/README.md"
+      - "amadeus/spaces/default/knowledge/amadeus-shared/software-design/*/SKILL.md"
 
 chat:
   auto_reply: true

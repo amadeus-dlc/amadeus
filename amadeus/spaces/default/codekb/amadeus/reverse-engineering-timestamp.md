@@ -1,6 +1,98 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260729-otel-upstream）
+## 実行メタデータ（現在: 260731-open-bug-batch-4）
+
+- Date: `2026-07-31T05:31:35Z`
+- Base commit: `3f73823b1`（observed の祖先、`git merge-base --is-ancestor 3f73823b1 HEAD` exit 0）
+- Observed commit: `6e7a9d701d7cf350310a047bc5b70ff18ed15272`
+- Distance: `13 commits`
+- 区間規模: `188 files changed, 6355 insertions(+), 424 deletions(-)`（`git diff --shortstat 3f73823b1..HEAD`、測定 ref = observed `6e7a9d701`）。面別内訳（`git diff --numstat` の機械集計）は `dist/` `52 files / +1661 / −171`、self-install 8面 `33 files / +1164 / −123`、`amadeus/` record `72 files / +2204 / −10`、`metrics/` `5 files / +286 / −2`、**ソース面 `26 files / +1040 / −118`**。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 4件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1811](https://github.com/amadeus-dlc/amadeus/issues/1811) P1/S2（`t-team-up-codex-resume.serial.test.ts` の fake supervisor stub が不死設計で、テスト終了後もプロセスが残留する）、[#1800](https://github.com/amadeus-dlc/amadeus/issues/1800) P3/S3（`t224-upstream-v2-migration-cli.test.ts:1411` の素の `status` 比較が spawn 失敗のセンチネル `-1` を診断不能な差分として表示する）、[#1797](https://github.com/amadeus-dlc/amadeus/issues/1797) P3/S4（`t259-guard-corpus.test.ts:108-109` の比 2.5 assert が逐次計測の別時間窓に立ち負荷変動で系統的にずれる）、[#1816](https://github.com/amadeus-dlc/amadeus/issues/1816) P3/S4（mirror Issue の close 経路が body を書かず、completion 境界の最終 body は Status が構造的に `Running` のまま残る）
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行（`#1811` のみプロセス残留のライブ実測あり）。
+- 判定: **4件とも現存**。#1811 は本番 supervisor 側が fail-closed 実装済み（`packages/framework/core/tools/team-up-codex-safety-wait.ts:643` の `runRecordIsActive` ループ、`:561-582` の `catch` → `false`）であり、患部はテスト fixture 側に限局する。#1816 は close 経路の body 非書込（`packages/framework/core/tools/amadeus-mirror-executor.ts:1156-1159`）と completion 境界の Status 強制（`amadeus-mirror-lifecycle.ts:311-312`）の2機序が残存する。
+- 区間の主要変化: 選挙ストアの pending ballot lane 新設（#1773 修正 `25f54b066` — `amadeus-election-store.ts` `+168/−10`、`pendingDir` `:113` / `readPending` `:139` / `appendPending` `:161` / `ballotKey` `:187` / `pendingNotOnLedger` `:197` / `integratePending` `:205`、tally 時に `:535` `:540` で統合）、選挙モデル view への question / 選択肢 description 搬送（#1772 修正 `75367ba67` — `amadeus-election-model.ts` `+36/−9`）、mirror boundary report の create 受理判定の反転（#1752 修正 `8a8abf567` — `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）新設と `amadeus-orchestrate.ts:4249` の `createRan` 化）、`release.yml` の再実行可能ジョブ分割（#1799 `b488466b8`、`+68/−22`）、7ハーネス `dot-gitignore` への pending lane 除外（各 `+5/−0`）、`v0.1.7` リリース（`e06b8f601`）。**core 正本の変更は選挙2モジュール・mirror 2モジュールに限局**し、sensors / hooks / scopes の構成は不変。
+- 引用再確認の相違: Developer 報告の**所在・機序・結論は全件一致**。相違は (a) コミット数 = 13（報告 14。`git rev-list --count 3f73823b1..HEAD`） (b) 区間の numstat 各値 — 報告値は insertions+deletions の合算に見え、insertions 単独では `election-store +168`（報告 +178）/ `election-model +36`（+45）/ `release.yml +68`（+90）/ `t223 +76`（+77）/ `t236 +55`（+63）/ `t265 +120`（+137）/ `t234 +66`（+68）、`t373 +323` のみ完全一致 (c) `afterEach` は `:39-41`（報告 `:38-41`） (d) `expectSuccessfulMigration` 宣言は `:218`、診断配列は `:225-238`（報告 `:222-236`） (e) 収束判定は `:1038-1041`（報告 `:1039-1041`） (f) allowlist の presentation 行ピン5件のうち `renderMirrorIssueContent`（`:239-273`）と交差するのは `245-247`（直撃）と `266-271`（下方シフト）の**2件**であり、`193-194` / `230-234` / `237-239` は同関数より上方に位置するため挿入位置が `:239` より下なら不変（報告「直撃3件+シフト2件」）。いずれも修正方針に影響しない。
+- 現在マーカーの降格: 直前の現在断面 `260730-open-bug-batch-3`（observed `3f73823b1`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 前 intent の observed `3f73823b1` は `origin/main` 系譜のコミットとして記録されており（`cid:reverse-engineering:c2-observed-mainline-commit` の実践）、今回**初めて祖先性が保たれた**（`git merge-base --is-ancestor 3f73823b1 HEAD` exit 0、距離13）。merge-base 復元は不要だった。本 intent の observed `6e7a9d701` も `origin/main` 系譜のコミットである。
+- Updated artifacts: 実質更新8件 = `architecture.md`（4バグの機構節 + 区間の構造変化）、`code-structure.md`（患部配置・区間の機械集計）、`code-quality-assessment.md`（根因確度と品質所見）、`business-overview.md`（利用者影響と delivery boundary）、`component-inventory.md`（対象コンポーネントと修正面）、`api-documentation.md`（4件が触れる内部契約）、`technology-stack.md`（構成カウントの変化）、`dependencies.md`（Bolt 間の交差判定 — 4件とも並行可・条件2点）。加えて本ファイルと per-intent `re-scans/260731-open-bug-batch-4.md`。
+- テスト採番予約: 空き最大は `t373`（`t372` は欠番）。本 intent は `t374`（#1811）/ `t375`（#1800）/ `t376`（#1797）を予約し、#1816 は既存 `tests/unit/t281-amadeus-mirror-presentation.test.ts` へのケース追加とする（`cid:code-generation:swarm-test-number-reservation`）。`t372` の欠番は埋めない。
+- Per-intent record: `re-scans/260731-open-bug-batch-4.md`。
+
+## 実行メタデータ（履歴: 260730-open-bug-batch-3）
+
+- Date: `2026-07-30T23:40:33Z`
+- Base commit: `a38a1f4d3`（observed の祖先、`git merge-base --is-ancestor a38a1f4d3 HEAD` exit 0）
+- Observed commit: `3f73823b1cf5969836faa22dfa333b48b933f2fc`
+- Distance: `25 commits`
+- 区間規模: `588 files changed, 52675 insertions(+), 27351 deletions(-)`。生成面（`dist/`）・self-install 6面・`amadeus/` record・`metrics/` を除くソース面は `98 files changed, 9531 insertions(+), 2532 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 3件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1773](https://github.com/amadeus-dlc/amadeus/issues/1773)（未開票中の全票本文が単一共有 tracked ファイル `ledger.json` に平文で載り blind 性が格納面から破れる）、[#1772](https://github.com/amadeus-dlc/amadeus/issues/1772)（配布ビューに設問文が無く選択肢の説明が parse 時に無音 drop される）、[#1752](https://github.com/amadeus-dlc/amadeus/issues/1752)（mirror boundary report の create 拒否条件が ask の指示と自己矛盾する）
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 判定: **3件とも現存**。#1752 は本区間で着地した #1791（`ffb68c484`、`intent-initialized` boundary の新設）の後も再現経路が温存されていることを `amadeus-orchestrate.ts:486-500` の実読で確認した。
+- 区間の主要変化: 自動起票 finding capability の新設（#1744 `d56e76ddd` — GitHub 汎用ゲートウェイ・階層設定リゾルバ・`gh` spawn の単一不純エッジを mirror 専用実装から抽出、新キー `auto-file-findings`）、sensor 発火 scope の exact-path allowlist 化（#1758 / #1770 — 前 intent #1742 の構造的解決）、degrade unit の engine 側一意解決（#1774 — 前 intent #1711 の解決）、mirror initial-create boundary の新設（#1791 — 前 intent #1750 の解決）、metrics 公開パイプライン（#1761）、phase-check 正名化と auto-solo 選挙フックの protocol 焼き込み（#1776 / #1782 — 前 intent #1749 / #1735 の解決）。**core tools は base `79` → observed `88`（新規9件）**、sensors `7` / hooks `12` / scopes `10` はいずれも不変。
+- 引用再確認の相違: Developer 報告の主要引用は**全件所在一致**（appendBallot の ledger 書込・materialize の blind lift・`Choice` 型・`parseChoices` の無音 drop・`DistributionView` のキー集合・`t234` の3重固定・report 拒否条件・`SKILL.md:18` / `:51`・tracked `ledger.json` 183件・`git check-ignore` exit 1）。行**範囲**表記に3点の精密化 — (a) #1791 の prompt 降格は `:488`（報告 `:479`。分岐全体は `:486-500`、`initialCreateIsOutstanding` 宣言は `:373`） (b) #1752 の拒否条件は条件式 `:4252-4256` のうち患部節が `:4255`、state 再評価は `:4241-4242`（報告 `:4251-4255` / `:4242`） (c) `t265` の fixture 行は `:793`（報告 `:791-810` は周辺ブロック）。いずれも所在・意味論は一致し結論に影響しない。加えて1点の精密化: Developer の「`.claude/hooks/` に ledger 配信機構 0件」は結論として正しいが、`grep -rn 'ledger' .claude/hooks/` は**3ヒットする**（`amadeus-mint-presence.ts:4` / `:37`、`amadeus-audit-logger.ts:67`）。全件を実読し、いずれも監査シャードの append-only ledger を指す語彙で選挙 ledger と無関係と確定した（`cid:requirements-analysis:absence-claim-grep-verify`）。
+- 追加所見（Developer 報告外）: 本区間で追加されたテストに**番号重複が3組**ある（`t366` = 3ファイル、`t367` = 2ファイル、`t368` = 3ファイル。`ls tests/integration tests/unit` の実測）。`cid:code-generation:swarm-test-number-reservation` が守られなかった実測であり、本 intent の新規テスト採番は `t371` より後を使う。テスト引用は `tNNN` 短形でなくフルパスで書く（`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補）。
+- 現在マーカーの降格: 直前の現在断面 `260730-open-bug-batch-2`（observed `c42ef4d77`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 記録済みの observed 3件（`c42ef4d77` / `278d61d8e` / `22ee27dbe`）はいずれも現 HEAD の**祖先ではない**。squash マージ運用で record ブランチの observed が `main` に残らない既知現象であり、`cid:reverse-engineering:rescan-base-ancestry`（祖先性を判定してから base を採用）に従い merge-base 復元で `a38a1f4d3` を採用した（`git merge-base --is-ancestor a38a1f4d3 HEAD` exit 0、距離25）。本 intent の observed `3f73823b1` は `origin/main` 系譜のコミットであり、次回 RE での非祖先化を避ける（`cid:reverse-engineering:c2-observed-mainline-commit`）。
+- Updated artifacts: 実質更新8件 = `architecture.md`（3バグの機構節 + 区間の構造変化）、`code-structure.md`（患部配置・区間の機械集計・テスト番号重複）、`code-quality-assessment.md`（根因確度と品質所見8件）、`business-overview.md`（利用者影響と delivery boundary）、`component-inventory.md`（対象コンポーネントと新規9モジュール）、`api-documentation.md`（3件が触れる内部契約と区間の新契約）、`technology-stack.md`（構成カウントの変化 core tools 79→88）、`dependencies.md`（Bolt 間の交差判定 — #1773 × #1772 が**交差する**）。加えて本ファイルと per-intent `re-scans/260730-open-bug-batch-3.md`。
+- Per-intent record: `re-scans/260730-open-bug-batch-3.md`。
+
+## 実行メタデータ（履歴: 260730-open-bug-batch-2）
+
+- Date: `2026-07-30T15:34:39Z`
+- Base commit: `8b8016f62`（observed の祖先、`git merge-base --is-ancestor 8b8016f62 HEAD` exit 0）
+- Observed commit: `c42ef4d77ef79d4230efe4fdac5d0d7abf7155f2`
+- Distance: `12 commits`
+- 区間規模: `116 files changed, 4276 insertions(+), 181 deletions(-)`。生成面（`dist/`）・self-install 面・`amadeus/` record を除く比較断面は `26 files changed, 997 insertions(+), 81 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 5件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1750](https://github.com/amadeus-dlc/amadeus/issues/1750)（Ideation SKIP スコープで初回 auto-mirror create が Inception 完了まで遅延）、[#1749](https://github.com/amadeus-dlc/amadeus/issues/1749)（phase boundary 成果物名の不一致）、[#1742](https://github.com/amadeus-dlc/amadeus/issues/1742)（非成果物へのステージセンサー発火）、[#1735](https://github.com/amadeus-dlc/amadeus/issues/1735)（codex ハーネスで auto-solo-election が不発）、[#1734](https://github.com/amadeus-dlc/amadeus/issues/1734)（promote:self の scope-grid キー順 churn）
+- Scan mode: Developer の静的差分スキャンを上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 区間の主要変化: degrade スコープの per-unit directive で `{unit-name}` を実ディレクトリへ解決（#1760 `e839b20ce`、`degradeUnitDirectories()` / `degradeUnitResolutionError()` 新設）、SKILL.md の new-work 経路ツール名修正（#1753 `042237263`）、TLC 標準モジュール parse の tmpdir 追従（#1745 `8bb81c2e7`）。残りは前 intent の record 同期・dist 畳み込み・metrics スナップショット。
+- 引用再確認の相違: Developer 報告の主要引用は**全件一致**（boundary 4種・intent-capture 発行元・phase-check 正準名・誤記18ファイル・センサー matches-only フィルタ・election 2箇所・SKILL.md 唯一所在・promote-self 非対称・HEAD churn 非再現）。関数の行**範囲**表記に3点の軽微な精密化 — (a) `scopeGridInSync` は `:130-142`（報告 `:130-144`） (b) `mergeScopeGrid` は `:147-160`（報告 `:147-159`） (c) `hasPersistedMirrorBoundary` は宣言 `:359`・呼び出し `:464`（報告は `:458-465` として呼び出し側のみを指していた）。いずれも所在・意味論は一致し、結論に影響しない。
+- 現在マーカーの降格: 直前の現在断面 `260730-skill-reviewer-fixes`（observed `278d61d8e`）を本節の新設に伴い履歴へ降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 直前の現在節が宣言する observed `278d61d8e` は現 HEAD の**祖先ではない**（`git merge-base --is-ancestor` exit 1）。その前の `22ee27dbe` も同様に非祖先（exit 1）。squash マージ運用で record ブランチの observed が `main` に残らない既知現象であり、`cid:reverse-engineering:rescan-base-ancestry`（祖先性を判定してから base を採用）に従い、HEAD の祖先である `8b8016f62` を差分 base として採用した。
+- Updated artifacts: 実質更新4件 = `architecture.md`（5バグの機構節）、`code-structure.md`（患部配置と区間の構造変化）、`code-quality-assessment.md`（根因確度と品質所見6件）、`business-overview.md`（利用者影響と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md` — 本区間で構成カウント・コンポーネント集合・公開契約・依存方向のいずれも変化がなく、5バグはすべて既存構成内の欠陥のため、現在マーカーの整合（`cid:reverse-engineering:c3-relabel`）を保つ目的で判断1行の現在節のみを置いた。加えて本ファイルと per-intent `re-scans/260730-open-bug-batch-2.md`。
+- Per-intent record: `re-scans/260730-open-bug-batch-2.md`。
+
+## 実行メタデータ（履歴: 260730-skill-reviewer-fixes）
+
+- Date: `2026-07-30T12:39:53Z`
+- Base commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`（observed の祖先、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `278d61d8efcea278bfefd2b384c22fcf72e717ab`
+- Distance: `34 commits`
+- 区間規模: `951 files changed, 54850 insertions(+), 8428 deletions(-)`。生成面（`dist/`）・self-install 面・record を除く比較断面は `340 files changed, 16513 insertions(+), 2547 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 2件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1736](https://github.com/amadeus-dlc/amadeus/issues/1736)（SKILL.md が new-work 経路で `amadeus-utility.ts next --new-intent` を指示するツール名誤り）、[#1711](https://github.com/amadeus-dlc/amadeus/issues/1711)（units-generation SKIP スコープで `{unit-name}` が未解決のまま reviewer-runtime へ渡り produces 実在検査で落ちる）
+- Scan mode: Developer の静的差分スキャンを上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 区間の主要変化: `bugfix` → `fix` スコープ改名と `self-*` スコープ4種の dogfood 5ハーネス自己インストール面への集約（新センサー `amadeus-self-scope-consistency` 付き）、Kimi subagent の caller-authorization 拒否層の新設、mirror boundary 自動発火とワークフロー完了の2相化。core tools は base 76 → observed 79（新規3件）、sensors は 6 → 7。
+- 引用再確認の相違: Developer 報告の3点を observed で訂正した — (a) `amadeus-utility.ts` の `default:` は `:6182`（報告の `:6179` は不一致、`switch (subcommand)` = `:6088` は一致） (b) `stage-protocol.md` の「unchanged directive JSON」規定は `:898`（報告の `:897` は不一致） (c) `amadeus-mirror-policy.ts` と `team-up-codex-safety-wait.ts` は **新設ではなく既存の変更**（`git diff --name-status 22ee27dbe 278d61d8e` で両者 `M`、base にも実在）。本区間の新規 core tool は `amadeus-caller-authorization.ts`（122行）、`amadeus-sensor-self-scope-consistency.ts`（231行）、`amadeus-workflow-completion.ts`（110行）の3件のみ。
+- 現在マーカーの降格: 直前の現在断面 `260729-open-bug-batch`（observed `22ee27dbe`）を本節の新設に伴い履歴へ降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Updated artifacts: `technology-stack.md`、`component-inventory.md`、`architecture.md`、`api-documentation.md`、`code-structure.md`、`business-overview.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、および per-intent `re-scans/260730-skill-reviewer-fixes.md`。
+- Per-intent record: `re-scans/260730-skill-reviewer-fixes.md`。
+
+## 実行メタデータ（履歴: 260729-open-bug-batch）
+
+- Date: `2026-07-29T07:06:38Z`
+- Base commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`（observed の祖先、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `22ee27dbef9027203658a6cd98bf97501c4b222c`
+- Distance: `13 commits`
+- 区間規模: `624 files changed, 71100 insertions(+), 26206 deletions(-)`。生成面・record・metrics等を除く比較断面は `215 files changed, 16982 insertions(+), 7844 deletions(-)`。
+- Scope: `amadeus-bugfix`、Brownfield、単一 repo `amadeus`、Depth `Minimal`、Test Strategy `Comprehensive`
+- Delivery boundary: 6件を1 Intentで追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667)、[#1664](https://github.com/amadeus-dlc/amadeus/issues/1664)、[#1663](https://github.com/amadeus-dlc/amadeus/issues/1663)、[#1662](https://github.com/amadeus-dlc/amadeus/issues/1662)、[#1336](https://github.com/amadeus-dlc/amadeus/issues/1336)、[#1607](https://github.com/amadeus-dlc/amadeus/issues/1607)、および進行中 OTel Intent [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) との衝突。
+- Scan mode: Developer の静的 live-code scan を完全な上流入力として使った differential refresh。Architect は主要引用（timeout 120/180秒、t224診断欠落、parallel checkout status、coverage diff、safety-wait 50ms、completion→audit seal）と区間/件数を observed commit で再確認した。テストは未実行。
+- 区間の主要変化: Intent Mirror Project 同期スタック、Bun-only test runner 契約、CLI/SDK/TUI test mechanisms、gated/unset swarm routing、番号回答の意味解決。#1607 / #1664 はこの最新 mirror/journal 断面を基準にする。
+- OTel 分離: 別 worktree `otel-improvement` は source 未変更で、未コミットの CodeKB は latest reachable trunk ではない。内容を読まず、本 scan へ混ぜていない。衝突評価は Developer scan の source-level 分析だけを採用した。
+- Working tree: 本 scan 開始時点で `amadeus/spaces/default/intents/intents.json` と `260729-open-bug-batch/` に別作業の未コミット変更が存在した。これらを変更・復元せず、CodeKB 9成果物と本 intent の re-scan 記録だけを更新した。
+- Updated artifacts: `business-overview.md`、`architecture.md`、`code-structure.md`、`api-documentation.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、`reverse-engineering-timestamp.md`。
+- Per-intent record: `re-scans/260729-open-bug-batch.md`。
+
+## 実行メタデータ（履歴: 260729-otel-upstream）
 
 - Date: `2026-07-29`
 - Base commit: `ca8ff0af40d6250edffe42246d3f5538819c22af`（前 intent `260728-slop-cleanup` の observed。`git merge-base --is-ancestor` **exit 0 = 祖先**、`git rev-list --count ca8ff0af..HEAD` = **13**。cid:reverse-engineering:rescan-base-ancestry）

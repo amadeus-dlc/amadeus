@@ -53,6 +53,11 @@ amadeus/spaces/*/intents/*/.amadeus-*
 # intent is born, hooks write their health beats to spaces/<space>/intents/
 # directly (docsRoot falls back when no record dir exists yet).
 amadeus/spaces/*/intents/.amadeus-*
+# Ballots accepted while an election is still collecting live per voter under
+# amadeus/spaces/<space>/elections/<election>/pending/ until tally folds them
+# into ledger.json. Untracked so a not-yet-voted voter cannot read a peer's
+# choice/GoA/rationale through `git status` / `git diff` (Issue #1773).
+amadeus/spaces/*/elections/*/pending/
 #
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
 # for these): amadeus/spaces/*/memory/** · amadeus/spaces/*/codekb/** ·

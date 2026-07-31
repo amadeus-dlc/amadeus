@@ -36,8 +36,54 @@ const tempDirs: string[] = [];
 // product failure.
 setDefaultTimeout(15_000);
 
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+// Issue #1811: a test that ends without `--kill` leaves its fixture
+// safety-wait supervisors orphaned, and their pid files live inside the temp
+// trees this hook deletes. Reap them first: SIGTERM, then SIGKILL whatever is
+// still alive when the grace window closes.
+const SWEEP_TERM_GRACE_MS = 2_000;
+const SWEEP_POLL_MS = 25;
+
+function collectSupervisorPids(dir: string): number[] {
+  const pids: number[] = [];
+  try {
+    for (const relative of new Bun.Glob("**/safety-wait.pid").scanSync({ cwd: dir })) {
+      const pid = Number(readFileSync(join(dir, relative), "utf8").trim());
+      if (Number.isSafeInteger(pid) && pid > 0) pids.push(pid);
+    }
+  } catch {}
+  return pids;
+}
+
+function stillAlive(pids: number[]): number[] {
+  return pids.filter((pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function reapSupervisors(pids: number[]) {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {}
+  }
+  const deadline = Date.now() + SWEEP_TERM_GRACE_MS;
+  while (stillAlive(pids).length > 0 && Date.now() < deadline) await Bun.sleep(SWEEP_POLL_MS);
+  for (const pid of stillAlive(pids)) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
+  }
+}
+
+afterEach(async () => {
+  const dirs = tempDirs.splice(0);
+  await reapSupervisors(dirs.flatMap(collectSupervisorPids));
+  for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
 // Drive codex_member_cmd for one member. HOME is pinned to a throwaway dir so
@@ -148,7 +194,7 @@ function createCliFixture() {
   writeFileSync(join(repo, "README.md"), "fixture\n");
   writeFileSync(
     join(repo, "tools", "team-up-codex-safety-wait.ts"),
-    `import { renameSync } from "node:fs";
+    `import { existsSync, renameSync } from "node:fs";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -216,6 +262,14 @@ await Bun.write(
 );
 renameSync(readyTemp, readyPath);
 process.on("SIGTERM", () => process.exit(0));
+// Issue #1811: stay alive only while the run record this supervisor was
+// launched for still exists, so an orphan whose launcher and record are both
+// gone exits instead of leaking. A supervisor started against a record that
+// never existed (the foreign-run ownership fixture) keeps waiting for SIGTERM.
+if (existsSync(runRecord)) {
+  while (existsSync(runRecord)) await Bun.sleep(100);
+  process.exit(0);
+}
 setInterval(() => {}, 1_000);
 `,
   );
@@ -680,6 +734,53 @@ printf '{"result":{"agents":[]}}\\n'
       }
     } finally {
       Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  // t374 (Issue #1811): the fake supervisor must not outlive its run record.
+  // Tests that end without `--kill` orphan every fixture supervisor; the stub
+  // therefore exits on its own once the run-record directory is gone, which is
+  // also what the afterEach sweep relies on as its backstop.
+  test("a fixture safety-wait supervisor exits when its run record disappears", async () => {
+    const fixture = createCliFixture();
+    const runRecord = join(fixture.state, "runs", "run-001");
+    const members = [
+      "leader",
+      "engineer-1",
+      "engineer-2",
+      "engineer-3",
+      "engineer-4",
+      "engineer-5",
+      "engineer-6",
+    ];
+
+    const fresh = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
+    const pids = members.map((member) =>
+      Number(readFileSync(join(runRecord, "members", member, "safety-wait.pid"), "utf8")),
+    );
+
+    try {
+      for (const pid of pids) expect(() => process.kill(pid, 0)).not.toThrow();
+
+      // Drop the run record without signalling anybody: the supervisors are
+      // already orphans of the exited launcher at this point.
+      rmSync(runRecord, { recursive: true, force: true });
+
+      const deadline = Date.now() + 10_000;
+      while (stillAlive(pids).length > 0 && Date.now() < deadline) await Bun.sleep(50);
+      expect(stillAlive(pids)).toEqual([]);
+    } finally {
+      for (const pid of pids) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {}
+      }
     }
   });
 

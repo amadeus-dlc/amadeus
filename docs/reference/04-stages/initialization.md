@@ -20,7 +20,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 | feature | All 0.1-0.3 |
 | mvp | All 0.1-0.3 |
 | poc | All 0.1-0.3 |
-| bugfix | All 0.1-0.3 |
+| fix | All 0.1-0.3 |
 | chore | All 0.1-0.3 |
 | refactor | All 0.1-0.3 |
 | infra | All 0.1-0.3 |
@@ -138,7 +138,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 
 ### Notes
 - Brownfield projects route to reverse-engineering (Stage 2.1)
-- Greenfield projects route to the first non-initialization stage (intent-capture for feature/poc; requirements-analysis for bugfix/refactor; practices-discovery for workshop, since workshop skips all of Ideation and reverse-engineering is downgraded to SKIP on greenfield)
+- Greenfield projects route to the first non-initialization stage (intent-capture for feature/poc; requirements-analysis for fix/refactor; practices-discovery for workshop, since workshop skips all of Ideation and reverse-engineering is downgraded to SKIP on greenfield)
 - When invoked from `/amadeus-init` (the explicit birth packaging), the orchestrator stops after this stage
 - When invoked from workflow start (`/amadeus <scope>` or describing what to build), the orchestrator continues into the first post-init stage
 

@@ -1,0 +1,16 @@
+{
+  "electionId": "E-OBB3-RAS13",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — c1/c2 は既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件不可 — 新規学習価値があり persist すべき"
+    }
+  ]
+}

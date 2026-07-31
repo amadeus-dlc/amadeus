@@ -1,6 +1,205 @@
 # API ドキュメント
 
-## OTel/observability 面の公開契約（260729-otel-upstream、現在、observed `22ee27dbe`）
+## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 触れる契約の一覧
+
+| Issue | 契約 | 種別 | 改訂の要否 |
+| --- | --- | --- | --- |
+| #1811 | supervisor の終了契約（run record 消滅で自律終了） | 本番契約（fixture 側が写せていない） | 本番は**改訂不要**。fixture が契約へ寄る |
+| #1800 | subprocess 終了チャネルの3分類（`exit-status` / `signal` / `spawn-error`） | テスト内契約 | **改訂不要**。失敗系へ適用を延長するだけ |
+| #1797 | corpus スケーリングの比 `2.5` 契約 | テスト内契約 | 数値の改訂可否は負荷スイープ実測から導く |
+| #1816 | mirror Issue body の描画契約（`## Status` が snapshot 逐語） | 本番契約（ユーザー可視） | **改訂を要する**（要件段で裁定） |
+
+### #1811 — supervisor の終了契約
+
+本番の契約は「run record が生きている間だけ supervise する」である。
+
+- `packages/framework/core/tools/team-up-codex-safety-wait.ts:643` verbatim: `while (await runRecordIsActive(runRecord, run, session)) {`
+- `runRecordIsActive`（宣言 `:561`）は run record 配下の `session` / `runtime` / `status` 3ファイルを読み、読取失敗時は `:580-582` の `catch` で `false` を返す
+
+**fixture 側はこの契約を写していない** — `tests/integration/t-team-up-codex-resume.serial.test.ts:218` の SIGTERM ハンドラのみが終了経路であり、`:219` の `setInterval` が event loop を無期限に保持する。
+
+**PID 追跡の契約**は既に存在する: `packages/framework/core/tools/team-up.sh:508` verbatim: `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"`。掃引はこの契約に乗れる。ただし `afterEach`（`:39-41`）の `rmSync` が同ディレクトリを消すため**掃引は `rmSync` より前**という順序契約が加わる。
+
+fixture が本番契約を写す場合（案 A）、述語は**「run record ディレクトリの実在のみ」に弱める**のが安全である。本番の3ファイル読取まで写すと fixture が本番の内部構造へ過剰結合する。
+
+### #1800 — subprocess 終了チャネルの3分類契約
+
+`tests/integration/t224-upstream-v2-migration-cli.test.ts` は終了状態を `-1` センチネルで正規化する契約を持つ。
+
+- `:170` / `:210` verbatim: `status: result.status ?? -1,`
+
+`-1` は「exit status を持たない終了」を意味し、`signal` と `error` の組で3分類へ解決される。この分類は `:311-313` の `test.each` で契約として固定されている。
+
+- `:311` verbatim: `["exit-status", { status: 1, signal: null, error: null }],`
+- `:312` verbatim: `["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],`
+- `:313` verbatim: `["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],`
+
+成功系の診断ヘルパー `expectSuccessfulMigration`（宣言 `:218`）はこの分類を消費して多行メッセージを組む（`:225-238`）。
+
+**契約の改訂は不要である** — `:1411` を同型ヘルパー経由へ寄せるだけで既存契約の適用範囲が失敗系へ延びる。新機構の導入ではなく既存様式への合流である。
+
+### #1797 — corpus スケーリングの比契約
+
+`tests/integration/t259-guard-corpus.test.ts` は「入力2倍で時間・RSS が 2.5倍以内」を契約として持つ。
+
+- `:108` verbatim: `expect(twoMedianMs / oneMedianMs).toBeLessThanOrEqual(2.5);`
+- `:109` verbatim: `expect(rssMultiplier).toBeLessThanOrEqual(2.5);`
+
+閾値 `2.5` は初出（`2e157d7fe`、#1424）以来不変。median 化（`median` 宣言 `:46`）は t258 裁定の反映として適用済みである。
+
+**契約の破れは数値ではなく計測設計にある** — `measure(1)`（`:101`）と `measure(2)`（`:102`）が逐次に別プロセスを spawn するため、両者は異なる時間窓で測られる。交互計測（案 (i)）を採る場合、契約の意味論は変わらず**計測手続きだけが変わる**。
+
+閾値そのものを改訂する場合は、負荷スイープの実測から数値を導出する（`cid:code-generation:c1-benchmark-baseline-correlation-verify`）。要件段では数値を固定せず「実測で決める」と書く。
+
+### #1816 — mirror Issue body の描画契約（ユーザー可視）
+
+body の描画契約は `packages/framework/core/tools/amadeus-mirror-presentation.ts` の `renderMirrorIssueContent`（宣言 `:239`）が持つ。body 組立は `:245-267` で、セクション順は `## Intent UUID` / `## Summary` / `## Phase` / `## Stage` / `## Status` / `## Updated At` / `## Mirror Marker` である。
+
+- `:259-260` verbatim: `"## Status",` / `snapshot.status,`
+
+**`snapshot.status` は逐語で描画される。** completion 境界では lifecycle 側の assert が `Running` を強制するため（`amadeus-mirror-lifecycle.ts:311-312` verbatim: `const completionMismatch = completion?.status === "pending" &&` / `(status !== "Running" || completion.stage !== currentStage);`）、最終 body は構造的に `Running` になる。
+
+**close 側は body 契約を一切持たない。** `packages/framework/core/tools/amadeus-mirror-executor.ts:1156-1159` の分岐で、`sync` は `editIssue(permit, context.issueContent.body)`、`close` は `closeIssue(permit)` と body を渡さない。収束判定も同じ非対称である（`:1038-1041` — sync = body 一致、close = `state === "CLOSED"`）。
+
+**改訂設計（案 (a)）の契約面**:
+
+| 項目 | 内容 |
+| --- | --- |
+| 導出キー | `snapshot.completionInstance` の**存在**。boundary をキーにすると `renderMirrorStatus`（`:298`）が組む drift 診断が close 後に恒久的な偽 drift を報告する |
+| `## Status` の終端値 | 要件段で確定 |
+| `## Stage` / `## Phase` の終端化 | 要件段の確定事項（`:253-257`） |
+| lifecycle assert（`:311-316`） | **改訂不要** — record 断面の整合検査であり表示層の関心ではない |
+
+`completionInstance` は presentation で未消費である（同ファイル内 `grep` 0ヒット）。型は `amadeus-mirror-types.ts:516` / `:527`、codec は `amadeus-mirror-state-codec.ts:567` / `:763` / `:770` / `:775`、lifecycle での供給は `:339`。
+
+**テスト契約への影響**:
+
+| ファイル | 契約 | 改訂 |
+| --- | --- | --- |
+| `tests/unit/t281-amadeus-mirror-presentation.test.ts` | body の逐語 assert（`:52` `## Stage` / `:55` `## Status`） | 既存2ケースは `completionInstance` を持たないため**改訂不要**。新規ケース追加のみ |
+| `tests/unit/t232-amadeus-mirror.test.ts` | body の `## Status` assert（`:35`） | 影響確認の対象 |
+| `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts` | close 順序の契約（`:262` `a prepared in-flight completion reaches Done and close before registry seal`） | **改訂不要**（body assert を持たない） |
+
+**仕様裁定マター**: 「record の main 着地前に close する」挙動は PR #1689 の設計帰結であり `t361:262` で契約固定されている。本 intent の実装スコープは**表示層に限定する**旨を要件段で申告する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+### 本区間で変化した契約（本 intent の患部外）
+
+| 契約 | 変化 | 由来 |
+| --- | --- | --- |
+| 選挙 ballot の格納契約 | collecting 中は `pending/<voter>.json` へ voter 単位で隔離し、tally 時に ledger へ統合する。`pendingDir` `:113` / `integratePending` `:205`。pending lane は git 非追跡（`.gitignore` + 7ハーネス `dot-gitignore`） | #1773 修正 |
+| 選挙配布ビューのキー集合 | `question` と選択肢 `description` を搬送するよう拡張（`amadeus-election-model.ts` `+36/−9`）。`t234-election-model.test.ts` `+66/−2` で契約を改訂 | #1772 修正 |
+| mirror boundary report の create 受理契約 | 「Issue が存在するなら拒否」から「成功 create receipt が存在すれば受理」へ反転。`succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）を `amadeus-orchestrate.ts:4249` で `createRan` として消費 | #1752 修正 |
+| release workflow のジョブ契約 | 再実行可能なジョブへ分割（`.github/workflows/release.yml` `+68/−22`） | #1799 |
+
+## オープンバグ3件が触れる内部契約（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。**公開 CLI verb の契約変化は区間内になし**（`amadeus-finding.ts` の新 CLI 1本は本 intent の患部外の新機能）。ただし3件はいずれも**修正時に内部契約を変える**。
+
+### 選挙モデルの型契約（#1772）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| 選択肢の表現 | `amadeus-election-model.ts:48` verbatim: `export type Choice = { internalNo: number; label: string };` | 説明（description）を運ぶフィールドが型に存在しない |
+| parse の受理方針 | `parseChoices`（`:73`）はホワイトリスト再構成。`:79` で `internalNo` / `label` の型のみ検査し、`:80` で2フィールドだけを push。未知フィールドは **exit 0 のまま無音 drop**（fail-open） | 起草者が `description` を書いても失われ、警告も出ない |
+| 配布ビューのキー集合 | `DistributionView`（`:306-310`）= `electionId` / `voter` / `ordered`。`ordered` の要素は `{ displayNo, internalNo, label }` | `question` が無く、投票者は設問文を配布物から得られない |
+| キー集合の固定 | 3重固定 — 型（`:306-310`）・設計コメント（`:304-305`、`BR-2 pins the key set`）・テスト（`tests/unit/t234-election-model.test.ts:190` / `:192`） | 契約変更には**要件段での仕様裁定とテスト契約の明示改訂**が要る（`cid:reverse-engineering:c1-pinned-behavior-ruling`） |
+| tally 側の選択肢表現 | `ChoiceCount`（`:427`）= `{ internalNo, label, count }`。構築 `:488`、消費 `:493-494` / `:500` | `Choice` を拡張する場合、tally 側と record render も同時に伝播対象（`cid:functional-design:c3`） |
+| 入力契約 | `SKILL.md:18` verbatim: `選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する:` | **question は入力契約に既に存在する** — 欠けているのは入力ではなく配布 |
+
+**同根の write⇔read 非対称（`cid:requirements-analysis:symmetric-pair-review` の棚卸し対象）**: `OriginalBallot` の `reservation`（`:135`）/ `rationale`（`:136`）は書き込まれるが配布ビューには現れない。空 `label` の通過、未知フィールドの無音 drop も同じ parse 方針の帰結である。
+
+### 選挙ストアの格納契約（#1773）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| 票の格納 | `amadeus-election-store.ts:464` で `LedgerFile` を組み `:465` で `ledger.json` へ書込。票オブジェクトは無加工 | 未開票中の全票本文（`goa` / `reservation` / `rationale`）が単一の共有ファイルに平文で載る |
+| blind の適用時点 | `materialize`（`:500`、コメント `:498` verbatim: `// Materialize the full ballot set at tally time (blind lift) and fix the`）は **tally 時のみ** | collecting 中は blind lift の保護対象外 |
+| 投票済み者の可視 | `timeline.json` へ `kind: "ballot"`（`:468`）と `voter`（`:472`）を追記 | 誰が投票済みかが collecting 中に可視（票内容とは別レイヤ） |
+| version control 面 | 選挙ディレクトリは非 ignore（`git check-ignore` exit 1）。tracked な `ledger.json` は 183件 | `git status` / `git diff` が第2の露出面になる |
+| 読取の運用契約 | `SKILL.md:51` — voter subagent は配布ビューを読んで投票する。ディレクトリ自体への到達を妨げる機構は無い | 配布面は健全だが格納面から迂回できる |
+
+**健全な面（修正対象外）**: 設計された配布面（`status` / `vote` 出力 / ShortNotification）と blind lift の設計そのもの。破れているのは格納設計と配置の2点のみである。
+
+### mirror boundary report の受理契約（#1752）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| 受理判定のタイミング | `amadeus-orchestrate.ts:4241-4242` が **report 実行時点**の state を再読して `expectedPhase` / `hasMirrorIssue` を導出 | offer 時点の提示内容と report 時点の state が乖離する |
+| create の拒否条件 | `:4252-4256` の論理和のうち `:4255` verbatim: `(answer === "create" && hasMirrorIssue)` | ask の指示（`:519-529` で「先に create を実行せよ」）に従うと、自分の成功が拒否条件になる |
+| answer 種別の対称性 | `sync` / `skip` には対応する state 照合が**無い** | 片側実装（`cid:requirements-analysis:symmetric-pair-review`） |
+| 初回 create boundary（#1791 で新設） | `:486-500`。`:487` で `initialCreateIsOutstanding` 判定、`:488` verbatim: `if (mode !== "auto" && boundary.initialCreate !== "pending") return false;` | **auto モード優先**のため prompt モードは従来 ask 経路へ落ちる。#1752 の再現経路は温存 |
+| 既習様式 | `amadeus-mirror-coordinator.ts` の `expectedPrompt` 照合（`:320` / `:560` / `:622` / `:742-746`） | ask 時 binding の永続化はこの様式で実装可能（修正候補 (b)） |
+
+### 区間で追加された内部契約（本 intent の患部外）
+
+| 契約 | 所在 | 性質 |
+| --- | --- | --- |
+| 階層設定キー `auto-file-findings` | `amadeus-layered-config.ts:51`（`AUTO_FILE_FINDINGS_KEY`）、`:79-81` の union | `auto-mirror` と同一のモード語彙・既定値（`:6` のコメントが明記）。`auto-solo-election` は boolean 単独で既定 `false`（`:7`） |
+| boundary kind `intent-initialized` | `amadeus-mirror-types.ts:28` verbatim: `\| { kind: "intent-initialized"; instance: string }` | policy は `amadeus-mirror-policy.ts:65` verbatim: `"intent-initialized": ["create", "sync"],` |
+| state フィールド / サブコマンド | `amadeus-state.ts:320`（`MIRROR_INITIAL_CREATE_FIELD`）、`:913`（`case "mirror-initial-create":`）、usage `:1002` / `:1161` | 引数は `<pending\|completed> --from <absent\|pending\|completed>`（`:1161` の usage 文字列） |
+| sensor 発火の exact-path allowlist | `amadeus-sensor-invocation.ts`（新規）、消費は `hooks/amadeus-sensor-fire.ts:27` の import | 前 intent #1742 の `matches` 単独判定に対する構造的解決 |
+| degrade unit 解決 | `amadeus-orchestrate.ts:3054`（`unitDirsUnderConstruction`）、呼び出し `:3264` | 前 intent #1711 / 本区間 #1774。`directive.unit` 搬送と非一意 fail-closed |
+
+**本 intent への含意**: `self-fix` スコープは units-generation を SKIP するため degrade 経路を自ら通る。#1774 の着地により conductor の手動 directive 解決は不要になっている（`cid:build-and-test:c1-degrade-interim-retired`）。手動解決が再び必要になった場合は退行として扱い Issue 起票する。
+
+## オープンバグ5件が触れる内部契約（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
+
+**判断: 現時点で実質更新なし（修正方式の裁定後に要再訪）。** 区間 `8b8016f62..c42ef4d77` で公開 CLI verb・型・戻り値の契約変化はない。ただし5件のうち3件は**修正時に内部契約を変える可能性がある** — #1750 は `MirrorBoundary` 型への新種別追加と `MIRROR_BOUNDARY_PHASES`（`amadeus-state.ts:221`）の receipt 表現、#1742 は sensor-fire hook の対象決定契約（`matches` 単独 → `matches` × 宣言 produces）、#1734 は `scopeGridInSync` / `mergeScopeGrid`（`scripts/promote-self.ts:130-142` / `:147-160`）の write⇔check 対称性。いずれも修正方式が未裁定のため、契約面の記述は Requirements / Functional Design での裁定後に更新する。
+
+## SKILL/reviewer 2件が修復する内部契約（260730-skill-reviewer-fixes、履歴、observed `278d61d8e`）
+
+測定 ref: すべて observed `278d61d8e`。
+
+### CLI verb 所有権の契約（#1736）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| `next` verb の所有 | `amadeus-orchestrate.ts` が単独所有。`amadeus-utility.ts:6088` の `switch (subcommand)` に `case "next"` は **0件**（`grep -c` 実測）、`:6182` の `default:` → `die()` で Usage を出して終了する。その Usage 文字列の verb 一覧にも `next` は現れない | harness SKILL.md（13ファイル）の new-work CONFIRM 行が `amadeus-utility.ts next --new-intent` を指示する。conductor が字義どおり実行すると未知 verb として die する |
+| `--new-intent` フラグ | `amadeus-orchestrate.ts:818` で型宣言、`:877-878` でパース、`:1995` で `MIGRATION_WORKFLOW_OPTIONS` に許可、`:2405` `if (flags.newIntent) {` → `:2412` `emit(birthPrintDirective(flags.scope ?? scope, flags, flags.intent));` で fresh-start と同一の birth directive を発行 | 契約自体は健全。誤りは呼び出し先ツール名のみ |
+| scope 解決の優先順 | `:2412` は `flags.scope ?? scope` — 明示 `--scope` を優先し、稼働中 intent の state scope を勝たせない（`:2406-2411` のコメントが根拠を明記） | 変化なし |
+
+### reviewer 読取スコープの契約（#1711）
+
+| 契約 | 現行の実装事実 | 破断 |
+| --- | --- | --- |
+| directive の `unit` フィールド | per-unit 経路のみ設定（`amadeus-orchestrate.ts:3086` `directive.unit = lastUnit;` / `:3110` `directive.unit = pickUnit;`）。degrade 経路（`:3050-3057` → `emitRunStageForSlug` `:2888-2894`）は **設定しない** | reviewer の unit 帰属チェック（`amadeus-reviewer.ts:76-78`）が発火せず、`:87` の返り値も unit なし形になる |
+| produces パスの解決済み前提 | `amadeus-reviewer-runtime.ts:224-246`（`scopeForDirective`）は `directive.produces` を解決済みパスとして受け、`onDisk` 判定つきで `reviewerReadScope` へ渡す（`:232-244`） | degrade 経路では `{unit-name}` プレースホルダ入りパスが渡り、`amadeus-reviewer.ts:74` が `required review artifact is missing: <path>` を throw する |
+| consumes の placeholder exempt | `amadeus-orchestrate.ts:1771-1774` が `if (c.path.includes(UNIT_NAME_PLACEHOLDER)) { present.push(c.path); continue; }` で実在検査を明示除外（コメント `:1759-1760`） | **produces 側に対応する exempt が存在しない**（非対称） |
+| reviewer への directive 受け渡し | `stage-protocol.md:898`「Before spawning the reviewer, pass the **unchanged** current `run-stage` directive JSON on stdin」 | 現行の運用回避（conductor が実 unit 名へ解決した JSON を渡す）はこの「unchanged」規定からの逸脱 |
+| エラーの外部形状 | `amadeus-reviewer-runtime.ts:623-641` の `runReviewerCommand` が throw を `:637-639` で捕捉し stderr 1行 + `exitCode = 1` へ変換 | conductor からは `exit 1` + missing artifact メッセージとして観測される（project.md `cid:code-generation:degrade-scope-unit-dir-layout` 追補の実測と整合） |
+
+### 区間で追加された内部契約（本 intent の患部外）
+
+| 契約 | 所在 |
+| --- | --- |
+| `MainConductorAuthorization` = `\| { kind: "authorized" } \| { kind: "denied"; role: string }` | `amadeus-caller-authorization.ts:27-29`。消費側は `amadeus-orchestrate.ts:2108` と `amadeus-state.ts:828` / `:831` の2箇所のみ |
+| `WorkflowCompletionPreparation` = `Readonly<{ instance: string; stage: string; status: "pending" \| "completed" }>` | `amadeus-workflow-completion.ts:9-13`。完了を2相化しクラッシュ回復を可能にする |
+
+## Open bug 6件が修復する内部契約（260729-open-bug-batch、履歴、observed `22ee27dbe`）
+
+Amadeus に常駐 REST/GraphQL service や database API はない。公開境界は短命 CLI、Shell command、directive JSON、監査 journal、生成ファイルである。本 intent は原則として verb・flag・schema を追加せず、既存契約の成功判定と診断 envelope を修復する。
+
+| Issue | 現行契約 | 欠落 | 修正後に必要な契約 |
+| --- | --- | --- | --- |
+| [#1667](https://github.com/amadeus-dlc/amadeus/issues/1667) | Bun test case 120秒、内部 `spawnSync` 180秒 | 外側の期限が内側より短く、child の完了結果を観測できない | outer timeout が verifier timeout を包含し、timeout 時も child 診断を返す |
+| [#1664](https://github.com/amadeus-dlc/amadeus/issues/1664) | `migrateWithTool` は status/stdout/stderr を返す | assertion が status だけを表示し診断 payload を捨てる | 非0終了時に stdout/stderr/exit/timeout を同一 failure envelope で提示する |
+| [#1663](https://github.com/amadeus-dlc/amadeus/issues/1663) | checkout worker は exit status と stderr を持つ | 親 Shell が個別 status を保持せず、registry + record の最終走査へ圧縮 | member ごとの status/log を収集し、集約失敗に member identity を保存する |
+| [#1662](https://github.com/amadeus-dlc/amadeus/issues/1662) | `git diff <base>...HEAD` と LCOV を突合 | diff は committed HEAD、LCOV は dirty working tree を含みうる | 両入力へ同じ source snapshot identity を結び、dirty 状態を拒否または明示取得する |
+| [#1336](https://github.com/amadeus-dlc/amadeus/issues/1336) | supervisor PID を保存し、50ms後に `kill -0` / `ps` で確認 | process alive と role-ready を同一視 | supervisor が初期化完了を readiness receipt として返し、親が期限付きで待つ |
+| [#1607](https://github.com/amadeus-dlc/amadeus/issues/1607) | final `report` → `complete-workflow` → `done`、次の `next` で completion boundary | registry complete と audit seal 後は mirror receipt を append できない | completion boundary の結果を final commit に含め、再試行 token と同一 completion instance を維持する |
+
+### CLI・journal 互換性
+
+- #1667 / #1664 / #1663 / #1662 / #1336 はテスト・内部 Shell/TypeScript seam の修正であり、既存 CLI の動詞集合と exit code の意味を変更しない。
+- #1607 は `report` / `next` の順序と terminal `done` の意味に関わる。新しい公開 verb を足す前に、既存 `mirror-boundary completion` と `complete-workflow` のどちらが transaction coordinator を所有するかを要件で裁定する。
+- audit journal の post-complete seal、mirror operation receipt の idempotency、Intent cursor の ownership は後方互換シムで二重化せず、単一の正準完了経路へ統合する。
+- 進行中の OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は journal entry と state/audit projection を消費するため、#1607 と #1664 の契約確定前にその Construction を重ねない。
+
+## OTel/observability 面の公開契約（260729-otel-upstream、履歴、observed `22ee27dbe`）
 
 区間内で focus 面の公開契約に変更はない（`amadeus-observability.ts` の `registered` はモジュール内部型の未使用フィールドで export 面に現れない）。#1672 の置換が触る現行契約を以下に固定する（いずれも `grep -n "^export"` 実測、測定 ref: observed `22ee27dbe`）。
 
