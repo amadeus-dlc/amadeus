@@ -118,6 +118,21 @@ function pendingPath(electionDir: string, voter: string): string {
   return join(pendingDir(electionDir), `${voter}.json`);
 }
 
+// A row must carry the two fields every consumer reads (the arrival seq and a
+// ballot with a voter); anything else is a corrupt file, not a runtime throw.
+function isPendingEntry(v: unknown): v is PendingEntry {
+  if (typeof v !== "object" || v === null) return false;
+  const row = v as { seq?: unknown; ballot?: unknown };
+  if (typeof row.seq !== "number" || !Number.isFinite(row.seq)) return false;
+  if (typeof row.ballot !== "object" || row.ballot === null) return false;
+  return typeof (row.ballot as { voter?: unknown }).voter === "string";
+}
+
+function parsePendingRows(rows: unknown): Result<PendingEntry[], StoreError> {
+  if (!Array.isArray(rows) || !rows.every(isPendingEntry)) return err("corrupt");
+  return ok(rows);
+}
+
 // Read every per-voter file, flattened into arrival order. A missing directory
 // is the normal empty case; a corrupt file is loud (fail-closed, same policy as
 // every other store read).
@@ -134,9 +149,9 @@ function readPending(electionDir: string): Result<PendingEntry[], StoreError> {
   for (const name of names.sort()) {
     const read = readJson<Partial<PendingFile>>(join(dir, name));
     if (!read.ok) return read;
-    const rows = read.value.entries;
-    if (!Array.isArray(rows)) return err("corrupt");
-    entries.push(...rows);
+    const rows = parsePendingRows(read.value.entries);
+    if (!rows.ok) return rows;
+    entries.push(...rows.value);
   }
   // seq is the arrival axis; the voter tiebreak keeps the order total even if a
   // hand-edited file repeats a seq.
@@ -158,16 +173,35 @@ function appendPending(
   if (existsSync(path)) {
     const read = readJson<Partial<PendingFile>>(path);
     if (!read.ok) return read;
-    if (!Array.isArray(read.value.entries)) return err("corrupt");
-    entries = read.value.entries;
+    const rows = parsePendingRows(read.value.entries);
+    if (!rows.ok) return rows;
+    entries = rows.value;
   }
   const file: PendingFile = { entries: [...entries, { seq, ballot }] };
   return writeStoreFile(path, JSON.stringify(file, null, 2));
 }
 
+// Identity of an accepted ballot across the two lanes: one voter has at most
+// one original plus amends, and each amend carries its own submission instant,
+// so (voter, kind, submittedAt) is unique among accepted ballots.
+function ballotKey(ballot: Ballot): string {
+  return JSON.stringify([ballot.voter, ballot.kind, ballot.submittedAt]);
+}
+
+// Which pending ballots are not on the ledger yet. The write and the drain are
+// two file operations and the drain can fail on its own, so integration is
+// defined by CONTENT rather than by the drain having succeeded: a pending row
+// already present on the ledger is never added again, which keeps the merged
+// read (Store.ledger) and a retried integrate free of double counting even
+// when the pending directory survives a failed drain.
+function pendingNotOnLedger(pending: PendingEntry[], ledger: LedgerFile): Ballot[] {
+  const known = new Set(ledger.ballots.map(ballotKey));
+  return pending.filter((e) => !known.has(ballotKey(e.ballot))).map((e) => e.ballot);
+}
+
 // Move the whole pending set onto ledger.json and drain the directory. Called
-// at the tally transition (Store.materialize) and idempotent: with nothing
-// pending it is a no-op, so a re-tally never duplicates rows.
+// at the tally transition (Store.materialize) and idempotent: re-running it
+// adds nothing and simply retries the drain.
 function integratePending(electionDir: string): Result<void, StoreError> {
   const pending = readPending(electionDir);
   if (!pending.ok) return pending;
@@ -176,12 +210,12 @@ function integratePending(electionDir: string): Result<void, StoreError> {
   const read = readJson<Partial<LedgerFile>>(ledgerPath);
   if (!read.ok) return read;
   const ledger = withLateLane(read.value);
-  const next: LedgerFile = {
-    ballots: [...ledger.ballots, ...pending.value.map((e) => e.ballot)],
-    late: ledger.late,
-  };
-  const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
-  if (!w.ok) return w;
+  const missing = pendingNotOnLedger(pending.value, ledger);
+  if (missing.length > 0) {
+    const next: LedgerFile = { ballots: [...ledger.ballots, ...missing], late: ledger.late };
+    const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
+    if (!w.ok) return w;
+  }
   try {
     rmSync(pendingDir(electionDir), { recursive: true, force: true });
   } catch {
@@ -500,8 +534,10 @@ export const Store = {
     const ledger = withLateLane(read.value);
     const pending = readPending(dir);
     if (!pending.ok) return pending;
+    // Pending rows already integrated (a drain that failed after the ledger
+    // write left them behind) are not counted twice.
     return ok({
-      ballots: [...ledger.ballots, ...pending.value.map((e) => e.ballot)],
+      ballots: [...ledger.ballots, ...pendingNotOnLedger(pending.value, ledger)],
       late: ledger.late,
     });
   },

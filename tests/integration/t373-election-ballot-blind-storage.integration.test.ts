@@ -12,6 +12,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -255,6 +256,32 @@ describe("t373 election ballot blind storage (#1773)", () => {
     chmodSync(pending, 0o755);
     expect(blockedDrain.ok).toBe(false);
     if (!blockedDrain.ok) expect(blockedDrain.error).toBe("io-error");
+
+    // …and the ballots the failed drain left behind are NOT counted twice: the
+    // merged read still sees one alice, and a retried tally neither re-appends
+    // her row nor leaves the pending directory behind.
+    const afterFailure = Store.ledger(root, "E-BLIND-1");
+    expect(afterFailure.ok).toBe(true);
+    if (afterFailure.ok) expect(afterFailure.value.ballots.map((b) => b.voter)).toEqual(["alice"]);
+    expect(
+      Store.materialize(
+        root,
+        "E-BLIND-1",
+        { kind: "hold", reason: "tie", counts: { favor: 0, against: 0, abstain: 0, discuss: 0 } },
+        "2026-07-31T01:30:00Z",
+      ).ok,
+    ).toBe(true);
+    expect(JSON.parse(rawLedger()).ballots.map((b: { voter: string }) => b.voter)).toEqual(["alice"]);
+    expect(existsSync(pending)).toBe(false);
+
+    // a hand-edited pending row that is not shaped like an entry is corrupt,
+    // never a runtime throw and never a ledger contaminant
+    expect(Store.appendBallot(root, "E-BLIND-1", ballot("bob"), RECV).ok).toBe(true);
+    writeFileSync(join(pending, "bob.json"), JSON.stringify({ entries: [{}] }));
+    const corrupt = Store.ledger(root, "E-BLIND-1");
+    expect(corrupt.ok).toBe(false);
+    if (!corrupt.ok) expect(corrupt.error).toBe("corrupt");
+    rmSync(pending, { recursive: true, force: true });
 
     // (3) appendPending mkdir catch — the election directory is not writable,
     // so the pending directory cannot be created. The directory is still
