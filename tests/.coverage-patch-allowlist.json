@@ -55,25 +55,25 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4311-4324",
+    "lines": "4312-4325",
     "reason": "The utility lifecycle audit adapter is exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing receives an injectable in-process audit port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4346-4368",
+    "lines": "4347-4369",
     "reason": "Intent archive and unarchive delegation is exercised through the shipped utility CLI by t257 and t259, including child output and status propagation; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility delegation receives an injectable in-process process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4379-4386",
+    "lines": "4380-4387",
     "reason": "Archived-selection rejection and successful cursor selection are exercised through the shipped utility CLI by t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility selection routing is injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4399-4409",
+    "lines": "4400-4410",
     "reason": "Intent lifecycle command routing and fail-closed selector validation are exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing and delegation receive injectable in-process process ports"
   },
@@ -271,7 +271,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4551-4552",
+    "lines": "4552-4553",
     "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) \u2014 canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-07-28: the advisory rows had silently drifted from 4216-4217 to 4551-4552 across prior insertions above them; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
@@ -475,13 +475,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "718-720",
+    "lines": "719-721",
     "reason": "Multi-line Pick type for the inspectHookHeartbeats snapshot options; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive platform and both swap targets in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "760-762",
+    "lines": "761-763",
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
@@ -1244,7 +1244,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-audit.ts",
-    "lines": "1202-1204",
+    "lines": "1205-1207",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1310,19 +1310,19 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4001-4005",
+    "lines": "4002-4005",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4716-4726",
+    "lines": "4717-4727",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4728-4730",
+    "lines": "4729-4731",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1358,13 +1358,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4749-4771",
+    "lines": "4750-4772",
     "reason": "Intent selection cursor write and lifecycle guard are exercised through the shipped utility CLI intent-select-response path by t171 integration; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4854-4865",
+    "lines": "4855-4866",
     "reason": "The intent-select-response resolver callback is exercised through the shipped utility CLI by t171 integration, including token verification and rejection; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
   },
@@ -1400,13 +1400,13 @@
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "799-800",
+    "lines": "803-804",
     "reason": "Defensive cardinality invariant over the const REGISTERED_EVENTS table: unreachable without editing the registry source itself, at which point this throw is the guard that fires. No test path can reach it through the public API.",
     "expiry": "remove if the registry table becomes runtime-composable (making cardinality genuinely variable)"
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "805-829",
+    "lines": "809-833",
     "reason": "assertDefConsistent/assertCanonicalDefConsistent defensive invariants over the const REGISTERED_EVENTS table (duplicate name/audit mapping, telemetry-with-mapping, canonical-without-mapping, misclassified category): unreachable without editing the registry source itself, at which point these throws are the guards that fire.",
     "expiry": "remove if the registry table becomes runtime-composable"
   },
