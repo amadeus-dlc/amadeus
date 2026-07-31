@@ -56,7 +56,8 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 function emitAudit(
   pd: string,
@@ -117,7 +118,7 @@ function spawnSibling(
     | "amadeus-runtime.ts",
   subargs: string[]
 ): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
-  const result = observeSubprocess(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
+  const result = observeSubprocessSpan(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
     spawnSync(
       "bun",
       [

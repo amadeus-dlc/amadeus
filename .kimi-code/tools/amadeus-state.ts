@@ -110,7 +110,9 @@ import {
   type StandingGrantScanObserver,
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
@@ -1460,7 +1462,7 @@ export function isNonDocPath(p: string): boolean {
 // callers fall back to the filesystem check rather than trapping.
 function git(pd: string, args: string[]): string | null {
   try {
-    const r = observeSubprocess(pd, "git", () =>
+    const r = observeSubprocessSpan(pd, "git", () =>
       spawnSync("git", args, {
         cwd: pd,
         encoding: "utf-8",
@@ -4610,10 +4612,12 @@ function handleFork(args: string[]): void {
       errorWithSlug(slug, `failed to compute updated Bolt Refs: ${errorMessage(e)}`);
     }
 
-    // Audit-first within the locked critical section. Use the unlocked
-    // variant since we already hold the lock.
+    // Audit-first within the locked critical section. The canonical emit
+    // re-enters the lock we already hold (withAuditLock's per-identity depth
+    // counter) as long as it is targeted at the SAME (intent, space) — which
+    // is also the pair that selects the shard this row belongs in.
     try {
-      appendAuditEntryUnlocked("STATE_FORKED", {
+      emitAuditEvent("STATE_FORKED", {
         "Bolt slug": slug,
         "Worktree path": wtPath,
         "Source state hash": sha,
@@ -4789,9 +4793,10 @@ function handleMerge(args: string[]): void {
     // re-hashing the file at observation time.
     const postMergeSha = sha256(merged);
 
-    // Strict audit-first within the locked critical section.
+    // Strict audit-first within the locked critical section — the canonical
+    // emit re-enters the held lock on the same target (see the fork arm).
     try {
-      appendAuditEntryUnlocked("STATE_MERGED", {
+      emitAuditEvent("STATE_MERGED", {
         "Bolt slug": slug,
         "Worktree path": wtPath,
         "Source state hash": wtSha,

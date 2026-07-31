@@ -30,6 +30,9 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+// Type-only: the runtime binding is required lazily (see
+// emitCanonicalAuditEvent below), so this import erases at compile time.
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
 
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
@@ -265,6 +268,29 @@ const EVENT_HEADINGS: Record<string, string> = {
 };
 
 // --- Helpers ---
+
+// The canonical emit, reached lazily.
+//
+// A top-level import would close a load-time cycle: the canonical path's audit
+// exporter appends through appendJournalRecordV2, which lives in THIS module.
+// require() is synchronous under Bun and keeps the module graph one-way at
+// init time — the same idiom amadeus-lib.ts uses for its own emitError row.
+//
+// Every caller below is inside a withAuditLock section for the (intent, space)
+// it passes here, so the emit re-enters that lock via the depth counter rather
+// than taking a second OS-level acquire. That is what preserves the enclosing
+// section's own retry budget: the outer acquire is the only one, and the 20s
+// parallel-Bolt window audit-merge sizes for stays the window in force.
+function emitCanonicalAuditEvent(
+  eventType: string,
+  fields: Record<string, string>,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): AppendAuditResult {
+  const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+  return otel.emitAuditEvent(eventType, fields, projectDir, intent, space);
+}
 
 function ensureAuditFile(projectDir: string, intent?: string, space?: string): string {
   const path = auditFilePath(projectDir, intent, space);
@@ -787,7 +813,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   const mainText = readFileSync(mainAuditPath, "utf-8");
   const sourceHash = auditPrefixHash(mainText, boundary);
 
-  // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
+  // Audit-of-intent: emit BEFORE the disk copy. The canonical emit throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
   // when emit fails).
   const forkFields: Record<string, string> = {
@@ -797,7 +823,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   };
   // Distinguish a re-entry fork from an initial one in the audit trail.
   if (reentrant) forkFields.Reentrant = "true";
-  const result = appendAuditEntry(
+  const result = emitCanonicalAuditEvent(
     "AUDIT_FORKED",
     forkFields,
     projectDir,
@@ -814,7 +840,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
     copyFileSync(mainAuditPath, wtAuditPath);
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
-    appendAuditEntry(
+    emitCanonicalAuditEvent(
       "ERROR_LOGGED",
       {
         Tool: "amadeus-audit",
@@ -1000,7 +1026,7 @@ export function mergeDeltaUnderLock(
       appendFileSync(mainAuditPath, delta, "utf-8");
       entriesMerged = countDeltaRecords(delta);
     }
-    const result = appendAuditEntryUnlocked(
+    const result = emitCanonicalAuditEvent(
       "AUDIT_MERGED",
       {
         "Bolt slug": coords.slug,
@@ -1015,7 +1041,7 @@ export function mergeDeltaUnderLock(
     return { entriesMerged, result };
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
-    appendAuditEntryUnlocked(
+    emitCanonicalAuditEvent(
       "ERROR_LOGGED",
       {
         Tool: "amadeus-audit",
