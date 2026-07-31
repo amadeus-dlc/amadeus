@@ -236,6 +236,21 @@ function oneLine(value: string): string {
   return redactSummary(value).replace(/\s*\r?\n\s*/gu, " ");
 }
 
+// The Status a mirror reports for a snapshot — the ONE definition both the
+// sync writer (renderMirrorIssueContent) and the drift check
+// (buildMirrorStatusRecordView.currentStatus) read, so the body written and the
+// scalar compared against it can never disagree.
+//
+// The completion boundary's last body write is a sync, and the lifecycle
+// snapshot forces Status=Running while a completion is pending (close writes no
+// body). Deriving the terminal Status from a pending completionInstance — the
+// only completion signal on the snapshot — keeps the mirrored Issue from
+// resting on Running forever. The key is the instance alone, never the boundary
+// kind, so the status view stays able to diagnose real drift.
+export function mirrorSnapshotStatus(snapshot: MirrorSnapshot): string {
+  return snapshot.completionInstance === undefined ? snapshot.status : "Completed";
+}
+
 export function renderMirrorIssueContent(input: {
   snapshot: MirrorSnapshot;
   marker: string;
@@ -243,6 +258,7 @@ export function renderMirrorIssueContent(input: {
   const { snapshot } = input;
   const summary = redactSummary(snapshot.projectSummary);
   const titleSummary = oneLine(snapshot.projectSummary) || snapshot.intentUuid;
+  const status = mirrorSnapshotStatus(snapshot);
   const body = [
     "## Intent UUID",
     snapshot.intentUuid,
@@ -257,7 +273,7 @@ export function renderMirrorIssueContent(input: {
     snapshot.currentStage,
     "",
     "## Status",
-    snapshot.status,
+    status,
     "",
     "## Updated At",
     snapshot.updatedAt,
