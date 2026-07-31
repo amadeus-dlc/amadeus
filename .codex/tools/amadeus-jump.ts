@@ -1,4 +1,5 @@
-import { appendAuditEntry } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   markPhaseVerified,
@@ -45,12 +46,19 @@ function effectiveAction(
 }
 
 // --- Audit emission helper ---
+// The one seam every jump emitter goes through, which is why the bootstrap
+// lives here rather than at each call: emitEvent throws with no Logger Provider
+// registered, and jump emits from several branches (phase boundaries, skips,
+// the stage row itself). Not wrapped in a try — jump's callers already treat an
+// audit failure as fatal, and the canonical path must not become quieter than
+// the writer it replaces.
 function emitAudit(
   pd: string,
   eventType: string,
   fields: Record<string, string>
 ): void {
-  appendAuditEntry(eventType, fields, pd);
+  ensureOtelBootstrap(pd);
+  appendAuditEntryViaEvents(eventType, fields, pd);
 }
 
 // --- Phase-boundary helpers (Issue #842) ---

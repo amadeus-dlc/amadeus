@@ -35,7 +35,6 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve as pathResolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
 	frameworkTemplatesDir,
 	loadGraph,
@@ -57,7 +56,7 @@ import {
 	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
-import { attachProcessTraceContext, initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { attachProcessTraceContext, initProcessObservability } from "./amadeus-observability.ts";
 
 // --- Constants ---
 
@@ -112,6 +111,52 @@ const SENSOR_TRACE_DEPENDENCIES: SensorTraceDependencies = {
 	attach: attachProcessTraceContext,
 	loadContext: () => import("../otel/context.ts"),
 };
+
+// The canonical emitter, resolved the same lazy way the trace context is and
+// for the same reason: BR-5 requires this CLI to START on a tool tree that
+// ships no otel/ directory, so the emit path must not be a top-level import.
+//
+// The two lazy loads differ in their failure contract. The trace context is
+// telemetry and fails OPEN (prepareSensorChildEnv swallows and returns the env
+// unchanged). An audit row is not optional — a fire that cannot record itself
+// must not report success — so this one fails CLOSED: the import error travels
+// to the caller untouched.
+//
+// Resolved ONCE per fire rather than per row, which is also what lets the four
+// emitters stay synchronous inside their audit-lock windows.
+export type SensorCanonicalEmit = (
+	eventType: string,
+	fields: Record<string, string>,
+	projectDir: string,
+) => void;
+
+async function loadCanonicalEmit(projectDir: string): Promise<SensorCanonicalEmit> {
+	const [{ ensureOtelBootstrap }, { appendAuditEntryViaEvents }] = await Promise.all([
+		import("../otel/bootstrap.ts"),
+		import("../otel/migration-adapter.ts"),
+	]);
+	ensureOtelBootstrap(projectDir);
+	return appendAuditEntryViaEvents;
+}
+
+// The spawn-span wrapper, lazily resolved for the same BR-5 reason — but on the
+// telemetry side of the split, so it fails OPEN: with no otel/ on disk the
+// spawn still runs, untraced, exactly as observeSubprocess behaved when
+// observability was off.
+type SensorSpawnObserver = <T extends { status: number | null }>(
+	projectDir: string,
+	command: string,
+	fn: () => T,
+) => T;
+
+async function loadSpawnObserver(): Promise<SensorSpawnObserver> {
+	try {
+		const { observeSubprocessSpan } = await import("../otel/subprocess-span.ts");
+		return observeSubprocessSpan;
+	} catch {
+		return (_projectDir, _command, fn) => fn();
+	}
+}
 
 // Prepare the per-sensor child environment only after this process has joined
 // the intent trace. Both boundaries are injected so ordering and fail-open
@@ -475,8 +520,11 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	};
 
 	// --- 4. Lock window A — emit SENSOR_FIRED ---
+	// Resolved before the lock: the import is async and the lock window is not.
+	const emitCanonical = await loadCanonicalEmit(projectDir);
+	const observeSpawn = await loadSpawnObserver();
 	withAuditLock(projectDir, () => {
-		appendAuditEntryUnlocked(
+		emitCanonical(
 			"SENSOR_FIRED",
 			{
 				"Fire id": fireId,
@@ -491,7 +539,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
 	const startedAt = Date.now();
 	const outcome = decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
-		observeSubprocess(projectDir, `sensor:${ctx.sensor.id}`, () =>
+		observeSpawn(projectDir, `sensor:${ctx.sensor.id}`, () =>
 			spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
 				encoding: "utf-8",
 				timeout: timeoutMs,
@@ -522,7 +570,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 
 	// --- 8. Lock window B — emit terminal row ---
 	withAuditLock(projectDir, () => {
-		emitTerminal(ctx, finalOutcome, projectDir);
+		emitTerminal(ctx, finalOutcome, projectDir, emitCanonical);
 	});
 
 	// --- 9. Process exit 0 ---
@@ -773,6 +821,7 @@ function emitTerminal(
 	ctx: FireContext,
 	outcome: FireOutcome,
 	projectDir: string,
+	emitCanonical: SensorCanonicalEmit,
 ): void {
 	const { sensor, stageSlug, outputPath, fireId, detailPath } = ctx;
 	const id = sensor.id;
@@ -791,7 +840,7 @@ function emitTerminal(
 		if (outcome.note) {
 			fields.Note = outcome.note;
 		}
-		appendAuditEntryUnlocked("SENSOR_PASSED", fields, projectDir);
+		emitCanonical("SENSOR_PASSED", fields, projectDir);
 		return;
 	}
 	if (outcome.kind === "failed") {
@@ -803,7 +852,7 @@ function emitTerminal(
 			"Detail path": relativizePath(detailPath, projectDir),
 			"Findings count": String(outcome.findingsCount),
 		};
-		appendAuditEntryUnlocked("SENSOR_FAILED", fields, projectDir);
+		emitCanonical("SENSOR_FAILED", fields, projectDir);
 		return;
 	}
 	// budget-override
@@ -813,7 +862,7 @@ function emitTerminal(
 		"Cap value": String(outcome.capValue),
 		"Observed value": String(outcome.observedSeconds),
 	};
-	appendAuditEntryUnlocked("SENSOR_BUDGET_OVERRIDE", fields, projectDir);
+	emitCanonical("SENSOR_BUDGET_OVERRIDE", fields, projectDir);
 }
 
 // --- Glob matcher (capability filter) ---

@@ -5,7 +5,8 @@
 // Receives JSON on stdin with subagent info. No-op if no audit shard exists.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   activeWorkflowIsComplete,
@@ -71,7 +72,17 @@ if (agentId) fields["Agent ID"] = agentId;
 if (agentMessage) fields.Message = agentMessage;
 
 try {
-  appendAuditEntry("SUBAGENT_COMPLETED", fields, projectDir);
+  // Stand up the canonical emit path before the first emit (emitEvent throws
+  // with no Logger Provider registered). Inside the try so a bootstrap failure
+  // lands on the SAME fail-open drop as an append failure.
+  //
+  // Agent ID and Message are conditional here, which is why this hook stayed on
+  // the legacy writer while the other four migrated: default-deny redaction
+  // dropped any key the registry did not name, and naming them required would
+  // have thrown on the calls that omit them. They are registered optional now,
+  // so both survive the write without becoming mandatory.
+  ensureOtelBootstrap(projectDir);
+  appendAuditEntryViaEvents("SUBAGENT_COMPLETED", fields, projectDir);
 } catch (e) {
   recordHookDrop(projectDir, "log-subagent", errorMessage(e));
   process.exit(0);

@@ -277,13 +277,30 @@ function readAudit(proj: string): string {
   return readAllAuditShards(proj);
 }
 
-/** The JSONL audit records across the merged trail (blank lines skipped). */
+/**
+ * The JSONL audit records across the merged trail (blank lines skipped),
+ * normalizing BOTH journal schemas. The dispatcher now writes through the
+ * canonical Event path, so its rows are schema v2: the legacy audit event type
+ * rides as the `Event` attribute and the payload lives under `attributes`
+ * rather than `fields`. Production readers (auditBlockField) already serve both
+ * shapes under the historical names; doing the same here keeps every assertion
+ * below at its original meaning.
+ *
+ * `Event` is dropped from the normalized payload because in v1 it was a
+ * top-level envelope key, not a field — leaving it in would add one to every
+ * field count Group J pins.
+ */
 function auditRecords(proj: string): Array<Record<string, unknown>> {
   return readAudit(proj)
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) return raw;
+      const { Event, ...fields } = (raw.attributes ?? {}) as Record<string, string>;
+      return { event: Event ?? null, timestamp: raw.timestamp, heading: raw.eventName, fields };
+    });
 }
 
 /** audit_event_count: count records whose `event` is <type> across the trail. */
