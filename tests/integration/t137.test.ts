@@ -79,6 +79,7 @@
 // failed assertion can't leave an unremovable read-only dir behind.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { auditRowsFrom } from "../harness/audit-rows.ts";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -225,10 +226,8 @@ function auditRecords(content: string): {
   event: string | null;
   fields?: Record<string, string>;
 }[] {
-  return content
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+  // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+  return auditRowsFrom(content);
 }
 
 function errorLoggedCount(content: string): number {

@@ -31,6 +31,7 @@
 // scenarios seed a state file first, so the guard lets the row through.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { countAuditEvent } from "../harness/audit-rows.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -82,10 +83,8 @@ function runOrch(args: string[], p: string, extraEnv: Record<string, string> = {
 function errorLoggedCount(p: string): number {
   const shard = seededAuditShard(p);
   if (!existsSync(shard)) return 0;
-  return readFileSync(shard, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .filter((l) => (JSON.parse(l) as { event: string | null }).event === "ERROR_LOGGED").length;
+  // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+  return countAuditEvent(readFileSync(shard, "utf-8"), "ERROR_LOGGED");
 }
 
 describe("t214: engine error directive records ERROR_LOGGED (#839)", () => {

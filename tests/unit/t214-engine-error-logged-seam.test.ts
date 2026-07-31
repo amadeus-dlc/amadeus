@@ -31,6 +31,10 @@ import {
   recordEngineError,
   runEngineMain,
 } from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
+import { countAuditEvent } from "../harness/audit-rows.ts";
+import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
+import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -44,7 +48,18 @@ let priorProjectDir: string | undefined;
 let priorGraph: string | undefined;
 let priorArgv: string[] | undefined;
 
+// The canonical emit path registers a Logger Provider for ONE workspace per
+// process and refuses to re-bootstrap for another (bootstrap.ts). Every test
+// here builds its own temp project in the SAME process, so the registration is
+// dropped between them.
+function resetOtel(): void {
+  resetLoggerProviderForTests();
+  resetOtelBootstrapForTests();
+  resetFatalLatchForTests();
+}
+
 beforeEach(() => {
+  resetOtel();
   priorProjectDir = process.env.CLAUDE_PROJECT_DIR;
   priorGraph = process.env.AMADEUS_STAGE_GRAPH;
   priorArgv = process.argv;
@@ -59,16 +74,15 @@ afterEach(() => {
   restore("AMADEUS_STAGE_GRAPH", priorGraph);
   if (priorArgv) process.argv = priorArgv;
   cleanupTestProject(proj);
+  resetOtel();
   proj = undefined;
 });
 
 function errorLoggedCount(p: string): number {
   const shard = seededAuditShard(p);
   if (!existsSync(shard)) return 0;
-  return readFileSync(shard, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .filter((l) => (JSON.parse(l) as { event: string | null }).event === "ERROR_LOGGED").length;
+  // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+  return countAuditEvent(readFileSync(shard, "utf-8"), "ERROR_LOGGED");
 }
 
 class ExitSignal extends Error {

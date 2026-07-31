@@ -18,6 +18,8 @@
 // cursor-release asserts throw. Both surfaces are demonstrated in the report.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelForFixture } from "../harness/otel-reset.ts";
+import { countAuditEvent } from "../harness/audit-rows.ts";
 import {
   existsSync,
   mkdirSync,
@@ -146,9 +148,11 @@ function track(proj: string): string {
 }
 
 beforeEach(() => {
+  resetOtelForFixture();
   projects = [];
 });
 afterEach(() => {
+  resetOtelForFixture();
   for (const p of projects) rmSync(p, { recursive: true, force: true });
 });
 
@@ -285,6 +289,7 @@ describe("t243 post-complete audit stop (#1248)", () => {
     const shard = readdirSync(auditDir)
       .map((n) => readFileSync(join(auditDir, n), "utf-8"))
       .join("\n");
-    expect(shard).toContain('"event":"AUDIT_MERGED"');
+    // AUDIT_MERGED is migrated onto the canonical path, so the row is schema v2.
+    expect(countAuditEvent(shard, "AUDIT_MERGED")).toBeGreaterThan(0);
   });
 });

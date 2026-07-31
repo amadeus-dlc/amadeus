@@ -31,6 +31,10 @@ import {
   worktreeAuditFilePath,
   worktreePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { auditRowsFrom, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
+import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
+import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -41,8 +45,20 @@ import {
 let proj: string | undefined;
 let priorProjectDir: string | undefined;
 
+// The canonical emit path registers a Logger Provider for ONE workspace per
+// process and refuses to re-bootstrap for another (bootstrap.ts). Each test
+// here builds its own temp project in the SAME process, so the registration
+// has to be dropped between them — the per-fixture reset every other in-process
+// OTel test does.
+function resetOtel(): void {
+  resetLoggerProviderForTests();
+  resetOtelBootstrapForTests();
+  resetFatalLatchForTests();
+}
+
 beforeEach(() => {
   priorProjectDir = process.env.CLAUDE_PROJECT_DIR;
+  resetOtel();
 });
 
 afterEach(() => {
@@ -50,6 +66,7 @@ afterEach(() => {
   else process.env.CLAUDE_PROJECT_DIR = priorProjectDir;
   cleanupTestProject(proj);
   proj = undefined;
+  resetOtel();
 });
 
 // --- exit/stdout/stderr capture (t214 precedent; jsonError/jsonSuccess in
@@ -142,16 +159,9 @@ function seedWtShard(p: string, content: string): string {
   return wtShard;
 }
 
-type AuditRecord = { event: string | null; fields?: Record<string, string> };
-
-function mainForkedRows(p: string): AuditRecord[] {
-  const shard = readFileSync(auditFilePath(p), "utf-8");
-  // Parse the JSONL ledger and keep the AUDIT_FORKED records.
-  return shard
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord)
-    .filter((r) => r.event === "AUDIT_FORKED");
+// Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+function mainForkedRows(p: string): NormalisedAuditRow[] {
+  return auditRowsFrom(readFileSync(auditFilePath(p), "utf-8")).filter((r) => r.event === "AUDIT_FORKED");
 }
 
 describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
@@ -169,7 +179,7 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     // The re-entry is audited distinctly from an initial fork.
     const forked = mainForkedRows(proj as string);
     expect(forked.length).toBe(1);
-    expect(forked[0]?.fields?.Reentrant).toBe("true");
+    expect(forked[0]?.fields.Reentrant).toBe("true");
     // The worktree shard is refreshed from main (copy happened).
     expect(readFileSync(wtShard, "utf-8")).toContain('"event":"AUDIT_FORKED"');
   });
@@ -200,7 +210,7 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     expect(out.emitted).toBe("AUDIT_FORKED");
     const forked = mainForkedRows(proj as string);
     expect(forked.length).toBe(1);
-    expect(forked[0]?.fields?.Reentrant).toBeUndefined();
+    expect(forked[0]?.fields.Reentrant).toBeUndefined();
     // The initial copy created the worktree shard.
     expect(existsSync(wtShard)).toBe(true);
   });

@@ -112,6 +112,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { countAuditEvent } from "../harness/audit-rows.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -301,12 +302,8 @@ function readAllShards(dir: string): string {
 
 /** Count audit records whose `event` is <ev> (mirrors `grep -c STATE_FORKED`). */
 function auditEventCount(proj: string, ev: string): number {
-  return readAllShards(auditDir(proj))
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>)
-    .filter((r) => r.event === ev).length;
+  // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+  return countAuditEvent(readAllShards(auditDir(proj)), ev);
 }
 
 const auditContains = (proj: string, needle: string): boolean =>

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 549,
+    "total": 550,
     "enumeratedByClass": {
-      "function": 309,
+      "function": 310,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -1600,6 +1600,13 @@
     {
       "unitClass": "function",
       "unitId": "function:emitError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:emitErrorAuditRow",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"

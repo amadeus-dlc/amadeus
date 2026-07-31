@@ -823,7 +823,13 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   };
   // Distinguish a re-entry fork from an initial one in the audit trail.
   if (reentrant) forkFields.Reentrant = "true";
-  const result = emitCanonicalAuditEvent(
+  // NOT MIGRATED (G2, blocked pending ruling). The canonical path's redaction
+  // is default-deny over the registry's required-attribute vocabulary, and
+  // `Reentrant` is required by no event — so a migrated AUDIT_FORKED silently
+  // LOSES the re-entry tag doctor reads to tell a re-entry fork from an initial
+  // one. Migrating this site is blocked on the attribute-vocabulary ruling, not
+  // on anything about this call.
+  const result = appendAuditEntry(
     "AUDIT_FORKED",
     forkFields,
     projectDir,

@@ -87,6 +87,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom, type NormalisedAuditRow } from "../harness/audit-rows.ts";
 import {
   AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
@@ -153,12 +154,9 @@ function readAudit(proj: string): string {
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 /** Parse the merged audit shards into JSONL records (non-JSON lines skipped). */
-function auditRecords(proj: string): Array<Record<string, unknown>> {
-  return readAudit(proj)
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+// Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+function auditRecords(proj: string): NormalisedAuditRow[] {
+  return auditRowsFrom(readAudit(proj));
 }
 /** Does any audit record carry `event` === <ev>? */
 function hasAuditEvent(proj: string, ev: string): boolean {
@@ -175,9 +173,7 @@ function lastEventIndex(proj: string, ev: string): number {
 }
 /** Does any audit record carry <key> === <value> in its fields? */
 function hasAuditField(proj: string, key: string, value: string): boolean {
-  return auditRecords(proj).some(
-    (r) => ((r.fields ?? {}) as Record<string, string>)[key] === value,
-  );
+  return auditRecords(proj).some((r) => r.fields[key] === value);
 }
 // The worktree mirror carries the SAME relative record dir as the main checkout.
 function wtStatePath(proj: string, slug: string): string {
