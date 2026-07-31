@@ -1351,10 +1351,6 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
-          "mechanism": "none"
-        },
-        {
           "file": "tests/integration/t110.test.ts",
           "mechanism": "none"
         },
@@ -1376,6 +1372,10 @@
         },
         {
           "file": "tests/integration/t88.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t-plugin-stage-discovery-performance.test.ts",
           "mechanism": "none"
         },
         {
@@ -1516,7 +1516,7 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
+          "file": "tests/perf/t-plugin-stage-discovery-performance.test.ts",
           "mechanism": "none"
         }
       ],
@@ -2495,6 +2495,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t257-status-registry-migration-perf.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3975,6 +3979,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t257-status-registry-migration-perf.test.ts",
           "mechanism": "none"
         }
       ],
@@ -5540,6 +5548,10 @@
         {
           "file": "tests/integration/t258-lifecycle-transaction.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/perf/t258-lifecycle-transaction-perf.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -5895,6 +5907,10 @@
         {
           "file": "tests/integration/t258-lifecycle-transaction.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/perf/t258-lifecycle-transaction-perf.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

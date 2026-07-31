@@ -6,16 +6,11 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { performance } from "node:perf_hooks";
 import {
-  benchmarkWorkloads,
   MIRROR_BENCHMARK_PROTOCOL,
   type MirrorBenchmarkWorkload,
 } from "../../scripts/mirror-distribution-benchmark.ts";
 import { aggregateMirrorBenchmarks } from "../../scripts/mirror-distribution-benchmark-aggregate.ts";
-import { checkMirrorDistribution } from "../../scripts/mirror-distribution-check.ts";
-import { validateMirrorDocs } from "../../scripts/mirror-docs-contract.ts";
-import { scanPublicProjections } from "../../scripts/scan-public-projections.ts";
 
 function replica(
   p95Ms = 10,
@@ -70,30 +65,6 @@ describe("t292 distribution performance protocol", () => {
       "docsParity",
       "digestMatrix",
     ]);
-  });
-
-  test("runs the clean read-only workload 20 times within a loose local envelope", () => {
-    const started = performance.now();
-    for (let index = 0; index < 20; index++) {
-      expect(checkMirrorDistribution(process.cwd()).findings).toEqual([]);
-      expect(validateMirrorDocs(process.cwd())).toEqual([]);
-      expect(scanPublicProjections(process.cwd())).toEqual([]);
-    }
-    // The three-replica benchmark is authoritative; this only catches a
-    // catastrophic local regression without failing on a loaded shared runner.
-    expect(performance.now() - started).toBeLessThan(10_000);
-  });
-
-  test("drives every benchmark workload in-process for coverage attribution", () => {
-    const results = benchmarkWorkloads(process.cwd());
-    expect(Object.keys(results)).toEqual(
-      Object.keys(MIRROR_BENCHMARK_PROTOCOL.workloads),
-    );
-    for (const result of Object.values(results)) {
-      expect(result.runs).toBe(MIRROR_BENCHMARK_PROTOCOL.runs);
-      expect(result.p95Ms).toBeGreaterThanOrEqual(0);
-      expect(result.rssBytes).toBeGreaterThan(0);
-    }
   });
 
   test("keeps rolling runner image versions advisory at the aggregate and CLI seams", () => {

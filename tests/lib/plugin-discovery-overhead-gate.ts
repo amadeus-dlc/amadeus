@@ -1,5 +1,5 @@
 // Decision surface for the U2 plugin stage discovery performance contract
-// (tests/integration/t-plugin-stage-discovery-performance.integration.test.ts).
+// (tests/perf/t-plugin-stage-discovery-performance.test.ts).
 //
 // The predicate lives here, apart from the measurement loop, so the verdict can
 // be driven in-process from recorded samples: the integration test can only

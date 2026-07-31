@@ -413,11 +413,12 @@ bash tests/run-tests.sh       # POSIX 互換ラッパー
 --unit          # 単一コンポーネントの分離
 --integration   # コンポーネント横断の契約とステージ/CLI ユーティリティ
 --e2e           # フルライフサイクル、worktree、レンダリングされたターミナルジャーニー
+--perf          # 実時間の性能ベンチマーク(wall-clock 計測)
 
 # プロファイルフラグ(ショートカット)
 (default)       # smoke + unit + integration
 --ci            # smoke + unit + integration
---release       # smoke + unit + integration + e2e
+--release       # smoke + unit + integration + e2e + perf
 --all           # --release と同じ
 
 # 出力修飾子
