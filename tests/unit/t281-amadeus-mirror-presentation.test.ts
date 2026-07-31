@@ -65,6 +65,30 @@ describe("t281 Issue content", () => {
     expect(content.labels).toEqual(["amadeus-intent-mirror"]);
   });
 
+  // A snapshot carrying a pending completionInstance always reports Status
+  // Running, so the terminal Status has to be derived rather than echoed.
+  test("renders Status Completed when a completion instance is pending", () => {
+    const content = renderMirrorIssueContent({
+      snapshot: {
+        intentUuid: "intent-1",
+        intentDir: "amadeus/spaces/default/intents/demo",
+        projectSummary: "Mirror the lifecycle",
+        lifecyclePhase: "CONSTRUCTION",
+        currentStage: "code-generation",
+        status: "Running",
+        registryStatus: "in-flight",
+        updatedAt: "2026-07-25T00:00:00Z",
+        completionInstance: "completion-1",
+      },
+      marker: "<!-- marker -->",
+    });
+    expect(content.body).toContain("## Status\nCompleted\n");
+    expect(content.body).not.toContain("## Status\nRunning\n");
+    // Phase and Stage stay verbatim: only the Status line is derived.
+    expect(content.body).toContain("## Phase\nCONSTRUCTION\n");
+    expect(content.body).toContain("## Stage\ncode-generation\n");
+  });
+
   test("redacts secrets and URL queries without executing metacharacters", () => {
     const secret = "TOP-SECRET-SENTINEL";
     const content = renderMirrorIssueContent({
