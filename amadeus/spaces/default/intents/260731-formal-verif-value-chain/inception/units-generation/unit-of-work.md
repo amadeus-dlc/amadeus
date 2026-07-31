@@ -6,14 +6,14 @@ components.md の C1〜C10 を、**独立に実装可能**な境界(units-genera
 
 ## u1-runner-relocation(walking skeleton)
 
-- 内容: C1(24 ファイル移設+ADR-2 model-map 複製同伴+drift check 配線)+C10 の CI パス付け替え(FR-A4)+stage 本文の参照書き換え(FR-A2)+dist 7 ハーネス再生成。
+- 内容: C1(24 ファイル移設+ADR-2 model-map 複製同伴+drift check 配線)+C10 の CI パス付け替え(FR-A4)+stage 本文の参照書き換え(FR-A2)+**移設対象分の台帳エントリ機械 remap(FR-A1 へ帰属改訂 2026-07-31 ユーザー裁定 — 移設と物理不可分のため)**+dist 7 ハーネス再生成。
 - 対応 FR: FR-A1 / FR-A2 / FR-A4。AC(u1 単独で達成可能な条件に限定): 分類 A/B/C の 24 ファイルが `plugins/formal-model-check/tools/` に実在し `bun` で runner 実行可、CI が移設後パスで意味論不変に green、grep AC 4面(plugin 配布面)0 件。`scripts/formal-verif/` ディレクトリの非存在は u2 の AC(分類 D 30 ファイルが残るため u1 時点では存在する — 中間状態として正常)。
 - deployable 根拠: このユニットだけで「プラグイン所有ツリーから runner が e2e で回る」— walking skeleton の薄スライス(scope Q1 裁定)。
 - 見積り: 移設 24+複製 1、実質 diff は参照書き換え+drift 配線(数十行)+dist 再生成。
 
 ## u2-residue-deletion
 
-- 内容: C10 の削除面 — 分類 D 30 ファイル+参照テスト・fixture・support の削除、complexity-baseline 20 件除去、allowlist 該当エントリ整理、分類 A 台帳エントリの機械 remap(FR-A5)。
+- 内容: C10 の削除面 — 分類 D 30 ファイル+参照テスト・fixture・support の削除、台帳2面の分類 D 分エントリ削除(FR-A5。分類 A/B/C 分の remap は u1 へ帰属改訂 2026-07-31)。
 - AC: 削除後 `bash tests/run-tests.sh --ci` green、台帳 stale 0、`test -d scripts/formal-verif` exit 1(ディレクトリ完全消滅は本 Unit で達成)。
 - deployable 根拠: 削除単独で CI green を保つ(到達不能コードの純減)。
 
