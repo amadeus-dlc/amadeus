@@ -1481,11 +1481,5 @@
     "lines": "771-779",
     "reason": "The import.meta.main CLI block only runs in a spawned process (session-end spawns `relay.ts flush`), which bun --coverage does not measure (cid:code-generation:bun-coverage-spawn-blindspot). Its two callees are covered in-process: parseCliArgs by tests/unit/t374-relay-otlp-mapping.test.ts and runRelay by tests/integration/t372-otlp-relay.test.ts across all four summary arms.",
     "expiry": "remove if bun measures spawned children, or if the dispatch moves into an exported handler"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-migrate.ts",
-    "lines": "2919",
-    "reason": "The doctor spawn inside runDoctor only runs on a migration whose preflight reached \"ready\" (a real Git clone with an installed engine and an upstream source), which only the spawned migrator CLI tests build; the whole runDoctor body is DA:0 in the full-suite LCOV, so wrapping its boundary in the canonical span wrapper cannot be driven in-process. Spawn-only rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); t384 drives the module's other migrated boundary (the git wrapper) in-process.",
-    "expiry": "remove when a ready-state migration fixture drives runDoctor in-process, or when the doctor spawn is injected as a dependency"
   }
 ]
