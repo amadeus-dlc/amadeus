@@ -39,6 +39,7 @@
 //     combos are built inline (the .sh's L1 rationale: too combinatorial
 //     for an on-disk fixtures dir).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -167,7 +168,7 @@ function memoryEmptyCount(proj: string): number {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as Record<string, unknown>)
     .filter((r) => r.event === "MEMORY_EMPTY").length;
 }
 

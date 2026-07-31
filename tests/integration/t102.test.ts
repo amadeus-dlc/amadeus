@@ -63,6 +63,7 @@
 //     `cp "$TEMPLATE"` + `bun -e ... raw.replace(...)` did. NOTHING is
 //     written under tests/fixtures/**. All temp dirs cleaned in afterAll.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -222,7 +223,7 @@ function memoryEmptyCount(proj: string): number {
   return readAllAuditShards(proj)
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as { event: string | null })
     .filter((r) => r.event === "MEMORY_EMPTY").length;
 }
 

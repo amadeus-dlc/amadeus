@@ -54,6 +54,7 @@
 //             the one RULE_LEARNED block, not merely present somewhere in
 //             audit.md — via extractAuditBlock(), equal-or-stronger isolation)
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -292,7 +293,7 @@ function auditRecords(content: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.startsWith("{"))
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as Record<string, unknown>);
 }
 
 /** Count audit records whose `event` is exactly <ev>. */

@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
-import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
   auditBlockField,
   splitAuditRecords,
@@ -469,7 +471,8 @@ export function mintHumanPresence(input: MintHumanPresenceInput): void {
     // — and reservations never expire on time alone.
     if (reservation.kind === "minted") return;
   }
-  appendAuditEntry("HUMAN_TURN", {}, input.projectDir);
+  ensureOtelBootstrap(input.projectDir);
+  appendAuditEntryViaEvents("HUMAN_TURN", {}, input.projectDir);
 }
 
 export type TargetedApprovalEvidence = {

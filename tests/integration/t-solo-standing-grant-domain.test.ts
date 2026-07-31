@@ -8,6 +8,7 @@
 
 // covers: function:resolveOperatingMode, function:findSoloStandingGrant, function:validateSoloStandingGrantById
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -133,6 +134,8 @@ function fixture(
   }> = [],
 ): { root: string; intent: string } {
   const root = mkdtempSync(join(tmpdir(), "amadeus-solo-grant-domain-"));
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   tmpRoots.push(root);
   const intentsDir = join(root, "amadeus", "spaces", "default", "intents");
   const intent = "solo-intent-abcd1234";

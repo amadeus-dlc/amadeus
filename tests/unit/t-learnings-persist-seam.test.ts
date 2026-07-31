@@ -7,6 +7,8 @@
 // Behavioural depth stays in t99; this file exists so the added lines register
 // in lcov (local-lcov-pre-push norm).
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -24,6 +26,9 @@ import { createTestProject, seededAuditShard, seededStateFile } from "../harness
 // each test so every case re-reads its own seeded .amadeus-clone-id.
 beforeEach(() => {
   _resetCloneIdForTests();
+  // Each case mints a fresh temp project and persist bootstraps the canonical
+  // emit path, which refuses a SECOND workspace in one process by design.
+  resetOtelPerProject();
 });
 
 // The active-intent cursor only resolves when the record carries a state file
@@ -102,7 +107,7 @@ const ruleLearnedRows = (pd: string): number =>
   (readIf(seededAuditShard(pd)) ?? "")
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as { event: string | null })
     .filter((r) => r.event === "RULE_LEARNED").length;
 
 describe("t-learnings-persist-seam (#754/#745 in-process)", () => {

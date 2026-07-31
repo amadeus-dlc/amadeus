@@ -24,6 +24,7 @@
 //   - dist/claude/.claude/tools/amadeus-audit.ts   : presenceMintRejection, handleAppend
 //   - dist/claude/.claude/tools/amadeus-state.ts   : grant-standing-delegation /
 //       revoke-standing-delegation / delegate-approval (spawned)
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -100,6 +101,8 @@ afterAll(() => {
 // in-process seams read (mirrors the on-disk layout after git sync).
 function scaffold(activeIntent = "leader-intent-ef567890"): { root: string; intent: string } {
   const root = mkdtempSync(join(tmpdir(), "amadeus-tsg-"));
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   tmpRoots.push(root);
   const intents = join(root, "amadeus", "spaces", "default", "intents");
   mkdirSync(join(intents, activeIntent), { recursive: true });
@@ -452,6 +455,7 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
   }
   function seedDelegateScenario(): { root: string; issuer: string; target: string } {
     const root = mkdtempSync(join(tmpdir(), "amadeus-tsg-rt-"));
+    resetOtelPerProject();
     tmpRoots.push(root);
     const intents = join(root, "amadeus", "spaces", "default", "intents");
     const issuer = "leader-intent-ef567890";

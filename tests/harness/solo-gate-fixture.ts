@@ -4,6 +4,7 @@
 // grant, and a routed carrier — so that construction lives here once and each
 // suite stays a single responsibility.
 
+import { resetOtelPerProject } from "./otel-reset.ts";
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -261,6 +262,8 @@ export function setup(expiresAt: string, routeNow: number): {
 } {
   const root = createTestProject();
   roots.push(root);
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   seedStateFile(root, "state-mid-inception.md");
   const registryPath = join(
     root,
