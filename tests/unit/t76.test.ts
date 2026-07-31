@@ -112,7 +112,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { countAuditEvent } from "../harness/audit-rows.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,

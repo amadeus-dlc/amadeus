@@ -78,7 +78,7 @@
 // deliberately seeds NEITHER. All temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { auditRowsFrom, countAuditEvent } from "../harness/audit-rows.ts";
+import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";

@@ -29,3 +29,19 @@ export function normalizeAuditRecord(raw: unknown): NormalizedAuditRecord {
     fields: attributes,
   };
 }
+
+// Whole-shard convenience over the same normalisation, so a caller that wants
+// "the records in this buffer" does not re-derive the line split each time.
+// Blank lines are skipped; anything else must parse, so a malformed line fails
+// the case loudly rather than being silently dropped.
+export function auditRowsFrom(body: string): NormalizedAuditRecord[] {
+  return body
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => normalizeAuditRecord(JSON.parse(line)));
+}
+
+// How many records in `body` carry `event`, under either schema.
+export function countAuditEvent(body: string, event: string): number {
+  return auditRowsFrom(body).filter((row) => row.event === event).length;
+}

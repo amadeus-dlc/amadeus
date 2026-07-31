@@ -87,7 +87,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { auditRowsFrom, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { auditRowsFrom, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
@@ -155,7 +155,7 @@ function readAudit(proj: string): string {
 }
 /** Parse the merged audit shards into JSONL records (non-JSON lines skipped). */
 // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
-function auditRecords(proj: string): NormalisedAuditRow[] {
+function auditRecords(proj: string): NormalizedAuditRecord[] {
   return auditRowsFrom(readAudit(proj));
 }
 /** Does any audit record carry `event` === <ev>? */

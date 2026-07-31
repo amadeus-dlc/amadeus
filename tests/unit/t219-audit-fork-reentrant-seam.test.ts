@@ -31,7 +31,7 @@ import {
   worktreeAuditFilePath,
   worktreePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { auditRowsFrom, countAuditEvent, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { auditRowsFrom, countAuditEvent, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
@@ -160,7 +160,7 @@ function seedWtShard(p: string, content: string): string {
 }
 
 // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
-function mainForkedRows(p: string): NormalisedAuditRow[] {
+function mainForkedRows(p: string): NormalizedAuditRecord[] {
   return auditRowsFrom(readFileSync(auditFilePath(p), "utf-8")).filter((r) => r.event === "AUDIT_FORKED");
 }
 

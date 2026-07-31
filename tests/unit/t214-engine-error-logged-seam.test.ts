@@ -31,7 +31,7 @@ import {
   recordEngineError,
   runEngineMain,
 } from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
-import { countAuditEvent } from "../harness/audit-rows.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";

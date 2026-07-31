@@ -31,7 +31,7 @@
 // scenarios seed a state file first, so the guard lets the row through.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { countAuditEvent } from "../harness/audit-rows.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

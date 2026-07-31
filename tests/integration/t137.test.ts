@@ -79,7 +79,7 @@
 // failed assertion can't leave an unremovable read-only dir behind.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { auditRowsFrom } from "../harness/audit-rows.ts";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,

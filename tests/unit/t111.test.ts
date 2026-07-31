@@ -34,7 +34,7 @@ import {
   auditFilePath,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { normaliseAuditRow } from "../harness/audit-rows.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 // --- Per-file temp roots, torn down in afterAll ---------------------------
@@ -113,7 +113,7 @@ function parseRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => normaliseAuditRow(JSON.parse(l) as Record<string, unknown>) as unknown as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l) as Record<string, unknown>) as unknown as AuditRecord);
 }
 
 function readRecords(projectDir: string, intent?: string): AuditRecord[] {

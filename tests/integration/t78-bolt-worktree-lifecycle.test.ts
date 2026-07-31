@@ -69,7 +69,7 @@
 // NOTHING is written under tests/fixtures/**; all temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { auditRowsFrom, normaliseAuditRow, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { auditRowsFrom, normalizeAuditRecord, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -190,7 +190,7 @@ function readMainAudit(proj: string): string {
       // Keep BOTH journal shapes: a v2 row carries its event type as the
       // `Event` attribute, so a bare `rec.event` filter drops every migrated
       // row before the normaliser downstream ever sees it.
-      if (normaliseAuditRow(rec).event === null) continue;
+      if (normalizeAuditRecord(rec).event === null) continue;
       blocks.push({ ts: (rec.timestamp as string) ?? "", text: line });
     }
   }
@@ -200,7 +200,7 @@ function readMainAudit(proj: string): string {
 
 /** The timestamp-sorted JSONL records of main's audit shards. */
 // Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
-function mainAuditRecords(proj: string): NormalisedAuditRow[] {
+function mainAuditRecords(proj: string): NormalizedAuditRecord[] {
   return auditRowsFrom(readMainAudit(proj));
 }
 

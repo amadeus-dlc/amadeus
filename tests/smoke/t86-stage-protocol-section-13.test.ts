@@ -60,7 +60,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AMADEUS_SRC, cleanupTestProject, createTestProject, REPO_ROOT, seededAuditDir, seedStateFile } from "../harness/fixtures.ts";
-import { countAuditEvent } from "../harness/audit-rows.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 
 const BUN = process.execPath; // the bun running this test
 const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");

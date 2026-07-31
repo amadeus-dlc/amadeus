@@ -9,7 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
-import { countAuditEvent } from "../harness/audit-rows.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

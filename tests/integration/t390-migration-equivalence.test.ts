@@ -16,7 +16,7 @@
 //   legacy:    appendAuditEntry(...)  -> schema v1 row { event, fields }
 //   migrated:  emitAuditEvent(...)    -> schema v2 row { eventName, attributes }
 //
-// normaliseAuditRow puts both into one view, so `event` and `fields` are
+// normalizeAuditRecord puts both into one view, so `event` and `fields` are
 // directly comparable. The v2 row additionally carries an `Event` attribute —
 // the audit type relocated so legacy readers keep finding it — which the
 // normaliser lifts back out; that lifting is itself pinned below, because if it
@@ -34,7 +34,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { auditFilePath, birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEvent } from "../../dist/claude/.claude/otel/audit-emit.ts";
-import { auditRowsFrom, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { auditRowsFrom, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -47,7 +47,15 @@ afterEach(() => {
   cleanupTestProject(proj);
 });
 
-function rowsFor(intent: string, event: string): NormalisedAuditRow[] {
+// The audit content a caller actually supplied: the field bag minus the Event
+// carrier. Comparing this rather than raw `fields` is what makes a v1 row and a
+// v2 row of the same emit directly comparable.
+function auditContent(row: NormalizedAuditRecord): Record<string, string> {
+  const { Event: _carrier, ...content } = row.fields;
+  return content;
+}
+
+function rowsFor(intent: string, event: string): NormalizedAuditRecord[] {
   // An intent that was never emitted into has no shard on disk yet. That is
   // zero rows — which is exactly what the leak assertion wants to read — so it
   // must not surface as ENOENT.
@@ -61,7 +69,7 @@ function rowsFor(intent: string, event: string): NormalisedAuditRow[] {
 function bothWays(
   event: string,
   fields: Record<string, string>
-): { legacy: NormalisedAuditRow; migrated: NormalisedAuditRow } {
+): { legacy: NormalizedAuditRecord; migrated: NormalizedAuditRecord } {
   const legacyIntent = birthIntent(proj, "equiv-legacy", "default", "feature").dirName;
   const migratedIntent = birthIntent(proj, "equiv-migrated", "default", "feature").dirName;
 
@@ -72,7 +80,7 @@ function bothWays(
   const migrated = rowsFor(migratedIntent, event);
   expect(legacy.length).toBe(1);
   expect(migrated.length).toBe(1);
-  return { legacy: legacy[0] as NormalisedAuditRow, migrated: migrated[0] as NormalisedAuditRow };
+  return { legacy: legacy[0] as NormalizedAuditRecord, migrated: migrated[0] as NormalizedAuditRecord };
 }
 
 describe("[migration-equivalence] a migrated row carries the legacy row's audit content", () => {
@@ -87,10 +95,10 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
     const { legacy, migrated } = bothWays("AUDIT_MERGED", fields);
 
     expect(migrated.event).toBe(legacy.event);
-    expect(migrated.fields).toEqual(legacy.fields);
+    expect(auditContent(migrated)).toEqual(auditContent(legacy));
     // ...and both equal what the caller actually passed, so a mutation applied
     // to BOTH writers could not hide inside a legacy-vs-migrated comparison.
-    expect(migrated.fields).toEqual(fields);
+    expect(auditContent(migrated)).toEqual(fields);
   });
 
   // The case the registry sweep existed for: an optional attribute present.
@@ -103,12 +111,12 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
     };
     const { legacy, migrated } = bothWays("AUDIT_FORKED", fields);
 
-    expect(migrated.fields).toEqual(legacy.fields);
+    expect(auditContent(migrated)).toEqual(auditContent(legacy));
     // Named explicitly: redaction is default-deny, and `Reentrant` only clears
     // it because the registry declares it optional and the policy's safe keys
     // are derived from required + optional. A registry edit that dropped it
     // would land here rather than in a silently thinner audit trail.
-    expect(migrated.fields.Reentrant).toBe("true");
+    expect(auditContent(migrated).Reentrant).toBe("true");
   });
 
   // The same event WITHOUT the optional attribute: absence stays absence.
@@ -120,8 +128,8 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
     };
     const { legacy, migrated } = bothWays("AUDIT_FORKED", fields);
 
-    expect(migrated.fields).toEqual(legacy.fields);
-    expect("Reentrant" in migrated.fields).toBe(false);
+    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect("Reentrant" in auditContent(migrated)).toBe(false);
   });
 
   // The delegation events, whose conditional keys were the reason these sites
@@ -137,9 +145,9 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
     };
     const { legacy, migrated } = bothWays("DELEGATED_APPROVAL", fields);
 
-    expect(migrated.fields).toEqual(legacy.fields);
-    expect("User Input" in migrated.fields).toBe(false);
-    expect(migrated.fields["Grant Id"]).toBe("grant-0001");
+    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect("User Input" in auditContent(migrated)).toBe(false);
+    expect(auditContent(migrated)["Grant Id"]).toBe("grant-0001");
   });
 
   test("DELEGATED_REJECTION with Feedback — the optional key round-trips", () => {
@@ -153,8 +161,8 @@ describe("[migration-equivalence] a migrated row carries the legacy row's audit 
     };
     const { legacy, migrated } = bothWays("DELEGATED_REJECTION", fields);
 
-    expect(migrated.fields).toEqual(legacy.fields);
-    expect(migrated.fields.Feedback).toBe("needs a falling proof");
+    expect(auditContent(migrated)).toEqual(auditContent(legacy));
+    expect(auditContent(migrated).Feedback).toBe("needs a falling proof");
   });
 });
 
@@ -188,11 +196,13 @@ describe("[migration-equivalence] the migrated row lands in the TARGET ledger", 
   });
 });
 
-describe("[migration-equivalence] the Event carrier is lifted, not surfaced as a field", () => {
-  // The comparisons above depend on this. If the carrier stopped being lifted,
-  // every field-set assertion here would gain a phantom `Event` key — so the
-  // lifting is pinned directly rather than left as an implicit assumption.
-  test("the raw v2 row carries Event in attributes; the normalised view does not", () => {
+describe("[migration-equivalence] the Event carrier is where the readers expect it", () => {
+  // The comparisons above strip `Event` because it is a carrier rather than a
+  // caller-supplied field. That is only sound while the carrier is genuinely
+  // present and genuinely carries the audit type — if the exporter stopped
+  // writing it, the legacy readers would go blind and auditContent() would be
+  // stripping nothing. So the relocation is pinned directly.
+  test("the v2 row carries the audit type as an Event attribute, and the view reads it back", () => {
     const intent = birthIntent(proj, "equiv-carrier", "default", "feature").dirName;
     const fields = {
       "Bolt slug": "bolt-otel-migrate-g2",
@@ -211,9 +221,11 @@ describe("[migration-equivalence] the Event carrier is lifted, not surfaced as a
     if (!raw) throw new Error("no canonical AUDIT_MERGED row");
     expect((raw.attributes as Record<string, string>).Event).toBe("AUDIT_MERGED");
 
-    const normalised = rowsFor(intent, "AUDIT_MERGED")[0] as NormalisedAuditRow;
+    const normalised = rowsFor(intent, "AUDIT_MERGED")[0] as NormalizedAuditRecord;
     expect(normalised.event).toBe("AUDIT_MERGED");
-    expect("Event" in normalised.fields).toBe(false);
-    expect(normalised.fields).toEqual(fields);
+    // Present in the field bag (the canonical normaliser leaves it there) and
+    // stripped by the content view — the two halves of the declared difference.
+    expect(normalised.fields.Event).toBe("AUDIT_MERGED");
+    expect(auditContent(normalised)).toEqual(fields);
   });
 });
