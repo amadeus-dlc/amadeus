@@ -1,6 +1,8 @@
 // t269 — mirror contract/policy performance budgets and determinism.
 // covers: packages/framework/core/tools/amadeus-mirror-config.ts, amadeus-mirror-policy.ts
-// size: medium
+// size: large
+//
+// perf tier (#1830 FR-1): real-time measurement, held out of --ci.
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";

@@ -25,6 +25,12 @@ import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
 import { type CoverageSourcePathContext } from "./lib/coverage-source-path.ts";
 import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
+import {
+  type Level,
+  type ParseArgsIo,
+  type ParsedArgs,
+  parseArgs,
+} from "./lib/run-tests-args.ts";
 import { buildTestsTotals, writeTestsTotals } from "./lib/run-tests-totals.ts";
 import {
   beginObservation,
@@ -68,22 +74,7 @@ function coverageSourcePathContext(): CoverageSourcePathContext {
 
 const COVERAGE_SOURCE_PATH_CONTEXT = coverageSourcePathContext();
 
-type Level = "smoke" | "unit" | "integration" | "e2e";
 type Status = "PASS" | "FAIL" | "SKIP";
-
-interface ParsedArgs {
-  runSmoke: boolean;
-  runUnit: boolean;
-  runIntegration: boolean;
-  runE2e: boolean;
-  coverage: boolean;
-  coverageDir: string;
-  verbose: boolean;
-  debug: boolean;
-  filter: string;
-  parallel: number;
-  fullProfile: boolean;
-}
 
 interface ResultRow {
   name: string;
@@ -119,11 +110,12 @@ LEVEL FLAGS (combinable, each selects exactly its level):
   --unit          Single-component isolation (hooks, frontmatter, knowledge)
   --integration   Cross-component contracts and live stage/CLI utilities
   --e2e           Full lifecycle, worktree, and rendered terminal journeys
+  --perf          Real-time performance benchmarks (wall-clock measurement)
 
 PROFILE FLAGS (shortcuts -- map to test pyramid layers):
   (default)       smoke + unit + integration
   --ci            smoke + unit + integration
-  --release       smoke + unit + integration + e2e
+  --release       smoke + unit + integration + e2e + perf
   --all           Same as --release
 
 OUTPUT MODIFIERS (combinable with any tier/profile):
@@ -148,122 +140,30 @@ EXAMPLES:
   bash tests/run-tests.sh --release              # All levels (hours)
   bash tests/run-tests.sh --integration --debug  # Integration with traces
   bash tests/run-tests.sh --smoke --e2e          # Specific levels
+  bash tests/run-tests.sh --perf                 # Benchmarks only (never in CI)
   bash tests/run-tests.sh --all --debug          # Everything with traces
   bash tests/run-tests.sh --integration --filter "t25|t26" --debug
   bash tests/run-tests.sh --all --parallel 4     # 4-way parallel for larger levels
 `;
 }
 
-function failUsage(message: string, code = 1): never {
-  process.stderr.write(`${message}\n\n${usage()}`);
-  process.exit(code);
-}
+const parseArgsIo: ParseArgsIo = {
+  defaultParallel: DEFAULT_PARALLEL,
+  failUsage(message: string): never {
+    process.stderr.write(`${message}\n\n${usage()}`);
+    process.exit(1);
+  },
+  fail(message: string, code: number): never {
+    process.stderr.write(message);
+    process.exit(code);
+  },
+  help(): never {
+    process.stdout.write(usage());
+    process.exit(0);
+  },
+};
 
-function parseArgs(argv: string[]): ParsedArgs {
-  const out: ParsedArgs = {
-    runSmoke: false,
-    runUnit: false,
-    runIntegration: false,
-    runE2e: false,
-    coverage: false,
-    coverageDir: "coverage",
-    verbose: false,
-    debug: false,
-    filter: "",
-    parallel: DEFAULT_PARALLEL,
-    fullProfile: false,
-  };
-  let levelSelected = false;
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    switch (arg) {
-      case "--smoke":
-        out.runSmoke = true;
-        levelSelected = true;
-        break;
-      case "--unit":
-        out.runUnit = true;
-        levelSelected = true;
-        break;
-      case "--integration":
-        out.runIntegration = true;
-        levelSelected = true;
-        break;
-      case "--e2e":
-        out.runE2e = true;
-        levelSelected = true;
-        break;
-      case "--ci":
-        out.runSmoke = true;
-        out.runUnit = true;
-        out.runIntegration = true;
-        levelSelected = true;
-        break;
-      case "--release":
-      case "--all":
-        out.runSmoke = true;
-        out.runUnit = true;
-        out.runIntegration = true;
-        out.runE2e = true;
-        out.fullProfile = true;
-        levelSelected = true;
-        break;
-      case "--coverage":
-        out.coverage = true;
-        break;
-      case "--coverage-dir": {
-        const value = argv[++i] ?? "";
-        if (!value) failUsage("--coverage-dir requires a directory");
-        out.coverageDir = value;
-        break;
-      }
-      case "--verbose":
-        out.verbose = true;
-        break;
-      case "--debug":
-        out.debug = true;
-        out.verbose = true;
-        break;
-      case "--filter": {
-        const value = argv[++i] ?? "";
-        out.filter = value;
-        break;
-      }
-      case "--parallel":
-      case "-P": {
-        const value = argv[++i] ?? "";
-        if (!/^[1-9][0-9]*$/.test(value)) {
-          process.stderr.write(
-            `ERROR: --parallel requires a positive integer (got: '${value || "<missing>"}')\n`,
-          );
-          process.exit(2);
-        }
-        out.parallel = Number(value);
-        break;
-      }
-      case "--help":
-        process.stdout.write(usage());
-        process.exit(0);
-        break;
-      case "-h":
-        process.stdout.write(usage());
-        process.exit(0);
-        break;
-      default:
-        failUsage(`Unknown flag: ${arg}`);
-    }
-  }
-
-  if (!levelSelected) {
-    out.runSmoke = true;
-    out.runUnit = true;
-    out.runIntegration = true;
-  }
-  return out;
-}
-
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2), parseArgsIo);
 const coverageRoot = resolve(REPO_ROOT, args.coverageDir);
 const coveragePartsDir = join(coverageRoot, ".parts");
 const coverageReports: string[] = [];
@@ -1056,6 +956,7 @@ function writeVerboseSummary(): void {
     args.runUnit ? "unit" : "",
     args.runIntegration ? "integration" : "",
     args.runE2e ? "e2e" : "",
+    args.runPerf ? "perf" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1209,6 +1110,14 @@ async function main(): Promise<number> {
         aggregateTierResults();
       }
     }
+  }
+
+  // Real-time benchmarks (#1830 FR-1). Held out of --ci so a loaded shared
+  // runner cannot turn wall-clock measurement into a red build. No exclude set,
+  // so the plain runTier path applies: parallel like integration/e2e (only
+  // smoke and unit are pinned serial).
+  if (args.runPerf) {
+    await runTier("perf", "Performance Tests (real-time benchmarks)", sizeCollector);
   }
 
   writeVerboseSummary();

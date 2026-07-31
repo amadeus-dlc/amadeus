@@ -418,11 +418,12 @@ bash tests/run-tests.sh       # POSIX compatibility wrapper
 --unit          # Single-component isolation
 --integration   # Cross-component contracts and stage/CLI utilities
 --e2e           # Full lifecycle, worktree, and rendered terminal journeys
+--perf          # Real-time performance benchmarks (wall-clock measurement)
 
 # Profile flags (shortcuts)
 (default)       # smoke + unit + integration
 --ci            # smoke + unit + integration
---release       # smoke + unit + integration + e2e
+--release       # smoke + unit + integration + e2e + perf
 --all           # Same as --release
 
 # Output modifiers

@@ -1,5 +1,7 @@
 // covers: function:discoverPluginStageFiles, function:compileStageGraph
-// size: medium
+// size: large
+//
+// perf tier (#1830 FR-1): real-time measurement, held out of --ci.
 //
 // U2 plugin-skeleton performance contract. The regression case alternates the
 // real zero-plugin compile and a fixed 100-plugin treatment in one process.

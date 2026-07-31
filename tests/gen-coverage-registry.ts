@@ -602,6 +602,7 @@ const TEST_TIERS = [
   "unit",
   "integration",
   "e2e",
+  "perf",
 ];
 
 export interface DiscoveredClaim {

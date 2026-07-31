@@ -1,15 +1,11 @@
 // covers: subcommand:amadeus-state:archive subcommand:amadeus-state:unarchive
-// @test-size medium
+// size: medium
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { cpus, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { currentGitSha } from "../harness/git-sha.ts";
-import {
-  exceedsMedianLatencyBudget,
-  median,
-} from "../lib/latency-median-budget-gate.ts";
+import { exceedsMedianLatencyBudget } from "../lib/latency-median-budget-gate.ts";
 import { appendLifecycleAuditEntryUnlocked } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import {
   auditLockDir,
@@ -20,7 +16,6 @@ import {
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const STATE = join(import.meta.dir, "../../packages/framework/core/tools/amadeus-state.ts");
-const BENCHMARK_CHILD = join(import.meta.dir, "../helpers/lifecycle-transaction-benchmark-child.ts");
 const roots: string[] = [];
 
 afterEach(() => {
@@ -464,81 +459,16 @@ describe("intent lifecycle transaction CLI", () => {
   });
 });
 
-type LifecycleBenchmarkSample = {
-  mode: "archive" | "recovery" | "noop";
-  size: number;
-  elapsedMs: number;
-  rssDeltaBytes: number;
-  fixtureSha256: string;
-};
-
-function benchmarkChild(mode: LifecycleBenchmarkSample["mode"]): LifecycleBenchmarkSample {
-  const result = spawnSync(process.execPath, [BENCHMARK_CHILD, "10000", mode], {
-    encoding: "utf-8",
-  });
-  if (result.status !== 0) throw new Error(result.stderr);
-  return JSON.parse(result.stdout);
-}
-
-function p95(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.ceil(sorted.length * 0.95) - 1];
-}
-
-// Absolute latency budgets (#1424). Unchanged in value; the verdict now gates
-// the median rather than the nearest-rank p95 so shared-runner load spikes are
-// absorbed while a genuine regression still reports (#1511, median ruling).
+// Absolute latency budget (#1424) for the archive path. The real measurement
+// moved to tests/perf/t258-lifecycle-transaction-perf.test.ts (#1830 FR-1);
+// this file keeps the pure verdict proof, which needs no wall clock.
 const ARCHIVE_LATENCY_BUDGET_MS = 500;
-const RECOVERY_LATENCY_BUDGET_MS = 750;
 
 describe("intent lifecycle transaction performance contract", () => {
-  test("records 100-child p95 and paired incremental RSS with provenance", () => {
-    for (let index = 0; index < 10; index++) {
-      benchmarkChild("archive");
-      benchmarkChild("recovery");
-      benchmarkChild("noop");
-    }
-    const archive = Array.from({ length: 100 }, () => benchmarkChild("archive"));
-    const recovery = Array.from({ length: 100 }, () => benchmarkChild("recovery"));
-    const noop = Array.from({ length: 100 }, () => benchmarkChild("noop"));
-    const rss = archive.map((sample, index) =>
-      Math.max(0, sample.rssDeltaBytes - noop[index].rssDeltaBytes)
-    );
-    const archiveLatencies = archive.map((sample) => sample.elapsedMs);
-    const recoveryLatencies = recovery.map((sample) => sample.elapsedMs);
-    const result = {
-      samples: 100,
-      warmups: 10,
-      archiveP95Ms: p95(archiveLatencies),
-      recoveryP95Ms: p95(recoveryLatencies),
-      archiveMedianMs: median(archiveLatencies),
-      recoveryMedianMs: median(recoveryLatencies),
-      rssDifferenceP95MiB: p95(rss) / (1024 * 1024),
-      fixtureSha256: archive[0].fixtureSha256,
-      gitSha: currentGitSha(),
-      bunVersion: Bun.version,
-      runnerImage: process.env.ImageOS ?? process.env.RUNNER_OS ?? "local",
-      cpuModel: cpus()[0]?.model ?? "unknown",
-    };
-    console.log(`LIFECYCLE_TRANSACTION_BENCHMARK ${JSON.stringify(result)}`);
-    expect(exceedsMedianLatencyBudget(archiveLatencies, ARCHIVE_LATENCY_BUDGET_MS)).toBe(false);
-    expect(exceedsMedianLatencyBudget(recoveryLatencies, RECOVERY_LATENCY_BUDGET_MS)).toBe(false);
-    expect(result.rssDifferenceP95MiB).toBeLessThanOrEqual(96);
-    expect(new Set(archive.map((sample) => sample.fixtureSha256)).size).toBe(1);
-    expect(new Set(recovery.map((sample) => sample.fixtureSha256)).size).toBe(1);
-    // The inline timeout is a hang guard, not a performance assertion — the
-    // performance surface is the median budgets and RSS ceiling above. 120s
-    // sat just under the measured wall-clock of the 330-spawn run on GitHub
-    // runners (123-152s across #1830's evidence and PR #1844's four
-    // consecutive reds, all with every budget assertion green), turning
-    // runner-class variance into a false red. 300s keeps the guard while
-    // clearing the measured range (#1830 path A).
-  }, 300_000);
-
   // FR-4 wiring proof: a genuine across-the-board regression, fed through the
-  // exact predicate and budget constant the benchmark asserts against above,
-  // reports as a failure. This pins that the median swap did not turn the gate
-  // into a no-op — the verdict the real run consumes still catches a regression.
+  // exact predicate and budget constant the benchmark asserts against, reports
+  // as a failure. This pins that the median swap did not turn the gate into a
+  // no-op — the verdict the real run consumes still catches a regression.
   test("a regressed archive latency median fails the same verdict path", () => {
     const regressed = Array.from(
       { length: 100 },
