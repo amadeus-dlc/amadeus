@@ -1,0 +1,155 @@
+name: Performance
+
+# Daily, non-blocking performance verification for the wall-clock benchmarks that
+# were split out of the blocking CI tier.
+#
+# Non-blocking loud-fail contract: this workflow is deliberately absent from
+# ci.yml's `ci-success` needs list and from branch protection, so a red run here
+# never blocks a pull request. Failures stay loud instead: the workflow run goes
+# red in the Actions tab and each failing job appends the tail of its output to
+# the run's step summary. Silencing a failure (continue-on-error, `|| true`) is
+# not an acceptable way to keep this workflow green.
+#
+# tests/perf/ must never carry a "CI-resident" claim. The
+# t257-ci-residency-marker-guard treats the perf tier as outside `--ci`, which is
+# correct: `bash tests/run-tests.sh --ci` excludes perf by design and only this
+# workflow runs `--perf`.
+#
+# Schedule suspension: GitHub disables `schedule` triggers after roughly 60 days
+# without repository activity. If the daily runs stop appearing, check the
+# Actions tab for a suspended schedule and re-enable it there.
+
+on:
+  schedule:
+    # 17:47 UTC = 02:47 JST, deliberately off the :00/:30 congestion peaks.
+    - cron: "47 17 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: perf
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  perf-tests:
+    name: Performance tests
+    runs-on: ubuntu-latest
+    # 2x the expected wall clock: per-test caps 250s + 180s + 120s, plus the
+    # remaining perf tests (~60s) and checkout/bun install setup (~120s) is
+    # about 12.2 min; 2 x 12.2 = 24.4, rounded up to 25.
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Tests - perf tier (real-time benchmarks)
+        run: |
+          set -o pipefail
+          bash tests/run-tests.sh --perf 2>&1 | tee perf-run.log
+
+      - name: Upload dynamic test-size report (advisory)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amadeus-perf-test-size-report
+          path: tests/logs/test-size-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarise failure
+        if: failure()
+        run: |
+          {
+            echo "### Performance tests failed"
+            echo
+            echo 'Last 50 lines of `bash tests/run-tests.sh --perf`:'
+            echo
+            echo '```'
+            tail -n 50 perf-run.log 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  distribution-benchmark:
+    name: Intent Mirror benchmark (${{ matrix.replica }})
+    runs-on: ubuntu-24.04
+    # 10x the maximum observed job duration on main (0.3 min in runs
+    # 30612356689 / 30610328352 / 30610135355) is 3 min; rounded up to the
+    # 5-minute floor used for short jobs.
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Measure fixed distribution workload
+        run: |
+          set -o pipefail
+          bun run distribution:benchmark | tee distribution-benchmark.json
+
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirror-distribution-benchmark-${{ matrix.replica }}
+          path: distribution-benchmark.json
+          retention-days: 14
+
+  distribution-benchmark-aggregate:
+    name: Intent Mirror benchmark aggregate
+    needs: distribution-benchmark
+    runs-on: ubuntu-24.04
+    # Same derivation as distribution-benchmark: 10 x 0.3 min = 3, floored to 5.
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Download all benchmark replicas
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mirror-distribution-benchmark-*
+          path: benchmark-replicas
+
+      - name: Enforce runtime compatibility, completeness, dispersion, p95, and RSS budgets
+        run: |
+          set -o pipefail
+          mapfile -t replicas < <(find benchmark-replicas -name distribution-benchmark.json -type f | sort)
+          bun run distribution:benchmark:aggregate -- "${replicas[@]}" 2>&1 | tee aggregate.log
+
+      - name: Summarise failure
+        if: failure()
+        run: |
+          {
+            echo "### Intent Mirror benchmark aggregate failed"
+            echo
+            echo 'Last 50 lines of `bun run distribution:benchmark:aggregate`:'
+            echo
+            echo '```'
+            tail -n 50 aggregate.log 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
