@@ -31,7 +31,7 @@ import {
   worktreeAuditFilePath,
   worktreePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { auditRowsFrom, type NormalisedAuditRow } from "../harness/audit-rows.ts";
+import { auditRowsFrom, countAuditEvent, type NormalisedAuditRow } from "../harness/audit-rows.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
@@ -181,7 +181,10 @@ describe("audit-fork re-entry (Issue #850, #478 gap1)", () => {
     expect(forked.length).toBe(1);
     expect(forked[0]?.fields.Reentrant).toBe("true");
     // The worktree shard is refreshed from main (copy happened).
-    expect(readFileSync(wtShard, "utf-8")).toContain('"event":"AUDIT_FORKED"');
+    // Read through the mixed v1/v2 view: the copied row is written by the
+    // canonical path, which carries the audit event type as an `Event`
+    // attribute rather than a top-level `event` key.
+    expect(countAuditEvent(readFileSync(wtShard, "utf-8"), "AUDIT_FORKED")).toBe(1);
   });
 
   test("(ii) DIVERGED: wt shard is not a prefix -> refuse, no audit side effect", () => {

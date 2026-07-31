@@ -390,41 +390,28 @@ const RECOVERED_REVISION_FEEDBACK =
 //
 // Lock-aware: when the caller is mid-transaction inside a withAuditLock (the
 // C2b lost-update wrapping — every RMW handler below holds the lock across
-// read→decide→emit→write), this process already owns the OS lock. Routing
-// through appendAuditEntry (which calls the NON-reentrant acquireAuditLock)
-// would self-deadlock and burn the 5s retry budget before throwing, so detect
-// the held lock and use the unlocked append variant instead — exactly how
-// handleFork/handleMerge emit (appendAuditEntryUnlocked) and how emitError
-// branches in amadeus-lib.ts. Outside a held lock (no current caller, but kept
-// safe for any future bare-emit site) it takes its own lock as before.
+// read→decide→emit→write), this process already owns the OS lock. The legacy
+// writers forced a choice here: appendAuditEntry's acquire is NON-reentrant, so
+// a held lock had to be detected and routed to the unlocked variant or the emit
+// would self-deadlock and burn the retry budget before throwing.
+//
+// The canonical emit needs no such branch. It locks through withAuditLock,
+// whose per-identity depth counter re-enters when the target names the SAME
+// (intent, space) the enclosing section holds — which is the pair threaded
+// here. One call therefore covers both cases, and the enclosing section's own
+// acquire stays the only one ever spent.
 function emitAudit(
   projectDir: string,
   eventType: string,
   fields: Record<string, string>
 ): void {
-  if (
-    holdsAuditLock(
-      projectDir,
-      stateOperationTarget?.intent,
-      stateOperationTarget?.space,
-    )
-  ) {
-    appendAuditEntryUnlocked(
-      eventType,
-      fields,
-      projectDir,
-      stateOperationTarget?.intent,
-      stateOperationTarget?.space,
-    );
-  } else {
-    appendAuditEntry(
-      eventType,
-      fields,
-      projectDir,
-      stateOperationTarget?.intent,
-      stateOperationTarget?.space,
-    );
-  }
+  emitAuditEvent(
+    eventType,
+    fields,
+    projectDir,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
 }
 
 // Thin alias over the shared accessor — kept so existing call sites read
@@ -3401,7 +3388,13 @@ export function handleDelegateApproval(args: string[]): void {
   if (userInput) fields["User Input"] = userInput;
   // Record which standing grant (#1125) authorised a human-turn-less delegation.
   if (grantId) fields["Grant Id"] = grantId;
-  const res = appendAuditEntry("DELEGATED_APPROVAL", fields, pd, toIntent, toSpace);
+  // Targeted, and the targeting IS the correctness here: toIntent/toSpace name
+  // the ledger being delegated INTO, which is not the issuer's own. Dropping
+  // the pair would not throw — it would silently record the approval against
+  // whatever the active cursor happens to be. `User Input` and `Grant Id` are
+  // registry-optional, so a standing-grant delegation that carries neither
+  // still satisfies the required set.
+  const res = emitAuditEvent("DELEGATED_APPROVAL", fields, pd, toIntent, toSpace);
 
   console.log(
     JSON.stringify({
@@ -3495,7 +3488,10 @@ function handleDelegateRejection(args: string[]): void {
     "Issuer Human Ts": issuerHumanTs,
   };
   if (feedback) fields.Feedback = feedback;
-  const res = appendAuditEntry("DELEGATED_REJECTION", fields, pd, toIntent, toSpace);
+  // Targeted at the ledger being delegated into — see the approval arm.
+  // `Feedback` is registry-optional, so a rejection issued without it still
+  // satisfies the required set.
+  const res = emitAuditEvent("DELEGATED_REJECTION", fields, pd, toIntent, toSpace);
 
   console.log(
     JSON.stringify({

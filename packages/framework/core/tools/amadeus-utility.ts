@@ -129,6 +129,7 @@ import {
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
 import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
@@ -197,11 +198,10 @@ function appendAuditEvent(
   event: string,
   fields: Record<string, string>
 ): void {
-  if (holdsAuditLock(projectDir)) {
-    appendAuditEntryUnlocked(event, fields, projectDir);
-  } else {
-    appendAuditEntry(event, fields, projectDir);
-  }
+  // One call for both cases: the canonical emit locks through withAuditLock,
+  // whose per-identity depth counter re-enters an already-held section instead
+  // of taking a second, non-reentrant acquire.
+  emitAuditEvent(event, fields, projectDir);
 }
 
 // ---------------------------------------------------------------------------
