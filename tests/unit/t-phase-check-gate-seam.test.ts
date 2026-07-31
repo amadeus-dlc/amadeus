@@ -38,6 +38,7 @@ import {
   seededRecordDir,
   seededStateFile,
   seedStateFile,
+  resetOtelProcessState,
 } from "../harness/fixtures.ts";
 
 class ExitSignal extends Error {
@@ -110,6 +111,7 @@ function restoreEnv(): void {
 describe("t-phase-check-gate-seam: verifyPhaseCheckArtifact unit (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     seedStateFile(proj, "state-mid-inception.md");
     saveEnv();
   });
@@ -157,6 +159,7 @@ describe("t-phase-check-gate-seam: verifyPhaseCheckArtifact unit (#886)", () => 
 describe("t-phase-check-gate-seam: advance boundary gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     // scope=bugfix, Current=requirements-analysis (inception); advance derives
     // code-generation (construction) → an inception→construction boundary.
     seedStateFile(proj, "state-mid-inception.md");
@@ -198,6 +201,7 @@ describe("t-phase-check-gate-seam: advance boundary gate (#886)", () => {
 describe("t-phase-check-gate-seam: finalize boundary gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     seedStateFile(proj, "state-mid-inception.md");
     saveEnv();
     seedReqProduces(proj);
@@ -229,6 +233,7 @@ describe("t-phase-check-gate-seam: finalize boundary gate (#886)", () => {
 describe("t-phase-check-gate-seam: complete-workflow gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     // complete-workflow treats the given slug as final and closes its phase;
     // requirements-analysis (inception, non-workspace_requires) keeps the test
     // off the workspace_requires source-work path.
@@ -265,6 +270,7 @@ describe("t-phase-check-gate-seam: complete-workflow gate (#886)", () => {
 describe("t-phase-check-gate-seam: approve gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     seedStateFile(proj, "state-mid-inception.md");
     // Move requirements-analysis to awaiting-approval [?] so approve is valid.
     // approve marks it [x] and delegates to advance (next = code-generation,
@@ -306,6 +312,7 @@ describe("t-phase-check-gate-seam: approve gate (#886)", () => {
 describe("t-phase-check-gate-seam: jump forward gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     // scope=feature, Current=feasibility (ideation, has [x] work). A forward jump
     // to functional-design (construction) closes ideation (with work → Verified,
     // gated) and inception (no work → Skipped, not gated).

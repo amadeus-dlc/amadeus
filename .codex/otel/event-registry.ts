@@ -90,7 +90,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Scope", "Request"],
-    optionalAttributes: [],
+    optionalAttributes: ["Repos"],
     schemaVersion: 1,
   },
   {
@@ -171,8 +171,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "PHASE_SKIPPED",
     durability: "canonical",
     category: "phase-lifecycle",
-    requiredAttributes: ["Phase", "Scope", "Reason"],
-    optionalAttributes: [],
+    requiredAttributes: ["Phase", "Reason"],
+    optionalAttributes: ["Scope"],
     schemaVersion: 1,
   },
   // --- Stage Lifecycle (7) ---
@@ -199,8 +199,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "STAGE_REVISING",
     durability: "canonical",
     category: "stage-lifecycle",
-    requiredAttributes: ["Stage", "Revision count", "Feedback"],
-    optionalAttributes: ["Recovered", "Transaction Id"],
+    requiredAttributes: ["Stage", "Revision count"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -383,8 +383,8 @@ export const REGISTERED_EVENTS = [
     auditEvent: "GATE_REJECTED",
     durability: "canonical",
     category: "interaction",
-    requiredAttributes: ["Stage", "Feedback"],
-    optionalAttributes: ["Recovered", "Transaction Id"],
+    requiredAttributes: ["Stage"],
+    optionalAttributes: ["Feedback", "Recovered", "Transaction Id"],
     schemaVersion: 1,
   },
   {
@@ -402,7 +402,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage", "Issuer Space", "Issuer Intent", "Issuer Shard", "Issuer Human Ts"],
-    optionalAttributes: ["User Input"],
+    optionalAttributes: ["User Input", "Grant Id"],
     schemaVersion: 1,
   },
   {
@@ -458,7 +458,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "artifact",
     requiredAttributes: [],
-    optionalAttributes: ["Tool", "File", "Context", "Artifact", "TransactionId", "Revision", "TransitionKind", "Digest", "TriggerBoundary", "Reconciliation", "OperationId", "Classification"],
+    optionalAttributes: ["Tool", "File", "Context", "Artifact", "TransactionId", "Revision", "TransitionKind", "Digest", "TriggerBoundary", "Reconciliation", "OperationId", "Classification", "coalescedWarning", "repairProof"],
     schemaVersion: 1,
   },
   {

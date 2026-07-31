@@ -123,6 +123,38 @@ export function createTestProject(): string {
 }
 
 /**
+ * Drop the per-process OTel registrations and the bootstrap's own record.
+ *
+ * The bootstrap is one-workspace-per-PROCESS: a second ensureOtelBootstrap for
+ * a different project dir is refused, not adopted. A suite whose subject emits
+ * on the canonical path therefore has to re-arm that invariant between cases,
+ * or a case inherits the registration its predecessor made for a since-deleted
+ * temp project and every emit fails with "already bootstrapped for project dir".
+ *
+ * Deliberately NOT called from createTestProject: minting a second workspace in
+ * one process is exactly what t376's invariant-violation cases assert about, so
+ * resetting there would erase the condition under test. Suites opt in from their
+ * own beforeEach.
+ *
+ * Import failures are ignored: fixtures also serve suites running against tool
+ * trees with no otel/ directory (the BR-5 partial-install cases).
+ */
+export function resetOtelProcessState(): void {
+  try {
+    for (const [mod, fn] of [
+      ["../../dist/claude/.claude/otel/logger-provider.ts", "resetLoggerProviderForTests"],
+      ["../../dist/claude/.claude/otel/tracer-provider.ts", "resetTracerProviderForTests"],
+      ["../../dist/claude/.claude/otel/bootstrap.ts", "resetOtelBootstrapForTests"],
+    ] as const) {
+      const loaded = require(mod) as Record<string, () => void>;
+      loaded[fn]?.();
+    }
+  } catch {
+    /* no otel tree in this fixture's tool set */
+  }
+}
+
+/**
  * The absolute intents dir for a space: `<proj>/amadeus/spaces/<space>/intents`.
  */
 export function intentsDirOf(proj: string, space = DEFAULT_SPACE): string {
@@ -677,4 +709,53 @@ export function cleanupWorkspaceJourney(journey: WorkspaceJourney | undefined): 
     return;
   }
   if (existsSync(journey.root)) removeTreeWithRetry(journey.root);
+}
+
+/**
+ * The shape a test assertion wants from an audit shard, regardless of which
+ * journal schema the emitter used.
+ */
+export interface NormalizedAuditRecord {
+  /** The v1 audit event type. Null for a record that carries none. */
+  event: string | null;
+  timestamp?: string;
+  /** The payload under its historical field names. */
+  fields: Record<string, string>;
+}
+
+/**
+ * Parse concatenated JSONL shard bytes into records, normalizing BOTH journal
+ * schemas onto the v1 field names.
+ *
+ * A migrated call site writes schema v2: the legacy audit event type rides as
+ * the `Event` ATTRIBUTE and the payload lives under `attributes` rather than
+ * `fields`. Production readers (auditBlockField) already serve both shapes
+ * under the historical names, so a test that hand-parses `{ event, fields }`
+ * silently stops seeing rows the moment its emitter migrates — it reads zero
+ * events and asserts happily against an empty set.
+ *
+ * `Event` is dropped from the normalized payload: in v1 it was an envelope key,
+ * not a field, so leaving it in would add one to every field count a test pins.
+ */
+export function parseAuditRecords(shardText: string): NormalizedAuditRecord[] {
+  return shardText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("{"))
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) {
+        return {
+          event: (raw.event as string | null) ?? null,
+          timestamp: raw.timestamp as string | undefined,
+          fields: (raw.fields ?? {}) as Record<string, string>,
+        };
+      }
+      const { Event, ...fields } = (raw.attributes ?? {}) as Record<string, string>;
+      return {
+        event: Event ?? null,
+        timestamp: raw.timestamp as string | undefined,
+        fields,
+      };
+    });
 }

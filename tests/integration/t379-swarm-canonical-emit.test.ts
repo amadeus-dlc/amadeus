@@ -22,7 +22,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { emitSwarmAudit, handleFinalize } from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
+import {
+  emitSwarmAudit,
+  emitSwarmDegraded,
+  emitSwarmStarted,
+  emitUnitConverged,
+  emitUnitFailed,
+  handleFinalize,
+} from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -73,6 +80,54 @@ function shardRecords(): ShardRecord[] {
     .filter((line) => line.startsWith("{"))
     .map((line) => JSON.parse(line) as ShardRecord);
 }
+
+describe("each named emitter travels the canonical Event path", () => {
+  // The referee's six emitters are thin wrappers whose whole content is the
+  // event type and the field NAMES. Driving them (rather than calling
+  // emitSwarmAudit with a hand-copied field set) is what makes this a test of
+  // the production vocabulary instead of a copy of it: rename a field in the
+  // wrapper and the assertion below fails, which a duplicated table would not.
+  const emitters: readonly [string, string, () => void, Record<string, string>][] = [
+    [
+      "SWARM_STARTED",
+      "amadeus.swarm.started",
+      () => emitSwarmStarted(proj, "1", ["u1", "u2"], "4"),
+      { "Batch number": "1", "Unit names": "u1,u2", "Concurrency cap": "4" },
+    ],
+    [
+      "SWARM_DEGRADED",
+      "amadeus.swarm.degraded",
+      () => emitSwarmDegraded(proj, "1", "codex-ultra"),
+      { "Batch number": "1", "Requested driver": "codex-ultra", "Fallback driver": "subagent" },
+    ],
+    [
+      "SWARM_UNIT_CONVERGED",
+      "amadeus.swarm.unit.converged",
+      () => emitUnitConverged(proj, "1", "u1"),
+      { "Batch number": "1", "Unit name": "u1" },
+    ],
+    [
+      "SWARM_UNIT_FAILED",
+      "amadeus.swarm.unit.failed",
+      () => emitUnitFailed(proj, "1", "u1", "error"),
+      { "Batch number": "1", "Unit name": "u1", Reason: "error" },
+    ],
+  ];
+
+  for (const [legacy, canonical, emit, expected] of emitters) {
+    test(`[migration-equivalence] ${legacy} lands as ${canonical} with the fields the emitter names`, () => {
+      emit();
+      const rows = shardRecords();
+      const emitted = rows.filter((r) => r.schemaVersion === 2 && r.eventName === canonical);
+      expect(emitted.length).toBe(1);
+      expect(emitted[0]?.attributes?.Event).toBe(legacy);
+      for (const [key, value] of Object.entries(expected)) {
+        expect(emitted[0]?.attributes?.[key]).toBe(value);
+      }
+      expect(rows.filter((r) => r.schemaVersion !== 2).length).toBe(0);
+    });
+  }
+});
 
 describe("the swarm taxonomy travels the canonical Event path", () => {
   // One case per event type: the registry lookup is BY legacy event type, so a

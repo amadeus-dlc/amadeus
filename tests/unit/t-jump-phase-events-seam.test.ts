@@ -24,6 +24,8 @@ import {
   seededRecordDir,
   seededStateFile,
   seedStateFile,
+  parseAuditRecords,
+  resetOtelProcessState,
 } from "../harness/fixtures.ts";
 
 // Concatenate every audit shard under the seeded record's audit/ dir — readers
@@ -56,11 +58,7 @@ function readState(proj: string): string {
 }
 
 function countEvent(audit: string, event: string): number {
-  return audit
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === event).length;
+  return parseAuditRecords(audit).filter((r) => r.event === event).length;
 }
 
 describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () => {
@@ -69,6 +67,7 @@ describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () =>
 
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     // scope=feature, Current Stage=feasibility (ideation). Ideation has [x]
     // stages (intent-capture, market-research); inception has none.
     seedStateFile(proj, "state-mid-ideation.md");
@@ -100,10 +99,7 @@ describe("t-jump-phase-events-seam: forward multi-phase jump (#842 FR-2)", () =>
     expect(countEvent(audit, "PHASE_STARTED")).toBe(1);
     // The VERIFIED row is for ideation; the SKIPPED row is for inception —
     // record-scoped, so neither value can be read off a neighbouring event.
-    const rows = audit
-      .split("\n")
-      .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    const rows = parseAuditRecords(audit);
     expect(
       rows.find((r) => r.event === "PHASE_VERIFIED")?.fields?.["Phase boundary"],
     ).toBe("ideation → construction");
@@ -129,6 +125,7 @@ describe("t-jump-phase-events-seam: backward jump emits no phase events (#842 FR
 
   beforeEach(() => {
     proj = createTestProject();
+    resetOtelProcessState();
     // scope=feature, Current Stage=functional-design (construction); ideation
     // and inception are already Verified.
     seedStateFile(proj, "state-construction-bolt1.md");

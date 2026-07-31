@@ -336,7 +336,7 @@ export function emitSwarmAudit(
   appendAuditEntryViaEvents(eventType, fields, pd);
 }
 
-function emitSwarmStarted(
+export function emitSwarmStarted(
   pd: string,
   batch: string,
   units: string[],
@@ -356,7 +356,7 @@ function emitSwarmStarted(
 // Loud-degrade: an ultra native to another harness was requested (or the Workflow
 // tool was unavailable for claude-ultra), so the conductor ran the subagent floor. The referee makes the
 // substrate difference invisible to convergence, but the downgrade is recorded.
-function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
+export function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
   emitSwarmAudit(
     "SWARM_DEGRADED",
     {
@@ -368,7 +368,7 @@ function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): vo
   );
 }
 
-function emitUnitConverged(pd: string, batch: string, unit: string): void {
+export function emitUnitConverged(pd: string, batch: string, unit: string): void {
   emitSwarmAudit(
     "SWARM_UNIT_CONVERGED",
     { "Batch number": batch, "Unit name": unit },
@@ -376,7 +376,7 @@ function emitUnitConverged(pd: string, batch: string, unit: string): void {
   );
 }
 
-function emitUnitFailed(
+export function emitUnitFailed(
   pd: string,
   batch: string,
   unit: string,

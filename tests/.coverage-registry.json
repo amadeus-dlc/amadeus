@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 154,
-      "audit": 33,
+      "audit": 34,
       "scope": 10,
       "stage": 8,
       "hook": 12,
@@ -471,6 +471,10 @@
         {
           "file": "tests/integration/t-sensor-fire-hardening.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -479,8 +483,13 @@
       "unitClass": "audit",
       "unitId": "SENSOR_PASSED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -5513,6 +5522,10 @@
         },
         {
           "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {

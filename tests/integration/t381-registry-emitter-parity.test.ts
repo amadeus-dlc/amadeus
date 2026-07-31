@@ -175,6 +175,35 @@ const EMITTER_FIELD_SETS: readonly (readonly [string, Record<string, string>, st
     { Stage: "requirements-analysis", "Grant Id": "g-1", "Transaction Id": "tx-2" },
     "corpus: 'User Input' 353/836 — conditional",
   ],
+  // The five below came from the SOURCE audit rather than the corpus: their
+  // divergent emitter never ran in the 89,867 measured rows, so frequency alone
+  // could not see them. PHASE_SKIPPED is the one that proved the point — the
+  // jump emitter threw the moment jump migrated.
+  [
+    "PHASE_SKIPPED",
+    { Phase: "inception", Reason: "no executed stages when jumping to functional-design" },
+    "tools/amadeus-jump.ts:139-142 (utility.ts:4233 also sends Scope; jump does not)",
+  ],
+  [
+    "STAGE_REVISING",
+    { Stage: "code-generation", "Revision count": "2" },
+    "tools/amadeus-state.ts:3734-3737 ('Feedback' is a conditional spread)",
+  ],
+  [
+    "GATE_REJECTED",
+    { Stage: "code-generation" },
+    "tools/amadeus-state.ts:3731-3733 ('Feedback' added only when non-empty)",
+  ],
+  [
+    "WORKFLOW_STARTED",
+    { Scope: "amadeus-feature", Request: "/amadeus build it", Repos: "repo-a, repo-b" },
+    "tools/amadeus-utility.ts:4205-4213 ('Repos' spread only when captured)",
+  ],
+  [
+    "AUDIT_FORKED",
+    { "Bolt slug": "u1", "Source Audit Hash": "abc", "Fork Boundary": "12", Reentrant: "true" },
+    "tools/amadeus-audit.ts:793-799 ('Reentrant' only on a re-entry fork)",
+  ],
 ];
 
 describe("every real emitter's field set survives the canonical path", () => {

@@ -89,6 +89,7 @@ import {
   seededAuditDir,
   seededRecordDir,
   seedStateFile,
+  parseAuditRecords,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
@@ -194,10 +195,14 @@ interface AuditRecord {
   fields?: Record<string, string>;
 }
 function auditRecords(body: string): AuditRecord[] {
-  return body
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+  // Normalized across both journal schemas: the hook emits on the canonical
+  // path now, so its rows are v2 and carry the event type as an attribute.
+  return parseAuditRecords(body).map((r) => ({
+    event: r.event,
+    heading: "",
+    timestamp: r.timestamp ?? "",
+    fields: r.fields,
+  }));
 }
 
 /** Count SUBAGENT_COMPLETED records in a JSONL shard buffer. */

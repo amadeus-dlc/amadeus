@@ -75,8 +75,13 @@ const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 // the migration-era emitters: a call site that moved onto the canonical Event
 // path is still a live emission, and the guard's question is whether the doc's
 // (event, emitter) row still names a file that emits it.
+// `emitCanonical` is the sensor dispatcher's lazily-resolved binding of
+// appendAuditEntryViaEvents. It has to be named here because the dispatcher
+// cannot import the emit path at module scope (BR-5: the CLI must start on a
+// tool tree with no otel/ directory), so the call sites read through the
+// resolved local rather than the adapter's own name.
 const EMITTERS =
-  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|appendAuditEntry|appendAuditEvent|emitSwarmAudit|emitAudit)";
+  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|appendAuditEntry|appendAuditEvent|emitSwarmAudit|emitAudit|emitCanonical)";
 
 /** Strip line comments so a commented-out emission does not count.
  *  Mirrors the .sh decommented(): drop //-prefixed lines and JSDoc *-lines. */

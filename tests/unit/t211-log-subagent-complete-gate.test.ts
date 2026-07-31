@@ -35,6 +35,7 @@ import {
   createTestProject,
   seededAuditDir,
   seededStateFile,
+  parseAuditRecords,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -101,12 +102,9 @@ function readAllShards(proj: string): string {
 
 /** Every record of `event` across the shards, as its parsed `fields` object. */
 function fieldsFor(proj: string, event: string): Record<string, string>[] {
-  return readAllShards(proj)
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+  return parseAuditRecords(readAllShards(proj))
     .filter((r) => r.event === event)
-    .map((r) => r.fields ?? {});
+    .map((r) => r.fields);
 }
 
 function runHook(proj: string, payload: Record<string, unknown>) {

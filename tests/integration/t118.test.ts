@@ -98,6 +98,7 @@ import {
   seededStateFile,
   seedStateFile,
   resetAidlcEnv,
+  parseAuditRecords,
 } from "../harness/fixtures.ts";
 
 // Standalone hermeticity (issue #698): the suite runner injects these guard
@@ -202,11 +203,8 @@ function reportDirectiveInProcess(p: string, answer: string): Record<string, unk
  * .sh count_event helper `grep -c "\*\*Event\*\*: $2$"` (end-anchored).
  */
 function eventCount(p: string, ev: string): number {
-  return readAudit(p)
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === ev).length;
+  // Normalized across both journal schemas — jump's rows are v2 now.
+  return parseAuditRecords(readAudit(p)).filter((r) => r.event === ev).length;
 }
 
 // ============================================================
