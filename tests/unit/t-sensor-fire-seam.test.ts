@@ -19,7 +19,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sensorsDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -36,6 +36,7 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  seededRecordDir,
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
@@ -185,7 +186,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
   let outPath: string;
   const prevEnv: Record<string, string | undefined> = {};
 
-  function setStubManifest(stubBasename: string): void {
+  function setStubManifest(stubBasename: string, timeoutSeconds = 5): void {
     writeFileSync(
       join(manifestDir, `amadeus-${SENSOR_ID}.md`),
       [
@@ -195,7 +196,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
         `command: bun .claude/tools/${stubBasename}`,
         "default_severity: advisory",
         "description: fire-seam fork manifest",
-        "timeout_seconds: 5",
+        `timeout_seconds: ${timeoutSeconds}`,
         "---",
         "# stub",
         "",
@@ -218,6 +219,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
     for (const stub of [
       "amadeus-sensor-stub-pass.ts",
       "amadeus-sensor-stub-fail.ts",
+      "amadeus-sensor-stub-slow.ts",
     ]) {
       copyFileSync(join(STUB_SRC_DIR, stub), join(scriptDir, stub));
     }
@@ -266,6 +268,36 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
       handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
+  });
+
+  // The canonical event names the fire appended to this project's shard.
+  function shardEvents(projectDir: string): string[] {
+    const dir = join(seededRecordDir(projectDir), "audit");
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((n) => n.endsWith(".jsonl"))
+      .flatMap((n) => readFileSync(join(dir, n), "utf-8").split("\n"))
+      .filter((l) => l.startsWith("{"))
+      .map((l) => (JSON.parse(l) as { eventName?: string }).eventName ?? "");
+  }
+
+  // The three terminal rows leave emitTerminal by different arms, and only the
+  // passing one had an in-process driver — so the FAILED and BUDGET_OVERRIDE
+  // emits were dark to coverage even though handleFire reaches them here.
+  test("a genuinely failing fire emits the SENSOR_FAILED terminal row", async () => {
+    setStubManifest("amadeus-sensor-stub-fail.ts");
+    expect(await driveExit(() => handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]))).toBe(0);
+    const events = shardEvents(proj);
+    expect(events).toContain("amadeus.sensor.fired");
+    expect(events).toContain("amadeus.sensor.failed");
+  });
+
+  test("a fire that outruns its budget emits the SENSOR_BUDGET_OVERRIDE terminal row", async () => {
+    // The slow stub sleeps 5s; a 1s manifest budget makes the dispatcher SIGTERM
+    // it and take branch a.
+    setStubManifest("amadeus-sensor-stub-slow.ts", 1);
+    expect(await driveExit(() => handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]))).toBe(0);
+    expect(shardEvents(proj)).toContain("amadeus.sensor.budget.override");
   });
 
   test("main dispatches `list` in-process (own argv, no exit)", async () => {
