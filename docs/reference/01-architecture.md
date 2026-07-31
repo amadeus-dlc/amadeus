@@ -499,17 +499,19 @@ tests/
 +-- unit/                     # Level: single-component isolation (no LLM)
 +-- integration/              # Level: cross-component contracts + live stage/CLI utilities
 +-- e2e/                      # Level: full lifecycle, worktree, rendered terminal journeys
++-- perf/                     # Level: wall-clock benchmarks (excluded from --ci)
 ```
 
 Every test is a `t*.test.ts` file run under `bun` — there are no shell test
-files. The four directories are the suite's four levels.
+files. Each level directory is one of the suite's levels.
 
 ## Testing
 
 The project's test suite is **entirely TypeScript** (zero `.sh` test files) and
-organized into four levels — `smoke`, `unit`, `integration`, `e2e` — that map
-onto the classic three-layer pyramid (smoke + unit = L1 Protocol, integration =
-L2 Stage, e2e = L3 Acceptance). Being all-TS makes the suite cross-platform by
+organized into levels — `smoke`, `unit`, `integration`, `e2e`, `perf` — the
+first four of which map onto the classic three-layer pyramid (smoke + unit = L1
+Protocol, integration = L2 Stage, e2e = L3 Acceptance); `perf` sits outside the
+pyramid as a wall-clock tier. Being all-TS makes the suite cross-platform by
 construction: the same files run identically on macOS, Linux, and native
 Windows. Tests validate everything from file existence to rendered-terminal
 journeys, ensuring that changes to hooks, agents, stages, or settings do not
@@ -523,6 +525,7 @@ introduce regressions.
 | **Unit** (L1) | `tests/unit/` | The framework hooks, CLI tools, stage/agent frontmatter, knowledge inventory, the orchestration-engine handlers, and other single-component contracts. Each test isolates one component. No LLM. |
 | **Integration** (L2) | `tests/integration/` | Cross-component contracts (scope-to-stage mapping, stage-agent cross-checks, protocol compliance, audit/runtime-graph end-to-end) and the live stage/CLI utilities driven through the `claude` CLI or SDK. The live files skip cleanly when `claude` is absent. |
 | **E2E** (L3) | `tests/e2e/` | Full lifecycle and worktree primitives, plus the rendered-terminal (`tui-drive.ts`) journeys that prove answering real AskUserQuestion gates advances disk state. The live journeys require `claude` + Bedrock creds and are gated behind `AMADEUS_TUI_LIVE=1`. |
+| **Perf** | `tests/perf/` | Wall-clock benchmarks (migration throughput, lifecycle-transaction latency, guard-corpus scanning, plugin stage discovery, mirror contract-policy and distribution). Excluded from `--ci` because verdicts depend on machine load; run daily by the non-blocking `.github/workflows/perf.yml`, and under `--release` / `--all`. |
 
 For the full test strategy, the coverage registry, and how to add tests, see [Testing](09-testing.md).
 

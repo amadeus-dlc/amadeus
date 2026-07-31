@@ -337,9 +337,15 @@ Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineer
 ```bash
 bun tests/run-tests.ts               # default: smoke + unit + integration
 bun tests/run-tests.ts --ci          # smoke + unit + integration
-bun tests/run-tests.ts --release     # + e2e (full acceptance)
+bun tests/run-tests.ts --release     # + e2e + perf (full acceptance)
+bun tests/run-tests.ts --perf        # wall-clock benchmarks only (never in --ci)
 bash tests/run-tests.sh --ci         # POSIX compatibility wrapper
 ```
+
+The `perf` tier is excluded from `--ci`: its wall-clock verdicts depend on
+machine load. It runs daily and on manual dispatch through
+`.github/workflows/perf.yml`, which is non-blocking — a red run there never
+gates a pull request, but it does go red loudly in the Actions tab.
 
 See the [Testing Reference](docs/reference/09-testing.md) for the full strategy and test registry.
 
