@@ -7,7 +7,8 @@
 //     elections.json  U1 registry: one row per created-after-U1 election
 //     <electionId>/
 //       election.json   definition + explicit state field (source of truth)
-//       ledger.json     accepted-ballot append list
+//       pending/        per-voter accepted ballots before tally (gitignored)
+//       ledger.json     accepted-ballot append list (filled at tally)
 //       ballots/        materialized at tally time (blind lift)
 //       tally.json      tally result + fixed ballot set
 //       timeline.json   event append list (each entry only from an executed op)
@@ -22,6 +23,7 @@ import {
   readFileSync,
   readdirSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -88,6 +90,104 @@ type LedgerFile = { ballots: Ballot[]; late: LateBallot[] };
 // (the file gains the field on the next append — no silent rewrite on load).
 function withLateLane(ledger: Partial<LedgerFile>): LedgerFile {
   return { ballots: ledger.ballots ?? [], late: ledger.late ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// Pending ballot lane (Issue #1773 — blind independence on disk)
+//
+// ledger.json is a SHARED, git-tracked file. Writing an accepted ballot there
+// while the election is still collecting hands every not-yet-voted voter two
+// read channels onto a peer's choice/GoA/reservation/rationale: the harness's
+// file-change notification and `git status` / `git diff`. So a ballot accepted
+// before tally is written to pending/<voter>.json (a gitignored directory) and
+// ledger.json stays empty until tally integrates the whole set at once.
+//
+// The pending entry carries the arrival sequence, so integration reproduces the
+// exact append order the single ledger file used to hold — deterministic and
+// independent of directory-listing order.
+// ---------------------------------------------------------------------------
+
+type PendingEntry = { seq: number; ballot: Ballot };
+type PendingFile = { entries: PendingEntry[] };
+
+export function pendingDir(electionDir: string): string {
+  return join(electionDir, "pending");
+}
+
+function pendingPath(electionDir: string, voter: string): string {
+  return join(pendingDir(electionDir), `${voter}.json`);
+}
+
+// Read every per-voter file, flattened into arrival order. A missing directory
+// is the normal empty case; a corrupt file is loud (fail-closed, same policy as
+// every other store read).
+function readPending(electionDir: string): Result<PendingEntry[], StoreError> {
+  const dir = pendingDir(electionDir);
+  if (!existsSync(dir)) return ok([]);
+  let names: string[];
+  try {
+    names = readdirSync(dir).filter((n) => n.endsWith(".json"));
+  } catch {
+    return err("io-error");
+  }
+  const entries: PendingEntry[] = [];
+  for (const name of names.sort()) {
+    const read = readJson<Partial<PendingFile>>(join(dir, name));
+    if (!read.ok) return read;
+    const rows = read.value.entries;
+    if (!Array.isArray(rows)) return err("corrupt");
+    entries.push(...rows);
+  }
+  // seq is the arrival axis; the voter tiebreak keeps the order total even if a
+  // hand-edited file repeats a seq.
+  return ok(entries.sort((a, b) => a.seq - b.seq || a.ballot.voter.localeCompare(b.ballot.voter)));
+}
+
+function appendPending(
+  electionDir: string,
+  ballot: Ballot,
+  seq: number,
+): Result<void, StoreError> {
+  try {
+    mkdirSync(pendingDir(electionDir), { recursive: true });
+  } catch {
+    return err("io-error");
+  }
+  const path = pendingPath(electionDir, ballot.voter);
+  let entries: PendingEntry[] = [];
+  if (existsSync(path)) {
+    const read = readJson<Partial<PendingFile>>(path);
+    if (!read.ok) return read;
+    if (!Array.isArray(read.value.entries)) return err("corrupt");
+    entries = read.value.entries;
+  }
+  const file: PendingFile = { entries: [...entries, { seq, ballot }] };
+  return writeStoreFile(path, JSON.stringify(file, null, 2));
+}
+
+// Move the whole pending set onto ledger.json and drain the directory. Called
+// at the tally transition (Store.materialize) and idempotent: with nothing
+// pending it is a no-op, so a re-tally never duplicates rows.
+function integratePending(electionDir: string): Result<void, StoreError> {
+  const pending = readPending(electionDir);
+  if (!pending.ok) return pending;
+  if (pending.value.length === 0) return ok(undefined);
+  const ledgerPath = join(electionDir, "ledger.json");
+  const read = readJson<Partial<LedgerFile>>(ledgerPath);
+  if (!read.ok) return read;
+  const ledger = withLateLane(read.value);
+  const next: LedgerFile = {
+    ballots: [...ledger.ballots, ...pending.value.map((e) => e.ballot)],
+    late: ledger.late,
+  };
+  const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
+  if (!w.ok) return w;
+  try {
+    rmSync(pendingDir(electionDir), { recursive: true, force: true });
+  } catch {
+    return err("io-error");
+  }
+  return ok(undefined);
 }
 
 // ---------------------------------------------------------------------------
@@ -390,12 +490,20 @@ export const Store = {
     return updateElectionStatus(root, electionId, state);
   },
 
+  // The accepted-ballot view every reader (status, tally, verify) sees: the
+  // integrated ledger file plus whatever is still pending, in arrival order.
+  // Splitting the STORAGE (#1773) must not split the semantics.
   ledger(root: string, electionId: string): Result<LedgerFile, StoreError> {
-    const read = readJson<Partial<LedgerFile>>(
-      join(resolveElectionDir(root, electionId).dir, "ledger.json"),
-    );
+    const dir = resolveElectionDir(root, electionId).dir;
+    const read = readJson<Partial<LedgerFile>>(join(dir, "ledger.json"));
     if (!read.ok) return read;
-    return ok(withLateLane(read.value));
+    const ledger = withLateLane(read.value);
+    const pending = readPending(dir);
+    if (!pending.ok) return pending;
+    return ok({
+      ballots: [...ledger.ballots, ...pending.value.map((e) => e.ballot)],
+      late: ledger.late,
+    });
   },
 
   // Duplicate rejection applies for the whole election lifetime (FR-3b) —
@@ -410,9 +518,11 @@ export const Store = {
   ): Result<void, StoreError> {
     const dir = resolveElectionDir(root, electionId).dir;
     const ledgerPath = join(dir, "ledger.json");
-    const read = readJson<Partial<LedgerFile>>(ledgerPath);
+    // Read the merged view (integrated + pending) so duplicate and amend-ref
+    // checks see every accepted ballot regardless of which lane holds it.
+    const read = Store.ledger(root, electionId);
     if (!read.ok) return read;
-    const ledger = withLateLane(read.value);
+    const ledger = read.value;
     const accepted = [...ledger.ballots, ...ledger.late.map((l) => l.ballot)];
     const dup = accepted.some(
       (b) => b.voter === ballot.voter && b.kind !== "amend" && ballot.kind !== "amend",
@@ -450,7 +560,14 @@ export const Store = {
         late: true as const,
         reexamRequired: lateReexamRequired(ballot),
       };
-      const next: LedgerFile = { ballots: ledger.ballots, late: [...ledger.late, late] };
+      // Past tally the fixed set already lives in ledger.json; integrate first
+      // so a late write never has to carry pending rows (and never drops them).
+      const integrated = integratePending(dir);
+      if (!integrated.ok) return integrated;
+      const onDisk = readJson<Partial<LedgerFile>>(ledgerPath);
+      if (!onDisk.ok) return onDisk;
+      const fixed = withLateLane(onDisk.value);
+      const next: LedgerFile = { ballots: fixed.ballots, late: [...fixed.late, late] };
       const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
       if (!w.ok) return w;
       return Store.appendTimeline(root, electionId, {
@@ -461,8 +578,9 @@ export const Store = {
         voter: ballot.voter,
       });
     }
-    const next: LedgerFile = { ballots: [...ledger.ballots, ballot], late: ledger.late };
-    const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
+    // Before tally the body goes to the gitignored pending lane, never to the
+    // shared ledger file (#1773). seq is the arrival index across all voters.
+    const w = appendPending(dir, ballot, ledger.ballots.length);
     if (!w.ok) return w;
     return Store.appendTimeline(root, electionId, {
       kind: "ballot",
@@ -504,6 +622,10 @@ export const Store = {
     talliedAt: string,
   ): Result<void, StoreError> {
     const dir = resolveElectionDir(root, electionId).dir;
+    // Tally is the transition where blindness ends: fold the pending lane into
+    // ledger.json (deterministic arrival order) before fixing the ballot set.
+    const integrated = integratePending(dir);
+    if (!integrated.ok) return integrated;
     const ledger = Store.ledger(root, electionId);
     if (!ledger.ok) return ledger;
     try {
