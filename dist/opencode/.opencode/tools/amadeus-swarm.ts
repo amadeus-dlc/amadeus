@@ -75,9 +75,11 @@ import { existsSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import { appendAuditEntry } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } from "./amadeus-lib.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -168,7 +170,7 @@ interface ToolRun {
 }
 
 function runTool(toolFile: string, args: string[], projectDir: string): ToolRun {
-  const result = observeSubprocess(projectDir, `${toolFile.replace(/\.ts$/, "")}:${args[0] ?? "?"}`, () =>
+  const result = observeSubprocessSpan(projectDir, `${toolFile.replace(/\.ts$/, "")}:${args[0] ?? "?"}`, () =>
     spawnSync(
       "bun",
       [join(TOOLS_DIR, toolFile), "--project-dir", projectDir, ...args],
@@ -213,7 +215,7 @@ function checkConverged(projectDir: string, cwd: string, checkCmd: string): bool
     process.platform !== "win32" && existsSync("/bin/bash")
       ? "/bin/bash"
       : true;
-  const result = observeSubprocess(projectDir, "unit-check-cmd", () =>
+  const result = observeSubprocessSpan(projectDir, "unit-check-cmd", () =>
     spawnSync(checkCmd, {
       cwd,
       encoding: "utf-8",
@@ -250,7 +252,7 @@ export function fileTamperResultForStatuses(
 // HEAD object must be confirmed before interpreting diff status 0 as clean.
 function fileTampered(projectDir: string, cwd: string, relPath: string): FileTamperResult {
   const headPath = relPath.split(sep).join("/");
-  const head = observeSubprocess(projectDir, "git", () =>
+  const head = observeSubprocessSpan(projectDir, "git", () =>
     spawnSync("git", ["cat-file", "-e", `HEAD:${headPath}`], {
       cwd,
       encoding: "utf-8",
@@ -260,7 +262,7 @@ function fileTampered(projectDir: string, cwd: string, relPath: string): FileTam
   if (head.status !== 0) {
     return fileTamperResultForStatuses(head.status, null, relPath);
   }
-  const diff = observeSubprocess(projectDir, "git", () =>
+  const diff = observeSubprocessSpan(projectDir, "git", () =>
     spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
       cwd,
       encoding: "utf-8",
@@ -312,11 +314,27 @@ export function verdictFor(
 
 // --- Audit emission (this tool owns the whole swarm taxonomy) ---------------
 //
+// Every row travels the canonical Event path through ONE seam: the bootstrap
+// is idempotent but it still has to run before the first emit (emitEvent
+// throws with no Logger Provider registered), and pinning that ordering in a
+// single place is what keeps the six emitters below unable to get it wrong.
+// Exported so the migration is drivable in-process — bun's coverage does not
+// instrument a spawned CLI.
+//
 // The engine is read-only and the conductor (prose) never emits audit events, so
 // the deterministic tool is the sole emitter. SWARM_STARTED fires once per batch
 // in `prepare`; SWARM_DEGRADED fires there too when the conductor reports a loud
 // downgrade. The per-unit pair, the per-failed-unit baton row, and the batch
 // tally all fire from `finalize`, the authoritative gate.
+
+export function emitSwarmAudit(
+  eventType: string,
+  fields: Record<string, string>,
+  pd: string
+): void {
+  ensureOtelBootstrap(pd);
+  appendAuditEntryViaEvents(eventType, fields, pd);
+}
 
 function emitSwarmStarted(
   pd: string,
@@ -324,7 +342,7 @@ function emitSwarmStarted(
   units: string[],
   concurrency: string
 ): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_STARTED",
     {
       "Batch number": batch,
@@ -339,7 +357,7 @@ function emitSwarmStarted(
 // tool was unavailable for claude-ultra), so the conductor ran the subagent floor. The referee makes the
 // substrate difference invisible to convergence, but the downgrade is recorded.
 function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_DEGRADED",
     {
       "Batch number": batch,
@@ -351,7 +369,7 @@ function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): vo
 }
 
 function emitUnitConverged(pd: string, batch: string, unit: string): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_UNIT_CONVERGED",
     { "Batch number": batch, "Unit name": unit },
     pd
@@ -364,7 +382,7 @@ function emitUnitFailed(
   unit: string,
   reason: FailureReason
 ): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_UNIT_FAILED",
     { "Batch number": batch, "Unit name": unit, Reason: reason },
     pd
@@ -377,7 +395,7 @@ function emitBatonReturned(
   unit: string,
   reason: FailureReason
 ): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_BATON_RETURNED",
     { "Batch number": batch, "Unit name": unit, Reason: reason },
     pd
@@ -390,7 +408,7 @@ function emitSwarmCompleted(
   convergedCount: number,
   failedCount: number
 ): void {
-  appendAuditEntry(
+  emitSwarmAudit(
     "SWARM_COMPLETED",
     {
       "Batch number": batch,
@@ -825,7 +843,7 @@ function splitCsv(value: string): string[] {
 }
 
 function currentBranch(projectDir: string): string {
-  const r = observeSubprocess(projectDir, "git", () =>
+  const r = observeSubprocessSpan(projectDir, "git", () =>
     spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       cwd: projectDir,
       encoding: "utf-8",

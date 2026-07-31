@@ -247,7 +247,7 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
       // five parallel appends travel the canonical path and land as v2. What
       // the concurrency contract needs is that each line carries a COMPLETE
       // envelope, whichever schema stamped it.
-      expect([1, 2]).toContain(record.schemaVersion);
+      expect([1, 2]).toContain(record.schemaVersion as number);
       expect(typeof record.seq).toBe("number");
       expect(typeof record.timestamp).toBe("string");
       expect(record.timestamp).not.toBe("");
