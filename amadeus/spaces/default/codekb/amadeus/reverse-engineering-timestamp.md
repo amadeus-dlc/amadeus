@@ -1,6 +1,26 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260730-open-bug-batch-2）
+## 実行メタデータ（現在: 260730-open-bug-batch-3）
+
+- Date: `2026-07-30T23:40:33Z`
+- Base commit: `a38a1f4d3`（observed の祖先、`git merge-base --is-ancestor a38a1f4d3 HEAD` exit 0）
+- Observed commit: `3f73823b1cf5969836faa22dfa333b48b933f2fc`
+- Distance: `25 commits`
+- 区間規模: `588 files changed, 52675 insertions(+), 27351 deletions(-)`。生成面（`dist/`）・self-install 6面・`amadeus/` record・`metrics/` を除くソース面は `98 files changed, 9531 insertions(+), 2532 deletions(-)`。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 3件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: [#1773](https://github.com/amadeus-dlc/amadeus/issues/1773)（未開票中の全票本文が単一共有 tracked ファイル `ledger.json` に平文で載り blind 性が格納面から破れる）、[#1772](https://github.com/amadeus-dlc/amadeus/issues/1772)（配布ビューに設問文が無く選択肢の説明が parse 時に無音 drop される）、[#1752](https://github.com/amadeus-dlc/amadeus/issues/1752)（mirror boundary report の create 拒否条件が ask の指示と自己矛盾する）
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テストは未実行。
+- 判定: **3件とも現存**。#1752 は本区間で着地した #1791（`ffb68c484`、`intent-initialized` boundary の新設）の後も再現経路が温存されていることを `amadeus-orchestrate.ts:486-500` の実読で確認した。
+- 区間の主要変化: 自動起票 finding capability の新設（#1744 `d56e76ddd` — GitHub 汎用ゲートウェイ・階層設定リゾルバ・`gh` spawn の単一不純エッジを mirror 専用実装から抽出、新キー `auto-file-findings`）、sensor 発火 scope の exact-path allowlist 化（#1758 / #1770 — 前 intent #1742 の構造的解決）、degrade unit の engine 側一意解決（#1774 — 前 intent #1711 の解決）、mirror initial-create boundary の新設（#1791 — 前 intent #1750 の解決）、metrics 公開パイプライン（#1761）、phase-check 正名化と auto-solo 選挙フックの protocol 焼き込み（#1776 / #1782 — 前 intent #1749 / #1735 の解決）。**core tools は base `79` → observed `88`（新規9件）**、sensors `7` / hooks `12` / scopes `10` はいずれも不変。
+- 引用再確認の相違: Developer 報告の主要引用は**全件所在一致**（appendBallot の ledger 書込・materialize の blind lift・`Choice` 型・`parseChoices` の無音 drop・`DistributionView` のキー集合・`t234` の3重固定・report 拒否条件・`SKILL.md:18` / `:51`・tracked `ledger.json` 183件・`git check-ignore` exit 1）。行**範囲**表記に3点の精密化 — (a) #1791 の prompt 降格は `:488`（報告 `:479`。分岐全体は `:486-500`、`initialCreateIsOutstanding` 宣言は `:373`） (b) #1752 の拒否条件は条件式 `:4252-4256` のうち患部節が `:4255`、state 再評価は `:4241-4242`（報告 `:4251-4255` / `:4242`） (c) `t265` の fixture 行は `:793`（報告 `:791-810` は周辺ブロック）。いずれも所在・意味論は一致し結論に影響しない。加えて1点の精密化: Developer の「`.claude/hooks/` に ledger 配信機構 0件」は結論として正しいが、`grep -rn 'ledger' .claude/hooks/` は**3ヒットする**（`amadeus-mint-presence.ts:4` / `:37`、`amadeus-audit-logger.ts:67`）。全件を実読し、いずれも監査シャードの append-only ledger を指す語彙で選挙 ledger と無関係と確定した（`cid:requirements-analysis:absence-claim-grep-verify`）。
+- 追加所見（Developer 報告外）: 本区間で追加されたテストに**番号重複が3組**ある（`t366` = 3ファイル、`t367` = 2ファイル、`t368` = 3ファイル。`ls tests/integration tests/unit` の実測）。`cid:code-generation:swarm-test-number-reservation` が守られなかった実測であり、本 intent の新規テスト採番は `t371` より後を使う。テスト引用は `tNNN` 短形でなくフルパスで書く（`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補）。
+- 現在マーカーの降格: 直前の現在断面 `260730-open-bug-batch-2`（observed `c42ef4d77`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 記録済みの observed 3件（`c42ef4d77` / `278d61d8e` / `22ee27dbe`）はいずれも現 HEAD の**祖先ではない**。squash マージ運用で record ブランチの observed が `main` に残らない既知現象であり、`cid:reverse-engineering:rescan-base-ancestry`（祖先性を判定してから base を採用）に従い merge-base 復元で `a38a1f4d3` を採用した（`git merge-base --is-ancestor a38a1f4d3 HEAD` exit 0、距離25）。本 intent の observed `3f73823b1` は `origin/main` 系譜のコミットであり、次回 RE での非祖先化を避ける（`cid:reverse-engineering:c2-observed-mainline-commit`）。
+- Updated artifacts: 実質更新8件 = `architecture.md`（3バグの機構節 + 区間の構造変化）、`code-structure.md`（患部配置・区間の機械集計・テスト番号重複）、`code-quality-assessment.md`（根因確度と品質所見8件）、`business-overview.md`（利用者影響と delivery boundary）、`component-inventory.md`（対象コンポーネントと新規9モジュール）、`api-documentation.md`（3件が触れる内部契約と区間の新契約）、`technology-stack.md`（構成カウントの変化 core tools 79→88）、`dependencies.md`（Bolt 間の交差判定 — #1773 × #1772 が**交差する**）。加えて本ファイルと per-intent `re-scans/260730-open-bug-batch-3.md`。
+- Per-intent record: `re-scans/260730-open-bug-batch-3.md`。
+
+## 実行メタデータ（履歴: 260730-open-bug-batch-2）
 
 - Date: `2026-07-30T15:34:39Z`
 - Base commit: `8b8016f62`（observed の祖先、`git merge-base --is-ancestor 8b8016f62 HEAD` exit 0）

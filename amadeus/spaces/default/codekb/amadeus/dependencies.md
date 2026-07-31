@@ -1,6 +1,47 @@
 # 依存関係
 
-## オープンバグ5件の依存関係（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の依存関係（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+**判断: 外部依存の変化なし。ただし Bolt 間にファイル交差が1組ある。** 区間 `a38a1f4d3..3f73823b1` で `package.json` の依存追加・削除・更新はない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
+
+### Bolt 間の交差判定
+
+前 intent までと異なり、**3件すべてが非交差ではない**。
+
+| 組 | 交差 | 判定 |
+| --- | --- | --- |
+| #1773 × #1772 | **交差する** — 両者とも `packages/framework/core/tools/amadeus-election-model.ts` を触る（#1773 は `OriginalBallot` の `:134-136`、#1772 は `Choice` `:48` と `DistributionView` `:306-310`） | 直列化するか、実 diff で行レンジの非交差を確認してから並行させる（`cid:code-generation:c6`。静的目録でなく実 diff で再評価する） |
+| #1773 × #1752 | 非交差（`amadeus-election-*.ts` vs `amadeus-orchestrate.ts`） | 並行可 |
+| #1772 × #1752 | 非交差 | 並行可 |
+
+3件とも `packages/framework/core/` を正本とするため、`bun scripts/package.ts` → `dist/` 7ハーネス → `bun run promote:self` → self-install 5面という**同一の再生成チェーン**を通る。ファイル単位で非交差でも生成面が競合するため、着地順は実 diff で再評価する。
+
+### 内部依存（#1773 / #1772 の修正が触る方向）
+
+```
+amadeus-election-model.ts   (型 — Choice :48 / DistributionView :306-310 / OriginalBallot :134-136)
+        │  型定義を供給
+        ▼
+amadeus-election-store.ts   (格納 — appendBallot :464-465 / materialize :500 / timeline :468-472)
+        │  ledger.json / timeline.json / ballots/<voter>.json
+        ▼
+選挙ディレクトリ（git tracked、非 ignore）
+        │  voter subagent が直接読む運用（SKILL.md:51）
+        ▼
+配布ビュー（shuffleView :338 — 設計上は健全な唯一の配布面）
+```
+
+依存方向は model → store の一方向。#1772（model の型拡張）は store・tally（`choiceCounts` `:488-496`）・record render へ**下流伝播**する。#1773 の格納分離案は store 層に閉じるが、`.gitignore` という **core の外側**へ影響が出る唯一の経路を持つ。
+
+### #1752 の依存
+
+`amadeus-orchestrate.ts` 内で閉じる。修正候補 (b)（ask 時 binding の永続化）を採る場合、`amadeus-mirror-coordinator.ts` の `expectedPrompt` 照合様式（`:320` / `:560` / `:622` / `:742-746`）を参照するが、これは**既存様式の踏襲であり新規依存の追加ではない**。候補 (a)（create receipt の存在判定）は `classifyReceipt` 語彙の再利用で同様に閉じる。
+
+### 区間で変化した依存方向（本 intent の患部外）
+
+`gh` の呼出依存が**集約された**。従来 mirror 系3モジュールに分散していた GitHub 呼出が `amadeus-github-gateway.ts` へ、プロセス起動が `amadeus-process-runner.ts` へ移り、抽出元は `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310 と縮小した。`hooks/amadeus-sensor-fire.ts` は新たに `tools/amadeus-sensor-invocation.ts` へ依存する（`:27` の import）— hook → tools 方向の依存であり既存の層順を保つ。
+
+## オープンバグ5件の依存関係（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 **判断: 外部依存の変化なし。Bolt 間の順序制約もなし。** 区間 `8b8016f62..c42ef4d77` で `package.json` の依存追加・削除・更新はない。5件は所有機構が互いに独立で、実装上の依存関係を持たない。
 

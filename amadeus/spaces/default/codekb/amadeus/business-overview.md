@@ -1,6 +1,35 @@
 # ビジネス概要
 
-## オープンバグ5件の業務境界（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の業務境界（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+3件は「選挙の情報設計が投票者・非投票者の双方に対して誤っている（#1773 / #1772）」と「mirror の指示と受理条件が矛盾する（#1752）」の2系統に分かれる。所有機構は選挙層（`amadeus-election-*`）と mirror/engine 層（`amadeus-orchestrate.ts`）で完全に分離しており、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる（`cid:code-generation:c6` の非交差判定）。
+
+### 利用者影響
+
+| Issue | 誰が困るか | どう困るか | 深刻度の性質 |
+| --- | --- | --- | --- |
+| #1773 | 選挙を運用する全チーム（ソロモードの subagent 選挙を含む） | 未開票（collecting）中の全票本文 — 選択・GoA・留保・根拠 — が単一の共有ファイル `ledger.json` に平文で載る。voter subagent は選挙ディレクトリを直接読む運用のため、先行票が後続投票者から構造的に到達可能。さらに同ファイルは git tracked のため `git status` / `git diff` にも現れる（第2の露出面） | **独立性（P1・アンカリング防止）の基盤が崩れる**。blind 配布そのものは設計どおり機能しているのに、格納面から迂回できる |
+| #1772 | 選挙の全投票者 | 配布ビュー（`DistributionView`）に設問文（question）が無く、選択肢は `label` のみ。起草者が書いた選択肢の説明（description）は parse 時に無音で捨てられる。投票者は「何を問われているか」も「各案が何を意味するか」も配布物から得られない | **投票の情報基盤の欠落**。無音 drop（fail-open、exit 0）のため起草者は説明が消えたことに気付けない |
+| #1752 | `auto-mirror` を prompt モードで運用する利用者 | ask が「先に create を実行せよ」と指示するのに、その指示に従って create を実行してから report すると「offered choices と一致しない」と拒否される。自分の成功が拒否条件になる自己矛盾 | **指示と受理の矛盾**。boundary が前進せず、利用者は迂回手順を自力で発見する必要がある |
+
+### 業務上の優先度所見
+
+- **#1773 が最も性質が悪い。** 設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全であり、blind lift（開票時の materialize）も設計どおり機能している。破れているのは**格納設計と配置**の2点だけで、ガバナンス上の「独立検証（P1）」がその2点で無音に空文化する。加えて blind 性を assert するテストが 0件のため、退行が検知されない。
+- **#1772 と #1773 は同じ選挙層の情報設計だが方向が逆。** #1773 は「見えてはいけないものが見える」、#1772 は「見えるべきものが見えない」。同一 intent で扱うと `Election.parse` の write⇔read 対称性という共通の設計面を1度で棚卸しできる。
+- **#1752 は #1791（本区間で着地）の後も残る。** 初回 create boundary の新設（`intent-initialized`）は auto モード優先の分岐であり、prompt モードは従来 ask 経路へ落ちるため再現経路がそのまま温存されている。「新機能が着地したから直った」と扱わない。
+
+### Delivery boundary
+
+3件を1 Intent で追跡し、1 Issue = 1 Bolt = 1 GitHub Pull Request。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+`packages/framework/core/` を触るのは3件すべてで、いずれも `bun scripts/package.ts` による dist 7ハーネス再生成と `bun run promote:self` による self-install 面同期を伴う。ファイル単位では非交差（#1773 / #1772 = `amadeus-election-*.ts`、#1752 = `amadeus-orchestrate.ts`）だが生成面が競合するため、着地順は静的目録でなく実 diff で再評価する。
+
+### 仕様裁定を要する2件（要件段へ持ち越し）
+
+- **#1772 はテスト契約の明示改訂を伴う。** `tests/unit/t234-election-model.test.ts:190` が配布ビューのキー集合を verbatim 固定しており、`amadeus-election-model.ts:304-305` のコメント（`BR-2 pins the key set`）と型宣言と合わせて3重に固定されている。3重固定は「バグでない」ことの証明ではなく「変更に裁定が要る」ことの証明である（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+- **#1773 は方式裁定（格納分離 vs 通知抑制）が未決。** 修正面が大きく変わるため、実装着手前に確定する。
+
+## オープンバグ5件の業務境界（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 5件は「フレームワークが自らの文書・契約どおりに動かない」という共通テーマを持つ一方、所有機構と同期対象ファイル集合が互いに重ならないため、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる。
 

@@ -1,6 +1,32 @@
 # 技術スタック
 
-## オープンバグ5件の技術断面（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の技術断面（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+技術選定に変更はない。Bun-only の TypeScript/ESM モノレポで、常駐 service・database・application server を持たず、外部境界は CLI・Shell・Git/GitHub・OTLP のままである。本 intent（#1773 / #1772 / #1752）は既存スタックだけで修正し、新規 runtime / development dependency を導入しない（区間内の `package.json` 依存変化も 0）。
+
+**構成カウント（測定 ref: observed `3f73823b1`。すべて `ls` / `git ls-files` / `git ls-tree` 出力からの転記 — `cid:requirements-analysis:numbers-from-command-output-only`）**
+
+| 面 | 実測値 | 測定コマンド | 区間の変化 |
+| --- | --- | --- | --- |
+| core tools トップレベル `*.ts` | `88` | `ls packages/framework/core/tools/*.ts \| wc -l` | base `a38a1f4d3` は `79`（`git ls-tree -r --name-only a38a1f4d3 packages/framework/core/tools/ \| grep -c '^packages/framework/core/tools/[^/]*\.ts$'`）。**新規9件** |
+| core sensors | `7` | `ls packages/framework/core/sensors/*.md \| wc -l` | 変化なし |
+| core hooks | `12` | `ls packages/framework/core/hooks/*.ts \| wc -l` | 変化なし |
+| core scopes | `10` | `ls packages/framework/core/scopes/*.md \| wc -l` | 変化なし |
+| tracked な `ledger.json` | `183` | `git ls-files \| grep -c 'ledger\.json'` | #1773 の git 露出面の規模。選挙ディレクトリは非 ignore（`git check-ignore` exit 1） |
+
+**本 intent が交差するスタック面**
+
+- **選挙層は core tools 内で閉じている（#1773 / #1772）**: 患部は `amadeus-election-store.ts`（格納）と `amadeus-election-model.ts`（型 / parse / view / tally）で、いずれも `packages/framework/core/tools/` 配下。core 正本の変更となるため 7 dist + 5 self-install の再生成対象（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。運用面の `skills/amadeus-election/SKILL.md` は harness ごとの authored ファイルではなく core からの投影である点が SKILL.md 系の患部（前 intent #1736）と異なる。
+- **`.gitignore` が修正面候補になりうる（#1773）**: 選挙 ledger を version control 面から外す方式を採る場合、tracked な 183件の扱い（履歴からの除去 vs 以後の非追跡）が設計判断になる。`packages/framework/core/` の外側を触る唯一の候補面である。
+- **engine 層は単一ファイル（#1752）**: `amadeus-orchestrate.ts` の `:4219-4278` のみ。同ファイルは本区間で `unitDirsUnderConstruction`（`:3054`）と初回 create 分岐（`:486-500`）の追加を受けており、**行番号が base から大きくシフトしている** — Issue 起票時点の行引用を HEAD で照合しない（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。
+- **テスト採番の衝突帯**: 本区間で `t366` / `t367` / `t368` に番号重複が生じている（各3 / 2 / 3ファイル）。新規テストの採番は `t371` より後を使う（詳細は `code-structure.md` の対応節）。
+
+**区間で導入された技術面（本 intent の患部外）**
+
+- **GitHub 連携層の一般化**: mirror 専用だった GitHub 呼出を `amadeus-github-gateway.ts`（+953）へ抽出し、`gh` の spawn を `amadeus-process-runner.ts`（+306）という**単一の不純エッジ**へ集約。階層設定は `amadeus-layered-config.ts`（+610）が global → space → intent の順で解決する（`:48` `auto-mirror` / `:50` `auto-solo-election` / `:51` `auto-file-findings`）。
+- **CI 面**: `metrics-maintenance.yml` 新設と `ci.yml` 更新（`.github/` は 2ファイル `+74 / -31`）。メトリクス公開は `scripts/metrics-publication{,-domain,-github}.ts`（`scripts/` 全体で `+1492 / -19`）。
+
+## オープンバグ5件の技術断面（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 **判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77`（12コミット）で core tools・sensors・hooks・scopes のいずれも件数変化がなく、ランタイム・依存・ツールチェーンの構成も不変。5件のバグはすべて既存構成内の欠陥であり、技術スタックの断面としては直前節（`260730-skill-reviewer-fixes`、observed `278d61d8e`）の記述がそのまま有効である。区間の変化は `amadeus-orchestrate.ts` への関数追加（#1760）・SKILL.md の文言修正（#1753）・`scripts/formal-verif/` の parse 修正（#1745）に留まる。
 

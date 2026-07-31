@@ -1,6 +1,87 @@
 # コード構造
 
-## オープンバグ5件の患部配置（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の患部配置（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。
+
+### #1773 — 選挙 ledger の格納面
+
+| 面 | パス | 所在 |
+| --- | --- | --- |
+| 書込 | `packages/framework/core/tools/amadeus-election-store.ts` | `appendBallot` の ledger 構築 `:464` / 書込 `:465`。late 経路は `:453-454` |
+| blind lift | 同上 | `materialize` 宣言 `:500`、設計コメント `:498` |
+| 型 | 同上（`LedgerFile`） | 票オブジェクトをそのまま保持 |
+| 票内容 | `packages/framework/core/tools/amadeus-election-model.ts` | `OriginalBallot` の `goa` `:134` / `reservation` `:135` / `rationale` `:136`。`AmendBallot` は `:147-149`、tally 側は `:193-194` |
+| 投票済み者の可視 | `amadeus-election-store.ts` | `timeline.json` へ `kind: "ballot"` `:468` / `voter` `:472` |
+| 運用面 | `packages/framework/core/skills/amadeus-election/SKILL.md` | voter subagent の手順 `:51` |
+| git 面 | `.gitignore` | 選挙ディレクトリは非 ignore（`git check-ignore` exit 1）。tracked な `ledger.json` は **183件**（`git ls-files \| grep -c 'ledger\.json'`） |
+
+**非患部の確認**: `.claude/hooks/` に election ledger の配信機構は無い。`grep -rn 'ledger' .claude/hooks/` は3ヒットするが、`amadeus-mint-presence.ts:4` / `:37` と `amadeus-audit-logger.ts:67` のいずれも**監査シャードの append-only ledger** を指す語彙であり、選挙 ledger とは無関係（`cid:requirements-analysis:absence-claim-grep-verify` に従い語彙一致だけで不在／存在を断定せず、ヒット全件を実読して判定した）。
+
+### #1772 — 配布ビューと parse の情報欠落
+
+| 面 | パス | 所在 |
+| --- | --- | --- |
+| 型（選択肢） | `packages/framework/core/tools/amadeus-election-model.ts` | `Choice` `:48` |
+| parse | 同上 | `parseChoices` `:73`（型検査 `:79` / 再構成 `:80`）、呼び出し `:92` |
+| 配布ビュー型 | 同上 | `DistributionView` `:306-310`、BR-2 設計コメント `:304-305` |
+| view render | 同上 | `shuffleView` `:338` |
+| tally 側 | 同上 | `ChoiceCount` `:427`、`choiceCounts` 構築 `:488`、消費 `:493-494` / `:500` |
+| テスト固定 | `tests/unit/t234-election-model.test.ts` | キー集合 `:190`、entry キー集合 `:192` |
+| 入力契約 | `packages/framework/core/skills/amadeus-election/SKILL.md` | `:18`（question は入力契約に既存） |
+
+### #1752 — mirror boundary report の分岐
+
+| 面 | パス | 所在 |
+| --- | --- | --- |
+| state 再評価 | `packages/framework/core/tools/amadeus-orchestrate.ts` | `hasMirrorIssue` `:4242`、`expectedPhase` `:4241` |
+| 拒否条件 | 同上 | 条件式 `:4252-4256`、患部節 `:4255` |
+| report 分岐全体 | 同上 | `:4219-4278` |
+| ask 指示 | 同上 | prompt 経路 `:519-529` |
+| #1791 の初回 create 分岐 | 同上 | `:486-500`（`initialCreateIsOutstanding` 判定 `:487`、prompt 降格 `:488`）。宣言 `:373`、別呼出 `:421` |
+| 既習様式（binding 永続化） | `packages/framework/core/tools/amadeus-mirror-coordinator.ts` | `expectedPrompt` 照合 `:320` / `:560` / `:622` / `:742-746` |
+| テスト fixture | `tests/integration/t265-engine-boundary.integration.test.ts` | `:793` |
+
+同行の投影面は13コピー（core 正本 → dist 7 → self-install 5）。
+
+### 区間の構造変化
+
+`a38a1f4d3..3f73823b1`（25コミット）の実測。
+
+| 測定 | 値 | コマンド |
+| --- | --- | --- |
+| 区間規模（全面） | `588 files changed, 52675 insertions(+), 27351 deletions(-)` | `git diff --shortstat a38a1f4d3 HEAD` |
+| ソース面（`dist/` / self-install 6面 / `amadeus/` record / `metrics/` を除く） | `98 files changed, 9531 insertions(+), 2532 deletions(-)` | 同上 + `':(exclude)…'` pathspec |
+| core tools `*.ts` | base `79` → observed `88` | `ls packages/framework/core/tools/*.ts \| wc -l` / `git ls-tree -r --name-only a38a1f4d3 …` |
+| core sensors / hooks / scopes | `7` / `12` / `10`（いずれも不変） | `ls packages/framework/core/{sensors/*.md,hooks/*.ts,scopes/*.md} \| wc -l` |
+
+ソース面の内訳（`git diff --numstat` からの機械集計、`cid:requirements-analysis:numbers-from-command-output-only`）:
+
+| ディレクトリ | files | insertions | deletions |
+| --- | --- | --- | --- |
+| `tests/` | 43 | 4773 | 505 |
+| `packages/framework/core/` | 30 | 3023 | 1945 |
+| `docs/` | 10 | 156 | 24 |
+| `packages/framework/harness/` | 8 | 12 | 7 |
+| `scripts/` | 4 | 1492 | 19 |
+| `.github/` | 2 | 74 | 31 |
+| `specs/` | 1 | 1 | 1 |
+
+新規 core tools 9件（`git diff --name-status a38a1f4d3 HEAD -- packages/framework/core/tools/ \| grep '^A'`）: `amadeus-github-gateway.ts` / `amadeus-github-types.ts` / `amadeus-layered-config.ts` / `amadeus-process-runner.ts` / `amadeus-contained-file.ts` / `amadeus-finding.ts` / `amadeus-finding-types.ts` / `amadeus-finding-capability.ts` / `amadeus-sensor-invocation.ts`。
+
+### テスト番号の重複採番（本 intent の患部外・要注意）
+
+本区間で追加されたテストに**番号重複が3組**存在する（`ls tests/integration tests/unit` の実測）:
+
+| 番号 | ファイル |
+| --- | --- |
+| `t366` | `t366-amadeus-finding-cli.integration.test.ts` / `t366-amadeus-finding-coordinator.test.ts` / `t366-skill-new-intent-verb.test.ts` |
+| `t367` | `t367-amadeus-finding-protocol.integration.test.ts` / `t367-degrade-unitname-resolution.test.ts` |
+| `t368` | `t368-amadeus-finding-cli.integration.test.ts` / `t368-phase-check-name-contract.test.ts` / `t368-safe-contained-file.integration.test.ts` |
+
+`cid:code-generation:swarm-test-number-reservation`（並列ディスパッチ時のテスト番号事前予約）が本区間で守られなかった実測である。本 intent が新規テストを追加する場合、**採番は `t371` より後**を使い、既存の重複帯を避ける（`t369` / `t370` / `t371` は各1件で埋まっている）。あわせて `cid:requirements-analysis:c1-ac-grep-surface-scope` に従い、テスト引用は `tNNN` 短形でなくフルパスで書く（`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補 — 同一番号の複数ファイル共存が実在する）。
+
+## オープンバグ5件の患部配置（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 本節の file:line はすべて observed `c42ef4d77` 時点。
 

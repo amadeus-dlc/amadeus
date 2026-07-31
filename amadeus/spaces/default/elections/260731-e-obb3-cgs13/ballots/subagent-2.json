@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB3-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は fix スコープの AC 起草時(既存テストグリーン維持系 AC を書く場面)に適用限定し、全要件への一律棚卸し義務へ肥大させない。",
+  "rationale": "code-summary.md:17 実測で t236 が FR-1a の禁じた欠陥状態そのものをピンし AC-3「既存テストグリーン維持」と構造的両立不能 → 実装段で builder 申告・conductor 受理の1往復を消費。既存 cid:reverse-engineering:c1-pinned-behavior-ruling(project.md:266)は「仕様ピンの意図的変更に要件段裁定」を縛る RE 検知面であり、「欠陥ピンテストが汎用グリーン維持 AC と衝突するクラスの AC 起草時棚卸し」は既存テキストから導出不能な要件側予防面 — 追補価値あり。",
+  "submittedAt": "2026-07-31T04:25:36Z"
+}
