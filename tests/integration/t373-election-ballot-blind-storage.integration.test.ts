@@ -12,7 +12,6 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -257,16 +256,20 @@ describe("t373 election ballot blind storage (#1773)", () => {
     expect(blockedDrain.ok).toBe(false);
     if (!blockedDrain.ok) expect(blockedDrain.error).toBe("io-error");
 
-    // (3) appendPending mkdir catch — a plain file occupies the pending path.
+    // (3) appendPending mkdir catch — the election directory is not writable,
+    // so the pending directory cannot be created. The directory is still
+    // readable, so the read side returns an empty pending set and the failure
+    // is genuinely the mkdir (not the listing branch above).
     expect(Store.create(root, election({ electionId: "E-BLIND-3" })).ok).toBe(true);
     expect(Store.setState(root, "E-BLIND-3", "collecting").ok).toBe(true);
-    writeFileSync(pendingDir(dirOf("E-BLIND-3")), "not a dir");
+    chmodSync(dirOf("E-BLIND-3"), 0o555);
     const blockedMkdir = Store.appendBallot(
       root,
       "E-BLIND-3",
       ballot("alice", 2, "E-BLIND-3"),
       RECV,
     );
+    chmodSync(dirOf("E-BLIND-3"), 0o755);
     expect(blockedMkdir.ok).toBe(false);
     if (!blockedMkdir.ok) expect(blockedMkdir.error).toBe("io-error");
   });
