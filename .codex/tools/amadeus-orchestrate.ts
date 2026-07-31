@@ -188,7 +188,10 @@ import {
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
 import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
-import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
+import {
+  mirrorIssueNumberFromDocument,
+  succeededMirrorCreateExists,
+} from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
@@ -4239,7 +4242,11 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       return;
     }
     const expectedPhase = currentMirrorBoundaryPhase(stateContent);
-    const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;
+    // Evidence that a create ran, not the absence of an Issue. Running the
+    // create the ask instructs records the Issue, so the earlier Issue re-read
+    // rejected exactly the reports that had done what the ask asked for
+    // (Issue #1752).
+    const createRan = succeededMirrorCreateExists(stateContent);
     let receipts: MirrorBoundaryReceipts;
     try {
       receipts = parseMirrorBoundaryReceipts(
@@ -4252,7 +4259,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     if (
       expectedPhase !== phase ||
       receipts[phase as MirrorBoundaryPhase] !== undefined ||
-      (answer === "create" && hasMirrorIssue)
+      (answer === "create" && !createRan)
     ) {
       emit(
         errorDirective(
