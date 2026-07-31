@@ -90,23 +90,35 @@ describe("t222 CI snapshot publication boundary", () => {
 
   test("performance verification stays out of the blocking pipeline", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
-    const jobs = Object.keys(
-      (Bun.YAML.parse(yaml) as { jobs?: Record<string, unknown> }).jobs ?? {},
-    );
+    const jobs = (Bun.YAML.parse(yaml) as { jobs?: Record<string, { needs?: unknown }> }).jobs
+      ?? {};
 
     for (const retired of [
       "distribution-benchmark",
       "distribution-benchmark-aggregate",
       "distribution-release-gate",
     ]) {
-      expect(jobs).not.toContain(retired);
+      expect(Object.keys(jobs)).not.toContain(retired);
     }
     expect(yaml).not.toContain("distribution:benchmark");
 
-    const ciSuccessNeeds =
-      yaml.split("  ci-success:")[1]?.split("\n    if:")[0] ?? "";
-    expect(ciSuccessNeeds).toContain("- distribution-contract");
-    expect(ciSuccessNeeds).not.toContain("benchmark");
+    // The full blocking dependency set: dropping any entry must be as loud as
+    // re-introducing a benchmark job.
+    const ciSuccessNeeds = jobs["ci-success"]?.needs;
+    expect(Array.isArray(ciSuccessNeeds)).toBe(true);
+    expect(new Set(ciSuccessNeeds as string[])).toEqual(
+      new Set([
+        "changes",
+        "typecheck",
+        "lint",
+        "distribution-contract",
+        "plugin-conformance-e2e",
+        "tests",
+        "drift-check",
+        "coverage",
+      ]),
+    );
+    expect(Object.keys(jobs)).toContain("distribution-contract");
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
