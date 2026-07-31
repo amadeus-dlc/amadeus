@@ -405,14 +405,14 @@ function listTestSources(dir: string, found: string[]): void {
   }
 }
 
+// Proof paths are repo-relative, because runBunTests resolves against
+// REPO_ROOT: an absolute path would join into a second repo root and read as a
+// missing proof (Refs: #1783).
 export function measureRelayProof(): RelayProof | null {
   try {
     const moduleExists = existsSync(join(REPO_ROOT, RELAY_MODULE));
     const sources: string[] = [];
     listTestSources(join(REPO_ROOT, "tests"), sources);
-    // Repo-relative, because runBunTests resolves against REPO_ROOT: an
-    // absolute path would join into a second repo root and read as a missing
-    // proof (Refs: #1783).
     const proofTests = sources
       .filter((path) => readFileSync(path, "utf-8").includes(RELAY_PROOF_MARKER))
       .map((path) => relative(REPO_ROOT, path))
@@ -428,10 +428,10 @@ export function measureRelayProof(): RelayProof | null {
 // REPO_ROOT. A walk that threw means the evidence was not gathered at all
 // (null -> UNKNOWN), which is not the same as "no suite carries the marker"
 // (an empty list -> FAIL under the floor).
-export function discoverMigrationEquivalenceTests(): readonly string[] | null {
+export function discoverMigrationEquivalenceTests(testsRoot: string = join(REPO_ROOT, "tests")): readonly string[] | null {
   try {
     const sources: string[] = [];
-    listTestSources(join(REPO_ROOT, "tests"), sources);
+    listTestSources(testsRoot, sources);
     return sources
       .filter((path) => MIGRATION_EQUIVALENCE_TITLE_RE.test(readFileSync(path, "utf-8")))
       .map((path) => relative(REPO_ROOT, path))
@@ -454,9 +454,9 @@ export function measureMigrationEquivalence(
   return { markerFiles, outcome: judgeable ? runTests(markerFiles) : null };
 }
 
+// env is passed explicitly below: bun does not fold runtime process.env changes
+// into a child on its own (cid:code-generation:bun-spawn-env-snapshot).
 function spawn(command: readonly string[]): { readonly ok: boolean; readonly detail: string } {
-  // env is passed explicitly: bun does not fold runtime process.env changes
-  // into a child on its own (cid:code-generation:bun-spawn-env-snapshot).
   const run = spawnSync(command[0] as string, command.slice(1), {
     cwd: REPO_ROOT,
     env: process.env,
@@ -601,7 +601,10 @@ const USAGE =
 
 type ParsedArgs = { readonly mode: "check" | "require-green"; readonly options: GateOptions } | null;
 
-function parseArgs(args: readonly string[]): ParsedArgs {
+// Exported as a seam: the option walk is the one place a typo'd flag can turn
+// into a silently ignored argument, so it is driven directly rather than only
+// through main()'s full gate run.
+export function parseArgs(args: readonly string[]): ParsedArgs {
   const mode = args[0] === "--check" ? "check" : args[0] === "--require-green" ? "require-green" : null;
   if (mode === null) return null;
   let reportPath: string | undefined;
@@ -614,12 +617,14 @@ function parseArgs(args: readonly string[]): ParsedArgs {
   return { mode, options: { reportPath } };
 }
 
+function usageError(): number {
+  console.error(USAGE);
+  return 2;
+}
+
 export function main(args: string[]): number {
   const parsed = parseArgs(args);
-  if (parsed === null) {
-    console.error(USAGE);
-    return 2;
-  }
+  if (parsed === null) return usageError();
   try {
     return parsed.mode === "check" ? runCheck(parsed.options) : runRequireGreen(parsed.options);
   } catch (err) {

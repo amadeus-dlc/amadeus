@@ -61,6 +61,13 @@ export function ensureContextManager(): void {
   managerRegistered = true;
 }
 
+// Test seam: registration is once-per-process by design, so a fixture that
+// tears the global manager down (context.disable() unregisters it) has to be
+// able to stand a fresh one back up for the rest of the process.
+export function resetContextManagerForTests(): void {
+  managerRegistered = false;
+}
+
 // --- Intent Trace Context (FR-TRC-4) -----------------------------------------
 
 // Persisted-record schema version (BR-6 mixed-period compatibility): records

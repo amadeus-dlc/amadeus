@@ -151,12 +151,7 @@ class AmadeusLogsBridge implements LoggerProvider {
   }
 }
 
-export function registerLoggerProvider(options: {
-  projectDir: string;
-  auditExporter: AuditLogExporter;
-  logExporter: LocalLogExporter;
-  redaction?: RedactionPolicy;
-}): void {
+export function registerLoggerProvider(options: { projectDir: string; auditExporter: AuditLogExporter; logExporter: LocalLogExporter; redaction?: RedactionPolicy }): void {
   if (registered !== null) {
     throw new Error("registerLoggerProvider called twice — invariant violation (NFR-3)");
   }
