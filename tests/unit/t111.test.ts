@@ -477,7 +477,12 @@ describe("handleAppend — thin wrapper over appendAuditEntry", () => {
     // Side effect: the record is on disk.
     const rec = readRecords(proj)[0]!;
     expect(rec.event).toBe("GATE_APPROVED");
-    expect(rec.fields).toEqual({ Stage: "2.1-practices" });
+    // The caller's fields, with the Event carrier excluded: a migrated row
+    // relocates the audit event type into the field bag so legacy readers keep
+    // finding it (rec.event above reads it back), and it is not a field the
+    // caller passed.
+    const { Event: _carrier, ...content } = rec.fields ?? {};
+    expect(content).toEqual({ Stage: "2.1-practices" });
 
     // Output: exactly one trailing-newline JSON line carrying the result.
     expect(captured.length).toBe(1);

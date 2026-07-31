@@ -1,4 +1,5 @@
 // size: medium
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -109,6 +110,13 @@ afterEach(() => {
     "AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET",
     savedEnv.swapHeartbeat,
   );
+});
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
 });
 
 describe("t257 doctor core result and context contracts", () => {

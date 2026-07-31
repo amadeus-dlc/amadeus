@@ -38,7 +38,6 @@ import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { seedCustomHarness } from "./custom-harness.ts";
-import { resetOtelPerProject } from "./otel-reset.ts";
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(HARNESS_DIR, "..", "..");
@@ -120,14 +119,6 @@ export function createTestProject(): string {
   }
   seedWorkspaceShell(proj);
   proj = toPortablePath(proj);
-  // A fresh fixture project is a fresh WORKSPACE, and the canonical emit path
-  // registers its Logger Provider for one workspace per process — a second
-  // bootstrap for a different project dir throws rather than re-registering.
-  // Production processes only ever serve one workspace, so the invariant is
-  // right; a test file that mints several projects is the exception, and it is
-  // handled here rather than in each of the callers that now reach an emit
-  // through a migrated tool.
-  resetOtelPerProject();
   return proj;
 }
 
