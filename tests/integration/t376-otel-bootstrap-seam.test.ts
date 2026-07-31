@@ -170,6 +170,29 @@ describe("ensureOtelBootstrap — the amadeus-log behaviour it replaces", () => 
   });
 });
 
+describe("ensureOtelBootstrap — a workspace with no intent yet", () => {
+  // The logs arm's two side effects disagreed about an unresolved intent:
+  // attachAnchor returns quietly (there is no anchor to restore), but
+  // probeJournal asked auditFilePath for a shard, and auditFilePath THROWS
+  // rather than name a path in the bare intents root. So any entry point that
+  // bootstrapped before the first intent existed — the migrated hooks reach
+  // ensureOtelBootstrap on every tool call — died on a workspace whose only
+  // fault was being new. There is no shard to probe in that state, which is
+  // exactly the case the probe already handles for a missing file.
+  test("bootstraps without an active intent instead of throwing", () => {
+    const bare = createTestProject();
+    try {
+      resetLoggerProviderForTests();
+      resetOtelBootstrapForTests();
+      expect(() => ensureOtelBootstrap(bare)).not.toThrow();
+      // Nothing was latched: an absent shard is not an unhealthy one.
+      expect(isFatalSet()).toBe(false);
+    } finally {
+      cleanupTestProject(bare);
+    }
+  });
+});
+
 describe("ensureTracerBootstrap", () => {
   test("the tracer becomes usable and a second call does not throw", () => {
     expect(() => getAmadeusTracer()).toThrow();

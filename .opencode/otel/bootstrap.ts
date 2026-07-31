@@ -60,6 +60,13 @@ function attachAnchor(projectDir: string): void {
 // inconsistent journal latches the process (FR-EVT-5) — the latch is what
 // stops a later canonical mutation from appending onto a broken ledger.
 function probeJournal(projectDir: string): void {
+  // Same unresolved-intent guard attachAnchor carries. auditFilePath THROWS
+  // rather than name a shard in the bare intents root, so asking it for a path
+  // before the first intent exists turns "nothing to probe" into a bootstrap
+  // failure — and the migrated hooks bootstrap on every tool call, including in
+  // a workspace whose only fault is being new. An unresolvable shard is the
+  // absent-shard case, which returns without latching.
+  if (activeIntent(projectDir) === null) return;
   const shard = auditFilePath(projectDir);
   if (!existsSync(shard)) return;
   const health = verifyJournalHealth({ shardPath: shard, projectDir });
