@@ -519,6 +519,10 @@ describe("migration routing", () => {
   });
 });
 
+// The tools reach the canonical emit path, whose module graph lives in otel/
+// over the vendored OTel API. Both are siblings of tools/ in a real install, so
+// a fixture that copies tools/ alone no longer resolves — it mirrors the real
+// layout instead.
 describe("migration utility adapter", () => {
   test("forwards the source, project root, mode, and JSON flag as argv", () => {
     const project = mkdtempSync(join(tmpdir(), "amadeus-migrate-utility-"));
