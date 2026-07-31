@@ -85,6 +85,7 @@
 // round-trips when read back). Error-only cases reuse a single fresh project
 // (no audit row lands on the rejected path). All temp dirs cleaned in afterAll.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -145,7 +146,7 @@ function auditRecords(body: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>);
 }
 
 /** Count audit records whose `event` is exactly <ev> in a buffer. */

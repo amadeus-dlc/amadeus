@@ -60,6 +60,7 @@
 // the .sh did with heredocs/touch/echo. NOTHING is written under tests/fixtures/**.
 // All temp dirs are cleaned in afterAll.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -167,7 +168,7 @@ function workflowStartedCount(p: string): number {
   return readAudit(p)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null })
     .filter((r) => r.event === "WORKFLOW_STARTED").length;
 }
 

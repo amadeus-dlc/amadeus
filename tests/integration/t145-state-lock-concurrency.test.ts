@@ -40,6 +40,7 @@
 // lock lives under tmpdir() and is asserted-then-removed (afterEach safety).
 // Nothing is written under tests/fixtures/**.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
@@ -115,7 +116,7 @@ function eventCount(p: string, type: string): number {
   return readAudit(p)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null })
     .filter((r) => r.event === type).length;
 }
 

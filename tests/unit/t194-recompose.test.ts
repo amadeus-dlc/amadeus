@@ -28,6 +28,7 @@
 // Mechanism: cli - spawns the shipped tools against temp projects born via
 // intent-birth (the real state-file shape, not a fixture).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -127,7 +128,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     const recomposed = auditText(proj)
       .split("\n")
       .filter((l) => l.trim() !== "")
-      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> })
       .filter((r) => r.event === "RECOMPOSED");
     expect(recomposed.length).toBeGreaterThan(0);
     expect(

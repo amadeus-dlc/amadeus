@@ -60,6 +60,7 @@
 // state file back, proving the pointer is unmoved — not merely absent of a
 // move directive.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -123,7 +124,7 @@ function auditRecords(proj: string): {
   return readFileSync(seededAuditShard(proj), "utf-8")
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> });
 }
 
 function countEvent(proj: string, event: string): number {

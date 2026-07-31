@@ -3,6 +3,7 @@
 // Targeted approval audit-prefix arms: opening a gate, resuming a
 // half-written approval, and recovering a completed one.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -166,7 +167,7 @@ describe("targeted approval prefix arms", () => {
     return shardBody
       .split("\n")
       .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as { event: string | null })
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null })
       .filter((r) => r.event === event).length;
   }
 
