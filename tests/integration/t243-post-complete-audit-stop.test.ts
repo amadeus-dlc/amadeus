@@ -18,7 +18,7 @@
 // cursor-release asserts throw. Both surfaces are demonstrated in the report.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { resetOtelForFixture } from "../harness/otel-reset.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { countAuditEvent } from "../harness/audit-rows.ts";
 import {
   existsSync,
@@ -148,11 +148,11 @@ function track(proj: string): string {
 }
 
 beforeEach(() => {
-  resetOtelForFixture();
+  resetOtelPerProject();
   projects = [];
 });
 afterEach(() => {
-  resetOtelForFixture();
+  resetOtelPerProject();
   for (const p of projects) rmSync(p, { recursive: true, force: true });
 });
 

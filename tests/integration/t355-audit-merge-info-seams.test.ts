@@ -8,7 +8,7 @@
 // shipped dist tree so the changed lines register in lcov (t219 precedent).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { resetOtelForFixture } from "../harness/otel-reset.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { countAuditEvent } from "../harness/audit-rows.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -42,12 +42,12 @@ let proj: string | undefined;
 let priorProjectDir: string | undefined;
 
 beforeEach(() => {
-  resetOtelForFixture();
+  resetOtelPerProject();
   priorProjectDir = process.env.CLAUDE_PROJECT_DIR;
 });
 
 afterEach(() => {
-  resetOtelForFixture();
+  resetOtelPerProject();
   if (priorProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
   else process.env.CLAUDE_PROJECT_DIR = priorProjectDir;
   cleanupTestProject(proj);

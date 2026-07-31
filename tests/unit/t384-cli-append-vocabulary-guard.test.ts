@@ -24,7 +24,10 @@
 // {Scope} lacks "Request"; t111 GATE_APPROVED {Stage} lacks "User Input").
 
 import { describe, expect, test } from "bun:test";
-import { unregisteredEventRejection } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import {
+  missingRequiredRejection,
+  unregisteredEventRejection,
+} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { REGISTERED_EVENTS } from "../../dist/claude/.claude/otel/event-registry.ts";
 
 // The canonical audit vocabulary, taken from the registry rather than restated
@@ -58,5 +61,58 @@ describe("the CLI append entry's vocabulary guard is registry-sourced", () => {
     for (const def of telemetry) {
       expect(unregisteredEventRejection(def.name)).not.toBeNull();
     }
+  });
+});
+
+describe("the CLI append entry rejects a field set missing required attributes", () => {
+  // The canonical path already fails closed on this (emitEvent throws), but it
+  // throws in the registry's OTel vocabulary — "amadeus.workflow.started" — and
+  // from inside the emit. Checking at the entry lets the CLI name the event the
+  // CALLER used and list what is missing.
+  test("names the event and every missing attribute", () => {
+    const rejection = missingRequiredRejection("WORKFLOW_STARTED", { Scope: "feature" });
+    expect(rejection).not.toBeNull();
+    expect(rejection).toContain("WORKFLOW_STARTED");
+    // The missing list names Request and ONLY Request — Scope was supplied.
+    // Asserted on the missing clause alone: the message also states the full
+    // required set, where Scope legitimately appears.
+    const missingClause = (rejection ?? "").split("Required:")[0];
+    expect(missingClause).toContain("Request");
+    expect(missingClause).not.toContain("Scope");
+  });
+
+  test("accepts a complete field set", () => {
+    expect(
+      missingRequiredRejection("WORKFLOW_STARTED", { Scope: "feature", Request: "/amadeus feature" })
+    ).toBeNull();
+  });
+
+  test("optional attributes are not required — the registry sweep's whole point", () => {
+    // Each of these carries an optionalAttributes entry that used to sit in
+    // requiredAttributes, and each has a production emitter that omits it:
+    // a standing-grant delegation has no User Input, a rejection may carry no
+    // Feedback, and an initial (non-reentrant) fork has no Reentrant tag.
+    expect(
+      missingRequiredRejection("DELEGATED_APPROVAL", {
+        Stage: "code-generation",
+        "Issuer Space": "default",
+        "Issuer Intent": "260729-otel-upstream",
+        "Issuer Shard": "shard.jsonl",
+        "Issuer Human Ts": "2026-07-31T00:00:00Z",
+      })
+    ).toBeNull();
+    expect(
+      missingRequiredRejection("AUDIT_FORKED", {
+        "Bolt slug": "bolt-otel-migrate-g2",
+        "Source Audit Hash": "0".repeat(64),
+        "Fork Boundary": "0",
+      })
+    ).toBeNull();
+  });
+
+  test("an unregistered event is the vocabulary guard's business, not this one", () => {
+    // Kept separate so a caller sees ONE readable reason, not a required-attribute
+    // complaint about an event that does not exist.
+    expect(missingRequiredRejection("WRONG", {})).toBeNull();
   });
 });

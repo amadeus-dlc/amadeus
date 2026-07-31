@@ -584,7 +584,9 @@ export function handleAppend(
   if (rejection) throw new Error(rejection);
   const unregistered = unregisteredEventRejection(eventType);
   if (unregistered) throw new Error(unregistered);
-  const result = appendAuditEntry(eventType, fields, projectDir);
+  const incomplete = missingRequiredRejection(eventType, fields);
+  if (incomplete) throw new Error(incomplete);
+  const result = emitCanonicalAuditEvent(eventType, fields, projectDir);
   jsonSuccess(result);
 }
 
@@ -1126,19 +1128,28 @@ export function presenceMintRejection(eventType: string): string | null {
 // inferred element type is the 78-name literal union — but this guard's input
 // is untrusted CLI text, and narrowing it there would make the check
 // untypeable.
-let registeredAuditEvents: Set<string> | null = null;
-function registeredAuditEventTypes(): Set<string> {
-  if (registeredAuditEvents === null) {
+// Keyed by the v1 audit event type, which is the vocabulary the CLI speaks.
+// Both guards below read this one map, so they can never disagree about which
+// events exist.
+let registeredAuditEventMap: Map<string, RegistryEventDef> | null = null;
+function registeredAuditEventDefs(): Map<string, RegistryEventDef> {
+  if (registeredAuditEventMap === null) {
     const { REGISTERED_EVENTS } = require("../otel/event-registry.ts") as {
       REGISTERED_EVENTS: readonly RegistryEventDef[];
     };
-    registeredAuditEvents = new Set(
+    registeredAuditEventMap = new Map(
       REGISTERED_EVENTS.flatMap((def) =>
-        def.durability === "canonical" && def.auditEvent !== null ? [def.auditEvent] : []
+        def.durability === "canonical" && def.auditEvent !== null
+          ? ([[def.auditEvent, def]] as [string, RegistryEventDef][])
+          : []
       )
     );
   }
-  return registeredAuditEvents;
+  return registeredAuditEventMap;
+}
+
+function registeredAuditEventTypes(): Set<string> {
+  return new Set(registeredAuditEventDefs().keys());
 }
 
 // `append` guard: refuse an event outside the registered vocabulary. Returns the
@@ -1154,6 +1165,27 @@ export function unregisteredEventRejection(eventType: string): string | null {
   const registered = registeredAuditEventTypes();
   if (registered.has(eventType)) return null;
   return `Invalid event type: ${eventType}. Must be one of: ${[...registered].join(", ")}`;
+}
+
+// `append` guard: refuse a field set that omits a required attribute. Returns
+// the error message to surface, or null when clean.
+//
+// The canonical path fails closed on this too (emitEvent throws), but it throws
+// in the registry's OTel vocabulary and from inside the emit. Checking here lets
+// the CLI name the event type the CALLER passed and list what is missing.
+//
+// An unregistered event returns null: that is unregisteredEventRejection's
+// business, and reporting both would hand the caller a required-attribute
+// complaint about an event that does not exist.
+export function missingRequiredRejection(
+  eventType: string,
+  fields: Record<string, string>
+): string | null {
+  const def = registeredAuditEventDefs().get(eventType);
+  if (def === undefined) return null;
+  const missing = def.requiredAttributes.filter((key) => !(key in fields));
+  if (missing.length === 0) return null;
+  return `Missing required attribute(s) for ${eventType}: ${missing.join(", ")}. Required: ${def.requiredAttributes.join(", ")}`;
 }
 
 // `append-raw` guard: the block is a free-form heading + body, so a forger can

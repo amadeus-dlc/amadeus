@@ -34,6 +34,8 @@ import {
   auditFilePath,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { normaliseAuditRow } from "../harness/audit-rows.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 // --- Per-file temp roots, torn down in afterAll ---------------------------
 const tmpRoots: string[] = [];
@@ -52,6 +54,11 @@ const FIXTURE_INTENT = "t111-fixture-deadbeef";
 function freshProject(seedAuditShard = false): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t111-"));
   tmpRoots.push(root);
+  // The canonical emit path bootstraps per workspace and refuses a second
+  // bootstrap for a different project dir. Each fixture project is a new
+  // workspace, so drop the per-process records the way the provider
+  // registrations already are.
+  resetOtelPerProject();
   // A record dir is one holding amadeus-state.md; a lone record resolves with
   // no active-intent cursor (see activeIntent()).
   const record = join(root, "amadeus", "spaces", "default", "intents", FIXTURE_INTENT);
@@ -97,11 +104,16 @@ interface AuditRecord {
 // Parse a shard buffer (JSONL — one JSON object per line, no header) into
 // records. Blank lines are skipped; anything else must parse, so a malformed
 // line fails the case loudly rather than being silently dropped.
+//
+// Normalised through the shared v1/v2 view: a shard is legitimately MIXED while
+// the migration runs, and a migrated row carries its audit event type as an
+// `Event` attribute rather than a top-level `event`. Reading raw would make a
+// migrated row look like a row that was never written.
 function parseRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normaliseAuditRow(JSON.parse(l) as Record<string, unknown>) as unknown as AuditRecord);
 }
 
 function readRecords(projectDir: string, intent?: string): AuditRecord[] {

@@ -32,7 +32,14 @@ export type NormalisedAuditRow = Record<string, unknown> & {
 export function normaliseAuditRow(raw: Record<string, unknown>): NormalisedAuditRow {
   if (typeof raw.eventName === "string") {
     const attributes = (raw.attributes ?? {}) as Record<string, string>;
-    return { ...raw, event: attributes.Event ?? null, fields: attributes };
+    // `Event` is lifted OUT of the field bag, not left in it. It is the audit
+    // event type, which schema v1 carried as the top-level `event` key and not
+    // as a field — the exporter relocates it into `attributes` purely so the
+    // legacy readers keep finding it (audit-log-exporter.ts:157). Presenting it
+    // as a field would make every migrated row's field set differ from its
+    // pre-migration self by one phantom entry.
+    const { Event: _carrier, ...fields } = attributes;
+    return { ...raw, event: attributes.Event ?? null, fields };
   }
   return {
     ...raw,
