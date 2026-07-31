@@ -460,13 +460,14 @@ tests/
 +-- unit/                     # Level: single-component isolation (no LLM)
 +-- integration/              # Level: cross-component contracts + live stage/CLI utilities
 +-- e2e/                      # Level: full lifecycle, worktree, rendered terminal journeys
++-- perf/                     # Level: wall-clock benchmarks (excluded from --ci)
 ```
 
-すべてのテストは `bun` で実行される `t*.test.ts` ファイルです — シェルテストファイルはありません。4つのディレクトリがスイートの4つのレベルです。
+すべてのテストは `bun` で実行される `t*.test.ts` ファイルです — シェルテストファイルはありません。各レベルディレクトリがスイートのレベルに対応します。
 
 ## テスト
 
-プロジェクトのテストスイートは **完全に TypeScript**(`.sh` テストファイルはゼロ)で、4つのレベル — `smoke`、`unit`、`integration`、`e2e` — に構成され、古典的な3層ピラミッド(smoke + unit = L1 Protocol、integration = L2 Stage、e2e = L3 Acceptance)にマップされます。全 TS であることで、スイートは構造上クロスプラットフォームになります: 同じファイルが macOS、Linux、ネイティブ Windows で同一に実行されます。テストはファイルの存在からレンダリングされたターミナルジャーニーまであらゆるものを検証し、フック、エージェント、ステージ、設定への変更がリグレッションを導入しないことを保証します。
+プロジェクトのテストスイートは **完全に TypeScript**(`.sh` テストファイルはゼロ)で、レベル — `smoke`、`unit`、`integration`、`e2e`、`perf` — に構成されます。前の4つは古典的な3層ピラミッド(smoke + unit = L1 Protocol、integration = L2 Stage、e2e = L3 Acceptance)にマップされ、`perf` はピラミッドの外側の wall-clock 層です。全 TS であることで、スイートは構造上クロスプラットフォームになります: 同じファイルが macOS、Linux、ネイティブ Windows で同一に実行されます。テストはファイルの存在からレンダリングされたターミナルジャーニーまであらゆるものを検証し、フック、エージェント、ステージ、設定への変更がリグレッションを導入しないことを保証します。
 
 ### テストレベル
 
@@ -476,6 +477,7 @@ tests/
 | **Unit**(L1) | `tests/unit/` | フレームワークのフック、CLI ツール、ステージ/エージェントのフロントマター、知識インベントリ、オーケストレーションエンジンのハンドラ、その他の単一コンポーネント契約。各テストは1つのコンポーネントを分離します。LLM なし。 |
 | **Integration**(L2) | `tests/integration/` | コンポーネント間契約(スコープからステージへのマッピング、ステージ-エージェント相互チェック、プロトコル準拠、監査/runtime-graph の end-to-end)と、`claude` CLI または SDK を通じて駆動されるライブステージ/CLI ユーティリティ。ライブファイルは `claude` が不在のときクリーンにスキップします。 |
 | **E2E**(L3) | `tests/e2e/` | フルライフサイクルと worktree プリミティブ、加えて、実際の AskUserQuestion ゲートへの回答がディスク状態を進めることを証明するレンダリングターミナル(`tui-drive.ts`)ジャーニー。ライブジャーニーは `claude` + Bedrock 認証情報を要し、`AMADEUS_TUI_LIVE=1` でゲートされます。 |
+| **Perf** | `tests/perf/` | wall-clock ベンチマーク(マイグレーションのスループット、ライフサイクルトランザクションのレイテンシ、guard corpus の走査、プラグインのステージ探索、mirror の contract-policy と distribution)。判定がマシン負荷に依存するため `--ci` から除外され、非 blocking の `.github/workflows/perf.yml` が日次で実行するほか、`--release` / `--all` でも実行されます。 |
 
 完全なテスト戦略、カバレッジレジストリ、テストの追加方法については、[Testing](09-testing.ja.md) を参照。
 

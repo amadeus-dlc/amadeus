@@ -50,7 +50,7 @@ For the repository layout decision behind the framework package boundary plus ro
 
 ## Testing
 
-The suite is entirely TypeScript (`t*.test.ts`, run via `bun`) across four levels — `smoke`, `unit`, `integration`, `e2e` — that map onto the three-layer pyramid (smoke + unit = L1 Protocol, integration = L2 Stage, e2e = L3 Acceptance). L1 runs locally with no dependencies; the live integration and e2e files require the relevant CLI tool plus working model-provider credentials, and skip cleanly when that substrate is absent.
+The suite is entirely TypeScript (`t*.test.ts`, run via `bun`) across the levels `smoke`, `unit`, `integration`, `e2e`, and `perf`. The first four map onto the three-layer pyramid (smoke + unit = L1 Protocol, integration = L2 Stage, e2e = L3 Acceptance); `perf` is a wall-clock tier kept out of `--ci`. L1 runs locally with no dependencies; the live integration and e2e files require the relevant CLI tool plus working model-provider credentials, and skip cleanly when that substrate is absent.
 
 **Quick reference:**
 
@@ -72,7 +72,10 @@ bash tests/run-tests.sh --smoke        # File structure validation
 bash tests/run-tests.sh --unit         # Hook behavior, stage content
 bash tests/run-tests.sh --integration  # Cross-component and stage/CLI tests
 bash tests/run-tests.sh --e2e          # Workflow, worktree, and terminal journeys
+bash tests/run-tests.sh --perf         # Wall-clock benchmarks (never part of --ci)
 ```
+
+The `perf` tier runs daily and on manual dispatch through `.github/workflows/perf.yml`, which also carries the Intent Mirror benchmark jobs moved out of `ci.yml`. That workflow is non-blocking — it is absent from `ci-success` and from branch protection, so a red run never gates a pull request, but failures stay loud in the Actions tab and in the run's step summary.
 
 For the full test strategy, stubs, and how to add new tests, see [reference/09-testing.md](09-testing.md).
 

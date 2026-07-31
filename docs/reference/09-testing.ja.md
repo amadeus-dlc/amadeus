@@ -9,9 +9,10 @@ AI-DLC のテストスイートは **完全に TypeScript** です — すべて
 ゼロです。これは構成によるプラットフォーム不変性の保証です: 同じファイルが
 macOS、Linux、ネイティブ Windows で同一に実行されます。
 
-スイートは **4つのレベル** — `smoke`、`unit`、`integration`、
-`e2e` — に構成され、それぞれ `tests/` 配下に1つのディレクトリを持ちます。この4レベルは、
-速度と網羅性のバランスを取る古典的な3層テストピラミッドにマッピングされます:
+スイートは `smoke`、`unit`、`integration`、`e2e`、`perf` のレベルに構成され、
+それぞれ `tests/` 配下に1つのディレクトリを持ちます。前の4つは、速度と網羅性の
+バランスを取る古典的な3層テストピラミッドにマッピングされます。`perf` はピラミッドの
+外側に位置する直交した wall-clock 層です(後述の「性能層(wall-clock ベンチマーク)」を参照):
 
 ```
             /\
@@ -28,8 +29,10 @@ macOS、Linux、ネイティブ Windows で同一に実行されます。
 
 `--ci` プロファイルとフラグなしのデフォルトは、いずれも **smoke + unit +
 integration** を実行します(したがって integration レベルはすべてのローカル
-`bun tests/run-tests.ts` に相乗りします)。`--release` / `--all` は `e2e` を追加します。上記のピラミッドは
-各レベルが概念的にどこに位置するかを示します — 実際にそれらを選択するのは
+`bun tests/run-tests.ts` に相乗りします)。`--release` / `--all` は `e2e` と `perf` を
+追加します。`perf` レベルは `--ci` とデフォルトプロファイルから意図的に外されており、
+`--perf`、`--release`、`--all` でのみ選択されます。上記のピラミッドは
+ピラミッド上の各レベルが概念的にどこに位置するかを示します — 実際にそれらを選択するのは
 以下のプロファイルフラグです。
 
 **ファイル名規約。** テストのファイル名は `t<NN>[-description].test.ts` です —
@@ -48,7 +51,10 @@ integration** を実行します(したがって integration レベルはすべ�
 カバレッジを偽らずにスイートを高速に保つ鍵です。
 
 - **スコープ / 階層** — テストが置かれているディレクトリ(`smoke`、`unit`、
-  `integration`、`e2e`)。*システムのどこまでを結線して動かすか* に答えます。
+  `integration`、`e2e`、`perf`)。*システムのどこまでを結線して動かすか* に答えます。
+  後述の純度軸で評価されるのは `unit`、`integration`、`e2e` だけです: `smoke` は
+  明示的に除外され、`perf` はガードの `other` バケットに落ちます — どちらも
+  サイズ上限を持ちません。
 - **サイズ** — テストの動的な実行時の振る舞い(`small`、`medium`、`large`):
   プロセス内に留まるか、それともプロセスを spawn する・ファイルシステムに触れる・
   タイマーを待つ・ソケットを開くか。テストピラミッドの本当の段は、ディレクトリ
@@ -64,6 +70,9 @@ integration** を実行します(したがって integration レベルはすべ�
   ライブのステージ/CLI ユーティリティ。
 - **e2e** — フルライフサイクル、worktree、レンダリング済みターミナルのジャーニー。
   リリース前に実行します。
+- **perf** — wall-clock 予算をアサートする実時間ベンチマーク。判定がマシン負荷に
+  依存するため `--ci` とデフォルトプロファイルから除外され、日次の性能 workflow と
+  `--release` / `--all` で実行されます。
 
 **サイズは宣言でなく導出。** ファイルのサイズは
 [`tests/lib/test-size.ts`](../../tests/lib/test-size.ts) の `classifyTestSize`
@@ -92,6 +101,7 @@ integration** を実行します(したがって integration レベルはすべ�
 | integration | medium | spawn / fs 接触は想定内。ネットワークは不可 |
 | e2e | large | 上限なし |
 | smoke | —(除外) | ピラミッド軸から **外す** |
+| perf | —(評価対象外) | ガードのスコープマップに無く `other` に落ちる。全ファイルが慣習として `// size: large` を明示する |
 
 `smoke` は意図的に除外します: その各ファイルは、ファイルを読み・ランナーを spawn
 して存在・設定・パーミッションをアサートする構造的ゲートであり、本質的に `medium`
@@ -150,6 +160,35 @@ LLM を呼び出さずにオーケストレーターの構造的正しさを検�
 - ステージ指示品質の LLM 意味的レビュー(明確さ、論理的流れ、曖昧さ検出)
 
 **実行:** `bun tests/run-tests.ts --release`
+
+## 性能層(wall-clock ベンチマーク)
+
+実時間ベンチマークは `tests/perf/` にあり、wall-clock 予算をアサートします:
+マイグレーションのスループット、ライフサイクルトランザクションのレイテンシ、
+guard corpus の走査、プラグインのステージ探索、そして mirror の contract-policy と
+distribution の経路です。判定がマシンの負荷に依存するため、これらは
+**`--ci` とフラグなしのデフォルトから除外**され、`--perf`、`--release`、`--all`
+でのみ選択されます。したがって `tests/perf/` は CI 常駐マーカーを決して持ちません —
+`t257-ci-residency-marker-guard` が、この層が `--ci` の外に留まることを強制します。
+
+**実行場所。** `.github/workflows/perf.yml` が、この層を日次スケジュール
+(`cron: "47 17 * * *"` — 17:47 UTC。`:00` / `:30` の混雑ピークを意図的に避けています)と
+`workflow_dispatch` で実行します。この workflow は perf 層の実行に加えて Intent Mirror
+ベンチマークのジョブ(`distribution-benchmark` とその集約)を持ちます。これらは
+ベンチマークのタイミングが Pull Request をゲートしないよう `ci.yml` から移設されました。
+
+**非 blocking・loud-fail。** `perf.yml` は `ci.yml` の `ci-success` の needs リストからも
+ブランチ保護からも意図的に外れており、ここが赤くなっても Pull Request は塞がれません。
+失敗は無音にはならず loud に残ります: Actions タブで実行が赤くなり、失敗した各ジョブは
+自身の出力の末尾を実行の step summary に追記します。`continue-on-error` や `|| true` で
+失敗を握り潰してグリーンを保つことは許容しません。
+
+**スケジュールの停止。** GitHub はリポジトリの活動が約60日途絶えると `schedule`
+トリガーを無効化します。日次実行が現れなくなったら、Actions タブで停止した
+スケジュールを確認し、そこから再有効化してください。
+
+`ci.yml` 自体はベンチマークジョブを失った点を除いて変更されていません:
+`ci-success` が集約する blocking ジョブの集合は従来どおりです。
 
 ## クロスプラットフォームカバレッジ
 
@@ -308,6 +347,7 @@ bun tests/gen-coverage-registry.ts --check  # コミット済みレジストリ�
 | `git commit` | L1 | `bun tests/run-tests.ts` | ローカル(pre-commit フック) |
 | CI パイプライン | L2 | `bun tests/run-tests.ts --ci` | CI/CD パイプライン |
 | リリース / main へのマージ | L3 | `bun tests/run-tests.ts --release` | CI/CD パイプライン |
+| 日次スケジュール / 手動 dispatch | perf | `bash tests/run-tests.sh --perf` | `.github/workflows/perf.yml`(非 blocking) |
 
 L1 は git pre-commit フックで強制できます: `bun tests/run-tests.ts || exit 1`。
 

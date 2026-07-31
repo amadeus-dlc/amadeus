@@ -47,7 +47,7 @@ docs/                # ドキュメント
 
 ## テスト
 
-このスイートは完全に TypeScript(`t*.test.ts`、`bun` で実行)で、4 つのレベル — `smoke`、`unit`、`integration`、`e2e` — にわたり、3 層ピラミッド(smoke + unit = L1 Protocol、integration = L2 Stage、e2e = L3 Acceptance)にマッピングされます。L1 は依存関係なしでローカル実行されます。ライブの統合テストと e2e ファイルは、該当する CLI ツールと動作するモデルプロバイダの認証情報を必要とし、その基盤が存在しない場合はクリーンにスキップします。
+このスイートは完全に TypeScript(`t*.test.ts`、`bun` で実行)で、`smoke`、`unit`、`integration`、`e2e`、`perf` のレベルにわたります。前の4つは 3 層ピラミッド(smoke + unit = L1 Protocol、integration = L2 Stage、e2e = L3 Acceptance)にマッピングされ、`perf` は `--ci` の外に置かれた wall-clock 層です。L1 は依存関係なしでローカル実行されます。ライブの統合テストと e2e ファイルは、該当する CLI ツールと動作するモデルプロバイダの認証情報を必要とし、その基盤が存在しない場合はクリーンにスキップします。
 
 **クイックリファレンス:**
 
@@ -69,7 +69,10 @@ bash tests/run-tests.sh --smoke        # ファイル構造の検証
 bash tests/run-tests.sh --unit         # フックの振る舞い、ステージのコンテンツ
 bash tests/run-tests.sh --integration  # コンポーネント横断およびステージ/CLI テスト
 bash tests/run-tests.sh --e2e          # ワークフロー、worktree、ターミナルのジャーニー
+bash tests/run-tests.sh --perf         # wall-clock ベンチマーク(--ci には決して含まれない)
 ```
+
+`perf` 層は `.github/workflows/perf.yml` の日次スケジュールと手動 dispatch で実行されます。この workflow は `ci.yml` から移設された Intent Mirror ベンチマークのジョブも持ちます。workflow は非 blocking で、`ci-success` からもブランチ保護からも外れているため、赤くなっても Pull Request をゲートしません。ただし失敗は Actions タブと実行の step summary で loud に残ります。
 
 完全なテスト戦略、スタブ、新しいテストの追加方法については [reference/09-testing.md](09-testing.ja.md) を参照してください。
 
