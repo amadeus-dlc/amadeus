@@ -242,7 +242,7 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "675-677",
-    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -260,19 +260,19 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "711-716",
-    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "760",
-    "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
+    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "lines": "4551-4552",
-    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-07-28: the advisory rows had silently drifted from 4216-4217 to 4551-4552 across prior insertions above them; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
+    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) \u2014 canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-07-28: the advisory rows had silently drifted from 4216-4217 to 4551-4552 across prior insertions above them; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
   {
@@ -284,13 +284,13 @@
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "901-903",
-    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
+    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "907",
-    "reason": "Unknown-subcommand usage message string in main()'s default case — `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
+    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -488,12 +488,12 @@
   {
     "file": "scripts/formal-verif/run-model-check.ts",
     "lines": "70-91",
-    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) — exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
+    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) \u2014 exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
   },
   {
     "file": "scripts/formal-verif/tlc-spawn-planner.ts",
     "lines": "128-179",
-    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
+    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin \u2014 requires a real JDK, exercised only by the real-toolchain probe outside CI."
   },
   {
     "file": "scripts/formal-verif/node-ci-model-check-port.ts",
@@ -503,12 +503,12 @@
   {
     "file": "scripts/formal-verif/tla-arm.ts",
     "lines": "442",
-    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) — structurally unreachable once every named pipeline error code is handled above."
+    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) \u2014 structurally unreachable once every named pipeline error code is handled above."
   },
   {
     "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
     "lines": "1838",
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
+    "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
@@ -830,79 +830,73 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "257-259",
+    "lines": "260-262",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "320-323",
+    "lines": "323-326",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "326-328",
+    "lines": "329-331",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "335-338",
+    "lines": "338-341",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "360-363",
+    "lines": "363-366",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "377",
+    "lines": "380",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "383-386",
+    "lines": "386-389",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "389-393",
+    "lines": "392-396",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "395-396",
+    "lines": "398-399",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "398-404",
+    "lines": "401-404",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "406",
+    "lines": "421",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "409",
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "411-412",
+    "lines": "423-424",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1148,7 +1142,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-grant-authorization.ts",
-    "lines": "204-206",
+    "lines": "207-209",
     "reason": "Shard read failure AFTER realpathSync already resolved the same path (TOCTOU window). Measured on this branch: chmod 000 makes realpathSync itself fail with EACCES on macOS, and readFileSync of a directory is EISDIR on macOS but returns \"\" on Linux (cid:code-generation:bun-readfilesync-dir-platform-divergence), so no portable injection reaches this catch. The resolve-failure sibling is covered in-process by the dangling-symlink case in tests/integration/t-solo-standing-grant-domain.test.ts.",
     "expiry": "remove when the standing grant scan receives an injectable filesystem port for the realpath-to-read race"
   },
@@ -1167,7 +1161,7 @@
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
     "lines": "879",
-    "reason": "Stop-hook payload parse inside `if (import.meta.main)` — same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
+    "reason": "Stop-hook payload parse inside `if (import.meta.main)` \u2014 same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
@@ -1184,7 +1178,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "397",
+    "lines": "400",
     "reason": "idempotentAppend runs only through the spawned mirror CLI (t282/t284/t300 drive the process boundary); the single-line TransactionId scan delegates to auditBlockField/splitAuditRecords which are covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when idempotentAppend gains an in-process seam test"
   },
@@ -1209,7 +1203,7 @@
   {
     "file": "packages/framework/core/tools/amadeus-journal-convert.ts",
     "lines": "289-298",
-    "reason": "import.meta.main CLI wrapper — spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
+    "reason": "import.meta.main CLI wrapper \u2014 spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
     "expiry": "remove if the wrapper gains an in-process seam or the module stops being imported in-process"
   },
   {
@@ -1238,13 +1232,7 @@
   },
   {
     "file": "tests/harness/solo-gate-fixture.ts",
-    "lines": "151-152",
-    "reason": "Defensive catch in the filler-event counter: reachable only when a seeded filler line is invalid JSON, which the serializer construction prevents. Fail-safe (counts the line as non-event).",
-    "expiry": "remove if the counter gains a malformed-line fixture"
-  },
-  {
-    "file": "tests/harness/solo-gate-fixture.ts",
-    "lines": "252",
+    "lines": "253",
     "reason": "Fail-closed guard in breakGrantIssuerIntent: throws only when no record carries the seeded Issuer Intent, which the fixture construction makes impossible; the guard exists so a future seeding change fails loud instead of silently no-opping (the exact defect class this rewrite fixed).",
     "expiry": "remove if a negative-fixture test drives the throw"
   },
@@ -1353,7 +1341,7 @@
   {
     "file": "packages/framework/core/tools/amadeus-observability.ts",
     "lines": "119",
-    "reason": "Defensive catch around the layered config read: readMirrorConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS — unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
+    "reason": "Defensive catch around the layered config read: readMirrorConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS \u2014 unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
     "expiry": "remove if readMirrorConfigLayers gains a throwing path or the belt is dropped"
   },
   {
