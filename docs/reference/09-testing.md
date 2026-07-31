@@ -52,7 +52,9 @@ Two **independent** axes describe every test. Keeping them separate is what
 lets the suite stay fast without lying about coverage.
 
 - **Scope / tier** — the directory a test lives in (`smoke`, `unit`,
-  `integration`, `e2e`). It answers *how much of the system is wired together*.
+  `integration`, `e2e`, `perf`). It answers *how much of the system is wired
+  together*. Only the first four are graded on the purity axis below; `perf`
+  falls into the guard's `other` bucket and carries no size ceiling.
 - **Size** — a test's dynamic runtime behaviour (`small`, `medium`, `large`):
   does it stay in-process, or does it spawn a process, touch the filesystem,
   wait on a timer, or open a socket. Size — **not** the directory — is the true
@@ -100,6 +102,7 @@ header, which the drift guard checks against the measured size.
 | integration | medium | spawns / fs touches are expected; no network |
 | e2e | large | no ceiling |
 | smoke | — (excluded) | sized **out** of the pyramid axis |
+| perf | — (ungraded) | not in the guard's scope map; falls into `other`. Every file pins `// size: large` by convention |
 
 `smoke` is excluded on purpose: its files are structural gates that read files
 and spawn the runner to assert existence, settings, and permissions, so they
