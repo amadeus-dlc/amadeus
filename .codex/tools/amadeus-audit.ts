@@ -30,6 +30,17 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+// Type-only: the runtime binding is required lazily (see
+// emitCanonicalAuditEvent below), so this import erases at compile time.
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
+// Type-only, like the emit import above: the registry is required lazily (see
+// registeredAuditEventTypes), so this erases at compile time.
+import type { EventDef as RegistryEventDef } from "../otel/event-registry.ts";
+
+// The lazily-required registry module's shape, named here so the require below
+// is a ONE-LINE cast: the annotation lines of a multi-line cast are erased at
+// runtime and stay permanently DA:0 in bun's lcov.
+type EventRegistryModule = { REGISTERED_EVENTS: readonly RegistryEventDef[] };
 
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
@@ -183,7 +194,11 @@ const VALID_EVENT_TYPES = new Set([
 
 // --- Event type to human-readable heading ---
 
-const EVENT_HEADINGS: Record<string, string> = {
+// Exported so the one table that maps an audit event type to its prose heading
+// stays the single definition: a v2 row stores the OTel eventName instead of the
+// heading, and readers resolve the heading back through here rather than
+// restating the mapping.
+export const EVENT_HEADINGS: Record<string, string> = {
   STAGE_STARTED: "Stage Start",
   STAGE_AWAITING_APPROVAL: "Stage Awaiting Approval",
   STAGE_REVISING: "Stage Revising",
@@ -265,6 +280,29 @@ const EVENT_HEADINGS: Record<string, string> = {
 };
 
 // --- Helpers ---
+
+// The canonical emit, reached lazily.
+//
+// A top-level import would close a load-time cycle: the canonical path's audit
+// exporter appends through appendJournalRecordV2, which lives in THIS module.
+// require() is synchronous under Bun and keeps the module graph one-way at
+// init time — the same idiom amadeus-lib.ts uses for its own emitError row.
+//
+// Every caller below is inside a withAuditLock section for the (intent, space)
+// it passes here, so the emit re-enters that lock via the depth counter rather
+// than taking a second OS-level acquire. That is what preserves the enclosing
+// section's own retry budget: the outer acquire is the only one, and the 20s
+// parallel-Bolt window audit-merge sizes for stays the window in force.
+function emitCanonicalAuditEvent(
+  eventType: string,
+  fields: Record<string, string>,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): AppendAuditResult {
+  const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+  return otel.emitAuditEvent(eventType, fields, projectDir, intent, space);
+}
 
 function ensureAuditFile(projectDir: string, intent?: string, space?: string): string {
   const path = auditFilePath(projectDir, intent, space);
@@ -553,7 +591,11 @@ export function handleAppend(
 ): void {
   const rejection = presenceMintRejection(eventType);
   if (rejection) throw new Error(rejection);
-  const result = appendAuditEntry(eventType, fields, projectDir);
+  const unregistered = unregisteredEventRejection(eventType);
+  if (unregistered) throw new Error(unregistered);
+  const incomplete = missingRequiredRejection(eventType, fields);
+  if (incomplete) throw new Error(incomplete);
+  const result = emitCanonicalAuditEvent(eventType, fields, projectDir);
   jsonSuccess(result);
 }
 
@@ -787,7 +829,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   const mainText = readFileSync(mainAuditPath, "utf-8");
   const sourceHash = auditPrefixHash(mainText, boundary);
 
-  // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
+  // Audit-of-intent: emit BEFORE the disk copy. The canonical emit throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
   // when emit fails).
   const forkFields: Record<string, string> = {
@@ -797,7 +839,12 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   };
   // Distinguish a re-entry fork from an initial one in the audit trail.
   if (reentrant) forkFields.Reentrant = "true";
-  const result = appendAuditEntry(
+  // `Reentrant` survives the emit because the registry declares it an OPTIONAL
+  // attribute of AUDIT_FORKED and the redaction policy's safe keys are derived
+  // from required + optional. Before that, a default-deny policy built from
+  // required alone would have dropped the tag doctor reads to tell a re-entry
+  // fork from an initial one.
+  const result = emitCanonicalAuditEvent(
     "AUDIT_FORKED",
     forkFields,
     projectDir,
@@ -814,7 +861,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
     copyFileSync(mainAuditPath, wtAuditPath);
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
-    appendAuditEntry(
+    emitCanonicalAuditEvent(
       "ERROR_LOGGED",
       {
         Tool: "amadeus-audit",
@@ -1000,7 +1047,7 @@ export function mergeDeltaUnderLock(
       appendFileSync(mainAuditPath, delta, "utf-8");
       entriesMerged = countDeltaRecords(delta);
     }
-    const result = appendAuditEntryUnlocked(
+    const result = emitCanonicalAuditEvent(
       "AUDIT_MERGED",
       {
         "Bolt slug": coords.slug,
@@ -1015,7 +1062,7 @@ export function mergeDeltaUnderLock(
     return { entriesMerged, result };
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
-    appendAuditEntryUnlocked(
+    emitCanonicalAuditEvent(
       "ERROR_LOGGED",
       {
         Tool: "amadeus-audit",
@@ -1070,6 +1117,81 @@ const PRESENCE_PROTECTED_HEADINGS = new Set(
 export function presenceMintRejection(eventType: string): string | null {
   if (!PRESENCE_PROTECTED_EVENTS.has(eventType)) return null;
   return `Refusing to append "${eventType}" via the general audit CLI: presence/provenance events are minted only by their trusted in-process writers (HUMAN_TURN by the UserPromptSubmit hook; DELEGATED_APPROVAL/DELEGATED_REJECTION by amadeus-state delegate-approval/delegate-rejection).`;
+}
+
+// The event vocabulary the audit journal accepts, read from the registry lazily
+// and memoised. Telemetry defs carry `auditEvent: null` and so are absent by
+// construction — FR-EXP-4's "telemetry never reaches the journal" needs no
+// separate check.
+//
+// Lazy for the same reason emitCanonicalAuditEvent is, but a different hazard:
+// not a cycle (event-registry.ts is pure data and imports nothing) — module
+// FOOTPRINT. The hooks import this module, and a hook runs inside sandboxes
+// that copy tools/ alone; an eager `../otel/...` import makes every such
+// sandbox fail to load the hook before it reaches the behaviour under test.
+// Keeping the reference lazy leaves this module's load-time contract as the
+// hooks already rely on it.
+//
+// Widened to Set<string> deliberately: the registry is `as const`, so the
+// inferred element type is the 78-name literal union — but this guard's input
+// is untrusted CLI text, and narrowing it there would make the check
+// untypeable.
+// Keyed by the v1 audit event type, which is the vocabulary the CLI speaks.
+// Both guards below read this one map, so they can never disagree about which
+// events exist.
+let registeredAuditEventMap: Map<string, RegistryEventDef> | null = null;
+function registeredAuditEventDefs(): Map<string, RegistryEventDef> {
+  if (registeredAuditEventMap === null) {
+    const { REGISTERED_EVENTS } = require("../otel/event-registry.ts") as EventRegistryModule;
+    registeredAuditEventMap = new Map(
+      REGISTERED_EVENTS.flatMap((def) =>
+        def.durability === "canonical" && def.auditEvent !== null
+          ? ([[def.auditEvent, def]] as [string, RegistryEventDef][])
+          : []
+      )
+    );
+  }
+  return registeredAuditEventMap;
+}
+
+function registeredAuditEventTypes(): Set<string> {
+  return new Set(registeredAuditEventDefs().keys());
+}
+
+// `append` guard: refuse an event outside the registered vocabulary. Returns the
+// error message to surface, or null when clean.
+//
+// This duplicates what appendAuditEntry checks against VALID_EVENT_TYPES, and
+// deliberately so: that check lives in the LEGACY writer, which the
+// legacy-writer-removal Bolt deletes. Validating at the CLI entry instead keeps
+// the rejection readable and attributable to the CLI once the canonical path is
+// the only writer left — otherwise an unregistered event would travel to
+// emitEvent's registry lookup and throw from inside the emit.
+export function unregisteredEventRejection(eventType: string): string | null {
+  const registered = registeredAuditEventTypes();
+  if (registered.has(eventType)) return null;
+  return `Invalid event type: ${eventType}. Must be one of: ${[...registered].join(", ")}`;
+}
+
+// `append` guard: refuse a field set that omits a required attribute. Returns
+// the error message to surface, or null when clean.
+//
+// The canonical path fails closed on this too (emitEvent throws), but it throws
+// in the registry's OTel vocabulary and from inside the emit. Checking here lets
+// the CLI name the event type the CALLER passed and list what is missing.
+//
+// An unregistered event returns null: that is unregisteredEventRejection's
+// business, and reporting both would hand the caller a required-attribute
+// complaint about an event that does not exist.
+export function missingRequiredRejection(
+  eventType: string,
+  fields: Record<string, string>
+): string | null {
+  const def = registeredAuditEventDefs().get(eventType);
+  if (def === undefined) return null;
+  const missing = def.requiredAttributes.filter((key) => !(key in fields));
+  if (missing.length === 0) return null;
+  return `Missing required attribute(s) for ${eventType}: ${missing.join(", ")}. Required: ${def.requiredAttributes.join(", ")}`;
 }
 
 // `append-raw` guard: the block is a free-form heading + body, so a forger can

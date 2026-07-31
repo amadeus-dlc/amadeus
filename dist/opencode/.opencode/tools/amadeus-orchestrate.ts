@@ -68,7 +68,7 @@
 // invert the whole thesis).
 
 import { createHash, randomUUID } from "node:crypto";
-import { observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   closeSync,
   constants as fsConstants,
@@ -150,6 +150,7 @@ import {
   type OperatingMode,
   withIntentLifecyclePreflight,
   withAuditLock,
+  emitErrorAuditRow,
 } from "./amadeus-lib.ts";
 import {
   classifyApprovalAuthority,
@@ -475,11 +476,6 @@ function emit(directive: Directive, recordError = true): void {
   console.log(JSON.stringify(result.data));
 }
 
-// Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
-// pattern as amadeus-lib's emitError — the runtime cycle is broken by the
-// require() below; the type erases at compile time.
-import type { appendAuditEntry as AppendAuditEntry } from "./amadeus-audit.ts";
-
 // Re-entry guard mirroring amadeus-lib's emitError: if appending the audit row
 // itself fails and somehow routes back through here, we must not recurse.
 let _engineErrorInProgress = false;
@@ -531,18 +527,10 @@ export function recordEngineError(message: string, projectDir?: string): void {
       pd = resolveProjectDir(projectDirFlag);
     }
     if (!existsSync(stateFilePath(pd))) return;
-    // Lazy require breaks the load-time cycle exactly like lib's emitError
-    // (amadeus-audit.ts imports from this module's dependency graph).
-    const audit = require("./amadeus-audit.ts") as { appendAuditEntry: typeof AppendAuditEntry };
-    audit.appendAuditEntry(
-      "ERROR_LOGGED",
-      {
-        Tool: "amadeus-orchestrate",
-        Command: rawArgs.join(" "),
-        Error: message,
-      },
-      pd,
-    );
+    // The same ERROR_LOGGED row lib's emitError writes, through the same
+    // seam — one definition of "how this project records a tool failure",
+    // including the lazy require that breaks the load-time cycle.
+    emitErrorAuditRow(pd, "amadeus-orchestrate", rawArgs.join(" "), message);
   } catch {
     // Swallowed by contract — recording failure must not mask the original error.
   } finally {
@@ -573,7 +561,7 @@ interface ToolRun {
 }
 
 function runTool(projectDir: string | undefined, toolFile: string, args: string[]): ToolRun {
-  const proc = observeSubprocess(
+  const proc = observeSubprocessSpan(
     resolveProjectDir(projectDir),
     `${toolFile.replace(/\.ts$/, "")}:${args[0] ?? "?"}`,
     () =>
@@ -3364,7 +3352,7 @@ function spawnState(
   subArgs: string[],
 ): { exitCode: number; stdout: string; stderr: string } {
   const toolPath = fileURLToPath(new URL("./amadeus-state.ts", import.meta.url));
-  const result = observeSubprocess(projectDir, `amadeus-state:${subArgs[0] ?? "?"}`, () =>
+  const result = observeSubprocessSpan(projectDir, `amadeus-state:${subArgs[0] ?? "?"}`, () =>
     Bun.spawnSync({
       cmd: ["bun", "run", toolPath, ...subArgs, "--project-dir", projectDir],
       env: process.env,
@@ -3396,7 +3384,7 @@ function spawnAuditAppend(
   for (const [k, v] of Object.entries(fields)) {
     fieldArgs.push("--field", `${k}=${v}`);
   }
-  const result = observeSubprocess(projectDir, "amadeus-audit:append", () =>
+  const result = observeSubprocessSpan(projectDir, "amadeus-audit:append", () =>
     Bun.spawnSync({
       cmd: ["bun", "run", auditTool, "append", eventType, ...fieldArgs, "--project-dir", projectDir],
       stdout: "pipe",

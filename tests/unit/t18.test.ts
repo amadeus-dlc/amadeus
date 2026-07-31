@@ -60,6 +60,7 @@ import {
   handleAppend,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import { auditFilePath, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 const TOOL = amadeusToolTarget(
   fileURLToPath(
@@ -108,6 +109,9 @@ function records(proj: string): AuditRecord[] {
 
 function withProject(fn: (proj: string) => void): void {
   const proj = makeProject();
+  // The canonical emit path bootstraps per workspace and refuses a second
+  // bootstrap for a different project dir; each case gets a fresh project.
+  resetOtelPerProject();
   try {
     fn(proj);
   } finally {
@@ -246,7 +250,13 @@ describe("appendAuditEntry() — event-type heading + validation (in-process)", 
         return true;
       };
       try {
-        handleAppend("WORKFLOW_STARTED", { Scope: "feature" }, proj);
+        // Production always supplies both (amadeus-utility.ts's birth emit), and
+        // the registry marks both required — so the fixture carries both.
+        handleAppend(
+          "WORKFLOW_STARTED",
+          { Scope: "feature", Request: "/amadeus feature" },
+          proj,
+        );
       } finally {
         process.stdout.write = original;
       }
@@ -295,7 +305,9 @@ describe("amadeus-audit CLI shell (Bun.spawnSync env seam)", () => {
       const r = Bun.spawnSync({
         cmd: [
           "bun", TOOL, "append", "WORKFLOW_STARTED",
-          "--field", "Scope=feature", "--project-dir", proj,
+          // Both required attributes, as production's birth emit supplies them.
+          "--field", "Scope=feature", "--field", "Request=/amadeus feature",
+          "--project-dir", proj,
         ],
         stdout: "pipe",
         stderr: "pipe",

@@ -650,7 +650,11 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "practices",
     requiredAttributes: [],
-    optionalAttributes: ["Section name", "Fallback source"],
+    // The names the emitter actually passes (`--field "Section: ..."`,
+    // `--field "Fallback: ..."`), not the longer prose the docs used to carry.
+    // Redaction is default-deny over this vocabulary, so a name that does not
+    // match here is dropped from the row without a sound.
+    optionalAttributes: ["Section", "Fallback"],
     schemaVersion: 1,
   },
   // --- Merge Dispatch (3) ---

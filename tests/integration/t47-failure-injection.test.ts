@@ -102,6 +102,7 @@
 // a finally so a failed assertion can't leave an unremovable read-only dir.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { auditRowsFrom, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -219,12 +220,9 @@ function readAudit(p: string): string {
 }
 
 /** Parse a JSONL audit buffer into records (blank lines skipped). */
-function auditRecords(content: string): Array<Record<string, unknown>> {
-  return content
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+// Mixed v1/v2 shard while the OTel migration runs — see tests/harness/audit-rows.ts.
+function auditRecords(content: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(content);
 }
 
 interface CliResult {

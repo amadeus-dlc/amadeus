@@ -74,8 +74,12 @@ const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 // a longer name's call. `appendAuditEntryViaEvents` and `emitSwarmAudit` are
 // the migration-era emitters: a call site that moved onto the canonical Event
 // path is still a live emission, and the guard's question is whether the doc's
-// (event, emitter) row still names a file that emits it.
-// Two names beyond the writer family:
+// (event, emitter) row still names a file that emits it. Omitting a migrated
+// name would make this guard read a MIGRATED emitter as a MISSING one — the
+// question is "is this event still emitted from this file", not "which writer
+// does it use".
+//
+// Names beyond the writer family:
 //
 //   emitCanonical — the sensor dispatcher's lazily-resolved binding of
 //   appendAuditEntryViaEvents. The dispatcher cannot import the emit path at
@@ -87,8 +91,16 @@ const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 //   E-U7CG-Q3A), and emitEvent takes the registry's OTel name rather than the v1
 //   type — so the legacy literal this check looks for lives in the registry
 //   lookup that resolves it, one line above the emit.
+//
+//   emitAuditEvent / emitCanonicalAuditEvent / emitErrorAuditRow — the targeted
+//   emit seam (otel/audit-emit.ts), amadeus-audit.ts's lazily-required wrapper
+//   around it, and amadeus-lib.ts's ERROR_LOGGED row.
+//
+// Prefix pairs that make the ordering load-bearing: appendAuditEntry precedes
+// its ...ViaEvents/...Unlocked forms, emitCanonical its ...AuditEvent form, and
+// emitAudit its ...Event form — each longer name is listed first.
 const EMITTERS =
-  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|appendAuditEntry|appendAuditEvent|emitSwarmAudit|emitAudit|emitCanonical|getEventDefByAuditEvent)";
+  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|emitCanonicalAuditEvent|getEventDefByAuditEvent|emitErrorAuditRow|appendAuditEntry|appendAuditEvent|emitAuditEvent|emitSwarmAudit|emitCanonical|emitAudit)";
 
 /** Strip line comments so a commented-out emission does not count.
  *  Mirrors the .sh decommented(): drop //-prefixed lines and JSDoc *-lines. */

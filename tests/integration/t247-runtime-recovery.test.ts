@@ -1,8 +1,9 @@
 // covers: runtime-recovery:production-paths
 // @test-size medium
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import * as nodeFs from "node:fs";
 import {
@@ -315,6 +316,13 @@ function seedPhaseCheck(project: string, phase: string): void {
   mkdirSync(verification, { recursive: true });
   writeFileSync(join(verification, `phase-check-${phase}.md`), `# ${phase} verification\n`);
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t247 Bolt DAG recovery production path", () => {
   test("stale runtime cache heals read-side and routes the canonical first unit", () => {

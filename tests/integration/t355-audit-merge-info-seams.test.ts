@@ -8,6 +8,8 @@
 // shipped dist tree so the changed lines register in lcov (t219 precedent).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -40,10 +42,12 @@ let proj: string | undefined;
 let priorProjectDir: string | undefined;
 
 beforeEach(() => {
+  resetOtelPerProject();
   priorProjectDir = process.env.CLAUDE_PROJECT_DIR;
 });
 
 afterEach(() => {
+  resetOtelPerProject();
   if (priorProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
   else process.env.CLAUDE_PROJECT_DIR = priorProjectDir;
   cleanupTestProject(proj);
@@ -146,7 +150,8 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     const main = readFileSync(auditFilePath(proj), "utf-8");
     expect(main).toContain('"event":"BOLT_STARTED"');
     expect(main).toContain('"event":"BOLT_COMPLETED"');
-    expect(main).toContain('"event":"AUDIT_MERGED"');
+    // AUDIT_MERGED is migrated onto the canonical path, so the row is schema v2.
+    expect(countAuditEvent(main, "AUDIT_MERGED")).toBeGreaterThan(0);
     expect(main).toContain('"Entries Merged":"2"');
   });
 
@@ -212,10 +217,10 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     );
     expect(run.exited).toBe(true);
     const main = readFileSync(auditFilePath(proj), "utf-8");
-    expect(main).toContain('"event":"ERROR_LOGGED"');
+    expect(countAuditEvent(main, "ERROR_LOGGED")).toBeGreaterThan(0);
     expect(main).toContain(`[slug=${SLUG}]`);
     expect(main).toContain("[fork-emitted:2026-07-28T11:00:00Z]");
-    expect(main).not.toContain('"event":"AUDIT_MERGED"');
+    expect(countAuditEvent(main, "AUDIT_MERGED")).toBe(0);
   });
 
   test("prefix-hash mismatch refuses with the tampering classification", () => {

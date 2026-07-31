@@ -5,7 +5,8 @@
 // migration. Every assertion crosses the real process seam and observes only
 // exit status, JSON, Git, or filesystem state.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -300,6 +301,13 @@ function expectReadOnlyRefusal(
 
 afterEach(() => {
   for (const project of fixtures.splice(0)) project.cleanup();
+});
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
 });
 
 describe("t224 upstream-v2 migration public CLI", () => {
@@ -1363,7 +1371,11 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "--apply",
       );
       expect(collided.status).toBe(1);
-      expect(collided.stdout).toContain("Failed to acquire audit lock after retries");
+      // The canonical emit locks through withAuditLock, which raises the typed
+      // AuditLockAcquireError naming the bucket and the exhausted budget, where
+      // the legacy writer raised a bare "after retries". What this case pins is
+      // that the collision surfaces as an acquire failure at all.
+      expect(collided.stdout).toContain("Failed to acquire audit lock");
       expect(parseReport(collided).evidence.rollback).toEqual({
         attempted: true,
         restored: true,
@@ -1386,7 +1398,10 @@ describe("t224 upstream-v2 migration public CLI", () => {
       rmSync(sharedLockBase, { recursive: true, force: true });
       rmSync(collisionRoot, { recursive: true, force: true });
     }
-  });
+    // The collision arm deliberately spends the whole acquire budget
+    // (50 x 100ms = 5.0s) before the failure it asserts on, so the case cannot
+    // fit inside bun's 5s default — that is the scenario, not slowness.
+  }, 60_000);
 
   test("a real doctor failure rolls the workspace and Git index back", () => {
     const project = fixture();

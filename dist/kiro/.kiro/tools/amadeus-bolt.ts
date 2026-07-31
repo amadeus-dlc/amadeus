@@ -56,7 +56,9 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 function emitAudit(
   pd: string,
@@ -65,7 +67,10 @@ function emitAudit(
   intent?: string,
   space?: string
 ): void {
-  appendAuditEntry(eventType, fields, pd, intent, space);
+  // Targeted: intent/space name the ledger this Bolt operation belongs to, and
+  // the target drives both the shard the row lands in and the row's own
+  // identity fields.
+  emitAuditEvent(eventType, fields, pd, intent, space);
 }
 
 // The intent/space/repo SELECTOR re-serialised for a delegated sibling spawn. A
@@ -117,7 +122,7 @@ function spawnSibling(
     | "amadeus-runtime.ts",
   subargs: string[]
 ): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
-  const result = observeSubprocess(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
+  const result = observeSubprocessSpan(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
     spawnSync(
       "bun",
       [

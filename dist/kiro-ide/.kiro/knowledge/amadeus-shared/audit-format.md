@@ -173,7 +173,7 @@ Emitted by the Inception stage `practices-discovery` and by the Construction orc
 | `PRACTICES_DISCOVERED` | Brownfield discovery dispatch + drafting completed; team-practices draft awaiting affirmation | — | Sources Scanned, Drafts | `tools/amadeus-state.ts` `practices-event --type discovered` |
 | `PRACTICES_AFFIRMED` | Team approved practices at the practices-discovery affirmation gate; content promoted to `.kiro/steering/amadeus-team.md` and `.kiro/steering/amadeus-project.md` | — | Affirming User, Sections Written, Mandated Rules Appended, Forbidden Rules Appended, Timestamp | `tools/amadeus-state.ts` `practices-promote` |
 | `PRACTICES_OVERRIDE` | Cross-row promotion failed during practices-discovery affirmation, OR walking-skeleton stance from `amadeus-team.md` overrode bolt-plan's marker for the current Bolt | Reason | Timestamp, Practices Stance, Bolt-Plan Marker, Bolt slug | `tools/amadeus-state.ts` `practices-promote` (write-failure path); `tools/amadeus-state.ts` `practices-event --type override` (bolt-plan-marker-conflict path — discriminator-field disambiguation, no separate event) |
-| `PRACTICES_SECTION_EMPTY` | Orchestrator read a practices section that returned empty; falling back to org defaults (advisory-only) | — | Section name, Fallback source | `tools/amadeus-state.ts` `practices-event --type empty` |
+| `PRACTICES_SECTION_EMPTY` | Orchestrator read a practices section that returned empty; falling back to org defaults (advisory-only) | — | Section, Fallback | `tools/amadeus-state.ts` `practices-event --type empty` |
 
 ### Merge Dispatch (3 events)
 

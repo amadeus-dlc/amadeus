@@ -1,4 +1,5 @@
 // size: medium
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -109,6 +110,13 @@ afterEach(() => {
     "AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET",
     savedEnv.swapHeartbeat,
   );
+});
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
 });
 
 describe("t257 doctor core result and context contracts", () => {
@@ -340,7 +348,12 @@ describe("t257 doctor CLI boundary and fatal ordering", () => {
     }
 
     expect(String(thrown)).not.toContain("Doctor failed after completing its output");
-    expect(String(thrown)).toContain("Failed to acquire audit lock after retries");
+    // The canonical emit locks through withAuditLock, which raises the typed
+    // AuditLockAcquireError ("...after 50 × 100ms = 5.0s retries") where the
+    // legacy writer raised a bare "after retries". The case is that doctor
+    // PRESERVES the acquire failure rather than replacing it with its own, so
+    // match the invariant part of the message, not the legacy wording.
+    expect(String(thrown)).toContain("Failed to acquire audit lock");
     expect(writeCount).toBe(0);
     expect(exitCount).toBe(0);
   }, 10_000);
