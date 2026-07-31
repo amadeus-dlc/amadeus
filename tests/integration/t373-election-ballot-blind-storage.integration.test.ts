@@ -5,7 +5,15 @@
 // rationale through a file-change notification or `git status` / `git diff`.
 // Layer: integration (real tmp elections root + a real `git check-ignore` run).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Election, Goa } from "../../packages/framework/core/tools/amadeus-election-model";
@@ -221,6 +229,46 @@ describe("t373 election ballot blind storage (#1773)", () => {
       expect(l2.value.late.length).toBe(1);
       expect(l2.value.late[0]?.reexamRequired).toBe(true);
     }
+  });
+
+  test("io-error branches of the pending lane: unreadable dir, blocked mkdir, undeletable drain", () => {
+    // (1) readPending readdir catch — the pending directory exists but cannot
+    // be listed (permission 000), so every reader fails loudly.
+    expect(Store.create(root, election()).ok).toBe(true);
+    expect(Store.setState(root, "E-BLIND-1", "collecting").ok).toBe(true);
+    expect(Store.appendBallot(root, "E-BLIND-1", ballot("alice"), RECV).ok).toBe(true);
+    const pending = pendingDir(dirOf());
+    chmodSync(pending, 0o000);
+    const unreadable = Store.ledger(root, "E-BLIND-1");
+    chmodSync(pending, 0o755);
+    expect(unreadable.ok).toBe(false);
+    if (!unreadable.ok) expect(unreadable.error).toBe("io-error");
+
+    // (2) integratePending rmSync catch — the drain cannot remove the entries
+    // because the pending directory itself is not writable.
+    chmodSync(pending, 0o555);
+    const blockedDrain = Store.materialize(
+      root,
+      "E-BLIND-1",
+      { kind: "hold", reason: "tie", counts: { favor: 0, against: 0, abstain: 0, discuss: 0 } },
+      "2026-07-31T01:00:00Z",
+    );
+    chmodSync(pending, 0o755);
+    expect(blockedDrain.ok).toBe(false);
+    if (!blockedDrain.ok) expect(blockedDrain.error).toBe("io-error");
+
+    // (3) appendPending mkdir catch — a plain file occupies the pending path.
+    expect(Store.create(root, election({ electionId: "E-BLIND-3" })).ok).toBe(true);
+    expect(Store.setState(root, "E-BLIND-3", "collecting").ok).toBe(true);
+    writeFileSync(pendingDir(dirOf("E-BLIND-3")), "not a dir");
+    const blockedMkdir = Store.appendBallot(
+      root,
+      "E-BLIND-3",
+      ballot("alice", 2, "E-BLIND-3"),
+      RECV,
+    );
+    expect(blockedMkdir.ok).toBe(false);
+    if (!blockedMkdir.ok) expect(blockedMkdir.error).toBe("io-error");
   });
 
   test("the pending directory is gitignored in this repo and in every shipped harness gitignore", () => {
