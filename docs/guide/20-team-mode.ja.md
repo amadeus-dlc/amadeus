@@ -96,10 +96,17 @@ role は `leader`、`e1`、`e2` などです。backend の詳細、配送の意�
   "electionId": "E-EXAMPLE-1",
   "kind": "zero-confirm",
   "question": "提案を承認しますか？",
-  "choices": [{ "internalNo": 1, "label": "approve" }],
+  "choices": [
+    { "internalNo": 1, "label": "approve", "description": "提案を原文のまま採用する。" }
+  ],
   "voters": ["e1"]
 }
 ```
+
+各選択肢には任意の `description`(その選択肢の本文)を付けられます。
+投票者ごとの blind view には選挙の `question` と各選択肢の `description` が
+含まれるため、自分の view だけを読んだ投票者にも議題と各選択肢の意味が分かります。
+`description` のない選択肢も有効で、その場合 view からキー自体が省かれます。
 
 ```bash
 bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --file election.json
