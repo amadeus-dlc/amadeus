@@ -532,6 +532,13 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
 // directly so their lines are measured by LCOV; the spawned round-trip above
 // proves end-to-end behaviour but subprocess execution is not instrumented). ---
 describe("in-process handler seams (coverage)", () => {
+  // Each case here mints its own fixture project and drives a handler that
+  // reaches the canonical emit, which registers a Logger Provider for one
+  // workspace per process — so drop the registration between cases.
+  beforeEach(() => {
+    resetOtelPerProject();
+  });
+
   class ExitSignal extends Error {
     constructor(public readonly code: number) {
       super(`exit ${code}`);

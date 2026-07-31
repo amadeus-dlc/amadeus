@@ -260,12 +260,17 @@ function makeProj(): string {
   git(["add", "-A"]);
   git(["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"]);
   // Window for the parallel-Bolt populator to detect instances in.
+  // Field sets match the real emitters: the registry marks Scope+Request
+  // required on WORKFLOW_STARTED and Stage+Agent on STAGE_STARTED, and the CLI
+  // append entry rejects an incomplete set.
   auditAppend(proj, "WORKFLOW_STARTED", [
-    ["Workflow ID", `t49-${Math.floor(Math.random() * 1e9)}`],
     ["Scope", "feature"],
-    ["Intent", "t49"],
+    ["Request", `/amadeus t49-${Math.floor(Math.random() * 1e9)}`],
   ]);
-  auditAppend(proj, "STAGE_STARTED", [["Stage", "code-generation"]]);
+  auditAppend(proj, "STAGE_STARTED", [
+    ["Stage", "code-generation"],
+    ["Agent", "developer"],
+  ]);
   return proj;
 }
 
@@ -346,18 +351,23 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     );
     mkdirSync(join(payWt, "amadeus"), { recursive: true });
     writeFileSync(join(payWt, "amadeus", ".amadeus-clone-id"), mainCloneId, "utf-8");
+    // The names the sensor dispatcher actually emits (amadeus-sensor.ts
+    // baseFields): "Sensor ID"/"Stage slug"/"Fire id", not the shorter labels
+    // this fixture used to carry — the legacy writer accepted any key, the
+    // canonical path redacts anything outside the registry vocabulary.
     auditAppend(payWt, "SENSOR_FIRED", [
-      ["Sensor", "required-sections"],
-      ["Stage", "code-generation"],
+      ["Fire id", "t49-fire-1"],
+      ["Sensor ID", "required-sections"],
+      ["Stage slug", "code-generation"],
       ["Output path", "amadeus-docs/some-output.md"],
-      ["Bolt slug", "pay"],
     ]);
     auditAppend(payWt, "SENSOR_FAILED", [
-      ["Sensor", "required-sections"],
-      ["Stage", "code-generation"],
+      ["Fire id", "t49-fire-1"],
+      ["Sensor ID", "required-sections"],
+      ["Stage slug", "code-generation"],
       ["Output path", "amadeus-docs/some-output.md"],
       ["Detail path", "amadeus-docs/.amadeus-sensors/required-sections-fail.txt"],
-      ["Bolt slug", "pay"],
+      ["Findings count", "1"],
     ]);
 
     // Complete all 3 in arbitrary order, then compile.
