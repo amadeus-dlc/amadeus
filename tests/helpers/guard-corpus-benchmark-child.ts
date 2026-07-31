@@ -6,6 +6,11 @@ import ts from "typescript";
 
 const WARMUP_ROUNDS = 10;
 const SAMPLE_ROUNDS = 100;
+// The memory probes only need resident set size to settle, not a latency
+// distribution, so they run a short loop. Keeping them cheap holds this
+// benchmark's total CPU footprint near the pre-#1797 cost, which matters
+// because sibling latency tests share the runner's parallel band.
+const RSS_ROUNDS = 20;
 
 const tools = join(import.meta.dir, "../../packages/framework/core/tools");
 const files = [
@@ -44,7 +49,7 @@ function measureRss(copies: number): number {
   const source = build(copies);
   for (let round = 0; round < WARMUP_ROUNDS; round += 1) traverse(source);
   const samples: number[] = [];
-  for (let round = 0; round < SAMPLE_ROUNDS; round += 1) {
+  for (let round = 0; round < RSS_ROUNDS; round += 1) {
     traverse(source);
     samples.push(process.memoryUsage.rss());
   }
