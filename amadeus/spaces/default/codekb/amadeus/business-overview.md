@@ -1,6 +1,71 @@
 # ビジネス概要
 
-## オープンバグ3件の業務境界（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の業務境界（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 利用者影響
+
+| Issue | P/S | 影響を受ける利用者 | 症状 |
+| --- | --- | --- | --- |
+| #1811 | P1/S2 | テストスイートを回す全開発者（ローカル・CI 双方） | テスト終了後もプロセスが残留し、ホストのプロセス表と資源を蝕む。ライブ実測で**84本の残留**（全 PPID=1、1 launch = 7 role）。累積するとホスト負荷を押し上げ、他のテストを負荷起因で不安定にする |
+| #1800 | P3/S3 | テスト失敗を調査する開発者 | 失敗時の出力が `expected 1, received -1` に留まり、signal 終了なのか spawn 失敗なのかが読めない。切り分けコストが直接発生する |
+| #1797 | P3/S4 | CI を待つ全開発者 | 負荷変動で比 assert が偽赤になり、無関係な PR が塞がれる。実測 `2.5065` vs 閾値 `2.5`（マージン 0.26%） |
+| #1816 | P3/S4 | mirror Issue を共有面として読むチーム・ステークホルダー | 完了した Intent の mirror Issue が `## Status: Running` のまま close される。**外部から見える面の情報が事実と食い違う** |
+
+### 影響の質的な差
+
+**#1811 は他3件の前提条件でもある。** 残留プロセスはホスト負荷そのものであり、#1800（spawn `EAGAIN` が第一容疑）と #1797（負荷変動による比のずれ）の発火確率を押し上げている。P1 の位置づけはこの波及効果を含む。
+
+**#1816 だけがエンドユーザー可視である。** 他3件は開発者体験（DX）と CI 安定性の問題だが、#1816 は GitHub Issue という**共有面の正確性**の問題である。record を正本、Issue を一方向の共有ビューとする設計（`cid:requirements-analysis:intent-first-mirror-issue`）において、共有ビューが正本と食い違うことは設計意図の破れに当たる。
+
+### Delivery boundary
+
+4件を1 Intent で追跡し、**1 Issue = 1 Bolt = 1 GitHub Pull Request**とする。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+| Issue | Bolt | 既存 open PR |
+| --- | --- | --- |
+| [#1811](https://github.com/amadeus-dlc/amadeus/issues/1811) | Bolt 1 | なし（conductor が起動前に実測、0件） |
+| [#1800](https://github.com/amadeus-dlc/amadeus/issues/1800) | Bolt 2 | なし |
+| [#1797](https://github.com/amadeus-dlc/amadeus/issues/1797) | Bolt 3 | なし |
+| [#1816](https://github.com/amadeus-dlc/amadeus/issues/1816) | Bolt 4 | なし |
+
+既存 open PR の棚卸しは `cid:reverse-engineering:c1-preexisting-pr-inventory`（バグ修正 intent の起動時に対象 Issue ごとの既存 PR を検査する）に従い実施済みで、**4件とも 0件**。前 intent（260730-open-bug-batch-2）で発生した「既存 PR を見落として再実装する」経路は本 intent では発生しない。
+
+`self-fix` スコープのため walking-skeleton のセレモニーは適用しない（org.md § Walking Skeleton — 既存コードベースへのインクリメンタルな作業）。
+
+### スコープ境界
+
+**スコープ内**:
+
+- #1811: テスト fixture の stub 設計と `afterEach` 掃引（本番非改変を推奨）
+- #1800: 失敗系診断の対称化（必須）と spawn-error 限定リトライ（要件段で確定）
+- #1797: 計測設計の是正。数値は負荷スイープ実測から導出
+- #1816: **表示層に限定した**終端化
+
+**スコープ外（要件段で明示的に申告する）**:
+
+| 事項 | 理由 |
+| --- | --- |
+| #1800 の並列度制御 | 別課題。診断の是正で切り分け可能になった後に判断する |
+| #1816 の「record 着地前 close」挙動 | PR #1689 の設計帰結であり `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts:262` で契約固定済み。**仕様裁定マター**（`cid:reverse-engineering:c1-pinned-behavior-ruling`） |
+| #1811 の本番 supervisor 改変 | 本番は既に fail-closed 実装済み（`team-up-codex-safety-wait.ts:643`、`:561-582`）。改変すると生成面で #1816 と交差する |
+
+**「再現しなかったので閉じる」は認めない** — #1800 は負荷条件依存で発火するため、再現不能時の受理条件を要件段で明示する（`cid:build-and-test:no-silent-scope-narrowing` — 要件・RAID が規定した検証項目を conductor 判断で先送りしない）。
+
+### 前 intent からの継続
+
+本区間（`3f73823b1..6e7a9d701`）で前 intent（260730-open-bug-batch-3）の3件が**全件着地した**。
+
+| Issue | 着地 | 業務上の意味 |
+| --- | --- | --- |
+| #1773 | `25f54b066` | 未開票中の票が共有ファイル・`git status` から読めた blind 性の破れを解消。選挙の独立性という第一原理 P1 の実装面が回復 |
+| #1772 | `75367ba67` | 投票者が設問文すら受け取れなかった状態を解消。判断に必要な情報が投票者へ届く |
+| #1752 | `8a8abf567` | 指示に従った利用者が自分の成功で拒否される自己矛盾を解消 |
+
+本 intent の4件はいずれもこれらと機構が重ならない。共有面の正確性（#1816）は #1752 と同じ mirror 領域だが、患部は表示層であり boundary 判定層ではない。
+
+## オープンバグ3件の業務境界（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 3件は「選挙の情報設計が投票者・非投票者の双方に対して誤っている（#1773 / #1772）」と「mirror の指示と受理条件が矛盾する（#1752）」の2系統に分かれる。所有機構は選挙層（`amadeus-election-*`）と mirror/engine 層（`amadeus-orchestrate.ts`）で完全に分離しており、1 Issue = 1 Bolt = 1 GitHub Pull Request を維持したまま並行実装できる（`cid:code-generation:c6` の非交差判定）。
 

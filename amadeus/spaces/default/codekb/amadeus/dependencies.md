@@ -1,6 +1,96 @@
 # 依存関係
 
-## オープンバグ3件の依存関係（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の依存関係（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### Bolt 間の交差判定
+
+**4件とも並行可**（`cid:code-generation:c6` — 交差判定は静的目録でなく実 diff で再評価する。本節は着手前の静的目録であり、着地順は実 diff で再評価する）。
+
+| 組 | ファイル交差 | 生成面交差 | 判定 |
+| --- | --- | --- | --- |
+| #1811 × #1800 | なし（別テストファイル） | なし（両方テスト面） | **並行可** |
+| #1811 × #1797 | なし | なし | **並行可** |
+| #1811 × #1816 | なし | **条件付き** — #1811 が本番非改変なら交差なし | **並行可（条件1）** |
+| #1800 × #1797 | なし | なし | **並行可** |
+| #1800 × #1816 | なし | なし | **並行可** |
+| #1797 × #1816 | **条件付き** — `tests/.coverage-patch-allowlist.json` は #1816 のみが触れる | なし | **並行可（条件2）** |
+
+### 並行の条件（2点）
+
+**条件1: #1811 の本番非改変を確定する。**
+
+`packages/framework/core/tools/team-up-codex-safety-wait.ts` または `packages/framework/core/tools/team-up.sh` を触ると、`bun scripts/package.ts` → 7 dist → `bun run promote:self` → self-install の再生成チェーンを通る。#1816 は同チェーンを必ず通るため、**生成面で交差する**。
+
+本番側は既に fail-closed 実装済み（`:643` の `runRecordIsActive` ループ、`:561-582` の `catch` → `false`）であり、患部はテスト fixture 側に限局する。本番非改変が成立する限り交差は生じない。
+
+**条件2: `tests/.coverage-patch-allowlist.json` へ触れるのは #1816 のみとする。**
+
+同ファイルは本区間（`3f73823b1..6e7a9d701`）で `+38/−38` の全面 remap を受けたばかりである。#1816 は `amadeus-mirror-presentation.ts` へ行を挿入するため presentation 行ピン5件（`193-194` / `230-234` / `237-239` / `245-247` / `266-271`）の機械 remap を要する（`cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+#1797 の対象である `t259` エントリ群は**別テスト由来**であり本件では触らない。この境界を守れば共有台帳の挿入衝突（`cid:code-generation:shared-ledger-insert-collision`）は発生しない。
+
+### 順序依存（交差とは別軸）
+
+**#1811 の着地は #1800 / #1797 の再現条件を変える。**
+
+| Issue | 依存の内容 |
+| --- | --- |
+| #1800 | 第一容疑は負荷条件下の spawn `EAGAIN`。#1811 の残留プロセス（実測84本）が解消されるとホスト負荷が下がり、再現確率が変わる |
+| #1797 | 比のずれは負荷変動由来。同様に再現条件が変わる |
+
+**負荷スイープ実測を #1811 の着地前に取るか後に取るかを要件段で固定する。**
+
+- **前**に取る → 残留込みの最悪条件を測る（保守的な閾値になる）
+- **後**に取る → 本来あるべき条件を測る（実運用に即した閾値になる）
+
+どちらを選ぶかで導出される数値が変わるため、実装段の裁量に委ねない。これは交差（同時実行の可否）ではなく**測定条件の依存**であり、並行実装自体は妨げない。
+
+### 外部依存
+
+本 intent の4件はいずれも**新規の外部依存を導入しない**。
+
+| Issue | 依存する既存機構 |
+| --- | --- |
+| #1811 | `packages/framework/core/tools/team-up.sh:508` の PID 追跡（`safety-wait.pid`）。掃引は `afterEach`（`:39-41`）の `rmSync` より**前**に行う順序依存あり |
+| #1800 | 同一ファイル内の既存診断ヘルパー `expectSuccessfulMigration`（`:218`）と3分類契約（`:311-313`）。新機構の導入ではなく既存様式への合流 |
+| #1797 | `tests/helpers/guard-corpus-benchmark-child.ts`（子プロセス側）。交互計測を採る場合の主改修面 |
+| #1816 | `snapshot.completionInstance`（型 `amadeus-mirror-types.ts:516` / `:527`、codec `amadeus-mirror-state-codec.ts:567` / `:763` / `:770` / `:775`、供給 `amadeus-mirror-lifecycle.ts:339`）。presentation では**未消費**のため参照を新設する |
+
+### 再生成チェーンの依存
+
+`packages/framework/core/` を触る変更（**#1816 のみ**）は以下を同一変更で同期する（project.md § Mandated）:
+
+1. `bun scripts/package.ts` → `dist/` 7ハーネス（`claude` / `codex` / `cursor` / `opencode` / `kimi` / `kiro` / `kiro-ide`）
+2. `bun run promote:self` → self-install ツリー
+3. `bun run dist:check` / `bun run promote:self:check` で一致を検証
+
+他3件はテスト面に閉じるためこのチェーンを通らない。
+
+### 検証コマンドの依存
+
+全 Bolt 共通（project.md § Testing Posture）:
+
+- `bun run typecheck`
+- `bun run lint`
+- `bun run dist:check`（#1816 のみ実質的な差分を持つ）
+- `bun run promote:self:check`（同上）
+- `bash tests/run-tests.sh --ci`
+
+**#1797 は追加で負荷スイープ実測を要する**（並列度を振った計測 — `cid:feasibility:parallelism-sweep-before-commit` の系譜）。**#1811 は追加でプロセス残留の実測**（launch → テスト終了 → `ps` でのゼロ確認）を要する。
+
+### 本区間で変化した依存関係（本 intent の患部外）
+
+| 変化 | 内容 |
+| --- | --- |
+| 選挙ストアの新規内部依存 | `amadeus-election-store.ts` が pending lane 6関数（`pendingDir` `:113` / `readPending` `:139` / `appendPending` `:161` / `ballotKey` `:187` / `pendingNotOnLedger` `:197` / `integratePending` `:205`）を持ち、tally 経路（`:535` / `:540` / `:601` / `:619` / `:663`）から消費する |
+| orchestrate → mirror codec の新規依存 | `amadeus-orchestrate.ts:193` が `succeededMirrorCreateExists` を import し、`:4249` で消費（実装は `amadeus-mirror-state-codec.ts:1731`） |
+| `.gitignore` 面の拡張 | ルート + 7ハーネス `dot-gitignore` へ `amadeus/spaces/*/elections/*/pending/` を追加（各 `+5`） |
+
+**外部パッケージ依存の追加・削除は本区間で 0件**。core tools への新規モジュール追加も 0件（前区間の +9件と対照的）。
+
+## オープンバグ3件の依存関係（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 **判断: 外部依存の変化なし。ただし Bolt 間にファイル交差が1組ある。** 区間 `a38a1f4d3..3f73823b1` で `package.json` の依存追加・削除・更新はない（ルート依存は Bun types / TypeScript / Biome / fast-check / Agent SDK / release-it の既存集合のまま）。
 

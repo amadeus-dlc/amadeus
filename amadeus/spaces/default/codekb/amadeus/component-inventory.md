@@ -1,6 +1,95 @@
 # コンポーネント棚卸し
 
-## オープンバグ3件の対象コンポーネント（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 修正面の目録
+
+| Issue | 主対象コンポーネント | 種別 | 補助対象 | 本番コード変更 |
+| --- | --- | --- | --- | --- |
+| #1811 P1/S2 | `tests/integration/t-team-up-codex-resume.serial.test.ts`（1,813行） | テスト fixture | なし | **不要（推奨: 非改変）** |
+| #1800 P3/S3 | `tests/integration/t224-upstream-v2-migration-cli.test.ts`（1,830行） | テスト診断 | なし | 不要 |
+| #1797 P3/S4 | `tests/integration/t259-guard-corpus.test.ts`（126行） | テスト計測 | `tests/helpers/guard-corpus-benchmark-child.ts` | 不要 |
+| #1816 P3/S4 | `packages/framework/core/tools/amadeus-mirror-presentation.ts` | 本番（表示層） | `tests/.coverage-patch-allowlist.json`（行ピン5件の remap）、`tests/unit/t281-amadeus-mirror-presentation.test.ts`（ケース追加） | **必要** → 7 dist + self-install 再生成 |
+
+**#1816 のみが `packages/framework/core/` を触る。** 他3件はテスト面に閉じるため、生成面（`dist/` 7ハーネス + self-install）の再生成チェーンを通らない。
+
+### コンポーネント別の詳細
+
+#### `tests/integration/t-team-up-codex-resume.serial.test.ts`（#1811）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| fake supervisor stub の終了ハンドラ | `:218` | `process.on("SIGTERM", () => process.exit(0));` — 唯一の終了経路 |
+| fake supervisor stub の event loop 保持 | `:219` | `setInterval(() => {}, 1_000);` — 不死化の直接原因 |
+| `afterEach` | `:39-41` | 一時ディレクトリの `rmSync` のみ。プロセス掃引なし。**掃引を追加する場合は `rmSync` より前**（PID ファイルが同ディレクトリ配下にある） |
+| 漏洩テスト | `:590` / `:973` / `:1004` | いずれも `--kill` を通らずに終端 |
+| 案 A の影響検証対象 | `:717` / `:774` / `:823` | stub へ record ポーリングを付与した場合に挙動が変わりうる3テスト |
+
+**関連する本番コンポーネント（改変対象ではない — 契約の参照元）**:
+
+| コンポーネント | 行 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up-codex-safety-wait.ts` | `:643` | `while (await runRecordIsActive(runRecord, run, session)) {` — run record 消滅で自律終了する fail-closed ループ |
+| 同上 | `:561`（宣言）/ `:580-582` | `runRecordIsActive` の `catch` → `return false` |
+| `packages/framework/core/tools/team-up.sh` | `:508` | `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"` — 掃引に使える PID 追跡面 |
+
+#### `tests/integration/t224-upstream-v2-migration-cli.test.ts`（#1800）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| 終了状態の正規化（2箇所の同型ヘルパー） | `:170` / `:210` | `status: result.status ?? -1,` — `-1` は signal 終了 or spawn 失敗のセンチネル |
+| 診断ヘルパー | `:218`（宣言）/ `:225-238`（メッセージ配列） | `expectSuccessfulMigration` — exit path / status / signal / error / stdout / stderr を並べる |
+| 3分類の契約固定 | `:311-313` | `exit-status` / `signal` / `spawn-error` の `test.each` |
+| **患部** | `:1411` | `expect(collided.status).toBe(1);` — 素の等値比較で診断が非対称 |
+
+#### `tests/integration/t259-guard-corpus.test.ts`（#1797）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| `median` | `:46`（宣言）/ `:47-48` | t258 裁定の反映として適用済み |
+| 計測呼び出し | `:89`（`measure` 宣言）/ `:101` / `:102` | `measure(1)` と `measure(2)` を**逐次に別プロセスで** spawn |
+| **患部** | `:108` / `:109` | 時間比・RSS 比の `toBeLessThanOrEqual(2.5)` |
+| 子プロセス | `tests/helpers/guard-corpus-benchmark-child.ts` | 交互計測（案 (i)）を採る場合の主改修面 |
+
+`tests/.coverage-patch-allowlist.json` の `t259` エントリ群は**別テスト由来**であり本件では触らない。
+
+#### `packages/framework/core/tools/amadeus-mirror-presentation.ts`（#1816）
+
+| 要素 | 行 | 役割 |
+| --- | --- | --- |
+| `renderMirrorIssueContent` | `:239`（宣言）〜`:273` | body 組立は `:245-267` |
+| **患部** | `:259-260` | `"## Status",` / `snapshot.status,` — snapshot の逐語レンダリング |
+| `## Stage` / `## Phase` | `:253-257` | 終端化の対象にするかは要件段の確定事項 |
+| `renderMirrorStatus` | `:298`（宣言） | `buildMirrorStatusRecordView` の drift 診断が偽 drift を出さないよう導出キーの選定に注意 |
+
+**`completionInstance` は本ファイルで未消費**（`grep` 0ヒット）。消費側は executor `:394` / coordinator `:279` `:284` / policy `:254` / lifecycle `:339` / state-codec `:567` `:763` `:770` `:775` / types `:516` `:527` / `amadeus-state.ts:533` ほか。
+
+**関連する本番コンポーネント**:
+
+| コンポーネント | 行 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-mirror-executor.ts` | `:1156-1159` | sync → `editIssue(permit, body)` / close → `closeIssue(permit)` の非対称（close は body を書かない） |
+| 同上 | `:1038-1041` | 収束判定も同じ非対称（sync = body 一致 / close = state CLOSED） |
+| `packages/framework/core/tools/amadeus-mirror-lifecycle.ts` | `:311-312` | pending completion を持つ snapshot に `Running` を強制する assert（`:311-316` が assert ブロック）。**改訂不要** |
+
+**`tests/.coverage-patch-allowlist.json` の presentation 行ピン**: `193-194` / `230-234` / `237-239` / `245-247` / `266-271` の5件。`renderMirrorIssueContent`（`:239-273`）と交差するのは `245-247`（直撃）と `266-271`（下方シフト）。機械 remap 必須（`cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+### 本区間で変化したコンポーネント（本 intent の患部外）
+
+| コンポーネント | 変化 | 由来 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-election-store.ts` | `+168/−10` — pending ballot lane 6関数を新設 | #1773 修正（`25f54b066`） |
+| `packages/framework/core/tools/amadeus-election-model.ts` | `+36/−9` — view へ question / choice description を搬送 | #1772 修正（`75367ba67`） |
+| `packages/framework/core/tools/amadeus-mirror-state-codec.ts` | `succeededMirrorCreateExists` を `:1731` に新設 | #1752 修正（`8a8abf567`） |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `+10/−3` — `:4249` で `createRan` を導出 | 同上 |
+| `.github/workflows/release.yml` | `+68/−22` — 再実行可能ジョブへ分割 | #1799（`b488466b8`） |
+| ルート `.gitignore` + 7ハーネス `dot-gitignore` | 各 `+5/−0` — pending lane 除外 | #1773 修正 |
+
+sensors / hooks / scopes の構成は不変。core tools への**新規モジュール追加は 0件**（前区間の +9件と対照的）。
+
+## オープンバグ3件の対象コンポーネント（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 本節の file:line はすべて observed `3f73823b1` 時点。
 

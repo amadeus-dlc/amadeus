@@ -1,6 +1,144 @@
 # アーキテクチャ
 
-## オープンバグ3件の対象機構（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+## オープンバグ4件の対象機構（260731-open-bug-batch-4、現在、observed `6e7a9d701`）
+
+本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。4件は所有機構が「テストハーネスのプロセス寿命」「テストの診断設計」「ベンチマークの計測設計」「mirror の表示層」に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。**3件（#1811 / #1800 / #1797）は患部がテスト側にあり本番コードを触らない**という共通性質を持つ。
+
+### 機構 A — fake supervisor stub が不死設計でテスト後もプロセスが残留する（#1811 P1/S2）
+
+患部は本番コードではなく**テスト fixture の stub 設計**にある。`tests/integration/t-team-up-codex-resume.serial.test.ts` が生成する fake safety-wait supervisor は、終了条件を SIGTERM ひとつだけに委ねている。
+
+- `:218` verbatim: `process.on("SIGTERM", () => process.exit(0));`
+- `:219` verbatim: `setInterval(() => {}, 1_000);`
+
+`setInterval` が event loop を無期限に保持するため、SIGTERM を明示的に送らない限りプロセスは終わらない。掃引の受け皿も無い — `afterEach`（`:39-41`）は一時ディレクトリの `rmSync` のみで、生成したプロセスの kill/reap を一切行わない。
+
+**漏洩する経路は3本**（いずれも `--kill` を通らずに終端する）:
+
+| 行 | テスト | 漏洩の理由 |
+| --- | --- | --- |
+| `:590` | `a fresh Codex launch pre-registers every role with agmsg` | launch のみで `--kill` を呼ばない |
+| `:973` | `continue reuses the current run worktrees and restores its runtime` | `--kill` 後に `-c` で再開し、再開した supervisor を kill しない |
+| `:1004` | `the first legacy resume requires a runtime and adopts fixed worktrees in place` | adopt 後に kill しない |
+
+**本番側は fail-closed で実装済みである。** `packages/framework/core/tools/team-up-codex-safety-wait.ts` の supervise ループは run record の生存を毎周確認する — `:643` verbatim: `while (await runRecordIsActive(runRecord, run, session)) {`。`runRecordIsActive`（宣言 `:561`）は run record 3ファイルの読取に失敗すれば `:580-582` の `catch` で `false` を返し、ループを抜けて終了する。すなわち**実運用の supervisor は run record が消えれば自律終了する**のに対し、テスト stub はその契約を写していない。
+
+**PID の追跡経路は既に存在する。** `packages/framework/core/tools/team-up.sh:508` verbatim: `printf '%s\n' "$pid" >"$member_record/safety-wait.pid"` が member record 配下へ PID を残すため、テスト側の掃引はこのファイルを読めば成立する。ただし `afterEach` の `rmSync` がディレクトリごと削除するため、**掃引は `rmSync` より前に行う必要がある**（順序が要件）。
+
+**修正方式候補**:
+
+| 案 | 内容 | 影響 |
+| --- | --- | --- |
+| A | stub へ record 実在ポーリングを付与し本番契約を写す | `:717` / `:774` / `:823` の3テストへの影響検証が必須。述語は「record ディレクトリ実在のみ」に弱めるのが安全（本番の3ファイル読取まで写すと fixture が過剰結合する） |
+| B | `afterEach` に期限付き kill/reap 掃引を追加する | 既存テストへの影響なし |
+| **C**（推奨） | A + B | 契約の写しと安全網の両立 |
+
+**本番非改変を推奨する** — `packages/framework/core/` を触ると 7 dist + self-install の再生成が発生し、他3件の Bolt と生成面で交差する。
+
+**同族の非該当**: `t267` の `nohup` は PATH リンク一覧の一要素（claude runtime 向け）であり本機構と無関係。ライブ実測では残留プロセス84本（全 PPID=1、1 launch = 7 role）を観測した。
+
+### 機構 B — 診断の非対称がテスト失敗の原因特定を阻む（#1800 P3/S3）
+
+`tests/integration/t224-upstream-v2-migration-cli.test.ts` は subprocess の終了チャネルを3種に分類する設計を**既に持っている**。ヘルパーは終了状態を `:170` / `:210` の同型行 verbatim: `status: result.status ?? -1,` で正規化し、`-1` を「exit status を持たない終了」（signal 終了 または spawn 失敗）のセンチネルとして使う。この3分類は `:311-313` の `test.each` で契約として固定済みである。
+
+- `:311` verbatim: `["exit-status", { status: 1, signal: null, error: null }],`
+- `:312` verbatim: `["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],`
+- `:313` verbatim: `["spawn-error", { status: -1, signal: null, error: "spawn EAGAIN" }],`
+
+成功系にはこの分類を活かす診断ヘルパー `expectSuccessfulMigration`（宣言 `:218`）があり、失敗時に exit path / status / signal / error / stdout / stderr を並べた多行メッセージを投げる（`:225-238`）。
+
+**患部は、失敗系の一箇所だけがこのヘルパーを通らないことである。** `:1411` verbatim: `expect(collided.status).toBe(1);` — 素の等値比較のため、`-1` が返ったときの出力は `expected 1, received -1` に留まり、signal 終了なのか spawn 失敗なのかが**構造的に読めない**。第一容疑は負荷条件下の spawn `EAGAIN`（`:313` が既に固定している分類）である。
+
+**修正候補**:
+
+| # | 内容 | 位置づけ |
+| --- | --- | --- |
+| (i) | 診断の対称化 — `expectSuccessfulMigration`（`:218`）と同型のヘルパー経由へ寄せる | **必須**。既存の3分類設計を失敗系へ延長するだけで新規機構を要さない |
+| (ii) | spawn-error 限定リトライ（`EAGAIN` / `EMFILE` / `ENOMEM` のみ・上限2回） | signal 終了と exit status はリトライしない。リトライ範囲の限定が要件 |
+| (iii) | 並列度制御 | **スコープ外** |
+
+再現不能な場合の扱い（修正の受理条件）は要件段で明示する — 「再現しなかったので閉じる」は無申告のスコープ縮小に当たる（`cid:build-and-test:no-silent-scope-narrowing`）。
+
+### 機構 C — 逐次計測の別時間窓が比 assert を系統的にずらす（#1797 P3/S4）
+
+`tests/integration/t259-guard-corpus.test.ts` は corpus のスケーリング特性を「2倍の入力で時間・RSS が 2.5倍以内」で検査する。
+
+- `:101` verbatim: `const oneSamples = measure(1);`
+- `:102` verbatim: `const twoSamples = measure(2);`
+- `:108` verbatim: `expect(twoMedianMs / oneMedianMs).toBeLessThanOrEqual(2.5);`
+- `:109` verbatim: `expect(rssMultiplier).toBeLessThanOrEqual(2.5);`
+
+**median 化は既に適用済みである**（`median` 宣言 `:46`、本体 `:47-48`）。これは `#1424` 起点の t258 裁定の反映であり、本件はその先に残った別機序である。
+
+**機序**: `measure(1)` と `measure(2)` は**逐次に別プロセスを spawn する**（`measure` 宣言 `:89`）。両者は異なる時間窓で計測されるため、窓の間にホスト負荷が変動すると比が系統的にずれる。実測 `2.5065` に対し閾値 `2.5` のマージンは **0.26%** しかない。閾値 `2.5` は初出（`2e157d7fe`、#1424）以来不変である。
+
+**これは `cid:code-generation:c1-benchmark-baseline-correlation-verify` が禁じる「空ウィンドウ baseline」型ではない** — baseline（`measure(1)`）は対象（`measure(2)`）と同じ計算を1倍量で行うため負荷との相関は健全である。破れているのは相関ではなく**時間窓の共有**である。
+
+**修正候補**:
+
+| # | 内容 | 判定 |
+| --- | --- | --- |
+| (i) | 交互計測（interleave）— 子プロセス1本で `A, B, A, B` の順に計測し時間窓の共有を構造的に保証する | **推奨** |
+| (ii) | 閾値の引上げ単独 | `cid` の要求（相関の健全性ではなく計測設計）を満たさない |
+| (iii) | 環境係数の導入 | 検証劇場に近く非推奨（org.md Forbidden） |
+
+**いずれの案でも、採用前に負荷スイープの実測で数値を導出する**（`cid:code-generation:c1-benchmark-baseline-correlation-verify`）。要件段では数値を固定せず「実測で決める」と書く。
+
+**修正面**: `tests/integration/t259-guard-corpus.test.ts` と `tests/helpers/guard-corpus-benchmark-child.ts`。`tests/.coverage-patch-allowlist.json` の `t259` エントリ群は**別テスト由来のため触らない**。
+
+### 機構 D — close 経路が body を書かず completion 境界の Status が構造的に Running のまま残る（#1816 P3/S4）
+
+2つの独立した機序が重なっている。
+
+**機序 D-1: close が body を書かない。** `packages/framework/core/tools/amadeus-mirror-executor.ts` の mutation 分岐は operation で二分される。
+
+- `:1156` verbatim: `const mutated =`
+- `:1157-1158` verbatim: `context.operation === "sync"` / `? await context.gateway.editIssue(permit, context.issueContent.body)`
+- `:1159` verbatim: `: await context.gateway.closeIssue(permit);`
+
+`closeIssue` は body を受け取らない。収束判定も同じ非対称を持つ（`:1038-1041` — sync は `issue.body === context.issueContent.body`、close は `issue.state === "CLOSED"`）。すなわち **close は状態遷移のみで、表示内容を一切更新しない**。
+
+**機序 D-2: completion 境界の最終 body は Status が構造的に `Running` になる。** 完了時の最後の body 書込は `sync` operation で行われるが、その時点の lifecycle snapshot は `Running` を強制される — `packages/framework/core/tools/amadeus-mirror-lifecycle.ts:311-312` verbatim: `const completionMismatch = completion?.status === "pending" &&` / `(status !== "Running" || completion.stage !== currentStage);` — pending completion を持つ snapshot が `Running` 以外なら例外を投げる assert である。
+
+表示層はこの `status` を逐語でレンダリングする — `packages/framework/core/tools/amadeus-mirror-presentation.ts:259-260` verbatim: `"## Status",` / `snapshot.status,`。
+
+**`completionInstance` は presentation で未消費である**（`grep -rn 'completionInstance' packages/framework/core/tools/*.ts` の実測: executor `:394` / coordinator `:279` `:284` / policy `:254` / lifecycle `:339` / state-codec `:567` `:763` `:770` `:775` / types `:516` `:527` / state `:533` ほか — presentation は **0ヒット**）。したがって表示層は完了を知る手段を持たない。
+
+**修正方式（案 (a) = 表示層での終端化）の実装面**:
+
+- **導出キーは `snapshot.completionInstance` の存在**とする。boundary をキーにすると `buildMirrorStatusRecordView` の drift 診断が close 後に恒久的な偽 drift を報告する。
+- `## Stage` / `## Phase` 行も終端化するかは**要件段の確定事項**。
+- `amadeus-mirror-lifecycle.ts:311-316` の assert は**改訂不要** — これは record 断面の整合検査であり表示層の関心ではない。
+
+**テスト契約**:
+
+| ファイル | 判定 |
+| --- | --- |
+| `tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts` | **改訂不要**（body assert を持たない。`:262` の `a prepared in-flight completion reaches Done and close before registry seal` は close 順序の契約） |
+| `tests/unit/t281-amadeus-mirror-presentation.test.ts` | 既存2ケースは改訂不要（いずれも `completionInstance` を持たない fixture。body assert は `:52` `## Stage` / `:55` `## Status`）。**新規ケースの追加のみ** |
+| `tests/unit/t232-amadeus-mirror.test.ts` | body assert あり（`:35` `## Status`）。影響確認の対象 |
+
+**`tests/.coverage-patch-allowlist.json` の presentation 行ピン5件は機械 remap が必須**（`cid:code-generation:c1-allowlist-mechanical-remap`）: `193-194` / `230-234` / `237-239` / `245-247` / `266-271`。`renderMirrorIssueContent` は `:239-273` に位置するため、body 組立（`:245-267`）への挿入は `245-247`（直撃）と `266-271`（下方シフト）に効く。`193-194` / `230-234` / `237-239` は同関数より上方にあり、挿入位置が `:239` より下であれば不変である。remap 後は reason 記述と現行行内容の直読照合を併用する（`cid:code-generation:e-fspbts13` の趣旨）。
+
+**ノルム乖離部分の切り分け**: 「record の main 着地前に close する」挙動は PR #1689 の設計帰結であり `t361:262` で契約として固定されている。これは**仕様裁定マター**であり、本 intent の実装スコープは**表示層に限定する**旨を要件段で申告する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+### 区間 `3f73823b1..6e7a9d701` の構造変化（本 intent の患部外）
+
+13コミット。ソース面は `26 files / +1040 / −118`（`git diff --numstat` の面別機械集計、測定 ref = observed `6e7a9d701`）。
+
+| 変化 | 内容 |
+| --- | --- |
+| 選挙ストアの pending ballot lane（#1773 修正 `25f54b066`） | `amadeus-election-store.ts` `+168/−10`。collecting 中の票を voter ごとの `pending/<voter>.json` へ隔離し、tally 時に ledger へ統合する。`pendingDir` `:113` / `readPending` `:139` / `appendPending` `:161` / `ballotKey` `:187` / `pendingNotOnLedger` `:197` / `integratePending` `:205`、統合点 `:535` `:540` / `:601` / `:619` / `:663` |
+| pending lane の非追跡化 | ルート `.gitignore` `+5`（`amadeus/spaces/*/elections/*/pending/`、コメントに Issue #1773 を明記）+ 7ハーネス `dot-gitignore` 各 `+5` |
+| 選挙 view への question / description 搬送（#1772 修正 `75367ba67`） | `amadeus-election-model.ts` `+36/−9`。`DistributionView` のキー集合と `Choice` 型を拡張し、`SKILL.md` / docs を対訳同期 |
+| mirror create 受理判定の反転（#1752 修正 `8a8abf567`） | `succeededMirrorCreateExists`（`amadeus-mirror-state-codec.ts:1731`）を新設し、`amadeus-orchestrate.ts:4249` で `const createRan = succeededMirrorCreateExists(stateContent);` として消費。従来の「Issue が存在するなら create を拒否」から「create receipt が成功していれば受理」へ判定を反転 |
+| `release.yml` の再実行可能ジョブ分割（#1799 `b488466b8`） | `.github/workflows/release.yml` `+68/−22` |
+| テスト | `t373-election-ballot-blind-storage.integration.test.ts` 新規 `+323`、`t265-engine-boundary.integration.test.ts` `+120/−17`、`t223-release-bot-bypass.integration.test.ts` `+76/−1`、`t234-election-model.test.ts` `+66/−2`、`t236-election-loop.integration.test.ts` `+55/−8`、`tests/.coverage-patch-allowlist.json` `+38/−38`（行ピン remap） |
+| リリース | `v0.1.7`（`e06b8f601`）、model-map ±4、`metrics/` スナップショット4件 |
+
+**含意**: 本区間は前 intent（260730-open-bug-batch-3）の3件（#1773 / #1772 / #1752）が**全件着地した**断面である。本 intent の4件はいずれもこれらと機構が重ならない。ただし `tests/.coverage-patch-allowlist.json` は本区間で全面 remap されており、#1816 が同ファイルへ再度触れる点だけが接触面である。
+
+## オープンバグ3件の対象機構（260730-open-bug-batch-3、履歴、observed `3f73823b1`）
 
 本節の file:line はすべて observed `3f73823b1` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。3件は所有機構が選挙層と mirror/engine 層に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。
 
