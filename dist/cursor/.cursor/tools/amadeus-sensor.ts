@@ -139,10 +139,11 @@ async function loadCanonicalEmit(projectDir: string): Promise<SensorCanonicalEmi
 	return appendAuditEntryViaEvents;
 }
 
-// The spawn-span wrapper, lazily resolved for the same BR-5 reason — but on the
-// telemetry side of the split, so it fails OPEN: with no otel/ on disk the
-// spawn still runs, untraced, exactly as observeSubprocess behaved when
-// observability was off.
+// The spawn-span wrapper, lazily resolved for the same BR-5 reason. No fallback
+// arm: by the time a fire reaches this, loadCanonicalEmit has already resolved
+// the same otel/ tree and failed closed if it was absent, so a catch here would
+// be unreachable. The fail-open the span side needs is inside the wrapper —
+// observeSubprocessSpan runs the callback untraced when observability is off.
 type SensorSpawnObserver = <T extends { status: number | null }>(
 	projectDir: string,
 	command: string,
@@ -150,12 +151,8 @@ type SensorSpawnObserver = <T extends { status: number | null }>(
 ) => T;
 
 async function loadSpawnObserver(): Promise<SensorSpawnObserver> {
-	try {
-		const { observeSubprocessSpan } = await import("../otel/subprocess-span.ts");
-		return observeSubprocessSpan;
-	} catch {
-		return (_projectDir, _command, fn) => fn();
-	}
+	const { observeSubprocessSpan } = await import("../otel/subprocess-span.ts");
+	return observeSubprocessSpan;
 }
 
 // Prepare the per-sensor child environment only after this process has joined
