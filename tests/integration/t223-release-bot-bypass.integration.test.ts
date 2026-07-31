@@ -6,13 +6,20 @@ describe("t223 release bot bypass boundary", () => {
   test("release phases run as separate sequential jobs", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/release.yml"), "utf8");
     const workflow = Bun.YAML.parse(yaml) as {
+      permissions: Record<string, string>;
       jobs: Record<
         string,
         {
           needs?: string | string[];
           outputs?: Record<string, string>;
           permissions?: Record<string, string>;
-          steps: Array<{ name?: string }>;
+          steps: Array<{
+            name?: string;
+            if?: string;
+            uses?: string;
+            with?: Record<string, unknown>;
+            run?: string;
+          }>;
         }
       >;
     };
@@ -24,6 +31,9 @@ describe("t223 release bot bypass boundary", () => {
     });
     expect(workflow.jobs["github-release"]?.needs).toBe("prepare");
     expect(workflow.jobs.publish?.needs).toEqual(["prepare", "github-release"]);
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(workflow.jobs.prepare?.permissions).toBeUndefined();
+    expect(workflow.jobs["github-release"]?.permissions).toBeUndefined();
     expect(workflow.jobs.publish?.permissions).toEqual({
       contents: "read",
       "id-token": "write",
@@ -36,6 +46,29 @@ describe("t223 release bot bypass boundary", () => {
     expect(prepareSteps).toContain("Bump, commit, tag, push (release-it)");
     expect(githubReleaseSteps).toContain("Create GitHub Release with generated notes");
     expect(publishSteps).toContain("Publish to npm");
+
+    const findStep = (job: string, name: string) => {
+      const step = workflow.jobs[job]?.steps.find((candidate) => candidate.name === name);
+      expect(step).toBeDefined();
+      return step;
+    };
+    const dryRun = "github.event_name == 'workflow_dispatch' && inputs.dry-run";
+    const skipRelease = findStep("github-release", "Skip GitHub Release (dry run)");
+    const releaseToken = findStep("github-release", "Create GitHub App token");
+    const createRelease = findStep("github-release", "Create GitHub Release with generated notes");
+    const checkout = findStep("publish", "Checkout released commit");
+    const publish = findStep("publish", "Publish to npm");
+
+    expect(skipRelease?.if).toBe(dryRun);
+    expect(releaseToken?.if).toBe(`\${{ !(${dryRun}) }}`);
+    expect(createRelease?.if).toBe(`\${{ !(${dryRun}) }}`);
+    expect(createRelease?.with?.tag_name).toBe(`v\${{ needs.prepare.outputs.version }}`);
+    expect(checkout?.with?.ref).toBe(`\${{ needs.prepare.outputs.sha }}`);
+    expect(publish?.run).toContain(`\${{ ${dryRun} }}`);
+
+    for (const step of [...(workflow.jobs["github-release"]?.steps ?? []), ...(workflow.jobs.publish?.steps ?? [])]) {
+      if (step.uses) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
+    }
   });
 
   test("release writes use the GitHub App token", () => {
