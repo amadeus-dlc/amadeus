@@ -124,7 +124,7 @@ const SENSOR_TRACE_DEPENDENCIES: SensorTraceDependencies = {
 //
 // Resolved ONCE per fire rather than per row, which is also what lets the four
 // emitters stay synchronous inside their audit-lock windows.
-export type SensorCanonicalEmit = (
+type SensorCanonicalEmit = (
 	eventType: string,
 	fields: Record<string, string>,
 	projectDir: string,
