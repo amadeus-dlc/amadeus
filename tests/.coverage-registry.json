@@ -4071,6 +4071,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t07-hook-audit-logger.test.ts",
           "mechanism": "cli"
         },
@@ -4207,6 +4211,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t30-hook-session-end.test.ts",
           "mechanism": "cli"
         }
@@ -4220,6 +4228,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t173-session-switch-restamp.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {
@@ -4328,6 +4340,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t131-hooks-settings-fire.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {
