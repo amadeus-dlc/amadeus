@@ -65,9 +65,14 @@ describe("t223 release bot bypass boundary", () => {
     expect(createRelease?.with?.tag_name).toBe(`v\${{ needs.prepare.outputs.version }}`);
     expect(checkout?.with?.ref).toBe(`\${{ needs.prepare.outputs.sha }}`);
     expect(publish?.run).toContain(`\${{ ${dryRun} }}`);
+    expect(publish?.run).toContain("args+=(--tag next)");
+    expect(publish?.run).toContain("npm publish --dry-run");
+    expect(publish?.run).toContain("npm publish --provenance");
 
-    for (const step of [...(workflow.jobs["github-release"]?.steps ?? []), ...(workflow.jobs.publish?.steps ?? [])]) {
-      if (step.uses) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
+    for (const job of Object.values(workflow.jobs)) {
+      for (const step of job.steps) {
+        if (step.uses) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
+      }
     }
   });
 
@@ -75,7 +80,9 @@ describe("t223 release bot bypass boundary", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/release.yml"), "utf8");
 
     expect(yaml).toContain("contents: read # release writes use the narrowly scoped GitHub App token below");
-    expect(yaml).toContain("uses: actions/create-github-app-token@v3");
+    expect(yaml).toContain(
+      "uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3",
+    );
     expect(yaml).toContain(`client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}`);
     expect(yaml).toContain(`private-key: \${{ secrets.METRICS_BOT_PRIVATE_KEY }}`);
     expect(yaml).toContain("permission-contents: write");
