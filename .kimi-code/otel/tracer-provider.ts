@@ -200,10 +200,7 @@ let registeredProjectDir: string | null = null;
 // project dir is recorded rather than left implicit in the exporter's closure:
 // it is what lets a bootstrap seam tell "already standing" apart from
 // "standing for a DIFFERENT workspace".
-export function registerTracerProvider(options: {
-  projectDir: string;
-  spanExporter: LocalSpanExporter;
-}): void {
+export function registerTracerProvider(options: { projectDir: string; spanExporter: LocalSpanExporter }): void {
   if (registeredProjectDir !== null) {
     throw new Error("registerTracerProvider called twice — invariant violation (NFR-3)");
   }

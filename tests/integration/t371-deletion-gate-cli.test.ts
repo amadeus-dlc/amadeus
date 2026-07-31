@@ -29,6 +29,7 @@ import {
   discoverMigrationEquivalenceTests,
   runBunTests,
   main,
+  parseArgs,
   measureCallsites,
   measureMigrationEquivalence,
   measureRegistryDrift,
@@ -167,6 +168,38 @@ describe("main — argv carries no forced-PASS channel", () => {
     expect(main(["--force-green"])).toBe(2);
     expect(main([])).toBe(2);
     expect(main(["--check", "--evidence", "green"])).toBe(2);
+  });
+
+  test("an unknown option carrying a value is rejected, not skipped", () => {
+    expect(main(["--check", "--report-to", "/tmp/nowhere.json"])).toBe(2);
+  });
+
+  test("the option walk accepts --report and rejects everything else", () => {
+    expect(parseArgs(["--check", "--report", "/tmp/report.json"])).toEqual({
+      mode: "check",
+      options: { reportPath: "/tmp/report.json" },
+    });
+    expect(parseArgs(["--require-green"])).toEqual({ mode: "require-green", options: { reportPath: undefined } });
+    expect(parseArgs(["--check", "--report"])).toBeNull();
+    expect(parseArgs(["--check", "--report-to", "/tmp/report.json"])).toBeNull();
+    expect(parseArgs(["--evidence"])).toBeNull();
+  });
+});
+
+// A walk that threw is UNKNOWN, not "no suite carries the marker": the two
+// answers drive opposite verdicts, so the unreadable-tree arm is pinned rather
+// than assumed.
+describe("discoverMigrationEquivalenceTests — an unreadable tree is not an empty tree", () => {
+  test("a missing tests root yields null rather than an empty list", () => {
+    const dir = scratch();
+    rmSync(dir, { recursive: true, force: true });
+    expect(discoverMigrationEquivalenceTests(dir)).toBeNull();
+  });
+
+  test("an empty tests root yields an empty list", () => {
+    const dir = scratch();
+    expect(discoverMigrationEquivalenceTests(dir)).toEqual([]);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
 

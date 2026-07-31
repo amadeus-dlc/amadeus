@@ -875,19 +875,19 @@ export function getEventDefByAuditEvent(auditEvent: string): EventDef {
 // layers): names unique, audit events unique, durability consistent with the
 // auditEvent mapping, categories present, and the canonical cardinality
 // pinned — an emptied registry fails instead of passing vacuously.
-export function assertRegistryConsistent(): void {
+// The set and its expected cardinality are parameters, defaulting to the
+// shipped registry: that registry is consistent by construction, so every
+// rejection below is only provable against a supplied set. The parameter type
+// widens to EventDef so the checks are not narrowed away by the const-asserted
+// literal types.
+export function assertRegistryConsistent(events: readonly EventDef[] = REGISTERED_EVENTS, expectedCanonical: number = EXPECTED_CANONICAL_COUNT): void {
   const names = new Set<string>();
   const auditEvents = new Set<string>();
-  // Widen to EventDef so the runtime checks below are not narrowed away by
-  // the const-asserted literal types.
-  const events: readonly EventDef[] = REGISTERED_EVENTS;
   for (const def of events) {
     assertDefConsistent(def, names, auditEvents);
   }
-  if (auditEvents.size !== EXPECTED_CANONICAL_COUNT) {
-    throw new Error(
-      `canonical registry cardinality drift: expected ${EXPECTED_CANONICAL_COUNT}, got ${auditEvents.size} (VER-1)`
-    );
+  if (auditEvents.size !== expectedCanonical) {
+    throw new Error(`canonical registry cardinality drift: expected ${expectedCanonical}, got ${auditEvents.size} (VER-1)`);
   }
 }
 

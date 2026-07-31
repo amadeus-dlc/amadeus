@@ -54,9 +54,7 @@ export function appendAuditEntryViaEvents(
   // on the guard's allowlist until the follow-up ruling.
   if (intent !== undefined || space !== undefined) {
     throw new Error(
-      `per-call intent/space targeting is not supported by the migration adapter (${eventType}) — ` +
-        "the canonical path writes to the registered provider's target (E-U7CG-Q3A); " +
-        "keep this call site on the legacy writer until the follow-up ruling"
+      `per-call intent/space targeting is not supported by the migration adapter (${eventType}) — the canonical path writes to the registered provider's target (E-U7CG-Q3A); keep this call site on the legacy writer until the follow-up ruling`
     );
   }
   // Reverse registry lookup: an unmapped legacy eventType throws here (BR-3).
