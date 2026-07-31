@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB3-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1 は rescan-base-ancestry(team.md:190)と c2-observed-mainline-commit(project.md:271)の、c2 は re-sensors-codekb-filter-mismatch(project.md:144)と c3-codekb-sensor(project.md:301)の既定規範の準拠適用であり、memory.md と codekb re-scan(:7-28)の双方が各 cid を明示引用している — 新規の一般化可能な知見は含まれない。",
+  "submittedAt": "2026-07-30T23:54:55Z"
+}

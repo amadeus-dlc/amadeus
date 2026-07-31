@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.md の候補2件を実測: c1 は質問絞り込み(cid:requirements-analysis:c5 + E-OC1 申告)の適用実例、c2 は HEAD 直読での引用実在確認で historical-section-cite-check-at-observed が既に規定する現在節照合の運用。project.md:214/:248・team.md:233 に既存 cid が実在し、requirements.md Review Iteration 1 (READY, Minor 2件は conductor 裏取り済み)にも新規機序はない — 新規学習なしの 0件で可。",
+      "submittedAt": "2026-07-31T00:16:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.md の候補2件を実測: 候補1(質問絞り込み)は project.md:248 cid:requirements-analysis:c5 と team.md:208/233 の E-OC1 規範の適用実例で、エントリ自体が両 cid を引用している。候補2(Minor 引用の HEAD 直読確認)は project.md:214 historical-section-cite-check-at-observed が既に『現在節は HEAD/observed の断面で照合し分水嶺とする』面を実測込みでカバーしており、いずれも新規学習ではない。",
+      "submittedAt": "2026-07-31T00:16:17Z"
+    }
+  ],
+  "late": []
+}

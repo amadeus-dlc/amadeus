@@ -1,6 +1,36 @@
 # コード品質評価
 
-## オープンバグ5件の品質評価（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の品質評価（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。3件とも**現存**を実測確認した。
+
+### 根因確度
+
+| Issue | 根因 | 確度 | 未裁定事項 |
+| --- | --- | --- | --- |
+| #1773 | 票の格納が blind の保護境界の外にある。`appendBallot`（`:464-465`）が票オブジェクトを無加工で単一共有ファイルへ書き、blind lift（`materialize` `:500`、コメント `:498`）は tally 時にしか働かない | **機序 100%**（格納面・git 面とも実測） | **方式裁定が未決** — 格納分離（票ごとの分割 / 暗号化 / 非 tracked 化）vs 通知抑制（読取経路の遮断）。修正面の広さが裁定で変わる |
+| #1772 | 型が情報を持たず（`Choice` `:48`）、parse がホワイトリスト再構成で未知フィールドを無音 drop する（`parseChoices` `:80`）。配布ビュー（`:306-310`）に `question` が無い | **100%** | BR-2 blind 契約（`:304-305`）と question / description 追加の両立可否。テスト契約（`t234:190` `:192`）の改訂範囲 |
+| #1752 | 受理判定が offer 時点でなく report 実行時点の state 再評価（`:4241-4242`）に立つため、`:4255` の `(answer === "create" && hasMirrorIssue)` が「指示に従った利用者」を拒否する | **100%**（#1791 着地後も再現経路の温存を `:486-500` の実読で確認） | 修正方式 — (a) create receipt の存在判定 vs (b) ask 時 binding の永続化。fixture（`t265:793`）の分岐設計 |
+
+### 品質所見
+
+**1. blind の保護が「配布」に閉じ「格納」に及んでいない（#1773）** — Amadeus 側の寄与因子は**格納設計と配置の2点だけ**である。設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全で、`shuffleView`（`:338`）による構造的 blind も設計どおり機能し、`.claude/hooks/` に election ledger の配信機構は 0件（`grep -rn 'ledger' .claude/hooks/` の3ヒットはすべて**監査シャードの append-only ledger** を指す語彙で、実読により選挙 ledger と無関係と確定 — `cid:requirements-analysis:absence-claim-grep-verify`）。すなわち「守る仕組みを作ったが、守る対象を守っていない場所に置いた」形状であり、機構の不在ではなく**境界の設定誤り**である。修正の受け入れ基準を「配布面が blind であること」に置くと、既に真である命題を検証することになり検証劇場になる（org.md Forbidden）— 基準は collecting 中の格納面と git 面に置く。
+
+**2. blind 性を assert するテストが 0件（#1773）** — 退行が構造的に検知されない。BR-2 の blind 契約は配布ビューのキー集合（`t234:190`）でピンされているが、**collecting 中に票内容が他の投票者から到達不能であること**を検査するテストは存在しない。修正時は「落ちる実証」（org.md Mandated）を格納面へ注入して行う必要がある。注入面は `cid:code-generation:injection-surface-verify` に従い、テストが実際に読む面（core 正本か dist か）を注入前に実測確認する。
+
+**3. fail-open な無音 drop（#1772、`cid:code-generation:verification-numeric-parse` の同族）** — `parseChoices`（`:73`）は `internalNo` / `label` の型不正では `null` を返して fail-closed に振る舞う一方、**未知フィールドは exit 0 のまま黙って捨てる**。起草者は description が失われたことに気付けず、投票者は説明の存在自体を知らない。「検証して証明を捨てる」のではなく「検証済みであることを型で運ぶ」（parse-don't-validate）という construction.md の原則からは、捨てるなら loud に、運ぶなら型にという二択であり、現行はどちらでもない。
+
+**4. write⇔read 非対称クラスタの継続（#1772 / #1752、`cid:requirements-analysis:symmetric-pair-review`）** — 3件のうち2件が非対称クラスタに属する。#1772 は `OriginalBallot` の `reservation`（`:135`）/ `rationale`（`:136`）が書かれるが配布ビューに現れない write⇔read 非対称。#1752 は `create` にだけ state 照合があり `sync` / `skip` には無い片側実装。前 intent（260730-open-bug-batch-2）の #1734（apply⇔check 非対称）・#1711（produces⇔consumes 非対称）に続き、**3 intent 連続で同型が観測されている**。修正時は他の対操作（resolve⇔commit、emit⇔terminal、fork⇔merge）にも同型が無いか棚卸しする（`cid:code-generation:same-root-inventory`）。
+
+**5. 3重固定は「バグでない」ことの証明ではない（#1772）** — `DistributionView` のキー集合は型（`:306-310`）・設計コメント（`:304-305`）・テスト（`t234:190`）の3重で固定されている。ただし BR-2 が禁じているのは「推薦マーカー・先行票・peer status」であって設問文ではない。3重固定は**変更に裁定が要ることの証明**であり、実装段で着手せず要件段で仕様裁定とテスト契約の明示改訂をセットで確定してから行う（`cid:reverse-engineering:c1-pinned-behavior-ruling`、`cid:code-generation:cg-invariant-conflict-explicit-revision`）。
+
+**6. 新機能の着地を修正の完了と混同しない（#1752）** — #1791（`ffb68c484`、本区間で着地）は `intent-initialized` boundary を新設し初回 create の遅延を解消したが、その分岐（`:486-500`）は `:488` verbatim: `if (mode !== "auto" && boundary.initialCreate !== "pending") return false;` と **auto モード優先**であり、prompt モードは従来 ask 経路へ落ちる。#1752 の自己矛盾は温存されている。関連機能の着地を根拠に Issue を閉じない（`cid:requirements-analysis:close-after-landing-verification` — 着地面の実読が要る）。
+
+**7. テスト番号の重複採番（本 intent の患部外・プロセス所見）** — 本区間で `t366`（3ファイル）・`t367`（2ファイル）・`t368`（3ファイル）の番号重複が生じている。`cid:code-generation:swarm-test-number-reservation`（並列ディスパッチ時の事前予約）が守られなかった実測であり、`cid:requirements-analysis:mechanism-cite-verify-at-draft` 追補（テスト引用は `tNNN` 短形でなくフルパス）の適用必要性が高まっている。本 intent の新規テスト採番は `t371` より後を使う。
+
+**8. 行番号シフトへの注意（全件）** — `amadeus-orchestrate.ts` は本区間で `unitDirsUnderConstruction`（`:3054`）と初回 create 分岐（`:486-500`）の追加を受け、行番号が base から大きくシフトしている。Issue 起票時点（base 以前）の行引用を HEAD で照合すると偽陽性になる（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`、`cid:requirements-analysis:historical-section-cite-check-at-observed`）。本 codekb の履歴節に含まれる file:line も当時の observed 断面に固定されているため、参照時は当該 observed で照合する。
+
+## オープンバグ5件の品質評価（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 本節の file:line はすべて observed `c42ef4d77` 時点。
 

@@ -715,5 +715,12 @@
     "dirName": "260730-open-bug-batch-2",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fb55c-3116-7019-a7be-53c3fdae228a",
+    "slug": "open-bug-batch-3",
+    "dirName": "260730-open-bug-batch-3",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

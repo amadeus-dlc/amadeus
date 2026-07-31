@@ -1,6 +1,74 @@
 # アーキテクチャ
 
-## オープンバグ5件の対象機構（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の対象機構（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。3件は所有機構が選挙層と mirror/engine 層に分離しており、1 Issue = 1 Bolt = 1 PR で並行実装できる。
+
+### 機構 A — 未開票中の票本文が単一共有 tracked ファイルに平文で載る（#1773）
+
+投票の受理は ledger への追記で完結する。`packages/framework/core/tools/amadeus-election-store.ts` の `appendBallot` が `:464` で `const next: LedgerFile = { ballots: [...ledger.ballots, ballot], late: ledger.late };` を組み、`:465` の `writeStoreFile(ledgerPath, …)` で選挙ディレクトリ直下の `ledger.json` へ**票オブジェクトそのまま**を書く。票の内容は `amadeus-election-model.ts` の `OriginalBallot` が持つ `goa`（`:134`）・`reservation`（`:135`）・`rationale`（`:136`）であり、選択と留保と根拠の全文が含まれる。
+
+blind の保護は**開票時にしか働かない**。`Store.materialize`（宣言 `:500`、コメント `:498` verbatim: `// Materialize the full ballot set at tally time (blind lift) and fix the`）が tally 時に `ballots/<voter>.json` へ展開する設計であり、collecting 中の `ledger.json` は blind lift の対象外である。
+
+露出面は2つある。
+
+| 面 | 機序 | 実測 |
+| --- | --- | --- |
+| 直接読取 | voter subagent は選挙ディレクトリを直接触る運用。`packages/framework/core/skills/amadeus-election/SKILL.md:51` verbatim: `手順: 配布ビューを読む → 独立に証拠を実測する → ballot JSON(voterKind: "subagent", voter: <指定名>)を作成する → vote verb を自分の Bash で実行する` | 配布ビュー経由が指示だが、同一ディレクトリ内の `ledger.json` への到達を構造的に妨げるものが無い |
+| git 露出 | `ledger.json` は git tracked（`git check-ignore` exit 1 = 非 ignore、tracked な `ledger.json` は **183件**） | `git status` / `git diff` に未開票の票本文が現れる |
+
+`timeline.json` にも投票済み者が可視（`:468` `kind: "ballot"`、`:472` `voter: ballot.voter`）。これは「誰が投票済みか」の露出であり、票**内容**の露出とは別レイヤだが、独立性の観点では同じ方向に効く。
+
+**Amadeus 側の寄与因子は格納設計と配置の2点に限られる。** 設計された配布面（`status` / `vote` 出力 / ShortNotification）は健全であり、`.claude/hooks/` に election ledger を配信する機構は **0件**（`grep -rn 'ledger' .claude/hooks/` の3ヒットはいずれも監査シャードの append-only ledger を指す語彙であり、選挙 ledger とは無関係）。流入 vector 自体はハーネス側にある。
+
+**blind 性を assert するテストは 0件** — 退行が検知されない。
+
+**修正面候補**: `amadeus-election-store.ts`（`appendBallot` / `ledger` / `materialize` / `status`）、`LedgerFile` 型、`.gitignore`、`SKILL.md`、および 13配布面の同期。**方式裁定（格納分離 vs 通知抑制）が未決**であり、修正面の広さが裁定で変わる。
+
+### 機構 B — 配布ビューが設問文と選択肢説明を運ばない（#1772）
+
+型そのものが情報を持たない。`amadeus-election-model.ts:48` verbatim: `export type Choice = { internalNo: number; label: string };` — description フィールドが存在しない。
+
+parse はホワイトリスト再構成であり、**未知フィールドを無音で捨てる**。`parseChoices`（`:73`）は `:79` で `if (typeof cc.internalNo !== "number" || typeof cc.label !== "string") return null;` と型検査したうえで、`:80` verbatim: `choices.push({ internalNo: cc.internalNo, label: cc.label });` と2フィールドだけを再構成する。起草者が `description` を書いても exit 0 のまま消える（fail-open）。
+
+配布ビューには設問文すら無い。`DistributionView`（`:306-310`）のフィールドは `electionId` / `voter` / `ordered`（`{ displayNo, internalNo, label }` の配列）の3つのみで、`question` は含まれない。この閉じた集合は**意図的な設計**として `:304-305` にコメントされている（verbatim: `// Structurally blind: exactly these fields exist — no recommendation marker,` / `// no prior votes, no peer status (BR-2 pins the key set).`）。
+
+**3重固定**: 型宣言（`:306-310`）・設計コメント（`:304-305`）・テスト（`tests/unit/t234-election-model.test.ts:190` verbatim: `expect(Object.keys(v1).sort()).toEqual(["electionId", "ordered", "voter"]);`）。BR-2 は「推薦マーカー・先行票・peer status を載せない」ための blind 契約であり、question / description の追加がこの契約を破るかは**別の判断**である。要件段での仕様裁定とテスト契約の明示改訂をセットで行う（`cid:reverse-engineering:c1-pinned-behavior-ruling`、`cid:code-generation:cg-invariant-conflict-explicit-revision`）。
+
+**同根パターン（`cid:code-generation:same-root-inventory` の棚卸し対象）**: Ballot 側にも write⇔read 非対称がある — `reservation` / `rationale` は書き込まれるが配布ビューには現れない。空 `label` の通過、未知フィールドの無音 drop は `Election.parse` 全体の方針であり、#1772 単体の欠陥ではなく設計方針の帰結である。
+
+**修正面候補**: 型 / parse / view render（`shuffleView` `:338`）/ record render / tally の `choiceCounts`（`:488-496`）/ docs / `SKILL.md:18`（verbatim: `選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する:` — question は入力契約に既に存在する）/ 13配布面同期。
+
+### 機構 C — mirror boundary report の create 拒否条件が自己矛盾（#1752）
+
+report 側は**実行時点の state を再評価**して受理可否を決める。`amadeus-orchestrate.ts:4242` verbatim: `const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;` を読み、`:4252-4256` の拒否条件のうち `:4255` verbatim: `(answer === "create" && hasMirrorIssue)` が発火する。
+
+ask 側は「先に create を実行してから report せよ」と指示する（`:519-529` の prompt 経路）。したがって**指示に従って create を実行した利用者は、自分の成功（= Issue が作られたこと）によって report を拒否される**。offered choices との照合が、offer 時点ではなく report 実行時点の state で行われていることが機序である。
+
+**#1791（本区間 `ffb68c484` で着地）の後も再現経路は温存される。** 新設された初回 create 分岐（`:486-500`）は `:487` で `if (!initialCreateIsOutstanding(boundary)) return false;`、`:488` verbatim: `if (mode !== "auto" && boundary.initialCreate !== "pending") return false;` と **auto モード優先**で構成されている。prompt モードで `initialCreate` が pending でなければ `false` を返して従来の ask 経路へ落ちるため、機構 C の自己矛盾はそのまま残る。
+
+**非対称**: `sync` / `skip` の answer には対応する state 照合が無い。拒否条件が `create` にだけ付いている片側実装であり、`cid:requirements-analysis:symmetric-pair-review` の対象クラスタに属する。
+
+**修正面候補**: `:4219-4278` の report 分岐。方式は (a) create receipt の存在判定（`classifyReceipt` 語彙の再利用）か (b) ask 時の binding 永続化 — 後者は `amadeus-mirror-coordinator.ts` の `expectedPrompt` 照合（`:320` / `:560` / `:622` / `:742-746`）が既習様式として存在する。
+
+**テスト契約の制約**: `tests/integration/t265-engine-boundary.integration.test.ts:793` verbatim: `["unoffered create", "inception", "create"],` の fixture は「offer されていない create」と「offer された create を実行済み」の2ケースを区別できない。修正には fixture の分岐が要る。
+
+### 区間 `a38a1f4d3..3f73823b1` の構造変化（本 intent の患部外）
+
+25コミット。core tools は base `79` → observed `88`（+9モジュール、`git diff --name-status` の `^A` 実測）。sensors `7` / hooks `12` / scopes `10` はいずれも不変。
+
+| 変化 | 内容 |
+| --- | --- |
+| 自動起票 finding capability（#1744 `d56e76ddd`） | GitHub 汎用ゲートウェイ（`amadeus-github-gateway.ts` +953）と階層設定リゾルバ（`amadeus-layered-config.ts` +610）を mirror 専用実装から抽出。`gh` spawn の唯一の不純エッジを `amadeus-process-runner.ts`（+306）へ集約。新キー `auto-file-findings`（`:51`、`auto-mirror` と同一モード語彙・既定値）。mirror 側は `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310 と縮小 |
+| sensor 発火 scope の限定（#1758 / #1770） | `amadeus-sensor-invocation.ts`（+118）が宣言 outputs を `sensor-invocation.json` へ投影し、`hooks/amadeus-sensor-fire.ts:27` が exact-path allowlist として消費。前 intent の #1742（`matches` 単独判定）に対する構造的解決 |
+| degrade unit 一意解決（#1774） | `unitDirsUnderConstruction`（`amadeus-orchestrate.ts:3054`、呼び出し `:3264`）による engine 側 `{unit-name}` 解決・非一意 fail-closed・`directive.unit` 搬送 |
+| mirror initial-create boundary（#1791） | 新 boundary kind `intent-initialized`（`amadeus-mirror-types.ts:28`）、policy `"intent-initialized": ["create", "sync"]`（`amadeus-mirror-policy.ts:65`）、新 state フィールド `Mirror Initial Create Receipt`（`amadeus-state.ts:320`）と新サブコマンド `mirror-initial-create`（`:913`）。前 intent の #1750 に対応 |
+| metrics 公開パイプライン（#1761） | `scripts/metrics-publication{,-domain,-github}.ts`（+114 / +701 / +656）、`metrics-maintenance.yml` 新設 |
+| 契約の焼き込み（#1776 / #1782） | phase-check 正名化（protocol / docs 各1行 + 契約テスト `t368`）、auto-solo 選挙フックの `stage-protocol.md` への焼き込み（`:140-143` halt 2分岐 / `:1010-1019` §13 側、コード変更ゼロ）。いずれも前 intent（#1749 / #1735）に対応 |
+
+**含意**: 本区間は前 intent（260730-open-bug-batch-2）の5件のうち #1750 / #1749 / #1742 / #1735 の4件が構造的に解決された断面である。本 intent の3件はいずれもこれらと機構が重ならない。
+
+## オープンバグ5件の対象機構（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 本節の file:line はすべて observed `c42ef4d77` 時点。5件は所有機構が互いに独立しており、1 Issue = 1 Bolt = 1 PR で並行実装できる（`cid:code-generation:c6` の非交差判定を満たす）。
 

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.md の2候補と build-test-results.md を実読し、引用4 cid の実在を grep で確認(project.md:279/311/312、team.md:155)。c1(B&T 実行形踏襲+t258 flake の assertion 実文帰属)は bt-20260730-1/bt-20260730-2/local-ci-red-assertion-verbatim の、c2(比例選定不生成+type-check センサー md 非適用の代替実測)は bt-proportional-selection と manual-sensor-fire 系の適用実例であり、新規機序・新規規範は含まれない — 0件で可。",
+      "submittedAt": "2026-07-31T04:34:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB3-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "t258 flake 帰属の証拠形は bt-20260730-2 の字義(無改変 base での byte-identical 再現)でなく単独再実行+交差ゼロ+次断面 green の変形だが、同族の帰属規律の適用範囲内であり新規学習には満たないと判断する。",
+      "rationale": "実測: 4 cid とも memory 層に実在(project.md:279/:311/:312、team.md:155)し、memory.md の2エントリと build-test-results.md:25 はいずれも当該 cid を明示引用した適用記述で、既存規範に無い新規機序・新規手順は含まれない。type-check センサーの md filter 不適合も manual-sensor-fire 系既存追補(filter 適合ファイル選定)の既知クラス。",
+      "submittedAt": "2026-07-31T04:34:54Z"
+    }
+  ],
+  "late": []
+}

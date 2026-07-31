@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB3-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memory.md の候補2件を実測: 候補1(質問絞り込み)は project.md:248 cid:requirements-analysis:c5 と team.md:208/233 の E-OC1 規範の適用実例で、エントリ自体が両 cid を引用している。候補2(Minor 引用の HEAD 直読確認)は project.md:214 historical-section-cite-check-at-observed が既に『現在節は HEAD/observed の断面で照合し分水嶺とする』面を実測込みでカバーしており、いずれも新規学習ではない。",
+  "submittedAt": "2026-07-31T00:16:17Z"
+}

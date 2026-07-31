@@ -1,6 +1,42 @@
 # コンポーネント棚卸し
 
-## オープンバグ5件の対象コンポーネント（260730-open-bug-batch-2、現在、observed `c42ef4d77`）
+## オープンバグ3件の対象コンポーネント（260730-open-bug-batch-3、現在、observed `3f73823b1`）
+
+本節の file:line はすべて observed `3f73823b1` 時点。
+
+| Issue / Bolt | コンポーネント | 責務 | 現在の破断点 | 依存・配布 |
+| --- | --- | --- | --- | --- |
+| [#1773](https://github.com/amadeus-dlc/amadeus/issues/1773) | `packages/framework/core/tools/amadeus-election-store.ts`（格納層）+ `amadeus-election-model.ts`（票の型）+ `skills/amadeus-election/SKILL.md`（運用手順） | 選挙の受理・永続化・blind lift・状態照会 | 未開票中の全票本文が単一共有 tracked ファイル `ledger.json` に平文で載る（書込 `:464-465`）。blind lift（`materialize` `:500`、コメント `:498`）は tally 時のみで collecting 中は保護対象外。voter subagent は選挙ディレクトリを直接触る（`SKILL.md:51`）。git tracked のため `git status` / `git diff` が第2の露出面（tracked `ledger.json` は 183件） | core 正本のため 7 dist + 5 self-install 再生成。`.gitignore` も修正面候補。**blind 性を assert するテストは 0件** |
+| [#1772](https://github.com/amadeus-dlc/amadeus/issues/1772) | `packages/framework/core/tools/amadeus-election-model.ts`（型 / parse / view render / tally） | 選挙定義の parse と blind 配布ビューの構築 | `Choice`（`:48`）が `{ internalNo, label }` のみで description を持たず、`parseChoices`（`:73`、再構成 `:80`）が未知フィールドを exit 0 のまま無音 drop（fail-open）。`DistributionView`（`:306-310`）に `question` が無い | core 正本。**テスト契約が3重固定**（型 `:306-310` / 設計コメント `:304-305` / `tests/unit/t234-election-model.test.ts:190` `:192`）— 要件段の仕様裁定が前提 |
+| [#1752](https://github.com/amadeus-dlc/amadeus/issues/1752) | `packages/framework/core/tools/amadeus-orchestrate.ts`（mirror boundary report 分岐） | boundary の offer と report 受理 | `:4255` の `(answer === "create" && hasMirrorIssue)` が report 実行時点の state 再評価（`:4241-4242`）に立つため、ask の指示（`:519-529`）に従って create した利用者が拒否される自己矛盾。`sync` / `skip` には対応する照合が無い片側実装 | core 正本。#1791 の初回 create 分岐（`:486-500`）は auto 優先（`:488`）のため prompt 経路の再現は温存。fixture `tests/integration/t265-engine-boundary.integration.test.ts:793` は2ケースを区別できず分岐が要る |
+
+### 共有コンポーネントと変更競合
+
+- **#1773 と #1772 は同一ファイル群を共有する。** 両者とも `amadeus-election-model.ts` を触る（#1773 は票の型 `:134-136`、#1772 は選択肢の型 `:48` と view `:306-310`）。ファイル単位で**交差する**ため、`cid:code-generation:c6` の非交差判定を満たさない — **直列化するか、実 diff で行レンジの非交差を確認してから並行させる**。前 intent までの「全件並行可」とは条件が異なる点に注意。
+- **#1752 は他2件と完全に非交差**（`amadeus-orchestrate.ts` のみ）。先行着地できる。
+- 3件とも `packages/framework/core/` を正本とするため、`bun scripts/package.ts` → dist 7ハーネス → `bun run promote:self` → self-install 5面の同一チェーンを通る。生成面が競合するため着地順は実 diff で再評価する。
+
+### 区間で増えた主要コンポーネント（本 intent の患部外）
+
+`a38a1f4d3..3f73823b1`（25コミット）で `packages/framework/core/tools/` に **9件**の新規モジュールが追加された（base `79` → observed `88`。`git diff --name-status a38a1f4d3 HEAD -- packages/framework/core/tools/ \| grep '^A'` の実測）。
+
+| コンポーネント | 責務 | 出自 |
+| --- | --- | --- |
+| `amadeus-github-gateway.ts` | GitHub 汎用ゲートウェイ（mirror 専用実装からの抽出、+953） | #1744 `d56e76ddd` |
+| `amadeus-github-types.ts` | 上記の型（+44） | 同上 |
+| `amadeus-layered-config.ts` | 階層設定リゾルバ（global → space → intent、+610）。`auto-mirror` / `auto-file-findings` / `auto-solo-election` を解決 | 同上 |
+| `amadeus-process-runner.ts` | `gh` spawn の唯一の不純エッジ（+306） | 同上 |
+| `amadeus-contained-file.ts` | ファイル境界の封じ込め（+175） | 同上 |
+| `amadeus-finding.ts` | finding CLI 本体（+296） | 同上 |
+| `amadeus-finding-types.ts` | 上記の型（+28） | 同上 |
+| `amadeus-finding-capability.ts` | capability 宣言（+33） | 同上 |
+| `amadeus-sensor-invocation.ts` | 宣言 outputs を `sensor-invocation.json` へ投影（+118）。`hooks/amadeus-sensor-fire.ts:27` が exact-path allowlist として消費 | #1758 / #1770 |
+
+**縮小したコンポーネント**（抽出元）: `amadeus-mirror-config.ts` −689 / `amadeus-mirror-gateway.ts` −911 / `amadeus-mirror-runner.ts` −310。`scripts/projections.ts` の `MIRROR_TOOL_FILES` に新5ファイルが追加されている。
+
+**件数不変の面**: core sensors `7` / core hooks `12` / core scopes `10`（いずれも `ls` 実測。base からの変化なし）。
+
+## オープンバグ5件の対象コンポーネント（260730-open-bug-batch-2、履歴、observed `c42ef4d77`）
 
 **判断: 実質更新なし。** 区間 `8b8016f62..c42ef4d77` で新規コンポーネント（core tool / sensor / hook / scope）の追加・削除はない。5件の患部はいずれも既存コンポーネント内にあり、所有関係も不変 — #1750 = `amadeus-mirror-lifecycle.ts` + `amadeus-orchestrate.ts`、#1749 = `stage-protocol-governance.md`、#1742 = `amadeus-sensor-fire.ts`、#1735 = `amadeus-election/SKILL.md` + `stage-protocol.md`、#1734 = `scripts/promote-self.ts`。個別の配置と行番号は `code-structure.md` の対応節を参照。
 
