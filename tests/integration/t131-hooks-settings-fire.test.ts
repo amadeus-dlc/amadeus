@@ -84,6 +84,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -91,7 +92,7 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { auditBlockField, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -288,6 +289,11 @@ function makeProject(withState: boolean): string {
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),
   );
+  // The audit-logger emits through the canonical Event path, so its module
+  // graph reaches the otel/ tree and the vendored OTel API. Both ship beside
+  // hooks/ in a real install — copied whole rather than chased file by file.
+  cpSync(join(AMADEUS_SRC, "otel"), join(proj, ".claude", "otel"), { recursive: true });
+  cpSync(join(AMADEUS_SRC, "vendor"), join(proj, ".claude", "vendor"), { recursive: true });
   for (const h of ["amadeus-audit-logger.ts", "amadeus-runtime-compile.ts"]) {
     copyFileSync(join(SRC_HOOKS, h), join(proj, ".claude", "hooks", h));
   }
@@ -369,10 +375,13 @@ describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () 
     const after = readAllAuditShards(proj).split("\n").length;
     expect(after).toBeGreaterThan(before);
     // STRONGER than the .sh's wc -l comparison: an actual artifact row landed.
+    // Read through the production accessor, which serves the legacy event type
+    // under its historical name whichever schema stamped the row — the hook now
+    // writes v2 through the canonical Event path.
     const events = readAllAuditShards(proj)
       .split("\n")
       .filter((l) => l.trim() !== "")
-      .map((l) => (JSON.parse(l) as { event: string | null }).event);
+      .map((l) => auditBlockField(l, "Event"));
     expect(events.some((e) => e === "ARTIFACT_CREATED" || e === "ARTIFACT_UPDATED")).toBe(true);
   }, 30000);
 

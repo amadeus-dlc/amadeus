@@ -8,7 +8,8 @@
 // to detect compaction-related state corruption on the next turn.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   errorMessage,
@@ -70,7 +71,11 @@ writeFileSync(
 // event until the engine's first append.
 if (hasActiveWorkflowAudit(projectDir)) {
   try {
-    appendAuditEntry(
+    // Stand up the canonical emit path before the first emit (emitEvent
+    // throws with no Logger Provider registered). Inside the try so a
+    // bootstrap failure lands on the SAME fail-open drop as an append failure.
+    ensureOtelBootstrap(projectDir);
+    appendAuditEntryViaEvents(
       "SESSION_COMPACTED",
       {
         "Current Stage": currentStage,
