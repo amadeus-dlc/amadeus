@@ -729,5 +729,12 @@
     "dirName": "260731-open-bug-batch-4",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fb74a-d1fc-7897-a6c1-0f8c6567be59",
+    "slug": "formal-verif-value-chain",
+    "dirName": "260731-formal-verif-value-chain",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
