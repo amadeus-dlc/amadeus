@@ -132,6 +132,7 @@ describe("the audit-merge critical section stays atomic on the canonical path", 
     expect(merged.entriesMerged).toBe(0);
     const row = shardLines(mainAudit).find((r) => r.eventName === "amadeus.audit.merged");
     expect(row).toBeDefined();
-    expect((row?.attributes as Record<string, unknown>)["Entries Merged"]).toBe("0");
+    if (!row) throw new Error("row must exist");
+    expect((row.attributes as Record<string, unknown>)["Entries Merged"]).toBe("0");
   });
 });
