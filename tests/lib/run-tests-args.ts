@@ -8,13 +8,14 @@
 // The runner keeps `usage()` (whose text tests/smoke/t05 pins) and supplies the
 // stderr/stdout writes and exit codes through `io`.
 
-export type Level = "smoke" | "unit" | "integration" | "e2e";
+export type Level = "smoke" | "unit" | "integration" | "e2e" | "perf";
 
 export interface ParsedArgs {
   runSmoke: boolean;
   runUnit: boolean;
   runIntegration: boolean;
   runE2e: boolean;
+  runPerf: boolean;
   coverage: boolean;
   coverageDir: string;
   verbose: boolean;
@@ -42,6 +43,7 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
     runUnit: false,
     runIntegration: false,
     runE2e: false,
+    runPerf: false,
     coverage: false,
     coverageDir: "coverage",
     verbose: false,
@@ -71,6 +73,10 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
         out.runE2e = true;
         levelSelected = true;
         break;
+      case "--perf":
+        out.runPerf = true;
+        levelSelected = true;
+        break;
       case "--ci":
         out.runSmoke = true;
         out.runUnit = true;
@@ -83,6 +89,7 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
         out.runUnit = true;
         out.runIntegration = true;
         out.runE2e = true;
+        out.runPerf = true;
         out.fullProfile = true;
         levelSelected = true;
         break;
