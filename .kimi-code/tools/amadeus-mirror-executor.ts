@@ -54,6 +54,11 @@ type StateResult =
   | { kind: "ok"; snapshot: MirrorStateSnapshot }
   | { kind: "failed"; summary: string };
 
+// A receipt ready to act on, or the outcome to return when it cannot be made ready.
+type ReadyReceipt =
+  | { kind: "ready"; snapshot: MirrorStateSnapshot; receipt: MirrorOperationReceipt }
+  | { kind: "outcome"; outcome: MirrorOperationOutcome };
+
 function auditContext(
   context: MirrorExecutionContext,
   operationId: string | undefined,
@@ -699,13 +704,7 @@ function claimPreparedAttempt(
   context: MirrorExecutionContext,
   snapshot: MirrorStateSnapshot,
   receipt: MirrorOperationReceipt,
-):
-  | {
-      kind: "ready";
-      snapshot: MirrorStateSnapshot;
-      receipt: MirrorOperationReceipt;
-    }
-  | { kind: "outcome"; outcome: MirrorOperationOutcome } {
+): ReadyReceipt {
   if (receipt.status !== "prepared") return { kind: "ready", snapshot, receipt };
   const attempted = markAttempted(
     ports,
