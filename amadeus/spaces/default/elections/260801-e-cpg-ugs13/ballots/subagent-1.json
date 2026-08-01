@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採番予約の実在確認面のみ留保: 本 intent の t398 予約は現 worktree・現 main では空きだが、未マージブランチ bolt-metrics 上に tests/unit/t398-otel-metrics-vocabulary.test.ts が既に実在する(git log --all --name-only で独立実測)。既存 cid:code-generation:swarm-test-number-reservation が縛るのは『同一 intent 内の並列 swarm ディスパッチにおける事前予約』であって、未マージブランチ跨ぎの交差予検査ではない — この面は厳密には既存 cid の射程外である。ただし現時点では規範化しない: (a) cid:requirements-analysis:mechanism-cite-verify-at-draft の E-FSPRAS13 追補が『同一テスト番号の複数ファイル共存は実在する生態(t211 = 5ファイル実測)』と明記しており、番号重複は致命ではなく引用のフルパス化で吸収済み (b) §12a reviewer が advisory かつ非ブロッカーと分類し unit-of-work.md:73 へ引き継ぎ済み。実際に交差が顕在化して改番コストが発生した場合は、次回 PM ラウンドで独立 cid 化を再判定することを予約する。",
+  "rationale": "0件(選択肢1)を支持。record を独立実測した結果、候補 c1 の3要素はいずれも既存 cid の適用実例であり、新規規則を導かない。(1) 直列理由の記録 — unit-of-work-dependency.md:14-16 の直列編成理由は cid:units-generation:c1 (a)(Delivery Planning 前の Unit 独立実装可能性検証)と cid:code-generation:c6(同一ファイル交差の直列化)の適用。U1→U2 は bolt_dag_absence 判別子の真のデータ依存、U2→U3 は amadeus-orchestrate.ts の同一ファイル交差+guardMessage canonical 消費(cid:nfr-requirements:cross-unit-note-canonical-reference)、U3→U4 は docs-after-implementation。いずれも既存規範から一意に導かれる。『本 intent 自身のガードの正当直列 corpus 実例』という自己適用も、規範の新設ではなく既存規範の実演である。(2) edge block の in-process 自己検証 — cid:units-generation:per-unit-loop-activation (a) が YAML edge block 必須と parse 失敗時の無音 degrade を既に定め、cid:units-generation:recompile-before-construction-bolt-dag が compile 鮮度確認を construction 進入前の定型手順として定めている。UG 段での in-process 検証はこの既決要求の前倒し実行にすぎない。#1893 教訓の自己適用も同様。(3) 採番予約 — cid:code-generation:swarm-test-number-reservation が明文で要求済み。成果物自身が unit-of-work.md:44 で当該 cid を明示引用しており、既存規範の適用であって新規発見でないことの一次証拠になっている。反対材料の探索も空: UG diary(memory.md)の Deviations / Tradeoffs / Open questions はいずれも空で、規範化を要する未解決事項が記録されていない。t398/t399/t400 は現 worktree の tests/ 配下で find 実測 0 件(空き)を独立確認。§12a レビュー(scratchpad/cpg-ug-review-iter1.md)は iteration 1 で READY、Critical 0 / Major 0、Minor 2件はいずれも advisory で unit-of-work.md:72-73 へ引き継ぎ済み。参照した 5 cid(units-generation:c1 / per-unit-loop-activation / recompile-before-construction-bolt-dag / swarm-test-number-reservation / cross-unit-note-canonical-reference)はすべて amadeus/spaces/default/memory/project.md へ grep で実在確認した。よって 0件を採用。ただし採番の branch 交差面に軽微な留保を付す(GoA 2)。",
+  "submittedAt": "2026-08-01T11:12:00Z"
+}

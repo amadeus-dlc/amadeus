@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-ADS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件に同意するが1点留保。decisions.md §『上流へ差し戻す点』(AC-1a が現行コードで到達可能経路を持たないことを設計側で書き換えず要件所有者へ差し戻した判断)は新規 cid 候補になりうる形をしている。ただし team.md P3(承認済み意図からの逸脱は所有者へ戻す)と cid:requirements-analysis:implementation-deviation-election が同じ規律を既に定めており、本件はその design 段での実例にとどまると判断して 0件側に立つ。同型が再発したら『設計段で要件の到達不能 AC を発見した場合の差し戻し』として昇格を再検討する。",
+  "rationale": "独立実測: (1) ADR-1 の『return false 7箇所』を .claude/tools/amadeus-orchestrate.ts:2928/2929/2930/2933/2935/2937/2939 の awk 抽出で7件と確認、記述は正確。この 6→7 の §12a Minor 是正自体が cid:requirements-analysis:enumeration-completeness-review(レビュー段の独立再列挙)が設計どおり機能した実例であり、新規規則を導かない。(2) ADR-2 の『消費者ゼロのフィールドは作らない』は phases/construction.md:10 の『文書のふりをしたフィールド』禁止と team.md:131 検証劇場 Forbidden の直接適用。(3) ADR-3 の batch 単位の個数突合は project.md:278 cid:functional-design:state-machine-cardinality-check の個数機械照合の適用。(4) ADR-4 の canonical 1定義は construction.md の canonical 導出原則の適用。いずれも既存 cid の実例で新規規則を導かない。",
+  "submittedAt": "2026-08-01T09:16:32Z"
+}

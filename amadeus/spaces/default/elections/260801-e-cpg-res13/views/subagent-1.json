@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-RES13",
+  "voter": "subagent-1",
+  "question": "260801-cg-plan-guard reverse-engineering の §13 学習選定。候補 c1(患部 verbatim 直読+関数不変実測による引用再解決免除)は E-OBB5-RES13 追補の適用実例、c2(RE センサー不適用の代替検証)は cid:reverse-engineering:re-sensors-codekb-filter-mismatch の実例 — いずれも新規規則を導かないため 0 件を提案。反対材料があれば record(RE diary・re-scans/260801-cg-plan-guard.md・timestamp)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件(両候補とも既存 cid の実例扱い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

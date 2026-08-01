@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件(c1 は既存 cid の実例扱い)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用あり(具体案を留保に記す)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T07:53:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "SD 成果物3点を実測。diary Interpretations は1件(0問一意導出+risk-first 編成)、Deviations/Tradeoffs/Open questions は空。questions は E-OC1 判定+承認TS+裁定の記録のみ。両要素とも既存 cid の実例に還元される: (a) 0問一意導出 = intent-capture:c1(裁定済み intent では未決のみ質問)+ requirements-analysis:no-election-judgment-gate(選挙不要判定の申告・冒頭固定の様式)+ requirements-analysis:c5 (b) risk-first 編成 = scope-definition:c3(raw WSJF より dependency と risk-first、未証明基盤に依存する価値面を先行着地させない)+ requirements-analysis:priority-vs-dependency。backlog/scope-document の残余要素も既存被覆: corpus sweep を実装と同一 Bolt に置く順序 = code-generation:corpus-sweep-for-new-guards(新設ガードの両側実測)、#1893 編入前提のクロスレビュー2名 = requirements-analysis:issue-cross-review。新規規則を導く実測差分は見つからず、0件が妥当。",
+      "submittedAt": "2026-08-01T07:52:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。record をリードオンリー実測して、SD diary の観測が既存 cid の機械的執行に尽きることを確認した。(a) diary Interpretations は 2026-08-01T07:52:00Z の1件のみ(Deviations/Tradeoffs/Open questions はテンプレのコメント例のみで total=0)であり、その内容は『In/Out は裁定済み骨子から一意導出(0問、E-OC1 判定を questions 冒頭に固定)』『バックログは risk-first』『#1893 の編入前提と REFRAME 手順を scope-document に固定』の3点。(b) 第1点は cid:intent-capture:c1(project.md:179『事前整理で裁定済みの intent では質問を未決の判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映する』)の適用であり、判定様式は cid:requirements-analysis:no-election-judgment-gate(team.md:208『判定と根拠種別は質問ファイル冒頭に明記する』)の字義どおりの執行 — scope-definition-questions.md 冒頭に E-OC1 判定と『ユーザー承認: 2026-08-01T07:49:13Z』が実在し、承認語彙+ISO TS の様式(cid:requirements-analysis:c4-answer-evidence-approval-vocab)も満たしている。(c) 第2点は cid:scope-definition:c3(project.md:191『raw WSJF より dependency と risk-first を優先し、未証明の基盤に依存する価値面を先行着地させない』)の先例と同型 — intent-backlog.md の B1→B2→B3→B4 は『判定入力の信頼化 → 発行側 → 実績側 → docs』という依存順であり、scope-document の『リスクと順序戦略』節が最大リスク(誤発動)への corpus sweep 先行を明記していて、新しい編成原理は導入していない。(d) 第3点(候補文が名指ししていない残余)も新規ではなく、cid:requirements-analysis:priority-vs-dependency(team.md:96 (4)『クロスレビュー2名成立はバッチ編入の前提であり、優先度が高くても揃うまで着手しない』)の適用 — intent-backlog.md の依存節が『#1893 の編入は クロスレビュー2名成立が前提。未成立のまま B1 実装期に入る場合、M6 を B1 から切り出して保留』と書いているのは当該ノルムの条件分岐を計画へ落としただけで、横断適用可能な新規則を導かない。よって候補 c1 は既存 cid の実例であり、0件が正しい。",
+      "submittedAt": "2026-08-01T07:52:50Z"
+    }
+  ],
+  "resolutions": []
+}

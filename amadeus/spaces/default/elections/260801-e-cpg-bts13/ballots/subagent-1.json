@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "留保2点。(1) build-test-results.md の U2ABS 閉包記録『消費は tests/integration/t399 のみ』は実測と不一致 — grep 実測で tests/unit/t133-bolt-dag-compile.test.ts:330-342 も graph.bolt_dag_absence.reason を assert しており消費テストは2ファイル。これは新ノルムではなく既存 cid(enumeration-completeness-review / numbers-from-command-output-only)の違反実例なので次回 PM ラウンドへ回付し、記録は t133 を含む形へ訂正すること。(2) 統合断面での coverage-patch-gate 再実行は added lines 0 で構造的に vacuous(patch 証拠は各 Bolt 断面が正)— 本 intent では artifact が per-Bolt 実測を併記して正しく扱えているため今回は persist 不要と判断するが、将来この vacuous PASS を patch 被覆の証拠として報告する事故が起きたら独立 cid へ昇格させる候補として記録する。",
+  "rationale": "BT 段 7成果物と memory.md を実測。build-test-results.md は全 blocking gate exit 0(9,792 assertions / 0 fail)、memory.md は Interpretations/Deviations/Tradeoffs/Open questions すべて空テンプレートのまま(BT 固有の解釈・逸脱なし)。perf/security instructions の比例選定は既存 cid:build-and-test:bt-proportional-selection、per-unit+統合の2層実行は既存 bt-20260730-1 で既決。新規の欠陥知見は CG 段で persist 済みを team.md:346(cg-allowlist-straddle-swell)と team.md:349(cg-bare-case-label-da0)で実在確認。BT 段固有の未回収知見は認められないため 0件を支持する。",
+  "submittedAt": "2026-08-01T21:51:30Z"
+}

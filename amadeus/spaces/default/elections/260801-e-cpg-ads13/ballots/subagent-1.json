@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-ADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "§12a レビューが自己申告した「AC-1a の violation 分岐は tryEmitSwarm 経由の到達経路を持たない」所見は、現時点では P3(承認済み意図からの逸脱は所有者へ戻す)の実例として要件所有者へ差し戻されており正しく処理されているが、設計段で AC の到達不能を検出する場面が再発したら独立 cid 候補として再提出したい。今回は既存原理から導出可能なため 0件に同意する。",
+  "rationale": "採用(1) = 0件。read-only 実測3点。(a) decisions.md / memory.md :7 を直読 — ADR-1(tryEmitSwarm 3値化・単一分岐点)、ADR-2(消費者2箇所を持つ bolt_dag_absence)、ADR-3(SWARM_DEGRADED を並行実績側へ)、ADR-4(3部メッセージの canonical 1定義)の4件を確認。ADR-2 は『どのコードも消費しないフィールドを持たせない』= org.md Forbidden の検証劇場条項そのものの遵守であり、遵守は新規規則を生まない。ADR-4 は construction.md『canonical な1定義から導出』の遵守。(b) §12a レビュー(scratchpad/cpg-ad-review-iter1.md)を全文直読 — verdict READY、Critical/Major ゼロ、Minor 1件のみ。その Minor は ADR-1 Context の『辞退理由は実装上6通り』に対し tryEmitSwarm(:2919-2963)の実 return false が7サイト(:2928/2929/2930/2933/2935/2937/2939)で、引用範囲 :2929-2930 が :2928 を落としているという列挙件数の齟齬。これは cid:functional-design:state-machine-cardinality-check(状態数×指令種数の個数機械照合)および cid:requirements-analysis:enumeration-completeness-review(列挙の完全性をレビュー段で独立再列挙)の適用によって検出された違反実例であって、両 cid が既に規定する検査で捕捉できている以上、新規規則を導かない。しかも即時是正済み。(c) 導出可能性を grep で確認 — state-machine-cardinality-check は team.md:278、enumeration-completeness-review は team.md:180/192/198/256 に実在。3候補すべて既存規範の実例側に落ちるため、PM ラウンドへの違反実例回付が適切で §13 persist 対象なし。",
+  "submittedAt": "2026-08-01T09:18:33Z"
+}

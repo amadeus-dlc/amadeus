@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "本件の欠陥は enumeration-completeness-review(team.md:180)の射程内。同 cid の本文は『選挙の前提に含めた機構列挙(書き手経路・呼び出し元一覧等)は起草時の grep 1回で確定とせず、レビュー段で独立の再列挙を必須観点にする — 列挙漏れは裁定自体を汚染し』と、今回の機序(recoverBoltDag の1経路だけを列挙し compile 経路を落とし、裁定を汚染)と回収経路(§12a reviewer の独立再列挙で捕捉→Q2r 再裁定)を逐語で言い当てている。ソロモードではユーザー直接裁定が選挙の代替であり(team.md ソロモード節、および questions ファイルの E-OC1 判定『仕様裁定(ソロモードではユーザー専権)のため選挙なし』が諮問=裁定手段であることを自認)、『選挙の前提』は『裁定の前提』として諮問文を含むと読むのが自然。よって新規 cid は既存の重複増でありノルム肥大側のコスト(週次蒸留の縮約対象)になる。留保: (1) 語句が『選挙』に閉じているためソロ運用で射程外と誤読される余地は残る — 同クラス(諮問文の機構過大一般化)が再発したら、新規 cid ではなく enumeration-completeness-review への1行追補『ソロモードのユーザー諮問文も本則の対象』として昇格させるべき。(2) 今回は既存ノルムが設計どおり機能して1往復で閉包した実例であり、その事実自体は本 RA の diary(Deviations/Interpretations)に既記載で保存されている。",
+  "rationale": "mechanism-cite-verify-at-draft(引用の実在・意味論)/ enumeration-completeness-review(列挙の完全性)/ ruling-premise-closure-verification(裁定前提の閉包)を grep 実測。今回の欠陥は『引用の実在』ではなく『呼び出し経路列挙の不完全』であり、2番目の cid の中核射程。c1 が persist 不要とされた理由(ruling-premise-closure-verification の実例)と同じ論理が c2 にも当てはまる。",
+  "submittedAt": "2026-08-01T09:45:00Z"
+}
