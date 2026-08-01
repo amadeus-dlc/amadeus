@@ -7985,6 +7985,53 @@ export function planGuardMessage(
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 
+// What the audit trail says actually ran, reduced to the only key the three
+// SWARM events share. SWARM_STARTED carries "Unit names", SWARM_DEGRADED carries
+// none, SWARM_COMPLETED carries neither — "Batch number" is the whole common
+// vocabulary, so matching on unit names would drop every degraded batch.
+//
+// Sets, not lists: the same batch legitimately emits SWARM_STARTED more than
+// once, and neither order nor multiplicity carries meaning here.
+export type SwarmEvidence = {
+  readonly startedBatches: ReadonlySet<number>; // SWARM_STARTED ∪ SWARM_DEGRADED
+  readonly completedBatches: ReadonlySet<number>; // SWARM_COMPLETED
+};
+
+// Whether the run's execution shape matches the plan's. `missing` carries EVERY
+// unsatisfied batch rather than the first, because approve is only reached once
+// all units are covered — a batch still lacking evidence at that point is not
+// mid-flight, it is a batch that never fanned out, and naming one of four
+// teaches the reader to fix one of four.
+export type SwarmEvidenceVerdict =
+  | { readonly kind: "satisfied" }
+  | { readonly kind: "missing"; readonly batches: readonly DeclaredBatch[] };
+
+// The single place a batch index becomes a batch NUMBER. Every consumer of a
+// declared batch goes through here, so the 1-origin conversion the audit rows
+// use cannot drift from the 0-origin array the compiler produces.
+//
+// Width-1 levels never appear: a topological level of one unit is serial by
+// plan, so there is no parallelism to have failed.
+function wideBatchesOf(batches: readonly (readonly string[])[]): DeclaredBatch[] {
+  const wide: DeclaredBatch[] = [];
+  for (let index = 0; index < batches.length; index++) {
+    const units = batches[index];
+    if (units.length >= 2) wide.push({ number: index + 1, units });
+  }
+  return wide;
+}
+
+export function swarmEvidenceVerdict(
+  batches: readonly (readonly string[])[],
+  evidence: SwarmEvidence,
+): SwarmEvidenceVerdict {
+  const missing = wideBatchesOf(batches).filter(
+    (batch) => !evidence.startedBatches.has(batch.number) || !evidence.completedBatches.has(batch.number),
+  );
+  if (missing.length === 0) return { kind: "satisfied" };
+  return { kind: "missing", batches: missing };
+}
+
 // Locate the first fenced ```yaml block whose body declares a top-level
 // `units:` key. Returns the inner block text, or null when no such fence
 // exists. Other fenced blocks (mermaid diagrams, prose examples) are skipped.

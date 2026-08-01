@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 572,
+    "total": 573,
     "enumeratedByClass": {
-      "function": 329,
+      "function": 330,
       "audit": 79,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 161,
+      "function": 162,
       "audit": 34,
       "scope": 10,
       "stage": 8,
@@ -3927,6 +3927,22 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:swarmEvidenceVerdict",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t402-approve-reconciliation-corpus.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t402-approve-reconciliation.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
