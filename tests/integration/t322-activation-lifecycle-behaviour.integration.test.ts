@@ -180,8 +180,28 @@ describe("t322 flow 2: advisory before build-and-test", () => {
 
     expect(logs.join("\n")).toContain('"stage":"build-and-test"'); // directive still emitted
     expect(errs.join("\n")).toContain(`${ACTIVATION_PLUGIN} spec hash CHANGED`); // advisory on stderr
-    // stdout directive JSON is not polluted by the advisory (channel separation).
-    expect(logs.join("\n")).not.toContain("spec hash CHANGED");
+
+    // CHANNEL SEPARATION, restated for the U5 advisories channel (FR-B2).
+    //
+    // This assertion used to read `expect(logs).not.toContain("spec hash
+    // CHANGED")` — under U6 the advisory was stderr-ONLY, so ANY occurrence of
+    // the text on stdout was pollution. U5 deliberately adds a MACHINE channel:
+    // the same decision now also rides the directive as a structured
+    // `advisories` entry, so the text legitimately appears on stdout INSIDE the
+    // JSON. The property worth pinning is unchanged in spirit and is what we
+    // now assert: stdout is still exactly ONE valid JSON directive (nothing is
+    // written beside it), and the advisory text appears ONLY inside the
+    // structured field — never as loose prose on the directive channel.
+    const stdout = logs.join("\n").trim();
+    const directive = JSON.parse(stdout) as {
+      advisories?: { message: string }[];
+    };
+    expect(directive.advisories?.length).toBe(1);
+    expect(directive.advisories?.[0].message).toContain("spec hash CHANGED");
+    // Nothing outside the JSON: stripping the advisories field leaves no trace
+    // of the advisory text anywhere else in the emitted bytes.
+    const withoutAdvisories = { ...directive, advisories: undefined };
+    expect(JSON.stringify(withoutAdvisories)).not.toContain("spec hash CHANGED");
   });
 
   test("composed + spec unchanged -> no advisory (current is silent)", () => {

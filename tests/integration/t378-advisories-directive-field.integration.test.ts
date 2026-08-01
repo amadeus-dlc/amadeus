@@ -1,0 +1,318 @@
+// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// size: medium
+//
+// U5 advisories-channel (FR-B2) — the MACHINE-CONSUMABLE advisory channel. The
+// stderr line was human-only: a conductor had no structured field to read, so
+// the nudge could not be relayed. This file pins the structured half:
+//
+//   1. activationAdvisoriesForHost STRUCTURES the 3-value judgment into
+//      Advisory[] (domain-entities.md E1) — `current` yields [].
+//   2. The directive validator ACCEPTS `advisories` on run-stage (it is a
+//      strict unknown-key rejecter, so the field must be allowlisted) and
+//      rejects a malformed entry.
+//   3. `next` carries the field on stdout ONLY when an advisory actually fires
+//      (business-logic-model.md I2 — silence is preserved byte-for-byte), and
+//      the stderr line is still written (L5 — the channels are additive).
+//
+// Driven IN-PROCESS (handleNext imported from source) so the added lines
+// register in lcov — bun --coverage does not instrument spawned children
+// (bun-coverage-spawn-blindspot).
+
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
+import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
+import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  ACTIVATION_PLUGIN,
+  ACTIVATION_WATCH_GLOBS,
+  activationAdvisoriesForHost,
+  recordActivationVerdict,
+} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import {
+  cleanupTestProject,
+  createTestProject,
+  FIXTURES_DIR,
+  resetAidlcEnv,
+  seedStateFile,
+} from "../harness/fixtures.ts";
+
+const REPO_ROOT = join(import.meta.dir, "..", "..");
+const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
+const FIX_BUILD_STAGE = join(FIXTURES_DIR, "state-fix-final-construction.md");
+
+let host = "";
+let proj = "";
+const savedEnv: Record<string, string | undefined> = {};
+function setEnv(k: string, v: string | undefined): void {
+  if (!(k in savedEnv)) savedEnv[k] = process.env[k];
+  if (v === undefined) delete process.env[k];
+  else process.env[k] = v;
+}
+
+// A hermetic host: spec tree + (optionally) the composition record that gates
+// the whole advisory (BR-U6-4 0-plugin zero-impact).
+function makeHost(composed: boolean): string {
+  const h = mkdtempSync(join(tmpdir(), "amadeus-t378-host-"));
+  mkdirSync(join(h, "specs", "tla"), { recursive: true });
+  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  if (composed) {
+    writeFileSync(
+      join(h, ".amadeus-plugin-composition.json"),
+      JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
+    );
+  }
+  return h;
+}
+
+// Record a verdict and then mutate the spec, so the judgment is `changed`.
+function makeChangedHost(): string {
+  const h = makeHost(true);
+  recordActivationVerdict(h, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
+  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+  return h;
+}
+
+let logs: string[] = [];
+let errs: string[] = [];
+const realLog = console.log;
+const realErr = console.error;
+const realStderrWrite = process.stderr.write.bind(process.stderr);
+
+beforeEach(() => {
+  resetAidlcEnv();
+  host = "";
+  proj = "";
+  logs = [];
+  errs = [];
+  console.log = (...a: unknown[]) => { logs.push(a.join(" ")); };
+  console.error = (...a: unknown[]) => { errs.push(a.join(" ")); };
+  (process.stderr as unknown as { write: (s: string) => boolean }).write = (s: string) => { errs.push(String(s)); return true; };
+});
+
+afterEach(() => {
+  console.log = realLog;
+  console.error = realErr;
+  (process.stderr as unknown as { write: typeof realStderrWrite }).write = realStderrWrite;
+  for (const [k, v] of Object.entries(savedEnv)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  for (const k of Object.keys(savedEnv)) delete savedEnv[k];
+  __resetGraphCache();
+  _resetStageGraphForTests();
+  resetAidlcEnv();
+  if (host) rmSync(host, { recursive: true, force: true });
+  cleanupTestProject(proj);
+});
+
+// ===========================================================================
+// 1. Structuring: judgment -> Advisory[] (domain-entities.md E1)
+// ===========================================================================
+
+describe("t378 activationAdvisoriesForHost (L2 structuring)", () => {
+  test("changed -> one Advisory carrying plugin/code/message/stage", () => {
+    host = makeChangedHost();
+    const advisories = activationAdvisoriesForHost(host, "build-and-test");
+    expect(advisories.length).toBe(1);
+    expect(advisories[0].plugin).toBe(ACTIVATION_PLUGIN);
+    expect(advisories[0].code).toBe("changed");
+    expect(advisories[0].stage).toBe("build-and-test");
+    // BR-U5-2: the message is the EXISTING stderr line, byte-identical.
+    expect(advisories[0].message).toBe(
+      `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
+    );
+  });
+
+  test("never-run (no recorded verdict) -> one Advisory with code never-run", () => {
+    host = makeHost(true);
+    const advisories = activationAdvisoriesForHost(host, "requirements-analysis");
+    expect(advisories.length).toBe(1);
+    expect(advisories[0].code).toBe("never-run");
+    expect(advisories[0].stage).toBe("requirements-analysis");
+    expect(advisories[0].message).toBe(
+      `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
+    );
+  });
+
+  test("current (verdict matches spec) -> [] (silence is preserved)", () => {
+    host = makeHost(true);
+    recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
+    expect(activationAdvisoriesForHost(host, "build-and-test")).toEqual([]);
+  });
+
+  test("not composed -> [] (0-plugin zero-impact, first gate)", () => {
+    host = makeHost(false);
+    expect(activationAdvisoriesForHost(host, "build-and-test")).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// 2. The directive contract: advisories is an ALLOWLISTED, SHAPE-CHECKED field
+// ===========================================================================
+
+function runStageFixture(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    kind: "run-stage",
+    stage: "build-and-test",
+    phase: "construction",
+    lead_agent: "amadeus-quality-agent",
+    support_agents: [],
+    mode: "inline",
+    gate: true,
+    memory_path: "x/memory.md",
+    consumes: [],
+    produces: ["x/out.md"],
+    rules_in_context: [],
+    sensors_applicable: [],
+    stage_file: "stages/x.md",
+    ...extra,
+  };
+}
+
+describe("t378 directive contract: advisories field", () => {
+  test("a well-formed advisories array is accepted on run-stage", () => {
+    const result = validateDirective(
+      runStageFixture({
+        advisories: [
+          { plugin: ACTIVATION_PLUGIN, code: "changed", message: "advisory: x", stage: "build-and-test" },
+        ],
+      }),
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  test("an entry with an unrecognised code is rejected (no演出 — the 2 firing values only)", () => {
+    const result = validateDirective(
+      runStageFixture({
+        advisories: [{ plugin: "p", code: "current", message: "m", stage: "s" }],
+      }),
+    );
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors.join("; ")).toContain("advisories[0].code");
+  });
+
+  test("each of plugin/message/stage must be a string, and every offender is named", () => {
+    const result = validateDirective(
+      runStageFixture({
+        advisories: [{ plugin: 1, code: "changed", message: null, stage: [] }],
+      }),
+    );
+    expect(result.valid).toBe(false);
+    const errors = result.valid === false ? result.errors.join("; ") : "";
+    // All three are reported in one pass — a validator that stopped at the
+    // first offender would hide the rest behind a fix-and-rerun loop.
+    expect(errors).toContain("advisories[0].plugin must be string, got number");
+    expect(errors).toContain("advisories[0].message must be string, got null");
+    expect(errors).toContain("advisories[0].stage must be string, got array");
+  });
+
+  test("a non-object entry is rejected", () => {
+    const result = validateDirective(runStageFixture({ advisories: ["nope"] }));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors.join("; ")).toContain("advisories[0] must be object");
+  });
+
+  test("a non-array advisories is rejected", () => {
+    const result = validateDirective(runStageFixture({ advisories: "nope" }));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors.join("; ")).toContain("advisories must be array");
+  });
+});
+
+// ===========================================================================
+// 3. next: the field appears ONLY when an advisory fires (I1/I2), and the
+//    stderr line is still written (L5 — additive, not a replacement).
+// ===========================================================================
+
+// ===========================================================================
+// 4. The consuming NORM: a field nobody is told to read is not a channel.
+//    stage-protocol.md must instruct the conductor to relay each advisory —
+//    in the canonical source AND in every shipped harness copy.
+// ===========================================================================
+
+describe("t378 stage-protocol relay norm", () => {
+  const PROTOCOL_REL = join("amadeus-common", "protocols", "stage-protocol.md");
+
+  // Discover each harness's protocol copy from disk. TWO discoveries, joined:
+  //   * the harness SET comes from packages/framework/harness/<n>/manifest.ts —
+  //     the same rule the packager uses, so a newly added harness widens this
+  //     sweep automatically instead of being silently missed;
+  //   * the dot-dir NAME comes from the built tree, because it is NOT always
+  //     `.<harness>` (kimi ships `.kimi-code`, kiro-ide ships `.kiro`) and
+  //     guessing it would skip those trees while still "passing".
+  // Every manifest-bearing harness must yield exactly one copy.
+  function protocolCopies(): string[] {
+    const canonical = join(REPO_ROOT, "packages", "framework", "core", PROTOCOL_REL);
+    const harnessRoot = join(REPO_ROOT, "packages", "framework", "harness");
+    const harnesses = readdirSync(harnessRoot, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && existsSync(join(harnessRoot, e.name, "manifest.ts")))
+      .map((e) => e.name)
+      .sort();
+    expect(harnesses.length).toBeGreaterThan(0);
+
+    const shipped: string[] = [];
+    for (const harness of harnesses) {
+      const distHarness = join(REPO_ROOT, "dist", harness);
+      const found = readdirSync(distHarness, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && e.name.startsWith("."))
+        .map((e) => join(distHarness, e.name, PROTOCOL_REL))
+        .filter((p) => existsSync(p));
+      expect({ harness, copies: found.length }).toEqual({ harness, copies: 1 });
+      shipped.push(found[0]);
+    }
+    expect(shipped.length).toBe(harnesses.length);
+    return [canonical, ...shipped];
+  }
+
+  test("every copy tells the conductor to surface directive.advisories", () => {
+    for (const path of protocolCopies()) {
+      const text = readFileSync(path, "utf-8");
+      expect(text).toContain("`advisories`");
+      // The norm has to name the ACTION, not merely the field.
+      expect(text.toLowerCase()).toContain("surface every entry");
+    }
+  });
+});
+
+describe("t378 next carries advisories on stdout", () => {
+  test("firing condition -> the emitted directive carries advisories AND the stderr line", () => {
+    host = makeChangedHost();
+    setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+    __resetGraphCache();
+    _resetStageGraphForTests();
+    proj = createTestProject();
+    seedStateFile(proj, FIX_BUILD_STAGE); // Current Stage = build-and-test
+    handleNext([], proj);
+
+    const directive = JSON.parse(logs.join("\n").trim()) as {
+      stage: string;
+      advisories?: { plugin: string; code: string; message: string; stage: string }[];
+    };
+    expect(directive.stage).toBe("build-and-test");
+    expect(directive.advisories?.length).toBe(1);
+    expect(directive.advisories?.[0].code).toBe("changed");
+    expect(directive.advisories?.[0].stage).toBe("build-and-test");
+    // stderr is preserved (L5): the human channel did not move.
+    expect(errs.join("\n")).toContain(`${ACTIVATION_PLUGIN} spec hash CHANGED`);
+  });
+
+  test("silent condition (0-plugin) -> the advisories KEY is absent, not an empty array", () => {
+    host = makeHost(false);
+    setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+    __resetGraphCache();
+    _resetStageGraphForTests();
+    proj = createTestProject();
+    seedStateFile(proj, FIX_BUILD_STAGE);
+    handleNext([], proj);
+
+    const raw = logs.join("\n").trim();
+    expect(raw).toContain('"stage":"build-and-test"');
+    expect(raw).not.toContain("advisories");
+  });
+});

@@ -22,6 +22,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   existsSync as fsExistsSync,
+  mkdirSync as fsMkdirSync,
   readdirSync as fsReaddirSync,
   readFileSync as fsReadFileSync,
   renameSync as fsRenameSync,
@@ -212,6 +213,115 @@ export function activationAdvisoryLine(judgment: ActivationJudgment): string | n
   }
 }
 
+// --- U5 (FR-B2): the MACHINE-CONSUMABLE advisory ---
+//
+// The stderr line above is the HUMAN channel. `Advisory` is the same decision
+// as structured data, so the engine can put it on the directive JSON and the
+// conductor can relay it (domain-entities.md E1). This module OWNS the type —
+// the directive-composing side imports it rather than re-declaring the shape
+// (canonical 1 definition).
+
+// The two FIRING judgment kinds, 1:1 with judgeActivation's non-silent values.
+// `current` has no code because it produces no Advisory at all.
+export type AdvisoryCode = "changed" | "never-run";
+
+export type Advisory = {
+  // The plugin the advisory is about (formal-model-check today; the type is
+  // general because the channel is not plugin-specific).
+  plugin: string;
+  code: AdvisoryCode;
+  // BR-U5-2 — byte-identical to the stderr line (activationAdvisoryLine). The
+  // wording is NOT re-authored here; both channels render the same string.
+  message: string;
+  // The checkpoint slug this fired at, so a relayed advisory says WHERE it was
+  // raised (the same judgment can surface at any of ACTIVATION_ADVISORY_STAGES).
+  stage: string;
+};
+
+// activationAdvisoriesForHost — the structured sibling of
+// activationAdvisoryForHost: the same two gates (composed? judgment firing?)
+// rendered as data instead of a line. Returns [] for BOTH silent cases
+// (not composed / `current`), so an empty result is the faithful encoding of
+// "nothing to say" and the caller never has to special-case null.
+export function activationAdvisoriesForHost(
+  hostRoot: string,
+  stage: string,
+  fs: ActivationFs = defaultActivationFs,
+): Advisory[] {
+  if (!formalModelCheckComposed(hostRoot, fs)) return [];
+  const judgment = resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs);
+  // Narrow on the judgment (not on the line being non-null) so `code` is the
+  // judgment's own kind — the two stay 1:1 by construction, not by convention.
+  if (judgment.kind === "current") return [];
+  const message = activationAdvisoryLine(judgment);
+  if (message === null) return [];
+  return [{ plugin: ACTIVATION_PLUGIN, code: judgment.kind, message, stage }];
+}
+
+// --- The run latch (business-logic-model L4 / domain-entities.md E3) ---
+//
+// Three checkpoints reachable from two emit paths means the SAME judgment would
+// be raised on every `next` of a run. The latch keeps one raise per
+// (plugin, code) per run: one marker file per key, holding the emit instant.
+//
+// FAIL-OPEN throughout (BR-U5-3): if the latch cannot be read or written we
+// treat the advisory as UNLATCHED and raise it. The failure mode we refuse is a
+// silently dropped nudge; a duplicate nudge is merely noise. This is the same
+// direction as the judgment's own fail-closed rule (unknown => fire).
+
+export type AdvisoryLatchFs = {
+  existsSync: (path: string) => boolean;
+  mkdirSync: (path: string) => void;
+  writeFileSync: (path: string, data: string) => void;
+};
+
+export const defaultAdvisoryLatchFs: AdvisoryLatchFs = {
+  existsSync: fsExistsSync,
+  mkdirSync: (p) => {
+    fsMkdirSync(p, { recursive: true });
+  },
+  writeFileSync: (p, data) => fsWriteFileSync(p, data),
+};
+
+// The marker path for one latch key. The key is sanitised to the slug shape so
+// a plugin name can never escape the latch dir (path traversal / separators).
+export function advisoryLatchPath(latchDir: string, plugin: string, code: AdvisoryCode): string {
+  const key = `${plugin}.${code}`.replace(/[^A-Za-z0-9._-]+/g, "-");
+  return join(latchDir, key);
+}
+
+// unlatchedAdvisories — the advisories that have NOT yet been raised this run,
+// marking each returned one as raised. Filter and mark are one operation so a
+// caller cannot read the latch and then forget to set it (which would make the
+// latch decorative). Both the read and the write are individually fail-open.
+export function unlatchedAdvisories(
+  latchDir: string,
+  advisories: readonly Advisory[],
+  now: string = new Date().toISOString(),
+  fs: AdvisoryLatchFs = defaultAdvisoryLatchFs,
+): Advisory[] {
+  const fresh: Advisory[] = [];
+  for (const advisory of advisories) {
+    const path = advisoryLatchPath(latchDir, advisory.plugin, advisory.code);
+    let alreadyRaised = false;
+    try {
+      alreadyRaised = fs.existsSync(path);
+    } catch {
+      alreadyRaised = false; // unreadable latch => raise (fail-open)
+    }
+    if (alreadyRaised) continue;
+    fresh.push(advisory);
+    try {
+      fs.mkdirSync(latchDir);
+      fs.writeFileSync(path, `${now}\n`);
+    } catch {
+      // Unwritable latch: the advisory is still raised (it is already in
+      // `fresh`); only the de-duplication for the rest of the run is lost.
+    }
+  }
+  return fresh;
+}
+
 // The composition record's plugin entries: [name, record][]. We only need the
 // names, so the record half is opaque.
 type CompositionJson = { plugins?: [string, unknown][] };
@@ -264,17 +374,19 @@ export function resolveActivationJudgment(
   return judgeActivation(current.ok ? current.hash : null, state === null ? null : state.lastVerdictHash);
 }
 
-// activationAdvisoryForHost — the whole engine-side advisory decision as one
-// total function. Returns null (no advisory) when formal-model-check is not
-// composed — the 0-plugin fast return that touches NO spec file (BR-U6-4 /
-// performance-design) — otherwise the judgment's advisory line (null on
-// `current`). Never writes state (BR-U6-6). Never throws.
+// activationAdvisoryForHost — the LINE-ONLY view of the same decision, for a
+// caller that wants the human sentence and nothing else (U5 doctor's activation
+// line). It reads the decision off activationAdvisoriesForHost rather than
+// re-running the gates, so the two views can never disagree about WHETHER an
+// advisory exists. The stage is irrelevant to a line-only caller, hence "".
+// Returns null when there is nothing to say (not composed, or `current`) — the
+// 0-plugin case still touches NO spec file (BR-U6-4 / performance-design).
+// Never writes state (BR-U6-6). Never throws.
 export function activationAdvisoryForHost(
   hostRoot: string,
   fs: ActivationFs = defaultActivationFs,
 ): string | null {
-  if (!formalModelCheckComposed(hostRoot, fs)) return null;
-  return activationAdvisoryLine(resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs));
+  return activationAdvisoriesForHost(hostRoot, "", fs)[0]?.message ?? null;
 }
 
 // recordActivationVerdict — flow 4: persist the current spec hash as the last
