@@ -111,9 +111,16 @@ export function buildSpanContext(projectDir: string): Record<string, string> {
     put(bag, "amadeus.agent.id", () => process.env.AMADEUS_AGENT_ID);
   } catch {
     // A failure the per-key guards did not anticipate degrades to NO context
-    // rather than to a partial bag: the keys are resolved as pairs, and half a
-    // pair would describe a unit of work that was never observed. Span creation
-    // continues either way (NFR-1).
+    // rather than to whatever the bag happened to hold when it threw: an
+    // unanticipated failure tells us nothing about which of the keys already in
+    // the bag were measured against the same workspace state, so the honest
+    // answer is none of them. Span creation continues either way (NFR-1).
+    //
+    // This is NOT a claim that the six keys are one paired context. Only
+    // intent/space pair (see putIntentPair); stage, phase, bolt, unit and the
+    // agent keys are independent fail-open reads, so a partial bag is the
+    // NORMAL result whenever some of them resolve and others do not — including
+    // a stage with no intent, which is pinned in t-otel-span-attrs.
     return {};
   }
   return bag;
