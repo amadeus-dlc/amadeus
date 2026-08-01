@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: kimi
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -96,7 +96,7 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-01T22:07:14Z
+- **Last Updated**: 2026-08-01T22:18:19Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
