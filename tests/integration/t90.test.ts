@@ -366,10 +366,16 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
   test("13: re-approve still-empty -> fresh MEMORY_EMPTY (total 2), then suppressed", () => {
     const proj = makeProject(AUDIT_PAST_APPROVED, STATE_FEATURE);
     writeMemory(proj, "ideation", "intent-capture", "\n");
-    const priorEmpty = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:05:00Z","heading":"Memory Empty","event":"MEMORY_EMPTY","fields":{"Stage":"intent-capture"}}
+    // Sequence numbers CONTINUE the shard these lines are appended to
+    // (AUDIT_PAST_APPROVED ends at seq 3). They restarted at 1 while nothing
+    // read the ordinals; the journal health probe now does (#1856), and a
+    // regression in a shard with no fork/merge provenance latches the process,
+    // which suppressed the very MEMORY_EMPTY this case counts. The assertions
+    // below are unchanged — only the fixture's ordinals are made physical.
+    const priorEmpty = `{"schemaVersion":1,"seq":4,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:05:00Z","heading":"Memory Empty","event":"MEMORY_EMPTY","fields":{"Stage":"intent-capture"}}
 `;
-    const rejump = `{"schemaVersion":1,"seq":1,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
-{"schemaVersion":1,"seq":2,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
+    const rejump = `{"schemaVersion":1,"seq":5,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Start","event":"STAGE_STARTED","fields":{"Stage":"intent-capture","Agent":"amadeus-product-agent"}}
+{"schemaVersion":1,"seq":6,"cloneId":"testclone0001","intentId":"test-intent","timestamp":"2024-01-01T10:10:00Z","heading":"Stage Completion","event":"STAGE_COMPLETED","fields":{"Stage":"intent-capture"}}
 `;
     const f = auditShardPath(proj);
     writeFileSync(f, readFileSync(f, "utf-8") + priorEmpty + rejump, "utf-8");

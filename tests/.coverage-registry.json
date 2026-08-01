@@ -4283,6 +4283,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t396-session-end-tracer-seam.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t30-hook-session-end.test.ts",
           "mechanism": "cli"
         }

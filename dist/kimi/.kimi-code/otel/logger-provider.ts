@@ -22,6 +22,7 @@ import type {
 } from "./audit-log-exporter.ts";
 import { getEventDef } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
+import { fatalReason, isFatalSet } from "./fatal-latch.ts";
 import type { LocalLogExporter } from "./local-log-exporter.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
@@ -43,14 +44,62 @@ function requireRegistered(): Registered {
 }
 
 // What an emit did. `appended: false` is never a failure — a failure throws.
-// It reports the two ways an emit legitimately does not reach the audit
-// journal: the post-complete seal (#1248, E-U7CG-Q3B ruling A') and a
-// telemetry-classified event, which never touches the journal by design
-// (FR-EXP-4). The timestamp is the one the emit actually stamped, so a caller
-// reporting on the emit quotes a real value rather than minting its own.
+// It reports the ways an emit legitimately does not reach the audit journal:
+// the post-complete seal (#1248, E-U7CG-Q3B ruling A'), a telemetry-classified
+// event, which never touches the journal by design (FR-EXP-4), and the fatal
+// health latch, which refuses canonical writes for the rest of the process
+// (FR-EVT-4, #1856). The timestamp is the one the emit actually stamped, so a
+// caller reporting on the emit quotes a real value rather than minting its own.
 export type EmitOutcome =
   | { readonly appended: true; readonly timestamp: string }
-  | { readonly appended: false; readonly reason: "intent-complete" | "telemetry"; readonly timestamp: string };
+  | { readonly appended: false; readonly reason: "intent-complete" | "telemetry" | "fatal-latch"; readonly timestamp: string };
+
+// Whether this process already said out loud that the latch is dropping
+// canonical emits. The refusal is per-emit but the notice is per-process: the
+// first drop carries the operator-relevant fact (the latch reason) and every
+// later one repeats it, so a latched hook loop would bury its own diagnostic.
+let fatalDropAnnounced = false;
+
+// The single announcement point for latch-dropped canonical emits (one call
+// site in emitEvent — the drop happens nowhere else).
+function announceFatalDrop(name: string): void {
+  if (fatalDropAnnounced) return;
+  fatalDropAnnounced = true;
+  const notice = `amadeus-otel: fatal health latch set — canonical emits refused from ${name} onward: ${fatalReason()} (FR-EVT-4)\n`;
+  process.stderr.write(notice);
+}
+
+// The canonical row an emit is about to hand the exporter: identity fields
+// resolved from the same `target` that selects the shard, with the
+// explicit-wins precedence the v1 writer uses.
+function canonicalRecord(
+  reg: Registered,
+  name: RegisteredEventName,
+  attributes: Record<string, unknown>,
+  target?: CanonicalEventTarget
+): CanonicalEventRecord {
+  const spanCtx = trace.getSpan(context.active())?.spanContext();
+  const space = target?.space ?? activeSpace(reg.projectDir);
+  return {
+    schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+    eventId: crypto.randomUUID(),
+    // Second-granular ISO — the SAME format the v1 writer stamps
+    // (isoTimestamp). The presence ledger's ordering predicates compare
+    // timestamp strings, so a millisecond-bearing v2 row would misorder
+    // against same-second v1 rows and silently reopen the human-turn gate.
+    timestamp: isoTimestamp(),
+    eventName: name,
+    attributes,
+    intentId: activeIntent(reg.projectDir, space, target?.intent) ?? "workspace",
+    space,
+    cloneId: auditCloneId(reg.projectDir),
+    traceId: spanCtx?.traceId ?? null,
+    spanId: spanCtx?.spanId ?? null,
+    traceFlags: spanCtx?.traceFlags ?? 0,
+    idempotencyKey: crypto.randomUUID(),
+    durability: "canonical",
+  };
+}
 
 // canonical emit. Throws synchronously on write failure (the exporter has
 // already set the fatal latch by then — FR-EVT-3). Registry and required-
@@ -82,27 +131,15 @@ export function emitEvent(
     reg.logExporter.exportLog({ name, timestamp, attributes: clean, traceId: null, spanId: null });
     return { appended: false, reason: "telemetry", timestamp };
   }
-  const spanCtx = trace.getSpan(context.active())?.spanContext();
-  const space = target?.space ?? activeSpace(reg.projectDir);
-  const record: CanonicalEventRecord = {
-    schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
-    eventId: crypto.randomUUID(),
-    // Second-granular ISO — the SAME format the v1 writer stamps
-    // (isoTimestamp). The presence ledger's ordering predicates compare
-    // timestamp strings, so a millisecond-bearing v2 row would misorder
-    // against same-second v1 rows and silently reopen the human-turn gate.
-    timestamp: isoTimestamp(),
-    eventName: name,
-    attributes: clean,
-    intentId: activeIntent(reg.projectDir, space, target?.intent) ?? "workspace",
-    space,
-    cloneId: auditCloneId(reg.projectDir),
-    traceId: spanCtx?.traceId ?? null,
-    spanId: spanCtx?.spanId ?? null,
-    traceFlags: spanCtx?.traceFlags ?? 0,
-    idempotencyKey: crypto.randomUUID(),
-    durability: "canonical",
-  };
+  // Fail-closed on a latched process (FR-EVT-4, #1856). The latch means this
+  // process already judged the ledger inconsistent — appending onto it would
+  // extend the damage the latch exists to contain. Placed AFTER the telemetry
+  // return so the fail-open telemetry path (FR-EVT-6) is untouched.
+  if (isFatalSet()) {
+    announceFatalDrop(name);
+    return { appended: false, reason: "fatal-latch", timestamp: isoTimestamp() };
+  }
+  const record = canonicalRecord(reg, name, clean, target);
   const outcome = reg.auditExporter.exportCanonicalEvent(record, target);
   return outcome.appended
     ? { appended: true, timestamp: record.timestamp }
@@ -178,4 +215,5 @@ export function registeredLoggerProjectDir(): string | null {
 export function resetLoggerProviderForTests(): void {
   logs.disable();
   registered = null;
+  fatalDropAnnounced = false;
 }
