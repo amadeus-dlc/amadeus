@@ -1372,18 +1372,28 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  re-sort so the canonical emitter stays deterministic. Unparseable or
  *  malformed on-disk grids contribute nothing (fresh wins).
  *
- *  `knownSlugs` is the slug set of the graph being compiled. A folded entry's
- *  cells are filtered through it, so a stage that has left the graph (a
- *  dropped plugin, a deleted core stage) does not leave a dangling cell
- *  addressing a slug no router can resolve — the fold preserves the composed
- *  scope, not a stale snapshot of the stage list it was authored against.
+ *  A folded row's CELLS are preserved verbatim, including a cell addressing a
+ *  slug the graph being compiled does not hold. The fold used to GC those
+ *  against the graph's slug set, which made a `drop` -> `compose` cycle destroy
+ *  an approved plan: `drop` takes the plugin stage out of the graph, the cell
+ *  was GC'd and written back, and a later `compose` could not restore it
+ *  because an opt-in stage (`scopes: []`) mints no cell through
+ *  `applyPluginScopeOptIns`. The on-disk grid is the ONLY copy of a composed
+ *  plan, and the recompile that destroyed it runs under `stdio: "ignore"`
+ *  (amadeus-plugin.ts spawnRecompile), so the loss was both silent and
+ *  unrecoverable (#1863). A cell for an absent slug is inert — every consumer
+ *  indexes `.stages` by a slug taken from the graph — so preserving it costs
+ *  nothing and makes the cycle lossless. Nor is such a cell an anomaly worth
+ *  reporting: the shipped grid carries `self-feature.formal-model-check`, so
+ *  every workspace that has not composed that opt-in plugin holds one by
+ *  design.
+ *
  *  When `registeredScopes` is provided, only folded rows that still have a
  *  scope metadata file survive; this removes renamed stock scopes without
  *  treating their old grid rows as composed scopes. */
 export function mergeComposedScopes(
   fresh: ScopeGrid,
   onDiskJson: string | null,
-  knownSlugs: ReadonlySet<string>,
   registeredScopes?: ReadonlySet<string>,
 ): ScopeGrid {
   if (!onDiskJson) return fresh;
@@ -1402,12 +1412,7 @@ export function mergeComposedScopes(
       typeof entry === "object" && entry !== null && !Array.isArray(entry) &&
       typeof (entry as { stages?: unknown }).stages === "object"
     ) {
-      const stages = (entry as ScopeGrid[string]).stages;
-      const kept: Record<string, "EXECUTE" | "SKIP"> = {};
-      for (const [slug, action] of Object.entries(stages)) {
-        if (knownSlugs.has(slug)) kept[slug] = action;
-      }
-      merged[name] = { stages: kept };
+      merged[name] = { stages: { ...(entry as ScopeGrid[string]).stages } };
     }
   }
   const sorted: ScopeGrid = {};
@@ -2374,7 +2379,6 @@ export function compileStageGraph(): {
     (stage) => !stage.plugin_source && (stage.scopes?.length ?? 0) > 0,
   );
   const pluginScopeStages = stages.filter((stage) => stage.plugin_source === true);
-  const knownSlugs = new Set(stages.map((stage) => stage.slug));
   return {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
@@ -2382,7 +2386,6 @@ export function compileStageGraph(): {
         mergeComposedScopes(
           transposeScopeGrid(stockScopeStages),
           onDiskGrid,
-          knownSlugs,
           new Set(Object.keys(loadScopeMetadata())),
         ),
         pluginScopeStages,

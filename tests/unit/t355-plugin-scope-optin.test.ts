@@ -17,15 +17,16 @@
 //     non-plugin stages);
 //   - a plugin stage OVERLAYS EXECUTE cells after the composed fold
 //     (applyPluginScopeOptIns) — strictly additive, never authoring SKIP.
-// `mergeComposedScopes` additionally GCs folded cells whose slug has left
-// the graph, so dropping a plugin does not leave a dangling cell behind.
+// (`mergeComposedScopes` used to also GC folded cells whose slug had left the
+// graph. That GC destroyed a composed plan across a drop -> compose cycle and
+// was removed in #1863; the fold now preserves cells verbatim.)
 //
 // Mechanism: none (PURE in-process imports — zero LLM, zero tokens). The
 // end-to-end compile proof over a real plugin host lives in
 // tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts.
 //
 // Source under test (dist/claude/.claude/tools/amadeus-graph.ts):
-//   mergeComposedScopes(fresh, onDiskJson, knownSlugs): ScopeGrid
+//   mergeComposedScopes(fresh, onDiskJson, registeredScopes?): ScopeGrid
 //   applyPluginScopeOptIns(grid, pluginStages): ScopeGrid
 
 import { describe, expect, test } from "bun:test";
@@ -52,13 +53,10 @@ function compileGrid(
   pluginStages: Stages,
   onDiskJson: string | null,
 ): ScopeGrid {
-  const all = [...coreStages, ...pluginStages];
-  const knownSlugs = new Set(all.map((s) => s.slug));
   return applyPluginScopeOptIns(
     mergeComposedScopes(
       transposeScopeGrid(coreStages.filter((s) => (s.scopes?.length ?? 0) > 0)),
       onDiskJson,
-      knownSlugs,
     ),
     pluginStages,
   );
@@ -131,7 +129,6 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
     const baseline = mergeComposedScopes(
       transposeScopeGrid(CORE.filter((s) => (s.scopes?.length ?? 0) > 0)),
       COMPOSED_ON_DISK,
-      new Set(CORE.map((s) => s.slug)),
     );
     expect(canonicalScopeGridJson(withNone)).toBe(canonicalScopeGridJson(baseline));
   });
@@ -148,8 +145,15 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
   });
 });
 
-describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", () => {
-  test("a folded composed row drops cells addressing absent slugs, keeps present ones", () => {
+// Declared revision (#1863): this block used to pin the OPPOSITE contract —
+// the fold GC'd every cell whose slug had left the graph. That GC was a
+// tidiness measure added alongside the #1630 clobber fix, not part of it (the
+// clobber fix is applyPluginScopeOptIns, pinned above and unchanged here), and
+// it destroyed a composed plan on a drop -> compose cycle. The cells are now
+// preserved and reported instead; the full cycle proof lives in
+// tests/unit/t397-composed-scope-drop-compose.test.ts.
+describe("mergeComposedScopes preserves folded cells verbatim (#1863)", () => {
+  test("a folded composed row keeps cells addressing absent slugs", () => {
     const onDisk = JSON.stringify({
       "self-feature": {
         stages: { alpha: "EXECUTE", "dropped-plugin": "EXECUTE", beta: "SKIP" },
@@ -158,31 +162,34 @@ describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", 
     const merged = mergeComposedScopes(
       transposeScopeGrid([stage("alpha", ["feature"])]),
       onDisk,
-      new Set(["alpha", "beta"]), // dropped-plugin is no longer in the graph
     );
+    // dropped-plugin is not in the graph; the cell survives so composing the
+    // plugin back in restores the approved plan.
     expect(merged["self-feature"].stages).toEqual({
       alpha: "EXECUTE",
+      "dropped-plugin": "EXECUTE",
       beta: "SKIP",
     });
   });
 
-  test("a composed row whose stages all left the graph folds as an empty row, not a dangling one", () => {
+  test("a composed row whose stages all left the graph keeps its whole plan", () => {
     const onDisk = JSON.stringify({
       ghost: { stages: { "gone-a": "EXECUTE", "gone-b": "EXECUTE" } },
     });
     const merged = mergeComposedScopes(
       transposeScopeGrid([stage("alpha", ["feature"])]),
       onDisk,
-      new Set(["alpha"]),
     );
-    expect(merged.ghost.stages).toEqual({});
+    expect(merged.ghost.stages).toEqual({
+      "gone-a": "EXECUTE",
+      "gone-b": "EXECUTE",
+    });
   });
 
-  test("fresh rows are never GC'd — only folded on-disk entries are filtered", () => {
+  test("fresh rows still win over a folded on-disk entry of the same name", () => {
     const merged = mergeComposedScopes(
       transposeScopeGrid([stage("alpha", ["feature"]), stage("beta", ["feature"])]),
       JSON.stringify({ feature: { stages: { alpha: "EXECUTE" } } }),
-      new Set(["alpha", "beta"]),
     );
     // `feature` exists in fresh, so the on-disk entry is skipped entirely.
     expect(merged.feature.stages).toEqual({ alpha: "EXECUTE", beta: "EXECUTE" });
@@ -190,9 +197,9 @@ describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", 
 
   test("a malformed on-disk grid still contributes nothing (fresh wins)", () => {
     const fresh = transposeScopeGrid([stage("alpha", ["feature"])]);
-    expect(mergeComposedScopes(fresh, "{ not json", new Set(["alpha"]))).toEqual(fresh);
-    expect(mergeComposedScopes(fresh, null, new Set(["alpha"]))).toEqual(fresh);
-    expect(mergeComposedScopes(fresh, "[]", new Set(["alpha"]))).toEqual(fresh);
+    expect(mergeComposedScopes(fresh, "{ not json")).toEqual(fresh);
+    expect(mergeComposedScopes(fresh, null)).toEqual(fresh);
+    expect(mergeComposedScopes(fresh, "[]")).toEqual(fresh);
   });
 
   test("a folded row without scope metadata is removed as stale", () => {
@@ -204,7 +211,6 @@ describe("mergeComposedScopes GCs cells for slugs that left the graph (#1630)", 
         bugfix: { stages: { alpha: "EXECUTE" } },
         "team-custom": { stages: { alpha: "EXECUTE" } },
       }),
-      new Set(["alpha"]),
       new Set(["fix", "team-custom"]),
     );
     expect(Object.keys(merged)).toEqual(["fix", "team-custom"]);

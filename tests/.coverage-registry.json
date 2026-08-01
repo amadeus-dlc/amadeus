@@ -2537,6 +2537,10 @@
         {
           "file": "tests/unit/t355-plugin-scope-optin.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t397-composed-scope-drop-compose.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
