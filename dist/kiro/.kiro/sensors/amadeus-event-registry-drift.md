@@ -30,7 +30,7 @@ script resolves the harness dir from its own path and compares:
 - the AuditLogExporter accept set (registry-derived; the reader decode set
   activates when the U3 codec table lands).
 
-The 78-event cardinality (#1672) is pinned so vacuous equality fails.
+The 79-event cardinality (#1672) is pinned so vacuous equality fails.
 
 ## Failure mode
 

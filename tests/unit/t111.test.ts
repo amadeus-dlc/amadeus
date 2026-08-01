@@ -7,7 +7,7 @@
 //
 // WHAT USED TO BE HERE. This file also held the contract of the legacy writer
 // pair (appendAuditEntry / appendAuditEntryUnlocked): block format, CR/LF
-// escaping, append-not-overwrite, and a mirrored copy of the 78-entry accept
+// escaping, append-not-overwrite, and a mirrored copy of the canonical accept
 // set. That writer was deleted (FR-MIG-5 / U8) and those cases went with it.
 // The claims did not vanish with them:
 //   - the accept set is now registry-sourced and pinned in t389, against the

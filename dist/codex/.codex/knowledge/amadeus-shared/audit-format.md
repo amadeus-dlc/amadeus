@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (78 events, 19 categories)
+## Event Registry (79 events, 19 categories)
 
 ### Workflow Lifecycle (6 events)
 
@@ -120,11 +120,20 @@ Human-grounded in both solo and team modes. A session driven by a real human tur
 | `ARTIFACT_UPDATED` | Existing artifact modified | — | Tool, File, Context, Artifact, TransactionId, Revision, TransitionKind, Digest, TriggerBoundary, Reconciliation, OperationId, Classification, coalescedWarning, repairProof | `hooks/amadeus-audit-logger.ts` (PostToolUse; Edit, or Write overwriting existing) |
 | `ARTIFACT_REUSED` | Re-use decision on backward jump | Stage, Decision, Artifacts | — | `tools/amadeus-state.ts reuse-artifact` |
 
-### Subagent Events (1 event — hook-emitted)
+### Subagent Events (2 events — hook-emitted)
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
+| `SUBAGENT_STARTED` | Subagent is dispatched | Agent Type | Agent ID, Purpose | `hooks/amadeus-log-subagent-start.ts` (PreToolUse{Task} / SubagentStart) |
 | `SUBAGENT_COMPLETED` | Subagent task finishes | Agent Type | Agent ID, Message | `hooks/amadeus-log-subagent.ts` (SubagentStop) |
+
+Harnesses do not agree on when a subagent BEGINS, so `SUBAGENT_STARTED` is
+emitted only where a start seam exists: Claude Code has no subagent-start event
+and uses `PreToolUse` on the dispatch tool, Kimi has a real `SubagentStart` that
+also carries the prompt (the source of `Purpose`), and Codex, Cursor, OpenCode
+and Kiro have no start seam and emit the completed half alone. A completion with
+no start is therefore normal on those harnesses; readers pair the two halves and
+drop unmatched rows rather than inventing an interval.
 
 ### Utility Events (1 event)
 

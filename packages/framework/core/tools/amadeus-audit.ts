@@ -53,7 +53,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (78) ---
+// --- Canonical event types (79) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -132,6 +132,7 @@ const VALID_EVENT_TYPES = new Set([
   "ARTIFACT_UPDATED",
   "ARTIFACT_REUSED",
   // Subagent (hook-emitted)
+  "SUBAGENT_STARTED",
   "SUBAGENT_COMPLETED",
   // Health/system
   "HEALTH_CHECKED",
@@ -239,6 +240,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",
+  SUBAGENT_STARTED: "Subagent Started",
   SUBAGENT_COMPLETED: "Subagent Completed",
   HEALTH_CHECKED: "Health Check",
   SCOPE_DETECTED: "Scope Detection",
@@ -1048,7 +1050,7 @@ export function presenceMintRejection(eventType: string): string | null {
 // hooks already rely on it.
 //
 // Widened to Set<string> deliberately: the registry is `as const`, so the
-// inferred element type is the 78-name literal union — but this guard's input
+// inferred element type is the 79-name literal union — but this guard's input
 // is untrusted CLI text, and narrowing it there would make the check
 // untypeable.
 // Keyed by the v1 audit event type, which is the vocabulary the CLI speaks.
