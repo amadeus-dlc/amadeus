@@ -108,6 +108,7 @@ import {
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
@@ -4714,13 +4715,32 @@ export function handlePracticesPromote(args: string[]): void {
     }
   }
 
+  // Latch gate (#1961): force the fatal health latch to be observable BEFORE
+  // either target write. The latch may only become set inside the FIRST emit
+  // of a process (the bootstrap journal health probe runs there), so without
+  // this bootstrap a latched-journal workspace sailed through to the writes
+  // and only failed at the Step 6 emit — after both files were mutated, with
+  // the compensating PRACTICES_OVERRIDE refused by the same latch. Bootstrap
+  // now (idempotent), then assert: a latched process fails here with NOTHING
+  // written. The post-write emit check below stays for the tiny window where
+  // the latch trips mid-process.
+  try {
+    ensureOtelBootstrap(pd);
+    assertMutationAllowed();
+  } catch (e) {
+    fail(`mutation refused before writing targets: ${errorMessage(e)}`);
+    return;
+  }
+
   // Step 4 & 5: Write project.md first, then team.md.
   // If the project write fails, team.md is untouched. If the team write
   // fails after project succeeded, we surface that as PRACTICES_OVERRIDE —
   // the user re-enters the gate; the duplicate-rule case is mitigated because
   // re-running parses the same rule list and appendUnderHeading is idempotent
   // only on the draft contents, not on ALL prior runs. Operators should treat
-  // a mid-promotion failure as a recovery scenario.
+  // a mid-promotion failure as a recovery scenario — one that, since the
+  // pre-write latch gate above, can only arise from a failure that occurs
+  // mid-process (a latch already set at handler start no longer reaches here).
   try {
     writeFileSync(guardrailsPath, newGuardrailsMd, "utf-8");
   } catch (e) {
