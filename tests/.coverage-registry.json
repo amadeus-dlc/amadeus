@@ -5216,6 +5216,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
@@ -5337,6 +5341,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
           "mechanism": "cli"
         },
         {
