@@ -1035,6 +1035,26 @@ describe("t279 close of an already closed Issue", () => {
     ).toContain("state-write");
   });
 
+  test("an unclaimable attempt blocks before completion", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic: () => ({ kind: "io-failure", summary: "disk full" }),
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write" },
+    });
+    expect(store.state().receipts[closeKey]?.status).toBe("prepared");
+    expect(gateway.history).toEqual(["view"]);
+  });
+
   // If the recovery record itself cannot be written, the caller must hear that
   // nothing was recorded rather than receive a warning that never landed.
   test("an unrecordable recovery is reported instead of returned silently", async () => {
