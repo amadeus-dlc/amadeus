@@ -71,9 +71,12 @@ import {
   loadScopeMapping,
   type AgentMetadata,
   type MarkerObservation,
-  CHECKBOX_MAP,
   STAGE_PROGRESS_HEADER_COMMENT,
   loadStageGraph,
+  perUnitLineOf,
+  rebuildDerivedPlanFields,
+  renderStageProgressSection,
+  replaceStageProgressSection,
   MERGE_SUCCEEDED_TAG_REGEX,
   migrateFlatLayout,
   nextInScopeStage,
@@ -4506,6 +4509,7 @@ ${stageProgress}
 - **Current Stage**: ${firstPostInit}
 - **Next Stage**: ${nextStageName}
 - **Status**: Running
+- **Construction Autonomy Mode**: unset
 - **Last Updated**: ${ts}
 
 ## Session Resume Point
@@ -5175,47 +5179,19 @@ export function handleScopeChange(projectDir: string, flags: Record<string, stri
   const existingCheckboxes = parseCheckboxes(content);
   const existingMap = new Map(existingCheckboxes.map(c => [c.slug, c]));
 
-  // Rebuild Stage Progress section
-  const phaseMap: Record<string, typeof graph> = {};
-  for (const stage of graph) {
-    if (!phaseMap[stage.phase]) phaseMap[stage.phase] = [];
-    phaseMap[stage.phase].push(stage);
-  }
-
-  const phaseHeaders: Record<string, string> = {
-    initialization: "INITIALIZATION PHASE",
-    ideation: "IDEATION PHASE",
-    inception: "INCEPTION PHASE",
-    construction: "CONSTRUCTION PHASE",
-    operation: "OPERATION PHASE",
-  };
-
-  let newStageProgress = "";
-  for (const phase of PHASES) {
-    const stages = phaseMap[phase] || [];
-    newStageProgress += `\n### ${phaseHeaders[phase]}\n`;
-    if (phase === "construction") {
-      // Preserve existing "Per unit:" line
-      const perUnitMatch = content.match(/^Per unit:.*$/m);
-      if (perUnitMatch) {
-        newStageProgress += `${perUnitMatch[0]}\n`;
-      }
-    }
-    for (const stage of stages) {
-      const action = adjustedMapping[stage.slug] || "SKIP";
-      const existing = existingMap.get(stage.slug);
-      // Preserve existing checkbox state via the canonical CHECKBOX_MAP (all six
-      // states round-trip); default to pending [ ] when the stage is not listed.
-      const marker = existing ? CHECKBOX_MAP[existing.state] : CHECKBOX_MAP.pending;
-      const suffix = action === "EXECUTE" ? "EXECUTE" : "SKIP";
-      newStageProgress += `- ${marker} ${stage.slug} \u2014 ${suffix}\n`;
-    }
-  }
-
-  // Replace Stage Progress section in content
-  const stageProgressRegex = /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
-  const stageProgressHeader = `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n`;
-  content = content.replace(stageProgressRegex, stageProgressHeader + newStageProgress);
+  // Rebuild Stage Progress section through the shared renderer (the same writer
+  // the post-compose re-sync uses), preserving each existing checkbox state via
+  // the canonical CHECKBOX_MAP \u2014 all six states round-trip; a stage the state
+  // does not list defaults to pending [ ].
+  content = replaceStageProgressSection(
+    content,
+    renderStageProgressSection(
+      graph,
+      (slug) => ((adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP"),
+      (slug) => existingMap.get(slug)?.state ?? "pending",
+      perUnitLineOf(content),
+    ),
+  );
 
   // Update fields
   content = setField(content, "Scope", newScope);
@@ -5360,6 +5336,17 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
         reject(slug, "not a compiled stage.");
       }
       const state = checkboxMap.get(slug);
+      // A compiled stage with NO row is not a pending stage — it is a state
+      // file that predates the stage (born before a plugin composed it, or on
+      // a host whose graph lacks it). setStageSuffix is a regex replace, so
+      // flipping such a stage would silently no-op while the derived counters
+      // were rewritten around it. Refuse and name the re-sync (#1849).
+      if (state === undefined) {
+        reject(
+          slug,
+          "it has no row in the state file's Stage Progress. The state predates this stage; re-sync it against the host graph (compose the plugin that owns it, or change scope) before re-shaping the plan.",
+        );
+      }
       if (state === "completed" || state === "in-progress" || state === "skipped" ||
           state === "awaiting-approval" || state === "revising") {
         reject(slug, `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.`);
@@ -5446,44 +5433,12 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
       const v = postSuffixes.get(slug) ?? scopeDef.stages[slug];
       return v === "EXECUTE" ? "EXECUTE" : "SKIP";
     };
-    // The Stages to Skip row carries birth/scope-change annotations (entry
-    // shape "<number> (<slug>)", e.g. "2.1 (reverse-engineering — greenfield)")
-    // that a bare-slug rebuild would destroy. Preserve each existing entry
-    // VERBATIM, in its existing position, when its stage is still skipped;
-    // drop entries whose stage was promoted; append newly-skipped stages in
-    // graph order, rendered the way scope-change renders them. A skip+add
-    // round trip therefore leaves the row byte-identical.
-    const priorSkipRow = getField(content, "Stages to Skip") || "";
-    const priorTokens =
-      priorSkipRow.trim() === "" || priorSkipRow.trim() === "none"
-        ? []
-        : priorSkipRow.split(", ");
-    const slugOfSkipToken = (token: string): string => {
-      const m = /^\S+ \((.+)\)$/.exec(token);
-      const inner = m ? m[1] : token;
-      return inner.split(" — ")[0];
-    };
-    const executeStages: string[] = [];
-    const skipStages: string[] = [];
-    const preservedSlugs = new Set<string>();
-    for (const token of priorTokens) {
-      const slug = slugOfSkipToken(token);
-      if (knownSlugs.has(slug) && eff(slug) === "SKIP") {
-        skipStages.push(token);
-        preservedSlugs.add(slug);
-      }
-    }
-    for (const s of graph) {
-      if (eff(s.slug) === "EXECUTE") executeStages.push(s.number);
-      else if (!preservedSlugs.has(s.slug)) skipStages.push(`${s.number} (${s.slug})`);
-    }
-    content = setField(content, "Stages to Execute", executeStages.join(", "));
-    content = setField(content, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
-    content = setField(content, "Total Stages", String(executeStages.length));
-    const completedCount = parseCheckboxes(content).filter(
-      (c) => c.state === "completed" && eff(c.slug) === "EXECUTE",
-    ).length;
-    content = setField(content, "Completed", String(completedCount));
+    // The shared rebuild preserves the Stages to Skip row's birth/scope-change
+    // annotations verbatim, so a skip+add round trip leaves the row unchanged.
+    const derived = rebuildDerivedPlanFields(content, graph, eff);
+    content = derived.content;
+    const executeStages = derived.executeStages;
+    const completedCount = derived.completedCount;
     // The Next Stage projection over the recomposed plan (override-aware).
     if (currentSlug) {
       const next = nextInScopeStage(currentSlug, scope, content);
