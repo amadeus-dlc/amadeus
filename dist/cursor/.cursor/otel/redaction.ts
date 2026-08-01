@@ -167,27 +167,55 @@ export function redactAttributes(
 const HOME_MARKER = "<home>";
 const EXTERNAL_MARKER = "<external>";
 
-// A path-like token: an optional already-applied marker, then "/", then a run
-// of characters that cannot delimit a stack frame. ONE character class under
-// ONE quantifier — no nesting, so matching costs one linear scan of the input
+// The ESM loader reports frames as URLs, so the scheme sits in FRONT of the
+// absolute path and its own "//" would otherwise be captured as the start of
+// the path. It is split off before the repo/home comparison and put back after.
+const FILE_URL_SCHEME = "file://";
+
+// A path-like token: an optional scheme, an optional already-applied marker, an
+// optional Windows drive letter, then a separator — "/" or "\" — then a run of
+// characters that cannot delimit a stack frame. ONE character class under ONE
+// quantifier — no nesting, so matching costs one linear scan of the input
 // however adversarial it is (regex-linearity-untrusted-input). Recognising the
 // markers here is what makes redactStacktrace idempotent: a second pass sees
 // `<home>/x` as one already-rewritten token instead of a fresh `/x`.
-const PATH_TOKEN_PATTERN = /(?:<home>|<external>)?\/[^\s()'"[\]]*/g;
+const PATH_TOKEN_PATTERN = /(?:file:\/\/)?(?:<home>|<external>)?(?:[A-Za-z]:)?[\\/][^\s()'"[\]]*/g;
+
+// Backslash-separated frames are compared against the roots in the one form
+// both sides can be written in. Rewriting to "/" is not cosmetic: `C:\Users\dev`
+// and `C:/Users/dev` name the same directory, and a prefix test that did not
+// normalize would report the developer's home directory as `<external>`.
+const SEPARATOR_PATTERN = /\\/g;
+
+// A file:// URL on Windows carries a slash before the drive letter
+// (`file:///C:/…`). Left in place it makes every such frame look absolute-rooted
+// and therefore external.
+const LEADING_DRIVE_SLASH_PATTERN = /^\/(?=[A-Za-z]:)/;
+
+function normalizePath(path: string): string {
+  return path.replace(SEPARATOR_PATTERN, "/");
+}
 
 function trimTrailingSeparator(path: string): string {
   return path.endsWith("/") ? path.slice(0, -1) : path;
 }
 
 function rewritePathToken(token: string, repoRoot: string, home: string): string {
+  // Split the scheme off first: everything below compares an absolute path, and
+  // `file://` in front of one is not part of it.
+  if (token.startsWith(FILE_URL_SCHEME)) {
+    const path = token.slice(FILE_URL_SCHEME.length).replace(LEADING_DRIVE_SLASH_PATTERN, "");
+    return FILE_URL_SCHEME + rewritePathToken(path, repoRoot, home);
+  }
   if (token.startsWith(HOME_MARKER) || token.startsWith(EXTERNAL_MARKER)) return token;
+  const path = normalizePath(token);
   // Repo first: the repo usually LIVES under home, and the repo-relative form
   // is strictly more useful than `<home>/…` for locating the frame.
-  if (repoRoot !== "" && token.startsWith(`${repoRoot}/`)) return token.slice(repoRoot.length + 1);
-  if (repoRoot !== "" && token === repoRoot) return ".";
-  if (home !== "" && token.startsWith(`${home}/`)) return HOME_MARKER + token.slice(home.length);
-  if (home !== "" && token === home) return HOME_MARKER;
-  return EXTERNAL_MARKER + token;
+  if (repoRoot !== "" && path.startsWith(`${repoRoot}/`)) return path.slice(repoRoot.length + 1);
+  if (repoRoot !== "" && path === repoRoot) return ".";
+  if (home !== "" && path.startsWith(`${home}/`)) return HOME_MARKER + path.slice(home.length);
+  if (home !== "" && path === home) return HOME_MARKER;
+  return EXTERNAL_MARKER + path;
 }
 
 // Rewrite every path-like token of a captured stack into one of three bounded
@@ -197,8 +225,8 @@ function rewritePathToken(token: string, repoRoot: string, home: string): string
 // linear pass; the output is a plain string, and a second pass over it is a
 // no-op.
 export function redactStacktrace(stack: string, repoRoot: string): string {
-  const root = trimTrailingSeparator(repoRoot);
-  const home = trimTrailingSeparator(process.env.HOME ?? "");
+  const root = trimTrailingSeparator(normalizePath(repoRoot));
+  const home = trimTrailingSeparator(normalizePath(process.env.HOME ?? ""));
   const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token) => rewritePathToken(token, root, home));
   return scrubCredentials(rewritten) as string;
 }
