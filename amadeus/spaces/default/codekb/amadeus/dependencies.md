@@ -4,6 +4,10 @@
 
 - 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。
 
+## CG 計画整合ガードの依存関係（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 判断: B1（runtime/lib）→ B2（orchestrate 発行側）→ B3（orchestrate approve 側）の直列依存。B2/B3 は同一ファイル（orchestrate）につき Bolt 内直列または非交差関数の実 diff 判定。dist 再生成はマージ順直列。詳細は `re-scans/260801-cg-plan-guard.md`。
+
 ## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-verif 価値チェーンの依存関係（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 

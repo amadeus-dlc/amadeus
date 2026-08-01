@@ -12,7 +12,7 @@
 // while every one of the six keys was dropped at the boundary.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -202,6 +202,30 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
     rmSync(stateFilePath(proj), { force: true });
     resetSpanContextForTests();
     expect(spanContextAttributes(proj)).toEqual({});
+  });
+
+  test("stage and phase resolve on their own when the intent pair does not (r3695226959)", () => {
+    // The keys are NOT one paired context: only intent/space pair, because
+    // space alone names no unit of work. Stage and phase are independent
+    // fail-open reads, so a workspace whose state file resolves while its
+    // intent cursor does not reports the stage it can measure rather than
+    // dropping it. Pinned because "half a pair" in the whole-bag guard's
+    // comment reads as a claim about all six keys, and it is not one.
+    //
+    // Reaching that state needs an off-invariant tree: two records so no
+    // cursor auto-resolves, plus a state file at the bare-intents fallback
+    // path stateFilePath() returns when recordDir() is null.
+    const intents = join(docsRoot(proj)!, "..", "intents");
+    mkdirSync(join(intents, "260801-a-aaaaaaaa"), { recursive: true });
+    mkdirSync(join(intents, "260801-b-bbbbbbbb"), { recursive: true });
+    writeFileSync(join(intents, "amadeus-state.md"), "- **Current Stage**: code-generation\n- **Lifecycle Phase**: Construction\n");
+    resetSpanContextForTests();
+
+    const attrs = spanContextAttributes(proj);
+    expect(attrs["amadeus.stage"]).toBe("code-generation");
+    expect(attrs["amadeus.phase"]).toBe("Construction");
+    expect("amadeus.intent.id" in attrs).toBe(false);
+    expect("amadeus.space" in attrs).toBe(false);
   });
 
   test("neither agent key appears when the env supplies neither", () => {

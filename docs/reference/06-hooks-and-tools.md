@@ -205,11 +205,11 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 
 1. **Project directory resolution:** Same multi-fallback pattern as amadeus-log-subagent.ts.
 2. **Health heartbeat:** Writes to `.amadeus-hooks-health/log-subagent-start.last`.
-3. **Dispatch-tool guard:** Exits silently unless the payload is a subagent dispatch. PreToolUse fires for *every* tool and the settings matcher is an unanchored regex, so a bare `Task` would also match `TaskUpdate`; the hook re-checks the tool name rather than trusting the matcher.
+3. **Dispatch-tool guard:** Exits silently unless the payload is a subagent dispatch. PreToolUse fires for *every* tool, so the hook re-checks the tool name rather than trusting the matcher. The shipped matcher is anchored (`^Task$`) precisely because an unanchored `Task` would also match `TaskUpdate`; the in-hook guard is the second line of that defence, and it is what holds if a workspace edits the matcher.
 4. **Field assembly:** `Agent Type` (blank normalizes to `"unknown"`), optional `Agent ID`, and optional `Purpose` — the first line of the dispatch prompt, escape-normalized and truncated to 200 characters so an unbounded prompt cannot carry its remainder into the audit row.
 5. **The same three gates as the completed half:** TTY, an active audit shard, and a workflow that is not already terminal — a start must never be recorded where its completion would be dropped.
 
-**Harness asymmetry:** Claude Code has no subagent-start event (hence the PreToolUse seam) and Kimi has a real `SubagentStart` that also carries the prompt. Codex, Cursor, OpenCode and Kiro expose no start seam and emit the completed half alone, so on those a completion with no start is normal; readers pair the halves and drop unmatched rows.
+**Harness asymmetry:** Two harnesses wire a start seam. Claude Code has no subagent-start event, hence the PreToolUse seam; Kimi has a real `SubagentStart` that also carries the prompt. Codex, Cursor and Kiro CLI register the completed half alone, so on those a completion with no start is the normal steady state. Kiro IDE and OpenCode register neither half — OpenCode's plugin surface owns only the `chat.message` presence seam. Readers pair the halves and drop unmatched rows.
 
 ### SubagentStop: amadeus-log-subagent.ts
 
@@ -354,7 +354,7 @@ The audit trail (the intent's `audit/` shards) uses the event taxonomy defined i
 | **Interaction Events** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` | `tools/amadeus-log.ts`, `tools/amadeus-state.ts` |
 | **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-state.ts`, `tools/amadeus-grant-authorization.ts` (trusted in-process route writer) |
 | **Artifact Events** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | `hooks/amadeus-audit-logger.ts`, `tools/amadeus-state.ts` |
-| **Subagent Events** | 1 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` |
+| **Subagent Events** | 2 | `SUBAGENT_STARTED`, `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent-start.ts`, `hooks/amadeus-log-subagent.ts` |
 | **Utility Events** | 1 | `HEALTH_CHECKED` | `tools/amadeus-utility.ts` |
 | **Error/Recovery Events** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `tools/amadeus-lib.ts`, `tools/amadeus-state.ts` |
 | **Construction Bolt Events** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` |

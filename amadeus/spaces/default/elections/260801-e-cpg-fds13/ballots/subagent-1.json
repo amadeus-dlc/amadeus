@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-FDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "record 実測: FD diary(construction/functional-design/memory.md Interpretations)は per-unit FD 4本完走と U2 iteration 1 NOT-READY→iteration 2 READY を記録。U2 の Major は BR-U2-9 の test h 引用が t251:189 へ誤帰属し実体が tests/unit/t211-swarm-batch-progress.test.ts:358 だったもので、team.md:174 の E-FSPRAS13 追補(tNNN 短形でなくフルパス、t211 の複数ファイル共存が実測根拠)が既にこの誤りの形そのものを名指しており、フルパス形で1往復で閉包している — 新規規則を導かない実例。型 canonical の verbatim 連鎖+形式差申告も team.md:279 cross-unit-type-verbatim-check と :285 cross-unit-type-canonical-lift の既定どおりの実施で逸脱なし。他3 unit は dag-integrity が iteration 1 READY(Minor 2 は advisory で BT へ委譲)、approve-reconciliation / docs-sync が iteration 1 READY で Findings None。既存 cid の外側にある知見は観測できないため 0 件が妥当。",
+  "submittedAt": "2026-08-01T12:05:00Z"
+}

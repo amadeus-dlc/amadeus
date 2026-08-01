@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-NDS13",
+  "voter": "subagent-1",
+  "question": "260801-cg-plan-guard nfr-design(4 unit)の §13 学習選定。候補 c1(§12a の是正記録: C-ID 誤引用2連発は mechanism-cite-verify-at-draft の違反実例、I/O 過大主張の精密化は numbers-from-command-output-only / 検証可能主張の実例、consumes N/A 同根展開は E-SRCNRS13 実例)— いずれも既存 cid の実例で新規規則を導かないため 0 件を提案。反対材料があれば record(ND diary・15成果物の Review 節)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

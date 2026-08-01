@@ -4,6 +4,10 @@
 
 - 判断: 公開 CLI 契約の変更なし。触れるのは内部ファイル契約1点 — `amadeus/.amadeus-sessions/.current-session` の書込みタイミング（`amadeus-session-start.ts` の state-file ガード後段 `:117` → ガード前段）。読み手側（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403` / `readCurrentSessionId` 経由3箇所）の契約は不変。`tests/unit/t10-hook-session-start.test.ts:211` / `:222` が現行挙動を pin しており改訂が必要（`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い要件段で宣言）。
 
+## CG 計画整合ガードが触れる内部契約（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 判断: 公開 CLI 契約の変更なし。触れる内部契約は3点 — next の directive 発行前提（bolt_dag 不在時の per-unit 降格が fail-closed 化）、approve の受理条件（SWARM 実績突合の追加）、edge block の受理形式（#1893 裁定依存）。いずれも要件段でテスト契約の明示改訂を宣言する（c1-pinned-behavior-ruling）。
+
 ## オープンバグ一括修正バッチ第5弾が触れる内部契約（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## 価値チェーン3件が触れる内部契約（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 

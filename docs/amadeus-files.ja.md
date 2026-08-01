@@ -191,7 +191,7 @@ amadeus/
 | ファイル | 説明 | git |
 |---|---|---|
 | `amadeus-state.md` | ワークフロー状態(6状態チェックボックス) | コミット |
-| `audit/<host>-<clone>.jsonl` | 監査証跡(クローンごとの追記専用 JSONL ジャーナルシャード、78イベントタイプ) | コミット |
+| `audit/<host>-<clone>.jsonl` | 監査証跡(クローンごとの追記専用 JSONL ジャーナルシャード、イベント1件につき1 JSON レコード) | コミット |
 | `verification/phase-check-<phase>.md` | フェーズ境界検証(3ファイル: ideation/inception/construction。stage 定義が作成を指示するのはこの3 phaseだけで、initialization と operation にはない。2026-07 の実機確認で訂正) | コミット |
 | `.amadeus-recovery.md` | リカバリ用ブレッドクラム | gitignore |
 | `runtime-graph.json` | 実行テレメトリ(監査シャードから再導出可能) | gitignore |

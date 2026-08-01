@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-FMCS13",
+  "voter": "subagent-2",
+  "question": "260801-cg-plan-guard formal-model-check の §13 学習選定。本ステージは出荷済み plugin の無改変実行(FormalElection.tla / .cfg も無改変、TLC 完全探索 NOT_DETECTED、completion marker complete:true、5,203,730 states / 529,692 distinct / queue 0、model-completeness センサー PASSED)。運用知見1点のみ観測: run-model-check は既存 --out ディレクトリで OUT_CONFLICT (exit 2) を返す fail-closed 挙動(仕様どおり、README 記載域)。新規ノルム候補なし = 0件を提案。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

@@ -340,5 +340,83 @@
     "dirName": "260801-e-omsfmc-s13",
     "createdAt": "2026-08-01T20:25:25Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-ICS13",
+    "dirName": "260801-e-cpg-ics13",
+    "createdAt": "2026-08-01T07:46:12Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-SDS13",
+    "dirName": "260801-e-cpg-sds13",
+    "createdAt": "2026-08-01T07:51:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-RES13",
+    "dirName": "260801-e-cpg-res13",
+    "createdAt": "2026-08-01T08:01:12Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-RAS13",
+    "dirName": "260801-e-cpg-ras13",
+    "createdAt": "2026-08-01T08:46:25Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-ADS13",
+    "dirName": "260801-e-cpg-ads13",
+    "createdAt": "2026-08-01T09:14:55Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-UGS13",
+    "dirName": "260801-e-cpg-ugs13",
+    "createdAt": "2026-08-01T09:37:30Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-DPS13",
+    "dirName": "260801-e-cpg-dps13",
+    "createdAt": "2026-08-01T09:50:01Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-FDS13",
+    "dirName": "260801-e-cpg-fds13",
+    "createdAt": "2026-08-01T10:52:17Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-NDS13",
+    "dirName": "260801-e-cpg-nds13",
+    "createdAt": "2026-08-01T11:58:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-U2ABS",
+    "dirName": "260801-e-cpg-u2abs",
+    "createdAt": "2026-08-01T15:26:21Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-CGS13",
+    "dirName": "260801-e-cpg-cgs13",
+    "createdAt": "2026-08-01T21:30:33Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-BTS13",
+    "dirName": "260801-e-cpg-bts13",
+    "createdAt": "2026-08-01T21:49:33Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CPG-FMCS13",
+    "dirName": "260801-e-cpg-fmcs13",
+    "createdAt": "2026-08-01T21:58:43Z",
+    "status": "recorded"
   }
 ]

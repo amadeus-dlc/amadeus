@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-DPS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件で可。留保: consumes 総当たりの是正は『事後適用』であり、audit shard の実測で delivery-planning の SENSOR_FAILED が 10 件記録されている(最終発火は 5 成果物とも SENSOR_PASSED、seq 365-374)。これは新規学習ではなく E-SRCNRS13(team.md:231、reviewer ディスパッチ前に総当たりを通す)の実行時点からの逸脱実例であり、違反実例として次回ローリング PM の材料に回すこと。",
+  "rationale": "DP record を独立に実測した。(1) 5 成果物(bolt-plan / risk-and-sequencing-rationale / team-allocation / external-dependency-map / delivery-planning-questions)の冒頭『上流入力(consumes 全数)』行はいずれも components.md を含み、直下の導出文で実参照している(装飾トークンでない)。参照先 inception/application-design/components.md は実在し、引かれている C1〜C7 の定義(:23-30)と2層構成(:13-14)も実在を確認。(2) audit shard(audit/j5ik2o-mac-studio-lan-2e2b550d2198.jsonl)で delivery-planning の最終 upstream-coverage 発火は 5 成果物とも SENSOR_PASSED(seq 365/366 risk, 367/368 external-dep, 369/370 questions, 371/372 bolt-plan, 373/374 team-allocation)。(3) 引用 cid の実在を memory/ の grep で確認: team.md:231(E-SRCNRS13 追補=宣言 consumes × 全成果物の総当たり実参照チェック)、project.md:233(delivery-planning:intra-bolt-order-as-risk-control)、project.md:214/:269(units-generation:c1、および依存順序・同一ファイル競合のある作業だけを直列化)。候補 c1 の2要素はいずれもこれらの適用であり新規規則を導かない。加えて『本 intent が導入するガードの自己適用』は当該ガードが未着地(construction 前)であるため、規範化は実測根拠を欠く時期尚早の一般化になる。よって 0件が妥当。",
+  "submittedAt": "2026-08-01T12:05:00Z"
+}

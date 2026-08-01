@@ -94,7 +94,7 @@ stateDiagram-v2
 | **Interaction** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` |
 | **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` |
 | **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`(audit-logger フック), `ARTIFACT_REUSED` |
-| **Subagent** | 1 | `SUBAGENT_COMPLETED`(log-subagent フック) |
+| **Subagent** | 2 | `SUBAGENT_STARTED`(log-subagent-start フック、ディスパッチシームを持つハーネスでのみ発火), `SUBAGENT_COMPLETED`(log-subagent フック) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` |
 | **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` |

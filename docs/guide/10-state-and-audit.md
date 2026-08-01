@@ -94,7 +94,7 @@ Events are organized into 19 categories:
 | **Interaction** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` |
 | **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` |
 | **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED` (audit-logger hook), `ARTIFACT_REUSED` |
-| **Subagent** | 1 | `SUBAGENT_COMPLETED` (log-subagent hook) |
+| **Subagent** | 2 | `SUBAGENT_STARTED` (log-subagent-start hook, only on harnesses that expose a dispatch seam), `SUBAGENT_COMPLETED` (log-subagent hook) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` |
 | **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` |
@@ -111,7 +111,7 @@ Events are organized into 19 categories:
 - **Every file write** to the intent's record dir (except the `audit/` shards themselves) is automatically logged by the audit-logger hook
 - **Every approval gate decision** (approve, request changes, accept-as-is) is logged
 - **Every question answer** you provide is recorded
-- **Every subagent completion** is logged by the log-subagent hook
+- **Every subagent completion** is logged by the log-subagent hook, and its dispatch by the log-subagent-start hook where the harness exposes a start seam — so a subagent is recorded as an interval rather than a point
 - **Every error and recovery** is logged
 
 ### How to read the audit log
