@@ -221,6 +221,7 @@ export async function executeReservedModelCheck(
     const prepared = await toolchain.preparePlanned({
       artifact: acquired.value,
       modelReceipt: source.modelReceipt,
+      vocabulary: source.vocabulary,
       modulePath: source.modelPath,
       cfgPath: source.cfgPath,
       subjectAlias: "run-model-check",

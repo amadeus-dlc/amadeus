@@ -28,13 +28,21 @@ import {
   type FsTlcToolchainDependencies,
 } from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import { loadVerifiedTlaSource } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import type { PreparedTlcRun } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR, MAX_TLC_STREAM_BYTES } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR, MAX_TLC_STREAM_BYTES, traceVocabularyFor } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const artifactBytes = new TextEncoder().encode("fixed-tlc-1.7.4-runtime-artifact");
 const sha256 = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
 const frozenModel = generateFrozenTlaModel({ publicContractIdentity: sha256("fixed-public-contract") });
 const modelReceipt = createFrozenTlaModelReceipt(frozenModel);
+const vocabulary = (() => {
+  const source = loadVerifiedTlaSource();
+  if (!source.ok) throw new Error(JSON.stringify(source.error));
+  const resolved = traceVocabularyFor(source.value.executionModel);
+  if (!resolved.ok) throw new Error(JSON.stringify(resolved.error));
+  return resolved.value;
+})();
 const moduleSource = frozenModel.moduleSource;
 const cfgSource = frozenModel.cfgSource;
 
@@ -236,6 +244,7 @@ describe("formal verification TLC runtime", () => {
     return { toolchain, distributionRoot, snapshotRoot, workspaceRoot, prepareInput: {
       artifact: acquired.value,
       modelReceipt,
+      vocabulary,
       modulePath: join(workspaceRoot, "FormalElection.tla"),
       cfgPath: join(workspaceRoot, "FormalElection.cfg"),
       subjectAlias: "opaque-subject",

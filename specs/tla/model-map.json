@@ -11,6 +11,26 @@
         "path": "specs/tla/FormalElection.cfg",
         "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
       },
+      "vocabulary": {
+        "namedInvariants": [
+          "ChoiceWinner",
+          "UnknownChoiceRejected",
+          "ReceivedAtAxis",
+          "InvalidTimestampRejected",
+          "AmendSubmission",
+          "UnknownRefRejected",
+          "PerVoterResolution"
+        ],
+        "traceStateVariables": [
+          "initialBudget",
+          "amendBudget",
+          "accepted",
+          "holdMarkers",
+          "holdBudget",
+          "tally",
+          "reexamRequired"
+        ]
+      },
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-model.ts",

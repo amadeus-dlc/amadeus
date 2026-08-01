@@ -5,6 +5,11 @@ import {
   type VerifiedTlaSource,
   loadVerifiedTlaSource,
 } from "./tla-model-loader.ts";
+import {
+  type ModelLoadError,
+  type ModelMapModel,
+  TLA_MODEL_MAP_PATH,
+} from "./tla-model-map.ts";
 
 export const TLA_VOTERS = ["V1", "V2", "V3"] as const;
 export const TLA_CHOICES = ["C1", "C2", "C3"] as const;
@@ -319,17 +324,26 @@ export function applyTlaElectionAction(state: TlaElectionState, action: TlaElect
   return applySubmissionAction(state, action);
 }
 
-export const TLA_NAMED_INVARIANTS = [
-  "ChoiceWinner",
-  "UnknownChoiceRejected",
-  "ReceivedAtAxis",
-  "InvalidTimestampRejected",
-  "AmendSubmission",
-  "UnknownRefRejected",
-  "PerVoterResolution",
-] as const;
-
-export type TlaNamedInvariant = (typeof TLA_NAMED_INVARIANTS)[number];
+// The named-invariant vocabulary has exactly one source: the model-map.json
+// `vocabulary` declaration (ADR-6). No code-level default remains here — a
+// model without a vocabulary declaration is an explicit failure, never a
+// fallback (BR-V1/V3).
+export function namedInvariantsFor(
+  model: ModelMapModel,
+): Result<readonly string[], ModelLoadError> {
+  if (model.vocabulary === undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: "MODEL_LOAD",
+        code: "MODEL_MAP_INVALID",
+        relativePath: TLA_MODEL_MAP_PATH,
+        detail: `model ${model.name} does not declare a vocabulary`,
+      },
+    };
+  }
+  return { ok: true, value: model.vocabulary.namedInvariants };
+}
 
 export interface TlaInvariantSourceLocation {
   line: number;
@@ -342,8 +356,10 @@ export interface FrozenTlaModelReceipt {
   cfgBytesIdentity: string;
   profileIdentity: string;
   publicContractIdentity: string;
-  namedInvariantFormulas: Record<TlaNamedInvariant, string>;
-  invariantSourceMap: Record<TlaNamedInvariant, TlaInvariantSourceLocation>;
+  // Key set = the selected model's vocabulary; closed-set enforced at runtime
+  // by exactPlainObject inside validateFrozenTlaModelReceipt.
+  namedInvariantFormulas: Record<string, string>;
+  invariantSourceMap: Record<string, TlaInvariantSourceLocation>;
   freezeRevision: 1;
 }
 
@@ -354,13 +370,16 @@ export interface FrozenTlaModelBundle extends FrozenTlaModelReceipt {
   cfgSource: string;
 }
 
-function invariantMap(source: string): Record<TlaNamedInvariant, TlaInvariantSourceLocation> {
+function invariantMap(
+  source: string,
+  invariants: readonly string[],
+): Record<string, TlaInvariantSourceLocation> {
   const lines = source.split("\n");
-  return Object.fromEntries(TLA_NAMED_INVARIANTS.map((name) => {
+  return Object.fromEntries(invariants.map((name) => {
     const line = lines.findIndex((value) => value.startsWith(`${name} ==`));
     if (line < 0) throw new Error(`missing invariant formula: ${name}`);
     return [name, { line: line + 1, column: 1 }];
-  })) as Record<TlaNamedInvariant, TlaInvariantSourceLocation>;
+  }));
 }
 
 function exactPlainObject(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
@@ -399,10 +418,10 @@ export function tlaCfgBytesIdentity(bytes: Uint8Array): Result<string, TlaSource
   return tlaSourceBytesIdentity(bytes, "amadeus.formal-verif.tla.cfg.v1");
 }
 
-function invariantRhs(source: string, name: TlaNamedInvariant): string {
+function invariantRhs(source: string, name: string, invariants: readonly string[]): string {
   const start = source.indexOf(name + " ==");
   const rhsStart = source.indexOf("==", start) + 2;
-  const later = TLA_NAMED_INVARIANTS
+  const later = invariants
     .map((candidate) => source.indexOf(candidate + " ==", rhsStart))
     .filter((index) => index > rhsStart);
   const end = Math.min(...later, source.indexOf("Spec ==", rhsStart));
@@ -447,6 +466,7 @@ export function toTlaModelHarnessError(error: TlaModelPipelineError): TlaModelHa
 function generateFrozenTlaModelFromSource(
   source: VerifiedTlaSource,
   input: { publicContractIdentity: string },
+  invariants: readonly string[],
 ): FrozenTlaModelBundle {
   const profileIdentity = canonicalIdentity({
     voters: TLA_VOTERS,
@@ -460,11 +480,11 @@ function generateFrozenTlaModelFromSource(
     maxHold: 1,
     workers: 1,
   }, "amadeus.formal-verif.tla.profile.v1");
-  const sourceMap = invariantMap(source.moduleSource);
-  const formulas = Object.fromEntries(TLA_NAMED_INVARIANTS.map((name) => [
+  const sourceMap = invariantMap(source.moduleSource, invariants);
+  const formulas = Object.fromEntries(invariants.map((name) => [
     name,
-    canonicalIdentity(invariantRhs(source.moduleSource, name), "amadeus.formal-verif.tla.invariant-formula.v1").sha256,
-  ])) as Record<TlaNamedInvariant, string>;
+    canonicalIdentity(invariantRhs(source.moduleSource, name, invariants), "amadeus.formal-verif.tla.invariant-formula.v1").sha256,
+  ]));
   const modelIdentity = canonicalIdentity({
     moduleBytesIdentity: source.moduleIdentity,
     cfgBytesIdentity: source.cfgIdentity,
@@ -494,9 +514,16 @@ export function generateFrozenTlaModel(input: { publicContractIdentity: string }
   if (!exactPlainObject(input, ["publicContractIdentity"]) || !/^[0-9a-f]{64}$/.test(input.publicContractIdentity)) {
     throw new TypeError("expected only a lowercase SHA-256 publicContractIdentity");
   }
+  // The frozen model is pinned to FormalElection by deliberate design (ADR-10),
+  // not by an ungeneralized leftover. MERGE-NOTE(u2): when the plural loader
+  // lands, this becomes loadVerifiedTlaSources() + selectVerifiedModel(sources,
+  // "FormalElection"); the singular call below is the pre-u2 spelling of the
+  // same pin.
   const source = loadVerifiedTlaSource();
   if (!source.ok) throw toTlaModelHarnessError(source.error);
-  return generateFrozenTlaModelFromSource(source.value, input);
+  const invariants = namedInvariantsFor(source.value.executionModel);
+  if (!invariants.ok) throw toTlaModelHarnessError(invariants.error);
+  return generateFrozenTlaModelFromSource(source.value, input, invariants.value);
 }
 
 const FROZEN_TLA_RECEIPT_KEYS = [
@@ -518,10 +545,10 @@ export function createFrozenTlaModelReceipt(bundle: FrozenTlaModelBundle): Froze
     profileIdentity: bundle.profileIdentity,
     publicContractIdentity: bundle.publicContractIdentity,
     namedInvariantFormulas: { ...bundle.namedInvariantFormulas },
-    invariantSourceMap: Object.fromEntries(TLA_NAMED_INVARIANTS.map((name) => [
+    invariantSourceMap: Object.fromEntries(Object.keys(bundle.namedInvariantFormulas).map((name) => [
       name,
       { ...bundle.invariantSourceMap[name] },
-    ])) as Record<TlaNamedInvariant, TlaInvariantSourceLocation>,
+    ])),
     freezeRevision: bundle.freezeRevision,
   };
 }
@@ -534,12 +561,24 @@ export type FrozenTlaModelValidationError = {
 function invariantReceiptShapeError(
   formulas: Record<string, unknown>,
   sourceMap: Record<string, unknown>,
+  invariants: readonly string[],
 ): string | null {
-  for (const name of TLA_NAMED_INVARIANTS) {
+  for (const name of invariants) {
     if (typeof formulas[name] !== "string") return `invalid formula identity for ${name}`;
     if (!exactPlainObject(sourceMap[name], ["line", "column"])) return `invalid source location for ${name}`;
   }
   return null;
+}
+
+// The closed-set key expectation is the selected frozen model's vocabulary
+// (map-declared), resolved through the same loader pin generateFrozenTlaModel
+// uses. Resolution failure is unreachable in a healthy workspace and falls
+// through to the regeneration failure path below (fail-closed).
+function frozenModelNamedInvariants(): readonly string[] | null {
+  const source = loadVerifiedTlaSource();
+  if (!source.ok) return null;
+  const invariants = namedInvariantsFor(source.value.executionModel);
+  return invariants.ok ? invariants.value : null;
 }
 
 export function validateFrozenTlaModelReceipt(
@@ -550,9 +589,15 @@ export function validateFrozenTlaModelReceipt(
     error: { kind: "FrozenTlaModelValidationError", message },
   });
   if (!exactPlainObject(input, FROZEN_TLA_RECEIPT_KEYS)) return reject("receipt must have the exact frozen model shape");
-  if (!exactPlainObject(input.namedInvariantFormulas, TLA_NAMED_INVARIANTS)) return reject("named invariant formulas differ from the closed set");
-  if (!exactPlainObject(input.invariantSourceMap, TLA_NAMED_INVARIANTS)) return reject("invariant source map differs from the closed set");
-  const shapeError = invariantReceiptShapeError(input.namedInvariantFormulas, input.invariantSourceMap);
+  const invariants = frozenModelNamedInvariants();
+  if (invariants === null) {
+    // Unreachable in a healthy workspace: the regeneration below fails the
+    // same way. Keep the historical failure message for this path.
+    return reject("public contract identity must be a lowercase SHA-256 value");
+  }
+  if (!exactPlainObject(input.namedInvariantFormulas, invariants)) return reject("named invariant formulas differ from the closed set");
+  if (!exactPlainObject(input.invariantSourceMap, invariants)) return reject("invariant source map differs from the closed set");
+  const shapeError = invariantReceiptShapeError(input.namedInvariantFormulas, input.invariantSourceMap, invariants);
   if (shapeError !== null) return reject(shapeError);
   if (typeof input.publicContractIdentity !== "string") return reject("public contract identity must be a lowercase SHA-256 value");
   let expected: FrozenTlaModelBundle;
@@ -572,7 +617,7 @@ export function validateFrozenTlaModelReceipt(
   ] as const) {
     if (input[key] !== expectedReceipt[key]) return reject(`${key} differs from the generated frozen model`);
   }
-  for (const name of TLA_NAMED_INVARIANTS) {
+  for (const name of Object.keys(expectedReceipt.namedInvariantFormulas)) {
     if (input.namedInvariantFormulas[name] !== expectedReceipt.namedInvariantFormulas[name]) {
       return reject(`formula identity differs for ${name}`);
     }

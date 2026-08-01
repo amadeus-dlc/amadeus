@@ -3,6 +3,7 @@ import {
   cpSync,
   chmodSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -38,6 +39,57 @@ describe("run-model-check source adapter", () => {
     expect(result.value.moduleName).toBe("FormalElection");
     expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
     expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
+    // The trace vocabulary rides the verified source: map-declared values,
+    // moduleName from the model name (never a map-side duplicate).
+    expect(result.value.vocabulary).toEqual({
+      moduleName: "FormalElection",
+      namedInvariants: [
+        "ChoiceWinner",
+        "UnknownChoiceRejected",
+        "ReceivedAtAxis",
+        "InvalidTimestampRejected",
+        "AmendSubmission",
+        "UnknownRefRejected",
+        "PerVoterResolution",
+      ],
+      traceStateVariables: [
+        "initialBudget",
+        "amendBudget",
+        "accepted",
+        "holdMarkers",
+        "holdBudget",
+        "tally",
+        "reexamRequired",
+      ],
+    });
+  });
+
+  test("rejects a request for a model with no verified source binding", () => {
+    // A fabricated module name is an explicit MODEL_LOAD failure — the
+    // byte-pin binds by requested model name, never by position.
+    const paths = copyCanonicalSource();
+    const unknown = join(paths.root, "NoSuch.tla");
+    cpSync("specs/tla/FormalElection.tla", unknown);
+    expect(loadRunModelCheckSource(unknown, paths.cfg)).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+
+    // MERGE-NOTE(u2/u4): MirrorLifecycle is registered but the pre-u2 loader
+    // verifies only the execution model, so this is the same explicit failure
+    // today. Once u2's plural loader and u4's vocabulary declaration land,
+    // this case must be revisited: selection succeeds and the outcome depends
+    // on the MirrorLifecycle vocabulary declaration.
+    const mirror = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-"));
+    roots.push(mirror);
+    const mirrorModel = join(mirror, "MirrorLifecycle.tla");
+    const mirrorCfg = join(mirror, "MirrorLifecycle.cfg");
+    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModel);
+    cpSync("specs/tla/MirrorLifecycle.cfg", mirrorCfg);
+    expect(loadRunModelCheckSource(mirrorModel, mirrorCfg)).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
   });
 
   test("rejects source drift and symlink inputs", () => {
@@ -102,5 +154,16 @@ describe("run-model-check source adapter", () => {
         cause: expect.any(Error),
       },
     });
+  });
+
+  test("keeps no code-level vocabulary defaults in the supply path (BR-V1 grep guard)", () => {
+    // Same shape as the loader adapter source check: the vocabulary has no
+    // code-level duplicate after the move to model-map.json (t404 pins values;
+    // this pins the ABSENCE of the removed constants).
+    const arm = readFileSync("plugins/formal-model-check/tools/tla-arm.ts", "utf8");
+    const toolchain = readFileSync("plugins/formal-model-check/tools/tlc-toolchain.ts", "utf8");
+    expect(arm).not.toContain("TLA_NAMED_INVARIANTS");
+    expect(arm).not.toContain("TlaNamedInvariant");
+    expect(toolchain).not.toContain("TRACE_STATE_VARIABLES");
   });
 });
