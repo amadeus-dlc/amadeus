@@ -34,10 +34,15 @@ import { resetOtelPerProject } from "../harness/otel-reset.ts";
 // hit here, not just in the dist twin). Same dual-surface rationale as
 // tests/harness/otel-reset.ts. Each surface's latch is its own singleton, so
 // setFatal is paired with the handler from the SAME graph.
-const SURFACES = [
+interface Surface {
+  name: string;
+  handler: (args: string[]) => void;
+  latch: (reason: string) => void;
+}
+const SURFACES: Surface[] = [
   { name: "dist", handler: handlePracticesPromoteDist, latch: setFatalDist },
   { name: "src", handler: handlePracticesPromoteSrc, latch: setFatalSrc },
-] as const;
+];
 
 const TEAM_MD_LIVE = "# Team-Level Rules\n\n## Way of Working\n\nOLD_WAY_TEXT\n";
 const PROJECT_MD_LIVE = "# Project-Level Rules\n\n## Mandated\n\n## Forbidden\n";
@@ -144,7 +149,8 @@ afterEach(() => {
   resetOtelPerProject();
 });
 
-describe.each(SURFACES)("t408 [$name]: practices-promote refuses BEFORE file writes under a set fatal latch (#1961)", ({ handler, latch }) => {
+for (const { name, handler, latch } of SURFACES) {
+  describe(`t408 [${name}]: practices-promote refuses BEFORE file writes under a set fatal latch (#1961)`, () => {
   test("latched process: loud fail, NEITHER target mutated, no PRACTICES_AFFIRMED row", () => {
     const fx = makeFixture();
     const teamBefore = readFileSync(fx.teamMd, "utf-8");
@@ -189,3 +195,4 @@ describe.each(SURFACES)("t408 [$name]: practices-promote refuses BEFORE file wri
     expect(project).toContain(`NEVER skip CI (affirmed ${today})`);
   });
 });
+}
