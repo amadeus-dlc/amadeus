@@ -116,18 +116,38 @@ function listRemoteBranches(context: SnapshotCliContext, pattern: string): Array
   });
 }
 
+// A candidate observed by ls-remote can be deleted before its fetch runs, because auto-merge lands
+// the pull request and drops the head branch. Callers skip an absent candidate: its absence is the
+// state the postcondition wants, whereas the problem channel means fail-closed ownership evidence.
+type RemoteBranchLoad = { kind: "loaded"; record: JsonRecord } | { kind: "absent" };
+
+// Absence has to be observed, not inferred from the fetch message: when it cannot be confirmed the
+// original failure stands.
+function remoteBranchIsAbsent(context: SnapshotCliContext, name: string): boolean {
+  try {
+    return listRemoteBranches(context, name).length === 0;
+  } catch {
+    return false;
+  }
+}
+
 function loadRemoteBranch(
   context: SnapshotCliContext,
   remote: { name: string; oid: string },
   mode: "snapshot" | "maintenance",
-): JsonRecord {
-  command(context, [
-    "git",
-    "fetch",
-    "--no-tags",
-    "origin",
-    `+refs/heads/${remote.name}:refs/remotes/origin/${remote.name}`,
-  ]);
+): RemoteBranchLoad {
+  try {
+    command(context, [
+      "git",
+      "fetch",
+      "--no-tags",
+      "origin",
+      `+refs/heads/${remote.name}:refs/remotes/origin/${remote.name}`,
+    ]);
+  } catch (error) {
+    if (remoteBranchIsAbsent(context, remote.name)) return { kind: "absent" };
+    throw error;
+  }
   const files = parseNameStatus(
     command(context, ["git", "diff", "--no-renames", "--name-status", `origin/main...${remote.oid}`, "--", "metrics/"]),
   ).map((file) => ({
@@ -135,10 +155,13 @@ function loadRemoteBranch(
     text: mode === "snapshot" && file.status !== "D" ? readGitFile(context, remote.oid, file.path) : undefined,
   }));
   return {
-    name: remote.name,
-    oid: remote.oid,
-    tipAuthor: command(context, ["git", "show", "-s", "--format=%an", remote.oid]),
-    files,
+    kind: "loaded",
+    record: {
+      name: remote.name,
+      oid: remote.oid,
+      tipAuthor: command(context, ["git", "show", "-s", "--format=%an", remote.oid]),
+      files,
+    },
   };
 }
 
@@ -343,7 +366,9 @@ export class SnapshotCliPort implements SnapshotPublisherPort {
     const problems: string[] = [];
     for (const remote of remotes) {
       try {
-        branches.push(parseSnapshotCandidate(loadRemoteBranch(this.#context, remote, "snapshot"), {
+        const loaded = loadRemoteBranch(this.#context, remote, "snapshot");
+        if (loaded.kind === "absent") continue;
+        branches.push(parseSnapshotCandidate(loaded.record, {
           repository: this.#context.repository,
           botLogin: this.#context.botLogin,
           targetSha: this.#context.targetSha,
@@ -496,8 +521,10 @@ export class MaintenanceCliPort implements MaintenancePublisherPort {
     const problems: string[] = [];
     for (const remote of remotes) {
       try {
+        const loaded = loadRemoteBranch(this.#context, remote, "maintenance");
+        if (loaded.kind === "absent") continue;
         branches.push(
-          parseMaintenanceCandidate(loadRemoteBranch(this.#context, remote, "maintenance"), {
+          parseMaintenanceCandidate(loaded.record, {
             repository: this.#context.repository,
             botLogin: this.#context.botLogin,
           }) as PublicationBranch,
