@@ -84,8 +84,11 @@ export function instrumentDef(name: InstrumentName): InstrumentDef {
 
 // Admit one measurement's attributes. Keys outside the instrument's declared
 // set throw (a caller bug, like the Metrics API subset's out-of-subset
-// instruments); keys whose value is null/undefined are dropped, which is the
-// fail-open shape for a dimension that could not be resolved.
+// instruments); keys whose value is null, undefined OR the empty string are
+// dropped, which is the fail-open shape for a dimension that could not be
+// resolved. Blank counts as unresolved for the same reason it does in the span
+// context bag: an empty dimension would force every consumer to know which
+// empty values mean "unknown".
 export function admitInstrumentAttributes(
   name: InstrumentName,
   attributes: Readonly<Record<string, string | null | undefined>>

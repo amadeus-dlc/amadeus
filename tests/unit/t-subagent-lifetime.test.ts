@@ -11,10 +11,10 @@
 // they interleave — a completion belongs to the innermost open dispatch.
 //
 // THE TWO UNMATCHED SIDES ARE NOT SYMMETRIC.
-//   - An unmatched COMPLETED row is dropped. Four of the seven harnesses have
-//     no start seam at all, so a completion with no start is the NORMAL steady
-//     state there, and inventing a start for it would report an interval that
-//     never happened.
+//   - An unmatched COMPLETED row is dropped. Only the harnesses that expose a
+//     dispatch seam emit the start half, so wherever that seam is absent a
+//     completion with no start is the NORMAL steady state, and inventing a
+//     start for it would report an interval that never happened.
 //   - An unmatched STARTED row is REPORTED, as incomplete. That is the whole
 //     point of registering the started half: a subagent that began and never
 //     finished is the idle-death signal, and dropping it would hide exactly
