@@ -209,7 +209,7 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 4. **Field assembly:** `Agent Type` (blank normalizes to `"unknown"`), optional `Agent ID`, and optional `Purpose` — the first line of the dispatch prompt, escape-normalized and truncated to 200 characters so an unbounded prompt cannot carry its remainder into the audit row.
 5. **The same three gates as the completed half:** TTY, an active audit shard, and a workflow that is not already terminal — a start must never be recorded where its completion would be dropped.
 
-**Harness asymmetry:** Claude Code has no subagent-start event (hence the PreToolUse seam) and Kimi has a real `SubagentStart` that also carries the prompt. Codex, Cursor, OpenCode and Kiro expose no start seam and emit the completed half alone, so on those a completion with no start is normal; readers pair the halves and drop unmatched rows.
+**Harness asymmetry:** Two harnesses wire a start seam. Claude Code has no subagent-start event, hence the PreToolUse seam; Kimi has a real `SubagentStart` that also carries the prompt. Codex, Cursor and Kiro CLI register the completed half alone, so on those a completion with no start is the normal steady state. Kiro IDE and OpenCode register neither half — OpenCode's plugin surface owns only the `chat.message` presence seam. Readers pair the halves and drop unmatched rows.
 
 ### SubagentStop: amadeus-log-subagent.ts
 
