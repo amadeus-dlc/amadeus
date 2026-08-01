@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 15
-- **Completed**: 13
-- **In Progress**: build-and-test
+- **Completed**: 14
+- **In Progress**: formal-model-check
 
 ## Runtime State
 - **Revision Count**: 0
@@ -78,9 +78,9 @@ Per unit: [TBD]
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [x] code-generation — EXECUTE
-- [-] build-and-test — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
-- [ ] formal-model-check — EXECUTE
+- [?] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
@@ -93,16 +93,16 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: formal-model-check
+- **Current Stage**: formal-model-check
+- **Next Stage**: none
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-01T11:45:22Z
+- **Last Updated**: 2026-08-01T12:16:49Z
 
 - **Swarm Gated Batch Approvals**: 1, 2, 3, 4
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Execute Build And Test
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Execute Formal Model Check
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
