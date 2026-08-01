@@ -1,0 +1,11 @@
+# Election Record — E-OMSB4-DEV
+
+- question: Bolt 4 裁定2(amadeus.bolt / amadeus.unit の供給源)の方式裁定。builder 実測: AMADEUS_BOLT/AMADEUS_UNIT env は repo 0 hit、「現在の unit」を名指す state フィールド不在、Bolt Refs は全 bolt リストで自プロセスの1つを特定不能、worktree ディレクトリ名は bolt と unit を判別不能(worktreePath(amadeus-lib.ts:4564-4571)の bolt-<slug> に対し swarm 経路(amadeus-swarm.ts:291)は unit を渡す)。報告全文 = scratchpad/b4-report.md の「裁定2」節。ユーザー裁定は「本 intent 内で追加実装」— 供給方式のみ未決。
+
+裁定: 案B: state へ first-class フィールド新設(choice 2 — tie 裁定)
+- 留保(subagent-2, GoA2): 二点。(1) builder 報告の BR-U6-3 引用は誤帰属 — 実測で 260726-plugin-host-delivery の stdout 純度規則(business-rules.md:9)であり、260729-otel-upstream 全域で BR-U6 は 0 hit。docs を6キーに留めた判断自体は正しいが、根拠は BR-U6-3 ではなく construction.md 「どのコードも消費しない『文書のふりをしたフィールド』を持たせない」と org.md 検証劇場 Forbidden へ差し替えて記録すること(cid:requirements-analysis:mechanism-cite-verify-at-draft)。(2) 案A は dispatch 配線が欠けた瞬間に案C へ無音退化する — 実測で AMADEUS_AGENT_TYPE/AMADEUS_AGENT_ID は span-context.ts:88-89 の受け口のみで packages/ scripts/ 全域 0 hit、受け口が無配線のまま着地しても何も赤くならない前例が現に存在する。よって2経路それぞれについて、dispatch 側の env 設定を外すと赤くなるテスト(落ちる実証)を完成条件に含め、受け口の fail-open テスト(env 不在→属性省略、空文字列でない)と対で置くこと
+- 留保(subagent-1, GoA3): 本票の支持は選択肢説明の論拠に基づかない。説明が B の欠点として挙げる「per-process の値を単一 state ファイルに置く構造矛盾」は実測と一致しない — fork は worktree-local な state を別途書いており(amadeus-state.ts:5046-5053 が <worktreePath>/amadeus-docs/amadeus-state.md へ Worktree Path を書込)、swarm prepare は unit ごとに隔離 worktree を fork するため per-worktree = per-unit が成立する。よって採用時は次の3点を条件とする: (1) 新設フィールドは worktree 側 state にのみ fork 時に書き、main state では不在(fail-open で省略)とすること — 単一ファイル共有にしない。(2) bolt と unit の判別は fork 呼出し元(bolt 経路 = amadeus-bolt / unit 経路 = swarm prepare)が既に知っている情報として記録すること — ディレクトリ名からの導出は worktreePath(amadeus-lib.ts:4509)が unit にも bolt- を前置するため原理的に不能(builder の指摘どおり)。(3) 新フィールドが Worktree Path と同じ decorative 死蔵(:4921 のコメントが明示、reader は amadeus-migrate.ts のフィールド一覧のみで実消費者 0)へ退行しないよう、resolver が実読することをテストで固定すること。また projectDir が worktree 内で worktree 側 state へ解決されることは flat レイアウト fallback からの推定であり未実行検証のため、実装前に実測すること。非採用時受容度: 案C=6、案A=7。
+票タイムライン: 配信 2026-08-01T14:03:12Z → 配信 2026-08-01T14:03:12Z → subagent-2 2026-08-01T14:06:53Z(受理 2026-08-01T14:07:06Z) → subagent-1 2026-08-01T14:07:39Z(受理 2026-08-01T14:07:47Z) → 開票 2026-08-01T14:08:04Z → 開票 2026-08-01T14:08:20Z
+GoA[E-OMSB4-DEV]: 1x0 2x1 3x1 4x0 5x0 6x0 7x0 8x0
+
+- hold 裁定履歴: tie → choice:2(2026-08-01T14:09:25Z、復帰先 tallied)

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-OMSB4-DEV",
+  "voter": "subagent-2",
+  "question": "Bolt 4 裁定2(amadeus.bolt / amadeus.unit の供給源)の方式裁定。builder 実測: AMADEUS_BOLT/AMADEUS_UNIT env は repo 0 hit、「現在の unit」を名指す state フィールド不在、Bolt Refs は全 bolt リストで自プロセスの1つを特定不能、worktree ディレクトリ名は bolt と unit を判別不能(worktreePath(amadeus-lib.ts:4564-4571)の bolt-<slug> に対し swarm 経路(amadeus-swarm.ts:291)は unit を渡す)。報告全文 = scratchpad/b4-report.md の「裁定2」節。ユーザー裁定は「本 intent 内で追加実装」— 供給方式のみ未決。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "案C: 供給経路なしの受け口のみ(agent.type/id と同じ前方互換)",
+      "description": "env 受け口だけ実装し dispatch 配線は行わない — 現行は常に省略(fail-open)。#1868 §2 の属性は宣言されるが production では当面不発。FR-SUB-4 の agent.type/id と同じ「将来供給時に自動で効く」形"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "案A: dispatch 側で env 新設(AMADEUS_BOLT / AMADEUS_UNIT)",
+      "description": "bolt worktree fork(amadeus-lib worktreePath 呼出し元)と swarm dispatch の2経路で env を設定し、resolver は既存 agent.type/id と同型の env 受け口(fail-open 省略)。migration 不要・state 無改変。resolver 側は既に確立した env 受け口様式の反復"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "案B: state へ first-class フィールド新設",
+      "description": "amadeus-state.md に現在 bolt/unit フィールドを追加し resolver が state 読取(stage/phase と同型)。ただし state schema 変更は migration 面(birth scaffold・既存 intent)へ波及し、per-process の値(並行 bolt で異なる)を単一 state ファイルに置く構造矛盾がある"
+    }
+  ]
+}

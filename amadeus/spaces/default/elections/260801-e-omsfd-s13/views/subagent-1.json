@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OMSFD-S13",
+  "voter": "subagent-1",
+  "question": "260801-otel-meta-schema functional-design ステージ(全6 unit)の §13 学習選定。conductor 提案: 0件(6 unit のレビュー指摘は全て既存ノルムの違反実例または適用 — 装飾トークン/引用意味論/機械照合/ペア対訳慣行/決定木要求。conductor 自身の是正スクリプト無音 no-op → 虚偽是正報告の1件も fix-diff-independent-reverify の違反実例としてローリング PM 材料へ回す(新規則は生まない — 既存規則が既に禁じる形)。FR-SUB-4 供給経路の実測確定は intent 固有の裁定で record 済み)。各自、construction/*/functional-design/ の成果物群と verdict 経緯を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

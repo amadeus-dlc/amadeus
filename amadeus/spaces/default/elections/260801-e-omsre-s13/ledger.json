@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSRE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-01T01:13:26Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSRE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "本区間は base 6e7a9d701 時点で packages/framework/core/otel/ が不在(git cat-file -e で確認)であり、形式は diff-refresh だが実質は新設サブシステム 18 モジュールの初回スキャンだった。この『diff 区間が新設サブシステム全体を含む場合、reverse-engineering:c1 の差分リフレッシュを字義どおり適用すると走査深度が不足しうる』という面は既存 cid に明示がない。今回は RE が自ら区間の性質を実測・宣言して初回スキャン相当の深度で走ったため実害ゼロであり persist 不要と判断するが、次に同型(base 時点で対象サブシステムが不在)が現れて走査深度不足が実測された場合は、reverse-engineering:c1 への追補として再提案することを条件に 0 件へ同意する。",
+      "rationale": "独立実測: (1) 成果物の実在 — codekb 8成果物 + reverse-engineering-timestamp.md の計9ファイルに 260801-otel-meta-schema の現在節が各1件(timestamp は3件)存在することを grep -c で確認、re-scans/260801-otel-meta-schema.md も実在(git status で untracked 新規、他9件は M)。(2) 引用の裏取り — Architect が Developer 報告から訂正した3点を observed 断面で独立検証し、すべて正しいと確認した: event-registry.ts:77 の EXPECTED_CANONICAL_COUNT = 78(報告 :79 は誤)、local-span-exporter.ts:88-99 の redactRecord が attributes/events/links のみを対象とし resource を含まないこと、scripts/package.ts:206-214 writeHarnessData() とコメント『the object shape leaves room for future per-harness runtime facts』の実在。すなわち codekb の内容主張は接地しており、後続ステージへ誤った断面を渡していない。(3) 学習候補の新規性判定 — 提案が挙げた5件はいずれも既存 cid の適用にすぎない: 差分リフレッシュ = reverse-engineering:c1、Developer→Architect 直列 = reverse-engineering:c3、現在マーカーの履歴降格 = c3-relabel(timestamp と codekb 8面で実施済み)、件数の測定 ref 明記 = measurement-ref-in-artifacts(『本節の file:line・件数はすべて observed 9c8df859e 時点』と明記)、祖先性を先に実測してからの base 採用 = rescan-base-ancestry(exit 0 / 距離 56 を記録)。(4) コミット数 55→56 の Architect 訂正も enumeration-completeness-review(起草時 grep 1回で確定とせずレビュー段で独立再列挙)と numbers-from-command-output-only(git log --oneline 6e7a9d701..HEAD | wc -l の出力転記)の既習実践であり、既存規範が設計どおり機能して捕捉した事例 = 防止機構の欠落は実測されていない。(5) 内容面の発見(export 境界で resource が redact 対象外、セッション相関の片側欠落)はコードベースの事実であって工程規範ではなく、前者は既に project.md の cid:practices-discovery:export-boundary-redaction が Mandated として覆っている。以上より、新規ノルムを生む実測は無く 0 件採用が妥当。",
+      "submittedAt": "2026-08-01T01:30:00Z"
+    }
+  ],
+  "late": []
+}

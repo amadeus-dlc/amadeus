@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OMSRA-S13",
+  "voter": "subagent-2",
+  "question": "260801-otel-meta-schema requirements-analysis ステージの §13 学習選定。conductor 提案: 0件(reviewer iteration 1 の Major = amadeus-harness.ts 行番号引用の混同は既存ノルム mechanism-cite-verify-at-draft の違反実例であり新規規則を生まない(違反実例としてローリング PM の材料に回る)。verdict の scratch 併書回収は E-MPRRAS13B の既習運用。diary エントリ0件)。各自、inception/requirements-analysis/ の成果物2点と reviewer verdict(iteration 2 READY)を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    }
+  ]
+}

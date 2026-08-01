@@ -1,0 +1,19 @@
+{
+  "electionId": "E-OMSB2C-DEV",
+  "voter": "subagent-2",
+  "question": "Bolt 2c(U5 metrics)builder 申告の契約逸脱・設計判断6件の裁定(実装済み・全検証 green。worktree = .amadeus/worktrees/bolt-metrics、報告全文 = scratchpad/b2-metrics-report.md)。(1) registerMeterProvider へ projectDir 追加 — registeredMeterProjectDir() 実装に必須で tracer/logger と対称の一意導出、呼出し元3箇所更新済み。(2) metrics-vocabulary.ts の leaf 分離 — redaction が metric 次元を admit する必要があり1ファイル案は import 循環になる実測。(3) supplyTokenUsage は setTokenUsageSink 注入 — resource-suppliers の LEAF 不変条件と循環回避(既存 generation counter と同じ反転パターン)。(4) gate.iterations の発火点 = stage.revising — GATE_REJECTED と対 emit のため両方数えると二重計上。(5) subagent.duration は SUBAGENT_STARTED 登録(U4 別 Bolt)待ち — observer 配線済み・in-process 検証のみ。(6) 跨プロセス duration にマーカーファイル(telemetry dir の pending-<kind>-<key>.start)新設 — stage の started/completed が別プロセスのため in-process pairing では production 計測0件。Relay store 選別に非一致をテスト固定済み。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "6件全て承認(実装受理)",
+      "description": "(1)-(3) は既存不変条件・実装可能性からの一意導出(執行クラス相当)、(4) は二重計上回避の正しい選択、(5) は DAG 順序(U4 が後続)による構造的制約、(6) は production 計測を成立させる最小機構でテスト固定済み — 全て設計意図の正当な実現形として受理する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部差し戻し(対象と修正を票に明記)",
+      "description": "いずれかを不受理とし、番号と要求修正を rationale に具体的に書く。特に (6) マーカーファイルは FD に無い新規永続機構のため精査すること。"
+    }
+  ]
+}

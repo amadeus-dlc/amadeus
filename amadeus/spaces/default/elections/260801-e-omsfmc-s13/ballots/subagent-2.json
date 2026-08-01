@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSFMC-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測により conductor の4論点すべてを裏取りし、いずれも既存 cid の適用実例で新規規範内容を含まないと確認した。(1) NOT_DETECTED の成立条件: fmc-out/tlc-stdout.bin を直読し 'Model checking completed. No error has been found.'(STARTMSG 2193)と最終統計 '5203730 states generated, 529692 distinct states found, 0 states left on queue'(STARTMSG 2199)、depth 9 の完全状態グラフ探索(STARTMSG 2194)を確認。completion-marker.json は complete:true / runId e1877468-525b-457e-95aa-2c7a83ebd154、manifest.json は outcome NOT_DETECTED / exitCode 0 / partial:false / errorCode null。manifest の 4 artifact 全件を shasum -a 256 で再計算し全ハッシュ一致(tlc-stderr.bin は 0 バイト = e3b0c442... の空ハッシュ)。env-receipt.json の inspection は jar-sha256 / network-deny / jdk-snapshot / sandbox-profile が全て expected==observed で passed、image-digest のみ 'Darwin sandbox-exec does not use a container image' の反証可能な理由付き not-applicable。これは project.md:308 cid:application-design:finite-exploration-not-detected-proof が要求する『完走した completion marker と state 統計が揃う』条件の充足そのものであり、新しい規則を導かない。(2) 初回 exit 2(HARNESS_ERROR / OUT_CONFLICT): repo grep で dist/plugins/formal-model-check/tools/run-model-check-artifacts.ts:137 'output directory already exists' / :142 'run-specific output directory already exists' および run-model-check-paths.ts:83 'output and model workspace must not overlap' を確認 — OUT_CONFLICT は :67 の failure code union に定義された設計上の fail-closed 分岐であり、既存ディレクトリ拒否は仕様どおりの挙動。新規 out で再実行して解消した経緯は運用手順であって規範ではない。(3) model-completeness センサーの filter 非適合: project.md:311 cid:reverse-engineering:c3-codekb-sensor が『sensor 成功として扱わず成果物を直接検証し stage diary に不適用理由と代替証拠を記録する』を既に規定済みで、本件はその適用。(4) two-layer-verification-posture の非該当: git status --porcelain specs/tla/ が空、git diff --stat origin/main -- specs/tla/ も空で specs/tla/ 9 ファイルの無改変を確認した。発動条件『並行プロトコルの spec 変更』を満たさず、本ステージはスコープ grid による opt-in 実行である旨の説明は実測と整合する。以上より persist すべき新規学習は存在せず、0件で可(1)。",
+  "submittedAt": "2026-08-01T20:27:26Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSAD-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "N1(外部 seam の供給側機構が未確定のまま設計へ確約しかけた類型)は cid:application-design:external-seam-vocab-measurement の射程内で新規性なしと確認したが、同型が別 intent で再発した場合は『設計段での未確定降格』の実効性を次回 PM ラウンドで再点検すべきと考える。",
+  "rationale": "独立実測: (1) inception/application-design/ の5成果物(components.md / component-dependency.md / component-methods.md / services.md / decisions.md)と memory.md を直読。memory.md は雛形コメントのみで実エントリ0件(diary 0件の主張と一致)。(2) audit shard の SUBAGENT_COMPLETED 実文で verdict 経緯を確認 — architecture-reviewer it.1 NOT-READY(C1/M2/m1/m2/m3)→ it.2 で全解消・N1 のみ残存で NOT-READY 継続 → it.3(閉包確認限定)READY。product-lead it.1 NOT-READY(amadeus-harness.ts:15-24 が HARNESS_DIR_TO_TYPE であり detectHarnessType でない誤引用)→ it.2 で :109-119 へ是正され READY。(3) 各指摘を既存ノルムへ写像し新規規則の要否を判定: C1(codekb が名指しした local-span-exporter.ts 改修面の欠落)と M1(FR-SUB-4 被覆ゼロ)は cid:requirements-analysis:enumeration-completeness-review / cid:requirements-analysis:consumes-first-drafting の違反実例、M2(依存矢印方向)は cid:requirements-analysis:symmetric-pair-review、product-lead の行番号誤引用は cid:requirements-analysis:mechanism-cite-verify-at-draft、N1(FR-SUB-4 の env carrier 供給経路の自己矛盾)は cid:application-design:external-seam-vocab-measurement(存在実測のみでの確約禁止・未実測は降格)および cid:application-design:citation-semantics-check の適用面であり、いずれも既存規則で捕捉可能。(4) 是正後の成果物実測で閉包を確認 — components.md に local-span-exporter.ts 行(FR-RES-4、redactRecord():88-99 引用)と FR-SUB-4 arm 行が実在し、後者は供給経路を明示的に『FD 段の未決事項』として降格記述。component-dependency.md は RES -->|suppliedResourceAttributes| SUP の一方向で循環なし、HOOKS_PT -.-> TP は『FD 未決』ラベル付き破線で components.md の記述と整合(自己矛盾解消済み)。(5) 手続き面: 閉包確認限定イテレーションは cid:requirements-analysis:delegated-review-analysis-with-owned-verdict(E-LSSADS13 追補)の既習運用、記録不能 READY のゲート開示も既習運用であり新規学習を生まない。以上より 0件提案は妥当と判断し choice 1 を支持する。",
+  "submittedAt": "2026-08-01T02:20:36Z"
+}

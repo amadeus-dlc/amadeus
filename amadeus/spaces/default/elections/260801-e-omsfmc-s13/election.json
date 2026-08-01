@@ -1,0 +1,22 @@
+{
+  "electionId": "E-OMSFMC-S13",
+  "kind": "learnings",
+  "question": "formal-model-check ステージの §13 学習選定。conductor 提案は「学習 0 件」。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "conductor 提案: TLC 完全探索 NOT_DETECTED(runId e1877468、5,203,730 states / 529,692 distinct / queue 0、completion-marker complete:true)は finite-exploration-not-detected-proof の既存成立条件の適用。初回 exit 2(HARNESS_ERROR / OUT_CONFLICT)は既存 --out ディレクトリの fail-closed 拒否 — 新規 out で再実行し解消(CLI 設計どおりの挙動で規則不要)。model-completeness センサーの filter 非適合は c3-codekb-sensor(不適用理由+代替証拠の diary 記録)の適用。本 intent は specs/tla/ 無改変のため two-layer-verification-posture の発動条件(並行プロトコル spec 変更)にも非該当 — スコープ grid による opt-in 実行。"
+    },
+    {
+      "internalNo": 2,
+      "label": "候補あり(票に明記)",
+      "description": "persist すべき候補を rationale に具体的に書く。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

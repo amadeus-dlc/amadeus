@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSRA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "iteration 1 の Major(引用混同)と Minor(テスト句欠落 7 FR)は新規ノルムを生まないが、既存ノルム(mechanism-cite-verify-at-draft / inception.md の要件テスト可能性)の違反実例として次回ローリング PM の材料に必ず計上されることを条件とする。計上されないまま流れると、0 件判断が単なる不記録になる。",
+      "rationale": "0 件で可(GoA 2)。3 点を独立実測した。(1) diary 0 件: inception/requirements-analysis/memory.md は 14 行のテンプレートのまま、4 節すべてが HTML コメント例のみで実エントリ 0(t100 が守る MEMORY_EMPTY 形)。学習候補の一次材料が存在しない。(2) iteration 1 Major の性質: 是正後の requirements.md FR-RES-3 は detectHarnessType() を amadeus-harness.ts:109-119、HARNESS_DIR_TO_TYPE を :15-24 と引く。実ファイルを直読して確認したところ、export const HARNESS_DIR_TO_TYPE = { は :15 で始まり as const satisfies ブロックが :24 で閉じ、export function detectHarnessType(): HarnessType { は :109 で始まり :119 で閉じる — 引用は現行実装と一致する。つまり指摘は『起草時に引用の実在・意味論を実測せよ』という既存 cid:requirements-analysis:mechanism-cite-verify-at-draft(team.md に 4 箇所参照)の違反実例であり、新規規則を導かない。Minor(テスト句欠落)も phases/inception.md の『要件はテスト可能かつ検証可能』の違反実例で同様。(3) verdict の scratch 併書回収: cid:requirements-analysis:builder-prompt-sync-completion 追補 2(E-MPRRAS13、team.md に実在)が record 外 scratch への verdict 併書を既に許可しており、本ステージの運用はその既習形の適用にすぎず新規性がない。以上より 3 候補源(diary / reviewer findings / 運用)いずれからも新規ノルム候補は導出されず、conductor 提案の 0 件が妥当。",
+      "submittedAt": "2026-08-01T02:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSRA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件に同意するが、独立実測で conductor 提案に含まれない残余事実が1件ある: audit seq 149(2026-08-01T01:26:27Z)の SENSOR_FAILED(upstream-coverage / requirements-analysis-questions.md / findings 5 = consumes 全数未参照)が再発火されないまま GATE_APPROVED(seq 165 系)に至っている。requirements.md 側は seq 153/162 で SENSOR_PASSED へ是正済みだが questions.md 側は未是正。これは manual-sensor-fire-before-gate-report(+その追補: verdict は exit code でなく audit の SENSOR_FAILED 行で判定)および artifact-upstream-inputs-header の違反実例であり、全 intent の audit 横断走査でも questions.md への同型 FAILED は本件1件のみ(再発なし)のため新規ノルムは生まない。よって 0件で可としつつ、(a) questions.md へ上流入力行を追記して再発火 PASSED を確定すること、(b) 本件をローリング PM の違反実例として記帳すること、を留保として付す。",
+      "rationale": "独立実測: (1) diary(inception/requirements-analysis/memory.md)は全4節ともコメント例のみで実エントリ0件 — audit の MEMORY_EMPTY と整合。(2) iteration 1 Major の対象 = amadeus-harness.ts の引用は現行 requirements.md FR-RES-3 で detectHarnessType() :109-119 / HARNESS_DIR_TO_TYPE :15-24 と記載され、実測(grep -n: :109 export function detectHarnessType / :15 export const HARNESS_DIR_TO_TYPE、:53-55 の HARNESS_TYPE_BY_DIR = HARNESS_DIR_TO_TYPE 別名)と一致。引用の実在・意味論とも是正済みで、欠陥類型は既存 cid:requirements-analysis:mechanism-cite-verify-at-draft の射程内 — 新規規則を生まない。(3) verdict は requirements.md:58-70 に Iteration 2 / READY / Findings None で実在し、scratch 併書回収は E-MPRRAS13B の既習運用。(4) audit 全数集計で ERROR_LOGGED 2件は seq 59/60 の phase-check-ideation.md 不在による approve 拒否であり、既存 cid:approval-handoff:phase-check-before-final-approve の違反実例(その後 phase-check-ideation.md 実在を確認)— これも新規規則を生まない。以上より 0件を支持する。",
+      "submittedAt": "2026-08-01T01:48:30Z"
+    }
+  ],
+  "late": []
+}

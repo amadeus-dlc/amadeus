@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSRA-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "iteration 1 の Major(引用混同)と Minor(テスト句欠落 7 FR)は新規ノルムを生まないが、既存ノルム(mechanism-cite-verify-at-draft / inception.md の要件テスト可能性)の違反実例として次回ローリング PM の材料に必ず計上されることを条件とする。計上されないまま流れると、0 件判断が単なる不記録になる。",
+  "rationale": "0 件で可(GoA 2)。3 点を独立実測した。(1) diary 0 件: inception/requirements-analysis/memory.md は 14 行のテンプレートのまま、4 節すべてが HTML コメント例のみで実エントリ 0(t100 が守る MEMORY_EMPTY 形)。学習候補の一次材料が存在しない。(2) iteration 1 Major の性質: 是正後の requirements.md FR-RES-3 は detectHarnessType() を amadeus-harness.ts:109-119、HARNESS_DIR_TO_TYPE を :15-24 と引く。実ファイルを直読して確認したところ、export const HARNESS_DIR_TO_TYPE = { は :15 で始まり as const satisfies ブロックが :24 で閉じ、export function detectHarnessType(): HarnessType { は :109 で始まり :119 で閉じる — 引用は現行実装と一致する。つまり指摘は『起草時に引用の実在・意味論を実測せよ』という既存 cid:requirements-analysis:mechanism-cite-verify-at-draft(team.md に 4 箇所参照)の違反実例であり、新規規則を導かない。Minor(テスト句欠落)も phases/inception.md の『要件はテスト可能かつ検証可能』の違反実例で同様。(3) verdict の scratch 併書回収: cid:requirements-analysis:builder-prompt-sync-completion 追補 2(E-MPRRAS13、team.md に実在)が record 外 scratch への verdict 併書を既に許可しており、本ステージの運用はその既習形の適用にすぎず新規性がない。以上より 3 候補源(diary / reviewer findings / 運用)いずれからも新規ノルム候補は導出されず、conductor 提案の 0 件が妥当。",
+  "submittedAt": "2026-08-01T02:05:00Z"
+}

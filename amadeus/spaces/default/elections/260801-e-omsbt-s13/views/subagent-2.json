@@ -1,0 +1,19 @@
+{
+  "electionId": "E-OMSBT-S13",
+  "voter": "subagent-2",
+  "question": "build-and-test ステージの §13 学習選定。conductor 提案は「学習 0 件」。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "conductor 提案: 本ステージの観測は既存規範の適用のみ。(a) 最終統合断面 full CI PASS(9761 assertions・0 failed)+全 drift guard green は bt-20260730-1(per-unit suites+main baseline = Comprehensive 充足)の適用 (b) promote:self:check の初回赤は runtime 残骸(.claude/scheduled_tasks.lock の ORPHAN)除去で解消 — ソース起因でない一時異常で、既存 external-status-triage 系の再実測原則の適用 (c) 条件付き READY の未検証3面明示は bt-verdict-names-unverified-facets の適用 (d) センサー初回 FAILED 9件(consumes 実参照不足・H2 不足)→ 是正で全 PASSED は consumes-first-drafting / artifact-upstream-inputs-header の違反実例(PM 記帳)。検証根拠: 全成果物7点実在、センサー 14/14 PASSED(audit 実測)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "候補あり(票に明記)",
+      "description": "persist すべき候補を rationale に具体的に書く。"
+    }
+  ]
+}

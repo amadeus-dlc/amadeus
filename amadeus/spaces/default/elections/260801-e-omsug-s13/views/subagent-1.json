@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OMSUG-S13",
+  "voter": "subagent-1",
+  "question": "260801-otel-meta-schema units-generation ステージの §13 学習選定。conductor 提案: 0件(Critical = ファイル交差の DAG 過小符号化は c6 / swarm-dispatch 系既存ノルムの違反実例、Major = 規模照合の表層是正は ledger-count-mechanical-recalc / fix-diff-independent-reverify の違反実例で、いずれも既存規則が既に禁じる形の再発 — 新規規則を生まない。閉包確認は E-LSSADS13 既習)。各自、inception/units-generation/ の3成果物と verdict 経緯を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

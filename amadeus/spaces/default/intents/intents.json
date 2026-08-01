@@ -731,16 +731,23 @@
     "status": "complete"
   },
   {
-    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
-    "slug": "perf-ci-separation",
-    "dirName": "260731-perf-ci-separation",
+    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
+    "slug": "otel-upstream",
+    "dirName": "260729-otel-upstream",
     "scope": "self-feature",
     "status": "complete"
   },
   {
-    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
-    "slug": "otel-upstream",
-    "dirName": "260729-otel-upstream",
+    "uuid": "019fbabd-a1a8-70d3-8839-4e97c36a480f",
+    "slug": "otel-meta-schema",
+    "dirName": "260801-otel-meta-schema",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
+    "slug": "perf-ci-separation",
+    "dirName": "260731-perf-ci-separation",
     "scope": "self-feature",
     "status": "complete"
   },

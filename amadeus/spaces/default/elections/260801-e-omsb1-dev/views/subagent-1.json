@@ -1,0 +1,19 @@
+{
+  "electionId": "E-OMSB1-DEV",
+  "voter": "subagent-1",
+  "question": "Bolt 1(U1 resource-core)builder 申告の設計逸脱2件の裁定。対象 worktree = .amadeus/worktrees/bolt-resource-core(HEAD 3753b14f1)、報告全文 = scratchpad/b1-builder-report.md。逸脱1: FD 契約『既存 redaction(redactAttributes+credential scrub)を1回適用』に対し、DEFAULT_REDACTION_POLICY の safeKeys が event registry 語彙由来で resource キーと素(そのまま適用すると default-deny で bag が空になる実測)のため、既存機構(redactAttributes/CREDENTIAL_SCRUB_PATTERNS)は再利用し safeKeys のみ閉集合14キーにした RESOURCE_REDACTION_POLICY を新設した。逸脱2: FD『SessionStart hook から supply し bag が3ストアへ現れるまで』に対し、hook プロセスは canonical 監査ジャーナルのみ書き telemetry 3ストアへ書かない実測により、(a) 実 hook spawn で supply 配線+SESSION_STARTED 着地 (b) 同一モジュール経由 supply の3ストア反映 in-process、の2段検証へ分割した(スタブ代替は不採用 = seam-writer-mode-precondition 準拠)。完全単一プロセス e2e は U5 で成立予定。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "両逸脱を承認(実装受理)",
+      "description": "両逸脱とも実測事実(safeKeys 素・hook の書込面)に接地した設計意図の正当な実現形と認め、実装を受理する。逸脱2の完全 e2e は U5 完了時の確認事項として引き継ぐ。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "差し戻し(修正内容を票に明記)",
+      "description": "いずれかの逸脱を不受理とし、要求する修正を票の rationale に具体的に書く。"
+    }
+  ]
+}

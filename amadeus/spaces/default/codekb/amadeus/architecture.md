@@ -152,6 +152,76 @@ return state.issueNumber === null ? "create" : "sync";
 - **区間の構造変化（`da51af375` → `c49e385ac`、11 commits）**: (a) `771afe2a2`（#1850）で OTel API ファミリーが唯一の上流として着地 — `packages/framework/core/otel/` 18モジュール（bootstrap の logs arm `:84-104` / traces arm `:108-116` の二分、tracer-provider の二重登録 throw `:205`、fatal-latch、relay）が dist 7面+self-install へ投影された。(b) perf tier 分離（#1848/#1851/#1855/#1859）で `tests/perf/` と `perf.yml` が新設され、ci.yml からベンチマーク3 job が削除された。
 - **本 intent の対象機構は5クラスタ**: (1) mirror 状態機械 — policy の applicable-operations 非対称（`amadeus-mirror-policy.ts:66`）と executor close 短絡の mark-attempted 欠落（`amadeus-mirror-executor.ts:1259-1266`）+mark-pending 死経路（`:527` × reducer `:557-558`）。(2) engine/state — birth scaffold の Construction Autonomy Mode 欠落（`amadeus-utility.ts:4461-`）と report の checkbox 行欠落 fail-closed（`amadeus-orchestrate.ts:4405-4411`、next 側 `:3622-3627` は寛容という非対称）。(3) OTel — fatal-latch の emit 経路不参照（`logger-provider.ts:67-110`）と session-end の seam 迂回直呼び（`hooks/amadeus-session-end.ts:80-81`、latent）。(4) graph 合成 — `mergeComposedScopes` の `knownSlugs` フィルタによる lossy drop→compose（`amadeus-graph.ts:1405-1411`）+実リポジトリ断面 `compile --check` の CI 不在。(5) metrics publication — TOCTOU 偽赤（`scripts/metrics-publication-github.ts:119-134` × `metrics-publication-domain.ts:453-462` の problems 無条件 terminal 化）と maintenance dispatch スキップ（`:536-540`）。
 
+## OTel メタ情報スキーマ実装の技術断面（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line・件数はすべて observed `9c8df859e`（`git rev-parse HEAD`）時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。対象は Issue #1868（OTel メタ情報スキーマ v1 — resource 12属性 / span / log / exception / subagent / metrics の6面）。
+
+### 全体像 — 3プロバイダ + 2ストア + 1リレー
+
+OTel 実装は `packages/framework/core/otel/` の18モジュール（計 4,123 行）に閉じている。API は自前実装で、vendored OTel API（`core/vendor/opentelemetry/`）のインターフェースに直接実装している（NodeSDK・BatchSpanProcessor は不使用 — `tracer-provider.ts:1-10`）。
+
+- **Logs arm**（canonical）: `logger-provider.ts` → `audit-log-exporter.ts`（監査ジャーナル、durability 契約の所有者）+ `local-log-exporter.ts`（機械ローカル）
+- **Traces arm**（telemetry）: `tracer-provider.ts` → `local-span-exporter.ts`
+- **Metrics arm**（telemetry）: `meter-provider.ts` → `local-metric-exporter.ts`
+- **Relay**: `relay.ts` — Signal Store の JSONL を OTLP へ転送する専用モジュール（U11 で Projector から縮退）
+
+### resource の現状 — 単一 literal、span record のみ
+
+resource はプロセス全体で **1 箇所の literal** だけが組み立てる。`tracer-provider.ts:137`:
+
+```
+resource: { "service.name": "amadeus", "telemetry.sdk.language": "typescript" },
+```
+
+`AmadeusSpan.end()`（`:122-141`）がレコード組み立て時に埋めており、組み立て関数も定数も存在しない。canonical ツリー全体で `"service.name"` / `telemetry.sdk.language` の出現はこの1行のみ（`grep -rn 'telemetry.sdk.language\|"service.name"' packages/framework/core --include='*.ts' | grep -v vendor` → 1 hit）。
+
+**logs / metrics には resource の概念自体が無い。** `CanonicalEventRecord`（`logger-provider.ts:87-105`）は `intentId` / `space` / `cloneId` / `traceId` / `spanId` を持つが resource フィールドを持たず、`MetricRecord`（`local-metric-exporter.ts`）も同様。Relay の `resourceAttributes()`（`relay.ts:298-312`）は `record.payload.resource` からのみ吸い上げるため、**logs / metrics の OTLP resource は現状ほぼ空**である。#1868 §1 の12属性を「全シグナル共通」にするには、span 以外の 2 ストアにも resource を載せる構造追加が要る。
+
+### 一元組み立ての設計位置 — bootstrap seam
+
+resource を1度だけ組み立てて3プロバイダへ配る位置として構造上最も自然なのは `bootstrap.ts`（Bolt M-P で新設、`fc94b38ba`）。理由は設計コメント `:1-22` が明示する既存契約そのものである：
+
+- 「the single place that sequence lives」— 全 entry point が無条件に呼ぶ唯一の初期化点
+- 「idempotent by construction」— API シングルトンへ問い合わせて判定し、シャドウフラグを持たない
+- arm が分離済み: `ensureOtelBootstrap(projectDir)`（`:84-101`、logs + side-effect）/ `ensureTracerBootstrap(projectDir)`（`:108-116`、traces、side-effect なし）
+
+両者とも引数は `projectDir` のみで、exporter を生成して register する形。resource を第2引数（または内部で1回解決）として通す拡張はこの形と整合する。
+
+**metrics arm は bootstrap に存在しない。** `registerMeterProvider` の呼出しはテスト3ファイル（`t369-otel-metrics-subset` / `t-otel-exporter-contract` / `t-otel-credential-free-gate`）のみで、プロダクションコードからは一度も呼ばれていない（独立実測: `grep -rn 'registerMeterProvider' packages/framework/core --include='*.ts'` の hit は `meter-provider.ts` 内の定義・throw のみ）。#1868 §6 の計器を出すには **bootstrap の metrics arm 新設が前提**になる。
+
+### redaction の二層構造と resource の位置
+
+`redaction.ts` の1ポリシーを両層が共有する（`:1-13`）。default-deny で、safe-key は registry の required∪optional から機械導出（`:65-71` `REGISTRY_ATTRIBUTE_KEYS`、`Command` のみ opt-in tier へ隔離）。
+
+- **write-time 層**: `logger-provider.ts:78`・`:119`（logs）、`subprocess-span.ts:82`（span 属性を call site 側で通す）
+- **export-boundary 層**: `audit-log-exporter.ts:157`、`local-log-exporter.ts:87`、`local-metric-exporter.ts:71`、`local-span-exporter.ts:91-97`、`relay.ts:233`・`:310`
+
+**独立検証で判明した非対称（scan 報告より精密化）**: span の export 境界 `redactRecord()`（`local-span-exporter.ts:88-99`）は `attributes` / `events[].attributes` / `links[].attributes` を通すが、**`resource` は通さない**（スプレッド `...record` でそのまま素通り）。一方 Relay の `resourceAttributes()`（`relay.ts:298-312`）は resource 値を `scrubCredentials` するが、**キーの default-deny admission は意図的に迂回する**（コメント `:294-297`「Resource is the exporter's own identity bag ... so it keeps its keys rather than passing the default-deny attribute filter — but its values are credential-scrubbed」）。
+
+つまり resource は現在 **ローカルストアでは無処理・OTLP 送出時のみ値スクラブ** という一層構造である。#1868 設計原則4「resource / span attributes とも既存の二層 redaction の対象に含める」は、resource について現状を満たしていない。`host.name` / `vcs.*` / `session.id` を resource へ載せる変更は、この層の追加を伴う。
+
+### exception 経路の拡張点
+
+`AmadeusSpan.recordException()`（`tracer-provider.ts:145-157`）は registry def の durability を実行時検査し `telemetry` でなければ throw（`:151-154`、FR-EVT-7 の不変条件）したうえで、`exception.message` **のみ**を addEvent する（`:156`）。`err.name` / `err.stack` は受け取っても捨てている。
+
+registry def（`event-registry.ts:827-837`）は `requiredAttributes: ["exception.message"]` / `optionalAttributes: []`。safe-key が registry から機械導出される構造（`redaction.ts:65-71`）のため、**`optionalAttributes` へ `exception.type` / `exception.stacktrace` を追加すれば redaction の admission は自動追従する** — これが #1868 §4 の最小改修経路である。
+
+ただし `addEvent()`（`tracer-provider.ts:98-105`）は write-time のフィルタを一切通さず生の bag を `this.events` へ push する。守っているのは export 境界（`local-span-exporter.ts:93`）だけなので、stacktrace は **単層** の防御しか受けない。かつ `CREDENTIAL_SCRUB_PATTERNS`（`redaction.ts:35-45`）の6パターンは credential 形のみで、**ホームディレクトリ絶対パスを扱うパターンは存在しない** — #1868 §4 が要求するパス書換えは新規パターン（またはパス専用の正規化関数）の追加になる。
+
+### subagent 観測のギャップ — started の発火点が無い
+
+完了側のみ実装済み（`hooks/amadeus-log-subagent.ts`、`SubagentStop` で配線）。開始側は **hook イベント自体が未配線**である。独立実測（`grep -rn 'SubagentStop\|PreToolUse\|...' packages/framework/harness/claude/settings.json.example`）で確認した宣言イベントは `UserPromptSubmit`（:23）/ `SessionStart`（:34）/ `SessionEnd`（:49）/ `PostToolUse`（:60）/ `SubagentStop`（:113）/ `Stop`（:124）で、**`PreToolUse` セクションが存在しない**。`PostToolUse` の matcher は `Write|Edit` / `TaskUpdate` / `AskUserQuestion` / `Bash` で `Task` を含まず、かつ PostToolUse は完了後発火のため started の担い手にならない。
+
+→ `amadeus.subagent.started` は `PreToolUse`（matcher: `Task`）セクションの新設が必要。#1868 §5 が指摘する「プロセス境界を跨ぐ」問題は、spawn 側（親プロセスの PreToolUse）と完了観測側（親プロセスの SubagentStop）が**どちらも親側 hook** であるため、スパン組み立ては親プロセス内で閉じられる構造にある。
+
+### trace 連結は既に成立している
+
+subagent 内のツール操作スパンは TRACEPARENT env 伝播（`context.ts:248`、W3C 形式を手実装 — `:12`・`:237` の `TRACEPARENT_RE`）で既に同一 trace へ連結済み。親不在時は `processParentSpanContext()`（`tracer-provider.ts:69`）が env carrier または復元済み intent anchor へフォールバックし、短命プロセスが孤児 trace を開かない（BR-3）。#1868 §5 の lifetime スパンは、この既成の連結の上に**親スパンを1段挿す**設計になる。
+
+### intent 識別の現在位置 — 保存パス経由
+
+span 側に intent 属性は無い。`local-span-exporter.ts` は `telemetryDir(options.projectDir)`（`amadeus-observability.ts:140-144` → `recordDir(projectDir)` 配下）へ書くため、**intent 識別は保存パスに符号化されている**だけである。logs 側は `CanonicalEventRecord.intentId`（`logger-provider.ts:97` が `activeIntent()` を解決）として行に直載り。#1868 §2 は span 側をこの行直載り形へ揃える変更にあたる。
+
 ## perf 検証の CI 分離が触れる機構（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
