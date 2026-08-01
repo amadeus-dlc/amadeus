@@ -129,6 +129,48 @@ export function redactAttributes(
   return admitted;
 }
 
+// The three bounded forms a path-like token is rewritten into. A repo path
+// loses its absolute prefix entirely (the relative path is the useful part);
+// anything else keeps its tail behind a marker that names the zone instead of
+// the machine.
+const HOME_MARKER = "<home>";
+const EXTERNAL_MARKER = "<external>";
+
+// A path-like token: an optional already-applied marker, then "/", then a run
+// of characters that cannot delimit a stack frame. ONE character class under
+// ONE quantifier — no nesting, so matching costs one linear scan of the input
+// however adversarial it is (regex-linearity-untrusted-input). Recognising the
+// markers here is what makes redactStacktrace idempotent: a second pass sees
+// `<home>/x` as one already-rewritten token instead of a fresh `/x`.
+const PATH_TOKEN_PATTERN = /(?:<home>|<external>)?\/[^\s()'"[\]]*/g;
+
+function trimTrailingSeparator(path: string): string {
+  return path.endsWith("/") ? path.slice(0, -1) : path;
+}
+
+function rewritePathToken(token: string, repoRoot: string, home: string): string {
+  if (token.startsWith(HOME_MARKER) || token.startsWith(EXTERNAL_MARKER)) return token;
+  // Repo first: the repo usually LIVES under home, and the repo-relative form
+  // is strictly more useful than `<home>/…` for locating the frame.
+  if (repoRoot !== "" && token.startsWith(`${repoRoot}/`)) return token.slice(repoRoot.length + 1);
+  if (repoRoot !== "" && token === repoRoot) return ".";
+  if (home !== "" && token.startsWith(`${home}/`)) return HOME_MARKER + token.slice(home.length);
+  if (home !== "" && token === home) return HOME_MARKER;
+  return EXTERNAL_MARKER + token;
+}
+
+// Rewrite every path-like token of a captured stack into a bounded form and
+// credential-scrub the result (FR-EXC). A raw `err.stack` names the machine's
+// user and directory layout in every frame, so it cannot be stored as an
+// attribute untouched. One linear pass; the output is a plain string, and a
+// second pass over it is a no-op.
+export function redactStacktrace(stack: string, repoRoot: string): string {
+  const root = trimTrailingSeparator(repoRoot);
+  const home = trimTrailingSeparator(process.env.HOME ?? process.env.USERPROFILE ?? "");
+  const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token) => rewritePathToken(token, root, home));
+  return scrubCredentials(rewritten) as string;
+}
+
 // VER-2 scanner: report the LABELS of every credential pattern present in the
 // given text (never the matched secrets). Returns [] when the text is clean —
 // the credential-free gate fails on any non-empty result (BR-15).

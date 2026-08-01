@@ -832,7 +832,12 @@ export const REGISTERED_EVENTS = [
     durability: "telemetry",
     category: "telemetry",
     requiredAttributes: ["exception.message"],
-    optionalAttributes: [],
+    // The OTel semantic-convention companions. Optional, not required: a
+    // non-Error thrown value has neither, and an Error may carry no stack, so
+    // requiring them would turn a recorded failure into a second failure.
+    // Listing them here is also what admits them through the default-deny
+    // redaction policy, which derives its safe keys from this vocabulary.
+    optionalAttributes: ["exception.type", "exception.stacktrace"],
     schemaVersion: 1,
   },
 ] as const satisfies readonly EventDef[];
