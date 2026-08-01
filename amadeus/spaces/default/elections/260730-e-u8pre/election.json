@@ -1,0 +1,24 @@
+{
+  "electionId": "E-U8PRE",
+  "kind": "design-deviation",
+  "question": "U8 前の canonical 化方針(E-U7CG-Q3A/Q3B 留保の後続裁定): OTel canonical emit 経路への per-call intent/space ターゲティングと lock 再入の導入方式。scout 実測(2026-07-30): [ターゲティング] emitEvent(logger-provider.ts:55)は target 引数なしで identity をアクティブカーソルから解決(:70/:81)。append seam(audit-log-exporter.ts:66-71)は既に (record, projectDir, intent?, space?) を受け、AuditLogExporterOptions.intent/space を本番で設定する箇所はゼロ(死んだ設定)— 欠けているのは emitEvent→exportCanonicalEvent の受け渡し2ホップのみ。**最大の落とし穴**: target をシャード選択だけに通して :70/:81 を直さないと「行はターゲットのシャードに落ちるが intentId は発行者を主張」— DELEGATED_APPROVAL が最も起こしてはいけない形(migration-adapter.ts:50-53 の fail-closed 理由そのもの)。v1 は auditIntentId がターゲット優先(amadeus-audit.ts:289-291)で対称性が破れている。[lock] acquireAuditLock(amadeus-lib.ts:5818)は再入検出なし、withAuditLock(:5948)は AUDIT_LOCK_DEPTH(:5886)で identity 単位の再入可、holdsAuditLock(:5995)は withAuditLock 経由のみ true。appendJournalRecordV2(amadeus-audit.ts:400)は生 acquire(:406)— **保持中 lock 内から呼ぶと、プロセス生存が DEFAULT_LOCK_STALE_MS(10分, :5405)超で reapStaleLockUnderMutex(:5761-5790)が自分の生きた lock を steal し、外側クリティカルセクションが lock を失ったまま続行する無音の排他破壊**(5s 遅延ではない)。[call site 分類] unlocked 17件 = A(単純 hoist 可)6・B(audit→state アトミック性が本質)7・C(read-decide-emit+戻り値消費)4。うち5 site(sensor.ts:479/:794/:806/:816 と grant-authorization.ts:776 — 内外 lock は別バケットと実測済み)は呼出側の構造変更のみで canonical 化可能(O-L5)。lib.ts:7305 と audit.ts:978 は他者 lock 保持が存在理由のため hoist 不可。v2 は unlocked の対を持たず v1 と非対称(symmetric-pair-review 対象)。抽出は :406-408/:424-426 を外し本体を export する機械的15行、seal 判定(:414-420)と appended/timestamp 消費4 site の伝播は EmitOutcome(:47-49)で充足済み。[別ファミリ] appendLifecycleAuditEntryUnlocked(定義 :498、seal を意図的バイパス)の本番4 site は guard allowlist 外で不可視+seal 意味論が異なる。各自 上記 file:line を独立実測して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "複合方針A: (1) O-L5 — 構造変更で 5 site を先行 canonical 化(実移行対象 17→12) (2) O-L2 — appendJournalRecordV2Unlocked を抽出して v1/v2 の locked/unlocked 対称を復元し、exporter に lock-held 入口を追加(新入口が audit-log-exporter.ts:141-148 の try/catch→latch.setFatal→rethrow を必ず通ることをレビュー観点に固定)+ 素 acquire 保持者2 site(audit.ts:928、mirror-store の port)は withAuditLock へ寄せる (3) O-T1 — emitEvent(name, attrs, target?) を追加し identity 解決 :70/:81 を同時修正(落ちる実証 =「シャード正・intentId 発行者」の注入赤)。lifecycle 系4 site は seal 意味論が異なるため本 canonical 化のスコープ外とし別裁定へ"
+    },
+    {
+      "internalNo": 2,
+      "label": "複合方針B: (1) O-L5 同左 (2) O-L1 — appendJournalRecordV2 の生 acquire を withAuditLock へ差し替え(約4行)+ 素 acquire 保持者2 site を withAuditLock へ寄せて depth で救う(unlocked 対の抽出はしない) (3) O-T1 同左。lifecycle 系4 site は同様にスコープ外・別裁定へ"
+    },
+    {
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

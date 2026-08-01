@@ -46,6 +46,48 @@ file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が触るコン
 中核テスト: `t-formal-verif-model-completeness-sensor`（unit / e2e / integration × 2 — #1510 対象）、`t-formal-verif-plugin-lifecycle` / `-stage-discovery`、`t-formal-verif-ci-workflow`（#1829 の CI 面）、`t-plugin-projection` / `t303` / `t310` / `t311` / `t356`（projection・promote-self 面）、`t341-plugin-conformance-journey`。
 
 ## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離の対象コンポーネント（260731-perf-ci-separation、履歴、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 分離候補（スイート内 perf）
+
+| コンポーネント | 種別 | 実時間性 | 分離した場合の主な波及 |
+| --- | --- | --- | --- |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | 実 subprocess ベンチ | 高（`:529` timeout 120s、ローカル 30.01s） | project coverage 低下、registry claim の移動、drift 報告から消える |
+| `tests/integration/t257-status-registry-migration.test.ts` | 実 subprocess ベンチ | 高（`:260` timeout 120s、ローカル 6.70s） | 同上 |
+| `tests/integration/t259-guard-corpus.test.ts` | 交互計測 + 孫 spawn | 中（`:121` timeout 180s、ローカル 12.28s） | 同上 |
+| `tests/integration/t269-amadeus-mirror-contract-policy-performance.integration.test.ts` | in-process マイクロベンチ | 低いが**予算が最厳**（`:102` 1ms / `:162` 50ms） | 同上 |
+| `tests/integration/t292-mirror-distribution-performance.integration.test.ts` | 主体は純アグリゲータ検証 + 実時間1点（`:84` 10s） | 低 | 純部分まで一緒に外すと検証力を失う。**分割検討の対象** |
+| `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts` | 実 compile 10 対 | 中（`:34` `COMPILE_LIMIT_MS = 10_000`） | 同上 |
+
+### 分離してはならないコンポーネント
+
+| コンポーネント | 理由 |
+| --- | --- |
+| `tests/unit/latency-median-budget-gate.test.ts`（`// size: small`） | `exceedsMedianLatencyBudget` / `median` の落ちる実証。合成データのみでコストゼロ |
+| `tests/unit/plugin-discovery-overhead-gate.test.ts`（`// size: small`） | `exceedsDiscoveryOverhead` の落ちる実証。同上 |
+| `tests/lib/latency-median-budget-gate.ts` / `tests/lib/plugin-discovery-overhead-gate.ts` | 判定述語の正本。計測側と消費側の両方から参照される |
+
+### 触れることになる周辺機構
+
+| コンポーネント | 行 | 分離との関係 |
+| --- | --- | --- |
+| `tests/run-tests.ts` | `:839-850` / `:875-880` / `:900-909` / `:1161-1166` | 除外集合の口。`runTier` のみ `excludes` 非対応 |
+| `tests/gen-coverage-registry.ts` | `discoverClaims` `:771-774`、`CLAIMS_TESTS_DIR` `:74` | 宇宙は**ディスク列挙**。実行からの除外では不変、ディレクトリ移動では claim が落ちる |
+| `tests/coverage-project-gate.ts` | totals `:48`、baseline `:52` | 行率ラチェット。実行除外で必ず低下 → baseline 再カット必須 |
+| `tests/coverage-patch-gate.ts` | allowlist `:56`、stale 拒否 `:295` | LCOV から消えたファイルを指す既存 allowlist 行ピンが hard-fail する |
+| `tests/integration/t257-ci-residency-marker-guard.integration.test.ts` | `CI_SCOPES` `:32`、`scopeOf` `:34` | 新ディレクトリを作ると `scopeOf` は `"other"` を返す |
+| `tests/unit/t-test-size-drift.test.ts` | — | ディスク上の全 `*.test.ts` を走査。ディレクトリ移動では発火しないが、注記値の誤りは fatal |
+| `tests/smoke/t05-run-tests-parallel.test.ts` | `PER_TEST_TIMEOUT` `:163` | ランナー CLI 契約のピン |
+| `.github/workflows/ci.yml` | `:167` / `:293` / `:353` / `:224` / `:255` / `:279` / `:475` / `:648` | ジョブグラフとブロッキング境界 |
+
+### 区間で変化したコンポーネント（本 intent 外）
+
+`amadeus-mirror-presentation.ts`（`mirrorSnapshotStatus` `:250-252` 新設）、`amadeus-mirror-lifecycle.ts`、`t224`（spawn 診断層）、`t259`（交互計測化）、`t-team-up-codex-resume.serial.test.ts`（supervisor reap）、`tests/.coverage-patch-allowlist.json`（上記に伴う churn）。
+
+
+## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
@@ -220,6 +262,38 @@ sensors / hooks / scopes の構成は不変。core tools への**新規モジュ
 ### 区間で増えた主要コンポーネント
 
 `ca8ff0af4..22ee27dbe` では Intent Mirror の Project 同期面として contract、diagnostics、executor、gateway、ledger reducer、reconciliation reducer、verification が `packages/framework/core/tools/` に追加された。テスト面では CLI/SDK/TUI mechanism と live Codex helper が追加された。これにより core tools は実測78ファイルとなり、#1607 の修正対象は旧 mirror lifecycle だけでなく Project ledger の完了ゲートまで含めた現行スタックで評価する必要がある。
+
+## OTel/observability 面コンポーネント（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+行数は HEAD の `wc -l` 実測値、消費者数は `grep -l` の import 実測値（測定 ref: observed `22ee27dbe`）。正本はすべて `packages/framework/core/` 配下。
+
+### C-O1. JSONL journal codec（`tools/amadeus-journal.ts`、236 行）
+
+serialize / parse / identity ヘルパのみを持つ pure codec（FS 非依存）。消費者は 5 モジュール（audit / state / lib / journal-convert / otel-projector）。`JOURNAL_SCHEMA_VERSION = 1` の wire 契約と `(cloneId, seq)` べき等キー、fork lineage token 採番を所有する。テストは `tests/unit/t352-journal-codec.pbt.test.ts`（fast-check PBT）。
+
+### C-O2. Audit writer（`tools/amadeus-audit.ts`、1094 行）
+
+append-only 監査台帳の writer。JSONL 化済みで codec を共有し、`initProcessObservability` でプロセス区間 telemetry も emit する。Markdown renderer `formatAuditRecord` は converter の lossless proof 専用に残存（`:323` コメント）。**#1672 で OTel EventRecord → AuditLogExporter 経路へ置換予定のコンポーネント**。
+
+### C-O3. 移行 converter（`tools/amadeus-journal-convert.ts`、298 行）
+
+Markdown shard → JSONL shard の one-shot 移行橋渡し。switchover 後に legacy Markdown block を parse してよい唯一のモジュールで、byte-exact round-trip 自己検証の fail-closed 設計。テストは `t356-journal-convert.test.ts`。
+
+### C-O4. Observability seam（`tools/amadeus-observability.ts`、325 行）
+
+Core 向け telemetry seam（Issue #1628 Phase 2）。消費者は tools 17 + hooks 12 = 計 29 モジュール。layered config 解決、default-deny の meta redaction、fail-open の buffer append、process / operation / subprocess の 3 種の区間計測を所有する。区間で未使用 `registered` フィールドが削除され、登録状態は `_processObservation !== null` に一本化。**#1672 で `observe()` / `observeSubprocess()` が Trace API spans へ置換予定**。テストは `t357-observability-seam.test.ts`。
+
+### C-O5. OTLP projector（`tools/amadeus-otel-projector.ts`、609 行）
+
+journal + buffer → OTLP/HTTP JSON の投影器（Phase 3）。依存ゼロで ResourceSpans/ResourceMetrics を自前構築し fetch POST する、OTel を話す唯一のモジュール。消費者は `hooks/amadeus-session-end.ts` と CLI のみで、Core からは import されない。**#1672 で pure OTLP relay へ縮小予定**。テストは `t358-otel-projector.test.ts`。
+
+### C-O6. Session-end hook（`hooks/amadeus-session-end.ts`）
+
+projector の piggyback 起動点（session 終了時の export 駆動）。
+
+### 配布増幅と区間の新設コンポーネント
+
+正本モジュールは 7 `dist` 面 + 5 self-install 面へ同期される（計 13 コピー、`git diff --name-status` で確認）。区間の新設コンポーネント（focus 外）: mirror-project 系 9 モジュール（project-executor 486 / project-verification 483 / reconciliation-reducer 385 / project-gateway 344 / project-diagnostics 314 / ledger-reducer 254 / warning-reducer 91 / timestamp 81 / contract 46 行）と純粋ロジック分離の `amadeus-intent-selection.ts`（168 行）。周辺テストに `t355-audit-merge-info-seams.test.ts`（audit マージ境界）と `t315-doctor-plugin-observability.integration.test.ts`（doctor の observability section）。
 
 ## Slop cleanup 対象コンポーネント（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 

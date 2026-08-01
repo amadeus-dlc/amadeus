@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OTELCG-S13B",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "候補1を採用(1)。独立実測で二重閉塞の両アームを再現確認した。(i) requirements.md:73 FR-MIG-4(d) の改訂文と承認系譜(scout実測→conductor提案→ユーザー承認)を verbatim 確認。(ii) shadow-compare.ts:271-272 が readStore(dir,'buffer-') / readStore(dir,'spans-') の二系統読みであることを確認。(iii) 旧 buffer- store の書き手 observe()/observeSubprocess() の production 呼出しは packages/ 配下で 0 件(grep ヒットは vendor/opentelemetry/api/metrics/Metric.d.ts:127,142 の無関係な ObservableResult.observe と tests/ のみ)。amadeus-observability.ts:149 が buffer- パスの唯一の生成元であり、その writer に production caller がない。(iv) 閉塞アーム1: absentStoreReason(:252-254)→notPerformed(:243-249)により old store 不在で eventCount/linkage/status/allowedAttributes の4次元すべてが performed:false の恒久 UNKNOWN に落ちる。(v) 閉塞アーム2: compareEventCount(:134-148)は operationNames(:112-114)の union キーで突合するため、name 空間が互いに素なら全 name が old N/new 0 または old 0/new N の finding を生み FAIL 確定 — 「store を埋めても FAIL」も成立。(vi) tests/callsite-guard.ts:345 が legacy observe()/observeSubprocess() の retirement を FR-MIG-1/FR-TRC-1 として明示しており、条件(c)充足が構造的に比較窓を閉じる因果と整合。よって『比較窓が移行完了後も存在するか』を設計時に検証せよという知見は実測に接地し、cid:requirements-analysis:symmetric-pair-review の時間軸面(write⇔check の対を時間で分断する移行系特有の欠陥)を埋める新規性がある。留保なし。",
+  "submittedAt": "2026-07-31T12:33:42Z"
+}

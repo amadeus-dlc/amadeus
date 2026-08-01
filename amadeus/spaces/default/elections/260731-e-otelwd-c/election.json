@@ -1,0 +1,22 @@
+{
+  "electionId": "E-OTELWD-C",
+  "kind": "blocker",
+  "question": "260729-otel-upstream writer-deletion Bolt: 削除ゲート条件 (c)(zero direct legacy call sites、checkCallsitesZero は total===0 のみ PASS — tests/deletion-gate.ts:161-176)は、残 3 call site のうち scripts/otel-phase1-measure.ts の 2 site が『設計上の恒久例外として allowlist 残置が正しい』(construction/callsite-migration/code-generation/code-summary.md:68・:134)と既決判断されており、契約と正面矛盾している。残る 1 site は amadeus-audit.ts:417 の自己参照(writer ペア削除で同時に消える)。前提裁定(2026-07-31 ユーザー): 条件 (d) は再定義縮退が確定し、shadow 比較ハーネスの旧経路計測(phase1-measure が担う『current 側』比較)は存在理由を失った。解消方式を選べ。各自、tests/deletion-gate.ts / tests/callsite-guard.ts / scripts/otel-phase1-measure.ts / tests/integration/t385-emitter-registry-admission.test.ts:36-57 / callsite-migration code-summary.md:68 を独立実測してから投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "C-1: scripts/otel-phase1-measure.ts を削除",
+      "description": "Phase 1 (#1678) の計測値は ADR に取得済みで、ハーネスは一回性。旧 writer を削除する以上、旧経路を計測するハーネスは定義上維持不能。削除で (c) の残 site が amadeus-audit.ts 自己参照 1 件のみになり、writer ペア削除と同時に total 0 → (c) PASS。t385:57 の除外エントリ・:36 コメント・callsite-allowlist の該当ブロックを同一変更で整理する。ゲート契約(total===0)は無改変で fail-closed 性を保つ。"
+    },
+    {
+      "internalNo": 2,
+      "label": "C-2: (c) を『恒久例外を除いてゼロ』へ再定義",
+      "description": "code-summary.md:68/:134 の『恒久例外』既決判断に契約側を合わせる。phase1-measure は残置。checkCallsitesZero に例外リストを導入するため fail-closed 性が弱まり、ゲート契約の変更(仕様変更)としてユーザー裁定が別途必要になる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

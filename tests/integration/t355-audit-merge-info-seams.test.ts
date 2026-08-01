@@ -8,19 +8,24 @@
 // shipped dist tree so the changed lines register in lcov (t219 precedent).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { countAuditEvent } from "../harness/audit-records.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import {
-  appendAuditEntry,
   handleAuditMerge,
+  mergeDeltaUnderLock,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import {
   auditFilePath,
+  auditLockDir,
+  releaseAuditLock,
   relativeRecordDir,
   worktreeAuditFilePath,
   worktreePath,
@@ -37,10 +42,12 @@ let proj: string | undefined;
 let priorProjectDir: string | undefined;
 
 beforeEach(() => {
+  resetOtelPerProject();
   priorProjectDir = process.env.CLAUDE_PROJECT_DIR;
 });
 
 afterEach(() => {
+  resetOtelPerProject();
   if (priorProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
   else process.env.CLAUDE_PROJECT_DIR = priorProjectDir;
   cleanupTestProject(proj);
@@ -143,7 +150,8 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     const main = readFileSync(auditFilePath(proj), "utf-8");
     expect(main).toContain('"event":"BOLT_STARTED"');
     expect(main).toContain('"event":"BOLT_COMPLETED"');
-    expect(main).toContain('"event":"AUDIT_MERGED"');
+    // AUDIT_MERGED is migrated onto the canonical path, so the row is schema v2.
+    expect(countAuditEvent(main, "AUDIT_MERGED")).toBeGreaterThan(0);
     expect(main).toContain('"Entries Merged":"2"');
   });
 
@@ -158,6 +166,61 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
     expect(run.exited).toBe(true);
     expect(run.stderr).toContain("missing Fork Boundary");
+  });
+
+  // E-U8PRE O-L1: the section now runs under withAuditLock with the extended
+  // env-tunable budget passed through explicitly. A spent budget arrives as
+  // AuditLockAcquireError and must still surface as audit-merge's own JSON
+  // error, not as an escaping throw.
+  test("a spent lock budget refuses with the in-flight-merge classification", () => {
+    proj = seedProject();
+    seedWtShard(proj, { deltas: [delta(3, "BOLT_STARTED", "2026-07-28T11:01:00Z")] });
+    const priorRetries = process.env.AMADEUS_AUDIT_LOCK_RETRIES;
+    process.env.AMADEUS_AUDIT_LOCK_RETRIES = "0";
+    // A live, freshly stamped holder this process did not take through
+    // withAuditLock: no depth entry, so no reentrancy and no stale reap.
+    const lockDir = auditLockDir(proj);
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(
+      join(lockDir, "owner.json"),
+      JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin) }),
+      "utf-8",
+    );
+    let run: { exited: boolean; stderr: string };
+    try {
+      run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    } finally {
+      releaseAuditLock(proj);
+      if (priorRetries === undefined) delete process.env.AMADEUS_AUDIT_LOCK_RETRIES;
+      else process.env.AMADEUS_AUDIT_LOCK_RETRIES = priorRetries;
+    }
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("Failed to acquire audit lock");
+    expect(run.stderr).toContain("another merge in flight?");
+  });
+
+  // The orphan-delta arm: the delta append fails AFTER the lock is held, so the
+  // section emits ERROR_LOGGED with the correlation tags doctor scans for and
+  // exits non-zero. Driven through the exported section seam because the handler
+  // routes both appends at the same shard — a broken shard would take the
+  // ERROR_LOGGED write down with it and the arm would never be reached.
+  test("a failed delta append emits ERROR_LOGGED with the correlation tags", () => {
+    proj = seedProject();
+    const unwritableDelta = join(proj, "no-such-dir", "main.jsonl");
+    const run = captureRun(() =>
+      mergeDeltaUnderLock(
+        proj as string,
+        unwritableDelta,
+        delta(3, "BOLT_STARTED", "2026-07-28T11:01:00Z"),
+        { slug: SLUG, sourceHash: "0".repeat(64), boundary: 1, forkTs: "2026-07-28T11:00:00Z" },
+      ),
+    );
+    expect(run.exited).toBe(true);
+    const main = readFileSync(auditFilePath(proj), "utf-8");
+    expect(countAuditEvent(main, "ERROR_LOGGED")).toBeGreaterThan(0);
+    expect(main).toContain(`[slug=${SLUG}]`);
+    expect(main).toContain("[fork-emitted:2026-07-28T11:00:00Z]");
+    expect(countAuditEvent(main, "AUDIT_MERGED")).toBe(0);
   });
 
   test("prefix-hash mismatch refuses with the tampering classification", () => {
@@ -178,7 +241,7 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
 describe("worktree info in-process (field reads over the shared accessor)", () => {
   test("happy path: emits path, branch, and merge_held=false", () => {
     proj = seedProject();
-    appendAuditEntry(
+    plantV1AuditRow(
       "WORKTREE_CREATED",
       {
         "Bolt slug": SLUG,
@@ -198,7 +261,7 @@ describe("worktree info in-process (field reads over the shared accessor)", () =
 
   test("malformed WORKTREE_CREATED (missing Branch name) exits with an error", () => {
     proj = seedProject();
-    appendAuditEntry(
+    plantV1AuditRow(
       "WORKTREE_CREATED",
       { "Bolt slug": SLUG, "Worktree path": `${proj}/.amadeus-worktrees/${SLUG}` },
       proj,

@@ -9,9 +9,11 @@ The AI-DLC test suite is **entirely TypeScript** — every test is a
 the platform-invariance guarantee by construction: the same files run
 identically on macOS, Linux, and native Windows.
 
-The suite is organized into **four levels** — `smoke`, `unit`, `integration`,
-`e2e` — one directory each under `tests/`. The four levels map onto the
-classic three-layer test pyramid that balances speed vs. thoroughness:
+The suite is organized into the levels `smoke`, `unit`, `integration`, `e2e`,
+and `perf` — one directory each under `tests/`. The first four map onto the classic
+three-layer test pyramid that balances speed vs. thoroughness; `perf` sits
+outside the pyramid as an orthogonal wall-clock tier (see
+[Performance Tier](#performance-tier-wall-clock-benchmarks)):
 
 ```
             /\
@@ -28,9 +30,11 @@ classic three-layer test pyramid that balances speed vs. thoroughness:
 
 The `--ci` profile and the no-flag default both run **smoke + unit +
 integration** (so the integration level rides along on every local
-`bun tests/run-tests.ts`); `--release` / `--all` adds `e2e`. The pyramid above
-shows where each level sits conceptually — the profile flags below are how you
-actually select them.
+`bun tests/run-tests.ts`); `--release` / `--all` adds `e2e` and `perf`. The
+`perf` level is deliberately absent from `--ci` and from the default profile —
+it is selected by `--perf`, `--release`, or `--all` only. The pyramid above
+shows where each pyramid level sits conceptually — the profile flags below are
+how you actually select them.
 
 **Filename convention.** A test's filename is `t<NN>[-description].test.ts` —
 just the level directory it lives in and an optional human description. There
@@ -48,7 +52,10 @@ Two **independent** axes describe every test. Keeping them separate is what
 lets the suite stay fast without lying about coverage.
 
 - **Scope / tier** — the directory a test lives in (`smoke`, `unit`,
-  `integration`, `e2e`). It answers *how much of the system is wired together*.
+  `integration`, `e2e`, `perf`). It answers *how much of the system is wired
+  together*. Only `unit`, `integration`, and `e2e` are graded on the purity axis
+  below: `smoke` is explicitly exempted from it, and `perf` falls into the
+  guard's `other` bucket — neither carries a size ceiling.
 - **Size** — a test's dynamic runtime behaviour (`small`, `medium`, `large`):
   does it stay in-process, or does it spawn a process, touch the filesystem,
   wait on a timer, or open a socket. Size — **not** the directory — is the true
@@ -64,6 +71,10 @@ lets the suite stay fast without lying about coverage.
   deterministic fixtures.
 - **e2e** — full lifecycle, worktree, and rendered-terminal journeys, run before
   releases.
+- **perf** — real-time benchmarks that assert wall-clock budgets. Excluded from
+  `--ci` and from the default profile because their verdicts depend on machine
+  load; they run on the daily performance workflow and under `--release` /
+  `--all`.
 
 **Size is derived, not declared.** A file's size is computed by
 `classifyTestSize` in [`tests/lib/test-size.ts`](../../tests/lib/test-size.ts)
@@ -92,6 +103,7 @@ header, which the drift guard checks against the measured size.
 | integration | medium | spawns / fs touches are expected; no network |
 | e2e | large | no ceiling |
 | smoke | — (excluded) | sized **out** of the pyramid axis |
+| perf | — (ungraded) | not in the guard's scope map; falls into `other`. Every file pins `// size: large` by convention |
 
 `smoke` is excluded on purpose: its files are structural gates that read files
 and spawn the runner to assert existence, settings, and permissions, so they
@@ -152,6 +164,38 @@ Runs full workflows and verifies the experience: beyond state transitions, it ch
 - LLM semantic review of stage instruction quality (clarity, logical flow, ambiguity detection)
 
 **Run:** `bun tests/run-tests.ts --release`
+
+## Performance Tier (wall-clock benchmarks)
+
+Real-time benchmarks live in `tests/perf/` and assert wall-clock budgets:
+migration throughput, lifecycle-transaction latency, guard-corpus scanning,
+plugin stage discovery, and the mirror contract-policy and distribution paths.
+Their verdicts depend on how loaded the machine is, so they are **excluded from
+`--ci` and from the no-flag default** and selected only by `--perf`,
+`--release`, or `--all`. `tests/perf/` therefore never carries a CI-resident
+marker — the `t257-ci-residency-marker-guard` enforces that the tier stays
+outside `--ci`.
+
+**Where they run.** `.github/workflows/perf.yml` runs the tier on a daily
+schedule (`cron: "47 17 * * *"` — 17:47 UTC, deliberately off the `:00`/`:30`
+congestion peaks) and on `workflow_dispatch`. It carries the perf-tier run plus
+the Intent Mirror benchmark jobs (`distribution-benchmark` and its aggregate),
+which were moved out of `ci.yml` so that benchmark timing never gates a pull
+request.
+
+**Non-blocking, loud-fail.** `perf.yml` is deliberately absent from `ci.yml`'s
+`ci-success` needs list and from branch protection, so a red run here never
+blocks a pull request. Failures stay loud rather than silent: the workflow run
+goes red in the Actions tab, and each failing job appends the tail of its
+output to the run's step summary. Silencing a failure with `continue-on-error`
+or `|| true` is not an acceptable way to keep it green.
+
+**Schedule suspension.** GitHub disables `schedule` triggers after roughly 60
+days without repository activity. If the daily runs stop appearing, check the
+Actions tab for a suspended schedule and re-enable it there.
+
+`ci.yml` itself is unchanged apart from losing the benchmark jobs: the set of
+blocking jobs aggregated by `ci-success` is the same as before.
 
 ## Cross-Platform Coverage
 
@@ -312,6 +356,7 @@ too far below a committed baseline.
 | `git commit` | L1 | `bun tests/run-tests.ts` | Local (pre-commit hook) |
 | CI pipeline | L2 | `bun tests/run-tests.ts --ci` | CI/CD pipeline |
 | Release / merge to main | L3 | `bun tests/run-tests.ts --release` | CI/CD pipeline |
+| Daily schedule / manual dispatch | perf | `bash tests/run-tests.sh --perf` | `.github/workflows/perf.yml` (non-blocking) |
 
 L1 can be enforced via a git pre-commit hook: `bun tests/run-tests.ts || exit 1`.
 
@@ -418,11 +463,12 @@ bash tests/run-tests.sh       # POSIX compatibility wrapper
 --unit          # Single-component isolation
 --integration   # Cross-component contracts and stage/CLI utilities
 --e2e           # Full lifecycle, worktree, and rendered terminal journeys
+--perf          # Real-time performance benchmarks (wall-clock measurement)
 
 # Profile flags (shortcuts)
 (default)       # smoke + unit + integration
 --ci            # smoke + unit + integration
---release       # smoke + unit + integration + e2e
+--release       # smoke + unit + integration + e2e + perf
 --all           # Same as --release
 
 # Output modifiers

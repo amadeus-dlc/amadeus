@@ -73,6 +73,35 @@ file:line はすべて HEAD `16486d3c` 断面の実測。本 intent の業務目
 `cid:build-and-test:two-layer-verification-posture` は「日常 CI は PBT/unit/integration、並行プロトコルの spec 変更時のみ形式モデルの完全探索を専用ジョブで」と定める。現行の `ci.yml:547` の `workflow_dispatch` 限定はこの姿勢の配線であり、本 intent は**この姿勢を変えずに、その手前（配布・貫通・整合）を通す**ことを業務範囲とする。PBT 単独では取りこぼす欠陥クラスが実測されている（`cid:build-and-test:pbt-oracle-cancellation` — 7 欠陥中 4 件をオラクル相殺で恒久見逃し）ため、mirror 題材でも形式モデル側の価値が期待できる。
 
 ## オープンバグ4件の業務境界（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、履歴、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 解こうとしている問題
+
+perf/ベンチマーク検証が PR ブロッキングの日常 CI に同居しているため、(a) 負荷感受性のある予算が競合ランナー上で評価され偽赤を生み、(b) 同じ integration tier が1 PR あたり最大3回（`tests` / `coverage-head` / `coverage-base`）実行されて perf コストが多重に支払われる。直近の #1797（t259 の窓分離由来の偽赤、`20230b90d` で交互計測へ是正）と #1800（spawn 枯渇のリトライ seam、`7ec3e0eae`）は、いずれもこの同居がもたらした症状である。
+
+### 利用者影響
+
+| 利用者 | 現在の影響 |
+| --- | --- |
+| PR を出す全開発者 | 負荷起因の perf 偽赤で再実行・切り分けコストが発生する。最厳予算は `t269...performance.integration.test.ts:102` の 1ms 判定で、ランナー負荷に直接晒される |
+| CI 資源の管理者 | integration tier が最大3回、加えて mirror ベンチマークが replica 3本 + aggregate（+ release gate）を消費する |
+| perf 退行を検知したい人 | 現状の予算は日常 CI の許容ノイズに合わせて緩められる圧力を受ける。分離すれば専用条件下で厳しく保てる |
+
+### 既に分離済みの境界（意思決定に効く事実）
+
+- **e2e tier は既に PR ブロック外**: `tests/run-tests.ts:197-202` の `--ci` は smoke / unit / integration のみを立て、e2e は `--release` / `--all`（`:203-211`）にしか含まれない。
+- **mirror distribution ベンチマーク鎖は既に非ブロッキング**: `distribution-release-gate`（`ci.yml:279`）は `ci-success` の `needs`（`:651-659`）に含まれず、さらに GitHub ruleset `18843917`（name `main`）の required status check は **`CI Success` 1件のみ**（2026-07-31 実測）。したがって de jure でもブロックしない。
+
+この2点から、本 intent の実質的な対象は**スイート内 perf テスト**（t258 / t257 / t259 / t269 / t292 / t-plugin-stage-discovery）に絞られる。mirror ベンチマーク鎖については、残る論点は「ブロックするか」ではなく「毎 PR でランナー時間を使い続けるか」である。
+
+### 出荷境界
+
+`self-feature` スコープ。Bolt 単位で PR を切り、`main` へスカッシュマージする。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+
+
+## オープンバグ4件の業務境界（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
@@ -232,6 +261,10 @@ Amadeus は、AI-DLC の Intent を決定的なステージ遷移、監査証跡
 - #1662 / #1336 / #1607 は成功判定の原子性・同一性・readiness を回復する整合性修正であり、成功条件を最終ファイル存在や固定 sleep で代用しない。
 - #1336 と #1663 は同じ `team-up.sh` を変更するため直列に扱い、readiness の基盤を先に直す。#1662 と #1667 は主ファイルが分離しており、独立 Bolt として並行可能である。
 - 進行中の OTel Intent [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は audit/journal/state の完了経路と交差する。#1607 は Construction 前の必須前提、#1664 は Journal v2 の診断契約確定前に着地させるのが安全である。
+
+## OTel/observability upstream イニシアチブの業務境界（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+Amadeus の業務目的・利用者ジャーニー・公開機能に変更はない。本 intent は [GitHub #1672](https://github.com/amadeus-dlc/amadeus/issues/1672) の OTel/observability upstream イニシアチブを扱い、長期的な利用者価値は「監査・観測データを OpenTelemetry の標準エコシステム（OTLP collector / Jaeger / 任意の OTLP バックエンド）へ一本化して届ける」ことにある。ただし現行コード（observed `22ee27dbef9027203658a6cd98bf97501c4b222c`、base `ca8ff0af40d6250edffe42246d3f5538819c22af`（祖先 exit 0）、距離 **13**）では **OTel API ファミリはまだ一切導入されていない**（`package.json` / `bun.lock` の `@opentelemetry` grep ヒット 0）— 現状は Issue #1628 の 3 Phase が築いた「ゼロ依存 OTLP/HTTP JSON」構成であり、#1672 の置換（audit writer → OTel EventRecord→AuditLogExporter、`observe()` / `observeSubprocess()` → Trace API spans、otel-projector の pure OTLP relay 化）は**すべて未着手の将来計画**である。本 scan は将来差分の基点として現行断面を固定するもので、コード変更を伴わない。区間では別系統の価値として GitHub Projects ボード連携（mirror-project サブシステム 9 モジュール新設）と intent 選択ロジックの分離（`amadeus-intent-selection.ts`）が着地し、前 intent `260728-slop-cleanup` の修正（journal コメント是正・未使用フィールド削除）も本 HEAD に含まれる。直後の `260728-slop-cleanup` 断面は履歴として保持する。
 
 ## Slop cleanup の業務境界（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 

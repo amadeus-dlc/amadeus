@@ -85,6 +85,36 @@ amadeus-sensor-model-completeness.ts:650-659 ── MODEL_UNCHANGED で拒否（
 `git diff --name-only 6e7a9d701..HEAD | grep "formal-verif\|plugins/\|model-map\|ci.yml"` のヒット6件は**すべて本 intent 自身の record ファイル**（`260731-formal-verif-value-chain/` 配下）であり、**対象実装面への変更はゼロ**。したがって本 intent の依存前提は前回 RE から不変。
 
 ## オープンバグ4件の依存関係（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離の依存関係（260731-perf-ci-separation、履歴、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 分離手段ごとの波及チェーン
+
+分離には性質の異なる3手段があり、**波及先が根本的に異なる**。
+
+| 手段 | coverage registry | project gate | patch gate | residency guard |
+| --- | --- | --- | --- | --- |
+| A. 実行から除外（`excludes` 経由） | **不変**（宇宙はディスク列挙、`discoverClaims` `:771-774`） | **必ず低下** → baseline 再カット必須 | 該当ファイルが LCOV から消えると既存行ピンが stale hard-fail | 不変 |
+| B. tier 外ディレクトリへ移動 | `covers:` claim が落ち units が `UNCOVERED` → `--check` が registry drift で失敗 | 低下 | 同上 | 新 scope は `scopeOf` `:34` が `"other"` を返す |
+| C. 別 workflow へ（ファイルは据置、job だけ分離） | 不変 | 実行有無次第 | 実行有無次第 | 不変 |
+
+### 依存関係の詳細
+
+- **`tests/gen-coverage-registry.ts`** — テスト宇宙は実行ではなく**ディスク**から列挙される（`CLAIMS_TESTS_DIR` `:74` = `AMADEUS_COVERAGE_TESTS_DIR ?? TESTS_DIR`、`discoverClaims` `:771` が `join(CLAIMS_TESTS_DIR, tier)` を走査し `covers:` ヘッダ持ちのみ保持）。**帰結: 実行除外は registry に何も起こさない。ディレクトリ移動・削除だけが claim を落とす。**
+- **`tests/coverage-project-gate.ts`** — `coverage/coverage-totals.json`（`:48`）を `tests/.coverage-project-baseline.json`（`:52`）と比較する行率ラチェット。perf テストを `coverage:ci` の実行から外せばその行ヒットが消え、プロジェクト % が下がってゲートが落ちる。**baseline 再カットが分離の最大の機械的帰結**であり、分離 PR と同一変更で行う必要がある。
+- **`tests/coverage-patch-gate.ts`** — LCOV ∩ `git diff` 追加行。allowlist は `tests/.coverage-patch-allowlist.json`（`:56`）で、`:295` verbatim `coverage-patch-gate: STALE allowlist entries (range matches no measurable line — remove or update)` の stale 拒否がある。除外したファイルが LCOV から消えると、そこを指す既存行ピンが hard-fail する（`cid:code-generation:allowlist-line-pin-stale` および同 cid の機械 remap 追補 `cid:code-generation:c1-allowlist-mechanical-remap` の対象）。
+- **`tests/integration/t257-ci-residency-marker-guard.integration.test.ts`** — `:32` verbatim: `const CI_SCOPES = new Set(["smoke", "unit", "integration"]);`。`CI-resident` マーカーを持つファイルはこの3 scope に居なければならない。**現時点でマーカーを持つのは2ファイルのみ**（当ガード自身と `t241-election-machine-executor.integration.test.ts`、`grep -rln 'CI-resident' tests/` 実測）で、perf テストはいずれも含まれない。したがって手段 B で `tests/e2e/` へ移してもこのガードは発火しない。ただし新ディレクトリを新設すると `scopeOf` `:34` が `"other"` を返すため、そこに将来 CI-resident を主張した瞬間に落ちる。
+- **`tests/unit/t-test-size-drift.test.ts`** — ディスク上の全 `*.test.ts` を走査し、declared が measured より**小さい**場合と注記値不正で落ちる。size は scope から独立なのでディレクトリ移動では発火しない。`// size: large` の追加は安全、spawn するファイルへの `// size: small` は致命的。
+- **drift 報告の縮退（見落としやすい副作用）** — `reportDynamicSizes` `:952` は**この invocation で実際に走ったファイル**のみを対象にする。perf テストを `--ci` から外すと drift 報告が静かに縮み、t258 の現在の `drift=wall-clock` エントリが CI 出力から**修正されずに消える**。アップロード artifact は `amadeus-test-size-report`。
+- **`tests/smoke/t05-run-tests-parallel.test.ts`** — ランナー CLI 契約のピン（`PER_TEST_TIMEOUT` `:163`）。新フラグ・新 tier はこの挙動を byte 一致で保つこと。
+
+### CI ジョブ依存
+
+`distribution-benchmark`（`:224`、matrix 3）→ `distribution-benchmark-aggregate`（`:255`、`if:` なし・`needs` のみ）→ `distribution-release-gate`（`:279`）。この鎖は `ci-success` の `needs`（`:651-659`）に**入っていない**。`coverage-head` / `coverage-base` → `coverage`（`:418`）→ `ci-success` および `metrics-snapshot`（`:475`）。**`metrics-snapshot` は `coverage` の成功に依存する**ため、coverage 側の構成変更はメトリクス鎖にも波及する（`tests/run-tests.ts` が書く `coverage/tests-totals.json` のファイル数・アサーション数も可視に減る）。
+
+
+## オープンバグ4件の依存関係（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
@@ -308,6 +338,17 @@ CLI・Shell・Git/GitHub の既存境界のみ。本 intent は HTTP・database�
 | #1662 / #1667 | 横断 Build and Test | 実装は分離可能だが CI 負荷と coverage 生成を同じ最終条件で検証 |
 
 各 Issue は独立 Bolt とし、個別の [GitHub Pull Request](https://github.com/amadeus-dlc/amadeus/pulls) に閉じる。共有ファイルの変更は stack せず、先行 Bolt 着地後の observed main へ rebase してから後続を作る。
+
+## OTel/observability 面の依存グラフ（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+内部依存は `grep -l 'from "./amadeus-<module>.ts"'` の import 実測値（`packages/framework/core/` 正本）。
+
+- `amadeus-journal.ts`（JSONL codec）← **5 モジュール**: `amadeus-audit.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-journal-convert.ts` / `amadeus-otel-projector.ts`。codec 自身の依存は `node:crypto` のみで FS に触れない。なお `amadeus-utility.ts` は doctor fix-hint の文字列中にファイル名を持つだけで import edge ではない。
+- `amadeus-observability.ts`（telemetry seam）← **tools 17 + hooks 12 = 計 29 モジュール**（全 tools 中 `amadeus-audit.ts` / `amadeus-bolt.ts` / `amadeus-jump.ts` / `amadeus-learnings.ts` / `amadeus-log.ts` / `amadeus-migrate.ts` / `amadeus-mirror-lifecycle.ts` / `amadeus-mirror.ts` / `amadeus-orchestrate.ts` / `amadeus-otel-projector.ts` / `amadeus-plugin.ts` / `amadeus-runtime.ts` / `amadeus-sensor.ts` / `amadeus-state.ts` / `amadeus-swarm.ts` / `amadeus-utility.ts` / `amadeus-worktree.ts` と 12 hooks）。依存先は `amadeus-lib.ts`（`activeIntent` / `activeSpace` / `auditCloneId` / `detectHarnessType` / `recordDir`）と `amadeus-mirror-config.ts`（layered config 読取）。
+- `amadeus-otel-projector.ts` ← `hooks/amadeus-session-end.ts`（session-end piggyback）+ CLI 直接実行のみ。依存先は journal codec + `amadeus-lib.ts` + observability（`resolveObservabilityConfig` / `telemetryDir`）。**Core → projector 方向の依存はゼロ**（設計裁定どおり）。
+- `amadeus-journal-convert.ts` → `amadeus-audit.ts` の `formatAuditRecord`（lossless proof 用の Markdown renderer）+ journal codec。
+
+外部依存: focus 5 モジュールが使うのは `node:crypto` / `node:fs` / `node:path` と global `fetch` のみで、`@opentelemetry` を含むサードパーティ依存はゼロ（`package.json` / `bun.lock` grep 実測 0）。区間では devDependencies から `@xterm/headless` / `node-pty`（連鎖して `node-addon-api`）が外れた。区間の新規内部依存（focus 外）: mirror-project 系は `amadeus-mirror-capability.ts`（mutation permit）と import-free な `amadeus-mirror-project-contract.ts`（field vocabulary）へ依存し、新設の `amadeus/config.json` の `mirror-projects` キーを入力とする。直後の `260728-slop-cleanup` 断面は履歴として保持する。
 
 ## Slop cleanup の依存断面（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 

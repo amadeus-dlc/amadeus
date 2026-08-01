@@ -91,6 +91,7 @@
 // (state-mid-ideation.md, state-corrupted.md, state-completed.md,
 // audit-sample.md). All temp dirs cleaned in afterAll.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -225,7 +226,7 @@ function auditRecords(body: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as Record<string, unknown>);
 }
 
 /** Count SESSION_COMPACTED records in a JSONL buffer. */

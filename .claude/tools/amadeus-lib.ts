@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { type JournalEntry, parseJournalLine } from "./amadeus-journal.ts";
+import { type JournalRecord, isJournalEntryV2, journalRecordField, parseJournalLine } from "./amadeus-journal.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, chmodSync, closeSync, constants as fsConstants, cpSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -4211,31 +4211,33 @@ export function humanActedSinceLastAnswer(projectDir: string): boolean {
 // leading `- ` so it serves both audit blocks and the state file). Mirrors the
 // per-tool private auditField readers; shared here for humanActedSinceGate.
 export function auditBlockField(block: string, fieldName: string): string | null {
-  // JSONL journal record (one JSON object per line). Envelope keys are served
-  // under their historical Markdown field names; payload fields come from the
-  // entry's fields map; a raw record's body is scanned like the legacy format
-  // (converted append-raw bodies keep their `**Key**: value` lines verbatim).
-  const entry = tryParseJournalRecord(block);
-  if (entry !== null) {
-    if (fieldName === "Timestamp") return entry.timestamp;
-    if (entry.event !== null) {
-      if (fieldName === "Event") return entry.event;
-      const value = entry.fields?.[fieldName];
-      return value !== undefined ? value.trim() : null;
+  // JSONL journal record (one JSON object per line, v1 or v2 — the common
+  // reader decodes both). Envelope keys are served under their historical
+  // Markdown field names; payload fields come from the normalized accessor
+  // (journalRecordField), so consumers never branch on the schema version.
+  const record = tryParseJournalRecord(block);
+  if (record !== null) {
+    if (!isJournalEntryV2(record) && record.event === null) {
+      // Raw v1 record: the Timestamp rides the envelope; every other field is
+      // scanned from the preserved body exactly like the legacy reader did
+      // (an append-raw body may carry `**Event**:` / field lines of its own;
+      // the write-time presence guard already vets what can land there).
+      if (fieldName === "Timestamp") return record.timestamp;
+      return legacyLineField(record.rawBody ?? "", fieldName);
     }
-    // Raw record: scan the preserved body exactly like the legacy reader did
-    // (an append-raw body may carry `**Event**:` / field lines of its own;
-    // the write-time presence guard already vets what can land there).
-    return legacyLineField(entry.rawBody ?? "", fieldName);
+    return journalRecordField(record, fieldName);
   }
   // Legacy line-scan: still the accessor for the Markdown STATE file (the
   // `- **Field**:` shape) and for raw bodies above.
   return legacyLineField(block, fieldName);
 }
 
-function tryParseJournalRecord(block: string): JournalEntry | null {
+function tryParseJournalRecord(block: string): JournalRecord | null {
   if (!block.startsWith("{")) return null;
   try {
+    // The common reader (U3): v1/v2 dispatch by schemaVersion. A line that
+    // fails to decode is not a journal record — the caller falls back to the
+    // legacy line-scan (state file, raw bodies).
     return parseJournalLine(block.trim());
   } catch {
     return null;
@@ -5953,19 +5955,73 @@ export function writeFileAtomic(
 // callers are all sync (compile, state.ts fork/merge); future async-locked
 // transactions need a separate `withAuditLockAsync` that awaits before
 // release. The compile-time guard catches the footgun at the call site.
+//
+// `retry` overrides the acquire budget for the OUTERMOST call (a reentrant
+// inner call takes no OS lock, so it has no budget to spend). Sections sized
+// for parallel-Bolt contention — audit-merge's env-tunable 200 x 100ms = 20s —
+// pass their own budget rather than inheriting the 5s default.
+export type AuditLockRetryBudget = {
+  readonly maxRetries?: number;
+  readonly retryMs?: number;
+};
+
+// A spent acquire budget, distinguishable from anything the locked section
+// throws. A CLI that reports lock contention in its own output shape (the
+// audit-merge JSON error) catches this rather than pattern-matching a message.
+// The message keeps the "Failed to acquire audit lock" prefix the existing
+// consumers branch on (amadeus-state.ts, amadeus-learnings.ts).
+export class AuditLockAcquireError extends Error {
+  constructor(key: string, maxRetries: number, retryMs: number) {
+    super(
+      `Failed to acquire audit lock for ${key} after ${maxRetries} × ${retryMs}ms = ` +
+        `${((maxRetries * retryMs) / 1000).toFixed(1)}s retries`,
+    );
+    this.name = "AuditLockAcquireError";
+  }
+}
+
 export function withAuditLock<T>(
   projectDir: string,
   fn: () => T extends Promise<unknown> ? never : T,
   intent?: string,
   space?: string,
+  retry?: AuditLockRetryBudget,
 ): T extends Promise<unknown> ? never : T {
+  if (!enterAuditLock(projectDir, intent, space, retry)) {
+    const key = auditLockIdentity(projectDir, intent, space);
+    throw new AuditLockAcquireError(key, retry?.maxRetries ?? 50, retry?.retryMs ?? 100);
+  }
+  try {
+    return fn();
+  } finally {
+    exitAuditLock(projectDir, intent, space);
+  }
+}
+
+// enterAuditLock / exitAuditLock — the two-phase form of withAuditLock, for the
+// ONE case that cannot take a callback: a lock reached through an injected
+// two-phase port (MirrorStateStorePorts.acquireLock/releaseLock, whose shape is
+// what lets failure injection replace an implementation instead of branching
+// production code). Every other call site uses withAuditLock, which cannot leak
+// the lock on an early return or a throw. Reaching for these directly gives up
+// that guarantee for nothing.
+//
+// withAuditLock is implemented on top of this pair, so there is exactly ONE
+// depth counter and one acquire path: a section entered through either form
+// re-enters the other.
+export function enterAuditLock(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+  retry?: AuditLockRetryBudget,
+): boolean {
   const key = auditLockIdentity(projectDir, intent, space);
   const currentDepth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
   if (currentDepth === 0) {
-    if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
-      throw new Error(`Failed to acquire audit lock for ${key} after retries`);
-    }
-    // Safety net: if the body calls process.exit (Bun skips `finally` in that
+    const maxRetries = retry?.maxRetries ?? 50;
+    const retryMs = retry?.retryMs ?? 100;
+    if (!acquireAuditLock(projectDir, maxRetries, retryMs, intent, space)) return false;
+    // Safety net: if the section calls process.exit (Bun skips `finally` in that
     // case), the on-exit handler releases the lock dir so the project isn't
     // poisoned for ~5s on the next invocation.
     // Same owner-stamp guard as releaseAuditLock (via removeLockDirIfOwned):
@@ -5975,17 +6031,23 @@ export function withAuditLock<T>(
     process.on("exit", onExit);
   }
   AUDIT_LOCK_DEPTH.set(key, currentDepth + 1);
-  try {
-    return fn();
-  } finally {
-    const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
-    if (depth <= 1) {
-      AUDIT_LOCK_DEPTH.delete(key);
-      releaseAuditLock(projectDir, intent, space);
-    } else {
-      AUDIT_LOCK_DEPTH.set(key, depth - 1);
-    }
+  return true;
+}
+
+// Unpairs one enterAuditLock. An exit with no matching enter — depth 0, which a
+// bare acquireAuditLock holder also reads as — releases NOTHING: the counter
+// never saw that acquisition, so there is none of ours to undo, and releasing
+// anyway would strip a lock its own holder still believes it owns.
+export function exitAuditLock(projectDir: string, intent?: string, space?: string): void {
+  const key = auditLockIdentity(projectDir, intent, space);
+  const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
+  if (depth === 0) return;
+  if (depth === 1) {
+    AUDIT_LOCK_DEPTH.delete(key);
+    releaseAuditLock(projectDir, intent, space);
+    return;
   }
+  AUDIT_LOCK_DEPTH.set(key, depth - 1);
 }
 
 // True iff THIS process currently holds the audit lock for the given identity
@@ -7265,13 +7327,51 @@ let _errorEmitInProgress = false;
 // Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
 // pattern as amadeus-graph.ts above — the runtime cycle is broken by
 // require() below; type erases at compile time.
-import type {
-  appendAuditEntry as AppendAuditEntry,
-  appendAuditEntryUnlocked as AppendAuditEntryUnlocked,
-} from "./amadeus-audit.ts";
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
+
+// The ERROR_LOGGED row emitError writes, exported as its own seam.
+//
+// It is separate from emitError for two reasons: emitError ends in
+// process.exit, so the write is otherwise only observable through a spawned
+// CLI; and the write is the whole of what the OTel migration changed here,
+// so the migrated behaviour deserves a name a test can call.
+//
+// ONE PATH, LOCK HELD OR NOT. The pre-migration site chose between
+// appendAuditEntryUnlocked and appendAuditEntry on holdsAuditLock, because
+// appendAuditEntry's bare acquire is not reentrant and would have spent its
+// full 50 x 100ms budget against the caller's OWN lock. The canonical path
+// locks through withAuditLock, whose per-identity depth counter re-enters, so
+// the branch has no work left to do. The caller's RESOLVED intent+space still
+// has to be threaded through unchanged: it is both the lock identity to
+// re-enter on and the shard the row belongs in, and omitting it writes to the
+// workspace sentinel bucket — the wrong ledger, silently.
+//
+// The otel import is LAZY to break the lib.ts <-> otel cycle at load time: the
+// canonical emit path reaches back into lib.ts (activeIntent, auditFilePath),
+// and a top-level import here would close the loop at module-init time.
+// require() is synchronous under Bun, the same idiom this file already uses for
+// amadeus-audit.ts. (Stated here rather than in the body: a standalone comment
+// line inside a function body is a permanent DA:0 in bun's lcov.)
+export function emitErrorAuditRow(
+  projectDir: string,
+  tool: string,
+  command: string,
+  msg: string,
+  intent?: string,
+  space?: string
+): void {
+  const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+  otel.emitAuditEvent("ERROR_LOGGED", { Tool: tool, Command: command, Error: msg }, projectDir, intent, space);
+}
 
 // Failures are swallowed — we're already exiting, the caller gets the JSON
 // error on stderr regardless.
+//
+// The caller threads its RESOLVED intent+space (fork/merge hold a PER-INTENT
+// lock — amadeus-state.ts error()/lockIntent), and both the shard and the
+// re-entered lock identity come from that pair. Omitted intent/space -> the
+// workspace sentinel, which is correct for every sentinel-locked caller (the
+// common case).
 export function emitError(
   projectDir: string,
   tool: string,
@@ -7284,44 +7384,7 @@ export function emitError(
     _errorEmitInProgress = true;
     try {
       if (existsSync(stateFilePath(projectDir))) {
-        // Lazy import to break the lib.ts ↔ amadeus-audit.ts cycle at load time.
-        // amadeus-audit.ts imports from lib.ts, and importing it at top of lib.ts
-        // would create a circular dependency. Dynamic import is synchronous via
-        // require under Bun and keeps the dependency one-way at module-init time.
-        const audit = require("./amadeus-audit.ts") as {
-          appendAuditEntry: typeof AppendAuditEntry;
-          appendAuditEntryUnlocked: typeof AppendAuditEntryUnlocked;
-        };
-        // If we're inside a withAuditLock-held critical section (e.g., the
-        // caller is amadeus-state.ts fork/merge mid-transaction), the audit
-        // lock is already held by us. Use the unlocked variant directly so
-        // the ERROR_LOGGED row lands without the 5s acquire timeout. The
-        // exit-handler safety net releases the lock dir on process.exit.
-        // NOTE: holdsAuditLock keys on the COMPOSITE lock identity (per-intent
-        // keying, P3) — a bare `AUDIT_LOCK_EXIT_HANDLERS.has(projectDir)` would
-        // miss the workspace-bucket / per-intent handler keys and re-introduce
-        // the 5s self-deadlock on every in-transaction error emit.
-        //
-        // The caller threads its RESOLVED intent+space (fork/merge hold a
-        // PER-INTENT lock — amadeus-state.ts error()/lockIntent). We MUST probe and
-        // emit on the SAME bucket: a bare holdsAuditLock(projectDir) keys the
-        // __workspace__ sentinel, returns false mid per-intent transaction, takes
-        // the 5s blocking-acquire branch, and writes ERROR_LOGGED to the wrong
-        // shard. Omitted intent/space -> sentinel, which is correct for every
-        // sentinel-locked caller (the common case).
-        if (holdsAuditLock(projectDir, intent, space)) {
-          audit.appendAuditEntryUnlocked("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
-        } else {
-          audit.appendAuditEntry("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
-        }
+        emitErrorAuditRow(projectDir, tool, command, msg, intent, space);
       }
     } catch {
       // Audit write failed — we're already in an error path, swallow.

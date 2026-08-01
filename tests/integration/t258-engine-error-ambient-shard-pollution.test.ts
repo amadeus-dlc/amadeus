@@ -26,6 +26,7 @@
 // checking out the pre-fix source for these two files and re-running.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -46,6 +47,7 @@ let savedProjectDir: string | undefined;
 let savedArgv: string[];
 
 beforeEach(() => {
+  resetOtelPerProject();
   savedProjectDir = process.env.CLAUDE_PROJECT_DIR;
   savedArgv = process.argv;
   // Neutralise argv so the pre-fix argv-extraction path (the fallback in
@@ -56,6 +58,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetOtelPerProject();
   if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
   else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
   process.argv = savedArgv;

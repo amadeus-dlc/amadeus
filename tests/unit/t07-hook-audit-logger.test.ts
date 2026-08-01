@@ -61,6 +61,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -140,12 +141,25 @@ interface AuditRecord {
   fields?: Record<string, string>;
 }
 
-/** Parse the concatenated JSONL shard bytes into records. */
+/**
+ * Parse the concatenated JSONL shard bytes into records, normalizing BOTH
+ * journal schemas. The hook now writes through the canonical Event path, so
+ * its rows are schema v2: the legacy audit event type rides as the `Event`
+ * attribute and the payload lives under `attributes` rather than `fields`.
+ * Production readers (auditBlockField) already serve both shapes under the
+ * historical names; this does the same so every assertion below keeps its
+ * original meaning.
+ */
 function readRecords(auditDir: string): AuditRecord[] {
   return readShards(auditDir)
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    .map((raw) => {
+      if (raw.schemaVersion !== 2) return raw as unknown as AuditRecord;
+      const attributes = (raw.attributes ?? {}) as Record<string, string>;
+      return { event: attributes.Event ?? null, heading: String(raw.eventName ?? ""), fields: attributes };
+    });
 }
 
 interface FireResult {
@@ -220,7 +234,7 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     // use a real per-intent stage artifact (domain knowledge is space-level now,
     // not a record subdir, so it is not a record-artifact example).
     fire(writeJson(join(recordRoot, "inception", "requirements-analysis", "requirements.md")), proj);
-    expect(readShards(auditDir)).toContain('"event":"ARTIFACT_CREATED"');
+    expect(readRecords(auditDir).map((r) => r.event)).toEqual(["ARTIFACT_CREATED"]);
   });
 
   test("extracts the ideation breadcrumb [.sh test 4]", () => {
@@ -235,7 +249,7 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
   test("Edit tool emits ARTIFACT_UPDATED [.sh test 5]", () => {
     const { auditDir, recordRoot } = seedIntentShard(proj);
     fire(editJson(join(recordRoot, "state.md")), proj);
-    expect(readShards(auditDir)).toContain('"event":"ARTIFACT_UPDATED"');
+    expect(readRecords(auditDir).map((r) => r.event)).toEqual(["ARTIFACT_UPDATED"]);
   });
 
   test("exits silently when no audit shard (shard not created) [.sh test 6]", () => {
@@ -325,6 +339,12 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-mirror-project-contract.ts"),
       join(proj, ".claude", "tools", "amadeus-mirror-project-contract.ts"),
     );
+    // The canonical emit path is part of that module graph too: the hook
+    // bootstraps the Logger Provider, which reaches the otel/ tree and the
+    // vendored OTel API. Both ship beside hooks/ in a real install, so the
+    // fixture copies the directories whole rather than chasing each new file.
+    cpSync(join(AMADEUS_SRC, "otel"), join(proj, ".claude", "otel"), { recursive: true });
+    cpSync(join(AMADEUS_SRC, "vendor"), join(proj, ".claude", "vendor"), { recursive: true });
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
     const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);

@@ -21,6 +21,29 @@
 - Per-intent record: `re-scans/260731-formal-verif-value-chain.md`。
 
 
+## 実行メタデータ（履歴: 260731-perf-ci-separation）
+
+- Date: `2026-07-31T08:20:00Z`
+- Base commit: `6e7a9d701d7cf350310a047bc5b70ff18ed15272`（observed の祖先、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0）
+- Observed commit: `da51af37533c31a9c3f4ed46bf71b5b15988b0d6`
+- Distance: `11 commits`（`git rev-list --count 6e7a9d701..da51af375`）
+- 区間規模: `120 files changed, 3939 insertions(+), 102 deletions(-)`（`git diff --shortstat 6e7a9d701..da51af375`、測定 ref = observed `da51af375`）。ソース面を触るのは4コミットのみで、残りは `record:` / `chore(metrics):` のスナップショット往来（#1824–#1832、#1834）。
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: Bolt 単位で PR を切り `main` へスカッシュマージ。[Pull Requests 一覧](https://github.com/amadeus-dlc/amadeus/pulls)
+- Focus: perf/ベンチマーク検証を PR ブロッキング CI から分離する面の棚卸し — ランナーの tier モデルと除外フック、スイート内 perf テストと予算定数、`ci.yml` のジョブグラフとブロッキング境界、coverage 機構への波及、非ブロッキング workflow の既存様式、サイズ／residency ラチェットとの相互作用。
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が主要引用を observed commit で独立再確認する直列構成。テスト未実行。
+- 判定: 本 intent の実質的対象は**スイート内 perf テスト**（`t258` / `t257` / `t259` / `t269` / `t292` / `t-plugin-stage-discovery`）に絞られる。理由は2つ — (a) e2e tier は `tests/run-tests.ts:197-202` の `--ci` に含まれず既に PR ブロック外 (b) mirror distribution ベンチマーク鎖は `distribution-release-gate`（`ci.yml:279`）が `ci-success` の `needs`（`:651-659`）に不在で、かつ GitHub ruleset `18843917`（name `main`）の required status check が **`CI Success` 1件のみ**（`gh api repos/amadeus-dlc/amadeus/rulesets/18843917`、2026-07-31 実測）であるため、**de jure でも既に非ブロッキング**である。残る論点はランナー時間（replica 3本 + aggregate + release gate）のみ。
+- 最強の論拠: **integration tier は1 PR あたり最大3回実行される**（`ci.yml:189` `tests` / `:320` `coverage-head` / `:395` `coverage-base`。`package.json:19-20` により `test:ci` と `coverage:ci` は同じ3 tier）。`scripts/detect-ci-changes.sh:9-32` が `tests/*` と `*.ts` を `full=true` かつ `coverage=true` に分類するため、テストファイル1つの変更で3ジョブすべてが起動する。単発コストではなくこの多重評価が、負荷感受性のある予算（最厳は `t269...performance.integration.test.ts:102` の 1ms）を偽赤に晒す。
+- 区間の主要変化: #1820 `7ec3e0eae`（`t224` に subprocess 終了チャネル3分類 `EXIT_CHANNEL_CASES` `:72` と spawn 枯渇リトライ seam `RETRYABLE_SPAWN_ERROR` `:90` / `SPAWN_RETRY_LIMIT` `:91` / `SPAWN_RETRY_BACKOFF_MS` `:92` / `runWithSpawnRetry` `:206` — integration tier が既に spawn 競合下にあることの直接証拠）、#1822 `20230b90d`（`t259` を単一プロセス交互計測へ集約し予算を `90_000` → `180_000` へ、`:121`）、#1823 `9008141df`（`mirrorSnapshotStatus` `:250-252` 新設）、#1821 `1a3087508`（`t-team-up-codex-resume.serial.test.ts` の fixture supervisor reap）。**`.github/`、`scripts/`、`package.json`、`tests/run-tests.ts` は区間内で無変更**であり、本 intent の対象構造は base 断面から不変である。
+- 引用再確認の相違（Developer 報告 → Architect が observed `da51af375` で再実測）: (a) `levelFiles` は `:839-850`（報告 `:838-848`） (b) `runFilesPartitioned` 宣言は `:875`（報告 `:873`） (c) `runTier` は `:900-909`、`pinnedSerial` `:881` / `effectiveParallel` `:901`（報告 `:899-909`） (d) `reportDynamicSizes` 宣言は `:952`、drift 出力は `:984-990`（報告 `:951` / `:983-990`） (e) integration の excludes 呼び出しは `:1161-1166`（報告 `:1162-1166`） (f) `printSummary` は `:911`、`tests-totals.json` 書込は `:913`（報告 `:912-915`）。**所在・機序・結論は全件一致**しており、相違はいずれも1〜2行のオフセットで方針に影響しない。
+- 新規に確定した事実（scan notes が INCONCLUSIVE としていた面）: branch protection。scan notes は「working tree からは確認できない」としていたが、`gh api repos/amadeus-dlc/amadeus/rulesets/18843917` で required status check が `CI Success` 1件のみと確定した（2026-07-31 実測）。これにより mirror ベンチマーク鎖の非ブロッキング性は de facto から de jure へ格上げされた。
+- 現在マーカーの降格: 直前の現在断面 `260731-open-bug-batch-4`（observed `6e7a9d701`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Base 選定根拠: 前 intent の observed `6e7a9d701` は `origin/main` 系譜のコミットとして記録されており、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0、距離 `11` で祖先性が保たれている（`cid:reverse-engineering:rescan-base-ancestry`、`cid:reverse-engineering:c2-observed-mainline-commit` の2世代連続の効果）。merge-base 復元は不要だった。本 intent の observed `da51af375` も `origin/main` 系譜のコミットである（`da51af375 record: sync intent 260731-open-bug-batch-4 (4 bug fixes) with elections and §13 learning (#1834)`）。
+- Updated artifacts: 実質更新8件 = `architecture.md`（区間の構造変化と機構 A–D: tier 軸・`--ci` 構成・ci.yml ジョブグラフ・非ブロッキング様式）、`code-structure.md`（perf テストの所在と予算定数、サイズ注記の罠、並列帯の競合相手）、`code-quality-assessment.md`（現状所見と分離が作りうる6リスク、未決4点）、`business-overview.md`（問題定義・利用者影響・既に分離済みの境界）、`component-inventory.md`（分離候補／分離不可／周辺機構の目録）、`api-documentation.md`（ランナー CLI 契約・判定述語契約・CI 契約）、`technology-stack.md`（ランナーと計測時間軸、CI プラットフォーム面、ベンチマークプロトコル）、`dependencies.md`（分離手段 A/B/C ごとの波及チェーン）。加えて本ファイルと per-intent `re-scans/260731-perf-ci-separation.md`。
+- Per-intent record: `re-scans/260731-perf-ci-separation.md`。
+
+
+
 ## 実行メタデータ（履歴: 260731-open-bug-batch-4）
 
 - Date: `2026-07-31T05:31:35Z`

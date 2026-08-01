@@ -16,6 +16,8 @@
 // createTestProject; NOTHING is written under tests/fixtures/**; temp dirs are
 // cleaned in afterAll.
 
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -110,13 +112,20 @@ function auditEventCount(file: string, ev: string): number {
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null })
     .filter((r) => r.event === ev).length;
 }
 
 // ============================================================
 // Case F — prose injection fails closed, no write (the FR-5 falling test)
 // ============================================================
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t-practices-promote-contract: prose injection fails closed", () => {
   test("F: a non-keyword ## Mandated line -> exit non-zero, PRACTICES_OVERRIDE, targets untouched", () => {

@@ -337,9 +337,15 @@ bun run promote:self:check      # セルフインストールのドリフトガ�
 ```bash
 bun tests/run-tests.ts               # 既定: smoke + unit + integration
 bun tests/run-tests.ts --ci          # smoke + unit + integration
-bun tests/run-tests.ts --release     # + e2e(フル受け入れ)
+bun tests/run-tests.ts --release     # + e2e + perf(フル受け入れ)
+bun tests/run-tests.ts --perf        # wall-clock ベンチマークのみ(--ci には入らない)
 bash tests/run-tests.sh --ci         # POSIX 互換ラッパー
 ```
+
+`perf` 層は `--ci` から除外されています: wall-clock の判定がマシン負荷に依存するためです。
+実行は `.github/workflows/perf.yml` の日次スケジュールと手動 dispatch で行われます。
+この workflow は非 blocking で、赤くなっても Pull Request をゲートしませんが、
+Actions タブでは loud に赤くなります。
 
 テスト戦略の全体とテストレジストリは [Testing Reference](docs/reference/09-testing.ja.md) を参照してください。
 

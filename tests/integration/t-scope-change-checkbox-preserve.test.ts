@@ -17,7 +17,8 @@
 // rebuild they pass. The `[x]`/`[-]`/`[S]` assertions pin FR-3c (the states
 // that already round-tripped keep round-tripping).
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
   cleanupTestProject,
@@ -65,6 +66,13 @@ function sixStateProj(): string {
   sedReplaceInFile(state, "- [ ] rough-mockups", "- [S] rough-mockups"); // skipped
   return p;
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t-scope-change-checkbox-preserve (#1015)", () => {
   test("scope-change preserves [?] awaiting-approval and [R] revising markers", () => {

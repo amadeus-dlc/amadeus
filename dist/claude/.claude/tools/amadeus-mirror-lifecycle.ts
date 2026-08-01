@@ -65,7 +65,7 @@ import type {
   MirrorStateSnapshot,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
-import { observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { workflowCompletionPreparation } from "./amadeus-workflow-completion.ts";
 
 export type MirrorLifecycleRequest = Readonly<{
@@ -106,7 +106,7 @@ type MirrorLifecycleAnswerRequest = Readonly<{
 }>;
 
 function repositoryFromOrigin(projectDir: string): RepositoryIdentity | null {
-  const result = observeSubprocess(projectDir, "git", () =>
+  const result = observeSubprocessSpan(projectDir, "git", () =>
     spawnSync("git", ["remote", "get-url", "origin"], {
       cwd: projectDir,
       encoding: "utf-8",

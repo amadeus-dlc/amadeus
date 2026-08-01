@@ -6,7 +6,8 @@
 // a filled [Answer] without ruling/approval evidence refuses the gate
 // fail-closed (exit 1, no checkbox transition, no STAGE_AWAITING_APPROVAL),
 // while every legitimate shape passes silently.
-import { afterEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +28,13 @@ function questionsFile(body: string): string {
 }
 
 const HEADER = "# RA — 明確化質問\n\n## 選挙不要判定(E-OC1 3段順序)\n\n";
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("checkQuestionsEvidence (in-process, all 6 reasons)", () => {
   test("missing file passes (no-file)", () => {

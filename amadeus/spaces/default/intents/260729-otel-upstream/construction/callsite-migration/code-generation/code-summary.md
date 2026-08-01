@@ -1,0 +1,136 @@
+# Code Summary — U7: callsite-migration
+
+上流入力: unit の functional-design（business-logic-model.md / business-rules.md / domain-entities.md）、nfr-requirements（performance / security / scalability / reliability / tech-stack-decisions）、nfr-design（logical-components / performance / reliability / scalability / security）を全数参照。上流の components.md / component-methods.md / services.md / unit-of-work.md も参照。
+
+裁定: E-U7CG-Q1（guard 配置）、E-U7CG-Q2（deliverable 境界）、E-U7CG-Q3A（per-call intent/space）、E-U7CG-Q3B（post-complete 抑止、ユーザー裁定案 A'）。
+
+## Files created
+
+- `packages/framework/core/otel/migration-adapter.ts` — 互換 Adapter（FR-MIG-1）
+- `tests/callsite-guard.ts` — call-site guard（VER-4）
+- `tests/.callsite-allowlist.json` — guard の allowlist 台帳（shrink-only、t258 allowlist とは別台帳）
+- `tests/unit/t367-callsite-guard.test.ts` — guard の純粋コア
+- `tests/integration/t367-callsite-guard-cli.test.ts` — guard の CLI verdict（in-process 駆動）
+- `tests/integration/t367-migration-adapter.test.ts` — Adapter 契約 + Q3B 伝播
+- `tests/integration/t367-shadow-comparison-production.test.ts` — shadow 比較の次元別契約と harness 障害 verdict
+
+## Files modified
+
+- `packages/framework/core/otel/shadow-compare.ts` — U1 原型を本番化（BR-10 の4次元 + unexplainedDiffs、harness 障害の顕在化）
+- `packages/framework/core/tools/amadeus-audit.ts` — `appendJournalRecordV2` が `JournalAppendOutcome` を返す（Q3B、cross-unit / U3 所有）
+- `packages/framework/core/otel/audit-log-exporter.ts` — `exportCanonicalEvent` が outcome を伝播（Q3B、cross-unit / U4 所有）
+- `packages/framework/core/otel/logger-provider.ts` — `emitEvent` が `EmitOutcome` を返す（Q3B、cross-unit / U1・U4 所有）
+- `tests/integration/t-otel-shadow-compare.test.ts` — U1 テストを本番 API へ追従
+- `.github/workflows/ci.yml` — lint ジョブへ guard 1ステップ
+- dist 7 面 + self-install 5 面（FR-DST-2、`bun scripts/package.ts` / `promote-self.ts --apply` で再生成）
+
+## Key implementation decisions
+
+- **allowlist のキーは (file, symbol) 件数**、file:line の pin ではない。行 pin は無関係な編集で行がずれた瞬間に stale 化し以後の全 PR を「動いた pin」で落とす（`cid:code-generation:allowlist-line-pin-stale`）。件数キーは BR-12 の単調減少性をその失敗様式なしに保つ。
+- **guard の走査範囲は正本のみ**（`packages/framework/core/` + `scripts/`）。dist・self-install は core の投影なので core を移行すれば構造的に追従し、`tests/` は旧 writer と同時に U8 で削除される。
+- **`ComparisonVerdict` を素な判別ユニオンに**した。実施されなかった比較から `equivalent` を読むことが型レベルで不可能で、実際に既存テスト2箇所を typecheck が弾いた（機構の実証）。
+- **Q3B は `void` を返り値ユニオンに残す**最小差分とした。void を返す seam は「着地した書込み」と読む（失敗する test double は throw する）ため、既存13箇所の注入 seam が無改変で型互換のまま通る。両 tsconfig の typecheck exit 0 で確認済み。
+
+## Deviations from the plan
+
+1. **guard 配置の申告付き読み替え（E-U7CG-Q1 裁定どおり）** — `nfr-design/logical-components.md` の「Adapter・guard は core/ 変更のため FR-DST-2 を適用」は Adapter に妥当・guard には過大一般化として読み替え、guard を `tests/` に置いた。裁定の留保に従い、当該設計文にも申告付き追記を残した（record 内の矛盾文を無修正で放置しない）。根拠は同追記に実測付きで記載。
+
+2. **Adapter の関数名を `appendAuditEntryViaEvents` にした（執行裁定 2026-07-30 で conductor 承認済み）** — `component-methods.md` は Adapter を literal に `appendAuditEntry` と描いているが、旧名を再利用すると **VER-4 guard が移行済み site と未移行 site を区別できなくなり**、guard が測るはずのカウントダウンが成立しない。BR-2 の「シグネチャを維持」は**引数形状の互換**と読み替える（引数・戻り値の形は維持しており、call-site 書換えは1行スワップのまま）。裁定の指示に従い、同じ申告を `functional-design/business-rules.md` の BR-2 直下にも追記した（record 内の矛盾文を無修正で放置しない）。
+
+3. **第1弾の実書換え batch は実施せず、実測報告に置き換え（E-U7CG-Q2R 裁定で充足と確定）** — E-U7CG-Q2 は「core/ 内の第1弾実書換え+ratchet 両側実証」を必須としたが、**その前提（機械的増分で移行可能）が2つの独立した機構で成立しない**ことを実測で確認し、実装せず停止して再エスカレーションした（下記「実測: 第1弾 batch が機械的増分にならない2つの機構」）。
+
+   **E-U7CG-Q2R 裁定（ソロ選挙 choice 1、2-0、GoA 2x2、2026-07-30。record: `amadeus/spaces/default/elections/260730-e-u7cg-q2r/record.md`）**: U7 Bolt は機構一式（Adapter + guard + shadow 比較、Q1/Q3A/Q3B 込み）+ 前提不成立の実測報告をもって**充足**とし、PR #1733 を完成扱いとする。両投票者が独立に再現した根拠は本書に記録の2機構 — (1) `otel/logger-provider.ts:36` の throw と production の bootstrap 2件のみ、(2) `amadeus-jump.ts` の 3 event の属性不足。前提解消（entrypoint bootstrap 方針 + 全 event の requiredAttributes 実 call site 突き合わせ）と実書換え batch は U8 前の追加 Bolt 群へ送る。
+
+   **裁定の留保（転記）**:
+   - 追加 Bolt での requiredAttributes 突き合わせにおいて、不足属性値の決定が **audit 意味論の変更（仕様変更）に及ぶ場合は builder・選挙のいずれでも決めず、ユーザーエスカレーションへ倒す**（エスカレーション正準リスト(4)）
+   - 前提解消 Bolt 群は**本 intent 内・U8 前に必ず編成する**（conductor 追跡、Task #1/#2 に統合済み）
+
+## 実測: 第1弾 batch が機械的増分にならない2つの機構
+
+**機構1 — Provider bootstrap の不在。** `registerLoggerProvider` を production で呼ぶのは `packages/framework/core/tools/amadeus-log.ts:78`（U1 の代表配線）と `scripts/otel-phase1-measure.ts:65` のみ。他の tool・hook（`amadeus-state.ts`、`amadeus-sensor.ts`、`amadeus-utility.ts`、`amadeus-jump.ts`、hooks 5件など）は一切 bootstrap しないため、その call site を canonical 経路へ差し替えると `emitEvent` が `"emit before registerLoggerProvider — invariant violation"`（`otel/logger-provider.ts:36`）で throw する。移行には entrypoint ごとの bootstrap 追加が必要で、これは1行スワップではない。
+
+**機構2 — registry の requiredAttributes が実 call site の fields と乖離。** `emitEvent` は `def.requiredAttributes` の充足を強制する（`logger-provider.ts`）が、v1 writer は強制していなかった。`amadeus-jump.ts` の7 eventType を突き合わせた実測:
+
+| eventType | jump が渡す fields | registry の requiredAttributes | 判定 |
+|---|---|---|---|
+| PHASE_COMPLETED | From phase, To phase, Stages completed, Details | From phase, To phase, Stages completed | OK |
+| PHASE_VERIFIED | Phase boundary, Details | Phase boundary, **Pass/fail**, **Issues** | **2件不足 → throw** |
+| PHASE_SKIPPED | Phase, Reason | Phase, **Scope**, Reason | **1件不足 → throw** |
+| PHASE_STARTED | Phase, Scope | Phase, **Stage count**, Scope | **1件不足 → throw** |
+| STAGE_SKIPPED | Stage, Reason | Stage, Reason | OK |
+| STAGE_JUMPED | Direction, Source, Target, Scope, Details | Direction, Source, Target, Scope | OK |
+| STAGE_STARTED | Stage, Agent | Stage, Agent | OK |
+
+7 種のうち **3 種が throw する**。`amadeus-jump.ts` は emit を try/catch して `error("Audit emission failed")` で終了するため、そのまま移行すれば jump の3経路が硬エラーになる。不足属性の値（Pass/fail、Issues、Stage count）を builder が発明することは audit 意味論の独断決定に当たるため実施しない。
+
+これまで canonical 経路を通った event は `amadeus-log.ts` が emit する少数（DECISION_RECORDED、QUESTION_ANSWERED 等）に限られ、残り約75 event の requiredAttributes は**実 call site と一度も突き合わされていない**。この乖離は jump 固有ではなく体系的な可能性が高い。
+
+**唯一 bootstrap 済みの候補 `scripts/otel-phase1-measure.ts`（2 site）も移行不可**: 当該2 site は Phase 1 計測ハーネスが旧経路を新経路と比較するための「current 側」であり（:62, :76）、移行すると比較対象が消えて計測自体が無意味になる。設計上の恒久例外として allowlist 残置が正しい。
+
+したがって本 Bolt で安全に移行できる call site は**ゼロ**。ratchet の「追加赤」側は実証済み（下記）だが、「実縮小 green」は実移行が存在しないため未実証。
+
+## Test coverage summary
+
+- TDD slice 4件（shadow 本番化 / guard 純粋コア / guard CLI seam / Adapter+Q3B）。各 slice で Red を実測してから最小実装で Green。
+- 新設テスト: t367 系4ファイル 33 tests。otel 系 + audit・journal 隣接の全 18 ファイル **170 pass / 0 fail**。
+- guard の落ちる実証（不可分1セット）: `otel/shadow-compare.ts` に `appendAuditEntry` 呼出しを1件注入 → `--check` exit 1 で `packages/framework/core/otel/shadow-compare.ts: appendAuditEntry — allowlist 0, measured 1` を名指し → revert で exit 0・ファイル byte 一致（`diff -q` 確認）。
+- corpus 側の実証: 既存 66 site すべてに対して gate は exit 0（正当な既存データを誤拒否しない）。
+- allowlist 過大計上時に green（縮小方向が通ること）は `t367-callsite-guard-cli.test.ts` で実証。
+
+## レビュー対応: PR #1733 Bugbot 指摘（Medium、同一行の複数呼出しの undercount）
+
+**指摘**: `detectCallsites` が1行×1シンボルにつき `RegExp.test` 1回だったため、同一行の2つ目以降の legacy 呼出しを数えなかった。guard は (file, symbol) 件数比較なので、**allowlist 済みの行に legacy 呼出しを追記すると CI が検出できない**（shrink-only ratchet の実カウント漏れ）。
+
+**対応**:
+1. 修正 — 各シンボルの regex に `g` フラグを付け、`RegExp.test`（存在判定）から `String.matchAll`（出現ごとに1件）へ変更。
+2. 回帰テスト — 同一行に同一シンボル2回（count=2）、および1行に2シンボルが混在して各々反復するケースを `t367-callsite-guard.test.ts` に固定。修正前に Red を実測（2 fail）してから修正で Green（12 pass）。
+3. **census 再実測 — 66 site / 24 file から変化なし**。実 corpus に同一シンボルを同一行で2回呼ぶ行は存在せず、記録済み baseline は正確だった（`--check` が「0 new / 66 remaining」を返し、measured 合計が 66 と一致）。したがって allowlist の再初期化は不要で、本書の実測値も据え置き。欠陥は将来の編集に対する検出穴（latent）だった。
+4. **落ちる実証の再実行（当該穴に対して、不可分1セット）** — allowlist が `appendAuditEntry: 1` を持つ `amadeus-jump.ts:53` の**同一行に2つ目の呼出しを追記** → `--check` exit 1 で `packages/framework/core/tools/amadeus-jump.ts: appendAuditEntry — allowlist 1, measured 2` を名指し → revert で exit 0・ファイル byte 一致（`diff -q` 確認）。修正前はこの注入が exit 0 で通っていた。
+
+## CI 是正（PR #1733、2026-07-30）
+
+**1. ci.yml 構造ピンの再 baseline。** `t-formal-verif-ci-workflow.integration.test.ts` が「changes outside the three permitted U4 edits」で赤。機構は**許可ステップの列挙ではなく、`normalizedCiBaseline` が3領域（formal job ブロック・`workflow_dispatch` 行・empty-base 分岐）を除去した残り全体の SHA-256 ピン**（`tests/formal-verif/support/ci-workflow-contract.ts`）。したがって「許可集合へステップを追加」は機構上不可能で、正しい保守経路は **fixture の再 baseline**（`260725-mirror-review-fixes` が Mirror CI ジョブ追加時に取った経路と同一 — 当該 code-summary に前例記録あり）。
+
+- 新 hash は手計算せず `normalizedCiBaseline` の実出力から導出（`b0a68bbf...`）
+- describe / 第1 test 名を "U4" から一般化（ピンの対象が U4 の編集に留まらなくなったため）
+- **落ちる実証を追加**: 未承認の ci.yml 編集で hash が今も反転することを test で固定。これがないと stale baseline の更新が vacuous に通り、hash ピンの目的が空文化する
+- 両 re-baseline の経緯を describe 直上コメントに記録（E-U7CG-Q1 裁定参照込み）
+
+**2. patch coverage gate の 10 行未被覆。** `local-lcov-pre-push` を怠り push 後の CI で検出（手順違反として申告）。allowlist ではなく seam-refactor-first の順序どおり全件を実挙動のテストで被覆:
+
+- shadow-compare 4行 — status 不一致 / 属性欠落 / linkage 不正 / new 側 torn line の findings 行。**BR-10 の4次元のうち3次元が equivalent 側だけしか被覆されていなかった実ギャップ**で、各々にテストを追加
+- migration-adapter 2行 — outcome→`AppendAuditResult` の写像を `appendAuditResultFromOutcome` として export された純粋 seam に抽出。telemetry arm は公開関数経由では構造的に到達不能（`getEventDefByAuditEvent` は canonical def のみ解決）なため、元の位置では不変条件が恒久未検証で腐る構造だった
+- callsite-guard 4行 — `main` の `--check --report` 形と catch arm を in-process 駆動。allowlist の description を module scope へ移動（多行呼出し引数内の `+` 連結は継続行が DA:0 に残る — `cid:code-generation:bun-multiline-arg-da0`）
+
+再測定: **measured added lines 409 / covered 409 / uncovered 0**（`AMADEUS_PATCH_LCOV` + `AMADEUS_PATCH_ALLOWLIST` の env seam で push 前にローカル実測）。
+
+**3. t259-guard-corpus（107s）・t258-lifecycle-transaction（147s）の再帰属。** どちらも自変更起因ではないと確定:
+- ローカル単独実行で green（t259 10.4s / t258 34.3s、いずれも timing assertion 通過）
+- **t259 の corpus root は `packages/framework/core/tools`**（`t259-guard-corpus.test.ts:9`）で、本 Unit の guard は `tests/` 配下にあるため**構造的に corpus へ入らない**
+- push 後の CI 再実行で Tests ジョブ green（8m34s）を実測
+
+最終 CI: run 30537546000 が全ジョブ green（`CI Success` ✓、`gh run watch --exit-status` exit 0）。
+
+## 残存 call site の実測値（Task #2 への入力）
+
+走査範囲（正本 `packages/framework/core/` + `scripts/`）の実測 = **66 site / 24 file**:
+
+| symbol | site 数 | file 数 |
+|---|---|---|
+| appendAuditEntry | 26 | 16 |
+| appendAuditEntryUnlocked | 18 | 10 |
+| observeSubprocess | 22 | 10 |
+| observe | 0 | 0 |
+
+`observe` の 0 件は raw grep と突き合わせ済み（唯一のテキスト一致 `hooks/amadeus-stop.ts:4` はコメント行で正しく除外）。
+
+**走査範囲外の残存**: `tests/` 配下は本 guard の走査対象外（旧 writer と同時に U8 で削除される前提）。Task #2 の batch 編成時に `SCAN_ROOTS` を広げるか別集計にするかの判断が必要。
+
+**後続裁定へ送る残置 site（Q3A / Q3B 裁定どおり allowlist 残置、guard から機械可視）**:
+
+- per-call intent/space ターゲティング依存（Q3A）: `amadeus-state.ts`（DELEGATED_APPROVAL / DELEGATED_REJECTION 系）、`amadeus-worktree.ts:88`、`amadeus-bolt.ts`、`amadeus-jump.ts` 等
+- post-complete `appended:false` を消費（Q3B）: `amadeus-grant-authorization.ts:787`、`amadeus-presence-reservation.ts:332`、`amadeus-mirror-state-store.ts:407` — 戻り値伝播だけでは移行不能（lock 保持中の入れ子呼出し + 明示 intent 指定）
+- `appendAuditEntryUnlocked` 全 18 site: canonical 経路（`appendJournalRecordV2` → `acquireAuditLock`、`amadeus-audit.ts:406`）は自ら lock を取り、この lock は mkdir ベースで**再入不可**（`amadeus-lib.ts:5818-5843` に再入追跡なし）。lock 保持前提の呼出し側を差し替えると retry budget（50×100ms）を空回りして失敗する
+- 設計上の恒久例外: `scripts/otel-phase1-measure.ts` の 2 site（新旧比較の current 側）
+
+**追加で後続裁定が必要な事項（本 Bolt で新規発見）**: (a) entrypoint ごとの Provider bootstrap 方針（二重 `registerLoggerProvider` は NFR-3 により throw するため、hook / tool の合成経路を含めた設計判断が必要） (b) registry の requiredAttributes と実 call site fields の全 event 突き合わせ（体系的乖離の可能性。不足属性の値決定は audit 意味論の判断）。

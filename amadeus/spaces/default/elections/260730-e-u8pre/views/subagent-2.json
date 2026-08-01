@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U8PRE",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "複合方針B: (1) O-L5 同左 (2) O-L1 — appendJournalRecordV2 の生 acquire を withAuditLock へ差し替え(約4行)+ 素 acquire 保持者2 site を withAuditLock へ寄せて depth で救う(unlocked 対の抽出はしない) (3) O-T1 同左。lifecycle 系4 site は同様にスコープ外・別裁定へ"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "複合方針A: (1) O-L5 — 構造変更で 5 site を先行 canonical 化(実移行対象 17→12) (2) O-L2 — appendJournalRecordV2Unlocked を抽出して v1/v2 の locked/unlocked 対称を復元し、exporter に lock-held 入口を追加(新入口が audit-log-exporter.ts:141-148 の try/catch→latch.setFatal→rethrow を必ず通ることをレビュー観点に固定)+ 素 acquire 保持者2 site(audit.ts:928、mirror-store の port)は withAuditLock へ寄せる (3) O-T1 — emitEvent(name, attrs, target?) を追加し identity 解決 :70/:81 を同時修正(落ちる実証 =「シャード正・intentId 発行者」の注入赤)。lifecycle 系4 site は seal 意味論が異なるため本 canonical 化のスコープ外とし別裁定へ"
+    }
+  ]
+}

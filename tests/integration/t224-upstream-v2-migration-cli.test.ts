@@ -5,7 +5,8 @@
 // migration. Every assertion crosses the real process seam and observes only
 // exit status, JSON, Git, or filesystem state.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -69,6 +70,13 @@ interface CliResult {
 
 // The three ways a spawned subprocess can end, as observed through CliResult:
 // a real exit status, a terminating signal, or a failure to spawn at all.
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
+
 const EXIT_CHANNEL_CASES = [
   ["exit-status", { status: 2, signal: null, error: null }],
   ["signal", { status: -1, signal: "SIGTERM" as NodeJS.Signals, error: null }],
@@ -1572,7 +1580,11 @@ describe("t224 upstream-v2 migration public CLI", () => {
         cloneIdLogicalPath: relative(project.projectDir, cloneId),
         cloneIdTargetPath: target,
       });
-      expect(collided.stdout).toContain("Failed to acquire audit lock after retries");
+      // The canonical emit locks through withAuditLock, which raises the typed
+      // AuditLockAcquireError naming the bucket and the exhausted budget, where
+      // the legacy writer raised a bare "after retries". What this case pins is
+      // that the collision surfaces as an acquire failure at all.
+      expect(collided.stdout).toContain("Failed to acquire audit lock");
       expect(parseReport(collided).evidence.rollback).toEqual({
         attempted: true,
         restored: true,

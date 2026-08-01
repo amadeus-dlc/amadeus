@@ -731,6 +731,20 @@
     "status": "complete"
   },
   {
+    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
+    "slug": "perf-ci-separation",
+    "dirName": "260731-perf-ci-separation",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
+    "slug": "otel-upstream",
+    "dirName": "260729-otel-upstream",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fb74a-d1fc-7897-a6c1-0f8c6567be59",
     "slug": "formal-verif-value-chain",
     "dirName": "260731-formal-verif-value-chain",

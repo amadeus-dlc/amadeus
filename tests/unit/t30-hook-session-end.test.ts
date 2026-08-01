@@ -57,6 +57,7 @@
 // audit.md, not just unchanged line count; test 5 also asserts the emit still
 // landed; test 6 asserts the reason is exactly "unknown").
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -107,7 +108,7 @@ function auditRecords(p: string): { event: string | null; fields?: Record<string
   return readAudit(p)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as { event: string | null; fields?: Record<string, string> });
 }
 
 function heartbeatPath(p: string): string {

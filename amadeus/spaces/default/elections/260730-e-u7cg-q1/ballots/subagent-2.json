@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "logical-components.md:21 の guard 側読み替えは code-summary の Deviation 節へ申告記録を必須とし、guard 自身の allowlist JSON は t258 の allowlist とは別台帳として shrink-only ratchet 契約を明記すること",
+  "rationale": "実測: (1) 兄弟テンプレート tests/coverage-project-gate.ts / tests/complexity-gate.ts / tests/.complexity-baseline.json は tests/ に実在し、harness manifest coreDirs(claude manifest :52-71 実読)に tests/ は含まれず dist 非投影。(2) t258 実契約(tests/lib/boundary-guard.ts SCAN_ROOTS :53-66)は packages/framework + dist 6面 + self-install 5面を走査し repo 専用パス参照を blocking 検出 — core/ 配置の guard は構造的に全ハーネスへ出荷され、repo パス参照で t258 と衝突する。(3) 既決 cid:code-generation:c1-1569-shipped-comment-vocab は core 内 repo-only パストークンへの対処を allowlist 追加でなく除去と既決しており、選択肢2の回避策は既決是正実績に逆行。cid:code-generation:harness-tools-placement も repo 専用物の core 配置を構造的漏出として禁止。(4) tech-stack-decisions.md :12 は lint ジョブ内1ステップ、:20 は coverage ratchet・CCN baseline と同型踏襲を明記し、その同型実体は tests/ にある — :15 の guard 併記が過大一般化であり、Adapter のみ core/ 変更で FR-DST-2 適用が設計全体と整合する唯一の読み。repo 専用 CI guard の全ハーネス出荷は利用者価値ゼロで t258 の趣旨(出荷面の自己完結)を毀損するため選択肢2は不採。既決 contract と一次証拠から選択肢1が一意に導かれエスカレーション(選択肢3)は不要",
+  "submittedAt": "2026-07-30T10:09:01Z"
+}

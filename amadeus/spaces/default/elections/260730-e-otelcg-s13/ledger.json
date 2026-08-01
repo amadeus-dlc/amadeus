@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OTELCG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1の機序をエンジン実装で決定的に確認したため全面支持(GoA 1)。(1) unitCovered(amadeus-orchestrate.ts:2787-2808)は node.produces の必須成果物を <recordPrefix>/construction/<unit>/<stage>/<name>.md へ解決し existsSync のみで被覆判定する — 承認・監査状態を一切参照しない。(2) firstUncoveredBatch(:2590-2606)がその述語で batch を選び、tryEmitSwarm(:2666-2710)は owedBatchGate が null(= 当該 batch 承認済み)なら invoke-swarm を再発出する — approve-batch 後も成果物不在なら同一 batch が再発出され続ける、が実装から一意に導かれる。(3) 監査シャード実測でも整合: SWARM_COMPLETED batch5(seq 2900, 2026-07-30T19:11:06Z)→ GATE_APPROVED batch5(seq 2924, 22:21:22Z)→ その直後 seq 2925-2929(22:22:05-22:22:56Z)で legacy-writer-removal / otlp-relay の code-generation-plan.md・code-summary.md を conductor が事後 Write。(4) 独立の傍証として、swarm 経路の 2 unit(legacy-writer-removal / otlp-relay)だけが memory.md 日誌を欠き plan+summary のみ存在する — swarm worker が record を書かないことの構造的痕跡。(5) 既存ノルムとの重複なし: cid:code-generation:c2 は finalize 後の merge 着地確認と report --result completed 抑止を扱うが、被覆判定が成果物実在であることと事後作成の定型化は未収載。cid:code-generation:degrade-scope-unit-dir-layout は degrade スコープの artifact guard 面で、swarm 経路面は空白。留意(阻害要因ではない): 候補文の『invoke-swarm が3回再発出』という回数は next 呼出が監査イベント化されないため audit からは裏取り不能。ただし規則本体(被覆=成果物実在 / 事後作成の定型化)は上記(1)(2)で一意に確定するため採否に影響しない。",
+      "submittedAt": "2026-07-30T22:26:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OTELCG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文には機構の file:line 引用(unitCovered = packages/framework/core/tools/amadeus-orchestrate.ts:2787-2807 の existsSync による produces 実在検査のみ、firstUncoveredBatch :2590-2607 が同 batch の uncovered を再抽出、owedBatchGate :2620-2636 は approve 済み batch にゲートを課さない)を併記し、『swarm worker は record を書かない』は本 intent の実測範囲(batch 5)に限定して書くこと — batch 1-4 の unit 成果物には memory.md が同居しており(otlp-relay / legacy-writer-removal のみ memory.md 不在)、record 成果物が別経路で到達しうることを示すため、全 swarm 経路への一般化は未実証である。また『invoke-swarm が3回再発出』の回数は audit に next directive が記録されないため独立検証できず、回数は実測値としてでなく観測メモとして書くこと。",
+      "rationale": "独立実測で候補1の中核主張を確認した。(1) 機構: unitCovered(amadeus-orchestrate.ts:2787-2807)は node.produces の各成果物の existsSync のみで coverage を判定し、SWARM_COMPLETED も approve-batch も coverage に影響しない。firstUncoveredBatch(:2590-2607)は uncovered が残る限り同一 batch を返し、tryEmitSwarm(:2666-2712)が invoke-swarm を再発出する。owedBatchGate(:2626-2635)は approve 済み batch にゲートを課さないため、approve-batch 後も再発出は止まらない — 候補1の因果は engine 実装から一意に導かれる。(2) swarm CLI 側: amadeus-swarm.ts に construction/<unit>/code-generation/ への書込は存在しない(grep 0 件、唯一の一致 :114 は decision table への doc 参照コメント)。(3) 実測: audit shard seq 2924 で batch 5 の GATE_APPROVED(2026-07-30T22:21:22Z)、その直後 seq 2925/2926/2928/2929 で legacy-writer-removal と otlp-relay の code-generation-plan.md / code-summary.md が Write により事後作成されている(22:22:05Z-22:22:56Z)。当該2 unit のみ memory.md を持たない(他9 unit は保持)ことが、これらが stage 起動経由でなく conductor による事後作成であることを裏付ける。以上より学習は実在の欠落を塞ぐ有用な定型手順であり、既存 cid:code-generation:degrade-scope-unit-dir-layout の swarm 経路面を補完する。留保のとおり引用・限定を付したうえで採用を支持する。",
+      "submittedAt": "2026-07-30T22:26:02Z"
+    }
+  ],
+  "late": []
+}

@@ -21,7 +21,8 @@
 // The hook is a no-op if amadeus-state.md is absent in cwd (no active workflow).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { stageGraphDrift } from "../tools/amadeus-graph.ts";
 import { repointHarnessIncludes } from "../tools/amadeus-includes.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
@@ -125,7 +126,11 @@ else if (source === "malformed") eventType = "SESSION_STARTED"; // visible via S
 
 if (eventType) {
   try {
-    appendAuditEntry(eventType, { Source: source }, projectDir);
+    // Stand up the canonical emit path before the first emit (emitEvent
+    // throws with no Logger Provider registered). Inside the try so a
+    // bootstrap failure lands on the SAME fail-open drop as an append failure.
+    ensureOtelBootstrap(projectDir);
+    appendAuditEntryViaEvents(eventType, { Source: source }, projectDir);
   } catch (e) {
     recordHookDrop(projectDir, "session-start", errorMessage(e));
     // Non-fatal — continue with context injection

@@ -24,7 +24,7 @@ import {
   handleConvert,
   intentIdFromShardPath,
 } from "../../dist/claude/.claude/tools/amadeus-journal-convert.ts";
-import { parseJournalShard } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
+import { parseJournalShard, readJournalRecords } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 
 const HEADER = "# AI-DLC Audit Log\n";
 const IDENTITY = { cloneId: "abc123def456", intentId: "260728-demo-1234abcd" };
@@ -233,7 +233,9 @@ describe("committed corpus — post-switchover invariants", () => {
       for await (const p of new Glob(g).scan(root)) {
         count += 1;
         try {
-          parseJournalShard(readFileSync(join(root, p), "utf-8"));
+          // Committed shards are mixed v1/v2 once the canonical OTel emitter
+          // starts writing v2 rows; the shared normalizer owns that read.
+          readJournalRecords(readFileSync(join(root, p), "utf-8"));
         } catch (e) {
           fails.push(`${p}: ${(e as Error).message}`);
         }

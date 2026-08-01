@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "U7 Bolt は機構一式+前提不成立の実測報告をもって充足とし PR #1733 を完成扱いにする。前提解消(entrypoint bootstrap 方針+全 event の requiredAttributes 実 call site 突き合わせ)と実書換え batch は U8 前の追加 Bolt 群へ送る(既存 Task #1/#2 に統合)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "U7 Bolt は機構一式+前提不成立の実測報告をもって充足とし PR #1733 を完成扱いにする。前提解消(entrypoint bootstrap 方針+全 event の requiredAttributes 実 call site 突き合わせ)と実書換え batch は U8 前の追加 Bolt 群へ送る(既存 Task #1/#2 に統合)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "U7 Bolt を open のまま維持し、前提解消(bootstrap 方針の設計+requiredAttributes 全数突き合わせ)まで本 Bolt 内で実施してから実書換え第1弾を行う",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "ユーザー裁定へエスカレーションする",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-30T10:38:16Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-U7CG-Q2R",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追加 Bolt での requiredAttributes 突き合わせで不足属性値の決定が audit 意味論の変更(仕様変更)に及ぶ場合は、正準リスト(4)に従いユーザーエスカレーションへ倒すこと。",
+      "rationale": "独立実測で前提不成立を確認: (1) registerLoggerProvider の production 呼出しは packages/framework/core/tools/amadeus-log.ts:78 と scripts/otel-phase1-measure.ts:65 のみで、logger-provider.ts:36 の requireRegistered が未 bootstrap の emit を throw する — 他 tool/hook への canonical 化は 1 行スワップでは成立しない。(2) emitEvent(logger-provider.ts:47-50)は requiredAttributes 欠落で throw し、amadeus-jump.ts の実 emit(:126-141)と event-registry.ts:125-157 の突き合わせで PHASE_VERIFIED(要求 Phase boundary/Pass/fail/Issues に対し emit は Phase boundary+Details)、PHASE_SKIPPED(Scope 欠落)、PHASE_STARTED(Stage count 欠落)の 3 種の throw を確認 — builder 報告と一致。不足属性値の発明は独断の audit 意味論決定で P3 違反となるため、本 Bolt 内での強行(choice 2)は Bolt 肥大と設計未裁定の実装を招く。安全に移行可能な call site がゼロである以上、機構一式+実測報告で U7 を充足し、bootstrap 方針設計と全 event 突き合わせを専用 Bolt へ送る choice 1 が 1 Unit/Bolt/PR 境界と deviation-stop-before-implement に整合する。非採用時受容度: choice 2 は 7、choice 3 は 6。",
+      "submittedAt": "2026-07-30T10:36:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-U7CG-Q2R",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "前提解消 Bolt 群は本 intent 内 U8 前に必ず残し、requiredAttributes 突き合わせで不足属性値の決定が audit 意味論の仕様判断に及ぶ場合は builder 独断でなくユーザー/選挙裁定へ戻すこと。自案非採用時の受容度: 案2=6、エスカレーション=6。",
+      "rationale": "独立実測: (1) logger-provider.ts:36 の throw 'emit before registerLoggerProvider — invariant violation' を verbatim 確認。(2) registerLoggerProvider( の production 呼出しは amadeus-log.ts:78 と scripts/otel-phase1-measure.ts:65 の2件のみ(他は tests/ 配下のみ、repo 全域 grep)— 他 tool/hook は bootstrap せず canonical 化で throw する主張と一致。(3) amadeus-jump.ts:126-141 の emit 実引数 vs event-registry.ts requiredAttributes: PHASE_VERIFIED は Pass/fail・Issues 欠落(:147)、PHASE_SKIPPED は Scope 欠落(:155)、PHASE_STARTED は Stage count 欠落(:131)— 3種 throw の実測主張を独立再現。安全に移行可能な call site ゼロは事実であり、不足属性値の発明は audit 意味論の独断決定(P3 違反)になるため本 Bolt 内強行は不可。案2 は bootstrap 方針設計+約75 event 全数突き合わせを同一 Bolt/PR へ束ね PR 肥大と責務混在を招く。案1 は作業を intent 内 U8 前 Bolt 群へ申告付き再配列するもので無申告スコープ縮小に当たらず、機構一式+ratchet 赤側/corpus 実証済みの PR #1733 は deployable な単位として完結する。ユーザー可視仕様の変更ではないため design-deviation 選挙での裁定が適切でエスカレーション不要。",
+      "submittedAt": "2026-07-30T10:37:13Z"
+    }
+  ],
+  "resolutions": []
+}

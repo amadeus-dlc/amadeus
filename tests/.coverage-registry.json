@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 548,
+    "total": 552,
     "enumeratedByClass": {
-      "function": 307,
+      "function": 311,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -31,8 +31,8 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 150,
-      "audit": 33,
+      "function": 155,
+      "audit": 34,
       "scope": 10,
       "stage": 8,
       "hook": 12,
@@ -471,6 +471,10 @@
         {
           "file": "tests/integration/t-sensor-fire-hardening.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -479,8 +483,13 @@
       "unitClass": "audit",
       "unitId": "SENSOR_PASSED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -1052,8 +1061,13 @@
       "unitClass": "function",
       "unitId": "function:auditBlockField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -1073,6 +1087,18 @@
         },
         {
           "file": "tests/unit/t160-workspace-record-resolution.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:AuditLockAcquireError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1363,10 +1389,6 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
-          "mechanism": "none"
-        },
-        {
           "file": "tests/integration/t110.test.ts",
           "mechanism": "none"
         },
@@ -1388,6 +1410,10 @@
         },
         {
           "file": "tests/integration/t88.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t-plugin-stage-discovery-performance.test.ts",
           "mechanism": "none"
         },
         {
@@ -1528,7 +1554,7 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
+          "file": "tests/perf/t-plugin-stage-discovery-performance.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1592,6 +1618,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:emitErrorAuditRow",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:emitRefsList",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1647,6 +1680,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:enterAuditLock",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:errorMessage",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1682,6 +1727,18 @@
         },
         {
           "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:exitAuditLock",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1737,6 +1794,10 @@
         {
           "file": "tests/integration/t164-shard-ordering-and-lock-bucket.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -2421,6 +2482,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t371-deletion-gate-cli.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }
@@ -2507,6 +2572,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t257-status-registry-migration-perf.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3560,8 +3629,13 @@
       "unitClass": "function",
       "unitId": "function:splitAuditRecords",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t365-journal-reader-swap.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3866,6 +3940,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t370-canonical-lock-target.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
           "mechanism": "none"
         }
@@ -3988,6 +4066,10 @@
         {
           "file": "tests/integration/t257-status-registry-migration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/perf/t257-status-registry-migration-perf.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4022,6 +4104,10 @@
         },
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {
@@ -4161,6 +4247,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t30-hook-session-end.test.ts",
           "mechanism": "cli"
         }
@@ -4174,6 +4264,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t173-session-switch-restamp.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {
@@ -4282,6 +4376,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t131-hooks-settings-fire.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
         },
         {
@@ -5454,12 +5552,16 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t382-sensor-canonical-emit.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t92.test.ts",
           "mechanism": "cli"
         },
         {
           "file": "tests/unit/t-sensor-fire-seam.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -5552,6 +5654,10 @@
         {
           "file": "tests/integration/t258-lifecycle-transaction.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/perf/t258-lifecycle-transaction-perf.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -5907,6 +6013,10 @@
         {
           "file": "tests/integration/t258-lifecycle-transaction.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/perf/t258-lifecycle-transaction-perf.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

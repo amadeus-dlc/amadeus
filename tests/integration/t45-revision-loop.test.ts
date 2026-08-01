@@ -56,6 +56,7 @@
 // end. Each transition's exit code is also asserted 0 (the .sh leaned on
 // `set -e` to abort the run on any non-zero; here we assert it explicitly).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -157,7 +158,7 @@ function countEvent(event: string): number {
   return readAudit(proj)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .filter((l) => (JSON.parse(l) as { event: string | null }).event === event).length;
+    .filter((l) => (normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null }).event === event).length;
 }
 
 // Snapshots captured between transitions so each .sh assertion checks the

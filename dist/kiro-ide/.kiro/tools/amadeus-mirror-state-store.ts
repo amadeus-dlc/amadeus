@@ -31,11 +31,16 @@ import { dirname, join } from "node:path";
 import {
   acquireAuditLock,
   auditBlockField,
+  enterAuditLock,
+  exitAuditLock,
   readAllAuditShards,
   splitAuditRecords,
   releaseAuditLock,
 } from "./amadeus-lib.ts";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { getEventDefByAuditEvent } from "../otel/event-registry.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
 import type {
   MirrorAuditContext,
   MirrorAuditOutbox,
@@ -397,12 +402,21 @@ function idempotentAppend(
     return { kind: "already-present" };
   }
   try {
-    const result = appendAuditEntryUnlocked(
-      "ARTIFACT_UPDATED",
+    // emitEvent, not the migration Adapter: this write NAMES its ledger, and
+    // the Adapter fails closed on per-call targeting by design (E-U7CG-Q3A)
+    // because it can only route to the registered provider's target. The target
+    // here drives both the shard and the row's own intentId (E-U8PRE O-T1), so
+    // the row cannot end up filed under one intent while claiming another.
+    //
+    // The enclosing section holds the REENTRANT lock for this same identity
+    // (see createMirrorStateStorePorts below), which is what lets the emit's
+    // own acquire pass through rather than collide.
+    ensureOtelBootstrap(config.projectDir);
+    const def = getEventDefByAuditEvent("ARTIFACT_UPDATED");
+    const result = emitEvent(
+      def.name as RegisteredEventName,
       { ...outbox.fields },
-      config.projectDir,
-      config.intent,
-      config.space,
+      { intent: config.intent, space: config.space },
     );
     if (!result.appended) {
       // The intent registry has sealed the ledger (post-complete). The business
@@ -419,10 +433,15 @@ export function createMirrorStateStorePorts(
   config: RealStorePortsConfig,
 ): MirrorStateStorePorts {
   return {
-    acquireLock: () =>
-      acquireAuditLock(config.projectDir, 50, 100, config.intent, config.space),
-    releaseLock: () =>
-      releaseAuditLock(config.projectDir, config.intent, config.space),
+    // The reentrant pair, not a bare acquire (E-U8PRE O-L1): a canonical emit
+    // issued from inside this section reaches appendJournalRecordV2, which
+    // locks the same identity. A bare acquire would collide with the lock this
+    // very port is holding — burning the retry budget, and once the section has
+    // outlived the stale threshold, letting the reaper steal a live lock out
+    // from under it. The port keeps its two-phase shape so failure injection
+    // stays a replaced implementation rather than a branch in this file.
+    acquireLock: () => enterAuditLock(config.projectDir, config.intent, config.space),
+    releaseLock: () => exitAuditLock(config.projectDir, config.intent, config.space),
     readDocument: () => readFileSync(config.statePath, "utf-8"),
     writeDocumentAtomic: (text: string) => atomicWrite(config.statePath, text),
     appendArtifactUpdated: (outbox: MirrorAuditOutbox) =>

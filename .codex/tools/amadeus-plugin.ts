@@ -29,7 +29,7 @@ import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } fr
 import { fileURLToPath } from "node:url";
 import { isHarnessDirName } from "./amadeus-harness.ts";
 import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
-import { observeSubprocess } from "./amadeus-observability.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   applyPluginDrop,
   applyPluginPlan,
@@ -286,7 +286,7 @@ function telemetryProjectDir(projectRoot: string): string {
 // the chain and the caller reports the recompile failure.
 function spawnRecompile(projectRoot: string): boolean {
   for (const tool of ["amadeus-graph.ts", "amadeus-runtime.ts"]) {
-    const res = observeSubprocess(
+    const res = observeSubprocessSpan(
       telemetryProjectDir(projectRoot),
       `${tool.replace(/\.ts$/, "")}:compile`,
       () =>
@@ -310,7 +310,7 @@ function spawnRecompile(projectRoot: string): boolean {
 // and the caller reports an apply-stage failure rather than leaving the host
 // with a composed stage nobody can type.
 function spawnRunnerGen(projectRoot: string): boolean {
-  const res = observeSubprocess(
+  const res = observeSubprocessSpan(
     telemetryProjectDir(projectRoot),
     "amadeus-runner-gen:write",
     () =>

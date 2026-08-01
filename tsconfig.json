@@ -13,6 +13,7 @@
   },
   "include": [
     "packages/framework/core/hooks/*.ts",
+    "packages/framework/core/otel/*.ts",
     "packages/framework/core/tools/*.ts",
     "packages/framework/harness/*/*.ts",
     "packages/setup/src/**/*.ts",

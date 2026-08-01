@@ -70,6 +70,53 @@ plugins/formal-model-check/
 `.github/workflows/ci.yml` — `:544` にマーカー `# U4 formal-model-check begin`、job キーは **`:545` `formal-model-check:`**、`:547` `if: github.event_name == 'workflow_dispatch'`（push / pull_request では走らない）。実行は `:584`（`run`）と `:600`（`verify`）。
 
 ## オープンバグ4件の患部配置（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 検証面の配置（260731-perf-ci-separation、履歴、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 区間の機械集計（`6e7a9d701` → `da51af375`）
+
+`git diff --shortstat 6e7a9d701..da51af375` = `120 files changed, 3939 insertions(+), 102 deletions(-)`、`git rev-list --count` = `11 commits`（測定 ref = observed `da51af375`）。ソース面を触るのは4コミットのみで、残りは `record:` / `chore(metrics):` のスナップショット往来（#1824–#1832、#1834）。
+
+**`.github/`、`scripts/`、`package.json`、`tests/run-tests.ts` は区間内で無変更** — 本 intent の対象構造は base 断面から動いていない。
+
+### perf テストの所在と予算定数
+
+| ファイル | 予算定数の行 | 予算 | timeout | 実時間性 |
+| --- | --- | --- | --- | --- |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | `:491-492` | `ARCHIVE_LATENCY_BUDGET_MS = 500` / `RECOVERY_LATENCY_BUDGET_MS = 750`、RSS `:526` `toBeLessThanOrEqual(96)` MiB | `:529` `}, 120_000);` | 実 subprocess 多数。スイート内で最重 |
+| `tests/integration/t257-status-registry-migration.test.ts` | `:200-201` | `STRICT_READ_LATENCY_BUDGET_MS = 100` / `MIGRATION_LATENCY_BUDGET_MS = 250`（判定 `:255-256`） | `:260` `}, 120_000);` | 実 subprocess。t258 の構造的双子 |
+| `tests/integration/t259-guard-corpus.test.ts` | `:104-105` | 比 2.5 の2本（`twoMedianMs / oneMedianMs` と `rssMultiplier` `:103`） | `:121` `}, 180_000);` | 単一プロセス交互計測 + `--rss` 孫プロセス |
+| `tests/integration/t269-amadeus-mirror-contract-policy-performance.integration.test.ts` | `:102` / `:162` | `toBeLessThanOrEqual(1)` ms / `toBeLessThanOrEqual(50)` ms | 既定 | `performance.now()` のみ。**スイート最厳の絶対予算（1ms）で最も負荷感受性が高い** |
+| `tests/integration/t292-mirror-distribution-performance.integration.test.ts` | `:84` | `toBeLessThan(10_000)` ms | 既定 | 主体は合成 fixture の純アグリゲータ検証。実時間はこの1点のみ |
+| `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts` | `:33-35` | `MEASURED_RUNS = 10` / `COMPILE_LIMIT_MS = 10_000` / `CAPACITY_BYTES = 64 * 1024 * 1024`（判定 `:213` / `:220`） | 既定 | 実 compile 10 対 |
+
+**ブロッキング側に残すべき純テスト**: `tests/unit/latency-median-budget-gate.test.ts` と `tests/unit/plugin-discovery-overhead-gate.test.ts`（いずれも `// size: small`）は合成データのみで、判定述語（`exceedsMedianLatencyBudget` / `exceedsDiscoveryOverhead` / `median`、正本は `tests/lib/latency-median-budget-gate.ts` と `tests/lib/plugin-discovery-overhead-gate.ts`）の落ちる実証を担う。コストゼロで、分離対象ではない。
+
+### サイズ注記の罠
+
+`tests/lib/test-size.ts:282` verbatim: `const m = raw.match(/^\s*(?:\/\/|#)\s*size:\s*(\S+)/i);`。一方 `t258-lifecycle-transaction.test.ts:2` と `t259-guard-corpus.test.ts:2` はいずれも `// @test-size medium` を持つ — この綴りは上記 regex に**一致しない**ため両ファイルは実質**未注記**であり、declared は静的分類へフォールバックする。t258 が drift 報告に `declared=None ... drift=wall-clock` として現れるのはこのためである。
+
+### 同じ並列帯を奪い合う非 perf の重量ファイル
+
+ローカル実測（`tests/logs/test-size-report.json`、650 files / `driftCount: 3`、ローカル1回走のため桁の目安として扱う）:
+
+```
+105.54s  tests/integration/t-team-up-codex-resume.serial.test.ts
+ 64.19s  tests/integration/t224-upstream-v2-migration-cli.test.ts
+ 34.19s  tests/integration/t-codex-hooks-migration.test.ts        (drift=wall-clock)
+ 33.35s  tests/integration/t225-upstream-v2-migration-preflight.test.ts (drift=wall-clock)
+ 30.01s  tests/integration/t258-lifecycle-transaction.test.ts     (drift=wall-clock)
+ 29.45s  tests/smoke/t05-run-tests-parallel.test.ts
+ 12.28s  tests/integration/t259-guard-corpus.test.ts
+  6.70s  tests/integration/t257-status-registry-migration.test.ts
+  6.49s  tests/integration/t292-mirror-distribution-performance.integration.test.ts
+```
+
+perf テストは絶対時間で最上位ではない — 分離の論拠は所要時間そのものではなく、**負荷感受性のある予算が競合並列帯で最大3回評価されること**にある。
+
+
+## オープンバグ4件の患部配置（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
@@ -428,6 +475,22 @@ core 正本の変更となるため、`bun scripts/package.ts`（7 dist）+ `bun
 ### `ca8ff0af4..22ee27dbe` の構造差分
 
 区間13コミットは624ファイル、71,100 insertions / 26,206 deletionsで、生成面・record・metricsを除く断面でも215ファイル、16,982 insertions / 7,844 deletionsである。主な構造変化は Intent Mirror Project 同期スタック（`amadeus-mirror-project-{contract,diagnostics,executor,gateway,ledger-reducer,reconciliation-reducer,verification}.ts`）とテスト駆動機構（`tests/harness/{cli-target,codex-exec-live,tui-client}.ts`、`tests/lib/{cli-mechanism,sdk-mechanism,tui-mechanism,typescript-source}.ts`）の追加である。これらは #1607 / #1664 と交差するため、対象 Bolt は observed commit の現行構造を正本として差分を作る。
+
+## OTel/observability 面の対象配置（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+Focus 5 モジュールはいずれも `packages/framework/core/tools/` の正本で、区間内の配置変化はない。行数は HEAD の `wc -l` 実測値（測定 ref: observed `22ee27dbe`）。
+
+| モジュール | 行数 | 区間の変化 |
+| --- | --- | --- |
+| `amadeus-journal.ts` | 236 | ヘッダコメントのみ（「PR-3 まで未配線」の失効記述を現行 5 消費者の記述へ） |
+| `amadeus-audit.ts` | 1094 | 無変更 |
+| `amadeus-journal-convert.ts` | 298 | 無変更 |
+| `amadeus-observability.ts` | 325 | `ProcessObservation` 型と初期化子から未使用の `registered` を削除 |
+| `amadeus-otel-projector.ts` | 609 | 無変更 |
+
+テストの配置（`ls tests/` 実測）: codec は `tests/unit/t352-journal-codec.pbt.test.ts`（fast-check PBT）、converter は `tests/integration/t356-journal-convert.test.ts`、seam は `tests/integration/t357-observability-seam.test.ts`、projector は `tests/integration/t358-otel-projector.test.ts`。周辺に `tests/integration/t355-audit-merge-info-seams.test.ts`（audit マージ境界）と `tests/integration/t315-doctor-plugin-observability.integration.test.ts`。telemetry buffer の出力先は `<record>/.amadeus-otel/buffer-<clone>.jsonl` で、出荷 `.gitignore` の `.amadeus-*` グロブに覆われる machine-local 領域である。
+
+区間の新規配置（focus 外、正本面 40 files / +4433 / -1559 の主系統）: mirror-project 系 9 モジュール（`amadeus-mirror-project-{contract,diagnostics,executor,gateway,ledger-reducer,reconciliation-reducer,verification}.ts` + `amadeus-mirror-timestamp.ts` + `amadeus-mirror-warning-reducer.ts`）と `amadeus-intent-selection.ts`（168 行）が `packages/framework/core/tools/` に追加され、ワークスペース設定 `amadeus/config.json`（`mirror-projects` キー）が新設された。正本の変更は既存 packaging / self-promotion 経路で 7 `dist` 面と 5 self-install 面へ同期済み（`git diff --name-status` で全 13 面に同名コピーがあることを確認）。
 
 ## Slop cleanup の対象配置（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q3B",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "cross-unit 契約変更につき U3/U4 所有コード(appendJournalRecordV2 / AuditLogExporter)への変更は申告付き逸脱として本裁定を根拠に最小差分で行い、戻り値追加後も既存 void 消費呼出しが型的に壊れないこと(戻り値無視の互換)を typecheck で確認すること。",
+  "rationale": "実測: amadeus-audit.ts:449 で旧 writer は {appended:false, reason:\"intent-complete\"} を返す一方、appendJournalRecordV2(:391-417)は :405-411 で同一 seal を検査して抑止するが void を返す。抑止判定は既に委譲経路内部で実行済みであり、その結果を戻り値として返すだけなら I/O・ロック・動的 import の追加はゼロ(performance-design.md:15 BR-2 適合)。audit-log-exporter.ts:52/:101/:104 の void 連鎖も実測確認。3消費者(amadeus-grant-authorization.ts:787 throw / amadeus-presence-reservation.ts:332 throw / amadeus-mirror-state-store.ts:407 io-failure で outbox 保持)は全て false arm に実質依存しており、無条件 appended:true は実行結果から導出しない偽成功報告(org.md Forbidden 検証劇場)で不可。選択肢2の allowlist 恒久保持は construction に実在する legacy-writer-removal unit と構造矛盾し、org.md Forbidden(要求されない後方互換レイヤーの温存禁止)にも抵触。選択肢1は既決制約3点(検証劇場禁止・BR-2・互換恒久化禁止)から一意に導かれる整合解であり、ユーザー可視の仕様変更ではない内部契約変更のためエスカレーション(選択肢3)は不要。受容度: 選択肢2なら 7(legacy-writer-removal との矛盾)、選択肢3なら 6(不本意だが支持)。",
+  "submittedAt": "2026-07-30T10:13:52Z"
+}

@@ -18,6 +18,7 @@
 // that bypass, so every guard-exercising spawn here DELETES the var from the
 // child env - otherwise it would be testing the bypass, not the declaration.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -154,7 +155,7 @@ describe("t215: docs-only workspace_requires exemption (#499/#848)", () => {
     const records = readFileSync(seededAuditShard(proj), "utf-8")
       .split("\n")
       .filter((l) => l.trim() !== "")
-      .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+      .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> });
     const exempted = records.filter((r) => r.event === "GUARD_EXEMPTED");
     expect(exempted.length).toBeGreaterThan(0);
     expect(exempted.some((r) => r.fields?.Stage === "code-generation")).toBe(true);

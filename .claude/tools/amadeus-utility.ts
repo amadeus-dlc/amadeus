@@ -18,11 +18,7 @@ import type { Stats } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  appendAuditEntry,
-  appendAuditEntryUnlocked,
-  appendLifecycleAuditEntryUnlocked,
-} from "./amadeus-audit.ts";
+import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
@@ -129,7 +125,9 @@ import {
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
 import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   buildDoctorPluginSection,
   type DoctorPluginObservation,
@@ -196,11 +194,10 @@ function appendAuditEvent(
   event: string,
   fields: Record<string, string>
 ): void {
-  if (holdsAuditLock(projectDir)) {
-    appendAuditEntryUnlocked(event, fields, projectDir);
-  } else {
-    appendAuditEntry(event, fields, projectDir);
-  }
+  // One call for both cases: the canonical emit locks through withAuditLock,
+  // whose per-identity depth counter re-enters an already-held section instead
+  // of taking a second, non-reentrant acquire.
+  emitAuditEvent(event, fields, projectDir);
 }
 
 // ---------------------------------------------------------------------------
@@ -1431,7 +1428,7 @@ function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
       fix: "restore `.codex/tools/amadeus-codex-hooks.ts` from the installed distribution",
     };
   }
-  const result = observeSubprocess(projectDir, "amadeus-codex-hooks:doctor", () =>
+  const result = observeSubprocessSpan(projectDir, "amadeus-codex-hooks:doctor", () =>
     Bun.spawnSync(
       ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
       { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
@@ -2137,7 +2134,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // repo (smoke / fresh fixtures) so doctor remains usable in non-git contexts.
   // ---------------------------------------------------------------------------
   try {
-    const proc = observeSubprocess(projectDir, "git", () =>
+    const proc = observeSubprocessSpan(projectDir, "git", () =>
       Bun.spawnSync({
         cmd: ["git", "-C", projectDir, "branch", "--list", "bolt-*"],
         stdout: "pipe",
@@ -4004,7 +4001,7 @@ function gitRmFlatTree(projectDir: string, flatTree: string): void {
     if (!existsSync(flatTree)) return;
     // Untrack (cached only — the data already moved). Ignore failure (non-git
     // project, or already untracked) — the rmSync below still tidies disk.
-    observeSubprocess(projectDir, "git", () =>
+    observeSubprocessSpan(projectDir, "git", () =>
       Bun.spawnSync(["git", "-C", projectDir, "rm", "-r", "--cached", "--quiet", "--", flatTree], {
         stdout: "ignore",
         stderr: "ignore",
@@ -4719,7 +4716,7 @@ function delegateIntentLifecycle(
   verb: "archive" | "unarchive",
   intentDir: string,
 ): void {
-  const run = observeSubprocess(projectDir, `amadeus-state:${verb}`, () =>
+  const run = observeSubprocessSpan(projectDir, `amadeus-state:${verb}`, () =>
     Bun.spawnSync({
       cmd: [
         "bun",
@@ -6021,7 +6018,7 @@ function handleMigrate(
   }
 
   const absoluteProjectDir = resolve(projectDir);
-  const run = observeSubprocess(absoluteProjectDir, "amadeus-migrate", () =>
+  const run = observeSubprocessSpan(absoluteProjectDir, "amadeus-migrate", () =>
     Bun.spawnSync({
       cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
       cwd: absoluteProjectDir,

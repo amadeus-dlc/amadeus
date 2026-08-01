@@ -24,7 +24,8 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
   auditBlockField,
   errorMessage,
@@ -795,6 +796,10 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
   // Timestamp >= the slug's current completed_at — gives exactly one
   // MEMORY_EMPTY per (slug, gate-completion) tuple, so doctor's rate
   // metric is honest under N-compile-per-workflow re-fires.
+  // Registration is process-wide and probes the journal, so it runs BEFORE the
+  // section rather than inside it. The emit below then re-enters this same lock
+  // identity (projectDir, no intent/space override) from the nested append.
+  ensureOtelBootstrap(projectDir);
   withAuditLock(projectDir, () => {
     const auditNow = readAllAuditShards(projectDir);
     const existingEmpties = findAllEvents(auditNow, "MEMORY_EMPTY");
@@ -807,7 +812,7 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
       if (alreadyEmitted) continue;
 
       const fields: Record<string, string> = { Stage: ze.slug };
-      appendAuditEntryUnlocked("MEMORY_EMPTY", fields, projectDir);
+      appendAuditEntryViaEvents("MEMORY_EMPTY", fields, projectDir);
     }
     writeFileAtomic(runtimeGraphPath(projectDir), `${JSON.stringify(graph, null, 2)}\n`);
   });

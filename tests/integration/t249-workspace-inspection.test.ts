@@ -11,7 +11,8 @@
 //
 // Uses node:fs (real temp dirs) — hence the integration tier.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -120,6 +121,13 @@ function seedUninitSubmodule(root: string): void {
   write(root, "README.md", "# empty root\n");
   write(root, ".gitmodules", '[submodule "libs/dep"]\n\tpath = libs/dep\n\turl = https://x/dep.git\n');
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("detectWorkspace (real fs, legacy string projection)", () => {
   test("nested project => Brownfield string projection", () => {

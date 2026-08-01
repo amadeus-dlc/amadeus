@@ -29,7 +29,8 @@
 // the tree byte-identical to committed. Every planted file is removed in a
 // try/finally AND an afterEach backstop.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +55,13 @@ function cleanup(): void {
   rmSync(ROOT_STALE, { force: true });
   rmSync(SUBDIR_ROOT, { recursive: true, force: true });
 }
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the provider tests already do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t-package-write-sweep — #771: write mode sweeps stale project-root outputs", () => {
   afterEach(cleanup);

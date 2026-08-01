@@ -27,6 +27,7 @@
 // adapter through each harness's measured input channel and reading back the
 // audit shard is the exact path the harness drives (same idiom as t149 / t203).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -167,7 +168,7 @@ function eventCount(dir: string, event: string): number {
     .join("\n")
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .filter((l) => (JSON.parse(l) as { event: string | null }).event === event).length;
+    .filter((l) => (normalizeAuditRecord(JSON.parse(l)) as { event: string | null }).event === event).length;
 }
 
 // Fire the shipped adapter's mint target through its measured prompt channel.

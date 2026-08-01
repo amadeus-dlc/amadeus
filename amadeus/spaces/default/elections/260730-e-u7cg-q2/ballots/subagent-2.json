@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-U7CG-Q2",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "core/ 99 行 batch は dist 7 ハーネス再生成+drift check を同一 PR に伴うため PR は肥大するが機械的増分に留まること、および残存 ~790 行(tools/tests 中心)の縮小 batch 群を U8 の call-site ゼロゲート前に明示 Bolt として計画に載せることを条件とする。",
+  "rationale": "実測: unit-of-work.md:44-47 U7(L) の責務は『段階移行』、FR-MIG-2(requirements.md:71)も『段階移行し…ゼロ後に削除』で段階が要件字義。BR-7/BR-8(business-rules.md:16-17)の shrink-only ratchet は段階移行を構造前提とするため選択肢3(全 ~1085 行一括)は L 超過かつ設計前提と矛盾。選択肢1(機構のみ)は ratchet の縮小経路が同一 PR で未駆動のまま完成扱いとなり、新設ガードの両側実測(corpus-sweep-for-new-guards / 落ちる実証)を満たさず、実書換えが未計画 Bolt へ宙に浮く。選択肢2 は allowlist 初期化→core/ 99 行(grep 実測で 99 行一致、自己インストール投影 693 行は再生成で機械追随)書換え→allowlist 縮小→CI green を同一 PR で実証でき、機構の実効証明と有界増分を両立する。FD が段階移行を既に規定しているためユーザーエスカレーション(選択肢4)は不要。",
+  "submittedAt": "2026-07-30T10:08:41Z"
+}

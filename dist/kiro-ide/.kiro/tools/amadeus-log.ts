@@ -5,7 +5,10 @@
 // these because they fire per-question, not per state transition.
 
 import { existsSync, readFileSync } from "node:fs";
-import { appendAuditEntry } from "./amadeus-audit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { emitEvent } from "../otel/logger-provider.ts";
+import type { RegisteredEventName } from "../otel/event-registry.ts";
+import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   emitError,
@@ -42,12 +45,22 @@ function resolveActiveProjectDir(explicit?: string): string {
   return pd;
 }
 
+// v1 audit event type -> OTel event name for the representative U1 pair.
+const OTEL_EVENT_NAMES: Record<string, RegisteredEventName> = {
+  DECISION_RECORDED: "amadeus.decision.recorded",
+  QUESTION_ANSWERED: "amadeus.question.answered",
+};
+
 function emitAudit(
-  pd: string,
   eventType: string,
   fields: Record<string, string>
 ): void {
-  appendAuditEntry(eventType, fields, pd);
+  // U1 representative wiring: canonical events flow through the Amadeus
+  // Logger Provider (emitEvent -> AuditLogExporter), never through a direct
+  // appendAuditEntry call site (BR-1). The failure contract is unchanged:
+  // a write failure throws synchronously here AND sets the fatal latch.
+  // An unmapped eventType is rejected at runtime by getEventDef (BR-2).
+  emitEvent((OTEL_EVENT_NAMES[eventType] ?? eventType) as RegisteredEventName, fields);
 }
 
 // --- Flag parsing ---
@@ -86,7 +99,10 @@ function handleDecision(args: string[]): void {
   if (!flags.stage) error("Missing --stage <slug>");
   if (!flags.decision) error("Missing --decision <text>");
 
-  const pd = resolveActiveProjectDir(projectDir);
+  // The active-workflow guard already ran in main (the bootstrap resolves
+  // the project dir with the same refusal). The latch check is the
+  // FR-EVT-4 mutation gate for this entrypoint.
+  assertMutationAllowed();
   const fields: Record<string, string> = {
     Stage: flags.stage,
     Decision: flags.decision,
@@ -95,7 +111,7 @@ function handleDecision(args: string[]): void {
   if (flags.rationale) fields.Rationale = flags.rationale;
 
   try {
-    emitAudit(pd, "DECISION_RECORDED", fields);
+    emitAudit("DECISION_RECORDED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -115,6 +131,7 @@ function handleAnswer(args: string[]): void {
   if (!flags.details) error("Missing --details <text>");
 
   const pd = resolveActiveProjectDir(projectDir);
+  assertMutationAllowed(); // FR-EVT-4: refuse when a prior canonical write failed
   const fields: Record<string, string> = {
     Stage: flags.stage,
     Details: flags.details,
@@ -147,7 +164,7 @@ function handleAnswer(args: string[]): void {
   }
 
   try {
-    emitAudit(pd, "QUESTION_ANSWERED", fields);
+    emitAudit("QUESTION_ANSWERED", fields);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
@@ -186,6 +203,7 @@ function main(): void {
   }
 
   try {
+    ensureOtelBootstrap(resolveActiveProjectDir(projectDir));
     switch (subcommand) {
       case "decision":
         handleDecision(filteredArgs.slice(1));

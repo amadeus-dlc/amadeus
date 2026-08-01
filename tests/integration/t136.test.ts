@@ -72,6 +72,7 @@
 // 10 .sh asserts -> 10 expect()-bearing test() cases here, plus the S1..S3
 // inline strengtheners on the cases that drive the spawns.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -214,7 +215,7 @@ function auditRecords(p: string): {
   return readAudit(p)
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as { event: string | null; fields?: Record<string, string> });
 }
 
 /**

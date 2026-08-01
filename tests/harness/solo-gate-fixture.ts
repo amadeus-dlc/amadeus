@@ -4,11 +4,13 @@
 // grant, and a routed carrier — so that construction lives here once and each
 // suite stays a single responsibility.
 
+import { parseAuditRecords } from "./fixtures.ts";
+import { resetOtelPerProject } from "./otel-reset.ts";
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "./v1-audit-fixture.ts";
 import {
   directiveSelfCheckExamples,
   type RunStageDirective,
@@ -112,8 +114,8 @@ export function appendGrant(
   grantId: string = GRANT_ID,
 ): string {
   const intent = seededRecordDir(root).split("/").at(-1)!;
-  const human = appendAuditEntry("HUMAN_TURN", {}, root, intent);
-  appendAuditEntry(
+  const human = plantV1AuditRow("HUMAN_TURN", {}, root, intent);
+  plantV1AuditRow(
     "GRANT_ISSUED",
     {
       "Grant Id": grantId,
@@ -141,17 +143,16 @@ export const SCAN_PASSES = [
   "owner-revalidation",
 ] as const;
 
+// Count the rows the standing-grant SCANNER counts, across both journal
+// schemas. This has to agree with amadeus-grant-authorization.ts's own
+// predicate (auditBlockField(block, "Event") !== null), which decodes v1 and v2
+// alike: a v1-only count here silently under-reports once a grant emitter
+// migrates, so padAuditFixture lays one filler too many and the shard ends up
+// holding E_owner + 1 scanner-visible events — the scan-budget assertion then
+// fails by exactly one, blaming the production scan for a fixture arithmetic
+// error.
 function auditEventCount(content: string): number {
-  return content
-    .split("\n")
-    .filter((line) => {
-      if (!line.startsWith("{")) return false;
-      try {
-        return typeof (JSON.parse(line) as { event?: unknown }).event === "string";
-      } catch {
-        return false;
-      }
-    }).length;
+  return parseAuditRecords(content).filter((record) => record.event !== null).length;
 }
 
 function fillerEvents(count: number): string {
@@ -218,7 +219,7 @@ export function padAuditFixture(
 
 export function revokeGrant(root: string, humanTs: string, grantId: string): void {
   const intent = seededRecordDir(root).split("/").at(-1)!;
-  appendAuditEntry(
+  plantV1AuditRow(
     "GRANT_REVOKED",
     {
       "Grant Id": grantId,
@@ -261,6 +262,8 @@ export function setup(expiresAt: string, routeNow: number): {
 } {
   const root = createTestProject();
   roots.push(root);
+  // A new workspace begins here — drop the previous case's OTel registration.
+  resetOtelPerProject();
   seedStateFile(root, "state-mid-inception.md");
   const registryPath = join(
     root,

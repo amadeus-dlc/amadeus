@@ -1,0 +1,28 @@
+{
+  "electionId": "E-U7CG-Q2",
+  "kind": "design-deviation",
+  "question": "U7 callsite-migration Bolt の deliverable 境界。unit-of-work.md U7(L) の責務は「約1600 call site の段階移行(互換 Adapter 経由)、call-site guard」で所有要件 FR-MIG-1/FR-MIG-2/VER-4。後続 U8 legacy-writer-removal は U7 依存で削除ゲート条件に「call site ゼロ」を含む。実測: 非 dist の *.ts で appendAuditEntry 参照 1085 行、うち core/ 内 99 行 — 1 Bolt での全書換えは L サイズを大きく超える。functional-design 自身は GuardAllowlist を「移行開始時に全既存 site で初期化 → batch 変換ごとに縮小」と規定(BR-7/BR-8: shrink-only ratchet)し、段階移行を構造として前提している。論点: 本 Bolt でどこまでを deliverable とするか。U8 の「call site ゼロ」ゲートとの間で実書換え作業が宙に浮かない編成を選ぶこと。各自 unit-of-work.md:44-54、business-rules.md BR-7/BR-8、FR-MIG-2 の実文、appendAuditEntry 参照の実測数を確認して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "本 Bolt = (1)互換 Adapter(FR-MIG-1) (2)guard+allowlist を現 site 総数で初期化+shrink-only ratchet+残存可視化 report(VER-4) (3)shadow 比較ハーネス本番化(BR-10)。実書換えは後続の allowlist 縮小 batch(U8 前の追加 Bolt 群)として段階実施"
+    },
+    {
+      "internalNo": 2,
+      "label": "選択肢1の機構一式に加え、第1弾の実書換え batch(core/ 内 99 行)まで本 Bolt に含め、縮小 ratchet の実効を同一 PR で実証する"
+    },
+    {
+      "internalNo": 3,
+      "label": "本 Bolt で全 call site(~1085 行)の書換えまで完了する(unit 責務の字義どおり)"
+    },
+    {
+      "internalNo": 4,
+      "label": "どれでもなく実装前停止のままユーザー裁定へエスカレーションする"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

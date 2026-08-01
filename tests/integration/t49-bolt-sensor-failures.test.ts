@@ -50,7 +50,9 @@
 //   .sh (7) fragment-merge fails after audit-merge     -> "7: soft-gap — fragment-merge fails after audit-merge => AUDIT_MERGED + BOLT_FAILED(fragment-merge-failed)"
 //   .sh (8) determinism: re-compile byte-equivalent    -> "8: determinism (L11) — re-compile after BOLT_FAILED + recovery is byte-equivalent"
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -258,12 +260,17 @@ function makeProj(): string {
   git(["add", "-A"]);
   git(["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"]);
   // Window for the parallel-Bolt populator to detect instances in.
+  // Field sets match the real emitters: the registry marks Scope+Request
+  // required on WORKFLOW_STARTED and Stage+Agent on STAGE_STARTED, and the CLI
+  // append entry rejects an incomplete set.
   auditAppend(proj, "WORKFLOW_STARTED", [
-    ["Workflow ID", `t49-${Math.floor(Math.random() * 1e9)}`],
     ["Scope", "feature"],
-    ["Intent", "t49"],
+    ["Request", `/amadeus t49-${Math.floor(Math.random() * 1e9)}`],
   ]);
-  auditAppend(proj, "STAGE_STARTED", [["Stage", "code-generation"]]);
+  auditAppend(proj, "STAGE_STARTED", [
+    ["Stage", "code-generation"],
+    ["Agent", "developer"],
+  ]);
   return proj;
 }
 
@@ -290,7 +297,7 @@ function auditRecords(proj: string): Array<Record<string, unknown>> {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as Record<string, unknown>);
 }
 
 /** Count records whose `event` is <EVENT> across main audit shards (the .sh's grep -c). */
@@ -299,6 +306,13 @@ function countEvent(proj: string, event: string): number {
 }
 
 const TEST_TIMEOUT = 120_000; // real git + multiple bun spawns per case
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-bolt-sensor-failures.sh, plan 8)", () => {
   // ===========================================================================
@@ -337,18 +351,23 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     );
     mkdirSync(join(payWt, "amadeus"), { recursive: true });
     writeFileSync(join(payWt, "amadeus", ".amadeus-clone-id"), mainCloneId, "utf-8");
+    // The names the sensor dispatcher actually emits (amadeus-sensor.ts
+    // baseFields): "Sensor ID"/"Stage slug"/"Fire id", not the shorter labels
+    // this fixture used to carry — the legacy writer accepted any key, the
+    // canonical path redacts anything outside the registry vocabulary.
     auditAppend(payWt, "SENSOR_FIRED", [
-      ["Sensor", "required-sections"],
-      ["Stage", "code-generation"],
+      ["Fire id", "t49-fire-1"],
+      ["Sensor ID", "required-sections"],
+      ["Stage slug", "code-generation"],
       ["Output path", "amadeus-docs/some-output.md"],
-      ["Bolt slug", "pay"],
     ]);
     auditAppend(payWt, "SENSOR_FAILED", [
-      ["Sensor", "required-sections"],
-      ["Stage", "code-generation"],
+      ["Fire id", "t49-fire-1"],
+      ["Sensor ID", "required-sections"],
+      ["Stage slug", "code-generation"],
       ["Output path", "amadeus-docs/some-output.md"],
       ["Detail path", "amadeus-docs/.amadeus-sensors/required-sections-fail.txt"],
-      ["Bolt slug", "pay"],
+      ["Findings count", "1"],
     ]);
 
     // Complete all 3 in arbitrary order, then compile.

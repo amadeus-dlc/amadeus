@@ -73,6 +73,14 @@ const REAL_RUN_TESTS_TOTALS = join(
 // #684/#696). A static import means the copied runner fails to load without it,
 // so the scratch tree must carry it too — same reason as bun-junit-to-meta.ts.
 const REAL_SIZE = join(import.meta.dir, "..", "lib", "test-size.ts");
+// run-tests.ts also imports lib/run-tests-args.ts (the argv decode seam, #1830).
+// Same static-import reason as the files above.
+const REAL_RUN_TESTS_ARGS = join(
+  import.meta.dir,
+  "..",
+  "lib",
+  "run-tests-args.ts",
+);
 
 const scratchRoots: string[] = [];
 
@@ -118,6 +126,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_COVERAGE_NORMALIZE, join(libDir, "coverage-normalize.ts"));
   copyFileSync(REAL_RUN_TESTS_TOTALS, join(libDir, "run-tests-totals.ts"));
   copyFileSync(REAL_SIZE, join(libDir, "test-size.ts"));
+  copyFileSync(REAL_RUN_TESTS_ARGS, join(libDir, "run-tests-args.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions
   // between the fail/pass families.

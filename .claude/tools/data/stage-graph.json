@@ -2156,6 +2156,7 @@
       "linter",
       "type-check",
       "answer-evidence",
+      "event-registry-drift",
       "self-scope-consistency"
     ],
     "scopes": [
@@ -2209,6 +2210,12 @@
         "path": ".claude/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
+      },
+      {
+        "id": "event-registry-drift",
+        "path": ".claude/sensors/amadeus-event-registry-drift.md",
+        "matches": "**/{event-registry,amadeus-audit}.ts",
+        "category": "code-quality"
       },
       {
         "id": "self-scope-consistency",
@@ -2457,7 +2464,8 @@
       {
         "id": "model-completeness",
         "path": ".claude/sensors/amadeus-model-completeness.md",
-        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}"
+        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}",
+        "category": "formal-verification"
       }
     ]
   },

@@ -46,6 +46,7 @@
 // asserts the two counts equal AND both equal 5 (the .sh only asserted the
 // counts equal).
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import {
   afterEach,
   beforeEach,
@@ -96,7 +97,7 @@ function auditRecords(body: string): AuditRecord[] {
   return body
     .split("\n")
     .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
+    .map((l) => normalizeAuditRecord(JSON.parse(l)) as unknown as AuditRecord);
 }
 
 let current: { proj: string } | null = null;

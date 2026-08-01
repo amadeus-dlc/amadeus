@@ -109,6 +109,41 @@ return state.issueNumber === null ? "create" : "sync";
 `intent-capture-approved` のみ `state.issueNumber` を参照せず `create` を返す — この非対称が [#1838](https://github.com/amadeus-dlc/amadeus/issues/1838)（重複 create）の機序候補であり、新モデルが検査すべき不変量（「issueNumber 記録済みなら create を発行しない」）の第一候補になる。
 
 ## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離が触れる内部契約（260731-perf-ci-separation、履歴、observed `da51af375`）
+
+本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### ランナー CLI 契約（変更に最も慎重を要する面）
+
+`tests/run-tests.ts` の外形は `tests/smoke/t05-run-tests-parallel.test.ts` が byte 単位でピンしている: 不正な `--parallel` → exit 2 と定型メッセージ、smoke バナーが `(parallel=N)` を省くこと、直列と `-P 4` のサマリ同値性、planted-failure の伝播。`PER_TEST_TIMEOUT = 120000` `:163`。**新フラグ・新 tier を足す場合もこれらの挙動を byte 一致で保つ必要がある**。
+
+新フラグを足す場合の接続点は3つ: `ParsedArgs` フィールド定義、`parseArgs` の `case` 追加（`--parallel` の検証様式は `:233` 以降）、そして除外集合の受け渡し（integration は `:1161-1166` の `runFilesPartitioned` 呼び出しが既存の口）。
+
+| 内部関数 | 行 | 契約 | 改訂の要否 |
+| --- | --- | --- | --- |
+| `levelFiles(level, excludes)` | `:839-850` | ディレクトリ列挙 + **basename** 除外集合 | 改訂不要。既存の口をそのまま使える |
+| `runFilesPartitioned(level, effectiveParallel, collector, excludes)` | `:875-880` | `excludes` を受け取る唯一の実行経路 | 改訂不要 |
+| `runTier(level, label, collector)` | `:900-909` | **`excludes` を受け取らない** | smoke / unit を除外対象にするならシグネチャ変更が必要 |
+| `reportDynamicSizes(collector)` | `:952`、出力 `:984-990` | 実行したファイルのみから drift を報告。`printSummary` の try/catch 内にあり **exit code に影響しない**（advisory） | 改訂不要だが副作用あり（下記） |
+
+### 判定述語の契約（分離後もブロッキング側に残すべき面）
+
+- `tests/lib/latency-median-budget-gate.ts` — `exceedsMedianLatencyBudget` / `median`。消費側は t258 `:524-525` と t257 `:255-256`。落ちる実証は `tests/unit/latency-median-budget-gate.test.ts`（純・合成）。
+- `tests/lib/plugin-discovery-overhead-gate.ts` — `exceedsDiscoveryOverhead`。消費側は `t-plugin-stage-discovery-performance.integration.test.ts:213` 近傍。落ちる実証は `tests/unit/plugin-discovery-overhead-gate.test.ts`。
+
+**述語の検証（純・安価）と計測の実行（実時間・負荷感受）は分離可能な2契約である** — 前者を日常 CI に残し後者だけを別面へ移せば、ゲートの落ちる実証は失われない。
+
+### CI 側の契約
+
+- `ci-success`（`ci.yml:648`、name `CI Success`）の `needs` = `:651-659` の8件。この集合が PR ブロックの唯一の定義であり、GitHub ruleset `18843917`（name `main`）の required status check は `CI Success` のみ（2026-07-31 実測）。**新 job を PR ブロック対象にしたい／したくない判断は、この `needs` への出入りだけで決まる**。
+- `scripts/detect-ci-changes.sh` の3分類（`:9-32`）: `*.ts` / `tests/*` は `full=true` かつ `coverage=true`。`packages/framework/*` などは `drift=true`。新 workflow を足す場合、`.github/workflows/ci.yml` 自身は `full` にも `coverage` にも該当するが、**他の workflow ファイルはどの分類にも該当しない**。
+
+### 変更の無い契約
+
+区間内で `.github/`、`scripts/`、`package.json`、`tests/run-tests.ts` の変更はゼロ。区間で新設された唯一の本番契約は `mirrorSnapshotStatus(snapshot)`（`packages/framework/core/tools/amadeus-mirror-presentation.ts:250-252`）であり、本 intent とは無関係である。
+
+
+## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 
 本節の file:line はすべて observed `6e7a9d701` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
@@ -306,6 +341,20 @@ Amadeus に常駐 REST/GraphQL service や database API はない。公開境界
 - #1607 は `report` / `next` の順序と terminal `done` の意味に関わる。新しい公開 verb を足す前に、既存 `mirror-boundary completion` と `complete-workflow` のどちらが transaction coordinator を所有するかを要件で裁定する。
 - audit journal の post-complete seal、mirror operation receipt の idempotency、Intent cursor の ownership は後方互換シムで二重化せず、単一の正準完了経路へ統合する。
 - 進行中の OTel [#1679](https://github.com/amadeus-dlc/amadeus/issues/1679) は journal entry と state/audit projection を消費するため、#1607 と #1664 の契約確定前にその Construction を重ねない。
+
+## OTel/observability 面の公開契約（260729-otel-upstream、履歴、observed `22ee27dbe`）
+
+区間内で focus 面の公開契約に変更はない（`amadeus-observability.ts` の `registered` はモジュール内部型の未使用フィールドで export 面に現れない）。#1672 の置換が触る現行契約を以下に固定する（いずれも `grep -n "^export"` 実測、測定 ref: observed `22ee27dbe`）。
+
+**(1) Journal codec（`amadeus-journal.ts`、内部 wire 契約）**: `JOURNAL_SCHEMA_VERSION = 1`（reader は `<= current` を受理し、超過は `JournalCodecError`）、`JournalEntry`（`schemaVersion` / `seq` / `cloneId` / `intentId` / `timestamp` / `heading` / `event: string | null`。canonical レコードは `fields`、raw レコード（`event: null`）は `rawBody`、converter 専用 escape hatch の `opaque`）、`journalEntryId`（`intentId:cloneId:seq` のべき等キー）、`forkLineageCloneId`（md5 先頭 12 hex の派生 clone token）、`serializeJournalEntry` / `parseJournalLine` / `splitJournalLines` / `parseJournalShard`。1 レコード = 1 物理行の不変条件を codec が強制し（値中の raw 改行は throw）、key 順固定で同一 entry は常に byte-identical に serialize される。フィールド値の CR/LF は append 側（`escapeAuditValue`）で `\n` リテラル化済みという前提で、codec は再エスケープしない。
+
+**(2) Observability seam（`amadeus-observability.ts`）**: 設定契約は layered `config.json`（global → space → intent）の `observability` 値（`enabled: boolean` 必須、`otlp.endpoint?`、`local.enabled?`、`redactionOptIn?: string[]`）で、narrowest present が全体を上書きし、いずれかの層が malformed なら DISABLED に落ちる。export は `ObservabilityConfig` / `resolveObservabilityConfig` / `observabilityEnabled` / `resetObservabilityConfigCache`（テスト seam）/ `TELEMETRY_DIR`（`.amadeus-otel`）/ `telemetryDir` / `TelemetryEvent`（`v: 1`、`kind: "process" | "operation" | "subprocess"`）/ `appendTelemetryEvent` / `initProcessObservability` / `flushProcessObservation` / `observe<T>` / `observeSubprocess<T>`。`meta` は default-deny の `META_SAFE_KEYS`（`stage` / `phase` / `event` / `tool` / `outcome` / `exitCode` / `command`）+ `redactionOptIn` のみ通過する。`initProcessObservability` は first-caller-wins、`flushProcessObservation` は再呼び出し no-op（`t357` が回帰境界）。全 API は fail-open で、buffer 書込失敗は呼び出し側へ throw しない。
+
+**(3) OTLP projector（`amadeus-otel-projector.ts`）**: `traceIdFor` / `spanIdFor`（sha256 による決定論的 ID）、`buildSpans`（intent → phase → stage → process → operation/subprocess の 5 層 hierarchy、parenting は時間包含）、`buildOtlpTraces` / `buildOtlpMetrics`、`runExport`、`parseCliArgs`（`{ projectDir?, force }`）、`OtlpSignalResult = "posted" | "failed" | "skipped"`、`ExportSummary`。消費側は CLI 起動点と `hooks/amadeus-session-end.ts` の piggyback で、Core は import しない。`OTEL_EXPORTER_OTLP_ENDPOINT` env が config 値に優先し、export 失敗は exit code を緑のまま維持する（fail-open 端到端）。
+
+**(4) Journal converter（`amadeus-journal-convert.ts`）**: `convertShardText` / `assertLosslessRender`（byte-exact round-trip 不成立で `JournalConvertError`、部分出力を残さない）/ `parseLegacyBlock` / `cloneIdFromShardName` / `intentIdFromShardPath` / `handleConvert`。CLI 契約は `bun tools/amadeus-journal-convert.ts <shard.md> [--allow-unmerged-forks]` で、doctor の fix-hint が案内する正規手順（convert → 生成 .jsonl 検証 → .md 削除）と一致する。
+
+**(5) 区間の他面（focus 外）**: `amadeus/config.json` に `mirror-projects` キー（例 `[{ "project": "amadeus-dlc/5" }]`）が新設された。`package.json` description のインストール導線は `bunx @amadeus-dlc/setup install` 表記へ更新。直後の `260728-slop-cleanup` 断面は履歴として保持する。
 
 ## Slop cleanup の API 影響（260728-slop-cleanup、履歴、observed `ca8ff0af4`）
 

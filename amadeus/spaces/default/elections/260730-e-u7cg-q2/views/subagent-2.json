@@ -1,0 +1,26 @@
+{
+  "electionId": "E-U7CG-Q2",
+  "voter": "subagent-2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "選択肢1の機構一式に加え、第1弾の実書換え batch(core/ 内 99 行)まで本 Bolt に含め、縮小 ratchet の実効を同一 PR で実証する"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "どれでもなく実装前停止のままユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "本 Bolt で全 call site(~1085 行)の書換えまで完了する(unit 責務の字義どおり)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "本 Bolt = (1)互換 Adapter(FR-MIG-1) (2)guard+allowlist を現 site 総数で初期化+shrink-only ratchet+残存可視化 report(VER-4) (3)shadow 比較ハーネス本番化(BR-10)。実書換えは後続の allowlist 縮小 batch(U8 前の追加 Bolt 群)として段階実施"
+    }
+  ]
+}

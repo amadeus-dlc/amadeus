@@ -1,0 +1,21 @@
+{
+  "electionId": "E-U7CG-Q3A",
+  "voter": "subagent-1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "ユーザー裁定へエスカレーションする"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "Adapter は intent/space が渡された場合 fail-closed で throw(invariant violation)。per-call ターゲティングを要する site は当面 allowlist に残し、その扱い(canonical 経路拡張 or 別機構)は後続裁定へ送る"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "canonical 経路を拡張し、emitEvent / AuditLogExporter に per-call の intent/space override を追加する(U3/U4 所有コードの cross-unit 契約変更を本 Bolt で実施)"
+    }
+  ]
+}

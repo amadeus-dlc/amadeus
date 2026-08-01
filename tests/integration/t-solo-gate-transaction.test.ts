@@ -4,13 +4,12 @@
 // state CLI across a real process boundary. The in-process arms of the same
 // transaction live in the sibling t-solo-gate-transaction-*.test.ts files.
 
+import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  appendAuditEntry,
-} from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   handleReport,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
@@ -64,7 +63,7 @@ function auditRecords(shardBody: string): AuditRecord[] {
   return shardBody
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+    .map((line) => normalizeAuditRecord(JSON.parse(line)) as unknown as AuditRecord);
 }
 
 describe("solo gate approval transaction", () => {
@@ -484,7 +483,7 @@ describe("solo gate approval transaction", () => {
       Date.now(),
     );
     const other = switchCursorToNonOwner(root);
-    appendAuditEntry(
+    plantV1AuditRow(
       "GATE_AUTHORIZATION_SELECTED",
       {
         "Route Id": ROUTE_ID,

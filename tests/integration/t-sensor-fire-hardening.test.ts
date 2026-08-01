@@ -107,8 +107,14 @@ function auditEventCount(proj: string, ev: string): number {
   return readAllAuditShards(proj)
     .split("\n")
     .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === ev).length;
+    .map((l) => JSON.parse(l) as Record<string, unknown>)
+    // The dispatcher emits on the canonical path now: a v2 row carries the
+    // legacy event type as the `Event` attribute, not a top-level key.
+    .filter((r) =>
+      r.schemaVersion === 2
+        ? (r.attributes as Record<string, string> | undefined)?.Event === ev
+        : r.event === ev,
+    ).length;
 }
 
 const TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"];

@@ -78,7 +78,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { auditBlockField, findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -133,19 +133,10 @@ function log(args: string[], p: string): CliResult {
   };
 }
 
-type AuditRecord = { event: string | null; fields?: Record<string, string> };
-
-/** Parse a JSONL audit buffer into records. */
-function auditRecords(body: string): AuditRecord[] {
-  return body
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as AuditRecord);
-}
-
-/** Count audit records with event <ev> in a buffer. */
+/** Count audit records with event <ev> in a buffer. Uses the production
+ * ledger reader so v1 and v2 (OTel emit path, U4) rows both count. */
 function auditEventCount(body: string, ev: string): number {
-  return auditRecords(body).filter((r) => r.event === ev).length;
+  return findAllEvents(body, ev).length;
 }
 
 /**
@@ -154,8 +145,8 @@ function auditEventCount(body: string, ev: string): number {
  * check: a key absent from THAT record returns "".
  */
 function auditField(body: string, ev: string, key: string): string {
-  const hit = auditRecords(body).find((r) => r.event === ev);
-  return hit?.fields?.[key] ?? "";
+  const hit = findAllEvents(body, ev)[0];
+  return hit === undefined ? "" : (auditBlockField(hit.block, key) ?? "");
 }
 
 /** Whole-buffer presence (mirrors a bare grep with no `^` anchor). */

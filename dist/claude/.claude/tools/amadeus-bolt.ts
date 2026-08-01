@@ -40,7 +40,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
   emitError,
   errorMessage,
@@ -56,7 +55,9 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
-import { initProcessObservability, observeSubprocess } from "./amadeus-observability.ts";
+import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { initProcessObservability } from "./amadeus-observability.ts";
 
 function emitAudit(
   pd: string,
@@ -65,7 +66,10 @@ function emitAudit(
   intent?: string,
   space?: string
 ): void {
-  appendAuditEntry(eventType, fields, pd, intent, space);
+  // Targeted: intent/space name the ledger this Bolt operation belongs to, and
+  // the target drives both the shard the row lands in and the row's own
+  // identity fields.
+  emitAuditEvent(eventType, fields, pd, intent, space);
 }
 
 // The intent/space/repo SELECTOR re-serialised for a delegated sibling spawn. A
@@ -117,7 +121,7 @@ function spawnSibling(
     | "amadeus-runtime.ts",
   subargs: string[]
 ): { ok: boolean; stdout: string; stderr: string; signal: string | null; status: number | null } {
-  const result = observeSubprocess(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
+  const result = observeSubprocessSpan(pd, `${toolName.replace(/\.ts$/, "")}:${subargs[0] ?? "?"}`, () =>
     spawnSync(
       "bun",
       [
@@ -700,14 +704,14 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 //                                  --reason <enum> --defaults <text>
 //
 // Wires the three MERGE_DISPATCH_* events by emitting via
-// `appendAuditEntry` per event variant. Orchestrator (SKILL.md per-Bolt
+// `emitAudit` per event variant. Orchestrator (SKILL.md per-Bolt
 // loop) brackets each amadeus-pipeline-deploy-agent dispatch: pre-call INVOKED,
 // post-call RETURNED on successful parse, FALLBACK on timeout/malformed-YAML.
 //
 // Emit-only contract: no state mutation, no spawn. Pure audit emission so
 // doctor can reconcile orphan INVOKED rows (slug + timestamp window).
 //
-// t48 emitter-pairing requires LITERAL `appendAuditEntry("EVENT_NAME")` per
+// t48 emitter-pairing requires a LITERAL `emitAudit(pd, "EVENT_NAME")` per
 // case branch — Map indirection on the --event flag breaks the grep at
 // tests/feature/t48-audit-event-emitters.sh:46-57. Three cases, three literal
 // emit calls.

@@ -99,6 +99,7 @@ function listRows(out: string): string[][] {
 
 const EXPECTED_IDS = [
   "answer-evidence",
+  "event-registry-drift",
   "linter",
   "model-completeness",
   "required-sections",
@@ -112,10 +113,10 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 7 framework sensors", () => {
+  test("1: list emits exactly 8 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(7);
+    expect(listRows(r.out)).toHaveLength(8);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
