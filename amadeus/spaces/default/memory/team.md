@@ -96,7 +96,17 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - バグ修正の着手順は「優先度がキューの並び順、依存関係が実行可能性の制約」の2層で決める: (1) パイプラインを塞ぐバグ(全 PR のマージ・CI を止めるもの)は P ラベルに関わらず依存の根元として最優先で倒す (2) 同一ファイルを触る修正は並行させず直列化する(c6 の非交差判定) (3) 進行中 PR と同じ層を触る修正は、その PR の着地を待つかファイル単位の非交差を実測確認してから着手する (4) クロスレビュー2名成立はバッチ編入の前提であり、優先度が高くても揃うまで着手しない(逆に低優先度でも揃っていれば同バッチに同乗可)。優先度と依存が衝突したら依存を優先し、その判断は leader が記録する (user decision 2026-07-10) <!-- cid:requirements-analysis:priority-vs-dependency -->
 - 潜在バグ探索タスクでは修正を行わない: 発見バグは file:line で裏取りした実測のみを GitHub Issue に起票する(推測起票・重複起票禁止)。修正は別メンバーへの独立タスクとして割り当てる (user decision 2026-07-09) <!-- cid:requirements-analysis:bughunt-file-only -->。追補(E-PHD-IC 2026-07-26 ユーザー直接裁定採用 — ソロ運用・選挙なし): 重複起票禁止の手順化 — 起票前に (a) `gh issue list --state all` でキーワード検索(closed を含める — 修正済み既知バグの再発見が最頻の重複源)し、(b) 症状が「既知修正の自ブランチ未取込」でないかを origin/main の当該ファイル diff / 修正 PR の着地で確認してから起票する。実測: 260726-plugin-host-delivery で mirror envelope バグを検索なしで起票(#1544)→ #1498 重複(修正 #1537 は main 着地済み・作業ブランチ未取込)とユーザー指摘で判明し重複クローズ (learned 2026-07-26) <!-- cid:requirements-analysis:pre-filing-dup-and-branch-check -->
 - GitHub Issue・PR はともにタイトル・本文・コメント(Issue のクロスレビュー verdict、ラベル bug/P0-P3 等を含む)を日本語で書く。コード識別子・ファイルパス・コマンド・ログ引用は原文のまま保持する。既存に英語が残っている場合は、その Issue/PR を更新するとき(コメント追加・ラベル変更・クローズ・修正着手等)についでにタイトル・本文を日本語化する(一括翻訳キャンペーンは行わない)。コミットメッセージは従来どおり英語 (user decision 2026-07-10) <!-- cid:requirements-analysis:issues-in-japanese --> <!-- cid:requirements-analysis:prs-in-japanese -->
-- enhancement / feature 系の GitHub Issue、および intent-first 経路のミラー Issue の概要には、本文冒頭に**エレベーターピッチ**(Geoffrey Moore テンプレート)を次の逐語様式の穴埋めで置く — 各行の [ ] を実内容で埋め、行構成・順序を変えない: 「[潜在的なニーズを満たしたり、潜在的な課題を解決したり] したい/[対象顧客] 向けの、/[プロダクト名] というプロダクトは、/[プロダクトのカテゴリー] です。/これは [重要な利点、対価に見合う説得力のある理由] ができ、/[代替手段の最右翼] とは違って、/[差別化の決定的な特徴] が備わっている。」。bug Issue は対象外(症状/機序/影響の既存様式が正 — 欠陥報告にピッチを強制すると作文になる)。代替手段・差別化が空文(「特になし」等)のピッチはレビューで差し戻す — 代替と差別化を書けないことは起票内容の価値仮説が未成熟であるシグナルとして扱う。ミラー Issue では本ピッチ7行が intent-first-mirror-issue の定める「3〜5行の概要」を**置換する正書式**であり、行数制限との矛盾は生じない(同 cid の概要規定はピッチ様式で充足とみなす) (user decision 2026-08-01) <!-- cid:requirements-analysis:issue-elevator-pitch -->
+- enhancement / feature 系の GitHub Issue、および intent-first 経路のミラー Issue の概要には、本文冒頭に**エレベーターピッチ**(Geoffrey Moore テンプレート)を次の逐語様式の穴埋めで置く — 各行の [ ] を実内容で埋め、行構成・順序を変えない:
+  ```
+  [潜在的なニーズを満たしたり、潜在的な課題を解決したり] したい
+  [対象顧客] 向けの、
+  [プロダクト名] というプロダクトは、
+  [プロダクトのカテゴリー] です。
+  これは [重要な利点、対価に見合う説得力のある理由] ができ、
+  [代替手段の最右翼] とは違って、
+  [差別化の決定的な特徴] が備わっている。
+  ```
+  bug Issue は対象外(症状/機序/影響の既存様式が正 — 欠陥報告にピッチを強制すると作文になる)。代替手段・差別化が空文(「特になし」等)のピッチはレビューで差し戻す — 代替と差別化を書けないことは起票内容の価値仮説が未成熟であるシグナルとして扱う。ミラー Issue では本ピッチ7行が intent-first-mirror-issue の定める「3〜5行の概要」を**置換する正書式**であり、行数制限との矛盾は生じない(同 cid の概要規定はピッチ様式で充足とみなす) (user decision 2026-08-01) <!-- cid:requirements-analysis:issue-elevator-pitch -->
 - bug Issue には、欠陥コードの導入経緯が特定の intent の作業に遡れる場合、その intent record(`amadeus/spaces/<space>/intents/<slug>-<id8>/`)へのリンク(または intent 名+導入コミット)に加えて、**原因の所在**を書く — その intent の「要件で見落とした/設計でこう決めたのが誤りだった/設計は正しいが実装が逸脱した」のどれに当たるかを、該当成果物(requirements.md、design、plan 等)を参照して1〜2文で特定する。どの intent・どのステージがバグを生みやすいかの分析と §13 学習の材料になる。blame で導入コミットが分かれば intent はチェックポイントコミットのメッセージ・record から遡れる。bootstrap 初期実装由来(origin:bootstrap)は intent が存在しないため対象外 (user decision 2026-07-10) <!-- cid:requirements-analysis:bug-intent-linkage -->
 - Issue の起票と検証: amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても、自発起票・ユーザー指示起票を問わず)。起票したらハルシネーション対策レビューとして、起票者以外のメンバー2名が主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントに残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) <!-- cid:requirements-analysis:issue-cross-review -->
 
