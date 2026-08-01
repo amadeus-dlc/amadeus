@@ -368,16 +368,44 @@ export function projectDirOfHostRoot(hostRoot: string): string {
 // loadStageGraph(): that resolves relative to the EXECUTING copy of the tools
 // (wrong when `--project-root` names another harness) and its module cache
 // could predate the recompile this re-sync follows. Falls back to the cached
-// loader when the host carries no compiled graph of its own.
-function hostStageGraph(hostRoot: string): StageEntry[] | undefined {
+// loader ONLY when the host carries no compiled graph of its own (`absent`).
+// A file that exists but does not parse to a stage-entry array is `invalid`
+// (#1962): it must neither crash the compose that already committed nor fall
+// through to the cached loader — `null` would slip past a nullish fallback
+// into exactly the wrong-graph read this function exists to avoid.
+type HostStageGraphRead =
+  | { kind: "graph"; graph: StageEntry[] }
+  | { kind: "absent" }
+  | { kind: "invalid"; reason: string };
+
+function hostStageGraph(hostRoot: string): HostStageGraphRead {
   const p = join(hostRoot, "tools", "data", "stage-graph.json");
-  if (!existsSync(p)) return undefined;
-  return JSON.parse(readFileSync(p, "utf-8")) as StageEntry[];
+  if (!existsSync(p)) return { kind: "absent" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(p, "utf-8"));
+  } catch (error) {
+    return { kind: "invalid", reason: String(error) };
+  }
+  if (!Array.isArray(parsed)) return { kind: "invalid", reason: "not a JSON array" };
+  if (!parsed.every((e) => typeof e === "object" && e !== null && typeof (e as { slug?: unknown }).slug === "string")) {
+    return { kind: "invalid", reason: "entries are not stage entries (missing string slug)" };
+  }
+  return { kind: "graph", graph: parsed as StageEntry[] };
 }
 
 function resyncIntentStates(hostRoot: string): readonly StateResyncOutcome[] {
+  const read = hostStageGraph(hostRoot);
+  if (read.kind === "invalid") {
+    // The plugin apply + recompile already committed; a broken graph copy only
+    // forfeits the re-sync, loudly, never a resync against the WRONG graph.
+    console.error(
+      `amadeus-plugin: ${join(hostRoot, "tools", "data", "stage-graph.json")} is invalid (${read.reason}); state re-sync skipped — recompile the host graph and re-run compose`,
+    );
+    return [];
+  }
   return resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
-    graph: hostStageGraph(hostRoot),
+    graph: read.kind === "graph" ? read.graph : undefined,
   });
 }
 
