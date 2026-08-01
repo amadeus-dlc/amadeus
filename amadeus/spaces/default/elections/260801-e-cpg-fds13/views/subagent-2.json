@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-FDS13",
+  "voter": "subagent-2",
+  "question": "260801-cg-plan-guard functional-design(4 unit)の §13 学習選定。候補 c1(per-unit FD の完走記録: U2 の pin 誤帰属 Major は E-FSPRAS13 フルパス規律の違反実例として1往復で回収、型 canonical の verbatim 連鎖+形式差申告)は既存 cid(E-FSPRAS13 / cross-unit-type-verbatim-check / mechanism-cite-verify-at-draft)の実例で新規規則を導かない — 0件を提案。反対材料があれば record(FD diary・4 unit の成果物と Review 節)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-RES13",
+      "voter": "subagent-1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 が適用する追補 cid:reverse-engineering:c1-xrev-scan-mode(E-OBB5-RES13)は本日 2026-08-01 採用の新規則であり、実例2件目としての適用は妥当だが規則自体の耐久性は未検証。次回週次蒸留ラウンドで免除条件(observed 一致 SHA での検証済み)の運用実績を再確認する。",
+      "rationale": "RE diary 実測: Interpretations 1件(患部3点 verbatim 直読・患部関数 diff 0 による引用再解決免除)、Deviations 1件(RE 宣言センサー filter 不適合の代替検証)のみ、Tradeoffs/Open questions は空。両者とも既存 cid の適用実例で新規一般規則を導かない — memory/project.md:279 に cid:reverse-engineering:c1-xrev-scan-mode(E-OBB5-RES13 追補、免除条件付き)、:149 に cid:reverse-engineering:re-sensors-codekb-filter-mismatch が実在し重複。引用スポットチェック: .claude/tools/amadeus-orchestrate.ts:2919 = function tryEmitSwarm( 宣言行、:2937 = if (!batches || batches.length === 0) return false; の無音 false — re-scans/260801-cg-plan-guard.md の記述と一致(grep -n / sed 実測)。0件提案に反対材料なし。",
+      "submittedAt": "2026-08-01T08:40:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件に同意するが、記録面で2点。(1) re-scans/260801-cg-plan-guard.md の『本 intent の患部3ファイル(orchestrate/runtime/lib)は区間内で touch されたが患部関数は不変』は実測とずれる — git diff c49e385ac..cb809c4de -- <3ファイル> の --stat は lib.ts のみ +202 で、orchestrate.ts と runtime.ts は区間内 diff 0(=touch されていない)。結論(患部関数不変)はより強い形で成立するため裁定に影響しないが、後続が『touch あり+関数不変』を免除の先例として引く余地を残すので、記録は『orchestrate/runtime は区間内無変更、lib は touch あり(writer 抽出)だが parseUnitsBlock 本体は不変』へ訂正するのが正確。(2) RE diary の『E-OBB5-RES13 追補の免除条件を関数不変の実測で充足』という表現は、追補が定める免除条件(当該引用が observed と一致する SHA で検証済みであること)そのものではなく、関数不変という別根拠を免除条件へ持ち込むように読める。実態は re-scans が『ガード患部の確定(observed cb809c4de)』として observed で verbatim 直読しており、これは免除の適用ではなく再解決の実施に当たる。追補が明示的に禁じた『区間 touch の有無のみを根拠とした一般免除』への拡大解釈を招かないよう、diary の表現は『observed で再解決済み(関数不変は補助証拠)』へ寄せることが望ましい。いずれも既存 cid の運用精度の問題であり、新規ノルムを要しない。",
+      "rationale": "独立実測により 0件(両候補とも既存 cid の実例)を支持する。(1) c2 は cid:reverse-engineering:re-sensors-codekb-filter-mismatch(memory/project.md:149)が既に『RE の成果物検証は実質 conductor 手動確認のみ』と明記しており、diary の Deviations 記載(現在節ヘッダ整合 8/8 の機械 grep+re-scans 記録による代替検証)は当該 cid が想定する運用そのもの。grep -rl 'cg-plan-guard、現在' で codekb/amadeus 直下の 8 成果物(api-documentation / architecture / business-overview / code-quality-assessment / code-structure / component-inventory / dependencies / technology-stack)が各 1 hit、re-scans 配下および reverse-engineering-timestamp.md は 0 hit で、主張どおり 8/8 を確認した。新規規則を導く要素はない。(2) c1 は cid:reverse-engineering:c1-xrev-scan-mode の E-OBB5-RES13 追補(memory/project.md:279、免除条件=引用が observed 一致 SHA で検証済み、区間 touch のみを根拠とする一般免除への拡大は禁止)の適用実例。本件は re-scans が observed cb809c4de での verbatim 直読を明記しており、免除の新類型ではなく既存条件の充足にとどまる。(3) 引用のスポット再実測: parseUnitsBlock は amadeus-lib.ts:7823 に実在し、unit エントリの認識は :7844 の /^\\s*-\\s+name\\s*:\\s*(.+?)\\s*$/ のみ — 裸の `- <値>`(:7870)は current 配下の depends_on 項目として扱われ、current 不在なら :7877 で throw、すなわち `- id:` 形式は unit として受理されない(re-scan の記述と一致)。computeBoltDag は amadeus-runtime.ts:300-313 に実在し、parse 失敗時に process.stderr.write('...bolt_dag node omitted') 後 return undefined、ファイル不在時も :302 で undefined(記述と一致)。tryEmitSwarm は :2934 autonomy===null で無音 false、:2937 !batches||length===0 で無音 false、:2938 firstUncoveredBatch(記述と一致)。(4) 基点検証: cb809c4dec912e594204cdfe56582e2303159dbe は commit として実在し、git merge-base --is-ancestor c49e385ac cb809c4de が exit 0(祖先性成立)。以上より、両候補とも既存 cid の適用実例であり、org/team/project のいずれの層にも新規規則を追加する根拠はない。",
+      "submittedAt": "2026-08-01T08:40:00Z"
+    }
+  ],
+  "late": []
+}

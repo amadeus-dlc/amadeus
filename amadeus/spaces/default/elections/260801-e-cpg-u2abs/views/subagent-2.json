@@ -1,0 +1,22 @@
+{
+  "electionId": "E-CPG-U2ABS",
+  "voter": "subagent-2",
+  "question": "U2 issuance-guard: SwarmDecline arm に載せた BoltDagAbsence フィールドが未消費(no-dag→ok のためガードメッセージ経路が存在せず、U3 FD domain-entities.md:88 も非消費を明言)。construction.md Forbidden(どのコードも消費しないフィールド禁止)・U2 FD 宣言(consumer (ii) = U2 の degrade 経路文言)・BR-U2-5(degradeUnitResolutionError 無改変)が三つ巴で矛盾する。実装(worktree bolt-issuance-guard、807c65ff8)は field を carry したが読者ゼロ。どう解消するか。実測面: readBoltDagAbsence 呼び出しは BR-U2-12(読み取りは readBoltDagBatches と firstUncoveredBatch のみ)とも不整合。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "BR-U2-5 を緩和し redirect/violation の observed facts に absence 理由を含めて今すぐ消費者を作る(FD consumer (ii) 実体化。ただし no-dag→ok のため実発火面は狭い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "decline arm から absence フィールドと readBoltDagAbsence 呼び出しを除去。FD へ申告付き是正(consumer (ii) は U3 FD の将来条項どおり必要時に生む)。Forbidden 準拠・BR-U2-12 整合"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "本 Bolt では未消費のまま受理し Bolt 3/BT で消費者を再判定(Forbidden 抵触の一時許容)"
+    }
+  ]
+}

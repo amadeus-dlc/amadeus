@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-ICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件を採用(GoA1)。read-only 実測3点。(1) questions ファイル(intent-capture-questions.md)の E-OC1 判定段落が cid:intent-capture:c1 を明示引用し、0問成立の根拠を既存ノルムから直接導出している — 候補 c1 は新規規則ではなく c1 の適用実例。grep 実測: project.md:179 が c1 の正本(『事前整理で裁定済みの intent では質問を未決の判断のみに絞る』、260717-mirror-issue-tool で 4+1問)。未決が 0 なら 0問は c1 の射程内の系であり、追加の規則は要らない。(2) 0問様式自体も既知 — team.md の E-TCRRAS13B が 0問様式を『既習形』として参照し、その 1問版対応として『## 裁定の記録』第2 H2 を規定している。本 questions ファイルは同節を実装済みで、様式面の新規学習もない。(3) mirror create 成功(Issue #1903、422 なし)は #1871 修正の元症状非再現の確認であり、cid:code-generation:ruling-premise-closure-verification(修正適用後に元症状の閉包まで実測する)の実践に該当する既存規則の適用。バグ修正の期待どおりの動作は新規規則を導かない。反対材料の探索も行ったが、『未決の1点(#1893 の修正方向)を証拠が揃う requirements-analysis 段へ送る』判断は c1 と cid:requirements-analysis:ruling-dependent-placeholder の射程内で、独立 cid を立てる新規性を認めなかった。",
+  "submittedAt": "2026-08-01T06:20:00Z"
+}
