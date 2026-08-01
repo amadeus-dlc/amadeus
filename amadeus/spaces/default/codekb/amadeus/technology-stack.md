@@ -68,6 +68,65 @@ TypeScript の判別ユニオンで有限ドメインが表現されており、
 
 - 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は #1850 の OTel ファミリー到着（`packages/framework/core/otel/` 18モジュール、bun ランタイム内 OTel API 互換層 — 外部依存追加なし）と perf tier（`tests/perf/`+`perf.yml`）で、いずれも詳細は前節（260731-perf-ci-separation）と `re-scans/260801-open-bug-batch-5.md` に委ねる。
 
+## OTel メタ情報スキーマ実装の技術断面（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line と件数はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### OTel 実装の技術選択
+
+- **vendored API に自前実装**: `packages/framework/core/vendor/opentelemetry/`（`api` / `api-logs` の型定義）へ直接実装する。NodeSDK・BatchSpanProcessor は不使用（`tracer-provider.ts:1-6`）。ランタイム依存を増やさない配布方針（project.md Forbidden「Bun-only 前提を変更する理由を文書化せず runtime dependency を追加しない」）の帰結
+- **同期エクスポート**: 完了スパンは `span.end()` で同期的に LocalSpanExporter へ渡る（`tracer-provider.ts:140`）。計器も `add` / `record` ごとに同期書き出し（`meter-provider.ts:50-79`）。短命プロセス群（hooks / CLI）でバッファのフラッシュ漏れを構造的に作らないための選択
+- **W3C traceparent 手実装**: `context.ts:12`「the traceparent format is fixed」/ `:237` `TRACEPARENT_RE = /^00-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/`。propagator ライブラリを持ち込まない
+- **ID 生成**: `crypto.getRandomValues`（`tracer-provider.ts:30-34`）
+- **Signal Store**: JSONL 追記。span は `spans-<cloneId>.jsonl`、metrics は `metrics-<cloneId>.jsonl`（`local-metric-exporter.ts:62`）、いずれも `telemetryDir(projectDir)` = intent record 配下
+
+### #1868 が要求する OTel semantic conventions 語彙
+
+標準語彙を優先し Amadeus 固有のみ `amadeus.` 名前空間、という #1868 設計原則1 に対し、現行実装で標準語彙を名乗っているのは `service.name` / `telemetry.sdk.language` / `exception.message` の3キーのみ。新規に持ち込む標準語彙群は次のとおりで、**いずれもリポジトリ内に前例がない**:
+
+- `service.version` / `deployment.environment.name` / `host.name` / `session.id`（Resource semconv）
+- `vcs.ref.head.name` / `vcs.ref.head.revision`（VCS semconv）
+- `gen_ai.request.model` / `gen_ai.client.token.usage` / `gen_ai.token.type`（GenAI semconv）
+- `exception.type` / `exception.stacktrace`（Exception semconv）
+
+### 環境判定の技術的空白
+
+`deployment.environment.name`（`local` / `ci` 判定）の供給元が無い。独立実測: `packages/framework` 全体で `process.env.CI` / `GITHUB_ACTIONS` の参照は **0 hit**。`otel/` 配下で `process.env` を読むのは `relay.ts:752`（エンドポイント解決、`options.env ?? process.env` の注入形）の 1 箇所のみ — env 読取りを注入可能にする様式はここが唯一の先例になる。
+
+CI 判定の既存の在り処は GitHub Actions ワークフロー側（`.github/workflows/`）と `tests/run-tests.sh --ci` フラグで、いずれもフレームワークランタイムからは見えない。
+
+### git 断面取得の技術的空白
+
+`vcs.ref.head.*` の共通ヘルパが無い。`git` を spawn するモジュールは実測で 8 箇所に散在:
+
+`amadeus-worktree.ts:120` / `amadeus-lib.ts:1519`（remote get-url）・`:4427` / `amadeus-norm-metrics.ts:224`（`rev-parse HEAD`）/ `amadeus-state.ts:1698` / `amadeus-mirror-lifecycle.ts:110` / `amadeus-migrate.ts:446` / `amadeus-swarm.ts:256`・`:266`
+
+`amadeus-worktree.ts` にローカル関数 `currentSha(gitCwd)` があり `commit_sha` として使われるが export されていない。telemetry 用の「現プロセスが走っている git 断面」を1度だけ解決してキャッシュする seam は新規。**プロセス起動時に1回 spawn するコスト**（#1868 §1 は resource = プロセス不変と定義）が短命 hook プロセスの起動時間へ乗る点は NFR 面の検討事項になる。
+
+### ビルド時ハーネス注入チャネル（独立検証で追加）
+
+`scripts/package.ts` は各 dist ツリーへ2つのハーネス固有データを **生成**する（canonical には存在しない）:
+
+- `tools/data/harness.json` — `writeHarnessData()`（`:206-214`）。現内容は `{harnessDir, rulesSubdir}`。7 ツリー分の実在を確認（`dist/{claude,codex,cursor,opencode,kimi,kiro,kiro-ide}/`）。コメント `:207-208`「the object shape leaves room for future per-harness runtime facts」
+- `<harnessDir>/VERSION` — `writeVersionFile()`（`:200-202`）、`AMADEUS_VERSION` 由来のプレーンテキスト1行
+
+両者とも `--check`（`dist:check`）で byte-diff される生成物であり、内容変更は必ず `bun scripts/package.ts` + `bun run promote:self` の再生成を伴う。**`amadeus.harness.version` の供給に env 配線もハーネス別コードも要らない経路**として、この既存チャネルが最有力。
+
+### テスト駆動の二重モジュールグラフ
+
+`otel/` 系テストは2系統に分かれる（混同注意 — 独立実測）:
+
+- **dist 直 import**: 44 ファイル（`grep -rl 'dist/claude/.claude/otel' tests/ | wc -l`）— `t369` / `t376` / `t381` / `t-otel-exporter-contract` ほか。振る舞いを assert する主系統
+- **canonical 直 import**: 6 ファイル（`grep -rl 'packages/framework/core/otel' tests/ | wc -l`）— `t-otel-core-plumbing.test.ts` ほか。冒頭コメント `:4-7`「these two module graphs carry separate singletons, so the canonical copy needs its own driver」
+
+**帰結**: core の `otel/` を触った変更は `bun scripts/package.ts` + `bun run promote:self` を同一変更で回さないと、テストの大半が旧バイト列を読んで偽グリーンになる（project.md Mandated の dist 再生成規範が telemetry 面で特に効く）。dist 再生成は7ハーネス全数が対象（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+
+### リセットシーム一覧（テスト設計の前提）
+
+`resetLoggerProviderForTests` / `resetTracerProviderForTests`（`tracer-provider.ts:225-228`）/ `resetMeterProviderForTests`（`meter-provider.ts:129`）/ `resetOtelBootstrapForTests`（`bootstrap.ts:120-122`）/ `resetContextManagerForTests` / `clearIntentContextForTests` / `resetFatalLatchForTests` / `resetObservabilityConfigCache`。集約ヘルパは `tests/harness/otel-reset.ts` の `resetOtelPerProject()`。
+
+resource をプロセス単位でキャッシュする実装を入れる場合、**このリセット集合への追加**がテスト分離の前提になる（`local-metric-exporter.ts:54-58` が intentId を exporter 生成ごとに1回だけ解決してキャッシュする先例あり — 理由コメント `:52-53`「measurement is a hot path」）。
+
 ## perf 分離の技術断面（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line と件数はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。

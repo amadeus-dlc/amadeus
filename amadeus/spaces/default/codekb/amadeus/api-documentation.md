@@ -119,6 +119,109 @@ return state.issueNumber === null ? "create" : "sync";
 
 - 判断: 公開 CLI 契約の変更なし。触れるのは内部契約4点 — mirror receipt 遷移（reducer の complete/mark-pending 受理元）、state scaffold のフィールド集合（Construction Autonomy Mode 追加）、report の checkbox ガード挙動（#1849 裁定依存）、metrics publication の problems 分類（一過性 I/O と所有権証拠異常の分離）。テスト pin の明示改訂を伴うものは要件段で宣言する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
 
+## OTel メタ情報スキーマ実装が触れる内部契約（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### bootstrap の公開契約
+
+```
+ensureOtelBootstrap(projectDir: string): void      // bootstrap.ts:84
+ensureTracerBootstrap(projectDir: string): void    // bootstrap.ts:108
+resetOtelBootstrapForTests(): void                 // bootstrap.ts:120
+```
+
+不変条件（`bootstrap.ts:41-47` `assertSameProject`）: 1プロセス = 1ワークスペース。別 projectDir での再 bootstrap は throw。冪等性の判定源は **API シングルトンへの問い合わせ**（`registeredLoggerProjectDir()` / `registeredTracerProjectDir()`）であり、モジュール内のシャドウフラグではない（`:34-39` の設計コメントが理由を明記 — 「a process whose provider was dropped gets a fresh registration instead of a memo saying it is still standing」）。resource を通す拡張はこの2契約の引数面に現れる。
+
+### プロバイダ登録の契約（3面で同型）
+
+```
+registerLoggerProvider({ projectDir, auditExporter, logExporter, redaction? }): void  // logger-provider.ts:154
+registerTracerProvider({ projectDir, spanExporter }): void                           // tracer-provider.ts:203
+registerMeterProvider({ metricExporter }): void                                      // meter-provider.ts:112
+```
+
+- 二重登録は不変条件違反として throw（NFR-3）: `tracer-provider.ts:204-206`、`meter-provider.ts:113-115`
+- **非対称が2点ある**。(1) logger / tracer は `projectDir` を受け取り記録する（`registeredTracerProjectDir()`、`:213-215`）が、**meter は projectDir を受け取らない** — bootstrap から metrics arm を生やす際、workspace 一致検査を成立させるには署名の対称化が要る。(2) **logger だけが `redaction?: RedactionPolicy` の注入スロットを持つ**（`logger-provider.ts:154`）— register オプションに横断的ポリシーを差す先例として、resource の注入もこの形（オプションオブジェクトへの追加フィールド）と整合する
+- 取得側: `getAmadeusTracer(name = "amadeus")`（`:217-222`）/ `getAmadeusMeter(name = "amadeus")`（`meter-provider.ts:121`）— いずれも未登録時 throw
+
+### Span の契約
+
+```
+startActiveSpan(name, [options], [ctx], fn)   // tracer-provider.ts:168
+```
+
+**コールバックはスパンを自動 end しない**（FR-TRC-2, #1678）。呼び出し側が `finally { span.end(); }` で終わらせる契約で、`context.test.ts` が pin している（`:8-10` のコメント）。#1868 §5 の subagent lifetime スパンを親プロセスで組み立てる場合、start と end が別 hook（PreToolUse / SubagentStop）= **別プロセス**に分かれるため、この契約はそのままでは使えない — スパンオブジェクトの跨プロセス保持は不可能で、started/completed の2イベントからの後付け構成か、開始時刻の永続化+完了時の遡及生成のいずれかになる。
+
+親 span 解決の順序（`:64-77`）: `trace.getSpan(parentContext)` → `processParentSpanContext()`（env carrier または復元済み intent anchor）→ なければ新規 trace。
+
+```
+recordException(exception: Exception, time?: TimeInput): void   // tracer-provider.ts:145
+```
+
+現行実装は registry def の durability を実行時検査し（`:151-154`）、`exception.message` のみを addEvent（`:156`）。`Exception` 型は `Error` またはそれ以外を許すが、実装は `exception instanceof Error ? exception.message : String(exception)`（`:155`）で message へ潰す。#1868 §4 の `err.name` / `err.stack` はこの分岐で取り出せる。
+
+```
+addEvent(name, attributesOrStartTime?, startTime?): this        // tracer-provider.ts:98
+```
+
+引数多重定義を手で判別（`:99-102`）。**フィルタを一切通さず生の bag を push する**（`:103`）— write-time redaction は呼び出し側の責任。
+
+### redaction の公開契約
+
+```
+redactAttributes(attrs, policy = DEFAULT_REDACTION_POLICY): Record<string, unknown>   // redaction.ts:120
+scrubCredentials(value, patterns = CREDENTIAL_SCRUB_PATTERNS): unknown                // redaction.ts:95
+scanForCredentials(text, patterns): string[]                                          // redaction.ts:135
+```
+
+- `redactAttributes` は **bag 単位・default-deny・入力非破壊・冪等**（`:116-119` が2層合成の安全性を明記）。単一値向けの API は無い
+- `scrubCredentials` は文字列・配列・オブジェクトを再帰走査するので、**stacktrace の複数行文字列にもそのまま効く**
+- `DEFAULT_REDACTION_POLICY`（`:73-91`）の safe-key = `REGISTRY_ATTRIBUTE_KEYS`（registry の required∪optional から `Command` 除外、`:65-71`）+ 8 個の追加キー（`Options` / `Rationale` / `Note` / `Event` / `Outcome` / `ExitCode` / `TraceId` / `SpanId`）。opt-in tier は `["Command"]` のみ
+- `CREDENTIAL_SCRUB_PATTERNS`（`:35-45`）6 パターン: `aws-access-key` / `github-token` / `api-token` / `bearer-token` / `private-key-block` / `credential-assignment`。**パス系パターンは無い**
+- `scanForCredentials` は VER-2 credential-free ゲートが同じ語彙で走査する（`:20-22`、一語彙一源）
+
+### レジストリの公開契約
+
+```
+getEventDef(name: RegisteredEventName): EventDef            // event-registry.ts:855
+getEventDefByAuditEvent(auditEvent: string): EventDef       // event-registry.ts:866
+canonicalAuditEvents(): string[]                            // event-registry.ts:846
+assertRegistryConsistent(events?, expectedCanonical?): void // event-registry.ts:883
+EXPECTED_CANONICAL_COUNT = 78                               // event-registry.ts:77
+EXCEPTION_SPAN_EVENT_NAME = "exception"                     // event-registry.ts:83
+```
+
+未登録名・未マップ eventType はいずれも **throw**（fail-closed）。`getEventDef` の引数型が `RegisteredEventName` union（`:842`、テーブルから機械導出）なので、型付き呼び出し側はコンパイル時に排除される。
+
+`EventDef` の形: `{ name, auditEvent, durability, category, requiredAttributes, optionalAttributes, schemaVersion }`。
+
+### 監査 export の accept-set 契約
+
+`audit-log-exporter.ts:130-176` の順序が厳密:
+
+1. `getEventDef(record.eventName)` — 未登録は throw
+2. `schemaVersion !== JOURNAL_SCHEMA_VERSION_V2` → throw（BR-13）
+3. `def.durability !== "canonical"` → throw（FR-EXP-4、telemetry は監査へ載らない）
+4. required 属性の欠落 → throw（BR-10）
+5. `redactAttributes` + `Event` 属性付与（`:157`）
+6. dry-run encode（`serializeJournalEntryV2`、I/O 前に codec 違反を検出）
+7. append。失敗のみ fatal latch を立てる（`:171`）
+
+**不変条件違反（1-4, 6）は latch を触らず throw、書込み失敗（7）だけが latch を立てる** — この分離が #1868 で属性を足すときの失敗モード設計の前提になる。
+
+### ハーネス検出の契約
+
+```
+harnessDir(): string                 // amadeus-harness.ts:105
+detectHarnessType(): HarnessType     // amadeus-harness.ts:109
+rulesSubdir(): string                // amadeus-harness.ts:135
+```
+
+`HarnessType` = `"claude-code" | "codex" | "cursor" | "opencode" | "kiro" | "kimi" | "unknown" | "manual"`（`:5-13`）。`detectHarnessType()` の優先順: `AMADEUS_HARNESS_TYPE` env（不正値は `"unknown"`）→ `CLAUDECODE === "1"` → harness dir 解決（fallback 到達時は `"unknown"`）。**`amadeus.harness` の値域はこの union がそのまま使える。**
+
+`rulesSubdir()`（`:135-141`）が `shippedRulesSubdir()` 経由で `tools/data/harness.json` を読む（`:121-133`）— packager 生成データを core が読む既存経路の唯一の実例。
+
 ## perf 分離が触れる内部契約（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。

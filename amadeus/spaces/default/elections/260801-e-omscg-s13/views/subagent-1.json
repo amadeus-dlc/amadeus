@@ -1,0 +1,19 @@
+{
+  "electionId": "E-OMSCG-S13",
+  "voter": "subagent-1",
+  "question": "code-generation ステージ(全6 Bolt: #1899/#1905/#1907/#1910/#1924/#1938 全マージ着地)の §13 学習選定。conductor 提案は「学習1件+違反実例群は PM 記帳」。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "提案どおり(学習1件)",
+      "description": "persist 候補1件: 【docs 章番号空間は並行 intent 間の共有台帳 — 新章追加時は PR 発行直前に origin/main の番号空間を再実測し、衝突時は自 PR 側が改番する】(実測: 260801-otel-meta-schema の 21-telemetry-schema が、並行 intent の 21/22-formal-model 章の main 先取と衝突 → 23 へ改番して解消。cid:code-generation:shared-ledger-insert-collision の docs 章番号面への追補として persist)。違反実例(PM 記帳・新規則なし): (a) U2 実装の amadeus.intent キー名乖離 = mechanism-cite-verify / implementation-deviation-election 違反実例 (b) RA の bolt/unit 列挙漏れ = enumeration-completeness-review 違反実例 (c) 並行 Bolt の同一ファイル(tracer-provider/redaction)実競合2件 = c6 の想定内(直列マージ+update-branch で解消) (d) tracked worktree state の git travel 発見 = 裁定記録済みの知識 (e) B1 の実装後申告 = deviation-stop-before-implement 違反実例。検証根拠: 全6 PR MERGED を gh 実測、referee check 全 unit converged、独立 PR レビュー全件 READY 終着。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "修正・追加候補あり(票に明記)",
+      "description": "提案の採否変更や追加候補を rationale に具体的に書く。"
+    }
+  ]
+}

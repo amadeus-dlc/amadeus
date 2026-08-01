@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSB1-DEV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "逸脱2の in-process アームは supply 関数を共有するがプロセスは共有しない。hook プロセス→3ストアの実経路は U5 まで未証明のままなので、U5 の受け入れ項目として『実 hook spawn 後にストア行の resource へ session.id が現れる』を明示的に引き継ぐこと(未検証面を verdict に書く = cid:build-and-test:verdict-names-unverified-facets)。",
+  "rationale": "両逸脱とも前提を独立実測で確認した。逸脱1: redaction.ts:64-71 の REGISTRY_ATTRIBUTE_KEYS は REGISTERED_EVENTS の required/optional から機械導出で、実際の語彙は PascalCase/空白区切り(Scope, Stage, Details, Command 等)+ハードコード8件(Options/Rationale/Note/Event/Outcome/ExitCode/TraceId/SpanId)。小文字ドット形は coalescedWarning/exception.message/repairProof のみで、resource の14キー(service.name 等)と交差ゼロ。redactAttributes(redaction.ts:126)は safeKeys/optIn 非該当を continue する default-deny なので、DEFAULT_REDACTION_POLICY をそのまま当てれば bag は空 — 申告どおり。RESOURCE_REDACTION_POLICY(resource.ts:71-75)は safeKeys のみ差し替え、redactAttributes と CREDENTIAL_SCRUB_PATTERNS を再利用しており機構は1定義のまま、default-deny も credential scrub も保存。契約『既存 redaction を1回適用』の設計意図の正当な実現形と判断する。逸脱2: logger-provider.ts:128-133 と :143 で分岐が排他 — durability=telemetry のみ logExporter へ、canonical は auditExporter のみ。event-registry の telemetry durability は amadeus.diagnostic.note と exception span event の2件だけで、hook が emit するのは appendAuditEntryViaEvents 経由の SESSION_STARTED(canonical、amadeus-session-start.ts:147)のみ。よって hook プロセスは監査ジャーナルにしか書かず、3ストアへの単一プロセス観測経路は現に存在しない(bootstrap.ts が logExporter を登録していても canonical 経路は通らない)。テストは実 hook spawn(t-otel-resource.test.ts:252-262)と同一 supplyResourceAttribute 経由の3ストア反映(:275-299)の2段で、書き手のスタブ化はしていない — seam-writer-mode-precondition 準拠。以上より両逸脱を受理する。",
+  "submittedAt": "2026-08-01T07:00:27Z"
+}

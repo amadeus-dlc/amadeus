@@ -1,0 +1,10 @@
+# Election Record — E-OMSFD-S13
+
+- question: 260801-otel-meta-schema functional-design ステージ(全6 unit)の §13 学習選定。conductor 提案: 0件(6 unit のレビュー指摘は全て既存ノルムの違反実例または適用 — 装飾トークン/引用意味論/機械照合/ペア対訳慣行/決定木要求。conductor 自身の是正スクリプト無音 no-op → 虚偽是正報告の1件も fix-diff-independent-reverify の違反実例としてローリング PM 材料へ回す(新規則は生まない — 既存規則が既に禁じる形)。FR-SUB-4 供給経路の実測確定は intent 固有の裁定で record 済み)。各自、construction/*/functional-design/ の成果物群と verdict 経緯を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり)。
+
+裁定: 0件で可(choice 1: 2票)
+内訳: choice1=2票 choice2=0票
+- 留保(subagent-2, GoA2): (a) 0件の裁定は §13(新規ノルム選定)に限って支持するが、u4fd verdict の残留指摘 r1 が未閉包のまま disk に残っている — construction/subagent-started/functional-design/domain-entities.md:21 が今も `event-registry.ts:79 EXPECTED_CANONICAL_COUNT(78→79)` であり、実測は `grep -n EXPECTED_CANONICAL_COUNT packages/framework/core/otel/event-registry.ts` → `77:export const EXPECTED_CANONICAL_COUNT = 78;`(:77)。u4fd は E-LSSADS13 の機械検証可能クラス carve-out を明示的に援用したうえで『conductor は r1 を反映してから次工程へ進めること』と条件付き READY にしている。ゲート報告前に :77 へ機械修正し grep 0-hit(`event-registry.ts:79` が record 内に残らないこと)で閉包を実測すること。閉包前にゲートを開かない。(b) 同種の未閉包が u2fd Minor(span-attrs/domain-entities.md:27 の `AD components.md:20` → 実際は :21)にも残っている — こちらは reviewer が非ブロッキングと明言しているためゲート条件にはしないが、r1 と同一 diff で機械是正することを推奨する。(c) 『是正スクリプト無音 no-op → 虚偽是正報告』の1件をローリング PM 材料へ回す方針は支持するが、当該インシデントが record のどこにも記録されていない — construction/functional-design/memory.md は6 unit 完走後もテンプレート(全節がコメント例のみ、実エントリ0)のままである。PM ラウンドの一次材料は diary であるため、Deviations 節へ当該インシデント(発生時刻・無音 no-op の機序・虚偽報告の内容・検出経路)を記録してからゲートへ進むこと。
+- 留保(subagent-1, GoA3): 0件は学習選定としては妥当だが、この裁定を「FD ステージがセンサー健全」の証跡として記録しないこと — construction/resource-core/functional-design/business-rules.md は required-sections FAILED が未解消のまま残っている(audit seq 369/387 で2回 FAILED、同 path の SENSOR_PASSED は監査上0件、現ファイルも h2_count=0 = grep -c '^## ' が 0。対照: 他5 unit は PASSED、exception unit は FAILED→PASSED で是正済み)。FD ゲート承認前に H2 節を補って required-sections を SENSOR_PASSED まで持っていくことを条件とする。
+票タイムライン: 配信 2026-08-01T03:44:53Z → 配信 2026-08-01T03:44:53Z → subagent-2 2026-08-01T03:46:46Z(受理 2026-08-01T03:47:24Z) → subagent-1 2026-08-01T03:47:27Z(受理 2026-08-01T03:47:55Z) → 開票 2026-08-01T03:48:10Z
+GoA[E-OMSFD-S13]: 1x0 2x1 3x1 4x0 5x0 6x0 7x0 8x0

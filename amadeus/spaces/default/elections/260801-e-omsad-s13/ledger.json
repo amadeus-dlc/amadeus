@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSAD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "N1(外部 seam の供給側機構が未確定のまま設計へ確約しかけた類型)は cid:application-design:external-seam-vocab-measurement の射程内で新規性なしと確認したが、同型が別 intent で再発した場合は『設計段での未確定降格』の実効性を次回 PM ラウンドで再点検すべきと考える。",
+      "rationale": "独立実測: (1) inception/application-design/ の5成果物(components.md / component-dependency.md / component-methods.md / services.md / decisions.md)と memory.md を直読。memory.md は雛形コメントのみで実エントリ0件(diary 0件の主張と一致)。(2) audit shard の SUBAGENT_COMPLETED 実文で verdict 経緯を確認 — architecture-reviewer it.1 NOT-READY(C1/M2/m1/m2/m3)→ it.2 で全解消・N1 のみ残存で NOT-READY 継続 → it.3(閉包確認限定)READY。product-lead it.1 NOT-READY(amadeus-harness.ts:15-24 が HARNESS_DIR_TO_TYPE であり detectHarnessType でない誤引用)→ it.2 で :109-119 へ是正され READY。(3) 各指摘を既存ノルムへ写像し新規規則の要否を判定: C1(codekb が名指しした local-span-exporter.ts 改修面の欠落)と M1(FR-SUB-4 被覆ゼロ)は cid:requirements-analysis:enumeration-completeness-review / cid:requirements-analysis:consumes-first-drafting の違反実例、M2(依存矢印方向)は cid:requirements-analysis:symmetric-pair-review、product-lead の行番号誤引用は cid:requirements-analysis:mechanism-cite-verify-at-draft、N1(FR-SUB-4 の env carrier 供給経路の自己矛盾)は cid:application-design:external-seam-vocab-measurement(存在実測のみでの確約禁止・未実測は降格)および cid:application-design:citation-semantics-check の適用面であり、いずれも既存規則で捕捉可能。(4) 是正後の成果物実測で閉包を確認 — components.md に local-span-exporter.ts 行(FR-RES-4、redactRecord():88-99 引用)と FR-SUB-4 arm 行が実在し、後者は供給経路を明示的に『FD 段の未決事項』として降格記述。component-dependency.md は RES -->|suppliedResourceAttributes| SUP の一方向で循環なし、HOOKS_PT -.-> TP は『FD 未決』ラベル付き破線で components.md の記述と整合(自己矛盾解消済み)。(5) 手続き面: 閉包確認限定イテレーションは cid:requirements-analysis:delegated-review-analysis-with-owned-verdict(E-LSSADS13 追補)の既習運用、記録不能 READY のゲート開示も既習運用であり新規学習を生まない。以上より 0件提案は妥当と判断し choice 1 を支持する。",
+      "submittedAt": "2026-08-01T02:20:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSAD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "conductor は 0件の根拠として reviewer 指摘が既存ノルムの違反実例に尽きることを挙げるが、その既存ノルムの違反は AD 成果物に残存したまま READY になっている — component-methods.md:9 の buildResource が『中立8属性』と書く一方、requirements.md:10 の FR-RES-2 が列挙する中立層解決属性は service.name / service.version / telemetry.sdk.language / deployment.environment.name / host.name / amadeus.clone_id / amadeus.operating_mode / vcs.ref.head.name / vcs.ref.head.revision の9件で、件数が1件合わない(cid:requirements-analysis:ledger-count-mechanical-recalc の違反)。学習候補にはしない(新規規則を生まない)が、FD 段が『8属性』を実装契約として引き継ぐと属性1件が構造的に脱落するため、conductor はゲート開示または FD 冒頭で件数を機械再計算して是正すること。",
+      "rationale": "0件を支持する(GoA 2、留保は残存欠陥の申し送りのみで採否には異議なし)。独立実測は4点。(1) diary 実測: inception/application-design/memory.md は 14 行の未編集テンプレート(4節すべてコメント例のみ、実エントリ 0)で、audit にも amadeus.memory.empty が記録されている。diary 由来候補は実在しない。(2) 引用ノルムの実在確認: conductor が挙げた4ノルムはすべて memory 層に実在する(team.md に enumeration-completeness-review / symmetric-pair-review / citation-semantics-check / external-seam-vocab-measurement、加えて project.md に symmetric-pair-review 3件・external-seam-vocab-measurement 2件・citation-semantics-check 1件の追補)。運用面の2件も実在する — E-LSSADS13 は team.md の delegated-review-analysis-with-owned-verdict 追補(機械検証可能クラス/列挙 omission クラスの分岐、後者は閉包確認限定イテレーション必須)、cg-20260730-3 は project.md:326(イテレーション予算消尽時は protocol どおりゲートへ進み fresh review 結果をゲートで開示)。本ステージの iteration 3 が『閉包確認限定』で READY に至った経緯は前者の既習運用にそのまま当たる。(3) 指摘6件の帰属を成果物で照合: C1(local-span-exporter.ts の欠落)は列挙漏れで enumeration-completeness-review — 現在は components.md / component-methods.md / component-dependency.md の3成果物に実在し解消済み。M2(依存方向の誤り)は write⇔read 方向の非対称で symmetric-pair-review。m2(引用ファイル名誤り)は citation 系。N1(FR-SUB-4 の env carrier 供給経路の自己矛盾)は seam の語彙・実在を未実測のまま確約した類型で external-seam-vocab-measurement に当たり、audit seq 250 のとおり『PreToolUse hook は subagent プロセスの env を書き換える契約を持たない』という制約事実の引用と『FD 段の未決事項』への明示切り分けで是正されている(未実測を確約として残さない=同ノルムの規定どおりの解消)。いずれも新規規則を生む機序ではない。(4) M1/m3 の FR 被覆ゼロ指摘を『AD 段に FR 被覆マトリクスを義務づける新ノルム』へ昇格すべきかを検討したが、否とする。requirements.md の FR id 集合(21件: FR-RES-1〜4 / FR-SPAN-1〜3 / FR-EXC-1〜4 / FR-MET-1〜4 / FR-SUB-1〜4 / FR-EVT-7 / FR-DOC-1)を AD 5成果物へ総当たり照合したところ、範囲表記(component-methods.md:9 FR-RES-1〜2、:31 FR-SPAN-1〜2、:46 FR-SUB-1〜2 等)を数えれば 21/21 が被覆されており、被覆確認の機械手段は既存の cid:requirements-analysis:consumes-first-drafting の E-SRCNRS13 追補(reviewer ディスパッチ前の総当たり実参照 grep)を FR 軸へ適用すれば足りる。なお私自身の初回照合は完全一致 grep で範囲表記を取りこぼし FR-RES-2 / FR-SPAN-2 を未被覆と誤検出しており、これも既存の cid:requirements-analysis:grep-occurrence-level-exclusion / 列挙 grep 手法ファミリの射程内で、新規則を要さない。以上より §13 候補は 0件が妥当。",
+      "submittedAt": "2026-08-01T02:21:51Z"
+    }
+  ],
+  "late": []
+}

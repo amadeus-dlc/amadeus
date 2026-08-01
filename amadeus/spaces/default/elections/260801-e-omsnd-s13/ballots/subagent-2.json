@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSND-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件の結論には同意するが、rationale の検証根拠のうちセンサー記述は実測と一致しない。nfr-design ステージの実測は firing 171 件(SENSOR_PASSED 170 / SENSOR_FAILED 1)であり「6 unit × 13 sensor 発火は全て SENSOR_PASSED」は偽。FAILED は seq 625(2026-08-01T04:01:26Z、resource-core/nfr-design/nfr-design-questions.md の upstream-coverage、unreferenced=business-logic-model)で、seq 628 の ARTIFACT_UPDATED を挟み seq 630 で再発火 PASSED として閉包済み。persist / ローリング PM への記帳時はこの数値を実測値へ訂正し、当該 rationale 自体を numbers-from-command-output-only / report-final-values-only の違反実例として1件追加記帳すること(これも既存ノルムの違反実例であり新規則を生まないため 0件の結論は不変)。",
+  "rationale": "独立実測により conductor の実体主張 (a)(b)(c) は全て裏取りできた。(1) 6 unit の構成と reviewer verdict: construction/{docs,exception,metrics,resource-core,span-attrs,subagent-started}/nfr-design/performance-design.md の '## Review' ブロック直読で、resource-core=Iteration 2 READY(2026-08-01T04:10:19Z、要約に『iteration1のCritical2件(vcs機構の無申告逸脱・resourceスロット虚構)』を verbatim 確認)、docs=Iteration 2 READY(04:44:22Z、『iteration1のMajor2件(6面列挙のLog誤混入・出典のbusiness-logic-model誤帰属3箇所)』)、exception/metrics/span-attrs/subagent-started=いずれも Iteration 1 READY(04:15:23Z / 04:23:39Z / 04:28:48Z / 04:35:32Z)。(2) 欠陥の帰属先ノルムを個別に照合: vcs 解決機構の無申告差替えは cid:requirements-analysis:implementation-deviation-election(実装前停止・裁定)および cid:code-generation:cg-invariant-conflict-explicit-revision の射程内、実在しない resource スロット前提の容量主張は cid:requirements-analysis:mechanism-cite-verify-at-draft と cid:requirements-analysis:absence-claim-grep-verify の射程内、FD 正本テーブルとの列挙不一致は cid:requirements-analysis:enumeration-completeness-review と cid:functional-design:cross-unit-type-verbatim-check(並行 per-unit で正本側定義を逐語照合)の射程内、出典の誤帰属3箇所は mechanism-cite-verify-at-draft に加え cid:nfr-requirements:compilation-stage-source-first(編纂型成果物の記憶起草が引用捏造クラスを生む)の射程内。4類型いずれも既存ノルムが既に規範を持ち、追補を要する新しい機序・面は見当たらないため、新規則を生まないという判断は妥当。(3) よって『0件で可』を支持するが、rationale のセンサー数値が実測と不一致のため GoA 2(軽微な留保付き合意)とする。留保欄参照。",
+  "submittedAt": "2026-08-01T04:48:01Z"
+}

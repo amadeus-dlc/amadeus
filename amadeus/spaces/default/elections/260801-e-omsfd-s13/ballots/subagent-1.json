@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSFD-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 3,
+  "reservation": "0件は学習選定としては妥当だが、この裁定を「FD ステージがセンサー健全」の証跡として記録しないこと — construction/resource-core/functional-design/business-rules.md は required-sections FAILED が未解消のまま残っている(audit seq 369/387 で2回 FAILED、同 path の SENSOR_PASSED は監査上0件、現ファイルも h2_count=0 = grep -c '^## ' が 0。対照: 他5 unit は PASSED、exception unit は FAILED→PASSED で是正済み)。FD ゲート承認前に H2 節を補って required-sections を SENSOR_PASSED まで持っていくことを条件とする。",
+  "rationale": "6 unit の FD 成果物と reviewer verdict 経緯(audit SUBAGENT_COMPLETED seq 396/397/410/423/446/459/472/485/498/511/524/537/550)を独立確認した。全 unit が最終 READY で、指摘は既存ノルムの違反実例に写像でき新規則を要さない: U1 閉集合12→14 の数値矛盾=ledger-count-mechanical-recalc / U2 services.md 装飾トークン=artifact-upstream-inputs-header・logger-provider.ts:97 引用の意味論照合=citation-semantics-check / U3 required-sections 失敗=sensor-before-reviewer・export 境界 redaction 文言=practices-discovery:export-boundary-redaction / U4 pin 6箇所 vs codekb §9 10項目の機械照合=enumeration-completeness-review+ledger-count-mechanical-recalc / U5 registerMeterProvider 呼び出し形が実装シグネチャと不一致=mechanism-cite-verify-at-draft / U6 新章の日英対訳ペア=docs-language-ownership+project.md の paired EN/JA Mandated。conductor 自身の是正スクリプト無音 no-op → 虚偽是正報告も既存規則が二重に禁じる形で、機序面は bulk-edit-verify-before-write(置換の成立検証を書込前に・replace-or-None 禁止)、報告面は verify-before-notify、加えて manual-sensor-fire-before-gate-report 追補(verdict は exit code でなく audit の SENSOR_PASSED/FAILED 行で判定)に該当する — いずれも新規則を生まずローリング PM の違反実例材料が正しい行き先。seq 381 の upstream-coverage FAILED(resource-core/frontend-components.md、現在は不在)も produces-ls-check-after-generation の E-GSFFD13 追補(conditional 非該当 optional 成果物の不在 assert)が既に覆う。FR-SUB-4 供給経路は AD components.md:20 の分岐(ii)を FD が実測確定し span-attrs/domain-entities.md:24 節へ record 済みで、intent 固有裁定として §13 対象外という conductor の整理に同意する。ただし上記 reservation の未解消 FAILED は 0件裁定とは別軸の是正事項として持ち越す。",
+  "submittedAt": "2026-08-01T03:47:27Z"
+}

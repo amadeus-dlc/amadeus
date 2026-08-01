@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSRA-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件に同意するが、独立実測で conductor 提案に含まれない残余事実が1件ある: audit seq 149(2026-08-01T01:26:27Z)の SENSOR_FAILED(upstream-coverage / requirements-analysis-questions.md / findings 5 = consumes 全数未参照)が再発火されないまま GATE_APPROVED(seq 165 系)に至っている。requirements.md 側は seq 153/162 で SENSOR_PASSED へ是正済みだが questions.md 側は未是正。これは manual-sensor-fire-before-gate-report(+その追補: verdict は exit code でなく audit の SENSOR_FAILED 行で判定)および artifact-upstream-inputs-header の違反実例であり、全 intent の audit 横断走査でも questions.md への同型 FAILED は本件1件のみ(再発なし)のため新規ノルムは生まない。よって 0件で可としつつ、(a) questions.md へ上流入力行を追記して再発火 PASSED を確定すること、(b) 本件をローリング PM の違反実例として記帳すること、を留保として付す。",
+  "rationale": "独立実測: (1) diary(inception/requirements-analysis/memory.md)は全4節ともコメント例のみで実エントリ0件 — audit の MEMORY_EMPTY と整合。(2) iteration 1 Major の対象 = amadeus-harness.ts の引用は現行 requirements.md FR-RES-3 で detectHarnessType() :109-119 / HARNESS_DIR_TO_TYPE :15-24 と記載され、実測(grep -n: :109 export function detectHarnessType / :15 export const HARNESS_DIR_TO_TYPE、:53-55 の HARNESS_TYPE_BY_DIR = HARNESS_DIR_TO_TYPE 別名)と一致。引用の実在・意味論とも是正済みで、欠陥類型は既存 cid:requirements-analysis:mechanism-cite-verify-at-draft の射程内 — 新規規則を生まない。(3) verdict は requirements.md:58-70 に Iteration 2 / READY / Findings None で実在し、scratch 併書回収は E-MPRRAS13B の既習運用。(4) audit 全数集計で ERROR_LOGGED 2件は seq 59/60 の phase-check-ideation.md 不在による approve 拒否であり、既存 cid:approval-handoff:phase-check-before-final-approve の違反実例(その後 phase-check-ideation.md 実在を確認)— これも新規規則を生まない。以上より 0件を支持する。",
+  "submittedAt": "2026-08-01T01:48:30Z"
+}
