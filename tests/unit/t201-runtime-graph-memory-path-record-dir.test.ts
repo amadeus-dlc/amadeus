@@ -40,6 +40,7 @@ import {
   seededAuditShard,
   seededRecordDir,
   seededStateFile,
+  seedUnitDependency,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -117,6 +118,7 @@ describe("t201 runtime-graph memory_path carries the intent record dir (#603)", 
     const memPath = join(seededRecordDir(proj), "inception", "units-generation", "memory.md");
     mkdirSync(dirname(memPath), { recursive: true });
     writeFileSync(memPath, MEMORY_MD, "utf-8");
+    seedUnitDependency(seededRecordDir(proj));
 
     const res = spawnSync(BUN, [RUNTIME, "compile", "--project-dir", proj], { encoding: "utf-8" });
     expect(res.status).toBe(0);

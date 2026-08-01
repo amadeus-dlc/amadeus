@@ -28,6 +28,7 @@ import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
   auditBlockField,
+  type BoltDagAbsence,
   errorMessage,
   activeIntent,
   findAllEvents,
@@ -112,8 +113,8 @@ interface RuntimeStage {
 // levels — each is a set of units whose dependencies are all satisfied by
 // prior batches, so the units in one batch can fan out in parallel (the
 // swarm reads this shape; "the DAG is the permission"). Present only once a
-// valid edge block exists on disk; absent/malformed/cyclic blocks omit the
-// node entirely (the gate-time required-sections sensor flags those upstream).
+// valid edge block exists on disk; see computeBoltDagOutcome for what happens
+// when one does not.
 interface BoltDag {
   units: { name: string; kind?: UnitKind; depends_on: string[] }[];
   batches: string[][];
@@ -125,6 +126,9 @@ interface RuntimeGraph {
   started_at: string;
   stages: RuntimeStage[];
   bolt_dag?: BoltDag;
+  // Mutually exclusive with bolt_dag: set only when the compile legitimately had
+  // no DAG to project (see computeBoltDagOutcome).
+  bolt_dag_absence?: BoltDagAbsence;
 }
 
 // --- Path helpers ---
@@ -292,24 +296,73 @@ function readMemory(
 }
 
 // Read units-generation's unit-of-work-dependency.md and compute the
-// Bolt/unit batch DAG. Returns undefined (node omitted) when the artifact
-// is absent, or when its edge block is absent / malformed / cyclic — those
-// failures are surfaced at the 2.7 gate by the required-sections sensor, not
-// silently encoded into a wrong-but-valid DAG. The parse is pure data (no
-// model call), so a re-compile is byte-identical.
-function computeBoltDag(projectDir: string): BoltDag | undefined {
+// Bolt/unit batch DAG, resolved into three arms rather than one nullable value.
+// The old single `undefined` return collapsed "this scope has no units" together
+// with "the plan's machine projection went missing", which is what let #1893
+// travel: an absent artefact returned with no diagnostic at all, and a malformed
+// edge block wrote an advisory that the hook swallowed because recordHookDrop
+// only reads stderr on a non-zero exit.
+//
+// `invalid` is a defect and stops the compile; `absent` is a legitimate no-DAG
+// state that the graph records so downstream can tell the two apart. The parse
+// is pure data (no model call), so a re-compile is byte-identical.
+type BoltDagOutcome =
+  | { readonly kind: "dag"; readonly dag: BoltDag }
+  | { readonly kind: "absent"; readonly absence: BoltDagAbsence }
+  | {
+      readonly kind: "invalid";
+      readonly reason: "absent" | "malformed" | "cyclic";
+      readonly detail: string;
+    };
+
+// Exported as the in-process test seam (the `compile` precedent below): the CLI
+// integration tests spawn the shipped dist and cannot register bun coverage.
+//
+// `stateContent` is passed in rather than re-read — compile already holds it, so
+// the guard costs no extra I/O. A state file that is missing or unparsable is
+// treated as "units-pending": with no evidence that units-generation ran, the
+// guard must not fire.
+export function computeBoltDagOutcome(
+  projectDir: string,
+  stateContent: string | null
+): BoltDagOutcome {
   const path = unitDependencyPath(projectDir);
-  if (!existsSync(path)) return undefined;
-  const body = readFileSync(path, "utf-8");
-  const parsed = parseBoltDag(body);
-  if (!parsed.ok) {
-    process.stderr.write(
-      `runtime-compile: unit-of-work-dependency.md edge block ${parsed.reason} ` +
-        `(${parsed.detail}); bolt_dag node omitted\n`
-    );
-    return undefined;
+  const unitsStage = stateContent
+    ? parseCheckboxes(stateContent).find((c) => c.slug === "units-generation")
+    : undefined;
+
+  if (!existsSync(path)) {
+    if (unitsStage?.state === "completed") {
+      return {
+        kind: "invalid",
+        reason: "absent",
+        detail: `units-generation is completed but ${path} does not exist`,
+      };
+    }
+    return unitsStage?.state === "skipped"
+      ? {
+          kind: "absent",
+          absence: {
+            reason: "scope-skips-units",
+            detail: "this scope skips units-generation, so there is no unit DAG to compile",
+          },
+        }
+      : {
+          kind: "absent",
+          absence: {
+            reason: "units-pending",
+            detail: "units-generation has not produced unit-of-work-dependency.md yet",
+          },
+        };
   }
-  return { units: parsed.units, batches: parsed.batches };
+
+  // The file exists, so its shape is required regardless of the stage state:
+  // having written it, the author owes the machine-readable form.
+  const parsed = parseBoltDag(readFileSync(path, "utf-8"));
+  if (!parsed.ok) {
+    return { kind: "invalid", reason: parsed.reason, detail: parsed.detail };
+  }
+  return { kind: "dag", dag: { units: parsed.units, batches: parsed.batches } };
 }
 
 // --- Compile core ---
@@ -782,12 +835,21 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
     stages,
   };
 
-  // Bolt/unit batch DAG — append only when a valid edge block exists, so the
-  // key order stays {…, stages, bolt_dag} and the absent case is byte-identical
-  // to the pre-milestone-15 envelope (no empty-node noise).
-  const boltDag = computeBoltDag(projectDir);
-  if (boltDag) {
-    graph.bolt_dag = boltDag;
+  // Bolt/unit batch DAG — appended last so the key order stays {…, stages, …}.
+  // A legitimate absence records WHY instead of leaving the caller to guess; an
+  // invalid one throws, which is the only way the PostToolUse hook ever sees the
+  // diagnostic (recordHookDrop reads stderr on a non-zero exit only).
+  const outcome = computeBoltDagOutcome(projectDir, stateContent);
+  if (outcome.kind === "invalid") {
+    throw new Error(
+      `runtime-compile: unit-of-work-dependency.md edge block ${outcome.reason} ` +
+        `(${outcome.detail}); refusing to write a runtime graph without the planned Bolt DAG`
+    );
+  }
+  if (outcome.kind === "dag") {
+    graph.bolt_dag = outcome.dag;
+  } else {
+    graph.bolt_dag_absence = outcome.absence;
   }
 
   // Audit-first inside ONE locked section: emit MEMORY_EMPTY rows first,

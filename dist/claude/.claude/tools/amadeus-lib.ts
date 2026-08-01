@@ -7823,6 +7823,20 @@ export type BoltDagParse =
   | { ok: true; units: UnitDependencyEdge[]; batches: string[][] }
   | { ok: false; reason: "absent" | "malformed" | "cyclic"; detail: string };
 
+// Why a compiled runtime graph legitimately carries NO bolt_dag node. The two
+// reasons are the only ones that are not defects: the scope skips
+// units-generation altogether (degrade scopes such as fix/chore), or the stage
+// has not produced its artefact yet. Anything else — units-generation completed
+// with the artefact missing, or an artefact that does not parse — is a defect
+// and fails the compile instead of landing here.
+//
+// `reason` is the machine discriminant; `detail` is prose for a human reading
+// stderr and is never branched on.
+export type BoltDagAbsence = {
+  readonly reason: "scope-skips-units" | "units-pending";
+  readonly detail: string;
+};
+
 // Locate the first fenced ```yaml block whose body declares a top-level
 // `units:` key. Returns the inner block text, or null when no such fence
 // exists. Other fenced blocks (mermaid diagrams, prose examples) are skipped.

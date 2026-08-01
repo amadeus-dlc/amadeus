@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { compile } from "../../dist/claude/.claude/tools/amadeus-runtime.ts";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { seedUnitDependency, toPortablePath } from "../harness/fixtures.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STATE_FIXTURE = join(REPO_ROOT, "tests", "fixtures", "state-construction.md");
@@ -41,6 +41,7 @@ function makeProject(): string {
   const rec = join(proj, RECORD_REL);
   mkdirSync(rec, { recursive: true });
   writeFileSync(join(rec, "amadeus-state.md"), readFileSync(STATE_FIXTURE), "utf-8");
+  seedUnitDependency(rec);
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, readFileSync(AUDIT_FIXTURE), "utf-8");

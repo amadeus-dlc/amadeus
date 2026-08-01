@@ -131,6 +131,7 @@ import {
   readIntentRegistry,
   readCurrentSessionId,
   recordDirMatches,
+  type BoltDagAbsence,
   recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
@@ -1461,6 +1462,29 @@ function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
 // level) or null when there is no graph file or no bolt_dag node. A pure read:
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
 const reportedBoltDagRecoveries = new Set<string>();
+
+// The companion read to readBoltDagBatches: when that returns null, this says
+// whether the compile had a legitimate reason for there being no DAG. A degrade
+// scope ("scope-skips-units") and a stage that simply has not run yet
+// ("units-pending") are the only two — anything else fails the compile outright,
+// so a null here alongside a null DAG means the graph predates this field.
+//
+// Exported as the in-process seam; the CLI path reads it through the same call.
+export function readBoltDagAbsence(projectDir: string): BoltDagAbsence | null {
+  let raw: unknown;
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    if (graph !== null && typeof graph === "object" && "bolt_dag_absence" in graph) {
+      raw = (graph as { bolt_dag_absence?: unknown }).bolt_dag_absence;
+    }
+  } catch {
+    return null;
+  }
+  if (raw === null || typeof raw !== "object") return null;
+  const { reason, detail } = raw as { reason?: unknown; detail?: unknown };
+  if (reason !== "scope-skips-units" && reason !== "units-pending") return null;
+  return { reason, detail: typeof detail === "string" ? detail : "" };
+}
 
 function readBoltDagBatches(projectDir: string): string[][] | null {
   const runtimePath = runtimeGraphPath(projectDir);

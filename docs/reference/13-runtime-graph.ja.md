@@ -28,7 +28,13 @@ interface RuntimeGraph {
   scope: string;                  // from state.md "Scope" field
   started_at: string;             // ISO 8601, same row as workflow_id
   stages: RuntimeStage[];         // chronological order by started_at
-  bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block; absent/malformed/cyclic blocks omit the node
+  bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
+  bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
+}
+
+interface BoltDagAbsence {
+  reason: "scope-skips-units" | "units-pending"; // the machine discriminant
+  detail: string;                 // prose for a human reading the graph; never branched on
 }
 
 interface BoltDag {
@@ -95,7 +101,11 @@ units:
 
 `compile` は *その構造化ブロック* をパースし — 純粋なデータパース、モデル呼び出しなし — `units`(そのままのエッジ)と `batches`(トポロジカルレベル)にします。各バッチは、依存関係がすべて先行バッチによって満たされるユニットの集合です。したがってバッチのユニットは相互依存を持たず並列に実行できます。レベルエントリは発行前に辞書順にソートされるため、author された順序に関わらずノードは決定論的です。
 
-ノードは、成果物が不在のとき、またはそのエッジブロックが不在、不正(重複名、ダングリングまたは自己依存、パース不能)、または循環しているとき、**完全に省略** されます — `compile` は理由を名指しした stderr 診断を書き、間違っているが妥当な DAG を発行する代わりに `bolt_dag` をエンベロープから外します。それらの失敗は、同じブロックを検証し `edge_block: ok | absent | malformed | cyclic` を報告する `required-sections` センサーによって、上流の 2.7 ゲートで表面化されます。エッジを構造化データとして author すること(2.7 承認ゲートの背後で、一度だけの知識作業)が、フック発火の `compile` を再実行時にバイト同一に保つものです: compile パスにモデルは座っていません。
+投影すべき DAG が無いとき、compile は2つのケースを区別します — 両方を「ノード欠落」へ潰しません。
+
+**正当な欠落**(スコープが units-generation をスキップする、またはステージがまだ成果物を出していない)は、その理由を載せた `bolt_dag_absence` を書いて exit 0 で終わります。下流はノード欠落の理由を推測せず、この値を読みます。
+
+**欠陥**は compile を失敗させます: 理由を名指しした stderr 診断を書き、graph を一切書かず、非ゼロで終了します。該当するのは2形です — units-generation が completed なのに成果物が不在の場合と、成果物は在るがエッジブロックがパースできない場合(不在、重複名・ダングリング/自己依存・パース不能行による不正、または循環)。後者はステージ状態に依りません: 書いた以上、author は機械可読な様式を負います。声を上げて失敗することが診断を読み手へ届ける唯一の手段です — PostToolUse フックはツールの stderr を非ゼロ終了時にしか記録しないため、exit 0 の省略は不可視でした。それらの失敗は、同じブロックを検証し `edge_block: ok | absent | malformed | cyclic` を報告する `required-sections` センサーによって、上流の 2.7 ゲートでも表面化されます。エッジを構造化データとして author すること(2.7 承認ゲートの背後で、一度だけの知識作業)が、フック発火の `compile` を再実行時にバイト同一に保つものです: compile パスにモデルは座っていません。
 
 ---
 

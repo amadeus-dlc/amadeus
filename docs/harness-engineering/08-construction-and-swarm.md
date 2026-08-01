@@ -123,8 +123,10 @@ declares `produces: unit-of-work-dependency`), and inside that artifact a
 required fenced `yaml` edge block lists every Unit with its `depends_on` list.
 
 The compiler reads that block into the `bolt_dag` node of `runtime-graph.json`.
-The node is present **only when** the edge block is well-formed and acyclic; an
-absent, malformed, or cyclic block omits the node entirely
+The node is present **only when** the edge block is well-formed and acyclic. A
+scope that legitimately has no DAG carries `bolt_dag_absence` with the reason
+instead; a malformed or cyclic block, or a missing artefact under a completed
+units-generation, fails the compile
 ([Runtime Graph](../reference/13-runtime-graph.md), schema note at line 44). The
 `bolt_dag` node also carries `batches` — topological levels where every Unit's
 dependencies are satisfied by prior levels, so a batch's Units have no edge
