@@ -256,7 +256,9 @@ STEP7 advisories at requirements-analysis = []
 
 **先行事例**: #1591(CLOSED)は「compose の書込ルート(プロジェクトルート)と engine/graph の読取ルート(ハーネスディレクトリ)の乖離」で同じクラスの欠陥。本件はその未修復の別インスタンス(activation watcher 面)。重複起票検査として `gh issue list --state all` を3クエリ(`activation spec hash host root` / `specs/tla advisory` / `pluginActivationHostRoot`)で実施し、本件に対応する既存 Issue は無い(#1738 は本 intent の親 enhancement)。
 
-**なぜ u8 で修正しないか**: 修正には「watch glob をどのルートに対して解決するか」の決定が要る。候補は (a) spec watch のみプロジェクトルート基準にし、composition record の判定は host root のまま(2ルートの明示分離) (b) host root 自体を変える(u6 の BR-U6-9 と他 unit のテスト契約に波及) (c) watch 対象を plugin 同梱資産に移す(spec の所有者が変わる仕様変更)。いずれも u6 の着地契約に触れる設計判断であり、`cid:requirements-analysis:implementation-deviation-election` と BR-U8-3 (ii) により **u8 では実装せず裁定へ回す**。
+**当初の保留と、その後の裁定**: 修正には「watch glob をどのルートに対して解決するか」の決定が要る。候補は (a) spec watch のみプロジェクトルート基準にし、composition record の判定は host root のまま(2ルートの明示分離) (b) host root 自体を変える(u6 の BR-U6-9 と他 unit のテスト契約に波及) (c) watch 対象を plugin 同梱資産に移す(spec の所有者が変わる仕様変更)。いずれも u6 の着地契約に触れる設計判断であるため、`cid:requirements-analysis:implementation-deviation-election` と BR-U8-3 (ii) に従い u8 では実装せず裁定へ回した。
+
+**conductor 裁定(2026-08-01)**: 本件は **FR-B3 既決要件への回復 = 執行クラスの glue 修正**として u8 内で実施する(ゲートで開示)。方式は候補 (a) — `specRoot = dirname(hostRoot)` を正とし、activation state file と composition record の解決は hostRoot のまま据え置く。実施内容と再実測は § S4-1 の是正(実施済み)を参照。
 
 **Issue 起票文案**(日本語、bug / P1 / S2-CRITICAL 想定):
 
@@ -264,7 +266,109 @@ STEP7 advisories at requirements-analysis = []
 >
 > 本文: `ACTIVATION_WATCH_GLOBS = ["specs/tla/**"]` は host root(実運用では `.claude/`)相対で展開されるが、実 spec はプロジェクトルート `specs/tla/` にある。結果として watch 集合が常に空になり、`lastVerdictHash` に空入力の SHA-256(`sha256:e3b0c442...b855`)が記録される。一度 verdict が記録されると判定は恒久 `current` になり、実 spec を変更しても advisory は発火しない(実測: 上記 STEP1〜STEP7)。既存テストは composition record と spec を同一 fixture host に置くため構造的に検出できない。#1591 と同クラス(書込/読取ルートの乖離)の別インスタンス。
 
-### S4-2【軽微 / (i) FR 範囲内だが本 Unit では未修正 — 判断を仰ぐ】stage file の verdict 語彙が CLI 出力と反転している
+### S4-1 の是正(実施済み — TDD)
+
+#### Red(修正前の失敗実測)
+
+新規テスト `tests/integration/t382-activation-real-layout-spec-root.integration.test.ts` を、**実デプロイレイアウト**(`<projectRoot>/.claude` を host root、`<projectRoot>/specs/tla` に spec)の fixture で先に書いた。純ヘルパー `specRootForHost` のみを追加した(未配線)状態で実行し、挙動面の赤を実測:
+
+```
+ 3 pass
+ 2 fail
+ 10 expect() calls
+Ran 5 tests across 1 file. [250.00ms]
+```
+
+失敗2件はいずれも欠陥の指紋(空入力ハッシュ)に着地した。実文:
+
+```
+85 |     const currentHash = judgment.kind === "never-run" ? judgment.currentHash : "";
+86 |     expect(currentHash).not.toBe(EMPTY_SET_HASH);
+                                 ^
+error: expect(received).not.toBe(expected)
+
+Expected: not "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+```
+
+```
+97 |     expect(settled.kind === "current" ? settled.hash : "").not.toBe(EMPTY_SET_HASH);
+                                                                    ^
+error: expect(received).not.toBe(expected)
+
+Expected: not "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+```
+
+(最初の実行はシンボル未定義の `SyntaxError: Export named 'specRootForHost' not found` で赤になったが、これは欠陥の証明にならないため、純ヘルパーだけを追加して**挙動の赤**を取り直した。)
+
+#### Green(修正)
+
+`packages/framework/core/tools/amadeus-plugin-activation.ts`:
+
+- `specRootForHost(hostRoot) = dirname(hostRoot)` を新設・export。ハーネスディレクトリは常にプロジェクトルート直下にあるため、その親がプロジェクトルートになる。
+- `resolveActivationJudgment` と `recordActivationVerdict` の spec ハッシュ計算を `computeSpecHash(specRootForHost(hostRoot), ...)` へ変更。
+- `computeSpecHash` の第1引数名を `hostRoot` → `specRoot` へ改名(**シグネチャ変更なし**)。この関数は「渡されたルートに対して glob を解決する」ものであり、名前を実体に合わせることが2ルートの再融合を防ぐ。
+- **activation state file(`.amadeus-plugin-activation.json`)と composition record の解決は hostRoot のまま**据え置き — 状態は host に属する。t382 がこの分離を明示的に pin する(`state stays on the host root, not the spec root`)。
+
+#### 既存テスト契約の明示改訂
+
+既存 fixture(t320 / t321 / t322 / t378 / t381)は composition record と `specs/tla/` を**同一ルート直下に置く欠陥前提レイアウト**だったため、修正により 13 件が失敗した。これらを実レイアウト(`<root>/.claude` を host、`<root>/specs/tla` に spec)へ改修した。これは pinned-behavior の**明示改訂**であり、根拠は FR-B3 の要件接地(fixture が実配置を写していなかったこと自体が欠陥の隠蔽要因)である。コミットメッセージにも宣言した。
+
+改修内容: t320 は `projectRoot` を導入し spec 書込と直接 `computeSpecHash` 呼出をそちらへ、状態・composition は `host` に据置。t321 / t378 / t381 は `makeHost` / `makeChangedHost` を入れ子レイアウトへ、spec 上書きは `specRootForHost(h)` 経由へ。t322 は3箇所のインライン host 生成を `makeHostRoot` / `writeProjectSpec` ヘルパーへ集約し、cleanup が harness ディレクトリだけでなくツリー全体を消すよう `hostProjectRoot` を追跡。
+
+#### 再実測(実運用レイアウト、修正後)
+
+S4-1 の STEP1〜STEP7 を**実 worktree**(host root = `<wt>/.claude`、spec = `<wt>/specs/tla`)で再実行:
+
+```
+hostRoot = /Users/.../bolt-u8-e2e-acceptance/.claude
+specRoot = /Users/.../bolt-u8-e2e-acceptance
+STEP1 judgment(before verdict) = {"kind":"never-run","currentHash":"sha256:8cb8c48e1511d469190a3d3372adbc2dd8422a5aff0ec1947b241a3a91e3663d"}
+STEP2 recordActivationVerdict wrote = true
+STEP3 state = {
+  "schema": 1,
+  "lastVerdictHash": "sha256:8cb8c48e1511d469190a3d3372adbc2dd8422a5aff0ec1947b241a3a91e3663d",
+  "recordedAt": "2026-08-01T09:04:42.856Z"
+}
+STEP4 judgment(after verdict) = {"kind":"current","hash":"sha256:8cb8c48e1511d469190a3d3372adbc2dd8422a5aff0ec1947b241a3a91e3663d"}
+STEP5 injected change into specs/tla/FormalElection.tla bytes 12999 -> 13026
+STEP6 judgment(after REAL spec change) = {"kind":"changed","currentHash":"sha256:82446ff70273d035e61eaabd2a5144cd1e1a00bc7e18e03b28ae6640bab699df","lastHash":"sha256:8cb8c48e1511d469190a3d3372adbc2dd8422a5aff0ec1947b241a3a91e3663d"}
+STEP7 advisories at requirements-analysis = [{"plugin":"formal-model-check","code":"changed","message":"advisory: formal-model-check spec hash CHANGED (specs/tla) — run /amadeus --stage formal-model-check","stage":"requirements-analysis"}]
+```
+
+修正前との対照が要点である。STEP1 の hash は空入力の `e3b0c442...` ではなく実 spec の `8cb8c48e...`(§ 実測で確定した plugin host root で先に測った repo ルート spec のハッシュと一致)。STEP6 は `current` 固定ではなく `changed` へ遷移し、STEP7 は空配列ではなく Advisory を1件返す。
+
+**CLI 経由の確認**(S1-c を実運用レイアウトで再証明 — `.claude/specs/` のような人工配置は一切使っていない):
+
+```
+bun .claude/tools/amadeus-orchestrate.ts next --stage requirements-analysis --single
+```
+
+exit code `0`、stderr verbatim:
+
+```
+advisory: formal-model-check spec hash CHANGED (specs/tla) — run /amadeus --stage formal-model-check
+```
+
+stdout verbatim:
+
+```json
+{
+  "kind": "run-stage",
+  "stage": "requirements-analysis",
+  "advisories": [
+    {
+      "plugin": "formal-model-check",
+      "code": "changed",
+      "message": "advisory: formal-model-check spec hash CHANGED (specs/tla) — run /amadeus --stage formal-model-check",
+      "stage": "requirements-analysis"
+    }
+  ]
+}
+```
+
+注入した spec 変更を復元(`git diff --stat specs/` が空)して同じコマンドを再実行すると、stderr の `advisory:` 行数 `0`・`advisories` キー欠落へ戻る。すなわち **FR-E1 の価値チェーンは実運用レイアウトで閉じた**。実験に使った verdict state とラッチは撤去済み。
+
+### S4-2【是正済み】stage file の verdict 語彙が CLI 出力と反転していた
 
 ステージ本文 Step 3 の記述:
 
@@ -274,7 +378,40 @@ STEP7 advisories at requirements-analysis = []
    not-detected, `2` = a harness error
 ```
 
-一方、実測した CLI 出力は exit 0 に対して `outcome: "NOT_DETECTED"` を返す(S1-e)。stage file は exit 0 を「detected」、exit 1 を「not-detected」と呼び、CLI は exit 0 を「NOT_DETECTED」と呼ぶ。CLI 側の語彙は「(反例が)検出されなかった」の意で一貫しており、stage file 側の括弧書きラベルが逆になっている。読み手が verdict を取り違える経路であり、docs 面の是正候補。挙動には影響しないため本 Unit では変更せず記録に留める(`cid:functional-design:c3-adjacent-enum-numerals` の系ではなく、単純な語彙不整合)。
+一方、実測した CLI 出力は exit 0 に対して `outcome: "NOT_DETECTED"` を返す(S1-e)。実装側の対応は `run-model-check-domain.ts:258-259` で確定できる:
+
+```
+  if (outcome.kind === "NOT_DETECTED") return 0;
+  if (outcome.kind === "DETECTED") return 1;
+```
+
+CLI の語彙が指す「検出」の対象は**反例**であり、exit 1(`DETECTED`)が「反例が見つかった」、exit 0(`NOT_DETECTED`)が「反例なし=不変条件が保持された」を意味する。stage file の括弧書きラベルはこれと正確に反転していた。
+
+**是正済み**: 正本 `plugins/formal-model-check/stages/formal-model-check.md` の Step 3 を、CLI の outcome 名を明示する3項の箇条書きへ書き換えた(exit 0 = `NOT_DETECTED` / exit 1 = `DETECTED` / exit 2 = `HARNESS_ERROR`)。`bun scripts/package.ts` と `bun run promote:self` により、生成面(`dist/plugins/formal-model-check/` の neutral bundle と全ハーネスツリー、`.claude/` セルフインストール)へ伝播済み。`dist:check` / `promote:self:check` がともに exit 0 で同期を確認している。
+
+なお本節冒頭の引用ブロックは**修正前の文面をそのまま保存**している(発見時点の記録として意図的に残す)。
+
+### S4-5【記録のみ / (iii)】composed 済み plugin には in-place 更新経路がない
+
+S4-2 の是正を composed 面(`.claude/plugins/formal-model-check/`)へ届けようとして判明した実測事実:
+
+- `bun .claude/tools/amadeus-plugin.ts compose --all-harnesses` は composed 済みの `.claude` に対して `plugin "formal-model-check" rejected: stage path already in host; tool path already in host; ...` で exit 1 になる。既存パスの上書き経路がない。
+- `install <path> --force` も同じ理由で projection が exit 1 になる(ただし `.amadeus-plugin-src/` の再取り込みは先行して実行される)。
+
+すなわち composed 済みホストの plugin 更新には `drop` → `compose` が要る。
+
+**ただしこれは同期義務ではない**。`scripts/promote-self.ts:164-177` が、composed plugin の面(`plugins/<name>/` 配下の stage body、生成された runner skill、`.amadeus-plugin-*` の engine dot-state、stage-graph の `plugin_source` ノード)を **composition record 所有の runtime state として promote ガードから意図的に carve out** している。当該コメント verbatim(`:168-171`、原文の改行位置のまま):
+
+```
+// plugin_source node inside tools/data/stage-graph.json. A byte-parity promote
+// would misread all of them as drift (ORPHAN / DIFFERS) and --apply would
+// destroy the composition. They are tolerated instead, mirroring the
+// composed-scope carve-out above, with ownership decided by the composition
+```
+
+よって正本(`plugins/formal-model-check/stages/formal-model-check.md`)と出荷 dist bundle の同期が契約であり、ローカル composed ホストの更新は利用者の `compose` 操作である。`dist:check` / `promote:self:check` はいずれも exit 0 で契約面の同期を確認済み。
+
+本ホストの composed コピーは旧文面のままだが、上記のとおり契約違反ではない。更新するなら `drop` → `compose` が必要で、これは本 intent の advisory 機構が依存している composition record を作り直す host 変更にあたるため、u8 では実施せず記録に留める(判断が要る場合は裁定へ)。
 
 ### S4-3【記録のみ / (iii)】`run-model-check --out` は既存ディレクトリを拒否する
 
@@ -284,9 +421,9 @@ STEP7 advisories at requirements-analysis = []
 
 `.claude/amadeus-common/protocols/stage-protocol.md:894-910` に「11a. Directive Advisories」節が実在し、`advisories` 配列の全エントリをステージ本文開始前にユーザーへ提示すること、message を verbatim 中継すること、nudge であってゲートではないこと、3 checkpoint で run ごとに最大1回であることが規定されている。u5 の主張どおりで、追加是正は不要。
 
-### glue 修正の実施件数: 0 件
+### glue 修正の実施件数: 2 件(S4-1 / S4-2)
 
-S4-1 は裁定待ち、S4-2 は docs 面で本 Unit のスコープ外判断、S4-3/S4-4 は記録のみ。よってコード変更は行っていない。
+conductor 裁定(2026-08-01)により S4-1 を執行クラスの glue 修正として実施し、S4-2 も同時に是正した。S4-3 / S4-4 は記録のみ(是正不要)。
 
 ## 検証(実測)
 
@@ -295,23 +432,54 @@ S4-1 は裁定待ち、S4-2 は docs 面で本 Unit のスコープ外判断、S
 | コマンド | exit code |
 |---|---|
 | `bun run typecheck` | `0` |
+| `bun run lint` | `0` |
 | `bun run dist:check` | `0` |
-| `bun test`(t319 / t320 / t321 / t322 / t378 / t381) | `0` |
+| `bun run promote:self:check` | `0` |
+| `bun test`(t319 / t320 / t321 / t322 / t378 / t381 / t382) | `0` |
+| `bash tests/run-tests.sh --ci` | `0` |
+| `bun tests/coverage-patch-gate.ts --check` | `0` |
 
-テスト集計(runner 出力からの転記):
+対象テスト集計(runner 出力からの転記):
 
 ```
- 66 pass
+ 71 pass
  0 fail
- 181 expect() calls
-Ran 66 tests across 6 files. [724.00ms]
+ 198 expect() calls
+Ran 71 tests across 7 files. [762.00ms]
 ```
 
-`dist:check` 末尾:
+フルスイート集計(`bash tests/run-tests.sh --ci` の SUMMARY からの転記):
+
+```
+Test files: 697
+Failed files: 0
+Total assertions: 9482
+Failed assertions: 0
+------------------------------
+RESULT: PASS
+```
+
+`dist:check` / `promote:self:check` 末尾:
 
 ```
 package --check: all harness trees in sync with packages/framework/core + harness.
+promote-self --check: project-local self install is in sync
 ```
+
+`bun run lint` は exit 0(警告 341・info 22 はいずれも本変更以前から存在する既存分)。
+
+## 逸脱: compose の副作用と撤去
+
+S4-2 の是正を composed 面へ届ける過程で `compose --all-harnesses` を実行したところ、**composed 済みでなかった4ハーネスツリー(`.codex` / `.cursor` / `.opencode` / `.kimi-code`)へ plugin を新規 compose してしまった**。意図しない副作用であり、内訳は untracked 86 エントリ(`plugins/`、`skills/`、`.amadeus-plugin-*` の各記録)+ tracked 4ファイル(各ツリーの `tools/data/stage-graph.json` に `plugin_source` ノード追加)+ 無関係な4 intent の `amadeus-state.md`(`Stages to Skip` へ `3.8 (formal-model-check)` 行が追加)。
+
+撤去手順と実測:
+
+1. 新規テスト `t382` を先に `git add`(untracked のままだと次手順で消えるため — `git clean -nd` のプレビューで実際に削除対象へ現れることを確認してから実施)。
+2. `git clean -fd` で untracked 86 エントリを削除。削除対象がハーネスツリー配下に限定されることをプレビューで機械確認してから実行。`-x` は使用せず、gitignore 済みのマシンローカル資産には触れていない。
+3. tracked な `stage-graph.json` 4件と無関係 intent の `amadeus-state.md` 4件を `git checkout --` で HEAD へ復元。
+4. `install --force` が書き換えた `.claude/.amadeus-plugin-src/` 4ファイルも HEAD へ復元し、composed ツリーとの整合を回復。
+
+撤去後、`git status --porcelain` の untracked は `0`、`promote:self:check` と `dist:check` はともに exit `0` へ回復した。自 intent の `amadeus-state.md` の差分は本作業開始前の fork 由来分のみで、`Current Stage` は不変。
 
 ## 実験残渣の撤去確認
 
@@ -336,4 +504,5 @@ state の差分は `Worktree Path` の設定と `Swarm Gated Batch Approvals: 1 
 
 1. **S1-f の audit ステージイベント** — conductor の `report`/advance 経路でのみ産出可能。
 2. **S3(FR-E3 新規モデル到達)** — u7 Phase B の MirrorLifecycle 着地待ち。AsIntended の TLC verdict 到達と AsImplemented 変種の反例トレース保存が対象。
-3. **S4-1 の裁定** — watch root の解決方式(候補 a/b/c)を決めたうえで修正 Unit を編成するか、本 intent の Won't とするか。
+
+(S4-1 / S4-2 は本 Unit 内で是正済み — 上記 § S4-1 の是正、§ S4-2 を参照。)

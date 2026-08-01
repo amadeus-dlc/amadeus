@@ -29,7 +29,7 @@ import {
   statSync as fsStatSync,
   writeFileSync as fsWriteFileSync,
 } from "node:fs";
-import { join, posix, relative, sep } from "node:path";
+import { dirname, join, posix, relative, sep } from "node:path";
 
 // The formal-model-check plugin is the sole activation target of this intent.
 export const ACTIVATION_PLUGIN = "formal-model-check";
@@ -87,6 +87,18 @@ export const defaultActivationFs: ActivationFs = {
   renameSync: (a, b) => fsRenameSync(a, b),
 };
 
+// specRootForHost — the root the watch globs resolve against, derived from the
+// plugin host root. The two are DIFFERENT directories and conflating them is the
+// defect this helper names: the host root is the harness directory (`.claude/`,
+// `dirname(TOOLS_DIR)`) and owns host state (the composition record, the verdict
+// file), while the watched TLA+ specs are a PROJECT asset one level up — the
+// formal-model-check stage body names them project-relative
+// (`--model specs/tla/FormalElection.tla`). A harness directory always sits
+// directly under the project root, so the parent is the project root.
+export function specRootForHost(hostRoot: string): string {
+  return dirname(hostRoot);
+}
+
 function toPosixRel(root: string, abs: string): string {
   return relative(root, abs).split(sep).join(posix.sep);
 }
@@ -125,17 +137,22 @@ function expandGlobs(hostRoot: string, globs: readonly string[], fs: ActivationF
 // identity is part of the judgment). fail-closed: any read error returns
 // `{ ok: false }` (reliability-design — never hash a partial set to a false
 // match). Deterministic: sorted paths, content bytes, no time/env/mtime input.
+//
+// The root is the SPEC root (the project root), not the plugin host root — a
+// caller holding a host root passes it through specRootForHost first. Naming the
+// parameter for what it actually resolves against is what keeps the two roots
+// from silently collapsing back into one.
 export function computeSpecHash(
-  hostRoot: string,
+  specRoot: string,
   globs: readonly string[],
   fs: ActivationFs = defaultActivationFs,
 ): SpecHashResult {
-  const rels = expandGlobs(hostRoot, globs, fs);
+  const rels = expandGlobs(specRoot, globs, fs);
   const hash = createHash("sha256");
   for (const rel of rels) {
     let bytes: Buffer;
     try {
-      bytes = fs.readFileSync(join(hostRoot, rel));
+      bytes = fs.readFileSync(join(specRoot, rel));
     } catch (err) {
       return { ok: false, reason: `unreadable spec file "${rel}": ${String(err)}` };
     }
@@ -369,7 +386,9 @@ export function resolveActivationJudgment(
   globs: readonly string[] = ACTIVATION_WATCH_GLOBS,
   fs: ActivationFs = defaultActivationFs,
 ): ActivationJudgment {
-  const current = computeSpecHash(hostRoot, globs, fs);
+  // The two roots are deliberately different: the specs are hashed from the
+  // PROJECT root (specRootForHost) while the recorded verdict is host state.
+  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
   const state = readActivationState(hostRoot, fs);
   return judgeActivation(current.ok ? current.hash : null, state === null ? null : state.lastVerdictHash);
 }
@@ -400,7 +419,7 @@ export function recordActivationVerdict(
   now: string = new Date().toISOString(),
   fs: ActivationFs = defaultActivationFs,
 ): boolean {
-  const current = computeSpecHash(hostRoot, globs, fs);
+  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
   if (!current.ok) return false;
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);
   return true;

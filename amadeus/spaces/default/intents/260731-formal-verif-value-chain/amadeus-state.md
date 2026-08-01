@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-u8-e2e-acceptance
 - **Bolt Refs**: [u7-mirror-model]
 - **Practices Affirmed Timestamp**:
 
@@ -99,7 +99,7 @@ Per unit: [TBD]
 - **Construction Autonomy Mode**: gated
 - **Last Updated**: 2026-07-31T21:49:58Z
 
-- **Swarm Gated Batch Approvals**: 1
+- **Swarm Gated Batch Approvals**: 1, 2
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
