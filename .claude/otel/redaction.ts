@@ -70,6 +70,21 @@ const REGISTRY_ATTRIBUTE_KEYS: readonly string[] = [
   ),
 ];
 
+// The span context vocabulary (FR-SPAN-1) — the closed key set span-context.ts
+// resolves and the policy below admits. It is DEFINED here, next to the
+// allow-list that is the only reason a span attribute reaches a store, and
+// consumed by the resolver rather than the other way round: this module sits on
+// every export path (both exporters and the Relay), and importing the resolver
+// would pull its workspace-resolution dependencies onto all of them.
+export const SPAN_CONTEXT_ATTRIBUTE_KEYS = [
+  "amadeus.intent",
+  "amadeus.space",
+  "amadeus.stage",
+  "amadeus.phase",
+  "amadeus.agent.type",
+  "amadeus.agent.id",
+] as const;
+
 export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
   safeKeys: [
     ...REGISTRY_ATTRIBUTE_KEYS,
@@ -83,6 +98,16 @@ export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
     "ExitCode",
     "TraceId",
     "SpanId",
+    // SPAN CONTEXT (span-context.ts, FR-SPAN-1) — the workflow context every
+    // span carries. These are NOT registry vocabulary: no canonical event
+    // declares them, so REGISTRY_ATTRIBUTE_KEYS above cannot admit them, and
+    // under default-deny an unlisted key is dropped at the store and Relay
+    // boundaries. Listing them here is what makes the six keys reach a Signal
+    // Store at all — omit one and it vanishes from the stored span while the
+    // append still reports success. Admission is not raw pass-through: like
+    // every admitted value they are credential-scrubbed below, which matters
+    // because the agent pair is env-supplied free text from outside core.
+    ...SPAN_CONTEXT_ATTRIBUTE_KEYS,
   ],
   // FR-DST-4: Command is admitted ONLY here — argv-derived values are always
   // scrubbed, never stored raw (BR-11/BR-12).
