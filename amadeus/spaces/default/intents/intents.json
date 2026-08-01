@@ -764,5 +764,12 @@
     "dirName": "260801-kimi-bootstrap-deadlock",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fbdd0-90e0-7592-8ea5-ae67b35716a2",
+    "slug": "tla-multi-model",
+    "dirName": "260801-tla-multi-model",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
