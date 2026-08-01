@@ -98,6 +98,7 @@ import {
   slugify,
   SLUG_TAG_REGEX,
   spacesRoot,
+  type CheckboxState,
   type StageEntry,
   setCheckbox,
   setField,
@@ -5258,6 +5259,46 @@ Completed: ${completedCount}/${executeStages.length}
 // the verb is inert when unused.
 // ---------------------------------------------------------------------------
 
+// Per-flip guards: a stage may be re-shaped only when it is compiled, carries a
+// row, is still pending, and lies ahead of the cursor. Each failure dies with a
+// reason naming the stage.
+function assertFlippableStages(
+  slugs: readonly string[],
+  ctx: {
+    knownSlugs: ReadonlySet<string>;
+    checkboxMap: ReadonlyMap<string, CheckboxState>;
+    graph: readonly StageEntry[];
+    currentSlug: string;
+    currentIdx: number;
+  },
+): void {
+  const reject = (slug: string, why: string): never => die(`Cannot recompose "${slug}": ${why}`);
+  for (const slug of slugs) {
+    if (!ctx.knownSlugs.has(slug)) {
+      reject(slug, "not a compiled stage.");
+    }
+    const state = ctx.checkboxMap.get(slug);
+    // A compiled stage with NO row is not a pending stage — it is a state file
+    // that predates the stage (born before a plugin composed it, or on a host
+    // whose graph lacks it). setStageSuffix is a regex replace, so flipping such
+    // a stage would silently no-op while the derived counters were rewritten
+    // around it. Refuse and name the re-sync (#1849).
+    if (state === undefined) {
+      reject(
+        slug,
+        "it has no row in the state file's Stage Progress. The state predates this stage; re-sync it against the host graph (compose the plugin that owns it, or change scope) before re-shaping the plan.",
+      );
+    }
+    if (state !== "pending") {
+      reject(slug, `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.`);
+    }
+    const idx = ctx.graph.findIndex((s) => s.slug === slug);
+    if (ctx.currentIdx !== -1 && idx !== -1 && idx <= ctx.currentIdx) {
+      reject(slug, `it is at or behind the current stage ("${ctx.currentSlug}"). In-flight recompose only reaches forward; re-running the past is out of scope.`);
+    }
+  }
+}
+
 function assertRecomposeStateAllowed(content: string): void {
   const rawAutonomy = getField(content, AUTONOMY_MODE_FIELD)?.trim();
   const autonomy: ConstructionAutonomy = rawAutonomy === undefined || rawAutonomy === ""
@@ -5331,31 +5372,13 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     const reject = (slug: string, why: string): never =>
       die(`Cannot recompose "${slug}": ${why}`);
 
-    for (const slug of [...skipList, ...addList]) {
-      if (!knownSlugs.has(slug)) {
-        reject(slug, "not a compiled stage.");
-      }
-      const state = checkboxMap.get(slug);
-      // A compiled stage with NO row is not a pending stage — it is a state
-      // file that predates the stage (born before a plugin composed it, or on
-      // a host whose graph lacks it). setStageSuffix is a regex replace, so
-      // flipping such a stage would silently no-op while the derived counters
-      // were rewritten around it. Refuse and name the re-sync (#1849).
-      if (state === undefined) {
-        reject(
-          slug,
-          "it has no row in the state file's Stage Progress. The state predates this stage; re-sync it against the host graph (compose the plugin that owns it, or change scope) before re-shaping the plan.",
-        );
-      }
-      if (state === "completed" || state === "in-progress" || state === "skipped" ||
-          state === "awaiting-approval" || state === "revising") {
-        reject(slug, `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.`);
-      }
-      const idx = graph.findIndex((s) => s.slug === slug);
-      if (currentIdx !== -1 && idx !== -1 && idx <= currentIdx) {
-        reject(slug, `it is at or behind the current stage ("${currentSlug}"). In-flight recompose only reaches forward; re-running the past is out of scope.`);
-      }
-    }
+    assertFlippableStages([...skipList, ...addList], {
+      knownSlugs,
+      checkboxMap,
+      graph,
+      currentSlug,
+      currentIdx,
+    });
 
     // The walking-skeleton gate derivation keys off the FIRST construction
     // EXECUTE stage (static). A flip that MOVES that anchor - skipping the
