@@ -26,6 +26,7 @@ import type {
 import { processParentSpanContext } from "./context.ts";
 import type { CompletedSpanRecord, LocalSpanExporter } from "./local-span-exporter.ts";
 import { EXCEPTION_SPAN_EVENT_NAME, getEventDef } from "./event-registry.ts";
+import { redactAttributes, redactStacktrace } from "./redaction.ts";
 import { currentResource } from "./resource.ts";
 import type { ResourceGetter } from "./resource.ts";
 import { spanContextAttributes } from "./span-context.ts";
@@ -67,7 +68,11 @@ class AmadeusSpan implements Span {
     private readonly exporter: LocalSpanExporter,
     private readonly scopeName: string,
     private readonly resource: ResourceGetter,
-    private readonly contextAttributes: SpanContextGetter
+    private readonly contextAttributes: SpanContextGetter,
+    // The workspace root a captured stacktrace is made relative to. Carried on
+    // the span rather than read from the module registration so a span always
+    // redacts against the root its own provider was registered for.
+    private readonly projectDir: string
   ) {
     this.kind = options?.kind !== undefined ? String(options.kind) : "internal";
     this.startMs = options?.startTime !== undefined ? toMs(options.startTime) : Date.now();
@@ -169,7 +174,27 @@ class AmadeusSpan implements Span {
       throw new Error(`exception span event misclassified as ${def.durability} — drift guard violation (FR-EVT-7)`);
     }
     const message = exception instanceof Error ? exception.message : String(exception);
-    this.addEvent(EXCEPTION_SPAN_EVENT_NAME, { "exception.message": message }, time);
+    this.addEvent(EXCEPTION_SPAN_EVENT_NAME, this.exceptionAttributes(exception, message), time);
+  }
+
+  // The OTel semantic-convention exception trio, redacted at write time. This
+  // is the ONLY write-time-redacted addEvent path (ADR-4): a stacktrace names
+  // the machine's user and layout in every frame, and the thrown message may
+  // quote a credential, so this bag cannot be stored as captured.
+  private exceptionAttributes(exception: Exception, message: string): Record<string, unknown> {
+    try {
+      const captured: Record<string, unknown> = { "exception.message": message };
+      if (exception instanceof Error) {
+        captured["exception.type"] = exception.name;
+        const stack = exception.stack;
+        if (typeof stack === "string") captured["exception.stacktrace"] = redactStacktrace(stack, this.projectDir);
+      }
+      return redactAttributes(captured);
+    } catch {
+      // A defect in redaction must not become the failure that ends the run
+      // (NFR-1): degrade to the message-only event the caller already had.
+      return { "exception.message": message };
+    }
   }
 }
 
@@ -178,10 +203,11 @@ class AmadeusTracer implements Tracer {
     private readonly exporter: LocalSpanExporter,
     private readonly scopeName: string,
     private readonly resource: ResourceGetter,
-    private readonly contextAttributes: SpanContextGetter
+    private readonly contextAttributes: SpanContextGetter,
+    private readonly projectDir: string
   ) {}
   startSpan(name: string, options?: SpanOptions, ctx?: Context): Span {
-    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName, this.resource, this.contextAttributes);
+    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName, this.resource, this.contextAttributes, this.projectDir);
   }
   startActiveSpan<F extends (span: Span) => unknown>(name: string, ...args: unknown[]): ReturnType<F> {
     let options: SpanOptions | undefined;
@@ -208,10 +234,11 @@ class AmadeusTracerProvider implements TracerProvider {
   constructor(
     private readonly exporter: LocalSpanExporter,
     private readonly resource: ResourceGetter,
-    private readonly contextAttributes: SpanContextGetter
+    private readonly contextAttributes: SpanContextGetter,
+    private readonly projectDir: string
   ) {}
   getTracer(name: string, _version?: string, _options?: unknown): Tracer {
-    return new AmadeusTracer(this.exporter, name, this.resource, this.contextAttributes);
+    return new AmadeusTracer(this.exporter, name, this.resource, this.contextAttributes, this.projectDir);
   }
 }
 
@@ -237,7 +264,7 @@ export function registerTracerProvider(options: RegisterTracerProviderOptions): 
   }
   const resource = options.resource ?? (() => currentResource(options.projectDir));
   const spanContext = () => spanContextAttributes(options.projectDir);
-  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter, resource, spanContext));
+  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter, resource, spanContext, options.projectDir));
   registeredProjectDir = options.projectDir;
 }
 
