@@ -137,6 +137,17 @@
 - **FR-7 欠陥1の方式**: plugin セルの保存 vs loud 警告+復旧手順の選択は design で確定する。
 - **mirror create 422**: 本 intent 自身の intent-initialized 境界 receipt が HTTP 422 で pending 滞留中 — FR-2 AC-2c の実測材料を兼ねる。422 の原因(タイトル長など)は Bolt 1 実装時に一次調査する。
 
+## Bolt 6(追加編入、2026-08-01 ユーザー裁定)
+
+### FR-10: #1871 — mirror title を intent dir ベースへ変更(仕様変更込み)
+
+- 承認系譜: intent birth 時の 422 実発現で #1871 を起票(2026-08-01)→ ユーザー裁定「title の仕様が悪い。intent dir に変える予定。本バッチで対応してよい」(2026-08-01、mid-turn 指示)。クロスレビュー2名の成立を編入前提とする(進行中)。
+- 患部: `packages/framework/core/tools/amadeus-mirror-presentation.ts:260/:285` — `titleSummary` を `oneLine(projectSummary)` から **intent dir**(例: `Intent Mirror: 260801-open-bug-batch-5`)ベースへ変更。GitHub の title 上限(256文字、2026-08-01 probe 実測)に対し構造的に安全になるが、防御的クランプも併設する(将来の dir 名長対策)。
+- AC-10a: 長い projectSummary(>932文字級)でも create/sync の title が 256 文字以下であることをテスト固定(修正前 Red: 現行 render で 256 超)。
+- AC-10b: 既存 mirror(長 title 形式)への sync が新 title へ収束し 422 を出さないことをテスト固定。
+- AC-10c: title 変更は render の出力契約変更 — 既存テストの title pin があれば明示改訂を宣言(CR-5 準拠、grep で棚卸し)。
+- 422 の effect 分類(outcome-unknown → no-effect-confirmed)は #1871 の期待2に記載のとおり検討対象だが、title 修正で発火経路が消えるため本バッチでは扱わない(スコープ外へ)。
+
 ## スコープ外(Won't)
 
 - #1829(plugin 配布)、#1830 path B — 別 intent。
