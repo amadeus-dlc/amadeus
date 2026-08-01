@@ -2464,7 +2464,7 @@
       {
         "id": "model-completeness",
         "path": ".claude/sensors/amadeus-model-completeness.md",
-        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}",
+        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}",
         "category": "formal-verification"
       }
     ]

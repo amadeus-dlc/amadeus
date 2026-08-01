@@ -329,3 +329,9 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 ## Tradeoffs
 - Guard `handleGateReject` as well as `handleGateReserve`: FR-1680-2 names only next/report/park/state mutation, but reservation marker files are disk-readable by the reviewer role (Read/Grep/Glob), so an unguarded gate-reject would let a subagent reject a gate with a read-off carrier. (learned 2026-07-30) <!-- cid:code-generation:cg-20260730-4 -->
+
+## code-generation:c1-shard-merge-dedupe-check
+- 監査シャードを並行 worktree からマージ(--no-ff/union)した後は、コミット前に同一行の完全重複検査(sort|uniq -d 相当)を1手挟み、重複行は後発出現のみ除去する — 並行 fork 由来のシャードマージは byte 同一行の二重混入を作りうる(実測: 260731-formal-verif-value-chain の batch 3/4 マージで 20 行重複 → journal 健全性プローブが FR-EVT-4 duplicate record で fatal health latch を張り全 canonical emit が停止。append-only-shard-conflict-resolution / cg-ledger-blob-reconstruction の重複行面の追補) (learned 2026-08-01) <!-- cid:code-generation:cg-shard-merge-dedupe -->
+
+## code-generation:c2-watch-root-vs-state-root
+- watch/監視系(spec ハッシュ・ファイル監視)の glob 解決基底は「監視対象を所有するルート」で明示宣言し、状態ファイル・composition record の所有ルート(hostRoot)と混同しない — 基底の混同は不在ディレクトリの空集合ハッシュとして fail-open に沈黙する(実測: 260731-formal-verif-value-chain u8 S4-1 — hostRoot=.claude 基底の specs/tla watch が空入力 SHA-256 を正常値として記録し、実 spec 変更後も恒久 current 固定。fixture が record と spec を同一ルートに置く欠陥前提レイアウトで隠蔽。修正 = specRootForHost(hostRoot)=dirname(hostRoot) の2ルート分離+実レイアウト fixture 化。seam-writer-mode-precondition / external-seam-vocab-measurement と直交する「解決基底の所有」面) (learned 2026-08-01) <!-- cid:code-generation:cg-watch-root-separation -->

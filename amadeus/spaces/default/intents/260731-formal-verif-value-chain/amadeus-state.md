@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [u1-runner-relocation, u5-advisories-channel, u3-boundary-guard, u4-tools-distribution, u6-impl-only-path, u7-mirror-model, u8-e2e-acceptance]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -77,7 +77,7 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
+- [?] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — EXECUTE
@@ -97,9 +97,9 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-07-31T21:49:58Z
+- **Last Updated**: 2026-08-01T11:30:45Z
 
-- **Swarm Gated Batch Approvals**: 1, 2, 3
+- **Swarm Gated Batch Approvals**: 1, 2, 3, 4
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
