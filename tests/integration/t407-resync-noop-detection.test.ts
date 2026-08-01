@@ -20,7 +20,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resyncStateToStageGraph } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -95,13 +95,30 @@ function moveStageProgressLast(proj: string): void {
 }
 
 describe("t407 silent no-op detection: a non-matching Stage Progress section", () => {
+  // A byte-identical write-back would slip through a pure content comparison,
+  // so "no write" is enforced physically: the state file and its directory are
+  // made read-only around the call — any write attempt throws instead of
+  // silently rewriting identical bytes.
+  function withWriteProtection<T>(proj: string, fn: () => T): T {
+    const dir = recordDirOf(proj);
+    const path = statePathOf(proj);
+    chmodSync(path, 0o444);
+    chmodSync(dir, 0o555);
+    try {
+      return fn();
+    } finally {
+      chmodSync(dir, 0o755);
+      chmodSync(path, 0o644);
+    }
+  }
+
   test("missing header comment line -> section-unrecognized, state file untouched", () => {
     const proj = bornProject();
     dropRow(proj, "user-stories");
     dropHeaderComment(proj);
     const before = readState(proj);
 
-    const outcomes = resyncStateToStageGraph(proj);
+    const outcomes = withWriteProtection(proj, () => resyncStateToStageGraph(proj));
     expect(outcomes.map((o) => o.status)).toEqual(["section-unrecognized"]);
     // Loud, not green: nothing was inserted, so nothing may claim to be.
     expect(outcomes[0].inserted).toEqual([]);
@@ -116,9 +133,25 @@ describe("t407 silent no-op detection: a non-matching Stage Progress section", (
     moveStageProgressLast(proj);
     const before = readState(proj);
 
-    const outcomes = resyncStateToStageGraph(proj);
+    const outcomes = withWriteProtection(proj, () => resyncStateToStageGraph(proj));
     expect(outcomes.map((o) => o.status)).toEqual(["section-unrecognized"]);
     expect(readState(proj)).toBe(before);
+  });
+
+  test("a checkbox-shaped decoy in another section satisfies neither inventory nor verification", () => {
+    const proj = bornProject();
+    dropRow(proj, "user-stories");
+    // A decoy line OUTSIDE Stage Progress (trailing notes prose) must not make
+    // the inventory believe the row exists — only the section's rows count.
+    writeState(proj, `${readState(proj)}\n## Notes\n- [ ] user-stories — EXECUTE\n`);
+
+    const outcomes = resyncStateToStageGraph(proj);
+    expect(outcomes.map((o) => o.status)).toEqual(["resynced"]);
+    expect(outcomes[0].inserted).toEqual(["user-stories"]);
+    // The REAL row landed inside the Stage Progress section, not just anywhere.
+    const section =
+      /## Stage Progress\n[\s\S]*?(?=\n## Current Status)/.exec(readState(proj))?.[0] ?? "";
+    expect(section).toMatch(/^- \[ \] user-stories — EXECUTE$/m);
   });
 
   test("happy path is unchanged: a well-formed section still resyncs with real rows", () => {
