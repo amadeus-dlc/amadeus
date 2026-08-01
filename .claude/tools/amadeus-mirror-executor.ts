@@ -1278,35 +1278,32 @@ async function executeLinked(
     // Completion is only reachable from an attempted receipt, so claim the
     // attempt first when the receipt is still prepared — the same shape
     // `adoptCreateCandidate` uses for the create side.
-    if (ensured.receipt.status === "prepared") {
+    let settled = { snapshot: ensured.snapshot, receipt: ensured.receipt };
+    if (settled.receipt.status === "prepared") {
       const attempted = markAttempted(
         ports,
         context,
-        ensured.snapshot,
-        ensured.receipt,
+        settled.snapshot,
+        settled.receipt,
         "mark-attempted",
       );
       if (attempted.kind === "failed") {
         return stateFailure(
           context,
-          ensured.receipt.operationId,
+          settled.receipt.operationId,
           attempted.summary,
         );
       }
-      return complete(
-        ports,
-        context,
-        attempted.snapshot,
-        requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
-        viewed.issue,
-        true,
-      );
+      settled = {
+        snapshot: attempted.snapshot,
+        receipt: requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
+      };
     }
     return complete(
       ports,
       context,
-      ensured.snapshot,
-      ensured.receipt,
+      settled.snapshot,
+      settled.receipt,
       viewed.issue,
       true,
     );
