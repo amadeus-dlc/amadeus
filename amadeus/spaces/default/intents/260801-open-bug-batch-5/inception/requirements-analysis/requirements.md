@@ -141,12 +141,12 @@
 
 ### FR-10: #1871 — mirror title を intent dir ベースへ変更(仕様変更込み)
 
-- 承認系譜: intent birth 時の 422 実発現で #1871 を起票(2026-08-01)→ ユーザー裁定「title の仕様が悪い。intent dir に変える予定。本バッチで対応してよい」(2026-08-01、mid-turn 指示)。クロスレビュー2名の成立を編入前提とする(進行中)。
-- 患部: `packages/framework/core/tools/amadeus-mirror-presentation.ts:260/:285` — `titleSummary` を `oneLine(projectSummary)` から **intent dir**(例: `Intent Mirror: 260801-open-bug-batch-5`)ベースへ変更。GitHub の title 上限(256文字、2026-08-01 probe 実測)に対し構造的に安全になるが、防御的クランプも併設する(将来の dir 名長対策)。
-- AC-10a: 長い projectSummary(>932文字級)でも create/sync の title が 256 文字以下であることをテスト固定(修正前 Red: 現行 render で 256 超)。
-- AC-10b: 既存 mirror(長 title 形式)への sync が新 title へ収束し 422 を出さないことをテスト固定。
-- AC-10c: title 変更は render の出力契約変更 — 既存テストの title pin があれば明示改訂を宣言(CR-5 準拠、grep で棚卸し)。
-- 422 の effect 分類(outcome-unknown → no-effect-confirmed)は #1871 の期待2に記載のとおり検討対象だが、title 修正で発火経路が消えるため本バッチでは扱わない(スコープ外へ)。
+- 承認系譜: intent birth 時の 422 実発現で #1871 を起票(2026-08-01)→ ユーザー裁定「title の仕様が悪い。intent dir に変える。本バッチで対応してよい」(2026-08-01)→ クロスレビュー2名成立(両名核心確認・S3 降格、コメント投稿済み)→ 既存ミラー title はユーザー裁定「共存許容」(2026-08-01 — 新規・再作成分のみ新 title、sync への title 送信追加はしない)。
+- 患部: `packages/framework/core/tools/amadeus-mirror-presentation.ts:260/:285` — `titleSummary` を `oneLine(projectSummary)` から **intent dir**(例: `Intent Mirror: 260801-open-bug-batch-5`)ベースへ変更。防御的クランプを併設する。**クランプの閾値前提の訂正(レビュー反証)**: 「256文字上限」は既存成功ミラー(506文字/836B 等)で反証済み — 真の閾値はバイト系で 943B〜1440B の間(未確定)。AC はコードポイント数の断定を置かず、クランプは保守側(バイト基準で十分小さい値)で設計する。
+- AC-10a: 長い projectSummary(1440B 級)でも create の title が実測失敗帯(943B 以上)へ到達しないことをテスト固定(修正前 Red: 現行 render で 1440B)。
+- AC-10b(裁定反映): sync は title を送信しない現行契約(`editArgv` は body のみ PATCH)を**維持**し、既存ミラーの旧 title は共存許容 — 「sync が title を変更しない」ことをテストで pin(意図の固定)。
+- AC-10c: title の形状を固定する既存テストは 0 件(r2 実測)— 新 title 形式のテスト固定を新設(pin 改訂は不要)。
+- スコープ外(レビュー確定): 422 の effect 分類変更(r1: 認可境界へ不要な変更 — 不採用)、body の無クランプ・MARKER_MAX_PAYLOAD_BYTES と GitHub body 上限の不整合(r2 同根 — 実害低、別 Issue 判断)。
 
 ## スコープ外(Won't)
 

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB5-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文の『marker は詰まっている receipt のものと一致させる』は実測と厳密には一致しないため、『adopt を実行する boundary(復旧時点で attempt 中の receipt)の createIdentity と一致させる — 最初に safety-block した receipt とは限らない』へ精密化して persist すること。実測: state:107 で safety-blocked は intent-initialized receipt(operationId 3f335682-2937-437c-a8f4-48c583acaafd)のまま残存し、adopt を成立させたのは phase-verified boundary の receipt(operationId ed7cc73d-67ba-4b10-ac2a-db2442840bd3 / preparedAt 2026-08-01T02:30:15.282Z、status succeeded、issueNumber 1872)で、#1872 の marker payload はこの後者と exact 一致する。",
+      "rationale": "c3 のみ採用を支持。(1) 実在確認: CG diary Deviations(2026-08-01)に 422 → zero-after-attempt safety-block → marker 付き Issue 手動作成で adopt 誘導・state 手術なしの復旧が記録され、#1871(bug/P2/S2-CRITICAL、open)が機序2層(title 無クランプ / 422 の outcome-unknown 分類)を、#1872 が marker 実体を裏取りする。state:107 の receipt 2件で createIdentity が boundary ごとに別 mint される点も実測確認した。(2) 新規性: memory 層 grep で deviation-stop-before-implement(team.md:183)・ruling-premise-closure-verification(team.md:178)・c1-narrow-fix-post-apply-remeasure(project.md:258)・disk-evidence-early-takeover のいずれも mirror safety-block からの帯域外回復手技を扱っておらず、c3 は既存 cid から導出不能。(3) 永続性: #1871 の修正(title を intent dir ベースへ)が消すのは本件のトリガーのみで、zero-after-attempt の fail-closed 自体と outcome-unknown からの製品内回復不能性は残る(422→no-effect-confirmed の再分類は #1871 でも『併せて検討』止まり)。ネットワーク断・他クラスの 422 等、別原因の outcome-unknown で同じデッドロックへ到達しうるため、回復手技は経路が生きている知識として persist に値する。c1/c2/c4 の非 persist にも同意する(c2 は上記3 cid の合成で導出可能、c1 は E-OBB4-CGS13 既追補の追実践、c4 は CR-6 の執行実例)。",
+      "submittedAt": "2026-08-01T05:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB5-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 3,
+      "reservation": "採用に賛成するが、persist 前に候補文の2点を実測どおりへ訂正することを条件とする。(1) 操作指示が逆: 候補文は「marker は詰まっている receipt のものと一致させる」と書くが、amadeus-state.md:107 の実測では #1872 の marker(operationId ed7cc73d-67ba-4b10-ac2a-db2442840bd3 / preparedAt 2026-08-01T02:30:15.282Z)は詰まった intent-initialized receipt(operationId 3f335682-2937-437c-a8f4-48c583acaafd / preparedAt 2026-08-01T01:15:23.465Z、status safety-blocked のまま現存)ではなく、phase-verified(inception)境界で新規 mint された receipt と一致している。正しい規則は「marker はこれから実行する境界の receipt(= 新しい createIdentity)に一致させる。詰まった receipt のものではない」。この一文は本学習の唯一の操作指示であり、逆のまま persist すると将来の運用者を確実に誤導する(P2)。(2) 「製品内回復不能」は過強: amadeus-mirror-lifecycle.ts:1010-1055 の repair relink(SKILL.md:60/:86 で user-invocable)は marker の intentUuid/intentDir/repository 一致のみを要求し operationId/preparedAt の exact 一致を要求しないため、marker 付き Issue に対する製品内の代替回復経路として実在する。今回 adopt 経路を採ったこと自体は妥当だが、norm 文には「adopt(exact 一致)と repair relink(intentUuid/dir/repo 一致)の2経路がある」ことを明記し、relink の存在を隠さない。",
+      "rationale": "choice 1(c3 のみ採用)を支持する。実測確認: (a) デッドロック機序は amadeus-mirror-provenance.ts:225-230 で確定 — classifyCandidates は localState=attempted-or-unknown かつ verified 0件で zero-after-attempt の safety-block を返し、verified 1件なら adopt を返す。よって marker 付き Issue の投入が safety-block を adopt へ反転させるという c3 の中核機序は正しい。(b) marker 照合の厳密性は createIdentityEquals(:134-145)が schema/intentUuid/intentDir/repository.canonical/operationId/preparedAt の6項全てを要求する実装で確認、verifyOwnership(:168)経由で adopt 判定に効く。(c) 境界ごとの新 createIdentity mint は state 実測で確認(intent-initialized 3f335682 vs phase-verified ed7cc73d の2 receipt が別 identity を持つ)。(d) 復旧結果は Mirror Initial Create Receipt: completed / provenance issueNumber 1872 / receipts の phase-verified が status succeeded で、audit・state の手術痕なし。Issue #1872 本文にも復旧経緯の注記あり。c3 の新規性: memory 3層の cid を mirror/adopt/marker/safety-block/provenance で横断 grep したが、mirror の safety-block からの marker 経由回復を扱う既存 cid は不在。c2 の非採用に同意する — 逸脱停止と裁定前提の閉包再実測は deviation-stop-before-implement / ruling-premise-closure-verification / c1-narrow-fix-post-apply-remeasure が既に覆い、diary の2連実践は実例記録で足りる。c1/c4 も既決 cid の追実践・執行実例で新規性なし。choice 2(0件)を採らない理由: #1871 の title クランプ修正が消すのは 422 という個別の入口だけで、outcome-unknown を生む任意の create 失敗(ネットワーク断・タイムアウト)から zero-after-attempt へ落ちる経路自体は残るため、回復手順の知識は一時的でない。ただし上記2点の訂正を条件とするため GoA 3。",
+      "submittedAt": "2026-08-01T05:05:00Z"
+    }
+  ],
+  "late": []
+}

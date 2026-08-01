@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OBB5-CGS13",
+  "kind": "s13-learnings",
+  "question": "260801-open-bug-batch-5 code-generation の §13 学習選定。候補と提案: c3 を新規 persist「mirror create の safety-block(zero-after-attempt)からの製品内回復不能時は、state 手術より provenance marker 付き Issue の手動作成による adopt 誘導を優先する — marker は当該 boundary の receipt の createIdentity(operationId/preparedAt まで exact)から renderMirrorMarker で生成する。境界ごとに新しい createIdentity が mint されるため、marker は詰まっている receipt のものと一致させる(実測: 260801 intent birth の 422 デッドロックを Issue #1872 の marker 差し替え → adopt completed で復旧、audit/state 無手術)」(project 層、cid:code-generation 系)。c2 の一般化「実装中に裁定の前提を破る第2欠陥を発見したら、same-root 同一 PR 編入の裁定を仰いでから続行(2連逸脱停止の実践)」は既存 cid(deviation-stop-before-implement / ruling-premise-closure-verification / c1-narrow-fix-post-apply-remeasure)から導出可能とみなし実例記録に留める提案。c1 は E-OBB4-CGS13 既追補の追実践、c4 は CR-6 の執行実例 — いずれも persist しない提案。各自 record(diary・PR・Issue)を実測確認して投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c3 のみ採用(c1/c2/c4 は既存 cid の実例扱い)"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件(c3 も #1871 修正で経路が消えるため一時知識とみなす)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
