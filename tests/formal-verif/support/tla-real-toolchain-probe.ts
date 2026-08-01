@@ -10,11 +10,11 @@ import {
   NodeJavaVersionPort,
   NodePhysicalReservationPort,
   NodeTlcProcessPort,
-} from "../../../scripts/formal-verif/fs-tlc-toolchain.ts";
+} from "../../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-} from "../../../scripts/formal-verif/tla-arm.ts";
+} from "../../../plugins/formal-model-check/tools/tla-arm.ts";
 
 const configuredJdkRoot = process.env.JAVA_HOME;
 if (!configuredJdkRoot) {

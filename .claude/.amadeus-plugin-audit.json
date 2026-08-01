@@ -1,1 +1,1 @@
-[{"event":"plugin-composed","plugin":"formal-model-check","detail":"1 host writes"}]
+[{"event":"plugin-composed","plugin":"formal-model-check","detail":"1 host writes"},{"event":"plugin-dropped","plugin":"formal-model-check","detail":"1 removals"},{"event":"plugin-composed","plugin":"formal-model-check","detail":"1 host writes"}]

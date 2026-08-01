@@ -9,11 +9,11 @@ import {
   type ArtifactNetworkPort,
   type FileDigestPort,
   type PhysicalReservationPort,
-} from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
-} from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const fixtureBytes = new TextEncoder().encode("fixed-tlc-1.7.4-test-artifact");
 
@@ -81,13 +81,6 @@ class FakeNetwork implements ArtifactNetworkPort {
 }
 
 describe("formal verification TLC artifact cache", () => {
-  test("keeps wildcard implementation exports behind the root barrel", () => {
-    const barrel = readFileSync(join(process.cwd(), "scripts/formal-verif/index.ts"), "utf8");
-    expect(barrel).not.toContain('export * from "./tla-arm.ts"');
-    expect(barrel).not.toContain('export * from "./tlc-toolchain.ts"');
-    expect(barrel).not.toContain('export * from "./fs-tlc-toolchain.ts"');
-  });
-
   const roots: string[] = [];
   afterEach(() => roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); }));
 

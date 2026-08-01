@@ -15,12 +15,12 @@ import {
   runModelCheckDiagnosticMain,
   type DiagnosticCommandResult,
   type DiagnosticDependencies,
-} from "../../scripts/formal-verif/run-model-check-diagnostic.ts";
-import { FIXED_DOCKER_IMAGE } from "../../scripts/formal-verif/tlc-spawn-planner.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-diagnostic.ts";
+import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 import {
   FIXED_JDK_RUN_PROFILE,
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
-} from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const roots: string[] = [];
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
@@ -275,8 +275,8 @@ describe("non-acceptance model-check diagnostic", () => {
 
   test("workflow keeps diagnostics opt-in and runs only the formal acceptance", () => {
     const source = readFileSync(".github/workflows/ci.yml", "utf8");
-    const diagnostic = `bun scripts/formal-verif/run-model-check-diagnostic.ts --root "\${EVIDENCE_ROOT}"`;
-    const acceptance = `bun scripts/formal-verif/run-model-check-ci.ts run --root "\${EVIDENCE_ROOT}"`;
+    const diagnostic = `bun plugins/formal-model-check/tools/run-model-check-diagnostic.ts --root "\${EVIDENCE_ROOT}"`;
+    const acceptance = `bun plugins/formal-model-check/tools/run-model-check-ci.ts run --root "\${EVIDENCE_ROOT}"`;
     expect(source).not.toContain(diagnostic);
     expect(source).toContain(acceptance);
     expect(source).not.toContain("diagnostic_status=$?");

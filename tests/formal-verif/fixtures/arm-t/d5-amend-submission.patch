@@ -1,7 +1,7 @@
-diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+diff --git a/plugins/formal-model-check/tools/tla-arm.ts b/plugins/formal-model-check/tools/tla-arm.ts
 index 34162f1ce..392fca6c2 100644
---- a/scripts/formal-verif/tla-arm.ts
-+++ b/scripts/formal-verif/tla-arm.ts
+--- a/plugins/formal-model-check/tools/tla-arm.ts
++++ b/plugins/formal-model-check/tools/tla-arm.ts
 @@ -450,10 +450,7 @@ SubmitAmend(v, ref, c, s, g) ==
       THEN Reject
       ELSE IF accepted[v] = NoBallot \\/ ref /= accepted[v].arrivalSeq

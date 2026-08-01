@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadRunModelCheckSource } from "../../scripts/formal-verif/run-model-check-source.ts";
+import { loadRunModelCheckSource } from "../../plugins/formal-model-check/tools/run-model-check-source.ts";
 
 describe("run-model-check source adapter", () => {
   const roots: string[] = [];

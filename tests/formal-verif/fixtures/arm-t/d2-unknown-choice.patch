@@ -1,7 +1,7 @@
-diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+diff --git a/plugins/formal-model-check/tools/tla-arm.ts b/plugins/formal-model-check/tools/tla-arm.ts
 index 34162f1ce..977de5147 100644
---- a/scripts/formal-verif/tla-arm.ts
-+++ b/scripts/formal-verif/tla-arm.ts
+--- a/plugins/formal-model-check/tools/tla-arm.ts
++++ b/plugins/formal-model-check/tools/tla-arm.ts
 @@ -434,7 +434,8 @@ Route(v, ballot, g) ==
  SubmitOriginal(v, c, s, g) ==
    /\\ initialBudget[v] = 1

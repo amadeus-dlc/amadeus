@@ -19,15 +19,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-} from "../../scripts/formal-verif/tla-arm.ts";
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
 import {
   loadVerifiedTlaSource,
-} from "../../scripts/formal-verif/tla-model-loader.ts";
+} from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import {
   loadVerifiedTlaSourceInternal,
-} from "../../scripts/formal-verif/tla-model-loader-internal.ts";
-import type { TlaFileSystem } from "../../scripts/formal-verif/tla-model-loader-internal.ts";
-import type { ModelMap } from "../../scripts/formal-verif/tla-model-map.ts";
+} from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
+import type { TlaFileSystem } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
+import type { ModelMap } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const EXPECTED_MODULE_IDENTITY = "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32";
@@ -330,7 +330,7 @@ describe("TLA model loader real-filesystem boundary", () => {
   });
 
   test("contains no embedded source fallback after migration", () => {
-    const adapterSource = readFileSync(join(REPOSITORY_ROOT, "scripts/formal-verif/tla-arm.ts"), "utf8");
+    const adapterSource = readFileSync(join(REPOSITORY_ROOT, "plugins/formal-model-check/tools/tla-arm.ts"), "utf8");
     expect(adapterSource).not.toContain("const MODEL_SOURCE");
     expect(adapterSource).not.toContain("const CFG_SOURCE");
     expect(adapterSource).not.toContain("---- MODULE FormalElection ----");

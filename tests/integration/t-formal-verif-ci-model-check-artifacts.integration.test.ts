@@ -15,10 +15,10 @@ import { join } from "node:path";
 import type {
   CiAcceptanceEvidence,
   CiModelCheckRunEvidence,
-} from "../../scripts/formal-verif/ci-model-check-domain.ts";
-import { verifyCiAcceptanceArtifacts } from "../../scripts/formal-verif/ci-model-check-artifacts.ts";
-import { FIXED_DOCKER_IMAGE } from "../../scripts/formal-verif/tlc-spawn-planner.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/ci-model-check-domain.ts";
+import { verifyCiAcceptanceArtifacts } from "../../plugins/formal-model-check/tools/ci-model-check-artifacts.ts";
+import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const roots: string[] = [];
 const SHA = "a".repeat(64);

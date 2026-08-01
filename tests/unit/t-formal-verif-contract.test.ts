@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { MAX_COMMAND_BYTES, parseArmSuiteResult, parseCellResult, parseExperimentConfig, parseJsonBytes } from "../../scripts/formal-verif/contract.ts";
+import { MAX_COMMAND_BYTES, parseArmSuiteResult, parseCellResult, parseExperimentConfig, parseJsonBytes } from "../../plugins/formal-model-check/tools/contract.ts";
 
 const config = { benchmarkRuns: 5, benchmarkWarmups: 1, benchmarkTimeoutSeconds: 120, tlcWorkers: 1, voters: 3, choices: 3, maxInitialPerVoter: 1, maxAmendPerVoter: 1, maxHold: 1, pbtSeed: 20260720, pbtNumRuns: 100 };
 const cell = { schemaVersion: 1, arm: "tla", fixtureId: "HEALTHY_BASELINE", baselineSha: "b".repeat(64), armSha: "a".repeat(64), verdict: "NOT_DETECTED", exitCode: 0, toolVersions: { bun: "1" }, seedOrBound: { seed: 1 }, startedAt: "2026-07-20T00:00:00Z", finishedAt: "2026-07-20T00:00:01Z", counterexampleId: null, evidencePaths: ["evidence/x.json"] };
