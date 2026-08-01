@@ -180,6 +180,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t39.test.ts",
     "integration/t393-birth-autonomy-field.integration.test.ts",
     "integration/t394-compose-state-resync.integration.test.ts",
+    "integration/t399-bolt-dag-outcome.test.ts",
     "integration/t45.test.ts",
     "integration/t49.test.ts",
     "integration/t51.test.ts",

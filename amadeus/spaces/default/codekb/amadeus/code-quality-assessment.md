@@ -1,6 +1,89 @@
 # コード品質評価
 
-## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- テスト空白（決定的）: state-file 無しの SessionStart で `.current-session` が書かれることを検証するテストは存在しない。現行の早期終了挙動は `tests/unit/t10-hook-session-start.test.ts:211`（silent exit）/ `:222`（no heartbeat）が no state file の early-exit（`packages/framework/core/hooks/amadeus-session-start.ts:70`）を直接 pin しており、修正はこの pin の改訂 + 回帰テスト追加を伴う。追加先の自然な場所は同 t10。近傍の足場: `tests/integration/t-kimi-adapter.test.ts:317` 付近、t365（`.current-session` を `:826` / `:958` / `:1199` / `:1884` で使用）、t173。`amadeus-caller-authorization.ts` 専用の単体テストファイルは不在。
+- 欠陥クラス: 単一 writer × ガード後段配置 — bootstrap 状態で reader 側が恒久 fail-closed になる writer-reader 不整合。`.current-session` 直読み2箇所（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403`）を `readCurrentSessionId`（`amadeus-lib.ts:2159`）へ寄せるリファクタは本 intent スコープ外。
+- 根因確度: 機序は observed HEAD で全 file:line 再実測済み（`:70` ガード / `:117` writer / 認可 `:96-109`）。決定的再現はテストなしでもコードパス追跡で確定（writer 到達不能は `:70` の無条件 exit から自明）。
+
+## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## 価値チェーン3件の品質評価（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が扱う欠陥は**いずれも「片側だけ実装された非対称」クラスタ**に属する（`cid:requirements-analysis:symmetric-pair-review`）。
+
+### 欠陥クラス 1 — 配布経路の非対称（#1829）
+
+| 経路 | 駆動 | tools |
+| --- | --- | --- |
+| projection | ディスク（`plugin-projection.ts:158` walkFs 全走査） | 運べる |
+| compose | 宣言（`amadeus-plugin-compose.ts:330-334` parser → `:1021` `composeWriteSet`） | 運べない |
+
+同じ「plugin の中身を配る」責務が2経路で**異なる駆動様式**を持ち、片方だけが宣言を要求する。生きた証拠として `dist/` には 8 変種 / 38 ファイルが並ぶのに compose 済み host には stage md 1本しかない。
+
+**品質上の評価**: これは欠陥というより**未完の機能**（tools 配布が要求されたことがない）。ただし `tests/.coverage-patch-allowlist.json:35-36` が「trusted path は `plugins/<plugin>/stages/` 始まり限定」と明記しており、tools を配る設計は**この防御的制約と正面衝突する**。allowlist の reason 文が防御の意図（containment rejection）を述べているため、単純な緩和ではなく境界の再設計が要る。
+
+### 欠陥クラス 2 — 死んだコードの体積（#1829 のスコープ）
+
+`scripts/formal-verif/` 54 ファイル中 **30（56%）がどの CLI からも到達不能**（群 D）。実験（arm-s / eligibility / full-matrix / tla-skeleton / evidence・fixture・provenance 群）の残骸。
+
+品質指標への現れ:
+
+- `tests/.complexity-baseline.json` の formal-verif エントリ 22 件中 **20 件（91%）が群 D**（`contract.ts` × 2 のみが群 A）。すなわち複雑度 baseline のほぼ全量が死んだコードを守っている
+- `tests/.coverage-patch-allowlist.json` の formal-verif 系 waiver も群 D 側に厚い（`fs-fixture-registry.ts` × 2 ほか）。reason は一貫して「e2e-only + `bun --coverage` の spawn 盲点」（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）
+- テスト側からは広く生きている（`provenance.ts` 14 件、`execution-evidence.ts` 10 件参照）。**「本番から死んでいるがテストから生きている」**という状態が、削除判断を単純な dead-code 除去にさせない
+
+**評価**: 削除すれば baseline 20 件と allowlist 複数エントリが同時に消え、台帳の見通しが大きく改善する。一方で削除範囲の誤りは 72 本の `.test.ts` に波及する。**削除は独立 Bolt にし、baseline/allowlist の機械 remap（`cid:code-generation:c1-allowlist-mechanical-remap`）を必須手順に含めるべき。**
+
+### 欠陥クラス 3 — 単一発火点前提の脆さ（#1738）
+
+`amadeus-orchestrate.ts:1296-1297` のコメント verbatim「single guarded call site — emitForSlug — so no latch is needed for BR-U6-8」は、**冪等性を構造（呼出しが1つしかない）に委ねた設計**である。
+
+**品質評価**: この設計自体は健全（余計な状態を持たない、`amadeus-plugin-activation.ts:272` 直上の「Never writes state / Never throws」と整合）。ただし前提がコメントにしか書かれておらず、**発火点を増やす変更を機械的に止めるガードが無い**。#1738 が advisory を前倒し・複数化するなら、(a) 発火点を単一に保ったまま位置だけ動かす、(b) ラッチを新設する、のいずれかを選ぶ必要があり、(b) を選ぶ場合は「重複発火しないこと」の落ちる実証（`org.md § Mandated`）が必須。
+
+チャネル分離（stderr 単線、`:1299-1300`）は `cid:code-generation:stdout-directive-stderr-advisory` に正しく従っており、この面は改修時も維持されるべき契約。
+
+### 欠陥クラス 4 — write⇔check 非対称による詰み（#1510、最重要）
+
+**本 intent で最も明確な欠陥。** 同じ `model-map.json` に対し:
+
+- 読取側（`tla-model-loader-internal.ts:232`）は **entries の impl-hash を照合して fail-closed**
+- 書込側（`amadeus-sensor-model-completeness.ts:650-659`）は **model/cfg identity しか見ずに MODEL_UNCHANGED で拒否**
+
+さらにセンサー manifest（`.claude/sensors/amadeus-model-completeness.md:8`）の `matches` は `amadeus-election*.ts` を含むため、**impl 変更でセンサーは発火する**。発火 → 更新拒否 → 実行時 fail-closed という**閉路の詰み**が成立している。
+
+品質評価:
+
+| 観点 | 判定 |
+| --- | --- |
+| 深刻度 | 高 — 「正しい手順で直せない」状態を作る。運用者は model-map を手編集するしかなく、それは `exactObject` 検証（`:158` / `:186`）を通っても hash の正しさを機械保証しない |
+| fail-closed 自体 | 適切（`:232` の drift 返却は正しい設計） |
+| 欠けているもの | 更新側の判定条件。model/cfg 不変でも entries の impl-hash が動いていれば更新すべき |
+| 修正の性質 | 依存追加を伴わない**判定条件の対称化**。`:650-659` の条件に entries 差分の有無を加えるのが最小形 |
+| 文書 | `.claude/sensors/amadeus-model-completeness.md:39-41` が MODEL_UNCHANGED 拒否を**仕様として記述している** — 修正は文書の同時改訂を伴う（`cid:code-generation:same-root-inventory`） |
+
+### 品質の良い面（改修時に壊さないもの）
+
+| 面 | 根拠 |
+| --- | --- |
+| activation の fail-closed | 読取不能・破損は `never-run` へ落ちて advisory を出す（沈黙しない）。`:272` 直上「Never writes state / Never throws」 |
+| model-map スキーマの厳格さ | `exactObject(["implPath","sha256"])`（`:158`）/ `exactObject(["cfg","entries","model","schemaVersion"])`（`:186`）+ 境界検査（`:161`）+ ソート/一意（`:169`）。フィールド追加を fail-closed で拒否する |
+| loader の内部 seam 明示 | `:236-237`「Internal/test-only seam. Production callers must use the no-argument wrapper in tla-model-loader.ts so runtime input cannot select a root or filesystem」— テスト都合の口が本番から使えないことを明記 |
+| mirror reducer のガード集約 | `:692-715` に4本が隣接配置され、事前条件が読み取り可能。終端集合も `:127-132` に単一定義 |
+| CI の限定発火 | `ci.yml:547` `if: github.event_name == 'workflow_dispatch'` — 重い TLC を日常 CI から外す判断（`cid:build-and-test:two-layer-verification-posture` と整合） |
+
+### 新モデル題材としての mirror の品質評価（#1738）
+
+**適格性は高い。** 有限ドメイン10種が `amadeus-mirror-types.ts` の 608 行に集中し全列挙可能（Mode 3 / Operation 3 / Boundary 6 / FailureClass 14 / ReceiptStatus 7 / MutationEffect 3 / PhaseKey 5 / ProjectSyncState 3 / ProjectMutation 2 / RegistryStatus 4）、遷移 21 種・終端4・ガード4本が reducer 823 行に閉じる。
+
+**有限化のリスク**: receipts は可変長 Record で上限が `:42` `MAX_RECEIPTS = 1000`。TLA モデル値では小さな定数へ落とす必要があり、**落とし方によっては検査したい不変量（receipt 履歴に依存する再試行の冪等性）が消える**。有限化定数の選び方は要件段の裁定対象。
+
+**検査価値のある不変量の第一候補**: `amadeus-mirror-coordinator.ts:230-244` の `operationForBoundary` で `intent-capture-approved` のみが `state.issueNumber` を参照せず `create` を返す。「issueNumber 記録済みなら create を発行しない」という不変量は、本日実測の [#1838](https://github.com/amadeus-dlc/amadeus/issues/1838)（重複 create）と直結する。**既知バグを再現できる不変量を最初のモデルに含めることは、価値チェーン貫通の実証として理想的**（`org.md § Mandated` の落ちる実証と同型）。
+
+なお PBT 単独ではこのクラスを取りこぼしうる（`cid:build-and-test:pbt-oracle-cancellation` — オラクル相殺で 7 欠陥中 4 件を恒久見逃した実測）。単一形式モデルの完全探索を併用する二層姿勢（`cid:build-and-test:two-layer-verification-posture`）が本題材にそのまま当てはまる。
+
+## オープンバグ4件の品質評価（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離に関わる品質評価（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 根因確度: 9件すべて独立2名クロスレビューで機序確定（検証 SHA = observed）。うち決定的再現済み5件（#1860 reducer in-process 駆動、#1857 二重登録 throw、#1861 fetch exit 128、#1863 mergeComposedScopes 純関数 A/B/C、#1864 sed 直読）。
 - 欠陥クラス分布: 非対称実装3（#1838 policy、#1849 report vs next、#1857 catch の recordHookDrop 有無）、状態機械の橋渡し遷移欠落1（#1860）、scaffold/テンプレ乖離1（#1846）、部分配線1（#1856）、lossy データ変換1（#1863）、一過性/構造的エラーの混同1（#1861）、台帳転位1（#1864）— `cid:requirements-analysis:symmetric-pair-review` クラスタが最頻。

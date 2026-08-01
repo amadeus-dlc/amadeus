@@ -1,6 +1,151 @@
 # アーキテクチャ
 
-## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi ハーネス bootstrap デッドロックの機構断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+本節の file:line はすべて observed `861688c31` 時点。患部全数・認可連鎖・テスト足場は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
+
+- **区間の構造変化（`c49e385ac` → `861688c31`、33 commits / 537 files / +28,879 −3,094）**: 大半は otel 基盤拡張（resource-core / span-context / exception イベント / metrics 語彙配線）、mirror 系（boundary 対称性・title バイトクランプ）、plugin scope opt-in、composed-scope drop、metrics snapshot 定期コミット群。患部領域では `packages/framework/core/hooks/amadeus-session-start.ts` に +14（otel resource seam の `supplyResourceAttribute("session.id", …)` 配線のみ、`:119-130`）が入ったが、early-exit ガード（`:70`）と `writeCurrentSessionId`（`:117`）の順序は不変 — Issue #1922 の機序は observed HEAD に生存する。
+- **#1922 デッドロック連鎖**: (1) Kimi SessionStart → `~/.kimi-code/config.toml` 管理ブロック → `bun .kimi-code/hooks/amadeus-kimi-adapter.ts session-start`。(2) adapter 内部で `trackKimiRoleLifecycle`（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:418-437`）が `establishKimiMainBaseline`（`:236-`）経由で `kimi-active-subagents.json` を書く（state-file 非依存で常に走る）。`routeTarget`（`:580-`）の `"session-start"` case（`:588-596`）が `normalizePayload`（`:491-500`）経由で core `amadeus-session-start.ts` を spawn。(3) core hook は `:67` `stateFilePath` → `:70` `if (!existsSync(stateFile)) process.exit(0)` で、アクティブ intent 無しのワークスペースではここで終了し、`:117` の `writeCurrentSessionId` に到達しない。(4) 認可 fail-closed: `authorizeMainConductor`（`amadeus-caller-authorization.ts:72-`）は `:75` 非 kimi 即 authorized、`:80-86` deny latch、`:88-94` marker 読めず denied、`:96-109` で `.current-session` ≠ `mainSessionId` → denied。bootstrap 状態では `.current-session` が永久に書かれないため、(2) の baseline marker が存在しても認可は恒久 fail-closed = デッドロック。呼出側は `amadeus-orchestrate.ts:2190` / `amadeus-state.ts:869`。(5) `isTrustedMainStop`（`amadeus-kimi-lib.ts:372-407`、`.current-session` 直読み `:399-403`）も同じ fail-closed。
+- **`.current-session` の writer/reader**: writer は `amadeus-session-start.ts:117` のみ（全 repo で唯一。`writeCurrentSessionId` 定義 `amadeus-lib.ts:2170`、`CURRENT_SESSION_FILE` `:2152`）。readers は `amadeus-caller-authorization.ts:96-109`（直読み）、`amadeus-kimi-lib.ts:399-403`（直読み）、`readCurrentSessionId`（`amadeus-lib.ts:2159-2166`）経由 `amadeus-orchestrate.ts:230` / `amadeus-state.ts:853` / `amadeus-utility.ts:4843`。
+- **最小修正方向**: `writeCurrentSessionId`（`:117`）を `:70` ガードより前へ移す。同ファイル内先例は `repointHarnessIncludes`（`:62`、コメント `:55-60` が「ガードより前に置く」理由を明記）。`supplyResourceAttribute`（`:119-130`）を一緒に動かすかは別論点（otel 属性は audit 経路）。
+
+## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-model-check 価値チェーンの対象機構（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+本節の file:line はすべて HEAD `16486d3c` 断面（= observed `da51af375` + 本 intent の record コミット1本のみ。ソース面は observed と同一）で実測した（`cid:reverse-engineering:measurement-ref-in-artifacts`）。対象は3 Issue — [#1738](https://github.com/amadeus-dlc/amadeus/issues/1738)（価値チェーン貫通）、[#1829](https://github.com/amadeus-dlc/amadeus/issues/1829)（配布自立化）、[#1510](https://github.com/amadeus-dlc/amadeus/issues/1510)（model-map 正規更新経路）。3件は**それぞれ別の機構層**（compose/projection の配布層、engine の advisory 層、sensor/loader の整合層）に所在し、共有する唯一の面は `plugins/formal-model-check/` の manifest スキーマである。
+
+### 機構 A — plugin 配布の compose/projection 非対称（#1829）
+
+`plugins/formal-model-check/` の正本は3点のみ（`plugin.json` / `README.md` / `stages/` — `ls` 実測、`tools/` は不在）。manifest 実体は次のとおりで、**`tools` フィールドはスキーマに存在しない**:
+
+```json
+{"name":"formal-model-check","stages":[{"slug":"formal-model-check","path":"stages/formal-model-check.md"}],"seams":[],"fragments":[]}
+```
+
+型と parser の両方が3フィールドで閉じている:
+
+- `packages/framework/core/tools/amadeus-plugin-compose.ts:105-110` — `export type PluginManifest = { name; stages; seams; fragments }`
+- 同 `:330-334` — `parseStages` / `parseSeams` / `parseFragments` の3本のみを呼び、他キーは構築されない
+
+**非対称の実体は書込集合の差にある。**
+
+| 経路 | 実装 | tools を運べるか |
+| --- | --- | --- |
+| projection（正本 → `dist/`） | `scripts/plugin-projection.ts:158` `discoverPluginSources` が `walkFs` で**全ファイル走査**（`:169-172`）、検証は構造安全性のみ（`:194`, `:207-215`）。`.json`/`.ts` は verbatim コピー（`:238-241`） | **運べる**（宣言不要） |
+| compose（`dist`/staging → host） | `amadeus-plugin-compose.ts:1021` `composeWriteSet` の `hostWrites` は `plan.stageCopies` と `plan.sharedWrites` のみ | **運べない**（manifest 宣言経路が無い） |
+
+この非対称は**生きた実測として観測できる**: `dist/plugins/formal-model-check/` には中立バンドル + 7 ハーネス面 = **8 変種 / 38 ファイル**（`find -type f` 実測）が存在し `plugin.json`・`README.md` が全変種に現れるのに対し、compose 済み host（`.claude/plugins/formal-model-check/`）には stage md 1本しか存在しない。composition record `.claude/.amadeus-plugin-composition.json` の `ownedPaths` も stage 1本に限定される（`amadeus-plugin-compose.ts:557`）。
+
+したがって #1829 の「16 ファイルを plugin 配下へ移して自立させる」には **manifest スキーマ拡張（型 + parser + `composeWriteSet`）が必須**であり、projection 側は無改修で通る。
+
+### 機構 B — 実行器 54 ファイルの到達可能性分類（#1829 のスコープ境界）
+
+`scripts/formal-verif/*.ts` は 54 ファイル（`ls | wc -l` 実測）。相対 import の推移閉包で4群に分かれ、検算 16+7+1+30 = 54 が一致する。
+
+| 群 | 数 | 到達元 | 内容 |
+| --- | --- | --- | --- |
+| A | 16 | `run-model-check.ts` の推移閉包 | `canonical` / `contract` / `fs-tlc-toolchain` / `run-model-check*`（6本）/ `tla-arm` / `tla-model-loader*`（2本）/ `tla-model-map` / `tlc-spawn-planner` / `tlc-toolchain` |
+| B | 7 | `.github/workflows/ci.yml` から直接 | `run-model-check-ci` / `run-skeleton-ci` / `ci-model-check-runner` / `ci-model-check-domain` / `ci-model-check-artifacts` / `ci-docker-trace` / `node-ci-model-check-port` |
+| C | 1 | 診断 CLI | `run-model-check-diagnostic`（閉包は A + 自身） |
+| D | 30 | **どの CLI からも到達不能** | `arm-s-*`（5本）/ `dispatcher` / `eligibility*` / `evidence-*` / `fixture-*` / `fs-*`（3本）/ `full-matrix*` / `index` / `proof-policy` / `provenance` / `receipt` / `repository-path-policy` / `tla-skeleton*`（3本）ほか |
+
+群 A の**外部依存はただ1本**: `scripts/formal-verif/canonical.ts:1-5` が `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` から `canonicalIdentity` 等を re-export する。すなわち plugin 配下へ移設しても core 側への依存は1本だけ残る（移設設計上の最重要制約）。
+
+**群 B は CI が消費するため「A の 16 本だけを抜き出して残余削除」は CI を壊す。** `.github/workflows/ci.yml:545` の job `formal-model-check` は `:584` `bun scripts/formal-verif/run-model-check-ci.ts run` と `:600` `... verify` を呼ぶ。B と C の帰属先は要件段の裁定対象（本 RE では確定しない）。
+
+群 D は本番からは死んでいるが**テストからは広く参照**されており（`provenance.ts` 14件、`execution-evidence.ts` 10件）、削除範囲は独立の裁定を要する。
+
+### 機構 C — activation advisory（#1738 の貫通点）
+
+engine が formal-model-check の実行を促す唯一の面。**単一発火点・stderr 単線**で実装されている。
+
+- `packages/framework/core/tools/amadeus-orchestrate.ts:1293` verbatim: `const ACTIVATION_ADVISORY_STAGE = "build-and-test";`
+- ガード `:1306` verbatim: `if (slug !== ACTIVATION_ADVISORY_STAGE) return;`
+- 呼出 `:1307` verbatim: `const line = activationAdvisoryForHost(hostRoot);` / `:1308` `if (line !== null) err(line);`
+
+チャネル契約は `:1299-1300` のコメントが明示する — 「Writes ONLY stderr — the stdout directive JSON stays byte-pure」（`cid:code-generation:stdout-directive-stderr-advisory` と整合）。
+
+判定本体は `packages/framework/core/tools/amadeus-plugin-activation.ts:272` `activationAdvisoryForHost`（全 295 行）。
+
+- 第1ゲート = compose 済みか（`:230` 近傍のコメント「The advisory's FIRST gate: when false the engine does nothing (0-plugin zero-impact — BR-U6-4)」）
+- 判定3値（`:56-57` コメント verbatim: 「`changed` and `never-run` fire the advisory; `current` is silent.」）— `changed` / `never-run` が発火、`current` は沈黙
+- 文面2種: `:209` `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}` / `:211` `... has no recorded verdict (specs/tla) — ...`
+- fail-closed（読取不能は `never-run` へ落ちる）、状態を書かない（`:272` 直上コメント「Never writes state (BR-U6-6). Never throws.」）
+
+**前倒しの設計争点**: `:1296-1297` のコメント verbatim「single guarded call site — emitForSlug — so no latch is needed for BR-U6-8」。発火点を build-and-test より前へ動かす／複数化すると**この単一呼出し前提が崩れ、ラッチ（重複抑止）が新たに必要になる**。#1738 の設計はこの前提の扱いを明示的に裁定する必要がある。
+
+### 機構 D — model-map 更新の詰み構造（#1510）
+
+`specs/tla/model-map.json` は `schemaVersion 1` / model `specs/tla/FormalElection.tla`（identity `742b7785…`）/ cfg（`92656a5c…`）/ entries 5件（いずれも `amadeus-election*.ts` の `implPath` + `sha256`）。スキーマ検証は `packages/framework/core/tools/amadeus-formal-verif-model-map.ts`（`:158` `exactObject(["implPath","sha256"])`、`:186` `exactObject(["cfg","entries","model","schemaVersion"])`）。
+
+**詰みは2つの機構の非対称から生じる**（因果を実測確定）:
+
+1. **実行時は impl-hash ドリフトで fail-closed する。** `scripts/formal-verif/tla-model-loader-internal.ts:232` verbatim:
+   `if (sha256 !== entry.sha256) return drift(entry.implPath, "implementation entry hash differs from model map");`
+   （他3分岐 `:221` / `:224` / `:229` はファイル種別・可読性のドリフト。消費側は `:239` `loadVerifiedTlaSourceInternal`、`:236-237` に internal/test-only seam の注記）
+2. **正規更新は model/cfg が変わっていないと拒否する。** `packages/framework/core/tools/amadeus-sensor-model-completeness.ts:650-659` — `assetFailure` フィルタ通過後、`assets.modelIdentity === loaded.map.model.identity && assets.cfgIdentity === loaded.map.cfg.identity` なら `{ ok: false, code: "MODEL_UNCHANGED" }`。**判定は model/cfg identity のみで、entries の impl-hash を一切見ない。**
+
+結果、**impl だけを変更した場合（`amadeus-election*.ts` の編集）、実行は SOURCE_DRIFT で止まるのに model-map を正規手順で更新する経路が存在しない**。
+
+センサー側はこの非対称をさらに際立たせる: `.claude/sensors/amadeus-model-completeness.md:8` verbatim
+`matches: "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}"`
+— **impl 変更でセンサーは発火するが、その発火から更新に到達できない。** 文書化された唯一の更新手順は同ファイル `:37`（`:39-41` に MODEL_UNCHANGED 拒否の記述あり）。更新本体は `amadeus-sensor-model-completeness.ts:691` `updateModelMapInternal`、公開 API `:729`、CLI 分岐 `:778-779` / `:790`。
+
+### 機構 E — mirror lifecycle 状態機械（新規 TLA モデル題材の有限ドメイン）
+
+#1738 が「価値チェーンを貫通させる」ために必要な**新しい検証題材**の候補。`amadeus-mirror*.ts` は 25 ファイル / 12,174 行（`wc -l` 実測）で、語彙は `amadeus-mirror-types.ts`（608 行）に集中し、**有限ドメインが全列挙可能**。
+
+| 型 | 濃度 | 値 |
+| --- | --- | --- |
+| `MirrorMode` `:13` | 3 | off / prompt / auto |
+| `MirrorOperation` `:15` | 3 | create / sync / close |
+| `MirrorBoundary.kind` `:23-33` | 6 | intent-initialized / intent-capture-approved / phase-verified / parked / workflow-completed / manual |
+| `MirrorFailureClass` | 14 | configuration / not-installed / unauthenticated / permission / rate-limit / network / api … |
+| `MirrorReceiptStatus` `:66-73` | 7 | prepared / attempted / succeeded / skipped-for-event / pending / safety-blocked / abandoned |
+| `MirrorMutationEffect` | 3 | not-started / no-effect-confirmed / outcome-unknown |
+| `MirrorPhaseKey` | 5 | ideation / inception / construction / operation / done |
+| `MirrorProjectSyncState` | 3 | synced / pending / safety-blocked |
+| `MirrorProjectMutation` | 2 | add-project-item / update-project-item-field |
+| `MirrorRegistryStatus` | 4 | in-flight / parked / complete / archived |
+
+遷移は `packages/framework/core/tools/amadeus-mirror-state-reducer.ts:55` の `MirrorTransition` union。**inline 18 種**（`prepare` / `mark-attempted` / `claim-create-attempt` / `retry-after-no-effect` / `claim-observed-retry` / `complete` / `complete-with-project-sync-hold` / `skip-for-event` の receipt 8 + `set-warning` / `set-global-warning` / `clear-global-warning` / `mark-pending` / `mark-safety-blocked` / `abandon-attempt` / `set-expected-prompt` / `consume-expected-prompt` / `repair-link` / `issue-repair-challenge` の補助 10）に加え、`:113` verbatim `| ProjectSyncTransition;` が入れ子で3種（`CommitProjectReconciliationTransition` / `HoldForProjectSyncTransition` / `RetireProjectSyncHoldTransition`、`amadeus-mirror-project-reconciliation-reducer.ts:45-48`）を持つため、**モデル化対象の遷移は計 21 種**。統合口は `:814` `reduceMirrorState`。
+
+終端状態は4（`:127-132` `TERMINAL_STATUSES` = succeeded / skipped-for-event / safety-blocked / abandoned）、非終端3。ガードは4本（`:692-715` verbatim）:
+
+- `guardMarkAttempted` — `status === "prepared" || status === "attempted"`
+- `guardClaimCreate` — 上記 + `r.createIdentity`
+- `guardRetryNoEffect` — `status === "pending" && lastEffect === "no-effect-confirmed"`
+- `guardObservedRetry` — `status === "pending" && lastEffect === "outcome-unknown"`
+
+**有限化定数**: receipts は可変長 Record だが `:42` `export const MAX_RECEIPTS = 1000;` が上限を与える。TLA モデル値では receipt 数の上限を小さい定数へ落とす必要がある（要件段の裁定対象）。
+
+**boundary → operation 写像**（`amadeus-mirror-coordinator.ts:230-244` `operationForBoundary` verbatim）:
+
+```ts
+if (context.boundary.kind === "manual") return null;
+if (context.boundary.kind === "intent-capture-approved") return "create";
+if (context.boundary.kind === "workflow-completed") { return nextCompletionOperation({...}); }
+return state.issueNumber === null ? "create" : "sync";
+```
+
+`intent-capture-approved` が **`state.issueNumber` を見ずに `create` 固定**である点は、本日実測の [#1838](https://github.com/amadeus-dlc/amadeus/issues/1838)（重複 create）の直接機序候補である。モジュール規模は state-codec 1946 / executor 1562 / lifecycle 1272 / coordinator 1004 / reducer 823 / types 608 — **骨格は reducer + types に閉じる**ため、model-map entries の正準 impl 集合の第一候補になる。
+
+### 3機構の相互作用と分割可能性
+
+| 面 | #1738 | #1829 | #1510 |
+| --- | --- | --- | --- |
+| `plugin.json` manifest スキーマ | 間接 | **改修必須** | — |
+| `amadeus-plugin-compose.ts` | 間接 | **改修必須** | — |
+| `amadeus-orchestrate.ts` advisory | **改修対象** | — | — |
+| `amadeus-sensor-model-completeness.ts` | — | — | **改修対象** |
+| `scripts/formal-verif/` 移設 | — | **改修対象** | — |
+| `specs/tla/` 新モデル | **追加対象** | — | 間接（entries 更新） |
+
+**共有ファイルはゼロ**であり、3件は独立 Bolt として並行実装できる。ただし #1829 の移設が `scripts/formal-verif/` のパスを変えると `tests/.coverage-patch-allowlist.json` と `tests/.complexity-baseline.json` の双方が影響を受けるため、この2台帳が唯一の直列化点になる。
+
+## オープンバグ4件の対象機構（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 検証の CI 分離が触れる機構（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 本節の file:line はすべて observed `c49e385ac` 時点。患部全数・機構詳細・Bolt 交差判定は `re-scans/260801-open-bug-batch-5.md` を正本とする。
 

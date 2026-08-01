@@ -45,6 +45,8 @@ import {
   renderPluginCliResult,
   runPluginCli,
   stagingEntryState,
+  listHarnessTrees,
+  listPluginSourceDirs,
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -80,6 +82,8 @@ function deps(opts: Opts = {}): PluginCliDeps {
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,
+    listHarnessTrees,
+    listPluginSourceDirs,
     copyPluginSource: (src, dst) => {
       copies += 1;
       copyPluginSource(src, dst, (l) => err.push(l));

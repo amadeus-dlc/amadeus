@@ -44,6 +44,10 @@ export const MEASUREMENT_ROOTS = [
   "packages/framework/core",
   "packages/setup/src",
   "scripts",
+  // Plugin-owned tool trees are product surface too: code that moves from
+  // scripts/ into plugins/<name>/tools/ must stay measured, or relocation would
+  // silently drop it out of the gate.
+  "plugins",
 ] as const;
 
 // ENV-VAR SEAMS (mirror coverage-project-gate's AMADEUS_COVERAGE_* pattern).

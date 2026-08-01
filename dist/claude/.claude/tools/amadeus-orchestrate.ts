@@ -104,6 +104,8 @@ import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeSpace,
   activeIntent,
+  advisoryLatchDir,
+  type BoltDagAbsence,
   type CheckboxLine,
   codekbRepoName,
   KNOWN_CODEKB_STAGES,
@@ -219,9 +221,11 @@ import { inferScopeFromText } from "./amadeus-utility.ts";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
-  activationAdvisoryForHost,
+  activationAdvisoriesForHost,
+  type Advisory,
   isComposedPluginStage,
   recordActivationVerdict,
+  unlatchedAdvisories,
 } from "./amadeus-plugin-activation.ts";
 
 function trustedHostSessionId(projectDir: string | undefined): string | undefined {
@@ -679,6 +683,7 @@ const DEFAULT_SCOPE = "feature";
 // boundaries), never a silent miss — we exit non-zero so a wiring bug surfaces
 // loudly rather than emitting a lie the conductor would act on.
 function emit(directive: Directive, recordError = true): void {
+  attachPendingAdvisories(directive);
   const result = validateDirective(directive);
   if (!result.valid) {
     console.error(
@@ -711,6 +716,19 @@ function emit(directive: Directive, recordError = true): void {
     }
   }
   console.log(JSON.stringify(result.data));
+}
+
+// Move any advisories raised for this emission onto the directive about to be
+// printed (U5 / FR-B2). Only a stage-carrying directive can hold them: an
+// error/print/done directive has no advisories field, and dropping the raise
+// there is correct — the stderr line was already written, and the run latch has
+// already recorded it. An EMPTY raise attaches nothing, so a silent judgment
+// leaves the directive byte-identical to the pre-U5 engine (invariant I2).
+function attachPendingAdvisories(directive: Directive): void {
+  const pending = takePendingAdvisories();
+  if (pending.length === 0) return;
+  if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return;
+  directive.advisories = pending;
 }
 
 function emitStateNeutralError(message: string): void {
@@ -1274,24 +1292,98 @@ export function pluginActivationHostRoot(): string {
   }
 }
 
-// The stage whose imminent directive triggers the advisory (business-logic-model
-// flow 2: "just before next emits the build-and-test directive").
-const ACTIVATION_ADVISORY_STAGE = "build-and-test";
+// The CHECKPOINTS whose imminent directive triggers the advisory (U5 / FR-B3,
+// ruling Q3=A). Was the single build-and-test slug; a spec change that
+// contradicts the requirements should surface while the requirements are being
+// written, not one phase later, so the set is:
+//   requirements-analysis — the upstream catch (a spec/requirement conflict)
+//   functional-design     — the design-time catch
+//   build-and-test        — the final safety net (the original, retained)
+const ACTIVATION_ADVISORY_STAGES: ReadonlySet<string> = new Set([
+  "requirements-analysis",
+  "functional-design",
+  "build-and-test",
+]);
 
-// Flow 2 — emit the formal-model-check activation advisory (stderr, at most one
-// line) when the engine is about to emit the build-and-test directive. Only the
-// build-and-test slug triggers it (single guarded call site — emitForSlug — so
-// no latch is needed for BR-U6-8). Silent when formal-model-check is not composed
-// (0-plugin zero-impact) or the spec is unchanged (`current`). Writes ONLY stderr
-// — the stdout directive JSON stays byte-pure (stdout-directive-stderr-advisory).
+// Flow 2 — raise the formal-model-check activation advisories for the stage the
+// engine is about to emit a directive for. Silent when the slug is not a
+// checkpoint, when formal-model-check is not composed (0-plugin zero-impact), or
+// when the spec is unchanged (`current`).
+//
+// TWO CALL SITES, NOT ONE (U5 / business-logic-model L3): emitForSlug (the main
+// workflow) AND emitSingleRunStage (the `--single` stage-runner path). The
+// earlier "single guarded call site so no latch is needed" invariant is
+// RETIRED — with three checkpoints reachable from two paths, the same judgment
+// would otherwise be repeated at every `next`. `latchDir` supplies the run-level
+// de-duplication (business-logic-model L4): the first raise per (plugin, code)
+// wins for the run and later ones are dropped. Passing null/undefined disables
+// the latch (every raise fires), which is what the pure-decision seam tests use.
+//
+// Returns the advisories it raised so the caller can put them on the directive
+// (the machine channel, FR-B2); the `err` sink still receives one line each, so
+// the human channel is unchanged (L5 — additive, never a replacement).
 export function emitActivationAdvisory(
   slug: string,
   hostRoot: string,
   err: (line: string) => void,
-): void {
-  if (slug !== ACTIVATION_ADVISORY_STAGE) return;
-  const line = activationAdvisoryForHost(hostRoot);
-  if (line !== null) err(line);
+  latchDir?: string | null,
+): Advisory[] {
+  if (!ACTIVATION_ADVISORY_STAGES.has(slug)) return [];
+  const raised = latchDir
+    ? unlatchedAdvisories(latchDir, activationAdvisoriesForHost(hostRoot, slug))
+    : activationAdvisoriesForHost(hostRoot, slug);
+  for (const advisory of raised) err(advisory.message);
+  return raised;
+}
+
+// The advisories raised for the directive currently being composed. A
+// module-scoped slot rather than a parameter on every emit call site: the two
+// advisory call sites each fan out into several emit() sites (per-unit
+// iteration, gate re-entry, the error paths), and emit() is the ONE stdout
+// point, so attaching there is what guarantees the field rides the directive
+// that is actually printed. Mirrors _handlerProjectDir's precedent. Consumed
+// (and cleared) by emit() so a raise can never leak onto a later directive.
+let _pendingAdvisories: Advisory[] = [];
+
+function setPendingAdvisories(advisories: Advisory[]): void {
+  _pendingAdvisories = advisories;
+}
+
+function takePendingAdvisories(): Advisory[] {
+  const pending = _pendingAdvisories;
+  _pendingAdvisories = [];
+  return pending;
+}
+
+// The activation advisory work for one about-to-be-emitted slug: raise (with the
+// run latch), write the human line to stderr, and stage the structured result
+// for emit(). Shared by BOTH emit paths so the two can never drift.
+function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
+  setPendingAdvisories(
+    emitActivationAdvisory(
+      slug,
+      pluginActivationHostRoot(),
+      (line) => process.stderr.write(`${line}\n`),
+      advisoryLatchDirForRun(projectDir),
+    ),
+  );
+}
+
+// The run's latch directory: `<record>/.amadeus-advisory-latch/<session>`. The
+// per-session leaf is what makes the latch RUN-scoped rather than permanent —
+// the placement's lifecycle IS the run boundary (business-logic-model L4). The
+// whole tree is machine-local and gitignored (`.amadeus-*` under the record), so
+// the latch never reaches a commit (invariant I4).
+//
+// Total by construction, so it carries no guard of its own: readCurrentSessionId
+// already absorbs its own read failures (returning null, which the "no-session"
+// leaf covers) and advisoryLatchDir is a path join over docsRoot, called
+// unguarded by every sibling path helper. The fail-open guarantee of BR-U5-3
+// lives where the actual I/O is — unlatchedAdvisories, whose read and write are
+// each individually fail-open.
+function advisoryLatchDirForRun(projectDir: string): string {
+  const session = readCurrentSessionId(projectDir) ?? "no-session";
+  return join(advisoryLatchDir(projectDir), session.replace(/[^A-Za-z0-9._-]+/g, "-"));
 }
 
 // FR-7(a) — a compose-installed plugin stage is reachable via `--stage <slug>`
@@ -1461,6 +1553,30 @@ function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
 // level) or null when there is no graph file or no bolt_dag node. A pure read:
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
 const reportedBoltDagRecoveries = new Set<string>();
+
+// The companion read to readBoltDagBatches: when that returns null, this says
+// whether the compile had a legitimate reason for there being no DAG. A degrade
+// scope ("scope-skips-units") and a stage that simply has not run yet
+// ("units-pending") are the only two — anything else fails the compile outright,
+// so a null here alongside a null DAG means the graph predates this field.
+//
+// Exported as the in-process seam. No CLI verb calls this yet — the degrade-path
+// message wiring is the issuance-guard Bolt's consumer of the same field.
+export function readBoltDagAbsence(projectDir: string): BoltDagAbsence | null {
+  let raw: unknown;
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    if (graph !== null && typeof graph === "object" && "bolt_dag_absence" in graph) {
+      raw = (graph as { bolt_dag_absence?: unknown }).bolt_dag_absence;
+    }
+  } catch {
+    return null;
+  }
+  if (raw === null || typeof raw !== "object") return null;
+  const { reason, detail } = raw as { reason?: unknown; detail?: unknown };
+  if (reason !== "scope-skips-units" && reason !== "units-pending") return null;
+  return { reason, detail: typeof detail === "string" ? detail : "" };
+}
 
 function readBoltDagBatches(projectDir: string): string[][] | null {
   const runtimePath = runtimeGraphPath(projectDir);
@@ -3339,9 +3455,11 @@ function emitForSlug(
   codekbCtx: CodekbCtx,
   projectDir: string,
 ): void {
-  // Flow 2: the formal-model-check activation advisory fires here — the single
-  // guarded call site — just before the build-and-test directive is emitted.
-  emitActivationAdvisory(slug, pluginActivationHostRoot(), (line) => process.stderr.write(`${line}\n`));
+  // Flow 2: the formal-model-check activation advisories are raised here — the
+  // MAIN-WORKFLOW call site — just before this stage's directive is emitted. The
+  // `--single` path raises them at its own site (emitSingleRunStage); the run
+  // latch is what keeps the two from repeating each other.
+  raiseActivationAdvisoriesFor(slug, projectDir);
   const node = nodeForSlug(slug);
   if (node && isPerUnit(node)) {
     emitPerUnitRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
@@ -3380,6 +3498,15 @@ function emitSingleRunStage(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
 ): void {
+  // The SECOND activation-advisory call site (business-logic-model L3). A
+  // stage-runner skill (/amadeus-requirements-analysis and friends) IS this
+  // path, so without a raise here the two new upstream checkpoints would be
+  // unreachable for every stage-runner user — the exact "the signal exists but
+  // never arrives" failure U5 removes. Raised before the guards below because
+  // the advisory is about the HOST, not about whether this stage resolves; a
+  // guard that returns an error directive simply drops the pending raise
+  // (an error directive carries no advisories field).
+  raiseActivationAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(

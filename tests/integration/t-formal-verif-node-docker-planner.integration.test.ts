@@ -8,9 +8,9 @@ import {
   NodeDockerCommandPort,
   NodePlannerEnvironmentPort,
   type DockerCommandPort,
-} from "../../scripts/formal-verif/tlc-spawn-planner.ts";
-import type { EnvVerifyContext } from "../../scripts/formal-verif/run-model-check-domain.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import type { EnvVerifyContext } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 describe("Node Docker planner adapter", () => {
   const roots: string[] = [];

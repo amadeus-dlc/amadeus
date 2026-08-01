@@ -9,12 +9,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
   diffModelMap,
   parseTlaModelMap,
   type ModelMapEntry,
-} from "../../scripts/formal-verif/tla-model-map.ts";
+} from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 import {
   checkModelCompleteness,
   main,
@@ -55,16 +55,21 @@ function fixture(entryCount = 1): {
     };
   });
   const map = {
-    schemaVersion: 1,
-    model: {
-      path: "specs/tla/FormalElection.tla",
-      identity: identity(model, "amadeus.formal-verif.tla.module.v1"),
-    },
-    cfg: {
-      path: "specs/tla/FormalElection.cfg",
-      identity: identity(cfg, "amadeus.formal-verif.tla.cfg.v1"),
-    },
-    entries,
+    schemaVersion: 2,
+    models: [
+      {
+        name: "FormalElection",
+        model: {
+          path: "specs/tla/FormalElection.tla",
+          identity: identity(model, "amadeus.formal-verif.tla.module.v1"),
+        },
+        cfg: {
+          path: "specs/tla/FormalElection.cfg",
+          identity: identity(cfg, "amadeus.formal-verif.tla.cfg.v1"),
+        },
+        entries,
+      },
+    ],
   };
   const mapPath = join(root, "specs", "tla", "model-map.json");
   writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
@@ -155,7 +160,7 @@ describe("model-completeness sensor component integration", () => {
     ).toMatchObject({ pass: false, reason: "map-missing" });
 
     const malformed = fixture();
-    writeFileSync(malformed.mapPath, "{\"schemaVersion\":2}");
+    writeFileSync(malformed.mapPath, "{\"schemaVersion\":1}");
     expect(
       await checkModelCompleteness({
         projectRoot: malformed.root,

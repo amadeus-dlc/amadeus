@@ -2,26 +2,26 @@ import { join } from "node:path";
 import type {
   PlannedTlcOutcome,
   PreparedPlannedTlcRun,
-} from "../../../scripts/formal-verif/fs-tlc-toolchain.ts";
+} from "../../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
   runModelCheck,
   runModelCheckMain,
   type PlannedModelCheckToolchain,
   type RunModelCheckDependencies,
-} from "../../../scripts/formal-verif/run-model-check.ts";
-import { beginModelCheckArtifacts } from "../../../scripts/formal-verif/run-model-check-artifacts.ts";
-import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../../scripts/formal-verif/run-model-check-execution.ts";
-import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../../scripts/formal-verif/run-model-check-paths.ts";
-import { StderrModelCheckReporter } from "../../../scripts/formal-verif/run-model-check-reporter.ts";
+} from "../../../plugins/formal-model-check/tools/run-model-check.ts";
+import { beginModelCheckArtifacts } from "../../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
+import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../../plugins/formal-model-check/tools/run-model-check-execution.ts";
+import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../../plugins/formal-model-check/tools/run-model-check-paths.ts";
+import { StderrModelCheckReporter } from "../../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
 import type {
   EnvReceipt,
-} from "../../../scripts/formal-verif/run-model-check-domain.ts";
+} from "../../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   type TlcExploration,
   type VerifiedTlcArtifact,
-} from "../../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
 const encoder = new TextEncoder();

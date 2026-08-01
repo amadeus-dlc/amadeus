@@ -20,7 +20,7 @@ describe("run-model-check CLI", () => {
   test("returns exit 2 and machine-readable stderr for a parse failure", () => {
     const result = Bun.spawnSync([
       "bun",
-      "scripts/formal-verif/run-model-check.ts",
+      "plugins/formal-model-check/tools/run-model-check.ts",
       "--model",
       "missing.tla",
     ], {

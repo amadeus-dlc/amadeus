@@ -18,12 +18,14 @@
 //
 // Source under test:
 //   dist/claude/.claude/tools/amadeus-runtime.ts
-//     :297 computeBoltDag(projectDir) — reads unit-of-work-dependency.md, calls
-//          parseBoltDag; returns undefined (node omitted) + STDERR diagnostic on
-//          absent/malformed/cyclic; pure data, no Date.now → byte-identical recompile.
-//     :758-761 compile() appends graph.bolt_dag only when computeBoltDag returns
-//          a node, so the absent envelope keeps key order {workflow_id, scope,
-//          started_at, stages} (the pre-milestone-15 4-key shape).
+//     computeBoltDagOutcome(projectDir, stateContent) — reads
+//          unit-of-work-dependency.md, calls parseBoltDag, and resolves one of
+//          three arms; pure data, no Date.now → byte-identical recompile.
+//     compile() appends graph.bolt_dag for the `dag` arm and
+//          graph.bolt_dag_absence for the `absent` one, and THROWS on `invalid`
+//          (units-generation completed with the artefact missing, or a file that
+//          does not parse) — so a broken plan fails the compile instead of
+//          silently omitting the node, which is what #1892/#1893 rode in on.
 //   dist/claude/.claude/tools/amadeus-sensor-required-sections.ts
 //     :89-97 filename-gated extension: for unit-of-work-dependency.md, sets
 //          result.edge_block = parseBoltDag().reason (or "ok"); a non-ok block
@@ -38,9 +40,10 @@
 //   .sh 1  valid block → bolt_dag node + 4 units             -> "valid edge block: bolt_dag node with 4 units"
 //   .sh 2  batches are sorted topological levels             -> "valid edge block: batches are correct sorted topological levels"
 //   .sh 3  second compile byte-identical                      -> "second compile is byte-identical (pure-data parse)"
-//   .sh 4  cyclic → node omitted + stderr 'cyclic'            -> "cyclic edge block: bolt_dag omitted + stderr names 'cyclic'"
-//   .sh 5  malformed (dangling) → omitted + stderr 'malformed' -> "malformed edge block: bolt_dag omitted + stderr names 'malformed'"
-//   .sh 6  absent artifact → 4-key envelope                   -> "absent artifact: envelope keeps the pre-milestone-15 4-key shape"
+//   .sh 4  cyclic → node omitted + stderr 'cyclic'            -> "cyclic edge block: non-zero exit + stderr names 'cyclic'" (revised)
+//   .sh 5  malformed (dangling) → omitted + stderr 'malformed' -> "malformed edge block: non-zero exit + stderr names 'malformed'" (revised)
+//   .sh 6  absent artifact → 4-key envelope                   -> split into "…units-generation completed: non-zero exit" +
+//                                                                  "…units-generation skipped: exit 0 + bolt_dag_absence" (revised)
 //   .sh 7  sensor valid → pass:true, edge_block:ok            -> "sensor: valid block → pass:true, edge_block:ok"
 //   .sh 8  sensor cyclic → pass:false, edge_block:cyclic      -> "sensor: cyclic block → pass:false, edge_block:cyclic"
 //   .sh 9  sensor absent → pass:false, edge_block:absent      -> "sensor: absent block → pass:false, edge_block:absent"
@@ -176,15 +179,32 @@ function writeUowd(proj: string, block: string): void {
 
 interface CompileRun {
   stderr: string;
+  status: number | null;
 }
 
 // run_compile (.sh:124-127): `bun RUNTIME compile --project-dir <proj>`,
-// capturing stderr (the omit diagnostic surface).
+// capturing stderr (the diagnostic surface) and the exit code. The exit code
+// carries the contract now: a compile that cannot project the planned Bolt DAG
+// fails instead of quietly omitting the node.
 function runCompile(proj: string): CompileRun {
   const res = spawnSync(BUN, [RUNTIME, "compile", "--project-dir", proj], {
     encoding: "utf-8",
   });
-  return { stderr: `${res.stdout ?? ""}${res.stderr ?? ""}` };
+  return { stderr: `${res.stdout ?? ""}${res.stderr ?? ""}`, status: res.status };
+}
+
+// Flip the seeded state's units-generation checkbox to SKIP — the degrade-scope
+// shape, where an absent artefact is normal rather than a defect.
+function markUnitsGenerationSkipped(proj: string): void {
+  const statePath = join(recordRoot(proj), "amadeus-state.md");
+  writeFileSync(
+    statePath,
+    readFileSync(statePath, "utf-8").replace(
+      /^- \[x\] units-generation —.*$/m,
+      "- [S] units-generation — SKIP: scope has no units",
+    ),
+    "utf-8",
+  );
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: test reads arbitrary compiled-graph shape
@@ -275,34 +295,51 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     expect(second).toBe(first);
   }, 30000);
 
-  // ---- 4: cyclic block → node omitted + stderr diagnostic ------------------
-  test("cyclic edge block: bolt_dag omitted + stderr names 'cyclic' [.sh test 4]", () => {
+  // ---- 4: cyclic block → compile fails ------------------------------------
+  // Revised: the .sh asserted the node was omitted and the graph still written.
+  // Omitting it silently is what let a broken plan reach the swarm, so the
+  // observation point moved from the graph to the exit code.
+  test("cyclic edge block: non-zero exit + stderr names 'cyclic' [.sh test 4, revised]", () => {
     const proj = makeProject();
     writeUowd(proj, CYCLIC_BLOCK);
-    const { stderr } = runCompile(proj);
-    const g = readGraph(proj);
-    expect("bolt_dag" in g).toBe(false);
+    const { stderr, status } = runCompile(proj);
+    expect(status).not.toBe(0);
     expect(stderr).toContain("cyclic");
   }, 30000);
 
-  // ---- 5: malformed (dangling dep) → node omitted + stderr diagnostic ------
-  test("malformed edge block (dangling dep): bolt_dag omitted + stderr names 'malformed' [.sh test 5]", () => {
+  // ---- 5: malformed (dangling dep) → compile fails -------------------------
+  test("malformed edge block (dangling dep): non-zero exit + stderr names 'malformed' [.sh test 5, revised]", () => {
     const proj = makeProject();
     writeUowd(proj, DANGLING_BLOCK);
-    const { stderr } = runCompile(proj);
-    const g = readGraph(proj);
-    expect("bolt_dag" in g).toBe(false);
+    const { stderr, status } = runCompile(proj);
+    expect(status).not.toBe(0);
     expect(stderr).toContain("malformed");
   }, 30000);
 
-  // ---- 6: absent artifact → 4-key envelope ---------------------------------
-  test("absent artifact: envelope keeps the pre-milestone-15 4-key shape (no empty node) [.sh test 6]", () => {
+  // ---- 6a: absent artifact under a completed units-generation → fails ------
+  test("absent artifact with units-generation completed: non-zero exit [.sh test 6, revised]", () => {
     const proj = makeProject(); // no unit-of-work-dependency.md written
-    runCompile(proj);
+    const { stderr, status } = runCompile(proj);
+    expect(status).not.toBe(0);
+    expect(stderr).toContain("absent");
+  }, 30000);
+
+  // ---- 6b: absent artifact in a degrade scope → normal --------------------
+  // The pre-milestone-15 4-key envelope no longer holds even here: recording WHY
+  // the DAG is absent is the point, so the key set grows by one. Deliberate.
+  test("absent artifact with units-generation skipped: exit 0 + bolt_dag_absence [.sh test 6, split]", () => {
+    const proj = makeProject();
+    markUnitsGenerationSkipped(proj);
+    expect(runCompile(proj).status).toBe(0);
     const g = readGraph(proj);
-    // Stronger than the .sh's join check: assert exact key set AND order, and
-    // that bolt_dag is genuinely absent (no empty-node noise).
-    expect(Object.keys(g)).toEqual(["workflow_id", "scope", "started_at", "stages"]);
+    expect(Object.keys(g)).toEqual([
+      "workflow_id",
+      "scope",
+      "started_at",
+      "stages",
+      "bolt_dag_absence",
+    ]);
+    expect(g.bolt_dag_absence.reason).toBe("scope-skips-units");
     expect("bolt_dag" in g).toBe(false);
   }, 30000);
 });

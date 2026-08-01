@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-} from "../../scripts/formal-verif/tla-arm.ts";
-import * as toolchainModule from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import * as toolchainModule from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 import {
   DARWIN_NETWORK_DENY_POLICY_IDENTITY,
   DARWIN_SANDBOX_PROVIDER_IDENTITY,
@@ -22,7 +22,7 @@ import {
   validateFixedTlcProfile,
   type TlcExecutionPort,
   type TlcToolchainFacade,
-} from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const hash = (token: string) => token.repeat(64);
 

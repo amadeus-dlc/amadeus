@@ -38,6 +38,7 @@ import {
   seededAuditShard,
   seededStateFile,
   toPortablePath,
+  seedUnitDependency,
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
@@ -254,6 +255,7 @@ describe("compile emits MEMORY_EMPTY through the canonical path", () => {
       join(record, "amadeus-state.md"),
       readFileSync(join(REPO_ROOT, "tests", "fixtures", "state-construction.md")),
     );
+    seedUnitDependency(record);
     const shard = auditFilePath(proj);
     mkdirSync(dirname(shard), { recursive: true });
     writeFileSync(

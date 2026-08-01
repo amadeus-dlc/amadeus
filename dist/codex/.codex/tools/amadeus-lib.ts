@@ -4798,6 +4798,15 @@ export function hooksHealthDir(projectDir: string, intent?: string, space?: stri
   return join(docsRoot(projectDir, intent, space), ".amadeus-hooks-health");
 }
 
+// `<root>/.amadeus-advisory-latch` — per-run markers for the plugin activation
+// advisories the engine has already raised (U5 run latch). Machine-local: the
+// `.amadeus-` prefix under the record is gitignored, so a latch never reaches a
+// commit. Callers add a per-session leaf; the leaf's lifecycle IS the run
+// boundary.
+export function advisoryLatchDir(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-advisory-latch");
+}
+
 // `<root>/.amadeus-recovery.md` — the validate-state breadcrumb the orchestrator
 // reads on resume.
 export function recoveryFilePath(projectDir: string, intent?: string, space?: string): string {
@@ -7822,6 +7831,20 @@ export interface UnitDependencyEdge {
 export type BoltDagParse =
   | { ok: true; units: UnitDependencyEdge[]; batches: string[][] }
   | { ok: false; reason: "absent" | "malformed" | "cyclic"; detail: string };
+
+// Why a compiled runtime graph legitimately carries NO bolt_dag node. The two
+// reasons are the only ones that are not defects: the scope skips
+// units-generation altogether (degrade scopes such as fix/chore), or the stage
+// has not produced its artefact yet. Anything else — units-generation completed
+// with the artefact missing, or an artefact that does not parse — is a defect
+// and fails the compile instead of landing here.
+//
+// `reason` is the machine discriminant; `detail` is prose for a human reading
+// stderr and is never branched on.
+export type BoltDagAbsence = {
+  readonly reason: "scope-skips-units" | "units-pending";
+  readonly detail: string;
+};
 
 // Locate the first fenced ```yaml block whose body declares a top-level
 // `units:` key. Returns the inner block text, or null when no such fence

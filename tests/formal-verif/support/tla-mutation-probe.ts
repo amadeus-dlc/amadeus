@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { generateFrozenTlaModel } from "../../../scripts/formal-verif/tla-arm.ts";
+import { generateFrozenTlaModel } from "../../../plugins/formal-model-check/tools/tla-arm.ts";
 
 type Mutation = "unknown-choice" | "invalid-timestamp" | "amend-budget" | "resolution";
 

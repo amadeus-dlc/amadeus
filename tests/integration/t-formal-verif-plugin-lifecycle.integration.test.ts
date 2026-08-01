@@ -15,16 +15,18 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   truncateSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   compileStageGraph,
   __resetGraphCache,
@@ -81,15 +83,25 @@ afterEach(() => {
 });
 
 // A read model over the current on-disk host bytes + the backend record. The
-// plugin contributes only a stage (no seams/fragments), so no host stage targets
-// are needed — an empty stage map suffices for inspectPlugin.
+// plugin contributes no seams/fragments, so no host stage targets are needed —
+// an empty stage map suffices for inspectPlugin. The composed area is walked
+// whole rather than probed for one known path: the plugin owns its tools as
+// well as its stage, and a snapshot missing an owned path reads as drift.
 function hostSnapshot(root: string, backend: WorkspaceBackend): HostSnapshot {
   const paths = new Set<string>();
   const files = new Map<string, Buffer>();
-  if (existsSync(join(root, STAGE_LANDING))) {
-    paths.add(STAGE_LANDING);
-    files.set(STAGE_LANDING, readFileSync(join(root, STAGE_LANDING)));
-  }
+  const walk = (dir: string): void => {
+    for (const name of [...readdirSync(dir)].sort()) {
+      const abs = join(dir, name);
+      if (statSync(abs).isDirectory()) walk(abs);
+      else {
+        paths.add(relative(root, abs).split(sep).join("/"));
+        files.set(relative(root, abs).split(sep).join("/"), readFileSync(abs));
+      }
+    }
+  };
+  const composed = join(root, "plugins");
+  if (existsSync(composed)) walk(composed);
   return { stages: new Map(), paths, files, composition: backend.readComposition() };
 }
 

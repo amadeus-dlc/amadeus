@@ -3,8 +3,8 @@ import {
   modelCheckExitCode,
   parseRunModelCheckArgs,
   toModelCheckOutcome,
-} from "../../scripts/formal-verif/index.ts";
-import { runModelCheckMain } from "../../scripts/formal-verif/run-model-check.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import { runModelCheckMain } from "../../plugins/formal-model-check/tools/run-model-check.ts";
 
 describe("run-model-check public contract", () => {
   test("parses one variable model run with the automatic provider", () => {

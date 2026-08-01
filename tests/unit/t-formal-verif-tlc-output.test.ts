@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-} from "../../scripts/formal-verif/tla-arm.ts";
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   parseTlcOutput174,
-} from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const encoder = new TextEncoder();
 

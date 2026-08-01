@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
   applyTlaElectionAction,
   createFrozenTlaModelReceipt,
@@ -8,7 +8,7 @@ import {
   tlaCfgBytesIdentity,
   tlaModuleBytesIdentity,
   validateFrozenTlaModelReceipt,
-} from "../../scripts/formal-verif/tla-arm.ts";
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
 
 const PUBLIC_CONTRACT_IDENTITY = "a".repeat(64);
 const INVARIANTS = [

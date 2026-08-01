@@ -137,7 +137,26 @@ export interface RunStageDirective {
   // both fields are present together and exactly match their canonical formats.
   standing_grant_id?: string;
   standing_grant_route_id?: string;
+  // advisories — plugin activation advisories raised at THIS checkpoint (U5 /
+  // FR-B2). The machine-readable half of a signal that used to exist only as a
+  // stderr line: the conductor reads this field and relays each entry to the
+  // human (stage-protocol.md §advisories). Present ONLY when non-empty — a
+  // silent judgment omits the key entirely, so every directive emitted before
+  // this channel existed is byte-unchanged.
+  advisories?: DirectiveAdvisory[];
 }
+
+// DirectiveAdvisory — the wire shape of amadeus-plugin-activation.ts's
+// `Advisory`. Declared here (rather than imported) so the directive contract
+// module stays dependency-free, and kept structurally identical so the
+// producing type assigns to it without a cast; the plugin module remains the
+// semantic owner (it is what decides when an advisory exists at all).
+export type DirectiveAdvisory = {
+  plugin: string;
+  code: "changed" | "never-run";
+  message: string;
+  stage: string;
+};
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
 // a named worker (e.g. code-generation, reverse-engineering). Carries every
@@ -160,6 +179,10 @@ export interface DispatchSubagentDirective {
   worker: string;
   conductor_persona?: string;
   consumes_absent?: Array<{ path: string; expected: boolean }>;
+  // Same advisory channel as run-stage: a checkpoint stage that runs in
+  // subagent mode must relay the advisory too, or the channel would have a
+  // mode-shaped hole.
+  advisories?: DirectiveAdvisory[];
 }
 
 // invoke-swarm — fan out N parallel workers across N worktrees for a build
@@ -323,6 +346,7 @@ const RUN_STAGE_FIELDS = [
   "next_stage",
   "standing_grant_id",
   "standing_grant_route_id",
+  "advisories",
 ] as const;
 
 // dispatch-subagent = run-stage fields + `worker`.
@@ -510,6 +534,11 @@ function checkRunStageShared(
   // next_stage: optional; if present must be a string (a stage slug) OR null (the
   // explicit terminal signal). Absent on gate:false / --single directives.
   checkOptionalNullableString(o, "next_stage", kind, errors);
+  // advisories: optional (present ONLY when a plugin activation advisory
+  // actually fires at this checkpoint). An EMPTY array is never emitted — the
+  // key's absence is the encoding of silence — but an explicitly empty array is
+  // still structurally valid rather than an error.
+  checkOptionalAdvisories(o, "advisories", kind, errors);
   if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
 }
 
@@ -783,6 +812,52 @@ function checkOptionalConsumesAbsent(
     if (typeof item.expected !== "boolean") {
       errors.push(
         `${kind}: ${field}[${i}].expected must be boolean, got ${describe(item.expected)}`,
+      );
+    }
+  });
+}
+
+// The advisory codes the channel accepts — the two FIRING judgment values.
+// `current` is deliberately absent: a silent judgment produces no entry at all,
+// so a "current" advisory would be a rendered decision with no decision behind
+// it (the validator refuses to carry one).
+const ADVISORY_CODES = ["changed", "never-run"] as const;
+
+// checkOptionalAdvisories — each entry must be
+// {plugin, code, message, stage} with `code` in ADVISORY_CODES. Same
+// presence-then-type shape as checkOptionalConsumesAbsent, the sibling
+// object-array field.
+function checkOptionalAdvisories(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  const v: unknown = o[field];
+  if (!Array.isArray(v)) {
+    errors.push(`${kind}: ${field} must be array, got ${describe(v)}`);
+    return;
+  }
+  const arr: unknown[] = v;
+  arr.forEach((item: unknown, i: number) => {
+    if (!isPlainObject(item)) {
+      errors.push(`${kind}: ${field}[${i}] must be object, got ${describe(item)}`);
+      return;
+    }
+    for (const key of ["plugin", "message", "stage"]) {
+      if (typeof item[key] !== "string") {
+        errors.push(
+          `${kind}: ${field}[${i}].${key} must be string, got ${describe(item[key])}`,
+        );
+      }
+    }
+    if (
+      typeof item.code !== "string" ||
+      !(ADVISORY_CODES as readonly string[]).includes(item.code)
+    ) {
+      errors.push(
+        `${kind}: ${field}[${i}].code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`,
       );
     }
   });

@@ -46,9 +46,27 @@ export function canonicalIdentity(
   return { bytes, sha256 };
 }
 
-export const TLA_MODEL_PATH = "specs/tla/FormalElection.tla";
-export const TLA_CFG_PATH = "specs/tla/FormalElection.cfg";
+// The model the TLC execution pipeline runs. The map registers every model that
+// is watched for source drift; only this one is executed, so the run/verify
+// toolchain keeps a single module binding.
+export const TLA_EXECUTION_MODEL_NAME = "FormalElection";
+export const TLA_MODEL_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.tla`;
+export const TLA_CFG_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.cfg`;
 export const TLA_MODEL_MAP_PATH = "specs/tla/model-map.json";
+export const TLA_MODEL_MAP_SCHEMA_VERSION = 2 as const;
+
+export function tlaModelPath(name: string): string {
+  return `specs/tla/${name}.tla`;
+}
+
+export function tlaCfgPath(name: string): string {
+  return `specs/tla/${name}.cfg`;
+}
+
+// Quoted by both the completeness sensor and the source loader so the recovery
+// step a reader is given cannot fork between them.
+export const IMPL_ONLY_UPDATE_HINT =
+  "when the model and configuration are unchanged, refresh implementation hashes with `updateModelMap --impl-only`";
 
 export type ModelLoadErrorCode =
   | "MODEL_MISSING"
@@ -80,11 +98,16 @@ export interface ModelMapEntry {
   readonly sha256: string;
 }
 
-export interface ModelMap {
-  readonly schemaVersion: 1;
+export interface ModelMapModel {
+  readonly name: string;
   readonly model: ModelMapAssetIdentity;
   readonly cfg: ModelMapAssetIdentity;
   readonly entries: readonly ModelMapEntry[];
+}
+
+export interface ModelMap {
+  readonly schemaVersion: 2;
+  readonly models: readonly ModelMapModel[];
 }
 
 export interface ModelMapDrift {
@@ -99,7 +122,9 @@ type Result<T, E> =
 
 const SHA256 = /^[0-9a-f]{64}$/;
 const IMPLEMENTATION_PREFIX = "packages/framework/core/tools/";
-const IMPLEMENTATION_FILE = /^amadeus-election(?:-[a-z0-9-]+)?\.ts$/;
+const IMPLEMENTATION_FILE = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
+// TLA module identifiers, which also fix the specs/tla file names a model owns.
+const MODEL_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 
 function invalid(detail: string): Result<never, ModelLoadError> {
   return {
@@ -175,6 +200,23 @@ function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoa
   return { ok: true, value: entries };
 }
 
+function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelLoadError> {
+  if (!exactObject(value, ["cfg", "entries", "model", "name"])) {
+    return invalid(`models[${index}] must have exactly name, model, cfg, and entries`);
+  }
+  if (typeof value.name !== "string" || !MODEL_NAME.test(value.name)) {
+    return invalid(`models[${index}].name must be a TLA module identifier`);
+  }
+  const name = value.name;
+  const model = parseAssetIdentity(value.model, tlaModelPath(name), `models[${index}].model`);
+  if (!model.ok) return model;
+  const cfg = parseAssetIdentity(value.cfg, tlaCfgPath(name), `models[${index}].cfg`);
+  if (!cfg.ok) return cfg;
+  const entries = parseEntries(value.entries);
+  if (!entries.ok) return entries;
+  return { ok: true, value: { name, model: model.value, cfg: cfg.value, entries: entries.value } };
+}
+
 export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadError> {
   let value: unknown;
   try {
@@ -183,34 +225,37 @@ export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadE
   } catch {
     return invalid("model map must be valid UTF-8 JSON");
   }
-  if (!exactObject(value, ["cfg", "entries", "model", "schemaVersion"])) {
-    return invalid("model map must have exactly schemaVersion, model, cfg, and entries");
+  if (!exactObject(value, ["models", "schemaVersion"])) {
+    return invalid("model map must have exactly schemaVersion and models");
   }
-  if (value.schemaVersion !== 1) return invalid("schemaVersion must be 1");
+  if (value.schemaVersion !== TLA_MODEL_MAP_SCHEMA_VERSION) {
+    return invalid(`schemaVersion must be ${TLA_MODEL_MAP_SCHEMA_VERSION}`);
+  }
+  if (!Array.isArray(value.models) || value.models.length === 0) {
+    return invalid("models must be a non-empty array");
+  }
+  const models: ModelMapModel[] = [];
+  let previousName = "";
+  for (const [index, candidate] of value.models.entries()) {
+    const model = parseModel(candidate, index);
+    if (!model.ok) return model;
+    if (model.value.name <= previousName) return invalid("models must be unique and sorted by name");
+    previousName = model.value.name;
+    models.push(model.value);
+  }
+  return { ok: true, value: { schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION, models } };
+}
 
-  const model = parseAssetIdentity(value.model, TLA_MODEL_PATH, "model");
-  if (!model.ok) return model;
-  const cfg = parseAssetIdentity(value.cfg, TLA_CFG_PATH, "cfg");
-  if (!cfg.ok) return cfg;
-  const entries = parseEntries(value.entries);
-  if (!entries.ok) return entries;
-  return {
-    ok: true,
-    value: {
-      schemaVersion: 1,
-      model: model.value,
-      cfg: cfg.value,
-      entries: entries.value,
-    },
-  };
+export function findModelMapModel(modelMap: ModelMap, name: string): ModelMapModel | undefined {
+  return modelMap.models.find((model) => model.name === name);
 }
 
 export function diffModelMap(
-  modelMap: ModelMap,
+  model: ModelMapModel,
   currentEntries: readonly ModelMapEntry[],
 ): readonly ModelMapDrift[] {
   const current = new Map(currentEntries.map((entry) => [entry.implPath, entry.sha256]));
-  return modelMap.entries.flatMap((entry) => {
+  return model.entries.flatMap((entry) => {
     const currentSha = current.get(entry.implPath) ?? null;
     return currentSha === entry.sha256
       ? []
