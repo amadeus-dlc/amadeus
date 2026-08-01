@@ -131,6 +131,19 @@ describe("every instrument records through the store (FR-MET)", () => {
     ]);
   });
 
+  test("a duration the clock ran backwards on is clamped to zero, not recorded negative (r3695363611)", () => {
+    // Both durations are a subtraction across two processes: the start is
+    // parked in a marker file and the end reads its own clock. An NTP step or
+    // a manual clock change between the halves makes that difference negative,
+    // and a negative sample in a duration histogram is not a slow run — it is
+    // an impossible one, and it poisons every aggregate computed over it.
+    recordStageDuration(-5_000, { stage: "code-generation", phase: "construction" });
+    recordSubagentDuration(-1, { agentType: "amadeus-developer-agent" });
+
+    expect(measurementsOf("amadeus.stage.duration").map((record) => record.value)).toEqual([0]);
+    expect(measurementsOf("amadeus.subagent.duration").map((record) => record.value)).toEqual([0]);
+  });
+
   test("token usage splits into one observation per GenAI token type", () => {
     recordTokenUsage({ inputTokens: 900, outputTokens: 120, model: "claude-fable-5" });
     expect(measurementsOf("gen_ai.client.token.usage").map((record) => record.attributes)).toEqual([
