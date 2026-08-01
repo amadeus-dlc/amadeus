@@ -30,7 +30,7 @@ import { join } from "node:path";
 import { canonicalAuditEvents, EXPECTED_CANONICAL_COUNT, REGISTERED_EVENTS } from "./event-registry.ts";
 
 export type DriftSets = {
-  // VALID_EVENT_TYPES — the v1 writer's closed vocabulary (78, #1672).
+  // VALID_EVENT_TYPES — the v1 writer's closed vocabulary (79, #1672).
   readonly auditVocabulary: ReadonlySet<string>;
   // (a) state machine + hooks references.
   readonly stateMachineReferences: ReadonlySet<string>;
@@ -167,7 +167,7 @@ function diff(name: string, left: ReadonlySet<string>, right: ReadonlySet<string
 }
 
 // Compare the sets; returns drift findings (empty = consistent). Enforces
-// (a)==(b)==(c) now, (d) when the codec table is supplied, and the 78
+// (a)==(b)==(c) now, (d) when the codec table is supplied, and the 79
 // cardinality pin against vacuous equality.
 export function findRegistryDrift(sets: DriftSets): string[] {
   const findings: string[] = [];

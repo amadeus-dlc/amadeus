@@ -22,7 +22,7 @@ AI-DLC は、フレームワークの方法論とチームのカスタマイズ�
 |   +-- ai-dlc-principles.md       # コア方法論の原則
 |   +-- verification.md            # フェーズ境界の検証ルール
 |   +-- brownfield.md              # ブラウンフィールドのセーフガード
-|   +-- audit-format.md            # 78 イベントの監査タクソノミー
+|   +-- audit-format.md            # 監査イベントタクソノミー
 |   +-- knowledge-readme-template.md  # チームが Tier 2 にコピーできる任意の README テンプレート
 |   +-- state-template.md          # State ファイルのテンプレート
 +-- amadeus-product-agent/

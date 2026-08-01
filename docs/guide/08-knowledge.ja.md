@@ -54,7 +54,7 @@ flowchart TD
 .claude/knowledge/
 ├── amadeus-shared/                       # すべてのエージェントがロード
 │   ├── ai-dlc-principles.md        # 中核的な方法論の原則
-│   ├── audit-format.md             # 78 イベントの監査タクソノミー
+│   ├── audit-format.md             # 監査イベントタクソノミー
 │   ├── brownfield.md               # Brownfield のセーフガードとリバースエンジニアリングのガイダンス
 │   ├── knowledge-readme-template.md # チームが Tier 2 にコピーできる任意の README テンプレート
 │   ├── state-template.md           # 状態ファイルのスキーマ

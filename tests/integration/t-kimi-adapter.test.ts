@@ -231,6 +231,23 @@ describe("normalizePayload + routeTarget — fixture-driven 正常写像", () =>
     });
   });
 
+  test("SubagentStart → the started hook, carrying agent name and prompt (U4)", () => {
+    // Kimi is the one harness with a real subagent-start event, and its
+    // payload carries the prompt — so it is also the one harness that can
+    // supply Purpose from a dedicated start seam rather than a tool envelope.
+    const calls = routeTarget("role-start", fixtureEnv("subagent-start"));
+    expect(calls).toHaveLength(1);
+    expect(calls[0].hookPath).toBe("amadeus-log-subagent-start.ts");
+    expect(JSON.parse(calls[0].stdin)).toEqual({
+      hook_event_name: "SubagentStart",
+      agent_type: "explore",
+      prompt: "Reply with the single word hi.",
+    });
+    // No tool_name: this seam fires only for subagents, so the core hook's
+    // dispatch-tool guard must not decline it.
+    expect(calls[0].stdin).not.toContain("tool_name");
+  });
+
   test("Stop routing requires an explicit trusted-main decision", () => {
     const stop = fixtureEnv("stop");
     expect(stop.session_id).toBe(

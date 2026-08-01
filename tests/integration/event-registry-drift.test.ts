@@ -1,7 +1,7 @@
 // covers: otel:event-registry otel:event-registry-drift file:tools/amadeus-audit.ts file:tools/amadeus-journal.ts
 //
 // VER-1 drift guard, layer 2 (unit test). Asserts the four-set equality of
-// FR-EVT-1 against the SHIPPED bytes (dist/claude/.claude), with the 78
+// FR-EVT-1 against the SHIPPED bytes (dist/claude/.claude), with the 79
 // cardinality pinned so vacuous equality fails:
 //   (a) state machine + hooks reference set == (b) canonical registry set
 //   (b) == VALID_EVENT_TYPES (the v1 writer's closed vocabulary)
@@ -47,11 +47,11 @@ describe("registry internal consistency (VER-1)", () => {
     expect(() => assertRegistryConsistent()).not.toThrow();
   });
 
-  test("canonical cardinality is pinned at 78 (#1672) — vacuous equality banned", () => {
-    expect(EXPECTED_CANONICAL_COUNT).toBe(78);
-    expect(canonicalAuditEvents().length).toBe(78);
-    expect(SETS.registryCanonical.size).toBe(78);
-    expect(SETS.auditVocabulary.size).toBe(78);
+  test("canonical cardinality is pinned at 79 (#1672) — vacuous equality banned", () => {
+    expect(EXPECTED_CANONICAL_COUNT).toBe(79);
+    expect(canonicalAuditEvents().length).toBe(79);
+    expect(SETS.registryCanonical.size).toBe(79);
+    expect(SETS.auditVocabulary.size).toBe(79);
   });
 
   test("canonical defs always map to the audit journal; telemetry defs never do (FR-EXP-4)", () => {
@@ -189,7 +189,7 @@ describe("extraction parity with the t28 vocabulary guard", () => {
   test("extractAuditVocabulary agrees with the t28 sed-range rule on the shipped amadeus-audit.ts", () => {
     const body = readFileSync(join(AMADEUS_SRC, "tools", "amadeus-audit.ts"), "utf-8");
     const vocab = extractAuditVocabulary(body);
-    expect(vocab.length).toBe(78);
+    expect(vocab.length).toBe(79);
     expect(vocab).toEqual([...SETS.auditVocabulary].sort());
   });
 });
