@@ -690,16 +690,23 @@ async function classifyCreateState(
   };
 }
 
-function adoptCreateCandidate(
+// Completion is only reachable from an attempted receipt. Both settlement
+// paths that meet an already-converged remote (an adopted create candidate, an
+// already CLOSED Issue) claim the attempt through here, so neither can drift
+// into completing straight from `prepared`.
+function claimPreparedAttempt(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
   snapshot: MirrorStateSnapshot,
   receipt: MirrorOperationReceipt,
-  issue: RemoteMirrorIssue,
-): MirrorOperationOutcome {
-  if (receipt.status !== "prepared") {
-    return complete(ports, context, snapshot, receipt, issue, true);
-  }
+):
+  | {
+      kind: "ready";
+      snapshot: MirrorStateSnapshot;
+      receipt: MirrorOperationReceipt;
+    }
+  | { kind: "outcome"; outcome: MirrorOperationOutcome } {
+  if (receipt.status !== "prepared") return { kind: "ready", snapshot, receipt };
   const attempted = markAttempted(
     ports,
     context,
@@ -708,17 +715,32 @@ function adoptCreateCandidate(
     "mark-attempted",
   );
   if (attempted.kind === "failed") {
-    return stateFailure(context, receipt.operationId, attempted.summary);
+    return {
+      kind: "outcome",
+      outcome: stateFailure(context, receipt.operationId, attempted.summary),
+    };
   }
-  const attemptedReceipt = requireReceipt(
-    attempted.snapshot,
-    context,
-  ) as MirrorOperationReceipt;
+  return {
+    kind: "ready",
+    snapshot: attempted.snapshot,
+    receipt: requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
+  };
+}
+
+function adoptCreateCandidate(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  snapshot: MirrorStateSnapshot,
+  receipt: MirrorOperationReceipt,
+  issue: RemoteMirrorIssue,
+): MirrorOperationOutcome {
+  const claimed = claimPreparedAttempt(ports, context, snapshot, receipt);
+  if (claimed.kind === "outcome") return claimed.outcome;
   return complete(
     ports,
     context,
-    attempted.snapshot,
-    attemptedReceipt,
+    claimed.snapshot,
+    claimed.receipt,
     issue,
     true,
   );
@@ -1275,35 +1297,18 @@ async function executeLinked(
       ensured.receipt,
     );
     if (authorizationFailure) return authorizationFailure;
-    // Completion is only reachable from an attempted receipt, so claim the
-    // attempt first when the receipt is still prepared — the same shape
-    // `adoptCreateCandidate` uses for the create side.
-    let settled = { snapshot: ensured.snapshot, receipt: ensured.receipt };
-    if (settled.receipt.status === "prepared") {
-      const attempted = markAttempted(
-        ports,
-        context,
-        settled.snapshot,
-        settled.receipt,
-        "mark-attempted",
-      );
-      if (attempted.kind === "failed") {
-        return stateFailure(
-          context,
-          settled.receipt.operationId,
-          attempted.summary,
-        );
-      }
-      settled = {
-        snapshot: attempted.snapshot,
-        receipt: requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
-      };
-    }
+    const claimed = claimPreparedAttempt(
+      ports,
+      context,
+      ensured.snapshot,
+      ensured.receipt,
+    );
+    if (claimed.kind === "outcome") return claimed.outcome;
     return complete(
       ports,
       context,
-      settled.snapshot,
-      settled.receipt,
+      claimed.snapshot,
+      claimed.receipt,
       viewed.issue,
       true,
     );

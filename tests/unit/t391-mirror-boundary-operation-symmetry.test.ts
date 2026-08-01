@@ -26,15 +26,20 @@ const UUID = "intent-1";
 const INTENT_DIR = "amadeus/spaces/default/intents/demo";
 const REPO: RepositoryIdentity = { owner: "acme", name: "app", canonical: "acme/app" };
 
-// Every boundary kind, one representative instance each.
+// Every boundary kind, one representative instance each. The cases are spelled
+// out rather than cast through a default so a new kind that carries an extra
+// field fails to typecheck here instead of silently running malformed.
 function boundaryOf(kind: MirrorBoundary["kind"]): MirrorBoundary {
   switch (kind) {
     case "phase-verified":
       return { kind, phase: "ideation", instance: "b-1" };
     case "parked":
       return { kind, stage: "intent-capture", instance: "b-1" };
-    default:
-      return { kind, instance: "b-1" } as MirrorBoundary;
+    case "intent-initialized":
+    case "intent-capture-approved":
+    case "workflow-completed":
+    case "manual":
+      return { kind, instance: "b-1" };
   }
 }
 

@@ -975,20 +975,22 @@ describe("t279 close of an already closed Issue", () => {
     return { gateway, closeContext, initial };
   }
 
+  // Select the write to fail by what it records, not by its ordinal: a write
+  // count changes with any extra state step and would silently fail a
+  // different write while the assertions still pass.
+  function closeReceiptStatusIn(text: string) {
+    const parsed = parseMirrorStateDocument(text);
+    return parsed.kind === "invalid"
+      ? null
+      : (parsed.snapshot.receipts[closeKey]?.status ?? null);
+  }
+
   test("a prepared receipt converges on completion without a close call", async () => {
     const { gateway, closeContext, initial } = fixture();
     const store = memoryStore(initial);
-    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
-    let writes = 0;
     const outcome = await executeMirrorOperation({
       context: closeContext,
-      ports: {
-        ...store.ports,
-        writeDocumentAtomic(text) {
-          writes += 1;
-          return writeDocumentAtomic(text);
-        },
-      },
+      ports: store.ports,
       localState: initial,
     });
     expect(outcome).toEqual({
@@ -998,9 +1000,8 @@ describe("t279 close of an already closed Issue", () => {
     });
     expect(gateway.history).toEqual(["view"]);
     expect(store.state().receipts[closeKey]?.status).toBe("succeeded");
-    // The claimed attempt and the completion, each followed by its audit
-    // outbox drain: no close call and no further state path.
-    expect(writes).toBe(4);
+    // The attempt was claimed on the way through, not skipped.
+    expect(store.state().receipts[closeKey]?.attemptedAt).toBe(NOW);
   });
 
   // The post-remote recovery record must actually reach warnings[]: a warning
@@ -1009,15 +1010,13 @@ describe("t279 close of an already closed Issue", () => {
     const { gateway, closeContext, initial } = fixture();
     const store = memoryStore(initial);
     const writeDocumentAtomic = store.ports.writeDocumentAtomic;
-    let writes = 0;
     const outcome = await executeMirrorOperation({
       context: closeContext,
       ports: {
         ...store.ports,
         writeDocumentAtomic(text) {
-          writes += 1;
           // Fail only the completion write; the recovery write must land.
-          return writes === 3
+          return closeReceiptStatusIn(text) === "succeeded"
             ? { kind: "io-failure", summary: "disk full" }
             : writeDocumentAtomic(text);
         },
@@ -1061,15 +1060,14 @@ describe("t279 close of an already closed Issue", () => {
     const { gateway, closeContext, initial } = fixture();
     const store = memoryStore(initial);
     const writeDocumentAtomic = store.ports.writeDocumentAtomic;
-    let writes = 0;
     const outcome = await executeMirrorOperation({
       context: closeContext,
       ports: {
         ...store.ports,
         writeDocumentAtomic(text) {
-          writes += 1;
-          // Both the completion write and the recovery write fail.
-          return writes >= 3
+          // Both the completion write and the recovery record fail.
+          const status = closeReceiptStatusIn(text);
+          return status === "succeeded" || status === "pending"
             ? { kind: "io-failure", summary: "disk full" }
             : writeDocumentAtomic(text);
         },
