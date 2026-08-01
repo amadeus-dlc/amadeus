@@ -40,6 +40,22 @@ The update is rejected with `MODEL_UNCHANGED` when model and configuration
 identities are unchanged. Accepted updates publish one canonical record using
 an exclusive lock, file fsync, atomic rename, and parent-directory fsync.
 
+## Refreshing implementation hashes only
+
+When only implementation files moved — the model and configuration are
+untouched, and `SOURCE_DRIFT` or a drift verdict names an implementation entry —
+the supported recovery is:
+
+`bun {{HARNESS_DIR}}/tools/amadeus-sensor-model-completeness.ts updateModelMap --impl-only`
+
+The flag is a declaration that model semantics did not change. It is refused
+with `INVALID_ARGUMENT` if either identity has moved (publish that revision
+through the unflagged command instead), and with `MODEL_UNCHANGED` if no
+implementation entry has drifted. An accepted run reports `IMPL_ONLY_UPDATED`
+with the entries whose hashes changed, so the update is recorded in the command
+output as well as in the published map. Editing the map by hand is not a
+supported path.
+
 ## Failure mode
 
 Drift and fail-closed input errors emit `SENSOR_FAILED` through the existing

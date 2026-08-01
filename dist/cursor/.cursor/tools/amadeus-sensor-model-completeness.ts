@@ -18,6 +18,7 @@ import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:p
 import {
   canonicalIdentity,
   diffModelMap,
+  IMPL_ONLY_UPDATE_HINT,
   parseTlaModelMap,
   type ModelMap,
   type ModelMapEntry,
@@ -30,6 +31,8 @@ const CFG_RELATIVE_PATH = "specs/tla/FormalElection.cfg";
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const DEFAULT_DEADLINE_MS = 9_000;
+const IMPL_ONLY_HASH_PREFIX = 12;
+const IMPL_ONLY_FLAG = "--impl-only";
 
 type FindingReason =
   | "changed"
@@ -67,8 +70,21 @@ export type CompletenessVerdict =
       readonly findings: readonly CompletenessFinding[];
     };
 
+export interface ImplOnlyChange {
+  readonly implPath: string;
+  readonly from: string;
+  readonly to: string;
+}
+
 export type UpdateModelMapResult =
   | { readonly ok: true; readonly entries: number; readonly map: string }
+  | {
+      readonly ok: true;
+      readonly code: "IMPL_ONLY_UPDATED";
+      readonly declared: "impl-only";
+      readonly changed: readonly ImplOnlyChange[];
+      readonly map: string;
+    }
   | {
       readonly ok: false;
       readonly code:
@@ -126,6 +142,7 @@ export interface CheckModelCompletenessOptions {
 
 export interface UpdateModelMapOptions {
   readonly projectRoot?: string;
+  readonly implOnly?: boolean;
   readonly dependencies?: Partial<CompletenessDependencies>;
 }
 
@@ -133,6 +150,7 @@ interface InternalOptions {
   readonly projectRoot?: string;
   readonly mapRelativePath: string;
   readonly deadlineMs?: number;
+  readonly implOnly?: boolean;
   readonly dependencies?: Partial<CompletenessDependencies>;
 }
 
@@ -627,10 +645,88 @@ function updatedEntries(
   return { entries };
 }
 
+function implOnlyChanges(
+  previous: readonly ModelMapEntry[],
+  published: readonly ModelMapEntry[],
+): readonly ImplOnlyChange[] {
+  const recorded = new Map(previous.map((entry) => [entry.implPath, entry.sha256]));
+  const changes: ImplOnlyChange[] = [];
+  for (const entry of published) {
+    const from = recorded.get(entry.implPath);
+    if (from !== undefined && from !== entry.sha256) {
+      changes.push({
+        implPath: entry.implPath,
+        from: from.slice(0, IMPL_ONLY_HASH_PREFIX),
+        to: entry.sha256.slice(0, IMPL_ONLY_HASH_PREFIX),
+      });
+    }
+  }
+  return changes;
+}
+
+function performImplOnlyUpdate(
+  loaded: LoadedMap,
+  assets: AssetEvaluation,
+  mapRelativePath: string,
+  deps: CompletenessDependencies,
+): UpdateModelMapResult {
+  // A single changed identity bit falsifies the --impl-only declaration.
+  if (
+    assets.modelIdentity !== loaded.map.model.identity ||
+    assets.cfgIdentity !== loaded.map.cfg.identity
+  ) {
+    return {
+      ok: false,
+      code: "INVALID_ARGUMENT",
+      detail: `${MODEL_MAP_RELATIVE_PATH}: model-changed; --impl-only declares the model and configuration are unchanged - publish a model revision with updateModelMap and no flag`,
+    };
+  }
+  // Drift is decided by the check path's own machinery so the two cannot disagree.
+  const evaluated = evaluateEntries(
+    loaded.rootReal,
+    loaded.map,
+    deps.now() + DEFAULT_DEADLINE_MS,
+    deps,
+    assets.totalBytes,
+  );
+  if (evaluated.timedOut) return updateFailure(mapRelativePath, "timeout");
+  const unreadable = evaluated.findings[0];
+  if (unreadable) return updateFailure(unreadable.path, unreadable.reason);
+  if (loaded.canonical.diffModelMap(loaded.map, evaluated.currentEntries).length === 0) {
+    return {
+      ok: false,
+      code: "MODEL_UNCHANGED",
+      detail: `${MODEL_MAP_RELATIVE_PATH}: impl-unchanged`,
+    };
+  }
+  const refreshed = updatedEntries(
+    loaded.rootReal,
+    loaded.map.entries,
+    deps,
+    evaluated.totalBytes,
+  );
+  if (refreshed.failure) {
+    return updateFailure(refreshed.failure.path, refreshed.failure.reason);
+  }
+  const entries = refreshed.entries as readonly ModelMapEntry[];
+  const model = assets.modelIdentity as string;
+  const cfg = assets.cfgIdentity as string;
+  const body = canonicalRecord(model, cfg, entries);
+  try {
+    deps.publish(loaded.rootReal, mapRelativePath, loaded.mapIdentity, body);
+  } catch {
+    return updateFailure(mapRelativePath, "publish-failed");
+  }
+  const changed = implOnlyChanges(loaded.map.entries, entries);
+  const map = MODEL_MAP_RELATIVE_PATH;
+  return { ok: true, code: "IMPL_ONLY_UPDATED", declared: "impl-only", changed, map };
+}
+
 async function performModelMapUpdate(
   projectRoot: string,
   rootReal: string,
   mapRelativePath: string,
+  implOnly: boolean,
   deps: CompletenessDependencies,
 ): Promise<UpdateModelMapResult> {
   const loadedResult = await loadMap(projectRoot, rootReal, mapRelativePath, deps);
@@ -648,6 +744,9 @@ async function performModelMapUpdate(
   if (!assets.modelIdentity || !assets.cfgIdentity) {
     return updateFailure(MODEL_MAP_RELATIVE_PATH, "unreadable");
   }
+  if (implOnly) {
+    return performImplOnlyUpdate(loaded, assets, mapRelativePath, deps);
+  }
   if (
     assets.modelIdentity === loaded.map.model.identity &&
     assets.cfgIdentity === loaded.map.cfg.identity
@@ -655,7 +754,7 @@ async function performModelMapUpdate(
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: model-unchanged`,
+      detail: `${MODEL_MAP_RELATIVE_PATH}: model-unchanged; ${IMPL_ONLY_UPDATE_HINT}`,
     };
   }
   const refreshed = updatedEntries(
@@ -719,6 +818,7 @@ async function updateModelMapInternal(options: InternalOptions): Promise<UpdateM
       projectRoot,
       rootReal,
       options.mapRelativePath,
+      options.implOnly === true,
       deps,
     );
   } finally {
@@ -740,10 +840,14 @@ function flagValue(argv: readonly string[], name: string): string | undefined {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-function supportedArguments(argv: readonly string[]): boolean {
+function supportedArguments(argv: readonly string[], allowImplOnly: boolean): boolean {
   const supported = new Set(["--project-dir", "--stage", "--output-path"]);
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index];
+    if (argument === IMPL_ONLY_FLAG) {
+      if (!allowImplOnly) return false;
+      continue;
+    }
     const value = argv[index + 1];
     if (!supported.has(argument) || !value || value.startsWith("--")) return false;
     index++;
@@ -777,7 +881,7 @@ export async function main(
 ): Promise<number> {
   const command = argv[0] === "updateModelMap" ? "updateModelMap" : "check";
   const args = command === "updateModelMap" ? argv.slice(1) : argv;
-  if (!supportedArguments(args)) {
+  if (!supportedArguments(args, command === "updateModelMap")) {
     const result: UpdateModelMapResult = {
       ok: false,
       code: "INVALID_ARGUMENT",
@@ -788,7 +892,10 @@ export async function main(
   }
   const projectRoot = flagValue(args, "--project-dir") ?? process.cwd();
   if (command === "updateModelMap") {
-    const result = await operations.update({ projectRoot });
+    const result = await operations.update({
+      projectRoot,
+      implOnly: args.includes(IMPL_ONLY_FLAG),
+    });
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return result.ok ? 0 : 1;
   }

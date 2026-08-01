@@ -278,6 +278,16 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
   });
 
+  test("implementation hash drift names the --impl-only recovery step", () => {
+    const fixture = createFixture();
+    const entry = fixture.modelMap.entries[0]!;
+    writeFileSync(join(fixture.root, entry.implPath), "// drift\n", { flag: "a" });
+    const result = loadVerifiedTlaSourceInternal(fixture.moduleUrl);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected SOURCE_DRIFT");
+    expect(result.error.detail).toContain("--impl-only");
+  });
+
   test("fails closed on implementation metadata and read races", () => {
     const metadataFixture = createFixture();
     const metadataEntry = metadataFixture.modelMap.entries[0]!;

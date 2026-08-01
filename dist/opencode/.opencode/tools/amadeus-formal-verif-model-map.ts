@@ -50,6 +50,11 @@ export const TLA_MODEL_PATH = "specs/tla/FormalElection.tla";
 export const TLA_CFG_PATH = "specs/tla/FormalElection.cfg";
 export const TLA_MODEL_MAP_PATH = "specs/tla/model-map.json";
 
+// Quoted by both the completeness sensor and the source loader so the recovery
+// step a reader is given cannot fork between them.
+export const IMPL_ONLY_UPDATE_HINT =
+  "when the model and configuration are unchanged, refresh implementation hashes with `updateModelMap --impl-only`";
+
 export type ModelLoadErrorCode =
   | "MODEL_MISSING"
   | "CFG_MISSING"

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
 import {
+  IMPL_ONLY_UPDATE_HINT,
   type ModelLoadError,
   type ModelLoadErrorCode,
   type ModelMap,
@@ -229,7 +230,12 @@ function verifyImplementationEntries(
     } catch {
       return drift(entry.implPath, "implementation entry bytes could not be read");
     }
-    if (sha256 !== entry.sha256) return drift(entry.implPath, "implementation entry hash differs from model map");
+    if (sha256 !== entry.sha256) {
+      return drift(
+        entry.implPath,
+        `implementation entry hash differs from model map; ${IMPL_ONLY_UPDATE_HINT}`,
+      );
+    }
   }
   return { ok: true, value: undefined };
 }
