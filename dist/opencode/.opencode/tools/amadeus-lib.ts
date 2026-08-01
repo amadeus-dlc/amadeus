@@ -5372,6 +5372,208 @@ export function countCheckboxes(
   return checkboxes.filter((c) => c.state === state).length;
 }
 
+// --- Stage Progress rebuild (shared writer) ----------------------------------
+//
+// One renderer for the `## Stage Progress` section, so every writer that
+// rebuilds the plan (scope-change, the post-compose re-sync) emits the same
+// bytes: graph order, one row per stage, the checkbox marker carrying run
+// state and the em-dash suffix carrying the plan.
+
+const PHASE_HEADERS: Record<string, string> = {
+  initialization: "INITIALIZATION PHASE",
+  ideation: "IDEATION PHASE",
+  inception: "INCEPTION PHASE",
+  construction: "CONSTRUCTION PHASE",
+  operation: "OPERATION PHASE",
+};
+
+export function renderStageProgressSection(
+  graph: StageEntry[],
+  planOf: (slug: string) => "EXECUTE" | "SKIP",
+  stateOf: (slug: string) => CheckboxState,
+  perUnitLine?: string,
+): string {
+  const byPhase: Record<string, StageEntry[]> = {};
+  for (const stage of graph) {
+    if (!byPhase[stage.phase]) byPhase[stage.phase] = [];
+    byPhase[stage.phase].push(stage);
+  }
+  let body = "";
+  for (const phase of PHASES) {
+    body += `\n### ${PHASE_HEADERS[phase]}\n`;
+    if (phase === "construction" && perUnitLine) body += `${perUnitLine}\n`;
+    for (const stage of byPhase[phase] ?? []) {
+      body += `- ${CHECKBOX_MAP[stateOf(stage.slug)]} ${stage.slug} — ${planOf(stage.slug)}\n`;
+    }
+  }
+  return body;
+}
+
+export function replaceStageProgressSection(content: string, body: string): string {
+  const section = /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
+  return content.replace(section, `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`);
+}
+
+/** The `Per unit:` annotation the Construction section carries, if any. */
+export function perUnitLineOf(content: string): string | undefined {
+  return /^Per unit:.*$/m.exec(content)?.[0];
+}
+
+export interface DerivedPlanFields {
+  content: string;
+  executeStages: string[];
+  completedCount: number;
+}
+
+// Rebuild the derived plan fields (Stages to Execute / to Skip / Total Stages /
+// Completed) against an EFFECTIVE plan. The Stages to Skip row carries
+// birth/scope-change annotations (entry shape "<number> (<slug> — reason)") that
+// a bare rebuild would destroy, so every still-skipped entry is preserved
+// VERBATIM in its existing position; promoted entries drop out and newly
+// skipped stages append in graph order.
+export function rebuildDerivedPlanFields(
+  content: string,
+  graph: StageEntry[],
+  effective: (slug: string) => "EXECUTE" | "SKIP",
+): DerivedPlanFields {
+  const knownSlugs = new Set(graph.map((s) => s.slug));
+  const priorSkipRow = getField(content, "Stages to Skip") || "";
+  const priorTokens =
+    priorSkipRow.trim() === "" || priorSkipRow.trim() === "none" ? [] : priorSkipRow.split(", ");
+  const slugOfSkipToken = (token: string): string => {
+    const m = /^\S+ \((.+)\)$/.exec(token);
+    const inner = m ? m[1] : token;
+    return inner.split(" — ")[0];
+  };
+  const executeStages: string[] = [];
+  const skipStages: string[] = [];
+  const preservedSlugs = new Set<string>();
+  for (const token of priorTokens) {
+    const slug = slugOfSkipToken(token);
+    if (knownSlugs.has(slug) && effective(slug) === "SKIP") {
+      skipStages.push(token);
+      preservedSlugs.add(slug);
+    }
+  }
+  for (const s of graph) {
+    if (effective(s.slug) === "EXECUTE") executeStages.push(s.number);
+    else if (!preservedSlugs.has(s.slug)) skipStages.push(`${s.number} (${s.slug})`);
+  }
+  let next = setField(content, "Stages to Execute", executeStages.join(", "));
+  next = setField(next, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
+  next = setField(next, "Total Stages", String(executeStages.length));
+  const completedCount = parseCheckboxes(next).filter(
+    (c) => c.state === "completed" && effective(c.slug) === "EXECUTE",
+  ).length;
+  next = setField(next, "Completed", String(completedCount));
+  return { content: next, executeStages, completedCount };
+}
+
+// --- Post-compose state re-sync (#1849) --------------------------------------
+//
+// Composing a plugin grows the host stage graph. `next` reads the GRAPH and
+// will happily issue a run-stage for a newly composed stage; `report` reads the
+// STATE and refuses the transition of a stage that has no row — an engine loop
+// with no in-band exit for every intent born before the composition (and for
+// every intent born on a host that does not carry the plugin at all).
+//
+// This is the one writer that closes that gap: for each RUNNING intent it
+// re-renders Stage Progress from the current host graph, preserving every
+// existing row's checkbox state and plan suffix, and recomputes the derived
+// counters so an inserted row cannot produce a Completed > Total skew.
+//
+// Fail-closed in three directions:
+//   - a terminal (non-Running) record is a RECORD, not a live plan: adding rows
+//     under a summary computed at completion corrupts it, so it is skipped;
+//   - a state row whose slug is absent from THIS host's graph means the record
+//     travelled from a host with a different graph: rebuilding would delete it,
+//     so the whole intent is skipped, untouched;
+//   - an unreadable state / unknown scope is reported, never guessed at.
+export type StateResyncStatus =
+  | "resynced"
+  | "current"
+  | "not-running"
+  | "foreign-rows"
+  | "unreadable";
+
+export interface StateResyncOutcome {
+  space: string;
+  intent: string;
+  status: StateResyncStatus;
+  /** Slugs whose rows this re-sync created (empty unless `resynced`). */
+  inserted: string[];
+}
+
+function resyncOneIntent(
+  projectDir: string,
+  space: string,
+  intent: string,
+  graph: StageEntry[],
+): StateResyncOutcome {
+  const outcome = (status: StateResyncStatus, inserted: string[] = []): StateResyncOutcome => ({
+    space,
+    intent,
+    status,
+    inserted,
+  });
+  let content: string;
+  try {
+    content = readStateFile(projectDir, intent, space);
+  } catch {
+    return outcome("unreadable");
+  }
+  if ((getField(content, "Status") || "") !== "Running") return outcome("not-running");
+  const scope = getField(content, "Scope");
+  const scopeDef = scope ? loadScopeMapping()[scope] : undefined;
+  if (!scopeDef) return outcome("unreadable");
+
+  const rows = parseCheckboxes(content);
+  const graphSlugs = new Set(graph.map((s) => s.slug));
+  if (rows.some((r) => !graphSlugs.has(r.slug))) return outcome("foreign-rows");
+
+  const rowBySlug = new Map(rows.map((r) => [r.slug, r]));
+  const inserted = graph.filter((s) => !rowBySlug.has(s.slug)).map((s) => s.slug);
+  if (inserted.length === 0) return outcome("current");
+
+  // An existing row's suffix is the effective plan (a recompose override wins
+  // over the scope grid); a stage that has no row yet takes the grid's verdict.
+  const suffixes = parseStateStageSuffixes(content);
+  const planOf = (slug: string): "EXECUTE" | "SKIP" =>
+    (suffixes.get(slug) ?? scopeDef.stages[slug]) === "EXECUTE" ? "EXECUTE" : "SKIP";
+  const stateOf = (slug: string): CheckboxState => rowBySlug.get(slug)?.state ?? "pending";
+
+  let next = replaceStageProgressSection(
+    content,
+    renderStageProgressSection(graph, planOf, stateOf, perUnitLineOf(content)),
+  );
+  next = rebuildDerivedPlanFields(next, graph, planOf).content;
+  next = setField(next, "Last Updated", isoTimestamp());
+  writeStateFile(projectDir, next, intent, space);
+  return outcome("resynced", inserted);
+}
+
+// Re-sync every intent of every space (or one named space/intent) against the
+// host stage graph. Returns one outcome per intent examined — the caller is
+// expected to print them, so a skipped record is visible rather than silent.
+export function resyncStateToStageGraph(
+  projectDir: string,
+  opts?: { graph?: StageEntry[]; space?: string; intent?: string },
+): StateResyncOutcome[] {
+  const graph = opts?.graph ?? loadStageGraph();
+  const spaces = opts?.space ? [opts.space] : listSpaces(projectDir).map((s) => s.name);
+  const outcomes: StateResyncOutcome[] = [];
+  for (const space of spaces) {
+    const intents = listIntents(projectDir, space)
+      .map((i) => i.dirName)
+      .filter((d): d is string => d !== null)
+      .filter((d) => opts?.intent === undefined || d === opts.intent);
+    for (const intent of intents) {
+      outcomes.push(resyncOneIntent(projectDir, space, intent, graph));
+    }
+  }
+  return outcomes;
+}
+
 // --- Audit locking (per-intent, reaper-guarded) -------------------------------
 //
 // The audit lock is a cross-process mutex: a bare mkdir-EEXIST dir in tmpdir().

@@ -126,8 +126,17 @@ function readState(proj: string): string {
 // Mirror the .sh's setup_construction_project (lines 89-98): seed the
 // Construction state fixture (so the active-intent cursor resolves and set-autonomy
 // can read/write the record's state), then append the Construction Autonomy Mode
-// field (the fixture pre-dates it; setFieldStrict parses by key, not location, so
-// end-of-file append is fine). Bolt's audit shard is created lazily on first emit.
+// field (setFieldStrict parses by key, not location, so end-of-file append is fine).
+// Bolt's audit shard is created lazily on first emit.
+//
+// PIN REVISED (#1846): the append is no longer standing in for a gap in the
+// ENGINE. The birth scaffold now emits the field in `## Current Status`
+// (t393 pins that, and pins set-autonomy succeeding on a BORN state). What the
+// append still stands in for is this hand-written FIXTURE, which deliberately
+// keeps the old shape — several suites (t17/t116/t147/t186/t188/t211) seed it and
+// inject their own autonomy value, and a fixture-level field would take
+// precedence over their injection (getField reads the first match). The v4
+// state-file guard cases below keep pinning the strict, no-create contract.
 function setupConstructionProject(): string {
   const proj = mkProj();
   seedStateFile(proj, join(FIXTURES_DIR, "state-construction.md"));

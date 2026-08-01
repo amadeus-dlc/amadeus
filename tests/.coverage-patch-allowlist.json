@@ -229,13 +229,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5678-5680",
+    "lines": "5880-5882",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5679-5681",
+    "lines": "5881-5883",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
@@ -1390,73 +1390,85 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "715-717",
+    "lines": "719-721",
     "reason": "Multi-line Pick type for the inspectHookHeartbeats snapshot options; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive platform and both swap targets in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "757-759",
+    "lines": "761-763",
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4001-4004",
+    "lines": "4005-4008",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4311-4324",
+    "lines": "4315-4328",
     "reason": "The utility lifecycle audit adapter is exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing receives an injectable in-process audit port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4346-4368",
+    "lines": "4350-4372",
     "reason": "Intent archive and unarchive delegation is exercised through the shipped utility CLI by t257 and t259, including child output and status propagation; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility delegation receives an injectable in-process process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4379-4386",
+    "lines": "4383-4390",
     "reason": "Archived-selection rejection and successful cursor selection are exercised through the shipped utility CLI by t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility selection routing is injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4399-4409",
+    "lines": "4403-4413",
     "reason": "Intent lifecycle command routing and fail-closed selector validation are exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing and delegation receive injectable in-process process ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4551-4552",
+    "lines": "4556-4557",
     "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) \u2014 canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-07-28: the advisory rows had silently drifted from 4216-4217 to 4551-4552 across prior insertions above them; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4716-4726",
+    "lines": "4513",
+    "reason": "The `- **Construction Autonomy Mode**: unset` row of the birth state template in handleIntentBirthStateBuild (#1846). Same blind spot as the 4556-4557 advisory rows directly below it: a full intent birth needs a completely seeded workspace and canonical in-process execution is impractical (no-canonical-direct-execution), so tests/integration/t393 drives birth through the SHIPPED CLI and asserts the emitted row plus set-autonomy succeeding on it — bun does not attribute spawned-CLI lines. Template-literal string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); there is no refactor that removes the row from the patch. Verified verbatim at pin time: the line is `- **Construction Autonomy Mode**: unset` inside the stateContent template.",
+    "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the state template"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "5467-5468",
+    "reason": "The derived-plan rebuild call inside handleRecompose's withAuditLock callback (#1849). The recompose verb is exercised through the shipped utility CLI by t194 and t394 (spawned CLI lines are unattributed), while the extracted rebuildDerivedPlanFields it delegates to IS driven in-process by t394 through the post-compose re-sync — only the two call/assignment rows inside the spawn-only handler remain. Already collapsed to the minimum (destructuring + one reassignment) per spawn-blindspot-two-step (i) before allowlisting. Verified verbatim at pin time: `const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);` and `content = rebuilt;`.",
+    "expiry": "remove when handleRecompose gains an in-process argv seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4721-4731",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4728-4730",
+    "lines": "4733-4735",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4749-4771",
+    "lines": "4754-4776",
     "reason": "Intent selection cursor write and lifecycle guard are exercised through the shipped utility CLI intent-select-response path by t171 integration; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4854-4865",
+    "lines": "4859-4870",
     "reason": "The intent-select-response resolver callback is exercised through the shipped utility CLI by t171 integration, including token verification and rejection; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
   },
