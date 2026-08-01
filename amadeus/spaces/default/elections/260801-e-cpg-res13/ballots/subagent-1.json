@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-RES13",
+  "voter": "subagent-1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c1 が適用する追補 cid:reverse-engineering:c1-xrev-scan-mode(E-OBB5-RES13)は本日 2026-08-01 採用の新規則であり、実例2件目としての適用は妥当だが規則自体の耐久性は未検証。次回週次蒸留ラウンドで免除条件(observed 一致 SHA での検証済み)の運用実績を再確認する。",
+  "rationale": "RE diary 実測: Interpretations 1件(患部3点 verbatim 直読・患部関数 diff 0 による引用再解決免除)、Deviations 1件(RE 宣言センサー filter 不適合の代替検証)のみ、Tradeoffs/Open questions は空。両者とも既存 cid の適用実例で新規一般規則を導かない — memory/project.md:279 に cid:reverse-engineering:c1-xrev-scan-mode(E-OBB5-RES13 追補、免除条件付き)、:149 に cid:reverse-engineering:re-sensors-codekb-filter-mismatch が実在し重複。引用スポットチェック: .claude/tools/amadeus-orchestrate.ts:2919 = function tryEmitSwarm( 宣言行、:2937 = if (!batches || batches.length === 0) return false; の無音 false — re-scans/260801-cg-plan-guard.md の記述と一致(grep -n / sed 実測)。0件提案に反対材料なし。",
+  "submittedAt": "2026-08-01T08:40:00Z"
+}

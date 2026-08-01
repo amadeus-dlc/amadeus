@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-NDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "『否定形の性能主張』面のみ留保。U3 iteration 1 の Major(『approve 経路は既に audit を読む』の偽主張 →『新規呼び出し1箇所・新規 parse 実装 0・有界 ≤12』へ精密化)は、既存 cid では cid:requirements-analysis:absence-claim-grep-verify(不在主張の反証確認)と Forbidden の検証劇場条項の合成として吸収できるが、いずれも『検査機構の不在』『ゲート結果の非導出』を主語としており、性能設計の『新規 I/O ゼロ』のような否定形コスト主張を検証可能形(呼び出し箇所数・新設 parse 数・有界上限)へ言い換える規律を正面から名指してはいない。今回は U1/U2/U4 の同型主張(『追加 I/O ゼロ』『新規 I/O ゼロ』)がいずれも構造レビュー(read 系呼び出し棚卸し)という検証形とセットで書かれており実害ゼロ、かつ §12a が iteration 1 で捕捉して無音通過していないため、独立 cid 化は不要と判断する。同型の偽主張が別 intent で再発した場合は、次回 PM 蒸留ラウンドで cid:nfr-design 系への追補として再判定することを予約する。",
+      "rationale": "選択肢1(0件)を支持。record を独立実測した結果、候補 c1 の3要素はいずれも既存 cid の違反実例・適用実例であり、新規規則を導かない。(1) C-ID 誤引用2連発 — ND diary の Deviations(2026-08-01T12:40:00Z)が U1 の off-by-one(C4/C5 → 正 C5/C6、dag-integrity/performance-design.md の Review Iteration 1 Findings で AD components.md :28-29 照合により是正)と U3 の誤ラベル(C7 = corpus sweep ハーネスを approve 拒否メッセージと混同、Critical で捕捉 → C1/C3 面へ訂正)を記録し、原因を『conductor 起草時の canonical 表未照合』と自己診断している。これは cid:requirements-analysis:mechanism-cite-verify-at-draft(team.md:174『選挙の選択肢・裁定文に実装機構の file:line を書くときは、その機構の実在と意味論を起草時に実測確認する』)の違反実例そのもので、規則側に不足はない。diary も『既存 cid の違反実例2件(無音通過なし)』と明記し、両件とも §12a reviewer が捕捉して iteration 2 で READY 閉包している。(2) I/O 過大主張の精密化 — approve-reconciliation/performance-design.md の是正後本文は『新規 read 0』を撤回し『新規呼び出し1箇所・新規 parse 実装 0』『宣言 batch ≤12 × イベント種3の有界走査』へ言い換えている。読み手が既存ユーティリティ readAllAuditShards の再利用であることは packages/framework/core/tools/amadeus-lib.ts:4335 の export 実在と、amadeus-learnings.ts:546 / amadeus-runtime.ts:332 / amadeus-state.ts:775 など既存複数消費者の grep で独立確認した(新設実装ではない)。数値『最大12』も U1 の実測 ref 付きへ是正済みで、cid:requirements-analysis:numbers-from-command-output-only / cid:reverse-engineering:measurement-ref-in-artifacts の適用実例に収まる。(3) consumes N/A 同根展開 — 4 unit すべての performance-design.md 冒頭に『上流入力(consumes 全数): business-logic-model.md』行と、SKIP 由来 consumes 5点(performance/security/scalability/reliability-requirements + tech-stack-decisions)の N/A 根拠+代替正本(requirements.md NFR-1〜4)の注記が並んでいることを実測した。U3 iteration 1 の Minor(N/A 根拠不在)を15ファイル全数へ同根展開した措置は、cid:requirements-analysis:consumes-first-drafting の E-SRCNRS13 追補(team.md:231、『宣言 consumes × 全成果物の総当たり実参照チェック — 名指し是正だけのパッチは同型欠落を残す』)と cid:code-generation:same-root-inventory が既に要求する挙動そのもので、規範の新設ではなく既決規範の実演である。反対材料の探索も空: ND diary の Tradeoffs / Open questions はいずれも空で、規範化を要する未解決事項の記録がない。参照した cid はすべて amadeus/spaces/default/memory/(team.md / project.md)へ grep で実在確認した。よって 0件を採用し、否定形性能主張の面にのみ軽微な留保を付す(GoA 2)。",
+      "submittedAt": "2026-08-01T12:50:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-NDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "頻度面のみ留保: C-ID 誤引用は本ステージ内で2 unit 連続(U1 off-by-one、U3 誤ラベル)であり、単発の違反実例ではなく反復シグナルである。既存 cid:requirements-analysis:mechanism-cite-verify-at-draft は散文規則のまま起草者の自律に依存しており、2件とも捕捉したのは reviewer 側であって起草側のセルフチェックではない(無音通過はゼロだが、検出は reviewer 予算を2 iteration 消費した)。次回の週次蒸留ラウンドで、C-ID 等の canonical 表参照については『起草時に canonical 表を grep して照合する1手』を機械セルフチェック側へ寄せる案(E-SRCNRS13 が consumes 面で総当たり grep を定めたのと同型の、コンポーネント ID 面への横展開)を再判定することを予約する。今回は新規 cid を立てず 0件とする — 反復は2回であり、E-PM8 蒸留ラウンド第1回が高チャーン候補を『機械化 enhancement 起票のうえ着地後に縮約』と裁定した手順に倣い、規範追加より先に機械化の可否を測るべきだから。",
+      "rationale": "0件(選択肢1)を支持。3要素すべてを独立実測し、いずれも既存 cid の適用・違反実例で新規規則を導かないと確認した。(1) C-ID 誤引用2連発 — dag-integrity/nfr-design/logical-components.md:6 の是正後記述『C5(computeBoltDagOutcome)/ C6(bolt_dag_absence)、AD components.md(:28-29)を正本とする参照』を AD 実物 sed -n '28,29p' と逐語照合し完全一致を確認(C5 行 = computeBoltDagOutcome/runtime/FR-3(a)(c)、C6 行 = bolt_dag_absence/runtime→orchestrate)。approve-reconciliation/nfr-design/logical-components.md:6 の C7 訂正も AD components.md:30『C7 | corpus sweep ハーネス | tests | FR-6』および :38『判定は C2、文言は C3 が持つ』と grep -n で行番号・文言とも一致。両件とも既存 cid:requirements-analysis:mechanism-cite-verify-at-draft(起草時の機構引用の実測確認)の射程内で、diary:9 も自ら『既存 cid の違反実例2件(無音通過なし)』と分類済み。新規則の余地なし。(2) I/O 過大主張の精密化 — performance-design.md:30 に『Major: I/O 主張を〈新規呼び出し1箇所・新規 parse 0・有界 ≤12〉へ精密化』が実在し、:11 の本文も『宣言 batch 数(最大 12 実測 corpus — U1 の測定を参照)× イベント種3の集合照合で O(n) 微小』と ref 付きの検証可能形へ着地している。訂正前の『approve 経路は既に audit を読む』は現行コード経路についての偽の存在主張であり、これも mechanism-cite-verify-at-draft(引用の実在)と cid:requirements-analysis:absence-claim-grep-verify の裏面、および cid:requirements-analysis:numbers-from-command-output-only(数値は出力からの転記)で既に被覆される。(3) consumes N/A 同根展開 — grep -o 'consumes_absent expected' で 4 unit × 5 成果物 = 20/20 ファイル全数にヒット(unit 別内訳も各 5/5 を grep -l で確認)。diary:5 の『15ファイル全数へ同根展開』は起点 U3 の 5 ファイルを除く残余数で、20 と矛盾しない。これは cid:requirements-analysis:consumes-first-drafting の E-SRCNRS13 追補(宣言 consumes × 全成果物の総当たり実参照チェック)と cid:code-generation:same-root-inventory(同根パターンの全数棚卸し)の適用そのもの。反対材料の探索も空: construction/nfr-design/memory.md の Tradeoffs / Open questions は空、Deviations は上記(1)の実例のみで、規範化を要する未解決事項の記録はない。参照 cid はすべて amadeus/spaces/default/memory/ へ grep で実在確認した(mechanism-cite-verify-at-draft = team.md:174、consumes-first-drafting+E-SRCNRS13 追補 = team.md:231、numbers-from-command-output-only = team.md:243)。よって 0件を採用。ただし C-ID 誤引用の反復頻度に軽微な留保を付す(GoA 2)。自案非採用時の受容度: 選択肢2(採用あり)= 6(不本意だが支持 — 具体案が『新規 cid』でなく既存 cid への追補統合であれば実害はない)。",
+      "submittedAt": "2026-08-01T12:55:00Z"
+    }
+  ],
+  "late": []
+}

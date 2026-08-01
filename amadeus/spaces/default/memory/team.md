@@ -341,3 +341,11 @@ TDD の適用外は、(1) 実行時の振る舞いを持たない文書・コメ
 
 TypeScript／ESM、Bun 直接実行、strict `tsc --noEmit`、Biome lint に従い、formatter と import organizer は無効のまま近傍スタイルを保つ。core の純粋な判定・判別 union と I/O handler の境界、harness 中立な正本と harness overlay の分離を維持し、生成物を直接編集しない。
 <!-- amadeus:practices-promote:END -->
+
+## allowlist remap は waiver レンジの span 膨張(straddle)を別途検査する
+
+- coverage-patch-allowlist の機械 remap(cid:code-generation:c1-allowlist-mechanical-remap)は『既存 waiver レンジの内側へ新規コードが挿入され、レンジが膨張して新規行が waiver を継承する fail-open』を検出できない — remap 後に各エントリの span 変化(行数の増減)を機械確認し、膨張を検出したらコード移設か waiver 分割で straddle 自体を解消する(実測: 260801-cg-plan-guard Bolt 3 で amadeus-orchestrate.ts の既存レンジ 4380-4392 が新規ヘルパー挿入により 13→85 行へ膨張、機械 remap 単独では通過 — builder が検出しヘルパー群を handleAuthorizedApprovalReport 直前へ移設(a65ff06df)して解消、新規59行は waiver ゼロで実測カバー。測定 ref = worktree ブランチ bolt-approve-reconciliation(base a6cfbddab)、値は builder の difflib base→head 行マップと `bun tests/coverage-patch-gate.ts --check` 出力『measured added lines: 59, covered: 59, allowlisted: 0, uncovered: 0』からの転記 — 一次記録は record `construction/approve-reconciliation/code-generation/code-summary.md`)。E-CPG-CGS13 2026-08-02 採用 2-0(GoA 2x2、ソロ選挙)— c1-allowlist-mechanical-remap への追補(span 検査面) (learned 2026-08-01) <!-- cid:code-generation:cg-allowlist-straddle-swell -->
+
+## bare case label 行は union merge で DA:0 に残る — 同一行に文を置く
+
+- switch の bare case label 行(fail-closed の `default:` 等)は bun lcov の union merge 下で DA:0 に残りうる — patch 対象の新規 case label は同一行に文を置く(1行化)。実測所在は成果物側の2事実に限定する(留保転記: 赤側の観測ログは builder 報告に不在のため断定しない): packages/framework/core/tools/amadeus-lib.ts の biome-ignore コメント逐語『single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)』と1行化形 `default: return violationVerdict(pendingBatch);`、および是正コミット c023a87cb『style: collapse the fail-closed default arm onto one line for lcov attribution』(260801-cg-plan-guard Bolt 2)。E-CPG-CGS13 2026-08-02 採用 2-0(GoA 2x2、ソロ選挙)— cid:code-generation:bun-inbody-comment-da0 の case label 変種としての追補 (learned 2026-08-01) <!-- cid:code-generation:cg-bare-case-label-da0 -->
