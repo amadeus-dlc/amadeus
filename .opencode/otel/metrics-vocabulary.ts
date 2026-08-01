@@ -14,28 +14,12 @@
 // trace/log side's job. So the vocabulary is closed here and an out-of-set key
 // is an invariant exception rather than a silently dropped dimension.
 
-export const INSTRUMENT_NAMES = [
-  "gen_ai.client.token.usage",
-  "amadeus.stage.duration",
-  "amadeus.gate.iterations",
-  "amadeus.operation.failures",
-  "amadeus.subagent.duration",
-] as const;
-
-export type InstrumentName = (typeof INSTRUMENT_NAMES)[number];
-
 export type InstrumentKind = "counter" | "histogram";
 
-export type InstrumentDef = {
-  readonly name: InstrumentName;
-  readonly kind: InstrumentKind;
-  // Every attribute key this instrument may carry (#1868 §6). An emitter MAY
-  // omit one — an unresolvable dimension is absent, never guessed (#1868
-  // design principle 2, fail-open) — but it may never add one.
-  readonly attributeKeys: readonly string[];
-};
-
-export const INSTRUMENTS: readonly InstrumentDef[] = [
+// The catalogue, and the only place any of it is written down: the name union,
+// the name list, and the redaction policy's dimension set are all derived from
+// it below.
+export const INSTRUMENTS = [
   {
     name: "gen_ai.client.token.usage",
     kind: "histogram",
@@ -61,7 +45,20 @@ export const INSTRUMENTS: readonly InstrumentDef[] = [
     kind: "histogram",
     attributeKeys: ["amadeus.agent.type"],
   },
-];
+] as const;
+
+export type InstrumentName = (typeof INSTRUMENTS)[number]["name"];
+
+// One instrument's declaration, widened: an emitter MAY omit a declared
+// attribute — an unresolvable dimension is absent, never guessed (#1868 design
+// principle 2, fail-open) — but it may never add one.
+export type InstrumentDef = {
+  readonly name: InstrumentName;
+  readonly kind: InstrumentKind;
+  readonly attributeKeys: readonly string[];
+};
+
+export const INSTRUMENT_NAMES: readonly InstrumentName[] = INSTRUMENTS.map((def) => def.name);
 
 // The union of every instrument's attribute keys. The redaction policy admits
 // these as safe keys — derived from the catalogue rather than hand-listed, so
