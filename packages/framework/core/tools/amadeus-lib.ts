@@ -7955,8 +7955,8 @@ export function planIntegrityVerdict(
       return { kind: "ok" };
     case "autonomy-unset":
       return redirectVerdict(units);
-    default:
-      return violationVerdict(units);
+    // biome-ignore format: single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)
+    default: return violationVerdict(units);
   }
 }
 
