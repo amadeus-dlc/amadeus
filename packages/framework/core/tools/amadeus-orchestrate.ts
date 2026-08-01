@@ -107,6 +107,7 @@ import {
   advisoryLatchDir,
   type BoltDagAbsence,
   type CheckboxLine,
+  type DeclaredBatch,
   codekbRepoName,
   KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
@@ -125,6 +126,9 @@ import {
   parseIntentStatus,
   ownPhase,
   parseApprovedSwarmBatches,
+  planGuardMessage,
+  planIntegrityVerdict,
+  type SwarmDecline,
   PHASES,
   READ_ONLY_FLAGS,
   relativeCodekbDir,
@@ -2888,16 +2892,14 @@ export function handleNext(args: string[], projectDir: string | undefined): void
 
   if (currentIsInFlight) {
     // Under an autonomy grant, an eligible per-unit build stage fans out as a
-    // swarm batch instead of a single run-stage. tryEmitSwarm emits the
-    // invoke-swarm directive (and returns true) only when all trigger
-    // conditions hold; otherwise emitForSlug fires, which itself drives the
-    // engine's per-unit for_each loop for a per-unit Construction stage (one
-    // unit per `next`, gate suppressed on every uncovered unit with the real
-    // gate only on the all-covered re-entry; issue #368) and emits a single
-    // directive for every other stage.
-    if (!tryEmitSwarm(currentSlug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
-      emitForSlug(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
-    }
+    // swarm batch instead of a single run-stage. emitSwarmOrPerUnit emits the
+    // invoke-swarm directive when all trigger conditions hold; otherwise it
+    // judges the refusal and either falls back to emitForSlug — which itself
+    // drives the engine's per-unit for_each loop for a per-unit Construction
+    // stage (one unit per `next`, gate suppressed on every uncovered unit with
+    // the real gate only on the all-covered re-entry; issue #368) and emits a
+    // single directive for every other stage — or stops on a plan mismatch.
+    emitSwarmOrPerUnit(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
     return;
   }
 
@@ -2916,14 +2918,12 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     });
     return;
   }
-  // Same swarm guard on the advance path: an eligible per-unit build stage
+  // Same issuance point on the advance path: an eligible per-unit build stage
   // under autonomy fans out as a batch rather than a single run-stage. Off the
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
-  // otherwise.
-  if (!tryEmitSwarm(next.slug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
-    emitForSlug(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
-  }
+  // otherwise — unless the refusal breaks the compiled plan, which stops.
+  emitSwarmOrPerUnit(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
 }
 
 // The per-unit marker + run mode that isolate the per-unit build stage. The
@@ -3032,6 +3032,30 @@ function owedBatchGate(
 // security-patch): there the skeleton's always-gated approval must never be bypassed
 // by a stray autonomous setting, so the engine enforces it rather than trusting the
 // conductor's ordering.
+//
+// The return is a discriminated outcome rather than a boolean: a caller that
+// only knows "did not fan out" cannot tell a scope with no units from a run
+// about to serialise a batch the plan declared parallel. `declined` names the
+// reason and carries the DECLARED batch so the plan-integrity guard can judge
+// it (issue #1892).
+type SwarmEmitOutcome =
+  | { readonly kind: "emitted" }
+  | {
+      readonly kind: "declined";
+      readonly decline: SwarmDecline;
+      readonly pendingBatch: DeclaredBatch | null;
+    };
+
+// The DECLARED batch behind a pick, by its 1-origin batch number. The pick's own
+// `units` are only the UNCOVERED ones, so a width-2 batch with one unit already
+// built would read as serial; the guard must judge what the plan declared, not
+// what is left. The one place the 1-origin offset is applied.
+function declaredBatchOf(batches: string[][], batchNumber: number): DeclaredBatch | null {
+  const declared = batches[batchNumber - 1];
+  if (!Array.isArray(declared)) return null;
+  return { number: batchNumber, units: declared };
+}
+
 function tryEmitSwarm(
   slug: string,
   scope: string,
@@ -3039,24 +3063,50 @@ function tryEmitSwarm(
   projectDir: string,
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
-): boolean {
+): SwarmEmitOutcome {
+  const notSwarmStage: SwarmEmitOutcome = {
+    kind: "declined",
+    decline: { kind: "not-swarm-stage" },
+    pendingBatch: null,
+  };
   const node = nodeForSlug(slug);
-  if (!node) return false;
-  if (node.phase !== "construction") return false;
-  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return false;
+  if (!node) return notSwarmStage;
+  if (node.phase !== "construction") return notSwarmStage;
+  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return notSwarmStage;
   // Never swarm the walking-skeleton gate stage — Bolt 1 is always gated and
   // human-approved before any batch fans out (structural defense-in-depth).
-  if (isSkeletonGateStage(node, scope)) return false;
-  const autonomy = readAutonomyMode(stateContent);
-  if (autonomy === null) return false;
+  // Declined before the DAG is read: this stage never swarms, so reading the
+  // plan here would be I/O with nothing to decide.
+  if (isSkeletonGateStage(node, scope)) {
+    return { kind: "declined", decline: { kind: "skeleton-gate" }, pendingBatch: null };
+  }
+  // The plan is now read BEFORE the grant is checked. The guard needs the
+  // declared width to judge an unanswered ladder, and this is the same read the
+  // granted path already performed — moved earlier, not added.
   const batches = readBoltDagBatches(projectDir);
-  if (!batches || batches.length === 0) return false;
+  if (!batches || batches.length === 0) {
+    return { kind: "declined", decline: { kind: "no-dag" }, pendingBatch: null };
+  }
   const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
-  if (pick === null) return false;
+  if (pick === null) {
+    return { kind: "declined", decline: { kind: "all-covered" }, pendingBatch: null };
+  }
+  const pendingBatch = declaredBatchOf(batches, pick.batchNumber);
+  const autonomy = readAutonomyMode(stateContent);
+  if (autonomy === null) {
+    // Before the walking skeleton ships an unset grant is the legitimate initial
+    // state (the ladder has not fired yet); after it ships the ladder's answer
+    // is owed, and a batch the plan declared parallel must not serialise while
+    // the question goes unanswered.
+    const decline: SwarmDecline = skeletonGateCompleted(stateContent, scope)
+      ? { kind: "autonomy-unset" }
+      : { kind: "autonomy-unset-pre-skeleton" };
+    return { kind: "declined", decline, pendingBatch };
+  }
   const owedGate = owedBatchGate(autonomy, batches, pick.batchNumber, stateContent);
   if (owedGate !== null) {
     emit(askDirective(owedGate));
-    return true;
+    return { kind: "emitted" };
   }
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
@@ -3076,7 +3126,43 @@ function tryEmitSwarm(
   } else {
     emit({ kind: "invoke-swarm", units: pick.units });
   }
-  return true;
+  return { kind: "emitted" };
+}
+
+// The SINGLE issuance point for a stage that may fan out. Both `next` paths —
+// re-entering the in-flight stage and advancing to the next one — go through
+// here, so the plan-integrity judgement exists in one place and cannot drift
+// between two copies.
+//
+// Three ways out, and this function performs no judging of its own: it collects
+// the two inputs, hands them to the pure verdict, and emits what the verdict
+// names. `ok` is the unchanged fallback to the normal run-stage emit (which
+// itself drives the per-unit for_each loop for a per-unit Construction stage).
+function emitSwarmOrPerUnit(
+  slug: string,
+  projectType: "brownfield" | "greenfield" | null,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+): void {
+  const outcome = tryEmitSwarm(slug, scope, stateContent, projectDir, recordPrefix, codekbCtx);
+  if (outcome.kind === "emitted") return;
+  const pendingBatch = outcome.pendingBatch;
+  const verdict = planIntegrityVerdict(outcome.decline, pendingBatch);
+  // No declared batch means nothing to break, which is why the verdict is `ok`
+  // in that case — the two halves of this condition are one rule, and naming
+  // the batch here is what lets the message cite it below.
+  if (verdict.kind === "ok" || pendingBatch === null) {
+    emitForSlug(slug, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
+    return;
+  }
+  const message = planGuardMessage(verdict);
+  // An unanswered ladder is a question, not a fault: it goes out as the same
+  // `ask` the ladder has always used, so the answer path is unchanged. Anything
+  // else is the run breaking its own plan, and stops.
+  emit(verdict.kind === "redirect" ? askDirective(message) : errorDirective(message));
 }
 
 // Emit a run-stage directive for a slug, resolving the graph node first. A slug

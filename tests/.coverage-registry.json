@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 563,
+    "total": 572,
     "enumeratedByClass": {
-      "function": 320,
+      "function": 329,
       "audit": 79,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 158,
+      "function": 161,
       "audit": 34,
       "scope": 10,
       "stage": 8,
@@ -1180,6 +1180,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:AUTONOMY_LADDER_EXIT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:AUTONOMY_MODE_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1901,11 +1908,44 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:GUARD_EXIT_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:GUARD_OBSERVED_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:GUARD_WEIGHT_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:guardIntentOperation",
       "minMechanism": "none",
       "coveredBy": [
         {
           "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:guardMessage",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
           "mechanism": "none"
         }
       ],
@@ -2950,10 +2990,48 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:PLAN_CORRECTION_EXIT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:PLAN_DRIFT_WEIGHT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:planFilePath",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:planGuardMessage",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:planIntegrityVerdict",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
