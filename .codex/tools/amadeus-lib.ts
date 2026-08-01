@@ -7908,21 +7908,28 @@ export type SwarmDecline =
 // `exit` field would turn the caller's branch into a value check and let the
 // two exits be swapped without the type noticing.
 //
-// `declaredWidth` is the one place the observed number comes from — the caller
-// never re-counts the units when it writes the message.
+// A batch as the compiled plan declares it: the 1-origin number and the FULL
+// unit list (not the uncovered remainder). The one shared shape between the
+// reader in orchestrate and the judge here, so the two cannot drift.
+export type DeclaredBatch = { readonly number: number; readonly units: readonly string[] };
+
+// `declaredWidth` and `batchNumber` are the one place the observed numbers come
+// from — the caller never re-counts the units or re-carries the batch number
+// beside the verdict when it writes the message.
 export type PlanIntegrityVerdict =
   | { readonly kind: "ok" }
-  | { readonly kind: "redirect"; readonly declaredWidth: number; readonly units: readonly string[] }
-  | { readonly kind: "violation"; readonly declaredWidth: number; readonly units: readonly string[] };
+  | { readonly kind: "redirect"; readonly batchNumber: number; readonly declaredWidth: number; readonly units: readonly string[] }
+  | { readonly kind: "violation"; readonly batchNumber: number; readonly declaredWidth: number; readonly units: readonly string[] };
 
 // The sole constructors for the two guard verdicts: width is derived from the
-// units here, so no call site can hand in a width that disagrees with the list.
-function redirectVerdict(units: readonly string[]): PlanIntegrityVerdict {
-  return { kind: "redirect", declaredWidth: units.length, units };
+// units and the number rides the same declared batch, so no call site can hand
+// in a pair that disagrees with the plan.
+function redirectVerdict(batch: DeclaredBatch): PlanIntegrityVerdict {
+  return { kind: "redirect", batchNumber: batch.number, declaredWidth: batch.units.length, units: batch.units };
 }
 
-function violationVerdict(units: readonly string[]): PlanIntegrityVerdict {
-  return { kind: "violation", declaredWidth: units.length, units };
+function violationVerdict(batch: DeclaredBatch): PlanIntegrityVerdict {
+  return { kind: "violation", batchNumber: batch.number, declaredWidth: batch.units.length, units: batch.units };
 }
 
 // Decide whether a swarm decline is benign. Total and pure: no disk, no audit,
@@ -7938,10 +7945,9 @@ function violationVerdict(units: readonly string[]): PlanIntegrityVerdict {
 // move this failure to compile time and delete the runtime floor with it.
 export function planIntegrityVerdict(
   decline: SwarmDecline,
-  pendingBatch: { readonly number: number; readonly units: readonly string[] } | null,
+  pendingBatch: DeclaredBatch | null,
 ): PlanIntegrityVerdict {
   if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };
-  const units = pendingBatch.units;
   switch (decline.kind) {
     case "not-swarm-stage":
     case "skeleton-gate":
@@ -7954,9 +7960,9 @@ export function planIntegrityVerdict(
     case "no-dag":
       return { kind: "ok" };
     case "autonomy-unset":
-      return redirectVerdict(units);
+      return redirectVerdict(pendingBatch);
     // biome-ignore format: single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)
-    default: return violationVerdict(units);
+    default: return violationVerdict(pendingBatch);
   }
 }
 
@@ -7964,14 +7970,13 @@ export function planIntegrityVerdict(
 // came from and gets a finished message — no call site assembles the sentence
 // itself, so the two exits cannot drift apart by one being reworded.
 //
-// The observed numbers come off the verdict, never re-derived here: the width
-// and the unit names are the ones the judge saw.
+// The observed numbers come off the verdict, never re-derived here: the batch
+// number, the width, and the unit names are the ones the judge saw.
 export function planGuardMessage(
   verdict: Extract<PlanIntegrityVerdict, { kind: "redirect" | "violation" }>,
-  batchNumber: number,
 ): string {
   const named = verdict.units.join(", ");
-  const declared = `the compiled Bolt DAG declares batch ${batchNumber} ${verdict.declaredWidth} units wide (${named}), so the plan says these units run in parallel`;
+  const declared = `the compiled Bolt DAG declares batch ${verdict.batchNumber} ${verdict.declaredWidth} units wide (${named}), so the plan says these units run in parallel`;
   if (verdict.kind === "redirect") {
     const observation = `${declared}, but Construction Autonomy Mode is unset — the walking-skeleton ladder has not been answered, so the run cannot fan the batch out and would fall back to building them one at a time.`;
     return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: AUTONOMY_LADDER_EXIT });

@@ -107,6 +107,7 @@ import {
   advisoryLatchDir,
   type BoltDagAbsence,
   type CheckboxLine,
+  type DeclaredBatch,
   codekbRepoName,
   KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
@@ -3042,17 +3043,14 @@ type SwarmEmitOutcome =
   | {
       readonly kind: "declined";
       readonly decline: SwarmDecline;
-      readonly pendingBatch: { readonly number: number; readonly units: readonly string[] } | null;
+      readonly pendingBatch: DeclaredBatch | null;
     };
 
 // The DECLARED batch behind a pick, by its 1-origin batch number. The pick's own
 // `units` are only the UNCOVERED ones, so a width-2 batch with one unit already
 // built would read as serial; the guard must judge what the plan declared, not
 // what is left. The one place the 1-origin offset is applied.
-function declaredBatchOf(
-  batches: string[][],
-  batchNumber: number,
-): { readonly number: number; readonly units: readonly string[] } | null {
+function declaredBatchOf(batches: string[][], batchNumber: number): DeclaredBatch | null {
   const declared = batches[batchNumber - 1];
   if (!Array.isArray(declared)) return null;
   return { number: batchNumber, units: declared };
@@ -3160,7 +3158,7 @@ function emitSwarmOrPerUnit(
     emitForSlug(slug, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
     return;
   }
-  const message = planGuardMessage(verdict, pendingBatch.number);
+  const message = planGuardMessage(verdict);
   // An unanswered ladder is a question, not a fault: it goes out as the same
   // `ask` the ladder has always used, so the answer path is unchanged. Anything
   // else is the run breaking its own plan, and stops.

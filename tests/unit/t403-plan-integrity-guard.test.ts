@@ -1,3 +1,5 @@
+// covers: function:guardMessage, function:planIntegrityVerdict, function:planGuardMessage
+//
 // The issuance-side plan-integrity guard: the three-part guard message builder
 // and the pure verdict that decides whether a swarm decline is a legitimate
 // serial fallback, an autonomy-ladder redirect, or a plan violation. Both are
@@ -117,6 +119,7 @@ describe("t403 planIntegrityVerdict maps declines to the three verdicts (FR-1)",
     expect(verdict.kind).toBe("redirect");
     if (verdict.kind !== "redirect") throw new Error("expected a redirect verdict");
     expect(verdict.declaredWidth).toBe(2);
+    expect(verdict.batchNumber).toBe(PARALLEL_BATCH.number);
     expect(verdict.units).toEqual(["alpha", "beta"]);
   });
 
@@ -129,6 +132,7 @@ describe("t403 planIntegrityVerdict maps declines to the three verdicts (FR-1)",
     expect(verdict.kind).toBe("violation");
     if (verdict.kind !== "violation") throw new Error("expected a violation verdict");
     expect(verdict.declaredWidth).toBe(2);
+    expect(verdict.batchNumber).toBe(PARALLEL_BATCH.number);
     expect(verdict.units).toEqual(["alpha", "beta"]);
   });
 
@@ -143,17 +147,19 @@ describe("t403 planIntegrityVerdict maps declines to the three verdicts (FR-1)",
 describe("t403 planGuardMessage writes both exits from one builder (FR-4 / AC-4a)", () => {
   const REDIRECT = {
     kind: "redirect",
+    batchNumber: 2,
     declaredWidth: 2,
     units: ["alpha", "beta"],
   } as const;
   const VIOLATION = {
     kind: "violation",
+    batchNumber: 7,
     declaredWidth: 3,
     units: ["alpha", "beta", "gamma"],
   } as const;
 
   test("l: the redirect message is three-part and exits via the ladder", () => {
-    const message = planGuardMessage(REDIRECT, 2);
+    const message = planGuardMessage(REDIRECT);
     expect(message).toContain(GUARD_OBSERVED_MARKER);
     expect(message).toContain(GUARD_WEIGHT_MARKER);
     expect(message).toContain(GUARD_EXIT_MARKER);
@@ -162,7 +168,7 @@ describe("t403 planGuardMessage writes both exits from one builder (FR-4 / AC-4a
   });
 
   test("m: the violation message is three-part and exits via a plan correction", () => {
-    const message = planGuardMessage(VIOLATION, 1);
+    const message = planGuardMessage(VIOLATION);
     expect(message).toContain(GUARD_OBSERVED_MARKER);
     expect(message).toContain(GUARD_WEIGHT_MARKER);
     expect(message).toContain(GUARD_EXIT_MARKER);
@@ -171,12 +177,12 @@ describe("t403 planGuardMessage writes both exits from one builder (FR-4 / AC-4a
   });
 
   test("n: both messages carry the same measured weight, from one constant", () => {
-    expect(planGuardMessage(REDIRECT, 2)).toContain(PLAN_DRIFT_WEIGHT);
-    expect(planGuardMessage(VIOLATION, 1)).toContain(PLAN_DRIFT_WEIGHT);
+    expect(planGuardMessage(REDIRECT)).toContain(PLAN_DRIFT_WEIGHT);
+    expect(planGuardMessage(VIOLATION)).toContain(PLAN_DRIFT_WEIGHT);
   });
 
   test("o: the observation states the batch, the width, and every declared unit", () => {
-    const message = planGuardMessage(VIOLATION, 7);
+    const message = planGuardMessage(VIOLATION);
     expect(message).toContain("batch 7 3 units wide");
     for (const unit of VIOLATION.units) expect(message).toContain(unit);
   });
