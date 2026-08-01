@@ -116,10 +116,15 @@ class FakeGateway implements MirrorGitHubGateway {
       state: "OPEN",
     });
   }
-  async findIssuesByMarker(): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
+  // Faithful to the real gateway: only issues whose body carries the searched
+  // marker come back, so a search keyed on the wrong identity finds nothing.
+  async findIssuesByMarker(
+    _repository: Parameters<MirrorGitHubGateway["findIssuesByMarker"]>[0],
+    marker: Parameters<MirrorGitHubGateway["findIssuesByMarker"]>[1],
+  ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
     this.history.push("find");
     if (this.findResult) return this.findResult;
-    return ok(this.candidates);
+    return ok(this.candidates.filter((candidate) => candidate.body.includes(marker)));
   }
   async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("view");
@@ -320,6 +325,41 @@ describe("t279 create", () => {
     const gateway = new FakeGateway();
     const outcome = await executeMirrorOperation({
       context: context("create", gateway),
+      ports: store.ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
+  // FR-1: a create that reaches an already-linked mirror must search on the
+  // recorded provenance identity (the identity the remote marker carries) and
+  // adopt the linked Issue instead of creating a second one.
+  test("create under an existing link adopts the linked Issue without creating", async () => {
+    const initial = linkedState();
+    const store = memoryStore(initial);
+    const gateway = new FakeGateway();
+    gateway.candidates = [issue()];
+    const outcome = await executeMirrorOperation({
+      context: { ...context("create", gateway), newOperationId: () => "op-2" },
+      ports: store.ports,
+      localState: initial,
+    });
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "create",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["readiness", "find"]);
+    expect(store.state().provenance?.createIdentity.operationId).toBe("op-1");
+  });
+
+  test("create under an existing link fails closed when the linked Issue is unverifiable", async () => {
+    const initial = linkedState();
+    const store = memoryStore(initial);
+    const gateway = new FakeGateway();
+    const outcome = await executeMirrorOperation({
+      context: { ...context("create", gateway), newOperationId: () => "op-2" },
       ports: store.ports,
       localState: initial,
     });

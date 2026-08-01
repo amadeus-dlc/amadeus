@@ -150,6 +150,44 @@ describe("attempt / complete", () => {
     );
     expect(r.kind).toBe("invalid");
   });
+
+  // A second create completion must not relink a already-linked mirror onto a
+  // different Issue: sync/close already guard the number, create did not.
+  const linkedThenSecondCreate = (issueNumber: number) => {
+    const linked = apply(attempted(), {
+      kind: "complete",
+      event: ev("create"),
+      issueNumber: 42,
+      completedAt: NOW,
+      createdAt: NOW,
+    });
+    const second = apply(
+      apply(linked, { ...prepareCreate, event: ev("create", "i2"), operationId: "op-2" }),
+      { kind: "mark-attempted", event: ev("create", "i2"), attemptedAt: NOW },
+    );
+    return reduceMirrorState(
+      second,
+      {
+        kind: "complete",
+        event: ev("create", "i2"),
+        issueNumber,
+        completedAt: NOW,
+        createdAt: NOW,
+      },
+      NOW,
+    );
+  };
+
+  test("create complete onto a different issue number is invalid when already linked", () => {
+    expect(linkedThenSecondCreate(43).kind).toBe("invalid");
+  });
+
+  test("create complete on the linked issue keeps the original provenance identity", () => {
+    const result = linkedThenSecondCreate(42);
+    if (result.kind !== "changed") throw new Error(`expected changed, got ${result.kind}`);
+    expect(result.snapshot.issueNumber).toBe(42);
+    expect(result.snapshot.provenance?.createIdentity.operationId).toBe("op-1");
+  });
 });
 
 describe("pending / retry", () => {

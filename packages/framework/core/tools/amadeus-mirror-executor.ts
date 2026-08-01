@@ -603,7 +603,16 @@ async function classifyCreateState(
       candidate: ReturnType<typeof classifyCandidates>;
     }
 > {
-  const marker = renderMirrorMarker(receipt.createIdentity);
+  // A linked mirror is searched and verified on its recorded provenance: the
+  // remote marker carries the create identity of the first create, so keying
+  // the search on this receipt's fresh identity would find nothing and let a
+  // second Issue be created.
+  const linkedProvenance =
+    snapshot.issueNumber !== null && snapshot.provenance
+      ? snapshot.provenance
+      : null;
+  const searchIdentity = linkedProvenance?.createIdentity ?? receipt.createIdentity;
+  const marker = renderMirrorMarker(searchIdentity);
   const found = await context.gateway.findIssuesByMarker(
     context.repository,
     marker,
@@ -642,7 +651,7 @@ async function classifyCreateState(
   for (const candidate of found.value) {
     const ownership = verifyOwnership({
       remoteIssue: candidate,
-      localProvenance: {
+      localProvenance: linkedProvenance ?? {
         schema: 1,
         createIdentity: receipt.createIdentity,
         issueNumber: candidate.number,
@@ -652,8 +661,9 @@ async function classifyCreateState(
     if (ownership.kind === "verified") verified.push(candidate);
     else mismatches += 1;
   }
-  const localState =
-    receipt.status === "prepared"
+  const localState = linkedProvenance
+    ? "provenance-present"
+    : receipt.status === "prepared"
       ? "fresh-prepared"
       : receipt.status === "pending" &&
           receipt.lastEffect === "no-effect-confirmed"
@@ -666,6 +676,7 @@ async function classifyCreateState(
       verifiedCandidates: verified,
       mismatchCandidateCount: mismatches,
       localCreateIdentity: receipt.createIdentity,
+      ...(linkedProvenance ? { provenance: linkedProvenance } : {}),
       now: context.now(),
     }),
   };

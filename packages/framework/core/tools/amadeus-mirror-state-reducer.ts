@@ -355,12 +355,24 @@ function writeCompletedIssue(
       return invalid("complete: create receipt has no create identity");
     if (transition.createdAt === undefined)
       return invalid("complete: create completion requires provenance createdAt");
-    const provenance: MirrorProvenance = {
-      schema: 1,
-      createIdentity: receipt.createIdentity,
-      issueNumber: transition.issueNumber,
-      createdAt: transition.createdAt,
-    };
+    // Symmetric with the sync/close guard below: once the mirror is linked, a
+    // create completion may only settle on that same Issue, and the original
+    // provenance identity stays authoritative because the remote marker
+    // carries it.
+    if (
+      snapshot.issueNumber !== null &&
+      snapshot.issueNumber !== transition.issueNumber
+    )
+      return invalid("complete: create issue number does not match linked issue");
+    const provenance: MirrorProvenance =
+      snapshot.provenance && snapshot.issueNumber === transition.issueNumber
+        ? snapshot.provenance
+        : {
+            schema: 1,
+            createIdentity: receipt.createIdentity,
+            issueNumber: transition.issueNumber,
+            createdAt: transition.createdAt,
+          };
     return changed(
       withReceipt(
         {

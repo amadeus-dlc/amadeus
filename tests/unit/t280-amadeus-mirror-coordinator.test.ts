@@ -591,3 +591,62 @@ describe("t280 prompt answers and completion", () => {
     ).toBeNull();
   });
 });
+
+// FR-1 (#1838): the Intent Capture approval boundary is a create *opportunity*,
+// not an unconditional create. Once an Issue number is recorded it must
+// synchronize that Issue, exactly as the sibling boundaries do.
+describe("t280 intent-capture-approved boundary operation", () => {
+  const APPROVAL: MirrorBoundary = {
+    kind: "intent-capture-approved",
+    instance: "ic-1",
+  };
+
+  async function operationsFor(initial: MirrorStateSnapshot) {
+    const store = memoryStore(initial);
+    const base = input(store, "auto");
+    const operations: MirrorOperation[] = [];
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      context: { ...base.context, boundary: APPROVAL },
+      dependencies: {
+        ...base.dependencies,
+        execute: async ({ context }) => {
+          operations.push(context.operation);
+          return {
+            kind: "completed",
+            operation: context.operation,
+            issueNumber: 7,
+          };
+        },
+      },
+    });
+    return { operations, outcome };
+  }
+
+  test("creates once when no Issue is linked yet", async () => {
+    const { operations } = await operationsFor(EMPTY_MIRROR_STATE);
+    expect(operations).toEqual(["create"]);
+  });
+
+  test("synchronizes the linked Issue instead of creating a second one", async () => {
+    const { operations, outcome } = await operationsFor({
+      ...EMPTY_MIRROR_STATE,
+      issueNumber: 7,
+      provenance: {
+        schema: 1,
+        createIdentity: {
+          schema: 1,
+          intentUuid: "intent-1",
+          intentDir: "amadeus/spaces/default/intents/demo",
+          repository: REPO,
+          operationId: "op-first",
+          preparedAt: NOW,
+        },
+        issueNumber: 7,
+        createdAt: NOW,
+      },
+    });
+    expect(operations).toEqual(["sync"]);
+    expect(outcome.kind).toBe("continued");
+  });
+});
