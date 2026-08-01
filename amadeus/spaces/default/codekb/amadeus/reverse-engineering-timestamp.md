@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260731-formal-verif-value-chain）
+## 実行メタデータ（現在: 260801-kimi-bootstrap-deadlock）
+
+- Date: `2026-08-01T12:15:00Z`
+- Base commit: `c49e385ac7b787ce151ab0f077943620bd8bf7e2`（observed の祖先、`git merge-base --is-ancestor c49e385ac HEAD` exit 0）
+- Observed commit: `861688c31fd08cc0068318d71b0d5c5a87153b57`（origin/main tip `d9f68e13c` とコード同一 + intent-record 1件 `record: birth intent 260801-kimi-bootstrap-deadlock`）
+- Distance: `33 commits`（`git rev-list --count c49e385ac..HEAD`）
+- 区間規模: `537 files changed, 28879 insertions(+), 3094 deletions(-)`（`git diff --shortstat c49e385ac..HEAD`、測定 ref = observed `861688c31`）。大半は otel 基盤拡張（resource-core / span-context / exception イベント / metrics 語彙配線）、mirror 系（boundary 対称性・title バイトクランプ）、plugin scope opt-in、composed-scope drop、metrics snapshot 定期コミット群。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal
+- Focus: Issue #1922 kimi ハーネスの bootstrap デッドロック — session-start hook の順序（`:70` state-file ガード vs `:117` `writeCurrentSessionId`）/ caller-authorization の fail-closed 連鎖 / `.current-session` writer-reader 棚卸し / 近傍テスト。差分リフレッシュ: 直近の observed `c49e385ac`（260801-open-bug-batch-5）を base とし、患部の区間 touch 判定（session-start.ts +14 は otel seam のみで順序不変、機序生存）と全 file:line の observed HEAD 再実測で二重化した。
+- Updated artifacts: 実質更新3件 = `architecture.md`（#1922 機構断面: デッドロック連鎖 + `.current-session` writer/reader + 最小修正方向）、`code-structure.md`（患部配置と区間 touch 判定）、`code-quality-assessment.md`（テスト空白の記録 — no-state-file SessionStart → `.current-session` 書込みを検証するテスト不在、t10 `:211` / `:222` が現行 early-exit を pin）。判断1行のみ5件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` — 単一バグの既存構成内修正であり、区間の構成変化（otel 基盤拡張等）は各ファイルの現在節1行で注記した（`cid:reverse-engineering:c3-relabel`）。加えて本ファイルと per-intent `re-scans/260801-kimi-bootstrap-deadlock.md`。
+- Per-intent record: `re-scans/260801-kimi-bootstrap-deadlock.md`（患部 file:line 全数・認可連鎖・テスト足場を含む）。
+
+## 実行メタデータ（履歴: 260801-open-bug-batch-5）
+## 実行メタデータ（履歴: 260731-formal-verif-value-chain）
 
 - Date: `2026-07-31T09:06:44Z`
 - Base commit: `6e7a9d701`（observed の祖先、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0、距離 `12`）

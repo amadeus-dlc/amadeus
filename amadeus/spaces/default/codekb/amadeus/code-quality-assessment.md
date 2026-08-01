@@ -1,6 +1,13 @@
 # コード品質評価
 
-## 価値チェーン3件の品質評価（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- テスト空白（決定的）: state-file 無しの SessionStart で `.current-session` が書かれることを検証するテストは存在しない。現行の早期終了挙動は `tests/unit/t10-hook-session-start.test.ts:211`（silent exit）/ `:222`（no heartbeat）が no state file の early-exit（`packages/framework/core/hooks/amadeus-session-start.ts:70`）を直接 pin しており、修正はこの pin の改訂 + 回帰テスト追加を伴う。追加先の自然な場所は同 t10。近傍の足場: `tests/integration/t-kimi-adapter.test.ts:317` 付近、t365（`.current-session` を `:826` / `:958` / `:1199` / `:1884` で使用）、t173。`amadeus-caller-authorization.ts` 専用の単体テストファイルは不在。
+- 欠陥クラス: 単一 writer × ガード後段配置 — bootstrap 状態で reader 側が恒久 fail-closed になる writer-reader 不整合。`.current-session` 直読み2箇所（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403`）を `readCurrentSessionId`（`amadeus-lib.ts:2159`）へ寄せるリファクタは本 intent スコープ外。
+- 根因確度: 機序は observed HEAD で全 file:line 再実測済み（`:70` ガード / `:117` writer / 認可 `:96-109`）。決定的再現はテストなしでもコードパス追跡で確定（writer 到達不能は `:70` の無条件 exit から自明）。
+
+## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## 価値チェーン3件の品質評価（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が扱う欠陥は**いずれも「片側だけ実装された非対称」クラスタ**に属する（`cid:requirements-analysis:symmetric-pair-review`）。
 

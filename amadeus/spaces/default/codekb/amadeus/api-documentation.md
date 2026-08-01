@@ -1,6 +1,11 @@
 # API ドキュメント
 
-## 価値チェーン3件が触れる内部契約（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi bootstrap デッドロック修正が触れる内部契約（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: 公開 CLI 契約の変更なし。触れるのは内部ファイル契約1点 — `amadeus/.amadeus-sessions/.current-session` の書込みタイミング（`amadeus-session-start.ts` の state-file ガード後段 `:117` → ガード前段）。読み手側（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403` / `readCurrentSessionId` 経由3箇所）の契約は不変。`tests/unit/t10-hook-session-start.test.ts:211` / `:222` が現行挙動を pin しており改訂が必要（`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い要件段で宣言）。
+
+## オープンバグ一括修正バッチ第5弾が触れる内部契約（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## 価値チェーン3件が触れる内部契約（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が変更・拡張しうる内部契約を、現行の形とともに固定する。
 

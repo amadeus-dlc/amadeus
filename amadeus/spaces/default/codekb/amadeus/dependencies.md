@@ -1,6 +1,11 @@
 # 依存関係
 
-## formal-verif 価値チェーンの依存関係（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi bootstrap デッドロック修正の依存関係（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。
+
+## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif 価値チェーンの依存関係（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。移設・貫通・整合の3件が依存グラフのどこを切るかを固定する。
 

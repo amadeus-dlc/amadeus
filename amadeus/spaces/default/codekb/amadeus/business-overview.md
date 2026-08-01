@@ -1,6 +1,11 @@
 # ビジネス概要
 
-## 価値チェーン3件の業務境界（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi ハーネス bootstrap デッドロック修正の業務境界（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
+
+## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## 価値チェーン3件の業務境界（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。本 intent の業務目的は **formal-model-check を「実験の成果物」から「利用者が使える機能」へ引き上げること**。3 Issue はその価値チェーンの別々の切断点に対応する。
 

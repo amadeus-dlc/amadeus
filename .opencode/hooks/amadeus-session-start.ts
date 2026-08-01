@@ -18,7 +18,8 @@
 //   clear   → SESSION_STARTED
 //   compact → no emission (PreCompact already fired)
 //
-// The hook is a no-op if amadeus-state.md is absent in cwd (no active workflow).
+// With no amadeus-state.md in cwd (no active workflow) the hook writes only the
+// per-user `.current-session` record (#1922) and skips everything else.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
@@ -64,9 +65,42 @@ try {
   // non-fatal — includes self-heal on the next /amadeus / switch / --doctor
 }
 
+// The conversation id the harness stamps on every hook input. Extracted from
+// the already-drained stdin BEFORE the no-workflow early-exit below, because
+// `.current-session` must be written even when no workflow exists yet.
+let sessionId = "";
+if (hookStdin.text.length > 0) {
+  try {
+    const raw: unknown = JSON.parse(hookStdin.text);
+    if (isClaudeCodeHookInput(raw) && typeof raw.session_id === "string") {
+      sessionId = raw.session_id;
+    }
+  } catch {
+    // malformed stdin — no session id to record; the post-guard block below
+    // classifies the source as "malformed" for the audit trail.
+  }
+}
+
+// Record the live conversation as the "current session" on EVERY fire (startup /
+// resume / clear / compact) — NOT gated on eventType, and NOT gated on a state
+// file existing. This MUST sit before the no-workflow guard: `.current-session`
+// is per-user runtime state independent of any workflow (amadeus-lib.ts
+// :2147-2151 design), and the kimi caller-authorization + isTrustedMainStop
+// readers fail-closed without it — a no-intent workspace (fresh worktree, first
+// run) would otherwise deadlock bootstrap, since the engine's auto-birth path
+// is never reached when this file is missing (#1922). The hook is the only
+// place that sees session_id; a CLI switch (`/amadeus intent <slug>`) cannot.
+// This marker lets the switch tool re-stamp the live session's record so a
+// deliberate in-conversation switch doesn't fire a FALSE rebind nag on resume
+// (see the re-stamp in handleIntent, amadeus-utility.ts). Separate file from
+// the per-session stamp below; no-op without a session_id.
+if (sessionId) writeCurrentSessionId(projectDir, sessionId);
+
 const stateFile = stateFilePath(projectDir);
 
-// No workflow active — do nothing
+// No workflow active — do nothing (beyond the per-user `.current-session`
+// record above: heartbeat, audit emission, telemetry supply, resume rebind,
+// and context injection all stay workflow-gated — FR-2).
 if (!existsSync(stateFile)) process.exit(0);
 
 // Telemetry process span (opt-in; no-op unless observability.enabled)
@@ -89,16 +123,13 @@ writeFileSync(join(healthDir, "session-start.last"), isoTimestamp(), "utf-8");
 //     the audit, so the operator can see something went wrong instead of
 //     silently mislabelling it).
 let source = "startup";
-// The conversation id Claude Code stamps on every hook input. Used to key the
-// per-session→intent record (resume rebind below); "" when absent (a TTY/empty
-// invocation) — the rebind logic no-ops without it.
-let sessionId = "";
+// sessionId was already extracted from the same stdin above (before the
+// no-workflow guard, #1922); this block only classifies the source.
 if (hookStdin.text.length > 0) {
   try {
     const raw: unknown = JSON.parse(hookStdin.text);
     if (isClaudeCodeHookInput(raw)) {
       source = raw.source ? String(raw.source) : "unknown";
-      if (typeof raw.session_id === "string") sessionId = raw.session_id;
     } else {
       source = "unknown";
     }
@@ -106,15 +137,6 @@ if (hookStdin.text.length > 0) {
     source = "malformed";
   }
 }
-
-// Record the live conversation as the "current session" on EVERY fire (startup /
-// resume / clear / compact) — NOT gated on eventType. The hook is the only place
-// that sees session_id; a CLI switch (`/amadeus intent <slug>`) cannot. This marker
-// lets the switch tool re-stamp the live session's record so a deliberate
-// in-conversation switch doesn't fire a FALSE rebind nag on resume (see the
-// re-stamp in handleIntent, amadeus-utility.ts). Separate file from the per-session
-// stamp below; no-op without a session_id.
-if (sessionId) writeCurrentSessionId(projectDir, sessionId);
 
 // Hand the conversation id to the resource seam (FR-RES-3) — this hook is the
 // only surface that sees it, and core cannot derive it. Supplied before the

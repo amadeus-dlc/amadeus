@@ -1,6 +1,11 @@
 # 技術スタック
 
-## formal-verif 価値チェーンの技術断面（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi bootstrap デッドロック修正の技術断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は otel 基盤拡張（`packages/framework/core/otel/` の resource-core / span-context / exception イベント / metrics 語彙配線、外部依存追加なし）と mirror 系整備で、詳細は前節（260801-open-bug-batch-5）と `re-scans/260801-kimi-bootstrap-deadlock.md` に委ねる。
+
+## オープンバグ一括修正バッチ第5弾の技術断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif 価値チェーンの技術断面（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。
 

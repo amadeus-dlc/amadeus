@@ -1,6 +1,11 @@
 # コンポーネント棚卸し
 
-## formal-verif 価値チェーンの対象コンポーネント（260731-formal-verif-value-chain、現在、observed `da51af375`）
+## kimi bootstrap デッドロック修正の対象コンポーネント（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: 新規コンポーネントなし。対象は既存3面 — core session-start hook（`packages/framework/core/hooks/amadeus-session-start.ts`）、認可（`packages/framework/core/tools/amadeus-caller-authorization.ts`）、kimi harness ロール管理（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`）の欠陥修正のみ。区間で到着した otel 基盤拡張（resource-core / span-context 等）の目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
+
+## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif 価値チェーンの対象コンポーネント（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
 file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が触るコンポーネントを所有境界つきで列挙する。
 
