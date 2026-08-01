@@ -154,6 +154,34 @@ gate-start  →  [?] AwaitingApproval
 
 `amadeus-state set-skeleton-stance <on|off|scope-dependent>` records the conductor's classified walking-skeleton stance into the `Skeleton Stance` field. Like `Revision Count`, this is runtime metadata that lives in the state file — it rides no event and **emits no audit row**, so it does NOT appear in the audit event taxonomy below. It is not a state-machine transition; it is a value the next `amadeus-orchestrate next` reads to resolve the deferred Construction Bolt-1 gate (the walking-skeleton ladder): the classify round-trip persists whether this intent's scope warrants a gated walking-skeleton Bolt 1, with `scope-dependent` falling back to the scope-mapping default (greenfield → skeleton-on, incremental → skeleton-off).
 
+### Plan-integrity guards (issue #1892)
+
+The compiled Bolt DAG's `batches` are the plan's declaration of what runs in parallel. Nothing used to hold a run to that declaration: a batch the plan declared parallel could be issued one Unit at a time, and the record would never show the drift. Two guards close that — one before the batch is issued, one before the stage that built it is approved.
+
+Every guard message is assembled from the same parts by a single template, so the exits cannot drift into separate dialects:
+
+| Part | Marker | Content |
+|---|---|---|
+| Observation | `Observed: ` | What the engine measured — the declared batch number, its width, and the Unit names |
+| Weight | `Why this matters: ` | Why the mismatch is worth stopping for |
+| Exit | `Approved exit: ` | The one approved way out |
+
+**Issuance-time guard.** Every `next` that may fan a Construction stage out goes through a single issuance point, so the judgement exists in one place and cannot drift between two copies. When the engine declines to fan out, the decline reason and the DECLARED batch (the full Unit list, not the uncovered remainder — a width-2 batch with one Unit already built would otherwise read as serial) go to a pure verdict:
+
+| Verdict | When | Directive |
+|---|---|---|
+| `ok` | No declared batch, a batch one Unit wide, or a decline that is serial by plan: not a swarm stage, the walking-skeleton gate, an unset grant before the skeleton ships, no compiled DAG, or all Units already covered | The unchanged run-stage emit |
+| `redirect` | The autonomy grant is unset after the walking skeleton shipped — the ladder's answer is owed | `ask`, citing the autonomy-ladder exit |
+| `violation` | Any other decline against a batch the plan declared parallel | `error`, citing the plan-correction exit |
+
+A decline reason added later without a branch here lands on `violation` rather than quietly serialising the batch.
+
+**Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail — `SWARM_STARTED` and `SWARM_DEGRADED` on the started side (a degraded batch still ran in parallel; it only fell back to the subagent floor), `SWARM_COMPLETED` on the completed side, across every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift.
+
+**The exits.** A `redirect` is answered with the autonomy ladder — `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `--mode gated` (a gate at every batch boundary), then re-run `next`. A `violation` or a refused approve is answered by correcting the plan, not the run: record the dependency that makes those Units serial, with its reason, in `unit-of-work-dependency.md`, re-run `amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.
+
+**Absence versus defect.** A guard needs a declared width to judge against, so a run with no compiled DAG is never a violation. The compile separates the two ways a DAG can be missing: a legitimate absence (the scope skips units-generation, or the stage has not produced its artifact yet) records `bolt_dag_absence` with that reason and exits 0, while a defect fails the compile and writes no graph at all — see [Runtime Graph](13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)".
+
 ### Standing delegation grants (team mode, #1125)
 
 Delegated approval (#671) opens ONE remote gate per real human turn. In a long agent-team run that means the leader re-acknowledges every gate. A **standing delegation grant** amortises that: a leader session, grounded in a real `HUMAN_TURN` on its own ledger, issues a time-boxed grant that opens stage-gate approvals across the team for the grant's TTL without a per-gate human turn.

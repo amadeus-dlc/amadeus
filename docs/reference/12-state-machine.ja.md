@@ -154,6 +154,34 @@ gate-start  →  [?] AwaitingApproval
 
 `amadeus-state set-skeleton-stance <on|off|scope-dependent>` は、コンダクターが分類した walking-skeleton スタンスを `Skeleton Stance` フィールドに記録します。`Revision Count` と同様、これは状態ファイルに存在するランタイムメタデータであり、イベントに乗らず**監査行(audit row)を発行しません**。したがって下記の監査イベントタクソノミー表には現れません。これは状態機械の遷移ではなく、次の `amadeus-orchestrate next` が読み取って遅延された Construction Bolt-1 ゲート(walking-skeleton ラダー)を解決するための値です。classify のラウンドトリップが、この intent のスコープがゲート付き walking-skeleton Bolt 1 を要するかどうかを永続化し、`scope-dependent` はスコープマッピングのデフォルト(greenfield → skeleton-on、incremental → skeleton-off)にフォールバックします。
 
+### 計画整合ガード(issue #1892)
+
+コンパイル済み Bolt DAG の `batches` は、何が並列に走るかについての計画の宣言です。従来、実行をその宣言に縛るものはありませんでした。計画が並列と宣言したバッチを 1 ユニットずつ発行しても、記録にはその逸脱が一切現れませんでした。2 つのガードがこれを塞ぎます — 1 つはバッチの発行前、もう 1 つはそれを構築したステージの承認前です。
+
+すべてのガードメッセージは単一のテンプレートによって同じ部品から組み立てられ、出口が別々の方言へ分岐しないようにします:
+
+| 部品 | マーカー | 内容 |
+|---|---|---|
+| 観測 | `Observed: ` | エンジンが実測したもの — 宣言バッチ番号、その幅、ユニット名 |
+| 重み | `Why this matters: ` | その不一致がなぜ停止に値するか |
+| 出口 | `Approved exit: ` | 唯一の承認された出口 |
+
+**発行時ガード。** Construction ステージをファンアウトしうる `next` はすべて単一の発行点を通るため、判断は 1 箇所に存在し、2 つのコピーの間で乖離しません。エンジンがファンアウトを見送ったとき、その見送り理由と**宣言**バッチ(未被覆の残りではなくユニット全数 — そうでなければ 1 ユニットを構築済みの幅 2 バッチが直列に見えてしまいます)が純粋な verdict へ渡されます:
+
+| Verdict | 条件 | ディレクティブ |
+|---|---|---|
+| `ok` | 宣言バッチがない、バッチ幅が 1 ユニット、または計画上直列である見送り: swarm ステージでない、walking-skeleton ゲート、skeleton 出荷前の未設定グラント、コンパイル済み DAG なし、全ユニット被覆済み | 変更なしの run-stage 発行 |
+| `redirect` | walking skeleton 出荷後に自律グラントが未設定 — ラダーの回答が未済 | `ask`(自律ラダーの出口を明示) |
+| `violation` | 計画が並列と宣言したバッチに対するそれ以外の見送り | `error`(計画訂正の出口を明示) |
+
+後から分岐なしで追加された見送り理由は、黙って直列化されるのではなく `violation` に落ちます。
+
+**承認時突合。** ゲート付き code-generation の approve で、エンジンは宣言バッチを監査証跡と突き合わせて読み直します — started 側は `SWARM_STARTED` と `SWARM_DEGRADED`(degrade したバッチも並列に走っており、サブエージェント floor へ落ちただけです)、completed 側は `SWARM_COMPLETED`、そして全シャードを横断して読みます。ある worktree で prepare され別の worktree で finalize されたバッチは、その行を 2 つのファイルに残すためです。計画が並列と宣言したのにファンアウトの記録がないバッチは approve を拒否し、最初の 1 件ではなく未充足のバッチ全数を名指しします。walking-skeleton ゲートステージは適用除外です。エンジン自身がそこでのファンアウトを拒否するため、SWARM 行がないことは逸脱ではなく遵守だからです。
+
+**出口。** `redirect` には自律ラダーで答えます — `amadeus-bolt set-autonomy --mode autonomous`(Bolt ごとのゲートなし)または `--mode gated`(各バッチ境界にゲート)を実行し、`next` を再実行します。`violation` と拒否された approve には、実行ではなく計画を訂正して答えます。それらのユニットを直列にする依存関係を、その理由とともに `unit-of-work-dependency.md` に記録し、`amadeus-runtime.ts compile` を再実行してから `next` を再実行します。計画が正しく逸脱が意図的である場合は、先に裁定にかけてください。
+
+**absence と defect。** ガードは判定の基準となる宣言幅を必要とするため、コンパイル済み DAG がない実行は決して violation になりません。コンパイルは DAG が欠ける 2 通りを区別します。正当な absence(スコープが units-generation をスキップする、またはステージがまだ成果物を produce していない)はその理由を `bolt_dag_absence` に記録して exit 0 で終わり、defect はコンパイル自体を失敗させてグラフを一切書きません — [Runtime Graph](13-runtime-graph.ja.md) § "The Bolt/unit dependency DAG (`bolt_dag`)" を参照してください。
+
 ### スタンディング委任グラント(チームモード、#1125)
 
 委任承認(#671)は実 human turn 1回につきリモートゲートを1つだけ開きます。長時間のエージェントチーム実行ではリーダーが毎ゲートを再承認することになります。**スタンディング委任グラント**はこれを償却します。リーダーセッションが自身の台帳の実 `HUMAN_TURN` に接地したうえで、TTL の間、ゲートごとの人間ターンなしにチーム全体のステージゲート承認を開く時限的グラントを発行します。

@@ -167,6 +167,20 @@ The compile and parse that turn the edge block into `bolt_dag` is code, not
 something you author. Shaping that parser is a code change → see the
 [Developer Reference](../reference/13-runtime-graph.md).
 
+**The plan is now binding.** Once the DAG declares a batch parallel, a run may no
+longer quietly build those Units one at a time. Before the batch is issued, a
+decline to fan out is judged against the declared width: an unanswered autonomy
+ladder comes back as an `ask` pointing at `amadeus-bolt set-autonomy`, and any
+other decline stops the run with an `error`. At the code-generation approve the
+engine reconciles the declared batches against the `SWARM_STARTED` /
+`SWARM_DEGRADED` / `SWARM_COMPLETED` rows in the audit trail and refuses an
+approve for a batch with no fan-out on record. Both messages name what was
+observed, why it matters, and the one approved exit — for a violation that exit
+is to correct the plan (record the dependency that makes those Units serial in
+`unit-of-work-dependency.md`, re-compile, re-run `next`), never to hand-wave the
+run past the guard. Full behaviour →
+[State Machine](../reference/12-state-machine.md) § "Plan-integrity guards".
+
 ---
 
 ## Wiring convergence — your project's own check is the trusted signal
