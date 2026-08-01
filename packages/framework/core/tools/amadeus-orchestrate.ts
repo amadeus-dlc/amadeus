@@ -4256,6 +4256,78 @@ function authorizedApprovalIntent(
   }
 }
 
+// Read ONE batch number off an audit block. The only entry point for turning a
+// recorded row into a set member, so the fail-closed rule lives in one place:
+// a row whose "Batch number" is absent, empty, or not a finite number is not
+// evidence of anything and never joins the set. (`Number("")` is 0, so the
+// empty string has to be rejected before the numeric check, or a blank field
+// would silently vouch for a batch 0 no plan ever declares.)
+function batchNumberOf(block: string): number | null {
+  const raw = auditBlockField(block, "Batch number");
+  if (raw === null || raw.trim() === "") return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Collect every batch number the audit trail says fanned out and finished. */
+function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
+  const numbers = new Set<number>();
+  for (const event of events) {
+    for (const found of findAllEvents(audit, event)) {
+      const number = batchNumberOf(found.block);
+      if (number !== null) numbers.add(number);
+    }
+  }
+  return numbers;
+}
+
+// What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
+// emitter of these three rows, so this is a read of first-hand evidence and not
+// a re-derivation of it — nothing here writes back, which is what stops the next
+// reconciliation from reading a row this one produced.
+//
+// SWARM_DEGRADED joins the STARTED side because it records a DRIVER falling back
+// to the subagent floor, not the fan-out being abandoned: a degraded batch still
+// ran in parallel. Reading every shard (not this clone's) matters for the same
+// reason — a batch prepared in one worktree and finalised in another leaves its
+// two rows in two files, and a single-shard read would call that batch missing.
+function collectSwarmEvidence(projectDir: string): SwarmEvidence {
+  const audit = readAllAuditShards(projectDir);
+  return {
+    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
+    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
+  };
+}
+
+/** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
+function namedMissingBatches(batches: readonly DeclaredBatch[]): string {
+  const named = batches.map((batch) => `batch ${batch.number} (${batch.units.length} units: ${batch.units.join(", ")})`);
+  return named.join("; ");
+}
+
+/** The batch numbers a set holds, ascending, or "none" when it holds nothing. */
+function listedBatchNumbers(numbers: ReadonlySet<number>): string {
+  const sorted = [...numbers].sort((left, right) => left - right);
+  return sorted.length === 0 ? "none" : sorted.join(", ");
+}
+
+// The VALUES the approve refusal carries — the prose template stays
+// guardMessage's, and the weight and exit are the same two constants the
+// issuance guard cites, so the three ports cannot drift into three dialects.
+//
+// Every number here is read off the verdict and the evidence that produced it;
+// nothing is re-counted at this call site
+// (cid:requirements-analysis:ledger-count-mechanical-recalc).
+function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
+  const owed = namedMissingBatches(batches);
+  const started = listedBatchNumbers(evidence.startedBatches);
+  const completed = listedBatchNumbers(evidence.completedBatches);
+  const declared = `the compiled Bolt DAG declares ${batches.length} parallel batch(es) with no fan-out on record — ${owed}`;
+  const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
+  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
+  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
+}
+
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
@@ -4388,78 +4460,6 @@ function handleAuthorizedApprovalReport(
   }
   const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
   emit({ kind: "done", reason: approvedReason });
-}
-
-// Read ONE batch number off an audit block. The only entry point for turning a
-// recorded row into a set member, so the fail-closed rule lives in one place:
-// a row whose "Batch number" is absent, empty, or not a finite number is not
-// evidence of anything and never joins the set. (`Number("")` is 0, so the
-// empty string has to be rejected before the numeric check, or a blank field
-// would silently vouch for a batch 0 no plan ever declares.)
-function batchNumberOf(block: string): number | null {
-  const raw = auditBlockField(block, "Batch number");
-  if (raw === null || raw.trim() === "") return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-/** Collect every batch number the audit trail says fanned out and finished. */
-function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
-  const numbers = new Set<number>();
-  for (const event of events) {
-    for (const found of findAllEvents(audit, event)) {
-      const number = batchNumberOf(found.block);
-      if (number !== null) numbers.add(number);
-    }
-  }
-  return numbers;
-}
-
-// What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
-// emitter of these three rows, so this is a read of first-hand evidence and not
-// a re-derivation of it — nothing here writes back, which is what stops the next
-// reconciliation from reading a row this one produced.
-//
-// SWARM_DEGRADED joins the STARTED side because it records a DRIVER falling back
-// to the subagent floor, not the fan-out being abandoned: a degraded batch still
-// ran in parallel. Reading every shard (not this clone's) matters for the same
-// reason — a batch prepared in one worktree and finalised in another leaves its
-// two rows in two files, and a single-shard read would call that batch missing.
-function collectSwarmEvidence(projectDir: string): SwarmEvidence {
-  const audit = readAllAuditShards(projectDir);
-  return {
-    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
-    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
-  };
-}
-
-/** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
-function namedMissingBatches(batches: readonly DeclaredBatch[]): string {
-  const named = batches.map((batch) => `batch ${batch.number} (${batch.units.length} units: ${batch.units.join(", ")})`);
-  return named.join("; ");
-}
-
-/** The batch numbers a set holds, ascending, or "none" when it holds nothing. */
-function listedBatchNumbers(numbers: ReadonlySet<number>): string {
-  const sorted = [...numbers].sort((left, right) => left - right);
-  return sorted.length === 0 ? "none" : sorted.join(", ");
-}
-
-// The VALUES the approve refusal carries — the prose template stays
-// guardMessage's, and the weight and exit are the same two constants the
-// issuance guard cites, so the three ports cannot drift into three dialects.
-//
-// Every number here is read off the verdict and the evidence that produced it;
-// nothing is re-counted at this call site
-// (cid:requirements-analysis:ledger-count-mechanical-recalc).
-function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
-  const owed = namedMissingBatches(batches);
-  const started = listedBatchNumbers(evidence.startedBatches);
-  const completed = listedBatchNumbers(evidence.completedBatches);
-  const declared = `the compiled Bolt DAG declares ${batches.length} parallel batch(es) with no fan-out on record — ${owed}`;
-  const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
-  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
-  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
