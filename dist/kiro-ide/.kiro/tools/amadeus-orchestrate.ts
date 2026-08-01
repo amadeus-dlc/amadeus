@@ -105,6 +105,14 @@ import {
   activeSpace,
   activeIntent,
   advisoryLatchDir,
+  auditBlockField,
+  findAllEvents,
+  guardMessage,
+  PLAN_CORRECTION_EXIT,
+  PLAN_DRIFT_WEIGHT,
+  readAllAuditShards,
+  type SwarmEvidence,
+  swarmEvidenceVerdict,
   type BoltDagAbsence,
   type CheckboxLine,
   type DeclaredBatch,
@@ -4382,6 +4390,78 @@ function handleAuthorizedApprovalReport(
   emit({ kind: "done", reason: approvedReason });
 }
 
+// Read ONE batch number off an audit block. The only entry point for turning a
+// recorded row into a set member, so the fail-closed rule lives in one place:
+// a row whose "Batch number" is absent, empty, or not a finite number is not
+// evidence of anything and never joins the set. (`Number("")` is 0, so the
+// empty string has to be rejected before the numeric check, or a blank field
+// would silently vouch for a batch 0 no plan ever declares.)
+function batchNumberOf(block: string): number | null {
+  const raw = auditBlockField(block, "Batch number");
+  if (raw === null || raw.trim() === "") return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Collect every batch number the audit trail says fanned out and finished. */
+function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
+  const numbers = new Set<number>();
+  for (const event of events) {
+    for (const found of findAllEvents(audit, event)) {
+      const number = batchNumberOf(found.block);
+      if (number !== null) numbers.add(number);
+    }
+  }
+  return numbers;
+}
+
+// What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
+// emitter of these three rows, so this is a read of first-hand evidence and not
+// a re-derivation of it — nothing here writes back, which is what stops the next
+// reconciliation from reading a row this one produced.
+//
+// SWARM_DEGRADED joins the STARTED side because it records a DRIVER falling back
+// to the subagent floor, not the fan-out being abandoned: a degraded batch still
+// ran in parallel. Reading every shard (not this clone's) matters for the same
+// reason — a batch prepared in one worktree and finalised in another leaves its
+// two rows in two files, and a single-shard read would call that batch missing.
+function collectSwarmEvidence(projectDir: string): SwarmEvidence {
+  const audit = readAllAuditShards(projectDir);
+  return {
+    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
+    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
+  };
+}
+
+/** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
+function namedMissingBatches(batches: readonly DeclaredBatch[]): string {
+  const named = batches.map((batch) => `batch ${batch.number} (${batch.units.length} units: ${batch.units.join(", ")})`);
+  return named.join("; ");
+}
+
+/** The batch numbers a set holds, ascending, or "none" when it holds nothing. */
+function listedBatchNumbers(numbers: ReadonlySet<number>): string {
+  const sorted = [...numbers].sort((left, right) => left - right);
+  return sorted.length === 0 ? "none" : sorted.join(", ");
+}
+
+// The VALUES the approve refusal carries — the prose template stays
+// guardMessage's, and the weight and exit are the same two constants the
+// issuance guard cites, so the three ports cannot drift into three dialects.
+//
+// Every number here is read off the verdict and the evidence that produced it;
+// nothing is re-counted at this call site
+// (cid:requirements-analysis:ledger-count-mechanical-recalc).
+function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
+  const owed = namedMissingBatches(batches);
+  const started = listedBatchNumbers(evidence.startedBatches);
+  const completed = listedBatchNumbers(evidence.completedBatches);
+  const declared = `the compiled Bolt DAG declares ${batches.length} parallel batch(es) with no fan-out on record — ${owed}`;
+  const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
+  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
+  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
+}
+
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a terminal `done` directive on success or an
@@ -4694,6 +4774,43 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
             `${units.length} units are not yet complete (${pick.uncovered.join(", ")}). ` +
             "Run `next` to continue the remaining units before approving.",
         });
+        return;
+      }
+    }
+  }
+
+  // Approve-time reconciliation (FR-2). The issuance guard stops a run that is
+  // ABOUT to serialise a parallel batch; this one stops a run that already did —
+  // a hand-driven fan-out, or a batch built one unit at a time outside the
+  // engine, reaches approve with every unit covered and nothing else to show for
+  // it. The plan is the claim, the SWARM rows are the receipt, and approve is the
+  // last moment the two can still be compared.
+  //
+  // Deliberately NOT conditioned on isSwarmDriven: the drift #1892 measured
+  // includes runs that never recorded an autonomy grant and completed serially,
+  // which is exactly the shape that predicate excludes.
+  //
+  // The conditions are ordered cheapest-first so the two reads never happen on a
+  // stage this does not govern: stage kind, then checkbox, then the DAG, then the
+  // audit (NFR-3). A re-report of an already-completed stage is an idempotent
+  // recovery replay and is left alone, as with the coverage guard above.
+  if (
+    isGated &&
+    stageCheckbox.state !== "completed" &&
+    node.for_each === SWARM_FOR_EACH &&
+    node.mode === SWARM_MODE &&
+    // The walking-skeleton gate stage is the one place the engine itself refuses
+    // to fan out (tryEmitSwarm declines it), so zero SWARM rows there is
+    // compliance, not drift — reconciling it would refuse an approve that the
+    // one approved exit, a plan correction, could never unblock.
+    !isSkeletonGateStage(node, scope)
+  ) {
+    const declaredBatches = readBoltDagBatches(pd);
+    if (declaredBatches !== null) {
+      const evidence = collectSwarmEvidence(pd);
+      const verdict = swarmEvidenceVerdict(declaredBatches, evidence);
+      if (verdict.kind === "missing") {
+        emit(errorDirective(swarmEvidenceRejection(verdict.batches, evidence)));
         return;
       }
     }
