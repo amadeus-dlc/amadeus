@@ -1,6 +1,15 @@
 # アーキテクチャ
 
-## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi ハーネス bootstrap デッドロックの機構断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+本節の file:line はすべて observed `861688c31` 時点。患部全数・認可連鎖・テスト足場は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
+
+- **区間の構造変化（`c49e385ac` → `861688c31`、33 commits / 537 files / +28,879 −3,094）**: 大半は otel 基盤拡張（resource-core / span-context / exception イベント / metrics 語彙配線）、mirror 系（boundary 対称性・title バイトクランプ）、plugin scope opt-in、composed-scope drop、metrics snapshot 定期コミット群。患部領域では `packages/framework/core/hooks/amadeus-session-start.ts` に +14（otel resource seam の `supplyResourceAttribute("session.id", …)` 配線のみ、`:119-130`）が入ったが、early-exit ガード（`:70`）と `writeCurrentSessionId`（`:117`）の順序は不変 — Issue #1922 の機序は observed HEAD に生存する。
+- **#1922 デッドロック連鎖**: (1) Kimi SessionStart → `~/.kimi-code/config.toml` 管理ブロック → `bun .kimi-code/hooks/amadeus-kimi-adapter.ts session-start`。(2) adapter 内部で `trackKimiRoleLifecycle`（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:418-437`）が `establishKimiMainBaseline`（`:236-`）経由で `kimi-active-subagents.json` を書く（state-file 非依存で常に走る）。`routeTarget`（`:580-`）の `"session-start"` case（`:588-596`）が `normalizePayload`（`:491-500`）経由で core `amadeus-session-start.ts` を spawn。(3) core hook は `:67` `stateFilePath` → `:70` `if (!existsSync(stateFile)) process.exit(0)` で、アクティブ intent 無しのワークスペースではここで終了し、`:117` の `writeCurrentSessionId` に到達しない。(4) 認可 fail-closed: `authorizeMainConductor`（`amadeus-caller-authorization.ts:72-`）は `:75` 非 kimi 即 authorized、`:80-86` deny latch、`:88-94` marker 読めず denied、`:96-109` で `.current-session` ≠ `mainSessionId` → denied。bootstrap 状態では `.current-session` が永久に書かれないため、(2) の baseline marker が存在しても認可は恒久 fail-closed = デッドロック。呼出側は `amadeus-orchestrate.ts:2190` / `amadeus-state.ts:869`。(5) `isTrustedMainStop`（`amadeus-kimi-lib.ts:372-407`、`.current-session` 直読み `:399-403`）も同じ fail-closed。
+- **`.current-session` の writer/reader**: writer は `amadeus-session-start.ts:117` のみ（全 repo で唯一。`writeCurrentSessionId` 定義 `amadeus-lib.ts:2170`、`CURRENT_SESSION_FILE` `:2152`）。readers は `amadeus-caller-authorization.ts:96-109`（直読み）、`amadeus-kimi-lib.ts:399-403`（直読み）、`readCurrentSessionId`（`amadeus-lib.ts:2159-2166`）経由 `amadeus-orchestrate.ts:230` / `amadeus-state.ts:853` / `amadeus-utility.ts:4843`。
+- **最小修正方向**: `writeCurrentSessionId`（`:117`）を `:70` ガードより前へ移す。同ファイル内先例は `repointHarnessIncludes`（`:62`、コメント `:55-60` が「ガードより前に置く」理由を明記）。`supplyResourceAttribute`（`:119-130`）を一緒に動かすかは別論点（otel 属性は audit 経路）。
+
+## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 本節の file:line はすべて observed `c49e385ac` 時点。患部全数・機構詳細・Bolt 交差判定は `re-scans/260801-open-bug-batch-5.md` を正本とする。
 

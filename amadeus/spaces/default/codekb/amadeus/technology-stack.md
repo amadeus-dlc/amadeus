@@ -1,6 +1,10 @@
 # 技術スタック
 
-## オープンバグ一括修正バッチ第5弾の技術断面（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi bootstrap デッドロック修正の技術断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は otel 基盤拡張（`packages/framework/core/otel/` の resource-core / span-context / exception イベント / metrics 語彙配線、外部依存追加なし）と mirror 系整備で、詳細は前節（260801-open-bug-batch-5）と `re-scans/260801-kimi-bootstrap-deadlock.md` に委ねる。
+
+## オープンバグ一括修正バッチ第5弾の技術断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は #1850 の OTel ファミリー到着（`packages/framework/core/otel/` 18モジュール、bun ランタイム内 OTel API 互換層 — 外部依存追加なし）と perf tier（`tests/perf/`+`perf.yml`）で、いずれも詳細は前節（260731-perf-ci-separation）と `re-scans/260801-open-bug-batch-5.md` に委ねる。
 

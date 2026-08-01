@@ -1,6 +1,13 @@
 # コード構造
 
-## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi bootstrap デッドロックの患部配置（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 患部: `packages/framework/core/hooks/amadeus-session-start.ts`（`:70` state-file ガード vs `:117` `writeCurrentSessionId` の順序）。認可側 `packages/framework/core/tools/amadeus-caller-authorization.ts`（`.current-session` 直読み `:96-109`）と kimi harness `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`（`isTrustedMainStop` `:372-407`、直読み `:399-403`）は reader 面。共通定義は `amadeus-lib.ts`（`CURRENT_SESSION_FILE :2152` / `readCurrentSessionId :2159` / `writeCurrentSessionId :2170` / `stateFilePath :3406`）。
+- 区間 touch（`c49e385ac` → `861688c31`）: `amadeus-session-start.ts` +14（otel seam 配線のみ、順序不変）。`amadeus-caller-authorization.ts` 無変更。`amadeus-lib.ts` +202 は `:5372` 一塊（countCheckboxes 領域）で `.current-session` 領域（`:2144-2178`）と `stateFilePath`（`:3406-3410`）は無変更。`harness/kimi/` 無変更。`.kimi-code/` と `dist/` は生成物（`bun scripts/package.ts` 再生成領域、手編集禁止）。
+- テスト面: 患部直下の新規テストなし。回帰テスト追加先は `tests/unit/t10-hook-session-start.test.ts`（現行 early-exit pin `:211` / `:222` の改訂を伴う）。
+- dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。
+
+## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 本節の file:line はすべて observed `c49e385ac` 時点。全数は `re-scans/260801-open-bug-batch-5.md` を正本とする。
 

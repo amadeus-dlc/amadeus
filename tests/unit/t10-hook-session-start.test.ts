@@ -7,9 +7,15 @@
 // pure function. amadeus-session-start.ts (dist/claude/.claude/hooks/) runs at
 // module top level on import and TERMINATES the process:
 //   :34  projectDir = resolveProjectDirFromHook(import.meta.url)
-//   :39  if (!existsSync(stateFile)) process.exit(0)
-//          — the "no active workflow" no-op gate (no heartbeat, no audit,
-//            no stdout)
+//   :67  if (sessionId) writeCurrentSessionId(projectDir, sessionId)
+//          — per-user `.current-session` record, written BEFORE the gate below
+//            even with no active workflow (#1922 bootstrap deadlock fix):
+//            `.current-session` is workflow-independent runtime state
+//            (amadeus-lib.ts :2147-2151) and the kimi caller-authorization /
+//            isTrustedMainStop readers fail-closed without it
+//   :70  if (!existsSync(stateFile)) process.exit(0)
+//          — the "no active workflow" gate (no heartbeat, no audit,
+//            no stdout; the `.current-session` write above still happens)
 //   :42-44 mkdir amadeus-docs/.amadeus-hooks-health + write session-start.last
 //          heartbeat (only reached when state IS present)
 //   :55-75 source defaults to "startup"; when stdin is not a TTY it reads
@@ -51,8 +57,8 @@
 //     tests/fixtures/**.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh  1 (silent exit when no state file)            -> "silent exit (no stdout) when no state file"
-//   .sh  2 (no heartbeat when no state file)           -> "no heartbeat when no state file"
+//   .sh  1 (silent exit when no state file)            -> "silent exit (no stdout) when no state file — but .current-session is written"
+//   .sh  2 (no heartbeat when no state file)           -> "no heartbeat and no audit emission when no state file"
 //   .sh  3 (outputs valid JSON w/ additionalContext)   -> "outputs valid JSON with an additionalContext key"
 //   .sh  4 (extracts Lifecycle Phase = IDEATION)       -> "injects the Lifecycle Phase (IDEATION)"
 //   .sh  5 (extracts Current Stage = feasibility)      -> "injects the Current Stage (feasibility)"
@@ -163,6 +169,16 @@ function heartbeatPath(p: string): string {
   return join(seededRecordDir(p), ".amadeus-hooks-health", "session-start.last");
 }
 
+/**
+ * The per-user current-session marker: `<proj>/amadeus/.amadeus-sessions/
+ * .current-session` (workspaceRoot + SESSIONS_DIR + CURRENT_SESSION_FILE in
+ * amadeus-lib.ts). Written by the hook BEFORE the no-workflow gate (#1922), so
+ * it exists even in a state-less fixture project.
+ */
+function currentSessionPath(p: string): string {
+  return join(p, "amadeus", ".amadeus-sessions", ".current-session");
+}
+
 function recoveryPath(p: string): string {
   return join(seededRecordDir(p), ".amadeus-recovery.md");
 }
@@ -208,22 +224,49 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
     cleanupTestProject(proj);
   });
 
-  test("silent exit (no stdout) when no state file [.sh test 1]", () => {
-    // createTestProject seeds no amadeus-state.md, so the hook hits its :39 no-op
-    // gate and exits 0 before any heartbeat / audit / stdout. The .sh checked
-    // the merged stdout+stderr was empty; STRONGER — assert stdout is exactly
-    // empty (the additionalContext JSON is the hook's only stdout write).
+  test("silent exit (no stdout) when no state file — but .current-session is written [.sh test 1]", () => {
+    // createTestProject seeds no amadeus-state.md, so the hook hits its no-op
+    // gate and exits 0 before any heartbeat / audit / stdout — but the
+    // `.current-session` write now sits BEFORE that gate (#1922 bootstrap
+    // deadlock: the kimi caller-authorization + isTrustedMainStop readers
+    // fail-closed without it, and it is workflow-independent per-user runtime
+    // state). The .sh checked the merged stdout+stderr was empty; STRONGER —
+    // assert stdout is exactly empty AND the marker carries the session id.
     expect(existsSync(statePath(proj))).toBe(false);
-    const r = fire(proj);
+    const r = fire(
+      proj,
+      '{"source":"startup","session_id":"sess-t10-nostate"}',
+    );
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toBe("");
+    expect(readFileSync(currentSessionPath(proj), "utf-8").trim()).toBe(
+      "sess-t10-nostate",
+    );
   });
 
-  test("no heartbeat when no state file [.sh test 2]", () => {
+  test("no heartbeat and no audit emission when no state file [.sh test 2]", () => {
     expect(existsSync(statePath(proj))).toBe(false);
-    fire(proj);
-    // The :39 gate fires before the mkdir/heartbeat at :42-44.
+    fire(proj, '{"source":"startup","session_id":"sess-t10-nostate"}');
+    // The gate still suppresses everything workflow-scoped (FR-2): no
+    // heartbeat and no audit shard, even though the session_id-bearing fire
+    // above writes the workflow-independent `.current-session` marker.
     expect(existsSync(heartbeatPath(proj))).toBe(false);
+    expect(readAudit(proj)).toBe("");
+  });
+
+  test("with a state file: audit emission works AND .current-session is written (FR-3 case b)", () => {
+    seedStateFile(proj, MID_IDEATION);
+    seedAuditFile(proj);
+    const started = (b: string): AuditRecord[] =>
+      auditRecords(b).filter((r) => r.event === "SESSION_STARTED");
+    const before = started(readAudit(proj)).length;
+    fire(proj, '{"source":"startup","session_id":"sess-t10-state"}');
+    // Backward compat (NFR-1): the intent-present path still emits exactly as
+    // before, and the same fire ALSO records the current session marker.
+    expect(started(readAudit(proj)).length).toBe(before + 1);
+    expect(readFileSync(currentSessionPath(proj), "utf-8").trim()).toBe(
+      "sess-t10-state",
+    );
   });
 
   test("outputs valid JSON with an additionalContext key [.sh test 3]", () => {

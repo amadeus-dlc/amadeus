@@ -1,6 +1,10 @@
 # ビジネス概要
 
-## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## kimi ハーネス bootstrap デッドロック修正の業務境界（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+
+- 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
+
+## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 利用者影響の序列: P1 2件（#1838 mirror 境界の順序逸脱、#1860 workflow 完了の恒久ブロック — 製品内回復手段なし・state 手術でのみ回復した実績）が最優先。P2 4件（#1846 set-autonomy 不能、#1849 合成後 intent の report 拒否、#1856 偽 green リスク、#1861 main 偽赤15%+ダッシュボード stale、#1863 plugin セル無音消失）。P3 2件（#1857 latent、#1864 台帳1行）。
 - Delivery boundary: 5 Bolt =5 PR（Bolt 1: #1838+#1860 → Bolt 2: #1846+#1849 → Bolt 3: #1856+#1857 → Bolt 4: #1863+#1864 → Bolt 5: #1861）。優先度が高いものから着地する（ユーザー指示 2026-08-01）。
