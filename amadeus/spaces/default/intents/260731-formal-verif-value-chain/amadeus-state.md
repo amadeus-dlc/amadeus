@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [u7-mirror-model]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
