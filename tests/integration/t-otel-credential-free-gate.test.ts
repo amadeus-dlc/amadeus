@@ -72,7 +72,7 @@ describe("credential-free gate (VER-2)", () => {
       logExporter: createLocalLogExporter({ projectDir: proj }),
     });
     registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
-    registerMeterProvider({ metricExporter: createLocalMetricExporter({ projectDir: proj }) });
+    registerMeterProvider({ projectDir: proj, metricExporter: createLocalMetricExporter({ projectDir: proj }) });
 
     // Canonical path: denied key, opt-in Command with an embedded token, and
     // a safe free-text key carrying an AWS key — every smuggling route.

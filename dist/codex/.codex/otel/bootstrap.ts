@@ -27,8 +27,12 @@ import { createAuditLogExporter } from "./audit-log-exporter.ts";
 import { attachIntentContext, ensureContextManager, restoreIntentContext } from "./context.ts";
 import { setFatal, verifyJournalHealth } from "./fatal-latch.ts";
 import { createLocalLogExporter } from "./local-log-exporter.ts";
+import { createLocalMetricExporter } from "./local-metric-exporter.ts";
 import { createLocalSpanExporter } from "./local-span-exporter.ts";
 import { registerLoggerProvider, registeredLoggerProjectDir } from "./logger-provider.ts";
+import { registerMeterProvider, registeredMeterProjectDir, resetMeterProviderForTests } from "./meter-provider.ts";
+import { recordTokenUsage } from "./metrics-instruments.ts";
+import { setTokenUsageSink } from "./resource-suppliers.ts";
 import { registerTracerProvider, registeredTracerProjectDir } from "./tracer-provider.ts";
 
 // Whether THIS module already ran the logs arm's side effects (anchor restore
@@ -87,6 +91,11 @@ export function ensureOtelBootstrap(projectDir: string): void {
   if (logsSideEffectsFor !== null) assertSameProject(logsSideEffectsFor, projectDir, "logs");
 
   ensureContextManager();
+  // The metrics arm rides the logs arm rather than standing alone: four of the
+  // five instruments are derived from canonical events, so every process that
+  // can emit one is a process that can measure. Registered BEFORE the Logger
+  // Provider so the first emit already has a Meter to record against.
+  ensureMeterBootstrap(projectDir);
   if (registeredFor === null) {
     registerLoggerProvider({
       projectDir,
@@ -98,6 +107,22 @@ export function ensureOtelBootstrap(projectDir: string): void {
   logsSideEffectsFor = projectDir;
   attachAnchor(projectDir);
   probeJournal(projectDir);
+}
+
+// Stand up the Metrics API for this process. Like the traces arm this has no
+// side effects beyond the registration, so the singleton's recorded workspace
+// is the whole state it needs. Installing the token-usage sink is part of the
+// registration rather than a separate step: the sink IS the metrics arm's
+// harness-facing half, and a process with a Meter but no sink would drop the
+// one instrument no canonical event can derive.
+export function ensureMeterBootstrap(projectDir: string): void {
+  const registeredFor = registeredMeterProjectDir();
+  if (registeredFor !== null) {
+    assertSameProject(registeredFor, projectDir, "metrics");
+    return;
+  }
+  registerMeterProvider({ projectDir, metricExporter: createLocalMetricExporter({ projectDir }) });
+  setTokenUsageSink(recordTokenUsage);
 }
 
 // Stand up the Trace API for this process. Separate from the logs arm because
@@ -117,6 +142,13 @@ export function ensureTracerBootstrap(projectDir: string): void {
 
 // Test seam: the record is per-process by design, so fixtures drop it the same
 // way they drop the provider registrations.
+//
+// The metrics arm goes with it. The Logger and Tracer arms are registered BY
+// the caller in most fixtures, so their resets are the caller's to run; the
+// Meter is registered by this seam and by nothing else, so a fixture that drops
+// the bootstrap without dropping the Meter would carry the previous fixture's
+// workspace into the next one and be refused by assertSameProject.
 export function resetOtelBootstrapForTests(): void {
   logsSideEffectsFor = null;
+  resetMeterProviderForTests();
 }

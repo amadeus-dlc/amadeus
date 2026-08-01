@@ -24,6 +24,7 @@ import { getEventDef } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
 import { fatalReason, isFatalSet } from "./fatal-latch.ts";
 import type { LocalLogExporter } from "./local-log-exporter.ts";
+import { observeCanonicalEventForMetrics } from "./metrics-instruments.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
 
@@ -141,9 +142,15 @@ export function emitEvent(
   }
   const record = canonicalRecord(reg, name, clean, target);
   const outcome = reg.auditExporter.exportCanonicalEvent(record, target);
-  return outcome.appended
-    ? { appended: true, timestamp: record.timestamp }
-    : { appended: false, reason: outcome.reason, timestamp: record.timestamp };
+  if (!outcome.appended) {
+    return { appended: false, reason: outcome.reason, timestamp: record.timestamp };
+  }
+  // Derive this event's measurements (#1868 §6) — only for a row that actually
+  // landed, so a sealed or refused emit is not counted as the thing happening.
+  // The observer is fail-open end to end; it is reached AFTER the append so a
+  // measurement can never stand between the caller and its written row.
+  observeCanonicalEventForMetrics(reg.projectDir, name, clean);
+  return { appended: true, timestamp: record.timestamp };
 }
 
 // Free-form diagnostic log. Always fail-open (FR-EVT-6).

@@ -43,7 +43,7 @@
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "842",
+    "lines": "847",
     "reason": "`export type RegisteredEventName = (typeof REGISTERED_EVENTS)[number][\"name\"]` is a type-only declaration erased before runtime; Bun stamps DA:0 on the line and nothing can ever execute it. The union it derives is enforced by tsc and by the registry drift guard (tests/integration/event-registry-drift.test.ts).",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   },
@@ -313,37 +313,37 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "237-254",
+    "lines": "237-252",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "254",
+    "lines": "279",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "260-263",
+    "lines": "288-291",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "260",
+    "lines": "288",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "262-263",
+    "lines": "290-291",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
-    "lines": "282-287",
+    "lines": "310-315",
     "reason": "t269 and contract tests assert the rendered help, prompts, diagnostics, and summaries; these residual rows are multiline fixed-string assembly stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },

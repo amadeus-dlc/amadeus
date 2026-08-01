@@ -76,6 +76,14 @@ file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が扱う欠陥
 
 ## オープンバグ4件の品質評価（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 ## perf 分離に関わる品質評価（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+
+- 根因確度: 9件すべて独立2名クロスレビューで機序確定（検証 SHA = observed）。うち決定的再現済み5件（#1860 reducer in-process 駆動、#1857 二重登録 throw、#1861 fetch exit 128、#1863 mergeComposedScopes 純関数 A/B/C、#1864 sed 直読）。
+- 欠陥クラス分布: 非対称実装3（#1838 policy、#1849 report vs next、#1857 catch の recordHookDrop 有無）、状態機械の橋渡し遷移欠落1（#1860）、scaffold/テンプレ乖離1（#1846）、部分配線1（#1856）、lossy データ変換1（#1863）、一過性/構造的エラーの混同1（#1861）、台帳転位1（#1864）— `cid:requirements-analysis:symmetric-pair-review` クラスタが最頻。
+- 原因所在: 実装段5（#1857 移行漏れ、#1860 実装漏れ、#1864 remap 不実施ほか）、要件列挙漏れ2（#1849、#1861）、設計段2（#1838、#1863 knownSlugs フィルタ）。origin:bootstrap は #1846 のみ。
+- 未決3点（要件段裁定へ送付）: #1849 機序（state 再構築 vs single マーカー）、#1856 latch 意味論、#1838 修正4面の順序制約の要件転記。
+
+## perf 分離に関わる品質評価（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

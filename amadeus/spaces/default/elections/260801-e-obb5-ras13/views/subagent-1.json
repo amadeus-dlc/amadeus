@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OBB5-RAS13",
+  "voter": "subagent-1",
+  "question": "260801-open-bug-batch-5 requirements-analysis の §13 学習選定。候補: c2 を一般化した規則「series 型バッチ intent(open-bug-batch 等の直前 sibling record が存在する反復 intent)のステージ成果物起草は、直前 sibling の同ステージ成果物を様式テンプレとして先に開き、必須節集合(ステージ契約 Step の mandated sections)を機械照合してから本文を書く — 実測: 260801-open-bug-batch-5 RA で照合を怠り Step 10 必須7節中5節欠落の Major を reviewer が捕捉、iteration 1 を消費(batch-4 は7節完備の対照)」(project 層、requirements-analysis 系)。c1(ユーザー裁定2件の記録)は裁定記録であり学習ではないため persist しない提案。判断材料: 既存 cid:functional-design:c12(上流入力ヘッダと実参照行を最初から書く)や consumes-first-drafting は「参照の様式」を縛るが「必須節集合の先例照合」は未カバー — 新規性があるか、required-sections センサーの守備範囲(H2 floor のみで節名は見ない)との関係も各自実測して判断すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c2 一般化を採用(c1 は裁定記録として不採用)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件(c2 は既存様式ノルム+required-sections の射程内とみなす)"
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  MIRROR_ISSUE_TITLE_MAX_BYTES,
   MIRROR_USER_CONTRACT,
   mirrorContractCommandUsage,
   renderMirrorLegacyHelp,
@@ -109,6 +110,89 @@ describe("t281 Issue content", () => {
     expect(content.body).not.toContain(secret);
     expect(content.body).toContain("token=[REDACTED]");
     expect(content.body).toContain("?[REDACTED]");
+  });
+});
+
+// The Issue title is the one field GitHub bounds hard (256 characters) and the
+// one field the mirror writes exactly once, at create. It carries no identity —
+// ownership is matched on the body marker — so it is derived from the Intent
+// directory name rather than from the free-form Project summary.
+describe("t281 Issue title", () => {
+  const snapshotWith = (
+    over: Partial<Parameters<typeof renderMirrorIssueContent>[0]["snapshot"]>,
+  ) => ({
+    intentUuid: "intent-1",
+    intentDir: "260801-open-bug-batch-5-ab12cd34",
+    projectSummary: "Mirror the lifecycle",
+    lifecyclePhase: "CONSTRUCTION",
+    currentStage: "code-generation",
+    status: "Running",
+    registryStatus: "in-flight" as const,
+    updatedAt: "2026-07-25T00:00:00Z",
+    ...over,
+  });
+
+  test("names the Intent directory, never the Project summary", () => {
+    const content = renderMirrorIssueContent({
+      snapshot: snapshotWith({ projectSummary: "a very chatty Project field" }),
+      marker: "<!-- marker -->",
+    });
+    expect(content.title).toBe("Intent Mirror: 260801-open-bug-batch-5-ab12cd34");
+    expect(content.title).not.toContain("chatty");
+    // The Project summary still reaches the body verbatim.
+    expect(content.body).toContain("## Summary\na very chatty Project field\n");
+  });
+
+  test("falls back to the Intent UUID when the directory is unusable", () => {
+    const content = renderMirrorIssueContent({
+      snapshot: snapshotWith({ intentDir: "   " }),
+      marker: "<!-- marker -->",
+    });
+    expect(content.title).toBe("Intent Mirror: intent-1");
+  });
+
+  // Regression: a 1440-byte Project field used to be pasted into the title
+  // whole, producing a >943-byte title that GitHub rejects with a
+  // non-retryable 422 — which strands the create receipt and blocks the
+  // workflow's completion boundary permanently.
+  test("keeps the title far below the GitHub bound for a huge Project field", () => {
+    const content = renderMirrorIssueContent({
+      snapshot: snapshotWith({ projectSummary: "x".repeat(1440) }),
+      marker: "<!-- marker -->",
+    });
+    expect(Buffer.byteLength(content.title, "utf8")).toBeLessThan(943);
+    expect(Buffer.byteLength(content.title, "utf8")).toBeLessThanOrEqual(
+      MIRROR_ISSUE_TITLE_MAX_BYTES,
+    );
+  });
+
+  // The directory name is a short slug, so this backstop should never fire in
+  // practice — which is exactly why it is pinned here rather than trusted.
+  test("clamps an over-long Intent directory in the byte domain", () => {
+    const content = renderMirrorIssueContent({
+      snapshot: snapshotWith({ intentDir: "z".repeat(600) }),
+      marker: "<!-- marker -->",
+    });
+    expect(Buffer.byteLength(content.title, "utf8")).toBe(
+      MIRROR_ISSUE_TITLE_MAX_BYTES,
+    );
+    expect(content.title.startsWith("Intent Mirror: zzz")).toBe(true);
+  });
+
+  // Clamping by byte count must not cut a character in half: a truncated UTF-8
+  // sequence is a replacement character on GitHub's side, not a shorter title.
+  test("never splits a multi-byte character when clamping", () => {
+    const content = renderMirrorIssueContent({
+      // 4 bytes per emoji, so no byte budget can land on a character boundary
+      // by arithmetic luck.
+      snapshot: snapshotWith({ intentDir: "🎼".repeat(200) }),
+      marker: "<!-- marker -->",
+    });
+    const bytes = Buffer.byteLength(content.title, "utf8");
+    expect(bytes).toBeLessThanOrEqual(MIRROR_ISSUE_TITLE_MAX_BYTES);
+    expect(content.title).not.toContain("�");
+    // 15-byte prefix + floor(185 / 4) = 46 whole emoji.
+    expect(bytes).toBe(15 + 46 * 4);
   });
 });
 

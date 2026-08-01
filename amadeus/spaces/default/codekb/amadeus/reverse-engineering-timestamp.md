@@ -22,6 +22,23 @@
 
 
 ## 実行メタデータ（履歴: 260731-perf-ci-separation）
+## 実行メタデータ（履歴: 260801-open-bug-batch-5）
+
+- Date: `2026-08-01T01:30:00Z`
+- Base commit: `da51af375`（observed の祖先、`git merge-base --is-ancestor da51af375 HEAD` exit 0）
+- Observed commit: `c49e385ac7b787ce151ab0f077943620bd8bf7e2`（origin/main tip、`record: sync intent 260731-perf-ci-separation ... (#1862)`）
+- Distance: `11 commits`（`git rev-list --count da51af375..HEAD`）
+- 区間規模: `3408 files changed, 176368 insertions(+), 18008 deletions(-)`（`git diff --shortstat da51af375..HEAD`、測定 ref = observed `c49e385ac`）。大半は `771afe2a2`（#1850 OTel 統合）の dist 7面+self-install 投影で、ソース面の実変化は `packages/framework/core/otel/`（18ファイル）と perf CI 分離4 Bolt（#1848/#1851/#1855/#1859）、norm 2件（#1843/#1847）。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Delivery boundary: 9 Issue を5 Bolt で追跡（Bolt 1: #1838+#1860 / Bolt 2: #1846+#1849 / Bolt 3: #1856+#1857 / Bolt 4: #1863+#1864 / Bolt 5: #1861）。Bolt ごとに PR を切り `main` へスカッシュマージ。
+- Focus: クロスレビュー2名成立済みの9バグの患部確定と区間シフト判定。全9件の独立2名 verdict（計18コメント）が検証 SHA `c49e385ac` = 本 RE の observed で投稿済みのため、レビュー成果を scan の一次入力とし、conductor が患部6箇所の verbatim スポット再実測+区間 touch 判定（患部16ファイル中、区間内変化は #1850 touch の7ファイルのみ・全引用は #1850 着地後検証のため再解決不要）で二重化した。
+- 既存 open PR 棚卸し: 9 Issue すべて 0 件 — 引き取りなし、全件新規実装（`cid:reverse-engineering:c1-preexisting-pr-inventory`）。
+- テスト採番予約: `t391`〜`t398` を8件へ予約（現最大 `t390`。既存テスト拡張で足りる場合は返上）。
+- Bolt 間交差判定: Bolt 1 は mirror 4ファイル共有で Bolt 内直列、Bolt 2 は `amadeus-utility.ts` 交差で Bolt 内直列、Bolt 3 は `bootstrap.ts` 交差で Bolt 内直列、Bolt 4 は非交差で並行可、Bolt 5 は全 Bolt と非交差。dist 再生成面はマージ順直列。
+- Updated artifacts: 実質更新4件 = `architecture.md`（9バグの機構節 + 区間の構造変化: OTel ファミリー到着・perf tier 分離）、`code-structure.md`（患部配置と区間の機械集計）、`code-quality-assessment.md`（根因確度と品質所見）、`business-overview.md`（利用者影響と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md` — 9バグはすべて既存構成内の欠陥であり、区間の構成変化（OTel 18モジュール等）は各ファイルの履歴節整合を保つ現在節1行で注記した（`cid:reverse-engineering:c3-relabel`）。加えて本ファイルと per-intent `re-scans/260801-open-bug-batch-5.md`。
+- Per-intent record: `re-scans/260801-open-bug-batch-5.md`（患部 file:line 全数・要件段へ送る裁定事項3件を含む）。
+
+## 実行メタデータ（履歴: 260731-perf-ci-separation）
 
 - Date: `2026-07-31T08:20:00Z`
 - Base commit: `6e7a9d701d7cf350310a047bc5b70ff18ed15272`（observed の祖先、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0）

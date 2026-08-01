@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB5-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "留保1点(監視条件付きの 0 件): 候補外だが本 BT 断面には既存 cid に正面から当たらない事象が1件ある — PR #1895 の CodeRabbit Major(intentDir の末尾セグメント抽出要求)は根拠が t280:82 の *テスト fixture 値* であり、production 供給経路(resolveMirrorRecordIdentity / recordDirMatches, amadeus-lib.ts:1846-1851 がネストパスを構造的に受理しない)を実測して反証・不採用とした。memory/ を fixture で grep した限り、corpus-sweep-for-new-guards(team.md:239)・transient-state-fixtures(:262)・golden-regen-from-shipped-surface(:249)・fixture-propagation-grep(project.md:152)はいずれも『自分が書くテスト側の fixture 設計』を縛るのみで、『外部レビュー指摘が fixture 値に接地している場合の供給経路実測による反証』面は未被覆。今回 0 件に賛成する理由は、(a) 反証が1往復で成立し iteration も実害も消費していない (b) 判断自体は org.md Forbidden(要求外の過剰防御・投機的一般化の禁止)+ P2(実測事実のみを根拠)+ deslop-in-workflow から一意に導出可能 — の2点に尽きる。したがって『新規 cid には未達だが、同型が再発したら(特に fixture 接地の外部指摘を実測せず受け入れて投機的一般化を再導入した場合)昇格候補』として次回の週次蒸留ラウンドへ回付すること。",
+  "rationale": "choice 1(0件)。実測で両候補とも既存 cid の実例と確認した。c1: build-test-results.md:5 が自ら cid:build-and-test:bt-20260730-1 を引いており(project.md:326 = per-unit focused suites + main worktree の full baseline を Comprehensive 執行とする)、:31 の AC-2c 節も見出しに cid:build-and-test:verdict-names-unverified-facets(project.md:244)を明記して検証済み/書き分け/PENDING を分離している — 規則の適用実例であって新規則の導出ではない。FR-10 の追加編入も、クロスレビュー2名成立(issue-cross-review)+ユーザー裁定(escalation-canonical (4) 仕様変更)+close-after-landing-verification の既決手順どおりの執行で、新しい行動規則を要さない。c2: BT diary Deviations(memory.md:9)と build-test-results.md:40 が記す共有 stash の pop 誤適用は、team.md:145 の stash-discipline(『共有されうる worktree では引数なしの git stash pop を使わず、ラベル/SHA を明示して適用する』)がまさに禁じている操作そのもので、team.md:274 の falling-proof-no-stash も同族。実害なし(競合 fail でエントリ保持・原状回復を実測)・自己捕捉で無音通過ゼロのため、記録すべきは違反実例であって新規則ではない。PR #1895 は MERGED(a6e9e506b、mergedAt 2026-08-01T05:38:08Z)で本文の検証表・allowlist 機械 remap も既存 cid(c1-allowlist-mechanical-remap / allowlist-line-pin-stale)の遵守記録。以上より 0 件に賛成、ただし上記留保の監視条件を付す。",
+  "submittedAt": "2026-08-01T06:05:00Z"
+}

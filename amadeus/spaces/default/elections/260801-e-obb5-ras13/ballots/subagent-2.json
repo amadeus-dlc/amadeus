@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB5-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用するが2点の留保: (1) 本規則は prose 規律であり、required-sections センサーが既に持つ heading-set override(amadeus/spaces/<space>/memory/templates/<artifact>.md、manifest の Heading-set overrides 節で prose 由来 heading set より優先と明記)が同じ検査を決定的に行える — templates/ は現在 .gitkeep のみで未使用のため今は prose で採るが、次回の週次蒸留ラウンド(cid:requirements-analysis:weekly-distillation-round)で templates/requirements.md への機械化候補として再判定すること。(2) 適用範囲を『直前 sibling record が実在する series 型バッチ intent の必須節集合照合』に限定し、全ステージへの『毎回前 record を開く』儀式へ肥大させないこと。",
+  "rationale": "choice 1(c2 一般化を採用)。実測: (a) RA diary Deviations に『reviewer iteration 1 が Major 1件(Step 10 必須7節のうち5節欠落)』と直前 sibling が7節完備である旨を確認。(b) requirements.md の Review — Iteration 1 が NOT-READY/Major 1件(Intent 分析・非機能要件・制約・前提・未解決事項の5節欠落)、Iteration 2 が READY 指摘0件 — iteration 1 が実際に消費されたことを成果物上で確認。(c) grep -n '^## ' の対照: batch-4 requirements.md = 承認系譜/Intent 分析/機能要件/非機能要件/制約/前提/スコープ外/未解決事項(必須7節完備)、batch-5 = 是正後14 H2。(d) 新規性: amadeus/spaces/default/memory/ を grep したところ、cid:requirements-analysis:consumes-first-drafting(team.md:231)・cid:nfr-design:body-derivation-before-header(project.md:184)・cid:functional-design:c12 はいずれも『上流入力(consumes)の参照様式と記載順序』のみを縛り、ステージ契約の必須節集合そのものを照合する規則は存在しない。(e) センサー射程: .claude/sensors/amadeus-required-sections.md の default mode は『at least 2 H2 headings』の floor のみで節名を見ず、diary も5節欠落時に『センサー全 PASSED』と記録している — 既存センサーは本欠陥に対して構造的に盲。よって『既存様式ノルム+required-sections の射程内』とする choice 2 は実測で成立せず、c2 には固有の被覆面がある。c1(ユーザー裁定2件)は裁定記録であって横断適用可能な practice ではないため不採用に同意。",
+  "submittedAt": "2026-08-01T02:35:00Z"
+}

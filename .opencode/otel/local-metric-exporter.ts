@@ -11,6 +11,8 @@ import { activeIntent, activeSpace, auditCloneId } from "../tools/amadeus-lib.ts
 import { telemetryDir } from "../tools/amadeus-observability.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
+import { currentResource, redactResource } from "./resource.ts";
+import type { ResourceGetter } from "./resource.ts";
 
 export type MetricRecord = {
   readonly name: string;
@@ -25,7 +27,10 @@ export type MetricRecord = {
 // The persisted line: the measured record plus the intent identity, resolved
 // here rather than by the producer — the same "identity fields are resolved at
 // the write boundary" policy the canonical journal follows (audit-log-exporter).
-export type PersistedMetricRecord = MetricRecord & { readonly intentId: string };
+export type PersistedMetricRecord = MetricRecord & {
+  readonly intentId: string;
+  readonly resource: Record<string, string>;
+};
 
 export type LocalMetricExporter = {
   exportMetric(record: MetricRecord): void;
@@ -38,6 +43,7 @@ export type LocalMetricExporterOptions = {
   readonly storeDir?: string;
   readonly write?: StoreWrite;
   readonly redaction?: RedactionPolicy;
+  readonly resource?: ResourceGetter;
 };
 
 function defaultWrite(path: string, line: string): void {
@@ -48,6 +54,7 @@ function defaultWrite(path: string, line: string): void {
 export function createLocalMetricExporter(options: LocalMetricExporterOptions): LocalMetricExporter {
   const write = options.write ?? defaultWrite;
   const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
+  const resource = options.resource ?? (() => currentResource(options.projectDir));
   // Resolved once per exporter: measurement is a hot path (no per-record
   // cursor read), and a short-lived CLI process keeps one identity for its
   // whole life (BR-3).
@@ -70,6 +77,7 @@ export function createLocalMetricExporter(options: LocalMetricExporterOptions): 
           ...record,
           attributes: redactAttributes(record.attributes, policy),
           intentId: intentId(),
+          resource: redactResource(resource()),
         };
         write(path, `${JSON.stringify(persisted)}\n`);
       } catch {

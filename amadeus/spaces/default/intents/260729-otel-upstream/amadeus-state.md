@@ -13,7 +13,7 @@
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
-- **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.3, 1.4, 1.7, 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.5, 3.6
+- **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.3, 1.4, 1.7, 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.5, 3.6, 3.8
 - **Stages to Skip**: 1.2 (market-research), 1.5 (team-formation), 1.6 (rough-mockups), 2.4 (user-stories), 2.5 (refined-mockups), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
 - **Depth**: Standard
 - **Test Strategy**: Comprehensive
@@ -25,7 +25,7 @@
 - **Build System**: bun (package.json)
 
 ## Execution Plan Summary
-- **Total Stages**: 18
+- **Total Stages**: 19
 - **Completed**: 19
 - **In Progress**: none
 

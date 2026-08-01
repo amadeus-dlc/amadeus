@@ -67,7 +67,7 @@ function bootAll() {
     logExporter: createLocalLogExporter({ projectDir: proj }),
   });
   registerTracerProvider({ projectDir: proj, spanExporter: createLocalSpanExporter({ projectDir: proj }) });
-  registerMeterProvider({ metricExporter: createLocalMetricExporter({ projectDir: proj }) });
+  registerMeterProvider({ projectDir: proj, metricExporter: createLocalMetricExporter({ projectDir: proj }) });
 }
 
 describe("canonical emit is synchronously observable (FR-JRN-3)", () => {

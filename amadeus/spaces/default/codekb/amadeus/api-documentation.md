@@ -110,6 +110,11 @@ return state.issueNumber === null ? "create" : "sync";
 
 ## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 ## perf 分離が触れる内部契約（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾が触れる内部契約（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+
+- 判断: 公開 CLI 契約の変更なし。触れるのは内部契約4点 — mirror receipt 遷移（reducer の complete/mark-pending 受理元）、state scaffold のフィールド集合（Construction Autonomy Mode 追加）、report の checkbox ガード挙動（#1849 裁定依存）、metrics publication の problems 分類（一過性 I/O と所有権証拠異常の分離）。テスト pin の明示改訂を伴うものは要件段で宣言する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+## perf 分離が触れる内部契約（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

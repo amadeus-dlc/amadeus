@@ -86,6 +86,11 @@ amadeus-sensor-model-completeness.ts:650-659 ── MODEL_UNCHANGED で拒否（
 
 ## オープンバグ4件の依存関係（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 ## perf 分離の依存関係（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+
+- 判断: Bolt 内交差3件（Bolt 1 = mirror 4ファイル共有、Bolt 2 = `amadeus-utility.ts`、Bolt 3 = `otel/bootstrap.ts`）は各 Bolt 内直列で解消。Bolt 間はファイル単位非交差だが、core/tools を触る Bolt 1-4 の dist 再生成はマージ順に直列（`cid:code-generation:c6` の実 diff 再評価をマージ時に行う）。Bolt 5 は完全独立。詳細は `re-scans/260801-open-bug-batch-5.md`。
+
+## perf 分離の依存関係（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

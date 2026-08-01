@@ -17,19 +17,31 @@
 import { resetOtelBootstrapForTests as resetBootstrapDist } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { resetFatalLatchForTests as resetLatchDist } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests as resetLoggerDist } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { resetMeterProviderForTests as resetMeterDist } from "../../dist/claude/.claude/otel/meter-provider.ts";
+import { resetMetricsInstrumentsForTests as resetInstrumentsDist } from "../../dist/claude/.claude/otel/metrics-instruments.ts";
+import { resetSuppliersForTests as resetSuppliersDist } from "../../dist/claude/.claude/otel/resource-suppliers.ts";
 import { resetTracerProviderForTests as resetTracerDist } from "../../dist/claude/.claude/otel/tracer-provider.ts";
 import { resetOtelBootstrapForTests as resetBootstrapSrc } from "../../packages/framework/core/otel/bootstrap.ts";
 import { resetFatalLatchForTests as resetLatchSrc } from "../../packages/framework/core/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests as resetLoggerSrc } from "../../packages/framework/core/otel/logger-provider.ts";
+import { resetMeterProviderForTests as resetMeterSrc } from "../../packages/framework/core/otel/meter-provider.ts";
+import { resetMetricsInstrumentsForTests as resetInstrumentsSrc } from "../../packages/framework/core/otel/metrics-instruments.ts";
+import { resetSuppliersForTests as resetSuppliersSrc } from "../../packages/framework/core/otel/resource-suppliers.ts";
 import { resetTracerProviderForTests as resetTracerSrc } from "../../packages/framework/core/otel/tracer-provider.ts";
 
 export function resetOtelPerProject(): void {
   resetLatchDist();
   resetLoggerDist();
   resetTracerDist();
+  resetMeterDist();
+  resetInstrumentsDist();
+  resetSuppliersDist();
   resetBootstrapDist();
   resetLatchSrc();
   resetLoggerSrc();
   resetTracerSrc();
+  resetMeterSrc();
+  resetInstrumentsSrc();
+  resetSuppliersSrc();
   resetBootstrapSrc();
 }

@@ -303,6 +303,11 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-harness.ts"),
       join(proj, ".claude", "tools", "amadeus-harness.ts"),
     );
+    // The resource bag names the framework version (otel/resource.ts).
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-version.ts"),
+      join(proj, ".claude", "tools", "amadeus-version.ts"),
+    );
     copyFileSync(
       join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
       join(proj, ".claude", "tools", "amadeus-audit.ts"),

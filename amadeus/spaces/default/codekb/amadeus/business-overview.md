@@ -74,6 +74,13 @@ file:line はすべて HEAD `16486d3c` 断面の実測。本 intent の業務目
 
 ## オープンバグ4件の業務境界（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
 ## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+
+- 利用者影響の序列: P1 2件（#1838 mirror 境界の順序逸脱、#1860 workflow 完了の恒久ブロック — 製品内回復手段なし・state 手術でのみ回復した実績）が最優先。P2 4件（#1846 set-autonomy 不能、#1849 合成後 intent の report 拒否、#1856 偽 green リスク、#1861 main 偽赤15%+ダッシュボード stale、#1863 plugin セル無音消失）。P3 2件（#1857 latent、#1864 台帳1行）。
+- Delivery boundary: 5 Bolt =5 PR（Bolt 1: #1838+#1860 → Bolt 2: #1846+#1849 → Bolt 3: #1856+#1857 → Bolt 4: #1863+#1864 → Bolt 5: #1861）。優先度が高いものから着地する（ユーザー指示 2026-08-01）。
+- 除外: #1829（plugin 配布、別 intent）、#1830 path B（別 intent）。#1864 の同型21件は #1622（P1）の材料としてコメント提供済み。
+
+## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

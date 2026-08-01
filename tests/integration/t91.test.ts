@@ -123,6 +123,11 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-harness.ts"),
     join(proj, ".claude", "tools", "amadeus-harness.ts"),
   );
+  // The resource bag names the framework version (otel/resource.ts).
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-version.ts"),
+    join(proj, ".claude", "tools", "amadeus-version.ts"),
+  );
   copyFileSync(
     join(SRC_TOOLS, "amadeus-audit.ts"),
     join(proj, ".claude", "tools", "amadeus-audit.ts"),
