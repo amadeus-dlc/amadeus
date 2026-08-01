@@ -7966,8 +7966,8 @@ export function planIntegrityVerdict(
   }
 }
 
-// The prose for a guard verdict. The caller passes the verdict and the batch it
-// came from and gets a finished message — no call site assembles the sentence
+// The prose for a guard verdict. The caller passes the verdict and gets a
+// finished message — no call site assembles the sentence
 // itself, so the two exits cannot drift apart by one being reworded.
 //
 // The observed numbers come off the verdict, never re-derived here: the batch
