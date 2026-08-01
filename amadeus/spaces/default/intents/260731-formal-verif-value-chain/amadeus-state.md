@@ -8,8 +8,8 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
-- **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-u6-impl-only-path
+- **Bolt Refs**: [u3-boundary-guard, u4-tools-distribution]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
