@@ -47,6 +47,7 @@ to add one.
 - [Operate the Intent Mirror](guide/22-intent-mirror.md)
 - [Metrics Dashboard](guide/23-metrics-dashboard.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.md)
+- [Telemetry Schema reference](reference/21-telemetry-schema.md)
 
 The repository layout decision is recorded in
 [Workspace Layout Decision](reference/18-workspace-layout.md): the framework

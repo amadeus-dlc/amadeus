@@ -58,7 +58,7 @@ function putIntentPair(bag: Record<string, string>, projectDir: string): void {
   const space = activeSpace(projectDir);
   const intent = activeIntent(projectDir, space);
   if (intent === null || intent.trim() === "" || space.trim() === "") return;
-  bag["amadeus.intent"] = intent.trim();
+  bag["amadeus.intent.id"] = intent.trim();
   bag["amadeus.space"] = space.trim();
 }
 

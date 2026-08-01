@@ -43,10 +43,6 @@ git から計測する対(`:56` `VCS_RESOURCE_KEYS`)、ハーネスが供給し�
 | `session.id` | string | ハーネス供給 seam | 供給がないとき |
 | `amadeus.agent.role` | string | ハーネス供給 seam | 供給がないとき |
 
-`telemetry.sdk.language` は #1868 §1 の表より前から存在し、同 Issue では「現状
-実測」の記述としてのみ触れられています。スキーマ v1 以前から resource に載って
-いた OTel 標準キーであり、そのまま維持されています。
-
 ### 解決規則
 
 - **属性ごとの fail-open。** 各属性は自分の `try` の下で解決されます
@@ -74,7 +70,7 @@ git から計測する対(`:56` `VCS_RESOURCE_KEYS`)、ハーネスが供給し�
 
 | 属性 | 型 | 供給元 | 省略条件 |
 |---|---|---|---|
-| `amadeus.intent` | string | `activeIntent`(`span-context.ts:57-63`) | cursor が解決しないとき — space と同時に省略 |
+| `amadeus.intent.id` | string | `activeIntent`(`span-context.ts:57-63`) | cursor が解決しないとき — space と同時に省略 |
 | `amadeus.space` | string | `activeSpace`(`span-context.ts:57-63`) | cursor が解決しないとき — intent と同時に省略 |
 | `amadeus.stage` | string | active intent の state ファイルの `Current Stage`(`span-context.ts:76`) | state ファイル不在、または当該フィールド不在 |
 | `amadeus.phase` | string | 同じ state ファイルの `Lifecycle Phase`(`span-context.ts:77`) | state ファイル不在、または当該フィールド不在 |

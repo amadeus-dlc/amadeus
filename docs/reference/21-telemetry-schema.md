@@ -45,10 +45,6 @@ It is the union of three groups: what core measures for itself
 | `session.id` | string | harness supply seam | never supplied |
 | `amadeus.agent.role` | string | harness supply seam | never supplied |
 
-`telemetry.sdk.language` predates the #1868 §1 table and is listed there only in
-the "current state" note; it is a standard OTel key that was already on the
-resource before schema v1 and is retained.
-
 ### Resolution rules
 
 - **Fail-open, per attribute.** Each attribute resolves under its own `try`
@@ -77,7 +73,7 @@ the resolver (`otel/span-context.ts:31`).
 
 | Attribute | Type | Source | Omitted when |
 |---|---|---|---|
-| `amadeus.intent` | string | `activeIntent` (`span-context.ts:57-63`) | the cursor does not resolve — omitted together with the space |
+| `amadeus.intent.id` | string | `activeIntent` (`span-context.ts:57-63`) | the cursor does not resolve — omitted together with the space |
 | `amadeus.space` | string | `activeSpace` (`span-context.ts:57-63`) | the cursor does not resolve — omitted together with the intent |
 | `amadeus.stage` | string | `Current Stage` of the active intent's state file (`span-context.ts:76`) | no state file, or the field is absent |
 | `amadeus.phase` | string | `Lifecycle Phase` of the same state file (`span-context.ts:77`) | no state file, or the field is absent |

@@ -130,7 +130,7 @@ describe("the six keys reach the STORE, not just the span record (FR-SPAN-1)", (
     getAmadeusTracer().startSpan("context-check").end();
 
     const stored = storedAttributes("context-check");
-    expect(stored["amadeus.intent"]).toBe(recordDirName());
+    expect(stored["amadeus.intent.id"]).toBe(recordDirName());
     expect(stored["amadeus.space"]).toBe("default");
     expect(stored["amadeus.stage"]).toBe("code-generation");
     expect(stored["amadeus.phase"]).toBe("CONSTRUCTION");
@@ -156,7 +156,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
     // No birthIntent: zero records, so the intent does not resolve. The journal
     // writer would stamp "workspace"/"default" here; a span attribute must not.
     const attrs = spanContextAttributes(proj);
-    expect("amadeus.intent" in attrs).toBe(false);
+    expect("amadeus.intent.id" in attrs).toBe(false);
     expect("amadeus.space" in attrs).toBe(false);
     expect(Object.values(attrs)).not.toContain("workspace");
     expect(Object.values(attrs)).not.toContain("default");
@@ -175,7 +175,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
         .map((name) => readFileSync(join(storeDir, name), "utf-8"))
         .join("");
       const attributes = (JSON.parse(line.trim()) as { attributes: Record<string, unknown> }).attributes;
-      expect("amadeus.intent" in attributes).toBe(false);
+      expect("amadeus.intent.id" in attributes).toBe(false);
       expect("amadeus.space" in attributes).toBe(false);
       expect(line).not.toContain("workspace");
     } finally {
@@ -189,7 +189,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
     const attrs = spanContextAttributes(proj);
     expect("amadeus.stage" in attrs).toBe(false);
     expect("amadeus.phase" in attrs).toBe(false);
-    expect(attrs["amadeus.intent"]).toBe(recordDirName());
+    expect(attrs["amadeus.intent.id"]).toBe(recordDirName());
   });
 
   test("an absent state file resolves to an empty bag rather than throwing", () => {

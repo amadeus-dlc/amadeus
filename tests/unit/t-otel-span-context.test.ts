@@ -37,7 +37,7 @@ describe("closed key set (FR-SPAN-1)", () => {
     expect([...SPAN_CONTEXT_ATTRIBUTE_KEYS].sort()).toEqual([
       "amadeus.agent.id",
       "amadeus.agent.type",
-      "amadeus.intent",
+      "amadeus.intent.id",
       "amadeus.phase",
       "amadeus.space",
       "amadeus.stage",
@@ -113,7 +113,7 @@ describe("redaction admission (E-OMSB2A-DEV case A)", () => {
   test("all six keys survive the default policy — the store boundary applies it", () => {
     const admitted = redactAttributes(
       {
-        "amadeus.intent": "260729-otel-upstream",
+        "amadeus.intent.id": "260729-otel-upstream",
         "amadeus.space": "default",
         "amadeus.stage": "code-generation",
         "amadeus.phase": "CONSTRUCTION",

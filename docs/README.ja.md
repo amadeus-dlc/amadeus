@@ -33,6 +33,7 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 - [Intent Mirrorを運用する](guide/22-intent-mirror.ja.md)
 - [メトリクスダッシュボード](guide/23-metrics-dashboard.ja.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.ja.md)
+- [Telemetry Schema reference](reference/21-telemetry-schema.ja.md)
 
 リポジトリレイアウトの設計判断は
 [Workspace Layout Decision](reference/18-workspace-layout.ja.md) に記録しています。
