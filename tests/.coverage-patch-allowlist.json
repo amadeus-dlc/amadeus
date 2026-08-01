@@ -1702,11 +1702,6 @@
   },
   {
     "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
-    "lines": "1838",
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
-  },
-  {
-    "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
     "lines": "1861",
     "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
   },
