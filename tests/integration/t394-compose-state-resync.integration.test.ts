@@ -37,7 +37,9 @@ import {
 import {
   defaultPluginCliDeps,
   handlePluginCli,
+  projectDirOfHostRoot,
 } from "../../dist/claude/.claude/tools/amadeus-plugin.ts";
+import { firstFlipRejection } from "../../dist/claude/.claude/tools/amadeus-utility.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 
@@ -213,6 +215,66 @@ describe("t394 compose wiring: the re-sync runs after the graph is recompiled", 
 
   test("the real dependency bag wires the re-sync (production composes are not inert)", () => {
     expect(typeof defaultPluginCliDeps().resyncIntentStates).toBe("function");
+  });
+
+  test("the real re-sync dep resolves the workspace above the harness dir and reads the host's own graph", () => {
+    const proj = bornProject();
+    dropRow(proj, "user-stories");
+    // The plugin host root is the HARNESS dir; the workspace is its parent.
+    const outcomes = defaultPluginCliDeps().resyncIntentStates?.(join(proj, ".claude")) ?? [];
+    expect(outcomes.filter((o) => o.status === "resynced").map((o) => o.inserted)).toEqual([
+      ["user-stories"],
+    ]);
+    expect(readState(proj)).toMatch(/^- \[ \] user-stories — EXECUTE$/m);
+  });
+
+  test("a host root that is not a harness dir IS the project dir", () => {
+    expect(projectDirOfHostRoot("/w/proj/.claude")).toBe("/w/proj");
+    expect(projectDirOfHostRoot("/w/proj")).toBe("/w/proj");
+  });
+});
+
+describe("t394 firstFlipRejection: the per-flip guard matrix, in-process", () => {
+  const graph = loadStageGraph();
+  const ctx = (over: Partial<Parameters<typeof firstFlipRejection>[1]> = {}) => ({
+    knownSlugs: new Set(graph.map((s) => s.slug)),
+    checkboxMap: new Map(graph.map((s) => [s.slug, "pending" as const])),
+    graph,
+    currentSlug: graph[0].slug,
+    currentIdx: 0,
+    ...over,
+  });
+
+  test("every named stage flippable -> null", () => {
+    expect(firstFlipRejection(["user-stories"], ctx())).toBeNull();
+  });
+
+  test("uncompiled slug", () => {
+    expect(firstFlipRejection(["no-such-stage"], ctx())?.why).toContain("not a compiled stage");
+  });
+
+  test("no state row -> the re-sync refusal (#1849)", () => {
+    const map = new Map(graph.map((s) => [s.slug, "pending" as const]));
+    map.delete("user-stories");
+    expect(firstFlipRejection(["user-stories"], ctx({ checkboxMap: map }))?.why).toContain(
+      "no row in the state file",
+    );
+  });
+
+  test("a frozen (non-pending) row", () => {
+    const map = new Map<string, "pending" | "completed">(
+      graph.map((s) => [s.slug, "pending" as const]),
+    );
+    map.set("user-stories", "completed");
+    expect(firstFlipRejection(["user-stories"], ctx({ checkboxMap: map }))?.why).toContain(
+      "not pending ([completed])",
+    );
+  });
+
+  test("at or behind the cursor", () => {
+    const idx = graph.findIndex((s) => s.slug === "user-stories");
+    const r = firstFlipRejection(["user-stories"], ctx({ currentIdx: idx, currentSlug: "user-stories" }));
+    expect(r?.why).toContain("at or behind the current stage");
   });
 });
 

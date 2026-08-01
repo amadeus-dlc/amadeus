@@ -5259,23 +5259,31 @@ Completed: ${completedCount}/${executeStages.length}
 // the verb is inert when unused.
 // ---------------------------------------------------------------------------
 
+export interface FlipRejection {
+  slug: string;
+  why: string;
+}
+
+export interface FlipContext {
+  knownSlugs: ReadonlySet<string>;
+  checkboxMap: ReadonlyMap<string, CheckboxState>;
+  graph: readonly StageEntry[];
+  currentSlug: string;
+  currentIdx: number;
+}
+
 // Per-flip guards: a stage may be re-shaped only when it is compiled, carries a
-// row, is still pending, and lies ahead of the cursor. Each failure dies with a
-// reason naming the stage.
-function assertFlippableStages(
+// row, is still pending, and lies ahead of the cursor. Returns the FIRST
+// rejection, or null when every named stage is flippable. A predicate rather
+// than a dying guard so the whole matrix is driven in-process (die() would take
+// the test process with it).
+export function firstFlipRejection(
   slugs: readonly string[],
-  ctx: {
-    knownSlugs: ReadonlySet<string>;
-    checkboxMap: ReadonlyMap<string, CheckboxState>;
-    graph: readonly StageEntry[];
-    currentSlug: string;
-    currentIdx: number;
-  },
-): void {
-  const reject = (slug: string, why: string): never => die(`Cannot recompose "${slug}": ${why}`);
+  ctx: FlipContext,
+): FlipRejection | null {
   for (const slug of slugs) {
     if (!ctx.knownSlugs.has(slug)) {
-      reject(slug, "not a compiled stage.");
+      return { slug, why: "not a compiled stage." };
     }
     const state = ctx.checkboxMap.get(slug);
     // A compiled stage with NO row is not a pending stage — it is a state file
@@ -5284,19 +5292,20 @@ function assertFlippableStages(
     // a stage would silently no-op while the derived counters were rewritten
     // around it. Refuse and name the re-sync (#1849).
     if (state === undefined) {
-      reject(
+      return {
         slug,
-        "it has no row in the state file's Stage Progress. The state predates this stage; re-sync it against the host graph (compose the plugin that owns it, or change scope) before re-shaping the plan.",
-      );
+        why: "it has no row in the state file's Stage Progress. The state predates this stage; re-sync it against the host graph (compose the plugin that owns it, or change scope) before re-shaping the plan.",
+      };
     }
     if (state !== "pending") {
-      reject(slug, `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.`);
+      return { slug, why: `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.` };
     }
     const idx = ctx.graph.findIndex((s) => s.slug === slug);
     if (ctx.currentIdx !== -1 && idx !== -1 && idx <= ctx.currentIdx) {
-      reject(slug, `it is at or behind the current stage ("${ctx.currentSlug}"). In-flight recompose only reaches forward; re-running the past is out of scope.`);
+      return { slug, why: `it is at or behind the current stage ("${ctx.currentSlug}"). In-flight recompose only reaches forward; re-running the past is out of scope.` };
     }
   }
+  return null;
 }
 
 function assertRecomposeStateAllowed(content: string): void {
@@ -5372,13 +5381,10 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     const reject = (slug: string, why: string): never =>
       die(`Cannot recompose "${slug}": ${why}`);
 
-    assertFlippableStages([...skipList, ...addList], {
-      knownSlugs,
-      checkboxMap,
-      graph,
-      currentSlug,
-      currentIdx,
+    const flipRejection = firstFlipRejection([...skipList, ...addList], {
+      knownSlugs, checkboxMap, graph, currentSlug, currentIdx,
     });
+    if (flipRejection) reject(flipRejection.slug, flipRejection.why);
 
     // The walking-skeleton gate derivation keys off the FIRST construction
     // EXECUTE stage (static). A flip that MOVES that anchor - skipping the
@@ -5458,10 +5464,8 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     };
     // The shared rebuild preserves the Stages to Skip row's birth/scope-change
     // annotations verbatim, so a skip+add round trip leaves the row unchanged.
-    const derived = rebuildDerivedPlanFields(content, graph, eff);
-    content = derived.content;
-    const executeStages = derived.executeStages;
-    const completedCount = derived.completedCount;
+    const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);
+    content = rebuilt;
     // The Next Stage projection over the recomposed plan (override-aware).
     if (currentSlug) {
       const next = nextInScopeStage(currentSlug, scope, content);
