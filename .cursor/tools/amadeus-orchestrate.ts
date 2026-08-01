@@ -3087,8 +3087,7 @@ function tryEmitSwarm(
   // granted path already performed — moved earlier, not added.
   const batches = readBoltDagBatches(projectDir);
   if (!batches || batches.length === 0) {
-    const absence = readBoltDagAbsence(projectDir);
-    return { kind: "declined", decline: { kind: "no-dag", absence }, pendingBatch: null };
+    return { kind: "declined", decline: { kind: "no-dag" }, pendingBatch: null };
   }
   const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
   if (pick === null) {

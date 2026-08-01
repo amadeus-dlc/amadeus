@@ -7899,7 +7899,7 @@ export type SwarmDecline =
   | { readonly kind: "skeleton-gate" }
   | { readonly kind: "autonomy-unset-pre-skeleton" }
   | { readonly kind: "autonomy-unset" }
-  | { readonly kind: "no-dag"; readonly absence: BoltDagAbsence | null }
+  | { readonly kind: "no-dag" }
   | { readonly kind: "all-covered" };
 
 // What the engine should do about a decline. `redirect` and `violation` carry
@@ -7948,8 +7948,9 @@ export function planIntegrityVerdict(
     case "autonomy-unset-pre-skeleton":
     case "all-covered":
       return { kind: "ok" };
-    // No compiled DAG means no declared width to break — including when the
-    // absence itself is unreadable. A guard with no evidence does not fire.
+    // No compiled DAG means no declared width to break. A guard with no
+    // evidence does not fire — the absence reason is not read here (E-CPG-U2ABS:
+    // no consumer exists yet; U3's future clause mints one when needed).
     case "no-dag":
       return { kind: "ok" };
     case "autonomy-unset":

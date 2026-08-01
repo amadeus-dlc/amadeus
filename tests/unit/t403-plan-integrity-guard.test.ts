@@ -90,7 +90,7 @@ describe("t403 planIntegrityVerdict maps declines to the three verdicts (FR-1)",
       { kind: "skeleton-gate" },
       { kind: "autonomy-unset-pre-skeleton" },
       { kind: "autonomy-unset" },
-      { kind: "no-dag", absence: null },
+      { kind: "no-dag" },
       { kind: "all-covered" },
     ];
     for (const decline of declines) {
@@ -107,15 +107,7 @@ describe("t403 planIntegrityVerdict maps declines to the three verdicts (FR-1)",
     ["skeleton-gate", { kind: "skeleton-gate" } as SwarmDecline],
     ["autonomy-unset-pre-skeleton", { kind: "autonomy-unset-pre-skeleton" } as SwarmDecline],
     ["all-covered", { kind: "all-covered" } as SwarmDecline],
-    ["no-dag (scope skips units)", {
-      kind: "no-dag",
-      absence: { reason: "scope-skips-units", detail: "" },
-    } as SwarmDecline],
-    ["no-dag (units pending)", {
-      kind: "no-dag",
-      absence: { reason: "units-pending", detail: "" },
-    } as SwarmDecline],
-    ["no-dag (absence unreadable)", { kind: "no-dag", absence: null } as SwarmDecline],
+    ["no-dag", { kind: "no-dag" } as SwarmDecline],
   ])("h: %s never fires the guard even at width 2 (AC-1c)", (_name, decline) => {
     expect(planIntegrityVerdict(decline, PARALLEL_BATCH).kind).toBe("ok");
   });
