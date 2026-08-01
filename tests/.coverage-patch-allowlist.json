@@ -1438,6 +1438,18 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4513",
+    "reason": "The `- **Construction Autonomy Mode**: unset` row of the birth state template in handleIntentBirthStateBuild (#1846). Same blind spot as the 4556-4557 advisory rows directly below it: a full intent birth needs a completely seeded workspace and canonical in-process execution is impractical (no-canonical-direct-execution), so tests/integration/t393 drives birth through the SHIPPED CLI and asserts the emitted row plus set-autonomy succeeding on it — bun does not attribute spawned-CLI lines. Template-literal string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); there is no refactor that removes the row from the patch. Verified verbatim at pin time: the line is `- **Construction Autonomy Mode**: unset` inside the stateContent template.",
+    "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the state template"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "5467-5468",
+    "reason": "The derived-plan rebuild call inside handleRecompose's withAuditLock callback (#1849). The recompose verb is exercised through the shipped utility CLI by t194 and t394 (spawned CLI lines are unattributed), while the extracted rebuildDerivedPlanFields it delegates to IS driven in-process by t394 through the post-compose re-sync — only the two call/assignment rows inside the spawn-only handler remain. Already collapsed to the minimum (destructuring + one reassignment) per spawn-blindspot-two-step (i) before allowlisting. Verified verbatim at pin time: `const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);` and `content = rebuilt;`.",
+    "expiry": "remove when handleRecompose gains an in-process argv seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
     "lines": "4721-4731",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
