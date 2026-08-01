@@ -238,5 +238,11 @@
     "dirName": "260801-e-obb5-cgs13",
     "createdAt": "2026-08-01T04:39:47Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB5-BTS13",
+    "dirName": "260801-e-obb5-bts13",
+    "createdAt": "2026-08-01T05:39:38Z",
+    "status": "recorded"
   }
 ]

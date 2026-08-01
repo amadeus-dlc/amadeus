@@ -34,9 +34,10 @@
 - **書き分け**: intent-initialized の safety-blocked receipt は歴史的痕跡として残存(warnings 2 件込み)— これは #1871(title 由来の 422)の痕跡であり、#1860 の prepared 滞留クラスではない。completion boundary の close は workflow 完了時に実測される(PENDING、閉包条件 = complete-workflow 時の close settled)。
 - **FR-4r 検証**: 260729-otel-upstream の skew 修復後、Total 19 = Completed 19 = EXECUTE 行 19 を機械照合で確認(audit 無改変)。
 
-## FR-10(#1871、追加編入分)
+## FR-10(#1871、追加編入分)— 確定
 
-- クロスレビュー2名成立(REFINED/確認、S3 降格執行)・既存 title 共存許容のユーザー裁定済み。Bolt 6(bolt/obb5-6-mirror-title)実装進行中 — **本 results は Bolt 6 の PR 着地後に追記で確定する**(それまで本ステージのゲートは開かない — 早期完了禁止)。
+- クロスレビュー2名成立(S3 降格執行)・既存 title 共存許容のユーザー裁定 → Bolt 6 = PR [#1895](https://github.com/amadeus-dlc/amadeus/pull/1895)(merge `a6e9e506b`、祖先実測)で着地。title = intent dir ベース(実例 47B)+200B バイトクランプ、sync の title 非送信契約を t272 で pin、t281 に新 title 形式5テスト。test:ci PASS(722 files)、patch gate 13/13、CodeRabbit Major は fixture 前提の誤りとして反証・解決。着地面 grep 5 hit。#1871 クローズ済み(計 **10 Issue / 6 Bolt / 6 PR**)。
+- Bolt 6 builder の申告事故1件(実害なし): 共有 stash の pop 誤適用 — 競合failで stash エントリは保持され、自ツリーは原状回復を実測確認済み(stash-discipline 違反として §13 の実例記録へ)。
 
 ## Issue クローズ(close-after-landing-verification 全数実施)
 

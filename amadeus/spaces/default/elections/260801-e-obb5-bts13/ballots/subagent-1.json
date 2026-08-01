@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB5-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: (1) c1 の full baseline(typecheck/lint/dist:check/promote:self:check/run-tests --ci 全 exit 0)は build-test-results.md:5 が自ら bt-20260730-1 の Comprehensive 執行形と明記しており、project.md:326 の既存 cid から一意に導ける。AC-2c の書き分け(検証済み/PENDING の分離)は project.md:244 verdict-names-unverified-facets の適用例そのもので、新規規則を導かない。FR-10 追加編入着地(PR #1895)は執行記録であり規則ではない。(2) c2 の stash pop 誤適用は team.md:145 stash-discipline が既に『引数なし pop 禁止・ラベル付き push・明示 apply・触れたら所有者へ即報告』を規定済みで、diary(memory.md:9)の記載どおり実害なし・自己捕捉・原状回復実測。既存規則が守るべきことを守れていなかった違反実例であって、新しい規則面は現れていない。CodeRabbit Major の反証(過剰防御の不再導入)も org.md Forbidden の既決。よって 0 件を支持。",
+  "submittedAt": "2026-08-01T05:47:00Z"
+}
