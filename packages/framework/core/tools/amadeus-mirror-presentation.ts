@@ -251,13 +251,47 @@ export function mirrorSnapshotStatus(snapshot: MirrorSnapshot): string {
   return snapshot.completionInstance === undefined ? snapshot.status : "Completed";
 }
 
+// GitHub rejects an over-long Issue title with a non-retryable 422, and a
+// mutation that reached the API is classified outcome-unknown — which strands
+// the create receipt and blocks the completion boundary for good. The published
+// bound is 256 *characters*, a unit JavaScript's UTF-16 `.length` does not
+// model, so the guard is expressed in UTF-8 bytes and set well below any
+// plausible reading of that bound. It is a backstop, not the mechanism: the
+// title is built from the Intent directory name, which is a short slug.
+export const MIRROR_ISSUE_TITLE_MAX_BYTES = 200;
+
+// The Intent directory is recorded as a bare directory name, but callers that
+// carry a record path are common enough that reading the last segment keeps the
+// title stable either way. The UUID is the fallback: it is the identifier the
+// snapshot always has.
+function mirrorIssueTitleSummary(snapshot: MirrorSnapshot): string {
+  const segment = snapshot.intentDir.split("/").filter((part) => part.trim() !== "").pop();
+  return oneLine(segment ?? "") || snapshot.intentUuid;
+}
+
+// Truncates on whole characters so a clamped title can never end in a broken
+// UTF-8 sequence. Iterating code points (not UTF-16 units) keeps astral
+// characters intact.
+function clampToBytes(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value, "utf8") <= maxBytes) return value;
+  let kept = "";
+  let used = 0;
+  for (const character of value) {
+    const width = Buffer.byteLength(character, "utf8");
+    if (used + width > maxBytes) break;
+    kept += character;
+    used += width;
+  }
+  return kept;
+}
+
 export function renderMirrorIssueContent(input: {
   snapshot: MirrorSnapshot;
   marker: string;
 }): MirrorIssueContent {
   const { snapshot } = input;
   const summary = redactSummary(snapshot.projectSummary);
-  const titleSummary = oneLine(snapshot.projectSummary) || snapshot.intentUuid;
+  const titleSummary = mirrorIssueTitleSummary(snapshot);
   const status = mirrorSnapshotStatus(snapshot);
   const body = [
     "## Intent UUID",
@@ -282,7 +316,7 @@ export function renderMirrorIssueContent(input: {
     input.marker,
   ].join("\n");
   return {
-    title: `Intent Mirror: ${titleSummary}`,
+    title: clampToBytes(`Intent Mirror: ${titleSummary}`, MIRROR_ISSUE_TITLE_MAX_BYTES),
     body,
     labels: ["amadeus-intent-mirror"],
   };
