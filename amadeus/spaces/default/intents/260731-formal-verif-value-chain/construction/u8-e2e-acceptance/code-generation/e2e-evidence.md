@@ -502,7 +502,49 @@ state の差分は `Worktree Path` の設定と `Swarm Gated Batch Approvals: 1 
 
 ## 残件(後続指示待ち)
 
-1. **S1-f の audit ステージイベント** — conductor の `report`/advance 経路でのみ産出可能。
-2. **S3(FR-E3 新規モデル到達)** — u7 Phase B の MirrorLifecycle 着地待ち。AsIntended の TLC verdict 到達と AsImplemented 変種の反例トレース保存が対象。
+1. **S1-f の audit ステージイベント** — conductor の `report`/advance 経路でのみ産出可能(本線 workflow の formal-model-check ステージ実行で充足予定 — 下記 S3 補遺の後続)。
+2. ~~**S3(FR-E3 新規モデル到達)** — u7 Phase B の MirrorLifecycle 着地待ち~~ → **充足済み(下記 S3 補遺、2026-08-01 conductor 実測)**。
 
 (S4-1 / S4-2 は本 Unit 内で是正済み — 上記 § S4-1 の是正、§ S4-2 を参照。)
+
+## S3 補遺: 新規モデル到達(FR-E3)— u7 着地後の統合断面実測(conductor、2026-08-01)
+
+u7(MirrorLifecycle 登録)のマージ着地(`0007167bc`)後の conductor 統合断面で実測した。
+
+### AsIntended = TLC 完全探索の verdict 到達
+
+u7 builder の最終断面再実測(worktree bolt-u7-mirror-model、tla2tools 1.7.4 / JDK 26.0.1、jar SHA-256 は FIXED_TLC_ARTIFACT_DESCRIPTOR と一致確認済み):
+
+```
+Model checking completed. No error has been found.
+208628 states generated, 89099 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 18.
+```
+
+exit 0・queue 残 0 = 宣言済み有限ドメインの固定点到達(finite-exploration-not-detected-proof の完走要件充足)。Phase A 初回実測と統計完全一致(.tla 無改変の裏取り)。
+
+### AsImplemented = #1838 の反例トレース保存(FR-C3 AC (ii))
+
+```
+Error: Invariant NoDuplicateCreate is violated.
+State 4:  boundaryIdx=1  issueNumber=ISSUE1   receipt(intent-initialized, create)=succeeded
+State 5:  boundaryIdx=2  issueNumber=ISSUE1
+State 6:  receipt(intent-capture-approved, create)=prepared  ← issueNumber 記録済みでの2本目 create
+```
+
+exit 12(275 generated / 209 distinct / depth 7)。フルログは scratch `u7-tlc/verify/MirrorLifecycleAsImplemented.out`、モデル実体は `specs/tla/MirrorLifecycleAsImplemented.tla`(model-map 未登録 = 恒常ジョブ外の一度限り実証 — u7 CI 統合契約どおり)。
+
+### 登録モデルの drift 監視が統合断面で発火する(落ちる実証)
+
+conductor が統合断面で実測(注入→赤→revert の不可分1セット):
+
+```
+ピン対象 amadeus-mirror-types.ts へ 1 バイト追記
+→ bun test t-formal-verif-mirror-model-registration.integration.test.ts = 1 fail(SHA 乖離検出)
+→ revert(cmp identical 確認)
+→ 同テスト = 5 pass / 0 fail
+```
+
+### 判定
+
+FR-E3「新規プロトコル(mirror lifecycle)へモデルが供給され検証が回る」は、(i) モデル供給(v2 登録・4 実装ファイル SHA ピン) (ii) TLC 完全探索 verdict 到達 (iii) 欠陥実装写像の反例実出力 (iv) drift 監視の実発火、の4面で成立。TLC の CI 恒常実行のみ #1920(ユーザー裁定による切り出し)へ委譲。
