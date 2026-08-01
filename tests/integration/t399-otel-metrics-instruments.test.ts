@@ -31,6 +31,7 @@ import { supplyTokenUsage } from "../../dist/claude/.claude/otel/resource-suppli
 // tree is what a harness runs, but only the canonical tree is what CI measures
 // for coverage, and these are two module graphs with two sets of singletons.
 import { ensureOtelBootstrap as ensureOtelBootstrapSrc } from "../../packages/framework/core/otel/bootstrap.ts";
+import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   markDurationStart as markDurationStartSrc,
   observeCanonicalEventForMetrics as observeSrc,
@@ -373,30 +374,39 @@ describe("walking skeleton — the SessionStart hook's supply reaches a store ro
 });
 
 describe("the canonical copy behaves identically (dist is a projection, not a fork)", () => {
-  // FIRST in this block on purpose: the stage-graph loader memoises its parse
-  // per process and exposes no reset, so once a later case has loaded the graph
-  // successfully the unreadable path is unreachable for the rest of the run.
-  test("an unreadable stage graph costs the phase dimension, not the measurement", () => {
+  // The stage-graph loader memoises its parse per process, so a case that
+  // points the env seam somewhere new is only measuring its own path if the
+  // memo is dropped on BOTH sides of the swap. Driving that through the
+  // exported reset seam is what makes these two cases independent of the order
+  // they are declared in — before, the unreadable-graph case was unreachable
+  // once any earlier case had loaded a graph successfully.
+  function withStageGraph(path: string, fn: () => void): void {
     const saved = process.env.AMADEUS_STAGE_GRAPH;
-    process.env.AMADEUS_STAGE_GRAPH = join(proj, "no-such-stage-graph.json");
+    process.env.AMADEUS_STAGE_GRAPH = path;
+    _resetStageGraphForTests();
     try {
+      fn();
+    } finally {
+      if (saved === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = saved;
+      _resetStageGraphForTests();
+    }
+  }
+
+  test("an unreadable stage graph costs the phase dimension, not the measurement", () => {
+    withStageGraph(join(proj, "no-such-stage-graph.json"), () => {
       ensureOtelBootstrapSrc(proj);
       observeSrc(proj, "amadeus.stage.started", { Stage: "code-generation", Agent: "developer" });
       observeSrc(proj, "amadeus.stage.completed", { Stage: "code-generation", Details: "done" });
       expect(measurementsOf("amadeus.stage.duration")[0]!.attributes).toEqual({ "amadeus.stage": "code-generation" });
-    } finally {
-      if (saved === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
-      else process.env.AMADEUS_STAGE_GRAPH = saved;
-    }
+    });
   });
 
   test("the stage pair resolves the phase from the graph", () => {
     // The canonical tree ships no compiled stage graph — that data file is a
     // packaging artefact — so point the loader's documented env seam at the
     // shipped one rather than asserting the phase is unresolvable here.
-    const saved = process.env.AMADEUS_STAGE_GRAPH;
-    process.env.AMADEUS_STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
-    try {
+    withStageGraph(join(AMADEUS_SRC, "tools", "data", "stage-graph.json"), () => {
       ensureOtelBootstrapSrc(proj);
       observeSrc(proj, "amadeus.stage.started", { Stage: "code-generation", Agent: "developer" });
       observeSrc(proj, "amadeus.stage.completed", { Stage: "code-generation", Details: "done" });
@@ -404,10 +414,7 @@ describe("the canonical copy behaves identically (dist is a projection, not a fo
         "amadeus.stage": "code-generation",
         "amadeus.phase": "construction",
       });
-    } finally {
-      if (saved === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
-      else process.env.AMADEUS_STAGE_GRAPH = saved;
-    }
+    });
   });
 
   test("a marker the filesystem refuses to read as a file yields no measurement", () => {
