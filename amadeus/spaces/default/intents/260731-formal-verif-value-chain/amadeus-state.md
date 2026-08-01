@@ -6,7 +6,7 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-07-31T08:29:21Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Harness**: claude-code
 - **Worktree Path**:
 - **Bolt Refs**: [u1-runner-relocation, u5-advisories-channel, u3-boundary-guard, u4-tools-distribution, u6-impl-only-path, u7-mirror-model, u8-e2e-acceptance]
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 15
-- **Completed**: 12
-- **In Progress**: code-generation
+- **Completed**: 13
+- **In Progress**: build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -77,8 +77,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [?] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — EXECUTE
 
@@ -93,16 +93,16 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: build-and-test
+- **Next Stage**: formal-model-check
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-01T11:30:45Z
+- **Last Updated**: 2026-08-01T11:45:22Z
 
 - **Swarm Gated Batch Approvals**: 1, 2, 3, 4
 ## Session Resume Point
-- **Last Completed Stage**: nfr-design
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: code-generation
+- **Next Action**: Execute Build And Test
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
