@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OBB5-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用するが2点の留保: (1) 本規則は prose 規律であり、required-sections センサーが既に持つ heading-set override(amadeus/spaces/<space>/memory/templates/<artifact>.md、manifest の Heading-set overrides 節で prose 由来 heading set より優先と明記)が同じ検査を決定的に行える — templates/ は現在 .gitkeep のみで未使用のため今は prose で採るが、次回の週次蒸留ラウンド(cid:requirements-analysis:weekly-distillation-round)で templates/requirements.md への機械化候補として再判定すること。(2) 適用範囲を『直前 sibling record が実在する series 型バッチ intent の必須節集合照合』に限定し、全ステージへの『毎回前 record を開く』儀式へ肥大させないこと。",
+      "rationale": "choice 1(c2 一般化を採用)。実測: (a) RA diary Deviations に『reviewer iteration 1 が Major 1件(Step 10 必須7節のうち5節欠落)』と直前 sibling が7節完備である旨を確認。(b) requirements.md の Review — Iteration 1 が NOT-READY/Major 1件(Intent 分析・非機能要件・制約・前提・未解決事項の5節欠落)、Iteration 2 が READY 指摘0件 — iteration 1 が実際に消費されたことを成果物上で確認。(c) grep -n '^## ' の対照: batch-4 requirements.md = 承認系譜/Intent 分析/機能要件/非機能要件/制約/前提/スコープ外/未解決事項(必須7節完備)、batch-5 = 是正後14 H2。(d) 新規性: amadeus/spaces/default/memory/ を grep したところ、cid:requirements-analysis:consumes-first-drafting(team.md:231)・cid:nfr-design:body-derivation-before-header(project.md:184)・cid:functional-design:c12 はいずれも『上流入力(consumes)の参照様式と記載順序』のみを縛り、ステージ契約の必須節集合そのものを照合する規則は存在しない。(e) センサー射程: .claude/sensors/amadeus-required-sections.md の default mode は『at least 2 H2 headings』の floor のみで節名を見ず、diary も5節欠落時に『センサー全 PASSED』と記録している — 既存センサーは本欠陥に対して構造的に盲。よって『既存様式ノルム+required-sections の射程内』とする choice 2 は実測で成立せず、c2 には固有の被覆面がある。c1(ユーザー裁定2件)は裁定記録であって横断適用可能な practice ではないため不採用に同意。",
+      "submittedAt": "2026-08-01T02:35:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OBB5-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "留保2点。(1) 恒久解は prose でなく機械化: required-sections センサーは heading-set テンプレート層を既に実装しており(.claude/sensors/amadeus-required-sections.md § 'Heading-set overrides' の path 1、.claude/tools/amadeus-sensor-required-sections.ts:156-165 の解決順)、amadeus/spaces/default/memory/templates/requirements.md を置けば必須節集合が決定的に検査される。実測でこのディレクトリは .gitkeep のみ、framework default templates dir も不在のため requirements.md には何のテンプレも解決せず、汎用 ≥2-H2 floor だけが働いて5節欠落のまま PASSED になった(reviewer の『センサー全 PASSED』と整合)。よって本規則は機械化までの暫定と明記し、次回週次蒸留ラウンドで『機械化(テンプレ設置して prose 削除)』へ回付する。(2) 適用述語を『series 型バッチ intent の直前 sibling 照合』に限定しない: 真の述語は『ステージ契約 Step が必須節集合を宣言している成果物』であり、sibling 成果物は既充足例が手近にある場合の便宜プロキシにすぎない。sibling が存在しない初回 intent でも同じ欠落は起こるため、条文は契約 Step の mandated sections 照合を主、sibling 照合を副として書く。",
+      "rationale": "採用側に立つ根拠: 既存ノルムの守備範囲を grep で実測したところ、cid:requirements-analysis:consumes-first-drafting(team.md:231)と cid:functional-design:c12(project.md:254)はいずれも上流入力ヘッダと consumes 実参照行の様式を縛るのみで、ステージ契約の必須節集合には触れていない。required-sections センサーも現行設定では汎用 H2 floor のみで節名を見ない(上記留保(1)の実測)。すなわち本件の欠落クラスは prose・機械のどちらにも捕捉されていない実ギャップであり、実害も iteration 1 消費として実測済み(batch-5 requirements.md の Review — Iteration 1 が Major 1件、Iteration 2 で閉包 / 対照の batch-4 は7必須節完備)。c1 の不採用にも同意 — ユーザー裁定2件は questions ファイルと record に固定済みの裁定記録であり、再現可能な行動規則ではないため §13 学習には当たらない。",
+      "submittedAt": "2026-08-01T02:21:10Z"
+    }
+  ],
+  "late": []
+}

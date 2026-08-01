@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OBB5-BTS13",
+  "voter": "subagent-2",
+  "question": "260801-open-bug-batch-5 build-and-test の §13 学習選定。候補: c1(full baseline green・AC-2c 実環境閉包・FR-10 追加編入着地)は既存 cid(bt-20260730-1 の Comprehensive 執行形・verdict-names-unverified-facets)の実例、c2(stash 誤適用の申告 — 実害なし・自己捕捉/CodeRabbit 反証)は既存 cid(stash-discipline / falling-proof-no-stash)の違反実例記録。いずれも新規規則を導かないため 0 件を提案する。反対材料があれば record(BT diary・build-test-results.md・PR #1895)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件(両候補とも既存 cid の実例扱い)"
+    }
+  ]
+}

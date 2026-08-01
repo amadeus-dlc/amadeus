@@ -1,6 +1,10 @@
 # 技術スタック
 
-## perf 分離の技術断面（260731-perf-ci-separation、現在、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の技術断面（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+
+- 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は #1850 の OTel ファミリー到着（`packages/framework/core/otel/` 18モジュール、bun ランタイム内 OTel API 互換層 — 外部依存追加なし）と perf tier（`tests/perf/`+`perf.yml`）で、いずれも詳細は前節（260731-perf-ci-separation）と `re-scans/260801-open-bug-batch-5.md` に委ねる。
+
+## perf 分離の技術断面（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line と件数はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

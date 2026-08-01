@@ -1,6 +1,10 @@
 # コンポーネント棚卸し
 
-## perf 分離の対象コンポーネント（260731-perf-ci-separation、現在、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+
+- 判断: 新規コンポーネントなし。対象は既存5クラスタ（mirror 状態機械 / engine state / OTel bootstrap 系 / graph 合成 / metrics publication）の欠陥修正のみ。区間で到着した OTel 18モジュールの目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-open-bug-batch-5.md` を正本とする。
+
+## perf 分離の対象コンポーネント（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

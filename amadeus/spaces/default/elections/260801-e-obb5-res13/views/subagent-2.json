@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OBB5-RES13",
+  "voter": "subagent-2",
+  "question": "260801-open-bug-batch-5 reverse-engineering の §13 学習選定。候補: c1「クロスレビュー2名成立済みバグバッチの RE は、レビュー verdict(検証 SHA = observed)を Developer scan の一次入力とし、conductor の verbatim スポット再実測+患部ファイルの区間 touch 判定で二重化する — 区間 touch があってもレビュー検証 SHA が observed と一致すれば行番号再解決は不要」(project 層、cid:reverse-engineering 系)。c2 は既存 cid:code-generation:disk-evidence-early-takeover の違反なし実例、c3 は既存 cid:reverse-engineering:re-sensors-codekb-filter-mismatch の実例のため、いずれも既存 cid の実例記録に留め persist しない提案。根拠は record の re-scans/260801-open-bug-batch-5.md と stage diary を実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件(c1 も既存ノルム crossreviewed-bug-batch 先例から導出可能とみなす)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c1 のみ採用(c2/c3 は既存 cid の実例扱い)"
+    }
+  ]
+}

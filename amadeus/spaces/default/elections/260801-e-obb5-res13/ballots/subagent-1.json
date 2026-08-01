@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB5-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c1 の後半(区間 touch があってもレビュー検証 SHA = observed なら行番号再解決は不要)は既存 cid:reverse-engineering:upstream-cite-reresolve-on-shift の適用除外条件であるため、独立 cid を新設せず同 cid への追補として persist し、新 cid 本体は前半(クロスレビュー verdict を Developer scan の一次入力とし conductor の verbatim スポット再実測+区間 touch 判定で二重化する scan mode)に限定すること。",
+  "rationale": "実測確認: (1) memory 層の cid:reverse-engineering:* 全 27 件を grep したが、クロスレビュー verdict を scan 一次入力に据える規則も、その二重化手順も不在。ballot view choice 1 が言う『既存ノルム crossreviewed-bug-batch 先例』に対応する cid は存在せず、隣接する bug-batch 由来 cid(c1-preexisting-pr-inventory / c2-observed-mainline-commit)はいずれも別の面を扱う。よって c1 は既存ノルムから導出できない。(2) upstream-cite-reresolve-on-shift は現行文面では区間の行挿入時に無条件の再解決を命じており、本 RE が 7 ファイルで再解決を省いた判断は、除外条件を明文化しない限り無申告逸脱と区別できない。逸脱の常態化を防ぐ点で persist の価値が高い。(3) 前提の実測: c49e385ac は origin/main tip として実在、da51af375 はその祖先(merge-base --is-ancestor exit 0)、患部ファイル(amadeus-utility.ts / amadeus-session-end.ts)の区間内 touch は 771afe2a2(#1850)単独で re-scans 記録の主張と一致。(4) c2/c3 は既存 cid(disk-evidence-early-takeover / re-sensors-codekb-filter-mismatch)の実例であり、非 persist の提案に同意。",
+  "submittedAt": "2026-08-01T01:27:06Z"
+}
