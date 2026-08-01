@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 552,
+    "total": 557,
     "enumeratedByClass": {
-      "function": 311,
+      "function": 316,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 155,
+      "function": 156,
       "audit": 34,
       "scope": 10,
       "stage": 8,
@@ -2549,6 +2549,10 @@
         {
           "file": "tests/unit/t355-plugin-scope-optin.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t397-composed-scope-drop-compose.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -2918,6 +2922,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:perUnitLineOf",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:PHASE_NUMBERS",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3073,6 +3084,13 @@
     {
       "unitClass": "function",
       "unitId": "function:readStateFile",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:rebuildDerivedPlanFields",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3248,6 +3266,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:renderStageProgressSection",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:replaceSection",
       "minMechanism": "none",
       "coveredBy": [
@@ -3257,6 +3282,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:replaceStageProgressSection",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3434,6 +3466,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resyncStateToStageGraph",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t394-compose-state-resync.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4249,6 +4293,10 @@
         {
           "file": "tests/integration/t378-hook-canonical-emit.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t396-session-end-tracer-seam.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t30-hook-session-end.test.ts",
@@ -5136,6 +5184,10 @@
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
@@ -6327,6 +6379,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t191-composed-scope-write.test.ts",
           "mechanism": "cli"
         },
@@ -6383,6 +6439,10 @@
         },
         {
           "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t394-compose-state-resync.integration.test.ts",
           "mechanism": "cli"
         },
         {

@@ -54,6 +54,11 @@ type StateResult =
   | { kind: "ok"; snapshot: MirrorStateSnapshot }
   | { kind: "failed"; summary: string };
 
+// A receipt ready to act on, or the outcome to return when it cannot be made ready.
+type ReadyReceipt =
+  | { kind: "ready"; snapshot: MirrorStateSnapshot; receipt: MirrorOperationReceipt }
+  | { kind: "outcome"; outcome: MirrorOperationOutcome };
+
 function auditContext(
   context: MirrorExecutionContext,
   operationId: string | undefined,
@@ -523,7 +528,7 @@ function complete(
         true,
         "outcome-unknown",
       );
-      applyTransition(
+      const recorded = applyTransition(
         ports,
         context,
         latest.snapshot,
@@ -537,6 +542,14 @@ function complete(
         true,
         "state-write",
       );
+      // A warning that was never persisted must not be reported as recorded.
+      if (recorded.kind === "failed") {
+        return stateFailure(
+          context,
+          latestReceipt.operationId,
+          `${postRemoteWarning.summary}; the outcome could not be recorded: ${recorded.summary}`,
+        );
+      }
       return {
         kind: "safety-blocked",
         operation: context.operation,
@@ -603,7 +616,16 @@ async function classifyCreateState(
       candidate: ReturnType<typeof classifyCandidates>;
     }
 > {
-  const marker = renderMirrorMarker(receipt.createIdentity);
+  // A linked mirror is searched and verified on its recorded provenance: the
+  // remote marker carries the create identity of the first create, so keying
+  // the search on this receipt's fresh identity would find nothing and let a
+  // second Issue be created.
+  const linkedProvenance =
+    snapshot.issueNumber !== null && snapshot.provenance
+      ? snapshot.provenance
+      : null;
+  const searchIdentity = linkedProvenance?.createIdentity ?? receipt.createIdentity;
+  const marker = renderMirrorMarker(searchIdentity);
   const found = await context.gateway.findIssuesByMarker(
     context.repository,
     marker,
@@ -642,7 +664,7 @@ async function classifyCreateState(
   for (const candidate of found.value) {
     const ownership = verifyOwnership({
       remoteIssue: candidate,
-      localProvenance: {
+      localProvenance: linkedProvenance ?? {
         schema: 1,
         createIdentity: receipt.createIdentity,
         issueNumber: candidate.number,
@@ -652,8 +674,9 @@ async function classifyCreateState(
     if (ownership.kind === "verified") verified.push(candidate);
     else mismatches += 1;
   }
-  const localState =
-    receipt.status === "prepared"
+  const localState = linkedProvenance
+    ? "provenance-present"
+    : receipt.status === "prepared"
       ? "fresh-prepared"
       : receipt.status === "pending" &&
           receipt.lastEffect === "no-effect-confirmed"
@@ -666,8 +689,40 @@ async function classifyCreateState(
       verifiedCandidates: verified,
       mismatchCandidateCount: mismatches,
       localCreateIdentity: receipt.createIdentity,
+      ...(linkedProvenance ? { provenance: linkedProvenance } : {}),
       now: context.now(),
     }),
+  };
+}
+
+// Completion is only reachable from an attempted receipt. Both settlement
+// paths that meet an already-converged remote (an adopted create candidate, an
+// already CLOSED Issue) claim the attempt through here, so neither can drift
+// into completing straight from `prepared`.
+function claimPreparedAttempt(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  snapshot: MirrorStateSnapshot,
+  receipt: MirrorOperationReceipt,
+): ReadyReceipt {
+  if (receipt.status !== "prepared") return { kind: "ready", snapshot, receipt };
+  const attempted = markAttempted(
+    ports,
+    context,
+    snapshot,
+    receipt,
+    "mark-attempted",
+  );
+  if (attempted.kind === "failed") {
+    return {
+      kind: "outcome",
+      outcome: stateFailure(context, receipt.operationId, attempted.summary),
+    };
+  }
+  return {
+    kind: "ready",
+    snapshot: attempted.snapshot,
+    receipt: requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
   };
 }
 
@@ -678,28 +733,13 @@ function adoptCreateCandidate(
   receipt: MirrorOperationReceipt,
   issue: RemoteMirrorIssue,
 ): MirrorOperationOutcome {
-  if (receipt.status !== "prepared") {
-    return complete(ports, context, snapshot, receipt, issue, true);
-  }
-  const attempted = markAttempted(
-    ports,
-    context,
-    snapshot,
-    receipt,
-    "mark-attempted",
-  );
-  if (attempted.kind === "failed") {
-    return stateFailure(context, receipt.operationId, attempted.summary);
-  }
-  const attemptedReceipt = requireReceipt(
-    attempted.snapshot,
-    context,
-  ) as MirrorOperationReceipt;
+  const claimed = claimPreparedAttempt(ports, context, snapshot, receipt);
+  if (claimed.kind === "outcome") return claimed.outcome;
   return complete(
     ports,
     context,
-    attempted.snapshot,
-    attemptedReceipt,
+    claimed.snapshot,
+    claimed.receipt,
     issue,
     true,
   );
@@ -1256,13 +1296,20 @@ async function executeLinked(
       ensured.receipt,
     );
     if (authorizationFailure) return authorizationFailure;
-    return complete(
+    const claimed = claimPreparedAttempt(
       ports,
       context,
       ensured.snapshot,
       ensured.receipt,
+    );
+    if (claimed.kind === "outcome") return claimed.outcome;
+    return complete(
+      ports,
+      context,
+      claimed.snapshot,
+      claimed.receipt,
       viewed.issue,
-      ensured.receipt.status !== "prepared",
+      true,
     );
   }
   const reconciled = reconcileLinkedReceipt(

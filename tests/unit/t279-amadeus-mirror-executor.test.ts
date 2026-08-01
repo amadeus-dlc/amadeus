@@ -116,10 +116,15 @@ class FakeGateway implements MirrorGitHubGateway {
       state: "OPEN",
     });
   }
-  async findIssuesByMarker(): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
+  // Faithful to the real gateway: only issues whose body carries the searched
+  // marker come back, so a search keyed on the wrong identity finds nothing.
+  async findIssuesByMarker(
+    _repository: Parameters<MirrorGitHubGateway["findIssuesByMarker"]>[0],
+    marker: Parameters<MirrorGitHubGateway["findIssuesByMarker"]>[1],
+  ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
     this.history.push("find");
     if (this.findResult) return this.findResult;
-    return ok(this.candidates);
+    return ok(this.candidates.filter((candidate) => candidate.body.includes(marker)));
   }
   async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("view");
@@ -320,6 +325,41 @@ describe("t279 create", () => {
     const gateway = new FakeGateway();
     const outcome = await executeMirrorOperation({
       context: context("create", gateway),
+      ports: store.ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
+  // FR-1: a create that reaches an already-linked mirror must search on the
+  // recorded provenance identity (the identity the remote marker carries) and
+  // adopt the linked Issue instead of creating a second one.
+  test("create under an existing link adopts the linked Issue without creating", async () => {
+    const initial = linkedState();
+    const store = memoryStore(initial);
+    const gateway = new FakeGateway();
+    gateway.candidates = [issue()];
+    const outcome = await executeMirrorOperation({
+      context: { ...context("create", gateway), newOperationId: () => "op-2" },
+      ports: store.ports,
+      localState: initial,
+    });
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "create",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["readiness", "find"]);
+    expect(store.state().provenance?.createIdentity.operationId).toBe("op-1");
+  });
+
+  test("create under an existing link fails closed when the linked Issue is unverifiable", async () => {
+    const initial = linkedState();
+    const store = memoryStore(initial);
+    const gateway = new FakeGateway();
+    const outcome = await executeMirrorOperation({
+      context: { ...context("create", gateway), newOperationId: () => "op-2" },
       ports: store.ports,
       localState: initial,
     });
@@ -869,5 +909,177 @@ describe("t279 sync and close convergence", () => {
       },
     });
     expect(gateway.history).not.toContain("close");
+  });
+});
+
+// FR-2 (#1860): a close boundary that finds the Issue already CLOSED settles
+// the receipt without a close call. The receipt may still be `prepared` — the
+// combination the suite never covered — and completion is only reachable from
+// an attempted receipt, so the short circuit has to claim the attempt first.
+describe("t279 close of an already closed Issue", () => {
+  const closeEvent = mirrorEventIdentity(
+    "intent-1",
+    { kind: "manual", instance: "manual-close" },
+    "close",
+  );
+  const syncEvent = mirrorEventIdentity(
+    "intent-1",
+    { kind: "workflow-completed", instance: "complete-1" },
+    "sync",
+  );
+  const syncKey = mirrorEventKey(syncEvent);
+  const closeKey = mirrorEventKey(closeEvent);
+  const closeAuthorization = {
+    kind: "manual" as const,
+    event: closeEvent,
+    operation: "close" as const,
+    boundaryInstance: closeEvent.boundary.instance,
+    receiptRevision: 1,
+    invocationId: closeEvent.boundary.instance,
+    finalSyncReceiptKey: syncKey,
+  };
+
+  function fixture() {
+    const gateway = new FakeGateway();
+    gateway.viewed = { ...issue(), state: "CLOSED" };
+    const closeContext: MirrorExecutionContext = {
+      ...context("close", gateway),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
+    };
+    const initial: MirrorStateSnapshot = {
+      ...linkedState(),
+      revision: 1,
+      receipts: {
+        [closeKey]: {
+          key: closeKey,
+          event: closeEvent,
+          operationId: "op-close",
+          status: "prepared" as const,
+          preparedAt: NOW,
+          authorization: closeAuthorization,
+        },
+        [syncKey]: {
+          key: syncKey,
+          event: syncEvent,
+          operationId: "op-sync-final",
+          status: "succeeded" as const,
+          preparedAt: NOW,
+          attemptedAt: NOW,
+          completedAt: NOW,
+          authorization: authorization(syncEvent, "sync"),
+        },
+      },
+    };
+    return { gateway, closeContext, initial };
+  }
+
+  // Select the write to fail by what it records, not by its ordinal: a write
+  // count changes with any extra state step and would silently fail a
+  // different write while the assertions still pass.
+  function closeReceiptStatusIn(text: string) {
+    const parsed = parseMirrorStateDocument(text);
+    return parsed.kind === "invalid"
+      ? null
+      : (parsed.snapshot.receipts[closeKey]?.status ?? null);
+  }
+
+  test("a prepared receipt converges on completion without a close call", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: store.ports,
+      localState: initial,
+    });
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "close",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["view"]);
+    expect(store.state().receipts[closeKey]?.status).toBe("succeeded");
+    // The attempt was claimed on the way through, not skipped.
+    expect(store.state().receipts[closeKey]?.attemptedAt).toBe(NOW);
+  });
+
+  // The post-remote recovery record must actually reach warnings[]: a warning
+  // that is only returned, never persisted, leaves the failure invisible.
+  test("a failed completion write is recorded as a state-write warning", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          // Fail only the completion write; the recovery write must land.
+          return closeReceiptStatusIn(text) === "succeeded"
+            ? { kind: "io-failure", summary: "disk full" }
+            : writeDocumentAtomic(text);
+        },
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write", effect: "outcome-unknown" },
+    });
+    expect(gateway.history).toEqual(["view"]);
+    expect(
+      store.state().warnings.map((w) => w.classification),
+    ).toContain("state-write");
+  });
+
+  test("an unclaimable attempt blocks before completion", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic: () => ({ kind: "io-failure", summary: "disk full" }),
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write" },
+    });
+    expect(store.state().receipts[closeKey]?.status).toBe("prepared");
+    expect(gateway.history).toEqual(["view"]);
+  });
+
+  // If the recovery record itself cannot be written, the caller must hear that
+  // nothing was recorded rather than receive a warning that never landed.
+  test("an unrecordable recovery is reported instead of returned silently", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          // Both the completion write and the recovery record fail.
+          const status = closeReceiptStatusIn(text);
+          return status === "succeeded" || status === "pending"
+            ? { kind: "io-failure", summary: "disk full" }
+            : writeDocumentAtomic(text);
+        },
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write", retryable: false },
+    });
+    expect(store.state().warnings).toHaveLength(0);
+    expect(gateway.history).toEqual(["view"]);
   });
 });

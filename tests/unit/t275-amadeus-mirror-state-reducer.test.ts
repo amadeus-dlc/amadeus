@@ -150,6 +150,44 @@ describe("attempt / complete", () => {
     );
     expect(r.kind).toBe("invalid");
   });
+
+  // A second create completion must not relink a already-linked mirror onto a
+  // different Issue: sync/close already guard the number, create did not.
+  const linkedThenSecondCreate = (issueNumber: number) => {
+    const linked = apply(attempted(), {
+      kind: "complete",
+      event: ev("create"),
+      issueNumber: 42,
+      completedAt: NOW,
+      createdAt: NOW,
+    });
+    const second = apply(
+      apply(linked, { ...prepareCreate, event: ev("create", "i2"), operationId: "op-2" }),
+      { kind: "mark-attempted", event: ev("create", "i2"), attemptedAt: NOW },
+    );
+    return reduceMirrorState(
+      second,
+      {
+        kind: "complete",
+        event: ev("create", "i2"),
+        issueNumber,
+        completedAt: NOW,
+        createdAt: NOW,
+      },
+      NOW,
+    );
+  };
+
+  test("create complete onto a different issue number is invalid when already linked", () => {
+    expect(linkedThenSecondCreate(43).kind).toBe("invalid");
+  });
+
+  test("create complete on the linked issue keeps the original provenance identity", () => {
+    const result = linkedThenSecondCreate(42);
+    if (result.kind !== "changed") throw new Error(`expected changed, got ${result.kind}`);
+    expect(result.snapshot.issueNumber).toBe(42);
+    expect(result.snapshot.provenance?.createIdentity.operationId).toBe("op-1");
+  });
 });
 
 describe("pending / retry", () => {
@@ -171,6 +209,23 @@ describe("pending / retry", () => {
     const r = pending("no-effect-confirmed").receipts[mirrorEventKey(ev("create"))];
     expect(r.status).toBe("pending");
     expect(r.lastEffect).toBe("no-effect-confirmed");
+  });
+
+  // The post-remote recovery record must be issuable from a prepared receipt
+  // too, otherwise a remote success whose local write failed cannot be recorded
+  // at all. The attempt it reports on did happen, so it is stamped here.
+  test("mark-pending from prepared records the attempt it reports on", () => {
+    const s = apply(apply(EMPTY, prepareCreate), {
+      kind: "mark-pending",
+      event: ev("create"),
+      effect: "outcome-unknown",
+      warning: warn("op-1", "outcome-unknown"),
+    });
+    const r = s.receipts[mirrorEventKey(ev("create"))];
+    expect(r.status).toBe("pending");
+    expect(r.lastEffect).toBe("outcome-unknown");
+    expect(r.attemptedAt).toBe(NOW);
+    expect(s.warnings).toHaveLength(1);
   });
 
   test("retry-after-no-effect only from pending+no-effect-confirmed", () => {

@@ -28,7 +28,12 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
-import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
+import {
+  resolveProjectDirFromHook,
+  resyncStateToStageGraph,
+  type StageEntry,
+  type StateResyncOutcome,
+} from "./amadeus-lib.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   applyPluginDrop,
@@ -93,7 +98,7 @@ export type DoctorLineState = "ok" | "drift" | "degraded" | "advisory" | "recove
 export type DoctorLine = { plugin: string; state: DoctorLineState; detail: string };
 
 export type PluginCliResult =
-  | { kind: "composed"; applied: number; recompiled: true }
+  | { kind: "composed"; applied: number; recompiled: true; resynced: readonly string[] }
   | { kind: "composed-all"; total: number; succeeded: number; failures: readonly BulkComposeFailure[] }
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
@@ -206,6 +211,10 @@ export type PluginCliDeps = {
   copyPluginSource: (src: string, dst: string) => void;
   listHarnessTrees: (projectDir: string) => readonly string[];
   listPluginSourceDirs: (root: string) => readonly string[];
+  // Post-compose Stage Progress re-sync (#1849). Optional so a stub deps bag
+  // stays a pure compose harness; defaultPluginCliDeps always wires the real
+  // writer, which is what production composes run.
+  resyncIntentStates?: (hostRoot: string) => readonly StateResyncOutcome[];
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -347,6 +356,31 @@ function spawnRunnerGen(projectRoot: string): boolean {
   return res.status === 0;
 }
 
+// The amadeus workspace root for a plugin host root. The host root is the
+// HARNESS dir (<project>/.claude — see defaultPluginHostRoot), and the workspace
+// (amadeus/spaces/…/intents) lives one level above it. In the canonical source
+// layout there is no harness leaf, so the host root already IS the project dir.
+export function projectDirOfHostRoot(hostRoot: string): string {
+  return isHarnessDirName(basename(hostRoot)) ? dirname(hostRoot) : hostRoot;
+}
+
+// The host's OWN compiled graph, read fresh off disk. Not lib's cached
+// loadStageGraph(): that resolves relative to the EXECUTING copy of the tools
+// (wrong when `--project-root` names another harness) and its module cache
+// could predate the recompile this re-sync follows. Falls back to the cached
+// loader when the host carries no compiled graph of its own.
+function hostStageGraph(hostRoot: string): StageEntry[] | undefined {
+  const p = join(hostRoot, "tools", "data", "stage-graph.json");
+  if (!existsSync(p)) return undefined;
+  return JSON.parse(readFileSync(p, "utf-8")) as StageEntry[];
+}
+
+function resyncIntentStates(hostRoot: string): readonly StateResyncOutcome[] {
+  return resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
+    graph: hostStageGraph(hostRoot),
+  });
+}
+
 export function defaultPluginCliDeps(): PluginCliDeps {
   return {
     discoverPlugins: (root) => discoverPlugins(root),
@@ -366,6 +400,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     listHarnessTrees,
     listPluginSourceDirs,
+    resyncIntentStates,
     out: (l) => console.log(l),
     err: (l) => console.error(l),
   };
@@ -683,7 +718,16 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
   if (!deps.generateRunners(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "stage-runner generation failed after compose" };
   }
-  return { kind: "composed", applied, recompiled: true };
+  // The composed graph now carries stages no RUNNING intent's state file knows
+  // about; `next` would issue them and `report` would refuse them (#1849). This
+  // runs LAST, after the graph on disk is the composed one.
+  const resync = deps.resyncIntentStates?.(hostRoot) ?? [];
+  return {
+    kind: "composed",
+    applied,
+    recompiled: true,
+    resynced: resync.filter((o) => o.status === "resynced").map((o) => o.intent),
+  };
 }
 
 // `install <path>`: stage the source folder under PLUGIN_SOURCE_DIR_NAME, then
@@ -969,7 +1013,10 @@ export function runPluginCli(argv: readonly string[], deps: PluginCliDeps = defa
 export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDeps): number {
   switch (result.kind) {
     case "composed":
-      deps.out(`composed ${result.applied} plugin(s), recompiled`);
+      deps.out(
+        `composed ${result.applied} plugin(s), recompiled` +
+          (result.resynced.length > 0 ? `, re-synced ${result.resynced.join(", ")}` : ""),
+      );
       return 0;
     case "composed-all": {
       deps.out(`compose --all-harnesses: ${result.succeeded}/${result.total} harness tree(s) up to date`);
