@@ -4322,7 +4322,7 @@ function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: Swa
   const owed = namedMissingBatches(batches);
   const started = listedBatchNumbers(evidence.startedBatches);
   const completed = listedBatchNumbers(evidence.completedBatches);
-  const declared = `the compiled Bolt DAG declares ${batches.length} parallel batch(es) with no fan-out on record — ${owed}`;
+  const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
   const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
   const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
