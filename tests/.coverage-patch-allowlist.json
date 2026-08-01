@@ -151,13 +151,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1643-1648",
+    "lines": "1648-1653",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1647-1652",
+    "lines": "1652-1657",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
@@ -1699,11 +1699,6 @@
     "lines": "358-393",
     "reason": "Live Node adapter ports (NodeJavaVersionPort java -version, NodeTlcProcessPort process-group spawn) exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install.",
     "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
-  },
-  {
-    "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
-    "lines": "1838",
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
   },
   {
     "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
