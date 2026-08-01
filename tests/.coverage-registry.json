@@ -3560,6 +3560,10 @@
         {
           "file": "tests/integration/t394-compose-state-resync.integration.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t406-compose-host-graph-guard.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
