@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OBB5-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c1 は独立 cid でなく cid:reverse-engineering:upstream-cite-reresolve-on-shift への追補として相互参照を明記し、行番号再解決の免除条件を『当該引用が observed と一致する SHA で検証済みであること』に限定して書くこと(区間 touch のみを根拠とした一般免除へ拡大しない)。",
+  "rationale": "実測で c2/c3 は既存 cid の実例に留まると確認: cid:code-generation:disk-evidence-early-takeover(team.md:223)は『ディスク兆候での早期引き取り+検証省略なし』を既に定めており diary Deviations:9 はその準拠実例、cid:reverse-engineering:re-sensors-codekb-filter-mismatch(project.md:149)は RE センサー3種の filter 不適合を既に知識クラスとして持ち diary Deviations:10 は再実例。一方 c1 は既存ノルムから導出できない2点を含む: (a) クロスレビュー verdict を Developer scan の一次入力とする scan mode は memory 層に前例なし(grep で crossreviewed-bug-batch 系 RE 規則は 0 件、issue-cross-review はバッチ編入の前提を定めるのみで RE 入力面は未カバー)。(b) 行番号再解決の免除条件は upstream-cite-reresolve-on-shift(project.md:226)の素直な読みでは『区間内で同一ファイルへ挿入があれば再解決』となり、本 RE の #1850 touch 7ファイル(re-scans:95)は再解決対象に見える — レビュー検証 SHA = observed(c49e385ac)であれば不要という限定は当該 cid に不在で、明文化しないと次回バッチで冗長な再解決か逆に無検証の免除を招く。バグバッチ RE は batch 2/3/4/5 と反復しており再利用価値が高い。",
+  "submittedAt": "2026-08-01T02:05:00Z"
+}

@@ -743,5 +743,12 @@
     "dirName": "260729-otel-upstream",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fbae3-a898-7dcd-b1df-420bf3945066",
+    "slug": "open-bug-batch-5",
+    "dirName": "260801-open-bug-batch-5",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

@@ -1,6 +1,13 @@
 # アーキテクチャ
 
-## perf 検証の CI 分離が触れる機構（260731-perf-ci-separation、現在、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+
+本節の file:line はすべて observed `c49e385ac` 時点。患部全数・機構詳細・Bolt 交差判定は `re-scans/260801-open-bug-batch-5.md` を正本とする。
+
+- **区間の構造変化（`da51af375` → `c49e385ac`、11 commits）**: (a) `771afe2a2`（#1850）で OTel API ファミリーが唯一の上流として着地 — `packages/framework/core/otel/` 18モジュール（bootstrap の logs arm `:84-104` / traces arm `:108-116` の二分、tracer-provider の二重登録 throw `:205`、fatal-latch、relay）が dist 7面+self-install へ投影された。(b) perf tier 分離（#1848/#1851/#1855/#1859）で `tests/perf/` と `perf.yml` が新設され、ci.yml からベンチマーク3 job が削除された。
+- **本 intent の対象機構は5クラスタ**: (1) mirror 状態機械 — policy の applicable-operations 非対称（`amadeus-mirror-policy.ts:66`）と executor close 短絡の mark-attempted 欠落（`amadeus-mirror-executor.ts:1259-1266`）+mark-pending 死経路（`:527` × reducer `:557-558`）。(2) engine/state — birth scaffold の Construction Autonomy Mode 欠落（`amadeus-utility.ts:4461-`）と report の checkbox 行欠落 fail-closed（`amadeus-orchestrate.ts:4405-4411`、next 側 `:3622-3627` は寛容という非対称）。(3) OTel — fatal-latch の emit 経路不参照（`logger-provider.ts:67-110`）と session-end の seam 迂回直呼び（`hooks/amadeus-session-end.ts:80-81`、latent）。(4) graph 合成 — `mergeComposedScopes` の `knownSlugs` フィルタによる lossy drop→compose（`amadeus-graph.ts:1405-1411`）+実リポジトリ断面 `compile --check` の CI 不在。(5) metrics publication — TOCTOU 偽赤（`scripts/metrics-publication-github.ts:119-134` × `metrics-publication-domain.ts:453-462` の problems 無条件 terminal 化）と maintenance dispatch スキップ（`:536-540`）。
+
+## perf 検証の CI 分離が触れる機構（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 

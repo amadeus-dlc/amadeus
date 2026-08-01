@@ -1,6 +1,15 @@
 # コード構造
 
-## perf 検証面の配置（260731-perf-ci-separation、現在、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+
+本節の file:line はすべて observed `c49e385ac` 時点。全数は `re-scans/260801-open-bug-batch-5.md` を正本とする。
+
+- 患部16ファイル: mirror 4（`packages/framework/core/tools/amadeus-mirror-{coordinator,policy,executor,state-reducer}.ts`）/ engine 4（`amadeus-{utility,orchestrate,lib,bolt}.ts`）/ OTel 4（`otel/{bootstrap,fatal-latch,logger-provider}.ts`、`hooks/amadeus-session-end.ts`）/ graph 1（`amadeus-graph.ts`）/ metrics 2（`scripts/metrics-publication-{github,domain}.ts`）/ 台帳 1（`tests/.coverage-patch-allowlist.json` — :1838 転位エントリの削除のみ）。
+- 区間 touch: 上記のうち #1850 が7ファイルを touch したが、全クロスレビューが #1850 着地後の `c49e385ac` で検証済みのため行番号の再解決は不要。mirror 4・graph・metrics 2 は区間内不変。
+- テスト面: 予約 `t391`〜`t398`。既存拡張候補は t279（mirror close × prepared fixture 欠落）、t222（metrics — problems 由来終端の pin なし）、t33（state scaffold pin 改訂）。
+- dist 同期面: core/tools・otel・hooks を触る Bolt 1-4 は正本1+dist 7+self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。Bolt 5（scripts/）は dist 非対象。
+
+## perf 検証面の配置（260731-perf-ci-separation、履歴、observed `da51af375`）
 
 本節の file:line はすべて observed `da51af375` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
