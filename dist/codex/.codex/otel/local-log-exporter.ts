@@ -15,6 +15,8 @@ import { auditCloneId } from "../tools/amadeus-lib.ts";
 import { telemetryDir } from "../tools/amadeus-observability.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes, scrubCredentials } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
+import { currentResource, redactResource } from "./resource.ts";
+import type { ResourceGetter } from "./resource.ts";
 
 export type DiagnosticLogRecord = {
   readonly name: string;
@@ -44,6 +46,10 @@ export type LocalLogExporterOptions = {
   readonly write?: StoreWrite;
   readonly redaction?: RedactionPolicy;
   readonly warn?: DropNote;
+  // Resolved at the write boundary, like intentId on the metric store: the
+  // resource describes the PROCESS, not the record, so every producer reaching
+  // this exporter gets it without having to carry it (FR-RES-1).
+  readonly resource?: ResourceGetter;
 };
 
 function defaultWrite(path: string, line: string): void {
@@ -74,6 +80,7 @@ export function createLocalLogExporter(options: LocalLogExporterOptions): LocalL
   const write = options.write ?? defaultWrite;
   const policy = options.redaction ?? DEFAULT_REDACTION_POLICY;
   const warn = options.warn ?? defaultWarn;
+  const resource = options.resource ?? (() => currentResource(options.projectDir));
   const storePath = (): string | null => {
     const dir = options.storeDir ?? telemetryDir(options.projectDir);
     if (dir === null || dir === undefined) return null;
@@ -84,7 +91,11 @@ export function createLocalLogExporter(options: LocalLogExporterOptions): LocalL
       try {
         const path = storePath();
         if (path === null) return;
-        const redacted = { ...record, attributes: redactAttributes(record.attributes, policy) };
+        const redacted = {
+          ...record,
+          attributes: redactAttributes(record.attributes, policy),
+          resource: redactResource(resource()),
+        };
         write(path, `${JSON.stringify(redacted)}\n`);
       } catch (cause) {
         // fail-open (FR-EVT-6): diagnostic loss never blocks the workflow. The
