@@ -65,17 +65,17 @@ git から計測する対(`:56` `VCS_RESOURCE_KEYS`)、ハーネスが供給し�
 すべての span は、それが属する作業単位の文脈を運びます。intent や stage で span
 を束ねるのに trace id で監査ジャーナルへ join し直す必要をなくすためです。語彙は
 閉集合で、それを許可する allow-list の隣で定義され
-(`otel/redaction.ts:80-87` `SPAN_CONTEXT_ATTRIBUTE_KEYS`)、resolver から
-再エクスポートされます(`otel/span-context.ts:31`)。
+(`otel/redaction.ts:80-89` `SPAN_CONTEXT_ATTRIBUTE_KEYS`)、resolver から
+再エクスポートされます(`otel/span-context.ts:34`)。
 
 | 属性 | 型 | 供給元 | 省略条件 |
 |---|---|---|---|
-| `amadeus.intent.id` | string | `activeIntent`(`span-context.ts:57-63`) | cursor が解決しないとき — space と同時に省略 |
-| `amadeus.space` | string | `activeSpace`(`span-context.ts:57-63`) | cursor が解決しないとき — intent と同時に省略 |
-| `amadeus.stage` | string | active intent の state ファイルの `Current Stage`(`span-context.ts:76`) | state ファイル不在、または当該フィールド不在 |
-| `amadeus.phase` | string | 同じ state ファイルの `Lifecycle Phase`(`span-context.ts:77`) | state ファイル不在、または当該フィールド不在 |
-| `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE`(`span-context.ts:88`) | 未設定または空のとき |
-| `amadeus.agent.id` | string | `AMADEUS_AGENT_ID`(`span-context.ts:89`) | 未設定または空のとき |
+| `amadeus.intent.id` | string | `activeIntent`(`span-context.ts:60-66`) | cursor が解決しないとき — space と同時に省略 |
+| `amadeus.space` | string | `activeSpace`(`span-context.ts:60-66`) | cursor が解決しないとき — intent と同時に省略 |
+| `amadeus.stage` | string | active intent の state ファイルの `Current Stage`(`span-context.ts:79`) | state ファイル不在、または当該フィールド不在 |
+| `amadeus.phase` | string | 同じ state ファイルの `Lifecycle Phase`(`span-context.ts:80`) | state ファイル不在、または当該フィールド不在 |
+| `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE`(`span-context.ts:110`) | 未設定または空のとき |
+| `amadeus.agent.id` | string | `AMADEUS_AGENT_ID`(`span-context.ts:111`) | 未設定または空のとき |
 | `amadeus.bolt` | string | worktree の Construction マーカー(`span-context.ts:86-99`) | マーカー不在、または unit を名指しているとき |
 | `amadeus.unit` | string | worktree の Construction マーカー(`span-context.ts:86-99`) | マーカー不在、または bolt を名指しているとき |
 
@@ -100,7 +100,7 @@ fork は slug からの推測ではなく判別済みの値を記録します。
 
 ### 解決規則
 
-- **intent/space の対は1ステップで解決します**(`span-context.ts:57-63`)。space
+- **intent/space の対は1ステップで解決します**(`span-context.ts:60-66`)。space
   単独では作業単位を記述しません — intent が住む容器にすぎない — ため、intent の
   ない space を持つバッグは、intent 不明のまま workspace 単位で span を束ねる
   ことを消費側に許してしまいます。
@@ -110,10 +110,10 @@ fork は slug からの推測ではなく判別済みの値を記録します。
   (`otel/logger-provider.ts:94`)。span 属性にその義務はなく、intent で束ねる
   消費側に「どの intent も記述しないフォールバック名のバケツ」を渡してはなりま
   せん。
-- **想定外の失敗は部分文脈でなく文脈なしへ縮退します**(`span-context.ts:90-96`)。
+- **想定外の失敗は部分文脈でなく文脈なしへ縮退します**(`span-context.ts:112-118`)。
   キーは対で解決され、対の半分は観測されていない作業単位を記述するためです。
   span 生成はいずれの場合も継続します。
-- **解決はプロセスごとに一度です**(`span-context.ts:111-116`)。Amadeus のツール
+- **解決はプロセスごとに一度です**(`span-context.ts:133-138`)。Amadeus のツール
   は短命 — 1プロセスが1 intent の1ステージを担って終了する — であり、span end は
   hot path です。メモは workspace をキーとするため、1プロセスで複数の fixture
   workspace を駆動しても、2つ目を1つ目のメモで答えることはありません。
@@ -146,9 +146,9 @@ subprocess span の `Command` / `ExitCode` はスキーマ v1 以前からのも
 ### Stacktrace の redaction
 
 生の stack は全フレームでマシンのユーザー名とディレクトリ構成を名指すため、捕捉
-したままでは保存できません。`redactStacktrace`(`otel/redaction.ts:197-202`)は
+したままでは保存できません。`redactStacktrace`(`otel/redaction.ts:199-204`)は
 パス様のトークンをすべて3つの有界形式のいずれかへ書き換え
-(`redaction.ts:180-189` `rewritePathToken`)、結果を credential scrub します。
+(`redaction.ts:182-191` `rewritePathToken`)、結果を credential scrub します。
 
 | ゾーン | 書換え後の形式 | 規則 |
 |---|---|---|
@@ -156,7 +156,7 @@ subprocess span の `Command` / `ExitCode` はスキーマ v1 以前からのも
 | ホームディレクトリ配下 | `<home>/…` | repo 相対にならなかった場合に適用 |
 | それ以外 | `<external>/…` | フォールバックのゾーンマーカー |
 
-パターンは1つの文字クラスに1つの量指定子(`redaction.ts:174`)であり、入力がどれ
+パターンは1つの文字クラスに1つの量指定子(`redaction.ts:176`)であり、入力がどれ
 ほど敵対的でも1回の線形走査で照合が済みます。自身が出力するマーカーも認識する
 ため書換えは冪等です — 2回目の走査は `<home>/x` を書換え済みの1トークンとして
 扱います。
@@ -302,27 +302,27 @@ Store へ置くことはできず、ポリシー強化前に書かれたレコ�
 | export 境界 | metric store | `local-metric-exporter.ts:78-80` |
 | export 境界 | OTLP Relay | `relay.ts:231-233`、`:310` |
 
-admission は **default-deny** です(`redaction.ts:152-162` `redactAttributes`):
+admission は **default-deny** です(`redaction.ts:154-164` `redactAttributes`):
 safe key と明示 opt-in key のみを通し、通したすべての値を credential scrub します。
 opt-in は生の素通しを意味しません。このパスは冪等で入力を変更しないため、2層が
 安全に合成されます。
 
 ### safe key の3層
 
-本番の safe key 集合(`redaction.ts:89-123` `DEFAULT_REDACTION_POLICY`)は手書き
+本番の safe key 集合(`redaction.ts:91-125` `DEFAULT_REDACTION_POLICY`)は手書き
 リストではなく3つの語彙から導出されます。新しい属性が保存レコードから黙って
 食われることを防ぐためです。
 
 | 層 | 導出元 | 掲載が必要な理由 |
 |---|---|---|
 | registry 語彙 | 登録済み全イベントの required *および* optional 属性(`redaction.ts:66-72`) | それらは設計上の監査フィールド。required 側だけを取ると、optional キーが保存行から消えたまま append は成功と報告された |
-| span 文脈 | `SPAN_CONTEXT_ATTRIBUTE_KEYS`(`redaction.ts:111`) | canonical イベントがこれらを宣言しないため registry 由来のベースラインでは許可できず、default-deny により store と Relay の境界で落ちてしまう |
-| metric 次元 | `INSTRUMENT_ATTRIBUTE_KEYS`(`redaction.ts:117`) | 掲載しないと default-deny が測定値からすべての次元を剥ぎ取ったうえで append を成功と報告してしまう |
+| span 文脈 | `SPAN_CONTEXT_ATTRIBUTE_KEYS`(`redaction.ts:113`) | canonical イベントがこれらを宣言しないため registry 由来のベースラインでは許可できず、default-deny により store と Relay の境界で落ちてしまう |
+| metric 次元 | `INSTRUMENT_ATTRIBUTE_KEYS`(`redaction.ts:119`) | 掲載しないと default-deny が測定値からすべての次元を剥ぎ取ったうえで append を成功と報告してしまう |
 
 これらに加えて、registry 語彙より前から存在する低カーディナリティの運用キーと、
 監査 exporter が付与しうる相関 id が並びます。
 
-opt-in キーは `Command` のみです(`redaction.ts:121`)。これは
+opt-in キーは `Command` のみです(`redaction.ts:123`)。これは
 `amadeus.operation.failed` の required 属性のため落とせず、scrub される opt-in 層
 だけで許可することで、argv 由来の値が credential を含んだまま保存されないように
 しています。
@@ -333,9 +333,9 @@ opt-in キーは `Command` のみです(`redaction.ts:121`)。これは
 `CREDENTIAL_SCRUB_PATTERNS`)を、2つの redaction 層と credential-free の CI ゲート
 が共有します。二重メンテナンスの対象を作らないためです。各パターンは安定した
 ラベルを持ち、ゲートは一致した秘密ではなくラベルを報告するため、CI ログが
-credential を反響しません(`redaction.ts:207-215` `scanForCredentials`)。一致部は
+credential を反響しません(`redaction.ts:209-217` `scanForCredentials`)。一致部は
 固定長・ラベルなしのマスク(`redaction.ts:50`)へ置換され、秘密の形状の手がかりを
-残しません。scrub は入れ子の JSON 値へ再帰します(`redaction.ts:127-146`)。
+残しません。scrub は入れ子の JSON 値へ再帰します(`redaction.ts:129-148`)。
 
 resource バッグは自身のポリシーを持ちます(`resource.ts:74-78`)。allow-list は
 閉じた resource 語彙です: 既定ポリシーは registry のイベント属性を許可しますが、

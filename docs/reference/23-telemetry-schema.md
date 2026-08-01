@@ -68,17 +68,17 @@ It is the union of three groups: what core measures for itself
 Every span carries the workflow context it belongs to, so that grouping spans by
 intent or stage does not require joining back to the audit journal by trace id.
 The vocabulary is closed, and is defined next to the allow-list that admits it
-(`otel/redaction.ts:80-87` `SPAN_CONTEXT_ATTRIBUTE_KEYS`) and re-exported from
-the resolver (`otel/span-context.ts:31`).
+(`otel/redaction.ts:80-89` `SPAN_CONTEXT_ATTRIBUTE_KEYS`) and re-exported from
+the resolver (`otel/span-context.ts:34`).
 
 | Attribute | Type | Source | Omitted when |
 |---|---|---|---|
-| `amadeus.intent.id` | string | `activeIntent` (`span-context.ts:57-63`) | the cursor does not resolve — omitted together with the space |
-| `amadeus.space` | string | `activeSpace` (`span-context.ts:57-63`) | the cursor does not resolve — omitted together with the intent |
-| `amadeus.stage` | string | `Current Stage` of the active intent's state file (`span-context.ts:76`) | no state file, or the field is absent |
-| `amadeus.phase` | string | `Lifecycle Phase` of the same state file (`span-context.ts:77`) | no state file, or the field is absent |
-| `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE` (`span-context.ts:88`) | the variable is unset or blank |
-| `amadeus.agent.id` | string | `AMADEUS_AGENT_ID` (`span-context.ts:89`) | the variable is unset or blank |
+| `amadeus.intent.id` | string | `activeIntent` (`span-context.ts:60-66`) | the cursor does not resolve — omitted together with the space |
+| `amadeus.space` | string | `activeSpace` (`span-context.ts:60-66`) | the cursor does not resolve — omitted together with the intent |
+| `amadeus.stage` | string | `Current Stage` of the active intent's state file (`span-context.ts:79`) | no state file, or the field is absent |
+| `amadeus.phase` | string | `Lifecycle Phase` of the same state file (`span-context.ts:80`) | no state file, or the field is absent |
+| `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE` (`span-context.ts:110`) | the variable is unset or blank |
+| `amadeus.agent.id` | string | `AMADEUS_AGENT_ID` (`span-context.ts:111`) | the variable is unset or blank |
 | `amadeus.bolt` | string | the worktree's Construction marker (`span-context.ts:86-99`) | no marker, or it names a unit |
 | `amadeus.unit` | string | the worktree's Construction marker (`span-context.ts:86-99`) | no marker, or it names a Bolt |
 
@@ -103,7 +103,7 @@ the discriminated value rather than guessing from the slug.
 
 ### Resolution rules
 
-- **The intent/space pair resolves as one step** (`span-context.ts:57-63`). A
+- **The intent/space pair resolves as one step** (`span-context.ts:60-66`). A
   space alone describes no unit of work — it is the container an intent lives in
   — so a bag carrying a space with no intent would let a consumer group spans
   under a workspace whose intent is unknown.
@@ -114,10 +114,10 @@ the discriminated value rather than guessing from the slug.
   and a consumer grouping by intent must not be handed a bucket named after a
   fallback that describes no intent at all.
 - **An unanticipated failure degrades to no context rather than partial
-  context** (`span-context.ts:90-96`). The keys resolve in pairs, and half a
+  context** (`span-context.ts:112-118`). The keys resolve in pairs, and half a
   pair would describe a unit of work that was never observed. Span creation
   continues either way.
-- **Resolution happens once per process** (`span-context.ts:111-116`). Amadeus
+- **Resolution happens once per process** (`span-context.ts:133-138`). Amadeus
   tools are short-lived — one process serves one stage of one intent and exits —
   and span end is a hot path. The memo is keyed by workspace, so a harness
   driving several fixture workspaces through one process does not answer the
@@ -151,9 +151,9 @@ turn a recorded failure into a second failure.
 ### Stacktrace redaction
 
 A raw stack names the machine's user and directory layout in every frame, so it
-cannot be stored as captured. `redactStacktrace` (`otel/redaction.ts:197-202`)
+cannot be stored as captured. `redactStacktrace` (`otel/redaction.ts:199-204`)
 rewrites every path-like token into one of three bounded forms
-(`redaction.ts:180-189` `rewritePathToken`) and credential-scrubs the result:
+(`redaction.ts:182-191` `rewritePathToken`) and credential-scrubs the result:
 
 | Zone | Rewritten form | Rule |
 |---|---|---|
@@ -162,7 +162,7 @@ rewrites every path-like token into one of three bounded forms
 | Anywhere else | `<external>/…` | the fallback zone marker |
 
 The pattern is one character class under one quantifier
-(`redaction.ts:174`), so matching costs a single linear scan however adversarial
+(`redaction.ts:176`), so matching costs a single linear scan however adversarial
 the input. It also recognises the markers it emits, which makes the rewrite
 idempotent — a second pass sees `<home>/x` as one already-rewritten token.
 
@@ -314,27 +314,27 @@ written before a policy tightened cannot leave the machine unfiltered.
 | export boundary | metric store | `local-metric-exporter.ts:78-80` |
 | export boundary | OTLP Relay | `relay.ts:231-233`, `:310` |
 
-Admission is **default-deny** (`redaction.ts:152-162` `redactAttributes`): only
+Admission is **default-deny** (`redaction.ts:154-164` `redactAttributes`): only
 safe keys and explicit opt-in keys are admitted, and every admitted value is
 credential-scrubbed. Opt-in never means raw pass-through. The pass is idempotent
 and never mutates its input, which is what lets the two layers compose.
 
 ### The three safe-key layers
 
-The production safe-key set (`redaction.ts:89-123` `DEFAULT_REDACTION_POLICY`)
+The production safe-key set (`redaction.ts:91-125` `DEFAULT_REDACTION_POLICY`)
 is derived from three vocabularies rather than hand-listed, so a new attribute
 cannot be silently eaten out of a stored record:
 
 | Layer | Derived from | Why it must be listed |
 |---|---|---|
 | registry vocabulary | every registered event's required *and* optional attributes (`redaction.ts:66-72`) | those keys are the audit fields by design; taking only the required half made optional keys vanish from stored rows while the append still reported success |
-| span context | `SPAN_CONTEXT_ATTRIBUTE_KEYS` (`redaction.ts:111`) | no canonical event declares them, so the registry-derived baseline cannot admit them and default-deny would drop them at the store and Relay boundaries |
-| metric dimensions | `INSTRUMENT_ATTRIBUTE_KEYS` (`redaction.ts:117`) | without them, default-deny would strip every dimension off a measurement at the export boundary and still report the append as a success |
+| span context | `SPAN_CONTEXT_ATTRIBUTE_KEYS` (`redaction.ts:113`) | no canonical event declares them, so the registry-derived baseline cannot admit them and default-deny would drop them at the store and Relay boundaries |
+| metric dimensions | `INSTRUMENT_ATTRIBUTE_KEYS` (`redaction.ts:119`) | without them, default-deny would strip every dimension off a measurement at the export boundary and still report the append as a success |
 
 Alongside these sit a small set of low-cardinality operational keys that predate
 the registry vocabulary and the correlation ids the audit exporter may add.
 
-`Command` is the one opt-in key (`redaction.ts:121`). It is a required attribute
+`Command` is the one opt-in key (`redaction.ts:123`). It is a required attribute
 of `amadeus.operation.failed`, so it cannot be dropped — it is admitted only
 through the scrubbed opt-in tier, so argv-derived values never persist with
 credentials intact.
@@ -345,10 +345,10 @@ One compiled pattern vocabulary (`redaction.ts:36-46`
 `CREDENTIAL_SCRUB_PATTERNS`) is shared by both redaction layers and by the
 credential-free CI gate, so there is no second list to maintain. Each pattern
 carries a stable label — the gate reports labels, never the matched secret, so
-CI logs never echo a credential (`redaction.ts:207-215` `scanForCredentials`).
+CI logs never echo a credential (`redaction.ts:209-217` `scanForCredentials`).
 Matches are replaced by a fixed, label-free mask (`redaction.ts:50`) that carries
 no hint of the secret's shape. Scrubbing is recursive over nested JSON values
-(`redaction.ts:127-146`).
+(`redaction.ts:129-148`).
 
 The resource bag carries its own policy (`resource.ts:74-78`) whose allow-list
 is the closed resource vocabulary: the default policy admits the registry's
