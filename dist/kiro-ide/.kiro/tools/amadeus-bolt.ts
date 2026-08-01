@@ -92,7 +92,14 @@ function selectorArgs(flags: Record<string, string>): string[] {
 // Boolean flags carry no value. Filter them out before parseFlags so the
 // strict value-required scan doesn't reject them. The --worktree / --merge
 // / --discard flags drive the per-Bolt lifecycle integration.
-const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard"]);
+const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard", "--unit"]);
+
+// The `--unit` pass-through for the state fork. A named helper rather than an
+// inline conditional so the branch is not counted against handleStart, which
+// sits at the complexity baseline's ceiling.
+function unitFlagArgs(booleans: Set<string>): string[] {
+  return booleans.has("unit") ? ["--unit"] : [];
+}
 
 function splitBooleanFlags(args: string[]): { booleans: Set<string>; rest: string[] } {
   const booleans = new Set<string>();
@@ -266,6 +273,10 @@ function handleStart(args: string[]): void {
     "fork",
     "--slug",
     flags.slug,
+    // Forwarded so the fork's telemetry marker names a unit when the swarm
+    // drove this start, and a Bolt otherwise. The caller is the only side that
+    // knows which — the slug alone reads the same either way.
+    ...unitFlagArgs(booleans),
     ...selectorArgs(flags),
   ]);
   if (!stateForkResult.ok) {

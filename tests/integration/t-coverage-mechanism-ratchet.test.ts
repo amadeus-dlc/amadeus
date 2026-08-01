@@ -112,6 +112,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
     "integration/t-log-subagent-start.integration.test.ts",
     "integration/t-norm-metrics.test.ts",
+    "integration/t-otel-bolt-context-marker.test.ts",
     "integration/t-otel-resource.test.ts",
     "integration/t224-state-set-failclosed.test.ts",
     "integration/t233-set-status-retreat-guard.integration.test.ts",

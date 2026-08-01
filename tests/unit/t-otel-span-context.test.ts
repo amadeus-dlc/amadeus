@@ -33,14 +33,16 @@ afterEach(() => {
 });
 
 describe("closed key set (FR-SPAN-1)", () => {
-  test("the vocabulary is exactly the six workflow-context keys", () => {
+  test("the vocabulary is exactly the workflow-context keys", () => {
     expect([...SPAN_CONTEXT_ATTRIBUTE_KEYS].sort()).toEqual([
       "amadeus.agent.id",
       "amadeus.agent.type",
-      "amadeus.intent",
+      "amadeus.bolt",
+      "amadeus.intent.id",
       "amadeus.phase",
       "amadeus.space",
       "amadeus.stage",
+      "amadeus.unit",
     ]);
   });
 });
@@ -110,15 +112,17 @@ describe("process memo (short-lived process model)", () => {
 });
 
 describe("redaction admission (E-OMSB2A-DEV case A)", () => {
-  test("all six keys survive the default policy — the store boundary applies it", () => {
+  test("every key survives the default policy — the store boundary applies it", () => {
     const admitted = redactAttributes(
       {
-        "amadeus.intent": "260729-otel-upstream",
+        "amadeus.intent.id": "260729-otel-upstream",
         "amadeus.space": "default",
         "amadeus.stage": "code-generation",
         "amadeus.phase": "CONSTRUCTION",
         "amadeus.agent.type": "builder",
         "amadeus.agent.id": "b2",
+        "amadeus.bolt": "docs",
+        "amadeus.unit": "U03-relay",
       },
       DEFAULT_REDACTION_POLICY
     );

@@ -78,12 +78,14 @@ const REGISTRY_ATTRIBUTE_KEYS: readonly string[] = [
 // every export path (both exporters and the Relay), and importing the resolver
 // would pull its workspace-resolution dependencies onto all of them.
 export const SPAN_CONTEXT_ATTRIBUTE_KEYS = [
-  "amadeus.intent",
+  "amadeus.intent.id",
   "amadeus.space",
   "amadeus.stage",
   "amadeus.phase",
   "amadeus.agent.type",
   "amadeus.agent.id",
+  "amadeus.bolt",
+  "amadeus.unit",
 ] as const;
 
 export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {

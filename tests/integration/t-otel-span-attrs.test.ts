@@ -13,6 +13,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { birthIntent, docsRoot, getField, readStateFile, setField, stateFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -29,7 +30,7 @@ import {
   registerTracerProvider,
   resetTracerProviderForTests,
 } from "../../dist/claude/.claude/otel/tracer-provider.ts";
-import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
+import { cleanupTestProject, createTestProject, REPO_ROOT } from "../harness/fixtures.ts";
 
 const ENV_KEYS = ["AMADEUS_AGENT_TYPE", "AMADEUS_AGENT_ID"];
 const INTENT_SLUG = "otel-u2-span";
@@ -130,7 +131,7 @@ describe("the six keys reach the STORE, not just the span record (FR-SPAN-1)", (
     getAmadeusTracer().startSpan("context-check").end();
 
     const stored = storedAttributes("context-check");
-    expect(stored["amadeus.intent"]).toBe(recordDirName());
+    expect(stored["amadeus.intent.id"]).toBe(recordDirName());
     expect(stored["amadeus.space"]).toBe("default");
     expect(stored["amadeus.stage"]).toBe("code-generation");
     expect(stored["amadeus.phase"]).toBe("CONSTRUCTION");
@@ -156,7 +157,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
     // No birthIntent: zero records, so the intent does not resolve. The journal
     // writer would stamp "workspace"/"default" here; a span attribute must not.
     const attrs = spanContextAttributes(proj);
-    expect("amadeus.intent" in attrs).toBe(false);
+    expect("amadeus.intent.id" in attrs).toBe(false);
     expect("amadeus.space" in attrs).toBe(false);
     expect(Object.values(attrs)).not.toContain("workspace");
     expect(Object.values(attrs)).not.toContain("default");
@@ -175,7 +176,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
         .map((name) => readFileSync(join(storeDir, name), "utf-8"))
         .join("");
       const attributes = (JSON.parse(line.trim()) as { attributes: Record<string, unknown> }).attributes;
-      expect("amadeus.intent" in attributes).toBe(false);
+      expect("amadeus.intent.id" in attributes).toBe(false);
       expect("amadeus.space" in attributes).toBe(false);
       expect(line).not.toContain("workspace");
     } finally {
@@ -189,7 +190,7 @@ describe("fail-open absence (NFR-1) — omitted, never a fallback value", () => 
     const attrs = spanContextAttributes(proj);
     expect("amadeus.stage" in attrs).toBe(false);
     expect("amadeus.phase" in attrs).toBe(false);
-    expect(attrs["amadeus.intent"]).toBe(recordDirName());
+    expect(attrs["amadeus.intent.id"]).toBe(recordDirName());
   });
 
   test("an absent state file resolves to an empty bag rather than throwing", () => {
@@ -283,5 +284,87 @@ describe("process memo (FR-SPAN-3) — resolved once, not per span", () => {
       expect(storedAttributes(name)["amadeus.stage"], `${name} stage`).toBe("code-generation");
       expect(storedAttributes(name)["amadeus.phase"], `${name} phase`).toBe("CONSTRUCTION");
     }
+  });
+});
+
+// U6 iteration 4 — the construction pair (#1868 §2). Bolt and unit name the
+// unit of work a Construction process is serving. They live in an UNTRACKED
+// worktree-local marker rather than the state file: the state file is a
+// tracked path shared with main, so a value written into a Bolt worktree
+// travels to main on merge and would then describe every later process there.
+describe("the construction pair (amadeus.bolt / amadeus.unit)", () => {
+  // Write the marker the fork produces, in the same shape and location.
+  function writeBoltContext(body: string, dir = proj): void {
+    const record = join(dir, "amadeus", "spaces", "default", "intents", recordDirName());
+    writeFileSync(join(record, ".amadeus-bolt-context"), body, "utf-8");
+  }
+
+  test("the marker's bolt slug reaches the store", () => {
+    birthIntent(proj, INTENT_SLUG, "default", "feature");
+    writeBoltContext('{"bolt":"docs"}\n');
+    resetSpanContextForTests();
+    standUpTracer();
+
+    getAmadeusTracer().startSpan("bolt-check").end();
+
+    expect(storedAttributes("bolt-check")["amadeus.bolt"]).toBe("docs");
+    expect("amadeus.unit" in storedAttributes("bolt-check")).toBe(false);
+  });
+
+  test("the marker's unit name reaches the store", () => {
+    birthIntent(proj, INTENT_SLUG, "default", "feature");
+    writeBoltContext('{"unit":"U03-relay"}\n');
+    resetSpanContextForTests();
+    standUpTracer();
+
+    getAmadeusTracer().startSpan("unit-check").end();
+
+    expect(storedAttributes("unit-check")["amadeus.unit"]).toBe("U03-relay");
+    expect("amadeus.bolt" in storedAttributes("unit-check")).toBe(false);
+  });
+
+  test("no marker means both keys are absent — never a fallback value", () => {
+    birthIntent(proj, INTENT_SLUG, "default", "feature");
+    resetSpanContextForTests();
+    const attrs = spanContextAttributes(proj);
+    expect("amadeus.bolt" in attrs).toBe(false);
+    expect("amadeus.unit" in attrs).toBe(false);
+  });
+
+  test("an unparsable marker degrades to absence rather than throwing", () => {
+    birthIntent(proj, INTENT_SLUG, "default", "feature");
+    writeBoltContext("not json at all");
+    resetSpanContextForTests();
+    const attrs = spanContextAttributes(proj);
+    expect("amadeus.bolt" in attrs).toBe(false);
+    expect("amadeus.unit" in attrs).toBe(false);
+    // The rest of the context still resolves — one bad file is not a bad bag.
+    expect(attrs["amadeus.intent.id"]).toBe(recordDirName());
+  });
+
+  test("concurrent worktrees resolve independently — each reads its own marker", () => {
+    birthIntent(proj, INTENT_SLUG, "default", "feature");
+    const second = createTestProject();
+    try {
+      birthIntent(second, INTENT_SLUG, "default", "feature");
+      writeBoltContext('{"unit":"U01-resource"}');
+      writeBoltContext('{"unit":"U02-span"}', second);
+
+      resetSpanContextForTests();
+      const first = { ...spanContextAttributes(proj) };
+      resetSpanContextForTests();
+      const other = spanContextAttributes(second);
+
+      expect(first["amadeus.unit"]).toBe("U01-resource");
+      expect(other["amadeus.unit"]).toBe("U02-span");
+    } finally {
+      cleanupTestProject(second);
+    }
+  });
+
+  test("the marker path is ignored by git — the value cannot travel to main", () => {
+    const relative = "amadeus/spaces/default/intents/an-intent/.amadeus-bolt-context";
+    const probe = spawnSync("git", ["check-ignore", relative], { cwd: REPO_ROOT, encoding: "utf-8" });
+    expect(probe.status, `git check-ignore said: ${probe.stdout}${probe.stderr}`).toBe(0);
   });
 });

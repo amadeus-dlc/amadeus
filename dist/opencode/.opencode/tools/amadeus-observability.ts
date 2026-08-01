@@ -18,7 +18,7 @@
 //     machine-local diagnostics file, and stays silent otherwise. (The
 //     journal keeps its own loud fail-closed contract — untouched here.)
 
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   activeIntent,
@@ -136,6 +136,38 @@ export function resetObservabilityConfigCache(): void {
 // --- buffer -----------------------------------------------------------------
 
 export const TELEMETRY_DIR = ".amadeus-otel";
+
+// The marker a Bolt/unit fork drops into the worktree it creates, naming the
+// unit of work every span from that worktree belongs to (#1868 §2). It lives
+// here — beside the telemetry dir, in the harness-neutral tools layer — because
+// the writer (amadeus-state fork) and the reader (otel/span-context) sit on
+// opposite sides of the tree and must not learn the name from each other.
+//
+// NOT a state field: the state file is a tracked path shared with main, so a
+// value written into one worktree reaches main when that branch merges and
+// would then name that Bolt for every later process there. This name is inside
+// the `.amadeus-*` ignore pattern, so it cannot travel.
+export const BOLT_CONTEXT_MARKER = ".amadeus-bolt-context";
+
+export type BoltContextKind = "bolt" | "unit";
+
+// Which kind a fork's slug names. Only the caller knows — the swarm drives the
+// same fork with a unit name, and the slug reads identically either way — so it
+// says so with `--unit` and this reads the answer off argv. A function rather
+// than an inline conditional at the call site: the fork handler runs only in a
+// spawned CLI, where coverage cannot see it, and the decision belongs where a
+// test can drive it directly.
+export function boltContextKind(args: readonly string[]): BoltContextKind {
+  return args.includes("--unit") ? "unit" : "bolt";
+}
+
+// Drop the marker into the record dir of the worktree a fork just created.
+// Overwrites: a re-fork of the same worktree names whatever it was re-forked
+// for, and a stale value would outlive the work it described.
+export function writeBoltContextMarker(recordDirPath: string, slug: string, kind: BoltContextKind): void {
+  mkdirSync(recordDirPath, { recursive: true });
+  writeFileSync(join(recordDirPath, BOLT_CONTEXT_MARKER), `${JSON.stringify({ [kind]: slug })}\n`, "utf-8");
+}
 
 export function telemetryDir(projectDir: string, intent?: string, space?: string): string | null {
   const dir = recordDir(projectDir, intent, space);
