@@ -6,12 +6,11 @@
 // signal — matches session-start.ts and the plan definition).
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
+import { ensureOtelBootstrap, ensureTracerBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { initProcessObservability, observabilityEnabled } from "../tools/amadeus-observability.ts";
-import { ensureContextManager, INTENT_CONTEXT_SCHEMA_VERSION, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
-import { createLocalSpanExporter } from "../otel/local-span-exporter.ts";
-import { getAmadeusTracer, registerTracerProvider } from "../otel/tracer-provider.ts";
+import { INTENT_CONTEXT_SCHEMA_VERSION, injectToSubprocess, persistIntentContext } from "../otel/context.ts";
+import { getAmadeusTracer } from "../otel/tracer-provider.ts";
 import {
   activeIntent,
   docsRoot,
@@ -77,8 +76,10 @@ if (observabilityEnabled(projectDir)) {
     // is wrapped in a span (FR-TRC-1) with W3C context injected into the
     // child environment (FR-TRC-5 minimal). The callback does NOT auto-end
     // the span — finally { span.end(); } (FR-TRC-2).
-    ensureContextManager();
-    registerTracerProvider({ projectDir, spanExporter: createLocalSpanExporter({ projectDir }) });
+    // Through the shared seam, not the register pair: registration is
+    // once-per-process (NFR-3), so a process that already stood a Tracer up
+    // would lose this whole block to the second register's throw (#1857).
+    ensureTracerBootstrap(projectDir);
     const tracer = getAmadeusTracer();
     const recordRoot = docsRoot(projectDir);
     const intent = activeIntent(projectDir);

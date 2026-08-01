@@ -237,6 +237,44 @@ describe("t222 metrics publication adapters", () => {
     ]);
   });
 
+  test("a snapshot branch load failure that is not absence stays an inventory problem", async () => {
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "gh") return { stdout: "[]", stderr: "" };
+        if (command.includes("ls-remote")) return { stdout: `${branchOid}\trefs/heads/${snapshotBranch}`, stderr: "" };
+        if (command.includes("fetch") && (command.at(-1) ?? "").startsWith("+refs/heads/")) {
+          throw new Error("fatal: unable to access remote");
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const inventory = await new SnapshotCliPort({ ...context, targetSha, runner }).inventory();
+    expect(inventory.branches).toEqual([]);
+    expect(inventory.problems).toEqual([expect.stringContaining("fatal: unable to access remote")]);
+  });
+
+  test("a maintenance branch deleted between ls-remote and fetch is dropped without a problem", async () => {
+    let listings = 0;
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "gh") return { stdout: "[]", stderr: "" };
+        if (command.includes("ls-remote")) {
+          listings += 1;
+          return listings === 1
+            ? { stdout: `${branchOid}\trefs/heads/metrics/maintenance`, stderr: "" }
+            : { stdout: "", stderr: "" };
+        }
+        if (command.includes("fetch") && (command.at(-1) ?? "").startsWith("+refs/heads/")) {
+          throw new Error("fatal: couldn't find remote ref refs/heads/metrics/maintenance");
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const observation = await new MaintenanceCliPort({ ...context, runner }).reconcile("d".repeat(40));
+    expect(observation.inventory.branches).toEqual([]);
+    expect(observation.inventory.problems).toEqual([]);
+  });
+
   test("snapshot cleanup records accepted and rejected mutations", async () => {
     const commands: string[][] = [];
     const runner: CommandRunner = {
@@ -582,6 +620,44 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
       ownership: { ok: true },
       files: [{ status: "A" }],
     });
+  }, 30_000);
+
+  test("a branch deleted between ls-remote and fetch converges and still dispatches maintenance", async () => {
+    const sha = addMainCommit("toctou-target");
+    const staleOid = "c".repeat(40);
+    let wildcardListings = 0;
+    const runner: CommandRunner = {
+      run(command, options) {
+        const output = systemCommandRunner.run(command, options);
+        if (!command.includes("ls-remote") || !(command.at(-1) ?? "").endsWith("*")) return output;
+        wildcardListings += 1;
+        // The second listing runs after auto-merge deleted the branch: replay the pre-merge
+        // observation so the following fetch races against a ref that no longer exists.
+        if (wildcardListings !== 2) return output;
+        return { stdout: `${staleOid}\trefs/heads/metrics/snapshot-${sha}`, stderr: "" };
+      },
+    };
+
+    const code = await publicationMain(
+      [
+        "snapshot",
+        "--target-sha",
+        sha,
+        "--repository",
+        REPOSITORY,
+        "--bot-login",
+        BOT_LOGIN,
+        "--deadline-seconds",
+        "10",
+        "--poll-seconds",
+        "1",
+      ],
+      { repoRoot: repository, runner },
+    );
+
+    expect(wildcardListings).toBeGreaterThanOrEqual(2);
+    expect(code).toBe(0);
+    expect(JSON.parse(readFileSync(statePath, "utf8")).dispatches).toBe(1);
   }, 30_000);
 
   test("maintenance publish never stages an untracked snapshot JSON", async () => {

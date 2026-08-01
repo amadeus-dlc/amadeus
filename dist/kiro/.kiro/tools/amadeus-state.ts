@@ -108,6 +108,7 @@ import {
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import {
@@ -462,13 +463,22 @@ function emitAudit(
   eventType: string,
   fields: Record<string, string>
 ): void {
-  emitAuditEvent(
+  // FR-EVT-4: a state mutation refuses outright while the fatal health latch is
+  // set. The emit path only DROPS canonical rows there (#1856), and a drop is a
+  // silent success for an audit-first handler — the write that follows would
+  // land with no ledger row behind it. Both halves are needed: the assert covers
+  // a latch already set when the handler starts, and the outcome check covers
+  // the first emit of a process, where the journal health probe latches INSIDE
+  // the bootstrap emitAuditEvent runs (so there was nothing to assert on yet).
+  assertMutationAllowed();
+  const result = emitAuditEvent(
     eventType,
     fields,
     projectDir,
     stateOperationTarget?.intent,
     stateOperationTarget?.space,
   );
+  if (result.appended === false && result.reason === "fatal-latch") assertMutationAllowed();
 }
 
 // Thin alias over the shared accessor — kept so existing call sites read

@@ -8,8 +8,8 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
-- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-u7-mirror-model
-- **Bolt Refs**: [u3-boundary-guard, u4-tools-distribution, u6-impl-only-path]
+- **Worktree Path**:
+- **Bolt Refs**: [u7-mirror-model]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration

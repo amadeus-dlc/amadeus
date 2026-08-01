@@ -25,6 +25,11 @@ const BASELINE_SHA = readFileSync(
 //     for the report to be retrievable). Placed beside the callsite-guard step
 //     for the same reason — the gate lives in tests/ and CI runs it as one
 //     lint step.
+//   - 260801-open-bug-batch-5 (#1863): the drift-check job's compiled-graph
+//     drift step (`amadeus-graph compile --check` over the real repository
+//     section). Placed in drift-check because it IS a drift guard, and
+//     because reusing that job leaves ci-success's needs set — and t222's pin
+//     on it — untouched.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

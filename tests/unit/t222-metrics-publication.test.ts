@@ -421,6 +421,16 @@ describe("t222 snapshot publisher orchestration", () => {
     });
   });
 
+  test("an ownership evidence problem stays terminal while waiting for the postcondition", async () => {
+    const abnormal = snapshotInventory({ problems: [`${SNAPSHOT_BRANCH}: tip author is not the publishing bot`] });
+    const { implementation } = port([snapshotInventory(), abnormal]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "publication-not-converged",
+      problems: expect.arrayContaining([`${SNAPSHOT_BRANCH}: tip author is not the publishing bot`]),
+    });
+  });
+
   test("a landed snapshot with the wrong SHA never satisfies the postcondition", async () => {
     const wrong = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: OTHER_SHA }] });
     const { implementation } = port([snapshotInventory(), wrong], { nowMs: () => 100 });

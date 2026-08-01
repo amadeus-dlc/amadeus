@@ -229,14 +229,29 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
     expect(grid["t355-plugin-only"].stages).toEqual({ [STAGE_SLUG]: "EXECUTE" });
   }, 30000);
 
-  test("dropping the plugin leaves no dangling cell in the composed row", async () => {
-    const root = makeHost([COMPOSED_SCOPE]);
+  // Declared revision (#1863): this test used to assert the cell was GC'd on
+  // drop. That GC destroyed the approved plan — an opt-in stage (`scopes: []`)
+  // mints no cell on the way back, so the on-disk grid was the only copy and a
+  // re-compose could not restore it. The contract is now the round trip below.
+  test("drop -> compose is lossless for an opt-in plugin's composed-scope cell", async () => {
+    // `scopes: []` — the opt-in shape formal-model-check ships with, so the
+    // cell can only come from the composed row on disk.
+    const root = makeHost([]);
     const seeded = seedComposedScope(root, "feature");
+    const gridPath = join(root, "scope-grid.json");
+    const manifest = readFileSync(join(root, ".amadeus-plugin-composition.json"), "utf-8");
+    const stagePath = join(root, "plugins", PLUGIN, "stages", `${STAGE_SLUG}.md`);
+    const stageBytes = readFileSync(stagePath, "utf-8");
+
+    // The composer's approved plan: the opt-in stage added to the composed row.
+    const seededGrid = JSON.parse(readFileSync(gridPath, "utf-8")) as Grid;
+    seededGrid[COMPOSED_SCOPE].stages[STAGE_SLUG] = "EXECUTE";
+    writeFileSync(gridPath, `${JSON.stringify(seededGrid, null, 2)}\n`, "utf-8");
+
     const withPlugin = await compileHost(root);
     expect(withPlugin[COMPOSED_SCOPE].stages[STAGE_SLUG]).toBe("EXECUTE");
 
-    // Drop the plugin: empty composition manifest, stage file removed. The
-    // grid on disk still carries the plugin's cell from the previous compile.
+    // Drop the plugin: empty composition manifest, stage file removed.
     rmSync(join(root, "plugins"), { recursive: true, force: true });
     writeFileSync(join(root, ".amadeus-plugin-composition.json"), JSON.stringify({
       ledger: [],
@@ -244,10 +259,24 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
       pluginStageIndexDigest: `sha256:${createHash("sha256").update(JSON.stringify([])).digest("hex")}`,
     }));
 
-    const after = await compileHost(root);
-    expect(after[COMPOSED_SCOPE].stages[STAGE_SLUG]).toBeUndefined();
-    // The composed plan itself is intact — only the departed slug's cell went.
-    expect(executeSlugs(after[COMPOSED_SCOPE])).toEqual(executeSlugs(seeded));
+    const dropped = await compileHost(root);
+    // The cell SURVIVES the drop — this is the write that used to destroy it.
+    expect(dropped[COMPOSED_SCOPE].stages[STAGE_SLUG]).toBe("EXECUTE");
+    // The rest of the composed plan is untouched.
+    for (const slug of executeSlugs(seeded)) {
+      expect(dropped[COMPOSED_SCOPE].stages[slug]).toBe("EXECUTE");
+    }
+
+    // Re-compose the same plugin: the plan is back, byte-identical to the
+    // pre-drop compile.
+    mkdirSync(join(root, "plugins", PLUGIN, "stages"), { recursive: true });
+    writeFileSync(stagePath, stageBytes);
+    writeFileSync(join(root, ".amadeus-plugin-composition.json"), manifest);
+    const recomposed = await compileHost(root);
+    expect(recomposed[COMPOSED_SCOPE].stages[STAGE_SLUG]).toBe("EXECUTE");
+    expect(executeSlugs(recomposed[COMPOSED_SCOPE])).toEqual(
+      executeSlugs(withPlugin[COMPOSED_SCOPE]),
+    );
   }, 30000);
 
   test("a zero-plugin host recompiles the shipped grid byte-identically", async () => {

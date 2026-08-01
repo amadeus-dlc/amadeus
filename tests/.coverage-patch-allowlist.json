@@ -61,13 +61,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-audit.ts",
-    "lines": "1116-1118",
+    "lines": "1119-1121",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-audit.ts",
-    "lines": "1153-1155",
+    "lines": "1156-1158",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -151,13 +151,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1643-1648",
+    "lines": "1648-1653",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1647-1652",
+    "lines": "1652-1657",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
@@ -223,7 +223,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5688-5690",
+    "lines": "5890-5892",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
@@ -235,67 +235,67 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "303",
+    "lines": "305",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "317",
+    "lines": "319",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "445-452",
+    "lines": "447-454",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "459-466",
+    "lines": "461-468",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "623-626",
+    "lines": "625-628",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "637-640",
+    "lines": "639-642",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "649",
+    "lines": "651",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-    "lines": "663",
+    "lines": "665",
     "reason": "t280 and t282 exercise the coordinator decision, prompt, persistence, reconciliation, and failure matrices in-process; these residual rows are multiline outcome construction and defensive impossible-state guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1428-1432",
+    "lines": "1471-1475",
     "reason": "The held receipt was parsed from the same valid snapshot and necessarily participates in latestProjectReconciliationReceiptKey for its intent. Invalid timestamps fail during state parsing before this defensive fail-closed branch; t359 covers the selector's none and invalid outcomes directly.",
     "expiry": "remove if held receipts can be excluded from Project reconciliation ordering or the selector returns a typed invariant result"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "lines": "1437-1441",
+    "lines": "1480-1484",
     "reason": "The held receipt was parsed from the same valid snapshot and necessarily participates in latestProjectReconciliationReceiptKey for its intent. Invalid timestamps fail during state parsing before this defensive fail-closed branch; t359 covers the selector's none and invalid outcomes directly.",
     "expiry": "remove if held receipts can be excluded from Project reconciliation ordering or the selector returns a typed invariant result"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-policy.ts",
-    "lines": "178-187",
+    "lines": "190-199",
     "reason": "t268 through t271 exercise every supported boundary/mode policy result; Bun stamps the exhaustive fallback branch DA:0 although validated union inputs cannot reach it.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -445,55 +445,55 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "371-373",
+    "lines": "383-385",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "420-422",
+    "lines": "432-434",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "424-426",
+    "lines": "436-438",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "428-430",
+    "lines": "440-442",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "449-450",
+    "lines": "461-462",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "494",
+    "lines": "506",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "569-572",
+    "lines": "586-589",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "580-589",
+    "lines": "597-606",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
-    "lines": "819",
+    "lines": "836",
     "reason": "t275, t279, t282, and t284 exercise legal transitions and fail-closed mismatches across operation, prompt, repair, and reconciliation states; these residual rows are defensive invariant outcomes stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1027,298 +1027,298 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "247",
+    "lines": "248",
     "reason": "The non-object Receipt guard is a defensive parser branch adjacent to invalid JSON, unknown phase/status, and duplicate-key cases covered in-process by tests/unit/t265-engine-boundary.test.ts.",
     "expiry": "remove when t265 adds explicit null/array/scalar parser cases"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "249-250",
+    "lines": "250-251",
     "reason": "The non-object Receipt guard is a defensive parser branch adjacent to invalid JSON, unknown phase/status, and duplicate-key cases covered in-process by tests/unit/t265-engine-boundary.test.ts.",
     "expiry": "remove when t265 adds explicit null/array/scalar parser cases"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "522-523",
+    "lines": "532-533",
     "reason": "Terminal audit replay is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; the state CLI child is outside parent Bun LCOV.",
     "expiry": "remove when terminal state CLI execution is attributed to parent LCOV"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "535-536",
+    "lines": "545-546",
     "reason": "Every injected crash point is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; the deliberate child exit is outside parent Bun LCOV.",
     "expiry": "remove when crash-injection state CLI execution is attributed to parent LCOV"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "536-545",
+    "lines": "546-555",
     "reason": "The terminal audit input and its replay contract are exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; Bun stamps the multiline input declaration from imports while child execution is not attributed.",
     "expiry": "remove when terminal state CLI execution is attributed to parent LCOV or the signature is collapsed"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "600",
+    "lines": "610",
     "reason": "Audit-failure and crash recovery are exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; the child-only catch boundary is not attributed by Bun.",
     "expiry": "remove when terminal audit emission receives an injected non-exiting error port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "832-834",
+    "lines": "842-844",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "847-862",
+    "lines": "857-872",
     "reason": "enforceCallerAuthorization runs only inside the spawned state CLI main path; t365 drives the authorized and denied outcomes end-to-end through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the state CLI main() receives an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "855",
+    "lines": "865",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "869-871",
+    "lines": "879-881",
     "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "872-874",
+    "lines": "882-884",
     "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "873-875",
+    "lines": "883-885",
     "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "876-879",
+    "lines": "886-889",
     "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "878",
+    "lines": "888",
     "reason": "Call site of enforceCallerAuthorization inside the spawn-only state CLI main path; same boundary attribution blind spot as the function body (see lines 816-831).",
     "expiry": "remove when the state CLI main() receives an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "880",
+    "lines": "890",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "890-895",
+    "lines": "900-905",
     "reason": "The archive and unarchive dispatch cases are covered as shipped subprocess journeys by t258; spawned CLI dispatch lines are not parent-LCOV resident.",
     "expiry": "remove when state dispatch and process-exit boundaries are injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "895-903",
+    "lines": "905-913",
     "reason": "The archive and unarchive dispatch cases are covered as shipped subprocess journeys by t258; spawned CLI dispatch lines are not parent-LCOV resident.",
     "expiry": "remove when state dispatch and process-exit boundaries are injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "897-899",
+    "lines": "907-909",
     "reason": "main() dispatch case for the mirror-initial-create verb (#1750). main() is the CLI entry — never imported, so the case, its handler call, and its break are only reached in a spawned child; the handler itself is driven in-process by tests/integration/t371-intent-initialized-boundary.test.ts.",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "911-916",
+    "lines": "921-926",
     "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "916-921",
+    "lines": "926-931",
     "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "961",
+    "lines": "971",
     "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "965",
+    "lines": "975",
     "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "986",
+    "lines": "996",
     "reason": "Unknown-subcommand usage message string in main()'s default case — mirror-initial-create was appended to the existing single-line list (#1750). A spawn-only message-string row per spawn-blindspot-two-step (ii).",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1073-1090",
+    "lines": "1083-1100",
     "reason": "mirror-boundary argv validation is exercised by the shipped subprocess contract in t265 integration/E2E. error() exits the process, so this CLI guard is intentionally tested out-of-process.",
     "expiry": "remove when error() and argv receive test-injectable non-exiting seams"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1080-1095",
+    "lines": "1090-1105",
     "reason": "mirror-boundary argv validation is exercised by the shipped subprocess contract in t265 integration/E2E. error() exits the process, so this CLI guard is intentionally tested out-of-process.",
     "expiry": "remove when error() and argv receive test-injectable non-exiting seams"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1091-1104",
+    "lines": "1101-1114",
     "reason": "The mirror-boundary handler lock/read/transition path is exercised by generated CLI journeys and state byte assertions in t265 integration/E2E; spawned handler execution is not attributed by Bun.",
     "expiry": "remove when handleMirrorBoundary receives injected state and lock ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1098-1107",
+    "lines": "1108-1117",
     "reason": "The mirror-boundary handler lock/read/transition path is exercised by generated CLI journeys and state byte assertions in t265 integration/E2E; spawned handler execution is not attributed by Bun.",
     "expiry": "remove when handleMirrorBoundary receives injected state and lock ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1102-1104",
+    "lines": "1112-1114",
     "reason": "Receipt CAS failure is exercised through the generated CLI with byte-identical state assertion in t265 integration; error() exits the child process.",
     "expiry": "remove when error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1105-1109",
+    "lines": "1115-1119",
     "reason": "Successful and idempotent Receipt writes and their JSON result are asserted through the generated state CLI in t265 integration/E2E; spawned lines are not parent-LCOV visible.",
     "expiry": "remove when handleMirrorBoundary receives injected state and output ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1109-1110",
+    "lines": "1119-1120",
     "reason": "Receipt CAS failure is exercised through the generated CLI with byte-identical state assertion in t265 integration; error() exits the child process.",
     "expiry": "remove when error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1111-1113",
+    "lines": "1121-1123",
     "reason": "Successful and idempotent Receipt writes and their JSON result are asserted through the generated state CLI in t265 integration/E2E; spawned lines are not parent-LCOV visible.",
     "expiry": "remove when handleMirrorBoundary receives injected state and output ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1234-1276",
+    "lines": "1244-1286",
     "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
     "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1241-1283",
+    "lines": "1251-1293",
     "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
     "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "2321",
+    "lines": "2331",
     "reason": "Explicit Intent terminal selection is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'a moved cursor keeps the original Intent pinned through lifecycle and terminal commit'; the selected-Intent state CLI child is outside parent Bun LCOV.",
     "expiry": "remove when selected-Intent terminal dispatch is driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "2462-2537",
+    "lines": "2472-2547",
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "3264",
+    "lines": "3274",
     "reason": "Workflow completion preparation is asserted by tests/integration/t265-engine-boundary.integration.test.ts test 'grant-backed final approval defers completion and preserves the active non-owner Intent'; the approval itself commits in the spawned state child and is not parent-LCOV resident.",
     "expiry": "remove when approval state commits are attributed to parent LCOV"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "3286-3290",
+    "lines": "3296-3300",
     "reason": "The completion-pending result is asserted by tests/integration/t265-engine-boundary.integration.test.ts test 'grant-backed final approval defers completion and preserves the active non-owner Intent'; the approval result is emitted by the spawned state child.",
     "expiry": "remove when approval state-child output is attributed to parent LCOV"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "3813",
+    "lines": "3823",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4014",
+    "lines": "4024",
     "reason": "Type-only continuation of the targeted rejection reservation/session pair. Bun attributes a zero-hit DA row to this erased annotation even though t365 executes the targeted branch and proves the verified session is reused through consume.",
     "expiry": "remove when Bun no longer emits coverage rows for erased multiline type annotations"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4223",
+    "lines": "4233",
     "reason": "Resume-payload compaction flag is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the resume verb gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4240",
+    "lines": "4250",
     "reason": "Resume-payload compaction flag is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the resume verb gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4269",
+    "lines": "4279",
     "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when acknowledge-compaction gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4294",
+    "lines": "4304",
     "reason": "acknowledge-compaction guard is computed only inside the spawned state CLI verb; the decision logic (compactionPendingFromAudit) is fully covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when acknowledge-compaction gains an in-process seam test"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5019",
+    "lines": "5029",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5198",
+    "lines": "5208",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5204-5206",
+    "lines": "5214-5216",
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5225-5228",
+    "lines": "5235-5238",
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5225-5229",
+    "lines": "5235-5239",
     "reason": "Mutation-before-reject error() emit in handleSetConstructionIteration for an invalid iteration token (U05). error() is `never` (process.exit); the reject DECISION (parseConstructionIteration returning !ok) is fully covered in-process by tests/unit/t250, and the handler's reject-with-no-mutation contract is exercised by the shipped-subprocess case in tests/integration/t250 (exit code + state byte-identity). Spawn-only error-exit row per spawn-blindspot-two-step (ii).",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5259",
+    "lines": "5269",
     "reason": "Mutation-before-reject error() emit in handleSetConstructionIteration for an invalid iteration token (U05). error() is `never` (process.exit); the reject DECISION (parseConstructionIteration returning !ok) is fully covered in-process by tests/unit/t250, and the handler's reject-with-no-mutation contract is exercised by the shipped-subprocess case in tests/integration/t250 (exit code + state byte-identity). Spawn-only error-exit row per spawn-blindspot-two-step (ii).",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5282",
+    "lines": "5292",
     "reason": "The prepared verifier's fail-closed matrix is exercised by the named 'prepared completion refuses ...' tests in tests/integration/t265-engine-boundary.integration.test.ts; this line is the I/O-race sibling where a state was read but its Intent disappears before verification.",
     "expiry": "remove when prepared-completion Intent resolution receives an injectable read port"
   },
@@ -1366,75 +1366,87 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "715-717",
+    "lines": "719-721",
     "reason": "Multi-line Pick type for the inspectHookHeartbeats snapshot options; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive platform and both swap targets in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "757-759",
+    "lines": "761-763",
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4001-4004",
+    "lines": "4005-4008",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4311-4324",
+    "lines": "4315-4328",
     "reason": "The utility lifecycle audit adapter is exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing receives an injectable in-process audit port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4346-4368",
+    "lines": "4350-4372",
     "reason": "Intent archive and unarchive delegation is exercised through the shipped utility CLI by t257 and t259, including child output and status propagation; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility delegation receives an injectable in-process process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4379-4386",
+    "lines": "4383-4390",
     "reason": "Archived-selection rejection and successful cursor selection are exercised through the shipped utility CLI by t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility selection routing is injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4399-4409",
+    "lines": "4403-4413",
     "reason": "Intent lifecycle command routing and fail-closed selector validation are exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing and delegation receive injectable in-process process ports"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4551-4552",
+    "lines": "4513",
+    "reason": "The `- **Construction Autonomy Mode**: unset` row of the birth state template in handleIntentBirthStateBuild (#1846). Same blind spot as the 4556-4557 advisory rows directly below it: a full intent birth needs a completely seeded workspace and canonical in-process execution is impractical (no-canonical-direct-execution), so tests/integration/t393 drives birth through the SHIPPED CLI and asserts the emitted row plus set-autonomy succeeding on it — bun does not attribute spawned-CLI lines. Template-literal string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); there is no refactor that removes the row from the patch. Verified verbatim at pin time: the line is `- **Construction Autonomy Mode**: unset` inside the stateContent template.",
+    "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the state template"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4556-4557",
     "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-07-28: the advisory rows had silently drifted from 4216-4217 to 4551-4552 across prior insertions above them; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4716-4726",
+    "lines": "4721-4731",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4728-4730",
+    "lines": "4733-4735",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4749-4771",
+    "lines": "4754-4776",
     "reason": "Intent selection cursor write and lifecycle guard are exercised through the shipped utility CLI intent-select-response path by t171 integration; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4854-4865",
+    "lines": "4859-4870",
     "reason": "The intent-select-response resolver callback is exercised through the shipped utility CLI by t171 integration, including token verification and rejection; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent selection receives an injectable in-process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "5467-5468",
+    "reason": "The derived-plan rebuild call inside handleRecompose's withAuditLock callback (#1849). The recompose verb is exercised through the shipped utility CLI by t194 and t394 (spawned CLI lines are unattributed), while the extracted rebuildDerivedPlanFields it delegates to IS driven in-process by t394 through the post-compose re-sync — only the two call/assignment rows inside the spawn-only handler remain. Already collapsed to the minimum (destructuring + one reassignment) per spawn-blindspot-two-step (i) before allowlisting. Verified verbatim at pin time: `const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);` and `content = rebuilt;`.",
+    "expiry": "remove when handleRecompose gains an in-process argv seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-worktree.ts",

@@ -227,12 +227,14 @@ function configIssueSummary(outcome: Extract<MirrorConfigOutcome, { kind: "inval
     .join("; ");
 }
 
-function operationForBoundary(
+// Which operation a boundary evaluates, given the link state. Exported so the
+// selection can be cross-checked against the policy's structural applicability
+// table without driving the whole boundary.
+export function operationForBoundary(
   context: MirrorBoundaryContext,
   state: MirrorStateSnapshot,
 ): MirrorOperation | null {
   if (context.boundary.kind === "manual") return null;
-  if (context.boundary.kind === "intent-capture-approved") return "create";
   if (context.boundary.kind === "workflow-completed") {
     return nextCompletionOperation({
       intentUuid: context.intentUuid,

@@ -5,7 +5,7 @@
 // <harnessDir>/tools/amadeus-plugin.ts drives the same engine (BR-U2-1 single
 // implementation — this file re-implements NO composition logic).
 //
-// Verbs (C1): compose [--if-stale] [--project-root <dir>], doctor, drop <name>,
+// Verbs (C1): compose [--if-stale] [--all-harnesses] [--project-root <dir>], doctor, drop <name>,
 // install <path> [--force], status. Unknown verb / unknown flag / surplus argument fail closed BEFORE any
 // mutation with usage on stderr and exit 2 (ADR-3, BR-U2-4). A failed manual
 // compose exits 1 loud; the SessionStart hook wraps the call so a hook failure is
@@ -27,8 +27,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isHarnessDirName } from "./amadeus-harness.ts";
-import { resolveProjectDirFromHook } from "./amadeus-lib.ts";
+import { isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
+import {
+  resolveProjectDirFromHook,
+  resyncStateToStageGraph,
+  type StageEntry,
+  type StateResyncOutcome,
+} from "./amadeus-lib.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   applyPluginDrop,
@@ -46,12 +51,13 @@ import {
   type HostSnapshot,
   type HostStage,
   inspectPlugin,
-  ownedStageDigests,
+  ownedRecordDigests,
   planPluginDrop,
   type PluginDescriptor,
   type PluginManifest,
   type PluginDiagnostic,
   type PluginRecord,
+  PLUGIN_MANIFEST,
   SEAM_NAMES,
   type SeamName,
   type StageSeams,
@@ -70,7 +76,7 @@ type DiscoveredPlugin = PluginDescriptor & { manifest: PluginManifest };
 // raw argv again.
 // ---------------------------------------------------------------------------
 export type PluginCliCommand =
-  | { kind: "compose"; ifStale: boolean; projectRoot?: string }
+  | { kind: "compose"; ifStale: boolean; allHarnesses: boolean; projectRoot?: string }
   | { kind: "doctor"; projectRoot?: string }
   | { kind: "drop"; name: string; projectRoot?: string }
   | { kind: "install"; sourcePath: string; force: boolean; projectRoot?: string }
@@ -83,11 +89,17 @@ export type CliParseResult = { ok: true; command: PluginCliCommand } | { ok: fal
 // Result surface (domain-entities.md). Returned by handlePluginCli for tests to
 // assert on; the process-boundary maps each to an exit code + stdout/stderr.
 // ---------------------------------------------------------------------------
+// One harness tree `compose --all-harnesses` could not bring up to date. The
+// aggregate carries every one of them: a failing tree never stops the fan-out,
+// it only makes the exit code non-zero (fail-closed aggregate).
+export type BulkComposeFailure = { hostRoot: string; message: string };
+
 export type DoctorLineState = "ok" | "drift" | "degraded" | "advisory" | "recovery-pending" | "unknown";
 export type DoctorLine = { plugin: string; state: DoctorLineState; detail: string };
 
 export type PluginCliResult =
-  | { kind: "composed"; applied: number; recompiled: true }
+  | { kind: "composed"; applied: number; recompiled: true; resynced: readonly string[] }
+  | { kind: "composed-all"; total: number; succeeded: number; failures: readonly BulkComposeFailure[] }
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
   | { kind: "doctor"; section: DoctorPluginSection; degraded: boolean }
@@ -102,7 +114,7 @@ export type PluginCliResult =
 // ---------------------------------------------------------------------------
 const USAGE = [
   "usage: amadeus-plugin.ts <verb> [flags]",
-  "  compose [--if-stale] [--project-root <dir>]",
+  "  compose [--if-stale] [--all-harnesses] [--project-root <dir>]",
   "  doctor  [--project-root <dir>]",
   "  drop <plugin-name> [--project-root <dir>]",
   "  install <path> [--force] [--project-root <dir>]",
@@ -121,13 +133,15 @@ function parseCompose(rest: string[]): CliParseResult {
   const pr = takeProjectRoot(rest);
   if (pr.error) return { ok: false, error: { message: pr.error } };
   let ifStale = false;
+  let allHarnesses = false;
   const leftover: string[] = [];
   for (const a of pr.rest) {
     if (a === "--if-stale") ifStale = true;
+    else if (a === "--all-harnesses") allHarnesses = true;
     else leftover.push(a);
   }
   if (leftover.length > 0) return { ok: false, error: { message: `compose: unexpected argument(s): ${leftover.join(" ")}` } };
-  return { ok: true, command: { kind: "compose", ifStale, projectRoot: pr.projectRoot } };
+  return { ok: true, command: { kind: "compose", ifStale, allHarnesses, projectRoot: pr.projectRoot } };
 }
 
 function parseDrop(rest: string[]): CliParseResult {
@@ -195,6 +209,12 @@ export type PluginCliDeps = {
   clearDrops: (hostRoot: string, plugin: string) => void;
   stagingEntryState: (dst: string, src: string) => StagingEntryState;
   copyPluginSource: (src: string, dst: string) => void;
+  listHarnessTrees: (projectDir: string) => readonly string[];
+  listPluginSourceDirs: (root: string) => readonly string[];
+  // Post-compose Stage Progress re-sync (#1849). Optional so a stub deps bag
+  // stays a pure compose harness; defaultPluginCliDeps always wires the real
+  // writer, which is what production composes run.
+  resyncIntentStates?: (hostRoot: string) => readonly StateResyncOutcome[];
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -284,13 +304,26 @@ function telemetryProjectDir(projectRoot: string): string {
 // the runtime left the composed stage off the stage graph, so auto-compose alone
 // never reached a run-stage directive. Fails loud: the first non-zero exit stops
 // the chain and the caller reports the recompile failure.
+// Which installed tools/ dir the post-apply steps spawn from. Normally this
+// file's own dir — the CLI is composing the tree it was installed into. Under
+// `compose --all-harnesses` it is composing SIBLING trees, and each of those
+// carries its own tools/: compiling a sibling with the caller's copy would
+// recompile the CALLER's graph, leaving the composed stage unreachable in the
+// tree that just received it. A host root with no tools of its own (the
+// canonical source layout) falls back to the caller's dir.
+export function resolveHarnessToolsDir(hostRoot: string, scriptDir: string = THIS_DIR): string {
+  const own = join(hostRoot, "tools");
+  return existsSync(join(own, "amadeus-graph.ts")) ? own : scriptDir;
+}
+
 function spawnRecompile(projectRoot: string): boolean {
+  const toolsDir = resolveHarnessToolsDir(projectRoot);
   for (const tool of ["amadeus-graph.ts", "amadeus-runtime.ts"]) {
     const res = observeSubprocessSpan(
       telemetryProjectDir(projectRoot),
       `${tool.replace(/\.ts$/, "")}:compile`,
       () =>
-        spawnSync("bun", [join(THIS_DIR, tool), "compile"], {
+        spawnSync("bun", [join(toolsDir, tool), "compile"], {
           cwd: projectRoot,
           stdio: "ignore",
           env: process.env,
@@ -314,13 +347,38 @@ function spawnRunnerGen(projectRoot: string): boolean {
     telemetryProjectDir(projectRoot),
     "amadeus-runner-gen:write",
     () =>
-      spawnSync("bun", [join(THIS_DIR, "amadeus-runner-gen.ts"), "write"], {
+      spawnSync("bun", [join(resolveHarnessToolsDir(projectRoot), "amadeus-runner-gen.ts"), "write"], {
         cwd: projectRoot,
         stdio: "ignore",
         env: process.env,
       }),
   );
   return res.status === 0;
+}
+
+// The amadeus workspace root for a plugin host root. The host root is the
+// HARNESS dir (<project>/.claude — see defaultPluginHostRoot), and the workspace
+// (amadeus/spaces/…/intents) lives one level above it. In the canonical source
+// layout there is no harness leaf, so the host root already IS the project dir.
+export function projectDirOfHostRoot(hostRoot: string): string {
+  return isHarnessDirName(basename(hostRoot)) ? dirname(hostRoot) : hostRoot;
+}
+
+// The host's OWN compiled graph, read fresh off disk. Not lib's cached
+// loadStageGraph(): that resolves relative to the EXECUTING copy of the tools
+// (wrong when `--project-root` names another harness) and its module cache
+// could predate the recompile this re-sync follows. Falls back to the cached
+// loader when the host carries no compiled graph of its own.
+function hostStageGraph(hostRoot: string): StageEntry[] | undefined {
+  const p = join(hostRoot, "tools", "data", "stage-graph.json");
+  if (!existsSync(p)) return undefined;
+  return JSON.parse(readFileSync(p, "utf-8")) as StageEntry[];
+}
+
+function resyncIntentStates(hostRoot: string): readonly StateResyncOutcome[] {
+  return resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
+    graph: hostStageGraph(hostRoot),
+  });
 }
 
 export function defaultPluginCliDeps(): PluginCliDeps {
@@ -340,6 +398,9 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     clearDrops: clearPluginDrops,
     stagingEntryState,
     copyPluginSource: (src, dst) => copyPluginSource(src, dst),
+    listHarnessTrees,
+    listPluginSourceDirs,
+    resyncIntentStates,
     out: (l) => console.log(l),
     err: (l) => console.error(l),
   };
@@ -392,6 +453,30 @@ export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";
 // `<host>/plugins/<name>/`, which IS compile-visible.
 function pluginSourceRootOf(hostRoot: string): string {
   return join(hostRoot, PLUGIN_SOURCE_DIR_NAME);
+}
+
+// The project-root directory a plugin is AUTHORED in, and the one
+// `--all-harnesses` seeds an absent staging dir from. Distinct from the
+// same-named composed area inside a harness tree: this one sits beside the
+// harness dirs, not under one.
+export const PLUGIN_AUTHORING_DIR_NAME = "plugins";
+
+// The harness trees that actually exist under `projectDir`, in the framework's
+// canonical probe order so the fan-out is deterministic. Detection only — a
+// missing tree is never created (domain-entities E3).
+export function listHarnessTrees(projectDir: string): readonly string[] {
+  return KNOWN_HARNESS_DIRS.map((name) => join(projectDir, name)).filter(
+    (dir) => existsSync(dir) && statSync(dir).isDirectory(),
+  );
+}
+
+// The plugin-bearing subdirectories of `root` (each holding a plugin.json),
+// sorted. An absent root yields [] — a project with no plugins is not an error.
+export function listPluginSourceDirs(root: string): readonly string[] {
+  if (!existsSync(root)) return [];
+  return [...readdirSync(root)]
+    .sort()
+    .filter((name) => existsSync(join(root, name, PLUGIN_MANIFEST)));
 }
 
 // ---------------------------------------------------------------------------
@@ -506,7 +591,7 @@ export function isRecordCurrent(hostRoot: string, deps: PluginCliDeps): boolean 
   for (const plugin of valid) {
     const recorded = record.plugins.get(plugin.name);
     if (recorded === undefined) return false;
-    if (!digestsEqual(ownedStageDigests(plugin), recorded.ownedContentDigests)) return false;
+    if (!digestsEqual(ownedRecordDigests(plugin), recorded.ownedContentDigests)) return false;
   }
   return true;
 }
@@ -523,13 +608,84 @@ function digestsEqual(a: ReadonlyMap<string, string>, b: ReadonlyMap<string, str
 function isStale(plugin: DiscoveredPlugin, record: CompositionRecord): boolean {
   const recorded = record.plugins.get(plugin.name);
   if (recorded === undefined) return true;
-  return !digestsEqual(ownedStageDigests(plugin), recorded.ownedContentDigests);
+  return !digestsEqual(ownedRecordDigests(plugin), recorded.ownedContentDigests);
 }
 
 // ---------------------------------------------------------------------------
 // Verb handlers
 // ---------------------------------------------------------------------------
+// `compose --all-harnesses`: run the SAME single-tree compose against every
+// harness tree that exists under the project, seeding an ABSENT staging dir from
+// the project's authoring `plugins/` first. Staging that already exists is left
+// untouched — replacing a differing staged bundle is `install --force`'s
+// decision, not this verb's. A failing tree is recorded and the fan-out
+// continues; the aggregate exits non-zero (fail-closed).
+function handleComposeAll(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps: PluginCliDeps): PluginCliResult {
+  const base = resolveProjectRoot(cmd);
+  const projectDir = isHarnessDirName(basename(base)) ? dirname(base) : base;
+  const trees = deps.listHarnessTrees(projectDir);
+  if (trees.length === 0) {
+    return { kind: "failure", stage: "discover", message: `no harness tree found under ${projectDir}` };
+  }
+  const sources = collectPluginSources(projectDir, trees, deps);
+  const failures: BulkComposeFailure[] = [];
+  let succeeded = 0;
+  for (const hostRoot of trees) {
+    const seedError = seedStaging(hostRoot, sources, deps);
+    if (seedError !== null) {
+      failures.push({ hostRoot, message: seedError });
+      continue;
+    }
+    const result = handleCompose({ kind: "compose", ifStale: cmd.ifStale, allHarnesses: false, projectRoot: hostRoot }, deps);
+    if (result.kind === "composed" || result.kind === "noop") succeeded += 1;
+    else failures.push({ hostRoot, message: describeTreeFailure(result) });
+  }
+  return { kind: "composed-all", total: trees.length, succeeded, failures };
+}
+
+// Where each plugin name can be seeded FROM: the project's authoring dir first,
+// then any tree that already stages it (so a project without an authoring dir
+// still propagates what one tree already has).
+function collectPluginSources(
+  projectDir: string,
+  trees: readonly string[],
+  deps: PluginCliDeps,
+): ReadonlyMap<string, string> {
+  const sources = new Map<string, string>();
+  const authoringRoot = join(projectDir, PLUGIN_AUTHORING_DIR_NAME);
+  for (const name of deps.listPluginSourceDirs(authoringRoot)) sources.set(name, join(authoringRoot, name));
+  for (const hostRoot of trees) {
+    const stagingRoot = pluginSourceRootOf(hostRoot);
+    for (const name of deps.listPluginSourceDirs(stagingRoot)) {
+      if (!sources.has(name)) sources.set(name, join(stagingRoot, name));
+    }
+  }
+  return sources;
+}
+
+// Place every known plugin into this tree's staging area IF it is absent there.
+// Returns a message on the first copy failure so the tree is reported rather
+// than composed from a half-written staging dir.
+function seedStaging(hostRoot: string, sources: ReadonlyMap<string, string>, deps: PluginCliDeps): string | null {
+  for (const [name, src] of [...sources].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
+    const dst = join(pluginSourceRootOf(hostRoot), name);
+    if (dst === src) continue;
+    if (deps.stagingEntryState(dst, src) !== "absent") continue;
+    try {
+      deps.copyPluginSource(src, dst);
+    } catch (error) {
+      return `staging seed failed for "${name}": ${String(error)}`;
+    }
+  }
+  return null;
+}
+
+function describeTreeFailure(result: PluginCliResult): string {
+  return result.kind === "failure" ? `${result.stage}: ${result.message}` : result.kind;
+}
+
 function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps: PluginCliDeps): PluginCliResult {
+  if (cmd.allHarnesses) return handleComposeAll(cmd, deps);
   const hostRoot = resolveProjectRoot(cmd);
   if (cmd.ifStale && isRecordCurrent(hostRoot, deps)) {
     return { kind: "noop", reason: "record-current" };
@@ -562,7 +718,16 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
   if (!deps.generateRunners(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "stage-runner generation failed after compose" };
   }
-  return { kind: "composed", applied, recompiled: true };
+  // The composed graph now carries stages no RUNNING intent's state file knows
+  // about; `next` would issue them and `report` would refuse them (#1849). This
+  // runs LAST, after the graph on disk is the composed one.
+  const resync = deps.resyncIntentStates?.(hostRoot) ?? [];
+  return {
+    kind: "composed",
+    applied,
+    recompiled: true,
+    resynced: resync.filter((o) => o.status === "resynced").map((o) => o.intent),
+  };
 }
 
 // `install <path>`: stage the source folder under PLUGIN_SOURCE_DIR_NAME, then
@@ -589,7 +754,7 @@ function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps
     };
   }
   if (state !== "identical") deps.copyPluginSource(src, dst);
-  const composed = handleCompose({ kind: "compose", ifStale: true, projectRoot: cmd.projectRoot }, deps);
+  const composed = handleCompose({ kind: "compose", ifStale: true, allHarnesses: false, projectRoot: cmd.projectRoot }, deps);
   if (composed.kind === "composed") return { kind: "installed", name, composeOutcome: "composed" };
   if (composed.kind === "noop") return { kind: "installed", name, composeOutcome: "noop" };
   return composed;
@@ -848,8 +1013,16 @@ export function runPluginCli(argv: readonly string[], deps: PluginCliDeps = defa
 export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDeps): number {
   switch (result.kind) {
     case "composed":
-      deps.out(`composed ${result.applied} plugin(s), recompiled`);
+      deps.out(
+        `composed ${result.applied} plugin(s), recompiled` +
+          (result.resynced.length > 0 ? `, re-synced ${result.resynced.join(", ")}` : ""),
+      );
       return 0;
+    case "composed-all": {
+      deps.out(`compose --all-harnesses: ${result.succeeded}/${result.total} harness tree(s) up to date`);
+      for (const failure of result.failures) deps.err(`amadeus-plugin: ${failure.hostRoot}: ${failure.message}`);
+      return result.failures.length > 0 ? 1 : 0;
+    }
     case "noop":
       deps.out("compose: record already current (no-op)");
       return 0;
