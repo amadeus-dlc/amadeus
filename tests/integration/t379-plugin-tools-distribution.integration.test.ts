@@ -229,6 +229,25 @@ describe("t379 compose --all-harnesses", () => {
     expect(readFileSync(join(project, ".claude", RUN_REL), "utf-8")).toBe(RUN_BODY);
   });
 
+  test("a tree whose staging cannot be seeded is reported, not composed", () => {
+    writeAuthoringSource(project);
+    for (const name of [".claude", ".codex"]) mkdirSync(join(project, name), { recursive: true });
+    const failing = join(project, ".codex");
+    const seedBlocked: PluginCliDeps = {
+      ...deps(),
+      copyPluginSource: (src, dst) => {
+        if (dst.startsWith(failing)) throw new Error("EACCES: staging is read-only");
+        copyPluginSource(src, dst, () => {});
+      },
+    };
+
+    expect(handlePluginCli(["compose", "--all-harnesses", "--project-root", project], seedBlocked)).toBe(1);
+    expect(err.join("\n")).toContain("staging seed failed");
+    expect(existsSync(join(failing, RUN_REL))).toBe(false);
+    // The healthy tree is unaffected — a seed failure never aborts the fan-out.
+    expect(readFileSync(join(project, ".claude", RUN_REL), "utf-8")).toBe(RUN_BODY);
+  });
+
   test("a project with no harness tree fails closed", () => {
     writeAuthoringSource(project);
     expect(handlePluginCli(["compose", "--all-harnesses", "--project-root", project], deps())).toBe(1);
