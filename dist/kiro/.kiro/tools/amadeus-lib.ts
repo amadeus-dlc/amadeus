@@ -5473,9 +5473,23 @@ export function renderStageProgressSection(
   return body;
 }
 
+// The recognized shape of the Stage Progress section. Shared by the replacer
+// and the extractor below so "what gets rewritten" and "what gets inventoried/
+// verified" can never drift apart (#1963).
+const STAGE_PROGRESS_SECTION_RE =
+  /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
+
 export function replaceStageProgressSection(content: string, body: string): string {
-  const section = /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
-  return content.replace(section, `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`);
+  return content.replace(
+    STAGE_PROGRESS_SECTION_RE,
+    `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
+  );
+}
+
+// The Stage Progress section of a state file, or null when its shape is not
+// recognized — the same inputs on which the replacer above silently no-ops.
+function stageProgressSectionOf(content: string): string | null {
+  return STAGE_PROGRESS_SECTION_RE.exec(content)?.[0] ?? null;
 }
 
 /** The `Per unit:` annotation the Construction section carries, if any. */
@@ -5546,19 +5560,25 @@ export function rebuildDerivedPlanFields(
 // existing row's checkbox state and plan suffix, and recomputes the derived
 // counters so an inserted row cannot produce a Completed > Total skew.
 //
-// Fail-closed in three directions:
+// Fail-closed in four directions:
 //   - a terminal (non-Running) record is a RECORD, not a live plan: adding rows
 //     under a summary computed at completion corrupts it, so it is skipped;
 //   - a state row whose slug is absent from THIS host's graph means the record
 //     travelled from a host with a different graph: rebuilding would delete it,
 //     so the whole intent is skipped, untouched;
-//   - an unreadable state / unknown scope is reported, never guessed at.
+//   - an unreadable state / unknown scope is reported, never guessed at;
+//   - a Stage Progress section the replacer's regex does not recognize (a
+//     hand-edited header comment, a trailing section) makes the replacement a
+//     silent no-op: that is verified by re-parsing the rewritten content, and
+//     on failure NOTHING is written — updating the derived counters without
+//     the rows would skew the record (#1963).
 export type StateResyncStatus =
   | "resynced"
   | "current"
   | "not-running"
   | "foreign-rows"
-  | "unreadable";
+  | "unreadable"
+  | "section-unrecognized";
 
 export interface StateResyncOutcome {
   space: string;
@@ -5591,7 +5611,11 @@ function resyncOneIntent(
   const scopeDef = scope ? loadScopeMapping()[scope] : undefined;
   if (!scopeDef) return outcome("unreadable");
 
-  const rows = parseCheckboxes(content);
+  // Only rows INSIDE the Stage Progress section count. parseCheckboxes scans
+  // its whole input, so a checkbox-shaped line in another section (notes,
+  // prose) would otherwise satisfy the inventory — and a missing row would
+  // never be inserted while the intent reports "current" (#1970 review).
+  const rows = parseCheckboxes(stageProgressSectionOf(content) ?? "");
   const graphSlugs = new Set(graph.map((s) => s.slug));
   if (rows.some((r) => !graphSlugs.has(r.slug))) return outcome("foreign-rows");
 
@@ -5610,6 +5634,17 @@ function resyncOneIntent(
     content,
     renderStageProgressSection(graph, planOf, stateOf, perUnitLineOf(content)),
   );
+  // Verify the replacement actually took effect. `replaceStageProgressSection`
+  // is a bare String.replace: a non-matching section regex returns the input
+  // unchanged with no signal. Comparing `next !== content` would not prove
+  // anything either (derived fields change the bytes anyway), so the rewritten
+  // SECTION is re-extracted and re-parsed — scoped so a checkbox-shaped decoy
+  // elsewhere in the file cannot vouch for a row that was never inserted —
+  // and every missing slug must now have a row (#1963).
+  const rowSlugsAfter = new Set(
+    parseCheckboxes(stageProgressSectionOf(next) ?? "").map((r) => r.slug),
+  );
+  if (inserted.some((slug) => !rowSlugsAfter.has(slug))) return outcome("section-unrecognized");
   next = rebuildDerivedPlanFields(next, graph, planOf).content;
   next = setField(next, "Last Updated", isoTimestamp());
   writeStateFile(projectDir, next, intent, space);
