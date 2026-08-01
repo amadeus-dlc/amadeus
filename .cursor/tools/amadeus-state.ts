@@ -478,9 +478,7 @@ function emitAudit(
     stateOperationTarget?.intent,
     stateOperationTarget?.space,
   );
-  if (result.appended === false && result.reason === "fatal-latch") {
-    assertMutationAllowed();
-  }
+  if (result.appended === false && result.reason === "fatal-latch") assertMutationAllowed();
 }
 
 // Thin alias over the shared accessor — kept so existing call sites read
