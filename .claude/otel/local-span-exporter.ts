@@ -18,6 +18,7 @@ import { auditCloneId } from "../tools/amadeus-lib.ts";
 import { telemetryDir } from "../tools/amadeus-observability.ts";
 import { DEFAULT_REDACTION_POLICY, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";
+import { redactResource } from "./resource.ts";
 
 // A recorded span link (FR-EXP-3): the linked span's context plus optional
 // attributes, redacted at the export boundary like any other attribute bag.
@@ -83,12 +84,16 @@ function noteStoreFailure(options: LocalSpanExporterOptions, cause: unknown): vo
 }
 
 // Export-boundary redaction (FR-DST-3 layer 2): attributes, per-event
-// attributes, and per-link attributes are filtered immediately before append,
-// so a producer that skipped the write-time layer cannot reach the store.
+// attributes, per-link attributes, and the resource bag are filtered
+// immediately before append, so a producer that skipped the write-time layer
+// cannot reach the store. The resource carries its own allow-list policy
+// (redactResource) because its keys are disjoint from the event vocabulary the
+// attribute policy admits.
 function redactRecord(record: CompletedSpanRecord, policy: RedactionPolicy): CompletedSpanRecord {
   return {
     ...record,
     attributes: redactAttributes(record.attributes, policy),
+    resource: redactResource(record.resource as Record<string, string>),
     events: record.events.map((event) =>
       event.attributes === undefined ? event : { ...event, attributes: redactAttributes(event.attributes, policy) }
     ),

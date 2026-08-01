@@ -26,6 +26,8 @@ import type {
 import { processParentSpanContext } from "./context.ts";
 import type { CompletedSpanRecord, LocalSpanExporter } from "./local-span-exporter.ts";
 import { EXCEPTION_SPAN_EVENT_NAME, getEventDef } from "./event-registry.ts";
+import { currentResource } from "./resource.ts";
+import type { ResourceGetter } from "./resource.ts";
 
 function hexId(bytes: number): string {
   const buf = new Uint8Array(bytes);
@@ -57,7 +59,8 @@ class AmadeusSpan implements Span {
     options: SpanOptions | undefined,
     parentContext: Context,
     private readonly exporter: LocalSpanExporter,
-    private readonly scopeName: string
+    private readonly scopeName: string,
+    private readonly resource: ResourceGetter
   ) {
     this.kind = options?.kind !== undefined ? String(options.kind) : "internal";
     this.startMs = options?.startTime !== undefined ? toMs(options.startTime) : Date.now();
@@ -134,7 +137,7 @@ class AmadeusSpan implements Span {
       attributes: { ...this.attributes },
       events: this.events,
       links: this.links,
-      resource: { "service.name": "amadeus", "telemetry.sdk.language": "typescript" },
+      resource: this.resource(),
       instrumentationScope: { name: this.scopeName },
     };
     this.exporter.exportSpan(record); // fail-open inside the exporter
@@ -160,10 +163,11 @@ class AmadeusSpan implements Span {
 class AmadeusTracer implements Tracer {
   constructor(
     private readonly exporter: LocalSpanExporter,
-    private readonly scopeName: string
+    private readonly scopeName: string,
+    private readonly resource: ResourceGetter
   ) {}
   startSpan(name: string, options?: SpanOptions, ctx?: Context): Span {
-    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName);
+    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName, this.resource);
   }
   startActiveSpan<F extends (span: Span) => unknown>(name: string, ...args: unknown[]): ReturnType<F> {
     let options: SpanOptions | undefined;
@@ -187,9 +191,12 @@ class AmadeusTracer implements Tracer {
 }
 
 class AmadeusTracerProvider implements TracerProvider {
-  constructor(private readonly exporter: LocalSpanExporter) {}
+  constructor(
+    private readonly exporter: LocalSpanExporter,
+    private readonly resource: ResourceGetter
+  ) {}
   getTracer(name: string, _version?: string, _options?: unknown): Tracer {
-    return new AmadeusTracer(this.exporter, name);
+    return new AmadeusTracer(this.exporter, name, this.resource);
   }
 }
 
@@ -200,11 +207,16 @@ let registeredProjectDir: string | null = null;
 // project dir is recorded rather than left implicit in the exporter's closure:
 // it is what lets a bootstrap seam tell "already standing" apart from
 // "standing for a DIFFERENT workspace".
-export function registerTracerProvider(options: { projectDir: string; spanExporter: LocalSpanExporter }): void {
+export function registerTracerProvider(options: {
+  projectDir: string;
+  spanExporter: LocalSpanExporter;
+  resource?: ResourceGetter;
+}): void {
   if (registeredProjectDir !== null) {
     throw new Error("registerTracerProvider called twice — invariant violation (NFR-3)");
   }
-  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter));
+  const resource = options.resource ?? (() => currentResource(options.projectDir));
+  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter, resource));
   registeredProjectDir = options.projectDir;
 }
 

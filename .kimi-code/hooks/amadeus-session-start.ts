@@ -23,6 +23,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
+import { supplyResourceAttribute } from "../otel/resource-suppliers.ts";
 import { stageGraphDrift } from "../tools/amadeus-graph.ts";
 import { repointHarnessIncludes } from "../tools/amadeus-includes.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
@@ -114,6 +115,21 @@ if (hookStdin.text.length > 0) {
 // re-stamp in handleIntent, amadeus-utility.ts). Separate file from the per-session
 // stamp below; no-op without a session_id.
 if (sessionId) writeCurrentSessionId(projectDir, sessionId);
+
+// Hand the conversation id to the resource seam (FR-RES-3). This hook is the
+// only surface that sees it, and core cannot derive it. Supplying BEFORE the
+// bootstrap below means the first record this process writes already carries
+// it; supplying afterwards would still work (the bag is a getter, not a
+// snapshot), but there is no reason to make the first record the odd one out.
+// A refusal here is a second supply in one process, which is not worth failing
+// a session over — fail-open (NFR-1).
+if (sessionId) {
+  try {
+    supplyResourceAttribute("session.id", sessionId);
+  } catch {
+    // already supplied in this process
+  }
+}
 
 // Emit session event. appendAuditEntry creates the audit shard if missing, so no
 // audit-existence guard — the state-file guard above is the sole "workflow
