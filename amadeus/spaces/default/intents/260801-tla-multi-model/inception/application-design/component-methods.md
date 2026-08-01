@@ -100,7 +100,9 @@ export function selectVerifiedModel(
 // tla-arm.ts — モデル別 invariant 集合の解決(model-map vocabulary を唯一の源に)
 export function namedInvariantsFor(
   model: ModelMapModel,
-): Result<readonly string[], TlaArmError>; // vocabulary 未設定は明示失敗
+): Result<readonly string[], ModelLoadError>; // vocabulary 未設定は明示失敗
+// (u3 functional-design での修正: 当初の TlaArmError は新設せず、語彙欠如は宣言の欠陥として
+//  既存の MODEL_MAP_INVALID(kind MODEL_LOAD)に載せる — 新エラー列挙を追加しない方針の一貫)
 
 // tlc-toolchain.ts — TRACE 解析語彙のモデル別供給
 export interface TraceVocabulary {
