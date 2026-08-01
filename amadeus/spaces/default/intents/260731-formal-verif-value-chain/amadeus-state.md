@@ -99,6 +99,7 @@ Per unit: [TBD]
 - **Construction Autonomy Mode**: gated
 - **Last Updated**: 2026-07-31T21:49:58Z
 
+- **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
