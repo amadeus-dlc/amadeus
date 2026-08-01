@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
   cleanupTestProject,
   createTestProject,

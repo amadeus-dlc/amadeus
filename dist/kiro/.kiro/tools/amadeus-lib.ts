@@ -4798,6 +4798,15 @@ export function hooksHealthDir(projectDir: string, intent?: string, space?: stri
   return join(docsRoot(projectDir, intent, space), ".amadeus-hooks-health");
 }
 
+// `<root>/.amadeus-advisory-latch` — per-run markers for the plugin activation
+// advisories the engine has already raised (U5 run latch). Machine-local: the
+// `.amadeus-` prefix under the record is gitignored, so a latch never reaches a
+// commit. Callers add a per-session leaf; the leaf's lifecycle IS the run
+// boundary.
+export function advisoryLatchDir(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-advisory-latch");
+}
+
 // `<root>/.amadeus-recovery.md` — the validate-state breadcrumb the orchestrator
 // reads on resume.
 export function recoveryFilePath(projectDir: string, intent?: string, space?: string): string {

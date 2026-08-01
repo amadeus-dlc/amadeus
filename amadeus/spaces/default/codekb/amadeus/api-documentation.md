@@ -1,6 +1,116 @@
 # API ドキュメント
 
-## オープンバグ一括修正バッチ第5弾が触れる内部契約（260801-open-bug-batch-5、現在、observed `c49e385ac`）
+## 価値チェーン3件が触れる内部契約（260731-formal-verif-value-chain、現在、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が変更・拡張しうる内部契約を、現行の形とともに固定する。
+
+### 契約 1 — plugin manifest スキーマ（#1829 で拡張が必要）
+
+現行の型（`packages/framework/core/tools/amadeus-plugin-compose.ts:105-110` verbatim）:
+
+```ts
+export type PluginManifest = {
+  name: string;
+  stages: readonly StageCopy[];
+  seams: readonly SeamContribution[];
+  fragments: readonly FragmentSplice[];
+};
+```
+
+parser（同 `:330-334`）も `parseStages` / `parseSeams` / `parseFragments` の3本のみを呼ぶ。**`tools` を宣言する場所が型にも parser にも無い。** `formal-model-check` の実 manifest も `"seams":[]` / `"fragments":[]` を明示した3フィールド構成。
+
+拡張時に同時に動く契約:
+
+| 契約点 | 現行 | 拡張の影響 |
+| --- | --- | --- |
+| `PluginManifest` 型 `:105-110` | 3フィールド | フィールド追加 |
+| manifest parser `:330-334` | 3 parser | parser 追加 + errors 合流 |
+| `composeWriteSet` `:1021` | `hostWrites` = `plan.stageCopies` ∪ `plan.sharedWrites` | 第3の write 源を追加 |
+| `ownedPaths` `:557` | stage パス限定 | 所有境界の拡張（drop の逆操作も対称に要る） |
+| coverage allowlist trusted path | `tests/.coverage-patch-allowlist.json:35-36` が `plugins/<plugin>/stages/` 始まりに限定と明記 | tools 配布時に**この限定が効く** |
+
+### 契約 2 — projection の入出力契約（#1829 は無改修で通る）
+
+`scripts/plugin-projection.ts`:
+
+- `:158` `discoverPluginSources` — `walkFs` で**全ファイル走査**（`:169-172`）。宣言不要
+- 検証は構造安全性のみ（`:194`、`:207-215`）
+- 変換規則 `:238-241` verbatim: 「Prose is transformed…; `.json`/`.ts` are verbatim」
+- 出力 prefix `:129` — `plugins/<name>/`
+
+すなわち **projection は宣言駆動ではなくディスク駆動**であり、compose だけが宣言駆動という非対称が契約レベルで存在する。
+
+### 契約 3 — activation advisory の出力契約（#1738 の変更対象）
+
+| 契約点 | 現行の形 |
+| --- | --- |
+| 発火スロット | `amadeus-orchestrate.ts:1293` `const ACTIVATION_ADVISORY_STAGE = "build-and-test";` |
+| ガード | `:1306` `if (slug !== ACTIVATION_ADVISORY_STAGE) return;` |
+| チャネル | stderr 単線。`:1299-1300` コメント「Writes ONLY stderr — the stdout directive JSON stays byte-pure」 |
+| 判定関数 | `amadeus-plugin-activation.ts:272` `activationAdvisoryForHost(hostRoot, fs = defaultActivationFs)` → `string \| null` |
+| 戻り値 | `null` = 沈黙（`current`）/ `:209` CHANGED 文面 / `:211` no recorded verdict 文面 |
+| 副作用 | 無（`:272` 直上コメント「Never writes state (BR-U6-6). Never throws.」） |
+| 第1ゲート | compose 済みか（`:230` 近傍、未 compose なら 0-plugin zero-impact） |
+| 重複抑止 | **ラッチ無し**。`:1296-1297` コメント「single guarded call site — emitForSlug — so no latch is needed for BR-U6-8」 |
+
+**発火点を増やす／前倒す設計は、この「単一呼出しゆえラッチ不要」という前提を破る。** advisory の冪等性契約を新設するか、発火点を単一に保ったまま位置だけ動かすかが要件段の裁定対象。
+
+### 契約 4 — model-map ファイル契約（#1510）
+
+`specs/tla/model-map.json` の実体（`schemaVersion 1`）:
+
+| フィールド | 内容 |
+| --- | --- |
+| `model` | `{ path: "specs/tla/FormalElection.tla", identity: "742b7785…" }` |
+| `cfg` | `{ path: "specs/tla/FormalElection.cfg", identity: "92656a5c…" }` |
+| `entries` | 5 件、各 `{ implPath, sha256 }`（`amadeus-election*.ts`） |
+
+スキーマ検証（`amadeus-formal-verif-model-map.ts`）: `:49-51` パス定数、`:158` `exactObject(["implPath","sha256"])`、`:161` 境界検査、`:169` ソート/一意、`:186` `exactObject(["cfg","entries","model","schemaVersion"])`。**`exactObject` はフィールド追加を fail-closed で拒否する**ため、entries に更新理由等のメタを足す設計はスキーマ改訂を伴う。
+
+### 契約 5 — 更新拒否と実行時ドリフトの非対称（#1510 の中核）
+
+| 方向 | 実装 | 判定対象 |
+| --- | --- | --- |
+| 実行時（読取） | `scripts/formal-verif/tla-model-loader-internal.ts:232` `if (sha256 !== entry.sha256) return drift(entry.implPath, "implementation entry hash differs from model map");` | **entries の impl-hash** |
+| 更新（書込） | `amadeus-sensor-model-completeness.ts:650-659` — model/cfg identity が一致していれば `{ ok:false, code:"MODEL_UNCHANGED" }` | **model/cfg identity のみ** |
+
+**片側だけが impl-hash を見る非対称**（`cid:requirements-analysis:symmetric-pair-review` の write⇔check 対の破れ）が詰みの正体。読取側の他3分岐は `:221`（種別）/ `:224`（可読性）/ `:229`（バイト読取）。消費側の公開口は `:239` `loadVerifiedTlaSourceInternal`（`:236-237` に「Internal/test-only seam. Production callers must use the no-argument wrapper in tla-model-loader.ts」）。
+
+更新側の API 面: `:691` `updateModelMapInternal`（本体）/ `:729`（公開）/ `:778-779`・`:790`（CLI 分岐）。文書化された唯一の手順は `.claude/sensors/amadeus-model-completeness.md:37`、`:39-41` に MODEL_UNCHANGED 拒否が明記されている。
+
+センサー発火契約は `.claude/sensors/amadeus-model-completeness.md:8` verbatim:
+
+```
+matches: "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}"
+```
+
+**impl 変更で発火するが更新に到達できない** — 発火契約と更新契約の間に穴がある。
+
+### 契約 6 — mirror 状態機械の遷移契約（#1738 の新モデル題材）
+
+`amadeus-mirror-state-reducer.ts`:
+
+- 入力: `MirrorTransition`（`:55`、inline 18 種 + `:113` `| ProjectSyncTransition;` の 3 種 = **21 種**）
+- 統合口: `:814` `reduceMirrorState`
+- 出力: `ReducerResult` = `changed` / `unchanged` / `invalid`（`:127` 直前の union）
+- 終端: `:127-132` `TERMINAL_STATUSES` = succeeded / skipped-for-event / safety-blocked / abandoned
+- 事前条件（`:692-715` verbatim）: `guardMarkAttempted`（prepared∨attempted）/ `guardClaimCreate`（同 + `createIdentity`）/ `guardRetryNoEffect`（pending ∧ no-effect-confirmed）/ `guardObservedRetry`（pending ∧ outcome-unknown）
+- 有限化定数: `:42` `export const MAX_RECEIPTS = 1000;`
+
+boundary → operation の写像契約（`amadeus-mirror-coordinator.ts:230-244` verbatim）:
+
+```ts
+if (context.boundary.kind === "manual") return null;
+if (context.boundary.kind === "intent-capture-approved") return "create";
+if (context.boundary.kind === "workflow-completed") { return nextCompletionOperation({ intentUuid, boundary, state }); }
+return state.issueNumber === null ? "create" : "sync";
+```
+
+`intent-capture-approved` のみ `state.issueNumber` を参照せず `create` を返す — この非対称が [#1838](https://github.com/amadeus-dlc/amadeus/issues/1838)（重複 create）の機序候補であり、新モデルが検査すべき不変量（「issueNumber 記録済みなら create を発行しない」）の第一候補になる。
+
+## オープンバグ4件が触れる内部契約（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離が触れる内部契約（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾が触れる内部契約（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: 公開 CLI 契約の変更なし。触れるのは内部契約4点 — mirror receipt 遷移（reducer の complete/mark-pending 受理元）、state scaffold のフィールド集合（Construction Autonomy Mode 追加）、report の checkbox ガード挙動（#1849 裁定依存）、metrics publication の problems 分類（一過性 I/O と所有権証拠異常の分離）。テスト pin の明示改訂を伴うものは要件段で宣言する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
 

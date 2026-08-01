@@ -8,8 +8,8 @@ import {
   selectTlcSpawnPlanner,
   type PlannerEnvironmentObservation,
   type PlannerEnvironmentPort,
-} from "../../scripts/formal-verif/tlc-spawn-planner.ts";
-import type { EnvVerifyContext } from "../../scripts/formal-verif/run-model-check-domain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import type { EnvVerifyContext } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 
 const SHA = "a".repeat(64);
 const OTHER_SHA = "b".repeat(64);

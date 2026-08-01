@@ -13,7 +13,7 @@ import {
   configureDockerTraceWrapper,
   installDockerTraceWrapper,
   parseDockerTrace,
-} from "../../scripts/formal-verif/ci-docker-trace.ts";
+} from "../../plugins/formal-model-check/tools/ci-docker-trace.ts";
 
 const roots: string[] = [];
 

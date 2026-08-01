@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 562,
+    "total": 563,
     "enumeratedByClass": {
-      "function": 319,
+      "function": 320,
       "audit": 79,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 157,
+      "function": 158,
       "audit": 34,
       "scope": 10,
       "stage": 8,
@@ -950,6 +950,18 @@
         {
           "file": "tests/unit/t211-log-subagent-complete-gate.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:advisoryLatchDir",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t381-advisory-checkpoints-latch.integration.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

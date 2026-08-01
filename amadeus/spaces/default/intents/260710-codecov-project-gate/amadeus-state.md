@@ -13,7 +13,7 @@
 
 ## Scope Configuration
 - **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.1, 3.5, 3.6
-- **Stages to Skip**: 1.1 (intent-capture), 1.2 (market-research), 1.3 (feasibility), 1.4 (scope-definition), 1.5 (team-formation), 1.6 (rough-mockups), 1.7 (approval-handoff), 2.2 (practices-discovery), 2.4 (user-stories), 2.5 (refined-mockups), 2.6 (application-design), 2.7 (units-generation), 2.8 (delivery-planning), 3.2 (nfr-requirements), 3.3 (nfr-design), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
+- **Stages to Skip**: 1.1 (intent-capture), 1.2 (market-research), 1.3 (feasibility), 1.4 (scope-definition), 1.5 (team-formation), 1.6 (rough-mockups), 1.7 (approval-handoff), 2.2 (practices-discovery), 2.4 (user-stories), 2.5 (refined-mockups), 2.6 (application-design), 2.7 (units-generation), 2.8 (delivery-planning), 3.2 (nfr-requirements), 3.3 (nfr-design), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization), 3.8 (formal-model-check)
 - **Depth**: Minimal
 - **Test Strategy**: Minimal
 
@@ -79,6 +79,7 @@ Per unit: [TBD]
 - [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
+- [ ] formal-model-check — SKIP
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
@@ -94,7 +95,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-10T04:13:07Z
+- **Last Updated**: 2026-08-01T11:32:20Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design

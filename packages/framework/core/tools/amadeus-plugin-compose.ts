@@ -102,11 +102,19 @@ export type SeamContribution = { stage: string; seam: SeamName; entries: readonl
 // `id` names the contribution so a drop can reverse exactly this splice.
 export type FragmentSplice = { file: string; anchor: string; id: string; text: string };
 
+// An executable the plugin's stages invoke, copied verbatim into the host beside
+// its stages so a composed plugin runs from the harness tree it was composed
+// into. The manifest declares a plugin-root-relative path under `tools/`;
+// parsing namespaces it under plugins/<name>/ exactly like a StageCopy, so both
+// kinds land in one owned-path space.
+export type ToolCopy = { path: string; bytes: Buffer };
+
 export type PluginManifest = {
   name: string;
   stages: readonly StageCopy[];
   seams: readonly SeamContribution[];
   fragments: readonly FragmentSplice[];
+  tools: readonly ToolCopy[];
 };
 
 // A discovered plugin. `manifest` is null when the manifest is malformed;
@@ -234,6 +242,7 @@ export type PluginCompositionPlan = {
   plugin: string;
   contentDigest: string;
   stageCopies: readonly StageCopy[];
+  toolCopies: readonly ToolCopy[];
   sharedWrites: readonly { path: string; bytes: Buffer }[];
   ledger: SharedFileLedger;
   record: PluginRecord;
@@ -330,8 +339,50 @@ export function parsePluginManifest(
   const stages = parseStages(name, raw.stages, readStage, errors);
   const seams = parseSeams(raw.seams, errors);
   const fragments = parseFragments(raw.fragments, errors);
+  const tools = parseTools(name, raw.tools, readStage, errors);
   if (errors.length > 0) return { manifest: null, errors: errors.sort() };
-  return { manifest: { name, stages, seams, fragments }, errors: [] };
+  return { manifest: { name, stages, seams, fragments, tools }, errors: [] };
+}
+
+// The directory a declared tool must live under, inside the plugin bundle. A
+// narrower constraint than expectRelPath's traversal check: it keeps the tool
+// space disjoint from the stage space so neither can claim the other's paths.
+const TOOLS_DIR_PREFIX = "tools/";
+
+// `tools` is OPTIONAL: an absent field yields [] so a manifest written before
+// this field existed stays valid and composes byte-identically. Present, it must
+// be an array of bundle-relative paths under tools/ that resolve to real bytes;
+// anything else is a manifest-shape error collected here and rejected whole.
+function parseTools(
+  pluginName: string,
+  value: unknown,
+  readFile: (rel: string) => Buffer | null,
+  errors: string[],
+): readonly ToolCopy[] {
+  if (value === undefined) return [];
+  const arr = expectArray(value, "tools", errors);
+  const out: ToolCopy[] = [];
+  const seen = new Set<string>();
+  arr.forEach((entry, i) => {
+    const rel = expectRelPath(entry, `tools[${i}]`, errors);
+    if (rel === null) return;
+    if (!rel.startsWith(TOOLS_DIR_PREFIX)) {
+      errors.push(`tools[${i}] "${rel}" must live under ${TOOLS_DIR_PREFIX}`);
+      return;
+    }
+    if (seen.has(rel)) {
+      errors.push(`tools[${i}] "${rel}" is a duplicate declaration`);
+      return;
+    }
+    seen.add(rel);
+    const bytes = readFile(rel);
+    if (bytes === null) {
+      errors.push(`tools[${i}] "${rel}" not found in bundle`);
+      return;
+    }
+    out.push({ path: posix.join("plugins", pluginName, rel), bytes });
+  });
+  return out;
 }
 
 function parseStages(
@@ -413,6 +464,7 @@ export function inspectPlugin(plugin: PluginDescriptor, host: HostSnapshot): Plu
   }
   const m = plugin.manifest;
   collectStageErrors(m, host, errors);
+  collectToolErrors(m, host, errors);
   collectSeamErrors(m, host, errors);
   collectFragmentErrors(m, host, errors);
   if (errors.length > 0) return { kind: "rejected", errors: sortErrors(errors) };
@@ -427,6 +479,19 @@ function collectStageErrors(m: PluginManifest, host: HostSnapshot, errors: Plugi
     seen.add(s.slug);
     if (host.stages.has(s.slug)) errors.push({ kind: "same-name-stage", message: `stage slug already in host`, locus: s.slug });
     if (host.paths.has(s.path)) errors.push({ kind: "clobber", message: `stage path already in host`, locus: s.path });
+  }
+}
+
+// A tool lands in the same no-clobber owned-path space as a stage: an existing
+// host file at the landing path is refused before any write, and a tool that
+// collides with one of this plugin's own stage paths is a malformed manifest.
+function collectToolErrors(m: PluginManifest, host: HostSnapshot, errors: PluginError[]): void {
+  const stagePaths = new Set(m.stages.map((s) => s.path));
+  for (const t of m.tools) {
+    if (stagePaths.has(t.path)) {
+      errors.push({ kind: "malformed-manifest", message: `tool path collides with a stage path`, locus: t.path });
+    }
+    if (host.paths.has(t.path)) errors.push({ kind: "clobber", message: `tool path already in host`, locus: t.path });
   }
 }
 
@@ -554,8 +619,8 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     sharedWrites.push({ path, bytes });
     sharedFiles.push({ path, expectedPostState: bytes });
   }
-  const ownedPaths = m.stages.map((s) => s.path).sort();
-  const ownedContentDigests = ownedStageDigests(plugin);
+  const ownedPaths = [...m.stages.map((s) => s.path), ...m.tools.map((t) => t.path)].sort();
+  const ownedContentDigests = ownedRecordDigests(plugin);
   const stageIndex = buildStageIndex(m.stages);
   const record: PluginRecord = {
     plugin: plugin.name,
@@ -570,19 +635,24 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     plugin: plugin.name,
     contentDigest: pluginContentDigest(plugin),
     stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
+    toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
     sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
     ledger,
     record,
   };
 }
 
-// The per-owned-stage content digests a composition would persist for `plugin`
-// (path → sha256 of the stage bytes). Exported as the single definition so the
-// no-op fast path (amadeus-plugin.ts compose --if-stale) can compare a freshly
-// discovered plugin against the recorded PluginRecord.ownedContentDigests without
-// reaching any mutation stage (inspect/plan/apply).
-export function ownedStageDigests(plugin: { manifest: PluginManifest }): ReadonlyMap<string, string> {
-  return new Map(plugin.manifest.stages.map((stage) => [stage.path, digestBytes(stage.bytes)]));
+// The per-owned-path content digests a composition would persist for `plugin`
+// (path → sha256 of the bytes). Covers EVERY owned kind — stages and tools —
+// because planPluginDrop reads this same map back: a path the record owns but
+// this map skips is an expectedDigest-undefined drift, which would make the
+// plugin undroppable. Exported as the single definition so the no-op fast path
+// (amadeus-plugin.ts compose --if-stale) can compare a freshly discovered plugin
+// against the recorded PluginRecord.ownedContentDigests without reaching any
+// mutation stage (inspect/plan/apply).
+export function ownedRecordDigests(plugin: { manifest: PluginManifest }): ReadonlyMap<string, string> {
+  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools];
+  return new Map(owned.map((entry) => [entry.path, digestBytes(entry.bytes)]));
 }
 
 function buildStageIndex(stages: readonly StageCopy[]): readonly PluginStageIndexEntry[] {
@@ -612,11 +682,12 @@ function pluginContentDigest(plugin: ValidPlugin): string {
   const hash = createHash("sha256");
   hash.update("amadeus.plugin-content.v1\0");
   hash.update(plugin.manifestBytes);
-  for (const stage of [...plugin.manifest.stages].sort((a, b) => cmpStr(a.path, b.path))) {
+  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools];
+  for (const entry of [...owned].sort((a, b) => cmpStr(a.path, b.path))) {
     hash.update("\0");
-    hash.update(stage.path);
+    hash.update(entry.path);
     hash.update("\0");
-    hash.update(stage.bytes);
+    hash.update(entry.bytes);
   }
   return `sha256:${hash.digest("hex")}`;
 }
@@ -971,7 +1042,14 @@ function commitTransaction(
 // surfaces atomically. A verify failure or any commit failure leaves host bytes,
 // composition record and audit unchanged.
 export function applyPluginPlan(plan: PluginCompositionPlan, tx: WorkspaceTransaction): ApplyResult {
-  const temp = buildTempImage([...plan.stageCopies.map((s) => ({ path: s.path, bytes: s.bytes })), ...plan.sharedWrites], []);
+  const temp = buildTempImage(
+    [
+      ...plan.stageCopies.map((s) => ({ path: s.path, bytes: s.bytes })),
+      ...plan.toolCopies.map((t) => ({ path: t.path, bytes: t.bytes })),
+      ...plan.sharedWrites,
+    ],
+    [],
+  );
   const verdict = tx.verify(temp, "compose");
   if (!verdict.ok) {
     return { kind: "failed", errors: [{ kind: "clobber", message: `temp verify failed: ${verdict.reason}`, locus: plan.plugin }] };
@@ -1025,6 +1103,7 @@ function composeWriteSet(
 ): WriteSet {
   const hostWrites = new Map<string, Buffer>();
   for (const s of plan.stageCopies) hostWrites.set(s.path, s.bytes);
+  for (const t of plan.toolCopies) hostWrites.set(t.path, t.bytes);
   for (const w of plan.sharedWrites) hostWrites.set(w.path, w.bytes);
   const prior = backend.readComposition();
   const plugins = new Map(prior.plugins);
