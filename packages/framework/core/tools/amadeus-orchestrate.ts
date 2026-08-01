@@ -104,6 +104,7 @@ import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeSpace,
   activeIntent,
+  type BoltDagAbsence,
   type CheckboxLine,
   codekbRepoName,
   KNOWN_CODEKB_STAGES,
@@ -131,7 +132,6 @@ import {
   readIntentRegistry,
   readCurrentSessionId,
   recordDirMatches,
-  type BoltDagAbsence,
   recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
