@@ -75,8 +75,8 @@ export function appendAuditResultFromOutcome(
   if (outcome.appended) {
     return { appended: true, event: eventType, timestamp: outcome.timestamp };
   }
-  if (outcome.reason === "intent-complete") {
-    return { appended: false, reason: "intent-complete", event: eventType, timestamp: outcome.timestamp };
+  if (outcome.reason === "intent-complete" || outcome.reason === "fatal-latch") {
+    return { appended: false, reason: outcome.reason, event: eventType, timestamp: outcome.timestamp };
   }
   // A telemetry outcome means the registry and this adapter disagree about
   // durability — the legacy eventType resolved to a def that never reaches the

@@ -44,11 +44,14 @@ type EventRegistryModule = { REGISTERED_EVENTS: readonly RegistryEventDef[] };
 
 // The append outcome (#1248). A completed intent stops accepting audit appends:
 // the gate returns the `appended: false` arm so a caller can distinguish a real
-// write from a post-complete suppression. Both arms carry event + timestamp so
-// existing consumers that only read `.timestamp`/`.event` are unaffected.
+// write from a post-complete suppression. The same arm carries the fatal health
+// latch refusal (#1856), which is a suppression for the same reason: the write
+// was declined deliberately, not attempted and failed. Both arms carry event +
+// timestamp so existing consumers that only read `.timestamp`/`.event` are
+// unaffected.
 export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
-  | { appended: false; reason: "intent-complete"; event: string; timestamp: string };
+  | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
 // --- Canonical event types (78) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
