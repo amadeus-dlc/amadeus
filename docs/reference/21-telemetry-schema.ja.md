@@ -76,6 +76,27 @@ git から計測する対(`:56` `VCS_RESOURCE_KEYS`)、ハーネスが供給し�
 | `amadeus.phase` | string | 同じ state ファイルの `Lifecycle Phase`(`span-context.ts:77`) | state ファイル不在、または当該フィールド不在 |
 | `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE`(`span-context.ts:88`) | 未設定または空のとき |
 | `amadeus.agent.id` | string | `AMADEUS_AGENT_ID`(`span-context.ts:89`) | 未設定または空のとき |
+| `amadeus.bolt` | string | worktree の Construction マーカー(`span-context.ts:86-99`) | マーカー不在、または unit を名指しているとき |
+| `amadeus.unit` | string | worktree の Construction マーカー(`span-context.ts:86-99`) | マーカー不在、または bolt を名指しているとき |
+
+### Construction の対の供給元
+
+Bolt と swarm unit はそれぞれ自分の git worktree で実行され、その worktree を
+作る fork が「何のための worktree か」を名指すマーカーを書きます
+(`tools/amadeus-state.ts:5081-5085`)。resolver は問い合わせ対象の workspace の
+マーカーを読むため(`span-context.ts:86-99`)、並行する2つの Bolt は互いに共有
+状態を持たずそれぞれ自分の値を解決します。
+
+マーカーは**意図的に state フィールドではありません**。state ファイルは main と
+共有される追跡パスであり、ある worktree で書いた値はそのブランチのマージで main
+へ到達し、以後そこで走る全プロセスをその Bolt の名前で修飾してしまいます — 不在
+が契約である場所に誤値が入ることになります。マーカー名はリポジトリの `.amadeus-*`
+ignore パターンの内側にあるため、所有する worktree の中に留まります
+(`tools/amadeus-observability.ts:140-170`)。
+
+slug が Bolt を名指すのか swarm unit を名指すのかは呼出し元だけが知っています
+(swarm は同じ fork を unit 名で駆動します)。したがって呼出し元が種別を伝え、
+fork は slug からの推測ではなく判別済みの値を記録します。
 
 ### 解決規則
 

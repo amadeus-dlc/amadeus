@@ -79,6 +79,27 @@ the resolver (`otel/span-context.ts:31`).
 | `amadeus.phase` | string | `Lifecycle Phase` of the same state file (`span-context.ts:77`) | no state file, or the field is absent |
 | `amadeus.agent.type` | string | `AMADEUS_AGENT_TYPE` (`span-context.ts:88`) | the variable is unset or blank |
 | `amadeus.agent.id` | string | `AMADEUS_AGENT_ID` (`span-context.ts:89`) | the variable is unset or blank |
+| `amadeus.bolt` | string | the worktree's Construction marker (`span-context.ts:86-99`) | no marker, or it names a unit |
+| `amadeus.unit` | string | the worktree's Construction marker (`span-context.ts:86-99`) | no marker, or it names a Bolt |
+
+### Where the Construction pair comes from
+
+A Bolt or swarm unit is served by its own git worktree, and the fork that
+creates that worktree drops a marker naming what it is for
+(`tools/amadeus-state.ts:5081-5085`). The resolver reads the marker of the
+workspace it is asked about (`span-context.ts:86-99`), so two concurrent Bolts
+resolve their own value with no shared state between them.
+
+The marker is deliberately **not** a state field. The state file is a tracked
+path shared with main: a value written into one worktree reaches main when that
+branch merges, and would then name that Bolt for every later process there — a
+wrong value where the contract is absence. The marker's name sits inside the
+repository's `.amadeus-*` ignore pattern, so it stays in the worktree that owns
+it (`tools/amadeus-observability.ts:140-170`).
+
+Only the caller knows whether a slug names a Bolt or a swarm unit — the swarm
+drives the same fork with a unit name — so it says which, and the fork records
+the discriminated value rather than guessing from the slug.
 
 ### Resolution rules
 

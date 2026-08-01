@@ -84,6 +84,8 @@ export const SPAN_CONTEXT_ATTRIBUTE_KEYS = [
   "amadeus.phase",
   "amadeus.agent.type",
   "amadeus.agent.id",
+  "amadeus.bolt",
+  "amadeus.unit",
 ] as const;
 
 export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {

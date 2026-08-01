@@ -110,7 +110,12 @@ import {
 import { emitAuditEvent } from "../otel/audit-emit.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
-import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  BOLT_CONTEXT_MARKER,
+  boltContextKind,
+  initProcessObservability,
+  writeBoltContextMarker,
+} from "./amadeus-observability.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
@@ -4925,6 +4930,10 @@ function handleFork(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
   const pd = resolveProjectDir(projectDir);
+  // Whether the slug names a swarm unit or a Bolt, for the telemetry marker
+  // written at the end of the fork. Resolved off argv: only the caller knows,
+  // and parseFlags takes value-carrying flags only.
+  const markerKind = boltContextKind(args);
 
   // The space+intent selector pins this fork to ONE intent end-to-end (vision
   // §5): --intent <record> / --space <name> override the active cursor;
@@ -5061,6 +5070,18 @@ function handleFork(args: string[]): void {
       writeStateFile(wtPath, wtContent, wtRecord, space);
     } catch (e) {
       errorWithSlug(slug, `failed to write worktree state at ${wtPath}: ${errorMessage(e)}`);
+    }
+
+    // The telemetry marker naming the unit of work this worktree serves
+    // (#1868 §2, read by otel/span-context.ts). Deliberately NOT a state
+    // field: the state file is a tracked path shared with main, so a value
+    // written here would reach main on merge and then name this Bolt for every
+    // later process there. The marker name sits inside the `.amadeus-*` ignore
+    // pattern, so it stays in the worktree that owns it.
+    try {
+      writeBoltContextMarker(wtDocsDir, slug, markerKind);
+    } catch (e) {
+      errorWithSlug(slug, `failed to write ${BOLT_CONTEXT_MARKER} at ${wtDocsDir}: ${errorMessage(e)}`);
     }
 
     return sha;

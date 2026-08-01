@@ -520,7 +520,7 @@ function handlePrepare(rest: string[]): void {
     }
     const started = runTool(
       "amadeus-bolt.ts",
-      ["start", "--worktree", "--slug", unit, "--batch", flags.batch, "--name", unit, ...repoArgs],
+      ["start", "--worktree", "--unit", "--slug", unit, "--batch", flags.batch, "--name", unit, ...repoArgs],
       projectDir
     );
     if (!started.ok) {
