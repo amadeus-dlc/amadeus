@@ -44,9 +44,16 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
      --out   <out-dir>
    ```
 
-3. Report the CLI's verdict by its exit code — `0` = the checked invariants held
-   across the whole finite state space (detected), `1` = a counterexample /
-   not-detected, `2` = a harness error (fail-closed; never reported as a pass).
+3. Report the CLI's verdict by its exit code. The CLI's outcome names say what
+   was detected — a **counterexample** — so read them that way:
+
+   - `0` = `NOT_DETECTED`: no counterexample was found; the checked invariants
+     held across the whole finite state space.
+   - `1` = `DETECTED`: a counterexample was found and the run reports its
+     identity.
+   - `2` = `HARNESS_ERROR`: the check could not be carried out (fail-closed;
+     never reported as a pass).
+
    The `run-model-check` CLI derives every verdict from real TLC output, never a
    hardcoded value (NFR-3, no verification theatre).
 

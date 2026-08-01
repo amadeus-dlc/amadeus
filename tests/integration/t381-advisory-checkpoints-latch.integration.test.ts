@@ -57,16 +57,21 @@ function setEnv(k: string, v: string | undefined): void {
 
 // A composed host whose spec CHANGED since the recorded verdict, so the
 // judgment fires (`changed`) at every checkpoint.
+// Laid out the way a real installation is (U8 FR-B3 grounding): the host root is
+// the harness directory, the watched spec tree is a PROJECT asset one level up.
+// Returns the host root.
 function makeChangedHost(): string {
-  const h = mkdtempSync(join(tmpdir(), "amadeus-t381-host-"));
-  mkdirSync(join(h, "specs", "tla"), { recursive: true });
-  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t381-host-"));
+  const h = join(root, ".claude");
+  mkdirSync(h, { recursive: true });
+  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
   writeFileSync(
     join(h, ".amadeus-plugin-composition.json"),
     JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
   );
   recordActivationVerdict(h, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
   return h;
 }
 

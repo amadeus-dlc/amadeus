@@ -29,6 +29,7 @@ import {
   ACTIVATION_STATE_FILE,
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
+  specRootForHost,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import {
   cleanupTestProject,
@@ -51,11 +52,16 @@ function setEnv(k: string, v: string | undefined): void {
   else process.env[k] = v;
 }
 
-// A temp host with the formal-model-check spec + (optionally) a composition
-// record, so the activation reads resolve against a clean, hermetic root.
+// A temp project laid out the way a real installation is (U8 FR-B3 grounding):
+// the plugin host root is the harness directory and the watched specs are a
+// PROJECT asset one level up, so the spec root is the host root's parent. The
+// composition record is host state and stays on the host root. Returns the host
+// root, which is what the engine seams take.
 function makeHost(composed: boolean): string {
-  const h = mkdtempSync(join(tmpdir(), "amadeus-t321-host-"));
-  const specDir = join(h, "specs", "tla");
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t321-host-"));
+  const h = join(root, ".claude");
+  mkdirSync(h, { recursive: true });
+  const specDir = join(root, "specs", "tla");
   mkdirSync(specDir, { recursive: true });
   writeFileSync(join(specDir, "FormalElection.tla"), "MODULE FormalElection\n");
   if (composed) {
@@ -107,7 +113,11 @@ describe("t321 emitActivationAdvisory (exported seam)", () => {
   test("build-and-test + composed + changed -> one stderr line", () => {
     host = makeHost(true);
     recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-    writeFileSync(join(host, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+    // The spec is a project asset — one level above the host root.
+    writeFileSync(
+      join(specRootForHost(host), "specs", "tla", "FormalElection.tla"),
+      "MODULE FormalElection\nVARIABLES x\n",
+    );
     const sink: string[] = [];
     emitActivationAdvisory("build-and-test", host, (l) => sink.push(l));
     expect(sink.length).toBe(1);

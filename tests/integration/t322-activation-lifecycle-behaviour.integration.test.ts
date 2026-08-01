@@ -49,8 +49,31 @@ const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data"
 const FIX_BUILD_STAGE = join(FIXTURES_DIR, "state-fix-final-construction.md");
 
 let host = "";
+// The project root that owns `host` — the real layout puts the plugin host root
+// (the harness directory) under the project root, and the watched TLA+ specs are
+// a project asset beside it. Tracked separately so cleanup removes the whole
+// tree, not just the harness directory.
+let hostProjectRoot = "";
 let proj = "";
 let graphFile = "";
+
+// Create a temp project in the REAL installation layout and return its plugin
+// host root: `<projectRoot>/.claude` with the specs at `<projectRoot>/specs/tla`.
+// Setting both module-level vars is what keeps afterEach's cleanup total.
+function makeHostRoot(prefix: string): string {
+  hostProjectRoot = mkdtempSync(join(tmpdir(), prefix));
+  const h = join(hostProjectRoot, ".claude");
+  mkdirSync(h, { recursive: true });
+  mkdirSync(join(hostProjectRoot, "specs", "tla"), { recursive: true });
+  writeFileSync(join(hostProjectRoot, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  return h;
+}
+
+// Overwrite the project's spec — the edit a user actually makes, one level above
+// the host root.
+function writeProjectSpec(content: string): void {
+  writeFileSync(join(hostProjectRoot, "specs", "tla", "FormalElection.tla"), content);
+}
 const savedEnv: Record<string, string | undefined> = {};
 function setEnv(k: string, v: string | undefined): void {
   if (!(k in savedEnv)) savedEnv[k] = process.env[k];
@@ -78,9 +101,7 @@ function makeTx(root: string, backend: WorkspaceBackend): WorkspaceTransaction {
 // Compose the shipped neutral formal-model-check bundle into a fresh temp host
 // with a spec tree, and write the plugin-inclusive compiled graph to disk.
 function composeAndCompile(): void {
-  host = mkdtempSync(join(tmpdir(), "amadeus-t322-host-"));
-  mkdirSync(join(host, "specs", "tla"), { recursive: true });
-  writeFileSync(join(host, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  host = makeHostRoot("amadeus-t322-host-");
   const backend = createNodeBackend(host);
   const descriptor = discoverPlugins(BUNDLE_ROOT).find((p) => p.name === ACTIVATION_PLUGIN);
   if (!descriptor) throw new Error("formal-model-check not discoverable in plugins/");
@@ -106,6 +127,7 @@ function composeAndCompile(): void {
 beforeEach(() => {
   resetAidlcEnv();
   host = "";
+  hostProjectRoot = "";
   proj = "";
   graphFile = "";
   logs = [];
@@ -127,7 +149,7 @@ afterEach(() => {
   __resetGraphCache();
   _resetStageGraphForTests();
   resetAidlcEnv();
-  if (host) rmSync(host, { recursive: true, force: true });
+  if (hostProjectRoot) rmSync(hostProjectRoot, { recursive: true, force: true });
   cleanupTestProject(proj);
 });
 
@@ -150,7 +172,9 @@ describe("t322 flow 4: verdict recorded on formal-model-check completion", () =>
     seedStateFile(proj, FIX_BUILD_STAGE); // an active intent so the audit shard resolves
     handleReport(["--single", "--stage", ACTIVATION_PLUGIN, "--result", "completed"], proj);
     expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(true);
-    const current = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    // The hash is taken over the SPEC root (the project root); the state it is
+    // compared against is host state.
+    const current = computeSpecHash(hostProjectRoot, ACTIVATION_WATCH_GLOBS);
     expect(current.ok && readActivationState(host)?.lastVerdictHash === current.hash).toBe(true);
     expect(logs.join("\n")).toContain('"kind":"done"');
   });
@@ -160,15 +184,13 @@ describe("t322 flow 2: advisory before build-and-test", () => {
   test("composed + spec changed since verdict -> stderr advisory before the build-and-test directive", () => {
     // build-and-test is a stock stage, so the stock graph suffices; the host is
     // composed (formal-model-check) with a recorded verdict and a since-changed spec.
-    host = mkdtempSync(join(tmpdir(), "amadeus-t322-adv-"));
-    mkdirSync(join(host, "specs", "tla"), { recursive: true });
-    writeFileSync(join(host, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+    host = makeHostRoot("amadeus-t322-adv-");
     writeFileSync(
       join(host, ".amadeus-plugin-composition.json"),
       JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
     );
     recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-    writeFileSync(join(host, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+    writeProjectSpec("MODULE FormalElection\nVARIABLES x\n");
 
     setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
     setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
@@ -205,9 +227,7 @@ describe("t322 flow 2: advisory before build-and-test", () => {
   });
 
   test("composed + spec unchanged -> no advisory (current is silent)", () => {
-    host = mkdtempSync(join(tmpdir(), "amadeus-t322-adv2-"));
-    mkdirSync(join(host, "specs", "tla"), { recursive: true });
-    writeFileSync(join(host, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+    host = makeHostRoot("amadeus-t322-adv2-");
     writeFileSync(
       join(host, ".amadeus-plugin-composition.json"),
       JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),

@@ -31,6 +31,7 @@ import {
   ACTIVATION_WATCH_GLOBS,
   activationAdvisoriesForHost,
   recordActivationVerdict,
+  specRootForHost,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import {
   cleanupTestProject,
@@ -53,12 +54,17 @@ function setEnv(k: string, v: string | undefined): void {
   else process.env[k] = v;
 }
 
-// A hermetic host: spec tree + (optionally) the composition record that gates
-// the whole advisory (BR-U6-4 0-plugin zero-impact).
+// A hermetic project in the REAL installation layout (U8 FR-B3 grounding): the
+// host root is the harness directory and the watched spec tree is a PROJECT
+// asset one level up, so the two roots stay distinguishable. The composition
+// record — host state — gates the whole advisory (BR-U6-4 0-plugin zero-impact)
+// and stays on the host root. Returns the host root.
 function makeHost(composed: boolean): string {
-  const h = mkdtempSync(join(tmpdir(), "amadeus-t378-host-"));
-  mkdirSync(join(h, "specs", "tla"), { recursive: true });
-  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t378-host-"));
+  const h = join(root, ".claude");
+  mkdirSync(h, { recursive: true });
+  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
   if (composed) {
     writeFileSync(
       join(h, ".amadeus-plugin-composition.json"),
@@ -72,7 +78,10 @@ function makeHost(composed: boolean): string {
 function makeChangedHost(): string {
   const h = makeHost(true);
   recordActivationVerdict(h, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-  writeFileSync(join(h, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+  writeFileSync(
+    join(specRootForHost(h), "specs", "tla", "FormalElection.tla"),
+    "MODULE FormalElection\nVARIABLES x\n",
+  );
   return h;
 }
 
