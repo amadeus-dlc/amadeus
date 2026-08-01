@@ -43,7 +43,7 @@
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
-    "lines": "842",
+    "lines": "847",
     "reason": "`export type RegisteredEventName = (typeof REGISTERED_EVENTS)[number][\"name\"]` is a type-only declaration erased before runtime; Bun stamps DA:0 on the line and nothing can ever execute it. The union it derives is enforced by tsc and by the registry drift guard (tests/integration/event-registry-drift.test.ts).",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   },
