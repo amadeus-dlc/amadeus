@@ -143,16 +143,6 @@ describe("t281 Issue title", () => {
     expect(content.body).toContain("## Summary\na very chatty Project field\n");
   });
 
-  test("uses the final segment of a path-shaped Intent directory", () => {
-    const content = renderMirrorIssueContent({
-      snapshot: snapshotWith({
-        intentDir: "amadeus/spaces/default/intents/260801-demo-ab12cd34",
-      }),
-      marker: "<!-- marker -->",
-    });
-    expect(content.title).toBe("Intent Mirror: 260801-demo-ab12cd34");
-  });
-
   test("falls back to the Intent UUID when the directory is unusable", () => {
     const content = renderMirrorIssueContent({
       snapshot: snapshotWith({ intentDir: "   " }),

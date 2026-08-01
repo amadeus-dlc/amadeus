@@ -260,15 +260,6 @@ export function mirrorSnapshotStatus(snapshot: MirrorSnapshot): string {
 // title is built from the Intent directory name, which is a short slug.
 export const MIRROR_ISSUE_TITLE_MAX_BYTES = 200;
 
-// The Intent directory is recorded as a bare directory name, but callers that
-// carry a record path are common enough that reading the last segment keeps the
-// title stable either way. The UUID is the fallback: it is the identifier the
-// snapshot always has.
-function mirrorIssueTitleSummary(snapshot: MirrorSnapshot): string {
-  const segment = snapshot.intentDir.split("/").filter((part) => part.trim() !== "").pop();
-  return oneLine(segment ?? "") || snapshot.intentUuid;
-}
-
 // Truncates on whole characters so a clamped title can never end in a broken
 // UTF-8 sequence. Iterating code points (not UTF-16 units) keeps astral
 // characters intact.
@@ -291,7 +282,10 @@ export function renderMirrorIssueContent(input: {
 }): MirrorIssueContent {
   const { snapshot } = input;
   const summary = redactSummary(snapshot.projectSummary);
-  const titleSummary = mirrorIssueTitleSummary(snapshot);
+  // The Intent directory name, not the free-form Project field: it is short,
+  // stable, and identifies the Intent a reader is looking at. The UUID is the
+  // fallback because it is the one identifier the snapshot always carries.
+  const titleSummary = oneLine(snapshot.intentDir) || snapshot.intentUuid;
   const status = mirrorSnapshotStatus(snapshot);
   const body = [
     "## Intent UUID",
