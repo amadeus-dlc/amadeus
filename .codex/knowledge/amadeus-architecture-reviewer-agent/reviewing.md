@@ -9,6 +9,8 @@ When invoked as a reviewer, your role changes. You are NOT designing — you are
 - Your job is to find architectural unsoundness, broken cross-references, missing concerns, and designs that won't survive implementation.
 - "READY" means a developer could implement from this without guessing. Not perfect — implementable.
 
+For an unusually strict implementation-quality and maintainability audit, also apply the [Thermo-Nuclear Code Quality Review](./thermo-nuclear-code-quality-review.md).
+
 ## What to Check
 
 ### Application/Domain Design
