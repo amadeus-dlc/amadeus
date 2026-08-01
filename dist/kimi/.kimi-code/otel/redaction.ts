@@ -71,6 +71,21 @@ const REGISTRY_ATTRIBUTE_KEYS: readonly string[] = [
   ),
 ];
 
+// The span context vocabulary (FR-SPAN-1) — the closed key set span-context.ts
+// resolves and the policy below admits. It is DEFINED here, next to the
+// allow-list that is the only reason a span attribute reaches a store, and
+// consumed by the resolver rather than the other way round: this module sits on
+// every export path (both exporters and the Relay), and importing the resolver
+// would pull its workspace-resolution dependencies onto all of them.
+export const SPAN_CONTEXT_ATTRIBUTE_KEYS = [
+  "amadeus.intent",
+  "amadeus.space",
+  "amadeus.stage",
+  "amadeus.phase",
+  "amadeus.agent.type",
+  "amadeus.agent.id",
+] as const;
+
 export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
   safeKeys: [
     ...REGISTRY_ATTRIBUTE_KEYS,
@@ -84,6 +99,16 @@ export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
     "ExitCode",
     "TraceId",
     "SpanId",
+    // SPAN CONTEXT (span-context.ts, FR-SPAN-1) — the workflow context every
+    // span carries. These are NOT registry vocabulary: no canonical event
+    // declares them, so REGISTRY_ATTRIBUTE_KEYS above cannot admit them, and
+    // under default-deny an unlisted key is dropped at the store and Relay
+    // boundaries. Listing them here is what makes the six keys reach a Signal
+    // Store at all — omit one and it vanishes from the stored span while the
+    // append still reports success. Admission is not raw pass-through: like
+    // every admitted value they are credential-scrubbed below, which matters
+    // because the agent pair is env-supplied free text from outside core.
+    ...SPAN_CONTEXT_ATTRIBUTE_KEYS,
     // The metric dimensions (#1868 §6), derived from the instrument catalogue.
     // Without them the default-deny admission would strip every dimension off
     // a measurement at the export boundary and still report the append as a
@@ -134,6 +159,46 @@ export function redactAttributes(
     admitted[key] = scrubCredentials(value, policy.scrubPatterns);
   }
   return admitted;
+}
+
+// Markers naming the zone a path came from instead of the machine it sits on.
+const HOME_MARKER = "<home>";
+const EXTERNAL_MARKER = "<external>";
+
+// A path-like token: an optional already-applied marker, then "/", then a run
+// of characters that cannot delimit a stack frame. ONE character class under
+// ONE quantifier — no nesting, so matching costs one linear scan of the input
+// however adversarial it is (regex-linearity-untrusted-input). Recognising the
+// markers here is what makes redactStacktrace idempotent: a second pass sees
+// `<home>/x` as one already-rewritten token instead of a fresh `/x`.
+const PATH_TOKEN_PATTERN = /(?:<home>|<external>)?\/[^\s()'"[\]]*/g;
+
+function trimTrailingSeparator(path: string): string {
+  return path.endsWith("/") ? path.slice(0, -1) : path;
+}
+
+function rewritePathToken(token: string, repoRoot: string, home: string): string {
+  if (token.startsWith(HOME_MARKER) || token.startsWith(EXTERNAL_MARKER)) return token;
+  // Repo first: the repo usually LIVES under home, and the repo-relative form
+  // is strictly more useful than `<home>/…` for locating the frame.
+  if (repoRoot !== "" && token.startsWith(`${repoRoot}/`)) return token.slice(repoRoot.length + 1);
+  if (repoRoot !== "" && token === repoRoot) return ".";
+  if (home !== "" && token.startsWith(`${home}/`)) return HOME_MARKER + token.slice(home.length);
+  if (home !== "" && token === home) return HOME_MARKER;
+  return EXTERNAL_MARKER + token;
+}
+
+// Rewrite every path-like token of a captured stack into one of three bounded
+// forms — repo-relative, `<home>/…`, `<external>/…` — and credential-scrub the
+// result (FR-EXC). A raw `err.stack` names the machine's user and directory
+// layout in every frame, so it cannot be stored as an attribute untouched. One
+// linear pass; the output is a plain string, and a second pass over it is a
+// no-op.
+export function redactStacktrace(stack: string, repoRoot: string): string {
+  const root = trimTrailingSeparator(repoRoot);
+  const home = trimTrailingSeparator(process.env.HOME ?? "");
+  const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token) => rewritePathToken(token, root, home));
+  return scrubCredentials(rewritten) as string;
 }
 
 // VER-2 scanner: report the LABELS of every credential pattern present in the
