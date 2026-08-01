@@ -24,8 +24,7 @@
 
 import { execFileSync } from "node:child_process";
 import { hostname } from "node:os";
-import { auditCloneId } from "../tools/amadeus-lib.ts";
-import { detectHarnessType } from "../tools/amadeus-harness.ts";
+import { auditCloneId, detectHarnessType } from "../tools/amadeus-lib.ts";
 import { AMADEUS_VERSION } from "../tools/amadeus-version.ts";
 import { CREDENTIAL_SCRUB_PATTERNS, redactAttributes } from "./redaction.ts";
 import type { RedactionPolicy } from "./redaction.ts";

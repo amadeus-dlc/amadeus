@@ -273,6 +273,8 @@ function makeProject(withState: boolean): string {
     "amadeus-runtime.ts",
     "amadeus-lib.ts",
     "amadeus-harness.ts",
+    // The resource bag names the framework version (otel/resource.ts).
+    "amadeus-version.ts",
     "amadeus-audit.ts",
     // amadeus-lib.ts imports the JSONL journal codec (amadeus-lib.ts:2).
     "amadeus-journal.ts",
