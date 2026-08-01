@@ -29,6 +29,18 @@ reviews:
     - "!.cursor/**"
     - "!.opencode/**"
     - "!.kimi-code/**"
+    # Workflow records are append-only process/audit artifacts, not editable
+    # sources: intents (stage records + audit shards), elections (ballot
+    # ledgers), codekb (RE-generated observation snapshots pinned to observed
+    # commits, refreshed only by RE diff-refresh). Review suggestions against
+    # them are category errors (Issue #1951 class ruling). memory/ and
+    # knowledge/ stay reviewable: they are hand-authored policy.
+    - "!amadeus/spaces/*/intents/**"
+    - "!amadeus/spaces/*/elections/**"
+    - "!amadeus/spaces/*/codekb/**"
+    # Metrics snapshots are append-only generated captures; defects are fixed
+    # in the collector and recovered by revert PR, never by editing snapshots.
+    - "!metrics/**"
 
   auto_review:
     enabled: true
