@@ -28,9 +28,8 @@ export const SUPPLIED_RESOURCE_KEYS = [
 
 export type SuppliedResourceKey = (typeof SUPPLIED_RESOURCE_KEYS)[number];
 
-// Token counts a harness observed for one exchange. The meter arm that
-// consumes them lands in U5; until then the seam accepts and drops (see
-// supplyTokenUsage).
+// Token counts a harness observed for one exchange, handed to whichever sink
+// the metrics arm installed (see supplyTokenUsage).
 export type TokenUsage = {
   readonly inputTokens: number;
   readonly outputTokens: number;
@@ -78,15 +77,36 @@ export function supplyGeneration(): number {
   return generation;
 }
 
-// Token-usage supply seam (FR-MET-3). The metrics arm is not wired until U5,
-// so this accepts and drops rather than throwing: a harness hook calling it
-// early must not fail the session.
-export function supplyTokenUsage(_usage: TokenUsage): void {
-  // no-op until the meter arm lands (FR-MET-3)
+// Where a supplied token count goes. Installed by the bootstrap seam rather
+// than imported, for the same reason the memo invalidation above is a polled
+// counter: this module is a LEAF, and importing the metrics arm — which reaches
+// the exporter, which reaches back here for the resource bag — would close a
+// cycle. Absent until the metrics arm stands up, which is also the honest
+// default: nothing consumes token counts in a process with no Meter.
+export type TokenUsageSink = (usage: TokenUsage) => void;
+
+let tokenUsageSink: TokenUsageSink | null = null;
+
+export function setTokenUsageSink(sink: TokenUsageSink): void {
+  tokenUsageSink = sink;
+}
+
+// Token-usage supply seam (FR-MET-3, #1868 §6). Fail-open on BOTH halves: a
+// hook that supplies before the metrics arm is up is dropped rather than
+// failing the session, and a sink that throws never reaches the harness —
+// telemetry does not get to break the surface that produced it.
+export function supplyTokenUsage(usage: TokenUsage): void {
+  if (tokenUsageSink === null) return;
+  try {
+    tokenUsageSink(usage);
+  } catch {
+    // fail-open
+  }
 }
 
 // Test seam: per-process state, dropped between fixtures.
 export function resetSuppliersForTests(): void {
   supplied.clear();
   generation = 0;
+  tokenUsageSink = null;
 }

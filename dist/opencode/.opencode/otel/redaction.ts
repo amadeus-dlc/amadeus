@@ -22,6 +22,7 @@
 // vocabulary source, no double maintenance.
 
 import { REGISTERED_EVENTS } from "./event-registry.ts";
+import { INSTRUMENT_ATTRIBUTE_KEYS } from "./metrics-vocabulary.ts";
 
 // A credential pattern: a stable label (reported by the VER-2 gate instead of
 // the matched secret, so CI logs never echo credentials) plus a compiled
@@ -108,6 +109,12 @@ export const DEFAULT_REDACTION_POLICY: RedactionPolicy = {
     // every admitted value they are credential-scrubbed below, which matters
     // because the agent pair is env-supplied free text from outside core.
     ...SPAN_CONTEXT_ATTRIBUTE_KEYS,
+    // The metric dimensions (#1868 §6), derived from the instrument catalogue.
+    // Without them the default-deny admission would strip every dimension off
+    // a measurement at the export boundary and still report the append as a
+    // success — the exact "silently eats a mandated attribute" failure the
+    // registry-derived baseline above exists to prevent.
+    ...INSTRUMENT_ATTRIBUTE_KEYS,
   ],
   // FR-DST-4: Command is admitted ONLY here — argv-derived values are always
   // scrubbed, never stored raw (BR-11/BR-12).

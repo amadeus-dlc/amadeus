@@ -107,19 +107,36 @@ class AmadeusMeterProvider implements MeterProvider {
 }
 
 let exporterRef: LocalMetricExporter;
-let registered = false;
+let registeredProjectDir: string | null = null;
 
-export function registerMeterProvider(options: { metricExporter: LocalMetricExporter }): void {
-  if (registered) {
+// Registration inputs. Declared at module scope for the same reason the Tracer
+// Provider's are: an inline multi-line type literal leaves its continuation
+// lines unexecuted in the merged LCOV (bun-multiline-arg-da0).
+export type RegisterMeterProviderOptions = {
+  readonly projectDir: string;
+  readonly metricExporter: LocalMetricExporter;
+};
+
+export function registerMeterProvider(options: RegisterMeterProviderOptions): void {
+  if (registeredProjectDir !== null) {
     throw new Error("registerMeterProvider called twice — invariant violation (NFR-3)");
   }
   exporterRef = options.metricExporter;
   metrics.setGlobalMeterProvider(new AmadeusMeterProvider());
-  registered = true;
+  registeredProjectDir = options.projectDir;
+}
+
+// The project dir this process's Meter Provider was registered for, or null
+// when nothing is registered — the same question the Tracer and Logger arms
+// answer. Measurement call sites read it as their arm-standing check: asking
+// getAmadeusMeter() instead would make an unmeasured process throw where the
+// contract is for it to record nothing.
+export function registeredMeterProjectDir(): string | null {
+  return registeredProjectDir;
 }
 
 export function getAmadeusMeter(name = "amadeus"): Meter {
-  if (!registered) {
+  if (registeredProjectDir === null) {
     throw new Error("getAmadeusMeter before registerMeterProvider — invariant violation");
   }
   return metrics.getMeter(name);
@@ -128,6 +145,6 @@ export function getAmadeusMeter(name = "amadeus"): Meter {
 // Test seam: drop the registration between fixtures.
 export function resetMeterProviderForTests(): void {
   metrics.disable();
-  registered = false;
+  registeredProjectDir = null;
 }
 

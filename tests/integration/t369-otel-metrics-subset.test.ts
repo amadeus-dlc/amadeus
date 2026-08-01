@@ -49,6 +49,7 @@ afterEach(() => {
 
 function bootMeter(write?: (path: string, line: string) => void) {
   registerMeterProvider({
+    projectDir: proj,
     metricExporter: createLocalMetricExporter({ projectDir: proj, ...(write !== undefined ? { write } : {}) }),
   });
 }
