@@ -1,10 +1,11 @@
 // covers: otel:tracer-provider otel:event-registry
 //
 // U3 (exception) — the exception span event carries the OTel semantic-
-// convention trio (FR-EXC): `exception.message` (unchanged), plus
-// `exception.type` and a redacted `exception.stacktrace` when the thrown value
-// is an Error that captured one. Non-Errors and stackless Errors omit the two
-// new attributes rather than inventing them (fail-open).
+// convention trio (FR-EXC): `exception.message`, plus `exception.type` and
+// `exception.stacktrace` when the thrown value is an Error that captured one.
+// Message and stacktrace get the SAME redaction — an IO error carries the
+// offending absolute path in its message. Non-Errors and stackless Errors omit
+// the two other attributes rather than inventing them (fail-open).
 //
 // The attribute bag is redacted at write time HERE and only here (ADR-4):
 // addEvent in general stays untouched. A defect inside that redaction must
@@ -90,6 +91,33 @@ describe("write-time redaction of the exception bag (ADR-4)", () => {
     expect(stacktrace).toContain("<home>/.bun/cache/pkg/index.js:7:1");
     expect(stacktrace).toContain("tools/x.ts:1:1");
     expect(stacktrace).not.toContain(proj);
+  });
+
+  test("an absolute path inside the message is rewritten, not just the one in the stack (r3695298665)", () => {
+    // The commonest filesystem leak is not the stack at all: a Node/Bun IO
+    // error puts the offending path in the MESSAGE ("ENOENT: no such file or
+    // directory, open '/Users/dev/…'"). Credential scrubbing alone never
+    // touched it, so the message went to the store naming the machine's user.
+    const home = process.env.HOME ?? "";
+    const attrs = recordOn(new Error(`ENOENT: no such file or directory, open '${home}/.ssh/config'`));
+    expect(attrs["exception.message"]).toContain("<home>/.ssh/config");
+    expect(attrs["exception.message"]).not.toContain(home);
+  });
+
+  test("a repo path inside the message becomes repo-relative", () => {
+    const attrs = recordOn(new Error(`cannot read ${proj}/tools/x.ts`));
+    expect(attrs["exception.message"]).toContain("tools/x.ts");
+    expect(attrs["exception.message"]).not.toContain(proj);
+  });
+
+  test("a credential quoted in the message is masked", () => {
+    const attrs = recordOn(new Error("auth failed: ghp_abcdefghijklmnopqrstuvwxyz012345"));
+    expect(attrs["exception.message"]).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz012345");
+    expect(attrs["exception.message"]).toContain("[REDACTED]");
+  });
+
+  test("a path-free message is unchanged", () => {
+    expect(recordOn(new Error("boom"))["exception.message"]).toBe("boom");
   });
 
   test("addEvent outside recordException is NOT redacted — the seam is recordException-only", () => {
