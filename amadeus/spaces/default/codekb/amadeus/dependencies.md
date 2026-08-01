@@ -1,6 +1,10 @@
 # 依存関係
 
-## kimi bootstrap デッドロック修正の依存関係（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の依存関係（260801-tla-multi-model、現在、observed `33e196b8`）
+
+- 判断: 外部依存の追加なし。内部依存は plugin 内で閉じる — loader → model-map 定数（`tla-model-loader-internal.ts:22` が `TLA_EXECUTION_MODEL_NAME` を import）、arm → loader、CI ポート → run-model-check、stage doc → CLI、canonical コピー ⇔ plugin コピー（byte-identical 二重管理、table test で parity 固定）。変更面が他の進行中 intent と交差する兆候は区間にない。dist 同期面: plugin 投影（`dist/plugins/formal-model-check/` + 各ハーネス）と core canonical コピーの再生成（`bun scripts/package.ts` + `bun run promote:self`）が PR に同梱される。一般化時は tests の FormalElection 参照 27 ファイルが機械的洗い出し対象。
+
+## kimi bootstrap デッドロック修正の依存関係（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。
 

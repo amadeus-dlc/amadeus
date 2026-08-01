@@ -1,6 +1,10 @@
 # コンポーネント棚卸し
 
-## kimi bootstrap デッドロック修正の対象コンポーネント（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の対象コンポーネント（260801-tla-multi-model、現在、observed `33e196b8`）
+
+- 判断: 新規コンポーネントの新設は見通しにない。対象は既存 plugin 内の 6 面 — model-map スキーマ（`plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` + canonical コピー `packages/framework/core/tools/`、byte-identical）、loader（`tla-model-loader.ts` / `tla-model-loader-internal.ts`）、arm（`tla-arm.ts`）、toolchain（`tlc-toolchain.ts` / `fs-tlc-toolchain.ts` / `tlc-spawn-planner.ts`）、CI ポート（`node-ci-model-check-port.ts` / `ci-model-check-*.ts` / `run-skeleton-ci.ts` / `run-model-check-diagnostic.ts`）、run 系（`run-model-check*.ts`、byte-pin `:118-123`）。加えて `specs/tla/`（model-map.json + 4 モジュール）、stage doc（`stages/formal-model-check.md`）、`.github/workflows/ci.yml:508-564`。患部一覧は `re-scans/260801-tla-multi-model.md` を正本とする。
+
+## kimi bootstrap デッドロック修正の対象コンポーネント（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 新規コンポーネントなし。対象は既存3面 — core session-start hook（`packages/framework/core/hooks/amadeus-session-start.ts`）、認可（`packages/framework/core/tools/amadeus-caller-authorization.ts`）、kimi harness ロール管理（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`）の欠陥修正のみ。区間で到着した otel 基盤拡張（resource-core / span-context 等）の目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
 

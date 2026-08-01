@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260801-kimi-bootstrap-deadlock）
+## 実行メタデータ（現在: 260801-tla-multi-model）
+
+- Date: `2026-08-01T15:42:54Z`
+- Base commit: `c49e385ac7b787ce151ab0f077943620bd8bf7e2`（observed の祖先、`git merge-base --is-ancestor c49e385ac HEAD` exit 0）
+- Observed commit: `33e196b80b2254eee733fcaec4359dfbdd29c24b`（`fix(kimi): session-start で .current-session を state-file ガードより前に書く(#1922 …)`。作業 HEAD `7e63522f5` は observed + 本 intent の record コミット 2 本のみでコード同一 — `git diff --name-only 33e196b8..HEAD` の非 `amadeus/spaces` ヒット 0 件）
+- Distance: `40 commits`（`git rev-list --count c49e385ac..33e196b8`）
+- 区間規模: `1396 files changed, 135185 insertions(+), 15633 deletions(-)`（`git diff --shortstat c49e385ac..33e196b8`）。最大の構造変化は `54bf1f805`（#1925、intent 260731-formal-verif-value-chain）の `scripts/formal-verif/` 30 ファイル削除 → `plugins/formal-model-check/tools/` 移設 + canonical コピー新設。残りは otel 基盤拡張、mirror 系整備、#1922 修正、metrics スナップショット群。
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth: Standard、Test Strategy: Comprehensive
+- Focus: Issue #1920（formal-model-check の TLC run/verify 複数モデル対応、MirrorLifecycle 恒常ジョブ化）+ #1921（model-map identity pin の補助モジュール拡張）— model-map v2 の単一モジュール世界観という同根 2 件。患部 = model-map スキーマ（exactObject `:204` / 定数 `:52-54`）、loader（`:252-275`）、arm（`:322-330`）、toolchain（`:418` / `:434-436` / `:439-440` / `:493-494` / `:515-516`）、CI（`ci.yml:508-564` + 直書き 3 ファイル）、byte-pin（`run-model-check-source.ts:118-123`）、stage doc、tests 景観。差分リフレッシュ: 直近の observed `c49e385ac`（260801-open-bug-batch-5）を base とし、全 file:line を observed HEAD で再実測。
+- Updated artifacts: 実質更新 3 件 = `architecture.md`（単一モジュール世界観 → 複数モデル一般化の 6 露出面 + identity 設計 + wrapper/Core 構造）、`code-structure.md`（plugin 移設後配置と患部 × 区間 touch 判定）、`code-quality-assessment.md`（テスト空白 — MirrorLifecycleCore.tla 編集で赤になるテスト不在、doc `:35-36` の未実装能力約束）。判断 1 行のみ 5 件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260801-tla-multi-model.md`。
+- 現在マーカーの降格: 直前の現在断面 `260801-kimi-bootstrap-deadlock`（observed `861688c31`）を全成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
+- Per-intent record: `re-scans/260801-tla-multi-model.md`（患部 file:line 全数・引用再確認テーブル・降格確認 grep を含む）。
+
+## 実行メタデータ（履歴: 260801-kimi-bootstrap-deadlock）
 
 - Date: `2026-08-01T12:15:00Z`
 - Base commit: `c49e385ac7b787ce151ab0f077943620bd8bf7e2`（observed の祖先、`git merge-base --is-ancestor c49e385ac HEAD` exit 0）
