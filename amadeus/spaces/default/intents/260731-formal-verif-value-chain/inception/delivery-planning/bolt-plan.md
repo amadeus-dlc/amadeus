@@ -5,14 +5,16 @@
 unit-of-work.md の 8 Unit を Bolt へ編成する。Unit・Bolt の定義と Bolt 粒度は正準(stage-protocol.md Glossary / delivery-planning.md Strategic questions)に従い、**本 intent の Bolt 粒度は「one Unit per Bolt」を選択**する(2.8 の設問への回答 — 8 Unit は依存 DAG 上で凝集しており束ねる利得がないため)。バッチは unit-of-work-dependency.md の edge block を compile した bolt_dag(実測 4 バッチ)に従う。
 
 > **改訂の申告**: 本成果物は当初「1 Unit = 1 Bolt = 1 PR」固定(旧ノルム)を前提にゲート承認され、その後 #1842 の2段のノルム改訂(#1843 → #1847 `c358acf10`)を経て現行文面へ追従した。Unit 分割・依存・バッチは全経緯を通じて不変。変わったのは (i) Bolt 粒度が固定でなく 2.8 の選択になった(本 intent は one Unit per Bolt を選択)(ii) PR 粒度が固定でなくなった(下記)。
+>
+> **改訂の申告 2(2026-07-31 ユーザー裁定)**: u1 実装時の実測で BR-U1-5 の前提「分類 D は自己完結」が反証された(分類 D 30 ファイル中 26 が移設対象 7 モジュールを import — 入方向閉包の未計測)。u1 単独では typecheck green 不能のため、正準定義「A Bolt wraps one or more Units」を適用し **B1 = {u1-runner-relocation + u2-residue-deletion} の統合 Bolt(1 PR)へ改訂**(AskUserQuestion 裁定「B1={u1+u2} に統合」)。旧 B3 行は B1 へ吸収。Unit 境界(u1/u2 の FD)は不変 — 変わったのは配送編成のみ。
 
 ## Bolt 列
 
 | Bolt | Unit | バッチ | ゲート | PR |
 |---|---|---|---|---|
-| B1 | u1-runner-relocation | 1(単独先行) | **walking-skeleton ゲート**(常に人間承認) | 1 PR |
+| B1 | u1-runner-relocation + u2-residue-deletion(改訂2 — 統合) | 1(単独先行) | **walking-skeleton ゲート**(常に人間承認) | 1 PR |
 | B2 | u5-advisories-channel | 1(u1 と非交差だが skeleton 先行のため実質後続) | Construction Autonomy Mode に従う | 1 PR |
-| B3 | u2-residue-deletion | 2 | 同上 | 1 PR |
+| ~~B3~~ | ~~u2-residue-deletion~~ → B1 へ統合(改訂2) | — | — | — |
 | B4 | u3-boundary-guard | 2 | 同上 | 1 PR |
 | B5 | u4-tools-distribution | 2 | 同上 | 1 PR |
 | B6 | u6-impl-only-path | 2 | 同上 | 1 PR |

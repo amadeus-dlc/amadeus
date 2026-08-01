@@ -24,6 +24,8 @@ ci.yml の変更はパス文字列2箇所のみ。EVIDENCE_ROOT・artifact 名�
 
 u1 の diff に分類 D 30 ファイルへの変更・削除を含めない(u2 のスコープ — 無申告のスコープ拡大禁止)。**台帳2面でも同様**: u1 が remap するのは移設対象(分類 A/B/C)のエントリのみで、分類 D のエントリには触れない(T7 の intersect 規則)。逆方向の保護: u1 の台帳 remap は FR-A1 帰属改訂(2026-07-31 ユーザー裁定)による正規スコープであり、u2 の肩代わりではない。分類 D が参照するテストの赤が u1 で新規発生しないこと(移設は A/B/C のみで D は自己完結のため構造的に無影響のはず — 実測で確認)。
 
+> **前提の反証と裁定(2026-07-31)**: 実装時実測により「D は自己完結」が反証された — 分類 D 30 ファイル中 26 が移設対象 7 モジュール(canonical/contract/run-model-check-domain/run-model-check/tla-arm/tlc-spawn-planner/tlc-toolchain)を import しており、u1 単独では typecheck green 不能(RE 閉包が出方向のみで入方向未計測)。ユーザー裁定: **B1 = {u1+u2} 統合 Bolt/1 PR**(正準「A Bolt wraps one or more Units」の適用)。本規則の「D に触れない」は Unit 帰属の規律として維持し、D の削除は同一 Bolt 内の u2 実装として実行する — 統合着地では D の import 破れは存在しない。green 検証(BR-U1-6)は統合着地(u1+u2 完了時点)で判定する。
+
 ## BR-U1-6: 検証コマンド集合
 
 PR ごとに `bun run typecheck` / `bun run lint` / `bun run dist:check` / `bun run promote:self:check` / `bash tests/run-tests.sh --ci` 全 green+push 前ローカル lcov で patch 未カバー 0(local-lcov-pre-push)。
