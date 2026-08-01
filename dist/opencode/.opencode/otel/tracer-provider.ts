@@ -28,6 +28,12 @@ import type { CompletedSpanRecord, LocalSpanExporter } from "./local-span-export
 import { EXCEPTION_SPAN_EVENT_NAME, getEventDef } from "./event-registry.ts";
 import { currentResource } from "./resource.ts";
 import type { ResourceGetter } from "./resource.ts";
+import { spanContextAttributes } from "./span-context.ts";
+
+// How a span learns its workflow context (FR-SPAN-1). A getter for the same
+// reason ResourceGetter is one: the value is resolved lazily, at span end,
+// rather than captured when the provider was registered.
+type SpanContextGetter = () => Record<string, string>;
 
 function hexId(bytes: number): string {
   const buf = new Uint8Array(bytes);
@@ -60,7 +66,8 @@ class AmadeusSpan implements Span {
     parentContext: Context,
     private readonly exporter: LocalSpanExporter,
     private readonly scopeName: string,
-    private readonly resource: ResourceGetter
+    private readonly resource: ResourceGetter,
+    private readonly contextAttributes: SpanContextGetter
   ) {
     this.kind = options?.kind !== undefined ? String(options.kind) : "internal";
     this.startMs = options?.startTime !== undefined ? toMs(options.startTime) : Date.now();
@@ -134,7 +141,13 @@ class AmadeusSpan implements Span {
       startMs: this.startMs,
       endMs: toMs(endTime),
       status: { code: String(this.status.code), ...(this.status.message !== undefined ? { message: this.status.message } : {}) },
-      attributes: { ...this.attributes },
+      // Workflow context UNDER the caller's attributes (FR-SPAN-2): the
+      // resolver describes the process, the call site describes the operation,
+      // and a call site that sets one of the six keys deliberately means it.
+      // Resolved at end() rather than in the constructor so a span opened
+      // before the workspace is readable still carries what resolves by the
+      // time it closes.
+      attributes: { ...this.contextAttributes(), ...this.attributes },
       events: this.events,
       links: this.links,
       resource: this.resource(),
@@ -164,10 +177,11 @@ class AmadeusTracer implements Tracer {
   constructor(
     private readonly exporter: LocalSpanExporter,
     private readonly scopeName: string,
-    private readonly resource: ResourceGetter
+    private readonly resource: ResourceGetter,
+    private readonly contextAttributes: SpanContextGetter
   ) {}
   startSpan(name: string, options?: SpanOptions, ctx?: Context): Span {
-    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName, this.resource);
+    return new AmadeusSpan(name, options, ctx ?? context.active(), this.exporter, this.scopeName, this.resource, this.contextAttributes);
   }
   startActiveSpan<F extends (span: Span) => unknown>(name: string, ...args: unknown[]): ReturnType<F> {
     let options: SpanOptions | undefined;
@@ -193,10 +207,11 @@ class AmadeusTracer implements Tracer {
 class AmadeusTracerProvider implements TracerProvider {
   constructor(
     private readonly exporter: LocalSpanExporter,
-    private readonly resource: ResourceGetter
+    private readonly resource: ResourceGetter,
+    private readonly contextAttributes: SpanContextGetter
   ) {}
   getTracer(name: string, _version?: string, _options?: unknown): Tracer {
-    return new AmadeusTracer(this.exporter, name, this.resource);
+    return new AmadeusTracer(this.exporter, name, this.resource, this.contextAttributes);
   }
 }
 
@@ -221,7 +236,8 @@ export function registerTracerProvider(options: RegisterTracerProviderOptions): 
     throw new Error("registerTracerProvider called twice — invariant violation (NFR-3)");
   }
   const resource = options.resource ?? (() => currentResource(options.projectDir));
-  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter, resource));
+  const spanContext = () => spanContextAttributes(options.projectDir);
+  trace.setGlobalTracerProvider(new AmadeusTracerProvider(options.spanExporter, resource, spanContext));
   registeredProjectDir = options.projectDir;
 }
 
