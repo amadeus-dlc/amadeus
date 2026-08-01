@@ -841,10 +841,7 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
   // diagnostic (recordHookDrop reads stderr on a non-zero exit only).
   const outcome = computeBoltDagOutcome(projectDir, stateContent);
   if (outcome.kind === "invalid") {
-    throw new Error(
-      `runtime-compile: unit-of-work-dependency.md edge block ${outcome.reason} ` +
-        `(${outcome.detail}); refusing to write a runtime graph without the planned Bolt DAG`
-    );
+    throw new Error(`runtime-compile: unit-of-work-dependency.md edge block ${outcome.reason} (${outcome.detail}); refusing to write a runtime graph without the planned Bolt DAG`);
   }
   if (outcome.kind === "dag") {
     graph.bolt_dag = outcome.dag;

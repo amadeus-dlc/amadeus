@@ -1045,7 +1045,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-runtime.ts",
-    "lines": "873",
+    "lines": "870",
     "reason": "MEMORY_EMPTY re-emission dedup runs only inside the spawned compile path; the single-line predicate delegates to auditBlockField (covered in-process by t351) and the timestamp compare. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the compile MEMORY_EMPTY path gains an in-process seam test"
   },

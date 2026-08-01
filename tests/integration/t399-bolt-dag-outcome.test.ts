@@ -29,7 +29,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { AMADEUS_SRC, FIXTURE_CLONE_ID, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { computeBoltDagOutcome } from "../../dist/claude/.claude/tools/amadeus-runtime.ts";
+import { compile, computeBoltDagOutcome } from "../../dist/claude/.claude/tools/amadeus-runtime.ts";
 import { readBoltDagAbsence } from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
 
 const BUN = process.execPath;
@@ -229,6 +229,19 @@ describe("t399 compile — exit-code contract", () => {
     expect(g.bolt_dag_absence.reason).toBe("scope-skips-units");
     expect("bolt_dag" in g).toBe(false);
     expect(readBoltDagAbsence(proj)).toEqual(g.bolt_dag_absence);
+  });
+
+  // The throw arm driven in-process, so the failure is attributable rather than
+  // only observable as a spawned process's exit code.
+  test("compile() itself throws on the invalid arm and leaves no graph behind", () => {
+    const proj = makeProject("x");
+    writeUowd(proj, MALFORMED_BLOCK);
+    expect(() => compile({ projectDir: proj })).toThrow(/malformed/);
+    expect(existsSync(join(recordRoot(proj), "runtime-graph.json"))).toBe(false);
+  });
+
+  test("readBoltDagAbsence returns null when there is no graph to read", () => {
+    expect(readBoltDagAbsence(makeProject("S"))).toBeNull();
   });
 
   test("valid block: bolt_dag present and bolt_dag_absence never co-exists", () => {
