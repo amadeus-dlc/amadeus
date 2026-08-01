@@ -70,7 +70,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, seedUnitDependency, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: compile resolves the per-intent RECORD dir. State, runtime-graph, and the
@@ -130,6 +130,7 @@ function makeProjectWithAudit(auditFixturePath: string): string {
   const rec = recordRoot(proj);
   mkdirSync(rec, { recursive: true });
   writeFileSync(join(rec, "amadeus-state.md"), readFileSync(STATE_FIXTURE), "utf-8");
+  seedUnitDependency(rec);
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, readFileSync(auditFixturePath), "utf-8");

@@ -5555,6 +5555,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t399-bolt-dag-outcome.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t48-runtime-graph-end-to-end.test.ts",
           "mechanism": "cli"
         },

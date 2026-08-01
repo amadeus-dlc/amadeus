@@ -61,7 +61,7 @@ checks have proven reliable.
 
 スウォームは作業を Unit にファンアウトするので、「何を一度に実行できるか?」という問いは上流の、inception の `units-generation` ステージで決定されます。そのステージは `unit-of-work-dependency.md` を生成し(`packages/framework/core/amadeus-common/stages/inception/units-generation.md` が `produces: unit-of-work-dependency` を宣言)、その成果物の中で、必須の fenced な `yaml` エッジブロックが各 Unit をその `depends_on` リストとともに列挙します。
 
-コンパイラはそのブロックを `runtime-graph.json` の `bolt_dag` ノードに読み込みます。このノードは、エッジブロックが整形式かつ非巡回である **場合のみ** 存在します。ブロックが欠落・不整形・巡回している場合、ノードは完全に省略されます([Runtime Graph](../reference/13-runtime-graph.ja.md)、44行目のスキーマ注記)。`bolt_dag` ノードは `batches` も持ちます — すべての Unit の依存が先行するレベルによって満たされるトポロジカルなレベルで、あるバッチの Unit 間にはエッジがなく、一緒にファンアウトできます。
+コンパイラはそのブロックを `runtime-graph.json` の `bolt_dag` ノードに読み込みます。このノードは、エッジブロックが整形式かつ非巡回である **場合のみ** 存在します。正当に DAG を持たないスコープは代わりに理由付きの `bolt_dag_absence` を持ちます。不整形・巡回したブロック、または units-generation が completed なのに成果物が不在の場合は、compile 自体が失敗します([Runtime Graph](../reference/13-runtime-graph.ja.md) § 「The Bolt/unit dependency DAG (`bolt_dag`)」)。`bolt_dag` ノードは `batches` も持ちます — すべての Unit の依存が先行するレベルによって満たされるトポロジカルなレベルで、あるバッチの Unit 間にはエッジがなく、一緒にファンアウトできます。
 
 並列面そのものは、フロントマターで `for_each: unit-of-work` を宣言する5つの **Unit ごと** の Construction ステージです:
 

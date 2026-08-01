@@ -242,6 +242,45 @@ export function seedStateFile(proj: string, fixturePath: string): void {
 }
 
 /**
+ * Seed the unit-of-work-dependency.md that a `- [x] units-generation` state
+ * fixture implies. A compile refuses to write a graph when the checkbox says the
+ * stage completed but its artefact is missing (computeBoltDagOutcome's `invalid`
+ * arm), so any project seeded from a completed-units fixture needs this to model
+ * a layout the engine can actually produce.
+ *
+ * The block is the smallest valid two-unit DAG; tests that care about the DAG's
+ * shape write their own artefact instead of calling this. Takes the record dir
+ * rather than the project root because most callers build their own record
+ * layout instead of the seeded default one.
+ */
+export function seedUnitDependency(recordDir: string): void {
+  const dir = join(recordDir, "inception", "units-generation");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "unit-of-work-dependency.md"),
+    [
+      "# Unit Dependency",
+      "",
+      "## Dependencies",
+      "",
+      "```yaml",
+      "units:",
+      "  - name: U1",
+      "    depends_on: []",
+      "  - name: U2",
+      "    depends_on: [U1]",
+      "```",
+      "",
+      "## Integration Points",
+      "",
+      "None.",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
+/**
  * Copy the audit sample into the default intent's DETERMINISTIC per-clone shard
  * (<record>/audit/<host>-<FIXTURE_CLONE_ID>.jsonl) — the SAME shard a spawned tool
  * resolves (the fixture pins the clone-id). Seeding the tool's own shard means
