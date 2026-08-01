@@ -43,22 +43,27 @@ function makeProject(entryCount = 1, bytesPerEntry = 32): string {
     join(root, "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
-        schemaVersion: 1,
-        model: {
-          path: "specs/tla/FormalElection.tla",
-          identity: canonicalIdentity(
-            model,
-            "amadeus.formal-verif.tla.module.v1",
-          ).sha256,
-        },
-        cfg: {
-          path: "specs/tla/FormalElection.cfg",
-          identity: canonicalIdentity(
-            cfg,
-            "amadeus.formal-verif.tla.cfg.v1",
-          ).sha256,
-        },
-        entries,
+        schemaVersion: 2,
+        models: [
+          {
+            name: "FormalElection",
+            model: {
+              path: "specs/tla/FormalElection.tla",
+              identity: canonicalIdentity(
+                model,
+                "amadeus.formal-verif.tla.module.v1",
+              ).sha256,
+            },
+            cfg: {
+              path: "specs/tla/FormalElection.cfg",
+              identity: canonicalIdentity(
+                cfg,
+                "amadeus.formal-verif.tla.cfg.v1",
+              ).sha256,
+            },
+            entries,
+          },
+        ],
       },
       null,
       2,
@@ -92,7 +97,7 @@ describe("model-completeness sensor integration", () => {
     });
     expect(
       JSON.parse(readFileSync(join(root, "specs", "tla", "model-map.json"), "utf-8"))
-        .entries,
+        .models.flatMap((model: { entries: unknown[] }) => model.entries),
     ).toHaveLength(3);
   });
 

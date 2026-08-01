@@ -3,9 +3,9 @@ id: model-completeness
 kind: deterministic
 command: bun .cursor/tools/amadeus-sensor-model-completeness.ts
 default_severity: advisory
-description: Detects drift between the FormalElection TLA model and its canonical implementation files
+description: Detects drift between each registered TLA model and its canonical implementation files
 category: formal-verification
-matches: "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}"
+matches: "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}"
 input_schema:
   output_path: string
   stage_slug: string

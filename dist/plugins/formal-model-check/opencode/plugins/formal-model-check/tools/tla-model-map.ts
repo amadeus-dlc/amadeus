@@ -1,5 +1,6 @@
 export {
   diffModelMap,
+  findModelMapModel,
   IMPL_ONLY_UPDATE_HINT,
   type ModelLoadError,
   type ModelLoadErrorCode,
@@ -7,8 +8,13 @@ export {
   type ModelMapAssetIdentity,
   type ModelMapDrift,
   type ModelMapEntry,
+  type ModelMapModel,
   parseTlaModelMap,
   TLA_CFG_PATH,
+  TLA_EXECUTION_MODEL_NAME,
   TLA_MODEL_MAP_PATH,
+  TLA_MODEL_MAP_SCHEMA_VERSION,
   TLA_MODEL_PATH,
+  tlaCfgPath,
+  tlaModelPath,
 } from "./amadeus-formal-verif-model-map.ts";

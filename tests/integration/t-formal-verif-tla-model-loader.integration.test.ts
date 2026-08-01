@@ -43,6 +43,20 @@ interface Fixture {
   readonly modelMap: ModelMap;
 }
 
+function executionEntries(modelMap: ModelMap) {
+  const execution = modelMap.models.find((model) => model.name === "FormalElection");
+  if (!execution) throw new Error("FormalElection must be registered");
+  return execution.entries;
+}
+
+function registeredPaths(modelMap: ModelMap): readonly string[] {
+  return modelMap.models.flatMap((model) => [
+    model.model.path,
+    model.cfg.path,
+    ...model.entries.map((entry) => entry.implPath),
+  ]);
+}
+
 function createFixture(): Fixture {
   const root = mkdtempSync(join(tmpdir(), "amadeus-tla-loader-"));
   temporaryRoots.push(root);
@@ -54,14 +68,12 @@ function createFixture(): Fixture {
   mkdirSync(join(root, "packages/framework/core/tools"), { recursive: true });
   writeFileSync(join(root, ".git"), "gitdir: fixture\n");
   writeFileSync(join(root, "package.json"), "{}\n");
-  copyFileSync(join(REPOSITORY_ROOT, "specs/tla/FormalElection.tla"), modelPath);
-  copyFileSync(join(REPOSITORY_ROOT, "specs/tla/FormalElection.cfg"), cfgPath);
   copyFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), mapPath);
   const modelMap = JSON.parse(readFileSync(mapPath, "utf8")) as ModelMap;
-  for (const entry of modelMap.entries) {
-    const destination = join(root, entry.implPath);
+  for (const relativePath of registeredPaths(modelMap)) {
+    const destination = join(root, relativePath);
     mkdirSync(dirname(destination), { recursive: true });
-    copyFileSync(join(REPOSITORY_ROOT, entry.implPath), destination);
+    copyFileSync(join(REPOSITORY_ROOT, relativePath), destination);
   }
   return {
     root,
@@ -258,7 +270,7 @@ describe("TLA model loader real-filesystem boundary", () => {
 
   test("rejects implementation symlinks and implementation hash drift", () => {
     const symlinkFixture = createFixture();
-    const firstEntry = symlinkFixture.modelMap.entries[0]!;
+    const firstEntry = executionEntries(symlinkFixture.modelMap)[0]!;
     const firstPath = join(symlinkFixture.root, firstEntry.implPath);
     const target = `${firstPath}.target`;
     copyFileSync(firstPath, target);
@@ -270,7 +282,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
 
     const driftFixture = createFixture();
-    const driftEntry = driftFixture.modelMap.entries[0]!;
+    const driftEntry = executionEntries(driftFixture.modelMap)[0]!;
     writeFileSync(join(driftFixture.root, driftEntry.implPath), "// drift\n", { flag: "a" });
     expect(loadVerifiedTlaSourceInternal(driftFixture.moduleUrl)).toMatchObject({
       ok: false,
@@ -280,7 +292,7 @@ describe("TLA model loader real-filesystem boundary", () => {
 
   test("implementation hash drift names the --impl-only recovery step", () => {
     const fixture = createFixture();
-    const entry = fixture.modelMap.entries[0]!;
+    const entry = executionEntries(fixture.modelMap)[0]!;
     writeFileSync(join(fixture.root, entry.implPath), "// drift\n", { flag: "a" });
     const result = loadVerifiedTlaSourceInternal(fixture.moduleUrl);
     expect(result.ok).toBe(false);
@@ -290,7 +302,7 @@ describe("TLA model loader real-filesystem boundary", () => {
 
   test("fails closed on implementation metadata and read races", () => {
     const metadataFixture = createFixture();
-    const metadataEntry = metadataFixture.modelMap.entries[0]!;
+    const metadataEntry = executionEntries(metadataFixture.modelMap)[0]!;
     rmSync(join(metadataFixture.root, metadataEntry.implPath));
     expect(loadVerifiedTlaSourceInternal(metadataFixture.moduleUrl)).toMatchObject({
       ok: false,
@@ -298,7 +310,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
 
     const readFixture = createFixture();
-    const readEntry = readFixture.modelMap.entries[0]!;
+    const readEntry = executionEntries(readFixture.modelMap)[0]!;
     const implementationPath = realpathSync(join(readFixture.root, readEntry.implPath));
     const readFs = realFileSystem({
       readFile: (path) => {
@@ -312,14 +324,47 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
   });
 
+  test("reports drift in a registered model that is not the execution model", () => {
+    const fixture = createFixture();
+    const watched = fixture.modelMap.models.find((model) => model.name !== "FormalElection");
+    if (!watched) throw new Error("a second registered model is required");
+    writeFileSync(join(fixture.root, watched.model.path), "\\* drift\n", { flag: "a" });
+    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", relativePath: watched.model.path },
+    });
+
+    const cfgFixture = createFixture();
+    writeFileSync(join(cfgFixture.root, watched.cfg.path), "\\* drift\n", { flag: "a" });
+    expect(loadVerifiedTlaSourceInternal(cfgFixture.moduleUrl)).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", relativePath: watched.cfg.path },
+    });
+  });
+
+  test("fails closed when the map does not register the execution model", () => {
+    const fixture = createFixture();
+    const withoutExecution = {
+      schemaVersion: 2,
+      models: fixture.modelMap.models.filter((model) => model.name !== "FormalElection"),
+    };
+    writeFileSync(fixture.mapPath, `${JSON.stringify(withoutExecution, null, 2)}\n`);
+    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+  });
+
   test("keeps model-map implementation hashes bound to every real file", () => {
     const modelMap = JSON.parse(
       readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), "utf8"),
     ) as ModelMap;
-    expect(modelMap.entries.map((entry) => entry.implPath)).toEqual(
-      [...modelMap.entries].map((entry) => entry.implPath).sort(),
-    );
-    for (const entry of modelMap.entries) {
+    for (const model of modelMap.models) {
+      expect(model.entries.map((entry) => entry.implPath)).toEqual(
+        [...model.entries].map((entry) => entry.implPath).sort(),
+      );
+    }
+    for (const entry of modelMap.models.flatMap((model) => model.entries)) {
       const actual = createHash("sha256")
         .update(readFileSync(join(REPOSITORY_ROOT, entry.implPath)))
         .digest("hex");
