@@ -194,6 +194,63 @@ describe("file:// URL frames (r3695298662)", () => {
   });
 });
 
+describe("URLs are not filesystem paths (r3696692658)", () => {
+  // The optional drive letter matched ANY single letter before a colon, so the
+  // "s" of "https:" was read as a drive and the URL came out corrupted. Since
+  // exception.message now goes through this function, that reaches ordinary
+  // error text ("fetch failed for https://…"), not just stack frames.
+  test("an https URL passes through untouched", () => {
+    withHome(HOME, () => {
+      const stack = "Error: fetch failed for https://example.com/x";
+      expect(redactStacktrace(stack, REPO)).toBe(stack);
+    });
+  });
+
+  test("an http URL with port, path and query passes through untouched", () => {
+    withHome(HOME, () => {
+      const stack = "Error: GET http://localhost:3000/api?q=1 returned 500";
+      expect(redactStacktrace(stack, REPO)).toBe(stack);
+    });
+  });
+
+  test("a URL and a real path on the same line are treated differently", () => {
+    withHome(HOME, () => {
+      const out = redactStacktrace(`posted https://example.com/x from ${HOME}/tool.js`, REPO);
+      expect(out).toContain("https://example.com/x");
+      expect(out).toContain("<home>/tool.js");
+      expect(out).not.toContain(HOME);
+    });
+  });
+
+  test("a scheme-less token that merely follows a colon is still redacted", () => {
+    // The regression this must not trade for: "Error:/Users/dev/secret.txt"
+    // had its "r:" eaten as a drive letter, and the home path behind it was
+    // then stored VERBATIM — a redaction failure, not a cosmetic one.
+    withHome(HOME, () => {
+      const out = redactStacktrace(`Error:${HOME}/secret.txt not found`, REPO);
+      expect(out).toContain("<home>/secret.txt");
+      expect(out).not.toContain(HOME);
+    });
+  });
+
+  test("a drive letter is still detected at a real token boundary", () => {
+    const WIN_HOME = "C:\\Users\\dev";
+    withHome(WIN_HOME, () => {
+      const out = redactStacktrace(`    at f (${WIN_HOME}\\app\\x.ts:1:1)`, "C:\\Users\\dev\\src\\amadeus");
+      expect(out).toContain("<home>/app/x.ts:1:1");
+      expect(out).not.toContain("Users");
+    });
+  });
+
+  test("file:// is still rewritten — it names a local path, unlike http(s)", () => {
+    withHome(HOME, () => {
+      const out = redactStacktrace(`    at load (file://${HOME}/x.js:1:1)`, REPO);
+      expect(out).toContain("file://<home>/x.js:1:1");
+      expect(out).not.toContain(HOME);
+    });
+  });
+});
+
 describe("credential scrubbing over the whole stack (FR-DST-5)", () => {
   test("credential-shaped substrings in any line are masked", () => {
     withHome(HOME, () => {
@@ -241,6 +298,14 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
     return `Error: boom\n    at f (file://${"/aaa".repeat(Math.floor(bytes / 4))}`;
   }
 
+  // A long alphanumeric run in front of the separator, which is what the
+  // scheme check looks back over. Bounded lookback keeps it O(1) per match; a
+  // scheme alternative inside the pattern would have re-scanned this run from
+  // every start position instead.
+  function adversarialSchemeish(bytes: number): string {
+    return `Error: boom\n    at f (${"a".repeat(bytes)}://host/x`;
+  }
+
   test("input-size sweep stays within a generous ceiling and keeps rewriting", () => {
     withHome(HOME, () => {
       for (const bytes of [12_500, 25_000, 50_000, 100_000]) {
@@ -265,6 +330,22 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
           expect(elapsedMs).toBeLessThanOrEqual(2_000);
           expect(out).toContain("<external>");
         }
+      }
+    });
+  }, 30_000);
+
+  test("a long scheme-ish run in front of the separator stays linear", () => {
+    // This fixture IS a URL by the scheme rule, so the assertion is that it
+    // comes back untouched — and that the bounded lookback did not turn the
+    // long run into per-start-position rescanning.
+    withHome(HOME, () => {
+      for (const bytes of [12_500, 25_000, 50_000, 100_000]) {
+        const input = adversarialSchemeish(bytes);
+        const startedAt = performance.now();
+        const out = redactStacktrace(input, REPO);
+        const elapsedMs = performance.now() - startedAt;
+        expect(elapsedMs).toBeLessThanOrEqual(2_000);
+        expect(out).toBe(input);
       }
     });
   }, 30_000);

@@ -179,7 +179,31 @@ const FILE_URL_SCHEME = "file://";
 // however adversarial it is (regex-linearity-untrusted-input). Recognising the
 // markers here is what makes redactStacktrace idempotent: a second pass sees
 // `<home>/x` as one already-rewritten token instead of a fresh `/x`.
-const PATH_TOKEN_PATTERN = /(?:file:\/\/)?(?:<home>|<external>)?(?:[A-Za-z]:)?[\\/][^\s()'"[\]]*/g;
+//
+// The drive letter is gated on a token boundary. Without it ANY letter before a
+// colon read as a drive, so `https://…` matched at its "s" and came out
+// corrupted — and worse, `Error:/Users/dev/x` had its "r:" swallowed, which
+// pushed the home path into the `<external>` arm and stored it VERBATIM. The
+// lookbehind is a zero-width assertion over a fixed class, so it adds no
+// backtracking.
+const PATH_TOKEN_PATTERN = /(?:file:\/\/)?(?:<home>|<external>)?(?:(?<![A-Za-z0-9])[A-Za-z]:)?[\\/][^\s()'"[\]]*/g;
+
+// A URL's authority is not a local path. With the drive letter gated above, a
+// `scheme://host/path` now matches at its "//", so the scheme survives in the
+// text immediately BEFORE the match — checked there rather than folded into the
+// pattern, because a scheme alternative would need its own quantifier and a long
+// non-URL run would then be re-scanned per start position. Bounded slice, fixed
+// upper length, so the check costs O(1) per match and the pass stays linear.
+const URL_SCHEME_TAIL_PATTERN = /[A-Za-z][A-Za-z0-9+.-]*:$/;
+const URL_SCHEME_LOOKBACK = 24;
+
+// Only an authority-form token (`//host/…`) can be a URL. A single leading
+// separator after a colon — `Error:/Users/dev/x` — is a path that happens to
+// follow a colon, and must stay redactable.
+function followsUrlScheme(text: string, token: string, offset: number): boolean {
+  if (!token.startsWith("//")) return false;
+  return URL_SCHEME_TAIL_PATTERN.test(text.slice(Math.max(0, offset - URL_SCHEME_LOOKBACK), offset));
+}
 
 // Backslash-separated frames are compared against the roots in the one form
 // both sides can be written in. Rewriting to "/" is not cosmetic: `C:\Users\dev`
@@ -227,7 +251,9 @@ function rewritePathToken(token: string, repoRoot: string, home: string): string
 export function redactStacktrace(stack: string, repoRoot: string): string {
   const root = trimTrailingSeparator(normalizePath(repoRoot));
   const home = trimTrailingSeparator(normalizePath(process.env.HOME ?? ""));
-  const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token) => rewritePathToken(token, root, home));
+  const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token, offset: number, text: string) =>
+    followsUrlScheme(text, token, offset) ? token : rewritePathToken(token, root, home)
+  );
   return scrubCredentials(rewritten) as string;
 }
 

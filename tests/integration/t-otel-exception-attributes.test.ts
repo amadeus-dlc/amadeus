@@ -120,6 +120,22 @@ describe("write-time redaction of the exception bag (ADR-4)", () => {
     expect(recordOn(new Error("boom"))["exception.message"]).toBe("boom");
   });
 
+  test("a URL in the message survives intact — it is not a local path (r3696692658)", () => {
+    // Routing the message through the path rewriter is what exposed this: an
+    // ordinary "fetch failed for https://…" is far commoner in message text
+    // than in a stack frame, and a corrupted URL is a corrupted diagnostic.
+    const message = "fetch failed for https://example.com/v1/items?id=7";
+    expect(recordOn(new Error(message))["exception.message"]).toBe(message);
+  });
+
+  test("a URL and a home path in one message are handled separately", () => {
+    const home = process.env.HOME ?? "";
+    const attrs = recordOn(new Error(`POST https://example.com/x from ${home}/tool.js failed`));
+    expect(attrs["exception.message"]).toContain("https://example.com/x");
+    expect(attrs["exception.message"]).toContain("<home>/tool.js");
+    expect(attrs["exception.message"]).not.toContain(home);
+  });
+
   test("addEvent outside recordException is NOT redacted — the seam is recordException-only", () => {
     const span = getAmadeusTracer().startSpan("operation");
     try {
