@@ -4,6 +4,12 @@
 
 - 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
 
+## CG 計画整合ガードの業務境界（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 利用者価値: 計画（units-generation/delivery-planning）で合意した並行実行が CG で無音に直列化される事故（実測 18 intent 中4件）を engine が構造的に阻止。逃し弁は計画訂正のみ — 乖離理由が必ず成果物に残る。
+- Delivery boundary: B1（判定基盤+#1893）→ B2（発行側+3部メッセージ）→ B3（approve 突合）→ B4（docs）。self-feature につき Bolt 1 は walking-skeleton gate 維持。
+- 編入前提: #1893 はクロスレビュー2名成立後（進行中）。
+
 ## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## 価値チェーン3件の業務境界（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 

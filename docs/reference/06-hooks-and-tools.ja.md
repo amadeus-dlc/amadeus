@@ -22,6 +22,7 @@
 +-- amadeus-sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
 +-- amadeus-runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
 +-- amadeus-validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
++-- amadeus-log-subagent-start.ts # PreToolUse Task (project-wide, settings.json, TypeScript)
 +-- amadeus-log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
 +-- amadeus-stop.ts              # Stop (project-wide, settings.json, TypeScript, flow-altering)
 +-- amadeus-session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
@@ -40,6 +41,7 @@
 | `amadeus-sync-statusline.ts` | PostToolUse | プロジェクト全体 (settings.json) | `TaskUpdate` | ステージタスクのアクティブ化時に状態ファイルを自動同期する |
 | `amadeus-runtime-compile.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Bash` | 遷移クラスの監査発行時に `runtime-graph.json` を再コンパイルする |
 | `amadeus-validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
+| `amadeus-log-subagent-start.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | サブエージェントのディスパッチを記録する(`SUBAGENT_STARTED`)。Claude Code にはサブエージェント開始イベントがないため、シームはディスパッチツールの PreToolUse となる。マッチャーはアンカー付きで、かつフックがツール名を再チェックする — アンカーなしの `Task` は `TaskUpdate` にもマッチするため |
 | `amadeus-log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
 | `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 後の2つは自律的Constructionでは抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
 | `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
@@ -193,6 +195,22 @@ sequenceDiagram
 
 **なぜこれが重要か:** コンテキストコンパクションは会話履歴を破棄する。コンパクションがステージの途中で起きると、モデルは何をしていたかの認識を失う。リカバリのパンくずは、コンパクションを生き延びる外部チェックポイントを提供する。
 
+### PreToolUse Task: amadeus-log-subagent-start.ts
+
+**Source:** `.claude/hooks/amadeus-log-subagent-start.ts`
+**Trigger:** サブエージェントがディスパッチされたとき(マッチャー: `^Task$`)
+**Purpose:** サブエージェントのディスパッチ(`SUBAGENT_STARTED`)を記録し、サブエージェントを点ではなく区間として残す
+
+**処理ステップ:**
+
+1. **プロジェクトディレクトリ解決:** amadeus-log-subagent.ts と同じマルチフォールバックパターン。
+2. **ヘルスハートビート:** `.amadeus-hooks-health/log-subagent-start.last` に書き込む。
+3. **ディスパッチツールガード:** ペイロードがサブエージェントのディスパッチでない限り静かに終了する。PreToolUse は*すべての*ツールで発火するため、フックはマッチャーを信頼せずツール名を再チェックする。出荷されるマッチャーがアンカー付き(`^Task$`)なのは、アンカーなしの `Task` が `TaskUpdate` にもマッチするからであり、フック内のガードはその二段目の防御 — ワークスペースがマッチャーを編集した場合に効くのはこちらである。
+4. **フィールド組み立て:** `Agent Type`(空の場合は `"unknown"` に正規化)、任意の `Agent ID`、任意の `Purpose` — ディスパッチプロンプトの最初の行で、エスケープを正規化し200文字に切り詰める。これにより無制限のプロンプトがその残りを監査行へ持ち込めない。
+5. **完了側と同じ3つのゲート:** TTY、アクティブな監査シャード、そして既に終端していないワークフロー — 完了が破棄される場所に開始が記録されてはならない。
+
+**ハーネスの非対称性:** 開始シームを配線しているハーネスは2つ。Claude Code はサブエージェント開始イベントを持たないため PreToolUse をシームとし、Kimi はプロンプトも運ぶ本物の `SubagentStart` を持つ。Codex、Cursor、Kiro CLI は完了側だけを登録するため、それらでは開始のない完了が通常の定常状態である。Kiro IDE と OpenCode はどちらの半分も登録しない — OpenCode のプラグイン面が持つのは `chat.message` のプレゼンスシームのみである。読み手は両半分をペアリングし、マッチしない行を破棄する。
+
 ### SubagentStop: amadeus-log-subagent.ts
 
 **Source:** `.claude/hooks/amadeus-log-subagent.ts`
@@ -336,7 +354,7 @@ Next Action: resume current stage
 | **Interaction Events** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` | `tools/amadeus-log.ts`, `tools/amadeus-state.ts` |
 | **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-state.ts`, `tools/amadeus-grant-authorization.ts` (trusted in-process route writer) |
 | **Artifact Events** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | `hooks/amadeus-audit-logger.ts`, `tools/amadeus-state.ts` |
-| **Subagent Events** | 1 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` |
+| **Subagent Events** | 2 | `SUBAGENT_STARTED`, `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent-start.ts`, `hooks/amadeus-log-subagent.ts` |
 | **Utility Events** | 1 | `HEALTH_CHECKED` | `tools/amadeus-utility.ts` |
 | **Error/Recovery Events** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `tools/amadeus-lib.ts`, `tools/amadeus-state.ts` |
 | **Construction Bolt Events** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` |

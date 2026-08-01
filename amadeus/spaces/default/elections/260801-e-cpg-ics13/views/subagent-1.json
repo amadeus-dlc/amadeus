@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-ICS13",
+  "voter": "subagent-1",
+  "question": "260801-cg-plan-guard intent-capture の §13 学習選定。候補 c1(事前裁定済み intent の 0問成立+#1871 修正の初回本番成功)は既存 cid:intent-capture:c1(事前裁定済みは質問を絞る)の実例であり、mirror 成功は #1871 修正の期待どおりの動作確認 — いずれも新規規則を導かないため 0 件を提案する。反対材料があれば record(IC diary・questions ファイル・Issue #1903)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    }
+  ]
+}

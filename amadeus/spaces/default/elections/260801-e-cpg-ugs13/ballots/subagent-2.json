@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件提案を独立実測で支持。(1) c1 の3要素はすべて既存 cid の実例で、新規規則を導かない: 直列理由の記録 = cid:units-generation:c1(Unit 分割の独立実装可能性検証)+ cid:delivery-planning:intra-bolt-order-as-risk-control の適用、edge block 検証 = cid:units-generation:per-unit-loop-activation (a) と cid:units-generation:recompile-before-construction-bolt-dag が既に要求する機構の前倒し実行、採番予約 = cid:code-generation:swarm-test-number-reservation。5 cid とも memory/(project.md / team.md)に実在を grep 確認。さらに成果物自身が既存 cid を明示引用している(unit-of-work.md:44 が swarm-test-number-reservation、unit-of-work-dependency.md の U2→U3 根拠が cross-unit-note-canonical-reference)— 既存規範の適用であって新規則の発見ではないことの一次証拠。(2) 反対材料の探索も空: repo 外 scratch から shipped parseBoltDag(.claude/tools/amadeus-lib.ts:7931)を in-process 実行し ok:true / batches 4(dag-integrity → issuance-guard → approve-reconciliation → docs-sync)を再現、diary の『4バッチ・散文一致』主張と一致。採番 t398/t399/t400 は find tests -name で全て 0 件(未使用)を確認。§12a は iteration 1 READY、Minor 2件はいずれも advisory で delivery-planning へ引き継ぎ済み(unit-of-work.md:68-73)— 規範化を要する未解決事項なし。よって 0件(選択肢1)を採用(GoA 1)。",
+  "submittedAt": "2026-08-01T11:05:00Z"
+}

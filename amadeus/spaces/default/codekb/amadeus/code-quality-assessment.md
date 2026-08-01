@@ -6,6 +6,12 @@
 - 欠陥クラス: 単一 writer × ガード後段配置 — bootstrap 状態で reader 側が恒久 fail-closed になる writer-reader 不整合。`.current-session` 直読み2箇所（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403`）を `readCurrentSessionId`（`amadeus-lib.ts:2159`）へ寄せるリファクタは本 intent スコープ外。
 - 根因確度: 機序は observed HEAD で全 file:line 再実測済み（`:70` ガード / `:117` writer / 認可 `:96-109`）。決定的再現はテストなしでもコードパス追跡で確定（writer 到達不能は `:70` の無条件 exit から自明）。
 
+## CG 計画整合ガードの品質所見（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 欠陥クラス: 無音 degrade 3経路（tryEmitSwarm の bolt_dag 不在 false / autonomy null false / computeBoltDag の stderr+undefined）— いずれも fail-open。既存ノルム（per-unit-loop-activation / recompile-before-construction-bolt-dag）は prose 手動確認で機械ガード不在。
+- 真因（#1892 調査）: 実測4件の不履行はすべて conductor の非タスク化 — engine 無音 degrade の確定例 0。よってガードの主敵は「prose 計画の非 directive 化」であり、発行時+approve 時の両点発動が要件。
+- 未決2点（RA 送り）: #1893 修正方向（A 受理拡張 / B 訂正+loud 拒否）、autonomy null 期の扱い。
+
 ## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## 価値チェーン3件の品質評価（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
