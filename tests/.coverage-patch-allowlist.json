@@ -769,151 +769,151 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3913-3914",
+    "lines": "3912-3913",
     "reason": "The --mirror-boundary report parser arm is exercised by generated CLI report journeys in t265 integration; main argv parsing in a spawned process is not LCOV-visible.",
     "expiry": "remove when report argv parsing is exported and driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3938-3940",
+    "lines": "3937-3939",
     "reason": "The --mirror-boundary report parser arm is exercised by generated CLI report journeys in t265 integration; main argv parsing in a spawned process is not LCOV-visible.",
     "expiry": "remove when report argv parsing is exported and driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4259-4261",
+    "lines": "4258-4260",
     "reason": "Defense-in-depth invariant: this branch requires a parsed pending completion for the same final stage to disappear while the already-loaded immutable state string is being rendered. Carrier replay, malformed preparation, invalid configuration, and vanished owner state are driven in-process by tests/integration/t265-engine-boundary.integration.test.ts.",
     "expiry": "remove if persisted boundary parsing and rendering no longer share the same immutable state snapshot"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4310-4312",
+    "lines": "4309-4311",
     "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
     "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4333-4334",
+    "lines": "4332-4333",
     "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
     "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4383-4395",
+    "lines": "4382-4394",
     "reason": "Invalid mirror report phase/result/answer combinations are exercised through the generated CLI by t265 integration. The error-emitting child process is outside parent LCOV.",
     "expiry": "remove when handleReport receives an injected directive sink"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4397-4412",
+    "lines": "4396-4411",
     "reason": "Mirror report early returns, active-state resolution, and malformed Receipt handling are covered by generated-CLI report tests in t265 integration; spawned execution is not merged into LCOV.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4412-4426",
+    "lines": "4411-4425",
     "reason": "Invalid mirror report phase/result/answer combinations are exercised through the generated CLI by t265 integration. The error-emitting child process is outside parent LCOV.",
     "expiry": "remove when handleReport receives an injected directive sink"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4413-4424",
+    "lines": "4412-4423",
     "reason": "Phase mismatch, already-processed/double answer, and unoffered create rejection are covered by generated-CLI t265 integration tests. These child-process branches are not parent-LCOV visible.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4425-4441",
+    "lines": "4424-4440",
     "reason": "The absent-to-completed state subcommand, its failure handling, and successful run-then-continue directive are exercised by t265 integration and generated-CLI E2E journeys. Spawned subcommands are not LCOV-visible.",
     "expiry": "remove when spawnState and directive emission are injected in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4428-4443",
+    "lines": "4427-4442",
     "reason": "Mirror report early returns, active-state resolution, and malformed Receipt handling are covered by generated-CLI report tests in t265 integration; spawned execution is not merged into LCOV.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4465-4477",
+    "lines": "4464-4476",
     "reason": "The absent-to-completed state subcommand, its failure handling, and successful run-then-continue directive are exercised by t265 integration and generated-CLI E2E journeys. Spawned subcommands are not LCOV-visible.",
     "expiry": "remove when spawnState and directive emission are injected in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4731-4733",
+    "lines": "4730-4732",
     "reason": "Defense-in-depth invariant: a parsed pending completion in the already-loaded immutable state necessarily yields a persisted completion boundary, so a false return here cannot occur without changing that parser contract. Normal replay, malformed preparation, and valid pending-boundary re-emission are exercised by t265 integration.",
     "expiry": "remove if workflowCompletionPreparation and persistedMirrorBoundary stop sharing the same immutable state snapshot or boundary rendering gains an injectable fault seam"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4789-4793",
+    "lines": "4788-4792",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4835-4849",
+    "lines": "4834-4848",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4842-4848",
+    "lines": "4841-4847",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4851-4852",
+    "lines": "4850-4851",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4868-4869",
+    "lines": "4867-4868",
     "reason": "handlePark project-dir binding and Kimi caller guard run only inside the spawned orchestrator CLI; t365 drives park's authorized and unauthorized outcomes through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
     "expiry": "remove when the orchestrator CLI main() receives an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4881",
+    "lines": "4880",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4881-4889",
+    "lines": "4880-4888",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "4891",
+    "lines": "4890",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "5012",
+    "lines": "5011",
     "reason": "Narrow simultaneous-reservation race-loser recovery: arm must lose after the initial locked lookup but before its own locked write, then the retry must observe the exact winning carrier. t365 proves two concurrent shipped CLI calls converge on one carrier and directly covers ordinary retry, conflict, and corrupt-marker outcomes; pausing inside the two-lock window requires an injectable reservation port.",
     "expiry": "remove when reserveKimiGateApproval receives an injectable reservation port for deterministic race-loser scheduling"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "5017-5024",
+    "lines": "5016-5023",
     "reason": "Narrow simultaneous-reservation race-loser recovery: arm must lose after the initial locked lookup but before its own locked write, then the retry must observe the exact winning carrier. t365 proves two concurrent shipped CLI calls converge on one carrier and directly covers ordinary retry, conflict, and corrupt-marker outcomes; pausing inside the two-lock window requires an injectable reservation port.",
     "expiry": "remove when reserveKimiGateApproval receives an injectable reservation port for deterministic race-loser scheduling"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "5248-5252",
+    "lines": "5247-5251",
     "reason": "Spawn-only main() dispatch arms for gate-reserve and gate-reject. t365 exercises both shipped CLI verbs end-to-end and drives the exported handlers in-process; Bun does not attribute child-process main dispatch to the parent LCOV report.",
     "expiry": "remove when main() receives an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "5274",
+    "lines": "5273",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
