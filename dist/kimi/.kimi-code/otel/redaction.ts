@@ -129,10 +129,7 @@ export function redactAttributes(
   return admitted;
 }
 
-// The three bounded forms a path-like token is rewritten into. A repo path
-// loses its absolute prefix entirely (the relative path is the useful part);
-// anything else keeps its tail behind a marker that names the zone instead of
-// the machine.
+// Markers naming the zone a path came from instead of the machine it sits on.
 const HOME_MARKER = "<home>";
 const EXTERNAL_MARKER = "<external>";
 
@@ -159,14 +156,15 @@ function rewritePathToken(token: string, repoRoot: string, home: string): string
   return EXTERNAL_MARKER + token;
 }
 
-// Rewrite every path-like token of a captured stack into a bounded form and
-// credential-scrub the result (FR-EXC). A raw `err.stack` names the machine's
-// user and directory layout in every frame, so it cannot be stored as an
-// attribute untouched. One linear pass; the output is a plain string, and a
-// second pass over it is a no-op.
+// Rewrite every path-like token of a captured stack into one of three bounded
+// forms — repo-relative, `<home>/…`, `<external>/…` — and credential-scrub the
+// result (FR-EXC). A raw `err.stack` names the machine's user and directory
+// layout in every frame, so it cannot be stored as an attribute untouched. One
+// linear pass; the output is a plain string, and a second pass over it is a
+// no-op.
 export function redactStacktrace(stack: string, repoRoot: string): string {
   const root = trimTrailingSeparator(repoRoot);
-  const home = trimTrailingSeparator(process.env.HOME ?? process.env.USERPROFILE ?? "");
+  const home = trimTrailingSeparator(process.env.HOME ?? "");
   const rewritten = stack.replace(PATH_TOKEN_PATTERN, (token) => rewritePathToken(token, root, home));
   return scrubCredentials(rewritten) as string;
 }
