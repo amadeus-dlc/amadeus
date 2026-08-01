@@ -343,6 +343,23 @@ describe("walking skeleton — the SessionStart hook's supply reaches a store ro
 });
 
 describe("the canonical copy behaves identically (dist is a projection, not a fork)", () => {
+  // FIRST in this block on purpose: the stage-graph loader memoises its parse
+  // per process and exposes no reset, so once a later case has loaded the graph
+  // successfully the unreadable path is unreachable for the rest of the run.
+  test("an unreadable stage graph costs the phase dimension, not the measurement", () => {
+    const saved = process.env.AMADEUS_STAGE_GRAPH;
+    process.env.AMADEUS_STAGE_GRAPH = join(proj, "no-such-stage-graph.json");
+    try {
+      ensureOtelBootstrapSrc(proj);
+      observeSrc(proj, "amadeus.stage.started", { Stage: "code-generation", Agent: "developer" });
+      observeSrc(proj, "amadeus.stage.completed", { Stage: "code-generation", Details: "done" });
+      expect(measurementsOf("amadeus.stage.duration")[0]!.attributes).toEqual({ "amadeus.stage": "code-generation" });
+    } finally {
+      if (saved === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = saved;
+    }
+  });
+
   test("the stage pair resolves the phase from the graph", () => {
     // The canonical tree ships no compiled stage graph — that data file is a
     // packaging artefact — so point the loader's documented env seam at the
