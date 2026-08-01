@@ -202,16 +202,21 @@ class AmadeusTracerProvider implements TracerProvider {
 
 let registeredProjectDir: string | null = null;
 
+// Registration inputs. Declared at module scope rather than inline: an inline
+// multi-line type literal leaves its continuation lines as unexecuted rows in
+// the merged LCOV, which reads as uncovered new code (bun-multiline-arg-da0).
+export type RegisterTracerProviderOptions = {
+  readonly projectDir: string;
+  readonly spanExporter: LocalSpanExporter;
+  readonly resource?: ResourceGetter;
+};
+
 // Global registration. Double registration is an invariant violation
 // (NFR-3: the API singleton must hold exactly one Amadeus provider). The
 // project dir is recorded rather than left implicit in the exporter's closure:
 // it is what lets a bootstrap seam tell "already standing" apart from
 // "standing for a DIFFERENT workspace".
-export function registerTracerProvider(options: {
-  projectDir: string;
-  spanExporter: LocalSpanExporter;
-  resource?: ResourceGetter;
-}): void {
+export function registerTracerProvider(options: RegisterTracerProviderOptions): void {
   if (registeredProjectDir !== null) {
     throw new Error("registerTracerProvider called twice — invariant violation (NFR-3)");
   }
