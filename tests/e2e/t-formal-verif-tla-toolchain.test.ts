@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY } from "../../scripts/formal-verif/tlc-toolchain.ts";
+import { FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const expectedCallOrder = ["acquire", "verifyOffline", "prepare", "run", "normalize"];
 const harness = resolve("tests/formal-verif/support/tla-toolchain-harness.ts");

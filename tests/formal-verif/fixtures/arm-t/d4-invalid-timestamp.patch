@@ -1,7 +1,7 @@
-diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+diff --git a/plugins/formal-model-check/tools/tla-arm.ts b/plugins/formal-model-check/tools/tla-arm.ts
 index 34162f1ce..36589d963 100644
---- a/scripts/formal-verif/tla-arm.ts
-+++ b/scripts/formal-verif/tla-arm.ts
+--- a/plugins/formal-model-check/tools/tla-arm.ts
++++ b/plugins/formal-model-check/tools/tla-arm.ts
 @@ -436,7 +436,8 @@ SubmitOriginal(v, c, s, g) ==
    /\\ IF c = "UNKNOWN_CHOICE"
       THEN Reject

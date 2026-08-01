@@ -46,6 +46,19 @@ reproducible: the same model + config + image digest yields the same verdict
 plugin absent (or dropped), the shipped `dist/` stage graph is byte-identical to
 a zero-plugin build.
 
+## Working with models
+
+Two reference chapters cover the model lifecycle around this stage:
+
+- [Keeping a Formal Model in Step with Its Implementation](../../docs/reference/21-formal-model-following.md)
+  — reading the `model-completeness` drift signal and deciding between an
+  implementation-hash refresh (`updateModelMap --impl-only`) and a model
+  revision.
+- [Supplying a Formal Model for a New Protocol](../../docs/reference/22-formal-model-supply.md)
+  — choosing a subject, declaring the reduction manifest, registering the model
+  in `specs/tla/model-map.json`, and the falling proof plus vacuity guard a new
+  model must pass before it counts as evidence.
+
 ## Compose / doctor / drop
 
 - **compose**: lands the stage under `<hostRoot>/plugins/formal-model-check/`,

@@ -16,6 +16,9 @@ describe("t300 parsePluginCliArgs (fail-closed)", () => {
       [["compose", "--if-stale"], { kind: "compose", ifStale: true }],
       [["compose", "--project-root", "/x"], { kind: "compose", ifStale: false, projectRoot: "/x" }],
       [["compose", "--if-stale", "--project-root", "/x"], { kind: "compose", ifStale: true, projectRoot: "/x" }],
+      [["compose", "--all-harnesses"], { kind: "compose", ifStale: false, allHarnesses: true }],
+      [["compose", "--all-harnesses", "--if-stale"], { kind: "compose", ifStale: true, allHarnesses: true }],
+      [["compose"], { kind: "compose", allHarnesses: false }],
       [["doctor"], { kind: "doctor" }],
       [["status"], { kind: "status" }],
       [["drop", "my-plugin"], { kind: "drop", name: "my-plugin" }],
@@ -41,6 +44,8 @@ describe("t300 parsePluginCliArgs (fail-closed)", () => {
       ["drop", "a", "--unknown"], // unknown flag on drop
       ["doctor", "extra"], // surplus argument
       ["status", "--if-stale"], // flag not allowed on status
+      ["compose", "--all-harness"], // near-miss flag spelling
+      ["drop", "a", "--all-harnesses"], // the bulk flag belongs to compose only
     ];
     for (const argv of rejected) {
       const r = parsePluginCliArgs(argv);

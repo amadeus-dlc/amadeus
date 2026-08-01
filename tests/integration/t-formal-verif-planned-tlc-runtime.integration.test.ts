@@ -14,16 +14,16 @@ import {
   FIXED_TLC_RESERVATION_BYTES,
   FsTlcToolchain,
   type FsTlcToolchainDependencies,
-} from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import type {
   EnvSnapshot,
   TlcSpawnPlanner,
-} from "../../scripts/formal-verif/run-model-check-domain.ts";
-import { loadRunModelCheckSource } from "../../scripts/formal-verif/run-model-check-source.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import { loadRunModelCheckSource } from "../../plugins/formal-model-check/tools/run-model-check-source.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
   MAX_TLC_STREAM_BYTES,
-} from "../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const artifactBytes = new TextEncoder().encode("planned-runtime-artifact");
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");

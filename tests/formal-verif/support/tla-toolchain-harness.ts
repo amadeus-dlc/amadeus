@@ -1,10 +1,10 @@
-import { canonicalIdentity } from "../../../scripts/formal-verif/canonical.ts";
-import { parseCellResult, type CellResult, type Result } from "../../../scripts/formal-verif/contract.ts";
+import { canonicalIdentity } from "../../../plugins/formal-model-check/tools/canonical.ts";
+import { parseCellResult, type CellResult, type Result } from "../../../plugins/formal-model-check/tools/contract.ts";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
   type FrozenTlaModelBundle,
-} from "../../../scripts/formal-verif/tla-arm.ts";
+} from "../../../plugins/formal-model-check/tools/tla-arm.ts";
 import {
   DARWIN_NETWORK_DENY_POLICY_IDENTITY,
   DARWIN_SANDBOX_PROVIDER_IDENTITY,
@@ -26,7 +26,7 @@ import {
   type VerifiedJdkSnapshot,
   type VerifiedSandbox,
   type VerifiedTlcArtifact,
-} from "../../../scripts/formal-verif/tlc-toolchain.ts";
+} from "../../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 export type SyntheticTlcScenario = "complete" | "counterexample" | "timeout";
 type ToolchainCall = "acquire" | "verifyOffline" | "prepare" | "run" | "normalize";

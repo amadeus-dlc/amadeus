@@ -34,10 +34,17 @@ import {
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
 
+// The REAL deployment layout (U8 FR-B3 grounding): the plugin host root is the
+// harness directory under the project root, and the watched TLA+ specs are a
+// project asset one level up. The fixture used to place both under one root,
+// which made the two indistinguishable and hid the fact that a real host hashes
+// an empty watch set. Spec writes go to `projectRoot`; the composition record and
+// the verdict state stay on `host`.
+let projectRoot = "";
 let host = "";
 
 function writeSpec(rel: string, content: string): void {
-  const abs = join(host, rel);
+  const abs = join(projectRoot, rel);
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, content);
 }
@@ -53,42 +60,44 @@ function composeFormalModelCheck(): void {
 }
 
 beforeEach(() => {
-  host = mkdtempSync(join(tmpdir(), "amadeus-t320-"));
+  projectRoot = mkdtempSync(join(tmpdir(), "amadeus-t320-"));
+  host = join(projectRoot, ".claude");
+  mkdirSync(host, { recursive: true });
   writeSpec("specs/tla/FormalElection.tla", "MODULE FormalElection\n");
   writeSpec("specs/tla/FormalElection.cfg", "INIT Init\n");
   writeSpec("specs/tla/model-map.json", "{}\n");
 });
 
-afterEach(() => rmSync(host, { recursive: true, force: true }));
+afterEach(() => rmSync(projectRoot, { recursive: true, force: true }));
 
 describe("t320 computeSpecHash (deterministic, fail-closed)", () => {
   test("identical input -> identical hash (BR-U6-1)", () => {
-    const a = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
-    const b = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const a = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
+    const b = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(a.ok && b.ok && a.hash === b.hash).toBe(true);
   });
 
   test("one byte changed -> changed hash; restore -> original hash", () => {
-    const before = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const before = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     writeSpec("specs/tla/FormalElection.tla", "MODULE FormalElection\nEXTENDS Naturals\n");
-    const after = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const after = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(before.ok && after.ok && before.hash !== after.hash).toBe(true);
     writeSpec("specs/tla/FormalElection.tla", "MODULE FormalElection\n");
-    const restored = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const restored = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(before.ok && restored.ok && before.hash === restored.hash).toBe(true);
   });
 
   test("rename with unchanged content -> changed hash (path is folded in)", () => {
-    const before = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
-    rmSync(join(host, "specs/tla/model-map.json"));
+    const before = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
+    rmSync(join(projectRoot, "specs/tla/model-map.json"));
     writeSpec("specs/tla/model-map-renamed.json", "{}\n");
-    const after = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const after = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(before.ok && after.ok && before.hash !== after.hash).toBe(true);
   });
 
   test("empty spec set (base dir absent) -> a determinate ok hash", () => {
-    rmSync(join(host, "specs"), { recursive: true, force: true });
-    const r = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    rmSync(join(projectRoot, "specs"), { recursive: true, force: true });
+    const r = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(r.ok).toBe(true);
   });
 
@@ -102,7 +111,7 @@ describe("t320 computeSpecHash (deterministic, fail-closed)", () => {
         return defaultActivationFs.readFileSync(p);
       },
     };
-    const r = computeSpecHash(host, ACTIVATION_WATCH_GLOBS, throwing);
+    const r = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS, throwing);
     expect(r.ok).toBe(false);
   });
 });
@@ -126,7 +135,7 @@ describe("t320 SpecHashState round-trip (single writer, atomic)", () => {
   });
 
   test("recordActivationVerdict persists the current spec hash (flow 4)", () => {
-    const current = computeSpecHash(host, ACTIVATION_WATCH_GLOBS);
+    const current = computeSpecHash(projectRoot, ACTIVATION_WATCH_GLOBS);
     expect(current.ok).toBe(true);
     const wrote = recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T01:00:00Z");
     expect(wrote).toBe(true);

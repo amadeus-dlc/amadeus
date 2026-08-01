@@ -88,6 +88,7 @@ function cleanPlugin(name = "pro"): PluginDescriptor {
     stages: [{ slug: "pro-review", path: "pro-review.md", bytes: pluginStageBytes("pro-review") }],
     seams: [{ stage: "code-generation", seam: "sensors", entries: ["pro-lint"] }],
     fragments: [{ file: "SKILL.md", anchor: "<!-- ANCHOR -->", id: "pro-block", text: "PRO" }],
+    tools: [],
   });
 }
 
@@ -202,6 +203,7 @@ describe("inspectPlugin", () => {
         { stage: "ghost", seam: "sensors", entries: ["b"] },
       ],
       fragments: [],
+      tools: [],
     });
     const result = inspectPlugin(plugin, host);
     expect(result.kind).toBe("rejected");
@@ -226,6 +228,7 @@ describe("inspectPlugin", () => {
       stages: [],
       seams: [],
       fragments: [{ file: "SKILL.md", anchor: "<!-- MISSING -->", id: "b", text: "T" }],
+      tools: [],
     });
     const result = inspectPlugin(plugin, makeHost());
     expect(result.kind).toBe("rejected");
@@ -471,6 +474,7 @@ describe("drop", () => {
         stages: [{ slug: `${name}-stage`, path: `${name}.md`, bytes: pluginStageBytes(`${name}-stage`) }],
         seams: [{ stage: "code-generation", seam: "sensors", entries: [sensor] }],
         fragments: [],
+        tools: [],
       });
     const backend = createInMemoryBackend();
     const cg = stage("code-generation", "cg.md", { sensors: ["linter"], produces: ["code-summary"] });

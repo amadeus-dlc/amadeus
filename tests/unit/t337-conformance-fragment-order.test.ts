@@ -42,6 +42,7 @@ function twoFragmentPlugin(): ValidPlugin {
       { file: "SKILL.md", anchor: "<!-- ANCHOR-ONE -->", id: "alpha", text: "ALPHA-BODY" },
       { file: "SKILL.md", anchor: "<!-- ANCHOR-TWO -->", id: "beta", text: "BETA-BODY" },
     ],
+    tools: [],
   };
   const descriptor: PluginDescriptor = { name: "frag-order", manifestBytes: Buffer.from(JSON.stringify(manifest)), manifest, parseErrors: [] };
   return descriptor as ValidPlugin;
