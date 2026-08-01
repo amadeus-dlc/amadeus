@@ -8,7 +8,7 @@
 // markers, a spawned hook) so it lives here rather than in the unit layer.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureMeterBootstrap, ensureOtelBootstrap } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { birthIntent, docsRoot, recordDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -27,7 +27,16 @@ import {
 import { instrumentDef } from "../../dist/claude/.claude/otel/metrics-vocabulary.ts";
 import type { InstrumentName } from "../../dist/claude/.claude/otel/metrics-vocabulary.ts";
 import { supplyTokenUsage } from "../../dist/claude/.claude/otel/resource-suppliers.ts";
-import { cleanupTestProject, createTestProject, FIXTURES_DIR } from "../harness/fixtures.ts";
+// The canonical copy, driven in-process alongside the shipped one: the shipped
+// tree is what a harness runs, but only the canonical tree is what CI measures
+// for coverage, and these are two module graphs with two sets of singletons.
+import { ensureOtelBootstrap as ensureOtelBootstrapSrc } from "../../packages/framework/core/otel/bootstrap.ts";
+import {
+  markDurationStart as markDurationStartSrc,
+  observeCanonicalEventForMetrics as observeSrc,
+  takeDurationStart as takeDurationStartSrc,
+} from "../../packages/framework/core/otel/metrics-instruments.ts";
+import { AMADEUS_SRC, cleanupTestProject, createTestProject, FIXTURES_DIR } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 let proj: string;
@@ -330,5 +339,37 @@ describe("walking skeleton — the SessionStart hook's supply reaches a store ro
     expect(records.length).toBeGreaterThan(0);
     const resource = records[0]!.resource as Record<string, string>;
     expect(resource["session.id"], "the hook's supply line did not reach the resource bag").toBe("conv-u5-metrics");
+  });
+});
+
+describe("the canonical copy behaves identically (dist is a projection, not a fork)", () => {
+  test("the stage pair resolves the phase from the graph", () => {
+    // The canonical tree ships no compiled stage graph — that data file is a
+    // packaging artefact — so point the loader's documented env seam at the
+    // shipped one rather than asserting the phase is unresolvable here.
+    const saved = process.env.AMADEUS_STAGE_GRAPH;
+    process.env.AMADEUS_STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+    try {
+      ensureOtelBootstrapSrc(proj);
+      observeSrc(proj, "amadeus.stage.started", { Stage: "code-generation", Agent: "developer" });
+      observeSrc(proj, "amadeus.stage.completed", { Stage: "code-generation", Details: "done" });
+      expect(measurementsOf("amadeus.stage.duration")[0]!.attributes).toEqual({
+        "amadeus.stage": "code-generation",
+        "amadeus.phase": "construction",
+      });
+    } finally {
+      if (saved === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = saved;
+    }
+  });
+
+  test("a marker the filesystem refuses to read as a file yields no measurement", () => {
+    markDurationStartSrc(proj, "stage", "code-generation", 1_000);
+    // Replace the marker with a directory: the read (macOS) or the removal
+    // (both platforms) throws, and the pairing degrades to "no start parked".
+    const marker = join(recordDir(proj)!, ".amadeus-otel", "pending-stage-code-generation.start");
+    rmSync(marker, { force: true });
+    mkdirSync(join(marker, "occupied"), { recursive: true });
+    expect(takeDurationStartSrc(proj, "stage", "code-generation")).toBeNull();
   });
 });
