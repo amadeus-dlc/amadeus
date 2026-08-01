@@ -5546,19 +5546,25 @@ export function rebuildDerivedPlanFields(
 // existing row's checkbox state and plan suffix, and recomputes the derived
 // counters so an inserted row cannot produce a Completed > Total skew.
 //
-// Fail-closed in three directions:
+// Fail-closed in four directions:
 //   - a terminal (non-Running) record is a RECORD, not a live plan: adding rows
 //     under a summary computed at completion corrupts it, so it is skipped;
 //   - a state row whose slug is absent from THIS host's graph means the record
 //     travelled from a host with a different graph: rebuilding would delete it,
 //     so the whole intent is skipped, untouched;
-//   - an unreadable state / unknown scope is reported, never guessed at.
+//   - an unreadable state / unknown scope is reported, never guessed at;
+//   - a Stage Progress section the replacer's regex does not recognize (a
+//     hand-edited header comment, a trailing section) makes the replacement a
+//     silent no-op: that is verified by re-parsing the rewritten content, and
+//     on failure NOTHING is written — updating the derived counters without
+//     the rows would skew the record (#1963).
 export type StateResyncStatus =
   | "resynced"
   | "current"
   | "not-running"
   | "foreign-rows"
-  | "unreadable";
+  | "unreadable"
+  | "section-unrecognized";
 
 export interface StateResyncOutcome {
   space: string;
@@ -5610,6 +5616,13 @@ function resyncOneIntent(
     content,
     renderStageProgressSection(graph, planOf, stateOf, perUnitLineOf(content)),
   );
+  // Verify the replacement actually took effect. `replaceStageProgressSection`
+  // is a bare String.replace: a non-matching section regex returns the input
+  // unchanged with no signal. Comparing `next !== content` would not prove
+  // anything either (derived fields change the bytes anyway), so the rewritten
+  // content is re-parsed and every missing slug must now have a row (#1963).
+  const rowSlugsAfter = new Set(parseCheckboxes(next).map((r) => r.slug));
+  if (inserted.some((slug) => !rowSlugsAfter.has(slug))) return outcome("section-unrecognized");
   next = rebuildDerivedPlanFields(next, graph, planOf).content;
   next = setField(next, "Last Updated", isoTimestamp());
   writeStateFile(projectDir, next, intent, space);

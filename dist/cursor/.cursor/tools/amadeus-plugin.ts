@@ -98,7 +98,16 @@ export type DoctorLineState = "ok" | "drift" | "degraded" | "advisory" | "recove
 export type DoctorLine = { plugin: string; state: DoctorLineState; detail: string };
 
 export type PluginCliResult =
-  | { kind: "composed"; applied: number; recompiled: true; resynced: readonly string[] }
+  | {
+      kind: "composed";
+      applied: number;
+      recompiled: true;
+      resynced: readonly string[];
+      /** Intents whose state re-sync FAILED loudly (`section-unrecognized`): the
+       * Stage Progress section was not recognized, no rows were inserted, and
+       * the state file was left untouched (#1963). Rendered on stderr, exit 1. */
+      resyncFailed: readonly string[];
+    }
   | { kind: "composed-all"; total: number; succeeded: number; failures: readonly BulkComposeFailure[] }
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
@@ -637,7 +646,12 @@ function handleComposeAll(cmd: Extract<PluginCliCommand, { kind: "compose" }>, d
       continue;
     }
     const result = handleCompose({ kind: "compose", ifStale: cmd.ifStale, allHarnesses: false, projectRoot: hostRoot }, deps);
-    if (result.kind === "composed" || result.kind === "noop") succeeded += 1;
+    if (result.kind === "composed" && result.resyncFailed.length > 0) {
+      failures.push({
+        hostRoot,
+        message: `state re-sync failed for ${result.resyncFailed.join(", ")}: Stage Progress section not recognized (#1963)`,
+      });
+    } else if (result.kind === "composed" || result.kind === "noop") succeeded += 1;
     else failures.push({ hostRoot, message: describeTreeFailure(result) });
   }
   return { kind: "composed-all", total: trees.length, succeeded, failures };
@@ -727,6 +741,9 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
     applied,
     recompiled: true,
     resynced: resync.filter((o) => o.status === "resynced").map((o) => o.intent),
+    resyncFailed: resync
+      .filter((o) => o.status === "section-unrecognized")
+      .map((o) => `${o.space}/${o.intent}`),
   };
 }
 
@@ -755,6 +772,9 @@ function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps
   }
   if (state !== "identical") deps.copyPluginSource(src, dst);
   const composed = handleCompose({ kind: "compose", ifStale: true, allHarnesses: false, projectRoot: cmd.projectRoot }, deps);
+  // A compose whose state re-sync failed loudly must stay loud: returning the
+  // composed result unchanged keeps the stderr rendering + exit 1 (#1963).
+  if (composed.kind === "composed" && composed.resyncFailed.length > 0) return composed;
   if (composed.kind === "composed") return { kind: "installed", name, composeOutcome: "composed" };
   if (composed.kind === "noop") return { kind: "installed", name, composeOutcome: "noop" };
   return composed;
@@ -1017,7 +1037,12 @@ export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDe
         `composed ${result.applied} plugin(s), recompiled` +
           (result.resynced.length > 0 ? `, re-synced ${result.resynced.join(", ")}` : ""),
       );
-      return 0;
+      for (const failed of result.resyncFailed) {
+        deps.err(
+          `amadeus-plugin: state re-sync FAILED for ${failed}: Stage Progress section not recognized — no rows inserted, state file left untouched (#1963)`,
+        );
+      }
+      return result.resyncFailed.length > 0 ? 1 : 0;
     case "composed-all": {
       deps.out(`compose --all-harnesses: ${result.succeeded}/${result.total} harness tree(s) up to date`);
       for (const failure of result.failures) deps.err(`amadeus-plugin: ${failure.hostRoot}: ${failure.message}`);
