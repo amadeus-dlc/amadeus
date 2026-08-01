@@ -174,7 +174,10 @@ ladder comes back as an `ask` pointing at `amadeus-bolt set-autonomy`, and any
 other decline stops the run with an `error`. At the code-generation approve the
 engine reconciles the declared batches against the `SWARM_STARTED` /
 `SWARM_DEGRADED` / `SWARM_COMPLETED` rows in the audit trail and refuses an
-approve for a batch with no fan-out on record. Both messages name what was
+approve for a batch with no fan-out on record (rows are matched by batch
+number across the append-only trail, so evidence from a superseded plan can
+still satisfy a renumbered batch — see
+[#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
 observed, why it matters, and the one approved exit — for a violation that exit
 is to correct the plan (record the dependency that makes those Units serial in
 `unit-of-work-dependency.md`, re-compile, re-run `next`), never to hand-wave the

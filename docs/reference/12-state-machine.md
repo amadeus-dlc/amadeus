@@ -162,9 +162,9 @@ Every guard message is assembled from the same parts by a single template, so th
 
 | Part | Marker | Content |
 |---|---|---|
-| Observation | `Observed: ` | What the engine measured — the declared batch number, its width, and the Unit names |
-| Weight | `Why this matters: ` | Why the mismatch is worth stopping for |
-| Exit | `Approved exit: ` | The one approved way out |
+| Observation | `Observed:` + space | What the engine measured — the declared batch number, its width, and the Unit names |
+| Weight | `Why this matters:` + space | Why the mismatch is worth stopping for |
+| Exit | `Approved exit:` + space | The one approved way out |
 
 **Issuance-time guard.** Every `next` that may fan a Construction stage out goes through a single issuance point, so the judgement exists in one place and cannot drift between two copies. When the engine declines to fan out, the decline reason and the DECLARED batch (the full Unit list, not the uncovered remainder — a width-2 batch with one Unit already built would otherwise read as serial) go to a pure verdict:
 
@@ -176,11 +176,11 @@ Every guard message is assembled from the same parts by a single template, so th
 
 A decline reason added later without a branch here lands on `violation` rather than quietly serialising the batch.
 
-**Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail — `SWARM_STARTED` and `SWARM_DEGRADED` on the started side (a degraded batch still ran in parallel; it only fell back to the subagent floor), `SWARM_COMPLETED` on the completed side, across every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift.
+**Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail — `SWARM_STARTED` and `SWARM_DEGRADED` on the started side (a degraded batch still ran in parallel; it only fell back to the subagent floor), `SWARM_COMPLETED` on the completed side, across every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift. One known limitation: the trail is append-only and the rows are matched by batch number, so after a replan a superseded plan's SWARM rows can still satisfy the same batch number — correlating evidence to a compile generation is tracked as [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953).
 
 **The exits.** A `redirect` is answered with the autonomy ladder — `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `--mode gated` (a gate at every batch boundary), then re-run `next`. A `violation` or a refused approve is answered by correcting the plan, not the run: record the dependency that makes those Units serial, with its reason, in `unit-of-work-dependency.md`, re-run `amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.
 
-**Absence versus defect.** A guard needs a declared width to judge against, so a run with no compiled DAG is never a violation. The compile separates the two ways a DAG can be missing: a legitimate absence (the scope skips units-generation, or the stage has not produced its artifact yet) records `bolt_dag_absence` with that reason and exits 0, while a defect fails the compile and writes no graph at all — see [Runtime Graph](13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)".
+**Absence versus defect.** A guard needs a declared width to judge against, so a run with no compiled DAG is never a violation. The compile separates the two ways a DAG can be missing. A legitimate absence is exactly one of two states — the scope skips units-generation (`scope-skips-units`), or the stage has not produced its artifact yet (`units-pending`) — and records `bolt_dag_absence` with that reason, exiting 0. Everything else is a defect that fails the compile, writes no graph (removing any stale one), and exits non-zero: an artifact missing after units-generation completed, a malformed edge block, or a cyclic one — see [Runtime Graph](13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)".
 
 ### Standing delegation grants (team mode, #1125)
 

@@ -162,9 +162,9 @@ gate-start  →  [?] AwaitingApproval
 
 | 部品 | マーカー | 内容 |
 |---|---|---|
-| 観測 | `Observed: ` | エンジンが実測したもの — 宣言バッチ番号、その幅、ユニット名 |
-| 重み | `Why this matters: ` | その不一致がなぜ停止に値するか |
-| 出口 | `Approved exit: ` | 唯一の承認された出口 |
+| 観測 | `Observed:` + space | エンジンが実測したもの — 宣言バッチ番号、その幅、ユニット名 |
+| 重み | `Why this matters:` + space | その不一致がなぜ停止に値するか |
+| 出口 | `Approved exit:` + space | 唯一の承認された出口 |
 
 **発行時ガード。** Construction ステージをファンアウトしうる `next` はすべて単一の発行点を通るため、判断は 1 箇所に存在し、2 つのコピーの間で乖離しません。エンジンがファンアウトを見送ったとき、その見送り理由と**宣言**バッチ(未被覆の残りではなくユニット全数 — そうでなければ 1 ユニットを構築済みの幅 2 バッチが直列に見えてしまいます)が純粋な verdict へ渡されます:
 
@@ -176,11 +176,11 @@ gate-start  →  [?] AwaitingApproval
 
 後から分岐なしで追加された見送り理由は、黙って直列化されるのではなく `violation` に落ちます。
 
-**承認時突合。** ゲート付き code-generation の approve で、エンジンは宣言バッチを監査証跡と突き合わせて読み直します — started 側は `SWARM_STARTED` と `SWARM_DEGRADED`(degrade したバッチも並列に走っており、サブエージェント floor へ落ちただけです)、completed 側は `SWARM_COMPLETED`、そして全シャードを横断して読みます。ある worktree で prepare され別の worktree で finalize されたバッチは、その行を 2 つのファイルに残すためです。計画が並列と宣言したのにファンアウトの記録がないバッチは approve を拒否し、最初の 1 件ではなく未充足のバッチ全数を名指しします。walking-skeleton ゲートステージは適用除外です。エンジン自身がそこでのファンアウトを拒否するため、SWARM 行がないことは逸脱ではなく遵守だからです。
+**承認時突合。** ゲート付き code-generation の approve で、エンジンは宣言バッチを監査証跡と突き合わせて読み直します — started 側は `SWARM_STARTED` と `SWARM_DEGRADED`(degrade したバッチも並列に走っており、サブエージェント floor へ落ちただけです)、completed 側は `SWARM_COMPLETED`、そして全シャードを横断して読みます。ある worktree で prepare され別の worktree で finalize されたバッチは、その行を 2 つのファイルに残すためです。計画が並列と宣言したのにファンアウトの記録がないバッチは approve を拒否し、最初の 1 件ではなく未充足のバッチ全数を名指しします。walking-skeleton ゲートステージは適用除外です。エンジン自身がそこでのファンアウトを拒否するため、SWARM 行がないことは逸脱ではなく遵守だからです。既知の制約が 1 つあります: 証跡は append-only で行はバッチ番号で照合されるため、replan 後は旧計画の SWARM 行が同じバッチ番号を充足しえます — 実績と compile 世代の相関付けは [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953) で追跡しています。
 
 **出口。** `redirect` には自律ラダーで答えます — `amadeus-bolt set-autonomy --mode autonomous`(Bolt ごとのゲートなし)または `--mode gated`(各バッチ境界にゲート)を実行し、`next` を再実行します。`violation` と拒否された approve には、実行ではなく計画を訂正して答えます。それらのユニットを直列にする依存関係を、その理由とともに `unit-of-work-dependency.md` に記録し、`amadeus-runtime.ts compile` を再実行してから `next` を再実行します。計画が正しく逸脱が意図的である場合は、先に裁定にかけてください。
 
-**absence と defect。** ガードは判定の基準となる宣言幅を必要とするため、コンパイル済み DAG がない実行は決して violation になりません。コンパイルは DAG が欠ける 2 通りを区別します。正当な absence(スコープが units-generation をスキップする、またはステージがまだ成果物を produce していない)はその理由を `bolt_dag_absence` に記録して exit 0 で終わり、defect はコンパイル自体を失敗させてグラフを一切書きません — [Runtime Graph](13-runtime-graph.ja.md) § "The Bolt/unit dependency DAG (`bolt_dag`)" を参照してください。
+**absence と defect。** ガードは判定の基準となる宣言幅を必要とするため、コンパイル済み DAG がない実行は決して violation になりません。コンパイルは DAG が欠ける 2 通りを区別します。正当な absence はちょうど 2 状態に限られます — スコープが units-generation をスキップする(`scope-skips-units`)、またはステージがまだ成果物を produce していない(`units-pending`)— そして理由を `bolt_dag_absence` に記録して exit 0 で終わります。それ以外はすべて defect で、コンパイルを失敗させ、グラフを書かず(stale なグラフは除去し)、非ゼロで終了します: units-generation completed 後の成果物欠落、不整形なエッジブロック、循環したエッジブロックです — [Runtime Graph](13-runtime-graph.ja.md) § "The Bolt/unit dependency DAG (`bolt_dag`)" を参照してください。
 
 ### スタンディング委任グラント(チームモード、#1125)
 
