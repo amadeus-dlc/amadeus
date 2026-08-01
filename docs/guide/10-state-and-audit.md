@@ -79,7 +79,7 @@ stateDiagram-v2
 
 The audit trail lives in the intent's record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/`. It is an append-only event journal written as **per-clone shards** (`<host>-<clone>.jsonl`, one JSON record per line, no header): each clone appends only to its own shard, so concurrent appends from sibling worktrees never git-conflict. Readers glob `audit/*.jsonl` and merge-sort by ISO timestamp to reconstruct the full chronological history of decisions and events.
 
-### 78-event taxonomy
+### The event taxonomy
 
 Events are organized into 19 categories:
 
@@ -123,7 +123,7 @@ Each shard is a JSONL journal: one JSON record per physical line. Every record c
 ```
 
 - **`timestamp`** — ISO 8601 timestamp
-- **`event`** — one of the 78 event types (`null` for free-form `append-raw` records, whose body lives in `rawBody`)
+- **`event`** — one of the canonical event types (`null` for free-form `append-raw` records, whose body lives in `rawBody`)
 - **`fields`** — event-specific data as string key/values (stage name, decision, artifact path, etc.)
 - **`seq`** — per-shard monotonic sequence; `intentId:cloneId:seq` is the global idempotency key
 

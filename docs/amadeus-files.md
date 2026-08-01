@@ -191,7 +191,7 @@ Located under `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.
 | File | Description | git |
 |---|---|---|
 | `amadeus-state.md` | Workflow state (six-state checkbox model) | Committed |
-| `audit/<host>-<clone>.jsonl` | Audit trail (append-only JSONL journal shard per clone, 78 event types) | Committed |
+| `audit/<host>-<clone>.jsonl` | Audit trail (append-only JSONL journal shard per clone, one row per canonical event type) | Committed |
 | `verification/phase-check-<phase>.md` | Phase-boundary verification. Three files: ideation, inception, construction. Stage definitions only instruct creation for these three phases; initialization and operation do not have one. Corrected by live verification in 2026-07 | Committed |
 | `.amadeus-recovery.md` | Recovery breadcrumb | gitignored |
 | `runtime-graph.json` | Runtime telemetry, derivable again from audit shards | gitignored |

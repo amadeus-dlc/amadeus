@@ -20,22 +20,22 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 556,
+    "total": 562,
     "enumeratedByClass": {
-      "function": 315,
-      "audit": 78,
+      "function": 319,
+      "audit": 79,
       "scope": 10,
       "stage": 32,
-      "hook": 12,
+      "hook": 13,
       "subcommand": 102,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 155,
+      "function": 157,
       "audit": 34,
       "scope": 10,
       "stage": 8,
-      "hook": 12,
+      "hook": 13,
       "subcommand": 83,
       "render-surface": 7
     }
@@ -621,6 +621,13 @@
     {
       "unitClass": "audit",
       "unitId": "SUBAGENT_COMPLETED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SUBAGENT_STARTED",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3760,6 +3767,44 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:SUBAGENT_DISPATCH_TOOL",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:SUBAGENT_PURPOSE_MAX_LENGTH",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:subagentPurposeLine",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-subagent-purpose.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:subagentStartFields",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-subagent-purpose.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:subgraphForScope",
       "minMechanism": "none",
       "coveredBy": [
@@ -4184,6 +4229,18 @@
         },
         {
           "file": "tests/unit/t211-log-subagent-complete-gate.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-log-subagent-start",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-log-subagent-start.integration.test.ts",
           "mechanism": "cli"
         }
       ],

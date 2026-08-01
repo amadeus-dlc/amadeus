@@ -110,6 +110,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t-codex-hooks-packaged-consumer.test.ts",
     "integration/t-eoc1-gate-evidence.test.ts",
     "integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
+    "integration/t-log-subagent-start.integration.test.ts",
     "integration/t-norm-metrics.test.ts",
     "integration/t-otel-resource.test.ts",
     "integration/t224-state-set-failclosed.test.ts",

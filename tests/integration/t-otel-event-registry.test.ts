@@ -1,6 +1,6 @@
 // covers: otel:event-registry otel:tracer-provider otel:logger-provider
 //
-// U2 (event-registry) — FR-EVT-7 functional contract over the full 78-event
+// U2 (event-registry) — FR-EVT-7 functional contract over the full canonical
 // registry: recordException()'s exception span event is telemetry (it rides
 // the span record, never the audit journal — BR-3), and emitEvent routes the
 // full canonical vocabulary through the registry with required-attribute
@@ -101,5 +101,50 @@ describe("emitEvent over the full registry (FR-EVT-1, BR-4)", () => {
     bootLogger(appended);
     emitEvent("amadeus.diagnostic.note", { Note: "n" });
     expect(appended).toEqual([]);
+  });
+});
+
+// U4 (subagent-started). The completed half has been canonical since #1672;
+// the started half is what makes a subagent an interval rather than a point,
+// and it is what amadeus.subagent.duration derives from.
+describe("amadeus.subagent.started (U4, FR-SUB)", () => {
+  test("routes to the audit exporter as SUBAGENT_STARTED with Agent Type alone", () => {
+    const appended: string[] = [];
+    bootLogger(appended);
+    emitEvent("amadeus.subagent.started", { "Agent Type": "developer" });
+    expect(appended).toEqual(["SUBAGENT_STARTED"]);
+  });
+
+  test("Agent Type is required — an emit without it throws and appends nothing", () => {
+    const appended: string[] = [];
+    bootLogger(appended);
+    expect(() => emitEvent("amadeus.subagent.started", {})).toThrow(/Agent Type/);
+    expect(appended).toEqual([]);
+  });
+
+  test("Agent ID and Purpose are optional and survive redaction", () => {
+    const appended: string[] = [];
+    const rows: Array<Readonly<Record<string, unknown>>> = [];
+    registerLoggerProvider({
+      projectDir: proj,
+      auditExporter: createAuditLogExporter({
+        projectDir: proj,
+        append: (record) => {
+          appended.push(getEventDef(record.eventName).auditEvent as string);
+          rows.push(record.attributes);
+        },
+      }),
+      logExporter: createLocalLogExporter({ projectDir: proj }),
+    });
+    emitEvent("amadeus.subagent.started", {
+      "Agent Type": "developer",
+      "Agent ID": "agent-7",
+      Purpose: "Implement the started half",
+    });
+    expect(appended).toEqual(["SUBAGENT_STARTED"]);
+    // Default-deny redaction drops any key no registry entry names, so this
+    // asserts admission, not merely that the emit did not throw.
+    expect(rows[0]?.["Agent ID"]).toBe("agent-7");
+    expect(rows[0]?.Purpose).toBe("Implement the started half");
   });
 });
