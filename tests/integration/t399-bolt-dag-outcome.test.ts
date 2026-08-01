@@ -67,7 +67,7 @@ function recordRoot(proj: string): string {
 // A minimal amadeus-state.md whose units-generation checkbox carries the given
 // marker. The resolver only reads that one row (parseCheckboxes), so the rest of
 // the file is the smallest shape the parser accepts.
-function stateWith(marker: string): string {
+function stateWith(marker: string, suffix = "EXECUTE"): string {
   return [
     "# Workflow State",
     "",
@@ -76,7 +76,7 @@ function stateWith(marker: string): string {
     "## Stages",
     "",
     "- [x] intent-capture — EXECUTE",
-    `- [${marker}] units-generation — EXECUTE`,
+    `- [${marker}] units-generation — ${suffix}`,
     "- [ ] code-generation — EXECUTE",
     "",
   ].join("\n");
@@ -164,6 +164,18 @@ describe("t399 computeBoltDagOutcome — decision table", () => {
     expect(outcome.absence.reason).toBe("units-pending");
   });
 
+  // Init writes the plan suffix ("SKIP") at birth but only flips the marker to
+  // [S] when the engine passes over the stage — a pending checkbox whose plan
+  // says SKIP is already a scope with no unit DAG to ship.
+  test("pending marker x SKIP plan suffix -> absent(scope-skips-units)", () => {
+    const proj = makeProject(" ");
+    writeFileSync(join(recordRoot(proj), "amadeus-state.md"), stateWith(" ", "SKIP"), "utf-8");
+    const outcome = computeBoltDagOutcome(proj, stateContentOf(proj));
+    expect(outcome.kind).toBe("absent");
+    if (outcome.kind !== "absent") throw new Error("unreachable");
+    expect(outcome.absence.reason).toBe("scope-skips-units");
+  });
+
   test("no state at all -> absent(units-pending), never invalid", () => {
     const proj = makeProject(null);
     const outcome = computeBoltDagOutcome(proj, stateContentOf(proj));
@@ -232,9 +244,14 @@ describe("t399 compile — exit-code contract", () => {
   });
 
   // The throw arm driven in-process, so the failure is attributable rather than
-  // only observable as a spawned process's exit code.
-  test("compile() itself throws on the invalid arm and leaves no graph behind", () => {
+  // only observable as a spawned process's exit code. The project compiles
+  // successfully FIRST so a graph with a bolt_dag exists on disk — the refusal
+  // must remove that stale plan, not merely skip the write.
+  test("compile() throws on the invalid arm and removes the stale graph", () => {
     const proj = makeProject("x");
+    writeUowd(proj, VALID_BLOCK);
+    compile({ projectDir: proj });
+    expect(readGraph(proj).bolt_dag.batches).toEqual([["U1"], ["U2"]]);
     writeUowd(proj, MALFORMED_BLOCK);
     expect(() => compile({ projectDir: proj })).toThrow(/malformed/);
     expect(existsSync(join(recordRoot(proj), "runtime-graph.json"))).toBe(false);

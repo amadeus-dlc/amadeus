@@ -23,7 +23,7 @@
 // the MEMORY_EMPTY-rate metric.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
@@ -339,7 +339,11 @@ export function computeBoltDagOutcome(
         detail: `units-generation is completed but ${path} does not exist`,
       };
     }
-    return unitsStage?.state === "skipped"
+    // The [S] marker lands when the engine passes over the stage, but the plan
+    // suffix ("SKIP" / "SKIP: reason") is written at init — a pending checkbox
+    // whose plan says SKIP is already a scope that ships no unit DAG.
+    const planSkips = unitsStage?.suffix.startsWith("SKIP") === true;
+    return unitsStage?.state === "skipped" || planSkips
       ? {
           kind: "absent",
           absence: {
@@ -841,6 +845,10 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
   // diagnostic (recordHookDrop reads stderr on a non-zero exit only).
   const outcome = computeBoltDagOutcome(projectDir, stateContent);
   if (outcome.kind === "invalid") {
+    // A graph from an earlier successful compile would keep a stale bolt_dag on
+    // disk while this compile refuses — downstream direct readers must fail
+    // loud (no graph) rather than act on the superseded plan.
+    rmSync(runtimeGraphPath(projectDir), { force: true });
     throw new Error(`runtime-compile: unit-of-work-dependency.md edge block ${outcome.reason} (${outcome.detail}); refusing to write a runtime graph without the planned Bolt DAG`);
   }
   if (outcome.kind === "dag") {

@@ -127,7 +127,7 @@ The node is present **only when** the edge block is well-formed and acyclic. A
 scope that legitimately has no DAG carries `bolt_dag_absence` with the reason
 instead; a malformed or cyclic block, or a missing artefact under a completed
 units-generation, fails the compile
-([Runtime Graph](../reference/13-runtime-graph.md), schema note at line 44). The
+([Runtime Graph](../reference/13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)"). The
 `bolt_dag` node also carries `batches` — topological levels where every Unit's
 dependencies are satisfied by prior levels, so a batch's Units have no edge
 between them and can fan out together.

@@ -1469,7 +1469,8 @@ const reportedBoltDagRecoveries = new Set<string>();
 // ("units-pending") are the only two — anything else fails the compile outright,
 // so a null here alongside a null DAG means the graph predates this field.
 //
-// Exported as the in-process seam; the CLI path reads it through the same call.
+// Exported as the in-process seam. No CLI verb calls this yet — the degrade-path
+// message wiring is the issuance-guard Bolt's consumer of the same field.
 export function readBoltDagAbsence(projectDir: string): BoltDagAbsence | null {
   let raw: unknown;
   try {
