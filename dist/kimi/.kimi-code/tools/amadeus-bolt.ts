@@ -55,7 +55,7 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
-import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 
@@ -68,8 +68,10 @@ function emitAudit(
 ): void {
   // Targeted: intent/space name the ledger this Bolt operation belongs to, and
   // the target drives both the shard the row lands in and the row's own
-  // identity fields.
-  emitAuditEvent(eventType, fields, pd, intent, space);
+  // identity fields. Guarded (#1959): the fatal-latch drop is non-throwing, so
+  // the plain emit would let every handler's try/catch proceed to its state
+  // write with no ledger row behind it — the guard throws instead.
+  emitAuditEventGuarded(eventType, fields, pd, intent, space);
 }
 
 // The intent/space/repo SELECTOR re-serialised for a delegated sibling spawn. A

@@ -31,6 +31,7 @@
 
 import type { AppendAuditResult } from "../tools/amadeus-audit.ts";
 import { ensureOtelBootstrap } from "./bootstrap.ts";
+import { assertMutationAllowed } from "./fatal-latch.ts";
 import { getEventDefByAuditEvent } from "./event-registry.ts";
 import type { RegisteredEventName } from "./event-registry.ts";
 import { emitEvent } from "./logger-provider.ts";
@@ -62,4 +63,26 @@ export function emitAuditEvent(
     def.name,
     emitEvent(def.name as RegisteredEventName, fields, { intent, space })
   );
+}
+
+// The fatal-latch-guarded emit for audit-FIRST mutation handlers (#1959, the
+// amadeus-state.ts emitAudit precedent). FR-EVT-4: a state mutation refuses
+// outright while the fatal health latch is set. The emit path only DROPS
+// canonical rows there (#1856), and a drop is a silent success for an
+// audit-first handler — the write that follows would land with no ledger row
+// behind it. Both halves are needed: the assert covers a latch already set
+// when the handler starts, and the outcome check covers the first emit of a
+// process, where the journal health probe latches INSIDE the bootstrap
+// emitAuditEvent runs (so there was nothing to assert on yet).
+export function emitAuditEventGuarded(
+  eventType: string,
+  fields: Record<string, string>,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): AppendAuditResult {
+  assertMutationAllowed();
+  const result = emitAuditEvent(eventType, fields, projectDir, intent, space);
+  if (result.appended === false && result.reason === "fatal-latch") assertMutationAllowed();
+  return result;
 }
