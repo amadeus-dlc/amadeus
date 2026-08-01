@@ -9,6 +9,14 @@
 - **`.current-session` の writer/reader**: writer は `amadeus-session-start.ts:117` のみ（全 repo で唯一。`writeCurrentSessionId` 定義 `amadeus-lib.ts:2170`、`CURRENT_SESSION_FILE` `:2152`）。readers は `amadeus-caller-authorization.ts:96-109`（直読み）、`amadeus-kimi-lib.ts:399-403`（直読み）、`readCurrentSessionId`（`amadeus-lib.ts:2159-2166`）経由 `amadeus-orchestrate.ts:230` / `amadeus-state.ts:853` / `amadeus-utility.ts:4843`。
 - **最小修正方向**: `writeCurrentSessionId`（`:117`）を `:70` ガードより前へ移す。同ファイル内先例は `repointHarnessIncludes`（`:62`、コメント `:55-60` が「ガードより前に置く」理由を明記）。`supplyResourceAttribute`（`:119-130`）を一緒に動かすかは別論点（otel 属性は audit 経路）。
 
+## CG 計画整合ガードの機構断面（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+本節の file:line は observed `cb809c4de` 時点。全数は `re-scans/260801-cg-plan-guard.md` を正本とする。
+
+- 患部3点: `amadeus-orchestrate.ts:2919-` tryEmitSwarm（`:2937` の bolt_dag 不在無音 false = 並列計画→直列降格の主経路）、`amadeus-runtime.ts:300-313` computeBoltDag（parse 失敗の stderr advisory は spawnRecompile の stdio:ignore に飲まれ実質無音）、`amadeus-lib.ts:7823-` parseUnitsBlock（`- name:` 形式限定 — #1893 の `- id:` は throw→undefined）。
+- 実績突合（M2）の一次証拠は audit SWARM イベント（amadeus-swarm.ts:325-327: STARTED/DEGRADED = prepare、COMPLETED = finalize）。成果物タイムスタンプは証拠にならない。
+- 区間の構造変化: open-bug-batch-5 の6修正着地。患部3ファイルは touch されたが患部関数は不変（diff 0 を確認）。probe merge-aware 化（#1886）が AUDIT_FORKED/MERGED 観測の直近先例。
+
 ## オープンバグ一括修正バッチ第5弾の機構断面（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-model-check 価値チェーンの対象機構（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 

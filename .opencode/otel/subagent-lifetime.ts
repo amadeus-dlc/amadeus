@@ -26,10 +26,11 @@
 // more than N lifetimes.
 //
 // THE TWO UNMATCHED SIDES ARE NOT SYMMETRIC.
-//   - An unmatched COMPLETED row is DROPPED. Four of the seven harnesses have
-//     no subagent-start seam at all, so on those a completion with no start is
-//     the normal steady state rather than a defect, and synthesizing a start
-//     for it would put an interval into the record that never happened.
+//   - An unmatched COMPLETED row is DROPPED. Only the harnesses that expose a
+//     dispatch seam emit the start half at all, so wherever that seam is
+//     absent a completion with no start is the normal steady state rather than
+//     a defect, and synthesizing a start for it would put an interval into the
+//     record that never happened.
 //   - An unmatched STARTED row is REPORTED, with `incomplete: true` and a null
 //     `completedAt`/`durationMs`. A subagent that began and never finished is
 //     the signal this half was registered to carry (FR-SUB-3); dropping it

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-FMCS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測(読み取りのみ): (1) completion-marker.json = {complete:true, runId b8f6b4f8-e138-4776-b32e-fabc8f3f7104}、manifest.json = outcome NOT_DETECTED / exitCode 0 / partial:false / errorCode:null、artifacts 4件 sha256 併記(tlc-stderr.bin は 0 bytes = e3b0c442... 空 SHA と一致)。(2) tlc-stdout.bin 末尾行 '5203730 states generated, 529692 distinct states found, 0 states left on queue.' で固定点完走を確認 — finite-exploration-not-detected-proof の NOT_DETECTED 主張要件(completion marker + state 統計 + queue 0)を充足。(3) git status --porcelain specs/tla/ = 出力ゼロ(無改変)。ワークツリー変更は elections.json / amadeus-state.md / audit shard / 新規 record ディレクトリのみで、spec・plugin への改変なし。(4) model-completeness センサーは audit seq 1013 で SENSOR_PASSED(Output path specs/tla/FormalElection.tla)。以上より本ステージは出荷済み plugin の無改変実行であり、新規の機構・設計判断・是正が存在しない。唯一の運用観測 OUT_CONFLICT も plugins/formal-model-check/tools/run-model-check-artifacts.ts:137 'output directory already exists' として実装済みかつ tests/integration/t-formal-verif-run-model-check-artifacts.integration.test.ts でピン済みの既決契約であり、ノルム化すれば既存仕様の再述にすぎない(勾配 1: 全面的支持)。",
+  "submittedAt": "2026-08-01T22:00:13Z"
+}

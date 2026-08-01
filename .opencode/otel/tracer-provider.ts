@@ -180,10 +180,15 @@ class AmadeusSpan implements Span {
   // The OTel semantic-convention exception trio, redacted at write time. This
   // is the ONLY write-time-redacted addEvent path (ADR-4): a stacktrace names
   // the machine's user and layout in every frame, and the thrown message may
-  // quote a credential, so this bag cannot be stored as captured.
+  // carry a path or quote a credential, so this bag cannot be stored as
+  // captured.
   private exceptionAttributes(exception: Exception, message: string): Record<string, unknown> {
     try {
-      const captured: Record<string, unknown> = { "exception.message": message };
+      // The message gets the same path rewriting as the stack, not just the
+      // credential scrub redactAttributes applies below: an IO error puts the
+      // offending absolute path in the MESSAGE ("ENOENT … open '/Users/…'"),
+      // which names the machine's user exactly as a frame would.
+      const captured: Record<string, unknown> = { "exception.message": redactStacktrace(message, this.projectDir) };
       if (exception instanceof Error) {
         captured["exception.type"] = exception.name;
         const stack = exception.stack;

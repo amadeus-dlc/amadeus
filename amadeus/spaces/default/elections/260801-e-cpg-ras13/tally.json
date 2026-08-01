@@ -1,0 +1,45 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T08:50:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "本件の欠陥は enumeration-completeness-review(team.md:180)の射程内。同 cid の本文は『選挙の前提に含めた機構列挙(書き手経路・呼び出し元一覧等)は起草時の grep 1回で確定とせず、レビュー段で独立の再列挙を必須観点にする — 列挙漏れは裁定自体を汚染し』と、今回の機序(recoverBoltDag の1経路だけを列挙し compile 経路を落とし、裁定を汚染)と回収経路(§12a reviewer の独立再列挙で捕捉→Q2r 再裁定)を逐語で言い当てている。ソロモードではユーザー直接裁定が選挙の代替であり(team.md ソロモード節、および questions ファイルの E-OC1 判定『仕様裁定(ソロモードではユーザー専権)のため選挙なし』が諮問=裁定手段であることを自認)、『選挙の前提』は『裁定の前提』として諮問文を含むと読むのが自然。よって新規 cid は既存の重複増でありノルム肥大側のコスト(週次蒸留の縮約対象)になる。留保: (1) 語句が『選挙』に閉じているためソロ運用で射程外と誤読される余地は残る — 同クラス(諮問文の機構過大一般化)が再発したら、新規 cid ではなく enumeration-completeness-review への1行追補『ソロモードのユーザー諮問文も本則の対象』として昇格させるべき。(2) 今回は既存ノルムが設計どおり機能して1往復で閉包した実例であり、その事実自体は本 RA の diary(Deviations/Interpretations)に既記載で保存されている。",
+      "rationale": "mechanism-cite-verify-at-draft(引用の実在・意味論)/ enumeration-completeness-review(列挙の完全性)/ ruling-premise-closure-verification(裁定前提の閉包)を grep 実測。今回の欠陥は『引用の実在』ではなく『呼び出し経路列挙の不完全』であり、2番目の cid の中核射程。c1 が persist 不要とされた理由(ruling-premise-closure-verification の実例)と同じ論理が c2 にも当てはまる。",
+      "submittedAt": "2026-08-01T09:45:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 形は独立 cid 新設ではなく mechanism-cite-verify-at-draft への追補統合を推す(留保収斂の既習様式・週次蒸留の corpus 肥大圧)。射程は『諮問文に書く機構由来の一般化(存在→全経路の含意)』に限定し、ユーザー向け散文一般へ広げない。層は project でなく team(ソロ運用の諮問手続き規律であり repo 非依存)が適合と考えるが、いずれも採用を妨げない。",
+      "rationale": "実測検証: (1) Q2 諮問文(requirements-analysis-questions.md:22)が『malformed は recoverBoltDag 経由で既に orchestrator throw = fail-closed 済み』と断定。(2) 実コード: amadeus-orchestrate.ts:1490-1491 は malformed で throw する一方、compile 経路は amadeus-runtime.ts:300-313 computeBoltDag が stderr 書込のみで undefined 返し(node omitted)、hook amadeus-runtime-compile.ts:210-217 は exit 0 時に stderr を読まず recordHookDrop も走らない = 完全無音。よって諮問文の一般化は片経路のみ真。(3) Q2r(:24-30)で正前提再裁定・射程を absent+malformed へ拡張して閉包、memory.md:5 と requirements.md:18/125 が §12a Major と回収を裏付け。novelty: mechanism-cite-verify-at-draft の射程は『選挙の選択肢・裁定文』、enumeration-completeness-review/enumeration-reverify-at-implementation は『選挙の前提』、verbatim-quote-with-cite は『選挙の前提・裁定・要件・設計』で、いずれも文言上は選挙・成果物面。ソロモードでは選挙が存在せずユーザー直接裁定が同じ役割を担うため、諮問文は文言上どの cid にも掛からない構造的隙間。誤前提の裁定はユーザーの裁定権を消費し回収コストが成果物誤りより高い非対称があるため、起草時ゲートを明示する価値は corpus 増分を上回ると判断。",
+      "submittedAt": "2026-08-01T10:05:00Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:2",
+      "resumedTo": "tallied",
+      "at": "2026-08-01T08:52:31Z"
+    }
+  ]
+}

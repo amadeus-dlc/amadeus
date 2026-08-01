@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 3,
+  "reservation": "0件は支持するが、BT 成果物の実測値3点の訂正をゲート前の条件とする。(1) unit-test-instructions.md『t403 unit(19: …a-e / f-k / l-o)』は実測 15(grep -cE '^\\s*(test|it)(\\.\\w+)?\\(' tests/unit/t403-plan-integrity-guard.test.ts = 15、ラベル a-o も 15 で本文内に自己矛盾)。(2) integration-test-instructions.md『t399(12)』は実測 13(同 grep、tests/integration/t399-bolt-dag-outcome.test.ts)。(3) build-test-results.md の『消費は tests/integration/t399 のみ』は readBoltDagAbsence には正しい(呼出し元は t399 のみ、production 0)が、graph.bolt_dag_absence は tests/unit/t133-bolt-dag-compile.test.ts:342 も assert しており両シンボルを一括した記述として不正確。いずれも既存 cid(numbers-from-command-output-only / ledger-count-mechanical-recalc / absence-claim-grep-verify)が既にカバーする違反実例であり、新機序を含まないため新規 cid 化はノルム肥大として反対する — 次回 PM ラウンドへ違反実例として回付されたい。",
+  "rationale": "record 実測により 0 件提案を支持。(a) BT 段の新規知見不在: 診断は build-and-test/ 7成果物+audit 実測。stage diary(construction/build-and-test/memory.md)は Interpretations / Deviations / Tradeoffs / Open questions 全節が空テンプレのままで、BT 実行中の解釈・逸脱・トレードオフの記録はゼロ。(b) CG 段 §13 との重複なし: team.md:346(cg-allowlist-straddle-swell)/ :349(cg-bare-case-label-da0)はいずれも CG 段の実装機序で、BT 段が再 persist すべき面を持たない。(c) 唯一の BT 段インシデント = required-sections SENSOR_FAILED 3件(seq 968/972/976、2026-08-01T21:48:10Z、performance-test-instructions.md / security-test-instructions.md / build-and-test-summary.md)は同 21:49:11Z(seq 986/988/990)に再発火 PASSED で自己捕捉・約1分で閉包。既知の H2 floor クラス(e-fvepd-marker-heading-floor / c2-mandated-sections-precheck)の反復であり新機序なし。(d) bt-proportional-selection 準拠を確認: performance / security の両 instructions は『生成しない検査』の根拠を明記しつつ、免責のみで完結せず実質検証(t403 の in-process 駆動と readBoltDagBatches 呼出し数不変の grep、corpus sweep 24テスト 3.8秒、落ちる実証 計9注入の赤→復元)を伴う — exemption-clause-must-not-substitute には抵触しない。(e) 事実面の裏取り: 4 PR の squash 着地を origin/main で確認(7c60316c5 #1928 / 02a072ce1 #1939 / e1092ddc1 #1948 / 8e5dc6c47 #1954)、測定 ref 764661954 は実在コミット(rev-parse 成功)。t402 unit=7 / t403 integration=10 / t402 integration=12 は実測一致。",
+  "submittedAt": "2026-08-01T21:52:53Z"
+}

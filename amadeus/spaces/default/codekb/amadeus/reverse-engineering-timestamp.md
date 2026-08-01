@@ -12,6 +12,20 @@
 - Updated artifacts: 実質更新3件 = `architecture.md`（#1922 機構断面: デッドロック連鎖 + `.current-session` writer/reader + 最小修正方向）、`code-structure.md`（患部配置と区間 touch 判定）、`code-quality-assessment.md`（テスト空白の記録 — no-state-file SessionStart → `.current-session` 書込みを検証するテスト不在、t10 `:211` / `:222` が現行 early-exit を pin）。判断1行のみ5件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` — 単一バグの既存構成内修正であり、区間の構成変化（otel 基盤拡張等）は各ファイルの現在節1行で注記した（`cid:reverse-engineering:c3-relabel`）。加えて本ファイルと per-intent `re-scans/260801-kimi-bootstrap-deadlock.md`。
 - Per-intent record: `re-scans/260801-kimi-bootstrap-deadlock.md`（患部 file:line 全数・認可連鎖・テスト足場を含む）。
 
+## 実行メタデータ（履歴: 260801-cg-plan-guard）
+
+- Date: `2026-08-01T08:15:00Z`
+- Base commit: `c49e385ac`（前回 observed、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `cb809c4dec912e594204cdfe56582e2303159dbe`（origin/main tip）
+- Distance: `22 commits`（open-bug-batch-5 の6 PR+record #1896、otel-meta U1 #1899、docs #1897/#1898、metrics 往来）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Focus: CG 計画整合ガード（#1892）の患部3点 — `tryEmitSwarm`（orchestrate:2919-、`:2937` の bolt_dag 不在無音 false）、`computeBoltDag`（runtime:300-313、stderr advisory が spawnRecompile の stdio:ignore に飲まれる実質無音）、`parseUnitsBlock`（lib:7823-、`- name:` 限定 = #1893 患部）— を conductor が verbatim 直読で確定。実績突合の一次証拠は audit SWARM イベント（swarm.ts:325-327）。
+- Scan mode: conductor focused live scan+#1893 クロスレビュー2名（進行中、成立後 RA で消費）。orchestrate/runtime は区間内無変更・lib のみ touch（parseUnitsBlock 本体不変）で、患部引用は observed で verbatim 直読により再解決済み（免除の適用ではない — E-CPG-RES13 投票者2訂正反映）。
+- corpus: 計画不履行4 record+正当直列6 record+#1893 現物（260712）— M7 sweep の最小 corpus、読み取り専用。
+- RA へ送る裁定2件: #1893 修正方向（A 受理拡張 / B 訂正+loud 拒否）、autonomy null 期の扱い。
+- Updated artifacts: 実質更新4件 = `architecture.md`（患部3点+SWARM 証拠+区間変化）、`code-structure.md`（実装対象と corpus）、`code-quality-assessment.md`（無音 degrade 3経路と真因）、`business-overview.md`（利用者価値と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260801-cg-plan-guard.md`。
+- Per-intent record: `re-scans/260801-cg-plan-guard.md`
+
 ## 実行メタデータ（履歴: 260801-open-bug-batch-5）
 ## 実行メタデータ（履歴: 260731-formal-verif-value-chain）
 

@@ -1,0 +1,24 @@
+{
+  "electionId": "E-CPG-CGS13",
+  "kind": "s13-learnings",
+  "question": "260801-cg-plan-guard code-generation(4 Bolt gated swarm)の §13 学習選定。候補2件: c1 = allowlist 行ピンの機械 remap は『既存 waiver レンジが新規挿入コードを飲み込んで span 膨張し、新規行が waiver を継承する fail-open』を検出できない — remap 後に各エントリの span 変化を機械確認し、膨張(straddle)を検出したらコード移設か waiver 分割で解消する(実測: Bolt 3 で 4380-4392 が 13→85 行に膨張、builder が検出しヘルパー移設 a65ff06df で解消。cid:code-generation:c1-allowlist-mechanical-remap への追補)。c2 = bare case label 行は bun lcov の union merge で DA:0 に残る — fail-closed default 等の case label は同一行に文を置く(実測: Bolt 2 の default: 行が patch gate 赤 → 1行化で解消。cid:code-generation:bun-inbody-comment-da0 の case label 変種としての追補)。反対材料・既存 cid で足りるとの判断があれば record(worktree 報告・patch gate ログ)を実測して投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1+c2 とも採用(既存 cid への追補として persist)"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1 のみ採用(c2 は bun-inbody-comment-da0 の実例扱いで追補不要)"
+    },
+    {
+      "internalNo": 3,
+      "label": "0件(両方とも既存 cid の実例扱い)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

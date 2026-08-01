@@ -7,6 +7,12 @@
 - テスト面: 患部直下の新規テストなし。回帰テスト追加先は `tests/unit/t10-hook-session-start.test.ts`（現行 early-exit pin `:211` / `:222` の改訂を伴う）。
 - dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。
 
+## CG 計画整合ガードの患部配置（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 実装対象: `packages/framework/core/tools/amadeus-orchestrate.ts`（tryEmitSwarm :2919- / firstUncoveredBatch :2843- / approve 経路）、`amadeus-runtime.ts`（computeBoltDag :300-）、`amadeus-lib.ts`（parseUnitsBlock :7823-）。dist 7面+self-install の9コピー同期対象。
+- corpus（読み取り専用）: 計画不履行4 record+正当直列6 record+#1893 現物（260712）。詳細は `re-scans/260801-cg-plan-guard.md`。
+- テスト採番は units-generation 段で実測予約（並行 intent との衝突回避）。
+
 ## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-verif / plugin / model-map の患部配置（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 

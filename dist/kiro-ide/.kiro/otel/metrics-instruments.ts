@@ -57,8 +57,17 @@ function measure(
   }
 }
 
+// Both durations are a subtraction across two processes — the start is parked
+// in a marker file, the end reads its own clock — so a clock step between the
+// halves can make the difference negative. A negative sample in a duration
+// histogram describes no run at all and skews every aggregate over it, so the
+// impossible value is clamped to the nearest possible one rather than recorded.
+function nonNegativeDuration(durationMs: number): number {
+  return Math.max(0, durationMs);
+}
+
 export function recordStageDuration(durationMs: number, attributes: { stage: string; phase?: string | null }): void {
-  measure("amadeus.stage.duration", "histogram", durationMs, {
+  measure("amadeus.stage.duration", "histogram", nonNegativeDuration(durationMs), {
     "amadeus.stage": attributes.stage,
     "amadeus.phase": attributes.phase,
   });
@@ -73,7 +82,9 @@ export function recordOperationFailure(attributes: { operation: string }): void 
 }
 
 export function recordSubagentDuration(durationMs: number, attributes: { agentType: string }): void {
-  measure("amadeus.subagent.duration", "histogram", durationMs, { "amadeus.agent.type": attributes.agentType });
+  measure("amadeus.subagent.duration", "histogram", nonNegativeDuration(durationMs), {
+    "amadeus.agent.type": attributes.agentType,
+  });
 }
 
 // One exchange's token counts (#1868 §6). Recorded as two observations of the

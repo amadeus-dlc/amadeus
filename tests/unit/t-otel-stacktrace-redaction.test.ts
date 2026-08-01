@@ -106,6 +106,151 @@ describe("path rewriting (FR-EXC)", () => {
   });
 });
 
+describe("Windows drive-letter frames (r3695286229)", () => {
+  // A Windows stack frame names the machine's user in exactly the way a POSIX
+  // one does, but it opens with a drive letter and separates with backslashes,
+  // so a pattern anchored on a leading "/" never sees it and the whole frame is
+  // stored verbatim.
+  const WIN_REPO = "C:\\Users\\dev\\src\\amadeus";
+  const WIN_HOME = "C:\\Users\\dev";
+
+  test("repo paths become repo-relative", () => {
+    withHome(WIN_HOME, () => {
+      const stack = `Error: boom\n    at run (${WIN_REPO}\\packages\\otel\\relay.ts:42:9)`;
+      const out = redactStacktrace(stack, WIN_REPO);
+      expect(out).toContain("packages/otel/relay.ts:42:9");
+      expect(out).not.toContain("Users");
+    });
+  });
+
+  test("home paths outside the repo become <home>/… and never carry the user name", () => {
+    withHome(WIN_HOME, () => {
+      const stack = `Error: boom\n    at load (${WIN_HOME}\\.bun\\cache\\pkg\\index.js:7:1)`;
+      const out = redactStacktrace(stack, WIN_REPO);
+      expect(out).toContain("<home>/.bun/cache/pkg/index.js:7:1");
+      expect(out).not.toContain("dev");
+    });
+  });
+
+  test("other drive-letter paths become <external>/…", () => {
+    withHome(WIN_HOME, () => {
+      const out = redactStacktrace("Error: boom\n    at boot (D:\\tools\\node\\loader.js:3:5)", WIN_REPO);
+      expect(out).toContain("<external>D:/tools/node/loader.js:3:5");
+    });
+  });
+
+  test("a UNC-style backslash path is still rewritten", () => {
+    withHome(WIN_HOME, () => {
+      const out = redactStacktrace("    at f (\\\\server\\share\\x.js:1:1)", WIN_REPO);
+      expect(out).toContain("<external>");
+      expect(out).not.toContain("\\\\server");
+    });
+  });
+});
+
+describe("file:// URL frames (r3695298662)", () => {
+  // Bun's ESM loader reports frames as file:// URLs. The scheme's own "//"
+  // sits in front of the absolute path, so a token starting at the first "/"
+  // captures "//Users/dev/…" — the user name survives unless the scheme is
+  // separated before the repo/home comparison runs.
+  test("a file:// repo frame becomes repo-relative behind the scheme", () => {
+    withHome(HOME, () => {
+      const stack = `Error: boom\n    at run (file://${REPO}/packages/otel/relay.ts:42:9)`;
+      const out = redactStacktrace(stack, REPO);
+      expect(out).toContain("file://packages/otel/relay.ts:42:9");
+      expect(out).not.toContain(REPO);
+    });
+  });
+
+  test("a file:// home frame becomes file://<home>/… and drops the absolute prefix", () => {
+    withHome(HOME, () => {
+      const stack = `    at load (file://${HOME}/.bun/install/cache/pkg/index.js:7:1)`;
+      const out = redactStacktrace(stack, REPO);
+      expect(out).toContain("file://<home>/.bun/install/cache/pkg/index.js:7:1");
+      expect(out).not.toContain(HOME);
+    });
+  });
+
+  test("a file:// frame outside repo and home becomes file://<external>/…", () => {
+    withHome(HOME, () => {
+      const out = redactStacktrace("    at boot (file:///usr/local/lib/loader.js:3:5)", REPO);
+      expect(out).toContain("file://<external>/usr/local/lib/loader.js:3:5");
+    });
+  });
+
+  test("rewriting a file:// frame is idempotent", () => {
+    withHome(HOME, () => {
+      const stack = `    at load (file://${HOME}/x.js:1:1)`;
+      const once = redactStacktrace(stack, REPO);
+      expect(redactStacktrace(once, REPO)).toBe(once);
+    });
+  });
+
+  test("a Windows file:// URL drops the slash that precedes the drive letter", () => {
+    withHome("C:\\Users\\dev", () => {
+      const out = redactStacktrace("    at f (file:///C:/Users/dev/x.js:1:1)", "C:\\Users\\dev\\src\\amadeus");
+      expect(out).toContain("file://<home>/x.js:1:1");
+    });
+  });
+});
+
+describe("URLs are not filesystem paths (r3696692658)", () => {
+  // The optional drive letter matched ANY single letter before a colon, so the
+  // "s" of "https:" was read as a drive and the URL came out corrupted. Since
+  // exception.message now goes through this function, that reaches ordinary
+  // error text ("fetch failed for https://…"), not just stack frames.
+  test("an https URL passes through untouched", () => {
+    withHome(HOME, () => {
+      const stack = "Error: fetch failed for https://example.com/x";
+      expect(redactStacktrace(stack, REPO)).toBe(stack);
+    });
+  });
+
+  test("an http URL with port, path and query passes through untouched", () => {
+    withHome(HOME, () => {
+      const stack = "Error: GET http://localhost:3000/api?q=1 returned 500";
+      expect(redactStacktrace(stack, REPO)).toBe(stack);
+    });
+  });
+
+  test("a URL and a real path on the same line are treated differently", () => {
+    withHome(HOME, () => {
+      const out = redactStacktrace(`posted https://example.com/x from ${HOME}/tool.js`, REPO);
+      expect(out).toContain("https://example.com/x");
+      expect(out).toContain("<home>/tool.js");
+      expect(out).not.toContain(HOME);
+    });
+  });
+
+  test("a scheme-less token that merely follows a colon is still redacted", () => {
+    // The regression this must not trade for: "Error:/Users/dev/secret.txt"
+    // had its "r:" eaten as a drive letter, and the home path behind it was
+    // then stored VERBATIM — a redaction failure, not a cosmetic one.
+    withHome(HOME, () => {
+      const out = redactStacktrace(`Error:${HOME}/secret.txt not found`, REPO);
+      expect(out).toContain("<home>/secret.txt");
+      expect(out).not.toContain(HOME);
+    });
+  });
+
+  test("a drive letter is still detected at a real token boundary", () => {
+    const WIN_HOME = "C:\\Users\\dev";
+    withHome(WIN_HOME, () => {
+      const out = redactStacktrace(`    at f (${WIN_HOME}\\app\\x.ts:1:1)`, "C:\\Users\\dev\\src\\amadeus");
+      expect(out).toContain("<home>/app/x.ts:1:1");
+      expect(out).not.toContain("Users");
+    });
+  });
+
+  test("file:// is still rewritten — it names a local path, unlike http(s)", () => {
+    withHome(HOME, () => {
+      const out = redactStacktrace(`    at load (file://${HOME}/x.js:1:1)`, REPO);
+      expect(out).toContain("file://<home>/x.js:1:1");
+      expect(out).not.toContain(HOME);
+    });
+  });
+});
+
 describe("credential scrubbing over the whole stack (FR-DST-5)", () => {
   test("credential-shaped substrings in any line are masked", () => {
     withHome(HOME, () => {
@@ -142,6 +287,25 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
     return `Error: boom\n    at f (${"/aaa".repeat(Math.floor(bytes / 4))}`;
   }
 
+  // The same shape in the two forms added for r3695286229/r3695298662: a
+  // backslash run behind a drive letter, and a slash run behind a scheme. Both
+  // enter the same single-class-single-quantifier token, so both must scan once.
+  function adversarialWindows(bytes: number): string {
+    return `Error: boom\n    at f (C:${"\\aaa".repeat(Math.floor(bytes / 4))}`;
+  }
+
+  function adversarialFileUrl(bytes: number): string {
+    return `Error: boom\n    at f (file://${"/aaa".repeat(Math.floor(bytes / 4))}`;
+  }
+
+  // A long alphanumeric run in front of the separator, which is what the
+  // scheme check looks back over. Bounded lookback keeps it O(1) per match; a
+  // scheme alternative inside the pattern would have re-scanned this run from
+  // every start position instead.
+  function adversarialSchemeish(bytes: number): string {
+    return `Error: boom\n    at f (${"a".repeat(bytes)}://host/x`;
+  }
+
   test("input-size sweep stays within a generous ceiling and keeps rewriting", () => {
     withHome(HOME, () => {
       for (const bytes of [12_500, 25_000, 50_000, 100_000]) {
@@ -151,6 +315,37 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         const elapsedMs = performance.now() - startedAt;
         expect(elapsedMs).toBeLessThanOrEqual(2_000);
         expect(out).toContain("<external>");
+      }
+    });
+  }, 30_000);
+
+  test("the drive-letter and file:// forms scan in the same linear time", () => {
+    withHome(HOME, () => {
+      for (const build of [adversarialWindows, adversarialFileUrl]) {
+        for (const bytes of [12_500, 25_000, 50_000, 100_000]) {
+          const input = build(bytes);
+          const startedAt = performance.now();
+          const out = redactStacktrace(input, REPO);
+          const elapsedMs = performance.now() - startedAt;
+          expect(elapsedMs).toBeLessThanOrEqual(2_000);
+          expect(out).toContain("<external>");
+        }
+      }
+    });
+  }, 30_000);
+
+  test("a long scheme-ish run in front of the separator stays linear", () => {
+    // This fixture IS a URL by the scheme rule, so the assertion is that it
+    // comes back untouched — and that the bounded lookback did not turn the
+    // long run into per-start-position rescanning.
+    withHome(HOME, () => {
+      for (const bytes of [12_500, 25_000, 50_000, 100_000]) {
+        const input = adversarialSchemeish(bytes);
+        const startedAt = performance.now();
+        const out = redactStacktrace(input, REPO);
+        const elapsedMs = performance.now() - startedAt;
+        expect(elapsedMs).toBeLessThanOrEqual(2_000);
+        expect(out).toBe(input);
       }
     });
   }, 30_000);

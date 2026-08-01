@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-FDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "record 実測: FD diary(construction/functional-design/memory.md Interpretations)は per-unit FD 4本完走と U2 iteration 1 NOT-READY→iteration 2 READY を記録。U2 の Major は BR-U2-9 の test h 引用が t251:189 へ誤帰属し実体が tests/unit/t211-swarm-batch-progress.test.ts:358 だったもので、team.md:174 の E-FSPRAS13 追補(tNNN 短形でなくフルパス、t211 の複数ファイル共存が実測根拠)が既にこの誤りの形そのものを名指しており、フルパス形で1往復で閉包している — 新規規則を導かない実例。型 canonical の verbatim 連鎖+形式差申告も team.md:279 cross-unit-type-verbatim-check と :285 cross-unit-type-canonical-lift の既定どおりの実施で逸脱なし。他3 unit は dag-integrity が iteration 1 READY(Minor 2 は advisory で BT へ委譲)、approve-reconciliation / docs-sync が iteration 1 READY で Findings None。既存 cid の外側にある知見は観測できないため 0 件が妥当。",
+      "submittedAt": "2026-08-01T12:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-FDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "read-only 実測: BR-U2-9 の test h 行は tests/unit/t211-swarm-batch-progress.test.ts:358 のフルパス形で是正済み、当該行の実体は 'h: gated + every batch covered -> the stage's own gate, never a second batch gate' で一致。4 unit の §12a verdict は U1/U3/U4 が iteration 1 READY、U2 のみ iteration 1 NOT-READY(Major = t251:189 への誤帰属)→ iteration 2 READY・Findings None で閉包。この Major は E-FSPRAS13(team.md:174 追補)が t211 短形引用の誤解決として既に規定し、その 実測 自体が同一テスト番号 t211 の誤照合+1イテレーション消費であり、本件と同型・同番号の反復にすぎない。型 canonical の verbatim 連鎖は cross-unit-type-verbatim-check(team.md:279)、機構引用の実在確認は mechanism-cite-verify-at-draft(team.md:174)が既にカバー。3 cid とも memory 実在を grep で確認。新規規則を導く材料は無く 0 件が妥当。",
+      "submittedAt": "2026-08-01T10:53:47Z"
+    }
+  ],
+  "late": []
+}
