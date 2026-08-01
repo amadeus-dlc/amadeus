@@ -99,7 +99,7 @@ describe("t391 boundary operation symmetry", () => {
     ]);
   });
 
-  test.each(mirrorBoundaryKinds())(
+  test.each([...mirrorBoundaryKinds()])(
     "%s: every selectable operation is applicable and not suppressed",
     (kind) => {
       for (const state of [UNLINKED, LINKED]) {
@@ -118,7 +118,7 @@ describe("t391 boundary operation symmetry", () => {
     },
   );
 
-  test.each(mirrorBoundaryKinds())(
+  test.each([...mirrorBoundaryKinds()])(
     "%s: a linked mirror is never re-created",
     (kind) => {
       expect(selected(kind, LINKED)).not.toBe("create");

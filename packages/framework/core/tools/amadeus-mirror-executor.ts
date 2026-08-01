@@ -523,7 +523,7 @@ function complete(
         true,
         "outcome-unknown",
       );
-      applyTransition(
+      const recorded = applyTransition(
         ports,
         context,
         latest.snapshot,
@@ -537,6 +537,14 @@ function complete(
         true,
         "state-write",
       );
+      // A warning that was never persisted must not be reported as recorded.
+      if (recorded.kind === "failed") {
+        return stateFailure(
+          context,
+          latestReceipt.operationId,
+          `${postRemoteWarning.summary}; the outcome could not be recorded: ${recorded.summary}`,
+        );
+      }
       return {
         kind: "safety-blocked",
         operation: context.operation,
@@ -1267,13 +1275,40 @@ async function executeLinked(
       ensured.receipt,
     );
     if (authorizationFailure) return authorizationFailure;
+    // Completion is only reachable from an attempted receipt, so claim the
+    // attempt first when the receipt is still prepared — the same shape
+    // `adoptCreateCandidate` uses for the create side.
+    if (ensured.receipt.status === "prepared") {
+      const attempted = markAttempted(
+        ports,
+        context,
+        ensured.snapshot,
+        ensured.receipt,
+        "mark-attempted",
+      );
+      if (attempted.kind === "failed") {
+        return stateFailure(
+          context,
+          ensured.receipt.operationId,
+          attempted.summary,
+        );
+      }
+      return complete(
+        ports,
+        context,
+        attempted.snapshot,
+        requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
+        viewed.issue,
+        true,
+      );
+    }
     return complete(
       ports,
       context,
       ensured.snapshot,
       ensured.receipt,
       viewed.issue,
-      ensured.receipt.status !== "prepared",
+      true,
     );
   }
   const reconciled = reconcileLinkedReceipt(

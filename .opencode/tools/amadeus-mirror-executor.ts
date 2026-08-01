@@ -523,7 +523,7 @@ function complete(
         true,
         "outcome-unknown",
       );
-      applyTransition(
+      const recorded = applyTransition(
         ports,
         context,
         latest.snapshot,
@@ -537,6 +537,14 @@ function complete(
         true,
         "state-write",
       );
+      // A warning that was never persisted must not be reported as recorded.
+      if (recorded.kind === "failed") {
+        return stateFailure(
+          context,
+          latestReceipt.operationId,
+          `${postRemoteWarning.summary}; the outcome could not be recorded: ${recorded.summary}`,
+        );
+      }
       return {
         kind: "safety-blocked",
         operation: context.operation,
@@ -603,7 +611,16 @@ async function classifyCreateState(
       candidate: ReturnType<typeof classifyCandidates>;
     }
 > {
-  const marker = renderMirrorMarker(receipt.createIdentity);
+  // A linked mirror is searched and verified on its recorded provenance: the
+  // remote marker carries the create identity of the first create, so keying
+  // the search on this receipt's fresh identity would find nothing and let a
+  // second Issue be created.
+  const linkedProvenance =
+    snapshot.issueNumber !== null && snapshot.provenance
+      ? snapshot.provenance
+      : null;
+  const searchIdentity = linkedProvenance?.createIdentity ?? receipt.createIdentity;
+  const marker = renderMirrorMarker(searchIdentity);
   const found = await context.gateway.findIssuesByMarker(
     context.repository,
     marker,
@@ -642,7 +659,7 @@ async function classifyCreateState(
   for (const candidate of found.value) {
     const ownership = verifyOwnership({
       remoteIssue: candidate,
-      localProvenance: {
+      localProvenance: linkedProvenance ?? {
         schema: 1,
         createIdentity: receipt.createIdentity,
         issueNumber: candidate.number,
@@ -652,8 +669,9 @@ async function classifyCreateState(
     if (ownership.kind === "verified") verified.push(candidate);
     else mismatches += 1;
   }
-  const localState =
-    receipt.status === "prepared"
+  const localState = linkedProvenance
+    ? "provenance-present"
+    : receipt.status === "prepared"
       ? "fresh-prepared"
       : receipt.status === "pending" &&
           receipt.lastEffect === "no-effect-confirmed"
@@ -666,6 +684,7 @@ async function classifyCreateState(
       verifiedCandidates: verified,
       mismatchCandidateCount: mismatches,
       localCreateIdentity: receipt.createIdentity,
+      ...(linkedProvenance ? { provenance: linkedProvenance } : {}),
       now: context.now(),
     }),
   };
@@ -1256,13 +1275,40 @@ async function executeLinked(
       ensured.receipt,
     );
     if (authorizationFailure) return authorizationFailure;
+    // Completion is only reachable from an attempted receipt, so claim the
+    // attempt first when the receipt is still prepared — the same shape
+    // `adoptCreateCandidate` uses for the create side.
+    if (ensured.receipt.status === "prepared") {
+      const attempted = markAttempted(
+        ports,
+        context,
+        ensured.snapshot,
+        ensured.receipt,
+        "mark-attempted",
+      );
+      if (attempted.kind === "failed") {
+        return stateFailure(
+          context,
+          ensured.receipt.operationId,
+          attempted.summary,
+        );
+      }
+      return complete(
+        ports,
+        context,
+        attempted.snapshot,
+        requireReceipt(attempted.snapshot, context) as MirrorOperationReceipt,
+        viewed.issue,
+        true,
+      );
+    }
     return complete(
       ports,
       context,
       ensured.snapshot,
       ensured.receipt,
       viewed.issue,
-      ensured.receipt.status !== "prepared",
+      true,
     );
   }
   const reconciled = reconcileLinkedReceipt(

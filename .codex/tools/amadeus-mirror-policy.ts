@@ -63,12 +63,24 @@ const APPLICABLE_OPERATIONS: Readonly<
   // (Issue created, receipt not yet recorded) converges on sync through the
   // coordinator's issueNumber rule instead of creating a second Issue.
   "intent-initialized": ["create", "sync"],
-  "intent-capture-approved": ["create"],
+  "intent-capture-approved": ["create", "sync"],
   "phase-verified": ["create", "sync"],
   parked: ["create", "sync"],
   "workflow-completed": ["create", "sync", "close"],
   manual: ["create", "sync", "close"],
 };
+
+// The structural applicability table, readable so the coordinator's selection
+// rule can be cross-checked against it boundary by boundary.
+export function applicableMirrorOperations(
+  kind: MirrorBoundary["kind"],
+): readonly MirrorOperation[] {
+  return APPLICABLE_OPERATIONS[kind];
+}
+
+export function mirrorBoundaryKinds(): readonly MirrorBoundary["kind"][] {
+  return Object.keys(APPLICABLE_OPERATIONS) as MirrorBoundary["kind"][];
+}
 
 const IN_PROGRESS_STATUSES: readonly MirrorReceiptStatus[] = [
   "prepared",

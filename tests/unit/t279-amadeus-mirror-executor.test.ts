@@ -911,3 +911,157 @@ describe("t279 sync and close convergence", () => {
     expect(gateway.history).not.toContain("close");
   });
 });
+
+// FR-2 (#1860): a close boundary that finds the Issue already CLOSED settles
+// the receipt without a close call. The receipt may still be `prepared` — the
+// combination the suite never covered — and completion is only reachable from
+// an attempted receipt, so the short circuit has to claim the attempt first.
+describe("t279 close of an already closed Issue", () => {
+  const closeEvent = mirrorEventIdentity(
+    "intent-1",
+    { kind: "manual", instance: "manual-close" },
+    "close",
+  );
+  const syncEvent = mirrorEventIdentity(
+    "intent-1",
+    { kind: "workflow-completed", instance: "complete-1" },
+    "sync",
+  );
+  const syncKey = mirrorEventKey(syncEvent);
+  const closeKey = mirrorEventKey(closeEvent);
+  const closeAuthorization = {
+    kind: "manual" as const,
+    event: closeEvent,
+    operation: "close" as const,
+    boundaryInstance: closeEvent.boundary.instance,
+    receiptRevision: 1,
+    invocationId: closeEvent.boundary.instance,
+    finalSyncReceiptKey: syncKey,
+  };
+
+  function fixture() {
+    const gateway = new FakeGateway();
+    gateway.viewed = { ...issue(), state: "CLOSED" };
+    const closeContext: MirrorExecutionContext = {
+      ...context("close", gateway),
+      triggerEvent: closeEvent,
+      event: closeEvent,
+      authorization: closeAuthorization,
+    };
+    const initial: MirrorStateSnapshot = {
+      ...linkedState(),
+      revision: 1,
+      receipts: {
+        [closeKey]: {
+          key: closeKey,
+          event: closeEvent,
+          operationId: "op-close",
+          status: "prepared" as const,
+          preparedAt: NOW,
+          authorization: closeAuthorization,
+        },
+        [syncKey]: {
+          key: syncKey,
+          event: syncEvent,
+          operationId: "op-sync-final",
+          status: "succeeded" as const,
+          preparedAt: NOW,
+          attemptedAt: NOW,
+          completedAt: NOW,
+          authorization: authorization(syncEvent, "sync"),
+        },
+      },
+    };
+    return { gateway, closeContext, initial };
+  }
+
+  test("a prepared receipt converges on completion without a close call", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let writes = 0;
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          return writeDocumentAtomic(text);
+        },
+      },
+      localState: initial,
+    });
+    expect(outcome).toEqual({
+      kind: "completed",
+      operation: "close",
+      issueNumber: 7,
+    });
+    expect(gateway.history).toEqual(["view"]);
+    expect(store.state().receipts[closeKey]?.status).toBe("succeeded");
+    // The claimed attempt and the completion, each followed by its audit
+    // outbox drain: no close call and no further state path.
+    expect(writes).toBe(4);
+  });
+
+  // The post-remote recovery record must actually reach warnings[]: a warning
+  // that is only returned, never persisted, leaves the failure invisible.
+  test("a failed completion write is recorded as a state-write warning", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let writes = 0;
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          // Fail only the completion write; the recovery write must land.
+          return writes === 3
+            ? { kind: "io-failure", summary: "disk full" }
+            : writeDocumentAtomic(text);
+        },
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write", effect: "outcome-unknown" },
+    });
+    expect(gateway.history).toEqual(["view"]);
+    expect(
+      store.state().warnings.map((w) => w.classification),
+    ).toContain("state-write");
+  });
+
+  // If the recovery record itself cannot be written, the caller must hear that
+  // nothing was recorded rather than receive a warning that never landed.
+  test("an unrecordable recovery is reported instead of returned silently", async () => {
+    const { gateway, closeContext, initial } = fixture();
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let writes = 0;
+    const outcome = await executeMirrorOperation({
+      context: closeContext,
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          // Both the completion write and the recovery write fail.
+          return writes >= 3
+            ? { kind: "io-failure", summary: "disk full" }
+            : writeDocumentAtomic(text);
+        },
+      },
+      localState: initial,
+    });
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      operation: "close",
+      warning: { classification: "state-write", retryable: false },
+    });
+    expect(store.state().warnings).toHaveLength(0);
+    expect(gateway.history).toEqual(["view"]);
+  });
+});

@@ -562,19 +562,24 @@ function reduceClearGlobalWarning(snapshot: MirrorStateSnapshot): ReducerResult 
 function reduceMarkPending(
   snapshot: MirrorStateSnapshot,
   t: Extract<MirrorTransition, { kind: "mark-pending" }>,
+  now: string,
 ): ReducerResult {
   const key = mirrorEventKey(t.event);
   const r = snapshot.receipts[key];
   if (!r) return invalid("mark-pending: no receipt for event");
-  if (r.status !== "attempted")
-    return invalid("mark-pending: only allowed from 'attempted'");
-  if (r.attemptedAt === undefined)
+  // `prepared` is accepted so a remote success whose local completion write
+  // failed can still be recorded: that attempt did happen, and it is stamped
+  // here because a pending receipt always carries its attempt time.
+  if (r.status !== "attempted" && r.status !== "prepared")
+    return invalid("mark-pending: only allowed from 'attempted' or 'prepared'");
+  if (r.status === "attempted" && r.attemptedAt === undefined)
     return invalid("mark-pending: attempted receipt missing attemptedAt");
   if (t.warning.operationId !== r.operationId)
     return invalid("mark-pending: warning operationId must match receipt");
   const pending: MirrorOperationReceipt = {
     ...r,
     status: "pending",
+    attemptedAt: r.attemptedAt ?? now,
     lastEffect: t.effect,
     failureClass: t.warning.classification,
   };
@@ -777,7 +782,7 @@ function reduceReceiptTransition(
     case "skip-for-event":
       return reduceSkip(snapshot, transition);
     case "mark-pending":
-      return reduceMarkPending(snapshot, transition);
+      return reduceMarkPending(snapshot, transition, now);
     case "mark-safety-blocked":
       return reduceSafetyBlocked(snapshot, transition);
     case "abandon-attempt":

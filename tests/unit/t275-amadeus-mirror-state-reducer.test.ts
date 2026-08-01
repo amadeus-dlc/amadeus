@@ -211,6 +211,23 @@ describe("pending / retry", () => {
     expect(r.lastEffect).toBe("no-effect-confirmed");
   });
 
+  // The post-remote recovery record must be issuable from a prepared receipt
+  // too, otherwise a remote success whose local write failed cannot be recorded
+  // at all. The attempt it reports on did happen, so it is stamped here.
+  test("mark-pending from prepared records the attempt it reports on", () => {
+    const s = apply(apply(EMPTY, prepareCreate), {
+      kind: "mark-pending",
+      event: ev("create"),
+      effect: "outcome-unknown",
+      warning: warn("op-1", "outcome-unknown"),
+    });
+    const r = s.receipts[mirrorEventKey(ev("create"))];
+    expect(r.status).toBe("pending");
+    expect(r.lastEffect).toBe("outcome-unknown");
+    expect(r.attemptedAt).toBe(NOW);
+    expect(s.warnings).toHaveLength(1);
+  });
+
   test("retry-after-no-effect only from pending+no-effect-confirmed", () => {
     const ok = reduceMirrorState(
       pending("no-effect-confirmed"),
