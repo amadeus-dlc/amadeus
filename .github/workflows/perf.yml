@@ -57,6 +57,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Tests - perf tier (real-time benchmarks)
+        id: perf_tests
         run: |
           set -o pipefail
           bash tests/run-tests.sh --perf 2>&1 | tee perf-run.log
@@ -71,7 +72,9 @@ jobs:
           retention-days: 14
 
       - name: Summarise failure
-        if: failure()
+        # Scope the summary to the test step itself: a bare failure() also
+        # fires on checkout/setup/install failures and would mislabel them.
+        if: ${{ failure() && steps.perf_tests.conclusion == 'failure' }}
         run: |
           {
             echo "### Performance tests failed"
@@ -111,6 +114,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Measure fixed distribution workload
+        id: distribution_benchmark
         run: |
           set -o pipefail
           # stdout stays the pure JSON artifact stream; diagnostics go to a
@@ -163,13 +167,17 @@ jobs:
           path: benchmark-replicas
 
       - name: Enforce runtime compatibility, completeness, dispersion, p95, and RSS budgets
+        id: benchmark_aggregate
         run: |
           set -o pipefail
           mapfile -t replicas < <(find benchmark-replicas -name distribution-benchmark.json -type f | sort)
           bun run distribution:benchmark:aggregate -- "${replicas[@]}" 2>&1 | tee aggregate.log
 
       - name: Summarise failure
-        if: failure()
+        # Scope the summary to the aggregate step itself: a bare failure()
+        # also fires on checkout/setup/download failures and would mislabel
+        # them as an aggregate-budget failure.
+        if: ${{ failure() && steps.benchmark_aggregate.conclusion == 'failure' }}
         run: |
           {
             echo "### Intent Mirror benchmark aggregate failed"

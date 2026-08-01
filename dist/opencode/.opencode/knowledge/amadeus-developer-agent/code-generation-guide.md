@@ -7,7 +7,7 @@ Choose patterns based on the problem domain:
 | Pattern | When to Use | Avoid When |
 |---------|-------------|------------|
 | **Repository** | Abstracting data access, multiple storage backends | Single database, simple CRUD only |
-| **Use Case** | Orchestrating an application flow across domain models, repositories, and external systems | A direct domain model call completes the operation |
+| **Use Case** | Orchestrating an application flow across domain models, repositories, and external systems | A direct domain model call completes the operation in internal code that never crosses the application boundary — API endpoints always invoke a use case (see Web API Implementation Checklist) |
 | **Factory** | Complex object creation, conditional construction logic | Simple constructor suffices |
 | **Strategy** | Runtime behavior variation (e.g., payment processing, notifications) | Only one algorithm exists |
 | **Observer/Event** | Decoupling side effects from core logic (email, logging, cache invalidation) | Synchronous response required from all handlers |
