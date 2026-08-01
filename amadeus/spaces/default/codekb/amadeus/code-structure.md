@@ -8,6 +8,78 @@
 - dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。
 
 ## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif / plugin / model-map の患部配置（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測（`cid:reverse-engineering:measurement-ref-in-artifacts`）。3 Issue（#1738 / #1829 / #1510）の患部配置と、移設が触る台帳面を配置図として固定する。
+
+### 実行器の現在配置 — `scripts/formal-verif/` 54 ファイル
+
+`ls scripts/formal-verif/*.ts | wc -l` = **54**。到達可能性で4群（検算 16+7+1+30 = 54 一致）。
+
+| 群 | ファイル |
+| --- | --- |
+| A（`run-model-check.ts` 推移閉包、16） | `canonical.ts` `contract.ts` `fs-tlc-toolchain.ts` `run-model-check-artifacts.ts` `run-model-check-domain.ts` `run-model-check-execution.ts` `run-model-check-paths.ts` `run-model-check-reporter.ts` `run-model-check-source.ts` `run-model-check.ts` `tla-arm.ts` `tla-model-loader-internal.ts` `tla-model-loader.ts` `tla-model-map.ts` `tlc-spawn-planner.ts` `tlc-toolchain.ts` |
+| B（CI ラッパ、7） | `run-model-check-ci.ts` `run-skeleton-ci.ts` `ci-model-check-runner.ts` `ci-model-check-domain.ts` `ci-model-check-artifacts.ts` `ci-docker-trace.ts` `node-ci-model-check-port.ts` |
+| C（診断、1） | `run-model-check-diagnostic.ts` |
+| D（到達不能、30） | `arm-s-model-subject.ts` `arm-s-oracle.ts` `arm-s-result.ts` `arm-s-runner.ts` `arm-s-universe.ts` `dispatcher.ts` `eligibility.ts` `eligibility-report.ts` `evidence-bundle.ts` `evidence-completeness.ts` `execution-evidence.ts` `execution-policy.ts` `final-cli-root.ts` `fixture-proof.ts` `fixture-registry.ts` `fixture-registry-domain.ts` `fixture-scan.ts` `fs-evidence-store.ts` `fs-fixture-registry.ts` `fs-provenance-store.ts` `full-matrix.ts` `full-matrix-cost.ts` `index.ts` `proof-policy.ts` `provenance.ts` `receipt.ts` `repository-path-policy.ts` `tla-skeleton.ts` `tla-skeleton-contract.ts` `tla-skeleton-outcome.ts` |
+
+群 A の**リポジトリ横断依存は1本のみ** — `scripts/formal-verif/canonical.ts:1-5` が `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` を re-export する。最大ファイルは `fs-tlc-toolchain.ts`（98,472 B）。
+
+### plugin 正本の現在配置
+
+```
+plugins/formal-model-check/
+├── plugin.json          # stages/seams/fragments のみ（tools フィールドなし）
+├── README.md
+└── stages/formal-model-check.md
+```
+
+`tools/` は**不在**（`ls` 実測）。`plugins/formal-model-check/stages/formal-model-check.md` の `scripts/` 参照は2箇所:
+
+- `:12` frontmatter `inputs:` — 「the run-model-check CLI (scripts/formal-verif/run-model-check.ts)」
+- `:41` 本体 — `bun scripts/formal-verif/run-model-check.ts \`
+
+同じ2箇所（`:12` / `:41`）が投影・compose 済み面にも複製されている: `.claude/plugins/formal-model-check/stages/formal-model-check.md`、`.claude/.amadeus-plugin-src/formal-model-check/stages/formal-model-check.md`、およびコンパイル済み文字列として `.claude/tools/data/stage-graph.json:2436`。**移設でパスを変えるとこの4面すべてが同時に動く。**
+
+### dist の変種構造
+
+`find dist -path "*formal-model-check*" -type f | wc -l` = **38 ファイル**、変種は中立バンドル + 7 ハーネス = **8**。
+
+| 変種 | 特徴 |
+| --- | --- |
+| 中立（`dist/plugins/formal-model-check/` 直下） | `plugin.json` `README.md` `stages/` |
+| claude | `.claude-plugin/plugin.json` + `hooks/hooks.json` を追加で持つ唯一の面 |
+| codex / cursor / kimi / kiro / kiro-ide | `hooks/auto-compose.snippet` |
+| opencode | hooks 面なし |
+
+### compose/discovery の配置従属
+
+- `packages/framework/core/tools/amadeus-plugin.ts:377-380` `resolveProjectRoot` — 単一ハーネスディレクトリを host root として解決
+- 同 `:272-274` コメント verbatim: 「`projectRoot` here is the HOST root — the harness dir (.claude/.kiro/...) under the project」
+- 同 `:381` `export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";` / `:393-395` `pluginSourceRootOf(hostRoot) = join(hostRoot, PLUGIN_SOURCE_DIR_NAME)`
+
+`find . -maxdepth 4 -name .amadeus-plugin-src` の実測ヒットは **`./.claude/.amadeus-plugin-src` のみ** — staging も compose も `.claude` 1面に閉じている。これが #1738 の多ハーネス化ギャップの配置上の実体。
+
+### 台帳面（移設で必ず動く2ファイル）
+
+| 台帳 | 該当行 | 移設時の作業 |
+| --- | --- | --- |
+| `tests/.complexity-baseline.json` | `:210-341` に `scripts/formal-verif/` 22 件（`grep -c` 実測）。うち `contract.ts` × 2 以外の **20 件が群 D** | 群 D 削除なら 20 件除去 + 匿名関数の ordinal 照合（`cid:code-generation:complexity-baseline-ordinal`） |
+| `tests/.coverage-patch-allowlist.json` | `:35-36`（plugin trusted path が `plugins/<plugin>/stages/` 始まり限定と明記 — **tools 配布時に効く制約**）/ `:303-324`（`tests/formal-verif/support/` 4本）/ `:327-337`（`fs-tlc-toolchain.ts` × 2 — 群 A、移設で path 書換必須）/ `:339-` 以降（群 D 群） | 行シフトが確実に発生するため `cid:code-generation:c1-allowlist-mechanical-remap` の機械 remap + 直読照合が必要 |
+
+### テスト面の配置
+
+`grep -rl formal-verif tests/` = **93 パス**。うち `.test.ts` は **72**（unit 29 / integration 35 / e2e 8）、残り 21 は `tests/formal-verif/fixtures/`（arm-t の d1〜d7 パッチ等）、`tests/formal-verif/support/`（10 本のハーネス）、および3台帳（`.complexity-baseline.json` / `.coverage-patch-allowlist.json` / `.coverage-registry.json`）。plugin 語を含む `.test.ts` は 70。
+
+`tests/formal-verif/` 直下には `fixtures/` と `support/` の2ディレクトリのみが存在する。
+
+### CI 配線の配置
+
+`.github/workflows/ci.yml` — `:544` にマーカー `# U4 formal-model-check begin`、job キーは **`:545` `formal-model-check:`**、`:547` `if: github.event_name == 'workflow_dispatch'`（push / pull_request では走らない）。実行は `:584`（`run`）と `:600`（`verify`）。
+
+## オープンバグ4件の患部配置（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 検証面の配置（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 本節の file:line はすべて observed `c49e385ac` 時点。全数は `re-scans/260801-open-bug-batch-5.md` を正本とする。
 

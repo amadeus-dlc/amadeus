@@ -73,6 +73,8 @@ function deps(opts: { runnersOk?: boolean; recompileOk?: boolean } = {}): Plugin
     },
     recordDrops: recordPluginDrops,
     stagingEntryState: () => "absent" as const,
+    listHarnessTrees: () => [],
+    listPluginSourceDirs: () => [],
     copyPluginSource: () => {},
     clearDrops: clearPluginDrops,
     out: (l) => out.push(l),

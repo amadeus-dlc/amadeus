@@ -5,6 +5,81 @@
 - 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
 
 ## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## 価値チェーン3件の業務境界（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。本 intent の業務目的は **formal-model-check を「実験の成果物」から「利用者が使える機能」へ引き上げること**。3 Issue はその価値チェーンの別々の切断点に対応する。
+
+### 現状の価値チェーンと切断点
+
+```
+[実装を書く] → [仕様を書く] → [仕様と実装を結ぶ] → [検証を実行] → [結果を受け取る]
+                                     ▲                                    ▲
+                                     │ #1510 で切断                        │ #1738 で細い
+                                     │（impl 変更後に model-map を         │（advisory は build-and-test
+                                     │  正規手順で更新できない）            │  1点の stderr 1行のみ）
+[配布する] ─────────────────────────────┘
+     ▲
+     │ #1829 で切断（実行器 54 本が repo の scripts/ に居座り、plugin として自立していない）
+```
+
+### 業務境界 1 — 配布自立化（#1829）
+
+**利用者から見た問題**: plugin を install しても実行器が付いてこない。`plugins/formal-model-check/` の正本は `plugin.json` / `README.md` / `stages/` の3点のみで `tools/` は存在せず、stage 本文（`:12` frontmatter inputs、`:41` の `bun scripts/formal-verif/run-model-check.ts`）が**この repo の `scripts/` を前提にしている**。他プロジェクトへ配ると動かない。
+
+**業務上の境界**:
+
+| 判断 | 誰が決めるか |
+| --- | --- |
+| 群 A（16 本）を plugin 配下へ移すこと | 確定（#1829 の本旨） |
+| 群 B（CI ラッパ 7 本）の帰属 — plugin か repo か | 要件段の裁定。CI（`ci.yml:584` / `:600`）が消費するため、字義どおり「16 抜き出し + 残余削除」は CI を壊す |
+| 群 C（診断 1 本）の帰属 | 要件段の裁定 |
+| 群 D（到達不能 30 本）+ 関連テストの削除範囲 | 要件段の裁定。本番からは死んでいるがテスト 72 本が参照する |
+| manifest スキーマに `tools` を足す形 | 要件段の裁定（型 + parser + `composeWriteSet` + `ownedPaths` の4点が同時に動く） |
+
+**利用者価値の最小単位**: 「install した plugin が単体で `--stage formal-model-check` を完走できる」。群 A のみの移設ではこれが成立するが CI が壊れるため、**群 B の扱いを決めない限り出荷可能な単位にならない**（`cid:intent-capture:ux-first-scope-for-distribution-intents` — 作り手都合の段階昇格ではなく利用者の最小実行可能単位から逆算する）。
+
+### 業務境界 2 — 価値チェーン貫通（#1738）
+
+**利用者から見た問題**: 検証機構は存在するが、ワークフローの中で「いつ・何を検証するか」が細い。
+
+現状の貫通点は1つだけ:
+
+- 発火は `build-and-test` ステージ直前の1回のみ（`amadeus-orchestrate.ts:1293` / `:1306`）
+- 出力は stderr 1行（`:209` CHANGED / `:211` no recorded verdict）
+- 未 compose なら完全沈黙（0-plugin zero-impact）
+- 検証対象は `FormalElection`（選挙プロトコル）ただ1モデル
+
+**多ハーネス化のギャップ**: compose は 1 回 = 1 ハーネスツリー（`amadeus-plugin.ts:377-380`、`:272-274` コメント）で、staging（`.amadeus-plugin-src`）も**実測で `.claude/` にしか存在しない**。7 ハーネスへ配るには 7 回別々に compose するか multi-host を新設するかの業務判断が要る。
+
+**新モデル題材としての mirror lifecycle**: 25 ファイル / 12,174 行の mirror 群のうち骨格は types（608）+ reducer（823）に閉じ、有限ドメイン 10 種・遷移 21 種・終端 4・ガード 4 が全列挙可能。**既知の実バグ（[#1838](https://github.com/amadeus-dlc/amadeus/issues/1838) 重複 create、機序候補は `amadeus-mirror-coordinator.ts:230-244` の `intent-capture-approved` → `create` 固定）を検査できる不変量を最初のモデルに含めれば、「形式検証が実バグを捕まえた」という価値の実証になる。**
+
+### 業務境界 3 — model-map 正規更新経路（#1510）
+
+**利用者から見た問題**: 実装（`amadeus-election*.ts`）を直すと、次の検証実行が `SOURCE_DRIFT` で止まる（`tla-model-loader-internal.ts:232`）。ところが model-map を正規手順で更新しようとすると `MODEL_UNCHANGED` で拒否される（`amadeus-sensor-model-completeness.ts:650-659` — 判定は model/cfg identity のみ）。**手編集以外に前へ進む道がない。**
+
+センサーは `matches`（`.claude/sensors/amadeus-model-completeness.md:8`）に `amadeus-election*.ts` を含むため**発火はする** — 発火して警告するが直す手段を提供しない、という業務上最も悪い形。
+
+**業務価値**: これが塞がっている限り、「実装を直したら仕様との整合を機械で確かめる」という価値チェーンの根が使えない。#1829 で配布を自立させ #1738 で貫通させても、**#1510 が塞がったままなら利用者は最初の実装変更で詰む**。したがって3件の中で**利用者価値への影響が最も直接的**。
+
+修正は依存追加を伴わず判定条件の対称化で足りるが、`.claude/sensors/amadeus-model-completeness.md:39-41` が MODEL_UNCHANGED 拒否を**仕様として記述している**ため、文書改訂を同一変更に含める必要がある（`cid:code-generation:same-root-inventory`）。
+
+### 分割と出荷単位
+
+| Bolt 候補 | 対象 | 単独で利用者価値を持つか |
+| --- | --- | --- |
+| #1510 | 更新判定の対称化 + 文書改訂 | **持つ**（詰みが解ける） |
+| #1738 | advisory の貫通 + 新モデル題材 | 持つ（検証対象が増える） |
+| #1829 | 実行器移設 + manifest 拡張 | 群 B の帰属確定が前提 |
+
+**共有ソースファイルはゼロ**であり並行実装できる。交差するのは `tests/.complexity-baseline.json` と `tests/.coverage-patch-allowlist.json` の2台帳のみ（#1829 の移設で行シフトが確実に起きる）。1 Issue = 1 Bolt = 1 PR の境界を維持し、台帳を触る #1829 の着地順序だけを調整する。
+
+### 検証姿勢との整合
+
+`cid:build-and-test:two-layer-verification-posture` は「日常 CI は PBT/unit/integration、並行プロトコルの spec 変更時のみ形式モデルの完全探索を専用ジョブで」と定める。現行の `ci.yml:547` の `workflow_dispatch` 限定はこの姿勢の配線であり、本 intent は**この姿勢を変えずに、その手前（配布・貫通・整合）を通す**ことを業務範囲とする。PBT 単独では取りこぼす欠陥クラスが実測されている（`cid:build-and-test:pbt-oracle-cancellation` — 7 欠陥中 4 件をオラクル相殺で恒久見逃し）ため、mirror 題材でも形式モデル側の価値が期待できる。
+
+## オープンバグ4件の業務境界（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 利用者影響の序列: P1 2件（#1838 mirror 境界の順序逸脱、#1860 workflow 完了の恒久ブロック — 製品内回復手段なし・state 手術でのみ回復した実績）が最優先。P2 4件（#1846 set-autonomy 不能、#1849 合成後 intent の report 拒否、#1856 偽 green リスク、#1861 main 偽赤15%+ダッシュボード stale、#1863 plugin セル無音消失）。P3 2件（#1857 latent、#1864 台帳1行）。
 - Delivery boundary: 5 Bolt =5 PR（Bolt 1: #1838+#1860 → Bolt 2: #1846+#1849 → Bolt 3: #1856+#1857 → Bolt 4: #1863+#1864 → Bolt 5: #1861）。優先度が高いものから着地する（ユーザー指示 2026-08-01）。

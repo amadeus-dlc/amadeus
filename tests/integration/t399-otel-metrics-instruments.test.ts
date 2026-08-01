@@ -288,6 +288,23 @@ describe("the real emit path drives the observer (FR-MET)", () => {
     expect(measurementsOf("amadeus.stage.duration").length).toBe(1);
   });
 
+  test("emitting the subagent pair through emitEvent measures the duration (U4)", () => {
+    // Until U4 registered amadeus.subagent.started, this derivation existed but
+    // could never fire in production: emitEvent rejects an unregistered name,
+    // so the only caller was a test reaching past it. This asserts the whole
+    // production path — registry admission, emit, observer — not the observer
+    // in isolation.
+    ensureOtelBootstrap(proj);
+    emitEvent("amadeus.subagent.started", { "Agent Type": "amadeus-developer-agent", Purpose: "do the thing" });
+    emitEvent("amadeus.subagent.completed", { "Agent Type": "amadeus-developer-agent" });
+    expect(measurementsOf("amadeus.subagent.duration")).toEqual([
+      expect.objectContaining({
+        kind: "histogram",
+        attributes: { "amadeus.agent.type": "amadeus-developer-agent" },
+      }),
+    ]);
+  });
+
   test("measurements never reach the canonical journal (FR-EXP-4)", () => {
     ensureOtelBootstrap(proj);
     emitEvent("amadeus.stage.started", { Stage: "code-generation", Agent: "amadeus-developer-agent" });

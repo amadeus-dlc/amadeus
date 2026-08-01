@@ -26,13 +26,13 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Stage Protocol](04-stage-protocol.md) | Behavioral contract: approval gates, compliance checklist |
 | [Stages](04-stages/) | Per-phase stage documentation (5 files) |
 | [Agent System](05-agent-system.md) | Agent structure, frontmatter contract, configuration matrix |
-| [Hooks and Tools](06-hooks-and-tools.md) | Hook system, CLI tools, 78-event audit taxonomy |
+| [Hooks and Tools](06-hooks-and-tools.md) | Hook system, CLI tools, audit event taxonomy |
 | [Sensor System](07-sensor-system.md) | Sensor manifest schema, PULL imports, fire model, default severity |
 | [Rule System](08-rule-system.md) | Rule file layout, scope derivation, the layer-chain resolver, conflict gates |
 | [Testing](09-testing.md) | Test pyramid, tiers, stubs, fixtures, test registry |
 | [Knowledge System](10-knowledge-system.md) | Two-tier architecture, loading order, templates |
 | [Contributing](11-contributing.md) | Development workflow, utility handler checklist, documentation policy |
-| [State Machine](12-state-machine.md) | Workflow / phase / stage machines, 78-event taxonomy, audit-first rules |
+| [State Machine](12-state-machine.md) | Workflow / phase / stage machines, event taxonomy, audit-first rules |
 | [Runtime Graph](13-runtime-graph.md) | The compiled `runtime-graph.json` artifact: data-plane mirror of the stage graph |
 | [Harness Primitives Mapping](14-claude-features.md) | How each AI-DLC concept maps to a harness's native primitives (Claude Code in depth) |
 | [Stage Definition](15-stage-definition.md) | YAML frontmatter contract, three-compartment body, compile pipeline |
@@ -40,6 +40,9 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Engine and Skill System](17-skill-system.md) | The orchestration engine (`next`/`report`), the typed directive contract, the conductor, plural skills, scope shape, and the swarm referee |
 | [Workspace Layout Decision](18-workspace-layout.md) | The Issue #610 repository layout decision: framework source moves to `packages/framework/`, root `scripts/` and `dist/` stay |
 | [Layered Configuration Resolver](19-layered-config.md) | Global → Space → Intent resolution, schema validation, and phase-boundary integration |
+| [Intent Mirror Reference](20-intent-mirror.md) | The Intent Mirror runtime and distribution contract |
+| [Keeping a Formal Model in Step](21-formal-model-following.md) | Reading the `model-completeness` drift signal and choosing between an implementation-hash refresh and a model revision |
+| [Supplying a Formal Model](22-formal-model-supply.md) | Adding a TLA+ model for a new concurrent protocol: subject choice, reduction manifest, registration, falling proof, vacuity guard |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |
 | [Agents](agents/) | Technical agent reference (frontmatter, tooling, stage ownership) |
 

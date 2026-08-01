@@ -16,8 +16,8 @@ import {
   beginModelCheckArtifacts,
   publishModelCheckArtifacts,
   type ModelCheckManifest,
-} from "../../scripts/formal-verif/run-model-check-artifacts.ts";
-import type { EnvReceipt } from "../../scripts/formal-verif/run-model-check-domain.ts";
+} from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
+import type { EnvReceipt } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
 const receipt: EnvReceipt = {

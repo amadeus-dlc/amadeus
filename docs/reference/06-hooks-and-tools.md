@@ -22,6 +22,7 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 +-- amadeus-sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
 +-- amadeus-runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
 +-- amadeus-validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
++-- amadeus-log-subagent-start.ts # PreToolUse Task (project-wide, settings.json, TypeScript)
 +-- amadeus-log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
 +-- amadeus-stop.ts              # Stop (project-wide, settings.json, TypeScript, flow-altering)
 +-- amadeus-session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
@@ -40,6 +41,7 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 | `amadeus-sync-statusline.ts` | PostToolUse | Project-wide (settings.json) | `TaskUpdate` | Auto-sync state file on stage task activation |
 | `amadeus-runtime-compile.ts` | PostToolUse | Project-wide (settings.json) | `Bash` | Recompile `runtime-graph.json` on transition-class audit emits |
 | `amadeus-validate-state.ts` | PreCompact | Project-wide (settings.json) | (empty) | Validate state file, write recovery breadcrumb |
+| `amadeus-log-subagent-start.ts` | PreToolUse | Project-wide (settings.json) | `^Task$` | Log subagent dispatch (`SUBAGENT_STARTED`). Claude Code has no subagent-start event, so the seam is the dispatch tool's PreToolUse; the matcher is anchored and the hook re-checks the tool name, because an unanchored `Task` also matches `TaskUpdate` |
 | `amadeus-log-subagent.ts` | SubagentStop | Project-wide (settings.json) | (empty) | Log subagent completion events |
 | `amadeus-stop.ts` | Stop | Project-wide (settings.json) | (empty) | **Flow-altering.** Enforce the forwarding loop on turn-end: run `amadeus-orchestrate next`; on `done` or `parked` allow the stop, on a pending directive block the stop and inject the next move back via `reason`. Allows the stop (human-wait carve-out) when the current stage is awaiting approval (`[?]`), being revised (`[R]`), `[-]` in-progress with an unanswered question in its `<slug>-questions.md`, or the ending turn was conversational (the human's last prompt was answered with no workflow-engine call, read from the harness transcript) - the last two suppressed under autonomous Construction. Recursion-bounded (no-progress counter + `stop_hook_active` under `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; default 2 in an interactive run and 8 under autonomous Construction). No-op outside an AIDLC workflow |
 | `amadeus-session-start.ts` | SessionStart | Project-wide (settings.json) | (empty) | Inject workflow context on session resume |
@@ -192,6 +194,22 @@ See [Runtime Graph](13-runtime-graph.md) for the compile lifecycle and the locke
 3. **Recovery breadcrumb:** Writes `.amadeus-recovery.md` containing the current stage and a validation timestamp. On session resume, the framework compares this with `amadeus-state.md` to detect compaction-related state corruption.
 
 **Why this matters:** Context compaction discards conversation history. If compaction happens mid-stage, the model loses awareness of what it was doing. The recovery breadcrumb provides an external checkpoint that survives compaction.
+
+### PreToolUse Task: amadeus-log-subagent-start.ts
+
+**Source:** `.claude/hooks/amadeus-log-subagent-start.ts`
+**Trigger:** When a subagent is dispatched (matcher: `^Task$`)
+**Purpose:** Log subagent dispatch (`SUBAGENT_STARTED`) so a subagent is recorded as an interval rather than a point
+
+**Processing steps:**
+
+1. **Project directory resolution:** Same multi-fallback pattern as amadeus-log-subagent.ts.
+2. **Health heartbeat:** Writes to `.amadeus-hooks-health/log-subagent-start.last`.
+3. **Dispatch-tool guard:** Exits silently unless the payload is a subagent dispatch. PreToolUse fires for *every* tool and the settings matcher is an unanchored regex, so a bare `Task` would also match `TaskUpdate`; the hook re-checks the tool name rather than trusting the matcher.
+4. **Field assembly:** `Agent Type` (blank normalizes to `"unknown"`), optional `Agent ID`, and optional `Purpose` — the first line of the dispatch prompt, escape-normalized and truncated to 200 characters so an unbounded prompt cannot carry its remainder into the audit row.
+5. **The same three gates as the completed half:** TTY, an active audit shard, and a workflow that is not already terminal — a start must never be recorded where its completion would be dropped.
+
+**Harness asymmetry:** Claude Code has no subagent-start event (hence the PreToolUse seam) and Kimi has a real `SubagentStart` that also carries the prompt. Codex, Cursor, OpenCode and Kiro expose no start seam and emit the completed half alone, so on those a completion with no start is normal; readers pair the halves and drop unmatched rows.
 
 ### SubagentStop: amadeus-log-subagent.ts
 

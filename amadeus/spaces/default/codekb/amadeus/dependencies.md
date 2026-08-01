@@ -5,6 +5,93 @@
 - 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。
 
 ## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif 価値チェーンの依存関係（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。移設・貫通・整合の3件が依存グラフのどこを切るかを固定する。
+
+### 実行器の依存閉包（#1829 の移設可能性を決める）
+
+`scripts/formal-verif/` 54 ファイルの相対 import 推移閉包を機械計算した結果:
+
+```
+run-model-check.ts ──▶ 群 A 16 ファイル ──▶ packages/framework/core/tools/amadeus-formal-verif-model-map.ts
+                                              ▲
+                                              └─ 唯一のリポジトリ横断依存（canonical.ts:1-5 の re-export）
+
+ci.yml:584/:600 ──▶ 群 B 7 ファイル ──▶ 群 A
+run-model-check-diagnostic.ts ──▶ 群 A（+ 自身）
+群 D 30 ファイル ──▶ （どの CLI からも到達不能。tests/ からのみ参照）
+```
+
+**移設の含意**: 群 A を `plugins/formal-model-check/tools/` へ移しても、core への依存は `amadeus-formal-verif-model-map.ts` 1本だけが残る。この1本を (a) plugin 側へ複製する / (b) core への依存として許容する / (c) plugin へ移して core 側の消費者（`amadeus-sensor-model-completeness.ts`）を逆向きに依存させる — の三択が要件段の裁定対象。**(c) は core → plugin の逆依存を作るため、依存方向の観点からは (b) が最も安全。**
+
+### 逆依存 — テストから群 D への参照（削除範囲の制約）
+
+群 D は本番からは到達不能だが `tests/` からは広く参照される（`provenance.ts` 14 件、`execution-evidence.ts` 10 件）。`grep -rl formal-verif tests/` = **93 パス**（`.test.ts` 72 = unit 29 / integration 35 / e2e 8、残り 21 は fixtures / support / 台帳）。群 D 削除は同数のテスト削除を伴うため、**削除範囲は独立の裁定事項**。
+
+### 台帳の依存（唯一の直列化点）
+
+| 台帳 | 依存の形 | 移設時 |
+| --- | --- | --- |
+| `tests/.complexity-baseline.json` | `scripts/formal-verif/` を path で 22 件参照（`:210-341`、うち 20 件が群 D） | path 書換 + 匿名関数 ordinal 照合 |
+| `tests/.coverage-patch-allowlist.json` | 群 A の `fs-tlc-toolchain.ts` × 2（`:327` / `:333`）、群 D の `fs-fixture-registry.ts` × 2（`:339` / `:345`）ほか、`tests/formal-verif/support/` 4 本（`:303-324`） | 行シフト確実 → `cid:code-generation:c1-allowlist-mechanical-remap` の機械 remap + reason 直読照合 |
+
+**#1738 / #1829 / #1510 の3件は共有ソースファイルを持たない**（`architecture.md` の相互作用表）。唯一この2台帳だけが交差するため、移設を含む Bolt を最後に着地させるか、他 Bolt の台帳行に触れないことを実 diff で確認する（`cid:code-generation:c6`）。
+
+### plugin 配布経路の依存方向
+
+```
+plugins/formal-model-check/（正本）
+   │
+   ├─ scripts/plugin-projection.ts:158 walkFs 全走査 ──▶ dist/plugins/formal-model-check/（8 変種 / 38 ファイル）
+   │      ※ 宣言不要・ディスク駆動
+   │
+   └─ plugin.json の宣言 ──▶ amadeus-plugin-compose.ts:330-334 parser
+                                 └─▶ :1021 composeWriteSet（stageCopies ∪ sharedWrites）
+                                        └─▶ <host>/plugins/formal-model-check/stages/…（stage 1本のみ）
+```
+
+**宣言駆動（compose）とディスク駆動（projection）の依存様式の違い**が #1829 の改修点。
+
+### host 従属の依存（#1738 の多ハーネス化ギャップ）
+
+- `amadeus-plugin.ts:377-380` `resolveProjectRoot` — 1 compose = 1 ハーネスツリー
+- 同 `:272-274` コメント「`projectRoot` here is the HOST root — the harness dir (.claude/.kiro/...) under the project」
+- discovery も host 従属: `:381` `PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src"` / `:393-395` `pluginSourceRootOf(hostRoot)`
+- 実測: `.amadeus-plugin-src` が存在するのは **`.claude/` のみ**
+
+すなわち compose は 7 ハーネスに対して**7 回別々に呼ぶ**か、multi-host を新設するかの分岐になる。
+
+### model-map をめぐる依存の環（#1510）
+
+```
+amadeus-election*.ts（impl 5 件）
+   │ sha256
+   ▼
+specs/tla/model-map.json ──読取──▶ tla-model-loader-internal.ts:232（impl-hash 照合 → SOURCE_DRIFT）
+   ▲
+   │ 書込（updateModelMapInternal :691 / 公開 :729 / CLI :778-779,:790）
+   │
+amadeus-sensor-model-completeness.ts:650-659 ── MODEL_UNCHANGED で拒否（model/cfg のみ判定）
+   ▲
+   └─ .claude/sensors/amadeus-model-completeness.md:8 の matches が amadeus-election*.ts で発火
+```
+
+**発火（impl 変更）→ 更新（拒否）→ 実行（impl-hash で fail-closed）の閉路が塞がっている。** 読取側と書込側で判定対象が違うことが唯一の原因であり、依存の追加・削除ではなく**判定条件の対称化**で解ける（新規依存は不要）。
+
+### mirror 題材の依存（#1738 の新モデル）
+
+`amadeus-mirror*.ts` 25 ファイル / 12,174 行のうち、モデル化対象は `amadeus-mirror-types.ts`（608）+ `amadeus-mirror-state-reducer.ts`（823）に閉じる。reducer は `:27` で `amadeus-mirror-project-reconciliation-reducer.ts` から `ProjectSyncTransition` を型 import しており、**遷移集合はこの2本に跨る**（inline 18 + 入れ子 3 = 21）。model-map entries に追加するなら最小で types + reducer の2本、遷移の駆動まで含めるなら coordinator（1,004）と lifecycle（1,272）が加わる — 規模差が大きいため entries 集合の確定は要件段の裁定対象。
+
+### 区間差分（`6e7a9d701..da51af375..HEAD`）の依存への影響
+
+区間 12 コミット / `126 files changed, 4214 insertions(+), 102 deletions(-)`（`git diff --shortstat 6e7a9d701..HEAD`）。面別内訳（`--numstat` 機械集計）: record `89 files / +3221 / −9`、`dist/` `14 / +133 / −14`、self-install `10 / +95 / −10`、`metrics/` `4 / +215 / −2`、**ソース面 `9 files / +550 / −67`**（amadeus/ 除く合計は 37 files / +993 / −93）。
+
+`git diff --name-only 6e7a9d701..HEAD | grep "formal-verif\|plugins/\|model-map\|ci.yml"` のヒット6件は**すべて本 intent 自身の record ファイル**（`260731-formal-verif-value-chain/` 配下）であり、**対象実装面への変更はゼロ**。したがって本 intent の依存前提は前回 RE から不変。
+
+## オープンバグ4件の依存関係（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離の依存関係（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: Bolt 内交差3件（Bolt 1 = mirror 4ファイル共有、Bolt 2 = `amadeus-utility.ts`、Bolt 3 = `otel/bootstrap.ts`）は各 Bolt 内直列で解消。Bolt 間はファイル単位非交差だが、core/tools を触る Bolt 1-4 の dist 再生成はマージ順に直列（`cid:code-generation:c6` の実 diff 再評価をマージ時に行う）。Bolt 5 は完全独立。詳細は `re-scans/260801-open-bug-batch-5.md`。
 

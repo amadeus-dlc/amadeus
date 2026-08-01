@@ -5,6 +5,54 @@
 - 判断: 新規コンポーネントなし。対象は既存3面 — core session-start hook（`packages/framework/core/hooks/amadeus-session-start.ts`）、認可（`packages/framework/core/tools/amadeus-caller-authorization.ts`）、kimi harness ロール管理（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`）の欠陥修正のみ。区間で到着した otel 基盤拡張（resource-core / span-context 等）の目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
 
 ## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
+## formal-verif 価値チェーンの対象コンポーネント（260731-formal-verif-value-chain、履歴、observed `da51af375`）
+
+file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が触るコンポーネントを所有境界つきで列挙する。
+
+| コンポーネント | 所在 | 規模 | 役割 | 触る Issue |
+| --- | --- | --- | --- | --- |
+| plugin compose エンジン | `packages/framework/core/tools/amadeus-plugin-compose.ts` | 1,488 行 | manifest 解析（`:330-334`）、`PluginManifest` 型（`:105-110`）、host 書込集合 `composeWriteSet`（`:1021`） | #1829 |
+| plugin CLI | `packages/framework/core/tools/amadeus-plugin.ts` | 884 行 | `compose` / `drop` / `install`、host root 解決（`:377-380`）、staging root（`:381` `PLUGIN_SOURCE_DIR_NAME` / `:393-395`） | #1829 / #1738 |
+| plugin projection | `scripts/plugin-projection.ts` | — | 正本 → `dist/` の全ファイル走査（`:158` `discoverPluginSources` / `:169-172`）、`.json`/`.ts` verbatim（`:238-241`）、prefix `plugins/<name>/`（`:129`） | #1829（無改修で通る） |
+| activation advisory 判定 | `packages/framework/core/tools/amadeus-plugin-activation.ts` | 295 行 | 3値判定 + 文面生成（`:209` / `:211`）、公開口 `:272` `activationAdvisoryForHost`、compose ゲート `:230` 近傍 | #1738 |
+| engine 発火点 | `packages/framework/core/tools/amadeus-orchestrate.ts` | — | `:1293` `ACTIVATION_ADVISORY_STAGE`、`:1306` ガード、`:1307-1308` stderr 出力 | #1738 |
+| model-map スキーマ | `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` | — | パス定数（`:49-51`）、`exactObject(["implPath","sha256"])`（`:158`）、境界検査（`:161`）、ソート/一意（`:169`）、`exactObject(["cfg","entries","model","schemaVersion"])`（`:186`） | #1510 |
+| model-completeness センサー | `packages/framework/core/tools/amadeus-sensor-model-completeness.ts` | — | `MODEL_UNCHANGED` 拒否（`:650-659`）、更新本体 `:691` `updateModelMapInternal`、公開 API `:729`、CLI 分岐 `:778-779` / `:790` | #1510 |
+| センサー manifest | `.claude/sensors/amadeus-model-completeness.md` | — | `matches`（`:8`）、更新手順（`:37`）、MODEL_UNCHANGED 拒否の記述（`:39-41`） | #1510 |
+| TLA source loader | `scripts/formal-verif/tla-model-loader-internal.ts` | — | SOURCE_DRIFT 4分岐（`:221` / `:224` / `:229` / `:232`）、消費側 `:239` `loadVerifiedTlaSourceInternal`（`:236-237` internal/test-only seam 注記） | #1510 |
+| 実行器 群 A | `scripts/formal-verif/` 16 本 | 最大 `fs-tlc-toolchain.ts` 98,472 B | `run-model-check.ts` の推移閉包。外部依存は `canonical.ts:1-5` の1本のみ | #1829（移設対象） |
+| 実行器 群 B | `scripts/formal-verif/` 7 本 | — | CI 専用ラッパ。`ci.yml:584` / `:600` から消費 | #1829（帰属は要裁定） |
+| 実行器 群 C | `run-model-check-diagnostic.ts` | 1 本 | 診断 CLI。閉包は群 A + 自身 | #1829（帰属は要裁定） |
+| 実行器 群 D | `scripts/formal-verif/` 30 本 | — | どの CLI からも到達不能。テストからは広く参照（`provenance.ts` 14 件 / `execution-evidence.ts` 10 件） | #1829（削除範囲は要裁定） |
+| CI ジョブ | `.github/workflows/ci.yml:545` | 約 100 行 | `workflow_dispatch` 限定（`:547`）、`run`（`:584`）/ `verify`（`:600`） | #1829 |
+| plugin 正本 | `plugins/formal-model-check/` | 3 点 | `plugin.json` / `README.md` / `stages/formal-model-check.md`。`tools/` 不在 | #1829 |
+
+### 新規モデル題材の候補コンポーネント — mirror lifecycle（#1738）
+
+`amadeus-mirror*.ts` = **25 ファイル / 12,174 行**。骨格は次の2本に閉じており、**model-map entries の正準 impl 集合の第一候補**になる。
+
+| コンポーネント | 行数 | 役割 |
+| --- | --- | --- |
+| `amadeus-mirror-types.ts` | 608 | 語彙の集中点。有限ドメイン10種を全列挙可能（Mode 3 / Operation 3 / Boundary 6 / FailureClass 14 / ReceiptStatus 7 / MutationEffect 3 / PhaseKey 5 / ProjectSyncState 3 / ProjectMutation 2 / RegistryStatus 4） |
+| `amadeus-mirror-state-reducer.ts` | 823 | `MirrorTransition` union（`:55`、inline 18 種 + `:113` `ProjectSyncTransition` 3 種 = 計 21）、終端4（`:127-132`）、ガード4本（`:692-715`）、統合口 `:814` `reduceMirrorState`、上限 `:42` `MAX_RECEIPTS = 1000` |
+
+周辺（モデル化の直接対象外だが遷移を駆動する）: `amadeus-mirror-state-codec.ts` 1,946 / `amadeus-mirror-executor.ts` 1,562 / `amadeus-mirror-lifecycle.ts` 1,272 / `amadeus-mirror-coordinator.ts` 1,004（`:230-244` `operationForBoundary`）/ `amadeus-mirror-project-reconciliation-reducer.ts`（`:45-48` `ProjectSyncTransition` の3構成子）。
+
+### テスト・台帳コンポーネント
+
+| 面 | 実測値 |
+| --- | --- |
+| formal-verif を参照する `.test.ts` | 72（unit 29 / integration 35 / e2e 8） |
+| formal-verif 参照パス総数（fixtures / support / 台帳込み） | 93 |
+| plugin 語を含む `.test.ts` | 70 |
+| `tests/formal-verif/` 下位 | `fixtures/`（arm-t の d1〜d7 パッチほか）と `support/`（10 本のハーネス） |
+| `tests/.complexity-baseline.json` の formal-verif エントリ | 22（うち 20 が群 D） |
+
+中核テスト: `t-formal-verif-model-completeness-sensor`（unit / e2e / integration × 2 — #1510 対象）、`t-formal-verif-plugin-lifecycle` / `-stage-discovery`、`t-formal-verif-ci-workflow`（#1829 の CI 面）、`t-plugin-projection` / `t303` / `t310` / `t311` / `t356`（projection・promote-self 面）、`t341-plugin-conformance-journey`。
+
+## オープンバグ4件の対象コンポーネント（260731-open-bug-batch-4、履歴、observed `6e7a9d701`）
+## perf 分離の対象コンポーネント（260731-perf-ci-separation、履歴、observed `da51af375`）
+## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: 新規コンポーネントなし。対象は既存5クラスタ（mirror 状態機械 / engine state / OTel bootstrap 系 / graph 合成 / metrics publication）の欠陥修正のみ。区間で到着した OTel 18モジュールの目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-open-bug-batch-5.md` を正本とする。
 

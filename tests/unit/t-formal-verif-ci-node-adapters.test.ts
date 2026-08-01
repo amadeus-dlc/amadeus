@@ -4,7 +4,7 @@ import {
   downloadCiArtifact,
   resolveDockerExecutable,
   runCiCommand,
-} from "../../scripts/formal-verif/node-ci-model-check-port.ts";
+} from "../../plugins/formal-model-check/tools/node-ci-model-check-port.ts";
 
 describe("CI Node adapters", () => {
   test("runs shell-free commands and hashes exact bytes", () => {

@@ -4411,6 +4411,61 @@ export function normalizeAgentType(raw: string | null | undefined): string {
   return raw?.trim() ? raw : "unknown";
 }
 
+// The SUBAGENT_STARTED `Purpose` field (U4): a LABEL derived from the dispatch
+// prompt, never a transcript of it. A prompt is unbounded operator text that
+// can carry credentials well past its opening line, so the derivation is
+// deliberately lossy in a fixed order — normalize escapes, take the first line,
+// trim, then bound the length.
+//
+// Normalizing ESCAPED breaks first is load-bearing rather than cosmetic: a
+// harness that hands the prompt through an undecoded JSON string delivers a
+// body whose newlines are still the two characters `\` `n`. Without this, such
+// a prompt is a single "line" and the 200-character window would carry
+// whatever followed the first line into the audit row.
+export const SUBAGENT_PURPOSE_MAX_LENGTH = 200;
+
+// The tool whose invocation opens a subagent on the harnesses that have no
+// dedicated start event (Claude Code): the start seam there is PreToolUse, and
+// PreToolUse fires for EVERY tool.
+export const SUBAGENT_DISPATCH_TOOL = "Task";
+
+// C0 control characters, tab excepted: the audit record is line-oriented, and a
+// stray control byte is invisible in review while corrupting the record frame.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+const CONTROL_CHARS = /[\u0000-\u0008\u000B-\u001F\u007F]/g;
+
+export function subagentPurposeLine(prompt: unknown): string {
+  if (typeof prompt !== "string") return "";
+  const unescaped = prompt.replace(/\\r\\n|\\n|\\r/g, "\n");
+  const firstLine = unescaped.split(/[\r\n]/, 1)[0] ?? "";
+  return firstLine.replace(CONTROL_CHARS, "").trim().slice(0, SUBAGENT_PURPOSE_MAX_LENGTH);
+}
+
+// The SUBAGENT_STARTED field set, derived from whichever start seam fired.
+// Returns null when the payload is not a subagent dispatch at all, which is the
+// common case on Claude Code: its start seam is PreToolUse, so this runs on
+// every tool call and must decline all but the dispatch tool. The settings
+// matcher is an UNANCHORED regex, so "Task" also matches TaskUpdate/TaskCreate
+// — without this check every todo-list write would append a phantom subagent.
+//
+// Two payload shapes converge here: the tool envelope (PreToolUse{Task}, which
+// carries subagent_type/prompt inside tool_input) and a dedicated start event
+// (kimi's SubagentStart, which carries them at the top level and has no
+// tool_name at all). Absence of tool_name therefore means "a seam that only
+// fires for subagents", not "unknown tool".
+export function subagentStartFields(payload: ClaudeCodeHookInput): Record<string, string> | null {
+  if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+  const toolInput = payload.tool_input ?? {};
+  const rawType = payload.agent_type ?? toolInput.subagent_type;
+  const fields: Record<string, string> = {
+    "Agent Type": normalizeAgentType(typeof rawType === "string" ? rawType : undefined),
+  };
+  if (typeof payload.agent_id === "string" && payload.agent_id) fields["Agent ID"] = payload.agent_id;
+  const purpose = subagentPurposeLine(payload.prompt ?? toolInput.prompt);
+  if (purpose) fields.Purpose = purpose;
+  return fields;
+}
+
 // --- Worktree anchor resolution (shared by read and write paths) ----------------
 //
 // The MAIN checkout is the shared anchor for the Bolt worktree namespace. A session
@@ -4741,6 +4796,15 @@ export function runtimeGraphPath(projectDir: string, intent?: string, space?: st
 // `--doctor`.
 export function hooksHealthDir(projectDir: string, intent?: string, space?: string): string {
   return join(docsRoot(projectDir, intent, space), ".amadeus-hooks-health");
+}
+
+// `<root>/.amadeus-advisory-latch` — per-run markers for the plugin activation
+// advisories the engine has already raised (U5 run latch). Machine-local: the
+// `.amadeus-` prefix under the record is gitignored, so a latch never reaches a
+// commit. Callers add a per-session leaf; the leaf's lifecycle IS the run
+// boundary.
+export function advisoryLatchDir(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-advisory-latch");
 }
 
 // `<root>/.amadeus-recovery.md` — the validate-state breadcrumb the orchestrator

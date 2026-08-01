@@ -253,4 +253,4 @@ Bolt ごとの runtime-graph フラグメントファイルは `<worktree>/<reco
 
 - **データプレーンがこの構造になっている理由** — `runtime-graph.json` を第2の真実のソースではなく `stage-graph.json` のミラーにする control/data プレーンの分離。[Plane Architecture](02-plane-architecture.ja.md) を参照。
 - **compile をトリガーするライフサイクル** — その監査 emit が compile フックを駆動する workflow / phase / stage の遷移。[State Machine](12-state-machine.ja.md) を参照。
-- **このグラフが導出される元の監査ログ** - 78 イベントの分類体系とエミッタレジストリ。[State Machine](12-state-machine.ja.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.ja.md) を参照。
+- **このグラフが導出される元の監査ログ** - イベント分類体系とエミッタレジストリ。[State Machine](12-state-machine.ja.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.ja.md) を参照。

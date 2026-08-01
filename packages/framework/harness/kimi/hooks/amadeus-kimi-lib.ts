@@ -554,6 +554,16 @@ export function normalizePayload(target: string, env: KimiEnvelope): string | nu
       // PreCompact: the core hook reads no stdin fields (state validation +
       // SESSION_COMPACTED + recovery breadcrumb are all self-contained).
       return "{}";
+    case "role-start":
+      // The one real subagent-start seam across the harnesses (U4). Kimi ships
+      // the dispatch prompt here, so Purpose is derivable; there is no
+      // agent_id in any probed version and no tool envelope, which is what
+      // tells the core hook this fires only for subagents.
+      return JSON.stringify({
+        hook_event_name: "SubagentStart",
+        agent_type: env.agent_name ?? "",
+        prompt: promptText(env.prompt),
+      });
     case "log-subagent":
       // Kimi names the subagent `agent_name` and ships no agent_id (capture).
       return JSON.stringify({
@@ -612,6 +622,8 @@ export function routeTarget(
       return [{ hookPath: "amadeus-runtime-compile.ts", stdin, translate: "none" }];
     case "validate-state":
       return [{ hookPath: "amadeus-validate-state.ts", stdin, translate: "none" }];
+    case "role-start":
+      return [{ hookPath: "amadeus-log-subagent-start.ts", stdin, translate: "none" }];
     case "log-subagent":
       return [{ hookPath: "amadeus-log-subagent.ts", stdin, translate: "none" }];
     case "stop":
