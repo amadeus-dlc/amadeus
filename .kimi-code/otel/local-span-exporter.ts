@@ -41,7 +41,7 @@ export type CompletedSpanRecord = {
   readonly attributes: Record<string, unknown>;
   readonly events: readonly { name: string; timeMs: number; attributes?: Record<string, unknown> }[];
   readonly links: readonly CompletedSpanLink[];
-  readonly resource: Record<string, unknown>;
+  readonly resource: Record<string, string>;
   readonly instrumentationScope: { name: string; version?: string };
 };
 
@@ -93,7 +93,7 @@ function redactRecord(record: CompletedSpanRecord, policy: RedactionPolicy): Com
   return {
     ...record,
     attributes: redactAttributes(record.attributes, policy),
-    resource: redactResource(record.resource as Record<string, string>),
+    resource: redactResource(record.resource),
     events: record.events.map((event) =>
       event.attributes === undefined ? event : { ...event, attributes: redactAttributes(event.attributes, policy) }
     ),
