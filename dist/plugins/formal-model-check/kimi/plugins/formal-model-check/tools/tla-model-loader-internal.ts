@@ -12,17 +12,20 @@ import { fileURLToPath } from "node:url";
 import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
 import {
+  findModelMapModel,
   IMPL_ONLY_UPDATE_HINT,
   type ModelLoadError,
   type ModelLoadErrorCode,
   type ModelMap,
+  type ModelMapModel,
   TLA_CFG_PATH,
+  TLA_EXECUTION_MODEL_NAME,
   TLA_MODEL_MAP_PATH,
   TLA_MODEL_PATH,
   parseTlaModelMap,
 } from "./tla-model-map.ts";
 
-export type { ModelLoadError, ModelLoadErrorCode, ModelMap } from "./tla-model-map.ts";
+export type { ModelLoadError, ModelLoadErrorCode, ModelMap, ModelMapModel } from "./tla-model-map.ts";
 
 export interface VerifiedTlaSource {
   readonly moduleBytes: Uint8Array;
@@ -32,6 +35,9 @@ export interface VerifiedTlaSource {
   readonly moduleIdentity: string;
   readonly cfgIdentity: string;
   readonly modelMap: ModelMap;
+  // The registered model the execution pipeline runs; every other registered
+  // model is still verified for drift, but only this one is handed to TLC.
+  readonly executionModel: ModelMapModel;
 }
 
 export interface SourceDriftError {
@@ -211,7 +217,7 @@ function verifyImplementationEntries(
   fs: TlaFileSystem,
 ): Result<void, SourceDriftError> {
   const implementationRoot = resolve(repositoryRoot, "packages", "framework", "core", "tools");
-  for (const entry of modelMap.entries) {
+  for (const entry of modelMap.models.flatMap((model) => model.entries)) {
     const absolutePath = resolve(repositoryRoot, entry.implPath);
     let linkStat: Stats;
     let realPath: string;
@@ -240,6 +246,34 @@ function verifyImplementationEntries(
   return { ok: true, value: undefined };
 }
 
+// Every registered model is a drift-monitored asset, not only the one the
+// execution pipeline runs, so a revision to any model or config that is not
+// published to the map is loud here rather than at the next TLC run.
+function verifyRegisteredAssets(
+  repositoryRoot: string,
+  modelMap: ModelMap,
+  fs: TlaFileSystem,
+): Result<void, TlaModelPipelineError> {
+  for (const model of modelMap.models) {
+    if (model.name === TLA_EXECUTION_MODEL_NAME) continue;
+    for (const asset of [
+      { recorded: model.model, kind: "MODEL" as const, domain: "amadeus.formal-verif.tla.module.v1" },
+      { recorded: model.cfg, kind: "CFG" as const, domain: "amadeus.formal-verif.tla.cfg.v1" },
+    ]) {
+      const path = verifyAssetPath(repositoryRoot, asset.recorded.path, asset.kind, fs);
+      if (!path.ok) return path;
+      const assetBytes = readAsset(path.value, asset.recorded.path, asset.kind, fs);
+      if (!assetBytes.ok) return assetBytes;
+      const identity = sourceIdentity(assetBytes.value, asset.recorded.path, asset.domain);
+      if (!identity.ok) return identity;
+      if (identity.value.identity !== asset.recorded.identity) {
+        return drift(asset.recorded.path, "registered asset identity differs from model map");
+      }
+    }
+  }
+  return { ok: true, value: undefined };
+}
+
 // Internal/test-only seam. Production callers must use the no-argument wrapper
 // in tla-model-loader.ts so runtime input cannot select a root or filesystem.
 export function loadVerifiedTlaSourceInternal(
@@ -256,6 +290,14 @@ export function loadVerifiedTlaSourceInternal(
   if (!mapBytes.ok) return mapBytes;
   const modelMap = parseTlaModelMap(mapBytes.value);
   if (!modelMap.ok) return modelMap;
+  const executionModel = findModelMapModel(modelMap.value, TLA_EXECUTION_MODEL_NAME);
+  if (!executionModel) {
+    return loadError(
+      "MODEL_MAP_INVALID",
+      TLA_MODEL_MAP_PATH,
+      `model map does not register the execution model ${TLA_EXECUTION_MODEL_NAME}`,
+    );
+  }
 
   const moduleIdentity = sourceIdentity(
     moduleBytes.value,
@@ -269,12 +311,14 @@ export function loadVerifiedTlaSourceInternal(
     "amadeus.formal-verif.tla.cfg.v1",
   );
   if (!cfgIdentity.ok) return cfgIdentity;
-  if (moduleIdentity.value.identity !== modelMap.value.model.identity) {
+  if (moduleIdentity.value.identity !== executionModel.model.identity) {
     return drift(TLA_MODEL_PATH, "module identity differs from model map");
   }
-  if (cfgIdentity.value.identity !== modelMap.value.cfg.identity) {
+  if (cfgIdentity.value.identity !== executionModel.cfg.identity) {
     return drift(TLA_CFG_PATH, "cfg identity differs from model map");
   }
+  const registeredAssets = verifyRegisteredAssets(paths.value.repositoryRoot, modelMap.value, fs);
+  if (!registeredAssets.ok) return registeredAssets;
   const implementationEntries = verifyImplementationEntries(paths.value.repositoryRoot, modelMap.value, fs);
   if (!implementationEntries.ok) return implementationEntries;
 
@@ -288,6 +332,7 @@ export function loadVerifiedTlaSourceInternal(
       moduleIdentity: moduleIdentity.value.identity,
       cfgIdentity: cfgIdentity.value.identity,
       modelMap: modelMap.value,
+      executionModel,
     },
   };
 }

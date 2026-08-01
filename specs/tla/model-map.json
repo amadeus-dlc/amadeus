@@ -1,33 +1,67 @@
 {
-  "schemaVersion": 1,
-  "model": {
-    "path": "specs/tla/FormalElection.tla",
-    "identity": "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32"
-  },
-  "cfg": {
-    "path": "specs/tla/FormalElection.cfg",
-    "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
-  },
-  "entries": [
+  "schemaVersion": 2,
+  "models": [
     {
-      "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
-      "sha256": "a405bf8def41e6abaf6943aeff620823de1dfe56c83b09272f6d54a7f7ea14ad"
+      "name": "FormalElection",
+      "model": {
+        "path": "specs/tla/FormalElection.tla",
+        "identity": "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32"
+      },
+      "cfg": {
+        "path": "specs/tla/FormalElection.cfg",
+        "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
+      },
+      "entries": [
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
+          "sha256": "a405bf8def41e6abaf6943aeff620823de1dfe56c83b09272f6d54a7f7ea14ad"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
+          "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
+          "sha256": "4dd2a6c215abd3ca784697d19358885c45dd9e2c2fb30313f01ade2fb942427b"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
+          "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election.ts",
+          "sha256": "c6ef348c9ccdd91caf4d917c6c91da983002d7616ba57e074710a3b1bdbbd26c"
+        }
+      ]
     },
     {
-      "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-      "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
-    },
-    {
-      "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-      "sha256": "4dd2a6c215abd3ca784697d19358885c45dd9e2c2fb30313f01ade2fb942427b"
-    },
-    {
-      "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
-      "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
-    },
-    {
-      "implPath": "packages/framework/core/tools/amadeus-election.ts",
-      "sha256": "c6ef348c9ccdd91caf4d917c6c91da983002d7616ba57e074710a3b1bdbbd26c"
+      "name": "MirrorLifecycle",
+      "model": {
+        "path": "specs/tla/MirrorLifecycle.tla",
+        "identity": "5e1d5dc61a6ecfbb6d08fe23573e9765890cd7899765c1cf5cfa7a7ca9e08ec4"
+      },
+      "cfg": {
+        "path": "specs/tla/MirrorLifecycle.cfg",
+        "identity": "631176d00f0664480597b6babc0dd4c17e219c56028a4978ec2cbd70b8cf467b"
+      },
+      "entries": [
+        {
+          "implPath": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+          "sha256": "51cd686aeb18abb0ec9c2e906663c800a4a66c2976d2c6ff529eb54be67c9a11"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-mirror-project-reconciliation-reducer.ts",
+          "sha256": "f9efa901839fd1a011291b2afb1995eb432dd8495e43b1c99e1f5b64b00ba0e6"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+          "sha256": "2e189dc5af7f15bfeb7706297ed61753f938bd2e399208adb6743fdc440eaec8"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-mirror-types.ts",
+          "sha256": "c8516b380cb6d487e29a6dba76381e4db8b9c09ac39a080a427a975c8eb0815e"
+        }
+      ]
     }
   ]
 }

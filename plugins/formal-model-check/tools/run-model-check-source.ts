@@ -127,7 +127,7 @@ export function loadRunModelCheckSource(
   }
 
   const publicContractIdentity = createHash("sha256")
-    .update(canonical.value.modelMap.entries.map(({ sha256 }) => sha256).join("\n"))
+    .update(canonical.value.executionModel.entries.map(({ sha256 }) => sha256).join("\n"))
     .digest("hex");
   const bundle = generateFrozenTlaModel({ publicContractIdentity });
   return {

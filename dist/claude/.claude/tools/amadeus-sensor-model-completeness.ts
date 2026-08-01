@@ -20,14 +20,14 @@ import {
   diffModelMap,
   IMPL_ONLY_UPDATE_HINT,
   parseTlaModelMap,
+  TLA_MODEL_MAP_SCHEMA_VERSION,
   type ModelMap,
   type ModelMapEntry,
   type ModelMapDrift,
+  type ModelMapModel,
 } from "./amadeus-formal-verif-model-map.ts";
 
 const MODEL_MAP_RELATIVE_PATH = "specs/tla/model-map.json";
-const MODEL_RELATIVE_PATH = "specs/tla/FormalElection.tla";
-const CFG_RELATIVE_PATH = "specs/tla/FormalElection.cfg";
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const DEFAULT_DEADLINE_MS = 9_000;
@@ -101,7 +101,7 @@ interface CanonicalModelMapModule {
   readonly parseTlaModelMap: typeof parseTlaModelMap;
   readonly canonicalIdentity: typeof canonicalIdentity;
   readonly diffModelMap: (
-    modelMap: ModelMap,
+    model: ModelMapModel,
     currentEntries: readonly ModelMapEntry[],
   ) => readonly ModelMapDrift[];
 }
@@ -173,10 +173,15 @@ interface EvaluatedEntries {
   readonly totalBytes: number;
 }
 
-interface AssetEvaluation {
-  readonly findings: readonly CompletenessFinding[];
+interface ModelAssetIdentities {
+  readonly name: string;
   readonly modelIdentity?: string;
   readonly cfgIdentity?: string;
+}
+
+interface AssetEvaluation {
+  readonly findings: readonly CompletenessFinding[];
+  readonly models: readonly ModelAssetIdentities[];
   readonly totalBytes: number;
 }
 
@@ -188,6 +193,16 @@ class SafeReadFailure extends Error {
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+// Models may pin the same implementation file; the file is read once and the
+// resulting hash serves every model that records it.
+function registeredEntries(map: ModelMap): readonly ModelMapEntry[] {
+  const seen = new Map<string, ModelMapEntry>();
+  for (const entry of map.models.flatMap((model) => model.entries)) {
+    if (!seen.has(entry.implPath)) seen.set(entry.implPath, entry);
+  }
+  return [...seen.values()];
 }
 
 function canonicalRelativePath(path: string): boolean {
@@ -388,44 +403,48 @@ function evaluateAssets(
   totalBefore: number,
 ): AssetEvaluation {
   const findings: CompletenessFinding[] = [];
+  const models: ModelAssetIdentities[] = [];
   let totalBytes = totalBefore;
-  let modelIdentity: string | undefined;
-  let cfgIdentity: string | undefined;
-  for (const asset of [
-    {
-      path: MODEL_RELATIVE_PATH,
-      domain: "amadeus.formal-verif.tla.module.v1",
-      recorded: map.model.identity,
-      assign: (value: string): void => {
-        modelIdentity = value;
+  for (const model of map.models) {
+    let modelIdentity: string | undefined;
+    let cfgIdentity: string | undefined;
+    for (const asset of [
+      {
+        path: model.model.path,
+        domain: "amadeus.formal-verif.tla.module.v1",
+        recorded: model.model.identity,
+        assign: (value: string): void => {
+          modelIdentity = value;
+        },
       },
-    },
-    {
-      path: CFG_RELATIVE_PATH,
-      domain: "amadeus.formal-verif.tla.cfg.v1",
-      recorded: map.cfg.identity,
-      assign: (value: string): void => {
-        cfgIdentity = value;
+      {
+        path: model.cfg.path,
+        domain: "amadeus.formal-verif.tla.cfg.v1",
+        recorded: model.cfg.identity,
+        assign: (value: string): void => {
+          cfgIdentity = value;
+        },
       },
-    },
-  ]) {
-    const outcome = deps.readFile(rootReal, asset.path, totalBytes);
-    totalBytes += outcome.bytes;
-    const decoded = decodeIdentity(
-      outcome,
-      asset.path,
-      asset.domain,
-      canonical.canonicalIdentity,
-    );
-    if (decoded.finding) {
-      findings.push(decoded.finding);
-      continue;
+    ]) {
+      const outcome = deps.readFile(rootReal, asset.path, totalBytes);
+      totalBytes += outcome.bytes;
+      const decoded = decodeIdentity(
+        outcome,
+        asset.path,
+        asset.domain,
+        canonical.canonicalIdentity,
+      );
+      if (decoded.finding) {
+        findings.push(decoded.finding);
+        continue;
+      }
+      const current = decoded.identity as string;
+      asset.assign(current);
+      if (current !== asset.recorded) findings.push({ path: asset.path, reason: "changed" });
     }
-    const current = decoded.identity as string;
-    asset.assign(current);
-    if (current !== asset.recorded) findings.push({ path: asset.path, reason: "changed" });
+    models.push({ name: model.name, modelIdentity, cfgIdentity });
   }
-  return { findings, modelIdentity, cfgIdentity, totalBytes };
+  return { findings, models, totalBytes };
 }
 
 function evaluateEntries(
@@ -438,7 +457,7 @@ function evaluateEntries(
   const currentEntries: ModelMapEntry[] = [];
   const findings: CompletenessFinding[] = [];
   let totalBytes = totalBefore;
-  for (const entry of map.entries) {
+  for (const entry of registeredEntries(map)) {
     if (deps.now() >= deadline) {
       findings.push({ path: entry.implPath, reason: "timeout" });
       return { currentEntries, findings, timedOut: true, totalBytes };
@@ -508,8 +527,11 @@ async function checkModelCompletenessInternal(
   }
 
   const unreadablePaths = new Set(findings.map((finding) => finding.path));
-  for (const drift of loaded.canonical.diffModelMap(loaded.map, evaluated.currentEntries)) {
-    if (!unreadablePaths.has(drift.implPath)) {
+  const reported = new Set<string>();
+  for (const model of loaded.map.models) {
+    for (const drift of loaded.canonical.diffModelMap(model, evaluated.currentEntries)) {
+      if (unreadablePaths.has(drift.implPath) || reported.has(drift.implPath)) continue;
+      reported.add(drift.implPath);
       findings.push({ path: drift.implPath, reason: "changed" });
     }
   }
@@ -534,16 +556,33 @@ export async function checkModelCompleteness(
 }
 
 function canonicalRecord(
-  modelIdentity: string,
-  cfgIdentity: string,
+  map: ModelMap,
+  assets: AssetEvaluation,
   entries: readonly ModelMapEntry[],
 ): string {
+  const currentEntry = new Map(entries.map((entry) => [entry.implPath, entry.sha256]));
+  const identities = new Map(assets.models.map((model) => [model.name, model]));
   return `${JSON.stringify(
     {
-      schemaVersion: 1,
-      model: { path: MODEL_RELATIVE_PATH, identity: modelIdentity },
-      cfg: { path: CFG_RELATIVE_PATH, identity: cfgIdentity },
-      entries,
+      schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION,
+      models: map.models.map((model) => {
+        const measured = identities.get(model.name);
+        return {
+          name: model.name,
+          model: {
+            path: model.model.path,
+            identity: measured?.modelIdentity ?? model.model.identity,
+          },
+          cfg: {
+            path: model.cfg.path,
+            identity: measured?.cfgIdentity ?? model.cfg.identity,
+          },
+          entries: model.entries.map((entry) => ({
+            implPath: entry.implPath,
+            sha256: currentEntry.get(entry.implPath) ?? entry.sha256,
+          })),
+        };
+      }),
     },
     null,
     2,
@@ -664,6 +703,17 @@ function implOnlyChanges(
   return changes;
 }
 
+// Every registered model must be byte-identical to its published identity for
+// the --impl-only declaration to hold; one drifted model falsifies it.
+function assetsUnchanged(map: ModelMap, assets: AssetEvaluation): boolean {
+  const measured = new Map(assets.models.map((model) => [model.name, model]));
+  return map.models.every((model) => {
+    const current = measured.get(model.name);
+    return current?.modelIdentity === model.model.identity
+      && current?.cfgIdentity === model.cfg.identity;
+  });
+}
+
 function performImplOnlyUpdate(
   loaded: LoadedMap,
   assets: AssetEvaluation,
@@ -671,10 +721,7 @@ function performImplOnlyUpdate(
   deps: CompletenessDependencies,
 ): UpdateModelMapResult {
   // A single changed identity bit falsifies the --impl-only declaration.
-  if (
-    assets.modelIdentity !== loaded.map.model.identity ||
-    assets.cfgIdentity !== loaded.map.cfg.identity
-  ) {
+  if (!assetsUnchanged(loaded.map, assets)) {
     return {
       ok: false,
       code: "INVALID_ARGUMENT",
@@ -692,7 +739,10 @@ function performImplOnlyUpdate(
   if (evaluated.timedOut) return updateFailure(mapRelativePath, "timeout");
   const unreadable = evaluated.findings[0];
   if (unreadable) return updateFailure(unreadable.path, unreadable.reason);
-  if (loaded.canonical.diffModelMap(loaded.map, evaluated.currentEntries).length === 0) {
+  const drifted = loaded.map.models.some(
+    (model) => loaded.canonical.diffModelMap(model, evaluated.currentEntries).length > 0,
+  );
+  if (!drifted) {
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
@@ -701,7 +751,7 @@ function performImplOnlyUpdate(
   }
   const refreshed = updatedEntries(
     loaded.rootReal,
-    loaded.map.entries,
+    registeredEntries(loaded.map),
     deps,
     evaluated.totalBytes,
   );
@@ -709,15 +759,13 @@ function performImplOnlyUpdate(
     return updateFailure(refreshed.failure.path, refreshed.failure.reason);
   }
   const entries = refreshed.entries as readonly ModelMapEntry[];
-  const model = assets.modelIdentity as string;
-  const cfg = assets.cfgIdentity as string;
-  const body = canonicalRecord(model, cfg, entries);
+  const body = canonicalRecord(loaded.map, assets, entries);
   try {
     deps.publish(loaded.rootReal, mapRelativePath, loaded.mapIdentity, body);
   } catch {
     return updateFailure(mapRelativePath, "publish-failed");
   }
-  const changed = implOnlyChanges(loaded.map.entries, entries);
+  const changed = implOnlyChanges(registeredEntries(loaded.map), entries);
   const map = MODEL_MAP_RELATIVE_PATH;
   return { ok: true, code: "IMPL_ONLY_UPDATED", declared: "impl-only", changed, map };
 }
@@ -741,16 +789,13 @@ async function performModelMapUpdate(
   );
   const assetFailure = assets.findings.find((finding) => finding.reason !== "changed");
   if (assetFailure) return updateFailure(assetFailure.path, assetFailure.reason);
-  if (!assets.modelIdentity || !assets.cfgIdentity) {
+  if (assets.models.some((model) => !model.modelIdentity || !model.cfgIdentity)) {
     return updateFailure(MODEL_MAP_RELATIVE_PATH, "unreadable");
   }
   if (implOnly) {
     return performImplOnlyUpdate(loaded, assets, mapRelativePath, deps);
   }
-  if (
-    assets.modelIdentity === loaded.map.model.identity &&
-    assets.cfgIdentity === loaded.map.cfg.identity
-  ) {
+  if (assetsUnchanged(loaded.map, assets)) {
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
@@ -759,7 +804,7 @@ async function performModelMapUpdate(
   }
   const refreshed = updatedEntries(
     loaded.rootReal,
-    loaded.map.entries,
+    registeredEntries(loaded.map),
     deps,
     assets.totalBytes,
   );
@@ -771,11 +816,7 @@ async function performModelMapUpdate(
       loaded.rootReal,
       mapRelativePath,
       loaded.mapIdentity,
-      canonicalRecord(
-        assets.modelIdentity,
-        assets.cfgIdentity,
-        refreshed.entries as readonly ModelMapEntry[],
-      ),
+      canonicalRecord(loaded.map, assets, refreshed.entries as readonly ModelMapEntry[]),
     );
   } catch {
     return updateFailure(mapRelativePath, "publish-failed");

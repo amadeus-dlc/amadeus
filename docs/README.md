@@ -47,6 +47,8 @@ to add one.
 - [Operate the Intent Mirror](guide/22-intent-mirror.md)
 - [Metrics Dashboard](guide/23-metrics-dashboard.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.md)
+- [Keeping a formal model in step with its implementation](reference/21-formal-model-following.md)
+- [Supplying a formal model for a new protocol](reference/22-formal-model-supply.md)
 
 The repository layout decision is recorded in
 [Workspace Layout Decision](reference/18-workspace-layout.md): the framework
