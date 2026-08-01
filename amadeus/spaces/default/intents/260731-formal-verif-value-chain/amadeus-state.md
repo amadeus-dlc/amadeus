@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**: [u7-mirror-model]
+- **Bolt Refs**: [u8-e2e-acceptance]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -99,7 +99,7 @@ Per unit: [TBD]
 - **Construction Autonomy Mode**: gated
 - **Last Updated**: 2026-07-31T21:49:58Z
 
-- **Swarm Gated Batch Approvals**: 1
+- **Swarm Gated Batch Approvals**: 1, 2
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
