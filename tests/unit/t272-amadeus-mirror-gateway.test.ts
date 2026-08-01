@@ -673,6 +673,17 @@ describe("editIssue / closeIssue", () => {
     expect(requests).toHaveLength(1);
   });
 
+  // The Issue title is write-once at create: sync sends body and nothing else,
+  // so an Intent whose title was minted under an older rule keeps it and never
+  // drifts. Adding a title field here would silently rewrite every mirror.
+  test("edit never sends a title field", async () => {
+    const { runner, requests } = fakeRunner([exited(0, singleEnvelope(200, issue(4)))]);
+    await createMirrorGitHubGateway(runner).editIssue(permit("sync", 4), "new body");
+    const fields = requests[0].args.filter((arg) => arg.includes("="));
+    expect(fields).toEqual(["body=new body"]);
+    expect(requests[0].args.some((arg) => arg.startsWith("title="))).toBe(false);
+  });
+
   test("close builds a PATCH state=closed argv", async () => {
     const { runner, requests } = fakeRunner([
       exited(0, singleEnvelope(200, issue(4, { state: "closed" }))),
