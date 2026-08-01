@@ -1,5 +1,6 @@
 export {
   diffModelMap,
+  IMPL_ONLY_UPDATE_HINT,
   type ModelLoadError,
   type ModelLoadErrorCode,
   type ModelMap,
