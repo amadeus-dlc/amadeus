@@ -7,12 +7,16 @@ Choose patterns based on the problem domain:
 | Pattern | When to Use | Avoid When |
 |---------|-------------|------------|
 | **Repository** | Abstracting data access, multiple storage backends | Single database, simple CRUD only |
-| **Service Layer** | Coordinating business logic across multiple repositories | Logic fits in a single model method |
+| **Use Case** | Orchestrating an application flow across domain models, repositories, and external systems | A direct domain model call completes the operation |
 | **Factory** | Complex object creation, conditional construction logic | Simple constructor suffices |
 | **Strategy** | Runtime behavior variation (e.g., payment processing, notifications) | Only one algorithm exists |
 | **Observer/Event** | Decoupling side effects from core logic (email, logging, cache invalidation) | Synchronous response required from all handlers |
 | **Middleware/Pipeline** | Cross-cutting concerns (auth, logging, validation, rate limiting) | Single-purpose request handling |
 | **Adapter** | Wrapping external APIs/SDKs behind a stable internal interface | Internal-only code with no external dependencies |
+
+In DDD-style code, use cases coordinate application flow, transaction boundaries,
+and calls to domain objects and ports. Keep business rules, invariants, and state
+transitions in the domain model rather than implementing them in use cases.
 
 ## Framework-Specific Generation Strategies
 
@@ -28,7 +32,7 @@ For each endpoint, generate:
 - [ ] Route definition with HTTP method and path
 - [ ] Request validation (path params, query params, body schema)
 - [ ] Authentication/authorization middleware
-- [ ] Service call with error handling
+- [ ] Use case invocation with error handling
 - [ ] Response serialization with correct status code
 - [ ] Error response formatting (consistent error envelope)
 
@@ -80,7 +84,8 @@ Follow the Arrange-Act-Assert (AAA) pattern:
 
 | Unit Type | Test Focus |
 |-----------|------------|
-| Service/Use Case | Business logic correctness, edge cases, error handling |
+| Use Case | Workflow and control-flow correctness, collaboration sequencing, transaction boundaries, error handling |
+| Domain Model | Business rules, invariants, state transitions, edge cases |
 | Controller/Handler | Request parsing, response format, status codes, auth checks |
 | Repository/DAO | Query correctness (use in-memory DB or test containers) |
 | Utility/Helper | Input/output mapping, boundary values, null/undefined handling |
