@@ -20,9 +20,14 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resyncStateToStageGraph } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  defaultPluginCliDeps,
+  handlePluginCli,
+} from "../../dist/claude/.claude/tools/amadeus-plugin.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 
@@ -126,5 +131,50 @@ describe("t407 silent no-op detection: a non-matching Stage Progress section", (
     expect(resynced[0].inserted).toEqual(["user-stories"]);
     // The verification is grounded in the rewritten content: the row exists.
     expect(readState(proj)).toMatch(/^- \[ \] user-stories — EXECUTE$/m);
+  });
+});
+
+describe("t407 compose rendering: a failed re-sync is loud, not swallowed", () => {
+  const FAILED_OUTCOME = {
+    space: "default",
+    intent: "demo-0badcafe",
+    status: "section-unrecognized" as const,
+    inserted: [],
+  };
+
+  test("compose renders the failure on stderr and exits 1", () => {
+    const host = mkdtempSync(join(tmpdir(), "amadeus-t407-"));
+    const errs: string[] = [];
+    const code = handlePluginCli(["compose", "--project-root", host], {
+      ...defaultPluginCliDeps(),
+      discoverPlugins: () => [],
+      recompile: () => true,
+      generateRunners: () => true,
+      resyncIntentStates: () => [FAILED_OUTCOME],
+      out: () => {},
+      err: (l) => errs.push(l),
+    });
+    expect(code).toBe(1);
+    expect(errs.join("\n")).toContain("state re-sync FAILED for default/demo-0badcafe");
+    rmSync(host, { recursive: true, force: true });
+  });
+
+  test("compose --all-harnesses reports the tree as a failure and exits 1", () => {
+    const host = mkdtempSync(join(tmpdir(), "amadeus-t407-all-"));
+    const errs: string[] = [];
+    const code = handlePluginCli(["compose", "--all-harnesses", "--project-root", host], {
+      ...defaultPluginCliDeps(),
+      listHarnessTrees: () => [host],
+      listPluginSourceDirs: () => [],
+      discoverPlugins: () => [],
+      recompile: () => true,
+      generateRunners: () => true,
+      resyncIntentStates: () => [FAILED_OUTCOME],
+      out: () => {},
+      err: (l) => errs.push(l),
+    });
+    expect(code).toBe(1);
+    expect(errs.join("\n")).toContain("state re-sync failed for default/demo-0badcafe");
+    rmSync(host, { recursive: true, force: true });
   });
 });
