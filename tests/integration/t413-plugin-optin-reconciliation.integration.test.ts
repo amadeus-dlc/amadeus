@@ -115,6 +115,9 @@ describe("t413 project opt-in reconciliation", () => {
   });
 
   test("install rolls back persistent surfaces when state re-sync fails", () => {
+    writeSelection([]);
+    const configPath = join(project, "amadeus", "config.json");
+    const configBefore = readFileSync(configPath);
     const source = join(project, "plugins", PLUGIN);
     const result = runPluginCli(["install", source, "--project-root", host], deps({
       resync: () => ({
@@ -133,7 +136,8 @@ describe("t413 project opt-in reconciliation", () => {
     });
     expect(existsSync(join(host, ".amadeus-plugin-src", PLUGIN))).toBe(false);
     expect(createNodeBackend(host).readComposition().plugins.has(PLUGIN)).toBe(false);
-    expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([PLUGIN]);
+    expect(existsSync(source)).toBe(true);
+    expect(readFileSync(configPath)).toEqual(configBefore);
   });
 
   test("fresh 0/0 is materialized for the current host and the next run is a no-op", () => {

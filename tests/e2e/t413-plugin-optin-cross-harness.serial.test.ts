@@ -30,6 +30,14 @@ const FACES: readonly Face[] = [
 const HOSTS = [".claude", ".codex", ".cursor", ".kimi-code", ".kiro", ".opencode"] as const;
 let projects: string[] = [];
 
+function subprocessEnv(extraEnv: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.AMADEUS_PLUGINS_HOST_ROOT;
+  delete env.AMADEUS_STAGE_GRAPH;
+  delete env.AMADEUS_STAGES_DIR;
+  return { ...env, ...extraEnv };
+}
+
 afterEach(() => {
   for (const project of projects) rmSync(project, { recursive: true, force: true });
   projects = [];
@@ -53,7 +61,7 @@ function freshProject(face: Face, selected = true): string {
     join(project, "amadeus", "config.json"),
     `${JSON.stringify({ plugins: selected ? [PLUGIN] : [] }, null, 2)}\n`,
   );
-  if (selected) cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
+  cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
   return project;
 }
 
@@ -65,10 +73,12 @@ async function fire(face: Face, project: string): Promise<{ stdout: string; stde
       cwd: project,
       encoding: "utf-8",
       timeout: 120_000,
-      env: process.env,
+      env: subprocessEnv(),
     });
     expect(result.error, `${face.name} process error`).toBeUndefined();
-    return { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+    const output = { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+    expect(result.status, `${face.name} exited ${result.status}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`).toBe(0);
+    return output;
   }
   const target = face.kind === "hook"
     ? join(host, "hooks", "amadeus-plugin-compose.ts")
@@ -79,10 +89,12 @@ async function fire(face: Face, project: string): Promise<{ stdout: string; stde
     input: "{}",
     encoding: "utf-8",
     timeout: 120_000,
-    env: { ...process.env, CLAUDE_PROJECT_DIR: project },
+    env: subprocessEnv({ CLAUDE_PROJECT_DIR: project }),
   });
   expect(result.error, `${face.name} process error`).toBeUndefined();
-  return { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  const output = { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  expect(result.status, `${face.name} exited ${result.status}\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`).toBe(0);
+  return output;
 }
 
 function assertOnlyCurrentHostComposed(project: string, current: string): void {

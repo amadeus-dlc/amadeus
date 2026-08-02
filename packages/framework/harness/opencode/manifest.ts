@@ -21,7 +21,7 @@
 //     skill origin, and re-composing it would duplicate the command in dist).
 //   - session skills ship as bare SKILL.md (no codex openai.yaml guard — that is
 //     an OpenAI/Codex agent-discovery artifact with no OpenCode equivalent).
-//   - the authored .opencode/ surface is the plugin/ dir (the prompt-hook mint
+//   - the authored .opencode/ surface is the plugins/ dir (the prompt-hook mint
 //     site and its measured payload vocabulary): OpenCode has no stdin adapter
 //     shim, so nothing authored lands inside a core-copied dir and
 //     authoredExempt stays the explicit empty array.

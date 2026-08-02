@@ -664,8 +664,12 @@ function isSafePluginDirName(name: string): boolean {
 // Is the composition record already current for every installed plugin? Reads
 // the record + discovers plugins and compares owned-stage digests. Reaches NO
 // mutation stage (inspect/plan/apply/recompile) — the no-op fast path predicate.
-export function isRecordCurrent(hostRoot: string, deps: PluginCliDeps): boolean {
-  const selection = resolvePluginSelection(hostRoot);
+export function isRecordCurrent(
+  hostRoot: string,
+  deps: PluginCliDeps,
+  selectionOverride?: ResolvedPluginSelection,
+): boolean {
+  const selection = selectionOverride ?? resolvePluginSelection(hostRoot);
   if (selection.kind === "invalid") return false;
   const backend = deps.makeBackend(hostRoot);
   const record = backend.readComposition();
@@ -923,7 +927,7 @@ function handleCompose(
   const changed = dropChangedCompositions(selection, hostRoot, deps);
   if (changed.failure !== null) return changed.failure;
   const reconciled = deselected.changed || changed.changed;
-  if (cmd.ifStale && !reconciled && isRecordCurrent(hostRoot, deps)) {
+  if (cmd.ifStale && !reconciled && isRecordCurrent(hostRoot, deps, selection)) {
     return { kind: "noop", reason: "record-current" };
   }
   const backend = deps.makeBackend(hostRoot);

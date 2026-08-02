@@ -236,6 +236,7 @@ describe("compileStageGraph plugin merge (U2)", () => {
     writeFileSync(join(host, "plugins", "amadeus-opencode-plugin.ts"), "export default () => ({});\n");
     const { json } = compileWithPluginHost(host);
     expect(json).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
+    expect(existsSync(join(host, ".amadeus-plugin-composition.json"))).toBe(false);
   });
 
   test("injecting a dummy plugin makes the output differ (falling proof of live discovery)", () => {
