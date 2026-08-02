@@ -1891,7 +1891,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-unit-pool-runtime.ts",
-    "lines": "128-129",
+    "lines": "132-134",
     "reason": "Error-prefix normalization after a malformed canonical Event Set is the catch sibling of decodeUnitPoolEventSet. tests/unit/t425-unit-pool.test.ts drives malformed JSON and invalid event shapes directly; reaching this wrapper additionally requires installing a malformed committed audit row.",
     "expiry": "remove when audit-row enumeration receives an injectable row source"
   },

@@ -193,9 +193,11 @@ const VALID_EVENT_TYPES = new Set([
   "MEMORY_EMPTY",
   "RULE_LEARNED",
   "SENSOR_PROPOSED",
-  // Swarm lifecycle — all emit from the swarm referee amadeus-swarm.ts (the
-  // per-Unit pair + batch tally from `finalize`; SWARM_STARTED + SWARM_DEGRADED
-  // from `prepare`). See CHANGELOG + audit-format.md.
+  // Swarm lifecycle — UNIT_POOL_EVENT_SET_COMMITTED emits from the C2
+  // single-writer tools/amadeus-unit-pool-runtime.ts; the remaining six
+  // SWARM_* events emit from the swarm referee amadeus-swarm.ts (the per-Unit
+  // pair + batch tally from `finalize`; SWARM_STARTED + SWARM_DEGRADED from
+  // `prepare`). See CHANGELOG + audit-format.md.
   "UNIT_POOL_EVENT_SET_COMMITTED",
   "SWARM_STARTED",
   "SWARM_UNIT_CONVERGED",

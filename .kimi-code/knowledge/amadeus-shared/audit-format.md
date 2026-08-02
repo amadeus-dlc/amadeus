@@ -223,7 +223,7 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 
 ### Swarm (7 events)
 
-All six `SWARM_*` events emit from `amadeus-swarm.ts`. In addition, `UNIT_POOL_EVENT_SET_COMMITTED` is the canonical C2 single-writer stream for FIFO queue, slot, Unit-attempt, dispatch-confirmation, settlement, reconciliation, drain, and late-result observations. Harnesses supply native facts only and own no scheduler or counter. `prepare` initializes the pool and records the effective cap; `finalize` refuses a non-terminal pool before re-verification and merge.
+All six `SWARM_*` events emit from `amadeus-swarm.ts`. In addition, `UNIT_POOL_EVENT_SET_COMMITTED` is the canonical C2 single-writer stream for FIFO queue, slot, Unit-attempt, dispatch-confirmation, settlement, reconciliation, drain, and late-result observations. Harnesses supply native facts only and own no scheduler or counter. `prepare` initialises the pool and records the effective cap; `finalize` refuses a non-terminal pool before re-verification and merge.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|

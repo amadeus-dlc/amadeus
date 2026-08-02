@@ -78,7 +78,7 @@ function isReconciliation(value: unknown): boolean {
     ["no-effect-confirmed", "effect-possible", "unknown"].includes(String(value.effect));
 }
 
-const EVENT_VALIDATORS: Readonly<Record<string, (value: Record<string, unknown>) => boolean>> = {
+const EVENT_VALIDATORS: Readonly<Record<UnitPoolEvent["type"], (value: Record<string, unknown>) => boolean>> = {
   "batch-initialized": (value) => typeof value.batchId === "string" && Number.isInteger(value.cap) &&
     Array.isArray(value.units) && value.units.every(isUnit) &&
     Array.isArray(value.queue) && value.queue.every(isQueueEntry),
@@ -93,9 +93,13 @@ const EVENT_VALIDATORS: Readonly<Record<string, (value: Record<string, unknown>)
   "late-result-observed": (value) => typeof value.attemptId === "string" && isOutcome(value.outcome),
 };
 
+function hasEventValidator(type: string): type is UnitPoolEvent["type"] {
+  return Object.hasOwn(EVENT_VALIDATORS, type);
+}
+
 function isUnitPoolEvent(value: unknown): value is UnitPoolEvent {
-  if (!isRecord(value) || typeof value.type !== "string") return false;
-  return EVENT_VALIDATORS[value.type]?.(value) ?? false;
+  if (!isRecord(value) || typeof value.type !== "string" || !hasEventValidator(value.type)) return false;
+  return EVENT_VALIDATORS[value.type](value);
 }
 
 function isEventSet(value: unknown): value is UnitPoolEventSet {
