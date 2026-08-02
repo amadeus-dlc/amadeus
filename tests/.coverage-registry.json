@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 576,
+    "total": 582,
     "enumeratedByClass": {
-      "function": 331,
+      "function": 337,
       "audit": 81,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 164,
+      "function": 170,
       "audit": 35,
       "scope": 10,
       "stage": 8,
@@ -2939,6 +2939,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:parseScopedCheckboxes",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:parseStageFrontmatter",
       "minMechanism": "none",
       "coveredBy": [
@@ -3435,6 +3447,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:requireChanged",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:requiredArtifactsForUnit",
       "minMechanism": "none",
       "coveredBy": [
@@ -3872,6 +3896,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:StageStateValidationError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:StandingGrant",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3900,6 +3936,30 @@
         },
         {
           "file": "tests/unit/t160-workspace-record-resolution.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:StateMutationInvariantError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:StateMutationTargetError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
           "mechanism": "none"
         }
       ],
@@ -4138,6 +4198,18 @@
         {
           "file": "tests/unit/t190-validate-grid.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:validateStageState",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t108.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

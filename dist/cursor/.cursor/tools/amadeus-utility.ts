@@ -96,6 +96,7 @@ import {
   readAllAuditShards,
   readCurrentSessionId,
   readStateFile,
+  requireChanged,
   resolveBirthRepoSet,
   resolveProjectDir,
   setActiveIntentCursor,
@@ -116,6 +117,7 @@ import {
   withAuditLock,
   validateBoltSlug,
   validScopes,
+  validateStageState,
   worktreeAuditFilePath,
   worktreeBaseDir,
   worktreeStateFilePath,
@@ -5469,8 +5471,18 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     }
 
     // --- Apply the suffix flips ---------------------------------------------
-    for (const slug of skipList) content = setStageSuffix(content, slug, "SKIP");
-    for (const slug of addList) content = setStageSuffix(content, slug, "EXECUTE");
+    for (const slug of skipList) {
+      content = requireChanged(
+        setStageSuffix(validateStageState(content), slug, "SKIP"),
+        `recompose:skip:${slug}`,
+      );
+    }
+    for (const slug of addList) {
+      content = requireChanged(
+        setStageSuffix(validateStageState(content), slug, "EXECUTE"),
+        `recompose:add:${slug}`,
+      );
+    }
 
     // --- Rebuild the derived fields against the EFFECTIVE plan --------------
     // (the scope-change set: Stages to Execute / to Skip / Total / Completed).
@@ -5633,7 +5645,10 @@ export function handleSetStatus(projectDir: string, flags: Record<string, string
     next = setField(next, "In Progress", stage);
     next = setField(next, "Status", "Running");
     next = setField(next, "Last Updated", isoTimestamp());
-    next = setCheckbox(next, stage, "in-progress");
+    next = requireChanged(
+      setCheckbox(validateStageState(next), stage, "in-progress"),
+      `set-status:start:${stage}`,
+    );
     writeStateFile(projectDir, next, flags.intent, flags.space);
 
     process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);

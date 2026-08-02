@@ -53,6 +53,7 @@ import {
   ownPhase,
   PHASE_NUMBERS,
   parseCheckboxes,
+  parseScopedCheckboxes,
   parseIntentStatus,
   parseRefsList,
   parseStateStageSuffixes,
@@ -61,6 +62,7 @@ import {
   readIntentRegistry,
   readStateFile,
   recordDirMatches,
+  requireChanged,
   recoverBoltDag,
   recoverGateRevision,
   type GateRevisionRecovery,
@@ -81,10 +83,12 @@ import {
   setFieldStrict,
   setIntentDocsOnly,
   setOrInsertField,
+  type ScopedCheckboxLine,
   stageIndex,
   standingGrantSatisfiesGate,
   stagesInScope,
   transitionIntentStatusLocked,
+  validateStageState,
   withLockedIntentRegistry,
   type IntentLifecycleAuditEvent,
   type IntentLifecycleVerb,
@@ -1413,7 +1417,10 @@ export function handleCheckbox(args: string[]): void {
   let content = readStateFile(pd, resolvedIntent, space);
 
   for (const { slug, state } of changes) {
-    content = setCheckbox(content, slug, state);
+    content = requireChanged(
+      setCheckbox(validateStageState(content), slug, state),
+      `checkbox:${slug}`,
+    );
   }
 
   // Sync Completed counter to actual [x] count
@@ -2139,10 +2146,16 @@ export function handleAdvance(args: string[]): void {
   }
 
   // 1. Mark completed-slug → [x] (idempotent)
-  content = setCheckbox(content, completedSlug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), completedSlug, "completed"),
+    `advance:complete:${completedSlug}`,
+  );
 
   // 2. Mark next-slug → [-]
-  content = setCheckbox(content, nextSlug, "in-progress");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), nextSlug, "in-progress"),
+    `advance:start:${nextSlug}`,
+  );
 
   // 3. Update fields
   const nextAfterNext = nextInScopeStage(nextSlug, scope, content);
@@ -2252,7 +2265,10 @@ export function handleFinalize(args: string[]): void {
   }
 
   // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), completedSlug, "completed"),
+    `complete-workflow:${completedSlug}`,
+  );
 
   // 2. Sync Completed counter to actual [x] count
   const completedCount = countCheckboxes(content, "completed");
@@ -2415,7 +2431,10 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   const timestamp = isoTimestamp();
   if (!stateAlreadyCompleted) {
     // Mark the final stage and every terminal field in one state-file rename.
-    content = setCheckbox(content, completedSlug, "completed");
+    content = requireChanged(
+      setCheckbox(validateStageState(content), completedSlug, "completed"),
+      `complete-workflow:${completedSlug}`,
+    );
     content = setField(
       content,
       "Completed",
@@ -2673,7 +2692,10 @@ function gateStartForTarget(args: string[], pd: string): void {
     }
   }
 
-  content = setCheckbox(content, slug, "awaiting-approval");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "awaiting-approval"),
+    `gate-start:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -3297,7 +3319,10 @@ function approveUnderLock(
     content = setField(content, "Revision Count", String(recoveredRevision));
   }
 
-  content = setCheckbox(content, slug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "completed"),
+    `approve:${slug}`,
+  );
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
@@ -4100,7 +4125,10 @@ function rejectForTarget(args: string[], pd: string): void {
   const revCount = (Number.isFinite(parsed) ? parsed : 0) + 1;
   content = setField(content, "Revision Count", String(revCount));
 
-  content = setCheckbox(content, slug, "revising");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "revising"),
+    `reject:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -4176,7 +4204,10 @@ function reviseForTarget(args: string[], pd: string): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "revising");
 
-  content = setCheckbox(content, slug, "awaiting-approval");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "awaiting-approval"),
+    `revise:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -4209,7 +4240,10 @@ function handleSkip(args: string[]): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
 
-  content = setCheckbox(content, slug, "skipped");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "skipped"),
+    `skip:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -5171,7 +5205,7 @@ function handleMerge(args: string[]): void {
   // audit lock for consistency. Read the SAME record the fork wrote.
   const wtContent = readStateFile(wtPath, wtRecord, space);
   const wtSha = sha256(wtContent);
-  const wtCheckboxes = parseCheckboxes(wtContent);
+  const wtCheckboxes = parseScopedCheckboxes(wtContent);
 
   // Hold the audit lock across the entire decide-emit-write transaction so
   // conflict-resolution decisions, the audit Target state hash, and the
@@ -5213,18 +5247,27 @@ function handleMerge(args: string[]): void {
     //    alphabetical slug wins.
     let merged = mainContent;
     const conflictResolution: string[] = [];
-    const mainCheckboxes = parseCheckboxes(mainContent);
-    const mainStateMap = new Map(mainCheckboxes.map((c) => [c.slug, c.state]));
+    const mainCheckboxes = parseScopedCheckboxes(mainContent);
+    const checkboxKey = (checkbox: ScopedCheckboxLine): string =>
+      `${checkbox.unit ?? ""}\0${checkbox.slug}`;
+    const mainStateMap = new Map(mainCheckboxes.map((c) => [checkboxKey(c), c.state]));
     const candidateSlugs = [...refsList].sort();
     const winningSlug = candidateSlugs[0];
 
     for (const wtCb of wtCheckboxes) {
-      const mainCbState = mainStateMap.get(wtCb.slug);
+      const mainCbState = mainStateMap.get(checkboxKey(wtCb));
       if (!mainCbState) continue;
       if (mainCbState === wtCb.state) continue;
 
       if (winningSlug === slug) {
-        merged = setCheckbox(merged, wtCb.slug, wtCb.state);
+        merged = requireChanged(
+          setCheckbox(
+            validateStageState(merged, wtCb.unit ? { unit: wtCb.unit } : {}),
+            wtCb.slug,
+            wtCb.state,
+          ),
+          `merge-worktree:${wtCb.slug}`,
+        );
         if (refsList.length > 1) {
           conflictResolution.push(`${wtCb.slug}:slug-precedence:${slug}`);
         }

@@ -23,12 +23,14 @@ import {
   parseCheckboxes,
   parseStateStageSuffixes,
   readStateFile,
+  requireChanged,
   resolveProjectDir,
   resolveStage,
   type StageEntry,
   setCheckbox,
   setField,
   stageIndex,
+  validateStageState,
   writeStateFile,
 } from "./amadeus-lib.js";
 
@@ -433,7 +435,10 @@ export function handleExecute(args: string[]): void {
       if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
       const state = checkboxMap.get(slug);
       if (state && IN_FLIGHT_STATES.includes(state)) {
-        content = setCheckbox(content, slug, "skipped");
+        content = requireChanged(
+          setCheckbox(validateStageState(content), slug, "skipped"),
+          `jump:skip:${slug}`,
+        );
         stagesSkipped.push(slug);
       }
     }
@@ -447,7 +452,10 @@ export function handleExecute(args: string[]): void {
         currentState !== "pending" &&
         IN_FLIGHT_STATES.includes(currentState)
       ) {
-        content = setCheckbox(content, currentSlug, "skipped");
+        content = requireChanged(
+          setCheckbox(validateStageState(content), currentSlug, "skipped"),
+          `jump:skip-current:${currentSlug}`,
+        );
         stagesSkipped.push(currentSlug);
       }
     }
@@ -467,20 +475,29 @@ export function handleExecute(args: string[]): void {
       if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
       const state = checkboxMap.get(slug);
       if (state && RESETTABLE.includes(state)) {
-        content = setCheckbox(content, slug, "pending");
+        content = requireChanged(
+          setCheckbox(validateStageState(content), slug, "pending"),
+          `jump:reset:${slug}`,
+        );
         stagesReset.push(slug);
       }
     }
   } else {
     // redo: reset target only → [ ]
-    content = setCheckbox(content, targetSlug, "pending");
+    content = requireChanged(
+      setCheckbox(validateStageState(content), targetSlug, "pending"),
+      `jump:reset-target:${targetSlug}`,
+    );
     stagesReset.push(targetSlug);
   }
 
   // Mark target [-] so state and checkbox agree. This was missing before the
   // refactor — jump set Current Stage=target but left the checkbox at [ ]/[S]/
   // pending, causing an orchestrator to see an inconsistent state.
-  content = setCheckbox(content, targetSlug, "in-progress");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), targetSlug, "in-progress"),
+    `jump:start:${targetSlug}`,
+  );
 
   // Detect phase-boundary crossing. Jump asymmetry was a MAJOR finding —
   // advance emits PHASE_COMPLETED/VERIFIED/STARTED when crossing phases,

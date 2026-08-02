@@ -243,6 +243,23 @@ describe("t194 recompose - rejections", () => {
     expect(run(proj, "amadeus-utility.ts", ["recompose"]).status).not.toBe(0);
   });
 
+  test("duplicate target rows fail validation before suffix write or success audit", () => {
+    const proj = bornProject();
+    const sp = statePathOf(proj);
+    const state = readState(proj);
+    const row = /^- \[[ xSR?-]\] market-research —.*$/m.exec(state)?.[0];
+    expect(row).toBeDefined();
+    const duplicated = state.replace(row as string, `${row}\n${row}`);
+    writeFileSync(sp, duplicated, "utf-8");
+
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain("reason=duplicate-target");
+    expect(readState(proj)).toBe(duplicated);
+    expect(auditText(proj)).not.toContain("RECOMPOSED");
+  });
+
   test("OFF path is inert: a rejected recompose leaves the state file byte-identical", () => {
     const proj = bornProject();
     const before = readState(proj);
