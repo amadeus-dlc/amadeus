@@ -1,24 +1,24 @@
 {
   "schemaVersion": 1,
-  "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+  "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
   "evidence": [
     {
       "schemaVersion": 1,
       "id": "shape-fixtures",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-gate.test.ts",
+            "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
             "no-silent-drop AST rules"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "shape-fixtures:primary"
           },
           "exitCode": 0,
@@ -30,20 +30,20 @@
     {
       "schemaVersion": 1,
       "id": "census-pre",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-gate.test.ts",
+            "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
             "first adoption accepts"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "census-pre:primary"
           },
           "exitCode": 0,
@@ -55,7 +55,7 @@
     {
       "schemaVersion": 1,
       "id": "census-post",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -66,7 +66,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "census-post:primary"
           },
           "exitCode": 0,
@@ -78,20 +78,20 @@
     {
       "schemaVersion": 1,
       "id": "classification-precision",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-gate.test.ts",
+            "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
             "approval is exact"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "classification-precision:primary"
           },
           "exitCode": 0,
@@ -103,7 +103,7 @@
     {
       "schemaVersion": 1,
       "id": "baseline-proof",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -116,7 +116,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "baseline-proof:primary"
           },
           "exitCode": 0,
@@ -128,20 +128,20 @@
     {
       "schemaVersion": 1,
       "id": "failure-matrix",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-gate.test.ts",
+            "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
             "first adoption fails closed"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "failure-matrix:primary"
           },
           "exitCode": 0,
@@ -153,7 +153,7 @@
     {
       "schemaVersion": 1,
       "id": "u2-u3-regressions",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -167,7 +167,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "u2-u3-regressions:primary"
           },
           "exitCode": 0,
@@ -179,18 +179,20 @@
     {
       "schemaVersion": 1,
       "id": "full-test",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "normal",
           "command": [
             "bun",
-            "run",
-            "test:ci"
+            "tests/run-tests.ts",
+            "--test-timeout-ms",
+            "120000",
+            "--ci"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "full-test:normal"
           },
           "exitCode": 0,
@@ -210,7 +212,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "full-test:isolated-known-timeouts"
           },
           "exitCode": 0,
@@ -222,7 +224,7 @@
     {
       "schemaVersion": 1,
       "id": "lint",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -233,7 +235,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "lint:primary"
           },
           "exitCode": 0,
@@ -245,7 +247,7 @@
     {
       "schemaVersion": 1,
       "id": "typecheck",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -256,7 +258,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "typecheck:primary"
           },
           "exitCode": 0,
@@ -268,22 +270,27 @@
     {
       "schemaVersion": 1,
       "id": "coverage",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "normal",
           "command": [
             "bun",
-            "run",
-            "coverage:ci"
+            "tests/run-tests.ts",
+            "--test-timeout-ms",
+            "120000",
+            "--ci",
+            "--coverage",
+            "--coverage-dir",
+            "coverage"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "coverage:normal"
           },
-          "exitCode": 4,
-          "verdict": "known-timeout"
+          "exitCode": 0,
+          "verdict": "pass"
         },
         {
           "name": "isolated-known-timeouts",
@@ -300,7 +307,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "coverage:isolated-known-timeouts"
           },
           "exitCode": 0,
@@ -312,7 +319,7 @@
     {
       "schemaVersion": 1,
       "id": "cold-warm-5x2",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -325,7 +332,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "cold-warm-5x2:primary"
           },
           "exitCode": 0,
@@ -337,7 +344,7 @@
     {
       "schemaVersion": 1,
       "id": "capacity-r0-r2-r4",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -350,7 +357,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "capacity-r0-r2-r4:primary"
           },
           "exitCode": 0,
@@ -362,18 +369,18 @@
     {
       "schemaVersion": 1,
       "id": "u1-complexity",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-gate.test.ts"
+            "tests/integration/no-silent-drop-gate.test.ts"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "u1-complexity:primary"
           },
           "exitCode": 0,
@@ -385,7 +392,7 @@
     {
       "schemaVersion": 1,
       "id": "package-apply",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -395,7 +402,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "package-apply:primary"
           },
           "exitCode": 0,
@@ -407,7 +414,7 @@
     {
       "schemaVersion": 1,
       "id": "promotion-apply",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -418,7 +425,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "promotion-apply:primary"
           },
           "exitCode": 0,
@@ -430,7 +437,7 @@
     {
       "schemaVersion": 1,
       "id": "package-check",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -441,7 +448,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "package-check:primary"
           },
           "exitCode": 0,
@@ -453,7 +460,7 @@
     {
       "schemaVersion": 1,
       "id": "promotion-check",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -464,7 +471,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "promotion-check:primary"
           },
           "exitCode": 0,
@@ -476,7 +483,7 @@
     {
       "schemaVersion": 1,
       "id": "event-pr-base",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -489,7 +496,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "event-pr-base:primary"
           },
           "exitCode": 0,
@@ -501,7 +508,7 @@
     {
       "schemaVersion": 1,
       "id": "event-fork-base",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -514,7 +521,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "event-fork-base:primary"
           },
           "exitCode": 0,
@@ -526,20 +533,20 @@
     {
       "schemaVersion": 1,
       "id": "event-push-before",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
           "command": [
             "bun",
             "test",
-            "tests/unit/no-silent-drop-repository-adoption.test.ts",
+            "tests/integration/no-silent-drop-repository-adoption.test.ts",
             "-t",
             "explicit argv overrides"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "event-push-before:primary"
           },
           "exitCode": 0,
@@ -551,7 +558,7 @@
     {
       "schemaVersion": 1,
       "id": "hang-deadline",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -564,7 +571,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "hang-deadline:primary"
           },
           "exitCode": 0,
@@ -576,7 +583,7 @@
     {
       "schemaVersion": 1,
       "id": "workflow-structure",
-      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "testedRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
       "runs": [
         {
           "name": "primary",
@@ -589,7 +596,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "sha256": "2c663226196e6973d1cfc8110ff954170352cba9330395b247a6dfcfa3e92e8e",
             "recordId": "workflow-structure:primary"
           },
           "exitCode": 0,
