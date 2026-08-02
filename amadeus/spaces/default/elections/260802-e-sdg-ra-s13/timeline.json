@@ -1,0 +1,21 @@
+[
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T02:53:51Z",
+    "receivedAt": "2026-08-02T02:54:04Z",
+    "detail": "ballot accepted: ra-voter-2",
+    "voter": "ra-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T02:53:54Z",
+    "receivedAt": "2026-08-02T02:54:29Z",
+    "detail": "ballot accepted: ra-voter-1",
+    "voter": "ra-voter-1"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-02T02:54:38Z",
+    "detail": "tally: established"
+  }
+]

@@ -310,7 +310,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-本 Intent では、`auto` 設定から Intent Capture 承認後の create、provenance 保存、部分失敗後の重複なし再試行までを最初の end-to-end walking skeleton とする。parser 単体ではなく、最大リスクである外部操作と回復性を先に実証してから sync・close へ広げる。
+私たちは、新しい実行経路・検証経路・配布経路を含む self-feature では、最大リスクを端から端まで通す最小の Construction Bolt を最初に置き、人間のゲートで確認してから後続機能へ広げる。既存挙動への限定修正では、org／project の scope rule と Delivery Planning の判定に従う。
 <!-- amadeus:practices-promote:END -->
 
 ## Testing Posture

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDG-UG-S13",
+  "voter": "ug-voter-2",
+  "question": "Units Generation の学習候補を永続化0件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.md に Interpretation／Deviation／Tradeoff の記録がなく、新しい横断 rule／sensor を追加しない"
+    }
+  ]
+}

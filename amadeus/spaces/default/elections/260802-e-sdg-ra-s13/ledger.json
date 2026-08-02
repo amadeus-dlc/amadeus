@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-RA-S13",
+      "voter": "ra-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。c1 の explicit API catalog を正準境界とする解釈と c4 の既存 Result／exit-code idiom を全 callsite で消費する方針は本 intent の要件・設計判断であり、Review Iteration 2 は初期カタログが閉じておらず、#1874 の修正前境界は Result ではなく bare String.replace だと指摘しているため、現時点の前提を横断規則へ昇格できない。c2 の baseline／exemption 増加を scope change と人間再承認へ戻す判断は team.md の P3／P4 とエスカレーション正準リストの既存適用である。c3 の質問を5問に絞った偏差は、既決ノルムを再質問せず既存実装で決まる事項を直接導出する project.md の cid:requirements-analysis:c5 などの適用で、質問数5自体に一般性はない。c5 の finding 単位の偽陽性率は C-08／S-02 と NFR-02 をこの intent で機械判定する測定定義であり、別 intent に横断適用する rule／sensor ではない。したがって c1〜c5 は既存規則の重複、intent 固有契約、または最終レビューで前提を否定された解釈に尽き、新規永続化0件を全面支持する。",
+      "submittedAt": "2026-08-02T02:53:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-RA-S13",
+      "voter": "ra-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。diary の5候補と Requirements／Review Iteration 2、org・team・project の既決規範を独立照合した。(1) c1 の explicit API catalog を正準境界とする解釈は、この intent の FR-03／FR-04 の検出方式であるうえ、Iteration 2 が『少なくとも』では閉集合でなく、#1874 の現物も Result 破棄ではないとして前提を否定しているため横断規範へ昇格できない。(2) c2 の baseline／exemption 増加を scope change と人間再承認へ戻す整理は、team.md P3 と cid:requirements-analysis:escalation-canonical の既存適用であり、通常 PR review との区別を新設する必要はない。なお Iteration 2 は上流 scope-document 内の baseline 確定順序の矛盾を未解消としており、当該 intent の解釈を永続化する段階でもない。(3) c3 の質問5問への限定は、既決事項を再質問せず真の未決事項だけを問う cid:requirements-analysis:no-election-for-decided-norms と project.md cid:intent-capture:c1 の適用実例である。(4) c4 の既存 Result／exit-code idiom を全 callsite で消費し全域 Result 型を作らない判断は、本 intent の #1878 修正境界と team.md P5 の surgical／要求外抽象化禁止を適用したもの。(5) c5 の finding を偽陽性率の分母とする定義は NFR-02 固有の測定契約で、Iteration 1 の分母0指摘を当該要件内で閉じたものに留まり、反復証拠を伴う新しい横断 rule／sensor ではない。したがって c1〜c5 のいずれにも memory 層へ追加すべき未被覆の一般化可能知見はない。",
+      "submittedAt": "2026-08-02T02:53:54Z"
+    }
+  ],
+  "late": []
+}

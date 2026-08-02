@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SDG-RE-S13",
+  "voter": "re-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。c1 の dirty active worktree を保護し detached observed revision を再スキャン正本にした判断は、既存の差分 refresh 規約（project.md cid:reverse-engineering:c1）と RE stage の鮮度・per-intent re-scan 契約を今回の作業状態へ適用した解釈であり、stage の trunk integrate 手順を一般に置換する新規規則にはできない。c2 の Developer 委譲2回停滞後の conductor 直接走査は stage が定める Developer scan→Architect synthesis と project.md cid:reverse-engineering:c3 からの今回固有の偏差であり、team.md の同期回収・遅着差分吸収規約が既にあるため恒久的 fallback に昇格させない。c3 の contributor-side CI CLI 境界は scan record 自身が後続設計で配布要件発生時に再評価するとしており、emit/Result vocabulary、ast-grep 実行性、census、15秒・偽陽性率も未確定なので intent 内の設計判断として保持すべきで、横断 rule や sensor の admission 条件を満たさない。Open questions も未確定事項であり学習候補ではない。",
+  "submittedAt": "2026-08-02T02:11:35Z"
+}
