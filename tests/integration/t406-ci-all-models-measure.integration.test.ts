@@ -21,8 +21,8 @@ import {
   type NodeCiModelCheckDependencies,
 } from "../../plugins/formal-model-check/tools/node-ci-model-check-port.ts";
 import {
+  main as runCiMain,
   parseCiArguments,
-  runCiMain,
 } from "../../plugins/formal-model-check/tools/run-model-check-ci.ts";
 import {
   beginModelCheckArtifacts,
@@ -411,6 +411,15 @@ describe("t406 CI all-model acceptance", () => {
       })).toBe(0);
       expect(selected).toEqual(MODEL_NAMES);
       expect(writes.at(-1)).toBe('{"exitCode":0,"reason":"NOT_DETECTED"}\n');
+
+      expect(await runCiMain(["run", "--root", root, "--model", "MirrorLifecycle"], {
+        writeError,
+        execute: async (options) => {
+          selected = options.models.map((model) => model.name);
+          return { exitCode: 0, reason: "NOT_DETECTED" };
+        },
+      })).toBe(0);
+      expect(selected).toEqual(["MirrorLifecycle"]);
 
       expect(await runCiMain(["run", "--root", root], {
         writeError,

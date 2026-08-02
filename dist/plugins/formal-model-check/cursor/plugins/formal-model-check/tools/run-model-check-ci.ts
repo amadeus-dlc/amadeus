@@ -50,7 +50,7 @@ export function parseCiArguments(argv: readonly string[]): CiCliInput | null {
   return null;
 }
 
-export async function runCiMain(
+export async function main(
   argv: readonly string[],
   overrides: Partial<CiMainDependencies> = {},
 ): Promise<0 | 2> {
@@ -139,5 +139,5 @@ async function runAcceptance(
 }
 
 if (import.meta.main) {
-  process.exitCode = await runCiMain(process.argv.slice(2));
+  process.exitCode = await main(process.argv.slice(2));
 }
