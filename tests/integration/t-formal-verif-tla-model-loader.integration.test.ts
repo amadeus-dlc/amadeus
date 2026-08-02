@@ -129,19 +129,17 @@ afterEach(() => {
 });
 
 describe("TLA model loader real-filesystem boundary", () => {
-  test("reports the MirrorLifecycle declaration gap on the real map until u4", () => {
-    // BR-D6: the real map registers no MirrorLifecycle auxiliaries until u4
-    // declares MirrorLifecycleCore, so the loader correctly fails with a
-    // declaration drift (missing side). u4 flips this to a green full load.
+  test("loads the real map after u4 closes the MirrorLifecycle declaration gap", () => {
+    // BR-D6's transitional red expectation ends when u4 declares the shared
+    // Core. The public loader must now verify both registered models.
     const loaded = loadVerifiedTlaSources();
-    expect(loaded.ok).toBe(false);
-    if (loaded.ok) return;
-    expect(loaded.error).toMatchObject({
-      kind: "SOURCE_DRIFT",
-      code: "SOURCE_DRIFT",
-      relativePath: "specs/tla/MirrorLifecycle.tla",
-    });
-    expect((loaded.error as { detail: string }).detail).toContain("missing=[MirrorLifecycleCore]");
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.value.models.map((model) => model.model.name)).toEqual([
+      "FormalElection",
+      "MirrorLifecycle",
+    ]);
+    expect(loaded.value.models[1]?.auxIdentities).toHaveLength(1);
   });
 
   test("loads every registered model with migration identities under 250ms", () => {

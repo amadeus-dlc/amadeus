@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: kimi
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-u4-mirror-declaration-drift
 - **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
