@@ -14,7 +14,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import {
   canonicalIdentity,
   diffModelMap,
@@ -22,10 +22,17 @@ import {
   parseTlaModelMap,
   TLA_MODEL_MAP_SCHEMA_VERSION,
   type ModelMap,
+  type ModelMapAssetIdentity,
   type ModelMapEntry,
   type ModelMapDrift,
   type ModelMapModel,
 } from "./amadeus-formal-verif-model-map.ts";
+import {
+  compareModuleDeclarations,
+  type ModuleDeclarationDrift,
+  type ModuleDepsError,
+  resolveAuxiliaryModules,
+} from "./tla-module-deps.ts";
 
 const MODEL_MAP_RELATIVE_PATH = "specs/tla/model-map.json";
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
@@ -44,7 +51,9 @@ type FindingReason =
   | "identity-changed"
   | "file-too-large"
   | "total-too-large"
-  | "timeout";
+  | "timeout"
+  | "declaration-drift"
+  | "declaration-unresolved";
 
 type UpdateFailureReason =
   | FindingReason
@@ -177,11 +186,22 @@ interface ModelAssetIdentities {
   readonly name: string;
   readonly modelIdentity?: string;
   readonly cfgIdentity?: string;
+  readonly auxIdentities?: readonly (string | undefined)[];
+  readonly moduleSources: ReadonlyMap<string, string>;
 }
 
 interface AssetEvaluation {
   readonly findings: readonly CompletenessFinding[];
   readonly models: readonly ModelAssetIdentities[];
+  readonly totalBytes: number;
+}
+
+interface DeclarationEvaluation {
+  readonly drifts: readonly ModuleDeclarationDrift[];
+  readonly findings: readonly CompletenessFinding[];
+  readonly resolvedByModel: ReadonlyMap<string, readonly string[]>;
+  readonly sourcesByModel: ReadonlyMap<string, ReadonlyMap<string, string>>;
+  readonly timedOut: boolean;
   readonly totalBytes: number;
 }
 
@@ -383,13 +403,17 @@ function decodeIdentity(
   path: string,
   domain: string,
   identity: typeof canonicalIdentity,
-): { readonly identity?: string; readonly finding?: CompletenessFinding } {
+): {
+  readonly identity?: string;
+  readonly source?: string;
+  readonly finding?: CompletenessFinding;
+} {
   if (!outcome.content) {
     return { finding: outcome.finding ?? { path, reason: "unreadable" } };
   }
   try {
     const source = new TextDecoder("utf-8", { fatal: true }).decode(outcome.content);
-    return { identity: identity(source, domain).sha256 };
+    return { identity: identity(source, domain).sha256, source };
   } catch {
     return { finding: { path, reason: "unreadable" } };
   }
@@ -408,8 +432,11 @@ function evaluateAssets(
   for (const model of map.models) {
     let modelIdentity: string | undefined;
     let cfgIdentity: string | undefined;
+    const auxIdentities: (string | undefined)[] = [];
+    const moduleSources = new Map<string, string>();
     for (const asset of [
       {
+        moduleName: model.name,
         path: model.model.path,
         domain: "amadeus.formal-verif.tla.module.v1",
         recorded: model.model.identity,
@@ -418,6 +445,7 @@ function evaluateAssets(
         },
       },
       {
+        moduleName: undefined,
         path: model.cfg.path,
         domain: "amadeus.formal-verif.tla.cfg.v1",
         recorded: model.cfg.identity,
@@ -425,6 +453,15 @@ function evaluateAssets(
           cfgIdentity = value;
         },
       },
+      ...(model.auxiliaries ?? []).map((aux, index) => ({
+        moduleName: basename(aux.path, ".tla"),
+        path: aux.path,
+        domain: "amadeus.formal-verif.tla.module.v1",
+        recorded: aux.identity,
+        assign: (value: string): void => {
+          auxIdentities[index] = value;
+        },
+      })),
     ]) {
       const outcome = deps.readFile(rootReal, asset.path, totalBytes);
       totalBytes += outcome.bytes;
@@ -440,11 +477,106 @@ function evaluateAssets(
       }
       const current = decoded.identity as string;
       asset.assign(current);
+      if (asset.moduleName && decoded.source !== undefined) {
+        moduleSources.set(asset.moduleName, decoded.source);
+      }
       if (current !== asset.recorded) findings.push({ path: asset.path, reason: "changed" });
     }
-    models.push({ name: model.name, modelIdentity, cfgIdentity });
+    models.push({
+      name: model.name,
+      modelIdentity,
+      cfgIdentity,
+      ...(model.auxiliaries ? { auxIdentities } : {}),
+      moduleSources,
+    });
   }
   return { findings, models, totalBytes };
+}
+
+function moduleDepsFailure(
+  moduleName: string,
+  detail: string,
+): { readonly ok: false; readonly error: ModuleDepsError } {
+  return {
+    ok: false,
+    error: {
+      kind: "MODULE_DEPS",
+      code: "MODULE_DEP_UNRESOLVED",
+      relativePath: `specs/tla/${moduleName}.tla`,
+      detail,
+    },
+  };
+}
+
+function evaluateDeclarations(
+  rootReal: string,
+  map: ModelMap,
+  assets: AssetEvaluation,
+  deadline: number,
+  deps: CompletenessDependencies,
+): DeclarationEvaluation {
+  const drifts: ModuleDeclarationDrift[] = [];
+  const findings: CompletenessFinding[] = [];
+  const resolvedByModel = new Map<string, readonly string[]>();
+  const sourcesByModel = new Map<string, ReadonlyMap<string, string>>();
+  const measured = new Map(assets.models.map((model) => [model.name, model]));
+  let totalBytes = assets.totalBytes;
+  for (const model of map.models) {
+    const modelAssets = measured.get(model.name);
+    if (!modelAssets?.moduleSources.has(model.name)) continue;
+    const declaredNames = (model.auxiliaries ?? []).map((aux) => basename(aux.path, ".tla"));
+    if (declaredNames.some((name) => !modelAssets.moduleSources.has(name))) continue;
+    const sources = new Map(modelAssets.moduleSources);
+    const readModule = (name: string) => {
+      const cached = sources.get(name);
+      if (cached !== undefined) return { ok: true as const, value: cached };
+      const relativePath = `specs/tla/${name}.tla`;
+      const outcome = deps.readFile(rootReal, relativePath, totalBytes);
+      totalBytes += outcome.bytes;
+      if (!outcome.content) {
+        return moduleDepsFailure(name, `${relativePath}: ${outcome.finding?.reason ?? "unreadable"}`);
+      }
+      try {
+        const source = new TextDecoder("utf-8", { fatal: true }).decode(outcome.content);
+        sources.set(name, source);
+        return { ok: true as const, value: source };
+      } catch {
+        return moduleDepsFailure(name, `${relativePath}: unreadable`);
+      }
+    };
+    const resolved = resolveAuxiliaryModules(model.name, readModule);
+    if (!resolved.ok) {
+      findings.push({ path: model.model.path, reason: "declaration-unresolved" });
+      sourcesByModel.set(model.name, sources);
+      continue;
+    }
+    if ((resolved.value.length > 0 || declaredNames.length > 0) && deps.now() >= deadline) {
+      findings.push({ path: model.model.path, reason: "timeout" });
+      return {
+        drifts,
+        findings,
+        resolvedByModel,
+        sourcesByModel,
+        timedOut: true,
+        totalBytes,
+      };
+    }
+    resolvedByModel.set(model.name, resolved.value);
+    sourcesByModel.set(model.name, sources);
+    const drift = compareModuleDeclarations(model.name, declaredNames, resolved.value);
+    if (drift.missing.length > 0 || drift.extra.length > 0) {
+      drifts.push(drift);
+      findings.push({ path: model.model.path, reason: "declaration-drift" });
+    }
+  }
+  return {
+    drifts,
+    findings,
+    resolvedByModel,
+    sourcesByModel,
+    timedOut: false,
+    totalBytes,
+  };
 }
 
 function evaluateEntries(
@@ -506,15 +638,26 @@ async function checkModelCompletenessInternal(
     deps,
     loaded.totalBytes,
   );
+  const declarations = evaluateDeclarations(
+    loaded.rootReal,
+    loaded.map,
+    assets,
+    deadline,
+    deps,
+  );
   const evaluated = evaluateEntries(
     loaded.rootReal,
     loaded.map,
     deadline,
     deps,
-    assets.totalBytes,
+    declarations.totalBytes,
   );
-  const findings = [...assets.findings, ...evaluated.findings];
-  if (evaluated.timedOut) {
+  const findings = [
+    ...assets.findings,
+    ...declarations.findings,
+    ...evaluated.findings,
+  ];
+  if (declarations.timedOut || evaluated.timedOut) {
     if (!findings.some((finding) => finding.reason === "timeout")) {
       findings.push({ path: options.mapRelativePath, reason: "timeout" });
     }
@@ -559,6 +702,7 @@ function canonicalRecord(
   map: ModelMap,
   assets: AssetEvaluation,
   entries: readonly ModelMapEntry[],
+  auxiliaryUpdates: ReadonlyMap<string, readonly ModelMapAssetIdentity[]> = new Map(),
 ): string {
   const currentEntry = new Map(entries.map((entry) => [entry.implPath, entry.sha256]));
   const identities = new Map(assets.models.map((model) => [model.name, model]));
@@ -567,6 +711,11 @@ function canonicalRecord(
       schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION,
       models: map.models.map((model) => {
         const measured = identities.get(model.name);
+        const auxiliaries = auxiliaryUpdates.get(model.name)
+          ?? model.auxiliaries?.map((aux, index) => ({
+            path: aux.path,
+            identity: measured?.auxIdentities?.[index] ?? aux.identity,
+          }));
         return {
           name: model.name,
           model: {
@@ -577,16 +726,42 @@ function canonicalRecord(
             path: model.cfg.path,
             identity: measured?.cfgIdentity ?? model.cfg.identity,
           },
+          ...(auxiliaries && auxiliaries.length > 0 ? { auxiliaries } : {}),
           entries: model.entries.map((entry) => ({
             implPath: entry.implPath,
             sha256: currentEntry.get(entry.implPath) ?? entry.sha256,
           })),
+          ...(model.vocabulary ? { vocabulary: model.vocabulary } : {}),
         };
       }),
     },
     null,
     2,
   )}\n`;
+}
+
+function correctedAuxiliaries(
+  declarations: DeclarationEvaluation,
+  canonical: CanonicalModelMapModule,
+): ReadonlyMap<string, readonly ModelMapAssetIdentity[]> {
+  const updates = new Map<string, readonly ModelMapAssetIdentity[]>();
+  for (const drift of declarations.drifts) {
+    const resolved = declarations.resolvedByModel.get(drift.modelName) ?? [];
+    const sources = declarations.sourcesByModel.get(drift.modelName);
+    const auxiliaries = resolved.map((name) => {
+      const source = sources?.get(name);
+      if (source === undefined) throw new Error(`resolved module source missing: ${name}`);
+      return {
+        path: `specs/tla/${name}.tla`,
+        identity: canonical.canonicalIdentity(
+          source,
+          "amadeus.formal-verif.tla.module.v1",
+        ).sha256,
+      };
+    });
+    updates.set(drift.modelName, auxiliaries);
+  }
+  return updates;
 }
 
 function validatePublishTarget(
@@ -710,13 +885,17 @@ function assetsUnchanged(map: ModelMap, assets: AssetEvaluation): boolean {
   return map.models.every((model) => {
     const current = measured.get(model.name);
     return current?.modelIdentity === model.model.identity
-      && current?.cfgIdentity === model.cfg.identity;
+      && current?.cfgIdentity === model.cfg.identity
+      && (model.auxiliaries ?? []).every(
+        (aux, index) => current?.auxIdentities?.[index] === aux.identity,
+      );
   });
 }
 
 function performImplOnlyUpdate(
   loaded: LoadedMap,
   assets: AssetEvaluation,
+  declarations: DeclarationEvaluation,
   mapRelativePath: string,
   deps: CompletenessDependencies,
 ): UpdateModelMapResult {
@@ -728,13 +907,20 @@ function performImplOnlyUpdate(
       detail: `${MODEL_MAP_RELATIVE_PATH}: model-changed; --impl-only declares the model and configuration are unchanged - publish a model revision with updateModelMap and no flag`,
     };
   }
+  if (declarations.findings.length > 0 || declarations.drifts.length > 0) {
+    return {
+      ok: false,
+      code: "INVALID_ARGUMENT",
+      detail: `${MODEL_MAP_RELATIVE_PATH}: declaration-drift; --impl-only cannot repair model declarations - publish the correction with updateModelMap and no flag`,
+    };
+  }
   // Drift is decided by the check path's own machinery so the two cannot disagree.
   const evaluated = evaluateEntries(
     loaded.rootReal,
     loaded.map,
     deps.now() + DEFAULT_DEADLINE_MS,
     deps,
-    assets.totalBytes,
+    declarations.totalBytes,
   );
   if (evaluated.timedOut) return updateFailure(mapRelativePath, "timeout");
   const unreadable = evaluated.findings[0];
@@ -792,10 +978,23 @@ async function performModelMapUpdate(
   if (assets.models.some((model) => !model.modelIdentity || !model.cfgIdentity)) {
     return updateFailure(MODEL_MAP_RELATIVE_PATH, "unreadable");
   }
-  if (implOnly) {
-    return performImplOnlyUpdate(loaded, assets, mapRelativePath, deps);
+  const declarations = evaluateDeclarations(
+    loaded.rootReal,
+    loaded.map,
+    assets,
+    deps.now() + DEFAULT_DEADLINE_MS,
+    deps,
+  );
+  const declarationFailure = declarations.findings.find(
+    (finding) => finding.reason === "declaration-unresolved" || finding.reason === "timeout",
+  );
+  if (declarationFailure) {
+    return updateFailure(declarationFailure.path, declarationFailure.reason);
   }
-  if (assetsUnchanged(loaded.map, assets)) {
+  if (implOnly) {
+    return performImplOnlyUpdate(loaded, assets, declarations, mapRelativePath, deps);
+  }
+  if (assetsUnchanged(loaded.map, assets) && declarations.drifts.length === 0) {
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
@@ -806,17 +1005,28 @@ async function performModelMapUpdate(
     loaded.rootReal,
     registeredEntries(loaded.map),
     deps,
-    assets.totalBytes,
+    declarations.totalBytes,
   );
   if (refreshed.failure) {
     return updateFailure(refreshed.failure.path, refreshed.failure.reason);
+  }
+  let auxiliaryUpdates: ReadonlyMap<string, readonly ModelMapAssetIdentity[]>;
+  try {
+    auxiliaryUpdates = correctedAuxiliaries(declarations, loaded.canonical);
+  } catch {
+    return updateFailure(mapRelativePath, "declaration-unresolved");
   }
   try {
     deps.publish(
       loaded.rootReal,
       mapRelativePath,
       loaded.mapIdentity,
-      canonicalRecord(loaded.map, assets, refreshed.entries as readonly ModelMapEntry[]),
+      canonicalRecord(
+        loaded.map,
+        assets,
+        refreshed.entries as readonly ModelMapEntry[],
+        auxiliaryUpdates,
+      ),
     );
   } catch {
     return updateFailure(mapRelativePath, "publish-failed");

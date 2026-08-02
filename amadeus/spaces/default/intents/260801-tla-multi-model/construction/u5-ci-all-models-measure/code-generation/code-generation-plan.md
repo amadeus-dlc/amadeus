@@ -18,3 +18,20 @@
 - `tlc-toolchain.ts`、`fs-tlc-toolchain.ts`、`run-model-check-execution.ts`、`tla-arm.ts` の frozen 層契約は変更しない。
 - `.github/workflows/ci.yml` の `timeout-minutes: 30`、`permissions: contents: read`、`workflow_dispatch` 条件、run / verify コマンド行は変更しない。
 - 新規外部依存、並列実行、統計 pin の緩和、run マトリクス縮小は導入しない。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-02T01:21:09Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+u5 の設計整合性は概ね良好だが、統合済み u1–u5 として root promotion drift と AC1 の証拠不足が残り、Build and Test へ進めない。
+
+### Findings
+
+- Blocking/Critical: promote:self:check が5ハーネス・10件で失敗。u1 sensor 差分と tla-module-deps.ts 欠落を同期し、package と promote の両 drift guard を green にする。
+- Blocking/Major: AC1 の両モデル意味論破壊と注入→red→除去→green往復を、設計どおり実装・記録するか正式再裁定し、t406 の同等証拠を summary に記録する。
+- Advisory/Major: created/modified/generated ファイル一覧と追加所有3ファイル・artifacts test を summary に明記する。
+- Advisory/Minor: 統合後の検証件数・コマンドを summary に更新し、promotion 修正後の hosted Ubuntu 30分予算確認を残リスクとして扱う。
