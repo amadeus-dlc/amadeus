@@ -91,6 +91,14 @@ const manifest: HarnessManifest = {
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
   ],
 
+  // Reviewers receive evidence through the conductor and may only inspect the
+  // authoritative paths passed to them. The real Claude `tools:` field narrows
+  // both built-ins and inherited MCP tools; `allowedTools:` is not recognized.
+  frontmatterAdditions: [
+    { file: "agents/amadeus-product-lead-agent.md", lines: ["tools: [Read, Grep, Glob]"] },
+    { file: "agents/amadeus-architecture-reviewer-agent.md", lines: ["tools: [Read, Grep, Glob]"] },
+  ],
+
   // The onboarding doc template (CLAUDE.md.example) renders from the shared skeleton
   // core/templates/onboarding.md with Claude's fills, then the standard
   // {{HARNESS_DIR}} → .claude transform. Single source across every harness.

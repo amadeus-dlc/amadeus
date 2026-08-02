@@ -68,11 +68,11 @@
 //   §4 audit ChangeReq fmt(.sh 129)  → "audit format: Change Request"
 //   §4 audit Question fmt (.sh 130)  → "audit format: Question interaction"
 //   §8 depth-aware gen    (.sh 133)  → "depth-aware question generation section"
-//   §8 ~2-4 range         (.sh 134)  → "Minimal range ~2-4"
-//   §8 ~8-12 range        (.sh 135)  → "Comprehensive range ~8-12"
+//   §8 Minimal cap 4      (.sh 134)  → "Minimal cap 4"
+//   §8 Comprehensive 12  (.sh 135)  → "Comprehensive cap 12"
 //   §8 Test Strategy      (.sh 138)  → "Test Strategy section in §8"
 //   §8 Nyquist            (.sh 139)  → "test strategy mentions Nyquist"
-//   §8 5-8 per component  (.sh 140)  → "Standard volume 5-8 tests per component"
+//   §8 risk-based ceiling (.sh 140)   → "Standard risk-based planning ceiling"
 //   §3 within-bolt        (.sh 143)  → "Within-Bolt Question Collection section"
 //   §3 QUESTION-ONLY      (.sh 144)  → "references QUESTION-ONLY mode"
 //   §3 ARTIFACT-ONLY      (.sh 145)  → "references ARTIFACT-ONLY mode"
@@ -345,12 +345,12 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
     expect(protocolHas("Depth-aware question generation")).toBe(true);
   });
 
-  test("§8: depth guidance includes Minimal range ~2-4", () => {
-    expect(protocolHas("~2-4")).toBe(true);
+  test("§8: depth guidance caps Minimal at 4", () => {
+    expect(protocolHas("Minimal | at most 4 per stage")).toBe(true);
   });
 
-  test("§8: depth guidance includes Comprehensive range ~8-12", () => {
-    expect(protocolHas("~8-12")).toBe(true);
+  test("§8: depth guidance caps Comprehensive at 12", () => {
+    expect(protocolHas("Comprehensive | at most 12 per stage")).toBe(true);
   });
 
   // =========================================================================
@@ -364,8 +364,10 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
     expect(protocolHas("Nyquist")).toBe(true);
   });
 
-  test("§8: test strategy defines Standard volume (5-8 tests per component)", () => {
-    expect(protocolHas("5-8 tests per component")).toBe(true);
+  test("§8: Standard testing is risk-based with a planning ceiling", () => {
+    expect(protocolHas("requirement and risk model")).toBe(true);
+    expect(protocolHas("8 tests per component only as a planning ceiling")).toBe(true);
+    expect(protocolHas("~5-15 tests total")).toBe(false);
   });
 
   // =========================================================================

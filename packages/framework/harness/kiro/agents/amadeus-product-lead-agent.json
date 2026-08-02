@@ -3,16 +3,9 @@
   "name": "amadeus-product-lead-agent",
   "description": "AI-DLC Product Lead Reviewer — delegation target for reviewing requirements, user stories, and mockups.",
   "prompt": "file://amadeus-product-lead-agent.md",
-  "tools": ["fs_read", "fs_write", "execute_bash", "thinking"],
-  "allowedTools": ["fs_read", "fs_write", "thinking"],
-  "toolsSettings": {
-    "execute_bash": {
-      "allowedCommands": ["bun \\.kiro/tools/.*", "date -u .*"]
-    },
-    "fs_write": {
-      "allowedPaths": ["amadeus/spaces/**"]
-    }
-  },
+  "tools": ["fs_read", "thinking"],
+  "allowedTools": ["fs_read", "thinking"],
+  "toolsSettings": {},
   "resources": [
     "file://.kiro/agents/amadeus-product-lead-agent.md",
     "file://.kiro/knowledge/amadeus-product-lead-agent/*.md",

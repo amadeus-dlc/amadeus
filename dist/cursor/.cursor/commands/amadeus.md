@@ -42,7 +42,7 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 
 | `kind` | What you do |
 |--------|-------------|
-| `run-stage` | Load the lead agent's persona (`.cursor/agents/amadeus-<role>-agent.md`) plus any `support_agents`, read `directive.stage_file` and the `consumes` input artifacts, run the stage body, and keep the stage diary at `directive.memory_path`. Then branch on `directive.gate`: `false` → complete and `report --result completed`; `true` → run the reviewer step (if `directive.reviewer` is present) and the §13 learnings ritual, then present the numbered Approve / Request-Changes gate and, on approval, `report --result approved --user-input "<exact choice>"`. |
+| `run-stage` | Load the lead agent's persona (`.cursor/agents/amadeus-<role>-agent.md`) plus any `support_agents`, read `directive.stage_file` and the `consumes` input artifacts, run the stage body, and keep the stage diary at `directive.memory_path`. Then branch on `directive.gate`: `false` → complete and `report --result completed`; `true` → run the reviewer step (if `directive.reviewer` is present), only the closed completion verification in stage-protocol.md §2, and the §13 learnings ritual, then present the numbered Approve / Request-Changes gate and, on approval, `report --result approved --user-input "<exact choice>"`. |
 | `ask` | Render `directive.question` as numbered prose, then feed the human's answer back on the next `report` via `--user-input "<answer>"`. |
 | `print` | Do exactly what `directive.message` says — it is authoritative. Terminal messages name a read-only utility (status, help, doctor, version): run it, print stdout verbatim, and STOP. Run-then-continue messages name a mutating tool and end with "re-run `next`": run it, then loop. Gated-terminal messages (workspace migration) name a dry-run + numbered Yes/No gate + apply command: run the dry-run, stop for the human, apply only after explicit approval. |
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
@@ -51,6 +51,17 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 ### Reviewer step (§12a)
 
 When `directive.reviewer` is present, pass the unchanged directive JSON on stdin to `bun .cursor/tools/amadeus-reviewer-runtime.ts scope` before spawning the exact checker. Pass only the returned `stage_file` + current Unit existing `produces` + present `consumes` paths; Q&A is included only when it is an explicit consume. Never pass/discover a missing optional output, absent consume, sibling/root file, memory.md, plan, or reasoning. Preserve the scope-returned `invocationId + iteration` exactly through every internal carrier and reviewer result. A declared single-file integration spot-check must go through `bun .cursor/tools/amadeus-reviewer-runtime.ts check-read` before the read, using the same directive, invocation ID, positive iteration, and transient transcript; it requires the current-artifact integration ID, exactly one passed-contract owner path, a reason, and one literal non-discovery file path. After the identity-first reviewer result returns, pass `{ directive, invocationId, result }` to `bun .cursor/tools/amadeus-reviewer-runtime.ts complete-review`. Only a zero exit and its durable four-field Review + revalidated Scope decision may establish READY. Bypass/tamper/invocation-or-iteration replay/rejected/outside/second request or invalid scope/persona/UTC/result fields establishes no Review/READY. Repeat the complete scope/reviewer/complete flow for each permitted NOT-READY iteration.
+The reviewer role must run under an explicit read-only allowlist containing
+only `Read`, `Grep`, and `Glob` equivalents; never grant or use file-write,
+shell, network, Git, or GitHub operations. Only validated `READY` returns to the
+`run-stage` completion path. A `complete-review` failure establishes no
+trustworthy verdict or findings: report the validation failure only, leave the
+stage incomplete, stop for human direction, and do not run completion
+verification, learnings, approval, or report a stage result. A validated
+`NOT-READY` verdict at the iteration limit leaves the stage incomplete: present
+unresolved `BLOCKER` findings, stop for human direction, and do not run
+completion verification, learnings, approval, or report a stage result.
+
 | `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or

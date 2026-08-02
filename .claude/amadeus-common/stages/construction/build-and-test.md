@@ -69,14 +69,15 @@ Create `<record>/construction/build-and-test/build-instructions.md`:
 Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**` (see stage-protocol.md §8 "Test Strategy"). Generate test instruction files based on the strategy level:
 
 **Minimal strategy** — generate ONLY:
-- `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). ~5-15 tests total. Skip all other test types.
+- `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). No fixed total or component quota. Skip all other test types.
 
 **Standard strategy** — generate:
-- `unit-test-instructions.md`: 5-8 tests per component, key behavior coverage
+- `unit-test-instructions.md`: Requirement- and risk-driven key behavior coverage; 8 tests per component is a planning ceiling, not a quota
 - `integration-test-instructions.md`: Key boundary tests, cross-unit interaction
+- E2E, performance, security, or other specifically named instruction files when applicable NFRs require them
 
 **Comprehensive strategy** — generate all applicable:
-- `unit-test-instructions.md`: 10-15 tests per component, thorough coverage
+- `unit-test-instructions.md`: Requirement-, risk-, and NFR-driven coverage; 15 tests per component is a planning ceiling, not a quota
 - `integration-test-instructions.md`: Cross-unit interaction, external dependency handling
 - `performance-test-instructions.md` (IF NFR performance requirements exist): Load testing, benchmarks, regression detection
 - `security-test-instructions.md` (IF NFR security requirements exist): SAST/DAST, auth testing, injection testing

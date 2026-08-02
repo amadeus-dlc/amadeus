@@ -9,7 +9,7 @@ When invoked as a reviewer, your role changes. You are NOT designing — you are
 - Your job is to find architectural unsoundness, broken cross-references, missing concerns, and designs that won't survive implementation.
 - "READY" means a developer could implement from this without guessing. Not perfect — implementable.
 
-For every CODE artifact review, additionally apply the [Thermo-Nuclear Code Quality Review](./thermo-nuclear-code-quality-review.md) in full. Its maintainability, abstraction-quality, and structural-simplification standards are mandatory, not an optional extra.
+For every CODE artifact review, additionally apply the [Thermo-Nuclear Code Quality Review](./thermo-nuclear-code-quality-review.md) in full. Its analysis is mandatory, but a possible simplification or maintainability improvement is `FOLLOW-UP` unless there is reproducible `BLOCKER` evidence.
 
 ## What to Check
 
@@ -73,9 +73,9 @@ After validation, `complete-review` appends this format to the PRIMARY artifact:
 
 | # | Severity | Location | Finding | Recommendation |
 |---|---|---|---|---|
-| 1 | Critical | components.yaml | CMP-003 depends on CMP-001 which depends on CMP-003 — circular | Break cycle: extract shared concern into new component |
-| 2 | Major | entities.yaml | ENT-005 references entity "Payment" not defined in this file | Add Payment entity or reference upstream |
-| 3 | Minor | nfr-spec | No cost estimate for the caching layer | Add estimate or mark as TBD |
+| 1 | BLOCKER | components.yaml | CMP-003 depends on CMP-001 which depends on CMP-003 — reproduced circular dependency | Break cycle: extract shared concern into new component |
+| 2 | FOLLOW-UP | entities.yaml | The Payment boundary could be made more explicit without changing the current contract | Clarify the boundary in a later design pass |
+| 3 | NIT | nfr-spec | Cost estimate heading could be shorter | Rename if touched again |
 
 ### Validation Tool Results
 
@@ -89,22 +89,23 @@ After validation, `complete-review` appends this format to the PRIMARY artifact:
 [1-2 sentences: what's the main architectural concern, or why it's ready.]
 ```
 
-### Severity Levels
+### Closed Severity Levels
 
 | Severity | Meaning | Blocks READY? |
 |---|---|---|
-| Critical | Architectural flaw that will cause failure at implementation or runtime | Yes |
-| Major | Design gap that will cause significant rework | Yes (if >2 major) |
-| Minor | Could be better, not blocking | No |
+| `BLOCKER` | Reproducible failure, explicit requirement/contract violation, security/data-safety defect, or demonstrated regression | Yes |
+| `FOLLOW-UP` | Concrete improvement or deferred risk without evidence of present failure or requirement violation | No |
+| `NIT` | Cosmetic or optional preference | No |
 
 ### Verdict Rules
 
-- **READY** if: zero Critical, ≤2 Major, any number of Minor
-- **NOT-READY** if: any Critical, OR >2 Major findings
+- **READY** if: zero unresolved `BLOCKER` findings
+- **NOT-READY** if: one or more unresolved `BLOCKER` findings
+- Finding count never changes severity. Prefix every finding with exactly `BLOCKER |`, `FOLLOW-UP |`, or `NIT |`.
 
 ### On Subsequent Iterations
 
 - Check each previous finding: resolved / partially resolved / unresolved
 - Only raise NEW findings if they emerge from fixes
-- Don't re-raise Minor findings that weren't addressed
+- Don't re-raise `FOLLOW-UP` or `NIT` findings that weren't addressed; they are not builder handoff work
 - Return the next iteration result; `complete-review` owns the non-growing durable projection

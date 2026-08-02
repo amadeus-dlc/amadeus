@@ -56,32 +56,33 @@ After validation, `complete-review` appends this format to the PRIMARY artifact:
 
 | # | Severity | Location | Finding | Recommendation |
 |---|---|---|---|---|
-| 1 | Critical | FR-3 | No acceptance criteria defined | Add measurable pass/fail criterion |
-| 2 | Major | Stories | S-4 and S-7 overlap in scope | Merge or clarify boundary |
-| 3 | Minor | NFR-2 | "High availability" is vague | Specify target (e.g., 99.9%) |
+| 1 | BLOCKER | FR-3 | Explicit requirement has no pass/fail criterion | Add a measurable acceptance criterion |
+| 2 | FOLLOW-UP | Stories | S-4 and S-7 could have a clearer non-overlapping boundary | Clarify the boundary in a later pass |
+| 3 | NIT | NFR-2 | Heading could be more concise | Rename if touched again |
 
 ### Summary
 
 [1-2 sentences: overall assessment. What's the main issue holding it back, or why it's ready.]
 ```
 
-### Severity Levels
+### Closed Severity Levels
 
 | Severity | Meaning | Blocks READY? |
 |---|---|---|
-| Critical | Cannot implement from this — fundamental gap or contradiction | Yes |
-| Major | Implementable but will cause rework or confusion downstream | Yes (if >2 major findings) |
-| Minor | Improvement opportunity, not blocking | No |
+| `BLOCKER` | Reproducible failure, explicit requirement/contract violation, security/data-safety defect, or demonstrated regression | Yes |
+| `FOLLOW-UP` | Concrete improvement or deferred risk without evidence of present failure or requirement violation | No |
+| `NIT` | Cosmetic or optional preference | No |
 
 ### Verdict Rules
 
-- **READY** if: zero Critical, ≤2 Major (with clear workarounds), any number of Minor
-- **NOT-READY** if: any Critical, OR >2 Major findings
+- **READY** if: zero unresolved `BLOCKER` findings
+- **NOT-READY** if: one or more unresolved `BLOCKER` findings
+- Finding count never changes severity. Prefix every finding with exactly `BLOCKER |`, `FOLLOW-UP |`, or `NIT |`.
 
 ### On Subsequent Iterations
 
 When re-reviewing after the builder addressed findings:
 - Check each previous finding: resolved / partially resolved / unresolved
 - Only raise NEW findings if they emerge from the fixes
-- Don't re-raise Minor findings that weren't addressed (they're optional)
+- Don't re-raise `FOLLOW-UP` or `NIT` findings that weren't addressed; they are not builder handoff work
 - Return the next iteration result; `complete-review` owns the non-growing durable projection

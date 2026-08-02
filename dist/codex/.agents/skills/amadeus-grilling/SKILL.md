@@ -45,11 +45,14 @@ happens in the conversation.
    you about?" as the very first question.
 2. **Discipline** is the protocol's §1 and §2 in full: one question at a
    time, recommended answer with rationale, facts self-researched with only
-   decisions asked, estimates confirmed with a confidence level, hybrid
-   termination ("done" at any time; continuation check at the depth
-   guideline), and an explicitly confirmed agreement summary before closing.
+   decisions asked, estimates confirmed with a confidence level, and bounded
+   termination ("done" at any time; otherwise Minimal 4 / Standard 8 /
+   Comprehensive 12 total questions). Use an explicitly requested level, or
+   default to Standard (8) when the user names none. Close with an explicitly
+   confirmed agreement summary that lists every unresolved material point.
 3. **Output is terminal-only.** Print the agreement summary (the full
-   question → decision table) to the terminal. Write it to a file ONLY when
+   question → decision table plus unresolved material points) to the terminal.
+   Write it to a file ONLY when
    the user explicitly asks for it to be saved to a path (e.g. "save the
    summary to docs/plan-review.md") — the same explicit-request exception
    `/amadeus-outcomes-pack` uses. Never write anywhere unprompted.
