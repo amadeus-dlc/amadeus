@@ -229,19 +229,24 @@ function compareExpected(
 // as drift on the four faces that legitimately lack the key.
 function compareCells(
   projectRoot: string,
-  canonical: HarnessSnapshot,
-  others: readonly HarnessSnapshot[],
+  snapshots: readonly HarnessSnapshot[],
   scope: string,
 ): Finding[] {
-  const canonicalCells = canonical.cells.get(scope);
-  if (!canonicalCells) return [];
-  const shared = [...canonicalCells.keys()]
-    .filter((stage) => others.every((face) => face.cells.get(scope)?.has(stage) === true))
+  // Compare only the faces that carry the scope row: a face missing the row
+  // is already reported as `missing`, and letting it participate here would
+  // blank the shared-key intersection and mask real divergence between the
+  // remaining faces (CodeRabbit finding on #2041).
+  const present = snapshots.filter((face) => face.cells.get(scope) !== undefined);
+  const [reference, ...rest] = present;
+  const referenceCells = reference?.cells.get(scope);
+  if (!referenceCells || rest.length === 0) return [];
+  const shared = [...referenceCells.keys()]
+    .filter((stage) => rest.every((face) => face.cells.get(scope)?.has(stage) === true))
     .sort();
   const findings: Finding[] = [];
-  for (const face of others) {
+  for (const face of rest) {
     for (const stage of shared) {
-      const expected = canonicalCells.get(stage);
+      const expected = referenceCells.get(stage);
       const actual = face.cells.get(scope)?.get(stage);
       if (expected === undefined || actual === undefined || expected === actual) continue;
       findings.push({
@@ -261,16 +266,19 @@ function compareCells(
 
 function compareBodies(
   projectRoot: string,
-  canonical: HarnessSnapshot,
-  others: readonly HarnessSnapshot[],
+  snapshots: readonly HarnessSnapshot[],
   scope: string,
 ): Finding[] {
-  const canonicalBody = canonical.bodies.get(scope);
-  if (canonicalBody === undefined) return [];
+  // Same present-face discipline as compareCells: a face without the scope
+  // file is a `missing` finding, never a comparison blank.
+  const present = snapshots.filter((face) => face.bodies.get(scope) !== undefined);
+  const [reference, ...rest] = present;
+  const referenceBody = reference?.bodies.get(scope);
+  if (referenceBody === undefined || rest.length === 0) return [];
   const findings: Finding[] = [];
-  for (const face of others) {
+  for (const face of rest) {
     const body = face.bodies.get(scope);
-    if (body === undefined || body === canonicalBody) continue;
+    if (body === undefined || body === referenceBody) continue;
     findings.push({
       harness: face.harness,
       surface: "scope-file",
@@ -287,18 +295,17 @@ function compareBodies(
 // second source of truth for cells would itself drift from the grids it
 // polices, and would need editing for every legitimate scope change.
 //
-// The first face is read as canonical because it is the one edited by hand;
-// the others are promoted copies of it. That choice only decides which side
-// of a divergence gets reported, never whether one is reported.
+// The first face CARRYING a scope is read as its reference (normally
+// .claude, the hand-edited face); the others are promoted copies of it. That
+// choice only decides which side of a divergence gets reported, never
+// whether one is reported.
 function compareAcrossFaces(
   projectRoot: string,
   snapshots: readonly HarnessSnapshot[],
 ): Finding[] {
-  const [canonical, ...others] = snapshots;
-  if (!canonical) return [];
   return EXPECTED_SELF_SCOPES.flatMap((scope) => [
-    ...compareCells(projectRoot, canonical, others, scope),
-    ...compareBodies(projectRoot, canonical, others, scope),
+    ...compareCells(projectRoot, snapshots, scope),
+    ...compareBodies(projectRoot, snapshots, scope),
   ]);
 }
 

@@ -255,6 +255,38 @@ describe("self-scope-consistency sensor", () => {
     ).toBe(false);
   });
 
+  test("still reports cell divergence when another face is missing the scope row", () => {
+    // A face that lacks the scope row entirely must not blank the shared-key
+    // intersection for the faces that do carry it: the missing row and the
+    // cell divergence are independent defects and both must surface.
+    const root = fixtureRoot();
+    for (const harness of HARNESSES) {
+      seedHarness(root, harness, {
+        gridScopes: harness === ".cursor" ? SCOPES.filter((s) => s !== "self-feature") : SCOPES,
+        cells: harness === ".kimi-code" ? { "self-feature": { feasibility: "EXECUTE" } } : {},
+      });
+    }
+    const result = evaluateSelfScopeConsistency(root);
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      harness: ".cursor",
+      surface: "scope-grid",
+      reason: "missing",
+      scope: "self-feature",
+      path: join(root, ".cursor", "tools", "data", "scope-grid.json"),
+    });
+    expect(result.findings).toContainEqual({
+      harness: ".kimi-code",
+      surface: "scope-grid",
+      reason: "cell-mismatch",
+      scope: "self-feature",
+      stage: "feasibility",
+      expected: "SKIP",
+      actual: "EXECUTE",
+      path: join(root, ".kimi-code", "tools", "data", "scope-grid.json"),
+    });
+  });
+
   test("reports scope prose that diverges on one face", () => {
     const root = fixtureRoot();
     for (const harness of HARNESSES) {

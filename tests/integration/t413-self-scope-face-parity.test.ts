@@ -49,14 +49,19 @@ describe("t413 self-* scope face parity", () => {
   });
 
   test("shared stage cells agree across all faces for every self-* scope", () => {
+    // Intersect stage keys over the faces that CARRY the scope row: a face
+    // missing the row is caught by the presence test above, and must not
+    // blank the intersection for the faces that do carry it.
     const divergent: string[] = [];
     for (const scope of SELF_SCOPES) {
-      const stagesPerFace = FACES.map((face) => grids.get(face)?.[scope]?.stages ?? {});
+      const present = FACES.filter((face) => grids.get(face)?.[scope]?.stages !== undefined);
+      const stagesPerFace = present.map((face) => grids.get(face)?.[scope]?.stages ?? {});
+      if (stagesPerFace.length < 2) continue;
       const shared = Object.keys(stagesPerFace[0]).filter((stage) =>
         stagesPerFace.every((stages) => Object.hasOwn(stages, stage)),
       );
       for (const stage of shared) {
-        const values = FACES.map((face, i) => `${face}=${stagesPerFace[i][stage]}`);
+        const values = present.map((face, i) => `${face}=${stagesPerFace[i][stage]}`);
         if (new Set(stagesPerFace.map((stages) => stages[stage])).size > 1) {
           divergent.push(`${scope}/${stage}: ${values.join(" ")}`);
         }
