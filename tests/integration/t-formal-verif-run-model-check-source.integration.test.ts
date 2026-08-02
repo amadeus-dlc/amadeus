@@ -74,21 +74,24 @@ describe("run-model-check source adapter", () => {
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
     });
+  });
 
-    // MERGE-NOTE(u2/u4): MirrorLifecycle is registered but the pre-u2 loader
-    // verifies only the execution model, so this is the same explicit failure
-    // today. Once u2's plural loader and u4's vocabulary declaration land,
-    // this case must be revisited: selection succeeds and the outcome depends
-    // on the MirrorLifecycle vocabulary declaration.
+  test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {
     const mirror = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-"));
     roots.push(mirror);
     const mirrorModel = join(mirror, "MirrorLifecycle.tla");
     const mirrorCfg = join(mirror, "MirrorLifecycle.cfg");
     cpSync("specs/tla/MirrorLifecycle.tla", mirrorModel);
     cpSync("specs/tla/MirrorLifecycle.cfg", mirrorCfg);
-    expect(loadRunModelCheckSource(mirrorModel, mirrorCfg)).toMatchObject({
-      ok: false,
-      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    const result = loadRunModelCheckSource(mirrorModel, mirrorCfg);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.source.model.name).toBe("MirrorLifecycle");
+    expect(result.value.vocabulary).toEqual({
+      moduleName: "MirrorLifecycle",
+      namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],
+      traceStateVariables: ["receipts", "issueNumber", "boundaryIdx"],
     });
   });
 

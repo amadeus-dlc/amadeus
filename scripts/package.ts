@@ -804,6 +804,10 @@ const GENERATED_PLUGIN_SOURCES: readonly GeneratedPluginSource[] = [
     from: "packages/framework/core/tools/amadeus-formal-verif-model-map.ts",
     to: "plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts",
   },
+  {
+    from: "packages/framework/core/tools/tla-module-deps.ts",
+    to: "plugins/formal-model-check/tools/tla-module-deps.ts",
+  },
 ];
 
 // `root` is a seam (defaults to the repo) so a test can drive write and check
