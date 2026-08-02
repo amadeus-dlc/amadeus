@@ -221,7 +221,11 @@ export type WriteOutcome<T = MirrorStateSnapshot> =
   | { kind: "unchanged"; value: T; document: string }
   | { kind: "conflict"; actualRevision: number }
   | { kind: "invalid"; issues: readonly string[] }
-  | { kind: "io-failure"; summary: string };
+  | {
+      kind: "io-failure";
+      summary: string;
+      phase?: "pre-commit" | "durability-unknown";
+    };
 
 export type MarkerOutcome =
   | { kind: "parsed"; identity: MirrorCreateIdentity }

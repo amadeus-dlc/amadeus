@@ -229,7 +229,10 @@ describe("commit-state-machine mapping", () => {
     store.failWrite = "durability-unknown";
     const r = mutateMirrorStateAtomic(store.ports, { transition: prepare, expectedRevision: 0, auditContext: CTX, now: NOW, intentUuid: "u" });
     expect(r.kind).toBe("io-failure");
-    if (r.kind === "io-failure") expect(r.summary).toContain("durability-unknown");
+    if (r.kind === "io-failure") {
+      expect(r.phase).toBe("durability-unknown");
+      expect(r.summary).toBe("x");
+    }
   });
 
   test("io-failure at the commit write is returned without audit", () => {

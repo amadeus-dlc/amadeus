@@ -51,8 +51,21 @@ export type ExecuteMirrorOperationInput = Readonly<{
 }>;
 
 type StateResult =
-  | { kind: "ok"; snapshot: MirrorStateSnapshot }
-  | { kind: "failed"; summary: string };
+  | {
+      kind: "ok";
+      snapshot: MirrorStateSnapshot;
+      commit: "clean" | "outbox-pending";
+    }
+  | {
+      kind: "failed";
+      phase: "pre-commit" | "durability-unknown";
+      summary: string;
+    };
+
+type OperationPreparationResult =
+  | { kind: "ready" }
+  | { kind: "maintenance-completed" }
+  | { kind: "maintenance-blocked"; summary: string };
 
 // A receipt ready to act on, or the outcome to return when it cannot be made ready.
 type ReadyReceipt =
@@ -100,12 +113,17 @@ function applyTransition(
   let result = invoke(snapshot.revision);
   if (result.kind === "conflict") {
     if (exclusive) {
-      return { kind: "failed", summary: "state compare-and-set conflict" };
+      return {
+        kind: "failed",
+        phase: "pre-commit",
+        summary: "state compare-and-set conflict",
+      };
     }
     const latest = readMirrorState(ports);
     if (latest.kind !== "ok") {
       return {
         kind: "failed",
+        phase: "pre-commit",
         summary:
           latest.kind === "invalid"
             ? `state invalid after conflict: ${latest.issues.join("; ")}`
@@ -115,18 +133,104 @@ function applyTransition(
     result = invoke(latest.snapshot.revision);
   }
   if (result.kind === "unchanged" && exclusive) {
-    return { kind: "failed", summary: "exclusive state claim was not written" };
+    return {
+      kind: "failed",
+      phase: "pre-commit",
+      summary: "exclusive state claim was not written",
+    };
   }
   if (result.kind === "written" || result.kind === "unchanged") {
-    return { kind: "ok", snapshot: result.value };
+    return {
+      kind: "ok",
+      snapshot: result.value,
+      commit: result.value.auditOutbox ? "outbox-pending" : "clean",
+    };
   }
   if (result.kind === "invalid") {
-    return { kind: "failed", summary: result.issues.join("; ") };
+    return {
+      kind: "failed",
+      phase: "pre-commit",
+      summary: result.issues.join("; "),
+    };
   }
   if (result.kind === "conflict") {
-    return { kind: "failed", summary: "state compare-and-set conflict" };
+    return {
+      kind: "failed",
+      phase: "pre-commit",
+      summary: "state compare-and-set conflict",
+    };
   }
-  return { kind: "failed", summary: result.summary };
+  return {
+    kind: "failed",
+    phase: result.phase ?? "pre-commit",
+    summary: result.summary,
+  };
+}
+
+function prepareOperation(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  snapshot: MirrorStateSnapshot,
+  transition: MirrorTransition,
+  operationId: string,
+  reconciliation: boolean,
+  classification?: MirrorFailureClass,
+): OperationPreparationResult {
+  if (!snapshot.auditOutbox) return { kind: "ready" };
+  const result = mutateMirrorStateAtomic(ports, {
+    transition,
+    expectedRevision: snapshot.revision,
+    auditContext: auditContext(
+      context,
+      operationId,
+      reconciliation,
+      classification,
+    ),
+    now: context.now(),
+    intentUuid: context.intentUuid,
+  });
+  if (result.kind === "conflict") return { kind: "maintenance-completed" };
+  const summary =
+    result.kind === "invalid"
+      ? `state invalid: ${result.issues.join("; ")}`
+      : result.kind === "io-failure"
+        ? result.summary
+        : "pending audit outbox remains";
+  return { kind: "maintenance-blocked", summary };
+}
+
+function prepareInvocation(
+  input: ExecuteMirrorOperationInput,
+): OperationPreparationResult & { operationId: string } {
+  const { context, localState, ports } = input;
+  const existing = requireReceipt(localState, context);
+  const operationId = existing?.operationId ?? context.newOperationId();
+  const transition: MirrorTransition = {
+    kind: "prepare",
+    event: context.event,
+    operationId,
+    preparedAt: existing?.preparedAt ?? context.now(),
+    ...(context.operation === "create"
+      ? {
+          create: {
+            intentDir: context.intentDir,
+            repository: context.repository,
+          },
+        }
+      : {}),
+    authorization: context.authorization,
+  };
+  return {
+    ...prepareOperation(
+      ports,
+      context,
+      localState,
+      transition,
+      operationId,
+      existing !== undefined,
+    ),
+    operationId,
+  };
 }
 
 function warning(
@@ -153,6 +257,8 @@ function stateFailure(
   context: MirrorExecutionContext,
   operationId: string,
   summary: string,
+  effect: MirrorMutationEffect = "not-started",
+  retryable = false,
 ): MirrorOperationOutcome {
   return {
     kind: "safety-blocked",
@@ -162,10 +268,35 @@ function stateFailure(
       operationId,
       "state-write",
       summary,
-      false,
-      "not-started",
+      retryable,
+      effect,
     ),
   };
+}
+
+function maintenanceFailure(
+  context: MirrorExecutionContext,
+  operationId: string,
+  preparation: Exclude<OperationPreparationResult, { kind: "ready" }>,
+): MirrorOperationOutcome {
+  const summary =
+    preparation.kind === "maintenance-completed"
+      ? "pending audit outbox maintenance completed; retry in a new invocation"
+      : `pending audit outbox maintenance blocked: ${preparation.summary}`;
+  return stateFailure(context, operationId, summary, "not-started", true);
+}
+
+function transitionFailure(
+  context: MirrorExecutionContext,
+  operationId: string,
+  result: Extract<StateResult, { kind: "failed" }>,
+): MirrorOperationOutcome {
+  return stateFailure(
+    context,
+    operationId,
+    result.summary,
+    result.phase === "durability-unknown" ? "outcome-unknown" : "not-started",
+  );
 }
 
 function persistBlocked(
@@ -185,15 +316,35 @@ function persistBlocked(
     false,
     effect,
   );
-  applyTransition(
+  const transition: MirrorTransition = {
+    kind: "mark-safety-blocked",
+    event: context.event,
+    warning: blockedWarning,
+  };
+  const preparation = prepareOperation(
     ports,
     context,
     snapshot,
-    { kind: "mark-safety-blocked", event: context.event, warning: blockedWarning },
+    transition,
     receipt.operationId,
     true,
     classification,
   );
+  if (preparation.kind !== "ready") {
+    return maintenanceFailure(context, receipt.operationId, preparation);
+  }
+  const result = applyTransition(
+    ports,
+    context,
+    snapshot,
+    transition,
+    receipt.operationId,
+    true,
+    classification,
+  );
+  if (result.kind === "failed") {
+    return transitionFailure(context, receipt.operationId, result);
+  }
   return {
     kind: "safety-blocked",
     operation: context.operation,
@@ -500,11 +651,23 @@ function complete(
   issue: RemoteMirrorIssue,
   reconciliation: boolean,
 ): MirrorOperationOutcome {
+  const transition = completionTransition(context, snapshot, receipt, issue);
+  const preparation = prepareOperation(
+    ports,
+    context,
+    snapshot,
+    transition,
+    receipt.operationId,
+    reconciliation,
+  );
+  if (preparation.kind !== "ready") {
+    return maintenanceFailure(context, receipt.operationId, preparation);
+  }
   const result = applyTransition(
     ports,
     context,
     snapshot,
-    completionTransition(context, snapshot, receipt, issue),
+    transition,
     receipt.operationId,
     reconciliation,
   );
@@ -1352,6 +1515,14 @@ export async function executeMirrorOperation(
         "not-started",
       ),
     };
+  }
+  const preparation = prepareInvocation(input);
+  if (preparation.kind !== "ready") {
+    return maintenanceFailure(
+      input.context,
+      preparation.operationId,
+      preparation,
+    );
   }
   const outcome =
     input.context.operation === "create"

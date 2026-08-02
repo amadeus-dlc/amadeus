@@ -270,7 +270,11 @@ function commitTransaction(
   if (writeRes.kind === "io-failure")
     return { kind: "io-failure", summary: writeRes.summary };
   if (writeRes.kind === "durability-unknown")
-    return { kind: "io-failure", summary: `durability-unknown: ${writeRes.summary}` };
+    return {
+      kind: "io-failure",
+      phase: "durability-unknown",
+      summary: writeRes.summary,
+    };
 
   // (10) idempotent audit append.
   const appendRes = ports.appendArtifactUpdated(outbox);
