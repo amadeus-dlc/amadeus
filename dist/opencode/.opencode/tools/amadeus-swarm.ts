@@ -12,7 +12,8 @@
 // this tool owns the convergence verdict + merge + audit (determinism); the human
 // grants autonomy and takes the baton on the envelope (judgement).
 //
-// THREE STATELESS SUBCOMMANDS (no iteration counter, no persisted state):
+// FOUR COMMANDS: three stateless verdict/merge commands plus one durable retry
+// reservation:
 //   prepare  --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <n>]
 //            [--degraded-from <subagent|claude-ultra|codex-ultra>] [--repo <name>]
 //       Fork an isolated git worktree per unit (amadeus-worktree create +
@@ -36,6 +37,11 @@
 //       is GENUINELY converged (green AND untampered), non-zero otherwise. Emits
 //       no audit — it informs the conductor's retry decision (knowledge), it does
 //       not commit anything. Same input → same verdict, however many times called.
+//   retry <unit> --retry-class <class> --effect-status <status>
+//          --cause-code <code> --source-surface <surface> --delivery-id <id>
+//       Exact-allowlist recovery gate. Atomically reserves one extra retry from
+//       the canonical recoverable-retry budget (default 2, hard cap 3). A failed
+//       check alone is never authority to re-spawn a worker.
 //   finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd>
 //            [--test-file <path>] [--reasons <unit>=<reason>,...]
 //       The AUTHORITATIVE gate. The conductor's claimed-converged set is an
@@ -50,15 +56,10 @@
 //       judges WHY a unit gave up; the tool only records it, never for a claimed
 //       unit, whose reason is always the tool's own re-verify verdict).
 //
-// WHY STATELESS / NO CAP CONSTANT. "The cap" is three jobs on three concerns — the
-// verdict (determinism -> check), the retry decision (knowledge -> the conductor,
-// which judges "one more try vs unsatisfiable"), and the runaway backstop
-// (determinism -> the harness 8-block Stop-hook ceiling). A per-unit counter here
-// would make determinism do the knowledge job and is redundant on the other
-// drivers (an ultra driver's cap is its own bound; /goal's is its
-// turn-clause). So this tool holds none of it: check is advisory, finalize is
-// authoritative (re-verifies at the merge gate), so a red unit cannot merge even
-// if the conductor lies or misremembers.
+// Retry judgement and retry authority remain distinct: the conductor supplies
+// observed native facts, while the exact allowlist and durable C2 budget decide
+// whether another dispatch is permitted. `check` remains advisory and `finalize`
+// remains authoritative, so a red unit cannot merge even if the conductor lies.
 //
 // COMPOSES existing tools, does NOT reimplement them:
 //   - amadeus-worktree create        -> the isolated git worktree per unit
@@ -71,15 +72,31 @@
 //     (BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
-import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } from "./amadeus-lib.ts";
+import {
+  getField,
+  parseArgs,
+  recordDir,
+  resolveConstructionRepo,
+  resolveProjectDir,
+  stateFilePath,
+  worktreePath,
+} from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  classifyRetry,
+  createBudgetPolicy,
+  defaultBudgetPolicy,
+  retryBackoffMs,
+  type RetryFacts,
+} from "./amadeus-convergence-policy.ts";
+import { reserveStageBudget } from "./amadeus-convergence-runtime.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -591,6 +608,163 @@ function handleCheck(rest: string[]): void {
   process.exit(genuine ? 0 : 1);
 }
 
+// --- retry ------------------------------------------------------------------
+
+const RETRY_CLASSES: readonly RetryFacts["retryClass"][] = [
+  "recoverable-transient",
+  "non-retryable",
+  "unknown",
+];
+const RETRY_EFFECTS: readonly RetryFacts["effectStatus"][] = [
+  "no-effect-confirmed",
+  "effect-possible",
+  "unknown",
+];
+const SWARM_RETRY_SURFACES: readonly RetryFacts["sourceSurface"][] = [
+  "swarm-dispatch",
+  "swarm-worker-start",
+  "swarm-result-collection",
+];
+
+function includesValue<T extends string>(values: readonly T[], value: string | undefined): value is T {
+  return value !== undefined && (values as readonly string[]).includes(value);
+}
+
+/**
+ * Authorize one extra native retry before a conductor re-dispatches work.
+ * A red convergence check is not itself retry authority: callers must provide
+ * one exact recoverable/no-effect fact tuple and a stable native delivery id.
+ */
+export function handleRetry(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
+  const { positional, flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const unit = positional[0] ?? flags.unit;
+  if (!unit) fail("retry requires a unit name (positional `retry <unit>` or --unit <unit>)");
+  if (!includesValue(RETRY_CLASSES, flags["retry-class"])) {
+    fail(`--retry-class must be one of: ${RETRY_CLASSES.join(", ")}`);
+  }
+  if (!includesValue(RETRY_EFFECTS, flags["effect-status"])) {
+    fail(`--effect-status must be one of: ${RETRY_EFFECTS.join(", ")}`);
+  }
+  if (!flags["cause-code"]) fail("retry requires --cause-code <code>");
+  if (!includesValue(SWARM_RETRY_SURFACES, flags["source-surface"])) {
+    fail(`--source-surface must be one of: ${SWARM_RETRY_SURFACES.join(", ")}`);
+  }
+  if (!flags["delivery-id"]) fail("retry requires --delivery-id <stable native failure id>");
+  const allowlistVersion = Number.parseInt(flags["allowlist-version"] ?? "1", 10);
+  const facts: RetryFacts = {
+    retryClass: flags["retry-class"],
+    effectStatus: flags["effect-status"],
+    causeCode: flags["cause-code"],
+    sourceSurface: flags["source-surface"],
+  };
+  const classification = classifyRetry(facts, allowlistVersion);
+  if (classification.kind !== "retryable") {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: classification.reasonCode,
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+
+  const configuredCap = process.env.AMADEUS_SWARM_RETRY_CAP;
+  const policyResult = configuredCap
+    ? createBudgetPolicy({
+        kind: "recoverable-retry",
+        effectiveCap: Number(configuredCap),
+        hardCap: 3,
+        configVersion: "convergence-v1",
+      })
+    : defaultBudgetPolicy("recoverable-retry");
+  if (!policyResult.ok) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "budget-policy-mismatch",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+
+  const activeRecord = recordDir(projectDir);
+  const statePath = stateFilePath(projectDir);
+  if (activeRecord === null || !existsSync(statePath)) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "state-inconsistent",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+  const state = readFileSync(statePath, "utf-8");
+  const stage = getField(state, "Current Stage")?.trim() ?? "";
+  const rawRevision = Number.parseInt(getField(state, "Revision Count") ?? "0", 10);
+  const revision = Number.isInteger(rawRevision) && rawRevision >= 0 ? rawRevision : 0;
+  if (stage.length === 0) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "state-inconsistent",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+  const reserved = reserveStageBudget({
+    projectDir,
+    intentUuid: basename(activeRecord),
+    stageSlug: stage,
+    stageInstanceId: `${stage}@${revision}`,
+    revision,
+    agent: getField(state, "Active Agent") ?? "amadeus-conductor",
+    budgetKind: "recoverable-retry",
+    subjectId: unit,
+    policy: policyResult.value,
+    lastDurableProgress: `${stage}:${getField(state, "Status") ?? "running"}`,
+    deliveryIdentity: flags["delivery-id"],
+    deduplicateDelivery: true,
+  });
+  if (reserved.kind === "reserved") {
+    console.log(
+      JSON.stringify({
+        kind: "retry-authorized",
+        unit,
+        retryOrdinal: reserved.consumed,
+        remaining: reserved.remaining,
+        backoffMs: retryBackoffMs(reserved.consumed),
+        ruleId: classification.ruleId,
+      }),
+    );
+    exit(0);
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      reserved.kind === "exhausted"
+        ? { kind: "retry-refused", termination: reserved.termination }
+        : {
+            kind: "retry-refused",
+            reasonCode: reserved.reason,
+            recommendedNextAction: "halt-and-ask",
+          },
+    ),
+  );
+  exit(2);
+}
+
 // --- finalize ---------------------------------------------------------------
 
 export function claimedUnitsOutsideBatch(
@@ -895,6 +1069,9 @@ function main(): void {
     case "check":
       handleCheck(rest);
       break;
+    case "retry":
+      handleRetry(rest);
+      break;
     case "finalize":
       handleFinalize(rest);
       break;
@@ -904,7 +1081,7 @@ function main(): void {
     default:
       console.error(
         JSON.stringify({
-          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, finalize, resolve`,
+          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, retry, finalize, resolve`,
         })
       );
       process.exit(1);

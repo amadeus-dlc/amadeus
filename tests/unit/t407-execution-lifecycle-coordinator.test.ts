@@ -8,6 +8,7 @@ import {
   type Clock,
   type ExecutionContract,
 } from "../../packages/framework/core/tools/amadeus-execution-contract.ts";
+import { createBudgetPolicy } from "../../packages/framework/core/tools/amadeus-convergence-policy.ts";
 import {
   createExecutionLifecycleCoordinator,
   createMemoryExecutionRepository,
@@ -28,6 +29,18 @@ const origin = {
   stage: "code-generation",
   agent: "amadeus-developer-agent",
   tool: "amadeus-orchestrate",
+} as const;
+
+const unitAttemptPolicyResult = createBudgetPolicy({
+  kind: "unit-attempt",
+  effectiveCap: 20,
+  hardCap: 20,
+  configVersion: "test-v1",
+});
+if (!unitAttemptPolicyResult.ok) throw new Error("test budget policy is invalid");
+const unitAttemptBudget = {
+  policy: unitAttemptPolicyResult.value,
+  lastDurableProgress: "operation-started",
 } as const;
 
 function rootRequest() {
@@ -112,9 +125,10 @@ function requireReservation(
   const reserved = coordinator.reserveExecution({
     operationId,
     idempotencyKey: `reserve-${ordinal}`,
-    budgetKind: "unit-slot",
+    budgetKind: "unit-attempt",
     subjectId: "unit-a",
     semanticAttemptOrdinal: ordinal,
+    ...unitAttemptBudget,
   });
   if (!reserved.ok) throw new Error("reservation failed");
   return reserved.value;
@@ -239,9 +253,10 @@ describe("reservation, dispatch and permit barrier", () => {
     const reserveRequest = {
       operationId: started.value.operation.operationId,
       idempotencyKey: "reserve-replay",
-      budgetKind: "unit-slot",
+      budgetKind: "unit-attempt" as const,
       subjectId: "unit-a",
       semanticAttemptOrdinal: 1,
+      ...unitAttemptBudget,
     };
     const reserved = coordinator.reserveExecution(reserveRequest);
     if (!reserved.ok) throw new Error("reserve failed");
@@ -286,9 +301,10 @@ describe("reservation, dispatch and permit barrier", () => {
     const reserved = coordinator.reserveExecution({
       operationId: started.value.operation.operationId,
       idempotencyKey: "reserve-key",
-      budgetKind: "unit-slot",
+      budgetKind: "unit-attempt",
       subjectId: "unit-a",
       semanticAttemptOrdinal: 1,
+      ...unitAttemptBudget,
     });
     if (!reserved.ok) throw new Error("reserve failed");
     const claimed = coordinator.claimDispatch(reserved.value.reservationId, "claim-key");
@@ -316,9 +332,10 @@ describe("reservation, dispatch and permit barrier", () => {
     const reserved = coordinator.reserveExecution({
       operationId: started.value.operation.operationId,
       idempotencyKey: "reserve-key",
-      budgetKind: "unit-slot",
+      budgetKind: "unit-attempt",
       subjectId: "unit-a",
       semanticAttemptOrdinal: 1,
+      ...unitAttemptBudget,
     });
     if (!reserved.ok) throw new Error("reserve failed");
     const claimed = coordinator.claimDispatch(reserved.value.reservationId, "claim-key");
@@ -416,9 +433,10 @@ describe("recovery and terminal boundaries", () => {
       coordinator.reserveExecution({
         operationId: root.value.operation.operationId,
         idempotencyKey: `reserve-${ordinal}`,
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-a",
         semanticAttemptOrdinal: ordinal,
+        ...unitAttemptBudget,
       });
 
     const safe = reserve(1);
@@ -474,9 +492,10 @@ describe("recovery and terminal boundaries", () => {
     const reserved = coordinator.reserveExecution({
       operationId: root.value.operation.operationId,
       idempotencyKey: "reserve-confirm",
-      budgetKind: "unit-slot",
+      budgetKind: "unit-attempt",
       subjectId: "unit-a",
       semanticAttemptOrdinal: 1,
+      ...unitAttemptBudget,
     });
     if (!reserved.ok) throw new Error("reserve failed");
     expect(coordinator.claimDispatch(reserved.value.reservationId, "claim-confirm").kind).toBe(
@@ -593,9 +612,10 @@ describe("defensive lifecycle branches", () => {
       coordinatorFor(createMemoryExecutionRepository()).reserveExecution({
         operationId: "missing-operation",
         idempotencyKey: "missing-reservation",
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-a",
         semanticAttemptOrdinal: 1,
+        ...unitAttemptBudget,
       }),
     ).toEqual({ ok: false, error: { kind: "not-found", persisted: false } });
 
@@ -607,9 +627,10 @@ describe("defensive lifecycle branches", () => {
       coordinator.reserveExecution({
         operationId: root.value.operation.operationId,
         idempotencyKey: "reserve-1",
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-b",
         semanticAttemptOrdinal: 1,
+        ...unitAttemptBudget,
       }),
     ).toEqual({
       ok: false,
@@ -625,9 +646,10 @@ describe("defensive lifecycle branches", () => {
       ])).reserveExecution({
         operationId: root.value.operation.operationId,
         idempotencyKey: "reserve-1",
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-a",
         semanticAttemptOrdinal: 1,
+        ...unitAttemptBudget,
       }),
     ).toEqual({
       ok: false,
@@ -645,9 +667,10 @@ describe("defensive lifecycle branches", () => {
       coordinator.reserveExecution({
         operationId: root.value.operation.operationId,
         idempotencyKey: "reserve-terminal",
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-a",
         semanticAttemptOrdinal: 2,
+        ...unitAttemptBudget,
       }),
     ).toEqual({
       ok: false,
@@ -659,9 +682,10 @@ describe("defensive lifecycle branches", () => {
       coordinatorFor(repositoryFrom(liveSets, true)).reserveExecution({
         operationId: root.value.operation.operationId,
         idempotencyKey: "reserve-append-failure",
-        budgetKind: "unit-slot",
+        budgetKind: "unit-attempt",
         subjectId: "unit-a",
         semanticAttemptOrdinal: 3,
+        ...unitAttemptBudget,
       }),
     ).toEqual({
       ok: false,

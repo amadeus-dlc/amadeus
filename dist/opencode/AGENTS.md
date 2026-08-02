@@ -9,8 +9,8 @@ byte-identical to every other harness distribution; only the shell differs.
 Invoke the orchestrator with the `$amadeus` command (authored at
 `.opencode/commands/amadeus.md`) followed by a scope or a description of
 what to build. It runs a deterministic forwarding loop: ask the engine what to
-do next, do that one thing, report the outcome, repeat until the workflow is
-done. Utility invocations pass through to the same engine —
+do next, do that one thing, report the outcome, and repeat only when that result
+is `continue`; human-wait and terminal results stop. Utility invocations pass through to the same engine —
 `$amadeus --status` for progress, `$amadeus --doctor` to validate setup,
 `$amadeus --version` for the framework version, and
 `$amadeus --stage <slug>` / `--phase <name>` / `--depth <level>` for the

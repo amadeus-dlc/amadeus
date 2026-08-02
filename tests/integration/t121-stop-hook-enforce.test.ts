@@ -18,19 +18,16 @@
 // Source under test (dist/claude/.claude/hooks/amadeus-stop.ts):
 //   :97  allowStop()       — emit nothing, exit 0 (the precedent non-blocking pattern)
 //   :104 blockStop(reason) — console.log({decision:"block",reason}); exit 0
-//   :129 guardFilePath()   — amadeus-docs/.amadeus-stop-hook/block-count.json
-//   :137 progressSignature(state) — `${Current-Stage}::${audit-line-count}`
-//   :204 decideBlock(state, stopHookActive) — the no-progress counter + cap logic:
-//          - sameSignature  → nextCount = prior.count + 1
-//          - prior===null && stopHookActive → nextCount = 2 (joining mid-flight)
-//          - else → nextCount = 1
-//          - persist; RELEASE (return false) once nextCount >= cap, else block
+//   decideBlock(state, stopHookActive, sessionId) — reserves one delivery from
+//          the audit-backed stage-instance budget. The cap-th delivery is
+//          permitted; cap+1 releases durably. Audit noise and hook restarts do
+//          not reset the budget.
 //   :259 runEngineNextKind() — spawns the engine; null (spawn fail / non-zero /
 //          unparseable) fails OPEN (allow)
 //   :298 continuationReason(kind, stage) — names "pending step", the kind, the
 //          forwarding-loop steps; phrased as continuation, never override-shaped
 //   :314 isTTY → allowStop; :321 no amadeus-state.md → allowStop; :356 done →
-//          resetGuard + allowStop; :336 garbage stdin → stopHookActive=false (no crash)
+//          allowStop; garbage stdin → stopHookActive=false (no crash)
 //   blockCap() :122 (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP overrides); the default is
 //          now RUN-MODE aware (defaultBlockCap :131): 8 for autonomous
 //          Construction (AUTONOMOUS_BLOCK_CAP), 2 otherwise (INTERACTIVE_BLOCK_CAP)
@@ -40,8 +37,8 @@
 //          recent human prompt was answered with NO workflow-engine call
 //
 // Old TAP -> new test parity (13 .sh assertions -> 13 named tests, several
-// STRONGER — exact-shape JSON parse, no override-verbs scan, block,block,
-// RELEASE,RELEASE sequence, persisted-counter reset):
+// STRONGER — exact-shape JSON parse, no override-verbs scan, cap-th delivery,
+// cap+1 release, and stage-pivot reset):
 //   .sh (a) assert RC=0 on pending           -> "(a) exits 0 on a pending directive"
 //   .sh (a) decision:block in stdout         -> "(a) pending run-stage directive emits decision:block"
 //   .sh (a) reason names pending work + kind  -> "(a) reason names the pending run-stage work as on-task continuation"
@@ -49,9 +46,9 @@
 //   .sh (b) assert RC=0 on done               -> "(b) done directive exits 0"
 //   .sh (b) done => empty stdout              -> "(b) done directive emits nothing (stop allowed)"
 //   .sh (c1) RC=0 at ceiling                  -> "(c1) recursion guard at ceiling exits 0"
-//   .sh (c1) cap8 + stop_hook_active releases -> "(c1) counter at default cap (8) + stop_hook_active releases (no block)"
-//   .sh (c2) block,block,RELEASE,RELEASE       -> "(c2) no-progress streak (cap 3) flips at the cap and stays released"
-//   .sh (c3) progress resets streak to 1      -> "(c3) progress (stage pivot) resets the no-progress streak to 1"
+//   .sh (c1) legacy counter at cap             -> "(c1) legacy no-progress state cannot bypass the durable budget"
+//   .sh (c2) cap-th/cap+1 boundary             -> "(c2) durable budget permits cap-th and releases cap+1"
+//   .sh (c3) stage pivot creates new subject   -> "(c3) progress (stage pivot) starts a fresh durable stage budget"
 //   .sh (d) RC=0 with no state file           -> "(d) no amadeus-state.md exits 0"
 //   .sh (d) no-op outside AIDLC => empty       -> "(d) no active workflow emits nothing (non-AIDLC session never blocked)"
 //   .sh robustness (3 fail-open sub-cases)    -> "garbage stdin + unparseable engine output fail OPEN"
@@ -75,8 +72,8 @@
 //   (f) chat transcript under autonomous Construction    -> BLOCK (carve-out off)
 //   (f) autonomous cap is 8 (count 2 + stop_hook_active) -> BLOCK (not interactive 2)
 //   (f) transcript_path -> nonexistent file              -> BLOCK (fail-closed, count 1)
-//   (g) interactive default cap 2: block then RELEASE at the 2nd no-progress
-//   (g) autonomous default cap 8: same sequence blocks 1-7, releases only at 8
+//   (g) interactive default cap 2: blocks 1-2, RELEASES cap+1
+//   (g) autonomous default cap 8: blocks 1-8, RELEASES cap+1
 //
 // §6-E note: this is a non-golden twin (a flow-altering hook whose block event
 // must ACTUALLY FIRE). Cases (a)/(c2) drive the BLOCK path to real
@@ -106,6 +103,7 @@ import {
 } from "../harness/fixtures.ts";
 import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { emitAuditEventGuarded } from "../../dist/claude/.claude/otel/audit-emit.ts";
 
 // Live-observed machine-injected turns, derived from the shared catalog so a
 // marker rename cannot leave stale copies here (#755). The tier-3 carve-out
@@ -185,7 +183,7 @@ function seedShell(proj: string): void {
   writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
 }
 
-// The stop-hook guard counter, re-rooted under the record (stopHookDir).
+// Legacy stop-hook guard path used only to prove old transient state is ignored.
 function guardFilePath(proj: string): string {
   return join(seededRecordDir(proj), ".amadeus-stop-hook", "block-count.json");
 }
@@ -626,9 +624,8 @@ function runRuntimeCompileHook(
 }
 
 /**
- * The hook's progress signature for a project — Current Stage + audit line
- * count — so a test can seed the counter at the matching key. Mirrors the
- * .sh's progress_sig (and amadeus-stop.ts:137 progressSignature).
+ * The retired hook progress signature, retained only to seed a realistic
+ * legacy counter and prove that canonical budgeting ignores it.
  */
 function progressSig(proj: string): string {
   const s = readFileSync(seededStateFile(proj), "utf-8");
@@ -643,15 +640,6 @@ function progressSig(proj: string): string {
     /* audit absent => 0 */
   }
   return `${stage}::${al}`;
-}
-
-/** Read the persisted no-progress counter (or null if missing/corrupt). */
-function guardCount(proj: string): number | null {
-  try {
-    return JSON.parse(readFileSync(guardFilePath(proj), "utf-8")).count as number;
-  } catch {
-    return null;
-  }
 }
 
 describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from t121-stop-hook-enforce.sh, plan 13 + 3 human-wait carve-out cases)", () => {
@@ -743,18 +731,16 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(r.out).toBe("");
   }, 30000);
 
-  test("(b2) parked resets the no-progress guard (like done)", () => {
+  test("(b2) parked does not consume the durable continuation budget", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // Pre-seed a no-progress streak; a parked allow must clear it.
-    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), { recursive: true });
-    writeFileSync(
-      guardFilePath(proj),
-      JSON.stringify({ signature: "requirements-analysis::1", count: 5 }),
-      "utf-8",
-    );
-    runHook(proj, '{"stop_hook_active":false}', "parked");
-    expect(guardCount(proj)).toBe(0);
+    expect(runHook(proj, '{"stop_hook_active":false}', "parked").out).toBe("");
+    const first = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    const second = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    const exhausted = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    expect(first.out).toContain('"decision":"block"');
+    expect(second.out).toContain('"decision":"block"');
+    expect(exhausted.out).toBe("");
   }, 30000);
 
   // (b2)(3) AUTONOMY GUARD - salvaged from #365. A `parked` directive under
@@ -775,26 +761,8 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
   // =========================================================================
   // (c) RECURSION GUARD — asserted hardest. The session must ALWAYS release.
   // =========================================================================
-  // (c1) Seed the no-progress counter AT the default ceiling (8) with a
-  // matching signature, then invoke with stop_hook_active:true. The hook MUST
-  // release — a stuck loop can never trap a turn.
-  test("(c1) recursion guard at ceiling exits 0", () => {
-    const proj = makeProject();
-    seedActive(proj, "requirements-analysis");
-    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
-      recursive: true,
-    });
-    const sig = progressSig(proj);
-    writeFileSync(
-      guardFilePath(proj),
-      JSON.stringify({ signature: sig, count: 8 }),
-      "utf-8",
-    );
-    const r = runHook(proj, '{"stop_hook_active":true}', "run-stage"); // default cap 8
-    expect(r.rc).toBe(0);
-  }, 30000);
-
-  test("(c1) counter at default cap (8) + stop_hook_active:true releases (no block) — session NOT trapped", () => {
+  // (c1) A legacy transient counter cannot bypass the canonical budget.
+  test("(c1) legacy no-progress state cannot bypass the durable budget", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
@@ -807,54 +775,64 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       "utf-8",
     );
     const r = runHook(proj, '{"stop_hook_active":true}', "run-stage");
-    // sameSignature => nextCount = 8 + 1 = 9 >= cap 8 => RELEASE (decideBlock
-    // :231). No block on stdout.
-    expect(r.out).toBe("");
+    expect(r.rc).toBe(0);
+    expect(r.out).toContain('"decision":"block"');
   }, 30000);
 
-  // (c2) Drive consecutive no-progress blocks to a low ceiling and prove the
-  // hook flips from BLOCK to ALLOW exactly at the cap, and STAYS released.
-  test("(c2) no-progress streak (cap 3): block,block,RELEASE,RELEASE — flips at the cap and stays released", () => {
+  // (c2) The cap-th delivery is authorized; cap+1 is rejected and remains terminal.
+  test("(c2) durable budget (cap 3): block,block,block,RELEASE — cap-th is allowed", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // cap=3, stop_hook_active false so the streak is driven purely by the
-    // unchanged signature (no report ran between invocations).
     const b1 = runHook(proj, '{"stop_hook_active":false}', "run-stage", "3");
     const b2 = runHook(proj, '{"stop_hook_active":false}', "run-stage", "3");
     const b3 = runHook(proj, '{"stop_hook_active":false}', "run-stage", "3");
     const b4 = runHook(proj, '{"stop_hook_active":false}', "run-stage", "3");
-    // counts go 1 (block), 2 (block), 3 (>=cap -> RELEASE), 4 (RELEASE).
     expect(b1.out).toContain("block");
     expect(b2.out).toContain("block");
-    expect(b3.out).toBe("");
+    expect(b3.out).toContain("block");
     expect(b4.out).toBe("");
-    // STRONGER: the first two are real, parseable block decisions.
+    // The cap-th delivery is still a real, parseable block decision.
     expect((JSON.parse(b1.out) as { decision: string }).decision).toBe("block");
-    expect((JSON.parse(b2.out) as { decision: string }).decision).toBe("block");
+    expect((JSON.parse(b3.out) as { decision: string }).decision).toBe("block");
   }, 30000);
 
-  // (c3) PROGRESS resets the streak — a healthy loop is never throttled even
-  // when stop_hook_active stays true. Block twice at stage-a, then pivot the
-  // stage + grow the audit (a report's effect): the counter resets to 1.
-  test("(c3) progress (stage pivot) resets the no-progress streak to 1 — healthy loop never throttled", () => {
+  test("(c2b) audit noise cannot reset a stage budget: three deliveries then cap+1 RELEASE", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+    const outputs: string[] = [];
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      outputs.push(runHook(proj, '{"stop_hook_active":true}', "run-stage", "3").out);
+      emitAuditEventGuarded(
+        "AUTONOMY_MODE_SET",
+        { Mode: attempt % 2 === 0 ? "autonomous" : "gated" },
+        proj,
+      );
+    }
+    expect(outputs.slice(0, 3).every((output) => output.includes('"decision":"block"'))).toBe(
+      true,
+    );
+    expect(outputs[3]).toBe("");
+  }, 30000);
+
+  // (c3) A stage pivot creates a new semantic subject with its own budget.
+  test("(c3) progress (stage pivot) starts a fresh durable stage budget", () => {
     const proj = makeProject();
     seedActive(proj, "stage-a");
-    runHook(proj, '{"stop_hook_active":true}', "run-stage", "8");
-    runHook(proj, '{"stop_hook_active":true}', "run-stage", "8");
-    const countBefore = guardCount(proj);
-    // Simulate a report landing: Current Stage pivots, the audit shard grows.
+    expect(runHook(proj, '{"stop_hook_active":true}', "run-stage", "2").out).toContain(
+      '"decision":"block"',
+    );
+    expect(runHook(proj, '{"stop_hook_active":true}', "run-stage", "2").out).toContain(
+      '"decision":"block"',
+    );
+    expect(runHook(proj, '{"stop_hook_active":true}', "run-stage", "2").out).toBe("");
     writeFileSync(
       seededStateFile(proj),
       "- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: stage-b\n",
       "utf-8",
     );
-    seedAuditShard(proj, `${auditRow(1)}\n${auditRow(2)}\n`);
-    runHook(proj, '{"stop_hook_active":true}', "run-stage", "8");
-    const countAfter = guardCount(proj);
-    // .sh: count_after == 1 && count_before != 1. After two no-progress blocks
-    // at stage-a the streak climbed past 1; the pivot resets it to 1.
-    expect(countAfter).toBe(1);
-    expect(countBefore).not.toBe(1);
+    expect(runHook(proj, '{"stop_hook_active":true}', "run-stage", "2").out).toContain(
+      '"decision":"block"',
+    );
   }, 30000);
 
   // =========================================================================
@@ -1076,26 +1054,15 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
 
   test("(f) AUTONOMY cap is 8 - autonomous workflow does NOT release at the interactive cap (2)", () => {
     const proj = makeProject();
-    // Same autonomous workflow, no transcript. Seed the no-progress counter at
-    // count 2 (the interactive cap) at the matching signature, then drive a
-    // post-block stop. At cap 8 (autonomous default) nextCount = 3 < 8 -> BLOCK;
-    // an interactive run would have RELEASED at 2. This pins the run-mode-aware
-    // default: the autonomous cap is genuinely 8, not 2.
     seedInProgressWithQuestions(proj, { autonomy: "autonomous" });
-    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
-      recursive: true,
-    });
-    const sig = progressSig(proj);
-    writeFileSync(
-      guardFilePath(proj),
-      JSON.stringify({ signature: sig, count: 2 }),
-      "utf-8",
+    const outputs = Array.from({ length: 3 }, () =>
+      runHook(proj, '{"stop_hook_active":true}', "run-stage").out,
     );
-    // No transcript and no autonomy carve-out, so the cap governs. sameSignature
-    // => nextCount = 2 + 1 = 3 < cap 8 => still BLOCK.
-    const r = runHook(proj, '{"stop_hook_active":true}', "run-stage");
-    expect(r.rc).toBe(0);
-    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+    expect(
+      outputs.every(
+        (output) => (JSON.parse(output) as { decision?: string }).decision === "block",
+      ),
+    ).toBe(true);
   }, 30000);
 
   test("(f) FAIL-CLOSED - a transcript_path pointing at a nonexistent file falls through to the cap-bounded block", () => {
@@ -1114,7 +1081,6 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-    expect(guardCount(proj)).toBe(1); // a fresh first block, not released
   }, 30000);
 
   // =========================================================================
@@ -1122,37 +1088,38 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
   // override the default cap is now run-mode aware: 2 for an INTERACTIVE run,
   // 8 for `Construction Autonomy Mode: autonomous` (AUTONOMOUS_BLOCK_CAP=8,
   // INTERACTIVE_BLOCK_CAP=2, amadeus-stop.ts:136-137). A human who pauses or chats
-  // is released after a single nudge; an unattended autonomous run keeps the
-  // long ceiling. No env var, no transcript, purely the no-progress streak.
+  // permits two deliveries; an unattended autonomous run keeps the long
+  // ceiling. No env var and no transcript are involved.
   // =========================================================================
-  test("(g) INTERACTIVE default cap (2): block then RELEASE at the 2nd no-progress attempt", () => {
+  test("(g) INTERACTIVE default cap (2): two blocks then cap+1 RELEASE", () => {
     const proj = makeProject();
     // Non-autonomous active workflow, no transcript, NO explicit cap env so the
     // interactive default (2) governs. stop_hook_active:false so the streak is
-    // driven purely by the unchanged signature (no report between invocations).
+    // driven purely by one unchanged stage instance (no report between invocations).
     seedActive(proj, "requirements-analysis");
-    const b1 = runHook(proj, '{"stop_hook_active":false}', "run-stage"); // count 1 -> block
-    const b2 = runHook(proj, '{"stop_hook_active":false}', "run-stage"); // count 2 >= cap 2 -> RELEASE
+    const b1 = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    const b2 = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    const b3 = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect((JSON.parse(b1.out) as { decision?: string }).decision).toBe("block");
-    expect(b2.out).toBe(""); // released at the interactive cap of 2
+    expect((JSON.parse(b2.out) as { decision?: string }).decision).toBe("block");
+    expect(b3.out).toBe("");
   }, 30000);
 
-  test("(g) AUTONOMOUS default cap (8): the SAME sequence does NOT release at 2, keeps blocking through 7, releases only at 8", () => {
+  test("(g) AUTONOMOUS default cap (8): eight blocks then cap+1 RELEASE", () => {
     const proj = makeProject();
     // Identical no-progress sequence as the interactive case, but flagged
-    // autonomous (the autonomy seed). The default cap is 8, so blocks 1-7 hold
-    // and only the 8th attempt releases, proving the autonomous default is not
-    // throttled to 2. No transcript / no env override.
+    // autonomous (the autonomy seed). The default cap is 8, so deliveries 1-8
+    // block and cap+1 releases, proving the autonomous default is not throttled
+    // to 2. No transcript / no env override.
     seedInProgressWithQuestions(proj, { autonomy: "autonomous" });
     const outs: string[] = [];
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 9; i++) {
       outs.push(runHook(proj, '{"stop_hook_active":false}', "run-stage").out);
     }
-    // Attempts 1-7 BLOCK (count 1..7 < cap 8); attempt 8 RELEASES (count 8 >= 8).
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       expect((JSON.parse(outs[i]) as { decision?: string }).decision).toBe("block");
     }
-    expect(outs[7]).toBe(""); // released only at the autonomous cap of 8
+    expect(outs[8]).toBe("");
   }, 30000);
 
   // =========================================================================
@@ -1202,9 +1169,8 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
   //      anchor stays the human's, not the hook's. Codex has no isMeta, so the
   //      content guard alone excludes it there (amadeus-stop.ts:605).
   //
-  // Each case uses a FRESH makeProject() (so the per-project no-progress counter
-  // starts at 0 and a BLOCK is a real first block at the interactive cap of 2,
-  // never masked by a released counter from a prior call; see the (a) pattern).
+  // Each case uses a FRESH makeProject(), so its audit-backed stage budget starts
+  // at 0 and a BLOCK is a real first delivery at the interactive cap of 2.
   // =========================================================================
 
   // --- (h.1) read-only engine queries are conversational (ALLOW) ---
@@ -1430,8 +1396,8 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
   //      anchor.
   //
   // Each BLOCK-expecting case uses a FRESH makeProject() (the interactive cap is
-  // 2; a reused project's counter would release on the 2nd no-progress call and
-  // mask a real BLOCK - see the (a)/(h) pattern).
+  // 2; reusing a project across three deliveries would exhaust its stage budget
+  // and mask a real BLOCK - see the (a)/(h) pattern).
   // =========================================================================
 
   // --- (i.1) PRECEDENCE: per-segment judgement of chained / argument-embedded flags ---
