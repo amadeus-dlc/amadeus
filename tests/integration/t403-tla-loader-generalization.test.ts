@@ -1,3 +1,6 @@
+// covers: file:plugins/formal-model-check/tools/tla-model-loader-internal.ts
+// size: medium
+//
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

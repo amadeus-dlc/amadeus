@@ -152,6 +152,19 @@ function validateRun(
   expectedKind: CiRunKind,
   expectedIndex: number,
 ): Result<void, string> {
+  const identity = validateRunIdentity(run, expectedModel, expectedKind, expectedIndex);
+  if (!identity.ok) return identity;
+  const execution = validateRunExecution(run, expectedModel, expectedKind, expectedIndex);
+  if (!execution.ok) return execution;
+  return validateDockerReceipt(run);
+}
+
+function validateRunIdentity(
+  run: CiModelCheckRunEvidence,
+  expectedModel: string,
+  expectedKind: CiRunKind,
+  expectedIndex: number,
+): Result<void, string> {
   if (
     run.model !== expectedModel
     || run.kind !== expectedKind
@@ -164,6 +177,15 @@ function validateRun(
   if (run.outcome !== "NOT_DETECTED" || run.exitCode !== 0) {
     return invalid(`run ${expectedIndex} did not complete with NOT_DETECTED`);
   }
+  return { ok: true, value: undefined };
+}
+
+function validateRunExecution(
+  run: CiModelCheckRunEvidence,
+  expectedModel: string,
+  expectedKind: CiRunKind,
+  expectedIndex: number,
+): Result<void, string> {
   if (!Number.isFinite(run.cliMs) || run.cliMs < 0 || run.cliMs >= 180_000) {
     return invalid(`run ${expectedIndex} CLI duration is outside the 180 second budget`);
   }
@@ -181,12 +203,19 @@ function validateRun(
   )) {
     return invalid(`run ${expectedIndex} MirrorLifecycle statistics drifted`);
   }
-  return validateDockerReceipt(run);
+  return { ok: true, value: undefined };
 }
 
-export function validateCiAcceptanceEvidence(
-  evidence: CiAcceptanceEvidence,
-): Result<void, string> {
+const EXPECTED_RUNS = [
+  ["warm-up", 0],
+  ["measured", 1],
+  ["measured", 2],
+  ["measured", 3],
+  ["measured", 4],
+  ["measured", 5],
+] as const;
+
+function validateAcceptanceDescriptor(evidence: CiAcceptanceEvidence): Result<void, string> {
   if (
     evidence.schema !== "amadeus.ci-model-check-acceptance.v1"
     || evidence.imageRef !== FIXED_DOCKER_IMAGE
@@ -196,6 +225,10 @@ export function validateCiAcceptanceEvidence(
   ) {
     return invalid("canonical image or jar descriptor drifted");
   }
+  return { ok: true, value: undefined };
+}
+
+function validateAcceptanceRuntime(evidence: CiAcceptanceEvidence): Result<void, string> {
   if (
     evidence.runtime.bunVersion !== "1.3.13"
     || evidence.runtime.githubRunId.length === 0
@@ -204,37 +237,50 @@ export function validateCiAcceptanceEvidence(
   ) {
     return invalid("runtime receipt is incomplete");
   }
-  if (evidence.runs.length === 0 || evidence.runs.length % 6 !== 0) {
+  if (evidence.runs.length === 0 || evidence.runs.length % EXPECTED_RUNS.length !== 0) {
     return invalid("acceptance requires six runs for every selected model");
   }
-  const expected = [
-    ["warm-up", 0],
-    ["measured", 1],
-    ["measured", 2],
-    ["measured", 3],
-    ["measured", 4],
-    ["measured", 5],
-  ] as const;
+  return { ok: true, value: undefined };
+}
+
+function validateModelRuns(
+  runs: readonly CiModelCheckRunEvidence[],
+  offset: number,
+  seen: Set<string>,
+  modelNames: Set<string>,
+): Result<void, string> {
+  const expectedModel = runs[offset]!.model;
+  if (expectedModel.length === 0 || modelNames.has(expectedModel)) {
+    return invalid("acceptance model ordering is invalid");
+  }
+  modelNames.add(expectedModel);
+  for (let index = 0; index < EXPECTED_RUNS.length; index += 1) {
+    const run = runs[offset + index]!;
+    if (seen.has(run.runId)) return invalid(`run ${run.index} reused a runId`);
+    seen.add(run.runId);
+    const verified = validateRun(
+      run,
+      expectedModel,
+      EXPECTED_RUNS[index]![0],
+      EXPECTED_RUNS[index]![1],
+    );
+    if (!verified.ok) return verified;
+  }
+  return { ok: true, value: undefined };
+}
+
+export function validateCiAcceptanceEvidence(
+  evidence: CiAcceptanceEvidence,
+): Result<void, string> {
+  const descriptor = validateAcceptanceDescriptor(evidence);
+  if (!descriptor.ok) return descriptor;
+  const runtime = validateAcceptanceRuntime(evidence);
+  if (!runtime.ok) return runtime;
   const seen = new Set<string>();
   const modelNames = new Set<string>();
-  for (let offset = 0; offset < evidence.runs.length; offset += expected.length) {
-    const expectedModel = evidence.runs[offset]!.model;
-    if (expectedModel.length === 0 || modelNames.has(expectedModel)) {
-      return invalid("acceptance model ordering is invalid");
-    }
-    modelNames.add(expectedModel);
-    for (let index = 0; index < expected.length; index += 1) {
-      const run = evidence.runs[offset + index]!;
-      if (seen.has(run.runId)) return invalid(`run ${run.index} reused a runId`);
-      seen.add(run.runId);
-      const verified = validateRun(
-        run,
-        expectedModel,
-        expected[index]![0],
-        expected[index]![1],
-      );
-      if (!verified.ok) return verified;
-    }
+  for (let offset = 0; offset < evidence.runs.length; offset += EXPECTED_RUNS.length) {
+    const verified = validateModelRuns(evidence.runs, offset, seen, modelNames);
+    if (!verified.ok) return verified;
   }
   return { ok: true, value: undefined };
 }

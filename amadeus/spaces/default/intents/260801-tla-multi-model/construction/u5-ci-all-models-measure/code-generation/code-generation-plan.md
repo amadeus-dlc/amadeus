@@ -35,3 +35,18 @@ u5 の設計整合性は概ね良好だが、統合済み u1–u5 として root
 - Blocking/Major: AC1 の両モデル意味論破壊と注入→red→除去→green往復を、設計どおり実装・記録するか正式再裁定し、t406 の同等証拠を summary に記録する。
 - Advisory/Major: created/modified/generated ファイル一覧と追加所有3ファイル・artifacts test を summary に明記する。
 - Advisory/Minor: 統合後の検証件数・コマンドを summary に更新し、promotion 修正後の hosted Ubuntu 30分予算確認を残リスクとして扱う。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-02T01:31:00Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Iteration 1 の promotion drift、AC1 mutation round-trip、所有ファイル追跡、検証証拠の鮮度は解消され、code-generation は Build and Test へ進める。
+
+### Findings
+
+- Advisory/Minor: AC1 の実装は generalized support probes ではなく t406 scratch fixture を採用したが、意味論変異・隔離・production runner/port・red/green 往復・bytes 復元の実質要件を満たす。設計のテスト配置表現は将来整合させる。
+- Advisory/Minor: 30分予算は macOS Docker でのみ実測済み。最終 CI acceptance 前に hosted Ubuntu workflow_dispatch を1回実行する。

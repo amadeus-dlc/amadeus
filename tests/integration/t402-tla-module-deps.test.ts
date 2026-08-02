@@ -1,3 +1,6 @@
+// covers: file:plugins/formal-model-check/tools/tla-module-deps.ts
+// size: medium
+//
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {

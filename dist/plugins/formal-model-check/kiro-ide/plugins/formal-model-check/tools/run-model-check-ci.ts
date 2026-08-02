@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
 import { verifyCiAcceptanceArtifacts } from "./ci-model-check-artifacts.ts";
-import { ciModelTargetFor } from "./ci-model-check-domain.ts";
+import { ciModelTargetFor, type CiModelTarget } from "./ci-model-check-domain.ts";
 import { executeCiModelCheckAcceptance } from "./ci-model-check-runner.ts";
 import { NodeCiModelCheckPort } from "./node-ci-model-check-port.ts";
 import {
@@ -40,44 +40,52 @@ async function main(argv: readonly string[]): Promise<0 | 2> {
     );
     return 2;
   }
+  const models = loadSelectedModelTargets(input.modelName);
+  if (models === null) return 2;
+  if (input.command === "verify") return verifyArtifacts(input.root, models);
+  return runAcceptance(input.root, models);
+}
+
+function writeHarnessError(error: { readonly code: string; readonly detail: string }): void {
+  process.stderr.write(`${JSON.stringify({
+    kind: "HARNESS_ERROR",
+    code: error.code,
+    detail: error.detail,
+  })}\n`);
+}
+
+function loadSelectedModelTargets(modelName: string | null): CiModelTarget[] | null {
   const loaded = loadVerifiedTlaSources();
   if (!loaded.ok) {
-    process.stderr.write(`${JSON.stringify({
-      kind: "HARNESS_ERROR",
-      code: loaded.error.code,
-      detail: loaded.error.detail,
-    })}\n`);
-    return 2;
+    writeHarnessError(loaded.error);
+    return null;
   }
   let selected = loaded.value.models;
-  if (input.modelName !== null) {
-    const model = selectVerifiedModel(loaded.value, input.modelName);
+  if (modelName !== null) {
+    const model = selectVerifiedModel(loaded.value, modelName);
     if (!model.ok) {
-      process.stderr.write(`${JSON.stringify({
-        kind: "HARNESS_ERROR",
-        code: model.error.code,
-        detail: model.error.detail,
-      })}\n`);
-      return 2;
+      writeHarnessError(model.error);
+      return null;
     }
     selected = [model.value];
   }
-  const models = selected.map(ciModelTargetFor);
-  if (input.command === "verify") {
-    const verified = verifyCiAcceptanceArtifacts(
-      input.root,
-      models.map((model) => model.name),
-    );
-    process.stderr.write(`${JSON.stringify({
-      kind: verified.ok ? "NOT_DETECTED" : "HARNESS_ERROR",
-      code: verified.ok ? "CI_ARTIFACTS_VERIFIED" : "CI_ARTIFACTS_INVALID",
-      detail: verified.ok ? "CI model-check artifacts verified" : verified.error,
-    })}\n`);
-    return verified.ok ? 0 : 2;
-  }
+  return selected.map(ciModelTargetFor);
+}
+
+function verifyArtifacts(root: string, models: readonly CiModelTarget[]): 0 | 2 {
+  const verified = verifyCiAcceptanceArtifacts(root, models.map((model) => model.name));
+  process.stderr.write(`${JSON.stringify({
+    kind: verified.ok ? "NOT_DETECTED" : "HARNESS_ERROR",
+    code: verified.ok ? "CI_ARTIFACTS_VERIFIED" : "CI_ARTIFACTS_INVALID",
+    detail: verified.ok ? "CI model-check artifacts verified" : verified.error,
+  })}\n`);
+  return verified.ok ? 0 : 2;
+}
+
+async function runAcceptance(root: string, models: readonly CiModelTarget[]): Promise<0 | 2> {
   const result = await executeCiModelCheckAcceptance(
     {
-      evidenceRoot: input.root,
+      evidenceRoot: root,
       runtime: {
         bunVersion: Bun.version,
         runnerOs: process.env.RUNNER_OS ?? "",
