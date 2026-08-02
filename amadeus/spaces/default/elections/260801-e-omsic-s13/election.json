@@ -1,0 +1,20 @@
+{
+  "electionId": "E-OMSIC-S13",
+  "kind": "learnings",
+  "question": "260801-otel-meta-schema intent-capture ステージの §13 学習選定。conductor 提案: 0件(事前裁定済み Issue #1868 を正本とする実装 intent の起票であり、質問0件・成果物3点は既決の転記。stage diary エントリ0件。既存ノルム intent-capture:c1(事前整理済み intent では質問を絞る)の適用そのもので新規学びなし)。各自、ideation/intent-capture/ の3成果物と #1868 の対応を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文)。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

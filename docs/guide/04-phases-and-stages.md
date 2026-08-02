@@ -326,6 +326,7 @@ Failures always stop Construction, even in autonomous mode. That's the one place
 - The per-Unit approval gate inside `stages/construction/code-generation.md` is **suppressed by the conductor** during normal Bolt execution. A single Bolt-level (or batch-level) gate replaces it.
 - The ladder prompt fires exactly once per workflow — after the walking-skeleton gate. Your answer is recorded as `Construction Autonomy Mode` in `amadeus-state.md` and honoured on session resume.
 - Parallel batches require multiple `Task`-capable subagent slots to be available — see [Agents](06-agents.md) for concurrency constraints.
+- The plan is binding: once the compiled Bolt DAG declares a batch parallel, a run cannot quietly build those Units one at a time. If the ladder has not been answered yet, the engine asks it again instead of falling back to serial. If the plan itself is wrong — those Units really are serial — the way out is to record the dependency (with its reason) in `unit-of-work-dependency.md`, re-run the runtime-graph compile, then re-run the workflow; the same applies when a Construction approve is refused for a batch that never fanned out. See [State Machine](../reference/12-state-machine.md) § "Plan-integrity guards".
 
 ---
 

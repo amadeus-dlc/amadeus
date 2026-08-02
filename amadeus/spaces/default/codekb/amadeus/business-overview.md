@@ -8,6 +8,12 @@
 
 - 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
 
+## CG 計画整合ガードの業務境界（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 利用者価値: 計画（units-generation/delivery-planning）で合意した並行実行が CG で無音に直列化される事故（実測 18 intent 中4件）を engine が構造的に阻止。逃し弁は計画訂正のみ — 乖離理由が必ず成果物に残る。
+- Delivery boundary: B1（判定基盤+#1893）→ B2（発行側+3部メッセージ）→ B3（approve 突合）→ B4（docs）。self-feature につき Bolt 1 は walking-skeleton gate 維持。
+- 編入前提: #1893 はクロスレビュー2名成立後（進行中）。
+
 ## オープンバグ一括修正バッチ第5弾の業務境界（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## 価値チェーン3件の業務境界（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
@@ -88,6 +94,50 @@ file:line はすべて HEAD `16486d3c` 断面の実測。本 intent の業務目
 - 利用者影響の序列: P1 2件（#1838 mirror 境界の順序逸脱、#1860 workflow 完了の恒久ブロック — 製品内回復手段なし・state 手術でのみ回復した実績）が最優先。P2 4件（#1846 set-autonomy 不能、#1849 合成後 intent の report 拒否、#1856 偽 green リスク、#1861 main 偽赤15%+ダッシュボード stale、#1863 plugin セル無音消失）。P3 2件（#1857 latent、#1864 台帳1行）。
 - Delivery boundary: 5 Bolt =5 PR（Bolt 1: #1838+#1860 → Bolt 2: #1846+#1849 → Bolt 3: #1856+#1857 → Bolt 4: #1863+#1864 → Bolt 5: #1861）。優先度が高いものから着地する（ユーザー指示 2026-08-01）。
 - 除外: #1829（plugin 配布、別 intent）、#1830 path B（別 intent）。#1864 の同型21件は #1622（P1）の材料としてコメント提供済み。
+
+## OTel メタ情報スキーマ実装の業務境界（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 何が解決される問題か
+
+現在のテレメトリは「何が起きたか」を記録するが「**どの条件下で**起きたか」を記録しない。resource は `service.name` と `telemetry.sdk.language` の2キーのみ（`tracer-provider.ts:137`）で、ログ行にはハーネス名もモデル名も git 断面も載らない。
+
+結果として答えられない問い:
+
+- 「この失敗は特定のハーネス固有か」 — `amadeus.harness` が無い
+- 「モデルを変えてから増えた失敗か」 — `gen_ai.request.model` が無い
+- 「どのコミット断面で走った結果か」 — `vcs.ref.head.*` が無い。チームのノルムは成果物に測定 ref を書くことを求めている（`cid:reverse-engineering:measurement-ref-in-artifacts`）が、テレメトリ側に同じ規律が及んでいない
+- 「同一 intent を複数セッションが並走で触った切り分け」 — `session.id` が無く、監査行の `amadeus.session.started` も `Source` しか持たない（`event-registry.ts:245-253`）
+- 「サブエージェントが起動したが完了報告なく落ちたか」 — 完了イベントのみ観測（`amadeus.subagent.completed`）で、開始側の発火点が存在しない
+- 「バグの一次証拠であるスタックトレース」 — `recordException` が `exception.message` のみを載せ `err.stack` を捨てている（`tracer-provider.ts:155-156`）
+
+### 利用者への価値
+
+| 受益者 | 得られるもの |
+|---|---|
+| バグ修正を行うチーム | スタックトレースと git 断面が一次証拠として保全され、再現条件の特定が短縮される |
+| 運用・ノルム保守 | ハーネス別・モデル別の失敗率が測れ、ノルムの実効性を発生率で監視する既存運用（ローリング PM のバグトレンド報告）に定量的裏付けが付く |
+| conductor | サブエージェントの「起動したが無応答」を構造的に検知できる。現在は `cid:code-generation:disk-evidence-early-takeover` のようにディスク上の兆候から人が推測している |
+| 外部ダッシュボード利用者 | OTel GenAI semantic conventions 準拠のため、Grafana 等の既製 GenAI ダッシュボードがそのまま使える（#1868 設計原則1 が独自語彙を禁じる理由） |
+
+### 業務上の制約とプライバシー境界
+
+- **ユーザー個人情報系は意図的に除外**（#1868 v1 完成宣言）。redaction 方針との整合を優先し、識別性より安全側に倒す判断
+- `host.name` はホスト名（環境によりユーザー名を含みうる）。ローカルの監査シャード名には既に含まれている（`amadeus-lib.ts:4277` が正規化して使用）が、**OTLP 送出は機外へ出す行為**であり露出面が異なる。resource が現在ローカルストアで redaction を通っていない構造（`local-span-exporter.ts:88-99`）と併せて、送出境界の扱いは要件として明示すべき事項
+- スタックトレースは絶対パス（ホームディレクトリ = ユーザー名等）を含む。#1868 §4 がリポジトリルート相対への書換えを求めるのはこのため
+- `Purpose`（§5 の dispatch 要約）は自由文であり、長文プロンプトの流入を防ぐため1行制限が要件に置かれている
+- **チームノルムの Mandate**: 「telemetry の export 境界でも redaction filter を通す — write-time のみの redaction に留めない」（`cid:practices-discovery:export-boundary-redaction`）。#1868 の新属性群はこの二層要件の適用対象
+
+### スコープの境界
+
+- **log attributes は変更なし**（§3）。event-registry の required/optional 全数管理を正とする既存統制を維持する
+- 属性追加の統制は「本 Issue のスキーマを正とし、逸脱追加は Issue の改訂を経る」（設計原則5）— log の registry fail-closed に対し、resource / span は**文書による統制**であり機械ガードは v1 の範囲外
+- 取得不能なメタは省略（fail-open）。取得失敗が emit を止めることはない — テレメトリが業務フローを塞がない既存の分類線（telemetry は fail-open、canonical は fail-closed）と一致
+
+### 関連 Issue
+
+#1672（着地済み親 — registry / canonical emit 経路の確立）、#1803（SpanExporter スロット）。
 
 ## perf 検証の CI 分離が扱う業務境界（260731-perf-ci-separation、履歴、observed `da51af375`）
 

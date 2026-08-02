@@ -42,7 +42,13 @@ interface RuntimeGraph {
   scope: string;                  // from state.md "Scope" field
   started_at: string;             // ISO 8601, same row as workflow_id
   stages: RuntimeStage[];         // chronological order by started_at
-  bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block; absent/malformed/cyclic blocks omit the node
+  bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
+  bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
+}
+
+interface BoltDagAbsence {
+  reason: "scope-skips-units" | "units-pending"; // the machine discriminant
+  detail: string;                 // prose for a human reading the graph; never branched on
 }
 
 interface BoltDag {
@@ -122,14 +128,26 @@ dependency and can run in parallel. Level entries are sorted
 lexicographically before emission, so the node is deterministic
 regardless of authored order.
 
-The node is **omitted entirely** when the artifact is absent, or when
-its edge block is absent, malformed (duplicate name, dangling or
-self-dependency, unparseable), or cyclic — `compile` writes a stderr
-diagnostic naming the reason and leaves `bolt_dag` off the envelope
-rather than emit a wrong-but-valid DAG. Those failures are surfaced
-upstream at the 2.7 gate by the `required-sections` sensor, which
-validates the same block and reports `edge_block: ok | absent |
-malformed | cyclic`. Authoring the edges as structured data (knowledge
+When there is no DAG to project, the compile distinguishes two cases
+rather than collapsing both into a missing node.
+
+A **legitimate absence** — the scope skips units-generation altogether, or
+the stage has not produced its artifact yet — writes `bolt_dag_absence`
+carrying that reason and exits 0. Downstream reads the reason instead of
+guessing why the node is missing.
+
+A **defect** fails the compile: it writes a stderr diagnostic naming the
+reason, writes no graph at all, and exits non-zero. Two shapes qualify —
+units-generation is completed but the artifact is absent, and the artifact
+exists but its edge block does not parse (absent, malformed by duplicate
+name / dangling or self-dependency / unparseable line, or cyclic). The
+second holds regardless of the stage state: having written the artifact,
+the author owes its machine-readable form. Failing loudly is what puts the
+diagnostic in front of a reader — the PostToolUse hook only records a
+tool's stderr on a non-zero exit, so an exit-0 omission was invisible.
+Those failures are *also* surfaced upstream at the 2.7 gate by the
+`required-sections` sensor, which validates the same block and reports
+`edge_block: ok | absent | malformed | cyclic`. Authoring the edges as structured data (knowledge
 work, once, behind the 2.7 approval gate) is what keeps the hook-fired
 `compile` byte-identical on re-run: no model sits in the compile path.
 

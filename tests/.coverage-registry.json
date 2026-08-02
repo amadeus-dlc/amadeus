@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 563,
+    "total": 573,
     "enumeratedByClass": {
-      "function": 320,
+      "function": 330,
       "audit": 79,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 158,
+      "function": 162,
       "audit": 34,
       "scope": 10,
       "stage": 8,
@@ -1180,6 +1180,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:AUTONOMY_LADDER_EXIT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:AUTONOMY_MODE_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1901,11 +1908,44 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:GUARD_EXIT_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:GUARD_OBSERVED_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:GUARD_WEIGHT_MARKER",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:guardIntentOperation",
       "minMechanism": "none",
       "coveredBy": [
         {
           "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:guardMessage",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
           "mechanism": "none"
         }
       ],
@@ -2950,10 +2990,48 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:PLAN_CORRECTION_EXIT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:PLAN_DRIFT_WEIGHT",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:planFilePath",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:planGuardMessage",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:planIntegrityVerdict",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t403-plan-integrity-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3482,6 +3560,22 @@
         {
           "file": "tests/integration/t394-compose-state-resync.integration.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t406-compose-host-graph-guard.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t407-resync-noop-detection.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t410-host-graph-shape-validation.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t411-compose-invalid-graph-visibility.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -3849,6 +3943,22 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:swarmEvidenceVerdict",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t402-approve-reconciliation-corpus.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t402-approve-reconciliation.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -5122,6 +5232,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
@@ -5243,6 +5357,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
           "mechanism": "cli"
         },
         {
@@ -5552,6 +5670,10 @@
         },
         {
           "file": "tests/integration/t102.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t399-bolt-dag-outcome.test.ts",
           "mechanism": "cli"
         },
         {

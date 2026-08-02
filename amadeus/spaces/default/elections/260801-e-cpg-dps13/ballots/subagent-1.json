@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-DPS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": "0件で可。ただし consumes 総当たりの『事後適用』は E-SRCNRS13 が定める実行時点(reviewer ディスパッチ前)からの逸脱実例であり、新規学習ではなく違反実例として次回ローリング PM の材料に回すこと(diary Interpretations の自己申告『次ステージからは起草時に総当たりを先行する』をそのまま是正記録とする)。",
+  "rationale": "DP record を実測し、候補 c1 の2要素がいずれも既存 cid から導出可能と確認した。(1) consumes 総当たり是正: diary Interpretations 自身が『E-SRCNRS13 の編纂型セルフチェックを事後適用』と明記しており、team.md:231 の追補(宣言 consumes × 全成果物の総当たり実参照チェックを reviewer ディスパッチ前に通す)の適用そのもの。新規規則を導かず、むしろ実行時点の逸脱実例に当たる。(2) 直列 Bolt 編成の理由記録: bolt-plan.md『直列実行の理由(本 intent のガード規範の自己適用)』が挙げる U1→U2(bolt_dag_absence 消費)/ U2→U3(amadeus-orchestrate.ts 同一ファイル交差)/ U3→U4(実装確定後の docs)は、project.md:269 cid:reverse-engineering:free_text_1(依存順序・同一ファイル競合のある作業だけを直列化)と project.md:214 cid:units-generation:c1(Bolt 粒度は intent ごとに選ぶ・1 Unit = 1 Bolt = 1 PR)の適用に収まる。順序をリスク制御として bolt-plan と risk-and-sequencing-rationale の両方へ根拠付きで書く点は project.md:233 cid:delivery-planning:intra-bolt-order-as-risk-control が既にカバー。さらに『本 record 自体が実装後 corpus sweep の緑ケースに入る』という自己適用の実証設計は team.md:239 cid:code-generation:corpus-sweep-for-new-guards(正当な既存データで赤くならないことの両側実測)の実例であり、独立規則を要しない。よって新設・追補すべき cid は無く 0件が妥当。",
+  "submittedAt": "2026-08-01T12:00:00Z"
+}

@@ -25,6 +25,20 @@
 - Updated artifacts: 実質更新3件 = `architecture.md`（#1922 機構断面: デッドロック連鎖 + `.current-session` writer/reader + 最小修正方向）、`code-structure.md`（患部配置と区間 touch 判定）、`code-quality-assessment.md`（テスト空白の記録 — no-state-file SessionStart → `.current-session` 書込みを検証するテスト不在、t10 `:211` / `:222` が現行 early-exit を pin）。判断1行のみ5件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` — 単一バグの既存構成内修正であり、区間の構成変化（otel 基盤拡張等）は各ファイルの現在節1行で注記した（`cid:reverse-engineering:c3-relabel`）。加えて本ファイルと per-intent `re-scans/260801-kimi-bootstrap-deadlock.md`。
 - Per-intent record: `re-scans/260801-kimi-bootstrap-deadlock.md`（患部 file:line 全数・認可連鎖・テスト足場を含む）。
 
+## 実行メタデータ（履歴: 260801-cg-plan-guard）
+
+- Date: `2026-08-01T08:15:00Z`
+- Base commit: `c49e385ac`（前回 observed、`git merge-base --is-ancestor` exit 0）
+- Observed commit: `cb809c4dec912e594204cdfe56582e2303159dbe`（origin/main tip）
+- Distance: `22 commits`（open-bug-batch-5 の6 PR+record #1896、otel-meta U1 #1899、docs #1897/#1898、metrics 往来）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Focus: CG 計画整合ガード（#1892）の患部3点 — `tryEmitSwarm`（orchestrate:2919-、`:2937` の bolt_dag 不在無音 false）、`computeBoltDag`（runtime:300-313、stderr advisory が spawnRecompile の stdio:ignore に飲まれる実質無音）、`parseUnitsBlock`（lib:7823-、`- name:` 限定 = #1893 患部）— を conductor が verbatim 直読で確定。実績突合の一次証拠は audit SWARM イベント（swarm.ts:325-327）。
+- Scan mode: conductor focused live scan+#1893 クロスレビュー2名（進行中、成立後 RA で消費）。orchestrate/runtime は区間内無変更・lib のみ touch（parseUnitsBlock 本体不変）で、患部引用は observed で verbatim 直読により再解決済み（免除の適用ではない — E-CPG-RES13 投票者2訂正反映）。
+- corpus: 計画不履行4 record+正当直列6 record+#1893 現物（260712）— M7 sweep の最小 corpus、読み取り専用。
+- RA へ送る裁定2件: #1893 修正方向（A 受理拡張 / B 訂正+loud 拒否）、autonomy null 期の扱い。
+- Updated artifacts: 実質更新4件 = `architecture.md`（患部3点+SWARM 証拠+区間変化）、`code-structure.md`（実装対象と corpus）、`code-quality-assessment.md`（無音 degrade 3経路と真因）、`business-overview.md`（利用者価値と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260801-cg-plan-guard.md`。
+- Per-intent record: `re-scans/260801-cg-plan-guard.md`
+
 ## 実行メタデータ（履歴: 260801-open-bug-batch-5）
 ## 実行メタデータ（履歴: 260731-formal-verif-value-chain）
 
@@ -63,6 +77,26 @@
 - Bolt 間交差判定: Bolt 1 は mirror 4ファイル共有で Bolt 内直列、Bolt 2 は `amadeus-utility.ts` 交差で Bolt 内直列、Bolt 3 は `bootstrap.ts` 交差で Bolt 内直列、Bolt 4 は非交差で並行可、Bolt 5 は全 Bolt と非交差。dist 再生成面はマージ順直列。
 - Updated artifacts: 実質更新4件 = `architecture.md`（9バグの機構節 + 区間の構造変化: OTel ファミリー到着・perf tier 分離）、`code-structure.md`（患部配置と区間の機械集計）、`code-quality-assessment.md`（根因確度と品質所見）、`business-overview.md`（利用者影響と delivery boundary）。判断1行のみ4件 = `technology-stack.md` / `component-inventory.md` / `api-documentation.md` / `dependencies.md` — 9バグはすべて既存構成内の欠陥であり、区間の構成変化（OTel 18モジュール等）は各ファイルの履歴節整合を保つ現在節1行で注記した（`cid:reverse-engineering:c3-relabel`）。加えて本ファイルと per-intent `re-scans/260801-open-bug-batch-5.md`。
 - Per-intent record: `re-scans/260801-open-bug-batch-5.md`（患部 file:line 全数・要件段へ送る裁定事項3件を含む）。
+
+## 実行メタデータ（履歴: 260801-otel-meta-schema）
+
+- Date: `2026-08-01T01:07:56Z`
+- Base commit: `6e7a9d701`（observed の祖先、`git merge-base --is-ancestor 6e7a9d701 HEAD` exit 0）
+- Observed commit: `9c8df859ef0492b6fbc82f26d931a1558277faaa`（`git rev-parse HEAD`）
+- Distance: `56 commits`（`git log --oneline 6e7a9d701..HEAD | wc -l`。scan 報告の 55 は本実測で 56 と訂正）
+- 区間規模: `3436 files changed, 177199 insertions(+), 18066 deletions(-)`（`git diff --shortstat 6e7a9d701 HEAD`、測定 ref = observed `9c8df859e`）。面別内訳（`git diff --numstat` の機械集計）は `dist/` `1484 files / +77091 / −8274`、self-install `1060 files / +55067 / −5911`、`amadeus/` record `459 files / +17893 / −12`、`metrics/` `5 files / +288 / −2`、**ソース面 `428 files / +26860 / −3867`**
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Focus: [#1868](https://github.com/amadeus-dlc/amadeus/issues/1868) — OTel メタ情報スキーマ v1（§1 resource 12属性 / §2 span attributes / §3 log = 変更なし / §4 exception / §5 subagent 観測 / §6 metrics 語彙）の実装のための技術断面確定
+- Scan mode: Developer の静的 live-code scan を上流入力とし、Architect が主要主張（resource literal 1箇所・`registerMeterProvider` の production 未呼出・PreToolUse 不在・exception 属性の欠落・78-pin ガード集合）を observed commit で独立再確認する直列構成。テストは未実行
+- **区間の性質（重要）**: base `6e7a9d701` の時点で `packages/framework/core/otel/` は**存在しない**（`git cat-file -e 6e7a9d701:packages/framework/core/otel/tracer-provider.ts` → 「exists on disk, but not in `6e7a9d701`」）。すなわち本区間は OTel v1 実装プログラム（#1672 系）の全体を含み、diff-refresh は実質「新設サブシステムの初回スキャン」にあたる。区間規模が前回（13 commits / 188 files）比で桁違いなのはこのため
+- 区間の主要変化: Phase 1 walking skeleton（`42dc68988` #1678 — Providers / Local Exporters / vendored OTel API）、event registry 78語彙 + drift guard（`e37f81094` #1703）、W3C Trace Context 伝播（`5ad0a1d04` #1705）、Local Exporters の production 化（`fe2e0480c` #1719）、fail-open diagnostic log（`d60f73208` #1731）、metrics API subset（`f8f87c797`）、Relay 縮退（`a169e5e9b`）、共有 bootstrap seam + subprocess span ラッパ（`fc94b38ba` Bolt M-P）、audit-emit 系 29 site の canonical 移行（`559c84b01` Bolt G1）、targeting 系移行（`a59b41870` Bolt G2）、subprocess 境界の span 化（`1a6dac8b7` Bolt G3）、旧 audit writer 削除（`5d912e0dd` #1844、削除ゲート6条件 GREEN）、perf tier 分離（`67ca151b5` ほか）、統合 patch-coverage 解消（`37dbc18eb`）
+- 判定: **#1868 の6面すべてについて患部と拡張点が確定**。最小改修は §4 exception（`tracer-provider.ts:155-156` の2行 + registry def の `optionalAttributes`）、最大は §5 subagent（PreToolUse hook 新設 + プロセス跨ぎのスパン設計 + canonical イベント追加による 78-pin 全面更新）。§6 metrics は §1 resource に依存し、bootstrap の metrics arm 新設が前提
+- 引用再確認の相違（Developer 報告との差分）: 所在・機序・結論は**主要主張すべて一致**。相違・精密化は次の6点 — (a) コミット数 = 56（報告 55、`git log --oneline 6e7a9d701..HEAD | wc -l`） (b) `EXPECTED_CANONICAL_COUNT` は `event-registry.ts:77`（報告 `:79`） (c) 報告「redaction は span event 属性を通らない」は **write-time に限れば正、export 境界では誤** — `local-span-exporter.ts:93` が `events[].attributes` を `redactAttributes` に通す（報告自身が後段で default-deny 前提の記述をしており内部的にも不整合） (d) **`resource` は export 境界の `redactRecord`（`local-span-exporter.ts:88-99`）の対象外**であり、ローカルストアでは無処理で書かれる（報告は Relay 側の扱いのみ言及）。Relay（`relay.ts:298-312`）は値スクラブのみでキー admission を意図的に迂回（`:294-297` に理由コメント） (e) 78-pin は drift test 内で **5箇所**（報告 4 箇所 = `:51-54`。加えて `:192` の `vocab.length` 78 pin が独立に存在） (f) ハーネス注入チャネルとして報告の3様式に加え、**packager 生成データファイル `tools/data/harness.json`**（`scripts/package.ts:206-214` `writeHarnessData()`、canonical に不在・dist 7ツリーに実在、コメント `:207-208`「the object shape leaves room for future per-harness runtime facts」）が第4様式として存在する。`amadeus.harness.version` の供給に env 配線を新設せずに済む最有力経路
+- 独立検証で追加した所見: **セッション相関の片側欠落** — `amadeus.session.started` / `.resumed` の def（`event-registry.ts:245-262`）は `requiredAttributes: ["Source"]` のみで session ID を持たない。#1868 §1 が `session.id` を「SESSION_STARTED 監査行との突合キー」と位置づけるが、監査行側に突合対象が存在しないため、resource への追加と registry への optional 属性追加が対になる（属性追加のみなら cardinality pin は不動）
+- 現在マーカーの降格: 直前の現在断面 `260731-open-bug-batch-4`（observed `6e7a9d701`）を本節の新設に伴い履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。共有 codekb 8成果物の line 3 現在ヘッダも同様に降格し、本 intent 断面を新しい現在節として追記した。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
+- Base 選定根拠: 前 intent の observed `6e7a9d701` は `origin/main` 系譜のコミット（`record: sync intent 260730-open-bug-batch-3 completion (3 bug fixes) (#1815)`）であり、祖先性が保たれている（exit 0、距離 56）。merge-base 復元は不要。`cid:reverse-engineering:rescan-base-ancestry`（日付最新でなく祖先性を判定してから採用）に従い、祖先性を先に実測してから base とした
+- Updated artifacts: 実質更新8件 = `architecture.md`（3プロバイダ構成・resource 一元化位置・redaction 二層・exception / subagent / trace 連結）、`code-structure.md`（otel 18モジュールの規模表・6面と患部の対応・ハーネス注入4様式・resource 属性の供給元棚卸し）、`component-inventory.md`（改修面の目録・registry 構成実測・subagent def・計器の現状）、`api-documentation.md`（bootstrap / 3プロバイダ登録 / Span / redaction / registry / 監査 accept-set / ハーネス検出の各契約）、`technology-stack.md`（vendored API 自前実装・semconv 語彙の前例不在・env / git 断面の空白・ビルド時注入チャネル・二重モジュールグラフ・リセットシーム）、`dependencies.md`（モジュール依存の向き・6面の相互依存・78-pin ガードの依存グラフ・外部依存）、`code-quality-assessment.md`（面別難度・強み5件・弱み7件・検証設計上の注意）、`business-overview.md`（解決される問い・受益者・プライバシー境界・スコープ境界）。加えて本ファイルと per-intent `re-scans/260801-otel-meta-schema.md`
+- Per-intent record: `re-scans/260801-otel-meta-schema.md`
 
 ## 実行メタデータ（履歴: 260731-perf-ci-separation）
 

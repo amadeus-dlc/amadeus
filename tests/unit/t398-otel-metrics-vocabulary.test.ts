@@ -90,6 +90,6 @@ describe("the redaction policy admits the dimensions (export-boundary-redaction)
   });
 
   test("an undeclared key is still denied at the boundary", () => {
-    expect(redactAttributes({ "amadeus.intent.id": "260801-otel" })).toEqual({});
+    expect(redactAttributes({ "amadeus.metric.undeclared": "260801-otel" })).toEqual({});
   });
 });

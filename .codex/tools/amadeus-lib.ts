@@ -5473,9 +5473,23 @@ export function renderStageProgressSection(
   return body;
 }
 
+// The recognized shape of the Stage Progress section. Shared by the replacer
+// and the extractor below so "what gets rewritten" and "what gets inventoried/
+// verified" can never drift apart (#1963).
+const STAGE_PROGRESS_SECTION_RE =
+  /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
+
 export function replaceStageProgressSection(content: string, body: string): string {
-  const section = /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
-  return content.replace(section, `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`);
+  return content.replace(
+    STAGE_PROGRESS_SECTION_RE,
+    `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
+  );
+}
+
+// The Stage Progress section of a state file, or null when its shape is not
+// recognized — the same inputs on which the replacer above silently no-ops.
+function stageProgressSectionOf(content: string): string | null {
+  return STAGE_PROGRESS_SECTION_RE.exec(content)?.[0] ?? null;
 }
 
 /** The `Per unit:` annotation the Construction section carries, if any. */
@@ -5546,19 +5560,25 @@ export function rebuildDerivedPlanFields(
 // existing row's checkbox state and plan suffix, and recomputes the derived
 // counters so an inserted row cannot produce a Completed > Total skew.
 //
-// Fail-closed in three directions:
+// Fail-closed in four directions:
 //   - a terminal (non-Running) record is a RECORD, not a live plan: adding rows
 //     under a summary computed at completion corrupts it, so it is skipped;
 //   - a state row whose slug is absent from THIS host's graph means the record
 //     travelled from a host with a different graph: rebuilding would delete it,
 //     so the whole intent is skipped, untouched;
-//   - an unreadable state / unknown scope is reported, never guessed at.
+//   - an unreadable state / unknown scope is reported, never guessed at;
+//   - a Stage Progress section the replacer's regex does not recognize (a
+//     hand-edited header comment, a trailing section) makes the replacement a
+//     silent no-op: that is verified by re-parsing the rewritten content, and
+//     on failure NOTHING is written — updating the derived counters without
+//     the rows would skew the record (#1963).
 export type StateResyncStatus =
   | "resynced"
   | "current"
   | "not-running"
   | "foreign-rows"
-  | "unreadable";
+  | "unreadable"
+  | "section-unrecognized";
 
 export interface StateResyncOutcome {
   space: string;
@@ -5591,7 +5611,11 @@ function resyncOneIntent(
   const scopeDef = scope ? loadScopeMapping()[scope] : undefined;
   if (!scopeDef) return outcome("unreadable");
 
-  const rows = parseCheckboxes(content);
+  // Only rows INSIDE the Stage Progress section count. parseCheckboxes scans
+  // its whole input, so a checkbox-shaped line in another section (notes,
+  // prose) would otherwise satisfy the inventory — and a missing row would
+  // never be inserted while the intent reports "current" (#1970 review).
+  const rows = parseCheckboxes(stageProgressSectionOf(content) ?? "");
   const graphSlugs = new Set(graph.map((s) => s.slug));
   if (rows.some((r) => !graphSlugs.has(r.slug))) return outcome("foreign-rows");
 
@@ -5610,6 +5634,17 @@ function resyncOneIntent(
     content,
     renderStageProgressSection(graph, planOf, stateOf, perUnitLineOf(content)),
   );
+  // Verify the replacement actually took effect. `replaceStageProgressSection`
+  // is a bare String.replace: a non-matching section regex returns the input
+  // unchanged with no signal. Comparing `next !== content` would not prove
+  // anything either (derived fields change the bytes anyway), so the rewritten
+  // SECTION is re-extracted and re-parsed — scoped so a checkbox-shaped decoy
+  // elsewhere in the file cannot vouch for a row that was never inserted —
+  // and every missing slug must now have a row (#1963).
+  const rowSlugsAfter = new Set(
+    parseCheckboxes(stageProgressSectionOf(next) ?? "").map((r) => r.slug),
+  );
+  if (inserted.some((slug) => !rowSlugsAfter.has(slug))) return outcome("section-unrecognized");
   next = rebuildDerivedPlanFields(next, graph, planOf).content;
   next = setField(next, "Last Updated", isoTimestamp());
   writeStateFile(projectDir, next, intent, space);
@@ -7831,6 +7866,206 @@ export interface UnitDependencyEdge {
 export type BoltDagParse =
   | { ok: true; units: UnitDependencyEdge[]; batches: string[][] }
   | { ok: false; reason: "absent" | "malformed" | "cyclic"; detail: string };
+
+// Why a compiled runtime graph legitimately carries NO bolt_dag node. The two
+// reasons are the only ones that are not defects: the scope skips
+// units-generation altogether (degrade scopes such as fix/chore), or the stage
+// has not produced its artefact yet. Anything else — units-generation completed
+// with the artefact missing, or an artefact that does not parse — is a defect
+// and fails the compile instead of landing here.
+//
+// `reason` is the machine discriminant; `detail` is prose for a human reading
+// stderr and is never branched on.
+export type BoltDagAbsence = {
+  readonly reason: "scope-skips-units" | "units-pending";
+  readonly detail: string;
+};
+
+// The three parts every plan-integrity guard message carries: what the engine
+// OBSERVED (with the numbers — declared width, batch, unit names), WHY the
+// mismatch is worth stopping for, and the ONE approved way out. A guard that
+// only says "no" teaches nothing; a guard that names the exit is a redirect.
+//
+// All three are required — no optional part — so "a part is missing" is not a
+// representable state and AC-4a's check is a type-level guarantee first and a
+// runtime check second (parse-don't-validate).
+export type GuardMessageParts = {
+  readonly observation: string;
+  readonly weight: string;
+  readonly exit: string;
+};
+
+// The part boundaries. Machine-checkable identity for the three-part contract:
+// the AC-4a test asserts these three markers are present, so dropping a part
+// turns the check red. Each is one line — a continuation line inside a
+// multi-line concatenation reads as DA:0 under Bun's LCOV merge.
+export const GUARD_OBSERVED_MARKER = "Observed: ";
+export const GUARD_WEIGHT_MARKER = "Why this matters: ";
+export const GUARD_EXIT_MARKER = "Approved exit: ";
+
+// The single assembler for every plan-integrity guard message. Callers pass
+// parts and never build the prose themselves — one template here is what keeps
+// the three ports (issuance redirect, issuance violation, approve-time
+// evidence) from drifting into three near-copies of the same sentence.
+export function guardMessage(parts: GuardMessageParts): string {
+  const observed = `${GUARD_OBSERVED_MARKER}${parts.observation}`;
+  const weight = `${GUARD_WEIGHT_MARKER}${parts.weight}`;
+  const exit = `${GUARD_EXIT_MARKER}${parts.exit}`;
+  return `${observed}\n\n${weight}\n\n${exit}`;
+}
+
+// The measured basis every plan-integrity guard cites, and the two approved
+// exits. One const per line for the same LCOV reason as the markers above.
+export const PLAN_DRIFT_WEIGHT = "A parallel batch that runs serially is plan drift the record never shows: across 18 audited intents, 4 declared parallel Bolts and shipped them one at a time, because the plan lived in prose and never became a directive (issue #1892).";
+export const PLAN_CORRECTION_EXIT = "Correct the plan, not the run: record the dependency that makes these units serial (with its reason) in unit-of-work-dependency.md, re-run `bun <harness>/tools/amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.";
+export const AUTONOMY_LADDER_EXIT = "Answer the walking-skeleton ladder: `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `amadeus-bolt set-autonomy --mode gated` (a gate at every batch boundary), then re-run `next`.";
+
+// Why `tryEmitSwarm` did not fan a batch out. Every refusal in that function
+// lands on exactly one arm, which is what lets the caller tell a legitimate
+// serial fallback apart from a plan the run is about to break.
+//
+// `autonomy-unset` splits in two on purpose. Before the walking skeleton ships,
+// an unset grant is the legitimate initial state (the ladder has not fired
+// yet); after it ships, an unset grant means the ladder's answer is owed. The
+// two need opposite handling, so they are separate arms rather than one arm
+// carrying a boolean — a value the caller would have to remember to check.
+export type SwarmDecline =
+  | { readonly kind: "not-swarm-stage" }
+  | { readonly kind: "skeleton-gate" }
+  | { readonly kind: "autonomy-unset-pre-skeleton" }
+  | { readonly kind: "autonomy-unset" }
+  | { readonly kind: "no-dag" }
+  | { readonly kind: "all-covered" };
+
+// What the engine should do about a decline. `redirect` and `violation` carry
+// the same payload but are separate arms because they lead to DIFFERENT exits
+// (the autonomy ladder vs a plan correction); folding them into one arm with an
+// `exit` field would turn the caller's branch into a value check and let the
+// two exits be swapped without the type noticing.
+//
+// A batch as the compiled plan declares it: the 1-origin number and the FULL
+// unit list (not the uncovered remainder). The one shared shape between the
+// reader in orchestrate and the judge here, so the two cannot drift.
+export type DeclaredBatch = { readonly number: number; readonly units: readonly string[] };
+
+// `declaredWidth` and `batchNumber` are the one place the observed numbers come
+// from — the caller never re-counts the units or re-carries the batch number
+// beside the verdict when it writes the message.
+export type PlanIntegrityVerdict =
+  | { readonly kind: "ok" }
+  | { readonly kind: "redirect"; readonly batchNumber: number; readonly declaredWidth: number; readonly units: readonly string[] }
+  | { readonly kind: "violation"; readonly batchNumber: number; readonly declaredWidth: number; readonly units: readonly string[] };
+
+// The sole constructors for the two guard verdicts: width is derived from the
+// units and the number rides the same declared batch, so no call site can hand
+// in a pair that disagrees with the plan.
+function redirectVerdict(batch: DeclaredBatch): PlanIntegrityVerdict {
+  return { kind: "redirect", batchNumber: batch.number, declaredWidth: batch.units.length, units: batch.units };
+}
+
+function violationVerdict(batch: DeclaredBatch): PlanIntegrityVerdict {
+  return { kind: "violation", batchNumber: batch.number, declaredWidth: batch.units.length, units: batch.units };
+}
+
+// Decide whether a swarm decline is benign. Total and pure: no disk, no audit,
+// no env — the caller collects the two inputs and this function alone judges
+// them, so a verdict can never be derived from the outcome it is meant to gate.
+//
+// A batch nobody declared, or one declared a single unit wide, is serial by
+// plan and never a violation. Above that width the decline reason decides.
+//
+// The `default` arm is the point of the whole function: a decline reason added
+// later without a branch here stops the run instead of quietly serialising it.
+// There is deliberately NO exhaustiveness check on `decline.kind` — one would
+// move this failure to compile time and delete the runtime floor with it.
+export function planIntegrityVerdict(
+  decline: SwarmDecline,
+  pendingBatch: DeclaredBatch | null,
+): PlanIntegrityVerdict {
+  if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };
+  switch (decline.kind) {
+    case "not-swarm-stage":
+    case "skeleton-gate":
+    case "autonomy-unset-pre-skeleton":
+    case "all-covered":
+      return { kind: "ok" };
+    // No compiled DAG means no declared width to break. A guard with no
+    // evidence does not fire — the absence reason is not read here (E-CPG-U2ABS:
+    // no consumer exists yet; U3's future clause mints one when needed).
+    case "no-dag":
+      return { kind: "ok" };
+    case "autonomy-unset":
+      return redirectVerdict(pendingBatch);
+    // biome-ignore format: single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)
+    default: return violationVerdict(pendingBatch);
+  }
+}
+
+// The prose for a guard verdict. The caller passes the verdict and gets a
+// finished message — no call site assembles the sentence
+// itself, so the two exits cannot drift apart by one being reworded.
+//
+// The observed numbers come off the verdict, never re-derived here: the batch
+// number, the width, and the unit names are the ones the judge saw.
+export function planGuardMessage(
+  verdict: Extract<PlanIntegrityVerdict, { kind: "redirect" | "violation" }>,
+): string {
+  const named = verdict.units.join(", ");
+  const declared = `the compiled Bolt DAG declares batch ${verdict.batchNumber} ${verdict.declaredWidth} units wide (${named}), so the plan says these units run in parallel`;
+  if (verdict.kind === "redirect") {
+    const observation = `${declared}, but Construction Autonomy Mode is unset — the walking-skeleton ladder has not been answered, so the run cannot fan the batch out and would fall back to building them one at a time.`;
+    return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: AUTONOMY_LADDER_EXIT });
+  }
+  const observation = `${declared} — but this run is about to issue them serially, one unit per \`next\`.`;
+  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
+}
+
+// What the audit trail says actually ran, reduced to the only key the three
+// SWARM events share. SWARM_STARTED carries "Unit names", SWARM_DEGRADED carries
+// none, SWARM_COMPLETED carries neither — "Batch number" is the whole common
+// vocabulary, so matching on unit names would drop every degraded batch.
+//
+// Sets, not lists: the same batch legitimately emits SWARM_STARTED more than
+// once, and neither order nor multiplicity carries meaning here.
+export type SwarmEvidence = {
+  readonly startedBatches: ReadonlySet<number>; // SWARM_STARTED ∪ SWARM_DEGRADED
+  readonly completedBatches: ReadonlySet<number>; // SWARM_COMPLETED
+};
+
+// Whether the run's execution shape matches the plan's. `missing` carries EVERY
+// unsatisfied batch rather than the first, because approve is only reached once
+// all units are covered — a batch still lacking evidence at that point is not
+// mid-flight, it is a batch that never fanned out, and naming one of four
+// teaches the reader to fix one of four.
+export type SwarmEvidenceVerdict =
+  | { readonly kind: "satisfied" }
+  | { readonly kind: "missing"; readonly batches: readonly DeclaredBatch[] };
+
+// The single place a batch index becomes a batch NUMBER. Every consumer of a
+// declared batch goes through here, so the 1-origin conversion the audit rows
+// use cannot drift from the 0-origin array the compiler produces.
+//
+// Width-1 levels never appear: a topological level of one unit is serial by
+// plan, so there is no parallelism to have failed.
+function wideBatchesOf(batches: readonly (readonly string[])[]): DeclaredBatch[] {
+  const wide: DeclaredBatch[] = [];
+  for (let index = 0; index < batches.length; index++) {
+    const units = batches[index];
+    if (units.length >= 2) wide.push({ number: index + 1, units });
+  }
+  return wide;
+}
+
+export function swarmEvidenceVerdict(
+  batches: readonly (readonly string[])[],
+  evidence: SwarmEvidence,
+): SwarmEvidenceVerdict {
+  const missing = wideBatchesOf(batches).filter(
+    (batch) => !evidence.startedBatches.has(batch.number) || !evidence.completedBatches.has(batch.number),
+  );
+  if (missing.length === 0) return { kind: "satisfied" };
+  return { kind: "missing", batches: missing };
+}
 
 // Locate the first fenced ```yaml block whose body declares a top-level
 // `units:` key. Returns the inner block text, or null when no such fence

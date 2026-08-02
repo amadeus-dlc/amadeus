@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-SDS13",
+  "voter": "subagent-1",
+  "question": "260801-cg-plan-guard scope-definition の §13 学習選定。候補 c1(裁定済み骨子からの一意導出 0問+risk-first 編成)は既存 cid(intent-capture:c1 / scope-definition:c3 の risk-first 先例 / no-election-judgment-gate)の実例であり新規規則を導かない — 0件を提案。反対材料があれば record(SD diary・scope-document・intent-backlog)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

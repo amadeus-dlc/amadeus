@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補あり(具体候補を票に明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T04:48:46Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSND-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用に賛成するが、提案 rationale の検証根拠の数値表記2点が実測と乖離しているため、裁定記録へ実測値で訂正転記すること(結論=0件は不変)。(1)「6 unit × 13 sensor 発火は全て SENSOR_PASSED」は不正確 — 実測は SENSOR_FIRED 171 / SENSOR_PASSED 170 / SENSOR_FAILED 1(seq 625、upstream-coverage、resource-core/nfr-design/nfr-design-questions.md、unreferenced=business-logic-model)。ARTIFACT_UPDATED(seq 626)後の再発火 seq 627-628 で PASSED、最終状態は全 green。(2)「U1 iteration1 の Critical 2件」は過小 — 実測 verdict は NOT-READY(Critical 2件・Major 2件・Minor 1件、seq 641)。cid:requirements-analysis:numbers-from-command-output-only / report-final-values-only 準拠の訂正を求める。",
+      "rationale": "独立実測(cwd=/Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/otel-improvement、対象 record=amadeus/spaces/default/intents/260801-otel-meta-schema、active-intent カーソルで確定)により choice 1(0件で可)を支持する。\n\n【reviewer verdict の実測】監査シャード audit/j5ik2o-mac-studio-lan-5e2c85780fa8.jsonl の SUBAGENT_COMPLETED を全数走査した結果、nfr-design の reviewer 完了は 7件で、U1 が 2回(seq 641 NOT-READY / seq 669 iteration2 READY)、U6 が 2回(seq 944 NOT-READY Major 2件 / seq 972 iteration2 READY)、U3(seq 723)・U5(seq 776)・U2(seq 829)・U4(seq 882)が各1回 READY。提案の「U1/U6=iter2 READY、他=iter1 READY」は実測と一致する。\n\n【欠陥の帰属判定 — 全件が既存ノルムの違反実例】(a) U1 Critical#1 = 承認済みイミュータブル上流 FD の vcs 解決機構を無申告で差し替え → cid:requirements-analysis:implementation-deviation-election(承認済み設計からの逸脱は実装前停止・裁定)の設計段面。Critical#2 = 実在しない「resource スロット」機構を前提にした容量主張 → cid:requirements-analysis:mechanism-cite-verify-at-draft / absence-claim-grep-verify。(b) U6 Major#1 = FD 正本テーブル domain-entities.md:9-16 に無い \"Log\" を含む6面の誤列挙 → cid:functional-design:cross-unit-type-verbatim-check / cid:requirements-analysis:enumeration-completeness-review。Major#2 = 出典の誤帰属3箇所 → mechanism-cite-verify-at-draft。(c) 追加で私が検出した SENSOR_FAILED(business-logic-model が本文未参照)も cid:code-generation:artifact-upstream-inputs-header / consumes-first-drafting / body-derivation-before-header の違反実例で、新規則を生まない。\n\nいずれのクラスも既存 cid が既に射程に収めており、新しい規則面(既存ノルムが構造的に守れない隙間)を提示するものはない。よってローリング PM の違反実例として記帳する扱いが正しく、§13 persist 0件を支持する。",
+      "submittedAt": "2026-08-01T04:47:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSND-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件の結論には同意するが、rationale の検証根拠のうちセンサー記述は実測と一致しない。nfr-design ステージの実測は firing 171 件(SENSOR_PASSED 170 / SENSOR_FAILED 1)であり「6 unit × 13 sensor 発火は全て SENSOR_PASSED」は偽。FAILED は seq 625(2026-08-01T04:01:26Z、resource-core/nfr-design/nfr-design-questions.md の upstream-coverage、unreferenced=business-logic-model)で、seq 628 の ARTIFACT_UPDATED を挟み seq 630 で再発火 PASSED として閉包済み。persist / ローリング PM への記帳時はこの数値を実測値へ訂正し、当該 rationale 自体を numbers-from-command-output-only / report-final-values-only の違反実例として1件追加記帳すること(これも既存ノルムの違反実例であり新規則を生まないため 0件の結論は不変)。",
+      "rationale": "独立実測により conductor の実体主張 (a)(b)(c) は全て裏取りできた。(1) 6 unit の構成と reviewer verdict: construction/{docs,exception,metrics,resource-core,span-attrs,subagent-started}/nfr-design/performance-design.md の '## Review' ブロック直読で、resource-core=Iteration 2 READY(2026-08-01T04:10:19Z、要約に『iteration1のCritical2件(vcs機構の無申告逸脱・resourceスロット虚構)』を verbatim 確認)、docs=Iteration 2 READY(04:44:22Z、『iteration1のMajor2件(6面列挙のLog誤混入・出典のbusiness-logic-model誤帰属3箇所)』)、exception/metrics/span-attrs/subagent-started=いずれも Iteration 1 READY(04:15:23Z / 04:23:39Z / 04:28:48Z / 04:35:32Z)。(2) 欠陥の帰属先ノルムを個別に照合: vcs 解決機構の無申告差替えは cid:requirements-analysis:implementation-deviation-election(実装前停止・裁定)および cid:code-generation:cg-invariant-conflict-explicit-revision の射程内、実在しない resource スロット前提の容量主張は cid:requirements-analysis:mechanism-cite-verify-at-draft と cid:requirements-analysis:absence-claim-grep-verify の射程内、FD 正本テーブルとの列挙不一致は cid:requirements-analysis:enumeration-completeness-review と cid:functional-design:cross-unit-type-verbatim-check(並行 per-unit で正本側定義を逐語照合)の射程内、出典の誤帰属3箇所は mechanism-cite-verify-at-draft に加え cid:nfr-requirements:compilation-stage-source-first(編纂型成果物の記憶起草が引用捏造クラスを生む)の射程内。4類型いずれも既存ノルムが既に規範を持ち、追補を要する新しい機序・面は見当たらないため、新規則を生まないという判断は妥当。(3) よって『0件で可』を支持するが、rationale のセンサー数値が実測と不一致のため GoA 2(軽微な留保付き合意)とする。留保欄参照。",
+      "submittedAt": "2026-08-01T04:48:01Z"
+    }
+  ],
+  "resolutions": []
+}

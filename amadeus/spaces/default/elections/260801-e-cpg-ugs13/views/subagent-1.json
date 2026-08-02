@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-UGS13",
+  "voter": "subagent-1",
+  "question": "260801-cg-plan-guard units-generation の §13 学習選定。候補 c1(直列理由の記録+edge block の in-process 自己検証+採番予約)は既存 cid(units-generation:c1 / per-unit-loop-activation / swarm-test-number-reservation / #1893 教訓の自己適用)の実例で新規規則を導かない — 0件を提案。反対材料があれば record(UG diary・3成果物・§12a レビュー)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    }
+  ]
+}

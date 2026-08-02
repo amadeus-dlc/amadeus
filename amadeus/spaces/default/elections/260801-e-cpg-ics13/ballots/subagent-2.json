@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-ICS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) project.md:179 の cid:intent-capture:c1 が『事前裁定済み intent では質問を未決の判断のみに絞る』を既に定めており、本 IC の 0問成立はその極限事例で新規規則を導かない。(2) gh issue view 1903 の title は 'Intent Mirror: 260801-cg-plan-guard' で intent dir 名と一致し、#1871 修正の期待どおりの動作確認にすぎない。(3) questions ファイル(H2 1件)が required-sections を通過している点は E-TCRRAS13B の暫定則(1問様式の第2 H2)が既に不要であることを示すが、その根拠 Issue #1296 は 2026-07-23 クローズ済みで暫定は既に失効しており、失効ノルムの退役は週次蒸留ラウンドの所管であって本 §13 の新規学習ではない。(4) SENSOR_FAILED 2件はいずれも stakeholder-map.md の書込途中(h2_count 0)で、最終状態は H2 2件・PASSED。以上より 0件を支持。",
+  "submittedAt": "2026-08-01T07:52:00Z"
+}

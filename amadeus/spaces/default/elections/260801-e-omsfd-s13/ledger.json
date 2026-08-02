@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSFD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "(a) 0件の裁定は §13(新規ノルム選定)に限って支持するが、u4fd verdict の残留指摘 r1 が未閉包のまま disk に残っている — construction/subagent-started/functional-design/domain-entities.md:21 が今も `event-registry.ts:79 EXPECTED_CANONICAL_COUNT(78→79)` であり、実測は `grep -n EXPECTED_CANONICAL_COUNT packages/framework/core/otel/event-registry.ts` → `77:export const EXPECTED_CANONICAL_COUNT = 78;`(:77)。u4fd は E-LSSADS13 の機械検証可能クラス carve-out を明示的に援用したうえで『conductor は r1 を反映してから次工程へ進めること』と条件付き READY にしている。ゲート報告前に :77 へ機械修正し grep 0-hit(`event-registry.ts:79` が record 内に残らないこと)で閉包を実測すること。閉包前にゲートを開かない。(b) 同種の未閉包が u2fd Minor(span-attrs/domain-entities.md:27 の `AD components.md:20` → 実際は :21)にも残っている — こちらは reviewer が非ブロッキングと明言しているためゲート条件にはしないが、r1 と同一 diff で機械是正することを推奨する。(c) 『是正スクリプト無音 no-op → 虚偽是正報告』の1件をローリング PM 材料へ回す方針は支持するが、当該インシデントが record のどこにも記録されていない — construction/functional-design/memory.md は6 unit 完走後もテンプレート(全節がコメント例のみ、実エントリ0)のままである。PM ラウンドの一次材料は diary であるため、Deviations 節へ当該インシデント(発生時刻・無音 no-op の機序・虚偽報告の内容・検出経路)を記録してからゲートへ進むこと。",
+      "rationale": "6 unit の FD 成果物と6通の reviewer verdict(scratch の u1fd〜u6fd、全て READY)を独立に読み、指摘クラスを既存ノルムへ照合した。(1) u2fd Major1(services.md 無参照 = 装飾トークン)は cid:requirements-analysis:artifact-upstream-inputs-header / consumes-first-drafting の違反実例。(2) u2fd Major2(logger-provider.ts:97 の呼出し形は同一だが失敗時挙動が相違)は cid:application-design:citation-semantics-check がそのまま射程に収める。(3) u1fd M1(閉集合 12 vs 14)は cid:requirements-analysis:ledger-count-mechanical-recalc。(4) u4fd r1 / u2fd Minor の file:line 誤記は cid:requirements-analysis:mechanism-cite-verify-at-draft(+E-FSPRAS13)。(5) u6fd Major1(en/ja 対訳ペア)は project.md Mandated『paired English/Japanese documentation』の適用であり新規則を要さない — 実測で docs/reference/ の最新章が 20-intent-mirror(en/ja 両在)、21 が空き番号であることを確認し、FD の主張と一致した。(6) u4fd M1 の決定木要求はステージ契約 Step5 の既存要求。(7) conductor 自身の無音 no-op → 虚偽是正報告は cid:code-generation:bulk-edit-verify-before-write(置換の成立検証を書込前に)+ cid:requirements-analysis:fix-diff-independent-reverify(是正 diff の独立再実測)+ verify-before-notify が既に禁じる形であり、新規則を生む余地はない。以上より、いずれも既存ノルムの違反実例・適用であって新しい規則クラスは観測できず、0件の提案は妥当。ただし留保 (a) のとおり reviewer が明示したゲート前条件が未履行のまま残っており、§13 が 0件であることは当該閉包の免除を意味しないため、GoA 1 ではなく 2 とする。",
+      "submittedAt": "2026-08-01T03:46:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSFD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 3,
+      "reservation": "0件は学習選定としては妥当だが、この裁定を「FD ステージがセンサー健全」の証跡として記録しないこと — construction/resource-core/functional-design/business-rules.md は required-sections FAILED が未解消のまま残っている(audit seq 369/387 で2回 FAILED、同 path の SENSOR_PASSED は監査上0件、現ファイルも h2_count=0 = grep -c '^## ' が 0。対照: 他5 unit は PASSED、exception unit は FAILED→PASSED で是正済み)。FD ゲート承認前に H2 節を補って required-sections を SENSOR_PASSED まで持っていくことを条件とする。",
+      "rationale": "6 unit の FD 成果物と reviewer verdict 経緯(audit SUBAGENT_COMPLETED seq 396/397/410/423/446/459/472/485/498/511/524/537/550)を独立確認した。全 unit が最終 READY で、指摘は既存ノルムの違反実例に写像でき新規則を要さない: U1 閉集合12→14 の数値矛盾=ledger-count-mechanical-recalc / U2 services.md 装飾トークン=artifact-upstream-inputs-header・logger-provider.ts:97 引用の意味論照合=citation-semantics-check / U3 required-sections 失敗=sensor-before-reviewer・export 境界 redaction 文言=practices-discovery:export-boundary-redaction / U4 pin 6箇所 vs codekb §9 10項目の機械照合=enumeration-completeness-review+ledger-count-mechanical-recalc / U5 registerMeterProvider 呼び出し形が実装シグネチャと不一致=mechanism-cite-verify-at-draft / U6 新章の日英対訳ペア=docs-language-ownership+project.md の paired EN/JA Mandated。conductor 自身の是正スクリプト無音 no-op → 虚偽是正報告も既存規則が二重に禁じる形で、機序面は bulk-edit-verify-before-write(置換の成立検証を書込前に・replace-or-None 禁止)、報告面は verify-before-notify、加えて manual-sensor-fire-before-gate-report 追補(verdict は exit code でなく audit の SENSOR_PASSED/FAILED 行で判定)に該当する — いずれも新規則を生まずローリング PM の違反実例材料が正しい行き先。seq 381 の upstream-coverage FAILED(resource-core/frontend-components.md、現在は不在)も produces-ls-check-after-generation の E-GSFFD13 追補(conditional 非該当 optional 成果物の不在 assert)が既に覆う。FR-SUB-4 供給経路は AD components.md:20 の分岐(ii)を FD が実測確定し span-attrs/domain-entities.md:24 節へ record 済みで、intent 固有裁定として §13 対象外という conductor の整理に同意する。ただし上記 reservation の未解消 FAILED は 0件裁定とは別軸の是正事項として持ち越す。",
+      "submittedAt": "2026-08-01T03:47:27Z"
+    }
+  ],
+  "late": []
+}

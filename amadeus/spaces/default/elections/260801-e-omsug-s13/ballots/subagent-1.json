@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSUG-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "units-generation 段でのファイル交差の事前棚卸しは free_text_1 / c6 の射程内ではあるが、『Unit DAG のエッジ導出時に実ファイル目録を突き合わせる』という段固有の手順としては明文化されていない。同クラスが units-generation で再発した場合は、独立 cid ではなく cid:code-generation:c6 への追補(交差判定の適用段拡張)として §13 へ再提出することを留保する。",
+  "rationale": "record 独立実測により 0件提案を支持する。(1) Critical 面: 是正後の unit-of-work.md は tracer-provider.ts の U1/U2/U3 三者交差と event-registry.ts の U3/U4 交差を明示し、unit-of-work-dependency.md の YAML edge block へ depends_on として符号化済み(span-attrs/exception/metrics→[resource-core]、subagent-started→[exception])。memory 層を grep したところ cid:reverse-engineering:free_text_1 が『依存順序や同一ファイルの競合がある作業だけを直列化する』を Unit 境界の一般規則として既に定め、cid:code-generation:c6 が『交差する場合のみ直列化。非交差判定は着手前に対象ファイル目録の突き合わせで行う』を重ねている。是正文自体が『c6 準拠』と明記しており、規則の欠落ではなく既存規則の違反実例。(2) Major 面: 按分を機械再計算したところ実装 350+50+95+195+150=840、テスト 330+130+150+230+200=1,040 で本文総計と一致し、components.md 行との双方向照合が明記されている。数値の機械再計算義務は cid:requirements-analysis:ledger-count-mechanical-recalc、是正 diff 内数値の独立再実測は cid:requirements-analysis:fix-diff-independent-reverify が既に定めており、表層是正の指摘はその違反実例で新規規則を生まない。(3) 閉包確認は cid:requirements-analysis:delegated-review-analysis-with-owned-verdict の E-LSSADS13 追補における機械検証可能クラス(数値の機械再計算で閉包可能)に該当し、追加イテレーション不要という起案の判断は妥当。以上より新規性のある学習は認められない。",
+  "submittedAt": "2026-08-01T02:45:30Z"
+}

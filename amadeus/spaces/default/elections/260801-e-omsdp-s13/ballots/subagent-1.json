@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSDP-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測: (1) 5成果物(bolt-plan/risk-and-sequencing-rationale/team-allocation/external-dependency-map/delivery-planning-questions)を全数直読、(2) bolt-plan の Bolt 列(Bolt1=U1 / Bolt2a2b2c=U2,U3,U5 / Bolt3=U4 / Bolt4=U6)は unit-of-work-dependency.md の YAML edge block および同ファイル末尾の batch1-4 編成と 1:1 一致で機械展開であることを確認、(3) 主張3点はいずれも既存ノルムの適用 — walking-skeleton 単独ゲートは org.md Walking Skeleton + project.md Forbidden(standing grant に walking-skeleton gate を認可させない)、intra-bolt 順序のリスク制御は cid:delivery-planning:intra-bolt-order-as-risk-control、NFR-4 checklist 化は project.md Mandated(dist 全ハーネス再生成 + promote:self)、(4) diary(memory.md)は template のまま total=0(全 H2 が HTML コメント例示のみ)で新規観測ゼロ。本ステージに逸脱・失敗・是正の実測イベントが存在せず、新規学習の実在根拠がない。",
+  "submittedAt": "2026-08-01T02:48:43Z"
+}

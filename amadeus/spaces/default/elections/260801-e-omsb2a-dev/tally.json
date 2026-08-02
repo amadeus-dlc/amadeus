@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "案A: DEFAULT_REDACTION_POLICY.safeKeys へ6キー追加"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "案A: DEFAULT_REDACTION_POLICY.safeKeys へ6キー追加",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "案B: span 専用 RedactionPolicy 新設",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "案C: event-registry の optionalAttributes 経由で派生 admit",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T07:32:58Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSB2A-DEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "案A の採用は、builder が挙げた2件の追加テスト義務(export 境界通過後の JSONL 実文字列で6キー生存 assert / credential 形 amadeus.agent.id の scrub assert)を必須の受け入れ基準として扱うことを条件とする — 前者を欠くと本欠陥クラス(span record 直読は green・永続面は無機能)が再び構造的に検出不能になる。あわせて redaction.ts:76-77 のコメント『Low-cardinality operational keys predating the registry vocabulary plus the correlation ids』は6キーを説明しないため、span 文脈属性の層として明文化する(無注記の追記は、次の読み手に『なぜ event 属性 policy に amadeus.* があるか』を辿れなくする)。",
+      "rationale": "現 HEAD で機構を独立実測し、builder の停止根拠と案間の優劣をいずれも確認した。(1) 前提の実在: redaction.ts:126 は `if (!policy.safeKeys.includes(key) && !policy.optIn.includes(key)) continue;` の default-deny、:73-91 の DEFAULT_REDACTION_POLICY.safeKeys は REGISTRY_ATTRIBUTE_KEYS(:65-71、REGISTERED_EVENTS の required+optional から Command 除外で派生)+手書き8キー(Options/Rationale/Note/Event/Outcome/ExitCode/TraceId/SpanId)。6キー(amadeus.intent/space/stage/phase/agent.type/agent.id)はどちらにも不在。(2) 二境界の実在: local-span-exporter.ts:96 は redactRecord 内で `attributes: redactAttributes(record.attributes, policy)`、policy 既定は :108 の `options.redaction ?? DEFAULT_REDACTION_POLICY`。relay.ts:233 は otlpAttributes 内で `Object.entries(redactAttributes(value as Record<string, unknown>, policy))`。よって契約どおりの実装は永続面・送出面の両方で全数 drop され、span record 直読のテストのみ green になる(org.md Forbidden の検証劇場クラス)— 停止判断自体が正しい。(3) 案B が不適な決定的理由(builder 評価より強い): span 属性は resource bag と違い既存 policy 語彙と disjoint ではない — subprocess-span.ts:80-87 が Command/ExitCode を span 属性として setAttributes しており、これらは DEFAULT_REDACTION_POLICY 収録語彙。span 経路を span 専用 policy へ『差し替え』れば Command/ExitCode が新たに drop される退行を生む。回避するには両語彙の union policy が要り、それは案A と機能等価でありながら exporter/relay の配線変更(redactRecord は record.attributes と events/links attributes に同一 policy を適用、relay の otlpAttributes は span 以外にも共用)を追加で背負う。RESOURCE_REDACTION_POLICY(resource.ts:74-78)が成立するのは resource.ts:68-71 のコメントどおり『資源キーが event 語彙と重複しない』からで、その前提が span 属性では成り立たない。(4) 案C が不適: event-registry は canonical event の属性契約であり、span 文脈属性を optionalAttributes へ載せると event スキーマ側に実在しない属性を宣言することになり、REGISTRY_ATTRIBUTE_KEYS 派生と drift guard の双方を汚染する。(5) 案A の性質: 変更は共有語彙1箇所で store/Relay 両境界へ自動反映され、default-deny(閉語彙)は保持されたまま閉語彙が6キー拡がるだけ。admit 後も :127 で全値が scrubCredentials を通るため、外部自由文である agent.id の生資格情報混入は塞がれたまま。6キーは Event/Outcome/Options/TraceId/SpanId と同じ低カーディナリティ運用文脈クラスで、既存の手書き層の意味論に整合する。『store/Relay 無改変』の趣旨(JSONL 様式・Relay プロトコル不変)は案A で保たれる。",
+      "submittedAt": "2026-08-01T13:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSB2A-DEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "案A の採用に賛成するが、2点を実装条件として明記することを求める。(1) builder が挙げた追加テスト義務2件(export 境界通過後の JSONL 実文字列で6キー生存 assert / credential 形の amadeus.agent.id が scrub される assert)を任意でなく必須の受け入れ基準として FD テスト義務へ追補する — span record 直読のテストだけでは本欠陥クラスを構造的に検出できないことが本件そのもので実証されており、テストを足さずに safeKeys だけ広げると同じ盲点が次の属性追加で再発する(cid:code-generation:injection-surface-verify のテスト面)。(2) safeKeys へ追加する6キーには『span 文脈属性(registry 語彙ではない)』である旨のコメントを併記する — 直上のコメントが手書き群を『registry 語彙に先行する低カーディナリティ運用キー』と定義しており、注記なしに追加すると REGISTRY_ATTRIBUTE_KEYS 由来と誤読され、将来の registry 起点の棚卸しで削除されうる。",
+      "rationale": "留保付き合意(2)。独立実測で builder 報告の前提を全数確認した。機構: redaction.ts:126 が `if (!policy.safeKeys.includes(key) && !policy.optIn.includes(key)) continue;` の default-deny、:73-91 の DEFAULT_REDACTION_POLICY.safeKeys = REGISTRY_ATTRIBUTE_KEYS(:65-71、event-registry の required+optional から Command を除外して導出)+ 手書き8キー(Options/Rationale/Note/Event/Outcome/ExitCode/TraceId/SpanId)。6キー(amadeus.intent/space/stage/phase/agent.type/agent.id)はどちらの集合にも不在。境界2面も確認: local-span-exporter.ts の redactRecord が attributes/events/links に redactAttributes を適用し(policy 既定 = DEFAULT_REDACTION_POLICY @ createLocalSpanExporter)、relay.ts:233 の otlpAttributes も同じ関数を通す。決定的プローブ(repo 外 scratch、read-only): 6キー+対照 ExitCode を redactAttributes へ渡すと出力は {\"ExitCode\":\"0\"} のみ = 6キー全数 drop を再現。あわせて {ExitCode: 'token: ghp_...'} が {ExitCode: 'token: [REDACTED]'} になることを確認し、admit 後も scrubCredentials が実効であること(案A の安全性根拠)を実測した。よって『契約どおり実装すると契約どおりのテストは green のまま永続シグナル上は無機能』という builder の判定は正しく、実装前停止は cid:requirements-analysis:implementation-deviation-election に適合する妥当な挙動。案A を採る理由: 変更が safeKeys 1箇所で store/Relay 両境界へ自動反映され、default-deny の構造(閉じた allow-list)は不変で閉語彙が6要素増えるだけ、admit 後も全値が scrubCredentials を通るため BR-12 の趣旨も保たれる。案B を採らない理由: resource.ts:74 の RESOURCE_REDACTION_POLICY が『別 policy』の前例ではあるが、その適用は redactResource が RESOURCE_REDACTION_POLICY をハードコードする resource bag 専用経路であり(local-span-exporter の redactRecord は resource: redactResource(...) と別行)、span attributes 側は exporter/relay が単一の policy 引数で attributes/events/links を共通処理する。span 専用 policy を差し込むには events/links(= registry 語彙)との合成か経路分岐の新設が要り、『store/Relay 面無改変』により強く抵触するうえ層が増える。案C を採らない理由: REGISTRY_ATTRIBUTE_KEYS は REGISTERED_EVENTS の required/optionalAttributes から導出される canonical event の属性語彙であり、span 文脈属性を optionalAttributes に載せることは『どの event もその属性を持ちうる』という誤った意味論を registry に埋め込む。registry は drift guard の対象でもあり波及面が最大。",
+      "submittedAt": "2026-08-01T05:40:00Z"
+    }
+  ],
+  "resolutions": []
+}

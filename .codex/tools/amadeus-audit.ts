@@ -30,6 +30,7 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 // Type-only: the runtime binding is required lazily (see
 // emitCanonicalAuditEvent below), so this import erases at compile time.
 import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
@@ -764,6 +765,17 @@ export function handleAuditFork(args: string[], projectDir: string): void {
   // from required + optional. Before that, a default-deny policy built from
   // required alone would have dropped the tag doctor reads to tell a re-entry
   // fork from an initial one.
+  //
+  // FR-EVT-4 (#1960): mirror the canonical amadeus-state.ts emitAudit pattern.
+  // The assert covers a latch already set when the handler starts; the outcome
+  // check after the emit covers the latch tripping inside the emit's own
+  // bootstrap (the journal health probe runs there). Both refuse BEFORE the
+  // disk copy below, so no worktree mirror is minted off an AUDIT_FORKED row
+  // that never landed. The outcome check fires on EVERY non-appended reason
+  // (#1991): "intent-complete" — the #1248 post-complete seal — suppresses the
+  // emit without throwing and without latching, so re-asserting cannot refuse
+  // it; the jsonError below is the loud refusal for that arm.
+  assertMutationAllowed();
   const result = emitCanonicalAuditEvent(
     "AUDIT_FORKED",
     forkFields,
@@ -771,6 +783,12 @@ export function handleAuditFork(args: string[], projectDir: string): void {
     intent,
     space,
   );
+  if (result.appended === false) {
+    if (result.reason === "fatal-latch") assertMutationAllowed();
+    jsonError(
+      `audit-fork: AUDIT_FORKED emit dropped (reason=${result.reason}) — refusing to mint the worktree audit mirror off a row that never landed [slug=${slug}]`
+    );
+  }
   const auditTs = result.timestamp;
 
   // Post-emit disk operations. On failure, emit ERROR_LOGGED with the
@@ -918,6 +936,13 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   // AUDIT_MERGED, ERROR_LOGGED with matching forkTs). The process.exit there
   // skips withAuditLock's finally, which is exactly what its exit-handler
   // safety net covers.
+  //
+  // A second failure mode does NOT throw: under the fatal health latch the
+  // emit DROPS (#1856), so mergeDeltaUnderLock checks the outcome itself
+  // (#1960) — a latch set before the section refuses ahead of the delta
+  // append, and a latch tripping inside the emit names the orphan delta on
+  // stderr and exits non-zero rather than returning into the jsonSuccess
+  // below.
   let merged: { entriesMerged: number; result: AppendAuditResult };
   try {
     merged = withAuditLock(
@@ -955,7 +980,29 @@ export function mergeDeltaUnderLock(
   intent?: string,
   space?: string,
 ): { entriesMerged: number; result: AppendAuditResult } {
+  // FR-EVT-4 (#1960): refuse BEFORE the delta append. Under the fatal health
+  // latch the canonical emit only DROPS (#1856) — it does not throw — so
+  // without this assert a latched process would extend the main shard with a
+  // delta whose AUDIT_MERGED row can never land. Placed OUTSIDE the try so the
+  // refusal surfaces to the caller instead of feeding the orphan-delta arm
+  // below (nothing was mutated yet — there is no orphan to correlate).
+  assertMutationAllowed();
+  // Intent-complete refusal, likewise BEFORE the delta append (#1991). The
+  // #1248 post-complete seal suppresses only the CANONICAL emit — the delta
+  // append below is a raw appendFileSync that would bypass the seal and extend
+  // a sealed ledger whose AUDIT_MERGED row can never land. The process is not
+  // latched here, so assertMutationAllowed cannot refuse it; this explicit
+  // check is the loud failure. Nothing has been mutated yet — a clean refusal,
+  // not an orphan to correlate.
+  if (intentStatusForAudit(projectDir, intent, space) === "complete") {
+    const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
+    process.stderr.write(
+      `audit-merge: target intent ${targetDir} is complete — the ledger is sealed (#1248); refusing before the delta append [slug=${coords.slug}] [fork-emitted:${coords.forkTs}]\n`,
+    );
+    process.exit(1);
+  }
   let entriesMerged = 0;
+  let result: AppendAuditResult;
   try {
     if (delta.trim() !== "") {
       // Delta is already a sequence of well-formed journal records (one
@@ -964,7 +1011,7 @@ export function mergeDeltaUnderLock(
       appendFileSync(mainAuditPath, delta, "utf-8");
       entriesMerged = countDeltaRecords(delta);
     }
-    const result = emitCanonicalAuditEvent(
+    result = emitCanonicalAuditEvent(
       "AUDIT_MERGED",
       {
         "Bolt slug": coords.slug,
@@ -976,7 +1023,6 @@ export function mergeDeltaUnderLock(
       intent,
       space,
     );
-    return { entriesMerged, result };
   } catch (e) {
     const message = e instanceof Error ? errorMessage(e) : String(e);
     emitCanonicalAuditEvent(
@@ -992,6 +1038,32 @@ export function mergeDeltaUnderLock(
     );
     process.exit(1);
   }
+  // The emit dropped INSIDE its own bootstrap (the journal health probe latches
+  // there, and the registry row can flip to complete mid-section — so there was
+  // nothing to refuse on beforehand; the same two-halves rationale as
+  // amadeus-state.ts emitAudit). A drop is not a throw for ANY reason (#1991),
+  // so the ERROR_LOGGED arm above cannot see it — and a dropped process would
+  // drop that emit too. Name the outcome out loud, with the same correlation
+  // tags doctor keys on, and exit non-zero instead of returning into
+  // jsonSuccess. An EMPTY delta skipped the append (#1991 (a)) — there is no
+  // orphan on the shard, and the message must not claim one.
+  if (result.appended === false) {
+    process.stderr.write(
+      `audit-merge: canonical emit dropped (reason=${result.reason}) after the delta stage — ${orphanDeltaDetail(entriesMerged, mainAuditPath)} [slug=${coords.slug}] [fork-emitted:${coords.forkTs}]\n`,
+    );
+    process.exit(1);
+  }
+  return { entriesMerged, result };
+}
+
+// The loud-fail arm's delta detail, honest about whether a delta actually
+// landed: entriesMerged === 0 means the empty delta skipped the append
+// entirely, so there is no orphan to point doctor at (#1991 (a)).
+function orphanDeltaDetail(entriesMerged: number, mainAuditPath: string): string {
+  if (entriesMerged === 0) {
+    return `empty delta: nothing was appended to ${mainAuditPath}, and no AUDIT_MERGED row landed`;
+  }
+  return `orphan delta (${entriesMerged} record(s)) is in ${mainAuditPath} with no AUDIT_MERGED row`;
 }
 
 // --- Presence/provenance CLI minting guard ---

@@ -73,6 +73,7 @@ import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   FIXTURES_DIR,
+  seedUnitDependency,
 } from "../harness/fixtures.ts";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -229,6 +230,7 @@ function makeProj(): string {
     join(recordDir(proj), "amadeus-state.md"),
     readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8"),
   );
+  seedUnitDependency(recordDir(proj));
   writeFileSync(
     join(intentsDir, "intents.json"),
     `${JSON.stringify(

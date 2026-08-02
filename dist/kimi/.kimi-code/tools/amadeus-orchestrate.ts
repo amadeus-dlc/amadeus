@@ -105,7 +105,17 @@ import {
   activeSpace,
   activeIntent,
   advisoryLatchDir,
+  auditBlockField,
+  findAllEvents,
+  guardMessage,
+  PLAN_CORRECTION_EXIT,
+  PLAN_DRIFT_WEIGHT,
+  readAllAuditShards,
+  type SwarmEvidence,
+  swarmEvidenceVerdict,
+  type BoltDagAbsence,
   type CheckboxLine,
+  type DeclaredBatch,
   codekbRepoName,
   KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
@@ -124,6 +134,9 @@ import {
   parseIntentStatus,
   ownPhase,
   parseApprovedSwarmBatches,
+  planGuardMessage,
+  planIntegrityVerdict,
+  type SwarmDecline,
   PHASES,
   READ_ONLY_FLAGS,
   relativeCodekbDir,
@@ -1553,6 +1566,30 @@ function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
 const reportedBoltDagRecoveries = new Set<string>();
 
+// The companion read to readBoltDagBatches: when that returns null, this says
+// whether the compile had a legitimate reason for there being no DAG. A degrade
+// scope ("scope-skips-units") and a stage that simply has not run yet
+// ("units-pending") are the only two — anything else fails the compile outright,
+// so a null here alongside a null DAG means the graph predates this field.
+//
+// Exported as the in-process seam. No CLI verb calls this yet — the degrade-path
+// message wiring is the issuance-guard Bolt's consumer of the same field.
+export function readBoltDagAbsence(projectDir: string): BoltDagAbsence | null {
+  let raw: unknown;
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    if (graph !== null && typeof graph === "object" && "bolt_dag_absence" in graph) {
+      raw = (graph as { bolt_dag_absence?: unknown }).bolt_dag_absence;
+    }
+  } catch {
+    return null;
+  }
+  if (raw === null || typeof raw !== "object") return null;
+  const { reason, detail } = raw as { reason?: unknown; detail?: unknown };
+  if (reason !== "scope-skips-units" && reason !== "units-pending") return null;
+  return { reason, detail: typeof detail === "string" ? detail : "" };
+}
+
 function readBoltDagBatches(projectDir: string): string[][] | null {
   const runtimePath = runtimeGraphPath(projectDir);
   let cached: unknown;
@@ -2863,16 +2900,14 @@ export function handleNext(args: string[], projectDir: string | undefined): void
 
   if (currentIsInFlight) {
     // Under an autonomy grant, an eligible per-unit build stage fans out as a
-    // swarm batch instead of a single run-stage. tryEmitSwarm emits the
-    // invoke-swarm directive (and returns true) only when all trigger
-    // conditions hold; otherwise emitForSlug fires, which itself drives the
-    // engine's per-unit for_each loop for a per-unit Construction stage (one
-    // unit per `next`, gate suppressed on every uncovered unit with the real
-    // gate only on the all-covered re-entry; issue #368) and emits a single
-    // directive for every other stage.
-    if (!tryEmitSwarm(currentSlug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
-      emitForSlug(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
-    }
+    // swarm batch instead of a single run-stage. emitSwarmOrPerUnit emits the
+    // invoke-swarm directive when all trigger conditions hold; otherwise it
+    // judges the refusal and either falls back to emitForSlug — which itself
+    // drives the engine's per-unit for_each loop for a per-unit Construction
+    // stage (one unit per `next`, gate suppressed on every uncovered unit with
+    // the real gate only on the all-covered re-entry; issue #368) and emits a
+    // single directive for every other stage — or stops on a plan mismatch.
+    emitSwarmOrPerUnit(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
     return;
   }
 
@@ -2891,14 +2926,12 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     });
     return;
   }
-  // Same swarm guard on the advance path: an eligible per-unit build stage
+  // Same issuance point on the advance path: an eligible per-unit build stage
   // under autonomy fans out as a batch rather than a single run-stage. Off the
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
-  // otherwise.
-  if (!tryEmitSwarm(next.slug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
-    emitForSlug(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
-  }
+  // otherwise — unless the refusal breaks the compiled plan, which stops.
+  emitSwarmOrPerUnit(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
 }
 
 // The per-unit marker + run mode that isolate the per-unit build stage. The
@@ -3007,6 +3040,30 @@ function owedBatchGate(
 // security-patch): there the skeleton's always-gated approval must never be bypassed
 // by a stray autonomous setting, so the engine enforces it rather than trusting the
 // conductor's ordering.
+//
+// The return is a discriminated outcome rather than a boolean: a caller that
+// only knows "did not fan out" cannot tell a scope with no units from a run
+// about to serialise a batch the plan declared parallel. `declined` names the
+// reason and carries the DECLARED batch so the plan-integrity guard can judge
+// it (issue #1892).
+type SwarmEmitOutcome =
+  | { readonly kind: "emitted" }
+  | {
+      readonly kind: "declined";
+      readonly decline: SwarmDecline;
+      readonly pendingBatch: DeclaredBatch | null;
+    };
+
+// The DECLARED batch behind a pick, by its 1-origin batch number. The pick's own
+// `units` are only the UNCOVERED ones, so a width-2 batch with one unit already
+// built would read as serial; the guard must judge what the plan declared, not
+// what is left. The one place the 1-origin offset is applied.
+function declaredBatchOf(batches: string[][], batchNumber: number): DeclaredBatch | null {
+  const declared = batches[batchNumber - 1];
+  if (!Array.isArray(declared)) return null;
+  return { number: batchNumber, units: declared };
+}
+
 function tryEmitSwarm(
   slug: string,
   scope: string,
@@ -3014,24 +3071,50 @@ function tryEmitSwarm(
   projectDir: string,
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
-): boolean {
+): SwarmEmitOutcome {
+  const notSwarmStage: SwarmEmitOutcome = {
+    kind: "declined",
+    decline: { kind: "not-swarm-stage" },
+    pendingBatch: null,
+  };
   const node = nodeForSlug(slug);
-  if (!node) return false;
-  if (node.phase !== "construction") return false;
-  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return false;
+  if (!node) return notSwarmStage;
+  if (node.phase !== "construction") return notSwarmStage;
+  if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return notSwarmStage;
   // Never swarm the walking-skeleton gate stage — Bolt 1 is always gated and
   // human-approved before any batch fans out (structural defense-in-depth).
-  if (isSkeletonGateStage(node, scope)) return false;
-  const autonomy = readAutonomyMode(stateContent);
-  if (autonomy === null) return false;
+  // Declined before the DAG is read: this stage never swarms, so reading the
+  // plan here would be I/O with nothing to decide.
+  if (isSkeletonGateStage(node, scope)) {
+    return { kind: "declined", decline: { kind: "skeleton-gate" }, pendingBatch: null };
+  }
+  // The plan is now read BEFORE the grant is checked. The guard needs the
+  // declared width to judge an unanswered ladder, and this is the same read the
+  // granted path already performed — moved earlier, not added.
   const batches = readBoltDagBatches(projectDir);
-  if (!batches || batches.length === 0) return false;
+  if (!batches || batches.length === 0) {
+    return { kind: "declined", decline: { kind: "no-dag" }, pendingBatch: null };
+  }
   const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
-  if (pick === null) return false;
+  if (pick === null) {
+    return { kind: "declined", decline: { kind: "all-covered" }, pendingBatch: null };
+  }
+  const pendingBatch = declaredBatchOf(batches, pick.batchNumber);
+  const autonomy = readAutonomyMode(stateContent);
+  if (autonomy === null) {
+    // Before the walking skeleton ships an unset grant is the legitimate initial
+    // state (the ladder has not fired yet); after it ships the ladder's answer
+    // is owed, and a batch the plan declared parallel must not serialise while
+    // the question goes unanswered.
+    const decline: SwarmDecline = skeletonGateCompleted(stateContent, scope)
+      ? { kind: "autonomy-unset" }
+      : { kind: "autonomy-unset-pre-skeleton" };
+    return { kind: "declined", decline, pendingBatch };
+  }
   const owedGate = owedBatchGate(autonomy, batches, pick.batchNumber, stateContent);
   if (owedGate !== null) {
     emit(askDirective(owedGate));
-    return true;
+    return { kind: "emitted" };
   }
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
@@ -3051,7 +3134,43 @@ function tryEmitSwarm(
   } else {
     emit({ kind: "invoke-swarm", units: pick.units });
   }
-  return true;
+  return { kind: "emitted" };
+}
+
+// The SINGLE issuance point for a stage that may fan out. Both `next` paths —
+// re-entering the in-flight stage and advancing to the next one — go through
+// here, so the plan-integrity judgement exists in one place and cannot drift
+// between two copies.
+//
+// Three ways out, and this function performs no judging of its own: it collects
+// the two inputs, hands them to the pure verdict, and emits what the verdict
+// names. `ok` is the unchanged fallback to the normal run-stage emit (which
+// itself drives the per-unit for_each loop for a per-unit Construction stage).
+function emitSwarmOrPerUnit(
+  slug: string,
+  projectType: "brownfield" | "greenfield" | null,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+): void {
+  const outcome = tryEmitSwarm(slug, scope, stateContent, projectDir, recordPrefix, codekbCtx);
+  if (outcome.kind === "emitted") return;
+  const pendingBatch = outcome.pendingBatch;
+  const verdict = planIntegrityVerdict(outcome.decline, pendingBatch);
+  // No declared batch means nothing to break, which is why the verdict is `ok`
+  // in that case — the two halves of this condition are one rule, and naming
+  // the batch here is what lets the message cite it below.
+  if (verdict.kind === "ok" || pendingBatch === null) {
+    emitForSlug(slug, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
+    return;
+  }
+  const message = planGuardMessage(verdict);
+  // An unanswered ladder is a question, not a fault: it goes out as the same
+  // `ask` the ladder has always used, so the answer path is unchanged. Anything
+  // else is the run breaking its own plan, and stops.
+  emit(verdict.kind === "redirect" ? askDirective(message) : errorDirective(message));
 }
 
 // Emit a run-stage directive for a slug, resolving the graph node first. A slug
@@ -4137,6 +4256,78 @@ function authorizedApprovalIntent(
   }
 }
 
+// Read ONE batch number off an audit block. The only entry point for turning a
+// recorded row into a set member, so the fail-closed rule lives in one place:
+// a row whose "Batch number" is absent, empty, or not a finite number is not
+// evidence of anything and never joins the set. (`Number("")` is 0, so the
+// empty string has to be rejected before the numeric check, or a blank field
+// would silently vouch for a batch 0 no plan ever declares.)
+function batchNumberOf(block: string): number | null {
+  const raw = auditBlockField(block, "Batch number");
+  if (raw === null || raw.trim() === "") return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Collect every batch number the audit trail says fanned out and finished. */
+function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
+  const numbers = new Set<number>();
+  for (const event of events) {
+    for (const found of findAllEvents(audit, event)) {
+      const number = batchNumberOf(found.block);
+      if (number !== null) numbers.add(number);
+    }
+  }
+  return numbers;
+}
+
+// What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
+// emitter of these three rows, so this is a read of first-hand evidence and not
+// a re-derivation of it — nothing here writes back, which is what stops the next
+// reconciliation from reading a row this one produced.
+//
+// SWARM_DEGRADED joins the STARTED side because it records a DRIVER falling back
+// to the subagent floor, not the fan-out being abandoned: a degraded batch still
+// ran in parallel. Reading every shard (not this clone's) matters for the same
+// reason — a batch prepared in one worktree and finalised in another leaves its
+// two rows in two files, and a single-shard read would call that batch missing.
+function collectSwarmEvidence(projectDir: string): SwarmEvidence {
+  const audit = readAllAuditShards(projectDir);
+  return {
+    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
+    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
+  };
+}
+
+/** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
+function namedMissingBatches(batches: readonly DeclaredBatch[]): string {
+  const named = batches.map((batch) => `batch ${batch.number} (${batch.units.length} units: ${batch.units.join(", ")})`);
+  return named.join("; ");
+}
+
+/** The batch numbers a set holds, ascending, or "none" when it holds nothing. */
+function listedBatchNumbers(numbers: ReadonlySet<number>): string {
+  const sorted = [...numbers].sort((left, right) => left - right);
+  return sorted.length === 0 ? "none" : sorted.join(", ");
+}
+
+// The VALUES the approve refusal carries — the prose template stays
+// guardMessage's, and the weight and exit are the same two constants the
+// issuance guard cites, so the three ports cannot drift into three dialects.
+//
+// Every number here is read off the verdict and the evidence that produced it;
+// nothing is re-counted at this call site
+// (cid:requirements-analysis:ledger-count-mechanical-recalc).
+function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
+  const owed = namedMissingBatches(batches);
+  const started = listedBatchNumbers(evidence.startedBatches);
+  const completed = listedBatchNumbers(evidence.completedBatches);
+  const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
+  const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
+  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
+  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
+}
+
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
@@ -4583,6 +4774,43 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
             `${units.length} units are not yet complete (${pick.uncovered.join(", ")}). ` +
             "Run `next` to continue the remaining units before approving.",
         });
+        return;
+      }
+    }
+  }
+
+  // Approve-time reconciliation (FR-2). The issuance guard stops a run that is
+  // ABOUT to serialise a parallel batch; this one stops a run that already did —
+  // a hand-driven fan-out, or a batch built one unit at a time outside the
+  // engine, reaches approve with every unit covered and nothing else to show for
+  // it. The plan is the claim, the SWARM rows are the receipt, and approve is the
+  // last moment the two can still be compared.
+  //
+  // Deliberately NOT conditioned on isSwarmDriven: the drift #1892 measured
+  // includes runs that never recorded an autonomy grant and completed serially,
+  // which is exactly the shape that predicate excludes.
+  //
+  // The conditions are ordered cheapest-first so the two reads never happen on a
+  // stage this does not govern: stage kind, then checkbox, then the DAG, then the
+  // audit (NFR-3). A re-report of an already-completed stage is an idempotent
+  // recovery replay and is left alone, as with the coverage guard above.
+  if (
+    isGated &&
+    stageCheckbox.state !== "completed" &&
+    node.for_each === SWARM_FOR_EACH &&
+    node.mode === SWARM_MODE &&
+    // The walking-skeleton gate stage is the one place the engine itself refuses
+    // to fan out (tryEmitSwarm declines it), so zero SWARM rows there is
+    // compliance, not drift — reconciling it would refuse an approve that the
+    // one approved exit, a plan correction, could never unblock.
+    !isSkeletonGateStage(node, scope)
+  ) {
+    const declaredBatches = readBoltDagBatches(pd);
+    if (declaredBatches !== null) {
+      const evidence = collectSwarmEvidence(pd);
+      const verdict = swarmEvidenceVerdict(declaredBatches, evidence);
+      if (verdict.kind === "missing") {
+        emit(errorDirective(swarmEvidenceRejection(verdict.batches, evidence)));
         return;
       }
     }

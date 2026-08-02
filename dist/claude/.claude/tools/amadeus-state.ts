@@ -108,9 +108,15 @@ import {
   validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
-import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  BOLT_CONTEXT_MARKER,
+  boltContextKind,
+  initProcessObservability,
+  writeBoltContextMarker,
+} from "./amadeus-observability.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
@@ -4709,13 +4715,32 @@ export function handlePracticesPromote(args: string[]): void {
     }
   }
 
+  // Latch gate (#1961): force the fatal health latch to be observable BEFORE
+  // either target write. The latch may only become set inside the FIRST emit
+  // of a process (the bootstrap journal health probe runs there), so without
+  // this bootstrap a latched-journal workspace sailed through to the writes
+  // and only failed at the Step 6 emit — after both files were mutated, with
+  // the compensating PRACTICES_OVERRIDE refused by the same latch. Bootstrap
+  // now (idempotent), then assert: a latched process fails here with NOTHING
+  // written. The post-write emit check below stays for the tiny window where
+  // the latch trips mid-process.
+  try {
+    ensureOtelBootstrap(pd);
+    assertMutationAllowed();
+  } catch (e) {
+    fail(`mutation refused before writing targets: ${errorMessage(e)}`);
+    return;
+  }
+
   // Step 4 & 5: Write project.md first, then team.md.
   // If the project write fails, team.md is untouched. If the team write
   // fails after project succeeded, we surface that as PRACTICES_OVERRIDE —
   // the user re-enters the gate; the duplicate-rule case is mitigated because
   // re-running parses the same rule list and appendUnderHeading is idempotent
   // only on the draft contents, not on ALL prior runs. Operators should treat
-  // a mid-promotion failure as a recovery scenario.
+  // a mid-promotion failure as a recovery scenario — one that, since the
+  // pre-write latch gate above, can only arise from a failure that occurs
+  // mid-process (a latch already set at handler start no longer reaches here).
   try {
     writeFileSync(guardrailsPath, newGuardrailsMd, "utf-8");
   } catch (e) {
@@ -4925,6 +4950,10 @@ function handleFork(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
   const pd = resolveProjectDir(projectDir);
+  // Whether the slug names a swarm unit or a Bolt, for the telemetry marker
+  // written at the end of the fork. Resolved off argv: only the caller knows,
+  // and parseFlags takes value-carrying flags only.
+  const markerKind = boltContextKind(args);
 
   // The space+intent selector pins this fork to ONE intent end-to-end (vision
   // §5): --intent <record> / --space <name> override the active cursor;
@@ -5061,6 +5090,18 @@ function handleFork(args: string[]): void {
       writeStateFile(wtPath, wtContent, wtRecord, space);
     } catch (e) {
       errorWithSlug(slug, `failed to write worktree state at ${wtPath}: ${errorMessage(e)}`);
+    }
+
+    // The telemetry marker naming the unit of work this worktree serves
+    // (#1868 §2, read by otel/span-context.ts). Deliberately NOT a state
+    // field: the state file is a tracked path shared with main, so a value
+    // written here would reach main on merge and then name this Bolt for every
+    // later process there. The marker name sits inside the `.amadeus-*` ignore
+    // pattern, so it stays in the worktree that owns it.
+    try {
+      writeBoltContextMarker(wtDocsDir, slug, markerKind);
+    } catch (e) {
+      errorWithSlug(slug, `failed to write ${BOLT_CONTEXT_MARKER} at ${wtDocsDir}: ${errorMessage(e)}`);
     }
 
     return sha;

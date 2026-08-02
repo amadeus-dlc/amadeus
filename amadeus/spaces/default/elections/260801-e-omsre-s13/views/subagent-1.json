@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OMSRE-S13",
+  "voter": "subagent-1",
+  "question": "260801-otel-meta-schema reverse-engineering ステージの §13 学習選定。conductor 提案: 0件(diff-refresh(c1)・Developer→Architect 直列(c3)・c3-relabel・measurement-ref・rescan-base-ancestry はすべて既存ノルムの適用。Architect が scan の 55→56 コミット数を独立訂正した事象も enumeration-completeness-review / fix-diff-independent-reverify の既習実践であり新規規則を生まない。codekb 9ファイル+re-scans record 着地済み)。各自、codekb/amadeus/ の現在節(260801-otel-meta-schema、observed 9c8df859e)と re-scans/260801-otel-meta-schema.md を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    }
+  ]
+}

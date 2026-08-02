@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "異議(候補あり)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T00:38:32Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSIC-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "intent-statement が「スキーマ正本は #1868 本文」と宣言する点は cid:requirements-analysis:intent-first-mirror-issue(record が仕様の正本・Issue は設計詳細を書かない一方向ミラー)と緊張するが、これは既決ノルムの適用面の指摘であり新規学習として persist すると既決規範の重複記述になるため、§13 候補ではなく leader への規範適用観測として回付すべき。",
+      "rationale": "0件で可(2)。独立実測: (a) 成果物3点(intent-statement.md 37行 / stakeholder-map.md 15行 / intent-capture-questions.md 10行)と gh issue view 1868(body 9032 bytes、OPEN)を突合し、6面すべてが対応することを確認 — §1 は issue 表12行に対し intent-statement の列挙は vcs.ref.head.name/.revision を2属性と数えて service.name(既存)除外で12属性、§2 intent.id/space/stage/phase/bolt/unit 直載り、§4 exception.type/stacktrace の optional 追加+redaction、§5 amadeus.subagent.started 新設+lifetime span subagent:<type>+agent.type/agent.id、§6 metrics 5計器(gen_ai.client.token.usage / stage.duration / gate.iterations / operation.failures / subagent.duration)、docs/reference/ スキーマ章はいずれも issue 本文と一致し、§3 log 無改変も『変更なし』と整合。捏造・欠落・過剰いずれもなし。(b) stage diary(ideation/intent-capture/memory.md)は4節すべて HTML コメント例のみで実エントリ0件 — 候補の実在根拠が存在しない。(c) audit shard 全28イベントを直読、intent-capture 区間(seq 16-28)は ARTIFACT_UPDATED×4 と SENSOR_FIRED/PASSED×4 のみで SENSOR_FAILED・逸脱記録ゼロ。(d) questions ファイルは E-OC1 判定+『ユーザー承認: 2026-08-01T00:55:00Z』の承認語彙+ISO TS 行(cid:requirements-analysis:c4-answer-evidence-approval-vocab 準拠)と第2 H2『裁定の記録』(E-TCRRAS13B の1問未満様式対応)を備え、いずれも既存ノルムの遵守そのもの。以上より本ステージは intent-capture:c1 の適用実演にとどまり新規知見なしとする conductor 提案は妥当。",
+      "submittedAt": "2026-08-01T09:40:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSIC-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(GoA 1)。独立実測5点。(1) diary 実エントリ0件: ideation/intent-capture/memory.md は Interpretations / Deviations / Tradeoffs / Open questions の4節すべてがテンプレートの HTML コメント例示のみで、逸脱・解釈・トレードオフの記録が一件もない。学習候補の実在根拠(cid:requirements-analysis:learnings-election が要求する diary・成果物の実在根拠)が構造的に存在しない。(2) 成果物3点(intent-statement.md / stakeholder-map.md / intent-capture-questions.md)を全読し、intent-statement の6項目を gh issue view 1868 の本文と逐条照合した — §1 resource の列挙(service.version / deployment.environment / host.name / clone_id / harness / harness.version / gen_ai.request.model / operating_mode / agent.role / session.id / vcs.ref.head.* = 12属性、service.name は既存扱いで除外)、§2 span の intent.id/space/stage/phase/bolt/unit 直載り、§4 exception の type/stacktrace optional 追加+stacktrace redaction(repo 相対化・repo 外 <home> マスク)、§5 amadeus.subagent.started 新設+lifetime span subagent:<type>+agent.type/agent.id、§6 metrics 5計器(gen_ai.client.token.usage / stage.duration / gate.iterations / operation.failures / subagent.duration)、および『log 面(§3)は無改変』まで #1868 の記述と一致した。新規の設計判断は行われておらず、既決裁定の転記に尽きる。(3) 質問0件と E-OC1 判定の証跡: intent-capture-questions.md は判定=質問0件・根拠種別=既決裁定を明記し、承認行『ユーザー承認: 2026-08-01T00:55:00Z』で答証跡述語(checkQuestionsEvidence の『承認』語彙+parse 可能な ISO タイムスタンプ、cid:requirements-analysis:c4-answer-evidence-approval-vocab)を満たす。1問様式でないため H2 floor は『## E-OC1 選挙不要判定』『## 裁定の記録』の2節で充足。(4) 実行の異常なし: 監査シャード28行を JSON parse して集計したところ SENSOR_FIRED 4 / SENSOR_PASSED 4 / SENSOR_FAILED 0 / STAGE_STARTED 4 / STAGE_COMPLETED 3 で、センサー FAILED も是正ループも発生していない。学びの発生源となる失敗事象がない。(5) 対抗候補の不在確認: 唯一の着目点だったスコープ語彙(WORKFLOW_STARTED の Scope=self-feature)は .claude/scopes/amadeus-self-feature.md が実在し、project.md:69-72 の Scope Overrides(2026-07-29 の self-* 語彙更新)と一致するため drift ではない。かつスコープ選択は initialization 段の決定で本ステージの学びに当たらない。以上より、本ステージは既存ノルム cid:intent-capture:c1(事前整理済み intent では確定裁定を前提知識として直接反映し質問を絞る)の素直な適用であり、新規に persist すべき規範知は存在しない。留保なし。",
+      "submittedAt": "2026-08-01T00:38:14Z"
+    }
+  ],
+  "resolutions": []
+}

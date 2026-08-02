@@ -13,6 +13,12 @@
 - 欠陥クラス: 単一 writer × ガード後段配置 — bootstrap 状態で reader 側が恒久 fail-closed になる writer-reader 不整合。`.current-session` 直読み2箇所（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403`）を `readCurrentSessionId`（`amadeus-lib.ts:2159`）へ寄せるリファクタは本 intent スコープ外。
 - 根因確度: 機序は observed HEAD で全 file:line 再実測済み（`:70` ガード / `:117` writer / 認可 `:96-109`）。決定的再現はテストなしでもコードパス追跡で確定（writer 到達不能は `:70` の無条件 exit から自明）。
 
+## CG 計画整合ガードの品質所見（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 欠陥クラス: 無音 degrade 3経路（tryEmitSwarm の bolt_dag 不在 false / autonomy null false / computeBoltDag の stderr+undefined）— いずれも fail-open。既存ノルム（per-unit-loop-activation / recompile-before-construction-bolt-dag）は prose 手動確認で機械ガード不在。
+- 真因（#1892 調査）: 実測4件の不履行はすべて conductor の非タスク化 — engine 無音 degrade の確定例 0。よってガードの主敵は「prose 計画の非 directive 化」であり、発行時+approve 時の両点発動が要件。
+- 未決2点（RA 送り）: #1893 修正方向（A 受理拡張 / B 訂正+loud 拒否）、autonomy null 期の扱い。
+
 ## オープンバグ一括修正バッチ第5弾の品質所見（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## 価値チェーン3件の品質評価（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
@@ -96,6 +102,53 @@ file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が扱う欠陥
 - 欠陥クラス分布: 非対称実装3（#1838 policy、#1849 report vs next、#1857 catch の recordHookDrop 有無）、状態機械の橋渡し遷移欠落1（#1860）、scaffold/テンプレ乖離1（#1846）、部分配線1（#1856）、lossy データ変換1（#1863）、一過性/構造的エラーの混同1（#1861）、台帳転位1（#1864）— `cid:requirements-analysis:symmetric-pair-review` クラスタが最頻。
 - 原因所在: 実装段5（#1857 移行漏れ、#1860 実装漏れ、#1864 remap 不実施ほか）、要件列挙漏れ2（#1849、#1861）、設計段2（#1838、#1863 knownSlugs フィルタ）。origin:bootstrap は #1846 のみ。
 - 未決3点（要件段裁定へ送付）: #1849 機序（state 再構築 vs single マーカー）、#1856 latch 意味論、#1838 修正4面の順序制約の要件転記。
+
+## OTel メタ情報スキーマ実装の品質評価（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 実装しやすさの評価（#1868 の6面）
+
+| 面 | 難度 | 根拠 |
+|---|---|---|
+| §4 exception | **低** | 患部が `tracer-provider.ts:155-156` の2行と registry def の `optionalAttributes` のみ。safe-key が機械追従するため redaction 改修不要（パス書換えを除く） |
+| §2 span attributes | 低〜中 | `subprocess-span.ts:80-87` に write-time redaction の既習様式あり。stage 解決だけが新規 |
+| §1 resource | **中** | 一元化先（bootstrap）は明確だが、logs / metrics に resource フィールドを新設する構造追加と、供給元未整備の属性（env / vcs / model / session）が5件 |
+| §5 subagent | **中〜高** | PreToolUse hook の新設 + プロセス境界を跨ぐスパン組み立ての設計判断 + canonical イベント追加による 78-pin 全面更新 |
+| §6 metrics | **中〜高** | bootstrap arm・register 経路・命名規約のすべてが新規。§1 完了が前提 |
+| §3 log | ゼロ | 変更なし |
+
+### 品質上の強み（実装が乗る土台）
+
+- **fail-closed と fail-open の分離が明示的**。監査ジャーナル（canonical）は不変条件違反で throw・書込み失敗で latch（`audit-log-exporter.ts:130-176`）、telemetry（span / metric）は全域 fail-open（`local-span-exporter.ts:110-118` の try/catch + `noteStoreFailure`、`:1-7` のコメントが契約を明記）。#1868 設計原則2「fail-open」はこの既存の分類線にそのまま乗る
+- **safe-key の機械導出**（`redaction.ts:65-71`）。コメント `:57-64` が「Taking only the required half is what made an optional key ... vanish from the stored row while the append still reported success」と過去の欠陥まで記録している。手書き複製がないため属性追加が安全
+- **一語彙一源**（`redaction.ts:20-22`）: VER-2 credential-free ゲートが `CREDENTIAL_SCRUB_PATTERNS` と同じ語彙で走査する。二重管理なし
+- **ランタイム自己検査**（`assertRegistryConsistent`、`event-registry.ts:883-897`）が名前重複・auditEvent 重複・durability/category 整合・cardinality を静的テストとは独立に検査する
+- **vacuity guard の実践**: `event-registry-drift.ts:115-117` が「canonical name vocabulary is empty — the sweep would pass vacuously (BR-6)」で空集合走査を拒否。`cid:code-generation:vocabulary-collision-vacuity-guard` の実装例
+- **設計意図がコメントに残っている密度が高い**。`bootstrap.ts:1-22`・`:34-39`、`tracer-provider.ts:8-10`・`:196-202`、`relay.ts:294-297`、`local-metric-exporter.ts:52-53` など、なぜその形かが読める
+
+### 品質上の弱み（#1868 が触ると顕在化するもの）
+
+1. **resource の redaction 非対称**（独立検証で判明）。`local-span-exporter.ts:88-99` の `redactRecord` は `attributes` / `events[].attributes` / `links[].attributes` を通すが `resource` は素通りする。Relay 側（`relay.ts:298-312`）は値スクラブのみでキー admission を意図的に迂回（`:294-297` に理由記載）。現状 resource は2キーの定数なので実害は無いが、#1868 が `host.name` / `vcs.*` / `session.id` を載せると **ローカルストアに無処理で書かれ、OTLP へは admission なしで送出される**。設計原則4「resource / span attributes とも二層 redaction の対象」は現状未達で、この差を埋めるのが改修点になる
+
+2. **span event の write-time 層が無い**。`addEvent`（`tracer-provider.ts:98-105`）はフィルタなしで push し、守っているのは export 境界だけ。span attributes は call site（`subprocess-span.ts:82`）が write-time redaction を通す様式なのに対し、event 側にその規律がない — **同じ span record 内で層の数が違う**非対称。#1868 §4 の stacktrace は最も機微な文字列なので、ここに write-time 層を足すかが判断点
+
+3. **credential パターンにパス系が無い**（`redaction.ts:35-45` の6パターンはすべて credential 形）。#1868 §4 が要求するホームディレクトリのマスク／リポジトリルート相対化は、`scrubCredentials` の再帰 string 走査に乗せるか、パス専用の正規化関数を別に置くかの設計判断になる。`scrubCredentials` は複数行文字列にもそのまま効く（`:95-114`）ので機構的な障壁は無い
+
+4. **register 署名の非対称**。`registerMeterProvider`（`meter-provider.ts:112`）だけ `projectDir` を取らず、`registerLoggerProvider`（`logger-provider.ts:154`）だけ `redaction?` 注入スロットを持つ。3プロバイダへ resource を配る改修は、この署名の不揃いを整理する機会でもあり、放置すれば bootstrap 側に3分岐が残る
+
+5. **セッション相関の片側欠落**（独立検証で判明）。`amadeus.session.started` / `.resumed` の def（`event-registry.ts:245-262`）は `Source` のみで session ID を持たない。resource へ `session.id` を載せても突合先が存在しないため、#1868 §1 が謳う「SESSION_STARTED 監査行との突合キー」は registry 側の属性追加とセットでないと成立しない
+
+6. **`Agent Type` の `unknown` 落ち**。`normalizeAgentType`（`amadeus-log-subagent.ts:50`）が空文字を正規化する扱い（#845 由来）。#1868 §5 が「識別性改善は実装時に hook 側で追跡」と留保している既知の品質課題
+
+7. **二重モジュールグラフの偽グリーン risk**。テスト 44 ファイルが dist を読み、6 ファイルが canonical を読む。`otel/` の変更で再生成を怠ると大半のテストが旧バイト列に対して green を返す。`t-otel-core-plumbing.test.ts:4-7` が「separate singletons」の理由を明記しているが、**再生成漏れ自体を検出するのは `dist:check` だけ**で、テストスイートは検出しない
+
+### 検証設計上の注意（新規ガードを足す場合）
+
+- 新設ゲートは失敗注入で実際に赤くなる「落ちる実証」が必須（org.md Mandated）。注入は**テストが実際に読む面**へ行う（`cid:code-generation:injection-surface-verify` — otel 系は大半が dist を読むため、canonical への注入は不発になる）
+- 型注釈・型 union のみの変更は TypeScript のランタイム消去で赤くならない（`cid:code-generation:inject-runtime-consumed-lines`）。registry の `optionalAttributes` は実行時配列なので注入面として有効
+- `t385` の static admission は **call site の供給キー ⊆ required∪optional** を静的解析する。解析不能サイトは `UNRESOLVED_SITES`（`:70`）へ列挙必須で、新規の解析不能サイトは即 fail（`:398` の `toEqual` 完全一致）。#1868 で emit call site を足すときは、動的キー構築を避けるか列挙追加が要る
+- 実 FS を触るテストは integration 層へ置く（`cid:code-generation:fs-tests-integration-first` — size purity ratchet が unit 層の fs トークンを拒否する）
 
 ## perf 分離に関わる品質評価（260731-perf-ci-separation、履歴、observed `da51af375`）
 

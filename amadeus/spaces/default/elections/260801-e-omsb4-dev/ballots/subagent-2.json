@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSB4-DEV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "二点。(1) builder 報告の BR-U6-3 引用は誤帰属 — 実測で 260726-plugin-host-delivery の stdout 純度規則(business-rules.md:9)であり、260729-otel-upstream 全域で BR-U6 は 0 hit。docs を6キーに留めた判断自体は正しいが、根拠は BR-U6-3 ではなく construction.md 「どのコードも消費しない『文書のふりをしたフィールド』を持たせない」と org.md 検証劇場 Forbidden へ差し替えて記録すること(cid:requirements-analysis:mechanism-cite-verify-at-draft)。(2) 案A は dispatch 配線が欠けた瞬間に案C へ無音退化する — 実測で AMADEUS_AGENT_TYPE/AMADEUS_AGENT_ID は span-context.ts:88-89 の受け口のみで packages/ scripts/ 全域 0 hit、受け口が無配線のまま着地しても何も赤くならない前例が現に存在する。よって2経路それぞれについて、dispatch 側の env 設定を外すと赤くなるテスト(落ちる実証)を完成条件に含め、受け口の fail-open テスト(env 不在→属性省略、空文字列でない)と対で置くこと",
+  "rationale": "実測: (1) AMADEUS_BOLT/AMADEUS_UNIT は repo 全域で election 成果物にのみ出現、production コード 0 hit — builder の前提を確認。(2) 決定的ブロッカーを直接確認: worktreePath(amadeus-lib.ts:4509-4516)は引数を問わず `bolt-${normalizeWorktreeSlug(slug)}` を返し、amadeus-swarm.ts:291 は同ヘルパへ unit を渡す(`const wt = worktreePath(projectDir, unit)`)。ディレクトリ名からの逆推論は bolt/unit を原理的に判別不能で、git worktree list 上も bolt-otel-migrate-g1..g3 等が同一様式で並ぶ。情報は dispatch 時点にのみ存在するため、そこで明示宣言する案A が parse-don't-validate の方向であり、下流での欠損復元を試みる設計より正しい。(3) 案B は view 記載の構造矛盾が決定的 — 本 intent は並行 bolt を実運用しており(worktree 実測で otel 系 bolt が同時に9本)、per-process の値を単一 amadeus-state.md に置くと並行 bolt が互いの識別子を上書きする。加えて birth scaffold・既存 intent への migration 波及があり、得るもののない構造的退行。(4) 案C はユーザー裁定『本 intent 内で追加実装』に対して供給を無期限に先送りし、#1868 §2 に production で恒久不発の属性を宣言する — construction.md の『文書のふりをしたフィールド』禁止に抵触。前例として挙がる agent.type/id は実測で無配線のまま着地しており、規範として複製すべき既決ではなく同種の潜在ギャップと読むのが妥当(留保(2)の根拠)。(5) 案A の resolver 側は span-context.ts:88-89 の put() + fail-open 省略という確立済み様式の反復にすぎず、migration 面・state schema 無改変。以上より案A が一意に妥当",
+  "submittedAt": "2026-08-01T14:06:53Z"
+}

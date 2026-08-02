@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSCG-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 文には再実測の手段を『git fetch 後の origin/main 実測(git ls-tree origin/main docs/reference/ 等)』と明記すること — ローカル作業ツリーの章一覧では並行 intent が main に先取した番号を構造的に捕捉できず(本票の裏取りでも fetch 前は 21/22-formal-model が不可視だった)、手段を欠いた規則は同じ衝突を再発させる。",
+  "rationale": "独立実測: (1) 6 PR 全て MERGED を gh 実測(#1899 07:15:22Z / #1905 09:07:35Z / #1907 09:31:05Z / #1910 10:01:25Z / #1924 13:05:24Z / #1938 19:46:42Z、いずれも 2026-08-01)。(2) record の unit 成果物は 6 unit(resource-core/span-attrs/exception/metrics/subagent-started/docs)全てに code-generation-plan.md + code-summary.md が実在。(3) persist 候補の一次証拠を確認 — origin/main の docs/reference には 21-formal-model-following / 22-formal-model-supply が実在し、本 intent の章は 23-telemetry-schema として着地。改番の事実は PR #1938 の merge commit ee94257e0『formal-model chapters claimed 21/22 — renumber telemetry schema to 23』と、PR 本文が改番前の『21-telemetry-schema』表記のまま残っている対照で確定。(4) 既存 memory 層に『章番号/番号空間』を扱う cid は grep 0 件で、shared-ledger-insert-collision(共有台帳への同一アンカー挿入衝突)の docs 章番号面への追補という写像は妥当かつ非重複。(5) 違反実例の PM 記帳分類も CG diary で裏取り — (a) キー名乖離と (b) RA の bolt/unit 列挙漏れは 2026-08-01T13:30:00Z エントリ、(e) B1 の実装後申告は 07:05:00Z エントリに実在し、いずれも既存 cid(mechanism-cite-verify / implementation-deviation-election / enumeration-completeness-review / deviation-stop-before-implement)の違反実例で新規則不要という判断に同意。(d) tracked worktree state の git travel も、worktree ごとに異なる値を gitignore 済みマーカーへ置く既存慣行(amadeus/.amadeus-clone-id、runtime-graph.json、.amadeus-*)の適用であり新規学習に当たらない — 裁定記録済み知識という分類を支持。留保1点のみ付して choice 1 を採用。",
+  "submittedAt": "2026-08-01T19:50:46Z"
+}

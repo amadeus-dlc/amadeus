@@ -8,6 +8,10 @@
 
 - 判断: 新規コンポーネントなし。対象は既存3面 — core session-start hook（`packages/framework/core/hooks/amadeus-session-start.ts`）、認可（`packages/framework/core/tools/amadeus-caller-authorization.ts`）、kimi harness ロール管理（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`）の欠陥修正のみ。区間で到着した otel 基盤拡張（resource-core / span-context 等）の目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
 
+## CG 計画整合ガードの対象コンポーネント（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 判断: 新規コンポーネントなし — 既存3モジュール（orchestrate/runtime/lib）内のガード関数追加と、audit SWARM イベントの読み手追加。目録は `re-scans/260801-cg-plan-guard.md` を正本とする。
+
 ## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-verif 価値チェーンの対象コンポーネント（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
@@ -59,6 +63,64 @@ file:line はすべて HEAD `16486d3c` 断面の実測。3 Issue が触るコン
 ## オープンバグ一括修正バッチ第5弾の対象コンポーネント（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: 新規コンポーネントなし。対象は既存5クラスタ（mirror 状態機械 / engine state / OTel bootstrap 系 / graph 合成 / metrics publication）の欠陥修正のみ。区間で到着した OTel 18モジュールの目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-open-bug-batch-5.md` を正本とする。
+
+## OTel メタ情報スキーマ実装の対象コンポーネント（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line・件数はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### 改修面の目録
+
+| コンポーネント | 現在の責務 | #1868 での改修 |
+|---|---|---|
+| `otel/tracer-provider.ts` | Span 実装 + Tracer Provider 登録 | resource literal（`:137`）の一元化・`recordException`（`:145-157`）の属性拡張・span 属性の intent/stage 直載り |
+| `otel/bootstrap.ts` | 冪等な一度きり初期化 seam（logs / traces の2 arm） | resource 組み立ての設置・**metrics arm 新設** |
+| `otel/event-registry.ts` | 80 def の全数管理（78 canonical + 2 telemetry） | exception def への optional 2属性追加・§5 `amadeus.subagent.started` 新設 |
+| `otel/redaction.ts` | 二層共有ポリシー・safe-key 機械導出 | stacktrace のパス書換え処置追加 |
+| `otel/local-span-exporter.ts` | span JSONL + export 境界 redaction | `resource` を redaction 対象へ（現在は素通り） |
+| `otel/logger-provider.ts` | canonical 行の identity 組み立て | resource フィールド追加（log OTLP resource の充填） |
+| `otel/meter-provider.ts` | Counter/Histogram subset | §6 計器の命名規約適用先。production 未配線 |
+| `otel/local-metric-exporter.ts` | metrics JSONL | resource フィールド追加 |
+| `otel/relay.ts` | Signal Store → OTLP 転送 | resource キー admission 方針の再確認（`:294-297`） |
+| `core/hooks/amadeus-log-subagent.ts` | SubagentStop → `SUBAGENT_COMPLETED` | started 側との対称化（Agent Type の `unknown` 落ち改善） |
+| `core/hooks/`（新規） | — | **PreToolUse（matcher: Task）hook の新設** |
+| `harness/claude/settings.json.example` | hook 配線 | PreToolUse セクション新設 |
+| `core/tools/amadeus-harness.ts` | ハーネス検出 | `amadeus.harness` の供給元（改修不要の見込み） |
+| `scripts/package.ts` | dist ビルド | `writeHarnessData()`（`:206-214`）へ harness version 等を追加する場合の唯一の書き手 |
+
+### イベントレジストリの構成（実測）
+
+`event-registry.ts` の def 総数 80（`grep -c '^    name: '`）。durability 内訳（`grep -o 'durability: "[a-z]*"' | sort | uniq -c`）:
+
+- `canonical` = **78**（`EXPECTED_CANONICAL_COUNT = 78` が `:77` で pin。scan 報告の `:79` は本実測で `:77` と訂正）
+- `telemetry` = **2**（`amadeus.diagnostic.note` と `exception`）
+
+telemetry 分類は `auditEvent: null` を持ち cardinality pin に参入しない（`assertRegistryConsistent` が canonical のみ数える）。これが「78-pin を触らずにイベントを足す」既存の回避先例であり、`exception`（`:827-837`）と diagnostic note（`:817-826`）が共存実例として機能している。
+
+**ただし #1868 §5 の `amadeus.subagent.started` は canonical（監査ジャーナルへ載る）指定のため、この回避は使えず 78→79 の全面更新になる。**
+
+### subagent イベントの現状定義
+
+`event-registry.ts:476-484`: `amadeus.subagent.completed` / `auditEvent: "SUBAGENT_COMPLETED"` / `category: "subagent"` / required `["Agent Type"]` / optional `["Agent ID", "Message"]`。
+
+hook 側（`amadeus-log-subagent.ts`）の取得値:
+- `agent_type` → `normalizeAgentType()` で空文字を正規化（`:50`、#845 の経緯）
+- `agent_id`（`:51`）・`last_assistant_message` を 200 文字に切った `Message`（`:52`）
+- 3段の早期 exit: TTY（`:37`）/ shard 不在 `hasActiveWorkflowAudit`（`:57`）/ workflow 完了済 `activeWorkflowIsComplete`（`:63`）
+- emit は `ensureOtelBootstrap` → `appendAuditEntryViaEvents`（`:84-85`）、失敗は `recordHookDrop` で fail-open（`:86-89`）
+
+コメント `:79-83` が「Agent ID と Message は conditional なので、default-deny redaction に落ちるのを避けるためこの hook だけ legacy writer に残っていた。optional 登録により両立した」経緯を記録している — **conditional 属性を registry optional で扱う設計先例**として #1868 §5 の `Purpose` に直接適用できる。
+
+### セッション相関の片側欠落（独立検証で判明）
+
+`amadeus.session.started` の def（`event-registry.ts:245-253`）は `requiredAttributes: ["Source"]` / `optionalAttributes: []` — **セッション ID を属性として持たない**。同様に `amadeus.session.resumed`（`:254-262`）も `Source` のみ。
+
+#1868 §1 は `session.id` を「SESSION_STARTED 監査行との突合キー」と位置づけるが、現状の監査行側には突合対象のキーが存在しない。resource へ `session.id` を載せるだけでは相関が片側にしか立たないため、**`amadeus.session.started` / `.resumed` の optional 属性追加が対になる**（属性追加のみなら cardinality pin は動かない）。
+
+### 計器の現状
+
+production 実例はゼロ。テストのみに `"amadeus.events.total"`（counter）と `"amadeus.span.duration"`（histogram）が現れる（`t369-otel-metrics-subset.test.ts`）。§6 が定める5計器（`gen_ai.client.token.usage` / `amadeus.stage.duration` / `amadeus.gate.iterations` / `amadeus.operation.failures` / `amadeus.subagent.duration`）はいずれも新規で、**命名規約・bootstrap arm・register 経路のすべてが未整備**。
+
+`meter-provider.ts` の subset 制約（`:28-38`, `:80-100`）: UpDownCounter / Gauge / Observable* / batch callback / `options.advice` は `outOfSubset()` で throw。§6 の5計器はすべて Counter か Histogram なので subset 内に収まる。
 
 ## perf 分離の対象コンポーネント（260731-perf-ci-separation、履歴、observed `da51af375`）
 

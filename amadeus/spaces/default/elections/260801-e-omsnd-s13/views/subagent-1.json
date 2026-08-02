@@ -1,0 +1,19 @@
+{
+  "electionId": "E-OMSND-S13",
+  "voter": "subagent-1",
+  "question": "nfr-design ステージ(全6 unit)の §13 学習選定: conductor 提案は「学習 0 件」。0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "conductor 提案: 本ステージで観測された欠陥は全て既存ノルムの違反実例であり新規則を生まない。(a) U1 iteration1 の Critical 2件 — vcs 解決機構の無申告差替え(implementation-deviation-election 違反)と実在しない「resource スロット」機構を前提にした容量主張(mechanism-cite-verify-at-draft / absence-claim-grep-verify 違反)。(b) U6 iteration1 の Major 2件 — FD 正本テーブルとの列挙不一致(enumeration-completeness-review / cross-unit-type-verbatim-check 違反)と出典の誤帰属3箇所(mechanism-cite-verify-at-draft 違反)。(c) U3/U5/U2/U4 は iteration1 READY。いずれもローリング PM の違反実例として記帳する。検証根拠: 6 unit × 13 sensor 発火は全て SENSOR_PASSED、reviewer verdict は runtime 記録済み(U1/U6=iter2 READY、他=iter1 READY)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "候補あり(具体候補を票に明記)",
+      "description": "0件に反対し、persist すべき学習候補を票の rationale に具体的に書く。"
+    }
+  ]
+}

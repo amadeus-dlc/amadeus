@@ -1,0 +1,20 @@
+{
+  "electionId": "E-CPG-RAS13",
+  "kind": "s13-learnings",
+  "question": "260801-cg-plan-guard requirements-analysis の §13 学習選定。候補: c2 を一般化した規則「ユーザーへの諮問文(AskUserQuestion の前提記述)も mechanism-cite-verify-at-draft の対象とする — 諮問文に機構の存在から導く一般化(『X があるので既に fail-closed』等)を書くときは、当該機構の呼び出し経路を全数列挙してから書く。片経路の存在からの過大一般化は裁定自体を汚染する(実測: 260801-cg-plan-guard RA で Q2 諮問文が recoverBoltDag の存在から『malformed 既 fail-closed』と過大一般化 → 裁定が誤前提で成立 → §12a reviewer が compile 経路の無音を捕捉し Q2r 正前提再裁定で回収。既存 cid は成果物・選挙前提の引用を縛るが、ユーザー諮問文は無ゲートだった隙間)」(project 層)。c1(再裁定の実施)は ruling-premise-closure-verification の実例として persist しない提案。判断材料: mechanism-cite-verify-at-draft / enumeration-completeness-review の既存射程(選挙の選択肢・裁定文・成果物)にユーザー諮問文が含まれるか各自 grep して判断。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c2 一般化を採用(諮問文への mechanism-cite 拡張)"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件(既存 cid の射程内とみなす)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

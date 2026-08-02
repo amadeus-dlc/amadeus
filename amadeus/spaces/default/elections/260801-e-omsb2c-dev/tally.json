@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "6件全て承認(実装受理)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "6件全て承認(実装受理)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部差し戻し(対象と修正を票に明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T08:58:35Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSB2C-DEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "(6) のマーカー機構は受理するが、stale marker の回収経路が実装にもテストにも不在(takeDurationStart の消費だけが削除点で、未完了ステージのマーカーは同一 key の再 start による上書きまで残る)。key 空間が stage slug / agent type に限られるため増加は有界で fail-open のため実害は測定漏れに留まるが、Issue 起票の上で追跡すること。あわせて t399:215 の Relay 非一致テストは readdir 結果に .jsonl が無いことの確認であり、Relay の selector そのものを駆動していない — selector 変更時に無音で失効しうるので、STORE_PREFIX を実際に適用する形へ強化することを推奨する。いずれも本 Bolt の差し戻し理由には当たらない。",
+      "rationale": "builder worktree(bolt-metrics、HEAD 2d391e074)をリードオンリー実測し、6件すべてを既存不変条件からの一意導出または正しい設計判断として確認した。(1) meter-provider.ts の registeredMeterProjectDir() は registeredProjectDir を保持しない限り実装不能で、local-metric-exporter.ts:35-37 の LocalMetricExporter 型は exportMetric のみを公開し projectDir を持たない(projectDir は :41-47 の Options 側にのみ在る)。tracer-provider.ts:203/230 と logger-provider.ts:198/217 が同型の projectDir 保持 + registered*ProjectDir を既に持つため、対称化は一意。(2) 循環は実在する: redaction.ts:25 が INSTRUMENT_ATTRIBUTE_KEYS を必要とし、local-metric-exporter.ts:12 が redaction.ts を import するため、catalogue を metrics-instruments.ts(:35 で meter-provider を import)へ置くと metrics-instruments → meter-provider → local-metric-exporter → redaction → metrics-instruments が閉じる。metrics-vocabulary.ts は import 0 行の真の leaf で、分離が最小解。(3) resource-suppliers.ts も import 0 行で、:10-13 のヘッダコメントが LEAF 不変条件と『memo 無効化を callback でなく generation counter で公開する』反転パターンを明示している。直接 import すれば resource.ts:31 経由で循環するため、setTokenUsageSink(:86-101)は既存パターンの踏襲であり新機軸ではない。(4) amadeus-state.ts:3048/3054 と :4118 で GATE_REJECTED と STAGE_REVISING が対で emit されることを確認。両方を数えれば二重計上であり、revision count を担う revising 側の採用が正しい。(5) event-registry.ts に amadeus.subagent.completed(:477)は在るが amadeus.subagent.started が不在であることを確認。U4 が後続という DAG 順序による構造的制約で、completed 側は takeDurationStart が null を返して無測定に縮退するため fail-open。(6) markerPath(:105-111)は telemetryDir 配下(recordDir/.amadeus-otel = intent スコープかつ gitignore 対象)へ pending-<kind>-<key>.start を置き、key を [A-Za-z0-9._-] へ潰して 80 文字で切るため不正 key で throw しない。takeDurationStart(:130-141)は読み取り後に rmSync するので二重計測不能。Relay の選別(relay.ts:33-35/115-116)は spans-/logs-/metrics- prefix かつ .jsonl を要求し pending-*.start は構造的に不一致。t399:210(不正 key)・:215(非 Signal Store)・:383(ディレクトリ注入で読取不能)が固定済み。stage の started/completed が別プロセスである以上、in-process pairing では production 計測 0 件になるため、この機構は FD 未記載でも計測を成立させる最小追加として受理する。留保は追跡事項として記録する。",
+      "submittedAt": "2026-08-01T08:54:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSB2C-DEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "(a) (2)(3) の循環主張は結論は正しいが機序の記述が不正確 — 報告が挙げる連鎖 `metrics-instruments → meter-provider → local-metric-exporter → redaction` のうち meter-provider:26 は `import type { LocalMetricExporter }` の型専用辺であり、bun/tsc で消去されるため runtime 循環は閉じない。(3) の `resource-suppliers → ... → resource.ts` 側も metrics-instruments:38 が `import type { TokenUsage }` の型専用辺で同様。したがって『循環になる実測』は成立していない。ただし決定自体は独立に正しい: (2) は redaction.ts が既に leaf の event-registry.ts(import 0行)から REGISTERED_EVENTS を引く既存イディオムと同型で、metrics-vocabulary.ts も import 0行の leaf として実測一致する。catalogue を instruments 側に置けば redaction が amadeus-lib.ts(loadStageGraph)と node:fs へ依存を得る層違反が実在する。(3) は resource-suppliers.ts の LEAF 不変条件がコード上に明文で存在し反転注入がそれを保存する。以後の成果物・裁定文では『循環』でなく『型専用辺のため runtime 循環は閉じないが、leaf/層境界の保存のため分離した』と機序を訂正して記録すること(cid:requirements-analysis:mechanism-cite-verify-at-draft / cid:application-design:citation-semantics-check)。(b) (6) マーカー機構にキー衝突の未対処面がある — キーは stage slug / agent type のみで、markDurationStart は同一キーを無条件上書き、takeDurationStart は消費時に削除する(metrics-instruments.ts:113-140)。同一 agentType の subagent を並行 dispatch する運用(本 intent 自体が swarm・並行 Bolt を既定とする)では、後発の start が先発を上書きし、最初の completion のみが誤った短い duration を計測し、以後の completion は無計測になる。t399 に並行同一キーのテストは存在しない(`grep -n 'concurren|parallel|twice'` → 該当なし)。あわせて start に対応する completion が来ない場合(park・再 jump・中断)マーカーは永続残留し、除去経路は repo 全域に存在しない(`grep -rn 'pending-' packages/framework/core --include=*.ts` → metrics-instruments.ts:110 のみ)。いずれも fail-open で制御フローには波及せず、キー種別数で有界なため受理を妨げないが、Issue 起票のうえ本 intent 内で衝突耐性(キーへの一意識別子付与)と孤児回収を扱うこと。(c) (5) は現状 production 発火 0 件の dead wiring であり、これは U9 が指摘を受けた形と同型である — `grep -n 'subagent.started' packages/framework/core/otel/event-registry.ts` は 0 hit(subagent.completed は :477 に実在)で、registry 未登録のため canonical emit されない。U4 の登録着地までは observer の当該分岐が到達不能であることを認めたうえで、U4 着地後に in-process ではなく実 emit 経路での発火を実測確認してからでなければ本 intent を完了扱いにしないこと(cid:code-generation:ruling-premise-closure-verification)。",
+      "rationale": "builder worktree(bolt-metrics、HEAD 2d391e074)を read-only で実測し6件を個別検証した。(1) 承認 — `local-metric-exporter.ts:35-37` の `LocalMetricExporter` は `exportMetric(record)` のみを公開し projectDir を持たないため、契約項目の `registeredMeterProjectDir()` は options への projectDir 追加なしに実装不能。既存 tracer-provider.ts:219/:230-232 と logger-provider.ts:217-219 が同一形(`RegisterXProviderOptions` をモジュールスコープ型として持ち `registeredXProjectDir(): string|null` を公開)であり、対称化は一意導出の執行クラスに当たる。呼出し元3箇所の更新も diff に実在。(2)(3) 承認 — 循環の機序記述は留保(a)のとおり不正確だが、leaf 分離・sink 反転はいずれも既存イディオム(event-registry.ts / generation counter memo)の適用であり、代替案(1ファイル・直接 import)は層違反または明文不変条件の破壊を招く。(4) 承認 — `amadeus-state.ts:4118-4119` で `GATE_REJECTED` と `STAGE_REVISING` が連続 emit される対であることを実測確認した(:432-436 の遷移定義とも整合)。両方を数えれば厳密に二重計上であり、Revision Count を担う revising 側の採用は正しい。(5) 承認(留保(c)付き)— registry 未登録は実測確認済みで、U4 が別 Bolt である以上 DAG 順序による構造的制約であり、逸脱ではなく順序である。(6) 承認(留保(b)付き)— 跨プロセス問題は実在する: stage の started は `next`、completed は `report` の別プロセスであり in-process start map では production 計測が構造的に 0 件になる。マーカーは (i) telemetryDir が record dir 配下(amadeus-observability.ts:140-144)のため intent スコープで隔離され、(ii) キーは `[^A-Za-z0-9._-]` を `_` へ潰し 80 文字で切るためパストラバーサルが閉じており(t399:210-212 が `../../etc/passwd` で実証)、(iii) 単一消費で二重計測を防ぎ(t399:205-207)、(iv) Relay の store 選別は `spans-`/`metrics-`/`logs-` prefix(relay.ts:33-35)+ `.jsonl` であり `pending-<kind>-<key>.start` はどちらの条件も満たさない(t399:215-219 が固定)。FD に無い新規永続機構ではあるが builder が実装前に申告し本選挙がその裁定である以上、cid:requirements-analysis:implementation-deviation-election の要求は満たされている。以上より6件とも受理するが、(a) の機序訂正・(b) の Issue 起票・(c) の閉包実測を条件として付すため GoA 1 ではなく 2 とする。",
+      "submittedAt": "2026-08-01T08:55:04Z"
+    }
+  ],
+  "resolutions": []
+}

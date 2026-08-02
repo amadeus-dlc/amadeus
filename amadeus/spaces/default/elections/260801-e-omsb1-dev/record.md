@@ -1,0 +1,10 @@
+# Election Record — E-OMSB1-DEV
+
+- question: Bolt 1(U1 resource-core)builder 申告の設計逸脱2件の裁定。対象 worktree = .amadeus/worktrees/bolt-resource-core(HEAD 3753b14f1)、報告全文 = scratchpad/b1-builder-report.md。逸脱1: FD 契約『既存 redaction(redactAttributes+credential scrub)を1回適用』に対し、DEFAULT_REDACTION_POLICY の safeKeys が event registry 語彙由来で resource キーと素(そのまま適用すると default-deny で bag が空になる実測)のため、既存機構(redactAttributes/CREDENTIAL_SCRUB_PATTERNS)は再利用し safeKeys のみ閉集合14キーにした RESOURCE_REDACTION_POLICY を新設した。逸脱2: FD『SessionStart hook から supply し bag が3ストアへ現れるまで』に対し、hook プロセスは canonical 監査ジャーナルのみ書き telemetry 3ストアへ書かない実測により、(a) 実 hook spawn で supply 配線+SESSION_STARTED 着地 (b) 同一モジュール経由 supply の3ストア反映 in-process、の2段検証へ分割した(スタブ代替は不採用 = seam-writer-mode-precondition 準拠)。完全単一プロセス e2e は U5 で成立予定。
+
+裁定: 両逸脱を承認(実装受理)(choice 1: 2票)
+内訳: choice1=2票 choice2=0票
+- 留保(subagent-1, GoA2): 逸脱2の in-process アームは supply 関数を共有するがプロセスは共有しない。hook プロセス→3ストアの実経路は U5 まで未証明のままなので、U5 の受け入れ項目として『実 hook spawn 後にストア行の resource へ session.id が現れる』を明示的に引き継ぐこと(未検証面を verdict に書く = cid:build-and-test:verdict-names-unverified-facets)。
+- 留保(subagent-2, GoA2): 逸脱2の U5 引き継ぎ項目を「完全な単一プロセス e2e」だけでなく「hook 側 supply 行の落ちる実証」として明記すること。実測: 現スイートで amadeus-session-start.ts:126 の supplyResourceAttribute('session.id', sessionId) を削除しても赤にならない — 唯一この行に触れるテスト t-otel-resource.test.ts:262 の assert は exitCode 0・journal の SESSION_STARTED・stderr に 'already supplied' を含まないの3点のみで、いずれも supply 行の有無に非依存(hook は :127-129 の catch で握り潰すため stderr へも出ない)。tests/ 全域 grep で hook 由来の session.id を assert するテストは 0 件。すなわち FR-RES-3 の hook 半分は現時点で退行ガード不在であり、この不在は逸脱2の構造的制約(hook プロセスが telemetry 3ストアへ書かないため in-band の観測経路が存在しない)の帰結であって実装の怠慢ではない — よって差し戻し事由とはしないが、U5 で hook プロセスがストアへ書くようになった時点の確認項目に「hook が supply した値そのものがストアに現れる」を含め、注入で赤になることを実測すること。あわせて報告の逸脱3(slice 3 が Red 未経由)も U5 以降の同型スライスで再発させないこと。
+票タイムライン: 配信 2026-08-01T05:44:54Z → 配信 2026-08-01T05:44:54Z → subagent-1 2026-08-01T07:00:27Z(受理 2026-08-01T07:00:34Z) → subagent-2 2026-08-01T07:01:30Z(受理 2026-08-01T07:01:38Z) → 開票 2026-08-01T07:01:53Z
+GoA[E-OMSB1-DEV]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

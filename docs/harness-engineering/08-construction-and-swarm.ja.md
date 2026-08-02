@@ -61,7 +61,7 @@ checks have proven reliable.
 
 スウォームは作業を Unit にファンアウトするので、「何を一度に実行できるか?」という問いは上流の、inception の `units-generation` ステージで決定されます。そのステージは `unit-of-work-dependency.md` を生成し(`packages/framework/core/amadeus-common/stages/inception/units-generation.md` が `produces: unit-of-work-dependency` を宣言)、その成果物の中で、必須の fenced な `yaml` エッジブロックが各 Unit をその `depends_on` リストとともに列挙します。
 
-コンパイラはそのブロックを `runtime-graph.json` の `bolt_dag` ノードに読み込みます。このノードは、エッジブロックが整形式かつ非巡回である **場合のみ** 存在します。ブロックが欠落・不整形・巡回している場合、ノードは完全に省略されます([Runtime Graph](../reference/13-runtime-graph.ja.md)、44行目のスキーマ注記)。`bolt_dag` ノードは `batches` も持ちます — すべての Unit の依存が先行するレベルによって満たされるトポロジカルなレベルで、あるバッチの Unit 間にはエッジがなく、一緒にファンアウトできます。
+コンパイラはそのブロックを `runtime-graph.json` の `bolt_dag` ノードに読み込みます。このノードは、エッジブロックが整形式かつ非巡回である **場合のみ** 存在します。正当に DAG を持たないスコープは代わりに理由付きの `bolt_dag_absence` を持ちます。不整形・巡回したブロック、または units-generation が completed なのに成果物が不在の場合は、compile 自体が失敗します([Runtime Graph](../reference/13-runtime-graph.ja.md) § 「The Bolt/unit dependency DAG (`bolt_dag`)」)。`bolt_dag` ノードは `batches` も持ちます — すべての Unit の依存が先行するレベルによって満たされるトポロジカルなレベルで、あるバッチの Unit 間にはエッジがなく、一緒にファンアウトできます。
 
 並列面そのものは、フロントマターで `for_each: unit-of-work` を宣言する5つの **Unit ごと** の Construction ステージです:
 
@@ -80,6 +80,8 @@ checks have proven reliable.
 ここでのハーネスのレバーは間接的ですが実在します: **あなたは `units-generation` が捉える依存構造を形づくることで、何が並列化されるかを形づくります。** クロス依存の少ない粗い Unit を好むチームガイダンスを執筆すると、より多くの Unit が同じバッチに入り並行実行されます。タイトで深く連鎖した依存は、作業を多数の小さなバッチへと直列化します。あなたはこれに、`units-generation` ステージの散文と、アーキテクトエージェントが分解時に読むルールを通じて影響を与えます — 分解そのものはエージェントが人間とともに行う知識の判断であり、それが書くトポロジーこそコンパイラがバッチに変えるものです。
 
 エッジブロックを `bolt_dag` に変えるコンパイルとパースはコードであり、あなたが執筆するものではありません。そのパーサを形づくるのはコード変更です → [Developer Reference](../reference/13-runtime-graph.ja.md) を参照してください。
+
+**計画は拘束力を持つようになりました。** DAG があるバッチを並列と宣言した以上、実行がそれらの Unit を黙って 1 つずつ構築することはもう許されません。バッチの発行前に、ファンアウトの見送りは宣言幅に照らして判定されます。未回答の自律ラダーは `amadeus-bolt set-autonomy` を指す `ask` として戻り、それ以外の見送りは `error` で実行を止めます。code-generation の approve では、エンジンが宣言バッチを監査証跡の `SWARM_STARTED` / `SWARM_DEGRADED` / `SWARM_COMPLETED` 行と突き合わせ、ファンアウトの記録がないバッチについては approve を拒否します(行は append-only の証跡全体からバッチ番号で照合されるため、旧計画の実績が replan 後の同番号バッチを充足しうる点は [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953) で追跡)。どちらのメッセージも、何を観測したか・なぜ重要か・唯一の承認された出口を名指しします。violation におけるその出口は計画の訂正(それらの Unit を直列にする依存関係を `unit-of-work-dependency.md` に記録し、再コンパイルして `next` を再実行する)であり、ガードを言い抜けて実行を先へ進めることでは決してありません。挙動の全体は [State Machine](../reference/12-state-machine.ja.md) § 「計画整合ガード」を参照してください。
 
 ---
 

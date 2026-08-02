@@ -8,6 +8,10 @@
 
 - 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。
 
+## CG 計画整合ガードの依存関係（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 判断: B1（runtime/lib）→ B2（orchestrate 発行側）→ B3（orchestrate approve 側）の直列依存。B2/B3 は同一ファイル（orchestrate）につき Bolt 内直列または非交差関数の実 diff 判定。dist 再生成はマージ順直列。詳細は `re-scans/260801-cg-plan-guard.md`。
+
 ## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-verif 価値チェーンの依存関係（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
@@ -98,6 +102,73 @@ amadeus-sensor-model-completeness.ts:650-659 ── MODEL_UNCHANGED で拒否（
 ## オープンバグ一括修正バッチ第5弾の依存関係（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 
 - 判断: Bolt 内交差3件（Bolt 1 = mirror 4ファイル共有、Bolt 2 = `amadeus-utility.ts`、Bolt 3 = `otel/bootstrap.ts`）は各 Bolt 内直列で解消。Bolt 間はファイル単位非交差だが、core/tools を触る Bolt 1-4 の dist 再生成はマージ順に直列（`cid:code-generation:c6` の実 diff 再評価をマージ時に行う）。Bolt 5 は完全独立。詳細は `re-scans/260801-open-bug-batch-5.md`。
+
+## OTel メタ情報スキーマ実装の依存関係（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### モジュール依存の向き
+
+```
+bootstrap.ts ──> logger-provider ──> audit-log-exporter ─┐
+             ├──> tracer-provider ──> local-span-exporter ├──> redaction.ts ──> event-registry.ts
+             ├──> context.ts                              │
+             └──> fatal-latch.ts                          │
+   meter-provider ──> local-metric-exporter ──────────────┘
+   relay.ts ──> redaction.ts（Signal Store JSONL を読む片方向）
+```
+
+**`redaction.ts` は `event-registry.ts` に依存する**（`:24` `import { REGISTERED_EVENTS }`）が逆向きは無い。この一方向性が「registry に属性を足すと safe-key が自動追従する」構造（`:65-71`）の実体で、#1868 §4 の exception 属性追加が redaction 側の改修を要さない理由でもある。
+
+### #1868 の6面の相互依存
+
+| 面 | 依存する面 | 独立実装可否 |
+|---|---|---|
+| §1 resource | なし（最上流） | **独立** |
+| §2 span attributes | §1 とは独立（span 側 bag は別レイヤ） | 独立 |
+| §3 log attributes | — | 変更なし |
+| §4 exception | なし（registry optional 追加のみ） | **独立** |
+| §5 subagent started | §2（`amadeus.agent.type` / `.id` を span へ） | started イベント単体は独立、lifetime スパンは §2 に依存 |
+| §6 metrics | **§1 に依存**（resource が全計器へ共通で付く前提）+ bootstrap の metrics arm 新設 | §1 の後 |
+
+→ **§1 が §6 の前提**である以外は疎で、Unit 分割の自由度は高い。ただし §1 / §2 / §4 はいずれも `tracer-provider.ts` を触るため、ファイル単位では交差する（`cid:code-generation:c6` の非交差判定は静的目録ではなく実 diff で行う）。
+
+### 78-pin ガードの依存グラフ（canonical イベント追加時）
+
+`amadeus.subagent.started`（§5、canonical）を足すと **78→79** になり、以下が同時に赤くなる。1つの数値が複数箇所へ複製されている構造なので、部分更新は必ず不整合を生む:
+
+1. `packages/framework/core/otel/event-registry.ts:77` — `EXPECTED_CANONICAL_COUNT = 78`（正本）
+2. `tests/integration/event-registry-drift.test.ts:51-54` — 4-set drift（`EXPECTED_CANONICAL_COUNT` / `canonicalAuditEvents().length` / `registryCanonical.size` / `auditVocabulary.size` をすべて 78 に pin）。加えて同ファイル `:192` に `vocab.length` の 78 pin が独立して存在する（scan 報告は 4 箇所としていたが、実測では**同ファイル内 5 箇所**）
+3. `tests/unit/t28-audit-event-sync.test.ts:72,175-176` — `CANONICAL_COUNT = 78`、`expect(TS_EVENTS.length).toBe(CANONICAL_COUNT)`
+4. `packages/framework/core/tools/amadeus-audit.ts:56` — `VALID_EVENT_TYPES` 本体（v1 語彙の Set リテラル）
+5. `tests/integration/t-otel-event-registry.test.ts` — 全数の FR-EVT-7 契約
+6. `tests/integration/t381-registry-emitter-parity.test.ts` — emitter/registry 全数パリティ
+7. `tests/integration/t385-emitter-registry-admission.test.ts` — call site の供給キー ⊆ required∪optional。**解析不能サイトは `UNRESOLVED_SITES` へ列挙必須**（新規の解析不能サイトは即 fail）
+8. `tests/integration/t48-audit-event-emitters.test.ts` — emitter 網羅
+9. `.claude/sensors/amadeus-event-registry-drift.md` + `packages/framework/core/tools/amadeus-sensor-event-registry-drift.ts` — ゲート時に同じ抽出を再実行
+10. `event-registry.ts:883-897` `assertRegistryConsistent` — ランタイム自己検査（名前重複・auditEvent 重複・durability/category 整合・cardinality pin）
+
+**telemetry 分類（`auditEvent: null`）を選べば 1-4 は動かない** — `assertRegistryConsistent` が canonical のみ数えるため。先例は `exception`（`:827-837`）と `amadeus.diagnostic.note`（`:817-826`）の2件（実測: `durability: "canonical"` 78 / `durability: "telemetry"` 2 / def 総数 80）。ただし #1868 §5 は started を**監査ジャーナルへ載せる canonical** として定義しているため、この回避は使えない。
+
+**属性追加のみ（§4 exception / §1 の session.id を session イベントへ）なら cardinality は動かず**、影響は 7（t385 static admission）と `tests/unit/t-otel-redaction.test.ts:35,44-45`（safe-key∪optIn の集合 assert）に限られる。
+
+### 外部依存
+
+新規の外部パッケージ依存は不要。#1868 が要求する値の取得元はすべて Node 標準か既存の内部モジュールで賄える:
+
+- `host.name` → `node:os` `hostname()`（`amadeus-lib.ts:5` で import 済み）
+- `vcs.ref.head.*` → `node:child_process` `spawnSync("git", …)`（既存 8 箇所の様式）
+- `service.version` → `tools/amadeus-version.ts`
+- `amadeus.harness` → `tools/amadeus-harness.ts`
+- `amadeus.clone_id` → `auditCloneId()`（`amadeus-lib.ts:4270`）
+
+**唯一の外部依存は `gen_ai.request.model` と `gen_ai.client.token.usage`** で、これはハーネス（Claude Code のトランスクリプト JSONL 等）から供給される値であり、フレームワーク側からは取得経路が存在しない（`ClaudeCodeHookInput` にモデル名フィールドなし — `amadeus-lib.ts:4957` 以降）。#1868 の fail-open 原則（設計原則2）により、取得不能時は省略で成立する。
+
+### ビルド・配布の依存
+
+`otel/` は core 中立層にあり、7 ハーネス dist すべてへ投影される。**core を触ると必ず 7 ツリー全数の再生成が要る**（`cid:build-and-test:bt-dist-regen-seven-harnesses` — 5 ツリーで止めると `kiro` / `kiro-ide` が DIFFERS で `dist:check` が落ちる）。加えてテストの大半が dist を読む二重モジュールグラフのため、再生成漏れは偽グリーンを作る。
+
+`scripts/package.ts` の `writeHarnessData()` を拡張する場合、生成物は `--check` の byte-diff 対象なので同一変更内での再生成が必須。
 
 ## perf 分離の依存関係（260731-perf-ci-separation、履歴、observed `da51af375`）
 

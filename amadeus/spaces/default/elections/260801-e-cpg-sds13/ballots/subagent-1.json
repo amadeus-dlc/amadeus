@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CPG-SDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "SD 成果物3点を実測。diary Interpretations は1件(0問一意導出+risk-first 編成)、Deviations/Tradeoffs/Open questions は空。questions は E-OC1 判定+承認TS+裁定の記録のみ。両要素とも既存 cid の実例に還元される: (a) 0問一意導出 = intent-capture:c1(裁定済み intent では未決のみ質問)+ requirements-analysis:no-election-judgment-gate(選挙不要判定の申告・冒頭固定の様式)+ requirements-analysis:c5 (b) risk-first 編成 = scope-definition:c3(raw WSJF より dependency と risk-first、未証明基盤に依存する価値面を先行着地させない)+ requirements-analysis:priority-vs-dependency。backlog/scope-document の残余要素も既存被覆: corpus sweep を実装と同一 Bolt に置く順序 = code-generation:corpus-sweep-for-new-guards(新設ガードの両側実測)、#1893 編入前提のクロスレビュー2名 = requirements-analysis:issue-cross-review。新規規則を導く実測差分は見つからず、0件が妥当。",
+  "submittedAt": "2026-08-01T07:52:27Z"
+}

@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c1+c2 とも採用(既存 cid への追補として persist)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1+c2 とも採用(既存 cid への追補として persist)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "c1 のみ採用(c2 は bun-inbody-comment-da0 の実例扱いで追補不要)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "0件(両方とも既存 cid の実例扱い)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T21:34:31Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2 の『patch gate 赤 → 1行化で解消』の赤side実測は builder 報告に文書化されていない — cpg-bolt2-report.md の落ちる実証3件(:59-62)も検証表(:88-92)も case label / lcov / DA:0 に一切言及せず、bolt2-verification.md も同語彙で 0 hit。根拠として実在するのは packages/framework/core/tools/amadeus-lib.ts:7964 の biome-ignore コメント逐語(『single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)』)と :7965 の1行化された `default: return violationVerdict(pendingBatch);` という成果物側の事実のみである。よって persist 文では実測所在をこのコメント行+1行化形に限定して書き、赤の観測を断定形で書かないことを条件に採用へ同意する(numbers-from-command-output-only / verbatim-quote-with-cite 準拠)。",
+      "rationale": "独立実測(読み取りのみ)。【c1 = 採用】(1) 根拠コミットの実在: bolt-approve-reconciliation worktree の git log に a65ff06df 'refactor(engine): move the reconciliation helpers above handleAuthorizedApprovalReport' が実在し、そのコミットメッセージ本文が straddle 機序を逐語で述べている — 'Their previous position split an existing coverage-allowlist range, which the mechanical line remap then widened to cover the new code — a waiver the new lines must not inherit'。変更面は 14 files / 991+ 991- で tests/.coverage-patch-allowlist.json を含み、正本+dist 7面+self-install が同一変更で同期している。(2) 症状の数値: cpg-bolt3-report.md:86-88 が 59 エントリ全件 remap・stale 検査に映ったのは10件のみ・4380-4392 の1件が span 13→85 行へ膨張、と記録。(3) 既存 cid との非重複が本候補の核心: project.md の c1-allowlist-mechanical-remap が定める是正は『全エントリの機械 remap + E-FSPBTS13 既定の直読照合(reason と現行行内容の一致)の併用』であり、team.md の allowlist-line-pin-stale 追補が守るのは『別の測定可能行への無音転位』である。ところが今回、builder は全59件へ直読照合を実施して mismatch 0 を得ており(:86)、それでも straddle は残っていた — つまり既存2 cid が定める検査は両方とも通過した上で fail-open が生存した。直読照合は『マップ先の1行の内容一致』しか見ず span の幅変化を見ないため、これは既存 cid の適用漏れではなく構造的な検出不能面であり、追補の実質価値がある。(4) 是正手段も新規: 既存 cid の系はエントリ側の是正(remap/更新)に閉じるが、本候補は『コード移設で straddle 自体を消す』または『waiver 分割』というレンジ形状側の是正を導入する。【c2 = 採用】(1) 成果物の実在: packages/framework/core/tools/amadeus-lib.ts:7962-7965 に case 'autonomy-unset' の2行形と default の1行形が併存し、default 直上 :7964 に biome-ignore format の理由コメントが実在する。(2) 既存 cid との非重複: bun 系 DA:0 ファミリは3件あるが対象形状が互いに素 — bun-inbody-comment-da0 は『関数本体内の standalone コメント行』(是正 = コメントをモジュールスコープへ移す)、bun-multiline-arg-da0 は『多行関数呼び出しの継続行』(是正 = 単一行 collapse)、multiline-type-cast-da0 は『lazy require の多行型キャスト』(是正 = 1行キャスト)。bare `case`/`default` ラベル行はコメントでも継続行でも型注釈行でもなく、既存3件のいずれの是正指示にも当たらない。(3) 実害の持続性が norm を要求する: 是正形は biome-ignore format による formatter 抑止であり、これは将来の一括 formatter 整備・deslop・lint 設定変更で機械的に外されうる形をしている。norm 化しなければ次の書き手はコメントを『不要な biome-ignore』として除去し、同じ patch gate 偽赤を再導入する。以上より c1・c2 とも既存 cid の実例扱いでは吸収されず、既存 cid への追補として persist する choice 1 を採る。",
+      "submittedAt": "2026-08-01T21:32:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2 の persist 文から『patch gate 赤』の断定を落とし、実測所在を成果物側の2事実に限定すること — packages/framework/core/tools/amadeus-lib.ts:7964 の biome-ignore コメント逐語(『single line keeps the case label measurable (bun lcov stamps a bare label 0 under union merge)』)と :7965 の1行化形 `default: return violationVerdict(pendingBatch);`、および是正コミット c023a87cb『style: collapse the fail-closed default arm onto one line for lcov attribution』(13 files = 正本+dist 7面+self-install 5面)。赤側の観測ログは cpg-bolt2-report.md に不在(:59-62 の落ちる実証3件・:88-92 の検証表とも case label / lcov / DA:0 に無言及)であり、numbers-from-command-output-only の趣旨から未観測の赤を断定形で書かない。",
+      "rationale": "独立実測(読み取りのみ、git 状態変更なし)。【c1 = 採用】(1) 実在: bolt-approve-reconciliation worktree の a65ff06df が実在(14 files / 991+991-、tests/.coverage-patch-allowlist.json を含み正本+dist 7面+self-install が同一変更で同期)。コミット本文が機序を逐語で述べる — 'Their previous position split an existing coverage-allowlist range, which the mechanical line remap then widened to cover the new code — a waiver the new lines must not inherit'。allowlist の実 diff で当該 intent 範囲の全ピンが一律シフトしていることを確認し(例 275-276→283-284、335-339→343-347)、親コミット efe5ed851 側に問題エントリ '4380-4392' が実在することを git show \"${c}:tests/...\" で直読確認した。(2) 既存 cid が構造的に検出できないことが核心: team.md:308 の c1-allowlist-mechanical-remap が定める是正は『全エントリの機械 remap + E-FSPBTS13 既定の直読照合(reason と現行行内容の一致)の併用』、team.md:284 の allowlist-line-pin-stale 追補が守るのは『別の測定可能行への無音転位』。いずれも1行の内容一致しか見ず span の幅変化を見ない。実測でも builder は全59件へ直読照合を実施し mismatch 0 を得た上で straddle が生存している(cpg-bolt3-report.md:86-88 — 全件 remap・stale 検査に映ったのは10件のみ・4380-4392 が span 13→85 行へ膨張)。既存 cid の適用漏れではなく検出不能面であり追補の実質価値がある。(3) 是正手段も既存系の外: 既存系はエントリ側の是正(remap/行番号更新)に閉じるが、本候補はレンジ形状側の是正(コード移設で straddle 消去 / waiver 分割)を導入する。移設後は span 変化 0・mismatch 0・新規59行 waiver ゼロ(patch gate: measured 59 / covered 59 / allowlisted 0 / uncovered 0、cpg-bolt3-report.md:77)。【c2 = 採用】(1) 成果物の実在: amadeus-lib.ts:7951-7966 の switch で case 'autonomy-unset' は2行形、default だけが1行形で、直上 :7964 に biome-ignore format の理由コメントが実在。是正コミット c023a87cb も実在。(2) 既存 DA:0 ファミリと形状が互いに素: bun-inbody-comment-da0(team.md:163)は『関数本体内の standalone コメント行』で是正=モジュールスコープへ移動、bun-multiline-arg-da0(:195)は『多行呼び出しの継続行』、multiline-type-cast-da0(:197)は『lazy require の多行型キャスト』。bare case/default ラベル行はいずれにも該当せず、3件のどの是正指示からも『ラベルと本体を同一行に置く』は導出できない。同ファミリが変種ごとに独立 cid を持つ既存慣行(型キャスト変種が独立 cid 化)とも整合する。(3) 是正形の脆弱性が norm を要求する: 現状の防御は biome-ignore format 1行のみで、将来の formatter 整備・deslop・lint 設定変更で機械的に外れうる。norm がなければ次の書き手はこれを不要な抑止として除去し同型を再導入する。以上より両候補とも既存 cid の実例扱いでは吸収されず、既存 cid への追補として persist する display 3 / internal 1 を採る。【手続き上の申告】投票内容確定後、ballot 書式の確認のため election ディレクトリを列挙した際に pending/subagent-1.json を開いてしまい他票を見た。上記の実測・結論・留保はいずれも閲覧前に確定済み(c2 の赤側ログ不在は cpg-bolt2-report.md の自 grep で先に検出)だが、blind 前提への抵触として明示申告する。",
+      "submittedAt": "2026-08-01T21:47:00Z"
+    }
+  ],
+  "resolutions": []
+}

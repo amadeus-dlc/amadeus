@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CPG-ADS13",
+  "voter": "subagent-2",
+  "question": "260801-cg-plan-guard application-design の §13 学習選定。候補 c1(2層構成・ADR 4件・Minor 即時是正)は既存 cid(state-machine-cardinality-check の列挙照合 / 検証劇場 Forbidden の消費者ゼロフィールド禁止 / enumeration-completeness-review)の実例で新規規則を導かない — 0件を提案。反対材料があれば record(AD diary・decisions.md・§12a レビュー)を実測して投票。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件(c1 は既存 cid の実例扱い)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用あり(具体案を留保に記す)"
+    }
+  ]
+}

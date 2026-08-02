@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-OMSSD-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "3成果物を独立確認: (1) scope-document.md の Must M1-M6 は intent-statement.md 『何を作るか』1-6 と 1:1 対応、Won't 4項目は同 『スコープ外』3項目+『事前裁定』の log 面無改変に対応し、新規判断の混入なし。(2) 『Must のみ・Should/Could を置かない+厳格 Won't』は project.md:189 の cid:scope-definition:c2 と逐語一致の既習形、『dependency+risk-first で最大リスク(harness overlay 注入 seam)を walking skeleton へ』は project.md:190 の cid:scope-definition:c3(未証明基盤に依存する価値面を先行着地させない)の同型適用で、いずれも既決ノルムの執行。(3) intent-backlog.md の B1-B6 も同じ Must 集合の分解で、依存(B4/B5→B1 seam)は c3 の帰結。(4) ideation/scope-definition/memory.md は例示コメントのみのテンプレート状態で実エントリ 0 件(Interpretations/Deviations/Tradeoffs/Open questions すべて空)。既存ノルム未被覆の一般化可能な規則は見当たらず、conductor 提案の 0 件は妥当。",
+  "submittedAt": "2026-08-01T00:45:10Z"
+}

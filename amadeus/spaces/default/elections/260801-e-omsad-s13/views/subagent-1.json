@@ -1,0 +1,17 @@
+{
+  "electionId": "E-OMSAD-S13",
+  "voter": "subagent-1",
+  "question": "260801-otel-meta-schema application-design ステージの §13 学習選定。conductor 提案: 0件(reviewer の6指摘(C1 span-exporter 欠落 / M1 FR-SUB-4 被覆ゼロ / M2 矢印方向 / N1 供給経路の自己矛盾ほか)はいずれも既存ノルム(enumeration-completeness-review・symmetric-pair-review・citation-semantics-check・external-seam-vocab-measurement)の違反実例・適用であり新規規則を生まない。閉包確認限定イテレーションは E-LSSADS13 の既習運用、記録不能 READY のゲート開示は cg-20260730-3 の既習運用。diary 0件)。各自、inception/application-design/ の5成果物と verdict 経緯を独立確認して投票せよ。選択肢: 0件で可 / 異議(候補あり — rationale に候補文)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "異議(候補あり)"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CPG-FMCS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測(読み取りのみ): (1) completion-marker.json = {complete:true, runId b8f6b4f8-e138-4776-b32e-fabc8f3f7104}、manifest.json = outcome NOT_DETECTED / exitCode 0 / partial:false / errorCode:null、artifacts 4件 sha256 併記(tlc-stderr.bin は 0 bytes = e3b0c442... 空 SHA と一致)。(2) tlc-stdout.bin 末尾行 '5203730 states generated, 529692 distinct states found, 0 states left on queue.' で固定点完走を確認 — finite-exploration-not-detected-proof の NOT_DETECTED 主張要件(completion marker + state 統計 + queue 0)を充足。(3) git status --porcelain specs/tla/ = 出力ゼロ(無改変)。ワークツリー変更は elections.json / amadeus-state.md / audit shard / 新規 record ディレクトリのみで、spec・plugin への改変なし。(4) model-completeness センサーは audit seq 1013 で SENSOR_PASSED(Output path specs/tla/FormalElection.tla)。以上より本ステージは出荷済み plugin の無改変実行であり、新規の機構・設計判断・是正が存在しない。唯一の運用観測 OUT_CONFLICT も plugins/formal-model-check/tools/run-model-check-artifacts.ts:137 'output directory already exists' として実装済みかつ tests/integration/t-formal-verif-run-model-check-artifacts.integration.test.ts でピン済みの既決契約であり、ノルム化すれば既存仕様の再述にすぎない(勾配 1: 全面的支持)。",
+      "submittedAt": "2026-08-01T22:00:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CPG-FMCS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件に同意するが、提案文の出典表記1点の訂正を条件とする。提案は OUT_CONFLICT を「仕様どおり、README 記載域」とするが、plugins/formal-model-check/README.md(68行、H2 = Bundle layout / Opt-in runtime dependency / Working with models / Compose / doctor / drop)を OUT_CONFLICT・already exists・--out で grep して 0 hit を実測した。実際の出典は (a) stages/formal-model-check.md:13 の exit code クラス記述(「exit 0 detected / 1 not-detected / 2 harness-error」)と (b) 実装コード tools/run-model-check-artifacts.ts:137 verbatim 'output directory already exists' / :142 'run-specific output directory already exists'、型 union :67、および別機序の tools/run-model-check-paths.ts:83 'output and model workspace must not overlap' である。既記載であること自体は真だが README ではないため、tally・裁定記録へ「README 記載域」を verbatim 転記しないこと(cid:requirements-analysis:mechanism-cite-verify-at-draft)。なお README に --out の運用注記が無いこと自体は docs 面の改善余地だが、これは Issue 事項であって memory 層へ persist する §13 ノルムではないため、本訂正は choice 1 を変えない。",
+      "rationale": "choice 1(0件で可)を支持する。実測確認: (1) 完走証跡 — fmc-out/completion-marker.json は complete:true / runId b8f6b4f8-e138-4776-b32e-fabc8f3f7104、manifest.json は outcome NOT_DETECTED / exitCode 0 / partial:false / errorCode null で expectedArtifacts 4件すべてが sha256 付きで実在(tlc-stderr.bin は 0 bytes = e3b0c442... の空 SHA と一致)。(2) 探索の完全性 — tlc-stdout.bin 末尾に 'Model checking completed. No error has been found.'、Progress(9) で 5,203,730 states generated / 529,692 distinct / 0 states left on queue、depth 9、Finished in 107403ms。queue 0 の固定点到達と completion marker が揃っており、cid:application-design:finite-exploration-not-detected-proof が NOT_DETECTED 主張に要求する条件(完走 marker + state 統計)を満たす。(3) 環境の同一性 — env-receipt.json の inspections は jar-sha256 / network-deny / jdk-snapshot / sandbox-profile が全て passed(expected と observed が一致)、image-digest のみ 'Darwin sandbox-exec does not use a container image' の根拠付き not-applicable。(4) センサー — audit に seq 1012 SENSOR_FIRED / seq 1013 SENSOR_PASSED(Sensor ID model-completeness、Output path specs/tla/FormalElection.tla、Duration 45ms、Fire id 29e757f8 で対応)を確認、当 intent の SENSOR_FAILED 行のうち formal-model-check stage のものは 0 件。(5) 無改変 — git status --porcelain plugins/formal-model-check/ specs/tla/ が空出力で、出荷済み plugin と .tla/.cfg の無改変を確認。以上より本ステージは既存機構の無改変実行が設計どおり成立したことの実演であり、新規に一般化すべき失敗様式・判断ギャップは観測されない。唯一の運用知見である OUT_CONFLICT は、(i) exit 2 + 明示メッセージで loud に落ちる fail-closed 挙動で無音の偽 green を作らず、(ii) コードと stage 契約に既記載、(iii) 単一 plugin CLI の局所的な操作注意にとどまり memory 層の org/team/project いずれの層でも一般化の射程を持たない。これを cid 化すると cid:requirements-analysis:weekly-distillation-round が縮約対象とする prose 肥大を新規に作るだけであり、choice 2(採用あり)を採らない。",
+      "submittedAt": "2026-08-01T22:00:55Z"
+    }
+  ],
+  "late": []
+}

@@ -65,7 +65,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { DEFAULT_RECORD_DIR, DEFAULT_SPACE, REPO_ROOT, toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, DEFAULT_SPACE, REPO_ROOT, seedUnitDependency, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: compile resolves the per-intent RECORD dir. State, runtime-graph, and the
@@ -114,6 +114,7 @@ function makeProjectWithAudit(auditFixtureName: string): string {
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   copyFileSync(STATE_FIXTURE, join(recordRoot(proj), "amadeus-state.md"));
+  seedUnitDependency(recordRoot(proj));
   // The audit fixture goes into the DETERMINISTIC shard the compile tool
   // resolves (auditFilePath) so readAllAuditShards() merges it back.
   const shard = auditFilePath(proj);

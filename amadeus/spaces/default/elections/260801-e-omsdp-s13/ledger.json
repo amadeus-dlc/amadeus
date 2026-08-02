@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSDP-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測: (1) 5成果物(bolt-plan/risk-and-sequencing-rationale/team-allocation/external-dependency-map/delivery-planning-questions)を全数直読、(2) bolt-plan の Bolt 列(Bolt1=U1 / Bolt2a2b2c=U2,U3,U5 / Bolt3=U4 / Bolt4=U6)は unit-of-work-dependency.md の YAML edge block および同ファイル末尾の batch1-4 編成と 1:1 一致で機械展開であることを確認、(3) 主張3点はいずれも既存ノルムの適用 — walking-skeleton 単独ゲートは org.md Walking Skeleton + project.md Forbidden(standing grant に walking-skeleton gate を認可させない)、intra-bolt 順序のリスク制御は cid:delivery-planning:intra-bolt-order-as-risk-control、NFR-4 checklist 化は project.md Mandated(dist 全ハーネス再生成 + promote:self)、(4) diary(memory.md)は template のまま total=0(全 H2 が HTML コメント例示のみ)で新規観測ゼロ。本ステージに逸脱・失敗・是正の実測イベントが存在せず、新規学習の実在根拠がない。",
+      "submittedAt": "2026-08-01T02:48:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSDP-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "5成果物と diary を独立実測して 0 件を支持。(1) diary は雛形のまま total=0(4節すべて HTML コメント例のみ、追記なし)。(2) bolt-plan の Bolt 列は UG 承認 DAG の機械展開と 1:1 — unit-of-work-dependency.md の YAML edge block(U1 depends_on []、U2/U3/U5→U1、U4→U3、U6→全)および同ファイルの並行編成節(batch1 U1 / batch2 U2,U3,U5 / batch3 U4 / batch4 U6)が bolt-plan の Bolt1 / 2a2b2c / 3 / 4 と完全一致し、新規判断を含まない。(3) 個別記述はいずれも既決ノルムの適用にすぎない: walking-skeleton 単独ゲート = org.md Walking Skeleton + project.md Forbidden(standing grant に walking-skeleton gate を認可させない)、intra-bolt 順序のリスク制御 = cid:delivery-planning:intra-bolt-order-as-risk-control、worktree 分離 = cid:code-generation:solo-bolt-worktree-required、NFR-4 の checklist 化 = project.md Mandated の dist/promote:self 同期、reviewer と builder の分離 = cid:requirements-analysis:role-model、質問 0 件判定の証跡様式 = cid:requirements-analysis:eoc1-evidence-in-questions-header(delivery-planning-questions.md に判定・根拠種別・ユーザー承認 ISO TS が実在)。(4) 外部依存は新規ゼロで、hook API の実測は FD 段(R4)へ明示委譲されており本ステージで新知見は発生していない。以上より、既存ノルムへ加算すべき一般化可能な学習は見当たらず 0 件で可。",
+      "submittedAt": "2026-08-01T02:48:36Z"
+    }
+  ],
+  "late": []
+}

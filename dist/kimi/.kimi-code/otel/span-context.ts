@@ -22,7 +22,10 @@
 // meaningfully change under a running process, and span end is a hot path that
 // would otherwise re-read the cursor and the state file per span.
 
-import { activeIntent, activeSpace, getField, readStateFile } from "../tools/amadeus-lib.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { activeIntent, activeSpace, getField, readStateFile, recordDir } from "../tools/amadeus-lib.ts";
+import { BOLT_CONTEXT_MARKER } from "../tools/amadeus-observability.ts";
 import { SPAN_CONTEXT_ATTRIBUTE_KEYS } from "./redaction.ts";
 
 // The closed vocabulary this module resolves. Defined in redaction.ts — next to
@@ -58,7 +61,7 @@ function putIntentPair(bag: Record<string, string>, projectDir: string): void {
   const space = activeSpace(projectDir);
   const intent = activeIntent(projectDir, space);
   if (intent === null || intent.trim() === "" || space.trim() === "") return;
-  bag["amadeus.intent"] = intent.trim();
+  bag["amadeus.intent.id"] = intent.trim();
   bag["amadeus.space"] = space.trim();
 }
 
@@ -77,6 +80,24 @@ function putStagePair(bag: Record<string, string>, projectDir: string): void {
   put(bag, "amadeus.phase", () => getField(content, "Lifecycle Phase"));
 }
 
+// Read the marker of whichever workspace is being asked about. Each Bolt
+// worktree has its own record dir, so two concurrent Bolts resolve their own
+// marker with no shared state between them.
+function putConstructionPair(bag: Record<string, string>, projectDir: string): void {
+  let parsed: unknown;
+  try {
+    const record = recordDir(projectDir);
+    if (record === null) return;
+    parsed = JSON.parse(readFileSync(join(record, BOLT_CONTEXT_MARKER), "utf-8"));
+  } catch {
+    return; // no marker, unreadable, or not JSON — both keys omitted
+  }
+  if (parsed === null || typeof parsed !== "object") return;
+  const marker = parsed as Record<string, unknown>;
+  put(bag, "amadeus.bolt", () => (typeof marker.bolt === "string" ? marker.bolt : undefined));
+  put(bag, "amadeus.unit", () => (typeof marker.unit === "string" ? marker.unit : undefined));
+}
+
 // Assemble the bag from scratch. Exported for tests and for anything needing an
 // unmemoised read; callers wanting the process-wide value use
 // `spanContextAttributes`.
@@ -85,13 +106,21 @@ export function buildSpanContext(projectDir: string): Record<string, string> {
   try {
     putIntentPair(bag, projectDir);
     putStagePair(bag, projectDir);
+    putConstructionPair(bag, projectDir);
     put(bag, "amadeus.agent.type", () => process.env.AMADEUS_AGENT_TYPE);
     put(bag, "amadeus.agent.id", () => process.env.AMADEUS_AGENT_ID);
   } catch {
     // A failure the per-key guards did not anticipate degrades to NO context
-    // rather than to a partial bag: the keys are resolved as pairs, and half a
-    // pair would describe a unit of work that was never observed. Span creation
-    // continues either way (NFR-1).
+    // rather than to whatever the bag happened to hold when it threw: an
+    // unanticipated failure tells us nothing about which of the keys already in
+    // the bag were measured against the same workspace state, so the honest
+    // answer is none of them. Span creation continues either way (NFR-1).
+    //
+    // This is NOT a claim that the six keys are one paired context. Only
+    // intent/space pair (see putIntentPair); stage, phase, bolt, unit and the
+    // agent keys are independent fail-open reads, so a partial bag is the
+    // NORMAL result whenever some of them resolve and others do not — including
+    // a stage with no intent, which is pinned in t-otel-span-attrs.
     return {};
   }
   return bag;

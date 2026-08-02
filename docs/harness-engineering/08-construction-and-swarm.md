@@ -123,9 +123,11 @@ declares `produces: unit-of-work-dependency`), and inside that artifact a
 required fenced `yaml` edge block lists every Unit with its `depends_on` list.
 
 The compiler reads that block into the `bolt_dag` node of `runtime-graph.json`.
-The node is present **only when** the edge block is well-formed and acyclic; an
-absent, malformed, or cyclic block omits the node entirely
-([Runtime Graph](../reference/13-runtime-graph.md), schema note at line 44). The
+The node is present **only when** the edge block is well-formed and acyclic. A
+scope that legitimately has no DAG carries `bolt_dag_absence` with the reason
+instead; a malformed or cyclic block, or a missing artefact under a completed
+units-generation, fails the compile
+([Runtime Graph](../reference/13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)"). The
 `bolt_dag` node also carries `batches` — topological levels where every Unit's
 dependencies are satisfied by prior levels, so a batch's Units have no edge
 between them and can fan out together.
@@ -164,6 +166,23 @@ the human, and the topology it writes is what the compiler turns into batches.
 The compile and parse that turn the edge block into `bolt_dag` is code, not
 something you author. Shaping that parser is a code change → see the
 [Developer Reference](../reference/13-runtime-graph.md).
+
+**The plan is now binding.** Once the DAG declares a batch parallel, a run may no
+longer quietly build those Units one at a time. Before the batch is issued, a
+decline to fan out is judged against the declared width: an unanswered autonomy
+ladder comes back as an `ask` pointing at `amadeus-bolt set-autonomy`, and any
+other decline stops the run with an `error`. At the code-generation approve the
+engine reconciles the declared batches against the `SWARM_STARTED` /
+`SWARM_DEGRADED` / `SWARM_COMPLETED` rows in the audit trail and refuses an
+approve for a batch with no fan-out on record (rows are matched by batch
+number across the append-only trail, so evidence from a superseded plan can
+still satisfy a renumbered batch — see
+[#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
+observed, why it matters, and the one approved exit — for a violation that exit
+is to correct the plan (record the dependency that makes those Units serial in
+`unit-of-work-dependency.md`, re-compile, re-run `next`), never to hand-wave the
+run past the guard. Full behaviour →
+[State Machine](../reference/12-state-machine.md) § "Plan-integrity guards".
 
 ---
 

@@ -1,5 +1,7 @@
 # Unit Dependency — metrics-observation
 
+## 依存関係(散文)
+
 ```
 U1 (seam) ──出力契約──> U2 (CLI) ──実行対象──> U3 (CI job)
 ```
@@ -12,17 +14,10 @@ U1 (seam) ──出力契約──> U2 (CLI) ──実行対象──> U3 (CI jo
 
 ```yaml
 units:
-  - id: U1
+  - name: U1
     depends_on: []
-  - id: U2
-    depends_on: []   # U1 と並行可(出力契約は design 固定済み。統合検証は U1 着地後)
-  - id: U3
+  - name: U2
+    depends_on: []
+  - name: U3
     depends_on: [U2]
-edges:
-  - from: U1
-    to: U2
-    type: contract   # tests-totals.json の4キー契約(ファイル境界の疎結合)
-  - from: U2
-    to: U3
-    type: execution  # U3 は U2 の CLI を実行
 ```

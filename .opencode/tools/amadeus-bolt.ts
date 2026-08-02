@@ -55,7 +55,7 @@ import {
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
-import { emitAuditEvent } from "../otel/audit-emit.ts";
+import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 
@@ -68,8 +68,10 @@ function emitAudit(
 ): void {
   // Targeted: intent/space name the ledger this Bolt operation belongs to, and
   // the target drives both the shard the row lands in and the row's own
-  // identity fields.
-  emitAuditEvent(eventType, fields, pd, intent, space);
+  // identity fields. Guarded (#1959): the fatal-latch drop is non-throwing, so
+  // the plain emit would let every handler's try/catch proceed to its state
+  // write with no ledger row behind it — the guard throws instead.
+  emitAuditEventGuarded(eventType, fields, pd, intent, space);
 }
 
 // The intent/space/repo SELECTOR re-serialised for a delegated sibling spawn. A
@@ -92,7 +94,14 @@ function selectorArgs(flags: Record<string, string>): string[] {
 // Boolean flags carry no value. Filter them out before parseFlags so the
 // strict value-required scan doesn't reject them. The --worktree / --merge
 // / --discard flags drive the per-Bolt lifecycle integration.
-const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard"]);
+const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard", "--unit"]);
+
+// The `--unit` pass-through for the state fork. A named helper rather than an
+// inline conditional so the branch is not counted against handleStart, which
+// sits at the complexity baseline's ceiling.
+function unitFlagArgs(booleans: Set<string>): string[] {
+  return booleans.has("unit") ? ["--unit"] : [];
+}
 
 function splitBooleanFlags(args: string[]): { booleans: Set<string>; rest: string[] } {
   const booleans = new Set<string>();
@@ -266,6 +275,10 @@ function handleStart(args: string[]): void {
     "fork",
     "--slug",
     flags.slug,
+    // Forwarded so the fork's telemetry marker names a unit when the swarm
+    // drove this start, and a Bolt otherwise. The caller is the only side that
+    // knows which — the slug alone reads the same either way.
+    ...unitFlagArgs(booleans),
     ...selectorArgs(flags),
   ]);
   if (!stateForkResult.ok) {

@@ -1,0 +1,27 @@
+{
+  "electionId": "E-OMSB2A-DEV",
+  "kind": "deviation",
+  "question": "Bolt 2a(U2 span-attrs)builder の実装前停止による設計裁定。FD 契約『resolver 6キーを span 属性へ直載り・store/Relay 無改変』に対し、6キーは DEFAULT_REDACTION_POLICY(redaction.ts:73-91 = registry 語彙+手書き8キー)の default-deny(:126)により store 境界(local-span-exporter.ts:96)と Relay 境界(relay.ts:233)で全数 drop される実測(決定的プローブ: 6キー+対照 ExitCode を redactAttributes へ → ExitCode のみ生存)。契約どおりの実装は永続シグナル上で完全無機能となり検証劇場クラス。builder 報告全文 = scratchpad/b2-spanattrs-report.md。6キーの admit 方式を裁定せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "案A: DEFAULT_REDACTION_POLICY.safeKeys へ6キー追加",
+      "description": "builder 推奨。手書き運用キー群(Event/Outcome/Options 等)へ6キーを追加 — 変更1箇所で store/Relay 両境界へ自動反映、default-deny 維持(閉語彙が6キー増えるだけ)、admit 後も全値 scrubCredentials 通過。6キーは既存手書きキーと同じ低カーディナリティ運用文脈クラス。追加テスト義務: (a) export 境界通過後の JSONL 実文字列で6キー生存 assert (b) credential 形の agent.id 値が scrub される assert。『store/Relay 無改変』の趣旨(JSONL 様式・Relay プロトコル不変)は保たれる"
+    },
+    {
+      "internalNo": 2,
+      "label": "案B: span 専用 RedactionPolicy 新設",
+      "description": "RESOURCE_REDACTION_POLICY 様式に倣い span 経路のみ差し替え。exporter/relay の配線変更が必要で『store/Relay 面無改変』により強く抵触"
+    },
+    {
+      "internalNo": 3,
+      "label": "案C: event-registry の optionalAttributes 経由で派生 admit",
+      "description": "6キーを registry へ載せ REGISTRY_ATTRIBUTE_KEYS 経由で admit。registry は canonical event の属性語彙で span 文脈属性とは意味論が別、drift guard へ波及するため builder は不適と評価"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

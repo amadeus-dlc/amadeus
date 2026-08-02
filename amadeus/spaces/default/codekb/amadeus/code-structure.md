@@ -13,6 +13,12 @@
 - テスト面: 患部直下の新規テストなし。回帰テスト追加先は `tests/unit/t10-hook-session-start.test.ts`（現行 early-exit pin `:211` / `:222` の改訂を伴う）。
 - dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。
 
+## CG 計画整合ガードの患部配置（260801-cg-plan-guard、履歴、observed `cb809c4de`）
+
+- 実装対象: `packages/framework/core/tools/amadeus-orchestrate.ts`（tryEmitSwarm :2919- / firstUncoveredBatch :2843- / approve 経路）、`amadeus-runtime.ts`（computeBoltDag :300-）、`amadeus-lib.ts`（parseUnitsBlock :7823-）。dist 7面+self-install の9コピー同期対象。
+- corpus（読み取り専用）: 計画不履行4 record+正当直列6 record+#1893 現物（260712）。詳細は `re-scans/260801-cg-plan-guard.md`。
+- テスト採番は units-generation 段で実測予約（並行 intent との衝突回避）。
+
 ## オープンバグ一括修正バッチ第5弾の患部配置（260801-open-bug-batch-5、履歴、observed `c49e385ac`）
 ## formal-verif / plugin / model-map の患部配置（260731-formal-verif-value-chain、履歴、observed `da51af375`）
 
@@ -93,6 +99,74 @@ plugins/formal-model-check/
 - 区間 touch: 上記のうち #1850 が7ファイルを touch したが、全クロスレビューが #1850 着地後の `c49e385ac` で検証済みのため行番号の再解決は不要。mirror 4・graph・metrics 2 は区間内不変。
 - テスト面: 予約 `t391`〜`t398`。既存拡張候補は t279（mirror close × prepared fixture 欠落）、t222（metrics — problems 由来終端の pin なし）、t33（state scaffold pin 改訂）。
 - dist 同期面: core/tools・otel・hooks を触る Bolt 1-4 は正本1+dist 7+self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）。Bolt 5（scripts/）は dist 非対象。
+
+## OTel メタ情報スキーマ実装の患部配置（260801-otel-meta-schema、履歴、observed `9c8df859e`）
+
+本節の file:line・件数はすべて observed `9c8df859e` 時点（`cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+### OTel モジュール群の配置と規模
+
+`packages/framework/core/otel/`（`wc -l` 実測、計 4,123 行 / 18 ファイル）:
+
+| ファイル | 行数 | #1868 での役割 |
+|---|---|---|
+| `event-registry.ts` | 919 | §3 log / §4 exception の属性定義。80 def・cardinality pin |
+| `relay.ts` | 779 | OTLP 送出。resource のキー admission 迂回点 |
+| `context.ts` | 303 | TRACEPARENT 伝播・intent anchor。§5 の trace 連結基盤 |
+| `shadow-compare.ts` | 314 | 移行期の突合（#1868 では不変） |
+| `tracer-provider.ts` | 228 | **resource literal（`:137`）・recordException（`:145`）— 最大の患部** |
+| `event-registry-drift.ts` | 195 | 78-pin ガードの抽出器 |
+| `logger-provider.ts` | 181 | log 行の identity 組み立て |
+| `audit-log-exporter.ts` | 179 | canonical accept-set + export redaction |
+| `redaction.ts` | 143 | safe-key 機械導出・credential パターン |
+| `meter-provider.ts` | 133 | §6 metrics の計器 API（production 未配線） |
+| `bootstrap.ts` | 122 | **resource 一元組み立ての設計位置。metrics arm 未実装** |
+| `local-span-exporter.ts` | 120 | export redaction（resource は対象外） |
+| `local-log-exporter.ts` | 97 | 機械ローカル log |
+| `subprocess-span.ts` | 92 | write-time redaction の既習様式 |
+| `local-metric-exporter.ts` | 80 | §6 の書き出し先 |
+| `migration-adapter.ts` | 87 | legacy eventType → def 逆引き |
+| `fatal-latch.ts` | 86 | ジャーナル健全性ラッチ |
+| `audit-emit.ts` | 65 | emit 薄ラッパ |
+
+### #1868 の6面と患部の対応
+
+| 面 | 主患部 | 副次的に触る面 |
+|---|---|---|
+| §1 resource（12属性） | `tracer-provider.ts:137`（literal）、`bootstrap.ts:84-116`（組み立て位置） | `logger-provider.ts:87-105`・`local-metric-exporter.ts`（resource フィールド新設）、`local-span-exporter.ts:88-99`（redaction 対象化） |
+| §2 span attributes | `tracer-provider.ts:90-97`（setAttribute 経路）、`subprocess-span.ts:80-87`（既習の write-time redaction 様式） | `redaction.ts:65-71`（safe-key 導出） |
+| §3 log attributes | **変更なし**（registry 現行を正とする） | — |
+| §4 exception | `tracer-provider.ts:145-157`、`event-registry.ts:827-837` | `redaction.ts:35-45`（パス系パターン新設） |
+| §5 subagent | `harness/claude/settings.json.example`（PreToolUse 新設）、`hooks/amadeus-log-subagent.ts`（completed 側）、`event-registry.ts:476-484` | `context.ts:237-256`（trace 連結は既成） |
+| §6 metrics | `bootstrap.ts`（arm 新設）、`meter-provider.ts:50-79`（計器 API） | `local-metric-exporter.ts` |
+
+### ハーネス境界の配置 — hooks は core 側にある
+
+`packages/framework/harness/claude/` は `manifest.ts` / `settings.json.example` / `skills/` のみで、**hook 実装は `packages/framework/core/hooks/` にあり全ハーネスへ投影される**（12 ファイル: `amadeus-audit-logger` / `amadeus-log-subagent` / `amadeus-mint-presence` / `amadeus-plugin-compose` / `amadeus-runtime-compile` / `amadeus-sensor-fire` / `amadeus-session-end` / `amadeus-session-start` / `amadeus-statusline` / `amadeus-stop` / `amadeus-sync-statusline` / `amadeus-validate-state`）。ハーネス別に異なるのは **配線（settings.json.example の hook 宣言）だけ**で、実装は中立層に置く — これが #1868 §5 の PreToolUse hook を追加する際の配置規約になる（実装 = core/hooks/、配線 = harness/<name>/）。
+
+### ハーネス→core 注入チャネル（4様式）
+
+1. **ファイルパス自己検出** — `tools/amadeus-harness.ts:15-24` の `HARNESS_DIR_TO_TYPE`（`.claude`→`claude-code`、`.codex`、`.cursor`、`.opencode`、`.kiro`、`.kimi-code`）。解決順は `resolveHarnessDir()`（`:98-103`）: `AMADEUS_HARNESS_DIR` env → script-path（`:80-85`、core が harness dir 配下に投影される性質を利用）→ cwd-probe（`:87-92`）→ fallback `.claude`。`detectHarnessType()`（`:109-119`）は `AMADEUS_HARNESS_TYPE` env と `CLAUDECODE=1` の sniff を先に見る。**telemetry での使用実例あり**: `amadeus-observability.ts:229` が `harness: detectHarnessType()` を封筒へ入れている。
+2. **packager 生成データファイル（独立検証で追加）** — `tools/data/harness.json` は **canonical ツリーに存在せず、`scripts/package.ts:206-214` の `writeHarnessData()` が各 dist へ書き出す**（実測: canonical の `core/tools/data/` は `scaffold` / `templates` のみ、dist 7 ツリーすべてに `harness.json` 実在）。現在の内容は `{harnessDir, rulesSubdir}` の2キーだが、コメント `:207-208` が「the object shape leaves room for future per-harness runtime facts」と拡張余地を明記している。読み手は `amadeus-harness.ts:121-133` の `shippedRulesSubdir()`。同様の packager 生成物として `<harnessDir>/VERSION`（`writeVersionFile()`、`package.ts:200-202`、`AMADEUS_VERSION` 由来）がある。→ **`amadeus.harness` / `amadeus.harness.version` はこのビルド時チャネルで供給でき、ランタイム env 配線を新設せずに済む可能性が高い**。
+3. **hook stdin JSON** — `ClaudeCodeHookInput`（`amadeus-lib.ts:4957` 付近）が `hook_event_name` / `session_id` / `cwd` / `tool_name` / `tool_input` / `source` / `prompt` / `agent_type` / `agent_id` / `last_assistant_message` を運ぶ。**モデル名を運ぶフィールドは型にも実コードにも無い** → `gen_ai.request.model` は既存 seam なしで新設が要る。
+4. **layered config** — `resolveObservabilityConfig(projectDir)`（`amadeus-observability.ts:95-124`）が global→space→intent の `config.json` を読み狭い層が丸ごと勝つ。静的メタ（`deployment.environment.name` 等）の既習様式。
+
+### resource 各属性の供給元棚卸し
+
+| 属性 | 既存供給元 | 状態 |
+|---|---|---|
+| `service.name` | `tracer-provider.ts:137` literal | 実在 |
+| `service.version` | `tools/amadeus-version.ts`（`AMADEUS_VERSION`） | 実在 |
+| `deployment.environment.name` | — | **未整備**。`packages/framework` 全体で `process.env.CI` / `GITHUB_ACTIONS` 参照 0 hit |
+| `host.name` | `node:os` `hostname()`（`amadeus-lib.ts:5` で import 済み、`:4277` で shard 名に使用） | 実在（正規化前の生値が OTel 標準値） |
+| `amadeus.clone_id` | `auditCloneId(projectDir)`（`amadeus-lib.ts:4270`） | 実在 |
+| `amadeus.harness` | `detectHarnessType()` | 実在（様式1） |
+| `amadeus.harness.version` | — | 様式2（`harness.json` 拡張）が最有力 |
+| `gen_ai.request.model` | — | **未整備**（様式3 に該当フィールドなし） |
+| `amadeus.operating_mode` | `AMADEUS_OPERATING_MODE` env | 実在 |
+| `amadeus.agent.role` | — | セッション申告（新規） |
+| `session.id` | SessionStart hook のみ（`amadeus-session-start.ts:100`）→ `writeCurrentSessionId` で永続化 | 部分的（CLI プロセスは永続ファイル経由でしか読めない） |
+| `vcs.ref.head.*` | 汎用ヘルパ無し。`git` spawn は `amadeus-worktree` / `amadeus-lib:4427` / `amadeus-state:1698` / `amadeus-norm-metrics:224` / `amadeus-mirror-lifecycle` / `amadeus-migrate` / `amadeus-swarm` に散在 | **共通 seam 未整備** |
 
 ## perf 検証面の配置（260731-perf-ci-separation、履歴、observed `da51af375`）
 

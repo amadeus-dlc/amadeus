@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり(学習1件)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり(学習1件)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "修正・追加候補あり(票に明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-01T19:51:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-OMSCG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "2点を条件とする: (1) 提案どおり独立 cid を新設せず cid:code-generation:shared-ledger-insert-collision への追補として persist すること(共有台帳への並行挿入衝突という機序が同一で、docs 章番号はその適用面違いにすぎない)。(2) 違反実例 (a)-(e) の PM 記帳は口頭要約でなく書面記録として残すこと — construction/code-generation/memory.md を実読したところ例示 HTML コメントのみのテンプレート状態(Interpretations/Deviations/Tradeoffs/Open questions すべて実エントリ 0 件)で、(a)(b)(d) は PR #1938 本文から辿れるが (c)(e) は現状 record 上に一次記録がなく、記帳しなければ次回 PM ラウンドの一次材料が失われる。",
+      "rationale": "独立実測: (1) 6 PR 全件 MERGED を gh pr view で確認(#1899/#1905/#1907/#1910/#1924/#1938)。(2) 学習候補の前提を一次証拠で裏取り — origin/main の docs/reference には 21-formal-model-following, 22-formal-model-supply が実在し、telemetry 章は 23-telemetry-schema.{md,ja.md} として着地。一方 PR #1938 本文は一貫して『21-telemetry-schema』と記述しており、同 PR のコミット列に 'merge origin/main into bolt-docs (formal-model chapters claimed 21/22…)' が実在する。すなわち『並行 intent が番号空間を main で先取 → 自 PR 側が改番して解消』は実測どおり成立する。(3) 既存ノルム被覆の確認 — memory 層(org/team/project)を '章番号' 等で走査したが docs 章番号空間を扱う規則は不在。近接する cid:code-generation:shared-ledger-insert-collision(共有台帳への同一アンカー挿入衝突)と cid:code-generation:allowlist-line-pin-stale(行ピンの stale 化)はいずれも別面で、docs 章番号面は未被覆。よって追補としての persist に価値がある。(4) 違反実例の非 persist(新規則を作らない)判断も妥当 — (a) amadeus.intent → amadeus.intent.id の無申告乖離と (b) RA の bolt/unit 列挙漏れは PR #1938 本文の『乖離裁定の実装』節に一次記録があり、それぞれ既存 cid:requirements-analysis:implementation-deviation-election / cid:requirements-analysis:enumeration-completeness-review の実例で新規則を要しない。(c) の同一ファイル交差は gh pr view --json files で実測し、tracer-provider.ts が #1899/#1905/#1907、redaction.ts が #1905/#1907/#1910 に跨ることを確認 — cid:code-generation:c6 の想定内(直列マージで解消)で新規則不要。(5) 上記のとおり conductor 提案の採用集合は過不足なく、0 件案・追加候補案よりも choice 1 が妥当。自案非採用時の受容度 = 6。",
+      "submittedAt": "2026-08-02T00:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-OMSCG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文には再実測の手段を『git fetch 後の origin/main 実測(git ls-tree origin/main docs/reference/ 等)』と明記すること — ローカル作業ツリーの章一覧では並行 intent が main に先取した番号を構造的に捕捉できず(本票の裏取りでも fetch 前は 21/22-formal-model が不可視だった)、手段を欠いた規則は同じ衝突を再発させる。",
+      "rationale": "独立実測: (1) 6 PR 全て MERGED を gh 実測(#1899 07:15:22Z / #1905 09:07:35Z / #1907 09:31:05Z / #1910 10:01:25Z / #1924 13:05:24Z / #1938 19:46:42Z、いずれも 2026-08-01)。(2) record の unit 成果物は 6 unit(resource-core/span-attrs/exception/metrics/subagent-started/docs)全てに code-generation-plan.md + code-summary.md が実在。(3) persist 候補の一次証拠を確認 — origin/main の docs/reference には 21-formal-model-following / 22-formal-model-supply が実在し、本 intent の章は 23-telemetry-schema として着地。改番の事実は PR #1938 の merge commit ee94257e0『formal-model chapters claimed 21/22 — renumber telemetry schema to 23』と、PR 本文が改番前の『21-telemetry-schema』表記のまま残っている対照で確定。(4) 既存 memory 層に『章番号/番号空間』を扱う cid は grep 0 件で、shared-ledger-insert-collision(共有台帳への同一アンカー挿入衝突)の docs 章番号面への追補という写像は妥当かつ非重複。(5) 違反実例の PM 記帳分類も CG diary で裏取り — (a) キー名乖離と (b) RA の bolt/unit 列挙漏れは 2026-08-01T13:30:00Z エントリ、(e) B1 の実装後申告は 07:05:00Z エントリに実在し、いずれも既存 cid(mechanism-cite-verify / implementation-deviation-election / enumeration-completeness-review / deviation-stop-before-implement)の違反実例で新規則不要という判断に同意。(d) tracked worktree state の git travel も、worktree ごとに異なる値を gitignore 済みマーカーへ置く既存慣行(amadeus/.amadeus-clone-id、runtime-graph.json、.amadeus-*)の適用であり新規学習に当たらない — 裁定記録済み知識という分類を支持。留保1点のみ付して choice 1 を採用。",
+      "submittedAt": "2026-08-01T19:50:46Z"
+    }
+  ],
+  "resolutions": []
+}
