@@ -18,6 +18,7 @@ import {
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FULL_SHA = "0123456789abcdef0123456789abcdef01234567";
+const BOOTSTRAP_BASE_SHA = "47574fbabf274e11cb8e0b37bf35a0309a7b3d42";
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -150,8 +151,7 @@ function writeManifest(root: string, manifest: MutableEvidenceManifest): void {
 
 describe("no-silent-drop CI argv authority", () => {
   test("a validated full base revision is consumed as one explicit argv", () => {
-    const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
-    const result = runCli("--base-revision", revision);
+    const result = runCli("--base-revision", BOOTSTRAP_BASE_SHA);
 
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ status: "pass", code: "NO_SILENT_DROP_OK" });
@@ -180,8 +180,7 @@ describe("no-silent-drop CI argv authority", () => {
   });
 
   test("explicit argv overrides the legacy environment seam", () => {
-    const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
-    const result = spawnSync("bun", ["run", "no-silent-drop", "--", "--base-revision", revision], {
+    const result = spawnSync("bun", ["run", "no-silent-drop", "--", "--base-revision", BOOTSTRAP_BASE_SHA], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       env: { ...process.env, AMADEUS_NSD_TRUSTED_BASE_SHA: "f".repeat(40) },

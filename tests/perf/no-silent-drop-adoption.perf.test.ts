@@ -11,6 +11,7 @@ import {
 } from "../no-silent-drop/repository-adoption.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
+const BOOTSTRAP_BASE_SHA = "47574fbabf274e11cb8e0b37bf35a0309a7b3d42";
 
 function timedGate(baseRevision: string): number {
   const started = performance.now();
@@ -27,12 +28,11 @@ function timedGate(baseRevision: string): number {
 
 describe("no-silent-drop repository adoption performance", () => {
   test("five fresh processes and their immediate repeats stay below 15 seconds", () => {
-    const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
     const cold: number[] = [];
     const warm: number[] = [];
     for (let index = 0; index < 5; index++) {
-      cold.push(timedGate(revision));
-      warm.push(timedGate(revision));
+      cold.push(timedGate(BOOTSTRAP_BASE_SHA));
+      warm.push(timedGate(BOOTSTRAP_BASE_SHA));
     }
 
     const verdict = validateTimingSamples({ cold, warm });
