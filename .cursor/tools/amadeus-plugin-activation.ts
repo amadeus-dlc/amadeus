@@ -30,6 +30,7 @@ import {
   writeFileSync as fsWriteFileSync,
 } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
+import { evaluateTlaModelReadiness } from "./amadeus-formal-verif-model-map.ts";
 
 // The formal-model-check plugin is the sole activation target of this intent.
 export const ACTIVATION_PLUGIN = "formal-model-check";
@@ -57,6 +58,7 @@ export type SpecHashState = {
 // The deterministic judgment (domain-entities.md ActivationJudgment). `changed`
 // and `never-run` fire the advisory; `current` is silent.
 export type ActivationJudgment =
+  | { kind: "not-ready"; reason: string }
   | { kind: "changed"; currentHash: string; lastHash: string }
   | { kind: "current"; hash: string }
   | { kind: "never-run"; currentHash: string };
@@ -227,6 +229,8 @@ export function activationAdvisoryLine(judgment: ActivationJudgment): string | n
       return `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
     case "never-run":
       return `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
+    case "not-ready":
+      return `advisory: ${ACTIVATION_PLUGIN} is not ready (${judgment.reason}) — add a valid specs/tla/model-map.json target before running it`;
   }
 }
 
@@ -240,7 +244,7 @@ export function activationAdvisoryLine(judgment: ActivationJudgment): string | n
 
 // The two FIRING judgment kinds, 1:1 with judgeActivation's non-silent values.
 // `current` has no code because it produces no Advisory at all.
-export type AdvisoryCode = "changed" | "never-run";
+export type AdvisoryCode = "not-ready" | "changed" | "never-run";
 
 export type Advisory = {
   // The plugin the advisory is about (formal-model-check today; the type is
@@ -253,6 +257,8 @@ export type Advisory = {
   // The checkpoint slug this fired at, so a relayed advisory says WHERE it was
   // raised (the same judgment can surface at any of ACTIVATION_ADVISORY_STAGES).
   stage: string;
+  target?: string;
+  reason?: string;
 };
 
 // activationAdvisoriesForHost — the structured sibling of
@@ -272,7 +278,13 @@ export function activationAdvisoriesForHost(
   if (judgment.kind === "current") return [];
   const message = activationAdvisoryLine(judgment);
   if (message === null) return [];
-  return [{ plugin: ACTIVATION_PLUGIN, code: judgment.kind, message, stage }];
+  return [{
+    plugin: ACTIVATION_PLUGIN,
+    code: judgment.kind,
+    message,
+    stage,
+    ...(judgment.kind === "not-ready" ? { reason: judgment.reason } : { target: "specs/tla" }),
+  }];
 }
 
 // --- The run latch (business-logic-model L4 / domain-entities.md E3) ---
@@ -378,6 +390,27 @@ export function isComposedPluginStage(
   return false;
 }
 
+type ActivationReadiness =
+  | { kind: "ready" }
+  | { kind: "not-ready"; reason: string };
+
+function activationReadiness(
+  specRoot: string,
+  fs: ActivationFs,
+): ActivationReadiness {
+  const mapPath = join(specRoot, "specs", "tla", "model-map.json");
+  if (!fs.existsSync(mapPath)) return { kind: "not-ready", reason: "model map is missing" };
+  try {
+    const readiness = evaluateTlaModelReadiness(
+      fs.readFileSync(mapPath),
+      (relativePath) => fs.existsSync(join(specRoot, relativePath)),
+    );
+    return readiness.ok ? { kind: "ready" } : { kind: "not-ready", reason: readiness.error.detail };
+  } catch {
+    return { kind: "not-ready", reason: "model map is invalid" };
+  }
+}
+
 // resolveActivationJudgment — compute the current hash, read the recorded state,
 // and judge. The read-only judgment U5 doctor renders and the engine advisory
 // consumes (fires nothing, writes nothing).
@@ -388,7 +421,10 @@ export function resolveActivationJudgment(
 ): ActivationJudgment {
   // The two roots are deliberately different: the specs are hashed from the
   // PROJECT root (specRootForHost) while the recorded verdict is host state.
-  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
+  const specRoot = specRootForHost(hostRoot);
+  const readiness = activationReadiness(specRoot, fs);
+  if (readiness.kind === "not-ready") return readiness;
+  const current = computeSpecHash(specRoot, globs, fs);
   const state = readActivationState(hostRoot, fs);
   return judgeActivation(current.ok ? current.hash : null, state === null ? null : state.lastVerdictHash);
 }
@@ -419,7 +455,9 @@ export function recordActivationVerdict(
   now: string = new Date().toISOString(),
   fs: ActivationFs = defaultActivationFs,
 ): boolean {
-  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
+  const specRoot = specRootForHost(hostRoot);
+  if (activationReadiness(specRoot, fs).kind === "not-ready") return false;
+  const current = computeSpecHash(specRoot, globs, fs);
   if (!current.ok) return false;
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);
   return true;

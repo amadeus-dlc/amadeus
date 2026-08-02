@@ -303,7 +303,10 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
       });
       // The session is NOT blocked (exit 0) and the failure is loud on stderr.
       expect(res.status).toBe(0);
-      expect(res.stderr ?? "").toContain("auto-compose");
+      const warnings = (res.stderr ?? "").split("\n").filter((line) => line.includes("auto-compose"));
+      expect(warnings).toEqual([
+        `amadeus-plugin: auto-compose failed for ${bad} (non-blocking); run \`amadeus-plugin.ts compose --project-root ${bad}\` to retry`,
+      ]);
     } finally {
       rmSync(bad, { recursive: true, force: true });
     }

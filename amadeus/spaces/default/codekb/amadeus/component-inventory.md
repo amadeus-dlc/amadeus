@@ -4,6 +4,13 @@
 
 - 判断: 新規コンポーネントの新設は見通しにない。対象は既存の 3 グループ — データ 10 ファイル（grid 5 面 `<face>/tools/data/scope-grid.json` + prose `amadeus-self-feature.md` 4 面 / `amadeus-self-document.md` 4 面 / `amadeus-self-refactor.md` 4 面）、検査機構（センサー正本 `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts` + manifest + byte 一致の 5 面コピー）、周辺ガード（`scripts/promote-self.ts` / `packages/framework/core/tools/amadeus-graph.ts` / `.github/workflows/ci.yml:243-255`）。テスト側は `tests/integration/t-self-scope-consistency-sensor.test.ts` / `tests/unit/t370-promote-self-scopegrid-order.test.ts` / `t93` / `t89`。患部一覧は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- **degraded** — plugin CLI currentness／doctor: プロジェクトが導入対象としている plugin を読まず、0 discovered／0 recorded を healthy と判定する。
+- **at-risk** — activation hash: `computeSpecHash` は glob 空集合を空SHAとして正常扱いし、verdictへ保存できる。同じ fail-open クラスとして #2018 と同時に閉じる候補である。
+- **healthy but incomplete** — `compose --all-harnesses` の source収集／staging seed は既に機能するが、durable opt-in 宣言と通常起動への current-host 配線がない。
+- **contract exception** — OpenCode は manual-only、Kiro CLI／IDE は `.kiro` host共有。7 face を6独立hostとして扱う棚卸しが必要である。
+
 ## formal-model-check 複数モデル化の対象コンポーネント（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 判断: 新規コンポーネントの新設は見通しにない。対象は既存 plugin 内の 6 面 — model-map スキーマ（`plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` + canonical コピー `packages/framework/core/tools/`、byte-identical）、loader（`tla-model-loader.ts` / `tla-model-loader-internal.ts`）、arm（`tla-arm.ts`）、toolchain（`tlc-toolchain.ts` / `fs-tlc-toolchain.ts` / `tlc-spawn-planner.ts`）、CI ポート（`node-ci-model-check-port.ts` / `ci-model-check-*.ts` / `run-skeleton-ci.ts` / `run-model-check-diagnostic.ts`）、run 系（`run-model-check*.ts`、byte-pin `:118-123`）。加えて `specs/tla/`（model-map.json + 4 モジュール）、stage doc（`stages/formal-model-check.md`）、`.github/workflows/ci.yml:508-564`。患部一覧は `re-scans/260801-tla-multi-model.md` を正本とする。

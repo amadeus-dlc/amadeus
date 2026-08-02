@@ -21,7 +21,7 @@
 //     skill origin, and re-composing it would duplicate the command in dist).
 //   - session skills ship as bare SKILL.md (no codex openai.yaml guard — that is
 //     an OpenAI/Codex agent-discovery artifact with no OpenCode equivalent).
-//   - the authored .opencode/ surface is the plugin/ dir (the prompt-hook mint
+//   - the authored .opencode/ surface is the plugins/ dir (the prompt-hook mint
 //     site and its measured payload vocabulary): OpenCode has no stdin adapter
 //     shim, so nothing authored lands inside a core-copied dir and
 //     authoredExempt stays the explicit empty array.
@@ -58,12 +58,12 @@ const manifest: HarnessManifest = {
   // harness/opencode/. projectRoot routes it to dist/opencode/.gitignore + the
   // --check drift guard. Byte-identical to codex's dot-gitignore (workspace
   // layout is harness-neutral).
-  // (plus the .opencode/plugin/ prompt-hook mint site and its helper under
-  // .opencode/lib/ — OpenCode executes every module under `.opencode/plugin/`,
+  // (plus the .opencode/plugins/ prompt-hook mint site and its helper under
+  // .opencode/lib/ — OpenCode executes every module under `.opencode/plugins/`,
   // so only the actual plugin may ship on that discovery path.)
   harnessFiles: [
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
-    { src: "plugin/amadeus-opencode-plugin.ts", dst: "plugin/amadeus-opencode-plugin.ts" },
+    { src: "plugins/amadeus-opencode-plugin.ts", dst: "plugins/amadeus-opencode-plugin.ts" },
     { src: "lib/amadeus-opencode-vocab.ts", dst: "lib/amadeus-opencode-vocab.ts" },
   ],
 

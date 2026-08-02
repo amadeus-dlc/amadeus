@@ -32,14 +32,16 @@ const COMPOSE_HOOK = "amadeus-plugin-compose";
 
 // Where each WIRED face dispatches auto-compose (the source file that must
 // carry the 1-point compose invocation). claude's is the U2 settings wiring;
-// the other five are U4's adapter wiring. Read from source — no dist staleness.
-const WIRING_SITE: Record<Exclude<PackageHarness, "opencode">, string> = {
+// the adapter-native faces use their lifecycle integrations. Read from source
+// so dist staleness cannot mask a missing trigger.
+const WIRING_SITE: Record<PackageHarness, string> = {
   claude: "packages/framework/harness/claude/settings.json.example",
   codex: "packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts",
   cursor: "packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts",
   kimi: "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
   kiro: "packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts",
   "kiro-ide": "packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts",
+  opencode: "packages/framework/harness/opencode/plugins/amadeus-opencode-plugin.ts",
 };
 
 const HARNESS_DIR: Record<PackageHarness, string> = {
@@ -52,8 +54,11 @@ const HARNESS_DIR: Record<PackageHarness, string> = {
   opencode: ".opencode",
 };
 
-function siteContainsCompose(relPath: string): boolean {
-  return readFileSync(join(REPO_ROOT, relPath), "utf-8").includes(COMPOSE_HOOK);
+function siteContainsCompose(harness: PackageHarness, relPath: string): boolean {
+  const source = readFileSync(join(REPO_ROOT, relPath), "utf-8");
+  return harness === "opencode"
+    ? source.includes('handlePluginCli(["compose", "--if-stale"')
+    : source.includes(COMPOSE_HOOK);
 }
 
 describe("t327 hook wiring XOR closure (U4)", () => {
@@ -63,9 +68,9 @@ describe("t327 hook wiring XOR closure (U4)", () => {
     for (const h of PACKAGE_HARNESSES) {
       const d = resolveFaceDisposition(h);
       if (d.kind === "wired") {
-        const site = WIRING_SITE[h as Exclude<PackageHarness, "opencode">];
+        const site = WIRING_SITE[h];
         expect(site, `wired face ${h} has a declared wiring site`).toBeDefined();
-        expect(siteContainsCompose(site), `wired face ${h}: ${site} invokes ${COMPOSE_HOOK}`).toBe(true);
+        expect(siteContainsCompose(h, site), `wired face ${h}: ${site} invokes auto-compose`).toBe(true);
       } else {
         // Degraded: no auto-compose wiring, and the manual floor is documented.
         const doc = installDoc("formal-model-check", HARNESS_DIR[h], "manual-only");
@@ -77,17 +82,15 @@ describe("t327 hook wiring XOR closure (U4)", () => {
     }
   });
 
-  // The degraded face (opencode) carries NO compose wiring in its plugin source —
-  // the fail-closed manual-only class must not accidentally auto-fire.
-  test("opencode plugin source carries no auto-compose wiring (BR-U1-6 fail-closed)", () => {
+  test("opencode plugin source wires native session.created auto-compose", () => {
     const oc = resolveFaceDisposition("opencode");
-    expect(oc.kind).toBe("degraded");
+    expect(oc.kind).toBe("wired");
     const src = readFileSync(
-      join(REPO_ROOT, "packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts"),
+      join(REPO_ROOT, "packages/framework/harness/opencode/plugins/amadeus-opencode-plugin.ts"),
       "utf-8",
     );
-    expect(src.includes(COMPOSE_HOOK)).toBe(false);
-    expect(src.includes("compose --if-stale")).toBe(false);
+    expect(src.includes('handlePluginCli(["compose", "--if-stale"')).toBe(true);
+    expect(src.includes("isOpencodeSessionCreatedEvent")).toBe(true);
   });
 
   // The degraded face's doctorVisibility (domain-entities.md): an advisory

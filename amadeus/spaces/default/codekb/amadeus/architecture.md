@@ -21,6 +21,14 @@
 
 - **値比較拡張の設計含意（面間比較が構造的に安全な理由）**: 期待セル値を定数として持たせる案は、grid 本体と並ぶ第 2 の正本を作り、lightening のたびに 2 か所を同期する新しい drift 源になる。面間比較（多数決や canonical face 指定ではなく「全面一致」を不変条件とする）は期待値を持たないため第 2 正本を作らず、`formal-model-check` / `installer-distribution` のような意図的非対称だけを明示的な除外として扱えばよい。センサーは dormant 判定（`:180-185`、self-* が 1 つも無い通常プロジェクトでは `skipped: "no-self-scopes"`）を持つため、面間比較を足しても配布先プロジェクトへの影響はない。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- 責務境界は、`plugins/<name>/` = authoring/supply、プロジェクトが導入対象として記録した plugin 名 = opt-in 意思、`<host>/.amadeus-plugin-src/<name>/` = host-local staging、`<host>/.amadeus-plugin-composition.json` = runtime record、activation = composition／spec／verdict の read-only judgment と分離する。現行は opt-in 意思を永続化する記録が欠けている。
+- 現行 `isRecordCurrent` は discovered 0件・recorded 0件を current と判定し、`compose --if-stale` が exit 0 の no-op になる。正しい判定は desired空・staged空・record空だけを healthy silent とし、desired非空で staged／recorded が欠ける状態を stale/degraded とする。
+- 7 face は6 host directoryへ写像される。Claude/Codex/Cursor/Kimi/Kiro CLI/Kiro IDE は自動 trigger を持つが、OpenCode は manual-only。Kiro CLI と Kiro IDE は同じ `.kiro` staging／recordを共有するため face 数で二重 materialize しない。
+- `requirements-analysis`、`functional-design`、`build-and-test` の3 checkpointは main workflow と `--single` の双方が同じ activation advisory 関数を通る。ただし state mutation contract は異なるため、両経路を分けて parity 検証する。
+- 最小修正候補は、導入対象の plugin 名を既存 project config に永続記録し、それを読む pure reader/validator を追加して、current host だけを自動 materialize する形。SessionStart から `--all-harnesses` を呼ぶ案は cross-host mutation と OpenCode 契約を混同するため採らず、authoring directory の存在を導入意思とみなす案も supply と意思を混同するため採らない。
+
 ## formal-model-check 複数モデル化の対象機構（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 本節の file:line はすべて observed `33e196b8` 時点。患部全数・引用再確認・降格確認は `re-scans/260801-tla-multi-model.md` を正本とする。

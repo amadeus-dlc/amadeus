@@ -49,6 +49,11 @@
 | `amadeus-session-end.ts` | SessionEnd | プロジェクト全体 (settings.json) | (空) | 正常終了時に `SESSION_ENDED` 監査イベントを発行する |
 | `amadeus-statusline.ts` | statusLine | プロジェクト全体 (settings.json) | -- | ターミナルでリアルタイムの進捗を表示する |
 
+OpenCode の同等 lifecycle は shell hook ではなく JavaScript plugin API にあります。
+`.opencode/plugins/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
+だけへ同じ `compose --if-stale` を呼びます。全 adapter は失敗を警告しつつ session を
+ブロックしません。
+
 ### 共通の特性
 
 すべてのTypeScriptフック:

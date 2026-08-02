@@ -39,6 +39,9 @@
 - GitHub の pull_request CI は PR が CONFLICTING の間は発火しない(merge commit を構築できないため)— PR の CI 不発を見たら第一容疑は merge conflict とし、gh pr view --json mergeable と git merge-tree の非破壊プローブで確定してから解消する(実測: PR #1500 が codekb 並行更新の衝突中 CI 0 run → 解消 push 直後に発火。merge-tree-nondestructive-conflict-probe / closed-pr-state-first の PR-CI 面追補) (learned 2026-07-26) <!-- cid:code-generation:conflicting-pr-suppresses-ci -->
 
 - 同一 worktree での coverage 計測(coverage:ci / --coverage 付き run-tests)は branch ごとに単独所有者を決めて直列化する — runner が起動時に coverageRoot を rmSync するため並行実行は相互破壊し、どちらの gate verdict も信頼不能になる(偽 stale allowlist・22pp 級の偽 % スイングを双方向で実測)。cid:code-generation:c5 引き取りの発動条件は「無音経過時間」でなく (a) live プロセス実測(run-tests --coverage の実在確認) (b) 事前 ping を先行させる — 長時間フォアグラウンド検証こそ第二の書き手が最も破壊的(実測: 260731-perf-ci-separation Bolt 1 で conductor/builder の並行 coverage:ci が相互破壊、builder の loud 警告と単独再実行で回収) (learned 2026-08-01) <!-- cid:code-generation:c1-coverage-single-owner --> (learned 2026-07-31) <!-- cid:code-generation:c3 -->
+- ハーネス横断のlifecycle parityはcurrent hostの成功だけで判定せず、各非current hostの関連ファイルが実行前とbyte-identicalであることも検証する。 (learned 2026-08-02) <!-- cid:code-generation:c1-260802-plugin-optin-parity -->
+- failure injectionによるrollback検証ではファイル内容の復元だけでなく、開始前に存在しなかった空の親ディレクトリが残らないことも確認する。 (learned 2026-08-02) <!-- cid:code-generation:c3-260802-plugin-optin-parity -->
+- `coverage:ci` をfull CIとcoverageの統合証跡として扱う。同じ `--ci` runnerをcoverage付きで実行し、全test files・assertionsを完走するため (learned 2026-08-02) <!-- cid:build-and-test:c1-260802-plugin-optin-parity -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
@@ -97,6 +100,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER treat a GitHub mirror failure as permission to silently lose synchronization state or permanently stop the AI-DLC workflow. (affirmed 2026-07-24)
 - NEVER add a backward-compatibility shim, generic tracker transport, scheduler, daemon, or unrelated large-module refactor for this Intent. (affirmed 2026-07-24)
 - NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
+- ユーザー向けの質問と成果物では、正式定義されていない略称や専門用語を使わない。定義済みの用語または平易な日本語を使う。 (learned 2026-08-02) <!-- cid:requirements-analysis:c3-260802-plugin-optin-parity -->
 ## Mandated
 
 - ALWAYS telemetry の export 境界(Local Exporter／OTLP Relay の送出点)でも redaction filter を通す — write-time のみの redaction に留めない。「機微情報を Signal Stores へ流さない」制約は書込時と送出時の二層で担保する (affirmed 2026-07-29、260729-otel-upstream practices-discovery) <!-- cid:practices-discovery:export-boundary-redaction -->
@@ -288,6 +292,9 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - engine の select-intent directive は既存 intent の選択肢のみを提示し「新規」を含まない — **継続作業では --new-intent を使わない**(continuation が既定)。作業が既存 intent と明らかに無関係で、かつユーザーが新規 intent の開始を明示承認済みの場合に限り、選択応答でなく next --new-intent --scope <scope> "<説明>" 経路で birth する(実測: 260802-vocab-canonical-consolid 起動時、ユーザーの新規指示済み+cursor 未設定+既存96 intent で select-intent が返り、--new-intent で正常 birth) (learned 2026-08-02) <!-- cid:intent-capture:c2-select-intent-birth -->
 - 裁定・要件が番号付きリスト(裁定N項等)を引用するときは、会話の時系列番号でなく**その裁定を最初に固定した正本成果物を一意に名指しして**(本実例では intent-statement の「## 確定済み裁定」節が唯一の正本 — 複数成果物に番号リストが併存する場合はどれが正本かを引用文に明記)、固定された番号を実読して引き、参照は file:line または見出しまで記す — 会話番号との1ズレが Major 2件(requirements+questions の双方汚染)になった実例(260802-vocab-canonical-consolid RA iteration 1、cid:requirements-analysis:mechanism-cite-verify-at-draft の裁定番号出典面) (learned 2026-08-02) <!-- cid:requirements-analysis:c2-ruling-number-canonical -->
 - 非 swarm の単一 Bolt でも base 前進が新規テスト番号(tNNN)を持ち込み採番衝突しうる — 再接地時は自 PR の tNNN を**再接地で merge した固定 base SHA**(moving な origin/main 名でなく rev-parse した実 SHA)の tests/ 実測で再確認し、衝突時は自 PR 側を改番のうえ **tNNN の全参照(テストファイル名・テスト名・record・PR 本文・audit 引用)を全域 grep で更新し残存 0 を確認**する(実測: 260802-vocab-canonical-consolid で前進 bf8de21f7 が t413-self-scope-face-parity を持込み、自側 t413→t414 改番+全域 grep で解消。cid:code-generation:swarm-test-number-reservation の非 swarm・再接地面への追補) (learned 2026-08-02) <!-- cid:code-generation:c1-tnnn-collision-on-regrounding -->
+ - plugin の導入対象は project root の `amadeus/config.json` だけに記録する。intent 選択前にも起動する全ハーネスの開始処理が同じ情報を読めるよう、space・intent の設定継承から分離する。 (learned 2026-08-02) <!-- cid:requirements-analysis:c1-260802-plugin-optin-parity -->
+ - OpenCode の `manual-only` は製品制約ではなく未配線として扱う。公式 plugin フックとセッションイベントがある場合は、他ハーネスと同じ初回自動導入契約へ揃える。 (learned 2026-08-02) <!-- cid:requirements-analysis:c2-260802-plugin-optin-parity -->
+ - plugin の初回導入成功とpluginが提供する検査の成功を分離する。検査対象0件でもpluginを利用可能にできるが、対象が揃うまでは未準備とし、成功記録を残さず明示検査をエラーにする。 (learned 2026-08-02) <!-- cid:requirements-analysis:c4-260802-plugin-optin-parity -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
@@ -321,6 +328,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 ## Architecture
 - CLIやlibraryのNFR設計では、常駐service向けのcache、horizontal scaling、circuit breakerを機械的に適用せず、決定的なfile境界とfail-closed契約へ置き換える (learned 2026-07-23) <!-- cid:nfr-design:c1 -->
 
+- activationの案内判定と明示的な形式検査は同じreadiness evaluatorを共有し、model-mapと対象assetの解釈を二重実装しない。 (learned 2026-08-02) <!-- cid:code-generation:c2-260802-plugin-optin-parity -->
 ## Reliability
 - Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する (learned 2026-07-23) <!-- cid:nfr-design:c3 -->
 

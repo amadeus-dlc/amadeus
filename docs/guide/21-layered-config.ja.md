@@ -53,6 +53,12 @@ opt-in できます。
 | `mirror-projects` | Project target の配列 | `[]` | intent と GitHub Project target、任意の status 名を対応付ける |
 | `auto-solo-election` | boolean | `false` | 設計逸脱・ブロッカー・§13 学習選定でソロ選挙を自動発動する |
 | `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | 確認済みの Amadeus の不具合・懸念を `amadeus-dlc/amadeus` に起票する |
+| `plugins` | plugin 名の配列 | `[]` | 現在のハーネスへ再調整する plugin を選択する。Global Config だけで有効 |
+
+`plugins` は project の opt-in 正本であり、Space / Intent Config では上書きできません。
+名前は一意な 1〜64 文字で、`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$` に一致する必要が
+あり、昇順で処理されます。配列の直接編集も正式にサポートされ、次のセッションで project
+`plugins/<name>/` から現在のハーネスだけを再調整します。
 
 `auto-solo-election` が制御するのは自動発動だけです。未設定または `false` でも、
 ユーザーは選挙を明示的に要求できます。仕様変更などのユーザー専権事項は、この設定で

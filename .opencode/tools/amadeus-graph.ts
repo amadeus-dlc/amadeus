@@ -1970,7 +1970,11 @@ function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
 }
 
 function readTrustedPluginStageIndex(hostRoot: string): PluginStageRead[] {
-  if (!existsSync(join(hostRoot, "plugins"))) return [];
+  const pluginsRoot = join(hostRoot, "plugins");
+  if (!existsSync(pluginsRoot)) return [];
+  const hasManagedPluginEntry = readdirSync(pluginsRoot, { withFileTypes: true })
+    .some((entry) => entry.isDirectory() || entry.isSymbolicLink());
+  if (!hasManagedPluginEntry) return [];
   const recordPath = join(hostRoot, ".amadeus-plugin-composition.json");
   if (!existsSync(recordPath)) {
     throw pluginIndexError("unknown", "plugin stage index has no composition record");

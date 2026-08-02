@@ -53,6 +53,13 @@ value. Other spaces continue to use `false`.
 | `mirror-projects` | project target array | `[]` | Maps an intent to GitHub Project targets and optional status names |
 | `auto-solo-election` | boolean | `false` | Enables automatic solo elections for design deviations, blockers, and §13 learning selection |
 | `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls filing confirmed Amadeus defects and concerns to `amadeus-dlc/amadeus` |
+| `plugins` | array of plugin names | `[]` | Selects plugins to reconcile into the current harness; valid only in Global Config |
+
+`plugins` is the project opt-in source of truth and is intentionally not
+overridable by Space or Intent Config. Names must be unique, 1–64 characters,
+match `^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`, and are processed in sorted
+order. Editing the array directly is supported; the next session reconciles the
+current harness from project `plugins/<name>/` without touching other harnesses.
 
 `auto-solo-election` controls automatic activation only. When it is absent or
 `false`, a user can still explicitly request an election. Specification

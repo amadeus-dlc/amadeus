@@ -89,14 +89,14 @@ const PROTOCOL_MARKERS = [
 
 // The file that owns the prompt-submit mint on each harness. OpenCode has no
 // stdin hook shell — its mint site is the JS plugin loaded from
-// `.opencode/plugin/`.
+// `.opencode/plugins/`.
 const MINT_OWNERS: Array<[string, string]> = [
   ["claude", join("hooks", "amadeus-mint-presence.ts")],
   ["codex", join("hooks", "amadeus-codex-adapter.ts")],
   ["cursor", join("hooks", "amadeus-mint-presence.ts")],
   ["kiro", join("hooks", "amadeus-kiro-adapter.ts")],
   ["kiro-ide", join("hooks", "amadeus-kiro-adapter.ts")],
-  ["opencode", join("plugin", "amadeus-opencode-plugin.ts")],
+  ["opencode", join("plugins", "amadeus-opencode-plugin.ts")],
 ];
 
 function harnessDir(name: string): string {
@@ -165,7 +165,7 @@ describe("solo standing grant — six-harness contract projection", () => {
 
   test("opencode forwards its native chat.message sessionID to the canonical seam", () => {
     const dir = harnessDir("opencode");
-    const text = readFileSync(join(dir, "plugin", "amadeus-opencode-plugin.ts"), "utf8");
+    const text = readFileSync(join(dir, "plugins", "amadeus-opencode-plugin.ts"), "utf8");
     // The measured OpenCode prompt seam and the identity it carries.
     expect(text).toContain('"chat.message"');
     expect(text).toContain("hostSessionCapability(message?.sessionID)");
@@ -174,7 +174,7 @@ describe("solo standing grant — six-harness contract projection", () => {
     expect(text).not.toContain("activeIntent");
     // OpenCode executes every module on its plugin discovery path. Keep helper
     // modules out of that directory so they are not invoked as plugins.
-    expect(existsSync(join(dir, "plugin", "amadeus-opencode-vocab.ts"))).toBe(false);
+    expect(existsSync(join(dir, "plugins", "amadeus-opencode-vocab.ts"))).toBe(false);
     expect(existsSync(join(dir, "lib", "amadeus-opencode-vocab.ts"))).toBe(true);
   });
 });

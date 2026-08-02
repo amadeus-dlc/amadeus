@@ -27,10 +27,13 @@ import { emitActivationAdvisory, handleNext } from "../../packages/framework/cor
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
+  type ActivationFs,
   type Advisory,
   type AdvisoryLatchFs,
   advisoryLatchPath,
+  defaultActivationFs,
   recordActivationVerdict,
+  resolveActivationJudgment,
   unlatchedAdvisories,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import {
@@ -40,10 +43,13 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
 const FIX_REQUIREMENTS = join(FIXTURES_DIR, "state-mid-inception.md"); // Current Stage = requirements-analysis
+const FIX_FUNCTIONAL = join(FIXTURES_DIR, "state-construction-bolt1.md");
+const FIX_BUILD = join(FIXTURES_DIR, "state-fix-final-construction.md");
 
 let host = "";
 let proj = "";
@@ -66,6 +72,8 @@ function makeChangedHost(): string {
   mkdirSync(h, { recursive: true });
   mkdirSync(join(root, "specs", "tla"), { recursive: true });
   writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
+  writeActivationModelMap(root);
   writeFileSync(
     join(h, ".amadeus-plugin-composition.json"),
     JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
@@ -115,6 +123,21 @@ afterEach(() => {
 // ===========================================================================
 
 describe("t381 checkpoint set", () => {
+  test("an unreadable model map is reported as invalid", () => {
+    host = makeChangedHost();
+    const brokenMapFs: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        if (path.endsWith("model-map.json")) throw new Error("synthetic read failure");
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+    expect(resolveActivationJudgment(host, ACTIVATION_WATCH_GLOBS, brokenMapFs)).toEqual({
+      kind: "not-ready",
+      reason: "model map is invalid",
+    });
+  });
+
   test("all three checkpoints raise the advisory, each stamped with its own slug", () => {
     host = makeChangedHost();
     for (const slug of ["requirements-analysis", "functional-design", "build-and-test"]) {
@@ -230,6 +253,26 @@ function seedComposedProject(): void {
 }
 
 describe("t381 both emit paths carry the advisory", () => {
+  test.each([
+    ["requirements-analysis", FIX_REQUIREMENTS],
+    ["functional-design", FIX_FUNCTIONAL],
+    ["build-and-test", FIX_BUILD],
+  ] as const)("%s emits byte-equal structured advisories on main and --single paths", (slug, fixture) => {
+    seedComposedProject();
+    seedStateFile(proj, fixture);
+    handleNext([], proj);
+    const main = JSON.parse(logs.join("\n").trim()) as { advisories?: unknown };
+
+    cleanupTestProject(proj);
+    proj = createTestProject();
+    logs = [];
+    handleNext(["--single", "--stage", slug], proj);
+    const single = JSON.parse(logs.join("\n").trim()) as { advisories?: unknown };
+
+    expect(Array.isArray(main.advisories) ? main.advisories.length : 0).toBeGreaterThan(0);
+    expect(JSON.stringify(single.advisories)).toBe(JSON.stringify(main.advisories));
+  });
+
   test("main workflow: next at requirements-analysis carries advisories (CP1 reachable)", () => {
     seedComposedProject();
     seedStateFile(proj, FIX_REQUIREMENTS);

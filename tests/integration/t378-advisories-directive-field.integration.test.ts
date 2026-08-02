@@ -40,6 +40,7 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
@@ -65,6 +66,8 @@ function makeHost(composed: boolean): string {
   mkdirSync(h, { recursive: true });
   mkdirSync(join(root, "specs", "tla"), { recursive: true });
   writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
+  writeActivationModelMap(root);
   if (composed) {
     writeFileSync(
       join(h, ".amadeus-plugin-composition.json"),
@@ -187,7 +190,14 @@ describe("t378 directive contract: advisories field", () => {
     const result = validateDirective(
       runStageFixture({
         advisories: [
-          { plugin: ACTIVATION_PLUGIN, code: "changed", message: "advisory: x", stage: "build-and-test" },
+          {
+            plugin: ACTIVATION_PLUGIN,
+            code: "changed",
+            message: "advisory: x",
+            stage: "build-and-test",
+            target: "specs/tla",
+            reason: "model changed",
+          },
         ],
       }),
     );
@@ -217,6 +227,25 @@ describe("t378 directive contract: advisories field", () => {
     expect(errors).toContain("advisories[0].plugin must be string, got number");
     expect(errors).toContain("advisories[0].message must be string, got null");
     expect(errors).toContain("advisories[0].stage must be string, got array");
+  });
+
+  test("optional target and reason fields reject non-string values", () => {
+    const result = validateDirective(
+      runStageFixture({
+        advisories: [{
+          plugin: "p",
+          code: "changed",
+          message: "m",
+          stage: "s",
+          target: 1,
+          reason: {},
+        }],
+      }),
+    );
+    expect(result.valid).toBe(false);
+    const errors = result.valid === false ? result.errors.join("; ") : "";
+    expect(errors).toContain("advisories[0].target must be string, got number");
+    expect(errors).toContain("advisories[0].reason must be string, got object");
   });
 
   test("a non-object entry is rejected", () => {

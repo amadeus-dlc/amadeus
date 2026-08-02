@@ -4,6 +4,12 @@
 
 - 判断: 外部依存の追加なし。内部依存は 3 本 — センサー正本 → 5 面コピー（byte-identical、`bun scripts/package.ts` + `bun run promote:self` で機械同期）、センサー manifest ⇔ 出力スキーマ、stage frontmatter（`code-generation.md:39-44`）→ センサー id（`t93.test.ts:106` / `t89.test.ts:366` が pin）。データ側の grid 5 面は互いに複製関係にあるが同期する機構が現状存在しない — それ自体が本 intent の患部。dist 同期面: センサー正本を触る場合は dist 7 面 + self-install 5 面のツールコピー再生成が PR に同梱される（grid データ自体は dist に `self-*` 行を持たないため対象外）。変更面が他の進行中 intent と交差する兆候は区間にない（患部 9 パスとも 0 コミット）。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- 正しい依存方向は `プロジェクトが導入対象として記録した plugin 名 -> current host staging -> composition record -> activation judgment -> orchestrate advisory`。現行は先頭の記録がなく、staging／record だけで currentness を閉じている。
+- supply経路は `plugins/<name> -> plugin-projection -> package faces`、runtime経路は `host trigger -> amadeus-plugin-compose hook -> compose --if-stale`。OpenCodeは自動triggerへ依存せずmanual compose、Kiro CLI／IDEは同一 `.kiro` runtime状態へ依存する。
+- packaging／promotion／installerはdesired宣言を各hostへ投影する必要があるが、activationからそれらを逆呼び出ししない。read-only judgmentからmutationへの循環依存を作らない。
+
 ## formal-model-check 複数モデル化の依存関係（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 判断: 外部依存の追加なし。内部依存は plugin 内で閉じる — loader → model-map 定数（`tla-model-loader-internal.ts:22` が `TLA_EXECUTION_MODEL_NAME` を import）、arm → loader、CI ポート → run-model-check、stage doc → CLI、canonical コピー ⇔ plugin コピー（byte-identical 二重管理、table test で parity 固定）。変更面が他の進行中 intent と交差する兆候は区間にない。dist 同期面: plugin 投影（`dist/plugins/formal-model-check/` + 各ハーネス）と core canonical コピーの再生成（`bun scripts/package.ts` + `bun run promote:self`）が PR に同梱される。一般化時は tests の FormalElection 参照 27 ファイルが機械的洗い出し対象。

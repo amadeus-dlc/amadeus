@@ -30,6 +30,12 @@
 
 - **dist 側の配置**: `dist/{claude,codex,cursor,opencode,kimi,kiro,kiro-ide}/<face>/tools/data/scope-grid.json` の 7 ファイルはいずれも stock 10 行のみで `self-*` 行を持たない（実測）。センサー正本を変更した場合の同期対象は dist 7 面 + self-install 5 面のツールコピーであり、grid データそのものは dist 同期の対象外。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- 主責務は `packages/framework/core/tools/amadeus-plugin.ts`（discovery／compose／doctor）、`amadeus-plugin-activation.ts`（spec/verdict judgment）、`amadeus-orchestrate.ts`（main／single checkpoint）、`amadeus-harness.ts`（6 host catalog）にある。
+- face 固有の trigger は `packages/framework/harness/*`、7 face の host class と projection は `scripts/plugin-projection.ts`、生成は `scripts/package.ts`、self-install は `scripts/promote-self.ts` が所有する。Kiro CLI／IDE は `.kiro` を共有し、OpenCode は manual-only に分類される。
+- `plugins/formal-model-check/` は供給元であり opt-in 宣言ではない。host-local staging と composition record のほかに、プロジェクトが導入対象として選んだ plugin 名を記録する場所が必要で、生成物 `dist/` は直接編集しない。
+
 ## formal-model-check 複数モデル化の患部配置（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 区間の構造変化（配置面）: `54bf1f805`（#1925、intent 260731-formal-verif-value-chain）が `scripts/formal-verif/` 30 ファイルを削除し `plugins/formal-model-check/tools/` へ移設した。現行の plugin 配置は `plugins/formal-model-check/` = `plugin.json` / `README.md` / `stages/formal-model-check.md` / `tools/` 25 本（model-map スキーマ `amadeus-formal-verif-model-map.ts`、loader `tla-model-loader.ts` + `tla-model-loader-internal.ts`、arm `tla-arm.ts`、toolchain `tlc-toolchain.ts` / `fs-tlc-toolchain.ts` / `tlc-spawn-planner.ts`、CI ポート `node-ci-model-check-port.ts` / `ci-model-check-*.ts` / `ci-docker-trace.ts`、run 系 `run-model-check*.ts` / `run-skeleton-ci.ts`、`canonical.ts` / `contract.ts`）。canonical コピー `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` は plugin 側と byte-identical（実測）。`specs/tla/` = FormalElection.tla（316 行）+ .cfg、MirrorLifecycle.tla（43 行、wrapper、INSTANCE `:31-32`）+ MirrorLifecycleCore.tla（648 行）+ .cfg、MirrorLifecycleAsImplemented.tla、MirrorLifecycleVacuity.cfg、model-map.json（schemaVersion 2、2 モデル）。

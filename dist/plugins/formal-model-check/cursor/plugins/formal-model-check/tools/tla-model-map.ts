@@ -1,5 +1,6 @@
 export {
   diffModelMap,
+  evaluateTlaModelReadiness,
   findModelMapModel,
   IMPL_ONLY_UPDATE_HINT,
   type ModelLoadError,
@@ -10,6 +11,7 @@ export {
   type ModelMapEntry,
   type ModelMapModel,
   type ModelVocabulary,
+  type TlaModelReadiness,
   parseTlaModelMap,
   TLA_CFG_PATH,
   TLA_EXECUTION_MODEL_NAME,

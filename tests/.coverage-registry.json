@@ -4408,6 +4408,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
           "mechanism": "cli"
         }

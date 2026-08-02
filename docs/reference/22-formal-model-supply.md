@@ -1,5 +1,10 @@
 # Supplying a Formal Model for a New Protocol
 
+Until `specs/tla/model-map.json` declares a model whose `.tla` and `.cfg` assets
+exist, activation reports `not-ready` and an explicit check fails with the
+missing-target reason. Plugin installation itself remains valid with zero
+models, and no automatic lifecycle path launches TLC.
+
 > Languages: **English** | [日本語](22-formal-model-supply.ja.md)
 
 Amadeus verifies in two layers. Property-based, unit, and integration tests run

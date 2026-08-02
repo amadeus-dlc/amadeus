@@ -16,7 +16,10 @@ import {
   type DoctorLine,
   type DoctorLineState,
   type DoctorPluginObservation,
+  doctorPluginRows,
+  pluginSelectionDoctorLine,
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
+import type { PluginSelectionCode } from "../../packages/framework/core/tools/amadeus-plugin-selection.ts";
 
 function diag(plugin: string, status: PluginDiagnostic["status"], observations: string[] = []): PluginDiagnostic {
   return { plugin, status, ownedPaths: [], observations };
@@ -144,5 +147,27 @@ describe("t313 DoctorLine type canon (BR-U5-5)", () => {
     const states: DoctorLineState[] = ["ok", "drift", "degraded", "advisory", "recovery-pending", "unknown"];
     const witnesses: DoctorLine[] = states.map((state) => ({ plugin: "p", state, detail: "" }));
     expect(witnesses.map((w) => w.state)).toEqual(states);
+  });
+});
+
+describe("t313 project selection doctor — complete six-state map", () => {
+  const cases: readonly [PluginSelectionCode, DoctorLineState, boolean, string][] = [
+    ["not-selected", "advisory", true, ".codex not-selected"],
+    ["source-missing", "degraded", false, ".codex source-missing: plugins/pro"],
+    ["not-installed", "degraded", false, ".codex not-installed: staging or composition missing"],
+    ["stale", "drift", true, ".codex stale: staging or composition differs from source"],
+    ["current", "ok", true, ".codex current"],
+    ["failed", "degraded", false, ".codex failed: recovery or manifest error"],
+  ];
+
+  test.each(cases)("%s maps to %s and the expected doctor exit contribution", (code, state, pass, detail) => {
+    const projected = pluginSelectionDoctorLine(
+      { plugin: "pro", code, source: "/project/plugins/pro", staging: "/project/.codex/.amadeus-plugin-src/pro" },
+      ".codex",
+    );
+    expect(projected).toEqual({ plugin: "pro", state, detail });
+    expect(doctorPluginRows({ installed: 1, lines: [projected], activation: null })).toEqual([
+      { pass, label: expect.stringContaining(detail) },
+    ]);
   });
 });

@@ -70,7 +70,7 @@ describe("t257 resolve against real files", () => {
   test("all three absent resolves to the default prompt mode", () => {
     expect(resolveAmadeusConfig(project(), INTENT)).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
       sources: [],
     });
   });
@@ -84,6 +84,26 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
+  });
+
+  test("project plugins resolve sorted and space/intent declarations fail project-only", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { plugins: ["zeta", "alpha"] });
+    const resolved = resolveAmadeusConfig(root, INTENT);
+    expect(resolved.kind).toBe("resolved");
+    if (resolved.kind === "resolved") expect(resolved.config.plugins).toEqual(["alpha", "zeta"]);
+
+    writeConfig(p.space, { plugins: ["alpha"] });
+    const invalid = resolveAmadeusConfig(root, INTENT);
+    expect(invalid.kind).toBe("invalid");
+    if (invalid.kind === "invalid") {
+      expect(invalid.issues[0]).toMatchObject({
+        layer: "space",
+        key: "plugins",
+        expected: "plugins may be configured only in amadeus/config.json",
+      });
+    }
   });
 
   test("space wins over global when intent is absent", () => {

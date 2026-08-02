@@ -356,7 +356,7 @@ export function claudeInstallArtifacts(plugin: PluginSource): readonly Projected
 // manual-only faces are what U3 adds on top of the U2 claude projector (which is
 // left byte-for-byte unchanged).
 // ---------------------------------------------------------------------------
-export type PluginHostClass = "native-manifest" | "folder-drop-auto" | "manual-only";
+export type PluginHostClass = "native-manifest" | "folder-drop-auto" | "native-plugin-auto" | "manual-only";
 
 export const PLUGIN_HOST_CLASS: Record<PackageHarness, PluginHostClass> = {
   claude: "native-manifest",
@@ -365,7 +365,7 @@ export const PLUGIN_HOST_CLASS: Record<PackageHarness, PluginHostClass> = {
   kimi: "folder-drop-auto",
   kiro: "folder-drop-auto",
   "kiro-ide": "folder-drop-auto",
-  opencode: "manual-only",
+  opencode: "native-plugin-auto",
 };
 
 // ---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ export const PLUGIN_COMPOSE_TRIGGER: Record<PackageHarness, ComposeTriggerState>
   kimi: "measured", // SessionStart (kimi hooks.snippet.toml → adapter session-start)
   kiro: "measured", // agentSpawn (kiro/agents/amadeus.json → adapter session-start)
   "kiro-ide": "measured", // promptSubmit (.kiro.hook → adapter session-start; idempotent --if-stale)
-  opencode: "deferred", // session-start seam unwired (chat.message only) — degrade
+  opencode: "measured", // official JS plugin session.created event
 };
 
 // A face's auto-compose disposition: either the session hook is WIRED (an
@@ -610,6 +610,13 @@ export function installDoc(name: string, harnessDir: string, clazz: PluginHostCl
   if (clazz === "manual-only") {
     lines.push(
       "This harness has no auto-compose session hook. Run compose after install and after every plugin change:",
+      "",
+      `    ${manualComposeCommand(harnessDir)}`,
+      "",
+    );
+  } else if (clazz === "native-plugin-auto") {
+    lines.push(
+      `Auto-compose is wired through the host's JavaScript plugin session event. To compose manually:`,
       "",
       `    ${manualComposeCommand(harnessDir)}`,
       "",

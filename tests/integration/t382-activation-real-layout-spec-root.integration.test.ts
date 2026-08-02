@@ -26,12 +26,16 @@ import { dirname, join } from "node:path";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_STATE_FILE,
+  ACTIVATION_WATCH_GLOBS,
+  type ActivationFs,
   activationAdvisoriesForHost,
   computeSpecHash,
+  defaultActivationFs,
   recordActivationVerdict,
   resolveActivationJudgment,
   specRootForHost,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { activationModelMap, writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
 
@@ -65,6 +69,7 @@ beforeEach(() => {
   // Specs are a PROJECT asset — one level above the harness directory.
   writeFile(join(projectRoot, "specs/tla/FormalElection.tla"), "MODULE FormalElection\n");
   writeFile(join(projectRoot, "specs/tla/FormalElection.cfg"), "INIT Init\n");
+  writeActivationModelMap(projectRoot);
   composeFormalModelCheck();
 });
 
@@ -123,5 +128,100 @@ describe("activation spec root on the real deployment layout", () => {
   test("an uncomposed host stays silent even though the project carries specs", () => {
     rmSync(join(host, COMPOSITION_FILE));
     expect(activationAdvisoriesForHost(host, "requirements-analysis")).toEqual([]);
+  });
+
+  test("a declared target with a missing cfg is not-ready and cannot record a verdict", () => {
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      activationModelMap(),
+    );
+    rmSync(join(projectRoot, "specs/tla/FormalElection.cfg"));
+    const judgment = resolveActivationJudgment(host);
+    expect(judgment).toEqual({
+      kind: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+    expect(recordActivationVerdict(host)).toBe(false);
+    expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(false);
+    expect(activationAdvisoriesForHost(host, "build-and-test")[0]).toMatchObject({
+      plugin: ACTIVATION_PLUGIN,
+      stage: "build-and-test",
+      code: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+  });
+
+  test("a declared target with model and cfg starts at never-run with a structured target", () => {
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      activationModelMap(),
+    );
+    expect(resolveActivationJudgment(host).kind).toBe("never-run");
+    expect(activationAdvisoriesForHost(host, "requirements-analysis")[0]).toMatchObject({
+      plugin: ACTIVATION_PLUGIN,
+      stage: "requirements-analysis",
+      code: "never-run",
+      target: "specs/tla",
+    });
+  });
+
+  test("zero declarations and an invalid map are not-ready and never overwrite a past verdict", async () => {
+    expect(recordActivationVerdict(host)).toBe(true);
+    const statePath = join(host, ACTIVATION_STATE_FILE);
+    const past = await Bun.file(statePath).text();
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      JSON.stringify({ schemaVersion: 2, models: [] }),
+    );
+    expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
+    expect(recordActivationVerdict(host)).toBe(false);
+    await expect(Bun.file(statePath).text()).resolves.toBe(past);
+
+    writeFile(join(projectRoot, "specs/tla/model-map.json"), "{not-json");
+    expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
+    expect(recordActivationVerdict(host)).toBe(false);
+    await expect(Bun.file(statePath).text()).resolves.toBe(past);
+  });
+
+  test("recording a verdict hashes each declared asset once after readiness", () => {
+    const reads = new Map<string, number>();
+    const countingFs: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        reads.set(path, (reads.get(path) ?? 0) + 1);
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+    expect(recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-08-02T00:00:00Z", countingFs)).toBe(true);
+    expect(reads.get(join(projectRoot, "specs/tla/model-map.json"))).toBe(2);
+    for (const relative of [
+      "specs/tla/FormalElection.tla",
+      "specs/tla/FormalElection.cfg",
+    ]) {
+      expect(reads.get(join(projectRoot, relative))).toBe(1);
+    }
+  });
+
+  test("add, delete, and restore a target preserve the meaning of a past successful verdict", async () => {
+    rmSync(join(projectRoot, "specs/tla/model-map.json"));
+    expect(resolveActivationJudgment(host)).toEqual({ kind: "not-ready", reason: "model map is missing" });
+    expect(recordActivationVerdict(host)).toBe(false);
+
+    writeActivationModelMap(projectRoot);
+    expect(resolveActivationJudgment(host).kind).toBe("never-run");
+    expect(recordActivationVerdict(host)).toBe(true);
+    expect(resolveActivationJudgment(host).kind).toBe("current");
+
+    const cfgPath = join(projectRoot, "specs/tla/FormalElection.cfg");
+    const cfg = await Bun.file(cfgPath).text();
+    rmSync(cfgPath);
+    expect(resolveActivationJudgment(host)).toEqual({
+      kind: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+    expect(recordActivationVerdict(host)).toBe(false);
+
+    writeFile(cfgPath, cfg);
+    expect(resolveActivationJudgment(host).kind).toBe("current");
   });
 });

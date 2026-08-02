@@ -49,6 +49,11 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 | `amadeus-session-end.ts` | SessionEnd | Project-wide (settings.json) | (empty) | Emit `SESSION_ENDED` audit event on graceful exit |
 | `amadeus-statusline.ts` | statusLine | Project-wide (settings.json) | -- | Show real-time progress in terminal |
 
+OpenCode exposes the equivalent lifecycle through its JavaScript plugin API,
+not this shell-hook table. `.opencode/plugins/amadeus-opencode-plugin.ts` handles
+`session.created` and invokes the same `compose --if-stale` operation for
+`.opencode` only. All adapters warn on failure without blocking the session.
+
 ### Shared Characteristics
 
 All of the TypeScript hooks:

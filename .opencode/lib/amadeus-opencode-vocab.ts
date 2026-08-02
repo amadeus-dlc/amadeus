@@ -11,7 +11,7 @@
 //   - `TextPart` is `{type:"text";text:string;synthetic?:boolean}` — the
 //     runtime stamps `synthetic:!0` on the text parts it injects itself.
 //
-// Extracted as an importable module outside `.opencode/plugin/` so OpenCode
+// Extracted as an importable module outside `.opencode/plugins/` so OpenCode
 // does not execute these helper exports as plugins, and the mapping logic stays
 // drivable in-process by bun --coverage — a plugin module loaded by the
 // OpenCode host is invisible to it
@@ -28,6 +28,15 @@ export function opencodeProjectDir(input: unknown): string | null {
     if (typeof value === "string" && value.trim().length > 0) return value;
   }
   return null;
+}
+
+/** True only for OpenCode's documented session creation lifecycle event. */
+export function isOpencodeSessionCreatedEvent(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const event = (value as Record<string, unknown>).event;
+  return typeof event === "object"
+    && event !== null
+    && (event as Record<string, unknown>).type === "session.created";
 }
 
 /**

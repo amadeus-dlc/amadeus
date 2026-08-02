@@ -27,9 +27,11 @@ initProcessObservability(
 try {
   const code = handlePluginCli(["compose", "--if-stale", "--project-root", hostRoot]);
   if (code !== 0) {
-    console.error("amadeus-plugin: auto-compose failed (non-blocking); run `amadeus-plugin.ts compose` to retry");
+    console.error(
+      `amadeus-plugin: auto-compose failed for ${hostRoot} (non-blocking); run \`amadeus-plugin.ts compose --project-root ${hostRoot}\` to retry`,
+    );
   }
 } catch (err) {
-  console.error(`amadeus-plugin: auto-compose error (non-blocking): ${String(err)}`);
+  console.error(`amadeus-plugin: auto-compose error for ${hostRoot} (non-blocking): ${String(err)}`);
 }
 process.exit(0);

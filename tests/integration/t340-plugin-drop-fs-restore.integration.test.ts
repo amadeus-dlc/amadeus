@@ -9,7 +9,7 @@
 // compares the directory STRUCTURE. Real temp filesystem → integration tier.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,7 @@ import {
   stagingEntryState,
   listHarnessTrees,
   listPluginSourceDirs,
+  renderPluginCliResult,
   runPluginCli,
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
@@ -47,7 +48,10 @@ let host = "";
 const out: string[] = [];
 const err: string[] = [];
 
-function deps(verifyOk = true): PluginCliDeps {
+type DropOpts = { verifyOk?: boolean; recompileOk?: boolean; runnerOk?: boolean; configWriteOk?: boolean };
+
+function deps(input: boolean | DropOpts = {}): PluginCliDeps {
+  const options: DropOpts = typeof input === "boolean" ? { verifyOk: input } : input;
   return {
     discoverPlugins: (root) => discoverPlugins(root),
     inspectPlugin,
@@ -59,21 +63,42 @@ function deps(verifyOk = true): PluginCliDeps {
     makeBackend: (root) => createNodeBackend(root),
     makeTx: (root, backend): WorkspaceTransaction => ({
       backend,
-      verify: () => (verifyOk ? { ok: true } : { ok: false, reason: "synthetic verify failure" }),
+      verify: () => (options.verifyOk !== false ? { ok: true } : { ok: false, reason: "synthetic verify failure" }),
       lock: createNodeLock(root),
       newTxnId: () => `t340-${Date.now()}-${Math.random()}`,
     }),
-    recompile: () => true,
-    generateRunners: () => true,
+    recompile: () => options.recompileOk !== false,
+    generateRunners: () => options.runnerOk !== false,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,
     listHarnessTrees,
     listPluginSourceDirs,
+    ...(options.configWriteOk === false
+      ? { writeProjectPlugins: () => { throw new Error("synthetic config write failure"); } }
+      : {}),
     copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     out: (l) => out.push(l),
     err: (l) => err.push(l),
   };
+}
+
+function treeSnapshot(root: string): readonly string[] {
+  const entries: string[] = [];
+  const walk = (dir: string): void => {
+    for (const name of [...readdirSync(dir)].sort()) {
+      const absolute = join(dir, name);
+      const path = relative(root, absolute);
+      if (statSync(absolute).isDirectory()) {
+        entries.push(`${path}${sep}`);
+        walk(absolute);
+      } else {
+        entries.push(`${path}\0${readFileSync(absolute).toString("base64")}`);
+      }
+    }
+  };
+  walk(root);
+  return entries;
 }
 
 // Every path under `root` — DIRECTORIES INCLUDED (trailing separator marks a
@@ -157,5 +182,74 @@ describe("t340 drop restores the filesystem baseline (FR-3, #1586)", () => {
     expect(handlePluginCli(["drop", PLUGIN, "--project-root", host], deps())).toBe(0);
     expect(structure(host)).toEqual(baseline);
     expect(existsSync(join(host, "plugins", "other", "keep.md"))).toBe(true);
+  });
+
+  test.each([
+    ["transaction verify", { verifyOk: false }, "drop failed"],
+    ["graph recompile", { recompileOk: false }, "recompile failed after drop"],
+    ["runner generation", { runnerOk: false }, "stage-runner generation failed after drop"],
+    ["configuration commit", { configWriteOk: false }, "config update failed after drop"],
+  ] as const)("%s failure restores config, supply, staging, and composition", (_label, options, message) => {
+    const project = mkdtempSync(join(tmpdir(), "amadeus-t340-project-"));
+    const harness = join(project, ".codex");
+    mkdirSync(harness, { recursive: true });
+    cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
+    mkdirSync(join(project, "amadeus"), { recursive: true });
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    try {
+      expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
+      const baseline = treeSnapshot(project);
+      err.length = 0;
+      const injected = deps(options);
+      const result = runPluginCli(["drop", PLUGIN, "--project-root", harness], injected);
+      expect(result.kind).toBe("failure");
+      if (result.kind !== "failure") return;
+      expect(result.message).toContain(message);
+      expect(renderPluginCliResult(result, injected)).toBe(1);
+      expect(err.at(-1)).toContain(`amadeus-plugin: ${result.stage} failed:`);
+      expect(treeSnapshot(project)).toEqual(baseline);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  test("a rejected drop is pre-mutation and preserves all four surfaces", () => {
+    const project = mkdtempSync(join(tmpdir(), "amadeus-t340-reject-"));
+    const harness = join(project, ".codex");
+    mkdirSync(harness, { recursive: true });
+    cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
+    mkdirSync(join(project, "amadeus"), { recursive: true });
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    try {
+      expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
+      const owned = join(harness, "plugins", PLUGIN, "stages", `${PLUGIN}.md`);
+      writeFileSync(owned, `${readFileSync(owned, "utf-8")}\nuser edit\n`);
+      const baseline = treeSnapshot(project);
+      const result = runPluginCli(["drop", PLUGIN, "--project-root", harness], deps());
+      expect(result).toMatchObject({ kind: "failure", stage: "plan" });
+      expect(treeSnapshot(project)).toEqual(baseline);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  test("successful drop preserves a user-diverged staging tree and project supply", () => {
+    const project = mkdtempSync(join(tmpdir(), "amadeus-t340-user-stage-"));
+    const harness = join(project, ".codex");
+    mkdirSync(harness, { recursive: true });
+    cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
+    mkdirSync(join(project, "amadeus"), { recursive: true });
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    try {
+      expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
+      const marker = join(harness, ".amadeus-plugin-src", PLUGIN, "user-owned.txt");
+      writeFileSync(marker, "preserve\n");
+      expect(handlePluginCli(["drop", PLUGIN, "--project-root", harness], deps())).toBe(0);
+      expect(readFileSync(marker, "utf-8")).toBe("preserve\n");
+      expect(existsSync(join(project, "plugins", PLUGIN, "plugin.json"))).toBe(true);
+      expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([]);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
   });
 });

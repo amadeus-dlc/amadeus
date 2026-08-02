@@ -1,5 +1,10 @@
 # 形式モデルを実装に追従させる
 
+`formal-model-check` の有効化判定は `not-ready`・`never-run`・`changed`・`current` の
+4値です。宣言済みの有効な model target がない場合は `not-ready` であり、成功または
+変更なしの verdict を記録できません。session-start の再調整は plugin を導入しますが、
+TLC を実行しません。
+
 > 言語: [English](21-formal-model-following.md) | **日本語**
 
 `specs/tla/` の TLA+ モデルは、それが記述していると主張するコードを実際に記述している間だけ価値を持ちます。`specs/tla/model-map.json` は各モデルを、その導出元となった実装ファイルへ pin し、`model-completeness` sensor は監視対象パスに触れるたびにその pin を再計算します。pin が一致しなくなると、sensor は drift を報告します。

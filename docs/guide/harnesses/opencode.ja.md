@@ -56,7 +56,7 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 | オンボーディング | `AGENTS.md`(セッション再開導線) |
 | 設定例 | `.opencode/opencode.json.example` — `$schema` + 権限絞り込み(`edit`/`bash`/`webfetch` = `ask`) |
 | セッションスキル | 4 本(`session-cost`・`replay`・`outcomes-pack`・`grilling`)— per-stage runner 32 本は初期スコープ外 |
-| フック | **8 中 1 配線** — presence mint を `.opencode/plugin/amadeus-opencode-plugin.ts` の JS プラグインとして配線済み。残り 7 target は工程0 対応表([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049))の実測どおり **条件付き 5・未対応 2**。下記 [フック対応表](#フック対応表-1049) を参照 |
+| フック | **8 中 1 配線** — presence mint を `.opencode/plugins/amadeus-opencode-plugin.ts` の JS プラグインとして配線済み。残り 7 target は工程0 対応表([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049))の実測どおり **条件付き 5・未対応 2**。下記 [フック対応表](#フック対応表-1049) を参照 |
 | `promote:self` | `bun run promote:self` が `dist/opencode/.opencode/` → ルート `.opencode/` へ promote(dogfood) |
 
 ## Claude Code との相違点
@@ -86,7 +86,7 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 | session-start | ⚠ 条件付き | `event`(`session.created`)に `source` フィールドがなく、`additionalContext` 注入 seam も OpenCode に不在。副作用のみ配線は不採用(偽対応を作らない) |
 | session-end | ⚠ 条件付き | `event`(`session.deleted`)/ `dispose` は `reason` を運ばず、意味もセッション終了と異なる。副作用のみ配線は不採用 |
 | validate-state | ⚠ 条件付き | `event`(`session.compacted`)は圧縮**後**発火。core hook は**圧縮前**バリデータで時機が逆 |
-| mint(HUMAN_TURN) | ✅ 対応済 | `.opencode/plugin/amadeus-opencode-plugin.ts`。2026-07-26 に opencode 1.18.3 で再実測: runtime は `chat.message` を `{sessionID, …}` で発火するため、plugin はその安定 identity を canonical な `hostSessionCapability` seam へ渡す。machine turn は fail-closed 維持 — runtime 自身の `synthetic` text part を除去し、残りを共有の machine 注入マーカー catalog で判定する |
+| mint(HUMAN_TURN) | ✅ 対応済 | `.opencode/plugins/amadeus-opencode-plugin.ts`。2026-07-26 に opencode 1.18.3 で再実測: runtime は `chat.message` を `{sessionID, …}` で発火するため、plugin はその安定 identity を canonical な `hostSessionCapability` seam へ渡す。machine turn は fail-closed 維持 — runtime 自身の `synthetic` text part を除去し、残りを共有の machine 注入マーカー catalog で判定する |
 | log-subagent | ❌ 未対応 | subagent 停止 + `agent_type` / `agent_id` を運ぶイベントが無い |
 | stop | ❌ 未対応 | ターン終了ゲートのイベントが無い(`session.idle` はアイドル遷移でありターン境界ではない) |
 

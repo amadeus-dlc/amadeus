@@ -1,7 +1,7 @@
-// covers: file:harness/opencode/plugin/amadeus-opencode-plugin.ts, file:harness/opencode/lib/amadeus-opencode-vocab.ts
+// covers: file:harness/opencode/plugins/amadeus-opencode-plugin.ts, file:harness/opencode/lib/amadeus-opencode-vocab.ts
 //
 // The OpenCode prompt-hook mint site, driven end-to-end against the SHIPPED
-// projection (dist/opencode/.opencode/plugin/) so the file OpenCode actually
+// projection (dist/opencode/.opencode/plugins/) so the file OpenCode actually
 // loads is the file under test.
 //
 // Seam measured 2026-07-26 on opencode 1.18.3: the runtime dispatches
@@ -46,7 +46,7 @@ const PLUGIN_PATH = join(
   "dist",
   "opencode",
   ".opencode",
-  "plugin",
+  "plugins",
   "amadeus-opencode-plugin.ts",
 );
 

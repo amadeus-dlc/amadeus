@@ -21,7 +21,7 @@ const MATRIX_CLASS = {
   kimi: "folder-drop-auto",
   kiro: "folder-drop-auto",
   "kiro-ide": "folder-drop-auto",
-  opencode: "manual-only",
+  opencode: "native-plugin-auto",
 } as const;
 
 describe("t306 PLUGIN_HOST_CLASS (U1 matrix transcription)", () => {

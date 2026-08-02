@@ -31,6 +31,7 @@ import {
   resolveActivationJudgment,
   writeActivationState,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
 
@@ -65,7 +66,7 @@ beforeEach(() => {
   mkdirSync(host, { recursive: true });
   writeSpec("specs/tla/FormalElection.tla", "MODULE FormalElection\n");
   writeSpec("specs/tla/FormalElection.cfg", "INIT Init\n");
-  writeSpec("specs/tla/model-map.json", "{}\n");
+  writeActivationModelMap(projectRoot);
 });
 
 afterEach(() => rmSync(projectRoot, { recursive: true, force: true }));
