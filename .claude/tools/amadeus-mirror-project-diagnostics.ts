@@ -3,7 +3,7 @@
 // This module owns the Project-specific observation model used by
 // `mirror repair status`. It never mutates a Project or the local ledger.
 
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
   expectedProjectStatus,
   selectProjectStatusOption,
@@ -271,7 +271,7 @@ export async function diagnoseMirrorProjects(
   target: MirrorProjectDiagnosticTarget,
   state: MirrorStateSnapshot,
 ): Promise<readonly MirrorRepairProjectDiagnostic[]> {
-  const config = resolveMirrorConfig(
+  const config = resolveAmadeusConfig(
     target.projectDir,
     target.intentDir,
     target.space,

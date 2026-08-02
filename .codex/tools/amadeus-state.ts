@@ -135,7 +135,7 @@ import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
-import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {

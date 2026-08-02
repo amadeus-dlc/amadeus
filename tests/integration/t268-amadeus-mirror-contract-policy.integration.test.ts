@@ -1,5 +1,5 @@
 // t268 — C0->C1->C2 contract flow, filesystem security, and dependency purity.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts, amadeus-mirror-policy.ts, amadeus-mirror-project-contract.ts, amadeus-mirror-types.ts
+// covers: packages/framework/core/tools/amadeus-config.ts, amadeus-mirror-policy.ts, amadeus-mirror-project-contract.ts, amadeus-mirror-types.ts
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -15,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveMirrorConfig } from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "../../packages/framework/core/tools/amadeus-config.ts";
 import {
   decideMirrorAction,
   mirrorEventIdentity,
@@ -62,7 +62,7 @@ describe("t268 one-way C0->C1->C2 flow", () => {
   test("a resolved lifecycle mode drives a policy decision", () => {
     const root = project();
     writeConfig(globalPath(root), { "auto-mirror": "auto" });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind !== "resolved") return;
     const event = mirrorEventIdentity(
@@ -94,7 +94,7 @@ describe("t268 filesystem security", () => {
     writeFileSync(outside, JSON.stringify({ "auto-mirror": "auto" }), "utf-8");
     mkdirSync(dirname(globalPath(root)), { recursive: true });
     symlinkSync(outside, globalPath(root));
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       expect(outcome.issues[0]?.kind).toBe("read-failure");
@@ -108,7 +108,7 @@ describe("t268 filesystem security", () => {
     mkdirSync(dirname(globalPath(root)), { recursive: true });
     const oversize = `{"auto-mirror":"auto"}${" ".repeat(1024 * 1024 + 16)}`;
     writeFileSync(globalPath(root), oversize, "utf-8");
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       const issue = outcome.issues[0];
@@ -121,7 +121,7 @@ describe("t268 filesystem security", () => {
     const root = project();
     writeConfig(globalPath(root), { "auto-mirror": "auto" });
     chmodSync(globalPath(root), 0o000);
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") expect(outcome.issues[0]?.kind).toBe("read-failure");
   });
@@ -130,7 +130,7 @@ describe("t268 filesystem security", () => {
     const root = project();
     // One read-failure layer plus one valid layer to exercise both fields.
     mkdirSync(join(root, "amadeus", "config.json"), { recursive: true });
-    const outcome = resolveMirrorConfig(root, INTENT);
+    const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
       for (const issue of outcome.issues) {
@@ -159,16 +159,20 @@ describe("t268 dependency purity", () => {
   });
 
   test("C1 config does not import C2 policy", () => {
-    expect(importSources("amadeus-mirror-config.ts")).toEqual([
-      "./amadeus-layered-config.ts",
+    const imports = importSources("amadeus-config.ts");
+    expect(imports).toEqual([
+      "node:fs",
+      "node:path",
+      "./amadeus-contained-file.ts",
+      "./amadeus-lib.ts",
+      "./amadeus-mirror-project-contract.ts",
+      "./amadeus-mirror-types.ts",
     ]);
-    const imports = importSources("amadeus-layered-config.ts");
-    expect(imports).toContain("./amadeus-mirror-project-contract.ts");
     expect(imports).not.toContain("./amadeus-mirror-policy.ts");
   });
 
   test("C1 config module exposes no filesystem write API", () => {
-    const text = readFileSync(join(TOOLS, "amadeus-layered-config.ts"), "utf-8");
+    const text = readFileSync(join(TOOLS, "amadeus-config.ts"), "utf-8");
     for (const forbidden of [
       "writeFileSync",
       "appendFileSync",

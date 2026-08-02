@@ -281,8 +281,7 @@ function makeProject(withState: boolean): string {
     // Both hooks open a telemetry process span (#1628 Phase 2); the seam and
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
-    "amadeus-mirror-config.ts",
-    "amadeus-layered-config.ts",
+    "amadeus-config.ts",
     "amadeus-contained-file.ts",
     "amadeus-mirror-policy.ts",
     "amadeus-mirror-project-contract.ts",

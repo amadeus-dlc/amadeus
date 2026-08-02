@@ -1,5 +1,5 @@
 // t257 — pure three-mode mirror configuration parsing and precedence.
-// covers: packages/framework/core/tools/amadeus-layered-config.ts (parseAmadeusConfigLayers)
+// covers: packages/framework/core/tools/amadeus-config.ts (parseAmadeusConfigLayers)
 // size: small
 
 import { describe, expect, test } from "bun:test";
@@ -7,7 +7,7 @@ import {
   type ConfigLayer,
   type AmadeusConfigLayerInput,
   parseAmadeusConfigLayers,
-} from "../../packages/framework/core/tools/amadeus-layered-config.ts";
+} from "../../packages/framework/core/tools/amadeus-config.ts";
 
 function present(layer: ConfigLayer, rawValue: unknown): AmadeusConfigLayerInput {
   return { layer, path: `amadeus/${layer}.json`, present: true, rawValue };

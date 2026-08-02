@@ -1,34 +1,34 @@
 // t343 — C1 mirror-projects configuration: the widened allowlist, the
 // fail-closed "<owner>/<number>" and status-names parse, and per-key layer
 // precedence independent of auto-mirror.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts
+// covers: packages/framework/core/tools/amadeus-config.ts
 // size: small
 
 import { describe, expect, test } from "bun:test";
 import {
   type ConfigLayer,
-  type MirrorConfigLayerInput,
-  parseMirrorConfigLayers,
-} from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+  type AmadeusConfigLayerInput,
+  parseAmadeusConfigLayers,
+} from "../../packages/framework/core/tools/amadeus-config.ts";
 
 function layer(
   name: ConfigLayer,
   rawValue: unknown,
   present = true,
-): MirrorConfigLayerInput {
+): AmadeusConfigLayerInput {
   return { layer: name, path: `${name}/config.json`, present, rawValue };
 }
 
-function resolved(layers: MirrorConfigLayerInput[]) {
-  const outcome = parseMirrorConfigLayers(layers);
+function resolved(layers: AmadeusConfigLayerInput[]) {
+  const outcome = parseAmadeusConfigLayers(layers);
   if (outcome.kind !== "resolved") {
     throw new Error(`expected resolved, got: ${JSON.stringify(outcome.issues)}`);
   }
   return outcome;
 }
 
-function issues(layers: MirrorConfigLayerInput[]) {
-  const outcome = parseMirrorConfigLayers(layers);
+function issues(layers: AmadeusConfigLayerInput[]) {
+  const outcome = parseAmadeusConfigLayers(layers);
   if (outcome.kind !== "invalid") throw new Error("expected invalid");
   return outcome.issues;
 }
@@ -384,7 +384,7 @@ describe("t343 issue reporting", () => {
   });
 
   test("an invalid layer contributes no partial configuration", () => {
-    const outcome = parseMirrorConfigLayers([
+    const outcome = parseAmadeusConfigLayers([
       layer("global", { "mirror-projects": [{ project: "a/1" }] }),
       layer("intent", { "mirror-projects": "broken" }),
     ]);

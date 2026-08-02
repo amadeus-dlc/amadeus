@@ -115,8 +115,8 @@ describe("layered opt-in config", () => {
     proj = seedProject();
     writeConfig(proj, "global", { "auto-mirror": "off", observability: { enabled: true } });
     resetObservabilityConfigCache();
-    const { resolveMirrorConfig } = require("../../dist/claude/.claude/tools/amadeus-mirror-config.ts");
-    const outcome = resolveMirrorConfig(proj);
+    const { resolveAmadeusConfig } = require("../../dist/claude/.claude/tools/amadeus-config.ts");
+    const outcome = resolveAmadeusConfig(proj);
     expect(outcome.kind).toBe("resolved");
   });
 });
