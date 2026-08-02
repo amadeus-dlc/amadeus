@@ -51,9 +51,13 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 
 ### Harness-neutral fixed Unit pool
 
-The harness reports native facts only and never owns queue order, slot counters, or retry admission.
+The fixed pool protocol below supersedes whole-batch fan-out wording. The harness reports native facts only; it never owns queue order, slot counters, attempt counters, or retry admission.
 
-Call `.opencode/tools/amadeus-swarm.ts acquire --batch <n> --idempotency-key <stable-id>` until capacity is full. Dispatch only the returned unconfirmed active permits, then call `confirm-dispatch` with the native handle. After `check`, call `settle-release` (or `settle-release-cancel-dependents` for a local terminal failure); that same canonical event set releases the slot and acquires the next dependency-ready FIFO Unit. Use `record-reconciliation` for an unconfirmed dispatch: `no-effect-confirmed` tail-requeues within budget, while possible/unknown effect drains and stops new dispatch. Review/waiver waits consume no slot, late results are observation-only, and `finalize` refuses a non-terminal pool.
+1. Prepare with `bun .opencode/tools/amadeus-swarm.ts prepare --batch <n> --units <all> --concurrency <directive.cap> [--base <branch>] [--repo <name>]`.
+2. Call `bun .opencode/tools/amadeus-swarm.ts acquire --batch <n> --idempotency-key <stable-delivery-id>` until capacity is full. Dispatch only returned unconfirmed permits, then call `bun .opencode/tools/amadeus-swarm.ts confirm-dispatch --batch <n> --attempt <attempt-id> --native-handle <handle> --idempotency-key <stable-delivery-id>`.
+3. After `bun .opencode/tools/amadeus-swarm.ts check <unit> --check-cmd "<command>"`, call `bun .opencode/tools/amadeus-swarm.ts settle-release --batch <n> --attempt <attempt-id> --outcome <succeeded|failed> --idempotency-key <stable-delivery-id>`. Non-success cancels transitive dependents and the same event set promotes ready FIFO work.
+4. Reconcile an unconfirmed dispatch with `bun .opencode/tools/amadeus-swarm.ts record-reconciliation --batch <n> --attempt <attempt-id> --reconciliation-kind <kind> --effect <no-effect-confirmed|effect-possible|unknown> --idempotency-key <stable-delivery-id>`. Record late completions with `bun .opencode/tools/amadeus-swarm.ts late-result-observed --batch <n> --attempt <attempt-id> --outcome <outcome> --idempotency-key <stable-delivery-id>`.
+5. Call `bun .opencode/tools/amadeus-swarm.ts finalize --batch <n> --units <all> --claimed <converged> --check-cmd "<command>"` only after the pool exists and is terminal; absent, open, draining, queued, or active pools are rejected.
 
 ### Reviewer step (§12a)
 

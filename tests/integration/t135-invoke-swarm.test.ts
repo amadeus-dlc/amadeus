@@ -65,7 +65,7 @@
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -254,7 +254,10 @@ function setupReferee(): void {
       SWARM_TOOL, "--project-dir", proj, "acquire", "--batch", "1",
       "--idempotency-key", key,
     ], { encoding: "utf-8" });
-    return JSON.parse(result.stdout ?? "{}") as { projection?: { active?: Array<{ attemptId: string; unitId: string }> } };
+    expect(result.status).toBe(0);
+    const stdout = (result.stdout ?? "").trim();
+    expect(stdout).not.toBe("");
+    return JSON.parse(stdout) as { projection?: { active?: Array<{ attemptId: string; unitId: string }> } };
   };
   acquire("test-acquire-1");
   const acquired = acquire("test-acquire-2");
@@ -330,10 +333,21 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
 
   test("1c: invoke-swarm bakes the intent-over-space-over-project max-parallel-units cap", () => {
     const proj = seedCodegenProject("autonomous");
+    writeFileSync(
+      join(seededRecordDir(proj), "inception", "units-generation", "unit-of-work-dependency.md"),
+      "# Unit dependencies\n\n```yaml\nunits:\n  - name: a\n    depends_on: []\n  - name: b\n    depends_on: []\n  - name: c\n    depends_on: []\n  - name: d\n    depends_on: []\n```\n",
+    );
+    const graphPath = join(seededRecordDir(proj), "runtime-graph.json");
+    writeFileSync(graphPath, JSON.stringify({ bolt_dag: {
+      units: ["a", "b", "c", "d"].map((name) => ({ name, depends_on: [] })),
+      batches: [["a", "b", "c", "d"]],
+    } }));
     writeFileSync(join(proj, "amadeus", "config.json"), JSON.stringify({ "max-parallel-units": 2 }));
-    writeFileSync(join(proj, "amadeus", "spaces", "default", "config.json"), JSON.stringify({ "max-parallel-units": 2 }));
+    writeFileSync(join(proj, "amadeus", "spaces", "default", "config.json"), JSON.stringify({ "max-parallel-units": 3 }));
     writeFileSync(join(seededRecordDir(proj), "config.json"), JSON.stringify({ "max-parallel-units": 1 }));
     expect(runNext(proj).directive.cap).toBe(1);
+    unlinkSync(join(seededRecordDir(proj), "config.json"));
+    expect(runNext(proj).directive.cap).toBe(3);
   }, 30000);
 
   // 2: issue #1612 — `gated` is an APPROVAL-FREQUENCY grant, not a swarm veto.
@@ -415,6 +429,41 @@ function auditRecords(): { event: string | null; fields?: Record<string, string>
 }
 
 describe("t135 referee — batch-level swarm audit taxonomy + baton return (the lying-conductor guard)", () => {
+  test("finalize rejects an absent or uninitialized Unit pool", () => {
+    const proj = setupWorktreeFixture();
+    try {
+      seedRefereeFixture(proj);
+      const finalized = spawnSync(
+        BUN,
+        [SWARM_TOOL, "--project-dir", proj, "finalize", "--batch", "8", "--units", "win", "--claimed", "win", "--check-cmd", "true"],
+        { encoding: "utf-8" },
+      );
+      expect(finalized.status).toBe(2);
+      expect(finalized.stdout).toContain("fixed Unit pool is not terminal");
+    } finally {
+      spawnSync("chmod", ["-R", "u+w", proj]);
+      cleanupWorktreeFixture(proj);
+    }
+  }, 60000);
+
+  test("invalid degraded-from is rejected before worktrees or pool state are created", () => {
+    const proj = setupWorktreeFixture();
+    try {
+      seedRefereeFixture(proj);
+      const prepared = spawnSync(
+        BUN,
+        [SWARM_TOOL, "--project-dir", proj, "prepare", "--batch", "8", "--units", "win", "--base", "main", "--degraded-from", "invalid"],
+        { encoding: "utf-8" },
+      );
+      expect(prepared.status).toBe(1);
+      expect(prepared.stderr).toContain("--degraded-from must be one of");
+      expect(existsSync(join(proj, ".amadeus", "worktrees", "bolt-win"))).toBe(false);
+      expect(readAllShards(seededAuditDir(proj))).not.toContain("UNIT_POOL_EVENT_SET_COMMITTED");
+    } finally {
+      cleanupWorktreeFixture(proj);
+    }
+  }, 60000);
+
   test("prepare failure leaves no orphan Unit pool", () => {
     const proj = setupWorktreeFixture();
     try {

@@ -98,9 +98,13 @@ import {
   type RetryFacts,
 } from "./amadeus-convergence-policy.ts";
 import { reserveStageBudget } from "./amadeus-convergence-runtime.ts";
-import { resolveAmadeusConfig } from "./amadeus-config.ts";
-import { createAuditUnitPoolRepository, createUnitPoolCoordinator } from "./amadeus-unit-pool-runtime.ts";
-import type { UnitPoolOutcome } from "./amadeus-unit-pool.ts";
+import { resolveAmadeusConfig, type AmadeusConfigIssue } from "./amadeus-config.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+  type UnitPoolMutationResult,
+} from "./amadeus-unit-pool-runtime.ts";
+import { UNIT_POOL_OUTCOMES, type UnitPoolOutcome } from "./amadeus-unit-pool.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -473,6 +477,45 @@ function stopOnIncompletePrepare(
   process.exit(2);
 }
 
+function formatConfigIssues(issues: readonly AmadeusConfigIssue[]): string {
+  return issues.map((issue) =>
+    issue.kind === "read-failure"
+      ? `${issue.layer} (${issue.path}): ${issue.summary}`
+      : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`
+  ).join(" | ");
+}
+
+function readDegradedFrom(flags: Record<string, string>): DriverName | undefined {
+  const value = flags["degraded-from"] as DriverName | undefined;
+  if (value !== undefined && !DRIVER_VALUES.includes(value)) {
+    fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
+  }
+  return value;
+}
+
+function emitDegradeIfRequested(projectDir: string, batch: string, requested: DriverName | undefined): void {
+  if (requested !== undefined) emitSwarmDegraded(projectDir, batch, requested);
+}
+
+function resolvePrepareConcurrency(
+  projectDir: string,
+  flags: Record<string, string>,
+  unitCount: number,
+): number {
+  const resolvedConfig = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
+  if (resolvedConfig.kind === "invalid") {
+    fail(`invalid swarm configuration: ${formatConfigIssues(resolvedConfig.issues)}`);
+  }
+  if (flags.concurrency !== undefined && !/^[1-9][0-9]*$/.test(flags.concurrency)) {
+    fail("--concurrency must be a positive integer");
+  }
+  const override = flags.concurrency === undefined ? resolvedConfig.config.maxParallelUnits : Number(flags.concurrency);
+  if (override > resolvedConfig.config.maxParallelUnits) {
+    fail(`--concurrency may only narrow max-parallel-units (${resolvedConfig.config.maxParallelUnits})`);
+  }
+  return Math.min(unitCount, resolvedConfig.config.maxParallelUnits, override);
+}
+
 function handlePrepare(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -487,6 +530,7 @@ function handlePrepare(rest: string[]): void {
   if (units.length === 0) {
     fail("--units resolved to an empty list");
   }
+  const degradedFrom = readDegradedFrom(flags);
 
   // P7: the construction repo this batch targets. resolveConstructionRepo errors
   // on a multi-repo intent with no --repo (forwarded as the batch failure), infers
@@ -504,22 +548,7 @@ function handlePrepare(rest: string[]): void {
   }
 
   const base = flags.base ?? currentBranch(repoCwd);
-  const resolvedConfig = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
-  if (resolvedConfig.kind === "invalid") {
-    fail(`invalid swarm configuration: ${resolvedConfig.issues.map((issue) =>
-      issue.kind === "read-failure"
-        ? `${issue.layer} (${issue.path}): ${issue.summary}`
-        : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`
-    ).join(" | ")}`);
-  }
-  if (flags.concurrency !== undefined && !/^[1-9][0-9]*$/.test(flags.concurrency)) {
-    fail("--concurrency must be a positive integer");
-  }
-  const override = flags.concurrency === undefined ? resolvedConfig.config.maxParallelUnits : Number(flags.concurrency);
-  if (override > resolvedConfig.config.maxParallelUnits) {
-    fail(`--concurrency may only narrow max-parallel-units (${resolvedConfig.config.maxParallelUnits})`);
-  }
-  const concurrency = String(Math.min(units.length, resolvedConfig.config.maxParallelUnits, override));
+  const concurrency = String(resolvePrepareConcurrency(projectDir, flags, units.length));
 
   const prepared: PreparedUnit[] = [];
   // Forward the RESOLVED repo name (not the raw flag) so every sibling primitive
@@ -585,13 +614,7 @@ function handlePrepare(rest: string[]): void {
   // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
   // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
   // only learns a degrade happened via this flag.
-  if (flags["degraded-from"]) {
-    const requested = flags["degraded-from"] as DriverName;
-    if (!DRIVER_VALUES.includes(requested)) {
-      fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
-    }
-    emitSwarmDegraded(projectDir, flags.batch, requested);
-  }
+  emitDegradeIfRequested(projectDir, flags.batch, degradedFrom);
 
   emitSwarmStarted(projectDir, flags.batch, units, concurrency);
 
@@ -864,8 +887,8 @@ export function handleFinalize(
     createAuditUnitPoolRepository(projectDir),
   ).readProjection(batch);
   if (
-    poolProjection.batchId !== null &&
-    (poolProjection.phase !== "terminal" || poolProjection.queue.length > 0 || poolProjection.active.length > 0)
+    poolProjection.batchId === null ||
+    poolProjection.phase !== "terminal" || poolProjection.queue.length > 0 || poolProjection.active.length > 0
   ) {
     finishFinalizeInputFailure(
       {
@@ -1085,18 +1108,6 @@ export function handleResolve(
 
 // --- fixed Unit pool -------------------------------------------------------
 
-const UNIT_POOL_OUTCOMES: readonly UnitPoolOutcome[] = [
-  "succeeded",
-  "failed",
-  "cancelled",
-  "dependency-unsatisfied",
-  "batch-unsafe",
-  "dispatch-not-started",
-  "dispatch-effect-unknown",
-  "worker-unresponsive",
-  "cancel-unconfirmed",
-];
-
 function requiredBatch(flags: Record<string, string>): string {
   if (!flags.batch || !/^[1-9][0-9]*$/.test(flags.batch)) fail("pool command requires --batch <positive integer>");
   return flags.batch;
@@ -1106,7 +1117,7 @@ function poolKey(flags: Record<string, string>, fallback: string): string {
   return flags["idempotency-key"] ?? fallback;
 }
 
-function printPoolMutation(result: ReturnType<ReturnType<typeof createUnitPoolCoordinator>["acquire"]>): void {
+function printPoolMutation(result: UnitPoolMutationResult): void {
   console.log(JSON.stringify(result, null, 2));
   process.exit(result.ok ? 0 : 2);
 }
@@ -1119,7 +1130,7 @@ function handleInitialEnqueue(rest: string[]): void {
   const units = splitCsv(flags.units);
   if (units.length === 0) fail("--units resolved to an empty list");
   const config = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
-  if (config.kind === "invalid") fail("invalid swarm configuration");
+  if (config.kind === "invalid") fail(`invalid swarm configuration: ${formatConfigIssues(config.issues)}`);
   const requested = flags.cap === undefined ? config.config.maxParallelUnits : Number(flags.cap);
   if (!Number.isInteger(requested) || requested < 1 || requested > config.config.maxParallelUnits) {
     fail(`--cap must be an integer from 1 through ${config.config.maxParallelUnits}`);
@@ -1140,7 +1151,7 @@ function handleAcquire(rest: string[]): void {
   if (!flags["idempotency-key"]) fail("acquire requires --idempotency-key <stable-delivery-id>");
   const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
   printPoolMutation(coordinator.acquire({
-    idempotencyKey: flags["idempotency-key"],
+    idempotencyKey: `unit-pool:${batchId}:acquire:${flags["idempotency-key"]}`,
     batchId,
   }));
 }

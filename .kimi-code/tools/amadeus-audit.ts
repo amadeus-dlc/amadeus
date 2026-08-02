@@ -86,7 +86,6 @@ const VALID_EVENT_TYPES = new Set([
   // Harness-neutral execution lifecycle batches (#1602). One row is one
   // canonical event set; required projections consume its digest after append.
   "EXECUTION_EVENT_SET_COMMITTED",
-  "UNIT_POOL_EVENT_SET_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -197,6 +196,7 @@ const VALID_EVENT_TYPES = new Set([
   // Swarm lifecycle — all emit from the swarm referee amadeus-swarm.ts (the
   // per-Unit pair + batch tally from `finalize`; SWARM_STARTED + SWARM_DEGRADED
   // from `prepare`). See CHANGELOG + audit-format.md.
+  "UNIT_POOL_EVENT_SET_COMMITTED",
   "SWARM_STARTED",
   "SWARM_UNIT_CONVERGED",
   "SWARM_UNIT_FAILED",

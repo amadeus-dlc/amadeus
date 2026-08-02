@@ -18,11 +18,25 @@ describe("t425 harness parity", () => {
   ] as const;
 
   test.each(roots)("%s ships the same pool owner and native-fact-only protocol", (harness, dir, instruction) => {
-    expect(existsSync(join("dist", harness, dir, "tools", "amadeus-unit-pool.ts"))).toBe(true);
-    expect(existsSync(join("dist", harness, dir, "tools", "amadeus-unit-pool-runtime.ts"))).toBe(true);
+    const poolPath = join("dist", harness, dir, "tools", "amadeus-unit-pool.ts");
+    const runtimePath = join("dist", harness, dir, "tools", "amadeus-unit-pool-runtime.ts");
+    expect(existsSync(poolPath)).toBe(true);
+    expect(existsSync(runtimePath)).toBe(true);
+    expect(readFileSync(poolPath, "utf8")).toBe(
+      readFileSync("packages/framework/core/tools/amadeus-unit-pool.ts", "utf8"),
+    );
+    expect(readFileSync(runtimePath, "utf8")).toBe(
+      readFileSync("packages/framework/core/tools/amadeus-unit-pool-runtime.ts", "utf8"),
+    );
     const text = readFileSync(join("dist", harness, instruction), "utf8");
-    expect(text).toContain("confirm-dispatch");
     expect(text).toContain("never owns queue order");
-    expect(text).toContain("finalize");
+    expect(text).toContain("prepare --batch <n> --units <all> --concurrency <directive.cap>");
+    expect(text).toContain("acquire --batch <n> --idempotency-key <stable-delivery-id>");
+    expect(text).toContain("confirm-dispatch --batch <n> --attempt <attempt-id> --native-handle <handle> --idempotency-key <stable-delivery-id>");
+    expect(text).toContain("settle-release --batch <n> --attempt <attempt-id> --outcome <succeeded|failed> --idempotency-key <stable-delivery-id>");
+    expect(text).toContain("record-reconciliation --batch <n> --attempt <attempt-id> --reconciliation-kind <kind> --effect <no-effect-confirmed|effect-possible|unknown> --idempotency-key <stable-delivery-id>");
+    expect(text).toContain("late-result-observed --batch <n> --attempt <attempt-id> --outcome <outcome> --idempotency-key <stable-delivery-id>");
+    expect(text).toContain("finalize --batch <n> --units <all> --claimed <converged> --check-cmd");
+    expect(text).toContain("pool exists and is terminal");
   });
 });

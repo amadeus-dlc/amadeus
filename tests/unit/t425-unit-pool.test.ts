@@ -11,6 +11,8 @@ import {
 import {
   createMemoryUnitPoolRepository,
   createUnitPoolCoordinator,
+  decodeUnitPoolEventSet,
+  fingerprintUnitPoolRequest,
 } from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
 
 const units = (count: number) =>
@@ -37,42 +39,17 @@ describe("t425 unit plan validation", () => {
 });
 
 describe("t425 fixed pool", () => {
-  test("controlled worker latches keep four submitted Units at max active two and complete all", async () => {
+  test("a released slot promotes the next ready Unit in FIFO order", () => {
     const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
     coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 2, units: units(4) });
     coordinator.acquire({ idempotencyKey: "a0", batchId: "b" });
     coordinator.acquire({ idempotencyKey: "a1", batchId: "b" });
-
-    const started = new Set<string>();
-    const releases: Array<() => void> = [];
-    const running = new Set<string>();
-    let maxRunning = 0;
-    const promises: Promise<void>[] = [];
-    const startReady = () => {
-      for (const attempt of coordinator.readProjection("b").active) {
-        if (started.has(attempt.attemptId)) continue;
-        started.add(attempt.attemptId);
-        coordinator.confirmDispatch({ idempotencyKey: `confirm-${attempt.attemptId}`, batchId: "b", attemptId: attempt.attemptId, nativeHandle: attempt.attemptId });
-        running.add(attempt.attemptId);
-        maxRunning = Math.max(maxRunning, running.size);
-        promises.push(new Promise<void>((resolve) => releases.push(() => {
-          running.delete(attempt.attemptId);
-          coordinator.settleRelease({ idempotencyKey: `s-${attempt.attemptId}`, batchId: "b", attemptId: attempt.attemptId, outcome: "succeeded" });
-          startReady();
-          resolve();
-        })));
-      }
-    };
-    startReady();
-    while (coordinator.readProjection("b").terminal.length < 4) {
-      const release = releases.shift();
-      expect(release).toBeDefined();
-      release!();
-      await Promise.resolve();
-    }
-    await Promise.all(promises);
-    expect(maxRunning).toBe(2);
-    expect(coordinator.readProjection("b").terminal).toHaveLength(4);
+    expect(coordinator.readProjection("b").active.map((attempt) => attempt.unitId)).toEqual(["u0", "u1"]);
+    const first = coordinator.readProjection("b").active[0];
+    coordinator.confirmDispatch({ idempotencyKey: "confirm-u0", batchId: "b", attemptId: first.attemptId, nativeHandle: "u0" });
+    coordinator.settleRelease({ idempotencyKey: "settle-u0", batchId: "b", attemptId: first.attemptId, outcome: "succeeded" });
+    expect(coordinator.readProjection("b").active.map((attempt) => attempt.unitId)).toEqual(["u1", "u2"]);
+    expect(coordinator.readProjection("b").queue.map((entry) => entry.unitId)).toEqual(["u3"]);
   });
 
   test.each([
@@ -149,6 +126,22 @@ describe("t425 fixed pool", () => {
     const projection = coordinator.readProjection("b");
     expect(projection.terminal).toContainEqual(expect.objectContaining({ unitId: "dependent", outcome: "dependency-unsatisfied" }));
     expect(projection.active.some((entry) => entry.unitId === "independent")).toBe(true);
+  });
+
+  test("settle-release automatically cancels transitive dependents on non-success", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({
+      idempotencyKey: "init", batchId: "b", cap: 1,
+      units: [{ unitId: "root", dependsOn: [] }, { unitId: "child", dependsOn: ["root"] }],
+    });
+    coordinator.acquire({ idempotencyKey: "acquire", batchId: "b" });
+    const attempt = coordinator.readProjection("b").active[0];
+    coordinator.confirmDispatch({ idempotencyKey: "confirm", batchId: "b", attemptId: attempt.attemptId, nativeHandle: "root" });
+    coordinator.settleRelease({ idempotencyKey: "settle", batchId: "b", attemptId: attempt.attemptId, outcome: "failed" });
+    expect(coordinator.readProjection("b").terminal).toEqual(expect.arrayContaining([
+      expect.objectContaining({ unitId: "root", outcome: "failed" }),
+      expect.objectContaining({ unitId: "child", outcome: "dependency-unsatisfied" }),
+    ]));
   });
 
   test("a duplicate settle is idempotent and does not release twice", () => {
@@ -243,10 +236,47 @@ describe("t425 fixed pool", () => {
     const coordinator = createUnitPoolCoordinator(repository);
     expect(coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 1, units: units(1) })).toEqual({
       ok: false,
-      reason: "canonical-write-failed",
+      reason: "canonical-write-failed: injected-unit-pool-append-failure",
     });
     expect(repository.readEventSets()).toEqual([]);
     expect(coordinator.readProjection("b")).toMatchObject({ batchId: null, queue: [], active: [], terminal: [] });
+  });
+
+  test("initial-enqueue rejects a queue that does not exactly match canonical order", () => {
+    const projection = foldUnitPoolEventSets([], "b");
+    expect(proposeUnitPoolCommand(projection, {
+      kind: "initial-enqueue",
+      batchId: "b",
+      cap: 1,
+      units: [{ unitId: "a", dependsOn: [] }, { unitId: "b", dependsOn: [] }],
+      queue: [
+        { queueEntryId: "duplicate", unitId: "b", ordinal: 0 },
+        { queueEntryId: "duplicate", unitId: "a", ordinal: 1 },
+      ],
+    })).toEqual({ ok: false, reason: "invalid-initial-queue" });
+  });
+
+  test("request fingerprints are invariant to object key insertion order", () => {
+    expect(fingerprintUnitPoolRequest({ batchId: "b", nested: { z: 1, a: 2 } })).toBe(
+      fingerprintUnitPoolRequest({ nested: { a: 2, z: 1 }, batchId: "b" }),
+    );
+  });
+
+  test("the same idempotency key cannot replay across batches", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    expect(coordinator.initialEnqueue({ idempotencyKey: "shared", batchId: "one", cap: 1, units: units(1) }).ok).toBe(true);
+    expect(coordinator.initialEnqueue({ idempotencyKey: "shared", batchId: "two", cap: 1, units: units(1) })).toEqual({
+      ok: false,
+      reason: "idempotency-conflict",
+    });
+  });
+
+  test("malformed audit event-set JSON fails closed", () => {
+    expect(() => decodeUnitPoolEventSet("not-json")).toThrow();
+    expect(() => decodeUnitPoolEventSet(JSON.stringify({
+      eventSetId: "set", batchId: "b", idempotencyKey: "key", payloadFingerprint: "hash",
+      events: [{ type: "not-a-unit-pool-event" }],
+    }))).toThrow("invalid-unit-pool-audit-row");
   });
 
   test("reconciliation exhaustion settles the Unit as worker-unresponsive and drains the batch", () => {

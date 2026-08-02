@@ -30,6 +30,10 @@ import {
   emitUnitFailed,
   handleFinalize,
 } from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+} from "../../dist/claude/.claude/tools/amadeus-unit-pool-runtime.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -223,9 +227,15 @@ describe("finalize drives the taxonomy through the seam", () => {
   }
 
   test("a claimed unit with no worktree fails, returns the baton and closes the batch", () => {
-    // No prepare ran, so the unit has no worktree: finalize refuses the merge
-    // and writes the failure trio. Exit 2 is the "conductor takes the baton"
-    // signal, which is what makes this the honest driver for those emitters.
+    // Finalize requires an initialized terminal pool. Drive one Unit through its
+    // complete pool lifecycle without creating a worktree; re-verification then
+    // fails on the absent worktree and writes the failure trio.
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    pool.initialEnqueue({ idempotencyKey: "init", batchId: "1", cap: 1, units: [{ unitId: "u1", dependsOn: [] }] });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "1" });
+    const attempt = pool.readProjection("1").active[0];
+    pool.confirmDispatch({ idempotencyKey: "confirm", batchId: "1", attemptId: attempt.attemptId, nativeHandle: "native-u1" });
+    pool.settleRelease({ idempotencyKey: "settle", batchId: "1", attemptId: attempt.attemptId, outcome: "succeeded" });
     const code = callFinalize([
       "--batch",
       "1",

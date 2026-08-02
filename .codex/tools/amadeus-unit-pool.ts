@@ -6,22 +6,21 @@
 // runtime adapter owns those effects.
 
 export const UNIT_ATTEMPT_DEFAULT_CAP = 2;
-export const UNIT_ATTEMPT_HARD_CAP = 3;
 export const RECONCILIATION_DEFAULT_CAP = 2;
-export const RECONCILIATION_HARD_CAP = 3;
-export const RECONCILIATION_PROBE_MS = 5_000;
-export const RECONCILIATION_PROBE_HARD_MS = 10_000;
 
-export type UnitPoolOutcome =
-  | "succeeded"
-  | "failed"
-  | "cancelled"
-  | "dependency-unsatisfied"
-  | "batch-unsafe"
-  | "dispatch-not-started"
-  | "dispatch-effect-unknown"
-  | "worker-unresponsive"
-  | "cancel-unconfirmed";
+export const UNIT_POOL_OUTCOMES = [
+  "succeeded",
+  "failed",
+  "cancelled",
+  "dependency-unsatisfied",
+  "batch-unsafe",
+  "dispatch-not-started",
+  "dispatch-effect-unknown",
+  "worker-unresponsive",
+  "cancel-unconfirmed",
+] as const;
+
+export type UnitPoolOutcome = (typeof UNIT_POOL_OUTCOMES)[number];
 
 export type UnitPoolPhase = "open" | "draining" | "terminal";
 export type UnitPoolResult = "completed" | "partial-failure" | "cancelled" | "terminated" | null;
@@ -274,6 +273,13 @@ function proposeInitialEnqueue(
   if (!Number.isInteger(command.cap) || command.cap < 1 || command.cap > 4) return { ok: false, reason: "invalid-cap" };
   const validation = validateAndOrderUnits(command.units);
   if (!validation.ok) return { ok: false, reason: `${validation.reason}:${validation.detail}` };
+  if (
+    command.queue.length !== validation.orderedUnitIds.length ||
+    new Set(command.queue.map((entry) => entry.queueEntryId)).size !== command.queue.length ||
+    command.queue.some((entry, ordinal) =>
+      entry.unitId !== validation.orderedUnitIds[ordinal] || entry.ordinal !== ordinal
+    )
+  ) return { ok: false, reason: "invalid-initial-queue" };
   return {
     ok: true,
     events: [{
@@ -364,14 +370,17 @@ function proposeReconciliation(
     type: "reconciliation-recorded",
     record: { attemptId: command.attemptId, kind: command.reconciliationKind, ordinal, effect: command.effect },
   };
-  if (command.effect === "no-effect-confirmed") {
-    return proposeNoEffectReconciliation(projection, command, attempt, recorded);
+  switch (command.effect) {
+    case "no-effect-confirmed":
+      return proposeNoEffectReconciliation(projection, command, attempt, recorded);
+    case "effect-possible":
+    case "unknown":
+      return { ok: true, events: [
+        recorded,
+        { type: "unit-settled", terminal: { unitId: attempt.unitId, attemptId: attempt.attemptId, outcome: "dispatch-effect-unknown" } },
+        { type: "batch-draining", queuedOutcome: "batch-unsafe" },
+      ] };
   }
-  return { ok: true, events: [
-    recorded,
-    { type: "unit-settled", terminal: { unitId: attempt.unitId, attemptId: attempt.attemptId, outcome: "dispatch-effect-unknown" } },
-    { type: "batch-draining", queuedOutcome: "batch-unsafe" },
-  ] };
 }
 
 function proposeRequeueSettlement(
@@ -403,7 +412,11 @@ function proposeSettlement(projection: UnitPoolProjection, command: SettlementCo
     type: "unit-settled",
     terminal: { unitId: attempt.unitId, attemptId: attempt.attemptId, outcome: command.outcome },
   };
-  if (command.kind === "settle-release") return { ok: true, events: [settled] };
+  if (command.kind === "settle-release") {
+    return command.outcome === "succeeded"
+      ? { ok: true, events: [settled] }
+      : { ok: true, events: [settled, ...cancelledDependentEvents(projection, attempt.unitId)] };
+  }
   if (command.kind === "settle-release-requeue") {
     return proposeRequeueSettlement(projection, command, attempt, settled);
   }

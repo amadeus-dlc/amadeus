@@ -227,6 +227,14 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const tooWide = invokeSwarm();
     tooWide.cap = 3;
     expect(errs(tooWide)).toContain("invoke-swarm: cap must not exceed units.length");
+
+    const zero = invokeSwarm();
+    zero.cap = 0;
+    expect(errs(zero)).toContain("invoke-swarm: cap must be a positive integer");
+
+    const fractional = invokeSwarm();
+    fractional.cap = 1.5;
+    expect(errs(fractional)).toContain("invoke-swarm: cap must be a positive integer");
   });
 
   test("present-gate missing memory_path -> error", () => {

@@ -83,7 +83,7 @@ export const EXPECTED_CANONICAL_COUNT = 81;
 export const EXCEPTION_SPAN_EVENT_NAME = "exception";
 
 export const REGISTERED_EVENTS = [
-  // --- Workflow Lifecycle (6) ---
+  // --- Workflow Lifecycle (7) ---
   {
     name: "amadeus.workflow.started",
     auditEvent: "WORKFLOW_STARTED",
@@ -144,15 +144,6 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Root Operation Id", "Event Set Digest", "Event Set"],
-    optionalAttributes: [],
-    schemaVersion: 1,
-  },
-  {
-    name: "amadeus.unit_pool.event_set.committed",
-    auditEvent: "UNIT_POOL_EVENT_SET_COMMITTED",
-    durability: "canonical",
-    category: "swarm",
-    requiredAttributes: ["Batch Id", "Event Set Id", "Event Set"],
     optionalAttributes: [],
     schemaVersion: 1,
   },
@@ -789,7 +780,16 @@ export const REGISTERED_EVENTS = [
     optionalAttributes: [],
     schemaVersion: 1,
   },
-  // --- Swarm (6) ---
+  // --- Swarm (7) ---
+  {
+    name: "amadeus.unit_pool.event_set.committed",
+    auditEvent: "UNIT_POOL_EVENT_SET_COMMITTED",
+    durability: "canonical",
+    category: "swarm",
+    requiredAttributes: ["Batch Id", "Event Set Id", "Event Set"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
   {
     name: "amadeus.swarm.started",
     auditEvent: "SWARM_STARTED",

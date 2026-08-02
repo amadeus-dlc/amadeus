@@ -130,6 +130,6 @@ These six `SWARM_*` events and the Unit-pool event are part of the 81-event audi
 
 - **The conductor's own chapter** — the forwarding loop, the gate ritual, and the learnings ritual in full. See [Orchestrator](03-orchestrator.md).
 - **The execution-truth artefact the engine and swarm read** — `runtime-graph.json` and its `bolt_dag` node. See [Runtime Graph](13-runtime-graph.md).
-- **The transitions `report` commits** - the workflow / phase / stage machines and the 68-event audit taxonomy. See [State Machine](12-state-machine.md).
+- **The transitions `report` commits** - the workflow / phase / stage machines and the 81-event audit taxonomy. See [State Machine](12-state-machine.md).
 - **The deterministic spine** — the Stop hook and the other framework hooks and tools. See [Hooks and Tools](06-hooks-and-tools.md).
 - **Using the runners day to day** — the typeable `/amadeus-<stage>` and `/amadeus-<scope>` commands. See the User Guide's [Skills and Runner Commands](../guide/17-skills.md).

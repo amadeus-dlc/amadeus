@@ -130,6 +130,6 @@ flowchart LR
 
 - **コンダクター自身の章** — 転送ループ、ゲートの儀式、学習の儀式を完全に。[Orchestrator](03-orchestrator.ja.md) を参照。
 - **エンジンとスウォームが読む execution-truth の成果物** — `runtime-graph.json` とその `bolt_dag` ノード。[Runtime Graph](13-runtime-graph.ja.md) を参照。
-- **`report` がコミットする遷移** - ワークフロー / フェーズ / ステージのマシンと 68-event 監査分類。[State Machine](12-state-machine.ja.md) を参照。
+- **`report` がコミットする遷移** - ワークフロー / フェーズ / ステージのマシンと 81-event 監査分類。[State Machine](12-state-machine.ja.md) を参照。
 - **決定論的な背骨** — Stop フックと他のフレームワークフックおよびツール。[Hooks and Tools](06-hooks-and-tools.ja.md) を参照。
 - **ランナーを日々使う** — タイプ可能な `/amadeus-<stage>` と `/amadeus-<scope>` コマンド。User Guide の [Skills and Runner Commands](../guide/17-skills.ja.md) を参照。
