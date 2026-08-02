@@ -785,5 +785,12 @@
     "dirName": "260801-tla-multi-model",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
+    "slug": "scope-grid-face-sync",
+    "dirName": "260802-scope-grid-face-sync",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

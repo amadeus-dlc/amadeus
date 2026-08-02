@@ -1,6 +1,27 @@
 # アーキテクチャ
 
-## formal-model-check 複数モデル化の対象機構（260801-tla-multi-model、現在、observed `33e196b8`）
+## scope-grid 面間同期の対象機構（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+
+本節の file:line はすべて observed `47574fbab` 時点。患部全数・引用再確認・ガード実行結果は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
+
+- **区間の構造変化（`33e196b80` → `47574fbab`、57 commits / 1,295 files / +74,640 −10,737）**: 患部（scope レジストリ 5 面・promote-self・graph compile・self-scope-consistency センサー）は区間内 0 コミットで無変更（`git log --oneline 33e196b80..47574fbab -- <path>` が 9 パスすべて 0 件）。区間の主な変化は患部外の 5 系統 — (1) `#2017` の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、(2) `#2012`（`f87cf9389`）formal-model-check の全登録 TLA モデル一般化（FormalElection 固定語彙を `model-map.json` 側へ移設）、(3) plugin compose 読取境界の fail-closed 化（`#1964`/`#1996`/`#2005`/`#1970`、新規 `t410`/`t411`）、(4) fatal-latch 系 loud fail 徹底（`#1959`/`#1961`/`#1966`/`#2000`）、(5) cg-plan-guard 3 Bolt（`#1928`/`#1939`/`#1948`）+ `#2016` mirror label 同期（`t412`）。残りは metrics スナップショット群。区間内で唯一患部近傍に触れたのは `.github/workflows/ci.yml`（`f87cf9389` 1 件）だが変更は `formal-model-check` ジョブのステップ名と echo 文言のみで、drift guard ステップ群（`ci.yml:243-255`）は無変更。
+
+- **scope レジストリの 3 層構造**: scope は「prose（`<face>/scopes/amadeus-<scope>.md`）」と「grid セル（`<face>/tools/data/scope-grid.json`）」の 2 面を持ち、それが 5 つの dogfood ハーネス面（`.claude` / `.codex` / `.cursor` / `.opencode` / `.kimi-code`）に**複製**されて存在する。第 3 層の `dist/<harness>/<face>/tools/data/scope-grid.json` は 7 面すべてが stock 10 行のみで、`self-*` 行を 1 つも持たない（実測: 7 ファイルとも `total_rows=10`、`self_rows=NONE`）。`self-*` は dist に載らない composed / runtime データという位置づけであり、この「dist に正本がない」ことが後述する盲点の共通の根になっている。
+
+- **乖離の現存（observed 実測）**: `self-feature` の 4 セル（`feasibility` / `approval-handoff` / `practices-discovery` / `nfr-requirements`）が `.claude` のみ `SKIP`、他 4 面は `EXECUTE`。EXECUTE 数は `.claude` 15/33 に対し他 4 面 18/32。prose 側も `.claude` だけが 2026-07-28 の lightening 記述を保持し、`amadeus-self-feature.md` は 17 行差、`self-document` / `self-refactor` は各 4 行差、`self-fix` は 0 行差（差分は 4 面とも同一）。すなわち 2026-07-28 の lightening 決定は `.claude` 1 面にしか着地しておらず、他 4 面は決定前の姿のまま 4 か月分の運用を通過している。
+
+- **意図的非対称との切り分け（第 5 の差分）**: `formal-model-check` セルは `.claude` のみ `EXECUTE`、他 4 面は当該キー自体が不在。これは欠陥ではなく設計であり、一次根拠は `packages/framework/core/tools/amadeus-graph.ts` の `mergeComposedScopes` 直上コメント — `:1375` 「A folded row's CELLS are preserved verbatim, including a cell addressing a slug the graph being compiled does not hold.」および `:1387` 「the shipped grid carries `self-feature.formal-model-check`, so every workspace that has not composed that opt-in plugin holds one by design.」。opt-in plugin ステージ（`scopes: []`）はセルを mint しないため、compose 済みの `.claude` だけがセルを持つ。**面間比較を導入する検査はこの 1 セルを差分として報告してはならない** — 同期対象は lightening 由来の 4 セル + prose であり、`formal-model-check` は除外条件として明示的に扱う必要がある。`installer-distribution` scope も同種の非対称（`.claude` / `.kimi-code` のみ存在、他 3 面不在 = 32 セル全体が scope-absent 差分）だが、`self-` 接頭辞でないため現行センサーの対象外。
+
+- **ガード 3 層が green のまま素通しする機序**: 3 層いずれも「面間のセル値」を見ない構造で、乖離を検出する責務がどこにも配置されていない。
+  1. **`scripts/promote-self.ts`** — prose は `COMPOSED_SCOPE_RE`（`:124`）が比較経路から除外する（`:455` の `if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist`）。grid は `scopeGridInSync`（`:132-134`、`mergeScopeGrid(got, want).equals(got)`）で判定するが、`mergeScopeGrid`（`:146-166`）は dist に無いキーを extras（`:151`）として拾い、`:156` の `.map((k) => [k, Object.hasOwn(w, k) ? w[k] : g[k]])` で **dst 側の値を verbatim 保持**するため、dist に `self-*` 行が 1 つも無い現状では `self-*` 行に対して恒真になる。`bun run promote:self:check` → exit 0（実測）。
+  2. **`amadeus-graph.ts compile --check`** — `mergeComposedScopes`（`:1394-1421`）が `:1409` `if (name in merged) continue;` により folded row のセルを verbatim 保存するため、on-disk のセル値は compile 結果と衝突しない。加えて CI（`ci.yml:254-255`）は `.claude` の tool を起動し、`scopeGridPath()`（`:330-332`、`DATA_DIR` は `:197` の `__FILE_DIR/data`）が起動ファイル自身のディレクトリを基底にするため、**検査対象は起動した 1 面のみ**。exit 0（実測）。
+  3. **`self-scope-consistency` センサー** — `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts`（231 行）は `readGridScopes`（`:110-137`）が `:116-117` で `Object.keys(grid)` の**名前だけ**を収集し、値である `.stages`（= セル全体）を読み捨てる。`compareExpected`（`:153-172`）は定数 `EXPECTED_SELF_SCOPES`（`:12-17`）との名前集合比較のみで、**面間比較そのものが存在しない**。5 面のコピーは canonical と byte 一致（`cmp` 実測、5/5 IDENTICAL）なので、どの面から起動しても同じ盲点を持つ。直接実行 → `{"pass":true,"findings_count":0,"findings":[],"skipped":null}`。
+
+- **manifest 文言が盲点を前提化している**: `packages/framework/core/sensors/amadeus-self-scope-consistency.md` は `:5` `default_severity: advisory`、`:8` `matches: "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}"`、本文 `:37-38` で「The check is advisory at write time. Package and promotion drift guards remain the release-blocking verification surfaces.」と宣言する。しかし上記のとおり package / promotion drift guard は `self-*` 行を構造的に見ない。**advisory センサーが release-blocking と呼んだ相手が、当のセンサーが見ている領域を見ていない** — 責務の相互委譲による空白であり、本 intent の再発防止はこの委譲関係の是正を含む。
+
+- **値比較拡張の設計含意（面間比較が構造的に安全な理由）**: 期待セル値を定数として持たせる案は、grid 本体と並ぶ第 2 の正本を作り、lightening のたびに 2 か所を同期する新しい drift 源になる。面間比較（多数決や canonical face 指定ではなく「全面一致」を不変条件とする）は期待値を持たないため第 2 正本を作らず、`formal-model-check` / `installer-distribution` のような意図的非対称だけを明示的な除外として扱えばよい。センサーは dormant 判定（`:180-185`、self-* が 1 つも無い通常プロジェクトでは `skipped: "no-self-scopes"`）を持つため、面間比較を足しても配布先プロジェクトへの影響はない。
+
+## formal-model-check 複数モデル化の対象機構（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 本節の file:line はすべて observed `33e196b8` 時点。患部全数・引用再確認・降格確認は `re-scans/260801-tla-multi-model.md` を正本とする。
 

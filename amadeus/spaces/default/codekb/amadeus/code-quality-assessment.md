@@ -1,6 +1,24 @@
 # コード品質評価
 
-## formal-model-check 複数モデル化の品質所見（260801-tla-multi-model、現在、observed `33e196b8`）
+## scope-grid 面間同期の品質所見（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+
+本節の file:line はすべて observed `47574fbab` 時点。実測手順とコマンド出力は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
+
+- **テスト空白（決定的）— 面間のセル値を pin するテストが存在しない**: `.claude` の `self-feature` 4 セルを `SKIP` から `EXECUTE` へ書き戻しても、逆に他 4 面を `SKIP` へ揃えても、赤になるテストは無い。既存の 3 種はいずれも別のことを見ている — (1) `tests/unit/t370-promote-self-scopegrid-order.test.ts`（9 test、`:50` describe）は `mergeScopeGrid` / `scopeGridInSync` のキー順対称性・冪等性・prototype 名 scope の保存を pin するが、**セル値の面間一致は pin していない**（`:78` "composed values survive canonicalisation" は 1 面内での値保存であって面間一致ではない）。(2) `tests/integration/t-self-scope-consistency-sensor.test.ts`（217 行 / 6 test）はセンサーの名前集合検査を pin する。(3) drift guard 群は前述のとおり `self-*` 行を構造的に見ない。この 3 者の隙間が乖離の 4 か月生存を許した。
+
+- **センサー fixture が値比較を構造的に排除している**: `t-self-scope-consistency-sensor.test.ts` の `seedHarness`（`:22-34`）は grid を `Object.fromEntries(gridScopes.map((scope) => [scope, { stages: {} }]))`（`:33`）— **すべての scope を空 `stages` で seed** する。したがって現行 6 test はセル値がそもそも存在しない世界でしか動いておらず、値比較を足す際は **全 fixture の更新が必須**（空 stages のままでは新検査が vacuous に通り、`cid:code-generation:vocabulary-collision-vacuity-guard` の空文化と同型になる）。同時に「面間で値が食い違う fixture で実際に赤くなる」落ちる実証（org.md Mandated）と、「現行 5 面の実データを流して意図的非対称だけが除外され残りが 0 件になる」corpus sweep（`cid:code-generation:corpus-sweep-for-new-guards`）の両側実測が要る。
+
+- **検査述語の除外条件を誤ると即座に偽赤になる**: 面間比較は現状のまま導入すると最低 2 クラスの差分を報告する — (a) 是正対象である `self-feature` 4 セル + prose 3 ファイル、(b) 意図的非対称である `self-feature.formal-model-check`（`.claude` のみ EXECUTE、根拠は `amadeus-graph.ts:1375` / `:1387` の設計コメント）。さらに `installer-distribution` scope（`.claude` / `.kimi-code` のみ存在）は `self-` 接頭辞でないため現行 `SELF_HARNESSES` 走査の対象外だが、走査範囲を広げる設計にすると 32 セル全体が scope-absent 差分として噴出する。除外条件は「opt-in plugin が mint するセル」という機序で書き、面名・スラッグのハードコード列挙にしない方が陳腐化しにくい。
+
+- **センサー id を pin する 2 テストとの連動**: `tests/integration/t93.test.ts:100-108` の `EXPECTED_IDS`（8 件、`self-scope-consistency` は `:106`）と `tests/integration/t89.test.ts:366`（code-generation の `sensors_applicable` 5 件、コメント `:139`）が id を固定している。センサーの**振る舞い**を拡張する分にはこの 2 テストは無変更でよいが、id 追加・分割（例: 面間比較を別センサーへ切り出す）を選ぶ場合は 2 テスト + stage frontmatter（`packages/framework/core/amadeus-common/stages/construction/code-generation.md:39-44`、`self-scope-consistency` は `:44`）+ 5 面 + dist の同期が連動する。既存センサーの拡張のほうが同期面が少ない。
+
+- **テスト番号**: unit / integration とも最大は `t412`、`t413` は空き（`ls tests/*/t413*` → 該当なし、実測）。なお別ブランチ `fix/2033-self-scope-grid-face-sync` に止血用の `t413` face-parity テストの WIP が既に存在するため、**`t413` は本 intent で予約済み**として扱い、追加テストが必要な場合は `t414` 以降を採る。センサー本体のテストは既存の無番号ファイル `t-self-scope-consistency-sensor.test.ts` を拡張する経路もある。
+
+- **manifest 文言の是正が再発防止の一部**: `packages/framework/core/sensors/amadeus-self-scope-consistency.md:37-38` は「advisory at write time。release-blocking は package / promotion drift guards」と書くが、その drift guard は `self-*` 行を見ない（`promote-self.ts:154-157` の extras verbatim 保持、dist に `self-*` 行ゼロ）。この一文は**塞ごうとしている盲点をそのまま前提として文書化している**ため、機構を直しても文言を残すと次の読み手に同じ誤解を与える。severity の扱い（advisory のままにするか blocking へ上げるか）は要件段の裁定事項で、advisory のまま維持する場合は「何が release-blocking なのか」を実態に合わせて書き直す必要がある。
+
+- **発火経路の狭さ**: `self-scope-consistency` を宣言するステージは `code-generation` のみ（`grep -rln "self-scope-consistency" packages/framework/core/amadeus-common/stages/` が 1 ファイル、実測）。ディスパッチャに個別分岐は無く、CI にセンサー実行ステップも無い。したがって拡張後も検査は「self 開発の code-generation ステージを回したとき」にしか発火せず、乖離が入り込む経路（scope prose の編集や `/amadeus compose`）と発火点がずれたままになる。この配置のままでよいかは要件段で明示的に判断する — 検査を強くしても発火しなければ実効は上がらない。
+
+## formal-model-check 複数モデル化の品質所見（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - テスト空白（決定的）: `specs/tla/MirrorLifecycleCore.tla`（648 行、検証本体）を編集しても赤になるテストは存在しない。model-map の MirrorLifecycle モデルが identity 照合するのは wrapper の `MirrorLifecycle.tla`（43 行）と `MirrorLifecycle.cfg` のみ（`tla-model-loader-internal.ts:252-275`、照合対象は model/cfg の 2 資産）で、entries は TS 実装 4 ファイル（`tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts` の MIRROR_IMPLEMENTATION）を指す。Core モジュールは model-map スキーマに載る場所がなく（これが #1921 の aux 拡張要求）、drift 検出も loader 照合も届かない。
 - doc と実装の非対称: `plugins/formal-model-check/stages/formal-model-check.md:35-36` は「caller は model-map.json 登録済みの別 `.tla`/`.cfg` ペアを指せる」と約束するが、実行面は `TLA_EXECUTION_MODEL_NAME` 固定（`amadeus-formal-verif-model-map.ts:52`）+ `run-model-check-source.ts:118-123` の byte-pin で、FormalElection 以外を渡すと SOURCE_DRIFT になる — この能力は未実装（#1920 の根）。
