@@ -20,7 +20,7 @@ import {
 import {
   handleBoltCommand,
   handleComplete,
-  runBoltCli,
+  main as runBoltCli,
 } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   assessAuditMergeRecovery,
