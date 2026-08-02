@@ -1,4 +1,5 @@
 # Collapse generated harness projections in GitHub diffs by default.
+.agents/** linguist-generated
 .claude/** linguist-generated
 .codex/** linguist-generated
 .cursor/** linguist-generated
