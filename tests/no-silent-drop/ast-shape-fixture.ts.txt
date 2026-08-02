@@ -1,0 +1,15 @@
+try {
+  fixture();
+} catch (error) {}
+
+try {
+  fixture();
+} catch (error) {
+  console.warn(error);
+}
+
+function resultFixture(): boolean {
+  return true;
+}
+
+resultFixture();
