@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Result } from "./contract.ts";
-import type {
-  CiAcceptanceEvidence,
-  CiModelTarget,
-  CiModelCheckRunEvidence,
+import {
+  EXPECTED_RUNS,
+  type CiAcceptanceEvidence,
+  type CiModelTarget,
+  type CiModelCheckRunEvidence,
 } from "./ci-model-check-domain.ts";
 import { verifyCiAcceptanceArtifacts } from "./ci-model-check-artifacts.ts";
 import { FIXED_DOCKER_IMAGE } from "./tlc-spawn-planner.ts";
@@ -95,28 +96,20 @@ export async function executeCiModelCheckAcceptance(
     return { exitCode: 2, reason: "BOOTSTRAP_FAILURE" };
   }
 
-  const specs = [
-    { kind: "warm-up", index: 0 },
-    { kind: "measured", index: 1 },
-    { kind: "measured", index: 2 },
-    { kind: "measured", index: 3 },
-    { kind: "measured", index: 4 },
-    { kind: "measured", index: 5 },
-  ] as const;
   const runs: CiModelCheckRunEvidence[] = [];
   for (const model of options.models) {
     mkdirSync(join(options.evidenceRoot, model.name, "runs"), {
       recursive: true,
       mode: 0o700,
     });
-    for (const spec of specs) {
-      const artifactDirectory = `${model.name}/runs/${spec.kind}-${spec.index}`;
+    for (const [kind, index] of EXPECTED_RUNS) {
+      const artifactDirectory = `${model.name}/runs/${kind}-${index}`;
       const executed = await port.run({
         evidenceRoot: options.evidenceRoot,
         outDir: join(options.evidenceRoot, artifactDirectory),
         model,
-        kind: spec.kind,
-        index: spec.index,
+        kind,
+        index,
       });
       if (!executed.ok) {
         recordFailure(

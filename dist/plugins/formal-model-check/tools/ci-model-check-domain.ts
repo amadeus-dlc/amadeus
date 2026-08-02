@@ -109,6 +109,62 @@ function invalid(detail: string): Result<void, string> {
   return { ok: false, error: detail };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNumberOrNull(value: unknown): boolean {
+  return value === null || typeof value === "number";
+}
+
+function haveTypes(fields: readonly (readonly [unknown, string])[]): boolean {
+  return fields.every(([value, expected]) => typeof value === expected);
+}
+
+function hasAcceptanceShape(value: unknown): value is CiAcceptanceEvidence {
+  if (!isRecord(value) || !isRecord(value.jar) || !isRecord(value.runtime)
+    || !Array.isArray(value.runs)) return false;
+  if (!haveTypes([
+    [value.jar.version, "string"],
+    [value.jar.url, "string"],
+    [value.jar.sha256, "string"],
+    [value.runtime.bunVersion, "string"],
+    [value.runtime.runnerOs, "string"],
+    [value.runtime.runnerArch, "string"],
+    [value.runtime.githubRunId, "string"],
+    [value.runtime.githubRunAttempt, "string"],
+    [value.runtime.headSha, "string"],
+  ])) return false;
+  return value.runs.every((run) => {
+    if (!isRecord(run) || !isRecord(run.docker) || !isRecord(run.cleanup)
+      || !isRecord(run.stats) || !Array.isArray(run.docker.argv)
+      || run.docker.argv.some((argument) => typeof argument !== "string")) return false;
+    return haveTypes([
+      [run.model, "string"],
+      [run.kind, "string"],
+      [run.index, "number"],
+      [run.runId, "string"],
+      [run.artifactDirectory, "string"],
+      [run.outcome, "string"],
+      [run.exitCode, "number"],
+      [run.cliMs, "number"],
+      [run.spawnMs, "number"],
+      [run.docker.imageRef, "string"],
+      [run.docker.exitCode, "number"],
+      [run.cleanup.containerName, "string"],
+      [run.cleanup.remainingContainers, "number"],
+      [run.cleanup.forced, "boolean"],
+      [run.stats.model, "string"],
+      [run.stats.completionMarker, "boolean"],
+    ]) && [
+      run.stats.generatedStates,
+      run.stats.distinctStates,
+      run.stats.statesLeftOnQueue,
+      run.stats.searchDepth,
+    ].every(isNumberOrNull);
+  });
+}
+
 function hasPair(argv: readonly string[], flag: string, value: string): boolean {
   return argv.some((argument, index) => argument === flag && argv[index + 1] === value);
 }
@@ -172,10 +228,10 @@ function validateRunIdentity(
     || !UUID.test(run.runId)
     || run.artifactDirectory !== `${expectedModel}/runs/${expectedKind}-${expectedIndex}`
   ) {
-    return invalid(`run ${expectedIndex} identity or ordering is invalid`);
+    return invalid(`${expectedModel} run ${expectedIndex} identity or ordering is invalid`);
   }
   if (run.outcome !== "NOT_DETECTED" || run.exitCode !== 0) {
-    return invalid(`run ${expectedIndex} did not complete with NOT_DETECTED`);
+    return invalid(`${expectedModel} run ${expectedIndex} did not complete with NOT_DETECTED`);
   }
   return { ok: true, value: undefined };
 }
@@ -187,13 +243,13 @@ function validateRunExecution(
   expectedIndex: number,
 ): Result<void, string> {
   if (!Number.isFinite(run.cliMs) || run.cliMs < 0 || run.cliMs >= 180_000) {
-    return invalid(`run ${expectedIndex} CLI duration is outside the 180 second budget`);
+    return invalid(`${expectedModel} run ${expectedIndex} CLI duration is outside the 180 second budget`);
   }
   if (!Number.isFinite(run.spawnMs) || run.spawnMs < 0 || run.spawnMs >= 180_000) {
-    return invalid(`run ${expectedIndex} spawn duration is outside the 180 second budget`);
+    return invalid(`${expectedModel} run ${expectedIndex} spawn duration is outside the 180 second budget`);
   }
   if (run.stats.model !== expectedModel || !run.stats.completionMarker) {
-    return invalid(`run ${expectedIndex} TLC completion evidence is invalid`);
+    return invalid(`${expectedModel} run ${expectedIndex} TLC completion evidence is invalid`);
   }
   if (expectedModel === "MirrorLifecycle" && expectedKind === "measured" && (
     run.stats.generatedStates !== 208_628
@@ -201,12 +257,12 @@ function validateRunExecution(
     || run.stats.statesLeftOnQueue !== 0
     || run.stats.searchDepth !== 18
   )) {
-    return invalid(`run ${expectedIndex} MirrorLifecycle statistics drifted`);
+    return invalid(`${expectedModel} run ${expectedIndex} MirrorLifecycle statistics drifted`);
   }
   return { ok: true, value: undefined };
 }
 
-const EXPECTED_RUNS = [
+export const EXPECTED_RUNS = [
   ["warm-up", 0],
   ["measured", 1],
   ["measured", 2],
@@ -270,8 +326,9 @@ function validateModelRuns(
 }
 
 export function validateCiAcceptanceEvidence(
-  evidence: CiAcceptanceEvidence,
+  evidence: unknown,
 ): Result<void, string> {
+  if (!hasAcceptanceShape(evidence)) return invalid("acceptance evidence shape is malformed");
   const descriptor = validateAcceptanceDescriptor(evidence);
   if (!descriptor.ok) return descriptor;
   const runtime = validateAcceptanceRuntime(evidence);

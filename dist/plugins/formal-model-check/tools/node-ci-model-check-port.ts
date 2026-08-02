@@ -210,7 +210,10 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
     if (request.model.layer === "verified-source") {
       return this.runVerifiedSource(request, docker);
     }
-    const tracePrefix = join(request.evidenceRoot, `docker-${request.kind}-${request.index}`);
+    const tracePrefix = join(
+      request.evidenceRoot,
+      `docker-${request.model.name}-${request.kind}-${request.index}`,
+    );
     configureDockerTraceWrapper(this.workspaceRoot, docker, tracePrefix);
     const startedAt = this.dependencies.nowMs();
     const result = this.dependencies.command(

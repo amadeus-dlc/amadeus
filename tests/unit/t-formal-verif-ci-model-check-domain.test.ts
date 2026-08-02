@@ -82,6 +82,31 @@ describe("CI model-check acceptance domain", () => {
     expect(validateCiAcceptanceEvidence(evidence())).toEqual({ ok: true, value: undefined });
   });
 
+  test("returns a failure for missing or malformed nested evidence shapes", () => {
+    const missingRun = evidence() as unknown as { runs: unknown[] };
+    missingRun.runs[0] = undefined;
+    const missingStats = evidence() as unknown as { runs: Array<Record<string, unknown>> };
+    missingStats.runs[0]!.stats = undefined;
+    const missingDockerArgv = evidence() as unknown as {
+      runs: Array<{ docker: Record<string, unknown> }>;
+    };
+    missingDockerArgv.runs[0]!.docker.argv = undefined;
+    for (const candidate of [
+      {},
+      { ...evidence(), jar: undefined },
+      { ...evidence(), runtime: undefined },
+      { ...evidence(), runs: undefined },
+      missingRun,
+      missingStats,
+      missingDockerArgv,
+    ]) {
+      expect(validateCiAcceptanceEvidence(candidate)).toEqual({
+        ok: false,
+        error: expect.stringContaining("shape"),
+      });
+    }
+  });
+
   test("rejects threshold equality, non-canonical supply data, and residual containers", () => {
     const value = evidence();
     value.runs[1] = { ...value.runs[1]!, spawnMs: 180_000 };

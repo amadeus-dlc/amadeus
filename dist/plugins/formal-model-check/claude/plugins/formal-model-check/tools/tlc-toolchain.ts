@@ -6,7 +6,11 @@ import {
   type FrozenTlaModelReceipt,
   type TlaInvariantSourceLocation,
 } from "./tla-arm.ts";
-import type { ModelLoadError, ModelMapModel } from "./tla-model-map.ts";
+import {
+  TLA_MODEL_MAP_PATH,
+  type ModelLoadError,
+  type ModelMapModel,
+} from "./tla-model-map.ts";
 
 // The toolchain consumes per-model vocabulary only through this record,
 // resolved from a loader-verified ModelMapModel declaration. The toolchain
@@ -28,7 +32,7 @@ export function traceVocabularyFor(
       error: {
         kind: "MODEL_LOAD",
         code: "MODEL_MAP_INVALID",
-        relativePath: "specs/tla/model-map.json",
+        relativePath: TLA_MODEL_MAP_PATH,
         detail: `model ${model.name} does not declare a vocabulary`,
       },
     };

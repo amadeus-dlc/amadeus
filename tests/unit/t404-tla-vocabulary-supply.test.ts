@@ -196,5 +196,25 @@ describe("t404: per-model vocabulary supply", () => {
       reason: "GRAMMAR",
       detail: "counterexample invariant is outside the frozen set",
     });
+    const absentSourceMapResult = parseTlcOutput174({
+      chunks: [encoder.encode(output.replace(
+        "Invariant ChoiceWinner is violated.",
+        "Invariant NoCloseWithoutLandedSync is violated.",
+      ))],
+      exitCode: 12,
+      signal: null,
+      timedOut: false,
+      expectedModuleName: "FormalElection",
+      expectedModulePath: "/workspace/FormalElection.tla",
+      expectedStandardModuleDirectory: "/fixed",
+      verifiedArtifactDescriptorIdentity: FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
+      modelReceipt,
+      vocabulary: mirrorVocabulary.value,
+    });
+    expect(absentSourceMapResult).toMatchObject({
+      kind: "HARNESS_ERROR",
+      reason: "GRAMMAR",
+      detail: "counterexample source map or trace is invalid",
+    });
   });
 });

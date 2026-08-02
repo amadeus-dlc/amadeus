@@ -222,7 +222,8 @@ function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is st
   if (posix.dirname(value) !== "specs/tla") return false;
   const base = posix.basename(value);
   if (!base.endsWith(".tla") || !MODEL_NAME.test(base.slice(0, -".tla".length))) return false;
-  return value !== selfPath;
+  const moduleName = base.slice(0, -".tla".length);
+  return value === tlaModelPath(moduleName) && value !== selfPath;
 }
 
 function parseAuxiliaryIdentities(

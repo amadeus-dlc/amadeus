@@ -57,6 +57,7 @@ function dependencies(
           join(workspace, ".amadeus-ci-docker-wrapper", "trace-prefix"),
           "utf8",
         ).trim();
+        expect(trace.endsWith("docker-FormalElection-measured-1")).toBe(true);
         expect(options.env.AMADEUS_REAL_DOCKER).toBeUndefined();
         expect(options.env.AMADEUS_DOCKER_TRACE).toBeUndefined();
         const runId = "00000000-0000-4000-8000-000000000001";
