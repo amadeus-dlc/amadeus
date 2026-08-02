@@ -15,6 +15,8 @@ import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
 } from "../../../plugins/formal-model-check/tools/tla-arm.ts";
+import { loadVerifiedTlaSource } from "../../../plugins/formal-model-check/tools/tla-model-loader.ts";
+import { traceVocabularyFor } from "../../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const configuredJdkRoot = process.env.JAVA_HOME;
 if (!configuredJdkRoot) {
@@ -41,6 +43,13 @@ const workspaceRoot = join(root, "workspace");
 mkdirSync(workspaceRoot, { recursive: true });
 const model = generateFrozenTlaModel({ publicContractIdentity: "a".repeat(64) });
 const modelReceipt = createFrozenTlaModelReceipt(model);
+const vocabulary = (() => {
+  const source = loadVerifiedTlaSource();
+  if (!source.ok) throw new Error(JSON.stringify(source.error));
+  const resolved = traceVocabularyFor(source.value.executionModel);
+  if (!resolved.ok) throw new Error(JSON.stringify(resolved.error));
+  return resolved.value;
+})();
 const modulePath = join(workspaceRoot, "FormalElection.tla");
 const cfgPath = join(workspaceRoot, "FormalElection.cfg");
 writeFileSync(modulePath, model.moduleBytes);
@@ -77,6 +86,7 @@ if (!offline.ok) throw new Error(JSON.stringify(offline.error));
 const prepared = await toolchain.prepare({
   artifact: offline.value,
   modelReceipt,
+  vocabulary,
   modulePath,
   cfgPath,
   subjectAlias: "formal-election-bounded",

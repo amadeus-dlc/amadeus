@@ -76,6 +76,30 @@ describe("MirrorLifecycle model registration", () => {
     }
   });
 
+  test("pins the shared Core module and detects auxiliary byte drift", () => {
+    const mirror = findModelMapModel(repositoryModelMap(), "MirrorLifecycle");
+    if (!mirror) throw new Error("MirrorLifecycle must be registered");
+    expect(mirror.auxiliaries).toHaveLength(1);
+    const core = mirror.auxiliaries?.[0];
+    if (!core) throw new Error("MirrorLifecycleCore must be declared");
+    expect(core.path).toBe("specs/tla/MirrorLifecycleCore.tla");
+    const source = readFileSync(join(REPOSITORY_ROOT, core.path), "utf8");
+    expect(core.identity).toBe(
+      canonicalIdentity(source, "amadeus.formal-verif.tla.module.v1").sha256,
+    );
+    expect(canonicalIdentity(`${source}\n\\* drift`, "amadeus.formal-verif.tla.module.v1").sha256)
+      .not.toBe(core.identity);
+  });
+
+  test("registers the MirrorLifecycle invariant and trace vocabulary", () => {
+    const mirror = findModelMapModel(repositoryModelMap(), "MirrorLifecycle");
+    if (!mirror) throw new Error("MirrorLifecycle must be registered");
+    expect(mirror.vocabulary).toEqual({
+      namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],
+      traceStateVariables: ["receipts", "issueNumber", "boundaryIdx"],
+    });
+  });
+
   test("leaves the AsImplemented falsification variant unregistered", () => {
     // The AsImplemented variant exists to produce a counterexample once; a
     // standing registration would make the drift gate permanently red.

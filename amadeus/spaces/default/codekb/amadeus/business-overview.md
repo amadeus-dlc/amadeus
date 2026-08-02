@@ -1,6 +1,10 @@
 # ビジネス概要
 
-## kimi ハーネス bootstrap デッドロック修正の業務境界（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の業務境界（260801-tla-multi-model、現在、observed `33e196b8`）
+
+- 判断: 同根の 2 Issue（#1920 ESTABLISHED_WITH_REFINEMENTS / #1921 ESTABLISHED、クロスレビュー成立済み）を 1 intent で扱う self-feature。model-map v2 は複数モデルを登録できるが実行・照合・CI が FormalElection 固定のため、MirrorLifecycle を恒常 CI ジョブにできず（#1920）、MirrorLifecycleCore.tla 等の補助モジュールを identity pin に載せられない（#1921）。利用者影響は formal-model-check の検証対象が選挙モデル 1 本に閉じること。公開契約の破壊的変更はなく、aux は optional 追加で既存 identity 値を不変に保てる。
+
+## kimi ハーネス bootstrap デッドロック修正の業務境界（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
 

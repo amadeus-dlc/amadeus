@@ -41,6 +41,27 @@ const canonicalMap = () => ({
   models: [electionModel(), mirrorModel()],
 });
 
+const SHA_E = "e".repeat(64);
+
+const auxEntry = (path = "specs/tla/MirrorLifecycleCore.tla", identity = SHA_E) => ({
+  path,
+  identity,
+});
+
+const auxMirrorModel = () => ({
+  ...mirrorModel(),
+  auxiliaries: [auxEntry()],
+});
+
+const vocabulary = () => ({
+  namedInvariants: ["TypeOK"],
+  traceStateVariables: ["receipts"],
+});
+
+const vocabElectionModel = () => ({ ...electionModel(), vocabulary: vocabulary() });
+
+const auxVocabMirrorModel = () => ({ ...auxMirrorModel(), vocabulary: vocabulary() });
+
 describe("model map v2 schema", () => {
   test("parses a multi-model canonical map", () => {
     expect(parseTlaModelMap(bytes(canonicalMap()))).toEqual({
@@ -248,6 +269,87 @@ describe("model map v2 schema", () => {
       ok: true,
     });
   });
+
+  test("parses models carrying auxiliaries, vocabulary, or both", () => {
+    for (const model of [auxMirrorModel(), vocabElectionModel(), auxVocabMirrorModel()]) {
+      expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toEqual({
+        ok: true,
+        value: { schemaVersion: 2, models: [model] },
+      });
+    }
+  });
+
+  test("rejects auxiliaries with unknown keys or an empty array", () => {
+    const elementExtra = {
+      ...mirrorModel(),
+      auxiliaries: [{ ...auxEntry(), bytes: 1 }],
+    };
+    const modelExtraKey = { ...auxMirrorModel(), notes: "x" };
+    const empty = { ...mirrorModel(), auxiliaries: [] };
+    for (const model of [elementExtra, modelExtraKey, empty]) {
+      expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
+  });
+
+  test("rejects auxiliary paths outside the canonical specs/tla boundary", () => {
+    const invalidPaths = [
+      "specs/tla/../x.tla",
+      "/specs/tla/X.tla",
+      "plugins/x.tla",
+      "specs/tla/nested/X.tla",
+      "specs/tla/MirrorLifecycle.cfg",
+      "specs/tla/1Bad.tla",
+      "specs/tla/MirrorLifecycle.tla", // self-auxiliary
+    ];
+    for (const path of invalidPaths) {
+      const model = { ...mirrorModel(), auxiliaries: [auxEntry(path)] };
+      expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
+  });
+
+  test("rejects non-canonical auxiliary identities and unordered or duplicate paths", () => {
+    const badIdentities = [
+      [{ ...auxEntry(), identity: "A".repeat(64) }],
+      [{ ...auxEntry(), identity: "a".repeat(63) }],
+      [{ ...auxEntry(), identity: 1 }],
+    ];
+    const unsorted = [
+      auxEntry("specs/tla/MirrorLifecycleCore.tla"),
+      auxEntry("specs/tla/FormalElection.tla", SHA_A),
+    ];
+    const duplicated = [auxEntry(), auxEntry()];
+    for (const auxiliaries of [...badIdentities, unsorted, duplicated]) {
+      const model = { ...mirrorModel(), auxiliaries };
+      expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
+  });
+
+  test("rejects malformed vocabulary shapes and members", () => {
+    const candidates = [
+      { ...vocabulary(), unknown: [] },
+      { namedInvariants: [], traceStateVariables: ["receipts"] },
+      { namedInvariants: ["not-an-inv"], traceStateVariables: ["receipts"] },
+      { namedInvariants: ["TypeOK", "TypeOK"], traceStateVariables: ["receipts"] },
+      { namedInvariants: ["TypeOK"], traceStateVariables: [] },
+      { namedInvariants: ["TypeOK"], traceStateVariables: ["receipts", "receipts"] },
+    ];
+    for (const candidate of candidates) {
+      const model = { ...electionModel(), vocabulary: candidate };
+      expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
+  });
 });
 
 describe("model map v2 lookup and drift", () => {
@@ -300,11 +402,43 @@ describe.each(modules)("model map v2 parser copy: %s", (_name, module) => {
         error: { code: "MODEL_MAP_INVALID" },
       });
     }
+    // Auxiliaries / vocabulary widen the accepted shape on both copies at
+    // once; the table fails if either copy drifts.
+    expect(
+      module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [auxVocabMirrorModel()] })),
+    ).toEqual({ ok: true, value: { schemaVersion: 2, models: [auxVocabMirrorModel()] } });
+    expect(
+      module.parseTlaModelMap(
+        bytes({
+          schemaVersion: 2,
+          models: [{ ...mirrorModel(), auxiliaries: [auxEntry("plugins/x.tla")] }],
+        }),
+      ),
+    ).toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
     const parsed = module.parseTlaModelMap(bytes(canonicalMap()));
     if (!parsed.ok) throw new Error(parsed.error.detail);
     const mirror = module.findModelMapModel(parsed.value, "MirrorLifecycle");
     if (!mirror) throw new Error("MirrorLifecycle must be registered");
     expect(module.diffModelMap(mirror, mirror.entries)).toEqual([]);
     expect(module.findModelMapModel(parsed.value, "Missing")).toBeUndefined();
+  });
+
+  test("rejects every auxiliary and vocabulary validation class", () => {
+    const invalidModels = [
+      { ...mirrorModel(), auxiliaries: [] },
+      { ...mirrorModel(), auxiliaries: [{ ...auxEntry(), extra: true }] },
+      { ...mirrorModel(), auxiliaries: [{ ...auxEntry(), identity: "A".repeat(64) }] },
+      { ...mirrorModel(), auxiliaries: [auxEntry(), auxEntry()] },
+      { ...electionModel(), vocabulary: { ...vocabulary(), extra: [] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: [] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: ["not-valid"] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: ["TypeOK", "TypeOK"] } },
+    ];
+    for (const model of invalidModels) {
+      expect(module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
   });
 });

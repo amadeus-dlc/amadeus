@@ -132,6 +132,7 @@ describe("run-model-check orchestration", () => {
         : ({ ok: true, value: Object.freeze({
         artifact,
         modelReceipt: input.modelReceipt,
+        vocabulary: input.vocabulary,
         modulePath: input.modulePath,
         cfgPath: input.cfgPath,
         cwd: workspace,

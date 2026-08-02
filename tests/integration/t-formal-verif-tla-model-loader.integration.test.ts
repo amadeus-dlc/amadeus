@@ -20,14 +20,20 @@ import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
 } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
-  loadVerifiedTlaSource,
+  loadVerifiedTlaSources,
 } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import {
-  loadVerifiedTlaSourceInternal,
+  loadVerifiedTlaSourcesInternal,
+  selectVerifiedModel,
 } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
 import type { TlaFileSystem } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
-import type { ModelMap } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
+import type {
+  ModelMap,
+  ModelMapAssetIdentity,
+  ModelMapModel,
+} from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const EXPECTED_MODULE_IDENTITY = "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32";
@@ -54,7 +60,26 @@ function registeredPaths(modelMap: ModelMap): readonly string[] {
     model.model.path,
     model.cfg.path,
     ...model.entries.map((entry) => entry.implPath),
+    ...(model.auxiliaries ?? []).map((aux) => aux.path),
   ]);
+}
+
+type MutableModel = { -readonly [K in keyof ModelMapModel]: ModelMapModel[K] };
+
+// BR-D6: the real map carries no MirrorLifecycle auxiliaries declaration until
+// u4 lands it, so the green-path fixture declares MirrorLifecycleCore with its
+// measured canonical identity (same domain-tagged algorithm the loader uses).
+function withMirrorAuxDeclaration(modelMap: ModelMap): ModelMap {
+  const mutable = JSON.parse(JSON.stringify(modelMap)) as { schemaVersion: number; models: MutableModel[] };
+  const mirror = mutable.models.find((model) => model.name === "MirrorLifecycle");
+  if (!mirror) throw new Error("MirrorLifecycle must be registered");
+  const coreSource = readFileSync(join(REPOSITORY_ROOT, "specs/tla/MirrorLifecycleCore.tla"), "utf8");
+  const auxiliaries: ModelMapAssetIdentity[] = [{
+    path: "specs/tla/MirrorLifecycleCore.tla",
+    identity: canonicalIdentity(coreSource, "amadeus.formal-verif.tla.module.v1").sha256,
+  }];
+  mirror.auxiliaries = auxiliaries;
+  return mutable as ModelMap;
 }
 
 function createFixture(): Fixture {
@@ -68,8 +93,11 @@ function createFixture(): Fixture {
   mkdirSync(join(root, "packages/framework/core/tools"), { recursive: true });
   writeFileSync(join(root, ".git"), "gitdir: fixture\n");
   writeFileSync(join(root, "package.json"), "{}\n");
-  copyFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), mapPath);
-  const modelMap = JSON.parse(readFileSync(mapPath, "utf8")) as ModelMap;
+  const realMap = JSON.parse(
+    readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), "utf8"),
+  ) as ModelMap;
+  const modelMap = withMirrorAuxDeclaration(realMap);
+  writeFileSync(mapPath, `${JSON.stringify(modelMap, null, 2)}\n`);
   for (const relativePath of registeredPaths(modelMap)) {
     const destination = join(root, relativePath);
     mkdirSync(dirname(destination), { recursive: true });
@@ -101,11 +129,33 @@ afterEach(() => {
 });
 
 describe("TLA model loader real-filesystem boundary", () => {
-  test("loads the repository-owned assets once with migration identities under 250ms", () => {
+  test("loads the real map after u4 closes the MirrorLifecycle declaration gap", () => {
+    // BR-D6's transitional red expectation ends when u4 declares the shared
+    // Core. The public loader must now verify both registered models.
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.value.models.map((model) => model.model.name)).toEqual([
+      "FormalElection",
+      "MirrorLifecycle",
+    ]);
+    expect(loaded.value.models[1]?.auxIdentities).toHaveLength(1);
+  });
+
+  test("loads every registered model with migration identities under 250ms", () => {
+    const fixture = createFixture();
     const startedAt = performance.now();
-    const loaded = loadVerifiedTlaSource();
+    const loaded = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
     const durationMs = performance.now() - startedAt;
-    expect(loaded).toMatchObject({
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.value.models.map((model) => model.model.name)).toEqual(
+      fixture.modelMap.models.map((model) => model.name),
+    );
+    // FR-6 invariance pin: the FormalElection identity values are unchanged
+    // by the multi-model generalization.
+    const formalElection = selectVerifiedModel(loaded.value, "FormalElection");
+    expect(formalElection).toMatchObject({
       ok: true,
       value: {
         moduleIdentity: EXPECTED_MODULE_IDENTITY,
@@ -124,7 +174,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     for (const [pathKey, code] of cases) {
       const fixture = createFixture();
       rmSync(fixture[pathKey]);
-      expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+      expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
         ok: false,
         error: { kind: "MODEL_LOAD", code },
       });
@@ -140,7 +190,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     for (const [pathKey, code] of cases) {
       const fixture = createFixture();
       writeFileSync(fixture[pathKey], new Uint8Array());
-      expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+      expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
         ok: false,
         error: { kind: "MODEL_LOAD", code },
       });
@@ -157,7 +207,7 @@ describe("TLA model loader real-filesystem boundary", () => {
       const fixture = createFixture();
       rmSync(fixture[pathKey]);
       mkdirSync(fixture[pathKey]);
-      expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+      expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
         ok: false,
         error: { kind: "MODEL_LOAD", code },
       });
@@ -168,7 +218,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     const markerlessRoot = mkdtempSync(join(tmpdir(), "amadeus-tla-no-root-"));
     temporaryRoots.push(markerlessRoot);
     const markerlessUrl = pathToFileURL(join(markerlessRoot, "probe.ts")).href;
-    expect(loadVerifiedTlaSourceInternal(markerlessUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(markerlessUrl)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
     });
@@ -180,7 +230,7 @@ describe("TLA model loader real-filesystem boundary", () => {
         return realpathSync(path);
       },
     });
-    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl, fs)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl, fs)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
     });
@@ -195,7 +245,7 @@ describe("TLA model loader real-filesystem boundary", () => {
         return realpathSync(path);
       },
     });
-    expect(loadVerifiedTlaSourceInternal(verificationFixture.moduleUrl, verificationFs)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(verificationFixture.moduleUrl, verificationFs)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_UNREADABLE" },
     });
@@ -207,7 +257,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     const containmentFs = realFileSystem({
       realpath: (path) => path === containmentModelPath ? outsidePath : realpathSync(path),
     });
-    expect(loadVerifiedTlaSourceInternal(containmentFixture.moduleUrl, containmentFs)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(containmentFixture.moduleUrl, containmentFs)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_UNREADABLE" },
     });
@@ -220,7 +270,7 @@ describe("TLA model loader real-filesystem boundary", () => {
         return readFileSync(path);
       },
     });
-    expect(loadVerifiedTlaSourceInternal(readFixture.moduleUrl, readFs)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(readFixture.moduleUrl, readFs)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_UNREADABLE" },
     });
@@ -233,7 +283,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     rmSync(fixture.modelPath);
     symlinkSync(target, fixture.modelPath);
     expect(lstatSync(fixture.modelPath).isSymbolicLink()).toBe(true);
-    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_UNREADABLE" },
     });
@@ -242,7 +292,7 @@ describe("TLA model loader real-filesystem boundary", () => {
   test("fails closed when model bytes differ from the recorded identity", () => {
     const fixture = createFixture();
     writeFileSync(fixture.modelPath, `${readFileSync(fixture.modelPath, "utf8")}\\* drift\n`);
-    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: {
         kind: "SOURCE_DRIFT",
@@ -255,14 +305,14 @@ describe("TLA model loader real-filesystem boundary", () => {
   test("rejects invalid UTF-8 model bytes and cfg identity drift", () => {
     const utf8Fixture = createFixture();
     writeFileSync(utf8Fixture.modelPath, Uint8Array.of(0xc3, 0x28));
-    expect(loadVerifiedTlaSourceInternal(utf8Fixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(utf8Fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/FormalElection.tla" },
     });
 
     const cfgFixture = createFixture();
     writeFileSync(cfgFixture.cfgPath, `${readFileSync(cfgFixture.cfgPath, "utf8")}\\* drift\n`);
-    expect(loadVerifiedTlaSourceInternal(cfgFixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(cfgFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/FormalElection.cfg" },
     });
@@ -276,7 +326,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     copyFileSync(firstPath, target);
     rmSync(firstPath);
     symlinkSync(target, firstPath);
-    expect(loadVerifiedTlaSourceInternal(symlinkFixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(symlinkFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: firstEntry.implPath },
     });
@@ -284,7 +334,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     const driftFixture = createFixture();
     const driftEntry = executionEntries(driftFixture.modelMap)[0]!;
     writeFileSync(join(driftFixture.root, driftEntry.implPath), "// drift\n", { flag: "a" });
-    expect(loadVerifiedTlaSourceInternal(driftFixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(driftFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: driftEntry.implPath },
     });
@@ -294,7 +344,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     const fixture = createFixture();
     const entry = executionEntries(fixture.modelMap)[0]!;
     writeFileSync(join(fixture.root, entry.implPath), "// drift\n", { flag: "a" });
-    const result = loadVerifiedTlaSourceInternal(fixture.moduleUrl);
+    const result = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected SOURCE_DRIFT");
     expect(result.error.detail).toContain("--impl-only");
@@ -304,7 +354,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     const metadataFixture = createFixture();
     const metadataEntry = executionEntries(metadataFixture.modelMap)[0]!;
     rmSync(join(metadataFixture.root, metadataEntry.implPath));
-    expect(loadVerifiedTlaSourceInternal(metadataFixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(metadataFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: metadataEntry.implPath },
     });
@@ -318,7 +368,7 @@ describe("TLA model loader real-filesystem boundary", () => {
         return readFileSync(path);
       },
     });
-    expect(loadVerifiedTlaSourceInternal(readFixture.moduleUrl, readFs)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(readFixture.moduleUrl, readFs)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: readEntry.implPath },
     });
@@ -329,27 +379,33 @@ describe("TLA model loader real-filesystem boundary", () => {
     const watched = fixture.modelMap.models.find((model) => model.name !== "FormalElection");
     if (!watched) throw new Error("a second registered model is required");
     writeFileSync(join(fixture.root, watched.model.path), "\\* drift\n", { flag: "a" });
-    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: watched.model.path },
     });
 
     const cfgFixture = createFixture();
     writeFileSync(join(cfgFixture.root, watched.cfg.path), "\\* drift\n", { flag: "a" });
-    expect(loadVerifiedTlaSourceInternal(cfgFixture.moduleUrl)).toMatchObject({
+    expect(loadVerifiedTlaSourcesInternal(cfgFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "SOURCE_DRIFT", relativePath: watched.cfg.path },
     });
   });
 
-  test("fails closed when the map does not register the execution model", () => {
+  test("loads the remaining models when the map drops one registration", () => {
+    // The execution-model concept is gone: an unregistered model no longer
+    // fails the load, but selecting it by name fails explicitly (BR-S3).
     const fixture = createFixture();
     const withoutExecution = {
       schemaVersion: 2,
       models: fixture.modelMap.models.filter((model) => model.name !== "FormalElection"),
     };
     writeFileSync(fixture.mapPath, `${JSON.stringify(withoutExecution, null, 2)}\n`);
-    expect(loadVerifiedTlaSourceInternal(fixture.moduleUrl)).toMatchObject({
+    const loaded = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.value.models.map((model) => model.model.name)).toEqual(["MirrorLifecycle"]);
+    expect(selectVerifiedModel(loaded.value, "FormalElection")).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
     });

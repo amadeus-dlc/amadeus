@@ -81,25 +81,30 @@ function project(): {
     join(root, "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
-        schemaVersion: 1,
-        model: {
-          path: "specs/tla/FormalElection.tla",
-          identity: canonicalIdentity(
-            model,
-            "amadeus.formal-verif.tla.module.v1",
-          ).sha256,
-        },
-        cfg: {
-          path: "specs/tla/FormalElection.cfg",
-          identity: canonicalIdentity(
-            cfg,
-            "amadeus.formal-verif.tla.cfg.v1",
-          ).sha256,
-        },
-        entries: [
+        schemaVersion: 2,
+        models: [
           {
-            implPath: implRelative,
-            sha256: Bun.CryptoHasher.hash("sha256", impl, "hex"),
+            name: "FormalElection",
+            model: {
+              path: "specs/tla/FormalElection.tla",
+              identity: canonicalIdentity(
+                model,
+                "amadeus.formal-verif.tla.module.v1",
+              ).sha256,
+            },
+            cfg: {
+              path: "specs/tla/FormalElection.cfg",
+              identity: canonicalIdentity(
+                cfg,
+                "amadeus.formal-verif.tla.cfg.v1",
+              ).sha256,
+            },
+            entries: [
+              {
+                implPath: implRelative,
+                sha256: Bun.CryptoHasher.hash("sha256", impl, "hex"),
+              },
+            ],
           },
         ],
       },
@@ -208,12 +213,24 @@ interface AuditRecord {
   fields?: Record<string, string>;
 }
 
+interface CanonicalAuditRecord {
+  readonly event?: string;
+  readonly heading?: string;
+  readonly fields?: Record<string, string>;
+  readonly attributes?: Record<string, string>;
+}
+
 /** Parse the merged JSONL shards into records (blank lines skipped). */
 function auditRecords(root: string): AuditRecord[] {
   return audit(root)
     .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+    .map((line) => JSON.parse(line) as CanonicalAuditRecord)
+    .map((record) => ({
+      event: record.event ?? record.attributes?.Event ?? null,
+      heading: record.heading ?? "",
+      fields: record.fields ?? record.attributes,
+    }));
 }
 
 afterEach(() => {
@@ -268,8 +285,11 @@ describe("model-completeness sensor E2E", () => {
     const map = JSON.parse(
       readFileSync(join(REPO_ROOT, "specs/tla/model-map.json"), "utf-8"),
     );
+    const formalElection = map.models.find(
+      (model: { name: string }) => model.name === "FormalElection",
+    );
     expect(
-      map.entries.every(
+      formalElection.entries.every(
         (entry: { implPath: string }) =>
           entry.implPath.startsWith(
             "packages/framework/core/tools/amadeus-election",

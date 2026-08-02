@@ -24,6 +24,13 @@ import {
 import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
+const FORMAL_ELECTION = {
+  name: "FormalElection",
+  modelPath: "specs/tla/FormalElection.tla",
+  cfgPath: "specs/tla/FormalElection.cfg",
+  layer: "frozen" as const,
+};
+
 const roots: string[] = [];
 
 afterEach(() => {
@@ -42,6 +49,7 @@ function dependencies(
     download: async () => new Uint8Array([1, 2, 3]),
     digest: () => digest,
     nowMs: () => times.shift() ?? 100_000,
+    randomUuid: () => "00000000-0000-4000-8000-000000000002",
     command: (executable, argv, options) => {
       if (executable === process.execPath) {
         const outDir = argv[argv.indexOf("--out") + 1]!;
@@ -49,6 +57,7 @@ function dependencies(
           join(workspace, ".amadeus-ci-docker-wrapper", "trace-prefix"),
           "utf8",
         ).trim();
+        expect(trace.endsWith("docker-FormalElection-measured-1")).toBe(true);
         expect(options.env.AMADEUS_REAL_DOCKER).toBeUndefined();
         expect(options.env.AMADEUS_DOCKER_TRACE).toBeUndefined();
         const runId = "00000000-0000-4000-8000-000000000001";
@@ -96,12 +105,13 @@ describe("Node CI model-check port", () => {
     const workspace = mkdtempSync(join(tmpdir(), "node-ci-port-workspace-"));
     const evidenceRoot = mkdtempSync(join(tmpdir(), "node-ci-port-evidence-"));
     roots.push(workspace, evidenceRoot);
-    mkdirSync(join(evidenceRoot, "runs"));
+    mkdirSync(join(evidenceRoot, "FormalElection/runs"), { recursive: true });
     const port = new NodeCiModelCheckPort(workspace, dependencies(workspace));
     expect(await port.bootstrap(evidenceRoot)).toEqual({ ok: true, value: undefined });
     const result = await port.run({
       evidenceRoot,
-      outDir: join(evidenceRoot, "runs/measured-1"),
+      outDir: join(evidenceRoot, "FormalElection/runs/measured-1"),
+      model: FORMAL_ELECTION,
       kind: "measured",
       index: 1,
     });
@@ -125,6 +135,61 @@ describe("Node CI model-check port", () => {
     expect(result).toEqual({
       ok: false,
       error: { code: "JAR_CHECKSUM", detail: "downloaded tla2tools.jar checksum drifted" },
+    });
+  });
+
+  test("runs a verified-source model directly and records exact TLC statistics", async () => {
+    const workspace = mkdtempSync(join(tmpdir(), "node-ci-port-verified-workspace-"));
+    const evidenceRoot = mkdtempSync(join(tmpdir(), "node-ci-port-verified-evidence-"));
+    roots.push(workspace, evidenceRoot);
+    mkdirSync(join(evidenceRoot, "MirrorLifecycle/runs"), { recursive: true });
+    const deps = dependencies(workspace);
+    const port = new NodeCiModelCheckPort(workspace, {
+      ...deps,
+      command: (executable, argv, options) => {
+        if (argv[0] === "run" && executable.endsWith("/docker")) {
+          expect(options.env.AMADEUS_REAL_DOCKER).toBeUndefined();
+          expect(options.env.AMADEUS_DOCKER_TRACE).toBeUndefined();
+          const trace = readFileSync(
+            join(workspace, ".amadeus-ci-docker-wrapper", "trace-prefix"),
+            "utf8",
+          ).trim();
+          writeFileSync(`${trace}.argv`, `${argv.join("\0")}\0`);
+          writeFileSync(`${trace}.timing`, "1000000000\n100000000000\n0\n");
+          return {
+            status: 0,
+            stdout: [
+              "208,628 states generated, 89,099 distinct states found, 0 states left on queue.",
+              "The depth of the complete state graph search is 18.",
+              "Model checking completed. No error has been found.",
+            ].join("\n"),
+            stderr: "",
+          };
+        }
+        return deps.command(executable, argv, options);
+      },
+    });
+    expect(await port.bootstrap(evidenceRoot)).toEqual({ ok: true, value: undefined });
+    const result = await port.run({
+      evidenceRoot,
+      outDir: join(evidenceRoot, "MirrorLifecycle/runs/measured-1"),
+      model: {
+        name: "MirrorLifecycle",
+        modelPath: "specs/tla/MirrorLifecycle.tla",
+        cfgPath: "specs/tla/MirrorLifecycle.cfg",
+        layer: "verified-source",
+      },
+      kind: "measured",
+      index: 1,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value.stats).toEqual({
+      model: "MirrorLifecycle",
+      completionMarker: true,
+      generatedStates: 208_628,
+      distinctStates: 89_099,
+      statesLeftOnQueue: 0,
+      searchDepth: 18,
     });
   });
 });

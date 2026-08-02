@@ -1,6 +1,10 @@
 # 技術スタック
 
-## kimi bootstrap デッドロック修正の技術断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の技術断面（260801-tla-multi-model、現在、observed `33e196b8`）
+
+- 判断: 技術スタックに変化なし。検証層は従前どおり TLA+ / TLC（`tla2tools.jar`、Docker 供給）+ Bun/TypeScript の実行基盤で、aux 追加・複数モデル化とも新規外部依存を要さない見通し。区間の構成変化は `54bf1f805` による plugin 移設（`scripts/formal-verif/` 削除 → `plugins/formal-model-check/tools/`）と otel 基盤拡張で、詳細は `architecture.md` 現在節と `re-scans/260801-tla-multi-model.md` に委ねる。
+
+## kimi bootstrap デッドロック修正の技術断面（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は otel 基盤拡張（`packages/framework/core/otel/` の resource-core / span-context / exception イベント / metrics 語彙配線、外部依存追加なし）と mirror 系整備で、詳細は前節（260801-open-bug-batch-5）と `re-scans/260801-kimi-bootstrap-deadlock.md` に委ねる。
 

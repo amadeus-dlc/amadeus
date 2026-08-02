@@ -30,7 +30,14 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { birthIntent, docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
@@ -151,7 +158,25 @@ describe("amadeus-mirror-lifecycle: the origin lookup is a span", () => {
 
 describe("amadeus-plugin: the recompile and runner-gen spawns are spans", () => {
   test("the recompile chain stores a span for the first compile it runs", () => {
-    defaultPluginCliDeps().recompile(proj);
+    const dataDir = join(proj, "graph-data");
+    mkdirSync(dataDir, { recursive: true });
+    const stageGraph = join(dataDir, "stage-graph.json");
+    const scopeGrid = join(dataDir, "scope-grid.json");
+    const shippedData = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data");
+    copyFileSync(join(shippedData, "stage-graph.json"), stageGraph);
+    copyFileSync(join(shippedData, "scope-grid.json"), scopeGrid);
+    const originalStageGraph = process.env.AMADEUS_STAGE_GRAPH;
+    const originalScopeGrid = process.env.AMADEUS_SCOPE_GRID;
+    process.env.AMADEUS_STAGE_GRAPH = stageGraph;
+    process.env.AMADEUS_SCOPE_GRID = scopeGrid;
+    try {
+      defaultPluginCliDeps().recompile(proj);
+    } finally {
+      if (originalStageGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = originalStageGraph;
+      if (originalScopeGrid === undefined) delete process.env.AMADEUS_SCOPE_GRID;
+      else process.env.AMADEUS_SCOPE_GRID = originalScopeGrid;
+    }
     expect(spanNames()).toContain("subprocess:amadeus-graph:compile");
     expect(legacySubprocessRows()).toEqual([]);
   });

@@ -12,15 +12,19 @@ import {
   type FrozenTlaModelReceipt,
 } from "./tla-arm.ts";
 import {
-  loadVerifiedTlaSource,
+  loadVerifiedTlaSources,
   type ModelLoadError,
   type SourceDriftError,
   type TlaModelPipelineError,
-  type VerifiedTlaSource,
+  type VerifiedModelSource,
 } from "./tla-model-loader.ts";
+import { selectVerifiedModel } from "./tla-model-loader-internal.ts";
+import { TLA_EXECUTION_MODEL_NAME } from "./tla-model-map.ts";
+import { traceVocabularyFor, type TraceVocabulary } from "./tlc-toolchain.ts";
 
 export interface RunModelCheckSource {
-  readonly source: VerifiedTlaSource;
+  readonly source: VerifiedModelSource;
+  readonly vocabulary: TraceVocabulary;
   readonly modelReceipt: FrozenTlaModelReceipt;
   readonly modelPath: string;
   readonly cfgPath: string;
@@ -30,6 +34,7 @@ export interface RunModelCheckSource {
 
 export interface RunModelCheckSourceDependencies {
   readonly readBytes: (path: string) => Uint8Array;
+  readonly loadVerifiedSources?: typeof loadVerifiedTlaSources;
 }
 
 const DEFAULT_SOURCE_DEPENDENCIES: RunModelCheckSourceDependencies = {
@@ -92,8 +97,20 @@ export function loadRunModelCheckSource(
   cfgPath: string,
   dependencies: RunModelCheckSourceDependencies = DEFAULT_SOURCE_DEPENDENCIES,
 ): Result<RunModelCheckSource, TlaModelPipelineError> {
-  const canonical = loadVerifiedTlaSource();
-  if (!canonical.ok) return canonical;
+  const canonical = (dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)();
+  if (!canonical.ok) {
+    // The requested-model byte-pin predates resolver errors, so a
+    // ModuleDepsError is narrowed onto SOURCE_DRIFT here with its code and
+    // detail preserved (u3 revisits this seam together with the shim removal).
+    const error = canonical.error;
+    if (error.kind === "MODULE_DEPS") {
+      return sourceDrift(
+        error.relativePath,
+        `module dependency resolution failed (${error.code}): ${error.detail}`,
+      );
+    }
+    return { ok: false, error };
+  }
   const model = verifiedPath(modelPath, ".tla", "MODEL_UNREADABLE");
   if (!model.ok) return model;
   const cfg = verifiedPath(cfgPath, ".cfg", "CFG_UNREADABLE");
@@ -105,6 +122,14 @@ export function loadRunModelCheckSource(
       "model and cfg must share one closed workspace",
     );
   }
+
+  // The byte-pin is selected by the requested model: the request must name a
+  // registered model and its bytes must match that model's verified source.
+  const requestedName = basename(model.value, ".tla");
+  const selected = selectVerifiedModel(canonical.value, requestedName);
+  if (!selected.ok) return selected;
+  const frozen = selectVerifiedModel(canonical.value, TLA_EXECUTION_MODEL_NAME);
+  if (!frozen.ok) return frozen;
 
   let modelBytes: Uint8Array;
   let cfgBytes: Uint8Array;
@@ -119,26 +144,31 @@ export function loadRunModelCheckSource(
       cause,
     );
   }
-  if (!sameBytes(modelBytes, canonical.value.moduleBytes)) {
+  if (!sameBytes(modelBytes, selected.value.moduleBytes)) {
     return sourceDrift(modelPath, "model bytes differ from the verified U1 source");
   }
-  if (!sameBytes(cfgBytes, canonical.value.cfgBytes)) {
+  if (!sameBytes(cfgBytes, selected.value.cfgBytes)) {
     return sourceDrift(cfgPath, "cfg bytes differ from the verified U1 source");
   }
 
   const publicContractIdentity = createHash("sha256")
-    .update(canonical.value.executionModel.entries.map(({ sha256 }) => sha256).join("\n"))
+    .update(frozen.value.model.entries.map(({ sha256 }) => sha256).join("\n"))
     .digest("hex");
+  // The frozen receipt stays pinned to FormalElection (ADR-10) even though the
+  // byte-pin above is model-selected.
   const bundle = generateFrozenTlaModel({ publicContractIdentity });
+  const vocabulary = traceVocabularyFor(selected.value.model);
+  if (!vocabulary.ok) return vocabulary;
   return {
     ok: true,
     value: {
-      source: canonical.value,
+      source: selected.value,
+      vocabulary: vocabulary.value,
       modelReceipt: createFrozenTlaModelReceipt(bundle),
       modelPath: model.value,
       cfgPath: cfg.value,
       workspaceRoot: dirname(model.value),
-      moduleName: basename(model.value, ".tla"),
+      moduleName: requestedName,
     },
   };
 }

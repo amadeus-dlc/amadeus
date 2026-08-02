@@ -1,6 +1,15 @@
 # アーキテクチャ
 
-## kimi ハーネス bootstrap デッドロックの機構断面（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の対象機構（260801-tla-multi-model、現在、observed `33e196b8`）
+
+本節の file:line はすべて observed `33e196b8` 時点。患部全数・引用再確認・降格確認は `re-scans/260801-tla-multi-model.md` を正本とする。
+
+- **区間の構造変化（`c49e385ac` → `33e196b8`、40 commits / 1,396 files / +135,185 −15,633）**: 最大の構造変化は `54bf1f805`（intent 260731-formal-verif-value-chain、#1925）で、`scripts/formal-verif/` 30 ファイルを削除し `plugins/formal-model-check/tools/` へ 25 本を移設、canonical コピー `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` を新設した（両コピー byte-identical、実測）。残りは otel 基盤拡張（resource-core / span-context / exception イベント / metrics 語彙配線）、mirror 系整備、#1922 修正（`33e196b8` 自身）と metrics スナップショット群。患部領域（`plugins/formal-model-check/` / `specs/tla/`）は `54bf1f805` 着地以降 observed まで無変更。
+- **単一モジュール世界観 → 複数モデル一般化の露出面**: model-map v2 は `models[]` 配列スキーマ（`TLA_MODEL_MAP_SCHEMA_VERSION = 2`、`plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts:56`）で複数モデルを**登録**できるが、実行面は固定定数 `TLA_EXECUTION_MODEL_NAME = "FormalElection"` / `TLA_MODEL_PATH` / `TLA_CFG_PATH`（`:52-54`）に単一バインドする。一般化が触れる面は 6 系統: (1) **schema** — `parseModel` の `exactObject(value, ["cfg", "entries", "model", "name"])`（`:204`）が未知キーを拒否するため、補助モジュール配列（aux）の追加はこの許可リストの改訂を要する。(2) **loader** — `verifyRegisteredAssets`（`tla-model-loader-internal.ts:252-275`）は非実行モデルの model/cfg identity のみ照合し `:258` で実行モデルを skip、aux モジュール（MirrorLifecycleCore.tla 等）は照合対象に載らない（#1921 の hollow）。(3) **arm** — `TLA_NAMED_INVARIANTS`（`tla-arm.ts:322-330`）は FormalElection 固有の不変条件名 7 件。(4) **toolchain** — `tlc-toolchain.ts` の TRACE 解析が FormalElection 固定（`:418` TRACE_STATE_VARIABLES、`:434-436` ラベル正規表現 `of module FormalElection>`、`:439-440` / `:515-516` 変数数チェック、`:493-494` `hasFrozenModelOutputBinding`）。(5) **CI** — `.github/workflows/ci.yml:508-564`（`workflow_dispatch` 限定・timeout 30 分・`run-model-check-ci.ts run|verify`）に加え `node-ci-model-check-port.ts:200-202` / `run-model-check-diagnostic.ts:208-209` / `run-skeleton-ci.ts:82-83` が `FormalElection.tla/.cfg` を直書き。(6) **byte-pin 契約** — `run-model-check-source.ts:118-123` が model/cfg バイトを canonical U1 ソースと `sameBytes` 照合するため、**CLI 引数（`--model`/`--cfg`）を変えるだけでは複数モデル実行は成立しない**（別モデルを渡すと source 照合で SOURCE_DRIFT になる）。
+- **identity 設計（aux 追加の整合条件）**: model/cfg identity は domain-tagged canonical（`canonicalIdentity :33-46`、`:40` で `sha256(domain ‖ "\0" ‖ bytes)`、domain = `amadeus.formal-verif.tla.module.v1` / `.cfg.v1`）、entries（implPath, sha256）は生 sha256（completeness sensor `amadeus-sensor-model-completeness.ts:194-195` / `:468`）。aux を optional キーとして追加する設計なら既存の identity 値・entries は不変に保てる。
+- **MirrorLifecycle の wrapper/Core 構造**: `specs/tla/MirrorLifecycle.tla`（43 行）は `:31-32` `Core == INSTANCE MirrorLifecycleCore WITH CaptureBoundaryAlwaysCreates <- FALSE` の薄い wrapper で、検証本体は `MirrorLifecycleCore.tla`（648 行）。`specs/tla/model-map.json`（schemaVersion 2）は FormalElection（entries=5）と MirrorLifecycle（entries=4）の 2 モデルを登録済み — 登録面の複数モデル化は済んでおり、残るは実行・照合・CI 面である。
+
+## kimi ハーネス bootstrap デッドロックの機構断面（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 本節の file:line はすべて observed `861688c31` 時点。患部全数・認可連鎖・テスト足場は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
 

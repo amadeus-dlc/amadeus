@@ -1,6 +1,13 @@
 # コード品質評価
 
-## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、現在、observed `861688c31`）
+## formal-model-check 複数モデル化の品質所見（260801-tla-multi-model、現在、observed `33e196b8`）
+
+- テスト空白（決定的）: `specs/tla/MirrorLifecycleCore.tla`（648 行、検証本体）を編集しても赤になるテストは存在しない。model-map の MirrorLifecycle モデルが identity 照合するのは wrapper の `MirrorLifecycle.tla`（43 行）と `MirrorLifecycle.cfg` のみ（`tla-model-loader-internal.ts:252-275`、照合対象は model/cfg の 2 資産）で、entries は TS 実装 4 ファイル（`tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts` の MIRROR_IMPLEMENTATION）を指す。Core モジュールは model-map スキーマに載る場所がなく（これが #1921 の aux 拡張要求）、drift 検出も loader 照合も届かない。
+- doc と実装の非対称: `plugins/formal-model-check/stages/formal-model-check.md:35-36` は「caller は model-map.json 登録済みの別 `.tla`/`.cfg` ペアを指せる」と約束するが、実行面は `TLA_EXECUTION_MODEL_NAME` 固定（`amadeus-formal-verif-model-map.ts:52`）+ `run-model-check-source.ts:118-123` の byte-pin で、FormalElection 以外を渡すと SOURCE_DRIFT になる — この能力は未実装（#1920 の根）。
+- 既存の足場（良い面）: loader は no-arg 1 エクスポートに pin 済み（`tests/unit/t-formal-verif-tla-model-loader.test.ts:10-13`、`loadVerifiedTlaSource.length === 0`）。model-map v2 パーサは plugin/canonical 両コピーを対象にした table test（`tests/unit/t-formal-verif-model-map-v2.test.ts`、`:6` コメント "neither copy can drift"、`:277` `describe.each(modules)`）で二重化。mirror 登録は integration で実 `model-map.json` 読込み検証。`tests/formal-verif/support/` に mutation / real-toolchain probe。一方 FormalElection 参照は tests 27 ファイルに散在し、一般化時の機械的洗い出し対象が大きい。
+- 欠陥クラス: 「登録スキーマは複数対応、実行・照合・CI は単一固定」の片側実装 — 前 intent 260731-formal-verif-value-chain が記録した非対称クラスタの継続。schema の `exactObject :204` は fail-closed で安全側だが、aux 追加時の必須変更点となる。
+
+## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - テスト空白（決定的）: state-file 無しの SessionStart で `.current-session` が書かれることを検証するテストは存在しない。現行の早期終了挙動は `tests/unit/t10-hook-session-start.test.ts:211`（silent exit）/ `:222`（no heartbeat）が no state file の early-exit（`packages/framework/core/hooks/amadeus-session-start.ts:70`）を直接 pin しており、修正はこの pin の改訂 + 回帰テスト追加を伴う。追加先の自然な場所は同 t10。近傍の足場: `tests/integration/t-kimi-adapter.test.ts:317` 付近、t365（`.current-session` を `:826` / `:958` / `:1199` / `:1884` で使用）、t173。`amadeus-caller-authorization.ts` 専用の単体テストファイルは不在。
 - 欠陥クラス: 単一 writer × ガード後段配置 — bootstrap 状態で reader 側が恒久 fail-closed になる writer-reader 不整合。`.current-session` 直読み2箇所（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403`）を `readCurrentSessionId`（`amadeus-lib.ts:2159`）へ寄せるリファクタは本 intent スコープ外。

@@ -7,6 +7,10 @@ import {
 } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import {
+  ciModelTargetFor,
+  type CiModelTarget,
+} from "./ci-model-check-domain.ts";
+import {
   digestCiArtifact,
   downloadCiArtifact,
   resolveDockerExecutable,
@@ -16,6 +20,10 @@ import {
   FIXED_JDK_RUN_PROFILE,
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
 } from "./tlc-toolchain.ts";
+import {
+  loadVerifiedTlaSources,
+  selectVerifiedModel,
+} from "./tla-model-loader.ts";
 
 export const DIAGNOSTIC_TIMEOUT_MS = 300_000;
 const MAX_DIAGNOSTIC_OUTPUT_BYTES = 16 * 1024 * 1024;
@@ -51,6 +59,7 @@ export interface DiagnosticDependencies {
 export interface DiagnosticInput {
   readonly workspaceRoot: string;
   readonly evidenceRoot: string;
+  readonly model: CiModelTarget;
 }
 
 interface DiagnosticStatistics {
@@ -64,6 +73,7 @@ interface DiagnosticStatistics {
 export interface DiagnosticResult extends DiagnosticStatistics {
   readonly schema: "amadeus.model-check-diagnostic.v1";
   readonly profile: "non-acceptance-diagnostic";
+  readonly model: string;
   readonly runId: string;
   readonly imageRef: string;
   readonly jar: {
@@ -194,7 +204,7 @@ export async function runModelCheckDiagnostic(
 ): Promise<DiagnosticResult> {
   const workspaceRoot = realpathSync(input.workspaceRoot);
   const evidenceRoot = realpathSync(input.evidenceRoot);
-  const diagnosticRoot = join(evidenceRoot, "diagnostic");
+  const diagnosticRoot = join(evidenceRoot, "diagnostic", input.model.name);
   const supplyRoot = join(diagnosticRoot, "supply");
   const scratchRoot = join(diagnosticRoot, "scratch");
   const statesRoot = join(scratchRoot, "states");
@@ -205,8 +215,8 @@ export async function runModelCheckDiagnostic(
   const containerName = `amadeus-tlc-${runId}`;
   const jarPath = join(supplyRoot, "tla2tools.jar");
   const modelRoot = join(workspaceRoot, "specs/tla");
-  const modelPath = join(modelRoot, "FormalElection.tla");
-  const cfgPath = join(modelRoot, "FormalElection.cfg");
+  const modelPath = join(workspaceRoot, input.model.modelPath);
+  const cfgPath = join(workspaceRoot, input.model.cfgPath);
   const argv = [
     "run", "--rm", "--network=none", "--name", containerName,
     "--mount", `type=bind,src=${modelRoot},dst=${modelRoot},readonly`,
@@ -277,6 +287,7 @@ export async function runModelCheckDiagnostic(
   const result: DiagnosticResult = {
     schema: "amadeus.model-check-diagnostic.v1",
     profile: "non-acceptance-diagnostic",
+    model: input.model.name,
     runId,
     imageRef: FIXED_DOCKER_IMAGE,
     jar: {
@@ -311,25 +322,57 @@ interface DiagnosticMainDependencies {
     input: DiagnosticInput,
   ) => Promise<{ readonly errorCode: string | null }>;
   readonly writeError: (value: string) => void;
+  readonly loadSources: typeof loadVerifiedTlaSources;
+  readonly selectModel: typeof selectVerifiedModel;
 }
+
+const DEFAULT_DIAGNOSTIC_MAIN_DEPENDENCIES: DiagnosticMainDependencies = {
+  run: runModelCheckDiagnostic,
+  writeError: (value) => process.stderr.write(value),
+  loadSources: loadVerifiedTlaSources,
+  selectModel: selectVerifiedModel,
+};
 
 export async function runModelCheckDiagnosticMain(
   argv: readonly string[],
-  dependencies: DiagnosticMainDependencies = {
-    run: runModelCheckDiagnostic,
-    writeError: (value) => process.stderr.write(value),
-  },
+  overrides: Partial<DiagnosticMainDependencies> = {},
 ): Promise<0 | 2> {
-  if (argv.length !== 2 || argv[0] !== "--root" || !argv[1] || !isAbsolute(argv[1])) {
-    dependencies.writeError("usage: run-model-check-diagnostic.ts --root <absolute-path>\n");
+  const dependencies = { ...DEFAULT_DIAGNOSTIC_MAIN_DEPENDENCIES, ...overrides };
+  const validRoot = argv[0] === "--root" && Boolean(argv[1]) && isAbsolute(argv[1]!);
+  const selectedName = argv.length === 4 && argv[2] === "--model" && argv[3]
+    ? argv[3]
+    : null;
+  if (!validRoot || (argv.length !== 2 && selectedName === null)) {
+    dependencies.writeError(
+      "usage: run-model-check-diagnostic.ts --root <absolute-path> [--model <registered-name>]\n",
+    );
     return 2;
   }
-  const result = await dependencies.run({
-    workspaceRoot: process.cwd(),
-    evidenceRoot: argv[1],
-  });
-  dependencies.writeError(`${JSON.stringify(result)}\n`);
-  return result.errorCode === null ? 0 : 2;
+  const loaded = dependencies.loadSources();
+  if (!loaded.ok) {
+    dependencies.writeError(`${JSON.stringify(loaded.error)}\n`);
+    return 2;
+  }
+  let selected = loaded.value.models;
+  if (selectedName !== null) {
+    const model = dependencies.selectModel(loaded.value, selectedName);
+    if (!model.ok) {
+      dependencies.writeError(`${JSON.stringify(model.error)}\n`);
+      return 2;
+    }
+    selected = [model.value];
+  }
+  let exitCode: 0 | 2 = 0;
+  for (const source of selected) {
+    const result = await dependencies.run({
+      workspaceRoot: process.cwd(),
+      evidenceRoot: argv[1]!,
+      model: ciModelTargetFor(source),
+    });
+    dependencies.writeError(`${JSON.stringify(result)}\n`);
+    if (result.errorCode !== null) exitCode = 2;
+  }
+  return exitCode;
 }
 
 if (import.meta.main) process.exitCode = await runModelCheckDiagnosticMain(process.argv.slice(2));

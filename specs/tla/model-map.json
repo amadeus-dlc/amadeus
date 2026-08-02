@@ -11,6 +11,26 @@
         "path": "specs/tla/FormalElection.cfg",
         "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
       },
+      "vocabulary": {
+        "namedInvariants": [
+          "ChoiceWinner",
+          "UnknownChoiceRejected",
+          "ReceivedAtAxis",
+          "InvalidTimestampRejected",
+          "AmendSubmission",
+          "UnknownRefRejected",
+          "PerVoterResolution"
+        ],
+        "traceStateVariables": [
+          "initialBudget",
+          "amendBudget",
+          "accepted",
+          "holdMarkers",
+          "holdBudget",
+          "tally",
+          "reexamRequired"
+        ]
+      },
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
@@ -44,6 +64,12 @@
         "path": "specs/tla/MirrorLifecycle.cfg",
         "identity": "631176d00f0664480597b6babc0dd4c17e219c56028a4978ec2cbd70b8cf467b"
       },
+      "auxiliaries": [
+        {
+          "path": "specs/tla/MirrorLifecycleCore.tla",
+          "identity": "e067f32d0a4975a5d66439de22e0d38b1542226dbdf2fd7c47d54f7524162fb8"
+        }
+      ],
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
@@ -61,7 +87,19 @@
           "implPath": "packages/framework/core/tools/amadeus-mirror-types.ts",
           "sha256": "c8516b380cb6d487e29a6dba76381e4db8b9c09ac39a080a427a975c8eb0815e"
         }
-      ]
+      ],
+      "vocabulary": {
+        "namedInvariants": [
+          "TypeOK",
+          "NoCloseWithoutLandedSync",
+          "NoDuplicateCreate"
+        ],
+        "traceStateVariables": [
+          "receipts",
+          "issueNumber",
+          "boundaryIdx"
+        ]
+      }
     }
   ]
 }

@@ -16,6 +16,7 @@ import {
   type DiagnosticCommandResult,
   type DiagnosticDependencies,
 } from "../../plugins/formal-model-check/tools/run-model-check-diagnostic.ts";
+import type { CiModelTarget } from "../../plugins/formal-model-check/tools/ci-model-check-domain.ts";
 import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 import {
   FIXED_JDK_RUN_PROFILE,
@@ -24,6 +25,12 @@ import {
 
 const roots: string[] = [];
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
+const FORMAL_ELECTION: CiModelTarget = {
+  name: "FormalElection",
+  modelPath: "specs/tla/FormalElection.tla",
+  cfgPath: "specs/tla/FormalElection.cfg",
+  layer: "frozen",
+};
 
 afterEach(() => {
   roots.splice(0).forEach((root) => {
@@ -31,11 +38,15 @@ afterEach(() => {
   });
 });
 
-function fixture(): { workspaceRoot: string; evidenceRoot: string } {
+function fixture(): {
+  workspaceRoot: string;
+  evidenceRoot: string;
+  model: CiModelTarget;
+} {
   const workspaceRoot = resolve(".");
   const evidenceRoot = realpathSync(mkdtempSync(join(tmpdir(), "formal-diagnostic-")));
   roots.push(evidenceRoot);
-  return { workspaceRoot, evidenceRoot };
+  return { workspaceRoot, evidenceRoot, model: FORMAL_ELECTION };
 }
 
 function dependencies(
@@ -103,7 +114,7 @@ describe("non-acceptance model-check diagnostic", () => {
     };
 
     const result = await runModelCheckDiagnostic(paths, dependencies(command));
-    const diagnosticRoot = join(paths.evidenceRoot, "diagnostic");
+    const diagnosticRoot = join(paths.evidenceRoot, "diagnostic", "FormalElection");
     const jarPath = join(diagnosticRoot, "supply", "tla2tools.jar");
     const scratchPath = join(diagnosticRoot, "scratch");
     const statesPath = join(scratchPath, "states");
@@ -132,6 +143,7 @@ describe("non-acceptance model-check diagnostic", () => {
     });
     expect(result).toMatchObject({
       profile: "non-acceptance-diagnostic",
+      model: "FormalElection",
       elapsedMs: 250,
       spawnMs: 250,
       totalElapsedMs: 750,
@@ -229,7 +241,10 @@ describe("non-acceptance model-check diagnostic", () => {
       },
     });
     expect(JSON.parse(
-      readFileSync(join(paths.evidenceRoot, "diagnostic/result.json"), "utf8"),
+      readFileSync(
+        join(paths.evidenceRoot, "diagnostic/FormalElection/result.json"),
+        "utf8",
+      ),
     )).toEqual(result);
   });
 
@@ -266,11 +281,49 @@ describe("non-acceptance model-check diagnostic", () => {
       writeError: (value) => writes.push(value),
     })).toBe(2);
     expect(writes[0]).toContain("usage:");
+    const models: string[] = [];
     expect(await runModelCheckDiagnosticMain(["--root", "/tmp/evidence"], {
-      run: async (input) => ({ errorCode: input.evidenceRoot === "/tmp/evidence" ? null : "DRIFT" }),
+      run: async (input) => {
+        models.push(input.model.name);
+        return { errorCode: input.evidenceRoot === "/tmp/evidence" ? null : "DRIFT" };
+      },
       writeError: (value) => writes.push(value),
     })).toBe(0);
+    expect(models).toEqual(["FormalElection", "MirrorLifecycle"]);
     expect(writes.at(-1)).toBe('{"errorCode":null}\n');
+    expect(await runModelCheckDiagnosticMain([
+      "--root", "/tmp/evidence", "--model", "unknown",
+    ], {
+      run: async () => ({ errorCode: null }),
+      writeError: (value) => writes.push(value),
+    })).toBe(2);
+
+    models.length = 0;
+    expect(await runModelCheckDiagnosticMain([
+      "--root", "/tmp/evidence", "--model", "MirrorLifecycle",
+    ], {
+      run: async (input) => {
+        models.push(input.model.name);
+        return { errorCode: null };
+      },
+      writeError: (value) => writes.push(value),
+    })).toBe(0);
+    expect(models).toEqual(["MirrorLifecycle"]);
+
+    expect(await runModelCheckDiagnosticMain(["--root", "/tmp/evidence"], {
+      run: async () => ({ errorCode: null }),
+      writeError: (value) => writes.push(value),
+      loadSources: () => ({
+        ok: false,
+        error: {
+          kind: "MODULE_DEPS",
+          code: "MODULE_DEP_UNRESOLVED",
+          relativePath: "specs/tla/Missing.tla",
+          detail: "injected dependency failure",
+        },
+      }),
+    })).toBe(2);
+    expect(writes.at(-1)).toContain("injected dependency failure");
   });
 
   test("workflow keeps diagnostics opt-in and runs only the formal acceptance", () => {

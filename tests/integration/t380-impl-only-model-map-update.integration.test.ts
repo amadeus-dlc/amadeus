@@ -55,6 +55,32 @@ function makeProject(entryCount = 2): string {
   return root;
 }
 
+function makeAuxProject(): string {
+  const root = makeProject();
+  const mapPath = join(root, "specs", "tla", "model-map.json");
+  const modelPath = join(root, "specs", "tla", "FormalElection.tla");
+  const corePath = join(root, "specs", "tla", "FormalElectionCore.tla");
+  const model = "---- MODULE FormalElection ----\nCore == INSTANCE FormalElectionCore\n====\n";
+  const core = "---- MODULE FormalElectionCore ----\nEXTENDS Naturals\n====\n";
+  writeFileSync(modelPath, model);
+  writeFileSync(corePath, core);
+  const map = JSON.parse(readFileSync(mapPath, "utf8"));
+  map.models[0].model.identity = canonicalIdentity(
+    model,
+    "amadeus.formal-verif.tla.module.v1",
+  ).sha256;
+  map.models[0].auxiliaries = [{
+    path: "specs/tla/FormalElectionCore.tla",
+    identity: canonicalIdentity(core, "amadeus.formal-verif.tla.module.v1").sha256,
+  }];
+  map.models[0].vocabulary = {
+    namedInvariants: ["TypeOK"],
+    traceStateVariables: ["state"],
+  };
+  writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
+  return root;
+}
+
 function recordedEntry(root: string, implPath: string): { implPath: string; sha256: string } {
   const map = JSON.parse(readFileSync(join(root, "specs", "tla", "model-map.json"), "utf-8"));
   return map.models
@@ -255,5 +281,64 @@ describe("updateModelMap --impl-only", () => {
       ok: false,
       code: "INVALID_ARGUMENT",
     });
+  });
+
+  test("a changed auxiliary is refused and the map is left untouched", async () => {
+    const root = makeAuxProject();
+    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const before = readFileSync(mapPath);
+    writeFileSync(
+      join(root, "specs", "tla", "FormalElectionCore.tla"),
+      "---- MODULE FormalElectionCore ----\nEXTENDS Integers\n====\n",
+    );
+    writeFileSync(
+      join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),
+      "// implementation 0 revised\n",
+    );
+
+    expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
+      ok: false,
+      code: "INVALID_ARGUMENT",
+    });
+    expect(readFileSync(mapPath)).toEqual(before);
+  });
+
+  test("a declaration mismatch is refused instead of publishing an entries-only half update", async () => {
+    const root = makeAuxProject();
+    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const map = JSON.parse(readFileSync(mapPath, "utf8"));
+    delete map.models[0].auxiliaries;
+    writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
+    const before = readFileSync(mapPath);
+    writeFileSync(
+      join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),
+      "// implementation 0 revised\n",
+    );
+
+    expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
+      ok: false,
+      code: "INVALID_ARGUMENT",
+    });
+    expect(readFileSync(mapPath)).toEqual(before);
+  });
+
+  test("an entries-only update preserves model, cfg, auxiliaries, and vocabulary", async () => {
+    const root = makeAuxProject();
+    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const before = JSON.parse(readFileSync(mapPath, "utf8"));
+    writeFileSync(
+      join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),
+      "// implementation 0 revised\n",
+    );
+
+    expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
+      ok: true,
+      code: "IMPL_ONLY_UPDATED",
+    });
+    const after = JSON.parse(readFileSync(mapPath, "utf8"));
+    for (const field of ["model", "cfg", "auxiliaries", "vocabulary"] as const) {
+      expect(after.models[0][field]).toEqual(before.models[0][field]);
+    }
+    expect(after.models[0].entries).not.toEqual(before.models[0].entries);
   });
 });

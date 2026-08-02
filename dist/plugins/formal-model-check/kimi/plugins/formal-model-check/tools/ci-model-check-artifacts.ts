@@ -239,6 +239,7 @@ function verifyRun(root: string, run: CiModelCheckRunEvidence): Result<void, str
 
 export function verifyCiAcceptanceArtifacts(
   evidenceRoot: string,
+  expectedModelNames?: readonly string[],
 ): Result<CiAcceptanceEvidence, string> {
   let root: string;
   try {
@@ -251,6 +252,16 @@ export function verifyCiAcceptanceArtifacts(
   const evidence = parsed.value as unknown as CiAcceptanceEvidence;
   const domain = validateCiAcceptanceEvidence(evidence);
   if (!domain.ok) return domain;
+  if (expectedModelNames !== undefined) {
+    if (evidence.runs.length !== expectedModelNames.length * 6) {
+      return failed("acceptance evidence does not contain exactly six runs per selected model");
+    }
+    const observed = evidence.runs.map((run) => run.model);
+    const expected = expectedModelNames.flatMap((model) => Array(6).fill(model));
+    if (!sameStrings(observed, expected)) {
+      return failed("acceptance evidence does not cover the selected models in declaration order");
+    }
+  }
   for (const run of evidence.runs) {
     const verified = verifyRun(root, run);
     if (!verified.ok) return verified;

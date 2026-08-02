@@ -33,13 +33,50 @@ import {
   NodeTlcProcessPort,
 } from "./fs-tlc-toolchain.ts";
 import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "./tla-arm.ts";
+import {
+  loadVerifiedTlaSources,
+  selectVerifiedModel,
+  type VerifiedModelSource,
+} from "./tla-model-loader.ts";
+import { traceVocabularyFor } from "./tlc-toolchain.ts";
 
+// The skeleton stays pinned to the FormalElection frozen model, so its trace
+// vocabulary comes from the same loader-verified declaration (no code-level
+// default). Resolution failure aborts the run, consistent with the throws
+// below.
+function formalElectionTraceVocabulary(source: VerifiedModelSource) {
+  const vocabulary = traceVocabularyFor(source.model);
+  if (!vocabulary.ok) throw new Error(`vocabulary failed: ${JSON.stringify(vocabulary.error)}`);
+  return vocabulary.value;
+}
+
+const cliArguments = process.argv.slice(2);
+const outputRoot = cliArguments[0];
+const validArguments = cliArguments.length === 1
+  || (cliArguments.length === 3 && cliArguments[1] === "--model" && Boolean(cliArguments[2]));
+const selectedModelName = cliArguments.length === 3 ? cliArguments[2] : "FormalElection";
+if (!outputRoot || !validArguments) {
+  throw new Error(
+    "usage: bun plugins/formal-model-check/tools/run-skeleton-ci.ts <output-directory> [--model <registered-name>]",
+  );
+}
 const configuredJdkRoot = process.env.JAVA_HOME;
 if (!configuredJdkRoot) throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
 const JDK_ROOT = realpathSync(configuredJdkRoot);
-
-const outputRoot = process.argv[2];
-if (!outputRoot) throw new Error("usage: bun plugins/formal-model-check/tools/run-skeleton-ci.ts <output-directory>");
+const loadedModels = loadVerifiedTlaSources();
+if (!loadedModels.ok) {
+  throw new Error(`loader failed: ${JSON.stringify(loadedModels.error)}`);
+}
+const selectedModel = selectVerifiedModel(loadedModels.value, selectedModelName);
+if (!selectedModel.ok) {
+  throw new Error(`model selection failed: ${JSON.stringify(selectedModel.error)}`);
+}
+if (selectedModel.value.model.name !== "FormalElection") {
+  throw new Error(
+    `skeleton only supports the frozen FormalElection layer; ${selectedModel.value.model.name} is verified-source`,
+  );
+}
+const formalElectionSource = selectedModel.value;
 const root = resolve(outputRoot);
 mkdirSync(root, { recursive: true });
 
@@ -111,6 +148,7 @@ async function runOnce(runNo: 1 | 2): Promise<SkeletonRunRow> {
   const prepared = await toolchain.prepare({
     artifact: offline.value,
     modelReceipt,
+    vocabulary: formalElectionTraceVocabulary(formalElectionSource),
     modulePath,
     cfgPath,
     subjectAlias: "fx-1252",

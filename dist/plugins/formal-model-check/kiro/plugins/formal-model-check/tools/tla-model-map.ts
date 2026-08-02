@@ -9,6 +9,7 @@ export {
   type ModelMapDrift,
   type ModelMapEntry,
   type ModelMapModel,
+  type ModelVocabulary,
   parseTlaModelMap,
   TLA_CFG_PATH,
   TLA_EXECUTION_MODEL_NAME,

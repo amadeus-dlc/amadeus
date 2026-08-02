@@ -20,6 +20,8 @@ import { checkGeneratedPluginSources, writeGeneratedPluginSources } from "../../
 
 const CANONICAL = "packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
 const GENERATED = "plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
+const RESOLVER_CANONICAL = "packages/framework/core/tools/tla-module-deps.ts";
+const RESOLVER_GENERATED = "plugins/formal-model-check/tools/tla-module-deps.ts";
 
 describe("generated plugin source drift check", () => {
   const roots: string[] = [];
@@ -31,12 +33,17 @@ describe("generated plugin source drift check", () => {
     const canonical = join(root, ...CANONICAL.split("/"));
     mkdirSync(dirname(canonical), { recursive: true });
     writeFileSync(canonical, "export const MAP = 1;\n");
+    const resolverCanonical = join(root, ...RESOLVER_CANONICAL.split("/"));
+    writeFileSync(resolverCanonical, "export const RESOLVER = 1;\n");
+    const resolverGenerated = join(root, ...RESOLVER_GENERATED.split("/"));
+    mkdirSync(dirname(resolverGenerated), { recursive: true });
+    writeFileSync(resolverGenerated, "export const RESOLVER = 1;\n");
     return root;
   };
 
   const generatedPath = (root: string): string => join(root, ...GENERATED.split("/"));
 
-  test("reports MISSING when the generated copy has never been written", () => {
+  test("reports MISSING when a generated copy has never been written", () => {
     const problems = checkGeneratedPluginSources(workspace());
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain("MISSING generated plugin source:");
