@@ -1,6 +1,36 @@
 # コード構造
 
-## formal-model-check 複数モデル化の患部配置（260801-tla-multi-model、現在、observed `33e196b8`）
+## scope-grid 面間同期の患部配置（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+
+本節の file:line はすべて observed `47574fbab` 時点。全数と再実測結果は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
+
+- **患部の配置（3 グループ）**:
+  1. **同期対象データ（10 ファイル）** — grid 5 面 `.claude|.codex|.cursor|.opencode|.kimi-code` の `tools/data/scope-grid.json`、prose 5 面の `scopes/amadeus-self-feature.md`（他に `amadeus-self-document.md` / `amadeus-self-refactor.md` が各 4 面、`amadeus-self-fix.md` は既に一致）。grid は flat 構造（top-level が scope 名、値が `{ "stages": { <slug>: "EXECUTE"|"SKIP" } }`）で、`.claude` は 15 scope 行 / self-feature 33 セル、他 4 面は 14 scope 行 / 32 セル（`.kimi-code` のみ `installer-distribution` を持つため 15 行）。
+  2. **検査機構（正本 + 5 面コピー）** — センサー正本 `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts`（231 行）と manifest `packages/framework/core/sensors/amadeus-self-scope-consistency.md`。5 面のコピー `<face>/tools/amadeus-sensor-self-scope-consistency.ts` は canonical と byte 一致（`cmp -s` 実測、5/5 IDENTICAL）— 正本を触れば `bun scripts/package.ts` + `bun run promote:self` で 5 面 + dist が機械同期される。
+  3. **周辺ガード** — `scripts/promote-self.ts`（`COMPOSED_SCOPE_RE :124` / `SCOPE_GRID_RE :125` / `scopeGridInSync :132-134` / `mergeScopeGrid :146-166`（extras 抽出 `:151`、dst 値の verbatim 保持 `:156`）/ orphan 走査の除外 `:455`）、`packages/framework/core/tools/amadeus-graph.ts`（`DATA_DIR :197` / `scopeGridPath() :330-332` / `mergeComposedScopes :1394-1421`、設計コメント `:1375` `:1387`）、CI の drift guard 3 ステップ（`.github/workflows/ci.yml:243` Dist / `:246` Self-install / `:254-255` Compiled graph）。
+
+- **区間 touch 判定（`33e196b80..47574fbab`）**: 患部 9 パス（grid 5 面 / センサー正本 / `promote-self.ts` / `amadeus-graph.ts` / `t370-promote-self-scopegrid-order.test.ts`）はいずれも **0 コミット**。`.github/workflows/ci.yml` のみ 1 件（`f87cf9389`、`#2012` formal-model-check の全登録モデル対応）だが、変更はジョブのステップ名と echo 文言に閉じ、drift guard ステップ群 `:243-255` は無変更。すなわち患部は前回 observed `33e196b80` 時点の姿のままであり、乖離は区間内に新たに導入されたものではなく既存の残存である。
+
+- **センサー拡張の挿入点（正本 `amadeus-sensor-self-scope-consistency.ts`、observed 実測の line）**:
+
+| 記号 | 位置 | 現状 | 拡張の性質 |
+| --- | --- | --- | --- |
+| `SELF_HARNESSES` | `:11` | 5 面の配列 | 変更不要（面集合はそのまま面間比較の母集団になる） |
+| `EXPECTED_SELF_SCOPES` | `:12-17` | 4 scope 名の定数 | **値の定数化は不可** — 期待セル値を足すと grid と並ぶ第 2 正本になる。面間比較で期待値を持たない形にする |
+| `Finding` | `:26-32` | `surface` は `"scope-file" \| "scope-grid"`、`reason` は `missing \| unexpected \| name-mismatch \| unreadable` | cell-mismatch / body-mismatch 系 reason と stage / expected / actual フィールドの追加が要る。manifest の `output_schema`（`amadeus-self-scope-consistency.md:12-20`）と対で改訂 |
+| `HarnessSnapshot` | `:41-46` | `fileScopes` / `gridScopes` の名前集合のみ保持 | **主要挿入点** — gridRows（scope → stages）と prose 本文の保持フィールド追加 |
+| `SurfaceSnapshot` | `:48-51` | 同上 | 同上 |
+| `frontmatterName` / `inspectScopeFile` | `:53-58` / `:60-94` | frontmatter の `name:` のみ抽出、本文は読み捨て | prose parity には本文（または正規化ハッシュ）の retain が要る |
+| `readGridScopes` | `:110-137` | `:115` で JSON parse 済み、`:116-117` が `Object.keys(grid)` の名前だけ収集し `.stages` を捨てる | **最小侵襲点** — `:115` の parse 結果から `stages` を retain するだけで値比較の材料が揃う |
+| `compareExpected` | `:153-172` | 定数との名前集合比較のみ | 変更不要（既存の名前検査はそのまま残す） |
+| `evaluateSelfScopeConsistency` | `:174-211` | `:177` で全面 snapshot 生成、`:180-185` dormant 判定、`:190-204` で面ごとの findings を flatMap | **cross-face 比較の唯一の呼び出し点は `:190-204` の flatMap 直後** — snapshots 全件が揃う場所はここだけ。dormant 判定 `:180-185` は変更不要 |
+| CLI `main` | `:213-229` | `--stage` / `--output-path` 必須、`AMADEUS_PROJECT_DIR` 基底 | 変更不要 |
+
+- **grid の実形（flat / non-nested）**: `scope-grid.json` は `{"chore": {...}, "enterprise": {...}, ..., "self-feature": {"stages": {...}}}` の flat 構造で、`scopes` ラッパーを持たない。したがって `readGridScopes :116` の `Object.keys(grid)` は scope 名を直接列挙しており、`.stages` を retain する拡張は 1 行の追加で足りる（parse 結果の再走査や別 reader の新設は不要）。
+
+- **dist 側の配置**: `dist/{claude,codex,cursor,opencode,kimi,kiro,kiro-ide}/<face>/tools/data/scope-grid.json` の 7 ファイルはいずれも stock 10 行のみで `self-*` 行を持たない（実測）。センサー正本を変更した場合の同期対象は dist 7 面 + self-install 5 面のツールコピーであり、grid データそのものは dist 同期の対象外。
+
+## formal-model-check 複数モデル化の患部配置（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 区間の構造変化（配置面）: `54bf1f805`（#1925、intent 260731-formal-verif-value-chain）が `scripts/formal-verif/` 30 ファイルを削除し `plugins/formal-model-check/tools/` へ移設した。現行の plugin 配置は `plugins/formal-model-check/` = `plugin.json` / `README.md` / `stages/formal-model-check.md` / `tools/` 25 本（model-map スキーマ `amadeus-formal-verif-model-map.ts`、loader `tla-model-loader.ts` + `tla-model-loader-internal.ts`、arm `tla-arm.ts`、toolchain `tlc-toolchain.ts` / `fs-tlc-toolchain.ts` / `tlc-spawn-planner.ts`、CI ポート `node-ci-model-check-port.ts` / `ci-model-check-*.ts` / `ci-docker-trace.ts`、run 系 `run-model-check*.ts` / `run-skeleton-ci.ts`、`canonical.ts` / `contract.ts`）。canonical コピー `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` は plugin 側と byte-identical（実測）。`specs/tla/` = FormalElection.tla（316 行）+ .cfg、MirrorLifecycle.tla（43 行、wrapper、INSTANCE `:31-32`）+ MirrorLifecycleCore.tla（648 行）+ .cfg、MirrorLifecycleAsImplemented.tla、MirrorLifecycleVacuity.cfg、model-map.json（schemaVersion 2、2 モデル）。
 - 患部 × 区間 touch 判定（`c49e385ac` → `33e196b8`）: 患部は全て `54bf1f805` で現配置へ移設された後、observed まで無変更（`git log --oneline 54bf1f805..33e196b8 -- plugins/formal-model-check specs/tla` 空）。複数モデル化が触る固定点: model-map `:204`（exactObject）/ `:52-54`（実行モデル定数）、loader `:252-275`（`:258` skip）、arm `:322-330`、toolchain `:418` / `:434-436` / `:439-440` / `:493-494` / `:515-516`、CI 直書き 3 ファイル（`node-ci-model-check-port.ts:200-202` / `run-model-check-diagnostic.ts:208-209` / `run-skeleton-ci.ts:82-83`）、source byte-pin `:118-123`、stage doc `:12` / `:33-36` / `:42-44`、`ci.yml:508-564`。

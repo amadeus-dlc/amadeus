@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260801-tla-multi-model）
+## 実行メタデータ（現在: 260802-scope-grid-face-sync）
+
+- Date: `2026-08-02T10:27:57Z`
+- Base commit: `33e196b80b2254eee733fcaec4359dfbdd29c24b`（前回 observed = 260801-tla-multi-model。祖先性実測: `git merge-base --is-ancestor 33e196b80 47574fbab` exit 0）
+- Observed commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（`chore(metrics): maintain snapshots at 6b68dd65b8bf6fc1ae97a5c33ffb5b849ea7ecfb (#2027)`、origin/main tip = 作業ツリー HEAD）
+- Distance: `57 commits`（`git rev-list --count 33e196b80..47574fbab`）
+- 区間規模: `1295 files changed, 74640 insertions(+), 10737 deletions(-)`（`git diff --shortstat 33e196b80..47574fbab`）。主な構造変化はいずれも患部外 — #2017 の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、#2012 の formal-model-check 全登録 TLA モデル一般化、plugin compose 読取境界の fail-closed 化（#1964/#1996/#2005/#1970、新規 t410/t411）、fatal-latch 系 loud fail 徹底（#1959/#1961/#1966/#2000）、cg-plan-guard 3 Bolt（#1928/#1939/#1948）+ #2016 mirror label 同期（t412）。残りは metrics スナップショット群。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal、Test Strategy: 既存 CI ブロッキング集合を維持
+- Focus: Issue #2033（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み）— 2026-07-28 の self-feature lightening 決定が `.claude` 1 面にしか着地せず、他 4 dogfood 面（`.codex` / `.cursor` / `.kimi-code` / `.opencode`）が決定前の姿で残存。患部 = grid 5 面（`self-feature` の feasibility / approval-handoff / practices-discovery / nfr-requirements が claude SKIP vs 他 EXECUTE、15/33 vs 18/32）、scope prose 3 種 × 4 面（self-feature 17 行差 / self-document 4 行差 / self-refactor 4 行差、self-fix は 0 行差）、検査機構（`amadeus-sensor-self-scope-consistency.ts` の `readGridScopes :110-137` が `:116-117` で `.stages` を読み捨て、`compareExpected :153-172` に面間比較が不在）、周辺ガード 3 層（`promote-self.ts` の extras verbatim 保持 `:151`/`:156`、`amadeus-graph.ts` の folded row 保存 `:1409` と単一面検査 `:330-332`、CI `ci.yml:243-255`）。意図的非対称（`self-feature.formal-model-check` = `amadeus-graph.ts:1375`/`:1387` の設計コメントが一次根拠、および `installer-distribution` scope）は是正対象から除外。差分リフレッシュ: 直近かつ祖先である `33e196b80` を base とし、全 file:line を observed で再実測。患部 9 パスは区間内 0 コミット（乖離は区間内の新規導入ではなく残存）。
+- Updated artifacts: 実質更新 3 件 = `architecture.md`（3 層構造とガード 3 層の盲点機序、意図的非対称の一次根拠、面間比較が第 2 正本を作らない設計含意）、`code-structure.md`（患部 3 グループの配置・区間 touch 判定表・センサー拡張の挿入点表）、`code-quality-assessment.md`（面間セル値を pin するテスト不在、fixture の空 `stages` による vacuous 化、除外条件の誤りによる偽赤、t93/t89 の id pin 連動、t413 予約、manifest 文言の是正、発火経路の狭さ）。判断 1 行のみ 5 件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260802-scope-grid-face-sync.md`。
+- 現在マーカーの降格: 直前の現在断面 `260801-tla-multi-model`（observed `33e196b8`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、現在、` 出現数は 1 件（`grep -c` 実測）。
+- Per-intent record: `re-scans/260802-scope-grid-face-sync.md`（患部 touch 判定表・乖離の現存実測・ガード 3 層の実行結果・センサー挿入点表・テスト景観・引用再確認テーブルを含む）。
+
+## 実行メタデータ（履歴: 260801-tla-multi-model）
 
 - Date: `2026-08-01T15:42:54Z`
 - Base commit: `c49e385ac7b787ce151ab0f077943620bd8bf7e2`（observed の祖先、`git merge-base --is-ancestor c49e385ac HEAD` exit 0）
