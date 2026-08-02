@@ -1,5 +1,5 @@
 // covers: subcommand:no-silent-drop:check, subcommand:no-silent-drop:census-evidence
-// size: small
+// size: medium
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
