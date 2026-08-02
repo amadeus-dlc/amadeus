@@ -39,6 +39,7 @@ let host = "";
 
 function deps(options: {
   apply?: PluginCliDeps["applyPluginPlan"];
+  resync?: PluginCliDeps["resyncIntentStates"];
   out?: (line: string) => void;
   err?: (line: string) => void;
 } = {}): PluginCliDeps {
@@ -65,6 +66,7 @@ function deps(options: {
     copyPluginSource: (src, dst) => copyPluginSource(src, dst, () => {}),
     listHarnessTrees,
     listPluginSourceDirs,
+    resyncIntentStates: options.resync,
     out: options.out ?? (() => {}),
     err: options.err ?? (() => {}),
   };
@@ -99,6 +101,41 @@ beforeEach(() => {
 afterEach(() => rmSync(project, { recursive: true, force: true }));
 
 describe("t413 project opt-in reconciliation", () => {
+  test("doctor reports invalid project configuration", () => {
+    writeFileSync(join(project, "amadeus", "config.json"), JSON.stringify({ plugins: PLUGIN }));
+    const result = runPluginCli(["doctor", "--project-root", host], deps());
+    expect(result.kind).toBe("doctor");
+    if (result.kind !== "doctor") return;
+    expect(result.degraded).toBe(true);
+    expect(result.section.lines).toContainEqual({
+      plugin: ".codex",
+      state: "unknown",
+      detail: expect.stringContaining("configuration invalid:"),
+    });
+  });
+
+  test("install rolls back persistent surfaces when state re-sync fails", () => {
+    const source = join(project, "plugins", PLUGIN);
+    const result = runPluginCli(["install", source, "--project-root", host], deps({
+      resync: () => ({
+        kind: "ran",
+        outcomes: [{
+          space: "default",
+          intent: "demo-0badcafe",
+          status: "section-unrecognized",
+          inserted: [],
+        }],
+      }),
+    }));
+    expect(result).toMatchObject({
+      kind: "composed",
+      resyncFailed: ["default/demo-0badcafe"],
+    });
+    expect(existsSync(join(host, ".amadeus-plugin-src", PLUGIN))).toBe(false);
+    expect(createNodeBackend(host).readComposition().plugins.has(PLUGIN)).toBe(false);
+    expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([PLUGIN]);
+  });
+
   test("fresh 0/0 is materialized for the current host and the next run is a no-op", () => {
     const configBefore = readFileSync(join(project, "amadeus", "config.json"));
     const first = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
@@ -117,6 +154,27 @@ describe("t413 project opt-in reconciliation", () => {
     const result = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
     expect(result.kind).toBe("composed");
     expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t413 source change");
+  });
+
+  test("doctor distinguishes staged drift, composition drift, and an invalid staged manifest", () => {
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
+    const source = join(project, "plugins", PLUGIN);
+    const staging = join(host, ".amadeus-plugin-src", PLUGIN);
+    const stagedTool = join(staging, "tools", "canonical.ts");
+    writeFileSync(stagedTool, `${readFileSync(stagedTool, "utf-8")}\n// staged drift\n`);
+    let doctor = runPluginCli(["doctor", "--project-root", host], deps());
+    expect(doctor.kind === "doctor" && doctor.section.lines.some((line) => line.plugin === PLUGIN && line.state === "drift")).toBe(true);
+
+    const sourceTool = join(source, "tools", "canonical.ts");
+    writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// composition drift\n`);
+    copyPluginSource(source, staging, () => {});
+    doctor = runPluginCli(["doctor", "--project-root", host], deps());
+    expect(doctor.kind === "doctor" && doctor.section.lines.some((line) => line.plugin === PLUGIN && line.state === "drift")).toBe(true);
+
+    writeFileSync(join(source, "plugin.json"), "{not-json");
+    copyPluginSource(source, staging, () => {});
+    doctor = runPluginCli(["doctor", "--project-root", host], deps());
+    expect(doctor.kind === "doctor" && doctor.section.lines.some((line) => line.plugin === PLUGIN && line.state === "degraded")).toBe(true);
   });
 
   test("removing selection safely drops composition and managed staging but preserves supply", () => {

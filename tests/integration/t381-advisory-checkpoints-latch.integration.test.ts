@@ -27,10 +27,13 @@ import { emitActivationAdvisory, handleNext } from "../../packages/framework/cor
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
+  type ActivationFs,
   type Advisory,
   type AdvisoryLatchFs,
   advisoryLatchPath,
+  defaultActivationFs,
   recordActivationVerdict,
+  resolveActivationJudgment,
   unlatchedAdvisories,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import {
@@ -120,6 +123,21 @@ afterEach(() => {
 // ===========================================================================
 
 describe("t381 checkpoint set", () => {
+  test("an unreadable model map is reported as invalid", () => {
+    host = makeChangedHost();
+    const brokenMapFs: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        if (path.endsWith("model-map.json")) throw new Error("synthetic read failure");
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+    expect(resolveActivationJudgment(host, ACTIVATION_WATCH_GLOBS, brokenMapFs)).toEqual({
+      kind: "not-ready",
+      reason: "model map is invalid",
+    });
+  });
+
   test("all three checkpoints raise the advisory, each stamped with its own slug", () => {
     host = makeChangedHost();
     for (const slug of ["requirements-analysis", "functional-design", "build-and-test"]) {

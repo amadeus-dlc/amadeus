@@ -1,10 +1,13 @@
 // covers: file:packages/framework/core/tools/amadeus-plugin-selection.ts
 // size: medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { observePluginSelection } from "../../packages/framework/core/tools/amadeus-plugin-selection.ts";
+import {
+  observePluginSelection,
+  resolvePluginSelection,
+} from "../../packages/framework/core/tools/amadeus-plugin-selection.ts";
 
 const roots: string[] = [];
 function root(): string {
@@ -17,6 +20,25 @@ afterEach(() => {
 });
 
 describe("t413 project plugin selection", () => {
+  test("malformed and schema-invalid project configuration fail closed", () => {
+    const project = root();
+    const host = join(project, ".codex");
+    mkdirSync(join(project, "amadeus"), { recursive: true });
+    const config = join(project, "amadeus", "config.json");
+
+    writeFileSync(config, "{not-json");
+    expect(resolvePluginSelection(host)).toMatchObject({
+      kind: "invalid",
+      message: expect.stringContaining("configuration is not valid JSON"),
+    });
+
+    writeFileSync(config, JSON.stringify({ plugins: "formal-model-check" }));
+    expect(resolvePluginSelection(host)).toMatchObject({
+      kind: "invalid",
+      message: expect.stringContaining("plugins unique array of valid plugin names"),
+    });
+  });
+
   test("selected source with no host state is not-installed", () => {
     const project = root();
     mkdirSync(join(project, "plugins", "formal-model-check"), { recursive: true });
