@@ -65,7 +65,7 @@ export function emitAuditEvent(
   );
 }
 
-// The fatal-latch-guarded emit for audit-FIRST mutation handlers (#1959, the
+// The drop-guarded emit for audit-FIRST mutation handlers (#1959, the
 // amadeus-state.ts emitAudit precedent). FR-EVT-4: a state mutation refuses
 // outright while the fatal health latch is set. The emit path only DROPS
 // canonical rows there (#1856), and a drop is a silent success for an
@@ -74,6 +74,12 @@ export function emitAuditEvent(
 // when the handler starts, and the outcome check covers the first emit of a
 // process, where the journal health probe latches INSIDE the bootstrap
 // emitAuditEvent runs (so there was nothing to assert on yet).
+//
+// The outcome check fires on EVERY non-appended reason (#1991): the arm also
+// carries "intent-complete" — the #1248 post-complete seal, a suppression at
+// the journal layer that throws nothing. The process is not latched there, so
+// re-asserting cannot refuse; the explicit throw below is what stops the
+// caller's mutation from proceeding with no ledger row behind it.
 export function emitAuditEventGuarded(
   eventType: string,
   fields: Record<string, string>,
@@ -83,6 +89,11 @@ export function emitAuditEventGuarded(
 ): AppendAuditResult {
   assertMutationAllowed();
   const result = emitAuditEvent(eventType, fields, projectDir, intent, space);
-  if (result.appended === false && result.reason === "fatal-latch") assertMutationAllowed();
+  if (result.appended === false) {
+    if (result.reason === "fatal-latch") assertMutationAllowed();
+    throw new Error(
+      `audit emit for ${eventType} dropped (reason=${result.reason}) — refusing the mutation behind it: no canonical ledger row landed (#1248 seal / #1856 drop, see #1991)`
+    );
+  }
   return result;
 }
