@@ -70,7 +70,7 @@ describe("t257 resolve against real files", () => {
   test("all three absent resolves to the default prompt mode", () => {
     expect(resolveAmadeusConfig(project(), INTENT)).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
       sources: [],
     });
   });

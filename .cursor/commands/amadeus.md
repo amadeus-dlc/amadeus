@@ -43,10 +43,22 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 | `kind` | What you do |
 |--------|-------------|
 | `run-stage` | Load the lead agent's persona (`.cursor/agents/amadeus-<role>-agent.md`) plus any `support_agents`, read `directive.stage_file` and the `consumes` input artifacts, run the stage body, and keep the stage diary at `directive.memory_path`. Then branch on `directive.gate`: `false` → complete and `report --result completed`; `true` → run the reviewer step (if `directive.reviewer` is present), only the closed completion verification in stage-protocol.md §2, and the §13 learnings ritual, then present the numbered Approve / Request-Changes gate and, on approval, `report --result approved --user-input "<exact choice>"`. |
+| `invoke-swarm` | Resolve the driver, prepare all `directive.units` with `--concurrency <directive.cap>`, then use the harness-neutral fixed Unit pool protocol below. Never dispatch a queued Unit or maintain a harness-local counter. |
 | `ask` | Render `directive.question` as numbered prose, then feed the human's answer back on the next `report` via `--user-input "<answer>"`. |
 | `print` | Do exactly what `directive.message` says — it is authoritative. Terminal messages name a read-only utility (status, help, doctor, version): run it, print stdout verbatim, and STOP. Run-then-continue messages name a mutating tool and end with "re-run `next`": run it, then loop. Gated-terminal messages (workspace migration) name a dry-run + numbered Yes/No gate + apply command: run the dry-run, stop for the human, apply only after explicit approval. |
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
 | `parked` | The workflow was parked at a clean boundary. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP. |
+| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
+
+### Harness-neutral fixed Unit pool
+
+The fixed pool protocol below supersedes whole-batch fan-out wording. The harness reports native facts only; it never owns queue order, slot counters, attempt counters, or retry admission.
+
+1. Prepare with `bun .cursor/tools/amadeus-swarm.ts prepare --batch <n> --units <all> --concurrency <directive.cap> [--base <branch>] [--repo <name>]`.
+2. Call `bun .cursor/tools/amadeus-swarm.ts acquire --batch <n> --idempotency-key <stable-delivery-id>` until capacity is full. Dispatch only returned unconfirmed permits, then call `bun .cursor/tools/amadeus-swarm.ts confirm-dispatch --batch <n> --attempt <attempt-id> --native-handle <handle> --idempotency-key <stable-delivery-id>`.
+3. After `bun .cursor/tools/amadeus-swarm.ts check <unit> --check-cmd "<command>"`, call `bun .cursor/tools/amadeus-swarm.ts settle-release --batch <n> --attempt <attempt-id> --outcome <succeeded|failed> --idempotency-key <stable-delivery-id>`. Non-success cancels transitive dependents and the same event set promotes ready FIFO work.
+4. Reconcile an unconfirmed dispatch with `bun .cursor/tools/amadeus-swarm.ts record-reconciliation --batch <n> --attempt <attempt-id> --reconciliation-kind <kind> --effect <no-effect-confirmed|effect-possible|unknown> --idempotency-key <stable-delivery-id>`. Record late completions with `bun .cursor/tools/amadeus-swarm.ts late-result-observed --batch <n> --attempt <attempt-id> --outcome <outcome> --idempotency-key <stable-delivery-id>`.
+5. Call `bun .cursor/tools/amadeus-swarm.ts finalize --batch <n> --units <all> --claimed <converged> --check-cmd "<command>"` only after the pool exists and is terminal; absent, open, draining, queued, or active pools are rejected.
 
 ### Reviewer step (§12a)
 
@@ -61,8 +73,6 @@ verification, learnings, approval, or report a stage result. A validated
 `NOT-READY` verdict at the iteration limit leaves the stage incomplete: present
 unresolved `BLOCKER` findings, stop for human direction, and do not run
 completion verification, learnings, approval, or report a stage result.
-
-| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or
 names a move you cannot make, surface it to the user — never improvise the

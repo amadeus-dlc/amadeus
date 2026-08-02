@@ -47,11 +47,11 @@ describe("registry internal consistency (VER-1)", () => {
     expect(() => assertRegistryConsistent()).not.toThrow();
   });
 
-  test("canonical cardinality is pinned at 80 (#1672, #1602) — vacuous equality banned", () => {
-    expect(EXPECTED_CANONICAL_COUNT).toBe(80);
-    expect(canonicalAuditEvents().length).toBe(80);
-    expect(SETS.registryCanonical.size).toBe(80);
-    expect(SETS.auditVocabulary.size).toBe(80);
+  test("canonical cardinality is pinned at 81 (#1672, #1602, #1919) — vacuous equality banned", () => {
+    expect(EXPECTED_CANONICAL_COUNT).toBe(81);
+    expect(canonicalAuditEvents().length).toBe(81);
+    expect(SETS.registryCanonical.size).toBe(81);
+    expect(SETS.auditVocabulary.size).toBe(81);
   });
 
   test("canonical defs always map to the audit journal; telemetry defs never do (FR-EXP-4)", () => {
@@ -189,7 +189,7 @@ describe("extraction parity with the t28 vocabulary guard", () => {
   test("extractAuditVocabulary agrees with the t28 sed-range rule on the shipped amadeus-audit.ts", () => {
     const body = readFileSync(join(AMADEUS_SRC, "tools", "amadeus-audit.ts"), "utf-8");
     const vocab = extractAuditVocabulary(body);
-    expect(vocab.length).toBe(80);
+    expect(vocab.length).toBe(81);
     expect(vocab).toEqual([...SETS.auditVocabulary].sort());
   });
 });

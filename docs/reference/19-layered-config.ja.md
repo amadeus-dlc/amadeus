@@ -39,6 +39,7 @@
   "mirror-projects": [],
   "auto-solo-election": true,
   "auto-file-findings": "prompt",
+  "max-parallel-units": 4,
   "plugins": ["formal-model-check"]
 }
 ```
@@ -47,7 +48,11 @@
 `auto-mirror` の値集合外、壊れた Project target、boolean 以外の
 `auto-solo-election` を拒否します。既定値は `autoMirror: "prompt"`、空の Project
 一覧、`autoSoloElection: false` です。`auto-file-findings` は `auto-mirror` と同じ
-値集合を受理し、既定値は `autoFileFindings: "prompt"` です。`plugins` は project-only の
+値集合を受理し、既定値は `autoFileFindings: "prompt"` です。
+`max-parallel-units` は 1 以上 hard cap 4 以下の整数を受理し、既定値は 4 です。
+swarm engine は Intent ごとに解決し、`min(batch size, 解決値)` を
+`invoke-swarm.cap` に焼き込みます。呼び出し単位の `--concurrency` は縮小だけを許可します。
+`plugins` は project-only の
 昇順・一意な名前配列で、既定値は `[]` です。Space または Intent layer に記載すると
 設定エラーになります。
 

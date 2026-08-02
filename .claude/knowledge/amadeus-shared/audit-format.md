@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (80 events, 19 categories)
+## Event Registry (81 events, 19 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -221,12 +221,13 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 | `RULE_LEARNED` | The learning gate persisted a kept learning as a practice line under the routed heading in `{project,team}.md` | Stage, Candidate-ID, Destination, Heading, Source | — | `tools/amadeus-learnings.ts persist` |
 | `SENSOR_PROPOSED` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter | Stage, Candidate-ID, Sensor ID, Manifest path, Matches, Destinations, Source | — | `tools/amadeus-learnings.ts persist` |
 
-### Swarm (6 events)
+### Swarm (7 events)
 
-All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the deterministic verdict surface the conductor consults. The referee is stateless (no iteration counter): `prepare` forks the per-unit worktrees and emits `SWARM_STARTED` (and `SWARM_DEGRADED` when the conductor reports a loud downgrade); `finalize` re-verifies the conductor's claimed-converged set, serialised-merges the genuine passes, and emits the per-Unit pair (`SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED`), the per-failed-Unit baton row (`SWARM_BATON_RETURNED`), and the batch tally (`SWARM_COMPLETED`). The `check` subcommand emits nothing — it is an advisory verdict that informs the conductor's retry decision. The engine is read-only and the conductor never emits audit events, so the deterministic tool owns the whole swarm taxonomy. Because the loop and its cap live in the driver (the `claude-ultra` Dynamic Workflow's `for`-bound or the subagent floor's harness ceiling), not in the referee, the per-Unit rows carry no `Iterations` / `Cap value` fields — there is no counter to record.
+All six `SWARM_*` events emit from `amadeus-swarm.ts`. In addition, `UNIT_POOL_EVENT_SET_COMMITTED` is the canonical C2 single-writer stream for FIFO queue, slot, Unit-attempt, dispatch-confirmation, settlement, reconciliation, drain, and late-result observations. Harnesses supply native facts only and own no scheduler or counter. `prepare` initialises the pool and records the effective cap; `finalize` refuses a non-terminal pool before re-verification and merge.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
+| `UNIT_POOL_EVENT_SET_COMMITTED` | One atomic fixed-pool queue/slot transition commits before native dispatch | Batch Id, Event Set Id, Event Set | — | `tools/amadeus-unit-pool-runtime.ts` |
 | `SWARM_STARTED` | Swarm referee `prepare` forked a batch of dependency-linked Units | Batch number, Unit names, Concurrency cap | — | `tools/amadeus-swarm.ts` |
 | `SWARM_UNIT_CONVERGED` | A swarm Unit re-verified green (and untampered) at the `finalize` gate | Batch number, Unit name | — | `tools/amadeus-swarm.ts` |
 | `SWARM_UNIT_FAILED` | A swarm Unit failed the `finalize` re-verify (not claimed, claimed-but-red, or tampered) | Batch number, Unit name, Reason | — | `tools/amadeus-swarm.ts` |

@@ -3064,6 +3064,71 @@ function declaredBatchOf(batches: string[][], batchNumber: number): DeclaredBatc
   return { number: batchNumber, units: declared };
 }
 
+type SelectedSwarmBatch = {
+  readonly batches: string[][];
+  readonly pick: NonNullable<ReturnType<typeof firstUncoveredBatch>>;
+  readonly pendingBatch: DeclaredBatch | null;
+};
+
+function selectSwarmBatch(
+  node: ReturnType<typeof nodeForSlug> & {},
+  projectDir: string,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+): { readonly kind: "selected"; readonly value: SelectedSwarmBatch } | { readonly kind: "declined"; readonly value: SwarmEmitOutcome } {
+  const batches = readBoltDagBatches(projectDir);
+  if (!batches || batches.length === 0) {
+    return { kind: "declined", value: { kind: "declined", decline: { kind: "no-dag" }, pendingBatch: null } };
+  }
+  const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
+  if (pick === null) {
+    return { kind: "declined", value: { kind: "declined", decline: { kind: "all-covered" }, pendingBatch: null } };
+  }
+  return {
+    kind: "selected",
+    value: { batches, pick, pendingBatch: declaredBatchOf(batches, pick.batchNumber) },
+  };
+}
+
+function autonomySwarmOutcome(
+  stateContent: string | null,
+  scope: string,
+  selected: SelectedSwarmBatch,
+): SwarmEmitOutcome | null {
+  const autonomy = readAutonomyMode(stateContent);
+  if (autonomy === null) {
+    const decline: SwarmDecline = skeletonGateCompleted(stateContent, scope)
+      ? { kind: "autonomy-unset" }
+      : { kind: "autonomy-unset-pre-skeleton" };
+    return { kind: "declined", decline, pendingBatch: selected.pendingBatch };
+  }
+  const owedGate = owedBatchGate(autonomy, selected.batches, selected.pick.batchNumber, stateContent);
+  if (owedGate === null) return null;
+  emit(askDirective(owedGate));
+  return { kind: "emitted" };
+}
+
+function swarmConfigIssue(issue: Extract<ReturnType<typeof resolveAmadeusConfig>, { kind: "invalid" }>["issues"][number]): string {
+  return issue.kind === "read-failure"
+    ? `${issue.layer} (${issue.path}): ${issue.summary}`
+    : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`;
+}
+
+function emitConfiguredSwarm(projectDir: string, units: string[]): void {
+  const config = resolveAmadeusConfig(projectDir);
+  if (config.kind === "invalid") {
+    emit(errorDirective(`Invalid swarm configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`));
+    return;
+  }
+  const directive = {
+    kind: "invoke-swarm" as const,
+    units,
+    cap: Math.min(units.length, config.config.maxParallelUnits),
+  };
+  const repos = intentRepos(projectDir);
+  emit(repos.length === 1 ? { ...directive, repo: repos[0] } : directive);
+}
+
 function tryEmitSwarm(
   slug: string,
   scope: string,
@@ -3091,31 +3156,10 @@ function tryEmitSwarm(
   // The plan is now read BEFORE the grant is checked. The guard needs the
   // declared width to judge an unanswered ladder, and this is the same read the
   // granted path already performed — moved earlier, not added.
-  const batches = readBoltDagBatches(projectDir);
-  if (!batches || batches.length === 0) {
-    return { kind: "declined", decline: { kind: "no-dag" }, pendingBatch: null };
-  }
-  const pick = firstUncoveredBatch(batches, node, projectDir, recordPrefix, codekbCtx);
-  if (pick === null) {
-    return { kind: "declined", decline: { kind: "all-covered" }, pendingBatch: null };
-  }
-  const pendingBatch = declaredBatchOf(batches, pick.batchNumber);
-  const autonomy = readAutonomyMode(stateContent);
-  if (autonomy === null) {
-    // Before the walking skeleton ships an unset grant is the legitimate initial
-    // state (the ladder has not fired yet); after it ships the ladder's answer
-    // is owed, and a batch the plan declared parallel must not serialise while
-    // the question goes unanswered.
-    const decline: SwarmDecline = skeletonGateCompleted(stateContent, scope)
-      ? { kind: "autonomy-unset" }
-      : { kind: "autonomy-unset-pre-skeleton" };
-    return { kind: "declined", decline, pendingBatch };
-  }
-  const owedGate = owedBatchGate(autonomy, batches, pick.batchNumber, stateContent);
-  if (owedGate !== null) {
-    emit(askDirective(owedGate));
-    return { kind: "emitted" };
-  }
+  const selection = selectSwarmBatch(node, projectDir, recordPrefix, codekbCtx);
+  if (selection.kind === "declined") return selection.value;
+  const autonomyOutcome = autonomySwarmOutcome(stateContent, scope, selection.value);
+  if (autonomyOutcome !== null) return autonomyOutcome;
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
   // legacy/flat intent). NOT resolveConstructionRepo here: that THROWS on >1, and
@@ -3128,12 +3172,7 @@ function tryEmitSwarm(
   //     (the three-concerns tenet). The SKILL.md prose tells it to supply --repo
   //     from the intent's recorded set; `prepare` errors without it on a multi-repo
   //     intent, surfacing the choice rather than guessing.
-  const repos = intentRepos(projectDir);
-  if (repos.length === 1) {
-    emit({ kind: "invoke-swarm", units: pick.units, repo: repos[0] });
-  } else {
-    emit({ kind: "invoke-swarm", units: pick.units });
-  }
+  emitConfiguredSwarm(projectDir, selection.value.pick.units);
   return { kind: "emitted" };
 }
 
