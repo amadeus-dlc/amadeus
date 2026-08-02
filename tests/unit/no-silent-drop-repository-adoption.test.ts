@@ -2,7 +2,8 @@
 // size: small
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { captureSnapshot, verifySnapshot } from "../no-silent-drop/engine.ts";
@@ -10,13 +11,13 @@ import {
   ADOPTION_RECEIPT_IDS,
   closeEvidenceReceipt,
   emptyEvidenceRegistry,
+  evidenceDigestForReceipt,
   validateEvidenceRegistry,
   validateTimingSamples,
 } from "../no-silent-drop/repository-adoption.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FULL_SHA = "0123456789abcdef0123456789abcdef01234567";
-const DIGEST = "a".repeat(64);
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -38,6 +39,109 @@ function runCli(...args: string[]) {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+type MutableEvidenceManifest = {
+  schemaVersion: number;
+  testedRevision: string;
+  evidence: Array<Record<string, unknown>>;
+};
+
+function evidenceFixture(): { root: string; registry: ReturnType<typeof emptyEvidenceRegistry> } {
+  const root = mkdtempSync(join(tmpdir(), "nsd-evidence-"));
+  temporaryDirectories.push(root);
+  const evidenceDirectory = join(root, "tests", "no-silent-drop", "evidence");
+  mkdirSync(evidenceDirectory, { recursive: true });
+
+  const primaryRuns = ADOPTION_RECEIPT_IDS.map((id) => {
+    const isComposite = id === "full-test" || id === "coverage";
+    return {
+      schemaVersion: 1,
+      recordId: `${id}:${isComposite ? "normal" : "primary"}`,
+      receiptId: id,
+      runName: isComposite ? "normal" : "primary",
+      testedRevision: FULL_SHA,
+      command: ["bun", "test", id],
+      exitCode: isComposite ? 1 : 0,
+      verdict: isComposite ? "known-timeout" : "pass",
+      tests: [{ name: `${id}.test.ts`, status: isComposite ? "timeout" : "pass" }],
+    };
+  });
+  const isolatedRuns = ["full-test", "coverage"].map((id) => ({
+    schemaVersion: 1,
+    recordId: `${id}:isolated-known-timeouts`,
+    receiptId: id,
+    runName: "isolated-known-timeouts",
+    testedRevision: FULL_SHA,
+    command: ["bun", "test", "--timeout", "120000", `${id}-timeout.test.ts`],
+    exitCode: 0,
+    verdict: "pass",
+    tests: [{ name: `${id}-timeout.test.ts`, status: "pass" }],
+  }));
+  const primaryBytes = `${JSON.stringify({ schemaVersion: 1, runs: primaryRuns }, null, 2)}\n`;
+  const isolatedBytes = `${JSON.stringify({ schemaVersion: 1, runs: isolatedRuns }, null, 2)}\n`;
+  const primaryPath = "tests/no-silent-drop/evidence/primary.json";
+  const isolatedPath = "tests/no-silent-drop/evidence/isolated.json";
+  writeFileSync(join(root, primaryPath), primaryBytes);
+  writeFileSync(join(root, isolatedPath), isolatedBytes);
+
+  const evidence = primaryRuns.map((primary) => {
+    const runs = [{
+      name: primary.runName,
+      command: primary.command,
+      artifact: { path: primaryPath, sha256: sha256(primaryBytes), recordId: primary.recordId },
+      exitCode: primary.exitCode,
+      verdict: primary.verdict,
+    }];
+    const isolated = isolatedRuns.find((candidate) => candidate.receiptId === primary.receiptId);
+    if (isolated !== undefined) {
+      runs.push({
+        name: isolated.runName,
+        command: isolated.command,
+        artifact: { path: isolatedPath, sha256: sha256(isolatedBytes), recordId: isolated.recordId },
+        exitCode: isolated.exitCode,
+        verdict: isolated.verdict,
+      });
+    }
+    return {
+      schemaVersion: 1,
+      id: primary.receiptId,
+      testedRevision: FULL_SHA,
+      runs,
+      verdict: "pass",
+    };
+  });
+  writeFileSync(
+    join(root, "tests", "no-silent-drop", "adoption-evidence-manifest.json"),
+    `${JSON.stringify({ schemaVersion: 1, testedRevision: FULL_SHA, evidence }, null, 2)}\n`,
+  );
+
+  let registry = emptyEvidenceRegistry(FULL_SHA);
+  for (const id of ADOPTION_RECEIPT_IDS) {
+    registry = closeEvidenceReceipt(registry, {
+      schemaVersion: 1,
+      id,
+      currentRevision: FULL_SHA,
+      evidenceDigest: evidenceDigestForReceipt(id, FULL_SHA, root),
+      pass: true,
+    }, root);
+  }
+  return { root, registry };
+}
+
+function readManifest(root: string): MutableEvidenceManifest {
+  return JSON.parse(readFileSync(join(root, "tests", "no-silent-drop", "adoption-evidence-manifest.json"), "utf8"));
+}
+
+function writeManifest(root: string, manifest: MutableEvidenceManifest): void {
+  writeFileSync(
+    join(root, "tests", "no-silent-drop", "adoption-evidence-manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
 }
 
 describe("no-silent-drop CI argv authority", () => {
@@ -84,40 +188,106 @@ describe("no-silent-drop CI argv authority", () => {
 });
 
 describe("repository adoption evidence registry", () => {
-  test("all 23 canonical receipts close one revision", () => {
-    let registry = emptyEvidenceRegistry(FULL_SHA);
-    for (const id of ADOPTION_RECEIPT_IDS) {
-      registry = closeEvidenceReceipt(registry, {
-        schemaVersion: 1,
-        id,
-        currentRevision: FULL_SHA,
-        evidenceDigest: DIGEST,
-        pass: true,
-      });
-    }
+  test("all 23 canonical receipts bind to repository evidence bytes for one revision", () => {
+    const { root, registry } = evidenceFixture();
 
-    expect(validateEvidenceRegistry(registry, FULL_SHA)).toEqual({ ok: true });
+    expect(validateEvidenceRegistry(registry, FULL_SHA, root)).toEqual({ ok: true });
     expect(registry.receipts).toHaveLength(23);
+    expect(new Set(registry.receipts.map((receipt) => receipt.evidenceDigest)).size).toBe(23);
   });
 
-  test("missing, extra, duplicate, wrong version/revision, and pass=false never validate green", () => {
-    const receipt = {
-      schemaVersion: 1 as const,
-      id: ADOPTION_RECEIPT_IDS[0],
-      currentRevision: FULL_SHA,
-      evidenceDigest: DIGEST,
-      pass: true as const,
+  test("the same fabricated digest cannot close any evidence population", () => {
+    const { root, registry } = evidenceFixture();
+    const fabricated = {
+      ...registry,
+      receipts: registry.receipts.map((receipt) => ({ ...receipt, evidenceDigest: "a".repeat(64) })),
     };
-    const missing = emptyEvidenceRegistry(FULL_SHA);
-    const duplicate = { ...missing, receipts: [receipt, receipt] };
-    const extra = { ...missing, receipts: [{ ...receipt, id: "unknown" }] };
-    const wrongVersion = { ...missing, schemaVersion: 2 };
-    const wrongRevision = { ...missing, receipts: [{ ...receipt, currentRevision: "f".repeat(40) }] };
-    const invalidDigest = { ...missing, receipts: [{ ...receipt, evidenceDigest: "not-a-digest" }] };
-    const failed = { ...missing, receipts: [{ ...receipt, pass: false }] };
 
-    for (const candidate of [missing, duplicate, extra, wrongVersion, wrongRevision, invalidDigest, failed]) {
-      expect(validateEvidenceRegistry(candidate, FULL_SHA).ok).toBeFalse();
+    expect(validateEvidenceRegistry(fabricated, FULL_SHA, root).ok).toBeFalse();
+  });
+
+  test("artifact and command tampering invalidate an already closed receipt", () => {
+    const artifactFixture = evidenceFixture();
+    writeFileSync(
+      join(artifactFixture.root, "tests", "no-silent-drop", "evidence", "primary.json"),
+      "tampered\n",
+    );
+    expect(validateEvidenceRegistry(artifactFixture.registry, FULL_SHA, artifactFixture.root).ok).toBeFalse();
+
+    const commandFixture = evidenceFixture();
+    const manifest = readManifest(commandFixture.root);
+    const first = manifest.evidence[0] as { runs: Array<{ command: string[] }> };
+    first.runs[0]?.command.push("--tampered");
+    writeManifest(commandFixture.root, manifest);
+    expect(validateEvidenceRegistry(commandFixture.registry, FULL_SHA, commandFixture.root).ok).toBeFalse();
+  });
+
+  test("missing, extra, and duplicate manifest evidence fail closed", () => {
+    for (const mutation of ["missing", "extra", "duplicate"] as const) {
+      const { root, registry } = evidenceFixture();
+      const manifest = readManifest(root);
+      if (mutation === "missing") manifest.evidence.pop();
+      if (mutation === "extra") manifest.evidence.push({ ...manifest.evidence[0], id: "unknown" });
+      if (mutation === "duplicate") manifest.evidence.push({ ...manifest.evidence[0] });
+      writeManifest(root, manifest);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
+    }
+  });
+
+  test("missing, extra, and duplicate artifact evidence fail closed", () => {
+    for (const mutation of ["missing", "extra", "duplicate"] as const) {
+      const { root, registry } = evidenceFixture();
+      const path = join(root, "tests", "no-silent-drop", "evidence", "primary.json");
+      const collection = JSON.parse(readFileSync(path, "utf8")) as { runs: Array<Record<string, unknown>> };
+      if (mutation === "missing") collection.runs.pop();
+      if (mutation === "extra") collection.runs.push({ ...collection.runs[0], recordId: "extra:primary" });
+      if (mutation === "duplicate") collection.runs.push({ ...collection.runs[0] });
+      writeFileSync(path, `${JSON.stringify(collection, null, 2)}\n`);
+      const validation = validateEvidenceRegistry(registry, FULL_SHA, root);
+      expect(validation.ok).toBeFalse();
+      if (!validation.ok) expect(validation.problems.join("\n")).toContain(`${mutation} artifact record`);
+    }
+  });
+
+  test("self-referential artifact evidence fails closed", () => {
+    const selfReferenceFixture = evidenceFixture();
+    const manifest = readManifest(selfReferenceFixture.root);
+    const first = manifest.evidence[0] as { runs: Array<{ artifact: { path: string } }> };
+    if (first.runs[0] !== undefined) first.runs[0].artifact.path = "tests/no-silent-drop/adoption-evidence.json";
+    writeManifest(selfReferenceFixture.root, manifest);
+    const validation = validateEvidenceRegistry(
+      selfReferenceFixture.registry,
+      FULL_SHA,
+      selfReferenceFixture.root,
+    );
+    expect(validation.ok).toBeFalse();
+    if (!validation.ok) expect(validation.problems.join("\n")).toContain("self-referential");
+  });
+
+  test("revision mismatch and pass=false fail closed", () => {
+    const revisionFixture = evidenceFixture();
+    const manifest = readManifest(revisionFixture.root);
+    manifest.testedRevision = "f".repeat(40);
+    writeManifest(revisionFixture.root, manifest);
+    expect(validateEvidenceRegistry(revisionFixture.registry, FULL_SHA, revisionFixture.root).ok).toBeFalse();
+
+    const failedFixture = evidenceFixture();
+    const failed = {
+      ...failedFixture.registry,
+      receipts: failedFixture.registry.receipts.map((receipt, index) =>
+        index === 0 ? { ...receipt, pass: false } : receipt),
+    };
+    expect(validateEvidenceRegistry(failed, FULL_SHA, failedFixture.root).ok).toBeFalse();
+  });
+
+  test("full and coverage receipts require normal and named isolated run bytes", () => {
+    for (const id of ["full-test", "coverage"] as const) {
+      const { root, registry } = evidenceFixture();
+      const manifest = readManifest(root);
+      const entry = manifest.evidence.find((candidate) => candidate.id === id) as { runs: unknown[] };
+      entry.runs.pop();
+      writeManifest(root, manifest);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
     }
   });
 
@@ -127,26 +297,20 @@ describe("repository adoption evidence registry", () => {
   });
 
   test("the safe committer refuses unknown, duplicate, mismatched, or failed receipts", () => {
+    const { root, registry: closed } = evidenceFixture();
+    const validReceipt = closed.receipts[0]!;
     const registry = emptyEvidenceRegistry(FULL_SHA);
-    const validReceipt = {
-      schemaVersion: 1 as const,
-      id: ADOPTION_RECEIPT_IDS[0],
-      currentRevision: FULL_SHA,
-      evidenceDigest: DIGEST,
-      pass: true as const,
-    };
-    const closed = closeEvidenceReceipt(registry, validReceipt);
 
-    expect(() => closeEvidenceReceipt(closed, validReceipt)).toThrow("duplicate");
-    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, id: "unknown" as never })).toThrow("unknown");
-    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, currentRevision: "f".repeat(40) })).toThrow(
+    expect(() => closeEvidenceReceipt(closed, validReceipt, root)).toThrow("duplicate");
+    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, id: "unknown" as never }, root)).toThrow("unknown");
+    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, currentRevision: "f".repeat(40) }, root)).toThrow(
       "revision",
     );
-    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, pass: false as never })).toThrow("pass");
+    expect(() => closeEvidenceReceipt(registry, { ...validReceipt, pass: false as never }, root)).toThrow("pass");
     expect(() => closeEvidenceReceipt({ ...closed, receipts: [validReceipt, validReceipt] }, {
       ...validReceipt,
       id: ADOPTION_RECEIPT_IDS[1],
-    })).toThrow("not safe to extend");
+    }, root)).toThrow("not safe to extend");
   });
 });
 

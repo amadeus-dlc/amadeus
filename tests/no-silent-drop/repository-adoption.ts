@@ -1,33 +1,13 @@
+import {
+  ADOPTION_RECEIPT_IDS,
+  type AdoptionReceiptId,
+  DEFAULT_EVIDENCE_REPOSITORY_ROOT,
+  validateEvidenceBundle,
+} from "./repository-adoption-evidence.ts";
 import type { BaselineDoc } from "./model.ts";
 import { digest } from "./model.ts";
 
-export const ADOPTION_RECEIPT_IDS = [
-  "shape-fixtures",
-  "census-pre",
-  "census-post",
-  "classification-precision",
-  "baseline-proof",
-  "failure-matrix",
-  "u2-u3-regressions",
-  "full-test",
-  "lint",
-  "typecheck",
-  "coverage",
-  "cold-warm-5x2",
-  "capacity-r0-r2-r4",
-  "u1-complexity",
-  "package-apply",
-  "promotion-apply",
-  "package-check",
-  "promotion-check",
-  "event-pr-base",
-  "event-fork-base",
-  "event-push-before",
-  "hang-deadline",
-  "workflow-structure",
-] as const;
-
-export type AdoptionReceiptId = (typeof ADOPTION_RECEIPT_IDS)[number];
+export { ADOPTION_RECEIPT_IDS, type AdoptionReceiptId } from "./repository-adoption-evidence.ts";
 
 export type AdoptionReceipt = {
   readonly schemaVersion: 1;
@@ -147,12 +127,20 @@ export function emptyEvidenceRegistry(currentRevision: string): EvidenceRegistry
 export function closeEvidenceReceipt(
   registry: EvidenceRegistry,
   receipt: AdoptionReceipt,
+  repositoryRoot = DEFAULT_EVIDENCE_REPOSITORY_ROOT,
 ): EvidenceRegistry {
-  assertPartialRegistry(registry);
+  const evidence = validateEvidenceBundle(repositoryRoot, registry.currentRevision);
+  if (evidence.problems.length > 0) {
+    throw new Error(`evidence bundle is invalid: ${evidence.problems.join("; ")}`);
+  }
+  assertPartialRegistry(registry, evidence.digests);
   if (!RECEIPT_ID_SET.has(receipt.id)) throw new Error(`unknown receipt id: ${receipt.id}`);
   if (receipt.schemaVersion !== 1) throw new Error(`receipt ${receipt.id} has an unknown schema version`);
   if (receipt.currentRevision !== registry.currentRevision) throw new Error(`receipt ${receipt.id} revision mismatch`);
   if (!SHA256.test(receipt.evidenceDigest)) throw new Error(`receipt ${receipt.id} evidence digest is invalid`);
+  if (receipt.evidenceDigest !== evidence.digests.get(receipt.id)) {
+    throw new Error(`receipt ${receipt.id} evidence digest does not match repository evidence`);
+  }
   if (receipt.pass !== true) throw new Error(`receipt ${receipt.id} must pass before it can be closed`);
   if (registry.receipts.some((candidate) => candidate.id === receipt.id)) {
     throw new Error(`duplicate receipt id: ${receipt.id}`);
@@ -160,13 +148,16 @@ export function closeEvidenceReceipt(
   return { ...registry, receipts: [...registry.receipts, receipt] };
 }
 
-function assertPartialRegistry(registry: EvidenceRegistry): void {
+function assertPartialRegistry(
+  registry: EvidenceRegistry,
+  expectedDigests: ReadonlyMap<AdoptionReceiptId, string>,
+): void {
   if (registry.schemaVersion !== 1) throw new Error("registry has an unknown schema version");
   if (!isFullRevision(registry.currentRevision)) throw new Error("registry current revision is invalid");
   if (!Array.isArray(registry.receipts)) throw new Error("registry receipts must be an array");
   const receivedIds = new Set<string>();
   const problems = registry.receipts.flatMap((candidate, index) =>
-    validateReceipt(candidate, index, registry.currentRevision, receivedIds));
+    validateReceipt(candidate, index, registry.currentRevision, receivedIds, expectedDigests));
   if (problems.length > 0) throw new Error(`registry is not safe to extend: ${problems.join("; ")}`);
 }
 
@@ -175,6 +166,7 @@ function validateReceipt(
   index: number,
   expectedRevision: string,
   receivedIds: Set<string>,
+  expectedDigests?: ReadonlyMap<AdoptionReceiptId, string>,
 ): string[] {
   if (!isRecord(candidate)) return [`receipt ${index} must be an object`];
   const problems: string[] = [];
@@ -183,18 +175,38 @@ function validateReceipt(
   if (typeof candidate.id !== "string" || !RECEIPT_ID_SET.has(candidate.id)) {
     return [...problems, `receipt ${index} has an unknown id`];
   }
+  const receiptId = candidate.id as AdoptionReceiptId;
   if (receivedIds.has(candidate.id)) problems.push(`duplicate receipt id: ${candidate.id}`);
   receivedIds.add(candidate.id);
   if (candidate.currentRevision !== expectedRevision) problems.push(`receipt ${candidate.id} revision mismatch`);
   if (typeof candidate.evidenceDigest !== "string" || !SHA256.test(candidate.evidenceDigest)) {
     problems.push(`receipt ${candidate.id} evidence digest is invalid`);
+  } else if (expectedDigests !== undefined && candidate.evidenceDigest !== expectedDigests.get(receiptId)) {
+    problems.push(`receipt ${candidate.id} evidence digest does not match repository evidence`);
   }
   if (candidate.pass !== true) problems.push(`receipt ${candidate.id} is not passing`);
   return problems;
 }
 
-export function validateEvidenceRegistry(value: unknown, expectedRevision: string): RegistryValidation {
-  const problems: string[] = [];
+export function evidenceDigestForReceipt(
+  id: AdoptionReceiptId,
+  expectedRevision: string,
+  repositoryRoot = DEFAULT_EVIDENCE_REPOSITORY_ROOT,
+): string {
+  const evidence = validateEvidenceBundle(repositoryRoot, expectedRevision);
+  if (evidence.problems.length > 0) throw new Error(`evidence bundle is invalid: ${evidence.problems.join("; ")}`);
+  const evidenceDigest = evidence.digests.get(id);
+  if (evidenceDigest === undefined) throw new Error(`missing evidence id: ${id}`);
+  return evidenceDigest;
+}
+
+export function validateEvidenceRegistry(
+  value: unknown,
+  expectedRevision: string,
+  repositoryRoot = DEFAULT_EVIDENCE_REPOSITORY_ROOT,
+): RegistryValidation {
+  const evidence = validateEvidenceBundle(repositoryRoot, expectedRevision);
+  const problems: string[] = [...evidence.problems];
   if (!isFullRevision(expectedRevision)) problems.push("expected revision is not a non-zero full SHA");
   if (!isRecord(value)) return { ok: false, problems: [...problems, "registry must be an object"] };
   if (!hasExactKeys(value, REGISTRY_KEYS)) problems.push("registry fields do not match schema version 1");
@@ -204,7 +216,7 @@ export function validateEvidenceRegistry(value: unknown, expectedRevision: strin
 
   const receivedIds = new Set<string>();
   for (const [index, candidate] of value.receipts.entries()) {
-    problems.push(...validateReceipt(candidate, index, expectedRevision, receivedIds));
+    problems.push(...validateReceipt(candidate, index, expectedRevision, receivedIds, evidence.digests));
   }
 
   for (const id of ADOPTION_RECEIPT_IDS) {

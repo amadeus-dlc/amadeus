@@ -131,6 +131,10 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const registry = JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "adoption-evidence.json"), "utf8"),
     );
+    const headRevision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
+
+    expect(spawnSync("git", ["cat-file", "-e", `${registry.currentRevision}^{commit}`], { cwd: REPO_ROOT }).status).toBe(0);
+    expect(registry.currentRevision).not.toBe(headRevision);
     expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
   });
 });
