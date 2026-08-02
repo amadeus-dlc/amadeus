@@ -274,7 +274,7 @@ When a stage needs to ask the user questions:
 **Step 1: Offer the user a choice of interaction mode — BEFORE authoring any questions.** The chosen mode decides whether a questions file is pre-authored at all, so the choice comes first: do NOT create a pre-built questions file while the mode is still undecided.
 
 ```question
-prompt: "This stage has up to [N] questions to work through. How would you like to answer them?"
+prompt: "This stage has a total budget of up to [N] questions, including any follow-ups. How would you like to answer them?"
 header: Questions
 multiSelect: false
 options:
@@ -288,7 +288,7 @@ options:
     description: Discuss freely — I'll extract decisions from our conversation
 ```
 
-Estimate `[N]` from the depth guidance below (the actual questions are authored in Step 2, per the chosen mode). When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
 
 Log the user's mode choice to `<record>/audit/<host>-<clone>.jsonl` using the Question interaction log format.
 
@@ -304,7 +304,7 @@ Stage files list **topic areas and example questions** — they are guidance, no
    - **Construction**: Minimal questions. By this point, decisions should be made. Questions are **exceptional, not routine** — only when the agent detects genuine gaps that prior stages didn't cover (e.g., a unit-specific edge case not addressed in Application Design). Not a full Q&A session.
    - **Operation**: Occasional targeted questions only where operational parameters weren't established earlier
 
-| Depth | Primary-question budget | Guidance |
+| Depth | Total question budget | Guidance |
 |-------|-------------------------|----------|
 | Minimal | at most 4 per stage | Ask only what's essential to proceed. Skip questions where the answer can be reasonably inferred from context, prior stages, or codebase analysis. |
 | Standard | at most 8 per stage | Cover the material decisions in the stage's topic areas without padding the set. |
@@ -315,10 +315,10 @@ ceiling:
 - A vague Minimal request still gets at most 4 primary questions; combine related decisions and adopt a documented recommendation for reversible, low-risk details.
 - A Comprehensive enterprise feature with crystal-clear requirements warrants fewer than 12 — don't pad with noise.
 - Prior stage outputs reduce what needs asking. If requirements-analysis already captured NFR targets, construction stages shouldn't re-ask.
-- Follow-up questions are limited to one consolidated round per stage and only for material ambiguity, with no more items than the depth's primary-question ceiling.
+- Primary and follow-up questions share this single total budget. A follow-up is allowed only for material ambiguity, in at most one consolidated round per stage, and may use only the slots left after primary questions. If no slots remain, record the unresolved item for the existing approval boundary instead of asking again.
 - Contradiction detection and resolution remains MANDATORY at all depth levels.
 
-**How to apply**: When authoring the questions file in Step 2, use the stage file's topic areas and examples as a starting point. Generate the fewest context-appropriate questions needed for material decisions without exceeding the depth ceiling.
+**How to apply**: When authoring the questions file in Step 2, use the stage file's topic areas and examples as a starting point. Generate the fewest context-appropriate primary questions needed for material decisions without exceeding the total ceiling; leave room for likely clarification only when the context warrants it, never as a quota.
 
 **Step 2: Author the questions file according to the chosen mode.** The questions file is always the decision record and the Stop-hook human-wait signal, but WHETHER it is pre-authored depends on the mode:
 
@@ -377,11 +377,12 @@ artifact, an external contract, or data safety and choosing a default would be
 irreversible or high risk. Reversible or low-risk uncertainty is not material:
 adopt the recommended value and record the assumption in `memory.md`.
 
-If material ambiguities remain, ask one consolidated follow-up round for the
-stage, containing no more items than the active depth's primary-question
-ceiling. After that round, do not generate another. Record any unresolved
-material ambiguity and carry it to the existing approval boundary; never create
-a new gate or silently claim it was resolved.
+If material ambiguities remain, ask at most one consolidated follow-up round for
+the stage. Its items consume only the slots remaining in the active depth's
+total question budget. When no slots remain, or after that round, do not
+generate another question. Record any unresolved material ambiguity and carry
+it to the existing approval boundary; never create a new gate or silently claim
+it was resolved.
 
 **Write every pending question into the questions file before you end the turn —
 including follow-ups and chat-mode questions.** The questions file (with blank
@@ -399,7 +400,7 @@ Construction, where the loop is meant to keep running without you.
 When processing user answers from question files:
 - **Missing answers**: If any [Answer]: tag is still blank or contains only underscores, list the unanswered questions and ask the user to complete them before proceeding.
 - **Invalid answers**: If an answer does not match any provided option (A-E, X) and is not a clear free-text response for "Other", ask the user to clarify which option they intended.
-- **Ambiguous answers**: If an answer like "maybe B" or "either A or C" is given, resolve it within the stage's one material follow-up round. If that round is already spent, record the ambiguity for the existing approval boundary instead of asking again.
+- **Ambiguous answers**: If an answer like "maybe B" or "either A or C" is given, resolve it within the stage's one material follow-up round and remaining total question budget. If that round is spent or no slots remain, record the ambiguity for the existing approval boundary instead of asking again.
 
 ### Contradiction detection (MANDATORY)
 After all answers are collected, cross-check the full answer set for:
@@ -411,18 +412,26 @@ After all answers are collected, cross-check the full answer set for:
 When contradictions are detected:
 1. Present the specific contradictory answers side by side
 2. Explain why they conflict
-3. Ask a targeted follow-up question to resolve the contradiction
-4. Do NOT proceed until contradictions are resolved
+3. Treat the contradiction as material ambiguity: ask within the same one
+   consolidated follow-up round and only while the total question budget has a
+   remaining slot
+4. If it remains unresolved when the round or budget is exhausted, record it in
+   the artifact and carry it to the existing approval boundary. Do not ask
+   again, create a new gate, or claim the contradiction was resolved.
 
 ### Overconfidence prevention
-- Default to asking, not assuming. Never proceed with ambiguity.
-- If an answer seems incomplete, probe deeper.
-- Red flags that require follow-up:
+- Research facts first; ask only when the remaining uncertainty is material and
+  the total question budget has a slot.
+- If an answer seems incomplete, use the single follow-up round rather than an
+  open-ended probing loop.
+- Red flags to evaluate for a budgeted material follow-up:
   - Single-word answers to open-ended questions
   - "Whatever you think is best" or "up to you" — ask what outcome they care about most
   - Contradictory signals between different answers
   - Answers that dodge the question or change the subject
-- When a user defers to AI judgment, reframe: "I want to make sure the design reflects YOUR priorities. Could you tell me [specific aspect]?"
+- When a user defers to AI judgment, ask one targeted priority question only if
+  it is material and budget remains; otherwise record the recommended reversible
+  default or carry the unresolved high-risk decision to approval.
 
 ### Plan and question file location
 Plan files and question files are co-located with their stage artifacts, not in a centralized `plans/` directory. For example, user story plan questions live at `<record>/inception/user-stories/user-stories-questions.md` alongside the user story artifacts. This co-location improves discoverability — all inputs, questions, and outputs for a stage are found in the same directory.
@@ -749,20 +758,22 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 - 1 verifiable test per identified requirement (requirement-driven, not component-driven)
 - Happy-path floor: every component gets at least 1 happy-path unit test regardless of requirement mapping
 - Unit tests ONLY — skip integration, E2E, performance, security
-- ~5-15 tests total for a typical project
 - Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical fix)
 
 **Standard — requirement and risk model:**
 - Select tests from requirements, changed behavior, boundary risk, and regression history; use 8 tests per component only as a planning ceiling, not a quota or coverage substitute
 - Unit tests + integration tests (key boundaries)
 - E2E, performance, security tests skipped unless NFR requirements exist
-- Test pyramid proportions apply within the generated set (75% unit / 20% integration / 5% E2E)
+- When unit, integration, and E2E layers all apply, 75/20/5 is default guidance
+  within that three-layer subset only. Requirements, risk, and NFR evidence take
+  precedence; never create a layer merely to satisfy the ratio.
 - Soft guideline
 
 **Comprehensive — requirement and risk model:**
 - Select tests from requirements, changed behavior, boundary risk, and NFR evidence; use 15 tests per component only as a planning ceiling, not a quota or coverage substitute
 - All test types: unit + integration + E2E + performance (if NFRs) + security (if NFRs)
-- Test pyramid proportions apply
+- The same conditional three-layer pyramid guidance applies; performance,
+  security, and other NFR-driven tests sit outside that ratio.
 - Soft guideline
 
 **Override syntax:**
@@ -959,7 +970,7 @@ Every reviewer and worker finding uses exactly one of these prefixes:
 
 | Severity | Evidence contract | Effect |
 |---|---|---|
-| `BLOCKER` | Reproducible failure, explicit requirement or contract violation, security/data-safety defect, or demonstrated regression | Blocks `READY`; may be handed to the builder and consume another bounded review iteration |
+| `BLOCKER` | Reproducible failure, explicit requirement or contract violation, security/data-safety defect, or demonstrated regression | Blocks `READY`. A reviewer finding goes to the builder while a bounded review iteration remains, then halts incomplete if still unresolved. A worker finding outside §12a halts immediately for human direction. |
 | `FOLLOW-UP` | Concrete improvement, maintainability opportunity, or deferred risk without evidence of present failure or requirement violation | Does not block `READY`; aggregate at the completion gate and do not re-review for it |
 | `NIT` | Cosmetic or optional local preference | Does not block `READY`, does not trigger builder handoff, and is omitted from user-facing status |
 
@@ -1001,8 +1012,9 @@ unless the reviewer supplies the `BLOCKER` evidence above.
      - Re-invoke the stage's lead agent (inline or subagent per `directive.mode`) with the artifact + unresolved `BLOCKER` findings only. The builder addresses those blockers and updates the artifact. Keep `FOLLOW-UP` for the completion message; never spend another review iteration on `FOLLOW-UP` or `NIT` alone.
      - Return to step 1 (re-invoke reviewer)
    - **NOT-READY** and iterations exhausted:
-     - Proceed to approval gate with unresolved findings noted:
-       "Reviewer found issues after N iterations. Presenting with unresolved findings for your decision."
+     - Keep the stage incomplete. Present the unresolved `BLOCKER` findings and
+       halt for human direction. Do not run §13, completion verification, or the
+       approval gate, and do not report a completed/approved stage result.
 
 ### Parallelism (per-unit stages)
 

@@ -19,8 +19,9 @@ possibility of a cleaner design is never a `BLOCKER` by itself.
 Use only the closed `BLOCKER | FOLLOW-UP | NIT` vocabulary from
 stage-protocol.md §12a. This contract overrides any demanding tone below:
 
-- `BLOCKER` requires concrete evidence of present harm or an explicit contract
-  violation. State the reproduction, violated requirement, or regression.
+- `BLOCKER` requires concrete evidence of present harm, an explicit contract
+  violation, or a security/data-safety defect. State the reproduction, violated
+  requirement, regression, or defect.
 - `FOLLOW-UP` covers possible simplifications, decomposition, abstraction
   cleanup, file-size concerns, and other maintainability improvements.
 - `NIT` covers cosmetic preferences.

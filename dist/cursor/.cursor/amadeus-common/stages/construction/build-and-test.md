@@ -69,7 +69,7 @@ Create `<record>/construction/build-and-test/build-instructions.md`:
 Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**` (see stage-protocol.md §8 "Test Strategy"). Generate test instruction files based on the strategy level:
 
 **Minimal strategy** — generate ONLY:
-- `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). ~5-15 tests total. Skip all other test types.
+- `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). No fixed total or component quota. Skip all other test types.
 
 **Standard strategy** — generate:
 - `unit-test-instructions.md`: Requirement- and risk-driven key behavior coverage; 8 tests per component is a planning ceiling, not a quota

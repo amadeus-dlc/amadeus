@@ -100,7 +100,7 @@ Plan should cover (as applicable to the unit):
 **Test files are MANDATORY in the plan.** Consult the active test strategy (stage-protocol.md §8 "Test Strategy") to determine test scope and volume:
 - **Minimal strategy**: Unit test files only, requirement-driven (1 test per requirement, happy-path floor per component)
 - **Standard strategy**: Requirement- and risk-driven unit tests plus integration tests for key boundaries; 8 tests per component is a planning ceiling, not a quota
-- **Comprehensive strategy**: Requirement-, risk-, and NFR-driven unit + integration + E2E tests; 15 tests per component is a planning ceiling, not a quota
+- **Comprehensive strategy**: Requirement-, risk-, and NFR-driven unit + integration + E2E tests, plus performance and security tests when required by applicable NFRs; 15 tests per component is a planning ceiling, not a quota
 
 The plan MUST include steps for:
 - [ ] Test files appropriate to the active test strategy

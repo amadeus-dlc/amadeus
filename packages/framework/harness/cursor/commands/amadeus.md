@@ -51,6 +51,12 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 ### Reviewer step (§12a)
 
 When `directive.reviewer` is present, pass the unchanged directive JSON on stdin to `bun .cursor/tools/amadeus-reviewer-runtime.ts scope` before spawning the exact checker. Pass only the returned `stage_file` + current Unit existing `produces` + present `consumes` paths; Q&A is included only when it is an explicit consume. Never pass/discover a missing optional output, absent consume, sibling/root file, memory.md, plan, or reasoning. Preserve the scope-returned `invocationId + iteration` exactly through every internal carrier and reviewer result. A declared single-file integration spot-check must go through `bun .cursor/tools/amadeus-reviewer-runtime.ts check-read` before the read, using the same directive, invocation ID, positive iteration, and transient transcript; it requires the current-artifact integration ID, exactly one passed-contract owner path, a reason, and one literal non-discovery file path. After the identity-first reviewer result returns, pass `{ directive, invocationId, result }` to `bun .cursor/tools/amadeus-reviewer-runtime.ts complete-review`. Only a zero exit and its durable four-field Review + revalidated Scope decision may establish READY. Bypass/tamper/invocation-or-iteration replay/rejected/outside/second request or invalid scope/persona/UTC/result fields establishes no Review/READY. Repeat the complete scope/reviewer/complete flow for each permitted NOT-READY iteration.
+Only validated `READY` returns to the `run-stage` completion path. Any
+`complete-review` failure or `NOT-READY` verdict at the iteration limit leaves
+the stage incomplete: present unresolved `BLOCKER` findings, stop for human
+direction, and do not run completion verification, learnings, approval, or
+report a stage result.
+
 | `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or

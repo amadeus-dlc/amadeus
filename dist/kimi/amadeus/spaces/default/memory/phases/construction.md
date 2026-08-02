@@ -17,7 +17,7 @@ imports them as the matching phase rule.
 
 ## Testing Standards
 
-- Use the active test strategy as the sole volume and test-type contract; choose cases from requirements, changed behavior, boundary risk, and regression history
+- Use the active test strategy as the sole volume and test-type contract; choose cases from requirements, changed behavior, boundary risk, regression history, and applicable NFR evidence
 - Cover error and edge behavior when the active strategy and identified risk require it; do not add cases merely to satisfy a fixed count
 - Tests must be runnable without manual setup beyond documented prerequisites
 - Do not generate tests that always pass regardless of implementation (e.g., `assert True`)

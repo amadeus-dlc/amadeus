@@ -367,6 +367,7 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
   test("§8: Standard testing is risk-based with a planning ceiling", () => {
     expect(protocolHas("requirement and risk model")).toBe(true);
     expect(protocolHas("8 tests per component only as a planning ceiling")).toBe(true);
+    expect(protocolHas("~5-15 tests total")).toBe(false);
   });
 
   // =========================================================================

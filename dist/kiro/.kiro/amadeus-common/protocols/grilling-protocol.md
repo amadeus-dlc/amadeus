@@ -31,7 +31,7 @@ every other structured question. This protocol never names a harness tool.
 | D3 | **Facts are never asked.** Anything determinable from the codebase, prior artifacts, or the code knowledge base is looked up by the agent, not put to the user. |
 | D4 | A fact the agent cannot settle by self-research is presented as an **estimate with a confidence level** (high / medium / low) for confirmation. If the user disagrees, demote it to a regular judgement question. |
 | D5 | **Decisions are always the user's.** Put each decision to the user and wait for the answer. Never decide on the user's behalf — autonomy is never inferred. |
-| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite `stage-protocol.md` §3 ceiling: Minimal 4 / Standard 8 / Comprehensive 12 primary questions. Do not offer continuation beyond that ceiling. |
+| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite `stage-protocol.md` §3 total question budget: Minimal 4 / Standard 8 / Comprehensive 12 rendered questions, including estimate confirmations, demoted judgement questions, and material-ambiguity clarifications. At most one clarification round may consume remaining slots. Do not offer continuation beyond the total ceiling. |
 | D7 | **Shared understanding is confirmed, never assumed.** At the end, present an agreement summary of every decision and obtain explicit confirmation. Do not proceed to artifact generation or session close before confirmation. On a correction request, update the affected answer and re-present the summary. |
 
 ## 2. The Grilling Loop (8 steps)
@@ -52,10 +52,12 @@ every other structured question. This protocol never names a harness tool.
    re-present.
 5. **WriteBack** — *(workflow only)* Write the answer back to its `[Answer]:`
    tag immediately, and log the `answer` audit event — one per question.
-6. **CheckEnd** — "done" short-circuits to step 7. Reaching the finite depth
-   ceiling also proceeds directly to step 7; never offer a continuation that
-   can exceed the ceiling. Otherwise, if open points remain, loop to step 1
-   (D6).
+6. **CheckEnd** — "done" short-circuits to step 7. Reaching the finite total
+   question ceiling also proceeds directly to step 7; never offer a
+   continuation that can exceed the ceiling. Otherwise, if a material open
+   point remains, the one clarification round is unused, and a budget slot
+   remains, loop to step 1. For every other open point, record it for the
+   existing approval boundary and proceed to step 7 (D6).
 7. **Summary** — Present the agreement summary of all decisions and request
    explicit confirmation (§3 C-4). A correction request updates the affected
    answer (workflow: the `[Answer]:` tag) and re-presents the summary. Never
@@ -92,9 +94,10 @@ question)".
 
 ### C-3: Ceiling transition
 
-When the finite question ceiling is reached, state that the ceiling has been
-reached and proceed directly to C-4. Do not render another question or offer a
-continuation option. "done" is accepted as free text at any point in the
+When the finite total question ceiling is reached, state that the ceiling has
+been reached, record unresolved material decisions for the existing approval
+boundary, and proceed directly to C-4. Do not render another question or offer
+a continuation option. "done" is accepted as free text at any point in the
 dialogue (D6).
 
 ### C-4: Agreement summary confirmation

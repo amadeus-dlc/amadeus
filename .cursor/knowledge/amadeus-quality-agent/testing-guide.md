@@ -57,7 +57,7 @@ Structure tests in this ratio (approximate):
 
 ## Depth-Aware Test Volume
 
-Test volume scales with the active test strategy (defaults to depth level, overridable via `--test-strategy`). Requirements, changed behavior, boundary risk, regression history, and NFR evidence determine the cases; numeric values are planning ceilings rather than quotas:
+Test volume scales with the active test strategy (defaults to depth level, overridable via `--test-strategy`). Requirements, changed behavior, boundary risk, regression history, and NFR evidence determine the cases; numeric values are planning ceilings rather than quotas. The 4/8/12 question budgets are a separate interaction contract and are not test-count ceilings:
 
 | Strategy | Selection model | Planning ceiling | Test Types |
 |----------|-----------------|------------------|------------|
@@ -66,7 +66,10 @@ Test volume scales with the active test strategy (defaults to depth level, overr
 | Comprehensive | Requirement, risk, and NFR driven | Up to 15 per component | Unit + integration + E2E + perf + security |
 
 - **Minimal** uses a requirement-driven model (1 test per requirement, not per component). The pyramid doesn't apply — unit tests only.
-- **Standard** and **Comprehensive** use risk-based selection. The pyramid proportions (75/20/5) apply within the generated set.
+- **Standard** and **Comprehensive** use risk-based selection. When unit,
+  integration, and E2E layers all apply, 75/20/5 is default guidance within
+  that three-layer subset only. Requirements, risk, and NFR evidence — including
+  performance and security needs — take precedence over the ratio.
 - The ceilings are soft guidelines. Exceed one only with a documented safety-critical or regression-risk reason, never to meet a count.
 
 See stage-protocol.md §8 "Test Strategy" for the authoritative guidance.

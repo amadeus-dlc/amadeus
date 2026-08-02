@@ -23,12 +23,15 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(PROTOCOL).toContain("Standard | at most 8 per stage");
     expect(PROTOCOL).toContain("Comprehensive | at most 12 per stage");
     expect(compact(PROTOCOL)).toContain("one consolidated follow-up round for the stage");
+    expect(PROTOCOL).toContain("Primary and follow-up questions share this single total budget");
+    expect(PROTOCOL).toContain("only the slots remaining");
     expect(PROTOCOL).not.toContain("8-12+");
     expect(PROTOCOL).not.toContain("These are guidelines, not hard caps");
 
     const grilling = read("amadeus-common/protocols/grilling-protocol.md");
-    expect(grilling).toContain("never offer a continuation that");
+    expect(grilling).toContain("Do not offer continuation beyond the total ceiling");
     expect(grilling).toContain("proceed directly to C-4");
+    expect(grilling).toContain("including estimate confirmations");
     expect(grilling).not.toContain('label: "Continue"');
   });
 
@@ -38,6 +41,7 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(PROTOCOL).toContain("irreversible or high risk");
     expect(PROTOCOL).toContain("adopt the recommended value and record the assumption");
     expect(PROTOCOL).toContain("carry it to the existing approval boundary");
+    expect(PROTOCOL).toContain("Treat the contradiction as material ambiguity");
   });
 
   test("centralizes ambiguity handling instead of stage-local unbounded loops", () => {
@@ -106,7 +110,10 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(guidance).toContain("planning ceiling, not a quota");
     expect(guidance).not.toContain("5-8 tests per component");
     expect(guidance).not.toContain("10-15 tests per component");
+    expect(guidance).not.toContain("~5-15 tests total");
+    expect(guidance).toContain("performance and security tests when required");
     expect(construction).toContain("active test strategy as the sole volume");
+    expect(construction).toContain("applicable NFR evidence");
     expect(construction).not.toContain("at least two error/edge cases");
   });
 
@@ -127,6 +134,7 @@ describe("#1999 bounded interaction and completion contracts", () => {
       const content = readFileSync(join(REPO_ROOT, relativePath), "utf8");
       expect(content, relativePath).toContain("closed");
       expect(content, relativePath).toContain("completion verification");
+      expect(content, relativePath).toContain("stage incomplete");
     }
 
     for (const relativePath of harnessFiles.slice(0, 5)) {
@@ -135,6 +143,7 @@ describe("#1999 bounded interaction and completion contracts", () => {
         "artifact + unresolved `BLOCKER` findings only",
       );
       expect(content, relativePath).not.toContain("send artifact + findings back");
+      expect(content, relativePath).toContain("Only validated READY may proceed");
     }
   });
 });
