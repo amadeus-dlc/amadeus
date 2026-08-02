@@ -243,6 +243,16 @@ describe("replaceMarkerSection", () => {
     expect(result.violations.map((v) => v.code)).toEqual(["marker-duplicated"]);
   });
 
+  test("reports an unclosed marker pair", () => {
+    const result = replaceMarkerSection(
+      "<!-- glossary:projection:begin protocol -->\n| Term | Definition |\n",
+      "protocol",
+      "NEW",
+    );
+    expect(result.violations.map((v) => v.code)).toEqual(["marker-missing"]);
+    expect(result.content).toBeNull();
+  });
+
   test("reports a nested begin marker", () => {
     const nested = [
       "<!-- glossary:projection:begin protocol -->",

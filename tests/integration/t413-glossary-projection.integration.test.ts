@@ -178,6 +178,11 @@ describe("fail-closed conditions", () => {
     expect(codesFor()).toContain("marker-missing");
   });
 
+  test("a marker-mode target file that does not exist at all", () => {
+    rmSync(join(root, REFERENCE_JA_PATH));
+    expect(codesFor()).toContain("missing-target");
+  });
+
   test("a harness placeholder that would reach a docs surface unconverted", () => {
     // `bolt` is in the reference projection, whose surfaces keep the neutral token
     // verbatim — a core placeholder authored there would ship into the docs.
