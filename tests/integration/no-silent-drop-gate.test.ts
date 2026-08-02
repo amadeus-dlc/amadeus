@@ -1,24 +1,50 @@
 // covers: subcommand:no-silent-drop:check, subcommand:no-silent-drop:census-evidence
 // size: medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import {
+  assertSafeRelativePath,
   loadVerifiedAstGrep,
   parseSource,
   scanParsedSources,
   scanSourceForTest,
+  stateResultKinds,
 } from "../no-silent-drop/ast-scan.ts";
-import { captureSnapshot, resultExitCode, runGate } from "../no-silent-drop/engine.ts";
+import { loadTrustedPreviousLedgers } from "../no-silent-drop/bootstrap.ts";
+import {
+  captureSnapshot,
+  isMode,
+  resultExitCode,
+  runGate,
+  verifySnapshot,
+} from "../no-silent-drop/engine.ts";
 import {
   addedFindings,
   approvalDigest,
+  assertExemptionsShrinkOnly,
   assertShrinkOnly,
+  baselineAtRevision,
+  buildCandidate,
   filterExemptions,
+  parseApproval,
   parseBaseline,
   parseExemptions,
+  readBaseline,
+  readExemptions,
+  trustedBaseSha,
   validateApproval,
 } from "../no-silent-drop/ledger.ts";
 import {
@@ -28,9 +54,11 @@ import {
   type Finding,
   findingFingerprint,
   InfraFailure,
+  violationResult,
 } from "../no-silent-drop/model.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
+const require = createRequire(import.meta.url);
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -89,7 +117,7 @@ function delegatedMutation(name: "setCheckbox" | "setStageSuffix", delegate: str
       const operation = "${name}";
       const data = validatedStageStateData(state, operation, slug);
       const target = targetStageLine(data, slug);
-      if (target === undefined) return { kind: "not-found", target: slug };
+      if (target === undefined) { return { kind: "not-found", target: slug }; }
       const nextLine = ${replacement};
       const content = data.content.slice(0, target.start) + nextLine + data.content.slice(target.end);
       ${delegate.replace("$POSTCONDITION", postcondition)}
@@ -278,6 +306,26 @@ function bootstrapRepository(): { root: string; baseRevision: string; artifactPa
   };
 }
 
+function snapshotRepository(): string {
+  const root = mkdtempSync(join(tmpdir(), "nsd-snapshot-"));
+  temporaryDirectories.push(root);
+  for (const path of ["packages/framework/core", "packages/framework/harness", "scripts"]) {
+    mkdirSync(join(root, path), { recursive: true });
+    writeFileSync(join(root, path, "source.ts"), "export const value = 1;\n");
+  }
+  return root;
+}
+
+function mutateBootstrapProvenance(
+  fixture: ReturnType<typeof bootstrapRepository>,
+  mutate: (value: Record<string, unknown>) => void,
+): void {
+  const path = join(fixture.root, "tests/no-silent-drop/bootstrap-provenance.json");
+  const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  mutate(value);
+  writeFileSync(path, `${JSON.stringify(value)}\n`);
+}
+
 describe("no-silent-drop AST rules", () => {
   test("NSD001 detects an empty catch block", () => {
     expect(scan("try { work(); } catch (error) {}").map((finding) => finding.ruleId)).toEqual(["NSD001"]);
@@ -337,6 +385,8 @@ describe("no-silent-drop AST rules", () => {
   });
 
   test("semantic contracts fail closed when applyTransition is unresolved or a catalog target has multiple implementations", () => {
+    expect(() => stateResultKinds({} as never, { getResolvedSignature: () => undefined } as never))
+      .toThrow("does not resolve to a single callable contract");
     expect(() => scan("declare function applyTransition(): unknown; applyTransition();"))
       .toThrow("applyTransition return type is not the approved StateResult contract");
     expect(() => scan(`
@@ -419,6 +469,15 @@ describe("no-silent-drop AST rules", () => {
     `;
     expect(scan(unsafe).map((finding) => finding.ruleId)).toEqual(["NSD003"]);
     expect(scan(safe)).toEqual([]);
+    expect(scan(`
+      function setCheckbox(content: string, slug: string): MutationResult {
+        if (!content.includes(slug)) return { kind: "not-found" };
+        const next = content.replace(slug, "done");
+        if (!next.includes("done")) return { kind: "failed" };
+        const result = { kind: "ok", content: next };
+        return result;
+      }
+    `)).toEqual([]);
   });
 
   test("NSD003 accepts only a directly returned, verified mutation helper delegate", () => {
@@ -481,6 +540,128 @@ describe("no-silent-drop AST rules", () => {
       findingFingerprint("NSD001", "a.ts", "catch (e) {}", 1),
     );
   });
+
+  test("verified ast-grep loader rejects overrides, absent packages, and untrusted resolution", () => {
+    const previous = process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
+    process.env.NAPI_RS_NATIVE_LIBRARY_PATH = "/tmp/untrusted.node";
+    expect(() => loadVerifiedAstGrep(REPO_ROOT)).toThrow("cannot override");
+    if (previous === undefined) delete process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
+    else process.env.NAPI_RS_NATIVE_LIBRARY_PATH = previous;
+
+    const missing = mkdtempSync(join(tmpdir(), "nsd-ast-missing-"));
+    temporaryDirectories.push(missing);
+    expect(() => loadVerifiedAstGrep(missing)).toThrow("package is unavailable");
+
+    const fake = mkdtempSync(join(tmpdir(), "nsd-ast-fake-"));
+    temporaryDirectories.push(fake);
+    const packageDirectory = join(fake, "node_modules", "@ast-grep", "napi");
+    mkdirSync(packageDirectory, { recursive: true });
+    writeFileSync(join(packageDirectory, "package.json"), '{"version":"0.44.0"}\n');
+    expect(() => loadVerifiedAstGrep(fake)).toThrow("version must be 0.45.0");
+    writeFileSync(join(packageDirectory, "package.json"), '{"version":"0.45.0"}\n');
+    expect(() => loadVerifiedAstGrep(fake)).toThrow("outside the verified local package");
+
+    expect(() => loadVerifiedAstGrep(REPO_ROOT, {
+      resolve: () => { throw new Error("resolve failed"); },
+      load: () => ({}),
+    })).toThrow("entrypoint is unavailable");
+    expect(() => loadVerifiedAstGrep(REPO_ROOT, {
+      resolve: (specifier) => require.resolve(specifier),
+      load: () => { throw new Error("native failed"); },
+    })).toThrow("native binding failed to load");
+  });
+
+  test("AST parsing fails closed for parser, rule, sentinel, and error-region failures", () => {
+    const lang = { TypeScript: "ts", Tsx: "tsx", JavaScript: "js" };
+    const throwingParser = { Lang: lang, parse: () => { throw new Error("parse"); } };
+    expect(() => parseSource(throwingParser as never, "fixture.ts", "x")).toThrow("ast-grep parse failed");
+
+    const throwingRule = {
+      Lang: lang,
+      parse: () => ({ root: () => ({ findAll: () => { throw new Error("rule"); } }) }),
+    };
+    expect(() => parseSource(throwingRule as never, "fixture.tsx", "x")).toThrow("candidate rule failed");
+
+    const node = (kind: string, text = "") => ({
+      kind: () => kind,
+      text: () => text,
+      range: () => ({ start: { line: 0, column: 0 } }),
+    });
+    const nodesParser = (nodes: unknown[]) => ({
+      Lang: lang,
+      parse: () => ({ root: () => ({ findAll: () => nodes }) }),
+    });
+    expect(() => parseSource(nodesParser([]) as never, "fixture.js", "x")).toThrow("expected one program");
+    expect(() => parseSource(nodesParser([node("program"), node("program")]) as never, "fixture.mjs", "x"))
+      .toThrow("expected one program");
+    expect(() => parseSource(nodesParser([node("program"), node("ERROR", "catch (")]) as never, "fixture.ts", "catch ("))
+      .toThrow("unparseable candidate AST region");
+  });
+
+  test("semantic scan rejects structural omissions and escaping evidence paths", () => {
+    expect(() => scanParsedSources([{
+      file: "fixture.ts",
+      source: "try { work(); } catch {}",
+      candidates: [],
+    }])).toThrow("structural/semantic candidate coverage mismatch");
+    expect(() => assertSafeRelativePath("/absolute/evidence.json")).toThrow("path escapes");
+    expect(() => assertSafeRelativePath("../escape.json")).toThrow("path escapes");
+    expect(() => assertSafeRelativePath("tests/evidence.json")).not.toThrow();
+  });
+
+  test("semantic contracts reject unresolved and malformed persistence or mutation helpers", () => {
+    expect(() => scan("const applyTransition = 1; applyTransition();")).toThrow();
+    expect(() => scan(`
+      type StateResult = { kind: "ok" };
+      declare function applyTransition(): StateResult;
+      function persistBlocked() {
+        const result = applyTransition();
+        if (result.kind === "failed") { throw new Error("failed"); }
+        return { kind: "safety-blocked" };
+      }
+    `)).toThrow("approved StateResult contract");
+
+    const guardedBlock = `
+      type StateResult = { kind: "ok" } | { kind: "failed" };
+      declare function applyTransition(): StateResult;
+      declare const fallback: unknown;
+      function persistBlocked() {
+        const result = applyTransition();
+        if (result.kind === "failed") { return fallback; }
+        return { kind: "safety-blocked" };
+      }
+    `;
+    expect(scan(guardedBlock).some((finding) => finding.ruleId === "NSD003")).toBe(true);
+
+    const wrongHelperResult = VERIFIED_MUTATION_HELPER.replace(
+      "  ): TextMutationResult {\n    const reparsed",
+      '  ): { kind: "changed"; content: string } {\n    const reparsed',
+    ) + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    expect(() => scan(wrongHelperResult)).toThrow("does not return TextMutationResult");
+
+    const malformedParameters = VERIFIED_MUTATION_HELPER.replace(
+      "before: Data,",
+      "{ content: before }: Data,",
+    ) + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    expect(scan(malformedParameters).some((finding) => finding.ruleId === "NSD003")).toBe(true);
+
+    expect(scan(`
+      type ValidatedStageState = { readonly validated: true };
+      function setCheckbox(state: string, slug: string, desired: string) {
+        if (slug === undefined) { return { kind: "not-found" }; }
+        return { kind: "changed", content: desired };
+      }
+    `).some((finding) => finding.ruleId === "NSD003")).toBe(true);
+
+    expect(scan(`
+      type ValidatedStageState = { readonly validated: true };
+      function setCheckbox(state: ValidatedStageState, slug: string, desired: string) {
+        const target = undefined;
+        if (target === undefined) { return { kind: "not-found" }; }
+        return { kind: "changed", content: desired };
+      }
+    `).some((finding) => finding.ruleId === "NSD003")).toBe(true);
+  });
 });
 
 describe("no-silent-drop ledger", () => {
@@ -539,6 +720,81 @@ describe("no-silent-drop ledger", () => {
     expect(() => validateApproval({ ...approval, entries: [{ ...approval.entries[0]!, classification: "FP" }] }, findings, "digest"))
       .toThrow("cannot enter the baseline");
   });
+
+  test("ledger parsers reject malformed envelopes and entries", () => {
+    expect(() => parseBaseline("{")) .toThrow("not valid JSON");
+    expect(() => parseBaseline("null")).toThrow("schemaVersion 1");
+    expect(() => parseBaseline('{"schemaVersion":1,"direction":"shrink-only"}')).toThrow("generatedFrom/entries");
+    expect(() => parseBaseline(JSON.stringify({
+      schemaVersion: 1,
+      direction: "shrink-only",
+      generatedFrom: { revision: 1, censusDigest: "c", approvalDigest: "a" },
+      entries: [],
+    }))).toThrow("generatedFrom.revision");
+    expect(() => parseBaseline(JSON.stringify({
+      schemaVersion: 1,
+      direction: "shrink-only",
+      generatedFrom: { revision: "r", censusDigest: "c", approvalDigest: "a", previousDigest: 1 },
+      entries: [],
+    }))).toThrow("previousDigest");
+    expect(() => parseBaseline(JSON.stringify({
+      schemaVersion: 1,
+      direction: "shrink-only",
+      generatedFrom: { revision: "r", censusDigest: "c", approvalDigest: "a" },
+      entries: [{ fingerprint: "f", ruleId: "BAD", file: "/a.ts", reason: "", issues: [1] }],
+    }))).toThrow("entries[0] is invalid");
+
+    expect(() => parseExemptions("{")).toThrow("not valid JSON");
+    expect(() => parseExemptions('{"schemaVersion":1,"previousDigest":1,"entries":[]}')).toThrow("entries array");
+    expect(() => parseExemptions('{"schemaVersion":1,"entries":[null]}')).toThrow("entries[0] is invalid");
+    expect(() => parseExemptions('{"schemaVersion":1,"entries":[{"fingerprint":"f","reason":"r"},{"fingerprint":"f","reason":"r"}]}'))
+      .toThrow("duplicate fingerprint");
+
+    expect(() => parseApproval("{")).toThrow("not valid JSON");
+    expect(() => parseApproval("null")).toThrow("censusDigest and entries");
+    expect(() => parseApproval('{"schemaVersion":1,"censusDigest":"c","entries":[null]}'))
+      .toThrow("entries[0] is invalid");
+  });
+
+  test("ledger readers, ratchets, base resolution, and candidate construction fail closed", () => {
+    const root = mkdtempSync(join(tmpdir(), "nsd-ledger-"));
+    temporaryDirectories.push(root);
+    const missing = join(root, "missing.json");
+    expect(readBaseline(missing, false)).toBeNull();
+    expect(() => readBaseline(missing, true)).toThrow("baseline is missing");
+    expect(() => readExemptions(missing)).toThrow("exemptions are missing");
+
+    const baseExemptions = { schemaVersion: 1 as const, entries: [{ fingerprint: "a", reason: "legacy" }] };
+    const addedExemption = { schemaVersion: 1 as const, entries: [{ fingerprint: "b", reason: "new" }] };
+    expect(() => assertExemptionsShrinkOnly(addedExemption, baseExemptions)).toThrow("exemption ratchet rejects");
+
+    const envNames = ["AMADEUS_NSD_TRUSTED_BASE_SHA", "GITHUB_BASE_SHA", "GITHUB_EVENT_BEFORE"] as const;
+    const saved = envNames.map((name) => process.env[name]);
+    for (const name of envNames) delete process.env[name];
+    expect(trustedBaseSha()).toBeNull();
+    expect(() => trustedBaseSha("short")).toThrow("event-specific full SHA");
+    saved.forEach((value, index) => {
+      const name = envNames[index]!;
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    });
+
+    expect(() => baselineAtRevision(root, "f".repeat(40))).toThrow("does not contain an unambiguous baseline");
+
+    const findings = scan("try { a(); } catch {}");
+    const approval: ApprovalDoc = {
+      schemaVersion: 1,
+      censusDigest: "digest",
+      entries: [{ fingerprint: findings[0]!.fingerprint, classification: "TP", reason: "confirmed", issues: ["#1979"] }],
+    };
+    expect(() => validateApproval({ ...approval, censusDigest: "wrong" }, findings, "digest")).toThrow("does not match");
+    expect(() => validateApproval({ ...approval, entries: [...approval.entries, approval.entries[0]!] }, findings, "digest"))
+      .toThrow("duplicate or unknown");
+    expect(() => validateApproval({ ...approval, entries: [] }, findings, "digest")).toThrow("is missing");
+    expect(buildCandidate("r", "digest", approval, findings).entries[0]?.fingerprint).toBe(findings[0]?.fingerprint);
+    expect(violationResult(findings).status).toBe("violations");
+    expect(() => violationResult([])).toThrow("at least one finding");
+  });
 });
 
 describe("no-silent-drop boundaries", () => {
@@ -551,6 +807,127 @@ describe("no-silent-drop boundaries", () => {
     }
     symlinkSync(join(root, "scripts", "source.ts"), join(root, "scripts", "alias.ts"));
     expect(() => captureSnapshot(root)).toThrow("contains a symlink");
+  });
+
+  test("snapshot rejects missing, symlinked, non-directory, and empty roots", () => {
+    const missing = mkdtempSync(join(tmpdir(), "nsd-root-missing-"));
+    temporaryDirectories.push(missing);
+    expect(() => captureSnapshot(missing)).toThrow("scan root is missing");
+
+    const symlinked = snapshotRepository();
+    rmSync(join(symlinked, "scripts"), { recursive: true, force: true });
+    symlinkSync(join(symlinked, "packages", "framework", "core"), join(symlinked, "scripts"));
+    expect(() => captureSnapshot(symlinked)).toThrow("scan root is a symlink");
+
+    const fileRoot = snapshotRepository();
+    rmSync(join(fileRoot, "scripts"), { recursive: true, force: true });
+    writeFileSync(join(fileRoot, "scripts"), "not a directory\n");
+    expect(() => captureSnapshot(fileRoot)).toThrow("scan root is not a directory");
+
+    const empty = snapshotRepository();
+    for (const path of ["packages/framework/core/source.ts", "packages/framework/harness/source.ts", "scripts/source.ts"]) {
+      rmSync(join(empty, path));
+    }
+    expect(() => captureSnapshot(empty)).toThrow("zero authored source files");
+  });
+
+  test("snapshot verification detects removed directories, metadata changes, and byte changes", () => {
+    const removedDirectoryRoot = snapshotRepository();
+    const removedDirectorySnapshot = captureSnapshot(removedDirectoryRoot);
+    rmSync(join(removedDirectoryRoot, "scripts"), { recursive: true, force: true });
+    expect(() => verifySnapshot(removedDirectorySnapshot)).toThrow();
+
+    const removedFileRoot = snapshotRepository();
+    const removedFileSnapshot = captureSnapshot(removedFileRoot);
+    rmSync(join(removedFileRoot, "scripts", "source.ts"));
+    const removedFileDirectory = removedFileSnapshot.directories.find((entry) => entry.absolute.endsWith("/scripts"))!;
+    utimesSync(join(removedFileRoot, "scripts"), new Date(), new Date(removedFileDirectory.mtimeMs));
+    expect(() => verifySnapshot(removedFileSnapshot)).toThrow();
+
+    const changedRoot = snapshotRepository();
+    const changedSnapshot = captureSnapshot(changedRoot);
+    const source = join(changedRoot, "scripts", "source.ts");
+    writeFileSync(source, "export const value = 2;\n");
+    const changedFile = changedSnapshot.files.find((entry) => entry.absolute === source)!;
+    utimesSync(source, new Date(), new Date(changedFile.mtimeMs));
+    expect(() => verifySnapshot(changedSnapshot)).toThrow();
+
+    const exactRoot = snapshotRepository();
+    const exactSnapshot = captureSnapshot(exactRoot);
+    const exactFile = exactSnapshot.files[0]!;
+    expect(() => verifySnapshot({
+      ...exactSnapshot,
+      directories: [],
+      files: [{ ...exactFile, absolute: join(exactRoot, "missing.ts") }],
+    })).toThrow("missing.ts");
+    expect(() => verifySnapshot({
+      ...exactSnapshot,
+      directories: [],
+      files: [{ ...exactFile, hash: "0".repeat(64) }],
+    })).toThrow("source bytes changed");
+  });
+
+  test("snapshot wraps unreadable source files and directories", () => {
+    const fileRoot = snapshotRepository();
+    const source = join(fileRoot, "scripts", "source.ts");
+    chmodSync(source, 0o000);
+    try {
+      expect(() => captureSnapshot(fileRoot)).toThrow();
+    } finally {
+      chmodSync(source, 0o600);
+    }
+
+    const directoryRoot = snapshotRepository();
+    const directory = join(directoryRoot, "scripts");
+    chmodSync(directory, 0o000);
+    try {
+      expect(() => captureSnapshot(directoryRoot)).toThrow();
+    } finally {
+      chmodSync(directory, 0o700);
+    }
+  });
+
+  test("gate reports revision and AST-shape infrastructure failures without throwing", async () => {
+    const noGit = snapshotRepository();
+    mkdirSync(join(noGit, "tests", "no-silent-drop"), { recursive: true });
+    writeFileSync(
+      join(noGit, "tests", "no-silent-drop", "ast-shape-fixture.ts.txt"),
+      readFileSync(join(REPO_ROOT, "tests/no-silent-drop/ast-shape-fixture.ts.txt"), "utf8"),
+    );
+    symlinkSync(join(REPO_ROOT, "node_modules"), join(noGit, "node_modules"));
+    writeFileSync(join(noGit, "tests", "no-silent-drop", "baseline.json"), `${JSON.stringify(baseline([]))}\n`);
+    writeFileSync(join(noGit, "tests", "no-silent-drop", "exemptions.json"), '{"schemaVersion":1,"entries":[]}\n');
+    expect((await runGate("check", noGit)).status).toBe("error");
+
+    const missingFixture = snapshotRepository();
+    expect(await runGate("check", missingFixture)).toMatchObject({ status: "error", code: "RULE_INVALID" });
+
+    const badFixture = snapshotRepository();
+    mkdirSync(join(badFixture, "tests", "no-silent-drop"), { recursive: true });
+    writeFileSync(join(badFixture, "tests", "no-silent-drop", "ast-shape-fixture.ts.txt"), "export const ok = true;\n");
+    symlinkSync(join(REPO_ROOT, "node_modules"), join(badFixture, "node_modules"));
+    expect(await runGate("check", badFixture)).toMatchObject({ status: "error", code: "RULE_INVALID" });
+
+    expect(isMode("check")).toBe(true);
+    expect(isMode("census-evidence")).toBe(true);
+    expect(isMode("approve-evidence")).toBe(true);
+    expect(isMode("baseline-candidate")).toBe(true);
+    expect(isMode("unknown")).toBe(false);
+  });
+
+  test("approval modes report missing and malformed approval documents", async () => {
+    const missing = bootstrapRepository();
+    expect(await runGate("approve-evidence", missing.root)).toMatchObject({
+      status: "error",
+      code: "BASELINE_MISSING",
+    });
+
+    const malformed = bootstrapRepository();
+    writeFileSync(join(malformed.root, "tests/no-silent-drop/approval.json"), "{");
+    expect(await runGate("approve-evidence", malformed.root)).toMatchObject({
+      status: "error",
+      code: "BASELINE_INVALID",
+    });
   });
 
   test("first adoption accepts a fully bound bootstrap provenance when the base has no ledger", async () => {
@@ -587,10 +964,106 @@ describe("no-silent-drop boundaries", () => {
     }
   });
 
+  test("bootstrap provenance parser rejects malformed envelopes, paths, arrays, and roles", async () => {
+    const mutations: Array<(fixture: ReturnType<typeof bootstrapRepository>) => void> = [
+      (fixture) => writeFileSync(join(fixture.root, fixture.artifactPaths[0]!), "{"),
+      (fixture) => writeFileSync(join(fixture.root, fixture.artifactPaths[0]!), "[]\n"),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.schemaVersion = 2; }),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.bootstrapBaseRevision = ""; }),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
+        const pre = value.pre as Record<string, unknown>;
+        (pre.raw as Record<string, unknown>).path = "/absolute.json";
+      }),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.added = "invalid"; }),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
+        const removed = value.removed as Array<Record<string, unknown>>;
+        removed[0]!.issue = "#unknown";
+      }),
+      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
+        const pre = value.pre as Record<string, unknown>;
+        const post = value.post as Record<string, unknown>;
+        (post.raw as Record<string, unknown>).path = (pre.raw as Record<string, unknown>).path;
+      }),
+    ];
+    for (const mutate of mutations) {
+      const fixture = bootstrapRepository();
+      mutate(fixture);
+      expect((await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).status).toBe("error");
+    }
+  });
+
+  test("bootstrap evidence and human-review binding mismatches fail closed", async () => {
+    const evidenceFixture = bootstrapRepository();
+    mutateBootstrapProvenance(evidenceFixture, (provenance) => {
+      const pre = provenance.pre as Record<string, unknown>;
+      const ref = pre.approvedEvidence as { path: string; digest: string };
+      const approved = JSON.parse(readFileSync(join(evidenceFixture.root, ref.path), "utf8")) as Record<string, unknown>;
+      approved.rawDigest = "0".repeat(64);
+      const bytes = `${JSON.stringify(approved)}\n`;
+      writeFileSync(join(evidenceFixture.root, ref.path), bytes);
+      ref.digest = digest(bytes);
+    });
+    expect((await runGate("check", evidenceFixture.root, { baseRevision: evidenceFixture.baseRevision })).status)
+      .toBe("error");
+
+    const reviewFixture = bootstrapRepository();
+    mutateBootstrapProvenance(reviewFixture, (provenance) => {
+      const ref = provenance.humanReview as { path: string; digest: string };
+      const review = JSON.parse(readFileSync(join(reviewFixture.root, ref.path), "utf8")) as Record<string, unknown>;
+      review.decision = "rejected";
+      const bytes = `${JSON.stringify(review)}\n`;
+      writeFileSync(join(reviewFixture.root, ref.path), bytes);
+      ref.digest = digest(bytes);
+    });
+    expect((await runGate("check", reviewFixture.root, { baseRevision: reviewFixture.baseRevision })).status)
+      .toBe("error");
+  });
+
+  test("trusted previous ledgers support git history and reject incomplete or invalid bases", () => {
+    const createLedgerRepo = (includeExemptions: boolean) => {
+      const root = mkdtempSync(join(tmpdir(), "nsd-ledger-git-"));
+      temporaryDirectories.push(root);
+      mkdirSync(join(root, "tests/no-silent-drop"), { recursive: true });
+      const baselineBytes = `${JSON.stringify(baseline(["legacy"]))}\n`;
+      const exemptionBytes = '{"schemaVersion":1,"entries":[]}\n';
+      writeFileSync(join(root, "tests/no-silent-drop/baseline.json"), baselineBytes);
+      if (includeExemptions) writeFileSync(join(root, "tests/no-silent-drop/exemptions.json"), exemptionBytes);
+      runGit(root, ["init", "-q"]);
+      runGit(root, ["add", "."]);
+      runGit(root, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "base"]);
+      return { root, sha: runGit(root, ["rev-parse", "HEAD"]), baselineBytes, exemptionBytes };
+    };
+
+    const complete = createLedgerRepo(true);
+    const currentBaseline = {
+      ...baseline([]),
+      generatedFrom: { ...baseline([]).generatedFrom, previousDigest: digest(complete.baselineBytes) },
+    };
+    const currentExemptions = {
+      schemaVersion: 1 as const,
+      previousDigest: digest(complete.exemptionBytes),
+      entries: [],
+    };
+    expect(loadTrustedPreviousLedgers(complete.root, complete.sha, currentBaseline, currentExemptions).source).toBe("git");
+    expect(() => loadTrustedPreviousLedgers(complete.root, "invalid", currentBaseline, currentExemptions))
+      .toThrow("not a resolvable full commit");
+
+    const incomplete = createLedgerRepo(false);
+    expect(() => loadTrustedPreviousLedgers(incomplete.root, incomplete.sha, currentBaseline, currentExemptions))
+      .toThrow("trusted previous exemptions is unavailable");
+  });
+
   test("real repository check emits the public pass envelope and exit 0", async () => {
     const result = await runGate("check", REPO_ROOT);
     expect(result).toEqual({ schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [] });
     expect(resultExitCode(result)).toBe(0);
+
+    const census = await runGate("census-evidence", REPO_ROOT);
+    expect(census).toMatchObject({ status: "pass", evidence: { revision: expect.any(String) } });
+    const approved = await runGate("approve-evidence", REPO_ROOT);
+    expect(approved).toMatchObject({ status: "pass", evidence: { approvalDigest: expect.any(String) } });
+    const candidate = await runGate("baseline-candidate", REPO_ROOT);
+    expect(candidate).toMatchObject({ status: "pass", candidate: { schemaVersion: 1 } });
   });
 
   test("CLI writes one JSON document to stdout", () => {

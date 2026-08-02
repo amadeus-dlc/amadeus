@@ -138,6 +138,31 @@ const delta = (seq: number, event: string, ts: string) =>
   seedLine(seq, event, ts, { "Bolt slug": SLUG });
 
 describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
+  test("missing worktree shard refuses before reading", () => {
+    proj = seedProject();
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("worktree audit not found");
+  });
+
+  test("a worktree shard without the requested anchor refuses", () => {
+    proj = seedProject();
+    const shard = seedWtShard(proj);
+    writeFileSync(shard, MAIN_LEDGER, "utf8");
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("missing AUDIT_FORKED entry");
+  });
+
+  test("a non-newline-terminated anchor refuses as malformed", () => {
+    proj = seedProject();
+    const shard = seedWtShard(proj);
+    writeFileSync(shard, readFileSync(shard, "utf8").trimEnd(), "utf8");
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("no separator after AUDIT_FORKED block");
+  });
+
   test("happy path: appends the delta verbatim and emits AUDIT_MERGED with the count", () => {
     proj = seedProject();
     seedWtShard(proj, {

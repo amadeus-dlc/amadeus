@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { isAbsolute, normalize, relative, resolve } from "node:path";
+import { isAbsolute, normalize, resolve } from "node:path";
 import {
   approvalDigest,
   CANONICAL_PATHS,
@@ -111,11 +111,7 @@ function safeArtifactPath(repoRoot: string, value: unknown, label: string): stri
   if (isAbsolute(path) || normalized === "." || normalized.startsWith("..") || normalized.includes("/../")) {
     throw new InfraFailure("BASELINE_INVALID", `${label} must be repository-relative`);
   }
-  const absolute = resolve(repoRoot, normalized);
-  if (relative(repoRoot, absolute).startsWith("..")) {
-    throw new InfraFailure("BASELINE_INVALID", `${label} escapes the repository`);
-  }
-  return absolute;
+  return resolve(repoRoot, normalized);
 }
 
 function artifactRef(repoRoot: string, value: unknown, label: string): BootstrapArtifactRef {

@@ -5344,7 +5344,28 @@ function assertRecomposeStateAllowed(content: string): void {
   }
 }
 
-function handleRecompose(projectDir: string, flags: Record<string, string>): void {
+export function applyRecomposeSuffixFlips(
+  content: string,
+  skipList: readonly string[],
+  addList: readonly string[],
+): string {
+  let updated = content;
+  for (const slug of skipList) {
+    updated = requireChanged(
+      setStageSuffix(validateStageState(updated), slug, "SKIP"),
+      `recompose:skip:${slug}`,
+    );
+  }
+  for (const slug of addList) {
+    updated = requireChanged(
+      setStageSuffix(validateStageState(updated), slug, "EXECUTE"),
+      `recompose:add:${slug}`,
+    );
+  }
+  return updated;
+}
+
+export function handleRecompose(projectDir: string, flags: Record<string, string>): void {
   const skipList = (flags.skip ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const addList = (flags.add ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (skipList.length === 0 && addList.length === 0) {
@@ -5471,18 +5492,7 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     }
 
     // --- Apply the suffix flips ---------------------------------------------
-    for (const slug of skipList) {
-      content = requireChanged(
-        setStageSuffix(validateStageState(content), slug, "SKIP"),
-        `recompose:skip:${slug}`,
-      );
-    }
-    for (const slug of addList) {
-      content = requireChanged(
-        setStageSuffix(validateStageState(content), slug, "EXECUTE"),
-        `recompose:add:${slug}`,
-      );
-    }
+    content = applyRecomposeSuffixFlips(content, skipList, addList);
 
     // --- Rebuild the derived fields against the EFFECTIVE plan --------------
     // (the scope-change set: Stages to Execute / to Skip / Total / Completed).

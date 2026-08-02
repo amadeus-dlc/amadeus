@@ -15,6 +15,7 @@ import {
   validateEvidenceRegistry,
   validateTimingSamples,
 } from "../no-silent-drop/repository-adoption.ts";
+import { readEvidenceArtifact } from "../no-silent-drop/repository-adoption-evidence.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FULL_SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -149,6 +150,19 @@ function writeManifest(root: string, manifest: MutableEvidenceManifest): void {
   );
 }
 
+function replacePrimaryArtifact(root: string, value: unknown): void {
+  const path = "tests/no-silent-drop/evidence/primary.json";
+  const bytes = `${JSON.stringify(value, null, 2)}\n`;
+  writeFileSync(join(root, path), bytes);
+  const manifest = readManifest(root);
+  for (const entry of manifest.evidence as Array<{ runs: Array<{ artifact: { path: string; sha256: string } }> }>) {
+    for (const run of entry.runs) {
+      if (run.artifact.path === path) run.artifact.sha256 = sha256(bytes);
+    }
+  }
+  writeManifest(root, manifest);
+}
+
 describe("no-silent-drop CI argv authority", () => {
   test("a validated full base revision is consumed as one explicit argv", () => {
     const result = runCli("--base-revision", BOOTSTRAP_BASE_SHA);
@@ -233,6 +247,116 @@ describe("repository adoption evidence registry", () => {
       if (mutation === "extra") manifest.evidence.push({ ...manifest.evidence[0], id: "unknown" });
       if (mutation === "duplicate") manifest.evidence.push({ ...manifest.evidence[0] });
       writeManifest(root, manifest);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
+    }
+  });
+
+  test("malformed manifest envelopes, entries, runs, and artifacts fail closed", () => {
+    const mutations: Array<(root: string) => void> = [
+      (root) => writeFileSync(join(root, "tests/no-silent-drop/adoption-evidence-manifest.json"), "{"),
+      (root) => writeFileSync(join(root, "tests/no-silent-drop/adoption-evidence-manifest.json"), "[]\n"),
+      (root) => writeFileSync(
+        join(root, "tests/no-silent-drop/adoption-evidence-manifest.json"),
+        '{"schemaVersion":2,"testedRevision":"bad","evidence":{}}\n',
+      ),
+      (root) => {
+        const manifest = readManifest(root);
+        manifest.evidence[0] = null as never;
+        writeManifest(root, manifest);
+      },
+      (root) => {
+        const manifest = readManifest(root);
+        (manifest.evidence[0] as Record<string, unknown>).id = "unknown";
+        writeManifest(root, manifest);
+      },
+      (root) => {
+        const manifest = readManifest(root);
+        (manifest.evidence[0] as Record<string, unknown>).runs = "invalid";
+        writeManifest(root, manifest);
+      },
+      (root) => {
+        const manifest = readManifest(root);
+        (manifest.evidence[0] as { runs: unknown[] }).runs[0] = null;
+        writeManifest(root, manifest);
+      },
+      (root) => {
+        const manifest = readManifest(root);
+        const run = (manifest.evidence[0] as { runs: Array<Record<string, unknown>> }).runs[0]!;
+        Object.assign(run, { name: "", command: [], exitCode: -1, verdict: "failed", artifact: null, extra: true });
+        writeManifest(root, manifest);
+      },
+      (root) => {
+        const manifest = readManifest(root);
+        const run = (manifest.evidence[0] as { runs: Array<Record<string, unknown>> }).runs[0]!;
+        run.artifact = { path: 1, recordId: "", sha256: "bad", extra: true };
+        writeManifest(root, manifest);
+      },
+    ];
+
+    for (const mutate of mutations) {
+      const { root, registry } = evidenceFixture();
+      mutate(root);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
+    }
+  });
+
+  test("unsafe, missing, and non-file artifact paths fail closed", () => {
+    for (const artifactPath of ["", "/absolute.json", "../escape.json", "tests/no-silent-drop/evidence/missing.json"] as const) {
+      const { root, registry } = evidenceFixture();
+      const manifest = readManifest(root);
+      const run = (manifest.evidence[0] as { runs: Array<{ artifact: { path: string } }> }).runs[0]!;
+      run.artifact.path = artifactPath;
+      writeManifest(root, manifest);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
+    }
+
+    const directoryFixture = evidenceFixture();
+    const manifest = readManifest(directoryFixture.root);
+    const run = (manifest.evidence[0] as { runs: Array<{ artifact: { path: string } }> }).runs[0]!;
+    run.artifact.path = "tests/no-silent-drop/evidence";
+    writeManifest(directoryFixture.root, manifest);
+    expect(validateEvidenceRegistry(directoryFixture.registry, FULL_SHA, directoryFixture.root).ok).toBeFalse();
+  });
+
+  test("artifact collection and summary schema violations fail closed", () => {
+    const values: unknown[] = [
+      null,
+      { schemaVersion: 2, runs: "invalid" },
+      { schemaVersion: 1, runs: [null] },
+      { schemaVersion: 1, runs: [{ recordId: 1 }] },
+      {
+        schemaVersion: 1,
+        runs: [{
+          schemaVersion: 1,
+          recordId: "shape-fixtures:primary",
+          receiptId: "shape-fixtures",
+          runName: "primary",
+          testedRevision: FULL_SHA,
+          command: ["bun", "test", "shape-fixtures"],
+          exitCode: 0,
+          verdict: "pass",
+          tests: [],
+        }],
+      },
+      {
+        schemaVersion: 1,
+        runs: [{
+          schemaVersion: 2,
+          recordId: "shape-fixtures:primary",
+          receiptId: "wrong",
+          runName: "wrong",
+          testedRevision: "wrong",
+          command: ["wrong"],
+          exitCode: 1,
+          verdict: "pass",
+          tests: [{ name: "", status: "failed", extra: true }],
+          extra: true,
+        }],
+      },
+    ];
+    for (const value of values) {
+      const { root, registry } = evidenceFixture();
+      replacePrimaryArtifact(root, value);
       expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
     }
   });
@@ -344,6 +468,43 @@ describe("repository adoption evidence registry", () => {
     }
   });
 
+  test("run-shape validation reaches primary, normal, and summary failure arms", () => {
+    const primary = evidenceFixture();
+    const primaryManifest = readManifest(primary.root);
+    const primaryEntry = primaryManifest.evidence.find((entry) => entry.id === "shape-fixtures") as {
+      runs: Array<{ exitCode: number }>;
+    };
+    primaryEntry.runs[0]!.exitCode = 1;
+    writeManifest(primary.root, primaryManifest);
+    expect(validateEvidenceRegistry(primary.registry, FULL_SHA, primary.root).ok).toBeFalse();
+
+    const normal = evidenceFixture();
+    const normalManifest = readManifest(normal.root);
+    const normalEntry = normalManifest.evidence.find((entry) => entry.id === "full-test") as {
+      runs: Array<{ exitCode: number }>;
+    };
+    normalEntry.runs[0]!.exitCode = 1;
+    writeManifest(normal.root, normalManifest);
+    expect(validateEvidenceRegistry(normal.registry, FULL_SHA, normal.root).ok).toBeFalse();
+
+    const summary = evidenceFixture();
+    const artifact = join(summary.root, "tests", "no-silent-drop", "evidence", "primary.json");
+    const collection = JSON.parse(readFileSync(artifact, "utf8")) as {
+      runs: Array<{ tests: Array<{ status: string }> }>;
+    };
+    collection.runs[0]!.tests[0]!.status = "failed";
+    writeFileSync(artifact, `${JSON.stringify(collection, null, 2)}\n`);
+    expect(validateEvidenceRegistry(summary.registry, FULL_SHA, summary.root).ok).toBeFalse();
+  });
+
+  test("artifact byte reader reports a post-stat read failure", () => {
+    const problems: string[] = [];
+    expect(readEvidenceArtifact("/tmp/evidence.json", "evidence.json", problems, () => {
+      throw new Error("read failed");
+    })).toBeUndefined();
+    expect(problems.join("\n")).toContain("cannot read evidence artifact evidence.json");
+  });
+
   test("timing evidence rejects negative and non-finite samples", () => {
     expect(validateTimingSamples({ cold: [1, 2, 3, 4, -1], warm: [1, 2, 3, 4, 5] }).pass).toBeFalse();
     expect(validateTimingSamples({ cold: [1, 2, 3, 4, 5], warm: [1, 2, 3, 4, Number.NaN] }).pass).toBeFalse();
@@ -364,6 +525,41 @@ describe("repository adoption evidence registry", () => {
       ...validReceipt,
       id: ADOPTION_RECEIPT_IDS[1],
     }, root)).toThrow("not safe to extend");
+  });
+
+  test("the safe committer rejects invalid bundles and non-matching evidence digests", () => {
+    const invalidBundle = evidenceFixture();
+    writeFileSync(
+      join(invalidBundle.root, "tests/no-silent-drop/adoption-evidence-manifest.json"),
+      "{}\n",
+    );
+    expect(() => closeEvidenceReceipt(
+      emptyEvidenceRegistry(FULL_SHA),
+      invalidBundle.registry.receipts[0]!,
+      invalidBundle.root,
+    )).toThrow("evidence bundle is invalid");
+
+    const mismatch = evidenceFixture();
+    expect(() => closeEvidenceReceipt(
+      emptyEvidenceRegistry(FULL_SHA),
+      { ...mismatch.registry.receipts[0]!, evidenceDigest: "a".repeat(64) },
+      mismatch.root,
+    )).toThrow("does not match repository evidence");
+  });
+
+  test("registry validation reports unknown receipt ids and malformed receipt digests", () => {
+    const { root, registry } = evidenceFixture();
+    const unknown = {
+      ...registry,
+      receipts: [{ ...registry.receipts[0]!, id: "unknown" }],
+    };
+    expect(validateEvidenceRegistry(unknown, FULL_SHA, root).ok).toBeFalse();
+
+    const malformed = {
+      ...registry,
+      receipts: [{ ...registry.receipts[0]!, evidenceDigest: "bad" }],
+    };
+    expect(validateEvidenceRegistry(malformed, FULL_SHA, root).ok).toBeFalse();
   });
 });
 

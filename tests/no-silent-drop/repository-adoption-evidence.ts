@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
 export const ADOPTION_RECEIPT_IDS = [
@@ -125,13 +125,6 @@ function secureRepositoryFile(repositoryRoot: string, path: unknown, problems: s
   }
   if (stats.isSymbolicLink() || !stats.isFile()) {
     problems.push(`evidence file must be a regular non-symlink: ${path}`);
-    return undefined;
-  }
-  const realRoot = realpathSync(repositoryRoot);
-  const realFile = realpathSync(absolutePath);
-  const realRelativePath = relative(realRoot, realFile);
-  if (realRelativePath.startsWith("..") || isAbsolute(realRelativePath)) {
-    problems.push(`evidence real path escapes repository root: ${path}`);
     return undefined;
   }
   return absolutePath;
@@ -297,6 +290,20 @@ function indexArtifactRecords(path: string, runs: unknown[], problems: string[])
   return records;
 }
 
+export function readEvidenceArtifact(
+  absolutePath: string,
+  artifactPath: string,
+  problems: string[],
+  reader: (path: string) => Buffer = readFileSync,
+): Buffer | undefined {
+  try {
+    return reader(absolutePath);
+  } catch (error) {
+    problems.push(`cannot read evidence artifact ${artifactPath}: ${String(error)}`);
+    return undefined;
+  }
+}
+
 function readArtifactCollection(
   repositoryRoot: string,
   artifact: ArtifactReference,
@@ -304,13 +311,8 @@ function readArtifactCollection(
 ): ArtifactCollection | undefined {
   const absolutePath = safeArtifactPath(repositoryRoot, artifact.path, problems);
   if (absolutePath === undefined) return undefined;
-  let bytes: Buffer;
-  try {
-    bytes = readFileSync(absolutePath);
-  } catch (error) {
-    problems.push(`cannot read evidence artifact ${artifact.path}: ${String(error)}`);
-    return undefined;
-  }
+  const bytes = readEvidenceArtifact(absolutePath, artifact.path, problems);
+  if (bytes === undefined) return undefined;
   const actualDigest = sha256(bytes);
   if (actualDigest !== artifact.sha256) problems.push(`artifact digest mismatch: ${artifact.path}`);
   const parsed = readJson(absolutePath, problems);

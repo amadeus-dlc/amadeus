@@ -90,7 +90,7 @@ function auditContext(
   };
 }
 
-function applyTransition(
+export function applyTransition(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
   snapshot: MirrorStateSnapshot,
@@ -310,7 +310,7 @@ function transitionFailure(
   );
 }
 
-function persistBlocked(
+export function persistBlocked(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
   snapshot: MirrorStateSnapshot,
@@ -654,7 +654,7 @@ function completionTransition(
     : { kind: "complete", ...completion };
 }
 
-function complete(
+export function complete(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
   snapshot: MirrorStateSnapshot,

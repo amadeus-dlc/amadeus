@@ -46,7 +46,15 @@ const CANDIDATE_CONFIG: NapiConfig = {
   },
 };
 
-export function loadVerifiedAstGrep(repoRoot: string): AstGrepModule {
+type AstGrepLoader = {
+  readonly resolve: (specifier: string) => string;
+  readonly load: (entry: string) => unknown;
+};
+
+export function loadVerifiedAstGrep(
+  repoRoot: string,
+  loader?: AstGrepLoader,
+): AstGrepModule {
   if (process.env.NAPI_RS_NATIVE_LIBRARY_PATH) {
     throw new InfraFailure("TOOL_MISSING", "NAPI_RS_NATIVE_LIBRARY_PATH cannot override the verified ast-grep copy");
   }
@@ -64,9 +72,10 @@ export function loadVerifiedAstGrep(repoRoot: string): AstGrepModule {
     );
   }
   const require = createRequire(import.meta.url);
+  const activeLoader = loader ?? { resolve: require.resolve, load: require };
   let entry: string;
   try {
-    entry = realpathSync(require.resolve("@ast-grep/napi"));
+    entry = realpathSync(activeLoader.resolve("@ast-grep/napi"));
   } catch (error) {
     throw new InfraFailure("TOOL_MISSING", `local ast-grep entrypoint is unavailable: ${String(error)}`);
   }
@@ -75,7 +84,7 @@ export function loadVerifiedAstGrep(repoRoot: string): AstGrepModule {
     throw new InfraFailure("TOOL_MISSING", `ast-grep resolved outside the verified local package: ${entry}`);
   }
   try {
-    return require(entry) as AstGrepModule;
+    return activeLoader.load(entry) as AstGrepModule;
   } catch (error) {
     throw new InfraFailure("TOOL_MISSING", `local ast-grep native binding failed to load: ${String(error)}`);
   }
@@ -233,7 +242,7 @@ function discriminantKinds(returnType: ts.Type, checker: ts.TypeChecker): Readon
   return kinds;
 }
 
-function stateResultKinds(call: ts.CallExpression, checker: ts.TypeChecker): ReadonlySet<string> {
+export function stateResultKinds(call: ts.CallExpression, checker: ts.TypeChecker): ReadonlySet<string> {
   const signature = checker.getResolvedSignature(call);
   if (!signature) {
     throw new InfraFailure("RULE_INVALID", "applyTransition does not resolve to a single callable contract");

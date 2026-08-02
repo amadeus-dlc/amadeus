@@ -4225,13 +4225,20 @@ function reviseForTarget(args: string[], pd: string): void {
   });
 }
 
+export function skipStageContent(content: string, slug: string): string {
+  return requireChanged(
+    setCheckbox(validateStageState(content), slug, "skipped"),
+    `skip:${slug}`,
+  );
+}
+
 // skip <slug> [--reason <text>] — transition [ ]/[-]/[R] → [S], emit STAGE_SKIPPED
-function handleSkip(args: string[]): void {
+export function handleSkip(args: string[], root = projectDir): void {
   if (args.length < 1) error("Usage: amadeus-state.ts skip <slug> [--reason <text>]");
   const slug = args[0];
   const reason = getFlagValue(args.slice(1), "--reason");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveProjectDir(root);
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
   withAuditLock(pd, () => {
   let content = readStateFile(pd);
@@ -4240,10 +4247,7 @@ function handleSkip(args: string[]): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
 
-  content = requireChanged(
-    setCheckbox(validateStageState(content), slug, "skipped"),
-    `skip:${slug}`,
-  );
+  content = skipStageContent(content, slug);
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -5168,6 +5172,43 @@ function handleFork(args: string[]): void {
 // merge from the worktree; alphabetical-slug tiebreak as defence-in-depth.
 // Idempotent: re-running for an already-merged slug exits non-zero with a
 // clear "already merged" error and emits no second STATE_MERGED row.
+export function mergeScopedCheckboxProgress(
+  mainContent: string,
+  worktreeContent: string,
+  refsList: readonly string[],
+  slug: string,
+): { merged: string; conflictResolution: string[] } {
+  let merged = mainContent;
+  const conflictResolution: string[] = [];
+  const mainCheckboxes = parseScopedCheckboxes(mainContent);
+  const worktreeCheckboxes = parseScopedCheckboxes(worktreeContent);
+  const checkboxKey = (checkbox: ScopedCheckboxLine): string =>
+    `${checkbox.unit ?? ""}\0${checkbox.slug}`;
+  const mainStateMap = new Map(mainCheckboxes.map((checkbox) => [checkboxKey(checkbox), checkbox.state]));
+  const winningSlug = [...refsList].sort()[0];
+
+  for (const worktreeCheckbox of worktreeCheckboxes) {
+    const mainState = mainStateMap.get(checkboxKey(worktreeCheckbox));
+    if (!mainState || mainState === worktreeCheckbox.state) continue;
+    if (winningSlug === slug) {
+      merged = requireChanged(
+        setCheckbox(
+          validateStageState(merged, worktreeCheckbox.unit ? { unit: worktreeCheckbox.unit } : {}),
+          worktreeCheckbox.slug,
+          worktreeCheckbox.state,
+        ),
+        `merge-worktree:${worktreeCheckbox.slug}`,
+      );
+      if (refsList.length > 1) {
+        conflictResolution.push(`${worktreeCheckbox.slug}:slug-precedence:${slug}`);
+      }
+    } else {
+      conflictResolution.push(`${worktreeCheckbox.slug}:deferred-to:${winningSlug}`);
+    }
+  }
+  return { merged, conflictResolution };
+}
+
 function handleMerge(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
@@ -5205,7 +5246,6 @@ function handleMerge(args: string[]): void {
   // audit lock for consistency. Read the SAME record the fork wrote.
   const wtContent = readStateFile(wtPath, wtRecord, space);
   const wtSha = sha256(wtContent);
-  const wtCheckboxes = parseScopedCheckboxes(wtContent);
 
   // Hold the audit lock across the entire decide-emit-write transaction so
   // conflict-resolution decisions, the audit Target state hash, and the
@@ -5245,36 +5285,9 @@ function handleMerge(args: string[]): void {
     //  - Tiebreak (alphabetical-slug, defence-in-depth): if multiple slugs
     //    in Bolt Refs would compete for the same cell, the lower
     //    alphabetical slug wins.
-    let merged = mainContent;
-    const conflictResolution: string[] = [];
-    const mainCheckboxes = parseScopedCheckboxes(mainContent);
-    const checkboxKey = (checkbox: ScopedCheckboxLine): string =>
-      `${checkbox.unit ?? ""}\0${checkbox.slug}`;
-    const mainStateMap = new Map(mainCheckboxes.map((c) => [checkboxKey(c), c.state]));
-    const candidateSlugs = [...refsList].sort();
-    const winningSlug = candidateSlugs[0];
-
-    for (const wtCb of wtCheckboxes) {
-      const mainCbState = mainStateMap.get(checkboxKey(wtCb));
-      if (!mainCbState) continue;
-      if (mainCbState === wtCb.state) continue;
-
-      if (winningSlug === slug) {
-        merged = requireChanged(
-          setCheckbox(
-            validateStageState(merged, wtCb.unit ? { unit: wtCb.unit } : {}),
-            wtCb.slug,
-            wtCb.state,
-          ),
-          `merge-worktree:${wtCb.slug}`,
-        );
-        if (refsList.length > 1) {
-          conflictResolution.push(`${wtCb.slug}:slug-precedence:${slug}`);
-        }
-      } else {
-        conflictResolution.push(`${wtCb.slug}:deferred-to:${winningSlug}`);
-      }
-    }
+    const progressMerge = mergeScopedCheckboxProgress(mainContent, wtContent, refsList, slug);
+    let merged = progressMerge.merged;
+    const conflictResolution = progressMerge.conflictResolution;
 
     // Remove slug from Bolt Refs.
     merged = setFieldStrict(merged, "Bolt Refs", removeSlug(currentRefs, slug));

@@ -35,9 +35,14 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
+  applyRecomposeSuffixFlips,
+  handleRecompose,
+} from "../../packages/framework/core/tools/amadeus-utility.ts";
+import {
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
+import { useRealScopeData } from "../harness/real-scope-data.ts";
 
 const BUN = process.execPath;
 
@@ -93,6 +98,28 @@ function bornProject(scope = "feature"): string {
 }
 
 describe("t194 recompose - flips land as suffix edits and the router honours them", () => {
+  test("in-process seam covers both suffix mutation directions", () => {
+    const proj = bornProject();
+    const skipped = applyRecomposeSuffixFlips(readState(proj), ["market-research"], []);
+    expect(skipped).toMatch(/- \[ \] market-research — SKIP/);
+    const restored = applyRecomposeSuffixFlips(skipped, [], ["market-research"]);
+    expect(restored).toMatch(/- \[ \] market-research — EXECUTE/);
+  });
+
+  test("in-process handler drives suffix flips and derived-plan rebuild", () => {
+    const proj = bornProject();
+    const restoreScopeData = useRealScopeData();
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      handleRecompose(proj, { skip: "market-research" });
+    } finally {
+      process.stdout.write = originalWrite;
+      restoreScopeData();
+    }
+    expect(readState(proj)).toMatch(/- \[ \] market-research — SKIP/);
+  });
+
   test("pending SKIP honored: suffix flips, marker untouched, router walks around it", () => {
     const proj = bornProject();
     const before = readState(proj);

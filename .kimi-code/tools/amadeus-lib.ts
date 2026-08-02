@@ -5368,7 +5368,7 @@ export function parseCheckboxes(content: string): CheckboxLine[] {
   let match: RegExpExecArray | null = regex.exec(content);
   while (match !== null) {
     const marker = match[1];
-    let state: CheckboxState;
+    let state: CheckboxState = "pending";
     switch (marker) {
       case " ":
         state = "pending";
@@ -5388,8 +5388,6 @@ export function parseCheckboxes(content: string): CheckboxLine[] {
       case "S":
         state = "skipped";
         break;
-      default:
-        state = "pending";
     }
     results.push({ slug: match[2], state, suffix: match[3].trim() });
     match = regex.exec(content);
@@ -5674,13 +5672,7 @@ export function setCheckbox(
   const marker = CHECKBOX_MAP[newState];
   const nextLine = target.line.replace(/^(- )\[[ xSR?-]\]/, `$1${marker}`);
   const content = `${data.content.slice(0, target.start)}${nextLine}${data.content.slice(target.end)}`;
-  return verifyStageMutation(
-    data,
-    content,
-    operation,
-    slug,
-    (line) => line.state === newState,
-  );
+  return verifyStageMutation(data, content, operation, slug, (line) => line.state === newState);
 }
 
 export function setStageSuffix(
@@ -5695,13 +5687,7 @@ export function setStageSuffix(
 
   const nextLine = target.line.replace(/(—\s*)(EXECUTE|SKIP)\b/, `$1${action}`);
   const content = `${data.content.slice(0, target.start)}${nextLine}${data.content.slice(target.end)}`;
-  return verifyStageMutation(
-    data,
-    content,
-    operation,
-    slug,
-    (line) => line.suffix.startsWith(action),
-  );
+  return verifyStageMutation(data, content, operation, slug, (line) => line.suffix.startsWith(action));
 }
 
 export function requireChanged(result: TextMutationResult, operation: string): string {

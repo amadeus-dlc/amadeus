@@ -4,16 +4,22 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  applyTransition,
+  complete,
   executeMirrorOperation,
+  persistBlocked,
 } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import { mirrorEventIdentity, mirrorEventKey } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import { renderMirrorMarker } from "../../packages/framework/core/tools/amadeus-mirror-provenance.ts";
 import {
   EMPTY_MIRROR_STATE,
+  MIRROR_STATE_SENTINEL_END,
+  MIRROR_STATE_SENTINEL_START,
   parseMirrorStateDocument,
   renderMirrorStateBlock,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import type { MirrorStateStorePorts } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
+import type { MirrorTransition } from "../../packages/framework/core/tools/amadeus-mirror-state-reducer.ts";
 import type {
   GatewayOutcome,
   MirrorCreateIdentity,
@@ -85,6 +91,21 @@ function memoryStore(initial: MirrorStateSnapshot = EMPTY_MIRROR_STATE): {
       return parsed.snapshot;
     },
   };
+}
+
+function sequencedStore(documents: readonly string[]): MirrorStateStorePorts {
+  let readIndex = 0;
+  return {
+    acquireLock: () => true,
+    releaseLock: () => {},
+    readDocument: () => documents[Math.min(readIndex++, documents.length - 1)]!,
+    writeDocumentAtomic: () => ({ kind: "ok" }),
+    appendArtifactUpdated: () => ({ kind: "appended" }),
+  };
+}
+
+function stateDocument(snapshot: MirrorStateSnapshot): string {
+  return `# State\n\n${renderMirrorStateBlock(snapshot)}\n`;
 }
 
 class FakeGateway implements MirrorGitHubGateway {
@@ -254,6 +275,90 @@ function context(
     authorization: authorization(event, operation),
   };
 }
+
+describe("t279 applyTransition seam", () => {
+  const noOp: MirrorTransition = { kind: "clear-global-warning" };
+
+  test("exclusive claims reject conflicts and unchanged transitions", () => {
+    const ctx = context("create", new FakeGateway());
+    const newer = { ...EMPTY_MIRROR_STATE, revision: 1 };
+    expect(applyTransition(
+      sequencedStore([stateDocument(newer)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-conflict",
+      false,
+      undefined,
+      true,
+    )).toMatchObject({ kind: "failed", summary: "state compare-and-set conflict" });
+    expect(applyTransition(
+      sequencedStore([stateDocument(EMPTY_MIRROR_STATE)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-unchanged",
+      false,
+      undefined,
+      true,
+    )).toMatchObject({ kind: "failed", summary: "exclusive state claim was not written" });
+  });
+
+  test("conflict recovery reports invalid, unreadable, and repeatedly changing state", () => {
+    const ctx = context("create", new FakeGateway());
+    const revisionOne = { ...EMPTY_MIRROR_STATE, revision: 1 };
+    const revisionTwo = { ...EMPTY_MIRROR_STATE, revision: 2 };
+    const invalid = `${MIRROR_STATE_SENTINEL_START}\n{}\n${MIRROR_STATE_SENTINEL_END}\n`;
+
+    expect(applyTransition(
+      sequencedStore([stateDocument(revisionOne), invalid]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-invalid",
+      false,
+    )).toMatchObject({ kind: "failed", summary: expect.stringContaining("state invalid after conflict") });
+
+    let lockCount = 0;
+    const unreadable = sequencedStore([stateDocument(revisionOne)]);
+    expect(applyTransition(
+      { ...unreadable, acquireLock: () => ++lockCount === 1 },
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-unreadable",
+      false,
+    )).toMatchObject({ kind: "failed", summary: "state lock unavailable" });
+
+    expect(applyTransition(
+      sequencedStore([stateDocument(revisionOne), stateDocument(revisionOne), stateDocument(revisionTwo)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-racing",
+      false,
+    )).toMatchObject({ kind: "failed", summary: "state compare-and-set conflict" });
+  });
+
+  test("invalid reducer outcomes are surfaced as pre-commit failures", () => {
+    const ctx = context("create", new FakeGateway());
+    const invalidTransition: MirrorTransition = {
+      kind: "complete",
+      event: ctx.event,
+      issueNumber: 7,
+      completedAt: NOW,
+      createdAt: NOW,
+    };
+    expect(applyTransition(
+      sequencedStore([stateDocument(EMPTY_MIRROR_STATE)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      invalidTransition,
+      "op-invalid-transition",
+      false,
+    )).toMatchObject({ kind: "failed", phase: "pre-commit" });
+  });
+});
 
 describe("t279 create", () => {
   test("fresh create claims attempted state before one remote create", async () => {
@@ -523,6 +628,48 @@ describe("t279 create", () => {
       expect(gateway.history).toEqual([]);
     },
   );
+
+  test("persistBlocked and complete surface maintenance outcomes at their call sites", () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const event = ctx.event;
+    const receipt = {
+      key: mirrorEventKey(event),
+      event,
+      operationId: "op-maintenance",
+      status: "prepared" as const,
+      preparedAt: NOW,
+      createIdentity: identity(),
+    };
+    const initial: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+      auditOutbox: {
+        transactionId: "tx-pending",
+        digest: "digest",
+        fields: { Artifact: "amadeus-state.md#mirror-state" },
+      },
+    };
+    const blockedStore = memoryStore(initial);
+    expect(persistBlocked(
+      blockedStore.ports,
+      ctx,
+      initial,
+      receipt,
+      "state-write",
+      "blocked",
+    )).toMatchObject({ kind: "safety-blocked", warning: { retryable: true } });
+
+    const completeStore = memoryStore(initial);
+    expect(complete(
+      completeStore.ports,
+      ctx,
+      initial,
+      receipt,
+      issue(),
+      false,
+    )).toMatchObject({ kind: "safety-blocked", warning: { retryable: true } });
+  });
 
   test("a durable authorization binding mismatch blocks before readiness", async () => {
     const gateway = new FakeGateway();
