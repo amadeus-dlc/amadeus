@@ -72,7 +72,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     );
   });
 
-  test("post-fix census is deterministic and removes only the approved issue identity", () => {
+  test("post-fix census is deterministic and removes only the approved issue identities", () => {
     const command = ["tests/no-silent-drop-gate.ts", "census-evidence"];
     const first = spawnSync("bun", command, { cwd: REPO_ROOT, encoding: "utf8" });
     const second = spawnSync("bun", command, { cwd: REPO_ROOT, encoding: "utf8" });
@@ -84,15 +84,21 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const baseline = JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "baseline.json"), "utf8"),
     );
+    const provenance = JSON.parse(
+      readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
+    );
     const currentIdentities = new Set<string>(
       result.evidence.findings.map((finding: { fingerprint: string }) => finding.fingerprint),
     );
-    const removed = baseline.entries.filter(
+    const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    expect(result.evidence.counts).toEqual({ C_pre: 30, B_pre: 30, B0: 31 });
-    expect(removed).toHaveLength(1);
-    expect(removed[0].issues).toContain("#1878");
+    expect(result.evidence.counts).toEqual({ C_pre: 223, B_pre: 223, B0: 223 });
+    expect(baseline.entries).toHaveLength(223);
+    expect(removed).toHaveLength(4);
+    expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
+      new Set(["#1874", "#1878"]),
+    );
   });
 
   test("the deadline and performance/capacity fixtures preserve their complete populations", () => {
