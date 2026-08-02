@@ -17,9 +17,17 @@
 //                          function's own comment says it exists to avoid.
 //
 // Pinned here: on ANY invalid content the re-sync is skipped (no crash), the
-// state file is left byte-identical (no cached-graph substitution), and a
-// visible stderr warning names the file. An ABSENT file keeps its documented
-// fallback to the cached loader; a valid array keeps the happy path.
+// state file is left byte-identical (no cached-graph substitution), and the
+// skip is a first-class `invalid-graph` outcome naming the file. An ABSENT
+// file keeps its documented fallback to the cached loader; a valid array keeps
+// the happy path.
+//
+// CONTRACT REVISION (#1993, declared): the original t406 pinned `compose` at
+// exit 0 with a console.error warning. #1993 makes the invalid-graph skip
+// visible in the compose result — warning through the injected `err` seam,
+// exit 1, aligned with #1970's `resyncFailed` face — so those two assertions
+// are revised here (the crash-safety and byte-identical-state pins are
+// unchanged).
 //
 // Mechanism: in-process (the exported default deps seam + handlePluginCli),
 // like t394, so lcov sees the guard branches.
@@ -98,19 +106,20 @@ const INVALID_PAYLOADS: readonly [label: string, payload: string][] = [
 
 describe("t406 read boundary: invalid host stage-graph.json", () => {
   for (const [label, payload] of INVALID_PAYLOADS) {
-    test(`${label}: re-sync skips without crash, without cached-graph substitution, with a warning`, () => {
+    test(`${label}: re-sync skips without crash, without cached-graph substitution, as a first-class outcome`, () => {
       writeFileSync(hostGraphPathOf(proj), payload, "utf-8");
       const before = readState(proj);
       const errSpy = spyOn(console, "error").mockImplementation(() => {});
       try {
-        let outcomes: unknown;
+        let resync: unknown;
         expect(() => {
-          outcomes = defaultPluginCliDeps().resyncIntentStates?.(host);
+          resync = defaultPluginCliDeps().resyncIntentStates?.(host);
         }).not.toThrow();
-        expect(outcomes).toEqual([]);
-        const warnings = errSpy.mock.calls.map((c) => c.join(" ")).join("\n");
-        expect(warnings).toContain("stage-graph.json");
-        expect(warnings).toContain("re-sync skipped");
+        // #1993: the skip is a discriminated outcome naming the file — never
+        // an empty list, never a raw console.error out of the dep.
+        expect(resync).toMatchObject({ kind: "invalid-graph" });
+        expect((resync as { path: string }).path).toContain("stage-graph.json");
+        expect(errSpy.mock.calls.length).toBe(0);
       } finally {
         errSpy.mockRestore();
       }
@@ -119,7 +128,7 @@ describe("t406 read boundary: invalid host stage-graph.json", () => {
     });
   }
 
-  test("compose survives a corrupt host graph: exit 0, warning, state untouched", () => {
+  test("compose survives a corrupt host graph: exit 1, err-seam warning, state untouched (#1993)", () => {
     writeFileSync(hostGraphPathOf(proj), "null", "utf-8");
     const before = readState(proj);
     const lines: string[] = [];
@@ -135,10 +144,13 @@ describe("t406 read boundary: invalid host stage-graph.json", () => {
         out: (l) => lines.push(l),
         err: (l) => lines.push(l),
       });
-      expect(code).toBe(0);
-      const warnings = errSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+      // Revised from exit 0 (#1993): the skipped re-sync is a failure face.
+      expect(code).toBe(1);
+      const warnings = lines.join("\n");
       expect(warnings).toContain("stage-graph.json");
       expect(warnings).toContain("re-sync skipped");
+      // The warning goes through the injected err seam, not console.error.
+      expect(errSpy.mock.calls.length).toBe(0);
     } finally {
       errSpy.mockRestore();
     }
@@ -150,7 +162,9 @@ describe("t406 read boundary: invalid host stage-graph.json", () => {
 describe("t406 happy path: a valid host graph re-syncs exactly as before", () => {
   test("the restored valid graph inserts the dropped row", () => {
     writeFileSync(hostGraphPathOf(proj), validGraphBytes, "utf-8");
-    const outcomes = defaultPluginCliDeps().resyncIntentStates?.(host) ?? [];
+    const resync = defaultPluginCliDeps().resyncIntentStates?.(host);
+    expect(resync?.kind).toBe("ran");
+    const outcomes = resync?.kind === "ran" ? resync.outcomes : [];
     expect(outcomes.filter((o) => o.status === "resynced").map((o) => o.inserted)).toEqual([
       ["user-stories"],
     ]);

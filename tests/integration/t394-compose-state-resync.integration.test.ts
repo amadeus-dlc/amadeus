@@ -200,7 +200,12 @@ describe("t394 compose wiring: the re-sync runs after the graph is recompiled", 
       resyncIntentStates: (root) => {
         trace.push("resyncIntentStates");
         expect(root).toBe(host);
-        return [{ space: "default", intent: "demo-0badcafe", status: "resynced", inserted: ["x"] }];
+        return {
+          kind: "ran" as const,
+          outcomes: [
+            { space: "default", intent: "demo-0badcafe", status: "resynced", inserted: ["x"] },
+          ],
+        };
       },
       out: (l) => lines.push(l),
       err: (l) => lines.push(l),
@@ -221,7 +226,9 @@ describe("t394 compose wiring: the re-sync runs after the graph is recompiled", 
     const proj = bornProject();
     dropRow(proj, "user-stories");
     // The plugin host root is the HARNESS dir; the workspace is its parent.
-    const outcomes = defaultPluginCliDeps().resyncIntentStates?.(join(proj, ".claude")) ?? [];
+    const resync = defaultPluginCliDeps().resyncIntentStates?.(join(proj, ".claude"));
+    expect(resync?.kind).toBe("ran");
+    const outcomes = resync?.kind === "ran" ? resync.outcomes : [];
     expect(outcomes.filter((o) => o.status === "resynced").map((o) => o.inserted)).toEqual([
       ["user-stories"],
     ]);

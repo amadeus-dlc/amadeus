@@ -3572,6 +3572,10 @@
         {
           "file": "tests/integration/t410-host-graph-shape-validation.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t411-compose-invalid-graph-visibility.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
