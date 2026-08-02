@@ -33,6 +33,20 @@ import {
   NodeTlcProcessPort,
 } from "./fs-tlc-toolchain.ts";
 import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "./tla-arm.ts";
+import { loadVerifiedTlaSource } from "./tla-model-loader.ts";
+import { traceVocabularyFor } from "./tlc-toolchain.ts";
+
+// The skeleton stays pinned to the FormalElection frozen model, so its trace
+// vocabulary comes from the same loader-verified declaration (no code-level
+// default). Resolution failure aborts the run, consistent with the throws
+// below.
+function formalElectionTraceVocabulary() {
+  const source = loadVerifiedTlaSource();
+  if (!source.ok) throw new Error(`loader failed: ${JSON.stringify(source.error)}`);
+  const vocabulary = traceVocabularyFor(source.value.executionModel);
+  if (!vocabulary.ok) throw new Error(`vocabulary failed: ${JSON.stringify(vocabulary.error)}`);
+  return vocabulary.value;
+}
 
 const configuredJdkRoot = process.env.JAVA_HOME;
 if (!configuredJdkRoot) throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
@@ -111,6 +125,7 @@ async function runOnce(runNo: 1 | 2): Promise<SkeletonRunRow> {
   const prepared = await toolchain.prepare({
     artifact: offline.value,
     modelReceipt,
+    vocabulary: formalElectionTraceVocabulary(),
     modulePath,
     cfgPath,
     subjectAlias: "fx-1252",

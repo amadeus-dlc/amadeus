@@ -202,6 +202,7 @@ describe("planned TLC filesystem runtime", () => {
     const prepared = await toolchain.preparePlanned({
       artifact: acquired.value,
       modelReceipt: source.value.modelReceipt,
+      vocabulary: source.value.vocabulary,
       modulePath: modelPath,
       cfgPath,
       subjectAlias: "run-model-check",

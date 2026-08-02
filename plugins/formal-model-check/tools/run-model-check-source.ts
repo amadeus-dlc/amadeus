@@ -19,9 +19,11 @@ import {
   type VerifiedModelSource,
 } from "./tla-model-loader.ts";
 import { selectVerifiedModel } from "./tla-model-loader-internal.ts";
+import { traceVocabularyFor, type TraceVocabulary } from "./tlc-toolchain.ts";
 
 export interface RunModelCheckSource {
   readonly source: VerifiedModelSource;
+  readonly vocabulary: TraceVocabulary;
   readonly modelReceipt: FrozenTlaModelReceipt;
   readonly modelPath: string;
   readonly cfgPath: string;
@@ -148,16 +150,21 @@ export function loadRunModelCheckSource(
   const publicContractIdentity = createHash("sha256")
     .update(selected.value.model.entries.map(({ sha256 }) => sha256).join("\n"))
     .digest("hex");
+  // The frozen receipt stays pinned to FormalElection (ADR-10) even though the
+  // byte-pin above is model-selected.
   const bundle = generateFrozenTlaModel({ publicContractIdentity });
+  const vocabulary = traceVocabularyFor(selected.value.model);
+  if (!vocabulary.ok) return vocabulary;
   return {
     ok: true,
     value: {
       source: selected.value,
+      vocabulary: vocabulary.value,
       modelReceipt: createFrozenTlaModelReceipt(bundle),
       modelPath: model.value,
       cfgPath: cfg.value,
       workspaceRoot: dirname(model.value),
-      moduleName: basename(model.value, ".tla"),
+      moduleName: requestedName,
     },
   };
 }

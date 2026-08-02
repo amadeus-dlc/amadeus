@@ -1,13 +1,47 @@
 import { canonicalIdentity } from "./canonical.ts";
 import { isUtcInstant, type CellResult, type Result } from "./contract.ts";
 import {
-  TLA_NAMED_INVARIANTS,
   validateFrozenTlaModelReceipt,
   type FrozenTlaModelBundle,
   type FrozenTlaModelReceipt,
   type TlaInvariantSourceLocation,
-  type TlaNamedInvariant,
 } from "./tla-arm.ts";
+import type { ModelLoadError, ModelMapModel } from "./tla-model-map.ts";
+
+// The toolchain consumes per-model vocabulary only through this record,
+// resolved from a loader-verified ModelMapModel declaration. The toolchain
+// itself never reads model-map.json and never calls the loader (ADR-6).
+export interface TraceVocabulary {
+  readonly moduleName: string; // = model.name, embedded in the trace label regex
+  readonly traceStateVariables: readonly string[];
+  readonly namedInvariants: readonly string[];
+}
+
+// Pure resolution from the parsed declaration; a model without a vocabulary
+// is an explicit MODEL_MAP_INVALID failure, never a default (BR-V3).
+export function traceVocabularyFor(
+  model: ModelMapModel,
+): Result<TraceVocabulary, ModelLoadError> {
+  if (model.vocabulary === undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: "MODEL_LOAD",
+        code: "MODEL_MAP_INVALID",
+        relativePath: "specs/tla/model-map.json",
+        detail: `model ${model.name} does not declare a vocabulary`,
+      },
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      moduleName: model.name,
+      traceStateVariables: model.vocabulary.traceStateVariables,
+      namedInvariants: model.vocabulary.namedInvariants,
+    },
+  };
+}
 
 function deepFreeze<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -115,6 +149,7 @@ export interface TlcOutputInput {
   expectedStandardModuleDirectory: string;
   verifiedArtifactDescriptorIdentity: string;
   modelReceipt: FrozenTlaModelReceipt;
+  vocabulary: TraceVocabulary;
 }
 export interface CompleteTlcExploration {
   kind: "COMPLETE";
@@ -415,15 +450,22 @@ function validateLifecycle(envelopes: TlcEnvelope[]): string | null {
   return validateLifecyclePayloads(envelopes) ?? validateLifecycleOrder(envelopes);
 }
 
-const TRACE_STATE_VARIABLES = ["initialBudget", "amendBudget", "accepted", "holdMarkers", "holdBudget", "tally", "reexamRequired"] as const;
-
 // Real TLC labels each non-initial trace step with the NAME of the next-state
 // action that fired (e.g. "<Tally line 133, col 3 ...>", "<SubmitOriginal ...>"),
 // not the literal token "Next" — measured 2026-07-22 against the first real
 // trace-form counterexample (D1 choice-winner fixture). The label grammar
 // accepts any identifier while keeping the span/module binding exact.
+// The module name comes from the model's vocabulary (model.name); model names
+// are TLA identifiers by parser guarantee, and are escaped defensively before
+// embedding so the regex grammar below stays byte-exact.
 
-function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export const traceLabelPattern = (moduleName: string): RegExp =>
+  new RegExp(`^<[A-Za-z_][A-Za-z0-9_]* line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module ${escapeRegExp(moduleName)}>$`);
+
+function parseTrace(envelopes: TlcEnvelope[], vocabulary: TraceVocabulary): TlcTraceState[] | null {
+  const labelPattern = traceLabelPattern(vocabulary.moduleName);
   const trace: TlcTraceState[] = [];
   for (const envelope of envelopes.filter(({ code }) => code === 2217)) {
     const lines = envelope.payload.split("\n");
@@ -433,11 +475,11 @@ function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
     const label = header[2]!;
     const validLabel = ordinal === 1
       ? label === "<Initial predicate>"
-      : /^<[A-Za-z_][A-Za-z0-9_]* line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
+      : labelPattern.test(label);
     const variables = lines.slice(1).flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
     if (ordinal === null || ordinal !== trace.length + 1 || !validLabel
-      || variables.length !== TRACE_STATE_VARIABLES.length
-      || variables.some((name, index) => name !== TRACE_STATE_VARIABLES[index])) return null;
+      || variables.length !== vocabulary.traceStateVariables.length
+      || variables.some((name, index) => name !== vocabulary.traceStateVariables[index])) return null;
     trace.push({ ordinal, label: header[2]!, body: lines.slice(1) });
   }
   return trace;
@@ -472,9 +514,9 @@ function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[],
   const invariantMatch = /^Invariant ([A-Za-z_][A-Za-z0-9_]*) is violated\.$/.exec(only(parsed, 2110)!.payload);
   if (invariantMatch === null || only(parsed, 2121)!.payload !== "The behavior up to this point is:") return failed("GRAMMAR", "invalid counterexample header");
   const invariantName = invariantMatch[1]!;
-  if (!TLA_NAMED_INVARIANTS.includes(invariantName as TlaNamedInvariant)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
-  const sourceLocation = model.invariantSourceMap[invariantName as TlaNamedInvariant];
-  const trace = parseTrace(parsed);
+  if (!input.vocabulary.namedInvariants.includes(invariantName)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
+  const sourceLocation = model.invariantSourceMap[invariantName];
+  const trace = parseTrace(parsed, input.vocabulary);
   if (sourceLocation === undefined || trace === null) return failed("GRAMMAR", "counterexample source map or trace is invalid");
   return {
     kind: "COUNTEREXAMPLE",
@@ -489,6 +531,9 @@ function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[],
   };
 }
 
+// Deliberately NOT generalized (ADR-10): the frozen model receipt is pinned to
+// the FormalElection vocabulary, so the output binding stays FormalElection
+// scoped. Do not parameterize the module name here.
 function hasFrozenModelOutputBinding(input: TlcOutputInput): boolean {
   return input.expectedModuleName === "FormalElection"
     && input.expectedModulePath.split(/[\\/]/).at(-1) === "FormalElection.tla"
@@ -508,12 +553,12 @@ function initialStateCounterexampleExploration(input: TlcOutputInput, parsed: Tl
   const headerMatch = /^Invariant ([A-Za-z_][A-Za-z0-9_]*) is violated by the initial state:$/.exec(lines[0] ?? "");
   if (headerMatch === null) return failed("GRAMMAR", "invalid initial-state counterexample header");
   const invariantName = headerMatch[1]!;
-  if (!TLA_NAMED_INVARIANTS.includes(invariantName as TlaNamedInvariant)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
-  const sourceLocation = model.invariantSourceMap[invariantName as TlaNamedInvariant];
+  if (!input.vocabulary.namedInvariants.includes(invariantName)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
+  const sourceLocation = model.invariantSourceMap[invariantName];
   const body = lines.slice(1);
   const variables = body.flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
-  if (sourceLocation === undefined || variables.length !== TRACE_STATE_VARIABLES.length
-    || variables.some((name, index) => name !== TRACE_STATE_VARIABLES[index])) {
+  if (sourceLocation === undefined || variables.length !== input.vocabulary.traceStateVariables.length
+    || variables.some((name, index) => name !== input.vocabulary.traceStateVariables[index])) {
     return failed("GRAMMAR", "counterexample source map or initial state is invalid");
   }
   const trace: TlcTraceState[] = [{ ordinal: 1, label: lines[0]!, body }];
@@ -826,6 +871,7 @@ export interface TlcClosedEnvironment {
 export interface TlcPrepareInput {
   readonly artifact: VerifiedTlcArtifact;
   readonly modelReceipt: FrozenTlaModelReceipt;
+  readonly vocabulary: TraceVocabulary;
   readonly modulePath: string;
   readonly cfgPath: string;
   readonly subjectAlias: string;
@@ -837,6 +883,7 @@ export interface PreparedTlcRun {
   readonly jdk: VerifiedJdkSnapshot;
   readonly sandbox: VerifiedSandbox;
   readonly modelReceipt: FrozenTlaModelReceipt;
+  readonly vocabulary: TraceVocabulary;
   readonly manifest: TlcRunManifest;
   readonly environment: TlcClosedEnvironment;
 }

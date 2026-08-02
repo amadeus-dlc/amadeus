@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { canonicalIdentity } from "../../../plugins/formal-model-check/tools/canonical.ts";
 import { parseCellResult, type CellResult, type Result } from "../../../plugins/formal-model-check/tools/contract.ts";
 import {
@@ -5,6 +8,10 @@ import {
   generateFrozenTlaModel,
   type FrozenTlaModelBundle,
 } from "../../../plugins/formal-model-check/tools/tla-arm.ts";
+import {
+  findModelMapModel,
+  parseTlaModelMap,
+} from "../../../plugins/formal-model-check/tools/tla-model-map.ts";
 import {
   DARWIN_NETWORK_DENY_POLICY_IDENTITY,
   DARWIN_SANDBOX_PROVIDER_IDENTITY,
@@ -16,6 +23,7 @@ import {
   createSandboxProbeReceipt,
   createTlcRunManifest,
   parseTlcOutput174,
+  traceVocabularyFor,
   type PreparedTlcRun,
   type RawTlcOutcome,
   type TlcCellBinding,
@@ -23,6 +31,7 @@ import {
   type TlcPrepareInput,
   type TlcToolchainError,
   type TlcToolchainFacade,
+  type TraceVocabulary,
   type VerifiedJdkSnapshot,
   type VerifiedSandbox,
   type VerifiedTlcArtifact,
@@ -36,6 +45,21 @@ const MODULE_PATH = "/synthetic/FormalElection.tla";
 const CFG_PATH = "/synthetic/FormalElection.cfg";
 const RUN_ROOT = "/synthetic";
 const JDK_ROOT = "/synthetic/jdk";
+
+// The synthetic module is FormalElection, so its trace vocabulary comes from
+// the real model-map declaration (the single source) — never duplicated here.
+const REPOSITORY_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
+const VOCABULARY: TraceVocabulary = (() => {
+  const parsed = parseTlaModelMap(
+    new Uint8Array(readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"))),
+  );
+  if (!parsed.ok) throw new Error(parsed.error.detail);
+  const model = findModelMapModel(parsed.value, MODULE_NAME);
+  if (model === undefined) throw new Error(`${MODULE_NAME} is not registered in the model map`);
+  const vocabulary = traceVocabularyFor(model);
+  if (!vocabulary.ok) throw new Error(vocabulary.error.detail);
+  return vocabulary.value;
+})();
 const PUBLIC_CONTRACT_IDENTITY = canonicalIdentity(
   { schemaVersion: 1, contract: "frozen-election-public-contract" },
   "amadeus.formal-verif.test.public-contract.v1",
@@ -290,6 +314,7 @@ function createSyntheticFacade(scenario: SyntheticTlcScenario): SyntheticFacade 
         jdk,
         sandbox,
         modelReceipt: input.modelReceipt,
+        vocabulary: input.vocabulary,
         manifest: manifest.value,
         environment: {
           JAVA_HOME: JDK_ROOT,
@@ -323,6 +348,7 @@ function createSyntheticFacade(scenario: SyntheticTlcScenario): SyntheticFacade 
         expectedStandardModuleDirectory: `${prepared.manifest.cwd}/.tlc-stdlib`,
         verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
         modelReceipt: prepared.modelReceipt,
+        vocabulary: prepared.vocabulary,
       });
       const normalized = parseCellResult({
         schemaVersion: 1,
@@ -411,6 +437,7 @@ export async function driveSyntheticTlcToolchain(scenario: SyntheticTlcScenario)
   const prepared = await synthetic.facade.prepare({
     artifact: acquired.value,
     modelReceipt,
+    vocabulary: VOCABULARY,
     modulePath: MODULE_PATH,
     cfgPath: CFG_PATH,
     subjectAlias: "opaque-subject",

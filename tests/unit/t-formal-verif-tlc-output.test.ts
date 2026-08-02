@@ -3,9 +3,11 @@ import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
 } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import { loadVerifiedTlaSource } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   parseTlcOutput174,
+  traceVocabularyFor,
 } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const encoder = new TextEncoder();
@@ -91,12 +93,23 @@ function counterexampleOutput(ordinals: readonly number[] = [1, 2, 3]): string {
 const frozenModel = generateFrozenTlaModel({ publicContractIdentity: "a".repeat(64) });
 const modelReceipt = createFrozenTlaModelReceipt(frozenModel);
 
+// The vocabulary comes from the model-map declaration (the single source) via
+// the loader-verified model — never duplicated as a test literal.
+const vocabulary = (() => {
+  const source = loadVerifiedTlaSource();
+  if (!source.ok) throw new Error(JSON.stringify(source.error));
+  const resolved = traceVocabularyFor(source.value.executionModel);
+  if (!resolved.ok) throw new Error(JSON.stringify(resolved.error));
+  return resolved.value;
+})();
+
 const context = {
   expectedModuleName: "FormalElection",
   expectedModulePath: "/workspace/FormalElection.tla",
   expectedStandardModuleDirectory: "/fixed",
   verifiedArtifactDescriptorIdentity: FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   modelReceipt,
+  vocabulary,
 };
 
 function parse(
@@ -472,6 +485,7 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
       expectedStandardModuleDirectory: "/fixed",
       verifiedArtifactDescriptorIdentity: FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
       modelReceipt: forgedReceipt,
+      vocabulary,
     });
     expect(result.kind).toBe("HARNESS_ERROR");
   });

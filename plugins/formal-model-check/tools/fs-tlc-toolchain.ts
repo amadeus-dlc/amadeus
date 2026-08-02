@@ -294,6 +294,7 @@ export interface PlannedTlcPrepareInput extends TlcPrepareInput {
 export interface PreparedPlannedTlcRun {
   readonly artifact: VerifiedTlcArtifact;
   readonly modelReceipt: TlcPrepareInput["modelReceipt"];
+  readonly vocabulary: TlcPrepareInput["vocabulary"];
   readonly modulePath: string;
   readonly cfgPath: string;
   readonly cwd: string;
@@ -1279,7 +1280,7 @@ class FsTlcRuntime {
       const manifest = createTlcRunManifest({ ...input, modulePath, cfgPath, jdk, sandbox, argv, cwd: actualWorkspace });
       if (!manifest.ok) throw new ToolchainFailure(manifest.error);
       const environment: TlcClosedEnvironment = Object.freeze({ JAVA_HOME: jdk.snapshotRoot, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", TZ: "UTC" });
-      const prepared: PreparedTlcRun = Object.freeze({ artifact: input.artifact, jdk, sandbox, modelReceipt: input.modelReceipt, manifest: manifest.value, environment });
+      const prepared: PreparedTlcRun = Object.freeze({ artifact: input.artifact, jdk, sandbox, modelReceipt: input.modelReceipt, vocabulary: input.vocabulary, manifest: manifest.value, environment });
       this.#issuedPrepared.add(prepared);
       return { ok: true, value: prepared };
     } catch (cause) {
@@ -1465,7 +1466,7 @@ class FsTlcRuntime {
         ? { kind: "HARNESS_ERROR", reason: "OUTPUT_CAPACITY", detail: "TLC stdout or stderr exceeded 16 MiB" }
         : input.outcome.stderrChunks.some((chunk) => chunk.byteLength > 0)
           ? { kind: "HARNESS_ERROR", reason: "GRAMMAR", detail: "TLC stderr was not empty" }
-          : parseTlcOutput174({ chunks: [...input.outcome.stdoutChunks], exitCode: input.outcome.exitCode, signal: input.outcome.signal, timedOut: input.outcome.timedOut, expectedModuleName: basename(input.prepared.manifest.modulePath, ".tla"), expectedModulePath: input.prepared.manifest.modulePath, expectedStandardModuleDirectory: standardModuleDirectory, verifiedArtifactDescriptorIdentity: input.prepared.artifact.descriptorIdentity, modelReceipt: input.prepared.modelReceipt });
+          : parseTlcOutput174({ chunks: [...input.outcome.stdoutChunks], exitCode: input.outcome.exitCode, signal: input.outcome.signal, timedOut: input.outcome.timedOut, expectedModuleName: basename(input.prepared.manifest.modulePath, ".tla"), expectedModulePath: input.prepared.manifest.modulePath, expectedStandardModuleDirectory: standardModuleDirectory, verifiedArtifactDescriptorIdentity: input.prepared.artifact.descriptorIdentity, modelReceipt: input.prepared.modelReceipt, vocabulary: input.prepared.vocabulary });
       const normalized = normalizeIssuedExploration({ exploration, fixtureId: input.binding.fixtureId, baselineSha: input.binding.baselineSha, armSha: input.binding.armSha, exitCode: input.outcome.exitCode, startedAt: input.binding.startedAt, finishedAt: input.binding.finishedAt, evidencePaths: [...input.binding.evidencePaths] });
       return normalized.ok ? normalized : { ok: false, error: { kind: "NormalizationError", code: "CELL_RESULT", message: normalized.error.message } };
     } catch (cause) {
@@ -1612,6 +1613,7 @@ class FsPlannedTlcRuntime {
       const prepared: PreparedPlannedTlcRun = Object.freeze({
         artifact: input.artifact,
         modelReceipt: input.modelReceipt,
+        vocabulary: input.vocabulary,
         modulePath,
         cfgPath,
         cwd,
@@ -1687,6 +1689,7 @@ class FsPlannedTlcRuntime {
       expectedStandardModuleDirectory: spawnedStandardModuleDirectory,
       verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
       modelReceipt: prepared.modelReceipt,
+      vocabulary: prepared.vocabulary,
     });
   }
 
