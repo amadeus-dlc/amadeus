@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-02T16:16:56.349Z",
+  "commit": "9750f8aea0763eb10572b27b900c435de0146e86",
+  "collectors": {
+    "ccn": {
+      "tool": "lizard",
+      "tool_version": "1.23.0",
+      "values": {
+        "functions": 4584,
+        "p50": 2,
+        "p90": 8,
+        "max": 38,
+        "over_threshold": 36,
+        "threshold": 15
+      }
+    },
+    "coverage": {
+      "tool": "bun",
+      "tool_version": "1.3.13",
+      "values": {
+        "hits": 57657,
+        "lines": 64025,
+        "percent": 90.05388520109332
+      }
+    },
+    "loc": {
+      "tool": "git",
+      "tool_version": "git version 2.54.0",
+      "values": {
+        "core": 113479,
+        "scripts": 9496,
+        "tests": 269245
+      }
+    },
+    "tests": {
+      "tool": "amadeus-run-tests",
+      "tool_version": "9750f8aea0763eb10572b27b900c435de0146e86",
+      "values": {
+        "files": 748,
+        "failedFiles": 0,
+        "assertions": 10123,
+        "failedAssertions": 0
+      }
+    },
+    "test_pyramid": {
+      "tool": "amadeus-test-size",
+      "tool_version": "9750f8aea0763eb10572b27b900c435de0146e86",
+      "values": {
+        "harness_medium": 1,
+        "integration_medium": 379,
+        "integration_small": 13,
+        "lib_medium": 1,
+        "e2e_medium": 82,
+        "e2e_small": 3,
+        "e2e_large": 2,
+        "perf_medium": 6,
+        "perf_small": 1,
+        "unit_small": 178,
+        "unit_medium": 162,
+        "unit_large": 1,
+        "smoke_medium": 15
+      }
+    },
+    "dist_size": {
+      "tool": "node-fs",
+      "tool_version": "24.3.0",
+      "values": {
+        "bytes": 35775815
+      }
+    }
+  }
+}
