@@ -195,6 +195,32 @@ function selectorViolations(
   return violations;
 }
 
+const BOLD_REF_RE = /\*\*([^*]+)\*\*/gu;
+
+/** A projected table must be self-contained: every bold cross-reference its own
+ *  definitions make has to resolve inside the same subset. */
+function closureViolations(
+  manifest: Manifest,
+  rows: readonly TermRow[],
+): readonly Violation[] {
+  const byKey = new Map(rows.map((r) => [r.key, r]));
+  const violations: Violation[] = [];
+  for (const [name, selector] of manifest) {
+    if (selector.kind === "all") continue;
+    const subset = new Set(selectRows(rows, selector).map((r) => r.key));
+    for (const key of subset) {
+      const row = byKey.get(key);
+      if (!row) continue;
+      for (const m of row.definition.matchAll(BOLD_REF_RE)) {
+        const cited = termKey(m[1]!);
+        if (!byKey.has(cited) || subset.has(cited)) continue;
+        violations.push(violation("subset-reference-unclosed", `${name}: ${key} cites ${cited}`));
+      }
+    }
+  }
+  return violations;
+}
+
 /** Every reason the canonical pair cannot be projected, enumerated in full. */
 export function validateCanonical(enMarkdown: string, jaMarkdown: string): readonly Violation[] {
   const en = parseTermTable(enMarkdown);
@@ -211,6 +237,7 @@ export function validateCanonical(enMarkdown: string, jaMarkdown: string): reado
   const { manifest, violations: manifestViolations } = parseManifest(enMarkdown);
   violations.push(...manifestViolations);
   violations.push(...selectorViolations(manifest, new Set(en.map((r) => r.key))));
+  violations.push(...closureViolations(manifest, en));
   return violations;
 }
 

@@ -118,17 +118,21 @@ This table is the single owner of every term definition in the repository. The s
 
 Which terms reach which generated surface. `knowledge` is the shipped agent-facing glossary, `protocol` the stage protocol's Terminology table, `reference` the Developer Reference Terminology tables (English and Japanese). Keys are the kebab-cased English term.
 
+A subset must be closed under the bold `**Term**` cross-references its own definitions make, so a reader of a projected table can follow every reference without leaving it. The generator enforces this.
+
 ```yaml
 projections:
   protocol:
-    terms: [aidlc, artifact, bolt, component, depth, generation, guardrail,
-            ladder-prompt, module, parallel-batch, phase, planning, scope,
-            service, stage, unit-of-work, walking-skeleton]
+    terms: [aidlc, artifact, bolt, component, control-loop, core, depth,
+            generation, guardrail, harness, ladder-prompt, lifecycle, module,
+            parallel-batch, phase, planning, rule, scope, service, stage,
+            unit-of-work, walking-skeleton]
   reference:
-    terms: [aidlc, approval-gate, artifact, bolt, component, depth, generation,
-            guardrail, inline-stage, ladder-prompt, lead-agent, module,
-            parallel-batch, phase, planning, scope, service, stage,
-            subagent-stage, unit-of-work, walking-skeleton]
+    terms: [aidlc, approval-gate, artifact, bolt, component, control-loop, core,
+            depth, generation, guardrail, harness, inline-execution,
+            inline-stage, ladder-prompt, lead-agent, lifecycle, module,
+            parallel-batch, phase, planning, rule, scope, service, stage,
+            subagent-execution, subagent-stage, unit-of-work, walking-skeleton]
   knowledge:
     terms: all
 ```

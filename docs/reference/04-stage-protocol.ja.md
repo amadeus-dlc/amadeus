@@ -670,19 +670,26 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[ladder prompt]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
 | **Artifact(成果物)** | ステージが生成し、intent のレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)に保存されるバージョン管理された markdown ドキュメント。例: `requirements.md`、`code-summary.md`、`initiative-brief.md`。 |
 | **Component(コンポーネント)** | モジュール内の論理的な構成要素(クラス、関数グループ、UI コンポーネント)。 |
+| **Control loop(制御ループ)** | ステージを方向づけ検証する、**Rules**(作業前に適用される standing decision)と **Sensors**(出力に対して発火する決定論的チェック)のフィードフォワード/フィードバックのペアリング。(**Harness** とは別物です — こちらは CLI ディストリビューションの意味。) |
+| **Core** | `packages/framework/core/` にある手作業で作成されたハーネス中立なソースオブトゥルース — エンジン、ステージ、エージェント、ルール、スコープ、センサー、knowledge、フック、セッションスキル。すべてのハーネスディストリビューションはそこから生成されます。ここで編集し、`dist/` では決して編集しません。 |
 | **Depth(深さ)** | 各ステージが生成する詳細の量を制御する 3 つの詳細レベル(Minimal、Standard、Comprehensive)の 1 つ。スコープにはデフォルトの深さがあり、任意の承認ゲートで上書きできます。[スコープ、深さ、テスト戦略](../guide/05-scopes-and-depth.ja.md) を参照。 |
 | **Generation(生成)** | 実行可能コードを生成するステージ(Code Generation、Build and Test)。**Planning** と対。 |
 | **Guardrail(ガードレール)** | space メモリレイヤー(`amadeus/spaces/<space>/memory/`)にある Rule ファイル内の本文セクション(`## Forbidden`、`## Mandated`、およびフェーズルールのガードレール見出し)で、規範的な振る舞いの制約を表現します。コンテナが Rule であり、「guardrail」はその中の規範的な内容を指します。**Rule** を参照。 |
+| **Harness(ハーネス)** | AI-DLC コアの CLI ディストリビューション — ハーネス中立な **Core** がレンダリングされる、1 つの有能なコマンドラインエージェント。このセットはオープンで成長可能です(今日: Claude Code、Codex CLI、Cursor、Kimi Code、Kiro CLI、Kiro IDE、OpenCode)。*注 — このリポジトリでは「harness」は文脈によって 4 つの意味を持ちます:* (1) **この正典的な CLI ディストリビューションの意味**; (2) rule+sensor の **control loop**(古い用法、現在は改名 — **Control loop** を参照); (3) `packages/framework/harness/<name>/` のソースサーフェスディレクトリ; (4) `tests/harness/` のテストヘルパーディレクトリ。ユーザードキュメントで「a harness」と言えるのは意味 1 だけです。 |
+| **Inline execution(インライン実行)** | オーケストレーターがエージェントペルソナをロードし、会話内で直接ステージを実行するデフォルトの実行モード。リアルタイムのユーザー対話をサポートします。 |
 | **Inline stage(インラインステージ)** | 委譲せず、オーケストレーターの会話内で直接実行されるステージ。**Inline execution** を参照。 |
 | **Ladder prompt(ラダープロンプト)** | walking-skeleton Bolt の終わりに表示される単一のプロンプト。「continue autonomously」か「gate every Bolt」を選ぶよう求めます。あなたの選択は autonomy mode として記録され、残りすべての Bolt を統治します。 |
 | **Lead agent(リードエージェント)** | ステージの作業に主として責任を持つエージェントペルソナ。 |
+| **Lifecycle(ライフサイクル)** | AI-DLC 方法論の全体: AI-Driven Development Life Cycle。方法論の 1 回の実行がワークフローです。 |
 | **Module(モジュール)** | サービス内のコードレベルの組織境界(パッケージ、名前空間)。 |
 | **Parallel batch(並列バッチ)** | 依存関係が満たされ、互いに依存しない Bolt のグループで、オーケストレーターによって並行実行されます。バッチの終わりの単一の承認ゲートがその中のすべての Bolt をカバーします。 |
 | **Phase(フェーズ)** | ライフサイクルの 5 つの主要区分の 1 つ: Initialization(0)、Ideation(1)、Inception(2)、Construction(3)、Operation(4)。各フェーズは 3〜8 のステージを含みます(Initialization 3、Ideation 7、Inception 8、Construction 7、Operation 7)。 |
 | **Planning(計画)** | markdown 成果物を生成するステージ(分析、質問、設計)。**Generation** と対。 |
+| **Rule(ルール)** | ワークスペースルートの space メモリレイヤー(`amadeus/spaces/<space>/memory/`)に一度作成され、各ハーネスのネイティブなインクルード(Claude の `@`-import スタブ、Kiro のリソース glob、Codex の `AMADEUS_RULES_DIR`)でコンテキストに取り込まれる持続的な振る舞いのルール。それがカバーするすべてのステージに適用されます。ルールは strict-additive な 5 レイヤーチェーン — org → team → project → phase → stage — を通じて解決され、該当するすべてのルールがコンテキストに現れます。より広いレイヤーは決して上書きされず、追加されるだけです。ルールは **control loop** のフィードフォワード側で、決定論的検証のためにセンサーとペアになることがあります。[ルールと学習ループ](../guide/09-rules-and-the-learning-loop.ja.md) を参照。 |
 | **Scope(スコープ)** | どのステージがどの深さで実行されるかを決める名前付き設定。1 スコープ 1 ファイルで `<harness-dir>/scopes/amadeus-<name>.md` に置かれます(enterprise、feature、mvp、poc、fix、chore、refactor、infra、security-patch、workshop)。フレームワークを編集せずにカスタムスコープを追加でき、自由記述の intent から自動検出することもできます。 |
 | **Service(サービス)** | デプロイ可能なプロセスまたはコンテナ(API サーバー、ワーカー、フロントエンドアプリ)。 |
 | **Stage(ステージ)** | ライフサイクル内の 32 の個別ステップの 1 つ。各ステージにはリードエージェント、定義された入出力があり、ステージプロトコルに従います。ステージはフェーズごとに番号付けされます(例: 1.1、2.4、3.5)。 |
+| **Subagent execution(サブエージェント実行)** | オーケストレーターが Task ツール経由でステージ作業を別の Claude Code サブプロセスに委譲する実行モード。サブエージェントはユーザー対話なしで自律的に実行します。ステージ 2.1(reverse-engineering)と 3.5(code-generation)で使われます。 |
 | **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
 | **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
 | **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。残りの Construction が実行される前に全体の形を確認できるよう、常にゲートされ対話的です。ラダープロンプトは承認直後に発火します。 |

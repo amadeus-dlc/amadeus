@@ -312,3 +312,32 @@ describe("rebaseLinks", () => {
     expect(rebaseLinks(text, "docs/reference")).toBe(text);
   });
 });
+
+describe("validateCanonical — subset reference closure", () => {
+  const table = [
+    "| **Bolt** | Bundles a **Unit of work**. |",
+    "| **Unit of work** | An independently implementable piece. |",
+    "| **Phase** | A grouping. |",
+  ].join("\n");
+  const manifestFor = (terms: string) =>
+    ["```yaml", "projections:", "  protocol:", `    terms: ${terms}`, "```"].join("\n");
+
+  test("accepts a subset that contains every term its definitions cite", () => {
+    const en = [table, manifestFor("[bolt, unit-of-work]")].join("\n");
+    expect(validateCanonical(en, table)).toEqual([]);
+  });
+
+  test("reports a cited term that the subset omits", () => {
+    const en = [table, manifestFor("[bolt]")].join("\n");
+    const found = validateCanonical(en, table).filter((v) => v.code === "subset-reference-unclosed");
+    expect(found.length).toBe(1);
+    expect(found[0]!.detail).toContain("unit-of-work");
+    expect(found[0]!.detail).toContain("bolt");
+  });
+
+  test("ignores bold text that is not a glossary term", () => {
+    const prose = "| **Phase** | Emphasis on **not a term** here. |";
+    const en = [prose, manifestFor("[phase]")].join("\n");
+    expect(validateCanonical(en, prose)).toEqual([]);
+  });
+});

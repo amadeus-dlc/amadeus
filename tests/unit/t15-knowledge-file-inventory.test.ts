@@ -151,9 +151,9 @@ describe("t15 — knowledge-file inventory + non-emptiness (mechanism: none)", (
     }
   });
 
-  // .sh L11-14: dynamic TAP plan = 11 + 11 + 7 + TOTAL_FILES. Re-derive that
+  // .sh L11-14: dynamic TAP plan = 14 + 14 + 7 + TOTAL_FILES. Re-derive that
   // arithmetic from the live tree so the migrated suite cannot silently shrink
-  // the surface: pin the total .md count at 56 and the summed plan at 85.
+  // the surface: pin the total .md count at 61 and the summed plan at 96.
   test("TAP-plan parity: 14 + 14 + 7 + TOTAL == 96 with TOTAL == 61 [.sh L11-14]", () => {
     const total = findMd(KNOWLEDGE_DIR).length;
     expect(total).toBe(61);
