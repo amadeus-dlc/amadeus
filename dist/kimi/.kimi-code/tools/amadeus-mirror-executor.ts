@@ -67,6 +67,9 @@ type OperationPreparationResult =
   | { kind: "maintenance-completed" }
   | { kind: "maintenance-blocked"; summary: string };
 
+type InvocationPreparationResult = OperationPreparationResult &
+  Readonly<{ operationId: string }>;
+
 // A receipt ready to act on, or the outcome to return when it cannot be made ready.
 type ReadyReceipt =
   | { kind: "ready"; snapshot: MirrorStateSnapshot; receipt: MirrorOperationReceipt }
@@ -199,13 +202,12 @@ function prepareOperation(
   return { kind: "maintenance-blocked", summary };
 }
 
-function prepareInvocation(
-  input: ExecuteMirrorOperationInput,
-): OperationPreparationResult & { operationId: string } {
-  const { context, localState, ports } = input;
-  const existing = requireReceipt(localState, context);
-  const operationId = existing?.operationId ?? context.newOperationId();
-  const transition: MirrorTransition = {
+function prepareTransition(
+  context: MirrorExecutionContext,
+  existing: MirrorOperationReceipt | null,
+  operationId: string,
+): MirrorTransition {
+  return {
     kind: "prepare",
     event: context.event,
     operationId,
@@ -220,6 +222,15 @@ function prepareInvocation(
       : {}),
     authorization: context.authorization,
   };
+}
+
+function prepareInvocation(
+  input: ExecuteMirrorOperationInput,
+): InvocationPreparationResult {
+  const { context, localState, ports } = input;
+  const existing = requireReceipt(localState, context);
+  const operationId = existing?.operationId ?? context.newOperationId();
+  const transition = prepareTransition(context, existing, operationId);
   return {
     ...prepareOperation(
       ports,
