@@ -17,7 +17,10 @@ import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
-import { handleComplete } from "../../packages/framework/core/tools/amadeus-bolt.ts";
+import {
+  handleBoltCommand,
+  handleComplete,
+} from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   assessAuditMergeRecovery,
   assessBoltCompletionRecovery,
@@ -67,20 +70,11 @@ function setupProject(slug: string): string {
   return projectDir;
 }
 
-function start(projectDir: string, slug: string, batch = "2"): Run {
-  return runBolt(projectDir, [
-    "start",
-    "--name",
-    slug,
-    "--batch",
-    batch,
-    "--worktree",
-    "--slug",
-    slug,
-  ]);
-}
-
-function completeArgs(projectDir: string, args: string[]): Run {
+function directArgs(
+  projectDir: string,
+  handler: (args: string[], explicitProjectDir?: string) => void,
+  args: string[],
+): Run {
   let status = 0;
   let out = "";
   const originalExit = process.exit.bind(process);
@@ -106,7 +100,7 @@ function completeArgs(projectDir: string, args: string[]): Run {
     return true;
   }) as typeof process.stderr.write;
   try {
-    handleComplete(args, projectDir);
+    handler(args, projectDir);
   } catch (error) {
     if (error instanceof ExitSignal) status = error.code;
     else throw error;
@@ -117,6 +111,28 @@ function completeArgs(projectDir: string, args: string[]): Run {
     process.stderr.write = originalError;
   }
   return { status, out };
+}
+
+function start(projectDir: string, slug: string, batch = "2"): Run {
+  return directCommand(projectDir, "start", [
+    "--name",
+    slug,
+    "--batch",
+    batch,
+    "--worktree",
+    "--slug",
+    slug,
+  ]);
+}
+
+function directCommand(projectDir: string, command: string, args: string[]): Run {
+  return directArgs(projectDir, (commandArgs, explicitProjectDir) => {
+    handleBoltCommand(command, commandArgs, explicitProjectDir);
+  }, args);
+}
+
+function completeArgs(projectDir: string, args: string[]): Run {
+  return directArgs(projectDir, handleComplete, args);
 }
 
 function complete(projectDir: string, slug: string, batch = "2"): Run {
@@ -232,6 +248,97 @@ afterEach(() => {
 });
 
 describe("t414 complete --merge partial-success recovery", () => {
+  test("covers the source start, fail, and abort lifecycle handlers", () => {
+    const projectDir = setupProject("direct-lifecycle");
+    projects.push(projectDir);
+
+    const plainStart = directCommand(projectDir, "start", [
+      "--name",
+      "plain",
+      "--batch",
+      "1",
+    ]);
+    expect(plainStart.status).toBe(0);
+    expect(plainStart.out).toContain('"emitted":"BOLT_STARTED"');
+
+    const failed = directCommand(projectDir, "fail", [
+      "--name",
+      "direct-lifecycle",
+      "--error",
+      "expected failure",
+      "--slug",
+      "direct-lifecycle",
+      "--succeeded-siblings",
+      "plain",
+    ]);
+    expect(failed.status).toBe(0);
+    expect(failed.out).toContain('"emitted":"BOLT_FAILED"');
+
+    const aborted = directCommand(projectDir, "abort", [
+      "--name",
+      "direct-lifecycle",
+      "--slug",
+      "direct-lifecycle",
+      "--reason",
+      "operator request",
+    ]);
+    expect(aborted.status).toBe(0);
+    expect(aborted.out).toContain('"reason":"aborted"');
+    expect(aborted.out).toContain('"discarded":false');
+
+    const worktreeStart = start(projectDir, "direct-lifecycle");
+    expect(worktreeStart.status).toBe(0);
+    expect(directCommand(projectDir, "hold-merge", [
+      "--slug",
+      "direct-lifecycle",
+    ]).out).toContain('"merge_held":true');
+    expect(directCommand(projectDir, "release-merge", [
+      "--slug",
+      "direct-lifecycle",
+    ]).out).toContain('"merge_held":false');
+
+    for (const [event, eventArgs] of [
+      ["MERGE_DISPATCH_INVOKED", ["--practices-excerpt", "merge practice"]],
+      [
+        "MERGE_DISPATCH_RETURNED",
+        [
+          "--strategy",
+          "squash",
+          "--target",
+          "main",
+          "--confidence",
+          "1",
+          "--notes",
+          "ready",
+        ],
+      ],
+      ["MERGE_DISPATCH_FALLBACK", ["--reason", "timeout", "--defaults", "squash main"]],
+    ] as const) {
+      const dispatched = directCommand(projectDir, "dispatch-event", [
+        "--event",
+        event,
+        "--slug",
+        "direct-lifecycle",
+        ...eventArgs,
+      ]);
+      expect(dispatched.status).toBe(0);
+      expect(dispatched.out).toContain(`"emitted":"${event}"`);
+    }
+
+    appendFileSync(
+      seededStateFile(projectDir),
+      "\n- **Construction Autonomy Mode**: autonomous\n",
+      "utf-8",
+    );
+    const autonomy = directCommand(projectDir, "set-autonomy", ["--mode", "gated"]);
+    expect(autonomy.status, autonomy.out).toBe(0);
+    expect(autonomy.out).toContain('"mode":"gated"');
+
+    const approval = directCommand(projectDir, "approve-batch", ["--batch", "2"]);
+    expect(approval.status).toBe(0);
+    expect(approval.out).toContain('"approved_batches":[2]');
+  });
+
   test("rejects an invalid batch before emitting completion evidence", () => {
     const projectDir = setupProject("invalid-batch");
     projects.push(projectDir);

@@ -193,7 +193,7 @@ function parseFlags(args: string[]): Record<string, string> {
 // slug-derivation rule). Single-bolt only — csv batch with --worktree is
 // rejected. Per-Bolt parallel batches issue N start --worktree calls, one
 // per slug.
-function handleStart(args: string[]): void {
+function handleStart(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
   if (!flags.name) error("Missing --name <bolt-name or csv>");
@@ -202,7 +202,7 @@ function handleStart(args: string[]): void {
     error(`Invalid --batch: "${flags.batch}". Must be a positive integer.`);
   }
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   const walkingSkeleton = flags["walking-skeleton"] === "true";
   const useWorktree = booleans.has("worktree");
 
@@ -466,7 +466,7 @@ function completionRecoveryFor(
 export function handleComplete(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
-  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   if (!flags.name) error("Missing --name <bolt-name or csv>", pd);
   if (!flags.batch) error("Missing --batch <batch-number>", pd);
   if (!/^[1-9][0-9]*$/.test(flags.batch)) {
@@ -562,12 +562,12 @@ export function handleComplete(args: string[], explicitProjectDir?: string): voi
 // with its WORKTREE_CREATED audit entry. `--name` is the human-prose Bolt
 // name; `--slug` is the kebab-case derivative threaded through worktree
 // commands.
-function handleFail(args: string[]): void {
+function handleFail(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.name) error("Missing --name <failed-bolt>");
   if (!flags.error) error("Missing --error <summary>");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   const fields: Record<string, string> = {
     "Failed Bolt": flags.name,
     "Error summary": flags.error,
@@ -603,14 +603,14 @@ function handleFail(args: string[]): void {
 // --discard, calls amadeus-worktree discard --slug <slug> to tear it down
 // (audit-of-intent: WORKTREE_DISCARDED emits before tear-down inside the
 // discard subprocess; on discard failure, halt without state damage).
-function handleAbort(args: string[]): void {
+function handleAbort(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
   if (!flags.name) error("Missing --name <bolt-name>");
   if (!flags.slug) error("Missing --slug <kebab-slug>");
   if (!flags.reason) error("Missing --reason <text>");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   const useDiscard = booleans.has("discard");
 
   // Discard-FIRST when --discard set, audit-AFTER. If we emitted BOLT_FAILED
@@ -693,18 +693,18 @@ function handleAbort(args: string[]): void {
 // workshop-resume false-positive guard — `merge_held: true` is legitimate
 // mid-resume. Reads forked-state files and builds a parent-batch
 // resolution graph.
-function handleHoldMerge(args: string[]): void {
+function handleHoldMerge(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.slug) error("Missing --slug <kebab-slug>");
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   setMergeHeld(pd, flags.slug, true, flags.intent, flags.space);
   console.log(JSON.stringify({ slug: flags.slug, merge_held: true }));
 }
 
-function handleReleaseMerge(args: string[]): void {
+function handleReleaseMerge(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.slug) error("Missing --slug <kebab-slug>");
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   setMergeHeld(pd, flags.slug, false, flags.intent, flags.space);
   console.log(JSON.stringify({ slug: flags.slug, merge_held: false }));
 }
@@ -774,12 +774,12 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 // case branch — Map indirection on the --event flag breaks the grep at
 // tests/feature/t48-audit-event-emitters.sh:46-57. Three cases, three literal
 // emit calls.
-function handleDispatchEvent(args: string[]): void {
+function handleDispatchEvent(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.event) error("Missing --event <MERGE_DISPATCH_INVOKED|MERGE_DISPATCH_RETURNED|MERGE_DISPATCH_FALLBACK>");
   if (!flags.slug) error("Missing --slug <kebab-slug>");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
 
   // Per-variant flag validation + literal emit. Fields populate per the
   // schema at audit-format.md:147-149.
@@ -855,14 +855,14 @@ function handleDispatchEvent(args: string[]): void {
 //
 // Emits AUTONOMY_MODE_SET AND updates the Construction Autonomy Mode field
 // in amadeus-state.md atomically (audit-first).
-function handleSetAutonomy(args: string[]): void {
+function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.mode) error("Missing --mode <autonomous|gated>");
   if (!["autonomous", "gated"].includes(flags.mode)) {
     error(`Invalid --mode: ${flags.mode}. Must be 'autonomous' or 'gated'.`);
   }
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
 
   // Validate state-file shape BEFORE emitting audit. setFieldStrict throws if
   // the field is absent (v4 state files or hand-edited files). If we emitted
@@ -915,7 +915,7 @@ function handleSetAutonomy(args: string[]): void {
 // NO second GATE_APPROVED, so a replayed command cannot inflate the audit trail.
 // Validation is numeric (parse, don't validate) and runs BEFORE any emission, so
 // a rejected batch number leaves neither an orphan audit row nor a state edit.
-function handleApproveBatch(args: string[]): void {
+function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
   const batch = Number(flags.batch.trim());
@@ -923,7 +923,7 @@ function handleApproveBatch(args: string[]): void {
     error(`Invalid --batch: ${flags.batch}. Must be a positive integer (batch numbers are 1-origin).`);
   }
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
   const content = readStateFile(pd);
   const approved = parseApprovedSwarmBatches(content);
   if (approved.includes(batch)) {
@@ -967,6 +967,51 @@ function handleApproveBatch(args: string[]): void {
 
 let projectDir: string | undefined;
 
+function resolveBoltProjectDir(explicitProjectDir?: string): string {
+  return resolveProjectDir(explicitProjectDir ?? projectDir);
+}
+
+export function handleBoltCommand(
+  subcommand: string | undefined,
+  args: string[],
+  explicitProjectDir?: string,
+): void {
+  switch (subcommand) {
+    case "start":
+      handleStart(args, explicitProjectDir);
+      return;
+    case "complete":
+      handleComplete(args, explicitProjectDir);
+      return;
+    case "fail":
+      handleFail(args, explicitProjectDir);
+      return;
+    case "abort":
+      handleAbort(args, explicitProjectDir);
+      return;
+    case "set-autonomy":
+      handleSetAutonomy(args, explicitProjectDir);
+      return;
+    case "approve-batch":
+      handleApproveBatch(args, explicitProjectDir);
+      return;
+    case "dispatch-event":
+      handleDispatchEvent(args, explicitProjectDir);
+      return;
+    case "hold-merge":
+      handleHoldMerge(args, explicitProjectDir);
+      return;
+    case "release-merge":
+      handleReleaseMerge(args, explicitProjectDir);
+      return;
+    default:
+      error(
+        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, approve-batch, dispatch-event, hold-merge, release-merge`,
+        explicitProjectDir,
+      );
+  }
+}
+
 function main(): void {
   const rawArgs = process.argv.slice(2);
 
@@ -983,48 +1028,16 @@ function main(): void {
   const subcommand = filteredArgs[0];
 
   try {
-    switch (subcommand) {
-      case "start":
-
+    if (subcommand === "start") {
   // Telemetry process span (opt-in; no-op unless observability.enabled).
   // Resolution failures must not change the CLI contract — skip silently.
-  try {
-    initProcessObservability(`tool:amadeus-bolt:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
-  } catch {
-    // no resolvable workflow -> nothing to observe
-  }
-
-        handleStart(filteredArgs.slice(1));
-        break;
-      case "complete":
-        handleComplete(filteredArgs.slice(1));
-        break;
-      case "fail":
-        handleFail(filteredArgs.slice(1));
-        break;
-      case "abort":
-        handleAbort(filteredArgs.slice(1));
-        break;
-      case "set-autonomy":
-        handleSetAutonomy(filteredArgs.slice(1));
-        break;
-      case "approve-batch":
-        handleApproveBatch(filteredArgs.slice(1));
-        break;
-      case "dispatch-event":
-        handleDispatchEvent(filteredArgs.slice(1));
-        break;
-      case "hold-merge":
-        handleHoldMerge(filteredArgs.slice(1));
-        break;
-      case "release-merge":
-        handleReleaseMerge(filteredArgs.slice(1));
-        break;
-      default:
-        error(
-          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, approve-batch, dispatch-event, hold-merge, release-merge`
-        );
+      try {
+        initProcessObservability(`tool:amadeus-bolt:${subcommand}`, resolveProjectDir(projectDir));
+      } catch {
+        // no resolvable workflow -> nothing to observe
+      }
     }
+    handleBoltCommand(subcommand, filteredArgs.slice(1), projectDir);
   } catch (e) {
     error(errorMessage(e));
   }
