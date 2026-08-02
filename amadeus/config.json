@@ -2,6 +2,9 @@
   "auto-mirror": "auto",
   "auto-file-findings": "auto",
   "auto-solo-election": true,
+  "plugins": [
+    "formal-model-check"
+  ],
   "mirror-projects": [
     {
       "project": "amadeus-dlc/5"

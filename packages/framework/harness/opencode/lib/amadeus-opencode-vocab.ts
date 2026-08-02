@@ -30,6 +30,15 @@ export function opencodeProjectDir(input: unknown): string | null {
   return null;
 }
 
+/** True only for OpenCode's documented session creation lifecycle event. */
+export function isOpencodeSessionCreatedEvent(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const event = (value as Record<string, unknown>).event;
+  return typeof event === "object"
+    && event !== null
+    && (event as Record<string, unknown>).type === "session.created";
+}
+
 /**
  * The human-authored prompt text of a `chat.message` payload, or null when the
  * message carries no human text. Synthetic text parts (the runtime's own

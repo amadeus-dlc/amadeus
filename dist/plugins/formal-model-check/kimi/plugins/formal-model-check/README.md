@@ -9,6 +9,13 @@ formal-model-check` invocation (`--single` optional). Amadeus never runs it
 automatically — the engine only emits a spec-hash advisory when the watched
 spec changed (U6 activation-policy).
 
+Activation has four read-only outcomes: `not-ready` when no valid declared
+model/config target exists, `never-run` when targets exist without a successful
+verdict, `changed` when targets differ from that verdict, and `current` when
+they match. Installation succeeds in `not-ready`; only an explicit model-check
+run requires a valid `specs/tla/model-map.json` target. Startup never launches
+TLC.
+
 ## Bundle layout
 
 ```

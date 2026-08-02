@@ -75,8 +75,8 @@ plugins/example/
    適用されます。ホストバイト・合成レコード・監査エントリを一括で書くか、まったく
    書かないかのいずれかです。合成レコードには明示 trust grant(plugin、content
    digest、timestamp)と各所有 stage の digestを永続化します。
-5. **doctor** — 読み取り専用の診断が、現在のホスト状態から各アクティブプラグインの
-   状態(`composed`・`drift`・`recovery-pending`)を射影します。
+5. **doctor** — 読み取り専用の診断が、project の選択・供給元・host staging・合成
+   レコードを比較し、`source-missing`・`not-installed`・`stale`・`current` を区別します。
 6. **drop** — レコード所有の除去が、プラグインの所有ファイルを削除し、各共有ファイルを
    base と *残り* のプラグインの貢献から再構築します。
 
@@ -137,7 +137,8 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 起動レイテンシを増やしません。フックの失敗は stderr 警告 1 行と exit 0 であり —
 プラグインの問題がセッションをブロックすることはありません。
 
-7 つのパッケージ面のうち 6 面がこのトリガーを配線し、1 面は配線しません。
+7 つのパッケージ面すべてがこのトリガーを配線します。Kiro CLI と Kiro IDE は同じ
+`.kiro` host tree を共有するため、7 面は 6 個の host directory を対象にします。
 
 | 面 | session-start トリガー | 自動 compose |
 | --- | --- | --- |
@@ -147,14 +148,11 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 | `kimi` | `SessionStart` | 配線あり |
 | `kiro` | `agentSpawn` | 配線あり |
 | `kiro-ide` | `promptSubmit`(`--if-stale` で冪等) | 配線あり |
-| `opencode` | なし(`chat.message` のみ) | **degraded — 手動のみ** |
+| `opencode` | JavaScript plugin の `session.created` event | 配線あり |
 
-`opencode` は `manual-only` クラスで、session-start シームを持たないため、自動 compose を
-配線せず、唯一の契約は手動 `compose` 床です。この degrade はサイレントなスキップではなく、
-面のインストールバンドルに書き込まれています。`manual-only` 面が同梱する `INSTALL.md` は
-明示的にこう記します: *"This harness has no auto-compose session hook. Run compose after
-install and after every plugin change"* に続けて `compose` コマンド。つまり `opencode` では
-`compose` を自分で実行し、他の 6 面ではセッションフックが代わりに実行します。
+OpenCode は shell hook ではなく公式 JavaScript/TypeScript plugin event を使います。既存の
+`.opencode/plugin/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
+だけを再調整します。失敗は他 adapter と同様に可視の非ブロッキング警告になります。
 
 ---
 
@@ -194,12 +192,13 @@ install and after every plugin change"* に続けて `compose` コマンド。�
   `.codex/.amadeus-plugin-src/<name>/`)へコピー。ここが `compose` の走査先であり、
   エンジンが合成済みプラグインステージを読み戻すルートでもあります。自動 compose は
   `hooks/auto-compose.snippet` から配線されます。
-- **`manual-only`**(`opencode`)— フォルダをコピー。セッションフックがないため、
-  インストール後および全プラグイン変更後に `compose` を実行します。
+- **`native-plugin-auto`**(`opencode`)— JavaScript plugin が `session.created` を受け、
+  同じ現在host再調整を呼び出します。
 
-`install` verb は、このフォルダドロップを 1 操作にまとめた形です — 手順が示すのと同じ
-discovery ルートへソースフォルダを staging し、同一の compose 経路をそのまま呼びます
-(compose を再実装してはいません)。
+`install` verb はトランザクション化された 1 操作です。project `plugins/<name>/` へ供給元を
+永続化し、現在の harness staging を生成し、共通 engine で compose した後、最後に昇順の
+project 選択を書きます。`drop` は安全な host drop の成功後だけ名前を除去し、再選択用の
+project 供給元は残します。
 
 ```
 /amadeus plugin install path/to/plugins/example

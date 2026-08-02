@@ -153,9 +153,11 @@ export interface RunStageDirective {
 // semantic owner (it is what decides when an advisory exists at all).
 export type DirectiveAdvisory = {
   plugin: string;
-  code: "changed" | "never-run";
+  code: "not-ready" | "changed" | "never-run";
   message: string;
   stage: string;
+  target?: string;
+  reason?: string;
 };
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
@@ -821,7 +823,7 @@ function checkOptionalConsumesAbsent(
 // `current` is deliberately absent: a silent judgment produces no entry at all,
 // so a "current" advisory would be a rendered decision with no decision behind
 // it (the validator refuses to carry one).
-const ADVISORY_CODES = ["changed", "never-run"] as const;
+const ADVISORY_CODES = ["not-ready", "changed", "never-run"] as const;
 
 // checkOptionalAdvisories — each entry must be
 // {plugin, code, message, stage} with `code` in ADVISORY_CODES. Same

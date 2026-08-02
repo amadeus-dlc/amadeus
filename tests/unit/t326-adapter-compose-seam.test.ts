@@ -13,6 +13,10 @@
 import { describe, expect, test } from "bun:test";
 import { parseCursorEnvelope, reconstruct } from "../../packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts";
 import { parseKimiEnvelope, routeTarget } from "../../packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts";
+import {
+  isOpencodeSessionCreatedEvent,
+  opencodeProjectDir,
+} from "../../packages/framework/harness/opencode/lib/amadeus-opencode-vocab.ts";
 
 const COMPOSE = "amadeus-plugin-compose.ts";
 const SESSION_START = "amadeus-session-start.ts";
@@ -56,5 +60,12 @@ describe("t326 adapter compose seam (U4)", () => {
     const cRecon = reconstruct("session-end", cEnv!);
     if ("calls" in cRecon) expect(cRecon.calls.map((c) => c.hookFile)).not.toContain(COMPOSE);
     expect(routeTarget("session-end", kEnv!).map((c) => c.hookPath)).not.toContain(COMPOSE);
+  });
+
+  test("OpenCode routes only session.created and resolves the active worktree", () => {
+    expect(isOpencodeSessionCreatedEvent({ event: { type: "session.created" } })).toBe(true);
+    expect(isOpencodeSessionCreatedEvent({ event: { type: "session.updated" } })).toBe(false);
+    expect(isOpencodeSessionCreatedEvent({ type: "session.created" })).toBe(false);
+    expect(opencodeProjectDir({ worktree: "/tmp/project", directory: "/tmp/project/subdir" })).toBe("/tmp/project");
   });
 });

@@ -104,6 +104,10 @@ function snapshot(root: string): readonly string[] {
       if (dir === root && name.startsWith(".amadeus-plugin")) continue;
       const abs = join(dir, name);
       const rel = relative(root, abs);
+      // The graph is a derived artifact regenerated at both compose and drop.
+      // Its bytes can reflect the active intent context; assert its semantic
+      // plugin membership separately below.
+      if (rel === join("tools", "data", "stage-graph.json")) continue;
       if (statSync(abs).isDirectory()) {
         rows.push(`${rel}${sep}`);
         walk(abs);
@@ -172,6 +176,16 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     // FIRST so the baseline snapshot covers a fully initialised workspace.
     const birth = run("bun", [join(hostRoot, "tools", "amadeus-utility.ts"), "intent-birth", "--scope", "fix"]);
     expect(birth.status).toBe(0);
+
+    // Normalize the copied distribution graph with the same runtime compiler
+    // that compose/drop use. The repository's dogfood graph may include a
+    // locally composed plugin, while this isolated host starts uncomposed.
+    const normalizeGraph = run(
+      "bun",
+      [join(hostRoot, "tools", "amadeus-graph.ts"), "compile"],
+      { AMADEUS_HARNESS_DIR: hostRoot },
+    );
+    expect(normalizeGraph.status).toBe(0);
 
     const baseline = snapshot(hostRoot);
     expect(baseline.length).toBeGreaterThan(0);
@@ -243,6 +257,10 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     rmSync(join(hostRoot, PLUGIN_SOURCE_DIR_NAME), { recursive: true, force: true });
     expect(snapshot(hostRoot)).toEqual(baseline);
     expect(existsSync(join(hostRoot, "plugins"))).toBe(false);
+    const droppedGraph = JSON.parse(
+      readFileSync(join(hostRoot, "tools", "data", "stage-graph.json"), "utf-8"),
+    ) as Array<{ slug?: string }>;
+    expect(droppedGraph.some((stage) => stage.slug === PLUGIN)).toBe(false);
 
     journeyMs = Date.now() - startedAt;
     console.log(`t341 journey wall clock: ${(journeyMs / 1000).toFixed(2)}s`);

@@ -1,5 +1,9 @@
 # 新規プロトコルへ形式モデルを供給する
 
+`specs/tla/model-map.json` が、実在する `.tla` と `.cfg` を持つ model を宣言するまで、
+有効化判定は `not-ready` となり、明示検査は不足理由付きで失敗します。model が0件でも
+plugin の導入自体は有効であり、自動 lifecycle 経路が TLC を起動することはありません。
+
 > 言語: [English](22-formal-model-supply.md) | **日本語**
 
 Amadeus は二層で検証します。property-based・unit・integration のテストは全変更で走り、日常の負荷を担います。単一の完全探索形式モデルは要求時にのみ走り、対象は並行プロトコル — 選挙・監査ロック・provenance・mirror ライフサイクル — に限られます。そこでは、興味深い失敗が「例示ベースのテストでは思いつかない順序」として現れるからです。

@@ -18,6 +18,13 @@
 
 - **発火経路の狭さ**: `self-scope-consistency` を宣言するステージは `code-generation` のみ（`grep -rln "self-scope-consistency" packages/framework/core/amadeus-common/stages/` が 1 ファイル、実測）。ディスパッチャに個別分岐は無く、CI にセンサー実行ステップも無い。したがって拡張後も検査は「self 開発の code-generation ステージを回したとき」にしか発火せず、乖離が入り込む経路（scope prose の編集や `/amadeus compose`）と発火点がずれたままになる。この配置のままでよいかは要件段で明示的に判断する — 検査を強くしても発火しなければ実効は上がらない。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- baseline `t299`／`t328`／`t327`／`t322` は25/25 pass。既存機構の破損ではなく、desired opt-inを表現・照合する契約の欠落である。
+- pinned gap: `t299` は opt-inなし0/0 silent successを正しく固定する一方、`t328` は事前stagingでhost欠落を迂回する。`t379` は全6 hostとopt-in filtering、`t381` は全3 checkpoint × main／single × 全face parityの十分な組合せを覆わない。
+- `t320` は compositionなしadvisoryなしと空spec hashを固定し、`t382` はwrong rootを捕捉するが空spec集合を拒否しない。`computeSpecHash` の空集合正常化は verdictを恒久currentにできるため、uncomposed pluginの早期returnでzero-impactを守りつつ fail-closed 化する候補である。
+- 変更後の重点検証は `t299`、`t320`、`t328`、`t379`、`t381` と、package／promotion／distribution drift guard。mainと`--single`はstate mutation契約が異なるため別々に検証する。
+
 ## formal-model-check 複数モデル化の品質所見（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - テスト空白（決定的）: `specs/tla/MirrorLifecycleCore.tla`（648 行、検証本体）を編集しても赤になるテストは存在しない。model-map の MirrorLifecycle モデルが identity 照合するのは wrapper の `MirrorLifecycle.tla`（43 行）と `MirrorLifecycle.cfg` のみ（`tla-model-loader-internal.ts:252-275`、照合対象は model/cfg の 2 資産）で、entries は TS 実装 4 ファイル（`tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts` の MIRROR_IMPLEMENTATION）を指す。Core モジュールは model-map スキーマに載る場所がなく（これが #1921 の aux 拡張要求）、drift 検出も loader 照合も届かない。

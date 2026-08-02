@@ -4,6 +4,12 @@
 
 - 判断: 公開 CLI 契約の変更なし（`/amadeus --scope <name>` の語彙・引数は不変）。触れる内部契約は 2 点 — (1) センサー出力スキーマ: `Finding`（`amadeus-sensor-self-scope-consistency.ts:26-32`）の `reason` 列挙と manifest の `output_schema`（`sensors/amadeus-self-scope-consistency.md:12-20`）が対で、cell-mismatch 系 reason と stage / expected / actual フィールドの追加は両者同時改訂を要する。(2) `scope-grid.json` の flat スキーマ（top-level = scope 名、値 = stages マップ `<slug>` → `EXECUTE` / `SKIP`）自体は不変で、是正はセル値の書き換えに閉じる。詳細は `code-structure.md` 現在節の挿入点表を正本とする。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- 現行 CLI 契約は `compose [--if-stale] [--all-harnesses] [--project-root]` と `doctor`。`--if-stale` は staged と recorded のみを比較するため desired 非空・host欠落を表現できず、0/0 を成功 no-op として返す。
+- 必要な内部契約は desired／staged／recorded の3集合を読む pure validator と、その結果を compose／doctor が共有すること。desired空・staged空・record空は silent success、desired非空で欠落は stale/degraded、staged済みでrecord不一致は compose required とする。
+- activation API は composition record を信頼境界として read-only を維持し、自動 install／compose／TLC を行わない。main workflow と `--single` は3 checkpointで同じ advisory payloadを返す。
+
 ## formal-model-check 複数モデル化が触れる内部契約（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 判断: 公開 CLI 契約の変更なし（`run-model-check.ts --model/--cfg/--out` は不変）。触れる内部契約は 3 点 — (1) `specs/tla/model-map.json` v2 スキーマ: `exactObject`（`amadeus-formal-verif-model-map.ts:204`）が未知キーを拒否するため aux 配列の追加はスキーマ改訂を伴う（optional 追加なら既存 identity 値は不変）。(2) identity 計算: model/cfg は domain-tagged canonical（`canonicalIdentity :33-46`）、entries は生 sha256 — aux の identity 方式の選定が契約追加点。(3) byte-pin source 契約: `run-model-check-source.ts:118-123` が実行対象を canonical U1 ソースに `sameBytes` で pin しており、複数モデル実行にはこの照合のモデル別一般化が必須（CLI 引数だけでは不可）。loader の no-arg pin（`t-formal-verif-tla-model-loader.test.ts:10-13`）の改訂は要件段で宣言（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。

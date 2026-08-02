@@ -38,6 +38,7 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { writeActivationModelAssets } from "../harness/formal-model-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
@@ -61,9 +62,7 @@ function makeHost(composed: boolean): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t321-host-"));
   const h = join(root, ".claude");
   mkdirSync(h, { recursive: true });
-  const specDir = join(root, "specs", "tla");
-  mkdirSync(specDir, { recursive: true });
-  writeFileSync(join(specDir, "FormalElection.tla"), "MODULE FormalElection\n");
+  writeActivationModelAssets(root);
   if (composed) {
     writeFileSync(
       join(h, ".amadeus-plugin-composition.json"),

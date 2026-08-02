@@ -4,6 +4,6 @@ Copy this bundle's `plugins/formal-model-check/` into `.opencode/.amadeus-plugin
 
 Or stage and compose in one operation with `bun .opencode/tools/amadeus-plugin.ts install <path>`, where `<path>` is this bundle's `plugins/formal-model-check/` folder.
 
-This harness has no auto-compose session hook. Run compose after install and after every plugin change:
+Auto-compose is wired through the host's JavaScript plugin session event. To compose manually:
 
     bun .opencode/tools/amadeus-plugin.ts compose

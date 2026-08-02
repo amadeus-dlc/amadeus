@@ -13,6 +13,15 @@
 - 現在マーカーの降格: 直前の現在断面 `260801-tla-multi-model`（observed `33e196b8`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、現在、` 出現数は 1 件（`grep -c` 実測）。
 - Per-intent record: `re-scans/260802-scope-grid-face-sync.md`（患部 touch 判定表・乖離の現存実測・ガード 3 層の実行結果・センサー挿入点表・テスト景観・引用再確認テーブルを含む）。
 
+## 実行メタデータ（履歴: 260802-plugin-optin-parity）
+
+- Date: `2026-08-02`
+- Base commit: `33e196b80b2254eee733fcaec4359dfbdd29c24b`
+- Observed commit: `689c38744cb9f4fcf2eb517e490cb66b3bb58ce8`
+- Distance: `55 commits`
+- Focus: [Issue #2018](https://github.com/amadeus-dlc/amadeus/issues/2018) — formal-model-check の project-level opt-in、7 package face／6 host directory の materialization・composition・activation parity
+- Scan mode: differential refresh。Issue本文・独立クロスレビュー2件・Developer Code Scan・現行コード・pinned testsを照合し、既存CodeKB本文は保持した。ゲート前に `origin/main` へrebaseし、#2017の config module正規名 `amadeus-config.ts` への変更を追加確認した。
+
 ## 実行メタデータ（履歴: 260801-tla-multi-model）
 
 - Date: `2026-08-01T15:42:54Z`

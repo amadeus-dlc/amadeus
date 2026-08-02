@@ -36,6 +36,15 @@ import {
 } from "./amadeus-lib.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
+  createPluginInstallSnapshot,
+  observePluginSelection,
+  type PluginInstallSnapshot,
+  type PluginSelection,
+  resolvePluginSelection,
+  type PluginSelectionOutcome,
+  writeProjectPlugins,
+} from "./amadeus-plugin-selection.ts";
+import {
   applyPluginDrop,
   applyPluginPlan,
   clearPluginDrops,
@@ -225,6 +234,7 @@ export type PluginCliDeps = {
   copyPluginSource: (src: string, dst: string) => void;
   listHarnessTrees: (projectDir: string) => readonly string[];
   listPluginSourceDirs: (root: string) => readonly string[];
+  writeProjectPlugins?: (projectDir: string, plugins: readonly string[]) => void;
   // Post-compose Stage Progress re-sync (#1849). Optional so a stub deps bag
   // stays a pure compose harness; defaultPluginCliDeps always wires the real
   // writer, which is what production composes run. Returns a discriminated
@@ -471,6 +481,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     copyPluginSource: (src, dst) => copyPluginSource(src, dst),
     listHarnessTrees,
     listPluginSourceDirs,
+    writeProjectPlugins,
     resyncIntentStates,
     out: (l) => console.log(l),
     err: (l) => console.error(l),
@@ -654,10 +665,16 @@ function isSafePluginDirName(name: string): boolean {
 // the record + discovers plugins and compares owned-stage digests. Reaches NO
 // mutation stage (inspect/plan/apply/recompile) — the no-op fast path predicate.
 export function isRecordCurrent(hostRoot: string, deps: PluginCliDeps): boolean {
+  const selection = resolvePluginSelection(hostRoot);
+  if (selection.kind === "invalid") return false;
   const backend = deps.makeBackend(hostRoot);
   const record = backend.readComposition();
   const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
   const valid = discovered.filter((d): d is DiscoveredPlugin => d.manifest !== null);
+  if (selection.explicit) {
+    if (selection.plugins.length !== valid.length) return false;
+    if (selection.plugins.some((name) => !valid.some((plugin) => plugin.name === name))) return false;
+  }
   if (valid.length !== record.plugins.size) return false;
   for (const plugin of valid) {
     const recorded = record.plugins.get(plugin.name);
@@ -765,10 +782,147 @@ function describeTreeFailure(result: PluginCliResult): string {
   return result.kind === "failure" ? `${result.stage}: ${result.message}` : result.kind;
 }
 
-function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps: PluginCliDeps): PluginCliResult {
+type ResolvedPluginSelection = Extract<PluginSelectionOutcome, { kind: "resolved" }>;
+type ReconcileStep = { failure: PluginCliResult | null; changed: boolean };
+
+function validateSelectedSources(selection: ResolvedPluginSelection, hostRoot: string): PluginCliResult | null {
+  for (const name of selection.plugins) {
+    const source = join(selection.projectDir, PLUGIN_AUTHORING_DIR_NAME, name);
+    if (!existsSync(source)) {
+      return {
+        kind: "failure",
+        stage: "discover",
+        message: `host ${basename(hostRoot)} plugin "${name}": source missing at plugins/${name}`,
+      };
+    }
+  }
+  return null;
+}
+
+function dropDeselectedCompositions(
+  selection: ResolvedPluginSelection,
+  hostRoot: string,
+  deps: PluginCliDeps,
+): ReconcileStep {
+  if (!selection.explicit) return { failure: null, changed: false };
+  const composed = deps.makeBackend(hostRoot).readComposition();
+  let changed = false;
+  for (const name of [...composed.plugins.keys()].sort()) {
+    if (selection.plugins.includes(name)) continue;
+    const dropped = handleDrop(
+      { kind: "drop", name, projectRoot: hostRoot },
+      deps,
+      { updateSelection: false, removeManagedStaging: true },
+    );
+    if (dropped.kind !== "dropped") return { failure: dropped, changed };
+    changed = true;
+  }
+  return { failure: null, changed };
+}
+
+function materializeSelectedSources(
+  selection: ResolvedPluginSelection,
+  hostRoot: string,
+  deps: PluginCliDeps,
+): void {
+  for (const name of selection.plugins) {
+    const source = join(selection.projectDir, PLUGIN_AUTHORING_DIR_NAME, name);
+    const target = join(pluginSourceRootOf(hostRoot), name);
+    if (deps.stagingEntryState(target, source) !== "identical") deps.copyPluginSource(source, target);
+  }
+}
+
+function dropChangedCompositions(
+  selection: ResolvedPluginSelection,
+  hostRoot: string,
+  deps: PluginCliDeps,
+): ReconcileStep {
+  if (!selection.explicit) return { failure: null, changed: false };
+  const backend = deps.makeBackend(hostRoot);
+  const record = backend.readComposition();
+  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
+  let changed = false;
+  for (const plugin of discovered.filter((candidate): candidate is DiscoveredPlugin => candidate.manifest !== null)) {
+    const composed = record.plugins.get(plugin.name);
+    if (composed === undefined || digestsEqual(ownedRecordDigests(plugin), composed.ownedContentDigests)) continue;
+    const dropped = handleDrop(
+      { kind: "drop", name: plugin.name, projectRoot: hostRoot },
+      deps,
+      { updateSelection: false, removeManagedStaging: false },
+    );
+    if (dropped.kind !== "dropped") return { failure: dropped, changed };
+    changed = true;
+  }
+  return { failure: null, changed };
+}
+
+function applyStalePlugins(
+  stale: readonly DiscoveredPlugin[],
+  hostRoot: string,
+  backend: WorkspaceBackend,
+  deps: PluginCliDeps,
+): PluginCliResult | number {
+  let applied = 0;
+  for (const plugin of stale) {
+    const inspected = deps.inspectPlugin(plugin, deps.buildHostSnapshot(hostRoot, backend));
+    if (inspected.kind !== "ready") {
+      return {
+        kind: "failure",
+        stage: "plan",
+        message: `plugin "${plugin.name}" rejected: ${inspected.errors.map((error) => error.message).join("; ")}`,
+      };
+    }
+    const result = deps.applyPluginPlan(inspected.plan, deps.makeTx(hostRoot, backend));
+    if (result.kind !== "committed") {
+      return { kind: "failure", stage: "apply", message: `plugin "${plugin.name}" apply ${result.kind}` };
+    }
+    deps.recordDrops(hostRoot, plugin.name, []);
+    applied += 1;
+  }
+  return applied;
+}
+
+function finishCompose(hostRoot: string, applied: number, deps: PluginCliDeps): PluginCliResult {
+  if (!deps.recompile(hostRoot)) return { kind: "failure", stage: "apply", message: "recompile failed after compose" };
+  if (!deps.generateRunners(hostRoot)) {
+    return { kind: "failure", stage: "apply", message: "stage-runner generation failed after compose" };
+  }
+  const resync = deps.resyncIntentStates?.(hostRoot) ?? { kind: "ran" as const, outcomes: [] };
+  const outcomes = resync.kind === "ran" ? resync.outcomes : [];
+  return {
+    kind: "composed",
+    applied,
+    recompiled: true,
+    resynced: outcomes.filter((outcome) => outcome.status === "resynced").map((outcome) => outcome.intent),
+    resyncFailed: outcomes
+      .filter((outcome) => outcome.status === "section-unrecognized")
+      .map((outcome) => `${outcome.space}/${outcome.intent}`),
+    resyncSkipped: resync.kind === "invalid-graph" ? { path: resync.path, reason: resync.reason } : null,
+  };
+}
+
+function handleCompose(
+  cmd: Extract<PluginCliCommand, { kind: "compose" }>,
+  deps: PluginCliDeps,
+  desiredOverride?: readonly string[],
+): PluginCliResult {
   if (cmd.allHarnesses) return handleComposeAll(cmd, deps);
   const hostRoot = resolveProjectRoot(cmd);
-  if (cmd.ifStale && isRecordCurrent(hostRoot, deps)) {
+  const resolvedSelection = resolvePluginSelection(hostRoot);
+  const selection =
+    desiredOverride === undefined || resolvedSelection.kind === "invalid"
+      ? resolvedSelection
+      : { ...resolvedSelection, plugins: [...new Set(desiredOverride)].sort(), explicit: true };
+  if (selection.kind === "invalid") return { kind: "failure", stage: "discover", message: selection.message };
+  const invalidSource = validateSelectedSources(selection, hostRoot);
+  if (invalidSource !== null) return invalidSource;
+  const deselected = dropDeselectedCompositions(selection, hostRoot, deps);
+  if (deselected.failure !== null) return deselected.failure;
+  materializeSelectedSources(selection, hostRoot, deps);
+  const changed = dropChangedCompositions(selection, hostRoot, deps);
+  if (changed.failure !== null) return changed.failure;
+  const reconciled = deselected.changed || changed.changed;
+  if (cmd.ifStale && !reconciled && isRecordCurrent(hostRoot, deps)) {
     return { kind: "noop", reason: "record-current" };
   }
   const backend = deps.makeBackend(hostRoot);
@@ -777,51 +931,29 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
   const stale = discovered
     .filter((d): d is DiscoveredPlugin => d.manifest !== null)
     .filter((d) => isStale(d, record));
-  let applied = 0;
-  for (const plugin of stale) {
-    const host = deps.buildHostSnapshot(hostRoot, backend);
-    const inspected = deps.inspectPlugin(plugin, host);
-    if (inspected.kind !== "ready") {
-      return { kind: "failure", stage: "plan", message: `plugin "${plugin.name}" rejected: ${inspected.errors.map((e) => e.message).join("; ")}` };
-    }
-    const result = deps.applyPluginPlan(inspected.plan, deps.makeTx(hostRoot, backend));
-    if (result.kind !== "committed") {
-      return { kind: "failure", stage: "apply", message: `plugin "${plugin.name}" apply ${result.kind}` };
-    }
-    // Write the plugin's DropsRecord entry (U2 skeleton: empty — the engine has
-    // no drop-with-log path yet, BR-U2-11). Plugin-separated.
-    deps.recordDrops(hostRoot, plugin.name, []);
-    applied += 1;
-  }
-  if (!deps.recompile(hostRoot)) {
-    return { kind: "failure", stage: "apply", message: "recompile failed after compose" };
-  }
-  if (!deps.generateRunners(hostRoot)) {
-    return { kind: "failure", stage: "apply", message: "stage-runner generation failed after compose" };
-  }
-  // The composed graph now carries stages no RUNNING intent's state file knows
-  // about; `next` would issue them and `report` would refuse them (#1849). This
-  // runs LAST, after the graph on disk is the composed one.
-  const resync = deps.resyncIntentStates?.(hostRoot) ?? { kind: "ran" as const, outcomes: [] };
-  const outcomes = resync.kind === "ran" ? resync.outcomes : [];
-  return {
-    kind: "composed",
-    applied,
-    recompiled: true,
-    resynced: outcomes.filter((o) => o.status === "resynced").map((o) => o.intent),
-    resyncFailed: outcomes
-      .filter((o) => o.status === "section-unrecognized")
-      .map((o) => `${o.space}/${o.intent}`),
-    resyncSkipped:
-      resync.kind === "invalid-graph" ? { path: resync.path, reason: resync.reason } : null,
-  };
+  const applied = applyStalePlugins(stale, hostRoot, backend, deps);
+  return typeof applied === "number" ? finishCompose(hostRoot, applied, deps) : applied;
 }
 
 // `install <path>`: stage the source folder under PLUGIN_SOURCE_DIR_NAME, then
 // delegate to the SAME compose path the manual instruction runs (trust layers and
 // the two-stage recompile included — this verb re-implements none of it). A
 // compose failure is returned unchanged so the stage that failed stays visible.
-function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps: PluginCliDeps): PluginCliResult {
+type InstallContext = {
+  kind: "ready";
+  hostRoot: string;
+  src: string;
+  name: string;
+  selected: ResolvedPluginSelection;
+  projectSource: string;
+  persistentInstall: boolean;
+  state: "absent" | "identical" | "different";
+};
+
+function prepareInstall(
+  cmd: Extract<PluginCliCommand, { kind: "install" }>,
+  deps: PluginCliDeps,
+): InstallContext | PluginCliResult {
   const hostRoot = resolveProjectRoot(cmd);
   const src = isAbsolute(cmd.sourcePath) ? cmd.sourcePath : resolve(process.cwd(), cmd.sourcePath);
   if (!existsSync(src) || !statSync(src).isDirectory()) {
@@ -831,53 +963,152 @@ function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps
   if (!isSafePluginDirName(name)) {
     return { kind: "failure", stage: "install", message: `cannot derive a plugin name from: ${cmd.sourcePath}` };
   }
-  const dst = join(pluginSourceRootOf(hostRoot), name);
-  const state = deps.stagingEntryState(dst, src);
+  const selected = resolvePluginSelection(hostRoot);
+  if (selected.kind === "invalid") return { kind: "failure", stage: "install", message: selected.message };
+  const projectSource = join(selected.projectDir, PLUGIN_AUTHORING_DIR_NAME, name);
+  const persistentInstall = selected.projectDir !== hostRoot;
+  const comparisonTarget = persistentInstall ? projectSource : join(pluginSourceRootOf(hostRoot), name);
+  const state = deps.stagingEntryState(comparisonTarget, src);
   if (state === "different" && !cmd.force) {
     return {
       kind: "failure",
       stage: "install",
-      message: `a different plugin named "${name}" is already staged. Re-run with --force to replace it, or drop it first.`,
+      message: `a different plugin named "${name}" is already supplied. Re-run with --force to replace it, or drop it first.`,
     };
   }
-  if (state !== "identical") deps.copyPluginSource(src, dst);
-  const composed = handleCompose({ kind: "compose", ifStale: true, allHarnesses: false, projectRoot: cmd.projectRoot }, deps);
-  // A compose whose state re-sync failed loudly (#1963) or was skipped over an
-  // invalid host graph (#1993) must stay loud: returning the composed result
-  // unchanged keeps the stderr rendering + exit 1.
-  if (composed.kind === "composed" && (composed.resyncFailed.length > 0 || composed.resyncSkipped !== null)) return composed;
-  if (composed.kind === "composed") return { kind: "installed", name, composeOutcome: "composed" };
-  if (composed.kind === "noop") return { kind: "installed", name, composeOutcome: "noop" };
-  return composed;
+  return { kind: "ready", hostRoot, src, name, selected, projectSource, persistentInstall, state };
 }
 
-function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: PluginCliDeps): PluginCliResult {
+function commitInstallOutcome(
+  context: InstallContext,
+  composed: PluginCliResult,
+  snapshot: PluginInstallSnapshot | null,
+  deps: PluginCliDeps,
+): PluginCliResult {
+  if (composed.kind === "composed" && (composed.resyncFailed.length > 0 || composed.resyncSkipped !== null)) {
+    snapshot?.rollback();
+    return composed;
+  }
+  if (composed.kind !== "composed" && composed.kind !== "noop") {
+    snapshot?.rollback();
+    return composed;
+  }
+  if (context.persistentInstall) {
+    (deps.writeProjectPlugins ?? writeProjectPlugins)(context.selected.projectDir, [
+      ...context.selected.plugins,
+      context.name,
+    ]);
+  }
+  return { kind: "installed", name: context.name, composeOutcome: composed.kind === "composed" ? "composed" : "noop" };
+}
+
+function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps: PluginCliDeps): PluginCliResult {
+  const context = prepareInstall(cmd, deps);
+  if (context.kind !== "ready") return context;
+  const { hostRoot, src, name, selected, projectSource, persistentInstall, state } = context;
+  const snapshot = createPluginInstallSnapshot(selected.projectDir, hostRoot, name);
+  try {
+    if (persistentInstall && state !== "identical") deps.copyPluginSource(src, projectSource);
+    const stagingSource = persistentInstall ? projectSource : src;
+    const dst = join(pluginSourceRootOf(hostRoot), name);
+    if (deps.stagingEntryState(dst, stagingSource) !== "identical") deps.copyPluginSource(stagingSource, dst);
+    const desired = persistentInstall ? [...selected.plugins, name] : undefined;
+    const composed = handleCompose(
+      { kind: "compose", ifStale: true, allHarnesses: false, projectRoot: cmd.projectRoot },
+      deps,
+      desired,
+    );
+    // A compose whose state re-sync failed loudly (#1963) or was skipped over an
+    // invalid host graph (#1993) must stay loud: commitInstallOutcome returns it
+    // unchanged after restoring every persistent surface.
+    return commitInstallOutcome(context, composed, snapshot, deps);
+  } catch (error) {
+    snapshot?.rollback();
+    return { kind: "failure", stage: "install", message: String(error) };
+  } finally {
+    snapshot?.dispose();
+  }
+}
+
+function removeManagedPluginStaging(
+  selected: ResolvedPluginSelection,
+  hostRoot: string,
+  name: string,
+  deps: PluginCliDeps,
+): void {
+  const staged = join(pluginSourceRootOf(hostRoot), name);
+  const supplied = join(selected.projectDir, PLUGIN_AUTHORING_DIR_NAME, name);
+  if (!existsSync(staged) || !existsSync(supplied)) return;
+  if (deps.stagingEntryState(staged, supplied) !== "identical") return;
+  rmSync(staged, { recursive: true, force: true });
+}
+
+function persistDropSelection(
+  selected: ResolvedPluginSelection,
+  name: string,
+  updateSelection: boolean,
+  deps: PluginCliDeps,
+): string | null {
+  if (!updateSelection || !selected.explicit) return null;
+  try {
+    (deps.writeProjectPlugins ?? writeProjectPlugins)(
+      selected.projectDir,
+      selected.plugins.filter((plugin) => plugin !== name),
+    );
+    return null;
+  } catch (error) {
+    return `config update failed after drop: ${String(error)}`;
+  }
+}
+
+function handleDrop(
+  cmd: Extract<PluginCliCommand, { kind: "drop" }>,
+  deps: PluginCliDeps,
+  options: { updateSelection: boolean; removeManagedStaging: boolean } = {
+    updateSelection: true,
+    removeManagedStaging: true,
+  },
+): PluginCliResult {
   const hostRoot = resolveProjectRoot(cmd);
+  const selected = resolvePluginSelection(hostRoot);
+  if (selected.kind === "invalid") return { kind: "failure", stage: "plan", message: selected.message };
+  const snapshot = options.updateSelection
+    ? createPluginInstallSnapshot(selected.projectDir, hostRoot, cmd.name)
+    : null;
+  const fail = (result: PluginCliResult): PluginCliResult => {
+    snapshot?.rollback();
+    snapshot?.dispose();
+    return result;
+  };
   const backend = deps.makeBackend(hostRoot);
   const host = deps.buildHostSnapshot(hostRoot, backend);
   const record = host.composition.plugins.get(cmd.name);
   if (record === undefined) {
-    return { kind: "failure", stage: "plan", message: `plugin "${cmd.name}" is not composed` };
+    return fail({ kind: "failure", stage: "plan", message: `plugin "${cmd.name}" is not composed` });
   }
   const plan = deps.planPluginDrop(record, host);
   if (plan.rejections.length > 0) {
-    return { kind: "failure", stage: "plan", message: `drop rejected: ${plan.rejections.map((e) => e.message).join("; ")}` };
+    return fail({ kind: "failure", stage: "plan", message: `drop rejected: ${plan.rejections.map((e) => e.message).join("; ")}` });
   }
   const result = deps.applyPluginDrop(plan, deps.makeTx(hostRoot, backend));
   if (result.kind !== "committed") {
-    return { kind: "failure", stage: "apply", message: `drop ${result.kind}` };
+    return fail({ kind: "failure", stage: "apply", message: `drop ${result.kind}` });
   }
   // Remove the plugin's DropsRecord entry (symmetric with the compose-time write).
   deps.clearDrops(hostRoot, cmd.name);
   if (!deps.recompile(hostRoot)) {
-    return { kind: "failure", stage: "apply", message: "recompile failed after drop" };
+    return fail({ kind: "failure", stage: "apply", message: "recompile failed after drop" });
   }
   // Symmetric with compose (BR-U3-3): the same regeneration that ADDS the plugin
   // stage's runner PRUNES it once the graph no longer carries the slug.
   if (!deps.generateRunners(hostRoot)) {
-    return { kind: "failure", stage: "apply", message: "stage-runner generation failed after drop" };
+    return fail({ kind: "failure", stage: "apply", message: "stage-runner generation failed after drop" });
   }
   const baselineRestored = backend.readComposition().plugins.size === 0 && pluginArtifactsAbsent(hostRoot, record);
+  if (options.removeManagedStaging) removeManagedPluginStaging(selected, hostRoot, cmd.name, deps);
+  const configError = persistDropSelection(selected, cmd.name, options.updateSelection, deps);
+  if (configError !== null) return fail({ kind: "failure", stage: "apply", message: configError });
+  snapshot?.dispose();
   return { kind: "dropped", plugin: cmd.name, baselineRestored, recompiled: true };
 }
 
@@ -917,14 +1148,86 @@ function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: 
   const backend = deps.makeBackend(hostRoot);
   const host = deps.buildHostSnapshot(hostRoot, backend);
   const journalPending = backend.readJournal() !== undefined;
-  const section = buildDoctorPluginSection({
+  const engineSection = buildDoctorPluginSection({
     diagnostics: deps.diagnosePlugins(host, journalPending),
     drops: readDropsRecord(hostRoot),
     revision: backend.auditCount(),
     activation: null,
   });
+  const selected = resolvePluginSelection(hostRoot);
+  if (selected.kind === "invalid") {
+    const section: DoctorPluginSection = {
+      ...engineSection,
+      lines: [
+        ...engineSection.lines,
+        { plugin: basename(hostRoot), state: "unknown", detail: `configuration invalid: ${selected.message}` },
+      ],
+    };
+    return { kind: "doctor", section, degraded: true };
+  }
+  const selectionLines = !selected.explicit
+    ? []
+    : selectionDoctorLines(selected.projectDir, hostRoot, selected.plugins, deps, backend.readComposition());
+  const normalized = new Set(selectionLines.map((line) => line.plugin));
+  const section: DoctorPluginSection = {
+    ...engineSection,
+    lines: [...selectionLines, ...engineSection.lines.filter((line) => !normalized.has(line.plugin))],
+  };
   const degraded = section.lines.some((l) => isFailingPluginState(l.state));
   return { kind: "doctor", section, degraded };
+}
+
+function selectionDoctorLines(
+  projectDir: string,
+  hostRoot: string,
+  selected: readonly string[],
+  deps: PluginCliDeps,
+  composition: CompositionRecord,
+): DoctorLine[] {
+  const host = basename(hostRoot);
+  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
+  const valid = new Map(
+    discovered.filter((plugin): plugin is DiscoveredPlugin => plugin.manifest !== null).map((plugin) => [plugin.name, plugin]),
+  );
+  const staged = new Set(deps.listPluginSourceDirs(pluginSourceRootOf(hostRoot)));
+  const composed = new Set(composition.plugins.keys());
+  const stale = new Set<string>();
+  const failed = new Set<string>();
+  const pending = deps.makeBackend(hostRoot).readJournal();
+  if (pending !== undefined) failed.add(pending.writeSet.audit.plugin);
+  for (const plugin of selected) {
+    const source = join(projectDir, PLUGIN_AUTHORING_DIR_NAME, plugin);
+    const staging = join(pluginSourceRootOf(hostRoot), plugin);
+    const descriptor = valid.get(plugin);
+    const record = composition.plugins.get(plugin);
+    if (existsSync(source) && existsSync(staging) && deps.stagingEntryState(staging, source) !== "identical") {
+      stale.add(plugin);
+    } else if (descriptor !== undefined && record !== undefined
+      && !digestsEqual(ownedRecordDigests(descriptor), record.ownedContentDigests)) {
+      stale.add(plugin);
+    } else if (staged.has(plugin) && descriptor === undefined) {
+      failed.add(plugin);
+    }
+  }
+  return observePluginSelection(projectDir, hostRoot, selected, staged, composed, stale, failed)
+    .map((selection) => pluginSelectionDoctorLine(selection, host));
+}
+
+export function pluginSelectionDoctorLine(selection: PluginSelection, host: string): DoctorLine {
+  switch (selection.code) {
+    case "not-selected":
+      return { plugin: selection.plugin, state: "advisory", detail: `${host} not-selected` };
+    case "source-missing":
+      return { plugin: selection.plugin, state: "degraded", detail: `${host} source-missing: plugins/${selection.plugin}` };
+    case "not-installed":
+      return { plugin: selection.plugin, state: "degraded", detail: `${host} not-installed: staging or composition missing` };
+    case "stale":
+      return { plugin: selection.plugin, state: "drift", detail: `${host} stale: staging or composition differs from source` };
+    case "current":
+      return { plugin: selection.plugin, state: "ok", detail: `${host} current` };
+    case "failed":
+      return { plugin: selection.plugin, state: "degraded", detail: `${host} failed: recovery or manifest error` };
+  }
 }
 
 function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: PluginCliDeps): PluginCliResult {

@@ -1,5 +1,10 @@
 # Keeping a Formal Model in Step with Its Implementation
 
+The `formal-model-check` activation judgment is `not-ready`, `never-run`,
+`changed`, or `current`. A missing/invalid declared model target is
+`not-ready`; it cannot be recorded as a successful or unchanged verdict.
+Session-start reconciliation installs the plugin but never runs TLC.
+
 > Languages: **English** | [日本語](21-formal-model-following.ja.md)
 
 A TLA+ model in `specs/tla/` is only worth its runtime if it still describes the

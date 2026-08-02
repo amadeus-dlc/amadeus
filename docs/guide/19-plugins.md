@@ -78,8 +78,9 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
    transaction: host bytes, the composition record, and the audit entry are
    written together, or not at all. The composition record persists the explicit
    trust grant (plugin, content digest, timestamp) and each owned stage digest.
-5. **Doctor** — a read-only diagnostic projects each active plugin's status
-   (`composed`, `drift`, or `recovery-pending`) from the current host state.
+5. **Doctor** — a read-only diagnostic compares project selection, project
+   supply, host staging, and the composition record. It distinguishes
+   `source-missing`, `not-installed`, `stale`, and `current` states.
 6. **Drop** — a record-owned removal deletes the plugin's owned files and rebuilds
    each shared file from the base plus the *remaining* plugins' contributions.
 
@@ -114,10 +115,10 @@ The verbs are:
 
 | Verb | What it does | Exit |
 | --- | --- | --- |
-| `compose [--if-stale] [--project-root <dir>]` | Apply every installed plugin to the host as one atomic transaction. `--if-stale` is a no-op fast path that returns immediately when the composition record is already current. | `0` on success or no-op; `1` on a failed apply |
+| `compose [--if-stale] [--project-root <dir>]` | Reconcile the current host with the project-level `plugins` selection. `--if-stale` is a no-op only when selection, supply, staging, and composition are current. | `0` on success or no-op; `1` on validation or apply failure |
 | `doctor [--project-root <dir>]` | Print each composed plugin's state (`ok`, `drift`, `recovery-pending`). | `0` when healthy; `1` when any plugin is degraded or recovery-pending |
 | `drop <plugin-name> [--project-root <dir>]` | Remove one plugin's owned files and rebuild the shared files from the remaining plugins. | `0` on success; `1` on a rejected or failed drop |
-| `install <path> [--force] [--project-root <dir>]` | Stage the plugin source folder at `<path>` into the host's discovery root and compose in one operation. `--force` replaces a *different* plugin already staged under that name. | `0` on success; `1` on a rejected or failed install |
+| `install <path> [--force] [--project-root <dir>]` | Persist the source at project `plugins/<name>/`, compose it into the current host, then commit its name to `amadeus/config.json`. A failure restores all four surfaces. | `0` on success; `1` on a rejected or failed install |
 | `status [--project-root <dir>]` | Print counts: installed, composed, and the audit revision. | `0` |
 
 With no `--project-root`, the host root is the **harness directory the CLI itself
@@ -145,7 +146,8 @@ pays only a few `existsSync` probes and returns without recomposing, so the hook
 adds no startup latency in the common case. Any hook failure is a single stderr
 warning and a zero exit — a plugin problem never blocks the session.
 
-Six of the seven packaged faces wire this trigger; one does not:
+All seven packaged faces wire this trigger. Kiro CLI and Kiro IDE share one
+`.kiro` host tree, so the seven faces cover six host directories:
 
 | Face | Session-start trigger | Auto-compose |
 | --- | --- | --- |
@@ -155,15 +157,12 @@ Six of the seven packaged faces wire this trigger; one does not:
 | `kimi` | `SessionStart` | wired |
 | `kiro` | `agentSpawn` | wired |
 | `kiro-ide` | `promptSubmit` (idempotent via `--if-stale`) | wired |
-| `opencode` | none (only `chat.message` is exposed) | **degraded — manual only** |
+| `opencode` | JavaScript plugin `session.created` event | wired |
 
-`opencode` is the `manual-only` class: it exposes no session-start seam, so it
-wires no auto-compose and the manual `compose` floor is its sole contract. The
-degrade is not a silent skip — it is written into the face's install bundle. The
-`INSTALL.md` a `manual-only` face ships states it plainly: *"This harness has no
-auto-compose session hook. Run compose after install and after every plugin
-change"*, followed by the `compose` command. So on `opencode` you run `compose`
-yourself; on the other six faces the session hook does it for you.
+OpenCode uses its official JavaScript/TypeScript plugin event rather than a
+shell hook. The existing `.opencode/plugin/amadeus-opencode-plugin.ts` handles
+`session.created`, reconciles only `.opencode`, and treats failure as a visible,
+non-blocking warning just like the other session-start adapters.
 
 ---
 
@@ -204,12 +203,14 @@ class:
   the harness-rooted directory `compose` scans, which is also the root the engine
   reads composed plugin stages back from; auto-compose is wired from
   `hooks/auto-compose.snippet`.
-- **`manual-only`** (`opencode`) — copy the folder; there is no session hook, so
-  run `compose` after install and after every plugin change.
+- **`native-plugin-auto`** (`opencode`) — the JavaScript plugin receives
+  `session.created` and invokes the same current-host reconciliation.
 
-The `install` verb is the one-operation form of that folder-drop: it stages the
-source folder into the same discovery root the manual steps name and then
-composes, through the identical compose path — it re-implements none of it.
+The `install` verb is the transactional one-operation form. It persists supply
+under project `plugins/<name>/`, materializes the current harness staging tree,
+composes through the shared engine, and writes the sorted project selection
+last. `drop` removes the name only after a safe host drop and deliberately keeps
+the project supply for later re-selection.
 
 ```
 /amadeus plugin install path/to/plugins/example

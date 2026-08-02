@@ -25,7 +25,7 @@ describe("t257 pure config resolution", () => {
   test("defaults to prompt when no layer is present", () => {
     expect(
       parseAmadeusConfigLayers([absent("global"), absent("space"), absent("intent")]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] }, sources: [] });
   });
 
   test.each(["off", "prompt", "auto"] as const)(
@@ -33,7 +33,7 @@ describe("t257 pure config resolution", () => {
     (value) => {
       expect(parseAmadeusConfigLayers([mode(value)])).toEqual({
         kind: "resolved",
-        config: { autoMirror: value, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+        config: { autoMirror: value, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
         sources: ["amadeus/global.json"],
       });
     },
@@ -73,7 +73,7 @@ describe("t257 pure config resolution", () => {
         present("space", {}),
         present("intent", {}),
       ]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] }, sources: [] });
   });
 
   // Each present layer carries a distinct mode (global=off, space=prompt,
@@ -114,7 +114,7 @@ describe("t257 pure config resolution", () => {
       ];
       expect(parseAmadeusConfigLayers(layers)).toEqual({
         kind: "resolved",
-        config: { autoMirror: expectedMode, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+        config: { autoMirror: expectedMode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
         sources: expectedSources,
       });
     },
@@ -129,7 +129,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -143,7 +143,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -157,13 +157,46 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
       sources: ["amadeus/space.json"],
     });
   });
 });
 
 describe("t257 pure config rejection", () => {
+  test("project plugins are validated, deduplicated and sorted without coercion", () => {
+    const resolved = parseAmadeusConfigLayers([present("global", { plugins: ["zeta", "alpha"] })]);
+    expect(resolved.kind === "resolved" && resolved.config.plugins).toEqual(["alpha", "zeta"]);
+    const valid64 = `a${"b".repeat(62)}z`;
+    expect(parseAmadeusConfigLayers([present("global", { plugins: [valid64] })]).kind).toBe("resolved");
+    for (const plugins of [
+      ["dup", "dup"],
+      ["Upper"],
+      [" white"],
+      ["white "],
+      ["日本語"],
+      ["-leading"],
+      ["trailing-"],
+      ["."],
+      [".."],
+      ["a_b"],
+      ["a/b"],
+      ["a\\b"],
+      [`a${"b".repeat(63)}z`],
+      [1],
+      "formal-model-check",
+    ]) {
+      expect(parseAmadeusConfigLayers([present("global", { plugins })]).kind).toBe("invalid");
+    }
+  });
+
+  test("plugins is project-only and rejected at space or intent", () => {
+    for (const layer of ["space", "intent"] as const) {
+      const result = parseAmadeusConfigLayers([present(layer, { plugins: ["formal-model-check"] })]);
+      expect(result.kind).toBe("invalid");
+    }
+  });
+
   test("rejects an invalid auto-file-findings value without coercion", () => {
     expect(
       parseAmadeusConfigLayers([

@@ -1,0 +1,37 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c1-260802-plugin-optin-parity",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "plugin の導入対象は project root の `amadeus/config.json` だけに記録する。intent 選択前にも起動する全ハーネスの開始処理が同じ情報を読めるよう、space・intent の設定継承から分離する。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2-260802-plugin-optin-parity",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "OpenCode の `manual-only` は製品制約ではなく未配線として扱う。公式 plugin フックとセッションイベントがある場合は、他ハーネスと同じ初回自動導入契約へ揃える。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3-260802-plugin-optin-parity",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Forbidden",
+      "text": "ユーザー向けの質問と成果物では、正式定義されていない略称や専門用語を使わない。定義済みの用語または平易な日本語を使う。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c4-260802-plugin-optin-parity",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "plugin の初回導入成功とpluginが提供する検査の成功を分離する。検査対象0件でもpluginを利用可能にできるが、対象が揃うまでは未準備とし、成功記録を残さず明示検査をエラーにする。",
+      "source": "orchestrator"
+    }
+  ]
+}

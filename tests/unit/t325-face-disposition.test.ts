@@ -45,16 +45,24 @@ describe("t325 face disposition classifier (U4)", () => {
     }
   });
 
-  // The concrete matrix conclusion (BR-U1-7): opencode degrades (manual-only +
-  // deferred); the other six wire. claude was wired in U2, the other five in U4.
+  // The concrete matrix conclusion (BR-U1-7): all seven faces wire. OpenCode
+  // uses its native plugin lifecycle to trigger measured reconciliation.
   test("resolveFaceDisposition — matrix conclusion (BR-U1-7)", () => {
     const wired = PACKAGE_HARNESSES.filter((h) => resolveFaceDisposition(h).kind === "wired");
     const degraded = PACKAGE_HARNESSES.filter((h) => resolveFaceDisposition(h).kind === "degraded");
-    expect([...wired].sort()).toEqual(["claude", "codex", "cursor", "kimi", "kiro", "kiro-ide"]);
-    expect([...degraded].sort()).toEqual(["opencode"]);
-    // opencode degrades on the manual-only axis (fail-closed, BR-U1-6).
+    expect([...wired].sort()).toEqual([
+      "claude",
+      "codex",
+      "cursor",
+      "kimi",
+      "kiro",
+      "kiro-ide",
+      "opencode",
+    ]);
+    expect([...degraded].sort()).toEqual([]);
+    // OpenCode is measured through its native plugin lifecycle.
     const oc = resolveFaceDisposition("opencode");
-    expect(oc.kind === "degraded" && oc.reason).toBe("manual-only");
+    expect(oc.kind).toBe("wired");
     // The two sets partition all 7 faces (no overlap, no omission).
     expect(wired.length + degraded.length).toBe(PACKAGE_HARNESSES.length);
   });

@@ -25,7 +25,7 @@ import {
   type ModelMapModel,
   TLA_EXECUTION_MODEL_NAME,
   TLA_MODEL_MAP_PATH,
-  parseTlaModelMap,
+  evaluateTlaModelReadiness,
 } from "./tla-model-map.ts";
 
 export type { ModelLoadError, ModelLoadErrorCode, ModelMap, ModelMapModel } from "./tla-model-map.ts";
@@ -416,7 +416,10 @@ export function loadVerifiedTlaSourcesInternal(
   if (!paths.ok) return paths;
   const mapBytes = readAsset(paths.value.mapPath, TLA_MODEL_MAP_PATH, "MODEL_MAP", fs);
   if (!mapBytes.ok) return mapBytes;
-  const modelMap = parseTlaModelMap(mapBytes.value);
+  const modelMap = evaluateTlaModelReadiness(
+    mapBytes.value,
+    (relativePath) => fs.exists(resolve(paths.value.repositoryRoot, relativePath)),
+  );
   if (!modelMap.ok) return modelMap;
 
   // Fail-fast order: (1) map parse above, (2) all-model identity verification,

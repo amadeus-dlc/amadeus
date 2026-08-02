@@ -4,6 +4,12 @@
 
 - 判断: 技術スタックに変化なし。患部は Bun / TypeScript の既存ツール層と JSON データのみで、新規外部依存を要さない。区間の技術面の変化は患部外 — `#2017` の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、`#2012` の formal-model-check 全登録モデル対応、plugin compose 読取境界の fail-closed 化、fatal-latch 系 loud fail 徹底で、詳細は `architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- 新規外部依存は不要。既存の Bun／TypeScript、filesystem JSON record、SHA-256、各ハーネス hook adapter、packaging projectionで修正可能である。
+- 常駐サービスではなく短命CLIのため、解決策は cache／service discovery ではなく durable project config と決定的なfile境界に置く。
+- package matrix は7 face、runtime hostは6 directory。OpenCodeのmanual-onlyとKiro 2 faceのshared `.kiro`をデータとして保持する。
+
 ## formal-model-check 複数モデル化の技術断面（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 判断: 技術スタックに変化なし。検証層は従前どおり TLA+ / TLC（`tla2tools.jar`、Docker 供給）+ Bun/TypeScript の実行基盤で、aux 追加・複数モデル化とも新規外部依存を要さない見通し。区間の構成変化は `54bf1f805` による plugin 移設（`scripts/formal-verif/` 削除 → `plugins/formal-model-check/tools/`）と otel 基盤拡張で、詳細は `architecture.md` 現在節と `re-scans/260801-tla-multi-model.md` に委ねる。

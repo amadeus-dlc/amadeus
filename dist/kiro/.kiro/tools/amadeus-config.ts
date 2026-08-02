@@ -49,6 +49,7 @@ const AUTO_MIRROR_KEY = "auto-mirror";
 const MIRROR_PROJECTS_KEY = "mirror-projects";
 const AUTO_SOLO_ELECTION_KEY = "auto-solo-election";
 const AUTO_FILE_FINDINGS_KEY = "auto-file-findings";
+const PLUGINS_KEY = "plugins";
 // "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
 // the mirror parser must tolerate the key so both subsystems can share the
 // layered config.json files, but it never interprets the value.
@@ -58,6 +59,7 @@ const ALLOWED_KEYS: readonly string[] = [
   AUTO_SOLO_ELECTION_KEY,
   AUTO_FILE_FINDINGS_KEY,
   "observability",
+  PLUGINS_KEY,
 ];
 
 const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
@@ -79,13 +81,15 @@ export type AmadeusConfigKey =
   | "auto-mirror"
   | "mirror-projects"
   | "auto-solo-election"
-  | "auto-file-findings";
+  | "auto-file-findings"
+  | "plugins";
 
 export type AmadeusConfig = Readonly<{
   autoMirror: MirrorMode;
   projects: readonly MirrorProjectTarget[];
   autoSoloElection: boolean;
   autoFileFindings: MirrorMode;
+  plugins?: readonly string[];
 }>;
 
 export type AmadeusConfigLayerInput = Readonly<{
@@ -402,6 +406,7 @@ type LayerClassification = Readonly<{
   projects?: readonly MirrorProjectTarget[];
   autoSoloElection?: boolean;
   autoFileFindings?: MirrorMode;
+  plugins?: readonly string[];
   issues: readonly LayerIssue[];
 }>;
 
@@ -410,7 +415,32 @@ type ResolvedLayerValues = {
   projects?: readonly MirrorProjectTarget[];
   autoSoloElection?: boolean;
   autoFileFindings?: MirrorMode;
+  plugins?: readonly string[];
 };
+
+const PLUGIN_NAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+
+function parsePlugins(value: unknown): readonly string[] | null {
+  if (!Array.isArray(value)) return null;
+  const names: string[] = [];
+  for (const candidate of value) {
+    if (typeof candidate !== "string" || !PLUGIN_NAME_RE.test(candidate) || names.includes(candidate)) return null;
+    names.push(candidate);
+  }
+  return names.sort();
+}
+
+function parseOptionalPlugins(rawValue: unknown, issues: LayerIssue[]): readonly string[] | undefined {
+  if (rawValue === undefined) return undefined;
+  const parsed = parsePlugins(rawValue);
+  if (parsed !== null) return parsed;
+  issues.push({
+    key: PLUGINS_KEY,
+    actualType: valueKind(rawValue),
+    expected: "unique array of valid plugin names",
+  });
+  return undefined;
+}
 
 function parseOptionalMode(
   rawValue: unknown,
@@ -503,12 +533,15 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     issues,
   );
 
+  const plugins = parseOptionalPlugins(rawValue[PLUGINS_KEY], issues);
+
   return {
     issues,
     ...(mode === undefined ? {} : { mode }),
     ...(projects === undefined ? {} : { projects }),
     ...(autoSoloElection === undefined ? {} : { autoSoloElection }),
     ...(autoFileFindings === undefined ? {} : { autoFileFindings }),
+    ...(plugins === undefined ? {} : { plugins }),
   };
 }
 
@@ -533,6 +566,10 @@ function mergeLayerValues(
     target.autoFileFindings = classified.autoFileFindings;
     contributed = true;
   }
+  if (classified.plugins !== undefined) {
+    target.plugins = classified.plugins;
+    contributed = true;
+  }
   return contributed;
 }
 
@@ -548,6 +585,31 @@ function layerConfigIssues(
     actualType: issue.actualType,
     expected: issue.expected,
   }));
+}
+
+function mergeConfigLayer(
+  layer: AmadeusConfigLayerInput,
+  resolved: ResolvedLayerValues,
+): { issues: AmadeusConfigIssue[]; contributed: boolean } {
+  const classified = classifyRawValue(layer.rawValue);
+  if (layer.layer !== "global" && classified.plugins !== undefined) {
+    return {
+      issues: [{
+        kind: "invalid-value",
+        layer: layer.layer,
+        path: layer.path,
+        key: "plugins",
+        actualType: "project-only key",
+        expected: "plugins may be configured only in amadeus/config.json",
+      }],
+      contributed: false,
+    };
+  }
+  const issues = layerConfigIssues(layer, classified);
+  return {
+    issues,
+    contributed: issues.length === 0 && mergeLayerValues(resolved, classified),
+  };
 }
 
 // Pure schema + precedence over collected layers. Every invalid layer is
@@ -568,13 +630,9 @@ export function parseAmadeusConfigLayers(
   const sources: string[] = [];
   const resolved: ResolvedLayerValues = {};
   for (const layer of ordered) {
-    const classified = classifyRawValue(layer.rawValue);
-    issues.push(...layerConfigIssues(layer, classified));
-    if (classified.issues.length > 0) continue;
-    // Each key resolves independently: the last layer carrying a valid value for
-    // that key wins, and `mirror-projects` fully replaces the previous layer's
-    // target list rather than merging into it.
-    if (mergeLayerValues(resolved, classified)) sources.push(layer.path);
+    const merged = mergeConfigLayer(layer, resolved);
+    issues.push(...merged.issues);
+    if (merged.contributed) sources.push(layer.path);
   }
 
   if (issues.length > 0) return { kind: "invalid", issues };
@@ -585,6 +643,7 @@ export function parseAmadeusConfigLayers(
       projects: resolved.projects ?? [],
       autoSoloElection: resolved.autoSoloElection ?? false,
       autoFileFindings: resolved.autoFileFindings ?? "prompt",
+      plugins: resolved.plugins ?? [],
     },
     sources,
   };

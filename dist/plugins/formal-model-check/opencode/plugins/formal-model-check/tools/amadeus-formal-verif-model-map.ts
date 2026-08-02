@@ -127,6 +127,8 @@ type Result<T, E> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
+export type TlaModelReadiness = Result<ModelMap, ModelLoadError>;
+
 const SHA256 = /^[0-9a-f]{64}$/;
 const IMPLEMENTATION_PREFIX = "packages/framework/core/tools/";
 const IMPLEMENTATION_FILE = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
@@ -362,6 +364,45 @@ export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadE
     models.push(model.value);
   }
   return { ok: true, value: { schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION, models } };
+}
+
+function missingAsset(
+  code: "MODEL_MISSING" | "CFG_MISSING",
+  relativePath: string,
+  model: string,
+): TlaModelReadiness {
+  return {
+    ok: false,
+    error: {
+      kind: "MODEL_LOAD",
+      code,
+      relativePath,
+      detail: `declared target ${model} is missing ${code === "MODEL_MISSING" ? "its model" : "its cfg"}`,
+    },
+  };
+}
+
+/**
+ * Canonical readiness seam shared by activation advisories and explicit TLC
+ * execution. A target is ready only when the strict model-map parser accepts
+ * the declaration and every declared model/cfg path is present. Identity and
+ * source-drift verification remain the explicit loader's next step.
+ */
+export function evaluateTlaModelReadiness(
+  modelMapBytes: Uint8Array,
+  assetExists: (relativePath: string) => boolean,
+): TlaModelReadiness {
+  const parsed = parseTlaModelMap(modelMapBytes);
+  if (!parsed.ok) return parsed;
+  for (const model of parsed.value.models) {
+    if (!assetExists(model.model.path)) {
+      return missingAsset("MODEL_MISSING", model.model.path, model.name);
+    }
+    if (!assetExists(model.cfg.path)) {
+      return missingAsset("CFG_MISSING", model.cfg.path, model.name);
+    }
+  }
+  return parsed;
 }
 
 export function findModelMapModel(modelMap: ModelMap, name: string): ModelMapModel | undefined {

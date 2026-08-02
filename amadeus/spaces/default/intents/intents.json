@@ -799,5 +799,12 @@
     "dirName": "260802-vocab-canonical-consolid",
     "scope": "self-document",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc11b-7db5-7be6-a79d-9bfae4ca9385",
+    "slug": "plugin-optin-parity",
+    "dirName": "260802-plugin-optin-parity",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

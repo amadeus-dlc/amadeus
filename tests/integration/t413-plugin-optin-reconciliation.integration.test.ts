@@ -1,0 +1,189 @@
+// covers: file:packages/framework/core/tools/amadeus-plugin.ts
+// size: medium
+
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  applyPluginDrop,
+  applyPluginPlan,
+  clearPluginDrops,
+  createNodeBackend,
+  createNodeLock,
+  diagnosePlugins,
+  discoverPlugins,
+  inspectPlugin,
+  planPluginDrop,
+  recordPluginDrops,
+  type WorkspaceTransaction,
+} from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import {
+  buildHostSnapshot,
+  copyPluginSource,
+  listHarnessTrees,
+  listPluginSourceDirs,
+  runPluginCli,
+  renderPluginCliResult,
+  stagingEntryState,
+  type PluginCliDeps,
+} from "../../packages/framework/core/tools/amadeus-plugin.ts";
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
+const PLUGIN = "formal-model-check";
+
+let project = "";
+let host = "";
+
+function deps(options: {
+  apply?: PluginCliDeps["applyPluginPlan"];
+  out?: (line: string) => void;
+  err?: (line: string) => void;
+} = {}): PluginCliDeps {
+  return {
+    discoverPlugins,
+    inspectPlugin,
+    applyPluginPlan: options.apply ?? applyPluginPlan,
+    planPluginDrop,
+    applyPluginDrop,
+    diagnosePlugins,
+    buildHostSnapshot,
+    makeBackend: createNodeBackend,
+    makeTx: (root, backend): WorkspaceTransaction => ({
+      backend,
+      verify: () => ({ ok: true }),
+      lock: createNodeLock(root),
+      newTxnId: () => `t413-${Date.now()}-${Math.random()}`,
+    }),
+    recompile: () => true,
+    generateRunners: () => true,
+    recordDrops: recordPluginDrops,
+    clearDrops: clearPluginDrops,
+    stagingEntryState,
+    copyPluginSource: (src, dst) => copyPluginSource(src, dst, () => {}),
+    listHarnessTrees,
+    listPluginSourceDirs,
+    out: options.out ?? (() => {}),
+    err: options.err ?? (() => {}),
+  };
+}
+
+function writeSelection(plugins: readonly string[]): void {
+  mkdirSync(join(project, "amadeus"), { recursive: true });
+  writeFileSync(join(project, "amadeus", "config.json"), `${JSON.stringify({ plugins }, null, 2)}\n`);
+}
+
+function writeFixturePlugin(name: string): void {
+  const root = join(project, "plugins", name);
+  mkdirSync(join(root, "stages"), { recursive: true });
+  writeFileSync(
+    join(root, "plugin.json"),
+    `${JSON.stringify({ name, stages: [{ slug: name, path: `stages/${name}.md` }] }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(root, "stages", `${name}.md`),
+    `---\nslug: ${name}\nphase: construction\nexecution: CONDITIONAL\ncondition: explicit test invocation\nlead_agent: amadeus-quality-agent\nsupport_agents: []\nmode: inline\nproduces: []\nconsumes: []\nrequires_stage: []\ninputs: synthetic fixture\noutputs: synthetic fixture verdict\nsensors: []\nscopes: []\n---\n\n# ${name}\n`,
+  );
+}
+
+beforeEach(() => {
+  project = mkdtempSync(join(tmpdir(), "amadeus-t413-project-"));
+  host = join(project, ".codex");
+  mkdirSync(host, { recursive: true });
+  cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
+  writeSelection([PLUGIN]);
+});
+
+afterEach(() => rmSync(project, { recursive: true, force: true }));
+
+describe("t413 project opt-in reconciliation", () => {
+  test("fresh 0/0 is materialized for the current host and the next run is a no-op", () => {
+    const configBefore = readFileSync(join(project, "amadeus", "config.json"));
+    const first = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(first.kind).toBe("composed");
+    expect(existsSync(join(host, ".amadeus-plugin-src", PLUGIN, "plugin.json"))).toBe(true);
+    expect(createNodeBackend(host).readComposition().plugins.has(PLUGIN)).toBe(true);
+    const second = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(second).toEqual({ kind: "noop", reason: "record-current" });
+    expect(readFileSync(join(project, "amadeus", "config.json"))).toEqual(configBefore);
+  });
+
+  test("a changed project source is restaged and recomposed", () => {
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
+    const sourceTool = join(project, "plugins", PLUGIN, "tools", "canonical.ts");
+    writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// t413 source change\n`);
+    const result = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(result.kind).toBe("composed");
+    expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t413 source change");
+  });
+
+  test("removing selection safely drops composition and managed staging but preserves supply", () => {
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
+    writeSelection([]);
+    const result = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(result.kind).toBe("composed");
+    expect(createNodeBackend(host).readComposition().plugins.has(PLUGIN)).toBe(false);
+    expect(existsSync(join(host, ".amadeus-plugin-src", PLUGIN))).toBe(false);
+    expect(existsSync(join(project, "plugins", PLUGIN, "plugin.json"))).toBe(true);
+  });
+
+  test("a missing selected source fails before changing the current host and doctor identifies it", () => {
+    rmSync(join(project, "plugins", PLUGIN), { recursive: true, force: true });
+    const compose = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(compose).toEqual({
+      kind: "failure",
+      stage: "discover",
+      message: `host .codex plugin "${PLUGIN}": source missing at plugins/${PLUGIN}`,
+    });
+    expect(existsSync(join(host, ".amadeus-plugin-src"))).toBe(false);
+    const doctor = runPluginCli(["doctor", "--project-root", host], deps());
+    expect(doctor.kind).toBe("doctor");
+    if (doctor.kind !== "doctor") return;
+    expect(doctor.degraded).toBe(true);
+    expect(doctor.section.lines).toContainEqual({
+      plugin: PLUGIN,
+      state: "degraded",
+      detail: `.codex source-missing: plugins/${PLUGIN}`,
+    });
+  });
+
+  test("multi-plugin partial success is durable and retry applies only the failed plugin", () => {
+    rmSync(join(project, "plugins", PLUGIN), { recursive: true, force: true });
+    writeFixturePlugin("alpha-plugin");
+    writeFixturePlugin("beta-plugin");
+    writeSelection(["alpha-plugin", "beta-plugin"]);
+    const applies = new Map<string, number>();
+    let failBeta = true;
+    const errors: string[] = [];
+    const injected = deps({
+      apply: (plan, tx) => {
+        applies.set(plan.plugin, (applies.get(plan.plugin) ?? 0) + 1);
+        if (plan.plugin === "beta-plugin" && failBeta) {
+          return { kind: "stopped", reason: "synthetic beta interruption" };
+        }
+        return applyPluginPlan(plan, tx);
+      },
+      err: (line) => errors.push(line),
+    });
+
+    const first = runPluginCli(["compose", "--if-stale", "--project-root", host], injected);
+    expect(first).toMatchObject({ kind: "failure", stage: "apply" });
+    expect(renderPluginCliResult(first, injected)).toBe(1);
+    expect(errors.at(-1)).toContain('plugin "beta-plugin" apply stopped');
+    expect(createNodeBackend(host).readComposition().plugins.has("alpha-plugin")).toBe(true);
+    expect(createNodeBackend(host).readComposition().plugins.has("beta-plugin")).toBe(false);
+
+    failBeta = false;
+    const retry = runPluginCli(["compose", "--if-stale", "--project-root", host], injected);
+    expect(retry.kind).toBe("composed");
+    expect(createNodeBackend(host).readComposition().plugins.has("alpha-plugin")).toBe(true);
+    expect(createNodeBackend(host).readComposition().plugins.has("beta-plugin")).toBe(true);
+    expect(applies).toEqual(new Map([["alpha-plugin", 1], ["beta-plugin", 2]]));
+    expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([
+      "alpha-plugin",
+      "beta-plugin",
+    ]);
+  });
+});

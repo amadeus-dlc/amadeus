@@ -110,7 +110,7 @@ function input(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt" },
+        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
         sources: ["/project/amadeus/config.json"],
       }),
     },

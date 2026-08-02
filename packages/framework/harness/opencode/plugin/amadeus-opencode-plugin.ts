@@ -25,14 +25,32 @@
 // the human's turn.
 
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
+import { handlePluginCli } from "../tools/amadeus-plugin.ts";
 import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
-import { opencodeProjectDir, opencodePromptText } from "../lib/amadeus-opencode-vocab.ts";
+import {
+  isOpencodeSessionCreatedEvent,
+  opencodeProjectDir,
+  opencodePromptText,
+} from "../lib/amadeus-opencode-vocab.ts";
 
 type ChatMessageInput = { sessionID?: unknown };
 type ChatMessageOutput = { parts?: unknown };
 
 export const amadeusOpencodePlugin = async (input: unknown) => ({
+  event: async (payload: unknown): Promise<void> => {
+    if (!isOpencodeSessionCreatedEvent(payload)) return;
+    const projectDir = opencodeProjectDir(input);
+    if (projectDir === null) return;
+    try {
+      const hostRoot = join(projectDir, ".opencode");
+      const code = handlePluginCli(["compose", "--if-stale", "--project-root", hostRoot]);
+      if (code !== 0) console.error(`amadeus-plugin: OpenCode auto-compose failed for ${hostRoot} (non-blocking)`);
+    } catch (error) {
+      console.error(`amadeus-plugin: OpenCode auto-compose error (non-blocking): ${String(error)}`);
+    }
+  },
   "chat.message": async (message: ChatMessageInput, output: ChatMessageOutput): Promise<void> => {
     try {
       const projectDir = opencodeProjectDir(input);

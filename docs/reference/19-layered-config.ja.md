@@ -38,7 +38,8 @@
   "auto-mirror": "prompt",
   "mirror-projects": [],
   "auto-solo-election": true,
-  "auto-file-findings": "prompt"
+  "auto-file-findings": "prompt",
+  "plugins": ["formal-model-check"]
 }
 ```
 
@@ -46,7 +47,9 @@
 `auto-mirror` の値集合外、壊れた Project target、boolean 以外の
 `auto-solo-election` を拒否します。既定値は `autoMirror: "prompt"`、空の Project
 一覧、`autoSoloElection: false` です。`auto-file-findings` は `auto-mirror` と同じ
-値集合を受理し、既定値は `autoFileFindings: "prompt"` です。
+値集合を受理し、既定値は `autoFileFindings: "prompt"` です。`plugins` は project-only の
+昇順・一意な名前配列で、既定値は `[]` です。Space または Intent layer に記載すると
+設定エラーになります。
 
 ## ソロ選挙との統合
 

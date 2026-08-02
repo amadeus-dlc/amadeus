@@ -41,6 +41,7 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { writeActivationModelAssets } from "../harness/formal-model-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "plugins");
@@ -64,8 +65,7 @@ function makeHostRoot(prefix: string): string {
   hostProjectRoot = mkdtempSync(join(tmpdir(), prefix));
   const h = join(hostProjectRoot, ".claude");
   mkdirSync(h, { recursive: true });
-  mkdirSync(join(hostProjectRoot, "specs", "tla"), { recursive: true });
-  writeFileSync(join(hostProjectRoot, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  writeActivationModelAssets(hostProjectRoot);
   return h;
 }
 

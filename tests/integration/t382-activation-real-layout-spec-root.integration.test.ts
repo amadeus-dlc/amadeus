@@ -32,6 +32,7 @@ import {
   resolveActivationJudgment,
   specRootForHost,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { activationModelMap, writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
 
@@ -65,6 +66,7 @@ beforeEach(() => {
   // Specs are a PROJECT asset — one level above the harness directory.
   writeFile(join(projectRoot, "specs/tla/FormalElection.tla"), "MODULE FormalElection\n");
   writeFile(join(projectRoot, "specs/tla/FormalElection.cfg"), "INIT Init\n");
+  writeActivationModelMap(projectRoot);
   composeFormalModelCheck();
 });
 
@@ -123,5 +125,81 @@ describe("activation spec root on the real deployment layout", () => {
   test("an uncomposed host stays silent even though the project carries specs", () => {
     rmSync(join(host, COMPOSITION_FILE));
     expect(activationAdvisoriesForHost(host, "requirements-analysis")).toEqual([]);
+  });
+
+  test("a declared target with a missing cfg is not-ready and cannot record a verdict", () => {
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      activationModelMap(),
+    );
+    rmSync(join(projectRoot, "specs/tla/FormalElection.cfg"));
+    const judgment = resolveActivationJudgment(host);
+    expect(judgment).toEqual({
+      kind: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+    expect(recordActivationVerdict(host)).toBe(false);
+    expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(false);
+    expect(activationAdvisoriesForHost(host, "build-and-test")[0]).toMatchObject({
+      plugin: ACTIVATION_PLUGIN,
+      stage: "build-and-test",
+      code: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+  });
+
+  test("a declared target with model and cfg starts at never-run with a structured target", () => {
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      activationModelMap(),
+    );
+    expect(resolveActivationJudgment(host).kind).toBe("never-run");
+    expect(activationAdvisoriesForHost(host, "requirements-analysis")[0]).toMatchObject({
+      plugin: ACTIVATION_PLUGIN,
+      stage: "requirements-analysis",
+      code: "never-run",
+      target: "specs/tla",
+    });
+  });
+
+  test("zero declarations and an invalid map are not-ready and never overwrite a past verdict", async () => {
+    expect(recordActivationVerdict(host)).toBe(true);
+    const statePath = join(host, ACTIVATION_STATE_FILE);
+    const past = Bun.file(statePath).text();
+    writeFile(
+      join(projectRoot, "specs/tla/model-map.json"),
+      JSON.stringify({ schemaVersion: 2, models: [] }),
+    );
+    expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
+    expect(recordActivationVerdict(host)).toBe(false);
+    expect(Bun.file(statePath).text()).resolves.toBe(await past);
+
+    writeFile(join(projectRoot, "specs/tla/model-map.json"), "{not-json");
+    expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
+    expect(recordActivationVerdict(host)).toBe(false);
+    expect(Bun.file(statePath).text()).resolves.toBe(await past);
+  });
+
+  test("add, delete, and restore a target preserve the meaning of a past successful verdict", async () => {
+    rmSync(join(projectRoot, "specs/tla/model-map.json"));
+    expect(resolveActivationJudgment(host)).toEqual({ kind: "not-ready", reason: "model map is missing" });
+    expect(recordActivationVerdict(host)).toBe(false);
+
+    writeActivationModelMap(projectRoot);
+    expect(resolveActivationJudgment(host).kind).toBe("never-run");
+    expect(recordActivationVerdict(host)).toBe(true);
+    expect(resolveActivationJudgment(host).kind).toBe("current");
+
+    const cfgPath = join(projectRoot, "specs/tla/FormalElection.cfg");
+    const cfg = Bun.file(cfgPath).text();
+    rmSync(cfgPath);
+    expect(resolveActivationJudgment(host)).toEqual({
+      kind: "not-ready",
+      reason: "declared target FormalElection is missing its cfg",
+    });
+    expect(recordActivationVerdict(host)).toBe(false);
+
+    writeFile(cfgPath, await cfg);
+    expect(resolveActivationJudgment(host).kind).toBe("current");
   });
 });

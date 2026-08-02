@@ -40,6 +40,7 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
@@ -65,6 +66,8 @@ function makeHost(composed: boolean): string {
   mkdirSync(h, { recursive: true });
   mkdirSync(join(root, "specs", "tla"), { recursive: true });
   writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
+  writeActivationModelMap(root);
   if (composed) {
     writeFileSync(
       join(h, ".amadeus-plugin-composition.json"),

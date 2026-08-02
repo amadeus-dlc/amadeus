@@ -40,7 +40,8 @@ The accepted JSON shape is:
   "auto-mirror": "prompt",
   "mirror-projects": [],
   "auto-solo-election": true,
-  "auto-file-findings": "prompt"
+  "auto-file-findings": "prompt",
+  "plugins": ["formal-model-check"]
 }
 ```
 
@@ -49,7 +50,9 @@ keys, non-object roots, values outside the `auto-mirror` mode set, malformed
 Project targets, and non-boolean `auto-solo-election` values. Defaults are
 `autoMirror: "prompt"`, an empty Project list, and
 `autoSoloElection: false`. `auto-file-findings` accepts the same mode set as
-`auto-mirror` and defaults to `autoFileFindings: "prompt"`.
+`auto-mirror` and defaults to `autoFileFindings: "prompt"`. `plugins` is a
+project-only, sorted unique name array and defaults to `[]`; its presence at the
+Space or Intent layer is a configuration error.
 
 ## Solo-election integration
 

@@ -4,6 +4,12 @@
 
 - 判断: Issue #2033（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み）の self-fix。利用者影響は「同じ scope を選んでも起動したハーネスによって実行ステージ列が変わる」こと — 2026-07-28 の self-feature lightening（4 ステージ SKIP 化）が `.claude` 1 面にしか着地せず、他 4 面は決定前の 18 ステージ路線のまま 4 か月運用された。公開契約の破壊的変更はなく、是正は決定済みの姿へ 4 面を揃える止血と、面間差分を検出する再発防止に閉じる。業務構造の変化は患部外（#2017 リネーム等）のみで、`architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 
+## 2026-08-02 差分更新 — Issue #2018
+
+- [Issue #2018](https://github.com/amadeus-dlc/amadeus/issues/2018) は Codex 固有ではなく、7 package face（Claude、Codex、Cursor、OpenCode、Kimi、Kiro CLI、Kiro IDE）を6 host directoryへ配置する plugin opt-in parity のバグである。Kiro 2 face は `.kiro` host を共有する。
+- 利用者が導入対象として選んだ plugin 名をプロジェクトに永続記録する場所がなく、authoring 済み plugin と host-local staged／recorded 状態だけでは「意図的な0件」と「opt-in 済み欠落」を区別できない。結果として Claude 以外では advisory が無音で失われる。
+- 成功境界は、desired 空の通常リポジトリでは zero-impact を維持しつつ、desired が非空なら各 face の契約に従って materialize／診断すること。OpenCode は manual-only を維持し、TLC の自動実行は行わない。
+
 ## formal-model-check 複数モデル化の業務境界（260801-tla-multi-model、履歴、observed `33e196b8`）
 
 - 判断: 同根の 2 Issue（#1920 ESTABLISHED_WITH_REFINEMENTS / #1921 ESTABLISHED、クロスレビュー成立済み）を 1 intent で扱う self-feature。model-map v2 は複数モデルを登録できるが実行・照合・CI が FormalElection 固定のため、MirrorLifecycle を恒常 CI ジョブにできず（#1920）、MirrorLifecycleCore.tla 等の補助モジュールを identity pin に載せられない（#1921）。利用者影響は formal-model-check の検証対象が選挙モデル 1 本に閉じること。公開契約の破壊的変更はなく、aux は optional 追加で既存 identity 値を不変に保てる。
