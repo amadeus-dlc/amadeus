@@ -6,6 +6,7 @@ import {
   executeCiModelCheckAcceptance,
   type CiAcceptancePort,
 } from "../../plugins/formal-model-check/tools/ci-model-check-runner.ts";
+import type { CiModelTarget } from "../../plugins/formal-model-check/tools/ci-model-check-domain.ts";
 import {
   beginModelCheckArtifacts,
   publishModelCheckArtifacts,
@@ -20,6 +21,20 @@ import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/
 
 const roots: string[] = [];
 const HEAD = "a".repeat(40);
+const MODELS: readonly CiModelTarget[] = [
+  {
+    name: "FormalElection",
+    modelPath: "specs/tla/FormalElection.tla",
+    cfgPath: "specs/tla/FormalElection.cfg",
+    layer: "frozen",
+  },
+  {
+    name: "MirrorLifecycle",
+    modelPath: "specs/tla/MirrorLifecycle.tla",
+    cfgPath: "specs/tla/MirrorLifecycle.cfg",
+    layer: "verified-source",
+  },
+];
 
 afterEach(() => {
   roots.splice(0).forEach((root) => {
@@ -31,9 +46,9 @@ function successfulPort(failAt?: number): CiAcceptancePort {
   let call = 0;
   return {
     bootstrap: async () => ({ ok: true, value: undefined }),
-    run: async ({ outDir, kind, index }) => {
+    run: async ({ outDir, kind, index, model }) => {
       call += 1;
-      const runId = `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+      const runId = `00000000-0000-4000-8000-${String(call).padStart(12, "0")}`;
       if (call === failAt) {
         return {
           ok: false,
@@ -62,10 +77,11 @@ function successfulPort(failAt?: number): CiAcceptancePort {
       return {
         ok: true,
         value: {
+          model: model.name,
           kind,
           index,
           runId,
-          artifactDirectory: `runs/${kind}-${index}`,
+          artifactDirectory: `${model.name}/runs/${kind}-${index}`,
           outcome: "NOT_DETECTED",
           exitCode: 0,
           cliMs: 100_000,
@@ -85,6 +101,14 @@ function successfulPort(failAt?: number): CiAcceptancePort {
             containerName: `amadeus-tlc-${runId}`,
             remainingContainers: 0,
             forced: false,
+          },
+          stats: {
+            model: model.name,
+            completionMarker: true,
+            generatedStates: model.name === "MirrorLifecycle" ? 208_628 : 1,
+            distinctStates: model.name === "MirrorLifecycle" ? 89_099 : 1,
+            statesLeftOnQueue: 0,
+            searchDepth: model.name === "MirrorLifecycle" ? 18 : 1,
           },
         },
       };
@@ -111,14 +135,18 @@ describe("CI model-check acceptance runner", () => {
     mkdirSync(evidenceRoot);
 
     const result = await executeCiModelCheckAcceptance(
-      { evidenceRoot, runtime: runtime() },
+      { evidenceRoot, runtime: runtime(), models: MODELS },
       successfulPort(),
     );
 
     expect(result).toEqual({ exitCode: 0, reason: "NOT_DETECTED" });
     const acceptance = JSON.parse(readFileSync(join(evidenceRoot, "acceptance.json"), "utf8"));
-    expect(acceptance.runs).toHaveLength(6);
-    expect(acceptance.runs.map((run: { kind: string }) => run.kind)).toEqual([
+    expect(acceptance.runs).toHaveLength(12);
+    expect(acceptance.runs.map((run: { model: string }) => run.model)).toEqual([
+      ...Array(6).fill("FormalElection"),
+      ...Array(6).fill("MirrorLifecycle"),
+    ]);
+    expect(acceptance.runs.slice(0, 6).map((run: { kind: string }) => run.kind)).toEqual([
       "warm-up", "measured", "measured", "measured", "measured", "measured",
     ]);
     expect(JSON.parse(readFileSync(join(evidenceRoot, "verification.json"), "utf8")).pass).toBe(true);
@@ -130,7 +158,7 @@ describe("CI model-check acceptance runner", () => {
     const bootstrapRoot = join(root, "bootstrap");
     mkdirSync(bootstrapRoot);
     const bootstrap = await executeCiModelCheckAcceptance(
-      { evidenceRoot: bootstrapRoot, runtime: runtime() },
+      { evidenceRoot: bootstrapRoot, runtime: runtime(), models: MODELS },
       {
         bootstrap: async () => ({ ok: false, error: { code: "DOCKER", detail: "daemon unavailable" } }),
         run: successfulPort().run,
@@ -142,10 +170,12 @@ describe("CI model-check acceptance runner", () => {
     const runRoot = join(root, "run");
     mkdirSync(runRoot);
     const runFailure = await executeCiModelCheckAcceptance(
-      { evidenceRoot: runRoot, runtime: runtime() },
+      { evidenceRoot: runRoot, runtime: runtime(), models: MODELS },
       successfulPort(2),
     );
     expect(runFailure.exitCode).toBe(2);
-    expect(JSON.parse(readFileSync(join(runRoot, "verification.json"), "utf8")).pass).toBe(false);
+    const verification = JSON.parse(readFileSync(join(runRoot, "verification.json"), "utf8"));
+    expect(verification.pass).toBe(false);
+    expect(verification.model).toBe("FormalElection");
   });
 });

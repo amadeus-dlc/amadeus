@@ -3,6 +3,40 @@ import { FIXED_DOCKER_IMAGE } from "./tlc-spawn-planner.ts";
 import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "./tlc-toolchain.ts";
 
 export type CiRunKind = "warm-up" | "measured";
+export type CiVerificationLayer = "frozen" | "verified-source";
+
+export interface CiModelTarget {
+  readonly name: string;
+  readonly modelPath: string;
+  readonly cfgPath: string;
+  readonly layer: CiVerificationLayer;
+}
+
+interface VerifiedModelTargetSource {
+  readonly model: {
+    readonly name: string;
+    readonly model: { readonly path: string };
+    readonly cfg: { readonly path: string };
+  };
+}
+
+export function ciModelTargetFor(source: VerifiedModelTargetSource): CiModelTarget {
+  return {
+    name: source.model.name,
+    modelPath: source.model.model.path,
+    cfgPath: source.model.cfg.path,
+    layer: source.model.name === "FormalElection" ? "frozen" : "verified-source",
+  };
+}
+
+export interface ModelTlcEvidence {
+  readonly model: string;
+  readonly completionMarker: boolean;
+  readonly generatedStates: number | null;
+  readonly distinctStates: number | null;
+  readonly statesLeftOnQueue: number | null;
+  readonly searchDepth: number | null;
+}
 
 export interface CiDockerCommandReceipt {
   imageRef: string;
@@ -17,16 +51,18 @@ export interface CiCleanupReceipt {
 }
 
 export interface CiModelCheckRunEvidence {
-  kind: CiRunKind;
-  index: number;
-  runId: string;
-  artifactDirectory: string;
-  outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR";
-  exitCode: 0 | 1 | 2;
-  cliMs: number;
-  spawnMs: number;
-  docker: CiDockerCommandReceipt;
-  cleanup: CiCleanupReceipt;
+  readonly model: string;
+  readonly kind: CiRunKind;
+  readonly index: number;
+  readonly runId: string;
+  readonly artifactDirectory: string;
+  readonly outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR";
+  readonly exitCode: 0 | 1 | 2;
+  readonly cliMs: number;
+  readonly spawnMs: number;
+  readonly docker: CiDockerCommandReceipt;
+  readonly cleanup: CiCleanupReceipt;
+  readonly stats: ModelTlcEvidence;
 }
 
 export interface CiAcceptanceEvidence {
@@ -112,14 +148,16 @@ function validateDockerReceipt(run: CiModelCheckRunEvidence): Result<void, strin
 
 function validateRun(
   run: CiModelCheckRunEvidence,
+  expectedModel: string,
   expectedKind: CiRunKind,
   expectedIndex: number,
 ): Result<void, string> {
   if (
-    run.kind !== expectedKind
+    run.model !== expectedModel
+    || run.kind !== expectedKind
     || run.index !== expectedIndex
     || !UUID.test(run.runId)
-    || run.artifactDirectory !== `runs/${expectedKind}-${expectedIndex}`
+    || run.artifactDirectory !== `${expectedModel}/runs/${expectedKind}-${expectedIndex}`
   ) {
     return invalid(`run ${expectedIndex} identity or ordering is invalid`);
   }
@@ -131,6 +169,17 @@ function validateRun(
   }
   if (!Number.isFinite(run.spawnMs) || run.spawnMs < 0 || run.spawnMs >= 180_000) {
     return invalid(`run ${expectedIndex} spawn duration is outside the 180 second budget`);
+  }
+  if (run.stats.model !== expectedModel || !run.stats.completionMarker) {
+    return invalid(`run ${expectedIndex} TLC completion evidence is invalid`);
+  }
+  if (expectedModel === "MirrorLifecycle" && expectedKind === "measured" && (
+    run.stats.generatedStates !== 208_628
+    || run.stats.distinctStates !== 89_099
+    || run.stats.statesLeftOnQueue !== 0
+    || run.stats.searchDepth !== 18
+  )) {
+    return invalid(`run ${expectedIndex} MirrorLifecycle statistics drifted`);
   }
   return validateDockerReceipt(run);
 }
@@ -155,8 +204,8 @@ export function validateCiAcceptanceEvidence(
   ) {
     return invalid("runtime receipt is incomplete");
   }
-  if (evidence.runs.length !== 6) {
-    return invalid("acceptance requires one warm-up and five measured runs");
+  if (evidence.runs.length === 0 || evidence.runs.length % 6 !== 0) {
+    return invalid("acceptance requires six runs for every selected model");
   }
   const expected = [
     ["warm-up", 0],
@@ -167,12 +216,25 @@ export function validateCiAcceptanceEvidence(
     ["measured", 5],
   ] as const;
   const seen = new Set<string>();
-  for (let index = 0; index < expected.length; index += 1) {
-    const run = evidence.runs[index]!;
-    if (seen.has(run.runId)) return invalid(`run ${run.index} reused a runId`);
-    seen.add(run.runId);
-    const verified = validateRun(run, expected[index]![0], expected[index]![1]);
-    if (!verified.ok) return verified;
+  const modelNames = new Set<string>();
+  for (let offset = 0; offset < evidence.runs.length; offset += expected.length) {
+    const expectedModel = evidence.runs[offset]!.model;
+    if (expectedModel.length === 0 || modelNames.has(expectedModel)) {
+      return invalid("acceptance model ordering is invalid");
+    }
+    modelNames.add(expectedModel);
+    for (let index = 0; index < expected.length; index += 1) {
+      const run = evidence.runs[offset + index]!;
+      if (seen.has(run.runId)) return invalid(`run ${run.index} reused a runId`);
+      seen.add(run.runId);
+      const verified = validateRun(
+        run,
+        expectedModel,
+        expected[index]![0],
+        expected[index]![1],
+      );
+      if (!verified.ok) return verified;
+    }
   }
   return { ok: true, value: undefined };
 }

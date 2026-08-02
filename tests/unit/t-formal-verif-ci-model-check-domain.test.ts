@@ -11,12 +11,14 @@ import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/
 const SHA = "a".repeat(64);
 
 function run(kind: "warm-up" | "measured", index: number) {
+  const model = "FormalElection";
   const runId = `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
   return {
+    model,
     kind,
     index,
     runId,
-    artifactDirectory: `runs/${kind}-${index}`,
+    artifactDirectory: `${model}/runs/${kind}-${index}`,
     outcome: "NOT_DETECTED" as const,
     exitCode: 0 as const,
     cliMs: 100_000,
@@ -40,6 +42,14 @@ function run(kind: "warm-up" | "measured", index: number) {
       exitCode: 0,
     },
     cleanup: { containerName: `amadeus-tlc-${runId}`, remainingContainers: 0, forced: false },
+    stats: {
+      model,
+      completionMarker: true,
+      generatedStates: 1,
+      distinctStates: 1,
+      statesLeftOnQueue: 0,
+      searchDepth: 1,
+    },
   };
 }
 
@@ -134,13 +144,13 @@ describe("CI model-check acceptance domain", () => {
       (value) => { value.runtime.githubRunAttempt = ""; },
       (value) => { value.runtime.headSha = "not-a-sha"; },
       (value) => { value.runs.pop(); },
-      (value) => { value.runs[1]!.runId = value.runs[0]!.runId; },
-      (value) => { value.runs[0]!.kind = "measured"; },
-      (value) => { value.runs[0]!.runId = "invalid"; },
-      (value) => { value.runs[0]!.artifactDirectory = "runs/other"; },
-      (value) => { value.runs[0]!.outcome = "DETECTED"; value.runs[0]!.exitCode = 1; },
-      (value) => { value.runs[0]!.cliMs = -1; },
-      (value) => { value.runs[0]!.spawnMs = -1; },
+      (value) => { (value.runs[1] as any).runId = value.runs[0]!.runId; },
+      (value) => { (value.runs[0] as any).kind = "measured"; },
+      (value) => { (value.runs[0] as any).runId = "invalid"; },
+      (value) => { (value.runs[0] as any).artifactDirectory = "runs/other"; },
+      (value) => { (value.runs[0] as any).outcome = "DETECTED"; (value.runs[0] as any).exitCode = 1; },
+      (value) => { (value.runs[0] as any).cliMs = -1; },
+      (value) => { (value.runs[0] as any).spawnMs = -1; },
       (value) => { value.runs[0]!.docker.exitCode = 1; },
     ];
     for (const mutate of mutations) {
