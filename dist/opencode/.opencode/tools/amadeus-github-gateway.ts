@@ -41,6 +41,7 @@ import type {
   MirrorGitHubGateway,
   MirrorMutationPermit,
 } from "./amadeus-mirror-types.ts";
+import type { MirrorLabelGateway } from "./amadeus-mirror-labels.ts";
 import type {
   CreateGitHubIssueInput,
   GitHubGatewayOutcome,
@@ -950,4 +951,84 @@ export function createFindingGitHubGatewayAdapter(
   runner: MirrorProcessRunner,
 ): FindingGitHubGateway {
   return createCombinedGitHubGateway(runner);
+}
+
+// --- Label sync gateway (#1990) ----------------------------------------------
+// Deliberately outside the permit-gated mirror mutation surface: label sync
+// touches the intent's RELATED issues, which never carry a mirror permit.
+
+export function addLabelsArgv(
+  repo: GitHubRepository,
+  issueNumber: number,
+  labels: readonly string[],
+): readonly string[] {
+  const args: string[] = [
+    "api",
+    "--include",
+    "--method",
+    "POST",
+    `${issuesPath(repo)}/${issueNumber}/labels`,
+  ];
+  for (const label of labels) args.push("-f", `labels[]=${label}`);
+  return args;
+}
+
+export function removeLabelArgv(
+  repo: GitHubRepository,
+  issueNumber: number,
+  label: string,
+): readonly string[] {
+  return [
+    "api",
+    "--include",
+    "--method",
+    "DELETE",
+    `${issuesPath(repo)}/${issueNumber}/labels/${encodeURIComponent(label)}`,
+  ];
+}
+
+// Label mutations only need the HTTP status: a successful DELETE is typically
+// `204 No Content` with an EMPTY body, which parseHttpEnvelope would reject as
+// malformed (it demands a JSON body). Scan the `--include` status lines alone.
+const LABEL_STATUS_LINE_RE = /^HTTP\/[0-9.]+ (\d{3})/gm;
+
+function labelHttpStatuses(stdout: Buffer): readonly number[] {
+  const text = stdout.toString("latin1");
+  if (!text.startsWith("HTTP/")) return [];
+  return [...text.matchAll(LABEL_STATUS_LINE_RE)].map((match) => Number(match[1]));
+}
+
+export function createMirrorLabelGateway(
+  runner: MirrorProcessRunner,
+): MirrorLabelGateway {
+  const call = async (
+    args: readonly string[],
+    okStatuses: ReadonlySet<number>,
+  ): Promise<GitHubGatewayOutcome<void>> => {
+    const result = await runner.run({ executable: "gh", args, profile: "single" });
+    if (result.kind !== "exited") {
+      return processFailure(result, "mutation");
+    }
+    const statuses = labelHttpStatuses(result.stdout);
+    if (statuses.length === 0) {
+      return failure("invalid-response", false, "outcome-unknown", result.exitCode, null);
+    }
+    const bad = statuses.find((status) => status < 200 || status >= 300);
+    if (bad !== undefined) {
+      if (okStatuses.has(bad)) return ok<void>(undefined);
+      const { classification, retryable } = classifyHttpStatus(bad);
+      return failure(classification, retryable, "outcome-unknown", result.exitCode, bad);
+    }
+    return ok<void>(undefined);
+  };
+  return {
+    addIssueLabels(repository, issueNumber, labels) {
+      return call(addLabelsArgv(repository, issueNumber, labels), new Set());
+    },
+    // 404 = the label (or its assignment) is already gone; removal is
+    // idempotent, so absence counts as success.
+    removeIssueLabel(repository, issueNumber, label) {
+      return call(removeLabelArgv(repository, issueNumber, label), new Set([404]));
+    },
+  };
 }
