@@ -669,7 +669,8 @@ export function isRecordCurrent(hostRoot: string, deps: PluginCliDeps): boolean 
   if (selection.kind === "invalid") return false;
   const backend = deps.makeBackend(hostRoot);
   const record = backend.readComposition();
-  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
+  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot))
+    .filter((plugin) => !selection.explicit || selection.plugins.includes(plugin.name));
   const valid = discovered.filter((d): d is DiscoveredPlugin => d.manifest !== null);
   if (selection.explicit) {
     if (selection.plugins.length !== valid.length) return false;
@@ -926,7 +927,8 @@ function handleCompose(
     return { kind: "noop", reason: "record-current" };
   }
   const backend = deps.makeBackend(hostRoot);
-  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
+  const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot))
+    .filter((plugin) => !selection.explicit || selection.plugins.includes(plugin.name));
   const record = backend.readComposition();
   const stale = discovered
     .filter((d): d is DiscoveredPlugin => d.manifest !== null)

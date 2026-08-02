@@ -455,8 +455,9 @@ export function recordActivationVerdict(
   now: string = new Date().toISOString(),
   fs: ActivationFs = defaultActivationFs,
 ): boolean {
-  if (resolveActivationJudgment(hostRoot, globs, fs).kind === "not-ready") return false;
-  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
+  const specRoot = specRootForHost(hostRoot);
+  if (activationReadiness(specRoot, fs).kind === "not-ready") return false;
+  const current = computeSpecHash(specRoot, globs, fs);
   if (!current.ok) return false;
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);
   return true;

@@ -269,7 +269,7 @@ describe("t381 both emit paths carry the advisory", () => {
     handleNext(["--single", "--stage", slug], proj);
     const single = JSON.parse(logs.join("\n").trim()) as { advisories?: unknown };
 
-    expect(main.advisories).toBeDefined();
+    expect(Array.isArray(main.advisories) ? main.advisories.length : 0).toBeGreaterThan(0);
     expect(JSON.stringify(single.advisories)).toBe(JSON.stringify(main.advisories));
   });
 

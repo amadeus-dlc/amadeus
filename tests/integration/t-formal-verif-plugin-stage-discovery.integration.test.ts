@@ -230,6 +230,14 @@ describe("compileStageGraph plugin merge (U2)", () => {
     expect(json).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
   });
 
+  test("a native OpenCode plugin file does not require an Amadeus composition record", () => {
+    const host = freshHost();
+    mkdirSync(join(host, "plugins"), { recursive: true });
+    writeFileSync(join(host, "plugins", "amadeus-opencode-plugin.ts"), "export default () => ({});\n");
+    const { json } = compileWithPluginHost(host);
+    expect(json).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
+  });
+
   test("injecting a dummy plugin makes the output differ (falling proof of live discovery)", () => {
     const empty = freshHost();
     const withPlugin = freshHost();

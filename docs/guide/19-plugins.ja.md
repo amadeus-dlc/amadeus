@@ -109,7 +109,7 @@ verb は次のとおりです。
 | verb | 動作 | exit |
 | --- | --- | --- |
 | `compose [--if-stale] [--project-root <dir>]` | 全インストール済みプラグインを単一のアトミックトランザクションとしてホストへ適用。`--if-stale` は合成レコードが既に最新なら即座に戻る no-op 高速路。 | 成功・no-op で `0`、適用失敗で `1` |
-| `doctor [--project-root <dir>]` | 各 compose 済みプラグインの状態(`ok`・`drift`・`recovery-pending`)を表示。 | 健全なら `0`、degraded / recovery-pending があれば `1` |
+| `doctor [--project-root <dir>]` | project の選択・供給元・host staging・合成を比較し、`source-missing`・`not-installed`・`stale`・`current` を表示。 | 健全なら `0`、degraded / recovery-pending があれば `1` |
 | `drop <plugin-name> [--project-root <dir>]` | 1 プラグインの所有ファイルを除去し、残りのプラグインから共有ファイルを再構築。 | 成功で `0`、拒否・失敗で `1` |
 | `install <path> [--force] [--project-root <dir>]` | `<path>` のプラグインソースフォルダをホストの discovery ルートへ staging し、そのまま compose まで 1 操作で実行。`--force` は同名で staging 済みの *別* プラグインを置換します。 | 成功で `0`、拒否・失敗で `1` |
 | `status [--project-root <dir>]` | 件数(installed・composed・監査 revision)を表示。 | `0` |
@@ -151,7 +151,7 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 | `opencode` | JavaScript plugin の `session.created` event | 配線あり |
 
 OpenCode は shell hook ではなく公式 JavaScript/TypeScript plugin event を使います。既存の
-`.opencode/plugin/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
+`.opencode/plugins/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
 だけを再調整します。失敗は他 adapter と同様に可視の非ブロッキング警告になります。
 
 ---

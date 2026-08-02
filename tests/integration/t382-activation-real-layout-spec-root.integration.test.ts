@@ -26,8 +26,11 @@ import { dirname, join } from "node:path";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_STATE_FILE,
+  ACTIVATION_WATCH_GLOBS,
+  type ActivationFs,
   activationAdvisoriesForHost,
   computeSpecHash,
+  defaultActivationFs,
   recordActivationVerdict,
   resolveActivationJudgment,
   specRootForHost,
@@ -165,19 +168,38 @@ describe("activation spec root on the real deployment layout", () => {
   test("zero declarations and an invalid map are not-ready and never overwrite a past verdict", async () => {
     expect(recordActivationVerdict(host)).toBe(true);
     const statePath = join(host, ACTIVATION_STATE_FILE);
-    const past = Bun.file(statePath).text();
+    const past = await Bun.file(statePath).text();
     writeFile(
       join(projectRoot, "specs/tla/model-map.json"),
       JSON.stringify({ schemaVersion: 2, models: [] }),
     );
     expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
     expect(recordActivationVerdict(host)).toBe(false);
-    expect(Bun.file(statePath).text()).resolves.toBe(await past);
+    await expect(Bun.file(statePath).text()).resolves.toBe(past);
 
     writeFile(join(projectRoot, "specs/tla/model-map.json"), "{not-json");
     expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
     expect(recordActivationVerdict(host)).toBe(false);
-    expect(Bun.file(statePath).text()).resolves.toBe(await past);
+    await expect(Bun.file(statePath).text()).resolves.toBe(past);
+  });
+
+  test("recording a verdict hashes each declared asset once after readiness", () => {
+    const reads = new Map<string, number>();
+    const countingFs: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        reads.set(path, (reads.get(path) ?? 0) + 1);
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+    expect(recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-08-02T00:00:00Z", countingFs)).toBe(true);
+    expect(reads.get(join(projectRoot, "specs/tla/model-map.json"))).toBe(2);
+    for (const relative of [
+      "specs/tla/FormalElection.tla",
+      "specs/tla/FormalElection.cfg",
+    ]) {
+      expect(reads.get(join(projectRoot, relative))).toBe(1);
+    }
   });
 
   test("add, delete, and restore a target preserve the meaning of a past successful verdict", async () => {

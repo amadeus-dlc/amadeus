@@ -135,7 +135,7 @@ describe("t413 startup performance regression budget on one runner", () => {
     const firstInstallBaselineMs: number[] = [];
     const firstInstallAutoMs: number[] = [];
     for (let index = 0; index < 30; index += 1) {
-      const baseline = projectHost(false, false).host;
+      const baseline = freshRoot("amadeus-t413-perf-install-");
       firstInstallBaselineMs.push(elapsed(() => {
         expect(runPluginCli(["install", FIXTURE, "--project-root", baseline], injected).kind).toBe("installed");
         expect(runPluginCli(["compose", "--if-stale", "--project-root", baseline], injected).kind).toBe("noop");
@@ -143,6 +143,7 @@ describe("t413 startup performance regression budget on one runner", () => {
       const automatic = projectHost(true, true).host;
       firstInstallAutoMs.push(elapsed(() => {
         expect(runPluginCli(["compose", "--if-stale", "--project-root", automatic], injected).kind).toBe("composed");
+        expect(runPluginCli(["compose", "--if-stale", "--project-root", automatic], injected).kind).toBe("noop");
       }));
     }
 

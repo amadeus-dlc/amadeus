@@ -39,7 +39,12 @@ function freshProject(face: Face, selected = true): string {
   const project = mkdtempSync(join(tmpdir(), `amadeus-t413-${face.name}-`));
   projects.push(project);
   for (const host of HOSTS) {
-    const dist = host === ".kiro" ? face.dist.startsWith("kiro") ? face.dist : "kiro" : FACES.find((f) => f.host === host)?.dist;
+    let dist: string | undefined;
+    if (host === ".kiro") {
+      dist = face.dist.startsWith("kiro") ? face.dist : "kiro";
+    } else {
+      dist = FACES.find((candidate) => candidate.host === host)?.dist;
+    }
     if (dist === undefined) throw new Error(`no dist tree for ${host}`);
     cpSync(join(REPO_ROOT, "dist", dist, host), join(project, host), { recursive: true });
   }
@@ -56,7 +61,7 @@ async function fire(face: Face, project: string): Promise<{ stdout: string; stde
   const host = join(project, face.host);
   if (face.kind === "opencode") {
     const program = "const loaded = await import(process.argv[1]); const plugin = await loaded.default({worktree: process.argv[2]}); await plugin.event({event:{type:'session.created'}});";
-    const result = spawnSync("bun", ["-e", program, join(host, "plugin", "amadeus-opencode-plugin.ts"), project], {
+    const result = spawnSync("bun", ["-e", program, join(host, "plugins", "amadeus-opencode-plugin.ts"), project], {
       cwd: project,
       encoding: "utf-8",
       timeout: 120_000,

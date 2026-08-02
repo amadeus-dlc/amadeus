@@ -3,7 +3,7 @@
 // core, byte-shared with every other harness).
 //
 // OpenCode has no shell-command hook shell — its extension surface is JS
-// plugins loaded from `.opencode/plugin/`. This plugin owns exactly one seam:
+// plugins loaded from `.opencode/plugins/`. This plugin owns exactly one seam:
 // it converts OpenCode's `chat.message` payload into the canonical
 // HostSessionCapability union and hands it to the canonical mint. It performs
 // NO authorization of its own and appends NO audit entry of its own.

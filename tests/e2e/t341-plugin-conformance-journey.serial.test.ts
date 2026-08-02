@@ -35,7 +35,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PLUGIN_SOURCE_DIR_NAME } from "../../packages/framework/core/tools/amadeus-plugin.ts";
@@ -59,12 +59,22 @@ let journeyMs = 0;
 
 type Run = { status: number | null; stdout: string; stderr: string };
 
+function subprocessEnv(extraEnv: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  // Other Bun test files temporarily set these compiler seams. Do not let a
+  // parallel test redirect this journey's isolated subprocesses.
+  delete env.AMADEUS_PLUGINS_HOST_ROOT;
+  delete env.AMADEUS_STAGE_GRAPH;
+  delete env.AMADEUS_STAGES_DIR;
+  return { ...env, ...extraEnv };
+}
+
 function run(command: string, args: readonly string[], extraEnv: NodeJS.ProcessEnv = {}): Run {
   const res = spawnSync(command, [...args], {
     cwd: ws,
     encoding: "utf-8",
     timeout: 180_000,
-    env: { ...process.env, ...extraEnv },
+    env: subprocessEnv(extraEnv),
     input: "{}",
   });
   return { status: res.status, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
@@ -81,7 +91,7 @@ const cli = (...args: string[]): Run => {
       cwd: ws,
       encoding: "utf-8",
       timeout: 180_000,
-      env: { ...process.env },
+      env: subprocessEnv(),
       input: "{}",
     },
   );
@@ -91,6 +101,23 @@ const cli = (...args: string[]): Run => {
     stderr: res.stderr ?? "",
   };
 };
+
+function normalizedStageGraph(path: string): unknown {
+  const stages = JSON.parse(readFileSync(path, "utf-8")) as Array<Record<string, unknown>>;
+  return stages.map((stage) => ({
+    ...stage,
+    // Rule resolution depends on the caller's workspace context. The journey
+    // compares the compiled stage/edge surface, not that contextual projection.
+    rules_in_context: [],
+    sensors_applicable: Array.isArray(stage.sensors_applicable)
+      ? stage.sensors_applicable.map((sensor) => {
+        if (typeof sensor !== "object" || sensor === null) return sensor;
+        const row = sensor as Record<string, unknown>;
+        return typeof row.path === "string" ? { ...row, path: basename(row.path) } : row;
+      })
+      : stage.sensors_applicable,
+  }));
+}
 
 // Every path under `root` with its content digest — DIRECTORIES INCLUDED (a
 // trailing separator marks one), so empty-directory residue is visible. The
@@ -104,15 +131,14 @@ function snapshot(root: string): readonly string[] {
       if (dir === root && name.startsWith(".amadeus-plugin")) continue;
       const abs = join(dir, name);
       const rel = relative(root, abs);
-      // The graph is a derived artifact regenerated at both compose and drop.
-      // Its bytes can reflect the active intent context; assert its semantic
-      // plugin membership separately below.
-      if (rel === join("tools", "data", "stage-graph.json")) continue;
       if (statSync(abs).isDirectory()) {
         rows.push(`${rel}${sep}`);
         walk(abs);
       } else {
-        rows.push(`${rel} ${createHash("sha256").update(readFileSync(abs)).digest("hex")}`);
+        const bytes = rel === join("tools", "data", "stage-graph.json")
+          ? JSON.stringify(normalizedStageGraph(abs))
+          : readFileSync(abs);
+        rows.push(`${rel} ${createHash("sha256").update(bytes).digest("hex")}`);
       }
     }
   };
@@ -187,6 +213,7 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     );
     expect(normalizeGraph.status).toBe(0);
 
+    const baselineGraph = normalizedStageGraph(join(hostRoot, "tools", "data", "stage-graph.json"));
     const baseline = snapshot(hostRoot);
     expect(baseline.length).toBeGreaterThan(0);
 
@@ -255,12 +282,11 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     // The developer's own copy of the bundle is theirs to remove; everything
     // else must be back to bytes AND structure.
     rmSync(join(hostRoot, PLUGIN_SOURCE_DIR_NAME), { recursive: true, force: true });
+    const droppedGraph = normalizedStageGraph(join(hostRoot, "tools", "data", "stage-graph.json"));
+    expect(droppedGraph).toEqual(baselineGraph);
+    expect((droppedGraph as Array<{ slug?: string }>).some((stage) => stage.slug === PLUGIN)).toBe(false);
     expect(snapshot(hostRoot)).toEqual(baseline);
     expect(existsSync(join(hostRoot, "plugins"))).toBe(false);
-    const droppedGraph = JSON.parse(
-      readFileSync(join(hostRoot, "tools", "data", "stage-graph.json"), "utf-8"),
-    ) as Array<{ slug?: string }>;
-    expect(droppedGraph.some((stage) => stage.slug === PLUGIN)).toBe(false);
 
     journeyMs = Date.now() - startedAt;
     console.log(`t341 journey wall clock: ${(journeyMs / 1000).toFixed(2)}s`);

@@ -243,9 +243,9 @@ describe("opencode manifest — the distribution row", () => {
     expect(manifest.harnessFiles).toEqual([
       { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
       // OpenCode's extension surface is JS plugins loaded from
-      // `.opencode/plugin/`; its non-plugin helper stays off that auto-load
+      // `.opencode/plugins/`; its non-plugin helper stays off that auto-load
       // path under `.opencode/lib/` (both remain inside the harness dir).
-      { src: "plugin/amadeus-opencode-plugin.ts", dst: "plugin/amadeus-opencode-plugin.ts" },
+      { src: "plugins/amadeus-opencode-plugin.ts", dst: "plugins/amadeus-opencode-plugin.ts" },
       { src: "lib/amadeus-opencode-vocab.ts", dst: "lib/amadeus-opencode-vocab.ts" },
     ]);
   });

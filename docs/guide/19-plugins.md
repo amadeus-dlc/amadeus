@@ -116,7 +116,7 @@ The verbs are:
 | Verb | What it does | Exit |
 | --- | --- | --- |
 | `compose [--if-stale] [--project-root <dir>]` | Reconcile the current host with the project-level `plugins` selection. `--if-stale` is a no-op only when selection, supply, staging, and composition are current. | `0` on success or no-op; `1` on validation or apply failure |
-| `doctor [--project-root <dir>]` | Print each composed plugin's state (`ok`, `drift`, `recovery-pending`). | `0` when healthy; `1` when any plugin is degraded or recovery-pending |
+| `doctor [--project-root <dir>]` | Compare project selection, supply, host staging, and composition, reporting `source-missing`, `not-installed`, `stale`, or `current`. | `0` when healthy; `1` when any plugin is degraded or recovery-pending |
 | `drop <plugin-name> [--project-root <dir>]` | Remove one plugin's owned files and rebuild the shared files from the remaining plugins. | `0` on success; `1` on a rejected or failed drop |
 | `install <path> [--force] [--project-root <dir>]` | Persist the source at project `plugins/<name>/`, compose it into the current host, then commit its name to `amadeus/config.json`. A failure restores all four surfaces. | `0` on success; `1` on a rejected or failed install |
 | `status [--project-root <dir>]` | Print counts: installed, composed, and the audit revision. | `0` |
@@ -160,7 +160,7 @@ All seven packaged faces wire this trigger. Kiro CLI and Kiro IDE share one
 | `opencode` | JavaScript plugin `session.created` event | wired |
 
 OpenCode uses its official JavaScript/TypeScript plugin event rather than a
-shell hook. The existing `.opencode/plugin/amadeus-opencode-plugin.ts` handles
+shell hook. The existing `.opencode/plugins/amadeus-opencode-plugin.ts` handles
 `session.created`, reconciles only `.opencode`, and treats failure as a visible,
 non-blocking warning just like the other session-start adapters.
 

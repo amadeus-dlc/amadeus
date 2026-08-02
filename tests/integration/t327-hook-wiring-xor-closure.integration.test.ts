@@ -41,7 +41,7 @@ const WIRING_SITE: Record<PackageHarness, string> = {
   kimi: "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
   kiro: "packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts",
   "kiro-ide": "packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts",
-  opencode: "packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts",
+  opencode: "packages/framework/harness/opencode/plugins/amadeus-opencode-plugin.ts",
 };
 
 const HARNESS_DIR: Record<PackageHarness, string> = {
@@ -86,7 +86,7 @@ describe("t327 hook wiring XOR closure (U4)", () => {
     const oc = resolveFaceDisposition("opencode");
     expect(oc.kind).toBe("wired");
     const src = readFileSync(
-      join(REPO_ROOT, "packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts"),
+      join(REPO_ROOT, "packages/framework/harness/opencode/plugins/amadeus-opencode-plugin.ts"),
       "utf-8",
     );
     expect(src.includes('handlePluginCli(["compose", "--if-stale"')).toBe(true);

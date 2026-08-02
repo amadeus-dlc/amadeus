@@ -46,13 +46,13 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 | `amadeus-stop.ts` | Stop | Project-wide (settings.json) | (empty) | **Flow-altering.** Enforce the forwarding loop on turn-end: run `amadeus-orchestrate next`; on `done` or `parked` allow the stop, on a pending directive block the stop and inject the next move back via `reason`. Allows the stop (human-wait carve-out) when the current stage is awaiting approval (`[?]`), being revised (`[R]`), `[-]` in-progress with an unanswered question in its `<slug>-questions.md`, or the ending turn was conversational (the human's last prompt was answered with no workflow-engine call, read from the harness transcript) - the last two suppressed under autonomous Construction. Recursion-bounded (no-progress counter + `stop_hook_active` under `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; default 2 in an interactive run and 8 under autonomous Construction). No-op outside an AIDLC workflow |
 | `amadeus-session-start.ts` | SessionStart | Project-wide (settings.json) | (empty) | Inject workflow context on session resume |
 | `amadeus-plugin-compose.ts` | SessionStart | Project-wide (settings.json) | (empty) | Auto-compose opted-in plugins into the host (`amadeus-plugin.ts compose --if-stale`); non-blocking, no-op when the composition record is current |
-
-OpenCode exposes the equivalent lifecycle through its JavaScript plugin API,
-not this shell-hook table. `.opencode/plugin/amadeus-opencode-plugin.ts` handles
-`session.created` and invokes the same `compose --if-stale` operation for
-`.opencode` only. All adapters warn on failure without blocking the session.
 | `amadeus-session-end.ts` | SessionEnd | Project-wide (settings.json) | (empty) | Emit `SESSION_ENDED` audit event on graceful exit |
 | `amadeus-statusline.ts` | statusLine | Project-wide (settings.json) | -- | Show real-time progress in terminal |
+
+OpenCode exposes the equivalent lifecycle through its JavaScript plugin API,
+not this shell-hook table. `.opencode/plugins/amadeus-opencode-plugin.ts` handles
+`session.created` and invokes the same `compose --if-stale` operation for
+`.opencode` only. All adapters warn on failure without blocking the session.
 
 ### Shared Characteristics
 

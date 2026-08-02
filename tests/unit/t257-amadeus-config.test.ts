@@ -197,6 +197,15 @@ describe("t257 pure config rejection", () => {
     }
   });
 
+  test("a project-only plugins issue does not hide sibling layer issues", () => {
+    const result = parseAmadeusConfigLayers([
+      present("space", { "auto-mirror": true, plugins: ["formal-model-check"] }),
+    ]);
+    expect(result.kind).toBe("invalid");
+    if (result.kind !== "invalid") return;
+    expect(result.issues.map((issue) => issue.key)).toEqual(["auto-mirror", "plugins"]);
+  });
+
   test("rejects an invalid auto-file-findings value without coercion", () => {
     expect(
       parseAmadeusConfigLayers([

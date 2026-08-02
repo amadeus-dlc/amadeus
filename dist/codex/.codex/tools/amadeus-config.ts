@@ -89,7 +89,7 @@ export type AmadeusConfig = Readonly<{
   projects: readonly MirrorProjectTarget[];
   autoSoloElection: boolean;
   autoFileFindings: MirrorMode;
-  plugins?: readonly string[];
+  plugins: readonly string[];
 }>;
 
 export type AmadeusConfigLayerInput = Readonly<{
@@ -592,20 +592,17 @@ function mergeConfigLayer(
   resolved: ResolvedLayerValues,
 ): { issues: AmadeusConfigIssue[]; contributed: boolean } {
   const classified = classifyRawValue(layer.rawValue);
-  if (layer.layer !== "global" && classified.plugins !== undefined) {
-    return {
-      issues: [{
-        kind: "invalid-value",
-        layer: layer.layer,
-        path: layer.path,
-        key: "plugins",
-        actualType: "project-only key",
-        expected: "plugins may be configured only in amadeus/config.json",
-      }],
-      contributed: false,
-    };
-  }
   const issues = layerConfigIssues(layer, classified);
+  if (layer.layer !== "global" && classified.plugins !== undefined) {
+    issues.push({
+      kind: "invalid-value",
+      layer: layer.layer,
+      path: layer.path,
+      key: PLUGINS_KEY,
+      actualType: "project-only key",
+      expected: "plugins may be configured only in amadeus/config.json",
+    });
+  }
   return {
     issues,
     contributed: issues.length === 0 && mergeLayerValues(resolved, classified),

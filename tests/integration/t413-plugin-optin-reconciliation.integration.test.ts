@@ -147,6 +147,27 @@ describe("t413 project opt-in reconciliation", () => {
     expect(readFileSync(join(project, "amadeus", "config.json"))).toEqual(configBefore);
   });
 
+  test("explicit selection ignores valid residual staging that was not opted in", () => {
+    const residual = "residual-plugin";
+    writeFixturePlugin(residual);
+    copyPluginSource(
+      join(project, "plugins", residual),
+      join(host, ".amadeus-plugin-src", residual),
+      () => {},
+    );
+
+    const first = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
+    expect(first.kind).toBe("composed");
+    const composition = createNodeBackend(host).readComposition();
+    expect(composition.plugins.has(PLUGIN)).toBe(true);
+    expect(composition.plugins.has(residual)).toBe(false);
+    expect(existsSync(join(host, ".amadeus-plugin-src", residual, "plugin.json"))).toBe(true);
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps())).toEqual({
+      kind: "noop",
+      reason: "record-current",
+    });
+  });
+
   test("a changed project source is restaged and recomposed", () => {
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
     const sourceTool = join(project, "plugins", PLUGIN, "tools", "canonical.ts");

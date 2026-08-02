@@ -46,13 +46,13 @@
 | `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 後の2つは自律的Constructionでは抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
 | `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
 | `amadeus-plugin-compose.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | オプトインされたプラグインをホストへ自動合成する(`amadeus-plugin.ts compose --if-stale`)。非ブロッキングで、合成レコードが最新の場合は無操作 |
-
-OpenCode の同等 lifecycle は shell hook ではなく JavaScript plugin API にあります。
-`.opencode/plugin/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
-だけへ同じ `compose --if-stale` を呼びます。全 adapter は失敗を警告しつつ session を
-ブロックしません。
 | `amadeus-session-end.ts` | SessionEnd | プロジェクト全体 (settings.json) | (空) | 正常終了時に `SESSION_ENDED` 監査イベントを発行する |
 | `amadeus-statusline.ts` | statusLine | プロジェクト全体 (settings.json) | -- | ターミナルでリアルタイムの進捗を表示する |
+
+OpenCode の同等 lifecycle は shell hook ではなく JavaScript plugin API にあります。
+`.opencode/plugins/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
+だけへ同じ `compose --if-stale` を呼びます。全 adapter は失敗を警告しつつ session を
+ブロックしません。
 
 ### 共通の特性
 

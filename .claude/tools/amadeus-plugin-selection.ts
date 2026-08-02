@@ -60,7 +60,7 @@ export function resolvePluginSelection(hostRoot: string): PluginSelectionOutcome
     && global !== null
     && !Array.isArray(global)
     && Object.hasOwn(global, "plugins");
-  return { kind: "resolved", projectDir, plugins: outcome.config.plugins ?? [], explicit };
+  return { kind: "resolved", projectDir, plugins: outcome.config.plugins, explicit };
 }
 
 export function observePluginSelection(
