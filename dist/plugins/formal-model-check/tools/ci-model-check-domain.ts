@@ -251,6 +251,7 @@ function validateRunExecution(
   if (run.stats.model !== expectedModel || !run.stats.completionMarker) {
     return invalid(`${expectedModel} run ${expectedIndex} TLC completion evidence is invalid`);
   }
+  // TLC-measured acceptance statistics; these exact values determine pass/fail.
   if (expectedModel === "MirrorLifecycle" && expectedKind === "measured" && (
     run.stats.generatedStates !== 208_628
     || run.stats.distinctStates !== 89_099
