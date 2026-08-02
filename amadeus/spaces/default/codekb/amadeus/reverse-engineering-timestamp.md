@@ -58,6 +58,22 @@
 - 現在マーカーの降格: 直前の現在断面 `260801-kimi-bootstrap-deadlock`（observed `861688c31`）を全成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
 - Per-intent record: `re-scans/260801-tla-multi-model.md`（患部 file:line 全数・引用再確認テーブル・降格確認 grep を含む）。
 
+## 実行メタデータ（履歴: 260801-silent-drop-gate）
+
+- Date: `2026-08-02`
+- Base commit: `861688c31fd08cc0068318d71b0d5c5a87153b57`
+- Observed commit: `d72f60b5a81fc6e45f99431d61b6561e91b2fc37`
+- Distance: `54 commits`
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`
+- Focus: Issue #1979 no-silent-drop static gate。3 shape（空／ログのみ catch、成否を返す emit・Result の戻り値破棄、永続化を伴わない偽成功）、ast-grep、shrink-only baseline、node-scoped exemption、#1878 `persistBlocked`、#1874 `setCheckbox` / `setStageSuffix`、#1963 回帰契約。
+- Authored scan roots: `packages/framework/core/`、`packages/framework/harness/`、`scripts/`。`dist/`、ルート生成投影、テスト fixture は除外。
+- Scan mode: Developer 委譲は2回とも成果物確定前に停滞したため、conductor が承認済みの限定範囲を observed の detached source `/tmp/amadeus-re-scan-wdyCU8/repo` で読取走査した。この偏差は探索範囲・revision を変更していないが、Developer による独立完遂ではない。
+- 判定: ast-grep は未導入。既存 `callsite-guard` / `complexity-gate` / lint job は静的 gate の実装先例。#1878 と #1874 は runtime 修正対象。#1963 は [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970)（commit `deb7b91f3`、observed の祖先）で修正済みのため再実装せず回帰契約のみ維持。
+- NFR: gate 単独15秒以内、偽陽性率5%以下、fixture 分類100%。tool／rule／baseline／exemption の欠落・不正、zero scan、partial scan は typed fail-closed。
+- Verification: Developer scan に記録された ancestor check と限定 `rg` / diff 観測を入力として Architect が主要 file:line を observed source で再読。追加の網羅探索、テスト、typecheck、lint、ast-grep prototype、性能計測は未実行。
+- Updated artifacts: `business-overview.md`、`architecture.md`、`code-structure.md`、`api-documentation.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、`re-scans/260801-silent-drop-gate.md`。
+- Per-intent record: `re-scans/260801-silent-drop-gate.md`
+
 ## 実行メタデータ（履歴: 260801-kimi-bootstrap-deadlock）
 
 - Date: `2026-08-01T12:15:00Z`

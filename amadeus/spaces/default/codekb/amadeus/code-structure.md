@@ -65,6 +65,21 @@ core の正本は `scripts/package.ts` から7 `dist` へ配布され、`promote
 - 患部 × 区間 touch 判定（`c49e385ac` → `33e196b8`）: 患部は全て `54bf1f805` で現配置へ移設された後、observed まで無変更（`git log --oneline 54bf1f805..33e196b8 -- plugins/formal-model-check specs/tla` 空）。複数モデル化が触る固定点: model-map `:204`（exactObject）/ `:52-54`（実行モデル定数）、loader `:252-275`（`:258` skip）、arm `:322-330`、toolchain `:418` / `:434-436` / `:439-440` / `:493-494` / `:515-516`、CI 直書き 3 ファイル（`node-ci-model-check-port.ts:200-202` / `run-model-check-diagnostic.ts:208-209` / `run-skeleton-ci.ts:82-83`）、source byte-pin `:118-123`、stage doc `:12` / `:33-36` / `:42-44`、`ci.yml:508-564`。
 - dist 同期面: plugin は `dist/plugins/formal-model-check/` および各ハーネス `dist/<harness>/` への投影領域（生成物、`bun scripts/package.ts` 再生成、手編集禁止）。canonical コピーは core tools のため dist 7 + self-install の再生成に連動する。
 
+## no-silent-drop の配置断面（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+| 面 | observed の所在 | 今回の意味 |
+| --- | --- | --- |
+| 既存静的 gate | `tests/callsite-guard.ts:1-205` | CLI／純粋判定／shrink-only 台帳の配置先例 |
+| fail-closed gate | `tests/complexity-gate.ts:12-24`, `:53-69` | typed failure と注入 seam の先例 |
+| blocking CI | `.github/workflows/ci.yml:93-143` | no-silent-drop step の接続先 |
+| runtime #1878 | `packages/framework/core/tools/amadeus-mirror-executor.ts:77-129`, `:171-201` | 戻り値破棄の実 callsite |
+| runtime #1874 | `packages/framework/core/tools/amadeus-lib.ts:5399-5429` | 非一致を無変更文字列へ潰す helper 2件 |
+| #1963 回帰面 | `amadeus-lib.ts:5476-5493`, `:5591-5650`; `amadeus-plugin.ts:428-452` | 既に loud outcome 化された比較対象 |
+
+走査対象は `packages/framework/core/`、`packages/framework/harness/`、`scripts/` の TypeScript 正本。`dist/`、ルートの生成投影、`tests/` fixture は除外する。gate CLI を既存 guard と同様に `tests/` へ置く場合は contributor-only で配布対象外となる。生成物でも使う要件は観測されていないため、core tool 化と全ハーネス投影は現時点の範囲外。
+
+追加される構造は、CLI adapter、3 rule、scanner、census normalizer、baseline validator、exemption validator、fixture matrix に限定する。baseline と exemption は別ファイルで保持し、どちらの update 経路も件数増加を許可しない。
+
 ## kimi bootstrap デッドロックの患部配置（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 患部: `packages/framework/core/hooks/amadeus-session-start.ts`（`:70` state-file ガード vs `:117` `writeCurrentSessionId` の順序）。認可側 `packages/framework/core/tools/amadeus-caller-authorization.ts`（`.current-session` 直読み `:96-109`）と kimi harness `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`（`isTrustedMainStop` `:372-407`、直読み `:399-403`）は reader 面。共通定義は `amadeus-lib.ts`（`CURRENT_SESSION_FILE :2152` / `readCurrentSessionId :2159` / `writeCurrentSessionId :2170` / `stateFilePath :3406`）。

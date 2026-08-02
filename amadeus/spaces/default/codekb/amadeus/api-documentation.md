@@ -29,6 +29,23 @@
 
 - 判断: 公開 CLI 契約の変更なし（`run-model-check.ts --model/--cfg/--out` は不変）。触れる内部契約は 3 点 — (1) `specs/tla/model-map.json` v2 スキーマ: `exactObject`（`amadeus-formal-verif-model-map.ts:204`）が未知キーを拒否するため aux 配列の追加はスキーマ改訂を伴う（optional 追加なら既存 identity 値は不変）。(2) identity 計算: model/cfg は domain-tagged canonical（`canonicalIdentity :33-46`）、entries は生 sha256 — aux の identity 方式の選定が契約追加点。(3) byte-pin source 契約: `run-model-check-source.ts:118-123` が実行対象を canonical U1 ソースに `sameBytes` で pin しており、複数モデル実行にはこの照合のモデル別一般化が必須（CLI 引数だけでは不可）。loader の no-arg pin（`t-formal-verif-tla-model-loader.test.ts:10-13`）の改訂は要件段で宣言（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
 
+## no-silent-drop が追加・変更する契約（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+### 観測済み契約
+
+- `tests/callsite-guard.ts:33-36` は `--check`／`--update`／`--report` を持ち、`:201-205` で measured count が許容量を超えたときだけ violation とする。
+- `tests/complexity-gate.ts:53-69` は root、baseline、tool command を環境変数で差し替えられ、missing tool と malformed baseline をテスト可能にする。
+- `setCheckbox(content, slug, state): string`（`amadeus-lib.ts:5399-5411`）と `setStageSuffix(content, slug, action): string`（`:5419-5429`）は slug 不在を表現できない。現契約は `tests/unit/t108.test.ts:207-232` と `tests/unit/t400-lib-record-path-and-field-helpers.test.ts:108-113` が無変更返却として固定している。
+- resync は `StateResyncStatus` の `section-unrecognized` と `StateResyncRun` の `invalid-graph` を first-class outcome とし、`tests/integration/t407-resync-noop-detection.test.ts:97-212` と `t411-compose-invalid-graph-visibility.test.ts:1-22` が stderr + exit 1 を固定する。
+
+### 確定した追加契約
+
+- no-silent-drop CLI は check 時に typed result を返し、違反または tool／rule／baseline／exemption の不正、zero scan、partial scan で非0 exit とする。stdout を機械可読出力に使う場合、診断は stderr に分離する。
+- rule ID は3 shape と1対1に対応する。catch exemption は非空理由を要求し、直近の catch AST node 1件だけへ作用する。ファイル単位・行範囲単位の免除は受理しない。
+- baseline update は減少のみ、exemption update は既存 node の削除・理由修正のみを許し、新規 violation を黙って承認する経路を持たない。
+- #1878 は永続化結果を消費し、失敗時に `safety-blocked` の偽成功を返さない。#1874 は `changed | not-found` 相当を表現し、mutation caller が `not-found` を loud failure として処理する。
+- #1963 は [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) の既存 contract を変更しない。
+
 ## kimi bootstrap デッドロック修正が触れる内部契約（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 公開 CLI 契約の変更なし。触れるのは内部ファイル契約1点 — `amadeus/.amadeus-sessions/.current-session` の書込みタイミング（`amadeus-session-start.ts` の state-file ガード後段 `:117` → ガード前段）。読み手側（`amadeus-caller-authorization.ts:96-109` / `amadeus-kimi-lib.ts:399-403` / `readCurrentSessionId` 経由3箇所）の契約は不変。`tests/unit/t10-hook-session-start.test.ts:211` / `:222` が現行挙動を pin しており改訂が必要（`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い要件段で宣言）。
