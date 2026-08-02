@@ -67,9 +67,9 @@ function evidenceFixture(): { root: string; registry: ReturnType<typeof emptyEvi
       runName: isComposite ? "normal" : "primary",
       testedRevision: FULL_SHA,
       command: ["bun", "test", id],
-      exitCode: isComposite ? 1 : 0,
-      verdict: isComposite ? "known-timeout" : "pass",
-      tests: [{ name: `${id}.test.ts`, status: isComposite ? "timeout" : "pass" }],
+      exitCode: 0,
+      verdict: "pass",
+      tests: [{ name: `${id}.test.ts`, status: "pass" }],
     };
   });
   const isolatedRuns = ["full-test", "coverage"].map((id) => ({
@@ -323,6 +323,22 @@ describe("repository adoption evidence registry", () => {
       const manifest = readManifest(root);
       const entry = manifest.evidence.find((candidate) => candidate.id === id) as { runs: unknown[] };
       entry.runs.pop();
+      writeManifest(root, manifest);
+      expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
+    }
+  });
+
+  test("full and coverage normal runs cannot close as known timeouts", () => {
+    for (const id of ["full-test", "coverage"] as const) {
+      const { root, registry } = evidenceFixture();
+      const manifest = readManifest(root);
+      const entry = manifest.evidence.find((candidate) => candidate.id === id) as {
+        runs: Array<{ exitCode: number; verdict: string }>;
+      };
+      if (entry.runs[0] !== undefined) {
+        entry.runs[0].exitCode = 4;
+        entry.runs[0].verdict = "known-timeout";
+      }
       writeManifest(root, manifest);
       expect(validateEvidenceRegistry(registry, FULL_SHA, root).ok).toBeFalse();
     }

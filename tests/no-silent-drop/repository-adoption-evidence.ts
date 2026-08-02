@@ -30,7 +30,7 @@ export const ADOPTION_RECEIPT_IDS = [
 
 export type AdoptionReceiptId = (typeof ADOPTION_RECEIPT_IDS)[number];
 
-type EvidenceVerdict = "pass" | "known-timeout";
+type EvidenceVerdict = "pass";
 
 type ArtifactReference = {
   readonly path: string;
@@ -178,10 +178,10 @@ function parseEvidenceRun(value: unknown, label: string, problems: string[]): Ev
   if (!Number.isInteger(value.exitCode) || (value.exitCode as number) < 0) {
     problems.push(`${label} exitCode must be a non-negative integer`);
   }
-  if (value.verdict !== "pass" && value.verdict !== "known-timeout") problems.push(`${label} verdict is invalid`);
+  if (value.verdict !== "pass") problems.push(`${label} verdict is invalid`);
   const artifact = parseArtifactReference(value.artifact, label, problems);
   if (command === undefined || typeof value.name !== "string" || !Number.isInteger(value.exitCode) ||
-    (value.verdict !== "pass" && value.verdict !== "known-timeout") || artifact === undefined) return undefined;
+    value.verdict !== "pass" || artifact === undefined) return undefined;
   return { name: value.name, command, artifact, exitCode: value.exitCode as number, verdict: value.verdict };
 }
 
@@ -232,11 +232,8 @@ function validateEntryRunShape(entry: EvidenceEntry): string[] {
   if (isolated?.name !== "isolated-known-timeouts" || isolated.exitCode !== 0 || isolated.verdict !== "pass") {
     problems.push(`evidence ${entry.id} must include a passing named isolated timeout run`);
   }
-  if (normal !== undefined && normal.verdict === "pass" && normal.exitCode !== 0) {
-    problems.push(`evidence ${entry.id} normal pass verdict requires exit 0`);
-  }
-  if (normal !== undefined && normal.verdict === "known-timeout" && normal.exitCode === 0) {
-    problems.push(`evidence ${entry.id} known-timeout verdict requires a nonzero exit`);
+  if (normal !== undefined && (normal.verdict !== "pass" || normal.exitCode !== 0)) {
+    problems.push(`evidence ${entry.id} normal run must exit 0 with pass verdict`);
   }
   return problems;
 }
@@ -247,7 +244,7 @@ function validateTestResult(value: unknown, label: string): { problems: string[]
   }
   const problems: string[] = [];
   if (typeof value.name !== "string" || value.name.length === 0) problems.push(`${label} name is invalid`);
-  if (value.status !== "pass" && value.status !== "timeout") problems.push(`${label} status is invalid`);
+  if (value.status !== "pass") problems.push(`${label} status is invalid`);
   return { problems, status: typeof value.status === "string" ? value.status : undefined };
 }
 
@@ -262,9 +259,6 @@ function validateSummaryTests(summary: Record<string, unknown>, label: string): 
   }
   if (summary.verdict === "pass" && statuses.some((status) => status !== "pass")) {
     problems.push(`${label} pass verdict contains a non-passing test`);
-  }
-  if (summary.verdict === "known-timeout" && !statuses.includes("timeout")) {
-    problems.push(`${label} known-timeout verdict has no timed out test`);
   }
   return problems;
 }
