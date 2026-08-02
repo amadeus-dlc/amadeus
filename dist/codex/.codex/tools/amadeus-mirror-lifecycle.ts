@@ -27,6 +27,14 @@ import {
   parseIssueNumber,
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
+import { createMirrorLabelGateway } from "./amadeus-github-gateway.ts";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import {
+  type MirrorLabelGateway,
+  mirrorLabelSyncPlan,
+  runMirrorLabelSync,
+} from "./amadeus-mirror-labels.ts";
+import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import {
   diagnoseMirrorProjects,
   type MirrorRepairProjectDiagnostic,
@@ -81,6 +89,7 @@ export type MirrorLifecycleRequest = Readonly<{
 
 export type MirrorLifecycleRuntime = Readonly<{
   gateway?: MirrorGitHubGateway;
+  labelGateway?: MirrorLabelGateway;
   ports?: MirrorStateStorePorts;
   now?: () => string;
   newOperationId?: () => string;
@@ -246,9 +255,56 @@ function lifecycleRuntime(
     gateway:
       runtime.gateway ??
       createMirrorGitHubGateway(createMirrorProcessRunner()),
+    // No process-runner default here: label sync mutates issues OUTSIDE the
+    // mirror link, so only entry points that explicitly opt in (the CLI main)
+    // get a real gateway. Absent means "skip label sync entirely" — this keeps
+    // every embedded/test caller free of surprise gh mutations.
+    labelGateway: runtime.labelGateway ?? null,
     now: runtime.now ?? (() => new Date().toISOString()),
     newOperationId: runtime.newOperationId ?? randomUUID,
   };
+}
+
+// #1990 — in-progress label sync riding the boundary that already reached
+// GitHub. Runs only under the `auto-mirror: auto` standing consent (the same
+// mode that authorizes unattended mirror mutations; user ruling 2026-08-02
+// extends it to in-progress labels on the intent's related issues). Fail-open
+// by contract: label problems warn on stderr and never change the boundary
+// outcome, so the workflow is never blocked by labels. The state document is
+// re-read AFTER the boundary so a mirror issue created by this very boundary
+// is already visible in the v1 block.
+async function syncBoundaryLabels(input: {
+  projectDir: string;
+  space: string;
+  intentDir: string;
+  boundary: MirrorBoundary;
+  statePath: string;
+  repository: RepositoryIdentity;
+  labelGateway: MirrorLabelGateway | null;
+}): Promise<void> {
+  if (input.labelGateway === null) return;
+  const labelGateway = input.labelGateway;
+  try {
+    const config = resolveMirrorConfig(input.projectDir, input.intentDir, input.space);
+    if (config.kind !== "resolved" || config.config.autoMirror !== "auto") return;
+    const document = readFileSync(input.statePath, "utf-8");
+    const plan = mirrorLabelSyncPlan(
+      input.boundary.kind,
+      document,
+      mirrorIssueNumberFromDocument(document),
+    );
+    const report = await runMirrorLabelSync(plan, input.repository, labelGateway);
+    for (const failure of report.failures) {
+      process.stderr.write(
+        `[amadeus-mirror] label sync warning: could not ${failure.operation} ` +
+          `"${failure.label}" on #${failure.issue} (${failure.detail})\n`,
+      );
+    }
+  } catch (cause) {
+    process.stderr.write(
+      `[amadeus-mirror] label sync warning: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+    );
+  }
 }
 
 // The record fields a snapshot is derived from. Structural rather than tied to
@@ -470,6 +526,15 @@ export async function runMirrorLifecycleBoundary(
     manualOperation: request.manualOperation,
     invocationId: request.invocationId,
     answer: request.answer,
+  });
+  await syncBoundaryLabels({
+    projectDir: request.projectDir,
+    space: target.space,
+    intentDir: target.intentDir,
+    boundary: request.boundary,
+    statePath: target.statePath,
+    repository: target.repository,
+    labelGateway: resolvedRuntime.labelGateway,
   });
   return { kind: "ok", outcome };
 }
@@ -1248,10 +1313,16 @@ export async function runMirrorLifecycleMain(
     console.log(JSON.stringify(result));
     return 0;
   }
+  const boundaryRuntime: MirrorLifecycleRuntime = {
+    ...runtime,
+    labelGateway:
+      runtime.labelGateway ??
+      createMirrorLabelGateway(createMirrorProcessRunner()),
+  };
   const result =
     parsed.kind === "answer"
       ? await runMirrorLifecycleAnswer(parsed.request, runtime)
-      : await runMirrorLifecycleBoundary(parsed.request, runtime);
+      : await runMirrorLifecycleBoundary(parsed.request, boundaryRuntime);
   if (result.kind === "error") {
     console.error(`amadeus-mirror-lifecycle: ${result.message}`);
     return 1;

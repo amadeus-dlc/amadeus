@@ -41,6 +41,7 @@ import type {
   MirrorGitHubGateway,
   MirrorMutationPermit,
 } from "./amadeus-mirror-types.ts";
+import type { MirrorLabelGateway } from "./amadeus-mirror-labels.ts";
 import type {
   CreateGitHubIssueInput,
   GitHubGatewayOutcome,
@@ -950,4 +951,72 @@ export function createFindingGitHubGatewayAdapter(
   runner: MirrorProcessRunner,
 ): FindingGitHubGateway {
   return createCombinedGitHubGateway(runner);
+}
+
+// --- Label sync gateway (#1990) ----------------------------------------------
+// Deliberately outside the permit-gated mirror mutation surface: label sync
+// touches the intent's RELATED issues, which never carry a mirror permit.
+
+export function addLabelsArgv(
+  repo: GitHubRepository,
+  issueNumber: number,
+  labels: readonly string[],
+): readonly string[] {
+  const args: string[] = [
+    "api",
+    "--include",
+    "--method",
+    "POST",
+    `${issuesPath(repo)}/${issueNumber}/labels`,
+  ];
+  for (const label of labels) args.push("-f", `labels[]=${label}`);
+  return args;
+}
+
+export function removeLabelArgv(
+  repo: GitHubRepository,
+  issueNumber: number,
+  label: string,
+): readonly string[] {
+  return [
+    "api",
+    "--include",
+    "--method",
+    "DELETE",
+    `${issuesPath(repo)}/${issueNumber}/labels/${encodeURIComponent(label)}`,
+  ];
+}
+
+export function createMirrorLabelGateway(
+  runner: MirrorProcessRunner,
+): MirrorLabelGateway {
+  const call = async (
+    args: readonly string[],
+    okStatuses: ReadonlySet<number>,
+  ): Promise<GitHubGatewayOutcome<void>> => {
+    const result = await runner.run({ executable: "gh", args, profile: "single" });
+    if (result.kind !== "exited") {
+      return processFailure(result, "mutation");
+    }
+    const env = parseHttpEnvelope(result.stdout, "array");
+    if (env.kind === "http-error") {
+      if (okStatuses.has(env.status)) return ok<void>(undefined);
+      const { classification, retryable } = classifyHttpStatus(env.status);
+      return failure(classification, retryable, "outcome-unknown", result.exitCode, env.status);
+    }
+    if (env.kind === "malformed") {
+      return failure("invalid-response", false, "outcome-unknown", result.exitCode, null);
+    }
+    return ok<void>(undefined);
+  };
+  return {
+    addIssueLabels(repository, issueNumber, labels) {
+      return call(addLabelsArgv(repository, issueNumber, labels), new Set());
+    },
+    // 404 = the label (or its assignment) is already gone; removal is
+    // idempotent, so absence counts as success.
+    removeIssueLabel(repository, issueNumber, label) {
+      return call(removeLabelArgv(repository, issueNumber, label), new Set([404]));
+    },
+  };
 }
