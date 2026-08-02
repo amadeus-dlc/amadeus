@@ -439,10 +439,11 @@ describe("fixed-pool CLI handlers are driven in-process", () => {
       "--batch", "8", "--units", "u8", "--reasons", "u8=budget-exhausted",
       "--check-cmd", "true", ...projectArgs(),
     ]))).toBe(2);
-    const emitted = shardRecords()
-      .filter((record) => record.schemaVersion === 2)
-      .map((record) => record.eventName);
+    const records = shardRecords().filter((record) => record.schemaVersion === 2);
+    const emitted = records.map((record) => record.eventName);
+    const failed = records.find((record) => record.eventName === "amadeus.swarm.unit.failed");
     expect(emitted).toContain("amadeus.swarm.unit.failed");
+    expect(failed?.attributes?.Reason).toBe("budget-exhausted");
     expect(emitted).toContain("amadeus.swarm.baton.returned");
     expect(emitted).toContain("amadeus.swarm.completed");
   });

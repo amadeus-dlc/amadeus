@@ -48,6 +48,7 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 | `print` | Do exactly what `directive.message` says — it is authoritative. Terminal messages name a read-only utility (status, help, doctor, version): run it, print stdout verbatim, and STOP. Run-then-continue messages name a mutating tool and end with "re-run `next`": run it, then loop. Gated-terminal messages (workspace migration) name a dry-run + numbered Yes/No gate + apply command: run the dry-run, stop for the human, apply only after explicit approval. |
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
 | `parked` | The workflow was parked at a clean boundary. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP. |
+| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 ### Harness-neutral fixed Unit pool
 
@@ -72,8 +73,6 @@ verification, learnings, approval, or report a stage result. A validated
 `NOT-READY` verdict at the iteration limit leaves the stage incomplete: present
 unresolved `BLOCKER` findings, stop for human direction, and do not run
 completion verification, learnings, approval, or report a stage result.
-
-| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or
 names a move you cannot make, surface it to the user — never improvise the

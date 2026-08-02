@@ -548,7 +548,7 @@ function handlePrepare(rest: string[]): void {
   }
 
   const base = flags.base ?? currentBranch(repoCwd);
-  const concurrency = String(resolvePrepareConcurrency(projectDir, flags, units.length));
+  const concurrency = resolvePrepareConcurrency(projectDir, flags, units.length);
 
   const prepared: PreparedUnit[] = [];
   // Forward the RESOLVED repo name (not the raw flag) so every sibling primitive
@@ -600,13 +600,13 @@ function handlePrepare(rest: string[]): void {
   // A partially prepared batch has no dispatch authority. Persisting the pool
   // before every worktree exists would leave a non-terminal queue that finalize
   // cannot drain because the conductor never received a complete worker set.
-  stopOnIncompletePrepare(flags.batch, base, Number(concurrency), prepared);
+  stopOnIncompletePrepare(flags.batch, base, concurrency, prepared);
 
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
   const initialized = pool.initialEnqueue({
     idempotencyKey: `unit-pool:${flags.batch}:initial-enqueue`,
     batchId: flags.batch,
-    cap: Number(concurrency),
+    cap: concurrency,
     units: units.map((unitId) => ({ unitId, dependsOn: [] })),
   });
   if (!initialized.ok) fail(`unit pool initialization failed: ${initialized.reason}`);
@@ -616,11 +616,11 @@ function handlePrepare(rest: string[]): void {
   // only learns a degrade happened via this flag.
   emitDegradeIfRequested(projectDir, flags.batch, degradedFrom);
 
-  emitSwarmStarted(projectDir, flags.batch, units, concurrency);
+  emitSwarmStarted(projectDir, flags.batch, units, String(concurrency));
 
   console.log(
     JSON.stringify(
-      { batch: flags.batch, base, concurrency: Number(concurrency), units: prepared, pool: initialized.projection },
+      { batch: flags.batch, base, concurrency, units: prepared, pool: initialized.projection },
       null,
       2
     )
@@ -943,7 +943,7 @@ export function handleFinalize(
   for (const unit of allUnits) {
     if (claimedSet.has(unit)) {
       const poolOutcome = poolOutcomes.get(unit);
-      if (poolProjection.batchId !== null && poolOutcome !== "succeeded") {
+      if (poolOutcome !== "succeeded") {
         results.push({
           unit,
           status: "failed",

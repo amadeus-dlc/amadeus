@@ -1915,8 +1915,8 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
-    "lines": "217-233",
-    "reason": "Unit-pool Command and Proposal unions plus the terminalOutcome signature are erased TypeScript declarations. Every command family is driven through the coordinator in t425; Bun's DA:0 records on these declaration lines are not executable.",
+    "lines": "217-231",
+    "reason": "Unit-pool Command and Proposal unions are erased TypeScript declarations. Every command family is driven through the coordinator in t425; Bun's DA:0 records on these declaration lines are not executable.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   },
   {
