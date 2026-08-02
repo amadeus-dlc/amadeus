@@ -123,6 +123,33 @@ describe("t270 harness provenance intent birth", () => {
         /^- \*\*Active Agent\*\*: .+\n- \*\*Harness\*\*: codex$/m,
       );
       expect(getField(result.state, "Harness")).toBe("codex");
+      expect(JSON.parse(getField(result.state, "Harness Version") ?? "")).toEqual({
+        state: "unavailable",
+        reason: "native-harness-version-not-exposed",
+      });
+      expect(JSON.parse(getField(result.state, "Model") ?? "")).toEqual({
+        state: "unavailable",
+        reason: "native-model-not-exposed",
+      });
+    } finally {
+      rmSync(result.projectDir, { recursive: true, force: true });
+    }
+  });
+
+  test("native environment facts are recorded without guessing", () => {
+    const result = birth(DISTRIBUTIONS[1], {
+      AMADEUS_HARNESS_VERSION: "0.139.0",
+      AMADEUS_MODEL: "gpt-5.6-sol",
+    });
+    try {
+      expect(JSON.parse(getField(result.state, "Harness Version") ?? "")).toEqual({
+        state: "available",
+        value: "0.139.0",
+      });
+      expect(JSON.parse(getField(result.state, "Model") ?? "")).toEqual({
+        state: "available",
+        value: "gpt-5.6-sol",
+      });
     } finally {
       rmSync(result.projectDir, { recursive: true, force: true });
     }

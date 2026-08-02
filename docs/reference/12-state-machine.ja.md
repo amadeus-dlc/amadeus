@@ -232,6 +232,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - 明示的な `--resume` 再入時に park マーカーがクリアされた |
 | `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した archive トランザクション。operation ID ごとに1回発行 |
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した unarchive トランザクション。operation ID ごとに1回発行 |
+| `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | 正典の audit-first 実行ライフサイクルイベントセットを原子的に記録 |
 
 ### Phase lifecycle
 

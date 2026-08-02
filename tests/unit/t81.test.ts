@@ -219,7 +219,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // plus GRANT_ISSUED + GRANT_REVOKED (#1125 standing delegation grants, +2) = 75,
     // plus INTENT_ARCHIVED + INTENT_UNARCHIVED (#1424 archived intent status, +2) = 77,
     // plus GATE_AUTHORIZATION_SELECTED (#1466 solo standing-grant route receipt, +1) = 78,
-    // plus SUBAGENT_STARTED (U4, the subagent interval's opening half, +1) = 79.
+    // plus SUBAGENT_STARTED (U4, the subagent interval's opening half, +1) = 79,
+    // plus EXECUTION_EVENT_SET_COMMITTED (#1602 audit-first lifecycle, +1) = 80.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -227,7 +228,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(79);
+    expect(count).toBe(80);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

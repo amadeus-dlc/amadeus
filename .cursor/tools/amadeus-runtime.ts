@@ -129,6 +129,29 @@ interface RuntimeGraph {
   // Mutually exclusive with bolt_dag: set only when the compile legitimately had
   // no DAG to project (see computeBoltDagOutcome).
   bolt_dag_absence?: BoltDagAbsence;
+  execution_observability?: {
+    root_operation_id: string;
+    event_set_digest: string;
+  };
+}
+
+function executionProjectionCursor(
+  projectDir: string,
+): RuntimeGraph["execution_observability"] {
+  const latest = findAllEvents(
+    readAllAuditShards(projectDir),
+    "EXECUTION_EVENT_SET_COMMITTED",
+  ).at(-1);
+  if (latest === undefined) return undefined;
+
+  const rootOperationId = auditBlockField(latest.block, "Root Operation Id");
+  const eventSetDigest = auditBlockField(latest.block, "Event Set Digest");
+  if (!rootOperationId || !eventSetDigest) return undefined;
+
+  return {
+    root_operation_id: rootOperationId,
+    event_set_digest: eventSetDigest,
+  };
 }
 
 // --- Path helpers ---
@@ -838,6 +861,10 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
     started_at: header.started_at,
     stages,
   };
+  const executionProjection = executionProjectionCursor(projectDir);
+  if (executionProjection !== undefined) {
+    graph.execution_observability = executionProjection;
+  }
 
   // Bolt/unit batch DAG — appended last so the key order stays {…, stages, …}.
   // A legitimate absence records WHY instead of leaving the caller to guess; an
@@ -913,6 +940,10 @@ function writeEmptyGraph(
     started_at: "",
     stages: [],
   };
+  const executionProjection = executionProjectionCursor(projectDir);
+  if (executionProjection !== undefined) {
+    graph.execution_observability = executionProjection;
+  }
   const writer = () => {
     writeFileAtomic(runtimeGraphPath(projectDir, intent, space), `${JSON.stringify(graph, null, 2)}\n`);
   };

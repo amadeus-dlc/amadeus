@@ -30,6 +30,10 @@ interface RuntimeGraph {
   stages: RuntimeStage[];         // chronological order by started_at
   bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
   bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
+  execution_observability?: {     // 監査から投影した最新の正典 execution event set
+    root_operation_id: string;
+    event_set_digest: string;
+  };
 }
 
 interface BoltDagAbsence {
@@ -86,6 +90,8 @@ interface SensorFiring {
 ```
 
 `instances` が存在する場合、ステージ行の単一インスタンスフィールド(`started_at`、`completed_at`、`memory_entries`、`memory_breakdown`)は NULL です — それらの値は代わりに各インスタンスに存在します。ステージ行フィールドとインスタンス配列フィールドが共存することはありません。
+
+`execution_observability` は、最新の正典 execution event set に対するオプションの必須投影です。digest は監査ジャーナルからコピーされ、runtime state から再計算しません。runtime graph の再 compile でも同じ監査由来のカーソルを保持するため、新しい正典イベントを作らず投影を再構築できます。
 
 ### The Bolt/unit dependency DAG (`bolt_dag`)
 

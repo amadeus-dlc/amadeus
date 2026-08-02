@@ -1,4 +1,5 @@
 {
+  "name": "opencode",
   "harnessDir": ".opencode",
   "rulesSubdir": "amadeus-rules"
 }

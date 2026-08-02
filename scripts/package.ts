@@ -208,7 +208,11 @@ function writeVersionFile(treeRoot: string): void {
 // leaves room for future per-harness runtime facts. Pretty-printed + trailing
 // newline so the committed file is diff-friendly and stable under --check.
 function writeHarnessData(treeRoot: string, m: HarnessManifest): void {
-  const data = { harnessDir: m.harnessDir, rulesSubdir: m.rulesRename ?? "rules" };
+  const data = {
+    name: m.name,
+    harnessDir: m.harnessDir,
+    rulesSubdir: m.rulesRename ?? "rules",
+  };
   const dst = join(treeRoot, HARNESS_DATA);
   mkdirSync(dirname(dst), { recursive: true });
   writeFileSync(dst, `${JSON.stringify(data, null, 2)}\n`);

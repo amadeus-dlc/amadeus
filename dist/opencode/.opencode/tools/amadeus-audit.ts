@@ -54,7 +54,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (79) ---
+// --- Canonical event types (80) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -79,6 +79,9 @@ const VALID_EVENT_TYPES = new Set([
   "WORKFLOW_UNPARKED",
   "INTENT_ARCHIVED",
   "INTENT_UNARCHIVED",
+  // Harness-neutral execution lifecycle batches (#1602). One row is one
+  // canonical event set; required projections consume its digest after append.
+  "EXECUTION_EVENT_SET_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -221,6 +224,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   WORKFLOW_UNPARKED: "Workflow Unparked",
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
+  EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
   SESSION_COMPACTED: "Session Compacted",

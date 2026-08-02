@@ -7,6 +7,9 @@
 - **Start Date**: [ISO timestamp]
 - **State Version**: 7
 - **Active Agent**: [current lead agent name]
+- **Harness**: [harness type]
+- **Harness Version**: [Fact JSON: available/unavailable/legacy-unknown/incomplete]
+- **Model**: [Fact JSON: available/unavailable/legacy-unknown/incomplete]
 - **Worktree Path**: [empty when not in a worktree]
 - **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**: [ISO 8601 timestamp on affirmation]
@@ -29,6 +32,7 @@
 
 ## Runtime State
 - **Revision Count**: 0
+- **Execution Projection Digest**: [latest canonical execution event-set digest]
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
