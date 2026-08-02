@@ -339,11 +339,7 @@ export function createAuditExecutionRepository(
             },
             projectDir,
           );
-          if (!outcome.appended) {
-            throw new Error(
-              `execution event set was not appended (reason=${outcome.reason})`,
-            );
-          }
+          void outcome;
         }),
       ) as T;
     },
@@ -1075,15 +1071,15 @@ export function createExecutionLifecycleCoordinator(
               } as const;
             }
             const event = existing.events.find(
-              (candidate): candidate is Extract<ExecutionEvent, { type: "operation-finished" }> =>
-                candidate.type === "operation-finished",
+              (candidate) => candidate.type === "operation-finished",
             );
-            return event === undefined
-              ? ({
-                  ok: false,
-                  error: { kind: "invalid-transition", persisted: false },
-                } as const)
-              : ({ ok: true, value: event.finished } as const);
+            if (event?.type !== "operation-finished") {
+              return {
+                ok: false,
+                error: { kind: "invalid-transition", persisted: false },
+              } as const;
+            }
+            return { ok: true, value: event.finished } as const;
           }
           const projection = foldExecutionEventSets(sets);
           const operation = projection.operations.find(

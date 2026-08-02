@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   createMemoryExecutionRepository,
+  type ExecutionEvent,
   type ExecutionEventSet,
 } from "../../packages/framework/core/tools/amadeus-execution-lifecycle.ts";
 import { createRequiredExecutionProjectionSink } from "../../packages/framework/core/tools/amadeus-execution-projection.ts";
@@ -104,6 +105,57 @@ test("the first required projection creates a missing runtime graph", () => {
   });
 });
 
+test("a missing runtime target after compile fails loud", () => {
+  const value = fixture();
+  rmSync(runtimeGraphPath(value.projectDir));
+  const sink = createRequiredExecutionProjectionSink(value.projectDir, value.repository, {
+    compileRuntime() {},
+  });
+  expect(() => sink.projectRequired(set)).toThrow(
+    "runtime graph compile did not produce an execution projection target",
+  );
+});
+
+test("telemetry projection reports absent, successful and failed optional sinks", () => {
+  const value = fixture();
+  const event: ExecutionEvent = {
+    type: "reservation-updated",
+    reservation: {
+      reservationId: "reservation-1",
+      operationId: "operation-1",
+      idempotencyKey: "reservation-key",
+      payloadFingerprint: "reservation-payload",
+      dispatchState: "reserved",
+      consumedAt: null,
+      startedAt: { state: "legacy-unknown" },
+    },
+  };
+  expect(
+    createRequiredExecutionProjectionSink(
+      value.projectDir,
+      value.repository,
+    ).projectTelemetry(event),
+  ).toEqual({ projected: false });
+
+  let projected: ExecutionEvent | undefined;
+  expect(
+    createRequiredExecutionProjectionSink(value.projectDir, value.repository, {
+      projectTelemetry(received) {
+        projected = received;
+      },
+    }).projectTelemetry(event),
+  ).toEqual({ projected: true });
+  expect(projected).toEqual(event);
+
+  expect(
+    createRequiredExecutionProjectionSink(value.projectDir, value.repository, {
+      projectTelemetry() {
+        throw new Error("telemetry unavailable");
+      },
+    }).projectTelemetry(event),
+  ).toEqual({ projected: false });
+});
+
 test("runtime compile preserves the required-projected canonical cursor", () => {
   const value = fixture();
   const sink = createRequiredExecutionProjectionSink(value.projectDir, value.repository);
@@ -151,6 +203,48 @@ test("runtime compile preserves the required-projected canonical cursor", () => 
         },
       },
     ].map((row) => JSON.stringify(row)).join("\n") + "\n",
+    "utf-8",
+  );
+
+  compile({ projectDir: value.projectDir });
+  expect(
+    JSON.parse(readFileSync(runtimeGraphPath(value.projectDir), "utf-8"))
+      .execution_observability,
+  ).toEqual({
+    root_operation_id: "root-1",
+    event_set_digest: "digest-1",
+  });
+});
+
+test("empty runtime compile preserves the required-projected canonical cursor", () => {
+  const value = fixture();
+  rmSync(runtimeGraphPath(value.projectDir));
+  const statePath = stateFilePath(value.projectDir);
+  writeFileSync(
+    statePath,
+    readFileSync(statePath, "utf-8").replace(
+      "## Runtime State\n",
+      "## Runtime State\n- **Execution Projection Digest**: digest-1\n",
+    ),
+    "utf-8",
+  );
+  const auditPath = auditFilePath(value.projectDir);
+  mkdirSync(dirname(auditPath), { recursive: true });
+  writeFileSync(
+    auditPath,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: "empty-projection-test",
+      intentId: "intent-1",
+      timestamp: "2026-08-02T00:00:01.000Z",
+      heading: "Execution Event Set Committed",
+      event: "EXECUTION_EVENT_SET_COMMITTED",
+      fields: {
+        "Root Operation Id": "root-1",
+        "Event Set Digest": "digest-1",
+      },
+    })}\n`,
     "utf-8",
   );
 

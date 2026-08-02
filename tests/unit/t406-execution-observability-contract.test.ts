@@ -144,6 +144,89 @@ describe("attempt duration facts", () => {
     expect(finished.attempt.measurement.error).toBe("wall-clock-regressed");
   });
 
+  test("a backwards monotonic clock is invalid even when wall time advances", () => {
+    const contract = createExecutionContract();
+    const start = contract.attemptFromConfirmation(
+      {
+        reservationId: "res-monotonic-regression",
+        operationId: "op-monotonic-regression",
+        rootOperationId: "op-monotonic-regression",
+        attemptOrdinal: 1,
+        nativeHandle: { state: "unavailable", reason: "not-exposed" },
+        dispatchEvidence: { state: "available", value: "accepted" },
+      },
+      clock("2026-08-02T00:00:00.000Z", 20),
+    );
+    const finished = contract.finishAttempt(
+      start,
+      { outcome: "failed", terminationReason: "clock-regressed" },
+      clock("2026-08-02T00:00:01.000Z", 10),
+    );
+    expect(finished.attempt.measurement).toEqual({
+      clockSource: "monotonic",
+      measurementQuality: "invalid",
+      error: "monotonic-clock-regressed",
+    });
+  });
+
+  test("wall fallback measures elapsed time when monotonic time is unavailable", () => {
+    const contract = createExecutionContract();
+    const start = contract.attemptFromConfirmation(
+      {
+        reservationId: "res-wall-fallback",
+        operationId: "op-wall-fallback",
+        rootOperationId: "op-wall-fallback",
+        attemptOrdinal: 1,
+        nativeHandle: { state: "legacy-unknown" },
+        dispatchEvidence: { state: "legacy-unknown" },
+      },
+      clock("2026-08-02T00:00:00.000Z", null),
+    );
+    const finished = contract.finishAttempt(
+      start,
+      { outcome: "succeeded", terminationReason: "completed" },
+      clock("2026-08-02T00:00:00.250Z", null),
+    );
+    expect(finished.attempt.measurement).toEqual({
+      clockSource: "wall",
+      measurementQuality: "wall-fallback",
+      durationMs: 250,
+    });
+  });
+
+  test("invalid wall timestamps stay incomplete and produce an invalid measurement", () => {
+    const contract = createExecutionContract();
+    const start = contract.attemptFromConfirmation(
+      {
+        reservationId: "res-invalid-wall",
+        operationId: "op-invalid-wall",
+        rootOperationId: "op-invalid-wall",
+        attemptOrdinal: 1,
+        nativeHandle: { state: "legacy-unknown" },
+        dispatchEvidence: { state: "legacy-unknown" },
+      },
+      clock("not-a-timestamp", null),
+    );
+    expect(start.attempt.startedAtFact).toEqual({
+      state: "incomplete",
+      missingFields: ["wall"],
+    });
+    const finished = contract.finishAttempt(
+      start,
+      { outcome: "failed", terminationReason: "invalid-clock" },
+      clock("still-not-a-timestamp", null),
+    );
+    expect(finished.attempt.finishedAtFact).toEqual({
+      state: "incomplete",
+      missingFields: ["wall"],
+    });
+    expect(finished.attempt.measurement).toEqual({
+      clockSource: "wall",
+      measurementQuality: "invalid",
+      error: "wall-clock-unavailable",
+    });
+  });
+
   test("native missing and legacy values stay explicit facts", () => {
     const contract = createExecutionContract();
     expect(

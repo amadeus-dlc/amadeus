@@ -108,6 +108,18 @@
     "expiry": "remove when handleOpen gains an injectable filesystem seam for post-create views-directory failure"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-execution-lifecycle.ts",
+    "lines": "266-268",
+    "reason": "Multi-line callback type for the in-memory repository transaction body; runtime-erased, but Bun can stamp the type-only rows DA:0. The transaction body and append callback are exercised in-process throughout tests/unit/t407-execution-lifecycle-coordinator.test.ts.",
+    "expiry": "remove if the signature is collapsed or Bun stops stamping erased callback types"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-execution-lifecycle.ts",
+    "lines": "325-327",
+    "reason": "Multi-line callback type for the audit repository transaction body; runtime-erased, but Bun can stamp the type-only rows DA:0. The repository transaction and canonical append are exercised in-process by tests/integration/t406-execution-observability-audit.test.ts.",
+    "expiry": "remove if the signature is collapsed or Bun stops stamping erased callback types"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-finding.ts",
     "lines": "284-287",
     "reason": "The process-I/O adapter is exercised through the spawned CLI integration suite; all parsing, file-safety, output selection, and exit-code behavior is covered in-process by t368.",
@@ -1102,6 +1114,12 @@
     "lines": "4403-4413",
     "reason": "Intent lifecycle command routing and fail-closed selector validation are exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
     "expiry": "remove when utility intent routing and delegation receive injectable in-process process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4515",
+    "reason": "The empty Execution Projection Digest row in the intent-birth state template is exercised through the shipped intent-birth CLI by tests/integration/t270-harness-provenance-birth.test.ts and tests/integration/t393-birth-autonomy-field.integration.test.ts. Bun does not attribute spawned CLI template rows to the parent LCOV process; this is the same message/template-string blind spot as the adjacent Construction Autonomy Mode row.",
+    "expiry": "remove when canonical intent birth has an in-process seeded-workspace driver or Bun attributes spawned CLI coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",

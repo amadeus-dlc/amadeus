@@ -132,14 +132,16 @@ function shippedRulesSubdir(): string | null {
   }
 }
 
+export function normalizeHarnessPackageName(name: unknown): string | null {
+  return typeof name === "string" && name.length > 0 ? name : null;
+}
+
 export function harnessPackageName(): string | null {
   try {
     const parsed = JSON.parse(
       readFileSync(join(DATA_DIR, "harness.json"), "utf-8"),
     ) as { name?: unknown };
-    return typeof parsed.name === "string" && parsed.name.length > 0
-      ? parsed.name
-      : null;
+    return normalizeHarnessPackageName(parsed.name);
   } catch {
     return null;
   }

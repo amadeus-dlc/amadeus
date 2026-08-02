@@ -4,9 +4,15 @@
 import { describe, expect, test } from "bun:test";
 import {
   HARNESS_CAPABILITY_PORTS,
+  captureDetectedExecutionEnvironment,
   captureExecutionEnvironment,
+  executionHarnessFrom,
   renderFact,
 } from "../../packages/framework/core/tools/amadeus-harness-capability.ts";
+import {
+  harnessPackageName,
+  normalizeHarnessPackageName,
+} from "../../packages/framework/core/tools/amadeus-harness.ts";
 
 describe("shared harness capability adapters", () => {
   test("all seven packages use the same policy-free port", () => {
@@ -89,5 +95,73 @@ describe("shared harness capability adapters", () => {
     expect(renderFact(snapshot.model)).toBe(
       '{"state":"unavailable","reason":"native-model-not-exposed"}',
     );
+  });
+
+  test("native dispatch and effect queries remain policy-free delegates", () => {
+    const port = HARNESS_CAPABILITY_PORTS.codex;
+    expect(port.dispatch({ executeNative: () => "native-result" })).toBe(
+      "native-result",
+    );
+    expect(
+      port.queryDispatchEffect({ queryNative: () => "no-effect-confirmed" }),
+    ).toBe("no-effect-confirmed");
+    expect(port.queryDispatchEffect({})).toBe("unknown");
+  });
+
+  test("native harness names map without introducing a Codex-only policy", () => {
+    expect(executionHarnessFrom("anything", "kiro-ide")).toBe("kiro-ide");
+    expect(executionHarnessFrom("claude-code")).toBe("claude");
+    for (const harness of [
+      "codex",
+      "cursor",
+      "kiro",
+      "opencode",
+      "kimi",
+    ] as const) {
+      expect(executionHarnessFrom(harness)).toBe(harness);
+    }
+    expect(executionHarnessFrom("manual")).toBeNull();
+  });
+
+  test("detected and undetected environments preserve explicit availability", () => {
+    expect(
+      captureDetectedExecutionEnvironment("codex", null, {
+        model: "gpt-5.6-sol",
+        monotonicClockAvailable: true,
+      }),
+    ).toMatchObject({
+      harness: { state: "available", value: "codex" },
+      model: { state: "available", value: "gpt-5.6-sol" },
+    });
+    expect(
+      captureDetectedExecutionEnvironment("manual", null, {
+        monotonicClockAvailable: undefined,
+      }),
+    ).toEqual({
+      harness: {
+        state: "unavailable",
+        reason: "execution-harness-not-detected",
+      },
+      model: { state: "unavailable", reason: "native-model-not-exposed" },
+      harnessVersion: {
+        state: "unavailable",
+        reason: "native-harness-version-not-exposed",
+      },
+      capability: {
+        state: "unavailable",
+        reason: "execution-harness-not-detected",
+      },
+      clockAvailability: {
+        state: "incomplete",
+        missingFields: ["monotonicClockAvailable"],
+      },
+    });
+  });
+
+  test("package names accept only non-empty strings and missing source data is explicit", () => {
+    expect(normalizeHarnessPackageName("codex")).toBe("codex");
+    expect(normalizeHarnessPackageName(42)).toBeNull();
+    expect(normalizeHarnessPackageName("")).toBeNull();
+    expect(harnessPackageName()).toBeNull();
   });
 });

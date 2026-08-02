@@ -24,6 +24,7 @@ export { EXECUTION_PROJECTION_DIGEST_FIELD };
 export interface RequiredProjectionPorts {
   readonly writeState?: (projectDir: string, content: string) => void;
   readonly writeRuntime?: (path: string, content: string) => void;
+  readonly compileRuntime?: (projectDir: string) => void;
   readonly projectTelemetry?: (event: ExecutionEvent) => void;
 }
 
@@ -43,6 +44,8 @@ export function createRequiredExecutionProjectionSink(
 ): ExecutionProjectionSink {
   const writeState = ports.writeState ?? writeStateFile;
   const writeRuntime = ports.writeRuntime ?? writeFileAtomic;
+  const compileRuntime =
+    ports.compileRuntime ?? ((targetProjectDir) => compile({ projectDir: targetProjectDir }));
 
   const project = (set: ExecutionEventSet): RequiredProjectionReceipt => {
     const state = projectState(readStateFile(projectDir), set.digest);
@@ -50,7 +53,7 @@ export function createRequiredExecutionProjectionSink(
 
     const graphPath = runtimeGraphPath(projectDir);
     if (!existsSync(graphPath)) {
-      compile({ projectDir });
+      compileRuntime(projectDir);
     }
     if (!existsSync(graphPath)) {
       throw new Error("runtime graph compile did not produce an execution projection target");
