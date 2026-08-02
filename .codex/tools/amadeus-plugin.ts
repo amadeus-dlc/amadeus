@@ -107,6 +107,11 @@ export type PluginCliResult =
        * Stage Progress section was not recognized, no rows were inserted, and
        * the state file was left untouched (#1963). Rendered on stderr, exit 1. */
       resyncFailed: readonly string[];
+      /** Non-null when the host's compiled stage-graph.json was invalid and the
+       * state re-sync was skipped entirely (#1993): distinguishable from
+       * "nothing to resync", rendered on stderr through the injected err seam,
+       * exit 1 — the same face as resyncFailed (#1970). */
+      resyncSkipped: { path: string; reason: string } | null;
     }
   | { kind: "composed-all"; total: number; succeeded: number; failures: readonly BulkComposeFailure[] }
   | { kind: "noop"; reason: "record-current" }
@@ -222,8 +227,11 @@ export type PluginCliDeps = {
   listPluginSourceDirs: (root: string) => readonly string[];
   // Post-compose Stage Progress re-sync (#1849). Optional so a stub deps bag
   // stays a pure compose harness; defaultPluginCliDeps always wires the real
-  // writer, which is what production composes run.
-  resyncIntentStates?: (hostRoot: string) => readonly StateResyncOutcome[];
+  // writer, which is what production composes run. Returns a discriminated
+  // outcome (#1993): the invalid-host-graph case is a first-class result, not
+  // an empty list, so callers can tell "nothing to resync" from "could not
+  // resync at all".
+  resyncIntentStates?: (hostRoot: string) => StateResyncRun;
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -417,19 +425,31 @@ function hostStageGraph(hostRoot: string): HostStageGraphRead {
   return { kind: "graph", graph: parsed as StageEntry[] };
 }
 
-function resyncIntentStates(hostRoot: string): readonly StateResyncOutcome[] {
+// The discriminated result of the post-compose state re-sync (#1993). The
+// invalid-graph case carries the path + reason so the RENDER layer can warn
+// through the injected err seam — the dep itself never prints.
+export type StateResyncRun =
+  | { kind: "ran"; outcomes: readonly StateResyncOutcome[] }
+  | { kind: "invalid-graph"; path: string; reason: string };
+
+function resyncIntentStates(hostRoot: string): StateResyncRun {
   const read = hostStageGraph(hostRoot);
   if (read.kind === "invalid") {
     // The plugin apply + recompile already committed; a broken graph copy only
-    // forfeits the re-sync, loudly, never a resync against the WRONG graph.
-    console.error(
-      `amadeus-plugin: ${join(hostRoot, "tools", "data", "stage-graph.json")} is invalid (${read.reason}); state re-sync skipped — recompile the host graph and re-run compose`,
-    );
-    return [];
+    // forfeits the re-sync — surfaced as a first-class outcome, never a resync
+    // against the WRONG graph, never an empty list masquerading as success.
+    return {
+      kind: "invalid-graph",
+      path: join(hostRoot, "tools", "data", "stage-graph.json"),
+      reason: read.reason,
+    };
   }
-  return resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
-    graph: read.kind === "graph" ? read.graph : undefined,
-  });
+  return {
+    kind: "ran",
+    outcomes: resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
+      graph: read.kind === "graph" ? read.graph : undefined,
+    }),
+  };
 }
 
 export function defaultPluginCliDeps(): PluginCliDeps {
@@ -688,7 +708,12 @@ function handleComposeAll(cmd: Extract<PluginCliCommand, { kind: "compose" }>, d
       continue;
     }
     const result = handleCompose({ kind: "compose", ifStale: cmd.ifStale, allHarnesses: false, projectRoot: hostRoot }, deps);
-    if (result.kind === "composed" && result.resyncFailed.length > 0) {
+    if (result.kind === "composed" && result.resyncSkipped !== null) {
+      failures.push({
+        hostRoot,
+        message: `${result.resyncSkipped.path} is invalid (${result.resyncSkipped.reason}); state re-sync skipped — recompile the host graph and re-run compose (#1993)`,
+      });
+    } else if (result.kind === "composed" && result.resyncFailed.length > 0) {
       failures.push({
         hostRoot,
         message: `state re-sync failed for ${result.resyncFailed.join(", ")}: Stage Progress section not recognized (#1963)`,
@@ -777,15 +802,18 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
   // The composed graph now carries stages no RUNNING intent's state file knows
   // about; `next` would issue them and `report` would refuse them (#1849). This
   // runs LAST, after the graph on disk is the composed one.
-  const resync = deps.resyncIntentStates?.(hostRoot) ?? [];
+  const resync = deps.resyncIntentStates?.(hostRoot) ?? { kind: "ran" as const, outcomes: [] };
+  const outcomes = resync.kind === "ran" ? resync.outcomes : [];
   return {
     kind: "composed",
     applied,
     recompiled: true,
-    resynced: resync.filter((o) => o.status === "resynced").map((o) => o.intent),
-    resyncFailed: resync
+    resynced: outcomes.filter((o) => o.status === "resynced").map((o) => o.intent),
+    resyncFailed: outcomes
       .filter((o) => o.status === "section-unrecognized")
       .map((o) => `${o.space}/${o.intent}`),
+    resyncSkipped:
+      resync.kind === "invalid-graph" ? { path: resync.path, reason: resync.reason } : null,
   };
 }
 
@@ -814,9 +842,10 @@ function handleInstall(cmd: Extract<PluginCliCommand, { kind: "install" }>, deps
   }
   if (state !== "identical") deps.copyPluginSource(src, dst);
   const composed = handleCompose({ kind: "compose", ifStale: true, allHarnesses: false, projectRoot: cmd.projectRoot }, deps);
-  // A compose whose state re-sync failed loudly must stay loud: returning the
-  // composed result unchanged keeps the stderr rendering + exit 1 (#1963).
-  if (composed.kind === "composed" && composed.resyncFailed.length > 0) return composed;
+  // A compose whose state re-sync failed loudly (#1963) or was skipped over an
+  // invalid host graph (#1993) must stay loud: returning the composed result
+  // unchanged keeps the stderr rendering + exit 1.
+  if (composed.kind === "composed" && (composed.resyncFailed.length > 0 || composed.resyncSkipped !== null)) return composed;
   if (composed.kind === "composed") return { kind: "installed", name, composeOutcome: "composed" };
   if (composed.kind === "noop") return { kind: "installed", name, composeOutcome: "noop" };
   return composed;
@@ -1084,7 +1113,12 @@ export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDe
           `amadeus-plugin: state re-sync FAILED for ${failed}: Stage Progress section not recognized — no rows inserted, state file left untouched (#1963)`,
         );
       }
-      return result.resyncFailed.length > 0 ? 1 : 0;
+      if (result.resyncSkipped !== null) {
+        deps.err(
+          `amadeus-plugin: ${result.resyncSkipped.path} is invalid (${result.resyncSkipped.reason}); state re-sync skipped — recompile the host graph and re-run compose`,
+        );
+      }
+      return result.resyncFailed.length > 0 || result.resyncSkipped !== null ? 1 : 0;
     case "composed-all": {
       deps.out(`compose --all-harnesses: ${result.succeeded}/${result.total} harness tree(s) up to date`);
       for (const failure of result.failures) deps.err(`amadeus-plugin: ${failure.hostRoot}: ${failure.message}`);

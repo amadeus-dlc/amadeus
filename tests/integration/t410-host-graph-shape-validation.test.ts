@@ -20,9 +20,11 @@
 // silently classifies every intent as foreign-rows.
 //
 // Pinned here: a graph missing any consumed field, and the empty array, are
-// `kind:"invalid"` — re-sync skipped with the #1964 stderr warning, state file
-// byte-identical. The happy path (all consumed fields present) stays with
-// t406, which must remain green against this change.
+// `kind:"invalid"` — re-sync skipped as a first-class invalid-graph outcome
+// (#1993 revised the original #1964 console.error warning into the composed
+// result face), state file byte-identical. The happy path (all consumed
+// fields present) stays with t406, which must remain green against this
+// change.
 //
 // Mechanism: in-process (the exported default deps seam), like t406/t394, so
 // lcov sees the guard branches.
@@ -113,20 +115,21 @@ const DEGRADED_PAYLOADS: readonly [label: string, payload: string][] = [
 
 describe("t410 read boundary: host graph missing consumed fields is invalid", () => {
   for (const [label, payload] of DEGRADED_PAYLOADS) {
-    test(`${label}: re-sync skips with a warning, state byte-identical`, () => {
+    test(`${label}: re-sync skips as a first-class outcome, state byte-identical`, () => {
       writeFileSync(hostGraphPathOf(proj), payload, "utf-8");
       const before = readState(proj);
       const errSpy = spyOn(console, "error").mockImplementation(() => {});
       try {
-        let outcomes: unknown;
+        let resync: unknown;
         expect(() => {
-          outcomes = defaultPluginCliDeps().resyncIntentStates?.(host);
+          resync = defaultPluginCliDeps().resyncIntentStates?.(host);
         }).not.toThrow();
-        // Invalid graph => the re-sync examines NO intent at all.
-        expect(outcomes).toEqual([]);
-        const warnings = errSpy.mock.calls.map((c) => c.join(" ")).join("\n");
-        expect(warnings).toContain("stage-graph.json");
-        expect(warnings).toContain("re-sync skipped");
+        // Invalid graph => the re-sync examines NO intent at all. #1993: the
+        // skip is a discriminated outcome (rendered via the err seam by the
+        // CLI layer), never an empty list or a raw console.error.
+        expect(resync).toMatchObject({ kind: "invalid-graph" });
+        expect((resync as { path: string }).path).toContain("stage-graph.json");
+        expect(errSpy.mock.calls.length).toBe(0);
       } finally {
         errSpy.mockRestore();
       }
@@ -139,15 +142,10 @@ describe("t410 read boundary: host graph missing consumed fields is invalid", ()
     });
   }
 
-  test("empty array [] is named as such in the warning", () => {
+  test("empty array [] is named as such in the outcome's reason", () => {
     writeFileSync(hostGraphPathOf(proj), "[]", "utf-8");
-    const errSpy = spyOn(console, "error").mockImplementation(() => {});
-    try {
-      defaultPluginCliDeps().resyncIntentStates?.(host);
-      const warnings = errSpy.mock.calls.map((c) => c.join(" ")).join("\n");
-      expect(warnings).toContain("empty");
-    } finally {
-      errSpy.mockRestore();
-    }
+    const resync = defaultPluginCliDeps().resyncIntentStates?.(host);
+    expect(resync).toMatchObject({ kind: "invalid-graph" });
+    expect((resync as { reason: string }).reason).toContain("empty");
   });
 });

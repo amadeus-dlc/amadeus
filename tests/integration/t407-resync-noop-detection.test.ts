@@ -183,7 +183,7 @@ describe("t407 compose rendering: a failed re-sync is loud, not swallowed", () =
       discoverPlugins: () => [],
       recompile: () => true,
       generateRunners: () => true,
-      resyncIntentStates: () => [FAILED_OUTCOME],
+      resyncIntentStates: () => ({ kind: "ran" as const, outcomes: [FAILED_OUTCOME] }),
       out: () => {},
       err: (l) => errs.push(l),
     });
@@ -202,7 +202,7 @@ describe("t407 compose rendering: a failed re-sync is loud, not swallowed", () =
       discoverPlugins: () => [],
       recompile: () => true,
       generateRunners: () => true,
-      resyncIntentStates: () => [FAILED_OUTCOME],
+      resyncIntentStates: () => ({ kind: "ran" as const, outcomes: [FAILED_OUTCOME] }),
       out: () => {},
       err: (l) => errs.push(l),
     });
