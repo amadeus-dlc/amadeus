@@ -220,13 +220,7 @@ function blockTerminates(block: ts.Block, checker: ts.TypeChecker): boolean {
   return block.statements.some((statement) => statementTerminates(statement, checker));
 }
 
-function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): boolean {
-  const signature = checker.getResolvedSignature(call);
-  if (!signature) {
-    throw new InfraFailure("RULE_INVALID", "applyTransition does not resolve to a single callable contract");
-  }
-  const returnType = checker.getReturnTypeOfSignature(signature);
-  if (returnType.aliasSymbol?.getName() === "StateResult") return true;
+function discriminantKinds(returnType: ts.Type, checker: ts.TypeChecker): ReadonlySet<string> {
   const members = returnType.isUnion() ? returnType.types : [returnType];
   const kinds = new Set<string>();
   for (const member of members) {
@@ -236,6 +230,16 @@ function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): 
     const kindType = checker.getTypeOfSymbolAtLocation(kind, declaration);
     if (kindType.isStringLiteral()) kinds.add(kindType.value);
   }
+  return kinds;
+}
+
+function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): boolean {
+  const signature = checker.getResolvedSignature(call);
+  if (!signature) {
+    throw new InfraFailure("RULE_INVALID", "applyTransition does not resolve to a single callable contract");
+  }
+  const returnType = checker.getReturnTypeOfSignature(signature);
+  const kinds = discriminantKinds(returnType, checker);
   return kinds.has("ok") && [...kinds].some((kind) => kind !== "ok");
 }
 
@@ -336,7 +340,328 @@ function persistBlockedIsSafe(body: ts.Block): boolean {
   return write >= 0 && guard > write && allSuccessAfter(body, success, guard);
 }
 
-function textMutationIsSafe(body: ts.Block): boolean {
+function nodesIn<T extends ts.Node>(root: ts.Node, guard: (node: ts.Node) => node is T): T[] {
+  const found: T[] = [];
+  const visit = (node: ts.Node): void => {
+    if (node !== root && ts.isFunctionLike(node)) return;
+    if (guard(node)) found.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(root);
+  return found;
+}
+
+function directCall(expression: ts.Expression | undefined): ts.CallExpression | null {
+  if (!expression) return null;
+  const unwrapped = ts.isParenthesizedExpression(expression) ? expression.expression : expression;
+  return ts.isCallExpression(unwrapped) ? unwrapped : null;
+}
+
+function directCallExpressionName(expression: ts.Expression | undefined): string | null {
+  const call = directCall(expression);
+  return call ? directCallName(call) : null;
+}
+
+function identifierName(node: ts.Node | undefined): string | null {
+  return node && ts.isIdentifier(node) ? node.text : null;
+}
+
+function boundCall(body: ts.Block, callName: string): { readonly binding: string; readonly call: ts.CallExpression } | null {
+  const matches: Array<{ readonly binding: string; readonly call: ts.CallExpression }> = [];
+  for (const declaration of nodesIn(body, ts.isVariableDeclaration)) {
+    const call = directCall(declaration.initializer);
+    const binding = identifierName(declaration.name);
+    if (call && binding && directCallName(call) === callName) matches.push({ binding, call });
+  }
+  for (const binary of nodesIn(body, ts.isBinaryExpression)) {
+    const call = directCall(binary.right);
+    const binding = identifierName(binary.left);
+    if (binary.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && call && binding && directCallName(call) === callName) matches.push({ binding, call });
+  }
+  return matches.length === 1 ? matches[0] as { readonly binding: string; readonly call: ts.CallExpression } : null;
+}
+
+function boundIdentifierCall(
+  body: ts.Block,
+  callName: string,
+): { readonly binding: string; readonly call: ts.CallExpression } | null {
+  const bound = boundCall(body, callName);
+  return bound && identifierName(bound.call.expression) === callName ? bound : null;
+}
+
+function hasProperty(node: ts.Node, objectName: string, propertyName: string): boolean {
+  return nodesIn(node, ts.isPropertyAccessExpression).some((property) =>
+    identifierName(property.expression) === objectName && property.name.text === propertyName);
+}
+
+function hasIdentifier(node: ts.Node, name: string): boolean {
+  return nodesIn(node, ts.isIdentifier).some((identifier) => identifier.text === name);
+}
+
+function hasThrow(statement: ts.Statement): boolean {
+  return ts.isThrowStatement(statement) || nodesIn(statement, ts.isThrowStatement).length > 0;
+}
+
+function returnKind(statement: ts.Statement, expected: string): boolean {
+  const returned = ts.isReturnStatement(statement)
+    ? statement
+    : ts.isBlock(statement)
+      ? statement.statements.find(ts.isReturnStatement)
+      : undefined;
+  if (!returned?.expression || !ts.isObjectLiteralExpression(returned.expression)) return false;
+  return returned.expression.properties.some((property) =>
+    ts.isPropertyAssignment(property)
+    && property.name.getText() === "kind"
+    && ts.isStringLiteralLike(property.initializer)
+    && property.initializer.text === expected);
+}
+
+function notFoundGuard(statement: ts.Statement, targetName: string): boolean {
+  return ts.isIfStatement(statement)
+    && hasIdentifier(statement.expression, targetName)
+    && hasIdentifier(statement.expression, "undefined")
+    && returnKind(statement.thenStatement, "not-found");
+}
+
+function helperFailureGuards(
+  body: ts.Block,
+  targetAfter: string,
+  targetBefore: string,
+  postcondition: string,
+  before: string,
+  content: string,
+): boolean {
+  const guards = body.statements.filter(ts.isIfStatement);
+  const postconditionGuard = guards.some((guard) =>
+    hasIdentifier(guard.expression, targetAfter)
+    && nodesIn(guard.expression, ts.isCallExpression).some((call) =>
+      identifierName(call.expression) === postcondition && identifierName(call.arguments[0]) === targetAfter)
+    && hasThrow(guard.thenStatement));
+  const isolationGuard = guards.some((guard) =>
+    hasIdentifier(guard.expression, targetBefore)
+    && hasProperty(guard.expression, before, "content")
+    && hasIdentifier(guard.expression, content)
+    && nodesIn(guard.expression, ts.isCallExpression).filter((call) => directCallName(call) === "slice").length >= 4
+    && hasThrow(guard.thenStatement));
+  return postconditionGuard && isolationGuard;
+}
+
+function helperReturnsChanged(body: ts.Block, contentName: string): boolean {
+  const returns = returnsIn(body, () => true);
+  const call = directCall(returns[0]?.expression);
+  return returns.length === 1
+    && identifierName(call?.expression) === "changed"
+    && identifierName(call?.arguments[0]) === contentName;
+}
+
+type MutationHelperParameters = {
+  readonly before: string;
+  readonly content: string;
+  readonly operation: string;
+  readonly target: string;
+  readonly postcondition: string;
+};
+
+function mutationHelperParameters(declaration: ts.FunctionDeclaration): MutationHelperParameters | null {
+  if (declaration.parameters.length !== 5) return null;
+  const [before, content, operation, target, postcondition] = declaration.parameters.map((parameter) =>
+    identifierName(parameter.name));
+  return before && content && operation && target && postcondition
+    ? { before, content, operation, target, postcondition }
+    : null;
+}
+
+function helperTargetBindings(body: ts.Block, after: string, before: string): readonly [string, string] | null {
+  const targetCalls = nodesIn(body, ts.isCallExpression)
+    .filter((call) => identifierName(call.expression) === "targetStageLine");
+  if (targetCalls.length !== 2) return null;
+  const targetAfter = targetCalls.find((call) => identifierName(call.arguments[0]) === after);
+  const targetBefore = targetCalls.find((call) => identifierName(call.arguments[0]) === before);
+  const afterBinding = targetAfter?.parent && ts.isVariableDeclaration(targetAfter.parent)
+    ? identifierName(targetAfter.parent.name) : null;
+  const beforeBinding = targetBefore?.parent && ts.isVariableDeclaration(targetBefore.parent)
+    ? identifierName(targetBefore.parent.name) : null;
+  return afterBinding && beforeBinding ? [afterBinding, beforeBinding] : null;
+}
+
+function helperReparseIsBound(
+  reparsed: NonNullable<ReturnType<typeof boundCall>>,
+  after: NonNullable<ReturnType<typeof boundCall>>,
+  parameters: MutationHelperParameters,
+): boolean {
+  return identifierName(reparsed.call.arguments[0]) === parameters.content
+    && identifierName(after.call.arguments[0]) === reparsed.binding
+    && identifierName(after.call.arguments[1]) === parameters.operation
+    && identifierName(after.call.arguments[2]) === parameters.target;
+}
+
+function verifiedMutationHelper(declaration: ts.FunctionDeclaration): boolean {
+  if (!declaration.body) return false;
+  const parameters = mutationHelperParameters(declaration);
+  const reparsed = boundIdentifierCall(declaration.body, "validateStageState");
+  const after = boundIdentifierCall(declaration.body, "validatedStageStateData");
+  if (!parameters || !reparsed || !after || !helperReparseIsBound(reparsed, after, parameters)) return false;
+  const targets = helperTargetBindings(declaration.body, after.binding, parameters.before);
+  if (!targets) return false;
+  return helperFailureGuards(
+    declaration.body,
+    targets[0],
+    targets[1],
+    parameters.postcondition,
+    parameters.before,
+    parameters.content,
+  ) && helperReturnsChanged(declaration.body, parameters.content);
+}
+
+function resolvedMutationHelper(call: ts.CallExpression, checker: ts.TypeChecker): ts.FunctionDeclaration {
+  const signature = checker.getResolvedSignature(call);
+  let symbol = checker.getSymbolAtLocation(call.expression);
+  if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+  const implementations = symbol?.declarations?.filter((declaration): declaration is ts.FunctionDeclaration =>
+    ts.isFunctionDeclaration(declaration) && declaration.body !== undefined) ?? [];
+  if (!signature || implementations.length !== 1 || implementations[0]?.name?.text !== "verifyStageMutation") {
+    throw new InfraFailure("RULE_INVALID", "verifyStageMutation does not resolve to one implementation");
+  }
+  const returnType = checker.getReturnTypeOfSignature(signature);
+  const kinds = discriminantKinds(returnType, checker);
+  if (kinds.size !== 2 || !kinds.has("changed") || !kinds.has("not-found")) {
+    throw new InfraFailure("RULE_INVALID", "verifyStageMutation does not return TextMutationResult");
+  }
+  return implementations[0] as ts.FunctionDeclaration;
+}
+
+function mutationPredicateIsExact(name: string, expression: ts.Expression, desiredName: string): boolean {
+  if (!ts.isArrowFunction(expression) || expression.parameters.length !== 1) return false;
+  const line = identifierName(expression.parameters[0]?.name);
+  if (!line || ts.isBlock(expression.body)) return false;
+  if (name === "setCheckbox") {
+    return ts.isBinaryExpression(expression.body)
+      && expression.body.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken
+      && hasProperty(expression.body, line, "state")
+      && hasIdentifier(expression.body, desiredName);
+  }
+  const call = directCall(expression.body);
+  return Boolean(call
+    && ts.isPropertyAccessExpression(call.expression)
+    && call.expression.name.text === "startsWith"
+    && hasProperty(call.expression.expression, line, "suffix")
+    && identifierName(call.arguments[0]) === desiredName);
+}
+
+function replacementUsesDesired(body: ts.Block, replacement: ts.CallExpression, desiredName: string): boolean {
+  if (hasIdentifier(replacement, desiredName)) return true;
+  return nodesIn(body, ts.isVariableDeclaration).some((declaration) => {
+    const binding = identifierName(declaration.name);
+    return binding !== null
+      && replacement.arguments.some((argument) => hasIdentifier(argument, binding))
+      && declaration.initializer !== undefined
+      && ts.isElementAccessExpression(declaration.initializer)
+      && identifierName(declaration.initializer.expression) === "CHECKBOX_MAP"
+      && identifierName(declaration.initializer.argumentExpression) === desiredName;
+  });
+}
+
+type MutationTargetParameters = {
+  readonly state: string;
+  readonly slug: string;
+  readonly desired: string;
+};
+
+type MutationTargetBindings = {
+  readonly data: NonNullable<ReturnType<typeof boundCall>>;
+  readonly target: NonNullable<ReturnType<typeof boundCall>>;
+  readonly operation: string;
+};
+
+type MutationContentBindings = {
+  readonly content: ts.VariableDeclaration;
+  readonly contentName: string;
+};
+
+function mutationTargetParameters(
+  declaration: ts.FunctionDeclaration,
+  checker: ts.TypeChecker,
+): MutationTargetParameters | null {
+  if (declaration.parameters.length !== 3) return null;
+  const [state, slug, desired] = declaration.parameters.map((parameter) => identifierName(parameter.name));
+  const stateType = checker.getTypeAtLocation(declaration.parameters[0] as ts.ParameterDeclaration);
+  const stateTypeName = stateType.aliasSymbol?.getName() ?? stateType.symbol?.getName();
+  return state && slug && desired && stateTypeName === "ValidatedStageState"
+    ? { state, slug, desired }
+    : null;
+}
+
+function mutationTargetBindings(body: ts.Block, parameters: MutationTargetParameters): MutationTargetBindings | null {
+  const data = boundIdentifierCall(body, "validatedStageStateData");
+  const target = boundIdentifierCall(body, "targetStageLine");
+  const operation = identifierName(data?.call.arguments[1]);
+  if (!data || !target || !operation) return null;
+  if (identifierName(data.call.arguments[0]) !== parameters.state) return null;
+  if (identifierName(target.call.arguments[0]) !== data.binding) return null;
+  if (identifierName(target.call.arguments[1]) !== parameters.slug) return null;
+  return { data, target, operation };
+}
+
+function mutationContentBindings(
+  body: ts.Block,
+  bindings: MutationTargetBindings,
+  desired: string,
+): MutationContentBindings | null {
+  const replacement = boundCall(body, "replace");
+  if (!replacement || !ts.isPropertyAccessExpression(replacement.call.expression)) return null;
+  if (!hasProperty(replacement.call.expression.expression, bindings.target.binding, "line")) return null;
+  if (!replacementUsesDesired(body, replacement.call, desired)) return null;
+  const content = body.statements.flatMap((statement) =>
+    ts.isVariableStatement(statement) ? [...statement.declarationList.declarations] : [])
+    .find((variable) => hasProperty(variable, bindings.data.binding, "content")
+      && hasIdentifier(variable, bindings.target.binding));
+  const contentName = identifierName(content?.name);
+  if (!content || !contentName || !content.initializer) return null;
+  return hasIdentifier(content.initializer, replacement.binding) ? { content, contentName } : null;
+}
+
+function returnedMutationDelegate(
+  name: string,
+  body: ts.Block,
+  parameters: MutationTargetParameters,
+  bindings: MutationTargetBindings,
+  content: MutationContentBindings,
+): ts.CallExpression | null {
+  const returned = returnsIn(body, (expression) => directCallExpressionName(expression) === "verifyStageMutation");
+  if (returned.length !== 1) return null;
+  if (topLevelIndex(returned[0] as ts.ReturnStatement, body) <= topLevelIndex(content.content, body)) return null;
+  const delegate = directCall(returned[0]?.expression);
+  if (delegate?.arguments.length !== 5) return null;
+  if (identifierName(delegate.expression) !== "verifyStageMutation") return null;
+  const args = delegate.arguments;
+  if (identifierName(args[0]) !== bindings.data.binding) return null;
+  if (identifierName(args[1]) !== content.contentName) return null;
+  if (identifierName(args[2]) !== bindings.operation) return null;
+  if (identifierName(args[3]) !== parameters.slug) return null;
+  return mutationPredicateIsExact(name, args[4] as ts.Expression, parameters.desired) ? delegate : null;
+}
+
+function delegatedTextMutationIsSafe(
+  name: string,
+  declaration: ts.FunctionDeclaration,
+  checker: ts.TypeChecker,
+): boolean {
+  const body = declaration.body as ts.Block;
+  const parameters = mutationTargetParameters(declaration, checker);
+  if (!parameters) return false;
+  const bindings = mutationTargetBindings(body, parameters);
+  if (!bindings) return false;
+  const found = topLevelStatementIndex(body, (statement) => notFoundGuard(statement, bindings.target.binding));
+  const content = mutationContentBindings(body, bindings, parameters.desired);
+  if (found < 0 || !content) return false;
+  const delegate = returnedMutationDelegate(name, body, parameters, bindings, content);
+  if (!delegate) return false;
+  return verifiedMutationHelper(resolvedMutationHelper(delegate, checker));
+}
+
+function textMutationIsSafe(declaration: ts.FunctionDeclaration, checker: ts.TypeChecker): boolean {
+  const body = declaration.body as ts.Block;
   const found = topLevelStatementIndex(body, (statement) =>
     guardedFailure(statement, ["content", "return"])
     && /(?:includes|match|test|exec)\s*\(/.test(statement.getText()));
@@ -346,7 +671,8 @@ function textMutationIsSafe(body: ts.Block): boolean {
     guardedFailure(statement, ["return"])
     && /(?:includes|match|test|exec|parseCheckboxes)\s*\(/.test(statement.getText()), mutation);
   const success = returnsIn(body, (expression) => returnsSuccess(expression));
-  return found >= 0 && mutation > found && postcondition > mutation && allSuccessAfter(body, success, postcondition);
+  const inlineSafe = found >= 0 && mutation > found && postcondition > mutation && allSuccessAfter(body, success, postcondition);
+  return inlineSafe || delegatedTextMutationIsSafe(declaration.name?.text ?? "", declaration, checker);
 }
 
 function composeResyncIsSafe(body: ts.Block): boolean {
@@ -359,10 +685,11 @@ function composeResyncIsSafe(body: ts.Block): boolean {
   return mutation >= 0 && postcondition > mutation && write > postcondition && allSuccessAfter(body, success, write);
 }
 
-function nsd003Safe(name: string, body: ts.Block): boolean {
+function nsd003Safe(name: string, declaration: ts.FunctionDeclaration, checker: ts.TypeChecker): boolean {
+  const body = declaration.body as ts.Block;
   if (name === "persistBlocked") return persistBlockedIsSafe(body);
   if (name === "resyncOneIntent") return composeResyncIsSafe(body);
-  return textMutationIsSafe(body);
+  return textMutationIsSafe(declaration, checker);
 }
 
 type SourceFindingCandidate = {
@@ -422,7 +749,7 @@ function semanticCandidateForNode(
   }
   if (!ts.isFunctionDeclaration(node) || !node.name || !NSD003_FUNCTIONS.has(node.name.text)) return null;
   if (!node.body) throw new InfraFailure("RULE_INVALID", `${node.name.text} has no analyzable implementation`);
-  return nsd003Safe(node.name.text, node.body)
+  return nsd003Safe(node.name.text, node, checker)
     ? null
     : { parsed, sourceFile, node, ruleId: "NSD003", symbol: node.name.text };
 }

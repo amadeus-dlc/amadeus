@@ -46,6 +46,57 @@ function semanticScan(source: string) {
   return scanParsedSources([parseSource(ast, "fixture.ts", source)]);
 }
 
+const VERIFIED_MUTATION_HELPER = `
+  type TextMutationResult = { kind: "changed"; content: string } | { kind: "not-found"; target: string };
+  type Line = { line: string; start: number; end: number; state: string; suffix: string };
+  type Data = { content: string };
+  type ValidatedStageState = { readonly validated: true };
+  declare function validateStageState(content: string): ValidatedStageState;
+  declare function validatedStageStateData(state: ValidatedStageState, operation: string, target: string): Data;
+  declare function targetStageLine(data: Data, target: string): Line | undefined;
+  function changed(content: string): TextMutationResult { return { kind: "changed", content }; }
+  function verifyStageMutation(
+    before: Data,
+    content: string,
+    operation: string,
+    target: string,
+    postcondition: (line: Line) => boolean,
+  ): TextMutationResult {
+    const reparsed = validateStageState(content);
+    const after = validatedStageStateData(reparsed, operation, target);
+    const targetAfter = targetStageLine(after, target);
+    if (targetAfter === undefined || !postcondition(targetAfter)) throw "postcondition-failed";
+    const targetBefore = targetStageLine(before, target);
+    if (
+      targetBefore === undefined
+      || before.content.slice(0, targetBefore.start) !== content.slice(0, targetAfter.start)
+      || before.content.slice(targetBefore.end) !== content.slice(targetAfter.end)
+    ) throw "non-target-changed";
+    return changed(content);
+  }
+`;
+
+function delegatedMutation(name: "setCheckbox" | "setStageSuffix", delegate: string): string {
+  const desired = name === "setCheckbox" ? "newState: string" : "action: string";
+  const replacement = name === "setCheckbox"
+    ? 'target.line.replace("old", newState)'
+    : 'target.line.replace("old", action)';
+  const postcondition = name === "setCheckbox"
+    ? "(line: Line) => line.state === newState"
+    : "(line: Line) => line.suffix.startsWith(action)";
+  return `
+    function ${name}(state: ValidatedStageState, slug: string, ${desired}): TextMutationResult {
+      const operation = "${name}";
+      const data = validatedStageStateData(state, operation, slug);
+      const target = targetStageLine(data, slug);
+      if (target === undefined) return { kind: "not-found", target: slug };
+      const nextLine = ${replacement};
+      const content = data.content.slice(0, target.start) + nextLine + data.content.slice(target.end);
+      ${delegate.replace("$POSTCONDITION", postcondition)}
+    }
+  `;
+}
+
 function baseline(fingerprints: readonly string[]): BaselineDoc {
   return {
     schemaVersion: 1,
@@ -332,6 +383,39 @@ describe("no-silent-drop AST rules", () => {
     `;
     expect(scan(unsafe).map((finding) => finding.ruleId)).toEqual(["NSD003"]);
     expect(scan(safe)).toEqual([]);
+  });
+
+  test("NSD003 accepts only a directly returned, verified mutation helper delegate", () => {
+    const safe = VERIFIED_MUTATION_HELPER
+      + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);")
+      + delegatedMutation("setStageSuffix", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    expect(scan(safe).filter((finding) => finding.ruleId === "NSD003")).toEqual([]);
+  });
+
+  test("NSD003 rejects unverified, wrong, or ignored mutation helper delegates", () => {
+    const unverified = VERIFIED_MUTATION_HELPER.replace(
+      /function verifyStageMutation\([\s\S]*?\n {2}}\n$/,
+      "function verifyStageMutation(_before: Data, content: string): TextMutationResult { return changed(content); }\n",
+    ) + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    const wrong = VERIFIED_MUTATION_HELPER.replaceAll("verifyStageMutation", "verifyOtherMutation")
+      + delegatedMutation("setCheckbox", "return verifyOtherMutation(data, content, operation, slug, $POSTCONDITION);");
+    const ignored = VERIFIED_MUTATION_HELPER
+      + delegatedMutation("setCheckbox", "verifyStageMutation(data, content, operation, slug, $POSTCONDITION); return changed(content);");
+    for (const source of [unverified, wrong, ignored]) {
+      expect(scan(source).filter((finding) => finding.ruleId === "NSD003")).toHaveLength(1);
+    }
+  });
+
+  test("NSD003 helper resolution fails closed when the approved delegate is unresolved or ambiguous", () => {
+    const unresolved = VERIFIED_MUTATION_HELPER.replace(
+      /function verifyStageMutation\([\s\S]*?\n {2}}\n$/,
+      "declare function verifyStageMutation(before: Data, content: string, operation: string, target: string, postcondition: (line: Line) => boolean): TextMutationResult;\n",
+    ) + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    const ambiguous = VERIFIED_MUTATION_HELPER
+      + "function verifyStageMutation(_before: Data, content: string): TextMutationResult { return changed(content); }\n"
+      + delegatedMutation("setCheckbox", "return verifyStageMutation(data, content, operation, slug, $POSTCONDITION);");
+    expect(() => scan(unresolved)).toThrow("verifyStageMutation does not resolve to one implementation");
+    expect(() => scan(ambiguous)).toThrow("verifyStageMutation does not resolve to one implementation");
   });
 
   test("NSD003 proves compose resync write and reparse before success", () => {
