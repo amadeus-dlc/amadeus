@@ -276,6 +276,7 @@ function makeProject(withState: boolean): string {
     // The resource bag names the framework version (otel/resource.ts).
     "amadeus-version.ts",
     "amadeus-audit.ts",
+    "amadeus-merge-recovery.ts",
     // amadeus-lib.ts imports the JSONL journal codec (amadeus-lib.ts:2).
     "amadeus-journal.ts",
     // Both hooks open a telemetry process span (#1628 Phase 2); the seam and

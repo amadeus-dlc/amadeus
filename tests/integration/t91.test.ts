@@ -132,6 +132,10 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-audit.ts"),
     join(proj, ".claude", "tools", "amadeus-audit.ts"),
   );
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-merge-recovery.ts"),
+    join(proj, ".claude", "tools", "amadeus-merge-recovery.ts"),
+  );
   // amadeus-lib.ts / amadeus-audit.ts both import the JSONL journal codec.
   copyFileSync(
     join(SRC_TOOLS, "amadeus-journal.ts"),

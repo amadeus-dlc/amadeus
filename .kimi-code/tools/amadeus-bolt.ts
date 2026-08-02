@@ -58,6 +58,12 @@ import {
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  assessBoltCompletionRecovery,
+  assessStateMergeRecovery,
+  type MergeRecoveryAssessment,
+} from "./amadeus-merge-recovery.ts";
+import { verifyAuditMergeRecovery } from "./amadeus-audit.ts";
 
 function emitAudit(
   pd: string,
@@ -363,6 +369,99 @@ function handleStart(args: string[]): void {
 // consolidate state + audit back to main. Runs BEFORE SKILL.md Step 6.5's
 // git-merge dispatch so AIDLC metadata consolidates first. Single-bolt
 // only — csv batch with --merge is rejected.
+function preflightCompletionMerge(
+  pd: string,
+  flags: Record<string, string>,
+  useMerge: boolean,
+): MergeRecoveryAssessment {
+  if (!useMerge) return { status: "pending" };
+  if (!flags.slug) error("--merge requires --slug <kebab-slug>");
+  if (flags.name.includes(",")) {
+    error(
+      `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`,
+    );
+  }
+  // A held sibling must be released before any completion evidence is minted.
+  if (isMergeHeld(pd, flags.slug, flags.intent, flags.space)) {
+    failJson(
+      "complete-merge",
+      flags.slug,
+      "merge-held",
+      `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`amadeus-bolt release-merge --slug ${flags.slug}\` before retrying.`,
+    );
+  }
+  const recovery = assessStateMergeRecovery(pd, flags.slug, flags.intent, flags.space);
+  if (recovery.status === "invalid") {
+    failJson("complete-merge", flags.slug, "state-merge-evidence-invalid", recovery.detail);
+  }
+  return recovery;
+}
+
+function mergeStateOrRecover(
+  pd: string,
+  flags: Record<string, string>,
+  recovery: MergeRecoveryAssessment,
+): void {
+  if (recovery.status !== "pending") return;
+  const result = spawnSibling(pd, "amadeus-state.ts", [
+    "merge",
+    "--slug",
+    flags.slug,
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const afterFailure = assessStateMergeRecovery(pd, flags.slug, flags.intent, flags.space);
+  if (afterFailure.status === "verified") return;
+  const reason = result.signal === "SIGTERM" ? "state-merge-timeout" : "state-merge-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "complete-merge",
+    flags.slug,
+    reason,
+    `amadeus-state merge --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
+function mergeAuditOrRecover(pd: string, flags: Record<string, string>): void {
+  const result = spawnSibling(pd, "amadeus-audit.ts", [
+    "audit-merge",
+    "--slug",
+    flags.slug,
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const recovery = verifyAuditMergeRecovery(pd, flags.slug, flags.intent, flags.space);
+  if (recovery.status === "verified") return;
+  const reason = result.signal === "SIGTERM" ? "audit-merge-timeout" : "audit-merge-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "complete-merge",
+    flags.slug,
+    reason,
+    `amadeus-audit audit-merge --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
+function completionRecoveryFor(
+  pd: string,
+  flags: Record<string, string>,
+  useMerge: boolean,
+): MergeRecoveryAssessment {
+  if (!useMerge) return { status: "pending" };
+  const recovery = assessBoltCompletionRecovery(
+    pd,
+    flags.slug,
+    flags.name,
+    flags.batch,
+    flags.intent,
+    flags.space,
+  );
+  if (recovery.status === "invalid") {
+    failJson("complete-merge", flags.slug, "bolt-completion-evidence-invalid", recovery.detail);
+  }
+  return recovery;
+}
+
 function handleComplete(args: string[]): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
@@ -374,33 +473,9 @@ function handleComplete(args: string[]): void {
 
   const pd = resolveProjectDir(projectDir);
   const useMerge = booleans.has("merge");
+  const stateRecovery = preflightCompletionMerge(pd, flags, useMerge);
 
-  if (useMerge) {
-    if (!flags.slug) {
-      error("--merge requires --slug <kebab-slug>");
-    }
-    if (flags.name.includes(",")) {
-      error(
-        `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`
-      );
-    }
-    // HOLD-MERGE invariant enforcement.
-    // SKILL.md U5's multi-failure halt-and-ask sequence sets `Merge-Held: true`
-    // on each successful Bolt's per-Bolt forked state file before rendering
-    // any failed-sibling AUQ. This refusal pins that invariant in tooling so
-    // an orchestrator that forgets the prose contract cannot land a merge
-    // mid-AUQ-sequence. Refusal is non-zero exit + stderr; the orchestrator
-    // must call `amadeus-bolt release-merge --slug <slug>` once the AUQ
-    // sequence resolves before retrying complete --merge.
-    if (isMergeHeld(pd, flags.slug, flags.intent, flags.space)) {
-      failJson(
-        "complete-merge",
-        flags.slug,
-        "merge-held",
-        `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`amadeus-bolt release-merge --slug ${flags.slug}\` before retrying.`
-      );
-    }
-  }
+  const completionRecovery = completionRecoveryFor(pd, flags, useMerge);
 
   try {
     const fields: Record<string, string> = {
@@ -410,7 +485,9 @@ function handleComplete(args: string[]): void {
     if (useMerge) {
       fields["Bolt slug"] = flags.slug;
     }
-    emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
+    if (completionRecovery.status === "pending") {
+      emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
+    }
   } catch (e) {
     if (useMerge) {
       failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
@@ -427,43 +504,11 @@ function handleComplete(args: string[]): void {
 
   // Delegate to state-merge (emits STATE_MERGED inside withAuditLock;
   // removes slug from main's Bolt Refs; merges per-field rules from worktree).
-  const stateMergeResult = spawnSibling(pd, "amadeus-state.ts", [
-    "merge",
-    "--slug",
-    flags.slug,
-    ...selectorArgs(flags),
-  ]);
-  if (!stateMergeResult.ok) {
-    const reason =
-      stateMergeResult.signal === "SIGTERM" ? "state-merge-timeout" : "state-merge-failed";
-    failBolt(pd, flags.name, flags.slug, reason, stateMergeResult.stderr || stateMergeResult.stdout);
-    failJson(
-      "complete-merge",
-      flags.slug,
-      reason,
-      `amadeus-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`
-    );
-  }
+  mergeStateOrRecover(pd, flags, stateRecovery);
 
   // Audit-merge primitive. Emits AUDIT_MERGED after appending the
   // worktree's post-fork delta to main audit.
-  const auditMergeResult = spawnSibling(pd, "amadeus-audit.ts", [
-    "audit-merge",
-    "--slug",
-    flags.slug,
-    ...selectorArgs(flags),
-  ]);
-  if (!auditMergeResult.ok) {
-    const reason =
-      auditMergeResult.signal === "SIGTERM" ? "audit-merge-timeout" : "audit-merge-failed";
-    failBolt(pd, flags.name, flags.slug, reason, auditMergeResult.stderr || auditMergeResult.stdout);
-    failJson(
-      "complete-merge",
-      flags.slug,
-      reason,
-      `amadeus-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`
-    );
-  }
+  mergeAuditOrRecover(pd, flags);
 
   // Fragment-merge primitive. Removes the worktree's runtime-graph.json
   // fragment. Idempotent — fragment-absent is a clean no-op. The post-Bash

@@ -84,6 +84,7 @@ import {
   cleanupWorktreeFixture,
   FIXTURES_DIR,
   seedStateFile,
+  seedUnitDependency,
   seededAuditDir,
   seededRecordDir,
   setupWorktreeFixture,
@@ -151,6 +152,7 @@ function makeBoltFixture(): string {
   // seeds it into the per-intent record (committed below so the worktree carries
   // it). The active-intent cursor on disk lets the main side resolve the record.
   seedStateFile(proj, join(FIXTURES_DIR, "state-construction.md"));
+  seedUnitDependency(seededRecordDir(proj));
   // Audit must be present (touched, can be empty) — a bare-header shard under the
   // record's audit/ dir (the tool appends its own per-clone shard alongside).
   mkdirSync(seededAuditDir(proj), { recursive: true });
@@ -279,10 +281,17 @@ describe("t12 (a) single-Bolt round-trip (migrated from t12-bolt-runtime-graph-f
     appendAudit(proj, "WORKFLOW_STARTED", [
       ["Workflow ID", "t12-1bolt"],
       ["Scope", "feature"],
+      ["Request", "runtime graph fixture"],
       ["Intent", "t12 fixture"],
     ]);
-    appendAudit(proj, "STAGE_STARTED", [["Stage", "code-generation"]]);
-    appendAudit(proj, "STAGE_COMPLETED", [["Stage", "code-generation"]]);
+    appendAudit(proj, "STAGE_STARTED", [
+      ["Stage", "code-generation"],
+      ["Agent", "amadeus-developer-agent"],
+    ]);
+    appendAudit(proj, "STAGE_COMPLETED", [
+      ["Stage", "code-generation"],
+      ["Details", "runtime graph fixture"],
+    ]);
     run(RUNTIME_TOOL, ["compile"], proj);
 
     const cg = codeGenStage(proj);
@@ -311,9 +320,13 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     appendAudit(proj, "WORKFLOW_STARTED", [
       ["Workflow ID", "t12-3bolt"],
       ["Scope", "feature"],
+      ["Request", "runtime graph fixture"],
       ["Intent", "t12 fixture"],
     ]);
-    appendAudit(proj, "STAGE_STARTED", [["Stage", "code-generation"]]);
+    appendAudit(proj, "STAGE_STARTED", [
+      ["Stage", "code-generation"],
+      ["Agent", "amadeus-developer-agent"],
+    ]);
     for (const slug of ["pay", "auth", "cart"]) {
       const r = boltStartWorktree(proj, slug);
       expect(r.status).toBe(0); // each fork landed cleanly
@@ -351,7 +364,8 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     const { proj } = buildThreeBoltFixture();
     // Complete in arbitrary order cart/pay/auth, then compile main.
     for (const slug of ["cart", "pay", "auth"]) boltCompleteMerge(proj, slug);
-    run(RUNTIME_TOOL, ["compile"], proj);
+    const compile = run(RUNTIME_TOOL, ["compile"], proj);
+    expect(compile.status).toBe(0);
 
     const cg = codeGenStage(proj);
     expect(cg).not.toBeNull();
