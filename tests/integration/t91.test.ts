@@ -148,10 +148,6 @@ function makeProject(): string {
     join(proj, ".claude", "tools", "amadeus-config.ts"),
   );
   copyFileSync(
-    join(SRC_TOOLS, "amadeus-config.ts"),
-    join(proj, ".claude", "tools", "amadeus-config.ts"),
-  );
-  copyFileSync(
     join(SRC_TOOLS, "amadeus-contained-file.ts"),
     join(proj, ".claude", "tools", "amadeus-contained-file.ts"),
   );
