@@ -792,5 +792,12 @@
     "dirName": "260802-scope-grid-face-sync",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc1b1-e84e-7a5a-a4cb-2b75b28d4c8a",
+    "slug": "vocab-canonical-consolid",
+    "dirName": "260802-vocab-canonical-consolid",
+    "scope": "self-document",
+    "status": "complete"
   }
 ]
