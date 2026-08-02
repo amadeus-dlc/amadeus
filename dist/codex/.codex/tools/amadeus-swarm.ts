@@ -1122,7 +1122,7 @@ function printPoolMutation(result: UnitPoolMutationResult): void {
   process.exit(result.ok ? 0 : 2);
 }
 
-function handleInitialEnqueue(rest: string[]): void {
+export function handleInitialEnqueue(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1144,7 +1144,7 @@ function handleInitialEnqueue(rest: string[]): void {
   }));
 }
 
-function handleAcquire(rest: string[]): void {
+export function handleAcquire(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1161,7 +1161,7 @@ function requiredAttempt(flags: Record<string, string>, command: string): string
   return flags.attempt;
 }
 
-function handleConfirmDispatch(rest: string[]): void {
+export function handleConfirmDispatch(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1176,7 +1176,7 @@ function handleConfirmDispatch(rest: string[]): void {
   }));
 }
 
-function handleRecordReconciliation(rest: string[]): void {
+export function handleRecordReconciliation(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1203,7 +1203,7 @@ function poolOutcome(flags: Record<string, string>, command: string): UnitPoolOu
   return flags.outcome as UnitPoolOutcome;
 }
 
-function handleSettle(rest: string[], command: "settle-release" | "settle-release-requeue" | "settle-release-cancel-dependents"): void {
+export function handleSettle(rest: string[], command: "settle-release" | "settle-release-requeue" | "settle-release-cancel-dependents"): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1221,7 +1221,7 @@ function handleSettle(rest: string[], command: "settle-release" | "settle-releas
   }
 }
 
-function handleTerminateBatch(rest: string[]): void {
+export function handleTerminateBatch(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
@@ -1238,7 +1238,7 @@ function handleTerminateBatch(rest: string[]): void {
   }));
 }
 
-function handleLateResult(rest: string[]): void {
+export function handleLateResult(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
   const batchId = requiredBatch(flags);
