@@ -455,6 +455,24 @@ function emitBoltFailed(pd: string, unit: string, errorSummary: string): void {
 
 // --- prepare ----------------------------------------------------------------
 
+interface PreparedUnit {
+  unit: string;
+  ok: boolean;
+  worktree_path?: string;
+  error?: string;
+}
+
+function stopOnIncompletePrepare(
+  batch: string,
+  base: string,
+  concurrency: number,
+  prepared: readonly PreparedUnit[],
+): void {
+  if (prepared.every((entry) => entry.ok)) return;
+  console.log(JSON.stringify({ batch, base, concurrency, units: prepared }, null, 2));
+  process.exit(2);
+}
+
 function handlePrepare(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -503,34 +521,7 @@ function handlePrepare(rest: string[]): void {
   }
   const concurrency = String(Math.min(units.length, resolvedConfig.config.maxParallelUnits, override));
 
-  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
-  const initialized = pool.initialEnqueue({
-    idempotencyKey: `unit-pool:${flags.batch}:initial-enqueue`,
-    batchId: flags.batch,
-    cap: Number(concurrency),
-    units: units.map((unitId) => ({ unitId, dependsOn: [] })),
-  });
-  if (!initialized.ok) fail(`unit pool initialization failed: ${initialized.reason}`);
-
-  // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
-  // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
-  // only learns a degrade happened via this flag.
-  if (flags["degraded-from"]) {
-    const requested = flags["degraded-from"] as DriverName;
-    if (!DRIVER_VALUES.includes(requested)) {
-      fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
-    }
-    emitSwarmDegraded(projectDir, flags.batch, requested);
-  }
-
-  emitSwarmStarted(projectDir, flags.batch, units, concurrency);
-
-  const prepared: {
-    unit: string;
-    ok: boolean;
-    worktree_path?: string;
-    error?: string;
-  }[] = [];
+  const prepared: PreparedUnit[] = [];
   // Forward the RESOLVED repo name (not the raw flag) so every sibling primitive
   // anchors to the same repo — an inferred lone repo is passed explicitly too, so
   // create/merge/discard never re-resolve to a different repo than prepare chose.
@@ -577,6 +568,33 @@ function handlePrepare(rest: string[]): void {
     prepared.push({ unit, ok: true, worktree_path: worktreeDir });
   }
 
+  // A partially prepared batch has no dispatch authority. Persisting the pool
+  // before every worktree exists would leave a non-terminal queue that finalize
+  // cannot drain because the conductor never received a complete worker set.
+  stopOnIncompletePrepare(flags.batch, base, Number(concurrency), prepared);
+
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  const initialized = pool.initialEnqueue({
+    idempotencyKey: `unit-pool:${flags.batch}:initial-enqueue`,
+    batchId: flags.batch,
+    cap: Number(concurrency),
+    units: units.map((unitId) => ({ unitId, dependsOn: [] })),
+  });
+  if (!initialized.ok) fail(`unit pool initialization failed: ${initialized.reason}`);
+
+  // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
+  // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
+  // only learns a degrade happened via this flag.
+  if (flags["degraded-from"]) {
+    const requested = flags["degraded-from"] as DriverName;
+    if (!DRIVER_VALUES.includes(requested)) {
+      fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
+    }
+    emitSwarmDegraded(projectDir, flags.batch, requested);
+  }
+
+  emitSwarmStarted(projectDir, flags.batch, units, concurrency);
+
   console.log(
     JSON.stringify(
       { batch: flags.batch, base, concurrency: Number(concurrency), units: prepared, pool: initialized.projection },
@@ -584,8 +602,6 @@ function handlePrepare(rest: string[]): void {
       2
     )
   );
-  // Exit 2 if any worktree failed to fork — the conductor must take the baton.
-  process.exit(prepared.some((p) => !p.ok) ? 2 : 0);
 }
 
 // --- check ------------------------------------------------------------------

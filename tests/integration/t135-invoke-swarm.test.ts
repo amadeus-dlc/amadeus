@@ -194,10 +194,7 @@ let finalizeStatus = -1;
 let finalizeOut = "";
 let auditBody = "";
 
-function setupReferee(): void {
-  if (wtproj !== undefined) return; // build once; cases 3-6 read the result
-  const proj = setupWorktreeFixture();
-  wtproj = proj;
+function seedRefereeFixture(proj: string): void {
   // The fixture already seeded the per-intent workspace shell + default record +
   // a seed commit (README only) on main. Write the construction state into the
   // seeded record, a bare audit shard, and a per-intent .gitignore (cursors +
@@ -227,6 +224,13 @@ function setupReferee(): void {
     ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--amend", "--no-edit"],
     { cwd: proj },
   );
+}
+
+function setupReferee(): void {
+  if (wtproj !== undefined) return; // build once; cases 3-6 read the result
+  const proj = setupWorktreeFixture();
+  wtproj = proj;
+  seedRefereeFixture(proj);
 
   // Conductor step 1: prepare forks a worktree per unit + emits SWARM_STARTED.
   spawnSync(
@@ -411,6 +415,27 @@ function auditRecords(): { event: string | null; fields?: Record<string, string>
 }
 
 describe("t135 referee — batch-level swarm audit taxonomy + baton return (the lying-conductor guard)", () => {
+  test("prepare failure leaves no orphan Unit pool", () => {
+    const proj = setupWorktreeFixture();
+    try {
+      seedRefereeFixture(proj);
+      spawnSync("git", ["branch", "bolt-lose", "main"], { cwd: proj });
+      const prepared = spawnSync(
+        BUN,
+        [SWARM_TOOL, "--project-dir", proj, "prepare", "--batch", "9", "--units", "win,lose", "--base", "main"],
+        { encoding: "utf-8" },
+      );
+
+      expect(prepared.status).toBe(2);
+      const audit = readAllShards(seededAuditDir(proj));
+      expect(audit).not.toContain("UNIT_POOL_EVENT_SET_COMMITTED");
+      expect(audit).not.toContain("SWARM_STARTED");
+    } finally {
+      spawnSync("chmod", ["-R", "u+w", proj]);
+      cleanupWorktreeFixture(proj);
+    }
+  }, 60000);
+
   test("3: SWARM_STARTED emitted at batch start (prepare)", () => {
     setupReferee();
     expect(auditBody).toContain("SWARM_STARTED");
