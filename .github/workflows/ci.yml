@@ -99,6 +99,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -110,6 +112,35 @@ jobs:
 
       - name: Lint (biome)
         run: bun run lint
+
+      - name: No silent drop (trusted base ratchet)
+        timeout-minutes: 1
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          case "${EVENT_NAME}" in
+            pull_request) BASE_REVISION="${PULL_REQUEST_BASE_SHA}" ;;
+            push) BASE_REVISION="${PUSH_BEFORE_SHA}" ;;
+            *)
+              echo "No trusted base revision for event: ${EVENT_NAME}" >&2
+              exit 2
+              ;;
+          esac
+
+          if [[ ! "${BASE_REVISION}" =~ ^[0-9a-f]{40}$ ]] || [[ "${BASE_REVISION}" =~ ^0+$ ]]; then
+            echo "Trusted base revision must be a non-zero full SHA" >&2
+            exit 2
+          fi
+
+          if ! git cat-file -e "${BASE_REVISION}^{commit}"; then
+            git fetch --no-tags --depth=1 origin "${BASE_REVISION}"
+          fi
+          git cat-file -e "${BASE_REVISION}^{commit}"
+          timeout --signal=TERM --kill-after=5s 30s bun run no-silent-drop -- --base-revision "${BASE_REVISION}"
 
       # VER-4: the legacy audit writer and the pre-OTel observe() wrapper are
       # being retired call site by call site. The allowlist ratchets down only,
