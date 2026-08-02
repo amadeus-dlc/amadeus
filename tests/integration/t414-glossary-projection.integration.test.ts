@@ -1,8 +1,8 @@
-// t413 (integration) — glossary projection generator against a real filesystem.
+// t414 (integration) — glossary projection generator against a real filesystem.
 // covers: scripts/glossary-projection.ts
 // size: medium
 //
-// The unit twin (tests/unit/t413-glossary-projection.test.ts) drives the pure
+// The unit twin (tests/unit/t414-glossary-projection.test.ts) drives the pure
 // parsing/validation/render layer. This twin drives `write` and `check` over a
 // throwaway repo tree: the write/check round trip, drift detection, and each
 // fail-closed condition that only exists once real files are involved.
@@ -103,7 +103,7 @@ function run(argv: readonly string[]): { code: number; out: string[]; err: strin
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "t413-glossary-"));
+  root = mkdtempSync(join(tmpdir(), "t414-glossary-"));
   seed();
 });
 

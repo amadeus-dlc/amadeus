@@ -1,4 +1,4 @@
-// t413 — glossary projection generator: the pure parsing/validation/render layer.
+// t414 — glossary projection generator: the pure parsing/validation/render layer.
 // covers: scripts/glossary-projection.ts
 // size: small
 
