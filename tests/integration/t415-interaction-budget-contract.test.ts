@@ -25,6 +25,11 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(compact(PROTOCOL)).toContain("one consolidated follow-up round for the stage");
     expect(PROTOCOL).not.toContain("8-12+");
     expect(PROTOCOL).not.toContain("These are guidelines, not hard caps");
+
+    const grilling = read("amadeus-common/protocols/grilling-protocol.md");
+    expect(grilling).toContain("never offer a continuation that");
+    expect(grilling).toContain("proceed directly to C-4");
+    expect(grilling).not.toContain('label: "Continue"');
   });
 
   test("limits follow-ups to material ambiguity and records reversible defaults", () => {
@@ -122,6 +127,14 @@ describe("#1999 bounded interaction and completion contracts", () => {
       const content = readFileSync(join(REPO_ROOT, relativePath), "utf8");
       expect(content, relativePath).toContain("closed");
       expect(content, relativePath).toContain("completion verification");
+    }
+
+    for (const relativePath of harnessFiles.slice(0, 5)) {
+      const content = readFileSync(join(REPO_ROOT, relativePath), "utf8");
+      expect(content, relativePath).toContain(
+        "artifact + unresolved `BLOCKER` findings only",
+      );
+      expect(content, relativePath).not.toContain("send artifact + findings back");
     }
   });
 });

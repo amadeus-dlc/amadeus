@@ -52,9 +52,10 @@ every other structured question. This protocol never names a harness tool.
    re-present.
 5. **WriteBack** — *(workflow only)* Write the answer back to its `[Answer]:`
    tag immediately, and log the `answer` audit event — one per question.
-6. **CheckEnd** — "done" short-circuits to step 7. If the depth guideline is
-   reached, present the continuation check (§3 C-3); "continue" loops to
-   step 1. Otherwise, if open points remain, loop to step 1 (D6).
+6. **CheckEnd** — "done" short-circuits to step 7. Reaching the finite depth
+   ceiling also proceeds directly to step 7; never offer a continuation that
+   can exceed the ceiling. Otherwise, if open points remain, loop to step 1
+   (D6).
 7. **Summary** — Present the agreement summary of all decisions and request
    explicit confirmation (§3 C-4). A correction request updates the affected
    answer (workflow: the `[Answer]:` tag) and re-presents the summary. Never
@@ -89,21 +90,12 @@ I estimate [X] (confidence: high/medium/low)." with two options — "Yes,
 proceed on that basis (recommended)" / "No, that's wrong (demote to a regular
 question)".
 
-### C-3: Continuation check (depth guideline reached)
+### C-3: Ceiling transition
 
-```question
-prompt: "The depth guideline ([N] questions) is reached. [One sentence on how well the key points are covered]. Continue?"
-header: Continue?
-multiSelect: false
-options:
-  - label: "Proceed to summary (recommended)"
-    description: Review the agreement summary and finish
-  - label: "Continue"
-    description: Keep drilling deeper
-```
-
-"done" is accepted as free text at any point in the dialogue, not only at this
-surface (D6).
+When the finite question ceiling is reached, state that the ceiling has been
+reached and proceed directly to C-4. Do not render another question or offer a
+continuation option. "done" is accepted as free text at any point in the
+dialogue (D6).
 
 ### C-4: Agreement summary confirmation
 
