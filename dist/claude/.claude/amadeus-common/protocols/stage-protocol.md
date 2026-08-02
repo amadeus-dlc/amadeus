@@ -751,25 +751,27 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 
 Key terms used throughout AI-DLC documentation:
 
+<!-- glossary:projection:begin protocol -->
 | Term | Definition |
 |------|-----------|
-| **Phase** | Top-level grouping: INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, OPERATION |
-| **Stage** | A discrete step within a phase (e.g., Intent Capture, Requirements Analysis, Code Generation, Observability Setup) |
-| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.claude/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, fix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
-| **Bolt** | One execution of Construction stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run **once** after all Bolts complete, not per-Bolt. The first Bolt is the **walking skeleton** — the thinnest end-to-end slice that proves the architecture. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
-| **Walking skeleton** | The first Bolt in Construction — smallest end-to-end slice that exercises every integration point. Always gated and interactive so humans can confirm the shape before the rest of Construction runs. |
-| **Ladder prompt** | The single prompt that fires after the walking-skeleton gate asking the user to choose between "continue autonomously" and "gate every Bolt". The choice is recorded in state (`Construction Autonomy Mode`) and governs the rest of Construction. |
-| **Parallel batch** | A group of Bolts whose dependencies are satisfied and that don't depend on each other, run concurrently in a single orchestrator turn. |
-| **Unit of Work** | An independently implementable package of features; the iteration unit for CONSTRUCTION stages |
-| **Service** | A deployable process or container (e.g., API server, worker, frontend app) |
-| **Module** | A code-level organizational boundary within a service (e.g., package, namespace) |
-| **Component** | A logical building block within a module (e.g., class, function group, UI component) |
-| **Planning** | Stages that analyze, question, and design (produce markdown artifacts) |
-| **Generation** | Stages that produce executable code (Code Generation, Build and Test) |
-| **Depth** | Scale of detail: Minimal, Standard, or Comprehensive — determined by scope and user override |
-| **Artifact** | A versioned markdown file under the active intent's record dir `<record>/` recording a decision, design, or analysis |
-| **Guardrail** | A learned behavioral rule (org-level or project-level) stored in `.claude/rules/` |
-| **AIDLC** | AI-Driven Development Life Cycle — the methodology this system implements |
+| **AIDLC** | AI-Driven Development Life Cycle — the methodology this system implements. See **Lifecycle**. |
+| **Bolt** | The unit of Construction execution: one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once after all Bolts complete, not per-Bolt. The first Bolt in Construction is the walking skeleton. See also: [parallel batch], [walking skeleton], [ladder prompt]. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
+| **Artifact** | A versioned markdown document produced by a stage and stored in the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`). Examples: `requirements.md`, `code-summary.md`, `initiative-brief.md`. |
+| **Component** | A logical building block within a module (class, function group, UI component). |
+| **Depth** | One of three detail levels (Minimal, Standard, Comprehensive) that controls how much detail each stage produces. Scopes have default depths; you can override at any approval gate. See [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md). |
+| **Generation** | Stages that produce executable code (Code Generation, Build and Test). Contrast **Planning**. |
+| **Guardrail** | The body sections inside a Rule file in the space memory layer (`amadeus/spaces/<space>/memory/`) — `## Forbidden`, `## Mandated`, and the phase-rule guardrail headings — that express prescriptive behavioural constraints. The container is a Rule; "guardrail" names the prescriptive content within it. See **Rule**. |
+| **Ladder prompt** | The single prompt shown at the end of the walking-skeleton Bolt asking you to choose "continue autonomously" or "gate every Bolt". Your choice is recorded as the autonomy mode and governs all remaining Bolts. |
+| **Module** | A code-level organizational boundary within a service (package, namespace). |
+| **Parallel batch** | A group of Bolts whose dependencies are satisfied and that don't depend on each other, run concurrently by the orchestrator. A single approval gate at the end of the batch covers every Bolt in it. |
+| **Phase** | One of the 5 major divisions of the lifecycle: Initialization (0), Ideation (1), Inception (2), Construction (3), Operation (4). Each phase contains 3-8 stages (Initialization 3, Ideation 7, Inception 8, Construction 7, Operation 7). |
+| **Planning** | Stages that analyze, question, and design, producing markdown artifacts. Contrast **Generation**. |
+| **Scope** | A named configuration that determines which stages execute and at what depth, one file per scope under `.claude/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, fix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing the framework, and a scope can also be auto-detected from a freeform intent. |
+| **Service** | A deployable process or container (API server, worker, frontend app). |
+| **Stage** | One of the 32 discrete steps in the lifecycle. Each stage has a lead agent, defined inputs/outputs, and follows the stage protocol. Stages are numbered by phase (e.g., 1.1, 2.4, 3.5). |
+| **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Always gated and interactive so you can confirm the overall shape before the rest of Construction runs. The ladder prompt fires immediately after approval. |
+<!-- glossary:projection:end -->
 
 ---
 

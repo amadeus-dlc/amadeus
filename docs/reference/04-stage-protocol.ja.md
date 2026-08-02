@@ -662,25 +662,31 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 *(Protocol Section 9)*
 
+<!-- glossary:projection:begin reference -->
 | 用語 | 定義 |
 |------|-----------|
-| **AI-DLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論 |
-| **Phase** | トップレベルのグループ化: Initialization、Ideation、Inception、Construction、Operation |
-| **Stage** | フェーズ内の個別のステップ(例 Intent Capture、Code Generation) |
-| **Scope** | どのステージがどの深度で実行されるかを制御(enterprise、feature、mvp、poc、fix、chore、refactor、infra、security-patch、workshop) |
-| **Depth** | 成果物の詳細スケール: Minimal、Standard、または Comprehensive |
-| **Unit of Work** | 独立して実装可能な機能パッケージ。Construction のイテレーション単位。ステージ 3.1-3.7 を1回通過する。 |
-| **Service** | デプロイ可能なプロセスまたはコンテナ(API サーバー、ワーカー、フロントエンドアプリ) |
-| **Module** | サービス内のコードレベルの組織境界(パッケージ、名前空間) |
-| **Component** | モジュール内の論理的な構成要素(クラス、関数グループ、UI コンポーネント) |
-| **Planning** | markdown 成果物を生成するステージ(分析、質問、設計) |
-| **Generation** | 実行可能コードを生成するステージ(Code Generation、Build and Test) |
-| **Artifact** | 決定、設計、または分析を記録する `<record>/` 内のバージョン管理された markdown ファイル |
-| **Guardrail** | space メモリ層(`amadeus/spaces/<space>/memory/`)に保存された学習済みの振る舞いのルール |
-| **Approval Gate** | ユーザーが承認または変更要求する構造化プロンプト |
-| **Inline Stage** | オーケストレーター会話で直接実行するステージ |
-| **Subagent Stage** | Claude Code の Task ツール呼び出しへ実行を委譲するステージ |
-| **Lead Agent** | ステージの作業に責任を持つ主要なエージェントペルソナ |
+| **AIDLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論。**Lifecycle** を参照。 |
+| **Approval gate(承認ゲート)** | 各ステージの終わりにある対話的なチェックポイント。作業を承認するか、変更を要求するか、(3 回の改訂後に)そのまま受け入れるかを選びます。Initialization ステージは承認ゲートをスキップします。 |
+| **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[ladder prompt]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
+| **Artifact(成果物)** | ステージが生成し、intent のレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)に保存されるバージョン管理された markdown ドキュメント。例: `requirements.md`、`code-summary.md`、`initiative-brief.md`。 |
+| **Component(コンポーネント)** | モジュール内の論理的な構成要素(クラス、関数グループ、UI コンポーネント)。 |
+| **Depth(深さ)** | 各ステージが生成する詳細の量を制御する 3 つの詳細レベル(Minimal、Standard、Comprehensive)の 1 つ。スコープにはデフォルトの深さがあり、任意の承認ゲートで上書きできます。[スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照。 |
+| **Generation(生成)** | 実行可能コードを生成するステージ(Code Generation、Build and Test)。**Planning** と対。 |
+| **Guardrail(ガードレール)** | space メモリレイヤー(`amadeus/spaces/<space>/memory/`)にある Rule ファイル内の本文セクション(`## Forbidden`、`## Mandated`、およびフェーズルールのガードレール見出し)で、規範的な振る舞いの制約を表現します。コンテナが Rule であり、「guardrail」はその中の規範的な内容を指します。**Rule** を参照。 |
+| **Inline stage(インラインステージ)** | 委譲せず、オーケストレーターの会話内で直接実行されるステージ。**Inline execution** を参照。 |
+| **Ladder prompt(ラダープロンプト)** | walking-skeleton Bolt の終わりに表示される単一のプロンプト。「continue autonomously」か「gate every Bolt」を選ぶよう求めます。あなたの選択は autonomy mode として記録され、残りすべての Bolt を統治します。 |
+| **Lead agent(リードエージェント)** | ステージの作業に主として責任を持つエージェントペルソナ。 |
+| **Module(モジュール)** | サービス内のコードレベルの組織境界(パッケージ、名前空間)。 |
+| **Parallel batch(並列バッチ)** | 依存関係が満たされ、互いに依存しない Bolt のグループで、オーケストレーターによって並行実行されます。バッチの終わりの単一の承認ゲートがその中のすべての Bolt をカバーします。 |
+| **Phase(フェーズ)** | ライフサイクルの 5 つの主要区分の 1 つ: Initialization(0)、Ideation(1)、Inception(2)、Construction(3)、Operation(4)。各フェーズは 3〜8 のステージを含みます(Initialization 3、Ideation 7、Inception 8、Construction 7、Operation 7)。 |
+| **Planning(計画)** | markdown 成果物を生成するステージ(分析、質問、設計)。**Generation** と対。 |
+| **Scope(スコープ)** | どのステージがどの深さで実行されるかを決める名前付き設定。1 スコープ 1 ファイルで `<harness-dir>/scopes/amadeus-<name>.md` に置かれます(enterprise、feature、mvp、poc、fix、chore、refactor、infra、security-patch、workshop)。フレームワークを編集せずにカスタムスコープを追加でき、自由記述の intent から自動検出することもできます。 |
+| **Service(サービス)** | デプロイ可能なプロセスまたはコンテナ(API サーバー、ワーカー、フロントエンドアプリ)。 |
+| **Stage(ステージ)** | ライフサイクル内の 32 の個別ステップの 1 つ。各ステージにはリードエージェント、定義された入出力があり、ステージプロトコルに従います。ステージはフェーズごとに番号付けされます(例: 1.1、2.4、3.5)。 |
+| **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
+| **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
+| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。残りの Construction が実行される前に全体の形を確認できるよう、常にゲートされ対話的です。ラダープロンプトは承認直後に発火します。 |
+<!-- glossary:projection:end -->
 
 ---
 
