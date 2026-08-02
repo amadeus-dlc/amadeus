@@ -1,5 +1,5 @@
 // covers: subcommand:no-silent-drop:check, contract:no-silent-drop:adoption-evidence
-// size: small
+// size: medium
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

@@ -1,6 +1,6 @@
 // t413 — repository adoption keeps the no-silent-drop gate blocking and fail-closed.
 // covers: workflow:ci:lint:no-silent-drop, contract:no-silent-drop:adoption-evidence
-// size: small
+// size: medium
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -133,14 +133,19 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(result.status).toBe(124);
   });
 
-  test("the canonical evidence registry closes exactly one tested implementation revision", () => {
+  test("the canonical evidence registry binds one reachable tested implementation revision", () => {
     const registry = JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "adoption-evidence.json"), "utf8"),
     );
     const headRevision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
 
     expect(spawnSync("git", ["cat-file", "-e", `${registry.currentRevision}^{commit}`], { cwd: REPO_ROOT }).status).toBe(0);
-    expect(registry.currentRevision).not.toBe(headRevision);
+    expect(
+      spawnSync("git", ["merge-base", "--is-ancestor", registry.currentRevision, headRevision], {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+      }).status,
+    ).toBe(0);
     expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
   });
 });
