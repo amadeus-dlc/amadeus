@@ -5220,6 +5220,10 @@
         {
           "file": "tests/e2e/t07-audit-fork-merge.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t414-bolt-partial-merge-recovery.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -5267,6 +5271,10 @@
       "coveredBy": [
         {
           "file": "tests/e2e/t12-bolt-runtime-graph-fork.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t414-bolt-partial-merge-recovery.test.ts",
           "mechanism": "cli"
         },
         {

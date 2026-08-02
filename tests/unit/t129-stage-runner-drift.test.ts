@@ -98,6 +98,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { renderRunner } from "../../packages/framework/core/tools/amadeus-runner-gen.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -181,6 +182,13 @@ function runGen(gen: string, args: string[]): SandboxRun {
 }
 
 describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.sh, plan 7)", () => {
+  test("generated runners continue on the engine's real typed directives", () => {
+    const runner = renderRunner("feature", "Build a production feature.");
+    expect(runner).toContain("`run-stage`, `invoke-swarm`, and `print`");
+    expect(runner).toContain("`ask`, `select-intent`, `error`, `parked`, or `done`");
+    expect(runner).not.toContain("report returns `continue`");
+  });
+
   // ===========================================================================
   // Test 1 — the SHIPPED runner set == the RUNNABLE compiled slug set, proven by
   // an INDEPENDENT two-source cross-check (no tool in the loop). STRONGER than the

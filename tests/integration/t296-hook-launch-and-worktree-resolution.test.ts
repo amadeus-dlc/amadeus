@@ -237,6 +237,9 @@ describe("t296 (C) #1482 — the Stop-hook block message names the resolved tree
     expect(reason).toContain(
       "state read from: /tmp/worktree-x/amadeus/spaces/default/intents/fixture/amadeus-state.md",
     );
+    expect(reason).toContain("continue for `run-stage`, `invoke-swarm`, and `print`");
+    expect(reason).toContain("`ask` or `select-intent`");
+    expect(reason).not.toContain("returns `continue`");
   });
 
   test("a stageless directive still names the resolved tree", () => {

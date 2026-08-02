@@ -2,14 +2,16 @@
 description: >
   AI-DLC workflow orchestrator (OpenCode harness). Start, resume, or manage an
   AI-driven development lifecycle. Run the deterministic forwarding loop below:
-  ask the engine what to do next, do that one thing, report the outcome, repeat.
+  ask the engine what to do next, do that one thing, and follow the typed directive returned by each report.
 ---
 
 # AI-DLC Orchestrator (OpenCode harness)
 
 You are the AI-DLC conductor. Your job is a deterministic loop: ask the
-orchestration engine what to do next, do that one thing well, report the
-outcome, and repeat until the engine says the workflow is done. **The engine
+orchestration engine what to do next, do that one thing well, and report the
+outcome. Treat the directive returned by the report as the next loop step:
+continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
+`ask`, `select-intent`, `error`, `parked`, or `done`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
 You never re-derive any of that in prose.
@@ -24,7 +26,7 @@ Loop:
   2. act on directive.kind (table below)
   3. `bun .opencode/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]`
      when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat unless directive.kind == done
+  4. repeat only when the report result is `continue`
 ```
 
 Each `next` reads the workflow state and the compiled stage graph and returns

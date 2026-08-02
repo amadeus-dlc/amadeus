@@ -436,22 +436,19 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
   }, TEST_TIMEOUT);
 
   // ===========================================================================
-  // Case 5 — Idempotent re-merge: second complete --merge errors at state-merge.
+  // Case 5 — Idempotent re-merge: second complete --merge verifies prior evidence.
   // ===========================================================================
-  test("5: idempotent re-merge — second complete --merge errors 'already merged' at state-merge", () => {
+  test("5: idempotent re-merge — second complete --merge succeeds without duplicate evidence", () => {
     const proj = makeProj();
     expect(wtCreate(proj, "solo").status).toBe(0);
     expect(boltStart(proj, "solo").status).toBe(0);
     expect(boltComplete(proj, "solo").status).toBe(0); // first merge succeeds
 
-    const second = boltComplete(proj, "solo"); // second errors
-    // STRONGER than the .sh's two independent greps: both the "already merged"
-    // cause AND the state-merge-failed reason ride on the SAME failJson
-    // envelope (fragment-merge never reached because state-merge is first in
-    // the chain). Exit is non-zero (failJson → process.exit(1)).
-    expect(second.out).toContain("already merged");
-    expect(second.out).toContain("state-merge-failed");
-    expect(second.status).not.toBe(0);
+    const second = boltComplete(proj, "solo");
+    expect(second.status).toBe(0);
+    expect(second.out).toContain(
+      '"merged":["STATE_MERGED","AUDIT_MERGED","RUNTIME_GRAPH_MERGED"]',
+    );
   }, TEST_TIMEOUT);
 
   // ===========================================================================

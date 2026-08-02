@@ -312,6 +312,10 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
       join(proj, ".claude", "tools", "amadeus-audit.ts"),
     );
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-merge-recovery.ts"),
+      join(proj, ".claude", "tools", "amadeus-merge-recovery.ts"),
+    );
     // amadeus-audit.ts imports the JSONL codec — copy it too or the local hook
     // fails to resolve its module graph and never reaches the heartbeat write.
     copyFileSync(

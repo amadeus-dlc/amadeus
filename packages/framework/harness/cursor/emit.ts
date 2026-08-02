@@ -123,7 +123,8 @@ harness-neutral method and tools live under \`.cursor/\` and \`amadeus/\`.
 Run the \`/amadeus\` command (defined at \`.cursor/commands/amadeus.md\`) followed by
 a scope or a description of what to build. It runs a deterministic loop against
 the orchestration engine (\`.cursor/tools/amadeus-orchestrate.ts\`): ask what to do
-next, do that one thing, report the outcome, repeat until done. The engine owns
+next, do that one thing, report the outcome, and repeat only on \`continue\`.
+Human-wait and terminal results stop. The engine owns
 all between-stage routing — never re-derive it in prose.
 
 ## The method

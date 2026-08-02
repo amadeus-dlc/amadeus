@@ -225,6 +225,10 @@ test("installed Codex migration route reaches apply without birthing or advancin
     expect(apply.stderr).toBe("");
     expect(apply.stdout).toContain("Mode: apply");
     expect(apply.stdout).toContain("Status: applied");
+    // The migration itself leaves no unstaged residue. The control Stop below
+    // deliberately appends canonical budget evidence, so check this boundary
+    // before exercising that independent hook side effect.
+    expect(project.git(["diff", "--name-only"])).toBe("");
 
     // Prove the following silent Stop is the migration carve-out, not a
     // fail-open hook: without a migration latch, the migrated active workflow
@@ -278,7 +282,17 @@ test("installed Codex migration route reaches apply without birthing or advancin
     ) as Array<{ dirName?: string }>;
     expect(registry.map((row) => row.dirName).sort()).toEqual(recordDirs);
 
-    expect(project.git(["diff", "--name-only"])).toBe("");
+    const unstaged = project.git(["diff", "--name-only"])
+      .trim()
+      .split(/\r?\n/u)
+      .filter(Boolean);
+    expect(unstaged).toHaveLength(1);
+    expect(unstaged[0]).toMatch(
+      /^amadeus\/spaces\/default\/intents\/[^/]+\/audit\/[^/]+\.jsonl$/u,
+    );
+    expect(project.git(["diff", "--", unstaged[0]])).toContain(
+      "EXECUTION_EVENT_SET_COMMITTED",
+    );
     expect(project.git(["diff", "--cached", "--name-only"]).trim()).not.toBe("");
   } finally {
     consumeMigrationStopLatch(project.projectDir, sessionId);

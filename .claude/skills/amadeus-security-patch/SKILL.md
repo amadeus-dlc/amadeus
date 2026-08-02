@@ -21,7 +21,7 @@ engine owns all routing; the conductor persona arrives on the first directive's
 1. `directive = bun .claude/tools/amadeus-orchestrate.ts next --scope security-patch $ARGUMENTS`
 2. Act on `directive.kind` exactly as the orchestrator does (run-stage / ask / print / error / done) — see `amadeus-common/protocols/stage-protocol.md`.
 3. `bun .claude/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]` when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-4. Repeat from step 1 until `directive.kind == done`.
+4. Treat the directive returned by the report as the next loop step. Continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for `ask`, `select-intent`, `error`, `parked`, or `done`.
 
 Pass `$ARGUMENTS` through verbatim after `--scope security-patch`; the engine parses
 any flags (`--status`, `--stage`, …) and the `--scope` from the

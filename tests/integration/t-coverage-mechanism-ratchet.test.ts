@@ -186,6 +186,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t407-resync-noop-detection.test.ts",
     "integration/t410-host-graph-shape-validation.test.ts",
     "integration/t411-compose-invalid-graph-visibility.test.ts",
+    "integration/t414-bolt-partial-merge-recovery.test.ts",
     "integration/t45.test.ts",
     "integration/t49.test.ts",
     "integration/t51.test.ts",
