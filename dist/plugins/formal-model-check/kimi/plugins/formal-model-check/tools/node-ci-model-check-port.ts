@@ -1,9 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { basename, join, relative } from "node:path";
@@ -15,12 +16,24 @@ import type {
 } from "./ci-model-check-runner.ts";
 import type { CiModelCheckRunEvidence } from "./ci-model-check-domain.ts";
 import {
+  beginModelCheckArtifacts,
+  publishModelCheckArtifacts,
+} from "./run-model-check-artifacts.ts";
+import {
+  buildEnvReceipt,
+  notApplicableInspection,
+  passedInspection,
+} from "./run-model-check-domain.ts";
+import {
   configureDockerTraceWrapper,
   installDockerTraceWrapper,
   parseDockerTrace,
 } from "./ci-docker-trace.ts";
 import { FIXED_DOCKER_IMAGE } from "./tlc-spawn-planner.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "./tlc-toolchain.ts";
+import {
+  FIXED_JDK_RUN_PROFILE,
+  FIXED_TLC_ARTIFACT_DESCRIPTOR,
+} from "./tlc-toolchain.ts";
 
 export interface CiCommandOptions {
   readonly cwd: string;
@@ -44,6 +57,7 @@ export interface NodeCiModelCheckDependencies {
   readonly download: (url: string, maxBytes: number) => Promise<Uint8Array>;
   readonly digest: (bytes: Uint8Array) => string;
   readonly nowMs: () => number;
+  readonly randomUuid: () => string;
 }
 
 export const runCiCommand = (
@@ -108,6 +122,7 @@ const DEFAULT_DEPENDENCIES: NodeCiModelCheckDependencies = {
   download: downloadCiArtifact,
   digest: digestCiArtifact,
   nowMs: performance.now.bind(performance),
+  randomUuid: randomUUID,
 };
 
 function failure(code: string, detail: string): Result<never, CiAcceptanceFailure> {
@@ -126,6 +141,7 @@ function baseEnvironment(): Record<string, string> {
 
 export class NodeCiModelCheckPort implements CiAcceptancePort {
   #docker: string | null = null;
+  #jarPath: string | null = null;
   readonly #wrapperDirectory: string;
 
   constructor(
@@ -169,6 +185,8 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
       if (jarSha256 !== FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256) {
         return failure("JAR_CHECKSUM", "downloaded tla2tools.jar checksum drifted");
       }
+      this.#jarPath = join(evidenceRoot, "bootstrap", "tla2tools.jar");
+      writeFileSync(this.#jarPath, jar, { mode: 0o400 });
       writeFileSync(
         join(evidenceRoot, "bootstrap", "supply-receipt.json"),
         `${JSON.stringify({
@@ -189,6 +207,9 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
   ): Promise<Result<CiModelCheckRunEvidence, CiAcceptanceFailure>> {
     const docker = this.#docker;
     if (!docker) return failure("DOCKER_BOOTSTRAP", "Docker was not bootstrapped");
+    if (request.model.layer === "verified-source") {
+      return this.runVerifiedSource(request, docker);
+    }
     const tracePrefix = join(request.evidenceRoot, `docker-${request.kind}-${request.index}`);
     configureDockerTraceWrapper(this.workspaceRoot, docker, tracePrefix);
     const startedAt = this.dependencies.nowMs();
@@ -197,9 +218,9 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
       [
         "plugins/formal-model-check/tools/run-model-check.ts",
         "--model",
-        "specs/tla/FormalElection.tla",
+        request.model.modelPath,
         "--cfg",
-        "specs/tla/FormalElection.cfg",
+        request.model.cfgPath,
         "--out",
         request.outDir,
         "--provider",
@@ -240,9 +261,14 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
       if (manifest.runId !== trace.value.runId || manifest.outcome !== "NOT_DETECTED") {
         return failure("MANIFEST", "terminal manifest does not match the Docker run");
       }
+      const { extractDiagnosticStatistics } = await import("./run-model-check-diagnostic.ts");
+      const statistics = extractDiagnosticStatistics(
+        readFileSync(join(request.outDir, "tlc-stdout.bin"), "utf8"),
+      );
       return {
         ok: true,
         value: {
+          model: request.model.name,
           kind: request.kind,
           index: request.index,
           runId: manifest.runId,
@@ -257,11 +283,139 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
             exitCode: trace.value.exitCode,
           },
           cleanup: { containerName, remainingContainers, forced },
+          stats: {
+            model: request.model.name,
+            completionMarker: statistics.completionMarker !== null,
+            generatedStates: statistics.generatedStates,
+            distinctStates: statistics.distinctStates,
+            statesLeftOnQueue: statistics.statesLeftOnQueue,
+            searchDepth: statistics.searchDepth,
+          },
         },
       };
     } catch {
       return failure("MANIFEST", `terminal manifest is unavailable for ${basename(request.outDir)}`);
     }
+  }
+
+  private async runVerifiedSource(
+    request: CiAcceptanceRunRequest,
+    docker: string,
+  ): Promise<Result<CiModelCheckRunEvidence, CiAcceptanceFailure>> {
+    const jarPath = this.#jarPath;
+    if (!jarPath) return failure("JAR_CHECKSUM", "TLC artifact was not bootstrapped");
+    const runId = this.dependencies.randomUuid();
+    const artifacts = beginModelCheckArtifacts(request.outDir, runId);
+    if (!artifacts.ok) return failure(artifacts.error.code, artifacts.error.detail);
+    const scratchRoot = artifacts.value.scratchRoot;
+    const statesRoot = join(scratchRoot, "states");
+    mkdirSync(statesRoot, { mode: 0o700 });
+    const modelRoot = join(this.workspaceRoot, "specs", "tla");
+    const containerName = `amadeus-tlc-${runId}`;
+    const argv = [
+      "run", "--rm", "--network=none", "--name", containerName,
+      "--mount", `type=bind,src=${modelRoot},dst=${modelRoot},readonly`,
+      "--mount", `type=bind,src=${jarPath},dst=${jarPath},readonly`,
+      "--mount", `type=bind,src=${scratchRoot},dst=${scratchRoot}`,
+      "--workdir", scratchRoot,
+      FIXED_DOCKER_IMAGE,
+      "java",
+      ...FIXED_JDK_RUN_PROFILE.jvmArgs,
+      `-Djava.io.tmpdir=${scratchRoot}`,
+      "-cp", jarPath,
+      "tlc2.TLC", "-workers", "1", "-tool", "-metadir", statesRoot,
+      "-config", join(this.workspaceRoot, request.model.cfgPath),
+      join(this.workspaceRoot, request.model.modelPath),
+    ] as const;
+    const tracePrefix = join(request.evidenceRoot, `docker-${request.model.name}-${request.kind}-${request.index}`);
+    configureDockerTraceWrapper(this.workspaceRoot, docker, tracePrefix);
+    const startedAt = new Date().toISOString();
+    const startedMs = this.dependencies.nowMs();
+    const output = this.dependencies.command(join(this.#wrapperDirectory, "docker"), argv, {
+      cwd: this.workspaceRoot,
+      env: baseEnvironment(),
+      timeoutMs: 190_000,
+    });
+    const cliMs = this.dependencies.nowMs() - startedMs;
+    const finishedAt = new Date().toISOString();
+    const trace = parseDockerTrace(tracePrefix, this.workspaceRoot);
+    if (!trace.ok) {
+      rmSync(artifacts.value.temporaryDir, { recursive: true, force: true });
+      return trace;
+    }
+    const remainingBefore = this.remainingContainers(containerName);
+    const forced = remainingBefore > 0;
+    if (forced) {
+      this.dependencies.command(docker, ["rm", "-f", containerName], {
+        cwd: this.workspaceRoot,
+        env: baseEnvironment(),
+        timeoutMs: 10_000,
+      });
+    }
+    const remainingContainers = this.remainingContainers(containerName);
+    const { extractDiagnosticStatistics } = await import("./run-model-check-diagnostic.ts");
+    const statistics = extractDiagnosticStatistics(output.stdout);
+    if (
+      output.status !== 0
+      || trace.value.exitCode !== 0
+      || output.stderr.length > 0
+      || statistics.completionMarker === null
+      || remainingContainers > 0
+    ) {
+      rmSync(artifacts.value.temporaryDir, { recursive: true, force: true });
+      return failure(
+        output.status === 1 ? "DETECTED" : "HARNESS_ERROR",
+        output.stderr || `verified-source model check exited ${output.status}`,
+      );
+    }
+    const published = publishModelCheckArtifacts({
+      workspace: artifacts.value,
+      outcome: { kind: "NOT_DETECTED" },
+      exitCode: 0,
+      environmentReceipt: buildEnvReceipt(runId, "docker-planner", [
+        passedInspection("image-digest", FIXED_DOCKER_IMAGE),
+        passedInspection("jar-sha256", FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256),
+        passedInspection("network-deny", "--network=none"),
+        notApplicableInspection("jdk-snapshot", "Docker image supplies the isolated JDK"),
+        notApplicableInspection("sandbox-profile", "Docker isolation replaces sandbox-exec"),
+      ]),
+      stdout: new TextEncoder().encode(output.stdout),
+      stderr: new TextEncoder().encode(output.stderr),
+      startedAt,
+      finishedAt,
+    });
+    if (!published.ok) {
+      rmSync(artifacts.value.temporaryDir, { recursive: true, force: true });
+      return failure(published.error.code, published.error.detail);
+    }
+    return {
+      ok: true,
+      value: {
+        model: request.model.name,
+        kind: request.kind,
+        index: request.index,
+        runId,
+        artifactDirectory: relative(request.evidenceRoot, request.outDir),
+        outcome: "NOT_DETECTED",
+        exitCode: 0,
+        cliMs,
+        spawnMs: trace.value.spawnMs,
+        docker: {
+          imageRef: FIXED_DOCKER_IMAGE,
+          argv: trace.value.argv,
+          exitCode: trace.value.exitCode,
+        },
+        cleanup: { containerName, remainingContainers, forced },
+        stats: {
+          model: request.model.name,
+          completionMarker: true,
+          generatedStates: statistics.generatedStates,
+          distinctStates: statistics.distinctStates,
+          statesLeftOnQueue: statistics.statesLeftOnQueue,
+          searchDepth: statistics.searchDepth,
+        },
+      },
+    };
   }
 
   private remainingContainers(containerName: string): number {

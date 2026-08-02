@@ -527,7 +527,7 @@ jobs:
         with:
           bun-version: 1.3.13
 
-      - name: Run fixed Docker model-check acceptance
+      - name: Run fixed Docker model-check acceptance (all registered models)
         id: formal-acceptance
         if: always()
         continue-on-error: true
@@ -551,7 +551,7 @@ jobs:
           echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
 
-      - name: Verify terminal evidence
+      - name: Verify terminal evidence (all registered models)
         id: formal-verify
         if: always()
         continue-on-error: true
@@ -606,7 +606,7 @@ jobs:
             echo "model counterexample detected"
             exit 1
           fi
-          echo "formal model check completed with NOT_DETECTED"
+          echo "all registered formal models completed with NOT_DETECTED"
   # U4 formal-model-check end
 
   ci-success:

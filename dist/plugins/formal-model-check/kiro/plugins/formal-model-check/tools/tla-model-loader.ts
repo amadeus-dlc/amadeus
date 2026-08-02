@@ -6,6 +6,7 @@ import {
   type VerifiedTlaSources,
   loadVerifiedTlaSourceInternal,
   loadVerifiedTlaSourcesInternal,
+  selectVerifiedModel,
 } from "./tla-model-loader-internal.ts";
 
 export type {
@@ -30,3 +31,5 @@ export function loadVerifiedTlaSource(): Result<VerifiedTlaSource, TlaModelPipel
 export function loadVerifiedTlaSources(): Result<VerifiedTlaSources, TlaModelPipelineError | ModuleDepsError> {
   return loadVerifiedTlaSourcesInternal(import.meta.url);
 }
+
+export { selectVerifiedModel };

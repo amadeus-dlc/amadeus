@@ -1,0 +1,79 @@
+{
+  "schema": "amadeus.u5-ci-all-models-measure.e2e.v1",
+  "measuredAt": "2026-08-02T01:00:35Z",
+  "environment": {
+    "bunVersion": "1.3.13",
+    "dockerServerVersion": "29.5.3",
+    "imageRef": "eclipse-temurin:26-jdk@sha256:939e35776c4582f5454276c42a9ca3825df1b4a983ed2edd4cd9b4e130bb0eeb",
+    "jarVersion": "1.7.4",
+    "jarSha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+  },
+  "diagnostic": {
+    "model": "MirrorLifecycle",
+    "profile": "non-acceptance-diagnostic",
+    "elapsedMs": 24494.360708,
+    "totalElapsedMs": 24841.789792,
+    "generatedStates": 208628,
+    "distinctStates": 89099,
+    "statesLeftOnQueue": 0,
+    "searchDepth": 18,
+    "completionMarker": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "remainingContainers": 0
+  },
+  "allModelAcceptance": {
+    "modelOrder": [
+      "FormalElection",
+      "MirrorLifecycle"
+    ],
+    "runCount": 12,
+    "runsPerModel": 6,
+    "totalCliMs": 644215.468417,
+    "totalSpawnMs": 615705.122816,
+    "models": [
+      {
+        "name": "FormalElection",
+        "layer": "frozen",
+        "minCliMs": 94509.72054200001,
+        "maxCliMs": 120247.52195899999,
+        "sumCliMs": 604783.6143750001,
+        "measuredStats": {
+          "generatedStates": 5203730,
+          "distinctStates": 529692,
+          "statesLeftOnQueue": 0,
+          "searchDepth": 9,
+          "completionMarker": true
+        }
+      },
+      {
+        "name": "MirrorLifecycle",
+        "layer": "verified-source",
+        "minCliMs": 6331.275541999959,
+        "maxCliMs": 6775.697792000021,
+        "sumCliMs": 39431.854041999904,
+        "measuredStats": {
+          "generatedStates": 208628,
+          "distinctStates": 89099,
+          "statesLeftOnQueue": 0,
+          "searchDepth": 18,
+          "completionMarker": true
+        }
+      }
+    ],
+    "verification": {
+      "pass": true,
+      "completedRuns": 12,
+      "exitCode": 0,
+      "reason": "NOT_DETECTED"
+    }
+  },
+  "budgetDecision": {
+    "perRunBudgetMs": 190000,
+    "workflowBudgetMs": 1800000,
+    "maxObservedRunMs": 120247.52195899999,
+    "observedTotalCliMs": 644215.468417,
+    "withinBudget": true,
+    "timeoutRelaxationRequired": false
+  }
+}

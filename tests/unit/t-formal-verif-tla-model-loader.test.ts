@@ -7,11 +7,15 @@ import type { ModelLoadErrorCode } from "../../plugins/formal-model-check/tools/
 import * as productionLoader from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 
 describe("TLA model adapter error mapping", () => {
-  test("exports only no-argument production loaders and no injectable runtime seam", () => {
+  test("exports production loaders and the fail-closed model selector without an injectable runtime seam", () => {
     // Shim period (BR-S4): the singular shim and the plural loader coexist,
     // both arity 0. u3 removes the shim and re-pins this list to
     // ["loadVerifiedTlaSources"].
-    expect(Object.keys(productionLoader)).toEqual(["loadVerifiedTlaSource", "loadVerifiedTlaSources"]);
+    expect(Object.keys(productionLoader)).toEqual([
+      "loadVerifiedTlaSource",
+      "loadVerifiedTlaSources",
+      "selectVerifiedModel",
+    ]);
     expect(productionLoader.loadVerifiedTlaSource.length).toBe(0);
     expect(productionLoader.loadVerifiedTlaSources.length).toBe(0);
   });
