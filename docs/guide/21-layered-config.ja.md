@@ -29,7 +29,8 @@ Global Config → Space Config → Intent Config
 
 ```json
 {
-  "auto-solo-election": false
+  "auto-solo-election": false,
+  "max-parallel-units": 4
 }
 ```
 
@@ -38,7 +39,8 @@ opt-in できます。
 
 ```json
 {
-  "auto-solo-election": true
+  "auto-solo-election": true,
+  "max-parallel-units": 2
 }
 ```
 
@@ -53,6 +55,7 @@ opt-in できます。
 | `mirror-projects` | Project target の配列 | `[]` | intent と GitHub Project target、任意の status 名を対応付ける |
 | `auto-solo-election` | boolean | `false` | 設計逸脱・ブロッカー・§13 学習選定でソロ選挙を自動発動する |
 | `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | 確認済みの Amadeus の不具合・懸念を `amadeus-dlc/amadeus` に起票する |
+| `max-parallel-units` | 整数 `1..4` | `4` | 1 Intent で同時に active となる Unit worker 数を機械的に制限する。後段 layer が前段を上書きする |
 | `plugins` | plugin 名の配列 | `[]` | 現在のハーネスへ再調整する plugin を選択する。Global Config だけで有効 |
 
 `plugins` は project の opt-in 正本であり、Space / Intent Config では上書きできません。

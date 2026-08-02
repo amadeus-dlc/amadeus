@@ -109,17 +109,18 @@ flowchart LR
 
 **スウォーム**は、人間から付与された自律性の下で並列 Construction 作業がどう収束するかです。ライブな `/amadeus` セッション内でのみ発火するため、コンダクター(そのセッション)がファンアウトとリトライループを所有します; `tools/amadeus-swarm.ts` は、コンダクターがループ自体を所有する間に相談する決定論的な**レフェリー**です。これは収束に適用された three-concerns 分割です: コンダクターがファンアウトとリトライ決定を所有し(ナレッジ)、ツールが収束判定 + マージ + 監査を所有し(決定論)、人間が自律性を付与し失敗エンベロープでバトンを取り戻す(判断)。
 
-レフェリーは**ステートレス**です — イテレーションカウンタなし、永続化された progress なし — で、3つのサブコマンドを持ちます:
+収束 check はステートレスのままですが、固定 Unit pool は監査 fold を正本とする C2 single writer です。FIFO queue、slot、Unit-attempt budget、reconciliation は pool が所有し、harness は native fact だけを報告します。
 
 | サブコマンド | 役割 | 発行 |
 |------------|------|------|
-| `prepare --batch <n> --units <a,b,c> [--base <branch>] [--degraded-from <subagent\|claude-ultra\|codex-ultra>]` | ユニットごとに分離された git worktree をフォークする(`amadeus-worktree create` + `amadeus-bolt start --worktree` を組み合わせる)。どのワーカーよりも前に実行されるため、`check` に折り込めない。 | `SWARM_STARTED`(loud downgrade が報告されたときは `SWARM_DEGRADED` も)。 |
+| `prepare --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <1..4>] [--degraded-from <subagent\|claude-ultra\|codex-ultra>]` | `max-parallel-units` を解決し、正準 FIFO pool を初期化して全 Unit の worktree を作る。 | `SWARM_STARTED`、`UNIT_POOL_EVENT_SET_COMMITTED`(loud downgrade 時は `SWARM_DEGRADED` も)。 |
+| `acquire` / `confirm-dispatch` / `record-reconciliation` / `settle-release*` / `terminate-batch` / `late-result-observed` | cap 以下の slot reservation、native start fact、release と次の dependency-ready FIFO Unit の promotion、drain/termination を原子的に行う。 | `UNIT_POOL_EVENT_SET_COMMITTED`。 |
 | `check <unit> --check-cmd <cmd> [--test-file <path>]` | ステートレスな単一ユニット判定: プロジェクト自身の check コマンドを実行(exit 0 = green、権威あるシグナル — ワーカーの自己申告は決して信頼されない)し、保護されたファイルを fork-git のベースラインと比較する anti-tamper を行う。`{converged, tampered, reason}` を表示し、genuinely converged の場合にのみ exit 0。 | なし(advisory; コンダクターのリトライ決定に情報を与える)。 |
 | `finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd> [--test-file <path>] [--reasons <unit>=<reason>,…]` | 権威あるゲート: どのマージよりも前に**すべての claimed ユニットで check を再実行**し(`--claimed` で名指しされたがディスク上では red のユニットはマージを拒否され、失敗エンベロープに入る — lying-conductor ガード)、その後 genuine passes の直列化された HOLD-MERGE のマージバック。exit 0(バッチが収束しマージされた)または 2(失敗エンベロープ)。 | `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED` / `SWARM_BATON_RETURNED` / `SWARM_COMPLETED`。 |
 
-これら6つの `SWARM_*` イベントは 68-event 監査分類の一部です([State Machine](12-state-machine.ja.md) を参照)。exit-2 エンベロープでは、コンダクターがバトンを取り戻します - 失敗は自律モードに関係なく常に停止し、人間を再エンゲージします。
+これら6つの `SWARM_*` イベントと Unit pool イベントは 81-event 監査分類の一部です([State Machine](12-state-machine.ja.md) を参照)。exit-2 エンベロープでは、コンダクターがバトンを取り戻します - 失敗は自律モードに関係なく常に停止し、人間を再エンゲージします。
 
-**ドライバーの継ぎ目。** `AMADEUS_USE_SWARM` は三値 enum です — 有効な状態は **未設定**、`claude-ultra`、`codex-ultra` の三つだけです。コンダクターは実行中のハーネスに対してこの値をバッチごとに1回(`amadeus-swarm.ts resolve --harness <self>` で)worktree や spawn より前に解決し、解決は `(値, ハーネス)` の静的関数です。**未設定** はすべてのハーネスで subagent floor(1つのメッセージ内の N 個の並列 `Task` 呼び出し、ユニットごとに1つ)を選択します。`claude-ultra` は Claude ハーネスでインラインの Dynamic Workflow ドライバー(その JS が per-unit パイプラインとイテレーションキャップを所有する)を選択し、`codex-ultra` は Codex ハーネスで reasoning effort=ultra の native fan-out を選択します。自身の native ではないハーネスで要求された ultra 値は `--degraded-from <requested>` で subagent floor へ**loud-degrade** し、レフェリーが `SWARM_DEGRADED` を発行します(requested 値は監査に保存されます)。その他すべての値 — 旧来の `1`、空文字列、未認識の文字列すべて — は worktree・spawn・`SWARM_STARTED` のいずれよりも前に **fail-closed で rejected** されます。互換シムはありません。runaway backstop はツール内のキャップではありません - ハーネスの Stop フックの上限であり、この autonomous-Construction パスでは 8 ブロックです(§3)。
+**ドライバーの継ぎ目。** `AMADEUS_USE_SWARM` の有効値は未設定、`claude-ultra`、`codex-ultra` です。コンダクターは prepare 前にバッチごとに1回だけ解決します。driver は native dispatch substrate だけを選び、どの harness も pool permit を消費しなければ dispatch できず、cap を所有・拡大できません。別 harness 向け ultra は loud-degrade、未知値は worktree・dispatch・監査開始より前に fail-closed で拒否します。
 
 **Bolt-DAG。** スウォームがファンアウトするバッチは、`runtime-graph.json` の `bolt_dag` ノード([Runtime Graph](13-runtime-graph.ja.md) を参照)から来ます。これは units-generation の `unit-of-work-dependency.md` エッジブロックからパースされます。ノードは `units`(それぞれ `depends_on` リストを持つ)と `batches` — すべてのユニットの依存が先行するバッチによって満たされるトポロジカルレベルなので、バッチのユニットは並列にファンアウトできる — を持ちます。ノードは、有効なエッジブロックがディスク上に存在するときにのみ存在します。無いときは graph が理由を語ります: 正当な欠落(スコープが units-generation をスキップする、またはステージが未実行)は代わりに `bolt_dag_absence` を書き、欠陥(units-generation が completed なのに成果物が不在、または成果物のブロックがパース不能)は compile 自体を失敗させます — gate-time の required-sections センサーは同じブロックを上流でフラグします。
 

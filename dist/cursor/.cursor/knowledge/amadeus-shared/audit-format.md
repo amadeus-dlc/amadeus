@@ -42,6 +42,7 @@ is.
 | `INTENT_ARCHIVED` | Human-authorized intent archive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts archive` |
 | `INTENT_UNARCHIVED` | Human-authorized intent unarchive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts unarchive` |
 | `EXECUTION_EVENT_SET_COMMITTED` | One audit-first execution lifecycle event set commits before required projections or native dispatch | Root Operation Id, Event Set Digest, Event Set | — | `tools/amadeus-execution-lifecycle.ts` |
+| `UNIT_POOL_EVENT_SET_COMMITTED` | One atomic fixed-pool queue/slot transition commits before native dispatch | Batch Id, Event Set Id, Event Set | — | `tools/amadeus-unit-pool-runtime.ts` |
 
 ### Phase Lifecycle (4 events)
 
@@ -223,7 +224,7 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 
 ### Swarm (6 events)
 
-All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the deterministic verdict surface the conductor consults. The referee is stateless (no iteration counter): `prepare` forks the per-unit worktrees and emits `SWARM_STARTED` (and `SWARM_DEGRADED` when the conductor reports a loud downgrade); `finalize` re-verifies the conductor's claimed-converged set, serialised-merges the genuine passes, and emits the per-Unit pair (`SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED`), the per-failed-Unit baton row (`SWARM_BATON_RETURNED`), and the batch tally (`SWARM_COMPLETED`). The `check` subcommand emits nothing — it is an advisory verdict that informs the conductor's retry decision. The engine is read-only and the conductor never emits audit events, so the deterministic tool owns the whole swarm taxonomy. Because the loop and its cap live in the driver (the `claude-ultra` Dynamic Workflow's `for`-bound or the subagent floor's harness ceiling), not in the referee, the per-Unit rows carry no `Iterations` / `Cap value` fields — there is no counter to record.
+All six `SWARM_*` events emit from `amadeus-swarm.ts`. In addition, `UNIT_POOL_EVENT_SET_COMMITTED` is the canonical C2 single-writer stream for FIFO queue, slot, Unit-attempt, dispatch-confirmation, settlement, reconciliation, drain, and late-result observations. Harnesses supply native facts only and own no scheduler or counter. `prepare` initializes the pool and records the effective cap; `finalize` refuses a non-terminal pool before re-verification and merge.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|

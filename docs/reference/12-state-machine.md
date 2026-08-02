@@ -388,10 +388,13 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 
 ### Swarm
 
-All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the deterministic verdict surface the conductor consults. The referee is stateless: `prepare` forks the per-unit worktrees and emits `SWARM_STARTED` (plus `SWARM_DEGRADED` when the conductor reports a loud downgrade); `finalize` re-verifies the conductor's claimed-converged set and emits the per-Unit pair, the per-failed-Unit baton row, and the batch tally. The `check` subcommand is advisory and emits nothing. The engine is read-only and the conductor never emits audit events, so the deterministic tool owns the whole swarm taxonomy. These rows track the lifecycle of a batch of dependency-linked Units: fan-out at batch start, per-Unit convergence or re-verify failure, return-the-baton handback to the conductor, and batch completion. The conductor handles `invoke-swarm` as an orthogonal directive kind beside the stage `mode` enum — it does NOT activate the reserved `agent-team` mode, which stays reserved. t48 forward check skips rows whose Emitter cell still reads `Reserved`.
+All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the deterministic verdict surface the conductor consults. The conductor owns fan-out and retry decisions while the referee owns convergence verdicts, merge, and audit. `prepare` forks per-unit worktrees and emits `SWARM_STARTED` (plus `SWARM_DEGRADED` for a loud downgrade); `finalize` re-verifies claims and emits the per-Unit verdicts, baton rows, and batch tally. The advisory `check` subcommand emits nothing.
+
+The same tool also fronts an audit-folded fixed Unit pool. `UNIT_POOL_EVENT_SET_COMMITTED` atomically records queue, slot, dispatch-confirmation, reconciliation, settlement, and drain transitions; harnesses report native facts but own no scheduler or counter.
 
 | Event | Emitter | Trigger |
 |---|---|---|
+| `UNIT_POOL_EVENT_SET_COMMITTED` | `tools/amadeus-unit-pool-runtime.ts` | The C2 single writer atomically committed a fixed-pool queue, slot, reconciliation, settlement, or drain transition |
 | `SWARM_STARTED` | `tools/amadeus-swarm.ts` | Swarm referee `prepare` forked a batch of dependency-linked Units |
 | `SWARM_UNIT_CONVERGED` | `tools/amadeus-swarm.ts` | A swarm Unit re-verified green (and untampered) at the `finalize` gate |
 | `SWARM_UNIT_FAILED` | `tools/amadeus-swarm.ts` | A swarm Unit failed the `finalize` re-verify (not claimed, claimed-but-red, or tampered) |

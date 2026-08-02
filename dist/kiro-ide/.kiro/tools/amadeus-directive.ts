@@ -199,6 +199,9 @@ export interface DispatchSubagentDirective {
 export interface InvokeSwarmDirective {
   kind: "invoke-swarm";
   units: string[];
+  // Effective fixed-pool width, already bounded by the resolved layered
+  // configuration and this batch's size.
+  cap: number;
   // repo — OPTIONAL. The sibling repo NAME this batch targets, present only when
   // the engine can resolve it deterministically: the intent records exactly one
   // repo (the lone sibling). Absent for a legacy/single-projectDir intent (no
@@ -360,7 +363,7 @@ const DISPATCH_SUBAGENT_FIELDS = [
   "worker",
 ] as const;
 
-const INVOKE_SWARM_FIELDS = ["kind", "units", "repo"] as const;
+const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
@@ -406,6 +409,13 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
   },
   "invoke-swarm": (o, errors) => {
     checkStringArray(o, "units", "invoke-swarm", errors);
+    if (!("cap" in o)) {
+      errors.push("invoke-swarm: missing required field: cap");
+    } else if (typeof o.cap !== "number" || !Number.isInteger(o.cap) || o.cap < 1) {
+      errors.push(`invoke-swarm: cap must be a positive integer, got ${describe(o.cap)}`);
+    } else if (Array.isArray(o.units) && o.cap > o.units.length) {
+      errors.push("invoke-swarm: cap must not exceed units.length");
+    }
     checkOptionalString(o, "repo", "invoke-swarm", errors);
   },
   "present-gate": (o, errors) => {
@@ -962,11 +972,13 @@ export const directiveSelfCheckExamples: Directive[] = [
     {
       kind: "invoke-swarm",
       units: ["auth", "billing", "notifications"],
+      cap: 3,
     },
     // invoke-swarm carrying the optional repo (the single-recorded-repo case).
     {
       kind: "invoke-swarm",
       units: ["auth", "billing"],
+      cap: 2,
       repo: "repo-a",
     },
     {

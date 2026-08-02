@@ -35,7 +35,7 @@ function issues(layers: AmadeusConfigLayerInput[]) {
 
 describe("t343 defaults", () => {
   test("no layer yields prompt mode and no configured Project", () => {
-    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] });
+    expect(resolved([]).config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] });
   });
 
   test("a layer with only auto-mirror leaves projects empty", () => {
@@ -44,15 +44,40 @@ describe("t343 defaults", () => {
       projects: [],
       autoSoloElection: false,
       autoFileFindings: "prompt",
+      maxParallelUnits: 4,
       plugins: [],
     });
   });
 
   test("an empty object contributes nothing and is not a source", () => {
     const outcome = resolved([layer("global", {})]);
-    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] });
+    expect(outcome.config).toEqual({ autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] });
     expect(outcome.sources).toEqual([]);
   });
+
+  test("max-parallel-units defaults to four and follows global -> space -> intent precedence", () => {
+    const outcome = resolved([
+      layer("global", { "max-parallel-units": 2 }),
+      layer("space", { "max-parallel-units": 3 }),
+      layer("intent", { "max-parallel-units": 1 }),
+    ]);
+    expect(outcome.config.maxParallelUnits).toBe(1);
+    expect(outcome.sources).toEqual([
+      "global/config.json",
+      "space/config.json",
+      "intent/config.json",
+    ]);
+  });
+
+  test.each([0, -1, 1.5, 5, "2", null])(
+    "max-parallel-units rejects values outside the integer range 1..4: %p",
+    (value) => {
+      expect(issues([layer("global", { "max-parallel-units": value })])[0]).toMatchObject({
+        key: "max-parallel-units",
+        expected: "integer from 1 through 4",
+      });
+    },
+  );
 
   test("auto-solo-election is opt-in and accepts only an explicit boolean", () => {
     expect(
@@ -300,6 +325,7 @@ describe("t343 allowlist", () => {
       ],
       autoSoloElection: false,
       autoFileFindings: "prompt",
+      maxParallelUnits: 4,
       plugins: [],
     });
   });

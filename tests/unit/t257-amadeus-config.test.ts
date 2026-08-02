@@ -25,7 +25,7 @@ describe("t257 pure config resolution", () => {
   test("defaults to prompt when no layer is present", () => {
     expect(
       parseAmadeusConfigLayers([absent("global"), absent("space"), absent("intent")]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] }, sources: [] });
   });
 
   test.each(["off", "prompt", "auto"] as const)(
@@ -33,7 +33,7 @@ describe("t257 pure config resolution", () => {
     (value) => {
       expect(parseAmadeusConfigLayers([mode(value)])).toEqual({
         kind: "resolved",
-        config: { autoMirror: value, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+        config: { autoMirror: value, projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
         sources: ["amadeus/global.json"],
       });
     },
@@ -73,7 +73,7 @@ describe("t257 pure config resolution", () => {
         present("space", {}),
         present("intent", {}),
       ]),
-    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] }, sources: [] });
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] }, sources: [] });
   });
 
   // Each present layer carries a distinct mode (global=off, space=prompt,
@@ -114,7 +114,7 @@ describe("t257 pure config resolution", () => {
       ];
       expect(parseAmadeusConfigLayers(layers)).toEqual({
         kind: "resolved",
-        config: { autoMirror: expectedMode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+        config: { autoMirror: expectedMode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
         sources: expectedSources,
       });
     },
@@ -129,7 +129,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -143,7 +143,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
       sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
     });
   });
@@ -157,7 +157,7 @@ describe("t257 pure config resolution", () => {
       ]),
     ).toEqual({
       kind: "resolved",
-      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+      config: { autoMirror: "auto", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
       sources: ["amadeus/space.json"],
     });
   });

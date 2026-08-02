@@ -79,7 +79,7 @@ function dispatchSubagent(): Record<string, unknown> {
 }
 
 function invokeSwarm(): Record<string, unknown> {
-  return { kind: "invoke-swarm", units: ["auth", "billing"] };
+  return { kind: "invoke-swarm", units: ["auth", "billing"], cap: 2 };
 }
 
 function presentGate(): Record<string, unknown> {
@@ -217,6 +217,16 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const d = invokeSwarm();
     delete d.units;
     expect(errs(d)).toContain("invoke-swarm: missing required field: units");
+  });
+
+  test("invoke-swarm requires a positive integer cap no greater than its batch", () => {
+    const missing = invokeSwarm();
+    delete missing.cap;
+    expect(errs(missing)).toContain("invoke-swarm: missing required field: cap");
+
+    const tooWide = invokeSwarm();
+    tooWide.cap = 3;
+    expect(errs(tooWide)).toContain("invoke-swarm: cap must not exceed units.length");
   });
 
   test("present-gate missing memory_path -> error", () => {

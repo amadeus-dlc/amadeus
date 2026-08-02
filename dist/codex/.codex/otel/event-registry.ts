@@ -1,6 +1,6 @@
 // event-registry.ts — the typed Event Registry (FR-EVT-1).
 //
-// The canonical half of the registry covers the full 80-event audit
+// The canonical half of the registry covers the full 81-event audit
 // vocabulary (#1672; VALID_EVENT_TYPES in tools/amadeus-audit.ts) — every
 // canonical name maps 1:1 onto the EXISTING v1 audit event vocabulary so the
 // current readers understand the records unchanged. The telemetry half
@@ -14,7 +14,7 @@
 //      sites (BR-2);
 //   2. unit test — tests/unit/event-registry-drift.test.ts asserts the
 //      four-set equality (state-machine references == canonical registry ==
-//      exporter accept set == journal reader decode set) with the 79
+//      exporter accept set == journal reader decode set) with the 81
 //      cardinality pinned, so vacuous equality fails;
 //   3. sensor — sensors/amadeus-event-registry-drift.md runs the same
 //      extraction at gate time.
@@ -74,7 +74,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 80;
+export const EXPECTED_CANONICAL_COUNT = 81;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -144,6 +144,15 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Root Operation Id", "Event Set Digest", "Event Set"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.unit_pool.event_set.committed",
+    auditEvent: "UNIT_POOL_EVENT_SET_COMMITTED",
+    durability: "canonical",
+    category: "swarm",
+    requiredAttributes: ["Batch Id", "Event Set Id", "Event Set"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

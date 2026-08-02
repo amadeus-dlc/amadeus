@@ -70,6 +70,17 @@ The orchestration engine emits eight kinds today: `run-stage`, `invoke-swarm`, `
 
 **Swarm retry authority is finite and deterministic.** A non-zero `amadeus-swarm check` does not authorize another worker by itself. Re-dispatch only after `amadeus-swarm retry <unit> --retry-class recoverable-transient --effect-status no-effect-confirmed --cause-code <worker-spawn-unavailable|read-only-probe-timeout> --source-surface <swarm-dispatch|swarm-worker-start|swarm-result-collection> --delivery-id <stable-native-failure-id>` exits `0`; wait its returned `backoffMs` before dispatch. Exit `2`, an unknown effect, a non-allowlisted tuple, or the durable default-2/hard-3 budget being exhausted terminates that unit and proceeds to `finalize` and halt-and-ask. This rule governs every “retry-vs-escalate” phrase above.
 
+### Harness-neutral fixed Unit pool
+
+The fixed pool protocol below supersedes any whole-batch fan-out wording above. The harness reports native facts only; it never owns queue order, slot counters, attempt counters, or retry admission.
+
+1. Pass the directive width to preparation: `bun .kimi-code/tools/amadeus-swarm.ts prepare --batch <n> --units <all> --concurrency <directive.cap> ...`. `max-parallel-units` resolves project → space → intent, defaults to the hard cap 4, and an invocation may only narrow it.
+2. Call `acquire --batch <n> --idempotency-key <stable-delivery-id>` until it returns `capacity-exhausted` or `no-ready-unit`. Dispatch native workers only for the unconfirmed active attempt permits in the returned projection—never for queued Units. After the harness accepts a worker, immediately call `confirm-dispatch --batch <n> --attempt <attempt-id> --native-handle <handle> --idempotency-key <stable-delivery-id>`; a claim alone is not a start fact.
+3. After each worker result and authoritative `check`, call `settle-release` with `succeeded` or `failed` (use `settle-release-cancel-dependents` for a local terminal failure). The same canonical event set releases the slot and acquires the next dependency-ready FIFO Unit, so dispatch every newly returned unconfirmed permit. Review and waiver waits hold no slot.
+4. For an unconfirmed dispatch, call `record-reconciliation` with the native effect fact. `no-effect-confirmed` releases and tail-requeues within the Unit attempt budget; `effect-possible`/`unknown` drains the batch and stops new dispatch. Record late native completions with `late-result-observed`; they never change terminal state.
+5. `finalize` is accepted only after the pool is terminal. A local failure cancels only transitive dependents and lets independent Units continue; systemic/unknown failure drains queued Units as `batch-unsafe`.
+
+
 ### Branching a `run-stage` on its gate
 
 `run-stage` folds the approval-gate decision into its `gate` field. The engine has already decided whether this stage gates for every deterministic case — bootstrap initialization stages auto-proceed (`gate: false`), every other EXECUTE stage gates (`gate: true`). One case is **not** deterministic and arrives as the sentinel `gate: "unresolved"`:

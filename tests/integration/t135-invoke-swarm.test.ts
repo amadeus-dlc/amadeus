@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-swarm:prepare, subcommand:amadeus-swarm:finalize, audit:SWARM_STARTED, audit:SWARM_COMPLETED, audit:SWARM_BATON_RETURNED
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-swarm:prepare, subcommand:amadeus-swarm:finalize, audit:UNIT_POOL_EVENT_SET_COMMITTED, audit:SWARM_STARTED, audit:SWARM_COMPLETED, audit:SWARM_BATON_RETURNED
 //
 // CLI-contract port of tests/integration/t135-invoke-swarm.sh (TAP plan 8),
 // mechanism = cli. The .sh proves invoke-swarm end-to-end across TWO real
@@ -242,6 +242,32 @@ function setupReferee(): void {
     writeFileSync(join(winWorktree, "win.txt"), "done\n");
   }
 
+  // The fixed pool is the dispatch authority. Acquire at most the prepared cap,
+  // confirm the two native handles, then settle each Unit. A settle releases its
+  // slot and atomically promotes the FIFO head (none remain in this 2-wide case).
+  const acquire = (key: string) => {
+    const result = spawnSync(BUN, [
+      SWARM_TOOL, "--project-dir", proj, "acquire", "--batch", "1",
+      "--idempotency-key", key,
+    ], { encoding: "utf-8" });
+    return JSON.parse(result.stdout ?? "{}") as { projection?: { active?: Array<{ attemptId: string; unitId: string }> } };
+  };
+  acquire("test-acquire-1");
+  const acquired = acquire("test-acquire-2");
+  for (const attempt of acquired.projection?.active ?? []) {
+    spawnSync(BUN, [
+      SWARM_TOOL, "--project-dir", proj, "confirm-dispatch", "--batch", "1",
+      "--attempt", attempt.attemptId, "--native-handle", `test-${attempt.unitId}`,
+      "--idempotency-key", `test-confirm-${attempt.unitId}`,
+    ], { encoding: "utf-8" });
+    spawnSync(BUN, [
+      SWARM_TOOL, "--project-dir", proj, "settle-release", "--batch", "1",
+      "--attempt", attempt.attemptId,
+      "--outcome", attempt.unitId === "win" ? "succeeded" : "failed",
+      "--idempotency-key", `test-settle-${attempt.unitId}`,
+    ], { encoding: "utf-8" });
+  }
+
   // Conductor step 3: finalize claiming BOTH (the conductor wrongly claims
   // lose). finalize re-verifies, refuses lose, returns the baton.
   const fin = spawnSync(
@@ -295,6 +321,15 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     // STRONGER than the .sh's string compare of the JSON array: assert the
     // parsed units array equals the first batch, in order, off the DAG.
     expect(directive.units).toEqual(["a", "b"]);
+    expect(directive.cap).toBe(2);
+  }, 30000);
+
+  test("1c: invoke-swarm bakes the intent-over-space-over-project max-parallel-units cap", () => {
+    const proj = seedCodegenProject("autonomous");
+    writeFileSync(join(proj, "amadeus", "config.json"), JSON.stringify({ "max-parallel-units": 2 }));
+    writeFileSync(join(proj, "amadeus", "spaces", "default", "config.json"), JSON.stringify({ "max-parallel-units": 2 }));
+    writeFileSync(join(seededRecordDir(proj), "config.json"), JSON.stringify({ "max-parallel-units": 1 }));
+    expect(runNext(proj).directive.cap).toBe(1);
   }, 30000);
 
   // 2: issue #1612 — `gated` is an APPROVAL-FREQUENCY grant, not a swarm veto.
@@ -379,6 +414,9 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
   test("3: SWARM_STARTED emitted at batch start (prepare)", () => {
     setupReferee();
     expect(auditBody).toContain("SWARM_STARTED");
+    expect(auditBody).toContain("UNIT_POOL_EVENT_SET_COMMITTED");
+    expect(auditBody).toContain("unit-acquired");
+    expect(auditBody).toContain("unit-settled");
   }, 60000);
 
   test("4: SWARM_COMPLETED emitted with converged/failed tally (finalize)", () => {

@@ -86,6 +86,7 @@ const VALID_EVENT_TYPES = new Set([
   // Harness-neutral execution lifecycle batches (#1602). One row is one
   // canonical event set; required projections consume its digest after append.
   "EXECUTION_EVENT_SET_COMMITTED",
+  "UNIT_POOL_EVENT_SET_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -229,6 +230,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
   EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
+  UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
   SESSION_COMPACTED: "Session Compacted",

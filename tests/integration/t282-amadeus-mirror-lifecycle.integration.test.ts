@@ -327,7 +327,7 @@ function boundaryInput(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", plugins: [] },
+        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
         sources: [],
       }),
     },
