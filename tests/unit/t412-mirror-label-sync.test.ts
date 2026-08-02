@@ -254,6 +254,34 @@ describe("createMirrorLabelGateway", () => {
     expect(outcome.kind).toBe("failure");
   });
 
+  test("remove treats 204 No Content (empty body) as success", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from("HTTP/2.0 204 No Content\r\nServer: GitHub.com\r\n\r\n"),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.removeIssueLabel(REPO, 7, "in-progress");
+    expect(outcome.kind).toBe("ok");
+  });
+
+  test("add succeeds on 2xx even when the body is empty", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from("HTTP/2.0 200 OK\r\nServer: GitHub.com\r\n\r\n"),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("ok");
+  });
+
   test("a malformed HTTP envelope is an invalid-response failure", async () => {
     const { runner } = fakeRunner([
       { kind: "exited", exitCode: 0, stdout: Buffer.from("not-http"), stderrTail: "" },

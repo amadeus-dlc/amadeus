@@ -1323,7 +1323,7 @@ export async function runMirrorLifecycleMain(
   };
   const result =
     parsed.kind === "answer"
-      ? await runMirrorLifecycleAnswer(parsed.request, runtime)
+      ? await runMirrorLifecycleAnswer(parsed.request, boundaryRuntime)
       : await runMirrorLifecycleBoundary(parsed.request, boundaryRuntime);
   if (result.kind === "error") {
     console.error(`amadeus-mirror-lifecycle: ${result.message}`);

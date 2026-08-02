@@ -987,6 +987,17 @@ export function removeLabelArgv(
   ];
 }
 
+// Label mutations only need the HTTP status: a successful DELETE is typically
+// `204 No Content` with an EMPTY body, which parseHttpEnvelope would reject as
+// malformed (it demands a JSON body). Scan the `--include` status lines alone.
+const LABEL_STATUS_LINE_RE = /^HTTP\/[0-9.]+ (\d{3})/gm;
+
+function labelHttpStatuses(stdout: Buffer): readonly number[] {
+  const text = stdout.toString("latin1");
+  if (!text.startsWith("HTTP/")) return [];
+  return [...text.matchAll(LABEL_STATUS_LINE_RE)].map((match) => Number(match[1]));
+}
+
 export function createMirrorLabelGateway(
   runner: MirrorProcessRunner,
 ): MirrorLabelGateway {
@@ -998,14 +1009,15 @@ export function createMirrorLabelGateway(
     if (result.kind !== "exited") {
       return processFailure(result, "mutation");
     }
-    const env = parseHttpEnvelope(result.stdout, "array");
-    if (env.kind === "http-error") {
-      if (okStatuses.has(env.status)) return ok<void>(undefined);
-      const { classification, retryable } = classifyHttpStatus(env.status);
-      return failure(classification, retryable, "outcome-unknown", result.exitCode, env.status);
-    }
-    if (env.kind === "malformed") {
+    const statuses = labelHttpStatuses(result.stdout);
+    if (statuses.length === 0) {
       return failure("invalid-response", false, "outcome-unknown", result.exitCode, null);
+    }
+    const bad = statuses.find((status) => status < 200 || status >= 300);
+    if (bad !== undefined) {
+      if (okStatuses.has(bad)) return ok<void>(undefined);
+      const { classification, retryable } = classifyHttpStatus(bad);
+      return failure(classification, retryable, "outcome-unknown", result.exitCode, bad);
     }
     return ok<void>(undefined);
   };
