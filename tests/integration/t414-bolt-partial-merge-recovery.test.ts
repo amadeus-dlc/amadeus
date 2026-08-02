@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   mkdirSync,
@@ -11,13 +12,24 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
-import { assessBoltCompletionRecovery } from "../../dist/claude/.claude/tools/amadeus-merge-recovery.ts";
+import { handleComplete } from "../../packages/framework/core/tools/amadeus-bolt.ts";
+import {
+  assessAuditMergeRecovery,
+  assessBoltCompletionRecovery,
+  assessStateMergeRecovery,
+} from "../../packages/framework/core/tools/amadeus-merge-recovery.ts";
+import {
+  relativeRecordDir,
+  worktreePath,
+  worktreeStateFilePath,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { auditRowsFrom } from "../harness/audit-records.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -68,9 +80,47 @@ function start(projectDir: string, slug: string, batch = "2"): Run {
   ]);
 }
 
+function completeArgs(projectDir: string, args: string[]): Run {
+  let status = 0;
+  let out = "";
+  const originalExit = process.exit.bind(process);
+  const originalLog = console.log.bind(console);
+  const originalConsoleError = console.error.bind(console);
+  const originalError = process.stderr.write.bind(process.stderr);
+  class ExitSignal extends Error {
+    constructor(readonly code: number) {
+      super(`exit ${code}`);
+    }
+  }
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  console.log = ((value: unknown) => {
+    out += `${String(value)}\n`;
+  }) as typeof console.log;
+  console.error = ((value: unknown) => {
+    out += `${String(value)}\n`;
+  }) as typeof console.error;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    out += String(chunk);
+    return true;
+  }) as typeof process.stderr.write;
+  try {
+    handleComplete(args, projectDir);
+  } catch (error) {
+    if (error instanceof ExitSignal) status = error.code;
+    else throw error;
+  } finally {
+    process.exit = originalExit;
+    console.log = originalLog;
+    console.error = originalConsoleError;
+    process.stderr.write = originalError;
+  }
+  return { status, out };
+}
+
 function complete(projectDir: string, slug: string, batch = "2"): Run {
-  return runBolt(projectDir, [
-    "complete",
+  return completeArgs(projectDir, [
     "--name",
     slug,
     "--batch",
@@ -118,15 +168,147 @@ function worktreeAuditDir(projectDir: string, slug: string): string {
   );
 }
 
+let evidenceSeq = 1000;
+function appendEvidence(
+  projectDir: string,
+  event: string,
+  slug: string,
+  fields: Record<string, string> = {},
+  timestamp = "2026-08-02T13:00:00.000Z",
+): void {
+  const shard = readdirSync(seededAuditDir(projectDir)).find((name) => name.endsWith(".jsonl"));
+  if (shard === undefined) throw new Error("fixture audit shard is missing");
+  appendFileSync(
+    join(seededAuditDir(projectDir), shard),
+    serializeJournalEntry({
+      schemaVersion: JOURNAL_SCHEMA_VERSION,
+      cloneId: "t414evidence",
+      intentId: DEFAULT_RECORD_DIR,
+      seq: evidenceSeq++,
+      timestamp,
+      heading: event,
+      event,
+      fields: { "Bolt slug": slug, ...fields },
+    }),
+    "utf-8",
+  );
+}
+
+function stateEvidenceProject(
+  slug: string,
+  overrides: Record<string, string> = {},
+): { projectDir: string; sourceState: string } {
+  const projectDir = setupProject(slug);
+  projects.push(projectDir);
+  writeFileSync(seededStateFile(projectDir), "- **Bolt Refs**: []\n", "utf-8");
+  const sourceState = "- **Status**: running\n";
+  const worktreeState = worktreeStateFilePath(
+    worktreePath(projectDir, slug),
+    relativeRecordDir(projectDir),
+  );
+  mkdirSync(dirname(worktreeState), { recursive: true });
+  writeFileSync(worktreeState, sourceState, "utf-8");
+  appendEvidence(projectDir, "STATE_FORKED", slug);
+  appendEvidence(projectDir, "STATE_MERGED", slug, {
+    "Worktree path": worktreePath(projectDir, slug),
+    "Source state hash": createHash("sha256").update(sourceState).digest("hex"),
+    "Target state hash": "a".repeat(64),
+    "Conflict resolution": "none",
+    ...overrides,
+  });
+  return { projectDir, sourceState };
+}
+
 let projects: string[] = [];
 
-beforeEach(() => resetAidlcEnv());
+beforeEach(() => {
+  resetAidlcEnv();
+  resetOtelPerProject();
+});
 afterEach(() => {
   for (const projectDir of projects) cleanupTestProject(projectDir);
   projects = [];
+  resetOtelPerProject();
 });
 
 describe("t414 complete --merge partial-success recovery", () => {
+  test("rejects an invalid batch before emitting completion evidence", () => {
+    const projectDir = setupProject("invalid-batch");
+    projects.push(projectDir);
+
+    const result = completeArgs(projectDir, ["--name", "invalid-batch", "--batch", "0"]);
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain("Must be a positive integer");
+    expect(eventCount(projectDir, "BOLT_COMPLETED")).toBe(0);
+  });
+
+  test("rejects csv merge requests before emitting completion evidence", () => {
+    const projectDir = setupProject("csv");
+    projects.push(projectDir);
+
+    const result = completeArgs(projectDir, [
+      "--name",
+      "csv,other",
+      "--batch",
+      "2",
+      "--merge",
+      "--slug",
+      "csv",
+    ]);
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain("requires a single bolt name");
+    expect(eventCount(projectDir, "BOLT_COMPLETED", "csv")).toBe(0);
+  });
+
+  test("refuses a held merge through the source completion handler", () => {
+    const projectDir = setupProject("held");
+    projects.push(projectDir);
+    expect(start(projectDir, "held").status).toBe(0);
+    expect(runBolt(projectDir, ["hold-merge", "--slug", "held"]).status).toBe(0);
+
+    const result = complete(projectDir, "held");
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain('"reason":"merge-held"');
+    expect(eventCount(projectDir, "BOLT_COMPLETED", "held")).toBe(0);
+  });
+
+  test("reports a source state-merge failure without minting merge evidence", () => {
+    const projectDir = setupProject("state-failure");
+    projects.push(projectDir);
+    expect(start(projectDir, "state-failure").status).toBe(0);
+    rmSync(
+      worktreeStateFilePath(
+        worktreePath(projectDir, "state-failure"),
+        relativeRecordDir(projectDir),
+      ),
+      { force: true },
+    );
+
+    const result = complete(projectDir, "state-failure");
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain('"reason":"state-merge-failed"');
+    expect(eventCount(projectDir, "STATE_MERGED", "state-failure")).toBe(0);
+  });
+
+  test("rejects mismatched completion evidence in the current fork cycle", () => {
+    const projectDir = setupProject("completion-mismatch");
+    projects.push(projectDir);
+    expect(start(projectDir, "completion-mismatch", "2").status).toBe(0);
+    appendEvidence(projectDir, "BOLT_COMPLETED", "completion-mismatch", {
+      "Bolt names": "completion-mismatch",
+      "Batch number": "99",
+    }, "9999-08-02T13:00:00.000Z");
+
+    const result = complete(projectDir, "completion-mismatch", "2");
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain('"reason":"bolt-completion-evidence-invalid"');
+  });
+
   test("resumes after STATE_MERGED when audit merge failed without duplicating lifecycle evidence", () => {
     const projectDir = setupProject("partial");
     projects.push(projectDir);
@@ -200,7 +382,8 @@ describe("t414 complete --merge partial-success recovery", () => {
     const projectDir = setupProject("replay");
     projects.push(projectDir);
     expect(start(projectDir, "replay").status).toBe(0);
-    expect(complete(projectDir, "replay").status).toBe(0);
+    const completed = complete(projectDir, "replay");
+    expect(completed.status, completed.out).toBe(0);
 
     const replay = complete(projectDir, "replay");
     expect(replay.status).toBe(0);
@@ -259,6 +442,113 @@ describe("t414 complete --merge partial-success recovery", () => {
     expect(assessBoltCompletionRecovery(projectDir, "tied", "tied", "3")).toEqual({
       status: "verified",
     });
+    expect(assessBoltCompletionRecovery(projectDir, "tied", "tied", "2")).toMatchObject({
+      status: "invalid",
+    });
+  });
+
+  test("state merge recovery rejects each unverifiable evidence shape", () => {
+    const missingState = createTestProject();
+    projects.push(missingState);
+    expect(assessStateMergeRecovery(missingState, "missing")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("cannot read main state"),
+    });
+
+    const missingRefs = setupProject("missing-refs");
+    projects.push(missingRefs);
+    writeFileSync(seededStateFile(missingRefs), "- **Status**: running\n", "utf-8");
+    expect(assessStateMergeRecovery(missingRefs, "missing-refs")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("Bolt Refs field"),
+    });
+
+    const stillReferenced = setupProject("referenced");
+    projects.push(stillReferenced);
+    writeFileSync(seededStateFile(stillReferenced), "- **Bolt Refs**: [referenced]\n", "utf-8");
+    appendEvidence(stillReferenced, "STATE_FORKED", "referenced");
+    appendEvidence(stillReferenced, "STATE_MERGED", "referenced");
+    expect(assessStateMergeRecovery(stillReferenced, "referenced")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("remains in Bolt Refs"),
+    });
+
+    const missingWorktreeState = setupProject("missing-worktree-state");
+    projects.push(missingWorktreeState);
+    writeFileSync(seededStateFile(missingWorktreeState), "- **Bolt Refs**: []\n", "utf-8");
+    appendEvidence(missingWorktreeState, "STATE_FORKED", "missing-worktree-state");
+    appendEvidence(missingWorktreeState, "STATE_MERGED", "missing-worktree-state");
+    expect(assessStateMergeRecovery(missingWorktreeState, "missing-worktree-state")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("worktree state is missing"),
+    });
+
+    const wrongPath = stateEvidenceProject("wrong-path", { "Worktree path": "/wrong" });
+    expect(assessStateMergeRecovery(wrongPath.projectDir, "wrong-path")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("Worktree path"),
+    });
+    const wrongHash = stateEvidenceProject("wrong-hash", { "Source state hash": "0".repeat(64) });
+    expect(assessStateMergeRecovery(wrongHash.projectDir, "wrong-hash")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("Source state hash"),
+    });
+    const malformed = stateEvidenceProject("malformed", { "Target state hash": "bad" });
+    expect(assessStateMergeRecovery(malformed.projectDir, "malformed")).toMatchObject({
+      status: "invalid",
+      detail: expect.stringContaining("required evidence is malformed"),
+    });
+    const verified = stateEvidenceProject("verified");
+    expect(assessStateMergeRecovery(verified.projectDir, "verified")).toEqual({
+      status: "verified",
+    });
+  });
+
+  test("audit merge recovery distinguishes pending, mismatched, ambiguous, and verified evidence", () => {
+    const pending = setupProject("audit-pending");
+    projects.push(pending);
+    appendEvidence(pending, "STATE_FORKED", "audit-pending");
+    expect(
+      assessAuditMergeRecovery(pending, "audit-pending", { sourceHash: "a", boundary: 1 }, 2),
+    ).toEqual({ status: "pending" });
+
+    const mismatched = setupProject("audit-mismatch");
+    projects.push(mismatched);
+    appendEvidence(mismatched, "STATE_FORKED", "audit-mismatch");
+    appendEvidence(mismatched, "AUDIT_MERGED", "audit-mismatch", {
+      "Source Audit Hash": "wrong",
+      "Fork Boundary": "1",
+      "Entries Merged": "2",
+    });
+    expect(
+      assessAuditMergeRecovery(mismatched, "audit-mismatch", { sourceHash: "a", boundary: 1 }, 2),
+    ).toMatchObject({ status: "invalid", detail: expect.stringContaining("does not match") });
+
+    const ambiguous = setupProject("audit-ambiguous");
+    projects.push(ambiguous);
+    appendEvidence(ambiguous, "STATE_FORKED", "audit-ambiguous");
+    for (let index = 0; index < 2; index++) {
+      appendEvidence(ambiguous, "AUDIT_MERGED", "audit-ambiguous", {
+        "Source Audit Hash": "a",
+        "Fork Boundary": "1",
+        "Entries Merged": "2",
+      });
+    }
+    expect(
+      assessAuditMergeRecovery(ambiguous, "audit-ambiguous", { sourceHash: "a", boundary: 1 }, 2),
+    ).toMatchObject({ status: "invalid", detail: expect.stringContaining("ambiguous") });
+
+    const verified = setupProject("audit-verified");
+    projects.push(verified);
+    appendEvidence(verified, "STATE_FORKED", "audit-verified");
+    appendEvidence(verified, "AUDIT_MERGED", "audit-verified", {
+      "Source Audit Hash": "a",
+      "Fork Boundary": "1",
+      "Entries Merged": "2",
+    });
+    expect(
+      assessAuditMergeRecovery(verified, "audit-verified", { sourceHash: "a", boundary: 1 }, 2),
+    ).toEqual({ status: "verified" });
   });
 
   test("never-merged slug fails closed without minting BOLT_COMPLETED", () => {

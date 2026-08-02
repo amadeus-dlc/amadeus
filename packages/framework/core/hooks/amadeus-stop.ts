@@ -134,16 +134,16 @@ const HOOK_NAME = "stop";
 //     just chats mid-workflow is released after a single nudge, not eight. A
 // A non-numeric / non-positive override falls back to the mode default rather
 // than disabling the guard — the guard must never be silently turned off.
-function blockCap(stateContent: string): number {
+export function stopContinuationBlockCap(stateContent: string): number {
   const raw = process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP;
-  const fallback = defaultBlockCap(stateContent);
+  const fallback = stopContinuationDefaultCap(stateContent);
   if (!raw) return fallback;
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 && n <= STOP_CONTINUATION_HARD_CAP ? n : fallback;
 }
 
 // The mode-aware default cap (used when no env override is set).
-function defaultBlockCap(stateContent: string): number {
+export function stopContinuationDefaultCap(stateContent: string): number {
   const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
   return mode === "autonomous" || mode === "gated"
     ? AUTONOMOUS_BLOCK_CAP
@@ -153,13 +153,13 @@ const AUTONOMOUS_BLOCK_CAP = 8;
 const INTERACTIVE_BLOCK_CAP = 2;
 const STOP_CONTINUATION_HARD_CAP = 10;
 
-function stopBudgetMode(stateContent: string): StopBudgetMode {
+export function stopBudgetMode(stateContent: string): StopBudgetMode {
   const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
   return mode === "autonomous" || mode === "gated" ? mode : "interactive";
 }
 
-function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
-  const configuredCap = blockCap(stateContent);
+export function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
+  const configuredCap = stopContinuationBlockCap(stateContent);
   const policy = process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
     ? createBudgetPolicy({
         kind: "stop-continuation",
@@ -259,20 +259,21 @@ function currentStageSlug(stateContent: string): string {
 // hook invocations, sessions and compact/resume are deliberately absent from
 // the BudgetSubject identity; only a real stage/revision transition creates a
 // new subject. Canonical write or state failures release the stop safely.
-function decideBlock(
+export function decideStopContinuation(
+  resolvedProjectDir: string,
   stateContent: string,
   stopHookActive: boolean,
   sessionId: string | undefined,
 ): boolean {
   const policy = stopBudgetPolicy(stateContent);
   const stage = currentStageSlug(stateContent);
-  const activeRecordDir = recordDir(projectDir);
+  const activeRecordDir = recordDir(resolvedProjectDir);
   if (policy === null || stage.length === 0 || activeRecordDir === null) return false;
   const revision = Number.parseInt(getField(stateContent, "Revision Count") ?? "0", 10);
   const stageRevision = Number.isInteger(revision) && revision >= 0 ? revision : 0;
   const stageInstanceId = `${stage}@${stageRevision}`;
   const result = reserveStageBudget({
-    projectDir,
+    projectDir: resolvedProjectDir,
     intentUuid: basename(activeRecordDir),
     stageSlug: stage,
     stageInstanceId,
@@ -286,7 +287,7 @@ function decideBlock(
   });
   if (result.kind === "reserved") return true;
   recordHookDrop(
-    projectDir,
+    resolvedProjectDir,
     HOOK_NAME,
     result.kind === "exhausted"
       ? `stop continuation budget exhausted (${policy.effectiveCap}/${policy.effectiveCap})`
@@ -992,12 +993,17 @@ if (isConversationalStop(stateContent, transcriptPath, transcriptFormat)) {
 // present-gate / ask / print / error). Decide whether to block, honouring the
 // recursion bounds. When the bounds say release, LET GO — a stuck loop must
 // never trap the session.
-const shouldBlock = decideBlock(stateContent, stopHookActive, migrationSessionId);
+const shouldBlock = decideStopContinuation(
+  projectDir,
+  stateContent,
+  stopHookActive,
+  migrationSessionId,
+);
 if (!shouldBlock) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    `durable continuation budget released the stop (cap ${blockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
+    `durable continuation budget released the stop (cap ${stopContinuationBlockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
   );
   allowStop();
 }

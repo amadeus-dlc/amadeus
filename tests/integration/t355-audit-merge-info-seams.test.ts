@@ -11,12 +11,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { countAuditEvent } from "../harness/audit-records.ts";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   handleAuditMerge,
   mergeDeltaUnderLock,
-} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+} from "../../packages/framework/core/tools/amadeus-audit.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   JOURNAL_SCHEMA_VERSION,
@@ -25,11 +25,12 @@ import {
 import {
   auditFilePath,
   auditLockDir,
+  _resetCloneIdForTests,
   releaseAuditLock,
   relativeRecordDir,
   worktreeAuditFilePath,
   worktreePath,
-} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleInfo } from "../../dist/claude/.claude/tools/amadeus-worktree.ts";
 import {
   cleanupTestProject,
@@ -153,6 +154,41 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     // AUDIT_MERGED is migrated onto the canonical path, so the row is schema v2.
     expect(countAuditEvent(main, "AUDIT_MERGED")).toBeGreaterThan(0);
     expect(main).toContain('"Entries Merged":"2"');
+
+    const replay = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(replay.exited).toBe(false);
+    expect(JSON.parse(replay.stdout)).toMatchObject({ emitted: "AUDIT_MERGED", reentrant: true });
+  });
+
+  test("a missing worktree audit directory is classified before merge", () => {
+    proj = seedProject();
+    mkdirSync(worktreePath(proj, SLUG), { recursive: true });
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("worktree audit not found");
+  });
+
+  test("multiple fork shards are rejected as ambiguous evidence", () => {
+    proj = seedProject();
+    const first = seedWtShard(proj);
+    writeFileSync(join(dirname(first), "second.jsonl"), readFileSync(first, "utf-8"), "utf-8");
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("ambiguous worktree audit evidence");
+  });
+
+  test("clone regeneration refuses when the original source shard vanished", () => {
+    proj = seedProject();
+    const originalMain = auditFilePath(proj);
+    seedWtShard(proj);
+    rmSync(originalMain);
+    writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), "newclone0002\n", "utf-8");
+    _resetCloneIdForTests();
+    writeFileSync(auditFilePath(proj), "", "utf-8");
+
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("main audit source shard not found");
   });
 
   test("malformed anchor (missing Fork Boundary) refuses via jsonError", () => {
@@ -166,6 +202,17 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
     expect(run.exited).toBe(true);
     expect(run.stderr).toContain("missing Fork Boundary");
+  });
+
+  test("a valid AUDIT_FORKED anchor without a trailing separator is rejected", () => {
+    proj = seedProject();
+    const shard = seedWtShard(proj);
+    writeFileSync(shard, readFileSync(shard, "utf-8").trimEnd(), "utf-8");
+
+    const run = captureRun(() => handleAuditMerge(["--slug", SLUG], proj as string));
+
+    expect(run.exited).toBe(true);
+    expect(run.stderr).toContain("no separator after AUDIT_FORKED block");
   });
 
   // E-U8PRE O-L1: the section now runs under withAuditLock with the extended
@@ -221,6 +268,24 @@ describe("audit-merge in-process (anchor / prefix / delta paths)", () => {
     expect(main).toContain(`[slug=${SLUG}]`);
     expect(main).toContain("[fork-emitted:2026-07-28T11:00:00Z]");
     expect(countAuditEvent(main, "AUDIT_MERGED")).toBe(0);
+  });
+
+  test("a partially present delta is refused instead of duplicated", () => {
+    proj = seedProject();
+    const first = delta(3, "BOLT_STARTED", "2026-07-28T11:01:00Z");
+    const second = delta(4, "BOLT_COMPLETED", "2026-07-28T11:02:00Z");
+    const mainAudit = auditFilePath(proj);
+    writeFileSync(mainAudit, MAIN_LEDGER + first, "utf-8");
+    const run = captureRun(() =>
+      mergeDeltaUnderLock(
+        proj as string,
+        mainAudit,
+        first + second,
+        { slug: SLUG, sourceHash: "0".repeat(64), boundary: 1, forkTs: "2026-07-28T11:00:00Z" },
+      ),
+    );
+    expect(run.exited).toBe(true);
+    expect(readFileSync(mainAudit, "utf-8")).toContain("partial audit delta evidence");
   });
 
   test("prefix-hash mismatch refuses with the tampering classification", () => {

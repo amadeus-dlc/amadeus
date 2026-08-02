@@ -87,6 +87,41 @@ describe("convergence budget boundary", () => {
     });
   });
 
+  test("policy creation rejects invalid and non-canonical caps", () => {
+    expect(
+      createBudgetPolicy({
+        kind: "question",
+        effectiveCap: 0,
+        hardCap: 3,
+        configVersion: "test-v1",
+      }),
+    ).toEqual({ ok: false, error: "cap-not-positive-integer" });
+    expect(
+      createBudgetPolicy({
+        kind: "question",
+        effectiveCap: 1,
+        hardCap: 0,
+        configVersion: "test-v1",
+      }),
+    ).toEqual({ ok: false, error: "cap-not-positive-integer" });
+    expect(
+      createBudgetPolicy({
+        kind: "question",
+        effectiveCap: 4,
+        hardCap: 3,
+        configVersion: "test-v1",
+      }),
+    ).toEqual({ ok: false, error: "hard-cap-exceeded" });
+    expect(
+      createBudgetPolicy({
+        kind: "stop-continuation",
+        effectiveCap: 2,
+        hardCap: 9,
+        configVersion: "test-v1",
+      }),
+    ).toEqual({ ok: false, error: "hard-cap-mismatch" });
+  });
+
   test("retry classification allows only the four exact v1 tuples", () => {
     const allowed = [
       ["worker-spawn-unavailable", "swarm-dispatch", "RR-V1-WSU-DISPATCH"],
@@ -195,6 +230,22 @@ describe("convergence budget boundary", () => {
       projectionSink,
     });
     expect(resumedCoordinator.reserveExecution(reserve(2, "reserve-2")).ok).toBe(true);
+    const mismatchedPolicy = createBudgetPolicy({
+      kind: "stop-continuation",
+      effectiveCap: 1,
+      hardCap: 10,
+      configVersion: "stop-v2",
+    });
+    if (!mismatchedPolicy.ok) throw new Error("mismatch policy creation failed");
+    expect(
+      resumedCoordinator.reserveExecution({
+        ...reserve(3, "reserve-policy-mismatch"),
+        policy: mismatchedPolicy.value,
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "budget-policy-mismatch", persisted: false },
+    });
     const exhausted = resumedCoordinator.reserveExecution(reserve(3, "reserve-3"));
     expect(exhausted).toMatchObject({
       ok: false,
@@ -204,6 +255,7 @@ describe("convergence budget boundary", () => {
         termination: { reasonCode: "budget-exhausted" },
       },
     });
+    expect(resumedCoordinator.reserveExecution(reserve(3, "reserve-3"))).toEqual(exhausted);
     const eventCount = repository.readEventSets().length;
     expect(resumedCoordinator.reserveExecution(reserve(4, "reserve-4"))).toEqual(exhausted);
     expect(repository.readEventSets()).toHaveLength(eventCount);

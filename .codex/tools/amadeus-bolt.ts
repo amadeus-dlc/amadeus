@@ -375,10 +375,11 @@ function preflightCompletionMerge(
   useMerge: boolean,
 ): MergeRecoveryAssessment {
   if (!useMerge) return { status: "pending" };
-  if (!flags.slug) error("--merge requires --slug <kebab-slug>");
+  if (!flags.slug) error("--merge requires --slug <kebab-slug>", pd);
   if (flags.name.includes(",")) {
     error(
       `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`,
+      pd,
     );
   }
   // A held sibling must be released before any completion evidence is minted.
@@ -462,16 +463,16 @@ function completionRecoveryFor(
   return recovery;
 }
 
-function handleComplete(args: string[]): void {
+export function handleComplete(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
-  if (!flags.name) error("Missing --name <bolt-name or csv>");
-  if (!flags.batch) error("Missing --batch <batch-number>");
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
+  if (!flags.name) error("Missing --name <bolt-name or csv>", pd);
+  if (!flags.batch) error("Missing --batch <batch-number>", pd);
   if (!/^[1-9][0-9]*$/.test(flags.batch)) {
-    error(`Invalid --batch: "${flags.batch}". Must be a positive integer.`);
+    error(`Invalid --batch: "${flags.batch}". Must be a positive integer.`, pd);
   }
 
-  const pd = resolveProjectDir(projectDir);
   const useMerge = booleans.has("merge");
   const stateRecovery = preflightCompletionMerge(pd, flags, useMerge);
 
@@ -1029,8 +1030,8 @@ function main(): void {
   }
 }
 
-function error(msg: string): never {
-  const pd = resolveProjectDir(projectDir);
+function error(msg: string, explicitProjectDir?: string): never {
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   const command = `amadeus-bolt ${process.argv.slice(2).join(" ")}`.trim();
   emitError(pd, "amadeus-bolt", command, msg);
 }
