@@ -3745,6 +3745,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/perf/t-no-silent-drop-text-mutation.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t108.test.ts",
           "mechanism": "none"
         }
@@ -3798,6 +3802,10 @@
       "unitId": "function:setStageSuffix",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/perf/t-no-silent-drop-text-mutation.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/unit/t194-recompose.test.ts",
           "mechanism": "cli"
@@ -4207,6 +4215,10 @@
       "unitId": "function:validateStageState",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/perf/t-no-silent-drop-text-mutation.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/unit/t108.test.ts",
           "mechanism": "none"
