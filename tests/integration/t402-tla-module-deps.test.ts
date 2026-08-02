@@ -98,6 +98,17 @@ describe("t402 tla-module-deps extraction", () => {
     expect(extractModuleRefs("M", source)).toEqual({ ok: true, value: ["Helper"] });
   });
 
+  test("keeps declarations inside nested block comments hidden", () => {
+    const source = [
+      "(* outer",
+      "  (* inner *)",
+      "  EXTENDS Fabricated",
+      "*)",
+      "EXTENDS Real",
+    ].join("\n");
+    expect(extractModuleRefs("M", source)).toEqual({ ok: true, value: ["Real"] });
+  });
+
   test("fails on a malformed EXTENDS token instead of skipping it silently", () => {
     const result = extractModuleRefs("M", "EXTENDS Naturals, not-a-module");
     expect(result).toMatchObject({

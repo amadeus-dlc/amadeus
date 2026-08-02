@@ -73,18 +73,21 @@ function checkModuleName(moduleName: string): Result<null, ModuleDepsError> {
   return { ok: true, value: null };
 }
 
-// Removes comments while preserving line boundaries. Block comments are
-// non-nested and may span lines; `(*` inside a `\*` line comment is inert.
+// Removes comments while preserving line boundaries. Block comments may nest
+// and span lines; `(*` inside a `\*` line comment is inert.
 // An unterminated block comment swallows the rest of the module so malformed
 // source cannot yield fabricated dependencies (BR-R6).
 function stripBlockComments(source: string): string {
   let out = "";
   let index = 0;
-  let inBlock = false;
+  let blockDepth = 0;
   while (index < source.length) {
-    if (inBlock) {
-      if (source.startsWith("*)", index)) {
-        inBlock = false;
+    if (blockDepth > 0) {
+      if (source.startsWith("(*", index)) {
+        blockDepth += 1;
+        index += 2;
+      } else if (source.startsWith("*)", index)) {
+        blockDepth -= 1;
         index += 2;
       } else {
         if (source[index] === "\n") out += "\n";
@@ -100,7 +103,7 @@ function stripBlockComments(source: string): string {
       continue;
     }
     if (source.startsWith("(*", index)) {
-      inBlock = true;
+      blockDepth = 1;
       index += 2;
       continue;
     }
