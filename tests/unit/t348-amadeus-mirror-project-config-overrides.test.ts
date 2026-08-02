@@ -8,9 +8,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   type ConfigLayer,
-  type MirrorConfigLayerInput,
-  parseMirrorConfigLayers,
-} from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+  type AmadeusConfigLayerInput,
+  parseAmadeusConfigLayers,
+} from "../../packages/framework/core/tools/amadeus-config.ts";
 import {
   DEFAULT_PROJECT_STATUS_NAMES,
   expectedProjectStatus,
@@ -24,20 +24,20 @@ function layer(
   name: ConfigLayer,
   rawValue: unknown,
   present = true,
-): MirrorConfigLayerInput {
+): AmadeusConfigLayerInput {
   return { layer: name, path: `${name}/config.json`, present, rawValue };
 }
 
-function projects(layers: MirrorConfigLayerInput[]): readonly MirrorProjectTarget[] {
-  const outcome = parseMirrorConfigLayers(layers);
+function projects(layers: AmadeusConfigLayerInput[]): readonly MirrorProjectTarget[] {
+  const outcome = parseAmadeusConfigLayers(layers);
   if (outcome.kind !== "resolved") {
     throw new Error(`expected resolved, got: ${JSON.stringify(outcome.issues)}`);
   }
   return outcome.config.projects;
 }
 
-function issues(layers: MirrorConfigLayerInput[]) {
-  const outcome = parseMirrorConfigLayers(layers);
+function issues(layers: AmadeusConfigLayerInput[]) {
+  const outcome = parseAmadeusConfigLayers(layers);
   if (outcome.kind !== "invalid") throw new Error("expected invalid");
   return outcome.issues;
 }
@@ -144,7 +144,7 @@ describe("t348 layer replacement", () => {
   });
 
   test("a layer that only sets auto-mirror leaves the winning target list intact", () => {
-    const outcome = parseMirrorConfigLayers([
+    const outcome = parseAmadeusConfigLayers([
       layer("global", {
         "mirror-projects": [{ project: "acme/5" }, { project: "acme/6" }],
       }),

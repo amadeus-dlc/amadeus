@@ -6,7 +6,7 @@
 
 The layered configuration resolver is a read-only component shared by mirror
 routing, solo-election activation, and Amadeus finding filing. Its source of truth is
-`packages/framework/core/tools/amadeus-layered-config.ts`.
+`packages/framework/core/tools/amadeus-config.ts`.
 
 ## Contract
 
@@ -99,9 +99,9 @@ fails, retry converges on the same Issue instead of creating a duplicate.
 
 The contract is covered by:
 
-- `tests/unit/t257-amadeus-mirror-config.test.ts` for parsing, merging,
+- `tests/unit/t257-amadeus-config.test.ts` for parsing, merging,
   defaults, path derivation, and reader behavior;
-- `tests/integration/t257-amadeus-mirror-config.integration.test.ts` for real
+- `tests/integration/t257-amadeus-config.integration.test.ts` for real
   filesystem precedence and failure cases;
 - `tests/integration/t265-engine-boundary.integration.test.ts` for all six
   mode-by-Issue boundary combinations;

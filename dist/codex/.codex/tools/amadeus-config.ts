@@ -1,4 +1,4 @@
-// amadeus-layered-config.ts — shared layered configuration resolver.
+// amadeus-config.ts — shared layered configuration resolver.
 //
 // Resolves the supported settings from the three git-shared layers
 // (global -> space -> intent, later layers winning per key). `auto-mirror`

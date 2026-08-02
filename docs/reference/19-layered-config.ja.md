@@ -6,7 +6,7 @@
 
 階層設定リゾルバーは、ミラールーティング、ソロ選挙の自動発動、Amadeus に関する
 発見事項の起票が共有する読み取り専用コンポーネントです。正本は
-`packages/framework/core/tools/amadeus-layered-config.ts` です。
+`packages/framework/core/tools/amadeus-config.ts` です。
 
 ## 契約
 
@@ -91,8 +91,8 @@ Issue に収束します。
 
 契約は次のテストで検証しています。
 
-- `tests/unit/t257-amadeus-mirror-config.test.ts`: 解析、マージ、既定値、パス導出、reader の動作
-- `tests/integration/t257-amadeus-mirror-config.integration.test.ts`: 実ファイル上の優先順位と失敗ケース
+- `tests/unit/t257-amadeus-config.test.ts`: 解析、マージ、既定値、パス導出、reader の動作
+- `tests/integration/t257-amadeus-config.integration.test.ts`: 実ファイル上の優先順位と失敗ケース
 - `tests/integration/t265-engine-boundary.integration.test.ts`: mode と Issue 有無の全6組
 - `tests/e2e/t265-engine-boundary.test.ts`: 自動 lifecycle 委譲と receipt による復旧
 - `tests/unit/t366-amadeus-finding-coordinator.test.ts`: mode routing、`marker` による冪等性、重複処理

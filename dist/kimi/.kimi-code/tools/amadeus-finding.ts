@@ -8,7 +8,7 @@ import type {
 import type { GitHubRepository } from "./amadeus-github-types.ts";
 import {
   resolveAmadeusConfig,
-} from "./amadeus-layered-config.ts";
+} from "./amadeus-config.ts";
 import {
   createFindingGitHubGatewayAdapter,
 } from "./amadeus-github-gateway.ts";

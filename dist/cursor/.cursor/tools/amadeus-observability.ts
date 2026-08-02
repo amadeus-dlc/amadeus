@@ -27,7 +27,7 @@ import {
   detectHarnessType,
   recordDir,
 } from "./amadeus-lib.ts";
-import { readAmadeusConfigLayers } from "./amadeus-layered-config.ts";
+import { readAmadeusConfigLayers } from "./amadeus-config.ts";
 
 // --- config -----------------------------------------------------------------
 

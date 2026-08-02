@@ -60,7 +60,7 @@ import {
 import {
   type AmadeusConfigIssue,
   resolveAmadeusConfig,
-} from "./amadeus-layered-config.ts";
+} from "./amadeus-config.ts";
 
 const USAGE =
   "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger explicit|auto-solo] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";

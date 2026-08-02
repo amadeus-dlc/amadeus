@@ -578,8 +578,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-observability.ts",
     "lines": "119",
-    "reason": "Defensive catch around the layered config read: readMirrorConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS \u2014 unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
-    "expiry": "remove if readMirrorConfigLayers gains a throwing path or the belt is dropped"
+    "reason": "Defensive catch around the layered config read: readAmadeusConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS \u2014 unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
+    "expiry": "remove if readAmadeusConfigLayers gains a throwing path or the belt is dropped"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",

@@ -1,5 +1,5 @@
 // t257 — real-filesystem three-mode mirror configuration resolution.
-// covers: packages/framework/core/tools/amadeus-layered-config.ts (readAmadeusConfigLayers, resolveAmadeusConfig)
+// covers: packages/framework/core/tools/amadeus-config.ts (readAmadeusConfigLayers, resolveAmadeusConfig)
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { resolveAmadeusConfig } from "../../packages/framework/core/tools/amadeus-layered-config.ts";
+import { resolveAmadeusConfig } from "../../packages/framework/core/tools/amadeus-config.ts";
 
 const INTENT = "260719-mirror-productization";
 const roots: string[] = [];
@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function project(): string {
-  const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-config-t257-"));
+  const root = mkdtempSync(join(tmpdir(), "amadeus-config-t257-"));
   roots.push(root);
   return root;
 }

@@ -4,9 +4,9 @@
 // boundary, composes C1/C2/C3/C6/C8, and always returns a non-blocking envelope.
 
 import {
-  type MirrorConfigOutcome,
-  resolveMirrorConfig,
-} from "./amadeus-mirror-config.ts";
+  type AmadeusConfigOutcome,
+  resolveAmadeusConfig,
+} from "./amadeus-config.ts";
 import {
   executeMirrorOperation,
   type ExecuteMirrorOperationInput,
@@ -100,7 +100,7 @@ export type MirrorCoordinatorDependencies = Readonly<{
     projectDir: string,
     intentDir: string,
     space?: string,
-  ) => MirrorConfigOutcome;
+  ) => AmadeusConfigOutcome;
   readState?: (ports: MirrorStateStorePorts) => MirrorReadOutcome;
   execute?: (
     input: ExecuteMirrorOperationInput,
@@ -217,7 +217,7 @@ function persistAuxiliary(
     : snapshot;
 }
 
-function configIssueSummary(outcome: Extract<MirrorConfigOutcome, { kind: "invalid" }>) {
+function configIssueSummary(outcome: Extract<AmadeusConfigOutcome, { kind: "invalid" }>) {
   return outcome.issues
     .map((issue) =>
       issue.kind === "read-failure"
@@ -473,7 +473,7 @@ function initializeBoundary(
       projects: readonly MirrorProjectTarget[];
       fallbackEvent: MirrorEventIdentity;
     } {
-  const resolve = input.dependencies?.resolveConfig ?? resolveMirrorConfig;
+  const resolve = input.dependencies?.resolveConfig ?? resolveAmadeusConfig;
   const read = input.dependencies?.readState ?? readMirrorState;
   const config = resolve(
     input.context.projectDir,

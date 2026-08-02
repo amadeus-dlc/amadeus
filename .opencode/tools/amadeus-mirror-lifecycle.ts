@@ -28,7 +28,7 @@ import {
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
 import { createMirrorLabelGateway } from "./amadeus-github-gateway.ts";
-import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
   type MirrorLabelGateway,
   mirrorLabelSyncPlan,
@@ -287,7 +287,7 @@ async function syncBoundaryLabels(input: SyncBoundaryLabelsInput): Promise<void>
   if (input.labelGateway === null) return;
   const labelGateway = input.labelGateway;
   try {
-    const config = resolveMirrorConfig(input.projectDir, input.intentDir, input.space);
+    const config = resolveAmadeusConfig(input.projectDir, input.intentDir, input.space);
     if (config.kind !== "resolved" || config.config.autoMirror !== "auto") return;
     const document = readFileSync(input.statePath, "utf-8");
     const plan = mirrorLabelSyncPlan(

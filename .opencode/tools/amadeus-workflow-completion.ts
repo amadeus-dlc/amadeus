@@ -4,7 +4,7 @@ import {
   getField,
   setOrInsertField,
 } from "./amadeus-lib.ts";
-import { resolveAmadeusConfig } from "./amadeus-layered-config.ts";
+import { resolveAmadeusConfig } from "./amadeus-config.ts";
 
 export type WorkflowCompletionPreparation = Readonly<{
   instance: string;

@@ -1,5 +1,5 @@
 // t269 — mirror contract/policy performance budgets and determinism.
-// covers: packages/framework/core/tools/amadeus-mirror-config.ts, amadeus-mirror-policy.ts
+// covers: packages/framework/core/tools/amadeus-config.ts, amadeus-mirror-policy.ts
 // size: large
 //
 // perf tier (#1830 FR-1): real-time measurement, held out of --ci.
@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { resolveMirrorConfig } from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+import { resolveAmadeusConfig } from "../../packages/framework/core/tools/amadeus-config.ts";
 import {
   decideMirrorAction,
   mirrorEventIdentity,
@@ -140,13 +140,13 @@ describe("t269 selector + read + policy budget", () => {
 
   test("selector + three reads + policy p95 is at most 50 ms (median of 3 runs)", () => {
     const root = workspace();
-    for (let i = 0; i < 100; i++) resolveMirrorConfig(root, INTENT);
+    for (let i = 0; i < 100; i++) resolveAmadeusConfig(root, INTENT);
     const runP95: number[] = [];
     for (let run = 0; run < 3; run++) {
       const samples: number[] = [];
       for (let i = 0; i < 1000; i++) {
         const start = performance.now();
-        const outcome = resolveMirrorConfig(root, INTENT);
+        const outcome = resolveAmadeusConfig(root, INTENT);
         if (outcome.kind === "resolved") {
           decideMirrorAction({
             kind: "lifecycle",
@@ -167,7 +167,7 @@ describe("t269 selector + read + policy budget", () => {
   test("resolution performs zero writes to the workspace", () => {
     const root = workspace();
     const before = fileCount(root);
-    for (let i = 0; i < 100; i++) resolveMirrorConfig(root, INTENT);
+    for (let i = 0; i < 100; i++) resolveAmadeusConfig(root, INTENT);
     expect(fileCount(root)).toBe(before);
   });
 });
