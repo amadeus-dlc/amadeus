@@ -127,7 +127,10 @@ export type DispatchClaimResult =
       readonly kind: "claimed";
       readonly reservation: ExecutionReservation;
     })
-  | { readonly kind: "idempotent"; readonly reservation: ExecutionReservation }
+  | (CanonicalCommitReceipt & {
+      readonly kind: "idempotent";
+      readonly reservation: ExecutionReservation;
+    })
   | { readonly kind: "conflict" | "not-found" | "invalid-transition" | "canonical-write-failed" };
 
 export interface ConfirmDispatchRequest {
@@ -447,6 +450,7 @@ function appendFailure(): Result<never, ExecutionRefusal> {
 
 type StartOperationResult = Result<ExecutionStarted, ExecutionRefusal>;
 type OperationStartedEvent = Extract<ExecutionEvent, { type: "operation-started" }>;
+type ReservationUpdatedEvent = Extract<ExecutionEvent, { type: "reservation-updated" }>;
 
 function startRefusal<T = ExecutionStarted>(
   kind: "idempotency-conflict" | "invalid-transition" | "not-found",
@@ -457,6 +461,15 @@ function startRefusal<T = ExecutionStarted>(
 function operationStartedEvent(set: ExecutionEventSet): OperationStartedEvent | undefined {
   return set.events.find(
     (candidate): candidate is OperationStartedEvent => candidate.type === "operation-started",
+  );
+}
+
+function reservationUpdatedEvent(
+  set: ExecutionEventSet,
+): ReservationUpdatedEvent | undefined {
+  return set.events.find(
+    (candidate): candidate is ReservationUpdatedEvent =>
+      candidate.type === "reservation-updated",
   );
 }
 
@@ -650,10 +663,7 @@ export function createExecutionLifecycleCoordinator(
                 error: { kind: "idempotency-conflict", persisted: false },
               } as const;
             }
-            const projection = foldExecutionEventSets(sets);
-            const reservation = projection.reservations.find(
-              (candidate) => candidate.idempotencyKey === request.idempotencyKey,
-            );
+            const reservation = reservationUpdatedEvent(existing)?.reservation;
             return reservation === undefined
               ? ({
                   ok: false,
@@ -710,17 +720,25 @@ export function createExecutionLifecycleCoordinator(
       try {
         return options.repository.transaction((sets, append) => {
           const existing = existingForKey(sets, idempotencyKey);
+          if (existing !== undefined) {
+            if (existing.payloadFingerprint !== payloadFingerprint) {
+              return { kind: "conflict" } as const;
+            }
+            const replayed = reservationUpdatedEvent(existing)?.reservation;
+            if (replayed?.reservationId !== reservationId) {
+              return { kind: "invalid-transition" } as const;
+            }
+            return {
+              kind: "idempotent",
+              reservation: replayed,
+              ...commitReceipt(existing),
+            } as const;
+          }
           const projection = foldExecutionEventSets(sets);
           const reservation = projection.reservations.find(
             (candidate) => candidate.reservationId === reservationId,
           );
           if (reservation === undefined) return { kind: "not-found" } as const;
-          if (existing !== undefined) {
-            if (existing.payloadFingerprint !== payloadFingerprint) {
-              return { kind: "conflict" } as const;
-            }
-            return { kind: "idempotent", reservation } as const;
-          }
           if (reservation.dispatchState !== "reserved") {
             return { kind: "invalid-transition" } as const;
           }

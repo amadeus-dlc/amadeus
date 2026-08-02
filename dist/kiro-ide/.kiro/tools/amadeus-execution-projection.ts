@@ -10,14 +10,16 @@ import type {
   TelemetryProjectionReceipt,
 } from "./amadeus-execution-lifecycle.ts";
 import {
+  EXECUTION_PROJECTION_DIGEST_FIELD,
   readStateFile,
   runtimeGraphPath,
-  setField,
+  setOrInsertField,
   writeFileAtomic,
   writeStateFile,
 } from "./amadeus-lib.ts";
+import { compile } from "./amadeus-runtime.ts";
 
-export const EXECUTION_PROJECTION_DIGEST_FIELD = "Execution Projection Digest";
+export { EXECUTION_PROJECTION_DIGEST_FIELD };
 
 export interface RequiredProjectionPorts {
   readonly writeState?: (projectDir: string, content: string) => void;
@@ -26,15 +28,11 @@ export interface RequiredProjectionPorts {
 }
 
 function projectState(content: string, digest: string): string {
-  const updated = setField(content, EXECUTION_PROJECTION_DIGEST_FIELD, digest);
-  if (updated !== content) return updated;
-  const marker = "## Runtime State\n";
-  if (!content.includes(marker)) {
-    throw new Error("state has no Runtime State section for execution projection");
-  }
-  return content.replace(
-    marker,
-    `${marker}- **${EXECUTION_PROJECTION_DIGEST_FIELD}**: ${digest}\n`,
+  return setOrInsertField(
+    content,
+    "## Runtime State",
+    EXECUTION_PROJECTION_DIGEST_FIELD,
+    digest,
   );
 }
 
@@ -52,7 +50,10 @@ export function createRequiredExecutionProjectionSink(
 
     const graphPath = runtimeGraphPath(projectDir);
     if (!existsSync(graphPath)) {
-      throw new Error("runtime graph is unavailable for execution projection");
+      compile({ projectDir });
+    }
+    if (!existsSync(graphPath)) {
+      throw new Error("runtime graph compile did not produce an execution projection target");
     }
     const raw = JSON.parse(readFileSync(graphPath, "utf-8")) as Record<string, unknown>;
     const projected = {

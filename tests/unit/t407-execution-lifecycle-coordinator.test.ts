@@ -135,6 +135,47 @@ describe("audit-first lifecycle", () => {
 });
 
 describe("reservation, dispatch and permit barrier", () => {
+  test("reservation and claim retries replay their original snapshots and claim receipt", () => {
+    const repository = createMemoryExecutionRepository();
+    const coordinator = createExecutionLifecycleCoordinator({
+      clock: fixedClock(),
+      repository,
+      projectionSink: passingProjection(),
+    });
+    const started = coordinator.startOperation(rootRequest());
+    if (!started.ok) throw new Error("start failed");
+    const reserveRequest = {
+      operationId: started.value.operation.operationId,
+      idempotencyKey: "reserve-replay",
+      budgetKind: "unit-slot",
+      subjectId: "unit-a",
+      semanticAttemptOrdinal: 1,
+    };
+    const reserved = coordinator.reserveExecution(reserveRequest);
+    if (!reserved.ok) throw new Error("reserve failed");
+    const claimed = coordinator.claimDispatch(reserved.value.reservationId, "claim-replay");
+    if (claimed.kind !== "claimed") throw new Error("claim failed");
+
+    const confirmed = coordinator.confirmDispatch({
+      reservationId: reserved.value.reservationId,
+      idempotencyKey: "confirm-replay",
+      attemptOrdinal: 1,
+      nativeHandle: { state: "available", value: "native-1" },
+      dispatchEvidence: { state: "available", value: "accepted" },
+    });
+    expect(confirmed.ok).toBe(true);
+
+    expect(coordinator.reserveExecution(reserveRequest)).toEqual(reserved);
+    expect(
+      coordinator.claimDispatch(reserved.value.reservationId, "claim-replay"),
+    ).toEqual({
+      kind: "idempotent",
+      reservation: claimed.reservation,
+      canonicalCommitReceiptId: claimed.canonicalCommitReceiptId,
+      eventSetDigest: claimed.eventSetDigest,
+    });
+  });
+
   test("native dispatch cannot receive a permit until canonical/state/runtime receipts share one digest", () => {
     const repository = createMemoryExecutionRepository();
     const projectionSink: ExecutionProjectionSink = {

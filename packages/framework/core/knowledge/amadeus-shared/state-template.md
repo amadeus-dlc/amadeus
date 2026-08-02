@@ -32,7 +32,7 @@
 
 ## Runtime State
 - **Revision Count**: 0
-- **Execution Projection Digest**: [latest canonical execution event-set digest]
+- **Execution Projection Digest**: [latest required-projected canonical execution event-set digest]
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

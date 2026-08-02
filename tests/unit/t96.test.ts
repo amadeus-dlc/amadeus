@@ -183,6 +183,83 @@ describe("t96 fragment-fork source-absent", () => {
     // empty graph has `"stages": []` (pretty-printed by writeEmptyGraph).
     expect(readFileSync(wtFrag, "utf-8")).toContain('"stages": []');
   });
+
+  test("reads execution projection from the explicitly targeted intent", () => {
+    projDir = makeProject("cart", null);
+    const targetRecord = wtRecordDir(projDir, "cart");
+    const intentsDir = join(
+      projDir,
+      ".amadeus",
+      "worktrees",
+      "bolt-cart",
+      "amadeus",
+      "spaces",
+      DEFAULT_SPACE,
+      "intents",
+    );
+    const targetStatePath = join(targetRecord, "amadeus-state.md");
+    const targetState = readFileSync(targetStatePath, "utf-8").replace(
+      "## Runtime State\n",
+      "## Runtime State\n- **Execution Projection Digest**: target-digest\n",
+    );
+    writeFileSync(targetStatePath, targetState, "utf-8");
+    const targetAuditDir = join(targetRecord, "audit");
+    mkdirSync(targetAuditDir, { recursive: true });
+    writeFileSync(
+      join(targetAuditDir, "target.jsonl"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "target",
+        intentId: DEFAULT_RECORD_DIR,
+        timestamp: "2026-08-02T00:00:00.000Z",
+        heading: "Execution Event Set Committed",
+        event: "EXECUTION_EVENT_SET_COMMITTED",
+        fields: {
+          "Root Operation Id": "target-root",
+          "Event Set Digest": "target-digest",
+        },
+      })}\n`,
+      "utf-8",
+    );
+
+    const otherRecord = join(intentsDir, "other-intent");
+    mkdirSync(join(otherRecord, "audit"), { recursive: true });
+    writeFileSync(
+      join(otherRecord, "amadeus-state.md"),
+      targetState.replace("target-digest", "other-digest"),
+      "utf-8",
+    );
+    writeFileSync(
+      join(otherRecord, "audit", "other.jsonl"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 1,
+        cloneId: "other",
+        intentId: "other-intent",
+        timestamp: "2026-08-02T00:00:01.000Z",
+        heading: "Execution Event Set Committed",
+        event: "EXECUTION_EVENT_SET_COMMITTED",
+        fields: {
+          "Root Operation Id": "other-root",
+          "Event Set Digest": "other-digest",
+        },
+      })}\n`,
+      "utf-8",
+    );
+    writeFileSync(join(intentsDir, "active-intent"), "other-intent\n", "utf-8");
+
+    const result = runRuntime(projDir, "fragment-fork", "--slug", "cart");
+
+    expect(result.rc).toBe(0);
+    expect(
+      JSON.parse(readFileSync(wtFragmentPath(projDir, "cart"), "utf-8"))
+        .execution_observability,
+    ).toEqual({
+      root_operation_id: "target-root",
+      event_set_digest: "target-digest",
+    });
+  });
 });
 
 // --- 3. fragment-fork one-shot guard --------------------------------------

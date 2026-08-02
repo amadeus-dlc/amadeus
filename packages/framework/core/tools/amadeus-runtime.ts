@@ -31,6 +31,7 @@ import {
   type BoltDagAbsence,
   errorMessage,
   activeIntent,
+  EXECUTION_PROJECTION_DIGEST_FIELD,
   findAllEvents,
   getField,
   loadStageGraph,
@@ -137,10 +138,21 @@ interface RuntimeGraph {
 
 function executionProjectionCursor(
   projectDir: string,
+  intent?: string,
+  space?: string,
 ): RuntimeGraph["execution_observability"] {
+  const projectedDigest = getField(
+    readStateFile(projectDir, intent, space),
+    EXECUTION_PROJECTION_DIGEST_FIELD,
+  );
+  if (!projectedDigest) return undefined;
+
   const latest = findAllEvents(
-    readAllAuditShards(projectDir),
+    readAllAuditShards(projectDir, intent, space),
     "EXECUTION_EVENT_SET_COMMITTED",
+  ).filter(
+    (candidate) =>
+      auditBlockField(candidate.block, "Event Set Digest") === projectedDigest,
   ).at(-1);
   if (latest === undefined) return undefined;
 
@@ -940,7 +952,7 @@ function writeEmptyGraph(
     started_at: "",
     stages: [],
   };
-  const executionProjection = executionProjectionCursor(projectDir);
+  const executionProjection = executionProjectionCursor(projectDir, intent, space);
   if (executionProjection !== undefined) {
     graph.execution_observability = executionProjection;
   }

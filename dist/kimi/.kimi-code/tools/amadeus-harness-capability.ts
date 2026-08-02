@@ -153,7 +153,7 @@ export const HARNESS_CAPABILITY_PORTS: Readonly<
     dispatchEffectQuery: false,
   }),
   "kiro-ide": port("kiro-ide", {
-    startSignal: true,
+    startSignal: false,
     completionSignal: true,
     nativeHandle: false,
     dispatchEffectQuery: false,

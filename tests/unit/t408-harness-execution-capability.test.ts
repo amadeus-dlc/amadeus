@@ -24,6 +24,18 @@ describe("shared harness capability adapters", () => {
     }
   });
 
+  test("Kiro IDE reports no start seam because only completion is shipped", () => {
+    expect(HARNESS_CAPABILITY_PORTS["kiro-ide"].capabilities()).toEqual({
+      state: "available",
+      value: {
+        startSignal: false,
+        completionSignal: true,
+        nativeHandle: false,
+        dispatchEffectQuery: false,
+      },
+    });
+  });
+
   test("Codex facts are available only when its native surface supplied them", () => {
     expect(
       HARNESS_CAPABILITY_PORTS.codex.normalize({

@@ -44,7 +44,7 @@ interface RuntimeGraph {
   stages: RuntimeStage[];         // chronological order by started_at
   bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
   bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
-  execution_observability?: {     // latest canonical execution event set projected from audit
+  execution_observability?: {     // latest required-projected canonical execution event set
     root_operation_id: string;
     event_set_digest: string;
   };
@@ -109,10 +109,11 @@ are NULL — those values sit on each instance instead. Stage-row
 fields and instance-array fields never coexist.
 
 `execution_observability` is an optional required projection of the latest
-canonical execution event set. Its digest is copied from the audit journal; it
-is never recomputed from runtime state. Recompiling the runtime graph preserves
-the same audit-derived cursor, so a projection can be rebuilt without creating
-another canonical event.
+canonical execution event set that crossed the StartPermit projection barrier.
+The runtime-state digest selects that committed event set, and the root/digest
+pair is copied from the audit journal rather than recomputed from runtime state.
+Recompiling the runtime graph therefore preserves the same required-projected
+cursor instead of advancing to a newer, not-yet-projected canonical event.
 
 ### The Bolt/unit dependency DAG (`bolt_dag`)
 
