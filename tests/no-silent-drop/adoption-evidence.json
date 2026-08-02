@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b",
+  "receipts": [
+    { "schemaVersion": 1, "id": "shape-fixtures", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "4096c0eafecc54671da01446316d707f9e2c6ad557c4b8922cb0e481e93ad1b8", "pass": true },
+    { "schemaVersion": 1, "id": "census-pre", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "a7db1224d6afb6a123851ff0031e188ee97bbb5d2d2c11f0b33ddb3ab39c20ed", "pass": true },
+    { "schemaVersion": 1, "id": "census-post", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "ed24eba9793ce67e7660b03c0c622b4196a87bc07b29a1deb5bf83f0dc53fd59", "pass": true },
+    { "schemaVersion": 1, "id": "classification-precision", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7287783344000f1cfc77bf8b270c0721300aeee8a5f4dee06a17e86d852837b9", "pass": true },
+    { "schemaVersion": 1, "id": "baseline-proof", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7d8cb71f88926baac862b16fcdf4ad5a7cb5f57268afea9da699f5d14be2649f", "pass": true },
+    { "schemaVersion": 1, "id": "failure-matrix", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "f2e8882ce8dd99b409873082a69625acbe1d0e60dcb27dd9799b426acd6da1fa", "pass": true },
+    { "schemaVersion": 1, "id": "u2-u3-regressions", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "bcbbe77edfb39bcf031d9320dca0ba28761585082bc739cf9f195e069f86e0d7", "pass": true },
+    { "schemaVersion": 1, "id": "full-test", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5b20cc11390b927bfa99f7140755706ec6b2e9f1518d2af49e556ac321e71512", "pass": true },
+    { "schemaVersion": 1, "id": "lint", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "4a88fbb247625d1ed6aeb1f5f9099a331b65d286158305964923c0a64fabbb90", "pass": true },
+    { "schemaVersion": 1, "id": "typecheck", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "28a59cfbb72d0797068fc588ed5f44ec1df8e5b61322a8d77058ac6cc758f001", "pass": true },
+    { "schemaVersion": 1, "id": "coverage", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "89318b0404052be198c89f0b6e25c835de399740c751fe839d3b15e93a973f4b", "pass": true },
+    { "schemaVersion": 1, "id": "cold-warm-5x2", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5dc1e838be237a7bf48ae72f1ad45827769e47f386e2397325d4814b49941d15", "pass": true },
+    { "schemaVersion": 1, "id": "capacity-r0-r2-r4", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "e6039fe3ed53080bb20b053f81a1b629c6c6ae05111fc02b05fa6eadb9703269", "pass": true },
+    { "schemaVersion": 1, "id": "u1-complexity", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "28a8919761f5690539d7e2f17ebaa47fa159cc4ec206abbaf14b429252509aa2", "pass": true },
+    { "schemaVersion": 1, "id": "package-apply", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7f7fb866b28b8f4b5b08d19fabbfd3ea9fbd9bbce69dae33b3fc80a6d0d3a83a", "pass": true },
+    { "schemaVersion": 1, "id": "promotion-apply", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "bfd68d0aef9c886bdbe0157b9e6c84d1e90fe4ceab142485c1129865753f7784", "pass": true },
+    { "schemaVersion": 1, "id": "package-check", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "66e3fca93b7860ab6f807dc616f48cc07f347cc5a06782274248e4afbafe6cd0", "pass": true },
+    { "schemaVersion": 1, "id": "promotion-check", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "aa0926bda2efe3d52dbfc8763732269cbdd18ca28e698034125f7ff6b2a5810b", "pass": true },
+    { "schemaVersion": 1, "id": "event-pr-base", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "3ef55768a93ba9f7dac1019cbf58e896b2d3293ac7e9c9765758b96328a87496", "pass": true },
+    { "schemaVersion": 1, "id": "event-fork-base", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "e5cf0ba3c4abab92ae2034500197564d9d5c02ea265b35b00803cc288a709605", "pass": true },
+    { "schemaVersion": 1, "id": "event-push-before", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5d3849526857976abafca5a51b5048208ba4e17f9a0cf14f9aab6ad078b97470", "pass": true },
+    { "schemaVersion": 1, "id": "hang-deadline", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "ca131216054d74f9b3185bf0e1f14dfda32f8c0505eacaf0f0f1dcd1209070c3", "pass": true },
+    { "schemaVersion": 1, "id": "workflow-structure", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7efde663630944f71966f9bee536749d0d987e512fc8487f9e091eb659a68d40", "pass": true }
+  ]
+}

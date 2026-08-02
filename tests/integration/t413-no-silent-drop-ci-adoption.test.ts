@@ -9,6 +9,7 @@ import {
   deadlineArgv,
   generatedLedgerFixture,
   trustedRevisionForEvent,
+  validateEvidenceRegistry,
   validateTimingSamples,
 } from "../no-silent-drop/repository-adoption.ts";
 
@@ -124,5 +125,12 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       { cwd: REPO_ROOT, encoding: "utf8" },
     );
     expect(result.status).toBe(124);
+  });
+
+  test("the canonical evidence registry closes exactly one tested implementation revision", () => {
+    const registry = JSON.parse(
+      readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "adoption-evidence.json"), "utf8"),
+    );
+    expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
   });
 });

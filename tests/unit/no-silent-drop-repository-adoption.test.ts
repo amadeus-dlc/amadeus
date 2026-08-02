@@ -11,6 +11,7 @@ import {
   closeEvidenceReceipt,
   emptyEvidenceRegistry,
   validateEvidenceRegistry,
+  validateTimingSamples,
 } from "../no-silent-drop/repository-adoption.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -112,11 +113,17 @@ describe("repository adoption evidence registry", () => {
     const extra = { ...missing, receipts: [{ ...receipt, id: "unknown" }] };
     const wrongVersion = { ...missing, schemaVersion: 2 };
     const wrongRevision = { ...missing, receipts: [{ ...receipt, currentRevision: "f".repeat(40) }] };
+    const invalidDigest = { ...missing, receipts: [{ ...receipt, evidenceDigest: "not-a-digest" }] };
     const failed = { ...missing, receipts: [{ ...receipt, pass: false }] };
 
-    for (const candidate of [missing, duplicate, extra, wrongVersion, wrongRevision, failed]) {
+    for (const candidate of [missing, duplicate, extra, wrongVersion, wrongRevision, invalidDigest, failed]) {
       expect(validateEvidenceRegistry(candidate, FULL_SHA).ok).toBeFalse();
     }
+  });
+
+  test("timing evidence rejects negative and non-finite samples", () => {
+    expect(validateTimingSamples({ cold: [1, 2, 3, 4, -1], warm: [1, 2, 3, 4, 5] }).pass).toBeFalse();
+    expect(validateTimingSamples({ cold: [1, 2, 3, 4, 5], warm: [1, 2, 3, 4, Number.NaN] }).pass).toBeFalse();
   });
 
   test("the safe committer refuses unknown, duplicate, mismatched, or failed receipts", () => {
