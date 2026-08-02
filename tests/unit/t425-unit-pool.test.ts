@@ -52,6 +52,35 @@ describe("t425 fixed pool", () => {
     expect(coordinator.readProjection("b").queue.map((entry) => entry.unitId)).toEqual(["u3"]);
   });
 
+  test("a successful prerequisite promotes its dependent Unit", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "b",
+      cap: 1,
+      units: [
+        { unitId: "root", dependsOn: [] },
+        { unitId: "child", dependsOn: ["root"] },
+      ],
+    });
+    coordinator.acquire({ idempotencyKey: "acquire-root", batchId: "b" });
+    const root = coordinator.readProjection("b").active[0];
+    coordinator.confirmDispatch({
+      idempotencyKey: "confirm-root",
+      batchId: "b",
+      attemptId: root.attemptId,
+      nativeHandle: "root",
+    });
+    coordinator.settleRelease({
+      idempotencyKey: "settle-root",
+      batchId: "b",
+      attemptId: root.attemptId,
+      outcome: "succeeded",
+    });
+
+    expect(coordinator.readProjection("b").active.map((attempt) => attempt.unitId)).toEqual(["child"]);
+  });
+
   test.each([
     [1, 0], [1, 1], [1, 4], [1, 8],
     [2, 0], [2, 1], [2, 4], [2, 8],
