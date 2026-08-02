@@ -74,6 +74,7 @@ Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**`
 **Standard strategy** — generate:
 - `unit-test-instructions.md`: Requirement- and risk-driven key behavior coverage; 8 tests per component is a planning ceiling, not a quota
 - `integration-test-instructions.md`: Key boundary tests, cross-unit interaction
+- E2E, performance, security, or other specifically named instruction files when applicable NFRs require them
 
 **Comprehensive strategy** — generate all applicable:
 - `unit-test-instructions.md`: Requirement-, risk-, and NFR-driven coverage; 15 tests per component is a planning ceiling, not a quota

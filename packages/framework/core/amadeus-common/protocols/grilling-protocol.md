@@ -31,7 +31,7 @@ every other structured question. This protocol never names a harness tool.
 | D3 | **Facts are never asked.** Anything determinable from the codebase, prior artifacts, or the code knowledge base is looked up by the agent, not put to the user. |
 | D4 | A fact the agent cannot settle by self-research is presented as an **estimate with a confidence level** (high / medium / low) for confirmation. If the user disagrees, demote it to a regular judgement question. |
 | D5 | **Decisions are always the user's.** Put each decision to the user and wait for the answer. Never decide on the user's behalf — autonomy is never inferred. |
-| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite `stage-protocol.md` §3 total question budget: Minimal 4 / Standard 8 / Comprehensive 12 rendered questions, including estimate confirmations, demoted judgement questions, and material-ambiguity clarifications. At most one clarification round may consume remaining slots. Do not offer continuation beyond the total ceiling. |
+| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite total question budget: workflow grilling uses the active stage depth; standalone grilling uses the explicitly requested Minimal / Standard / Comprehensive level and defaults to Standard when none is requested. The ceilings are Minimal 4 / Standard 8 / Comprehensive 12 rendered questions, including estimate confirmations, demoted judgement questions, and material-ambiguity clarifications. At most one clarification round may consume remaining slots. Do not offer continuation beyond the total ceiling. |
 | D7 | **Shared understanding is confirmed, never assumed.** At the end, present an agreement summary of every decision and obtain explicit confirmation. Do not proceed to artifact generation or session close before confirmation. On a correction request, update the affected answer and re-present the summary. |
 
 ## 2. The Grilling Loop (8 steps)
@@ -57,14 +57,16 @@ every other structured question. This protocol never names a harness tool.
    continuation that can exceed the ceiling. Otherwise, if a material open
    point remains, the one clarification round is unused, and a budget slot
    remains, loop to step 1. For every other open point, record it for the
-   existing approval boundary and proceed to step 7 (D6).
+   workflow approval boundary, or the standalone terminal agreement summary,
+   and proceed to step 7 (D6).
 7. **Summary** — Present the agreement summary of all decisions and request
    explicit confirmation (§3 C-4). A correction request updates the affected
    answer (workflow: the `[Answer]:` tag) and re-presents the summary. Never
    move on until confirmed (D7).
 8. **Confirmed** — Workflow: hand off to the stage's artifact generation
    (stage-protocol Step 4 onward, unchanged). Standalone: print the summary to
-   the terminal and finish (write it to a path only on explicit user request).
+   the terminal, include every unresolved material point in it, and finish
+   (write it to a path only on explicit user request).
 
 ## 3. Question Spec Templates
 
@@ -95,10 +97,11 @@ question)".
 ### C-3: Ceiling transition
 
 When the finite total question ceiling is reached, state that the ceiling has
-been reached, record unresolved material decisions for the existing approval
-boundary, and proceed directly to C-4. Do not render another question or offer
-a continuation option. "done" is accepted as free text at any point in the
-dialogue (D6).
+been reached. In workflow mode, record unresolved material decisions for the
+existing approval boundary. In standalone mode, include them in the terminal
+agreement summary. Proceed directly to C-4; do not render another question or
+offer a continuation option. "done" is accepted as free text at any point in
+the dialogue (D6).
 
 ### C-4: Agreement summary confirmation
 
@@ -126,7 +129,8 @@ obligations differ:
 | Aspect | Grill me mode (workflow) | /amadeus-grilling (standalone) |
 |---|---|---|
 | Entry | Mode selection in stage-protocol §3 Step 2 | Skill invocation, subject via argument |
+| Budget source | Active stage depth | Explicit Minimal / Standard / Comprehensive request; Standard (8) by default |
 | Questions file | REQUIRED — append each question with a blank `[Answer]:` tag before presenting; write each answer back before the next question | None — terminal only |
 | Audit log | REQUIRED — `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision` before each question, `... answer` after each answer (per question; existing event types only) | None — read-only classification, no audit events |
-| After confirmation | Stage artifact generation (stage-protocol Step 4+) | Terminal summary; file written only on explicit user request |
+| After confirmation | Stage artifact generation (stage-protocol Step 4+) | Terminal summary including unresolved material points; file written only on explicit user request |
 | State | Stage pointer advances via the normal stage lifecycle | Never touches the workflow stage pointer |

@@ -254,9 +254,14 @@ export default function emit(ctx: EmitContext): EmitResult {
     const name = fm.name ?? "";
     const description = (fm.description ?? "").replace(/\s+/g, " ").trim();
     const instructions = rewriteProse(body);
+    const sandbox =
+      name === "amadeus-product-lead-agent" || name === "amadeus-architecture-reviewer-agent"
+        ? 'sandbox_mode = "read-only"\n'
+        : "";
     return (
       `name = "${name}"\n` +
       `description = "${description.replace(/"/g, '\\"')}"\n` +
+      sandbox +
       `developer_instructions = ${tomlMultiline(instructions.trim())}\n`
     );
   }

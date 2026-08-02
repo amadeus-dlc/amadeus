@@ -1003,6 +1003,12 @@ unless the reviewer supplies the `BLOCKER` evidence above.
    bun .claude/tools/amadeus-reviewer-runtime.ts complete-review
    ```
 
+   A non-zero `complete-review` result establishes no trustworthy verdict or
+   findings. Report the validation failure only, keep the stage incomplete,
+   and halt for human direction; never present the unvalidated reviewer output
+   as findings and never continue to completion verification, §13, approval,
+   or a stage result.
+
    These three modes are §12a-only internal conductor adapters. They are not public CLI/help/utility commands and add no directive, event, or audit shape.
 
 4. **Read verdict.** Only after `complete-review` succeeds, read the final Review section from the primary artifact:

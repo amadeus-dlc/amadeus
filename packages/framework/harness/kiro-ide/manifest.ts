@@ -88,16 +88,15 @@ const manifest: HarnessManifest = {
   // frontmatter tool names: "read" / "write" / "shell". NOTE the IDE grant is
   // UNSCOPED (no allowedCommands/allowedPaths equivalent) - wider than the
   // CLI JSON sandbox; the persona Boundaries prose and the conductor's gates
-  // remain the behavioral constraint. Reviewers need "write" too: the stage
-  // protocol has them append a `## Review` section to the primary artifact
-  // (the same grant their CLI JSONs carry). Never grant a delegation tool
-  // here - delegates must not nest.
+  // remain the behavioral constraint. Reviewers are read-only; the conductor's
+  // validated complete-review adapter owns the Review write. Never grant a
+  // delegation tool here - delegates must not nest.
   frontmatterAdditions: [
     { file: "agents/amadeus-composer-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
     { file: "agents/amadeus-developer-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
     { file: "agents/amadeus-architect-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
-    { file: "agents/amadeus-product-lead-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
-    { file: "agents/amadeus-architecture-reviewer-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
+    { file: "agents/amadeus-product-lead-agent.md", lines: [`tools: ["read"]`] },
+    { file: "agents/amadeus-architecture-reviewer-agent.md", lines: [`tools: ["read"]`] },
   ],
 
   onboarding: { dst: "AGENTS.md", projectRoot: true, fills: onboardingFills },

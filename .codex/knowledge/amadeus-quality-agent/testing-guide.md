@@ -61,11 +61,11 @@ Test volume scales with the active test strategy (defaults to depth level, overr
 
 | Strategy | Selection model | Planning ceiling | Test Types |
 |----------|-----------------|------------------|------------|
-| Minimal (Nyquist) | 1 per requirement + happy-path floor | No component quota | Unit only |
-| Standard | Requirement and risk driven | Up to 8 per component | Unit + integration |
-| Comprehensive | Requirement, risk, and NFR driven | Up to 15 per component | Unit + integration + E2E + perf + security |
+| Minimal (Nyquist) | 1 per requirement + happy-path floor | No component quota | Unit by default; add safety-critical or NFR-required types |
+| Standard | Requirement and risk driven | Up to 8 per component | Unit + integration by default; add E2E, performance, security, or other NFR-required types |
+| Comprehensive | Requirement, risk, and NFR driven | Up to 15 per component | Unit + integration + E2E; performance, security, and other types when applicable |
 
-- **Minimal** uses a requirement-driven model (1 test per requirement, not per component). The pyramid doesn't apply — unit tests only.
+- **Minimal** uses a requirement-driven model (1 test per requirement, not per component). The pyramid doesn't apply; unit tests are the default, while safety-critical context or applicable NFRs may require additional types.
 - **Standard** and **Comprehensive** use risk-based selection. When unit,
   integration, and E2E layers all apply, 75/20/5 is default guidance within
   that three-layer subset only. Requirements, risk, and NFR evidence — including
