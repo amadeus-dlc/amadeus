@@ -363,8 +363,44 @@ describe("no-silent-drop AST rules", () => {
         return { kind: "safety-blocked" };
       }
     `;
+    const failedArmSafe = `
+      type StateResult = { kind: "ok" } | { kind: "failed" };
+      type Outcome = { kind: "failed" } | { kind: "safety-blocked" };
+      declare function applyTransition(): StateResult;
+      declare function transitionFailure(result: StateResult): Outcome;
+      function persistBlocked(): Outcome {
+        const result = applyTransition();
+        if (result.kind === "failed") return transitionFailure(result);
+        return { kind: "safety-blocked" };
+      }
+    `;
     expect(scan(unsafe).map((finding) => finding.ruleId)).toContain("NSD003");
     expect(scan(safe).filter((finding) => finding.ruleId === "NSD003")).toEqual([]);
+    expect(scan(failedArmSafe).filter((finding) => finding.ruleId === "NSD003")).toEqual([]);
+  });
+
+  test("NSD003 persistBlocked failure-arm proof rejects incomplete or mismatched handling", () => {
+    const declarations = `
+      type StateResult = { kind: "ok" } | { kind: "failed" };
+      type Outcome = { kind: "failed" } | { kind: "safety-blocked" };
+      declare function applyTransition(): StateResult;
+      declare function transitionFailure(result: StateResult): Outcome;
+      declare const other: StateResult;
+      declare const early: boolean;
+    `;
+    const bodies = [
+      `const result = applyTransition(); return { kind: "safety-blocked" };`,
+      `const result = applyTransition(); if (result.status === "failed") return transitionFailure(result); return { kind: "safety-blocked" };`,
+      `const result = applyTransition(); if (result.kind === "ok") return transitionFailure(result); return { kind: "safety-blocked" };`,
+      `const result = applyTransition(); if (result.kind === "failed") return { kind: "safety-blocked" }; return { kind: "safety-blocked" };`,
+      `const result = applyTransition(); if (other.kind === "failed") return transitionFailure(other); return { kind: "safety-blocked" };`,
+      `if (early) return { kind: "safety-blocked" }; const result = applyTransition(); if (result.kind === "failed") return transitionFailure(result); return { kind: "safety-blocked" };`,
+      `applyTransition(); return { kind: "safety-blocked" };`,
+    ];
+    for (const body of bodies) {
+      const source = `${declarations} function persistBlocked(): Outcome { ${body} }`;
+      expect(scan(source).filter((finding) => finding.ruleId === "NSD003")).toHaveLength(1);
+    }
   });
 
   test("NSD003 proves text mutation target and postcondition before success", () => {

@@ -233,13 +233,16 @@ function discriminantKinds(returnType: ts.Type, checker: ts.TypeChecker): Readon
   return kinds;
 }
 
-function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): boolean {
+function stateResultKinds(call: ts.CallExpression, checker: ts.TypeChecker): ReadonlySet<string> {
   const signature = checker.getResolvedSignature(call);
   if (!signature) {
     throw new InfraFailure("RULE_INVALID", "applyTransition does not resolve to a single callable contract");
   }
-  const returnType = checker.getReturnTypeOfSignature(signature);
-  const kinds = discriminantKinds(returnType, checker);
+  return discriminantKinds(checker.getReturnTypeOfSignature(signature), checker);
+}
+
+function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): boolean {
+  const kinds = stateResultKinds(call, checker);
   return kinds.has("ok") && [...kinds].some((kind) => kind !== "ok");
 }
 
@@ -332,12 +335,87 @@ function allSuccessAfter(body: ts.Block, success: ts.ReturnStatement[], required
   return success.length > 0 && success.every((statement) => topLevelIndex(statement, body) > requiredIndex);
 }
 
-function persistBlockedIsSafe(body: ts.Block): boolean {
-  const write = topLevelStatementIndex(body, (statement) =>
-    ts.isVariableStatement(statement) && statementTextIncludes(statement, ["applyTransition("]));
-  const guard = topLevelStatementIndex(body, (statement) => guardedFailure(statement, [".kind", '"ok"']), write);
-  const success = returnsIn(body, (expression) => returnsSuccess(expression, "safety-blocked"));
-  return write >= 0 && guard > write && allSuccessAfter(body, success, guard);
+type PersistedTransition = {
+  readonly binding: string;
+  readonly statementIndex: number;
+  readonly kinds: ReadonlySet<string>;
+};
+
+function persistedTransition(body: ts.Block, checker: ts.TypeChecker): PersistedTransition | null {
+  const matches: Array<{ readonly binding: string; readonly call: ts.CallExpression; readonly statementIndex: number }> = [];
+  for (const [statementIndex, statement] of body.statements.entries()) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const call = directCall(declaration.initializer);
+      const binding = identifierName(declaration.name);
+      if (call && binding && identifierName(call.expression) === "applyTransition") {
+        matches.push({ binding, call, statementIndex });
+      }
+    }
+  }
+  if (matches.length !== 1) return null;
+  const match = matches[0] as (typeof matches)[number];
+  const kinds = stateResultKinds(match.call, checker);
+  if (!kinds.has("ok") || ![...kinds].some((kind) => kind !== "ok")) {
+    throw new InfraFailure("RULE_INVALID", "applyTransition return type is not the approved StateResult contract");
+  }
+  return {
+    binding: match.binding,
+    statementIndex: match.statementIndex,
+    kinds,
+  };
+}
+
+function exactKindComparison(
+  expression: ts.Expression,
+  binding: string,
+): { readonly operator: ts.SyntaxKind; readonly value: string } | null {
+  if (!ts.isBinaryExpression(expression)) return null;
+  if (!ts.isPropertyAccessExpression(expression.left)) return null;
+  if (identifierName(expression.left.expression) !== binding || expression.left.name.text !== "kind") return null;
+  if (!ts.isStringLiteralLike(expression.right)) return null;
+  return { operator: expression.operatorToken.kind, value: expression.right.text };
+}
+
+function failureReturn(statement: ts.Statement, binding: string): boolean {
+  const returned = ts.isReturnStatement(statement)
+    ? statement
+    : ts.isBlock(statement) && statement.statements.length === 1 && ts.isReturnStatement(statement.statements[0])
+      ? statement.statements[0]
+      : null;
+  if (!returned?.expression) return false;
+  if (ts.isObjectLiteralExpression(returned.expression)) return returnKind(returned, "failed");
+  const call = directCall(returned.expression);
+  return Boolean(call
+    && identifierName(call.expression) === "transitionFailure"
+    && call.arguments.some((argument) => identifierName(argument) === binding));
+}
+
+function transitionFailureGuard(statement: ts.Statement, transition: PersistedTransition): boolean {
+  if (!ts.isIfStatement(statement) || statement.elseStatement) return false;
+  const comparison = exactKindComparison(statement.expression, transition.binding);
+  if (!comparison || transition.kinds.size !== 2
+    || !transition.kinds.has("ok") || !transition.kinds.has("failed")) return false;
+  const selectsFailure = comparison.operator === ts.SyntaxKind.EqualsEqualsEqualsToken && comparison.value === "failed";
+  const excludesSuccess = comparison.operator === ts.SyntaxKind.ExclamationEqualsEqualsToken && comparison.value === "ok";
+  return (selectsFailure || excludesSuccess) && failureReturn(statement.thenStatement, transition.binding);
+}
+
+function safetyBlockedReturn(expression: ts.Expression | undefined): boolean {
+  if (!expression || !ts.isObjectLiteralExpression(expression)) return false;
+  return expression.properties.some((property) =>
+    ts.isPropertyAssignment(property)
+    && property.name.getText() === "kind"
+    && ts.isStringLiteralLike(property.initializer)
+    && property.initializer.text === "safety-blocked");
+}
+
+function persistBlockedIsSafe(body: ts.Block, checker: ts.TypeChecker): boolean {
+  const transition = persistedTransition(body, checker);
+  if (!transition) return false;
+  const guard = topLevelStatementIndex(body, (statement) => transitionFailureGuard(statement, transition));
+  const success = returnsIn(body, safetyBlockedReturn);
+  return guard > transition.statementIndex && allSuccessAfter(body, success, guard);
 }
 
 function nodesIn<T extends ts.Node>(root: ts.Node, guard: (node: ts.Node) => node is T): T[] {
@@ -687,7 +765,7 @@ function composeResyncIsSafe(body: ts.Block): boolean {
 
 function nsd003Safe(name: string, declaration: ts.FunctionDeclaration, checker: ts.TypeChecker): boolean {
   const body = declaration.body as ts.Block;
-  if (name === "persistBlocked") return persistBlockedIsSafe(body);
+  if (name === "persistBlocked") return persistBlockedIsSafe(body, checker);
   if (name === "resyncOneIntent") return composeResyncIsSafe(body);
   return textMutationIsSafe(declaration, checker);
 }
