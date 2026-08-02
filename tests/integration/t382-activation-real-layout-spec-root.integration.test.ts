@@ -191,7 +191,7 @@ describe("activation spec root on the real deployment layout", () => {
     expect(resolveActivationJudgment(host).kind).toBe("current");
 
     const cfgPath = join(projectRoot, "specs/tla/FormalElection.cfg");
-    const cfg = Bun.file(cfgPath).text();
+    const cfg = await Bun.file(cfgPath).text();
     rmSync(cfgPath);
     expect(resolveActivationJudgment(host)).toEqual({
       kind: "not-ready",
@@ -199,7 +199,7 @@ describe("activation spec root on the real deployment layout", () => {
     });
     expect(recordActivationVerdict(host)).toBe(false);
 
-    writeFile(cfgPath, await cfg);
+    writeFile(cfgPath, cfg);
     expect(resolveActivationJudgment(host).kind).toBe("current");
   });
 });
