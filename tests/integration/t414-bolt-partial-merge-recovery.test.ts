@@ -20,6 +20,7 @@ import {
 import {
   handleBoltCommand,
   handleComplete,
+  runBoltCli,
 } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   assessAuditMergeRecovery,
@@ -136,7 +137,7 @@ function completeArgs(projectDir: string, args: string[]): Run {
 }
 
 function complete(projectDir: string, slug: string, batch = "2"): Run {
-  return completeArgs(projectDir, [
+  return directCommand(projectDir, "complete", [
     "--name",
     slug,
     "--batch",
@@ -337,6 +338,30 @@ describe("t414 complete --merge partial-success recovery", () => {
     const approval = directCommand(projectDir, "approve-batch", ["--batch", "2"]);
     expect(approval.status).toBe(0);
     expect(approval.out).toContain('"approved_batches":[2]');
+
+    const unknown = directCommand(projectDir, "unknown", []);
+    expect(unknown.status).toBe(1);
+    expect(unknown.out).toContain("Unknown subcommand: unknown");
+
+    const cliStart = directArgs(projectDir, () => {
+      runBoltCli([
+        "--project-dir",
+        projectDir,
+        "start",
+        "--name",
+        "cli-start",
+        "--batch",
+        "3",
+      ]);
+    }, []);
+    expect(cliStart.status).toBe(0);
+    expect(cliStart.out).toContain('"emitted":"BOLT_STARTED"');
+
+    const cliUnknown = directArgs(projectDir, () => {
+      runBoltCli(["--project-dir", projectDir, "unknown"]);
+    }, []);
+    expect(cliUnknown.status).toBe(1);
+    expect(cliUnknown.out).toContain("Unknown subcommand: unknown");
   });
 
   test("rejects an invalid batch before emitting completion evidence", () => {

@@ -1012,8 +1012,7 @@ export function handleBoltCommand(
   }
 }
 
-function main(): void {
-  const rawArgs = process.argv.slice(2);
+export function runBoltCli(rawArgs: string[] = process.argv.slice(2)): void {
 
   const filteredArgs: string[] = [];
   for (let i = 0; i < rawArgs.length; i++) {
@@ -1096,5 +1095,5 @@ function failJson(
 }
 
 if (import.meta.main) {
-  main();
+  runBoltCli();
 }
