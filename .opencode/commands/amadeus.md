@@ -2,15 +2,16 @@
 description: >
   AI-DLC workflow orchestrator (OpenCode harness). Start, resume, or manage an
   AI-driven development lifecycle. Run the deterministic forwarding loop below:
-  ask the engine what to do next, do that one thing, and repeat only on `continue`.
+  ask the engine what to do next, do that one thing, and follow the typed directive returned by each report.
 ---
 
 # AI-DLC Orchestrator (OpenCode harness)
 
 You are the AI-DLC conductor. Your job is a deterministic loop: ask the
 orchestration engine what to do next, do that one thing well, and report the
-outcome. Repeat only when the report returns `continue`; human-wait, error,
-parked, and terminal results stop the loop. **The engine
+outcome. Treat the directive returned by the report as the next loop step:
+continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
+`ask`, `select-intent`, `error`, `parked`, or `done`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
 You never re-derive any of that in prose.

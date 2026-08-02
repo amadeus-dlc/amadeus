@@ -966,7 +966,7 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   try {
     merged = withAuditLock(
       projectDir,
-      () => mergeDeltaUnderLock(projectDir, mainAuditPath, delta, { slug, sourceHash, boundary, forkTs }, intent, space),
+      () => mergeDeltaUnderLock(projectDir, sourceMainAuditPath, delta, { slug, sourceHash, boundary, forkTs }, intent, space),
       intent,
       space,
       { maxRetries: lockRetries, retryMs: lockRetryMs },

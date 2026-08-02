@@ -2,12 +2,12 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import {
   auditBlockField,
-  findAllEvents,
   getField,
   parseRefsList,
   readAllAuditShards,
   readStateFile,
   relativeRecordDir,
+  splitAuditRecords,
   worktreePath,
   worktreeStateFilePath,
 } from "./amadeus-lib.ts";
@@ -18,6 +18,28 @@ export type MergeRecoveryAssessment =
   | { status: "invalid"; detail: string };
 
 const SHA256 = /^[a-f0-9]{64}$/;
+
+function eventsInCurrentFork(
+  audit: string,
+  event: string,
+  slug: string,
+): { timestamp: string; block: string }[] {
+  const timeline = splitAuditRecords(audit)
+    .map((block, pos) => ({
+      block,
+      pos,
+      timestamp: auditBlockField(block, "Timestamp") ?? "",
+      event: auditBlockField(block, "Event") ?? "",
+      slug: auditBlockField(block, "Bolt slug") ?? "",
+    }))
+    .filter((row) => row.timestamp !== "" && row.slug === slug)
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.pos - b.pos);
+  const currentFork = timeline.findLastIndex((row) => row.event === "STATE_FORKED");
+  const currentCycle = currentFork === -1 ? timeline : timeline.slice(currentFork + 1);
+  return currentCycle
+    .filter((row) => row.event === event)
+    .map(({ timestamp, block }) => ({ timestamp, block }));
+}
 
 function sha256(content: string): string {
   return createHash("sha256").update(content).digest("hex");
@@ -35,7 +57,11 @@ export function assessBoltCompletionRecovery(
   intent?: string,
   space?: string,
 ): MergeRecoveryAssessment {
-  const events = findAllEvents(readAllAuditShards(projectDir, intent, space), "BOLT_COMPLETED", slug);
+  const events = eventsInCurrentFork(
+    readAllAuditShards(projectDir, intent, space),
+    "BOLT_COMPLETED",
+    slug,
+  );
   if (events.length === 0) return { status: "pending" };
   const inconsistent = events.some(
     ({ block }) => field(block, "Bolt names") !== boltNames || field(block, "Batch number") !== batch,
@@ -66,7 +92,11 @@ export function assessStateMergeRecovery(
     return { status: "invalid", detail: "main state is missing the Bolt Refs field" };
   }
 
-  const events = findAllEvents(readAllAuditShards(projectDir, intent, space), "STATE_MERGED", slug);
+  const events = eventsInCurrentFork(
+    readAllAuditShards(projectDir, intent, space),
+    "STATE_MERGED",
+    slug,
+  );
   if (parseRefsList(refsValue).includes(slug)) {
     if (events.length !== 0) {
       return {
@@ -124,7 +154,11 @@ export function assessAuditMergeRecovery(
   intent?: string,
   space?: string,
 ): MergeRecoveryAssessment {
-  const events = findAllEvents(readAllAuditShards(projectDir, intent, space), "AUDIT_MERGED", slug);
+  const events = eventsInCurrentFork(
+    readAllAuditShards(projectDir, intent, space),
+    "AUDIT_MERGED",
+    slug,
+  );
   if (events.length === 0) return { status: "pending" };
   if (events.length !== 1) {
     return {

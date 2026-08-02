@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+  appendFileSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -11,6 +12,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+} from "../../dist/claude/.claude/tools/amadeus-journal.ts";
+import { assessBoltCompletionRecovery } from "../../dist/claude/.claude/tools/amadeus-merge-recovery.ts";
 import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
@@ -49,26 +55,26 @@ function setupProject(slug: string): string {
   return projectDir;
 }
 
-function start(projectDir: string, slug: string): Run {
+function start(projectDir: string, slug: string, batch = "2"): Run {
   return runBolt(projectDir, [
     "start",
     "--name",
     slug,
     "--batch",
-    "2",
+    batch,
     "--worktree",
     "--slug",
     slug,
   ]);
 }
 
-function complete(projectDir: string, slug: string): Run {
+function complete(projectDir: string, slug: string, batch = "2"): Run {
   return runBolt(projectDir, [
     "complete",
     "--name",
     slug,
     "--batch",
-    "2",
+    batch,
     "--merge",
     "--slug",
     slug,
@@ -152,12 +158,42 @@ describe("t414 complete --merge partial-success recovery", () => {
     projects.push(projectDir);
     expect(start(projectDir, "cursor").status).toBe(0);
 
+    const worktreeShard = readdirSync(worktreeAuditDir(projectDir, "cursor")).find((name) =>
+      name.endsWith(".jsonl"),
+    );
+    expect(worktreeShard).toBeDefined();
+    const marker = serializeJournalEntry({
+      schemaVersion: JOURNAL_SCHEMA_VERSION,
+      cloneId: "t414cursor",
+      intentId: DEFAULT_RECORD_DIR,
+      seq: 999,
+      timestamp: "2026-08-02T13:00:00.000Z",
+      heading: "Hook Dropped",
+      event: "HOOK_DROPPED",
+      fields: { Hook: "t414-cursor-delta", Reason: "target-shard-proof" },
+    });
+    appendFileSync(
+      join(worktreeAuditDir(projectDir, "cursor"), worktreeShard!),
+      marker,
+      "utf-8",
+    );
+
     rmSync(join(projectDir, "amadeus", ".amadeus-clone-id"), { force: true });
     const result = complete(projectDir, "cursor");
 
     expect(result.status).toBe(0);
     expect(eventCount(projectDir, "STATE_MERGED", "cursor")).toBe(1);
     expect(eventCount(projectDir, "AUDIT_MERGED", "cursor")).toBe(1);
+    const sourceShard = readFileSync(
+      join(seededAuditDir(projectDir), worktreeShard!),
+      "utf-8",
+    );
+    expect(sourceShard).toContain("t414-cursor-delta");
+    const otherShards = readdirSync(seededAuditDir(projectDir))
+      .filter((name) => name.endsWith(".jsonl") && name !== worktreeShard)
+      .map((name) => readFileSync(join(seededAuditDir(projectDir), name), "utf-8"))
+      .join("\n");
+    expect(otherShards).not.toContain("t414-cursor-delta");
   });
 
   test("a fully merged Bolt replays as an idempotent success", () => {
@@ -171,6 +207,58 @@ describe("t414 complete --merge partial-success recovery", () => {
     expect(eventCount(projectDir, "STATE_MERGED", "replay")).toBe(1);
     expect(eventCount(projectDir, "AUDIT_MERGED", "replay")).toBe(1);
     expect(eventCount(projectDir, "BOLT_COMPLETED", "replay")).toBe(1);
+  });
+
+  test("a new fork cycle with the same slug ignores prior merge evidence", () => {
+    const projectDir = setupProject("redo");
+    projects.push(projectDir);
+    expect(start(projectDir, "redo", "2").status).toBe(0);
+    expect(complete(projectDir, "redo", "2").status).toBe(0);
+
+    expect(start(projectDir, "redo", "3").status).toBe(0);
+    const second = complete(projectDir, "redo", "3");
+
+    expect(second.status).toBe(0);
+    expect(eventCount(projectDir, "STATE_MERGED", "redo")).toBe(2);
+    expect(eventCount(projectDir, "AUDIT_MERGED", "redo")).toBe(2);
+    expect(eventCount(projectDir, "BOLT_COMPLETED", "redo")).toBe(2);
+  });
+
+  test("same-timestamp lifecycle rows are separated by ledger order", () => {
+    const projectDir = setupProject("tied");
+    projects.push(projectDir);
+    const shard = readdirSync(seededAuditDir(projectDir)).find((name) => name.endsWith(".jsonl"));
+    expect(shard).toBeDefined();
+    const timestamp = "2026-08-02T13:00:00.000Z";
+    const entries: Array<{ event: string; fields: Record<string, string> }> = [
+      { event: "STATE_FORKED", fields: { "Bolt slug": "tied" } },
+      {
+        event: "BOLT_COMPLETED",
+        fields: { "Bolt slug": "tied", "Bolt names": "tied", "Batch number": "2" },
+      },
+      { event: "STATE_FORKED", fields: { "Bolt slug": "tied" } },
+      {
+        event: "BOLT_COMPLETED",
+        fields: { "Bolt slug": "tied", "Bolt names": "tied", "Batch number": "3" },
+      },
+    ];
+    const rows = entries.map(({ event, fields }, index) =>
+      serializeJournalEntry({
+        schemaVersion: JOURNAL_SCHEMA_VERSION,
+        cloneId: "t414tied",
+        intentId: DEFAULT_RECORD_DIR,
+        seq: 100 + index,
+        timestamp,
+        heading: event,
+        event,
+        fields,
+      }),
+    );
+    appendFileSync(join(seededAuditDir(projectDir), shard!), rows.join(""), "utf-8");
+
+    expect(assessBoltCompletionRecovery(projectDir, "tied", "tied", "3")).toEqual({
+      status: "verified",
+    });
   });
 
   test("never-merged slug fails closed without minting BOLT_COMPLETED", () => {

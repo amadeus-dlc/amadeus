@@ -16,8 +16,9 @@
 // rest on the conductor's good behaviour: when the conductor tries to end its
 // turn, this hook runs the engine (`amadeus-orchestrate next`) and, if a
 // directive is still PENDING, blocks the stop and injects the directive back
-// via `reason`. A report continues only on `continue`; human-wait and terminal
-// results stop. Enforced by the harness, not by the LLM remembering.
+// via `reason`. A report's next directive continues for run-stage,
+// invoke-swarm, and print; human-wait, error, parked, and done stop the loop.
+// Enforced by the harness, not by the LLM remembering.
 //
 // The reason is an ON-TASK CONTINUATION — it names the work the conductor
 // still owes (run the loop, act on the directive, report), never an
@@ -767,8 +768,9 @@ export function continuationReason(
     `\`bun ${harnessDir()}/tools/amadeus-orchestrate.ts next\`, act on the directive it ` +
     "emits, then run `amadeus-orchestrate report --stage <stage> --result <outcome>` to commit " +
     "the transition. Complete only this directive's declared completion conditions and do " +
-    "not search for additional improvements. Re-consult the engine only when handling this " +
-    "directive returns `continue`; human-wait and terminal results end the loop. " +
+    "not search for additional improvements. Treat the directive returned by the report as " +
+    "the next loop step: continue for `run-stage`, `invoke-swarm`, and `print`; human-wait " +
+    "(`ask` or `select-intent`), `error`, `parked`, and `done` end the loop. " +
     "If instead you mean to pause this workflow for now (and resume in a later " +
     `session), run \`bun ${harnessDir()}/tools/amadeus-orchestrate.ts park\` to park it ` +
     "cleanly at this inter-stage boundary - never mark stages complete just to end the turn."
