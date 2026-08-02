@@ -197,6 +197,19 @@ function selectorViolations(
 
 const BOLD_REF_RE = /\*\*([^*]+)\*\*/gu;
 
+/** Prose cites terms in the plural (`**Rules**`), so a bold run resolves to a
+ *  term when its key, or a de-pluralised form of it, is a defined term. The
+ *  stripped forms only count when they land on a real key, which keeps bold
+ *  emphasis that is not a term (`**MUST**`) from resolving to anything. */
+export function resolveCitedKey(
+  bold: string,
+  isTerm: (key: string) => boolean,
+): string | null {
+  const key = termKey(bold);
+  const candidates = [key, key.replace(/es$/u, ""), key.replace(/s$/u, "")];
+  return candidates.find((c) => c.length > 0 && isTerm(c)) ?? null;
+}
+
 /** A projected table must be self-contained: every bold cross-reference its own
  *  definitions make has to resolve inside the same subset. */
 function closureViolations(
@@ -204,6 +217,7 @@ function closureViolations(
   rows: readonly TermRow[],
 ): readonly Violation[] {
   const byKey = new Map(rows.map((r) => [r.key, r]));
+  const isTerm = (key: string): boolean => byKey.has(key);
   const violations: Violation[] = [];
   for (const [name, selector] of manifest) {
     if (selector.kind === "all") continue;
@@ -212,8 +226,8 @@ function closureViolations(
       const row = byKey.get(key);
       if (!row) continue;
       for (const m of row.definition.matchAll(BOLD_REF_RE)) {
-        const cited = termKey(m[1]!);
-        if (!byKey.has(cited) || subset.has(cited)) continue;
+        const cited = resolveCitedKey(m[1]!, isTerm);
+        if (cited === null || subset.has(cited)) continue;
         violations.push(violation("subset-reference-unclosed", `${name}: ${key} cites ${cited}`));
       }
     }
@@ -432,32 +446,41 @@ function rowsForSurface(
   return selected.map((r) => ja.get(r.key) ?? r);
 }
 
+/** The rendered surface, plus the projected region on its own. Only the region
+ *  this generator owns may be validated — a marker surface's `content` also
+ *  carries hand-authored prose whose links and tokens are not ours to police. */
+type RenderedSurface = MarkerReplacement & { readonly projected: string };
+
 function renderSurface(
   surface: Surface,
   sourceRows: readonly TermRow[],
   existing: string | null,
-): MarkerReplacement {
+): RenderedSurface {
   const rows = sourceRows.map((r) => ({
     ...r,
     definition: rebaseLinks(r.definition, surface.linkBase),
   }));
-  if (surface.mode === "file") return { content: renderKnowledgeSurface(rows), violations: [] };
-  if (existing === null) {
-    return { content: null, violations: [violation("missing-target", surface.path)] };
+  if (surface.mode === "file") {
+    const content = renderKnowledgeSurface(rows);
+    return { content, projected: content, violations: [] };
   }
-  const table = renderTable(rows, surface.headers);
-  return replaceMarkerSection(existing, surface.projection, surface.coreTokens ? toCoreTokens(table) : table);
+  if (existing === null) {
+    return { content: null, projected: "", violations: [violation("missing-target", surface.path)] };
+  }
+  const rendered = renderTable(rows, surface.headers);
+  const projected = surface.coreTokens ? toCoreTokens(rendered) : rendered;
+  return { ...replaceMarkerSection(existing, surface.projection, projected), projected };
 }
 
 /** Every rebased link must still point at a file that exists, so a projection
  *  can never ship a link that resolves nowhere. */
 function surfaceLinkViolations(
   surface: Surface,
-  content: string,
+  projected: string,
   root: string,
 ): readonly Violation[] {
   const violations: Violation[] = [];
-  for (const line of content.split("\n")) {
+  for (const line of projected.split("\n")) {
     if (!line.startsWith("| **")) continue;
     for (const m of line.matchAll(INLINE_LINK_RE)) {
       const target = m[1]!;
@@ -471,9 +494,9 @@ function surfaceLinkViolations(
   return violations;
 }
 
-function surfaceTokenViolations(surface: Surface, content: string): readonly Violation[] {
+function surfaceTokenViolations(surface: Surface, projected: string): readonly Violation[] {
   const forbidden = surface.coreTokens ? NEUTRAL_HARNESS_TOKEN : CORE_HARNESS_TOKEN;
-  const table = content.split("\n").filter((l) => l.startsWith("| **"));
+  const table = projected.split("\n").filter((l) => l.startsWith("| **"));
   if (!table.some((l) => l.includes(forbidden))) return [];
   return [violation("surface-token-leak", `${surface.path}: unconverted ${forbidden}`)];
 }
@@ -501,8 +524,8 @@ export function planSurfaces(root: string): Plan {
     const rendered = renderSurface(surface, rows, readIfPresent(root, surface.path));
     violations.push(...rendered.violations);
     if (rendered.content === null) continue;
-    violations.push(...surfaceTokenViolations(surface, rendered.content));
-    violations.push(...surfaceLinkViolations(surface, rendered.content, root));
+    violations.push(...surfaceTokenViolations(surface, rendered.projected));
+    violations.push(...surfaceLinkViolations(surface, rendered.projected, root));
     plans.push({ path: surface.path, content: rendered.content });
   }
   return { plans, violations };

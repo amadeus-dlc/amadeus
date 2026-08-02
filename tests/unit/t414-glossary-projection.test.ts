@@ -7,6 +7,7 @@ import {
   parseManifest,
   parseTermTable,
   rebaseLinks,
+  resolveCitedKey,
   renderKnowledgeSurface,
   renderTable,
   replaceMarkerSection,
@@ -339,5 +340,39 @@ describe("validateCanonical — subset reference closure", () => {
     const prose = "| **Phase** | Emphasis on **not a term** here. |";
     const en = [prose, manifestFor("[phase]")].join("\n");
     expect(validateCanonical(en, prose)).toEqual([]);
+  });
+
+  test("reports a cited term that the subset omits when the citation is plural", () => {
+    const plural = [
+      "| **Bolt** | Bundles several **Unit of works**. |",
+      "| **Unit of work** | An independently implementable piece. |",
+    ].join("\n");
+    const en = [plural, manifestFor("[bolt]")].join("\n");
+    const found = validateCanonical(en, plural).filter((v) => v.code === "subset-reference-unclosed");
+    expect(found.length).toBe(1);
+    expect(found[0]!.detail).toContain("unit-of-work");
+  });
+});
+
+describe("resolveCitedKey", () => {
+  const isTerm = (key: string) => ["rule", "sensor", "phase", "process"].includes(key);
+
+  test("resolves a term cited in its own singular form", () => {
+    expect(resolveCitedKey("Rule", isTerm)).toBe("rule");
+  });
+
+  test("resolves an -s plural back to the defined term", () => {
+    expect(resolveCitedKey("Rules", isTerm)).toBe("rule");
+    expect(resolveCitedKey("Sensors", isTerm)).toBe("sensor");
+  });
+
+  test("resolves an -es plural back to the defined term", () => {
+    expect(resolveCitedKey("Processes", isTerm)).toBe("process");
+  });
+
+  test("resolves nothing for bold text whose singular forms are not terms", () => {
+    expect(resolveCitedKey("MUST", isTerm)).toBeNull();
+    expect(resolveCitedKey("Guidelines", isTerm)).toBeNull();
+    expect(resolveCitedKey("Ses", isTerm)).toBeNull();
   });
 });

@@ -125,14 +125,14 @@ projections:
   protocol:
     terms: [aidlc, artifact, bolt, component, control-loop, core, depth,
             generation, guardrail, harness, ladder-prompt, lifecycle, module,
-            parallel-batch, phase, planning, rule, scope, service, stage,
+            parallel-batch, phase, planning, rule, scope, sensor, service, stage,
             unit-of-work, walking-skeleton]
   reference:
     terms: [aidlc, approval-gate, artifact, bolt, component, control-loop, core,
             depth, generation, guardrail, harness, inline-execution,
             inline-stage, ladder-prompt, lead-agent, lifecycle, module,
-            parallel-batch, phase, planning, rule, scope, service, stage,
-            subagent-execution, subagent-stage, unit-of-work, walking-skeleton]
+            parallel-batch, phase, planning, rule, scope, sensor, service,
+            stage, subagent-execution, subagent-stage, unit-of-work, walking-skeleton]
   knowledge:
     terms: all
 ```

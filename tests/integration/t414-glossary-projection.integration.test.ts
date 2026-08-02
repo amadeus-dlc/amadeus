@@ -149,6 +149,21 @@ describe("write / check round trip", () => {
     expect(drifted.err.join("\n")).toContain(PROTOCOL_PATH);
   });
 
+  test("hand-authored rows outside the marker are left alone by the surface checks", () => {
+    // A marker surface is mostly hand-authored prose. Only the projected region
+    // is ours, so a broken link or a stray placeholder elsewhere in that file is
+    // none of this generator's business.
+    const foreign = [
+      "| **Something else** | See [Nowhere](99-does-not-exist.md) and `{{HARNESS_DIR}}/x`. |",
+      "",
+    ].join("\n");
+    write(REFERENCE_EN_PATH, marked("reference", "## Terminology Glossary") + foreign);
+
+    expect(run(["write"]).code).toBe(0);
+    expect(read(REFERENCE_EN_PATH)).toContain("99-does-not-exist.md");
+    expect(run(["check"]).code).toBe(0);
+  });
+
   test("an unknown subcommand fails loudly", () => {
     const result = run(["explode"]);
     expect(result.code).toBe(1);
