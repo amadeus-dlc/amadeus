@@ -73,22 +73,39 @@ function checkModuleName(moduleName: string): Result<null, ModuleDepsError> {
   return { ok: true, value: null };
 }
 
-// Removes `(* ... *)` block comments (non-nested, possibly spanning lines).
-// An unterminated `(*` swallows the rest of the module: malformed source must
-// not yield fabricated dependencies (BR-R6).
+// Removes comments while preserving line boundaries. Block comments are
+// non-nested and may span lines; `(*` inside a `\*` line comment is inert.
+// An unterminated block comment swallows the rest of the module so malformed
+// source cannot yield fabricated dependencies (BR-R6).
 function stripBlockComments(source: string): string {
   let out = "";
   let index = 0;
+  let inBlock = false;
   while (index < source.length) {
-    const open = source.indexOf("(*", index);
-    if (open === -1) {
-      out += source.slice(index);
-      break;
+    if (inBlock) {
+      if (source.startsWith("*)", index)) {
+        inBlock = false;
+        index += 2;
+      } else {
+        if (source[index] === "\n") out += "\n";
+        index += 1;
+      }
+      continue;
     }
-    out += source.slice(index, open);
-    const close = source.indexOf("*)", open + 2);
-    if (close === -1) break;
-    index = close + 2;
+    if (source.startsWith("\\*", index)) {
+      const newline = source.indexOf("\n", index + 2);
+      if (newline === -1) break;
+      out += "\n";
+      index = newline + 1;
+      continue;
+    }
+    if (source.startsWith("(*", index)) {
+      inBlock = true;
+      index += 2;
+      continue;
+    }
+    out += source[index];
+    index += 1;
   }
   return out;
 }
@@ -104,18 +121,23 @@ export function extractModuleRefs(
   if (!nameCheck.ok) return nameCheck;
   const refs: string[] = [];
   const withoutBlocks = stripBlockComments(source);
-  for (const rawLine of withoutBlocks.split("\n")) {
-    const commentStart = rawLine.indexOf("\\*");
-    const line = (commentStart === -1 ? rawLine : rawLine.slice(0, commentStart)).trim();
+  const lines = withoutBlocks.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!.trim();
     if (line.length === 0) continue;
     let extendsRest: string | null = null;
     let instanceRest: string | null = null;
     if (line.startsWith("EXTENDS ")) {
       extendsRest = line.slice("EXTENDS ".length);
+      while (extendsRest.trimEnd().endsWith(",") && index + 1 < lines.length) {
+        index += 1;
+        const continuation = lines[index]!.trim();
+        if (continuation.length > 0) extendsRest += continuation;
+      }
     } else if (line.startsWith("INSTANCE ")) {
       instanceRest = line.slice("INSTANCE ".length);
     } else {
-      const assignment = line.match(/^[A-Za-z][A-Za-z0-9]*\s*==\s*INSTANCE\s+(.+)$/);
+      const assignment = line.match(/^[A-Za-z][A-Za-z0-9_]*\s*==\s*INSTANCE\s+(.+)$/);
       if (assignment) instanceRest = assignment[1];
     }
     // EXTENDS takes every comma-separated name; INSTANCE takes only the first
@@ -149,6 +171,7 @@ export function resolveAuxiliaryModules(
   const nameCheck = checkModuleName(moduleName);
   if (!nameCheck.ok) return nameCheck;
   const resolved = new Set<string>();
+  const visited = new Set<string>();
   // DFS with an explicit stack; `path` tracks the current chain for cycles.
   const visit = (
     current: string,
@@ -161,6 +184,8 @@ export function resolveAuxiliaryModules(
         `cyclic module reference: ${[...path, current].join(" -> ")}`,
       );
     }
+    if (visited.has(current)) return { ok: true, value: null };
+    visited.add(current);
     const source = readModule(current);
     if (!source.ok) {
       if (source.error.code === "MODULE_DEP_UNRESOLVED") return source;

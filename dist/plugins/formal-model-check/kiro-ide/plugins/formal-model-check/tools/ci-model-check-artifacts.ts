@@ -253,10 +253,12 @@ export function verifyCiAcceptanceArtifacts(
   const domain = validateCiAcceptanceEvidence(evidence);
   if (!domain.ok) return domain;
   if (expectedModelNames !== undefined) {
-    const observed = evidence.runs
-      .filter((_run, index) => index % 6 === 0)
-      .map((run) => run.model);
-    if (!sameStrings(observed, expectedModelNames)) {
+    if (evidence.runs.length !== expectedModelNames.length * 6) {
+      return failed("acceptance evidence does not contain exactly six runs per selected model");
+    }
+    const observed = evidence.runs.map((run) => run.model);
+    const expected = expectedModelNames.flatMap((model) => Array(6).fill(model));
+    if (!sameStrings(observed, expected)) {
       return failed("acceptance evidence does not cover the selected models in declaration order");
     }
   }

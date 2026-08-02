@@ -50,13 +50,21 @@ describe("t402 tla-module-deps extraction", () => {
     const source = [
       "---- MODULE M ----",
       "EXTENDS Naturals, Helper",
-      "Other == INSTANCE OtherModule",
+      "Other_1 == INSTANCE OtherModule",
       "          WITH Flag <- FALSE",
       "Direct == INSTANCE Deep",
     ].join("\n");
     expect(extractModuleRefs("M", source)).toEqual({
       ok: true,
       value: ["Helper", "OtherModule", "Deep"],
+    });
+  });
+
+  test("extracts EXTENDS names continued onto the next line", () => {
+    const source = ["EXTENDS Naturals,", "  Helper,", "  OtherModule"].join("\n");
+    expect(extractModuleRefs("M", source)).toEqual({
+      ok: true,
+      value: ["Helper", "OtherModule"],
     });
   });
 
@@ -85,6 +93,11 @@ describe("t402 tla-module-deps extraction", () => {
     expect(extractModuleRefs("M", source)).toEqual({ ok: true, value: ["Helper"] });
   });
 
+  test("does not open a block comment from inside a line comment", () => {
+    const source = ["\\* inert (* opener", "EXTENDS Helper"].join("\n");
+    expect(extractModuleRefs("M", source)).toEqual({ ok: true, value: ["Helper"] });
+  });
+
   test("fails on a malformed EXTENDS token instead of skipping it silently", () => {
     const result = extractModuleRefs("M", "EXTENDS Naturals, not-a-module");
     expect(result).toMatchObject({
@@ -108,10 +121,16 @@ describe("t402 tla-module-deps transitive resolution", () => {
       B: "EXTENDS Naturals\nX == INSTANCE C",
       C: "EXTENDS FiniteSets",
     };
-    expect(resolveAuxiliaryModules("A", readerFor(modules))).toEqual({
+    const reads = new Map<string, number>();
+    const reader = readerFor(modules);
+    expect(resolveAuxiliaryModules("A", (name) => {
+      reads.set(name, (reads.get(name) ?? 0) + 1);
+      return reader(name);
+    })).toEqual({
       ok: true,
       value: ["B", "C"],
     });
+    expect(Object.fromEntries(reads)).toEqual({ A: 1, B: 1, C: 1 });
   });
 
   test("is deterministic for identical input", () => {

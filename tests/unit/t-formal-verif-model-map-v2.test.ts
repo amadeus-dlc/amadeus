@@ -299,6 +299,7 @@ describe("model map v2 schema", () => {
       "specs/tla/../x.tla",
       "/specs/tla/X.tla",
       "plugins/x.tla",
+      "specs/tla/nested/X.tla",
       "specs/tla/MirrorLifecycle.cfg",
       "specs/tla/1Bad.tla",
       "specs/tla/MirrorLifecycle.tla", // self-auxiliary

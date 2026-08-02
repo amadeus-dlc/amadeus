@@ -19,6 +19,7 @@ import {
   type VerifiedModelSource,
 } from "./tla-model-loader.ts";
 import { selectVerifiedModel } from "./tla-model-loader-internal.ts";
+import { TLA_EXECUTION_MODEL_NAME } from "./tla-model-map.ts";
 import { traceVocabularyFor, type TraceVocabulary } from "./tlc-toolchain.ts";
 
 export interface RunModelCheckSource {
@@ -126,6 +127,8 @@ export function loadRunModelCheckSource(
   const requestedName = basename(model.value, ".tla");
   const selected = selectVerifiedModel(canonical.value, requestedName);
   if (!selected.ok) return selected;
+  const frozen = selectVerifiedModel(canonical.value, TLA_EXECUTION_MODEL_NAME);
+  if (!frozen.ok) return frozen;
 
   let modelBytes: Uint8Array;
   let cfgBytes: Uint8Array;
@@ -148,7 +151,7 @@ export function loadRunModelCheckSource(
   }
 
   const publicContractIdentity = createHash("sha256")
-    .update(selected.value.model.entries.map(({ sha256 }) => sha256).join("\n"))
+    .update(frozen.value.model.entries.map(({ sha256 }) => sha256).join("\n"))
     .digest("hex");
   // The frozen receipt stays pinned to FormalElection (ADR-10) even though the
   // byte-pin above is model-selected.

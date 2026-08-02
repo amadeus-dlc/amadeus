@@ -360,6 +360,29 @@ describe("t406 CI all-model acceptance", () => {
     }
   });
 
+  test("rejects unknown and empty run-skeleton model options before JDK setup", () => {
+    const root = mkdtempSync(join(tmpdir(), "t406-skeleton-args-"));
+    try {
+      for (const args of [
+        [root, "--unknown", "MirrorLifecycle"],
+        [root, "--model", ""],
+      ]) {
+        const result = Bun.spawnSync([
+          process.execPath,
+          "plugins/formal-model-check/tools/run-skeleton-ci.ts",
+          ...args,
+        ], {
+          cwd: resolve("."),
+          env: { ...process.env, JAVA_HOME: "" },
+        });
+        expect(result.exitCode).not.toBe(0);
+        expect(result.stderr.toString()).toContain("usage:");
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("keeps the workflow control plane fixed and documents the all-model default", () => {
     const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
     expect(workflow).toContain("if: github.event_name == 'workflow_dispatch'");

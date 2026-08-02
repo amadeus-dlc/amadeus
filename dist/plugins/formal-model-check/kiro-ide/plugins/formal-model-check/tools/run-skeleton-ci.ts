@@ -50,20 +50,19 @@ function formalElectionTraceVocabulary(source: VerifiedModelSource) {
   return vocabulary.value;
 }
 
-const configuredJdkRoot = process.env.JAVA_HOME;
-if (!configuredJdkRoot) throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
-const JDK_ROOT = realpathSync(configuredJdkRoot);
-
 const cliArguments = process.argv.slice(2);
 const outputRoot = cliArguments[0];
-const selectedModelName = cliArguments.length === 3 && cliArguments[1] === "--model"
-  ? cliArguments[2]
-  : "FormalElection";
-if (!outputRoot || !selectedModelName || (cliArguments.length !== 1 && cliArguments.length !== 3)) {
+const validArguments = cliArguments.length === 1
+  || (cliArguments.length === 3 && cliArguments[1] === "--model" && Boolean(cliArguments[2]));
+const selectedModelName = cliArguments.length === 3 ? cliArguments[2] : "FormalElection";
+if (!outputRoot || !validArguments) {
   throw new Error(
     "usage: bun plugins/formal-model-check/tools/run-skeleton-ci.ts <output-directory> [--model <registered-name>]",
   );
 }
+const configuredJdkRoot = process.env.JAVA_HOME;
+if (!configuredJdkRoot) throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
+const JDK_ROOT = realpathSync(configuredJdkRoot);
 const loadedModels = loadVerifiedTlaSources();
 if (!loadedModels.ok) {
   throw new Error(`loader failed: ${JSON.stringify(loadedModels.error)}`);

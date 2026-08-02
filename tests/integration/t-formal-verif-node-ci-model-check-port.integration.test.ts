@@ -147,6 +147,8 @@ describe("Node CI model-check port", () => {
       ...deps,
       command: (executable, argv, options) => {
         if (argv[0] === "run" && executable.endsWith("/docker")) {
+          expect(options.env.AMADEUS_REAL_DOCKER).toBeUndefined();
+          expect(options.env.AMADEUS_DOCKER_TRACE).toBeUndefined();
           const trace = readFileSync(
             join(workspace, ".amadeus-ci-docker-wrapper", "trace-prefix"),
             "utf8",

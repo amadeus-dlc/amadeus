@@ -175,6 +175,26 @@ describe("CI model-check artifact verifier", () => {
     expect(verifyCiAcceptanceArtifacts(root)).toEqual({ ok: true, value: evidence });
   });
 
+  test("requires exactly six ordered runs for every selected model", () => {
+    const wrongLength = fixture();
+    expect(verifyCiAcceptanceArtifacts(
+      wrongLength.root,
+      ["FormalElection", "MirrorLifecycle"],
+    )).toEqual({
+      ok: false,
+      error: expect.stringContaining("exactly six runs"),
+    });
+
+    const mixedBlock = fixture();
+    mixedBlock.evidence.runs[1] = {
+      ...mixedBlock.evidence.runs[1]!,
+      model: "MirrorLifecycle",
+      stats: { ...mixedBlock.evidence.runs[1]!.stats, model: "MirrorLifecycle" },
+    };
+    writeJson(join(mixedBlock.root, "acceptance.json"), mixedBlock.evidence);
+    expect(verifyCiAcceptanceArtifacts(mixedBlock.root, ["FormalElection"]).ok).toBe(false);
+  });
+
   test("rejects byte drift and an unexecuted Docker inspection", () => {
     const drifted = fixture();
     writeFileSync(join(drifted.root, "FormalElection/runs/warm-up-0/tlc-stdout.bin"), "drifted\n");

@@ -93,6 +93,11 @@ describe("run-model-check source adapter", () => {
       namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],
       traceStateVariables: ["receipts", "issueNumber", "boundaryIdx"],
     });
+    const electionPaths = copyCanonicalSource();
+    const election = loadRunModelCheckSource(electionPaths.model, electionPaths.cfg);
+    expect(election.ok).toBe(true);
+    if (!election.ok) return;
+    expect(result.value.modelReceipt).toEqual(election.value.modelReceipt);
   });
 
   test("rejects source drift and symlink inputs", () => {
