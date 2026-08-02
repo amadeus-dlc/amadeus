@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   EXPECTED_SELF_SCOPES,
   SELF_HARNESSES,
@@ -13,13 +14,39 @@ const HARNESSES: readonly string[] = SELF_HARNESSES;
 const SCOPES: readonly string[] = EXPECTED_SELF_SCOPES;
 const roots: string[] = [];
 
+// Cells every face shares — the intersection the parity invariant ranges over.
+const SHARED_STAGES: Readonly<Record<string, string>> = {
+  "intent-capture": "EXECUTE",
+  feasibility: "SKIP",
+  "requirements-analysis": "EXECUTE",
+  "code-generation": "EXECUTE",
+};
+// Present on the canonical face alone, mirroring the real per-face plugin
+// composition (`self-feature.formal-model-check` on .claude only). Every
+// fixture carries it, so each passing case doubles as a negative control that
+// face-local stage keys never enter the comparison.
+const FACE_LOCAL_STAGE = "formal-model-check";
+const CANONICAL_FACE = ".claude";
+
 function fixtureRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-self-scope-sensor-"));
   roots.push(root);
   return root;
 }
 
-function seedHarness(root: string, harness: string, gridScopes = SCOPES): void {
+function scopeBody(scope: string): string {
+  return `---\nname: ${scope}\n---\n\n# ${scope}\n\nShared prose for ${scope}.\n`;
+}
+
+interface SeedOverrides {
+  readonly gridScopes?: readonly string[];
+  /** scope -> stage -> cell value, layered over SHARED_STAGES. */
+  readonly cells?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** scope -> full file body, replacing scopeBody(). */
+  readonly bodies?: Readonly<Record<string, string>>;
+}
+
+function seedHarness(root: string, harness: string, overrides: SeedOverrides = {}): void {
   const scopesDir = join(root, harness, "scopes");
   const dataDir = join(root, harness, "tools", "data");
   mkdirSync(scopesDir, { recursive: true });
@@ -27,10 +54,21 @@ function seedHarness(root: string, harness: string, gridScopes = SCOPES): void {
   for (const scope of SCOPES) {
     writeFileSync(
       join(scopesDir, `amadeus-${scope}.md`),
-      `---\nname: ${scope}\n---\n`,
+      overrides.bodies?.[scope] ?? scopeBody(scope),
     );
   }
-  const grid = Object.fromEntries(gridScopes.map((scope) => [scope, { stages: {} }]));
+  const grid = Object.fromEntries(
+    (overrides.gridScopes ?? SCOPES).map((scope) => [
+      scope,
+      {
+        stages: {
+          ...SHARED_STAGES,
+          ...(harness === CANONICAL_FACE ? { [FACE_LOCAL_STAGE]: "EXECUTE" } : {}),
+          ...(overrides.cells?.[scope] ?? {}),
+        },
+      },
+    ]),
+  );
   writeFileSync(join(dataDir, "scope-grid.json"), `${JSON.stringify(grid)}\n`);
 }
 
@@ -98,11 +136,9 @@ describe("self-scope-consistency sensor", () => {
   test("reports a scope file and scope-grid mismatch", () => {
     const root = fixtureRoot();
     for (const harness of HARNESSES) {
-      seedHarness(
-        root,
-        harness,
-        harness === ".codex" ? SCOPES.filter((scope) => scope !== "self-fix") : SCOPES,
-      );
+      seedHarness(root, harness, {
+        gridScopes: harness === ".codex" ? SCOPES.filter((scope) => scope !== "self-fix") : SCOPES,
+      });
     }
     const result = evaluateSelfScopeConsistency(root);
     expect(result.pass).toBe(false);
@@ -190,6 +226,63 @@ describe("self-scope-consistency sensor", () => {
       surface: "scope-grid",
       reason: "unreadable",
       path: codexGridPath,
+    });
+  });
+
+  test("reports a shared scope-grid cell that diverges on one face", () => {
+    const root = fixtureRoot();
+    for (const harness of HARNESSES) {
+      seedHarness(root, harness, {
+        cells: harness === ".kimi-code" ? { "self-feature": { feasibility: "EXECUTE" } } : {},
+      });
+    }
+    const result = evaluateSelfScopeConsistency(root);
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      harness: ".kimi-code",
+      surface: "scope-grid",
+      reason: "cell-mismatch",
+      scope: "self-feature",
+      stage: "feasibility",
+      expected: "SKIP",
+      actual: "EXECUTE",
+      path: join(root, ".kimi-code", "tools", "data", "scope-grid.json"),
+    });
+    // The canonical face's face-local stage is absent from the other four, so
+    // it falls outside the shared intersection and must never be reported.
+    expect(
+      result.findings.some((finding) => finding.stage === FACE_LOCAL_STAGE),
+    ).toBe(false);
+  });
+
+  test("reports scope prose that diverges on one face", () => {
+    const root = fixtureRoot();
+    for (const harness of HARNESSES) {
+      seedHarness(root, harness, {
+        bodies:
+          harness === ".opencode"
+            ? { "self-refactor": "---\nname: self-refactor\n---\n\n# drifted\n" }
+            : {},
+      });
+    }
+    const result = evaluateSelfScopeConsistency(root);
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      harness: ".opencode",
+      surface: "scope-file",
+      reason: "body-mismatch",
+      scope: "self-refactor",
+      path: join(root, ".opencode", "scopes", "amadeus-self-refactor.md"),
+    });
+  });
+
+  test("passes against this repository's five real self-install faces", () => {
+    const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    expect(evaluateSelfScopeConsistency(repoRoot)).toMatchObject({
+      pass: true,
+      findings_count: 0,
+      findings: [],
+      skipped: null,
     });
   });
 
