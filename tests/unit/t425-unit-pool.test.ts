@@ -308,6 +308,29 @@ describe("t425 fixed pool", () => {
     }))).toThrow("invalid-unit-pool-audit-row");
   });
 
+  test("canonical queue events omit prompt, credential, and raw output fields", () => {
+    const repository = createMemoryUnitPoolRepository();
+    const coordinator = createUnitPoolCoordinator(repository);
+    coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 1, units: units(1) });
+    coordinator.acquire({ idempotencyKey: "acquire", batchId: "b" });
+    const attempt = coordinator.readProjection("b").active[0];
+    coordinator.confirmDispatch({
+      idempotencyKey: "confirm",
+      batchId: "b",
+      attemptId: attempt.attemptId,
+      nativeHandle: "native-u0",
+    });
+    coordinator.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "b",
+      attemptId: attempt.attemptId,
+      outcome: "succeeded",
+    });
+
+    const encoded = JSON.stringify(repository.readEventSets());
+    expect(encoded).not.toMatch(/"(?:prompt|credential|raw[_-]?output)"\s*:/i);
+  });
+
   test("reconciliation exhaustion settles the Unit as worker-unresponsive and drains the batch", () => {
     const projection = foldUnitPoolEventSets([{
       eventSetId: "set",
