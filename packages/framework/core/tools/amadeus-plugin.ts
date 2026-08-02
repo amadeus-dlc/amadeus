@@ -397,8 +397,22 @@ function hostStageGraph(hostRoot: string): HostStageGraphRead {
     return { kind: "invalid", reason: String(error) };
   }
   if (!Array.isArray(parsed)) return { kind: "invalid", reason: "not a JSON array" };
-  if (!parsed.every((e) => typeof e === "object" && e !== null && typeof (e as { slug?: unknown }).slug === "string")) {
-    return { kind: "invalid", reason: "entries are not stage entries (missing string slug)" };
+  // A recompile that SUCCEEDED never emits an empty graph, so `[]` here is a
+  // broken copy, not a small one — letting it through would classify every
+  // intent's rows as foreign and silently drop the whole re-sync (#1992).
+  if (parsed.length === 0) {
+    return { kind: "invalid", reason: "empty array — a compiled stage graph is never empty" };
+  }
+  // Validate exactly the fields the re-sync path consumes per entry — `slug`
+  // (row identity / foreign-row detection), `phase` (renderStageProgressSection
+  // buckets rows by it; a phase-less entry silently drops out of the rendered
+  // section), `number` (rebuildDerivedPlanFields writes it into the derived
+  // plan fields; a number-less entry writes the literal "undefined") — not the
+  // full StageEntry schema (#1992).
+  for (const field of ["slug", "phase", "number"] as const) {
+    if (!parsed.every((e) => typeof e === "object" && e !== null && typeof (e as Record<string, unknown>)[field] === "string")) {
+      return { kind: "invalid", reason: `entries are not stage entries (missing string ${field})` };
+    }
   }
   return { kind: "graph", graph: parsed as StageEntry[] };
 }

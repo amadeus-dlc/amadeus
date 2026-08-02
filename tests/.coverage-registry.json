@@ -3568,6 +3568,10 @@
         {
           "file": "tests/integration/t407-resync-noop-detection.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t410-host-graph-shape-validation.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
