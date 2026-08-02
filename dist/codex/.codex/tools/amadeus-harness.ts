@@ -132,6 +132,21 @@ function shippedRulesSubdir(): string | null {
   }
 }
 
+export function normalizeHarnessPackageName(name: unknown): string | null {
+  return typeof name === "string" && name.length > 0 ? name : null;
+}
+
+export function harnessPackageName(): string | null {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(join(DATA_DIR, "harness.json"), "utf-8"),
+    ) as { name?: unknown };
+    return normalizeHarnessPackageName(parsed.name);
+  } catch {
+    return null;
+  }
+}
+
 export function rulesSubdir(): string {
   if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
   if (process.env.AMADEUS_HARNESS_DIR) {

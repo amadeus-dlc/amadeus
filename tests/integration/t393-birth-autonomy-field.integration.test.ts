@@ -103,10 +103,9 @@ describe("t393 drift guard: generated state vs canonical state-template.md", () 
     "amadeus-shared",
     "state-template.md",
   );
-  // Fields the ENGINE emits that the template does not document yet (#1846
-  // cross-review "テンプレ側の陳腐化 2件"). Pinned so the set cannot grow
-  // silently; shrinking it (documenting them) is a template-only change.
-  const KNOWN_TEMPLATE_GAPS = ["Harness", "Test Strategy"];
+  // Fields the ENGINE emits that the template does not document yet. Pinned so
+  // the set cannot grow silently; shrinking it documents an existing field.
+  const KNOWN_TEMPLATE_GAPS = ["Test Strategy"];
 
   test("every field the template documents is emitted by birth", () => {
     const generated = new Set(fieldNames(readState(bornProject())));

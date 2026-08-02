@@ -33,6 +33,11 @@ import {
 import type { GraphStage, RuleFile } from "./amadeus-graph.ts";
 import { repointHarnessIncludes } from "./amadeus-includes.ts";
 import {
+  captureDetectedExecutionEnvironment,
+  renderFact,
+} from "./amadeus-harness-capability.ts";
+import { harnessPackageName } from "./amadeus-harness.ts";
+import {
   auditBlockField,
   activeIntent,
   activeSpace,
@@ -4437,6 +4442,15 @@ function handleIntentBirthStateBuild(
 
   const projectDesc = flags.arguments || "[Project description]";
   const harnessType = detectHarnessType();
+  const executionEnvironment = captureDetectedExecutionEnvironment(
+    harnessType,
+    harnessPackageName(),
+    {
+      model: process.env.AMADEUS_MODEL,
+      harnessVersion: process.env.AMADEUS_HARNESS_VERSION,
+      monotonicClockAvailable: typeof performance?.now === "function",
+    },
+  );
 
   // Phase Progress — per-phase status. Init pre-crosses the initialization →
   // first-post-init boundary (the PHASE_VERIFIED/PHASE_STARTED hand-off below),
@@ -4473,6 +4487,8 @@ function handleIntentBirthStateBuild(
 - **State Version**: 7
 - **Active Agent**: ${firstPostInitAgent}
 - **Harness**: ${harnessType}
+- **Harness Version**: ${renderFact(executionEnvironment.harnessVersion)}
+- **Model**: ${renderFact(executionEnvironment.model)}
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -4496,6 +4512,7 @@ function handleIntentBirthStateBuild(
 
 ## Runtime State
 - **Revision Count**: 0
+- **Execution Projection Digest**:
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

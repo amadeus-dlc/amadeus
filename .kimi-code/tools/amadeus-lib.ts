@@ -5209,6 +5209,7 @@ export function isAutonomousMode(stateContent: string | null): boolean {
 // A comma-separated list of 1-origin batch numbers, appended by
 // `amadeus-bolt approve-batch --batch <n>`; the engine only ever READS it.
 export const SWARM_BATCH_APPROVALS_FIELD = "Swarm Gated Batch Approvals";
+export const EXECUTION_PROJECTION_DIGEST_FIELD = "Execution Projection Digest";
 
 // Parse the recorded approvals into ascending 1-origin batch numbers. Numeric
 // parse, not string compare (verification-numeric-parse): a token that is not a

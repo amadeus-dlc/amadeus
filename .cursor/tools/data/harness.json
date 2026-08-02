@@ -1,4 +1,5 @@
 {
+  "name": "cursor",
   "harnessDir": ".cursor",
   "rulesSubdir": "amadeus-rules"
 }

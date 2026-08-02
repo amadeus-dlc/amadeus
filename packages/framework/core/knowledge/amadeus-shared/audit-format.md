@@ -29,9 +29,9 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (79 events, 19 categories)
+## Event Registry (80 events, 19 categories)
 
-### Workflow Lifecycle (6 events)
+### Workflow Lifecycle (7 events)
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
@@ -41,6 +41,7 @@ is.
 | ✓ `WORKFLOW_UNPARKED` | Park marker cleared on explicit `--resume` re-entry | — | Timestamp | `tools/amadeus-state.ts unpark` |
 | `INTENT_ARCHIVED` | Human-authorized intent archive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts archive` |
 | `INTENT_UNARCHIVED` | Human-authorized intent unarchive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts unarchive` |
+| `EXECUTION_EVENT_SET_COMMITTED` | One audit-first execution lifecycle event set commits before required projections or native dispatch | Root Operation Id, Event Set Digest, Event Set | — | `tools/amadeus-execution-lifecycle.ts` |
 
 ### Phase Lifecycle (4 events)
 

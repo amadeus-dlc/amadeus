@@ -1,4 +1,5 @@
 {
+  "name": "kimi",
   "harnessDir": ".kimi-code",
   "rulesSubdir": "rules"
 }
