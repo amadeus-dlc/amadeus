@@ -119,10 +119,9 @@ After all answers are collected:
 
 ### Step 9: Follow-Up Questions
 
-If ANY ambiguity, vagueness, or contradictions found in Step 8:
-- Create follow-up questions targeting the specific ambiguities
-- Resolve all ambiguities before proceeding
-- When in doubt, ask. Incomplete answers lead to poor designs.
+Apply stage-protocol.md §3 "Answer analysis": only material ambiguities qualify,
+and the stage gets at most one consolidated follow-up round. Record anything
+still unresolved for the existing approval boundary.
 
 ### Step 10: Generate Requirements
 

@@ -93,7 +93,7 @@ MANDATORY ambiguity analysis:
 - Scan ALL responses for vague language ("mix of", "not sure", "depends", "probably")
 - Check for contradictions between answers
 - Identify missing details
-- Create follow-up questions if ANY ambiguity found
+- Apply the material-ambiguity definition and single follow-up-round budget in stage-protocol.md §3
 
 ### Step 7: Present plan and generate
 

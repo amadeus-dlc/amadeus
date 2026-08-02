@@ -8,7 +8,24 @@ disable-model-invocation: true
 
 Use this skill for an unusually strict review focused on implementation quality, maintainability, abstraction quality, and codebase health.
 
-Above all, this skill should push the reviewer to be **ambitious** about code structure. Do not merely identify local cleanup opportunities. Actively search for "code judo" moves: restructurings that preserve behavior while making the implementation dramatically simpler, smaller, more direct, and more elegant.
+Above all, this skill should make structural review rigorous. Look for "code
+judo" moves that could make the implementation simpler, but classify them as
+`FOLLOW-UP` unless there is reproducible evidence of a requirement violation,
+clear regression, security/data-safety defect, or runtime failure. The
+possibility of a cleaner design is never a `BLOCKER` by itself.
+
+## Evidence and Severity Contract
+
+Use only the closed `BLOCKER | FOLLOW-UP | NIT` vocabulary from
+stage-protocol.md §12a. This contract overrides any demanding tone below:
+
+- `BLOCKER` requires concrete evidence of present harm or an explicit contract
+  violation. State the reproduction, violated requirement, or regression.
+- `FOLLOW-UP` covers possible simplifications, decomposition, abstraction
+  cleanup, file-size concerns, and other maintainability improvements.
+- `NIT` covers cosmetic preferences.
+
+The review may search deeply, but `READY` is blocked only by `BLOCKER`.
 
 ## Core Prompt
 
@@ -28,8 +45,8 @@ Apply the baseline prompt above, plus these explicit review rules:
    - Do not stop at "this could be a bit cleaner."
    - Look for opportunities to reframe the change so that whole branches, helpers, modes, conditionals, or layers disappear entirely.
    - Prefer the solution that makes the code feel inevitable in hindsight.
-   - Assume there is often a "code judo" move available: a re-organization that uses the existing architecture more effectively and makes the change dramatically simpler and more elegant.
-   - If you see a path to delete complexity rather than rearrange it, push hard for that path.
+   - Consider whether a "code judo" move uses the existing architecture more effectively and makes the change dramatically simpler and more elegant.
+   - If you see a path to delete complexity rather than rearrange it, record it as `FOLLOW-UP` unless it meets the evidence contract above.
 
 1. **Do not let a PR push a file from under 1k lines to over 1k lines without a very strong reason.**
    - Treat this as a strong code-quality smell by default.
@@ -168,19 +185,20 @@ Prefer a smaller number of high-conviction comments over a long list of cosmetic
 
 ## Approval Bar
 
-Do not approve merely because behavior seems correct.
-The bar for approval is:
+Approve when there is no unresolved `BLOCKER`. Use the following as review
+prompts, not additional completion criteria:
 
 - no clear structural regression
-- no obvious missed opportunity to make the implementation dramatically simpler when such a path is visible
+- no unrecorded opportunity to make the implementation dramatically simpler when such a path is visible
 - no unjustified file-size explosion
 - no obvious spaghetti-growth from special-case branching
 - no obviously hacky or magical abstraction that makes the code harder to reason about
 - no unnecessary wrapper/cast/optionality churn obscuring the real design
 - no clear architecture-boundary leak or avoidable canonical-helper duplication
-- no missed opportunity for an obvious decomposition that would materially improve maintainability
+- no unrecorded opportunity for an obvious decomposition that would materially improve maintainability
 
-Treat these as presumptive blockers unless the author can justify them clearly:
+Treat these as `FOLLOW-UP` unless the evidence contract independently makes one
+a `BLOCKER`:
 
 - the PR preserves a lot of incidental complexity when there is a plausible code-judo move that would delete it
 - the PR pushes a file from below 1000 lines to above 1000 lines
@@ -189,4 +207,4 @@ Treat these as presumptive blockers unless the author can justify them clearly:
 - the PR adds an unnecessary abstraction, wrapper, or cast-heavy contract that makes the design more indirect
 - the PR duplicates an existing helper or puts logic in the wrong layer when there is a clear canonical home
 
-If those conditions are not met, leave explicit, actionable feedback and push for a cleaner decomposition.
+Leave explicit, actionable feedback without changing `READY` for improvement-only findings.

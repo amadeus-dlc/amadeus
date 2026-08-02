@@ -31,7 +31,7 @@ every other structured question. This protocol never names a harness tool.
 | D3 | **Facts are never asked.** Anything determinable from the codebase, prior artifacts, or the code knowledge base is looked up by the agent, not put to the user. |
 | D4 | A fact the agent cannot settle by self-research is presented as an **estimate with a confidence level** (high / medium / low) for confirmation. If the user disagrees, demote it to a regular judgement question. |
 | D5 | **Decisions are always the user's.** Put each decision to the user and wait for the answer. Never decide on the user's behalf — autonomy is never inferred. |
-| D6 | **Hybrid termination.** When the depth guideline is reached (the existing `stage-protocol.md` §3 contract: Minimal ~2-4 / Standard ~5-8 / Comprehensive ~8-12+ questions), present a continuation check. The user may extend with "continue" or cut the session short at any point with "done". |
+| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite `stage-protocol.md` §3 ceiling: Minimal 4 / Standard 8 / Comprehensive 12 primary questions. Do not offer continuation beyond that ceiling. |
 | D7 | **Shared understanding is confirmed, never assumed.** At the end, present an agreement summary of every decision and obtain explicit confirmation. Do not proceed to artifact generation or session close before confirmation. On a correction request, update the affected answer and re-present the summary. |
 
 ## 2. The Grilling Loop (8 steps)

@@ -163,6 +163,24 @@ options:
 
 Every stage ends with this 5-part structure:
 
+### Closed stage-completion verification
+
+Before entering the approval gate, verify only this closed checklist:
+
+1. Every required artifact named by the current directive exists. Optional
+   artifacts are required only when their documented condition applies.
+2. Every validation command or sensor explicitly declared by the stage has run,
+   and its recorded result is available to the gate.
+3. Every unresolved finding has been classified with the closed severity
+   vocabulary below, and any `BLOCKER` is named at the existing approval
+   boundary.
+
+Once these three checks are complete, do not start another exploratory review,
+search for additional improvement opportunities, or invent a new completion
+criterion. `FOLLOW-UP` and `NIT` findings do not prevent the approval gate;
+`BLOCKER` findings are handed to the human there when the bounded reviewer loop
+cannot resolve them.
+
 ### Part 0: Enter the approval gate (mandatory — before presenting completion)
 Before showing the completion message:
 1. Optional before the human prompt: `bun {{HARNESS_DIR}}/tools/amadeus-state.ts gate-start <slug>` — marks the stage `[-]` → `[?]` and emits `STAGE_AWAITING_APPROVAL`. The stage is now on-hold waiting for the user; `/amadeus --status` will show "Awaiting your approval on <stage-name>". If this step is missed, the later `report --stage <slug> --result approved` opens the missing gate before approval, and `reject <slug>` likewise backfills it before the rejection (both backfilled rows carry `Recovered: true`).
@@ -256,7 +274,7 @@ When a stage needs to ask the user questions:
 **Step 1: Offer the user a choice of interaction mode — BEFORE authoring any questions.** The chosen mode decides whether a questions file is pre-authored at all, so the choice comes first: do NOT create a pre-built questions file while the mode is still undecided.
 
 ```question
-prompt: "This stage has ~[N] questions to work through. How would you like to answer them?"
+prompt: "This stage has up to [N] questions to work through. How would you like to answer them?"
 header: Questions
 multiSelect: false
 options:
@@ -286,20 +304,21 @@ Stage files list **topic areas and example questions** — they are guidance, no
    - **Construction**: Minimal questions. By this point, decisions should be made. Questions are **exceptional, not routine** — only when the agent detects genuine gaps that prior stages didn't cover (e.g., a unit-specific edge case not addressed in Application Design). Not a full Q&A session.
    - **Operation**: Occasional targeted questions only where operational parameters weren't established earlier
 
-| Depth | Target Range | Guidance |
-|-------|-------------|----------|
-| Minimal | ~2-4 per stage | Ask only what's essential to proceed. Skip questions where the answer can be reasonably inferred from context, prior stages, or codebase analysis. Minimal follow-ups unless answers are contradictory or dangerously vague. |
-| Standard | ~5-8 per stage | Cover the stage's topic areas. Follow up on ambiguities. Probe for missing details when answers are incomplete. |
-| Comprehensive | ~8-12+ per stage | Cover all topic areas in depth. Generate additional context-aware questions beyond the reference set — edge cases, compliance, scale, failure modes, cross-cutting concerns. Actively seek unknowns the user hasn't considered. |
+| Depth | Primary-question budget | Guidance |
+|-------|-------------------------|----------|
+| Minimal | at most 4 per stage | Ask only what's essential to proceed. Skip questions where the answer can be reasonably inferred from context, prior stages, or codebase analysis. |
+| Standard | at most 8 per stage | Cover the material decisions in the stage's topic areas without padding the set. |
+| Comprehensive | at most 12 per stage | Cover material edge cases, compliance, scale, failure modes, and cross-cutting concerns without generating questions merely to reach the ceiling. |
 
-**These are guidelines, not hard caps.** The agent MUST use judgment:
-- A Minimal fix with a vague one-line description warrants more questions — don't blindly cap at 2.
-- A Comprehensive enterprise feature with crystal-clear requirements warrants fewer — don't pad with noise.
+**These are finite ceilings, not targets.** The agent MUST use judgment below the
+ceiling:
+- A vague Minimal request still gets at most 4 primary questions; combine related decisions and adopt a documented recommendation for reversible, low-risk details.
+- A Comprehensive enterprise feature with crystal-clear requirements warrants fewer than 12 — don't pad with noise.
 - Prior stage outputs reduce what needs asking. If requirements-analysis already captured NFR targets, construction stages shouldn't re-ask.
-- Follow-up questions are always justified regardless of depth — ambiguity must be resolved.
+- Follow-up questions are limited to one consolidated round per stage and only for material ambiguity, with no more items than the depth's primary-question ceiling.
 - Contradiction detection and resolution remains MANDATORY at all depth levels.
 
-**How to apply**: When authoring the questions file in Step 2, use the stage file's topic areas and examples as a starting point. Generate context-appropriate questions within the depth range. For Minimal, focus on the fewest questions that unblock artifact generation. For Comprehensive, proactively explore areas the user may not have considered.
+**How to apply**: When authoring the questions file in Step 2, use the stage file's topic areas and examples as a starting point. Generate the fewest context-appropriate questions needed for material decisions without exceeding the depth ceiling.
 
 **Step 2: Author the questions file according to the chosen mode.** The questions file is always the decision record and the Stop-hook human-wait signal, but WHETHER it is pre-authored depends on the mode:
 
@@ -353,8 +372,16 @@ After collecting answers, analyze ALL responses for:
 - Contradictions between answers
 - Missing details needed for the next step
 
-If ANY ambiguity found: create follow-up questions and resolve before proceeding.
-**When in doubt, ask.** Incomplete answers lead to poor designs.
+An ambiguity is **material** only when its answer would substantially change an
+artifact, an external contract, or data safety and choosing a default would be
+irreversible or high risk. Reversible or low-risk uncertainty is not material:
+adopt the recommended value and record the assumption in `memory.md`.
+
+If material ambiguities remain, ask one consolidated follow-up round for the
+stage, containing no more items than the active depth's primary-question
+ceiling. After that round, do not generate another. Record any unresolved
+material ambiguity and carry it to the existing approval boundary; never create
+a new gate or silently claim it was resolved.
 
 **Write every pending question into the questions file before you end the turn —
 including follow-ups and chat-mode questions.** The questions file (with blank
@@ -372,7 +399,7 @@ Construction, where the loop is meant to keep running without you.
 When processing user answers from question files:
 - **Missing answers**: If any [Answer]: tag is still blank or contains only underscores, list the unanswered questions and ask the user to complete them before proceeding.
 - **Invalid answers**: If an answer does not match any provided option (A-E, X) and is not a clear free-text response for "Other", ask the user to clarify which option they intended.
-- **Ambiguous answers**: If an answer like "maybe B" or "either A or C" is given, ask the user to commit to a single choice and explain their reasoning.
+- **Ambiguous answers**: If an answer like "maybe B" or "either A or C" is given, resolve it within the stage's one material follow-up round. If that round is already spent, record the ambiguity for the existing approval boundary instead of asking again.
 
 ### Contradiction detection (MANDATORY)
 After all answers are collected, cross-check the full answer set for:
@@ -683,9 +710,9 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 
 ### Depth levels
 
-- **Minimal** (poc, fix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
-- **Standard** (feature, mvp, infra): ~5-8 questions per stage, full artifacts at moderate detail
-- **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute
+- **Minimal** (poc, fix, chore, refactor, security-patch): at most 4 primary questions per stage, minimal artifacts, brief analysis
+- **Standard** (feature, mvp, infra): at most 8 primary questions per stage, full artifacts at moderate detail
+- **Comprehensive** (enterprise): at most 12 primary questions per stage, comprehensive artifacts with deep analysis, all stages execute
 
 The orchestrator determines appropriate depth based on scope selection. Users can override at three points:
 1. Via the `--depth` flag: `/amadeus --scope fix --depth comprehensive` or `/amadeus --depth minimal`
@@ -695,19 +722,19 @@ The orchestrator determines appropriate depth based on scope selection. Users ca
 ### Depth-Level Examples
 
 **Minimal project** (e.g., fix, single-page internal tool):
-- Questions: ~2-4 per stage, essentials only, skip what's inferable from code/context
+- Questions: at most 4 per stage, essentials only, skip what's inferable from code/context
 - Requirements Analysis: 5-10 requirements, brief descriptions, minimal NFR coverage
 - Application Design: Single component diagram, basic data model, no ADRs needed
 - Functional Design: Brief business rules, simple domain entities, skip frontend-components.md
 
 **Standard project** (e.g., multi-page web application):
-- Questions: ~5-8 per stage, cover topic areas, follow up on ambiguities
+- Questions: at most 8 per stage, cover material topic areas
 - Requirements Analysis: 15-30 requirements with acceptance criteria, moderate NFR coverage
 - Application Design: Component diagrams with interactions, data model with relationships, 2-3 ADRs
 - Functional Design: Detailed business logic models, comprehensive business rules, domain entity lifecycle
 
 **Comprehensive project** (e.g., distributed system with integrations):
-- Questions: ~8-12+ per stage, deep probing, generate questions beyond reference set
+- Questions: at most 12 per stage, cover material risk and contract decisions
 - Requirements Analysis: 30+ requirements, detailed acceptance criteria, comprehensive NFR coverage across all categories
 - Application Design: Multi-layer component diagrams, detailed data flow, integration sequence diagrams, 5+ ADRs with alternatives analysis
 - Functional Design: Decision trees, state machines, concurrency handling, error recovery flows, cross-unit interaction patterns
@@ -725,15 +752,15 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 - ~5-15 tests total for a typical project
 - Soft guideline — LLM can exceed when safety-critical context demands it (e.g., security-critical fix)
 
-**Standard — per-component model:**
-- 5-8 tests per component
+**Standard — requirement and risk model:**
+- Select tests from requirements, changed behavior, boundary risk, and regression history; use 8 tests per component only as a planning ceiling, not a quota or coverage substitute
 - Unit tests + integration tests (key boundaries)
 - E2E, performance, security tests skipped unless NFR requirements exist
 - Test pyramid proportions apply within the generated set (75% unit / 20% integration / 5% E2E)
 - Soft guideline
 
-**Comprehensive — per-component model:**
-- 10-15 tests per component
+**Comprehensive — requirement and risk model:**
+- Select tests from requirements, changed behavior, boundary risk, and NFR evidence; use 15 tests per component only as a planning ceiling, not a quota or coverage substitute
 - All test types: unit + integration + E2E + performance (if NFRs) + security (if NFRs)
 - Test pyramid proportions apply
 - Soft guideline
@@ -880,7 +907,8 @@ When a subagent completes its work, it MUST return a structured summary to the o
 
 ### Rules:
 - The orchestrator MUST read this summary before proceeding to the next stage
-- If the "Issues / Concerns" section is non-empty, the orchestrator MUST present them to the user before continuing
+- Prefix each issue or concern with exactly `BLOCKER |`, `FOLLOW-UP |`, or `NIT |` using the closed severity contract in §12a
+- Present `BLOCKER` entries immediately and halt the affected work for human direction; aggregate `FOLLOW-UP` entries in the normal completion message; omit `NIT` entries from user-facing status
 - If the "Produced" section lists fewer files than expected for the stage, the orchestrator MUST investigate before marking the stage complete
 
 ### Context budget for subagent prompts
@@ -925,6 +953,21 @@ worth reporting rather than expected noise.
 
 If the `run-stage` directive includes a `reviewer` field (non-null), the orchestrator MUST invoke the reviewer as a **separate sub-agent** after the stage body produces its artifacts and before the §13 learnings ritual.
 
+### Closed finding severity and verdict contract
+
+Every reviewer and worker finding uses exactly one of these prefixes:
+
+| Severity | Evidence contract | Effect |
+|---|---|---|
+| `BLOCKER` | Reproducible failure, explicit requirement or contract violation, security/data-safety defect, or demonstrated regression | Blocks `READY`; may be handed to the builder and consume another bounded review iteration |
+| `FOLLOW-UP` | Concrete improvement, maintainability opportunity, or deferred risk without evidence of present failure or requirement violation | Does not block `READY`; aggregate at the completion gate and do not re-review for it |
+| `NIT` | Cosmetic or optional local preference | Does not block `READY`, does not trigger builder handoff, and is omitted from user-facing status |
+
+`READY` means zero unresolved `BLOCKER` findings. `NOT-READY` requires at least
+one unresolved `BLOCKER`; finding count never changes severity. A possible
+simplification, code-judo move, or unspecified opportunity is `FOLLOW-UP`
+unless the reviewer supplies the `BLOCKER` evidence above.
+
 ### Flow
 
 1. **Build the authoritative declared pass-list.** Before spawning the reviewer, pass the unchanged current `run-stage` directive JSON on stdin to:
@@ -955,7 +998,7 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
    - **READY** → proceed to §13 learnings ritual then the approval gate
    - **NOT-READY** and `reviewIterations < reviewer_max_iterations` (default 2):
      - Increment review iteration counter
-     - Re-invoke the stage's lead agent (inline or subagent per `directive.mode`) with the artifact + review findings. The builder addresses the findings and updates the artifact.
+     - Re-invoke the stage's lead agent (inline or subagent per `directive.mode`) with the artifact + unresolved `BLOCKER` findings only. The builder addresses those blockers and updates the artifact. Keep `FOLLOW-UP` for the completion message; never spend another review iteration on `FOLLOW-UP` or `NIT` alone.
      - Return to step 1 (re-invoke reviewer)
    - **NOT-READY** and iterations exhausted:
      - Proceed to approval gate with unresolved findings noted:

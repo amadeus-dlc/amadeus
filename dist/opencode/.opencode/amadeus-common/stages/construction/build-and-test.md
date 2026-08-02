@@ -72,11 +72,11 @@ Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**`
 - `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). ~5-15 tests total. Skip all other test types.
 
 **Standard strategy** — generate:
-- `unit-test-instructions.md`: 5-8 tests per component, key behavior coverage
+- `unit-test-instructions.md`: Requirement- and risk-driven key behavior coverage; 8 tests per component is a planning ceiling, not a quota
 - `integration-test-instructions.md`: Key boundary tests, cross-unit interaction
 
 **Comprehensive strategy** — generate all applicable:
-- `unit-test-instructions.md`: 10-15 tests per component, thorough coverage
+- `unit-test-instructions.md`: Requirement-, risk-, and NFR-driven coverage; 15 tests per component is a planning ceiling, not a quota
 - `integration-test-instructions.md`: Cross-unit interaction, external dependency handling
 - `performance-test-instructions.md` (IF NFR performance requirements exist): Load testing, benchmarks, regression detection
 - `security-test-instructions.md` (IF NFR security requirements exist): SAST/DAST, auth testing, injection testing
