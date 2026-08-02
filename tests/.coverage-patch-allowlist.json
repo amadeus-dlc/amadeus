@@ -19,27 +19,9 @@
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "879",
-    "reason": "Stop-hook payload parse inside `if (import.meta.main)` \u2014 same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
-    "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
-  },
-  {
-    "file": "packages/framework/core/hooks/amadeus-stop.ts",
     "lines": "906",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "1005",
-    "reason": "The ask/select-intent human-wait branch runs inside the spawned Stop hook. t121 drives both directive kinds through the shipped hook process and asserts exit 0 with no forwarding-loop block; the local live Codex E2E also measures the line, but that E2E is intentionally disabled on GitHub Actions, where Bun does not attribute child-process execution to the parent LCOV report.",
-    "expiry": "remove when the Stop hook body gains an in-process driver or GitHub coverage can merge child-process execution without running live codex exec"
-  },
-  {
-    "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "lines": "1094",
-    "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
-    "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   },
   {
     "file": "packages/framework/core/otel/event-registry.ts",
@@ -58,12 +40,6 @@
     "lines": "771-779",
     "reason": "The import.meta.main CLI block only runs in a spawned process (session-end spawns `relay.ts flush`), which bun --coverage does not measure (cid:code-generation:bun-coverage-spawn-blindspot). Its two callees are covered in-process: parseCliArgs by tests/unit/t374-relay-otlp-mapping.test.ts and runRelay by tests/integration/t372-otlp-relay.test.ts across all four summary arms.",
     "expiry": "remove if bun measures spawned children, or if the dispatch moves into an exported handler"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-audit.ts",
-    "lines": "1230-1232",
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
@@ -106,12 +82,6 @@
     "lines": "317",
     "reason": "Defensive views-directory mkdirSync catch immediately after Store.create minted and created a fresh election directory. Normal create and view-write failures are covered; reaching this row requires a permission or filesystem race between Store.create and the views mkdir, and the CLI has no injectable filesystem seam.",
     "expiry": "remove when handleOpen gains an injectable filesystem seam for post-create views-directory failure"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-execution-lifecycle.ts",
-    "lines": "266-268",
-    "reason": "Multi-line callback type for the in-memory repository transaction body; runtime-erased, but Bun can stamp the type-only rows DA:0. The transaction body and append callback are exercised in-process throughout tests/unit/t407-execution-lifecycle-coordinator.test.ts.",
-    "expiry": "remove if the signature is collapsed or Bun stops stamping erased callback types"
   },
   {
     "file": "packages/framework/core/tools/amadeus-execution-lifecycle.ts",
@@ -1033,12 +1003,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
-    "lines": "173-177",
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "846-849",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
@@ -1051,12 +1015,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
-    "lines": "885-886",
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "887",
     "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -1065,12 +1023,6 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "901-903",
     "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
-    "expiry": "remove when main() gains an in-process argv driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-swarm.ts",
-    "lines": "907",
-    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
