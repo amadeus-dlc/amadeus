@@ -26,6 +26,22 @@ function parseJson(text: string, label: string): unknown {
   }
 }
 
+function parseBaselineEntry(raw: unknown, index: number, label: string): BaselineEntry {
+  if (!isRecord(raw)
+    || typeof raw.fingerprint !== "string"
+    || !RULE_IDS.includes(raw.ruleId as (typeof RULE_IDS)[number])
+    || typeof raw.file !== "string"
+    || raw.file.startsWith("/")
+    || raw.file.includes("..")
+    || typeof raw.reason !== "string"
+    || raw.reason.trim() === ""
+    || !Array.isArray(raw.issues)
+    || !raw.issues.every((issue) => typeof issue === "string")) {
+    throw new InfraFailure("BASELINE_INVALID", `${label}.entries[${index}] is invalid`);
+  }
+  return raw as BaselineEntry;
+}
+
 export function parseBaseline(text: string, label = "baseline"): BaselineDoc {
   const value = parseJson(text, label);
   if (!isRecord(value) || value.schemaVersion !== 1 || value.direction !== "shrink-only") {
@@ -43,23 +59,12 @@ export function parseBaseline(text: string, label = "baseline"): BaselineDoc {
   const entries: BaselineEntry[] = [];
   const fingerprints = new Set<string>();
   for (const [index, raw] of value.entries.entries()) {
-    if (!isRecord(raw)
-      || typeof raw.fingerprint !== "string"
-      || !RULE_IDS.includes(raw.ruleId as (typeof RULE_IDS)[number])
-      || typeof raw.file !== "string"
-      || raw.file.startsWith("/")
-      || raw.file.includes("..")
-      || typeof raw.reason !== "string"
-      || raw.reason.trim() === ""
-      || !Array.isArray(raw.issues)
-      || !raw.issues.every((issue) => typeof issue === "string")) {
-      throw new InfraFailure("BASELINE_INVALID", `${label}.entries[${index}] is invalid`);
+    const entry = parseBaselineEntry(raw, index, label);
+    if (fingerprints.has(entry.fingerprint)) {
+      throw new InfraFailure("BASELINE_INVALID", `${label} contains duplicate fingerprint ${entry.fingerprint}`);
     }
-    if (fingerprints.has(raw.fingerprint)) {
-      throw new InfraFailure("BASELINE_INVALID", `${label} contains duplicate fingerprint ${raw.fingerprint}`);
-    }
-    fingerprints.add(raw.fingerprint);
-    entries.push(raw as BaselineEntry);
+    fingerprints.add(entry.fingerprint);
+    entries.push(entry);
   }
   return {
     schemaVersion: 1,
