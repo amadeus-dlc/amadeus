@@ -11,7 +11,7 @@ bun test --timeout 120000 \
   tests/unit/t313-doctor-plugin-section.test.ts \
   tests/unit/t325-face-disposition.test.ts \
   tests/unit/t326-adapter-compose-seam.test.ts \
-  tests/unit/t413-formal-model-readiness.test.ts
+  tests/unit/t415-formal-model-readiness.test.ts
 ```
 
 project-only `plugins` schema、名前・重複・順序、doctor 6状態、7 face分類、OpenCode lifecycle seam、formal model readinessのzero/add/delete/invalid/past-successを検証する。

@@ -7,7 +7,7 @@ import { activationModelMap } from "../harness/formal-model-fixture.ts";
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
 
-describe("t413 shared formal-model readiness seam", () => {
+describe("t415 shared formal-model readiness seam", () => {
   test("a strict declaration with both assets is ready", () => {
     const present = new Set([
       "specs/tla/FormalElection.tla",

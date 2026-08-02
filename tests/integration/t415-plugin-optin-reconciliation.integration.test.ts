@@ -56,7 +56,7 @@ function deps(options: {
       backend,
       verify: () => ({ ok: true }),
       lock: createNodeLock(root),
-      newTxnId: () => `t413-${Date.now()}-${Math.random()}`,
+      newTxnId: () => `t415-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => true,
     generateRunners: () => true,
@@ -91,7 +91,7 @@ function writeFixturePlugin(name: string): void {
 }
 
 beforeEach(() => {
-  project = mkdtempSync(join(tmpdir(), "amadeus-t413-project-"));
+  project = mkdtempSync(join(tmpdir(), "amadeus-t415-project-"));
   host = join(project, ".codex");
   mkdirSync(host, { recursive: true });
   cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
@@ -100,7 +100,7 @@ beforeEach(() => {
 
 afterEach(() => rmSync(project, { recursive: true, force: true }));
 
-describe("t413 project opt-in reconciliation", () => {
+describe("t415 project opt-in reconciliation", () => {
   test("doctor reports invalid project configuration", () => {
     writeFileSync(join(project, "amadeus", "config.json"), JSON.stringify({ plugins: PLUGIN }));
     const result = runPluginCli(["doctor", "--project-root", host], deps());
@@ -175,10 +175,10 @@ describe("t413 project opt-in reconciliation", () => {
   test("a changed project source is restaged and recomposed", () => {
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
     const sourceTool = join(project, "plugins", PLUGIN, "tools", "canonical.ts");
-    writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// t413 source change\n`);
+    writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// t415 source change\n`);
     const result = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
     expect(result.kind).toBe("composed");
-    expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t413 source change");
+    expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t415 source change");
   });
 
   test("doctor distinguishes staged drift, composition drift, and an invalid staged manifest", () => {

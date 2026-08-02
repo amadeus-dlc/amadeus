@@ -5,7 +5,7 @@
 ## 実行方法
 
 ```bash
-bun test --timeout 120000 tests/perf/t413-plugin-optin-startup-performance.test.ts
+bun test --timeout 120000 tests/perf/t415-plugin-optin-startup-performance.test.ts
 ```
 
 同一runner上でbaselineと変更後を交互測定する。未選択とcurrentは各100回、初回導入は明示install+compose baselineと自動導入を各30回測定し、p95を比較する。

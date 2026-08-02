@@ -8,8 +8,8 @@
 bun test --timeout 120000 \
   tests/integration/t340-plugin-drop-fs-restore.integration.test.ts \
   tests/integration/t353-plugin-install-verb.integration.test.ts \
-  tests/integration/t413-plugin-optin-selection.integration.test.ts \
-  tests/integration/t413-plugin-optin-reconciliation.integration.test.ts
+  tests/integration/t415-plugin-optin-selection.integration.test.ts \
+  tests/integration/t415-plugin-optin-reconciliation.integration.test.ts
 bun audit --production
 git diff --exit-code -- package.json bun.lock
 ```

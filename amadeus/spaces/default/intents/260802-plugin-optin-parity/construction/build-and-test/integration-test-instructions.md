@@ -15,8 +15,8 @@ bun test --timeout 120000 \
   tests/integration/t353-plugin-install-verb.integration.test.ts \
   tests/integration/t381-advisory-checkpoints-latch.integration.test.ts \
   tests/integration/t382-activation-real-layout-spec-root.integration.test.ts \
-  tests/integration/t413-plugin-optin-selection.integration.test.ts \
-  tests/integration/t413-plugin-optin-reconciliation.integration.test.ts
+  tests/integration/t415-plugin-optin-selection.integration.test.ts \
+  tests/integration/t415-plugin-optin-reconciliation.integration.test.ts
 ```
 
 ## E2Eと全回帰
@@ -24,7 +24,7 @@ bun test --timeout 120000 \
 ```bash
 bun test --timeout 120000 \
   tests/e2e/t341-plugin-conformance-journey.serial.test.ts \
-  tests/e2e/t413-plugin-optin-cross-harness.serial.test.ts
+  tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts
 bun run test:ci
 ```
 

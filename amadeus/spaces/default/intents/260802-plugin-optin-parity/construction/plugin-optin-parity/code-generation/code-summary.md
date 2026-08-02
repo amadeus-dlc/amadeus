@@ -34,9 +34,9 @@ Architecture Review Iteration 1 の BLOCKER 3件と MAJOR 2件は、cross-harnes
 
 ## 計画との差分
 
-- 6状態 doctor の全数写像は `t313-doctor-plugin-section.test.ts` から canonical `doctorPluginRows` を直接通し、実FS状態は `t339` と `t413` selection/reconciliation に分割した。検証範囲は計画と同じである。
+- 6状態 doctor の全数写像は `t313-doctor-plugin-section.test.ts` から canonical `doctorPluginRows` を直接通し、実FS状態は `t339` と `t415` selection/reconciliation に分割した。検証範囲は計画と同じである。
 - 3 checkpoint × main/single の比較は lifecycle E2E と責務を分け、engine seam を直接駆動する `t381-advisory-checkpoints-latch.integration.test.ts` に置いた。cross-harness E2E は7 faceの実startupと現在host限定/zero-impactを担当する。
-- readiness の状態遷移は既存 formal-verif unit名へ分散させず、新しい共有 seam の `t413-formal-model-readiness.test.ts`、実 loader integration、activation real-layout integration で検証した。
+- readiness の状態遷移は既存 formal-verif unit名へ分散させず、新しい共有 seam の `t415-formal-model-readiness.test.ts`、実 loader integration、activation real-layout integration で検証した。
 - `.codex/.amadeus-plugin-*`、`.codex/plugins/`、`.codex/skills/` は dogfood compose が生成した machine-local/runtime 面であり、正本・配布生成物・commit 対象には含めない。
 - commit、push、PR 操作は実施していない。
 
@@ -45,5 +45,5 @@ Architecture Review Iteration 1 の BLOCKER 3件と MAJOR 2件は、cross-harnes
 - 実装計画: `code-generation-plan.md`
 - 正本コード: `packages/framework/core/`、`packages/framework/harness/opencode/`、`scripts/plugin-projection.ts`
 - 共有 readiness: `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` と `plugins/formal-model-check/tools/`
-- 新規テスト: `tests/unit/t413-formal-model-readiness.test.ts`、`tests/integration/t413-plugin-optin-*.test.ts`、`tests/e2e/t413-plugin-optin-cross-harness.serial.test.ts`、`tests/perf/t413-plugin-optin-startup-performance.test.ts`
+- 新規テスト: `tests/unit/t415-formal-model-readiness.test.ts`、`tests/integration/t415-plugin-optin-*.test.ts`、`tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts`、`tests/perf/t415-plugin-optin-startup-performance.test.ts`
 - 生成面: `dist/` と存在する self-install harness directory

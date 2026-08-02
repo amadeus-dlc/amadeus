@@ -24,7 +24,7 @@
 - 既存の `amadeus-plugin-compose.ts` の plugin 単位 transaction を合成の正本として再利用する。project source、project config、host staging を跨ぐ install の補償処理は CLI 上位の transaction seam に閉じ込める。
 - `dist/`、self-install 面、`plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` の正本コピーは手編集しない。framework source を変更後、package/promote コマンドで生成する。
 - 形式検査は自動実行しない。自動導入は plugin を利用可能にするところまで、activation は read-only judgment、TLC 実行は利用者が明示した `formal-model-check` stage に限定する。
-- テスト番号は調査時点の次番 `t413` を本 Unit に割り当てる。実装開始直前に `rg --files tests` で競合を再確認し、既に使用されていれば同一 Unit の全新規ファイルを次の未使用番号へ一括変更する。
+- テスト番号は調査時点の次番 `t415` を本 Unit に割り当てる。実装開始直前に `rg --files tests` で競合を再確認し、既に使用されていれば同一 Unit の全新規ファイルを次の未使用番号へ一括変更する。
 
 ## 3. 変更対象
 
@@ -49,7 +49,7 @@
 | 層 | ファイル | 主な検証対象 |
 | --- | --- | --- |
 | Unit | `tests/unit/t257-amadeus-config.test.ts` | `plugins` schema、global-only、正規化、拒否ケース |
-| Integration | `tests/integration/t413-plugin-optin-selection.integration.test.ts`（新規） | 6状態の判定表、再調整 plan、fail-closed、補償判断 |
+| Integration | `tests/integration/t415-plugin-optin-selection.integration.test.ts`（新規） | 6状態の判定表、再調整 plan、fail-closed、補償判断 |
 | Unit | `tests/unit/t313-doctor-plugin-section.test.ts` / `tests/unit/t314-doctor-plugin-rows.test.ts` | doctor の正規化 code と表示・exit 寄与 |
 | Unit | `tests/unit/t306-plugin-host-class.test.ts` / `tests/unit/t326-adapter-compose-seam.test.ts` | 7 face の自動 trigger 分類と OpenCode seam |
 | Unit | `tests/unit/t-formal-verif-run-model-check.test.ts` / `tests/unit/t-formal-verif-tla-model-loader.test.ts` | 有効モデルなしの明示検査拒否 |
@@ -57,12 +57,12 @@
 | Integration | `tests/integration/t353-plugin-install-verb.integration.test.ts` | supply/config/staging/composition の install 同期と rollback |
 | Integration | `tests/integration/t340-plugin-drop-fs-restore.integration.test.ts` | 安全な drop、config 更新順序、供給元保持、失敗時不変 |
 | Integration | `tests/integration/t339-plugin-doctor-standalone-render.integration.test.ts` | desired を含む doctor/status の状態別診断 |
-| Integration | `tests/integration/t413-plugin-optin-reconciliation.integration.test.ts`（新規） | fresh/current/stale/remove/source-missing/partial-failure/retry の現在host再調整 |
+| Integration | `tests/integration/t415-plugin-optin-reconciliation.integration.test.ts`（新規） | fresh/current/stale/remove/source-missing/partial-failure/retry の現在host再調整 |
 | Integration | `tests/integration/t303-plugin-projection-harness.integration.test.ts` | OpenCode を含む7 face の生成物と trigger disposition |
 | Integration | `tests/integration/t378-advisories-directive-field.integration.test.ts` / `tests/integration/t381-advisory-checkpoints-latch.integration.test.ts` / `tests/integration/t382-activation-real-layout-spec-root.integration.test.ts` | 4値 activation、3 checkpoint、main/single、latch |
 | E2E | `tests/e2e/t341-plugin-conformance-journey.serial.test.ts` | 公開 CLI の install→doctor→drop journey と rollback |
-| E2E | `tests/e2e/t413-plugin-optin-cross-harness.serial.test.ts`（新規） | fresh worktree、7 face/6 host、3 checkpoint、main/single parity、zero-impact |
-| Perf | `tests/perf/t413-plugin-optin-startup-performance.test.ts`（新規） | desiredなし/current各100回、初回導入30回の p95 退行上限 |
+| E2E | `tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts`（新規） | fresh worktree、7 face/6 host、3 checkpoint、main/single parity、zero-impact |
+| Perf | `tests/perf/t415-plugin-optin-startup-performance.test.ts`（新規） | desiredなし/current各100回、初回導入30回の p95 退行上限 |
 | Distribution | `tests/integration/t311-zero-plugin-byte-identical.integration.test.ts` / `tests/integration/t379-plugin-tools-distribution.integration.test.ts` / `tests/integration/t-package-generated-plugin-sources.integration.test.ts` | zero-impact、新core toolの全配布、generated formal-model source parity |
 
 Comprehensive 戦略として、構成判定・再調整・activation の各 component に unit/integration/E2E を通算10〜15ケース配置する。実FS/process を使うケースは unit allowlist を増やさず integration/E2E に置き、各ファイルへ既存形式の `// size:` を付ける。テスト設定は既存 `package.json`、`tests/run-tests.ts`、`tests/lib/test-size.ts` を利用し、新しい framework は追加しない。新規ファイルが自動 discovery されることと size classification をテスト実行前に確認する。
@@ -83,7 +83,7 @@ Comprehensive 戦略として、構成判定・再調整・activation の各 com
 
 ### Step 1: ベースラインと Red の固定
 
-- [x] 対象ファイルの現行テストを実行し、変更前 Green と `t413` の未使用を確認する。
+- [x] 対象ファイルの現行テストを実行し、変更前 Green と `t415` の未使用を確認する。
 - [x] `tests/unit/t257-amadeus-config.test.ts`、`tests/integration/t353-plugin-install-verb.integration.test.ts`、`tests/integration/t381-advisory-checkpoints-latch.integration.test.ts` に、Issue #2018 を再現する最小 Red を各1件ずつ追加する。
 - [x] Red は「desired=`formal-model-check` なのに fresh Codex host の0/0をcurrentと判定する」「install成功前にconfigを確定してしまう」「仕様0件をnever-run/currentとして扱える」の3経路を明示的に落とす。
 
@@ -100,7 +100,7 @@ Trace: FR-1.1〜FR-1.8、FR-6.1、NFR-1、NFR-2、NFR-5。
 
 ### Step 3: desired state と再調整 plan の深いモジュール化
 
-- [x] `tests/integration/t413-plugin-optin-selection.integration.test.ts` を先に作り、`not-selected`、`source-missing`、`not-installed`、`stale`、`current`、`failed` の6状態、名前順決定性、全source事前検証、managed staging のみ削除、部分成功後のretry planを検証する。
+- [x] `tests/integration/t415-plugin-optin-selection.integration.test.ts` を先に作り、`not-selected`、`source-missing`、`not-installed`、`stale`、`current`、`failed` の6状態、名前順決定性、全source事前検証、managed staging のみ削除、部分成功後のretry planを検証する。
 - [x] `packages/framework/core/tools/amadeus-plugin-selection.ts` を追加し、project root、host root、desired名、source/staging/composition observation から pure な判別 union と reconcile plan を返す。
 - [x] 同モジュールに `amadeus/config.json` の原子的な temp+rename 更新、source/staging の scoped snapshot/restore、containment check を置く。plugin名からのpathは `plugins/` と現在hostの `.amadeus-plugin-src/` を越えないことをスマートコンストラクタで保証する。
 - [x] 設定不正またはsource不足は全pluginを変更前に拒否し、合成開始後は既存 engine transaction の plugin単位 commit を維持する。
@@ -109,7 +109,7 @@ Trace: FR-1.3〜FR-1.8、FR-2.2〜FR-2.5、FR-2A、FR-3.1〜FR-3.3、NFR-1、NFR
 
 ### Step 4: `compose` の現在host自動導入と冪等再調整
 
-- [x] `tests/integration/t413-plugin-optin-reconciliation.integration.test.ts` に fresh 0/0、current no-op、source変更によるstale、desired削除、複数pluginの1件失敗、次回retryを実FSで追加する。
+- [x] `tests/integration/t415-plugin-optin-reconciliation.integration.test.ts` に fresh 0/0、current no-op、source変更によるstale、desired削除、複数pluginの1件失敗、次回retryを実FSで追加する。
 - [x] `packages/framework/core/tools/amadeus-plugin.ts` の `isRecordCurrent` と `handleCompose` を desired state 基準へ切り替える。stagingのdiscover件数だけで 0/0 を current としない。
 - [x] compose開始前に設定全体と全sourceを検証し、現在hostへ desired source を昇順で materialize してから既存 inspect/plan/apply を呼ぶ。desiredから外れた plugin は composition record の所有権とsource一致を確認してから安全にdrop/pruneする。
 - [x] `compose --if-stale` は `not-selected` か `current` のみ無変更、`not-installed`/`stale` は再調整、`source-missing`/`failed` は plugin名・host・失敗段階付き非0とする。
@@ -130,7 +130,7 @@ Trace: FR-1A.1〜FR-1A.7、FR-2.4〜FR-2.5、FR-6.2〜FR-6.3、NFR-1、NFR-2、N
 ### Step 6: diagnosis、警告、公開CLI結果
 
 - [x] `tests/unit/t313-doctor-plugin-section.test.ts` で `doctorPluginRows` まで直接通し、6状態から表示/exitへの全数写像を追加する。
-- [x] `tests/integration/t339-plugin-doctor-standalone-render.integration.test.ts`、`t413-plugin-optin-selection.integration.test.ts`、`t413-plugin-optin-reconciliation.integration.test.ts` の組合せで6状態、host名/plugin名/不足箇所、config非変更を追加する。
+- [x] `tests/integration/t339-plugin-doctor-standalone-render.integration.test.ts`、`t415-plugin-optin-selection.integration.test.ts`、`t415-plugin-optin-reconciliation.integration.test.ts` の組合せで6状態、host名/plugin名/不足箇所、config非変更を追加する。
 - [x] `packages/framework/core/tools/amadeus-plugin.ts` の doctor/status projection を desired/source/staging/composition の observation に接続し、成功済みと失敗pluginを個別表示する。
 - [x] `packages/framework/core/hooks/amadeus-plugin-compose.ts` は既存の非ブロッキング契約を保ち、失敗時はCLIの詳細に加えて対象hostと再試行コマンドを1回だけ警告する。成功/no-opでは無警告とする。
 
@@ -151,17 +151,17 @@ Trace: FR-2.1〜FR-2.7、FR-4.1、FR-6.3、NFR-3、NFR-5。
 - [x] `tests/integration/t381-advisory-checkpoints-latch.integration.test.ts` に3 checkpoint × main/single の同値性、unselected時の無案内、current時の無案内、TLC非起動を追加する。
 - [x] `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` に「有効な宣言済みmodelとcfgが存在する」read-only readiness判定を追加し、生成コピーを経由して明示実行側も同じ判定を使う。
 - [x] `packages/framework/core/tools/amadeus-plugin-activation.ts` の judgment/advisory を4値へ拡張し、対象なし/削除/無効mapは `not-ready`、対象あり成功記録なしは `never-run`、hash差分は `changed`、一致は `current` とする。`recordActivationVerdict` は `not-ready` で書かない。
-- [x] `tests/unit/t413-formal-model-readiness.test.ts`、`tests/integration/t-formal-verif-tla-model-loader.integration.test.ts`、`t382-activation-real-layout-spec-root.integration.test.ts` で、対象なしの明示検査が理由付き非0、対象追加後は成功可能、対象削除後は過去recordがあっても `not-ready` へ戻ることを固定する。
+- [x] `tests/unit/t415-formal-model-readiness.test.ts`、`tests/integration/t-formal-verif-tla-model-loader.integration.test.ts`、`t382-activation-real-layout-spec-root.integration.test.ts` で、対象なしの明示検査が理由付き非0、対象追加後は成功可能、対象削除後は過去recordがあっても `not-ready` へ戻ることを固定する。
 
 Trace: FR-4.1〜FR-4.7、FR-5.1〜FR-5.4、FR-6.1、NFR-1、NFR-3〜NFR-5。
 
 ### Step 9: Comprehensive の cross-harness E2E と性能回帰
 
-- [x] `tests/e2e/t413-plugin-optin-cross-harness.serial.test.ts` を作り、fresh fixtureの7 face/6 hostについて、project configに選択ありなら各face起動時に「そのhostだけ」staging/recordが作られ、他hostが不変であることを検証する。
+- [x] `tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts` を作り、fresh fixtureの7 face/6 hostについて、project configに選択ありなら各face起動時に「そのhostだけ」staging/recordが作られ、他hostが不変であることを検証する。
 - [x] `tests/integration/t381-advisory-checkpoints-latch.integration.test.ts` で Requirements Analysis、Functional Design、Build and Test の各checkpointを main workflow と `--single` の双方で実行し、構造化advisoryがbyte-equalであることを比較する。
 - [x] 同E2Eで未opt-in repoの全faceがconfig/staging/composition/graphを変更せず、advisoryもTLC stateも発生しないことを検証する。
 - [x] `tests/e2e/t341-plugin-conformance-journey.serial.test.ts` とinstall/drop/reconciliation integrationで公開CLIのinstall→再起動no-op→doctor→drop→再起動not-selectedを固定する。
-- [x] `tests/perf/t413-plugin-optin-startup-performance.test.ts` を作り、同一runnerで baseline/変更後を交互測定する。desiredなし/currentは各100回、初回導入は既存install+compose基準と自動導入を各30回測定し、p95増加が `max(20%, 25ms)` / `max(20%, 50ms)` 内であることを判定する。
+- [x] `tests/perf/t415-plugin-optin-startup-performance.test.ts` を作り、同一runnerで baseline/変更後を交互測定する。desiredなし/currentは各100回、初回導入は既存install+compose基準と自動導入を各30回測定し、p95増加が `max(20%, 25ms)` / `max(20%, 50ms)` 内であることを判定する。
 
 Trace: FR-2、FR-3、FR-4、FR-5、FR-6、NFR-1、NFR-3、NFR-4、NFR-5。
 
@@ -191,18 +191,18 @@ Trace: FR-6.3、NFR-1、NFR-3、NFR-4、および検証要件1〜12。
 
 | 要件 | 実装ファイル | テストファイル | Step |
 | --- | --- | --- | --- |
-| FR-1 | `amadeus-config.ts`, `amadeus-plugin-selection.ts`, `amadeus/config.json` | `t257-amadeus-config.test.ts`, `t257-amadeus-config.integration.test.ts`, `t413-plugin-optin-selection.integration.test.ts` | 2, 3 |
+| FR-1 | `amadeus-config.ts`, `amadeus-plugin-selection.ts`, `amadeus/config.json` | `t257-amadeus-config.test.ts`, `t257-amadeus-config.integration.test.ts`, `t415-plugin-optin-selection.integration.test.ts` | 2, 3 |
 | FR-1A | `amadeus-plugin-selection.ts`, `amadeus-plugin.ts` | `t353-plugin-install-verb.integration.test.ts`, `t340-plugin-drop-fs-restore.integration.test.ts`, `t341-plugin-conformance-journey.serial.test.ts` | 5, 9 |
-| FR-2 | `packages/framework/core/tools/amadeus-plugin-selection.ts`, `packages/framework/core/tools/amadeus-plugin.ts`, `packages/framework/core/hooks/amadeus-plugin-compose.ts`, OpenCode plugin/vocab、`scripts/plugin-projection.ts` | `t413-plugin-optin-reconciliation.integration.test.ts`, `t303-plugin-projection-harness.integration.test.ts`, `t413-plugin-optin-cross-harness.serial.test.ts` | 4, 7, 9 |
-| FR-2A | `packages/framework/core/tools/amadeus-plugin-selection.ts`, `packages/framework/core/tools/amadeus-plugin.ts`, `packages/framework/core/hooks/amadeus-plugin-compose.ts` | `t413-plugin-optin-selection.integration.test.ts`, `t413-plugin-optin-reconciliation.integration.test.ts`, `t353-plugin-install-verb.integration.test.ts` | 3〜6 |
+| FR-2 | `packages/framework/core/tools/amadeus-plugin-selection.ts`, `packages/framework/core/tools/amadeus-plugin.ts`, `packages/framework/core/hooks/amadeus-plugin-compose.ts`, OpenCode plugin/vocab、`scripts/plugin-projection.ts` | `t415-plugin-optin-reconciliation.integration.test.ts`, `t303-plugin-projection-harness.integration.test.ts`, `t415-plugin-optin-cross-harness.serial.test.ts` | 4, 7, 9 |
+| FR-2A | `packages/framework/core/tools/amadeus-plugin-selection.ts`, `packages/framework/core/tools/amadeus-plugin.ts`, `packages/framework/core/hooks/amadeus-plugin-compose.ts` | `t415-plugin-optin-selection.integration.test.ts`, `t415-plugin-optin-reconciliation.integration.test.ts`, `t353-plugin-install-verb.integration.test.ts` | 3〜6 |
 | FR-3 | `amadeus-plugin-selection.ts`, `amadeus-plugin.ts` | `t313-doctor-plugin-section.test.ts`, `t314-doctor-plugin-rows.test.ts`, `t339-plugin-doctor-standalone-render.integration.test.ts` | 3, 4, 6 |
-| FR-4 | `amadeus-plugin-activation.ts`, `amadeus-orchestrate.ts`（既存checkpoint集合を維持） | `t378-advisories-directive-field.integration.test.ts`, `t381-advisory-checkpoints-latch.integration.test.ts`, `t413-plugin-optin-cross-harness.serial.test.ts` | 8, 9 |
+| FR-4 | `amadeus-plugin-activation.ts`, `amadeus-orchestrate.ts`（既存checkpoint集合を維持） | `t378-advisories-directive-field.integration.test.ts`, `t381-advisory-checkpoints-latch.integration.test.ts`, `t415-plugin-optin-cross-harness.serial.test.ts` | 8, 9 |
 | FR-5 | `amadeus-formal-verif-model-map.ts`, `amadeus-plugin-activation.ts` | formal-verif unit群、`t382-activation-real-layout-spec-root.integration.test.ts`, cross-harness E2E | 8, 9 |
 | FR-6 | 上記正本、`scripts/plugin-projection.ts`、package/promote生成面 | `t311-zero-plugin-byte-identical.integration.test.ts`, distribution tests, cross-harness E2E | 4, 7, 9, 11 |
 | NFR-1 | config/selection/CLI/activation のpure planと昇順処理 | unit全般、reconciliation integration、cross-harness E2E | 2〜9 |
 | NFR-2 | `amadeus-plugin-selection.ts`, 既存compose transaction | selection unit、install/drop/reconciliation integration | 3〜5 |
 | NFR-3 | core正本、OpenCode harness overlay、package/promotion | projection/distribution tests、cross-harness E2E | 7, 9, 11 |
-| NFR-4 | no-op fast path、現在host限定処理 | `t413-plugin-optin-startup-performance.test.ts` | 4, 9 |
+| NFR-4 | no-op fast path、現在host限定処理 | `t415-plugin-optin-startup-performance.test.ts` | 4, 9 |
 | NFR-5 | selection state union、doctor/status/hook renderer | doctor unit/integration、reconciliation integration、E2E | 3, 6, 9 |
 
 ## 6. 完了条件

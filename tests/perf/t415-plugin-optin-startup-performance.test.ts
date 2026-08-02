@@ -53,7 +53,7 @@ function deps(): PluginCliDeps {
       backend,
       verify: () => ({ ok: true }),
       lock: createNodeLock(root),
-      newTxnId: () => `t413-perf-${Date.now()}-${Math.random()}`,
+      newTxnId: () => `t415-perf-${Date.now()}-${Math.random()}`,
     }),
     recompile: () => true,
     generateRunners: () => true,
@@ -75,7 +75,7 @@ function freshRoot(prefix: string): string {
 }
 
 function projectHost(selected: boolean, supplied: boolean): { project: string; host: string } {
-  const project = freshRoot("amadeus-t413-perf-project-");
+  const project = freshRoot("amadeus-t415-perf-project-");
   const host = join(project, ".codex");
   mkdirSync(host, { recursive: true });
   mkdirSync(join(project, "amadeus"), { recursive: true });
@@ -101,13 +101,13 @@ function expectWithinBudget(baseline: readonly number[], treatment: readonly num
   expect(changed - base).toBeLessThanOrEqual(Math.max(base * 0.2, floorMs));
 }
 
-describe("t413 startup performance regression budget on one runner", () => {
+describe("t415 startup performance regression budget on one runner", () => {
   test("unselected/current use 100 alternating samples and first install uses 30 alternating samples", () => {
     const injected = deps();
-    const emptyBaseline = freshRoot("amadeus-t413-perf-empty-");
+    const emptyBaseline = freshRoot("amadeus-t415-perf-empty-");
     const emptyAuto = projectHost(false, false).host;
 
-    const currentBaseline = freshRoot("amadeus-t413-perf-current-");
+    const currentBaseline = freshRoot("amadeus-t415-perf-current-");
     cpSync(FIXTURE, join(currentBaseline, ".amadeus-plugin-src", PLUGIN), { recursive: true });
     expect(runPluginCli(["compose", "--if-stale", "--project-root", currentBaseline], injected).kind).toBe("composed");
     const currentAuto = projectHost(true, true).host;
@@ -135,7 +135,7 @@ describe("t413 startup performance regression budget on one runner", () => {
     const firstInstallBaselineMs: number[] = [];
     const firstInstallAutoMs: number[] = [];
     for (let index = 0; index < 30; index += 1) {
-      const baseline = freshRoot("amadeus-t413-perf-install-");
+      const baseline = freshRoot("amadeus-t415-perf-install-");
       firstInstallBaselineMs.push(elapsed(() => {
         expect(runPluginCli(["install", FIXTURE, "--project-root", baseline], injected).kind).toBe("installed");
         expect(runPluginCli(["compose", "--if-stale", "--project-root", baseline], injected).kind).toBe("noop");

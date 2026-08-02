@@ -11,7 +11,7 @@ import {
 
 const roots: string[] = [];
 function root(): string {
-  const value = mkdtempSync(join(tmpdir(), "amadeus-t413-"));
+  const value = mkdtempSync(join(tmpdir(), "amadeus-t415-"));
   roots.push(value);
   return value;
 }
@@ -19,7 +19,7 @@ afterEach(() => {
   for (const value of roots.splice(0)) rmSync(value, { recursive: true, force: true });
 });
 
-describe("t413 project plugin selection", () => {
+describe("t415 project plugin selection", () => {
   test("malformed and schema-invalid project configuration fail closed", () => {
     const project = root();
     const host = join(project, ".codex");

@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 function freshProject(face: Face, selected = true): string {
-  const project = mkdtempSync(join(tmpdir(), `amadeus-t413-${face.name}-`));
+  const project = mkdtempSync(join(tmpdir(), `amadeus-t415-${face.name}-`));
   projects.push(project);
   for (const host of HOSTS) {
     let dist: string | undefined;
@@ -107,7 +107,7 @@ function assertOnlyCurrentHostComposed(project: string, current: string): void {
   }
 }
 
-describe("t413 fresh opt-in lifecycle across seven faces and six hosts", () => {
+describe("t415 fresh opt-in lifecycle across seven faces and six hosts", () => {
   for (const face of FACES) {
     test(`${face.name}: its real startup lifecycle materializes only ${face.host}`, async () => {
       const project = freshProject(face);
