@@ -56,6 +56,9 @@ export function parseBaseline(text: string, label = "baseline"): BaselineDoc {
       throw new InfraFailure("BASELINE_INVALID", `${label}.generatedFrom.${field} must be a string`);
     }
   }
+  if (generatedFrom.previousDigest !== undefined && typeof generatedFrom.previousDigest !== "string") {
+    throw new InfraFailure("BASELINE_INVALID", `${label}.generatedFrom.previousDigest must be a string`);
+  }
   const entries: BaselineEntry[] = [];
   const fingerprints = new Set<string>();
   for (const [index, raw] of value.entries.entries()) {
@@ -73,6 +76,7 @@ export function parseBaseline(text: string, label = "baseline"): BaselineDoc {
       revision: generatedFrom.revision as string,
       censusDigest: generatedFrom.censusDigest as string,
       approvalDigest: generatedFrom.approvalDigest as string,
+      ...(generatedFrom.previousDigest === undefined ? {} : { previousDigest: generatedFrom.previousDigest as string }),
     },
     entries,
   };
@@ -80,7 +84,10 @@ export function parseBaseline(text: string, label = "baseline"): BaselineDoc {
 
 export function parseExemptions(text: string): ExemptionDoc {
   const value = parseJson(text, "exemptions");
-  if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.entries)) {
+  if (!isRecord(value)
+    || value.schemaVersion !== 1
+    || !Array.isArray(value.entries)
+    || (value.previousDigest !== undefined && typeof value.previousDigest !== "string")) {
     throw new InfraFailure("BASELINE_INVALID", "exemptions must use schemaVersion 1 with an entries array");
   }
   const fingerprints = new Set<string>();
@@ -97,7 +104,11 @@ export function parseExemptions(text: string): ExemptionDoc {
     fingerprints.add(raw.fingerprint);
     return { fingerprint: raw.fingerprint, reason: raw.reason };
   });
-  return { schemaVersion: 1, entries };
+  return {
+    schemaVersion: 1,
+    ...(value.previousDigest === undefined ? {} : { previousDigest: value.previousDigest }),
+    entries,
+  };
 }
 
 export function parseApproval(text: string): ApprovalDoc {
@@ -148,8 +159,23 @@ export function readExemptions(path: string): ExemptionDoc {
   }
 }
 
-export function filterExemptions(findings: readonly Finding[], exemptions: ExemptionDoc): Finding[] {
+export function filterExemptions(
+  findings: readonly Finding[],
+  exemptions: ExemptionDoc,
+  eligible: ReadonlySet<string> = new Set(),
+): Finding[] {
   const exempt = new Set(exemptions.entries.map((entry) => entry.fingerprint));
+  const findingsByFingerprint = new Set(findings.map((finding) => finding.fingerprint));
+  for (const fingerprint of exempt) {
+    if (!eligible.has(fingerprint) || !findingsByFingerprint.has(fingerprint)) {
+      throw new InfraFailure("BASELINE_INVALID", `exemption is stale or does not target an eligible NSD002 finding: ${fingerprint}`);
+    }
+  }
+  for (const fingerprint of eligible) {
+    if (!exempt.has(fingerprint)) {
+      throw new InfraFailure("BASELINE_INVALID", `intentional-drop marker has no matching exemption ledger entry: ${fingerprint}`);
+    }
+  }
   return findings.filter((finding) => !exempt.has(finding.fingerprint));
 }
 
@@ -169,8 +195,20 @@ export function assertShrinkOnly(current: BaselineDoc, base: BaselineDoc): void 
   }
 }
 
-export function trustedBaseSha(): string | null {
-  const source = process.env.AMADEUS_NSD_TRUSTED_BASE_SHA
+export function assertExemptionsShrinkOnly(current: ExemptionDoc, base: ExemptionDoc): void {
+  const allowed = new Set(base.entries.map((entry) => entry.fingerprint));
+  const added = current.entries.filter((entry) => !allowed.has(entry.fingerprint));
+  if (added.length > 0) {
+    throw new InfraFailure(
+      "BASELINE_INVALID",
+      `exemption ratchet rejects ${added.length} addition/replacement(s): ${added.map((entry) => entry.fingerprint).join(", ")}`,
+    );
+  }
+}
+
+export function trustedBaseSha(explicit?: string): string | null {
+  const source = explicit
+    ?? process.env.AMADEUS_NSD_TRUSTED_BASE_SHA
     ?? process.env.GITHUB_BASE_SHA
     ?? process.env.GITHUB_EVENT_BEFORE;
   if (source === undefined || source === "") return null;
@@ -249,4 +287,5 @@ export const CANONICAL_PATHS = {
   baseline: (root: string) => join(root, "tests", "no-silent-drop", "baseline.json"),
   exemptions: (root: string) => join(root, "tests", "no-silent-drop", "exemptions.json"),
   approval: (root: string) => join(root, "tests", "no-silent-drop", "approval.json"),
+  bootstrap: (root: string) => join(root, "tests", "no-silent-drop", "bootstrap-provenance.json"),
 } as const;

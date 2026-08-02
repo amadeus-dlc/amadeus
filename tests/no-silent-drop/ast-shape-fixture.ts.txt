@@ -8,8 +8,10 @@ try {
   console.warn(error);
 }
 
-function resultFixture(): boolean {
-  return true;
-}
+type StateResult = { kind: "ok" } | { kind: "failed" };
+declare function applyTransition(): StateResult;
+applyTransition();
 
-resultFixture();
+function setCheckbox(content: string, slug: string): string {
+  return content.replace(slug, "done");
+}

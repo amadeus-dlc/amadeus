@@ -66,12 +66,14 @@ export type BaselineDoc = {
     readonly revision: string;
     readonly censusDigest: string;
     readonly approvalDigest: string;
+    readonly previousDigest?: string;
   };
   readonly entries: readonly BaselineEntry[];
 };
 
 export type ExemptionDoc = {
   readonly schemaVersion: 1;
+  readonly previousDigest?: string;
   readonly entries: readonly {
     readonly fingerprint: string;
     readonly reason: string;

@@ -12,11 +12,8 @@ import {
 } from "./model.ts";
 
 const EXACT_AST_GREP_VERSION = "0.45.0";
-const INTENTIONAL_DROP = /intentional-drop:\s+\S/i;
-const RESULT_TYPE = /(?:\bboolean\b|\b(?:Result|Outcome|Receipt|StateResult)\b)/;
-const KNOWN_RESULT_SYMBOLS = new Set(["applyTransition", "persistBlocked"]);
-const LOG_ONLY_CALL = /^(?:await\s+)?(?:[A-Za-z_$][\w$]*\??\.)*(?:log|warn|error|info|debug)\s*\(/;
-const DIRECT_CALL = /^(?:await\s+)?(?:void\s+)?(?:[A-Za-z_$][\w$]*\??\.)*([A-Za-z_$][\w$]*)\s*\(/;
+const INTENTIONAL_DROP = /^\s*\/\/ intentional-drop:\s*(\S(?:.*\S)?)\s*$/;
+const NSD003_FUNCTIONS = new Set(["persistBlocked", "setCheckbox", "setStageSuffix", "resyncOneIntent"]);
 
 type AstGrepModule = typeof import("@ast-grep/napi");
 type Candidate = {
@@ -24,15 +21,17 @@ type Candidate = {
   readonly text: string;
   readonly line: number;
   readonly column: number;
-  readonly node: SgNode;
 };
 
 export type ParsedSource = {
   readonly file: string;
   readonly source: string;
   readonly candidates: readonly Candidate[];
-  readonly declaredSymbols: ReadonlySet<string>;
-  readonly resultSymbols: ReadonlySet<string>;
+};
+
+export type SemanticScan = {
+  readonly findings: Finding[];
+  readonly exemptionEligible: ReadonlySet<string>;
 };
 
 const CANDIDATE_CONFIG: NapiConfig = {
@@ -88,30 +87,7 @@ function languageFor(file: string, ast: AstGrepModule): AstLang {
   return ast.Lang.TypeScript;
 }
 
-function namedChildren(node: SgNode): SgNode[] {
-  return node.children().filter((child) => child.isNamed());
-}
-
-function declaredFunction(text: string): { name: string; returnsResult: boolean } | null {
-  const match = text.match(
-    /^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*:\s*([^\n{]+)/s,
-  );
-  if (!match) return null;
-  const name = match[1] as string;
-  const returnType = (match[2] as string).trim();
-  return {
-    name,
-    returnsResult:
-      RESULT_TYPE.test(returnType)
-      || (/^emit(?:Audit)?$/.test(name) && !/\bvoid\b/.test(returnType)),
-  };
-}
-
-export function parseSource(
-  ast: AstGrepModule,
-  file: string,
-  source: string,
-): ParsedSource {
+export function parseSource(ast: AstGrepModule, file: string, source: string): ParsedSource {
   let parsed: SgRoot;
   try {
     parsed = ast.parse(languageFor(file, ast), source);
@@ -120,7 +96,6 @@ export function parseSource(
   }
   let nodes: SgNode[];
   try {
-    // One ast-grep query covers the candidate shapes and the per-file program sentinel.
     nodes = parsed.root().findAll(CANDIDATE_CONFIG);
   } catch (error) {
     throw new InfraFailure("RULE_INVALID", `candidate rule failed: ${String(error)}`);
@@ -131,117 +106,383 @@ export function parseSource(
   }
   const errorNodes = nodes.filter((node) => node.kind() === "ERROR");
   if (errorNodes.length > 0) {
-    const tsParsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-    const syntaxErrors = (tsParsed as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics ?? [];
-    const riskyUnsupportedShape = errorNodes.some((node) => /\b(?:catch|emit\w*|applyTransition|persistBlocked)\b/.test(node.text()));
-    if (syntaxErrors.length > 0 || riskyUnsupportedShape) {
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+    const syntaxErrors = (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics ?? [];
+    if (syntaxErrors.length > 0 || errorNodes.some((node) => /\b(?:catch|applyTransition)\b/.test(node.text()))) {
       throw new InfraFailure("SCAN_PARTIAL", `${file}: source contains an unparseable candidate AST region`);
     }
   }
   const candidates = nodes
-    .filter((node) => node.kind() !== "program")
+    .filter((node) => node.kind() !== "program" && node.kind() !== "ERROR")
     .map((node) => ({
       kind: String(node.kind()),
       text: node.text(),
       line: node.range().start.line + 1,
       column: node.range().start.column + 1,
-      node,
     }));
-  const resultSymbols = new Set(KNOWN_RESULT_SYMBOLS);
-  const declaredSymbols = new Set<string>();
-  for (const candidate of candidates) {
-    if (candidate.kind !== "function_declaration") continue;
-    const declaration = declaredFunction(candidate.text);
-    if (!declaration) continue;
-    declaredSymbols.add(declaration.name);
-    if (declaration.returnsResult) resultSymbols.add(declaration.name);
+  return { file, source, candidates };
+}
+
+function createSemanticProgram(parsedSources: readonly ParsedSource[]): ts.Program {
+  const options: ts.CompilerOptions = {
+    allowJs: true,
+    checkJs: false,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    noLib: true,
+    target: ts.ScriptTarget.ESNext,
+  };
+  const host = ts.createCompilerHost(options, true);
+  const sources = new Map(parsedSources.map((parsed) => [parsed.file, ts.createSourceFile(
+    parsed.file,
+    parsed.source,
+    ts.ScriptTarget.Latest,
+    true,
+    /\.(?:js|jsx|mjs|cjs)$/.test(parsed.file) ? ts.ScriptKind.JS : ts.ScriptKind.TS,
+  )]));
+  host.fileExists = (fileName) => sources.has(fileName);
+  host.readFile = (fileName) => sources.get(fileName)?.text;
+  host.getSourceFile = (fileName) => sources.get(fileName);
+  return ts.createProgram([...sources.keys()], options, host);
+}
+
+function locationKey(sourceFile: ts.SourceFile, node: ts.Node, kind: string): string {
+  const start = kind === "function_declaration"
+    ? node.getChildren(sourceFile).find((child) => child.kind === ts.SyntaxKind.FunctionKeyword)?.getStart(sourceFile)
+      ?? node.getStart(sourceFile)
+    : node.getStart(sourceFile);
+  const position = sourceFile.getLineAndCharacterOfPosition(start);
+  return `${kind}\0${position.line + 1}\0${position.character + 1}`;
+}
+
+function assertStructuralCoverage(parsed: ParsedSource, sourceFile: ts.SourceFile): void {
+  const structural = new Map<string, number>();
+  for (const candidate of parsed.candidates) {
+    const key = `${candidate.kind}\0${candidate.line}\0${candidate.column}`;
+    structural.set(key, (structural.get(key) ?? 0) + 1);
   }
-  return { file, source, candidates, declaredSymbols, resultSymbols };
+  const semantic: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCatchClause(node)) semantic.push(locationKey(sourceFile, node, "catch_clause"));
+    if (ts.isExpressionStatement(node)) semantic.push(locationKey(sourceFile, node, "expression_statement"));
+    if (ts.isFunctionDeclaration(node) && node.body && node.name && NSD003_FUNCTIONS.has(node.name.text)) {
+      semantic.push(locationKey(sourceFile, node, "function_declaration"));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  for (const key of semantic) {
+    if (structural.get(key) !== 1) {
+      throw new InfraFailure("RULE_INVALID", `${parsed.file}: structural/semantic candidate coverage mismatch at ${key}`);
+    }
+  }
 }
 
-function hasIntentionalMarker(source: string, line: number): boolean {
-  const lines = source.split(/\r?\n/);
-  return [lines[line - 1], lines[line - 2]].some((text) => text !== undefined && INTENTIONAL_DROP.test(text));
+function directCallName(expression: ts.Expression): string | null {
+  const call = ts.isAwaitExpression(expression) ? expression.expression : expression;
+  if (!ts.isCallExpression(call)) return null;
+  const callee = call.expression;
+  if (ts.isIdentifier(callee)) return callee.text;
+  return ts.isPropertyAccessExpression(callee) ? callee.name.text : null;
 }
 
-function catchRule(candidate: Candidate): RuleId | null {
-  const block = candidate.node.children().find((node) => node.kind() === "statement_block");
-  if (!block) return null;
-  const statements = namedChildren(block);
-  if (statements.length === 0) return "NSD001";
-  const isLogOnly = statements.every(
-    (statement) => statement.kind() === "expression_statement" && LOG_ONLY_CALL.test(statement.text().trim()),
-  );
-  return isLogOnly ? "NSD002" : null;
+function callReturnsNever(expression: ts.Expression, checker: ts.TypeChecker): boolean {
+  const target = ts.isAwaitExpression(expression) ? expression.expression : expression;
+  if (!ts.isCallExpression(target)) return false;
+  if (target.expression.getText() === "process.exit") return true;
+  const signature = checker.getResolvedSignature(target);
+  if (!signature) return false;
+  return Boolean(checker.getReturnTypeOfSignature(signature).flags & ts.TypeFlags.Never);
+}
+
+function statementTerminates(statement: ts.Statement, checker: ts.TypeChecker): boolean {
+  if (ts.isThrowStatement(statement)) return true;
+  if (ts.isBreakStatement(statement) || ts.isContinueStatement(statement)) return true;
+  if (ts.isReturnStatement(statement)) return true;
+  if (ts.isBlock(statement)) return blockTerminates(statement, checker);
+  if (ts.isExpressionStatement(statement)) return callReturnsNever(statement.expression, checker);
+  if (ts.isIfStatement(statement)) {
+    return statement.elseStatement !== undefined
+      && statementTerminates(statement.thenStatement, checker)
+      && statementTerminates(statement.elseStatement, checker);
+  }
+  if (ts.isTryStatement(statement)) return tryTerminates(statement, checker);
+  return false;
+}
+
+function tryTerminates(statement: ts.TryStatement, checker: ts.TypeChecker): boolean {
+  if (statement.finallyBlock && blockTerminates(statement.finallyBlock, checker)) return true;
+  return blockTerminates(statement.tryBlock, checker)
+    && Boolean(statement.catchClause && blockTerminates(statement.catchClause.block, checker));
+}
+
+function blockTerminates(block: ts.Block, checker: ts.TypeChecker): boolean {
+  return block.statements.some((statement) => statementTerminates(statement, checker));
+}
+
+function stateResultContract(call: ts.CallExpression, checker: ts.TypeChecker): boolean {
+  const signature = checker.getResolvedSignature(call);
+  if (!signature) {
+    throw new InfraFailure("RULE_INVALID", "applyTransition does not resolve to a single callable contract");
+  }
+  const returnType = checker.getReturnTypeOfSignature(signature);
+  if (returnType.aliasSymbol?.getName() === "StateResult") return true;
+  const members = returnType.isUnion() ? returnType.types : [returnType];
+  const kinds = new Set<string>();
+  for (const member of members) {
+    const kind = member.getProperty("kind");
+    const declaration = kind?.valueDeclaration ?? kind?.declarations?.[0];
+    if (!kind || !declaration) continue;
+    const kindType = checker.getTypeOfSymbolAtLocation(kind, declaration);
+    if (kindType.isStringLiteral()) kinds.add(kindType.value);
+  }
+  return kinds.has("ok") && [...kinds].some((kind) => kind !== "ok");
+}
+
+function isDiscardedApplyTransition(node: ts.ExpressionStatement, checker: ts.TypeChecker): boolean {
+  const expression = ts.isAwaitExpression(node.expression) ? node.expression.expression : node.expression;
+  if (!ts.isCallExpression(expression) || directCallName(expression) !== "applyTransition") return false;
+  if (!stateResultContract(expression, checker)) {
+    throw new InfraFailure("RULE_INVALID", "applyTransition return type is not the approved StateResult contract");
+  }
+  return true;
+}
+
+function childCallCount(node: ts.Node): number {
+  let count = 0;
+  const visit = (child: ts.Node): void => {
+    if (ts.isCallExpression(child)) count += 1;
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return count;
+}
+
+function intentionalDropReason(sourceFile: ts.SourceFile, node: ts.ExpressionStatement): string | null {
+  const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line;
+  const lines = sourceFile.text.split(/\r?\n/);
+  let cursor = line - 1;
+  while (cursor >= 0 && lines[cursor]?.trim() === "") cursor -= 1;
+  const marker = cursor >= 0 ? lines[cursor]?.match(INTENTIONAL_DROP) : null;
+  if (!marker) return null;
+  let previous = cursor - 1;
+  while (previous >= 0 && lines[previous]?.trim() === "") previous -= 1;
+  if (previous >= 0 && INTENTIONAL_DROP.test(lines[previous] ?? "")) return null;
+  return childCallCount(node) === 1 ? (marker[1] as string) : null;
+}
+
+function topLevelIndex(node: ts.Node, body: ts.Block): number {
+  let current = node;
+  while (current.parent !== body && current.parent) current = current.parent;
+  return body.statements.indexOf(current as ts.Statement);
+}
+
+function returnsIn(body: ts.Block, predicate: (expression: ts.Expression | undefined) => boolean): ts.ReturnStatement[] {
+  const returns: ts.ReturnStatement[] = [];
+  const visit = (node: ts.Node): void => {
+    if (node !== body && ts.isFunctionLike(node)) return;
+    if (ts.isReturnStatement(node) && predicate(node.expression)) returns.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(body);
+  return returns;
+}
+
+function topLevelStatementIndex(body: ts.Block, predicate: (statement: ts.Statement) => boolean, after = -1): number {
+  return body.statements.findIndex((statement, index) => index > after && predicate(statement));
+}
+
+function statementTextIncludes(statement: ts.Statement, patterns: readonly string[]): boolean {
+  const text = statement.getText();
+  return patterns.every((pattern) => text.includes(pattern));
+}
+
+function guardedFailure(statement: ts.Statement, patterns: readonly string[]): boolean {
+  return ts.isIfStatement(statement)
+    && !statement.elseStatement
+    && statementTextIncludes(statement, patterns)
+    && (ts.isReturnStatement(statement.thenStatement)
+      ? !returnsSuccess(statement.thenStatement.expression)
+      : ts.isBlock(statement.thenStatement)
+        && statement.thenStatement.statements.some((nested) =>
+          ts.isThrowStatement(nested) || (ts.isReturnStatement(nested) && !returnsSuccess(nested.expression))));
+}
+
+function returnsSuccess(expression: ts.Expression | undefined, expected?: string): boolean {
+  if (!expression) return false;
+  const text = expression.getText();
+  if (expected) return text.includes(expected);
+  if (ts.isObjectLiteralExpression(expression)) {
+    const kind = expression.properties.find((property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) && property.name.getText() === "kind");
+    return Boolean(kind && ts.isStringLiteralLike(kind.initializer) && ["ok", "success"].includes(kind.initializer.text));
+  }
+  if (ts.isCallExpression(expression)) {
+    if (/(?:failed|failure|not-found|section-unrecognized|unreadable)/.test(text)) return false;
+    return /(?:resynced|safety-blocked|success)/.test(text);
+  }
+  return true;
+}
+
+function allSuccessAfter(body: ts.Block, success: ts.ReturnStatement[], requiredIndex: number): boolean {
+  return success.length > 0 && success.every((statement) => topLevelIndex(statement, body) > requiredIndex);
+}
+
+function persistBlockedIsSafe(body: ts.Block): boolean {
+  const write = topLevelStatementIndex(body, (statement) =>
+    ts.isVariableStatement(statement) && statementTextIncludes(statement, ["applyTransition("]));
+  const guard = topLevelStatementIndex(body, (statement) => guardedFailure(statement, [".kind", '"ok"']), write);
+  const success = returnsIn(body, (expression) => returnsSuccess(expression, "safety-blocked"));
+  return write >= 0 && guard > write && allSuccessAfter(body, success, guard);
+}
+
+function textMutationIsSafe(body: ts.Block): boolean {
+  const found = topLevelStatementIndex(body, (statement) =>
+    guardedFailure(statement, ["content", "return"])
+    && /(?:includes|match|test|exec)\s*\(/.test(statement.getText()));
+  const mutation = topLevelStatementIndex(body, (statement) =>
+    ts.isVariableStatement(statement) && /\.replace\s*\(/.test(statement.getText()), found);
+  const postcondition = topLevelStatementIndex(body, (statement) =>
+    guardedFailure(statement, ["return"])
+    && /(?:includes|match|test|exec|parseCheckboxes)\s*\(/.test(statement.getText()), mutation);
+  const success = returnsIn(body, (expression) => returnsSuccess(expression));
+  return found >= 0 && mutation > found && postcondition > mutation && allSuccessAfter(body, success, postcondition);
+}
+
+function composeResyncIsSafe(body: ts.Block): boolean {
+  const mutation = topLevelStatementIndex(body, (statement) => statementTextIncludes(statement, ["replaceStageProgressSection("]));
+  const postcondition = topLevelStatementIndex(body, (statement) =>
+    guardedFailure(statement, ["section-unrecognized"])
+    && /(?:stageProgressSectionOf|rowSlugsAfter|inserted\.some)/.test(statement.getText()), mutation);
+  const write = topLevelStatementIndex(body, (statement) => statementTextIncludes(statement, ["writeStateFile("]), postcondition);
+  const success = returnsIn(body, (expression) => returnsSuccess(expression, "resynced"));
+  return mutation >= 0 && postcondition > mutation && write > postcondition && allSuccessAfter(body, success, write);
+}
+
+function nsd003Safe(name: string, body: ts.Block): boolean {
+  if (name === "persistBlocked") return persistBlockedIsSafe(body);
+  if (name === "resyncOneIntent") return composeResyncIsSafe(body);
+  return textMutationIsSafe(body);
+}
+
+type SourceFindingCandidate = {
+  readonly parsed: ParsedSource;
+  readonly sourceFile: ts.SourceFile;
+  readonly node: ts.Node;
+  readonly ruleId: RuleId;
+  readonly symbol?: string;
+  readonly exemptionReason?: string;
+};
+
+function semanticCandidates(
+  parsed: ParsedSource,
+  sourceFile: ts.SourceFile,
+  checker: ts.TypeChecker,
+): SourceFindingCandidate[] {
+  const findings: SourceFindingCandidate[] = [];
+  const visit = (node: ts.Node): void => {
+    const candidate = semanticCandidateForNode(parsed, sourceFile, node, checker);
+    if (candidate) findings.push(candidate);
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return findings;
+}
+
+function catalogImplementationNames(sourceFile: ts.SourceFile): string[] {
+  const names: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isFunctionDeclaration(node) && node.body && node.name && NSD003_FUNCTIONS.has(node.name.text)) {
+      names.push(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return names;
+}
+
+function semanticCandidateForNode(
+  parsed: ParsedSource,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  checker: ts.TypeChecker,
+): SourceFindingCandidate | null {
+  if (ts.isCatchClause(node) && !blockTerminates(node.block, checker)) {
+    return { parsed, sourceFile, node, ruleId: "NSD001" };
+  }
+  if (ts.isExpressionStatement(node) && isDiscardedApplyTransition(node, checker)) {
+    return {
+      parsed,
+      sourceFile,
+      node,
+      ruleId: "NSD002",
+      symbol: "applyTransition",
+      exemptionReason: intentionalDropReason(sourceFile, node) ?? undefined,
+    };
+  }
+  if (!ts.isFunctionDeclaration(node) || !node.name || !NSD003_FUNCTIONS.has(node.name.text)) return null;
+  if (!node.body) throw new InfraFailure("RULE_INVALID", `${node.name.text} has no analyzable implementation`);
+  return nsd003Safe(node.name.text, node.body)
+    ? null
+    : { parsed, sourceFile, node, ruleId: "NSD003", symbol: node.name.text };
 }
 
 function messages(ruleId: RuleId, symbol?: string): string {
-  if (ruleId === "NSD001") return "Empty catch block silently drops the failure";
-  if (ruleId === "NSD002") return "Catch block only logs and neither returns nor rethrows";
-  return `Result from ${symbol ?? "a fallible call"} is discarded without inspection`;
+  if (ruleId === "NSD001") return "Catch block has a path that silently continues without an approved failure terminal";
+  if (ruleId === "NSD002") return `StateResult from ${symbol ?? "applyTransition"} is discarded without inspection`;
+  return `${symbol ?? "Mutation contract"} can report success without its required write and postcondition`;
 }
 
-function ruleForCandidate(
-  candidate: Candidate,
-  parsed: ParsedSource,
-  globalResultSymbols: ReadonlySet<string>,
-): { ruleId: RuleId; symbol?: string } | null {
-  if (candidate.kind === "catch_clause") {
-    const ruleId = catchRule(candidate);
-    return ruleId ? { ruleId } : null;
-  }
-  if (candidate.kind !== "expression_statement") return null;
-  const symbol = candidate.text.trim().match(DIRECT_CALL)?.[1];
-  if (!symbol) return null;
-  const isResult = parsed.declaredSymbols.has(symbol)
-    ? parsed.resultSymbols.has(symbol)
-    : globalResultSymbols.has(symbol);
-  return isResult ? { ruleId: "NSD003", symbol } : null;
-}
-
-function buildFinding(
-  parsed: ParsedSource,
-  candidate: Candidate,
-  matched: { ruleId: RuleId; symbol?: string },
-  ordinals: Map<string, number>,
-): Finding {
-  const snippet = normalizeSnippet(candidate.text);
-  const ordinalKey = `${parsed.file}\0${matched.ruleId}\0${snippet}`;
+function buildFinding(candidate: SourceFindingCandidate, ordinals: Map<string, number>): Finding {
+  const { line, character } = candidate.sourceFile.getLineAndCharacterOfPosition(candidate.node.getStart(candidate.sourceFile));
+  const snippet = normalizeSnippet(candidate.node.getText(candidate.sourceFile));
+  const ordinalKey = `${candidate.parsed.file}\0${candidate.ruleId}\0${snippet}`;
   const ordinal = ordinals.get(ordinalKey) ?? 0;
   ordinals.set(ordinalKey, ordinal + 1);
   return {
-    ruleId: matched.ruleId,
-    file: parsed.file,
-    line: candidate.line,
-    column: candidate.column,
-    message: messages(matched.ruleId, matched.symbol),
+    ruleId: candidate.ruleId,
+    file: candidate.parsed.file,
+    line: line + 1,
+    column: character + 1,
+    message: messages(candidate.ruleId, candidate.symbol),
     snippet,
-    fingerprint: findingFingerprint(matched.ruleId, parsed.file, snippet, ordinal),
+    fingerprint: findingFingerprint(candidate.ruleId, candidate.parsed.file, snippet, ordinal),
   };
 }
 
-export function findingsFromParsed(
-  parsedSources: readonly ParsedSource[],
-): Finding[] {
-  const globalResultSymbols = new Set(KNOWN_RESULT_SYMBOLS);
+export function scanParsedSources(parsedSources: readonly ParsedSource[]): SemanticScan {
+  const program = createSemanticProgram(parsedSources);
+  const checker = program.getTypeChecker();
+  const candidates: SourceFindingCandidate[] = [];
+  const contractNames = new Map<string, number>();
   for (const parsed of parsedSources) {
-    for (const symbol of parsed.resultSymbols) globalResultSymbols.add(symbol);
-  }
-  const findings: Finding[] = [];
-  const ordinals = new Map<string, number>();
-  for (const parsed of parsedSources) {
-    for (const candidate of parsed.candidates) {
-      const matched = ruleForCandidate(candidate, parsed, globalResultSymbols);
-      if (!matched || hasIntentionalMarker(parsed.source, candidate.line)) continue;
-      findings.push(buildFinding(parsed, candidate, matched, ordinals));
+    const sourceFile = program.getSourceFile(parsed.file);
+    if (!sourceFile) throw new InfraFailure("RULE_INVALID", `${parsed.file}: TypeScript Program omitted the snapshot`);
+    assertStructuralCoverage(parsed, sourceFile);
+    for (const name of catalogImplementationNames(sourceFile)) {
+      contractNames.set(name, (contractNames.get(name) ?? 0) + 1);
     }
+    candidates.push(...semanticCandidates(parsed, sourceFile, checker));
   }
-  return findings.sort((left, right) =>
+  if ([...contractNames.values()].some((count) => count > 1)) {
+    throw new InfraFailure("RULE_INVALID", "multiple implementations resolve to one NSD003 catalog contract");
+  }
+  const ordinals = new Map<string, number>();
+  const exemptionEligible = new Set<string>();
+  const findings = candidates.map((candidate) => {
+    const finding = buildFinding(candidate, ordinals);
+    if (candidate.ruleId === "NSD002" && candidate.exemptionReason) exemptionEligible.add(finding.fingerprint);
+    return finding;
+  }).sort((left, right) =>
     left.file.localeCompare(right.file)
     || left.line - right.line
     || left.column - right.column
-    || left.ruleId.localeCompare(right.ruleId)
-  );
+    || left.ruleId.localeCompare(right.ruleId));
+  return { findings, exemptionEligible };
+}
+
+export function findingsFromParsed(parsedSources: readonly ParsedSource[]): Finding[] {
+  return scanParsedSources(parsedSources).findings;
 }
 
 export function scanSourceForTest(file: string, source: string, repoRoot: string): Finding[] {

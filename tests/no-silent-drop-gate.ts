@@ -23,7 +23,6 @@ function parseBaseRevision(argv: readonly string[]): { ok: true; revision?: stri
 }
 
 const parsed = parseBaseRevision(process.argv.slice(3));
-if (parsed.ok && parsed.revision !== undefined) process.env.AMADEUS_NSD_TRUSTED_BASE_SHA = parsed.revision;
 const result = !isMode(mode)
   ? errorResult(
       "RULE_INVALID",
@@ -31,7 +30,7 @@ const result = !isMode(mode)
     )
   : !parsed.ok
     ? errorResult("RULE_INVALID", parsed.detail)
-    : await runGate(mode);
+    : await runGate(mode, undefined, { ...(parsed.revision === undefined ? {} : { baseRevision: parsed.revision }) });
 
 process.stdout.write(`${JSON.stringify(result)}\n`);
 process.exitCode = resultExitCode(result);

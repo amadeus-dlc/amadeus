@@ -10,16 +10,17 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
-  findingsFromParsed,
   loadVerifiedAstGrep,
   parseSource,
+  scanParsedSources,
   scanSourceForTest,
 } from "./ast-scan.ts";
+import { loadTrustedPreviousLedgers } from "./bootstrap.ts";
 import {
   addedFindings,
   approvalDigest,
+  assertExemptionsShrinkOnly,
   assertShrinkOnly,
-  baselineAtRevision,
   buildCandidate,
   CANONICAL_PATHS,
   filterExemptions,
@@ -66,6 +67,8 @@ type Snapshot = {
   readonly directories: readonly DirectoryStamp[];
   readonly targetDigest: string;
 };
+
+export type GateOptions = { readonly baseRevision?: string };
 
 const SOURCE_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const SKIP_DIRECTORIES = new Set(["dist", "node_modules", "vendor", ".git"]);
@@ -201,7 +204,7 @@ function validateAstShape(repoRoot: string): void {
   }
   const findings = scanSourceForTest("ast-shape-fixture.ts", fixture, repoRoot);
   const actual = findings.map((finding) => finding.ruleId).sort().join(",");
-  if (actual !== "NSD001,NSD002,NSD003") {
+  if (actual !== "NSD001,NSD001,NSD002,NSD003") {
     throw new InfraFailure("RULE_INVALID", `AST shape fixture mismatch: ${actual || "no findings"}`);
   }
 }
@@ -222,16 +225,17 @@ function readApproval(repoRoot: string) {
   }
 }
 
-async function execute(mode: Mode, repoRoot: string): Promise<GateResult> {
+async function execute(mode: Mode, repoRoot: string, options: GateOptions): Promise<GateResult> {
   validateAstShape(repoRoot);
   const snapshot = captureSnapshot(repoRoot);
   const ast = loadVerifiedAstGrep(repoRoot);
   const parsed = snapshot.files.map((file) => parseSource(ast, file.relative, file.content));
-  const rawFindings = findingsFromParsed(parsed);
+  const semanticScan = scanParsedSources(parsed);
+  const rawFindings = semanticScan.findings;
   verifySnapshot(snapshot);
 
   const exemptions = readExemptions(CANONICAL_PATHS.exemptions(repoRoot));
-  const findings = filterExemptions(rawFindings, exemptions);
+  const findings = filterExemptions(rawFindings, exemptions, semanticScan.exemptionEligible);
   const baseline = readBaseline(CANONICAL_PATHS.baseline(repoRoot), mode === "check");
   const revision = currentRevision(repoRoot);
   const censusDigest = censusDigestOf(findings.map((finding) => finding.fingerprint));
@@ -251,8 +255,17 @@ async function execute(mode: Mode, repoRoot: string): Promise<GateResult> {
   if (mode === "census-evidence") return passResult({ evidence });
 
   if (mode === "check") {
-    const trustedSha = trustedBaseSha();
-    if (trustedSha) assertShrinkOnly(baseline as NonNullable<typeof baseline>, baselineAtRevision(repoRoot, trustedSha));
+    const trustedSha = trustedBaseSha(options.baseRevision);
+    if (trustedSha) {
+      const previous = loadTrustedPreviousLedgers(
+        repoRoot,
+        trustedSha,
+        baseline as NonNullable<typeof baseline>,
+        exemptions,
+      );
+      assertShrinkOnly(baseline as NonNullable<typeof baseline>, previous.baseline);
+      assertExemptionsShrinkOnly(exemptions, previous.exemptions);
+    }
     const added = addedFindings(findings, baseline as NonNullable<typeof baseline>);
     return added.length > 0 ? violationResult(added) : passResult();
   }
@@ -267,9 +280,9 @@ async function execute(mode: Mode, repoRoot: string): Promise<GateResult> {
   });
 }
 
-export async function runGate(mode: Mode, repoRoot = REPO_ROOT): Promise<GateResult> {
+export async function runGate(mode: Mode, repoRoot = REPO_ROOT, options: GateOptions = {}): Promise<GateResult> {
   try {
-    return await execute(mode, repoRoot);
+    return await execute(mode, repoRoot, options);
   } catch (error) {
     if (error instanceof InfraFailure) return errorResult(error.code, error.message);
     return errorResult("INTERNAL_ERROR", error instanceof Error ? error.message : String(error));
