@@ -6,7 +6,7 @@
       "recordId": "shape-fixtures:primary",
       "receiptId": "shape-fixtures",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -28,7 +28,7 @@
       "recordId": "census-pre:primary",
       "receiptId": "census-pre",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -50,7 +50,7 @@
       "recordId": "census-post:primary",
       "receiptId": "census-post",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/no-silent-drop-gate.ts",
@@ -70,7 +70,7 @@
       "recordId": "classification-precision:primary",
       "receiptId": "classification-precision",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -92,7 +92,7 @@
       "recordId": "baseline-proof:primary",
       "receiptId": "baseline-proof",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/no-silent-drop-gate.ts",
@@ -114,7 +114,7 @@
       "recordId": "failure-matrix:primary",
       "receiptId": "failure-matrix",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -136,7 +136,7 @@
       "recordId": "u2-u3-regressions:primary",
       "receiptId": "u2-u3-regressions",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -159,7 +159,7 @@
       "recordId": "full-test:normal",
       "receiptId": "full-test",
       "runName": "normal",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/run-tests.ts",
@@ -181,7 +181,7 @@
       "recordId": "full-test:isolated-known-timeouts",
       "receiptId": "full-test",
       "runName": "isolated-known-timeouts",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -206,7 +206,7 @@
       "recordId": "lint:primary",
       "receiptId": "lint",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "run",
@@ -226,7 +226,7 @@
       "recordId": "typecheck:primary",
       "receiptId": "typecheck",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "run",
@@ -246,7 +246,7 @@
       "recordId": "coverage:normal",
       "receiptId": "coverage",
       "runName": "normal",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/run-tests.ts",
@@ -271,7 +271,7 @@
       "recordId": "coverage:isolated-known-timeouts",
       "receiptId": "coverage",
       "runName": "isolated-known-timeouts",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -297,7 +297,7 @@
       "recordId": "cold-warm-5x2:primary",
       "receiptId": "cold-warm-5x2",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -319,7 +319,7 @@
       "recordId": "capacity-r0-r2-r4:primary",
       "receiptId": "capacity-r0-r2-r4",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -341,7 +341,7 @@
       "recordId": "u1-complexity:primary",
       "receiptId": "u1-complexity",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -361,7 +361,7 @@
       "recordId": "package-apply:primary",
       "receiptId": "package-apply",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/package.ts"
@@ -380,7 +380,7 @@
       "recordId": "promotion-apply:primary",
       "receiptId": "promotion-apply",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/promote-self.ts",
@@ -400,7 +400,7 @@
       "recordId": "package-check:primary",
       "receiptId": "package-check",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/package.ts",
@@ -420,7 +420,7 @@
       "recordId": "promotion-check:primary",
       "receiptId": "promotion-check",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/promote-self.ts",
@@ -440,7 +440,7 @@
       "recordId": "event-pr-base:primary",
       "receiptId": "event-pr-base",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -462,7 +462,7 @@
       "recordId": "event-fork-base:primary",
       "receiptId": "event-fork-base",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -484,7 +484,7 @@
       "recordId": "event-push-before:primary",
       "receiptId": "event-push-before",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -506,7 +506,7 @@
       "recordId": "hang-deadline:primary",
       "receiptId": "hang-deadline",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -528,7 +528,7 @@
       "recordId": "workflow-structure:primary",
       "receiptId": "workflow-structure",
       "runName": "primary",
-      "testedRevision": "c127f292f4df5b8063d8ad48ef6fd4d56b688f34",
+      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
