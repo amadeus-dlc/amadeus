@@ -670,7 +670,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[ladder prompt]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
 | **Artifact(成果物)** | ステージが生成し、intent のレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)に保存されるバージョン管理された markdown ドキュメント。例: `requirements.md`、`code-summary.md`、`initiative-brief.md`。 |
 | **Component(コンポーネント)** | モジュール内の論理的な構成要素(クラス、関数グループ、UI コンポーネント)。 |
-| **Depth(深さ)** | 各ステージが生成する詳細の量を制御する 3 つの詳細レベル(Minimal、Standard、Comprehensive)の 1 つ。スコープにはデフォルトの深さがあり、任意の承認ゲートで上書きできます。[スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照。 |
+| **Depth(深さ)** | 各ステージが生成する詳細の量を制御する 3 つの詳細レベル(Minimal、Standard、Comprehensive)の 1 つ。スコープにはデフォルトの深さがあり、任意の承認ゲートで上書きできます。[スコープ、深さ、テスト戦略](../guide/05-scopes-and-depth.ja.md) を参照。 |
 | **Generation(生成)** | 実行可能コードを生成するステージ(Code Generation、Build and Test)。**Planning** と対。 |
 | **Guardrail(ガードレール)** | space メモリレイヤー(`amadeus/spaces/<space>/memory/`)にある Rule ファイル内の本文セクション(`## Forbidden`、`## Mandated`、およびフェーズルールのガードレール見出し)で、規範的な振る舞いの制約を表現します。コンテナが Rule であり、「guardrail」はその中の規範的な内容を指します。**Rule** を参照。 |
 | **Inline stage(インラインステージ)** | 委譲せず、オーケストレーターの会話内で直接実行されるステージ。**Inline execution** を参照。 |

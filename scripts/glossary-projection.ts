@@ -15,7 +15,7 @@
 // projection.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -246,6 +246,29 @@ export function toCoreTokens(text: string): string {
   return text.split(NEUTRAL_HARNESS_TOKEN).join(CORE_HARNESS_TOKEN);
 }
 
+/** The directory the canonical glossary's own relative links resolve against. */
+const CANONICAL_DIR = posix.dirname(CANONICAL_EN);
+
+const INLINE_LINK_RE = /\]\(([^()\s]+)\)/gu;
+
+function isRelativeTarget(target: string): boolean {
+  return !/^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/iu.test(target);
+}
+
+/** Re-point the canonical glossary's guide-relative links so they still resolve
+ *  from the surface they are projected onto. `linkBase` is the repo-relative
+ *  directory the output is read from — `.` yields repo-root-relative paths. */
+export function rebaseLinks(text: string, linkBase: string): string {
+  return text.replace(INLINE_LINK_RE, (whole, target: string) => {
+    if (!isRelativeTarget(target)) return whole;
+    const hash = target.indexOf("#");
+    const path = hash < 0 ? target : target.slice(0, hash);
+    const fragment = hash < 0 ? "" : target.slice(hash);
+    const resolved = posix.normalize(posix.join(CANONICAL_DIR, path));
+    return `](${posix.relative(linkBase, resolved)}${fragment})`;
+  });
+}
+
 export type MarkerReplacement = {
   readonly content: string | null;
   readonly violations: readonly Violation[];
@@ -308,6 +331,9 @@ export type Surface = {
   /** `file` renders the whole file; `marker` swaps the body between markers. */
   readonly mode: "file" | "marker";
   readonly coreTokens: boolean;
+  /** Repo-relative directory the output is read from — canonical links are
+   *  re-pointed relative to it. `.` yields repo-root-relative paths. */
+  readonly linkBase: string;
   readonly headers: readonly [string, string];
 };
 
@@ -318,6 +344,7 @@ export const SURFACES: readonly Surface[] = [
     language: "en",
     mode: "file",
     coreTokens: true,
+    linkBase: ".",
     headers: ["Term", "Definition"],
   },
   {
@@ -326,6 +353,7 @@ export const SURFACES: readonly Surface[] = [
     language: "en",
     mode: "marker",
     coreTokens: true,
+    linkBase: ".",
     headers: ["Term", "Definition"],
   },
   {
@@ -334,6 +362,7 @@ export const SURFACES: readonly Surface[] = [
     language: "en",
     mode: "marker",
     coreTokens: false,
+    linkBase: "docs/reference",
     headers: ["Term", "Definition"],
   },
   {
@@ -342,6 +371,7 @@ export const SURFACES: readonly Surface[] = [
     language: "ja",
     mode: "marker",
     coreTokens: false,
+    linkBase: "docs/reference",
     headers: ["用語", "定義"],
   },
 ];
@@ -377,15 +407,41 @@ function rowsForSurface(
 
 function renderSurface(
   surface: Surface,
-  rows: readonly TermRow[],
+  sourceRows: readonly TermRow[],
   existing: string | null,
 ): MarkerReplacement {
+  const rows = sourceRows.map((r) => ({
+    ...r,
+    definition: rebaseLinks(r.definition, surface.linkBase),
+  }));
   if (surface.mode === "file") return { content: renderKnowledgeSurface(rows), violations: [] };
   if (existing === null) {
     return { content: null, violations: [violation("missing-target", surface.path)] };
   }
   const table = renderTable(rows, surface.headers);
   return replaceMarkerSection(existing, surface.projection, surface.coreTokens ? toCoreTokens(table) : table);
+}
+
+/** Every rebased link must still point at a file that exists, so a projection
+ *  can never ship a link that resolves nowhere. */
+function surfaceLinkViolations(
+  surface: Surface,
+  content: string,
+  root: string,
+): readonly Violation[] {
+  const violations: Violation[] = [];
+  for (const line of content.split("\n")) {
+    if (!line.startsWith("| **")) continue;
+    for (const m of line.matchAll(INLINE_LINK_RE)) {
+      const target = m[1]!;
+      if (!isRelativeTarget(target)) continue;
+      const path = target.split("#")[0]!;
+      const resolved = posix.normalize(posix.join(surface.linkBase, path));
+      if (existsSync(join(root, resolved))) continue;
+      violations.push(violation("surface-link-unresolved", `${surface.path}: ${target}`));
+    }
+  }
+  return violations;
 }
 
 function surfaceTokenViolations(surface: Surface, content: string): readonly Violation[] {
@@ -419,6 +475,7 @@ export function planSurfaces(root: string): Plan {
     violations.push(...rendered.violations);
     if (rendered.content === null) continue;
     violations.push(...surfaceTokenViolations(surface, rendered.content));
+    violations.push(...surfaceLinkViolations(surface, rendered.content, root));
     plans.push({ path: surface.path, content: rendered.content });
   }
   return { plans, violations };

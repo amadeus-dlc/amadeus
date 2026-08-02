@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import {
   parseManifest,
   parseTermTable,
+  rebaseLinks,
   renderKnowledgeSurface,
   renderTable,
   replaceMarkerSection,
@@ -275,5 +276,39 @@ describe("renderKnowledgeSurface", () => {
   test("substitutes the harness placeholder and ends with a trailing newline", () => {
     expect(rendered).toContain("| **Bolt** | `{{HARNESS_DIR}}/x` |");
     expect(rendered.endsWith("\n")).toBe(true);
+  });
+});
+
+describe("rebaseLinks", () => {
+  test("re-points a guide-relative link at a docs/reference surface", () => {
+    expect(rebaseLinks("see [Scopes](05-scopes-and-depth.md).", "docs/reference")).toBe(
+      "see [Scopes](../guide/05-scopes-and-depth.md).",
+    );
+  });
+
+  test("normalizes a link that already climbs out of the guide", () => {
+    expect(rebaseLinks("[Engine](../reference/17-skill-system.md)", "docs/reference")).toBe(
+      "[Engine](17-skill-system.md)",
+    );
+  });
+
+  test("keeps the fragment attached to the rebased path", () => {
+    expect(
+      rebaseLinks("[Levels](05-scopes-and-depth.md#the-3-test-strategy-levels)", "docs/reference"),
+    ).toBe("[Levels](../guide/05-scopes-and-depth.md#the-3-test-strategy-levels)");
+  });
+
+  test("renders repo-root-relative paths for a core surface", () => {
+    expect(rebaseLinks("[Codex](harnesses/codex-cli.md)", ".")).toBe(
+      "[Codex](docs/guide/harnesses/codex-cli.md)",
+    );
+    expect(rebaseLinks("[MCP](../reference/14-claude-features.md#mcp-servers)", ".")).toBe(
+      "[MCP](docs/reference/14-claude-features.md#mcp-servers)",
+    );
+  });
+
+  test("leaves absolute URLs and bare fragments alone", () => {
+    const text = "[site](https://example.com/a.md) and [here](#anchor)";
+    expect(rebaseLinks(text, "docs/reference")).toBe(text);
   });
 });

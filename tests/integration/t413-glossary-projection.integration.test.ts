@@ -195,6 +195,17 @@ describe("fail-closed conditions", () => {
     expect(codes).toContain("surface-token-leak");
   });
 
+  test("a canonical link that resolves nowhere once rebased", () => {
+    write(
+      "docs/guide/glossary.md",
+      CANON_EN.replace(
+        "One pass through the Construction stages.",
+        "See [Nowhere](99-does-not-exist.md).",
+      ),
+    );
+    expect(codesFor()).toContain("surface-link-unresolved");
+  });
+
   test("an empty effective subset for a non-`all` projection", () => {
     write("docs/guide/glossary.md", CANON_EN.replace("terms: [bolt]", "terms: []"));
     expect(codesFor()).toContain("manifest-empty-subset");
