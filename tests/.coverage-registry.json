@@ -4408,7 +4408,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/e2e/t413-plugin-optin-cross-harness.serial.test.ts",
+          "file": "tests/e2e/t415-plugin-optin-cross-harness.serial.test.ts",
           "mechanism": "none"
         },
         {
