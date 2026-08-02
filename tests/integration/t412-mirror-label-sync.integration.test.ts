@@ -148,6 +148,66 @@ describe("mirror boundary label sync wiring", () => {
     expect(labels.calls).toEqual([]);
   });
 
+  test("label failures warn on stderr and never change the boundary outcome", async () => {
+    const fx = fixtureWithRefs();
+    const gateway = new ProjectGateway(markerBody());
+    const failing: MirrorLabelGateway = {
+      async addIssueLabels() {
+        return {
+          kind: "failure",
+          classification: "network",
+          summary: "gh down",
+          retryable: true,
+          effect: "not-started",
+        };
+      },
+      async removeIssueLabel() {
+        return {
+          kind: "failure",
+          classification: "network",
+          summary: "gh down",
+          retryable: true,
+          effect: "not-started",
+        };
+      },
+    };
+    const outcome = await runMirrorLifecycleBoundary(
+      boundaryRequest(fx, { kind: "intent-initialized", instance: "b-3" }),
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => NOW,
+        newOperationId: () => "op-1",
+        labelGateway: failing,
+      },
+    );
+    expect(outcome.kind).toBe("ok");
+  });
+
+  test("a label gateway that throws is contained by the fail-open catch", async () => {
+    const fx = fixtureWithRefs();
+    const gateway = new ProjectGateway(markerBody());
+    const throwing: MirrorLabelGateway = {
+      async addIssueLabels() {
+        throw new Error("label gateway exploded");
+      },
+      async removeIssueLabel() {
+        throw new Error("label gateway exploded");
+      },
+    };
+    const outcome = await runMirrorLifecycleBoundary(
+      boundaryRequest(fx, { kind: "intent-initialized", instance: "b-4" }),
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => NOW,
+        newOperationId: () => "op-1",
+        labelGateway: throwing,
+      },
+    );
+    expect(outcome.kind).toBe("ok");
+  });
+
   test("phase-verified boundaries stay label-silent", async () => {
     const fx = fixtureWithRefs({ state: linkedState() });
     const gateway = new ProjectGateway(markerBody());

@@ -162,6 +162,15 @@ describe("runMirrorLabelSync", () => {
     expect(report.attempted).toBe(0);
     expect(calls).toEqual([]);
   });
+
+  test("a remove failure is reported with the remove operation", async () => {
+    const { gateway } = fakeGateway(new Set([9]));
+    const report = await runMirrorLabelSync({ add: [], remove: [9, 10] }, REPO, gateway);
+    expect(report.attempted).toBe(2);
+    expect(report.failures).toEqual([
+      { issue: 9, operation: "remove", label: IN_PROGRESS_LABEL, detail: "boom" },
+    ]);
+  });
 });
 
 describe("label argv builders", () => {
@@ -243,5 +252,17 @@ describe("createMirrorLabelGateway", () => {
     const gateway = createMirrorLabelGateway(runner);
     const outcome = await gateway.removeIssueLabel(REPO, 7, "in-progress");
     expect(outcome.kind).toBe("failure");
+  });
+
+  test("a malformed HTTP envelope is an invalid-response failure", async () => {
+    const { runner } = fakeRunner([
+      { kind: "exited", exitCode: 0, stdout: Buffer.from("not-http"), stderrTail: "" },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("invalid-response");
+    }
   });
 });

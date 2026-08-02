@@ -273,7 +273,7 @@ function lifecycleRuntime(
 // outcome, so the workflow is never blocked by labels. The state document is
 // re-read AFTER the boundary so a mirror issue created by this very boundary
 // is already visible in the v1 block.
-async function syncBoundaryLabels(input: {
+type SyncBoundaryLabelsInput = Readonly<{
   projectDir: string;
   space: string;
   intentDir: string;
@@ -281,7 +281,9 @@ async function syncBoundaryLabels(input: {
   statePath: string;
   repository: RepositoryIdentity;
   labelGateway: MirrorLabelGateway | null;
-}): Promise<void> {
+}>;
+
+async function syncBoundaryLabels(input: SyncBoundaryLabelsInput): Promise<void> {
   if (input.labelGateway === null) return;
   const labelGateway = input.labelGateway;
   try {
