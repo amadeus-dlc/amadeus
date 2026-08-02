@@ -16,4 +16,8 @@ Unlike the generic `refactor` scope, verification remains Comprehensive so the
 build-and-test boundary covers applicable tests, generated harness parity,
 `dist:check`, and `promote:self:check`.
 
+Lightening review 2026-07-28: no completed self-refactor intent exists
+yet, so the evidence-mining methodology that lightened self-feature has
+no data to work from. Revisit once completed intents accumulate.
+
 Not inferable by keyword; select it explicitly with `--scope self-refactor`.
