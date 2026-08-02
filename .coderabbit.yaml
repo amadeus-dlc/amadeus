@@ -80,7 +80,8 @@ knowledge_base:
       - ".agents/rules/*.md"
       - ".agents/skills/*/SKILL.md"
       - "amadeus/spaces/default/memory/**/*.md"
-      - "amadeus/spaces/default/knowledge/amadeus-shared/domain-language.md"
+      - "docs/guide/glossary.md"
+      - "docs/guide/glossary.ja.md"
       - "amadeus/spaces/default/knowledge/amadeus-shared/software-design/README.md"
       - "amadeus/spaces/default/knowledge/amadeus-shared/software-design/*/SKILL.md"
 
