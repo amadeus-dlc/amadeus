@@ -1,29 +1,167 @@
 {
   "schemaVersion": 1,
-  "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b",
+  "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
   "receipts": [
-    { "schemaVersion": 1, "id": "shape-fixtures", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "4096c0eafecc54671da01446316d707f9e2c6ad557c4b8922cb0e481e93ad1b8", "pass": true },
-    { "schemaVersion": 1, "id": "census-pre", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "a7db1224d6afb6a123851ff0031e188ee97bbb5d2d2c11f0b33ddb3ab39c20ed", "pass": true },
-    { "schemaVersion": 1, "id": "census-post", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "ed24eba9793ce67e7660b03c0c622b4196a87bc07b29a1deb5bf83f0dc53fd59", "pass": true },
-    { "schemaVersion": 1, "id": "classification-precision", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7287783344000f1cfc77bf8b270c0721300aeee8a5f4dee06a17e86d852837b9", "pass": true },
-    { "schemaVersion": 1, "id": "baseline-proof", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7d8cb71f88926baac862b16fcdf4ad5a7cb5f57268afea9da699f5d14be2649f", "pass": true },
-    { "schemaVersion": 1, "id": "failure-matrix", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "f2e8882ce8dd99b409873082a69625acbe1d0e60dcb27dd9799b426acd6da1fa", "pass": true },
-    { "schemaVersion": 1, "id": "u2-u3-regressions", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "bcbbe77edfb39bcf031d9320dca0ba28761585082bc739cf9f195e069f86e0d7", "pass": true },
-    { "schemaVersion": 1, "id": "full-test", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5b20cc11390b927bfa99f7140755706ec6b2e9f1518d2af49e556ac321e71512", "pass": true },
-    { "schemaVersion": 1, "id": "lint", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "4a88fbb247625d1ed6aeb1f5f9099a331b65d286158305964923c0a64fabbb90", "pass": true },
-    { "schemaVersion": 1, "id": "typecheck", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "28a59cfbb72d0797068fc588ed5f44ec1df8e5b61322a8d77058ac6cc758f001", "pass": true },
-    { "schemaVersion": 1, "id": "coverage", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "89318b0404052be198c89f0b6e25c835de399740c751fe839d3b15e93a973f4b", "pass": true },
-    { "schemaVersion": 1, "id": "cold-warm-5x2", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5dc1e838be237a7bf48ae72f1ad45827769e47f386e2397325d4814b49941d15", "pass": true },
-    { "schemaVersion": 1, "id": "capacity-r0-r2-r4", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "e6039fe3ed53080bb20b053f81a1b629c6c6ae05111fc02b05fa6eadb9703269", "pass": true },
-    { "schemaVersion": 1, "id": "u1-complexity", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "28a8919761f5690539d7e2f17ebaa47fa159cc4ec206abbaf14b429252509aa2", "pass": true },
-    { "schemaVersion": 1, "id": "package-apply", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7f7fb866b28b8f4b5b08d19fabbfd3ea9fbd9bbce69dae33b3fc80a6d0d3a83a", "pass": true },
-    { "schemaVersion": 1, "id": "promotion-apply", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "bfd68d0aef9c886bdbe0157b9e6c84d1e90fe4ceab142485c1129865753f7784", "pass": true },
-    { "schemaVersion": 1, "id": "package-check", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "66e3fca93b7860ab6f807dc616f48cc07f347cc5a06782274248e4afbafe6cd0", "pass": true },
-    { "schemaVersion": 1, "id": "promotion-check", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "aa0926bda2efe3d52dbfc8763732269cbdd18ca28e698034125f7ff6b2a5810b", "pass": true },
-    { "schemaVersion": 1, "id": "event-pr-base", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "3ef55768a93ba9f7dac1019cbf58e896b2d3293ac7e9c9765758b96328a87496", "pass": true },
-    { "schemaVersion": 1, "id": "event-fork-base", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "e5cf0ba3c4abab92ae2034500197564d9d5c02ea265b35b00803cc288a709605", "pass": true },
-    { "schemaVersion": 1, "id": "event-push-before", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "5d3849526857976abafca5a51b5048208ba4e17f9a0cf14f9aab6ad078b97470", "pass": true },
-    { "schemaVersion": 1, "id": "hang-deadline", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "ca131216054d74f9b3185bf0e1f14dfda32f8c0505eacaf0f0f1dcd1209070c3", "pass": true },
-    { "schemaVersion": 1, "id": "workflow-structure", "currentRevision": "abf6b7ca379b0673d3bb5cce053db5bf50befd3b", "evidenceDigest": "7efde663630944f71966f9bee536749d0d987e512fc8487f9e091eb659a68d40", "pass": true }
+    {
+      "schemaVersion": 1,
+      "id": "shape-fixtures",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "9cb40dc7579cdf6f2929dc142427cd47e6adf59bffb90b51ba50b8407f7d41eb",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-pre",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "3614952448501ba5ab51dc02d439fb4f6fceb748c673fb19eaf3e026b588c42c",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-post",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "b092f30b1c0e59c8d830a631426458ddc273eeb6a8e125ed984418f8f4392d2c",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "classification-precision",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "085630bedabc29bef70f89b8c58aa5e27499ebd0f6b7cf301e88ec993f7b89c0",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "baseline-proof",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "dd9f8691a6510bc1a670967968f2f23dde181db690c0c725f383d66b93997951",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "failure-matrix",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "efc10f31242051e32071da88f867e7dfd77c5b8579e1abcd43ad7d3560dea8ea",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u2-u3-regressions",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "b85b00c1c36ea2e0da79df29564201e9756761d3da1ea9ea41c6c6c076217316",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "full-test",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "7cfc2f089d3101172a2061874e934cb03c0c84cf7f0c963b7722b4cf5957ce6b",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "lint",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "450f37026d3042054e295ffffadf560aec6dc4694ccdb6e84666c083870177c0",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "typecheck",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "c9be09c251c5c77d221f2a69e4055d2d5027d10e1560444fd6f4e15dd5ab040c",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "coverage",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "3182431b5a72c50305dcb35bbec75bb76b136a4dbbe3359615b6e88f053e0cf8",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cold-warm-5x2",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "22f2b6f9776473b206ff46f62d0339a70066e93f260dd5e4cd8309b1c56a969e",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "capacity-r0-r2-r4",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "56d1cee5973bf9ac224c6e8d5f21933262f067b195f8c75dd010045601a9bcbc",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u1-complexity",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "0585debb448232a93b4c72e58b442ec266367484840687cea7a11cd3e813b62c",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-apply",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "d1f3e288a30e6fc42f6d88861ed9c3af7a5b60240215591be8abae1be395a8dc",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-apply",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "dc644923680357655e998ad61a94ebbdb75bc6e4984e05759169e92773657f72",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-check",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "a8cc9da8015ab358cf1a2fa017dca92f2a11e1465eb5bb10b45707e97a29b6d8",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-check",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "5dee6bae9cbb738d21cbc44fda24d35ed54349d62f57c9102ac27e6df7829643",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-pr-base",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "55f26fa217dacd673868c5450cfd5b60ea8c05d26cc9a32d1c2e02f843f2d98e",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-fork-base",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "de74ebb2e7830627986a9f723e9b83692410b71237e139a3c0c46bc8d399b94d",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-push-before",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "b9422e9e14079ed16b1ed457f056484ea1881f31b0d6a4b5a14d10e0b3e7d6dc",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hang-deadline",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "88b26f0381634bb075f2479f22eaa4068001439df4ad5b03ee21b193402019b0",
+      "pass": true
+    },
+    {
+      "schemaVersion": 1,
+      "id": "workflow-structure",
+      "currentRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "evidenceDigest": "be942268e14d08931f2eb4fff4684d832870cad553bb7fdf5ef636a16eca46cf",
+      "pass": true
+    }
   ]
 }

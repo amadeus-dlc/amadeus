@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 1,
+  "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+  "evidence": [
+    {
+      "schemaVersion": 1,
+      "id": "shape-fixtures",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-gate.test.ts",
+            "-t",
+            "no-silent-drop AST rules"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "shape-fixtures:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-pre",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-gate.test.ts",
+            "-t",
+            "first adoption accepts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "census-pre:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-post",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "tests/no-silent-drop-gate.ts",
+            "census-evidence"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "census-post:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "classification-precision",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-gate.test.ts",
+            "-t",
+            "approval is exact"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "classification-precision:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "baseline-proof",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "tests/no-silent-drop-gate.ts",
+            "check",
+            "--base-revision",
+            "47574fbabf274e11cb8e0b37bf35a0309a7b3d42"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "baseline-proof:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "failure-matrix",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-gate.test.ts",
+            "-t",
+            "first adoption fails closed"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "failure-matrix:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u2-u3-regressions",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/t108.test.ts",
+            "tests/unit/t400-lib-record-path-and-field-helpers.test.ts",
+            "tests/unit/t279-amadeus-mirror-executor.test.ts",
+            "tests/integration/t278-amadeus-mirror-state-store.integration.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "u2-u3-regressions:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "full-test",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "normal",
+          "command": [
+            "bun",
+            "run",
+            "test:ci"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "full-test:normal"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        },
+        {
+          "name": "isolated-known-timeouts",
+          "command": [
+            "bun",
+            "test",
+            "--timeout",
+            "120000",
+            "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+            "tests/integration/t-codex-hooks-ownership.test.ts",
+            "tests/integration/t-codex-hooks-migration.test.ts",
+            "tests/integration/t-team-up-codex-resume.serial.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "full-test:isolated-known-timeouts"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "lint",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "run",
+            "lint"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "lint:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "typecheck",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "run",
+            "typecheck"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "typecheck:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "coverage",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "normal",
+          "command": [
+            "bun",
+            "run",
+            "coverage:ci"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "coverage:normal"
+          },
+          "exitCode": 4,
+          "verdict": "known-timeout"
+        },
+        {
+          "name": "isolated-known-timeouts",
+          "command": [
+            "bun",
+            "test",
+            "--coverage",
+            "--timeout",
+            "120000",
+            "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+            "tests/integration/t-codex-hooks-ownership.test.ts",
+            "tests/integration/t-codex-hooks-migration.test.ts",
+            "tests/integration/t-team-up-codex-resume.serial.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "coverage:isolated-known-timeouts"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cold-warm-5x2",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/perf/no-silent-drop-adoption.perf.test.ts",
+            "-t",
+            "five fresh processes"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "cold-warm-5x2:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "capacity-r0-r2-r4",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/perf/no-silent-drop-adoption.perf.test.ts",
+            "-t",
+            "generated r0/r2/r4"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "capacity-r0-r2-r4:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u1-complexity",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-gate.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "u1-complexity:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-apply",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/package.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "package-apply:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-apply",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/promote-self.ts",
+            "--apply"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "promotion-apply:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-check",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/package.ts",
+            "--check"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "package-check:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-check",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/promote-self.ts",
+            "--check"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "promotion-check:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-pr-base",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "PR, fork PR, and push contexts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "event-pr-base:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-fork-base",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "each trusted event fixture"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "event-fork-base:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-push-before",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/no-silent-drop-repository-adoption.test.ts",
+            "-t",
+            "explicit argv overrides"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "event-push-before:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hang-deadline",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "GNU timeout hang injection"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "hang-deadline:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "workflow-structure",
+      "testedRevision": "05bce75a2facb841ba07ea4eb66e385f5eb2f610",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "existing lint job owns"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "4772b2167a5ea0c7de22403b9aa2634bc38ad468ecf36c367da81139dea4a9f1",
+            "recordId": "workflow-structure:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass"
+    }
+  ]
+}

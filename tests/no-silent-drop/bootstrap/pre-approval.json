@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "censusDigest": "2ebf83c121608b5659bdd89d6b6b75e46244c0056fd8bc937d7b761d39049905",
+  "censusDigest": "eb09161b64084983d0e2f99009d68237f663559f4da28307d203cf804d12e730",
   "entries": [
     {
       "fingerprint": "03c9e430ecf3c1b1dabee31906cf795d605efa4db2d7330390274a5c29675a45",
@@ -176,6 +176,14 @@
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"
+      ]
+    },
+    {
+      "fingerprint": "19ef0e79c8061cceba1324b12baae3edfe7c08e9e67cbafeeb51fe96706a8955",
+      "classification": "TP",
+      "reason": "Approved silent-drop defect fixed by the initial repository adoption.",
+      "issues": [
+        "#1878"
       ]
     },
     {
@@ -531,6 +539,14 @@
       ]
     },
     {
+      "fingerprint": "45664ff7552f6153e4f6ec2c75987f0eda635ed663b0182a2b99a790ced28e74",
+      "classification": "TP",
+      "reason": "Approved silent-drop defect fixed by the initial repository adoption.",
+      "issues": [
+        "#1874"
+      ]
+    },
+    {
       "fingerprint": "481906defb015b0e9668b4c72b516ce02a21dbf678213cbeacabe7453cfefd60",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
@@ -848,6 +864,14 @@
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"
+      ]
+    },
+    {
+      "fingerprint": "75bdcc54ae4a714da29d84c1058092fa72c79eca1df2d5d307e4703dd3851c6b",
+      "classification": "TP",
+      "reason": "Approved silent-drop defect fixed by the initial repository adoption.",
+      "issues": [
+        "#1878"
       ]
     },
     {
@@ -1192,6 +1216,14 @@
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"
+      ]
+    },
+    {
+      "fingerprint": "a45b2fc3440409f02e79e25fd372f1d1e881aaf9bae3984765580e157fee325c",
+      "classification": "TP",
+      "reason": "Approved silent-drop defect fixed by the initial repository adoption.",
+      "issues": [
+        "#1874"
       ]
     },
     {
