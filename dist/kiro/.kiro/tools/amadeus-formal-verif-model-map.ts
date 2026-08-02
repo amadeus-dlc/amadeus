@@ -310,23 +310,29 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
   if (!cfg.ok) return cfg;
   const entries = parseEntries(record.entries);
   if (!entries.ok) return entries;
-  const parsed: ModelMapModel = {
-    name,
-    model: model.value,
-    cfg: cfg.value,
-    entries: entries.value,
-  };
+  let auxiliaries: readonly ModelMapAssetIdentity[] | undefined;
   if ("auxiliaries" in record) {
-    const auxiliaries = parseAuxiliaryIdentities(record.auxiliaries, model.value.path);
-    if (!auxiliaries.ok) return auxiliaries;
-    parsed.auxiliaries = auxiliaries.value;
+    const parsed = parseAuxiliaryIdentities(record.auxiliaries, model.value.path);
+    if (!parsed.ok) return parsed;
+    auxiliaries = parsed.value;
   }
+  let vocabulary: ModelVocabulary | undefined;
   if ("vocabulary" in record) {
-    const vocabulary = parseModelVocabulary(record.vocabulary);
-    if (!vocabulary.ok) return vocabulary;
-    parsed.vocabulary = vocabulary.value;
+    const parsed = parseModelVocabulary(record.vocabulary);
+    if (!parsed.ok) return parsed;
+    vocabulary = parsed.value;
   }
-  return { ok: true, value: parsed };
+  return {
+    ok: true,
+    value: {
+      name,
+      model: model.value,
+      cfg: cfg.value,
+      entries: entries.value,
+      ...(auxiliaries === undefined ? {} : { auxiliaries }),
+      ...(vocabulary === undefined ? {} : { vocabulary }),
+    },
+  };
 }
 
 export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadError> {

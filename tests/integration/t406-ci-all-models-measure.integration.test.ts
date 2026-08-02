@@ -334,7 +334,7 @@ describe("t406 CI all-model acceptance", () => {
     expect(validateCiAcceptanceEvidence(incomplete).ok).toBe(false);
 
     const statisticsDrift = acceptanceEvidence();
-    (statisticsDrift.runs[6]!.stats as { generatedStates: number }).generatedStates = 1;
+    (statisticsDrift.runs[7]!.stats as { generatedStates: number }).generatedStates = 1;
     expect(validateCiAcceptanceEvidence(statisticsDrift)).toEqual({
       ok: false,
       error: expect.stringContaining("statistics drifted"),
