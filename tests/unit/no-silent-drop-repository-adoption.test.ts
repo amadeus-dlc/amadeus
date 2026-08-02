@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { captureSnapshot, verifySnapshot } from "../no-silent-drop/engine.ts";
@@ -130,6 +130,10 @@ function evidenceFixture(): { root: string; registry: ReturnType<typeof emptyEvi
       pass: true,
     }, root);
   }
+  writeFileSync(
+    join(root, "tests", "no-silent-drop", "adoption-evidence.json"),
+    `${JSON.stringify(registry, null, 2)}\n`,
+  );
   return { root, registry };
 }
 
@@ -262,6 +266,40 @@ describe("repository adoption evidence registry", () => {
     );
     expect(validation.ok).toBeFalse();
     if (!validation.ok) expect(validation.problems.join("\n")).toContain("self-referential");
+  });
+
+  test("internal and external symlink evidence files fail closed", () => {
+    const artifactFixture = evidenceFixture();
+    const externalDirectory = mkdtempSync(join(tmpdir(), "nsd-external-evidence-"));
+    temporaryDirectories.push(externalDirectory);
+    const externalArtifact = join(externalDirectory, "primary.json");
+    const artifactPath = join(artifactFixture.root, "tests", "no-silent-drop", "evidence", "primary.json");
+    writeFileSync(externalArtifact, readFileSync(artifactPath));
+    rmSync(artifactPath);
+    symlinkSync(externalArtifact, artifactPath);
+    const artifactValidation = validateEvidenceRegistry(artifactFixture.registry, FULL_SHA, artifactFixture.root);
+    expect(artifactValidation.ok).toBeFalse();
+    if (!artifactValidation.ok) expect(artifactValidation.problems.join("\n")).toContain("non-symlink");
+
+    const manifestFixture = evidenceFixture();
+    const manifestPath = join(manifestFixture.root, "tests", "no-silent-drop", "adoption-evidence-manifest.json");
+    const manifestTarget = join(manifestFixture.root, "tests", "no-silent-drop", "manifest-target.json");
+    writeFileSync(manifestTarget, readFileSync(manifestPath));
+    rmSync(manifestPath);
+    symlinkSync(manifestTarget, manifestPath);
+    const manifestValidation = validateEvidenceRegistry(manifestFixture.registry, FULL_SHA, manifestFixture.root);
+    expect(manifestValidation.ok).toBeFalse();
+    if (!manifestValidation.ok) expect(manifestValidation.problems.join("\n")).toContain("non-symlink");
+
+    const registryFixture = evidenceFixture();
+    const registryPath = join(registryFixture.root, "tests", "no-silent-drop", "adoption-evidence.json");
+    const registryTarget = join(registryFixture.root, "tests", "no-silent-drop", "registry-target.json");
+    writeFileSync(registryTarget, readFileSync(registryPath));
+    rmSync(registryPath);
+    symlinkSync(registryTarget, registryPath);
+    const registryValidation = validateEvidenceRegistry(registryFixture.registry, FULL_SHA, registryFixture.root);
+    expect(registryValidation.ok).toBeFalse();
+    if (!registryValidation.ok) expect(registryValidation.problems.join("\n")).toContain("non-symlink");
   });
 
   test("revision mismatch and pass=false fail closed", () => {

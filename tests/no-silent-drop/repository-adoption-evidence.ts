@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, relative, resolve } from "node:path";
 
 export const ADOPTION_RECEIPT_IDS = [
   "shape-fixtures",
@@ -105,22 +105,44 @@ function readJson(path: string, problems: string[]): unknown {
   }
 }
 
-function safeArtifactPath(repositoryRoot: string, artifactPath: unknown, problems: string[]): string | undefined {
-  if (typeof artifactPath !== "string" || artifactPath.length === 0 || isAbsolute(artifactPath)) {
-    problems.push("artifact path must be a non-empty repository-relative path");
+function secureRepositoryFile(repositoryRoot: string, path: unknown, problems: string[]): string | undefined {
+  if (typeof path !== "string" || path.length === 0 || isAbsolute(path)) {
+    problems.push("evidence path must be a non-empty repository-relative path");
     return undefined;
   }
-  const absolutePath = resolve(repositoryRoot, artifactPath);
+  const absolutePath = resolve(repositoryRoot, path);
   const relativePath = relative(repositoryRoot, absolutePath);
   if (relativePath.startsWith("..") || isAbsolute(relativePath)) {
-    problems.push(`artifact path escapes repository root: ${artifactPath}`);
+    problems.push(`evidence path escapes repository root: ${path}`);
     return undefined;
   }
+  let stats: ReturnType<typeof lstatSync>;
+  try {
+    stats = lstatSync(absolutePath);
+  } catch (error) {
+    problems.push(`cannot stat evidence file ${path}: ${String(error)}`);
+    return undefined;
+  }
+  if (stats.isSymbolicLink() || !stats.isFile()) {
+    problems.push(`evidence file must be a regular non-symlink: ${path}`);
+    return undefined;
+  }
+  const realRoot = realpathSync(repositoryRoot);
+  const realFile = realpathSync(absolutePath);
+  const realRelativePath = relative(realRoot, realFile);
+  if (realRelativePath.startsWith("..") || isAbsolute(realRelativePath)) {
+    problems.push(`evidence real path escapes repository root: ${path}`);
+    return undefined;
+  }
+  return absolutePath;
+}
+
+function safeArtifactPath(repositoryRoot: string, artifactPath: unknown, problems: string[]): string | undefined {
   if (artifactPath === EVIDENCE_MANIFEST_PATH || artifactPath === EVIDENCE_REGISTRY_PATH) {
     problems.push(`artifact path is self-referential: ${artifactPath}`);
     return undefined;
   }
-  return absolutePath;
+  return secureRepositoryFile(repositoryRoot, artifactPath, problems);
 }
 
 function parseArtifactReference(value: unknown, label: string, problems: string[]): ArtifactReference | undefined {
@@ -413,7 +435,8 @@ function validateNoExtraRecords(
 
 export function validateEvidenceBundle(repositoryRoot: string, expectedRevision: string): EvidenceBundle {
   const problems: string[] = [];
-  const rawManifest = readJson(join(repositoryRoot, EVIDENCE_MANIFEST_PATH), problems);
+  const manifestPath = secureRepositoryFile(repositoryRoot, EVIDENCE_MANIFEST_PATH, problems);
+  const rawManifest = manifestPath === undefined ? undefined : readJson(manifestPath, problems);
   const entries = indexEvidenceEntries(parseManifestEntries(rawManifest, expectedRevision, problems), problems);
   const collections = readCollections(repositoryRoot, entries, problems);
   const referencedRecords = validateArtifactReferences(entries, collections, problems);
@@ -422,4 +445,15 @@ export function validateEvidenceBundle(repositoryRoot: string, expectedRevision:
   const digests = new Map<AdoptionReceiptId, string>();
   for (const entry of entries.values()) digests.set(entry.id, sha256(canonicalBinding(entry, artifactDigests)));
   return { entries, digests, problems };
+}
+
+export function validateEvidenceRegistryFile(repositoryRoot: string, value: unknown): string[] {
+  const problems: string[] = [];
+  const registryPath = secureRepositoryFile(repositoryRoot, EVIDENCE_REGISTRY_PATH, problems);
+  if (registryPath === undefined) return problems;
+  const repositoryValue = readJson(registryPath, problems);
+  if (JSON.stringify(repositoryValue) !== JSON.stringify(value)) {
+    problems.push("registry value does not match canonical repository evidence bytes");
+  }
+  return problems;
 }

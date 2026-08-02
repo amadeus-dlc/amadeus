@@ -3,6 +3,7 @@ import {
   type AdoptionReceiptId,
   DEFAULT_EVIDENCE_REPOSITORY_ROOT,
   validateEvidenceBundle,
+  validateEvidenceRegistryFile,
 } from "./repository-adoption-evidence.ts";
 import type { BaselineDoc } from "./model.ts";
 import { digest } from "./model.ts";
@@ -206,7 +207,7 @@ export function validateEvidenceRegistry(
   repositoryRoot = DEFAULT_EVIDENCE_REPOSITORY_ROOT,
 ): RegistryValidation {
   const evidence = validateEvidenceBundle(repositoryRoot, expectedRevision);
-  const problems: string[] = [...evidence.problems];
+  const problems: string[] = [...evidence.problems, ...validateEvidenceRegistryFile(repositoryRoot, value)];
   if (!isFullRevision(expectedRevision)) problems.push("expected revision is not a non-zero full SHA");
   if (!isRecord(value)) return { ok: false, problems: [...problems, "registry must be an object"] };
   if (!hasExactKeys(value, REGISTRY_KEYS)) problems.push("registry fields do not match schema version 1");
