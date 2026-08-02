@@ -219,7 +219,7 @@ const MODEL_KEY_SETS: readonly (readonly string[])[] = [
 function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is string {
   if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
   if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
-  if (!value.startsWith("specs/tla/")) return false;
+  if (posix.dirname(value) !== "specs/tla") return false;
   const base = posix.basename(value);
   if (!base.endsWith(".tla") || !MODEL_NAME.test(base.slice(0, -".tla".length))) return false;
   return value !== selfPath;
