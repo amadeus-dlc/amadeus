@@ -346,4 +346,104 @@ describe("t425 fixed pool", () => {
     expect(projection.terminal).toContainEqual(expect.objectContaining({ unitId: "u0", outcome: "failed" }));
     expect(projection.terminal).toContainEqual(expect.objectContaining({ unitId: "u1", outcome: "succeeded" }));
   });
+
+  test("terminate-batch drains queued Units and commits the requested terminal result", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 1, units: units(2) });
+
+    expect(coordinator.terminateBatch({
+      idempotencyKey: "terminate",
+      batchId: "b",
+      result: "terminated",
+      queuedOutcome: "batch-unsafe",
+    }).ok).toBe(true);
+    expect(coordinator.readProjection("b")).toMatchObject({
+      phase: "terminal",
+      result: "terminated",
+      terminal: [
+        { unitId: "u0", attemptId: null, outcome: "batch-unsafe" },
+        { unitId: "u1", attemptId: null, outcome: "batch-unsafe" },
+      ],
+    });
+  });
+
+  test("a no-effect reconciliation settles an active Unit while the pool is draining", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 2, units: units(2) });
+    coordinator.acquire({ idempotencyKey: "a0", batchId: "b" });
+    coordinator.acquire({ idempotencyKey: "a1", batchId: "b" });
+    const [uncertain, sibling] = coordinator.readProjection("b").active;
+    coordinator.recordReconciliation({
+      idempotencyKey: "unknown",
+      batchId: "b",
+      attemptId: uncertain.attemptId,
+      reconciliationKind: "worker-start",
+      effect: "unknown",
+    });
+
+    expect(coordinator.recordReconciliation({
+      idempotencyKey: "no-effect",
+      batchId: "b",
+      attemptId: sibling.attemptId,
+      reconciliationKind: "worker-start",
+      effect: "no-effect-confirmed",
+    }).ok).toBe(true);
+    expect(coordinator.readProjection("b").terminal).toContainEqual(
+      expect.objectContaining({ unitId: sibling.unitId, outcome: "dispatch-not-started" }),
+    );
+  });
+
+  test("a second dispatch-not-started result exhausts the Unit attempt budget", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 1, units: units(1) });
+    coordinator.acquire({ idempotencyKey: "a0", batchId: "b" });
+    let attempt = coordinator.readProjection("b").active[0];
+    coordinator.settleReleaseRequeue({
+      idempotencyKey: "requeue-1",
+      batchId: "b",
+      attemptId: attempt.attemptId,
+      outcome: "dispatch-not-started",
+    });
+    attempt = coordinator.readProjection("b").active[0];
+
+    expect(coordinator.settleReleaseRequeue({
+      idempotencyKey: "requeue-2",
+      batchId: "b",
+      attemptId: attempt.attemptId,
+      outcome: "dispatch-not-started",
+    }).ok).toBe(true);
+    expect(coordinator.readProjection("b").terminal).toContainEqual(
+      expect.objectContaining({ unitId: "u0", outcome: "failed" }),
+    );
+  });
+
+  test("settlement is rejected until native dispatch is confirmed", () => {
+    const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 1, units: units(1) });
+    coordinator.acquire({ idempotencyKey: "acquire", batchId: "b" });
+    const attempt = coordinator.readProjection("b").active[0];
+
+    expect(coordinator.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "b",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    })).toEqual({ ok: false, reason: "dispatch-not-confirmed" });
+  });
+
+  test("the audit decoder accepts a well-formed reconciliation record", () => {
+    const eventSet = {
+      eventSetId: "set",
+      batchId: "b",
+      idempotencyKey: "reconcile",
+      payloadFingerprint: "fingerprint",
+      events: [{
+        type: "reconciliation-recorded",
+        record: { attemptId: "attempt", kind: "worker-start", ordinal: 1, effect: "effect-possible" },
+      }],
+    } as const;
+
+    expect(decodeUnitPoolEventSet(JSON.stringify(eventSet))).toEqual(eventSet);
+  });
+
 });

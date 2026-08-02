@@ -1843,8 +1843,86 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
-    "lines": "568",
+    "lines": "585",
     "reason": "The --unit pass-through in handlePrepare's argv for amadeus-bolt start. handlePrepare runs only inside the spawned swarm CLI, so the argument array is 0-stamped by in-process imports. The flag's meaning is driven in-process through boltContextKind and asserted end-to-end by the spawned unit fork in tests/integration/t-otel-bolt-context-marker.test.ts. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when handlePrepare gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "3111-3121",
+    "reason": "The invoke-swarm configuration adapter is reached through the spawned orchestrator CLI. tests/integration/t135-invoke-swarm.test.ts proves the resolved cap and layered precedence, while tests/unit/t257-amadeus-config.test.ts and its integration twin cover invalid configuration diagnostics in-process; Bun does not attribute the spawned next command to parent LCOV.",
+    "expiry": "remove when tryEmitSwarm receives an in-process directive sink and configuration port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "469-516",
+    "reason": "Prepare validation and configuration helpers are owned by the spawned swarm CLI. tests/integration/t135-invoke-swarm.test.ts exercises valid preparation, invalid degraded drivers, capped concurrency, and partial-prepare refusal through the shipped command; Bun cannot attribute child-process execution to parent LCOV.",
+    "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "533",
+    "reason": "Spawn-only prepare wiring that validates --degraded-from before any worktree or pool mutation. The no-orphan contract is asserted by tests/integration/t135-invoke-swarm.test.ts, but Bun does not merge child-process coverage.",
+    "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "551-553",
+    "reason": "Spawn-only prepare wiring for the resolved fixed-pool cap and prepared-unit accumulator. tests/integration/t135-invoke-swarm.test.ts drives both the successful and rejected shipped CLI paths.",
+    "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "603-623",
+    "reason": "Spawn-only prepare commit sequence: reject partial preparation, initialize the canonical pool, then emit SWARM_STARTED and the response. tests/integration/t135-invoke-swarm.test.ts asserts no orphan pool on failure and the complete event trail on success; child-process rows are not parent-LCOV visible.",
+    "expiry": "remove when handlePrepare gains an in-process argv, audit, and output driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "1111-1252",
+    "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution.",
+    "expiry": "remove when fixed-pool handlers receive injectable argv, repository, output, and exit ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "lines": "1327-1349",
+    "reason": "Spawn-only main() dispatch arms for the fixed-pool commands. The handlers' protocol is exercised by t135 and pinned by t425, while Bun does not attribute child-process main dispatch to parent LCOV.",
+    "expiry": "remove when main() receives an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool-runtime.ts",
+    "lines": "128-129",
+    "reason": "Error-prefix normalization after a malformed canonical Event Set is the catch sibling of decodeUnitPoolEventSet. tests/unit/t425-unit-pool.test.ts drives malformed JSON and invalid event shapes directly; reaching this wrapper additionally requires installing a malformed committed audit row.",
+    "expiry": "remove when audit-row enumeration receives an injectable row source"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "lines": "23-38",
+    "reason": "Unit-pool outcome, phase, result, plan, and validation declarations are TypeScript-only and erased at runtime. Their closed values and behavior are enforced by tsc and tests/unit/t425-unit-pool.test.ts; Bun emits DA:0 records that cannot execute.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "lines": "74-113",
+    "reason": "Queue, active-attempt, terminal, reconciliation, and projection interfaces are TypeScript-only and erased at runtime. Their shapes are exercised through coordinator projections in t425 and enforced by tsc; Bun emits non-executable DA:0 rows.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "lines": "130-147",
+    "reason": "Canonical Unit-pool Event and Event Set declarations are TypeScript-only. Runtime decoding validates their concrete shapes in amadeus-unit-pool-runtime.ts and t425, while tsc enforces producers; the declarations themselves cannot execute.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "lines": "217-233",
+    "reason": "Unit-pool Command and Proposal unions plus the terminalOutcome signature are erased TypeScript declarations. Every command family is driven through the coordinator in t425; Bun's DA:0 records on these declaration lines are not executable.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "lines": "257-258",
+    "reason": "PoolCommand and SettlementCommand are compile-time extraction aliases erased before runtime. tsc enforces their narrowing and t425 drives each settlement command kind.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   }
 ]

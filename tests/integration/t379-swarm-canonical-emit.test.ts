@@ -259,4 +259,41 @@ describe("finalize drives the taxonomy through the seam", () => {
     // Never a converged row for a unit that did not land on the trunk.
     expect(emitted).not.toContain("amadeus.swarm.unit.converged");
   });
+
+  test("finalize rejects a batch whose fixed pool was never initialized", () => {
+    expect(callFinalize([
+      "--batch",
+      "2",
+      "--units",
+      "u2",
+      "--claimed",
+      "u2",
+      "--check-cmd",
+      "true",
+      "--project-dir",
+      proj,
+    ])).toBe(2);
+  });
+
+  test("finalize rejects a claimed Unit whose pool outcome was not successful", () => {
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    pool.initialEnqueue({ idempotencyKey: "init-3", batchId: "3", cap: 1, units: [{ unitId: "u3", dependsOn: [] }] });
+    pool.acquire({ idempotencyKey: "acquire-3", batchId: "3" });
+    const attempt = pool.readProjection("3").active[0];
+    pool.confirmDispatch({ idempotencyKey: "confirm-3", batchId: "3", attemptId: attempt.attemptId, nativeHandle: "native-u3" });
+    pool.settleRelease({ idempotencyKey: "settle-3", batchId: "3", attemptId: attempt.attemptId, outcome: "failed" });
+
+    expect(callFinalize([
+      "--batch",
+      "3",
+      "--units",
+      "u3",
+      "--claimed",
+      "u3",
+      "--check-cmd",
+      "true",
+      "--project-dir",
+      proj,
+    ])).toBe(2);
+  });
 });
