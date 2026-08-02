@@ -398,16 +398,18 @@ async function loadMap(
   }
 }
 
+interface DecodedIdentity {
+  readonly identity?: string;
+  readonly source?: string;
+  readonly finding?: CompletenessFinding;
+}
+
 function decodeIdentity(
   outcome: SafeReadOutcome,
   path: string,
   domain: string,
   identity: typeof canonicalIdentity,
-): {
-  readonly identity?: string;
-  readonly source?: string;
-  readonly finding?: CompletenessFinding;
-} {
+): DecodedIdentity {
   if (!outcome.content) {
     return { finding: outcome.finding ?? { path, reason: "unreadable" } };
   }

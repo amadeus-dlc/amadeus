@@ -34,6 +34,7 @@ export interface RunModelCheckSource {
 
 export interface RunModelCheckSourceDependencies {
   readonly readBytes: (path: string) => Uint8Array;
+  readonly loadVerifiedSources?: typeof loadVerifiedTlaSources;
 }
 
 const DEFAULT_SOURCE_DEPENDENCIES: RunModelCheckSourceDependencies = {
@@ -96,7 +97,7 @@ export function loadRunModelCheckSource(
   cfgPath: string,
   dependencies: RunModelCheckSourceDependencies = DEFAULT_SOURCE_DEPENDENCIES,
 ): Result<RunModelCheckSource, TlaModelPipelineError> {
-  const canonical = loadVerifiedTlaSources();
+  const canonical = (dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)();
   if (!canonical.ok) {
     // The requested-model byte-pin predates resolver errors, so a
     // ModuleDepsError is narrowed onto SOURCE_DRIFT here with its code and

@@ -422,4 +422,23 @@ describe.each(modules)("model map v2 parser copy: %s", (_name, module) => {
     expect(module.diffModelMap(mirror, mirror.entries)).toEqual([]);
     expect(module.findModelMapModel(parsed.value, "Missing")).toBeUndefined();
   });
+
+  test("rejects every auxiliary and vocabulary validation class", () => {
+    const invalidModels = [
+      { ...mirrorModel(), auxiliaries: [] },
+      { ...mirrorModel(), auxiliaries: [{ ...auxEntry(), extra: true }] },
+      { ...mirrorModel(), auxiliaries: [{ ...auxEntry(), identity: "A".repeat(64) }] },
+      { ...mirrorModel(), auxiliaries: [auxEntry(), auxEntry()] },
+      { ...electionModel(), vocabulary: { ...vocabulary(), extra: [] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: [] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: ["not-valid"] } },
+      { ...electionModel(), vocabulary: { ...vocabulary(), namedInvariants: ["TypeOK", "TypeOK"] } },
+    ];
+    for (const model of invalidModels) {
+      expect(module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_MAP_INVALID" },
+      });
+    }
+  });
 });

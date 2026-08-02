@@ -297,6 +297,33 @@ describe("non-acceptance model-check diagnostic", () => {
       run: async () => ({ errorCode: null }),
       writeError: (value) => writes.push(value),
     })).toBe(2);
+
+    models.length = 0;
+    expect(await runModelCheckDiagnosticMain([
+      "--root", "/tmp/evidence", "--model", "MirrorLifecycle",
+    ], {
+      run: async (input) => {
+        models.push(input.model.name);
+        return { errorCode: null };
+      },
+      writeError: (value) => writes.push(value),
+    })).toBe(0);
+    expect(models).toEqual(["MirrorLifecycle"]);
+
+    expect(await runModelCheckDiagnosticMain(["--root", "/tmp/evidence"], {
+      run: async () => ({ errorCode: null }),
+      writeError: (value) => writes.push(value),
+      loadSources: () => ({
+        ok: false,
+        error: {
+          kind: "MODULE_DEPS",
+          code: "MODULE_DEP_UNRESOLVED",
+          relativePath: "specs/tla/Missing.tla",
+          detail: "injected dependency failure",
+        },
+      }),
+    })).toBe(2);
+    expect(writes.at(-1)).toContain("injected dependency failure");
   });
 
   test("workflow keeps diagnostics opt-in and runs only the formal acceptance", () => {

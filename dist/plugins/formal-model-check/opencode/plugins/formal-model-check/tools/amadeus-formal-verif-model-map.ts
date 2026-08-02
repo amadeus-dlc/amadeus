@@ -310,14 +310,12 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
   if (!cfg.ok) return cfg;
   const entries = parseEntries(record.entries);
   if (!entries.ok) return entries;
-  const parsed: {
-    name: string;
-    model: ModelMapAssetIdentity;
-    cfg: ModelMapAssetIdentity;
-    auxiliaries?: readonly ModelMapAssetIdentity[];
-    entries: readonly ModelMapEntry[];
-    vocabulary?: ModelVocabulary;
-  } = { name, model: model.value, cfg: cfg.value, entries: entries.value };
+  const parsed: ModelMapModel = {
+    name,
+    model: model.value,
+    cfg: cfg.value,
+    entries: entries.value,
+  };
   if ("auxiliaries" in record) {
     const auxiliaries = parseAuxiliaryIdentities(record.auxiliaries, model.value.path);
     if (!auxiliaries.ok) return auxiliaries;

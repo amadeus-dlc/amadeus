@@ -322,15 +322,22 @@ interface DiagnosticMainDependencies {
     input: DiagnosticInput,
   ) => Promise<{ readonly errorCode: string | null }>;
   readonly writeError: (value: string) => void;
+  readonly loadSources: typeof loadVerifiedTlaSources;
+  readonly selectModel: typeof selectVerifiedModel;
 }
+
+const DEFAULT_DIAGNOSTIC_MAIN_DEPENDENCIES: DiagnosticMainDependencies = {
+  run: runModelCheckDiagnostic,
+  writeError: (value) => process.stderr.write(value),
+  loadSources: loadVerifiedTlaSources,
+  selectModel: selectVerifiedModel,
+};
 
 export async function runModelCheckDiagnosticMain(
   argv: readonly string[],
-  dependencies: DiagnosticMainDependencies = {
-    run: runModelCheckDiagnostic,
-    writeError: (value) => process.stderr.write(value),
-  },
+  overrides: Partial<DiagnosticMainDependencies> = {},
 ): Promise<0 | 2> {
+  const dependencies = { ...DEFAULT_DIAGNOSTIC_MAIN_DEPENDENCIES, ...overrides };
   const validRoot = argv[0] === "--root" && Boolean(argv[1]) && isAbsolute(argv[1]!);
   const selectedName = argv.length === 4 && argv[2] === "--model" && argv[3]
     ? argv[3]
@@ -341,14 +348,14 @@ export async function runModelCheckDiagnosticMain(
     );
     return 2;
   }
-  const loaded = loadVerifiedTlaSources();
+  const loaded = dependencies.loadSources();
   if (!loaded.ok) {
     dependencies.writeError(`${JSON.stringify(loaded.error)}\n`);
     return 2;
   }
   let selected = loaded.value.models;
   if (selectedName !== null) {
-    const model = selectVerifiedModel(loaded.value, selectedName);
+    const model = dependencies.selectModel(loaded.value, selectedName);
     if (!model.ok) {
       dependencies.writeError(`${JSON.stringify(model.error)}\n`);
       return 2;

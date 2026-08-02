@@ -193,6 +193,12 @@ describe("CI model-check artifact verifier", () => {
     };
     writeJson(join(mixedBlock.root, "acceptance.json"), mixedBlock.evidence);
     expect(verifyCiAcceptanceArtifacts(mixedBlock.root, ["FormalElection"]).ok).toBe(false);
+
+    const wrongSelection = fixture();
+    expect(verifyCiAcceptanceArtifacts(wrongSelection.root, ["MirrorLifecycle"])).toEqual({
+      ok: false,
+      error: expect.stringContaining("declaration order"),
+    });
   });
 
   test("rejects byte drift and an unexecuted Docker inspection", () => {

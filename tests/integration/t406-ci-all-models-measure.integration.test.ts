@@ -20,7 +20,10 @@ import {
   NodeCiModelCheckPort,
   type NodeCiModelCheckDependencies,
 } from "../../plugins/formal-model-check/tools/node-ci-model-check-port.ts";
-import { parseCiArguments } from "../../plugins/formal-model-check/tools/run-model-check-ci.ts";
+import {
+  parseCiArguments,
+  runCiMain,
+} from "../../plugins/formal-model-check/tools/run-model-check-ci.ts";
 import {
   beginModelCheckArtifacts,
   publishModelCheckArtifacts,
@@ -325,6 +328,26 @@ describe("t406 CI all-model acceptance", () => {
     expect(validateCiAcceptanceEvidence(evidence)).toEqual({ ok: true, value: undefined });
   });
 
+  test("rejects model-specific completion, statistics, and block-order drift", () => {
+    const incomplete = acceptanceEvidence();
+    (incomplete.runs[0]!.stats as { completionMarker: boolean }).completionMarker = false;
+    expect(validateCiAcceptanceEvidence(incomplete).ok).toBe(false);
+
+    const statisticsDrift = acceptanceEvidence();
+    (statisticsDrift.runs[6]!.stats as { generatedStates: number }).generatedStates = 1;
+    expect(validateCiAcceptanceEvidence(statisticsDrift)).toEqual({
+      ok: false,
+      error: expect.stringContaining("statistics drifted"),
+    });
+
+    const duplicateBlock = acceptanceEvidence();
+    (duplicateBlock.runs[6] as { model: string }).model = "FormalElection";
+    expect(validateCiAcceptanceEvidence(duplicateBlock)).toEqual({
+      ok: false,
+      error: expect.stringContaining("model ordering"),
+    });
+  });
+
   test("injects a semantic defect into each model, observes red, restores bytes, and returns green", async () => {
     await assertSemanticMutationRoundTrip("FormalElection");
     await assertSemanticMutationRoundTrip("MirrorLifecycle");
@@ -343,6 +366,8 @@ describe("t406 CI all-model acceptance", () => {
         root,
         modelName: "MirrorLifecycle",
       });
+      expect(parseCiArguments(["run", "--root", "relative"])).toBeNull();
+      expect(parseCiArguments(["run", "--root", root, "extra"])).toBeNull();
       const result = Bun.spawnSync([
         process.execPath,
         "plugins/formal-model-check/tools/run-model-check-ci.ts",
@@ -355,6 +380,51 @@ describe("t406 CI all-model acceptance", () => {
       expect(result.exitCode).toBe(2);
       expect(result.stderr.toString()).toContain("MODEL_MAP_INVALID");
       expect(result.stdout.toString()).toBe("");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("drives every CI CLI branch in-process", async () => {
+    const root = mkdtempSync(join(tmpdir(), "t406-ci-main-"));
+    const writes: string[] = [];
+    const writeError = (value: string) => writes.push(value);
+    try {
+      expect(await runCiMain([], { writeError })).toBe(2);
+      expect(writes.at(-1)).toContain("usage:");
+
+      expect(await runCiMain(["verify", "--root", root, "--model", "NoSuch"], {
+        writeError,
+      })).toBe(2);
+      expect(writes.at(-1)).toContain("MODEL_MAP_INVALID");
+
+      expect(await runCiMain(["verify", "--root", root], { writeError })).toBe(2);
+      expect(writes.at(-1)).toContain("CI_ARTIFACTS_INVALID");
+
+      let selected: readonly string[] = [];
+      expect(await runCiMain(["run", "--root", root], {
+        writeError,
+        execute: async (options) => {
+          selected = options.models.map((model) => model.name);
+          return { exitCode: 0, reason: "NOT_DETECTED" };
+        },
+      })).toBe(0);
+      expect(selected).toEqual(MODEL_NAMES);
+      expect(writes.at(-1)).toBe('{"exitCode":0,"reason":"NOT_DETECTED"}\n');
+
+      expect(await runCiMain(["run", "--root", root], {
+        writeError,
+        loadSources: () => ({
+          ok: false,
+          error: {
+            kind: "MODEL_LOAD",
+            code: "MODEL_MAP_INVALID",
+            relativePath: "specs/tla/model-map.json",
+            detail: "injected load failure",
+          },
+        }),
+      })).toBe(2);
+      expect(writes.at(-1)).toContain("injected load failure");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

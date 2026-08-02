@@ -76,6 +76,41 @@ describe("run-model-check source adapter", () => {
     });
   });
 
+  test("preserves canonical loader failures at the source adapter boundary", () => {
+    const moduleFailure = loadRunModelCheckSource("unused.tla", "unused.cfg", {
+      readBytes: () => new Uint8Array(),
+      loadVerifiedSources: () => ({
+        ok: false,
+        error: {
+          kind: "MODULE_DEPS",
+          code: "MODULE_DEP_UNRESOLVED",
+          relativePath: "specs/tla/Missing.tla",
+          detail: "injected dependency failure",
+        },
+      }),
+    });
+    expect(moduleFailure).toEqual({
+      ok: false,
+      error: {
+        kind: "SOURCE_DRIFT",
+        code: "SOURCE_DRIFT",
+        relativePath: "specs/tla/Missing.tla",
+        detail: expect.stringContaining("MODULE_DEP_UNRESOLVED"),
+      },
+    });
+
+    const modelFailure = {
+      kind: "MODEL_LOAD" as const,
+      code: "MODEL_MAP_INVALID" as const,
+      relativePath: "specs/tla/model-map.json",
+      detail: "injected model-map failure",
+    };
+    expect(loadRunModelCheckSource("unused.tla", "unused.cfg", {
+      readBytes: () => new Uint8Array(),
+      loadVerifiedSources: () => ({ ok: false, error: modelFailure }),
+    })).toEqual({ ok: false, error: modelFailure });
+  });
+
   test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {
     const mirror = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-"));
     roots.push(mirror);

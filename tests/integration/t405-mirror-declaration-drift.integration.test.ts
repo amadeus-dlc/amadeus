@@ -209,4 +209,14 @@ describe("MirrorLifecycle auxiliary declaration drift", () => {
       findings: expect.arrayContaining([{ path: MODEL_PATH, reason: "declaration-unresolved" }]),
     });
   });
+
+  test("fails closed when an undeclared referenced module cannot be read", async () => {
+    const fixture = createFixture(false);
+    rmSync(join(fixture.root, CORE_PATH));
+    expect(await checkModelCompleteness({ projectRoot: fixture.root })).toMatchObject({
+      pass: false,
+      reason: "drift",
+      findings: expect.arrayContaining([{ path: MODEL_PATH, reason: "declaration-unresolved" }]),
+    });
+  });
 });

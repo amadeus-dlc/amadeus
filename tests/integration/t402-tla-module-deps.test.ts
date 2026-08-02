@@ -3,12 +3,14 @@
 //
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import * as canonicalDeps from "../../packages/framework/core/tools/tla-module-deps.ts";
 import {
   compareModuleDeclarations,
   extractModuleRefs,
   type ModuleDepsError,
   resolveAuxiliaryModules,
 } from "../../plugins/formal-model-check/tools/tla-module-deps.ts";
+import * as pluginDeps from "../../plugins/formal-model-check/tools/tla-module-deps.ts";
 
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }
@@ -44,6 +46,45 @@ const realReader = (name: string): Result<string, ModuleDepsError> => {
     return unresolved(name)();
   }
 };
+
+const dependencyModules = [
+  ["canonical", canonicalDeps],
+  ["plugin", pluginDeps],
+] as const;
+
+describe.each(dependencyModules)("t402 tla-module-deps copy: %s", (_name, module) => {
+  test("covers parser and resolver failure classes on both distributed copies", () => {
+    expect(module.extractModuleRefs("../escape", "EXTENDS B")).toMatchObject({
+      ok: false,
+      error: { code: "MODULE_DEP_OUT_OF_BOUNDS" },
+    });
+    expect(module.extractModuleRefs("M", [
+      "(* outer (* nested *) hidden *)",
+      "EXTENDS Naturals,",
+      "  Helper",
+      "INSTANCE Direct",
+    ].join("\n"))).toEqual({ ok: true, value: ["Helper", "Direct"] });
+    expect(module.extractModuleRefs("M", "EXTENDS not-valid")).toMatchObject({
+      ok: false,
+      error: { code: "MODULE_DEP_UNRESOLVED" },
+    });
+    expect(module.resolveAuxiliaryModules("A", () => ({
+      ok: false,
+      error: {
+        kind: "MODULE_DEPS",
+        code: "MODULE_DEP_OUT_OF_BOUNDS",
+        relativePath: "specs/tla/A.tla",
+        detail: "injected non-unresolved failure",
+      },
+    }))).toMatchObject({
+      ok: false,
+      error: {
+        code: "MODULE_DEP_OUT_OF_BOUNDS",
+        detail: expect.stringContaining("cannot read module A"),
+      },
+    });
+  });
+});
 
 describe("t402 tla-module-deps extraction", () => {
   test("extracts EXTENDS names and both INSTANCE declaration forms", () => {
