@@ -905,6 +905,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
           "mechanism": "none"
         }
@@ -3406,6 +3410,10 @@
         },
         {
           "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
           "mechanism": "none"
         },
         {
