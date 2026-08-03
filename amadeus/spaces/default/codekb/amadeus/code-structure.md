@@ -53,11 +53,11 @@ core の正本は `scripts/package.ts` から7 `dist` へ配布され、`promote
 
 - **dist 側の配置**: `dist/{claude,codex,cursor,opencode,kimi,kiro,kiro-ide}/<face>/tools/data/scope-grid.json` の 7 ファイルはいずれも stock 10 行のみで `self-*` 行を持たない（実測）。センサー正本を変更した場合の同期対象は dist 7 面 + self-install 5 面のツールコピーであり、grid データそのものは dist 同期の対象外。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- 主責務は `packages/framework/core/tools/amadeus-plugin.ts`（discovery／compose／doctor）、`amadeus-plugin-activation.ts`（spec/verdict judgment）、`amadeus-orchestrate.ts`（main／single checkpoint）、`amadeus-harness.ts`（6 host catalog）にある。
-- face 固有の trigger は `packages/framework/harness/*`、7 face の host class と projection は `scripts/plugin-projection.ts`、生成は `scripts/package.ts`、self-install は `scripts/promote-self.ts` が所有する。Kiro CLI／IDE は `.kiro` を共有し、OpenCode は manual-only に分類される。
-- `plugins/formal-model-check/` は供給元であり opt-in 宣言ではない。host-local staging と composition record のほかに、プロジェクトが導入対象として選んだ plugin 名を記録する場所が必要で、生成物 `dist/` は直接編集しない。
+- authoring は `plugins/formal-model-check/`、package projection は `scripts/plugin-projection.ts` と `scripts/package.ts`、root self-install は `scripts/promote-self.ts`、runtime repair は `packages/framework/core/tools/amadeus-plugin.ts`、graph／runner再生成は `amadeus-graph.ts`／`amadeus-runner-gen.ts` が所有する。現在はこの所有鎖に「commit 済み project projection を生成・検査する」工程がない。
+- Claude は staging、composition／audit／drops、composed stage/tool、compiled graph、runnerを含む58ファイルが tracked。Codex／Cursor／OpenCode／Kimi は同等surfaceが0 trackedで、startup時にだけ生成される。
+- Codex 固有規則は `.codex` 内の stage／tool／graph と project-root `.agents/skills` の runner に分かれる。`.codex/skills` は正規構造ではなく、汎用 `SKILLS_DIR = tools/../skills` を無補正で呼ぶ runtime compose の不具合である。
 
 ## formal-model-check 複数モデル化の患部配置（260801-tla-multi-model、履歴、observed `33e196b8`）
 

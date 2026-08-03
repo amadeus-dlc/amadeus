@@ -22,10 +22,12 @@
 // does not instrument spawned children).
 
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { HarnessManifest } from "./manifest-types.ts";
+import type { HarnessManifest, StageEntrySurface } from "./manifest-types.ts";
 import { transform } from "./harness-transform.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -60,7 +62,12 @@ export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 // (amadeus-plugin-compose.ts) so the dist-shipped engine carries no scripts/
 // import; imported for local use and re-exported for existing consumers of this
 // module (C2 relocation, single definition — no double-def).
-import { type ReadOnlyFs, nodeReadOnlyFs } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import {
+  compositionFromJson,
+  compositionToJson,
+  type ReadOnlyFs,
+  nodeReadOnlyFs,
+} from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "../packages/framework/core/tools/amadeus-plugin.ts";
 export { type ReadOnlyFs, nodeReadOnlyFs };
 
@@ -120,6 +127,7 @@ export type BuildResult = {
   expectedPaths: ReadonlySet<string>;
   readSources: ReadonlySet<string>;
   outsideHarness: readonly string[];
+  artifacts?: ReadonlyMap<string, Buffer>;
 };
 
 // The POSIX prefix a plugin owns inside a dist harness tree. Namespacing every
@@ -429,12 +437,19 @@ export type HarnessProjectionSpec = {
   harness: PackageHarness;
   clazz: PluginHostClass;
   harnessDir: string;
+  stageEntry: StageEntrySurface;
 };
 
 // Build the spec for one face by reading the U1 class map + the harness manifest
 // (BR-U3-2: the spec constructor takes the matrix enumeration as input).
 export function harnessProjectionSpec(harness: PackageHarness): HarnessProjectionSpec {
-  return { harness, clazz: PLUGIN_HOST_CLASS[harness], harnessDir: loadHarnessManifest(harness).harnessDir };
+  const manifest = loadHarnessManifest(harness);
+  return {
+    harness,
+    clazz: PLUGIN_HOST_CLASS[harness],
+    harnessDir: manifest.harnessDir,
+    stageEntry: manifest.stageEntry,
+  };
 }
 
 // The plan-stage outDir rejection set (ADR-5, upstream t188 #27-32, 1:1).
@@ -894,7 +909,106 @@ export function assertSelfInstallHarness(name: string): SelfInstallHarness {
 // C5 internal helper: the self-install projection is the closed five faces only.
 // Returns the (empty) BuildResult contract; the actual byte reflection stays in
 // promote-self.ts's existing five-face closed list — U09 does not widen it.
-export function buildSelfInstallProjection(name: SelfInstallHarness): BuildResult {
+const DETERMINISTIC_GRANT_TIMESTAMP = "1970-01-01T00:00:00.000Z";
+
+function copyDirectoryContents(source: string, destination: string): void {
+  mkdirSync(destination, { recursive: true });
+  for (const entry of readdirSync(source)) {
+    cpSync(join(source, entry), join(destination, entry), { recursive: true });
+  }
+}
+
+function fileMap(root: string): Map<string, Buffer> {
+  const files = new Map<string, Buffer>();
+  if (!existsSync(root)) return files;
+  for (const { rel, abs } of walkFs(nodeReadOnlyFs, root, "")) files.set(rel, readFileSync(abs));
+  return files;
+}
+
+function normalizeCompositionRecord(hostRoot: string): void {
+  const path = join(hostRoot, ".amadeus-plugin-composition.json");
+  if (!existsSync(path)) return;
+  const record = compositionFromJson(readFileSync(path, "utf-8"));
+  for (const plugin of record.plugins.values()) {
+    const grant = plugin.trustGrant;
+    if (grant) grant.grantTimestamp = DETERMINISTIC_GRANT_TIMESTAMP;
+  }
+  writeFileSync(path, compositionToJson(record));
+}
+
+function projectInTemporaryWorkspace(repoRoot: string, name: SelfInstallHarness): Map<string, Buffer> {
+  const manifest = loadHarnessManifest(name);
+  const distFace = join(repoRoot, "dist", name);
+  if (!existsSync(distFace)) throw new Error(`missing packaged harness: dist/${name}`);
+  const workspace = mkdtempSync(join(tmpdir(), `amadeus-self-${name}-`));
+  try {
+    copyDirectoryContents(distFace, workspace);
+    const configSource = join(repoRoot, "amadeus", "config.json");
+    const pluginsSource = join(repoRoot, "plugins");
+    if (!existsSync(configSource)) throw new Error("missing self plugin selection: amadeus/config.json");
+    mkdirSync(join(workspace, "amadeus"), { recursive: true });
+    cpSync(configSource, join(workspace, "amadeus", "config.json"));
+    if (existsSync(pluginsSource)) cpSync(pluginsSource, join(workspace, "plugins"), { recursive: true });
+    const hostRoot = join(workspace, manifest.harnessDir);
+    const tool = join(hostRoot, "tools", "amadeus-plugin.ts");
+    const env: NodeJS.ProcessEnv = { ...process.env, AMADEUS_HARNESS_DIR: manifest.harnessDir };
+    delete env.AMADEUS_PLUGINS_HOST_ROOT;
+    delete env.AMADEUS_RULES_DIR;
+    delete env.AMADEUS_SCOPE_GRID;
+    delete env.AMADEUS_SCOPE_MAPPING;
+    delete env.AMADEUS_SENSORS_DIR;
+    delete env.AMADEUS_STAGE_GRAPH;
+    delete env.AMADEUS_STAGES_DIR;
+    const result = spawnSync("bun", [tool, "compose", "--if-stale", "--project-root", hostRoot], {
+      cwd: workspace,
+      env,
+      encoding: "utf-8",
+      timeout: 120_000,
+    });
+    if (result.status !== 0) {
+      const detail = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+      throw new Error(`self projection failed for ${name}: ${detail || `exit ${result.status}`}`);
+    }
+    normalizeCompositionRecord(hostRoot);
+    rmSync(join(hostRoot, ".amadeus-plugin-audit.json"), { force: true });
+    rmSync(join(hostRoot, ".amadeus-plugin-drops.json"), { force: true });
+    const baseline = fileMap(distFace);
+    const generated = fileMap(workspace);
+    const artifacts = new Map<string, Buffer>();
+    for (const [path, bytes] of generated) {
+      const runnerRoot = manifest.stageEntry.kind === "runner" ? `${manifest.stageEntry.root}/` : null;
+      if (!path.startsWith(`${manifest.harnessDir}/`) && (runnerRoot === null || !path.startsWith(runnerRoot))) continue;
+      const prior = baseline.get(path);
+      if (prior === undefined || !prior.equals(bytes)) artifacts.set(path, bytes);
+    }
+    return artifacts;
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+export function buildSelfInstallProjection(
+  name: SelfInstallHarness,
+  repoRoot: string = REPO_ROOT,
+): BuildResult {
   assertSelfInstallHarness(name);
-  return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [] };
+  const configPath = join(repoRoot, "amadeus", "config.json");
+  if (!existsSync(configPath)) {
+    return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [], artifacts: new Map() };
+  }
+  const config = JSON.parse(readFileSync(configPath, "utf-8")) as { plugins?: unknown };
+  if (config.plugins !== undefined &&
+    (!Array.isArray(config.plugins) || config.plugins.some((plugin) => typeof plugin !== "string"))) {
+    throw new PluginValidationError(["SELF_INSTALL rejected: amadeus/config.json plugins must be a string array"]);
+  }
+  if (!Array.isArray(config.plugins) || config.plugins.length === 0) {
+    return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [], artifacts: new Map() };
+  }
+  const artifacts = projectInTemporaryWorkspace(repoRoot, name);
+  return {
+    expectedPaths: new Set(artifacts.keys()),
+    readSources: new Set(),
+    outsideHarness: [...artifacts.keys()].filter((path) => !path.startsWith(`${loadHarnessManifest(name).harnessDir}/`)),
+    artifacts,
+  };
 }

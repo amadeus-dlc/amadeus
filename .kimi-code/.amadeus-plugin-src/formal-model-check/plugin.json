@@ -1,0 +1,38 @@
+{
+  "name": "formal-model-check",
+  "stages": [
+    {
+      "slug": "formal-model-check",
+      "path": "stages/formal-model-check.md"
+    }
+  ],
+  "seams": [],
+  "fragments": [],
+  "tools": [
+    "tools/amadeus-formal-verif-model-map.ts",
+    "tools/canonical.ts",
+    "tools/ci-docker-trace.ts",
+    "tools/ci-model-check-artifacts.ts",
+    "tools/ci-model-check-domain.ts",
+    "tools/ci-model-check-runner.ts",
+    "tools/contract.ts",
+    "tools/fs-tlc-toolchain.ts",
+    "tools/node-ci-model-check-port.ts",
+    "tools/run-model-check-artifacts.ts",
+    "tools/run-model-check-ci.ts",
+    "tools/run-model-check-diagnostic.ts",
+    "tools/run-model-check-domain.ts",
+    "tools/run-model-check-execution.ts",
+    "tools/run-model-check-paths.ts",
+    "tools/run-model-check-reporter.ts",
+    "tools/run-model-check-source.ts",
+    "tools/run-model-check.ts",
+    "tools/run-skeleton-ci.ts",
+    "tools/tla-arm.ts",
+    "tools/tla-model-loader-internal.ts",
+    "tools/tla-model-loader.ts",
+    "tools/tla-model-map.ts",
+    "tools/tlc-spawn-planner.ts",
+    "tools/tlc-toolchain.ts"
+  ]
+}

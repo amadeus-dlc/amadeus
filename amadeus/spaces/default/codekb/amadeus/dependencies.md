@@ -23,11 +23,11 @@ core source ─> package.ts ─> 7 dist ─> promote-self ─> 5 root faces
 
 - 判断: 外部依存の追加なし。内部依存は 3 本 — センサー正本 → 5 面コピー（byte-identical、`bun scripts/package.ts` + `bun run promote:self` で機械同期）、センサー manifest ⇔ 出力スキーマ、stage frontmatter（`code-generation.md:39-44`）→ センサー id（`t93.test.ts:106` / `t89.test.ts:366` が pin）。データ側の grid 5 面は互いに複製関係にあるが同期する機構が現状存在しない — それ自体が本 intent の患部。dist 同期面: センサー正本を触る場合は dist 7 面 + self-install 5 面のツールコピー再生成が PR に同梱される（grid データ自体は dist に `self-*` 行を持たないため対象外）。変更面が他の進行中 intent と交差する兆候は区間にない（患部 9 パスとも 0 コミット）。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- 正しい依存方向は `プロジェクトが導入対象として記録した plugin 名 -> current host staging -> composition record -> activation judgment -> orchestrate advisory`。現行は先頭の記録がなく、staging／record だけで currentness を閉じている。
-- supply経路は `plugins/<name> -> plugin-projection -> package faces`、runtime経路は `host trigger -> amadeus-plugin-compose hook -> compose --if-stale`。OpenCodeは自動triggerへ依存せずmanual compose、Kiro CLI／IDEは同一 `.kiro` runtime状態へ依存する。
-- packaging／promotion／installerはdesired宣言を各hostへ投影する必要があるが、activationからそれらを逆呼び出ししない。read-only judgmentからmutationへの循環依存を作らない。
+- 正しいDAGは `plugins/<name> authoring → neutral bundle → face-aware project projection → graph compile → face-aware runner → commit/drift check → startup verify/repair`。runtime composeをneutral bundle直後の唯一のmaterializerにしてはならない。
+- `scripts/package.ts` はneutral／0-plugin baseline、`scripts/promote-self.ts` はroot projectionの同期と既存composition保全、`amadeus-plugin.ts` はrepair、各harness manifest／emitはpath policyを所有する。特にCodex runnerは `manifest/emit → .agents/skills` へ依存させる。
+- root self-installはClaude／Codex／Cursor／OpenCode／Kimiの5面、Kiro CLI／IDEはpackage-only。Kiroの共有 `.kiro` とCodexのproject-root skillを「host相対 `skills/`」へ一般化しない。
 
 ## formal-model-check 複数モデル化の依存関係（260801-tla-multi-model、履歴、observed `33e196b8`）
 

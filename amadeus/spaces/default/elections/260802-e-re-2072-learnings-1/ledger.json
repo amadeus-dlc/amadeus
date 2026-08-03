@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RE-2072-LEARNINGS-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "全面支持。独立実測で、(1) Codex manifest が .codex/skills を非正規、project-root .agents/skills を正規 discovery tree と明記し、現状の compose が formal-model-check runner を .codex/skills に生成している、(2) scripts/package.ts が neutral bundle の 0-plugin baseline を明示し、scripts/promote-self.ts が root .codex/.agents を project-local dogfood install として別管理する、(3) 動的 compose 後の .codex/plugins・.codex/skills 等が git status で未追跡となり、初回利用前から利用可能かつ起動後 Git clean という parity 条件を満たさない、の3点を確認した。したがって3候補はいずれも再発防止に有効な project 固有 Corrections であり、相互矛盾せず採用が妥当。",
+      "submittedAt": "2026-08-02T23:27:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RE-2072-LEARNINGS-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "推奨3候補を全面支持する。独立実測では、HEADのClaude self-install面にformal-model-checkのplugin 26ファイルとrunner 1ファイルが追跡済みなのに、Codex面はplugin 0件・正規runner 0件で、現composeは非追跡の.codex/skillsへrunnerを生成していた。一方、packages/framework/harness/codex/emit.tsはSKILLS_DSTをdist rootの.agents/skillsと定義し、.codex/skillsを明示否定するため、Codex runnerの正規配置候補は実装事実と一致する。scripts/package.tsとplugin-projection.tsは0-plugin時のno-op/byte-identical baselineとneutral bundleを明示し、対象37テストも全件passしたため、package baselineとself-repository dogfood投影を分離する候補も既存契約を守る。現行project.mdに同趣旨の規則はなく、3件ともリポジトリ固有かつ再発防止に有効である。",
+      "submittedAt": "2026-08-02T23:27:57Z"
+    }
+  ],
+  "late": []
+}

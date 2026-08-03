@@ -34,7 +34,7 @@ import { DistributionTransactionCoordinator } from "./distribution-transaction.t
 // The self-install face set is defined ONCE, next to the seven package faces it
 // is deliberately narrower than. This script consumes it; it never re-declares
 // an equal-valued list under another name (#1575).
-import { SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
+import { buildSelfInstallProjection, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
 
 type Mode = "check" | "apply";
 
@@ -177,6 +177,9 @@ export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
 // the ledger indexes.
 export const PLUGIN_ENGINE_STATE_RE = /^\.[^/]+\/\.amadeus-plugin-[^/]+(\/.*)?$/;
 export const STAGE_GRAPH_RE = /^\.[^/]+\/tools\/data\/stage-graph\.json$/;
+const PLUGIN_RUNTIME_HISTORY_RE = /(?:audit|drops)\.json$/u;
+const PLUGIN_RUNNER_PATH_RE = /skills\/amadeus-([^/]+)\//u;
+const EXPECTED_STAGING_PATH_RE = /\/\.amadeus-plugin-src\/([^/]+)\//u;
 
 export type PluginLedger = {
   slugs: Set<string>;
@@ -408,6 +411,10 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
       expected.set(dstRel, readFileSync(file));
     }
   }
+  for (const harness of SELF_INSTALL_HARNESSES) {
+    const projection = buildSelfInstallProjection(harness, repoRoot);
+    for (const [rel, bytes] of projection.artifacts ?? []) expected.set(rel, bytes);
+  }
   const contributorSkillsAbs = join(repoRoot, CONTRIBUTOR_SKILLS_ROOT);
   if (existsSync(contributorSkillsAbs)) {
     for (const file of walk(contributorSkillsAbs)) {
@@ -442,6 +449,15 @@ function managedRoots(): string[] {
   return managedDirs.map((d) => normalizeRel(d.dst));
 }
 
+function runnerPlacedElsewhere(runner: RegExpMatchArray | null, rel: string, expected: Map<string, Buffer>): boolean {
+  if (runner === null) return false;
+  const marker = `/skills/amadeus-${runner[1]}/`;
+  for (const path of expected.keys()) {
+    if (path !== rel && path.includes(marker)) return true;
+  }
+  return false;
+}
+
 function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const roots = managedRoots();
   const orphans: string[] = [];
@@ -453,12 +469,104 @@ function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[
       const rel = normalizeRel(relative(repoRoot, file));
       if (isPreserved(rel)) continue;
       if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist
-      if (PLUGIN_ENGINE_STATE_RE.test(rel)) continue; // plugin engine dot-state — runtime data, never in dist
-      if (isPluginOwned(rel, ledgerFor(rel))) continue; // composed plugin surface — owned by the composition record
+      if (PLUGIN_ENGINE_STATE_RE.test(rel)) {
+        const host = rel.split("/")[0];
+        const deterministic = expected.has(`${host}/.amadeus-plugin-composition.json`);
+        if (!deterministic || !PLUGIN_RUNTIME_HISTORY_RE.test(rel)) continue;
+      }
+      if (isPluginOwned(rel, ledgerFor(rel))) {
+        const runner = rel.match(PLUGIN_RUNNER_PATH_RE);
+        if (runnerPlacedElsewhere(runner, rel, expected)) continue;
+        continue;
+      }
       if (!expected.has(rel)) orphans.push(rel);
     }
   }
   return orphans;
+}
+
+function projectionNames(paths: readonly string[], pattern: RegExp): Set<string> {
+  const names = new Set<string>();
+  for (const path of paths) {
+    const match = path.match(pattern);
+    if (match?.[1]) names.add(match[1]);
+  }
+  return names;
+}
+
+function expectedPluginRunnerSlugs(expected: Map<string, Buffer>): Set<string> {
+  const slugs = new Set<string>();
+  for (const [path, bytes] of expected) {
+    if (!path.endsWith("/.amadeus-plugin-composition.json")) continue;
+    const ledger = parsePluginLedger(bytes);
+    if (ledger === null) continue;
+    for (const slug of ledger.slugs) slugs.add(slug);
+  }
+  return slugs;
+}
+
+function isMisplacedRunner(
+  rel: string,
+  selectedRunners: ReadonlySet<string>,
+  expected: Map<string, Buffer>,
+): boolean {
+  const segments = rel.split("/");
+  const skillRoot = segments.lastIndexOf("skills");
+  const directory = segments[skillRoot + 1] ?? "";
+  if (!directory.startsWith("amadeus-")) return false;
+  const runner = directory.slice("amadeus-".length);
+  return selectedRunners.has(runner) && !expected.has(rel);
+}
+
+function misplacedRunnersInRoot(
+  root: string,
+  selectedRunners: ReadonlySet<string>,
+  expected: Map<string, Buffer>,
+  repoRoot: string,
+): string[] {
+  const absolute = join(repoRoot, root);
+  if (!existsSync(absolute)) return [];
+  const misplaced: string[] = [];
+  for (const file of walk(absolute)) {
+    const rel = normalizeRel(relative(repoRoot, file));
+    if (isMisplacedRunner(rel, selectedRunners, expected)) misplaced.push(rel);
+  }
+  return misplaced;
+}
+
+function addMisplacedRunners(
+  misplaced: Set<string>,
+  selectedRunners: ReadonlySet<string>,
+  expected: Map<string, Buffer>,
+  repoRoot: string,
+): void {
+  for (const root of managedRoots()) {
+    for (const rel of misplacedRunnersInRoot(root, selectedRunners, expected, repoRoot)) misplaced.add(rel);
+  }
+}
+
+function addMisplacedKiroProjection(misplaced: Set<string>, selectedPlugins: ReadonlySet<string>, repoRoot: string): void {
+  for (const plugin of selectedPlugins) {
+    for (const candidate of [
+      `.kiro/.amadeus-plugin-src/${plugin}`,
+      `.kiro/plugins/${plugin}`,
+      `.kiro/skills/amadeus-${plugin}`,
+    ]) {
+      const absolute = join(repoRoot, candidate);
+      if (!existsSync(absolute)) continue;
+      for (const file of walk(absolute)) misplaced.add(normalizeRel(relative(repoRoot, file)));
+    }
+  }
+}
+
+export function misplacedPluginProjectionFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
+  const misplaced = new Set<string>();
+  const expectedPaths = [...expected.keys()];
+  const selectedRunners = expectedPluginRunnerSlugs(expected);
+  const selectedPlugins = projectionNames(expectedPaths, EXPECTED_STAGING_PATH_RE);
+  addMisplacedRunners(misplaced, selectedRunners, expected, repoRoot);
+  addMisplacedKiroProjection(misplaced, selectedPlugins, repoRoot);
+  return [...misplaced].sort();
 }
 
 function ensureActiveSpaceCursor(repoRoot: string): void {
@@ -481,10 +589,14 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
     if (SCOPE_GRID_RE.test(rel)) {
       if (!scopeGridInSync(got, want)) problems.push(`DIFFERS: ${rel}`);
     } else if (STAGE_GRAPH_RE.test(rel)) {
-      if (!stageGraphInSync(got, want, ledgerFor(rel))) problems.push(`DIFFERS: ${rel}`);
+      const deterministicProjection = want.includes(Buffer.from('"plugin_source": true'));
+      if (deterministicProjection ? !got.equals(want) : !stageGraphInSync(got, want, ledgerFor(rel))) {
+        problems.push(`DIFFERS: ${rel}`);
+      }
     } else if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
   }
   for (const rel of orphanedFiles(expected, repoRoot)) problems.push(`ORPHAN: ${rel}`);
+  for (const rel of misplacedPluginProjectionFiles(expected, repoRoot)) problems.push(`MISPLACED: ${rel}`);
   // The active-space cursor is a per-user runtime file (gitignored). --apply
   // ensure-creates it; mirror that here so a fresh checkout / CI (where no prior
   // /amadeus run has created it) self-heals the cursor instead of failing the
@@ -495,7 +607,11 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
 
 function apply(expected: Map<string, Buffer>, repoRoot: string): void {
   const updates: Array<{ path: string; bytes: Buffer | null }> = [];
-  for (const rel of orphanedFiles(expected, repoRoot)) {
+  const removals = new Set([
+    ...orphanedFiles(expected, repoRoot),
+    ...misplacedPluginProjectionFiles(expected, repoRoot),
+  ]);
+  for (const rel of removals) {
     const path = join(repoRoot, rel);
     if (lstatSync(path).isSymbolicLink()) rmSync(path);
     else updates.push({ path: rel, bytes: null });
@@ -505,16 +621,34 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
     const abs = join(repoRoot, rel);
     const out = SCOPE_GRID_RE.test(rel) && existsSync(abs)
       ? mergeScopeGrid(readFileSync(abs), bytes)
-      : STAGE_GRAPH_RE.test(rel) && existsSync(abs)
+      : STAGE_GRAPH_RE.test(rel) && existsSync(abs) && !bytes.includes(Buffer.from('"plugin_source": true'))
         ? mergeStageGraph(readFileSync(abs), bytes, ledgerFor(rel))
         : bytes;
     updates.push({ path: rel, bytes: out });
   }
-  new DistributionTransactionCoordinator(repoRoot).apply(
-    updates,
-    mirrorProjectionRegistryDigest(),
-  );
+  applyDistributionUpdates(repoRoot, updates);
   ensureActiveSpaceCursor(repoRoot);
+}
+
+export function applyDistributionUpdates(
+  repoRoot: string,
+  updates: readonly { path: string; bytes: Buffer | null }[],
+  coordinator: DistributionTransactionCoordinator = new DistributionTransactionCoordinator(repoRoot),
+): void {
+  try {
+    coordinator.apply(updates, mirrorProjectionRegistryDigest());
+  } catch (error) {
+    if (coordinator.pendingJournalCount() > 0) {
+      try {
+        coordinator.recover();
+      } catch (recoveryError) {
+        const combined = recoveryError instanceof Error ? recoveryError : new Error(String(recoveryError));
+        Object.defineProperty(combined, "cause", { value: error, configurable: true });
+        throw combined;
+      }
+    }
+    throw error;
+  }
 }
 
 // Kimi Code has no project-level wiring config, so in the self-development

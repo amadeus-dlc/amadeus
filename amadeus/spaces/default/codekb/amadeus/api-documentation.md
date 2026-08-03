@@ -19,11 +19,11 @@
 
 - 判断: 公開 CLI 契約の変更なし（`/amadeus --scope <name>` の語彙・引数は不変）。触れる内部契約は 2 点 — (1) センサー出力スキーマ: `Finding`（`amadeus-sensor-self-scope-consistency.ts:26-32`）の `reason` 列挙と manifest の `output_schema`（`sensors/amadeus-self-scope-consistency.md:12-20`）が対で、cell-mismatch 系 reason と stage / expected / actual フィールドの追加は両者同時改訂を要する。(2) `scope-grid.json` の flat スキーマ（top-level = scope 名、値 = stages マップ `<slug>` → `EXECUTE` / `SKIP`）自体は不変で、是正はセル値の書き換えに閉じる。詳細は `code-structure.md` 現在節の挿入点表を正本とする。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- 現行 CLI 契約は `compose [--if-stale] [--all-harnesses] [--project-root]` と `doctor`。`--if-stale` は staged と recorded のみを比較するため desired 非空・host欠落を表現できず、0/0 を成功 no-op として返す。
-- 必要な内部契約は desired／staged／recorded の3集合を読む pure validator と、その結果を compose／doctor が共有すること。desired空・staged空・record空は silent success、desired非空で欠落は stale/degraded、staged済みでrecord不一致は compose required とする。
-- activation API は composition record を信頼境界として read-only を維持し、自動 install／compose／TLC を行わない。main workflow と `--single` は3 checkpointで同じ advisory payloadを返す。
+- project projection の出力契約は、選択済み plugin について host-local staging、composition state、composed files、plugin nodeを含む stage graph、face固有 runnerを決定的に生成し、5 self-install面で version管理すること。生成後の再実行はbyte不変でなければならない。
+- startup の `compose --if-stale` 契約は、commit 済み projection が current なら完全な no-op、欠落またはdrift時だけ transactional repair とする。postcondition は「fresh worktreeで初回利用可能」かつ「正常 startup 後の `git status --porcelain` が空」である。
+- runner destination は face contract の一部とする。Codex は `.agents/skills`、Claude等は各manifestが定めるhost pathを返し、core plugin CLIが `tools/../skills` を暗黙の全face契約として扱わない。
 
 ## formal-model-check 複数モデル化が触れる内部契約（260801-tla-multi-model、履歴、observed `33e196b8`）
 

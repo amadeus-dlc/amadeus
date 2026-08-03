@@ -13,11 +13,11 @@
 
 - 判断: 技術スタックに変化なし。患部は Bun / TypeScript の既存ツール層と JSON データのみで、新規外部依存を要さない。区間の技術面の変化は患部外 — `#2017` の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、`#2012` の formal-model-check 全登録モデル対応、plugin compose 読取境界の fail-closed 化、fatal-latch 系 loud fail 徹底で、詳細は `architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- 新規外部依存は不要。既存の Bun／TypeScript、filesystem JSON record、SHA-256、各ハーネス hook adapter、packaging projectionで修正可能である。
-- 常駐サービスではなく短命CLIのため、解決策は cache／service discovery ではなく durable project config と決定的なfile境界に置く。
-- package matrix は7 face、runtime hostは6 directory。OpenCodeのmanual-onlyとKiro 2 faceのshared `.kiro`をデータとして保持する。
+- 新規外部依存は不要。既存の Bun／TypeScript、SHA-256 content digest、filesystem JSON ledger、manifest／emit、package／promotion drift guardで閉じる。
+- 技術的な正本は `plugins/<name>/`、配布物はneutral bundle、project-local plugin surfaceは決定的な生成projectionとする。tracked surfaceをdesired stateとして扱い、startup時の動的生成はself-healingに限定する。
+- 対応行列は package 7 face、root self-install 5面、runtime host directory 6種。Codexのskill discoveryはhost directory外の `.agents/skills` であり、path計算をharness-awareにする必要がある。
 
 ## formal-model-check 複数モデル化の技術断面（260801-tla-multi-model、履歴、observed `33e196b8`）
 

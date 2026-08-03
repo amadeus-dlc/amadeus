@@ -46,9 +46,27 @@ export function canonicalIdentity(
   return { bytes, sha256 };
 }
 
-export const TLA_MODEL_PATH = "specs/tla/FormalElection.tla";
-export const TLA_CFG_PATH = "specs/tla/FormalElection.cfg";
+// The model the TLC execution pipeline runs. The map registers every model that
+// is watched for source drift; only this one is executed, so the run/verify
+// toolchain keeps a single module binding.
+export const TLA_EXECUTION_MODEL_NAME = "FormalElection";
+export const TLA_MODEL_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.tla`;
+export const TLA_CFG_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.cfg`;
 export const TLA_MODEL_MAP_PATH = "specs/tla/model-map.json";
+export const TLA_MODEL_MAP_SCHEMA_VERSION = 2 as const;
+
+export function tlaModelPath(name: string): string {
+  return `specs/tla/${name}.tla`;
+}
+
+export function tlaCfgPath(name: string): string {
+  return `specs/tla/${name}.cfg`;
+}
+
+// Quoted by both the completeness sensor and the source loader so the recovery
+// step a reader is given cannot fork between them.
+export const IMPL_ONLY_UPDATE_HINT =
+  "when the model and configuration are unchanged, refresh implementation hashes with `updateModelMap --impl-only`";
 
 export type ModelLoadErrorCode =
   | "MODEL_MISSING"
@@ -80,11 +98,23 @@ export interface ModelMapEntry {
   readonly sha256: string;
 }
 
-export interface ModelMap {
-  readonly schemaVersion: 1;
+export interface ModelVocabulary {
+  readonly namedInvariants: readonly string[];
+  readonly traceStateVariables: readonly string[];
+}
+
+export interface ModelMapModel {
+  readonly name: string;
   readonly model: ModelMapAssetIdentity;
   readonly cfg: ModelMapAssetIdentity;
+  readonly auxiliaries?: readonly ModelMapAssetIdentity[];
   readonly entries: readonly ModelMapEntry[];
+  readonly vocabulary?: ModelVocabulary;
+}
+
+export interface ModelMap {
+  readonly schemaVersion: 2;
+  readonly models: readonly ModelMapModel[];
 }
 
 export interface ModelMapDrift {
@@ -97,9 +127,13 @@ type Result<T, E> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
+export type TlaModelReadiness = Result<ModelMap, ModelLoadError>;
+
 const SHA256 = /^[0-9a-f]{64}$/;
 const IMPLEMENTATION_PREFIX = "packages/framework/core/tools/";
-const IMPLEMENTATION_FILE = /^amadeus-election(?:-[a-z0-9-]+)?\.ts$/;
+const IMPLEMENTATION_FILE = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
+// TLA module identifiers, which also fix the specs/tla file names a model owns.
+const MODEL_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 
 function invalid(detail: string): Result<never, ModelLoadError> {
   return {
@@ -175,6 +209,134 @@ function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoa
   return { ok: true, value: entries };
 }
 
+// The optional auxiliaries / vocabulary keys widen the model shape to exactly
+// these four key sets; every other combination is rejected as before.
+const MODEL_KEY_SETS: readonly (readonly string[])[] = [
+  ["cfg", "entries", "model", "name"],
+  ["auxiliaries", "cfg", "entries", "model", "name"],
+  ["cfg", "entries", "model", "name", "vocabulary"],
+  ["auxiliaries", "cfg", "entries", "model", "name", "vocabulary"],
+];
+
+function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is string {
+  if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
+  if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
+  if (posix.dirname(value) !== "specs/tla") return false;
+  const base = posix.basename(value);
+  if (!base.endsWith(".tla") || !MODEL_NAME.test(base.slice(0, -".tla".length))) return false;
+  const moduleName = base.slice(0, -".tla".length);
+  return value === tlaModelPath(moduleName) && value !== selfPath;
+}
+
+function parseAuxiliaryIdentities(
+  value: unknown,
+  selfPath: string,
+): Result<readonly ModelMapAssetIdentity[], ModelLoadError> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return invalid("auxiliaries must be a non-empty array when present");
+  }
+  const auxiliaries: ModelMapAssetIdentity[] = [];
+  let previousPath = "";
+  for (const [index, candidate] of value.entries()) {
+    if (!exactObject(candidate, ["identity", "path"])) {
+      return invalid(`auxiliaries[${index}] must have exactly identity and path`);
+    }
+    if (!isCanonicalAuxiliaryPath(candidate.path, selfPath)) {
+      return invalid(
+        `auxiliaries[${index}].path must be a canonical specs/tla/<Name>.tla path other than the model's own`,
+      );
+    }
+    if (typeof candidate.identity !== "string" || !SHA256.test(candidate.identity)) {
+      return invalid(`auxiliaries[${index}].identity must be a lowercase SHA-256 value`);
+    }
+    if (candidate.path <= previousPath) {
+      return invalid("auxiliaries must be unique and sorted by path");
+    }
+    auxiliaries.push({ path: candidate.path, identity: candidate.identity });
+    previousPath = candidate.path;
+  }
+  return { ok: true, value: auxiliaries };
+}
+
+function parseVocabularyNames(value: unknown, label: string): Result<readonly string[], ModelLoadError> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return invalid(`${label} must be a non-empty array`);
+  }
+  const names: string[] = [];
+  for (const [index, candidate] of value.entries()) {
+    if (typeof candidate !== "string" || !MODEL_NAME.test(candidate)) {
+      return invalid(`${label}[${index}] must be a TLA identifier`);
+    }
+    if (names.includes(candidate)) {
+      return invalid(`${label} must not contain duplicates`);
+    }
+    names.push(candidate);
+  }
+  return { ok: true, value: names };
+}
+
+function parseModelVocabulary(value: unknown): Result<ModelVocabulary, ModelLoadError> {
+  if (!exactObject(value, ["namedInvariants", "traceStateVariables"])) {
+    return invalid("vocabulary must have exactly namedInvariants and traceStateVariables");
+  }
+  const namedInvariants = parseVocabularyNames(value.namedInvariants, "vocabulary.namedInvariants");
+  if (!namedInvariants.ok) return namedInvariants;
+  const traceStateVariables = parseVocabularyNames(
+    value.traceStateVariables,
+    "vocabulary.traceStateVariables",
+  );
+  if (!traceStateVariables.ok) return traceStateVariables;
+  return {
+    ok: true,
+    value: {
+      namedInvariants: namedInvariants.value,
+      traceStateVariables: traceStateVariables.value,
+    },
+  };
+}
+
+function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelLoadError> {
+  if (!MODEL_KEY_SETS.some((keys) => exactObject(value, keys))) {
+    return invalid(
+      `models[${index}] must have exactly name, model, cfg, and entries, optionally with auxiliaries and vocabulary`,
+    );
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.name !== "string" || !MODEL_NAME.test(record.name)) {
+    return invalid(`models[${index}].name must be a TLA module identifier`);
+  }
+  const name = record.name;
+  const model = parseAssetIdentity(record.model, tlaModelPath(name), `models[${index}].model`);
+  if (!model.ok) return model;
+  const cfg = parseAssetIdentity(record.cfg, tlaCfgPath(name), `models[${index}].cfg`);
+  if (!cfg.ok) return cfg;
+  const entries = parseEntries(record.entries);
+  if (!entries.ok) return entries;
+  let auxiliaries: readonly ModelMapAssetIdentity[] | undefined;
+  if ("auxiliaries" in record) {
+    const parsed = parseAuxiliaryIdentities(record.auxiliaries, model.value.path);
+    if (!parsed.ok) return parsed;
+    auxiliaries = parsed.value;
+  }
+  let vocabulary: ModelVocabulary | undefined;
+  if ("vocabulary" in record) {
+    const parsed = parseModelVocabulary(record.vocabulary);
+    if (!parsed.ok) return parsed;
+    vocabulary = parsed.value;
+  }
+  return {
+    ok: true,
+    value: {
+      name,
+      model: model.value,
+      cfg: cfg.value,
+      entries: entries.value,
+      ...(auxiliaries === undefined ? {} : { auxiliaries }),
+      ...(vocabulary === undefined ? {} : { vocabulary }),
+    },
+  };
+}
+
 export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadError> {
   let value: unknown;
   try {
@@ -183,34 +345,76 @@ export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadE
   } catch {
     return invalid("model map must be valid UTF-8 JSON");
   }
-  if (!exactObject(value, ["cfg", "entries", "model", "schemaVersion"])) {
-    return invalid("model map must have exactly schemaVersion, model, cfg, and entries");
+  if (!exactObject(value, ["models", "schemaVersion"])) {
+    return invalid("model map must have exactly schemaVersion and models");
   }
-  if (value.schemaVersion !== 1) return invalid("schemaVersion must be 1");
+  if (value.schemaVersion !== TLA_MODEL_MAP_SCHEMA_VERSION) {
+    return invalid(`schemaVersion must be ${TLA_MODEL_MAP_SCHEMA_VERSION}`);
+  }
+  if (!Array.isArray(value.models) || value.models.length === 0) {
+    return invalid("models must be a non-empty array");
+  }
+  const models: ModelMapModel[] = [];
+  let previousName = "";
+  for (const [index, candidate] of value.models.entries()) {
+    const model = parseModel(candidate, index);
+    if (!model.ok) return model;
+    if (model.value.name <= previousName) return invalid("models must be unique and sorted by name");
+    previousName = model.value.name;
+    models.push(model.value);
+  }
+  return { ok: true, value: { schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION, models } };
+}
 
-  const model = parseAssetIdentity(value.model, TLA_MODEL_PATH, "model");
-  if (!model.ok) return model;
-  const cfg = parseAssetIdentity(value.cfg, TLA_CFG_PATH, "cfg");
-  if (!cfg.ok) return cfg;
-  const entries = parseEntries(value.entries);
-  if (!entries.ok) return entries;
+function missingAsset(
+  code: "MODEL_MISSING" | "CFG_MISSING",
+  relativePath: string,
+  model: string,
+): TlaModelReadiness {
   return {
-    ok: true,
-    value: {
-      schemaVersion: 1,
-      model: model.value,
-      cfg: cfg.value,
-      entries: entries.value,
+    ok: false,
+    error: {
+      kind: "MODEL_LOAD",
+      code,
+      relativePath,
+      detail: `declared target ${model} is missing ${code === "MODEL_MISSING" ? "its model" : "its cfg"}`,
     },
   };
 }
 
+/**
+ * Canonical readiness seam shared by activation advisories and explicit TLC
+ * execution. A target is ready only when the strict model-map parser accepts
+ * the declaration and every declared model/cfg path is present. Identity and
+ * source-drift verification remain the explicit loader's next step.
+ */
+export function evaluateTlaModelReadiness(
+  modelMapBytes: Uint8Array,
+  assetExists: (relativePath: string) => boolean,
+): TlaModelReadiness {
+  const parsed = parseTlaModelMap(modelMapBytes);
+  if (!parsed.ok) return parsed;
+  for (const model of parsed.value.models) {
+    if (!assetExists(model.model.path)) {
+      return missingAsset("MODEL_MISSING", model.model.path, model.name);
+    }
+    if (!assetExists(model.cfg.path)) {
+      return missingAsset("CFG_MISSING", model.cfg.path, model.name);
+    }
+  }
+  return parsed;
+}
+
+export function findModelMapModel(modelMap: ModelMap, name: string): ModelMapModel | undefined {
+  return modelMap.models.find((model) => model.name === name);
+}
+
 export function diffModelMap(
-  modelMap: ModelMap,
+  model: ModelMapModel,
   currentEntries: readonly ModelMapEntry[],
 ): readonly ModelMapDrift[] {
   const current = new Map(currentEntries.map((entry) => [entry.implPath, entry.sha256]));
-  return modelMap.entries.flatMap((entry) => {
+  return model.entries.flatMap((entry) => {
     const currentSha = current.get(entry.implPath) ?? null;
     return currentSha === entry.sha256
       ? []

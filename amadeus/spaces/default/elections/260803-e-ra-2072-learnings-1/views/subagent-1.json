@@ -1,0 +1,13 @@
+{
+  "electionId": "E-RA-2072-LEARNINGS-1",
+  "voter": "subagent-1",
+  "question": "Requirements Analysisの学び候補は既存のReverse Engineering学習と重複するため0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "新しいproject ruleを追加せず、既存のplugin projection parity学習を正本として維持する"
+    }
+  ]
+}

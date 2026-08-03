@@ -34,6 +34,7 @@ import {
   projectPluginArtifacts,
   type ProjectedArtifact,
   SELF_INSTALL_HARNESSES,
+  harnessProjectionSpec,
   validatePluginSources,
 } from "../../scripts/plugin-projection.ts";
 import type { HarnessManifest } from "../../scripts/manifest-types.ts";
@@ -316,8 +317,17 @@ describe("self-install closed union", () => {
   test("assertSelfInstallHarness / buildSelfInstallProjection reject kiro-ide loudly", () => {
     expect(() => assertSelfInstallHarness("kiro-ide")).toThrow(PluginValidationError);
     expect(() => buildSelfInstallProjection("kiro" as never)).toThrow(PluginValidationError);
-    const r = buildSelfInstallProjection("claude");
-    expect(r.expectedPaths.size).toBe(0);
-    expect(r.outsideHarness).toEqual([]);
+  });
+
+  test("manifest-owned stage entry matrix keeps Codex at project-root .agents/skills", () => {
+    const rows = new Map(PACKAGE_HARNESSES.map((harness) => [harness, harnessProjectionSpec(harness)]));
+    expect(rows.get("codex")?.stageEntry).toEqual({ kind: "runner", root: ".agents/skills" });
+    expect(rows.get("claude")?.stageEntry).toEqual({ kind: "runner", root: ".claude/skills" });
+    expect(rows.get("kimi")?.stageEntry).toEqual({ kind: "runner", root: ".kimi-code/skills" });
+    expect(rows.get("cursor")?.stageEntry).toEqual({ kind: "command", path: ".cursor/commands/amadeus.md" });
+    expect(rows.get("opencode")?.stageEntry).toEqual({ kind: "command", path: ".opencode/commands/amadeus.md" });
+    expect(rows.get("kiro")?.stageEntry.kind).toBe("runner");
+    expect(rows.get("kiro-ide")?.stageEntry.kind).toBe("runner");
+    expect(JSON.stringify(rows.get("codex"))).not.toContain(".codex/skills");
   });
 });

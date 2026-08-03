@@ -12,11 +12,11 @@
 
 - 判断: Issue #2033（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み）の self-fix。利用者影響は「同じ scope を選んでも起動したハーネスによって実行ステージ列が変わる」こと — 2026-07-28 の self-feature lightening（4 ステージ SKIP 化）が `.claude` 1 面にしか着地せず、他 4 面は決定前の 18 ステージ路線のまま 4 か月運用された。公開契約の破壊的変更はなく、是正は決定済みの姿へ 4 面を揃える止血と、面間差分を検出する再発防止に閉じる。業務構造の変化は患部外（#2017 リネーム等）のみで、`architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- [Issue #2018](https://github.com/amadeus-dlc/amadeus/issues/2018) は Codex 固有ではなく、7 package face（Claude、Codex、Cursor、OpenCode、Kimi、Kiro CLI、Kiro IDE）を6 host directoryへ配置する plugin opt-in parity のバグである。Kiro 2 face は `.kiro` host を共有する。
-- 利用者が導入対象として選んだ plugin 名をプロジェクトに永続記録する場所がなく、authoring 済み plugin と host-local staged／recorded 状態だけでは「意図的な0件」と「opt-in 済み欠落」を区別できない。結果として Claude 以外では advisory が無音で失われる。
-- 成功境界は、desired 空の通常リポジトリでは zero-impact を維持しつつ、desired が非空なら各 face の契約に従って materialize／診断すること。OpenCode は manual-only を維持し、TLC の自動実行は行わない。
+- [Issue #2018](https://github.com/amadeus-dlc/amadeus/issues/2018) は PR [#2049](https://github.com/amadeus-dlc/amadeus/pull/2049) 後も残る配布欠陥である。PR #2049 は opt-in と起動時 self-healing を実装したが、Claude の plugin 関係 58 ファイルだけが tracked で、Codex／Cursor／OpenCode／Kimi の self-install 面には同等の commit 済み projection がない。
+- 正しい利用者価値は、fresh worktree で初回起動前から選択済み plugin を利用でき、通常 startup が検証だけの no-op となって `git status` を汚さないこと。起動時 compose は欠損・drift の修復経路として残すが、通常の配布経路にはしない。
+- 対象は root self-install 5面（Claude／Codex／Cursor／OpenCode／Kimi）と package 7 face。Kiro CLI／IDE は root dogfood 対象外の package-only で、共有 `.kiro` へ二重投影しない。
 
 ## formal-model-check 複数モデル化の業務境界（260801-tla-multi-model、履歴、observed `33e196b8`）
 
