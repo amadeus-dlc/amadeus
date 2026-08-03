@@ -520,3 +520,8 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 ## 後続設計への業務判断
 
 推奨する最小境界は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` であり、全 check の純関数化は本 Issue のスコープ外とする。Functional Design では、戻り値を終了コードだけに絞る `runDoctor(): number` と、観測結果を明示する `{ results, output, exitCode }` のどちらを正式契約にするか決定する。
+
+## 記録系 round-trip PBT の業務境界（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 利用者向けの業務機能・提供価値・ステークホルダー構成に変化がないため。Issue #1980（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS、対象 SHA `8e5dc6c4`）は開発基盤（テスト）の拡充とコア読み側の fail-closed 化であり、公開 CLI 契約・ワークフロー体験は不変。業務上の効果は「書いた記録が読めない／発行した承認が消費されない」不整合バグ族の shift-left（分類第 2 位 44 件 — #1979 と同一の全量調査、bug Issue 全 259 件中 分類済み 181 件が分母）であり、機構面は `architecture.md` 現在節、患部配置は `code-structure.md` 現在節、被覆分布は `code-quality-assessment.md` 現在節、実測全数は `re-scans/260802-record-roundtrip-pbt.md` に委ねる。
+

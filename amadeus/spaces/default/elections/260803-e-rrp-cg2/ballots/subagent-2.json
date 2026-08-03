@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-CG2",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "ci.yml の --timeout=30000 には由来コメント(tests/run-tests.ts:59 の DEFAULT_TEST_TIMEOUT_MS と逐語一致である旨、および P-EL2 の実測 5.4-5.6s / 30s cap の余裕)を必ず併記し、値が根拠なきマジックナンバーに見えない形で着地させること。",
+  "rationale": "独立再現: builder worktree で AMADEUS_PBT_DEEP=1 の 5 path 実行を --timeout なし/ありで各1回実測。なし = P-EL2 (fail) 5585.78ms / this test timed out after 5000ms / 35 pass 1 fail / Ran 36 tests across 5 files [8.60s] / exit 1。あり(--timeout=30000) = 36 pass 0 fail / Ran 36 tests across 5 files [8.81s] / exit 0。wall clock は両者とも 8.6-8.8s で不変であり、反例でも性能退行でもなく per-test cap のみが差分。機序も実文で確認: tests/run-tests.ts:59 `const DEFAULT_TEST_TIMEOUT_MS = 30_000;` と :663 の `--timeout=${DEFAULT_TEST_TIMEOUT_MS}` により、このリポの正準ランナーは全 bun test 子プロセスへ 30000ms を渡す。:52-58 のコメントが『Bun's own 5000ms default is load-sensitive under the parallel band (#1331/#1326)』『30s keeps genuinely hung tests loud while removing the load-noise band』と理由まで明記しており、30000 は本リポの既決 per-test ポリシーである。ランナーを介さず bun test を直接叩く深掘りジョブだけが Bun 既定 5000ms を継承する — これは設計判断の差ではなく実行環境(runner 経由 vs 直接起動)の差であり、A はその吸収に当たる。設計契約の変更には当たらないと判断する根拠: (i) BR-PDC-7 の検査条件は env AMADEUS_PBT_DEEP=1 / 先頭 set -o pipefail / 2>&1 | tee <log> の3点で、argv の閉集合を定めていない (ii) BR-PDC-13 の検査は『実行コマンドの引数が明示列挙であること』で、対象集合(5 path・依存 unit の着地物と1対1)は --timeout 付与後も不変 (iii) services.md:75 の S2 実行コマンド行の理由は『対象を新規 PBT に限定し、深掘りの実行時間を有界に保つ』であり、A は限定も有界性も保つ(むしろ per-test cap は hang を loud に保つ side で有界性に資する。ジョブ外枠は BR-PDC-8 の timeout-minutes が別途担保) (iv) 設計自身が business-logic-model §2.3 / performance-design §2.3 で実 FS integration 層の深掘り未実測を明記し実装段へ委ねており、本件はその委任範囲内の実測。所在も ci.yml のみで U5 内に収まる。B は着地済み他 unit ファイル(tests/integration/t417)の編集で U5 所在を超え、別途逸脱裁定を要する。C は BR-PDC-12(深掘り予算 numRuns: 50_000 を本 unit は変更しない)の直接違反で、FR-5a が買う深掘り深度そのものを削る。D は t417 の fail-closed 深掘りを消し BR-PDC-13 の1対1対応と BR-PDC-5/6 の件数契約まで崩す — 4案中最悪。よって A。",
+  "submittedAt": "2026-08-03T00:00:00Z"
+}

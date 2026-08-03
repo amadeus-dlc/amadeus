@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-CG1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: (a) t259 fixture seedElectionFileWithoutRow(builder worktree HEAD c96677ac6 の :57-68)は choices: [] を書き、直上コメント実文(:55-56)『bypassing Store.create so no registry row exists — used to exercise the absent/row-missing setState branches』のとおりテスト主題は registry 配線であり、空 choices の可読性を仕様固定するピン(テスト名/assert/コメントのいずれも)は不在。(b) requirements.md FR-1b(:18)は『空 choices』を fail-closed 棄却対象として明示列挙 — 新 read が本 fixture を corrupt 棄却するのは要件どおりで、fixture の妥当 choices への1行是正は要件適合の最小是正。ユーザー可視契約の変更(仕様変更)には当たらない。FD BR-ELRP-21 / business-logic-model.md Step 9(:214)の t259 緑予測は誤予測であり申告付き訂正が正当。(c) model-map.json:44-45 で amadeus-election-store.ts が sha256 ピンされており SOURCE_DRIFT は実装変更の構造的必然。builder branch diff 実測で specs/tla/ 無変更・変更は amadeus-election-store.ts +25/-3 のみ = 『モデル意味論不変』の --impl-only 宣言は真であり、ツール規定の正規回復経路(手編集非支援)。両是正とも一次証拠から一意に導かれ、同一 PR での実施が妥当。",
+  "submittedAt": "2026-08-03T01:21:34Z"
+}

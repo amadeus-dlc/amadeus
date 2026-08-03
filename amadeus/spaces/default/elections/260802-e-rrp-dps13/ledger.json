@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測3点で候補主張が全て裏付けられた: (1) audit シャード seq 187-195 (17:57:20Z) に upstream-coverage SENSOR_FAILED 5件(DP 5成果物全数)、seq 209-217 (17:58:00Z) に同5成果物の SENSOR_PASSED — FAILED→PASSED 遷移が主張どおり。(2) diary Interpretations 17:58:22Z が consumes-first-drafting 違反実例と自己分類、5成果物ヘッダは是正後の宣言準拠「上流入力(consumes 全数)」形で現存。(3) team.md:242 の cid 原文は「記憶ベースの参照リストは宣言と乖離する」「upstream-coverage FAILED→是正ループ」をまさに本件の欠陥形状として既に規定しており、機序・予防策(宣言先読み+E-SRCNRS13 総当たり grep)とも既存 cid の射程内。Bolt 編成も既定(Bolt=Unit・walking skeleton 単独ゲート・共有資源直列化)の機械的導出で新規判断なし。よって新規学習候補は不在、c1 は既存 cid の違反実例記録が正しい扱い。",
+      "submittedAt": "2026-08-02T17:59:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測4点: (a) diary Interpretations 2026-08-02T17:58:22Z が consumes-first-drafting 違反実例と自己分類し Bolt 編成は機械的導出と記録 (b) 5成果物すべて冒頭に上流入力(consumes 全数)ヘッダ+実参照注記で是正済み (c) audit で SENSOR_FAILED 5件(seq 187-195, 17:57:20Z, 5成果物全て upstream-coverage)→SENSOR_PASSED 5件(seq 209-217, 17:58:00-01Z)の遷移を確認 (d) team.md:242 cid:requirements-analysis:consumes-first-drafting 原文『directive の consumes 宣言を先に読み…写してから本文を書き始める — 記憶ベースの参照リストは宣言と乖離する』が本件の機序を全面カバー。新規機構・新規知識クラスは不在で、既存 cid の違反実例記録のみが適切。0件で可。",
+      "submittedAt": "2026-08-02T17:59:44Z"
+    }
+  ],
+  "late": []
+}

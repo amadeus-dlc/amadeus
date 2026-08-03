@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c7 の persist は parse 側の反転面(配列・不正形の台帳入力を空台帳として受理せず parse-don't-validate で分離し、台帳故障をソース退行と誤報しない)に限定した cid:code-generation:verification-numeric-parse への追補として書き、exit code のみ assert の旧テストは既存の検証劇場 Forbidden の違反実例として扱う(新規 cid で Forbidden を再述しない)。",
+  "rationale": null,
+  "submittedAt": "2026-08-03T06:10:00Z"
+}

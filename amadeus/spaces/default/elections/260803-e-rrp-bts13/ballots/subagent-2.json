@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "AC 外という判定自体が抜け道になりうるため、追補本文には『AC 外の認定は requirements.md / RAID の実文照合で行い、no-silent-scope-narrowing が縛る「実装時実測」規定項目は AC 外に分類しない』を明記すること。",
+  "rationale": "c1 は既存 cid:code-generation:c1-coverage-single-owner(同一 worktree の coverage は単独所有者を決めて直列化)の実現手段の選択にすぎず、新しい行動指針を追加しない。main 断面での patch gate 追加行0 は所有分離の副次的帰結であり、実効値は各 Bolt 着地時の 76/76・107/107・183/183(build-test-results.md:30)で既に説明済み。統合証跡を coverage:ci 一本にする点も既存 cid:build-and-test:c1-260802-plugin-optin-parity で既決。よって執行実例。c2 は新規追補に当たる。verdict-names-unverified-facets の原文(project.md:253)は『検証した面と検証していない面を verdict 自体に書き分ける』と定め、実測例では未検証面の存在をもって無条件 READY を避け条件付き READY を採った。今回はその逆方向 — 未検証面2件が受け入れ基準(FR-1〜7 / NFR-1〜5)の外にあることを根拠に無条件 READY とし、書き分けは verdict 節でなく申し送り節で行った(summary.md:33-35、results.md:64-71)。『AC の内か外かで条件付き/無条件を分ける』という判定軸は原文に存在せず、かつ no-silent-scope-narrowing(未検証と明記することは先送りの正当化にならない)との境界線を新たに引くため、判断規則として persist 相当。bt-proportional-selection は生成範囲の規則であり verdict 形状には触れない。",
+  "submittedAt": "2026-08-03T06:26:40Z"
+}

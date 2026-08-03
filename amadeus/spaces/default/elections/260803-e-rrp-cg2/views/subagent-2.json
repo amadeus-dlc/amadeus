@@ -1,0 +1,27 @@
+{
+  "electionId": "E-RRP-CG2",
+  "voter": "subagent-2",
+  "question": "260802-record-roundtrip-pbt / Bolt 6(pbt-deep-ci)の実装前停止裁定。builder は設計指定の実行コマンド(BR-PDC-7 / services.md S2 = `AMADEUS_PBT_DEEP=1 bun test <paths>`)が赤になることを実測して停止した。事実: 対象集合 DECLARED=5/EXISTING=5(t416/t417/t418/t419/t274)、深掘り実行で t417 の P-EL2(実 FS の integration property)が 5384.69ms かかり `bun test` 直接起動の per-test 既定 5000ms を超過して失敗(3回連続で決定的再現、real 8.51/8.24/8.26)。反例ではなくランナーのタイムアウト。`--timeout=30000` を付すと 36 pass/0 fail/exit 0(3回とも real 8.2 前後)。機序: このリポの正準ランナー tests/run-tests.ts:59 `const DEFAULT_TEST_TIMEOUT_MS = 30_000;` が :663 で全 `bun test` 起動へ 30000ms を渡しており、ランナーを介さず直接叩く本ジョブだけが 5000ms 既定を継承する。設計自身が business-logic-model §2.3 / performance-design §2.3 で「実 FS を触る tests/integration 層の深掘り実測は本ステージ時点で 1 件も存在しない」と未実測を明記しており、実装段へ委ねられた実測に該当する。判断材料を実測(builder worktree /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-pbt-deep-ci はリードオンリー参照可、tests/run-tests.ts:59/:663 の実文、同 worktree 内の未追跡設計コピー construction/pbt-deep-ci/functional-design/business-rules.md の BR-PDC-7/12/13、services.md S2)して投票せよ。GoA 明記、2/3/6 は留保1文。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "D: t417 を対象集合から外す(FR-5a の fail-closed 深掘りが消える)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C: t417 の深掘り numRuns を下げる(BR-PDC-12 直接違反)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B: t417 内に per-test timeout 引数を置く(着地済み他 unit ファイルの編集 — U5 所在を超える)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A: 深掘りジョブの bun test へ --timeout=30000 を付す(ci.yml のみ・U5 所在内。値は run-tests.ts:59 の既存定数と逐語一致)"
+    }
+  ]
+}

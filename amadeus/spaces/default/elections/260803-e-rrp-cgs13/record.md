@@ -1,0 +1,11 @@
+# Election Record — E-RRP-CGS13
+
+- question: 260802-record-roundtrip-pbt / code-generation §13 学習選定(全6 Bolt 完了時)。surface 候補8件のうち、新規知識クラスの候補は次の3件: c5 = ratchet 系ガードの初期 census は「実装時点」でなく「マージ先 base」で採る(Bolt 5 実測: base 前進 #2092 が3件の新規キャストを持ち込み初回 CI 赤 → 再接地して 33/18→36/19 で採り直し。shrink-only は増加を admit できないため base 前進が構造的に赤を作る)/ c6 = 正準ランナー経由でない新設 CI ジョブは per-test timeout 等のランナー既定を継承しない(Bolt 6 実測: tests/run-tests.ts:59 の DEFAULT_TEST_TIMEOUT_MS=30_000 が全 bun test 起動へ渡るため通常 tier では顕在化せず、ランナー非経由の新ジョブだけが Bun 既定 5000ms を継承 → E-RRP-CG2 で --timeout 付与を採択)/ c7 = fail-closed の破れが「バイパス」ではなく「誤報への反転」になる形(Bolt 5 レビュー実測: parseAllowlist が typeof [] === 'object' で配列 sites を空台帳として受理 → 既存36サイト全件が新規追加に見え、台帳故障をソース退行と誤報。旧テストは exit code のみ assert で主張と逆の理由で緑 = 検証劇場)。残り5件(c1/c4/c8 = 規模超過の執行受理、c2 = registry 再生成の機械的必然、c3 = stash 手順違反の自己捕捉)は既存 cid(estimates-not-acceptance-criteria / stash-discipline / falling-proof-no-stash)の執行・違反実例と判断している。各候補を (a) 既存 cid の執行/違反実例(persist 不要) (b) 既存 cid への追補または新規 cid(persist 相当) で判定し採用集合を選べ。判断材料: diary(construction/code-generation/memory.md)、project.md/team.md の既存 cid(allowlist-line-pin-stale / c1-allowlist-mechanical-remap / cg-allowlist-straddle-swell / test-path-set-completeness / 検証劇場 Forbidden / estimates-not-acceptance-criteria)、各 Bolt の PR(#2085 #2097 #2098 #2099 #2113 #2118)。GoA 明記、2/3/6 は留保1文。
+
+裁定: c5+c6+c7 の3件を採用(いずれも既存 cid が覆わない新規面 — ratchet 初期 census の base 依存 / ランナー非経由ジョブの既定非継承 / fail-closed の誤報反転)(choice 1 — tie 裁定)
+- 留保(subagent-1, GoA2): c7 の persist は parse 側の反転面(配列・不正形の台帳入力を空台帳として受理せず parse-don't-validate で分離し、台帳故障をソース退行と誤報しない)に限定した cid:code-generation:verification-numeric-parse への追補として書き、exit code のみ assert の旧テストは既存の検証劇場 Forbidden の違反実例として扱う(新規 cid で Forbidden を再述しない)。
+- 留保(subagent-2, GoA2): c5/c6 は独立 cid でなく既存 cid への追補として persist すべき(c5 = cid:code-generation:base-advance-regrounding の ratchet baseline 面、c6 = 正準ラッパ非経由で暗黙既定が失われる bun 実装差ファミリ)、かつ c7 の不採用理由は org.md 検証劇場 Forbidden だけでなく cid:build-and-test:error-path-reach-lcov(exit code のみ assert の偽経路 green)を第一の帰属先として記録すること。
+票タイムライン: 配信 2026-08-03T05:53:05Z → 配信 2026-08-03T05:53:05Z → subagent-1 2026-08-03T06:10:00Z(受理 2026-08-03T05:55:19Z) → subagent-2 2026-08-03T05:56:30Z(受理 2026-08-03T05:56:22Z) → 開票 2026-08-03T06:03:52Z
+GoA[E-RRP-CGS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0
+
+- hold 裁定履歴: tie → choice:1(2026-08-03T06:06:10Z、復帰先 tallied)

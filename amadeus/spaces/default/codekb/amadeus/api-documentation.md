@@ -821,3 +821,8 @@ bun scripts/package.ts [<harness>] [--check]
 ## Functional Design で確定する契約
 
 候補Aは `runDoctor(): number` とし、出力と診断結果は既存副作用に残す。候補Bは `{ results, output, exitCode }` を返し、薄い CLI wrapper が stdout と `process.exit` に変換する。どちらでも既存 CLI の表示、集計、exit 0/1、audit、cleanup、cwd 契約は不変条件とする。
+
+## 記録系 round-trip PBT が触れる内部契約（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 公開 CLI verb・flag・directive JSON スキーマの追加も変更もない。触れるのは内部関数契約 2 点で、いずれも `architecture.md` 現在節の seam ペア表を正本とする — (1) `readJson<T>`（`amadeus-election-store.ts:71`、`:80` 無検査キャスト）の戻り型契約を「無検査キャスト」から「検証済み値または棄却」へ強める（`Store.load` `:503-510` が呼出元）、(2) 読み側 fail-closed 化により、従来は受理されていた不正記録が `Result` の err 側／throw へ回るため、消費側の分岐が増える。いずれも境界ごとの一本化であり、4 境界を貫く単一の汎用バリデータ API は新設しない。
+

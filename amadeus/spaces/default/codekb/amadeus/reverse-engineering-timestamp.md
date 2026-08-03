@@ -1325,3 +1325,17 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 ## 差分スキャン結果
 
 `handleDoctor` は export 済みで、monkeypatch 型 in-process テスト6ファイル104ケースが成功し、LCOV 437/771行 hit を確認済みという入力事実を反映した。spawn 契約 t37/t83/t210 は41ケース成功、LCOV 1/771行 hit であり、spawn 盲点は継続する。本更新は既存 CodeKB を保持した差分追記で、対象9ファイルと `re-scans/260723-doctor-inprocess-seam.md` に限定した。
+
+## 実行メタデータ（履歴: 260802-record-roundtrip-pbt）
+
+- Date: `2026-08-02T16:39:04Z`
+- Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（前回 observed = 260802-scope-grid-face-sync。祖先性実測: `git merge-base --is-ancestor 47574fbab HEAD` exit 0）
+- Observed commit: `9750f8aea0763eb10572b27b900c435de0146e86`（`fix(plugin): persist opt-in selection across harnesses (#2049)`、origin/main 系譜かつ HEAD 祖先 = `merge-base(HEAD, origin/main)`。`cid:reverse-engineering:c2-observed-mainline-commit` 準拠）
+- Distance: `13 commits`（`git rev-list --count 47574fbab..9750f8aea`）
+- 区間規模: `574 files changed, 51854 insertions(+), 2012 deletions(-)`（`git diff --shortstat 47574fbab..9750f8aea`）。大半は dist 7 面投影と metrics スナップショット。区間の主変更はいずれも患部外 — #2031 execution observability baseline（`execution-*` 新モジュール群 + audit へ `EXECUTION_EVENT_SET_COMMITTED` 追加、event types 79→80）、#2041 scope-grid face sync、#2044 glossary 単一所有化、#2049 plugin opt-in persist、#2053 PBT posture ノルム（`project.md` § Testing へ `cid:build-and-test:pbt-developer-testing-posture` を追加 — 本 intent の直接の上位規範）。
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth: Standard、Test Strategy: Comprehensive
+- Focus: Issue #1980（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み、対象 SHA `8e5dc6c4`）— 記録系 4 境界（mirror / state / audit / election）の write⇔read round-trip PBT + fail-closed PBT の導入と、読み側バリデータの一本化。中心機序は「発行側だけがバリデータを通り、消費側の読み戻しが素通りする」非対称で、`Election.parse` / `Ballot.parse` のプロダクション呼出が発行側 2 箇所（`amadeus-election.ts:310` open / `:433` vote）のみ、消費側が通る `Store.load`（`amadeus-election-store.ts:503-510`）は `readJson<T>`（`:71`）の `:80` `return ok(JSON.parse(text) as T);` を経るだけで `Election.parse` を再適用しない。実対象は **state / election の各 1 境界以上（新規）+ mirror / audit は既存被覆の外側のみ**。差分リフレッシュ: 直近かつ祖先である `47574fbab` を base とし、全 file:line を observed で再実測。患部 10 パスのうち区間内コミットは `amadeus-lib.ts`（1、#2031 の +1 行）と `amadeus-audit.ts`（1、#2031 の +5 行）のみで、残り 8 パスは 0（乖離は区間内の新規導入ではなく残存）。
+- Scan mode: `cid:reverse-engineering:c1-xrev-scan-mode` — クロスレビュー 2 名の verdict を Developer scan の一次入力とし、conductor が observed で verbatim スポット再実測 + 患部区間 touch 判定を行って二重化。Architect が全 file:line を再解決して成果物へ転記。
+- Updated artifacts: 実質更新 3 件 = `architecture.md`（4 境界の seam ペア表、読み側の硬さが 3 層に割れている機序、発行側のみがバリデータを通る非対称、round-trip と fail-closed の書き分けが必須である理由、state テキストフィールド層の fail-open / fail-closed 同居、core/tools 配置による dist 7 面投影の含意）、`code-structure.md`（患部 3 グループの配置、テスト側 10 パスの内訳、静的ガード挿入点と無検査キャスト候補母集団 8 箇所 / 5 ファイル、区間 touch 判定表、行シフト再解決表）、`code-quality-assessment.md`（既存 PBT 被覆分布、`.pbt.` 命名探索の罠、#1459 硬化が読み戻し経路を通らない残存欠陥、PBT 実装規約の現況と揺れ 2 件、静的ガードの品質要件、オラクル相殺リスク、投影・ゲートの品質コスト）。判断 1 行のみ 5 件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260802-record-roundtrip-pbt.md`。
+- 現在マーカーの降格: 直前の現在断面 `260802-scope-grid-face-sync`（observed `47574fbab`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、現在、` 出現数は 1 件（`grep -c '、現在、'` 実測、8 成果物すべて）。
+- Per-intent record: `re-scans/260802-record-roundtrip-pbt.md`（scan mode 申告・患部 touch 判定表・引用再確認テーブル・4 境界 seam ペア表・既存 PBT 棚卸し・実対象の線引きを含む）。

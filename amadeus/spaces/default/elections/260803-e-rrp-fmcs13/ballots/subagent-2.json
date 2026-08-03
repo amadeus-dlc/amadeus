@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-FMCS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "本ステージの発動契機が spec 変更ではなく model-map の実装エントリ(amadeus-election-store.ts)変更だった点は build-and-test:two-layer-verification-posture の発動条件(並行プロトコルの spec 変更時)に明文がなく、次に同型が再発したら「impl-entry drift も形式検証の発動契機である」旨の追補候補として再提出する余地を残す(今回は追加実行=安全側かつ model-completeness sensor が impl ハッシュ整合を所掌するため矛盾なし、persist 不要と判断)。",
+  "rationale": "実測: fmc-out/manifest.json は outcome=NOT_DETECTED / exitCode=0 / partial=false、completion-marker.json は {\"complete\": true}、tlc-stdout.bin に `5203730 states generated, 529692 distinct states found, 0 states left on queue.` と `The depth of the complete state graph search is 9.` を確認 — diary の主張は逐語一致。c1 が述べているのは『completion marker と state 統計が揃ったので NOT_DETECTED を主張できた』という事実であり、これは既存 cid:application-design:finite-exploration-not-detected-proof が既に定める規則の充足=執行実例で、新しい規則を1つも足さない。c2 の内容(produces/consumes とも空・証跡は --out 配下へ record 外出力・verdict は実 TLC 出力由来でハードコード非介在)は .claude/plugins/formal-model-check/stages/formal-model-check.md の frontmatter(produces: [] / consumes: [])と本文 Step 2-3(--out 指定、『derives every verdict from real TLC output, never a hardcoded value (NFR-3, no verification theatre)』)に出荷時点で明記済みの契約そのままで、これも執行実例。よって persist 相当の追補は 0 件(internalNo 1)。",
+  "submittedAt": "2026-08-03T06:53:04Z"
+}

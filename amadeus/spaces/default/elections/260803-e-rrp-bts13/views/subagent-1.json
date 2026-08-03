@@ -1,0 +1,27 @@
+{
+  "electionId": "E-RRP-BTS13",
+  "voter": "subagent-1",
+  "question": "260802-record-roundtrip-pbt / build-and-test §13 学習選定。surface 候補2件: c1 = 統合検証を本線でなく origin/main から切った検証専用 worktree で実走(coverage 単独所有者の明確化 — cid:code-generation:c1-coverage-single-owner の適用。着地面 = main 断面のため patch gate は追加行0で、各 Bolt 着地時の 76/76・107/107・183/183 が実効値)/ c2 = verdict を条件付きでなく無条件 READY とした(未検証面2件 = pbt-deep の実 CI 初回 run / #2112 の潜在債務 はいずれも受け入れ基準 FR-1〜7・NFR-1〜5 の外。cid:build-and-test:verdict-names-unverified-facets が求める書き分けは summary/results の申し送り節で実施)。各候補が (a) 既存 cid の執行実例(persist 不要)か (b) 新規追補(persist 相当)かを、diary・build-and-test の7成果物・既存 cid(c1-coverage-single-owner / verdict-names-unverified-facets / no-silent-scope-narrowing / bt-proportional-selection)を実測して判定し投票せよ。GoA 明記、2/3/6 は留保1文。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "c1+c2 両方採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件 — c1/c2 とも既存 cid の執行実例"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c1 のみ採用(検証専用 worktree での統合実走を追補として persist)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "c2 のみ採用(無条件 READY の判定基準を追補として persist)"
+    }
+  ]
+}

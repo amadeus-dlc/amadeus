@@ -508,3 +508,8 @@ Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub
 ## カバレッジ上の位置づけ
 
 export 済み `handleDoctor` の monkeypatch 型 in-process テストは6ファイル104ケース成功、LCOV 437/771行 hit である。spawn 契約 t37/t83/t210 は41ケース成功だが LCOV 1/771行 hit である。従って spawn テストは CLI/cwd 互換性、in-process テストは内部分岐という相補的な役割を持つ。
+
+## 記録系 round-trip PBT の技術断面（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 技術スタックに追加なし。PBT 基盤 `fast-check`（#697 で導入済み、`devDependencies`）と Bun / TypeScript の既存ツール層だけで足り、新規外部依存を要さない。実行面も既存の `tests/run-tests.ts`（`:117` が `--ci = smoke + unit + integration` を宣言）へ載るだけで、新規 CI ジョブは要らない（深掘りは `AMADEUS_PBT_DEEP=1` × 既存 `--release` tier の env 階層で分離 — 規約の現況と揺れは `code-quality-assessment.md` 現在節）。区間の技術面の変化は患部外 — #2031 の execution observability baseline（`execution-*` 新モジュール群、audit event types 79→80）で、詳細は `architecture.md` 現在節と `re-scans/260802-record-roundtrip-pbt.md` に委ねる。
+

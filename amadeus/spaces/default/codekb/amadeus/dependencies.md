@@ -802,3 +802,8 @@ doctor core の明示すべき依存は、個別 checks、env、cache、session 
 ## 依存方向の判断
 
 依存方向は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` とする。CLI wrapper から checks を直接呼ばず、checks から stdout や `process.exit` を参照させない。新規外部パッケージは追加せず、既存の Bun/TypeScript/Node 標準機能と現在の audit・filesystem 実装を使う。
+
+## 記録系 round-trip PBT の依存関係（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 外部依存の追加なし（`fast-check` は #697 で導入済み）。内部依存は 3 本 — (1) テスト → 被検コーデックの import 面が dist 出荷コピー（`t204` / `t352` / `t364`）と core 正本（`t274` / `t275`）の 2 流儀に割れており、新規分の統一方針を設計段で確定する必要がある、(2) 読み側 fail-closed 化 → 消費側呼出元（election は `Store.load` `amadeus-election-store.ts:503-510`、state は `transitionMirrorBoundaryReceipt` 等）のエラー分岐、(3) core/tools 改修 → dist 7 ハーネス + self-install 面の機械同期（`bun scripts/package.ts` + `bun run promote:self`、`dist:check` / `promote:self:check` / `t258-boundary-guard` が連動）。患部 10 パスのうち区間内コミットは `amadeus-lib.ts`（1、#2031 の +1 行）と `amadeus-audit.ts`（1、#2031 の +5 行）のみで、他 8 パスは 0 — 他の進行中 intent と交差する兆候は区間にない。
+
