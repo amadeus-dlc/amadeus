@@ -658,7 +658,13 @@ describe("t279 create", () => {
       receipt,
       "state-write",
       "blocked",
-    )).toMatchObject({ kind: "safety-blocked", warning: { retryable: true } });
+    )).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        retryable: true,
+        summary: expect.stringContaining("original safety block (state-write): blocked"),
+      },
+    });
 
     const completeStore = memoryStore(initial);
     expect(complete(

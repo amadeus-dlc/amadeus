@@ -1,5 +1,5 @@
 // covers: function:setCheckbox, function:validateStageState, function:requireChanged
-//   function:parseScopedCheckboxes, function:StageStateValidationError
+//   function:parseScopedCheckboxes, function:stageLineKey, function:StageStateValidationError
 //   function:StateMutationTargetError, function:StateMutationInvariantError
 // size: small
 //
@@ -28,6 +28,7 @@ import {
   parseScopedCheckboxes,
   requireChanged,
   setCheckbox,
+  stageLineKey,
   StageStateValidationError,
   StateMutationInvariantError,
   StateMutationTargetError,
@@ -275,6 +276,11 @@ describe("setCheckbox() — validation and loud failure", () => {
         { slug: "ideation", state: "pending", suffix: "EXECUTE", unit: "cart" },
         { slug: "ideation", state: "in-progress", suffix: "EXECUTE", unit: "checkout" },
       ]);
+  });
+
+  test("builds distinct canonical keys for global and per-unit stage rows", () => {
+    expect(stageLineKey("ideation")).toBe("\0ideation");
+    expect(stageLineKey("ideation", "cart")).toBe("cart\0ideation");
   });
 
   test("rejects a forged validated state as a typed invariant failure", () => {

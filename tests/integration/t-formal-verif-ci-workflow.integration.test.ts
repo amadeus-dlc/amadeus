@@ -44,6 +44,9 @@ const BASELINE_SHA = readFileSync(
 //     it stays non-blocking (FR-5b) and t222's pin stays untouched.
 //   - 260801-silent-drop-gate: the lint job's blocking semantic no-silent-drop
 //     invocation, kept in lint so ci-success retains its existing needs set.
+//   - 260801-silent-drop-gate review follow-up: normalize GitHub's all-zero
+//     push before-SHA to the baseline-less path and disable checkout credential
+//     persistence in the tests job.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

@@ -390,7 +390,7 @@ function readCollections(
     for (const run of entry.runs) {
       const existing = collections.get(run.artifact.path);
       if (existing !== undefined && existing.digest !== run.artifact.sha256) {
-        problems.push(`artifact ${run.artifact.path} has inconsistent declared digests`);
+        problems.push(`artifact ${run.artifact.path} measured digest does not match the declared digest`);
       }
       if (existing === undefined) {
         const collection = readArtifactCollection(repositoryRoot, run.artifact, problems);

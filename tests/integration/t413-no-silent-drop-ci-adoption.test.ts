@@ -32,7 +32,10 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(gateStep).toContain("git cat-file -e");
     expect(gateStep).not.toContain("git fetch");
     expect(gateStep).toContain("workflow_dispatch) BASE_REVISION=\"\"");
+    expect(gateStep).toContain('if [[ "${BASE_REVISION}" =~ ^0+$ ]]');
     expect(gateStep).toContain("timeout --signal=TERM --kill-after=5s 30s");
+    const testsJob = workflow.slice(workflow.indexOf("  tests:\n"), workflow.indexOf("  coverage-head:\n"));
+    expect(testsJob).toContain("persist-credentials: false");
     expect(workflow.match(/bun run no-silent-drop/g)).toHaveLength(1);
     expect(gateStep).toContain(`-- --base-revision "${baseRevisionVariable}"`);
     expect(gateStep).not.toContain("continue-on-error");
@@ -139,6 +142,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       ["--signal=TERM", "--kill-after=1s", "0.1s", "bun", "-e", "setInterval(() => {}, 1000)"],
       { cwd: REPO_ROOT, encoding: "utf8" },
     );
+    expect(result.error).toBeUndefined();
     expect(result.status).toBe(124);
   });
 

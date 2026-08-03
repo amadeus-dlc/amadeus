@@ -5644,6 +5644,9 @@ export function handleSetStatus(projectDir: string, flags: Record<string, string
         break;
       }
     }
+    if (currentBox === "") {
+      die(`State mutation refused: operation=${JSON.stringify("set-status:" + stage)} phase=validate reason=target-not-found target=${JSON.stringify(stage)}`);
+    }
     if (currentBox === "completed" || currentBox === "awaiting-approval") {
       process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
       return;

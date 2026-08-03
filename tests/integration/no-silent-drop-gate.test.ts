@@ -543,10 +543,13 @@ describe("no-silent-drop AST rules", () => {
 
   test("verified ast-grep loader rejects overrides, absent packages, and untrusted resolution", () => {
     const previous = process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
-    process.env.NAPI_RS_NATIVE_LIBRARY_PATH = "/tmp/untrusted.node";
-    expect(() => loadVerifiedAstGrep(REPO_ROOT)).toThrow("cannot override");
-    if (previous === undefined) delete process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
-    else process.env.NAPI_RS_NATIVE_LIBRARY_PATH = previous;
+    try {
+      process.env.NAPI_RS_NATIVE_LIBRARY_PATH = "/tmp/untrusted.node";
+      expect(() => loadVerifiedAstGrep(REPO_ROOT)).toThrow("cannot override");
+    } finally {
+      if (previous === undefined) delete process.env.NAPI_RS_NATIVE_LIBRARY_PATH;
+      else process.env.NAPI_RS_NATIVE_LIBRARY_PATH = previous;
+    }
 
     const missing = mkdtempSync(join(tmpdir(), "nsd-ast-missing-"));
     temporaryDirectories.push(missing);
@@ -770,14 +773,17 @@ describe("no-silent-drop ledger", () => {
 
     const envNames = ["AMADEUS_NSD_TRUSTED_BASE_SHA", "GITHUB_BASE_SHA", "GITHUB_EVENT_BEFORE"] as const;
     const saved = envNames.map((name) => process.env[name]);
-    for (const name of envNames) delete process.env[name];
-    expect(trustedBaseSha()).toBeNull();
-    expect(() => trustedBaseSha("short")).toThrow("event-specific full SHA");
-    saved.forEach((value, index) => {
-      const name = envNames[index]!;
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    });
+    try {
+      for (const name of envNames) delete process.env[name];
+      expect(trustedBaseSha()).toBeNull();
+      expect(() => trustedBaseSha("short")).toThrow("event-specific full SHA");
+    } finally {
+      saved.forEach((value, index) => {
+        const name = envNames[index]!;
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      });
+    }
 
     expect(() => baselineAtRevision(root, "f".repeat(40))).toThrow("does not contain an unambiguous baseline");
 

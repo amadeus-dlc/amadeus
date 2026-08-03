@@ -10,12 +10,6 @@
     },
     {
       "path": "packages/framework/core/tools/amadeus-bolt.ts",
-      "name": "handleComplete",
-      "ordinal": 0,
-      "ccn": 21
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-bolt.ts",
       "name": "handleDispatchEvent",
       "ordinal": 0,
       "ccn": 17
@@ -45,12 +39,6 @@
       "ccn": 22
     },
     {
-      "path": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-      "name": "classifyCreateState",
-      "ordinal": 0,
-      "ccn": 21
-    },
-    {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "emitJumpDirective",
       "ordinal": 0,
@@ -60,7 +48,7 @@
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "handleNext",
       "ordinal": 0,
-      "ccn": 29
+      "ccn": 22
     },
     {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -119,14 +107,8 @@
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
-      "ordinal": 17,
+      "ordinal": 15,
       "ccn": 30
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-state.ts",
-      "name": "(anonymous)",
-      "ordinal": 20,
-      "ccn": 16
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
@@ -139,18 +121,6 @@
       "name": "main",
       "ordinal": 0,
       "ccn": 38
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-swarm.ts",
-      "name": "handlePrepare",
-      "ordinal": 0,
-      "ccn": 19
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-utility.ts",
-      "name": "(anonymous)",
-      "ordinal": 92,
-      "ccn": 16
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
@@ -168,13 +138,13 @@
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "handleRecompose",
       "ordinal": 0,
-      "ccn": 42
+      "ccn": 28
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "handleScopeChange",
       "ordinal": 0,
-      "ccn": 36
+      "ccn": 26
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",

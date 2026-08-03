@@ -5533,7 +5533,7 @@ const CANONICAL_STAGE_LINE_RE = /^- \[([ xSR?-])\] (\S+)\s*—\s*((?:EXECUTE|SKI
 const STAGE_PROGRESS_VALIDATION_RE =
   /^## Stage Progress\r?\n([\s\S]*?)(?=\r?\n## (?!Stage Progress)|(?![\s\S]))/m;
 
-function stageLineKey(slug: string, unit?: string): string {
+export function stageLineKey(slug: string, unit?: string): string {
   return `${unit ?? ""}\0${slug}`;
 }
 

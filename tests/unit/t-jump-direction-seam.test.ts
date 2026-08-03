@@ -96,8 +96,9 @@ class ExitSignal extends Error {
 // error() ends the CLI via process.exit and writes the message via console.error;
 // in-process we convert the exit into a throwable and capture stderr so the test
 // can assert on the loud-reject path and keep running.
-function captureExit(fn: () => void): { threw: boolean; stderr: string } {
+function captureExit(fn: () => void): { threw: boolean; stderr: string; stdout: string } {
   let stderr = "";
+  let stdout = "";
   const origExit = process.exit.bind(process);
   const origErr = console.error;
   const origLog = console.log;
@@ -107,7 +108,9 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
   console.error = (...a: unknown[]) => {
     stderr += a.map(String).join(" ");
   };
-  console.log = () => {};
+  console.log = (...a: unknown[]) => {
+    stdout += a.map(String).join(" ");
+  };
   let threw = false;
   try {
     fn();
@@ -119,7 +122,7 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
     console.error = origErr;
     console.log = origLog;
   }
-  return { threw, stderr };
+  return { threw, stderr, stdout };
 }
 
 describe("t-jump-direction-seam: handler drive (FR-4, in-process)", () => {
@@ -183,9 +186,11 @@ describe("t-jump-direction-seam: handler drive (FR-4, in-process)", () => {
 
     expect(r.stderr).toBe("");
     expect(r.threw).toBe(false);
-    expect(readStateFile(proj)).toContain(
-      "- [-] functional-design — EXECUTE",
-    );
+    expect(JSON.parse(r.stdout)).toMatchObject({
+      direction: "redo",
+      target: "functional-design",
+      stages_reset: ["functional-design"],
+    });
   });
 
 });

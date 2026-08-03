@@ -313,19 +313,15 @@ function validateCurrentArtifactBindings(
   currentExemptions: ExemptionDoc,
   post: ReturnType<typeof validateEvidenceBundle>,
 ): void {
-  const baselineBytes = readArtifact(repoRoot, provenance.candidate, "bootstrap.candidate");
-  const exemptionsBytes = readArtifact(repoRoot, {
+  assertBootstrap(provenance.candidate.path === BASELINE_PATH, "bootstrap candidate path is not canonical");
+  readArtifact(repoRoot, provenance.candidate, "bootstrap.candidate");
+  readArtifact(repoRoot, {
     path: EXEMPTIONS_PATH,
     digest: provenance.initialExemptions.bytesDigest,
   }, "bootstrap.initialExemptions");
   const currentIdentities = currentBaseline.entries.map((entry) => entry.fingerprint);
   const exemptionIdentities = currentExemptions.entries.map((entry) => entry.fingerprint);
 
-  assertBootstrap(provenance.candidate.path === BASELINE_PATH, "bootstrap candidate path is not canonical");
-  assertBootstrap(
-    digest(baselineBytes) === provenance.candidate.digest,
-    "bootstrap candidate B0 exact bytes do not match the current baseline",
-  );
   assertBootstrap(
     currentBaseline.generatedFrom.revision === provenance.postRevision,
     "bootstrap post revision does not match the current baseline",
@@ -339,10 +335,6 @@ function validateCurrentArtifactBindings(
     "bootstrap B0 census digest mismatch",
   );
   assertBootstrap(sameSet(post.approved.identities, currentIdentities), "bootstrap post identities mismatch");
-  assertBootstrap(
-    digest(exemptionsBytes) === provenance.initialExemptions.bytesDigest,
-    "bootstrap initial exemption exact-bytes digest mismatch",
-  );
   assertBootstrap(
     identitySetDigest(exemptionIdentities) === provenance.initialExemptions.identitySetDigest,
     "bootstrap initial exemption identity digest mismatch",

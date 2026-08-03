@@ -287,11 +287,15 @@ function maintenanceFailure(
   context: MirrorExecutionContext,
   operationId: string,
   preparation: Exclude<OperationPreparationResult, { kind: "ready" }>,
+  originalFailure?: { classification: MirrorFailureClass; summary: string },
 ): MirrorOperationOutcome {
-  const summary =
+  const maintenanceSummary =
     preparation.kind === "maintenance-completed"
       ? "pending audit outbox maintenance completed; retry in a new invocation"
       : `pending audit outbox maintenance blocked: ${preparation.summary}`;
+  const summary = originalFailure
+    ? `original safety block (${originalFailure.classification}): ${originalFailure.summary}; ${maintenanceSummary}`
+    : maintenanceSummary;
   return stateFailure(context, operationId, summary, "not-started", true);
 }
 
@@ -340,7 +344,10 @@ export function persistBlocked(
     classification,
   );
   if (preparation.kind !== "ready") {
-    return maintenanceFailure(context, receipt.operationId, preparation);
+    return maintenanceFailure(context, receipt.operationId, preparation, {
+      classification,
+      summary,
+    });
   }
   const result = applyTransition(
     ports,

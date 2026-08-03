@@ -271,7 +271,13 @@ export function buildCandidate(
     direction: "shrink-only",
     generatedFrom: { revision, censusDigest, approvalDigest: approvalDigest(approval) },
     entries: approval.entries.map((entry) => {
-      const finding = findingByFingerprint.get(entry.fingerprint) as Finding;
+      const finding = findingByFingerprint.get(entry.fingerprint);
+      if (!finding) {
+        throw new InfraFailure(
+          "BASELINE_INVALID",
+          `approval references an unknown finding: ${entry.fingerprint}`,
+        );
+      }
       return {
         fingerprint: entry.fingerprint,
         ruleId: finding.ruleId,

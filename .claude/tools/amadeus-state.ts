@@ -84,6 +84,7 @@ import {
   setIntentDocsOnly,
   setOrInsertField,
   type ScopedCheckboxLine,
+  stageLineKey,
   stageIndex,
   standingGrantSatisfiesGate,
   stagesInScope,
@@ -648,6 +649,20 @@ export function validateSlug(slug: string | undefined): string {
 
 function errorWithSlug(slug: string, msg: string): never {
   error(`[slug=${slug}] ${msg}`);
+}
+
+function stageCheckboxOrError(
+  content: string,
+  slug: string,
+  operation: string,
+): ReturnType<typeof parseCheckboxes>[number] {
+  for (const checkbox of parseCheckboxes(content)) {
+    if (checkbox.slug === slug) return checkbox;
+  }
+  errorWithSlug(
+    slug,
+    `State mutation refused: operation=${JSON.stringify(operation)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
+  );
 }
 
 function sha256(buf: string): string {
@@ -2042,18 +2057,20 @@ export function handleAdvance(args: string[]): void {
   //   1. completedSlug matches `Current Stage` (normal post-approve flow);
   //   2. completedSlug is already `[x]` (idempotent replay / approve-first).
   // Anything else errors.
-  const completedCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === completedSlug
+  const completedCbBefore = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `advance:complete:${completedSlug}`,
   );
   const currentStageField = getField(content, "Current Stage");
   const matchesCurrent = completedSlug === currentStageField;
-  const alreadyMarkedCompleted = completedCbBefore?.state === "completed";
+  const alreadyMarkedCompleted = completedCbBefore.state === "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
   if (!matchesCurrent && !alreadyMarkedCompleted) {
     error(
       `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
-        completedCbBefore?.state ?? "unknown"
+        completedCbBefore.state
       }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`
     );
   }
@@ -2105,13 +2122,15 @@ export function handleAdvance(args: string[]): void {
   // states — in-progress, awaiting-approval, revising. Matching only
   // in-progress let a stale replay demote a gate-held `[?]`/`[R]` next stage
   // back to `[-]` and re-emit STAGE_STARTED.
-  const nextCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === nextSlug
+  const nextCbBefore = stageCheckboxOrError(
+    content,
+    nextSlug,
+    `advance:start:${nextSlug}`,
   );
   const nextAlreadyStarted =
-    nextCbBefore?.state === "in-progress" ||
-    nextCbBefore?.state === "awaiting-approval" ||
-    nextCbBefore?.state === "revising";
+    nextCbBefore.state === "in-progress" ||
+    nextCbBefore.state === "awaiting-approval" ||
+    nextCbBefore.state === "revising";
   const isReplay =
     alreadyMarkedCompleted &&
     stageCompletedAlreadyAudited &&
@@ -2263,9 +2282,11 @@ export function handleFinalize(args: string[]): void {
   // completing transition that must not rubber-stamp. Guard only when the slug
   // is not already [x] (an idempotent re-finalize already passed the guard),
   // and before any mutation so a refusal leaves state untouched.
-  const alreadyMarkedCompleted =
-    parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
-    "completed";
+  const alreadyMarkedCompleted = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `finalize:${completedSlug}`,
+  ).state === "completed";
   if (!alreadyMarkedCompleted) {
     verifyStageArtifacts(pd, completedStage);
   }
@@ -2409,9 +2430,11 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
   // alreadyMarkedCompleted guard.
-  const alreadyMarkedCompleted =
-    parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
-    "completed";
+  const alreadyMarkedCompleted = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `complete-workflow:${completedSlug}`,
+  ).state === "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
   const completionInstance = completion?.instance ??
@@ -5189,7 +5212,7 @@ export function mergeScopedCheckboxProgress(
   const mainCheckboxes = parseScopedCheckboxes(mainContent);
   const worktreeCheckboxes = parseScopedCheckboxes(worktreeContent);
   const checkboxKey = (checkbox: ScopedCheckboxLine): string =>
-    `${checkbox.unit ?? ""}\0${checkbox.slug}`;
+    stageLineKey(checkbox.slug, checkbox.unit);
   const mainStateMap = new Map(mainCheckboxes.map((checkbox) => [checkboxKey(checkbox), checkbox.state]));
   const winningSlug = [...refsList].sort()[0];
 

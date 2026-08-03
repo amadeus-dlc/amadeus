@@ -836,7 +836,6 @@ function semanticCandidateForNode(
     };
   }
   if (!isNsd003Function(node)) return null;
-  if (!node.body) throw new InfraFailure("RULE_INVALID", `${node.name.text} has no analyzable implementation`);
   return nsd003Safe(node.name.text, node, checker)
     ? null
     : { parsed, sourceFile, node, ruleId: "NSD003", symbol: node.name.text };

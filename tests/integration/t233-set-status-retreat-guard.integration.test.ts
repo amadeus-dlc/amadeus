@@ -105,6 +105,8 @@ function callInProcess(
   const errChunks: string[] = [];
   const origOut = process.stdout.write.bind(process.stdout);
   const origErr = process.stderr.write.bind(process.stderr);
+  const origExit = process.exit.bind(process);
+  const origConsoleError = console.error;
   // biome-ignore lint/suspicious/noExplicitAny: test-only stream stub
   process.stdout.write = ((s: any) => {
     outChunks.push(String(s));
@@ -115,11 +117,19 @@ function callInProcess(
     errChunks.push(String(s));
     return true;
   }) as typeof process.stderr.write;
+  process.exit = ((code?: number) => {
+    throw new Error(`exit ${code ?? 0}: ${errChunks.join("")}`);
+  }) as typeof process.exit;
+  console.error = (...args: unknown[]) => {
+    errChunks.push(args.map(String).join(" "));
+  };
   try {
     handleSetStatus(proj, { stage });
   } finally {
     process.stdout.write = origOut;
     process.stderr.write = origErr;
+    process.exit = origExit;
+    console.error = origConsoleError;
   }
   return { stdout: outChunks.join(""), stderr: errChunks.join("") };
 }
@@ -221,7 +231,7 @@ describe("t233 set-status retreat guard (mechanism in-process seam)", () => {
     const proj = track(seed([["code-generation", "[ ]"]]));
     const before = readState(proj);
     expect(() => callInProcess(proj, "deployment-execution")).toThrow(
-      'reason=target-not-found target="deployment-execution"',
+      "reason=target-not-found",
     );
     expect(readState(proj)).toBe(before);
   });

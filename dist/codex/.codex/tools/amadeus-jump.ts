@@ -355,6 +355,15 @@ export function handleResolve(args: string[]): void {
 
 // --- Subcommand: execute ---
 
+function assertTargetCheckboxExists(
+  checkboxMap: ReadonlyMap<string, CheckboxState>,
+  targetSlug: string,
+): void {
+  if (!checkboxMap.has(targetSlug)) {
+    error(`State mutation refused: operation=${JSON.stringify("jump:" + targetSlug)} phase=validate reason=target-not-found target=${JSON.stringify(targetSlug)}`);
+  }
+}
+
 export function handleExecute(args: string[]): void {
   const flags = parseFlags(args);
   const pd = resolveProjectDir(projectDir);
@@ -403,6 +412,7 @@ export function handleExecute(args: string[]): void {
 
   // Build a lookup of current checkbox states
   const checkboxMap = new Map(checkboxes.map((c) => [c.slug, c.state]));
+  assertTargetCheckboxExists(checkboxMap, targetSlug);
 
   const stagesSkipped: string[] = [];
   const stagesReset: string[] = [];
