@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "direction": "shrink-only",
   "generatedFrom": {
-    "revision": "4aa35926fe7437f78e8ab20645153c8f6a2a1067",
+    "revision": "69338a56fb5abaf34825815ca058d762401a44a4",
     "censusDigest": "c287c52b60e88159c0f302476f058cbaee6c0f46303fed56deef19f6df305ec8",
     "approvalDigest": "d888f26d233fb8043ca7ad2fee8a983a18d8770447fd147c3142e5a0d3ca9e2e",
-    "previousDigest": "4e8999f9acbb670f47e01e28d7db22eb40267812082be6be86f1e1f13c9687b8"
+    "previousDigest": "ea618c5692ef392d6b769171351b611032db9d87f85b8271f0575748757acdd3"
   },
   "entries": [
     {
