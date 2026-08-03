@@ -13,6 +13,7 @@ const ENGINE_DIR_BY_HARNESS: Readonly<Record<string, string>> = Object.freeze({
   opencode: ".opencode",
   cursor: ".cursor",
   kimi: ".kimi-code",
+  pi: ".pi",
 });
 
 export function engineDirNameFor(harness: HarnessName): string {

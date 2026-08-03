@@ -55,6 +55,7 @@ describe("Pi dist foundation", () => {
   });
 
   test("does not ship a trust decision or treat the driver as a native extension", () => {
+    expect(existsSync(join(DIST, "package.json"))).toBe(false);
     expect(existsSync(join(DIST, ".pi", "trust.json"))).toBe(false);
     expect(existsSync(join(DIST, ".pi", "settings.json"))).toBe(false);
     expect(existsSync(join(DIST, ".pi", "extensions", "amadeus-pi-driver.ts"))).toBe(false);

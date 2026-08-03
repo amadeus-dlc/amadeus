@@ -21,8 +21,8 @@ export function renderHelp(): string {
     "amadeus-setup",
     "",
     "Usage:",
-    "  amadeus-setup install [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
-    "  amadeus-setup upgrade [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
+    "  amadeus-setup install [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi|pi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
+    "  amadeus-setup upgrade [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi|pi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
     "  amadeus-setup            # this help; install/upgrade are never run implicitly",
   ].join("\n");
 }
@@ -141,7 +141,7 @@ export function renderError(err: ClassifiedError): string {
     case "unknown-flag":
       return `Unknown option: ${err.raw}. Run \`amadeus-setup\` with no arguments for usage.`;
     case "invalid-harness":
-      return `Invalid --harness value: "${err.raw}". Expected one of claude, codex, kiro, kiro-ide, opencode, cursor, kimi.`;
+      return `Invalid --harness value: "${err.raw}". Expected one of claude, codex, kiro, kiro-ide, opencode, cursor, kimi, pi.`;
     case "multiple-harnesses":
       return `Only one --harness is supported per run (got: ${err.raws.join(", ")}). Run once per harness.`;
     case "missing-required":

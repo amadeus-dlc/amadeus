@@ -68,6 +68,12 @@ function manifest(entries: readonly PlanEntry[]): Manifest {
   return parsed.value;
 }
 
+function writeInstalledManifest(target: string, entries: readonly PlanEntry[]): void {
+  const path = join(target, "amadeus", ".installer", "amadeus-setup-manifest.json");
+  mkdirSync(join(target, "amadeus", ".installer"), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(manifest(entries).toJSON(), null, 2)}\n`);
+}
+
 describe("SetupTransactionCoordinator", () => {
   test("commits managed files and manifest together while retaining the captured inode in private 0600 storage", async () => {
     const { target, source, privateRoot } = fixture();
@@ -209,5 +215,37 @@ describe("SetupTransactionCoordinator", () => {
     );
     expect(permissionsResult.hasFailures()).toBe(true);
     expect(permissionsResult.failures()[0]?.detail).toContain("0700");
+  });
+
+  test("retires a removed owned resource only when its bytes still match the prior manifest", async () => {
+    const { target, source, privateRoot } = fixture();
+    const retired = entry("amadeus-retired.ts", "managed\n");
+    writeFileSync(join(target, retired.path), "managed\n");
+    writeInstalledManifest(target, [retired]);
+
+    const result = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).apply(
+      plan(source, []),
+      target,
+      manifest([]),
+    );
+
+    expect(result.hasFailures()).toBe(false);
+    expect(existsSync(join(target, retired.path))).toBe(false);
+  });
+
+  test("preserves a modified owned resource retired by the next catalog", async () => {
+    const { target, source, privateRoot } = fixture();
+    const retired = entry("amadeus-retired.ts", "managed\n");
+    writeFileSync(join(target, retired.path), "user-modified\n");
+    writeInstalledManifest(target, [retired]);
+
+    const result = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).apply(
+      plan(source, []),
+      target,
+      manifest([]),
+    );
+
+    expect(result.hasFailures()).toBe(false);
+    expect(readFileSync(join(target, retired.path), "utf8")).toBe("user-modified\n");
   });
 });

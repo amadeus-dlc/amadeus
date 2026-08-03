@@ -67,6 +67,7 @@ import {
   validatePluginSources,
 } from "./plugin-projection.ts";
 import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
+import { piPackageMetadataProblems } from "./pi-package.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FRAMEWORK_ROOT = join(REPO_ROOT, "packages", "framework");
@@ -673,6 +674,13 @@ function assertResourceDestinationsSafe(m: HarnessManifest, root: string): void 
 
 export function writeHarness(name: string): void {
   const m = loadManifest(name);
+  if (name === "pi") {
+    const rootPackage = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
+      pi?: unknown;
+    };
+    const problems = piPackageMetadataProblems(rootPackage.pi);
+    if (problems.length > 0) throw new Error(`[pi] invalid package metadata: ${problems.join("; ")}`);
+  }
   const distDir = join(REPO_ROOT, "dist", name);
   assertResourceDestinationsSafe(m, distDir);
   const candidate = mkdtempSync(join(tmpdir(), `amadeus-candidate-${name}-`));

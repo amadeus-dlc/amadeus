@@ -673,12 +673,23 @@ function retiredOwnedPaths(target: string, next: Manifest): string[] {
   try {
     const parsed = JSON.parse(readTextNoFollow(path)) as { files?: ManifestFile[] };
     const nextPaths = new Set(next.toJSON().files.map((entry) => entry.path));
-    return (parsed.files ?? []).filter((entry) => entry.class === "owned" && !nextPaths.has(entry.path)).map((entry) => entry.path);
+    return (parsed.files ?? [])
+      .filter((entry) => entry.class === "owned" && !nextPaths.has(entry.path))
+      .filter((entry) => {
+        const current = targetPath(target, entry.path);
+        const state = lstatIfExists(current);
+        return state !== null && !state.isSymbolicLink() && state.isFile() && md5(current) === entry.md5;
+      })
+      .map((entry) => entry.path);
   } catch {
     // A corrupt manifest is itself captured transactionally but is not trusted
     // as authority for destructive retired-file actions.
     return [];
   }
+}
+
+function md5(path: string): string {
+  return createHash("md5").update(readFileSync(path)).digest("hex");
 }
 
 function priorState(path: string): PriorState {
