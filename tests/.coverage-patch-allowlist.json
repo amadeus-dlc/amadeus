@@ -320,7 +320,12 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "2865",
+    "selector": {
+      "function": "printHelp",
+      "fingerprint": "sha256:5ac910fd81a1d074fda5573058ba1fe92d467af8ed07db7f08839cf7e9d93df7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
     "reason": "Continuation row of printHelp's multi-line template literal. The amadeus-graph CLI help boundary is exercised through spawned CLI tests, but Bun stamps the string continuation DA:0 and does not attribute child-process coverage to the parent LCOV report.",
     "expiry": "remove if Bun attributes multi-line template continuation rows or spawned CLI coverage"
   },
