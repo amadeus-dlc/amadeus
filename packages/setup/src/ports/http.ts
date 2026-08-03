@@ -1,8 +1,13 @@
 import { FetchError, type HttpMeta } from "../domain/payload.ts";
 import { Result } from "../shared/result.ts";
 
-// SEC-F02: communication is limited to exactly these two hosts, HTTPS only.
-const ALLOWED_HOSTS = new Set(["api.github.com", "codeload.github.com"]);
+// SEC-F02/BR-U2-4: communication is limited to these exact hosts, HTTPS only.
+const ALLOWED_HOSTS = new Set([
+  "api.github.com",
+  "codeload.github.com",
+  "github.com",
+  "release-assets.githubusercontent.com",
+]);
 const API_BASE = "https://api.github.com";
 const MAX_REDIRECTS = 5;
 
@@ -49,8 +54,8 @@ export function createHttp(options: HttpOptions): Http {
 // Each caller only adds what is specific to it (JSON parsing vs. the body
 // stream / empty-body check).
 async function fetchChecked(url: URL, timeoutMs: number): Promise<Result<Response, FetchError>> {
-  if (!ALLOWED_HOSTS.has(url.host)) {
-    return Result.err(FetchError.payloadInvalid(`refusing to contact untrusted host: ${url.host}`));
+  if (!isAllowedUrl(url)) {
+    return Result.err(FetchError.payloadInvalid(`refusing to contact untrusted URL: ${url.toString()}`));
   }
   try {
     const response = await fetchFollowingAllowedHosts(url, timeoutMs);
@@ -76,8 +81,8 @@ async function fetchFollowingAllowedHosts(initialUrl: URL, timeoutMs: number): P
       const location = response.headers.get("location");
       if (!location) throw new Error(`redirect response ${response.status} had no Location header`);
       const next = new URL(location, current);
-      if (!ALLOWED_HOSTS.has(next.host)) {
-        throw new Error(`refusing to follow redirect to untrusted host: ${next.host}`);
+      if (!isAllowedUrl(next)) {
+        throw new Error(`refusing to follow redirect to untrusted URL: ${next.toString()}`);
       }
       current = next;
       continue;
@@ -85,4 +90,8 @@ async function fetchFollowingAllowedHosts(initialUrl: URL, timeoutMs: number): P
     return response;
   }
   throw new Error("too many redirects");
+}
+
+function isAllowedUrl(url: URL): boolean {
+  return url.protocol === "https:" && ALLOWED_HOSTS.has(url.host);
 }

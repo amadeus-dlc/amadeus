@@ -24,6 +24,7 @@ import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts"
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
+import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
@@ -52,7 +53,8 @@ function v2Entries(): TarFixtureEntry[] {
   ];
 }
 
-function fakeHttp(archive: Buffer, tag: string): Http {
+function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
+  const checksums = buildReleaseAssetChecksums(archive, tag);
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) return Result.ok([{ tag_name: tag, draft: false, prerelease: false }]);
@@ -63,14 +65,15 @@ function fakeHttp(archive: Buffer, tag: string): Http {
       if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
       throw new Error(`unexpected path in fixture: ${path}`);
     },
-    async downloadArchive() {
-      const stream = Readable.toWeb(Readable.from(archive)) as unknown as ReadableStream<Uint8Array>;
+    async downloadArchive(url) {
+      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
+      const stream = Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
       return Result.ok(stream);
     },
   };
 }
 
-function realPorts(archive: Buffer, tag: string): CliPorts {
+function realPorts(archive: Buffer, tag: `v${string}`): CliPorts {
   return {
     tty: {
       isTTY: false,

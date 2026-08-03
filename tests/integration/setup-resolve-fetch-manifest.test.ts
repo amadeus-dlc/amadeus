@@ -2,7 +2,7 @@
 //
 // Integration test for the U1 boundary chain: resolver -> fetcher -> manifest
 // build -> manifest-io write/read, all through a single fake Http (releases +
-// codeload archive) and real filesystem ports (a real temp target directory).
+// release asset) and real filesystem ports (a real temp target directory).
 // No production module is faked here except the network boundary (Http).
 
 import { describe, expect, test } from "bun:test";
@@ -20,6 +20,7 @@ import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 import { Readable } from "node:stream";
+import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
 
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
 const ARCHIVE: TarFixtureEntry[] = [
@@ -28,6 +29,8 @@ const ARCHIVE: TarFixtureEntry[] = [
 ];
 
 function fakeHttp(): Http {
+  const archive = buildTarGz(ARCHIVE);
+  const checksums = buildReleaseAssetChecksums(archive, "v1.2.3");
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) {
@@ -35,8 +38,9 @@ function fakeHttp(): Http {
       }
       throw new Error(`unexpected path in integration fixture: ${path}`);
     },
-    async downloadArchive() {
-      const stream = Readable.toWeb(Readable.from(buildTarGz(ARCHIVE))) as unknown as ReadableStream<Uint8Array>;
+    async downloadArchive(url) {
+      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
+      const stream = Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
       return Result.ok(stream);
     },
   };

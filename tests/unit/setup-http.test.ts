@@ -51,3 +51,60 @@ describe("createHttp — getJson()", () => {
     });
   });
 });
+
+describe("createHttp — release asset redirects", () => {
+  test("allows the exact GitHub release hosts and follows the redirect manually", async () => {
+    const original = globalThis.fetch;
+    const contacted: string[] = [];
+    globalThis.fetch = (async (input) => {
+      const url = String(input);
+      contacted.push(url);
+      if (url.startsWith("https://github.com/")) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: "https://release-assets.githubusercontent.com/github-production-release-asset/file.tar.gz" },
+        });
+      }
+      return new Response("archive", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const http = createHttp({ apiTimeoutMs: 1000, archiveTimeoutMs: 1000 });
+      const result = await http.downloadArchive(
+        new URL("https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz"),
+      );
+
+      expect(result.type).toBe("ok");
+      expect(contacted).toEqual([
+        "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+        "https://release-assets.githubusercontent.com/github-production-release-asset/file.tar.gz",
+      ]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  test("refuses an insecure redirect before contacting its target", async () => {
+    const original = globalThis.fetch;
+    const contacted: string[] = [];
+    globalThis.fetch = (async (input) => {
+      contacted.push(String(input));
+      return new Response(null, {
+        status: 302,
+        headers: { location: "http://release-assets.githubusercontent.com/insecure.tar.gz" },
+      });
+    }) as typeof fetch;
+    try {
+      const http = createHttp({ apiTimeoutMs: 1000, archiveTimeoutMs: 1000 });
+      const result = await http.downloadArchive(
+        new URL("https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz"),
+      );
+
+      expect(result.type).toBe("err");
+      expect(contacted).toEqual([
+        "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      ]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
