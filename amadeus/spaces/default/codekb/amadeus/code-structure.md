@@ -1,6 +1,21 @@
 # コード構造
 
-## registry drift guard の患部配置（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択の患部配置（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+| 分類 | 正本／対象 | 今回の位置づけ |
+| --- | --- | --- |
+| activation | `packages/framework/core/tools/amadeus-plugin-activation.ts` | advisory shape（`:247`）と `(plugin, code)` latch key（`:290`） |
+| orchestration | `packages/framework/core/tools/amadeus-orchestrate.ts` | pending消費（`:697`）、発火（`:1307`）、main / single接続（`:1325`）、per-unit functional-design（`:3470`, `:3607`）、report flags（`:3955`, `:4159`） |
+| directive schema | `packages/framework/core/tools/amadeus-directive.ts` | `advisories` wire（`:140`）。人間選択入力は未定義 |
+| generic state | `packages/framework/core/tools/amadeus-state.ts` | presence（`:2811`）と `GATE_APPROVED`（`:3322`）。advisory receiptではない |
+| stage protocol | `packages/framework/core/amadeus-common/protocols/stage-protocol.md` | §11a（`:941`）で提示・人間判断を規定するが、状態遷移を実装しない |
+| stage definitions | `requirements-analysis.md`、`functional-design.md`、`build-and-test.md` | 3 checkpoint。functional-designはper-unit |
+| audit正本 | `packages/framework/core/knowledge/amadeus-shared/audit-format.md`、`packages/framework/core/otel/event-registry.ts` | canonical event 81件。advisory固有receiptなし |
+| tests | `tests/integration/t378-advisories-directive-field.integration.test.ts`、`t381-advisory-checkpoints-latch.integration.test.ts` | 現行発火・directive・latchの28件を固定。人間選択状態機械は未検証 |
+
+実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
+
+## registry drift guard の患部配置（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 ### 正本と投影境界
 
@@ -2053,4 +2068,3 @@ Issue 本文・クロスレビューの引用のうち、observed `9750f8aea` �
 | `harness/claude/manifest.ts` `coreDirs` tools 行 | `:52` | `:53` | +1 |
 
 ずれなしを実測確認したもの: `amadeus-election.ts:310` / `:433`、`amadeus-election-store.ts:80`、`amadeus-lib.ts:5179` `getField`、`amadeus-election-store.ts:503-510` `Store.load`、`tests/run-tests.ts:117`、`t274:58` / `:341`。
-

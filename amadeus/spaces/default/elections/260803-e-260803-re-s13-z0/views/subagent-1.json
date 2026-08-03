@@ -1,0 +1,13 @@
+{
+  "electionId": "E-260803-RE-S13-Z0",
+  "voter": "subagent-1",
+  "question": "Reverse Engineering の学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1/c2は今回固有の再利用判断か既存規約の適用であり、新しいpracticeまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ]
+}

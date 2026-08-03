@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260803-RE-S13-Z0",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を全面支持する。独立実測では、surface が返した c1 は『既存CodeKBを差分更新する』であり、audit seq 22 と memory.md はユーザーが既存9成果物に対して Modify を選んだ事実を示す。これは stage-protocol.md の全ステージ共通 Keep/Modify/Redo 契約が毎回ユーザー判断として扱う分岐で、今回の選択を project practice に固定すると将来の Keep/Redo 判断を不当に先取りする。c2 は『全体再スキャンより患部の独立再実測を優先する』であり、Issue #2129 の2件の独立クロスレビューはいずれも target SHA 498c3034a、file:line、CONFIRMED_WITH_REFINEMENTS を備え、現行 project.md の cid:reverse-engineering:c1-xrev-single-issue（クロスレビュー2名成立済み単発Issueを一次入力にできる）をそのまま満たす。さらに re-scan record の base a8e1ce025.. は observed 498c3034a.. の祖先（exit 0、距離42）で、cid:reverse-engineering:rescan-base-ancestry の既存条件も充足し、HEAD と origin/main も同一 SHA だった。実成果物は共有9件を局所更新し、2 integration filesを 28 pass / 0 fail で検証している。したがって c1/c2 は今回の再利用判断または既存規約の執行であり、将来の振る舞いを変える新規 practice でも、未検査の不変条件を機械化する新規 sensor でもない。memory層へ重複永続化せず承認ゲートへ進むのが妥当である。",
+      "submittedAt": "2026-08-03T08:12:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260803-RE-S13-Z0",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。c1 は project.md の cid:reverse-engineering:c1（既存 CodeKB の差分リフレッシュ）と同一であり、c2 は cid:reverse-engineering:c1-xrev-scan-mode および c1-xrev-single-issue（クロスレビュー済み単発 Issue の患部スポット再実測）の機械的適用である。Issue #2129 の2独立レビューはいずれも target SHA 498c3034a78bd432dc426f9f807b79c8ae980762 と file:line を提示し、HEAD=origin/main=同 SHA、関連28テストも 28 pass / 0 fail だったため、新規 practice/sensor の空白は認めない。",
+      "submittedAt": "2026-08-03T08:12:13Z"
+    }
+  ],
+  "late": []
+}

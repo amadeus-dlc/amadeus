@@ -1,6 +1,34 @@
 # コード品質評価
 
-## registry drift guard の品質所見（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択の品質所見（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+### 実測された強み
+
+- `bun test --timeout 120000 tests/integration/t378-advisories-directive-field.integration.test.ts tests/integration/t381-advisory-checkpoints-latch.integration.test.ts` は exit 0、28 pass、0 fail、107 expect。3 checkpoint、main / `--single`、directive shape、同一run latchの現行契約を回帰固定している。
+- advisoryはtyped directiveとstderrの両方に到達し、fieldは存在時だけ載る。単なる通知配線の欠落ではないことをテストとコードの両方で切り分けられる。
+- generic human presence、standing grant、gate approval、canonical audit registryは既にfail-closedな権限機構を持つ。新しい判断境界はこれらの概念を再利用できる可能性があるが、意味相関なしの流用はしない。
+
+### 確認された欠陥と証拠限界
+
+| 所見 | 判定 | 根拠／限界 |
+| --- | --- | --- |
+| advisory固有の選択入力・保持・検証がない | CONFIRMED | directive/report/state/auditの対応field・遷移が不在 |
+| 最初のper-unit directive前にholdしない | CONFIRMED | `gate:false` で消費・latchし、最終 `gate:true` では再掲なし |
+| 汎用human eventをreceiptにできる | 否定 | plugin/code/choiceとの意味相関がない |
+| AIが実際にadvisoryを黙殺した | INCONCLUSIVE | 凍結証拠から実発話を復元できない |
+| 実損量 | INCONCLUSIVE | 発生有無・件数を確定できる一次証拠なし |
+
+### 欠落する回帰seam
+
+- receiptなしでstage開始を拒否するfalling proof。
+- 「今すぐ実行」「リスクを認識して延期」をそれぞれ1回だけ人間権限で記録し、AI／一般audit CLIによる自己mintを拒否するtest。
+- 最初の `functional-design` `gate:false` より前のhold、main / `--single` / per-unitの対称性。
+- not-ready / changed / never-run / current / not-composed、初回 / 再入 / 新session / spec変更 / 新run / replayでのfresh・stale判定。
+- directive発行前error、現行 `run-stage` と将来 `dispatch-subagent` の共通境界。
+
+具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
+
+## registry drift guard の品質所見（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 ### 実測された強み
 
@@ -2049,4 +2077,3 @@ round-trip プロパティはメタモルフィックで独立オラクル不要
 ### 投影・ゲートの品質コスト
 
 core/tools を触るため coverage patch ゲートの母集団に入る。CLI spawn 経由でしか通らない行は lcov に載らないため（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）、in-process seam の設計を実装時点で行う。加えて `dist:check` / `promote:self:check`（7 ハーネス — 5 で止めると kiro / kiro-ide が DIFFERS）、`t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照 — コメント文字列にも `scripts/<file>` を書かない、`cid:code-generation:c1-1569-shipped-comment-vocab`）が連動する。
-
