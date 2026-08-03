@@ -90,7 +90,7 @@ function distRoot(): string {
 // dir + manifest row (+ optional emit.ts), with zero edits here — the
 // one-core-many-harnesses promise. Sorted so the default build/--check order is
 // stable (claude first by name).
-function discoverHarnessNames(): string[] {
+export function discoverHarnessNames(): string[] {
   if (!existsSync(HARNESS_ROOT)) return [];
   return readdirSync(HARNESS_ROOT)
     .filter((n) => existsSync(join(HARNESS_ROOT, n, "manifest.ts")))
