@@ -1929,6 +1929,7 @@ function resolveConsumes(
   unit: string,
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): ResolvedConsume[] {
   const resolved: ResolvedConsume[] = [];
   for (const consume of consumes) {
@@ -1936,6 +1937,17 @@ function resolveConsumes(
       consume.conditional_on &&
       projectType &&
       consume.conditional_on !== projectType
+    ) {
+      continue;
+    }
+    const producer = producersOf(consume.artifact)[0];
+    if (
+      unitKind !== undefined &&
+      producer !== undefined &&
+      !requiredArtifactsForUnit(
+        { produces: [consume.artifact], produces_kinds: producer.produces_kinds },
+        unitKind,
+      ).includes(consume.artifact)
     ) {
       continue;
     }
@@ -2127,7 +2139,7 @@ function buildRunStageDirective(
   unitKind?: UnitKind,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
-    node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx,
+    node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx, unitKind,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
   const resolvedProduces = resolveProduces(

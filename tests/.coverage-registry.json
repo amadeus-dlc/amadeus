@@ -3426,6 +3426,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/e2e/t416-nfr-kind-pruning.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t248-stage-contract.test.ts",
           "mechanism": "none"
         }
@@ -5864,6 +5868,10 @@
       "unitId": "amadeus-state advance",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/e2e/t416-nfr-kind-pruning.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t-transition-guard-audit.test.ts",
           "mechanism": "cli"

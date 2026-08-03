@@ -86,7 +86,7 @@ Collect answers following stage-protocol.md §3 question flow (offer interaction
 ### Step 5: Get Plan Approval
 
 Present the decomposition plan to the user as a structured question:
-- Summarize the approach: unit boundary strategy, estimated unit count, dependency structure
+- Summarize the approach: unit boundary strategy, estimated unit count, dependency structure, and each unit's canonical `kind`. Explain that `kind` determines which Construction artifacts apply to that unit.
 - Options: Approve Plan / Revise Plan
 
 ---
@@ -98,7 +98,13 @@ Present the decomposition plan to the user as a structured question:
 Based on the approved plan, generate 3 artifacts in `<record>/inception/units-generation/`:
 
 **unit-of-work.md:**
-- Unit definitions (name, description, boundaries)
+- Unit definitions (name, canonical `kind`, description, boundaries). Every new unit MUST declare exactly one canonical `kind`; unlike the optional upstream field, omission is not allowed for newly generated Amadeus unit plans.
+- Classify each unit using exactly one of these meanings:
+  - `service` — a deployed executable
+  - `spec` — a contract or schema consumed in place
+  - `ui` — a frontend surface
+  - `packaging` — build or distribution artifacts
+  - `library` — reusable code without a standalone runtime
 - Unit responsibilities (what each unit owns and delivers)
 - Deployment model per unit (standalone, shared, embedded)
 - Relative complexity estimate per unit (S/M/L/XL)
@@ -110,13 +116,15 @@ Based on the approved plan, generate 3 artifacts in `<record>/inception/units-ge
 - Parallel development opportunities (sets of units with no dependency between them — multiple valid topological orderings exist)
 - A REQUIRED fenced `yaml` edge block (below) — the machine-readable mirror of the prose DAG. The downstream batch fan-out is computed from this block, not the prose, so it must be present, well-formed, and cycle-free. The `required-sections` sensor checks it at this stage's gate.
 
-The fenced block lists every unit with its direct dependencies (the unit names it depends on). Independent units carry `depends_on: []`. Name each unit exactly once; every name in a `depends_on` list must be a declared unit; no unit may depend on itself; the edges must be acyclic:
+The fenced block lists every unit with its canonical `kind` and direct dependencies (the unit names it depends on). Use the field order `name`, `kind`, `depends_on`. Independent units carry `depends_on: []`. Name each unit exactly once; every name in a `depends_on` list must be a declared unit; no unit may depend on itself; the edges must be acyclic:
 
 ```yaml
 units:
   - name: <unit-name>
+    kind: service
     depends_on: []
   - name: <another-unit>
+    kind: spec
     depends_on: [<unit-name>]
 ```
 
@@ -138,7 +146,7 @@ Update `<record>/amadeus-state.md`:
 ### Step 8: Present Completion & Request Approval
 
 Use stage-protocol.md completion template with completion emoji: :wrench:
-- Summary of units defined, dependencies mapped, stories assigned
+- Summary of units defined with each unit's canonical `kind`, dependencies mapped, stories assigned, and the resulting Construction artifact applicability
 - Review path: `<record>/inception/units-generation/`
 - Structured approval question with options: Approve (continue to Construction phase) / Request Changes
 
@@ -148,7 +156,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/units-gene
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings), and — for `unit-of-work-dependency.md` specifically — that the required fenced `yaml` edge block is present, well-formed, and cycle-free. Failure mode: missing headings or an absent/malformed/cyclic edge block emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings), and — for `unit-of-work-dependency.md` specifically — that the required fenced `yaml` edge block is present, well-formed, cycle-free, and gives every unit a canonical `kind`. Failure mode: missing headings, missing kinds, or an absent/malformed/cyclic edge block emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`; missing kinds are reported by unit name.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `components`, `component-methods`, `services`, `component-dependency`, `decisions`, `requirements`, `stories`).
 
 ## Learn

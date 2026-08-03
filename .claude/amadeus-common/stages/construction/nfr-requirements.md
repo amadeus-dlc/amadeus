@@ -82,6 +82,8 @@ Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent
 
 Read functional design artifacts from `<record>/construction/{unit-name}/functional-design/` (if they exist). Read `<record>/inception/requirements-analysis/requirements.md` (if exists) and any reverse engineering artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints). Incremental scopes (infra) skip functional-design by design; when its artifacts are absent, derive the NFR context from the requirements and the code knowledge base instead — never invent the content of a missing artifact.
 
+Do not reclassify or copy decisions already established in Requirements Analysis, Functional Design, or the code knowledge base. In an applicable artifact, reference an established decision as `file:line`; if one item is not applicable, state the reason in one line.
+
 ### Step 3: Assess NFR Categories
 
 Analyze the unit across NFR categories:
@@ -107,7 +109,7 @@ stage-protocol.md §3.
 
 ### Step 6: Generate Artifacts
 
-Generate the following in `<record>/construction/{unit-name}/nfr-requirements/`:
+Generate only the applicable output paths listed in the engine directive under `<record>/construction/{unit-name}/nfr-requirements/`. Do not create N/A placeholders for pruned outputs or extra files merely to complete the full list below. The possible output contracts are:
 
 - **performance-requirements.md**: Response time targets, throughput requirements, latency budgets, resource constraints, benchmarks
 - **security-requirements.md**: Authentication requirements, authorization model, data protection, compliance, threat considerations
