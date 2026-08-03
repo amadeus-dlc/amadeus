@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBFS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 5,
+  "goa": 2,
+  "reservation": "project-level practice としては、影響を受ける複数 harness にまたがる性能・停止性・予算契約を変更する Intent に適用範囲を限定し、『全 harness』を未影響 harness まで含む無条件の全称規則にしないこと。",
+  "rationale": "候補5は、環境依存の性能改善率と、共有 core が保証すべき停止性・予算・終了理由の安全契約を分離しており、このリポジトリの packages/framework/core と packages/framework/harness/<name> の境界、および harness 専用実装を core へ漏出させない既存 project rule と整合する。候補1〜3は Codex を一次 cohort／dogfood 対象とする本 Intent 固有の射程を含み、候補4は既存の全成果物への是正伝播規則と重複が大きい。候補5は今後の cross-harness 性能・有界性変更にも再利用できる一方、停止性等と無関係な Intent や未影響 harness へ一律適用すると過剰一般化になるため、適用条件を限定する留保付きで賛成する。",
+  "submittedAt": "2026-08-02T02:28:22Z"
+}

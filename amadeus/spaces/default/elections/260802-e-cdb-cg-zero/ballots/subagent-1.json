@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-CDB-CG-ZERO",
+    "voter": "subagent-1",
+    "submittedAt": "2026-08-02T23:09:40Z"
+  },
+  "electionId": "E-CDB-CG-ZERO",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "GoAを強度尺度と誤解した元投票を訂正する。提示された唯一の選択肢では、Interpretations・Deviations・Tradeoffs・Open questions に記録がなく、永続化すべき学習候補がないと明示されているため、「0件で可」を支持する。",
+  "submittedAt": "2026-08-02T23:11:32Z"
+}

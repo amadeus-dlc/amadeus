@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBCBF2",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "前回の部分成功を前提にidempotent recoveryを実装・検証すれば、既存worktreeとcommitを保持しつつ正常なfinalizeへ収束できるため",
+  "submittedAt": "2026-08-02T00:01:00Z"
+}

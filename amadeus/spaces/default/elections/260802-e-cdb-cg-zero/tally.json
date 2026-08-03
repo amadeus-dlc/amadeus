@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T23:11:52Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDB-CG-ZERO",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 8,
+      "reservation": null,
+      "rationale": "提示された唯一の選択肢では、Interpretations・Deviations・Tradeoffs・Open questions のいずれにも記録がなく、永続化すべき学習候補がないと明示されている。したがって、学習候補0件として承認ゲートへ進める判断が妥当である。",
+      "submittedAt": "2026-08-02T23:09:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDB-CG-ZERO",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提示された選択肢は『0件で可』のみであり、4区分に記録がないため永続化対象がないという説明は、0件のまま承認ゲートへ進む判断と整合する。",
+      "submittedAt": "2026-08-02T23:11:19Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-CDB-CG-ZERO",
+        "voter": "subagent-1",
+        "submittedAt": "2026-08-02T23:09:40Z"
+      },
+      "electionId": "E-CDB-CG-ZERO",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "GoAを強度尺度と誤解した元投票を訂正する。提示された唯一の選択肢では、Interpretations・Deviations・Tradeoffs・Open questions に記録がなく、永続化すべき学習候補がないと明示されているため、「0件で可」を支持する。",
+      "submittedAt": "2026-08-02T23:11:32Z"
+    }
+  ],
+  "resolutions": []
+}

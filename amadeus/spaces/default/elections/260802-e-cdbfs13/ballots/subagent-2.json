@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBFS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "Codex を一次対象とする部分は、共有 core を変更し Codex で先行実測する Intent に限定し、harness 固有 Intent や別 harness が一次実証面となる変更へ無条件に適用しない。",
+  "rationale": "共有 core の合否を全 supported harness 共通の conformance 契約とし、harness 固有差を adapter と live probe の証拠へ閉じ込める原則は、このマルチハーネス・プロジェクトの既存 core/harness 境界を補強し、他 Intent にも再利用できる。既存 project.md に完全な重複や org.md との矛盾はない。ただし Codex を効果測定・dogfood の一次対象とする部分は、共有 core を変更し Codex で先行実測する Intent に限定すべきであり、harness 固有 Intent や別 harness が一次実証面となる変更へ無条件に一般化しないことを留保する。",
+  "submittedAt": "2026-08-02T02:28:51Z"
+}

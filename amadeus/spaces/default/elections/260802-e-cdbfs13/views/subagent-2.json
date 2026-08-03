@@ -1,0 +1,43 @@
+{
+  "electionId": "E-CDBFS13",
+  "voter": "subagent-2",
+  "question": "Feasibility の5候補から、他 Intent にも適用する project-level practice として最も保持すべき候補を1つ選ぶか、Intent 固有として0件を選んでください",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "当初の「live Codex 専用ゲート強度」質問を撤回した。一次測定対象から専用ポリシーゲートを導く論理的根拠がなく、全ハーネス共通 predicate と harness 別 conformance probe へ再構成した。",
+      "description": "c3 → project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "上流要件の主語を「Codex 利用者」から「影響を受ける全 supported harness の利用者」へ訂正した。Codex は性能評価の一次 cohort に限定し、正しさ・安全性は共通不変条件として扱う。",
+      "description": "c2 → project.md ## Corrections"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "Feasibility で判明した要件レベルの曖昧さを残さず、承認済み Intent Capture の intent-statement と stakeholder-map を上流訂正した。対象 Issue と Bolt 順は変えず、品質契約の適用範囲だけを明確化した。",
+      "description": "c4 → project.md ## Corrections"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 6,
+      "label": "0件で可",
+      "description": "すべて本 Intent 固有として record にのみ保存する"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 5,
+      "label": "全 harness に同じ性能改善率を要求せず、共通の停止性・予算・終了理由と adapter 証拠だけを必須にした。性能差は環境依存だが、安全契約まで環境依存にすると統一ゲートが成立しないためである。",
+      "description": "c5 → project.md ## Corrections"
+    },
+    {
+      "displayNo": 6,
+      "internalNo": 1,
+      "label": "Codex は効果測定と dogfood の一次対象だが、合否規則は共有 core の統一 conformance 契約とする。harness 固有面は adapter と live probe の実証ケースとして接続する。",
+      "description": "c1 → project.md ## Corrections"
+    }
+  ]
+}

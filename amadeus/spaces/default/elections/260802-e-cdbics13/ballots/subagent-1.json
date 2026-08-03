@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1 は Codex を本 Intent の効果測定・dogfood の一次対象としつつ共有 core の harness-neutral 性を守るという、この Intent の対象境界であり、intent-statement.md と memory.md に保存済みである。c2 は #1602 の実測ベースライン後に時間予算・反復上限・並列上限の具体値を NFR で確定するという、この Intent 固有の評価順序であり、同じく成果物に保存済みである。いずれも別 Intent へ恒久適用すべき project/team 共通規則ではなく、project.md に重複追加しない0件案に全面賛成する。",
+  "submittedAt": "2026-08-02T02:11:06Z"
+}

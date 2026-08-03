@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBPD13",
+  "voter": "practices-voter-1",
+  "question": "Practices Discovery の4候補は既存ノルムまたは実行時の一過性判断と重複するため、project/team memoryへ追加する恒久学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存の practices-discovery:c2、timestamp sensor整合、共有core境界を再利用し、重複ノルムを追加しない"
+    }
+  ]
+}

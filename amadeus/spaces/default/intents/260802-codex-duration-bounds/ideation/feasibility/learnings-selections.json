@@ -1,0 +1,13 @@
+{
+  "stage_slug": "feasibility",
+  "selections": [
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "複数 harness に影響する性能・有界性変更では、性能改善率は環境別に評価してよいが、影響を受ける harness の停止性・予算・終了理由と adapter 証拠は共有契約として扱う。未影響 harness や無関係な Intent へは全称適用しない。",
+      "source": "orchestrator"
+    }
+  ]
+}

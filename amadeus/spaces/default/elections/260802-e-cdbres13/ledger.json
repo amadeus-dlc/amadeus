@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBRES13",
+      "voter": "subagent-2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-02T03:16:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBRES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立確認の結果、恒久学習候補0件が妥当。今回の具体的な所有境界（ExecutionContract／ConvergencePolicy、各 Issue の test seam）、4 Issue の依存順、open PR 0件、cap=2/4 Unit 等の検証例、未確定上限・queue fairness・operation 粒度等の UNKNOWN は、CodeKB 本体と re-scans/260802-codex-duration-bounds.md に十分保存された Intent 固有の分析・後続設計入力である。再利用可能な方法論は既存 memory が既に被覆する。base は『HEAD の祖先である observed のうち距離最小』を選ぶ cid:reverse-engineering:rescan-base-ancestry の適用であり、実測でも base cb809c4de は observed 6d84d06cb の祖先、距離66、shortstat 1679/151213/14354 と成果物記載が一致した。observed も origin/main 系譜で cid:reverse-engineering:c2-observed-mainline-commit に準拠する。共有 core と影響 harness の安全契約は cid:feasibility:c5、長い timeout を injectable clock／counter 等で決定的に検証する方針は cid:build-and-test:wtfbt-c3 および bt-timeout-verification-shape と重複する。UNKNOWN を推測で埋めず後続 gate へ渡す判断も新規の反復観測ではなく、stage diary はテンプレートのみである。",
+      "submittedAt": "2026-08-02T03:16:14Z"
+    }
+  ],
+  "late": []
+}

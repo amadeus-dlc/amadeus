@@ -806,5 +806,12 @@
     "dirName": "260802-plugin-optin-parity",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc02a-c982-7839-ada8-4493deb88435",
+    "slug": "codex-duration-bounds",
+    "dirName": "260802-codex-duration-bounds",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

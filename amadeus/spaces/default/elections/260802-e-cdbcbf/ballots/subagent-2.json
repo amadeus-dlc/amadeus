@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBCBF",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "失敗原因が監査 shard の欠落として特定されており、既存 worktree と commit e7b4f7be を保持したまま正規復旧して同じ finalize を再実行できるため",
+  "submittedAt": "2026-08-02T00:00:00Z"
+}

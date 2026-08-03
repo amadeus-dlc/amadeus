@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBUGS13",
+      "voter": "ugs13-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1/c3は既存stage境界の適用、c2/c6は本Intent固有の設計、c4/c5は今回のdelivery判断として成果物に保持されるため、project/team memoryへ一般化して追加すべき新規学習はない。よって0件で可に完全同意する。",
+      "submittedAt": "2026-08-02T04:31:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBUGS13",
+      "voter": "ugs13-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。c1/c3は既存stage責務の適用、c2/c6は本Intent固有のUnit/アーキテクチャ判断、c4/c5は今回のdelivery判断として成果物に保持されるため、project/team memoryへ一般化して追加すべき新規学習はない。",
+      "submittedAt": "2026-08-02T04:31:29Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "Retry"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "Retry",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "Skip",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "Abort",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T12:38:43Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBCBF2",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "前回の部分成功を前提にidempotent recoveryを実装・検証すれば、既存worktreeとcommitを保持しつつ正常なfinalizeへ収束できるため",
+      "submittedAt": "2026-08-02T00:01:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBCBF2",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "部分成功後の再実行を正規に扱える idempotent recovery を実装・検証すれば、既存 worktree と commit を保持しながら state merge 問題そのものを解消し、finalize を安全に完了できるため",
+      "submittedAt": "2026-08-02T12:38:22Z"
+    }
+  ],
+  "resolutions": []
+}
