@@ -5,7 +5,7 @@
 // covers: docs/guide/harnesses/pi.ja.md
 // covers: docs/harness-engineering/09-porting-to-a-new-harness.md
 // covers: docs/harness-engineering/09-porting-to-a-new-harness.ja.md
-// size: small
+// size: medium
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -101,12 +101,12 @@ describe("Pi user and maintainer documentation contract", () => {
       for (const path of [
         "tests/unit/t-pi-harness-manifest.test.ts",
         "tests/smoke/t-pi-dist-structure.test.ts",
-        "tests/unit/t-pi-package-candidate.test.ts",
-        "tests/unit/t-pi-lifecycle-gate-adapter.test.ts",
+        "tests/integration/t-pi-package-candidate.test.ts",
+        "tests/integration/t-pi-lifecycle-gate-adapter.test.ts",
         "tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts",
         "tests/unit/t-pi-driver-contract.test.ts",
         "tests/integration/t-pi-child-driver.integration.test.ts",
-        "tests/unit/t-pi-doctor-diagnostics.test.ts",
+        "tests/integration/t-pi-doctor-diagnostics.test.ts",
         "tests/integration/t-pi-doctor-dispatch.integration.test.ts",
         "tests/integration/t-pi-docs-contract.test.ts",
       ]) expect(body).toContain(`\`${path}\``);

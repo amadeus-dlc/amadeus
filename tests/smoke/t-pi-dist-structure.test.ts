@@ -1,7 +1,7 @@
 // Pi packaged foundation and authored-catalog parity.
 // covers: file:dist/pi/.pi/tools/data/harness.json
 // covers: file:dist/pi/.pi/skills/amadeus/SKILL.md
-// size: small
+// size: medium
 
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";

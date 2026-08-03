@@ -160,16 +160,16 @@ driver は deterministic swarm permit lifecycle、つまり prepare、acquire、
   loader-role rule。
 - `tests/smoke/t-pi-dist-structure.test.ts` — generated descriptor と authored resource の
   byte/hash parity。
-- `tests/unit/t-pi-package-candidate.test.ts` と
+- `tests/integration/t-pi-package-candidate.test.ts` と
   `tests/integration/setup-install-flow.test.ts` の Pi case — 共通 candidate identity、完全な
   setup install、transactional upgrade。
-- `tests/unit/t-pi-lifecycle-gate-adapter.test.ts` と
+- `tests/integration/t-pi-lifecycle-gate-adapter.test.ts` と
   `tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts` — captured public event
   shape、human presence、journaling、continuation、compaction。
 - `tests/unit/t-pi-driver-contract.test.ts` と
   `tests/integration/t-pi-child-driver.integration.test.ts` — 閉じた RPC request/result behavior、
   guardian cleanup、terminal replay。
-- `tests/unit/t-pi-doctor-diagnostics.test.ts` と
+- `tests/integration/t-pi-doctor-diagnostics.test.ts` と
   `tests/integration/t-pi-doctor-dispatch.integration.test.ts` — read-only かつ redacted な
   diagnostics と utility dispatch。
 - `tests/integration/t-pi-docs-contract.test.ts` — user/maintainer section、link、manifest catalog、
@@ -184,12 +184,12 @@ bun scripts/package.ts pi
 bun scripts/package.ts pi --check
 bun test tests/unit/t-pi-harness-manifest.test.ts \
   tests/smoke/t-pi-dist-structure.test.ts \
-  tests/unit/t-pi-package-candidate.test.ts \
-  tests/unit/t-pi-lifecycle-gate-adapter.test.ts \
+  tests/integration/t-pi-package-candidate.test.ts \
+  tests/integration/t-pi-lifecycle-gate-adapter.test.ts \
   tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts \
   tests/unit/t-pi-driver-contract.test.ts \
   tests/integration/t-pi-child-driver.integration.test.ts \
-  tests/unit/t-pi-doctor-diagnostics.test.ts \
+  tests/integration/t-pi-doctor-diagnostics.test.ts \
   tests/integration/t-pi-doctor-dispatch.integration.test.ts \
   tests/integration/t-pi-docs-contract.test.ts
 bun run typecheck

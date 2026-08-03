@@ -20,13 +20,19 @@ export type PiSourceIdentity =
   | Readonly<{ kind: "formal"; source: "local" | "git"; revision: string; catalogDigest: string; locator: string }>
   | Readonly<{ kind: "blocked"; reason: string }>;
 
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+function canonicalJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
   if (typeof value === "object" && value !== null) {
     const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
+    return Object.fromEntries(
+      Object.keys(record).sort().map((key) => [key, canonicalJsonValue(record[key])]),
+    );
   }
-  return JSON.stringify(value);
+  return value;
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(canonicalJsonValue(value));
 }
 
 function packagePath(destination: string): string {

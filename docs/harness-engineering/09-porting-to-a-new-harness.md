@@ -248,17 +248,17 @@ Keep these contract families aligned with implementation changes:
   collision, and loader-role rules.
 - `tests/smoke/t-pi-dist-structure.test.ts` — generated descriptor and authored
   resource byte/hash parity.
-- `tests/unit/t-pi-package-candidate.test.ts` and the Pi cases in
+- `tests/integration/t-pi-package-candidate.test.ts` and the Pi cases in
   `tests/integration/setup-install-flow.test.ts` — common candidate identity,
   complete setup install, and transactional upgrade.
-- `tests/unit/t-pi-lifecycle-gate-adapter.test.ts` and
+- `tests/integration/t-pi-lifecycle-gate-adapter.test.ts` and
   `tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts` — captured
   public event shapes, human presence, journaling, continuation, and
   compaction.
 - `tests/unit/t-pi-driver-contract.test.ts` and
   `tests/integration/t-pi-child-driver.integration.test.ts` — closed RPC
   request/result behavior, guardian cleanup, and terminal replay.
-- `tests/unit/t-pi-doctor-diagnostics.test.ts` and
+- `tests/integration/t-pi-doctor-diagnostics.test.ts` and
   `tests/integration/t-pi-doctor-dispatch.integration.test.ts` — read-only,
   redacted diagnostics and utility dispatch.
 - `tests/integration/t-pi-docs-contract.test.ts` — user/maintainer section,
@@ -274,12 +274,12 @@ bun scripts/package.ts pi
 bun scripts/package.ts pi --check
 bun test tests/unit/t-pi-harness-manifest.test.ts \
   tests/smoke/t-pi-dist-structure.test.ts \
-  tests/unit/t-pi-package-candidate.test.ts \
-  tests/unit/t-pi-lifecycle-gate-adapter.test.ts \
+  tests/integration/t-pi-package-candidate.test.ts \
+  tests/integration/t-pi-lifecycle-gate-adapter.test.ts \
   tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts \
   tests/unit/t-pi-driver-contract.test.ts \
   tests/integration/t-pi-child-driver.integration.test.ts \
-  tests/unit/t-pi-doctor-diagnostics.test.ts \
+  tests/integration/t-pi-doctor-diagnostics.test.ts \
   tests/integration/t-pi-doctor-dispatch.integration.test.ts \
   tests/integration/t-pi-docs-contract.test.ts
 bun run typecheck

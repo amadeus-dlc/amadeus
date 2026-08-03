@@ -56,6 +56,7 @@ import {
   InfraFailure,
   violationResult,
 } from "../no-silent-drop/model.ts";
+import { noSilentDropTrustedBase } from "../lib/no-silent-drop-trusted-base.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const revision = (...args: string[]): string | null => {
@@ -63,11 +64,8 @@ const revision = (...args: string[]): string | null => {
   const value = result.status === 0 ? result.stdout.trim() : "";
   return /^[0-9a-f]{40}$/.test(value) ? value : null;
 };
-const headRevision = revision("rev-parse", "HEAD");
-const mergeBaseRevision = revision("merge-base", "HEAD", "origin/main");
-const TRUSTED_BASE_REVISION = mergeBaseRevision !== null && mergeBaseRevision !== headRevision
-  ? mergeBaseRevision
-  : revision("rev-parse", "HEAD^")
+const TRUSTED_BASE_REVISION = noSilentDropTrustedBase(REPO_ROOT)
+  ?? revision("rev-parse", "HEAD^")
     ?? JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
     ).bootstrapBaseRevision as string;

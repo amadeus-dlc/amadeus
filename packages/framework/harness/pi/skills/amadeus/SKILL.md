@@ -2,7 +2,8 @@
 name: amadeus
 description: >
   Run or resume the AI-DLC workflow on Pi Coding Agent. Use for structured
-  product and software delivery, status, doctor, stage, phase, and scope flows.
+  product and software delivery, status, doctor, stage, phase, and scope flows,
+  plus the intent and space verbs.
 compatibility: "Pi Coding Agent >= 0.83.0 and bun"
 ---
 
@@ -41,7 +42,9 @@ Treat the directive returned by `report` as the next loop step. Continue for
   run `next` again; otherwise print the result and stop.
 - `run-stage`: read the named persona, support personas, stage file, present
   consumes, and applicable rules. Produce only the declared outputs. Respect
-  `consumes_absent`; never invent an absent artifact.
+  `consumes_absent`; never invent an absent artifact; required output paths are mandatory;
+  optional output paths are candidates governed by the stage instructions.
+  Pass only artifact paths that exist to reviewers and completion checks.
 - `invoke-swarm`: use the Pi child-execution resource at
   `.pi/drivers/amadeus-pi-driver.ts` through the deterministic swarm protocol.
   Resolve the driver before preparing worktrees. Never pretend dispatch
@@ -107,7 +110,11 @@ queueing, dependency readiness, convergence, and merge eligibility.
 For each granted batch:
 
 1. Resolve with `bun .pi/tools/amadeus-swarm.ts resolve --harness pi`.
-2. Prepare the exact batch and concurrency granted by the directive.
+   A `claude-ultra` request degrades only through the referee's declared path;
+   `codex-ultra` and unsupported values must follow the same shared resolution contract.
+2. Prepare the exact batch and concurrency granted by the directive. For a
+   multi-repository intent, pass the directive's repository as `--repo <name>`;
+   never guess an omitted repository.
 3. Acquire one permit per ready unit and dispatch it through the packaged Pi
    child driver. Confirm only a driver-accepted dispatch with its native handle.
 4. Run the referee's declared check, then settle and release the corresponding
@@ -144,3 +151,17 @@ bun .pi/tools/amadeus-orchestrate.ts next --doctor
 If an active intent exists, default to continuing it. Offer a new intent only
 for clearly unrelated work. Route explicit workflow-plan reshaping through the
 engine's compose path; never edit stage status fields by hand.
+
+## Intent birth and unrelated work
+
+On a fresh workspace, follow the engine's `print` directive and run the exact
+`intent-birth` command it names. When unrelated work arrives while an intent is
+active, offer a second intent and wait for explicit confirmation. On approval,
+route it through:
+
+```sh
+bun .pi/tools/amadeus-orchestrate.ts next --new-intent --scope <scope> "<description>"
+```
+
+Then run the `intent-birth` command named by the returned directive. Do not
+construct or mutate intent state directly.

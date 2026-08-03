@@ -366,6 +366,14 @@ function copyManifestResources(
   }
 }
 
+function recordOutsideHarnessFile(
+  outsideHarness: string[],
+  path: string,
+  projectRoot: boolean | undefined,
+): void {
+  if (projectRoot) outsideHarness.push(path);
+}
+
 // ---------------------------------------------------------------------------
 // Build one harness tree into `outRoot` (the dist/<name> dir). Returns the set
 // of paths the copy+generate steps produced (for the orphan scan) plus the set
@@ -454,7 +462,7 @@ function buildTree(m: HarnessManifest, outRoot: string): BuildResult {
     const outPath = projectRoot ? join(outRoot, dst) : join(treeRoot, dst);
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, transform(dst, Buffer.from(rendered, "utf-8"), harnessDir, m.rulesRename));
-    if (projectRoot) outsideHarness.push(outPath);
+    recordOutsideHarnessFile(outsideHarness, outPath, projectRoot);
   }
 
   // 2c. Emit the relocated method ("memory") tree at the workspace root
@@ -672,15 +680,27 @@ function assertResourceDestinationsSafe(m: HarnessManifest, root: string): void 
     throw new Error(`[${m.name}] refusing unsafe resource destination ${first.destination}: ${first.problem}`);
 }
 
+function piMetadataFromRootPackage(): unknown {
+  const rootPackage: unknown = JSON.parse(
+    readFileSync(join(REPO_ROOT, "package.json"), "utf8"),
+  );
+  if (typeof rootPackage !== "object" || rootPackage === null || Array.isArray(rootPackage)) {
+    return undefined;
+  }
+  return (rootPackage as Record<string, unknown>).pi;
+}
+
+function piPackageProblemsForHarness(name: string): string[] {
+  if (name !== "pi") return [];
+  return piPackageMetadataProblems(piMetadataFromRootPackage())
+    .map((problem) => `PI PACKAGE: ${problem}`);
+}
+
 export function writeHarness(name: string): void {
   const m = loadManifest(name);
-  if (name === "pi") {
-    const rootPackage = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
-      pi?: unknown;
-    };
-    const problems = piPackageMetadataProblems(rootPackage.pi);
-    if (problems.length > 0) throw new Error(`[pi] invalid package metadata: ${problems.join("; ")}`);
-  }
+  const packageProblems = piPackageProblemsForHarness(name);
+  if (packageProblems.length > 0)
+    throw new Error(`[${name}] invalid package metadata: ${packageProblems.join("; ")}`);
   const distDir = join(REPO_ROOT, "dist", name);
   assertResourceDestinationsSafe(m, distDir);
   const candidate = mkdtempSync(join(tmpdir(), `amadeus-candidate-${name}-`));
