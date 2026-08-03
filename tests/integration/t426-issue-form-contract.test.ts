@@ -200,6 +200,7 @@ describe("t426 Issue Form contract", () => {
     expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
     expect(job.permissions).toEqual({ contents: "read", issues: "write" });
     expect(job.if).toContain("### 優先度（いつ対応するか）");
+    expect(job.if).toContain("### 優先度（いつ直すか）");
     expect(job.steps[0]?.uses).toBe(
       "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3",
     );
@@ -243,6 +244,18 @@ describe("t426 Issue Form contract", () => {
     expect(question.failures).toEqual([]);
     expect(question.added).toEqual([["question", "P1"]]);
     expect(question.removed.sort()).toEqual(["P3", "documentation"]);
+
+    const legacyBug = await executeWorkflow(
+      script ?? "",
+      issueBody("bug", "P1 — 重要だが回避可能", [
+        ["重大度（どれだけ深刻か）", "S2-CRITICAL — 回避策なし"],
+        ["原因の所在", "未特定"],
+      ]).replace("優先度（いつ対応するか）", "優先度（いつ直すか）"),
+      ["bug", "P2", "S3-MAJOR"],
+    );
+    expect(legacyBug.failures).toEqual([]);
+    expect(legacyBug.added).toEqual([["P1", "S2-CRITICAL"]]);
+    expect(legacyBug.removed.sort()).toEqual(["P2", "S3-MAJOR"]);
   });
 
   test("the workflow rejects untouched placeholder classifications", async () => {

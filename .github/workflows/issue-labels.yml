@@ -11,7 +11,7 @@ concurrency:
 jobs:
   sync:
     name: Sync Issue Form classification labels
-    if: contains(github.event.issue.body, '### 優先度（いつ対応するか）')
+    if: contains(github.event.issue.body, '### 優先度（いつ対応するか）') || contains(github.event.issue.body, '### 優先度（いつ直すか）')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -43,7 +43,8 @@ jobs:
               ["question", "回答してほしい問い・選択肢"],
             ];
             const issueTypes = typeSignals.filter(([, label]) => hasField(label)).map(([type]) => type);
-            const priority = field("優先度（いつ対応するか）").match(/^P[0-3]\b/)?.[0];
+            const priority = (field("優先度（いつ対応するか）") || field("優先度（いつ直すか）"))
+              .match(/^P[0-3]\b/)?.[0];
             if (issueTypes.length !== 1 || !priority) {
               core.setFailed("Issue Form から種別/P分類を取得できませんでした");
               return;
