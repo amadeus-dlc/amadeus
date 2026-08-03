@@ -63,4 +63,17 @@ describe("t416 deterministic self-install plugin projections", () => {
     expect(buildSelfInstallProjection("claude", missing).expectedPaths.size).toBe(0);
     expect(buildSelfInstallProjection("codex", empty).expectedPaths.size).toBe(0);
   });
+
+  test("compile fixture environment cannot change committed projection bytes", () => {
+    const previous = process.env.AMADEUS_RULES_DIR;
+    try {
+      delete process.env.AMADEUS_RULES_DIR;
+      const canonical = digestible(buildSelfInstallProjection("codex", REPO_ROOT));
+      process.env.AMADEUS_RULES_DIR = join(tmpdir(), "amadeus-t416-missing-rules");
+      expect(digestible(buildSelfInstallProjection("codex", REPO_ROOT))).toBe(canonical);
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_RULES_DIR;
+      else process.env.AMADEUS_RULES_DIR = previous;
+    }
+  }, 120_000);
 });

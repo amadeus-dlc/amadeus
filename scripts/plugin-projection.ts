@@ -950,6 +950,10 @@ function projectInTemporaryWorkspace(repoRoot: string, name: SelfInstallHarness)
     const tool = join(hostRoot, "tools", "amadeus-plugin.ts");
     const env: NodeJS.ProcessEnv = { ...process.env, AMADEUS_HARNESS_DIR: manifest.harnessDir };
     delete env.AMADEUS_PLUGINS_HOST_ROOT;
+    delete env.AMADEUS_RULES_DIR;
+    delete env.AMADEUS_SCOPE_GRID;
+    delete env.AMADEUS_SCOPE_MAPPING;
+    delete env.AMADEUS_SENSORS_DIR;
     delete env.AMADEUS_STAGE_GRAPH;
     delete env.AMADEUS_STAGES_DIR;
     const result = spawnSync("bun", [tool, "compose", "--if-stale", "--project-root", hostRoot], {
