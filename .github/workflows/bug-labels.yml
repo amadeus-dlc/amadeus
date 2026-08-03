@@ -1,0 +1,68 @@
+name: Bug label sync
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: bug-label-sync-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync bug classification labels
+    if: contains(github.event.issue.labels.*.name, 'bug')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Apply labels selected in the Issue Form
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body ?? "";
+
+            function field(label) {
+              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const match = body.match(new RegExp(`^### ${escaped}\\s*\\n+([^\\n]+)`, "m"));
+              return match?.[1]?.trim() ?? "";
+            }
+
+            const priority = field("優先度（いつ直すか）").match(/^P[0-3]\b/)?.[0];
+            const severity = field("重大度（どれだけ深刻か）").match(/^S[1-4]-(?:FATAL|CRITICAL|MAJOR|MINOR)\b/)?.[0];
+            if (!priority || !severity) {
+              core.setFailed("Issue Form から P/S 分類を取得できませんでした");
+              return;
+            }
+
+            const desired = new Set(["bug", priority, severity]);
+            if (field("原因の所在") === "origin:bootstrap") desired.add("origin:bootstrap");
+
+            const managed = new Set([
+              "P0", "P1", "P2", "P3",
+              "S1-FATAL", "S2-CRITICAL", "S3-MAJOR", "S4-MINOR",
+              "origin:bootstrap",
+            ]);
+            const existing = new Set(issue.labels.map((label) => typeof label === "string" ? label : label.name));
+            const add = [...desired].filter((label) => !existing.has(label));
+            if (add.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: add,
+              });
+            }
+
+            for (const label of [...existing].filter((name) => managed.has(name) && !desired.has(name))) {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: label,
+              });
+            }

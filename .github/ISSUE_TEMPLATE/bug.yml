@@ -9,7 +9,7 @@ body:
       value: |
         推測ではなく、実際に観測した事実を記載してください。秘密情報や認証情報は含めないでください。
 
-        このフォームは `bug` ラベルを自動付与します。ラベルを付与できる起票者は、選択した P/S と同名のラベルも起票時に付与してください。権限がない場合、選択内容を maintainer がトリアージ時にラベルへ反映します。
+        フォーム送信時に、`bug` と選択した P/S の先頭コード（例: `P0`、`S1-FATAL`）が同名ラベルとして自動付与されます。原因の所在で `origin:bootstrap` を選択した場合も同名ラベルが自動付与されます。
 
   - type: checkboxes
     id: duplicate-check
@@ -97,7 +97,7 @@ body:
     id: priority
     attributes:
       label: 優先度（いつ直すか）
-      description: 選択した P ラベルを起票時に付与してください。
+      description: 選択肢先頭の P コードが、フォーム送信時に同名ラベルへ反映されます。
       options:
         - P0 — 正しさ・安全性の破綻
         - P1 — 重要だが回避可能
@@ -110,7 +110,7 @@ body:
     id: severity
     attributes:
       label: 重大度（どれだけ深刻か）
-      description: 選択した S ラベルを起票時に付与してください。優先度とは独立に判断します。
+      description: 選択肢先頭の S コードが、フォーム送信時に同名ラベルへ反映されます。優先度とは独立に判断します。
       options:
         - S1-FATAL — データ・監査・ゲート整合性の破壊、誤マージ誘発、ワークフロー停止
         - S2-CRITICAL — 主要機能の誤動作、または回避策のない偽 green・偽赤
@@ -123,7 +123,7 @@ body:
     id: cause-location
     attributes:
       label: 原因の所在
-      description: 現時点の実測に基づく分類を選択してください。未確定なら「未特定」を選びます。
+      description: 現時点の実測に基づく分類を選択してください。`origin:bootstrap` はフォーム送信時に同名ラベルへ反映されます。未確定なら「未特定」を選びます。
       options:
         - 要件での見落とし
         - 設計判断の誤り
