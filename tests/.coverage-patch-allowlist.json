@@ -1531,12 +1531,6 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
-    "file": "scripts/plugin-projection.ts",
-    "lines": "927",
-    "reason": "The plugins tuple shape used while normalizing the persisted composition record is a TypeScript-only declaration erased at runtime. t416 drives records with and without trust grants through the real projection and tsc enforces this declaration, but the declaration row itself cannot execute.",
-    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
-  },
-  {
     "file": "scripts/scan-public-projections.ts",
     "lines": "51-53",
     "reason": "projection scan integration tests exercise clean, missing, and forbidden public projection outcomes through the shipped CLI; these residual scanner/main rows are not attributed to parent Bun LCOV.",
