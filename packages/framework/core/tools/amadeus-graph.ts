@@ -2577,7 +2577,7 @@ export function graphCompileInvariantViolations(
   return violations;
 }
 
-function scopeGridSurfaces(projectDir: string): ScopeGridSurface[] {
+export function discoverScopeGridSurfaces(projectDir: string): ScopeGridSurface[] {
   const paths: string[] = [];
   for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
     if (!entry.isDirectory() || !entry.name.startsWith(".")) continue;
@@ -2601,11 +2601,11 @@ function scopeGridSurfaces(projectDir: string): ScopeGridSurface[] {
     .map((path) => ({ path: toPosix(relative(projectDir, path)), json: readFileSync(path, "utf-8") }));
 }
 
-function runCompileCheck(): void {
+export function runCompileCheck(projectDir: string = resolveProjectDir()): void {
   const { gridJson } = compileStageGraph();
   const violations = graphCompileInvariantViolations(
     gridJson,
-    scopeGridSurfaces(resolveProjectDir()),
+    discoverScopeGridSurfaces(projectDir),
   );
   if (violations.length > 0) {
     throw new Error(`compile invariant check failed:\n${violations.join("\n")}`);

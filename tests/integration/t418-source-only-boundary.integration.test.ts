@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildHarnessCandidate } from "../../scripts/package.ts";
 import {
@@ -77,6 +78,23 @@ describe("t418 source-only boundary process integration", () => {
     });
     expect(update.status).toBe(0);
     expect(trackedGitFiles(root)).toHaveLength(7_000);
+  });
+
+  test("fails loud when the tracked-file inventory cannot be read", () => {
+    const root = mkdtempSync(join(tmpdir(), "t418-not-a-git-repository-"));
+    fixtures.push(root);
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => errors.push(args.join(" "));
+    try {
+      expect(sourceOnlyBoundaryMain(root)).toBe(1);
+    } finally {
+      console.error = originalError;
+    }
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("git ls-files failed");
+    expect(errors[0]).toContain("exit 128");
+    expect(errors[0]).toContain("not a git repository");
   });
 
   test("fails on tracked generated files and index-only removal preserves bytes", () => {
