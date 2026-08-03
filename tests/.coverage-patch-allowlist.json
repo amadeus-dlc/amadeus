@@ -1565,9 +1565,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:5a5861dfb3d3d266849fc83eb09afdf4064bbb09d704b7711e567f4eb6f5c4ad",
-      "anchorLines": 15,
-      "targetLines": "1-15"
+      "fingerprint": "sha256:232edb4cb1102ef83053dd1554116ff32d0e8322d180acd8528091b0c56a7955",
+      "anchorLines": 18,
+      "targetLines": "1-18"
     },
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1576,9 +1576,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:4d7fc5c5b812b5efadb33abcf36e995cc43d54cae5d9679c510b3e39d513f902",
-      "anchorLines": 7,
-      "targetLines": "1-7"
+      "fingerprint": "sha256:cd3096c5e4bd936e9dd0805156a8c2473a80bd7c49c91a54ea9da2af10c97467",
+      "anchorLines": 10,
+      "targetLines": "1-10"
     },
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
