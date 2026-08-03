@@ -1,6 +1,10 @@
 # ビジネス概要
 
-## scope-grid 面間同期の業務境界（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の業務境界（260802-source-only-dist、現在、observed `63e69d922`）
+
+- 判断: 区間（`47574fbab..63e69d922`）に本書の主題（業務ドメイン・利用者価値の構造）への実質変更なし（判断 1 行）。Issue #2043 は「生成物 `dist/` をリポジトリから外し、配布を Release Asset へ移す」という**配布形態の変更**であり、利用者が得る価値（`/amadeus` によるワークフロー実行、installer による導入）そのものは不変。利用者影響が生じうるのは導入経路の一点 — installer が現在 codeload のソース tarball 内 `dist/` を読む（`packages/setup/src/internal/payload-factory.ts:38`）ため、配布元の変更は導入手順の互換性判断を伴う。業務構造の変化は患部外（区間の大半は `#2031` / `#2049` の dist 再生成と metrics スナップショット）で、詳細は `architecture.md` 現在節と `re-scans/260802-source-only-dist.md` に委ねる。測定 ref: observed `63e69d922`。
+
+## scope-grid 面間同期の業務境界（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: Issue #2033（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み）の self-fix。利用者影響は「同じ scope を選んでも起動したハーネスによって実行ステージ列が変わる」こと — 2026-07-28 の self-feature lightening（4 ステージ SKIP 化）が `.claude` 1 面にしか着地せず、他 4 面は決定前の 18 ステージ路線のまま 4 か月運用された。公開契約の破壊的変更はなく、是正は決定済みの姿へ 4 面を揃える止血と、面間差分を検出する再発防止に閉じる。業務構造の変化は患部外（#2017 リネーム等）のみで、`architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 

@@ -1,6 +1,10 @@
 # コンポーネント棚卸し
 
-## scope-grid 面間同期の対象コンポーネント（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の対象コンポーネント（260802-source-only-dist、現在、observed `63e69d922`）
+
+- 判断: 区間（`47574fbab..63e69d922`）に本書の主題（コンポーネント台帳）への実質変更なし（判断 1 行）。新規コンポーネントの新設は見通しになく、対象は既存の 4 グループ — (1) 生成系スクリプト（`scripts/package.ts` 963 行 / `scripts/promote-self.ts` 689 行）、(2) installer（`packages/setup` の `internal/resolved-version-factory.ts` / `internal/payload-factory.ts` / `ports/http.ts`）、(3) CI・リリース設定（`.github/workflows/ci.yml` `:225-255` / `.github/workflows/release.yml` `:133-158` / `scripts/detect-ci-changes.sh` / `.gitignore`）、(4) 配布・消費面（`dist/` 8 ディレクトリ = 7 ハーネス + `dist/plugins/`、dogfood 面 6 面、ルート `AGENTS.md` / `CLAUDE.md`）。ハーネス面の集合は `discoverHarnessNames`（`scripts/package.ts:92-97`）が `manifest.ts` の実在で機械発見するため台帳のハードコードは不在（実測 7 件）。患部一覧は `code-structure.md` 現在節と `re-scans/260802-source-only-dist.md` を正本とする。測定 ref: observed `63e69d922`。
+
+## scope-grid 面間同期の対象コンポーネント（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 新規コンポーネントの新設は見通しにない。対象は既存の 3 グループ — データ 10 ファイル（grid 5 面 `<face>/tools/data/scope-grid.json` + prose `amadeus-self-feature.md` 4 面 / `amadeus-self-document.md` 4 面 / `amadeus-self-refactor.md` 4 面）、検査機構（センサー正本 `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts` + manifest + byte 一致の 5 面コピー）、周辺ガード（`scripts/promote-self.ts` / `packages/framework/core/tools/amadeus-graph.ts` / `.github/workflows/ci.yml:243-255`）。テスト側は `tests/integration/t-self-scope-consistency-sensor.test.ts` / `tests/unit/t370-promote-self-scopegrid-order.test.ts` / `t93` / `t89`。患部一覧は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
 

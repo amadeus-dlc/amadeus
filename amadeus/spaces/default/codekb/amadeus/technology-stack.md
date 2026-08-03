@@ -1,6 +1,10 @@
 # 技術スタック
 
-## scope-grid 面間同期の技術断面（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の技術断面（260802-source-only-dist、現在、observed `63e69d922`）
+
+- 判断: 区間（`47574fbab..63e69d922`）に本書の主題（技術スタック）への実質変更なし（判断 1 行）。患部は Bun / TypeScript の既存ツール層と GitHub Actions 設定・`.gitignore` に閉じ、新規外部依存を要さない。関与する既存の外部要素は 3 つで、いずれも現行スタック内 — GitHub Actions の `softprops/action-gh-release@…v2`（`release.yml:152-154`、Release Asset 添付に用いる場合は既存アクションの `files:` 入力で足りる）、`oven-sh/setup-bun@v2` + bun 1.3.13（`release.yml:174-177` / `ci.yml:234-237`）、codeload / api.github.com への HTTPS 取得（`packages/setup/src/ports/http.ts:5` の `ALLOWED_HOSTS`）。配布元を Release Asset へ移す場合は許可ホスト集合の見直しが技術面の唯一の実質論点で、ランタイム・言語・ビルドツールの変更は不要。区間の技術面の変化は患部外（`#2031` の `harness.json` への `name` 追加と全 7 面 dist 再生成、`#2057` の `.gitattributes` linguist-generated 化）で、詳細は `architecture.md` 現在節に委ねる。測定 ref: observed `63e69d922`。
+
+## scope-grid 面間同期の技術断面（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 技術スタックに変化なし。患部は Bun / TypeScript の既存ツール層と JSON データのみで、新規外部依存を要さない。区間の技術面の変化は患部外 — `#2017` の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、`#2012` の formal-model-check 全登録モデル対応、plugin compose 読取境界の fail-closed 化、fatal-latch 系 loud fail 徹底で、詳細は `architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 

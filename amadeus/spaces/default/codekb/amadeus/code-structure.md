@@ -1,6 +1,64 @@
 # コード構造
 
-## scope-grid 面間同期の患部配置（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の患部配置（260802-source-only-dist、現在、observed `63e69d922`）
+
+本節の file:line はすべて observed `63e69d922` 時点。全数・再実測コマンド・出力は `re-scans/260802-source-only-dist.md` を正本とする。
+
+### 患部の配置（B1〜B11）
+
+| # | パス | 行 | 内容 |
+| --- | --- | --- | --- |
+| B1 | `scripts/promote-self.ts`（689 行） | `:53-60` | `managedDirs` 6 エントリ（src はすべて `dist/…`）。dist は 8 ディレクトリだが kiro / kiro-ide は promote 対象外 |
+| B1 | 同 | `:65-74` / `:76` / `:77` | `PROJECT_INSTRUCTIONS` / `CODEX_AGENTS_MARKER` / `AMADEUS_IMPORT`（`@.agents/rules/amadeus.md`） |
+| B1 | 同 | `:83-99` / `:101-114` | `composeRootAgents` / `preserved`（10 エントリ、手編集正本の保護） |
+| B1 | 同 | `:124` / `:125` / `:132` / `:178` / `:179` | `COMPOSED_SCOPE_RE` / `SCOPE_GRID_RE` / `scopeGridInSync` / `PLUGIN_ENGINE_STATE_RE` / `STAGE_GRAPH_RE` |
+| B1 | 同 | `:355-359` / `:471-494` | `scripts/package.ts` への再帰呼び出し（apply / `--check`、promote が build を内包）/ `check()`（`MISSING :477`、`DIFFERS :481-485`、`ORPHAN :487`） |
+| B2 | `scripts/package.ts`（963 行） | `:5` / `:7` | `--check` モードの usage |
+| B2 | 同 | `:28-34` | 手編集検出の設計コメント（`guard fails CI when someone hand-edits a dist or forgets to regenerate.`） |
+| B2 | 同 | `:92-97` | `discoverHarnessNames`（`manifest.ts` の実在で機械発見、実測 7 件）— ハーネス名のハードコード列は不在 |
+| B2 | 同 | `:210-215` | `writeHarnessData`（区間で `name: m.name` が追加された唯一の患部変更、`#2031`） |
+| B2 | 同 | `:698-712` / `:728-742` | `checkHarness`（committed `:700` / temp `:701` / `buildTree` `:705` / MISSING・DIFFERS `:707-712`）/ ハーネス外バイト差分 |
+| B3 | `packages/setup/src/internal/resolved-version-factory.ts` | `:4` / `:5` / `:14` | ADR-003 コメント / `CODELOAD_BASE` / `archiveUrl()` の URL 組立 |
+| B3 | `packages/setup/src/internal/payload-factory.ts` | `:12` / `:38` / `:42` / `:44` / `:53-58` | `resolveWrapperDir`（位置基準解決、BR-F10）/ `distDir = join(wrapper.value, "dist")` / `readdirSync(distDir)` / `missing dist/ directory in extracted archive` / harness 不在・選択 |
+| B3 | `packages/setup/src/ports/http.ts` | `:5` / `:7` / `:52` / `:79` | `ALLOWED_HOSTS`（api.github.com + codeload.github.com、SEC-F02）/ `MAX_REDIRECTS = 5` / 初回ホスト検査 / redirect 先ホスト検査 |
+| B4 | `.github/workflows/release.yml`（206 行） | `:133-158` | `github-release` ジョブ。checkout / bun / build なしの 3 ステップ。`softprops/action-gh-release@…v2` `:152-154` の入力は `tag_name :156` / `generate_release_notes :157` / `token :158` の 3 つのみ = **`files:` 不在 = asset ゼロ** |
+| B4 | 同 | `:164-190` | 対照の `publish` ジョブ（checkout `:169-172` + bun 1.3.13 `:174-177` + `bun run build` `:188-190`） |
+| B5 | `.github/workflows/ci.yml`（691 行） | `:225-255` | `drift-check` ジョブ（6 ステップ、build 不在）。発火条件 `:228`、`dist:check :243-244`、`promote:self:check :246-247`、`amadeus-graph.ts compile --check :254-255` |
+| B6 | `scripts/detect-ci-changes.sh`（37 行） | `:9-16` / `:18-24` | `full` フィルタ（`:13` に `scripts/*` `tests/*` `packages/framework/*` `packages/setup/*` `book-pack/*` の 5 パターン）/ `drift` フィルタ（`:20` に `dist/*` を含む 9 パターン、`:21` に `AGENTS.md` `CLAUDE.md`）。`.kiro-ide` パターン不在・`.kiro/*` のルート面不在は既存不整合 |
+| B7 | `.gitignore`（84 行） | `:16-19` | COMMITTED 契約（`# dist/ is generated, COMMITTED, and drift-guarded` + `!/dist/`）= 反転の起点 |
+| B7 | 同 | `:22-24` / `:27` / `:29-32` | `dist/{claude,kiro,codex}/amadeus-docs/` / `dist/claude/todo-app/` / `packages/setup/dist/`（「フレームワークの `/dist/` とは別物」注記付き） |
+| B8 | `.claude/settings.json` | `:48` / `:57`,`:68`,`:79`,`:90`,`:94`,`:103`,`:112`,`:121`,`:132`,`:143`,`:154` | statusline + hook command 11 本（実体は `.claude/hooks/` に 13 本。未参照 2 本 = `amadeus-log-subagent-start.ts` / `amadeus-plugin-compose.ts`。後者が他経路から起動される点は**推測**、確定は requirements 段） |
+| B8 | 同 | `:31` | 巨大インライン Markdown（promote-self の `preserved` 対象 = 手編集正本） |
+| B9 | `AGENTS.md`（162 行 / 18,937 B） | `:1` / `:90` / `:92` | `@.agents/rules/amadeus.md` import / 手編集禁止規約（dist コミット前提の文言 = 改訂対象）/ `# AI-DLC on Codex CLI` マーカー（手書き prefix 1-91 行 5,983 B、生成 suffix 92-162 行 12,954 B） |
+| B10 | scope 正本 | — | `amadeus-self-*.md` 4 種 + `amadeus-installer-distribution.md` は `packages/` / `dist/` / `plugins/` / `contrib/` に **0 件**（`find` 実測）。stock 10 種のみ `packages/framework/core/scopes/` に正本を持つ |
+| B10 | 同 | — | self-\* 4 種は dot 5 面に存在、`.agents` は 0（`.agents/` は `rules` / `skills` のみ）。`amadeus-installer-distribution.md` は `.claude` / `.kimi-code` の **2 面のみ = 面間乖離が現存** |
+| B10 | `scope-grid.json` | — | root 15 キー vs `dist/claude` 10 キー（差分 5 = self-\* 4 + installer-distribution） |
+| B11 | `tests/` | — | `grep -rln 'dist/' tests/` のヒット数 = **423**（Issue #2043 記載の 373 から区間で増加） |
+
+### 区間 touch 判定（`47574fbab..63e69d922`、`git log --oneline <base>..<observed> -- <path>`）
+
+| パス | コミット数 | 判定 |
+| --- | --- | --- |
+| `scripts/package.ts` | 1 | `#2031`（`8448fdc6e`）で `writeHarnessData` に `name` 追加。**Issue #2043 の cite（SHA `8e5dc6c4`）から `:212` 以降 +4、`:808` 以降 +8 の行シフト**。配布契約は不変 |
+| `scripts/promote-self.ts` | 0 | diff なし。#2043 の cite はそのまま有効 |
+| `.github/workflows/release.yml` | 0 | 同上 |
+| `.github/workflows/ci.yml` | 0 | 同上（行数不変 691） |
+| `scripts/detect-ci-changes.sh` | 0 | 同上 |
+| `.gitignore` | 0 | 同上 |
+| `AGENTS.md` | 0 | 同上 |
+| `packages/setup` | 0 | 同上 |
+| `.claude/settings.json` | 0 | 同上 |
+
+区間の 576 ファイルの大半は `#2031`（213 ファイル）/ `#2049`（228 ファイル）の dist 再生成と metrics スナップショット群。非 dot 面で変わったのは `.coderabbit.yaml` と `.gitattributes`（`#2057` が `.agents/**` を linguist-generated 化）のみ。**すなわち #2043 が記述した配布構造は `scripts/package.ts` の行シフトを除いて全面的に現存し、患部の再列挙は不要**（行シフトの再解決だけを要する）。
+
+### 変更面の同時性（source-only 化で同一 PR に載る集合）
+
+- **installer 3 ファイルは分離不能**: `resolved-version-factory.ts`（URL 生成）/ `payload-factory.ts`（展開後レイアウト前提）/ `http.ts`（許可ホスト集合）は、配布元を codeload から Release Asset へ移すと 3 つとも同時に変わる。片方だけの変更は「URL は新しいがホスト検査が古い」等の即時破綻を生む。
+- **`.gitignore:16-19` の反転は起点であって単独では完結しない**: 反転すると `detect-ci-changes.sh:20` の `dist/*` トリガが沈黙し、`ci.yml:243-244` の `dist:check` が比較対象（committed 側）を失う。3 者は同一変更に含める。
+- **dogfood 面は残す非対称**: `.claude/settings.json` の 11 本の hook 参照と `AGENTS.md:1` の `.agents` import が生きている以上、dist 消去と dogfood 面消去は同一視できない。`promote-self.ts:53-60` の src が `dist/` である以上、写像の入力源の置換（`:355-359` の再帰 build を正式入力へ昇格 等）が同一 PR に必要。
+- **`AGENTS.md:90` の文言**: dist コミット前提の規約文。配布構造の変更と同時に改訂する（文書だけ遅らせると規約と実装が乖離する）。
+
+## scope-grid 面間同期の患部配置（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 本節の file:line はすべて observed `47574fbab` 時点。全数と再実測結果は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
 

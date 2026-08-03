@@ -1,6 +1,24 @@
 # コード品質評価
 
-## scope-grid 面間同期の品質所見（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の品質所見（260802-source-only-dist、現在、observed `63e69d922`）
+
+本節の file:line と件数はすべて observed `63e69d922` 時点の実測。実測コマンドと出力は `re-scans/260802-source-only-dist.md` を正本とする。
+
+- **配布境界のテスト所在**: 患部を守っているテストは 2 グループある。(1) 生成・同期側 — `t370`（`scopeGridInSync`）/ `t200`（`COMPOSED_SCOPE_RE`）/ `t356`（plugin carve-out）/ `t-package-write-sweep`（write ↔ check の対称性）。(2) installer 経路 — `setup-installation` / `setup-resolved-version` / `setup-http`。補助として `t-package-unreferenced-source`、`t149` / `t150`（dist 構造契約）、`setup-pack-contract`、`t209`。すなわち「正本 → dist の生成」と「アーカイブ → 利用者環境の展開」の両端は個別に守られている。
+
+- **テスト空白地帯: `release.yml` の `github-release` ジョブ**: `tests/` 配下に `release.yml` を読むテストは **0 件**（`grep` 実測）。`github-release` ジョブ（`.github/workflows/release.yml:133-158`）の入力集合（`tag_name` / `generate_release_notes` / `token` の 3 つのみ、`files:` 不在）を pin するテストは存在しない。source-only 化は**まさにこのジョブへ Release Asset の生成とアップロードを追加する**変更であり、現在は追加分が回帰から守られない状態で入る。新設するアップロード経路には「asset が実際に添付されること」「asset の中身が dist ビルド結果と一致すること」を機械確認する検査を同一 PR で用意しない限り、org.md Forbidden の検証劇場（生成物の実在を実行結果から導出しない）に落ちる危険がある。あわせて `dist:check` の意味論が「committed との一致」から「生成の成功」へ変わる以上、**新設ガードには落ちる実証（意図的な不一致注入で赤になること）が必須**。
+
+- **`dist/` 参照の広がり = 移行の実コスト指標**: `tests/` 配下で `dist/` を参照するファイルは **423 件**（Issue #2043 記載の 373 から区間で増加）。この増加は区間の `#2031` / `#2049` が dist 再生成を伴ったこととは独立で、テスト側が dist ツリーを前提に増え続けていることを示す。source-only 化は「dist が作業ツリーに常在する」前提を外すため、423 件のうち (a) ビルド生成物を都度作れば済むもの、(b) committed dist の実在に構造的に依存するもの、の切り分けが要る。切り分けを行わずに反転すると、テストスイート全体が広域で赤くなるか、より悪いことに**遅延ビルドの有無で偽グリーンになる**（`packages/setup/dist/` の遅延ビルド `tests/lib/setup-lazy-build.ts` は既にこのクラスの前例で、`.gitignore:29-32` が「別物・drift-guard 対象外」と明示している）。
+
+- **drift guard の意味変化はテストでは捉えられない**: `dist:check`（`scripts/package.ts --check`）が守っているのは「コミット済み dist と再ビルド結果のバイト一致」で、設計コメント（`scripts/package.ts:28-34`）が明示するとおり「誰かが dist を手編集したか再生成を忘れたとき」に CI を落とす。dist が非コミットになると committed 側が消え、ガードは自動的に**通る**方向へ退化する（比較対象ゼロ = 差分ゼロ）。これは fail-open であり、テストの赤としては現れない。同型の危険が `detect-ci-changes.sh:20` の `dist/*` トリガにもある — dist が無視対象になると当該パターンがマッチしなくなり、drift ジョブが起動しなくなる。**ガードが沈黙する変化は既存テストで検出できない**ため、反転と同時に「ガードが依然として意味を持つこと」を実証する検査が要る。
+
+- **Issue #2043 cite の鮮度**: #2043 の患部 cite（SHA `8e5dc6c4`）は本 observed に対し 1 ファイルだけ行番号がシフトしている — `scripts/package.ts` の `:212` 以降 +4、`:808` 以降 +8（`#2031` `8448fdc6e` の `writeHarnessData` への `name` フィールド追加による）。他の患部ファイル（`promote-self.ts` / `ci.yml`（行数不変 691）/ `.gitignore` / `AGENTS.md` / `detect-ci-changes.sh` / `packages/setup` / `release.yml` / `.claude/settings.json`）は区間 diff なしで cite がそのまま有効。**下流ステージが #2043 の行番号を引く場合、`scripts/package.ts` のみ再解決が要る**（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。
+
+- **既存の構造的不整合（本 intent の患部近傍に現存）**: (1) `detect-ci-changes.sh:20` の drift フィルタに `.kiro-ide` パターンが無く、また `.kiro/*` はルート面に実体が無い（dogfood 面は 6 面で kiro 系を含まない）。(2) `amadeus-installer-distribution.md` が `.claude` と `.kimi-code` の 2 面にしか存在しない面間乖離。(3) self-\* 4 種 + installer-distribution の scope prose は `packages/` にも `dist/` にも正本を持たず dogfood 面が唯一の実体（`find` 実測 0 件）。(1) は本 intent の変更と直交する既存欠陥だが、drift フィルタを触る以上は同時是正の候補。(2)(3) は dist 非コミット化で「復元元が無い」問題へ直結するため、本 intent のスコープ判断で明示的に扱う必要がある。
+
+- **未参照フックの扱い**: `.claude/hooks/` の 13 本のうち `.claude/settings.json` から参照されるのは 11 本で、`amadeus-log-subagent-start.ts` と `amadeus-plugin-compose.ts` が未参照。後者が他ハーネス面の設定や別経路から起動されるという解釈は**現時点では推測**であり、実測で確定していない。配布面の棚卸しを行う本 intent では、未参照ファイルが「不要」なのか「別経路から必要」なのかを確定してから配布集合を決める必要がある（`t-package-unreferenced-source` が近縁の検査として既存）。
+
+## scope-grid 面間同期の品質所見（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 本節の file:line はすべて observed `47574fbab` 時点。実測手順とコマンド出力は `re-scans/260802-scope-grid-face-sync.md` を正本とする。
 

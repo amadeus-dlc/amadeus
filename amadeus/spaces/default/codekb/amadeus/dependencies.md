@@ -1,6 +1,10 @@
 # 依存関係
 
-## scope-grid 面間同期の依存関係（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行の依存関係（260802-source-only-dist、現在、observed `63e69d922`）
+
+- 判断: 区間（`47574fbab..63e69d922`）に本書の主題（依存関係）への実質変更なし（判断 1 行）。外部依存の追加なし。内部依存は配布の三層に沿って 4 本 — (1) 正本（`packages/framework/core/` + `packages/framework/harness/<name>/manifest.ts` 7 面）→ `dist/<harness>/`（`scripts/package.ts`）、(2) `dist/` → dogfood 面 6 面（`scripts/promote-self.ts:53-60` の `managedDirs`、src がすべて `dist/…` = **dist 消去で入力が消える単方向依存**。ただし `:355-359` の再帰 build 呼び出しにより promote は build を内包しており、入力源の置換余地がある）、(3) codeload アーカイブ → installer（`packages/setup` の URL 生成・許可ホスト・展開後レイアウトの 3 ファイルが一体で、配布元変更時は同時改訂が必須）、(4) CI ガード → 上記全体（`ci.yml:243-247` の `dist:check` / `promote:self:check` は committed `dist/` の実在に依存し、`detect-ci-changes.sh:20` の `dist/*` パターンが発火トリガの一員）。加えて scope prose の self-\* 4 種と installer-distribution は `packages/` / `dist/` に正本を持たず dogfood 面が唯一の実体であるため（`find` 実測 0 件）、dist 非コミット化は復元元不在の依存を露出させる。dist 同期面: 配布系スクリプトを触る変更は従来どおり dist 7 面 + self-install 6 面の再生成が PR に同梱される。詳細は `architecture.md` / `code-structure.md` の現在節を正本とする。測定 ref: observed `63e69d922`。
+
+## scope-grid 面間同期の依存関係（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 外部依存の追加なし。内部依存は 3 本 — センサー正本 → 5 面コピー（byte-identical、`bun scripts/package.ts` + `bun run promote:self` で機械同期）、センサー manifest ⇔ 出力スキーマ、stage frontmatter（`code-generation.md:39-44`）→ センサー id（`t93.test.ts:106` / `t89.test.ts:366` が pin）。データ側の grid 5 面は互いに複製関係にあるが同期する機構が現状存在しない — それ自体が本 intent の患部。dist 同期面: センサー正本を触る場合は dist 7 面 + self-install 5 面のツールコピー再生成が PR に同梱される（grid データ自体は dist に `self-*` 行を持たないため対象外）。変更面が他の進行中 intent と交差する兆候は区間にない（患部 9 パスとも 0 コミット）。
 

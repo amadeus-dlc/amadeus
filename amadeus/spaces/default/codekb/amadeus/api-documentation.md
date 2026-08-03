@@ -1,6 +1,10 @@
 # API ドキュメント
 
-## scope-grid 面間同期が触れる内部契約（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## source-only 構成移行が触れる内部契約（260802-source-only-dist、現在、observed `63e69d922`）
+
+- 判断: 区間（`47574fbab..63e69d922`）に本書の主題（CLI 契約・内部 API 面）への実質変更なし（判断 1 行）。`/amadeus` の公開 CLI 契約は不変で、`bun run dist` / `dist:check` / `promote:self` / `promote:self:check` のスクリプト契約も語彙・引数ともに現状維持。触れうる内部契約は 2 点に限られ、いずれも実装判断が確定してから記述する — (1) installer の配布元契約（`resolved-version-factory.ts:5` の `CODELOAD_BASE` と `:14` の `archiveUrl()`、`http.ts:5` の `ALLOWED_HOSTS`、`payload-factory.ts:38` の展開後 `dist/` レイアウト前提の 3 者が一体の契約を成す）、(2) `harness.json` スキーマ（`scripts/package.ts:210-215`、区間で `name` フィールドが追加済み = `#2031`）。詳細は `code-structure.md` 現在節の患部配置表を正本とする。測定 ref: observed `63e69d922`。
+
+## scope-grid 面間同期が触れる内部契約（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 公開 CLI 契約の変更なし（`/amadeus --scope <name>` の語彙・引数は不変）。触れる内部契約は 2 点 — (1) センサー出力スキーマ: `Finding`（`amadeus-sensor-self-scope-consistency.ts:26-32`）の `reason` 列挙と manifest の `output_schema`（`sensors/amadeus-self-scope-consistency.md:12-20`）が対で、cell-mismatch 系 reason と stage / expected / actual フィールドの追加は両者同時改訂を要する。(2) `scope-grid.json` の flat スキーマ（top-level = scope 名、値 = stages マップ `<slug>` → `EXECUTE` / `SKIP`）自体は不変で、是正はセル値の書き換えに閉じる。詳細は `code-structure.md` 現在節の挿入点表を正本とする。
 
