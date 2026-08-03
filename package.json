@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "bun run dist && bun run promote:self",
     "dist": "bun scripts/package.ts",
     "dist:check": "bun scripts/package.ts --check",
     "promote:self": "bun scripts/promote-self.ts --apply",

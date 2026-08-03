@@ -47,6 +47,9 @@ const BASELINE_SHA = readFileSync(
 //   - 260801-silent-drop-gate review follow-up: normalize GitHub's all-zero
 //     push before-SHA to the baseline-less path and disable checkout credential
 //     persistence in the tests job.
+//   - 260802-source-only-dist u7: build-before-test steps, the blocking
+//     reproducible-build job, and its ci-success dependency. The legacy drift
+//     job remains unchanged until the u8 atomic switch.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

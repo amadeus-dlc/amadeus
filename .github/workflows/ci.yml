@@ -236,6 +236,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build generated distributions
+        run: bun run build
+
       - name: Plugin conformance journey (e2e)
         run: bun test tests/e2e/t341-plugin-conformance-journey.serial.test.ts
 
@@ -260,6 +263,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build generated distributions
+        run: bun run build
+
       - name: Install lizard (CCN measurement, pinned - the suite's complexity-gate tests spawn it)
         run: pip install lizard==1.23.0
 
@@ -274,6 +280,53 @@ jobs:
           path: tests/logs/test-size-report.json
           if-no-files-found: warn
           retention-days: 14
+
+  reproducible-build:
+    name: Reproducible build
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Build isolated distributions
+        run: |
+          set -euo pipefail
+          REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
+
+          prepare_tree() {
+            local tree="$1"
+            if [[ -e "${tree}" ]]; then
+              echo "::error::isolated build tree already exists: ${tree}"
+              exit 1
+            fi
+            git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"
+            git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"
+            (cd "${tree}" && bun install --frozen-lockfile)
+            (cd "${tree}" && bun run build)
+          }
+
+          mkdir -p "${REPRO_ROOT}"
+          prepare_tree "${REPRO_ROOT}/tree-a"
+          prepare_tree "${REPRO_ROOT}/tree-b"
+
+      - name: Compare distribution bytes
+        run: |
+          set -euo pipefail
+          REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
+          if ! diff -qr "${REPRO_ROOT}/tree-a/dist" "${REPRO_ROOT}/tree-b/dist"; then
+            echo "::error::isolated builds produced different distribution bytes"
+            exit 1
+          fi
 
   drift-check:
     name: Dist and self-install drift
@@ -330,6 +383,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build generated distributions
+        run: bun run build
+
       - name: Install lizard (CCN measurement, pinned - the suite's complexity-gate tests spawn it)
         run: pip install lizard==1.23.0
 
@@ -338,6 +394,10 @@ jobs:
 
       - name: Project coverage gate
         run: bun tests/coverage-project-gate.ts --check
+
+      - name: Remove transitional generated Codex suffix
+        if: ${{ github.event_name == 'pull_request' }}
+        run: rm -f -- .agents/rules/amadeus-codex-suffix.md
 
       - name: Patch coverage gate
         if: ${{ github.event_name == 'pull_request' }}
@@ -408,6 +468,13 @@ jobs:
           set -euo pipefail
           git checkout --detach "${{ steps.merge-base.outputs.sha }}"
           bun install --frozen-lockfile
+          build_script="$(bun -e 'const pkg = await Bun.file("package.json").json(); process.stdout.write(pkg.scripts?.build ?? "")')"
+          if [[ -n "${build_script}" ]]; then
+            bun run build
+          else
+            # The merge-base of this transition predates the root build alias.
+            bun run dist && bun run promote:self
+          fi
           status=0
           bun run coverage:ci -- -P 4 || status=$?
           if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
@@ -800,6 +867,7 @@ jobs:
       - distribution-contract
       - plugin-conformance-e2e
       - tests
+      - reproducible-build
       - drift-check
       - coverage
     if: ${{ always() }}
@@ -826,6 +894,7 @@ jobs:
               require_result "distribution-contract" "${{ needs.distribution-contract.result }}"
               require_result "plugin-conformance-e2e" "${{ needs.plugin-conformance-e2e.result }}"
               require_result "tests" "${{ needs.tests.result }}"
+              require_result "reproducible-build" "${{ needs.reproducible-build.result }}"
               require_result "drift-check" "${{ needs.drift-check.result }}"
               ran=true
               ;;

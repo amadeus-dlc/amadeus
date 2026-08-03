@@ -114,6 +114,7 @@ describe("t222 CI snapshot publication boundary", () => {
         "distribution-contract",
         "plugin-conformance-e2e",
         "tests",
+        "reproducible-build",
         "drift-check",
         "coverage",
       ]),
@@ -187,7 +188,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - drift-check\n      - coverage",
+      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
@@ -203,6 +204,9 @@ describe("t222 CI snapshot publication boundary", () => {
       `require_result "plugin-conformance-e2e" "\${{ needs.plugin-conformance-e2e.result }}"`,
     );
     expect(ciSuccessJob).toContain(`require_result "tests" "\${{ needs.tests.result }}"`);
+    expect(ciSuccessJob).toContain(
+      `require_result "reproducible-build" "\${{ needs.reproducible-build.result }}"`,
+    );
     expect(ciSuccessJob).toContain(`require_result "drift-check" "\${{ needs.drift-check.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
   });
