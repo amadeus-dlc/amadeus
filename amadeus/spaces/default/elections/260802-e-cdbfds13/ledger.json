@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBFDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を全面支持する。c1は4 Unitの質問票すべてが承認済みFR・component/method/service契約からの一意導出と実測でき、具体的cap値もrequirements FR-08.3でNFR Requirementsへ留保済みの本Intent固有判断である。c2はteam/project memoryにharness中立coreとharness overlay分離が既に明記され、同Intent上流も共有core契約を承認済みである。c3はFunctional Design仕様がfrontend-components.mdをUIを含む場合のみのCONDITIONAL出力と定め、対象4 Unitに同ファイルが0件であることも確認した。さらにoptional非該当成果物の不在確認は既存cid:code-generation:produces-ls-check-after-generationで既習であり、新規memory追加は重複になる。",
+      "submittedAt": "2026-08-02T05:13:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBFDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を強く支持する。独立実測では、c1は全4 Unitのfunctional-design-questions.mdが同一のユーザー承認(2026-08-02T04:52:03Z)と各FR／C2-C5／承認済みmethod・service契約からの一意導出を個別に記録し、具体cap値をFR-08.3に従いNFR Requirementsへ留保しており、今回のIntentに閉じた判断である。c2の共有core＋native fact/unavailable adapterはteam.md Code Styleのharness中立正本／overlay分離、当Intentのteam-practices.md、Application Design ADR-01・components.md・services.mdで既に確定済みの方針の適用で、新規規律ではない。c3はfunctional-design stageがfrontend-componentsをUI時のみのoptional_producesと明記し、services.mdもdatabase／UI component非該当と明記、4 Unit全てでfrontend-components.mdが0件であることを列挙確認した。さらにoptional非該当成果物の不存在確認は既存cid:code-generation:produces-ls-check-after-generationが被覆する。よって3件はいずれもstage record保持で十分で、project/team memoryへの重複追加は不要。留保なし。",
+      "submittedAt": "2026-08-02T05:13:44Z"
+    }
+  ],
+  "late": []
+}

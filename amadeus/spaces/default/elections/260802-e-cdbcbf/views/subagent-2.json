@@ -1,0 +1,25 @@
+{
+  "electionId": "E-CDBCBF",
+  "voter": "subagent-2",
+  "question": "convergence-budgets の finalize が Unit worktree の監査 shard 欠落で audit-merge-failed となった。既存 worktree と commit e7b4f7be を保持したまま、どう処理するか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "Retry",
+      "description": "既存 worktree に必要な監査 shard を正規に復旧し、同じ Bolt の finalize を再実行する"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "Abort",
+      "description": "Construction を停止し、worktree を保持する"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "Skip",
+      "description": "convergence-budgets を skipped とし、worktree を保持して次へ進む"
+    }
+  ]
+}

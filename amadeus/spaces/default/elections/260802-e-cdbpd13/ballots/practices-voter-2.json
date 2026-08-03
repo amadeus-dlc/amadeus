@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBPD13",
+  "voter": "practices-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "候補はいずれも既存の read-only scanner 規律、正本と生成投影の境界、共有 core と harness adapter の分離、既存センサー整合へ還元できる。重複する恒久ノルムを追加せず、既存ノルムを適用するのが適切。",
+  "submittedAt": "2026-08-02T03:31:19Z"
+}

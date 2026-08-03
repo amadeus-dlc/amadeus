@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T03:31:48Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBPD13",
+      "voter": "practices-voter-1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。候補のうち read-only 調査で engine/state 操作を禁止する規律は cid:practices-discovery:c2-engine-mutation-ban、team.md 部分昇格は cid:practices-discovery:c2、timestamp 成果物の sensor 例外は cid:practices-discovery:e-fvepd-marker-heading-floor、harness 中立 core と harness 表層の境界は project/team memory に既に存在する。いずれも既存ノルムの再適用または今回限りの実行判断であり、恒久規則を追加すると重複・drift を増やすため、選択肢1を留保なく支持する。",
+      "submittedAt": "2026-08-02T03:31:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBPD13",
+      "voter": "practices-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補はいずれも既存の read-only scanner 規律、正本と生成投影の境界、共有 core と harness adapter の分離、既存センサー整合へ還元できる。重複する恒久ノルムを追加せず、既存ノルムを適用するのが適切。",
+      "submittedAt": "2026-08-02T03:31:19Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CDBADS13",
+  "kind": "zero-confirm",
+  "question": "Application Designの§13候補5件はすべてIntent固有の設計判断または既存規則の適用であり、project/team memoryへ追加する新規学習は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "候補は設計成果物に保持し、恒久ルールへ重複転記しない"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

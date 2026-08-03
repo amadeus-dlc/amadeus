@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "5候補をmemory、設計成果物、既存memory規則と独立照合した。c1は全配布面同期の既存規則を現行7面へ適用した目録、c2・c4・c5はそれぞれADR-02・単一writer公開契約・ADR-09に保持されたIntent固有設計判断、c3はinception規則の先行着地禁止と小さく検証可能な再編を4 Issueへ適用した配送判断である。新しい横断practiceとしてproject/team memoryへ重複追加する必要はない。",
+  "submittedAt": "2026-08-02T04:09:21Z"
+}

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-CDBCBF2",
+  "voter": "subagent-1",
+  "question": "convergence-budgets の再finalizeが、前回の部分成功でstate merge済みのため state-merge-failed となった。既存worktreeとcommitを保持したままどう処理するか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "Skip",
+      "description": "convergence-budgetsをskippedとし、worktreeを保持して次へ進む"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "Retry",
+      "description": "partial mergeを正規に再開できるidempotent recoveryを実装・検証し、既存worktreeでfinalizeを再実行する"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "Abort",
+      "description": "Constructionを停止し、worktreeを保持する"
+    }
+  ]
+}

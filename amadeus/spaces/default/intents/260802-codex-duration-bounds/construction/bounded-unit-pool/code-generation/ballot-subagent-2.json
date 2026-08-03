@@ -1,0 +1,9 @@
+{
+  "electionId": "E-CDB-CG-ZERO",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "rationale": "提示された選択肢は『0件で可』のみであり、4区分に記録がないため永続化対象がないという説明は、0件のまま承認ゲートへ進む判断と整合する。",
+  "submittedAt": "2026-08-02T23:11:19Z"
+}

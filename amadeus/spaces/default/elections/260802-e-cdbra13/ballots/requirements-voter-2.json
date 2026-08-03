@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBRA13",
+  "voter": "requirements-voter-2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。operation tree、初期 allowlist、budget 遷移、adapter inventory は、いずれも本 Intent の対象機構・受け入れ境界・実装順序を具体化する要件であり、複数 Intent に一般化できる新しいチーム規律とは区別される。共有 core と harness adapter の責務分離も既存境界の適用であるため、memory へ重複転記せず requirements 成果物に保持する判断を留保なく支持する。",
+  "submittedAt": "2026-08-02T03:46:02Z"
+}

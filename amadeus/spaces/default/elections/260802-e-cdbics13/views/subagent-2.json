@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBICS13",
+  "voter": "subagent-2",
+  "question": "Intent Capture の学習候補 c1/c2 は Intent 固有の裁定として成果物に保存済みであり、project/team memory へ恒久ルールとして追加する候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1 と c2 は本 Intent 固有の境界・評価方針であり、恒久ルールへ重複追加しない"
+    }
+  ]
+}

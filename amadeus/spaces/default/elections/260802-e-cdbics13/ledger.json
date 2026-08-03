@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBICS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 は Codex を本 Intent の効果測定・dogfood の一次対象としつつ共有 core の harness-neutral 性を守るという、この Intent の対象境界であり、intent-statement.md と memory.md に保存済みである。c2 は #1602 の実測ベースライン後に時間予算・反復上限・並列上限の具体値を NFR で確定するという、この Intent 固有の評価順序であり、同じく成果物に保存済みである。いずれも別 Intent へ恒久適用すべき project/team 共通規則ではなく、project.md に重複追加しない0件案に全面賛成する。",
+      "submittedAt": "2026-08-02T02:11:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBICS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 は Codex を本 Intent の効果測定・dogfood の一次対象とする射程裁定であり、c2 は #1602 の実測後に数値目標を確定する本 Intent の順序裁定である。いずれも intent-statement.md、stakeholder-map.md、intent-capture/memory.md に保存済みで、project.md が一時的な Intent 制約は Intent record に置くと明示する分類に一致する。恒久化すると他 Intent へ Codex 一次対象や #1602 依存を誤適用するため、project/team memory へ追加する候補は0件でよい。",
+      "submittedAt": "2026-08-02T02:11:45Z"
+    }
+  ],
+  "late": []
+}

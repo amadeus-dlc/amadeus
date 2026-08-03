@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBRA13",
+  "voter": "requirements-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "4候補はいずれも本Intent固有の要件具体化、または既存の共有core／harness境界の適用であり、project/team memoryへ昇格すべき新規かつ反復可能な恒久規則ではないため、0件で可と判断する。",
+  "submittedAt": "2026-08-02T03:46:44Z"
+}
