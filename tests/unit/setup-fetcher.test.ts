@@ -20,7 +20,11 @@ import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { verifySha256 } from "../../packages/setup/src/internal/checksum-verifier.ts";
 import { createExtractedPayload } from "../../packages/setup/src/internal/payload-factory.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
-import { buildReleaseAssetHttp, toReadableStream } from "../lib/setup-release-asset-fixture.ts";
+import {
+  buildReleaseAssetHttp,
+  releaseAssetFixtureKind,
+  toReadableStream,
+} from "../lib/setup-release-asset-fixture.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 function version(raw = "0.1.7") {
@@ -60,7 +64,7 @@ function assetHttp(
     },
     async downloadArchive(url) {
       urls.push(url.toString());
-      const response = url.pathname.endsWith("/SHA256SUMS") ? checksumResponse : archiveResponse;
+      const response = releaseAssetFixtureKind(url, "v0.1.8") === "checksum" ? checksumResponse : archiveResponse;
       return response instanceof Uint8Array ? Result.ok(toReadableStream(response)) : Result.err(response);
     },
   };
@@ -286,7 +290,10 @@ describe("verifySha256 — filesystem failures", () => {
         "archive.tar.gz",
       );
       expect(missingChecksum.type).toBe("err");
-      if (missingChecksum.type === "err") expect(missingChecksum.error.detail).toContain("could not read SHA256SUMS");
+      if (missingChecksum.type === "err") {
+        expect(missingChecksum.error.type).toBe("payload-invalid");
+        expect(missingChecksum.error.detail).toContain("could not read SHA256SUMS");
+      }
 
       const written = await tmpWrite.writeFile("SHA256SUMS", Buffer.from(`${"0".repeat(64)}  archive.tar.gz\n`));
       expect(written.type).toBe("ok");
@@ -296,7 +303,10 @@ describe("verifySha256 — filesystem failures", () => {
         "archive.tar.gz",
       );
       expect(missingArchive.type).toBe("err");
-      if (missingArchive.type === "err") expect(missingArchive.error.detail).toContain("could not verify archive.tar.gz");
+      if (missingArchive.type === "err") {
+        expect(missingArchive.error.type).toBe("payload-invalid");
+        expect(missingArchive.error.detail).toContain("could not verify archive.tar.gz");
+      }
     });
   });
 });
@@ -314,7 +324,10 @@ describe("createExtractedPayload — wrapper fallback failures", () => {
         try {
           const result = createExtractedPayload(extractedDir, version(), HarnessName.all);
           expect(result.type).toBe("err");
-          if (result.type === "err") expect(result.error.detail).toContain("could not read distribution root");
+          if (result.type === "err") {
+            expect(result.error.type).toBe("payload-invalid");
+            expect(result.error.detail).toContain("could not read distribution root");
+          }
         } finally {
           chmodSync(wrapperDir, 0o755);
         }
@@ -324,6 +337,27 @@ describe("createExtractedPayload — wrapper fallback failures", () => {
 });
 
 describe("buildReleaseAssetHttp — resolver routes", () => {
+  test("streams a Uint8Array as one binary chunk", async () => {
+    const reader = toReadableStream(Uint8Array.of(1, 2, 3)).getReader();
+
+    expect(await reader.read()).toEqual({ done: false, value: Uint8Array.of(1, 2, 3) });
+    expect(await reader.read()).toEqual({ done: true, value: undefined });
+  });
+
+  test("rejects release asset URLs with the wrong scheme, host, tag, or path", async () => {
+    const http = buildReleaseAssetHttp(Buffer.from("archive"), "v0.1.8");
+    const invalidUrls = [
+      "http://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      "https://example.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.9/amadeus-dist-v0.1.9.tar.gz",
+      "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/other.tar.gz",
+    ];
+
+    for (const url of invalidUrls) {
+      await expect(http.downloadArchive(new URL(url))).rejects.toThrow("unexpected release asset URL in fixture");
+    }
+  });
+
   test("serves annotated-tag and tag-list responses from the shared fixture", async () => {
     const http = buildReleaseAssetHttp(Buffer.from("archive"), "v0.1.8");
 

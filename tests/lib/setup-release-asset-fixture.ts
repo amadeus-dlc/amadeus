@@ -13,7 +13,23 @@ export function buildReleaseAssetChecksums(archive: Uint8Array, tag: `v${string}
 }
 
 export function toReadableStream(bytes: Uint8Array): ReadableStream<Uint8Array> {
-  return Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
+  return Readable.toWeb(Readable.from([bytes], { objectMode: false })) as unknown as ReadableStream<Uint8Array>;
+}
+
+export function releaseAssetFixtureKind(url: URL, tag: `v${string}`): "archive" | "checksum" {
+  const releaseBase = `https://github.com/amadeus-dlc/amadeus/releases/download/${tag}`;
+  if (url.toString() === `${releaseBase}/amadeus-dist-${tag}.tar.gz`) return "archive";
+  if (url.toString() === `${releaseBase}/SHA256SUMS`) return "checksum";
+  throw new Error(`unexpected release asset URL in fixture: ${url.toString()}`);
+}
+
+export function releaseAssetFixtureBytes(
+  url: URL,
+  archive: Uint8Array,
+  checksums: Uint8Array,
+  tag: `v${string}`,
+): Uint8Array {
+  return releaseAssetFixtureKind(url, tag) === "checksum" ? checksums : archive;
 }
 
 export function buildReleaseAssetHttp(archive: Uint8Array, tag: `v${string}`): Http {
@@ -28,7 +44,7 @@ export function buildReleaseAssetHttp(archive: Uint8Array, tag: `v${string}`): H
       throw new Error(`unexpected path in fixture: ${path}`);
     },
     async downloadArchive(url) {
-      return Result.ok(toReadableStream(url.pathname.endsWith("/SHA256SUMS") ? checksums : archive));
+      return Result.ok(toReadableStream(releaseAssetFixtureBytes(url, archive, checksums, tag)));
     },
   };
 }

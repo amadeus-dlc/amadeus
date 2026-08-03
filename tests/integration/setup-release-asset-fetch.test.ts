@@ -14,7 +14,7 @@ import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildDistAssets } from "../../scripts/release-dist.ts";
 import { discoverHarnessNames } from "../../scripts/package.ts";
-import { toReadableStream } from "../lib/setup-release-asset-fixture.ts";
+import { releaseAssetFixtureBytes, toReadableStream } from "../lib/setup-release-asset-fixture.ts";
 
 const roots: string[] = [];
 const CLAUDE = HarnessName.all.find((name) => String(name) === "claude");
@@ -39,7 +39,9 @@ describe("u1 release asset -> u2 installer", () => {
         throw new Error("fetcher must never call getJson");
       },
       async downloadArchive(url) {
-        return Result.ok(toReadableStream(readFileSync(url.pathname.endsWith("/SHA256SUMS") ? bundle.checksumPath : bundle.tarPath)));
+        const archive = readFileSync(bundle.tarPath);
+        const checksums = readFileSync(bundle.checksumPath);
+        return Result.ok(toReadableStream(releaseAssetFixtureBytes(url, archive, checksums, "v0.1.8")));
       },
     };
     const parsed = SemVer.parse("0.1.8");

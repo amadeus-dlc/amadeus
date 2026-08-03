@@ -19,8 +19,11 @@ import { ManifestFiles, Manifest } from "../../packages/setup/src/domain/manifes
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
-import { Readable } from "node:stream";
-import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
+import {
+  buildReleaseAssetChecksums,
+  releaseAssetFixtureBytes,
+  toReadableStream,
+} from "../lib/setup-release-asset-fixture.ts";
 
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
 const ARCHIVE: TarFixtureEntry[] = [
@@ -39,9 +42,7 @@ function fakeHttp(): Http {
       throw new Error(`unexpected path in integration fixture: ${path}`);
     },
     async downloadArchive(url) {
-      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
-      const stream = Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
+      return Result.ok(toReadableStream(releaseAssetFixtureBytes(url, archive, checksums, "v1.2.3")));
     },
   };
 }
