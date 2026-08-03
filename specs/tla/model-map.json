@@ -85,7 +85,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-mirror-types.ts",
-          "sha256": "e78716cb4ee0b9e35c9e9c1a4f699b5b2d1031d6de1ad68991e288f2c89822fd"
+          "sha256": "3f5d0cb176ac95897742f31127f91cd6aa2d4201806106496f2dd01852952e2d"
         }
       ],
       "vocabulary": {

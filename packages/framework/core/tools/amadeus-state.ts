@@ -1398,7 +1398,12 @@ export function handleCheckbox(args: string[]): void {
     if (eqIdx <= 0) error(`Invalid slug=state pair: ${pair}`);
     const slug = pair.slice(0, eqIdx);
     const stateStr = pair.slice(eqIdx + 1);
-    if (!findStageBySlug(slug)) error(`Unknown stage: ${slug}`);
+    if (!findStageBySlug(slug)) {
+      errorWithSlug(
+        slug,
+        `State mutation refused: operation=${JSON.stringify(`checkbox:${slug}`)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
+      );
+    }
     if (!isCheckboxState(stateStr)) {
       error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
     }
