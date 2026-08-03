@@ -58,7 +58,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (80) ---
+// --- Canonical event types (84) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -92,6 +92,7 @@ const VALID_EVENT_TYPES = new Set([
   "EXECUTION_EVENT_SET_COMMITTED",
   "LOOP_MONITOR_EVENT_SET_COMMITTED",
   "QUALITY_REPAIR_TRANSACTION_COMMITTED",
+  "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -244,6 +245,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
   LOOP_MONITOR_EVENT_SET_COMMITTED: "Loop Monitor Event Set Committed",
   QUALITY_REPAIR_TRANSACTION_COMMITTED: "Quality Repair Transaction Committed",
+  INTENT_AUTONOMY_TRANSACTION_COMMITTED: "Intent Autonomy Transaction Committed",
   UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
