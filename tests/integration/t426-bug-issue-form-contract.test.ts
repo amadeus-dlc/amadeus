@@ -115,14 +115,22 @@ describe("t426 bug Issue Form contract", () => {
   test("the issue workflow atomically reconciles form classifications with labels", async () => {
     const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
       on: { issues: { types: string[] } };
-      permissions: { issues: string };
-      jobs: { sync: { if: string; steps: Array<{ with?: { script?: string } }> } };
+      jobs: {
+        sync: {
+          if: string;
+          permissions: { contents: string; issues: string };
+          steps: Array<{ uses?: string; with?: { script?: string } }>;
+        };
+      };
     };
     const script = workflow.jobs.sync.steps[0]?.with?.script;
 
     expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
-    expect(workflow.permissions.issues).toBe("write");
+    expect(workflow.jobs.sync.permissions).toEqual({ contents: "read", issues: "write" });
     expect(workflow.jobs.sync.if).toContain("'bug'");
+    expect(workflow.jobs.sync.steps[0]?.uses).toBe(
+      "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3",
+    );
     expect(script).toBeDefined();
 
     const added: string[][] = [];
