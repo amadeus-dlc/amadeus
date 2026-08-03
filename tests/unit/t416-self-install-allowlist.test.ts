@@ -96,6 +96,21 @@ describe("t416 promote-self preserved compatibility view", () => {
     };
     expect(() => preserved(duplicate)).toThrow("multiple allowlist categories");
 
+    const duplicateTracked: SelfInstallAllowlist = {
+      ...SELF_INSTALL_ALLOWLIST,
+      tracked: [
+        { path: ".codex/config.toml", depth: 1 },
+        { path: ".codex/config.toml", depth: 1 },
+      ],
+    };
+    expect(() => preserved(duplicateTracked)).toThrow("duplicate tracked allowlist path");
+
+    const duplicateRuntime: SelfInstallAllowlist = {
+      ...SELF_INSTALL_ALLOWLIST,
+      preservedRuntime: [".codex/local", ".codex/local/"],
+    };
+    expect(() => preserved(duplicateRuntime)).toThrow("duplicate runtime allowlist path");
+
     for (const invalidPath of ["/absolute", ".claude/../escape", ".claude/*.json", ".claude/a\0b"]) {
       expect(() => preserved(withTrackedPath(invalidPath))).toThrow("invalid allowlist path");
     }
