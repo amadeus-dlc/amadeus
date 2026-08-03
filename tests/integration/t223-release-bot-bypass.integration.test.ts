@@ -24,15 +24,17 @@ describe("t223 release bot bypass boundary", () => {
       >;
     };
 
-    expect(Object.keys(workflow.jobs)).toEqual(["prepare", "github-release", "publish"]);
+    expect(Object.keys(workflow.jobs)).toEqual(["prepare", "build-dist", "github-release", "publish"]);
     expect(workflow.jobs.prepare?.outputs).toEqual({
       version: `\${{ steps.release.outputs.version }}`,
       sha: `\${{ steps.release.outputs.sha }}`,
     });
-    expect(workflow.jobs["github-release"]?.needs).toBe("prepare");
+    expect(workflow.jobs["build-dist"]?.needs).toBe("prepare");
+    expect(workflow.jobs["github-release"]?.needs).toEqual(["prepare", "build-dist"]);
     expect(workflow.jobs.publish?.needs).toEqual(["prepare", "github-release"]);
     expect(workflow.permissions).toEqual({ contents: "read" });
     expect(workflow.jobs.prepare?.permissions).toBeUndefined();
+    expect(workflow.jobs["build-dist"]?.permissions).toBeUndefined();
     expect(workflow.jobs["github-release"]?.permissions).toBeUndefined();
     expect(workflow.jobs.publish?.permissions).toEqual({
       contents: "read",
@@ -40,10 +42,22 @@ describe("t223 release bot bypass boundary", () => {
     });
 
     const prepareSteps = workflow.jobs.prepare?.steps.map((step) => step.name);
+    const buildDistSteps = workflow.jobs["build-dist"]?.steps.map((step) => step.name);
     const githubReleaseSteps = workflow.jobs["github-release"]?.steps.map((step) => step.name);
     const publishSteps = workflow.jobs.publish?.steps.map((step) => step.name);
 
     expect(prepareSteps).toContain("Bump, commit, tag, push (release-it)");
+    expect(buildDistSteps).toEqual([
+      "Skip dist asset build (dry run)",
+      "Checkout released commit",
+      "Set up bun",
+      "Install dependencies",
+      "Build dist",
+      "Run full test suite",
+      "Verify reproducible dist build",
+      "Build release assets",
+      "Upload release assets",
+    ]);
     expect(githubReleaseSteps).toContain("Create GitHub Release with generated notes");
     expect(publishSteps).toContain("Publish to npm");
 
@@ -55,14 +69,22 @@ describe("t223 release bot bypass boundary", () => {
     const dryRun = "github.event_name == 'workflow_dispatch' && inputs.dry-run";
     const skipRelease = findStep("github-release", "Skip GitHub Release (dry run)");
     const releaseToken = findStep("github-release", "Create GitHub App token");
+    const downloadAssets = findStep("github-release", "Download release assets");
     const createRelease = findStep("github-release", "Create GitHub Release with generated notes");
     const checkout = findStep("publish", "Checkout released commit");
     const publish = findStep("publish", "Publish to npm");
 
     expect(skipRelease?.if).toBe(dryRun);
     expect(releaseToken?.if).toBe(`\${{ !(${dryRun}) }}`);
+    expect(downloadAssets?.if).toBe(`\${{ !(${dryRun}) }}`);
+    expect(downloadAssets?.with).toEqual({ name: "release-dist", path: "release-assets" });
     expect(createRelease?.if).toBe(`\${{ !(${dryRun}) }}`);
     expect(createRelease?.with?.tag_name).toBe(`v\${{ needs.prepare.outputs.version }}`);
+    expect(createRelease?.with?.files).toBe(
+      `release-assets/amadeus-dist-v\${{ needs.prepare.outputs.version }}.tar.gz\n` +
+        `release-assets/amadeus-dist-v\${{ needs.prepare.outputs.version }}.manifest.json\n` +
+        `release-assets/SHA256SUMS\n`,
+    );
     expect(checkout?.with?.ref).toBe(`\${{ needs.prepare.outputs.sha }}`);
     expect(publish?.run).toContain(`\${{ ${dryRun} }}`);
     expect(publish?.run).toContain("args+=(--tag next)");
