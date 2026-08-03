@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260802-RA-S13-C2",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "project.md へ保存する規則本文では『25件』を不変の契約値として固定せず、『実装正本から導出した受理集合の全件』と count-free に表現すること。25件は今回の観測値として証跡に残し、完全性を保証する主体は machine registry の存在だけでなく、正本との双方向集合差・重複・空抽出・cardinality を失敗にする機械ガードであることを明記する。また現時点は Requirements Analysis の READY まででガード実装前なので、既に保証済みとは書かず、今後の起草・検証規律として保存すること。",
+  "rationale": "choice 1 を採用する。独立実測では、packages/framework/core/tools/amadeus-stage-schema.ts の REQUIRED_FIELDS 12件 + OPTIONAL_FIELDS 13件 = 25件（unique 25）、amadeus-lib.ts の emitter FIELD_ORDER も25件（unique 25）で双方向差分0。一方、authoritative spec の top-level authored table は16件で、schema側だけに number/name/produces_kinds/sensors/reviewer/reviewer_max_iterations/bundle/when/required_sections の9件があり、英日 Field reference の narrative H3 は各9見出しだった。docs/reference/15-stage-definition.md 自身も complete field table と judgement calls の narrative を明示的に別責務とするため、25件すべてをH3化すると現行責務を壊し、薄い説明16件を重複させる。requirements.md FR-2/AC-2 は、完全集合をmachine registryで検査しnarrative H3を部分集合として維持する契約を固定し、Review Iteration 2 は READY / Findings None。既存memoryを検索すると、project.md の cid:functional-design:c4-yaml-block-over-inline-comment は機械可読メタデータの記法、team.md の単一ソース／drift規律は正本と投影の同期を扱うが、『完全性を担うregistry』と『判断を担う部分的narrative』を分離して文書肥大を避ける責務境界は規定していない。この区別は今回の実測欠陥を説明し、今後同型のschema/reference設計にも再利用できる新しいCorrectionである。留保のとおり件数固定と実装済み断定を避ければ、project.mdへの保存が妥当。",
+  "submittedAt": "2026-08-02T21:56:15Z"
+}

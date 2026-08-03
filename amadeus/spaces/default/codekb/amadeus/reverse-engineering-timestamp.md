@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260802-scope-grid-face-sync）
+## 実行メタデータ（現在: 260802-registry-drift-guard）
+
+- Date: `2026-08-02T18:00:19Z`
+- Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（本 intent の過去recordはなし。`re-scans/` のうち最新時刻 `2026-08-02T10:27:57Z` で共有 freshness pointer にも採用された `260802-scope-grid-face-sync` の observed を最新の記録済み祖先として選択。dirty worktree保全のため今回のpreflightではtrunk統合・追加git操作を行わず、既存recordの系譜記録を根拠とした）
+- Observed commit: `64b44a9f8c8c79aff876d3275b194f39ead62a49`（ユーザー指定の観測HEAD。dirty worktreeを保全し、scanによるsource変更なし）
+- Scope: `self-fix`、Brownfield、単一repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: Issue #2037の文書バックフィルと分離したregistry drift再発防止。CLI dispatch 33 ↔ `Valid:` 30、stage schema accepted 25 ↔ emitter 25 ↔ authoritative spec欠落9、EN/JA Field referenceのmachine registry不在、docs-only CI迂回を対象とした。
+- Scan mode: Developer Code Scanの完全要点をArchitectがlive sourceの主要seam（state switch/default、schema required/optional、emitter order、英日H3、authoritative table/reserved節、CI change detector）と照合して合成。テストはDeveloper scanで対象5 suite 164 pass / 316 assertions / 0 fail。Architect synthesisではテスト再実行なし。
+- Current decision: 全25 fieldのmachine registryを英日Field reference冒頭へ置き、judgement-heavy H3は維持する二層案を推奨。schema既存配列をreadonly exportし、pure extraction/comparison helper、双方向/cardinality/empty/negative tamper、docs-path CI配線で閉じる。
+- Requirements Analysisへ送る裁定: (1) CLI表示順を契約化するか集合一致だけにするか、(2) machine registryの表現と英日parity、(3) authoritative spec欠落9件とactive `when`、stale `t62`を同一intentで直すか、(4) docs-only change detectorの最小対象path。
+- Updated artifacts: 9共有成果物の現在断面を更新し、直前の `260802-scope-grid-face-sync` を本文保持のまま履歴へ降格。per-intent record `re-scans/260802-registry-drift-guard.md` を新設。
+- Per-intent record: `re-scans/260802-registry-drift-guard.md`
+
+## 実行メタデータ（履歴: 260802-scope-grid-face-sync）
 
 - Date: `2026-08-02T10:27:57Z`
 - Base commit: `33e196b80b2254eee733fcaec4359dfbdd29c24b`（前回 observed = 260801-tla-multi-model。祖先性実測: `git merge-base --is-ancestor 33e196b80 47574fbab` exit 0）

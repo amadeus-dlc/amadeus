@@ -1,0 +1,16 @@
+{
+  "electionId": "E-260802-RA-S13-C2",
+  "kind": "learning-selection",
+  "question": "Requirements Analysis の学習候補『完全性registryとnarrative H3を分離する』を project.md の Corrections に保存してよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "完全性registryとnarrative H3を分離する",
+      "description": "全25フィールドのH3化による重複を避けつつ、machine registryの双方向一致で完全性を保証する。保存先: project.md ## Corrections"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

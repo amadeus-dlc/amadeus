@@ -1,0 +1,13 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "完全性registryとnarrative H3を分離する — schema全件のmachine registryを双方向検証し、解説H3は判断を要するsubsetに限定する。固定件数や実装済み状態を普遍契約として焼き込まない",
+      "source": "orchestrator"
+    }
+  ]
+}

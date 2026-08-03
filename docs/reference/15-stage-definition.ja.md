@@ -82,6 +82,40 @@ YAML が権威あるものです。JSON はビルド成果物です。CI がそ�
 権威ある仕様には、型と制約を含む完全なフィールドテーブルがあります。
 このセクションは判断を要するフィールドについてナラティブを加えます。
 
+次のバージョン付きレジストリが機械可読な完全性の検査面です。フィールド名は
+スキーマと一致しなければなりません。以下のナラティブなサブセクションは意図的に
+その部分集合のまま維持します。
+
+<!-- amadeus-stage-field-registry:v1:start -->
+| フィールド |
+| --- |
+| `slug` |
+| `phase` |
+| `execution` |
+| `condition` |
+| `lead_agent` |
+| `support_agents` |
+| `mode` |
+| `produces` |
+| `consumes` |
+| `requires_stage` |
+| `inputs` |
+| `outputs` |
+| `number` |
+| `name` |
+| `for_each` |
+| `workspace_requires` |
+| `optional_produces` |
+| `produces_kinds` |
+| `sensors` |
+| `scopes` |
+| `reviewer` |
+| `reviewer_max_iterations` |
+| `bundle` |
+| `when` |
+| `required_sections` |
+<!-- amadeus-stage-field-registry:v1:end -->
+
 ### `requires_stage`
 
 依存エッジをエンコードします。2つの役割:
@@ -179,11 +213,11 @@ consume エントリごとの Boolean。セマンティックには **アクテ�
 ブロッキングではありません — ユーザーはスコープを選ぶことですでにその切り詰めを
 オプトインしています。
 
-**v0.10.0 が加えるもの。** 予約された `when:` プリミティブ(下記「予約」
-セクション参照)は、著者がより豊かな述語を表現できるようにします —
-`when: producer-in-plan`、`when: mode == brownfield`、`when: scope != poc`。
-今日の `required: true` + `conditional_on: brownfield|greenfield` のペアは、
-v0.3.0 が必要とする2つの次元をカバーします。`when:` はそれを一般化します。
+**有効な `when:` サポート。** ステージは
+`when: {producer-in-plan: <artifact-slug>}` を宣言し、指定した成果物の生成側が
+プランに含まれる場合だけ適用対象にできます。現在のスキーマはそれ以外の述語を
+受理しません。個別の consume に対するブラウンフィールド／グリーンフィールドの
+分岐には、引き続き `consumes[].conditional_on` を使います。
 
 ### `consumes[].conditional_on`
 
@@ -375,7 +409,6 @@ YAML を JSON を再コンパイルせずに編集すると、明確なメッセ
 
 | キー | 予想されるリリース | それが行うこと |
 |-----|----------------|-----------------|
-| `when` | v0.10.0 fitness compiler | 構造化された条件。`condition` の散文を機械で強制可能なロジックへコンパイルする。`consumes[].conditional_on` を置き換え、今日のスコープ認識な `consumes[].required` をより豊かな述語(`producer-in-plan`、`mode == brownfield`、`scope != poc`)で一般化する |
 | `on_failure` | v0.8.0 Ralph loop | 宣言的なエラー回復 — 「このステージが失敗したら X へ戻れ」または「調整された入力でリトライせよ」。リビジョンのセマンティクスを `stage-protocol-recovery.md` の散文の外へ移す |
 | `blocks_on` | v0.4.0 Construction(表面化される場合) | データ読み取りなしの完了依存 — 今日の過負荷な `requires_stage`(「あなたの出力を消費する」と「あなたの後に実行する」を混同している)を分割する |
 | `timeout` | v0.5.0 sensor binding | 実行予算(締め切り)。ステージフロントマターではなくセンサーバインディングに配置される |

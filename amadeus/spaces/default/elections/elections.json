@@ -508,5 +508,23 @@
     "dirName": "260803-e-cdb-bt-zero",
     "createdAt": "2026-08-03T00:22:16Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260802-RA-S13-C2",
+    "dirName": "260802-e-260802-ra-s13-c2",
+    "createdAt": "2026-08-02T21:54:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-CG-S13-Z0",
+    "dirName": "260802-e-260803-cg-s13-z0",
+    "createdAt": "2026-08-02T23:21:20Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-BT-S13-Z0",
+    "dirName": "260802-e-260803-bt-s13-z0",
+    "createdAt": "2026-08-02T23:50:37Z",
+    "status": "recorded"
   }
 ]

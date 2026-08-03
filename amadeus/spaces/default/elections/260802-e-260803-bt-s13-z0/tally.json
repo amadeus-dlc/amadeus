@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T23:53:49Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260803-BT-S13-Z0",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢1を全面支持する。独立再実行で既存size drift guardと対象integrationの20 tests／56 assertionsが全件成功し、新規testのfilesystem／process API利用とsize: medium宣言も整合していた。初回の誤ったsmall宣言を既存guardが検出し、訂正後に全体CIまでgreenとなった事象は既存機構の期待どおりの適用実例であり、新しい横断practiceまたはsensorを重複永続化する根拠はない。",
+      "submittedAt": "2026-08-02T23:52:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260803-BT-S13-Z0",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持する。Build and Test の memory.md にある2判断は、性能・セキュリティ専用テストをNFRに比例させる cid:build-and-test:bt-proportional-selection と、未検証面をverdictへ明記する cid:build-and-test:verdict-names-unverified-facets の既存規範をそのまま適用したもの。成果物でも t414 は純関数33件をunit、実FS12件をintegrationへ分離し、既存 fs-tests-integration-first／静的size driftの配置規律に整合している。さらにprojection driftは注入でexit 1→復元後exit 0を2回実証し、全CI greenで、既存の落ちる実証規範が期待どおり機能した証拠である。新しい横断的機序や既存sensorの欠落はなく、practiceまたはsensorの追加は重複永続化になるためGoA1。",
+      "submittedAt": "2026-08-02T23:53:27Z"
+    }
+  ],
+  "resolutions": []
+}
