@@ -6,7 +6,7 @@
 // compose trigger) into wired|degraded so that "wired AND degraded" and
 // "neither" are both unrepresentable — a silent gap (a face that is neither
 // wired nor degraded) cannot exist by construction. resolveFaceDisposition
-// applies it across the real 7-face matrix enumeration (BR-U1-7). The XOR全数
+// applies it across the real 8-face matrix enumeration (BR-U1-7). The XOR全数
 // assert against real wiring lives in t327 (integration); this unit exercises
 // the classifier's four axis combinations and the enumeration mapping.
 
@@ -45,7 +45,7 @@ describe("t325 face disposition classifier (U4)", () => {
     }
   });
 
-  // The concrete matrix conclusion (BR-U1-7): all seven faces wire. OpenCode
+  // The concrete matrix conclusion (BR-U1-7): all eight faces wire. OpenCode
   // uses its native plugin lifecycle to trigger measured reconciliation.
   test("resolveFaceDisposition — matrix conclusion (BR-U1-7)", () => {
     const wired = PACKAGE_HARNESSES.filter((h) => resolveFaceDisposition(h).kind === "wired");
@@ -58,12 +58,13 @@ describe("t325 face disposition classifier (U4)", () => {
       "kiro",
       "kiro-ide",
       "opencode",
+      "pi",
     ]);
     expect([...degraded].sort()).toEqual([]);
     // OpenCode is measured through its native plugin lifecycle.
     const oc = resolveFaceDisposition("opencode");
     expect(oc.kind).toBe("wired");
-    // The two sets partition all 7 faces (no overlap, no omission).
+    // The two sets partition all 8 faces (no overlap, no omission).
     expect(wired.length + degraded.length).toBe(PACKAGE_HARNESSES.length);
   });
 });

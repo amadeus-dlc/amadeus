@@ -12,7 +12,7 @@ import { PACKAGE_HARNESSES, PLUGIN_HOST_CLASS } from "../../scripts/plugin-proje
 
 // Verbatim from harness-capability-matrix.md (e) class_assignment:
 //   native-manifest: [claude]
-//   folder-drop-auto: [codex, cursor, kimi, kiro, kiro-ide]
+//   folder-drop-auto: [codex, cursor, kimi, kiro, kiro-ide, pi]
 //   manual-only: [opencode]
 const MATRIX_CLASS = {
   claude: "native-manifest",
@@ -22,6 +22,7 @@ const MATRIX_CLASS = {
   kiro: "folder-drop-auto",
   "kiro-ide": "folder-drop-auto",
   opencode: "native-plugin-auto",
+  pi: "folder-drop-auto",
 } as const;
 
 describe("t306 PLUGIN_HOST_CLASS (U1 matrix transcription)", () => {

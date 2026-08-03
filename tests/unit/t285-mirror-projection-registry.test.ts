@@ -13,7 +13,7 @@ import {
 } from "../../packages/framework/harness/projections.ts";
 
 describe("t285 projection registry", () => {
-  test("owns exactly seven dist surfaces and five self-install surfaces", () => {
+  test("owns exactly eight dist surfaces and five self-install surfaces", () => {
     expect(MIRROR_SURFACE_IDS).toEqual([
       "claude",
       "codex",
@@ -22,6 +22,7 @@ describe("t285 projection registry", () => {
       "kiro",
       "kiro-ide",
       "opencode",
+      "pi",
     ]);
     expect(MIRROR_PROJECTIONS.map((projection) => projection.surface)).toEqual([
       ...MIRROR_SURFACE_IDS,
@@ -56,6 +57,8 @@ describe("t285 projection registry", () => {
     );
     expect(mirrorProjection("codex").selfTool).toStartWith(".codex/");
     expect(mirrorProjection("codex").selfSkill).toStartWith(".agents/");
+    expect(mirrorProjection("pi").distTool).toStartWith("dist/pi/.pi/");
+    expect(mirrorProjection("pi").selfTool).toBeNull();
   });
 
   test("covers every wrapper and rejects path collisions and traversal", () => {

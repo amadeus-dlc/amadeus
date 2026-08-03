@@ -12,7 +12,8 @@ export type ExecutionHarness =
   | "kiro"
   | "kiro-ide"
   | "opencode"
-  | "kimi";
+  | "kimi"
+  | "pi";
 
 export type DispatchEffectQuery =
   | "no-effect-confirmed"
@@ -170,6 +171,12 @@ export const HARNESS_CAPABILITY_PORTS: Readonly<
     nativeHandle: true,
     dispatchEffectQuery: false,
   }),
+  pi: port("pi", {
+    startSignal: true,
+    completionSignal: true,
+    nativeHandle: true,
+    dispatchEffectQuery: false,
+  }),
 });
 
 export function captureExecutionEnvironment(
@@ -198,7 +205,8 @@ export function executionHarnessFrom(
     harnessType === "cursor" ||
     harnessType === "kiro" ||
     harnessType === "opencode" ||
-    harnessType === "kimi"
+    harnessType === "kimi" ||
+    harnessType === "pi"
   ) {
     return harnessType;
   }

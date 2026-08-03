@@ -142,10 +142,10 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
   // The self-install faces are read from their single definition and are a strict
   // subset of the package faces. A second, equal-valued list under another name
   // (the #1575 shape) is caught by the source guard below.
-  test("self-install stays the closed five faces (not widened to seven)", () => {
+  test("self-install stays the closed five faces (not widened to every package face)", () => {
     expect([...SELF_INSTALL_HARNESSES].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
     expect(SELF_INSTALL_HARNESSES).toHaveLength(5);
-    expect(PACKAGE_HARNESSES).toHaveLength(7);
+    expect(PACKAGE_HARNESSES).toHaveLength(8);
     for (const f of SELF_INSTALL_HARNESSES) expect([...PACKAGE_HARNESSES]).toContain(f);
   });
 

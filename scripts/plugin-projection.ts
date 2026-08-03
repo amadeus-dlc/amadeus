@@ -1,10 +1,10 @@
 // scripts/plugin-projection.ts — C5 Distribution Projection (U09, FR-6 item 19).
 //
 // Discovers authoring plugin sources under repo-root plugins/<name>/, projects
-// each into the seven packaged harness trees (dist/<harness>/<harnessDir>/plugins/
+// each into the eight packaged harness trees (dist/<harness>/<harnessDir>/plugins/
 // <name>/) and a harness-neutral bundle (dist/plugins/<name>/), and derives
 // byte/orphan/unreferenced/collision drift. Self-install stays the existing
-// closed five faces (claude/codex/cursor/opencode/kimi) — kiro/kiro-ide are packaged
+// closed five faces (claude/codex/cursor/opencode/kimi) — kiro/kiro-ide/pi are packaged
 // but never promoted to the project root.
 //
 // OWNERSHIP: plugins/<name>/ is hand-authored source (read-only here). Every
@@ -38,7 +38,7 @@ const HARNESS_ROOT = join(REPO_ROOT, "packages", "framework", "harness");
 // contract) is validated by C1/U10, not re-parsed here.
 export const PLUGIN_MANIFEST = "plugin.json";
 
-// The seven faces the packager discovers from harness/<name>/manifest.ts. Named
+// The eight faces the packager discovers from harness/<name>/manifest.ts. Named
 // here for the closed-matrix verification; the packager's own default target
 // list stays manifest-DISCOVERED, not this constant.
 export const PACKAGE_HARNESSES = [
@@ -49,12 +49,13 @@ export const PACKAGE_HARNESSES = [
   "kiro-ide",
   "opencode",
   "kimi",
+  "pi",
 ] as const;
 export type PackageHarness = (typeof PACKAGE_HARNESSES)[number];
 
 // The self-install closed union: the five faces promote-self.ts reflects into
-// the project root. Intentionally NOT the seven package faces — a type + runtime
-// boundary that keeps kiro/kiro-ide out of the project-local install.
+// the project root. Intentionally NOT the eight package faces — a type + runtime
+// boundary that keeps kiro/kiro-ide/pi out of the project-local install.
 export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
 export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 
@@ -374,6 +375,7 @@ export const PLUGIN_HOST_CLASS: Record<PackageHarness, PluginHostClass> = {
   kiro: "folder-drop-auto",
   "kiro-ide": "folder-drop-auto",
   opencode: "native-plugin-auto",
+  pi: "folder-drop-auto",
 };
 
 // ---------------------------------------------------------------------------
@@ -395,6 +397,7 @@ export const PLUGIN_COMPOSE_TRIGGER: Record<PackageHarness, ComposeTriggerState>
   kiro: "measured", // agentSpawn (kiro/agents/amadeus.json → adapter session-start)
   "kiro-ide": "measured", // promptSubmit (.kiro.hook → adapter session-start; idempotent --if-stale)
   opencode: "measured", // official JS plugin session.created event
+  pi: "measured", // ExtensionAPI session_start event
 };
 
 // A face's auto-compose disposition: either the session hook is WIRED (an
