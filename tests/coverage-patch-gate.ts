@@ -140,6 +140,8 @@ interface FunctionScope extends ResolvedLineRange {
   name: string;
 }
 
+const functionScopeCache = new Map<string, FunctionScope[]>();
+
 function parseLineRange(lines: string): ResolvedLineRange {
   if (!/^\d+(-\d+)?$/.test(lines)) throw new Error(`coverage-patch-gate: invalid line range: ${lines}`);
   const [start, explicitEnd] = lines.split("-").map((part) => Number.parseInt(part, 10));
@@ -153,6 +155,9 @@ function sourceFingerprint(lines: readonly string[]): string {
 }
 
 function functionScopes(file: string, source: string): FunctionScope[] {
+  const cacheKey = `${file}\0${source}`;
+  const cached = functionScopeCache.get(cacheKey);
+  if (cached) return cached;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const scopes: FunctionScope[] = [{ name: "<module>", start: 1, end: source.split(/\r?\n/).length }];
   const lineRange = (node: ts.Node): ResolvedLineRange => ({
@@ -197,6 +202,7 @@ function functionScopes(file: string, source: string): FunctionScope[] {
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
+  functionScopeCache.set(cacheKey, scopes);
   return scopes;
 }
 
@@ -206,7 +212,8 @@ export function createSemanticSelector(file: string, source: string, lines: stri
   if (target.end > sourceLines.length) {
     throw new Error(`coverage-patch-gate: line range ${lines} exceeds ${file}`);
   }
-  const containing = functionScopes(file, source)
+  const scopes = functionScopes(file, source);
+  const containing = scopes
     .filter((scope) => scope.start <= target.start && scope.end >= target.end)
     .sort((a, b) => {
       const widthDifference = a.end - a.start - (b.end - b.start);
@@ -217,7 +224,7 @@ export function createSemanticSelector(file: string, source: string, lines: stri
     });
   let scope = containing[0];
   if (!scope) throw new Error(`coverage-patch-gate: ${file}:${lines} is outside the source file`);
-  if (functionScopes(file, source).filter((candidate) => candidate.name === scope.name).length !== 1) {
+  if (scopes.filter((candidate) => candidate.name === scope.name).length !== 1) {
     scope = containing.find((candidate) => candidate.name === "<module>") as FunctionScope;
   }
   let anchorStart = target.start;
@@ -289,9 +296,14 @@ export interface AllowlistEntry {
 
 export interface ResolvedAllowlistEntry {
   file: string;
-  lines: string;
+  start: number;
+  end: number;
   reason: string;
   expiry?: string;
+}
+
+function formatLineRange(range: ResolvedLineRange): string {
+  return range.start === range.end ? String(range.start) : `${range.start}-${range.end}`;
 }
 
 function validSemanticSelector(value: unknown): value is SemanticSelector {
@@ -353,7 +365,8 @@ export function resolveAllowlistEntries(
     const range = resolveSemanticSelector(entry.file, source, entry.selector);
     return {
       file: entry.file,
-      lines: range.start === range.end ? String(range.start) : `${range.start}-${range.end}`,
+      start: range.start,
+      end: range.end,
       reason: entry.reason,
       ...(entry.expiry === undefined ? {} : { expiry: entry.expiry }),
     };
@@ -370,9 +383,7 @@ export function findStaleAllowlistEntries(
   return entries.filter((e) => {
     const hits = lcov.get(e.file);
     if (!hits) return true;
-    const [lo, hi] = e.lines.split("-").map((s) => Number.parseInt(s, 10));
-    const upper = hi ?? lo;
-    for (let line = lo; line <= upper; line += 1) {
+    for (let line = e.start; line <= e.end; line += 1) {
       if (hits.has(line)) return false;
     }
     return true;
@@ -382,8 +393,7 @@ export function findStaleAllowlistEntries(
 function allowlisted(entries: ResolvedAllowlistEntry[], file: string, line: number): boolean {
   return entries.some((e) => {
     if (e.file !== file) return false;
-    const [lo, hi] = e.lines.split("-").map((s) => Number.parseInt(s, 10));
-    return line >= lo && line <= (hi ?? lo);
+    return line >= e.start && line <= e.end;
   });
 }
 
@@ -500,10 +510,9 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
     const entries = parseAllowlist(readFileSync(alPath, "utf8"));
     const sources = new Map<string, string>();
     for (const entry of entries) {
-      if ("selector" in entry) {
-        const sourcePath = join(repoRoot, entry.file);
-        if (existsSync(sourcePath)) sources.set(entry.file, readFileSync(sourcePath, "utf8"));
-      }
+      if (sources.has(entry.file)) continue;
+      const sourcePath = join(repoRoot, entry.file);
+      if (existsSync(sourcePath)) sources.set(entry.file, readFileSync(sourcePath, "utf8"));
     }
     try {
       allowlist = resolveAllowlistEntries(entries, sources);
@@ -515,7 +524,7 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
     if (stale.length > 0) {
       console.error(
         `coverage-patch-gate: STALE allowlist entries (range matches no measurable line — remove or update):\n${stale
-          .map((e) => `  ${e.file}:${e.lines} (${e.reason})`)
+          .map((e) => `  ${e.file}:${formatLineRange(e)} (${e.reason})`)
           .join("\n")}`,
       );
       return 1;

@@ -88,7 +88,8 @@ describe("t229 patch gate verdict (falling proof)", () => {
   test("allowlisted line is exempted but counted", () => {
     const allowlist = [{
       file: "packages/framework/core/tools/example.ts",
-      lines: "11",
+      start: 11,
+      end: 11,
       reason: "spawn-only dispatch case; seam refactor unnatural (see #881 class)",
       expiry: "remove when the dispatch moves behind an in-process seam",
     }];
@@ -185,6 +186,72 @@ describe("t229 allowlist contract (E-CV1 Q1=A reservations)", () => {
     expect(resolveSemanticSelector("example.ts", source, functionSelector)).toEqual({ start: 3, end: 3 });
   });
 
+  test("class members carry the class name prefix", () => {
+    const source = [
+      "export class Runtime {",
+      "  private value = 0;",
+      "  constructor() {",
+      "    this.value = 1;",
+      "  }",
+      "  #execute() {",
+      "    return 2;",
+      "  }",
+      "  get ready() {",
+      "    return 3;",
+      "  }",
+      "}",
+    ].join("\n");
+
+    expect(createSemanticSelector("example.ts", source, "4").function).toBe("Runtime.constructor");
+    expect(createSemanticSelector("example.ts", source, "7").function).toBe("Runtime.#execute");
+    expect(createSemanticSelector("example.ts", source, "10").function).toBe("Runtime.ready");
+  });
+
+  test("duplicate function names fall back to module scope", () => {
+    const source = [
+      "function duplicate() {",
+      "  return 1;",
+      "}",
+      "function duplicate() {",
+      "  return 2;",
+      "}",
+    ].join("\n");
+
+    expect(createSemanticSelector("example.ts", source, "2").function).toBe("<module>");
+  });
+
+  test("selector resolution fails closed for missing, duplicate, and ambiguous matches", () => {
+    const original = ["function target() {", "    return 1;", "}"].join("\n");
+    const selector = createSemanticSelector("example.ts", original, "2");
+    const duplicateSource = [
+      "function target(input: boolean) {",
+      "  if (input)",
+      "    return 1;",
+      "  else",
+      "    return 1;",
+      "}",
+    ].join("\n");
+    const duplicateFunctions = [
+      "function duplicate() { return 1; }",
+      "function duplicate() { return 2; }",
+    ].join("\n");
+
+    expect(() => resolveSemanticSelector("example.ts", original, { ...selector, function: "missing" }))
+      .toThrow(/resolved 0 times/);
+    expect(() => resolveSemanticSelector("example.ts", duplicateFunctions, { ...selector, function: "duplicate" }))
+      .toThrow(/resolved 2 times/);
+    expect(() => resolveSemanticSelector("example.ts", duplicateSource, selector)).toThrow(/resolved 2 times/);
+    expect(() => resolveSemanticSelector("example.ts", original.replace("return 1", "return 2"), selector))
+      .toThrow(/resolved 0 times/);
+  });
+
+  test("allowlist resolution fails closed when its source is missing", () => {
+    const entries = parseAllowlist(
+      JSON.stringify([{ file: "missing.ts", selector: VALID_SELECTOR, reason: "missing source" }]),
+    );
+    expect(() => resolveAllowlistEntries(entries, new Map())).toThrow(/source not found/);
+  });
+
   test("reason-less entry throws (fail-closed ledger)", () => {
     expect(() =>
       parseAllowlist(JSON.stringify([{ file: "x.ts", selector: VALID_SELECTOR, reason: "  " }])),
@@ -208,11 +275,14 @@ describe("t229 allowlist contract (E-CV1 Q1=A reservations)", () => {
   test("stale range (matches no measurable line) is detected", () => {
     const lcov = parseLcovLineHits(LCOV);
     const entries = [
-      { file: "packages/framework/core/tools/example.ts", lines: "100-110", reason: "stale range" },
-      { file: "gone.ts", lines: "1", reason: "file no longer measured" },
-      { file: "packages/framework/core/tools/example.ts", lines: "11", reason: "still live" },
+      { file: "packages/framework/core/tools/example.ts", start: 100, end: 110, reason: "stale range" },
+      { file: "gone.ts", start: 1, end: 1, reason: "file no longer measured" },
+      { file: "packages/framework/core/tools/example.ts", start: 11, end: 11, reason: "still live" },
     ];
     const stale = findStaleAllowlistEntries(entries, lcov);
-    expect(stale.map((e) => e.lines)).toEqual(["100-110", "1"]);
+    expect(stale.map(({ start, end }) => ({ start, end }))).toEqual([
+      { start: 100, end: 110 },
+      { start: 1, end: 1 },
+    ]);
   });
 });

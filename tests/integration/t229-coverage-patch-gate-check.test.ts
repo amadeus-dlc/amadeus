@@ -179,30 +179,54 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(runCheck(repoRoot)).toBe(0);
   });
 
-  test("stale allowlist entry fails the run loudly", () => {
+  test("allowlist entry whose resolved range is absent from LCOV fails as stale", () => {
     const d = fixtureDir();
     const lcovPath = join(d, "lcov.info");
     writeFileSync(lcovPath, LCOV);
     const diffPath = join(d, "pr.diff");
     writeFileSync(diffPath, "");
     const alPath = join(d, "allowlist.json");
+    const selector = createSemanticSelector("tracked.ts", "export const tracked = 1;\n", "1");
     writeFileSync(
       alPath,
       JSON.stringify([{
-        file: "gone.ts",
-        selector: {
-          function: "<module>",
-          fingerprint: `sha256:${"0".repeat(64)}`,
-          anchorLines: 1,
-          targetLines: "1",
-        },
+        file: "tracked.ts",
+        selector,
         reason: "stale",
       }]),
     );
     process.env.AMADEUS_PATCH_LCOV = lcovPath;
     process.env.AMADEUS_PATCH_DIFF = diffPath;
     process.env.AMADEUS_PATCH_ALLOWLIST = alPath;
-    expect(runCheck(repoRoot)).toBe(1);
+    const result = captureCheck(repoRoot);
+    expect(result.result).toBe(1);
+    expect(result.stderr).toContain("STALE allowlist entries");
+  });
+
+  test("allowlist entry whose source is missing fails before stale LCOV evaluation", () => {
+    const d = fixtureDir();
+    const lcovPath = join(d, "lcov.info");
+    writeFileSync(lcovPath, LCOV);
+    const diffPath = join(d, "pr.diff");
+    writeFileSync(diffPath, "");
+    const alPath = join(d, "allowlist.json");
+    writeFileSync(alPath, JSON.stringify([{
+      file: "gone.ts",
+      selector: {
+        function: "<module>",
+        fingerprint: `sha256:${"0".repeat(64)}`,
+        anchorLines: 1,
+        targetLines: "1",
+      },
+      reason: "missing source",
+    }]));
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    process.env.AMADEUS_PATCH_DIFF = diffPath;
+    process.env.AMADEUS_PATCH_ALLOWLIST = alPath;
+
+    const result = captureCheck(repoRoot);
+    expect(result.result).toBe(1);
+    expect(result.stderr).toContain("source not found");
   });
 
   test("semantic allowlist resolution survives source lines inserted before its function", () => {
