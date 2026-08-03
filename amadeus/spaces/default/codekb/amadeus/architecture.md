@@ -99,6 +99,43 @@ sequenceDiagram
 - **identity 設計（aux 追加の整合条件）**: model/cfg identity は domain-tagged canonical（`canonicalIdentity :33-46`、`:40` で `sha256(domain ‖ "\0" ‖ bytes)`、domain = `amadeus.formal-verif.tla.module.v1` / `.cfg.v1`）、entries（implPath, sha256）は生 sha256（completeness sensor `amadeus-sensor-model-completeness.ts:194-195` / `:468`）。aux を optional キーとして追加する設計なら既存の identity 値・entries は不変に保てる。
 - **MirrorLifecycle の wrapper/Core 構造**: `specs/tla/MirrorLifecycle.tla`（43 行）は `:31-32` `Core == INSTANCE MirrorLifecycleCore WITH CaptureBoundaryAlwaysCreates <- FALSE` の薄い wrapper で、検証本体は `MirrorLifecycleCore.tla`（648 行）。`specs/tla/model-map.json`（schemaVersion 2）は FormalElection（entries=5）と MirrorLifecycle（entries=4）の 2 モデルを登録済み — 登録面の複数モデル化は済んでおり、残るは実行・照合・CI 面である。
 
+## no-silent-drop の静的検査アーキテクチャ（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+本節の file:line は observed `d72f60b5a81fc6e45f99431d61b6561e91b2fc37` 時点。観測事実の全数は `re-scans/260801-silent-drop-gate.md` を正本とする。
+
+### 観測された既存境界
+
+- contributor-side の静的ゲートは `tests/callsite-guard.ts` に scan roots と allowlist（`:59-67`）、検出・census の純粋関数（`:115-149`）、shrink-only 判定（`:165-205`）を分離する先例がある。
+- `tests/complexity-gate.ts:12-24` は測定失敗と baseline 不正を fail-closed にし、`:53-69` は root／baseline／tool command のテスト seam を持つ。
+- `.github/workflows/ci.yml:93-143` の `lint` job は Biome、callsite guard、deletion gate、complexity gate を直列実行する。新 gate の blocking adapter はこの境界に属する。
+- `packages/framework/core/tools/amadeus-mirror-executor.ts:77-129` の `applyTransition` は `StateResult` を返すが、`persistBlocked` は `:171-201` でその結果を破棄して常に `safety-blocked` を返す。
+- `packages/framework/core/tools/amadeus-lib.ts:5399-5429` の `setCheckbox` / `setStageSuffix` は bare `String.replace` で、非一致を入力不変のまま返す。
+- #1963 は共有 regex（`amadeus-lib.ts:5476-5493`）、置換後の再抽出・slug 検証（`:5591-5650`）、invalid graph の判別 union（`amadeus-plugin.ts:428-452`）として修正済み。
+
+### 設計上の示唆
+
+静的ゲートは既存 runtime に混ぜず、次の6責務を持つ contributor-side CLI とするのが境界上もっとも浅い。AST rule set は3 shape を独立 rule ID とし、scanner は authored roots と走査完全性だけを所有する。census normalizer、baseline ratchet、node-scoped exemption validator、typed renderer を分離し、CLI が最終的な exit code を一元決定する。baseline は既存債務、exemption は意図的 drop を表すため、同じ台帳へ統合しない。
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+  CI[CI lint job] --> CLI[no-silent-drop CLI]
+  CLI --> CFG[config and rule loader]
+  CFG --> AST[three AST rules]
+  AST --> SCAN[authored-root scanner]
+  SCAN --> CENSUS[census normalizer]
+  CENSUS --> BASE[shrink-only baseline]
+  CENSUS --> EXEMPT[node exemption validator]
+  BASE --> RESULT[typed result]
+  EXEMPT --> RESULT
+  RESULT --> EXIT[diagnostic and exit code]
+```
+
+テキスト fallback: CI の lint job が単一 CLI を起動し、CLI は設定・rule を検証して3 authored roots を走査する。正規化済み census を shrink-only baseline と node 単位 exemption の両方へ照合し、typed result を1か所で stderr と exit code に変換する。設定、rule、tool、baseline、走査完全性のどこかが不成立なら比較前に fail-closed となる。
+
+runtime 側は静的ゲートと別境界で直す。#1878 は `persistBlocked` が `StateResult` の `failed` を `MirrorOperationOutcome` へ昇格する。#1874 は helper または mutation 境界で `changed | not-found` を明示し、caller が不在を消費する。#1963 の resync 経路は [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) の loud-failure 契約を negative/regression fixture として固定し、同じロジックを作り直さない。
+
 ## kimi ハーネス bootstrap デッドロックの機構断面（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 本節の file:line はすべて observed `861688c31` 時点。患部全数・認可連鎖・テスト足場は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。

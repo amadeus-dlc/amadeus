@@ -4,16 +4,22 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  applyTransition,
+  complete,
   executeMirrorOperation,
+  persistBlocked,
 } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import { mirrorEventIdentity, mirrorEventKey } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
 import { renderMirrorMarker } from "../../packages/framework/core/tools/amadeus-mirror-provenance.ts";
 import {
   EMPTY_MIRROR_STATE,
+  MIRROR_STATE_SENTINEL_END,
+  MIRROR_STATE_SENTINEL_START,
   parseMirrorStateDocument,
   renderMirrorStateBlock,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
 import type { MirrorStateStorePorts } from "../../packages/framework/core/tools/amadeus-mirror-state-store.ts";
+import type { MirrorTransition } from "../../packages/framework/core/tools/amadeus-mirror-state-reducer.ts";
 import type {
   GatewayOutcome,
   MirrorCreateIdentity,
@@ -85,6 +91,21 @@ function memoryStore(initial: MirrorStateSnapshot = EMPTY_MIRROR_STATE): {
       return parsed.snapshot;
     },
   };
+}
+
+function sequencedStore(documents: readonly string[]): MirrorStateStorePorts {
+  let readIndex = 0;
+  return {
+    acquireLock: () => true,
+    releaseLock: () => {},
+    readDocument: () => documents[Math.min(readIndex++, documents.length - 1)]!,
+    writeDocumentAtomic: () => ({ kind: "ok" }),
+    appendArtifactUpdated: () => ({ kind: "appended" }),
+  };
+}
+
+function stateDocument(snapshot: MirrorStateSnapshot): string {
+  return `# State\n\n${renderMirrorStateBlock(snapshot)}\n`;
 }
 
 class FakeGateway implements MirrorGitHubGateway {
@@ -255,6 +276,90 @@ function context(
   };
 }
 
+describe("t279 applyTransition seam", () => {
+  const noOp: MirrorTransition = { kind: "clear-global-warning" };
+
+  test("exclusive claims reject conflicts and unchanged transitions", () => {
+    const ctx = context("create", new FakeGateway());
+    const newer = { ...EMPTY_MIRROR_STATE, revision: 1 };
+    expect(applyTransition(
+      sequencedStore([stateDocument(newer)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-conflict",
+      false,
+      undefined,
+      true,
+    )).toMatchObject({ kind: "failed", phase: "pre-commit", summary: "state compare-and-set conflict" });
+    expect(applyTransition(
+      sequencedStore([stateDocument(EMPTY_MIRROR_STATE)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-unchanged",
+      false,
+      undefined,
+      true,
+    )).toMatchObject({ kind: "failed", phase: "pre-commit", summary: "exclusive state claim was not written" });
+  });
+
+  test("conflict recovery reports invalid, unreadable, and repeatedly changing state", () => {
+    const ctx = context("create", new FakeGateway());
+    const revisionOne = { ...EMPTY_MIRROR_STATE, revision: 1 };
+    const revisionTwo = { ...EMPTY_MIRROR_STATE, revision: 2 };
+    const invalid = `${MIRROR_STATE_SENTINEL_START}\n{}\n${MIRROR_STATE_SENTINEL_END}\n`;
+
+    expect(applyTransition(
+      sequencedStore([stateDocument(revisionOne), invalid]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-invalid",
+      false,
+    )).toMatchObject({ kind: "failed", summary: expect.stringContaining("state invalid after conflict") });
+
+    let lockCount = 0;
+    const unreadable = sequencedStore([stateDocument(revisionOne)]);
+    expect(applyTransition(
+      { ...unreadable, acquireLock: () => ++lockCount === 1 },
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-unreadable",
+      false,
+    )).toMatchObject({ kind: "failed", summary: "state lock unavailable" });
+
+    expect(applyTransition(
+      sequencedStore([stateDocument(revisionOne), stateDocument(revisionOne), stateDocument(revisionTwo)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      noOp,
+      "op-racing",
+      false,
+    )).toMatchObject({ kind: "failed", summary: "state compare-and-set conflict" });
+  });
+
+  test("invalid reducer outcomes are surfaced as pre-commit failures", () => {
+    const ctx = context("create", new FakeGateway());
+    const invalidTransition: MirrorTransition = {
+      kind: "complete",
+      event: ctx.event,
+      issueNumber: 7,
+      completedAt: NOW,
+      createdAt: NOW,
+    };
+    expect(applyTransition(
+      sequencedStore([stateDocument(EMPTY_MIRROR_STATE)]),
+      ctx,
+      EMPTY_MIRROR_STATE,
+      invalidTransition,
+      "op-invalid-transition",
+      false,
+    )).toMatchObject({ kind: "failed", phase: "pre-commit" });
+  });
+});
+
 describe("t279 create", () => {
   test("fresh create claims attempted state before one remote create", async () => {
     const store = memoryStore();
@@ -419,6 +524,251 @@ describe("t279 create", () => {
     expect(gateway.history).toEqual([]);
   });
 
+  test.each([
+    ["pre-commit", "io-failure", "not-started"],
+    ["durability-unknown", "durability-unknown", "outcome-unknown"],
+  ] as const)(
+    "%s failure while persisting a safety block is propagated",
+    async (_phase, failureKind, expectedEffect) => {
+      const gateway = new FakeGateway();
+      const ctx = context("create", gateway);
+      const event = ctx.event;
+      const receipt = {
+        key: mirrorEventKey(event),
+        event,
+        operationId: "op-1",
+        status: "prepared" as const,
+        preparedAt: NOW,
+        createIdentity: { ...identity(), intentDir: "other" },
+      };
+      const initial = {
+        ...EMPTY_MIRROR_STATE,
+        receipts: { [receipt.key]: receipt },
+      };
+      const store = memoryStore(initial);
+      const outcome = await executeMirrorOperation({
+        context: ctx,
+        ports: {
+          ...store.ports,
+          writeDocumentAtomic: () =>
+            failureKind === "durability-unknown"
+              ? { kind: "durability-unknown", summary: "directory fsync failed" }
+              : { kind: "io-failure", summary: "disk full" },
+        },
+        localState: initial,
+      });
+
+      expect(outcome).toMatchObject({
+        kind: "safety-blocked",
+        warning: {
+          classification: "state-write",
+          effect: expectedEffect,
+          retryable: false,
+        },
+      });
+      expect(store.state().receipts[receipt.key]?.status).toBe("prepared");
+      expect(gateway.history).toEqual([]);
+    },
+  );
+
+  test.each([
+    ["maintenance completed", false, false],
+    ["maintenance blocked", true, true],
+  ] as const)(
+    "a prior outbox makes the invocation %s and retryable",
+    async (expectedSummary, auditFails, outboxRemains) => {
+      const gateway = new FakeGateway();
+      const ctx = context("create", gateway);
+      const event = ctx.event;
+      const receipt = {
+        key: mirrorEventKey(event),
+        event,
+        operationId: "op-1",
+        status: "prepared" as const,
+        preparedAt: NOW,
+        createIdentity: { ...identity(), intentDir: "other" },
+      };
+      const initial: MirrorStateSnapshot = {
+        ...EMPTY_MIRROR_STATE,
+        receipts: { [receipt.key]: receipt },
+        auditOutbox: {
+          transactionId: "tx-pending",
+          digest: "digest",
+          fields: { Artifact: "amadeus-state.md#mirror-state" },
+        },
+      };
+      const store = memoryStore(initial);
+      const outcome = await executeMirrorOperation({
+        context: ctx,
+        ports: auditFails
+          ? {
+              ...store.ports,
+              appendArtifactUpdated: () => ({
+                kind: "io-failure",
+                summary: "audit unavailable",
+              }),
+            }
+          : store.ports,
+        localState: initial,
+      });
+
+      expect(outcome).toMatchObject({
+        kind: "safety-blocked",
+        warning: {
+          classification: "state-write",
+          effect: "not-started",
+          retryable: true,
+        },
+      });
+      if (outcome.kind === "safety-blocked") {
+        expect(outcome.warning.summary).toContain(expectedSummary);
+      }
+      expect(store.state().receipts[receipt.key]?.status).toBe("prepared");
+      expect(Boolean(store.state().auditOutbox)).toBe(outboxRemains);
+      expect(gateway.history).toEqual([]);
+    },
+  );
+
+  test("a lock-time reread that already processed the transition is outcome-unknown and not retryable", async () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const event = ctx.event;
+    const receipt = {
+      key: mirrorEventKey(event),
+      event,
+      operationId: "op-raced-maintenance",
+      status: "prepared" as const,
+      preparedAt: NOW,
+      createIdentity: identity("op-raced-maintenance"),
+    };
+    const lockedSnapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+    };
+    const callerSnapshot: MirrorStateSnapshot = {
+      ...lockedSnapshot,
+      auditOutbox: {
+        transactionId: "tx-already-drained",
+        digest: "digest",
+        fields: { Artifact: "amadeus-state.md#mirror-state" },
+      },
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: ctx,
+      ports: memoryStore(lockedSnapshot).ports,
+      localState: callerSnapshot,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        classification: "state-write",
+        effect: "outcome-unknown",
+        retryable: false,
+        summary: expect.stringContaining("state transition was processed"),
+      },
+    });
+    expect(gateway.history).toEqual([]);
+  });
+
+  test("persistBlocked and complete surface maintenance outcomes at their call sites", () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const event = ctx.event;
+    const receipt = {
+      key: mirrorEventKey(event),
+      event,
+      operationId: "op-maintenance",
+      status: "prepared" as const,
+      preparedAt: NOW,
+      createIdentity: identity(),
+    };
+    const initial: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+      auditOutbox: {
+        transactionId: "tx-pending",
+        digest: "digest",
+        fields: { Artifact: "amadeus-state.md#mirror-state" },
+      },
+    };
+    const blockedStore = memoryStore(initial);
+    expect(persistBlocked(
+      blockedStore.ports,
+      ctx,
+      initial,
+      receipt,
+      "state-write",
+      "blocked",
+    )).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        retryable: true,
+        summary: expect.stringContaining("original safety block (state-write): blocked"),
+      },
+    });
+
+    const completeStore = memoryStore(initial);
+    expect(complete(
+      completeStore.ports,
+      ctx,
+      initial,
+      receipt,
+      issue(),
+      false,
+    )).toMatchObject({ kind: "safety-blocked", warning: { retryable: true } });
+  });
+
+  test("complete preserves an unknown durability outcome when the committed receipt is already visible", () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const receipt = {
+      key: mirrorEventKey(ctx.event),
+      event: ctx.event,
+      operationId: "op-1",
+      status: "attempted" as const,
+      preparedAt: NOW,
+      attemptedAt: NOW,
+      createIdentity: identity(),
+    };
+    const initial: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+    };
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let writes = 0;
+
+    const outcome = complete(
+      {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          const committed = writeDocumentAtomic(text);
+          return writes === 1
+            ? { kind: "durability-unknown", summary: "directory fsync failed" }
+            : committed;
+        },
+      },
+      ctx,
+      initial,
+      receipt,
+      issue(),
+      false,
+    );
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        classification: "state-write",
+        effect: "outcome-unknown",
+        summary: "directory fsync failed",
+      },
+    });
+    expect(store.state().receipts[receipt.key]?.status).toBe("succeeded");
+  });
+
   test("a durable authorization binding mismatch blocks before readiness", async () => {
     const gateway = new FakeGateway();
     const ctx = context("create", gateway);
@@ -559,6 +909,41 @@ describe("t279 create", () => {
       localState: EMPTY_MIRROR_STATE,
     });
     expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["readiness", "find", "create"]);
+  });
+
+  test("an audit propagation failure preserves the persisted business block", async () => {
+    const store = memoryStore();
+    const appendArtifactUpdated = store.ports.appendArtifactUpdated;
+    const gateway = new FakeGateway();
+    gateway.createResult = ok({
+      ...issue(),
+      body: "missing ownership marker",
+    });
+    const ctx = context("create", gateway);
+    const outcome = await executeMirrorOperation({
+      context: ctx,
+      ports: {
+        ...store.ports,
+        appendArtifactUpdated(outbox) {
+          return outbox.fields.TransitionKind === "mark-safety-blocked"
+            ? { kind: "io-failure", summary: "audit unavailable" }
+            : appendArtifactUpdated(outbox);
+        },
+      },
+      localState: EMPTY_MIRROR_STATE,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        classification: "provenance",
+        effect: "outcome-unknown",
+      },
+    });
+    const state = store.state();
+    expect(state.receipts[mirrorEventKey(ctx.event)]?.status).toBe("safety-blocked");
+    expect(state.auditOutbox?.fields.TransitionKind).toBe("mark-safety-blocked");
     expect(gateway.history).toEqual(["readiness", "find", "create"]);
   });
 

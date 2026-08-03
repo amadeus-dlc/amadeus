@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "reviewer": "j5ik2o",
+  "reviewedAt": "2026-08-02T12:30:00.000Z",
+  "candidateDigest": "607988a05398e0c85324980ebba66ad127981fe3d28235141dc0f7d980d292a9",
+  "preApprovedEvidenceDigest": "1f8e6fd8aa37e089a82d18266f2cf758293e084e97042c15563405e4553673a0",
+  "postApprovedEvidenceDigest": "ca45be4ff22be8a06d8e40a81529c8e0965b14f24cdcc79ecfe6ef7725e110ae"
+}

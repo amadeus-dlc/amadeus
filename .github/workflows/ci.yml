@@ -42,6 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Detect CI-relevant changes
         id: filter
@@ -99,6 +100,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -110,6 +114,44 @@ jobs:
 
       - name: Lint (biome)
         run: bun run lint
+
+      - name: No silent drop (trusted base ratchet)
+        timeout-minutes: 1
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          case "${EVENT_NAME}" in
+            pull_request) BASE_REVISION="${PULL_REQUEST_BASE_SHA}" ;;
+            push) BASE_REVISION="${PUSH_BEFORE_SHA}" ;;
+            workflow_dispatch)
+              if ! BASE_REVISION="$(git rev-parse --verify --quiet HEAD^)"; then
+                echo "Trusted base revision is unavailable: workflow_dispatch HEAD has no parent" >&2
+                exit 2
+              fi
+              ;;
+            *)
+              echo "No trusted base revision for event: ${EVENT_NAME}" >&2
+              exit 2
+              ;;
+          esac
+
+          if [[ "${BASE_REVISION}" =~ ^0+$ ]]; then
+            echo "Trusted base revision must not be all zeros" >&2
+            exit 2
+          fi
+          if [[ ! "${BASE_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Trusted base revision must be a 40-character lowercase hexadecimal SHA: ${BASE_REVISION}" >&2
+            exit 2
+          fi
+          if ! git cat-file -e "${BASE_REVISION}^{commit}" 2>/dev/null; then
+            echo "Trusted base revision is unavailable after full-history checkout: ${BASE_REVISION}" >&2
+            exit 2
+          fi
+          timeout --signal=TERM --kill-after=5s 30s bun run no-silent-drop -- --base-revision "${BASE_REVISION}"
 
       # VER-4: the legacy audit writer and the pre-OTel observe() wrapper are
       # being retired call site by call site. The allowlist ratchets down only,
@@ -206,6 +248,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2

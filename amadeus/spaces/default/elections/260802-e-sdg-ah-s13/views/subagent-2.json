@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDG-AH-S13",
+  "voter": "subagent-2",
+  "question": "Approval & Handoff の学習候補を永続化0件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "候補 c1 は既存 team.md の Bolt ごとのレビュー規範と重複するため、project.md へ追加保存しない"
+    }
+  ]
+}

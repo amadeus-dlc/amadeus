@@ -1,0 +1,609 @@
+{
+  "schemaVersion": 1,
+  "evidence": [
+    {
+      "schemaVersion": 1,
+      "id": "shape-fixtures",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/no-silent-drop-gate.test.ts",
+            "-t",
+            "no-silent-drop AST rules"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "shape-fixtures:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-pre",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/no-silent-drop-gate.test.ts",
+            "-t",
+            "first adoption accepts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "census-pre:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "census-post",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "tests/no-silent-drop-gate.ts",
+            "census-evidence"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "census-post:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "classification-precision",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/no-silent-drop-gate.test.ts",
+            "-t",
+            "approval is exact"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "classification-precision:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "baseline-proof",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "tests/no-silent-drop-gate.ts",
+            "check",
+            "--base-revision",
+            "47574fbabf274e11cb8e0b37bf35a0309a7b3d42"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "baseline-proof:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "failure-matrix",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/no-silent-drop-gate.test.ts",
+            "-t",
+            "first adoption fails closed"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "failure-matrix:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u2-u3-regressions",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/unit/t108.test.ts",
+            "tests/unit/t400-lib-record-path-and-field-helpers.test.ts",
+            "tests/unit/t279-amadeus-mirror-executor.test.ts",
+            "tests/integration/t278-amadeus-mirror-state-store.integration.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "u2-u3-regressions:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "full-test",
+      "runs": [
+        {
+          "name": "normal",
+          "command": [
+            "bun",
+            "tests/run-tests.ts",
+            "--test-timeout-ms",
+            "120000",
+            "--ci"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "full-test:normal"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        },
+        {
+          "name": "isolated-known-timeouts",
+          "command": [
+            "bun",
+            "test",
+            "--timeout",
+            "120000",
+            "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+            "tests/integration/t-codex-hooks-ownership.test.ts",
+            "tests/integration/t-codex-hooks-migration.test.ts",
+            "tests/integration/t-team-up-codex-resume.serial.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "full-test:isolated-known-timeouts"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "lint",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "run",
+            "lint"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "lint:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "typecheck",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "run",
+            "typecheck"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "typecheck:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "coverage",
+      "runs": [
+        {
+          "name": "normal",
+          "command": [
+            "bun",
+            "tests/run-tests.ts",
+            "--test-timeout-ms",
+            "120000",
+            "--ci",
+            "--coverage",
+            "--coverage-dir",
+            "coverage"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "coverage:normal"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        },
+        {
+          "name": "isolated-known-timeouts",
+          "command": [
+            "bun",
+            "test",
+            "--coverage",
+            "--timeout",
+            "120000",
+            "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+            "tests/integration/t-codex-hooks-ownership.test.ts",
+            "tests/integration/t-codex-hooks-migration.test.ts",
+            "tests/integration/t-team-up-codex-resume.serial.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "coverage:isolated-known-timeouts"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cold-warm-5x2",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/perf/no-silent-drop-adoption.perf.test.ts",
+            "-t",
+            "five fresh processes"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "cold-warm-5x2:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "capacity-r0-r2-r4",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/perf/no-silent-drop-adoption.perf.test.ts",
+            "-t",
+            "generated r0/r2/r4"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "capacity-r0-r2-r4:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "u1-complexity",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/no-silent-drop-gate.test.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "u1-complexity:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-apply",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/package.ts"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "package-apply:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-apply",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/promote-self.ts",
+            "--apply"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "promotion-apply:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "package-check",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/package.ts",
+            "--check"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "package-check:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "promotion-check",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "scripts/promote-self.ts",
+            "--check"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "promotion-check:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-pr-base",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "a PR context selects its trusted base SHA"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "event-pr-base:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-fork-base",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "a fork PR context selects its trusted base SHA"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "event-fork-base:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "event-push-before",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "a push context selects its trusted before SHA"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "event-push-before:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "hang-deadline",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "GNU timeout hang injection"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "hang-deadline:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "id": "workflow-structure",
+      "runs": [
+        {
+          "name": "primary",
+          "command": [
+            "bun",
+            "test",
+            "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+            "-t",
+            "existing lint job owns"
+          ],
+          "artifact": {
+            "path": "tests/no-silent-drop/evidence/adoption-runs.json",
+            "sha256": "099e357be2b331f9b141e71a931a985f42320d6db339c746a62cb6f126c1dbe3",
+            "recordId": "workflow-structure:primary"
+          },
+          "exitCode": 0,
+          "verdict": "pass"
+        }
+      ],
+      "verdict": "pass",
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    }
+  ],
+  "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+}

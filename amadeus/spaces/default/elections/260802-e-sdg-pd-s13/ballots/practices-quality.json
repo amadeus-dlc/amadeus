@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SDG-PD-S13",
+  "voter": "practices-quality",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "Walking Skeleton の managed-block 更新は Practices Discovery の通常成果として妥当だが、§13 の『永続化0件』とは区別して扱い、新規 learning 候補として重複計上しないこと。",
+  "rationale": "0件で可。testing/TDD・falling proof・blocking coverage は team.md §Testing に既存であり、同日 CodeKB の差分再利用と partial draft は project.md の Practices Discovery 規則、空の Mandated/Forbidden は discovered-rules 規則、scan roots と exemption の shrink-only は intent 固有規則として既に定義済みである。no-silent-drop の shape・baseline・exemption・CI 契約も当該 intent の承認済み判断であり、横断 rule/sensor へ再永続化すると重複する。一方、Walking Skeleton の更新は evidence に基づく通常の managed-block 昇格で、§13 の新規 learning 追加とは別である。",
+  "submittedAt": "2026-08-02T02:25:22Z"
+}

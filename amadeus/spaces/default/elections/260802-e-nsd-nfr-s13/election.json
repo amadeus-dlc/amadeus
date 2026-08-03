@@ -1,0 +1,64 @@
+{
+  "electionId": "E-NSD-NFR-S13",
+  "kind": "learnings-selection",
+  "question": "nfr-requirements の次回実行へ残す学習候補を一つ選ぶ",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "CLIのNFRを構造的上限で定義した"
+    },
+    {
+      "internalNo": 2,
+      "label": "静的ゲートの信頼性を実行単位で定義した"
+    },
+    {
+      "internalNo": 3,
+      "label": "static-gate-engine の第1レビュー指摘を反映した"
+    },
+    {
+      "internalNo": 4,
+      "label": "text-mutation-loud-failure の信頼性を副作用順序で定義した"
+    },
+    {
+      "internalNo": 5,
+      "label": "text mutation第1レビューを反映した"
+    },
+    {
+      "internalNo": 6,
+      "label": "repository-adoption のNFRをtrusted baseとevidence provenance中心に定義した"
+    },
+    {
+      "internalNo": 7,
+      "label": "repository-adoption第1レビューを反映した"
+    },
+    {
+      "internalNo": 8,
+      "label": "自動retryより明示的な後続invocationを選んだ"
+    },
+    {
+      "internalNo": 9,
+      "label": "初期実装では並列化とincremental cacheを採らない"
+    },
+    {
+      "internalNo": 10,
+      "label": "ast-grepのversion probeを通常checkから分離した"
+    },
+    {
+      "internalNo": 11,
+      "label": "bulk mutationの各step後reparseを維持し、計算量上限を O(T × (D + S)) と明示した"
+    },
+    {
+      "internalNo": 12,
+      "label": "writerのdirectory fsync失敗ではbyte不変を要求せず、rename済みcandidate完全bytesと永続audit不変を要求する"
+    },
+    {
+      "internalNo": 13,
+      "label": "15秒性能sampleからcheckout／fetch／installを分離した"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

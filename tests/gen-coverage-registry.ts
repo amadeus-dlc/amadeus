@@ -104,6 +104,8 @@ const SCOPE_GRID_PATH = join(TOOLS_DIR, "data", "scope-grid.json");
 const AUDIT_PATH = join(TOOLS_DIR, "amadeus-audit.ts");
 const LIB_PATH = join(TOOLS_DIR, "amadeus-lib.ts");
 const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
+const STATE_PATH = join(TOOLS_DIR, "amadeus-state.ts");
+const TARGETED_STATE_FUNCTIONS = ["skipStageContent", "handleSkip", "mergeScopedCheckboxProgress"] as const;
 
 const REGISTRY_PATH =
   process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
@@ -575,6 +577,17 @@ export function enumerateExportedFunctions(): Unit[] {
         source: rel,
       });
     }
+  }
+  const stateSource = readFileSync(STATE_PATH, "utf-8");
+  for (const name of TARGETED_STATE_FUNCTIONS) {
+    const declaration = new RegExp(`^export\\s+(?:async\\s+)?function\\s+${name}\\b`, "m");
+    if (!declaration.test(stateSource)) throw new Error(`coverage target function is missing: ${name}`);
+    units.push({
+      unitClass: "function",
+      unitId: `function:${name}`,
+      minMechanism: MIN_MECHANISM.function,
+      source: "dist/claude/.claude/tools/amadeus-state.ts",
+    });
   }
   return units;
 }

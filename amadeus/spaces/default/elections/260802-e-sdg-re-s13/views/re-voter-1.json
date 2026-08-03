@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDG-RE-S13",
+  "voter": "re-voter-1",
+  "question": "Reverse Engineering の学習候補を永続化0件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1 は既存 RE 規約、c2 は今回固有の実行偏差、c3 は intent 内の設計判断であり、横断ルールや新規 sensor として追加しない"
+    }
+  ]
+}

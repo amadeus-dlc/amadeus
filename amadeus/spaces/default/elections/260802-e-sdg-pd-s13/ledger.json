@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-PD-S13",
+      "voter": "practices-developer",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測では、候補の横断面は既存規範で既に閉じている。(1) ユーザー可視成功・永続化・監査・安全性を偽る silent failure は construction.md:14-16 の境界エラー処理・伝播/記録・回復可能性分類と、project.md:50 の判別 union Result 採用で既決。(2) 新規 blocking gate の TDD・落ちる実証は team.md:320-324、実 corpus 全数 sweep は team.md:250、免除の shrink-only は project.md:284 に既存。(3) pure 判定/判別 union と I/O handler、core/harness 境界は team.md:342 と project.md:48-50 に既存。(4) memory.md:7,19 と evidence.md:25 が後続判断へ送った emit/Result 語彙、intentional best-effort census、ast-grep 固定版、3 shape/baseline/exemption/CI の具体形は本 intent の要件・設計であり、team/project 横断 rule として再永続化すると既決規範の重複になる。(5) discovered-rules.md:5-7 は Mandated/Forbidden を正しく空節にしており、project.md:206 の変更なし様式にも一致。Walking Skeleton の更新は team-practices.md:7-9 の self-feature 向け既存5領域更新であり、§13 の新規 Mandated/Forbidden 候補ではない。よって新しい rule/sensor は0件が妥当。",
+      "submittedAt": "2026-08-02T02:24:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-PD-S13",
+      "voter": "practices-quality",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Walking Skeleton の managed-block 更新は Practices Discovery の通常成果として妥当だが、§13 の『永続化0件』とは区別して扱い、新規 learning 候補として重複計上しないこと。",
+      "rationale": "0件で可。testing/TDD・falling proof・blocking coverage は team.md §Testing に既存であり、同日 CodeKB の差分再利用と partial draft は project.md の Practices Discovery 規則、空の Mandated/Forbidden は discovered-rules 規則、scan roots と exemption の shrink-only は intent 固有規則として既に定義済みである。no-silent-drop の shape・baseline・exemption・CI 契約も当該 intent の承認済み判断であり、横断 rule/sensor へ再永続化すると重複する。一方、Walking Skeleton の更新は evidence に基づく通常の managed-block 昇格で、§13 の新規 learning 追加とは別である。",
+      "submittedAt": "2026-08-02T02:25:22Z"
+    }
+  ],
+  "late": []
+}

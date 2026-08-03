@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-AH-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(GoA 1)。独立実測により候補 c1 は既存規範の重複適用と確認した。(1) approval-handoff/memory.md:7 は『レビュー単位の提案前に Bolt / PR 規範を照合する』という候補の発生事実を記録する。(2) team.md:57 は Construction 成果を Bolt ごとに PR/スカッシュマージし、複数 Unit・工程記録・無関係なリファクタを単一 PR に束ねないことを既に明文化する。(3) team.md:65 は org/team/project の既決規範を質問対象にせず、質問起草時に既決照合を先に行うことを既に明文化するため、候補 c1 の『提案前に照合』という手順面も既存 contract に含まれる。(4) team.md:154 は Bolt READY 時の PR 発行タスク化まで既に定める。実際、scope-definition-questions.md:42-51 の Q4=A(単一統合 PR)は approval-handoff-questions.md:9-15 で team.md との矛盾として検出され、decision-log.md:29-30 の D-12→D-13 および initiative-brief.md:71 で Bolt ごとの独立 PR へ補正済みである。これは既存規範の適用漏れを同じ既存規範で是正した事例であり、新しい条件・例外・手順を導かないため project.md への追加永続化は不要。",
+      "submittedAt": "2026-08-02T01:34:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-AH-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。approval-handoff/memory.md:9 の c1 は、Scope Definition の単一 PR 案を Bolt ごとの PR へ補正し、提案前に既決規範を照合するという内容である。team.md:57 は既に『Construction の成果は Bolt ごとに PR/スカッシュマージする』『複数ユニットを単一 PR に束ねない』と明記している。decision-log.md:29-30 と initiative-brief.md:71 でも同じ既決規範への補正が成果物へ反映済みであり、c1 は新規の一般化可能な規範ではなく既存規範の違反・適用実例であるため、project.md への重複 persist は不要。",
+      "submittedAt": "2026-08-02T01:34:46Z"
+    }
+  ],
+  "late": []
+}

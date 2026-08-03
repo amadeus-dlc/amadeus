@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SDG-FD-S13",
+  "voter": "functional-design-reviewer",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memory.mdにInterpretation／Deviation／Tradeoffの実entryがなく、今回の未解決findingはintent固有の要件・Unit間contractとしてstage gateへ送るべきで、未解決のまま横断ruleへ一般化しないため0件で可。",
+  "submittedAt": "2026-08-02T05:25:11Z"
+}

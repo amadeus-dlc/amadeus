@@ -33,6 +33,28 @@ core source ─> package.ts ─> 7 dist ─> promote-self ─> 5 root faces
 
 - 判断: 外部依存の追加なし。内部依存は plugin 内で閉じる — loader → model-map 定数（`tla-model-loader-internal.ts:22` が `TLA_EXECUTION_MODEL_NAME` を import）、arm → loader、CI ポート → run-model-check、stage doc → CLI、canonical コピー ⇔ plugin コピー（byte-identical 二重管理、table test で parity 固定）。変更面が他の進行中 intent と交差する兆候は区間にない。dist 同期面: plugin 投影（`dist/plugins/formal-model-check/` + 各ハーネス）と core canonical コピーの再生成（`bun scripts/package.ts` + `bun run promote:self`）が PR に同梱される。一般化時は tests の FormalElection 参照 27 ファイルが機械的洗い出し対象。
 
+## no-silent-drop の依存関係（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+```text
+fixed ast-grep tool
+  -> rule/config validation
+  -> authored-root scan (core + harness + scripts)
+  -> census normalization
+  -> baseline ratchet + exemption validation
+  -> typed result
+  -> CI lint step
+
+runtime #1878: applyTransition StateResult -> persistBlocked outcome
+runtime #1874: strict mutation result -> all setCheckbox/setStageSuffix callers
+#1963: existing resync outcomes -> regression fixtures only
+```
+
+- 外部依存: ast-grep は新規。observed の依存集合には存在しないため、package manifest と Bun lockfile の固定が先行条件。
+- 内部依存: scanner は3 authored roots のみに依存し、`dist/`、self-install 投影、fixture へ依存しない。baseline と exemption は scanner の正規化 identity を共有するが、互いの意味論へ依存しない。
+- 実装順のトポロジー: typed domain／rule fixture → scanner 完全性 → baseline・exemption → CLI → CI adapter。CI adapter は tool と全 rule が利用可能になるまで有効化できない。
+- #1878 は `applyTransition` の既存 `StateResult` を消費する局所修正。#1874 は caller が多く、`amadeus-jump.ts`、`amadeus-utility.ts`、`amadeus-state.ts` の mutation 境界を全数移行する必要がある。helper だけを throwing 化すると広い破壊になるため、結果型と caller 消費を同一単位で扱う。
+- #1963 の [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) は observed の祖先に含まれ、再実装依存は無い。t407/t411 を回帰依存として維持する。
+
 ## kimi bootstrap デッドロック修正の依存関係（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 単一バグ修正で外部依存・内部依存の追加なし。修正面は core hook + 単体テスト（t10）のみで他の進行中 intent の作業面と非交差。dist 同期面: core hooks を触るため正本1 + dist 7 + self-install 1 の9コピー再生成（`bun scripts/package.ts` + `bun run promote:self`）が修正 PR に同梱される。

@@ -5362,71 +5362,308 @@ export interface CheckboxLine {
   suffix: string; // e.g., "EXECUTE" or "SKIP: reason"
 }
 
+function checkboxStateOfMarker(marker: string): CheckboxState {
+  switch (marker) {
+    case "-": return "in-progress";
+    case "?": return "awaiting-approval";
+    case "R": return "revising";
+    case "x": return "completed";
+    case "S": return "skipped";
+    default: return "pending";
+  }
+}
+
 export function parseCheckboxes(content: string): CheckboxLine[] {
   const results: CheckboxLine[] = [];
   const regex = /^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$/gm;
   let match: RegExpExecArray | null = regex.exec(content);
   while (match !== null) {
-    const marker = match[1];
-    let state: CheckboxState;
-    switch (marker) {
-      case " ":
-        state = "pending";
-        break;
-      case "-":
-        state = "in-progress";
-        break;
-      case "?":
-        state = "awaiting-approval";
-        break;
-      case "R":
-        state = "revising";
-        break;
-      case "x":
-        state = "completed";
-        break;
-      case "S":
-        state = "skipped";
-        break;
-      default:
-        state = "pending";
-    }
-    results.push({ slug: match[2], state, suffix: match[3].trim() });
+    results.push({
+      slug: match[2],
+      state: checkboxStateOfMarker(match[1]),
+      suffix: match[3].trim(),
+    });
     match = regex.exec(content);
   }
   return results;
 }
 
-export function setCheckbox(
-  content: string,
-  slug: string,
-  newState: CheckboxState
-): string {
-  const marker = CHECKBOX_MAP[newState];
-  // Match any checkbox state for this slug
-  const regex = new RegExp(
-    `^(- )\\[[ xSR?-]\\]( ${escapeRegex(slug)} —)`,
-    "m"
-  );
-  return content.replace(regex, `$1${marker}$2`);
+export interface ScopedCheckboxLine extends CheckboxLine {
+  unit?: string;
 }
 
-// The suffix-setter twin of setCheckbox: flips ONE stage line's plan suffix
-// (the em-dash EXECUTE/SKIP tail the router's override channel reads)
-// in either direction, leaving the checkbox marker untouched. setCheckbox owns
-// the marker (run-state); this owns the suffix (the plan) - the two edit
-// disjoint fields of the same line, so recompose and jump compose cleanly.
-// Returns the content unchanged when the slug has no stage line.
-export function setStageSuffix(
+/** Parse checkbox rows with the `Per unit:` context used by worktree merging. */
+export function parseScopedCheckboxes(content: string): ScopedCheckboxLine[] {
+  const results: ScopedCheckboxLine[] = [];
+  let unit: string | undefined;
+  for (const line of content.split(/\r?\n/)) {
+    if (line.startsWith("### ")) unit = undefined;
+    const unitMatch = /^Per unit:\s*(.+)$/.exec(line);
+    if (unitMatch !== null) {
+      unit = unitMatch[1].trim();
+      continue;
+    }
+    const match = /^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$/.exec(line);
+    if (match === null) continue;
+    results.push({
+      slug: match[2],
+      state: checkboxStateOfMarker(match[1]),
+      suffix: match[3].trim(),
+      ...(unit ? { unit } : {}),
+    });
+  }
+  return results;
+}
+
+const VALIDATED_STAGE_STATE: unique symbol = Symbol("ValidatedStageState");
+
+/** A state snapshot whose Stage Progress rows have been parsed exactly once. */
+export interface ValidatedStageState {
+  readonly [VALIDATED_STAGE_STATE]: true;
+}
+
+export type TextMutationResult =
+  | { kind: "changed"; content: string }
+  | { kind: "not-found"; target: string };
+
+export type StageStateValidationReason =
+  | "section-unrecognized"
+  | "malformed-line"
+  | "duplicate-target";
+
+export class StageStateValidationError extends Error {
+  readonly code = "STATE_MUTATION_INVALID";
+  readonly phase = "validate";
+  readonly retry = 0;
+
+  constructor(
+    readonly reason: StageStateValidationReason,
+    readonly target: string,
+  ) {
+    super(
+      `State mutation validation failed: phase=validate reason=${reason} target=${JSON.stringify(target)}`,
+    );
+    this.name = "StageStateValidationError";
+  }
+}
+
+export class StateMutationTargetError extends Error {
+  readonly code = "STATE_MUTATION_TARGET_NOT_FOUND";
+  readonly phase = "validate";
+  readonly reason = "target-not-found";
+  readonly retry = 0;
+
+  constructor(
+    readonly operation: string,
+    readonly target: string,
+  ) {
+    super(
+      `State mutation refused: operation=${JSON.stringify(operation)} phase=validate reason=target-not-found target=${JSON.stringify(target)}`,
+    );
+    this.name = "StateMutationTargetError";
+  }
+}
+
+export type StateMutationInvariantReason =
+  | "reparse-failed"
+  | "postcondition-failed"
+  | "non-target-changed";
+
+export class StateMutationInvariantError extends Error {
+  readonly code = "STATE_MUTATION_INVARIANT";
+  readonly phase = "verify";
+  readonly retry = 0;
+
+  constructor(
+    readonly reason: StateMutationInvariantReason,
+    readonly operation: string,
+    readonly target: string,
+  ) {
+    super(
+      `State mutation invariant failed: operation=${JSON.stringify(operation)} phase=verify reason=${reason} target=${JSON.stringify(target)}`,
+    );
+    this.name = "StateMutationInvariantError";
+  }
+}
+
+interface ValidatedStageLine {
+  readonly line: string;
+  readonly start: number;
+  readonly end: number;
+  readonly state: CheckboxState;
+  readonly suffix: string;
+  readonly unit?: string;
+}
+
+interface ValidatedStageStateData {
+  readonly content: string;
+  readonly lines: ReadonlyMap<string, ValidatedStageLine>;
+  readonly linesBySlug: ReadonlyMap<string, readonly ValidatedStageLine[]>;
+  readonly unit?: string;
+}
+
+const VALIDATED_STAGE_STATES = new WeakMap<ValidatedStageState, ValidatedStageStateData>();
+const CANONICAL_STAGE_LINE_RE = /^- \[([ xSR?-])\] (\S+)\s*—\s*((?:EXECUTE|SKIP)\b.*)$/;
+const STAGE_PROGRESS_VALIDATION_RE =
+  /^## Stage Progress\r?\n([\s\S]*?)(?=\r?\n## (?!Stage Progress)|(?![\s\S]))/m;
+
+export function stageLineKey(slug: string, unit?: string): string {
+  return `${unit ?? ""}\0${slug}`;
+}
+
+/** Parse and seal the only state shape the stage-line writers may mutate. */
+export function validateStageState(
   content: string,
+  scope: { readonly unit?: string } = {},
+): ValidatedStageState {
+  const sectionMatch = STAGE_PROGRESS_VALIDATION_RE.exec(content);
+  if (sectionMatch === null) {
+    throw new StageStateValidationError("section-unrecognized", "Stage Progress");
+  }
+
+  const lines = new Map<string, ValidatedStageLine>();
+  const linesBySlug = new Map<string, ValidatedStageLine[]>();
+  let offset = sectionMatch.index;
+  let unit: string | undefined;
+  let lineNumber = 0;
+  for (const lineWithNewline of sectionMatch[0].match(/.*(?:\n|$)/g) ?? []) {
+    if (lineWithNewline === "") continue;
+    lineNumber += 1;
+    const line = lineWithNewline.endsWith("\n") ? lineWithNewline.slice(0, -1) : lineWithNewline;
+    if (line.startsWith("### ")) unit = undefined;
+    const unitMatch = /^Per unit:\s*(.+)$/.exec(line);
+    if (unitMatch !== null) unit = unitMatch[1].trim();
+    const match = CANONICAL_STAGE_LINE_RE.exec(line);
+    if (line.startsWith("- [") && match === null) {
+      throw new StageStateValidationError("malformed-line", `Stage Progress line ${lineNumber}`);
+    }
+    if (match !== null) {
+      const slug = match[2];
+      const key = stageLineKey(slug, unit);
+      if (lines.has(key)) {
+        throw new StageStateValidationError("duplicate-target", unit ? `${unit}:${slug}` : slug);
+      }
+      const parsedLine: ValidatedStageLine = {
+        line,
+        start: offset,
+        end: offset + line.length,
+        state: checkboxStateOfMarker(match[1]),
+        suffix: match[3],
+        ...(unit ? { unit } : {}),
+      };
+      lines.set(key, parsedLine);
+      const sameSlug = linesBySlug.get(slug) ?? [];
+      sameSlug.push(parsedLine);
+      linesBySlug.set(slug, sameSlug);
+    }
+    offset += lineWithNewline.length;
+  }
+
+  const validated = Object.freeze({ [VALIDATED_STAGE_STATE]: true }) as ValidatedStageState;
+  VALIDATED_STAGE_STATES.set(validated, { content, lines, linesBySlug, ...scope });
+  return validated;
+}
+
+function targetStageLine(
+  data: ValidatedStageStateData,
   slug: string,
-  action: "EXECUTE" | "SKIP"
-): string {
-  const regex = new RegExp(
-    `^(- \\[[ xSR?-]\\] ${escapeRegex(slug)}\\s*—\\s*)(EXECUTE|SKIP)\\b`,
-    "m"
-  );
-  return content.replace(regex, `$1${action}`);
+): ValidatedStageLine | undefined {
+  if (data.unit !== undefined) return data.lines.get(stageLineKey(slug, data.unit));
+  const candidates = data.linesBySlug.get(slug) ?? [];
+  if (candidates.length > 1) throw new StageStateValidationError("duplicate-target", slug);
+  return candidates[0];
+}
+
+function validatedStageStateData(
+  state: ValidatedStageState,
+  operation: string,
+  target: string,
+): ValidatedStageStateData {
+  const data = VALIDATED_STAGE_STATES.get(state);
+  if (data === undefined) {
+    throw new StateMutationInvariantError("reparse-failed", operation, target);
+  }
+  return data;
+}
+
+function changed(content: string): TextMutationResult {
+  return { kind: "changed", content };
+}
+
+function verifyStageMutation(
+  before: ValidatedStageStateData,
+  content: string,
+  operation: string,
+  target: string,
+  postcondition: (line: ValidatedStageLine) => boolean,
+): TextMutationResult {
+  let after: ValidatedStageStateData;
+  try {
+    const reparsed = validateStageState(content, before.unit ? { unit: before.unit } : {});
+    after = validatedStageStateData(reparsed, operation, target);
+  } catch (error) {
+    if (error instanceof StageStateValidationError) {
+      throw new StateMutationInvariantError("reparse-failed", operation, target);
+    }
+    throw error;
+  }
+  const targetAfter = targetStageLine(after, target);
+  if (targetAfter === undefined || !postcondition(targetAfter)) {
+    throw new StateMutationInvariantError("postcondition-failed", operation, target);
+  }
+  const targetBefore = targetStageLine(before, target);
+  if (
+    targetBefore === undefined ||
+    before.content.slice(0, targetBefore.start) !== content.slice(0, targetAfter.start) ||
+    before.content.slice(targetBefore.end) !== content.slice(targetAfter.end)
+  ) {
+    throw new StateMutationInvariantError("non-target-changed", operation, target);
+  }
+  return changed(content);
+}
+
+export function setCheckbox(
+  state: ValidatedStageState,
+  slug: string,
+  newState: CheckboxState,
+): TextMutationResult {
+  const operation = "set-checkbox";
+  const data = validatedStageStateData(state, operation, slug);
+  const target = targetStageLine(data, slug);
+  if (target === undefined) return { kind: "not-found", target: slug };
+
+  const marker = CHECKBOX_MAP[newState];
+  const nextLine = target.line.replace(/^(- )\[[ xSR?-]\]/, `$1${marker}`);
+  const content = `${data.content.slice(0, target.start)}${nextLine}${data.content.slice(target.end)}`;
+  return verifyStageMutation(data, content, operation, slug, (line) => line.state === newState);
+}
+
+export function setStageSuffix(
+  state: ValidatedStageState,
+  slug: string,
+  action: "EXECUTE" | "SKIP",
+): TextMutationResult {
+  const operation = "set-stage-suffix";
+  const data = validatedStageStateData(state, operation, slug);
+  const target = targetStageLine(data, slug);
+  if (target === undefined) return { kind: "not-found", target: slug };
+
+  const nextLine = target.line.replace(/(—\s*)(EXECUTE|SKIP)\b.*$/, `$1${action}`);
+  const content = `${data.content.slice(0, target.start)}${nextLine}${data.content.slice(target.end)}`;
+  return verifyStageMutation(data, content, operation, slug, (line) => line.suffix.startsWith(action));
+}
+
+/**
+ * Require a successfully resolved, invariant-checked mutation target.
+ * A `changed` result may be byte-identical when the requested state already holds.
+ */
+export function requireChanged(result: TextMutationResult, operation: string): string {
+  switch (result.kind) {
+    case "changed":
+      return result.content;
+    case "not-found":
+      throw new StateMutationTargetError(operation, result.target);
+  }
 }
 
 export function countCheckboxes(

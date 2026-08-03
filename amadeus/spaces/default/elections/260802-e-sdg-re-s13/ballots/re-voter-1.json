@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SDG-RE-S13",
+  "voter": "re-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件に同意するが、Developer 委譲が2回とも成果物確定前に停滞した点は再発監視対象とする。同型が別の Reverse Engineering でも再発し、conductor 引取による scan 完遂が常態化するなら、新規 cid ではなく既存の無応答サブエージェント引取規律(team.md の cid:code-generation:c5)または read-only dispatch の構造ガード(project.md の cid:functional-design:c4-subagent-structural-guard)への限定追補として再提案すべきである。今回は既存規律どおり引取後に承認済み revision・roots・除外を維持し、未計測事項も未確認として残しているため、追加 persist の必要条件には達していない。",
+  "rationale": "独立検証の結論は0件で可。(1) c1: diary の『dirty な active worktree へ最新 main を merge せず detached worktree の observed revision を再スキャン正本とした』は、RE stage の既存 codekb を差分更新する契約と project.md の cid:reverse-engineering:c1、observed commit を origin/main 系譜に置く cid:reverse-engineering:c2-observed-mainline-commit、team.md P5 の worktree/scratch 隔離を当該状況へ適用したもの。re-scan record は Base=861688c31、Observed=d72f60b5a、Distance=54、authored roots 3件と除外を明記しており、新しい横断規則ではない。(2) c2: stage は Developer→Architect 直列を要求し、project.md cid:reverse-engineering:c3 も既に同じ順序を規定する。一方 team.md cid:code-generation:c5 は無応答サブエージェントの成果物実態を検分して conductor が引き取る既決回復策を明記する。scan record は2回の停滞、引取範囲の不変、Architect synthesis の実施、未計測 corpus・性能・偽陽性率・ast-grep 実行性を未確認として残したことを開示しており、偏差は既存回復規律内で閉包している。(3) c3: contributor-side CI CLI を最小境界とする判断は、scan record の既存 tests/*-gate.ts と CI lint job の観測、no-silent-drop の3 shape、後続設計で確定すべき API vocabulary・ast-grep 配布・baseline/exemption 文法に基づく当該 intent の設計入力である。配布 runtime API 化は未要求かつ未確定で、現時点で一般 practice や sensor に昇格させる反復証拠がない。(4) Open questions は §13 により候補化しない。既に project.md には静的 gate の authored roots 限定(cid:feasibility:c2-2)と exemption の shrink-only ratchet(cid:feasibility:c3)、RE sensor 不適用時の代替検証(cid:reverse-engineering:c3-codekb-sensor)が存在する。今回の diary 3候補から、これらを超える新規 prescriptive rule または決定的 verification check は導けないため、規範肥大を避けて0件とするのが妥当。",
+  "submittedAt": "2026-08-02T02:10:52Z"
+}

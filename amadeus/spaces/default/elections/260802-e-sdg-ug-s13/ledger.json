@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-UG-S13",
+      "voter": "ug-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "配布ビューに示された判断材料では、memory.md に Interpretation／Deviation／Tradeoff の記録がなく、新しい横断 rule／sensor を追加する根拠もないため、Units Generation の学習候補を永続化0件とする判断を全面支持する。",
+      "submittedAt": "2026-08-02T03:52:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-UG-S13",
+      "voter": "ug-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢1『0件で可』を全面支持する。対象 intent 260801-silent-drop-gate の inception/units-generation/memory.md を実測したところ、Interpretations・Deviations・Tradeoffs は各見出しと単行HTMLコメントの例だけで、永続化候補となる実記録は0件だった。したがって新しい横断 rule／sensor を追加しない判断が証拠と一致する。",
+      "submittedAt": "2026-08-02T03:52:49Z"
+    }
+  ],
+  "late": []
+}

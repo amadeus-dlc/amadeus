@@ -23,6 +23,19 @@
 
 - 判断: 技術スタックに変化なし。検証層は従前どおり TLA+ / TLC（`tla2tools.jar`、Docker 供給）+ Bun/TypeScript の実行基盤で、aux 追加・複数モデル化とも新規外部依存を要さない見通し。区間の構成変化は `54bf1f805` による plugin 移設（`scripts/formal-verif/` 削除 → `plugins/formal-model-check/tools/`）と otel 基盤拡張で、詳細は `architecture.md` 現在節と `re-scans/260801-tla-multi-model.md` に委ねる。
 
+## no-silent-drop の技術断面（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+| 層 | observed / 採用条件 |
+| --- | --- |
+| Runtime | Bun 1.3.13（`.github/workflows/ci.yml:103-109`） |
+| Language | TypeScript / ES module、strict `tsc --noEmit`（`package.json:21`） |
+| Existing lint | Biome 2.5.5（`package.json:33-36`）、対象 roots は `package.json:22-23` |
+| Existing static gates | Bun CLI の callsite／complexity guard、GitHub Actions lint job |
+| AST engine | ast-grep は observed の `package.json:33-42`、`bun.lock`、`scripts/`、`packages/framework/`、`.github/` に未導入。実装時は固定バージョンを Bun lockfile に記録する |
+| Distribution | contributor-only gate は `dist/` 非対象。core tool 化した場合だけ `scripts/package.ts:1-34` と `scripts/promote-self.ts:353-367` の同期対象になる |
+
+技術選択の制約は AST で catch body と式文の意味的 shape を分類できること、Linux runner で cold start を含め15秒以内であること、rule／tool 欠落を成功扱いしないこと。文字列検索は intentional best-effort catch と void 通知 API を区別できず、偽陽性率5%以下の目標に適合しない。
+
 ## kimi bootstrap デッドロック修正の技術断面（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 本 intent は既存構成内の欠陥修正のみで技術スタックに変化なし。区間の構成変化は otel 基盤拡張（`packages/framework/core/otel/` の resource-core / span-context / exception イベント / metrics 語彙配線、外部依存追加なし）と mirror 系整備で、詳細は前節（260801-open-bug-batch-5）と `re-scans/260801-kimi-bootstrap-deadlock.md` に委ねる。

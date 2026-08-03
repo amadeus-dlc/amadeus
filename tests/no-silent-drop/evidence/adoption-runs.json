@@ -1,0 +1,549 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "recordId": "shape-fixtures:primary",
+      "receiptId": "shape-fixtures",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/no-silent-drop-gate.test.ts",
+        "-t",
+        "no-silent-drop AST rules"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "shape-fixtures:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "census-pre:primary",
+      "receiptId": "census-pre",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/no-silent-drop-gate.test.ts",
+        "-t",
+        "first adoption accepts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "census-pre:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "census-post:primary",
+      "receiptId": "census-post",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "tests/no-silent-drop-gate.ts",
+        "census-evidence"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "census-post:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "classification-precision:primary",
+      "receiptId": "classification-precision",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/no-silent-drop-gate.test.ts",
+        "-t",
+        "approval is exact"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "classification-precision:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "baseline-proof:primary",
+      "receiptId": "baseline-proof",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "tests/no-silent-drop-gate.ts",
+        "check",
+        "--base-revision",
+        "47574fbabf274e11cb8e0b37bf35a0309a7b3d42"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "baseline-proof:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "failure-matrix:primary",
+      "receiptId": "failure-matrix",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/no-silent-drop-gate.test.ts",
+        "-t",
+        "first adoption fails closed"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "failure-matrix:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "u2-u3-regressions:primary",
+      "receiptId": "u2-u3-regressions",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/unit/t108.test.ts",
+        "tests/unit/t400-lib-record-path-and-field-helpers.test.ts",
+        "tests/unit/t279-amadeus-mirror-executor.test.ts",
+        "tests/integration/t278-amadeus-mirror-state-store.integration.test.ts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "u2-u3-regressions:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "full-test:normal",
+      "receiptId": "full-test",
+      "runName": "normal",
+      "command": [
+        "bun",
+        "tests/run-tests.ts",
+        "--test-timeout-ms",
+        "120000",
+        "--ci"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "full-test:normal",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "full-test:isolated-known-timeouts",
+      "receiptId": "full-test",
+      "runName": "isolated-known-timeouts",
+      "command": [
+        "bun",
+        "test",
+        "--timeout",
+        "120000",
+        "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+        "tests/integration/t-codex-hooks-ownership.test.ts",
+        "tests/integration/t-codex-hooks-migration.test.ts",
+        "tests/integration/t-team-up-codex-resume.serial.test.ts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "full-test:isolated-known-timeouts",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "lint:primary",
+      "receiptId": "lint",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "run",
+        "lint"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "lint:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "typecheck:primary",
+      "receiptId": "typecheck",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "run",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "typecheck:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "coverage:normal",
+      "receiptId": "coverage",
+      "runName": "normal",
+      "command": [
+        "bun",
+        "tests/run-tests.ts",
+        "--test-timeout-ms",
+        "120000",
+        "--ci",
+        "--coverage",
+        "--coverage-dir",
+        "coverage"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "coverage:normal",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "coverage:isolated-known-timeouts",
+      "receiptId": "coverage",
+      "runName": "isolated-known-timeouts",
+      "command": [
+        "bun",
+        "test",
+        "--coverage",
+        "--timeout",
+        "120000",
+        "tests/integration/t227-codex-migration-walking-skeleton.test.ts",
+        "tests/integration/t-codex-hooks-ownership.test.ts",
+        "tests/integration/t-codex-hooks-migration.test.ts",
+        "tests/integration/t-team-up-codex-resume.serial.test.ts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "coverage:isolated-known-timeouts",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "cold-warm-5x2:primary",
+      "receiptId": "cold-warm-5x2",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/perf/no-silent-drop-adoption.perf.test.ts",
+        "-t",
+        "five fresh processes"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "cold-warm-5x2:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "capacity-r0-r2-r4:primary",
+      "receiptId": "capacity-r0-r2-r4",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/perf/no-silent-drop-adoption.perf.test.ts",
+        "-t",
+        "generated r0/r2/r4"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "capacity-r0-r2-r4:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "u1-complexity:primary",
+      "receiptId": "u1-complexity",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/no-silent-drop-gate.test.ts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "u1-complexity:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "package-apply:primary",
+      "receiptId": "package-apply",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "scripts/package.ts"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "package-apply:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "promotion-apply:primary",
+      "receiptId": "promotion-apply",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "scripts/promote-self.ts",
+        "--apply"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "promotion-apply:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "package-check:primary",
+      "receiptId": "package-check",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "scripts/package.ts",
+        "--check"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "package-check:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "promotion-check:primary",
+      "receiptId": "promotion-check",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "scripts/promote-self.ts",
+        "--check"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "promotion-check:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "event-pr-base:primary",
+      "receiptId": "event-pr-base",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+        "-t",
+        "a PR context selects its trusted base SHA"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "event-pr-base:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "event-fork-base:primary",
+      "receiptId": "event-fork-base",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+        "-t",
+        "a fork PR context selects its trusted base SHA"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "event-fork-base:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "event-push-before:primary",
+      "receiptId": "event-push-before",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+        "-t",
+        "a push context selects its trusted before SHA"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "event-push-before:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "hang-deadline:primary",
+      "receiptId": "hang-deadline",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+        "-t",
+        "GNU timeout hang injection"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "hang-deadline:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "workflow-structure:primary",
+      "receiptId": "workflow-structure",
+      "runName": "primary",
+      "command": [
+        "bun",
+        "test",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+        "-t",
+        "existing lint job owns"
+      ],
+      "exitCode": 0,
+      "verdict": "pass",
+      "tests": [
+        {
+          "name": "workflow-structure:primary",
+          "status": "pass"
+        }
+      ],
+      "testedRevision": "fc49f8de26f85c56ddc7ba94ee7522276ed3ec60"
+    }
+  ]
+}

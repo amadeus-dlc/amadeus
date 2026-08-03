@@ -96,6 +96,7 @@ import {
   readAllAuditShards,
   readCurrentSessionId,
   readStateFile,
+  requireChanged,
   resolveBirthRepoSet,
   resolveProjectDir,
   setActiveIntentCursor,
@@ -116,6 +117,7 @@ import {
   withAuditLock,
   validateBoltSlug,
   validScopes,
+  validateStageState,
   worktreeAuditFilePath,
   worktreeBaseDir,
   worktreeStateFilePath,
@@ -132,6 +134,7 @@ import {
   withIntentLifecyclePreflight,
   rulesSubdir,
   type ScopeDefinition,
+  StageStateValidationError,
 } from "./amadeus-lib.ts";
 import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
@@ -5342,7 +5345,28 @@ function assertRecomposeStateAllowed(content: string): void {
   }
 }
 
-function handleRecompose(projectDir: string, flags: Record<string, string>): void {
+export function applyRecomposeSuffixFlips(
+  content: string,
+  skipList: readonly string[],
+  addList: readonly string[],
+): string {
+  let updated = content;
+  for (const slug of skipList) {
+    updated = requireChanged(
+      setStageSuffix(validateStageState(updated), slug, "SKIP"),
+      `recompose:skip:${slug}`,
+    );
+  }
+  for (const slug of addList) {
+    updated = requireChanged(
+      setStageSuffix(validateStageState(updated), slug, "EXECUTE"),
+      `recompose:add:${slug}`,
+    );
+  }
+  return updated;
+}
+
+export function handleRecompose(projectDir: string, flags: Record<string, string>): void {
   const skipList = (flags.skip ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const addList = (flags.add ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (skipList.length === 0 && addList.length === 0) {
@@ -5469,8 +5493,7 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
     }
 
     // --- Apply the suffix flips ---------------------------------------------
-    for (const slug of skipList) content = setStageSuffix(content, slug, "SKIP");
-    for (const slug of addList) content = setStageSuffix(content, slug, "EXECUTE");
+    content = applyRecomposeSuffixFlips(content, skipList, addList);
 
     // --- Rebuild the derived fields against the EFFECTIVE plan --------------
     // (the scope-change set: Stages to Execute / to Skip / Total / Completed).
@@ -5613,31 +5636,42 @@ export function handleSetStatus(projectDir: string, flags: Record<string, string
   // awaiting-approval is a late statusline sync for a stage that has since moved
   // forward; writing "in-progress" over it would retreat the run-state and drop
   // the completion. Suppress the write entirely and leave the file byte-identical.
-  withAuditLock(projectDir, () => {
-    const content = readStateFile(projectDir, flags.intent, flags.space);
-    let currentBox = "";
-    for (const cb of parseCheckboxes(content)) {
-      if (cb.slug === stage) {
-        currentBox = cb.state;
-        break;
+  try {
+    withAuditLock(projectDir, () => {
+      const content = readStateFile(projectDir, flags.intent, flags.space);
+      let currentBox = "";
+      for (const cb of parseCheckboxes(content)) {
+        if (cb.slug === stage) {
+          currentBox = cb.state;
+          break;
+        }
       }
-    }
-    if (currentBox === "completed" || currentBox === "awaiting-approval") {
-      process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
-      return;
-    }
+      if (currentBox === "") {
+        die(`State mutation refused: operation=${JSON.stringify("set-status:" + stage)} phase=validate reason=target-not-found target=${JSON.stringify(stage)}`);
+      }
+      if (currentBox === "completed" || currentBox === "awaiting-approval") {
+        process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
+        return;
+      }
 
-    let next = setField(content, "Lifecycle Phase", phase);
-    next = setField(next, "Current Stage", stage);
-    next = setField(next, "Active Agent", agent);
-    next = setField(next, "In Progress", stage);
-    next = setField(next, "Status", "Running");
-    next = setField(next, "Last Updated", isoTimestamp());
-    next = setCheckbox(next, stage, "in-progress");
-    writeStateFile(projectDir, next, flags.intent, flags.space);
+      let next = setField(content, "Lifecycle Phase", phase);
+      next = setField(next, "Current Stage", stage);
+      next = setField(next, "Active Agent", agent);
+      next = setField(next, "In Progress", stage);
+      next = setField(next, "Status", "Running");
+      next = setField(next, "Last Updated", isoTimestamp());
+      next = requireChanged(
+        setCheckbox(validateStageState(next), stage, "in-progress"),
+        `set-status:start:${stage}`,
+      );
+      writeStateFile(projectDir, next, flags.intent, flags.space);
 
-    process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
-  }, flags.intent, flags.space);
+      process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+    }, flags.intent, flags.space);
+  } catch (error) {
+    if (error instanceof StageStateValidationError) die(errorMessage(error));
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------

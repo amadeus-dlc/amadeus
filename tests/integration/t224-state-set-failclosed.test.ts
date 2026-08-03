@@ -28,7 +28,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fieldExists, setFieldStrict } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { handleSet } from "../../dist/claude/.claude/tools/amadeus-state.ts";
@@ -180,6 +180,55 @@ describe("t224 state set fail-closed CLI", () => {
     expect(r.rc).not.toBe(0);
     expect(r.combined).toContain("Field not found in state file:");
     expect(r.combined).toContain("Ghost Counter");
+    expect(stateSha(proj)).toBe(before);
+  });
+});
+
+describe("t224 checkbox text mutation fail-closed CLI", () => {
+  test("an absent target rejects before write and never reports updated", () => {
+    proj = createTestProject();
+    seedStateFile(proj, INIT_DONE);
+    const before = stateSha(proj);
+
+    const r = runState(proj, ["checkbox", "missing-stage=completed"]);
+
+    expect(r.rc).not.toBe(0);
+    expect(r.combined).toContain("reason=target-not-found");
+    expect(r.combined).toContain("missing-stage");
+    expect(r.stdout).not.toContain('"updated":true');
+    expect(stateSha(proj)).toBe(before);
+  });
+
+  test("one absent target rejects a multi-change request atomically", () => {
+    proj = createTestProject();
+    seedStateFile(proj, INIT_DONE);
+    const before = stateSha(proj);
+
+    const r = runState(proj, [
+      "checkbox",
+      "intent-capture=completed",
+      "missing-stage=completed",
+    ]);
+
+    expect(r.rc).not.toBe(0);
+    expect(r.combined).toContain("reason=target-not-found");
+    expect(stateSha(proj)).toBe(before);
+  });
+
+  test("duplicate canonical rows reject validation with bytes unchanged", () => {
+    proj = createTestProject();
+    seedStateFile(proj, INIT_DONE);
+    const path = stateMd(proj);
+    const state = readFileSync(path, "utf-8");
+    const row = /^- \[[ xSR?-]\] intent-capture —.*$/m.exec(state)?.[0];
+    expect(row).toBeDefined();
+    writeFileSync(path, state.replace(row as string, `${row}\n${row}`), "utf-8");
+    const before = stateSha(proj);
+
+    const r = runState(proj, ["checkbox", "intent-capture=completed"]);
+
+    expect(r.rc).not.toBe(0);
+    expect(r.combined).toContain("reason=duplicate-target");
     expect(stateSha(proj)).toBe(before);
   });
 });

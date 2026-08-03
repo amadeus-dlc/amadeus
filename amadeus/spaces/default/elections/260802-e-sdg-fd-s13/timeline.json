@@ -1,0 +1,33 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-02T05:25:29Z",
+    "detail": "delivered via subagent: functional-design-reviewer (reported-by-conductor)",
+    "voter": "functional-design-reviewer"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-02T05:25:29Z",
+    "detail": "delivered via subagent: reverse-engineering-developer (reported-by-conductor)",
+    "voter": "reverse-engineering-developer"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T05:25:11Z",
+    "receivedAt": "2026-08-02T05:25:34Z",
+    "detail": "ballot accepted: functional-design-reviewer",
+    "voter": "functional-design-reviewer"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T05:25:12Z",
+    "receivedAt": "2026-08-02T05:25:34Z",
+    "detail": "ballot accepted: reverse-engineering-developer",
+    "voter": "reverse-engineering-developer"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-02T05:25:40Z",
+    "detail": "tally: established"
+  }
+]
