@@ -126,6 +126,33 @@ describe("#846 — exported main() drives in-process", () => {
     }
   });
 
+  test("required-sections main validates unit kinds in dependency DAGs", () => {
+    for (const kindLine of ["    kind: library\n", "", "    kind: worker\n"]) {
+      const p = tmpArtifact(
+        "unit-of-work-dependency.md",
+        [
+          "# Units",
+          "",
+          "## Dependencies",
+          "",
+          "```yaml",
+          "units:",
+          "  - name: api",
+          kindLine.trimEnd(),
+          "    depends_on: []",
+          "```",
+          "",
+          "## Integration",
+          "",
+          "None.",
+          "",
+        ].filter((line) => line !== "").join("\n"),
+      );
+      expect(drive(() => requiredSectionsMain(["--output-path", p]))).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("upstream-coverage main([--output-path]) exits 0 when no upstream", () => {
     const p = tmpArtifact("uc.md", "# Title\n\n## Alpha\n");
     expect(drive(() => upstreamCoverageMain(["--output-path", p]))).toBe(0);

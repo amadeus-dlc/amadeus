@@ -81,7 +81,9 @@ Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent
 
 ### Step 2: Read Prior Artifacts
 
-Read NFR requirements from `<record>/construction/{unit-name}/nfr-requirements/`. Read functional design artifacts from `<record>/construction/{unit-name}/functional-design/` (if they exist). Read application design from `<record>/inception/application-design/` (if exists) for architectural context; when the scope skipped those design stages, derive the architectural context from the NFR requirements and, on brownfield, the code knowledge base — never invent the content of a missing artifact.
+Read only the present input paths listed in the engine directive's `consumes`; omitted inputs are not applicable and must not be recreated or reported as missing. Read application design from `<record>/inception/application-design/` (if exists) for architectural context; when the scope skipped those design stages, derive the architectural context from the present NFR requirements and, on brownfield, the code knowledge base — never invent the content of a missing artifact.
+
+Do not reclassify or copy decisions already established in Requirements Analysis, Functional Design, or the code knowledge base. In an applicable artifact, reference an established decision as `file:line`; if one item is not applicable, state the reason in one line.
 
 ### Step 3: Generate Design Questions
 
@@ -115,7 +117,7 @@ Design concrete solutions for each NFR category:
 
 ### Step 6: Generate Artifacts
 
-Generate the following in `<record>/construction/{unit-name}/nfr-design/`:
+Generate only the applicable output paths listed in the engine directive under `<record>/construction/{unit-name}/nfr-design/`. Do not create N/A placeholders for pruned outputs or extra files merely to complete the full list below. The possible output contracts are:
 
 - **performance-design.md**: Caching architecture, optimization strategies, resource pooling, async patterns, performance budgets
 - **security-design.md**: Authentication/authorization architecture, encryption design, input validation strategy, security headers, compliance controls

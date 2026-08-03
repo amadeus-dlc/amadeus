@@ -17,8 +17,14 @@ import { join } from "node:path";
 import {
   __resetGraphCache,
   compileStageGraph,
+  requiredArtifactsForUnit,
 } from "../../packages/framework/core/tools/amadeus-graph.ts";
-import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  _resetStageGraphForTests,
+  parseStageFrontmatter,
+  type UnitKind,
+  UNIT_KINDS,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   handleNext,
   handleReport,
@@ -120,6 +126,7 @@ function seedProject(
 - **Scope**: feature
 - **State Version**: 7
 - **Skeleton Stance**: on
+- **Construction Autonomy Mode**: autonomous
 
 ## Scope Configuration
 - **Stages to Execute**: all
@@ -195,6 +202,142 @@ function writeFunctionalArtifacts(
   }
 }
 
+function activateStage(project: string, slug: "nfr-requirements" | "nfr-design"): void {
+  const statePath = seededStateFile(project);
+  let state = readFileSync(statePath, "utf-8").replace(
+    "- [-] functional-design — EXECUTE",
+    "- [x] functional-design — EXECUTE",
+  );
+  if (slug === "nfr-design") {
+    state = state
+      .replace("- [ ] nfr-requirements — EXECUTE", "- [x] nfr-requirements — EXECUTE")
+      .replace("- [ ] nfr-design — EXECUTE", "- [-] nfr-design — EXECUTE");
+  } else {
+    state = state.replace(
+      "- [ ] nfr-requirements — EXECUTE",
+      "- [-] nfr-requirements — EXECUTE",
+    );
+  }
+  writeFileSync(
+    statePath,
+    state.replace("- **Current Stage**: functional-design", `- **Current Stage**: ${slug}`),
+    "utf-8",
+  );
+}
+
+function writeStageArtifacts(
+  project: string,
+  unit: string,
+  stage: string,
+  artifacts: string[],
+): void {
+  const dir = join(seededRecordDir(project), "construction", unit, stage);
+  mkdirSync(dir, { recursive: true });
+  for (const artifact of artifacts) {
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`, "utf-8");
+  }
+}
+
+const ALL_NFR_REQUIREMENTS = [
+  "performance-requirements",
+  "security-requirements",
+  "scalability-requirements",
+  "reliability-requirements",
+  "tech-stack-decisions",
+];
+
+const ALL_NFR_DESIGNS = [
+  "performance-design",
+  "security-design",
+  "scalability-design",
+  "reliability-design",
+  "logical-components",
+];
+
+describe("t248 canonical NFR artifact matrices", () => {
+  const stagesDir = join(
+    REPO_ROOT,
+    "packages/framework/core/amadeus-common/stages",
+  );
+  const requirements = parseStageFrontmatter(
+    readFileSync(join(stagesDir, "construction/nfr-requirements.md"), "utf-8"),
+  ) as { produces: string[]; produces_kinds?: Record<string, UnitKind[]> };
+  const design = parseStageFrontmatter(
+    readFileSync(join(stagesDir, "construction/nfr-design.md"), "utf-8"),
+  ) as { produces: string[]; produces_kinds?: Record<string, UnitKind[]> };
+  const expected = {
+    service: {
+      requirements: ALL_NFR_REQUIREMENTS,
+      design: ALL_NFR_DESIGNS,
+    },
+    ui: {
+      requirements: [
+        "performance-requirements",
+        "security-requirements",
+        "tech-stack-decisions",
+      ],
+      design: ["performance-design", "security-design", "logical-components"],
+    },
+    library: {
+      requirements: ["security-requirements", "tech-stack-decisions"],
+      design: ["security-design", "logical-components"],
+    },
+    spec: {
+      requirements: ["security-requirements", "tech-stack-decisions"],
+      design: ["security-design"],
+    },
+    packaging: {
+      requirements: ["security-requirements", "tech-stack-decisions"],
+      design: ["security-design"],
+    },
+  } as const;
+
+  test.each([...UNIT_KINDS])("routes the canonical NFR output matrix for %s", (kind) => {
+    expect(requiredArtifactsForUnit(requirements, kind)).toEqual(expected[kind].requirements);
+    expect(requiredArtifactsForUnit(design, kind)).toEqual(expected[kind].design);
+  });
+});
+
+describe("t248 NFR stage source contracts", () => {
+  const stagesDir = join(
+    REPO_ROOT,
+    "packages/framework/core/amadeus-common/stages",
+  );
+
+  test("units-generation requires a canonical kind in planning, prose, and YAML", () => {
+    const body = readFileSync(join(stagesDir, "inception/units-generation.md"), "utf-8");
+    expect(body).toContain("Every new unit MUST declare exactly one canonical `kind`");
+    expect(body).toContain(
+      "- name: <unit-name>\n    kind: service\n    depends_on: []",
+    );
+  });
+
+  test.each(["nfr-requirements", "nfr-design"])(
+    "%s generates only directive-listed outputs without placeholders",
+    (slug) => {
+      const body = readFileSync(join(stagesDir, `construction/${slug}.md`), "utf-8");
+      expect(body).toContain("Generate only the applicable output paths listed in the engine directive");
+      expect(body).toContain("Do not create N/A placeholders for pruned outputs");
+      expect(body).toContain("reference an established decision as `file:line`");
+    },
+  );
+
+  test("nfr-design reads only present directive consumes", () => {
+    const body = readFileSync(join(stagesDir, "construction/nfr-design.md"), "utf-8");
+    expect(body).toContain("Read only the present input paths listed in the engine directive's `consumes`");
+  });
+});
+
+function writeAllNfrDesignInputs(project: string, unit: string): void {
+  writeStageArtifacts(project, unit, "nfr-requirements", ALL_NFR_REQUIREMENTS);
+  writeStageArtifacts(project, unit, "functional-design", ["business-logic-model"]);
+}
+
+function artifactNames(paths: unknown): string[] {
+  if (!Array.isArray(paths)) throw new Error("directive paths are not an array");
+  return paths.map((path) => String(path).split("/").at(-1)!.replace(/\.md$/, ""));
+}
+
 // Each case builds its own fixture project, and the canonical emit path
 // registers a Logger Provider for one workspace per process — so the
 // registration is dropped between cases, as the provider tests already do.
@@ -244,6 +387,109 @@ describe("t248 kind-aware routing and coverage", () => {
     writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     const directive = next(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
+  }, 30_000);
+});
+
+describe("t248 kind-aware consume projection", () => {
+  test.each([
+    ["service", [...ALL_NFR_REQUIREMENTS, "business-logic-model"]],
+    ["ui", ["performance-requirements", "security-requirements", "tech-stack-decisions", "business-logic-model"]],
+    ["library", ["security-requirements", "tech-stack-decisions", "business-logic-model"]],
+    ["spec", ["security-requirements", "tech-stack-decisions"]],
+    ["packaging", ["security-requirements", "tech-stack-decisions"]],
+  ] as const)("projects producer applicability into %s NFR Design inputs", (kind, expected) => {
+    const project = seedProject([{ name: "unit", kind }]);
+    activateStage(project, "nfr-design");
+    writeAllNfrDesignInputs(project, "unit");
+
+    const directive = next(project, sourceGraph());
+
+    expect(directive.kind).toBe("run-stage");
+    expect(artifactNames(directive.consumes)).toEqual([...expected]);
+    expect("consumes_absent" in directive).toBe(false);
+  }, 30_000);
+
+  test("covers a library NFR Design with only its two applicable outputs", () => {
+    const project = seedProject([{ name: "library", kind: "library" }]);
+    activateStage(project, "nfr-design");
+    writeAllNfrDesignInputs(project, "library");
+    writeStageArtifacts(project, "library", "nfr-design", [
+      "security-design",
+      "logical-components",
+    ]);
+
+    const directive = next(project, sourceGraph());
+
+    expect(directive.unit).toBe("library");
+    expect(directive.gate).toBe(true);
+  }, 30_000);
+
+  test("falls back only the kindless unit in a valid mixed runtime graph", () => {
+    const project = seedProject([
+      { name: "library", kind: "library" },
+      { name: "z-legacy" },
+    ]);
+    activateStage(project, "nfr-design");
+    writeAllNfrDesignInputs(project, "library");
+    writeAllNfrDesignInputs(project, "z-legacy");
+
+    const library = next(project, sourceGraph());
+    expect(library.unit).toBe("library");
+    expect(artifactNames(library.produces)).toEqual(["security-design", "logical-components"]);
+    expect(artifactNames(library.consumes)).toEqual([
+      "security-requirements",
+      "tech-stack-decisions",
+      "business-logic-model",
+    ]);
+    writeStageArtifacts(project, "library", "nfr-design", [
+      "security-design",
+      "logical-components",
+    ]);
+
+    const legacy = next(project, sourceGraph());
+    expect(legacy.unit).toBe("z-legacy");
+    expect(artifactNames(legacy.produces)).toEqual(ALL_NFR_DESIGNS);
+    expect(artifactNames(legacy.consumes)).toEqual([
+      ...ALL_NFR_REQUIREMENTS,
+      "business-logic-model",
+    ]);
+  }, 30_000);
+
+  test("discards every unit kind when one runtime row has an invalid kind", () => {
+    const project = seedProject([
+      { name: "library", kind: "library" },
+      { name: "service", kind: "service" },
+    ]);
+    activateStage(project, "nfr-design");
+    writeAllNfrDesignInputs(project, "library");
+    const runtimePath = join(seededRecordDir(project), "runtime-graph.json");
+    const graph = JSON.parse(readFileSync(runtimePath, "utf-8"));
+    graph.bolt_dag.units[1].kind = "worker";
+    writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
+
+    const directive = next(project, sourceGraph());
+
+    expect(directive.unit).toBe("library");
+    expect(artifactNames(directive.produces)).toEqual(ALL_NFR_DESIGNS);
+    expect(artifactNames(directive.consumes)).toEqual([
+      ...ALL_NFR_REQUIREMENTS,
+      "business-logic-model",
+    ]);
+  }, 30_000);
+
+  test("falls back every NFR Design input when runtime-graph is missing", () => {
+    const project = seedProject([{ name: "library", kind: "library" }]);
+    activateStage(project, "nfr-design");
+    writeAllNfrDesignInputs(project, "library");
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+
+    const directive = next(project, sourceGraph());
+
+    expect(artifactNames(directive.produces)).toEqual(ALL_NFR_DESIGNS);
+    expect(artifactNames(directive.consumes)).toEqual([
+      ...ALL_NFR_REQUIREMENTS,
+      "business-logic-model",
+    ]);
   }, 30_000);
 });
 
