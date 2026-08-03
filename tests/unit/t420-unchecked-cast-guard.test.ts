@@ -181,6 +181,29 @@ describe("parseAllowlist — the ledger is fail-closed at its only read (BR-CG-1
     expect(parseAllowlist('{"direction":"shrink-only","sites":{}}').kind).toBe("loaded");
   });
 
+  test("a `sites` array is unreadable, not an empty ledger", () => {
+    // `typeof [] === "object"`, so an array would slip through an object check
+    // and parse as a ledger holding nothing. That is the worst possible reading:
+    // every existing site then looks newly added, and the guard reports a source
+    // regression that did not happen instead of the ledger fault that did.
+    expect(parseAllowlist('{"direction":"shrink-only","sites":[]}').kind).toBe("failed");
+    expect(parseAllowlist('{"direction":"shrink-only","sites":{"a.ts":[]}}').kind).toBe("failed");
+    expect(parseAllowlist('{"direction":"shrink-only","sites":{"a.ts":3}}').kind).toBe("failed");
+  });
+
+  test("counts must be non-negative integers — the ratchet compares them", () => {
+    // A count that is fractional, negative or not a number has no comparison
+    // against a measured count that keeps the shrink-only property meaningful.
+    const of = (count: string): string => `{"direction":"shrink-only","sites":{"a.ts":{"json-parse-as":${count}}}}`;
+
+    expect(parseAllowlist(of("1.5")).kind).toBe("failed");
+    expect(parseAllowlist(of("-1")).kind).toBe("failed");
+    expect(parseAllowlist(of('"2"')).kind).toBe("failed");
+    expect(parseAllowlist(of("null")).kind).toBe("failed");
+    expect(parseAllowlist(of("0")).kind).toBe("loaded");
+    expect(parseAllowlist(of("2")).kind).toBe("loaded");
+  });
+
   test("a rendered allowlist round-trips back through the parser", () => {
     const census = { "a.ts": { "json-parse-as": 2 } };
     const loaded = parseAllowlist(renderAllowlist(census));

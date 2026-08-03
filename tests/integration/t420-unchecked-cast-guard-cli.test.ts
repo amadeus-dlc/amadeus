@@ -33,6 +33,21 @@ import {
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
+// Runs the gate with console.error captured, so a test can pin WHY the gate
+// exited and not merely that it did.
+function capturingStderr(run: () => number): { code: number; stderr: string } {
+  const original = console.error;
+  const lines: string[] = [];
+  console.error = (...args: unknown[]) => {
+    lines.push(args.map(String).join(" "));
+  };
+  try {
+    return { code: run(), stderr: lines.join("\n") };
+  } finally {
+    console.error = original;
+  }
+}
+
 const scratch: string[] = [];
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "unchecked-cast-guard-"));
@@ -165,18 +180,43 @@ describe("runCheck — verdicts and the residual report", () => {
   });
 
   test("a malformed allowlist fails closed rather than passing vacuously", () => {
+    // Exit 1 alone does not prove fail-closed: a ledger parsed into an EMPTY
+    // one also exits 1, via NEW_CAST, because every live site then looks new.
+    // That verdict says "the source regressed" about a tree that did not, so
+    // the reason is asserted alongside the code — otherwise a broken ledger
+    // could satisfy this test while the fail-closed contract is broken.
     const dir = tempDir();
-    const bad = join(dir, "bad.json");
-    writeFileSync(bad, "{ not json", "utf-8");
-    expect(runCheck({ allowlistPath: bad })).toBe(1);
+    const cases: readonly { readonly name: string; readonly body: string }[] = [
+      { name: "not JSON at all", body: "{ not json" },
+      { name: "a JSON array, not an object", body: "[]" },
+      { name: "JSON null", body: "null" },
+      { name: "the wrong ratchet direction", body: JSON.stringify({ direction: "grow-ok", sites: {} }) },
+      { name: "no sites map", body: JSON.stringify({ direction: "shrink-only" }) },
+      { name: "sites as an array", body: JSON.stringify({ direction: "shrink-only", sites: [] }) },
+      { name: "a site entry that is not a map", body: JSON.stringify({ direction: "shrink-only", sites: { "a.ts": 3 } }) },
+      {
+        name: "a fractional count",
+        body: JSON.stringify({ direction: "shrink-only", sites: { "a.ts": { "json-parse-as": 1.5 } } }),
+      },
+      {
+        name: "a negative count",
+        body: JSON.stringify({ direction: "shrink-only", sites: { "a.ts": { "json-parse-as": -1 } } }),
+      },
+      {
+        name: "a count that is not a number",
+        body: JSON.stringify({ direction: "shrink-only", sites: { "a.ts": { "json-parse-as": "2" } } }),
+      },
+    ];
 
-    const wrongDirection = join(dir, "grow.json");
-    writeFileSync(wrongDirection, JSON.stringify({ direction: "grow-ok", sites: {} }), "utf-8");
-    expect(runCheck({ allowlistPath: wrongDirection })).toBe(1);
+    for (const { name, body } of cases) {
+      const path = join(dir, `${name.replace(/\W+/g, "-")}.json`);
+      writeFileSync(path, body, "utf-8");
+      const { code, stderr } = capturingStderr(() => runCheck({ allowlistPath: path }));
 
-    const badSites = join(dir, "sites.json");
-    writeFileSync(badSites, JSON.stringify({ direction: "shrink-only", sites: [] }), "utf-8");
-    expect(runCheck({ allowlistPath: badSites })).toBe(1);
+      expect(`${name}: ${code}`).toBe(`${name}: 1`);
+      expect(`${name}: ${stderr}`).toContain("ALLOWLIST_UNREADABLE");
+      expect(`${name}: ${stderr}`).not.toContain("NEW_CAST");
+    }
   });
 
   test("an unreadable ledger fails closed even when the census would have passed", () => {

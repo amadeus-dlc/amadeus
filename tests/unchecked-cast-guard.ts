@@ -192,6 +192,28 @@ export function diffAgainstAllowlist(census: Census, allowlist: AllowlistDoc): G
 
 export type LoadedAllowlist = { kind: "loaded"; doc: AllowlistDoc } | { kind: "failed"; detail: string };
 
+// The counts ARE the ratchet's arithmetic, so a ledger that cannot supply them
+// is unreadable rather than lenient. A fractional, negative or non-numeric entry
+// has no comparison against a measured count that preserves the shrink-only
+// property, and a `sites` array is rejected explicitly because
+// `typeof [] === "object"` would otherwise admit it as an EMPTY ledger — which
+// parses, then reports every existing site as newly added. That inverts
+// fail-closed into a false regression: the guard would blame the source tree
+// for a fault in its own ledger.
+function invalidSitesDetail(sites: Record<string, unknown>): string | null {
+  for (const [file, perFile] of Object.entries(sites)) {
+    if (perFile === null || typeof perFile !== "object" || Array.isArray(perFile)) {
+      return `allowlist.sites["${file}"] must be a JSON object of kind -> count`;
+    }
+    for (const [kind, count] of Object.entries(perFile as Record<string, unknown>)) {
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
+        return `allowlist.sites["${file}"]["${kind}"] must be a non-negative integer, got ${String(count)}`;
+      }
+    }
+  }
+  return null;
+}
+
 export function parseAllowlist(body: string): LoadedAllowlist {
   let parsed: unknown;
   try {
@@ -206,8 +228,12 @@ export function parseAllowlist(body: string): LoadedAllowlist {
   if (doc.direction !== "shrink-only") {
     return { kind: "failed", detail: `allowlist direction must be "shrink-only", got ${String(doc.direction)}` };
   }
-  if (doc.sites === null || typeof doc.sites !== "object") {
+  if (doc.sites === null || typeof doc.sites !== "object" || Array.isArray(doc.sites)) {
     return { kind: "failed", detail: "allowlist.sites must be a JSON object" };
+  }
+  const invalidSites = invalidSitesDetail(doc.sites as Record<string, unknown>);
+  if (invalidSites !== null) {
+    return { kind: "failed", detail: invalidSites };
   }
   return {
     kind: "loaded",
