@@ -20,6 +20,7 @@ import {
   renderMirrorStateJson,
   writeMirrorStateDocument,
 } from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
+import { validMirrorSnapshotArb } from "../helpers/arbitraries/mirror-snapshot.ts";
 
 const TS = "2026-07-24T00:00:00Z";
 
@@ -358,6 +359,47 @@ describe("property: arbitrary surrounding bytes round-trip", () => {
         },
       ),
       { numRuns: 200 },
+    );
+  });
+});
+
+// ── PBT CONVENTIONS (FR-4c) ─────────────────────────────────────────────────
+// Mirrors tests/unit/t204-audit-escape.pbt.test.ts:16-28 (the canonical
+// definition); scoped to the property below, since this file is not a
+// PBT-only file.
+// 1. DETERMINISTIC PR CI. Fixed seed (MIRROR_PBT_SEED) + fast-check's default
+//    numRuns (100), so a red build replays the same counterexample.
+// 2. FAILURE OUTPUT. fast-check prints seed, replay path, and the shrunk
+//    counterexample — no extra wiring.
+// 3. PINNING SHRUNK COUNTEREXAMPLES. A caught bug is copied into an
+//    example-based test above as the permanent regression pin.
+// 4. DEEP RUNS (opt-in, no new CI job). AMADEUS_PBT_DEEP=1 raises numRuns.
+// ────────────────────────────────────────────────────────────────────────────
+const MIRROR_PBT_SEED = 0x27_4d17;
+const MIRROR_PBT_DEEP =
+  process.env.AMADEUS_PBT_DEEP === "1" || process.env.AMADEUS_PBT_DEEP === "true";
+const MIRROR_PBT_OPTS = MIRROR_PBT_DEEP
+  ? { seed: MIRROR_PBT_SEED, numRuns: 50_000 }
+  : { seed: MIRROR_PBT_SEED };
+
+// P-MR1 generalizes the example at :58 over the whole valid-snapshot space.
+// The equation is `render . parse . render = render` (equality of the CANONICAL
+// FORM), not `parse . render = id`: MirrorStateSnapshot is optional-with-null
+// (amadeus-mirror-types.ts:208/:212/:216), so an absent key and an explicit null
+// are the same state and a structural comparison would report a false red.
+// Surrounding bytes are deliberately NOT varied here — that axis belongs to the
+// property at :341, which in turn keeps its snapshot space near-fixed.
+describe("property: valid snapshot round-trip", () => {
+  test("render -> parse -> render is stable for any valid snapshot", () => {
+    fc.assert(
+      fc.property(validMirrorSnapshotArb, (snapshot: MirrorStateSnapshot) => {
+        const canonical = renderMirrorStateJson(snapshot);
+        const parsed = parseMirrorStateDocument(renderMirrorStateBlock(snapshot));
+        expect(parsed.kind, canonical).toBe("ok");
+        if (parsed.kind !== "ok") return;
+        expect(renderMirrorStateJson(parsed.snapshot)).toBe(canonical);
+      }),
+      MIRROR_PBT_OPTS,
     );
   });
 });
