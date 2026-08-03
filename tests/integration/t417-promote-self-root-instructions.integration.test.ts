@@ -60,6 +60,15 @@ afterEach(() => {
 });
 
 describe("t417 promote-self root instruction authority", () => {
+  test("--check accepts an absent generated suffix but rejects a stale existing suffix", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    rmSync(join(root, ".agents/rules/amadeus-codex-suffix.md"));
+    expect(await promoteSelfMain(["--check", "--no-build"], root)).toBe(0);
+
+    write(".agents/rules/amadeus-codex-suffix.md", "stale suffix\n");
+    expect(await promoteSelfMain(["--check", "--no-build"], root)).toBe(1);
+  });
+
   test("--apply preserves root AGENTS and generates only the canonical imported suffix", async () => {
     const before = readFileSync(join(root, "AGENTS.md"));
 
