@@ -17,7 +17,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import { Readable } from "node:stream";
 import { codexHooksDoctorCheck } from "../../packages/framework/harness/codex/tools/amadeus-codex-hooks.ts";
 import { main } from "../../packages/setup/src/cli.ts";
 import type { CliPorts } from "../../packages/setup/src/cli.ts";
@@ -25,16 +24,12 @@ import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.t
 import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
-import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
-import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
-import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
+import { buildReleaseAssetHttp } from "../lib/setup-release-asset-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
-const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags?per_page=100";
 const ACTIVE_RELATIVE_PATH = ".codex/hooks.json";
 const EXAMPLE_RELATIVE_PATH = ".codex/hooks.json.example";
 const CANONICAL_SOURCE = join(ROOT, EXAMPLE_RELATIVE_PATH);
@@ -59,32 +54,6 @@ afterEach(() => {
   }
 });
 
-function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
-  const checksums = buildReleaseAssetChecksums(archive, tag);
-  return {
-    async getJson(path: string) {
-      if (path === RELEASES_PATH) {
-        return Result.ok([{ tag_name: tag, draft: false, prerelease: false }]);
-      }
-      if (path === `/repos/amadeus-dlc/amadeus/git/ref/tags/${tag}`) {
-        return Result.ok({
-          ref: `refs/tags/${tag}`,
-          object: { sha: "0".repeat(40), type: "commit" },
-        });
-      }
-      if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
-      throw new Error(`unexpected path in fixture: ${path}`);
-    },
-    async downloadArchive(url) {
-      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
-      const stream = Readable.toWeb(
-        Readable.from(bytes),
-      ) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
-    },
-  };
-}
-
 function realPorts(archive: Buffer, tag: `v${string}`): CliPorts {
   return {
     tty: {
@@ -100,7 +69,7 @@ function realPorts(archive: Buffer, tag: `v${string}`): CliPorts {
       },
     },
     manifestIo: createManifestIo(createFsRead(), createFsWrite()),
-    http: fakeHttp(archive, tag),
+    http: buildReleaseAssetHttp(archive, tag),
     createTmpWrite,
     applyWrite: createApplyWrite(),
     verifyRead: createVerifyRead(),

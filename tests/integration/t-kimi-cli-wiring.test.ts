@@ -16,10 +16,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Readable } from "node:stream";
 import { main, type CliPorts } from "../../packages/setup/src/cli.ts";
 import { MANAGED_BLOCK_BEGIN, MANAGED_BLOCK_END } from "../../packages/setup/src/domain/kimi-hooks.ts";
-import type { Http } from "../../packages/setup/src/ports/http.ts";
 import type { TtyIO } from "../../packages/setup/src/ports/tty.ts";
 import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts";
 import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
@@ -28,13 +26,11 @@ import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.t
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { IoError } from "../../packages/setup/src/ports/fsops.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
-import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
+import { buildReleaseAssetHttp } from "../lib/setup-release-asset-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SNIPPET_MASTER = join(HERE, "..", "..", "packages", "framework", "harness", "kimi", "hooks", "amadeus-hooks.snippet.toml");
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
-const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags?per_page=100";
 const MANIFEST_RELATIVE_PATH = join("amadeus", ".installer", "amadeus-setup-manifest.json");
 
 function kimiFixtureEntries(orgContent: string): TarFixtureEntry[] {
@@ -43,24 +39,6 @@ function kimiFixtureEntries(orgContent: string): TarFixtureEntry[] {
     { type: "file", name: "dist/kimi/.kimi-code/hooks/amadeus-hooks.snippet.toml", content: readFileSync(SNIPPET_MASTER) },
     { type: "file", name: "dist/kimi/amadeus/spaces/default/memory/org.md", content: Buffer.from(orgContent) },
   ];
-}
-
-function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
-  const checksums = buildReleaseAssetChecksums(archive, tag);
-  return {
-    async getJson(path: string) {
-      if (path === RELEASES_PATH) return Result.ok([{ tag_name: tag, draft: false, prerelease: false }]);
-      if (path === `/repos/amadeus-dlc/amadeus/git/ref/tags/${tag}`)
-        return Result.ok({ ref: `refs/tags/${tag}`, object: { sha: "0".repeat(40), type: "commit" } });
-      if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
-      throw new Error(`unexpected path in fixture: ${path}`);
-    },
-    async downloadArchive(url) {
-      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
-      const stream = Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
-    },
-  };
 }
 
 function nonInteractiveTty(): TtyIO {
@@ -101,7 +79,7 @@ function realPorts(archive: Buffer, tag: `v${string}`, tty: TtyIO, out: (message
   return {
     tty,
     manifestIo: createManifestIo(createFsRead(), createFsWrite()),
-    http: fakeHttp(archive, tag),
+    http: buildReleaseAssetHttp(archive, tag),
     createTmpWrite,
     applyWrite: createApplyWrite(),
     verifyRead: createVerifyRead(),

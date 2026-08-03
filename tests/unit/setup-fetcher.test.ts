@@ -8,7 +8,6 @@
 
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { Readable } from "node:stream";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Http } from "../../packages/setup/src/ports/http.ts";
@@ -19,16 +18,13 @@ import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
 import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
+import { toReadableStream } from "../lib/setup-release-asset-fixture.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 function version(raw = "0.1.7") {
   const parsed = SemVer.parse(raw);
   if (parsed.type === "err") throw new Error("invalid fixture version");
   return ResolvedVersion.fromTag(parsed.value);
-}
-
-function stream(bytes: Uint8Array): ReadableStream<Uint8Array> {
-  return Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
 }
 
 function fakeHttp(gz: Buffer, failures: FetchError[] = []): Http & { calls: number } {
@@ -44,8 +40,7 @@ function fakeHttp(gz: Buffer, failures: FetchError[] = []): Http & { calls: numb
       state.calls++;
       const failure = failures[state.calls - 1];
       if (failure) return Result.err(failure);
-      const stream = Readable.toWeb(Readable.from(gz)) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
+      return Result.ok(toReadableStream(gz));
     },
   };
 }
@@ -64,7 +59,7 @@ function assetHttp(
     async downloadArchive(url) {
       urls.push(url.toString());
       const response = url.pathname.endsWith("/SHA256SUMS") ? checksumResponse : archiveResponse;
-      return response instanceof Uint8Array ? Result.ok(stream(response)) : Result.err(response);
+      return response instanceof Uint8Array ? Result.ok(toReadableStream(response)) : Result.err(response);
     },
   };
 }

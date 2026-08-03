@@ -5,7 +5,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Readable } from "node:stream";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
 import { SemVer } from "../../packages/setup/src/domain/semver.ts";
@@ -15,17 +14,15 @@ import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildDistAssets } from "../../scripts/release-dist.ts";
 import { discoverHarnessNames } from "../../scripts/package.ts";
+import { toReadableStream } from "../lib/setup-release-asset-fixture.ts";
 
 const roots: string[] = [];
-const CLAUDE = HarnessName.all[0] as HarnessName;
+const CLAUDE = HarnessName.all.find((name) => String(name) === "claude");
+if (!CLAUDE) throw new Error("claude harness fixture is unavailable");
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-
-function stream(bytes: Uint8Array): ReadableStream<Uint8Array> {
-  return Readable.toWeb(Readable.from(bytes)) as unknown as ReadableStream<Uint8Array>;
-}
 
 describe("u1 release asset -> u2 installer", () => {
   test("installs a harness from the exact asset and SHA256SUMS produced by buildDistAssets", async () => {
@@ -42,7 +39,7 @@ describe("u1 release asset -> u2 installer", () => {
         throw new Error("fetcher must never call getJson");
       },
       async downloadArchive(url) {
-        return Result.ok(stream(readFileSync(url.pathname.endsWith("/SHA256SUMS") ? bundle.checksumPath : bundle.tarPath)));
+        return Result.ok(toReadableStream(readFileSync(url.pathname.endsWith("/SHA256SUMS") ? bundle.checksumPath : bundle.tarPath)));
       },
     };
     const parsed = SemVer.parse("0.1.8");
