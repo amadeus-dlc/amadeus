@@ -5362,34 +5362,27 @@ export interface CheckboxLine {
   suffix: string; // e.g., "EXECUTE" or "SKIP: reason"
 }
 
+function checkboxStateOfMarker(marker: string): CheckboxState {
+  switch (marker) {
+    case "-": return "in-progress";
+    case "?": return "awaiting-approval";
+    case "R": return "revising";
+    case "x": return "completed";
+    case "S": return "skipped";
+    default: return "pending";
+  }
+}
+
 export function parseCheckboxes(content: string): CheckboxLine[] {
   const results: CheckboxLine[] = [];
   const regex = /^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$/gm;
   let match: RegExpExecArray | null = regex.exec(content);
   while (match !== null) {
-    const marker = match[1];
-    let state: CheckboxState = "pending";
-    switch (marker) {
-      case " ":
-        state = "pending";
-        break;
-      case "-":
-        state = "in-progress";
-        break;
-      case "?":
-        state = "awaiting-approval";
-        break;
-      case "R":
-        state = "revising";
-        break;
-      case "x":
-        state = "completed";
-        break;
-      case "S":
-        state = "skipped";
-        break;
-    }
-    results.push({ slug: match[2], state, suffix: match[3].trim() });
+    results.push({
+      slug: match[2],
+      state: checkboxStateOfMarker(match[1]),
+      suffix: match[3].trim(),
+    });
     match = regex.exec(content);
   }
   return results;
@@ -5412,31 +5405,12 @@ export function parseScopedCheckboxes(content: string): ScopedCheckboxLine[] {
     }
     const match = /^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$/.exec(line);
     if (match === null) continue;
-    const marker = match[1];
-    let state: CheckboxState;
-    switch (marker) {
-      case " ":
-        state = "pending";
-        break;
-      case "-":
-        state = "in-progress";
-        break;
-      case "?":
-        state = "awaiting-approval";
-        break;
-      case "R":
-        state = "revising";
-        break;
-      case "x":
-        state = "completed";
-        break;
-      case "S":
-        state = "skipped";
-        break;
-      default:
-        state = "pending";
-    }
-    results.push({ slug: match[2], state, suffix: match[3].trim(), ...(unit ? { unit } : {}) });
+    results.push({
+      slug: match[2],
+      state: checkboxStateOfMarker(match[1]),
+      suffix: match[3].trim(),
+      ...(unit ? { unit } : {}),
+    });
   }
   return results;
 }
@@ -5535,17 +5509,6 @@ const STAGE_PROGRESS_VALIDATION_RE =
 
 export function stageLineKey(slug: string, unit?: string): string {
   return `${unit ?? ""}\0${slug}`;
-}
-
-function checkboxStateOfMarker(marker: string): CheckboxState {
-  switch (marker) {
-    case "-": return "in-progress";
-    case "?": return "awaiting-approval";
-    case "R": return "revising";
-    case "x": return "completed";
-    case "S": return "skipped";
-    default: return "pending";
-  }
 }
 
 /** Parse and seal the only state shape the stage-line writers may mutate. */
@@ -5690,6 +5653,10 @@ export function setStageSuffix(
   return verifyStageMutation(data, content, operation, slug, (line) => line.suffix.startsWith(action));
 }
 
+/**
+ * Require a successfully resolved, invariant-checked mutation target.
+ * A `changed` result may be byte-identical when the requested state already holds.
+ */
 export function requireChanged(result: TextMutationResult, operation: string): string {
   switch (result.kind) {
     case "changed":

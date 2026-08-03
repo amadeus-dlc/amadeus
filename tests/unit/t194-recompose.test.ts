@@ -106,7 +106,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     expect(restored).toMatch(/- \[ \] market-research — EXECUTE/);
   });
 
-  test("in-process handler drives suffix flips and derived-plan rebuild", () => {
+  test("in-process handler drives suffix flips", () => {
     const proj = bornProject();
     const restoreScopeData = useRealScopeData();
     const originalWrite = process.stdout.write.bind(process.stdout);

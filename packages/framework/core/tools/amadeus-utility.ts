@@ -134,6 +134,7 @@ import {
   withIntentLifecyclePreflight,
   rulesSubdir,
   type ScopeDefinition,
+  StageStateValidationError,
 } from "./amadeus-lib.ts";
 import { resolveCurrentIntentSelectionResponse } from "./amadeus-intent-selection.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
@@ -5635,37 +5636,42 @@ export function handleSetStatus(projectDir: string, flags: Record<string, string
   // awaiting-approval is a late statusline sync for a stage that has since moved
   // forward; writing "in-progress" over it would retreat the run-state and drop
   // the completion. Suppress the write entirely and leave the file byte-identical.
-  withAuditLock(projectDir, () => {
-    const content = readStateFile(projectDir, flags.intent, flags.space);
-    let currentBox = "";
-    for (const cb of parseCheckboxes(content)) {
-      if (cb.slug === stage) {
-        currentBox = cb.state;
-        break;
+  try {
+    withAuditLock(projectDir, () => {
+      const content = readStateFile(projectDir, flags.intent, flags.space);
+      let currentBox = "";
+      for (const cb of parseCheckboxes(content)) {
+        if (cb.slug === stage) {
+          currentBox = cb.state;
+          break;
+        }
       }
-    }
-    if (currentBox === "") {
-      die(`State mutation refused: operation=${JSON.stringify("set-status:" + stage)} phase=validate reason=target-not-found target=${JSON.stringify(stage)}`);
-    }
-    if (currentBox === "completed" || currentBox === "awaiting-approval") {
-      process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
-      return;
-    }
+      if (currentBox === "") {
+        die(`State mutation refused: operation=${JSON.stringify("set-status:" + stage)} phase=validate reason=target-not-found target=${JSON.stringify(stage)}`);
+      }
+      if (currentBox === "completed" || currentBox === "awaiting-approval") {
+        process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
+        return;
+      }
 
-    let next = setField(content, "Lifecycle Phase", phase);
-    next = setField(next, "Current Stage", stage);
-    next = setField(next, "Active Agent", agent);
-    next = setField(next, "In Progress", stage);
-    next = setField(next, "Status", "Running");
-    next = setField(next, "Last Updated", isoTimestamp());
-    next = requireChanged(
-      setCheckbox(validateStageState(next), stage, "in-progress"),
-      `set-status:start:${stage}`,
-    );
-    writeStateFile(projectDir, next, flags.intent, flags.space);
+      let next = setField(content, "Lifecycle Phase", phase);
+      next = setField(next, "Current Stage", stage);
+      next = setField(next, "Active Agent", agent);
+      next = setField(next, "In Progress", stage);
+      next = setField(next, "Status", "Running");
+      next = setField(next, "Last Updated", isoTimestamp());
+      next = requireChanged(
+        setCheckbox(validateStageState(next), stage, "in-progress"),
+        `set-status:start:${stage}`,
+      );
+      writeStateFile(projectDir, next, flags.intent, flags.space);
 
-    process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
-  }, flags.intent, flags.space);
+      process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+    }, flags.intent, flags.space);
+  } catch (error) {
+    if (error instanceof StageStateValidationError) die(errorMessage(error));
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------

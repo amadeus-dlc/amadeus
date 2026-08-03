@@ -31,7 +31,10 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(gateStep).toContain("github.event.before");
     expect(gateStep).toContain("git cat-file -e");
     expect(gateStep).not.toContain("git fetch");
-    expect(gateStep).toContain('workflow_dispatch) BASE_REVISION="$(git rev-parse HEAD^)"');
+    expect(gateStep).toContain('BASE_REVISION="$(git rev-parse --verify --quiet HEAD^)"');
+    expect(gateStep).toContain("workflow_dispatch HEAD has no parent");
+    expect(gateStep).toContain("Trusted base revision must not be all zeros");
+    expect(gateStep).toContain("must be a 40-character lowercase hexadecimal SHA");
     expect(gateStep).toContain('if [[ "${BASE_REVISION}" =~ ^0+$ ]]');
     expect(gateStep).toContain("timeout --signal=TERM --kill-after=5s 30s");
     const testsJob = workflow.slice(workflow.indexOf("  tests:\n"), workflow.indexOf("  coverage-head:\n"));

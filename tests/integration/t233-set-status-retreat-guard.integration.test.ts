@@ -282,6 +282,23 @@ describe("t233 set-status retreat guard (mechanism cli — cross-process)", () =
     expect(readState(proj)).toBe(before);
   });
 
+  test("BR-2 cli: malformed Stage Progress fails through structured error without writing state", () => {
+    const proj = track(seed([["code-generation", "[ ]"]]));
+    const statePath = seededStateFile(proj);
+    const malformed = readState(proj).replace(
+      "- [ ] code-generation — EXECUTE",
+      "- [ ] code-generation — EXECUTE\n- [!] malformed-stage — EXECUTE",
+    );
+    writeFileSync(statePath, malformed, "utf8");
+
+    const r = utilSync(proj, ["set-status", "--stage", "code-generation"]);
+
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr.toString()).toContain("State mutation validation failed");
+    expect(JSON.parse(r.stderr.toString())).toHaveProperty("error");
+    expect(readState(proj)).toBe(malformed);
+  });
+
   // BR-3: set-status ∥ `amadeus-state set` in parallel. The completed checkbox
   // must NOT roll back (the guard suppresses the retreat under contention), and
   // the concurrent field write must land — no lost update in either direction.

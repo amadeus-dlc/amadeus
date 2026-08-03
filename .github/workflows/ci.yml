@@ -127,7 +127,12 @@ jobs:
           case "${EVENT_NAME}" in
             pull_request) BASE_REVISION="${PULL_REQUEST_BASE_SHA}" ;;
             push) BASE_REVISION="${PUSH_BEFORE_SHA}" ;;
-            workflow_dispatch) BASE_REVISION="$(git rev-parse HEAD^)" ;;
+            workflow_dispatch)
+              if ! BASE_REVISION="$(git rev-parse --verify --quiet HEAD^)"; then
+                echo "Trusted base revision is unavailable: workflow_dispatch HEAD has no parent" >&2
+                exit 2
+              fi
+              ;;
             *)
               echo "No trusted base revision for event: ${EVENT_NAME}" >&2
               exit 2
@@ -135,11 +140,11 @@ jobs:
           esac
 
           if [[ "${BASE_REVISION}" =~ ^0+$ ]]; then
-            echo "Trusted base revision must be a non-zero full SHA" >&2
+            echo "Trusted base revision must not be all zeros" >&2
             exit 2
           fi
           if [[ ! "${BASE_REVISION}" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Trusted base revision must be a non-zero full SHA" >&2
+            echo "Trusted base revision must be a 40-character lowercase hexadecimal SHA: ${BASE_REVISION}" >&2
             exit 2
           fi
           if ! git cat-file -e "${BASE_REVISION}^{commit}" 2>/dev/null; then

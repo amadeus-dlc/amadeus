@@ -226,10 +226,14 @@ export function trustedBaseSha(explicit?: string): string | null {
 export function baselineAtRevision(repoRoot: string, sha: string): BaselineDoc {
   const object = `${sha}:tests/no-silent-drop/baseline.json`;
   const shown = spawnSync("git", ["show", object], { cwd: repoRoot, encoding: "utf8" });
+  if (shown.error !== undefined || shown.status === null || typeof shown.stdout !== "string") {
+    throw new InfraFailure("INTERNAL_ERROR", "trusted baseline lookup could not start");
+  }
   if (shown.status !== 0) {
+    const detail = typeof shown.stderr === "string" ? shown.stderr.trim() : "";
     throw new InfraFailure(
       "BASELINE_INVALID",
-      `trusted base does not contain an unambiguous baseline: ${shown.stderr.trim() || object}`,
+      `trusted base does not contain an unambiguous baseline: ${detail || object}`,
     );
   }
   return parseBaseline(shown.stdout, `baseline at ${sha}`);

@@ -78,6 +78,10 @@ function hashText(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
+function compareBytes(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function readSource(path: string): string {
   try {
     return readFileSync(path, "utf8");
@@ -150,8 +154,8 @@ export function captureSnapshot(repoRoot = REPO_ROOT): Snapshot {
     }
     walkSnapshotDirectory(repoRoot, absoluteRoot, files, directories);
   }
-  files.sort((left, right) => left.relative.localeCompare(right.relative));
-  directories.sort((left, right) => left.absolute.localeCompare(right.absolute));
+  files.sort((left, right) => compareBytes(left.relative, right.relative));
+  directories.sort((left, right) => compareBytes(left.absolute, right.absolute));
   if (files.length === 0) throw new InfraFailure("SCAN_ZERO", "validated target set contains zero authored source files");
   const targetDigest = digest(files.map((file) => `${file.relative}\0${file.hash}`).join("\n"));
   return { files, directories, targetDigest };

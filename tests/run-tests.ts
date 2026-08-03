@@ -132,7 +132,7 @@ OUTPUT MODIFIERS (combinable with any tier/profile):
                   always run serially.
                   Recommended range: 1-8. See docs/reference/09-testing.md.
   --test-timeout-ms N
-                  Per-file Bun test timeout in milliseconds (default: ${DEFAULT_TEST_TIMEOUT_MS};
+                  Per-test Bun timeout in milliseconds (default: ${DEFAULT_TEST_TIMEOUT_MS};
                   maximum: ${MAX_TEST_TIMEOUT_MS}).
 
   -h, --help      Show this help and exit
