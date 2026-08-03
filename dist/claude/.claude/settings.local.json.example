@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy to settings.local.json (gitignored) for personal overrides. These take precedence over settings.json.",
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85"
+  }
+}
