@@ -2562,6 +2562,7 @@ export function graphCompileInvariantViolations(
       }
     } catch (error) {
       violations.push(`(iii) scope grid is invalid at ${surface.path}: ${errorMessage(error)}`);
+      continue;
     }
   }
   const dagProbe = parseDag(
