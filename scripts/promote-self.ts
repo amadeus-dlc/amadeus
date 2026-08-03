@@ -638,7 +638,15 @@ export function applyDistributionUpdates(
   try {
     coordinator.apply(updates, mirrorProjectionRegistryDigest());
   } catch (error) {
-    if (coordinator.pendingJournalCount() > 0) coordinator.recover();
+    if (coordinator.pendingJournalCount() > 0) {
+      try {
+        coordinator.recover();
+      } catch (recoveryError) {
+        const combined = recoveryError instanceof Error ? recoveryError : new Error(String(recoveryError));
+        Object.defineProperty(combined, "cause", { value: error, configurable: true });
+        throw combined;
+      }
+    }
     throw error;
   }
 }

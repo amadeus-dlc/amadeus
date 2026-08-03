@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export type HarnessType =
@@ -153,7 +153,7 @@ export type HarnessStageEntry =
 
 function validRelativeProjectPath(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 &&
-    !value.startsWith("/") && !/^[A-Za-z]:[\\/]/u.test(value) &&
+    !value.startsWith("/") && !win32.isAbsolute(value) &&
     !value.split(/[\\/]/u).includes("..");
 }
 

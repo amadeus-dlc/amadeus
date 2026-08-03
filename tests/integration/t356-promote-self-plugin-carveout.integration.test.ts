@@ -22,7 +22,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DistributionTransactionCoordinator } from "../../scripts/distribution-transaction.ts";
+import {
+  DistributionRecoveryError,
+  DistributionTransactionCoordinator,
+} from "../../scripts/distribution-transaction.ts";
 import {
   applyDistributionUpdates,
   misplacedPluginProjectionFiles,
@@ -197,5 +200,28 @@ describe("t356 composed-plugin state through promote-self", () => {
     expect(readFileSync(join(root, "a.txt"), "utf-8")).toBe("old-a");
     expect(readFileSync(join(root, "b.txt"), "utf-8")).toBe("old-b");
     expect(coordinator.pendingJournalCount()).toBe(0);
+  });
+
+  test("a recovery failure retains the original apply error as its cause", () => {
+    write("a.txt", "old-a");
+    const applyError = new Error("injected projection failure");
+    const recoveryError = new Error("injected recovery failure");
+    const coordinator = new DistributionTransactionCoordinator(root, {
+      checkpoint: (checkpoint) => {
+        if (checkpoint === "target-renamed") throw applyError;
+        if (checkpoint === "recovery-restore") throw recoveryError;
+      },
+    });
+
+    let caught: unknown;
+    try {
+      applyDistributionUpdates(root, [{ path: "a.txt", bytes: Buffer.from("new-a") }], coordinator);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(DistributionRecoveryError);
+    expect(caught).toHaveProperty("message", `Error: ${recoveryError.message}`);
+    expect(caught).toHaveProperty("cause", applyError);
+    expect(coordinator.pendingJournalCount()).toBe(1);
   });
 });

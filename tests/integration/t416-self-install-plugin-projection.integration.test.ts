@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { harnessStageEntry } from "../../packages/framework/core/tools/amadeus-harness.ts";
 import type { PluginRecord } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { defaultPluginCliDeps } from "../../packages/framework/core/tools/amadeus-plugin.ts";
+import { renderStageRunner } from "../../packages/framework/core/tools/amadeus-runner-gen.ts";
 import {
   buildSelfInstallProjection,
   SELF_INSTALL_HARNESSES,
@@ -57,6 +58,11 @@ describe("t416 deterministic self-install plugin projections", () => {
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-composition.json")), harness).toBe(true);
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-audit.json")), harness).toBe(false);
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-drops.json")), harness).toBe(false);
+      const composition = [...(first.artifacts ?? [])].find(([path]) =>
+        path.endsWith(".amadeus-plugin-composition.json")
+      )?.[1].toString("utf-8");
+      expect(composition, harness).toEndWith("\n");
+      expect(composition, harness).toContain('\n  "plugins":');
     }
   }, 120_000);
 
@@ -110,6 +116,8 @@ describe("t416 deterministic self-install plugin projections", () => {
     for (const stageEntry of [
       { kind: "runner", root: "/tmp/skills" },
       { kind: "runner", root: "../skills" },
+      { kind: "runner", root: "\\skills" },
+      { kind: "runner", root: "\\\\server\\share" },
       { kind: "command", path: "C:\\commands\\amadeus.md" },
       { kind: "command", path: "" },
     ]) {
@@ -130,13 +138,17 @@ describe("t416 deterministic self-install plugin projections", () => {
     const slug = "formal-model-check";
     const current = defaultPluginCliDeps().derivedProjectionCurrent!;
     mkdirSync(dataDir, { recursive: true });
-    writeFileSync(graphPath, JSON.stringify([{ slug: 42 }, { slug }]));
+    const node = { slug, phase: "construction" } as Parameters<typeof renderStageRunner>[0];
+    writeFileSync(graphPath, JSON.stringify([{ slug: 42 }, node]));
 
     writeFileSync(descriptor, JSON.stringify({ stageEntry: { kind: "runner", root: ".agents/skills" } }));
     const runner = join(projectDir, ".agents", "skills", `amadeus-${slug}`, "SKILL.md");
     mkdirSync(join(runner, ".."), { recursive: true });
-    writeFileSync(runner, "# runner\n");
+    writeFileSync(runner, renderStageRunner(node));
     expect(current(hostRoot, pluginRecord(slug))).toBe(true);
+    writeFileSync(runner, "# modified runner\n");
+    expect(current(hostRoot, pluginRecord(slug))).toBe(false);
+    writeFileSync(runner, renderStageRunner(node));
     rmSync(runner);
     expect(current(hostRoot, pluginRecord(slug))).toBe(false);
 
@@ -151,7 +163,7 @@ describe("t416 deterministic self-install plugin projections", () => {
     rmSync(descriptor);
     const fallbackRunner = join(hostRoot, "skills", `amadeus-${slug}`, "SKILL.md");
     mkdirSync(join(fallbackRunner, ".."), { recursive: true });
-    writeFileSync(fallbackRunner, "# runner\n");
+    writeFileSync(fallbackRunner, renderStageRunner(node));
     expect(current(hostRoot, pluginRecord(slug))).toBe(true);
 
     writeFileSync(graphPath, JSON.stringify([{ slug: "other" }]));

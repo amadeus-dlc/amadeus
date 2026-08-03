@@ -29,6 +29,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
+import type { GraphStage } from "./amadeus-graph.ts";
 import {
   resolveProjectDirFromHook,
   resyncStateToStageGraph,
@@ -74,6 +75,7 @@ import {
   type WorkspaceBackend,
   type WorkspaceTransaction,
 } from "./amadeus-plugin-compose.ts";
+import { renderStageRunner } from "./amadeus-runner-gen.ts";
 
 // A discovered plugin whose manifest parsed (non-null). Distinct from the
 // engine's branded ValidPlugin (an inspect-time cast); the CLI only needs the
@@ -712,21 +714,25 @@ function hostProjectionCurrent(backend: WorkspaceBackend, record: PluginRecord):
 
 function derivedProjectionCurrent(hostRoot: string, record: PluginRecord): boolean {
   const graphPath = join(hostRoot, "tools", "data", "stage-graph.json");
-  let graphSlugs: Set<string>;
+  let graphNodes: Map<string, GraphStage>;
   try {
-    const graph = JSON.parse(readFileSync(graphPath, "utf-8")) as Array<{ slug?: unknown }>;
+    const graph = JSON.parse(readFileSync(graphPath, "utf-8")) as Array<GraphStage & { slug?: unknown }>;
     if (!Array.isArray(graph)) return false;
-    graphSlugs = new Set(graph.flatMap((node) => typeof node.slug === "string" ? [node.slug] : []));
+    graphNodes = new Map(graph.flatMap((node) => typeof node.slug === "string" ? [[node.slug, node]] : []));
   } catch {
     return false;
   }
   const slugs = record.stageIndex.map((stage) => stage.slug);
-  if (slugs.some((slug) => !graphSlugs.has(slug))) return false;
+  if (slugs.some((slug) => !graphNodes.has(slug))) return false;
   const entry = harnessStageEntry(join(hostRoot, "tools", "data"));
   if (entry?.kind === "command") return existsSync(join(projectDirOfHostRoot(hostRoot), ...entry.path.split("/")));
   const root = entry?.kind === "runner" ? entry.root : `${basename(hostRoot)}/skills`;
   const projectDir = projectDirOfHostRoot(hostRoot);
-  return slugs.every((slug) => existsSync(join(projectDir, ...root.split("/"), `amadeus-${slug}`, "SKILL.md")));
+  return slugs.every((slug) => {
+    const node = graphNodes.get(slug);
+    const path = join(projectDir, ...root.split("/"), `amadeus-${slug}`, "SKILL.md");
+    return node !== undefined && existsSync(path) && readFileSync(path, "utf-8") === renderStageRunner(node);
+  });
 }
 
 function digestsEqual(a: ReadonlyMap<string, string>, b: ReadonlyMap<string, string>): boolean {

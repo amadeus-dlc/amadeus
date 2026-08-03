@@ -930,7 +930,7 @@ function normalizeCompositionRecord(hostRoot: string): void {
     const grant = entry[1]?.trustGrant;
     if (grant) grant.grantTimestamp = DETERMINISTIC_GRANT_TIMESTAMP;
   }
-  writeFileSync(path, JSON.stringify(record));
+  writeFileSync(path, `${JSON.stringify(record, null, 2)}\n`);
 }
 
 function projectInTemporaryWorkspace(repoRoot: string, name: SelfInstallHarness): Map<string, Buffer> {

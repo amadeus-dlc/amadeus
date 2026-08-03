@@ -1,1 +1,178 @@
-{"ledger":[],"plugins":[["formal-model-check",{"plugin":"formal-model-check","ownedPaths":["plugins/formal-model-check/stages/formal-model-check.md","plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts","plugins/formal-model-check/tools/canonical.ts","plugins/formal-model-check/tools/ci-docker-trace.ts","plugins/formal-model-check/tools/ci-model-check-artifacts.ts","plugins/formal-model-check/tools/ci-model-check-domain.ts","plugins/formal-model-check/tools/ci-model-check-runner.ts","plugins/formal-model-check/tools/contract.ts","plugins/formal-model-check/tools/fs-tlc-toolchain.ts","plugins/formal-model-check/tools/node-ci-model-check-port.ts","plugins/formal-model-check/tools/run-model-check-artifacts.ts","plugins/formal-model-check/tools/run-model-check-ci.ts","plugins/formal-model-check/tools/run-model-check-diagnostic.ts","plugins/formal-model-check/tools/run-model-check-domain.ts","plugins/formal-model-check/tools/run-model-check-execution.ts","plugins/formal-model-check/tools/run-model-check-paths.ts","plugins/formal-model-check/tools/run-model-check-reporter.ts","plugins/formal-model-check/tools/run-model-check-source.ts","plugins/formal-model-check/tools/run-model-check.ts","plugins/formal-model-check/tools/run-skeleton-ci.ts","plugins/formal-model-check/tools/tla-arm.ts","plugins/formal-model-check/tools/tla-model-loader-internal.ts","plugins/formal-model-check/tools/tla-model-loader.ts","plugins/formal-model-check/tools/tla-model-map.ts","plugins/formal-model-check/tools/tlc-spawn-planner.ts","plugins/formal-model-check/tools/tlc-toolchain.ts"],"ownedContentDigests":[["plugins/formal-model-check/stages/formal-model-check.md","sha256:6366201445c3a27fc7f847368696c4c33b728d50632dad4cd8ef5dd4b434f438"],["plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts","sha256:78ddcbba5d761e7858376a2080e897ad75e504d6757cc2f3545625fb6c993bb1"],["plugins/formal-model-check/tools/canonical.ts","sha256:ae5f118a50feb3a874e729ee629820cc63d2638280541793b2cbbfda49fb58c7"],["plugins/formal-model-check/tools/ci-docker-trace.ts","sha256:f6fb429ea6fbd87d3fee141a653166dfb581d485c39974788ec3e53cb3b8506c"],["plugins/formal-model-check/tools/ci-model-check-artifacts.ts","sha256:088ee143f3752461dbb3100ab1fc47cac1784de985b929b5c802410c917effd0"],["plugins/formal-model-check/tools/ci-model-check-domain.ts","sha256:ee257bf4ac71251b7f562eeb73222b2980ae30eed40c2cbf645725c639301f8f"],["plugins/formal-model-check/tools/ci-model-check-runner.ts","sha256:5cedb7c787bb7de8058d3285b048ffec12d55f753bea369a1fdd4dabaadeb821"],["plugins/formal-model-check/tools/contract.ts","sha256:8330e4e7ed964c05586f927e3818abbb13d10a744b07eed8ec0ef8c1d9a9b1c1"],["plugins/formal-model-check/tools/fs-tlc-toolchain.ts","sha256:0904d16a51c007cd811f099dfdd9961f0de96a736b88edabd34605892393a5ea"],["plugins/formal-model-check/tools/node-ci-model-check-port.ts","sha256:0b97279fabd0b96749c74cad6d7b2842dcdb3020d1add9dcbc88f3d154c7d6e7"],["plugins/formal-model-check/tools/run-model-check-artifacts.ts","sha256:aca0e72a55c6e2a36e89d6739259d897c30fefee13bbfab9506cd0ddeeaf4791"],["plugins/formal-model-check/tools/run-model-check-ci.ts","sha256:a4667a90598ca3d4306640e352e6a049a02a1760612ba900ffc6b078f300afab"],["plugins/formal-model-check/tools/run-model-check-diagnostic.ts","sha256:f53aefbb01ae44add8b05a333869383a9d3991ebd4099453b9001aa457569195"],["plugins/formal-model-check/tools/run-model-check-domain.ts","sha256:b6e92941aebd519d53f91f0e67030d4be60a26cc48401ebd39c96aad4db234a9"],["plugins/formal-model-check/tools/run-model-check-execution.ts","sha256:1d6a2bb478045c6054d4489fbeff8bf384ccc3b54ec5c441ef4863402c27eef0"],["plugins/formal-model-check/tools/run-model-check-paths.ts","sha256:4924a10c8fd3095b149c30bb6261af53455f51545fd39ff467afe33063c26326"],["plugins/formal-model-check/tools/run-model-check-reporter.ts","sha256:cca7daa7cd76edee0287239d89e71d5ba9d99f124e669a75efe3c8a6e84cedab"],["plugins/formal-model-check/tools/run-model-check-source.ts","sha256:b31432d562b880e3f624f0a59c2256ddfe102d9aa64d2d99790226299e36cdd3"],["plugins/formal-model-check/tools/run-model-check.ts","sha256:fd93806a890ec6a11a025ec9b34699ddfb4338676ddb6fb5214287be176996d5"],["plugins/formal-model-check/tools/run-skeleton-ci.ts","sha256:6148749b3e75d49a0b71d3b13a6246d7df0d26b33c8c300e8d9ee84051f62db3"],["plugins/formal-model-check/tools/tla-arm.ts","sha256:7e5538f91e636902687f1161f4f470dda4530f92b6636eacc9ad50b441413e47"],["plugins/formal-model-check/tools/tla-model-loader-internal.ts","sha256:51da2b8a9b5b3b4ea625e92574c641a5d9ce7e10e7444f99888fa3cd1a02b0ce"],["plugins/formal-model-check/tools/tla-model-loader.ts","sha256:b46f39858df8a858320e8d2e20c1447ea6d346c8dc59f9ca84918a0c25ee6a0b"],["plugins/formal-model-check/tools/tla-model-map.ts","sha256:6b399130b19a8409fb3f85d52ab06b04c66849793d57539166938f257ed08a1a"],["plugins/formal-model-check/tools/tlc-spawn-planner.ts","sha256:e033d1fa038bebf1cb253807edfa86f6f10b3100908423e04c2d01c59c36415a"],["plugins/formal-model-check/tools/tlc-toolchain.ts","sha256:6416b6ee256dffa12cb29473a91a2e2c9410674cf8483af60d8c09793cbe2b67"]],"stageIndex":[{"path":"plugins/formal-model-check/stages/formal-model-check.md","slug":"formal-model-check","contentDigest":"sha256:6366201445c3a27fc7f847368696c4c33b728d50632dad4cd8ef5dd4b434f438","frontmatter":{"slug":"formal-model-check","phase":"construction","execution":"CONDITIONAL","condition":"Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).","lead_agent":"amadeus-quality-agent","mode":"inline","inputs":"all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.","outputs":"the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.","support_agents":[],"produces":[],"requires_stage":[],"sensors":["model-completeness"],"scopes":[],"consumes":[]}}],"stageIndexDigest":"sha256:a1ba1d5d08e96c1eb09f4a0545030f65ff84f92fe26d1e3af05b922e76e9bfda","trustGrant":{"plugin":"formal-model-check","contentDigest":"sha256:4480b36438d23a6d4e0c36b0d4adb23ced82abbbf7d1f824f287c155882d85bd","grantTimestamp":"1970-01-01T00:00:00.000Z"},"sharedFiles":[]}]],"pluginStageIndexDigest":"sha256:fbf24c6024dd044a567391c2192517db212985b7f7ec30673a5dff78688efd01"}
+{
+  "ledger": [],
+  "plugins": [
+    [
+      "formal-model-check",
+      {
+        "plugin": "formal-model-check",
+        "ownedPaths": [
+          "plugins/formal-model-check/stages/formal-model-check.md",
+          "plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts",
+          "plugins/formal-model-check/tools/canonical.ts",
+          "plugins/formal-model-check/tools/ci-docker-trace.ts",
+          "plugins/formal-model-check/tools/ci-model-check-artifacts.ts",
+          "plugins/formal-model-check/tools/ci-model-check-domain.ts",
+          "plugins/formal-model-check/tools/ci-model-check-runner.ts",
+          "plugins/formal-model-check/tools/contract.ts",
+          "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+          "plugins/formal-model-check/tools/node-ci-model-check-port.ts",
+          "plugins/formal-model-check/tools/run-model-check-artifacts.ts",
+          "plugins/formal-model-check/tools/run-model-check-ci.ts",
+          "plugins/formal-model-check/tools/run-model-check-diagnostic.ts",
+          "plugins/formal-model-check/tools/run-model-check-domain.ts",
+          "plugins/formal-model-check/tools/run-model-check-execution.ts",
+          "plugins/formal-model-check/tools/run-model-check-paths.ts",
+          "plugins/formal-model-check/tools/run-model-check-reporter.ts",
+          "plugins/formal-model-check/tools/run-model-check-source.ts",
+          "plugins/formal-model-check/tools/run-model-check.ts",
+          "plugins/formal-model-check/tools/run-skeleton-ci.ts",
+          "plugins/formal-model-check/tools/tla-arm.ts",
+          "plugins/formal-model-check/tools/tla-model-loader-internal.ts",
+          "plugins/formal-model-check/tools/tla-model-loader.ts",
+          "plugins/formal-model-check/tools/tla-model-map.ts",
+          "plugins/formal-model-check/tools/tlc-spawn-planner.ts",
+          "plugins/formal-model-check/tools/tlc-toolchain.ts"
+        ],
+        "ownedContentDigests": [
+          [
+            "plugins/formal-model-check/stages/formal-model-check.md",
+            "sha256:6366201445c3a27fc7f847368696c4c33b728d50632dad4cd8ef5dd4b434f438"
+          ],
+          [
+            "plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts",
+            "sha256:78ddcbba5d761e7858376a2080e897ad75e504d6757cc2f3545625fb6c993bb1"
+          ],
+          [
+            "plugins/formal-model-check/tools/canonical.ts",
+            "sha256:ae5f118a50feb3a874e729ee629820cc63d2638280541793b2cbbfda49fb58c7"
+          ],
+          [
+            "plugins/formal-model-check/tools/ci-docker-trace.ts",
+            "sha256:f6fb429ea6fbd87d3fee141a653166dfb581d485c39974788ec3e53cb3b8506c"
+          ],
+          [
+            "plugins/formal-model-check/tools/ci-model-check-artifacts.ts",
+            "sha256:088ee143f3752461dbb3100ab1fc47cac1784de985b929b5c802410c917effd0"
+          ],
+          [
+            "plugins/formal-model-check/tools/ci-model-check-domain.ts",
+            "sha256:ee257bf4ac71251b7f562eeb73222b2980ae30eed40c2cbf645725c639301f8f"
+          ],
+          [
+            "plugins/formal-model-check/tools/ci-model-check-runner.ts",
+            "sha256:5cedb7c787bb7de8058d3285b048ffec12d55f753bea369a1fdd4dabaadeb821"
+          ],
+          [
+            "plugins/formal-model-check/tools/contract.ts",
+            "sha256:8330e4e7ed964c05586f927e3818abbb13d10a744b07eed8ec0ef8c1d9a9b1c1"
+          ],
+          [
+            "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+            "sha256:0904d16a51c007cd811f099dfdd9961f0de96a736b88edabd34605892393a5ea"
+          ],
+          [
+            "plugins/formal-model-check/tools/node-ci-model-check-port.ts",
+            "sha256:0b97279fabd0b96749c74cad6d7b2842dcdb3020d1add9dcbc88f3d154c7d6e7"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-artifacts.ts",
+            "sha256:aca0e72a55c6e2a36e89d6739259d897c30fefee13bbfab9506cd0ddeeaf4791"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-ci.ts",
+            "sha256:a4667a90598ca3d4306640e352e6a049a02a1760612ba900ffc6b078f300afab"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-diagnostic.ts",
+            "sha256:f53aefbb01ae44add8b05a333869383a9d3991ebd4099453b9001aa457569195"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-domain.ts",
+            "sha256:b6e92941aebd519d53f91f0e67030d4be60a26cc48401ebd39c96aad4db234a9"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-execution.ts",
+            "sha256:1d6a2bb478045c6054d4489fbeff8bf384ccc3b54ec5c441ef4863402c27eef0"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-paths.ts",
+            "sha256:4924a10c8fd3095b149c30bb6261af53455f51545fd39ff467afe33063c26326"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-reporter.ts",
+            "sha256:cca7daa7cd76edee0287239d89e71d5ba9d99f124e669a75efe3c8a6e84cedab"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check-source.ts",
+            "sha256:b31432d562b880e3f624f0a59c2256ddfe102d9aa64d2d99790226299e36cdd3"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-model-check.ts",
+            "sha256:fd93806a890ec6a11a025ec9b34699ddfb4338676ddb6fb5214287be176996d5"
+          ],
+          [
+            "plugins/formal-model-check/tools/run-skeleton-ci.ts",
+            "sha256:6148749b3e75d49a0b71d3b13a6246d7df0d26b33c8c300e8d9ee84051f62db3"
+          ],
+          [
+            "plugins/formal-model-check/tools/tla-arm.ts",
+            "sha256:7e5538f91e636902687f1161f4f470dda4530f92b6636eacc9ad50b441413e47"
+          ],
+          [
+            "plugins/formal-model-check/tools/tla-model-loader-internal.ts",
+            "sha256:51da2b8a9b5b3b4ea625e92574c641a5d9ce7e10e7444f99888fa3cd1a02b0ce"
+          ],
+          [
+            "plugins/formal-model-check/tools/tla-model-loader.ts",
+            "sha256:b46f39858df8a858320e8d2e20c1447ea6d346c8dc59f9ca84918a0c25ee6a0b"
+          ],
+          [
+            "plugins/formal-model-check/tools/tla-model-map.ts",
+            "sha256:6b399130b19a8409fb3f85d52ab06b04c66849793d57539166938f257ed08a1a"
+          ],
+          [
+            "plugins/formal-model-check/tools/tlc-spawn-planner.ts",
+            "sha256:e033d1fa038bebf1cb253807edfa86f6f10b3100908423e04c2d01c59c36415a"
+          ],
+          [
+            "plugins/formal-model-check/tools/tlc-toolchain.ts",
+            "sha256:6416b6ee256dffa12cb29473a91a2e2c9410674cf8483af60d8c09793cbe2b67"
+          ]
+        ],
+        "stageIndex": [
+          {
+            "path": "plugins/formal-model-check/stages/formal-model-check.md",
+            "slug": "formal-model-check",
+            "contentDigest": "sha256:6366201445c3a27fc7f847368696c4c33b728d50632dad4cd8ef5dd4b434f438",
+            "frontmatter": {
+              "slug": "formal-model-check",
+              "phase": "construction",
+              "execution": "CONDITIONAL",
+              "condition": "Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).",
+              "lead_agent": "amadeus-quality-agent",
+              "mode": "inline",
+              "inputs": "all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.",
+              "outputs": "the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.",
+              "support_agents": [],
+              "produces": [],
+              "requires_stage": [],
+              "sensors": [
+                "model-completeness"
+              ],
+              "scopes": [],
+              "consumes": []
+            }
+          }
+        ],
+        "stageIndexDigest": "sha256:a1ba1d5d08e96c1eb09f4a0545030f65ff84f92fe26d1e3af05b922e76e9bfda",
+        "trustGrant": {
+          "plugin": "formal-model-check",
+          "contentDigest": "sha256:4480b36438d23a6d4e0c36b0d4adb23ced82abbbf7d1f824f287c155882d85bd",
+          "grantTimestamp": "1970-01-01T00:00:00.000Z"
+        },
+        "sharedFiles": []
+      }
+    ]
+  ],
+  "pluginStageIndexDigest": "sha256:fbf24c6024dd044a567391c2192517db212985b7f7ec30673a5dff78688efd01"
+}
