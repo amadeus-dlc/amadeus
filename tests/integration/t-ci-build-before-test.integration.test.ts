@@ -106,6 +106,18 @@ describe("u7 CI build-before-test contract", () => {
     expect(measure.indexOf("bun run build")).toBeLessThan(measure.indexOf("bun run coverage:ci"));
   });
 
+  test("head patch coverage removes only the transitional generated Codex suffix", () => {
+    const job = jobByName("coverage-head");
+    const cleanup = stepByName(job, "Remove transitional generated Codex suffix");
+    expect(cleanup.run).toBe("rm -f -- .agents/rules/amadeus-codex-suffix.md");
+    expect(stepIndex(job, "Remove transitional generated Codex suffix")).toBeGreaterThan(
+      stepIndex(job, "Project coverage gate"),
+    );
+    expect(stepIndex(job, "Remove transitional generated Codex suffix")).toBeLessThan(
+      stepIndex(job, "Patch coverage gate"),
+    );
+  });
+
   test("reproducibility job builds two isolated fixed-SHA trees sequentially", () => {
     const job = jobByName("reproducible-build");
     const build = stepByName(job, "Build isolated distributions").run ?? "";

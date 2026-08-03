@@ -340,6 +340,10 @@ jobs:
       - name: Project coverage gate
         run: bun tests/coverage-project-gate.ts --check
 
+      - name: Remove transitional generated Codex suffix
+        if: ${{ github.event_name == 'pull_request' }}
+        run: rm -f -- .agents/rules/amadeus-codex-suffix.md
+
       - name: Patch coverage gate
         if: ${{ github.event_name == 'pull_request' }}
         env:
