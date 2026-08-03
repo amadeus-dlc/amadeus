@@ -11,6 +11,28 @@
         "path": "specs/tla/FormalElection.cfg",
         "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
       },
+      "entries": [
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
+          "sha256": "a405bf8def41e6abaf6943aeff620823de1dfe56c83b09272f6d54a7f7ea14ad"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
+          "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
+          "sha256": "cec225b25f38b9b2ecbad8509894af0fa18f7a74cc8b8a345896654cb10ce030"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
+          "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election.ts",
+          "sha256": "5cb665f7c1adda84665aa31cf5197ea453021e35b56a5d8f8965879a1689a49a"
+        }
+      ],
       "vocabulary": {
         "namedInvariants": [
           "ChoiceWinner",
@@ -30,29 +52,7 @@
           "tally",
           "reexamRequired"
         ]
-      },
-      "entries": [
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
-          "sha256": "a405bf8def41e6abaf6943aeff620823de1dfe56c83b09272f6d54a7f7ea14ad"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "4dd2a6c215abd3ca784697d19358885c45dd9e2c2fb30313f01ade2fb942427b"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
-          "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "5cb665f7c1adda84665aa31cf5197ea453021e35b56a5d8f8965879a1689a49a"
-        }
-      ]
+      }
     },
     {
       "name": "MirrorLifecycle",
