@@ -456,7 +456,7 @@ function qualityDelivery(
 }
 
 export interface QualityRepairCoordinator {
-  observe(input: QualityEvidenceBatchInput, trace: LoopTraceContext): QualityObserveResult;
+  recordEvidence(input: QualityEvidenceBatchInput, trace: LoopTraceContext): QualityObserveResult;
   dispatchJudge(
     permit: CommittedJudgeDispatchPermit,
     judgePort: JudgePort,
@@ -577,7 +577,7 @@ export function createQualityRepairCoordinator(options: {
   }
 
   return {
-    observe(input, trace) {
+    recordEvidence(input, trace) {
       const priorByInput = input.previousSnapshot === null
         ? null
         : repository.readProjection(input.previousSnapshot.qualityScopeId);
