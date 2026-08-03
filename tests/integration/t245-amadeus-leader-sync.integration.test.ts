@@ -222,7 +222,7 @@ describe("t245 real filesystem ownership and transient corpus", () => {
     } finally {
       gitStdout(["worktree", "remove", "--force", root], projectDir);
     }
-  });
+  }, 120_000); // full origin/main corpus plus real Git worktree I/O can exceed Bun's 30s default on CI
 });
 
 describe("t245 E-PM10A falling proofs", () => {

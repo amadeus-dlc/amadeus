@@ -1,0 +1,86 @@
+name: ドキュメント課題
+description: ドキュメントの不足・誤り・改善を、対象読者と完了条件とともに報告します
+title: "docs: "
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- amadeus-issue-form:v1 type=documentation -->
+        現行ドキュメントの実測と、対象読者が必要とする状態を区別して記載してください。秘密情報や認証情報は含めないでください。
+
+        フォーム送信時に、`documentation` と選択した P コード（例: `P2`）が同名ラベルとして自動付与されます。
+
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: 重複・現行状態の確認
+      description: 重複や、現行ブランチでは修正済みの内容を起票しないため、両方を確認してください。
+      options:
+        - label: open/closed の両方を対象に、同じ課題・提案・質問の Issue を検索しました
+          required: true
+        - label: origin/main と関連する open/merged PR を確認し、現行状態でも起票が必要だと確認しました
+          required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・対象範囲
+      description: 何が不足・誤解・陳腐化しているかと、対象ドキュメントの範囲を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 根拠・実測証拠
+      description: 確認した文書の path:line、コマンド結果、実装との不一致、利用者のつまずきなどを記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: 期待結果・完了条件
+      description: 修正後に読者が理解・実行できることと、完了を確認できる条件を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影響・価値
+      description: 影響する読者・利用経路と、誤解や作業失敗の影響を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-work
+    attributes:
+      label: 関連 Issue・PR・intent
+      description: 関連する Issue、PR、intent record、実装変更を記載してください。無い場合は「なし」と記載します。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度（いつ対応するか）
+      description: 選択肢先頭の P コードが、フォーム送信時に同名ラベルへ反映されます。
+      options:
+        - 未選択
+        - P0 — 正しさ・安全性の破綻
+        - P1 — 重要だが回避可能
+        - P2 — 通常
+        - P3 — いつか対応
+    validations:
+      required: true
+
+  - type: textarea
+    id: audience-and-surface
+    attributes:
+      label: 対象読者・ドキュメント面
+      description: 対象読者、正本、対訳・生成物・参照元など同期が必要な面を列挙してください。
+    validations:
+      required: true

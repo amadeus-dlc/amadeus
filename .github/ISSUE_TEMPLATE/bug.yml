@@ -1,0 +1,154 @@
+name: バグ報告
+description: 実測できる不具合を、再現・原因分析・P/S分類に必要な証拠とともに報告します
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- amadeus-issue-form:v1 type=bug -->
+        推測ではなく、実際に観測した事実を記載してください。秘密情報や認証情報は含めないでください。
+
+        フォーム送信時に、`bug` と選択した P/S の先頭コード（例: `P0`、`S1-FATAL`）が同名ラベルとして自動付与されます。原因の所在で `origin:bootstrap` を選択した場合も同名ラベルが自動付与されます。
+
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: 重複・現行状態の確認
+      description: 重複や、現行ブランチでは解消済みの内容を起票しないため、両方を確認してください。
+      options:
+        - label: open/closed の両方を対象に、同じ課題・提案・質問の Issue を検索しました
+          required: true
+        - label: origin/main と関連する open/merged PR を確認し、現行状態でも起票が必要だと確認しました
+          required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・対象範囲
+      description: 何をしたときに何が起きたか、対象となる利用者・機能・範囲を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 根拠・実測証拠
+      description: 実行したコマンドと結果、exit code、確認した file:line、ログのうち該当するものを記載してください。
+      placeholder: |
+        command:
+        exit code:
+        output:
+        file:line:
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: 期待結果・完了条件
+      description: 既存契約・要件・利用者の期待に照らした正しい挙動と、完了を確認できる条件を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影響・価値
+      description: 影響する利用者・ワークフロー・データ、回避策の有無を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-work
+    attributes:
+      label: 関連 Issue・PR・intent
+      description: 関連する Issue、PR、intent record、導入コミットを記載してください。無い場合は「なし」と記載します。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度（いつ対応するか）
+      description: 選択肢先頭の P コードが、フォーム送信時に同名ラベルへ反映されます。
+      options:
+        - 未選択
+        - P0 — 正しさ・安全性の破綻
+        - P1 — 重要だが回避可能
+        - P2 — 通常
+        - P3 — いつか対応
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 観測環境・対象リビジョン
+      description: 対象 SHA、ブランチ、OS、Bun/Amadeus バージョンなど、再現に必要な環境を記載してください。
+      placeholder: |
+        - revision:
+        - branch:
+        - OS:
+        - Bun / Amadeus:
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 最小の再現手順を順番に記載してください。再現できない場合は、観測条件と取得済み証拠を記載してください。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: 機序
+      description: 症状が生じるコード経路を記載してください。未特定なら「未特定」と書き、仮説は仮説と明記してください。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 重大度（どれだけ深刻か）
+      description: 選択肢先頭の S コードが、フォーム送信時に同名ラベルへ反映されます。優先度とは独立に判断します。
+      options:
+        - 未選択
+        - S1-FATAL — データ・監査・ゲート整合性の破壊、誤マージ誘発、ワークフロー停止
+        - S2-CRITICAL — 主要機能の誤動作、または回避策のない偽 green・偽赤
+        - S3-MAJOR — 回避策のある誤動作、または限定条件での発現
+        - S4-MINOR — 軽微、エッジケース、表示層
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cause-location
+    attributes:
+      label: 原因の所在
+      description: 現時点の実測に基づく分類を選択してください。`origin:bootstrap` はフォーム送信時に同名ラベルへ反映されます。未確定なら「未特定」を選びます。
+      options:
+        - 未選択
+        - 要件での見落とし
+        - 設計判断の誤り
+        - 設計は正しいが実装が逸脱
+        - origin:bootstrap
+        - 外部要因
+        - 未特定
+    validations:
+      required: true
+
+  - type: textarea
+    id: provenance
+    attributes:
+      label: 原因の根拠・導入経緯
+      description: 原因分類の根拠を記載してください。intent に遡れる場合は record または導入コミットも示してください。該当しない場合は理由を記載します。
+    validations:
+      required: true
