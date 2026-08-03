@@ -48,12 +48,11 @@
 
 - **発火経路の狭さ**: `self-scope-consistency` を宣言するステージは `code-generation` のみ（`grep -rln "self-scope-consistency" packages/framework/core/amadeus-common/stages/` が 1 ファイル、実測）。ディスパッチャに個別分岐は無く、CI にセンサー実行ステップも無い。したがって拡張後も検査は「self 開発の code-generation ステージを回したとき」にしか発火せず、乖離が入り込む経路（scope prose の編集や `/amadeus compose`）と発火点がずれたままになる。この配置のままでよいかは要件段で明示的に判断する — 検査を強くしても発火しなければ実効は上がらない。
 
-## 2026-08-02 差分更新 — Issue #2018
+## 2026-08-03 差分更新 — Issue #2018 projection parity 修復
 
-- baseline `t299`／`t328`／`t327`／`t322` は25/25 pass。既存機構の破損ではなく、desired opt-inを表現・照合する契約の欠落である。
-- pinned gap: `t299` は opt-inなし0/0 silent successを正しく固定する一方、`t328` は事前stagingでhost欠落を迂回する。`t379` は全6 hostとopt-in filtering、`t381` は全3 checkpoint × main／single × 全face parityの十分な組合せを覆わない。
-- `t320` は compositionなしadvisoryなしと空spec hashを固定し、`t382` はwrong rootを捕捉するが空spec集合を拒否しない。`computeSpecHash` の空集合正常化は verdictを恒久currentにできるため、uncomposed pluginの早期returnでzero-impactを守りつつ fail-closed 化する候補である。
-- 変更後の重点検証は `t299`、`t320`、`t328`、`t379`、`t381` と、package／promotion／distribution drift guard。mainと`--single`はstate mutation契約が異なるため別々に検証する。
+- PR #2049 の `t415` 群はfresh projectの各startupがcurrent hostを動的materializeできることを固定するが、commit済みproject projectionからの初回利用性も、startup後のgit cleanも検証しない。動的修復がgreenでも配布parityは証明されない。
+- `t356-promote-self-plugin-carveout` はClaudeの `.claude/skills/amadeus-formal-model-check` を保全するcharacterizationで、Codexの正規 `.agents/skills` を覆わない。誤った `.codex/skills` を生成しても検出するface-aware falling proofが必要である。
+- 必須回帰境界は、5 self-install面のtracked projection全数／byte parity、fresh worktreeでstartup前からstageとrunnerが利用可能、startup後 `git status --porcelain` 空、再projection冪等、Codex `.agents/skills` 存在かつ `.codex/skills` 不在、7 package faceのneutral bundle／0-plugin baseline維持である。
 
 ## formal-model-check 複数モデル化の品質所見（260801-tla-multi-model、履歴、observed `33e196b8`）
 

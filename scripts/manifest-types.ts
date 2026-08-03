@@ -59,6 +59,11 @@ export type EmitResult = {
   problems: string[];
 };
 
+/** How a composed stage is entered on this harness after graph compilation. */
+export type StageEntrySurface =
+  | { kind: "runner"; root: string }
+  | { kind: "command"; path: string };
+
 /**
  * How this harness's onboarding doc (CLAUDE.md / AGENTS.md) is generated from
  * the shared skeleton core/templates/onboarding.md. The packager renders the
@@ -84,6 +89,8 @@ export type HarnessManifest = {
   mirrorSurface: MirrorSurfaceId;
   /** The harness directory the token substitutes to (".claude" | ".kiro" | ".codex"). */
   harnessDir: string;
+  /** Project-root-relative native entry surface for composed stages. */
+  stageEntry: StageEntrySurface;
   /** core/<src> → <harnessDir>/<dst> projections. */
   coreDirs: DirMap[];
   /** harness/<name>/<src> → <harnessDir>/<dst> authored-file copies. */

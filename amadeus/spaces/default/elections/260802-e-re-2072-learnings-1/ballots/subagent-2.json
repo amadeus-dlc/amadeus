@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RE-2072-LEARNINGS-1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "推奨3候補を全面支持する。独立実測では、HEADのClaude self-install面にformal-model-checkのplugin 26ファイルとrunner 1ファイルが追跡済みなのに、Codex面はplugin 0件・正規runner 0件で、現composeは非追跡の.codex/skillsへrunnerを生成していた。一方、packages/framework/harness/codex/emit.tsはSKILLS_DSTをdist rootの.agents/skillsと定義し、.codex/skillsを明示否定するため、Codex runnerの正規配置候補は実装事実と一致する。scripts/package.tsとplugin-projection.tsは0-plugin時のno-op/byte-identical baselineとneutral bundleを明示し、対象37テストも全件passしたため、package baselineとself-repository dogfood投影を分離する候補も既存契約を守る。現行project.mdに同趣旨の規則はなく、3件ともリポジトリ固有かつ再発防止に有効である。",
+  "submittedAt": "2026-08-02T23:27:57Z"
+}

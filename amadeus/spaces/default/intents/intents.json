@@ -827,5 +827,12 @@
     "dirName": "260802-nfr-kind-pruning",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc49f-46eb-79c2-89f4-818d7c094873",
+    "slug": "plugin-projection-parity",
+    "dirName": "260802-plugin-projection-parity",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

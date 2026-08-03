@@ -2423,6 +2423,53 @@
     ]
   },
   {
+    "slug": "formal-model-check",
+    "number": "3.8",
+    "name": "Formal Model Check",
+    "phase": "construction",
+    "plugin_source": true,
+    "execution": "CONDITIONAL",
+    "condition": "Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).",
+    "lead_agent": "amadeus-quality-agent",
+    "support_agents": [],
+    "mode": "inline",
+    "produces": [],
+    "consumes": [],
+    "requires_stage": [],
+    "sensors": [
+      "model-completeness"
+    ],
+    "scopes": [],
+    "inputs": "all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.",
+    "outputs": "the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.",
+    "rules_in_context": [
+      {
+        "path": "amadeus/spaces/default/memory/org.md",
+        "scope": "org"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/team.md",
+        "scope": "team"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/project.md",
+        "scope": "project"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
+        "scope": "phase"
+      }
+    ],
+    "sensors_applicable": [
+      {
+        "id": "model-completeness",
+        "path": ".codex/sensors/amadeus-model-completeness.md",
+        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}",
+        "category": "formal-verification"
+      }
+    ]
+  },
+  {
     "slug": "deployment-pipeline",
     "number": "4.1",
     "name": "Deployment Pipeline",

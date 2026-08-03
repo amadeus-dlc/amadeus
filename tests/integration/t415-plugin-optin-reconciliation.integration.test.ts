@@ -181,6 +181,23 @@ describe("t415 project opt-in reconciliation", () => {
     expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t415 source change");
   });
 
+  test("a missing or modified composed file is repaired from the selected source", () => {
+    const injected = deps();
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], injected).kind).toBe("composed");
+    const stage = join(host, "plugins", PLUGIN, "stages", "formal-model-check.md");
+    const expected = readFileSync(stage);
+    const composition = join(host, ".amadeus-plugin-composition.json");
+    const expectedComposition = readFileSync(composition);
+    rmSync(stage);
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], injected)).toMatchObject({ kind: "composed" });
+    expect(readFileSync(stage)).toEqual(expected);
+    expect(readFileSync(composition)).toEqual(expectedComposition);
+    writeFileSync(stage, "corrupted projection\n");
+    expect(runPluginCli(["compose", "--if-stale", "--project-root", host], injected).kind).toBe("composed");
+    expect(readFileSync(stage)).toEqual(expected);
+    expect(readFileSync(composition)).toEqual(expectedComposition);
+  });
+
   test("doctor distinguishes staged drift, composition drift, and an invalid staged manifest", () => {
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
     const source = join(project, "plugins", PLUGIN);

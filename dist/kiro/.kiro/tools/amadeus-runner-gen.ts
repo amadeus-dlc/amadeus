@@ -600,7 +600,12 @@ function main(): void {
   const [, , subcommand, ...rest] = process.argv;
   switch (subcommand) {
     case "write": {
-      const written = handleWrite();
+      const outAt = rest.indexOf("--out");
+      if (outAt >= 0 && (outAt + 1 >= rest.length || rest.length !== 2)) {
+        console.error("Usage: write [--out <skills-dir>]");
+        process.exit(1);
+      }
+      const written = handleWrite(outAt >= 0 ? rest[outAt + 1] : SKILLS_DIR);
       console.log(`Wrote ${written.length} stage-runner dirs under skills/.`);
       break;
     }

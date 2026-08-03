@@ -22,6 +22,7 @@ const manifest: HarnessManifest = {
   name: "codex",
   mirrorSurface: "codex",
   harnessDir: ".codex",
+  stageEntry: { kind: "runner", root: ".agents/skills" },
 
   // Core projection: rules→amadeus-rules, NO session skills (emitted to
   // .agents/skills/ by emit). Persona .md files ARE core (the conductor reads

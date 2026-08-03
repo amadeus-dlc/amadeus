@@ -41,6 +41,7 @@ const manifest: HarnessManifest = {
   name: "claude",
   mirrorSurface: "claude",
   harnessDir: ".claude",
+  stageEntry: { kind: "runner", root: ".claude/skills" },
 
   // core/<src> → <harnessDir>/<dst>. Claude keeps every core dir name as-is.
   // The method ("memory") is NO LONGER a core dir projected into the harness

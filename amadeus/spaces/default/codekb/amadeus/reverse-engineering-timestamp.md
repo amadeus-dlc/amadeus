@@ -13,6 +13,16 @@
 - Updated artifacts: 9共有成果物の現在断面を更新し、直前の `260802-scope-grid-face-sync` を本文保持のまま履歴へ降格。per-intent record `re-scans/260802-registry-drift-guard.md` を新設。
 - Per-intent record: `re-scans/260802-registry-drift-guard.md`
 
+## 実行メタデータ（履歴: 260802-plugin-projection-parity）
+
+- Date: `2026-08-03`
+- Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（直近の祖先observed、260802-scope-grid-face-sync）
+- Observed commit: `a8e1ce025a918310ab7d803270bb6fc6b649c598`（`feat(swarm): enforce fixed-width unit execution pool (#2071)`）
+- Distance: `25 commits`。区間規模: `1085 files changed, 92157 insertions(+), 9694 deletions(-)`。
+- Scope: `self-fix`、Brownfield。Focus: [Issue #2018](https://github.com/amadeus-dlc/amadeus/issues/2018)／PR [#2049](https://github.com/amadeus-dlc/amadeus/pull/2049) 後に残る committed plugin projection parity。Claude 58 tracked、他4 self-install面0 tracked、startup composeによるdirty生成、Codex runnerの `.codex/skills` 誤投影を再実測した。
+- Architecture ruling: packageはneutral bundle／0-plugin baselineを維持し、5 self-install面へ決定的project projectionをversion管理する。startup composeはrepair-only。Codex runnerの正規先はproject-root `.agents/skills`、Kiro CLI／IDEはpackage-only。
+- Updated artifacts: 共有CodeKB 8成果物、本ファイル、`re-scans/260802-plugin-projection-parity.md`。既存の他intent履歴と `architecture.md` の Interaction Diagrams は保持した。
+
 ## 実行メタデータ（履歴: 260802-scope-grid-face-sync）
 
 - Date: `2026-08-02T10:27:57Z`
