@@ -1,0 +1,180 @@
+// covers: FR-3.1, FR-4.1, NFR-1, BR-U7-1..6
+// size: medium
+
+import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const REPO_ROOT = join(import.meta.dir, "../..");
+const WORKFLOW_PATH = join(REPO_ROOT, ".github/workflows/ci.yml");
+
+interface WorkflowStep {
+  readonly name?: string;
+  readonly run?: string;
+}
+
+interface WorkflowJob {
+  readonly needs?: string | readonly string[];
+  readonly steps?: readonly WorkflowStep[];
+}
+
+interface Workflow {
+  readonly jobs?: Readonly<Record<string, WorkflowJob>>;
+}
+
+function workflow(): Workflow {
+  return Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as Workflow;
+}
+
+function jobByName(name: string): WorkflowJob {
+  const job = workflow().jobs?.[name];
+  expect(job, `missing workflow job: ${name}`).toBeDefined();
+  return job!;
+}
+
+function stepByName(job: WorkflowJob, name: string): WorkflowStep {
+  const step = job.steps?.find((candidate) => candidate.name === name);
+  expect(step, `missing workflow step: ${name}`).toBeDefined();
+  return step!;
+}
+
+function stepIndex(job: WorkflowJob, name: string): number {
+  return job.steps?.findIndex((step) => step.name === name) ?? -1;
+}
+
+function runRunnerFixture(dist: "missing" | "empty" | "present") {
+  const root = mkdtempSync(join(tmpdir(), "amadeus-runner-dist-"));
+  const testsDir = join(root, "tests");
+  mkdirSync(testsDir, { recursive: true });
+  cpSync(join(REPO_ROOT, "tests/run-tests.ts"), join(testsDir, "run-tests.ts"));
+  cpSync(join(REPO_ROOT, "tests/lib"), join(testsDir, "lib"), { recursive: true });
+  if (dist !== "missing") mkdirSync(join(root, "dist"));
+  if (dist === "present") writeFileSync(join(root, "dist", "marker"), "generated\n");
+
+  try {
+    return spawnSync(
+      process.execPath,
+      [join(testsDir, "run-tests.ts"), "--smoke", "--filter", "__no_matching_test__"],
+      { encoding: "utf8" },
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+describe("u7 CI build-before-test contract", () => {
+  test("root build script generates dist before self-install surfaces", () => {
+    const pkg = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
+      scripts?: Record<string, string>;
+    };
+    expect(pkg.scripts?.build).toBe("bun run dist && bun run promote:self");
+  });
+
+  test("every head test job builds after install and before testing", () => {
+    for (const [jobName, testStep] of [
+      ["plugin-conformance-e2e", "Plugin conformance journey (e2e)"],
+      ["tests", "Tests - smoke + unit + integration"],
+      ["coverage-head", "Generate coverage reports"],
+    ] as const) {
+      const job = jobByName(jobName);
+      const install = stepIndex(job, "Install dependencies");
+      const build = stepIndex(job, "Build generated distributions");
+      const testRun = stepIndex(job, testStep);
+      expect(install, jobName).toBeGreaterThan(stepIndex(job, "Checkout"));
+      expect(build, jobName).toBeGreaterThan(install);
+      expect(testRun, jobName).toBeGreaterThan(build);
+      expect(stepByName(job, "Build generated distributions").run).toBe("bun run build");
+    }
+  });
+
+  test("merge-base coverage builds before measuring without masking build failure", () => {
+    const job = jobByName("coverage-base");
+    const measure = stepByName(job, "Measure base coverage").run ?? "";
+    expect(measure).toContain('build_script="$(bun -e');
+    expect(measure).toContain("bun run build");
+    expect(measure).toContain("bun run dist && bun run promote:self");
+    expect(measure.indexOf("bun run build")).toBeLessThan(measure.indexOf("bun run coverage:ci"));
+  });
+
+  test("reproducibility job builds two isolated fixed-SHA trees sequentially", () => {
+    const job = jobByName("reproducible-build");
+    const build = stepByName(job, "Build isolated distributions").run ?? "";
+    expect(spawnSync("bash", ["-n"], { input: build }).status).toBe(0);
+    expect(build).toContain('git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"');
+    expect(build).toContain('git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"');
+    expect(build).toContain('(cd "${tree}" && bun run build)');
+    expect(build.indexOf('prepare_tree "${REPRO_ROOT}/tree-a"')).toBeLessThan(
+      build.indexOf('prepare_tree "${REPRO_ROOT}/tree-b"'),
+    );
+  });
+
+  test("reproducibility comparison reports paths and fails on a byte difference", () => {
+    const compare = stepByName(jobByName("reproducible-build"), "Compare distribution bytes").run
+      ?? "";
+    const root = mkdtempSync(join(tmpdir(), "amadeus-repro-compare-"));
+    try {
+      for (const tree of ["tree-a", "tree-b"]) {
+        mkdirSync(join(root, tree, "dist", "codex"), { recursive: true });
+        writeFileSync(join(root, tree, "dist", "codex", "asset"), "same\n");
+      }
+      const equal = spawnSync("bash", ["-c", compare], {
+        encoding: "utf8",
+        env: { ...process.env, REPRO_ROOT: root },
+      });
+      expect(equal.status).toBe(0);
+
+      writeFileSync(join(root, "tree-b", "dist", "codex", "asset"), "SECRET-CONTENT\n");
+      const different = spawnSync("bash", ["-c", compare], {
+        encoding: "utf8",
+        env: { ...process.env, REPRO_ROOT: root },
+      });
+      expect(different.status).toBe(1);
+      expect(different.stdout + different.stderr).toContain("dist/codex/asset");
+      expect(different.stdout + different.stderr).not.toContain("SECRET-CONTENT");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("run-tests fails closed for missing or empty dist and stays silent when built", () => {
+    for (const state of ["missing", "empty"] as const) {
+      const result = runRunnerFixture(state);
+      expect(result.status, state).toBe(1);
+      expect(result.stderr, state).toContain(
+        "run-tests: dist/ is missing — run `bun run build` first",
+      );
+    }
+
+    const present = runRunnerFixture("present");
+    expect(present.status).toBe(0);
+    expect(present.stderr).not.toContain("bun run build");
+  });
+
+  test("required reproducibility and legacy drift checks both block CI", () => {
+    const jobs = workflow().jobs ?? {};
+    const ciSuccess = jobByName("ci-success");
+    expect(ciSuccess.needs).toContain("reproducible-build");
+    expect(stepByName(ciSuccess, "All checks passed").run).toContain(
+      'require_result "reproducible-build"',
+    );
+
+    const drift = jobByName("drift-check");
+    expect(stepByName(drift, "Dist drift guard").run).toBe("bun run dist:check");
+    expect(stepByName(drift, "Self-install drift guard").run).toBe(
+      "bun run promote:self:check",
+    );
+    expect(stepByName(drift, "Compiled graph drift guard").run).toBe(
+      "bun .claude/tools/amadeus-graph.ts compile --check",
+    );
+    expect(Object.keys(jobs)).toContain("drift-check");
+  });
+});
