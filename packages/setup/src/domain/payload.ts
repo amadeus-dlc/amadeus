@@ -9,7 +9,16 @@ export type HttpMeta = {
   readonly url: string;
 };
 
-export type FetchErrorType = "dns" | "conn" | "timeout" | "http" | "rate-limit" | "payload-invalid";
+export type FetchErrorType =
+  | "dns"
+  | "conn"
+  | "timeout"
+  | "http"
+  | "rate-limit"
+  | "payload-invalid"
+  | "asset-missing"
+  | "checksum-unavailable"
+  | "checksum-mismatch";
 
 export type FetchError = {
   readonly type: FetchErrorType;
@@ -27,6 +36,26 @@ export namespace FetchError {
 
   export function payloadInvalid(detail: string): FetchError {
     return createFetchError("payload-invalid", detail, null);
+  }
+
+  export function assetMissing(tag: string, introVersion: string): FetchError {
+    return createFetchError(
+      "asset-missing",
+      `release asset not found for ${tag} (expected for versions >= ${introVersion}) — this is an error, not a fallback`,
+      404,
+    );
+  }
+
+  export function checksumUnavailable(tag: string): FetchError {
+    return createFetchError(
+      "checksum-unavailable",
+      `checksum file missing for ${tag} — refusing to install unverified archive`,
+      404,
+    );
+  }
+
+  export function checksumMismatch(archiveName: string): FetchError {
+    return createFetchError("checksum-mismatch", `checksum mismatch for ${archiveName} — refusing to install`);
   }
 }
 
@@ -61,8 +90,9 @@ export type ExtractedPayload = {
 };
 
 export namespace ExtractedPayload {
-  // BR-F10: codeload always wraps the archive in exactly one top-level directory;
-  // locate() resolves it by position (not by name) then anchors on dist/<harness>.
+  // BR-F10/BR-U2-3: resolve the single wrapper by position, then accept the
+  // legacy wrapper/dist/<harness> layout or the release-asset wrapper/<harness>
+  // layout, in that order.
   export function locate(extractedDir: string, version: ResolvedVersion): Result<ExtractedPayload, FetchError> {
     return createExtractedPayload(extractedDir, version, HarnessName.all);
   }

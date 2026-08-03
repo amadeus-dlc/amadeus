@@ -7,6 +7,9 @@ const GUIDANCE: Record<FetchErrorType, string> = {
   http: "The GitHub archive could not be retrieved; verify the requested version exists.",
   "rate-limit": "GitHub API rate limit reached; wait a while before retrying.",
   "payload-invalid": "The downloaded archive is not a valid Amadeus distribution.",
+  "asset-missing": "The required release asset is missing; verify the release is complete.",
+  "checksum-unavailable": "The release checksum is missing; the archive cannot be verified.",
+  "checksum-mismatch": "The release archive failed checksum verification and will not be installed.",
 };
 
 export function createFetchError(type: FetchErrorType, detail: string, status: number | null = null): FetchError {
@@ -26,6 +29,9 @@ export function createFetchError(type: FetchErrorType, detail: string, status: n
           return status !== null && status >= 500;
         case "rate-limit":
         case "payload-invalid":
+        case "asset-missing":
+        case "checksum-unavailable":
+        case "checksum-mismatch":
           return false;
         default: {
           const exhaustive: never = type;
