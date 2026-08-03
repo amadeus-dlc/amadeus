@@ -113,19 +113,18 @@ const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 // without-convergence sense; error covers a tamper / lying-claim / plumbing fault.
 type FailureReason = "unsatisfiable" | "budget-exhausted" | "cap-exhausted" | "error";
 
-// The driver vocabulary: the subagent floor plus the two per-harness ultra
-// drivers. subagent is always available; claude-ultra is native to the Claude
-// harness and codex-ultra to the Codex harness. `--degraded-from` records which
-// ultra driver a loud downgrade fell away from.
-export type DriverName = "subagent" | "claude-ultra" | "codex-ultra";
-export const DRIVER_VALUES: readonly DriverName[] = ["subagent", "claude-ultra", "codex-ultra"];
+// The driver vocabulary: the native subagent floor, two ultra drivers, and the
+// Pi RPC child driver. Pi has no native subagent tool, so its own driver is the
+// default floor on that harness.
+export type DriverName = "subagent" | "claude-ultra" | "codex-ultra" | "pi";
+export const DRIVER_VALUES: readonly DriverName[] = ["subagent", "claude-ultra", "codex-ultra", "pi"];
 
 // The harnesses whose driver selection resolve arbitrates. Kept as a runtime
 // array (not a bare type union) so the `--harness` CLI check is a real array
 // membership test — a type-only union would erase at runtime and let an unknown
 // harness through.
-export type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide" | "kimi";
-export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide", "kimi"];
+export type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide" | "kimi" | "pi";
+export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide", "kimi", "pi"];
 
 // The static outcome of resolving AMADEUS_USE_SWARM against the running harness.
 // A discriminated union so the invalid state is unrepresentable: `rejected` keeps
@@ -133,7 +132,7 @@ export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro"
 // rejected value for a dispatchable driver (parse-don't-validate, fail-closed).
 export type DriverResolution =
   | { kind: "selected"; driver: DriverName }
-  | { kind: "degraded"; driver: "subagent"; requested: DriverName }
+  | { kind: "degraded"; driver: "subagent" | "pi"; requested: DriverName }
   | { kind: "rejected"; raw: string; reason: "unknown-value" };
 
 // Resolve the requested driver from the raw AMADEUS_USE_SWARM value against the
@@ -145,18 +144,16 @@ export type DriverResolution =
 // conductor's concern (it then calls prepare with --degraded-from).
 export function resolveDriver(raw: string | undefined, harness: HarnessName): DriverResolution {
   if (raw === undefined) {
-    // unset: the subagent floor is the only default. Every other value must be
-    // an explicit, recognised opt-in.
-    return { kind: "selected", driver: "subagent" };
+    return { kind: "selected", driver: harness === "pi" ? "pi" : "subagent" };
   }
-  if (raw === "claude-ultra" || raw === "codex-ultra") {
-    const nativeHarness: HarnessName = raw === "claude-ultra" ? "claude" : "codex";
+  if (raw === "claude-ultra" || raw === "codex-ultra" || raw === "pi") {
+    const nativeHarness: HarnessName = raw === "claude-ultra" ? "claude" : raw === "codex-ultra" ? "codex" : "pi";
     if (harness === nativeHarness) {
       return { kind: "selected", driver: raw };
     }
-    // A recognised ultra driver that is not native to this harness degrades to
-    // the subagent floor, preserving the requested value for the audit trail.
-    return { kind: "degraded", driver: "subagent", requested: raw };
+    // A recognised driver that is not native to this harness degrades to that
+    // harness's safe floor, preserving the request for the audit trail.
+    return { kind: "degraded", driver: harness === "pi" ? "pi" : "subagent", requested: raw };
   }
   // Everything else — the empty string, the old "1", any unknown token — is
   // rejected. Fail-closed: an unrecognised value never falls through to a floor.
