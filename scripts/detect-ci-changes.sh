@@ -29,6 +29,7 @@ while IFS= read -r -d '' path; do
   case "${path}" in
     packages/framework/*|\
     .agents/*|.claude/*|.codex/*|.cursor/*|.opencode/*|.kimi-code/*|\
+    .gitignore|.gitattributes|\
     AGENTS.md|CLAUDE.md)
       drift=true
       ;;

@@ -322,20 +322,44 @@ jobs:
             git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"
             (cd "${tree}" && bun install --frozen-lockfile)
             (cd "${tree}" && bun run build)
+            local version
+            version="$(cd "${tree}" && bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')"
+            (cd "${tree}" && bun scripts/release-dist.ts --version "${version}")
           }
 
           mkdir -p "${REPRO_ROOT}"
           prepare_tree "${REPRO_ROOT}/tree-a"
           prepare_tree "${REPRO_ROOT}/tree-b"
 
-      - name: Compare distribution bytes
+      - name: Compare generated outputs and release assets
         run: |
           set -euo pipefail
           REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
-          if ! diff -qr "${REPRO_ROOT}/tree-a/dist" "${REPRO_ROOT}/tree-b/dist"; then
-            echo "::error::isolated builds produced different distribution bytes"
-            exit 1
-          fi
+          GENERATED_OUTPUTS=(
+            dist
+            .claude
+            .codex
+            .agents
+            .cursor
+            .opencode
+            .kimi-code
+            AGENTS.md
+            CLAUDE.md
+            release-assets
+          )
+
+          for output in "${GENERATED_OUTPUTS[@]}"; do
+            tree_a="${REPRO_ROOT}/tree-a/${output}"
+            tree_b="${REPRO_ROOT}/tree-b/${output}"
+            if [[ ! -e "${tree_a}" || ! -e "${tree_b}" ]]; then
+              echo "::error::isolated build output is missing: ${output}"
+              exit 1
+            fi
+            if ! diff -qr "${tree_a}" "${tree_b}"; then
+              echo "::error::isolated builds produced different bytes: ${output}"
+              exit 1
+            fi
+          done
 
   drift-check:
     name: Source-only and graph invariants

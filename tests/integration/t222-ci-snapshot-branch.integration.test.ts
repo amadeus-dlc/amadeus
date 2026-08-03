@@ -44,6 +44,16 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  test("source-only tracking rules request the drift guard", () => {
+    for (const path of [".gitignore", ".gitattributes"]) {
+      expect(detectChanges([path]), path).toEqual({
+        full: "false",
+        drift: "true",
+        coverage: "false",
+      });
+    }
+  });
+
   test("absent Kiro root faces do not request drift checks", () => {
     expect(detectChanges([".kiro/tools/generated.ts", ".kiro-ide/tools/generated.ts"]))
       .toEqual({ full: "false", drift: "false", coverage: "false" });

@@ -140,6 +140,7 @@ describe("u7 CI build-before-test contract", () => {
     expect(build).toContain('git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"');
     expect(build).toContain('git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"');
     expect(build).toContain('(cd "${tree}" && bun run build)');
+    expect(build).toContain('(cd "${tree}" && bun scripts/release-dist.ts --version "${version}")');
     expect(build.indexOf('prepare_tree "${REPRO_ROOT}/tree-a"')).toBeLessThan(
       build.indexOf('prepare_tree "${REPRO_ROOT}/tree-b"'),
     );
@@ -149,7 +150,10 @@ describe("u7 CI build-before-test contract", () => {
     const job = jobByName("reproducible-build");
     expect(job.env?.REPRO_ROOT).toBeUndefined();
 
-    for (const stepName of ["Build isolated distributions", "Compare distribution bytes"]) {
+    for (const stepName of [
+      "Build isolated distributions",
+      "Compare generated outputs and release assets",
+    ]) {
       expect(stepByName(job, stepName).run).toContain(
         'REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"',
       );
@@ -157,14 +161,30 @@ describe("u7 CI build-before-test contract", () => {
   });
 
   test("reproducibility comparison reports paths and fails on a byte difference", () => {
-    const compare = stepByName(jobByName("reproducible-build"), "Compare distribution bytes").run
-      ?? "";
+    const compare = stepByName(
+      jobByName("reproducible-build"),
+      "Compare generated outputs and release assets",
+    ).run ?? "";
     const runnerTemp = mkdtempSync(join(tmpdir(), "amadeus-repro-compare-"));
     const root = join(runnerTemp, "amadeus-reproducible-build");
+    const generatedDirectories = [
+      "dist",
+      ".claude",
+      ".codex",
+      ".agents",
+      ".cursor",
+      ".opencode",
+      ".kimi-code",
+      "release-assets",
+    ];
+    const generatedFiles = ["AGENTS.md", "CLAUDE.md"];
     try {
       for (const tree of ["tree-a", "tree-b"]) {
-        mkdirSync(join(root, tree, "dist", "codex"), { recursive: true });
-        writeFileSync(join(root, tree, "dist", "codex", "asset"), "same\n");
+        for (const path of generatedDirectories) {
+          mkdirSync(join(root, tree, path), { recursive: true });
+          writeFileSync(join(root, tree, path, "asset"), "same\n");
+        }
+        for (const path of generatedFiles) writeFileSync(join(root, tree, path), "same\n");
       }
       const equal = spawnSync("bash", ["-c", compare], {
         encoding: "utf8",
@@ -172,13 +192,13 @@ describe("u7 CI build-before-test contract", () => {
       });
       expect(equal.status).toBe(0);
 
-      writeFileSync(join(root, "tree-b", "dist", "codex", "asset"), "SECRET-CONTENT\n");
+      writeFileSync(join(root, "tree-b", "release-assets", "asset"), "SECRET-CONTENT\n");
       const different = spawnSync("bash", ["-c", compare], {
         encoding: "utf8",
         env: { ...process.env, RUNNER_TEMP: runnerTemp },
       });
       expect(different.status).toBe(1);
-      expect(different.stdout + different.stderr).toContain("dist/codex/asset");
+      expect(different.stdout + different.stderr).toContain("release-assets/asset");
       expect(different.stdout + different.stderr).not.toContain("SECRET-CONTENT");
     } finally {
       rmSync(runnerTemp, { recursive: true, force: true });
