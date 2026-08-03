@@ -1044,6 +1044,12 @@
     "expiry": "remove if Bun attributes multiline template rows to the rendering invocation"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-runner-gen.ts",
+    "lines": "603-608",
+    "reason": "The write --out argv adapter is exercised by the deterministic self-install projection integration, which invokes the shipped runner generator through the plugin CLI child process. Bun does not attribute child-process execution to the parent LCOV report; handleWrite itself is covered in-process by t351.",
+    "expiry": "remove when runner-gen argument parsing gains an in-process seam or Bun merges child-process coverage"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "1265-1268",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
@@ -1523,6 +1529,12 @@
     "lines": "689",
     "reason": "self-promotion integration tests execute the shipped CLI and verify byte parity; the residual import-meta main wrapper is not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "scripts/plugin-projection.ts",
+    "lines": "927",
+    "reason": "The plugins tuple shape used while normalizing the persisted composition record is a TypeScript-only declaration erased at runtime. t416 drives records with and without trust grants through the real projection and tsc enforces this declaration, but the declaration row itself cannot execute.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations"
   },
   {
     "file": "scripts/scan-public-projections.ts",
