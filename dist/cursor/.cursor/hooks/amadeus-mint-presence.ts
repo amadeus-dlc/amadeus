@@ -37,14 +37,22 @@
 // shards. The gate fails open on an empty ledger, so skipping the mint there is
 // safe. The mint is fail-open (try/catch, exit 0): a mint failure must never
 // block the human's turn.
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import {
+  auditFilePath,
+  auditShardName,
+  findAllEvents,
   isClaudeCodeHookInput,
   isMachineInjectedTurnText,
   readHookStdin,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
+import {
+  choiceFromExactPrompt,
+  recordProtectedAdvisoryChoice,
+} from "../tools/amadeus-advisory-choice.ts";
 import { detectHarnessType } from "../tools/amadeus-harness.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
@@ -61,6 +69,7 @@ type PromptContext = {
   readonly machineInjected: boolean;
   readonly sessionId: string | null;
   readonly cwd: string | null;
+  readonly prompt: string | null;
   readonly route: {
     readonly eventName: string;
     readonly toolName: string | null;
@@ -72,10 +81,17 @@ async function readPromptContext(): Promise<PromptContext> {
   // A TTY yields empty text here (readHookStdin never blocks on a terminal) —
   // treat as unclassifiable (fail-open -> mint).
   const stdin = await readHookStdin();
-  const blank = {
+  // Codex Desktop may carry an exact menu answer as raw stdin rather than a
+  // JSON object. Retain only a canonical advisory choice; arbitrary malformed
+  // or prompt-absent payloads remain presence-only fail-open inputs.
+  const rawChoicePrompt = choiceFromExactPrompt(stdin.text) === null
+    ? null
+    : stdin.text;
+  const blank: PromptContext = {
     machineInjected: false,
     sessionId: null,
     cwd: stdin.cwd,
+    prompt: rawChoicePrompt,
     route: null,
   };
   try {
@@ -97,12 +113,13 @@ async function readPromptContext(): Promise<PromptContext> {
       : JSON.stringify(raw.tool_input ?? {});
     const route = { eventName, toolName, purposeText };
     if (typeof prompt !== "string") {
-      return { machineInjected: false, sessionId, cwd: stdin.cwd, route };
+      return { machineInjected: false, sessionId, cwd: stdin.cwd, prompt: null, route };
     }
     return {
       machineInjected: isMachineInjectedTurnText(prompt),
       sessionId,
       cwd: stdin.cwd,
+      prompt,
       route,
     };
   } catch {
@@ -122,6 +139,17 @@ try {
       requireReservationRoute: detectHarnessType() === "kimi",
       ...(context.route === null ? {} : { route: context.route }),
     });
+    if (context.prompt !== null) {
+      const turns = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN");
+      const latest = turns[turns.length - 1];
+      if (latest !== undefined) {
+        recordProtectedAdvisoryChoice(projectDir, context.prompt, {
+          timestamp: latest.timestamp,
+          shard: auditShardName(projectDir),
+          eventIdentity: createHash("sha256").update(latest.block).digest("hex"),
+        });
+      }
+    }
   }
 } catch {
   // Non-fatal — a mint failure must never block the human's turn.

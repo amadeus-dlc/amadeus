@@ -658,5 +658,29 @@
     "dirName": "260803-e-rrp-fmcs13",
     "createdAt": "2026-08-03T06:51:09Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-RE-S13-Z0",
+    "dirName": "260803-e-260803-re-s13-z0",
+    "createdAt": "2026-08-03T08:10:18Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-RA-S13-Z0",
+    "dirName": "260803-e-260803-ra-s13-z0",
+    "createdAt": "2026-08-03T10:49:17Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-AHC-CG-S13-Z0",
+    "dirName": "260803-e-260803-ahc-cg-s13-z0",
+    "createdAt": "2026-08-03T13:18:33Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260803-AHC-BT-S13-Z0",
+    "dirName": "260803-e-260803-ahc-bt-s13-z0",
+    "createdAt": "2026-08-03T14:07:57Z",
+    "status": "recorded"
   }
 ]

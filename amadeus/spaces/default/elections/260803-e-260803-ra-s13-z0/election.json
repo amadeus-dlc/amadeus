@@ -1,0 +1,17 @@
+{
+  "electionId": "E-260803-RA-S13-Z0",
+  "kind": "learning-selection",
+  "question": "Requirements Analysisの学習候補は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1〜c7は今回固有の実行記録、Issue #2129の要件、または既存stage protocolの再確認であり、新しいpracticeまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

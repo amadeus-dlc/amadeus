@@ -35,6 +35,23 @@ export interface ModelCheckArtifactInput {
   readonly stderr: Uint8Array;
   readonly startedAt: string;
   readonly finishedAt: string;
+  readonly advisory?: AdvisoryArtifactCorrelation;
+  readonly sourceProvenance?: ModelCheckSourceProvenance;
+}
+
+export interface AdvisoryArtifactCorrelation {
+  readonly target: string;
+  readonly specIdentity: string;
+  readonly instance: string;
+}
+
+export interface ModelCheckSourceProvenance {
+  readonly modelPath: string;
+  readonly cfgPath: string;
+  readonly moduleIdentity: string;
+  readonly cfgIdentity: string;
+  readonly moduleSha256: string;
+  readonly cfgSha256: string;
 }
 
 export interface ModelCheckArtifactEntry {
@@ -55,6 +72,8 @@ export interface ModelCheckManifest {
   readonly partial: boolean;
   readonly errorCode: string | null;
   readonly errorDetail: string | null;
+  readonly advisory: AdvisoryArtifactCorrelation | null;
+  readonly sourceProvenance: ModelCheckSourceProvenance | null;
 }
 
 export interface PublishedModelCheckArtifacts {
@@ -209,6 +228,8 @@ export function publishModelCheckArtifacts(
       partial: input.outcome.kind === "HARNESS_ERROR",
       errorCode: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.code : null,
       errorDetail: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.detail : null,
+      advisory: input.advisory ?? null,
+      sourceProvenance: input.sourceProvenance ?? null,
     };
     writeDurable(
       join(workspace.temporaryDir, "manifest.json"),

@@ -1,6 +1,21 @@
 # API ドキュメント
 
-## registry drift guard が対象とする契約（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory のdirective／report契約（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+### 現行wire契約
+
+- `run-stage` directive は `advisories` を省略可能フィールドとして持ち、各要素の `plugin`、`code`、`message`、`stage` をconductorへ渡す（`amadeus-directive.ts:140`）。engineはadvisoryがある場合だけフィールドを載せる。
+- mainと`--single`はいずれもactivation結果をdirectiveへ載せる（`amadeus-orchestrate.ts:1307`, `:1325`）。同一runでは `(plugin, code)` latch により最大1回の発行となる。
+- main report（`:3955`）とsingle report（`:4159`）の入力flagには、advisoryに対する人間選択、相関ID、鮮度、receipt参照がない。
+- `HUMAN_TURN`は人間が入力した事実、`GATE_APPROVED`はstage gate承認を表す。どちらもadvisoryの `plugin` / `code` と選択内容を結ばないため、advisory receiptとして解釈しない。
+
+### 未承認の契約論点
+
+- Issue #2129 が想定する「今すぐ実行」と「リスクを認識して延期」の意味を、どの入力面で受け、どの遷移まで有効とするかはRequirements Analysisで決める。
+- main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
+- protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
+
+## registry drift guard が対象とする契約（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 ### CLI 契約
 
@@ -825,4 +840,3 @@ bun scripts/package.ts [<harness>] [--check]
 ## 記録系 round-trip PBT が触れる内部契約（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 公開 CLI verb・flag・directive JSON スキーマの追加も変更もない。触れるのは内部関数契約 2 点で、いずれも `architecture.md` 現在節の seam ペア表を正本とする — (1) `readJson<T>`（`amadeus-election-store.ts:71`、`:80` 無検査キャスト）の戻り型契約を「無検査キャスト」から「検証済み値または棄却」へ強める（`Store.load` `:503-510` が呼出元）、(2) 読み側 fail-closed 化により、従来は受理されていた不正記録が `Result` の err 側／throw へ回るため、消費側の分岐が増える。いずれも境界ごとの一本化であり、4 境界を貫く単一の汎用バリデータ API は新設しない。
-

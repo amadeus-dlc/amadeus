@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260803-AHC-CG-S13-Z0",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.mdに実観察がなく、解釈・逸脱・トレードオフを永続化する根拠がないため、学習候補0件を強く支持する。",
+      "submittedAt": "2026-08-03T13:20:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260803-AHC-CG-S13-Z0",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.mdはテンプレート例のみで実記録が0件のため、新たなpracticeまたはsensorを永続化せず承認ゲートへ進む判断を全面支持する。",
+      "submittedAt": "2026-08-03T13:19:56Z"
+    }
+  ],
+  "late": []
+}

@@ -26,6 +26,30 @@ describe("run-model-check public contract", () => {
     });
   });
 
+  test("parses an advisory-correlated local run only when all correlation fields are present", () => {
+    expect(parseRunModelCheckArgs([
+      "--model", "/workspace/Model.tla",
+      "--cfg", "/workspace/Model.cfg",
+      "--out", "/evidence/run-1",
+      "--advisory-target", "specs/tla",
+      "--advisory-spec-identity", `sha256:${"a".repeat(64)}`,
+      "--advisory-instance", "019fc698-ba1f-7000-8000-000000000001",
+    ])).toMatchObject({
+      ok: true,
+      value: {
+        advisory: {
+          target: "specs/tla",
+          specIdentity: `sha256:${"a".repeat(64)}`,
+          instance: "019fc698-ba1f-7000-8000-000000000001",
+        },
+      },
+    });
+    expect(parseRunModelCheckArgs([
+      "--model", "a.tla", "--cfg", "a.cfg", "--out", "out",
+      "--advisory-instance", "019fc698-ba1f-7000-8000-000000000001",
+    ])).toMatchObject({ ok: false, error: { kind: "MISSING_ARG" } });
+  });
+
   test("rejects missing, unknown, duplicate, and invalid provider arguments", () => {
     expect(parseRunModelCheckArgs(["--model"])).toMatchObject({
       ok: false,

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-260803-AHC-BT-S13-Z0",
+  "voter": "subagent-2",
+  "question": "Build and Testの学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.mdに解釈・逸脱・トレードオフの実記録がなく、新しいpracticeまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ]
+}

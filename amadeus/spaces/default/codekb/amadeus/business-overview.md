@@ -1,6 +1,15 @@
 # ビジネス概要
 
-## registry drift guard の業務境界（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## 形式検査 advisory の人間判断境界（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+- **利用者価値**: [Issue #2129](https://github.com/amadeus-dlc/amadeus/issues/2129) は、形式モデル検査を早期に実行するか、リスクを認識して後へ送るかを人間が選べる状態を守る。対象は `requirements-analysis`、per-unit の `functional-design`、`build-and-test` の3チェックポイントであり、後段の `formal-model-check` 実行可否とは別の上流判断である。
+- **現状の成立範囲**: plugin activation は advisory を生成し、engine は `run-stage` directive の `advisories` と stderr に載せられる。既存テスト28件は、この発火・directive掲載・同一run内の `(plugin, code)` latchを固定している。
+- **現状の欠陥**: advisory固有の人間選択を入力し、意味を保持し、後続遷移で検証する状態機械がない。一般の `HUMAN_TURN`、standing grant、`GATE_APPROVED` は「このadvisoryに対して何を選んだか」のreceiptではないため、AIだけで先へ進める構造を閉じていない。
+- **影響範囲**: main / `--single`、初回 / 再入 / 新session / spec変更、not-ready / changed / never-run / current / not-composed、通常stage / per-unit stage、現行 `run-stage` / 将来の `dispatch-subagent` を同じ契約で扱う必要がある。特に `functional-design` は最初の `gate:false` directive でadvisoryが消費・latchされ、全unit後の `gate:true` では再提示されない。
+- **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
+- **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
+
+## registry drift guard の業務境界（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 - **目的**: [Issue #2037](https://github.com/amadeus-dlc/amadeus/issues/2037) の文書バックフィルとは分離し、CLI が実際に受理する verb とエラー時の `Valid:` 一覧、および stage schema が受理するフィールド集合と参照文書の機械レジストリを双方向に照合する。今回の価値は「欠落した3 verb／複数 field を個別に直すこと」ではなく、次の追加時に同型 drift を CI で止める再発防止にある。
 - **現存する利用者影響**: `amadeus-state.ts` は 33 verb を dispatch する一方、未知 verb の診断は 30 verb しか列挙せず、`set-construction-iteration`、`archive`、`unarchive` を案内できない。stage field は実装が25件を受理するのに、権威ある仕様表は9件不足し、英日 Field reference は意図的に判断を要する9見出しだけを詳説する。このため「実装できるが発見・説明できない」契約が蓄積している。
@@ -524,4 +533,3 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 ## 記録系 round-trip PBT の業務境界（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 利用者向けの業務機能・提供価値・ステークホルダー構成に変化がないため。Issue #1980（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS、対象 SHA `8e5dc6c4`）は開発基盤（テスト）の拡充とコア読み側の fail-closed 化であり、公開 CLI 契約・ワークフロー体験は不変。業務上の効果は「書いた記録が読めない／発行した承認が消費されない」不整合バグ族の shift-left（分類第 2 位 44 件 — #1979 と同一の全量調査、bug Issue 全 259 件中 分類済み 181 件が分母）であり、機構面は `architecture.md` 現在節、患部配置は `code-structure.md` 現在節、被覆分布は `code-quality-assessment.md` 現在節、実測全数は `re-scans/260802-record-roundtrip-pbt.md` に委ねる。
-

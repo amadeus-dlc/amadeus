@@ -1,6 +1,61 @@
 # アーキテクチャ
 
-## registry drift guard の対象機構（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+### 実測された境界
+
+| 境界 | 現在の責務 | 確認された空白 |
+| --- | --- | --- |
+| plugin activation | `amadeus-plugin-activation.ts:247` でadvisory shapeを作り、`:290` で `(plugin, code)` をlatch keyにする | 人間選択を表す状態を持たない |
+| orchestration | `amadeus-orchestrate.ts:1307` で発火し、`:1325` でmain / `--single` のdirectiveへ接続する | 発行前に選択receiptを要求する遷移がない |
+| pending consumption | `amadeus-orchestrate.ts:697` でpending advisoryを消費する | 消費と人間選択の永続化が原子的に結ばれていない |
+| directive wire | `amadeus-directive.ts:140` の `advisories` でplugin / code / message / stageを運ぶ | 選択入力・receipt参照を運ぶ契約がない |
+| report | main `amadeus-orchestrate.ts:3955`、single `:4159` の受理flag群 | advisory固有の選択・receipt・鮮度を報告できない |
+| presence / approval | `amadeus-state.ts:2811` のhuman presence、`:3322` の汎用 `GATE_APPROVED` | advisoryの意味と相関しないため代用不能 |
+| protocol / audit | `stage-protocol.md:941` はadvisoryの提示と人間判断を要求。audit registryは81 event | 判断内容を機械検証できるcanonical receiptは存在しない |
+
+3チェックポイントは同じ欠落を共有する。`requirements-analysis` と `build-and-test` はstage directive境界、`functional-design` はper-unit境界である。`functional-design.md:2` と orchestrator `:3470` / `:3607` の組合せでは、最初の `gate:false` directiveがadvisoryを消費・latchし、全unit完了後の `gate:true` には再掲されない。したがってreport時だけのguardは、最初のstage body開始を止められず遅い。
+
+### 実測と未承認設計の分離
+
+- **実測**: advisoryの発火、directive掲載、latch、generic presence / approval、report入力の欠落は現行コードから確認済みである。
+- **未承認要件候補**: 最初の `gate:false` を含むstage body開始前に、相関した人間選択がなければholdすること、選択の鮮度をrun / spec / sessionのどこに結ぶか、再入・replayでstaleを拒否することをRequirements Analysisで決める必要がある。
+- **未承認セキュリティ候補**: canonical audit eventを追加する場合、一般audit CLIからAIが自己発行できないprotected writerが必要になる。ただしreceiptの形式、保存先、event名はまだ決定しない。
+- **不十分な代替**: protocol文だけに依存する案、report時だけ拒否する案、汎用 `HUMAN_TURN` / standing grant / `GATE_APPROVED` をreceipt扱いする案は、意味相関または発行前holdを満たさない。
+
+### Interaction Diagrams
+
+#### 現行のadvisory発行フロー
+
+```mermaid
+flowchart TD
+  A["Plugin readiness evaluator"] --> B["Pending advisory keyed by plugin and code"]
+  B --> C["Engine next for main or single mode"]
+  C --> D["run-stage directive with advisories"]
+  D --> E["Conductor protocol requires human-visible relay"]
+  E --> F["Stage body can start"]
+  B --> G["Pending advisory consumed and latched"]
+  H["Missing advisory-specific human choice state"] -.-> F
+```
+<!-- Text fallback: plugin readiness evaluator が plugin と code をキーに pending advisory を作り、engine next が main または single の run-stage directive へ載せる。protocol は人間への提示を要求するが、stage body 開始前に advisory 固有の人間選択状態を検査する辺は存在せず、pending advisory は消費・latchされる。 -->
+
+#### per-unit functional-design の時間順
+
+```mermaid
+sequenceDiagram
+  participant Engine as "Engine"
+  participant Conductor as "Conductor"
+  participant Human as "Human"
+  Engine->>Conductor: "First unit directive, gate false, advisory present"
+  Conductor-->>Human: "Protocol requires advisory relay"
+  Note over Engine,Human: "No machine-verifiable advisory choice receipt"
+  Engine->>Engine: "Consume and latch plugin plus code"
+  Engine->>Conductor: "Run remaining unit directives"
+  Engine->>Conductor: "Final directive, gate true, advisory absent"
+```
+<!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
+
+## registry drift guard の対象機構（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 本節は Developer Code Scan を observed `64b44a9f8c8c79aff876d3275b194f39ead62a49` で合成した現在断面である。正本・テスト・文書の詳細は `re-scans/260802-registry-drift-guard.md` を参照する。
 
@@ -26,7 +81,7 @@
 
 セキュリティ／コンプライアンス上、新しい外部I/O・権限・個人情報は導入しない。リスクは検査の fail-open と診断の誤誘導であり、空抽出拒否、重複検出、negative tamper、source-derived expected により防御する。
 
-## Interaction Diagrams
+## Interaction Diagrams（260802-registry-drift-guard、履歴）
 
 ### CLI verb registry の検査フロー
 
@@ -2958,4 +3013,3 @@ round-trip（`write → read` で同値）はメタモルフィックで独立�
 ### 配置と投影の含意
 
 対象コーデック群（`amadeus-mirror-state-codec.ts` / `amadeus-election-model.ts` / `amadeus-election-store.ts` / `amadeus-journal.ts` / `amadeus-audit.ts` / `amadeus-state.ts`）はすべて `packages/framework/core/tools/` にあり、全ハーネス manifest の `coreDirs` が `{ src: "tools", dst: "tools" }`（`packages/framework/harness/claude/manifest.ts:53`、observed 実測。レビュー記載 `:52` から +1 シフト）で投影する。したがってコア側の一本化・fail-closed 化は自動的に (a) dist 7 ハーネス全ての再生成 (b) `dist:check` / `promote:self:check` (c) coverage patch ゲートの母集団入り（spawn 盲点があるため in-process seam 設計を実装時点で行う） (d) `t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照）を引き込む。テスト側は dist へ投影されない（`find dist -type d -name tests` / `find dist -name "*.test.ts"` ともに 0 件）。
-

@@ -11,6 +11,11 @@ export interface RunModelCheckInput {
   readonly cfgPath: string;
   readonly outDir: string;
   readonly provider: ModelCheckProvider;
+  readonly advisory?: {
+    readonly target: string;
+    readonly specIdentity: string;
+    readonly instance: string;
+  };
 }
 
 export interface CliError {
@@ -176,7 +181,31 @@ export type ModelCheckOutcome =
       readonly detail: string;
     };
 
-const VALUE_OPTIONS = new Set(["--model", "--cfg", "--out", "--provider"]);
+const ADVISORY_OPTIONS = [
+  "--advisory-target",
+  "--advisory-spec-identity",
+  "--advisory-instance",
+] as const;
+const VALUE_OPTIONS = new Set(["--model", "--cfg", "--out", "--provider", ...ADVISORY_OPTIONS]);
+
+function parseProvider(value: string): Result<ModelCheckProvider, CliError> {
+  if (value === "auto" || value === "sandbox-exec" || value === "docker") {
+    return { ok: true, value };
+  }
+  return {
+    ok: false,
+    error: { kind: "INVALID_PROVIDER", detail: `unsupported provider: ${value}` },
+  };
+}
+
+function advisoryFromValues(values: ReadonlyMap<string, string>): RunModelCheckInput["advisory"] {
+  if (!ADVISORY_OPTIONS.every((option) => values.has(option))) return undefined;
+  return {
+    target: values.get("--advisory-target")!,
+    specIdentity: values.get("--advisory-spec-identity")!,
+    instance: values.get("--advisory-instance")!,
+  };
+}
 
 export function parseRunModelCheckArgs(
   argv: readonly string[],
@@ -208,11 +237,13 @@ export function parseRunModelCheckArgs(
       };
     }
   }
-  const provider = values.get("--provider") ?? "auto";
-  if (provider !== "auto" && provider !== "sandbox-exec" && provider !== "docker") {
+  const provider = parseProvider(values.get("--provider") ?? "auto");
+  if (!provider.ok) return provider;
+  const advisoryCount = ADVISORY_OPTIONS.filter((option) => values.has(option)).length;
+  if (advisoryCount !== 0 && advisoryCount !== ADVISORY_OPTIONS.length) {
     return {
       ok: false,
-      error: { kind: "INVALID_PROVIDER", detail: `unsupported provider: ${provider}` },
+      error: { kind: "MISSING_ARG", detail: "all advisory correlation arguments are required together" },
     };
   }
   return {
@@ -221,7 +252,8 @@ export function parseRunModelCheckArgs(
       modelPath: values.get("--model")!,
       cfgPath: values.get("--cfg")!,
       outDir: values.get("--out")!,
-      provider,
+      provider: provider.value,
+      ...(advisoryCount === ADVISORY_OPTIONS.length ? { advisory: advisoryFromValues(values)! } : {}),
     },
   };
 }

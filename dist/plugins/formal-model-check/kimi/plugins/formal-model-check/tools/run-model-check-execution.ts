@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Result } from "./contract.ts";
 import type {
   PlannedTlcOutcome,
@@ -106,6 +107,8 @@ function receiptFromError(
 }
 
 function publish(
+  input: RunModelCheckInput,
+  source: RunModelCheckSource,
   workspace: ArtifactWorkspace,
   outcome: ModelCheckOutcome,
   receipt: EnvReceipt,
@@ -129,6 +132,15 @@ function publish(
         stderr,
         startedAt,
         finishedAt: dependencies.utcNow(),
+        ...(input.advisory === undefined ? {} : { advisory: input.advisory }),
+        sourceProvenance: {
+          modelPath: source.source.model.model.path,
+          cfgPath: source.source.model.cfg.path,
+          moduleIdentity: source.source.moduleIdentity,
+          cfgIdentity: source.source.cfgIdentity,
+          moduleSha256: createHash("sha256").update(source.source.moduleBytes).digest("hex"),
+          cfgSha256: createHash("sha256").update(source.source.cfgBytes).digest("hex"),
+        },
       });
     } catch {
       return {
@@ -164,12 +176,15 @@ function publish(
 function publishToolchainFailure(
   error: TlcToolchainError,
   input: RunModelCheckInput,
+  source: RunModelCheckSource,
   workspace: ArtifactWorkspace,
   startedAt: string,
   dependencies: ReservedModelCheckDependencies,
 ): RunModelCheckResult {
   const outcome = toolchainErrorOutcome(error);
   return publish(
+    input,
+    source,
     workspace,
     outcome,
     receiptFromError(error, input, workspace, dependencies),
@@ -191,6 +206,8 @@ export async function executeReservedModelCheck(
     const cache = prepareModelCheckCache(workspace, dependencies.filesystem);
     if (!cache.ok) {
       return publish(
+        input,
+        source,
         workspace,
         cache.error,
         createNotRunPlannerReceipt(input.provider, dependencies.platform, workspace.runId, cache.error.code),
@@ -203,7 +220,7 @@ export async function executeReservedModelCheck(
     const toolchain = dependencies.createToolchain(cache.value, source.workspaceRoot);
     const acquired = await toolchain.acquire();
     if (!acquired.ok) {
-      return publishToolchainFailure(acquired.error, input, workspace, startedAt, dependencies);
+      return publishToolchainFailure(acquired.error, input, source, workspace, startedAt, dependencies);
     }
     const planner = selectTlcSpawnPlanner(
       input.provider,
@@ -216,7 +233,7 @@ export async function executeReservedModelCheck(
       dependencies.platform,
     );
     if (!planner.ok) {
-      return publishToolchainFailure(planner.error, input, workspace, startedAt, dependencies);
+      return publishToolchainFailure(planner.error, input, source, workspace, startedAt, dependencies);
     }
     const prepared = await toolchain.preparePlanned({
       artifact: acquired.value,
@@ -231,13 +248,15 @@ export async function executeReservedModelCheck(
       planner: planner.value,
     });
     if (!prepared.ok) {
-      return publishToolchainFailure(prepared.error, input, workspace, startedAt, dependencies);
+      return publishToolchainFailure(prepared.error, input, source, workspace, startedAt, dependencies);
     }
     const executed = await toolchain.runPlanned(prepared.value);
     if (!executed.ok) {
-      return publishToolchainFailure(executed.error, input, workspace, startedAt, dependencies);
+      return publishToolchainFailure(executed.error, input, source, workspace, startedAt, dependencies);
     }
     return publish(
+      input,
+      source,
       workspace,
       toModelCheckOutcome(executed.value.exploration),
       executed.value.environmentReceipt,
@@ -249,6 +268,8 @@ export async function executeReservedModelCheck(
   } catch {
     const outcome = failure("UNEXPECTED_RUNTIME", "reserved model-check execution failed");
     return publish(
+      input,
+      source,
       workspace,
       outcome,
       createNotRunPlannerReceipt(input.provider, dependencies.platform, workspace.runId, outcome.code),

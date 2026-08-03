@@ -23,7 +23,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { emitActivationAdvisory, handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { emitActivationAdvisory, handleNext, handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
@@ -252,25 +252,34 @@ function seedComposedProject(): void {
   proj = createTestProject();
 }
 
-describe("t381 both emit paths carry the advisory", () => {
+describe("t381 both emit paths enforce the advisory hold", () => {
   test.each([
     ["requirements-analysis", FIX_REQUIREMENTS],
     ["functional-design", FIX_FUNCTIONAL],
     ["build-and-test", FIX_BUILD],
-  ] as const)("%s emits byte-equal structured advisories on main and --single paths", (slug, fixture) => {
+  ] as const)("%s emits the same hold contract on main and --single paths", (slug, fixture) => {
     seedComposedProject();
     seedStateFile(proj, fixture);
     handleNext([], proj);
-    const main = JSON.parse(logs.join("\n").trim()) as { advisories?: unknown };
+    const main = JSON.parse(logs.join("\n").trim()) as {
+      kind: string;
+      advisories?: Array<{ message: string; checkpoint: string; spec_identity: string; advisory_instance: string }>;
+    };
 
     cleanupTestProject(proj);
     proj = createTestProject();
+    seedStateFile(proj, fixture);
     logs = [];
     handleNext(["--single", "--stage", slug], proj);
-    const single = JSON.parse(logs.join("\n").trim()) as { advisories?: unknown };
+    const single = JSON.parse(logs.join("\n").trim()) as typeof main;
 
-    expect(Array.isArray(main.advisories) ? main.advisories.length : 0).toBeGreaterThan(0);
-    expect(JSON.stringify(single.advisories)).toBe(JSON.stringify(main.advisories));
+    expect(main.kind).toBe("await-advisory-choice");
+    expect(single.kind).toBe("await-advisory-choice");
+    expect(main.advisories?.[0].message).toBe(single.advisories?.[0].message);
+    expect(main.advisories?.[0].checkpoint).toBe(slug);
+    expect(single.advisories?.[0].checkpoint).toBe(slug);
+    expect(main.advisories?.[0].spec_identity).toBe(single.advisories?.[0].spec_identity);
+    expect(main.advisories?.[0].advisory_instance).not.toBe(single.advisories?.[0].advisory_instance);
   });
 
   test("main workflow: next at requirements-analysis carries advisories (CP1 reachable)", () => {
@@ -279,11 +288,49 @@ describe("t381 both emit paths carry the advisory", () => {
     handleNext([], proj);
     const directive = JSON.parse(logs.join("\n").trim()) as {
       stage: string;
-      advisories?: { stage: string; code: string }[];
+      kind: string;
+      advisories?: { checkpoint: string; code: string }[];
     };
+    expect(directive.kind).toBe("await-advisory-choice");
     expect(directive.stage).toBe("requirements-analysis");
     expect(directive.advisories?.length).toBe(1);
-    expect(directive.advisories?.[0].stage).toBe("requirements-analysis");
+    expect(directive.advisories?.[0].checkpoint).toBe("requirements-analysis");
+  });
+
+  test("receiptなしのmain / --single reportはstage実行済みを装っても拒否される", () => {
+    seedComposedProject();
+    seedStateFile(proj, FIX_REQUIREMENTS);
+    handleNext([], proj);
+    logs = [];
+    handleReport(["--stage", "requirements-analysis", "--result", "completed"], proj);
+    expect(JSON.parse(logs.join("\n")).kind).toBe("error");
+    expect(logs.join("\n")).toContain("unresolved advisory choice");
+
+    cleanupTestProject(proj);
+    proj = createTestProject();
+    seedStateFile(proj, FIX_REQUIREMENTS);
+    logs = [];
+    handleNext(["--single", "--stage", "requirements-analysis"], proj);
+    logs = [];
+    handleReport(["--single", "--stage", "requirements-analysis", "--result", "completed"], proj);
+    expect(JSON.parse(logs.join("\n")).kind).toBe("error");
+    expect(logs.join("\n")).toContain("unresolved advisory choice");
+  });
+
+  test("receiptなしのapproval carrier reportもauthority処理前に拒否される", () => {
+    seedComposedProject();
+    seedStateFile(proj, FIX_REQUIREMENTS);
+    handleNext([], proj);
+    logs = [];
+    setEnv("AMADEUS_OPERATING_MODE", "solo");
+    handleReport([
+      "--stage", "requirements-analysis",
+      "--result", "completed",
+      "--standing-grant-id", "cafe0001",
+      "--standing-grant-route-id", "00000000-0000-4000-8000-000000000001",
+    ], proj);
+    expect(JSON.parse(logs.join("\n")).kind).toBe("error");
+    expect(logs.join("\n")).toContain("unresolved advisory choice");
   });
 
   test("--single (the stage-runner path) carries advisories too", () => {
@@ -291,11 +338,13 @@ describe("t381 both emit paths carry the advisory", () => {
     handleNext(["--single", "--stage", "functional-design"], proj);
     const directive = JSON.parse(logs.join("\n").trim()) as {
       stage: string;
-      advisories?: { stage: string; code: string }[];
+      kind: string;
+      advisories?: { checkpoint: string; code: string }[];
     };
+    expect(directive.kind).toBe("await-advisory-choice");
     expect(directive.stage).toBe("functional-design");
     expect(directive.advisories?.length).toBe(1);
-    expect(directive.advisories?.[0].stage).toBe("functional-design");
+    expect(directive.advisories?.[0].checkpoint).toBe("functional-design");
     expect(errs.join("\n")).toContain("spec hash CHANGED");
   });
 

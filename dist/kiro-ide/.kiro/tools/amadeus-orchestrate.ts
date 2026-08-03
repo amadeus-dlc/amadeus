@@ -85,6 +85,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
+  type AwaitAdvisoryChoiceDirective,
   type AwaitApprovalDirective,
   type Directive,
   type ErrorDirective,
@@ -92,10 +93,17 @@ import {
   type GateValue,
   type ParkedDirective,
   type PrintDirective,
+  renderAdvisoryChoiceQuestion,
   type RunStageDirective,
   type SelectIntentDirective,
   validateDirective,
 } from "./amadeus-directive.ts";
+import {
+  ADVISORY_CHOICE_OPTIONS,
+  advisoryReportHoldReason,
+  closeAdvisoryInstancesForStage,
+  guardAdvisoryChoices,
+} from "./amadeus-advisory-choice.ts";
 import {
   buildIntentSelectionSnapshot,
   type IntentSelectionSnapshot,
@@ -695,8 +703,8 @@ const DEFAULT_SCOPE = "feature";
 // boundaries), never a silent miss — we exit non-zero so a wiring bug surfaces
 // loudly rather than emitting a lie the conductor would act on.
 function emit(directive: Directive, recordError = true): void {
-  attachPendingAdvisories(directive);
-  const result = validateDirective(directive);
+  const guardedDirective = applyPendingAdvisoryGuard(directive);
+  const result = validateDirective(guardedDirective);
   if (!result.valid) {
     console.error(
       `amadeus-orchestrate: refusing to emit a malformed directive: ${result.errors.join("; ")}`,
@@ -736,11 +744,28 @@ function emit(directive: Directive, recordError = true): void {
 // there is correct — the stderr line was already written, and the run latch has
 // already recorded it. An EMPTY raise attaches nothing, so a silent judgment
 // leaves the directive byte-identical to the pre-U5 engine (invariant I2).
-function attachPendingAdvisories(directive: Directive): void {
+function applyPendingAdvisoryGuard(directive: Directive): Directive {
   const pending = takePendingAdvisories();
-  if (pending.length === 0) return;
-  if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return;
-  directive.advisories = pending;
+  if (pending.length === 0) return directive;
+  if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return directive;
+  const guard = guardAdvisoryChoices(
+    resolveProjectDir(_handlerProjectDir),
+    directive.stage,
+    pending,
+    pluginActivationHostRoot(),
+  );
+  if (guard.kind === "allow") return directive;
+  const choiceDirective: AwaitAdvisoryChoiceDirective = {
+    kind: "await-advisory-choice",
+    stage: guard.stage,
+    question: renderAdvisoryChoiceQuestion(guard.advisories),
+    options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label) as AwaitAdvisoryChoiceDirective["options"],
+    advisories: guard.advisories,
+    ...(guard.runRequired
+      ? { run_required: true, formal_checks: guard.formalChecks }
+      : {}),
+  };
+  return choiceDirective;
 }
 
 function emitStateNeutralError(message: string): void {
@@ -1371,14 +1396,19 @@ function takePendingAdvisories(): Advisory[] {
 // run latch), write the human line to stderr, and stage the structured result
 // for emit(). Shared by BOTH emit paths so the two can never drift.
 function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
-  setPendingAdvisories(
-    emitActivationAdvisory(
-      slug,
-      pluginActivationHostRoot(),
-      (line) => process.stderr.write(`${line}\n`),
-      advisoryLatchDirForRun(projectDir),
-    ),
+  const hostRoot = pluginActivationHostRoot();
+  const advisories = ACTIVATION_ADVISORY_STAGES.has(slug)
+    ? activationAdvisoriesForHost(hostRoot, slug)
+    : [];
+  emitActivationAdvisory(
+    slug,
+    hostRoot,
+    (line) => process.stderr.write(`${line}\n`),
+    advisoryLatchDirForRun(projectDir),
   );
+  // The presentation latch suppresses duplicate stderr only. The safety guard
+  // must inspect the complete current judgment on every emission.
+  setPendingAdvisories(advisories);
 }
 
 // The run's latch directory: `<record>/.amadeus-advisory-latch/<session>`. The
@@ -4219,6 +4249,11 @@ function handleSingleReport(
   }
 
   const pd = resolveProjectDir(projectDir);
+  const advisoryHold = advisoryReportHoldReason(pd, node.slug);
+  if (advisoryHold !== null) {
+    emit(errorDirective(`Cannot report stage "${node.slug}": ${advisoryHold}.`));
+    return;
+  }
   const wfId = syntheticWorkflowId(node.slug);
 
   const started = spawnAuditAppend(pd, "STAGE_STARTED", {
@@ -4248,10 +4283,7 @@ function handleSingleReport(
     return;
   }
 
-  // Flow 4: a completed formal-model-check single run records the activation
-  // verdict (the current spec hash), the sole write of SpecHashState (BR-U6-6).
-  // A no-op for every other stage.
-  recordActivationVerdictIfActivationStage(node.slug, pluginActivationHostRoot());
+  closeAdvisoryInstancesForStage(pd, node.slug);
 
   emit({
     kind: "done",
@@ -4701,6 +4733,11 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       ));
       return;
     }
+    const advisoryHold = advisoryReportHoldReason(pd, slug);
+    if (advisoryHold !== null) {
+      emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
+      return;
+    }
     handleAuthorizedApprovalReport(pd, slug, authority);
     return;
   }
@@ -4729,6 +4766,11 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   }
   const explicitStage = flags.stage?.trim();
   const slug = explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
+  const advisoryHold = advisoryReportHoldReason(pd, slug);
+  if (advisoryHold !== null) {
+    emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
+    return;
+  }
 
   const scope = getField(stateContent, "Scope");
   if (!scope || scope.length === 0) {
@@ -5010,9 +5052,12 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     return;
   }
   if (deferWorkflowCompletion) {
+    closeAdvisoryInstancesForStage(pd, slug);
     emitDeferredCompletionBoundary(pd, slug);
     return;
   }
+
+  closeAdvisoryInstancesForStage(pd, slug);
 
   // The transition committed. Emit a terminal `done` directive naming the move
   // — the loop driver reads this to know the report landed and the next `next`

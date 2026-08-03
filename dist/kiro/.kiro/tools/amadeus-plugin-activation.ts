@@ -258,6 +258,7 @@ export type Advisory = {
   // raised (the same judgment can surface at any of ACTIVATION_ADVISORY_STAGES).
   stage: string;
   target?: string;
+  specIdentity?: string;
   reason?: string;
 };
 
@@ -278,12 +279,16 @@ export function activationAdvisoriesForHost(
   if (judgment.kind === "current") return [];
   const message = activationAdvisoryLine(judgment);
   if (message === null) return [];
+  const computed = computeSpecHash(specRootForHost(hostRoot), ACTIVATION_WATCH_GLOBS, fs);
+  const specIdentity = computed.ok ? computed.hash : "unreadable-spec";
   return [{
     plugin: ACTIVATION_PLUGIN,
     code: judgment.kind,
     message,
     stage,
-    ...(judgment.kind === "not-ready" ? { reason: judgment.reason } : { target: "specs/tla" }),
+    ...(judgment.kind === "not-ready"
+      ? { target: "specs/tla", specIdentity, reason: judgment.reason }
+      : { target: "specs/tla", specIdentity: judgment.currentHash }),
   }];
 }
 

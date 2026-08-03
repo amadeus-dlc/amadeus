@@ -16,6 +16,12 @@ they match. Installation succeeds in `not-ready`; only an explicit model-check
 run requires a valid `specs/tla/model-map.json` target. Startup never launches
 TLC.
 
+An advisory-correlated local run receives the three all-or-none CLI options
+`--advisory-target`, `--advisory-spec-identity`, and `--advisory-instance`.
+They are copied into `manifest.json` alongside source provenance for the actual
+model/config bytes. The engine accepts only a complete, non-partial,
+provenance-matching `NOT_DETECTED` result for that exact advisory instance.
+
 ## Bundle layout
 
 ```

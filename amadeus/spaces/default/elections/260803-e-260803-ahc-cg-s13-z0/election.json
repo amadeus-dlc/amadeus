@@ -1,0 +1,17 @@
+{
+  "electionId": "E-260803-AHC-CG-S13-Z0",
+  "kind": "learning-selection",
+  "question": "Code Generationの学習候補は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.mdに解釈・逸脱・トレードオフの記録がなく、新しいpracticeまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

@@ -940,21 +940,33 @@ If a Task tool call fails (timeout, error, or returns truncated/incomplete outpu
 
 ## 11a. Directive Advisories
 
-If the `run-stage` / `dispatch-subagent` directive carries an `advisories`
-array, **surface every entry to the user before starting the stage body**. The
-field is present only when the engine actually raised something (it is omitted,
-never empty), and each entry is `{plugin, code, message, stage}` — relay the
-`message` verbatim and name the `plugin` it came from.
+An `await-advisory-choice` directive is a **fail-closed checkpoint**. **Surface every entry**
+in the `advisories` array, including each
+`advisories[].message` verbatim,
+then present exactly the directive's two
+choices: `今すぐ実行する` and `リスクを承知して延期する`. Do not start the
+stage body, dispatch a worker, or report the stage while this directive is
+active. A general approval, standing grant, delegated approval, or uncorrelated
+human turn does not resolve it.
 
-An advisory is a **nudge, not a gate**: it never blocks the stage, never starts
-another stage on its own, and is never acted on silently. The human decides
-whether to follow it (typically by running the named stage) and the stage
-proceeds either way. The same text is also written to stderr for the human
-channel; relaying it is what makes it reach a user who only sees the directive.
+The canonical user-visible `question` is rendered by
+`tools/amadeus-directive.ts#renderAdvisoryChoiceQuestion` from every advisory
+message in array order. Present that `question` verbatim; do not substitute a
+summary or reconstruct it in a harness adapter.
 
-The engine raises these at `requirements-analysis`, `functional-design` and
-`build-and-test`, at most once per advisory per run, so a repeat is a signal
-worth reporting rather than expected noise.
+The engine persists one identity per pending advisory and accepts a choice only
+from the trusted human-prompt hook. Re-run `next` after the human answers. A
+risk defer releases only that checkpoint. A run-now answer returns
+`run_required: true` plus one or more structured `formal_checks`; execute each
+`command` exactly as supplied, then re-run `next`. Only a complete, non-partial,
+provenance-verified `NOT_DETECTED` result releases the hold. `DETECTED`,
+`HARNESS_ERROR`, missing/corrupt evidence, or an identity mismatch keeps the
+hold active and requires a fresh retry or explicit risk defer.
+
+The engine applies this contract at `requirements-analysis`,
+`functional-design`, and `build-and-test`, including main workflow, `--single`,
+and the first `gate:false` per-unit directive. A directive without advisories is
+unchanged.
 
 ## 12. Phase Boundary Verification
 
