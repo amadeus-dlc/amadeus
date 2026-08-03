@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 599,
+    "total": 600,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 85,
+      "audit": 86,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -334,6 +334,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LOOP_MONITOR_EVENT_SET_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "audit",
