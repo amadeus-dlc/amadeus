@@ -168,12 +168,17 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       }).status,
     ).toBe(0);
     expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
+    // Freshness is asserted over the gate's own implementation only. packages/framework/core/tools
+    // is the corpus the gate scans, not the gate: it changes with ordinary feature and fix work, so
+    // including it would demand a 23-receipt re-adoption of the evidence bundle on every commit that
+    // touches a scanned file — and that bundle has no generator, so the demand is unsatisfiable
+    // rather than merely expensive. Staleness of the recorded census against a changed corpus is a
+    // real gap, tracked separately as #2153; it needs an evidence-regeneration path, not a pin here.
     const changedImplementation = spawnSync("git", [
       "diff",
       "--name-only",
       `${registry.currentRevision}..${headRevision}`,
       "--",
-      "packages/framework/core/tools",
       ":(glob)tests/no-silent-drop/**/*.ts",
     ], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
     expect(changedImplementation).toBe("");
