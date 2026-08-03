@@ -98,6 +98,22 @@ describe("u7 CI build-before-test contract", () => {
     }
   });
 
+  test("every generated-distribution consumer builds before use", () => {
+    for (const [jobName, consumerStep] of [
+      ["typecheck", "Typecheck (tsc --noEmit, both tsconfigs)"],
+      ["lint", "Deletion gate (legacy writer, six-condition machine verification)"],
+      ["distribution-contract", "Intent Mirror distribution contract"],
+    ] as const) {
+      const job = jobByName(jobName);
+      const install = stepIndex(job, "Install dependencies");
+      const build = stepIndex(job, "Build generated distributions");
+      const consumer = stepIndex(job, consumerStep);
+      expect(build, jobName).toBeGreaterThan(install);
+      expect(consumer, jobName).toBeGreaterThan(build);
+      expect(stepByName(job, "Build generated distributions").run).toBe("bun run build");
+    }
+  });
+
   test("merge-base coverage builds before measuring without masking build failure", () => {
     const job = jobByName("coverage-base");
     const measure = stepByName(job, "Measure base coverage").run ?? "";

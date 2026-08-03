@@ -87,6 +87,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build generated distributions
+        run: bun run build
+
       - name: Typecheck (tsc --noEmit, both tsconfigs)
         run: bun run typecheck
 
@@ -117,6 +120,9 @@ jobs:
       # FR-MIG-4(c) deletion-gate condition) stays visible in the job log.
       - name: Call-site guard (legacy emit path, shrink-only ratchet)
         run: bun tests/callsite-guard.ts --check
+
+      - name: Build generated distributions
+        run: bun run build
 
       # FR-MIG-4: the six-condition deletion gate for the legacy audit writer.
       # --check does not fail the job — BLOCKED is the expected state for the
@@ -159,6 +165,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Intent Mirror distribution contract
         run: bun run distribution:check

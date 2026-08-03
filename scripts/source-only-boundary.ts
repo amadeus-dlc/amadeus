@@ -28,10 +28,18 @@ export function evaluateTrackedBoundary(
 export function trackedGitFiles(projectDir: string): readonly string[] {
   const result = spawnSync("git", ["ls-files", "-z"], {
     cwd: projectDir,
-    encoding: "buffer",
+    encoding: null,
+    maxBuffer: 32 * 1024 * 1024,
   });
-  if (result.status !== 0) {
-    const detail = result.stderr.toString("utf-8").trim();
+  if (result.error || result.status !== 0) {
+    const detail = [
+      result.error?.message,
+      result.signal ? `signal ${result.signal}` : undefined,
+      result.status !== null ? `exit ${result.status}` : undefined,
+      result.stderr.toString("utf-8").trim() || undefined,
+    ]
+      .filter(Boolean)
+      .join("; ");
     throw new Error(`git ls-files failed${detail ? `: ${detail}` : ""}`);
   }
   return result.stdout

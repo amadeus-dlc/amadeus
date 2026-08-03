@@ -20,7 +20,8 @@
 //     gate runtime iteration today.
 //
 // Compile is the YAML -> JSON transform. Core stages bootstrap number + name
-// from today's stage-graph.json so their historical bytes remain stable.
+// from the source-owned stage-identities.json so a clean checkout can build
+// without a committed stage-graph.json.
 // Plugin stages may author either field in frontmatter; authored values take
 // precedence and are projected without changing the core-stage fallback.
 //
@@ -213,6 +214,47 @@ function stagesDir(): string {
  *  that set/unset the env mid-process see the change. */
 function stageGraphPath(): string {
   return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
+}
+
+type StageIdentity = Pick<GraphStage, "slug" | "number" | "name">;
+
+function loadStageIdentities(): StageIdentity[] {
+  const path = join(DATA_DIR, "stage-identities.json");
+  const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+  if (!Array.isArray(parsed)) throw new Error(`Stage identities must be an array at ${path}`);
+  const identities: StageIdentity[] = [];
+  const slugs = new Set<string>();
+  for (const entry of parsed) {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      !("slug" in entry) ||
+      !("number" in entry) ||
+      !("name" in entry) ||
+      typeof entry.slug !== "string" ||
+      typeof entry.number !== "string" ||
+      typeof entry.name !== "string" ||
+      !/^\d+\.\d+$/.test(entry.number) ||
+      entry.name.length === 0
+    ) {
+      throw new Error(`Invalid stage identity in ${path}`);
+    }
+    if (slugs.has(entry.slug)) throw new Error(`Duplicate stage identity "${entry.slug}" in ${path}`);
+    slugs.add(entry.slug);
+    identities.push({ slug: entry.slug, number: entry.number, name: entry.name });
+  }
+  return identities;
+}
+
+function compileIdentitySeed(): StageIdentity[] {
+  if (process.env.AMADEUS_STAGE_GRAPH) return loadStageGraph();
+  const identities = loadStageIdentities();
+  if (!existsSync(stageGraphPath())) return identities;
+  const identitySlugs = new Set(identities.map((entry) => entry.slug));
+  const compiledOnly = loadStageGraph()
+    .filter((entry) => !identitySlugs.has(entry.slug))
+    .map(({ slug, number, name }) => ({ slug, number, name }));
+  return [...identities, ...compiledOnly];
 }
 
 // The relocated method ("memory") is harness-neutral and lives at the
@@ -2104,8 +2146,8 @@ function pluginsHostRoot(): string {
   return process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(dirname(stagesDir()));
 }
 
-/** Regenerate stage-graph.json from the 31 YAML stage files.
- *  Bootstraps absent number + name from the existing JSON while preserving
+/** Regenerate stage-graph.json from the stage definition files.
+ *  Bootstraps absent number + name from the source-owned identity seed while preserving
  *  optional authored plugin metadata. Asserts the
  *  edge-local invariant: every requires_stage edge points from a
  *  higher-numbered stage to a lower-numbered one. Also transposes each
@@ -2117,10 +2159,9 @@ export function compileStageGraph(): {
   gridJson: string;
   stages: GraphStage[];
 } {
-  // Harvest number + name mappings from existing JSON. A slug already in
-  // the JSON keeps its pinned number + name (the "computed not authored,
-  // stable thereafter" contract); a NEW slug is auto-seeded below.
-  const existing = loadStageGraph();
+  // Harvest number + name mappings from the source-owned identity seed. An
+  // explicit AMADEUS_STAGE_GRAPH fixture remains the test/plugin override.
+  const existing = compileIdentitySeed();
   const numberBySlug = new Map(existing.map((s) => [s.slug, s.number]));
   const nameBySlug = new Map(existing.map((s) => [s.slug, s.name]));
 

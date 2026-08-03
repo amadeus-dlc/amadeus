@@ -31,7 +31,6 @@
 // writes the requested generated output.
 
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -140,8 +139,7 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-// The two compiled-data files graph compile bootstraps its number/name seed
-// from. They are regenerated into every tree, never authored in core/.
+// Compiled graph outputs whose embedded rule paths may need a harness rename.
 const COMPILED_DATA = ["tools/data/stage-graph.json", "tools/data/scope-grid.json"];
 
 // The packager-emitted harness descriptor (vision T1 open-set seam): the
@@ -270,26 +268,6 @@ function emitActiveSpace(outRoot: string): string {
   return outPath;
 }
 
-// Copy the committed compiled-data JSON into the assembled tree so
-// compileStageGraph() can harvest the number/name seed before it re-derives
-// (and rewrites harness-correct paths into) the file. The number/name mapping
-// is harness-INDEPENDENT (slug → number/name), so any harness's committed JSON
-// is a valid seed; compile re-derives every other field and emits
-// harness-correct paths. `seedFrom` is the committed <harnessDir> tree; if it
-// lacks the JSON (a harness's first-ever build), fall back to the committed
-// claude tree's JSON as the canonical seed-of-record.
-function seedCompiledData(treeRoot: string, seedFrom: string): void {
-  const claudeSeedRoot = join(REPO_ROOT, "dist", "claude", ".claude");
-  for (const rel of COMPILED_DATA) {
-    let src = join(seedFrom, rel);
-    if (!existsSync(src)) src = join(claudeSeedRoot, rel); // first build: seed from claude
-    if (!existsSync(src)) continue;
-    const dst = join(treeRoot, rel);
-    mkdirSync(dirname(dst), { recursive: true });
-    cpSync(src, dst);
-  }
-}
-
 // The result of a buildTree run: the out-of-harness paths produced (for the
 // byte-diff) and the set of harness SOURCE files the build actually read (for
 // the unreferenced-source scan, #735).
@@ -335,10 +313,9 @@ function projectPluginsIntoHarnessTree(
 // Build one harness tree into `outRoot` (the dist/<name> dir). Returns the set
 // of paths the copy+generate steps produced (for the orphan scan) plus the set
 // of harness SOURCE files the build actually read (for the unreferenced-source
-// scan). `seedFrom` is the committed <harnessDir> tree the compiled-data seed is
-// read from (a pre-sweep stash under write).
+// scan). Compiled data bootstraps from the source-owned stage identity seed.
 // ---------------------------------------------------------------------------
-function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): BuildResult {
+function buildTree(m: HarnessManifest, outRoot: string): BuildResult {
   const harnessDir = m.harnessDir;
   const harnessSrcRoot = join(HARNESS_ROOT, m.name);
   const treeRoot = join(outRoot, harnessDir);
@@ -436,14 +413,9 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): Build
   emitMemorySeed(treeRoot, harnessDir, m.rulesRename);
 
   // 3. Compile the stage graph into the assembled tree (writes harness-correct
-  //    stage-graph.json + scope-grid.json). compileStageGraph() bootstraps each
-  //    stage's number + name from the EXISTING stage-graph.json (the
-  //    "computed-not-authored" seed contract — stage-definition.md), so seed the
-  //    assembled tree with the committed dist JSON before compiling. Compile is
-  //    idempotent on that seed: it re-derives every other field from the YAML
-  //    and rewrites harness-correct paths, reproducing the committed JSON
-  //    byte-for-byte. The seed is the only authored datum in the compiled file.
-  seedCompiledData(treeRoot, seedFrom);
+  //    stage-graph.json + scope-grid.json). Stable number/name mappings come
+  //    from source-owned tools/data/stage-identities.json, so a generated seed
+  //    or pre-existing dist tree is not required.
   // Point loadRules at the emitted method tree via AMADEUS_RULES_DIR so
   // rules_in_context is populated at compile time. The method now lives at the
   // workspace-root amadeus/spaces/default/memory/ (NOT inside <harnessDir>), so
@@ -607,29 +579,9 @@ function loadManifest(name: string): HarnessManifest {
 export function writeHarness(name: string): void {
   const m = loadManifest(name);
   const distDir = join(REPO_ROOT, "dist", name);
-  const treeRoot = join(distDir, m.harnessDir);
-  // Stash the existing compiled-data seed before the clean sweep so compile
-  // can bootstrap its number/name mappings (the seed survives the regenerate).
-  const seedStash = mkdtempSync(join(tmpdir(), `amadeus-seed-${name}-`));
   const candidate = mkdtempSync(join(tmpdir(), `amadeus-candidate-${name}-`));
   try {
-    for (const rel of COMPILED_DATA) {
-      const src = join(treeRoot, rel);
-      if (existsSync(src)) {
-        const dst = join(seedStash, rel);
-        mkdirSync(dirname(dst), { recursive: true });
-        cpSync(src, dst);
-      }
-    }
-    const { readSources } = buildTree(m, candidate, seedStash);
-    const harnessSrcDir = join(HARNESS_ROOT, name);
-    const unreadSources = unreferencedSources([...walk(harnessSrcDir)], readSources);
-    if (unreadSources.length > 0) {
-      const listed = unreadSources
-        .map((path) => relative(harnessSrcDir, path).split(sep).join("/"))
-        .join(", ");
-      throw new Error(`UNREFERENCED in source: ${name}/${listed}`);
-    }
+    buildHarnessCandidate(name, candidate);
     const candidateFiles = new Map<string, Buffer>();
     for (const file of walk(candidate))
       candidateFiles.set(relative(candidate, file), readFileSync(file));
@@ -649,9 +601,20 @@ export function writeHarness(name: string): void {
     );
     console.log(`[${name}] regenerated dist/${name}/${m.harnessDir}`);
   } finally {
-    rmSync(seedStash, { recursive: true, force: true });
     rmSync(candidate, { recursive: true, force: true });
   }
+}
+
+export function buildHarnessCandidate(name: string, candidate: string): void {
+  const manifest = loadManifest(name);
+  const { readSources } = buildTree(manifest, candidate);
+  const harnessSrcDir = join(HARNESS_ROOT, name);
+  const unreadSources = unreferencedSources([...walk(harnessSrcDir)], readSources);
+  if (unreadSources.length === 0) return;
+  const listed = unreadSources
+    .map((path) => relative(harnessSrcDir, path).split(sep).join("/"))
+    .join(", ");
+  throw new Error(`UNREFERENCED in source: ${name}/${listed}`);
 }
 
 // Pure diff for the unreferenced-source scan (#735): given every source file
