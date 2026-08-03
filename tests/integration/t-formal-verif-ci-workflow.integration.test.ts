@@ -78,7 +78,10 @@ describe("CI workflow structure (formal job isolation + baseline pin)", () => {
       false,
     )).toContain("formal job event condition drifted");
     expect(inspectCiWorkflow(
-      source.replace(/actions\/upload-artifact@[0-9a-f]{40}/, "actions/upload-artifact@v4"),
+      source.replace(
+        "id: formal-upload\n        if: always()\n        continue-on-error: true\n        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4",
+        "id: formal-upload\n        if: always()\n        continue-on-error: true\n        uses: actions/upload-artifact@v4",
+      ),
       BASELINE_SHA,
       false,
     )).toContain("upload action is not pinned");
@@ -104,13 +107,13 @@ describe("CI workflow structure (formal job isolation + baseline pin)", () => {
     const source = readFileSync(WORKFLOW, "utf8");
     for (const [needle, replacement, finding] of [
       [
-        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
-        "actions/checkout@invalid # v4",
+        "id: formal-checkout\n        continue-on-error: true\n        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4",
+        "id: formal-checkout\n        continue-on-error: true\n        uses: actions/checkout@invalid # v4",
         "checkout action is not pinned",
       ],
       [
-        "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2",
-        "oven-sh/setup-bun@invalid # v2",
+        "id: formal-setup-bun\n        if: always()\n        continue-on-error: true\n        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2",
+        "id: formal-setup-bun\n        if: always()\n        continue-on-error: true\n        uses: oven-sh/setup-bun@invalid # v2",
         "Bun action or version is not pinned",
       ],
       ["id: formal-acceptance\n        if: always()", "id: formal-acceptance", "always evidence or terminal flow drifted"],
