@@ -22,8 +22,8 @@ R4へのentryは、今回transitionを作る前に module-internal `OperationPre
 |---|---|---|
 | `failed(pre-commit)` | 今回transitionのcommit point未到達 | `stateFailure`、`state-write`、`not-started`、`retryable=false` |
 | `failed(durability-unknown)` | rename後directory fsync失敗でdurabilityを確定不能 | `stateFailure`、`state-write`、`outcome-unknown`、`retryable=false` |
-| `ok(clean)` | 今回business stateとauditが収束済み、または許可された変更不要 | 元のbusiness `safety-blocked` |
-| `ok(outbox-pending)` | 今回business stateはcommit済み、今回outboxは未収束 | 元のbusiness `safety-blocked`。次回invocationでmaintenance |
+| `ok(clean)` | 許可された変更不要でstate writeが発生していない | 元のbusiness `safety-blocked` |
+| `ok(outbox-pending)` | 今回business stateとembedded outboxはcommit済み。audit append成否にかかわらずclearは次回maintenanceへ分離 | 元のbusiness `safety-blocked`。次回invocationでmaintenance |
 
 current-transition用の module-internal `StoreMutationResult` は `transition-written`、`transition-unchanged`、`transition-conflict`、`transition-invalid`、`transition-io-failure(phase)` の閉集合だけを持つ。既存outbox maintenanceは `OperationPreparationResult` が所有し、`StoreMutationResult`／`StateResult` へ変換しない。R4 atomic adapterはbusiness state rename前、rename後directory fsync、outbox maintenance writeをtyped fieldで区別する。
 
@@ -44,7 +44,7 @@ maintenance-only invocationは今回business operationの成功を返さない�
 |---|---|---|---|
 | outboxなし、lock〜rename前 | `failed(pre-commit)` | 呼出開始時からstate／audit／outbox bytes不変 | `not-started`、retryable=false |
 | outboxなし、rename後directory fsync | `failed(durability-unknown)` | byte invarianceを主張しない | `outcome-unknown`、retryable=false |
-| 今回state commit後audit append／clear失敗 | `ok(outbox-pending)` | commit済みstateと今回outboxを保持 | business outcomeを返し、次回maintenance |
+| 今回state commit後audit append失敗または成功 | `ok(outbox-pending)` | commit済みstateと今回outboxを保持。current invocationではclearしない | business outcomeを返し、次回maintenance |
 | prior outboxのappend／clear未完了 | `maintenance-blocked` | prior transactionの許可済み収束だけが進み得る。今回transitionは未開始 | `not-started`、retryable=true |
 | prior outboxのclear完了 | `maintenance-completed` | prior transactionだけが収束。今回transitionは未開始 | `not-started`、retryable=true |
 
@@ -71,16 +71,16 @@ FR-10の呼出開始時bytes不変は、`ready` から今回transitionへ進むi
 | `maintenance-completed` | prior outbox clear済み | `stateFailure(not-started, retryable=true)`、business outcome禁止 |
 | `transition-io-failure(pre-commit)` | `ready` 後 | `stateFailure(not-started, retryable=false)` |
 | `transition-io-failure(durability-unknown)` | `ready` 後 | `stateFailure(outcome-unknown, retryable=false)` |
-| `transition-written` | 今回outboxあり／なし | `ok(outbox-pending)`／`ok(clean)` |
+| `transition-written` | business state＋embedded outboxをatomic commit | 常に`ok(outbox-pending)`。audit append成功時もclearは次回maintenance |
 | `transition-unchanged` | non-exclusive／exclusive | `ok(clean)`／`failed(pre-commit)` |
-| `transition-conflict` | non-exclusive初回／その他 | 1回再評価／`failed(pre-commit)` |
+| `transition-conflict` | `persistBlocked` のexclusive transition／その他の既存non-exclusive caller | 本Unitでは即時`failed(pre-commit)`／既存callerだけ1回再評価（本Unitのcall-count対象外） |
 | `transition-invalid` | 全mode | `failed(pre-commit)` |
 
 ## Acceptanceシナリオ
 
 - `ready` からの各pre-commit failureで `not-started`、元business outcome不返却、呼出開始時からstate／audit／outbox bytes一致を検証する。
 - directory fsync失敗で `outcome-unknown` を返し、typed phaseだけで分岐する。
-- 今回transitionのaudit append／clear失敗ではbusiness stateとoutboxを保持し、後続maintenanceでaudit 1件以下／outbox clearへ収束する。
+- 今回transitionはbusiness state＋embedded outboxを一回のatomic writeでcommitし、audit appendの成否にかかわらずoutboxを保持してreturnする。後続maintenanceでaudit 1件以下／outbox clearへ収束する。
 - prior outboxのappend失敗、append成功後clear失敗、clear成功の3経路すべてで今回transitionの評価回数が0、business outcomeが0、`not-started`／`retryable=true` になる。
 - maintenance-only invocationの後、明示的な後続invocationがoutbox absentの `ready` から今回transitionを1回だけ評価する。
 - 同一transaction identityでpayload fieldが不一致ならfail-closedでoutboxを保持する。

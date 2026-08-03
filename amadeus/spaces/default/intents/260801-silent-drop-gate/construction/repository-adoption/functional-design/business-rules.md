@@ -85,7 +85,7 @@ CIはbase revisionを一つの明示argvとしてU1のroot scriptへ渡す。led
 - 既存lint jobへ独立したblocking stepを一つ追加する。
 - 新規CI jobを作らない。
 - root scriptを一回だけ呼び、detector algorithmをworkflowへ複製しない。
-- GNU `timeout` が外側deadlineを所有し、30秒でTERM、追加5秒でKILLする。job `timeout-minutes: 1` はbackup ceilingとする。
+- GNU `timeout` が外側deadlineを所有し、30秒でTERM、追加5秒でKILLする。同じno-silent-drop stepの `timeout-minutes: 1` をbackup ceilingとし、lint job全体のtimeoutは変更しない。
 - exit 0だけを成功とし、exit 1／2、timeout 124、KILL 137、signal、fetch／起動失敗をすべてjob failureにする。
 - `continue-on-error`、warning-only、`|| true`相当、後続commandによるexit上書きを禁止する。
 - stdout JSONとstderr textをCI条件式で再分類しない。

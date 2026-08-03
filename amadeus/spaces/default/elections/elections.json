@@ -580,5 +580,11 @@
     "dirName": "260802-e-sdg-fd-s13",
     "createdAt": "2026-08-02T05:24:23Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-NSD-NFR-S13",
+    "dirName": "260802-e-nsd-nfr-s13",
+    "createdAt": "2026-08-02T07:31:22Z",
+    "status": "recorded"
   }
 ]

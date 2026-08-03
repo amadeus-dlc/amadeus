@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-NSD-NFR-S13",
+      "voter": "subagent-1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 8,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-02T07:32:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-NSD-NFR-S13",
+      "voter": "subagent-2",
+      "voterKind": "member",
+      "choiceInternalNo": 13,
+      "goa": 7,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-02T07:32:10Z"
+    }
+  ],
+  "late": []
+}

@@ -68,7 +68,7 @@ U4が所有するcheckout設定はfull historyを取得する。SHA形式検証�
 1. checkoutをfull history設定で実行し、Bun 1.3.13、frozen installを完了する。
 2. event payloadからtrusted base revisionを選び、形式検証する。
 3. base objectを確認し、必要な場合だけliteral full SHAをoriginからfetchして再確認する。
-4. GNU `timeout` を外側deadline ownerとし、`TERM` 30秒、追加5秒後の `KILL` でU1所有のroot `no-silent-drop` scriptを一回呼ぶ。job側の `timeout-minutes: 1` はbackup ceilingとする。
+4. GNU `timeout` を外側deadline ownerとし、`TERM` 30秒、追加5秒後の `KILL` でU1所有のroot `no-silent-drop` scriptを一回呼ぶ。同じno-silent-drop stepの `timeout-minutes: 1` はbackup ceilingとし、lint job全体のtimeoutは変更しない。
 5. exit 0だけを成功とし、exit 1／2、GNU timeoutの124、KILLの137、signal、command／fetch起動失敗をstep failureにする。
 6. `continue-on-error`、warning-only、stderr text判定、JSONのCI側再実装を行わない。
 
