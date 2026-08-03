@@ -26,7 +26,11 @@ export type AssertionId =
   | "SECRET_CANARY_ABSENT"
   | "CREDENTIAL_DESCENDANT_RELEASED"
   | "TIMEOUT_ABORT_REAP"
-  | "OUTPUT_BOUNDED_DRAIN";
+  | "OUTPUT_BOUNDED_DRAIN"
+  | "POLICY_CI_ZERO_CALLS"
+  | "POLICY_STRICT_OPT_IN"
+  | "ENV_ALLOWLIST_EXACT"
+  | "SETTINGS_PROJECT_ONLY";
 
 export interface BoundaryCall {
   readonly boundary: string;

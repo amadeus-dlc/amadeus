@@ -1,11 +1,43 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LiveJourney } from "./adapter.ts";
+import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
 
 export interface CodexAnchorJourneyOptions {
   readonly prompt?: string;
   readonly timeoutMs?: number;
+}
+
+export function createClaudeStructuredJourney(): LiveJourney {
+  return {
+    id: "claude-print-structured-v1",
+    prompt: CLAUDE_PRINT_PROMPT,
+    timeoutMs: 90_000,
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution) => {
+      const structuredOutput = execution.structured?.structured_output;
+      const anchor = structuredOutput !== null && typeof structuredOutput === "object" && !Array.isArray(structuredOutput)
+        ? (structuredOutput as Readonly<Record<string, unknown>>).amadeus_live_e2e
+        : undefined;
+      const passed = execution.exitCode === 0 &&
+        execution.structured?.is_error === false &&
+        typeof execution.structured.num_turns === "number" &&
+        execution.structured.num_turns >= 1 &&
+        anchor === "ok";
+      return {
+        passed,
+        diagnostic: passed ? "exit, result envelope, turn count, and structured schema passed" : "Claude structured anchor mismatch",
+        evidence: [
+          {
+            kind: "claude-structured-anchor",
+            value: digest(`${execution.exitCode}:${execution.structured?.is_error}:${execution.structured?.num_turns}:${anchor}`),
+            source: "assertion",
+          },
+        ],
+      };
+    },
+  };
 }
 
 export function createCodexAnchorJourney(options: CodexAnchorJourneyOptions = {}): LiveJourney {

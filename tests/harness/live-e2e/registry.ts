@@ -1,7 +1,7 @@
 import type { EnvironmentDeclaration } from "./policy.ts";
 import type { Result } from "./contract.ts";
 
-export type LiveAdapterId = "codex-exec";
+export type LiveAdapterId = "codex-exec" | "claude-print";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
 export interface LiveCapability {
@@ -39,6 +39,22 @@ export const LIVE_CAPABILITIES = [
       sourcePathKeys: ["HOME", "CODEX_HOME", "AMADEUS_CODEX_EXEC_AUTH_HOME"],
     },
     isolationSummary: "fresh project/home; env credential lease; no source config or hooks",
+  },
+  {
+    id: "claude-print",
+    harness: "claude",
+    transport: "print",
+    optInKey: "AMADEUS_CLAUDE_PRINT_LIVE",
+    minimumVersion: "2.1.220",
+    measuredVersion: "2.1.220",
+    status: "supported",
+    anchorKinds: ["exit", "schema", "state"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR"],
+      sensitiveKeys: ["ANTHROPIC_API_KEY"],
+      sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
+    },
+    isolationSummary: "fresh project/home; project settings only; native keychain or env credential lease",
   },
 ] as const satisfies readonly LiveCapability[];
 
