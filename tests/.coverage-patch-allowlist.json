@@ -1093,7 +1093,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4005-4008",
+    "lines": "4015-4018",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1652,7 +1652,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "551-552",
+    "lines": "555-556",
     "reason": "Every injected crash point is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; the deliberate child exit is outside parent Bun LCOV.",
     "expiry": "remove when crash-injection state CLI execution is attributed to parent LCOV"
   },
@@ -1670,7 +1670,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "896",
+    "lines": "854",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1790,7 +1790,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5249",
+    "lines": "5305",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
@@ -1813,7 +1813,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5276-5279",
+    "lines": "5357-5360",
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
