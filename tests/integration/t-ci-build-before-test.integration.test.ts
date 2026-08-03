@@ -23,6 +23,7 @@ interface WorkflowStep {
 }
 
 interface WorkflowJob {
+  readonly env?: Readonly<Record<string, string>>;
   readonly needs?: string | readonly string[];
   readonly steps?: readonly WorkflowStep[];
 }
@@ -117,10 +118,22 @@ describe("u7 CI build-before-test contract", () => {
     );
   });
 
+  test("reproducibility steps share a RUNNER_TEMP-derived isolated root", () => {
+    const job = jobByName("reproducible-build");
+    expect(job.env?.REPRO_ROOT).toBeUndefined();
+
+    for (const stepName of ["Build isolated distributions", "Compare distribution bytes"]) {
+      expect(stepByName(job, stepName).run).toContain(
+        'REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"',
+      );
+    }
+  });
+
   test("reproducibility comparison reports paths and fails on a byte difference", () => {
     const compare = stepByName(jobByName("reproducible-build"), "Compare distribution bytes").run
       ?? "";
-    const root = mkdtempSync(join(tmpdir(), "amadeus-repro-compare-"));
+    const runnerTemp = mkdtempSync(join(tmpdir(), "amadeus-repro-compare-"));
+    const root = join(runnerTemp, "amadeus-reproducible-build");
     try {
       for (const tree of ["tree-a", "tree-b"]) {
         mkdirSync(join(root, tree, "dist", "codex"), { recursive: true });
@@ -128,20 +141,20 @@ describe("u7 CI build-before-test contract", () => {
       }
       const equal = spawnSync("bash", ["-c", compare], {
         encoding: "utf8",
-        env: { ...process.env, REPRO_ROOT: root },
+        env: { ...process.env, RUNNER_TEMP: runnerTemp },
       });
       expect(equal.status).toBe(0);
 
       writeFileSync(join(root, "tree-b", "dist", "codex", "asset"), "SECRET-CONTENT\n");
       const different = spawnSync("bash", ["-c", compare], {
         encoding: "utf8",
-        env: { ...process.env, REPRO_ROOT: root },
+        env: { ...process.env, RUNNER_TEMP: runnerTemp },
       });
       expect(different.status).toBe(1);
       expect(different.stdout + different.stderr).toContain("dist/codex/asset");
       expect(different.stdout + different.stderr).not.toContain("SECRET-CONTENT");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      rmSync(runnerTemp, { recursive: true, force: true });
     }
   });
 
