@@ -74,3 +74,18 @@ FR-5.2 / FR-5.3 に対応する self-install allowlist の単一正本を導入�
 - `.codex/local/` は現時点で ignore 未登録。u8 の原子切替で追加し、実ファイル突合と故意 stage の落ちる実証を同 PR に含めること。
 - `.codex/hooks.json` の `.gitattributes` 歴史的例外を維持するか撤去するか棚卸しすること。
 - dispatcher は u4 成果の着地後に実ファイルが存在する前提。深さ2再包含は t416 integration の `git check-ignore --no-index` で実効性を固定済み。
+
+## 追加収束 — 生成投影の同期
+
+初回コミット後、`bun scripts/package.ts --check` が正本 module の dist 投影欠落を7件検出した。source-only への原子切替は u8 であり、それまでは project 規範どおり dist / self-install 生成物を正本と同一変更系列で同期する必要があるため、正規 generator だけを使用して投影を追加した。
+
+- `bun scripts/package.ts` で dist 7面（claude / codex / cursor / kimi / kiro / kiro-ide / opencode）を生成
+- `bun run promote:self` で self-install 5面（claude / codex / cursor / kimi / opencode）を生成
+- 生成後の変更は `self-install-allowlist.ts` 12投影だけであり、正本と全12件 byte-identical（`cmp`、exit 0）
+- `bun scripts/package.ts --check`: 全7面 OK、exit 0
+- `bun run promote:self:check`: 全5面 + project-local self install OK、exit 0
+- u6 対象8 test files: 69 pass / 0 fail / 221 assertions、exit 0
+- `bun run lint`: exit 0（既存 baseline 386 warnings / 23 infos）
+- `bun run typecheck`: exit 0
+
+追加作業による設計変更・手編集の生成物・fallback はない。入力 state / audit / functional-design / nfr-design / inception は引き続き未追跡のまま commit 対象外とした。
