@@ -351,12 +351,10 @@ function validateCurrentArtifactBindings(
 }
 
 function validateApprovedPreBindings(
-  trustedSha: string,
   provenance: BootstrapProvenance,
   pre: ReturnType<typeof validateEvidenceBundle>,
 ): string[] {
   const preIdentities = provenance.approvedPre.entries.map((entry) => entry.fingerprint);
-  assertBootstrap(provenance.preRevision === trustedSha, "bootstrap pre revision does not match the trusted base");
   assertBootstrap(
     identitySetDigest(preIdentities) === provenance.approvedPre.identitySetDigest,
     "bootstrap B_pre identity digest mismatch",
@@ -416,13 +414,18 @@ function validateBootstrap(
 ): TrustedPreviousLedgers {
   const provenance = readBootstrapProvenance(repoRoot);
   assertBootstrap(
-    provenance.bootstrapBaseRevision === trustedSha,
-    "bootstrap base revision does not match the trusted base",
+    provenance.bootstrapBaseRevision === provenance.preRevision,
+    "bootstrap base revision does not match the approved pre revision",
+  );
+  assertBootstrap(
+    gitObjectExists(repoRoot, `${provenance.preRevision}^{commit}`)
+      && isAncestor(repoRoot, provenance.preRevision, trustedSha),
+    "bootstrap pre revision is not an ancestor of the trusted base",
   );
   const pre = validateEvidenceBundle(repoRoot, provenance.pre, provenance.preRevision, provenance, "bootstrap.pre");
   const post = validateEvidenceBundle(repoRoot, provenance.post, provenance.postRevision, provenance, "bootstrap.post");
   const currentIdentities = currentBaseline.entries.map((entry) => entry.fingerprint);
-  const preIdentities = validateApprovedPreBindings(trustedSha, provenance, pre);
+  const preIdentities = validateApprovedPreBindings(provenance, pre);
   validateCurrentArtifactBindings(repoRoot, provenance, currentBaseline, currentExemptions, post);
   validateStrictSubset(provenance, preIdentities, currentIdentities);
   validatePreviousBindings(currentBaseline, currentExemptions, provenance, post.approvalBytes);
@@ -449,6 +452,19 @@ function validateBootstrap(
 
 function gitObjectExists(repoRoot: string, object: string): boolean {
   return spawnSync("git", ["cat-file", "-e", object], { cwd: repoRoot, encoding: "utf8" }).status === 0;
+}
+
+function isAncestor(repoRoot: string, ancestor: string, descendant: string): boolean {
+  const result = spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  throw new InfraFailure(
+    "BASELINE_INVALID",
+    `bootstrap base lineage could not be verified: ${result.stderr.trim() || `${ancestor}..${descendant}`}`,
+  );
 }
 
 function showGitObject(repoRoot: string, object: string, label: string): string {

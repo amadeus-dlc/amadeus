@@ -937,6 +937,31 @@ describe("no-silent-drop boundaries", () => {
     expect(resultExitCode(result)).toBe(0);
   });
 
+  test("first adoption remains valid when the trusted base advances from the approved pre revision", async () => {
+    const fixture = bootstrapRepository();
+    const advancedBaseRevision = runGit(fixture.root, ["rev-parse", "HEAD"]);
+    const result = await runGate("check", fixture.root, { baseRevision: advancedBaseRevision });
+    expect(result).toEqual({ schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [] });
+  });
+
+  test("first adoption rejects a trusted base outside the approved pre lineage", async () => {
+    const fixture = bootstrapRepository();
+    const divergentRevision = runGit(fixture.root, [
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.com",
+      "commit-tree",
+      "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+      "-m",
+      "divergent",
+    ]);
+    expect(await runGate("check", fixture.root, { baseRevision: divergentRevision })).toMatchObject({
+      status: "error",
+      code: "BASELINE_INVALID",
+    });
+  });
+
   test("first adoption fails closed for absent, mutated, mismatched, or incomplete provenance", async () => {
     const mutations: Array<(fixture: ReturnType<typeof bootstrapRepository>) => void> = [
       (fixture) => rmSync(join(fixture.root, fixture.artifactPaths[0]!)),
