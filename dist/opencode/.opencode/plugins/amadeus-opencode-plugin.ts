@@ -49,6 +49,7 @@ export const amadeusOpencodePlugin = async (input: unknown) => ({
       if (code !== 0) console.error(`amadeus-plugin: OpenCode auto-compose failed for ${hostRoot} (non-blocking)`);
     } catch (error) {
       console.error(`amadeus-plugin: OpenCode auto-compose error (non-blocking): ${String(error)}`);
+      return;
     }
   },
   "chat.message": async (message: ChatMessageInput, output: ChatMessageOutput): Promise<void> => {
@@ -63,6 +64,7 @@ export const amadeusOpencodePlugin = async (input: unknown) => ({
       });
     } catch {
       // best-effort presence record — advisory
+      return;
     }
   },
 });

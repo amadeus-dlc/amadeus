@@ -787,6 +787,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fbfa8-d1a8-7ce7-841d-5391f747be8e",
+    "slug": "silent-drop-gate",
+    "dirName": "260801-silent-drop-gate",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
     "slug": "scope-grid-face-sync",
     "dirName": "260802-scope-grid-face-sync",

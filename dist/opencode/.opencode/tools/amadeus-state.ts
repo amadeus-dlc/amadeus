@@ -53,6 +53,7 @@ import {
   ownPhase,
   PHASE_NUMBERS,
   parseCheckboxes,
+  parseScopedCheckboxes,
   parseIntentStatus,
   parseRefsList,
   parseStateStageSuffixes,
@@ -61,6 +62,7 @@ import {
   readIntentRegistry,
   readStateFile,
   recordDirMatches,
+  requireChanged,
   recoverBoltDag,
   recoverGateRevision,
   type GateRevisionRecovery,
@@ -77,14 +79,19 @@ import {
   resolveProjectDir,
   resolveStage,
   setCheckbox,
+  StateMutationTargetError,
   setField,
   setFieldStrict,
   setIntentDocsOnly,
   setOrInsertField,
+  type ScopedCheckboxLine,
+  type StageEntry,
+  stageLineKey,
   stageIndex,
   standingGrantSatisfiesGate,
   stagesInScope,
   transitionIntentStatusLocked,
+  validateStageState,
   withLockedIntentRegistry,
   type IntentLifecycleAuditEvent,
   type IntentLifecycleVerb,
@@ -644,6 +651,25 @@ export function validateSlug(slug: string | undefined): string {
 
 function errorWithSlug(slug: string, msg: string): never {
   error(`[slug=${slug}] ${msg}`);
+}
+
+function stageCheckboxOrError(
+  content: string,
+  slug: string,
+  operation: string,
+): ReturnType<typeof parseCheckboxes>[number] {
+  const matches = parseCheckboxes(content).filter((checkbox) => checkbox.slug === slug);
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    errorWithSlug(
+      slug,
+      `State mutation refused: operation=${JSON.stringify(operation)} phase=validate reason=duplicate-target target=${JSON.stringify(slug)}`,
+    );
+  }
+  errorWithSlug(
+    slug,
+    `State mutation refused: operation=${JSON.stringify(operation)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
+  );
 }
 
 function sha256(buf: string): string {
@@ -1394,6 +1420,12 @@ export function handleCheckbox(args: string[]): void {
     if (eqIdx <= 0) error(`Invalid slug=state pair: ${pair}`);
     const slug = pair.slice(0, eqIdx);
     const stateStr = pair.slice(eqIdx + 1);
+    if (!findStageBySlug(slug)) {
+      errorWithSlug(
+        slug,
+        `State mutation refused: operation=${JSON.stringify("checkbox:" + slug)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
+      );
+    }
     if (!isCheckboxState(stateStr)) {
       error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
     }
@@ -1413,7 +1445,10 @@ export function handleCheckbox(args: string[]): void {
   let content = readStateFile(pd, resolvedIntent, space);
 
   for (const { slug, state } of changes) {
-    content = setCheckbox(content, slug, state);
+    content = requireChanged(
+      setCheckbox(validateStageState(content), slug, state),
+      `checkbox:${slug}`,
+    );
   }
 
   // Sync Completed counter to actual [x] count
@@ -1423,6 +1458,11 @@ export function handleCheckbox(args: string[]): void {
   writeStateFile(pd, content, resolvedIntent, space);
   console.log(JSON.stringify({ updated: true, checkboxes: changes.length, completed_count: completedCount }));
   }, resolvedIntent, space);
+  } catch (cause) {
+    if (cause instanceof StateMutationTargetError) {
+      errorWithSlug(cause.target, errorMessage(cause));
+    }
+    throw cause;
   } finally {
     lockIntent = undefined;
     lockSpace = undefined;
@@ -1983,6 +2023,136 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   }
 }
 
+function advanceScopeOrError(content: string): string {
+  const scope = getField(content, "Scope");
+  if (!scope) {
+    error("State file has no Scope field. Refusing to advance — fix the state file first.");
+  }
+  if (!validScopes().has(scope)) {
+    error(`State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`);
+  }
+  return scope;
+}
+
+function resolveAdvanceNextStage(
+  positional: readonly string[],
+  completedSlug: string,
+  scope: string,
+  content: string,
+): StageEntry {
+  let nextSlug: string;
+  if (positional.length >= 2) {
+    nextSlug = positional[1];
+    const stateOverrides = parseStateStageSuffixes(content);
+    const nextAction = stateOverrides.get(nextSlug) ?? loadScopeMapping()[scope]?.stages[nextSlug];
+    if (nextAction === "SKIP") {
+      error(
+        `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`,
+      );
+    }
+  } else {
+    const next = nextInScopeStage(completedSlug, scope, content);
+    if (!next) {
+      error(
+        `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
+          `Use 'complete-workflow' if this was the final stage.`,
+      );
+    }
+    nextSlug = next.slug;
+  }
+  const nextStage = findStageBySlug(nextSlug);
+  if (!nextStage) error(`Unknown stage: ${nextSlug}`);
+  return nextStage;
+}
+
+function inspectCompletedAdvanceState(
+  pd: string,
+  content: string,
+  completedSlug: string,
+): {
+  alreadyMarkedCompleted: boolean;
+  currentStageField: string | null;
+  stageCompletedAlreadyAudited: boolean;
+} {
+  const completedCbBefore = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `advance:complete:${completedSlug}`,
+  );
+  const currentStageField = getField(content, "Current Stage");
+  const alreadyMarkedCompleted = completedCbBefore.state === "completed";
+  if (completedSlug !== currentStageField && !alreadyMarkedCompleted) {
+    error(
+      `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
+        completedCbBefore.state
+      }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`,
+    );
+  }
+  return {
+    alreadyMarkedCompleted,
+    currentStageField,
+    stageCompletedAlreadyAudited:
+      alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug),
+  };
+}
+
+function isAdvanceReplay(
+  content: string,
+  nextSlug: string,
+  currentStageField: string | null,
+  alreadyMarkedCompleted: boolean,
+  stageCompletedAlreadyAudited: boolean,
+): boolean {
+  const nextCbBefore = stageCheckboxOrError(content, nextSlug, `advance:start:${nextSlug}`);
+  const nextAlreadyStarted =
+    nextCbBefore.state === "in-progress" ||
+    nextCbBefore.state === "awaiting-approval" ||
+    nextCbBefore.state === "revising";
+  return (
+    alreadyMarkedCompleted &&
+    stageCompletedAlreadyAudited &&
+    nextAlreadyStarted &&
+    currentStageField === nextSlug
+  );
+}
+
+function emitAdvanceAudit(
+  pd: string,
+  content: string,
+  completedStage: StageEntry,
+  nextStage: StageEntry,
+  scope: string,
+  completedCount: number,
+  alreadyMarkedCompleted: boolean,
+  stageCompletedAlreadyAudited: boolean,
+): string {
+  const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
+  try {
+    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
+      emitAudit(pd, "STAGE_COMPLETED", {
+        Stage: completedStage.slug,
+        Details: `Stage ${completedStage.name} completed`,
+      });
+    }
+    if (crossesPhaseBoundary) {
+      content = markPhaseVerified(content, completedStage.phase);
+      content = setPhaseProgress(content, nextStage.phase, "Active");
+      emitAudit(pd, "PHASE_COMPLETED", {
+        "From phase": completedStage.phase,
+        "To phase": nextStage.phase,
+        "Stages completed": String(completedCount),
+      });
+      emitAudit(pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
+      });
+      emitAudit(pd, "PHASE_STARTED", { Phase: nextStage.phase, Scope: scope });
+    }
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
+  return content;
+}
+
 export function handleAdvance(args: string[]): void {
   // Keep only the positional <completed-slug> [<next-slug>]; any flags are
   // filtered out so they are not misread as the next slug.
@@ -2008,17 +2178,7 @@ export function handleAdvance(args: string[]): void {
 
   // Scope is authoritative for deriving next stage — refuse silent "feature"
   // fallback when the state file is missing or corrupted. Adversarial finding.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
+  const scope = advanceScopeOrError(content);
 
   // Slug validation — `advance <slug>` is a post-gate-approval transition.
   // The caller must have just finished <completedSlug>. Silently accepting
@@ -2029,52 +2189,15 @@ export function handleAdvance(args: string[]): void {
   //   1. completedSlug matches `Current Stage` (normal post-approve flow);
   //   2. completedSlug is already `[x]` (idempotent replay / approve-first).
   // Anything else errors.
-  const completedCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === completedSlug
-  );
-  const currentStageField = getField(content, "Current Stage");
-  const matchesCurrent = completedSlug === currentStageField;
-  const alreadyMarkedCompleted = completedCbBefore?.state === "completed";
-  const stageCompletedAlreadyAudited =
-    alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
-  if (!matchesCurrent && !alreadyMarkedCompleted) {
-    error(
-      `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
-        completedCbBefore?.state ?? "unknown"
-      }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`
-    );
-  }
+  const { alreadyMarkedCompleted, currentStageField, stageCompletedAlreadyAudited } =
+    inspectCompletedAdvanceState(pd, content, completedSlug);
 
   // If next-slug was not provided, derive it from the scope AND state file.
   // The state file's EXECUTE/SKIP suffix (set by handleInit with Greenfield
   // overrides) and per-stage checkbox state take precedence over the
   // scope-mapping.json defaults.
-  let nextSlug: string;
-  if (positional.length >= 2) {
-    nextSlug = positional[1];
-    // Validate the caller-supplied next slug is in scope AND not already
-    // SKIP-stamped in the state file. Symmetric with single-arg form.
-    const stateOverrides = parseStateStageSuffixes(content);
-    const nextAction =
-      stateOverrides.get(nextSlug) ??
-      loadScopeMapping()[scope]?.stages[nextSlug];
-    if (nextAction === "SKIP") {
-      error(
-        `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`
-      );
-    }
-  } else {
-    const next = nextInScopeStage(completedSlug, scope, content);
-    if (!next) {
-      error(
-        `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
-          `Use 'complete-workflow' if this was the final stage.`
-      );
-    }
-    nextSlug = next.slug;
-  }
-  const nextStage = findStageBySlug(nextSlug);
-  if (!nextStage) error(`Unknown stage: ${nextSlug}`);
+  const nextStage = resolveAdvanceNextStage(positional, completedSlug, scope, content);
+  const nextSlug = nextStage.slug;
 
   const dirCheck = advanceDirectionCheck(
     stageIndex(completedSlug),
@@ -2092,18 +2215,13 @@ export function handleAdvance(args: string[]): void {
   // states — in-progress, awaiting-approval, revising. Matching only
   // in-progress let a stale replay demote a gate-held `[?]`/`[R]` next stage
   // back to `[-]` and re-emit STAGE_STARTED.
-  const nextCbBefore = parseCheckboxes(content).find(
-    (c) => c.slug === nextSlug
+  const isReplay = isAdvanceReplay(
+    content,
+    nextSlug,
+    currentStageField,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
   );
-  const nextAlreadyStarted =
-    nextCbBefore?.state === "in-progress" ||
-    nextCbBefore?.state === "awaiting-approval" ||
-    nextCbBefore?.state === "revising";
-  const isReplay =
-    alreadyMarkedCompleted &&
-    stageCompletedAlreadyAudited &&
-    nextAlreadyStarted &&
-    currentStageField === nextSlug;
   if (isReplay) {
     console.log(
       JSON.stringify({
@@ -2139,10 +2257,16 @@ export function handleAdvance(args: string[]): void {
   }
 
   // 1. Mark completed-slug → [x] (idempotent)
-  content = setCheckbox(content, completedSlug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), completedSlug, "completed"),
+    `advance:complete:${completedSlug}`,
+  );
 
   // 2. Mark next-slug → [-]
-  content = setCheckbox(content, nextSlug, "in-progress");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), nextSlug, "in-progress"),
+    `advance:start:${nextSlug}`,
+  );
 
   // 3. Update fields
   const nextAfterNext = nextInScopeStage(nextSlug, scope, content);
@@ -2164,43 +2288,23 @@ export function handleAdvance(args: string[]): void {
 
   // 4. Atomic audit emission — audit-first, then state write.
   // If audit fails, throw before touching state (writeStateFile below is skipped).
+  content = emitAdvanceAudit(
+    pd,
+    content,
+    completedStage,
+    nextStage,
+    scope,
+    completedCount,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
+  );
   try {
-    // Emit STAGE_COMPLETED only if approve didn't already emit it.
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        Details: `Stage ${completedStage.name} completed`,
-      });
-    }
-    if (crossesPhaseBoundary) {
-      // Phase Progress roll-up, in the SAME boundary branch as the PHASE_* audit
-      // so the ledger and the roll-up can never disagree (#836): close the
-      // completed stage's phase (→ Verified — it just went [x]) and enter the
-      // next stage's phase (→ Active). Content is written after this try; a
-      // failing emitAudit exits before writeStateFile, so the flip is discarded
-      // with the rest. Intermediate phases an advance skips over entirely were
-      // already stamped Skipped at init time.
-      content = markPhaseVerified(content, completedStage.phase);
-      content = setPhaseProgress(content, nextStage.phase, "Active");
-      emitAudit(pd, "PHASE_COMPLETED", {
-        "From phase": completedStage.phase,
-        "To phase": nextStage.phase,
-        "Stages completed": String(completedCount),
-      });
-      emitAudit(pd, "PHASE_VERIFIED", {
-        "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
-      });
-      emitAudit(pd, "PHASE_STARTED", {
-        Phase: nextStage.phase,
-        Scope: scope,
-      });
-    }
     emitAudit(pd, "STAGE_STARTED", {
       Stage: nextSlug,
       Agent: nextStage.lead_agent,
     });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
   }
 
   operationWriteState(pd, content);
@@ -2244,15 +2348,20 @@ export function handleFinalize(args: string[]): void {
   // completing transition that must not rubber-stamp. Guard only when the slug
   // is not already [x] (an idempotent re-finalize already passed the guard),
   // and before any mutation so a refusal leaves state untouched.
-  const alreadyMarkedCompleted =
-    parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
-    "completed";
+  const alreadyMarkedCompleted = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `finalize:${completedSlug}`,
+  ).state === "completed";
   if (!alreadyMarkedCompleted) {
     verifyStageArtifacts(pd, completedStage);
   }
 
   // 1. Mark completed
-  content = setCheckbox(content, completedSlug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), completedSlug, "completed"),
+    `finalize:${completedSlug}`,
+  );
 
   // 2. Sync Completed counter to actual [x] count
   const completedCount = countCheckboxes(content, "completed");
@@ -2387,9 +2496,11 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
   // alreadyMarkedCompleted guard.
-  const alreadyMarkedCompleted =
-    parseCheckboxes(content).find((c) => c.slug === completedSlug)?.state ===
-    "completed";
+  const alreadyMarkedCompleted = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `complete-workflow:${completedSlug}`,
+  ).state === "completed";
   const stageCompletedAlreadyAudited =
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
   const completionInstance = completion?.instance ??
@@ -2415,7 +2526,10 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   const timestamp = isoTimestamp();
   if (!stateAlreadyCompleted) {
     // Mark the final stage and every terminal field in one state-file rename.
-    content = setCheckbox(content, completedSlug, "completed");
+    content = requireChanged(
+      setCheckbox(validateStageState(content), completedSlug, "completed"),
+      `complete-workflow:${completedSlug}`,
+    );
     content = setField(
       content,
       "Completed",
@@ -2673,7 +2787,10 @@ function gateStartForTarget(args: string[], pd: string): void {
     }
   }
 
-  content = setCheckbox(content, slug, "awaiting-approval");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "awaiting-approval"),
+    `gate-start:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -3297,7 +3414,10 @@ function approveUnderLock(
     content = setField(content, "Revision Count", String(recoveredRevision));
   }
 
-  content = setCheckbox(content, slug, "completed");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "completed"),
+    `approve:${slug}`,
+  );
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
@@ -4100,7 +4220,10 @@ function rejectForTarget(args: string[], pd: string): void {
   const revCount = (Number.isFinite(parsed) ? parsed : 0) + 1;
   content = setField(content, "Revision Count", String(revCount));
 
-  content = setCheckbox(content, slug, "revising");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "revising"),
+    `reject:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -4176,7 +4299,10 @@ function reviseForTarget(args: string[], pd: string): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "revising");
 
-  content = setCheckbox(content, slug, "awaiting-approval");
+  content = requireChanged(
+    setCheckbox(validateStageState(content), slug, "awaiting-approval"),
+    `revise:${slug}`,
+  );
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -4194,13 +4320,20 @@ function reviseForTarget(args: string[], pd: string): void {
   });
 }
 
+export function skipStageContent(content: string, slug: string): string {
+  return requireChanged(
+    setCheckbox(validateStageState(content), slug, "skipped"),
+    `skip:${slug}`,
+  );
+}
+
 // skip <slug> [--reason <text>] — transition [ ]/[-]/[R] → [S], emit STAGE_SKIPPED
-function handleSkip(args: string[]): void {
+export function handleSkip(args: string[], root = projectDir): void {
   if (args.length < 1) error("Usage: amadeus-state.ts skip <slug> [--reason <text>]");
   const slug = args[0];
   const reason = getFlagValue(args.slice(1), "--reason");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveProjectDir(root);
   // C2b lost-update safety: validate→transition→emit-audit→write under one lock.
   withAuditLock(pd, () => {
   let content = readStateFile(pd);
@@ -4209,7 +4342,7 @@ function handleSkip(args: string[]): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
 
-  content = setCheckbox(content, slug, "skipped");
+  content = skipStageContent(content, slug);
   const timestamp = isoTimestamp();
   content = setField(content, "Last Updated", timestamp);
 
@@ -5134,6 +5267,43 @@ function handleFork(args: string[]): void {
 // merge from the worktree; alphabetical-slug tiebreak as defence-in-depth.
 // Idempotent: re-running for an already-merged slug exits non-zero with a
 // clear "already merged" error and emits no second STATE_MERGED row.
+export function mergeScopedCheckboxProgress(
+  mainContent: string,
+  worktreeContent: string,
+  refsList: readonly string[],
+  slug: string,
+): { merged: string; conflictResolution: string[] } {
+  let merged = mainContent;
+  const conflictResolution: string[] = [];
+  const mainCheckboxes = parseScopedCheckboxes(mainContent);
+  const worktreeCheckboxes = parseScopedCheckboxes(worktreeContent);
+  const checkboxKey = (checkbox: ScopedCheckboxLine): string =>
+    stageLineKey(checkbox.slug, checkbox.unit);
+  const mainStateMap = new Map(mainCheckboxes.map((checkbox) => [checkboxKey(checkbox), checkbox.state]));
+  const winningSlug = [...refsList].sort()[0];
+
+  for (const worktreeCheckbox of worktreeCheckboxes) {
+    const mainState = mainStateMap.get(checkboxKey(worktreeCheckbox));
+    if (!mainState || mainState === worktreeCheckbox.state) continue;
+    if (winningSlug === slug) {
+      merged = requireChanged(
+        setCheckbox(
+          validateStageState(merged, worktreeCheckbox.unit ? { unit: worktreeCheckbox.unit } : {}),
+          worktreeCheckbox.slug,
+          worktreeCheckbox.state,
+        ),
+        `merge-worktree:${worktreeCheckbox.slug}`,
+      );
+      if (refsList.length > 1) {
+        conflictResolution.push(`${worktreeCheckbox.slug}:slug-precedence:${slug}`);
+      }
+    } else {
+      conflictResolution.push(`${worktreeCheckbox.slug}:deferred-to:${winningSlug}`);
+    }
+  }
+  return { merged, conflictResolution };
+}
+
 function handleMerge(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
@@ -5171,7 +5341,6 @@ function handleMerge(args: string[]): void {
   // audit lock for consistency. Read the SAME record the fork wrote.
   const wtContent = readStateFile(wtPath, wtRecord, space);
   const wtSha = sha256(wtContent);
-  const wtCheckboxes = parseCheckboxes(wtContent);
 
   // Hold the audit lock across the entire decide-emit-write transaction so
   // conflict-resolution decisions, the audit Target state hash, and the
@@ -5211,27 +5380,9 @@ function handleMerge(args: string[]): void {
     //  - Tiebreak (alphabetical-slug, defence-in-depth): if multiple slugs
     //    in Bolt Refs would compete for the same cell, the lower
     //    alphabetical slug wins.
-    let merged = mainContent;
-    const conflictResolution: string[] = [];
-    const mainCheckboxes = parseCheckboxes(mainContent);
-    const mainStateMap = new Map(mainCheckboxes.map((c) => [c.slug, c.state]));
-    const candidateSlugs = [...refsList].sort();
-    const winningSlug = candidateSlugs[0];
-
-    for (const wtCb of wtCheckboxes) {
-      const mainCbState = mainStateMap.get(wtCb.slug);
-      if (!mainCbState) continue;
-      if (mainCbState === wtCb.state) continue;
-
-      if (winningSlug === slug) {
-        merged = setCheckbox(merged, wtCb.slug, wtCb.state);
-        if (refsList.length > 1) {
-          conflictResolution.push(`${wtCb.slug}:slug-precedence:${slug}`);
-        }
-      } else {
-        conflictResolution.push(`${wtCb.slug}:deferred-to:${winningSlug}`);
-      }
-    }
+    const progressMerge = mergeScopedCheckboxProgress(mainContent, wtContent, refsList, slug);
+    let merged = progressMerge.merged;
+    const conflictResolution = progressMerge.conflictResolution;
 
     // Remove slug from Bolt Refs.
     merged = setFieldStrict(merged, "Bolt Refs", removeSlug(currentRefs, slug));

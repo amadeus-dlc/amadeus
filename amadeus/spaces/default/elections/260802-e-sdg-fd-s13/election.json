@@ -1,0 +1,17 @@
+{
+  "electionId": "E-SDG-FD-S13",
+  "kind": "zero-confirm",
+  "question": "Functional Design の学習候補を永続化0件としてよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.md に Interpretation／Deviation／Tradeoff の記録がなく、新しい横断 rule／sensor を追加しない"
+    }
+  ],
+  "voters": [
+    "functional-design-reviewer",
+    "reverse-engineering-developer"
+  ],
+  "state": "recorded"
+}

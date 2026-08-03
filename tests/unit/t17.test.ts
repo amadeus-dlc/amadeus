@@ -542,6 +542,39 @@ describe("t17 advance validation", () => {
     expect(r.combined).toContain("invalid Scope");
   });
 
+  test("advance rejects a missing current-stage checkbox without changing state", () => {
+    proj = createTestProject();
+    seedStateFile(proj, MID_IDEATION);
+    const withoutTarget = readState(proj)
+      .split("\n")
+      .filter((line) => !line.startsWith("- [-] feasibility —"))
+      .join("\n");
+    writeFileSync(stateMd(proj), withoutTarget, "utf-8");
+    const before = readState(proj);
+
+    const r = runState(proj, ["advance", "feasibility"]);
+
+    expect(r.rc).toBe(1);
+    expect(r.combined).toContain("reason=target-not-found");
+    expect(readState(proj)).toBe(before);
+  });
+
+  test("advance rejects duplicate current-stage checkboxes without changing state", () => {
+    proj = createTestProject();
+    seedStateFile(proj, MID_IDEATION);
+    const state = readState(proj);
+    const row = state.split("\n").find((line) => line.startsWith("- [-] feasibility —"));
+    expect(row).toBeDefined();
+    writeFileSync(stateMd(proj), state.replace(row as string, `${row}\n${row}`), "utf-8");
+    const before = readState(proj);
+
+    const r = runState(proj, ["advance", "feasibility"]);
+
+    expect(r.rc).toBe(1);
+    expect(r.combined).toContain("reason=duplicate-target");
+    expect(readState(proj)).toBe(before);
+  });
+
   test("31: replay of advance does not double-emit STAGE_STARTED", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);

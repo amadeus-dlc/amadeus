@@ -105,6 +105,8 @@ function callInProcess(
   const errChunks: string[] = [];
   const origOut = process.stdout.write.bind(process.stdout);
   const origErr = process.stderr.write.bind(process.stderr);
+  const origExit = process.exit.bind(process);
+  const origConsoleError = console.error;
   // biome-ignore lint/suspicious/noExplicitAny: test-only stream stub
   process.stdout.write = ((s: any) => {
     outChunks.push(String(s));
@@ -115,11 +117,19 @@ function callInProcess(
     errChunks.push(String(s));
     return true;
   }) as typeof process.stderr.write;
+  process.exit = ((code?: number) => {
+    throw new Error(`exit ${code ?? 0}: ${errChunks.join("")}`);
+  }) as typeof process.exit;
+  console.error = (...args: unknown[]) => {
+    errChunks.push(args.map(String).join(" "));
+  };
   try {
     handleSetStatus(proj, { stage });
   } finally {
     process.stdout.write = origOut;
     process.stderr.write = origErr;
+    process.exit = origExit;
+    console.error = origConsoleError;
   }
   return { stdout: outChunks.join(""), stderr: errChunks.join("") };
 }
@@ -177,7 +187,8 @@ describe("t233 set-status retreat guard (mechanism in-process seam)", () => {
   });
 
   // BR-4: forward states write exactly as before — Current Stage + checkbox
-  // [-] land, stdout carries the updated JSON.
+// [-] land, stdout carries the updated JSON. A missing checkbox target fails
+// loudly before any write, preserving the state bytes.
   test("BR-4 pending [ ] target: write succeeds", () => {
     const proj = track(seed([["code-generation", "[ ]"]]));
     const { stdout } = callInProcess(proj, "code-generation");
@@ -204,8 +215,9 @@ describe("t233 set-status retreat guard (mechanism in-process seam)", () => {
     expect(fieldValue(after, "Current Stage")).toBe("nfr-design");
   });
 
-  // BR-8: skipped [S] and a known stage with NO checkbox line both write as
-  // before (skipped is not in the suppress set; an absent line is forward).
+  // BR-8: skipped [S] writes as before (it is not in the suppress set), while
+  // a known stage with no checkbox line is rejected as a missing mutation
+  // target instead of being silently dropped.
   test("BR-8 skipped [S] target: write succeeds (not a retreat)", () => {
     const proj = track(seed([["market-research", "[S]"]]));
     callInProcess(proj, "market-research");
@@ -214,16 +226,14 @@ describe("t233 set-status retreat guard (mechanism in-process seam)", () => {
     expect(fieldValue(after, "Current Stage")).toBe("market-research");
   });
 
-  test("BR-8 known stage with no checkbox line: write succeeds", () => {
+  test("BR-8 known stage with no checkbox line: write fails loudly", () => {
     // Seed a line for a DIFFERENT stage so the target stage has no checkbox row.
     const proj = track(seed([["code-generation", "[ ]"]]));
-    const { stdout } = callInProcess(proj, "deployment-execution");
-    const after = readState(proj);
-    // No line was added for the target (setCheckbox no-ops on absent slug), but
-    // the statusline fields advanced — the forward path ran.
-    expect(checkboxMarker(after, "deployment-execution")).toBeNull();
-    expect(fieldValue(after, "Current Stage")).toBe("deployment-execution");
-    expect(stdout).toContain('"updated":true');
+    const before = readState(proj);
+    expect(() => callInProcess(proj, "deployment-execution")).toThrow(
+      "reason=target-not-found",
+    );
+    expect(readState(proj)).toBe(before);
   });
 
   // BR-6: the retreat no-op adds no audit line (set-status never emits audit;
@@ -270,6 +280,23 @@ describe("t233 set-status retreat guard (mechanism cli — cross-process)", () =
     expect(r.stderr.toString()).toContain("retreat write suppressed");
     expect(r.stdout.toString()).toBe("");
     expect(readState(proj)).toBe(before);
+  });
+
+  test("BR-2 cli: malformed Stage Progress fails through structured error without writing state", () => {
+    const proj = track(seed([["code-generation", "[ ]"]]));
+    const statePath = seededStateFile(proj);
+    const malformed = readState(proj).replace(
+      "- [ ] code-generation — EXECUTE",
+      "- [ ] code-generation — EXECUTE\n- [!] malformed-stage — EXECUTE",
+    );
+    writeFileSync(statePath, malformed, "utf8");
+
+    const r = utilSync(proj, ["set-status", "--stage", "code-generation"]);
+
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr.toString()).toContain("State mutation validation failed");
+    expect(JSON.parse(r.stderr.toString())).toHaveProperty("error");
+    expect(readState(proj)).toBe(malformed);
   });
 
   // BR-3: set-status ∥ `amadeus-state set` in parallel. The completed checkbox

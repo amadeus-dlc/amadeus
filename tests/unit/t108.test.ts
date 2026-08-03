@@ -1,32 +1,17 @@
-// covers: function:setCheckbox
+// covers: function:setCheckbox, function:validateStageState, function:requireChanged
+//   function:parseScopedCheckboxes, function:stageLineKey, function:StageStateValidationError
+//   function:StateMutationTargetError, function:StateMutationInvariantError
 // size: small
 //
-// t108 — setCheckbox() in amadeus-lib.ts.
+// t108 — validated state-line mutations in amadeus-lib.ts.
 // Mechanism: none (pure string transform, zero I/O, zero LLM, zero tokens).
-// Technique: metamorphic — the no-clobber-neighbours invariant.
+// Technique: metamorphic no-clobber-neighbours checks plus typed failure cases.
 //
-// Source (dist/claude/.claude/tools/amadeus-lib.ts):
-//   :484  setCheckbox(content, slug, newState): string
-//   :489    marker = CHECKBOX_MAP[newState]        // a BRACKETED literal, e.g. "[x]"
-//   :491    regex  = /^(- )\[[ xSR?-]\]( <slug> —)/  with flag "m" ONLY (no "g")
-//   :495    return content.replace(regex, `$1${marker}$2`)
-//
-// Verified facts the assertions below depend on (read at the cited lines):
-//   - CHECKBOX_MAP (:50-57) maps states to bracketed markers:
-//       pending "[ ]", in-progress "[-]", awaiting-approval "[?]",
-//       revising "[R]", completed "[x]", skipped "[S]".
-//     setCheckbox swaps the WHOLE bracket group; group 1 is "- " and group 2
-//     is " <slug> —" (space + slug + space + U+2014 em-dash).
-//   - The divider is an EM-DASH U+2014 (bytes e2 80 94), confirmed via od on
-//     line 492. A line that uses a hyphen-minus instead will NOT match.
-//   - Flag is "m" but NOT "g": content.replace fires on the FIRST match only.
-//     Slugs are normally unique per checkbox list, so this flips exactly the
-//     target line; a later identical slug (pathological) would be untouched.
-//   - escapeRegex (:1540) escapes regex metachars in the slug, so a slug like
-//     "v0.4.0" is matched literally (the "." is not a wildcard).
-//   - ABSENT slug => regex has no match => content.replace returns the SAME
-//     string reference, unchanged. NOT an insert, NOT a throw. (Verified by
-//     reading :491-495: there is no else-branch, no push, no error path.)
+// The public mutation boundary accepts only an opaque ValidatedStageState.
+// A unique canonical row yields `changed`, including idempotent same-value
+// writes. An absent row yields `not-found`; malformed or duplicate rows fail
+// validation before the setter can run. requireChanged is the caller boundary
+// that promotes `not-found` to a typed loud failure.
 //
 // Test-design note (house style, per tests/unit/t69-worktree-path.sh and
 // t106.none.test.ts): assert the OBSERVABLE CONTRACT, never re-implement the
@@ -40,7 +25,16 @@ import { describe, expect, test } from "bun:test";
 import {
   CHECKBOX_MAP,
   type CheckboxState,
+  parseScopedCheckboxes,
+  requireChanged,
   setCheckbox,
+  setStageSuffix,
+  stageLineKey,
+  StageStateValidationError,
+  StateMutationInvariantError,
+  StateMutationTargetError,
+  type ValidatedStageState,
+  validateStageState,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // U+2014 EM DASH — the divider setCheckbox's regex requires between slug and
@@ -53,14 +47,38 @@ const EM = "—";
 // and one with regex-metachar-laden text) so a flip has plenty of neighbours
 // that MUST stay byte-identical.
 function buildBlock(): string {
-  return [
+  const rows = [
     `- [ ] ideation ${EM} EXECUTE`,
     `- [-] inception ${EM} EXECUTE`,
     `- [x] construction ${EM} SKIP: already shipped`,
     `- [S] operation ${EM} SKIP: out of scope (v2.0+)`,
-    `- [?] review ${EM} awaiting sign-off`,
+    `- [?] review ${EM} EXECUTE`,
     `- [R] rework ${EM} EXECUTE`,
   ].join("\n");
+  return [
+    "# AI-DLC State Tracking",
+    "",
+    "## Stage Progress",
+    "<!-- Checkbox states: canonical -->",
+    "",
+    "### IDEATION PHASE",
+    rows,
+    "",
+    "## Current Status",
+    "- **Status**: Running",
+    "",
+  ].join("\n");
+}
+
+function mutateCheckbox(
+  content: string,
+  slug: string,
+  state: CheckboxState,
+): string {
+  return requireChanged(
+    setCheckbox(validateStageState(content), slug, state),
+    `test:${slug}`,
+  );
 }
 
 const ALL_SLUGS = [
@@ -96,7 +114,7 @@ describe("setCheckbox() — target line flips to the new state", () => {
     // Pin the observable literal. CHECKBOX_MAP.completed is "[x]"; after the
     // flip the target line must START with "- [x] inception ". This catches a
     // marker map drift OR a replacement that dropped/duplicated the brackets.
-    const out = setCheckbox(buildBlock(), "inception", "completed");
+    const out = mutateCheckbox(buildBlock(), "inception", "completed");
     expect(lineForSlug(out, "inception")).toBe(`- [x] inception ${EM} EXECUTE`);
   });
 
@@ -113,7 +131,7 @@ describe("setCheckbox() — target line flips to the new state", () => {
       "skipped",
     ];
     for (const state of states) {
-      const out = setCheckbox(buildBlock(), "inception", state);
+      const out = mutateCheckbox(buildBlock(), "inception", state);
       const marker = CHECKBOX_MAP[state]; // bracketed, e.g. "[?]"
       expect(lineForSlug(out, "inception")).toBe(
         `- ${marker} inception ${EM} EXECUTE`
@@ -126,7 +144,9 @@ describe("setCheckbox() — target line flips to the new state", () => {
     // must leave the line identical — group-1/group-2 are preserved and the
     // marker is rewritten to the same value.
     const block = buildBlock();
-    const out = setCheckbox(block, "construction", "completed");
+    const result = setCheckbox(validateStageState(block), "construction", "completed");
+    expect(result).toEqual({ kind: "changed", content: block });
+    const out = requireChanged(result, "test:idempotent");
     expect(lineForSlug(out, "construction")).toBe(
       `- [x] construction ${EM} SKIP: already shipped`
     );
@@ -141,7 +161,7 @@ describe("setCheckbox() — metamorphic no-clobber-neighbours invariant", () => 
     // adjacent line) would mutate a neighbour and fail here.
     const block = buildBlock();
     for (const target of ALL_SLUGS) {
-      const out = setCheckbox(block, target, "skipped");
+      const out = mutateCheckbox(block, target, "skipped");
       const before = neighbourLines(block, target);
       const after = neighbourLines(out, target);
       expect(after).toEqual(before);
@@ -154,7 +174,7 @@ describe("setCheckbox() — metamorphic no-clobber-neighbours invariant", () => 
     // the per-line differences; any count other than 1 means the transform
     // either touched a neighbour (>1) or failed to match its target (0).
     const block = buildBlock();
-    const out = setCheckbox(block, "review", "completed");
+    const out = mutateCheckbox(block, "review", "completed");
 
     const beforeLines = block.split("\n");
     const afterLines = out.split("\n");
@@ -170,7 +190,7 @@ describe("setCheckbox() — metamorphic no-clobber-neighbours invariant", () => 
     }
     expect(changed).toBe(1);
     // And the one changed line is precisely the "review" line, now completed.
-    expect(afterLines[changedIndex]).toBe(`- [x] review ${EM} awaiting sign-off`);
+    expect(afterLines[changedIndex]).toBe(`- [x] review ${EM} EXECUTE`);
   });
 
   test("does not touch a slug that is a substring-prefix of the target", () => {
@@ -178,56 +198,123 @@ describe("setCheckbox() — metamorphic no-clobber-neighbours invariant", () => 
     // a prefix of the other must not cross-contaminate: flipping "build" must
     // leave "build-extra" alone, because "build" is not followed by " —" on
     // the "build-extra" line.
-    const block = [
+    const block = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      [
       `- [ ] build ${EM} EXECUTE`,
       `- [ ] build-extra ${EM} EXECUTE`,
-    ].join("\n");
-    const out = setCheckbox(block, "build", "completed");
+      ].join("\n"),
+    );
+    const out = mutateCheckbox(block, "build", "completed");
     expect(lineForSlug(out, "build")).toBe(`- [x] build ${EM} EXECUTE`);
     // The neighbour, whose slug merely shares the "build" prefix, is untouched.
-    expect(out.split("\n")[1]).toBe(`- [ ] build-extra ${EM} EXECUTE`);
+    expect(lineForSlug(out, "build-extra")).toBe(`- [ ] build-extra ${EM} EXECUTE`);
   });
 
-  test("treats a regex-metachar slug literally (escapeRegex contract)", () => {
-    // A slug containing "." must be matched as a literal dot, not a wildcard.
-    // If escapeRegex were dropped, "v0X4X0" would also match "v0.4.0"'s
-    // pattern. We assert the dotted slug flips and a same-shape neighbour that
-    // differs only by literal vs. wildcard char is NOT touched.
-    const block = [
+  test("matches a regex-metachar slug by exact map key", () => {
+    // A slug containing "." is looked up as a literal map key. The same-shape
+    // neighbour that differs only by punctuation must remain untouched.
+    const block = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      [
       `- [ ] v0.4.0 ${EM} EXECUTE`,
       `- [ ] v0X4X0 ${EM} EXECUTE`,
-    ].join("\n");
-    const out = setCheckbox(block, "v0.4.0", "completed");
-    expect(out.split("\n")[0]).toBe(`- [x] v0.4.0 ${EM} EXECUTE`);
+      ].join("\n"),
+    );
+    const out = mutateCheckbox(block, "v0.4.0", "completed");
+    expect(lineForSlug(out, "v0.4.0")).toBe(`- [x] v0.4.0 ${EM} EXECUTE`);
     // The wildcard-collision candidate must remain pending and byte-identical.
-    expect(out.split("\n")[1]).toBe(`- [ ] v0X4X0 ${EM} EXECUTE`);
+    expect(lineForSlug(out, "v0X4X0")).toBe(`- [ ] v0X4X0 ${EM} EXECUTE`);
   });
 });
 
-describe("setCheckbox() — absent slug behaviour (verified real contract)", () => {
-  test("returns the content UNCHANGED when the slug is absent (no insert, no throw)", () => {
-    // Source has no match -> no replacement -> original string returned. This
-    // is the real behaviour at :491-495: there is no insert branch and no
-    // error path. Pin it so a future "helpful" insert-on-missing change is
-    // caught as a behavioural break.
+describe("setCheckbox() — validation and loud failure", () => {
+  test("returns a typed not-found result with byte-identical input", () => {
     const block = buildBlock();
-    const out = setCheckbox(block, "nonexistent-stage", "completed");
-    expect(out).toBe(block);
+    const result = setCheckbox(validateStageState(block), "nonexistent-stage", "completed");
+    expect(result).toEqual({ kind: "not-found", target: "nonexistent-stage" });
+    expect(() => requireChanged(result, "test:missing")).toThrow(StateMutationTargetError);
   });
 
-  test("a slug present in text but NOT followed by the em-dash divider is absent for matching purposes", () => {
-    // The regex anchors on " <slug> —" (em-dash). A line that names the slug
-    // without the em-dash divider (e.g. a hyphen-minus, or no divider) does
-    // NOT match, so the call is a no-op. Confirms the divider is load-bearing.
-    const hyphenBlock = `- [ ] ideation - EXECUTE`; // ASCII hyphen, not U+2014
-    expect(setCheckbox(hyphenBlock, "ideation", "completed")).toBe(hyphenBlock);
-
-    const noDivider = `- [ ] ideation EXECUTE`;
-    expect(setCheckbox(noDivider, "ideation", "completed")).toBe(noDivider);
+  test("rejects a malformed canonical line before entering the setter", () => {
+    const malformed = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      "- [ ] ideation - EXECUTE",
+    );
+    expect(() => validateStageState(malformed)).toThrow(StageStateValidationError);
   });
 
-  test("empty content is returned unchanged", () => {
-    // Degenerate input: no lines, no match. Must not throw.
-    expect(setCheckbox("", "ideation", "completed")).toBe("");
+  test("rejects duplicate canonical targets before mutation", () => {
+    const duplicate = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      `- [ ] ideation ${EM} EXECUTE\n- [x] ideation ${EM} SKIP`,
+    );
+    expect(() => validateStageState(duplicate)).toThrow(/duplicate-target/);
+  });
+
+  test("keeps per-unit targets distinct and mutates only the selected unit", () => {
+    const perUnit = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      [
+        "Per unit: cart",
+        `- [ ] ideation ${EM} EXECUTE`,
+        "Per unit: checkout",
+        `- [-] ideation ${EM} EXECUTE`,
+      ].join("\n"),
+    );
+    expect(() => setCheckbox(validateStageState(perUnit), "ideation", "completed"))
+      .toThrow(/duplicate-target/);
+
+    const out = requireChanged(
+      setCheckbox(validateStageState(perUnit, { unit: "checkout" }), "ideation", "completed"),
+      "test:per-unit",
+    );
+    expect(out).toContain(`Per unit: cart\n- [ ] ideation ${EM} EXECUTE`);
+    expect(out).toContain(`Per unit: checkout\n- [x] ideation ${EM} EXECUTE`);
+
+    expect(parseScopedCheckboxes(perUnit).filter((line) => line.slug === "ideation"))
+      .toEqual([
+        { slug: "ideation", state: "pending", suffix: "EXECUTE", unit: "cart" },
+        { slug: "ideation", state: "in-progress", suffix: "EXECUTE", unit: "checkout" },
+      ]);
+  });
+
+  test("builds distinct canonical keys for global and per-unit stage rows", () => {
+    expect(stageLineKey("ideation")).toBe("\0ideation");
+    expect(stageLineKey("ideation", "cart")).toBe("cart\0ideation");
+  });
+
+  test("rejects a forged validated state as a typed invariant failure", () => {
+    const forged = {} as ValidatedStageState;
+    expect(() => setCheckbox(forged, "ideation", "completed"))
+      .toThrow(StateMutationInvariantError);
+  });
+
+  test("malformed-line diagnostics do not echo state content", () => {
+    const secret = "secret-suffix";
+    const malformed = buildBlock().replace(
+      `- [ ] ideation ${EM} EXECUTE`,
+      `- [ ] ideation - ${secret}`,
+    );
+    try {
+      validateStageState(malformed);
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StageStateValidationError);
+      expect((error as Error).message).not.toContain(secret);
+    }
+  });
+
+  test("rejects a missing Stage Progress section", () => {
+    expect(() => validateStageState("")).toThrow(/section-unrecognized/);
+  });
+});
+
+describe("setStageSuffix()", () => {
+  test("removes a stale SKIP reason when a stage is restored to EXECUTE", () => {
+    const result = setStageSuffix(validateStageState(buildBlock()), "construction", "EXECUTE");
+    const out = requireChanged(result, "test:stage-suffix");
+
+    expect(lineForSlug(out, "construction")).toBe(`- [x] construction ${EM} EXECUTE`);
   });
 });

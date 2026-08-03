@@ -538,5 +538,53 @@
     "dirName": "260803-e-ra-2072-learnings-1",
     "createdAt": "2026-08-03T00:43:08Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-AH-S13",
+    "dirName": "260802-e-sdg-ah-s13",
+    "createdAt": "2026-08-02T01:33:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-RE-S13",
+    "dirName": "260802-e-sdg-re-s13",
+    "createdAt": "2026-08-02T02:09:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-PD-S13",
+    "dirName": "260802-e-sdg-pd-s13",
+    "createdAt": "2026-08-02T02:23:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-RA-S13",
+    "dirName": "260802-e-sdg-ra-s13",
+    "createdAt": "2026-08-02T02:51:51Z",
+    "status": "open"
+  },
+  {
+    "electionId": "E-SDG-UG-S13",
+    "dirName": "260802-e-sdg-ug-s13",
+    "createdAt": "2026-08-02T03:51:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-DPL-S13",
+    "dirName": "260802-e-sdg-dpl-s13",
+    "createdAt": "2026-08-02T04:10:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-FD-S13",
+    "dirName": "260802-e-sdg-fd-s13",
+    "createdAt": "2026-08-02T05:24:23Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-NSD-NFR-S13",
+    "dirName": "260802-e-nsd-nfr-s13",
+    "createdAt": "2026-08-02T07:31:22Z",
+    "status": "recorded"
   }
 ]

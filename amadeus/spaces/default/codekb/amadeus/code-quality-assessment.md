@@ -61,6 +61,29 @@
 - 既存の足場（良い面）: loader は no-arg 1 エクスポートに pin 済み（`tests/unit/t-formal-verif-tla-model-loader.test.ts:10-13`、`loadVerifiedTlaSource.length === 0`）。model-map v2 パーサは plugin/canonical 両コピーを対象にした table test（`tests/unit/t-formal-verif-model-map-v2.test.ts`、`:6` コメント "neither copy can drift"、`:277` `describe.each(modules)`）で二重化。mirror 登録は integration で実 `model-map.json` 読込み検証。`tests/formal-verif/support/` に mutation / real-toolchain probe。一方 FormalElection 参照は tests 27 ファイルに散在し、一般化時の機械的洗い出し対象が大きい。
 - 欠陥クラス: 「登録スキーマは複数対応、実行・照合・CI は単一固定」の片側実装 — 前 intent 260731-formal-verif-value-chain が記録した非対称クラスタの継続。schema の `exactObject :204` は fail-closed で安全側だが、aux 追加時の必須変更点となる。
 
+## no-silent-drop の品質所見（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+### 観測事実
+
+- 強み: 既存 callsite guard は shrink-only、missing/malformed allowlist の fail-closed、純粋判定の分離を実装済み（`tests/callsite-guard.ts:13-25`, `:115-205`）。complexity gate は外部 tool failure と baseline failure の注入 seam を持つ（`tests/complexity-gate.ts:12-24`, `:53-69`）。
+- #1878: `applyTransition` は failure を判別できる（`amadeus-mirror-executor.ts:77-129`）のに `persistBlocked` が結果を捨てる（`:188-196`）。これは戻り値破棄 shape の実欠陥で、positive fixture と runtime 回帰の両方に使える。
+- #1874: `setCheckbox` / `setStageSuffix` は不一致を無変更返却へ潰し（`amadeus-lib.ts:5399-5429`）、既存テストが absent slug の no-op を固定する（`t108.test.ts:207-232`, `t400-lib-record-path-and-field-helpers.test.ts:108-113`）。期待値改訂を伴うため、暗黙の helper 変更ではなく明示的 runtime contract 修正が必要。
+- #1963: [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) により malformed/trailing section、decoy checkbox、invalid graph が typed failure と exit 1 になる。`t407:97-212` / `t411:1-22` は健全な回帰面である。
+
+### 設計上の品質条件
+
+- 3 shape の positive／negative fixture を100%分類する。intentional best-effort と void 通知 API を negative fixture に含める。
+- repo integration は3 roots の完全走査、生成物・fixture 除外、zero／partial scan 拒否を確認する。rule 数と走査 root 数を typed metadata で照合し、実行された一部だけの green を許さない。
+- baseline／exemption の更新は shrink-only。exemption は理由の空文字、離れたコメント、複数 node への波及を拒否する。
+- CI gate 単独の cold／warm を計測し、15秒以内を blocking assertion にする。初期 corpus の分類レビューで偽陽性率5%以下を確認する。
+- tool missing、rule missing／invalid、baseline missing／invalid、zero scan、partial scan はすべて固有の typed diagnostic と exit 1 を持つ。
+
+### 未確認リスク
+
+- 成否を返す emit／Result API の正準 vocabulary は未確定。名前一致だけでは void 通知 API を誤検出する。
+- intentional best-effort catch の初期 census と偽陽性率は未計測。
+- ast-grep の Bun 配布形、Linux runner の cold-start、固定バージョンは未検証。
+
 ## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - テスト空白（決定的）: state-file 無しの SessionStart で `.current-session` が書かれることを検証するテストは存在しない。現行の早期終了挙動は `tests/unit/t10-hook-session-start.test.ts:211`（silent exit）/ `:222`（no heartbeat）が no state file の early-exit（`packages/framework/core/hooks/amadeus-session-start.ts:70`）を直接 pin しており、修正はこの pin の改訂 + 回帰テスト追加を伴う。追加先の自然な場所は同 t10。近傍の足場: `tests/integration/t-kimi-adapter.test.ts:317` 付近、t365（`.current-session` を `:826` / `:958` / `:1199` / `:1884` で使用）、t173。`amadeus-caller-authorization.ts` 専用の単体テストファイルは不在。

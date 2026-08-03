@@ -1,0 +1,17 @@
+{
+  "electionId": "E-SDG-RA-S13",
+  "kind": "zero-confirm",
+  "question": "Requirements Analysis の学習候補を永続化0件としてよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1〜c5 は既存規則の適用、本 intent 固有の要件、または最終レビューで否定された解釈であり、新しい横断 rule／sensor を追加しない"
+    }
+  ],
+  "voters": [
+    "ra-voter-1",
+    "ra-voter-2"
+  ],
+  "state": "open"
+}

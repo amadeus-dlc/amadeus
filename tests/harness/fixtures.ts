@@ -153,6 +153,10 @@ export function seededAuditDir(proj: string, space = DEFAULT_SPACE): string {
   return join(seededRecordDir(proj, space), "audit");
 }
 
+export function resetSeededAuditDir(proj: string, space = DEFAULT_SPACE): void {
+  rmSync(seededAuditDir(proj, space), { recursive: true, force: true });
+}
+
 /**
  * The DETERMINISTIC audit shard path a spawned tool resolves in a fixture
  * project: `<record>/audit/<host-slug>-<FIXTURE_CLONE_ID>.jsonl`. Mirrors

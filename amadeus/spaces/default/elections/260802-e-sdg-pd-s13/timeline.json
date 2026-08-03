@@ -1,0 +1,33 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-02T02:23:55Z",
+    "detail": "delivered via subagent: practices-quality (reported-by-conductor)",
+    "voter": "practices-quality"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-02T02:23:55Z",
+    "detail": "delivered via subagent: practices-developer (reported-by-conductor)",
+    "voter": "practices-developer"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T02:24:27Z",
+    "receivedAt": "2026-08-02T02:24:50Z",
+    "detail": "ballot accepted: practices-developer",
+    "voter": "practices-developer"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-02T02:25:22Z",
+    "receivedAt": "2026-08-02T02:25:38Z",
+    "detail": "ballot accepted: practices-quality",
+    "voter": "practices-quality"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-02T02:25:49Z",
+    "detail": "tally: established"
+  }
+]

@@ -17,11 +17,13 @@ import {
   removeField,
   removeSlug,
   repoDir,
+  requireChanged,
   setStageSuffix,
   stageDir,
   stopHookDir,
   worktreeDocsDir,
   worktreeRuntimeGraphPath,
+  validateStageState,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const PROJECT = join("/tmp", "amadeus-t400");
@@ -106,11 +108,32 @@ describe("t400 state-file field and stage-line editing", () => {
   });
 
   test("rewrites the suffix of a stage line without touching its checkbox marker", () => {
-    const content = "- [ ] code-generation — EXECUTE\n- [x] build-and-test — EXECUTE\n";
-    expect(setStageSuffix(content, "code-generation", "SKIP")).toBe(
+    const content = [
+      "## Stage Progress",
+      "<!-- Checkbox states: canonical -->",
+      "- [ ] code-generation — EXECUTE",
+      "- [x] build-and-test — EXECUTE",
+      "",
+      "## Current Status",
+      "- **Status**: Running",
+      "",
+    ].join("\n");
+    expect(
+      requireChanged(
+        setStageSuffix(validateStageState(content), "code-generation", "SKIP"),
+        "test:set-suffix",
+      ),
+    ).toContain(
       "- [ ] code-generation — SKIP\n- [x] build-and-test — EXECUTE\n",
     );
-    expect(setStageSuffix(content, "absent-stage", "SKIP")).toBe(content);
+    expect(setStageSuffix(validateStageState(content), "absent-stage", "SKIP")).toEqual({
+      kind: "not-found",
+      target: "absent-stage",
+    });
+    expect(setStageSuffix(validateStageState(content), "code-generation", "EXECUTE")).toEqual({
+      kind: "changed",
+      content,
+    });
   });
 
   test("maps an unmarked checkbox to the pending state", () => {
