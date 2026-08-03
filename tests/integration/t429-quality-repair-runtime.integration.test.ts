@@ -123,13 +123,13 @@ describe("Quality Repair production coordinator", () => {
     const { activation, repository, coordinator } = runtime();
     let previous: QualityEvidenceSnapshot | null = null;
 
-    const first = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+    const first = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(first.kind).toBe("repair");
     previous = first.snapshot;
-    const second = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+    const second = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(second.kind).toBe("repair");
     previous = second.snapshot;
-    const third = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+    const third = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(third.kind).toBe("judge-reserved");
     previous = third.snapshot;
 
@@ -140,10 +140,10 @@ describe("Quality Repair production coordinator", () => {
     expect(firstJudge.requests).toHaveLength(1);
     expect(firstJudge.requests[0]?.allowedRouteIds).toEqual(["replan"]);
 
-    const fourth = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+    const fourth = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(fourth.kind).toBe("repair");
     previous = fourth.snapshot;
-    const fifth = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+    const fifth = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(fifth.kind).toBe("judge-reserved");
     previous = fifth.snapshot;
     if (fifth.kind !== "judge-reserved") return;
@@ -167,7 +167,7 @@ describe("Quality Repair production coordinator", () => {
     expect(renderQualityRepairStatus(status!)).toContain("REPAIR_STALLED");
 
     const before = repository.readTransactions().length;
-    expect(coordinator.observe(batch(activation.graph.graphRevision, previous), trace).kind).toBe("REPAIR_STALLED");
+    expect(coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace).kind).toBe("REPAIR_STALLED");
     expect(repository.readTransactions()).toHaveLength(before);
   });
 
@@ -176,7 +176,7 @@ describe("Quality Repair production coordinator", () => {
     let previous: QualityEvidenceSnapshot | null = null;
     const snapshots = [];
     for (let index = 0; index < 3; index += 1) {
-      const result = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+      const result = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
       previous = result.snapshot;
       snapshots.push(result);
     }
@@ -185,7 +185,7 @@ describe("Quality Repair production coordinator", () => {
     if (firstThreshold.kind !== "judge-reserved") throw new Error("missing first threshold");
     coordinator.dispatchJudge(firstThreshold.permit, firstJudge.port, replanPort);
     for (let index = 0; index < 2; index += 1) {
-      const result = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+      const result = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
       previous = result.snapshot;
       snapshots.push(result);
     }
@@ -222,7 +222,7 @@ describe("Quality Repair production coordinator", () => {
 
   test("reuses the generic committed live authorization seam", () => {
     const { activation, repository, coordinator } = runtime();
-    const first = coordinator.observe(batch(activation.graph.graphRevision, null), trace);
+    const first = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
     const denied = coordinator.authorizeLiveSmoke(first.snapshot.qualityScopeId, `sha256:${"e".repeat(64)}`, {
       authorize: () => ({ authorized: false, reason: "not-authorized" }),
     });
@@ -237,9 +237,9 @@ describe("Quality Repair production coordinator", () => {
   test("reconciles before one attested no-effect successor and never admits attempt 2", () => {
     const { activation, repository, coordinator } = runtime();
     let previous: QualityEvidenceSnapshot | null = null;
-    let thresholdResult: ReturnType<typeof coordinator.observe> | null = null;
+    let thresholdResult: ReturnType<typeof coordinator.recordEvidence> | null = null;
     for (let index = 0; index < 3; index += 1) {
-      thresholdResult = coordinator.observe(batch(activation.graph.graphRevision, previous), trace);
+      thresholdResult = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
       previous = thresholdResult.snapshot;
     }
     if (thresholdResult?.kind !== "judge-reserved") throw new Error("missing threshold");
@@ -277,7 +277,7 @@ describe("Quality Repair production coordinator", () => {
 
   test("round-trips canonical transactions into a fresh replay projection", () => {
     const { activation, repository, coordinator } = runtime();
-    const observed = coordinator.observe(batch(activation.graph.graphRevision, null), trace);
+    const observed = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
     const encoded = JSON.stringify(repository.readTransactions()[0]);
     const decoded = decodeQualityRepairTransaction(encoded);
     const restored = createMemoryQualityRepairRepository({ initialTransactions: [decoded] });
