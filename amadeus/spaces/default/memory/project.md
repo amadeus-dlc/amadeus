@@ -15,7 +15,7 @@
 - 常任グラント(standing grant)がカバーするのはステージゲートの承認のみであり、質問ファイルの [Answer] など内容裁定の代答には使えない。内容質問はグラント有効下でも必ず人間の回答を取ってから記入する (learned 2026-08-01、260801-tla-multi-model approval-handoff で conductor が自己記入しかけ即訂正した実測) (learned 2026-08-01) <!-- cid:approval-handoff:c2-grant-gates-only -->
 - AskUserQuestion が dismiss された場合は沈黙を承認とみなさず、推奨値も選択扱いにしない。適用可能な最も具体的な既存規則(例: project.md の限定則)で判定し、questions ファイルに dismiss 事実と適用根拠を明記する (learned 2026-08-01、260801-tla-multi-model practices-discovery) (learned 2026-08-01) <!-- cid:practices-discovery:c2-dismiss-not-approval -->
 - amadeus-reviewer-runtime complete-review の記録後は、各 artifact の `## Review — Iteration N` block が正しい unit・iteration・summary で追記されたか実読検証する。シェル側の値渡し事故(連想配列の未対応等)で別 unit の review block が全 artifact に誤記録された実測あり (learned 2026-08-01、260801-tla-multi-model functional-design) (learned 2026-08-01) <!-- cid:functional-design:c2-verify-review-block -->
-- per-unit ステージ(nfr-design 等)の engine 完了判定は stage frontmatter の produces_kinds ではなく directive の produces 全件の実在を見る。kind ゲートで一部ファイルを省略すると gate:false のまま滞留するため、N/A カテゴリも根拠付きの薄い書として全件生成する (learned 2026-08-01、260801-tla-multi-model nfr-design) (learned 2026-08-01) <!-- cid:nfr-design:c1-engine-produces-all-five -->
+- per-unit ステージ(nfr-design 等)の engine 完了判定は、既知の Unit kind では stage frontmatter の `produces_kinds` が適用成果物を絞り、directive に列挙された成果物の実在だけを見る。legacy のkindless Unitは過少生成を避けるため全5成果物へfallbackする。適用外成果物のN/A placeholderは生成しない (learned 2026-08-01、260801-tla-multi-model nfr-designの実測をIssue #2019で条件付きに訂正) (learned 2026-08-01) <!-- cid:nfr-design:c1-engine-produces-all-five -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。

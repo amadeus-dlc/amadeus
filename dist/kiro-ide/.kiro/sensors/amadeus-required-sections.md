@@ -15,6 +15,7 @@ output_schema:
   headings: string[]
   findings_count: integer
   edge_block: string
+  missing_unit_kinds: string[]
   template: string
   template_expected: string[]
   template_missing: string[]
@@ -37,11 +38,15 @@ set, so a marker is never checked against a heading-set template either.
 
 For `unit-of-work-dependency.md` (units-generation 2.7), additionally
 requires the fenced `yaml` `units:` edge block to be present, well-formed,
-and cycle-free — the machine-readable DAG the runtime compiler parses into
+cycle-free, and to give every parsed unit a canonical `kind` — the
+machine-readable DAG the runtime compiler parses into
 the batch fan-out. The check reports `edge_block` as `ok`, `absent`,
 `malformed`, or `cyclic`; anything but `ok` fails the sensor at the gate so
-the malformed block never reaches the compiler. Every other artefact keeps
-the generic H2-count check only.
+the malformed block never reaches the compiler. A structurally valid block
+with omitted kinds keeps `edge_block: ok` but fails with `pass: false`, one or
+more findings, and the omitted unit names in `missing_unit_kinds`. Invalid kind
+values remain the shared parser's `edge_block: malformed` result. Every other
+artefact keeps the generic H2-count check only.
 
 ## Heading-set overrides — two paths, with precedence
 
