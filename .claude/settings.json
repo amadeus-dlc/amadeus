@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-mint-presence.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" mint-presence"
           }
         ]
       }
@@ -65,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-start.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" session-start"
           }
         ]
       }
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-end.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" session-end"
           }
         ]
       }
@@ -87,11 +87,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-audit-logger.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" audit-logger"
           },
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-sensor-fire.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" sensor-fire"
           }
         ]
       },
@@ -100,7 +100,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-sync-statusline.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" sync-statusline"
           }
         ]
       },
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-mint-presence.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" mint-presence"
           }
         ]
       },
@@ -118,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-runtime-compile.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" runtime-compile"
           }
         ]
       }
@@ -129,7 +129,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-validate-state.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" validate-state"
           }
         ]
       }
@@ -140,7 +140,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-log-subagent.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" log-subagent"
           }
         ]
       }
@@ -151,7 +151,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-stop.ts\""
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" stop"
           }
         ]
       }

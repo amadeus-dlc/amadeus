@@ -1,4 +1,4 @@
-// covers: file:skills/amadeus/SKILL.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/protocols/stage-protocol-recovery.md, file:amadeus-common/protocols/stage-protocol-governance.md, file:hooks/amadeus-audit-logger.ts, file:hooks/amadeus-sensor-fire.ts, file:hooks/amadeus-runtime-compile.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-validate-state.ts, file:hooks/amadeus-log-subagent.ts, file:hooks/amadeus-log-subagent-start.ts, file:hooks/amadeus-mint-presence.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-session-end.ts, file:hooks/amadeus-statusline.ts, file:hooks/amadeus-stop.ts, file:hooks/amadeus-plugin-compose.ts, file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md, file:amadeus-common/stages/initialization/workspace-scaffold.md, file:amadeus-common/stages/initialization/workspace-detection.md, file:amadeus-common/stages/initialization/state-init.md, file:amadeus-common/stages/ideation/intent-capture.md, file:amadeus-common/stages/ideation/market-research.md, file:amadeus-common/stages/ideation/feasibility.md, file:amadeus-common/stages/ideation/scope-definition.md, file:amadeus-common/stages/ideation/team-formation.md, file:amadeus-common/stages/ideation/rough-mockups.md, file:amadeus-common/stages/ideation/approval-handoff.md, file:amadeus-common/stages/inception/reverse-engineering.md, file:amadeus-common/stages/inception/practices-discovery.md, file:amadeus-common/stages/inception/requirements-analysis.md, file:amadeus-common/stages/inception/user-stories.md, file:amadeus-common/stages/inception/refined-mockups.md, file:amadeus-common/stages/inception/application-design.md, file:amadeus-common/stages/inception/units-generation.md, file:amadeus-common/stages/inception/delivery-planning.md, file:amadeus-common/stages/construction/functional-design.md, file:amadeus-common/stages/construction/nfr-requirements.md, file:amadeus-common/stages/construction/nfr-design.md, file:amadeus-common/stages/construction/infrastructure-design.md, file:amadeus-common/stages/construction/code-generation.md, file:amadeus-common/stages/construction/build-and-test.md, file:amadeus-common/stages/construction/ci-pipeline.md, file:amadeus-common/stages/operation/deployment-pipeline.md, file:amadeus-common/stages/operation/environment-provisioning.md, file:amadeus-common/stages/operation/deployment-execution.md, file:amadeus-common/stages/operation/observability-setup.md, file:amadeus-common/stages/operation/incident-response.md, file:amadeus-common/stages/operation/performance-validation.md, file:amadeus-common/stages/operation/feedback-optimization.md, file:settings.json.example, file:settings.local.json.example, file:knowledge/amadeus-shared/state-template.md, file:rules/amadeus-org.md, file:rules/amadeus-project.md, file:CLAUDE.md.example
+// covers: file:skills/amadeus/SKILL.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/protocols/stage-protocol-recovery.md, file:amadeus-common/protocols/stage-protocol-governance.md, file:hooks/amadeus-audit-logger.ts, file:hooks/amadeus-dispatch.ts, file:hooks/amadeus-sensor-fire.ts, file:hooks/amadeus-runtime-compile.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-validate-state.ts, file:hooks/amadeus-log-subagent.ts, file:hooks/amadeus-log-subagent-start.ts, file:hooks/amadeus-mint-presence.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-session-end.ts, file:hooks/amadeus-statusline.ts, file:hooks/amadeus-stop.ts, file:hooks/amadeus-plugin-compose.ts, file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md, file:amadeus-common/stages/initialization/workspace-scaffold.md, file:amadeus-common/stages/initialization/workspace-detection.md, file:amadeus-common/stages/initialization/state-init.md, file:amadeus-common/stages/ideation/intent-capture.md, file:amadeus-common/stages/ideation/market-research.md, file:amadeus-common/stages/ideation/feasibility.md, file:amadeus-common/stages/ideation/scope-definition.md, file:amadeus-common/stages/ideation/team-formation.md, file:amadeus-common/stages/ideation/rough-mockups.md, file:amadeus-common/stages/ideation/approval-handoff.md, file:amadeus-common/stages/inception/reverse-engineering.md, file:amadeus-common/stages/inception/practices-discovery.md, file:amadeus-common/stages/inception/requirements-analysis.md, file:amadeus-common/stages/inception/user-stories.md, file:amadeus-common/stages/inception/refined-mockups.md, file:amadeus-common/stages/inception/application-design.md, file:amadeus-common/stages/inception/units-generation.md, file:amadeus-common/stages/inception/delivery-planning.md, file:amadeus-common/stages/construction/functional-design.md, file:amadeus-common/stages/construction/nfr-requirements.md, file:amadeus-common/stages/construction/nfr-design.md, file:amadeus-common/stages/construction/infrastructure-design.md, file:amadeus-common/stages/construction/code-generation.md, file:amadeus-common/stages/construction/build-and-test.md, file:amadeus-common/stages/construction/ci-pipeline.md, file:amadeus-common/stages/operation/deployment-pipeline.md, file:amadeus-common/stages/operation/environment-provisioning.md, file:amadeus-common/stages/operation/deployment-execution.md, file:amadeus-common/stages/operation/observability-setup.md, file:amadeus-common/stages/operation/incident-response.md, file:amadeus-common/stages/operation/performance-validation.md, file:amadeus-common/stages/operation/feedback-optimization.md, file:settings.json.example, file:settings.local.json.example, file:knowledge/amadeus-shared/state-template.md, file:rules/amadeus-org.md, file:rules/amadeus-project.md, file:CLAUDE.md.example
 //
 // t01 — shipped-tree file-structure invariant. Migrated from
 // tests/smoke/t01-file-structure.sh (TAP plan 63, 63 distinct file-existence
@@ -20,7 +20,7 @@
 // STRONGER than the .sh, which only existence-checked each path individually):
 //   .sh L12  SKILL.md exists                          -> "ships skills/amadeus/SKILL.md"
 //   .sh L15-17  3 stage-protocol files                -> "ships the 3 stage-protocol spine files" (each asserted)
-//   .sh L20-29  11 hooks (each)                        -> "ships each of the 12 framework hooks" + "ships EXACTLY the 12 expected amadeus-*.ts hooks" (count strengthening; grew to 11 with the human-turn mint hook)
+//   .sh L20-29  11 hooks (each)                        -> "ships each of the 14 framework hooks" + exact-roster count strengthening
 //   .sh L32-34  11 agents (loop)                       -> "ships each of the 14 agent personas" + "ships EXACTLY 14 amadeus-*-agent.md files" (count strengthening; roster grew to 13 with the two reviewer personas, then 14 with the composer)
 //   .sh L38-40  3 initialization stages (loop)         -> "ships the 3 initialization stages"
 //   .sh L43-45  7 ideation stages (loop)               -> "ships the 7 ideation stages"
@@ -70,9 +70,10 @@ const AGENTS = [
   "composer",
 ] as const;
 
-// The framework hooks (the .sh's 10, plus mint-presence and plugin-compose).
+// The framework hooks (the .sh's 10, plus mint-presence, plugin-compose, and dispatcher).
 const HOOKS = [
   "amadeus-audit-logger.ts",
+  "amadeus-dispatch.ts",
   "amadeus-sensor-fire.ts",
   "amadeus-runtime-compile.ts",
   "amadeus-sync-statusline.ts",
@@ -145,16 +146,16 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
     }
   });
 
-  test("ships each of the 11 framework hooks [.sh L20-29]", () => {
+  test("ships each of the 14 framework hooks [.sh L20-29]", () => {
     for (const h of HOOKS) {
       expect(existsSync(at("hooks", h))).toBe(true);
     }
   });
 
   // STRONGER than the .sh: not just "each of these 11 exists" but "the hooks
-  // dir contains EXACTLY 12 amadeus-*.ts hooks — catches a 13th hook sneaking
+  // dir contains exactly the declared amadeus-*.ts hooks — catches another hook sneaking
   // in or a rename that drops one while another covers the count.
-  test("ships EXACTLY the 13 expected amadeus-*.ts hooks [.sh L20-29 — count strengthening]", () => {
+  test("ships EXACTLY the 14 expected amadeus-*.ts hooks [.sh L20-29 — count strengthening]", () => {
     const shipped = readdirSync(at("hooks"))
       .filter((f) => f.startsWith("amadeus-") && f.endsWith(".ts"))
       .sort();
@@ -255,30 +256,31 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
   // assert_file_exists calls. The roster later grew by two reviewer agent
   // personas (product-lead, architecture-reviewer) to 65, then by the
   // human-turn mint hook to 66, then by the composer persona to 67, the
-  // plugin-compose hook to 68, and the subagent-start hook to 69. Re-derive
+  // plugin-compose hook to 68, the subagent-start hook to 69, and the dispatcher
+  // hook to 70. Re-derive
   // the full path list from the same data the loops drove and pin its length,
   // so the migrated suite cannot silently shrink the structural surface the
   // .sh enforced.
-  test("asserts EXACTLY 69 shipped paths (TAP plan 63 + 2 reviewer agents + 1 presence hook + the composer + the plugin-compose hook + the subagent-start hook) [.sh L9]", () => {
+  test("asserts EXACTLY 70 shipped paths (TAP plan 63 + 2 reviewer agents + 1 presence hook + the composer + 3 additional hooks) [.sh L9]", () => {
     const paths: string[] = [
       at("skills", "amadeus", "SKILL.md"), // 1
       at("amadeus-common", "protocols", "stage-protocol.md"), // 2
       at("amadeus-common", "protocols", "stage-protocol-recovery.md"), // 3
       at("amadeus-common", "protocols", "stage-protocol-governance.md"), // 4
-      ...HOOKS.map((h) => at("hooks", h)), // 5-17 (13)
-      ...AGENTS.map((a) => at("agents", `amadeus-${a}-agent.md`)), // 18-31 (14)
+      ...HOOKS.map((h) => at("hooks", h)), // 5-18 (14)
+      ...AGENTS.map((a) => at("agents", `amadeus-${a}-agent.md`)), // 19-32 (14)
       ...Object.entries(STAGES).flatMap(([phase, stages]) =>
         stages.map((s) => at("amadeus-common", "stages", phase, `${s}.md`)),
-      ), // 32-63 (32)
-      at("settings.json.example"), // 64
-      at("settings.local.json.example"), // 65
-      at("knowledge", "amadeus-shared", "state-template.md"), // 66
-      mem("org.md"), // 67 — method relocated to amadeus/spaces/default/memory/
-      mem("project.md"), // 68
-      at("CLAUDE.md.example"), // 69
+      ), // 33-64 (32)
+      at("settings.json.example"), // 65
+      at("settings.local.json.example"), // 66
+      at("knowledge", "amadeus-shared", "state-template.md"), // 67
+      mem("org.md"), // 68 — method relocated to amadeus/spaces/default/memory/
+      mem("project.md"), // 69
+      at("CLAUDE.md.example"), // 70
     ];
-    expect(paths.length).toBe(69);
-    // Every one of the 69 must exist — the .sh's full TAP plan, re-proven as a
+    expect(paths.length).toBe(70);
+    // Every one of the 70 must exist — the .sh's full TAP plan, re-proven as a
     // single set so the count and the existence checks cannot drift apart.
     for (const p of paths) {
       expect(existsSync(p)).toBe(true);

@@ -83,6 +83,7 @@ const manifest: HarnessManifest = {
     // reference (explicit @-imports, no copy). The rules/ dir is no longer a
     // core projection — this stub is the only file in it.
     { src: "rules-amadeus.md", dst: "rules/amadeus.md" },
+    { src: "hooks/amadeus-dispatch.ts", dst: "hooks/amadeus-dispatch.ts" },
     { src: "settings.json.example", dst: "settings.json.example" },
     { src: "settings.local.json.example", dst: "settings.local.json.example" },
     // Project-root install files (beside .claude/, not inside it). A user copies
