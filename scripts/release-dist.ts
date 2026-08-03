@@ -313,23 +313,38 @@ function parseManifest(path: string): DistAssetManifest {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("manifest must be a JSON object");
   const record = value as Record<string, unknown>;
   if (Object.keys(record).join(",") !== MANIFEST_FIELDS.join(",")) throw new Error("manifest schema fields do not match BR-U1-3");
-  const parsedVersion = typeof record.version === "string" ? parseDistAssetVersion(record.version) : { ok: false as const };
-  if (
-    record.schema !== 1 ||
-    !parsedVersion.ok ||
-    typeof record.tarball !== "string" ||
-    typeof record.sha256 !== "string" ||
-    !/^[0-9a-f]{64}$/.test(record.sha256) ||
-    !Number.isSafeInteger(record.sizeBytes) ||
-    (record.sizeBytes as number) < 0 ||
-    !Array.isArray(record.harnesses) ||
-    !record.harnesses.every((item) => typeof item === "string") ||
-    !Number.isSafeInteger(record.fileCount) ||
-    (record.fileCount as number) < 0
-  ) {
+  if (!hasValidManifestValues(record)) {
     throw new Error("manifest contains invalid field values");
   }
   return record as unknown as DistAssetManifest;
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function hasValidManifestText(record: Record<string, unknown>): boolean {
+  if (typeof record.version !== "string") return false;
+  return (
+    parseDistAssetVersion(record.version).ok &&
+    typeof record.tarball === "string" &&
+    typeof record.sha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(record.sha256)
+  );
+}
+
+function hasValidHarnesses(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function hasValidManifestValues(record: Record<string, unknown>): boolean {
+  return (
+    record.schema === 1 &&
+    hasValidManifestText(record) &&
+    isNonNegativeSafeInteger(record.sizeBytes) &&
+    hasValidHarnesses(record.harnesses) &&
+    isNonNegativeSafeInteger(record.fileCount)
+  );
 }
 
 function parseChecksumFile(path: string): Map<string, string> {
