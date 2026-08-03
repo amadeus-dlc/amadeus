@@ -62,6 +62,9 @@ function freshProjectedCheckout(selected = true): string {
   mkdirSync(join(root, "amadeus"), { recursive: true });
   if (selected) cpSync(join(REPO_ROOT, "amadeus", "config.json"), join(root, "amadeus", "config.json"));
   else writeFileSync(join(root, "amadeus", "config.json"), `${JSON.stringify({ plugins: [] }, null, 2)}\n`);
+  cpSync(join(REPO_ROOT, "amadeus", "spaces", "default", "memory"), join(root, "amadeus", "spaces", "default", "memory"), {
+    recursive: true,
+  });
   cpSync(join(REPO_ROOT, "plugins"), join(root, "plugins"), { recursive: true });
   cpSync(join(REPO_ROOT, ".gitignore"), join(root, ".gitignore"));
   if (selected) for (const harness of SELF_INSTALL_HARNESSES) writeProjection(root, harness);

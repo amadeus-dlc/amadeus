@@ -62,7 +62,12 @@ export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 // (amadeus-plugin-compose.ts) so the dist-shipped engine carries no scripts/
 // import; imported for local use and re-exported for existing consumers of this
 // module (C2 relocation, single definition — no double-def).
-import { type ReadOnlyFs, nodeReadOnlyFs } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import {
+  compositionFromJson,
+  compositionToJson,
+  type ReadOnlyFs,
+  nodeReadOnlyFs,
+} from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "../packages/framework/core/tools/amadeus-plugin.ts";
 export { type ReadOnlyFs, nodeReadOnlyFs };
 
@@ -923,14 +928,12 @@ function fileMap(root: string): Map<string, Buffer> {
 function normalizeCompositionRecord(hostRoot: string): void {
   const path = join(hostRoot, ".amadeus-plugin-composition.json");
   if (!existsSync(path)) return;
-  const record = JSON.parse(readFileSync(path, "utf-8")) as {
-    plugins?: Array<[string, { trustGrant?: { grantTimestamp?: string } | null }]>;
-  };
-  for (const entry of record.plugins ?? []) {
-    const grant = entry[1]?.trustGrant;
+  const record = compositionFromJson(readFileSync(path, "utf-8"));
+  for (const plugin of record.plugins.values()) {
+    const grant = plugin.trustGrant;
     if (grant) grant.grantTimestamp = DETERMINISTIC_GRANT_TIMESTAMP;
   }
-  writeFileSync(path, `${JSON.stringify(record, null, 2)}\n`);
+  writeFileSync(path, compositionToJson(record));
 }
 
 function projectInTemporaryWorkspace(repoRoot: string, name: SelfInstallHarness): Map<string, Buffer> {

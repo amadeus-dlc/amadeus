@@ -1419,11 +1419,11 @@ function recordFromJson(v: Json): PluginRecord {
 export function compositionToJson(c: CompositionRecord): string {
   const plugins = [...c.plugins.entries()].map(([k, r]) => [k, recordToJson(r)] as const);
   const stageIndexes = [...c.plugins.entries()].map(([name, record]) => [name, record.stageIndex]);
-  return JSON.stringify({
+  return `${JSON.stringify({
     ledger: [...c.ledger.entries()].map(([k, e]) => [k, ledgerEntryToJson(e)]),
     plugins,
     pluginStageIndexDigest: digestBytes(Buffer.from(JSON.stringify(stageIndexes))),
-  });
+  }, null, 2)}\n`;
 }
 
 export function compositionFromJson(text: string): CompositionRecord {
