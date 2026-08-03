@@ -47,11 +47,13 @@
 <!-- Checkbox states: [ ] not started, [-] in progress, [?] awaiting approval (gate open), [R] revising (user rejected gate), [x] completed, [S] skipped (scope-excluded at init, cut via `skip`, or bypassed via --stage/--phase jump) -->
 
 ### INITIALIZATION PHASE
+
 - [ ] workspace-scaffold — EXECUTE
 - [ ] workspace-detection — EXECUTE
 - [ ] state-init — EXECUTE
 
 ### IDEATION PHASE
+
 - [ ] intent-capture — EXECUTE
 - [ ] market-research — EXECUTE
 - [ ] feasibility — EXECUTE
@@ -61,6 +63,7 @@
 - [ ] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
+
 - [ ] reverse-engineering — EXECUTE
 - [ ] practices-discovery — EXECUTE
 - [ ] requirements-analysis — EXECUTE
@@ -71,6 +74,7 @@
 - [ ] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
+
 Per unit: [unit-name]
 - [ ] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
@@ -81,6 +85,7 @@ Per unit: [unit-name]
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
+
 - [ ] deployment-pipeline — EXECUTE
 - [ ] environment-provisioning — EXECUTE
 - [ ] deployment-execution — EXECUTE

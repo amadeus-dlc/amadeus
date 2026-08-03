@@ -217,8 +217,13 @@ export type MirrorStateSnapshot = Readonly<{
 }>;
 
 export type WriteOutcome<T = MirrorStateSnapshot> =
-  | { kind: "written"; value: T; document: string }
-  | { kind: "unchanged"; value: T; document: string }
+  | {
+      kind: "written";
+      origin: "transition" | "outbox-drain-blocked";
+      value: T;
+      document: string;
+    }
+  | { kind: "unchanged"; origin: "transition"; value: T; document: string }
   | { kind: "conflict"; actualRevision: number }
   | { kind: "invalid"; issues: readonly string[] }
   | {

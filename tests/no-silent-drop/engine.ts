@@ -187,8 +187,11 @@ export function verifySnapshot(snapshot: Snapshot): void {
 
 function currentRevision(repoRoot: string): string {
   const result = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" });
+  if (result.error || result.status !== 0 || typeof result.stdout !== "string") {
+    throw new InfraFailure("INTERNAL_ERROR", "current revision is not an unambiguous full SHA");
+  }
   const revision = result.stdout.trim();
-  if (result.status !== 0 || !/^[0-9a-f]{40}$/.test(revision)) {
+  if (!/^[0-9a-f]{40}$/.test(revision)) {
     throw new InfraFailure("INTERNAL_ERROR", "current revision is not an unambiguous full SHA");
   }
   return revision;
@@ -257,16 +260,17 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
   if (mode === "check") {
     if (baseline === null) throw new InfraFailure("BASELINE_MISSING", "baseline is required in check mode");
     const trustedSha = trustedBaseSha(options.baseRevision);
-    if (trustedSha) {
-      const previous = loadTrustedPreviousLedgers(
-        repoRoot,
-        trustedSha,
-        baseline,
-        exemptions,
-      );
-      assertShrinkOnly(baseline, previous.baseline);
-      assertExemptionsShrinkOnly(exemptions, previous.exemptions);
+    if (trustedSha === null) {
+      throw new InfraFailure("BASELINE_INVALID", "check mode requires a non-zero trusted base revision");
     }
+    const previous = loadTrustedPreviousLedgers(
+      repoRoot,
+      trustedSha,
+      baseline,
+      exemptions,
+    );
+    assertShrinkOnly(baseline, previous.baseline);
+    assertExemptionsShrinkOnly(exemptions, previous.exemptions);
     const added = addedFindings(findings, baseline);
     return added.length > 0 ? violationResult(added) : passResult();
   }

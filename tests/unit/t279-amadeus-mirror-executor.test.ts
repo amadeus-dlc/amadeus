@@ -629,6 +629,48 @@ describe("t279 create", () => {
     },
   );
 
+  test("a lock-time reread that already processed the transition is outcome-unknown and not retryable", async () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const event = ctx.event;
+    const receipt = {
+      key: mirrorEventKey(event),
+      event,
+      operationId: "op-raced-maintenance",
+      status: "prepared" as const,
+      preparedAt: NOW,
+      createIdentity: identity("op-raced-maintenance"),
+    };
+    const lockedSnapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+    };
+    const callerSnapshot: MirrorStateSnapshot = {
+      ...lockedSnapshot,
+      auditOutbox: {
+        transactionId: "tx-already-drained",
+        digest: "digest",
+        fields: { Artifact: "amadeus-state.md#mirror-state" },
+      },
+    };
+
+    const outcome = await executeMirrorOperation({
+      context: ctx,
+      ports: memoryStore(lockedSnapshot).ports,
+      localState: callerSnapshot,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        classification: "state-write",
+        effect: "outcome-unknown",
+        retryable: false,
+      },
+    });
+    expect(gateway.history).toEqual([]);
+  });
+
   test("persistBlocked and complete surface maintenance outcomes at their call sites", () => {
     const gateway = new FakeGateway();
     const ctx = context("create", gateway);

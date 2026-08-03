@@ -170,7 +170,7 @@ function assertStructuralCoverage(parsed: ParsedSource, sourceFile: ts.SourceFil
   const visit = (node: ts.Node): void => {
     if (ts.isCatchClause(node)) semantic.push(locationKey(sourceFile, node, "catch_clause"));
     if (ts.isExpressionStatement(node)) semantic.push(locationKey(sourceFile, node, "expression_statement"));
-    if (ts.isFunctionDeclaration(node) && node.body && node.name && NSD003_FUNCTIONS.has(node.name.text)) {
+    if (isNsd003Function(node)) {
       semantic.push(locationKey(sourceFile, node, "function_declaration"));
     }
     ts.forEachChild(node, visit);

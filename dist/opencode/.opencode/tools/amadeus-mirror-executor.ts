@@ -64,7 +64,8 @@ type StateResult =
 type OperationPreparationResult =
   | { kind: "ready" }
   | { kind: "maintenance-completed" }
-  | { kind: "maintenance-blocked"; summary: string };
+  | { kind: "maintenance-blocked"; summary: string }
+  | { kind: "transition-processed" };
 
 type InvocationPreparationResult = OperationPreparationResult &
   Readonly<{ operationId: string }>;
@@ -191,6 +192,9 @@ function prepareOperation(
     intentUuid: context.intentUuid,
   });
   if (result.kind === "conflict") return { kind: "maintenance-completed" };
+  if (result.kind === "unchanged" || (result.kind === "written" && result.origin === "transition")) {
+    return { kind: "transition-processed" };
+  }
   const summary =
     result.kind === "invalid"
       ? `state invalid: ${result.issues.join("; ")}`
@@ -289,6 +293,14 @@ function maintenanceFailure(
   preparation: Exclude<OperationPreparationResult, { kind: "ready" }>,
   originalFailure?: { classification: MirrorFailureClass; summary: string },
 ): MirrorOperationOutcome {
+  if (preparation.kind === "transition-processed") {
+    const maintenanceSummary =
+      "state transition was processed while reconciling a pending audit outbox; reread before retrying";
+    const summary = originalFailure
+      ? `original safety block (${originalFailure.classification}): ${originalFailure.summary}; ${maintenanceSummary}`
+      : maintenanceSummary;
+    return stateFailure(context, operationId, summary, "outcome-unknown", false);
+  }
   const maintenanceSummary =
     preparation.kind === "maintenance-completed"
       ? "pending audit outbox maintenance completed; retry in a new invocation"

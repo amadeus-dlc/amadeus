@@ -320,6 +320,7 @@ function readArtifactCollection(
     parsed = JSON.parse(bytes.toString("utf8"));
   } catch (error) {
     problems.push(`cannot parse JSON evidence ${artifact.path}: ${String(error)}`);
+    return { digest: actualDigest, records: new Map() };
   }
   if (!isRecord(parsed) || !hasExactKeys(parsed, COLLECTION_KEYS) || parsed.schemaVersion !== 1 ||
     !Array.isArray(parsed.runs)) {

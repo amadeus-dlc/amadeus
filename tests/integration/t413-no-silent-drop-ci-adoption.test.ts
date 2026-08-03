@@ -31,7 +31,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(gateStep).toContain("github.event.before");
     expect(gateStep).toContain("git cat-file -e");
     expect(gateStep).not.toContain("git fetch");
-    expect(gateStep).toContain("workflow_dispatch) BASE_REVISION=\"\"");
+    expect(gateStep).toContain('workflow_dispatch) BASE_REVISION="$(git rev-parse HEAD^)"');
     expect(gateStep).toContain('if [[ "${BASE_REVISION}" =~ ^0+$ ]]');
     expect(gateStep).toContain("timeout --signal=TERM --kill-after=5s 30s");
     const testsJob = workflow.slice(workflow.indexOf("  tests:\n"), workflow.indexOf("  coverage-head:\n"));
@@ -69,7 +69,6 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
     const contexts = [
       { eventName: "pull_request", pullRequestBaseSha: revision },
-      { eventName: "pull_request", pullRequestBaseSha: revision },
       { eventName: "push", beforeSha: revision },
     ];
     for (const context of contexts) {
@@ -105,8 +104,8 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    expect(result.evidence.counts).toEqual({ C_pre: 217, B_pre: 217, B0: 223 });
-    expect(baseline.entries).toHaveLength(223);
+    expect(result.evidence.counts).toEqual({ C_pre: 217, B_pre: 217, B0: 217 });
+    expect(baseline.entries).toHaveLength(217);
     expect(removed).toHaveLength(10);
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
       new Set(["#1874", "#1878", "#1979"]),

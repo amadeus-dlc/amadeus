@@ -114,6 +114,7 @@ export function generatedLedgerFixture(scale: number): BaselineDoc {
       ruleId: "NSD002" as const,
       file: `packages/framework/core/tools/capacity-${index}.ts`,
       reason: "Generated capacity ledger fixture.",
+      // Schema-valid placeholder used only by this synthetic capacity fixture.
       issues: ["#1979"],
     })),
   };

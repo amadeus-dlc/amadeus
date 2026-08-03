@@ -5685,7 +5685,7 @@ export function setStageSuffix(
   const target = targetStageLine(data, slug);
   if (target === undefined) return { kind: "not-found", target: slug };
 
-  const nextLine = target.line.replace(/(—\s*)(EXECUTE|SKIP)\b/, `$1${action}`);
+  const nextLine = target.line.replace(/(—\s*)(EXECUTE|SKIP)\b.*$/, `$1${action}`);
   const content = `${data.content.slice(0, target.start)}${nextLine}${data.content.slice(target.end)}`;
   return verifyStageMutation(data, content, operation, slug, (line) => line.suffix.startsWith(action));
 }

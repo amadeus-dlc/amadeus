@@ -28,6 +28,7 @@ import {
   parseScopedCheckboxes,
   requireChanged,
   setCheckbox,
+  setStageSuffix,
   stageLineKey,
   StageStateValidationError,
   StateMutationInvariantError,
@@ -306,5 +307,14 @@ describe("setCheckbox() — validation and loud failure", () => {
 
   test("rejects a missing Stage Progress section", () => {
     expect(() => validateStageState("")).toThrow(/section-unrecognized/);
+  });
+});
+
+describe("setStageSuffix()", () => {
+  test("removes a stale SKIP reason when a stage is restored to EXECUTE", () => {
+    const result = setStageSuffix(validateStageState(buildBlock()), "construction", "EXECUTE");
+    const out = requireChanged(result, "test:stage-suffix");
+
+    expect(lineForSlug(out, "construction")).toBe(`- [x] construction ${EM} EXECUTE`);
   });
 });

@@ -61,7 +61,10 @@ export type BootstrapProvenance = {
     readonly identitySetDigest: string;
     readonly entries: ExemptionDoc["entries"];
   };
-  readonly removed: readonly { readonly fingerprint: string; readonly issue: "#1874" | "#1878" }[];
+  readonly removed: readonly {
+    readonly fingerprint: string;
+    readonly issue: "#1874" | "#1878" | "#1979";
+  }[];
   readonly added: readonly string[];
 };
 
@@ -158,12 +161,12 @@ function parseProvenance(repoRoot: string, text: string): BootstrapProvenance {
   const removed = raw.removed.map((value, index) => {
     const entry = record(value, `bootstrap.removed[${index}]`);
     const issue = entry.issue;
-    if (issue !== "#1874" && issue !== "#1878") {
+    if (issue !== "#1874" && issue !== "#1878" && issue !== "#1979") {
       throw new InfraFailure("BASELINE_INVALID", `bootstrap.removed[${index}].issue is not approved`);
     }
     return {
       fingerprint: nonEmptyString(entry.fingerprint, `bootstrap.removed[${index}].fingerprint`),
-      issue: issue as "#1874" | "#1878",
+      issue: issue as "#1874" | "#1878" | "#1979",
     };
   });
   const added = stringArray(raw.added, "bootstrap.added");
@@ -249,7 +252,9 @@ function identitySetDigest(identities: readonly string[]): string {
 }
 
 function sameSet(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((identity) => new Set(right).has(identity));
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return rightSet.size === right.length && left.every((identity) => rightSet.has(identity));
 }
 
 function validateEvidenceBundle(
@@ -377,7 +382,13 @@ function validateStrictSubset(
   assertBootstrap(sameSet(removed, declaredRemoved), "bootstrap removed identities mismatch");
   assertBootstrap(added.length === 0, "bootstrap B0 adds identities outside B_pre");
   assertBootstrap(provenance.added.length === 0, "bootstrap provenance declares added identities");
-  assertBootstrap(sameSet(declaredIssues, ["#1874", "#1878"]), "bootstrap removed issues must be exactly #1874 and #1878");
+  const approvedRemovalIssues = new Set(["#1874", "#1878", "#1979"]);
+  assertBootstrap(
+    declaredIssues.includes("#1874")
+      && declaredIssues.includes("#1878")
+      && declaredIssues.every((issue) => approvedRemovalIssues.has(issue)),
+    "bootstrap removed issues must include #1874 and #1878 and may include #1979",
+  );
   assertBootstrap(!invalidIssueBinding, "bootstrap removed issue binding mismatch");
 }
 

@@ -79,6 +79,7 @@ import {
   resolveProjectDir,
   resolveStage,
   setCheckbox,
+  StateMutationTargetError,
   setField,
   setFieldStrict,
   setIntentDocsOnly,
@@ -656,8 +657,13 @@ function stageCheckboxOrError(
   slug: string,
   operation: string,
 ): ReturnType<typeof parseCheckboxes>[number] {
-  for (const checkbox of parseCheckboxes(content)) {
-    if (checkbox.slug === slug) return checkbox;
+  const matches = parseCheckboxes(content).filter((checkbox) => checkbox.slug === slug);
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    errorWithSlug(
+      slug,
+      `State mutation refused: operation=${JSON.stringify(operation)} phase=validate reason=duplicate-target target=${JSON.stringify(slug)}`,
+    );
   }
   errorWithSlug(
     slug,
@@ -1451,6 +1457,11 @@ export function handleCheckbox(args: string[]): void {
   writeStateFile(pd, content, resolvedIntent, space);
   console.log(JSON.stringify({ updated: true, checkboxes: changes.length, completed_count: completedCount }));
   }, resolvedIntent, space);
+  } catch (cause) {
+    if (cause instanceof StateMutationTargetError) {
+      errorWithSlug(cause.target, errorMessage(cause));
+    }
+    throw cause;
   } finally {
     lockIntent = undefined;
     lockSpace = undefined;

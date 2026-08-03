@@ -58,6 +58,9 @@ import {
 } from "../no-silent-drop/model.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
+const TRUSTED_BASE_REVISION = JSON.parse(
+  readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
+).bootstrapBaseRevision as string;
 const require = createRequire(import.meta.url);
 const temporaryDirectories: string[] = [];
 
@@ -776,6 +779,7 @@ describe("no-silent-drop ledger", () => {
     try {
       for (const name of envNames) delete process.env[name];
       expect(trustedBaseSha()).toBeNull();
+      expect(trustedBaseSha("0".repeat(40))).toBeNull();
       expect(() => trustedBaseSha("short")).toThrow("event-specific full SHA");
     } finally {
       saved.forEach((value, index) => {
@@ -804,6 +808,14 @@ describe("no-silent-drop ledger", () => {
 });
 
 describe("no-silent-drop boundaries", () => {
+  test("check mode fails closed without a trusted base revision", async () => {
+    expect(await runGate("check", REPO_ROOT)).toMatchObject({
+      status: "error",
+      code: "BASELINE_INVALID",
+      detail: expect.stringContaining("trusted base revision"),
+    });
+  });
+
   test("snapshot rejects a symlink in an authoritative scan root", () => {
     const root = mkdtempSync(join(tmpdir(), "nsd-snapshot-"));
     temporaryDirectories.push(root);
@@ -1090,7 +1102,7 @@ describe("no-silent-drop boundaries", () => {
   });
 
   test("real repository check emits the public pass envelope and exit 0", async () => {
-    const result = await runGate("check", REPO_ROOT);
+    const result = await runGate("check", REPO_ROOT, { baseRevision: TRUSTED_BASE_REVISION });
     expect(result).toEqual({ schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [] });
     expect(resultExitCode(result)).toBe(0);
 
@@ -1103,7 +1115,13 @@ describe("no-silent-drop boundaries", () => {
   });
 
   test("CLI writes one JSON document to stdout", () => {
-    const result = spawnSync("bun", ["run", "no-silent-drop"], {
+    const result = spawnSync("bun", [
+      "run",
+      "no-silent-drop",
+      "--",
+      "--base-revision",
+      TRUSTED_BASE_REVISION,
+    ], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       timeout: 30_000,

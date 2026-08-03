@@ -14,6 +14,10 @@ import {
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
 
+function compareBytes(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -215,6 +219,7 @@ export function trustedBaseSha(explicit?: string): string | null {
   if (!FULL_SHA.test(source)) {
     throw new InfraFailure("BASELINE_INVALID", `trusted base must be an event-specific full SHA, got ${source}`);
   }
+  if (/^0+$/.test(source)) return null;
   return source;
 }
 
@@ -234,7 +239,7 @@ export function approvalDigest(approval: ApprovalDoc): string {
   return digest(JSON.stringify({
     schemaVersion: approval.schemaVersion,
     censusDigest: approval.censusDigest,
-    entries: [...approval.entries].sort((a, b) => a.fingerprint.localeCompare(b.fingerprint)),
+    entries: [...approval.entries].sort((a, b) => compareBytes(a.fingerprint, b.fingerprint)),
   }));
 }
 
@@ -285,7 +290,7 @@ export function buildCandidate(
         reason: entry.reason,
         issues: entry.issues,
       };
-    }).sort((a, b) => a.fingerprint.localeCompare(b.fingerprint)),
+    }).sort((a, b) => compareBytes(a.fingerprint, b.fingerprint)),
   };
 }
 

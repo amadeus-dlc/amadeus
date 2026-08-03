@@ -196,7 +196,7 @@ export function mutateMirrorStateAtomic(
     const reduced = reduceMirrorState(snapshot, input.transition, input.now);
     if (reduced.kind === "invalid") return { kind: "invalid", issues: reduced.issues };
     if (reduced.kind === "unchanged")
-      return { kind: "unchanged", value: snapshot, document: doc };
+      return { kind: "unchanged", origin: "transition", value: snapshot, document: doc };
 
     // (7..11) commit business state + outbox, then audit + clear.
     return commitTransaction(ports, input, snapshot, reduced, doc, block);
@@ -217,14 +217,24 @@ function drainExistingOutbox(
   const appendRes = ports.appendArtifactUpdated(outbox);
   if (appendRes.kind === "io-failure" || appendRes.kind === "conflict") {
     // committed-audit-pending: business state already durable; leave outbox.
-    return { kind: "written", value: withoutOutbox(snapshot), document: doc };
+    return {
+      kind: "written",
+      origin: "outbox-drain-blocked",
+      value: withoutOutbox(snapshot),
+      document: doc,
+    };
   }
   const clearedSnapshot = withoutOutbox(snapshot);
   const clearedDoc = writeMirrorStateDocument(doc, block, clearedSnapshot);
   const clearRes = ports.writeDocumentAtomic(clearedDoc);
   if (clearRes.kind !== "ok") {
     // audit durable; outbox clear failed -> converge on a later call.
-    return { kind: "written", value: clearedSnapshot, document: doc };
+    return {
+      kind: "written",
+      origin: "outbox-drain-blocked",
+      value: clearedSnapshot,
+      document: doc,
+    };
   }
   return { kind: "conflict", actualRevision: snapshot.revision };
 }
@@ -280,7 +290,7 @@ function commitTransaction(
   const appendRes = ports.appendArtifactUpdated(outbox);
   if (appendRes.kind === "io-failure" || appendRes.kind === "conflict") {
     // committed-audit-pending -> written; the outbox stays for the next drain.
-    return { kind: "written", value: committedSnapshot, document: committedDoc };
+    return { kind: "written", origin: "transition", value: committedSnapshot, document: committedDoc };
   }
 
   // (11) clear the outbox (revision-invariant maintenance write).
@@ -288,9 +298,9 @@ function commitTransaction(
   const finalDoc = writeMirrorStateDocument(doc, block, finalSnapshot);
   const clearRes = ports.writeDocumentAtomic(finalDoc);
   if (clearRes.kind !== "ok") {
-    return { kind: "written", value: committedSnapshot, document: committedDoc };
+    return { kind: "written", origin: "transition", value: committedSnapshot, document: committedDoc };
   }
-  return { kind: "written", value: finalSnapshot, document: finalDoc };
+  return { kind: "written", origin: "transition", value: finalSnapshot, document: finalDoc };
 }
 
 function withoutOutbox(snapshot: MirrorStateSnapshot): MirrorStateSnapshot {

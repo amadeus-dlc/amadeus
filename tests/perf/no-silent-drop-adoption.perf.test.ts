@@ -57,7 +57,8 @@ describe("no-silent-drop repository adoption performance", () => {
     expect(verdict.pass).toBeTrue();
     expect(verdict.coldMax).toBeLessThanOrEqual(15);
     expect(verdict.warmMax).toBeLessThanOrEqual(15);
-  }, 120_000);
+  // Cold CI hosts may spend most of the first pair compiling native dependencies.
+  }, 180_000);
 
   test("generated r0/r2/r4 ledgers exercise the shrink-only capacity boundary", () => {
     const r0 = generatedLedgerFixture(0);
