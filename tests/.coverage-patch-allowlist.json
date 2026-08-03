@@ -1526,7 +1526,7 @@
   },
   {
     "file": "scripts/promote-self.ts",
-    "lines": "694",
+    "lines": "697",
     "reason": "self-promotion integration tests execute the shipped CLI and verify byte parity; the residual import-meta main wrapper is not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
