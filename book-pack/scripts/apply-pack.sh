@@ -47,23 +47,25 @@ PY
 done
 
 # 4. Pre-seed stage numbers so the walk order is correct.
-#    Compile bootstraps number+name by slug from the existing JSON, and its
-#    own error message sanctions renumbering there. application-design is
+#    Compile bootstraps number+name by slug from the source-owned identity
+#    seed. application-design is
 #    SKIP in the book scope; parking it at 2.9 frees 2.6 so
 #    book-structure-design runs BEFORE units-generation (2.7). The only
 #    stage that required application-design was units-generation, and the
 #    fork points it at book-structure-design instead.
-python3 - "$CL/tools/data/stage-graph.json" <<'PY'
+python3 - "$CL/tools/data/stage-identities.json" <<'PY'
 import json, sys
 path = sys.argv[1]
-graph = json.load(open(path))
-slugs = {s["slug"] for s in graph}
-for s in graph:
+identities = json.load(open(path))
+slugs = {s["slug"] for s in identities}
+for s in identities:
     if s["slug"] == "application-design":
         s["number"] = "2.9"
 if "book-structure-design" not in slugs:
-    graph.append({"slug": "book-structure-design", "number": "2.6", "name": "Book Structure Design"})
-json.dump(graph, open(path, "w"), indent=2)
+    identities.append({"slug": "book-structure-design", "number": "2.6", "name": "Book Structure Design"})
+with open(path, "w") as output:
+    json.dump(identities, output, indent=2)
+    output.write("\n")
 PY
 
 # 5. Recompile: stage-graph.json + scope-grid.json regenerate from the

@@ -14,7 +14,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Readable } from "node:stream";
 import { main } from "../../packages/setup/src/cli.ts";
 import type { CliPorts } from "../../packages/setup/src/cli.ts";
 import type { Http } from "../../packages/setup/src/ports/http.ts";
@@ -24,6 +23,11 @@ import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts"
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
+import {
+  buildReleaseAssetChecksums,
+  releaseAssetFixtureBytes,
+  toReadableStream,
+} from "../lib/setup-release-asset-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
@@ -52,7 +56,8 @@ function v2Entries(): TarFixtureEntry[] {
   ];
 }
 
-function fakeHttp(archive: Buffer, tag: string): Http {
+function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
+  const checksums = buildReleaseAssetChecksums(archive, tag);
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) return Result.ok([{ tag_name: tag, draft: false, prerelease: false }]);
@@ -63,14 +68,13 @@ function fakeHttp(archive: Buffer, tag: string): Http {
       if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
       throw new Error(`unexpected path in fixture: ${path}`);
     },
-    async downloadArchive() {
-      const stream = Readable.toWeb(Readable.from(archive)) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
+    async downloadArchive(url) {
+      return Result.ok(toReadableStream(releaseAssetFixtureBytes(url, archive, checksums, tag)));
     },
   };
 }
 
-function realPorts(archive: Buffer, tag: string): CliPorts {
+function realPorts(archive: Buffer, tag: `v${string}`): CliPorts {
   return {
     tty: {
       isTTY: false,

@@ -23,8 +23,7 @@
 //      still reported (check exit 1) and removed by --apply.
 //   4. A dangling symlink OUTSIDE preserved is diagnosed as an ORPHAN (no
 //      crash) and removed by --apply.
-//   5. Root CLAUDE.md inlines the preserved Claude onboarding file without
-//      importing AGENTS.md.
+//   5. Root CLAUDE.md stays aligned with its two canonical source files.
 //   6. A missing preserved Claude onboarding file fails closed.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -40,9 +39,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
 import { SELF_INSTALL_HARNESSES } from "../../scripts/plugin-projection.ts";
 import {
-  composeRootAgents,
   packageFreshnessArgs,
   promoteSelfMain,
   runPackageFreshness,
@@ -66,9 +65,14 @@ beforeEach(async () => {
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
-  write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
-  write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
-  // Materialize an in-sync self install (also creates CLAUDE.md + cursor).
+  const claudeOnboarding = "@.claude/rules/amadeus.md\n\n# Claude onboarding\n";
+  write(".claude/CLAUDE.md", claudeOnboarding);
+  write("CLAUDE.md", `${PROJECT_INSTRUCTIONS}${claudeOnboarding}`);
+  write(
+    "AGENTS.md",
+    "@.agents/rules/amadeus.md\n@.agents/rules/amadeus-codex-suffix.md\n\n# Project rules\n",
+  );
+  // Materialize an in-sync self install (also creates the cursor).
   expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
   expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
 });
@@ -86,25 +90,9 @@ const plantPreservedDangling = (): string => {
 };
 
 describe("t209 promote-self dangling-symlink resilience", () => {
-  test("root AGENTS keeps project guidance and replaces the generated suffix", () => {
-    const got = composeRootAgents(
-      Buffer.from("@.agents/rules/amadeus.md\n\n# Project rules\n\n# AI-DLC on Codex CLI\n\nstale\n"),
-      Buffer.from("@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\nfresh\n"),
-    ).toString("utf-8");
-    expect(got).toBe("@.agents/rules/amadeus.md\n\n# Project rules\n\n# AI-DLC on Codex CLI\n\nfresh\n");
-    expect(got.match(/@\.agents\/rules\/amadeus\.md/g)).toHaveLength(1);
-  });
-
-  test("root AGENTS keeps the dist import when no project guidance exists", () => {
-    const dist = Buffer.from("@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\nfresh\n");
-    expect(composeRootAgents(Buffer.alloc(0), dist)).toEqual(dist);
-  });
-
-  test("root CLAUDE inlines Claude onboarding without importing AGENTS", () => {
+  test("root CLAUDE matches project instructions plus Claude onboarding", () => {
     const got = readFileSync(join(root, "CLAUDE.md"), "utf-8");
-    expect(got).toStartWith("## Project Instructions\n");
-    expect(got).toContain("@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
-    expect(got).not.toContain("@AGENTS.md");
+    expect(got).toBe(`${PROJECT_INSTRUCTIONS}@.claude/rules/amadeus.md\n\n# Claude onboarding\n`);
   });
 
   test("fails when the preserved Claude onboarding file is missing", async () => {
@@ -164,11 +152,11 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "kimi"],
     ]);
     expect(packageFreshnessArgs("check")).toEqual([
-      ["scripts/package.ts", "claude", "--check"],
-      ["scripts/package.ts", "codex", "--check"],
-      ["scripts/package.ts", "cursor", "--check"],
-      ["scripts/package.ts", "opencode", "--check"],
-      ["scripts/package.ts", "kimi", "--check"],
+      ["scripts/package.ts", "claude"],
+      ["scripts/package.ts", "codex"],
+      ["scripts/package.ts", "cursor"],
+      ["scripts/package.ts", "opencode"],
+      ["scripts/package.ts", "kimi"],
     ]);
   });
 

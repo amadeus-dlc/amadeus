@@ -1,1 +1,0 @@
-{"version":"1.0.0","enabled":true,"name":"amadeus-audit-logger","description":"Logs artifact create/update events on file writes to amadeus-docs/.","when":{"type":"postToolUse","toolTypes":["write"]},"then":{"type":"runCommand","command":"bun .kiro/hooks/amadeus-kiro-adapter.ts audit-and-sensors"}}

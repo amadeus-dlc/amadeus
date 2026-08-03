@@ -19,18 +19,13 @@ const knownPrefixes = [
   ["amadeus", "-"].join(""),
 ] as const;
 const forbiddenPrefixes = knownPrefixes.filter((known) => known !== prefix);
-// The migrator, its generated self-install copies, exact token fixture,
-// compatibility documents, and upstream-sync skill deliberately quote upstream
+// The migrator, exact token fixture, compatibility documents, and upstream-sync
+// skill deliberately quote upstream
 // paths and filenames. Keep the exemption content-only: authored paths still
 // follow this repository's naming contract, and tracked-file assertions prevent
 // stale rows.
 const foreignPrefixContentAllowlist = new Set([
   "packages/framework/core/tools/amadeus-migrate.ts",
-  ".claude/tools/amadeus-migrate.ts",
-  ".codex/tools/amadeus-migrate.ts",
-  ".cursor/tools/amadeus-migrate.ts",
-  ".kimi-code/tools/amadeus-migrate.ts",
-  ".opencode/tools/amadeus-migrate.ts",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
   "docs/research/upstream-sync/ledger.json",
@@ -52,10 +47,6 @@ const foreignPrefixContentAllowlist = new Set([
   "contrib/skills/amadeus-upstream-sync/SKILL.md",
   "contrib/skills/amadeus-upstream-sync/evals/evals.json",
   "contrib/skills/amadeus-upstream-sync/references/artifact-contracts.md",
-  ".claude/skills/amadeus-upstream-sync/SKILL.md",
-  ".claude/skills/amadeus-upstream-sync/references/artifact-contracts.md",
-  ".agents/skills/amadeus-upstream-sync/SKILL.md",
-  ".agents/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   "tests/fixtures/upstream-v2-migration/operational-tokens.txt",
 ]);
 

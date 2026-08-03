@@ -154,7 +154,7 @@ L = リード、S = サポート
 
 1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を持つ `packages/framework/core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`packages/framework/core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
 2. `packages/framework/core/knowledge/{name}-agent/` にナレッジファイルを追加する
-3. エージェントが参加するステージファイル(`packages/framework/core/amadeus-common/stages/`)にエージェントを追加する — 各ステージのフロントマターで `lead_agent` / `support_agents` を設定する。コンパイル済みの `tools/data/stage-graph.json` はそのフロントマターから `bun scripts/package.ts` によって生成される。手編集は絶対にしない(`package.ts --check` のドリフトガードが手編集されたdistでCIを失敗させる)。
+3. エージェントが参加するステージファイル(`packages/framework/core/amadeus-common/stages/`)にエージェントを追加する — 各ステージのフロントマターで `lead_agent` / `support_agents` を設定する。コンパイル済みの `tools/data/stage-graph.json` はそのフロントマターから `bun scripts/package.ts` によって生成される。frontmatterを編集してからbuildする。生成物は未追跡のまま保ち、CIがgraph不変量を検査し、隔離した2回のbuildにbyte同一性を要求する。
 4. ディストリビューションを再生成する: `bun scripts/package.ts`(その後 `--check` でドリフトがないことを確認)
 5. 手動保守のナレッジテーブルにエージェント→examplesの行を追加する(space レベルのチームナレッジディレクトリは `amadeus/knowledge/{name}-agent/` で、コンテンツがあるときにチームが作成する — エンジンはスキャフォールドしない)
 6. テストを更新する: ファイル存在のスモークテスト、ステージ-エージェント相互参照のフィーチャーテスト

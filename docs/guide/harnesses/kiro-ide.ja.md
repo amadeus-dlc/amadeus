@@ -112,9 +112,9 @@ Kiro IDE は `.kiro/hooks/` 配下の `.kiro.hook` ファイルを通じてフ�
 ## フレームワーク開発者向け
 
 `dist/kiro-ide` は `bun scripts/package.ts kiro-ide` によって `packages/framework/core/` +
-`packages/framework/harness/kiro-ide/` から **生成** されます(`{{HARNESS_DIR}}` トークンを `.kiro`
+`packages/framework/harness/kiro-ide/` から未追跡のローカル出力として**生成**されます(`{{HARNESS_DIR}}` トークンを `.kiro`
 に置換し、`rules/` → `steering/` をリネームしたコアコピー)。
-`bun scripts/package.ts --check` がドリフトガードで、CI で実行されます。作成された
+CIは隔離した2回のbuildを比較し、source-only境界を検査します。作成された
 Kiro IDE サーフェスは `packages/framework/harness/kiro-ide/` にあります: オーケストレーター
 スキル(`skills/amadeus/`)、エージェント JSON(`agents/`)、フックアダプタと
 `.kiro.hook` ファイル(`hooks/`)、`settings/cli.json`、`AGENTS.md` — それら

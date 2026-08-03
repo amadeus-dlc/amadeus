@@ -35,17 +35,29 @@ export function createExtractedPayload(
 ): Result<ExtractedPayload, FetchError> {
   const wrapper = resolveWrapperDir(extractedDir);
   if (wrapper.type === "err") return wrapper;
-  const distDir = join(wrapper.value, "dist");
+  const legacyDistDir = join(wrapper.value, "dist");
 
-  let distEntries: string[];
+  let payloadDir = legacyDistDir;
+  let payloadEntries: string[];
   try {
-    distEntries = readdirSync(distDir);
-  } catch {
-    return Result.err(createFetchError("payload-invalid", `missing dist/ directory in extracted archive (expected ${distDir})`));
+    payloadEntries = readdirSync(legacyDistDir);
+  } catch (cause) {
+    if (!isMissingPath(cause)) {
+      return Result.err(createFetchError("payload-invalid", `could not read legacy distribution root ${legacyDistDir}: ${String(cause)}`));
+    }
+    payloadDir = wrapper.value;
+    try {
+      payloadEntries = readdirSync(payloadDir);
+    } catch (cause) {
+      return Result.err(createFetchError("payload-invalid", `could not read distribution root ${payloadDir}: ${String(cause)}`));
+    }
   }
   const available = harnessNames.filter(
-    (name) => distEntries.includes(name) && statSync(join(distDir, name)).isDirectory(),
+    (name) => payloadEntries.includes(name) && statSync(join(payloadDir, name)).isDirectory(),
   );
+  if (available.length === 0) {
+    return Result.err(createFetchError("payload-invalid", "distribution contains none of the supported harnesses"));
+  }
 
   return Result.ok(
     Object.freeze({
@@ -54,11 +66,15 @@ export function createExtractedPayload(
         if (!available.includes(harness)) {
           return Result.err(createFetchError("payload-invalid", `harness "${harness}" is not present in this distribution`));
         }
-        return Result.ok(join(distDir, harness));
+        return Result.ok(join(payloadDir, harness));
       },
       availableHarnesses(): readonly HarnessName[] {
         return available;
       },
     }),
   );
+}
+
+function isMissingPath(cause: unknown): boolean {
+  return cause instanceof Error && "code" in cause && (cause as { code?: string }).code === "ENOENT";
 }

@@ -85,9 +85,9 @@ The flow is:
 edit stage .md YAML  →  compile  →  stage-graph.json  →  runtime reads it
 ```
 
-After editing any stage's frontmatter, run the compile to regenerate `stage-graph.json`, then commit both together. CI runs a drift check that fails the merge if the JSON doesn't match what the YAML would compile to — so a forgotten recompile is caught, not shipped.
+After editing any stage's frontmatter, run `bun run build` to regenerate the local `stage-graph.json`. The generated graph stays untracked. CI compiles from the authoritative YAML and validates graph invariants before tests.
 
-The rule that follows: **do not hand-edit `stage-graph.json`.** Edit the YAML, recompile. A hand-edit either gets clobbered by the next compile or trips the drift check. The compile command and the drift guard are documented in [Authoring flow](../reference/15-stage-definition.md#authoring-flow).
+The rule that follows: **do not hand-edit `stage-graph.json`.** Edit the YAML and rebuild; the next build replaces any local hand-edit. The compile command and invariant check are documented in [Authoring flow](../reference/15-stage-definition.md#authoring-flow).
 
 ---
 

@@ -274,6 +274,30 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(runCheck(repoRoot)).toBe(0);
   });
 
+  test("git branch: deletion-only files cannot exhaust the added-line diff buffer", () => {
+    const deletedPath = join(repoRoot, "deleted-generated.txt");
+    writeFileSync(deletedPath, Buffer.alloc(65 * 1024 * 1024, 0x78));
+    expect(spawnSync("git", ["add", "deleted-generated.txt"], { cwd: repoRoot }).status).toBe(0);
+    expect(
+      spawnSync("git", ["commit", "-m", "test: add generated fixture"], { cwd: repoRoot }).status,
+    ).toBe(0);
+    rmSync(deletedPath);
+    expect(spawnSync("git", ["add", "deleted-generated.txt"], { cwd: repoRoot }).status).toBe(0);
+    expect(
+      spawnSync("git", ["commit", "-m", "test: remove generated fixture"], { cwd: repoRoot }).status,
+    ).toBe(0);
+
+    const d = fixtureDir();
+    const lcovPath = join(d, "lcov.info");
+    writeFileSync(lcovPath, "");
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    delete process.env.AMADEUS_PATCH_DIFF;
+    process.env.AMADEUS_PATCH_BASE_REF = "HEAD^";
+    process.env.AMADEUS_PATCH_ALLOWLIST = join(d, "no-allowlist.json");
+
+    expect(runCheck(repoRoot)).toBe(0);
+  });
+
   test("git branch: unknown base ref fails closed", () => {
     const d = fixtureDir();
     const lcovPath = join(d, "lcov.info");

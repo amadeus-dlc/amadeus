@@ -59,6 +59,7 @@ import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 const HOOKS_DIR = join(AMADEUS_SRC, "hooks");
 const SETTINGS = join(AMADEUS_SRC, "settings.json.example");
 const DOC = join(REPO_ROOT, "docs", "reference", "06-hooks-and-tools.md");
+const SETTINGS_TRANSPORT_HOOKS = new Set(["amadeus-dispatch.ts"]);
 
 // --- Ground truth A: hook scripts on disk (hooks/amadeus-*.ts) -----------------
 // The .sh did `ls -1 "$HOOKS_DIR"/amadeus-*.ts | wc -l`.
@@ -166,9 +167,9 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
   });
 
   // --- Ground truth cross-check: disk == settings total ---
-  test("3: ground truth cross-check — settings total registrations == hook files on disk [.sh test 3]", () => {
+  test("3: ground truth cross-check — settings registrations plus transport helpers == hook files on disk [.sh test 3]", () => {
     const { total } = settingsCounts();
-    expect(total).toBe(diskHookCount());
+    expect(total + SETTINGS_TRANSPORT_HOOKS.size).toBe(diskHookCount());
   });
 
   // --- Doc count-free contract (FR-6) ---
@@ -211,7 +212,9 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     // wires there.
     const statusLineEntries = inventory.filter((e) => e.annotation.includes("statusLine"));
     expect(statusLineEntries.map((e) => e.script)).toEqual([settingsStatusLineScript() ?? "<unwired>"]);
-    expect(inventory.length - statusLineEntries.length).toBe(settingsCounts().block);
+    expect(inventory.length - statusLineEntries.length - SETTINGS_TRANSPORT_HOOKS.size).toBe(
+      settingsCounts().block,
+    );
   });
 
   // --- Doc reverse: the doc's own split is whole, counted from the inventory ---
@@ -225,7 +228,9 @@ describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-co
     const inventory = docHookInventory();
     const statusLineEntries = inventory.filter((e) => e.annotation.includes("statusLine"));
     expect(statusLineEntries.length).toBe(settingsCounts().statusline);
-    expect(inventory.length - statusLineEntries.length).toBe(settingsCounts().block);
+    expect(inventory.length - statusLineEntries.length - SETTINGS_TRANSPORT_HOOKS.size).toBe(
+      settingsCounts().block,
+    );
     expect(inventory.length).toBe(diskHookCount());
   });
 });

@@ -2,7 +2,7 @@
 
 > 言語: [English](09-porting-to-a-new-harness.md) | **日本語**
 
-AI-DLC は **1つのコア、多数のハーネス** から出荷されます — 今日では Claude Code、Kiro CLI、Kiro IDE、Codex CLI で、その集合はオープンです。手で執筆されるソースは、ハーネス中立の `packages/framework/core/` に加えて、CLI ごとの薄い `packages/framework/harness/<name>/` 面です。パッケージャ(`scripts/package.ts`)が、コミットされた各 `dist/<harness>/` ツリーを再生成します。もう1つハーネスを追加するのは **1つのディレクトリと1つのマニフェスト行** です — エンジン、方法論、ハーネスディレクトリ/ルールの解決は `packages/framework/core/` の編集を一切要しません。唯一のオプションの例外は、ハーネスごとの `--doctor` アーム(Step 2 参照)です。このページはその契約を歩きます。
+AI-DLC は **1つのコア、多数のハーネス** から出荷されます — 今日では Claude Code、Kiro CLI、Kiro IDE、Codex CLI で、その集合はオープンです。手で執筆されるソースは、ハーネス中立の `packages/framework/core/` に加えて、CLI ごとの薄い `packages/framework/harness/<name>/` 面です。パッケージャ(`scripts/package.ts`)が未追跡のローカル `dist/<harness>/` ツリーを再生成し、release CIがクリーンcheckoutから公開assetを構築します。もう1つハーネスを追加するのは **1つのディレクトリと1つのマニフェスト行** です — エンジン、方法論、ハーネスディレクトリ/ルールの解決は `packages/framework/core/` の編集を一切要しません。唯一のオプションの例外は、ハーネスごとの `--doctor` アーム(Step 2 参照)です。このページはその契約を歩きます。
 
 > このリポジトリにおける「harness」の3つの意味: **`packages/framework/harness/`**(このページが扱う CLI ごとの配布面)、**`docs/harness-engineering/`**(このガイド)、そして **`tests/harness/`**(テストスイートのヘルパーライブラリ)。互いに無関係で、配布物なのは最初のものだけです。
 
@@ -15,14 +15,14 @@ packages/framework/harness/
   kiro/    manifest.ts · skills/amadeus/ · agents/*.json · hooks/amadeus-kiro-adapter.ts · settings/cli.json · AGENTS.md
   codex/   manifest.ts · emit.ts · skills/amadeus/ · hooks/amadeus-codex-adapter.ts
 scripts/
-  package.ts               # bun scripts/package.ts [<name>] [--check]
+  package.ts               # bun scripts/package.ts [<name>]
   manifest-types.ts        # すべてのマニフェストが実装する HarnessManifest 契約
-dist/<name>/               # 生成・コミット・ドリフトガード対象
+dist/<name>/               # 生成・未追跡のローカル出力
 ```
 
-`packages/framework/core/` の散文は `{{HARNESS_DIR}}` トークンでハーネスディレクトリを名指しします。パッケージャはマニフェストが宣言する `harnessDir`(`.claude` / `.kiro` / `.codex` / あなたの `.foo`)に何であれ置換します。`.ts` は変換されずバイトコピーされます — `packages/framework/core/tools/amadeus-lib.ts` の実行時 `harnessDir()` シームが、出荷されたレイアウトから実行時にディレクトリを導出します(オープンセット: ハードコードされたリストではなく、ツール自身のパスからディレクトリ名を読みます)。したがって同じツールのソースがすべてのツリーで実行されます。受け入れゲートは **バイト同一性** です: ハーネスを再生成すると、そのコミット済み dist を正確に再現しなければなりません(`package.ts --check`)。
+`packages/framework/core/` の散文は `{{HARNESS_DIR}}` トークンでハーネスディレクトリを名指しします。パッケージャはマニフェストが宣言する `harnessDir`(`.claude` / `.kiro` / `.codex` / あなたの `.foo`)に何であれ置換します。`.ts` は変換されずバイトコピーされます — `packages/framework/core/tools/amadeus-lib.ts` の実行時 `harnessDir()` シームが、出荷されたレイアウトから実行時にディレクトリを導出します(オープンセット: ハードコードされたリストではなく、ツール自身のパスからディレクトリ名を読みます)。したがって同じツールのソースがすべてのツリーで実行されます。受け入れゲートは **再現性** です: CIは隔離した2つのworkspaceですべてのハーネスを再生成し、結果のbyte同一性を要求します。
 
-パッケージャは `packages/framework/harness/` をスキャンして `manifest.ts` を探すことでハーネスを **発見** します。したがって新しいディレクトリは、パッケージャ自体を編集することなく、デフォルトの `bun scripts/package.ts` と `--check` によってビルドされます — 「1つのディレクトリと1つのマニフェスト行、共有コードの編集はゼロ」の文字通りの意味です。
+パッケージャは `packages/framework/harness/` をスキャンして `manifest.ts` を探すことでハーネスを **発見** します。したがって新しいディレクトリは、パッケージャ自体を編集することなく、デフォルトの `bun scripts/package.ts` によってビルドされます — 「1つのディレクトリと1つのマニフェスト行、共有コードの編集はゼロ」の文字通りの意味です。
 
 ## Step 1 — マニフェスト(宣言的な80%)
 
@@ -41,7 +41,7 @@ Claude のマニフェストは最小限のリファレンスです(リネーム
 
 ## Step 2 — フックアダプタ(ハーネスごとのシム)
 
-コアフックは Claude 形状の stdin を正規形として消費します。新しいハーネスは **1つの執筆されたアダプタ**(`packages/framework/harness/<name>/hooks/amadeus-<name>-adapter.ts`、`harnessFiles` + `authoredExempt` に列挙)を出荷し、それがハーネスのフックペイロードをその契約に正規化し、共有コアフックへサブプロセスパイプします。コアフックをロジック + アダプタに分割しないでください — コア本体はすべてのハーネスでバイト共有されたまま保たれます(`--check` がそれを証明します: dist 内のすべての `.ts` はその `packages/framework/core/` ソースとバイト同一です)。
+コアフックは Claude 形状の stdin を正規形として消費します。新しいハーネスは **1つの執筆されたアダプタ**(`packages/framework/harness/<name>/hooks/amadeus-<name>-adapter.ts`、`harnessFiles` + `authoredExempt` に列挙)を出荷し、それがハーネスのフックペイロードをその契約に正規化し、共有コアフックへサブプロセスパイプします。コアフックをロジック + アダプタに分割しないでください — コア本体はすべてのハーネスでバイト共有されたまま保たれます(core byte-identityテストが、投影されたすべての `.ts` と `packages/framework/core/` ソースの一致を検証します)。
 
 アダプタをハーネスのイベントにハーネス独自の方法で配線します: Kiro は `agents/amadeus.json` にターゲットを登録し、Codex は `hooks.json` を emit します。実際のコアフック消費者を持つイベントだけを登録してください。
 
@@ -49,9 +49,9 @@ Claude のマニフェストは最小限のリファレンスです(リネーム
 
 ## Step 3 — `emit.ts`(命令的な20%、必要な場合のみ)
 
-宣言的な行では表現できない構造的な相違は `emit.ts` です — マニフェストが参照するプラグインで、パッケージャが `EmitContext`(`coreRoot`、`harnessRoot`、`distRoot`、`harnessDir`、`substituteToken`、`check`)とともに呼び出し、それが書いたパスを返します。Codex のものが実例です: `config.toml`、`hooks.json`、フック信頼の事前シード、`AGENTS.md` のマージ、エージェント TOML の転置、そして `.agents/skills/` ツリー(`packages/framework/core/tools/amadeus-runner-gen.ts` がエクスポートするレンダー関数から `AMADEUS_HARNESS_DIR` の下で構成され、決して再実装されない)。面がすべて執筆されたファイルであるハーネス(Claude、Kiro)は `emit: null` を設定します。
+宣言的な行では表現できない構造的な相違は `emit.ts` です — マニフェストが参照するプラグインで、パッケージャが `EmitContext`(`coreRoot`、`harnessRoot`、`distRoot`、`harnessDir`、`substituteToken`、`check`)とともに呼び出し、それが書いたパスを返します。`check` はAPI互換性のため残っていますが、source-only packagerはwrite modeでemitterを呼び、CIが隔離した出力treeを比較します。Codex のものが実例です: `config.toml`、`hooks.json`、フック信頼の事前シード、`AGENTS.md` のマージ、エージェント TOML の転置、そして `.agents/skills/` ツリー(`packages/framework/core/tools/amadeus-runner-gen.ts` がエクスポートするレンダー関数から `AMADEUS_HARNESS_DIR` の下で構成され、決して再実装されない)。面がすべて執筆されたファイルであるハーネス(Claude、Kiro)は `emit: null` を設定します。
 
-`emit` は `ctx.check` を尊重します: `--check` の下では、出力を diff し、書き込む代わりに問題を返します。したがってドリフトガードは `<harnessDir>` の外に存在する emit 所有のファイル(例: `.agents/skills/`、ルートの `AGENTS.md`)をカバーします。
+`<harnessDir>` の外に存在するemit所有ファイル(例: `.agents/skills/`、root `AGENTS.md`)も、隔離build比較とsource-only境界検査の対象です。
 
 ## Step 4 — ただ1つの変換クラス
 
@@ -59,11 +59,12 @@ Claude のマニフェストは最小限のリファレンスです(リネーム
 
 ## Step 5 — テストとゲート
 
-- パッケージング同一性テスト(`t145`)が `package.ts --check` を実行します。これはマニフェストを持つすべてのハーネスを自動的にカバーします。
+- reproducible-build CI jobが、発見した全manifestを隔離した2つのworkspaceでpackageし、完全な出力をbyte単位で比較します。
+- `bun run source-only:check` が、bootstrap/configuration allowlist外の生成ハーネス出力が追跡・stageされた場合に拒否します。
 - `<name>` フックアダプタ契約テストが、ライブ捕捉されたペイロードをアダプタに通し、観測可能なコアフックの効果をアサートします。
 - ライブジャーニーは `skipReason()`(`AMADEUS_<NAME>_*_LIVE=1` 環境変数 + バイナリの存在 + 認証済み)でゲートされた e2e として出荷され、決定的な層ではクリーンにスキップされ、移植がマージされる前にローカルでグリーンに実行されます。
 
-再生成には `bun scripts/package.ts <name>`、ドリフトガードには `--check`、そしてゲートには決定的なスイート(`bash tests/run-tests.sh --smoke --unit --integration -P 8`)に加えてライブジャーニーを実行してください。
+再生成には `bun scripts/package.ts <name>`、Git境界検査には `bun run source-only:check`、そしてゲートには決定的なスイート(`bash tests/run-tests.sh --smoke --unit --integration -P 8`)に加えてライブジャーニーを実行してください。CIが隔離buildの再現性比較を行います。
 
 ## 次へ
 

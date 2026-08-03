@@ -55,6 +55,7 @@ scopes:
   - mvp
   - infra
   - workshop
+  - installer-distribution
 inputs: NFR design artifacts, application design, functional design
 outputs: "deployment-architecture.md, infrastructure-services.md, monitoring-design.md, cicd-pipeline.md, CONDITIONAL: shared-infrastructure.md (under this stage's per-unit record dir, engine-resolved)"
 ---

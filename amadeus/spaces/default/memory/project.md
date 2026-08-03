@@ -7,7 +7,7 @@
 
 ## Way of Working
 
-実装時は `packages/framework/core/` または `packages/framework/harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
+実装時は `packages/framework/core/` または `packages/framework/harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは未追跡のローカル生成物として `bun run build` で再生成する。
 
 - 大規模な initiative を規模だけを理由に複数 intent へ分割しない。1 intent が監査・状態機械・trace の anchor なので、論理的に1つの取り組みを分断すると intent anchor・横断削除ゲート・audit trail が分断される。並行化は intent 分割ではなく units-generation の Unit 設計と Construction Bolt の swarm 並行実装(team.md の parallel-bolts 既定)で実現する。Phase 間が直列依存の場合、並行化の実益は Phase 内 module 分割から得るため、unit 設計ゲートで依存グラフを人が確認する (learned 2026-07-29) <!-- cid:intent-capture:c4-2 -->
 - read-only 目的で dispatch するサブエージェント（証拠スキャン・コードスキャン等）への prompt には、engine 操作（amadeus-orchestrate.ts の next/report/park、state tool の直接呼出し）を実行しないことと、finding を最終メッセージとして返すことだけを明示する。スキャナが report を試みると gate が早期オープンし QUESTION_ANSWERED が拒否され、park を試みると workflow が停止する（260729-otel-upstream practices-discovery で両方を実測）。調査系サブエージェントはループの制御を持たず、状態遷移は conductor のみが行う (learned 2026-07-29) <!-- cid:practices-discovery:c2-engine-mutation-ban -->
@@ -22,7 +22,7 @@
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・Release Asset 配布・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
@@ -44,7 +44,7 @@
 - `coverage:ci` をfull CIとcoverageの統合証跡として扱う。同じ `--ci` runnerをcoverage付きで実行し、全test files・assertionsを完走するため (learned 2026-08-02) <!-- cid:build-and-test:c1-260802-plugin-optin-parity -->
 ## Deployment
 
-デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
+デプロイ基盤は持たず、リリースは npm パッケージ配布、GitHub Release Asset、タグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、隔離2回ビルドの再現性検査、source-only境界検査、グラフ不変量検査、smoke+unit+integration tests を実行する。
 
 リリースは release.yml の workflow_dispatch 一本で行う。release-it がバージョン同期、`vX.Y.Z` タグ、GitHub Release ノート、npm publish を実行する。手書きの `CHANGELOG.md` は持たず、PR や amadeus ワークフローからバージョンを上げない。
 
@@ -64,7 +64,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - リンター: Biome 2.4系(フォーマッタ無効)
 - テスト: bun test ベースの自作ランナー `tests/run-tests.sh`(smoke / unit / integration / e2e の4層)
 - 主要開発依存: agent SDK、Biome、TypeScript、fast-check。TUI E2E は Bun から tmux バックエンドを駆動する
-- 構成: `packages/framework/core/`(ハーネス中立のソースオブトゥルース)、`packages/framework/harness/<name>/`(ハーネス別表層)、`scripts/package.ts`(ビルド)、`dist/<harness>/`(生成・コミット・ドリフトガード対象)、`docs/`
+- 構成: `packages/framework/core/`(ハーネス中立のソースオブトゥルース)、`packages/framework/harness/<name>/`(ハーネス別表層)、`scripts/package.ts`(ビルド)、`dist/<harness>/`(未追跡のローカル生成物)、`docs/`
 
 ## Decided
 
@@ -85,12 +85,11 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER 手書きの `CHANGELOG.md` をリポジトリに復活させない — 2026-07-09 に削除済み。リリースノートは release.yml の GitHub Release 自動生成ノートが唯一のソース (user decision 2026-07-09)
 - NEVER 既存テストの赤を「自分と無関係」を理由に無視して作業を続行したり、赤いスイートをグリーン・完了として報告したりしない。変更前のベースラインを確認し、自分の変更による失敗は直す。既存の無関係な失敗は、安全かつ低コストなら修正し、それ以外は Issue に記録して明示的にフラグする。
 
-- NEVER `dist/<harness>/` を実装の近道として手編集しない。 (affirmed 2026-07-07)
 - NEVER インストーラの挙動を変更するとき、正本・配布物・セルフインストールツリーをコミット間で不整合にしない。 (affirmed 2026-07-07)
-- NEVER 決定的なドリフトガードが存在する検査を、ローカルだけの手動チェックリストで代替しない。 (affirmed 2026-07-07)
+- NEVER 隔離2回ビルドの再現性検査、source-only境界検査、グラフ不変量検査を、ローカルだけの手動チェックリストで代替しない。コミット済み生成物とのbyte parityではなく、独立ビルド結果と正本の性質を検証する。 (revised 2026-08-03; affirmed 2026-07-07)
 - NEVER 利用者側の Bun-only 前提を変更する理由を文書化せず、配布フレームワークへ runtime dependency を追加しない。 (affirmed 2026-07-07)
 - NEVER `packages/framework/core/` / `packages/framework/harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
-- NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
+- NEVER `dist/` の追跡境界・配置・配布経路の変更を internal refactor として扱わない。README、docs、tests、self-promotion、CI、installer、release asset への user-facing impact を棚卸しする。本source-only移行では Intent `260802-source-only-dist` の FR-6 / ADR-A8 / u9-docs-norms で棚卸しを実施した。 (revised 2026-08-03; affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
 - NEVER walking-skeleton stance が有効なとき、standing grant に walking-skeleton gate を認可させない。 (affirmed 2026-07-25)
 - NEVER 想定内の grant 失効・取消・scope 不一致 fallback を、`ERROR_LOGGED` を発生させる fatal error 経路へ流さない。 (affirmed 2026-07-25)
@@ -99,20 +98,20 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER automatically edit or close an Issue whose Amadeus ownership provenance is absent or inconsistent. (affirmed 2026-07-24)
 - NEVER treat a GitHub mirror failure as permission to silently lose synchronization state or permanently stop the AI-DLC workflow. (affirmed 2026-07-24)
 - NEVER add a backward-compatibility shim, generic tracker transport, scheduler, daemon, or unrelated large-module refactor for this Intent. (affirmed 2026-07-24)
-- NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
+- NEVER edit generated `dist/` or self-install copies as independent sources of truth; they are disposable local build output and are not review or commit surfaces. (revised 2026-08-03; affirmed 2026-07-24)
 - ユーザー向けの質問と成果物では、正式定義されていない略称や専門用語を使わない。定義済みの用語または平易な日本語を使う。 (learned 2026-08-02) <!-- cid:requirements-analysis:c3-260802-plugin-optin-parity -->
 ## Mandated
 
 - ALWAYS telemetry の export 境界(Local Exporter／OTLP Relay の送出点)でも redaction filter を通す — write-time のみの redaction に留めない。「機微情報を Signal Stores へ流さない」制約は書込時と送出時の二層で担保する (affirmed 2026-07-29、260729-otel-upstream practices-discovery) <!-- cid:practices-discovery:export-boundary-redaction -->
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
-- ALWAYS `packages/framework/core/` または `packages/framework/harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)
-- ALWAYS セルフインストールされる全ハーネスツリーに影響する正本変更後は `bun run promote:self` を実行する。 (affirmed 2026-07-07)
-- ALWAYS インストーラ関連の検証に `bun run dist:check` と `bun run promote:self:check` を含め、生成された配布物との一致を確認する。 (affirmed 2026-07-07)
+- ALWAYS `packages/framework/core/` または `packages/framework/harness/<name>/` を正本として編集し、`bun run build` で未追跡の `dist/` とセルフインストール面を再生成する。 (revised 2026-08-03; affirmed 2026-07-07)
+- ALWAYS セルフインストールされる全ハーネスツリーに影響する正本変更後は `bun run build` を実行し、追跡ファイルが不変であることを確認する。 (revised 2026-08-03; affirmed 2026-07-07)
+- ALWAYS インストーラ関連の検証に隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、関連テストを含める。Release Asset はクリーンcheckoutのrelease workflowだけが生成し、ローカル生成物とのbyte parityを追跡ファイルへ要求しない。 (revised 2026-08-03; affirmed 2026-07-07)
 - ALWAYS インストーラ変更はマージ前に `bun run typecheck`、`bun run lint`、関連する `tests/run-tests.sh` プロファイルで検証する。 (affirmed 2026-07-07)
 - ALWAYS インストーラの最初の Construction Bolt を小さな end-to-end package setup slice とし、広範な拡張より前にゲートする。 (affirmed 2026-07-07)
 - ALWAYS layout-normalization の判断では `code-structure`, `technology-stack`, `dependencies`, `code-quality-assessment`, `architecture`, `business-overview` の CodeKB 根拠を参照する。 (affirmed 2026-07-07)
-- ALWAYS `dist/` またはセルフインストールされるハーネスツリーの path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
+- ALWAYS `dist/` またはセルフインストールされるハーネスツリーのpathを変える案では、再現性検査、source-only境界検査、グラフ不変量検査、Release Assetとinstallerの互換性を同じ成果物に書く。 (revised 2026-08-03; affirmed 2026-07-07)
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 - ALWAYS harness 専用ツールを `packages/framework/core/tools/` に置かない — 全6ハーネス manifest の coreDirs が tools を投影するため構造的に全ハーネス dist へ漏出する。harness 専用は `packages/framework/harness/<name>/tools/`+harnessFiles 投影に置く(core 中立層/harness 表層境界の具体化。E-770-CGBT 2026-07-18 採用 3/3 — e4 提案+e1 GoA1+e3 GoA2 留保=小型1行統合。票: 初回配信 11:42Z 頃 → e3 11:43:21Z(0件)→ e4 11:44:07Z(本候補提案)→ e1 11:44:22Z(GoA3 留保)→ 追加ラウンド配信 11:44Z 台 → e1 11:44:55Z(採用 GoA1)→ e3 11:45:06Z(採用 GoA2)→ 開票 11:45Z 台。実測根拠: E-770-CG2 裁定(reviewer が core/tools 配置の漏出を捕捉、manifest 6面 :26-:39 実測)+#1212 実装(harnessFiles 化で漏出0)) (learned 2026-07-18) <!-- cid:code-generation:harness-tools-placement -->
@@ -147,7 +146,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 概念の改名・所有移管を含む修正では、旧名・旧所属を全成果物(上流の unit 定義・関係図・questions ファイル含む)で grep してから再レビューに出す — 伝播漏れはレビューイテレーションを1回消費する最頻出の欠陥 (learned 2026-07-08) <!-- cid:functional-design:c3 -->
 - NFR 具体化では、ファイル名・タイムスタンプ等の設計値を実行環境の制約(Windows 予約文字、API の実在バージョン)と照合し、性能数値は強制メカニズム(タイムアウト等)から導出する — 照合なしの数値・形式は実装で破綻する (learned 2026-07-08) <!-- cid:nfr-requirements:c3 -->
 - 概念移動時の全成果物 grep には修正中のユニット自身のファイルも含める — 伝播漏れは消費側だけでなく発生元にも残る(functional-design:c3 の補強) (learned 2026-07-08) <!-- cid:nfr-requirements:c5 -->
-- framework 版同期の検証は、パッケージ内コピーの内部整合テストと dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — packages/framework/core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
+- framework版同期の検証は、パッケージ内コピーの内部整合テストと、クリーンcheckoutからのrelease asset生成・隔離2回build再現性検査の相補2機構で扱う。`packages/framework/core/tools/amadeus-version.ts` を触る変更は `scripts/release-version-sync.ts` の全version surface同期と生成成功の確認なしに完了と見なさない (revised 2026-08-03; learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
 - 「修正対象ファイルの目録」「無改修」「実行回数・予算」等の断定的インベントリは、全設計決定が確定した後に導出して書く — 設計途中の早期断定は修正のたびに偽り、レビューイテレーションを消費する(nfr-design で3度観測) (learned 2026-07-08) <!-- cid:nfr-design:c7 -->
 - 「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床 (learned 2026-07-08) <!-- cid:nfr-design:c4 -->
 - レビュー是正で新しい概念・共有物・所有関係(ヘルパー、環境変数、契約など)を導入するときは、その提供側と消費側の全成果物(他ユニット・他ステージ含む)を同時に棚卸しして伝播させ、伝播先一覧を是正コミットに含める — 是正自体が次の伝播漏れの発生源になる(infrastructure-design で2回観測) (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:review-fix-propagation -->
@@ -164,7 +163,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ノルム PR・record-sync PR は leader/作業ブランチから切らず、origin/main から対象コミットのみの単独ブランチで切る — 作業ブランチ起点は工程記録コミットが同乗し main と衝突する(E-PM1 P4 2026-07-16 採用 4/4、#1014 の CONFLICTING→b2cde40fb 載せ替えの実測)。追補(E-PM10A 2026-07-20 採用 4-0 全会一致 GoA 1x4): record-sync の overlay(team ブランチからの amadeus/ 一括 checkout)は base 前進した共有ファイルを無音で巻き戻す — record-sync ブランチでは自 intent 外の M ファイル全数を origin/main と突き合わせ、memory 層は main 版へ復元する(#1264 で team.md が pre-#1259 版に戻り E-GMECG 追補消失を S1 捕捉→是正した実測。票: 配信 01:51:48Z → e3 01:52:32Z → e4/e1 01:53:07Z → e2 01:53:11Z → 開票 01:53:52Z) <!-- cid:requirements-analysis:norm-pr-from-main-base -->
 - 可変長 scope/path 集合を CLI argv へ展開する処理は、空集合を明示 no-op または loud failure へ閉じ、引数省略で CLI 既定の unscoped 全域へ拡張させない。foreign 応答の negative control と unscoped 呼出し0件を assert する。E-PM10A の owned-only/Git 計測規律の argv 境界への追補。実害: leader-owned 対象が空のとき git numstat の pathspec が消え、全リポジトリ差分を leader-owned と誤計測し得た。票: E-LSSCG 配信 2026-07-20T11:40:27Z → e2 11:41:34Z(受理11:41:48Z) → e1 11:41:49Z(受理11:42:23Z) → e4 11:42:21Z(受理11:42:44Z) → 開票11:43:06Z。GoA[E-LSSCG]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:code-generation:e-lsscg-empty-argv-unscoped-guard -->
 - 巨大 PR(dist×4+self-install×2+record 増幅で数百ファイル級)では GitHub diff API が 406 を返し codecov/patch check-run が構造的に生成不能になる — トリアージ4手順: (i) 待ちジョブのログ実文で「未着 timeout」と「赤」を区別 (ii) pulls API(権威)で patch 集計を確定 (iii) 対照として passing PR の head check-runs に codecov/patch の実在を確認 (iv) `Accept: vnd.github.diff` の curl で 406 を直接実測(自己回復クラスとの区別)。恒久対策は Issue #1017(E-PM1 C1 2026-07-16 採用 4/4、PR #982/E-982 実測) <!-- cid:code-generation:mega-pr-codecov-structural-absence -->
-- 新 harness dist ツリーを追加する PR と core を変更する PR の並行は、どちらの head CI でも検出できない dist drift(クロスマージ盲点)を作る — (i) 並行 PR の交差判定(c6)に「dist ツリー集合の変化」を含める (ii) 新ツリー追加 PR の最終 rebase 時は全正本面の regen を必須とする (iii) マージ直後の main push CI 赤を loud 監視する。旧 base ローカルの dist:check は新ツリー非対象の構造的偽 green になる点に注意(shared-ledger-insert-collision の dist ツリー版。E-PB5 c1 2026-07-16 採用 4/4 — #1030×#1032 のクロスマージで main dist:check 赤(#1039)→止血 #1040 の実測列) <!-- cid:code-generation:cross-merge-dist-tree-blindspot -->
+- 新harness追加PRとcore変更PRの並行で生じた「コミット済みdist集合のクロスマージ盲点」はsource-only境界により閉じた。生成ツリーを再び追跡してこの盲点を復活させない。新harness追加ではmanifest検出、隔離2回buildの全出力比較、`source-only:check`、マージ後main CIを正とする (revised 2026-08-03; learned 2026-07-16。旧実測: #1030×#1032→#1039→#1040) <!-- cid:code-generation:cross-merge-dist-tree-blindspot -->
 - spawn-only の CLI モジュールを coverage seam 目的で in-process import しない — import はモジュール全行を lcov に 0-hit で載せ、当該ファイルの patch 行を absent→missed へ反転させる。seam 関数は既計測モジュール(coverage registry 上に実計測実績があるもの)へ移設して import する。本則は spawn-blindspot-two-step((i) リファクタ (ii) waiver)の主経路に従属する「seam 移設先の選定則」であり、seam-export-handler-amend と相互参照(E-PM1 C2 2026-07-16 採用 4/4、#982 の bolt.ts 685 zero-hit 行 lcov 直読→operation-journal 移設の実測) <!-- cid:code-generation:seam-placement-measured-module -->
 - phase 最終ステージ(approval-handoff / delivery-planning 等)の approve 前に verification/phase-check-<phase>.md の作成を定型タスクとして含める — エンジンの phase-boundary ガードが実在を要求して approve を拒否する。成果物の正名は approval-handoff:c2 に従う(同項と相互参照。E-PM1 PM-e2-1 2026-07-16 採用 4/4、delivery-planning approve の「phase-check-inception.md does not exist」拒否実測。bolt-pr-taskization 同型の指令ループ外規範)。精密化(E-PM3 M3 2026-07-16 採用 4/4): phase 最終ステージはスコープの EXECUTE 集合に依存して移動する(例: amadeus/chore/fix スコープでは build-and-test が construction 最終)— gate open 準備の定型に「本ステージが phase boundary か」の実測を含め、該当時は phase-check-<phase>.md を approve 前に作成する(同日3 intent で phase guard 接地の実測) <!-- cid:approval-handoff:phase-check-before-final-approve -->
 - conductor はゲート準備完了報告の前に、宣言センサー(sensors_applicable)を全成果物へ手動発火し、FAILED を是正してから報告する — PostToolUse 依存では発火漏れが起きうる(E-PM1 M2 2026-07-16 採用 4/4、approval-handoff/practices-discovery の2ステージ連続で報告前捕捉の実測)。追補(E-1059-RA c1 2026-07-16 採用 4/4 うち開票時 3/4): センサー verdict は fire の exit code で読まない — fire は dispatcher 起動エラー以外で常に exit 0(amadeus-sensor.ts:511、:29)であり、PASSED/FAILED は audit の SENSOR_PASSED/SENSOR_FAILED 行と FAILED 時のみ生成される detail finding ファイル(:411)で判定する(e4 の exit 0 誤読→実 FAILED 見逃しヒヤリハット+e2 の自 intent 事後裏取り(SENSOR_FAILED 0 件で green 真正確認)の実測)。追補2(E-1059-CG c1 2026-07-16 採用 4/4 うち開票時 3/4): 発火対象は sensor filter 適合ファイルから選ぶ(linter = **/*.{ts,js}、type-check = **/*.{ts,tsx} — 各 sensor manifest :8 実測)。md 成果物への fire は matches-rejection exit 1 になるため、fire は出力を破棄せず実行する — >/dev/null 併用は不発を無音化する(e4 の4連続無音不発→可視再実行捕捉の実測、e2/e1 の同型癖の自己申告2件)。追補3(E-PM3 M5 2026-07-16 採用 4/4 うち留保転記): 非 active intent への sensor fire の audit 行は active intent のシャードへ記録される — verdict の遡及監査時は全 intent シャードの union で読む(通常のゲート準備 = 自 intent への発火は自シャード読みで足りる)。stale FAILED 2件が偽赤に見えた実測。追補4(E-PM10 C1 2026-07-19 採用 — ソロ運用につきユーザー直接裁定、選挙なし): PostToolUse の自動発火は「現ステージの consumes」で編集ファイルを検査するため、他ステージ成果物の遡及編集(レビュー是正の同期修正等)で構造的な stage-mismatch 偽赤が出る — verdict 判定時は audit 行の Output path の所属ステージと Stage slug の一致を確認し、不一致の FAILED は成果物の自ステージでの手動再発火で確定する(260718-election-ts-foundation UG 中の AD 成果物 components.md 編集で偽赤→自ステージ再発火 PASSED の実測) <!-- cid:requirements-analysis:manual-sensor-fire-before-gate-report -->
@@ -268,7 +267,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ガード層の欠陥修正は「ガード通過 = 症状解消」と仮定せず、narrow fix 適用後に元症状(下流の状態遷移まで)を再実測してから確定する — ガードの背後に第2層の欠陥(auth 上書き・identity 不一致等)が隠れており、ガード除去で初めて露出する(実測: 260726-answer-manual-binding で guard 補填後も expectedPrompt 非 consume の第2層を builder が適用後実測で発見 → 裁定 B でスコープ拡張。cid:code-generation:ruling-premise-closure-verification の多層欠陥面の追補 — 裁定準拠の実装完了と症状の閉包は別物、の実践形) (learned 2026-07-27) <!-- cid:code-generation:c1-narrow-fix-post-apply-remeasure -->
 - §12a reviewer への検証課題が対象パス集合外のファイル直読を構造的に要求する場合(列挙の完全性検証・cross-unit 整合照合・import 先の意味論確認等)、そのファイルを許可 read-only 集合へディスパッチ時点で含める — 不整合のままディスパッチすると reviewer は逸脱自己申告か検証断念の二択を迫られる(実測: 260731-formal-verif-value-chain FD で u5/u7/u8 の3 unit にスコープ外読取の自己申告が反復 — いずれも検証課題(BR-U7-4 棚卸し・ProjectSyncTransition の status 検証・sibling FD 整合)の遂行に構造的に必要な読取だった。cid:code-generation:builder-prompt-sync-completion の reviewer 許可集合面の追補) (learned 2026-07-31) <!-- cid:code-generation:c1-reviewer-scope-alignment -->
 - 生成系・レビュー系サブエージェントへの委譲プロンプトには、state 変更コマンド (amadeus-orchestrate.ts report、amadeus-state.ts、amadeus-log.ts、amadeus-bolt.ts) の実行禁止と、ゲート提示・レビュー・学習リチュアルは conductor のみが行う旨を必ず明記する (user decision 2026-07-26。260726-promote-self-hooks で生成サブエージェントが §12a とゲートを跳过して report --result completed を自行実行し、未消費 HUMAN_TURN を消費して code-generation を無断完了させた事案の再発防止) (learned 2026-07-26) <!-- cid:build-and-test:cg-subagent-state-mutation-ban -->
-- packages/framework/core 配下を変更したときの dist 再生成は7ハーネス全て (claude, codex, cursor, opencode, kimi, kiro, kiro-ide) を対象とする。5ハーネスで止めると kiro/kiro-ide が DIFFERS となり dist:check が落ちる (user decision 2026-07-26。260726-promote-self-hooks の build-and-test で実発) (learned 2026-07-26) <!-- cid:build-and-test:bt-dist-regen-seven-harnesses -->
+- `packages/framework/core/` 配下を変更したときのbuildと再現性検査はmanifestが発見する全ハーネス(現行: claude, codex, cursor, opencode, kimi, kiro, kiro-ide)を対象とする。固定数や一部列挙で止めず、packagerの検出集合を正とする (revised 2026-08-03; user decision 2026-07-26) <!-- cid:build-and-test:bt-dist-regen-seven-harnesses -->
 - docs の件数表記は隣接列挙原則に従う: 同一文書内に列挙(表・配列転記)が隣接する箇所のみ硬数値を許し、隣接列挙のない散文の件数語は count-free 表現へ置換する — 件数語は可視な同期相手(列挙)がある場合にのみ存在を許すことで、カタログ拡張時の散文陳腐化(README 6→7 / 19-plugins 6/4 クラスの実測乖離)を構造的に防ぐ(260727-docs-impl-sync FD の BR-2 裁定、cid:code-generation:count-comment-sync-on-catalog-change の docs 散文面への一般化) (learned 2026-07-27) <!-- cid:functional-design:c3-adjacent-enum-numerals -->
 - packages/framework/core 配下のコメント・文字列に repo-only の scripts/<file> パストークンを書かない — core/tools は全 dist へ投影されるため t258-boundary-guard(出荷 core/tools は scripts/ を参照しない境界契約)が赤になる。接触時は allowlist 追加ではなくコメント reword でトークンを除去する(実測: 260727-install-doc-mismatch CG で定数コメントの scripts/plugin-projection.ts 参照が全 dist 投影で t258 赤 → reword+再生成で PASS) (learned 2026-07-27) <!-- cid:code-generation:c1-1569-shipped-comment-vocab -->
 - 選挙・合議機構の定足数設計では「奇数=機械で決め切る」「偶数=スプリット時に人間裁定へエスカレーション」が対立原理であることを明示し、人間コントロールを保存したい文脈では偶数定足数を選ぶ(P1/P4 整合)。実測: 260727-solo-election intent-capture でユーザーが conductor の3体奇数案を2体偶数(チームモード2/4/6体の偶数設計の保存)へ訂正 (learned 2026-07-27) <!-- cid:intent-capture:c2 -->

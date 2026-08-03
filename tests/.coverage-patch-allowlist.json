@@ -319,6 +319,17 @@
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "selector": {
+      "function": "printHelp",
+      "fingerprint": "sha256:cc65bbf9acafebb11ab865e32bbb869cc3cdb45880015b938ab84069a22c5423",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Continuation row of printHelp's multi-line template literal. The amadeus-graph CLI help boundary is exercised through spawned CLI tests, but Bun stamps the string continuation DA:0 and does not attribute child-process coverage to the parent LCOV report.",
+    "expiry": "remove if Bun attributes multi-line template continuation rows or spawned CLI coverage"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-journal-convert.ts",
     "selector": {
       "function": "<module>",

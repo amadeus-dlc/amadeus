@@ -16,6 +16,7 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 
 ```
 .claude/hooks/
++-- amadeus-dispatch.ts          # Self-install settings transport to the generated hooks (project-wide, TypeScript)
 +-- amadeus-mint-presence.ts     # UserPromptSubmit + PostToolUse AskUserQuestion (project-wide, settings.json, TypeScript)
 +-- amadeus-audit-logger.ts      # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
 +-- amadeus-sensor-fire.ts       # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
@@ -35,6 +36,7 @@ All but one are **non-blocking** — they observe and exit 0, never altering con
 
 | Hook | Event | Scoping | Matcher | Purpose |
 |------|-------|---------|---------|---------|
+| `amadeus-dispatch.ts` | Configured hook events | Project-wide (self-install settings transport) | Fixed hook slug | Resolve the project root independently of the caller's working directory, validate the generated hook tree, and forward stdin/stdout/stderr, arguments, exit status, and signals to the selected generated hook |
 | `amadeus-mint-presence.ts` | UserPromptSubmit + PostToolUse | Project-wide (settings.json) | (empty) / `AskUserQuestion` | Record a `HUMAN_TURN` event on every real human prompt and on every answered `AskUserQuestion` widget (gate approvals and interview answers are widget clicks, not typed prompts); the approval/interview gate checks the ledger and requires one since the last gate resolution so a model under autopilot cannot fabricate an approval with no human having acted |
 | `amadeus-audit-logger.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Auto-log artifact writes to the `audit/` shards |
 | `amadeus-sensor-fire.ts` | PostToolUse | Project-wide (settings.json) | `Write\|Edit` | Fire the active stage's resolved Sensors on matching writes (advisory; never blocks) |

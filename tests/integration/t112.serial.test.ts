@@ -116,8 +116,13 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   const testsDir = join(root, "tests");
   const smokeDir = join(testsDir, "smoke");
   const libDir = join(testsDir, "lib");
+  const distDir = join(root, "dist");
   mkdirSync(smokeDir, { recursive: true });
   mkdirSync(libDir, { recursive: true });
+  // Satisfy the public build-before-test precondition so this fixture reaches
+  // the exit-code aggregation behavior it is responsible for calibrating.
+  mkdirSync(distDir);
+  writeFileSync(join(distDir, "built-marker"), "fixture distribution\n");
 
   copyFileSync(REAL_RUNNER, join(testsDir, "run-tests.sh"));
   copyFileSync(REAL_RUNNER_TS, join(testsDir, "run-tests.ts"));

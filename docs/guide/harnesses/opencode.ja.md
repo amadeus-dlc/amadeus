@@ -7,8 +7,8 @@
 エンジン、ステートマシン、監査ログ、グラフ、swarm レフェリー、learnings ゲートは
 すべてのディストリビューションでバイト単位で同一であり、異なるのはシェルだけです。
 このツリーは `bun scripts/package.ts opencode` によって
-`packages/framework/core/` + `packages/framework/harness/opencode/` から
-**生成** されます。手編集しないでください(ドリフトガードが CI で失敗します)。
+`packages/framework/core/` + `packages/framework/harness/opencode/` から未追跡のローカル出力として
+**生成**されます。release CIはクリーンcheckoutから再生成します。
 
 ## 前提条件
 
@@ -99,7 +99,7 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 
 ```bash
 bun scripts/package.ts opencode      # packages/framework/core + harness/opencode から dist/opencode を再生成
-bun scripts/package.ts --check       # CI ドリフトガード(全ハーネス)
+bun run source-only:check            # 生成物がGit境界の外にあることを検査
 ```
 
 ## 次のステップ

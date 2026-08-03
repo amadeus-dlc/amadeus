@@ -7,20 +7,27 @@
 // archive, so these pin the wire format instead.
 
 import { describe, expect, test } from "bun:test";
-import { Readable } from "node:stream";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { chmodSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Http } from "../../packages/setup/src/ports/http.ts";
-import { createTmpWrite, type TmpWrite } from "../../packages/setup/src/ports/fsops.ts";
+import { createTmpWrite, IoError, type TmpWrite } from "../../packages/setup/src/ports/fsops.ts";
 import { createFetcher } from "../../packages/setup/src/modules/fetcher.ts";
 import { FetchError } from "../../packages/setup/src/domain/payload.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
 import { SemVer } from "../../packages/setup/src/domain/semver.ts";
+import { verifySha256 } from "../../packages/setup/src/internal/checksum-verifier.ts";
+import { createExtractedPayload } from "../../packages/setup/src/internal/payload-factory.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
+import {
+  buildReleaseAssetHttp,
+  releaseAssetFixtureKind,
+  toReadableStream,
+} from "../lib/setup-release-asset-fixture.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
-function version(raw = "0.6.9") {
+function version(raw = "0.1.7") {
   const parsed = SemVer.parse(raw);
   if (parsed.type === "err") throw new Error("invalid fixture version");
   return ResolvedVersion.fromTag(parsed.value);
@@ -39,8 +46,26 @@ function fakeHttp(gz: Buffer, failures: FetchError[] = []): Http & { calls: numb
       state.calls++;
       const failure = failures[state.calls - 1];
       if (failure) return Result.err(failure);
-      const stream = Readable.toWeb(Readable.from(gz)) as unknown as ReadableStream<Uint8Array>;
-      return Result.ok(stream);
+      return Result.ok(toReadableStream(gz));
+    },
+  };
+}
+
+type AssetResponse = Uint8Array | FetchError;
+
+function assetHttp(
+  archiveResponse: AssetResponse,
+  checksumResponse: AssetResponse,
+  urls: string[] = [],
+): Http {
+  return {
+    async getJson(): Promise<never> {
+      throw new Error("fetcher must never call getJson");
+    },
+    async downloadArchive(url) {
+      urls.push(url.toString());
+      const response = releaseAssetFixtureKind(url, "v0.1.8") === "checksum" ? checksumResponse : archiveResponse;
+      return response instanceof Uint8Array ? Result.ok(toReadableStream(response)) : Result.err(response);
     },
   };
 }
@@ -70,6 +95,7 @@ describe("createFetcher — happy path", () => {
       const http = fakeHttp(buildTarGz(VALID_ARCHIVE));
       const result = await createFetcher(http, tmpWrite).fetchArchive(version());
       expect(result.type).toBe("ok");
+      expect(http.calls).toBe(1);
       if (result.type !== "ok") return;
       expect(result.value.availableHarnesses()).toContain(CLAUDE);
       const root = result.value.harnessRoot(CLAUDE);
@@ -94,12 +120,280 @@ describe("createFetcher — happy path", () => {
   });
 });
 
+describe("createFetcher — verified release asset", () => {
+  test("downloads SHA256SUMS, verifies the archive, and locates a wrapper-root harness", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive = buildTarGz([
+        { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
+      ]);
+      const archiveName = "amadeus-dist-v0.1.8.tar.gz";
+      const digest = createHash("sha256").update(archive).digest("hex");
+      const checksums = Buffer.from(`${digest}  ${archiveName}\n${"0".repeat(64)}  amadeus-dist-v0.1.8.manifest.json\n`);
+      const urls: string[] = [];
+      const http = assetHttp(archive, checksums, urls);
+
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
+
+      expect(result.type).toBe("ok");
+      expect(urls).toEqual([
+        "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+        "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/SHA256SUMS",
+      ]);
+      if (result.type !== "ok") return;
+      const root = result.value.harnessRoot(CLAUDE);
+      expect(root.type).toBe("ok");
+      if (root.type === "ok") expect(existsSync(join(root.value, "marker.txt"))).toBe(true);
+    });
+  });
+
+  test("fails closed when the required release asset is missing", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const urls: string[] = [];
+      const missing = FetchError.classify(new Error("HTTP 404"), {
+        status: 404,
+        url: "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      });
+      const http = assetHttp(missing, missing, urls);
+
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
+
+      expect(result.type).toBe("err");
+      if (result.type === "err") {
+        expect(result.error.type).toBe("asset-missing");
+        expect(result.error.detail).toBe(
+          "release asset not found for v0.1.8 (expected for versions >= 0.1.8) — this is an error, not a fallback",
+        );
+        expect(result.error.isTransient()).toBe(false);
+      }
+      expect(urls).toEqual([
+        "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      ]);
+    });
+  });
+
+  test("fails closed before extraction when SHA256SUMS is missing", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive = buildTarGz([
+        { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
+      ]);
+      const missing = FetchError.classify(new Error("HTTP 404"), {
+        status: 404,
+        url: "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/SHA256SUMS",
+      });
+      const http = assetHttp(archive, missing);
+
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
+
+      expect(result.type).toBe("err");
+      if (result.type === "err") {
+        expect(result.error.type).toBe("checksum-unavailable");
+        expect(result.error.detail).toBe(
+          "checksum file missing for v0.1.8 — refusing to install unverified archive",
+        );
+        expect(result.error.isTransient()).toBe(false);
+      }
+      expect(existsSync(join(tmpWrite.root, "extracted"))).toBe(false);
+    });
+  });
+
+  test("preserves a non-404 checksum download failure", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive = buildTarGz([
+        { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
+      ]);
+      const forbidden = FetchError.classify(new Error("HTTP 403"), {
+        status: 403,
+        url: "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/SHA256SUMS",
+      });
+
+      const result = await createFetcher(assetHttp(archive, forbidden), tmpWrite).fetchArchive(version("0.1.8"));
+
+      expect(result.type).toBe("err");
+      if (result.type === "err") expect(result.error.status).toBe(403);
+    });
+  });
+
+  test("fails closed before extraction when the archive checksum does not match", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive = buildTarGz([
+        { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
+      ]);
+      const checksums = Buffer.from(`${"f".repeat(64)}  amadeus-dist-v0.1.8.tar.gz\n`);
+      const http = assetHttp(archive, checksums);
+
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
+
+      expect(result.type).toBe("err");
+      if (result.type === "err") {
+        expect(result.error.type).toBe("checksum-mismatch");
+        expect(result.error.detail).toBe(
+          "checksum mismatch for amadeus-dist-v0.1.8.tar.gz — refusing to install",
+        );
+        expect(result.error.isTransient()).toBe(false);
+      }
+      expect(existsSync(join(tmpWrite.root, "extracted"))).toBe(false);
+    });
+  });
+
+  test("strictly rejects malformed, missing-target, and duplicate checksum entries", async () => {
+    const archive = buildTarGz([
+      { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
+    ]);
+    const digest = createHash("sha256").update(archive).digest("hex");
+    const invalidChecksums = [
+      `not-a-digest  amadeus-dist-v0.1.8.tar.gz\n`,
+      `${digest}  another.tar.gz\n`,
+      `${digest}  amadeus-dist-v0.1.8.tar.gz\n${digest}  amadeus-dist-v0.1.8.tar.gz\n`,
+    ];
+
+    for (const checksumText of invalidChecksums) {
+      await withTmpWrite(async (tmpWrite) => {
+        const http = assetHttp(archive, Buffer.from(checksumText));
+
+        const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
+
+        expect(result.type).toBe("err");
+        if (result.type === "err") expect(result.error.type).toBe("payload-invalid");
+        expect(existsSync(join(tmpWrite.root, "extracted"))).toBe(false);
+      });
+    }
+  });
+});
+
+describe("createFetcher — download persistence", () => {
+  test("classifies a temporary write failure as payload-invalid", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const failingTmpWrite: TmpWrite = {
+        ...tmpWrite,
+        async writeStream() {
+          return Result.err(IoError.of("disk full"));
+        },
+      };
+
+      const result = await createFetcher(fakeHttp(buildTarGz(VALID_ARCHIVE)), failingTmpWrite).fetchArchive(version());
+
+      expect(result.type).toBe("err");
+      if (result.type === "err") {
+        expect(result.error.type).toBe("payload-invalid");
+        expect(result.error.detail).toContain("disk full");
+      }
+    });
+  });
+});
+
+describe("verifySha256 — filesystem failures", () => {
+  test("classifies missing checksum and archive files as payload-invalid", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const missingChecksum = await verifySha256(
+        join(tmpWrite.root, "archive.tar.gz"),
+        join(tmpWrite.root, "missing-SHA256SUMS"),
+        "archive.tar.gz",
+      );
+      expect(missingChecksum.type).toBe("err");
+      if (missingChecksum.type === "err") {
+        expect(missingChecksum.error.type).toBe("payload-invalid");
+        expect(missingChecksum.error.detail).toContain("could not read SHA256SUMS");
+      }
+
+      const written = await tmpWrite.writeFile("SHA256SUMS", Buffer.from(`${"0".repeat(64)}  archive.tar.gz\n`));
+      expect(written.type).toBe("ok");
+      const missingArchive = await verifySha256(
+        join(tmpWrite.root, "missing-archive.tar.gz"),
+        join(tmpWrite.root, "SHA256SUMS"),
+        "archive.tar.gz",
+      );
+      expect(missingArchive.type).toBe("err");
+      if (missingArchive.type === "err") {
+        expect(missingArchive.error.type).toBe("payload-invalid");
+        expect(missingArchive.error.detail).toContain("could not verify archive.tar.gz");
+      }
+    });
+  });
+});
+
+describe("createExtractedPayload — wrapper fallback failures", () => {
+  test.skipIf(process.platform === "win32")(
+    "classifies an unreadable wrapper root after a missing legacy dist as payload-invalid",
+    async () => {
+      await withTmpWrite(async (tmpWrite) => {
+        const created = await tmpWrite.mkdir("payload/wrapper");
+        expect(created.type).toBe("ok");
+        const extractedDir = join(tmpWrite.root, "payload");
+        const wrapperDir = join(extractedDir, "wrapper");
+        chmodSync(wrapperDir, 0o111);
+        try {
+          const result = createExtractedPayload(extractedDir, version(), HarnessName.all);
+          expect(result.type).toBe("err");
+          if (result.type === "err") {
+            expect(result.error.type).toBe("payload-invalid");
+            expect(result.error.detail).toContain("could not read distribution root");
+          }
+        } finally {
+          chmodSync(wrapperDir, 0o755);
+        }
+      });
+    },
+  );
+});
+
+describe("buildReleaseAssetHttp — resolver routes", () => {
+  test("streams a Uint8Array as one binary chunk", async () => {
+    const reader = toReadableStream(Uint8Array.of(1, 2, 3)).getReader();
+
+    expect(await reader.read()).toEqual({ done: false, value: Uint8Array.of(1, 2, 3) });
+    expect(await reader.read()).toEqual({ done: true, value: undefined });
+  });
+
+  test("rejects release asset URLs with the wrong scheme, host, tag, or path", async () => {
+    const http = buildReleaseAssetHttp(Buffer.from("archive"), "v0.1.8");
+    const invalidUrls = [
+      "http://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      "https://example.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
+      "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.9/amadeus-dist-v0.1.9.tar.gz",
+      "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/other.tar.gz",
+    ];
+
+    for (const url of invalidUrls) {
+      await expect(http.downloadArchive(new URL(url))).rejects.toThrow("unexpected release asset URL in fixture");
+    }
+  });
+
+  test("serves annotated-tag and tag-list responses from the shared fixture", async () => {
+    const http = buildReleaseAssetHttp(Buffer.from("archive"), "v0.1.8");
+
+    const annotated = await http.getJson("/repos/amadeus-dlc/amadeus/git/ref/tags/v0.1.8");
+    expect(annotated.type).toBe("ok");
+    if (annotated.type === "ok") {
+      expect(annotated.value).toEqual({
+        ref: "refs/tags/v0.1.8",
+        object: { sha: "0".repeat(40), type: "commit" },
+      });
+    }
+
+    const tags = await http.getJson("/repos/amadeus-dlc/amadeus/tags?per_page=100");
+    expect(tags.type).toBe("ok");
+    if (tags.type === "ok") expect(tags.value).toEqual([{ name: "v0.1.8" }]);
+  });
+});
+
 describe("createFetcher — BR-F10 wrapper/dist validation", () => {
   test("payload-invalid when the wrapper directory has no dist/", async () => {
     await withTmpWrite(async (tmpWrite) => {
       const archive: TarFixtureEntry[] = [{ type: "file", name: "amadeus-0.6.9/README.md", content: Buffer.from("hi") }];
       const http = fakeHttp(buildTarGz(archive));
       const result = await createFetcher(http, tmpWrite).fetchArchive(version());
+      expect(result.type).toBe("err");
+      if (result.type === "err") expect(result.error.type).toBe("payload-invalid");
+    });
+  });
+
+  test("does not use the wrapper-root fallback when dist exists but is not a directory", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive: TarFixtureEntry[] = [
+        { type: "file", name: "amadeus-0.1.7/dist", content: Buffer.from("not a directory") },
+        { type: "file", name: "amadeus-0.1.7/claude/marker.txt", content: Buffer.from("must not be used") },
+      ];
+      const result = await createFetcher(fakeHttp(buildTarGz(archive)), tmpWrite).fetchArchive(version());
       expect(result.type).toBe("err");
       if (result.type === "err") expect(result.error.type).toBe("payload-invalid");
     });

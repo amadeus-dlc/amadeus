@@ -67,20 +67,20 @@ AI-DLC のドキュメントは、トピックではなく、あなたが何を�
 
 ## ビルドモデル: `packages/framework/core/` で作成し、ハーネスを再生成する
 
-ハーネスエンジニアが作成するものはすべて **`packages/framework/core/`** に存在します — 手書きでハーネス中立なソースオブトゥルース(ステージは `packages/framework/core/amadeus-common/stages/`、エージェントは `packages/framework/core/agents/`、スコープ、ルール、センサー、ナレッジ、ツール、フック)。実際に実行するハーネスごとの `dist/<harness>/` ツリー(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)は、`packages/framework/core/` に薄い `packages/framework/harness/<name>/` 表層を加えたものから**生成**され、**ドリフトガード**されています — そこを手編集すると CI が拒否します。ループは常にこうです:
+ハーネスエンジニアが作成するものはすべて **`packages/framework/core/`** に存在します — 手書きでハーネス中立なソースオブトゥルース(ステージは `packages/framework/core/amadeus-common/stages/`、エージェントは `packages/framework/core/agents/`、スコープ、ルール、センサー、ナレッジ、ツール、フック)。実際に実行するハーネスごとの `dist/<harness>/` ツリー(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)は、`packages/framework/core/` に薄い `packages/framework/harness/<name>/` 表層を加えたものから生成される**未追跡のローカル出力**です。ループは次のとおりです:
 
 ```bash
-# 1. packages/framework/core/ でソースを編集する(dist/ は決して編集しない)
+# 1. packages/framework/core/ でソースを編集する
 $EDITOR packages/framework/core/amadeus-common/stages/inception/my-stage.md
 
 # 2. packages/framework/core/ + packages/framework/harness/ からすべてのハーネスツリーを再生成する
 bun scripts/package.ts
 
-# 3. ドリフトがないことを確認する(CI ガード。コミット前に実行)
-bun scripts/package.ts --check
+# 3. 生成物がGit境界の外にあることを確認する
+bun run source-only:check
 ```
 
-`packages/framework/core/` の編集と再生成された `dist/` を一緒にコミットします。以下の各章のレシピで `bun .claude/tools/amadeus-graph.ts compile`(または別のツール)を実行するように書かれている場合、そのコマンドは*インストール済み*のツリー — あなたのプロジェクトの `.claude/`(または `.kiro/` / `.codex/`)— に対して実行され、実行時にグラフを再コンパイルします。そこは作成する場所ではありません。**あなたは `packages/framework/core/` で作成し、ツールはハーネスディレクトリで実行します。** その分割 — 作成されるソース対生成される実行時 — が、本ガイドを通じて区別し続けるべきものです。ビルド契約の全容は[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)と開発者リファレンスの[アーキテクチャ § ソース対配布](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses)を参照してください。
+`packages/framework/core/` の編集だけをコミットし、再生成された `dist/` はコミットしません。CIは隔離した2回のbuildをbyte単位で比較します。以下の各章のレシピで `bun .claude/tools/amadeus-graph.ts compile`(または別のツール)を実行するように書かれている場合、そのコマンドは*インストール済み*のツリー — あなたのプロジェクトの `.claude/`(または `.kiro/` / `.codex/`)— に対して実行され、実行時にグラフを再コンパイルします。そこは作成する場所ではありません。**あなたは `packages/framework/core/` で作成し、ツールはハーネスディレクトリで実行します。** その分割 — 作成されるソース対生成される実行時 — が、本ガイドを通じて区別し続けるべきものです。ビルド契約の全容は[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)と開発者リファレンスの[アーキテクチャ § ソース対配布](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses)を参照してください。
 
 ### フレームワークコードの配置先
 
@@ -100,9 +100,9 @@ bun scripts/package.ts --check
 
 昇格は複製ではなく移動です。正本を `git mv` し、内部 path を新しい正本位置からの
 相対参照へ変更して、必要な manifest、package、self-install の投影を追加します。
-派生 tree を再生成した後、旧位置への参照をすべて除去します。正本の変更と生成された
-投影は同じ commit に含めます。最後に distribution、self-install、境界 drift の
-各検査を実行してください。生成された `dist/` tree を手編集してはいけません。
+派生treeを再生成した後、旧位置への参照をすべて除去します。commitするのは正本の
+変更だけで、生成された投影はignoreされたままです。最後に関連テスト、隔離buildの
+再現性ゲート、`bun run source-only:check` を実行してください。
 
 ---
 

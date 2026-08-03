@@ -1,13 +1,10 @@
-// t150-codex-packaging: dist/codex parity + drift guard + trust-seed recipe.
+// t150-codex-packaging: generated Codex shape + trust-seed recipe.
 //
 // covers: file:tools/amadeus-lib.ts
 //
 // WHAT. Three contracts land here:
-//   (1) The committed dist/codex tree is byte-identical to what
-//       `bun scripts/package.ts codex` regenerates from dist/claude/.claude
-//       (modulo the script's single sanctioned prefix-transform class).
-//       Drift fails with the regen command — same UX as amadeus-runner-gen
-//       check and kiro's t141.
+//   (1) The retired committed-dist check fails loudly instead of silently
+//       reintroducing generated-tree comparison semantics.
 //   (2) Core parity: every .ts under dist/codex/.codex/tools/ and the core
 //       hook bodies are BYTE-IDENTICAL to their dist/claude sources (the
 //       architecture-B invariant: the generator may transform prose/data
@@ -49,18 +46,14 @@ function divergentCoreTypeScriptFiles(subdir: string): string[] {
     .map((file) => `${subdir}/${file.slice(dstDir.length + 1)}`);
 }
 
-describe("t150 dist/codex packaging parity + drift guard", () => {
-  test("1: committed dist/codex matches the packaging script (drift guard)", () => {
+describe("t150 generated Codex packaging contract", () => {
+  test("1: the retired committed-dist check fails loudly", () => {
     const r = spawnSync("bun", [PACKAGE_SCRIPT, "codex", "--check"], {
       encoding: "utf-8",
       cwd: REPO_ROOT,
     });
-    if (r.status !== 0) {
-      // Surface the script's own stale-file list — it names the fix.
-      console.error(r.stderr);
-    }
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain("in sync");
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("--check has been removed");
   });
 
   test("2: every packaged .ts file is byte-identical to its dist/claude source (code is never transformed)", () => {
