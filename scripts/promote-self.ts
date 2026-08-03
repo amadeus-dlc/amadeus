@@ -28,6 +28,7 @@ import {
   SELF_INSTALL_ALLOWLIST,
   STAGE_GRAPH_RE,
 } from "../packages/framework/core/tools/data/self-install-allowlist.ts";
+import { PROJECT_INSTRUCTIONS } from "../packages/framework/harness/claude/project-instructions.ts";
 import { mirrorProjectionRegistryDigest } from "../packages/framework/harness/projections.ts";
 import {
   kimiConfigPath,
@@ -69,41 +70,20 @@ const managedDirs: ManagedDir[] = [
 
 const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
 const CONTRIBUTOR_SKILL_DESTINATIONS = [".claude/skills", ".agents/skills"];
-
-const PROJECT_INSTRUCTIONS = `## Project Instructions
-
-- Communicate with the user in Japanese.
-- Write documentation in English by default.
-- As an exception, write \`amadeus/**/*.md\` in Japanese.
-- Write code comments in English.
-- Write commit messages in English.
-- If you find violations of these language rules while working, fix them as part of the same change.
-
-`;
-
 const CODEX_AGENTS_MARKER = "# AI-DLC on Codex CLI\n";
 const AMADEUS_IMPORT = "@.agents/rules/amadeus.md\n\n";
+const CODEX_SUFFIX_REL = ".agents/rules/amadeus-codex-suffix.md";
+const CODEX_SUFFIX_IMPORT = "@.agents/rules/amadeus-codex-suffix.md";
+const ROOT_AGENTS_IMPORTS = [AMADEUS_IMPORT.trim(), CODEX_SUFFIX_IMPORT] as const;
 
-// Preserve the hand-authored project guidance before the Codex onboarding
-// marker, while replacing the generated suffix from dist on every promotion.
-// The root already imports the Amadeus rules, so strip the dist copy to avoid
-// loading the same method tree twice.
-export function composeRootAgents(existing: Buffer, codexDist: Buffer): Buffer {
-  const current = existing.toString("utf-8");
+function composeCodexAgentsSuffix(codexDist: Buffer): Buffer {
   const generated = codexDist.toString("utf-8");
-  const markerAt = current.indexOf(CODEX_AGENTS_MARKER);
-  let prefix = markerAt >= 0 ? current.slice(0, markerAt) : `${current.trimEnd()}\n\n`;
-  let hasImport = false;
-  prefix = prefix.replaceAll(AMADEUS_IMPORT, () => {
-    if (hasImport) return "";
-    hasImport = true;
-    return AMADEUS_IMPORT;
-  });
-  const suffix = hasImport && generated.startsWith(AMADEUS_IMPORT)
-    ? generated.slice(AMADEUS_IMPORT.length)
-    : generated;
-  const separator = prefix.trimEnd().length > 0 ? "\n\n" : "";
-  return Buffer.from(`${prefix.trimEnd()}${separator}${suffix}`, "utf-8");
+  return Buffer.from(
+    generated.startsWith(AMADEUS_IMPORT)
+      ? generated.slice(AMADEUS_IMPORT.length)
+      : generated,
+    "utf-8",
+  );
 }
 
 const preserved = preservedEntries(SELF_INSTALL_ALLOWLIST);
@@ -325,7 +305,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md,",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, and .kimi-code/ generated files,",
       "              then merge the amadeus hooks managed block into the user-level kimi config",
       "              ($KIMI_CODE_HOME/config.toml, or ~/.kimi-code/config.toml when unset; a backup is made)",
       "  --no-build  skip the package.ts freshness step",
@@ -415,22 +395,9 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
       }
     }
   }
-  const claudeOnboarding = join(repoRoot, ".claude", "CLAUDE.md");
-  if (!existsSync(claudeOnboarding)) {
-    throw new Error("missing source file: .claude/CLAUDE.md");
-  }
-  expected.set(
-    "CLAUDE.md",
-    Buffer.concat([
-      Buffer.from(PROJECT_INSTRUCTIONS, "utf-8"),
-      readFileSync(claudeOnboarding),
-    ]),
-  );
-  const rootAgents = join(repoRoot, "AGENTS.md");
   const distAgents = join(repoRoot, "dist", "codex", "AGENTS.md");
   if (!existsSync(distAgents)) throw new Error("missing source file: dist/codex/AGENTS.md");
-  const existing = existsSync(rootAgents) ? readFileSync(rootAgents) : Buffer.alloc(0);
-  expected.set("AGENTS.md", composeRootAgents(existing, readFileSync(distAgents)));
+  expected.set(CODEX_SUFFIX_REL, composeCodexAgentsSuffix(readFileSync(distAgents)));
   return expected;
 }
 
@@ -445,6 +412,39 @@ function runnerPlacedElsewhere(runner: RegExpMatchArray | null, rel: string, exp
     if (path !== rel && path.includes(marker)) return true;
   }
   return false;
+}
+
+function rootAgentsProblems(repoRoot: string): string[] {
+  const path = join(repoRoot, "AGENTS.md");
+  if (!existsSync(path)) return ["MISSING: AGENTS.md"];
+  const contents = readFileSync(path, "utf-8");
+  const imports = contents
+    .split("\n")
+    .filter((line) => line.startsWith("@"));
+  const hasGeneratedSuffix = contents
+    .split("\n")
+    .includes(CODEX_AGENTS_MARKER.trimEnd());
+  return imports.length === ROOT_AGENTS_IMPORTS.length &&
+      imports.every((line, index) => line === ROOT_AGENTS_IMPORTS[index]) &&
+      !hasGeneratedSuffix
+    ? []
+    : ["DIFFERS: AGENTS.md"];
+}
+
+function rootClaudeProblems(repoRoot: string): string[] {
+  const claudeOnboarding = join(repoRoot, ".claude", "CLAUDE.md");
+  const rootClaude = join(repoRoot, "CLAUDE.md");
+  if (!existsSync(claudeOnboarding)) return ["MISSING: .claude/CLAUDE.md"];
+  if (!existsSync(rootClaude)) return ["MISSING: CLAUDE.md"];
+  const expected = Buffer.concat([
+    Buffer.from(PROJECT_INSTRUCTIONS, "utf-8"),
+    readFileSync(claudeOnboarding),
+  ]);
+  return readFileSync(rootClaude).equals(expected) ? [] : ["DIFFERS: CLAUDE.md"];
+}
+
+function rootInstructionProblems(repoRoot: string): string[] {
+  return [...rootAgentsProblems(repoRoot), ...rootClaudeProblems(repoRoot)];
 }
 
 function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
@@ -566,12 +566,15 @@ function ensureActiveSpaceCursor(repoRoot: string): void {
 }
 
 function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
-  const problems: string[] = [];
+  const problems = rootInstructionProblems(repoRoot);
   const ledgerFor = ledgerLookup(repoRoot);
   for (const [rel, want] of expected) {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) {
-      problems.push(`MISSING: ${rel}`);
+      // The imported Codex suffix is an untracked self-install artifact: a
+      // clean checkout has no file until --apply runs. Existing bytes remain
+      // fail-closed through the normal comparison below.
+      if (rel !== CODEX_SUFFIX_REL) problems.push(`MISSING: ${rel}`);
       continue;
     }
     const got = readFileSync(abs);
@@ -594,7 +597,11 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   return problems;
 }
 
-function apply(expected: Map<string, Buffer>, repoRoot: string): void {
+function apply(
+  expected: Map<string, Buffer>,
+  repoRoot: string,
+  coordinator: DistributionTransactionCoordinator,
+): void {
   const updates: Array<{ path: string; bytes: Buffer | null }> = [];
   const removals = new Set([
     ...orphanedFiles(expected, repoRoot),
@@ -615,7 +622,7 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
         : bytes;
     updates.push({ path: rel, bytes: out });
   }
-  applyDistributionUpdates(repoRoot, updates);
+  applyDistributionUpdates(repoRoot, updates, coordinator);
   ensureActiveSpaceCursor(repoRoot);
 }
 
@@ -743,6 +750,8 @@ export async function promoteSelfMain(
   repoRoot: string = REPO_ROOT,
   freshness: (mode: Mode) => void = runPackageFreshness,
   postApply: PostApplyStep | null = kimiHooksStep,
+  coordinatorFactory: (repoRoot: string) => DistributionTransactionCoordinator =
+    (root) => new DistributionTransactionCoordinator(root),
 ): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
@@ -768,7 +777,7 @@ export async function promoteSelfMain(
     freshness(mode);
   }
 
-  const coordinator = new DistributionTransactionCoordinator(repoRoot);
+  const coordinator = coordinatorFactory(repoRoot);
   if (mode === "check" && coordinator.pendingJournalCount() > 0) {
     console.error("promote-self --check FAILED: distribution recovery required");
     return 1;
@@ -786,7 +795,20 @@ export async function promoteSelfMain(
   }
 
   if (mode === "apply") {
-    apply(expected, repoRoot);
+    const rootProblems = rootInstructionProblems(repoRoot);
+    if (rootProblems.length > 0) {
+      console.error(`promote-self --apply FAILED (${rootProblems.length} problem(s)):`);
+      for (const problem of rootProblems) console.error(`  ${problem}`);
+      return 1;
+    }
+    try {
+      apply(expected, repoRoot, coordinator);
+    } catch (error) {
+      console.error(
+        `promote-self --apply FAILED: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 1;
+    }
     if (postApply !== null) {
       const ran = await postApply.run(repoRoot);
       if (ran !== 0) return ran;
