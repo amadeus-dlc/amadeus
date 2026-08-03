@@ -81,6 +81,78 @@ function bytes(value: unknown): Buffer {
   return Buffer.from(JSON.stringify(value), "utf8");
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isErrnoException(value: unknown): value is NodeJS.ErrnoException {
+  return value instanceof Error && "code" in value && typeof value.code === "string";
+}
+
+function parseSignedControl(line: string): SignedControl | null {
+  try {
+    const value: unknown = JSON.parse(line);
+    if (!isRecord(value) || !isRecord(value.payload) || typeof value.signature !== "string") return null;
+    const payload = value.payload;
+    if (
+      (payload.kind !== "go" && payload.kind !== "terminate")
+      || typeof payload.runId !== "string"
+      || typeof payload.nonce !== "string"
+      || typeof payload.seq !== "number"
+      || !Number.isSafeInteger(payload.seq)
+    ) return null;
+    if (payload.kind === "go") {
+      if (typeof payload.correlationId !== "string" || typeof payload.prompt !== "string") return null;
+      return {
+        payload: {
+          kind: "go",
+          runId: payload.runId,
+          nonce: payload.nonce,
+          seq: payload.seq,
+          correlationId: payload.correlationId,
+          prompt: payload.prompt,
+        },
+        signature: value.signature,
+      };
+    }
+    if (payload.reason !== "cancelled" && payload.reason !== "timed-out" && payload.reason !== "driver-refused") {
+      return null;
+    }
+    return {
+      payload: {
+        kind: "terminate",
+        runId: payload.runId,
+        nonce: payload.nonce,
+        seq: payload.seq,
+        reason: payload.reason,
+      },
+      signature: value.signature,
+    };
+  } catch {
+    return null;
+  }
+}
+
+type SignalResult = "sent" | "absent" | "failed";
+
+function signalProcessGroup(signalName: NodeJS.Signals): SignalResult {
+  try {
+    process.kill(-process.pid, signalName);
+    return "sent";
+  } catch (error) {
+    return isErrnoException(error) && error.code === "ESRCH" ? "absent" : "failed";
+  }
+}
+
+function writeAbort(child: ChildProcessWithoutNullStreams | null): boolean {
+  try {
+    child?.stdin.write(`${JSON.stringify({ type: "abort" })}\n`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function run(args: GuardianArgs): void {
   const guardianKeys = generateKeyPairSync("ed25519");
   const guardianPublicKey = guardianKeys.publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -105,24 +177,14 @@ function run(args: GuardianArgs): void {
   const closeGroup = (reason: string): void => {
     if (terminating) return;
     terminating = true;
-    try {
-      child?.stdin.write(`${JSON.stringify({ type: "abort" })}\n`);
-    } catch {
-      // The group escalation below remains authoritative.
-    }
+    if (!writeAbort(child)) emit({ kind: "failure", runId: args.runId, reason: "pi-abort-write-failed" });
     setTimeout(() => {
-      try {
-        process.kill(-process.pid, "SIGTERM");
-      } catch {
-        // ESRCH means the group is already gone.
-      }
+      const signal = signalProcessGroup("SIGTERM");
+      if (signal === "failed") emit({ kind: "failure", runId: args.runId, reason: "guardian-sigterm-failed" });
     }, TERM_GRACE_MS);
     setTimeout(() => {
-      try {
-        process.kill(-process.pid, "SIGKILL");
-      } catch {
-        // ESRCH means the group is already gone.
-      }
+      const signal = signalProcessGroup("SIGKILL");
+      if (signal === "failed") emit({ kind: "failure", runId: args.runId, reason: "guardian-sigkill-failed" });
     }, KILL_GRACE_MS);
     emit({ kind: "termination-started", runId: args.runId, reason });
   };
@@ -136,10 +198,8 @@ function run(args: GuardianArgs): void {
       closeGroup("control-line-cap-exceeded");
       return;
     }
-    let signed: SignedControl;
-    try {
-      signed = JSON.parse(line) as SignedControl;
-    } catch {
+    const signed = parseSignedControl(line);
+    if (signed === null) {
       closeGroup("control-json-invalid");
       return;
     }
@@ -230,10 +290,14 @@ function run(args: GuardianArgs): void {
   });
 }
 
-if (import.meta.main) {
+function main(): void {
   try {
     run(parseArgs(process.argv.slice(2)));
-  } catch {
+  } catch (error) {
+    process.stderr.write(`Pi guardian startup failed: ${String(error)}\n`);
     process.exitCode = 1;
+    return;
   }
 }
+
+if (import.meta.main) main();

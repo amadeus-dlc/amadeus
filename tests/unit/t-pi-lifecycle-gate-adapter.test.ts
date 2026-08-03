@@ -251,6 +251,28 @@ describe("Amadeus Pi lifecycle adapter", () => {
 });
 
 describe("default canonical core commit port", () => {
+  test("narrows malformed and non-canonical audit rows before identity matching", async () => {
+    const root = project();
+    const auditDir = join(root, "amadeus", "spaces", "default", "intents", "260804-pi-test", "audit");
+    mkdirSync(auditDir, { recursive: true });
+    writeFileSync(join(auditDir, "legacy-mixed.jsonl"), "{not-json\n{\"idempotencyKey\":7,\"eventId\":false}\n");
+    const port = new DefaultCanonicalEventCommitPort(root);
+    const event: PiCanonicalEvent = {
+      schemaVersion: 1,
+      profile: "pi-coding-agent/0.83",
+      eventKey: "pi:v1:session:input:narrowed",
+      fingerprint: "e".repeat(64),
+      kind: "input-received",
+      sessionIdDigest: "f".repeat(64),
+      occurredAt: "2026-08-04T00:00:00Z",
+      safe: { source: "rpc", textDigest: "a".repeat(64), imageCount: 0 },
+      sealedPayloadRef: "amadeus/.amadeus-sessions/pi-lifecycle/journal/narrowed.json",
+    };
+    const result = await port.commitOnce(event);
+    expect(result.ok).toBe(true);
+    expect(readAllAuditShards(root)).not.toContain("HUMAN_TURN");
+  });
+
   test("uses eventKey/fingerprint for durable same/same replay and same/different refusal", async () => {
     const root = project();
     const port = new DefaultCanonicalEventCommitPort(root);

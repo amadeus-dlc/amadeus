@@ -184,10 +184,12 @@ function isGuardianReady(payload: Record<string, unknown>): payload is Record<st
   return (
     payload.kind === "ready" &&
     typeof payload.runId === "string" &&
+    typeof payload.pid === "number" &&
     Number.isSafeInteger(payload.pid) &&
-    (payload.pid as number) > 0 &&
+    payload.pid > 0 &&
+    typeof payload.pgid === "number" &&
     Number.isSafeInteger(payload.pgid) &&
-    (payload.pgid as number) > 0 &&
+    payload.pgid > 0 &&
     typeof payload.nonce === "string" &&
     typeof payload.publicKey === "string" &&
     typeof payload.snapshotDigest === "string" &&
@@ -198,9 +200,25 @@ function isGuardianReady(payload: Record<string, unknown>): payload is Record<st
 function parseEnvelope(line: string): GuardianEnvelope | null {
   if (Buffer.byteLength(line, "utf8") > ENVELOPE_LINE_LIMIT_BYTES) return null;
   try {
-    const value = JSON.parse(line) as Partial<GuardianEnvelope>;
-    if (!value || typeof value !== "object" || !value.payload || typeof value.signature !== "string") return null;
+    const value: unknown = JSON.parse(line);
+    if (!isRecord(value) || !isRecord(value.payload) || typeof value.signature !== "string") return null;
     return { payload: value.payload, signature: value.signature };
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isErrnoException(value: unknown): value is NodeJS.ErrnoException {
+  return value instanceof Error && "code" in value && typeof value.code === "string";
+}
+
+export function parsePiDriverInput(input: string): unknown {
+  try {
+    return JSON.parse(input);
   } catch {
     return null;
   }
@@ -286,7 +304,7 @@ function groupExtinct(pgid: number): boolean {
     process.kill(-pgid, 0);
     return false;
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "ESRCH";
+    return isErrnoException(error) && error.code === "ESRCH";
   }
 }
 
@@ -366,6 +384,7 @@ async function runGuardian(
       }, driverKeys.privateKey));
     } catch {
       failFirst("guardian-control-write-failed");
+      return;
     }
   };
 
@@ -574,12 +593,7 @@ async function main(): Promise<void> {
     }
     chunks.push(bytes);
   }
-  let raw: unknown;
-  try {
-    raw = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    raw = null;
-  }
+  const raw = parsePiDriverInput(Buffer.concat(chunks).toString("utf8"));
   const result = await executePiChild(raw);
   process.stdout.write(`${JSON.stringify(result)}\n`);
   process.exitCode = result.kind === "succeeded" ? 0 : 1;

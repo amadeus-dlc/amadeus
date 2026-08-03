@@ -108,6 +108,7 @@ async function autoComposePlugins(projectDir: string, context: PiExtensionContex
     }
   } catch {
     context.ui?.notify("Amadeus plugin auto-compose failed; run doctor for details.", "warning");
+    return;
   }
 }
 
@@ -748,14 +749,26 @@ function readStateValidity(projectDir: string, core: CoreRuntime): { stage: stri
 function existingAuditIdentity(projectDir: string, eventKey: string, core: CoreRuntime): string | null {
   for (const line of core.readAllAuditShards(projectDir).split("\n")) {
     if (line.trim().length === 0) continue;
-    try {
-      const row = JSON.parse(line) as { idempotencyKey?: unknown; eventId?: unknown };
-      if (row.idempotencyKey === eventKey) return typeof row.eventId === "string" ? row.eventId : "";
-    } catch {
-      // Mixed legacy shards are ignored; the current canonical writer is JSONL.
-    }
+    const row = parseAuditIdentityRow(line);
+    if (row?.idempotencyKey === eventKey) return row.eventId ?? "";
   }
   return null;
+}
+
+function parseAuditIdentityRow(line: string): { readonly idempotencyKey?: string; readonly eventId?: string } | null {
+  try {
+    const parsed: unknown = JSON.parse(line);
+    const row = record(parsed);
+    if (row === null) return null;
+    if (row.idempotencyKey !== undefined && typeof row.idempotencyKey !== "string") return null;
+    if (row.eventId !== undefined && typeof row.eventId !== "string") return null;
+    return {
+      ...(typeof row.idempotencyKey === "string" ? { idempotencyKey: row.idempotencyKey } : {}),
+      ...(typeof row.eventId === "string" ? { eventId: row.eventId } : {}),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export class DefaultCanonicalEventCommitPort implements CanonicalEventCommitPort {
@@ -1194,6 +1207,7 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
       } catch (error) {
         current.health.block(String(error), eventKey);
         context.ui?.notify("Amadeus Pi lifecycle adapter blocked; run doctor for details.", "error");
+        return;
       }
     }
 

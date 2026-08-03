@@ -34,14 +34,14 @@
       "source": "extensions/amadeus-pi-extension.ts",
       "destination": ".pi/extensions/amadeus.ts",
       "load": "native",
-      "sha256": "a08d6d45c7c27e4e201d054cc990804aa475384cbb8d14311ed32069c082886f"
+      "sha256": "3c07a2d66f07242d958734816b1a6583f810b20e1ecfaf3fe675c9ff17399295"
     },
     {
       "kind": "driver",
       "source": "drivers/amadeus-pi-driver.ts",
       "destination": ".pi/drivers/amadeus-pi-driver.ts",
       "load": "internal",
-      "sha256": "c0eadd97105f6094236f5a5b34cd94aced8625e7f3b7bc2872e6624ae9463514"
+      "sha256": "c62806527a0fb1ada295a1c7523e55efe79731082bb7431881b83abafec372dd"
     },
     {
       "kind": "driver",
@@ -55,7 +55,7 @@
       "source": "drivers/amadeus-pi-guardian.ts",
       "destination": ".pi/drivers/amadeus-pi-guardian.ts",
       "load": "internal",
-      "sha256": "c7a563aa53746387c456c0de968b9c4b22f754e0dc373c6068fb44b5026cbb94"
+      "sha256": "de4f08d622eb9dd3dadf09426237f04dda0d56e9fbe108e661529fc6e5c785e4"
     },
     {
       "kind": "driver",

@@ -4,6 +4,7 @@ import {
   fingerprintPiRequest,
   parsePiChildRequest,
 } from "../../packages/framework/harness/pi/drivers/amadeus-pi-driver-contract.ts";
+import { parsePiDriverInput } from "../../packages/framework/harness/pi/drivers/amadeus-pi-driver.ts";
 
 const request = {
   schemaVersion: 1,
@@ -18,6 +19,15 @@ const request = {
 } as const;
 
 describe("Pi child request contract", () => {
+  test("narrows driver stdin JSON without throwing or widening malformed input", () => {
+    expect(parsePiDriverInput(JSON.stringify(request))).toEqual(request);
+    expect(parsePiDriverInput("{not-json")).toBeNull();
+    expect(parsePiChildRequest(parsePiDriverInput("{not-json"))).toEqual({
+      ok: false,
+      reason: "request-shape-invalid",
+    });
+  });
+
   test("accepts the closed schema and fingerprints it deterministically", () => {
     const parsed = parsePiChildRequest(request);
     expect(parsed.ok).toBe(true);
