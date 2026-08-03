@@ -450,10 +450,11 @@ export function createMirrorStateStorePorts(
     // The reentrant pair, not a bare acquire (E-U8PRE O-L1): a canonical emit
     // issued from inside this section reaches appendJournalRecordV2, which
     // locks the same identity. A bare acquire would collide with the lock this
-    // very port is holding — burning the retry budget, and once the section has
-    // outlived the stale threshold, letting the reaper steal a live lock out
-    // from under it. The port keeps its two-phase shape so failure injection
-    // stays a replaced implementation rather than a branch in this file.
+    // very port is holding, burning the retry budget and then failing — the
+    // reentrant pair re-enters instead. (The reaper can no longer compound that
+    // into a steal: a live owner is never reclaimed at any age, #1906.) The port
+    // keeps its two-phase shape so failure injection stays a replaced
+    // implementation rather than a branch in this file.
     acquireLock: () => enterAuditLock(config.projectDir, config.intent, config.space),
     releaseLock: () => exitAuditLock(config.projectDir, config.intent, config.space),
     readDocument: () => readFileSync(config.statePath, "utf-8"),
@@ -473,15 +474,7 @@ export function createMirrorProjectReconciliationLock(
 ): MirrorProjectReconciliationLock {
   const identity = `${statePath}:mirror-project-reconciliation`;
   return {
-    acquire: () =>
-      acquireAuditLock(
-        identity,
-        0,
-        0,
-        undefined,
-        undefined,
-        "dead-owner-only",
-      ),
+    acquire: () => acquireAuditLock(identity, 0, 0),
     release: () => releaseAuditLock(identity),
   };
 }

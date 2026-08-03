@@ -8,8 +8,8 @@
 // two intents lock independently; an intent-OMITTED call hashes a RESERVED
 // __workspace__ sentinel bucket distinct from every per-intent bucket (P4's
 // auto-birth + every intents.json write depend on this). The reaper stamps owner
-// PID+start-time on acquire and reclaims a provably-dead (ESRCH) or over-age lock
-// — a live, under-threshold holder is NEVER robbed.
+// PID+start-time on acquire and reclaims a provably-dead (ESRCH) lock — a LIVE
+// holder is NEVER robbed, however long it has held the lock (#1906).
 //
 // SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-lib.ts):
 //   auditLockDir(pd, intent?, space?) / auditLockIdentity — per-intent + sentinel.
@@ -176,14 +176,18 @@ describe("t161 stale-lock reaper", () => {
     releaseAuditLock(PD, INTENT, "default");
   });
 
-  test("a live-but-OVER-AGE lock is reclaimed", () => {
-    // Owner = THIS process (alive), but the stamp is far older than the threshold.
+  test("a live-but-OVER-AGE lock is NEVER reclaimed", () => {
+    // Owner = THIS process (alive), stamp far older than the threshold. This
+    // USED to be a reclaim; #1906 retired it. Age cannot tell a wedged holder
+    // from a long-running one, and the steal broke mutual exclusion silently —
+    // a live owner is now off-limits at any age. The wedged-holder recovery
+    // moved to the detectLeakedLocks doctor probe (asserted below).
     process.env.AMADEUS_LOCK_STALE_MS = "1000"; // 1s threshold
     try {
-      stampOwner(process.pid, 60_000); // 60s old → over-age
-      expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
-      releaseAuditLock(PD, INTENT, "default");
+      stampOwner(process.pid, 60_000); // 60s old → over-age, but alive
+      expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(false);
     } finally {
+      rmSync(auditLockDir(PD, INTENT, "default"), { recursive: true, force: true });
       delete process.env.AMADEUS_LOCK_STALE_MS;
     }
   });
@@ -201,56 +205,33 @@ describe("t161 stale-lock reaper", () => {
     }
   });
 
-  test("dead-owner-only policy never reclaims a live over-age holder", () => {
+  // The dead-owner-only reap policy used to be opt-in per call site; #1906 made
+  // it the only policy and deleted the parameter. This pins the unified acquire:
+  // liveness alone decides, so the SAME staleness threshold that leaves a live
+  // holder untouched still reclaims a dead one immediately.
+  test("liveness alone decides the reap — live refused, dead reclaimed, same threshold", () => {
     process.env.AMADEUS_LOCK_STALE_MS = "1";
     try {
       stampOwner(process.pid, 60_000);
-      expect(
-        acquireAuditLock(
-          PD,
-          0,
-          1,
-          INTENT,
-          "default",
-          "dead-owner-only",
-        ),
-      ).toBe(false);
+      expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(false);
       rmSync(auditLockDir(PD, INTENT, "default"), {
         recursive: true,
         force: true,
       });
 
       stampOwner(2_000_000_000, 0);
-      expect(
-        acquireAuditLock(
-          PD,
-          0,
-          1,
-          INTENT,
-          "default",
-          "dead-owner-only",
-        ),
-      ).toBe(true);
+      expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
       releaseAuditLock(PD, INTENT, "default");
     } finally {
       delete process.env.AMADEUS_LOCK_STALE_MS;
     }
   });
 
-  test("dead-owner-only policy fails closed when its owner stamp cannot be written", () => {
+  test("an acquire fails closed when its owner stamp cannot be written", () => {
     const lockDir = auditLockDir(PD, INTENT, "default");
     const previousUmask = process.umask(0o666);
     try {
-      expect(
-        acquireAuditLock(
-          PD,
-          0,
-          1,
-          INTENT,
-          "default",
-          "dead-owner-only",
-        ),
-      ).toBe(false);
+      expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(false);
       expect(existsSync(lockDir)).toBe(false);
     } finally {
       process.umask(previousUmask);

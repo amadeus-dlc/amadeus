@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 174,
+      "function": 175,
       "audit": 35,
       "scope": 10,
       "stage": 8,
@@ -901,6 +901,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
           "mechanism": "none"
         }
@@ -1574,8 +1578,13 @@
       "unitClass": "function",
       "unitId": "function:detectLeakedLocks",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3394,6 +3403,10 @@
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",

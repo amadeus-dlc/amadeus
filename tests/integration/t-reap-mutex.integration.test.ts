@@ -49,7 +49,12 @@ beforeEach(() => {
   lockDir = auditLockDir(proj, INTENT, SPACE);
   mutexDir = `${lockDir}.reap`;
   for (const key of ["AMADEUS_LOCK_STALE_MS", "AMADEUS_LOCK_UNSTAMPED_GRACE_MS", "AMADEUS_REAP_MUTEX_STALE_MS"]) savedEnv[key] = process.env[key];
-  process.env.AMADEUS_LOCK_STALE_MS = "600000";
+  // Deliberately TINY (#1906): every stamp here is instantly "over-age", so the
+  // live-holder refusals below are proved by LIVENESS, not by hiding behind a
+  // generous threshold. This used to need a 10-minute threshold to hold — the
+  // reaper would otherwise steal a live over-age lock. A generous unstamped
+  // grace still covers the real mkdir→stamp gap.
+  process.env.AMADEUS_LOCK_STALE_MS = "1";
   process.env.AMADEUS_LOCK_UNSTAMPED_GRACE_MS = "10000";
 });
 
@@ -109,7 +114,8 @@ describe("reap mutex — reapers are serialised and never rob through a vacancy 
   test("the reap mutex is released after refusing a fresh live holder", () => {
     rmSync(lockDir, { recursive: true, force: true });
     mkdirSync(lockDir, { recursive: true });
-    // a LIVE (this process), under-age holder — the reaper must refuse it
+    // a LIVE (this process) holder — the reaper must refuse it on liveness
+    // alone (the threshold is 1ms, so it is over-age the instant it is written)
     writeFileSync(join(lockDir, "owner.json"), JSON.stringify({ pid: process.pid, startedAtMs: Date.now() }), "utf-8");
     expect(acquireAuditLock(proj, 0, 1, INTENT, SPACE)).toBe(false);
     expect(existsSync(mutexDir)).toBe(false);
