@@ -395,6 +395,14 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | The learning gate persisted a kept learning as a dated practice entry to `amadeus/spaces/<space>/memory/{project,team}.md` |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter |
 
+### Loop monitor
+
+The Loop Monitor commits delivery observations, cycle triggers, Judge reservations and results, closed-route applications, and latch transitions as one canonical event set. The per-clone Replay Index is a repairable projection of this audit source of truth.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
+
 ### Swarm
 
 All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the deterministic verdict surface the conductor consults. The conductor owns fan-out and retry decisions while the referee owns convergence verdicts, merge, and audit. `prepare` forks per-unit worktrees and emits `SWARM_STARTED` (plus `SWARM_DEGRADED` for a loud downgrade); `finalize` re-verifies claims and emits the per-Unit verdicts, baton rows, and batch tally. The advisory `check` subcommand emits nothing.
