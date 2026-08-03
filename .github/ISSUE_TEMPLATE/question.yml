@@ -1,0 +1,86 @@
+name: 質問・判断依頼
+description: 調査や判断が必要な問いを、根拠・影響・必要な回答とともに起票します
+title: "question: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- amadeus-issue-form:v1 type=question -->
+        調べれば確定できる事実と、判断が必要な論点を区別して記載してください。秘密情報や認証情報は含めないでください。
+
+        フォーム送信時に、`question` と選択した P コード（例: `P2`）が同名ラベルとして自動付与されます。
+
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: 重複・現行状態の確認
+      description: 重複や、現行ブランチ・既存議論では解決済みの問いを起票しないため、両方を確認してください。
+      options:
+        - label: open/closed の両方を対象に、同じ課題・提案・質問の Issue を検索しました
+          required: true
+        - label: origin/main と関連する open/merged PR を確認し、現行状態でも起票が必要だと確認しました
+          required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・対象範囲
+      description: 問いが生じた背景と、判断・調査の対象範囲を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 根拠・実測証拠
+      description: 確認済みの仕様、コード、コマンド結果、Issue、PR と、まだ不明な点を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: 期待結果・完了条件
+      description: どの問いに答え、何が確定すればこの Issue を完了できるか記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影響・価値
+      description: 回答が必要な理由、回答待ちで止まる判断や作業、期限への影響を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-work
+    attributes:
+      label: 関連 Issue・PR・intent
+      description: 関連する Issue、PR、intent record、仕様を記載してください。無い場合は「なし」と記載します。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度（いつ対応するか）
+      description: 選択肢先頭の P コードが、フォーム送信時に同名ラベルへ反映されます。
+      options:
+        - 未選択
+        - P0 — 正しさ・安全性の破綻
+        - P1 — 重要だが回避可能
+        - P2 — 通常
+        - P3 — いつか対応
+    validations:
+      required: true
+
+  - type: textarea
+    id: decision-options
+    attributes:
+      label: 回答してほしい問い・選択肢
+      description: 回答してほしい問いを明記し、既知の選択肢と各トレードオフを列挙してください。事実確認だけなら想定する確認方法を記載します。
+    validations:
+      required: true
