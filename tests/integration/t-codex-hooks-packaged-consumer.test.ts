@@ -29,6 +29,7 @@ import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
+import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
@@ -58,7 +59,8 @@ afterEach(() => {
   }
 });
 
-function fakeHttp(archive: Buffer, tag: string): Http {
+function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
+  const checksums = buildReleaseAssetChecksums(archive, tag);
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) {
@@ -73,16 +75,17 @@ function fakeHttp(archive: Buffer, tag: string): Http {
       if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
       throw new Error(`unexpected path in fixture: ${path}`);
     },
-    async downloadArchive() {
+    async downloadArchive(url) {
+      const bytes = url.pathname.endsWith("/SHA256SUMS") ? checksums : archive;
       const stream = Readable.toWeb(
-        Readable.from(archive),
+        Readable.from(bytes),
       ) as unknown as ReadableStream<Uint8Array>;
       return Result.ok(stream);
     },
   };
 }
 
-function realPorts(archive: Buffer, tag: string): CliPorts {
+function realPorts(archive: Buffer, tag: `v${string}`): CliPorts {
   return {
     tty: {
       isTTY: false,

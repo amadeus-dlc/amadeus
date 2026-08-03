@@ -17,6 +17,7 @@ import { buildDistAssets } from "../../scripts/release-dist.ts";
 import { discoverHarnessNames } from "../../scripts/package.ts";
 
 const roots: string[] = [];
+const CLAUDE = HarnessName.all[0] as HarnessName;
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -53,9 +54,7 @@ describe("u1 release asset -> u2 installer", () => {
       const result = await createFetcher(http, tmpWrite).fetchArchive(ResolvedVersion.fromRelease(parsed.value));
       expect(result.type).toBe("ok");
       if (result.type !== "ok") return;
-      const claude = HarnessName.all.find((name) => String(name) === "claude");
-      if (!claude) throw new Error("claude harness fixture is unavailable");
-      const harnessRoot = result.value.harnessRoot(claude);
+      const harnessRoot = result.value.harnessRoot(CLAUDE);
       expect(harnessRoot.type).toBe("ok");
       if (harnessRoot.type === "ok") expect(readFileSync(join(harnessRoot.value, "marker.txt"), "utf8")).toBe("claude\n");
     } finally {

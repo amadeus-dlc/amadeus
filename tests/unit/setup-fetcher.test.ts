@@ -50,6 +50,25 @@ function fakeHttp(gz: Buffer, failures: FetchError[] = []): Http & { calls: numb
   };
 }
 
+type AssetResponse = Uint8Array | FetchError;
+
+function assetHttp(
+  archiveResponse: AssetResponse,
+  checksumResponse: AssetResponse,
+  urls: string[] = [],
+): Http {
+  return {
+    async getJson(): Promise<never> {
+      throw new Error("fetcher must never call getJson");
+    },
+    async downloadArchive(url) {
+      urls.push(url.toString());
+      const response = url.pathname.endsWith("/SHA256SUMS") ? checksumResponse : archiveResponse;
+      return response instanceof Uint8Array ? Result.ok(stream(response)) : Result.err(response);
+    },
+  };
+}
+
 async function withTmpWrite<T>(fn: (tmpWrite: TmpWrite) => Promise<T>): Promise<T> {
   const created = await createTmpWrite("amadeus-setup-fetcher-test-");
   if (created.type === "err") throw new Error(created.error.detail);
@@ -110,15 +129,7 @@ describe("createFetcher — verified release asset", () => {
       const digest = createHash("sha256").update(archive).digest("hex");
       const checksums = Buffer.from(`${digest}  ${archiveName}\n${"0".repeat(64)}  amadeus-dist-v0.1.8.manifest.json\n`);
       const urls: string[] = [];
-      const http: Http = {
-        async getJson(): Promise<never> {
-          throw new Error("fetcher must never call getJson");
-        },
-        async downloadArchive(url) {
-          urls.push(url.toString());
-          return Result.ok(stream(url.pathname.endsWith("/SHA256SUMS") ? checksums : archive));
-        },
-      };
+      const http = assetHttp(archive, checksums, urls);
 
       const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
 
@@ -141,15 +152,7 @@ describe("createFetcher — verified release asset", () => {
         status: 404,
         url: "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/amadeus-dist-v0.1.8.tar.gz",
       });
-      const http: Http = {
-        async getJson(): Promise<never> {
-          throw new Error("fetcher must never call getJson");
-        },
-        async downloadArchive(url) {
-          urls.push(url.toString());
-          return Result.err(missing);
-        },
-      };
+      const http = assetHttp(missing, missing, urls);
 
       const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
 
@@ -176,14 +179,7 @@ describe("createFetcher — verified release asset", () => {
         status: 404,
         url: "https://github.com/amadeus-dlc/amadeus/releases/download/v0.1.8/SHA256SUMS",
       });
-      const http: Http = {
-        async getJson(): Promise<never> {
-          throw new Error("fetcher must never call getJson");
-        },
-        async downloadArchive(url) {
-          return url.pathname.endsWith("/SHA256SUMS") ? Result.err(missing) : Result.ok(stream(archive));
-        },
-      };
+      const http = assetHttp(archive, missing);
 
       const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
 
@@ -205,14 +201,7 @@ describe("createFetcher — verified release asset", () => {
         { type: "file", name: "amadeus-dist-v0.1.8/claude/marker.txt", content: Buffer.from("asset") },
       ]);
       const checksums = Buffer.from(`${"f".repeat(64)}  amadeus-dist-v0.1.8.tar.gz\n`);
-      const http: Http = {
-        async getJson(): Promise<never> {
-          throw new Error("fetcher must never call getJson");
-        },
-        async downloadArchive(url) {
-          return Result.ok(stream(url.pathname.endsWith("/SHA256SUMS") ? checksums : archive));
-        },
-      };
+      const http = assetHttp(archive, checksums);
 
       const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
 
@@ -241,14 +230,7 @@ describe("createFetcher — verified release asset", () => {
 
     for (const checksumText of invalidChecksums) {
       await withTmpWrite(async (tmpWrite) => {
-        const http: Http = {
-          async getJson(): Promise<never> {
-            throw new Error("fetcher must never call getJson");
-          },
-          async downloadArchive(url) {
-            return Result.ok(stream(url.pathname.endsWith("/SHA256SUMS") ? Buffer.from(checksumText) : archive));
-          },
-        };
+        const http = assetHttp(archive, Buffer.from(checksumText));
 
         const result = await createFetcher(http, tmpWrite).fetchArchive(version("0.1.8"));
 
