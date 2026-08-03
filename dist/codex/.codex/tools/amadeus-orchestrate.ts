@@ -3233,7 +3233,8 @@ function emitSwarmOrPerUnit(
 // `unit` defaults to the {unit-name} placeholder — the faithful emission for
 // every caller that has no concrete Unit of Work. The degrade path (a scope that
 // SKIPs units-generation) passes the unit directory it resolved off disk so the
-// emitted paths are real, not placeholder-shaped.
+// emitted paths are real, not placeholder-shaped, and passes its validated kind
+// so artifact applicability stays identical to the compiled-DAG path.
 function emitRunStageForSlug(
   slug: string,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -3242,6 +3243,7 @@ function emitRunStageForSlug(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
   unit: string = UNIT_NAME_PLACEHOLDER,
+  unitKind?: UnitKind,
 ): void {
   const node = nodeForSlug(slug);
   if (!node) {
@@ -3259,6 +3261,7 @@ function emitRunStageForSlug(
     stateContent,
     recordPrefix,
     codekbCtx,
+    unitKind,
   );
   if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
@@ -3527,6 +3530,7 @@ function emitPerUnitRunStage(
       recordPrefix,
       codekbCtx,
       picked.unit,
+      unitKinds.get(picked.unit),
     );
     return;
   }

@@ -68,6 +68,7 @@ interface Directive {
   stage?: string;
   message?: string;
   consumes?: string[];
+  consumes_absent?: { path: string; expected: boolean }[];
   produces?: string[];
   optional_produces?: string[];
   stage_file?: string;
@@ -136,6 +137,15 @@ function infraScopeState(): string {
     .replace("**Scope**: fix", "**Scope**: infra")
     .replaceAll("code-generation", "nfr-requirements")
     .replace("build-and-test", "nfr-design");
+}
+
+function infraNfrDesignState(): string {
+  return infraScopeState()
+    .replace("**In Progress**: nfr-requirements", "**In Progress**: nfr-design")
+    .replace("- [-] nfr-requirements — EXECUTE", "- [x] nfr-requirements — EXECUTE")
+    .replace("- [ ] nfr-design — EXECUTE", "- [-] nfr-design — EXECUTE")
+    .replace("**Current Stage**: nfr-requirements", "**Current Stage**: nfr-design")
+    .replace("**Last Completed Stage**: requirements-analysis", "**Last Completed Stage**: nfr-requirements");
 }
 
 /** A fresh `fix`-scope project with NO compiled Bolt DAG. */
@@ -452,6 +462,33 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("unit-svc");
+  }, 30000);
+
+  test("16: degrade directives apply the resolved unit kind to outputs and inputs", () => {
+    const proj = createTestProject();
+    tempDirs.push(proj);
+    writeFileSync(seededStateFile(proj), infraNfrDesignState());
+    seedRuntimeUnitKinds(proj, [{ name: "unit-lib", kind: "library" }]);
+    seedUnitArtifacts(proj, "unit-lib", "nfr-requirements", [
+      "security-requirements.md",
+      "tech-stack-decisions.md",
+    ]);
+
+    const d = runNextInProcess(proj);
+
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-lib");
+    expect((d.produces ?? []).map((path) => path.split("/").at(-1))).toEqual([
+      "security-design.md",
+      "logical-components.md",
+    ]);
+    expect((d.consumes ?? []).map((path) => path.split("/").at(-1))).toEqual([
+      "security-requirements.md",
+      "tech-stack-decisions.md",
+    ]);
+    expect(
+      (d.consumes_absent ?? []).map((consume) => consume.path.split("/").at(-1)),
+    ).toEqual(["business-logic-model.md"]);
   }, 30000);
 
   test("6: a construction stage's own diary dir is not mistaken for a unit", () => {
