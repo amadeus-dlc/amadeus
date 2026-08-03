@@ -100,9 +100,7 @@ export function archiveSizeStatus(sizeBytes: number): "ok" | "warning" | "reject
 }
 
 function compareNames(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
+  return Number(left > right) - Number(left < right);
 }
 
 function posixRelative(root: string, path: string): string {
