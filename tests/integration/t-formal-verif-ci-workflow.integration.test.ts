@@ -30,6 +30,11 @@ const BASELINE_SHA = readFileSync(
 //     section). Placed in drift-check because it IS a drift guard, and
 //     because reusing that job leaves ci-success's needs set — and t222's pin
 //     on it — untouched.
+//   - 260802-record-roundtrip-pbt U4 (#1980): the lint job's unchecked-cast
+//     guard step (FR-3a, the shrink-only ratchet over `JSON.parse(...) as T`).
+//     Placed beside the call-site guard for the same reason the U7 entry above
+//     gives — the guard lives in tests/ and CI runs it as one lint step, so
+//     ci-success's needs set is again untouched.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

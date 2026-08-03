@@ -118,6 +118,14 @@ jobs:
       - name: Call-site guard (legacy emit path, shrink-only ratchet)
         run: bun tests/callsite-guard.ts --check
 
+      # FR-3a (#1980): reads that give a JSON value taken off disk a domain type
+      # without proving it. The allowlist ratchets down only, so a NEW unchecked
+      # cast fails the job while the existing 33 stay visible in the log as the
+      # debt they are. Placed beside the call-site guard: both live in tests/ and
+      # CI runs each as one lint step.
+      - name: Unchecked-cast guard (JSON read paths, shrink-only ratchet)
+        run: bun tests/unchecked-cast-guard.ts --check
+
       # FR-MIG-4: the six-condition deletion gate for the legacy audit writer.
       # --check does not fail the job — BLOCKED is the expected state for the
       # whole migration period, and a permanently red job gets ignored. What CI
