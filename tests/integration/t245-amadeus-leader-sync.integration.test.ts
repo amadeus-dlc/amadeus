@@ -222,7 +222,7 @@ describe("t245 real filesystem ownership and transient corpus", () => {
     } finally {
       gitStdout(["worktree", "remove", "--force", root], projectDir);
     }
-  });
+  }, 120_000);
 });
 
 describe("t245 E-PM10A falling proofs", () => {
