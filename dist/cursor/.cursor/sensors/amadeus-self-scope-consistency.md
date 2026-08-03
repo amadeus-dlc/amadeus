@@ -3,9 +3,9 @@ id: self-scope-consistency
 kind: deterministic
 command: bun .cursor/tools/amadeus-sensor-self-scope-consistency.ts
 default_severity: advisory
-description: Amadeus self-development only — checks that the five dogfood harnesses agree on the canonical self-* scope files and scope-grid rows, down to the prose bytes and the shared stage cells
+description: Amadeus self-development only — checks that the five dogfood harnesses agree on all five promoted scope files and scope-grid rows, down to the prose bytes and the shared stage cells
 category: framework-integrity
-matches: "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}"
+matches: "**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}"
 input_schema:
   output_path: string
   stage_slug: string
@@ -32,10 +32,10 @@ no `self-*` scope exists.
 
 Once any self scope is present, the sensor checks the five dogfood harness
 surfaces (`.claude`, `.codex`, `.cursor`, `.opencode`, and `.kimi-code`). Each
-must contain the canonical `self-document`, `self-feature`, `self-fix`, and
-`self-refactor` identities both as `scopes/amadeus-self-*.md` files and as
-rows in `tools/data/scope-grid.json`. A scope filename whose frontmatter
-declares a different `name:` also fails.
+must contain the canonical `installer-distribution`, `self-document`,
+`self-feature`, `self-fix`, and `self-refactor` identities both as scope files
+and as rows in `tools/data/scope-grid.json`. A scope filename whose
+frontmatter declares a different `name:` also fails.
 
 Identities are not enough on their own: the faces are copies of one another,
 so the sensor also compares their content. Scope prose must be byte-identical

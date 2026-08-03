@@ -34,6 +34,7 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - installer-distribution
 inputs: CD pipeline config from deployment-pipeline stage, provisioned environments from environment-provisioning stage, built artifacts from Construction
 outputs: deployment-log.md, smoke-test-results.md, health-check-report.md, deployment-execution-questions.md (under this stage's record dir, engine-resolved)
 ---

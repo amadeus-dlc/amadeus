@@ -275,11 +275,11 @@ function auditEventCount(file: string, ev: string): number {
   return auditRecords(file).filter((r) => r.event === ev).length;
 }
 
-// The 9 alphabetically-sorted default scopes (t60.sh:45). Pins the derivation
+// The 15 alphabetically-sorted default scopes. Pins the derivation
 // baseline: validScopes() == sorted scope names from the shipped
 // .claude/scopes/*.md set.
 const EXPECTED_DEFAULT_SCOPES =
-  "chore,enterprise,feature,fix,infra,mvp,poc,refactor,security-patch,workshop";
+  "chore,enterprise,feature,fix,infra,installer-distribution,mvp,poc,refactor,security-patch,self-document,self-feature,self-fix,self-refactor,workshop";
 
 describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-valid-scopes-derived.sh, plan 9)", () => {
   // --- Test 0: STRONGER current-surface pin (no .sh row) ---
@@ -309,8 +309,8 @@ describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-v
     expect(res.stdout ?? "").toBe("");
   });
 
-  // --- Test 2: runtime — validScopes() default returns 10 sorted scopes ---
-  test("2: validScopes() returns 10 alphabetically-sorted scopes", () => {
+  // --- Test 2: runtime — validScopes() default returns 15 sorted scopes ---
+  test("2: validScopes() returns 15 alphabetically-sorted scopes", () => {
     // Spawn `bun -e import { validScopes } from <shipped lib.ts>` against the
     // shipped tree (no fixture scope dropped) — exactly the .sh mechanism
     // (t60.sh:46). The fresh process reads .claude/scopes/*.md, no cache.

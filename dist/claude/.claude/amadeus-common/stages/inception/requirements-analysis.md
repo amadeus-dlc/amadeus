@@ -44,6 +44,11 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: RE artifacts (if brownfield), user's project description (from <record>/audit/<host>-<clone>.jsonl)
 outputs: requirements.md, requirements-analysis-questions.md (under this stage's record dir, engine-resolved)
 ---

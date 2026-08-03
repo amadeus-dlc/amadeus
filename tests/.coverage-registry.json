@@ -20,11 +20,11 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 576,
+    "total": 581,
     "enumeratedByClass": {
       "function": 331,
       "audit": 81,
-      "scope": 10,
+      "scope": 15,
       "stage": 32,
       "hook": 13,
       "subcommand": 102,
@@ -33,7 +33,7 @@
     "coveredByClass": {
       "function": 162,
       "audit": 35,
-      "scope": 10,
+      "scope": 15,
       "stage": 8,
       "hook": 13,
       "subcommand": 83,
@@ -4840,6 +4840,18 @@
     },
     {
       "unitClass": "scope",
+      "unitId": "installer-distribution",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
       "unitId": "mvp",
       "minMechanism": "none",
       "coveredBy": [
@@ -4894,6 +4906,54 @@
         {
           "file": "tests/smoke/t130-scope-runners.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-document",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-feature",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-fix",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-refactor",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

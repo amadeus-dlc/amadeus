@@ -29,6 +29,8 @@ scopes:
   - enterprise
   - feature
   - mvp
+  - installer-distribution
+  - self-feature
 inputs: Intent statement, feasibility assessment, constraint register
 outputs: scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)
 ---

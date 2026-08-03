@@ -52,6 +52,11 @@ scopes:
   - security-patch
   - workshop
   - chore
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: ALL prior design artifacts for this unit
 outputs: application code + code-generation-plan.md, code-summary.md (under this stage's per-unit record dir, engine-resolved)
 ---

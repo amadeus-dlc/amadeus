@@ -176,10 +176,15 @@ The engine resolves scope-level stage routing internally (it reads the compiled 
 | feature        | Standard      | (default)    | 32 / 32         |
 | fix            | Minimal       | (default)    | 7 / 32          |
 | infra          | Standard      | (default)    | 13 / 32         |
+| installer-distribution | Standard      | (default)    | 25 / 32         |
 | mvp            | Standard      | (default)    | 22 / 32         |
 | poc            | Minimal       | (default)    | 8 / 32          |
 | refactor       | Minimal       | (default)    | 8 / 32          |
 | security-patch | Minimal       | (default)    | 10 / 32         |
+| self-document  | Standard      | Minimal      | 9 / 32          |
+| self-feature   | Standard      | Comprehensive | 14 / 32         |
+| self-fix       | Minimal       | Comprehensive | 7 / 32          |
+| self-refactor  | Minimal       | Comprehensive | 8 / 32          |
 | workshop       | Standard      | Minimal      | 25 / 32         |
 
 <!-- END: compiled scope grid -->
