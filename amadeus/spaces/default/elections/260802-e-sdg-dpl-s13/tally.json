@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T04:12:22Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-DPL-S13",
+      "voter": "dpl-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Delivery Planning の memory.md を独立実測した結果、Interpretations／Deviations／Tradeoffs の各節には説明用の単一行コメントだけがあり、実記録は0件だったため、横断 rule／sensor を追加しない判断に全面同意する。",
+      "submittedAt": "2026-08-02T04:11:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-DPL-S13",
+      "voter": "dpl-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "対象 record の delivery-planning/memory.md を実測し、Interpretations／Deviations／Tradeoffs／Open questions の全節がテンプレートの単一行 HTML コメント例のみで、実観測行は0件であることを確認した。蒸留元となる Interpretation／Deviation／Tradeoff が存在しないため、新しい横断 rule／sensor を発明せず永続化0件とするのが妥当。",
+      "submittedAt": "2026-08-02T04:11:54Z"
+    }
+  ],
+  "resolutions": []
+}

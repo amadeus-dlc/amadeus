@@ -10,6 +10,9 @@
 
 export type Level = "smoke" | "unit" | "integration" | "e2e" | "perf";
 
+export const DEFAULT_TEST_TIMEOUT_MS = 30_000;
+export const MAX_TEST_TIMEOUT_MS = 300_000;
+
 export interface ParsedArgs {
   runSmoke: boolean;
   runUnit: boolean;
@@ -22,6 +25,7 @@ export interface ParsedArgs {
   debug: boolean;
   filter: string;
   parallel: number;
+  testTimeoutMs: number;
   fullProfile: boolean;
 }
 
@@ -37,6 +41,16 @@ export interface ParseArgsIo {
   help(): never;
 }
 
+function parseTestTimeoutMs(value: string, io: ParseArgsIo): number {
+  if (!/^[1-9][0-9]*$/.test(value) || Number(value) > MAX_TEST_TIMEOUT_MS) {
+    io.fail(
+      `ERROR: --test-timeout-ms requires a positive integer at most ${MAX_TEST_TIMEOUT_MS} (got: '${value || "<missing>"}')\n`,
+      2,
+    );
+  }
+  return Number(value);
+}
+
 export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
   const out: ParsedArgs = {
     runSmoke: false,
@@ -50,6 +64,7 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
     debug: false,
     filter: "",
     parallel: io.defaultParallel,
+    testTimeoutMs: DEFAULT_TEST_TIMEOUT_MS,
     fullProfile: false,
   };
   let levelSelected = false;
@@ -124,6 +139,11 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
           );
         }
         out.parallel = Number(value);
+        break;
+      }
+      case "--test-timeout-ms": {
+        const value = argv[++i] ?? "";
+      out.testTimeoutMs = parseTestTimeoutMs(value, io);
         break;
       }
       case "--help":

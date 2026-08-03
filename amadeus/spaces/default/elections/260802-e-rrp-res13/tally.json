@@ -1,0 +1,63 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "c1 のみ採用 — xrev-scan-mode の enhancement 単発 Issue 面を既存 cid への追補として persist、c2 は執行実例"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件 — c1/c2 とも既存 cid の執行実例であり新規学習なし",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "c1 のみ採用 — xrev-scan-mode の enhancement 単発 Issue 面を既存 cid への追補として persist、c2 は執行実例",
+        "count": 2
+      },
+      {
+        "internalNo": 3,
+        "label": "c2 のみ採用 — observed 選定則の merge-base 面を追補として persist、c1 は執行実例",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "c1+c2 両方採用 — 両方とも追補として persist",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T16:56:02Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "追補は『クロスレビュー2名成立済みかつ verdict が検証 SHA と file:line を明記している単発 Issue(bug/enhancement を問わない)』へ適用範囲を限定し、免除条件は E-OBB5-RES13 既定のまま(review 対象 SHA ≠ observed のときは全引用を再解決)と明記すること。",
+      "rationale": "c1: 既存 cid の precondition は字義で『クロスレビュー2名成立済みバグバッチ』であり、本実測は単発の enhancement Issue #1980 への適用 = 対象クラスの拡張。かつ review 対象 SHA 8e5dc6c4 ≠ observed 9750f8aea のため免除条件を適用せず全引用を再解決した非自明な運用点を含むため、既存 cid への追補として persist 相当。c2: merge-base(HEAD, origin/main) の採用は c2-observed-mainline-commit(origin/main 系譜)と rescan-base-ancestry(HEAD 祖先かつ距離最小)の機械的交点にすぎず、新規の規則内容を含まない執行実例。",
+      "submittedAt": "2026-08-03T00:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 文は diary の「免除条件は行シフト再解決表の作成で充足」という記述でなく re-scan 成果物の実測記載(「行番号再解決の免除条件は適用しない — 患部の一部が区間内 touch を持つため全引用を observed で再解決した」)を根拠とし、c1 の新規性は免除条件の充足ではなく xrev scan mode の適用対象をバグバッチから単発のクロスレビュー済み enhancement Issue へ広げた点に限定して書くこと。",
+      "rationale": "c1 = 追補相当。既存 cid:reverse-engineering:c1-xrev-scan-mode の字義は「クロスレビュー2名成立済みバグバッチの RE」に限定されており(project.md:289 原文実測)、本件は単発の enhancement Issue #1980 への適用で適用範囲を広げている。機序(verdict を一次入力+conductor の verbatim スポット再実測+患部10パスの区間 touch 判定で二重化)は同一のため独立 cid でなく同 cid への1行追補が妥当。なお diary は免除条件充足と書くが re-scans/260802-record-roundtrip-pbt.md は「免除条件は適用しない」と実測記載しており、追補の根拠は後者に置く必要がある(留保)。c2 = 執行実例。origin/main tip 0fbd34eed は HEAD 祖先でないことを git merge-base --is-ancestor で実測(exit 1)、9750f8aea は祖先(exit 0)。cid:c2-observed-mainline-commit の「origin/main 系譜」と cid:rescan-base-ancestry の「HEAD 祖先」を同時に満たす候補は merge-base 9750f8aea 以外に存在せず、既決 contract からの機械的一意導出であって新規学習ではない。",
+      "submittedAt": "2026-08-03T00:00:00Z"
+    }
+  ],
+  "resolutions": []
+}

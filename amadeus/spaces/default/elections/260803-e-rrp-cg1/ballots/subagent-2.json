@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-CG1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "赤テスト件数(t259 2件・formal-verif 系 11 ファイル)は builder 報告の転記で私は未再実行だが、裁定根拠自体は fixture 実文(:57-68 choices: [])・model-map.json の election-store sha256 ピン・FR-1b/BR-ELRP-21 の実読で独立確定している。",
+  "rationale": "(A) t259 の主題はコメント実文どおり registry 配線(row 不在時 setState 分岐)であり空 choices を仕様固定していない。FR-1b が空 choices の corrupt 棄却を要件として明示するため、fixture 1行是正は承認済み要件の執行。FD decisions.md:239 の『破壊は見込まれない』は誤予測で申告付き訂正が正当。(B) 本 Bolt は実装のみ変更でモデル意味論不変 — updateModelMap --impl-only はツール規定の回復経路。いずれもユーザー可視契約の変更に当たらず仕様変更ではない。",
+  "submittedAt": "2026-08-03T01:20:59Z"
+}

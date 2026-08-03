@@ -30,6 +30,24 @@
 
 - 判断: 新規コンポーネントの新設は見通しにない。対象は既存 plugin 内の 6 面 — model-map スキーマ（`plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` + canonical コピー `packages/framework/core/tools/`、byte-identical）、loader（`tla-model-loader.ts` / `tla-model-loader-internal.ts`）、arm（`tla-arm.ts`）、toolchain（`tlc-toolchain.ts` / `fs-tlc-toolchain.ts` / `tlc-spawn-planner.ts`）、CI ポート（`node-ci-model-check-port.ts` / `ci-model-check-*.ts` / `run-skeleton-ci.ts` / `run-model-check-diagnostic.ts`）、run 系（`run-model-check*.ts`、byte-pin `:118-123`）。加えて `specs/tla/`（model-map.json + 4 モジュール）、stage doc（`stages/formal-model-check.md`）、`.github/workflows/ci.yml:508-564`。患部一覧は `re-scans/260801-tla-multi-model.md` を正本とする。
 
+## no-silent-drop の対象コンポーネント（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+| コンポーネント | 状態 | 責務／所見 |
+| --- | --- | --- |
+| `tests/callsite-guard.ts` | healthy / 再利用先例 | authored source census と shrink-only allowlist。現行 root は core + scripts（`:61`）のため新 gate の harness root は別途明示が必要 |
+| `tests/complexity-gate.ts` | healthy / 再利用先例 | 外部 tool、baseline、typed failure、注入 seam |
+| CI lint job | healthy / 拡張点 | `.github/workflows/ci.yml:93-143`。既存静的 gate の直列 blocking boundary |
+| no-silent-drop CLI | 未実装 | 設定検証、完全走査、typed diagnostic、exit code の所有者 |
+| AST rule set | 未実装 | 3 shape を独立 rule ID で分類 |
+| census normalizer | 未実装 | repo-relative path と AST node identity、生成物／fixture 除外 |
+| baseline ratchet | 未実装 | 既存違反の shrink-only 債務台帳 |
+| exemption validator | 未実装 | 非空理由と直近1 node の intentional drop 台帳 |
+| `persistBlocked` | at-risk | `amadeus-mirror-executor.ts:188-196` が `StateResult` を破棄 |
+| `setCheckbox` / `setStageSuffix` | at-risk | `amadeus-lib.ts:5399-5429` が非一致を成功相当の文字列へ潰す |
+| state resync / plugin compose | healthy / regression-only | #1963 の section・graph 失敗を typed outcome と exit 1 へ昇格済み |
+
+新規 gate は runtime コンポーネントへ依存させず、runtime 2修正は各所有モジュール内で結果消費を直す。これにより静的検出の責務と実際の失敗伝播を分離できる。
+
 ## kimi bootstrap デッドロック修正の対象コンポーネント（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: 新規コンポーネントなし。対象は既存3面 — core session-start hook（`packages/framework/core/hooks/amadeus-session-start.ts`）、認可（`packages/framework/core/tools/amadeus-caller-authorization.ts`）、kimi harness ロール管理（`packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts`）の欠陥修正のみ。区間で到着した otel 基盤拡張（resource-core / span-context 等）の目録化は本 intent のスコープ外（bugs-only）。患部一覧は `re-scans/260801-kimi-bootstrap-deadlock.md` を正本とする。
@@ -1218,3 +1236,8 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 所有境界
 
 薄い CLI wrapper は stdout、集計、exit 0/1、spawn CLI/cwd 互換性を所有する。doctor core は検査順序、結果集合、終了判定を所有し、audit 追記と stale lock cleanup を欠落させない。checks/dependencies は既存動作を提供し、utility 全体の再設計は行わない。
+
+## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
+

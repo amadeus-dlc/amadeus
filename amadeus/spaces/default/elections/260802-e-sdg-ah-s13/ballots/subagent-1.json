@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SDG-AH-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。approval-handoff/memory.md:9 の c1 は、Scope Definition の単一 PR 案を Bolt ごとの PR へ補正し、提案前に既決規範を照合するという内容である。team.md:57 は既に『Construction の成果は Bolt ごとに PR/スカッシュマージする』『複数ユニットを単一 PR に束ねない』と明記している。decision-log.md:29-30 と initiative-brief.md:71 でも同じ既決規範への補正が成果物へ反映済みであり、c1 は新規の一般化可能な規範ではなく既存規範の違反・適用実例であるため、project.md への重複 persist は不要。",
+  "submittedAt": "2026-08-02T01:34:46Z"
+}

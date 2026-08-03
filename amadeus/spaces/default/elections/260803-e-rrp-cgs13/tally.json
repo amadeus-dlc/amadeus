@@ -1,0 +1,45 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T06:03:52Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c7 の persist は parse 側の反転面(配列・不正形の台帳入力を空台帳として受理せず parse-don't-validate で分離し、台帳故障をソース退行と誤報しない)に限定した cid:code-generation:verification-numeric-parse への追補として書き、exit code のみ assert の旧テストは既存の検証劇場 Forbidden の違反実例として扱う(新規 cid で Forbidden を再述しない)。",
+      "rationale": null,
+      "submittedAt": "2026-08-03T06:10:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "c5/c6 は独立 cid でなく既存 cid への追補として persist すべき(c5 = cid:code-generation:base-advance-regrounding の ratchet baseline 面、c6 = 正準ラッパ非経由で暗黙既定が失われる bun 実装差ファミリ)、かつ c7 の不採用理由は org.md 検証劇場 Forbidden だけでなく cid:build-and-test:error-path-reach-lcov(exit code のみ assert の偽経路 green)を第一の帰属先として記録すること。",
+      "rationale": "c5 採用: 既存 allowlist 系 cid(allowlist-line-pin-stale / c1-allowlist-mechanical-remap / cg-allowlist-straddle-swell)と complexity-baseline-ordinal はいずれも『ファイル内での行ピンの位置ズレ』を扱う positional 面であり、c5 の『shrink-only 単調ガードでは台帳の初期値そのものがマージ先 base に依存し、base 前進が構造的に赤を作る(増加を admit できない)』は別機序。base-advance-regrounding は rebase 後の全検証再実行までは定めるが baseline の意味論的基準点を定めていない。実測: PR #2113 の初期台帳 33/18 が base 前進 #2092 の新規キャスト3件で初回 CI 赤 → 最終 base で 36/19 に採り直し。c6 採用: 正準ランナー tests/run-tests.ts:59 の DEFAULT_TEST_TIMEOUT_MS=30_000 が全 bun test 起動へ渡るため通常 tier では顕在化せず、ランナー非経由の新設ジョブだけが Bun 既定 5000ms を継承する。既存の no-canonical-direct-execution(project-root 解決)/ bun-spawn-env-snapshot(env 非継承)と同族だが、CI ジョブ新設面と timeout 既定は未カバーで、一般形(正準ランナーが供給する暗黙既定は直呼びで失われる)は再発性がある。c7 不採用: (i) parseAllowlist の typeof [] === 'object' 受理は cid:code-generation:verification-numeric-parse(JS の型不正判定がゲートを無言で破る/落ちる実証に型不正入力ケースを含める)の射程内、(ii) 旧テストが exit code のみ assert で主張と逆の理由で緑だった点は cid:build-and-test:error-path-reach-lcov(別経路が同じ exit code に到達する偽経路 green は assertion だけでは見えない)の違反実例そのもの。新規性は『破れの向きが fail-open でなく誤報(false-RED)』という一点のみで、そこから導かれる行動(verdict の理由まで assert する・型不正入力を落ちる実証に含める)は既存2 cid が既に命じている。加えて false-RED は CI が赤くなる自己申告型で、無音の false-GREEN より発見容易であり、新規知識クラスとして persist する実益が薄い。",
+      "submittedAt": "2026-08-03T05:56:30Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:1",
+      "resumedTo": "tallied",
+      "at": "2026-08-03T06:06:10Z"
+    }
+  ]
+}

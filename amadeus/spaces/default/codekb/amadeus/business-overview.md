@@ -22,6 +22,15 @@
 
 - 判断: 同根の 2 Issue（#1920 ESTABLISHED_WITH_REFINEMENTS / #1921 ESTABLISHED、クロスレビュー成立済み）を 1 intent で扱う self-feature。model-map v2 は複数モデルを登録できるが実行・照合・CI が FormalElection 固定のため、MirrorLifecycle を恒常 CI ジョブにできず（#1920）、MirrorLifecycleCore.tla 等の補助モジュールを identity pin に載せられない（#1921）。利用者影響は formal-model-check の検証対象が選挙モデル 1 本に閉じること。公開契約の破壊的変更はなく、aux は optional 追加で既存 identity 値を不変に保てる。
 
+## no-silent-drop 静的ゲートの業務境界（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+- 利用者価値: authored source の失敗が「空／ログのみの catch」「成否を返す API の戻り値破棄」「永続化を伴わない偽成功」の3 shape で無音化されることを、pull_request の blocking CI で新規混入時に拒否する。
+- 対象: `packages/framework/core/`、`packages/framework/harness/`、`scripts/`。`dist/`、ルートの生成投影、テスト fixture は検査対象外とし、正本だけを数える。
+- 移行契約: 既存違反は shrink-only baseline で債務として固定し、意図的な best-effort は「非空理由 + 直近1 AST node」の exemption に限定する。baseline と exemption は別台帳とし、新規増加を更新操作で受理しない。
+- runtime 修正対象: #1878 の `persistBlocked` は永続化失敗を結果へ反映し、#1874 の `setCheckbox` / `setStageSuffix` は対象 slug 不在を成功相当に扱わない。
+- 回帰保護: #1963 は [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) で修正済み。再実装せず、malformed section・decoy checkbox・invalid graph が loud failure になる既存契約を維持する。
+- 成功境界: gate 単独で15秒以内、fixture 分類100%、偽陽性率5%以下。tool／rule／baseline の欠落・不正、zero scan、partial scan は型付き診断と非0 exit で fail-closed にする。
+
 ## kimi ハーネス bootstrap デッドロック修正の業務境界（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - 判断: Issue #1922 単一バグの修正。kimi harness でアクティブ intent 無しのワークスペースを開くと `.current-session` が永久に書かれず、main conductor 認可が恒久 fail-closed となって初回起動がデッドロックする。利用者影響は kimi harness 利用者の初回起動不能（アクティブ intent 誕生後は自己解消）。修正は `writeCurrentSessionId` のガード前段への移動1点で、公開契約の変更なし。
@@ -511,3 +520,8 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 ## 後続設計への業務判断
 
 推奨する最小境界は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` であり、全 check の純関数化は本 Issue のスコープ外とする。Functional Design では、戻り値を終了コードだけに絞る `runDoctor(): number` と、観測結果を明示する `{ results, output, exitCode }` のどちらを正式契約にするか決定する。
+
+## 記録系 round-trip PBT の業務境界（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 利用者向けの業務機能・提供価値・ステークホルダー構成に変化がないため。Issue #1980（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS、対象 SHA `8e5dc6c4`）は開発基盤（テスト）の拡充とコア読み側の fail-closed 化であり、公開 CLI 契約・ワークフロー体験は不変。業務上の効果は「書いた記録が読めない／発行した承認が消費されない」不整合バグ族の shift-left（分類第 2 位 44 件 — #1979 と同一の全量調査、bug Issue 全 259 件中 分類済み 181 件が分母）であり、機構面は `architecture.md` 現在節、患部配置は `code-structure.md` 現在節、被覆分布は `code-quality-assessment.md` 現在節、実測全数は `re-scans/260802-record-roundtrip-pbt.md` に委ねる。
+

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SDG-FD-S13",
+      "voter": "functional-design-reviewer",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.mdにInterpretation／Deviation／Tradeoffの実entryがなく、今回の未解決findingはintent固有の要件・Unit間contractとしてstage gateへ送るべきで、未解決のまま横断ruleへ一般化しないため0件で可。",
+      "submittedAt": "2026-08-02T05:25:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SDG-FD-S13",
+      "voter": "reverse-engineering-developer",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "stage memoryの候補が0件であり、設計レビューの残存事項は実装前に人間裁定すべきscope固有課題であるため、新しい横断rule／sensorを永続化しない0件案を支持する。",
+      "submittedAt": "2026-08-02T05:25:12Z"
+    }
+  ],
+  "late": []
+}

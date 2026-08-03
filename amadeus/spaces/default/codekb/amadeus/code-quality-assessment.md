@@ -61,6 +61,29 @@
 - 既存の足場（良い面）: loader は no-arg 1 エクスポートに pin 済み（`tests/unit/t-formal-verif-tla-model-loader.test.ts:10-13`、`loadVerifiedTlaSource.length === 0`）。model-map v2 パーサは plugin/canonical 両コピーを対象にした table test（`tests/unit/t-formal-verif-model-map-v2.test.ts`、`:6` コメント "neither copy can drift"、`:277` `describe.each(modules)`）で二重化。mirror 登録は integration で実 `model-map.json` 読込み検証。`tests/formal-verif/support/` に mutation / real-toolchain probe。一方 FormalElection 参照は tests 27 ファイルに散在し、一般化時の機械的洗い出し対象が大きい。
 - 欠陥クラス: 「登録スキーマは複数対応、実行・照合・CI は単一固定」の片側実装 — 前 intent 260731-formal-verif-value-chain が記録した非対称クラスタの継続。schema の `exactObject :204` は fail-closed で安全側だが、aux 追加時の必須変更点となる。
 
+## no-silent-drop の品質所見（260801-silent-drop-gate、履歴、observed `d72f60b5a`）
+
+### 観測事実
+
+- 強み: 既存 callsite guard は shrink-only、missing/malformed allowlist の fail-closed、純粋判定の分離を実装済み（`tests/callsite-guard.ts:13-25`, `:115-205`）。complexity gate は外部 tool failure と baseline failure の注入 seam を持つ（`tests/complexity-gate.ts:12-24`, `:53-69`）。
+- #1878: `applyTransition` は failure を判別できる（`amadeus-mirror-executor.ts:77-129`）のに `persistBlocked` が結果を捨てる（`:188-196`）。これは戻り値破棄 shape の実欠陥で、positive fixture と runtime 回帰の両方に使える。
+- #1874: `setCheckbox` / `setStageSuffix` は不一致を無変更返却へ潰し（`amadeus-lib.ts:5399-5429`）、既存テストが absent slug の no-op を固定する（`t108.test.ts:207-232`, `t400-lib-record-path-and-field-helpers.test.ts:108-113`）。期待値改訂を伴うため、暗黙の helper 変更ではなく明示的 runtime contract 修正が必要。
+- #1963: [PR #1970](https://github.com/amadeus-dlc/amadeus/pull/1970) により malformed/trailing section、decoy checkbox、invalid graph が typed failure と exit 1 になる。`t407:97-212` / `t411:1-22` は健全な回帰面である。
+
+### 設計上の品質条件
+
+- 3 shape の positive／negative fixture を100%分類する。intentional best-effort と void 通知 API を negative fixture に含める。
+- repo integration は3 roots の完全走査、生成物・fixture 除外、zero／partial scan 拒否を確認する。rule 数と走査 root 数を typed metadata で照合し、実行された一部だけの green を許さない。
+- baseline／exemption の更新は shrink-only。exemption は理由の空文字、離れたコメント、複数 node への波及を拒否する。
+- CI gate 単独の cold／warm を計測し、15秒以内を blocking assertion にする。初期 corpus の分類レビューで偽陽性率5%以下を確認する。
+- tool missing、rule missing／invalid、baseline missing／invalid、zero scan、partial scan はすべて固有の typed diagnostic と exit 1 を持つ。
+
+### 未確認リスク
+
+- 成否を返す emit／Result API の正準 vocabulary は未確定。名前一致だけでは void 通知 API を誤検出する。
+- intentional best-effort catch の初期 census と偽陽性率は未計測。
+- ast-grep の Bun 配布形、Linux runner の cold-start、固定バージョンは未検証。
+
 ## kimi bootstrap デッドロックの品質所見（260801-kimi-bootstrap-deadlock、履歴、observed `861688c31`）
 
 - テスト空白（決定的）: state-file 無しの SessionStart で `.current-session` が書かれることを検証するテストは存在しない。現行の早期終了挙動は `tests/unit/t10-hook-session-start.test.ts:211`（silent exit）/ `:222`（no heartbeat）が no state file の early-exit（`packages/framework/core/hooks/amadeus-session-start.ts:70`）を直接 pin しており、修正はこの pin の改訂 + 回帰テスト追加を伴う。追加先の自然な場所は同 t10。近傍の足場: `tests/integration/t-kimi-adapter.test.ts:317` 付近、t365（`.current-session` を `:826` / `:958` / `:1199` / `:1884` で使用）、t173。`amadeus-caller-authorization.ts` 専用の単体テストファイルは不在。
@@ -1972,3 +1995,58 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 ## 品質改善の限定範囲
 
 推奨改善は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` の最小分割である。全 check の純関数化や5,205行の utility 全体の再編は行わない。成功判定は既存104ケースとspawn 41ケースの維持に加え、stdout 診断・集計、exit 0/1、audit、stale lock cleanup、CLI/cwd 契約が回帰しないこととする。
+
+## 記録系 round-trip PBT の品質所見（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+本節の file:line・件数はすべて observed `9750f8aea` 時点。実測手順とコマンド出力は `re-scans/260802-record-roundtrip-pbt.md` を正本とする。
+
+### 既存 PBT の被覆分布（4 境界）
+
+| 境界 | 既存 round-trip PBT | 判定 |
+| --- | --- | --- |
+| mirror | `t274-amadeus-mirror-state-codec.test.ts` — `:58` `round-trip: render -> parse -> equal snapshot` は **example-based**、property は `:341` `property: arbitrary surrounding bytes round-trip` の周辺バイト保存のみ。`t275-amadeus-mirror-state-reducer.test.ts:373` に reducer の property（`:375-376`） | **半分** — `render → parse` の property 版と妥当 snapshot の arbitrary が不足 |
+| audit / journal | `t204-audit-escape.pbt.test.ts`（P-AE1 = loss-free domain 上の条件付き round-trip `unescape ∘ escape = id`）、`t352-journal-codec.pbt.test.ts`、`t364-journal-v2.pbt.test.ts`（バイト水準） | **あり** |
+| state | `fast-check` 使用 0 件 | **なし** |
+| election | `fast-check` 使用 0 件（`t234` / `t235` / `t238` は example-based のみ） | **なし** |
+
+測定: `grep -rln "fast-check" tests/` の全数（10 パス = `tests/unit` 7 / `tests/integration` 1 / `tests/helpers/arbitraries` 2、observed `9750f8aea`）。
+
+**棚卸し手法の罠（後続検証者向け）**: `.pbt.` 命名でのファイル探索は `t274` / `t275` を構造的に取りこぼし、「mirror に PBT なし」という**偽の不在主張**を作る（`cid:requirements-analysis:absence-claim-grep-verify`）。棚卸しは必ず `grep -rln "fast-check" tests/` で行う。あわせて `grep -rlin "round-trip" tests/` は coverage-registry / patch-allowlist をヒットさせるため、`tests/unit/` `tests/integration/` に限定する。
+
+### 残存欠陥クラス: 硬化が読み戻し経路を通らない
+
+#1459（CLOSED 2026-07-26）は `Election.parse` 側を硬化した（`amadeus-election-model.ts:77` 空 choices 拒否 / `:96` 重複 internalNo 拒否 / `:109` 重複 voter 拒否）。しかし `Store.load`（`amadeus-election-store.ts:503-510`）は `readJson<ElectionFile>`（`:71`、`:80` で `JSON.parse(text) as T`）を通るだけで `Election.parse` を再適用しないため、**ディスクからの読み戻しでは当時の欠陥入力がそのまま受理される**。`Election.parse` のプロダクション呼出は発行側 2 箇所（`amadeus-election.ts:310` / `:433`）のみで消費側 0 件。
+
+→ #1459 の再現は pre-fix 面切替を要さず、読み戻し経路の fail-closed プロパティが現行コードでそのまま赤になる。対照的に #1547（CLOSED 2026-07-26）の再現は pre-fix 面切替が要る（`cid:code-generation:falling-proof-no-stash` に従い、fix コミット後に対象ファイルのみ `git checkout <sha> -- <path>` で切替。stash は使わない）。
+
+### 境界ごとの読み側硬さのばらつき（品質面）
+
+- **state 構造フィールド**は既に読み側 fail-closed（`amadeus-state.ts:248` 重複 phase / `:257` 不正 JSON / `:261` 非オブジェクト / `:266` 未知 phase / `:270` 不正 status を throw）。欠けているのは検査ではなく**プロパティ**である。書き手が正規化書き手（`:278` が `MIRROR_BOUNDARY_PHASES`（`:225`）順へ並べ替え）であるため、プロパティは「正規化後の同値」で張る必要があり、素朴な `serialize ∘ parse = id` は成立しない（偽の赤になる）。
+- **state テキストフィールド**は fail-open と fail-closed が同居する。`setField`（`amadeus-lib.ts:5237`）はフィールド行が無いとき無変更の content をそのまま返す（サイレント no-op）一方、`setFieldStrict`（`:5271`）は同状況で throw する。`getField`（`:5179`）は値を `.trim()` して返すため round-trip は trim 込みの条件付き同値でしか成立しない。受理ドメインを設計段で明示しないと、恒真プロパティか偽の赤のどちらかに落ちる。
+- **election** は読み側の検査がゼロ。`writeStoreFile`（`:60`）は tmp→rename のアトミック書き込みだが、読み側の crash-consistency プロパティは存在しない（本 intent では将来課題として記録のみ）。
+
+### PBT 実装規約の現況と揺れ
+
+既存規約は `tests/unit/setup-semver.pbt.test.ts` を canonical 定義とし、`t204-audit-escape.pbt.test.ts:16-28` がヘッダで 4 点を明文化している（verbatim: `DETERMINISTIC PR CI` / `FAILURE OUTPUT` / `PINNING SHRUNK COUNTEREXAMPLES` / `DEEP RUNS (opt-in, no new CI job)`）:
+
+1. PR CI は per-property の固定 seed + fast-check 既定 `numRuns`（100）。`t204:38` `const PBT_SEED = 0xa0_d17;`、`t352:25` `const PBT_SEED = 16280702;`、`t364:41` `const PBT_SEED = 26072903;`
+2. 失敗時は fast-check が seed / replay path / shrink 済み反例を出力する（追加配線不要）
+3. shrink 済み反例は example-based テストへ写して恒久 pin にする
+4. 深掘りは `AMADEUS_PBT_DEEP=1` で既存 `--release` tier へ分離（`t204:39` `const DEEP = process.env.AMADEUS_PBT_DEEP === "1" || ...`、`:41` `const OPTS = DEEP ? { seed: PBT_SEED, numRuns: 50_000 } : { seed: PBT_SEED };`）
+
+**揺れ 1（deep tier の非一貫）**: `AMADEUS_PBT_DEEP` の実装は `setup-semver.pbt` / `setup-manifest.pbt` / `setup-plan-decisions` / `t204-audit-escape.pbt` の 4 ファイルのみで、`t352` / `t364` / `t274` / `t275` は固定 seed のみ（`grep -n "AMADEUS_PBT_DEEP" tests/unit/*.ts tests/integration/*.ts` の全数、observed `9750f8aea`）。すなわち setup ドメイン 3 本 + audit 1 本が第 4 項を満たし、記録系の journal 2 本 + mirror 2 本は満たしていない。
+
+**揺れ 2（import 面の 2 流儀）**: dist 出荷コピー import が `t204:35`（`"../../dist/claude/.claude/tools/amadeus-audit.ts"`）/ `t352:23` / `t364:39`（ともに `"../../dist/claude/.claude/tools/amadeus-journal.ts"`）、core 正本 import が `t274:13`/`:22` / `t275:13`/`:19`（`"../../packages/framework/core/tools/..."`）。新規 PBT がどちらを読むかは設計段で確定して成果物に明記する（実装段へ丸投げしない — `cid:code-generation:golden-regen-from-shipped-surface`）。読む面が変われば「落ちる実証」の注入面も変わる（`cid:code-generation:injection-surface-verify`）。
+
+### 静的ガードの品質要件
+
+「共有バリデータを経由しない読み戻し経路」の検出は grep 単体では不足で、`tests/callsite-guard.ts` 同型の allowlist ratchet が必要。同ファイルのヘッダが記す設計理由（verbatim: `WHY COUNTS AND NOT LINE PINS. An allowlist of file:line identifiers goes stale the moment an unrelated edit shifts a file`）に従い、`(file, symbol)` 単位のカウントで単調減少性を保つ（`cid:code-generation:allowlist-line-pin-stale`）。新設ガードは失敗ケースを注入して実際に赤くなる「落ちる実証」を完成条件に含める（org.md Mandated）。あわせて corpus sweep（既存の正当なデータで赤くならないこと）も両側で実測する（`cid:code-generation:corpus-sweep-for-new-guards`）。
+
+### オラクル相殺リスク（`cid:build-and-test:pbt-oracle-cancellation`）
+
+round-trip プロパティはメタモルフィックで独立オラクル不要のため相殺しない。ただし **fail-closed プロパティで棄却規則をテスト側に再実装すると相殺に落ちる** — arbitrary は非適合入力の生成に徹し、判定は被検バリデータ自身へ委ねる。さらに、発行⇔消費が同一バリデータを共有する構造へ収斂させた後は、round-trip 単独ではバリデータ自身の欠陥が恒真化して見えなくなるため、2 種のプロパティを分けて張ることが品質上の必須条件になる。
+
+### 投影・ゲートの品質コスト
+
+core/tools を触るため coverage patch ゲートの母集団に入る。CLI spawn 経由でしか通らない行は lcov に載らないため（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）、in-process seam の設計を実装時点で行う。加えて `dist:check` / `promote:self:check`（7 ハーネス — 5 で止めると kiro / kiro-ide が DIFFERS）、`t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照 — コメント文字列にも `scripts/<file>` を書かない、`cid:code-generation:c1-1569-shipped-comment-vocab`）が連動する。
+

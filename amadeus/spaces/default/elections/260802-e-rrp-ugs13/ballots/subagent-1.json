@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "同型の AD 交差表→UG 依存エッジ持ち上げ漏れが別 intent で再発した場合は、enumeration-completeness-review への追補として昇格を再提案する。",
+  "rationale": "実測: (a) diary c1(memory.md:17)は Unit 凝集を cid:units-generation:c1 (a) の適用と自己申告。(b) unit-of-work.md Review Iteration 1 Major は「cast-guard/pbt-deep-ci が ci.yml + formal-verif-ci-baseline を共有するのに『交差なし』と正反対の主張」で、AD component-dependency.md「共有資源と交差判定」表(:104-106)で既に確定済みの判定の転記漏れ。(c) 是正は unit-of-work-dependency.md:43 の「共有資源による直列化」節+エッジ追加で AD 表と整合し Iteration 2 READY。機序は既存 cid の守備範囲内 — 上流確定判定の下流照合漏れは enumeration-completeness-review(E-SDE-FD 追補の上流照合面)、「交差なし」の未検証断定は absence-claim-grep-verify、既存表からの独立再導出は inventory-from-grep-each-time、交差判定自体は shared-ledger-insert-collision / code-generation:c6 がカバーし、reviewer が iteration 1 で捕捉した執行実例。単発発生・新規機序なしのため persist 相当の新規学習は無い。",
+  "submittedAt": "2026-08-02T17:53:31Z"
+}

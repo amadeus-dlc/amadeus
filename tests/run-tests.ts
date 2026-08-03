@@ -26,6 +26,8 @@ import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.
 import { type CoverageSourcePathContext } from "./lib/coverage-source-path.ts";
 import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
 import {
+  DEFAULT_TEST_TIMEOUT_MS,
+  MAX_TEST_TIMEOUT_MS,
   type Level,
   type ParseArgsIo,
   type ParsedArgs,
@@ -56,7 +58,6 @@ const DEFAULT_PARALLEL = Math.min(availableParallelism(), 4);
 // completeness, setup-pack-contract). 30s keeps genuinely hung tests loud
 // while removing the load-noise band. Individual tests may still pass their
 // own longer budgets (e.g. MATRIX_TIMEOUT_MS) explicitly.
-const DEFAULT_TEST_TIMEOUT_MS = 30_000;
 
 function coverageSourcePathContext(): CoverageSourcePathContext {
   const tempRoots = new Set<string>();
@@ -130,6 +131,9 @@ OUTPUT MODIFIERS (combinable with any tier/profile):
                   Default: min(available CPU cores, 4). Smoke and unit tiers
                   always run serially.
                   Recommended range: 1-8. See docs/reference/09-testing.md.
+  --test-timeout-ms N
+                  Per-test Bun timeout in milliseconds (default: ${DEFAULT_TEST_TIMEOUT_MS};
+                  maximum: ${MAX_TEST_TIMEOUT_MS}).
 
   -h, --help      Show this help and exit
 
@@ -660,7 +664,7 @@ async function runBunTestFile(
     [
       "test",
       file,
-      `--timeout=${DEFAULT_TEST_TIMEOUT_MS}`,
+      `--timeout=${args.testTimeoutMs}`,
       "--reporter=junit",
       `--reporter-outfile=${junitXml}`,
       ...(args.coverage

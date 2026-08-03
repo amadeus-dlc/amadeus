@@ -61,6 +61,7 @@ import {
   checkPluginProjections,
   discoverPluginSources,
   pluginBundleExpected,
+  type PluginSource,
   validatePluginSources,
 } from "./plugin-projection.ts";
 import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
@@ -304,7 +305,7 @@ type BuildResult = { outsideHarness: string[]; readSources: Set<string> };
 // so a pre-plugin repo builds byte-identical output). A malformed/duplicate/
 // unsafe source throws loudly here, before any write. Re-read per call (not
 // cached) so it never goes stale within a long-lived process (tests, watch).
-function repoPlugins(): readonly import("./plugin-projection.ts").PluginSource[] {
+function repoPlugins(): readonly PluginSource[] {
   return validatePluginSources(discoverPluginSources(pluginsRoot()));
 }
 

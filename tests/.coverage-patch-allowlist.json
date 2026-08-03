@@ -344,7 +344,7 @@
     "file": "packages/framework/core/tools/amadeus-jump.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:b276b598e53a2f360fad11749ed0b90efb4a755a82a09045029aacc10fea91e6",
+      "fingerprint": "sha256:55e7fe69ef64c96cef5b0dcd1fa9484dcf579d9eccd6cb74e3629cbfa5a906b3",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -355,7 +355,7 @@
     "file": "packages/framework/core/tools/amadeus-jump.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:df283a49712a32d9c307c2ab0b21f52ea438af96edb49078cab1e24967317eb0",
+      "fingerprint": "sha256:bd2368e0b6a6b67acb08e30c740df410f2d91db1d9f8f6db9e87a16bdfc9064c",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -432,7 +432,7 @@
     "file": "packages/framework/core/tools/amadeus-lib.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:16b34a3b79a187e203aa708f006b73b54dde4e68f4794018b678bf1edc699e45",
+      "fingerprint": "sha256:a399ad137a78989c43dc7ba1b386049a2807e964c5bc25cdc276c232a5fdb88f",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -541,8 +541,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
     "selector": {
-      "function": "reconcileHeldProjectsUnderLock",
-      "fingerprint": "sha256:c7dd283579ade60d483a7a83177f00dfb0c1fed97c616758f0c1c3f28196ed39",
+      "function": "executeLinked",
+      "fingerprint": "sha256:db3756e345b0b132f09d066d4dd784b6645680f95f6a29b6705ba6b3039ccfa8",
       "anchorLines": 5,
       "targetLines": "1-5"
     },
@@ -552,8 +552,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
     "selector": {
-      "function": "reconcileHeldProjectsUnderLock",
-      "fingerprint": "sha256:9f67f1e27e4930098c0d1089576a9235bde56412b70d14078c78e9c255b3b5a6",
+      "function": "executeLinked",
+      "fingerprint": "sha256:84bb3c9295b8e56cceb8a1e24bc711105ef48190e8c808aab719f92e25666738",
       "anchorLines": 5,
       "targetLines": "1-5"
     },
@@ -938,64 +938,9 @@
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
       "function": "commitTransaction",
-      "fingerprint": "sha256:b303073010fc2221b665cd6354dd246f87635b750ca3d893530f3d2326ee4152",
+      "fingerprint": "sha256:04ad7460facde45906ced9c7dc43ae099dedebf65a9fad3f1b9e8785a04a18c1",
       "anchorLines": 3,
       "targetLines": "1-3"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "atomicWrite",
-      "fingerprint": "sha256:4ad50d1ac5c06ff9dd2499b8de8bdcb394be62e8a575d0ea140eee1aee2adfe4",
-      "anchorLines": 4,
-      "targetLines": "1-4"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "atomicWrite",
-      "fingerprint": "sha256:0337aacaa77f3f041d43f0a54f12b19be5a995b99cdda5d8085d3fd49d767e6a",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "atomicWrite",
-      "fingerprint": "sha256:76fc695e6114dcd1584f0198245c2da1333305b2ba2112fb584e17af6aa380e8",
-      "anchorLines": 4,
-      "targetLines": "1-4"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "atomicWrite",
-      "fingerprint": "sha256:ec55eea6d1d8990b3f9fa181dc00c6baf56726aafae47aa510b185a7a9a7de3a",
-      "anchorLines": 4,
-      "targetLines": "1-4"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "atomicWrite",
-      "fingerprint": "sha256:0901860c81c88349252f6e638bfb0ff2291055f36ed827cd74f33ad44e4e189a",
-      "anchorLines": 1,
-      "targetLines": "1"
     },
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1004,7 +949,7 @@
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:8a26ea0107782718c4e4dc660bf345fdeebeaea84a74820d32477655ebb5e0bb",
+      "fingerprint": "sha256:8d9e6adbae88c094e351a6fc30f8534950baa30e8d4741eee263d10449794118",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -1014,8 +959,63 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:5fcb32d3093eea4b4c8bf3604825a2d13b3afe834e7b2712396f88bc42e4133e",
+      "function": "atomicWrite",
+      "fingerprint": "sha256:9a4b39ab81703c9b17524cb83c98a9b55430277a9e1e5d2d238dccfef5d1f131",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "selector": {
+      "function": "atomicWrite",
+      "fingerprint": "sha256:3988fc61707c2188b3cfff6628f8ffba51135e02550db8cef51b4ee0172ad89a",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "selector": {
+      "function": "atomicWrite",
+      "fingerprint": "sha256:d5ad63675beb6bf69991f0d40293889ea9bf0c44cf9bef721a9d28f3775106ba",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "selector": {
+      "function": "atomicWrite",
+      "fingerprint": "sha256:9bc439caa63fb9ceac77a3357a12400c3cf3bf80d0b743abcff140cf4509bafe",
+      "anchorLines": 5,
+      "targetLines": "3"
+    },
+    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "selector": {
+      "function": "atomicWrite",
+      "fingerprint": "sha256:95d69f6bd86c8041d023a65361657d90dee3c54ef8f5cfa07d50566302332fa3",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "selector": {
+      "function": "atomicWrite",
+      "fingerprint": "sha256:ce8757c6d974b9a7fcc29ce50494614731566624d41f73c41fa24fbbfafdce98",
       "anchorLines": 5,
       "targetLines": "1-5"
     },
@@ -1025,8 +1025,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:99ebbfdff99d3801b23b095d77fe02cf0cd5e16ab4d69af7644092d518531dbc",
+      "function": "atomicWrite",
+      "fingerprint": "sha256:1cc34e4d63320cce0115dadbc8ea5abd1ee1791763157d7c4d2965f98ba26849",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -1036,19 +1036,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:51570bca5114769dc05b426915886be17f36b57b601d2b18ba9e5367f942d9e4",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "idempotentAppend runs only through the spawned mirror CLI (t282/t284/t300 drive the process boundary); the single-line TransactionId scan delegates to auditBlockField/splitAuditRecords which are covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
-    "expiry": "remove when idempotentAppend gains an in-process seam test"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:d8123e43734f00bcd69cc72b539fbb6ab62c5da108b195af96eef63c452f9ff2",
+      "function": "<module>",
+      "fingerprint": "sha256:d5f67ef572f2b3c7cbcf0594150a02c3eb42094320b004764d9803a5a4380502",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -1058,8 +1047,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:2d06700dba39eaefa4b1720f01d36ce531629db105791f6de5b44a612412a5bd",
+      "function": "<module>",
+      "fingerprint": "sha256:902228d30356d37fecb047f6841dc7a5183a2521e053862bae96edac75418030",
       "anchorLines": 18,
       "targetLines": "1-18"
     },
@@ -1070,20 +1059,9 @@
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "selector": {
       "function": "idempotentAppend",
-      "fingerprint": "sha256:3c225218f24e8b69e2d36cb319fd32479c7d47dff40fc8987abe1c5f2da5afb7",
+      "fingerprint": "sha256:f45785bc4662d61882c60c532cb1fc936ece2c28e945e62c43c11bf569b0fe67",
       "anchorLines": 1,
       "targetLines": "1"
-    },
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "selector": {
-      "function": "idempotentAppend",
-      "fingerprint": "sha256:e905b9943c14417a948d0242b7cb926f10059b1ba16e4f6f210955fdf0435440",
-      "anchorLines": 2,
-      "targetLines": "1-2"
     },
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1982,8 +1960,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "openHeartbeatNoFollow",
-      "fingerprint": "sha256:170982f11ddee3f2ef0775ff76cb3173193c970ad62b4007240166784ca445e6",
+      "function": "<module>",
+      "fingerprint": "sha256:8df55f40470b25b7e34dfad1bac5e2df06a786c8b619819cbae0571e7659f641",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -1994,7 +1972,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "inspectHookHeartbeats",
-      "fingerprint": "sha256:253cf481ed1a5b00d6bac6ac396602c25dd3804f3b6f3e56b1fab1496c23d572",
+      "fingerprint": "sha256:395096960af0902b08ae4fe4b20506f1ea2dc9c1a94f74066707191a58afa765",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -2004,8 +1982,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:706f9a86a00a445726a30f76b28ea1f6dcb77783a32265ebe3ffd7d6869757c0",
+      "function": "gitRmFlatTree",
+      "fingerprint": "sha256:8a750e3450ec7203bdbeac6e2c8d105a44efb5850303d5dc5702fe01ecfe5753",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -2016,7 +1994,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:8b37f6a031b8a105fedb9c2cdc1ec2d2b43d583cd831b3fc39c31062008939b5",
+      "fingerprint": "sha256:9a56d3bb1e498499030a2ea12f5d18c1c8210b6e45e64bba3e110febe7906ee5",
       "anchorLines": 14,
       "targetLines": "1-14"
     },
@@ -2027,7 +2005,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:7ebbdc8c1c2e4cee55e17d94aadf2977d82648221e9de442204135acd1c83f61",
+      "fingerprint": "sha256:062176047529ff963ee581263e19f329a858140dbb5d5c84a0bc6f86cf6e5765",
       "anchorLines": 23,
       "targetLines": "1-23"
     },
@@ -2038,7 +2016,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:dd21aef1dfad562e7d116dc8f23f9472d78ad58468eef5ac2be73609c4a4171f",
+      "fingerprint": "sha256:2e13196bfc434185f88e0439c0a140458978fee4ce571baf81b7b93e95bad373",
       "anchorLines": 8,
       "targetLines": "1-8"
     },
@@ -2049,7 +2027,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:123b7aefa50b4b32ebe8b02248b08b79c014ba965bf51a6b0e86408d0c4318c6",
+      "fingerprint": "sha256:4f407906858350a3872f132539b2800faec53a2a58c8f4e4631bc96949708ed5",
       "anchorLines": 11,
       "targetLines": "1-11"
     },
@@ -2071,7 +2049,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:ba218562e15f16b533b1bbfa3fb53e93b849b62d9bc8d38db56c965d669b0372",
+      "fingerprint": "sha256:6cb55df878603967aa4874ba7f4449290575ec82e12bf45da1ce454a5b9d9487",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -2082,7 +2060,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:532437fa437fd6fe55e03568060c1a2f609acb281a19d7d1cee3804dbb6040e4",
+      "fingerprint": "sha256:e473421b0c929d8619f903ac16156a1d30a35aac700c28ba53a0968c7886db46",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -2092,8 +2070,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "delegateIntentLifecycle",
-      "fingerprint": "sha256:0c904da007d723d98c1e1ce70350b8d20fb55b5f6939dd6890a56952c7a0a61c",
+      "function": "<module>",
+      "fingerprint": "sha256:42a971efaca969861c02a8f38c4171db467a565c2e48b09709443e650b3bbe25",
       "anchorLines": 11,
       "targetLines": "1-11"
     },
@@ -2104,7 +2082,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "delegateIntentLifecycle",
-      "fingerprint": "sha256:71ab0b6258f7b04aa17eb48f5bcb1cdc8a77c20a2d68214c6e3179373af570f4",
+      "fingerprint": "sha256:58e5143f4d6fe147b55becc11ef03eb2fa56633f5d533fe7a8f4998ea0da8d11",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -2114,8 +2092,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "selectIntentCandidateLocked",
-      "fingerprint": "sha256:d21316a72c85311f6f3e8d076203391de824881d17e340dd7bed8089628d42ab",
+      "function": "<module>",
+      "fingerprint": "sha256:7f7e0772da103c3aacc77eb92340c8789ae7f1adc4bd578ba8c0e305e86de69b",
       "anchorLines": 23,
       "targetLines": "1-23"
     },
@@ -2125,8 +2103,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "selectCurrentResponse",
-      "fingerprint": "sha256:3b0b9c67de2b79603925508967ed70956ba4d4dd9fcf9810b23c46ceb89f8309",
+      "function": "handleIntentSelectionResponse",
+      "fingerprint": "sha256:e35409842163e2be8acb1433777b8f3aa51efbd4150b854645c72ff34ed3f250",
       "anchorLines": 12,
       "targetLines": "1-12"
     },
@@ -2137,7 +2115,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleRecompose",
-      "fingerprint": "sha256:a2b887993a18c02293b4e134410c3955e8e46f40336b7551b37f77f1b29e39cb",
+      "fingerprint": "sha256:cfe6de6d9528792f7d7c2de695b63c21db423a0fd34aa68996732f75858ee6bf",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -3011,19 +2989,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "parseMirrorBoundaryReceipts",
-      "fingerprint": "sha256:f8b394940a9bbf2eed014dc3a2f0d5eb89470d6cc3afa062a7d8412c66076f46",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "The non-object Receipt guard is a defensive parser branch adjacent to invalid JSON, unknown phase/status, and duplicate-key cases covered in-process by tests/unit/t265-engine-boundary.test.ts.",
-    "expiry": "remove when t265 adds explicit null/array/scalar parser cases"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
       "function": "completionAuditEvents",
-      "fingerprint": "sha256:cc0ce339098c1d3750131f46a1d8526c7ba13bb896e5a0134b1496006612d269",
+      "fingerprint": "sha256:d39062d666d530ae0785e05d0fb87b11119e81508d6fedf475b11b6dfe1fc652",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -3033,8 +3000,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "injectWorkflowCompletionCrash",
-      "fingerprint": "sha256:e6ff179bd362afa5611bcd525ca1bb9fc63ea1eb1b73014bc9d565a2996f0877",
+      "function": "<module>",
+      "fingerprint": "sha256:3956a208633ecb536734a789aa99acf30697e7e46b35ff6e61abb04e563d3c21",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -3045,7 +3012,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:8212a2eb743f925ffe7be2a65708dd7526ee851f31bddce94ba46946d2c09c82",
+      "fingerprint": "sha256:5914bb1d86a6d164d00e11a7f7c958ff59a6868f397dbc1d5e3e17095c591785",
       "anchorLines": 10,
       "targetLines": "1-10"
     },
@@ -3056,7 +3023,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "emitWorkflowCompletionAuditRows",
-      "fingerprint": "sha256:b7268cd0d3c93ba3c347da56ebea02f368cca79455530c6f9790b9f8b12f2fc5",
+      "fingerprint": "sha256:0f4144358a64fd3e618bed20556eff2f52d2dcb07069c44a4db1fed219e08979",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3066,8 +3033,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "main",
-      "fingerprint": "sha256:bbd198fee3f97a5f3366c910bbc6e435f81a86e33a85c70f1b7add327fc84e4e",
+      "function": "runSelectedIntentOperation",
+      "fingerprint": "sha256:e98834798c2df64502093acdef36492b954a7fbb9f693f00c333c75588c8d4e2",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3077,8 +3044,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:b72a34ec7a851f2784f92b22a48b30cb2474fa640d836edc6876f969c3d1f9d0",
+      "function": "<module>",
+      "fingerprint": "sha256:bfa242d9603209bacba33a1f550aad92e6625473465b7d34b2c9f910fc8d0bfd",
       "anchorLines": 16,
       "targetLines": "1-16"
     },
@@ -3088,8 +3055,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:886821a41ad15959cbe5dc3e9ba7f4f2ed636aca27a3d6981c06f89b228dedc4",
+      "function": "main",
+      "fingerprint": "sha256:bbd198fee3f97a5f3366c910bbc6e435f81a86e33a85c70f1b7add327fc84e4e",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3099,8 +3066,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "main",
-      "fingerprint": "sha256:1793e029826099343d1620d6fa4d0a8d1aac7677382bc9cba7ebf5add18efed6",
+      "function": "enforceCallerAuthorization",
+      "fingerprint": "sha256:7922aad30b06514c11122cc5107dbdc7dca6f65a48f4d60e12ac26bc93bcd50c",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -3110,8 +3077,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "main",
-      "fingerprint": "sha256:9a3ebc458a07351e67b25e6ab032262398c79548c7458b8f2f2a599e92f91bb4",
+      "function": "enforceCallerAuthorization",
+      "fingerprint": "sha256:1362e043a02de92033534f487cbb42a9d6ad60ee8b362031b49a48692ed14cf2",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -3121,8 +3088,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "main",
-      "fingerprint": "sha256:04b7e4a696f8df8c9121de08dafb368a383692009beac0e43038af38d352ccfc",
+      "function": "enforceCallerAuthorization",
+      "fingerprint": "sha256:9ecd7cb971a3ee794b6cd855506be923b881c41143060897cdd96a77f49e0792",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3133,7 +3100,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:d65dfcfdc0a71dcb64cafe5a958ccaea6dc67790c6d8c2270c10e589b0e2fe8a",
+      "fingerprint": "sha256:72c7aa445c0e9987b08b5ffd432e54493c1b06b0d4bef0dc5f0b5a45019e9b80",
       "anchorLines": 9,
       "targetLines": "1-9"
     },
@@ -3144,7 +3111,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:6e83dac0a2283c74fcd8fdc0e52cc07a72cb37a491549b8c3dca259da40d9c9a",
+      "fingerprint": "sha256:1c576556d151adfc37093135747cb2eb75c0be142d694bc805024aa25dee229b",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -3155,7 +3122,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:97073c7215ab1996c467d7f8162edd4b7e716f4acc239a0406cb2bb10720f2e9",
+      "fingerprint": "sha256:baf4ff5c884c432a187633a6c77b208d3e0622c6bf5cf7dab096c03470a0fc3f",
       "anchorLines": 6,
       "targetLines": "1-6"
     },
@@ -3166,9 +3133,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:de74f44cedc9a5ca249f8af3ec246415e53fa555a290c712c1728b70630c349a",
-      "anchorLines": 3,
-      "targetLines": "2"
+      "fingerprint": "sha256:e034962e5a9ea1059a9d74ded16d48b5e5fa736dde83220c8005508526c15f3b",
+      "anchorLines": 1,
+      "targetLines": "1"
     },
     "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -3177,7 +3144,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:c6c76405fccca415687e252efdd8e65edf1b788e75bb46eb36ea6f41dcee3b81",
+      "fingerprint": "sha256:5e798b6fb2abe1024fa73399b2033a97c98c7ba8de249e0a68de404bcf9b4a4b",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3188,7 +3155,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "handleSet",
-      "fingerprint": "sha256:365f3f58e6ddde767213a6dbc81d6fd345d950b30045d2649a2f8a79966565d9",
+      "fingerprint": "sha256:71c82ba6f4b33a2bacf84d7bb870d97a7dd02097102859011236677c539d3c7e",
       "anchorLines": 16,
       "targetLines": "1-16"
     },
@@ -3198,8 +3165,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleMirrorBoundary",
-      "fingerprint": "sha256:6c820d48d14475e85cb3e4b2d84033454c41f95f3c3cf12440765816a0d41783",
+      "function": "handleSet",
+      "fingerprint": "sha256:f7087b0e986eb3935b4900e48afc730e32ba68296f3ede0dbbd8c35f33757586",
       "anchorLines": 10,
       "targetLines": "1-10"
     },
@@ -3209,8 +3176,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleMirrorBoundary",
-      "fingerprint": "sha256:99a8ada4e5d6a46770a6f33c6ccedc21afadd267a1e15da9247d0b6d818a03e5",
+      "function": "handleSet",
+      "fingerprint": "sha256:9b403d0a818469c609a1f68b94737fb5d1bc535baa046aad1607a37523e43ced",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -3221,7 +3188,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "handleMirrorBoundary",
-      "fingerprint": "sha256:7ac90f43255ac3e2b637736f4e35bbc2d65419b5df86a9476bb356e613fff7b3",
+      "fingerprint": "sha256:84672db065d9e8cd635d935afb5b5c9f55af441efe1558e8cf891c61c5a837a1",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
@@ -3232,7 +3199,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:1ed11d3f1a8b39d293e352684bf6e352eec60a7d6a9235cbcbdee16fbd3c5d68",
+      "fingerprint": "sha256:e2e751e8b189779d59f4ba0ec42e6e6eeb0bdd48124566aeaee48e4406d26614",
       "anchorLines": 43,
       "targetLines": "1-43"
     },
@@ -3242,8 +3209,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleCompleteWorkflow",
-      "fingerprint": "sha256:eaeae6aacf21e732c5fcfdb8552e743bb129cbc8f8dfdaa36a1034db7f7242c4",
+      "function": "handleFinalize",
+      "fingerprint": "sha256:56502c870ad9a2183a980da60dca82788cfc8c6f264af702bb089011a7db2c34",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3253,8 +3220,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:6da3e175e5d2c5ac016ce40f021dfcd2e0741cfa2b08a5bad73a90ac7d8dc09b",
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:7411797210aeccf68c833eb5e41c776e0c7a9ed06a20a9ee5dd3a49c99cf3da2",
       "anchorLines": 76,
       "targetLines": "1-76"
     },
@@ -3264,8 +3231,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "approveUnderLock",
-      "fingerprint": "sha256:41a0efea991abd12b37afd9526cffadfeddad17a5931e27af8653f38d599a3a7",
+      "function": "authorizeApproval",
+      "fingerprint": "sha256:31bbd3b5dd7cc952c45cf5b0f80aa3f0786e6e1067a3b3de4a111692cfb58d8f",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3275,8 +3242,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "approveUnderLock",
-      "fingerprint": "sha256:e9bb4a5c04cccfc07178b83bc735fa256953ce4a91d680e820f25a15ebeeabbe",
+      "function": "<module>",
+      "fingerprint": "sha256:2d36c91ac99e0db9f739ec54030d7fc08e9f2662b99497e40d8f0cffadce7d57",
       "anchorLines": 5,
       "targetLines": "1-5"
     },
@@ -3296,8 +3263,19 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
+      "function": "handleMerge",
+      "fingerprint": "sha256:5d8f7cfe448e9607eff044656c1057f3bcaaa4d3c5664b6ad47fcb0314e5d7bc",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The handleMerge call site for mergeScopedCheckboxProgress is reachable only through the spawned state CLI, so Bun does not attribute these three adapter rows to the parent LCOV report. The extracted merge decision is driven in-process by tests/integration/t-text-mutation-state-seams.integration.test.ts across winning, losing, and malformed-state paths; only the spawn-only result unpacking remains unmeasured.",
+    "expiry": "remove when handleMerge gains an in-process driver or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
       "function": "rejectForTarget",
-      "fingerprint": "sha256:a61a7796f9808900f011c24110a61334bd1ccd03a19f90dcc6370fe89848b310",
+      "fingerprint": "sha256:f28c3b29deab7be7964a40a27f6bd88112ab9e07cb04062137ed077a1a7a4219",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3307,8 +3285,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleResume",
-      "fingerprint": "sha256:c10848a764490427686a873d1d46b2b973210bebb5edfb3b2674361e9823dc9b",
+      "function": "rejectForTarget",
+      "fingerprint": "sha256:cd2c5b9c27f984cc65e56177bf066549ef1eacbb6e9b29f4c950cbb3425e7cb8",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3318,8 +3296,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleAcknowledgeCompaction",
-      "fingerprint": "sha256:c10848a764490427686a873d1d46b2b973210bebb5edfb3b2674361e9823dc9b",
+      "function": "reviseForTarget",
+      "fingerprint": "sha256:8c712c73d4d64760d5594095dca7286f00caad8a5af47c37d4518a5fcbc7611c",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3330,7 +3308,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "handleMerge",
-      "fingerprint": "sha256:e5afa70ff17e761c98d5223a0badee74e036e8ab97cfda73c04d47d33d73c29a",
+      "fingerprint": "sha256:3a08aa26f38ad4b11e137287205877e93e0a763a1b1b3d6b5521bb5ee51a8ed0",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -3340,8 +3318,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleSetConstructionIteration",
-      "fingerprint": "sha256:d23633a2a9933adf92381373ce3e20f3e14776b1294aa5f561724161ec1d2c23",
+      "function": "handleMerge",
+      "fingerprint": "sha256:e839dddea161d9859bd2d3b28da68bd59e469d3cf9de373ac73b9dcf48c329fb",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3351,8 +3329,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "verifyPreparedCompletionIdentity",
-      "fingerprint": "sha256:9ae9e6f87ab5d4bb49d034db50199ac29b5398d23edb47170dd17d16a778c4dd",
+      "function": "verifyPreparedWorkflowCompletion",
+      "fingerprint": "sha256:ebbd8b3cabba96ce328968b00d1b7089c1fa13b3b2f499eaea17d56fff668147",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -3363,18 +3341,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "handleFork",
-      "fingerprint": "sha256:94076c6dd3dd6240d2bd99540b492d327f5c09315a83c8e7731375bf8fc23888",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Marker-kind resolution inside handleFork, which main() only ever reaches as a subprocess (the handler is module-private, so no in-process caller exists and bun cannot see through the spawn). The decision itself IS driven in-process: boltContextKind is exported from amadeus-observability.ts and exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts, while the spawned fork in the same file asserts the marker the CLI actually produced. What stays unmeasured is this call site's wiring. Spawn-blindspot-two-step: the seam extraction is step (i), this residue is (ii).",
-    "expiry": "remove when handleFork gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "handleFork",
-      "fingerprint": "sha256:5b62ce8ecb3b09242c71fceeed8431639b38d23ef4186469017be1f033c028b4",
+      "fingerprint": "sha256:0fd4ca5511f65d64556d7afdda43c2b9baaba6251a93b3f5f7330eb0e3aa0bec",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -3534,5 +3501,159 @@
     },
     "reason": "PoolCommand and SettlementCommand are compile-time extraction aliases erased before runtime. tsc enforces their narrowing and t425 drives each settlement command kind.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "selector": {
+      "function": "maintenanceFailure",
+      "fingerprint": "sha256:c868013ba2719984cd5fbf388ce1c059e7103aa38fc40725e4efb68654417b5b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t279 drives the transition-processed maintenance path without an original failure and asserts the resulting outcome-unknown warning plus this exact maintenance summary. Bun's merged LCOV stamps the multiline ternary false arm DA:0 even though the targeted-file report omits that row and records the surrounding decision and return.",
+    "expiry": "remove when Bun attributes the multiline ternary false arm or the expression is collapsed"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "selector": {
+      "function": "assertTargetCheckboxExists",
+      "fingerprint": "sha256:ee85074816a294abc5e2749645cc364422c1983ae4fcbc27abaad20706e06f99",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The missing target-checkbox refusal exits through error(). t-jump-direction-seam drives the exact handler branch in-process against the byte-identical shipped dist module and asserts target-not-found; canonical package-source rows are not credited by the dist-module execution under Bun coverage.",
+    "expiry": "remove when jump handler coverage is unified across canonical and packaged modules or error() receives a non-exiting port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "stageCheckboxOrError",
+      "fingerprint": "sha256:987ea17dbf1f238f8df29ca71f2dbb90cdc3d94ccfa97569782ff07c2b1e49d8",
+      "anchorLines": 9,
+      "targetLines": "1-9"
+    },
+    "reason": "The missing and duplicate checkbox-target branches exit through error(). t17 drives both exact advance failures through the shipped state CLI and asserts non-zero exit, the structured reason, and byte-identical state; spawned child rows are not parent-LCOV visible.",
+    "expiry": "remove when stageCheckboxOrError receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleCheckbox",
+      "fingerprint": "sha256:e404aff33f4945335510002eb4b1ee09c34a3acb8f56054818c7e61058e2da2e",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The checkbox adapter translates StateMutationTargetError into the structured slug-tagged CLI error. t224 drives a duplicate canonical row through the shipped checkbox command and asserts duplicate-target plus byte identity; error() exits the child, so the catch wiring is not parent-LCOV visible.",
+    "expiry": "remove when handleCheckbox receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "advanceScopeOrError",
+      "fingerprint": "sha256:753857334a09b2d78ef79aa8fbcd2ee451163e0e9573ff708f817c12f9bbf1e0",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t17 advance validation test 29 and t47 F3 drive the missing-Scope refusal through the shipped state CLI and assert a loud non-zero result. The error() row executes only in the spawned child.",
+    "expiry": "remove when advance validation receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "advanceScopeOrError",
+      "fingerprint": "sha256:9527abfd9701e1d62a4a322bcb6bf1ce31e1e5f40e595a5a1e2913491b6ca210",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t17 advance validation test 30 drives the invalid-Scope refusal through the shipped state CLI and asserts the diagnostic. The error() row executes only in the spawned child.",
+    "expiry": "remove when advance validation receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "resolveAdvanceNextStage",
+      "fingerprint": "sha256:e8d7c6b66c185aa532d6b8efff32702c3bbe08abf1dde0faaf15af40a88c9a1e",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "t17 advance validation test 32 drives an explicit SKIP-stamped next stage through the shipped state CLI and asserts the refusal. error() exits the child before mutation, so parent LCOV cannot attribute these rows.",
+    "expiry": "remove when resolveAdvanceNextStage receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "resolveAdvanceNextStage",
+      "fingerprint": "sha256:911bb726f842f1ff2ba09a926404ef8dd49158ba114c07dc060d51323aacf2b9",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "t17 advance validation test 34 drives the no-next-stage refusal through the shipped state CLI and asserts the complete-workflow guidance. error() exits the child, so parent LCOV cannot attribute the message rows.",
+    "expiry": "remove when resolveAdvanceNextStage receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "inspectCompletedAdvanceState",
+      "fingerprint": "sha256:3eeda055454f7996397529e641370fd79eb48b158466e5e8c6660448b40086f1",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "This multiline return-type declaration for inspectCompletedAdvanceState is erased TypeScript. Its three concrete fields are consumed by handleAdvance and covered by t17 and the in-process advance seams; Bun emits non-executable DA:0 rows for the annotation continuation.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations or the signature is collapsed"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "inspectCompletedAdvanceState",
+      "fingerprint": "sha256:29427a0a32991397701c748d3a0e4a09943ae87cf845e94d692346553cf28e1d",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "t17 advance validation test 28 drives the wrong-active-slug refusal through the shipped state CLI and asserts the Cannot advance diagnostic. The multiline error() message executes in the child process only.",
+    "expiry": "remove when inspectCompletedAdvanceState receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "emitAdvanceAudit",
+      "fingerprint": "sha256:fed924ee8492cb66b9d10bcfcec8b44b58360f4b262fd1fbfca7aeee2a37ff37",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed phase-audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
+    "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleAdvance",
+      "fingerprint": "sha256:fed924ee8492cb66b9d10bcfcec8b44b58360f4b262fd1fbfca7aeee2a37ff37",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed STAGE_STARTED audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
+    "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
+  },
+  {
+    "file": "tests/no-silent-drop/engine.ts",
+    "selector": {
+      "function": "currentRevision",
+      "fingerprint": "sha256:c82184023e31cb80977fc1f2324c11a3cec8e0be1a0b39cb60b55bbb923c93d7",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Defensive current-revision shape guard after a successful git rev-parse. A real git success contract returns a full SHA; start failure and non-zero exit are handled immediately above. Reaching this branch requires replacing git with a contract-violating executable, so it remains as a fail-closed invariant belt.",
+    "expiry": "remove when currentRevision receives an injected process port that can return malformed successful stdout"
+  },
+  {
+    "file": "tests/no-silent-drop/ledger.ts",
+    "selector": {
+      "function": "baselineAtRevision",
+      "fingerprint": "sha256:704f2c6974e59623bf49616242a5bd00d59c739b04334a680de867e80cbe19f3",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive startup-failure classification for git show. The integration suite drives the observable non-zero lookup failure; making spawnSync itself fail to start would require removing the running test process's git executable or injecting a process port. The distinct INTERNAL_ERROR branch is retained fail closed.",
+    "expiry": "remove when baselineAtRevision receives an injected process port that can model startup failure"
   }
 ]

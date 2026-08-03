@@ -1,0 +1,17 @@
+{
+  "electionId": "E-SDG-PD-S13",
+  "kind": "zero-confirm",
+  "question": "Practices Discovery の学習候補を永続化0件としてよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1〜c5 は既存規則の適用または本 intent 固有の判断であり、新しい横断 rule／sensor を追加しない"
+    }
+  ],
+  "voters": [
+    "practices-quality",
+    "practices-developer"
+  ],
+  "state": "recorded"
+}

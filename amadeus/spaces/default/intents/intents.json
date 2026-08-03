@@ -787,6 +787,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fbfa8-d1a8-7ce7-841d-5391f747be8e",
+    "slug": "silent-drop-gate",
+    "dirName": "260801-silent-drop-gate",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
     "slug": "scope-grid-face-sync",
     "dirName": "260802-scope-grid-face-sync",
@@ -833,6 +840,13 @@
     "slug": "plugin-projection-parity",
     "dirName": "260802-plugin-projection-parity",
     "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc33a-5108-7892-af73-77827a83fd10",
+    "slug": "record-roundtrip-pbt",
+    "dirName": "260802-record-roundtrip-pbt",
+    "scope": "self-feature",
     "status": "complete"
   }
 ]

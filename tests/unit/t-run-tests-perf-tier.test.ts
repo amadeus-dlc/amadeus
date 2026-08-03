@@ -111,6 +111,18 @@ describe("unchanged argv decode", () => {
     );
   });
 
+  test("--test-timeout-ms is bounded and defaults to 30 seconds", () => {
+    expect(parseArgs([], io).testTimeoutMs).toBe(30_000);
+    expect(parseArgs(["--test-timeout-ms", "120000"], io).testTimeoutMs).toBe(120_000);
+    expect(parseArgs(["--test-timeout-ms", "300000"], io).testTimeoutMs).toBe(300_000);
+    for (const value of ["", "0", "-1", "1.5", "300001"]) {
+      const argv = value === "" ? ["--test-timeout-ms"] : ["--test-timeout-ms", value];
+      expect(() => parseArgs(argv, io)).toThrow(
+        "fail:2:ERROR: --test-timeout-ms requires a positive integer at most 300000",
+      );
+    }
+  });
+
   test("--coverage-dir without a value fails usage", () => {
     expect(() => parseArgs(["--coverage-dir"], io)).toThrow(
       "failUsage:1:--coverage-dir requires a directory",

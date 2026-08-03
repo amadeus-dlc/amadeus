@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "追補は『クロスレビュー2名成立済みかつ verdict が検証 SHA と file:line を明記している単発 Issue(bug/enhancement を問わない)』へ適用範囲を限定し、免除条件は E-OBB5-RES13 既定のまま(review 対象 SHA ≠ observed のときは全引用を再解決)と明記すること。",
+  "rationale": "c1: 既存 cid の precondition は字義で『クロスレビュー2名成立済みバグバッチ』であり、本実測は単発の enhancement Issue #1980 への適用 = 対象クラスの拡張。かつ review 対象 SHA 8e5dc6c4 ≠ observed 9750f8aea のため免除条件を適用せず全引用を再解決した非自明な運用点を含むため、既存 cid への追補として persist 相当。c2: merge-base(HEAD, origin/main) の採用は c2-observed-mainline-commit(origin/main 系譜)と rescan-base-ancestry(HEAD 祖先かつ距離最小)の機械的交点にすぎず、新規の規則内容を含まない執行実例。",
+  "submittedAt": "2026-08-03T00:00:00Z"
+}

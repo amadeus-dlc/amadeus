@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-FDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c3 は cid:code-generation:c1-reviewer-scope-alignment(検証に構造的に必要なパスは dispatch 時点で許可集合へ含める)の違反実例そのものであり新規追補は不要 — reviewer 面での再発が再度観測されたら蒸留ラウンドで昇格を再判定する。",
+  "rationale": "実測: (a) diary 2026-08-02T18:15-18:27Z の3候補原文を直読。(b) audit で functional-design の SENSOR_FAILED 24件→是正後 PASSED を grep 実測(FAILED=24)。(c) team.md:242 consumes-first-drafting 原文 — 既存則は起草者本人の『directive を先に読む』を縛るが、conductor の委譲ブリーフが記憶起草の consumes を6サブエージェント×4成果物=24面へ増幅する経路は未規定の新規面であり、『委譲ブリーフの consumes は directive から機械転記』は追補相当。(d) c1 は AD が明示委任した除外集合の実測充填で always-elect の機械的執行クラス — state-pbt Review block(READY『AD 委任範囲内で言語仕様に照らし妥当、A-2 不変』GoA 1-2)が裏付け、新規則なし。(e) c3 は project.md:268 c1-reviewer-scope-alignment が既に処方する形(260731 FD の u5/u7/u8 と同型 — 検証に必要な unit-of-work-dependency.md の読取・内容一致・verdict 影響なし)の違反/反復実例で、project.md:14 c4-subagent-structural-guard も『prompt 明示だけに依存しない』を既定済み。よって c2 のみ採用。",
+  "submittedAt": "2026-08-02T18:29:29Z"
+}

@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-FMCS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "本ステージの発動契機が spec 変更ではなく model-map の実装エントリ(amadeus-election-store.ts)変更だった点は build-and-test:two-layer-verification-posture の発動条件(並行プロトコルの spec 変更時)に明文がなく、次に同型が再発したら「impl-entry drift も形式検証の発動契機である」旨の追補候補として再提出する余地を残す(今回は追加実行=安全側かつ model-completeness sensor が impl ハッシュ整合を所掌するため矛盾なし、persist 不要と判断)。",
+      "rationale": "実測: fmc-out/manifest.json は outcome=NOT_DETECTED / exitCode=0 / partial=false、completion-marker.json は {\"complete\": true}、tlc-stdout.bin に `5203730 states generated, 529692 distinct states found, 0 states left on queue.` と `The depth of the complete state graph search is 9.` を確認 — diary の主張は逐語一致。c1 が述べているのは『completion marker と state 統計が揃ったので NOT_DETECTED を主張できた』という事実であり、これは既存 cid:application-design:finite-exploration-not-detected-proof が既に定める規則の充足=執行実例で、新しい規則を1つも足さない。c2 の内容(produces/consumes とも空・証跡は --out 配下へ record 外出力・verdict は実 TLC 出力由来でハードコード非介在)は .claude/plugins/formal-model-check/stages/formal-model-check.md の frontmatter(produces: [] / consumes: [])と本文 Step 2-3(--out 指定、『derives every verdict from real TLC output, never a hardcoded value (NFR-3, no verification theatre)』)に出荷時点で明記済みの契約そのままで、これも執行実例。よって persist 相当の追補は 0 件(internalNo 1)。",
+      "submittedAt": "2026-08-03T06:53:04Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-FMCS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件裁定は「新規ノルム不要」の意であり、c2 が触れた「formal-model-check の証跡が record 外の scratch にのみ存在し version-controlled でない」点(将来の再監査で verdict を再現できない)は学習ではなく証跡保全の設計課題として Issue 起票か次回週次蒸留ラウンドへ回付されるべきである。",
+      "rationale": "実測により c1/c2 とも既存 cid の執行実例と判定した。c1: TLC 出力 tlc-stdout.bin を直読し `5203730 states generated, 529692 distinct states found, 0 states left on queue.`(固定点到達)/ `The depth of the complete state graph search is 9.` / `Model checking completed. No error has been found.` を確認、completion-marker.json は {\"complete\": true}、manifest.json は outcome=NOT_DETECTED / exitCode=0 / partial=false / errorCode=null、tlc-stderr.bin は 0 バイト。これは project.md § Verification の cid:application-design:finite-exploration-not-detected-proof(「completion marker と state 統計が揃った場合にのみ NOT_DETECTED を主張できる」)が既に定める条件をそのまま充足した実行であり、規則を追加・精密化する新知見を含まない。発動契機(並行プロトコル面の変更で形式検証を追加する)も team.md の cid:build-and-test:two-layer-verification-posture が既定済みで、実装エントリ改修の検知は model-map.json の entries[].sha256(amadeus-election-store.ts 等5エントリ)と model-completeness sensor が機械的に担う出荷済み契約である。c2: produces/consumes が空であること、出力が --out へ行くこと、verdict が実 TLC 出力由来でハードコード非介在(NFR-3)であることは、いずれも .claude/plugins/formal-model-check/stages/formal-model-check.md の frontmatter(produces: [] / consumes: [])と本文 Step 3(「derives every verdict from real TLC output, never a hardcoded value (NFR-3, no verification theatre)」)に出荷時点で明記された stage 契約の記述であり、実行して観測した事実の再述にとどまる。検証劇場の禁止は org.md Forbidden が既に縛る。§13 の学習は将来の振る舞いを変える規則であることを要するが、c1/c2 はいずれも既決規則の遵守記録であって規則そのものを増減させないため、persist は memory 層を冗長化するだけである(cid:requirements-analysis:no-election-for-decided-norms の趣旨、および週次蒸留ラウンドが縮約対象とする高チャーン記述の増加回避)。",
+      "submittedAt": "2026-08-03T07:05:00Z"
+    }
+  ],
+  "late": []
+}

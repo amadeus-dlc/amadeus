@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-NDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c1 の persist は独立 cid でなく cid:functional-design:c2-brief-consumes-verbatim への追補(条件付き consumes を持つ per-unit ステージの reviewer ブリーフに限定した解決結果=SKIP 状態の負方向明示)として統合し、規範の肥大を避けること。",
+  "rationale": "実測: (a) diary construction/nfr-design/memory.md 23:32:12Z — 6体中5体が stage frontmatter の生 consumes(条件付き6件)を根拠に同一の誤前提 Major、実測は解決済み directive の consumes 1件で audit の nfr-design SENSOR_PASSED=120 / SENSOR_FAILED=0 を grep 実測(偽前提を確定)。(b) nfr-design.md frontmatter :24-36 — required:true の consumes 6件を直読、execution: CONDITIONAL(nfr-requirements SKIP 時は解決で消える)。(c) project.md:300 c2-brief-consumes-verbatim 原文 — 適用限定は『委譲ブリーフ経由の consumes 配布』で directive JSON からの機械転記を縛るが、機械転記は正方向(何を消費するか)のみを運び、条件付き consumes が SKIP へ解決された負方向事実(なぜ frontmatter の5件が不在か)を構造的に伝えない — reviewer は stage frontmatter を自力で読めるため、転記済みブリーフ下でも生 consumes 起点の誤前提 Major は防げない(reservation-transcription の negative-vocabulary check と同型の正/負方向の別検査面)。team.md:291 upstream-coverage-conditional-consumes は brownfield で条件付き consumes が『要求される』側の面で、本件の『解決で除外される』側は未被覆。よって c1 は既存追補の射程外の新規面であり追補 persist 相当(実害 = 5件の同型 Major で reviewer iteration 消費)。(d) state-pbt/performance-design.md 末尾 Review block 実読 — Iteration 1 Major『2.8ms は v×400 の単位不整合、v×100≈0.70ms へ訂正』→ Iteration 2 READY。reviewer が算出式照合で捕捉しており、c2 は既存 cid:nfr-requirements:derived-value-shows-formula が設計どおり機能した違反実例(persist 不要)。",
+  "submittedAt": "2026-08-03T00:00:00Z"
+}

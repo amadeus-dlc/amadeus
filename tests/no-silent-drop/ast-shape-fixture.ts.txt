@@ -1,0 +1,17 @@
+try {
+  fixture();
+} catch (error) {}
+
+try {
+  fixture();
+} catch (error) {
+  console.warn(error);
+}
+
+type StateResult = { kind: "ok" } | { kind: "failed" };
+declare function applyTransition(): StateResult;
+applyTransition();
+
+function setCheckbox(content: string, slug: string): string {
+  return content.replace(slug, "done");
+}

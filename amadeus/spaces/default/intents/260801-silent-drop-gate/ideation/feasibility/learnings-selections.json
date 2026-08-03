@@ -1,0 +1,21 @@
+{
+  "stage_slug": "feasibility",
+  "selections": [
+    {
+      "candidate_id": "c2-2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "静的ゲートの走査対象は手書き正本（packages/framework/core/、packages/framework/harness/、scripts/）とし、生成物とテスト fixture を除外する",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "意図的な免除にも shrink-only ratchet を適用し、新規免除追加を通常更新で許可しない",
+      "source": "orchestrator"
+    }
+  ]
+}

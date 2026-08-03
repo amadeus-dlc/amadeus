@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-DPS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測4点: (a) diary Interpretations 2026-08-02T17:58:22Z が consumes-first-drafting 違反実例と自己分類し Bolt 編成は機械的導出と記録 (b) 5成果物すべて冒頭に上流入力(consumes 全数)ヘッダ+実参照注記で是正済み (c) audit で SENSOR_FAILED 5件(seq 187-195, 17:57:20Z, 5成果物全て upstream-coverage)→SENSOR_PASSED 5件(seq 209-217, 17:58:00-01Z)の遷移を確認 (d) team.md:242 cid:requirements-analysis:consumes-first-drafting 原文『directive の consumes 宣言を先に読み…写してから本文を書き始める — 記憶ベースの参照リストは宣言と乖離する』が本件の機序を全面カバー。新規機構・新規知識クラスは不在で、既存 cid の違反実例記録のみが適切。0件で可。",
+  "submittedAt": "2026-08-02T17:59:44Z"
+}
