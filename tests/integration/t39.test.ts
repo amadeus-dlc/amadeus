@@ -209,7 +209,12 @@ const EXPECTED_SKIPPED: Record<string, string[]> = {
   chore: ["ideation", "inception", "operation"],
   refactor: ["ideation", "operation"],
   infra: ["ideation"],
+  "installer-distribution": [],
   "security-patch": ["ideation"],
+  "self-document": ["operation"],
+  "self-feature": ["operation"],
+  "self-fix": ["ideation", "operation"],
+  "self-refactor": ["ideation", "operation"],
   workshop: ["ideation"],
 };
 
@@ -222,7 +227,12 @@ const SCOPES = [
   "chore",
   "refactor",
   "infra",
+  "installer-distribution",
   "security-patch",
+  "self-document",
+  "self-feature",
+  "self-fix",
+  "self-refactor",
   "workshop",
 ] as const;
 

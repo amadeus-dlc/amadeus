@@ -49,6 +49,8 @@ scopes:
   - mvp
   - infra
   - workshop
+  - installer-distribution
+  - self-feature
 inputs: NFR requirements artifacts, functional design artifacts
 outputs: performance-design.md, security-design.md, scalability-design.md, reliability-design.md, logical-components.md (under this stage's per-unit record dir, engine-resolved)
 ---

@@ -22,6 +22,11 @@ scopes:
   - security-patch
   - workshop
   - chore
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: workspace classification from workspace-detection, scope from orchestrator
 outputs: <record>/amadeus-state.md (full populated version, engine-resolved)
 ---

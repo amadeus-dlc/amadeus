@@ -46,6 +46,7 @@ scopes:
   - mvp
   - infra
   - workshop
+  - installer-distribution
 inputs: <record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts
 outputs: "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's amadeus-team.md and amadeus-project.md."
 ---

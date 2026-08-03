@@ -48,6 +48,10 @@ scopes:
   - mvp
   - refactor
   - workshop
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-refactor
 inputs: unit-of-work.md, unit-of-work-story-map.md, requirements.md, application design artifacts
 outputs: "business-logic-model.md, business-rules.md, domain-entities.md, CONDITIONAL: frontend-components.md (under this stage's per-unit record dir, engine-resolved)"
 ---

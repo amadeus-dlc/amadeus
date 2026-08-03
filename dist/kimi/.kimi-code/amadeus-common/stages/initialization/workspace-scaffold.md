@@ -21,6 +21,11 @@ scopes:
   - security-patch
   - workshop
   - chore
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: none (first stage after session start)
 outputs: the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir
 ---

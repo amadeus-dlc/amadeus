@@ -94,18 +94,23 @@ const UTIL = amadeusToolTarget(
   ),
 );
 
-// The 10 scopes the framework ships, alphabetical — the .sh's hard-coded
-// expectation (t125:62). Each is a literal independent of source iteration.
+// The 15 scopes the framework ships, alphabetical. Each is a literal
+// independent of source iteration, so an accidental catalog change fails loud.
 const SHIPPED_SCOPES = [
   "chore",
   "enterprise",
   "feature",
   "fix",
   "infra",
+  "installer-distribution",
   "mvp",
   "poc",
   "refactor",
   "security-patch",
+  "self-document",
+  "self-feature",
+  "self-fix",
+  "self-refactor",
   "workshop",
 ];
 
@@ -132,11 +137,11 @@ afterEach(() => {
 });
 
 describe("shipped scope files — frontmatter + derived metadata (in-process)", () => {
-  test("exactly 10 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
+  test("exactly 15 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
     const files = readdirSync(SCOPES_DIR).filter(
       (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
-    expect(files.length).toBe(10);
+    expect(files.length).toBe(15);
   });
 
   test("every shipped scope file's frontmatter name == its slug [.sh test 2]", () => {
@@ -155,7 +160,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     }
   });
 
-  test("validScopes() == the 10 .md-derived names, alphabetical [.sh test 3]", () => {
+  test("validScopes() == the 15 .md-derived names, alphabetical [.sh test 3]", () => {
     expect([...validScopes()]).toEqual(SHIPPED_SCOPES);
   });
 

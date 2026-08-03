@@ -3,7 +3,7 @@
   "coveredByClass": {
     "function": 174,
     "audit": 35,
-    "scope": 10,
+    "scope": 15,
     "stage": 8,
     "hook": 13,
     "subcommand": 83,

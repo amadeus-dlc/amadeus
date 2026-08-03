@@ -48,6 +48,7 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - installer-distribution
 inputs: functional design artifacts, requirements.md, RE artifacts
 outputs: performance-requirements.md, security-requirements.md, scalability-requirements.md, reliability-requirements.md, tech-stack-decisions.md (under this stage's per-unit record dir, engine-resolved)
 ---

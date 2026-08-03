@@ -31,6 +31,7 @@ scopes:
   - feature
   - infra
   - workshop
+  - installer-distribution
 inputs: Infrastructure design from infrastructure-design stage, CD pipeline config from deployment-pipeline stage
 outputs: environment-inventory.md, validation-report.md, environment-provisioning-questions.md (under this stage's record dir, engine-resolved)
 ---
