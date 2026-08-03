@@ -1,6 +1,133 @@
 # コード構造
 
-## registry drift guard の患部配置（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## state integrity の患部配置（260803-state-integrity、現在、observed `6c15af23a`）
+
+本節の file:line はすべて observed `6c15af23a` 時点。全数列挙と引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+### 差分区間の患部への到達（base `a8e1ce025` → HEAD、49 コミット）
+
+区間全体は 1594 files / +174860 / −6561（`git diff --stat` / `git rev-list --count` とも exit 0、preflight 後の HEAD で再実測）だが、患部ファイルに触れたのは 2 コミットだけである。preflight で統合した 6 コミット（`a2f08658e`、`dece5e59d`、`272cac2af`、`52a082af7`、`7a51ace47`、`763ebf676`）は患部 6 ファイルを 1 行も変更していない（空出力・exit 0）。
+
+| ファイル | 区間内コミット |
+| --- | --- |
+| `packages/framework/core/tools/amadeus-lib.ts` | `7c29e33f7` |
+| `packages/framework/core/tools/amadeus-state.ts` | `7c29e33f7`, `35c88498c` |
+| `packages/framework/core/tools/amadeus-jump.ts` | `7c29e33f7` |
+| `packages/framework/core/tools/amadeus-utility.ts` | `7c29e33f7` |
+| `packages/framework/core/tools/amadeus-audit.ts` | なし |
+| `packages/framework/core/tools/amadeus-bolt.ts` | なし |
+
+`7c29e33f7`（PR #2088、no-silent-drop gate）の `amadeus-lib.ts` への変更は hunk header 1 件（`@@ -5362,71 +5362,308 @@`）に限局し、変更領域は checkbox/text-mutation（5362–5670）のみ。**ロックコード（5937–6600）は +237 行下方へシフトしただけで論理は byte 単位で不変。** `35c88498c` は `amadeus-state.ts` への 1 行変更（registry drift guard）で両バグと無関係。
+
+### #1906 — ロック機構の配置
+
+すべて `packages/framework/core/tools/amadeus-lib.ts` 内。
+
+| 領域 | 行 | 役割 |
+| --- | --- | --- |
+| `auditLockIdentity` | `:5960-5966` | bucket 決定（`intent` 未指定 → `projectDir + WORKSPACE_LOCK_SENTINEL`） |
+| `writeOwnerStamp` / `removeLockDirIfOwned` / `readOwnerStamp` | `:6013` / `:6048` / `:6060` | stamp の書込・削除・読取（いずれも catch silent-continue） |
+| `unstampedGraceMs` | `:6107-6114` | 既定 `5000` |
+| `lockDirMtimeMs` | `:6122` | dir 齢の取得 |
+| `stampMatches` | `:6142-6154` | CAS 後検証（`:6144-6152` が分岐 A 用、`:6153-6154` が分岐 B 用） |
+| `reapStaleLock` finally | `:6210` | |
+| `acquireReapMutex` | `:6241` / `:6250` / `:6258` / `:6263` / `:6269` | reap の直列化 |
+| `liveOwnerMayBeReaped` | `:6274-6282` | **分岐 B の入口述語** |
+| `reapStaleLockUnderMutex` | `:6284-6331` | 分岐 A `:6285-6295`（判定 `:6294`）／分岐 B `:6296-6300`。CAS steal はこの後 |
+| `finalizeAuditLockAcquire` | `:6337-6356` | **`:6344-6345` に fail-open**。catch は `:6350` |
+| `acquireAuditLock` | `:6360-6361` が既定値（`maxRetries = 50`, `retryMs = 100`）。catch は `:6372` / `:6380` | |
+| `withAuditLock` | `:6520-6521` で `AuditLockAcquireError` を throw | |
+| `DEFAULT_LOCK_STALE_MS` | `:5945` | 本番既定 10 分 |
+
+関連する既存文書コメントは `packages/framework/core/tools/amadeus-audit.ts:429-433`（分岐 B の帰結を明記）。
+
+### ロック取得点の配置
+
+`withAuditLock(` は `packages/` 全体で 36 箇所。
+
+| ファイル | 件数 |
+| --- | --- |
+| `amadeus-state.ts` | **15** |
+| `amadeus-presence-reservation.ts` | 5 |
+| `amadeus-utility.ts` | 3 |
+| `amadeus-runtime.ts` / `amadeus-sensor.ts` / `amadeus-grant-authorization.ts` / `amadeus-audit.ts` | 各 2 |
+| `amadeus-lib.ts` | 2（定義 + `withLockedIntentRegistry:2289`） |
+| `amadeus-learnings.ts` / `amadeus-orchestrate.ts` / `amadeus-graph.ts` | 各 1 |
+
+`amadeus-state.ts` の 15 件: `:823`（`operationWithLock`）、`:1079`、`:1159`、`:1193`、`:1237`、`:1269`、`:1387`、`:1444`、`:2341`、`:3474`、`:3634`、`:4338`、`:5157`、`:5359`、`:5466`。
+
+bucket は callback の**閉じ行**で判定する（開き行の grep では誤分類する）。per-intent は `:1079`→`:1133`、`:1444`→`:1460`、`:5157`→`:5241`、`:5359`→`:5414` の 4 件。残る `:1159`、`:1193`、`:1237`、`:1269`、`:2341`、`:3634`、`:4338`、`:5466` は workspace sentinel。
+
+depth counter を経由しない bare 取得: `amadeus-audit.ts:549`、`amadeus-mirror-state-store.ts:457`（`enterAuditLock`）/`:477`、`packages/framework/core/otel/fatal-latch.ts:99`（削減予算 `(5, 50)` = 250 ms）。
+
+### ロックされていない state read-modify-write
+
+| 関数 | read → write | 備考 |
+| --- | --- | --- |
+| `amadeus-jump.ts` jump handler | `:370` → `:627` | ファイル内に `withAuditLock` が存在しない。`:565` で `Completed` を書く |
+| `amadeus-bolt.ts` | `:872` → `:889` | ファイル内に `withAuditLock` が存在しない |
+| `amadeus-bolt.ts` | `:927` → `:954` | 同上 |
+| `amadeus-utility.ts` `handleScopeChange`（`:5141-5299`） | `:5162` → `:5244` | `:5239` で `Completed` を書く |
+| `amadeus-utility.ts` `handleConfigChange`（`:5538-5616`） | `:5561` → `:5578` | `Completed` には触れない |
+| `amadeus-lib.ts` `resyncOneIntent`（`:5830-5891`） | `:5843` → `:5888` | `rebuildDerivedPlanFields:5784` 経由で `Completed` を書く。**新規所見** |
+
+ロック済みと確認: `handleRecompose`（`amadeus-utility.ts:5385`→`:5516`）、`handleSetStatus`（`:5640`→`:5667`）、`amadeus-state.ts` の全 RMW。
+
+### #1875 — `Completed` の書き手と読み手の配置
+
+値の書き手は 9 件（`setField(.*"Completed"` 9 hits のうち 7 件がカウント。`amadeus-state.ts:2419` / `:2538` は `Status: "Completed"` で別フィールド。加えて位置引数の `:2536` と state テンプレート `amadeus-utility.ts:4513`）。
+
+**定義 R** — `amadeus-state.ts:1455`→`:1456`（JSON `:1459`）、`:2286`→`:2287`（audit `:2143`、JSON `:2318`）、`:2367`→`:2368`（JSON `:2433`）、`:2536`/`:2554`（audit `:605`/`:619`、JSON `:2592`）、`:3422`、`amadeus-jump.ts:564`→`:565`（audit `:132`、JSON `:638`）。読み手は `amadeus-state.ts:3377`。
+
+**定義 E** — `amadeus-lib.ts:5781`→`:5784`（共有書き手。直前 `:5780` が `Total Stages = executeStages.length`）。消費: `amadeus-lib.ts:5886`（`resyncOneIntent`、UNLOCKED）、`amadeus-utility.ts:5507`→`:5516`（表示 `:5529`、locked）。独自 inline コピー: `amadeus-utility.ts:5236`→`:5239`（表示 `:5266`、UNLOCKED）。
+
+**定義 G** — `amadeus-utility.ts:4433` → テンプレート `:4513` → audit `:4568`。
+
+### #1875 が乗る新しい text-mutation 基盤（`7c29e33f7` 導入）
+
+- `TextMutationResult` 判別ユニオン `amadeus-lib.ts:5425` = `changed | not-found`
+- `StateMutationTargetError` `:5450`
+- `requireChanged(result, operation)` `:5660-5667`（`not-found` で throw）— 呼び出し点 19（`amadeus-state.ts` 11 / `amadeus-jump.ts` 5 / `amadeus-utility.ts` 3）
+- `setCheckbox` / `setStageSuffix` `:5599` / `:5629` / `:5645`
+- `countCheckboxes` `:5669` — 意味論不変。**EXECUTE/SKIP suffix に対して定義盲目のまま**
+
+### テストによる pin の配置
+
+**ロック挙動** — 34 ファイルがロックのノブ／プリミティブを参照する。荷重を持つのは:
+
+- `tests/unit/t161-per-intent-lock-reaper.test.ts`、`tests/integration/t163-reaper-steal-race.test.ts`、`tests/integration/t-reap-mutex.integration.test.ts` — reaper の steal 意味論
+- `tests/integration/t164-shard-ordering-and-lock-bucket.test.ts` — **bucket 意味論を直接 pin。bucket 統一はここに当たる**
+- `tests/integration/t145-state-lock-concurrency.test.ts` — fail-closed acquire 契約
+- `tests/integration/t380-locked-canonical-emit.test.ts`、`t388-audit-merge-atomic-canonical.test.ts` — `AuditLockAcquireError` の形
+- `tests/integration/t370-canonical-lock-target.integration.test.ts`、`t405-audit-merge-fatal-latch.test.ts`、`t355-audit-merge-info-seams.test.ts`、`t33-hook-concurrency.test.ts`、`t46-parallel-bolt.test.ts`、`t92.test.ts`、`t66.test.ts`
+- `tests/unit/t76.test.ts`、`t115.test.ts`、`t125.test.ts`、`t188-human-presence-gate.test.ts`、`tests/e2e/t07-audit-fork-merge.test.ts`
+
+**`Completed` 定義（矛盾 pin）** — 定義 R: `tests/e2e/t52-workflow-state-progression.test.ts:118`、`tests/e2e/t-tui-kiro-fix-scope.serial.test.ts:143`。定義 E: `tests/integration/t394-compose-state-resync.integration.test.ts:126-144`。その他の数値 pin: `tests/unit/t17.test.ts:234,268,324,331,387,825`；`t19.test.ts:442`；`t11.test.ts:324,630,773,798,832`；`t186-foreach-per-unit-iteration.test.ts:127`；`t211-swarm-batch-progress.test.ts:282`；`tests/integration/t256-state-intent-selector.test.ts:254`；`t224-state-set-failclosed.test.ts:168,170,245,252`。
+
+**ゲート** — `.github/workflows/ci.yml:154`（no-silent-drop、`package.json:24` → `bun tests/no-silent-drop-gate.ts check --base-revision <base>`、規則は `tests/no-silent-drop/ast-scan.ts:845-846, :16`、baseline は `tests/no-silent-drop/baseline.json` 217 エントリ）、`ci.yml:169`（`bun tests/unchecked-cast-guard.ts --check`）。
+
+### 生成面 — 各 core tool ファイルは 12 コピーを持つ
+
+- 7 つの `dist/` ツリー: `claude`、`codex`、`cursor`、`kimi`、`kiro`、`kiro-ide`、`opencode`
+- repo root の 5 self-install ツリー: `.claude/tools`、`.codex/tools`、`.cursor/tools`、`.opencode/tools`、`.kimi-code/tools`
+- `.kiro/tools` と `.kiro-ide/tools` は**存在しない**（dist 専用ハーネス）
+
+投影先は `amadeus-lib.ts` → `dist/{claude/.claude, codex/.codex, cursor/.cursor, kimi/.kimi-code, kiro/.kiro, kiro-ide/.kiro, opencode/.opencode}/tools/` + `{.claude, .codex, .cursor, .opencode, .kimi-code}/tools/`。`amadeus-state.ts` / `amadeus-jump.ts` / `amadeus-utility.ts` / `amadeus-audit.ts` / `amadeus-bolt.ts` も同一集合。
+
+### 2 パッチのソース衝突面
+
+| ファイル | #1906 | #1875 | 交差 |
+| --- | --- | --- | --- |
+| `amadeus-lib.ts` | 6274–6390（bucket を取るなら +2289） | 5669、5781–5785 | 約 490 行離れ不交差 |
+| `amadeus-state.ts` | 1079/1133、1159、1193、1237、1269、1444/1460、2341、3474、3634、4338、5157、5359、5466 | 1455–1456、2286–2287、2367–2368、2536、2554、3377、3422 | **`handleCheckbox` 1444–1460 が交差** |
+| `amadeus-jump.ts` | 370→627 | 564–565 | **同一関数・行が交差** |
+| `amadeus-utility.ts` | 5162→5244 | 4433、5236–5239 | **`handleScopeChange` が交差** |
+
+生成面 12 コピーは分割の有無にかかわらず両パッチで衝突する。
+
+## registry drift guard の患部配置（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 ### 正本と投影境界
 

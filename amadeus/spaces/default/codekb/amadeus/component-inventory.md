@@ -1,6 +1,40 @@
 # コンポーネント棚卸し
 
-## registry drift guard の対象コンポーネント（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## state integrity の対象コンポーネント（260803-state-integrity、現在、observed `6c15af23a`）
+
+本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+| コンポーネント | 所在 | 責務 | health |
+| --- | --- | --- | --- |
+| audit lock reaper | `amadeus-lib.ts:6284-6331`（`liveOwnerMayBeReaped:6274-6282`） | stale lock の検出と CAS steal | **不健全（S1-FATAL 相当）** — 分岐 B の CAS 後検証が構造的に不活性。6/6 の run で無音の相互排他破れを実測 |
+| lock acquire finalize | `amadeus-lib.ts:6337-6356` | stamp 書込と acquire の成否確定 | **不健全** — `:6345` の fail-open が stamp なし live lock を恒久化。唯一の決定的な分岐 A 経路 |
+| lock owner stamp | `writeOwnerStamp:6013` / `readOwnerStamp:6060` | 所有者 PID と `startedAtMs` の記録 | **不完全** — acquire 時 1 回のみで heartbeat 経路がなく、健全な長時間 holder と wedge holder が区別不能 |
+| CAS 検証 `stampMatches` | `amadeus-lib.ts:6142-6154` | steal の後段検証 | **非対称** — 分岐 A 用（`:6144-6152`）は入口述語の再評価、分岐 B 用（`:6153-6154`）は必ず通過する |
+| reap mutex | `acquireReapMutex:6241-6269` | steal の直列化 | **健全** — 勝者は 1 プロセスに限定される。欠陥は入口判定側にある |
+| `withAuditLock` depth counter | `amadeus-lib.ts`（`:6520-6521` で `AuditLockAcquireError`） | 同一 identity の再入許可 | **健全** — nested-append の自己 EEXIST を防ぐ（`amadeus-audit.ts:429-433` の設計意図どおり機能） |
+| `auditLockIdentity` | `amadeus-lib.ts:5960-5966` | bucket 決定 | **不整合** — 同一 state file を per-intent と workspace sentinel の 2 bucket で保護する呼び出し点が併存（code-derived、未実測） |
+| `withLockedIntentRegistry` | `amadeus-lib.ts:2289` | `intents.json` の保護 | 意図的に workspace スコープ。bucket 統一を採る場合は「registry ロック」と「state file ロック」の分離が必要 |
+| state CLI ロック取得点 | `amadeus-state.ts` 15 箇所 | state file の RMW 保護 | per-intent 4 件（`:1079`、`:1444`、`:5157`、`:5359`）／ workspace 8 件。bucket 判定は callback 閉じ行で行う |
+| `amadeus-jump.ts` jump handler | `:370` → `:627` | ステージジャンプの state 更新 | **UNLOCKED** — ロックプリミティブを import していない。`:565` で `Completed` を書く |
+| `amadeus-bolt.ts` state RMW | `:872`→`:889`、`:927`→`:954` | Bolt 進行の state 更新 | **UNLOCKED** — 同上 |
+| `handleScopeChange` | `amadeus-utility.ts:5141-5299` | スコープ変更 | **UNLOCKED** かつ `Completed` の**独自 inline コピー**（`:5236`→`:5239`）を持つ |
+| `resyncOneIntent` | `amadeus-lib.ts:5830-5891` | intent の派生フィールド再同期 | **UNLOCKED** — `rebuildDerivedPlanFields:5784` 経由で `Completed` を書く。**新規所見**。`NSD003_FUNCTIONS` の追跡対象でもある |
+| `countCheckboxes` | `amadeus-lib.ts:5669` | `[x]` の生カウント | 定義 R の供給元。EXECUTE/SKIP suffix に対して定義盲目 |
+| `rebuildDerivedPlanFields` | `amadeus-lib.ts:5781-5784` | EXECUTE 実効の完了数と `Total Stages` を導出 | 定義 E の供給元・**唯一の共有書き手**。統一の受け皿として既存 |
+| `approvalNextStateIssue` | `amadeus-state.ts:3377` | approve の fail-closed 検証 | **検証劇場** — 書き手と同じ定義 R で再計算するため乖離検出が構造的に不可能（repo `Forbidden` 該当） |
+| state 初期化テンプレート | `amadeus-utility.ts:4433` / `:4513` / `:4568` | `Completed` の seed 値 | 定義 G の供給元。graph の initialization 段数を使う第 3 の定義 |
+| `requireChanged` 基盤 | `amadeus-lib.ts:5660-5667`（呼び出し 19 箇所） | text mutation の not-found を throw | **健全・新設**（`7c29e33f7`）。#1875 の是正はこの規律の上に載る |
+| no-silent-drop gate | `ci.yml:154`、`tests/no-silent-drop/ast-scan.ts`、`baseline.json` | NSD001/002/003 の検出 | 健全だが**本 intent 最大の CI リスク源** — ロックの catch 編集で再 fingerprint され NSD001 が発火する |
+
+### 依存関係上の注意
+
+- `amadeus-jump.ts` と `amadeus-bolt.ts` は現在ロックプリミティブを一切 import していない。これらの UNLOCKED RMW をロックする判断は**新規依存の導入**にあたる。
+- `packages/framework/core/otel/fatal-latch.ts:99` は削減予算 `(5, 50)` = 250 ms で bare acquire する。lock 予算に関する変更はこの呼び出し点の余裕にも影響する。
+- 各 core tool ファイルは 12 個のコミット済み生成コピー（7 dist + 5 self-install）を持ち、いずれのパッチも全面再生成を強制する。
+
+## registry drift guard の対象コンポーネント（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 | コンポーネント | 責務 | 依存 | 健全性 |
 | --- | --- | --- | --- |

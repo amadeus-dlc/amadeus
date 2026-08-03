@@ -1,6 +1,18 @@
 # ビジネス概要
 
-## registry drift guard の業務境界（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## state integrity の業務境界（260803-state-integrity、現在、observed `6c15af23a`）
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+- **目的**: [Issue #1906](https://github.com/amadeus-dlc/amadeus/issues/1906)（P2 / S1-FATAL / `origin:bootstrap`）の audit lock 相互排他破れと、[Issue #1875](https://github.com/amadeus-dlc/amadeus/issues/1875)（P3 / S4-MINOR / `origin:bootstrap`）の `Completed` カウンタ定義三分裂を是正する。両 Issue とも本 observed SHA でクロスレビュー2名成立済み。価値は「1 件の競合を塞ぐこと」ではなく、**監査記録と state の整合性が無音で壊れる経路を閉じること**にある。
+- **現存する利用者影響（#1906）**: audit lock の reaper には 2 つの steal 分岐があり、うち **live-owner-over-age 分岐（分岐 B）は CAS 後検証が構造的に不活性**である。生きている holder は取得後に stamp を更新しないため、検証は守るべきケースそのものに対して必ず通過する。critical section が `lockStaleMs()` を超えるだけで相互排他が破れ、実測では 20 並行増分のうち 14–16 が**全プロセス exit 0 のまま**失われた。もう一方の分岐（old-unstamped-dir、分岐 A）は単独では到達しにくいが、acquire の fail-open（`amadeus-lib.ts:6345`）により、一時的な stamp 書込失敗が**恒久的に steal 可能な live lock** へ変換され、タイミングの幸運なしに成立する。監査シャードは append-only であるため、ここでの無音損失は後から検出も復元もできない。
+- **重要な訂正 — 既定構成は fail-CLOSED である**: 既定ノブ下の decisive run は 41 成功 + 19 の loud な非ゼロ終了 = 60 で、無音損失ゼロだった。失われた作業はすべて `exit 1` として表面化する。**Issue 原文の「全プロセスが exit 0 のまま増分が消える」という記述は既定構成の挙動を描写していない。** 無音損失は `lockStaleMs()` を下回る短い閾値、または stamp 書込失敗という前提条件の下で発現する。この訂正は要件のリスク記述に反映する必要がある。
+- **現存する利用者影響（#1875）**: `Completed` フィールドに 3 つの定義（生カウント R / EXECUTE 実効 E / graph 由来 G）が並存し、9 箇所の書き手に分散している。3 定義すべてが append-only の audit 行と CLI JSON へ到達するため、**同じワークフローの進捗が、どのコマンドが最後に書いたかによって別の数値として記録される**。さらに approve の fail-closed 検証器（`amadeus-state.ts:3377`）は自分が書いたのと同じ定義で再計算するため、乖離を検出することが構造的に不可能で、検証しているように見えて何も守っていない。
+- **成功境界**: (i) 相互排他が破れる経路を、無音ではなく loud failure か正しい排他のどちらかへ倒すこと、(ii) `Completed` を単一の正準定義から単一の書き手経路で導出し、検証器をその正準定義へ接続すること。いずれも「落ちる実証」— 修正前に赤くなり修正後に緑になるテスト — を受け入れ基準に含める。
+- **スコープ境界**: 生成済み harness 面（7 dist + 5 self-install の計 12 コピー）を手編集せず `packages/framework/core/` の正本を直し、投影整合は既存 `dist:check` / `promote:self:check` に委ねる。ロック機構の全面再設計、監査シャード形式の変更、`Completed` 以外の派生フィールドの整理は本 intent に含めない。ロック bucket の統一と UNLOCKED な state RMW のロック化を含めるかは裁定事項とする。
+- **次段の裁定**: (1) 3 定義のどれを正準とするか — 定義 R と E は既存 e2e / integration テストで**矛盾して pin されており**、どの裁定でも既存テストの明示改訂が必然的に発生する（仕様判断であり実装判断ではない）、(2) live PID の over-age reap を heartbeat 付きで残すか除くか — 除く場合は wedge holder の回復手段を別途定義する必要があり、現行挙動は `amadeus-audit.ts:429-433` で意図的と文書化されている、(3) bucket 統一と UNLOCKED RMW のロック化を本 intent に含めるか繰り延べるか、(4) 2 つの Bolt を直列化するか — 生成面 12 コピーは分割しても衝突するため並行化の実益は限定的である。
+
+## registry drift guard の業務境界（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 - **目的**: [Issue #2037](https://github.com/amadeus-dlc/amadeus/issues/2037) の文書バックフィルとは分離し、CLI が実際に受理する verb とエラー時の `Valid:` 一覧、および stage schema が受理するフィールド集合と参照文書の機械レジストリを双方向に照合する。今回の価値は「欠落した3 verb／複数 field を個別に直すこと」ではなく、次の追加時に同型 drift を CI で止める再発防止にある。
 - **現存する利用者影響**: `amadeus-state.ts` は 33 verb を dispatch する一方、未知 verb の診断は 30 verb しか列挙せず、`set-construction-iteration`、`archive`、`unarchive` を案内できない。stage field は実装が25件を受理するのに、権威ある仕様表は9件不足し、英日 Field reference は意図的に判断を要する9見出しだけを詳説する。このため「実装できるが発見・説明できない」契約が蓄積している。

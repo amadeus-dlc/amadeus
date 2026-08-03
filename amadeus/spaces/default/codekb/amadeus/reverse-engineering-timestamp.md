@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260802-registry-drift-guard）
+## 実行メタデータ（現在: 260803-state-integrity）
+
+- Date: `2026-08-03`
+- Base commit: `a8e1ce025a918310ab7d803270bb6fc6b649c598`（`git merge-base --is-ancestor` exit 0 で祖先性を実測確認。HEAD から 42 コミット手前の最近祖先を `cid:reverse-engineering:rescan-base-ancestry` に従って選択。直近記録 `260802-registry-drift-guard` の observed `64b44a9f8` は本 worktree HEAD の祖先ではないため不採用）
+- Observed commit: `498c3034a78bd432dc426f9f807b79c8ae980762`（worktree HEAD、`git rev-parse` exit 0。scan による source 変更なし）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal
+- Focus: audit lock の相互排他破れ（[Issue #1906](https://github.com/amadeus-dlc/amadeus/issues/1906)、P2 / S1-FATAL / `origin:bootstrap`）と `Completed` カウンタ定義の三分裂（[Issue #1875](https://github.com/amadeus-dlc/amadeus/issues/1875)、P3 / S4-MINOR / `origin:bootstrap`）。両 Issue とも本 observed SHA でクロスレビュー2名成立済み。
+- Scan mode: **xrev scan mode**（`cid:reverse-engineering:c1-xrev-scan-mode`、単発のクロスレビュー済み Issue への拡張 `c1-xrev-single-issue`）。両 Issue のレビュー verdict を Developer scan の一次入力とし、Architect が主要 seam 9 箇所を verbatim 実読で二重化した（引用不一致 0 件）。**行番号再解決の免除は適用される（APPLIES）** — 理由: レビュアーが引用した file:line はすべて本 observed SHA `498c3034a` で検証されており、レビュー対象 SHA == observed SHA が成立する。coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。
+- Current decision: #1906 の相互排他破れは 2 つの steal 分岐に分解される。支配的なのは分岐 B（live-owner-over-age、`amadeus-lib.ts:6274-6282` / `:6296-6300`）で、CAS 後検証は **構造的に不活性**（live holder は stamp を更新しないため `stampMatches` が守るべきケースで必ず通過する）。6/6 の scratch run が 20 増分中 14–16 を失い全プロセス exit 0。分岐 A（old-unstamped-dir）は grace ノブ単独では 0/6 だが、`finalizeAuditLockAcquire:6345` の fail-open が一時的な stamp 書込失敗を恒久的に steal 可能な live lock へ変換し決定的にする。**既定ノブでの挙動は fail-CLOSED**（41 成功 + 19 loud 非ゼロ終了 = 60、無音損失ゼロ）であり、Issue 原文の記述は既定構成を描写していない。最小かつ高価値の修正は `:6345` を fail closed にすること。#1875 は `Completed` に 3 定義（R=生カウント / E=EXECUTE 実効 / G=graph 由来）が並存し、`amadeus-state.ts:3377` の approve 検証器は自分が書いたのと同じ定義で再計算するため乖離検出が構造的に不可能（検証劇場）。
+- Requirements Analysis へ送る裁定: (1) 3 つの `Completed` 定義のどれを正準とするか — R と E は既存 e2e/integration テストで矛盾して pin されており、いずれの裁定も既存テストの明示改訂を伴う、(2) live PID の over-age reap を heartbeat 付きで残すか除くか — 除く場合の wedge holder 回復手段を定義する必要があり、`amadeus-audit.ts:429-433` は現行挙動を意図的と文書化している、(3) ロック bucket 統一と UNLOCKED な RMW のロック化を本 intent に含めるか繰り延べるか（`t164` の bucket 意味論 pin 改訂と `resyncOneIntent` の扱いを含む）、(4) Bolt 直列化か唯一の綺麗な並行分割か — 生成面 12 コピーは分割しても衝突するため並行化の実益は限定的、(5) 付随: NSD001 の対処方針（ロック catch 編集は baseline 再 fingerprint を伴う）。
+- 新規所見（どちらの Issue にも記載なし）: (a) ロックは heartbeat を持たない — `owner.startedAtMs` は acquire 時刻のまま更新されず、健全な長時間 holder と wedge した holder が区別不能、(b) ロック bucket が不整合 — `handleSet`/`handleCheckbox` は per-intent bucket、`handlePark`/`handleUnpark` 他は同一 state file を workspace sentinel bucket で変更する（**code-derived、未実測**）、(c) `resyncOneIntent`（`amadeus-lib.ts:5843→5888`）は `Completed` を書く UNLOCKED な state RMW である。
+- Updated artifacts: 9 共有成果物の現在断面を更新し、直前の `260802-registry-drift-guard` を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-state-integrity.md` を新設。
+- Per-intent record: `re-scans/260803-state-integrity.md`
+
+## 実行メタデータ（履歴: 260802-registry-drift-guard）
 
 - Date: `2026-08-02T18:00:19Z`
 - Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（本 intent の過去recordはなし。`re-scans/` のうち最新時刻 `2026-08-02T10:27:57Z` で共有 freshness pointer にも採用された `260802-scope-grid-face-sync` の observed を最新の記録済み祖先として選択。dirty worktree保全のため今回のpreflightではtrunk統合・追加git操作を行わず、既存recordの系譜記録を根拠とした）
