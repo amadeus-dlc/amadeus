@@ -1401,7 +1401,7 @@ export function handleCheckbox(args: string[]): void {
     if (!findStageBySlug(slug)) {
       errorWithSlug(
         slug,
-        `State mutation refused: operation=${JSON.stringify(`checkbox:${slug}`)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
+        `State mutation refused: operation=${JSON.stringify("checkbox:" + slug)} phase=validate reason=target-not-found target=${JSON.stringify(slug)}`,
       );
     }
     if (!isCheckboxState(stateStr)) {
