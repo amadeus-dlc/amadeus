@@ -6,7 +6,6 @@
       "recordId": "shape-fixtures:primary",
       "receiptId": "shape-fixtures",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -21,14 +20,14 @@
           "name": "shape-fixtures:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "census-pre:primary",
       "receiptId": "census-pre",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -43,14 +42,14 @@
           "name": "census-pre:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "census-post:primary",
       "receiptId": "census-post",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/no-silent-drop-gate.ts",
@@ -63,14 +62,14 @@
           "name": "census-post:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "classification-precision:primary",
       "receiptId": "classification-precision",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -85,14 +84,14 @@
           "name": "classification-precision:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "baseline-proof:primary",
       "receiptId": "baseline-proof",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/no-silent-drop-gate.ts",
@@ -107,14 +106,14 @@
           "name": "baseline-proof:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "failure-matrix:primary",
       "receiptId": "failure-matrix",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -129,14 +128,14 @@
           "name": "failure-matrix:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "u2-u3-regressions:primary",
       "receiptId": "u2-u3-regressions",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -152,14 +151,14 @@
           "name": "u2-u3-regressions:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "full-test:normal",
       "receiptId": "full-test",
       "runName": "normal",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/run-tests.ts",
@@ -174,14 +173,14 @@
           "name": "full-test:normal",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "full-test:isolated-known-timeouts",
       "receiptId": "full-test",
       "runName": "isolated-known-timeouts",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -199,14 +198,14 @@
           "name": "full-test:isolated-known-timeouts",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "lint:primary",
       "receiptId": "lint",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "run",
@@ -219,14 +218,14 @@
           "name": "lint:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "typecheck:primary",
       "receiptId": "typecheck",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "run",
@@ -239,14 +238,14 @@
           "name": "typecheck:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "coverage:normal",
       "receiptId": "coverage",
       "runName": "normal",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "tests/run-tests.ts",
@@ -264,14 +263,14 @@
           "name": "coverage:normal",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "coverage:isolated-known-timeouts",
       "receiptId": "coverage",
       "runName": "isolated-known-timeouts",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -290,14 +289,14 @@
           "name": "coverage:isolated-known-timeouts",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "cold-warm-5x2:primary",
       "receiptId": "cold-warm-5x2",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -312,14 +311,14 @@
           "name": "cold-warm-5x2:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "capacity-r0-r2-r4:primary",
       "receiptId": "capacity-r0-r2-r4",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -334,14 +333,14 @@
           "name": "capacity-r0-r2-r4:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "u1-complexity:primary",
       "receiptId": "u1-complexity",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -354,14 +353,14 @@
           "name": "u1-complexity:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "package-apply:primary",
       "receiptId": "package-apply",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/package.ts"
@@ -373,14 +372,14 @@
           "name": "package-apply:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "promotion-apply:primary",
       "receiptId": "promotion-apply",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/promote-self.ts",
@@ -393,14 +392,14 @@
           "name": "promotion-apply:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "package-check:primary",
       "receiptId": "package-check",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/package.ts",
@@ -413,14 +412,14 @@
           "name": "package-check:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "promotion-check:primary",
       "receiptId": "promotion-check",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "scripts/promote-self.ts",
@@ -433,14 +432,14 @@
           "name": "promotion-check:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "event-pr-base:primary",
       "receiptId": "event-pr-base",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -455,14 +454,14 @@
           "name": "event-pr-base:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "event-fork-base:primary",
       "receiptId": "event-fork-base",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -477,14 +476,14 @@
           "name": "event-fork-base:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "event-push-before:primary",
       "receiptId": "event-push-before",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -499,14 +498,14 @@
           "name": "event-push-before:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "hang-deadline:primary",
       "receiptId": "hang-deadline",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -521,14 +520,14 @@
           "name": "hang-deadline:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "recordId": "workflow-structure:primary",
       "receiptId": "workflow-structure",
       "runName": "primary",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "command": [
         "bun",
         "test",
@@ -543,7 +542,8 @@
           "name": "workflow-structure:primary",
           "status": "pass"
         }
-      ]
+      ],
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     }
   ]
 }

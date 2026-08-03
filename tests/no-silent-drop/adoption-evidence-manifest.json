@@ -1,11 +1,9 @@
 {
   "schemaVersion": 1,
-  "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
   "evidence": [
     {
       "schemaVersion": 1,
       "id": "shape-fixtures",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -18,19 +16,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "shape-fixtures:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "census-pre",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -43,19 +41,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "census-pre:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "census-post",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -66,19 +64,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "census-post:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "classification-precision",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -91,19 +89,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "classification-precision:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "baseline-proof",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -116,19 +114,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "baseline-proof:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "failure-matrix",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -141,19 +139,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "failure-matrix:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "u2-u3-regressions",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -167,19 +165,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "u2-u3-regressions:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "full-test",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "normal",
@@ -192,7 +190,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "full-test:normal"
           },
           "exitCode": 0,
@@ -212,19 +210,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "full-test:isolated-known-timeouts"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "lint",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -235,19 +233,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "lint:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "typecheck",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -258,19 +256,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "typecheck:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "coverage",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "normal",
@@ -286,7 +284,7 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "coverage:normal"
           },
           "exitCode": 0,
@@ -307,19 +305,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "coverage:isolated-known-timeouts"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "cold-warm-5x2",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -332,19 +330,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "cold-warm-5x2:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "capacity-r0-r2-r4",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -357,19 +355,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "capacity-r0-r2-r4:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "u1-complexity",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -380,19 +378,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "u1-complexity:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "package-apply",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -402,19 +400,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "package-apply:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "promotion-apply",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -425,19 +423,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "promotion-apply:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "package-check",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -448,19 +446,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "package-check:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "promotion-check",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -471,19 +469,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "promotion-check:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "event-pr-base",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -496,19 +494,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "event-pr-base:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "event-fork-base",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -521,19 +519,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "event-fork-base:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "event-push-before",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -546,19 +544,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "event-push-before:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "hang-deadline",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -571,19 +569,19 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "hang-deadline:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     },
     {
       "schemaVersion": 1,
       "id": "workflow-structure",
-      "testedRevision": "d77e0a8fe96fb847d0999c43edf765990ccafbb0",
       "runs": [
         {
           "name": "primary",
@@ -596,14 +594,16 @@
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
-            "sha256": "e80233ddcd7d77349c95a563f446365ec011503cfa65a8440d1634ef5ebb66c9",
+            "sha256": "88cb073605f4f31046baac0e961993ba8c426d57fa6d037b0c604c341250100c",
             "recordId": "workflow-structure:primary"
           },
           "exitCode": 0,
           "verdict": "pass"
         }
       ],
-      "verdict": "pass"
+      "verdict": "pass",
+      "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
     }
-  ]
+  ],
+  "testedRevision": "39a38bea431041258e7d85035f8f11802d2c6f91"
 }
