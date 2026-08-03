@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-loop-monitor.ts
+// covers: file:packages/framework/core/tools/amadeus-loop-monitor.ts, audit:LOOP_MONITOR_TRANSACTION_COMMITTED
 // size: medium
 
 import { describe, expect, test } from "bun:test";
@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import {
   applyLoopDelivery,
   compileLoopMonitorManifest,
+  createJudgeRouteConstraint,
   createLoopDelivery,
   createLoopMonitorProjection,
   type CompiledLoopMonitor,
@@ -305,6 +306,23 @@ describe("loop monitor manifest compiler", () => {
 });
 
 describe("loop monitor delivery reducer", () => {
+  test("admits a content-bound non-empty route subset without quality-specific branching", () => {
+    const monitor = compiled();
+    const replanOnly = createJudgeRouteConstraint(monitor, ["replan"]);
+    expect(replanOnly.routeIds).toEqual(["replan"]);
+    expect(replanOnly.fingerprint).not.toBe(monitor.routeConstraint.fingerprint);
+
+    const constrained = createLoopDelivery({
+      ...delivery(monitor, "quality-check", null, "subset-route"),
+      routeConstraint: replanOnly,
+    });
+    expect(applyLoopDelivery(createLoopMonitorProjection(partition, monitor), monitor, constrained).ok).toBe(true);
+    expect(() => createJudgeRouteConstraint(monitor, [])).toThrow("loop-monitor-route-constraint-empty");
+    expect(() => createJudgeRouteConstraint(monitor, ["unknown"])).toThrow(
+      "loop-monitor-route-constraint-unknown-route",
+    );
+  });
+
   test("delivery construction admits identifiers and digests only, never raw evidence", () => {
     const monitor = compiled();
     expect(() => createLoopDelivery({
