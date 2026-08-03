@@ -1,0 +1,1946 @@
+// amadeus-mirror-state-codec.ts — S1 Mirror State Document Codec (C3 internal).
+//
+// Owns the versioned Mirror state block inside `amadeus-state.md`: a
+// duplicate-key-aware JSON tokenizer, entity validation, canonical rendering,
+// and byte-preserving splice. It NEVER re-serialises bytes outside the Mirror
+// block, and it parses only the Mirror JSON (the surrounding document is kept
+// as substrings). Imports C0 types plus the pure canonical event-key and
+// timestamp helpers only; no filesystem, process, GitHub, reducer, or store
+// dependency.
+//
+// Wire contract (business-logic-model.md:27) — a single block:
+//   <!-- amadeus:mirror-state:v1:start -->
+//   {"schema":1,"revision":0,"issueNumber":null,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}
+//   <!-- amadeus:mirror-state:v1:end -->
+// Root key order is fixed; each entity renders in its domain-entities.md order;
+// no whitespace; LF newlines; the block ends with LF.
+
+import type {
+  MirrorAuditOutbox,
+  MirrorBoundary,
+  MirrorCreateIdentity,
+  MirrorEventIdentity,
+  MirrorExpectedPrompt,
+  MirrorExecutionAuthorization,
+  MirrorFailureClass,
+  MirrorMutationEffect,
+  MirrorOperation,
+  MirrorOperationReceipt,
+  MirrorProjectSyncEntry,
+  MirrorProjectSyncHold,
+  MirrorProjectSyncLedger,
+  MirrorProvenance,
+  MirrorReceiptStatus,
+  MirrorRepairChallenge,
+  MirrorStateSnapshot,
+  MirrorWarning,
+  RepositoryIdentity,
+} from "./amadeus-mirror-types.ts";
+import { mirrorEventKey } from "./amadeus-mirror-policy.ts";
+import { mirrorTimestampEpoch } from "./amadeus-mirror-timestamp.ts";
+
+export const MIRROR_STATE_SENTINEL_START =
+  "<!-- amadeus:mirror-state:v1:start -->";
+export const MIRROR_STATE_SENTINEL_END = "<!-- amadeus:mirror-state:v1:end -->";
+
+// Parser resource bounds (security-requirements.md / security-design.md).
+export const MIRROR_CODEC_LIMITS = {
+  maxDepth: 16,
+  maxStringBytes: 256 * 1024,
+  // Event keys encode a full Intent UUID plus a durable lifecycle boundary.
+  maxKeyBytes: 512,
+  maxAggregateBytes: 2 * 1024 * 1024,
+} as const;
+
+const RECEIPT_STATUSES: ReadonlySet<MirrorReceiptStatus> = new Set([
+  "prepared",
+  "attempted",
+  "succeeded",
+  "skipped-for-event",
+  "pending",
+  "safety-blocked",
+  "abandoned",
+]);
+
+const FAILURE_CLASSES: ReadonlySet<MirrorFailureClass> = new Set([
+  "configuration",
+  "not-installed",
+  "unauthenticated",
+  "permission",
+  "rate-limit",
+  "network",
+  "api",
+  "command",
+  "invalid-response",
+  "state-write",
+  "state-parse",
+  "provenance",
+  "landing",
+  "ambiguous-create",
+]);
+
+const MUTATION_EFFECTS: ReadonlySet<MirrorMutationEffect> = new Set([
+  "not-started",
+  "no-effect-confirmed",
+  "outcome-unknown",
+]);
+
+const OPERATIONS: ReadonlySet<MirrorOperation> = new Set([
+  "create",
+  "sync",
+  "close",
+]);
+
+const BOUNDARY_KINDS: ReadonlySet<MirrorBoundary["kind"]> = new Set([
+  "intent-initialized",
+  "intent-capture-approved",
+  "phase-verified",
+  "parked",
+  "workflow-completed",
+  "manual",
+]);
+
+const WARNING_SOURCES: ReadonlySet<MirrorWarning["source"]> = new Set([
+  "persisted-receipt",
+  "persisted-warning",
+  "current-invocation",
+]);
+
+export type MirrorBlockRange = { readonly start: number; readonly end: number };
+
+export type MirrorStateParse =
+  | {
+      kind: "ok";
+      snapshot: MirrorStateSnapshot;
+      block: MirrorBlockRange | null;
+    }
+  | { kind: "invalid"; issues: readonly string[] };
+
+// ---------------------------------------------------------------------------
+// Strict JSON tokenizer: rejects duplicate keys, enforces depth/size bounds,
+// and never uses the prototype chain (null-proto accumulators) so a
+// "__proto__" key is a plain data key, not prototype pollution.
+// ---------------------------------------------------------------------------
+
+type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [k: string]: JsonValue };
+
+class JsonParseError extends Error {
+  constructor(
+    readonly path: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const SIMPLE_ESCAPES: Readonly<Record<string, string>> = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
+function parseJsonStrict(text: string): JsonValue {
+  let i = 0;
+  const n = text.length;
+  let depth = 0;
+
+  const isWs = (c: string): boolean =>
+    c === " " || c === "\t" || c === "\n" || c === "\r";
+  const skipWs = (): void => {
+    while (i < n && isWs(text[i])) i++;
+  };
+
+  const parseString = (path: string): string => {
+    // assumes text[i] === '"'
+    i++;
+    let out = "";
+    while (i < n) {
+      const c = text[i];
+      if (c === '"') {
+        i++;
+        if (Buffer.byteLength(out, "utf-8") > MIRROR_CODEC_LIMITS.maxStringBytes) {
+          throw new JsonParseError(path, "string exceeds byte limit");
+        }
+        return out;
+      }
+      if (c === "\\") {
+        const esc = text[i + 1];
+        if (esc === undefined) throw new JsonParseError(path, "truncated escape");
+        if (esc === "u") {
+          const hex = text.slice(i + 2, i + 6);
+          if (!/^[0-9a-fA-F]{4}$/.test(hex))
+            throw new JsonParseError(path, "invalid unicode escape");
+          out += String.fromCharCode(Number.parseInt(hex, 16));
+          i += 4;
+        } else {
+          const decoded = SIMPLE_ESCAPES[esc];
+          if (decoded === undefined)
+            throw new JsonParseError(path, `invalid escape '\\${esc}'`);
+          out += decoded;
+        }
+        i += 2;
+        // Guard growth mid-string so an adversarial input cannot balloon before
+        // the closing quote is seen.
+        if (Buffer.byteLength(out, "utf-8") > MIRROR_CODEC_LIMITS.maxStringBytes) {
+          throw new JsonParseError(path, "string exceeds byte limit");
+        }
+        continue;
+      }
+      if (c.charCodeAt(0) <= 0x1f)
+        throw new JsonParseError(path, "unescaped control character");
+      out += c;
+      i++;
+    }
+    throw new JsonParseError(path, "unterminated string");
+  };
+
+  const scanDigits = (): boolean => {
+    const s = i;
+    while (i < n && text[i] >= "0" && text[i] <= "9") i++;
+    return i > s;
+  };
+
+  const parseNumber = (path: string): number => {
+    const start = i;
+    if (text[i] === "-") i++;
+    if (text[i] === "0") i++;
+    else if (!scanDigits()) throw new JsonParseError(path, "invalid number");
+    if (text[i] === "." && (i++, !scanDigits()))
+      throw new JsonParseError(path, "invalid fraction");
+    if (text[i] === "e" || text[i] === "E") {
+      i++;
+      if (text[i] === "+" || text[i] === "-") i++;
+      if (!scanDigits()) throw new JsonParseError(path, "invalid exponent");
+    }
+    return Number(text.slice(start, i));
+  };
+
+  const parseValue = (path: string): JsonValue => {
+    skipWs();
+    if (i >= n) throw new JsonParseError(path, "unexpected end of input");
+    const c = text[i];
+    if (c === "{") return parseObject(path);
+    if (c === "[") return parseArray(path);
+    if (c === '"') return parseString(path);
+    if (c === "-" || (c >= "0" && c <= "9")) return parseNumber(path);
+    if (text.startsWith("true", i)) {
+      i += 4;
+      return true;
+    }
+    if (text.startsWith("false", i)) {
+      i += 5;
+      return false;
+    }
+    if (text.startsWith("null", i)) {
+      i += 4;
+      return null;
+    }
+    throw new JsonParseError(path, `unexpected token '${c}'`);
+  };
+
+  const parseArray = (path: string): JsonValue[] => {
+    depth++;
+    if (depth > MIRROR_CODEC_LIMITS.maxDepth)
+      throw new JsonParseError(path, "max depth exceeded");
+    i++;
+    const arr: JsonValue[] = [];
+    skipWs();
+    if (text[i] === "]") {
+      i++;
+      depth--;
+      return arr;
+    }
+    for (let idx = 0; ; idx++) {
+      arr.push(parseValue(`${path}[${idx}]`));
+      skipWs();
+      if (text[i] === ",") {
+        i++;
+        continue;
+      }
+      if (text[i] === "]") {
+        i++;
+        depth--;
+        return arr;
+      }
+      throw new JsonParseError(path, "expected ',' or ']'");
+    }
+  };
+
+  const parseObject = (path: string): { [k: string]: JsonValue } => {
+    depth++;
+    if (depth > MIRROR_CODEC_LIMITS.maxDepth)
+      throw new JsonParseError(path, "max depth exceeded");
+    i++;
+    const obj = Object.create(null) as { [k: string]: JsonValue };
+    const seen = new Set<string>();
+    skipWs();
+    if (text[i] === "}") {
+      i++;
+      depth--;
+      return obj;
+    }
+    while (true) {
+      skipWs();
+      if (text[i] !== '"') throw new JsonParseError(path, "expected object key");
+      const key = parseString(path);
+      if (Buffer.byteLength(key, "utf-8") > MIRROR_CODEC_LIMITS.maxKeyBytes)
+        throw new JsonParseError(`${path}.${key}`, "key exceeds byte limit");
+      if (seen.has(key))
+        throw new JsonParseError(`${path}.${key}`, "duplicate key");
+      seen.add(key);
+      skipWs();
+      if (text[i] !== ":")
+        throw new JsonParseError(`${path}.${key}`, "expected ':'");
+      i++;
+      obj[key] = parseValue(`${path}.${key}`);
+      skipWs();
+      if (text[i] === ",") {
+        i++;
+        continue;
+      }
+      if (text[i] === "}") {
+        i++;
+        depth--;
+        return obj;
+      }
+      throw new JsonParseError(path, "expected ',' or '}'");
+    }
+  };
+
+  const value = parseValue("$");
+  skipWs();
+  if (i !== n) throw new JsonParseError("$", "trailing content after JSON value");
+  return value;
+}
+
+// ---------------------------------------------------------------------------
+// Semantic validation: JsonValue -> MirrorStateSnapshot, collecting ALL issues.
+// ---------------------------------------------------------------------------
+
+type JsonObject = { [k: string]: JsonValue };
+
+function isObject(v: unknown): v is JsonObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isPositiveInt(v: JsonValue): v is number {
+  return typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+}
+
+function isNonNegativeInt(v: JsonValue): v is number {
+  return typeof v === "number" && Number.isSafeInteger(v) && v >= 0;
+}
+
+function isNonEmptyString(v: JsonValue): v is string {
+  return typeof v === "string" && v.length > 0;
+}
+
+function optionalPositiveInt(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): number | undefined {
+  if (!(key in obj)) return undefined;
+  const value = obj[key];
+  if (isPositiveInt(value)) return value;
+  issues.push(`${path}.${key}: must be a positive safe integer`);
+  return undefined;
+}
+
+function isTimestamp(v: JsonValue): v is string {
+  return typeof v === "string" && mirrorTimestampEpoch(v) !== null;
+}
+
+// Typed field extractors: push a path-scoped issue on failure and return
+// undefined, so validators stay flat (one guard on the required set narrows
+// the locals). These keep each validator's cognitive complexity low.
+function reqNonEmptyString(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): string | undefined {
+  const v = obj[key];
+  if (isNonEmptyString(v)) return v;
+  issues.push(`${path}.${key}: required non-empty string`);
+  return undefined;
+}
+
+function reqTimestamp(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): string | undefined {
+  const v = obj[key];
+  if (isTimestamp(v)) return v;
+  issues.push(`${path}.${key}: required RFC 3339 UTC timestamp`);
+  return undefined;
+}
+
+function optTimestamp(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): string | undefined {
+  const v = key in obj ? obj[key] : undefined;
+  if (v === undefined) return undefined;
+  if (isTimestamp(v)) return v;
+  issues.push(`${path}.${key}: must be RFC 3339 UTC timestamp`);
+  return undefined;
+}
+
+function reqEnum<T extends string>(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  set: ReadonlySet<T>,
+  label: string,
+  path: string,
+  issues: string[],
+): T | undefined {
+  const v = obj[key];
+  if (typeof v === "string" && set.has(v as T)) return v as T;
+  issues.push(`${path}.${key}: unknown ${label}`);
+  return undefined;
+}
+
+function reqHexDigest(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  path: string,
+  issues: string[],
+): string | undefined {
+  const v = obj[key];
+  if (typeof v === "string" && /^[0-9a-f]{64}$/.test(v)) return v;
+  issues.push(`${path}.${key}: required 64-char lowercase hex`);
+  return undefined;
+}
+
+function optEnum<T extends string>(
+  obj: { [k: string]: JsonValue },
+  key: string,
+  set: ReadonlySet<T>,
+  label: string,
+  path: string,
+  issues: string[],
+): T | undefined {
+  const v = key in obj ? obj[key] : undefined;
+  if (v === undefined) return undefined;
+  if (typeof v === "string" && set.has(v as T)) return v as T;
+  issues.push(`${path}.${key}: unknown ${label}`);
+  return undefined;
+}
+
+const ROOT_KEYS: ReadonlySet<string> = new Set([
+  "schema",
+  "revision",
+  "issueNumber",
+  "provenance",
+  "receipts",
+  "warnings",
+  "repairChallenges",
+  "expectedPrompt",
+  "auditOutbox",
+  "projectSync",
+]);
+
+const PROJECT_SYNC_KEYS: ReadonlySet<string> = new Set(["projects"]);
+const PROJECT_ENTRY_KEYS: ReadonlySet<string> = new Set([
+  "project",
+  "projectId",
+  "itemId",
+  "phaseField",
+  "lastAppliedStatus",
+  "state",
+  "updatedAt",
+]);
+
+// The ledger accepts all three states so U2's pending / safety-blocked writes
+// land without a codec change; U1's writer only ever emits `synced`.
+const PROJECT_SYNC_STATES: ReadonlySet<MirrorProjectSyncEntry["state"]> = new Set([
+  "synced",
+  "pending",
+  "safety-blocked",
+]);
+
+const REPOSITORY_KEYS: ReadonlySet<string> = new Set(["owner", "name", "canonical"]);
+const CREATE_IDENTITY_KEYS: ReadonlySet<string> = new Set([
+  "schema",
+  "intentUuid",
+  "intentDir",
+  "repository",
+  "operationId",
+  "preparedAt",
+]);
+const EVENT_KEYS: ReadonlySet<string> = new Set([
+  "intentUuid",
+  "boundary",
+  "operation",
+]);
+const RECEIPT_KEYS: ReadonlySet<string> = new Set([
+  "key",
+  "event",
+  "operationId",
+  "createdRevision",
+  "projectSyncRevision",
+  "status",
+  "preparedAt",
+  "attemptedAt",
+  "completedAt",
+  "failureClass",
+  "lastEffect",
+  "createIdentity",
+  "authorization",
+  "projectSyncHold",
+  "projectSyncVerified",
+]);
+const PROJECT_SYNC_HOLD_KEYS: ReadonlySet<string> = new Set(["reason", "heldAt"]);
+const PROJECT_SYNC_HOLD_REASONS: ReadonlySet<MirrorProjectSyncHold["reason"]> =
+  new Set(["project-sync-unsettled"]);
+const WARNING_KEYS: ReadonlySet<string> = new Set([
+  "operationId",
+  "operation",
+  "classification",
+  "summary",
+  "occurredAt",
+  "retryable",
+  "effect",
+  "source",
+]);
+const PROVENANCE_KEYS: ReadonlySet<string> = new Set([
+  "schema",
+  "createIdentity",
+  "issueNumber",
+  "createdAt",
+]);
+const CHALLENGE_KEYS: ReadonlySet<string> = new Set([
+  "challengeId",
+  "intentUuid",
+  "repository",
+  "planDigest",
+  "operationId",
+  "expectedPhrase",
+  "issuedAt",
+  "consumedAt",
+]);
+const AUDIT_OUTBOX_KEYS: ReadonlySet<string> = new Set([
+  "transactionId",
+  "digest",
+  "fields",
+]);
+const EXPECTED_PROMPT_KEYS: ReadonlySet<string> = new Set([
+  "bindingId",
+  "event",
+  "operation",
+  "issuedAt",
+  "retryOf",
+]);
+const AUTHORIZATION_KEYS: ReadonlySet<string> = new Set([
+  "kind",
+  "event",
+  "operation",
+  "boundaryInstance",
+  "receiptRevision",
+  "landing",
+  "resolvedMode",
+  "expectedBindingId",
+  "answerId",
+  "invocationId",
+  "finalSyncReceiptKey",
+]);
+const LANDING_KEYS: ReadonlySet<string> = new Set([
+  "registryStatus",
+  "workflowStatus",
+  "completionInstance",
+]);
+
+function checkUnknownKeys(
+  obj: { [k: string]: JsonValue },
+  allowed: ReadonlySet<string>,
+  path: string,
+  issues: string[],
+): void {
+  for (const k of Object.keys(obj)) {
+    if (!allowed.has(k)) issues.push(`${path}: unknown field '${k}'`);
+  }
+}
+
+function validateRepository(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): RepositoryIdentity | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: repository must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, REPOSITORY_KEYS, path, issues);
+  const owner = v.owner;
+  const name = v.name;
+  const canonical = v.canonical;
+  if (!isNonEmptyString(owner)) issues.push(`${path}.owner: required non-empty string`);
+  if (!isNonEmptyString(name)) issues.push(`${path}.name: required non-empty string`);
+  if (typeof canonical !== "string")
+    issues.push(`${path}.canonical: required string`);
+  if (
+    isNonEmptyString(owner) &&
+    isNonEmptyString(name) &&
+    typeof canonical === "string"
+  ) {
+    const expected = `${owner.toLowerCase()}/${name.toLowerCase()}`;
+    if (canonical !== expected)
+      issues.push(
+        `${path}.canonical: must equal lowercase '${expected}' but was '${canonical}'`,
+      );
+    return { owner, name, canonical: canonical as `${string}/${string}` };
+  }
+  return null;
+}
+
+function validateBoundary(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorBoundary | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: boundary must be an object`);
+    return null;
+  }
+  const kind = v.kind;
+  if (typeof kind !== "string" || !BOUNDARY_KINDS.has(kind as MirrorBoundary["kind"])) {
+    issues.push(`${path}.kind: unknown boundary kind`);
+    return null;
+  }
+  if (!isNonEmptyString(v.instance)) {
+    issues.push(`${path}.instance: required non-empty string`);
+    return null;
+  }
+  const instance = v.instance;
+  if (kind === "phase-verified") {
+    if (!isNonEmptyString(v.phase)) {
+      issues.push(`${path}.phase: required for phase-verified`);
+      return null;
+    }
+    return { kind, phase: v.phase, instance };
+  }
+  if (kind === "parked") {
+    if (!isNonEmptyString(v.stage)) {
+      issues.push(`${path}.stage: required for parked`);
+      return null;
+    }
+    return { kind, stage: v.stage, instance };
+  }
+  return { kind, instance } as MirrorBoundary;
+}
+
+function validateEvent(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorEventIdentity | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: event must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, EVENT_KEYS, path, issues);
+  const intentUuid = v.intentUuid;
+  const operation = v.operation;
+  if (!isNonEmptyString(intentUuid))
+    issues.push(`${path}.intentUuid: required non-empty string`);
+  if (typeof operation !== "string" || !OPERATIONS.has(operation as MirrorOperation))
+    issues.push(`${path}.operation: unknown operation`);
+  const boundary = validateBoundary(v.boundary, `${path}.boundary`, issues);
+  if (isNonEmptyString(intentUuid) && OPERATIONS.has(operation as MirrorOperation) && boundary) {
+    return { intentUuid, boundary, operation: operation as MirrorOperation };
+  }
+  return null;
+}
+
+function validateAuthorization(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorExecutionAuthorization | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: authorization must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, AUTHORIZATION_KEYS, path, issues);
+  const kind = v.kind;
+  const event = validateEvent(v.event, `${path}.event`, issues);
+  const operation = reqEnum(v, "operation", OPERATIONS, "operation", path, issues);
+  const boundaryInstance = reqNonEmptyString(v, "boundaryInstance", path, issues);
+  const receiptRevision = v.receiptRevision;
+  if (!isPositiveInt(receiptRevision)) {
+    issues.push(`${path}.receiptRevision: required positive safe integer`);
+  }
+  const landing = validateLanding(v.landing, "landing" in v, path, issues);
+  if (
+    event === null ||
+    operation === undefined ||
+    boundaryInstance === undefined ||
+    !isPositiveInt(receiptRevision)
+  ) {
+    return null;
+  }
+  const base = {
+    event,
+    operation,
+    boundaryInstance,
+    receiptRevision,
+    ...(landing ? { landing } : {}),
+    ...(isNonEmptyString(v.finalSyncReceiptKey)
+      ? { finalSyncReceiptKey: v.finalSyncReceiptKey }
+      : {}),
+  };
+  if (
+    "finalSyncReceiptKey" in v &&
+    !isNonEmptyString(v.finalSyncReceiptKey)
+  ) {
+    issues.push(`${path}.finalSyncReceiptKey: must be a non-empty string`);
+    return null;
+  }
+  if (kind === "auto") {
+    if (v.resolvedMode !== "auto") {
+      issues.push(`${path}.resolvedMode: auto authorization requires 'auto'`);
+      return null;
+    }
+    return { ...base, kind, resolvedMode: "auto" };
+  }
+  if (kind === "prompt-approved") {
+    if (!isNonEmptyString(v.expectedBindingId) || !isNonEmptyString(v.answerId)) {
+      issues.push(
+        `${path}: prompt-approved requires expectedBindingId and answerId`,
+      );
+      return null;
+    }
+    return {
+      ...base,
+      kind,
+      expectedBindingId: v.expectedBindingId,
+      answerId: v.answerId,
+    };
+  }
+  if (kind === "manual") {
+    if (!isNonEmptyString(v.invocationId)) {
+      issues.push(`${path}.invocationId: manual authorization requires a value`);
+      return null;
+    }
+    return { ...base, kind, invocationId: v.invocationId };
+  }
+  issues.push(`${path}.kind: unknown authorization kind`);
+  return null;
+}
+
+function validateLanding(
+  value: JsonValue | undefined,
+  present: boolean,
+  path: string,
+  issues: string[],
+): MirrorExecutionAuthorization["landing"] {
+  if (!present) return undefined;
+  if (!isObject(value)) {
+    issues.push(`${path}.landing: must be an object`);
+    return undefined;
+  }
+  checkUnknownKeys(value, LANDING_KEYS, `${path}.landing`, issues);
+  if (
+    value.registryStatus === "complete" &&
+    value.workflowStatus === "Completed" &&
+    !("completionInstance" in value)
+  ) {
+    return { registryStatus: "complete", workflowStatus: "Completed" };
+  }
+  if (
+    value.registryStatus === "in-flight" &&
+    isNonEmptyString(value.workflowStatus) &&
+    isNonEmptyString(value.completionInstance)
+  ) {
+    return {
+      registryStatus: "in-flight",
+      workflowStatus: value.workflowStatus,
+      completionInstance: value.completionInstance,
+    };
+  }
+  issues.push(
+    `${path}.landing: requires complete/Completed or an in-flight completion instance`,
+  );
+  return undefined;
+}
+
+function validateCreateIdentity(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorCreateIdentity | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: createIdentity must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, CREATE_IDENTITY_KEYS, path, issues);
+  if (v.schema !== 1) issues.push(`${path}.schema: must be 1`);
+  const intentUuid = v.intentUuid;
+  const intentDir = v.intentDir;
+  const operationId = v.operationId;
+  const preparedAt = v.preparedAt;
+  if (!isNonEmptyString(intentUuid))
+    issues.push(`${path}.intentUuid: required non-empty string`);
+  if (!isNonEmptyString(intentDir))
+    issues.push(`${path}.intentDir: required non-empty string`);
+  if (!isNonEmptyString(operationId))
+    issues.push(`${path}.operationId: required non-empty string`);
+  if (!isTimestamp(preparedAt))
+    issues.push(`${path}.preparedAt: required RFC 3339 UTC timestamp`);
+  const repository = validateRepository(v.repository, `${path}.repository`, issues);
+  if (
+    v.schema === 1 &&
+    isNonEmptyString(intentUuid) &&
+    isNonEmptyString(intentDir) &&
+    isNonEmptyString(operationId) &&
+    isTimestamp(preparedAt) &&
+    repository
+  ) {
+    return {
+      schema: 1,
+      intentUuid,
+      intentDir,
+      repository,
+      operationId,
+      preparedAt,
+    };
+  }
+  return null;
+}
+
+type ReceiptOptionals = {
+  attemptedAt: string | undefined;
+  completedAt: string | undefined;
+  failureClass: MirrorFailureClass | undefined;
+  lastEffect: MirrorMutationEffect | undefined;
+  projectSyncHold: MirrorProjectSyncHold | null | undefined;
+  projectSyncVerified: true | null | undefined;
+};
+
+function validateProjectSyncVerified(
+  value: JsonValue,
+  path: string,
+  issues: string[],
+): true | null {
+  if (value === true) return true;
+  issues.push(`${path}: must be true when present`);
+  return null;
+}
+
+// The Project-sync hold that parks an otherwise-succeeded receipt at `pending`
+// (E-U2CG). `null` signals a malformed value, distinct from `undefined` = absent.
+function validateProjectSyncHold(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncHold | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: projectSyncHold must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_SYNC_HOLD_KEYS, path, issues);
+  const reason = reqEnum(
+    v,
+    "reason",
+    PROJECT_SYNC_HOLD_REASONS,
+    "project sync hold reason",
+    path,
+    issues,
+  );
+  const heldAt = reqTimestamp(v, "heldAt", path, issues);
+  if (reason === undefined || heldAt === undefined) return null;
+  return { reason, heldAt };
+}
+
+function validateReceiptOptionals(
+  value: { [key: string]: JsonValue },
+  path: string,
+  issues: string[],
+): ReceiptOptionals {
+  return {
+    attemptedAt: optTimestamp(value, "attemptedAt", path, issues),
+    completedAt: optTimestamp(value, "completedAt", path, issues),
+    failureClass: optEnum(
+      value,
+      "failureClass",
+      FAILURE_CLASSES,
+      "failure class",
+      path,
+      issues,
+    ),
+    lastEffect: optEnum(
+      value,
+      "lastEffect",
+      MUTATION_EFFECTS,
+      "mutation effect",
+      path,
+      issues,
+    ),
+    projectSyncHold:
+      "projectSyncHold" in value
+        ? validateProjectSyncHold(
+            value.projectSyncHold,
+            `${path}.projectSyncHold`,
+            issues,
+          )
+        : undefined,
+    projectSyncVerified:
+      "projectSyncVerified" in value
+        ? validateProjectSyncVerified(
+            value.projectSyncVerified,
+            `${path}.projectSyncVerified`,
+            issues,
+          )
+        : undefined,
+  };
+}
+
+function checkReceiptVerificationOperation(
+  event: MirrorEventIdentity | null,
+  optionals: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  if (
+    optionals.projectSyncVerified === true &&
+    event?.operation === "close"
+  ) {
+    issues.push(
+      `${path}.projectSyncVerified: not allowed for operation 'close'`,
+    );
+  }
+}
+
+function checkReceiptKey(
+  event: MirrorEventIdentity | null,
+  key: string | undefined,
+  mapKey: string,
+  path: string,
+  issues: string[],
+): void {
+  if (!event) return;
+  const canonical = mirrorEventKey(event);
+  if (canonical !== mapKey)
+    issues.push(`${path}: map key '${mapKey}' does not match canonical event key`);
+  if (key !== undefined && key !== canonical)
+    issues.push(`${path}.key: does not match canonical event key`);
+}
+
+function checkReceiptTimestampInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  const needsAttempt = status === "attempted" || status === "pending" || status === "succeeded";
+  if (needsAttempt && o.attemptedAt === undefined)
+    issues.push(`${path}.attemptedAt: required for status '${status}'`);
+  const needsCompleted =
+    status === "succeeded" || status === "skipped-for-event" || status === "abandoned";
+  if (needsCompleted && o.completedAt === undefined)
+    issues.push(`${path}.completedAt: required for status '${status}'`);
+}
+
+// A Project-sync hold is the one way a receipt reaches `pending` without a
+// failed Issue mutation, so it stands in for the failure fields that describe
+// one. It is meaningless on any other status.
+function checkReceiptHoldInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  const held = o.projectSyncHold !== undefined && o.projectSyncHold !== null;
+  if (
+    (status === "pending" || status === "safety-blocked") &&
+    o.failureClass === undefined &&
+    !(status === "pending" && held)
+  )
+    issues.push(`${path}.failureClass: required for status '${status}'`);
+  if (status === "pending" && o.lastEffect === undefined && !held)
+    issues.push(`${path}.lastEffect: required for status 'pending'`);
+  if (held && status !== "pending")
+    issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
+  if (o.projectSyncVerified === true && status !== "succeeded") {
+    issues.push(
+      `${path}.projectSyncVerified: only allowed for status 'succeeded'`,
+    );
+  }
+}
+
+function checkReceiptStatusInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  checkReceiptTimestampInvariants(status, o, path, issues);
+  checkReceiptHoldInvariants(status, o, path, issues);
+}
+
+function validateReceipt(
+  v: JsonValue,
+  mapKey: string,
+  path: string,
+  issues: string[],
+): MirrorOperationReceipt | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: receipt must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, RECEIPT_KEYS, path, issues);
+  const key = reqNonEmptyString(v, "key", path, issues);
+  const operationId = reqNonEmptyString(v, "operationId", path, issues);
+  const createdRevision = optionalPositiveInt(
+    v,
+    "createdRevision",
+    path,
+    issues,
+  );
+  const projectSyncRevision = optionalPositiveInt(
+    v,
+    "projectSyncRevision",
+    path,
+    issues,
+  );
+  const status = reqEnum(v, "status", RECEIPT_STATUSES, "receipt status", path, issues);
+  const preparedAt = reqTimestamp(v, "preparedAt", path, issues);
+  const event = validateEvent(v.event, `${path}.event`, issues);
+  checkReceiptKey(event, key, mapKey, path, issues);
+  const o = validateReceiptOptionals(v, path, issues);
+  const createIdentity =
+    "createIdentity" in v
+      ? validateCreateIdentity(v.createIdentity, `${path}.createIdentity`, issues)
+      : undefined;
+  const authorization =
+    "authorization" in v
+      ? validateAuthorization(v.authorization, `${path}.authorization`, issues)
+      : undefined;
+  if (status !== undefined) checkReceiptStatusInvariants(status, o, path, issues);
+  checkReceiptVerificationOperation(event, o, path, issues);
+
+  if (
+    key === undefined ||
+    operationId === undefined ||
+    status === undefined ||
+    preparedAt === undefined ||
+    event === null ||
+    createIdentity === null ||
+    authorization === null ||
+    o.projectSyncHold === null ||
+    o.projectSyncVerified === null
+  ) {
+    return null;
+  }
+  const receipt = buildReceipt({
+    key,
+    event,
+    operationId,
+    status,
+    preparedAt,
+    optionals: o,
+    createIdentity,
+    authorization,
+  });
+  return {
+    ...receipt,
+    ...(createdRevision === undefined ? {} : { createdRevision }),
+    ...(projectSyncRevision === undefined ? {} : { projectSyncRevision }),
+  };
+}
+
+function buildReceipt(input: {
+    key: string;
+    event: MirrorEventIdentity;
+    operationId: string;
+    status: MirrorReceiptStatus;
+    preparedAt: string;
+    optionals: ReceiptOptionals;
+    createIdentity?: MirrorCreateIdentity;
+    authorization?: MirrorExecutionAuthorization;
+  }): MirrorOperationReceipt {
+  const receipt: MirrorOperationReceipt = {
+    key: input.key,
+    event: input.event,
+    operationId: input.operationId,
+    status: input.status,
+    preparedAt: input.preparedAt,
+    ...(input.optionals.attemptedAt === undefined
+      ? {}
+      : { attemptedAt: input.optionals.attemptedAt }),
+    ...(input.optionals.completedAt === undefined
+      ? {}
+      : { completedAt: input.optionals.completedAt }),
+    ...(input.optionals.failureClass === undefined
+      ? {}
+      : { failureClass: input.optionals.failureClass }),
+    ...(input.optionals.lastEffect === undefined
+      ? {}
+      : { lastEffect: input.optionals.lastEffect }),
+    ...(input.optionals.projectSyncHold
+      ? { projectSyncHold: input.optionals.projectSyncHold }
+      : {}),
+    ...(input.optionals.projectSyncVerified === true
+      ? { projectSyncVerified: true as const }
+      : {}),
+    ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
+    ...(input.authorization ? { authorization: input.authorization } : {}),
+  };
+  return receipt;
+}
+
+function nullableString(
+  v: JsonValue,
+  key: string,
+  path: string,
+  issues: string[],
+): string | null | undefined {
+  if (v === null) return null;
+  if (isNonEmptyString(v)) return v;
+  issues.push(`${path}.${key}: must be null or non-empty string`);
+  return undefined;
+}
+
+function nullableOperation(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorOperation | null | undefined {
+  if (v === null) return null;
+  if (typeof v === "string" && OPERATIONS.has(v as MirrorOperation)) return v as MirrorOperation;
+  issues.push(`${path}.operation: must be null or a known operation`);
+  return undefined;
+}
+
+function validateWarning(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorWarning | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: warning must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, WARNING_KEYS, path, issues);
+  const operationId = nullableString(v.operationId, "operationId", path, issues);
+  const operation = nullableOperation(v.operation, path, issues);
+  const classification = reqEnum(v, "classification", FAILURE_CLASSES, "failure class", path, issues);
+  const summary = typeof v.summary === "string" ? v.summary : undefined;
+  if (summary === undefined) issues.push(`${path}.summary: required string`);
+  const occurredAt = reqTimestamp(v, "occurredAt", path, issues);
+  const retryable = typeof v.retryable === "boolean" ? v.retryable : undefined;
+  if (retryable === undefined) issues.push(`${path}.retryable: required boolean`);
+  const effect = reqEnum(v, "effect", MUTATION_EFFECTS, "mutation effect", path, issues);
+  const source = reqEnum(v, "source", WARNING_SOURCES, "warning source", path, issues);
+  if (
+    operationId === undefined ||
+    operation === undefined ||
+    classification === undefined ||
+    summary === undefined ||
+    occurredAt === undefined ||
+    retryable === undefined ||
+    effect === undefined ||
+    source === undefined
+  ) {
+    return null;
+  }
+  return {
+    operationId,
+    operation,
+    classification,
+    summary,
+    occurredAt,
+    retryable,
+    effect,
+    source,
+  };
+}
+
+function validateProvenance(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProvenance | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: provenance must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROVENANCE_KEYS, path, issues);
+  if (v.schema !== 1 && v.schema !== 2)
+    issues.push(`${path}.schema: must be 1 or 2`);
+  const issueNumber = v.issueNumber;
+  const createdAt = v.createdAt;
+  if (!isPositiveInt(issueNumber))
+    issues.push(`${path}.issueNumber: required positive integer`);
+  if (!isTimestamp(createdAt))
+    issues.push(`${path}.createdAt: required RFC 3339 UTC timestamp`);
+  const createIdentity = validateCreateIdentity(
+    v.createIdentity,
+    `${path}.createIdentity`,
+    issues,
+  );
+  if (
+    (v.schema === 1 || v.schema === 2) &&
+    isPositiveInt(issueNumber) &&
+    isTimestamp(createdAt) &&
+    createIdentity
+  ) {
+    return {
+      schema: v.schema,
+      createIdentity,
+      issueNumber,
+      createdAt,
+    };
+  }
+  return null;
+}
+
+function validateChallenge(
+  v: JsonValue,
+  mapKey: string,
+  path: string,
+  issues: string[],
+): MirrorRepairChallenge | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: challenge must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, CHALLENGE_KEYS, path, issues);
+  const challengeId = reqNonEmptyString(v, "challengeId", path, issues);
+  if (challengeId !== undefined && challengeId !== mapKey)
+    issues.push(`${path}: map key '${mapKey}' must equal challengeId`);
+  const intentUuid = reqNonEmptyString(v, "intentUuid", path, issues);
+  const planDigest = reqHexDigest(v, "planDigest", path, issues);
+  const operationId = reqNonEmptyString(v, "operationId", path, issues);
+  const expectedPhrase = reqNonEmptyString(v, "expectedPhrase", path, issues);
+  const issuedAt = reqTimestamp(v, "issuedAt", path, issues);
+  const consumedAt = optTimestamp(v, "consumedAt", path, issues);
+  const repository = validateRepository(v.repository, `${path}.repository`, issues);
+  if (
+    challengeId === undefined ||
+    intentUuid === undefined ||
+    planDigest === undefined ||
+    operationId === undefined ||
+    expectedPhrase === undefined ||
+    issuedAt === undefined ||
+    repository === null
+  ) {
+    return null;
+  }
+  const challenge: {
+    challengeId: string;
+    intentUuid: string;
+    repository: RepositoryIdentity;
+    planDigest: string;
+    operationId: string;
+    expectedPhrase: string;
+    issuedAt: string;
+    consumedAt?: string;
+  } = { challengeId, intentUuid, repository, planDigest, operationId, expectedPhrase, issuedAt };
+  if (consumedAt !== undefined) challenge.consumedAt = consumedAt;
+  return challenge;
+}
+
+function validateAuditOutbox(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorAuditOutbox | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: auditOutbox must be an object or null`);
+    return null;
+  }
+  checkUnknownKeys(v, AUDIT_OUTBOX_KEYS, path, issues);
+  const transactionId = v.transactionId;
+  const digest = v.digest;
+  const fields = v.fields;
+  if (!isNonEmptyString(transactionId))
+    issues.push(`${path}.transactionId: required non-empty string`);
+  if (typeof digest !== "string") issues.push(`${path}.digest: required string`);
+  const fieldRecord: Record<string, string> = {};
+  if (!isObject(fields)) {
+    issues.push(`${path}.fields: required object`);
+  } else {
+    for (const k of Object.keys(fields)) {
+      const fv = fields[k];
+      if (typeof fv !== "string") {
+        issues.push(`${path}.fields.${k}: must be string`);
+      } else {
+        fieldRecord[k] = fv;
+      }
+    }
+  }
+  if (isNonEmptyString(transactionId) && typeof digest === "string" && isObject(fields)) {
+    return { transactionId, digest, fields: fieldRecord };
+  }
+  return null;
+}
+
+// One projectSync ledger row. `projectId`, `itemId` and `lastAppliedStatus` are
+// nullable-required: the key must be present and either a non-empty string or
+// null, so an absent key is a defect rather than an implied null. `phaseField`
+// was added after v1 shipped, so an absent legacy key normalizes to null.
+function validateProjectEntry(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncEntry | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: project entry must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_ENTRY_KEYS, path, issues);
+  const project = reqNonEmptyString(v, "project", path, issues);
+  const projectId = nullableString(v.projectId, "projectId", path, issues);
+  const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
+  const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
+  const itemId = nullableString(v.itemId, "itemId", path, issues);
+  const phaseField =
+    "phaseField" in v
+      ? nullableString(v.phaseField, "phaseField", path, issues)
+      : null;
+  const lastAppliedStatus = nullableString(
+    v.lastAppliedStatus,
+    "lastAppliedStatus",
+    path,
+    issues,
+  );
+  if (
+    project === undefined ||
+    projectId === undefined ||
+    state === undefined ||
+    updatedAt === undefined ||
+    itemId === undefined ||
+    phaseField === undefined ||
+    lastAppliedStatus === undefined
+  ) {
+    return null;
+  }
+  return {
+    project,
+    projectId,
+    itemId,
+    phaseField,
+    lastAppliedStatus,
+    state,
+    updatedAt,
+  };
+}
+
+// The ledger is keyed by canonical "owner/number" through the entry's own
+// `project` field; duplicate rows for one Project are a defect, since the
+// reducer upserts by that key.
+function validateProjectSync(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncLedger | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: projectSync must be an object or null`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_SYNC_KEYS, path, issues);
+  const raw = v.projects;
+  if (!Array.isArray(raw)) {
+    issues.push(`${path}.projects: required array`);
+    return null;
+  }
+  const projects: MirrorProjectSyncEntry[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < raw.length; i += 1) {
+    const entry = validateProjectEntry(raw[i], `${path}.projects[${i}]`, issues);
+    if (entry === null) continue;
+    if (seen.has(entry.project)) {
+      issues.push(`${path}.projects[${i}]: duplicate project '${entry.project}'`);
+      continue;
+    }
+    seen.add(entry.project);
+    projects.push(entry);
+  }
+  return { projects };
+}
+
+function validateExpectedPrompt(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorExpectedPrompt | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: expectedPrompt must be an object or null`);
+    return null;
+  }
+  checkUnknownKeys(v, EXPECTED_PROMPT_KEYS, path, issues);
+  const operation = reqEnum(v, "operation", OPERATIONS, "operation", path, issues);
+  const bindingId = reqNonEmptyString(v, "bindingId", path, issues);
+  const issuedAt = reqTimestamp(v, "issuedAt", path, issues);
+  const event = validateEvent(v.event, `${path}.event`, issues);
+  const retryOf = validateRetryOf(v, path, issues);
+  if (
+    event === null ||
+    operation === undefined ||
+    issuedAt === undefined ||
+    bindingId === undefined
+  )
+    return null;
+  const prompt: {
+    event: MirrorEventIdentity;
+    operation: MirrorOperation;
+    issuedAt: string;
+    bindingId: string;
+    retryOf?: MirrorExpectedPrompt["retryOf"];
+  } = { bindingId, event, operation, issuedAt };
+  if (retryOf) prompt.retryOf = retryOf;
+  return prompt;
+}
+
+function validateRetryOf(
+  v: { [k: string]: JsonValue },
+  path: string,
+  issues: string[],
+): MirrorExpectedPrompt["retryOf"] | undefined {
+  if (!("retryOf" in v) || v.retryOf === undefined) return undefined;
+  const r = v.retryOf;
+  if (!isObject(r)) {
+    issues.push(`${path}.retryOf: must be an object`);
+    return undefined;
+  }
+  const rEvent = validateEvent(r.event, `${path}.retryOf.event`, issues);
+  const operationId = reqNonEmptyString(r, "operationId", `${path}.retryOf`, issues);
+  if (rEvent && operationId !== undefined) return { event: rEvent, operationId };
+  return undefined;
+}
+
+function validateReceiptMap(
+  raw: JsonValue,
+  issues: string[],
+): Record<string, MirrorOperationReceipt> {
+  const receipts: Record<string, MirrorOperationReceipt> = {};
+  if (raw === undefined) return receipts;
+  if (!isObject(raw)) {
+    issues.push("$.receipts: must be an object");
+    return receipts;
+  }
+  const keys = Object.keys(raw);
+  if (keys.length > 1000) issues.push("$.receipts: exceeds 1000 entries");
+  for (const k of keys) {
+    const r = validateReceipt(raw[k], k, `$.receipts["${k}"]`, issues);
+    if (r) receipts[k] = r;
+  }
+  return receipts;
+}
+
+function checkProjectSyncRevisionInvariants(
+  receipt: MirrorOperationReceipt,
+  snapshotRevision: number,
+  path: string,
+  issues: string[],
+): void {
+  const projectSyncRevision = receipt.projectSyncRevision;
+  if (projectSyncRevision === undefined) return;
+  if (projectSyncRevision > snapshotRevision) {
+    issues.push(`${path}.projectSyncRevision: must not exceed $.revision`);
+  }
+  if (
+    receipt.createdRevision !== undefined &&
+    projectSyncRevision < receipt.createdRevision
+  ) {
+    issues.push(
+      `${path}.projectSyncRevision: must not precede createdRevision`,
+    );
+  }
+}
+
+function checkReceiptRevisionInvariants(
+  receipts: Readonly<Record<string, MirrorOperationReceipt>>,
+  snapshotRevision: number | undefined,
+  issues: string[],
+): void {
+  if (snapshotRevision === undefined) return;
+  for (const [key, receipt] of Object.entries(receipts)) {
+    const path = `$.receipts["${key}"]`;
+    const authorizationRevision = receipt.authorization?.receiptRevision;
+    if (
+      receipt.createdRevision !== undefined &&
+      receipt.createdRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.createdRevision: must not exceed $.revision`);
+    }
+    checkProjectSyncRevisionInvariants(
+      receipt,
+      snapshotRevision,
+      path,
+      issues,
+    );
+    if (
+      authorizationRevision !== undefined &&
+      authorizationRevision > snapshotRevision
+    ) {
+      issues.push(`${path}.authorization.receiptRevision: must not exceed $.revision`);
+    }
+    if (
+      receipt.createdRevision !== undefined &&
+      authorizationRevision !== undefined &&
+      receipt.createdRevision !== authorizationRevision
+    ) {
+      issues.push(
+        `${path}.createdRevision: must equal authorization.receiptRevision`,
+      );
+    }
+  }
+}
+
+function validateWarningList(raw: JsonValue, issues: string[]): MirrorWarning[] {
+  const warnings: MirrorWarning[] = [];
+  if (raw === undefined) return warnings;
+  if (!Array.isArray(raw)) {
+    issues.push("$.warnings: must be an array");
+    return warnings;
+  }
+  if (raw.length > 1000) issues.push("$.warnings: exceeds 1000 entries");
+  raw.forEach((w, idx) => {
+    const parsed = validateWarning(w, `$.warnings[${idx}]`, issues);
+    if (parsed) warnings.push(parsed);
+  });
+  return warnings;
+}
+
+function validateChallengeMap(
+  raw: JsonValue,
+  issues: string[],
+): Record<string, MirrorRepairChallenge> {
+  const challenges: Record<string, MirrorRepairChallenge> = {};
+  if (raw === undefined) return challenges;
+  if (!isObject(raw)) {
+    issues.push("$.repairChallenges: must be an object");
+    return challenges;
+  }
+  const keys = Object.keys(raw);
+  if (keys.length > 100) issues.push("$.repairChallenges: exceeds 100 active entries");
+  for (const k of keys) {
+    const c = validateChallenge(raw[k], k, `$.repairChallenges["${k}"]`, issues);
+    if (c) challenges[k] = c;
+  }
+  return challenges;
+}
+
+// SP-C06: issueNumber and provenance.issueNumber both null or same positive int.
+function checkIssueNumberConsistency(
+  root: { [k: string]: JsonValue },
+  issueNumber: number | null,
+  provenance: MirrorProvenance | null,
+  issues: string[],
+): void {
+  if (provenance) {
+    if (issueNumber === null)
+      issues.push("$.issueNumber: must be set when provenance is present");
+    else if (provenance.issueNumber !== issueNumber)
+      issues.push("$.issueNumber: must equal provenance.issueNumber");
+  } else if (root.provenance === null && issueNumber !== null) {
+    issues.push("$.issueNumber: must be null when provenance is null");
+  }
+}
+
+function parseRootIssueNumber(v: JsonValue, issues: string[]): number | null | undefined {
+  if (v === null) return null;
+  if (isPositiveInt(v)) return v;
+  issues.push("$.issueNumber: must be null or positive integer");
+  return undefined;
+}
+
+function parseOptionalPrompt(
+  v: JsonValue,
+  issues: string[],
+): MirrorExpectedPrompt | undefined {
+  if (v === null || v === undefined) return undefined;
+  return validateExpectedPrompt(v, "$.expectedPrompt", issues) ?? undefined;
+}
+
+function parseOptionalOutbox(v: JsonValue, issues: string[]): MirrorAuditOutbox | null {
+  if (v === null || v === undefined) return null;
+  return validateAuditOutbox(v, "$.auditOutbox", issues);
+}
+
+function parseOptionalProjectSync(
+  v: JsonValue,
+  issues: string[],
+): MirrorProjectSyncLedger | null {
+  if (v === null || v === undefined) return null;
+  return validateProjectSync(v, "$.projectSync", issues);
+}
+
+function validateSnapshot(root: JsonValue, issues: string[]): MirrorStateSnapshot | null {
+  if (!isObject(root)) {
+    issues.push("$: Mirror block must be a JSON object");
+    return null;
+  }
+  checkUnknownKeys(root, ROOT_KEYS, "$", issues);
+  if (root.schema !== 1) issues.push("$.schema: must be 1");
+  const revision = isNonNegativeInt(root.revision) ? root.revision : undefined;
+  if (revision === undefined) issues.push("$.revision: required non-negative integer");
+
+  const issueNumber = parseRootIssueNumber(root.issueNumber, issues);
+  const provenance =
+    root.provenance === null || root.provenance === undefined
+      ? null
+      : validateProvenance(root.provenance, "$.provenance", issues);
+  checkIssueNumberConsistency(root, issueNumber ?? null, provenance, issues);
+
+  const receipts = validateReceiptMap(root.receipts, issues);
+  checkReceiptRevisionInvariants(receipts, revision, issues);
+  const warnings = validateWarningList(root.warnings, issues);
+  const repairChallenges = validateChallengeMap(root.repairChallenges, issues);
+  const expectedPrompt = parseOptionalPrompt(root.expectedPrompt, issues);
+  const auditOutbox = parseOptionalOutbox(root.auditOutbox, issues);
+  const projectSync = parseOptionalProjectSync(root.projectSync, issues);
+
+  if (revision === undefined || issues.length > 0) return null;
+
+  const snapshot: {
+    revision: number;
+    issueNumber: number | null;
+    provenance: MirrorProvenance | null;
+    receipts: Record<string, MirrorOperationReceipt>;
+    warnings: MirrorWarning[];
+    repairChallenges: Record<string, MirrorRepairChallenge>;
+    expectedPrompt?: MirrorExpectedPrompt;
+    auditOutbox?: MirrorAuditOutbox | null;
+    projectSync?: MirrorProjectSyncLedger | null;
+  } = {
+    revision,
+    issueNumber: issueNumber ?? null,
+    provenance,
+    receipts,
+    warnings,
+    repairChallenges,
+    auditOutbox,
+    projectSync,
+  };
+  if (expectedPrompt) snapshot.expectedPrompt = expectedPrompt;
+  return snapshot;
+}
+
+// ---------------------------------------------------------------------------
+// Sentinel location + document parse.
+// ---------------------------------------------------------------------------
+
+export const EMPTY_MIRROR_STATE: MirrorStateSnapshot = {
+  revision: 0,
+  issueNumber: null,
+  provenance: null,
+  receipts: {},
+  warnings: [],
+  repairChallenges: {},
+  auditOutbox: null,
+  projectSync: null,
+};
+
+function allIndexesOf(haystack: string, needle: string): number[] {
+  const out: number[] = [];
+  let from = 0;
+  for (;;) {
+    const at = haystack.indexOf(needle, from);
+    if (at === -1) break;
+    out.push(at);
+    from = at + needle.length;
+  }
+  return out;
+}
+
+export function parseMirrorStateDocument(document: string): MirrorStateParse {
+  const starts = allIndexesOf(document, MIRROR_STATE_SENTINEL_START);
+  const ends = allIndexesOf(document, MIRROR_STATE_SENTINEL_END);
+  if (starts.length === 0 && ends.length === 0) {
+    return { kind: "ok", snapshot: EMPTY_MIRROR_STATE, block: null };
+  }
+  if (starts.length !== 1 || ends.length !== 1) {
+    return {
+      kind: "invalid",
+      issues: [
+        `Mirror state block must appear exactly once (found ${starts.length} start / ${ends.length} end sentinels)`,
+      ],
+    };
+  }
+  const start = starts[0];
+  const endSentinel = ends[0];
+  if (endSentinel < start) {
+    return { kind: "invalid", issues: ["Mirror end sentinel precedes start sentinel"] };
+  }
+  const jsonStart = start + MIRROR_STATE_SENTINEL_START.length;
+  const json = document.slice(jsonStart, endSentinel);
+  if (Buffer.byteLength(json, "utf-8") > MIRROR_CODEC_LIMITS.maxAggregateBytes) {
+    return {
+      kind: "invalid",
+      issues: ["Mirror block exceeds aggregate byte limit"],
+    };
+  }
+  let value: JsonValue;
+  try {
+    value = parseJsonStrict(json);
+  } catch (err) {
+    const e = err as JsonParseError;
+    return {
+      kind: "invalid",
+      issues: [`Mirror JSON parse error at ${e.path ?? "$"}: ${e.message}`],
+    };
+  }
+  const issues: string[] = [];
+  const snapshot = validateSnapshot(value, issues);
+  if (!snapshot || issues.length > 0) {
+    return { kind: "invalid", issues };
+  }
+  return {
+    kind: "ok",
+    snapshot,
+    block: { start, end: endSentinel + MIRROR_STATE_SENTINEL_END.length },
+  };
+}
+
+// The authoritative "is a mirror issue recorded?" derivation from a state
+// document: the v1 block's issueNumber. A missing block, a block whose
+// issueNumber is null (create not yet completed), and an unparseable block all
+// mean "no mirror recorded" (null). This is the single definition consumed by
+// the orchestrate boundary decision; it never re-parses the block itself.
+export function mirrorIssueNumberFromDocument(document: string): number | null {
+  const parsed = parseMirrorStateDocument(document);
+  return parsed.kind === "ok" ? parsed.snapshot.issueNumber : null;
+}
+
+// The "did a create actually run?" derivation from a state document: a create
+// receipt at `succeeded`, in the receipt vocabulary classifyReceipt reads. It
+// is the evidence the boundary report accepts for `--user-input create`, so a
+// manual create that recorded its Issue no longer rejects its own report
+// (Issue #1752). The boundary instance is deliberately not matched: the answer
+// reports that a create ran, not which ask offered it.
+export function succeededMirrorCreateExists(document: string): boolean {
+  const parsed = parseMirrorStateDocument(document);
+  if (parsed.kind !== "ok") return false;
+  return Object.values(parsed.snapshot.receipts).some(
+    (receipt) =>
+      receipt.event.operation === "create" && receipt.status === "succeeded",
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Canonical rendering (ordered objects -> whitespace-free JSON).
+// ---------------------------------------------------------------------------
+
+function renderRepository(r: RepositoryIdentity): unknown {
+  return { owner: r.owner, name: r.name, canonical: r.canonical };
+}
+
+function renderBoundary(b: MirrorBoundary): unknown {
+  if (b.kind === "phase-verified")
+    return { kind: b.kind, phase: b.phase, instance: b.instance };
+  if (b.kind === "parked")
+    return { kind: b.kind, stage: b.stage, instance: b.instance };
+  return { kind: b.kind, instance: b.instance };
+}
+
+function renderEvent(e: MirrorEventIdentity): unknown {
+  return {
+    intentUuid: e.intentUuid,
+    boundary: renderBoundary(e.boundary),
+    operation: e.operation,
+  };
+}
+
+function renderCreateIdentity(c: MirrorCreateIdentity): unknown {
+  return {
+    schema: c.schema,
+    intentUuid: c.intentUuid,
+    intentDir: c.intentDir,
+    repository: renderRepository(c.repository),
+    operationId: c.operationId,
+    preparedAt: c.preparedAt,
+  };
+}
+
+function renderReceipt(r: MirrorOperationReceipt): unknown {
+  const out: Record<string, unknown> = {
+    key: r.key,
+    event: renderEvent(r.event),
+    operationId: r.operationId,
+    ...(r.createdRevision === undefined
+      ? {}
+      : { createdRevision: r.createdRevision }),
+    ...(r.projectSyncRevision === undefined
+      ? {}
+      : { projectSyncRevision: r.projectSyncRevision }),
+    status: r.status,
+    preparedAt: r.preparedAt,
+  };
+  if (r.attemptedAt !== undefined) out.attemptedAt = r.attemptedAt;
+  if (r.completedAt !== undefined) out.completedAt = r.completedAt;
+  if (r.failureClass !== undefined) out.failureClass = r.failureClass;
+  if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
+  if (r.projectSyncHold !== undefined) out.projectSyncHold = r.projectSyncHold;
+  if (r.projectSyncVerified !== undefined)
+    out.projectSyncVerified = r.projectSyncVerified;
+  if (r.createIdentity !== undefined)
+    out.createIdentity = renderCreateIdentity(r.createIdentity);
+  if (r.authorization !== undefined)
+    out.authorization = renderAuthorization(r.authorization);
+  return out;
+}
+
+function renderAuthorization(a: MirrorExecutionAuthorization): unknown {
+  return {
+    kind: a.kind,
+    event: renderEvent(a.event),
+    operation: a.operation,
+    boundaryInstance: a.boundaryInstance,
+    receiptRevision: a.receiptRevision,
+    ...(a.landing ? { landing: a.landing } : {}),
+    ...(a.finalSyncReceiptKey
+      ? { finalSyncReceiptKey: a.finalSyncReceiptKey }
+      : {}),
+    ...(a.kind === "auto" ? { resolvedMode: a.resolvedMode } : {}),
+    ...(a.kind === "prompt-approved"
+      ? {
+          expectedBindingId: a.expectedBindingId,
+          answerId: a.answerId,
+        }
+      : {}),
+    ...(a.kind === "manual" ? { invocationId: a.invocationId } : {}),
+  };
+}
+
+function renderWarning(w: MirrorWarning): unknown {
+  return {
+    operationId: w.operationId,
+    operation: w.operation,
+    classification: w.classification,
+    summary: w.summary,
+    occurredAt: w.occurredAt,
+    retryable: w.retryable,
+    effect: w.effect,
+    source: w.source,
+  };
+}
+
+function renderProvenance(p: MirrorProvenance): unknown {
+  return {
+    schema: p.schema,
+    createIdentity: renderCreateIdentity(p.createIdentity),
+    issueNumber: p.issueNumber,
+    createdAt: p.createdAt,
+  };
+}
+
+function renderChallenge(c: MirrorRepairChallenge): unknown {
+  const out: Record<string, unknown> = {
+    challengeId: c.challengeId,
+    intentUuid: c.intentUuid,
+    repository: renderRepository(c.repository),
+    planDigest: c.planDigest,
+    operationId: c.operationId,
+    expectedPhrase: c.expectedPhrase,
+    issuedAt: c.issuedAt,
+  };
+  if (c.consumedAt !== undefined) out.consumedAt = c.consumedAt;
+  return out;
+}
+
+function renderExpectedPrompt(p: MirrorExpectedPrompt): unknown {
+  const out: Record<string, unknown> = {
+    bindingId: p.bindingId,
+    event: renderEvent(p.event),
+    operation: p.operation,
+    issuedAt: p.issuedAt,
+  };
+  if (p.retryOf !== undefined)
+    out.retryOf = {
+      event: renderEvent(p.retryOf.event),
+      operationId: p.retryOf.operationId,
+    };
+  return out;
+}
+
+// An empty ledger renders as null, matching the provenance / expectedPrompt /
+// auditOutbox convention, so a workspace with no configured Project keeps the
+// steady-state block bytes.
+function renderProjectSync(ledger: MirrorProjectSyncLedger): unknown {
+  return {
+    projects: ledger.projects.map((entry) => ({
+      project: entry.project,
+      projectId: entry.projectId,
+      itemId: entry.itemId,
+      phaseField: entry.phaseField,
+      lastAppliedStatus: entry.lastAppliedStatus,
+      state: entry.state,
+      updatedAt: entry.updatedAt,
+    })),
+  };
+}
+
+function renderAuditOutbox(o: MirrorAuditOutbox): unknown {
+  // fields render in insertion order; the reducer/store control field order.
+  return { transactionId: o.transactionId, digest: o.digest, fields: o.fields };
+}
+
+export function renderMirrorStateJson(snapshot: MirrorStateSnapshot): string {
+  const receipts: Record<string, unknown> = {};
+  for (const k of Object.keys(snapshot.receipts)) {
+    receipts[k] = renderReceipt(snapshot.receipts[k]);
+  }
+  const challenges: Record<string, unknown> = {};
+  for (const k of Object.keys(snapshot.repairChallenges)) {
+    challenges[k] = renderChallenge(snapshot.repairChallenges[k]);
+  }
+  const root = {
+    schema: 1,
+    revision: snapshot.revision,
+    issueNumber: snapshot.issueNumber,
+    provenance: snapshot.provenance ? renderProvenance(snapshot.provenance) : null,
+    receipts,
+    warnings: snapshot.warnings.map(renderWarning),
+    repairChallenges: challenges,
+    expectedPrompt: snapshot.expectedPrompt
+      ? renderExpectedPrompt(snapshot.expectedPrompt)
+      : null,
+    auditOutbox: snapshot.auditOutbox ? renderAuditOutbox(snapshot.auditOutbox) : null,
+    projectSync:
+      snapshot.projectSync && snapshot.projectSync.projects.length > 0
+        ? renderProjectSync(snapshot.projectSync)
+        : null,
+  };
+  return JSON.stringify(root);
+}
+
+export function renderMirrorStateBlock(snapshot: MirrorStateSnapshot): string {
+  return `${MIRROR_STATE_SENTINEL_START}\n${renderMirrorStateJson(snapshot)}\n${MIRROR_STATE_SENTINEL_END}`;
+}
+
+// Splice a snapshot into the document, preserving every byte outside the block.
+// `block` from parseMirrorStateDocument marks the existing block extent; null
+// means append (blank line + block) after ensuring a trailing newline.
+export function writeMirrorStateDocument(
+  document: string,
+  block: MirrorBlockRange | null,
+  snapshot: MirrorStateSnapshot,
+): string {
+  const blockText = renderMirrorStateBlock(snapshot);
+  if (block) {
+    return document.slice(0, block.start) + blockText + document.slice(block.end);
+  }
+  if (document.length === 0) return `${blockText}\n`;
+  const base = document.endsWith("\n") ? document : `${document}\n`;
+  return `${base}\n${blockText}\n`;
+}

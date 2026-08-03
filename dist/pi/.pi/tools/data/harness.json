@@ -1,0 +1,68 @@
+{
+  "name": "pi",
+  "harnessDir": ".pi",
+  "rulesSubdir": "rules",
+  "stageEntry": {
+    "kind": "runner",
+    "root": ".pi/skills"
+  },
+  "nativeRuntime": {
+    "package": "@earendil-works/pi-coding-agent",
+    "minimumVersion": "0.83.0",
+    "projectTrust": "native",
+    "trustIsSandbox": false,
+    "autoApproveProjectTrust": false,
+    "mutateTrustStore": false
+  },
+  "resources": [
+    {
+      "kind": "skill",
+      "source": "skills/amadeus/SKILL.md",
+      "destination": ".pi/skills/amadeus/SKILL.md",
+      "load": "native",
+      "sha256": "4cfde2fec1d1dd831452621ae1641f36e1b9ffa2d9dd69b083440faf934bcf01"
+    },
+    {
+      "kind": "question-annex",
+      "source": "skills/amadeus/question-rendering.md",
+      "destination": ".pi/skills/amadeus/question-rendering.md",
+      "load": "annex",
+      "sha256": "a7294c085f079c390862e049f3ea6356cc10366ea1b8074efcbbb623751827b2"
+    },
+    {
+      "kind": "extension",
+      "source": "extensions/amadeus-pi-extension.ts",
+      "destination": ".pi/extensions/amadeus.ts",
+      "load": "native",
+      "sha256": "a08d6d45c7c27e4e201d054cc990804aa475384cbb8d14311ed32069c082886f"
+    },
+    {
+      "kind": "driver",
+      "source": "drivers/amadeus-pi-driver.ts",
+      "destination": ".pi/drivers/amadeus-pi-driver.ts",
+      "load": "internal",
+      "sha256": "c0eadd97105f6094236f5a5b34cd94aced8625e7f3b7bc2872e6624ae9463514"
+    },
+    {
+      "kind": "driver",
+      "source": "drivers/amadeus-pi-driver-contract.ts",
+      "destination": ".pi/drivers/amadeus-pi-driver-contract.ts",
+      "load": "internal",
+      "sha256": "6321c75e9174ee48b23f63791c0d89c9fbdf027a210bc02b1aba3d39b3b8a793"
+    },
+    {
+      "kind": "driver",
+      "source": "drivers/amadeus-pi-guardian.ts",
+      "destination": ".pi/drivers/amadeus-pi-guardian.ts",
+      "load": "internal",
+      "sha256": "c7a563aa53746387c456c0de968b9c4b22f754e0dc373c6068fb44b5026cbb94"
+    },
+    {
+      "kind": "driver",
+      "source": "drivers/amadeus-pi-replay-store.ts",
+      "destination": ".pi/drivers/amadeus-pi-replay-store.ts",
+      "load": "internal",
+      "sha256": "33562dcd53f38318c15172dec44b516f5474569c19c9c55748556fd3bcba6531"
+    }
+  ]
+}

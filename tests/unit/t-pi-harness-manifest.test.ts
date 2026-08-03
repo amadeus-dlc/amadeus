@@ -47,6 +47,24 @@ describe("Pi harness manifest", () => {
         destination: ".pi/drivers/amadeus-pi-driver.ts",
         load: "internal",
       },
+      {
+        kind: "driver",
+        source: "drivers/amadeus-pi-driver-contract.ts",
+        destination: ".pi/drivers/amadeus-pi-driver-contract.ts",
+        load: "internal",
+      },
+      {
+        kind: "driver",
+        source: "drivers/amadeus-pi-guardian.ts",
+        destination: ".pi/drivers/amadeus-pi-guardian.ts",
+        load: "internal",
+      },
+      {
+        kind: "driver",
+        source: "drivers/amadeus-pi-replay-store.ts",
+        destination: ".pi/drivers/amadeus-pi-replay-store.ts",
+        load: "internal",
+      },
     ]);
   });
 
