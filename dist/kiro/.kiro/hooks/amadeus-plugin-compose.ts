@@ -33,5 +33,6 @@ try {
   }
 } catch (err) {
   console.error(`amadeus-plugin: auto-compose error for ${hostRoot} (non-blocking): ${String(err)}`);
+  process.exit(0);
 }
 process.exit(0);

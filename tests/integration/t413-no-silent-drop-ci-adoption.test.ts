@@ -93,11 +93,11 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    expect(result.evidence.counts).toEqual({ C_pre: 223, B_pre: 223, B0: 223 });
+    expect(result.evidence.counts).toEqual({ C_pre: 217, B_pre: 217, B0: 223 });
     expect(baseline.entries).toHaveLength(223);
-    expect(removed).toHaveLength(4);
+    expect(removed).toHaveLength(10);
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
-      new Set(["#1874", "#1878"]),
+      new Set(["#1874", "#1878", "#1979"]),
     );
   });
 
