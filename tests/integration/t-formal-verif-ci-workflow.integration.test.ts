@@ -30,6 +30,9 @@ const BASELINE_SHA = readFileSync(
 //     section). Placed in drift-check because it IS a drift guard, and
 //     because reusing that job leaves ci-success's needs set — and t222's pin
 //     on it — untouched.
+//   - 260802-source-only-dist u7: build-before-test steps, the blocking
+//     reproducible-build job, and its ci-success dependency. The legacy drift
+//     job remains unchanged until the u8 atomic switch.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

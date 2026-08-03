@@ -57,6 +57,12 @@ const DEFAULT_PARALLEL = Math.min(availableParallelism(), 4);
 // while removing the load-noise band. Individual tests may still pass their
 // own longer budgets (e.g. MATRIX_TIMEOUT_MS) explicitly.
 const DEFAULT_TEST_TIMEOUT_MS = 30_000;
+const BUILD_REQUIRED_MESSAGE = "run-tests: dist/ is missing or empty — run `bun run build` first\n";
+
+function hasBuiltDistribution(): boolean {
+  const distDir = join(REPO_ROOT, "dist");
+  return existsSync(distDir) && readdirSync(distDir).length > 0;
+}
 
 function coverageSourcePathContext(): CoverageSourcePathContext {
   const tempRoots = new Set<string>();
@@ -1014,6 +1020,11 @@ function writeVerboseSummary(): void {
 }
 
 async function main(): Promise<number> {
+  if (!hasBuiltDistribution()) {
+    appendFileSync(2, BUILD_REQUIRED_MESSAGE);
+    return 1;
+  }
+
   process.stdout.write("AI-DLC Testing Harness\n");
   process.stdout.write("======================\n");
 
