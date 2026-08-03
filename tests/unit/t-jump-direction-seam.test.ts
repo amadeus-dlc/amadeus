@@ -169,6 +169,26 @@ describe("t-jump-direction-seam: handler drive (FR-4, in-process)", () => {
     expect(r.stderr).toContain("backward");
   });
 
+  test("execute rejects a graph target that has no state checkbox", () => {
+    sedReplaceInFile(
+      join(seededRecordDir(proj), "amadeus-state.md"),
+      "- [ ] deployment-execution — EXECUTE\n",
+      "",
+    );
+    const r = captureExit(() =>
+      handleExecute([
+        "--target",
+        "deployment-execution",
+        "--direction",
+        "forward",
+      ]),
+    );
+
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("reason=target-not-found");
+    expect(r.stderr).toContain("deployment-execution");
+  });
+
   test("execute redoes the current stage through the target-only reset branch", () => {
     sedReplaceInFile(
       join(seededRecordDir(proj), "amadeus-state.md"),

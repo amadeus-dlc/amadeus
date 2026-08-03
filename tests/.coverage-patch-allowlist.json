@@ -565,12 +565,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "400",
-    "reason": "idempotentAppend runs only through the spawned mirror CLI (t282/t284/t300 drive the process boundary); the single-line TransactionId scan delegates to auditBlockField/splitAuditRecords which are covered in-process by t351. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
-    "expiry": "remove when idempotentAppend gains an in-process seam test"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
     "lines": "401-404",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -583,13 +577,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "421",
-    "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-    "lines": "423-424",
+    "lines": "438",
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1123,7 +1111,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "4515",
+    "lines": "4518",
     "reason": "The empty Execution Projection Digest row in the intent-birth state template is exercised through the shipped intent-birth CLI by tests/integration/t270-harness-provenance-birth.test.ts and tests/integration/t393-birth-autonomy-field.integration.test.ts. Bun does not attribute spawned CLI template rows to the parent LCOV process; this is the same message/template-string blind spot as the adjacent Construction Autonomy Mode row.",
     "expiry": "remove when canonical intent birth has an in-process seeded-workspace driver or Bun attributes spawned CLI coverage"
   },
@@ -1640,12 +1628,6 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "256-257",
-    "reason": "The non-object Receipt guard is a defensive parser branch adjacent to invalid JSON, unknown phase/status, and duplicate-key cases covered in-process by tests/unit/t265-engine-boundary.test.ts.",
-    "expiry": "remove when t265 adds explicit null/array/scalar parser cases"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "538-539",
     "reason": "Terminal audit replay is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'terminal commit resumes after %s without duplicate terminal audit'; the state CLI child is outside parent Bun LCOV.",
     "expiry": "remove when terminal state CLI execution is attributed to parent LCOV"
@@ -1682,7 +1664,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "871",
+    "lines": "922",
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
   },
@@ -1754,7 +1736,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "1127-1129",
+    "lines": "1172-1174",
     "reason": "Successful and idempotent Receipt writes and their JSON result are asserted through the generated state CLI in t265 integration/E2E; spawned lines are not parent-LCOV visible.",
     "expiry": "remove when handleMirrorBoundary receives injected state and output ports"
   },
@@ -1790,18 +1772,18 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5311",
+    "lines": "5400",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5294-5296",
+    "lines": "5383-5385",
     "reason": "The handleMerge call site for mergeScopedCheckboxProgress is reachable only through the spawned state CLI, so Bun does not attribute these three adapter rows to the parent LCOV report. The extracted merge decision is driven in-process by tests/integration/t-text-mutation-state-seams.integration.test.ts across winning, losing, and malformed-state paths; only the spawn-only result unpacking remains unmeasured.",
     "expiry": "remove when handleMerge gains an in-process driver or Bun merges child-process coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4030",
+    "lines": "4175",
     "reason": "Type-only continuation of the targeted rejection reservation/session pair. Bun attributes a zero-hit DA row to this erased annotation even though t365 executes the targeted branch and proves the verified session is reused through consume.",
     "expiry": "remove when Bun no longer emits coverage rows for erased multiline type annotations"
   },
@@ -1831,7 +1813,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5333",
+    "lines": "5514",
     "reason": "The prepared verifier's fail-closed matrix is exercised by the named 'prepared completion refuses ...' tests in tests/integration/t265-engine-boundary.integration.test.ts; this line is the I/O-race sibling where a state was read but its Intent disappears before verification.",
     "expiry": "remove when prepared-completion Intent resolution receives an injectable read port"
   },
@@ -1924,5 +1906,89 @@
     "lines": "257-258",
     "reason": "PoolCommand and SettlementCommand are compile-time extraction aliases erased before runtime. tsc enforces their narrowing and t425 drives each settlement command kind.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "lines": "301",
+    "reason": "t279 drives the transition-processed maintenance path without an original failure and asserts the resulting outcome-unknown warning plus this exact maintenance summary. Bun's merged LCOV stamps the multiline ternary false arm DA:0 even though the targeted-file report omits that row and records the surrounding decision and return.",
+    "expiry": "remove when Bun attributes the multiline ternary false arm or the expression is collapsed"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "lines": "363",
+    "reason": "The missing target-checkbox refusal exits through error(). t-jump-direction-seam drives the exact handler branch in-process against the byte-identical shipped dist module and asserts target-not-found; canonical package-source rows are not credited by the dist-module execution under Bun coverage.",
+    "expiry": "remove when jump handler coverage is unified across canonical and packaged modules or error() receives a non-exiting port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "663-671",
+    "reason": "The missing and duplicate checkbox-target branches exit through error(). t17 drives both exact advance failures through the shipped state CLI and asserts non-zero exit, the structured reason, and byte-identical state; spawned child rows are not parent-LCOV visible.",
+    "expiry": "remove when stageCheckboxOrError receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "1461-1463",
+    "reason": "The checkbox adapter translates StateMutationTargetError into the structured slug-tagged CLI error. t224 drives a duplicate canonical row through the shipped checkbox command and asserts duplicate-target plus byte identity; error() exits the child, so the catch wiring is not parent-LCOV visible.",
+    "expiry": "remove when handleCheckbox receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2029",
+    "reason": "t17 advance validation test 29 and t47 F3 drive the missing-Scope refusal through the shipped state CLI and assert a loud non-zero result. The error() row executes only in the spawned child.",
+    "expiry": "remove when advance validation receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2032",
+    "reason": "t17 advance validation test 30 drives the invalid-Scope refusal through the shipped state CLI and asserts the diagnostic. The error() row executes only in the spawned child.",
+    "expiry": "remove when advance validation receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2049-2050",
+    "reason": "t17 advance validation test 32 drives an explicit SKIP-stamped next stage through the shipped state CLI and asserts the refusal. error() exits the child before mutation, so parent LCOV cannot attribute these rows.",
+    "expiry": "remove when resolveAdvanceNextStage receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2056-2058",
+    "reason": "t17 advance validation test 34 drives the no-next-stage refusal through the shipped state CLI and asserts the complete-workflow guidance. error() exits the child, so parent LCOV cannot attribute the message rows.",
+    "expiry": "remove when resolveAdvanceNextStage receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2072-2075",
+    "reason": "This multiline return-type declaration for inspectCompletedAdvanceState is erased TypeScript. Its three concrete fields are consumed by handleAdvance and covered by t17 and the in-process advance seams; Bun emits non-executable DA:0 rows for the annotation continuation.",
+    "expiry": "remove if Bun stops emitting DA records for erased type declarations or the signature is collapsed"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2085-2088",
+    "reason": "t17 advance validation test 28 drives the wrong-active-slug refusal through the shipped state CLI and asserts the Cannot advance diagnostic. The multiline error() message executes in the child process only.",
+    "expiry": "remove when inspectCompletedAdvanceState receives a non-exiting error port or Bun merges child coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2150",
+    "reason": "Fail-closed phase-audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
+    "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2306",
+    "reason": "Fail-closed STAGE_STARTED audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
+    "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
+  },
+  {
+    "file": "tests/no-silent-drop/engine.ts",
+    "lines": "199",
+    "reason": "Defensive current-revision shape guard after a successful git rev-parse. A real git success contract returns a full SHA; start failure and non-zero exit are handled immediately above. Reaching this branch requires replacing git with a contract-violating executable, so it remains as a fail-closed invariant belt.",
+    "expiry": "remove when currentRevision receives an injected process port that can return malformed successful stdout"
+  },
+  {
+    "file": "tests/no-silent-drop/ledger.ts",
+    "lines": "230",
+    "reason": "Defensive startup-failure classification for git show. The integration suite drives the observable non-zero lookup failure; making spawnSync itself fail to start would require removing the running test process's git executable or injecting a process port. The distinct INTERNAL_ERROR branch is retained fail closed.",
+    "expiry": "remove when baselineAtRevision receives an injected process port that can model startup failure"
   }
 ]

@@ -802,6 +802,10 @@ describe("no-silent-drop ledger", () => {
       .toThrow("duplicate or unknown");
     expect(() => validateApproval({ ...approval, entries: [] }, findings, "digest")).toThrow("is missing");
     expect(buildCandidate("r", "digest", approval, findings).entries[0]?.fingerprint).toBe(findings[0]?.fingerprint);
+    expect(() => buildCandidate("r", "digest", {
+      ...approval,
+      entries: [{ ...approval.entries[0]!, fingerprint: "f".repeat(64) }],
+    }, findings)).toThrow("approval references an unknown finding");
     expect(violationResult(findings).status).toBe("violations");
     expect(() => violationResult([])).toThrow("at least one finding");
   });

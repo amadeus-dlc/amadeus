@@ -666,6 +666,7 @@ describe("t279 create", () => {
         classification: "state-write",
         effect: "outcome-unknown",
         retryable: false,
+        summary: expect.stringContaining("state transition was processed"),
       },
     });
     expect(gateway.history).toEqual([]);

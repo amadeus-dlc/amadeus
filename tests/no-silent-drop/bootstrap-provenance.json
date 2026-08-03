@@ -3,7 +3,7 @@
   "commandVersion": "no-silent-drop-bootstrap-v1",
   "bootstrapBaseRevision": "47574fbabf274e11cb8e0b37bf35a0309a7b3d42",
   "preRevision": "47574fbabf274e11cb8e0b37bf35a0309a7b3d42",
-  "postRevision": "98da97e926d7be59e08f63256b2e937a8e9ba252",
+  "postRevision": "47b619d80fcb4b641182752650b4ff7f687b2e17",
   "ruleBundleDigest": "62afe6ed907cf244ba30852124cb1f11c0a9e076bd462bca5d8b64cb15b92d5d",
   "semanticDependencyDigest": "4601653522c5d43089d88c250f5c5f14936ec9d571dfca365b44d26639ae2069",
   "pre": {
@@ -27,11 +27,11 @@
   "post": {
     "raw": {
       "path": "tests/no-silent-drop/bootstrap/post-raw.json",
-      "digest": "1898a6db8034b0b2b67729ffb5f9c561ae27a708a0f40c111fddf755e4050969"
+      "digest": "dd541d6cb2c73d78cb3ca10797d29a0ed6ae178b3164b5fa931ec2f666da7f73"
     },
     "classification": {
       "path": "tests/no-silent-drop/bootstrap/post-classification.json",
-      "digest": "b266773c19db6246da04d20fdb95c539bbcca6ef916191f9e13d43333fee8ab8"
+      "digest": "a10fb6ce6456e823f19c6894351bc256cef780e983995cd1fad0936a1afeea86"
     },
     "approval": {
       "path": "tests/no-silent-drop/bootstrap/post-approval.json",
@@ -39,16 +39,16 @@
     },
     "approvedEvidence": {
       "path": "tests/no-silent-drop/bootstrap/post-approved-evidence.json",
-      "digest": "c8e1f293cfde843c0875767c0b3a99b6cfa6b2675ba6d68103e46c886a90b5dc"
+      "digest": "ff6da5b9365007acb2ec69795bedce204807fa918f3c11112955e86069420f90"
     }
   },
   "candidate": {
     "path": "tests/no-silent-drop/baseline.json",
-    "digest": "2138a95e4285fbc7700c894357a3c8e3896daf98d50c0ca5d47c83f156738e0b"
+    "digest": "1ff5065cbe3a54fc177e7e93865c2a74084d44775f41071f510f387cb2f46bfa"
   },
   "humanReview": {
     "path": "tests/no-silent-drop/bootstrap/human-review.json",
-    "digest": "cda4fa25a19a1221bb39d004402a6354ed21455f5a7a9852ff74e7f6ca275fdb"
+    "digest": "decbfea50c33499d4acefbd45efa7d31a4ec041358815d41d03c192312b2aab2"
   },
   "approvedPre": {
     "identitySetDigest": "eb09161b64084983d0e2f99009d68237f663559f4da28307d203cf804d12e730",
