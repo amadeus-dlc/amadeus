@@ -30,7 +30,9 @@ export type AssertionId =
   | "POLICY_CI_ZERO_CALLS"
   | "POLICY_STRICT_OPT_IN"
   | "ENV_ALLOWLIST_EXACT"
-  | "SETTINGS_PROJECT_ONLY";
+  | "SETTINGS_PROJECT_ONLY"
+  | "SDK_CREDENTIAL_PIPE_SINGLE_USE"
+  | "SDK_OUTPUT_BOUNDED_DRAIN";
 
 export interface BoundaryCall {
   readonly boundary: string;

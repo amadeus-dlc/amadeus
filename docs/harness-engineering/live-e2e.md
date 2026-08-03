@@ -6,7 +6,7 @@ This runbook describes the opt-in, local-only journey used to verify an Amadeus 
 
 Live journeys never run on GitHub Actions, even if an opt-in variable is set. Each adapter has a dedicated opt-in whose only accepted value is the exact string `1`. The child process receives a newly constructed allow-list environment and a short-lived credential lease; it does not receive or copy source auth files, user configuration, user hooks, source home paths, prompts, or full stdout/stderr in durable evidence.
 
-The `codex-exec` adapter requires `AMADEUS_CODEX_EXEC_LIVE=1`, Codex CLI 0.139.0 or newer, `dist/codex`, and an `OPENAI_API_KEY` credential lease. The `claude-print` adapter requires `AMADEUS_CLAUDE_PRINT_LIVE=1`, Claude Code 2.1.220 or newer with the measured print flags, and `dist/claude`. Claude authentication is either a short-lived `ANTHROPIC_API_KEY` binding or a native keychain credential confirmed by `claude auth status --json`; source `HOME`, `CLAUDE_CONFIG_DIR`, and user/local settings are never forwarded. Cleanup and credential-leak findings override an otherwise successful or timed-out run.
+The `codex-exec` adapter requires `AMADEUS_CODEX_EXEC_LIVE=1`, Codex CLI 0.139.0 or newer, `dist/codex`, and an `OPENAI_API_KEY` credential lease. The `claude-print` adapter requires `AMADEUS_CLAUDE_PRINT_LIVE=1`, Claude Code 2.1.220 or newer with the measured print flags, and `dist/claude`. The `claude-sdk` adapter separately requires `AMADEUS_CLAUDE_SDK_LIVE=1`, Claude Agent SDK 0.3.158 or newer, and `dist/claude`. Claude authentication is either a short-lived `ANTHROPIC_API_KEY` binding or a native keychain credential confirmed by `claude auth status --json`; source `HOME`, `CLAUDE_CONFIG_DIR`, and user/local settings are never forwarded. The SDK adapter owns the SDK client and stream in an isolated worker group, transfers an environment credential through one length-prefixed stdin frame, and escalates abort to TERM and KILL before cleanup. Cleanup and credential-leak findings override an otherwise successful or timed-out run.
 
 ## Running a live journey
 
@@ -28,6 +28,15 @@ AMADEUS_CLAUDE_PRINT_LIVE=1 ANTHROPIC_API_KEY='…' \
 
 When Claude Code has a usable native keychain login, omit `ANTHROPIC_API_KEY`; the runner verifies the native credential before allocating scratch. It copies `dist/claude` into a fresh Git project, writes exactly `{ "hooks": {} }` to project `.claude/settings.json`, sets a fresh `HOME` and `TMPDIR`, and invokes `claude -p --setting-sources project --tools "" --no-session-persistence --output-format json --json-schema … --max-budget-usd 0.25`. Success requires exit zero, `is_error=false`, at least one turn, and the closed structured output `{ "amadeus_live_e2e": "ok" }` before cleanup and durable ledger append.
 
+Run the serial Claude Agent SDK journey independently from the print journey:
+
+```bash
+AMADEUS_CLAUDE_SDK_LIVE=1 ANTHROPIC_API_KEY='…' \
+  bun test --timeout 120000 tests/e2e/t-claude-sdk-kernel.serial.test.ts
+```
+
+The parent process imports no SDK client. It creates a fresh project/home, starts one SDK-owning worker group, sends the run-bound credential frame once, and drives the literal `echo ok` prompt with project-only settings. The worker emits only bounded, sanitized JSON events. Success requires exactly one terminal success result, positive turn count, zero permission denials, ordered state/audit observations, and non-empty tool-result or assistant-byte evidence. A 90-second deadline requests SDK abort, waits 10 seconds, then escalates to TERM for 5 seconds and KILL/reap for 5 seconds. A single event over 65,536 bytes, total event output over 1 MiB, more than 4,096 events, an in-memory queue over 16 events or 256 KiB, a duplicate or late terminal, or any cleanup/credential leak is non-green.
+
 ## Ledger and matrix
 
 Recorded runs append atomically to `tests/harness/live-e2e/runs.jsonl`. A recorded receipt contains adapter/version/SHA/time/result and bounded digests, never raw credentials, absolute source paths, prompts, or full output. A pending durability marker is not green evidence; recover the identical receipt before projecting it.
@@ -46,6 +55,7 @@ The live test updates only the ledger. Maintainers explicitly run `update`, revi
 | Adapter | Harness | Transport | Opt-in | GitHub Actions | Isolation | Anchors | State | Version (min/measured) | Last green / Issue |
 |---|---|---|---|---|---|---|---|---|---|
 | claude-print | claude | print | `AMADEUS_CLAUDE_PRINT_LIVE` | hard deny | fresh project/home; project settings only; native keychain or env credential lease | exit, schema, state | UNVERIFIED | 2.1.220 / 2.1.220 | — |
+| claude-sdk | claude | agent-sdk | `AMADEUS_CLAUDE_SDK_LIVE` | hard deny | SDK-owned worker group; one-shot credential pipe; project settings only | schema, tool, state, audit | UNVERIFIED | 0.3.158 / 0.3.158 | — |
 | codex-exec | codex | exec | `AMADEUS_CODEX_EXEC_LIVE` | hard deny | fresh project/home; env credential lease; no source config or hooks | exit, schema, file | UNVERIFIED | 0.139.0 / 0.146.0 | — |
 <!-- AMADEUS_LIVE_E2E_MATRIX:END -->
 

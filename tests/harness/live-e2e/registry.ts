@@ -1,7 +1,7 @@
 import type { EnvironmentDeclaration } from "./policy.ts";
 import type { Result } from "./contract.ts";
 
-export type LiveAdapterId = "codex-exec" | "claude-print";
+export type LiveAdapterId = "codex-exec" | "claude-print" | "claude-sdk";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
 export interface LiveCapability {
@@ -12,7 +12,7 @@ export interface LiveCapability {
   readonly minimumVersion: string;
   readonly measuredVersion: string;
   readonly status: CapabilityStatus;
-  readonly anchorKinds: readonly ("exit" | "schema" | "file" | "state")[];
+  readonly anchorKinds: readonly ("exit" | "schema" | "file" | "state" | "tool" | "audit")[];
   readonly followUpIssue?: string;
   readonly environment: EnvironmentDeclaration;
   readonly isolationSummary: string;
@@ -55,6 +55,22 @@ export const LIVE_CAPABILITIES = [
       sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
     },
     isolationSummary: "fresh project/home; project settings only; native keychain or env credential lease",
+  },
+  {
+    id: "claude-sdk",
+    harness: "claude",
+    transport: "agent-sdk",
+    optInKey: "AMADEUS_CLAUDE_SDK_LIVE",
+    minimumVersion: "0.3.158",
+    measuredVersion: "0.3.158",
+    status: "supported",
+    anchorKinds: ["schema", "tool", "state", "audit"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR"],
+      sensitiveKeys: ["ANTHROPIC_API_KEY"],
+      sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
+    },
+    isolationSummary: "SDK-owned worker group; one-shot credential pipe; project settings only",
   },
 ] as const satisfies readonly LiveCapability[];
 

@@ -121,6 +121,10 @@ export interface DriveResult {
   assistantText: string;
   /** The SDK's terminal result event, or undefined if the stream never ended. */
   resultEvent: ResultEvent | undefined;
+  /** Every terminal event in stream order; live adapters reject duplicates. */
+  resultEvents?: ResultEvent[];
+  /** SDK message kinds in stream order for structural ordering checks. */
+  messageTypes?: string[];
   /** Contents of amadeus-docs/amadeus-state.md after the run, if it exists. */
   stateFile?: string;
   /** Audit event-type strings parsed from amadeus-docs/audit.md, in file order. */
@@ -268,6 +272,10 @@ export interface DriveOptions {
   settingSources?: Array<"user" | "project" | "local">;
   /** Extra env to layer onto the SDK subprocess (e.g. Bedrock overrides). */
   env?: Record<string, string>;
+  /** Restrict settings resolution to the copied scratch project. */
+  settingsAuthority?: "shipped-default" | "project-only";
+  /** Parent-owned cancellation forwarded into the SDK AbortController. */
+  abortSignal?: AbortSignal;
   /**
    * Optional sink for each AskUserQuestion as it is answered — handy when a
    * calibrator wants a live trace. Receives the same struct stored in
@@ -341,9 +349,11 @@ function processEnv(): Record<string, string> {
  */
 export function resolveDriveSdkSettings(
   projectDir: string,
-  opts: Pick<DriveOptions, "model" | "env"> = {},
+  opts: Pick<DriveOptions, "model" | "env" | "settingsAuthority"> = {},
 ): DriveSdkSettings {
-  const shipped = readClaudeSettings(SHIPPED_SETTINGS);
+  const shipped = opts.settingsAuthority === "project-only"
+    ? undefined
+    : readClaudeSettings(SHIPPED_SETTINGS);
   const projectSettingsPath = join(projectDir, ".claude", "settings.json");
   const project = projectSettingsPath === SHIPPED_SETTINGS
     ? shipped
@@ -422,6 +432,8 @@ export async function driveAidlc(
 
   const toolResults: CapturedToolResult[] = [];
   const askedQuestions: CapturedAskUserQuestion[] = [];
+  const resultEvents: ResultEvent[] = [];
+  const messageTypes: string[] = [];
   // toolUseID -> { toolName, input } so we can join tool_use to its later
   // synthetic-user tool_result block.
   const pendingTools = new Map<
@@ -444,6 +456,9 @@ export async function driveAidlc(
   });
 
   const abortController = new AbortController();
+  const forwardAbort = () => abortController.abort();
+  opts.abortSignal?.addEventListener("abort", forwardAbort, { once: true });
+  if (opts.abortSignal?.aborted) abortController.abort();
   let timedOut = false;
   let stoppedAfterAskUserQuestion = false;
   let stoppedAfterToolResult = false;
@@ -511,6 +526,7 @@ export async function driveAidlc(
 
   try {
     for await (const msg of run) {
+      messageTypes.push(msg.type);
       writeSdkTrace(tracePath, "message", { type: msg.type });
       if (msg.type === "assistant") {
         // Capture assistant text AND register any tool_use blocks so we can
@@ -615,6 +631,7 @@ export async function driveAidlc(
             : 0,
           raw: m,
         };
+        resultEvents.push(resultEvent);
         writeSdkTrace(tracePath, "result", {
           subtype: resultEvent.subtype,
           is_error: resultEvent.is_error,
@@ -640,6 +657,7 @@ export async function driveAidlc(
     }
   } finally {
     if (timer) clearTimeout(timer);
+    opts.abortSignal?.removeEventListener("abort", forwardAbort);
     writeSdkTrace(tracePath, "end", {
       timedOut,
       stoppedAfterAskUserQuestion,
@@ -654,6 +672,8 @@ export async function driveAidlc(
     toolResults,
     assistantText,
     resultEvent,
+    resultEvents,
+    messageTypes,
     askedQuestions,
   };
 

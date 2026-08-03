@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LiveJourney } from "./adapter.ts";
+import { CLAUDE_SDK_PROMPT, type ClaudeSdkWorkerEvent } from "./claude-sdk.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
 
@@ -35,6 +36,66 @@ export function createClaudeStructuredJourney(): LiveJourney {
             source: "assertion",
           },
         ],
+      };
+    },
+  };
+}
+
+function numericField(event: ClaudeSdkWorkerEvent, key: string): number | undefined {
+  const value = event[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+export function createClaudeSdkJourney(timeoutMs = 90_000): LiveJourney {
+  return {
+    id: "claude-sdk-structured-v1",
+    prompt: CLAUDE_SDK_PROMPT,
+    timeoutMs,
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution) => {
+      const rawEvents = execution.structured?.sdkEvents;
+      const events = Array.isArray(rawEvents) ? rawEvents as ClaudeSdkWorkerEvent[] : [];
+      const terminals = events.filter((event) => event.kind === "terminal");
+      const terminal = terminals[0];
+      const ordered = events.every((event, index) => event.ordinal === index);
+      const terminalLast = terminal !== undefined && terminal.ordinal === events.length - 1;
+      const outputEvidence = events.some((event) =>
+        (event.kind === "tool" || event.kind === "assistant") && (numericField(event, "byteLength") ?? 0) > 0
+      );
+      const structuralEvents = ["state", "audit"].every((kind) =>
+        events.filter((event) => event.kind === kind).length === 1
+      );
+      const passed = execution.exitCode === 0 &&
+        !execution.timedOut &&
+        !execution.aborted &&
+        execution.structured?.truncated !== true &&
+        ordered &&
+        terminalLast &&
+        structuralEvents &&
+        terminals.length === 1 &&
+        terminal.type === "result" &&
+        terminal.subtype === "success" &&
+        terminal.isError === false &&
+        (numericField(terminal, "numTurns") ?? 0) >= 1 &&
+        numericField(terminal, "permissionDenialsCount") === 0 &&
+        terminal.hasLateEvent === false &&
+        outputEvidence;
+      return {
+        passed,
+        diagnostic: passed
+          ? "SDK terminal, ordering, permission, state/audit, and output evidence passed"
+          : "Claude SDK structured journey mismatch",
+        evidence: [{
+          kind: "claude-sdk-structured-anchor",
+          value: digest(JSON.stringify({
+            eventCount: events.length,
+            ordered,
+            terminalCount: terminals.length,
+            terminalSubtype: terminal?.subtype,
+            outputEvidence,
+          })),
+          source: "assertion",
+        }],
       };
     },
   };
