@@ -1,5 +1,7 @@
 name: Issue label sync
 
+permissions: {}
+
 on:
   issues:
     types: [opened, edited]

@@ -186,6 +186,7 @@ describe("t426 Issue Form contract", () => {
   test("the workflow reconciles common and bug-specific labels", async () => {
     const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
       on: { issues: { types: string[] } };
+      permissions: Record<string, never>;
       jobs: {
         sync: {
           if: string;
@@ -198,6 +199,7 @@ describe("t426 Issue Form contract", () => {
     const script = job.steps[0]?.with?.script;
 
     expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
+    expect(workflow.permissions).toEqual({});
     expect(job.permissions).toEqual({ contents: "read", issues: "write" });
     expect(job.if).toContain("### 優先度（いつ対応するか）");
     expect(job.if).toContain("### 優先度（いつ直すか）");
