@@ -55,7 +55,15 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { hooksHealthDir, isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
+import {
+  auditFilePath,
+  auditShardName,
+  findAllEvents,
+  hooksHealthDir,
+  isMachineInjectedTurnText,
+  stateFilePath,
+} from "../tools/amadeus-lib.ts";
+import { recordProtectedAdvisoryChoice } from "../tools/amadeus-advisory-choice.ts";
 import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
 import { spawnHookWithRuntime } from "./amadeus-codex-hook-runtime.ts";
 
@@ -379,6 +387,17 @@ switch (target) {
           projectDir,
           capability: hostSessionCapability(codex.session_id),
         });
+        if (typeof codex.prompt === "string") {
+          const turns = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN");
+          const latest = turns[turns.length - 1];
+          if (latest !== undefined) {
+            recordProtectedAdvisoryChoice(projectDir, codex.prompt, {
+              timestamp: latest.timestamp,
+              shard: auditShardName(projectDir),
+              eventIdentity: createHash("sha256").update(latest.block).digest("hex"),
+            });
+          }
+        }
       }
     } catch {
       // best-effort presence record — advisory

@@ -51,6 +51,15 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
    `--model` from `run-model-check-ci.ts run|verify --root <absolute-path>`
    checks all registered models.
 
+   When an `await-advisory-choice` directive supplies a
+   `formal_checks[].command`, run that command unchanged. It adds
+   `--advisory-target`, `--advisory-spec-identity`, and
+   `--advisory-instance` as one all-or-none correlation group and uses the
+   engine-selected output directory. The local manifest records those
+   coordinates together with the selected model/config paths, registered
+   identities, and byte digests. These fields prove which evidence may resolve
+   that one advisory; they do not change TLC exploration.
+
 3. Report the CLI's verdict by its exit code. The CLI's outcome names say what
    was detected — a **counterexample** — so read them that way:
 

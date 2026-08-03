@@ -35,12 +35,15 @@
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
+  seededRecordDir,
   seedStateFile,
 } from "../harness/fixtures.ts";
 import {
@@ -48,6 +51,15 @@ import {
   MACHINE_INJECTED_TURN_MARKERS,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  closeAdvisoryInstancesForStage,
+  guardAdvisoryChoices,
+} from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  beginModelCheckArtifacts,
+  publishModelCheckArtifacts,
+} from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
+import { buildEnvReceipt, passedInspection } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 
 // The four live-observed machine-injection forms (measured 2026-07-10, #755).
 // Derived from the shared catalog so a marker rename cannot leave a stale copy
@@ -106,6 +118,75 @@ function humanTurnCount(proj: string): number {
     .filter((r) => r.event === "HUMAN_TURN").length;
 }
 
+const formalAdvisory = {
+  plugin: "formal-model-check",
+  code: "changed" as const,
+  message: "advisory: formal-model-check spec hash CHANGED",
+  stage: "functional-design",
+  target: "specs/tla",
+  specIdentity: "sha256:abc",
+};
+
+function publishAdvisoryOutcome(
+  proj: string,
+  route: { output_dir: string; advisory_instance: string },
+  outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR",
+): void {
+  const model = join(proj, "specs/tla/FormalElection.tla");
+  const cfg = join(proj, "specs/tla/FormalElection.cfg");
+  mkdirSync(join(proj, "specs/tla"), { recursive: true });
+  writeFileSync(model, "---- MODULE FormalElection ----\n====\n");
+  writeFileSync(cfg, "SPECIFICATION Spec\n");
+  const runId = "00000000-0000-4000-8000-000000000001";
+  const workspace = beginModelCheckArtifacts(route.output_dir, runId);
+  if (!workspace.ok) throw new Error(workspace.error.detail);
+  const published = publishModelCheckArtifacts({
+    workspace: workspace.value,
+    outcome: outcome === "NOT_DETECTED"
+      ? { kind: "NOT_DETECTED" }
+      : outcome === "DETECTED"
+      ? { kind: "DETECTED", counterexampleIdentity: "counterexample-1" }
+      : { kind: "HARNESS_ERROR", code: "TLC_START_FAILED", detail: "synthetic harness failure" },
+    exitCode: outcome === "NOT_DETECTED" ? 0 : outcome === "DETECTED" ? 1 : 2,
+    environmentReceipt: buildEnvReceipt(runId, "test", [
+      passedInspection("network-deny", "deny"),
+    ]),
+    stdout: new TextEncoder().encode("complete"),
+    stderr: new Uint8Array(),
+    startedAt: "2026-08-03T12:00:00.000Z",
+    finishedAt: "2026-08-03T12:00:01.000Z",
+    advisory: {
+      target: formalAdvisory.target,
+      specIdentity: formalAdvisory.specIdentity,
+      instance: route.advisory_instance,
+    },
+    sourceProvenance: {
+      modelPath: "specs/tla/FormalElection.tla",
+      cfgPath: "specs/tla/FormalElection.cfg",
+      moduleIdentity: "registered-module",
+      cfgIdentity: "registered-cfg",
+      moduleSha256: createHash("sha256").update(readFileSync(model)).digest("hex"),
+      cfgSha256: createHash("sha256").update(readFileSync(cfg)).digest("hex"),
+    },
+  });
+  if (!published.ok) throw new Error(published.error.detail);
+}
+
+function advisoryReceipts(proj: string): Array<{
+  identity: { advisoryInstance: string };
+  choice: string;
+  humanTurn: { eventIdentity: string };
+}> {
+  const store = JSON.parse(
+    readFileSync(join(seededRecordDir(proj), ".amadeus-advisory-choice.json"), "utf-8"),
+  ) as { receipts: Array<{
+    identity: { advisoryInstance: string };
+    choice: string;
+    humanTurn: { eventIdentity: string };
+  }> };
+  return store.receipts;
+}
+
 let proj: string;
 
 describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)", () => {
@@ -134,6 +215,168 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const rc = mint(proj, hookInput("please approve the feasibility gate"));
     expect(rc).toBe(0);
     expect(humanTurnCount(proj)).toBe(1);
+  });
+
+  test("列挙済みchoiceだけがpending advisory receiptになりholdを解除する", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("raw plain exact choice carrierは同じhook呼出しでHUMAN_TURNとreceiptを相関する", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+
+    expect(mint(proj, "1")).toBe(0);
+
+    expect(humanTurnCount(proj)).toBe(1);
+    expect(advisoryReceipts(proj)).toHaveLength(1);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+  });
+
+  test.each(["2", "リスクを承知して延期する"])(
+    "raw defer choice carrier %s はfresh receiptとして相関する",
+    (carrier) => {
+      expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+
+      expect(mint(proj, carrier)).toBe(0);
+
+      expect(humanTurnCount(proj)).toBe(1);
+      expect(advisoryReceipts(proj).map((receipt) => receipt.choice)).toEqual(["defer-with-risk"]);
+      expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+    },
+  );
+
+  test("non-choice raw carrierはHUMAN_TURNだけをmintしreceipt化しない", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+
+    expect(mint(proj, "continue without a formal choice")).toBe(0);
+
+    expect(humanTurnCount(proj)).toBe(1);
+    expect(advisoryReceipts(proj)).toHaveLength(0);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+  });
+
+  test("run-nowは検証済みNOT_DETECTED後だけholdを解除する", () => {
+    const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (first.kind !== "hold") throw new Error("expected hold");
+    const instance = first.advisories[0]!.advisory_instance;
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    expect(routed.runRequired).toBe(true);
+    expect(routed.formalChecks[0]?.advisory_instance).toBe(instance);
+    publishAdvisoryOutcome(proj, routed.formalChecks[0]!, "NOT_DETECTED");
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("run-now待機中の別gate choiceは重複receiptやretry attemptを作らない", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    expect(routed.formalChecks[0]?.output_dir).not.toContain("-retry-");
+
+    expect(mint(proj, "1")).toBe(0);
+
+    expect(advisoryReceipts(proj).map((receipt) => receipt.choice)).toEqual(["run-now"]);
+    const stillRouted = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (stillRouted.kind !== "hold") throw new Error("expected original run route");
+    expect(stillRouted.formalChecks[0]?.output_dir).toBe(routed.formalChecks[0]?.output_dir);
+  });
+
+  test("検証済みNOT_DETECTED後のapproval 1は重複run-now receiptを作らない", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    publishAdvisoryOutcome(proj, routed.formalChecks[0]!, "NOT_DETECTED");
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+
+    expect(mint(proj, "1")).toBe(0);
+
+    expect(advisoryReceipts(proj).map((receipt) => receipt.choice)).toEqual(["run-now"]);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("旧adapterがNOT_DETECTED後に作った重複receiptは検証済みattemptを無効化しない", () => {
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    publishAdvisoryOutcome(proj, routed.formalChecks[0]!, "NOT_DETECTED");
+
+    const storePath = join(seededRecordDir(proj), ".amadeus-advisory-choice.json");
+    const store = JSON.parse(readFileSync(storePath, "utf-8")) as { receipts: Array<Record<string, unknown>> };
+    const first = store.receipts[0] as Record<string, unknown>;
+    store.receipts.push({
+      ...first,
+      humanTurn: {
+        timestamp: "2026-08-03T12:01:00Z",
+        shard: "host-clone.jsonl",
+        eventIdentity: "legacy-duplicate-human-turn",
+      },
+      recordedAt: "2026-08-03T12:01:00Z",
+    });
+    writeFileSync(storePath, `${JSON.stringify(store, null, 2)}\n`);
+
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("DETECTED後のfresh run-nowは同一instanceのretry NOT_DETECTEDだけで解除する", () => {
+    const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (first.kind !== "hold") throw new Error("expected initial hold");
+    const instance = first.advisories[0]!.advisory_instance;
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    publishAdvisoryOutcome(proj, routed.formalChecks[0]!, "DETECTED");
+    const detected = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (detected.kind !== "hold") throw new Error("expected detected hold");
+    expect(detected.runRequired).toBe(false);
+    expect(detected.advisories[0]?.result).toContain("counterexample-1");
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const retry = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (retry.kind !== "hold") throw new Error("expected retry route");
+    expect(retry.runRequired).toBe(true);
+    expect(retry.formalChecks[0]?.advisory_instance).toBe(instance);
+    expect(retry.formalChecks[0]?.output_dir).toEndWith("-retry-2");
+    const receipts = advisoryReceipts(proj);
+    expect(receipts.map((receipt) => receipt.choice)).toEqual(["run-now", "run-now"]);
+    expect(receipts.every((receipt) => receipt.identity.advisoryInstance === instance)).toBe(true);
+    expect(receipts[0]?.humanTurn.eventIdentity).not.toBe(receipts[1]?.humanTurn.eventIdentity);
+    publishAdvisoryOutcome(proj, retry.formalChecks[0]!, "NOT_DETECTED");
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("HARNESS_ERROR後は同一instanceへのfresh deferだけで解除できる", () => {
+    const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (first.kind !== "hold") throw new Error("expected initial hold");
+    const instance = first.advisories[0]!.advisory_instance;
+    expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
+    const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (routed.kind !== "hold") throw new Error("expected run route");
+    publishAdvisoryOutcome(proj, routed.formalChecks[0]!, "HARNESS_ERROR");
+    const failed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (failed.kind !== "hold") throw new Error("expected harness error hold");
+    expect(failed.advisories[0]?.advisory_instance).toBe(instance);
+    expect(failed.advisories[0]?.result).toContain("HARNESS_ERROR TLC_START_FAILED");
+    expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
+    const receipts = advisoryReceipts(proj);
+    expect(receipts.map((receipt) => receipt.choice)).toEqual(["run-now", "defer-with-risk"]);
+    expect(receipts.every((receipt) => receipt.identity.advisoryInstance === instance)).toBe(true);
+    expect(receipts[0]?.humanTurn.eventIdentity).not.toBe(receipts[1]?.humanTurn.eventIdentity);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
+  });
+
+  test("stage完了後の同一発火は新しいinstanceになる", () => {
+    const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (first.kind !== "hold") throw new Error("expected hold");
+    expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("allow");
+    closeAdvisoryInstancesForStage(proj, "functional-design");
+    const repeated = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
+    if (repeated.kind !== "hold") throw new Error("expected repeated hold");
+    expect(repeated.advisories[0]?.advisory_instance).not.toBe(first.advisories[0]?.advisory_instance);
   });
 
   // --- FAIL-OPEN: a read/parse failure must not rob a real human --------------

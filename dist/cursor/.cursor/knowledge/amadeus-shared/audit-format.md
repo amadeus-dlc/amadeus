@@ -74,6 +74,19 @@ is.
 | `SESSION_ENDED` | Claude Code session terminates | Reason | — | `hooks/amadeus-session-end.ts` |
 | `HUMAN_TURN` | A real human acted this turn: submitted a prompt, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. | — | — | `tools/amadeus-presence-reservation.ts` — the canonical presence seam appended to by `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) and by the per-harness prompt-submit adapters, which never append on their own |
 
+### Advisory choice evidence
+
+Formal-model-check checkpoint choices use an authoritative side ledger at
+`<record>/.amadeus-advisory-choice.json`, written atomically under the audit
+lock. Each pending row binds plugin/code, checkpoint, target, spec identity,
+intent run, and advisory instance. Each receipt adds the canonical choice and
+the exact physical `HUMAN_TURN` coordinates: shard, timestamp, and SHA-256 of
+the event record. A stage report is refused while any matching row is
+unresolved. The ordinary audit shard still supplies the human turn and stage
+lifecycle; the side ledger supplies the advisory-specific correlation that a
+general approval event cannot express. Local run-now evidence is retained in
+the instance-specific `.amadeus-advisory-check/` directory.
+
 ### Initialization Events (3 events — fire IN ADDITION TO `STAGE_COMPLETED`)
 
 | Event | When | Required | Optional | Emitter |

@@ -41,6 +41,7 @@ export type GateValue = boolean | typeof GATE_UNRESOLVED;
 export type DirectiveKind =
   | "run-stage"
   | "dispatch-subagent"
+  | "await-advisory-choice"
   | "invoke-swarm"
   | "present-gate"
   | "ask"
@@ -157,8 +158,53 @@ export type DirectiveAdvisory = {
   message: string;
   stage: string;
   target?: string;
+  specIdentity?: string;
   reason?: string;
 };
+
+export type AdvisoryChoiceDirectiveAdvisory = {
+  plugin: string;
+  code: "not-ready" | "changed" | "never-run";
+  message: string;
+  checkpoint: string;
+  target: string;
+  spec_identity: string;
+  intent_run: string;
+  advisory_instance: string;
+  result?: string;
+};
+
+export type AdvisoryFormalCheckDirective = {
+  stage: "formal-model-check";
+  command: string;
+  output_dir: string;
+  target: string;
+  spec_identity: string;
+  advisory_instance: string;
+};
+
+const ADVISORY_CHOICE_QUESTION_SUFFIX =
+  "各advisoryについて次のいずれかを選択してください。";
+
+/**
+ * Render the user-visible advisory question without summarizing or rewriting
+ * any advisory message. The engine and every packaged harness share this seam.
+ */
+export function renderAdvisoryChoiceQuestion(
+  advisories: readonly Pick<AdvisoryChoiceDirectiveAdvisory, "message">[],
+): string {
+  return `${advisories.map((advisory) => advisory.message).join("\n")}\n\n${ADVISORY_CHOICE_QUESTION_SUFFIX}`;
+}
+
+export interface AwaitAdvisoryChoiceDirective {
+  kind: "await-advisory-choice";
+  stage: string;
+  question: string;
+  options: ["今すぐ実行する", "リスクを承知して延期する"];
+  advisories: AdvisoryChoiceDirectiveAdvisory[];
+  run_required?: boolean;
+  formal_checks?: AdvisoryFormalCheckDirective[];
+}
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
 // a named worker (e.g. code-generation, reverse-engineering). Carries every
@@ -287,6 +333,7 @@ export interface AwaitApprovalDirective {
 export type Directive =
   | RunStageDirective
   | DispatchSubagentDirective
+  | AwaitAdvisoryChoiceDirective
   | InvokeSwarmDirective
   | PresentGateDirective
   | AskDirective
@@ -308,6 +355,7 @@ export type ValidationResult =
 export const VALID_KINDS = [
   "run-stage",
   "dispatch-subagent",
+  "await-advisory-choice",
   "invoke-swarm",
   "present-gate",
   "ask",
@@ -363,6 +411,16 @@ const DISPATCH_SUBAGENT_FIELDS = [
   "worker",
 ] as const;
 
+const AWAIT_ADVISORY_CHOICE_FIELDS = [
+  "kind",
+  "stage",
+  "question",
+  "options",
+  "advisories",
+  "run_required",
+  "formal_checks",
+] as const;
+
 const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
@@ -382,6 +440,7 @@ const AWAIT_APPROVAL_FIELDS = [
 const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> = {
   "run-stage": RUN_STAGE_FIELDS,
   "dispatch-subagent": DISPATCH_SUBAGENT_FIELDS,
+  "await-advisory-choice": AWAIT_ADVISORY_CHOICE_FIELDS,
   "invoke-swarm": INVOKE_SWARM_FIELDS,
   "present-gate": PRESENT_GATE_FIELDS,
   ask: ASK_FIELDS,
@@ -407,6 +466,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkRunStageShared(o, "dispatch-subagent", errors);
     checkString(o, "worker", "dispatch-subagent", errors);
   },
+  "await-advisory-choice": (o, errors) => checkAwaitAdvisoryChoice(o, errors),
   "invoke-swarm": (o, errors) => {
     checkStringArray(o, "units", "invoke-swarm", errors);
     if (!("cap" in o)) {
@@ -601,6 +661,79 @@ function checkAwaitApproval(
   ) {
     errors.push("await-approval: presence_reservation_id must be UUID v4");
   }
+}
+
+function checkAwaitAdvisoryChoice(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkString(o, "stage", "await-advisory-choice", errors);
+  checkString(o, "question", "await-advisory-choice", errors);
+  checkStringArray(o, "options", "await-advisory-choice", errors);
+  if (
+    !Array.isArray(o.options) ||
+    o.options.length !== 2 ||
+    o.options[0] !== "今すぐ実行する" ||
+    o.options[1] !== "リスクを承知して延期する"
+  ) {
+    errors.push("await-advisory-choice: options must be the canonical two choices");
+  }
+  if ("run_required" in o && typeof o.run_required !== "boolean") {
+    errors.push(`await-advisory-choice: run_required must be boolean, got ${describe(o.run_required)}`);
+  }
+  if (o.run_required === true && (!Array.isArray(o.formal_checks) || o.formal_checks.length === 0)) {
+    errors.push("await-advisory-choice: run_required requires non-empty formal_checks");
+  }
+  if (o.run_required !== true && "formal_checks" in o) {
+    errors.push("await-advisory-choice: formal_checks requires run_required=true");
+  }
+  if (Array.isArray(o.formal_checks)) {
+    o.formal_checks.forEach((item, index) => {
+      const prefix = `await-advisory-choice: formal_checks[${index}]`;
+      if (!isPlainObject(item)) {
+        errors.push(`${prefix} must be object, got ${describe(item)}`);
+        return;
+      }
+      for (const key of ["command", "output_dir", "target", "spec_identity", "advisory_instance"]) {
+        if (typeof item[key] !== "string" || item[key].length === 0) {
+          errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
+        }
+      }
+      if (item.stage !== "formal-model-check") {
+        errors.push(`${prefix}.stage must be formal-model-check, got ${describe(item.stage)}`);
+      }
+    });
+  }
+  if (!Array.isArray(o.advisories) || o.advisories.length === 0) {
+    errors.push("await-advisory-choice: advisories must be a non-empty array");
+    return;
+  }
+  o.advisories.forEach((item, index) => {
+    const prefix = `await-advisory-choice: advisories[${index}]`;
+    if (!isPlainObject(item)) {
+      errors.push(`${prefix} must be object, got ${describe(item)}`);
+      return;
+    }
+    for (const key of [
+      "plugin",
+      "message",
+      "checkpoint",
+      "target",
+      "spec_identity",
+      "intent_run",
+      "advisory_instance",
+    ]) {
+      if (typeof item[key] !== "string" || item[key].length === 0) {
+        errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
+      }
+    }
+    if (typeof item.code !== "string" || !(ADVISORY_CODES as readonly string[]).includes(item.code)) {
+      errors.push(`${prefix}.code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`);
+    }
+    if ("result" in item && (typeof item.result !== "string" || item.result.length === 0)) {
+      errors.push(`${prefix}.result must be non-empty string, got ${describe(item.result)}`);
+    }
+  });
 }
 
 // --- Helpers (mirror amadeus-stage-schema.ts: presence first, then type) ---
@@ -840,7 +973,7 @@ function checkOptionalAdvisoryStrings(
   prefix: string,
   errors: string[],
 ): void {
-  for (const key of ["target", "reason"]) {
+  for (const key of ["target", "specIdentity", "reason"]) {
     if (key in item && typeof item[key] !== "string") {
       errors.push(`${prefix}.${key} must be string, got ${describe(item[key])}`);
     }

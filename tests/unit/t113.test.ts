@@ -33,6 +33,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type Directive,
+  renderAdvisoryChoiceQuestion,
   validateDirective,
 } from "../../dist/claude/.claude/tools/amadeus-directive.ts";
 
@@ -91,6 +92,25 @@ function presentGate(): Record<string, unknown> {
   };
 }
 
+function awaitAdvisoryChoice(): Record<string, unknown> {
+  return {
+    kind: "await-advisory-choice",
+    stage: "functional-design",
+    question: "形式検査advisoryについて選択してください。",
+    options: ["今すぐ実行する", "リスクを承知して延期する"],
+    advisories: [{
+      plugin: "formal-model-check",
+      code: "changed",
+      message: "advisory: formal-model-check spec hash CHANGED",
+      checkpoint: "functional-design",
+      target: "specs/tla",
+      spec_identity: "sha256:abc",
+      intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
+      advisory_instance: "019fc698-ba1f-7000-8000-000000000001",
+    }],
+  };
+}
+
 function selectIntent(): Record<string, unknown> {
   const options = ["first-intent", "second-intent"];
   return {
@@ -137,6 +157,45 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
 
   test("run-stage well-formed -> VALID", () => {
     expect(validateDirective(runStage()).valid).toBe(true);
+  });
+
+  test("await-advisory-choice well-formed -> VALID", () => {
+    expect(validateDirective(awaitAdvisoryChoice()).valid).toBe(true);
+  });
+
+  test("advisory choice renderer preserves every message verbatim and in order", () => {
+    expect(renderAdvisoryChoiceQuestion([
+      { message: "first advisory\nwith detail" },
+      { message: "second advisory: do not summarize" },
+    ])).toBe(
+      "first advisory\nwith detail\nsecond advisory: do not summarize\n\n" +
+      "各advisoryについて次のいずれかを選択してください。",
+    );
+  });
+
+  test("await-advisory-choice rejects missing identity and non-canonical options", () => {
+    const missingIdentity = awaitAdvisoryChoice();
+    missingIdentity.advisories = [{ plugin: "p", code: "changed", message: "m" }];
+    expect(errs(missingIdentity)).toContain("advisories[0].advisory_instance");
+    expect(errs({ ...awaitAdvisoryChoice(), options: ["continue"] })).toContain("options");
+  });
+
+  test("await-advisory-choice validates the explicit formal-check route", () => {
+    const routed = {
+      ...awaitAdvisoryChoice(),
+      run_required: true,
+      formal_checks: [{
+        stage: "formal-model-check",
+        command: '"bun" "plugins/formal-model-check/tools/run-model-check.ts"',
+        output_dir: "/evidence/advisory-1",
+        target: "specs/tla",
+        spec_identity: "sha256:abc",
+        advisory_instance: "019fc698-ba1f-7000-8000-000000000001",
+      }],
+    };
+    expect(validateDirective(routed).valid).toBe(true);
+    expect(errs({ ...awaitAdvisoryChoice(), run_required: true })).toContain("formal_checks");
+    expect(errs({ ...awaitAdvisoryChoice(), formal_checks: routed.formal_checks })).toContain("run_required=true");
   });
 
   test("dispatch-subagent well-formed -> VALID", () => {
