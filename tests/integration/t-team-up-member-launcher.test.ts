@@ -75,6 +75,10 @@ function commandFor(
     ],
     env: {
       ...process.env,
+      AGENT_IDENTITY: "",
+      CODEX_IDENTITY: "",
+      CLAUDE_IDENTITY: "",
+      RUN_RECORD: "",
       ...env,
       HOME: home,
       TEAM_REPO: ROOT,

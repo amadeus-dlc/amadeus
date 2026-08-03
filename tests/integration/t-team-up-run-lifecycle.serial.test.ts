@@ -343,7 +343,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
   return { base, env, herdrState, joinLog, repo, safetyWaitBarrierDir, state };
 }
 
-describe("team-up safety-wait supervisor", () => {
+describe("team-up safety-wait supervisor: CLI contract", () => {
   test("the safety-wait CLI validates commands and supervises only an active exact run", async () => {
     const root = mkdtempSync(join(tmpdir(), "amadeus-safety-wait-cli-"));
     tempDirs.push(root);
@@ -437,7 +437,7 @@ printf '{"result":{"agents":[]}}\\n'
   });
 });
 
-describe("team-up run lifecycle", () => {
+describe("team-up run lifecycle: launch", () => {
   test("help explains the fresh and resume lifecycle commands", () => {
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP, "--help"],
@@ -571,7 +571,7 @@ describe("team-up run lifecycle", () => {
   });
 });
 
-describe("team-up safety-wait supervisor", () => {
+describe("team-up safety-wait supervisor: ownership and readiness", () => {
   test("Codex fresh, resume, and kill own one safety-wait supervisor per role", () => {
     const fixture = createCliFixture();
     const members = [
@@ -883,7 +883,7 @@ describe("team-up safety-wait supervisor", () => {
 
 });
 
-describe("team-up run lifecycle", () => {
+describe("team-up run lifecycle: resume and preparation", () => {
   test("a fresh Claude launch pre-registers every role with agmsg", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
@@ -1092,7 +1092,7 @@ describe("team-up Herdr adapter", () => {
 
 });
 
-describe("team-up run lifecycle", () => {
+describe("team-up run lifecycle: retained runs", () => {
   test("a fresh launch refuses a dirty base repository", () => {
     const fixture = createCliFixture();
     writeFileSync(join(fixture.repo, "uncommitted.txt"), "not in HEAD\n");
