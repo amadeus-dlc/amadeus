@@ -56,7 +56,7 @@ function gitTrackedFiles(projectDir: string): string[] {
 }
 
 describe("codex exec live E2E helper", () => {
-  test("canonical project setup activates the distribution and completes git, trust, and config", () => {
+  test("canonical project setup activates the distribution without copying source auth", () => {
     const fixture = createCodexHarnessFixture();
     const project = setupCodexExecProject({
       prefix: "codex-exec-project-",
@@ -75,6 +75,7 @@ describe("codex exec live E2E helper", () => {
       expect(relative(project.proj, project.home).startsWith(`..${sep}`)).toBe(true);
       expect(trackedFiles).toContain("prepared.txt");
       expect(trackedFiles.some((file) => file.endsWith("auth.json"))).toBe(false);
+      expect(existsSync(join(project.home, "auth.json"))).toBe(false);
       expect(readFileSync(join(project.home, "config.toml"), "utf-8")).toContain(
         'model = "fixture-model"',
       );
@@ -84,7 +85,7 @@ describe("codex exec live E2E helper", () => {
     }
   });
 
-  test("canonical project setup rolls back copied auth and distribution when trust fails", () => {
+  test("canonical project setup rolls back isolated home and distribution when trust fails", () => {
     const fixture = createCodexHarnessFixture();
     let scratchRoot: string | undefined;
     try {
@@ -97,7 +98,7 @@ describe("codex exec live E2E helper", () => {
           model: "fixture-model",
           prepareProject: (projectDir) => {
             scratchRoot = dirname(projectDir);
-            expect(existsSync(join(scratchRoot, "codex-home", "auth.json"))).toBe(true);
+            expect(existsSync(join(scratchRoot, "codex-home", "auth.json"))).toBe(false);
             expect(existsSync(join(projectDir, ".codex", "config.toml"))).toBe(true);
             writeFileSync(join(projectDir, "prepared.txt"), "prepared\n", "utf-8");
           },

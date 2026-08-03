@@ -28,8 +28,8 @@
 //
 // LIVE GATE: disabled on GitHub Actions. Locally, requires
 // AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
-// normal Codex auth.json. Skips cleanly otherwise. Serial.
+// (AMADEUS_CODEX_BIN or PATH) + an OPENAI_API_KEY credential lease. Source
+// Codex auth/config paths are never copied. Skips cleanly otherwise. Serial.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -55,7 +55,7 @@ import {
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const AUTH_HOME = undefined;
 const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 // A multi-spawn live journey. codex exec is the slowest harness — even a "cheap"
@@ -98,7 +98,7 @@ const SKIP_REASON = codexExecLiveRequirementsSkipReason({
 // The journey root with the codex shell, git-init'd + trusted + a CODEX_HOME
 // containing normal Codex auth and project trust. The real CODEX_HOME lives in
 // a separate scratch root so preserving or committing the workspace can never
-// retain auth.json.
+// retain credential material.
 interface CodexWorkspaceJourney extends WorkspaceJourney {
   cleanupAuth: () => void;
 }

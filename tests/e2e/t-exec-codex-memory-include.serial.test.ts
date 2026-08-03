@@ -22,8 +22,8 @@
 //
 // LIVE GATE: disabled on GitHub Actions. Locally, requires
 // AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AMADEUS_CODEX_BIN or PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a
-// normal Codex auth.json. Skips cleanly otherwise.
+// (AMADEUS_CODEX_BIN or PATH) + an OPENAI_API_KEY credential lease. Source
+// Codex auth/config paths are never copied. Skips cleanly otherwise.
 // Verified live 2026-06-24 (codex-cli 0.139.0):
 // the @-mention resolved org.md and the sentinel round-tripped (exit 0).
 
@@ -44,7 +44,7 @@ import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
+const AUTH_HOME = undefined;
 const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
