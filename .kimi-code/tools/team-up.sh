@@ -236,20 +236,6 @@ herdr_wait_ready() {
   return 1
 }
 
-# The run record's mux file is a generation marker, not a backend selector:
-# fresh runs always record "herdr". A run whose marker is missing or is not
-# "herdr" predates the herdr-only launcher and cannot be driven here — reject
-# it loudly with recovery guidance.
-reject_legacy_run() {
-  local run_id="$1" marker="$2"
-  {
-    echo "ERROR: run $run_id predates the herdr-only launcher (mux marker: ${marker:-<none>}); it cannot be resumed or killed here."
-    echo "Its worktrees and branches are intact — create a fresh run with: bash <harness-dir>/tools/team-up.sh"
-    echo "If the old session is still attached, tear it down manually, e.g.: tmux kill-session -t $S"
-  } >&2
-  exit 1
-}
-
 # True when session $1 exists: a running herdr headless server answers
 # `workspace list` over the session socket.
 mux_has_session() {
@@ -617,10 +603,6 @@ Without -c, creates a new run (leader + N engineers) from the repository HEAD.
 
 The first resume of legacy fixed worktrees requires --claude or --codex.
 
-Runs created before the herdr-only launcher (their run record's mux marker is
-absent or not "herdr") can no longer be resumed or killed; their worktrees and
-branches stay intact, so create a fresh run to continue that work.
-
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
   TEAM_ENGINEERS      Engineer count for a fresh run: 2, 4, or 6 (default: 6)
@@ -867,12 +849,7 @@ while [ "$#" -gt 0 ]; do
     if [ -f "$INSTANCE_DIR/active-run" ]; then
       active_run="$(cat "$INSTANCE_DIR/active-run")"
     fi
-    # Legacy guard: refuse to --kill a run created before the herdr-only
-    # launcher (its mux marker is absent or not "herdr"); its session, if any,
-    # is not a herdr session this script can tear down.
     if [ -n "$active_run" ]; then
-      saved_mux="$(cat "$INSTANCE_DIR/runs/$active_run/mux" 2>/dev/null || true)"
-      [ "$saved_mux" = "herdr" ] || reject_legacy_run "$active_run" "$saved_mux"
       stop_safety_wait_supervisors "$INSTANCE_DIR/runs/$active_run"
     fi
     mux_kill "$S"
@@ -1471,10 +1448,6 @@ create_run() {
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
-  # Generation marker (always "herdr" now that it is the only backend);
-  # resume/--kill read it back as a legacy guard, rejecting runs whose marker
-  # is absent or not "herdr".
-  printf 'herdr\n' >"$RUN_RECORD/mux"
   printf '%s\n' "$INSTANCE" >"$RUN_RECORD/instance"
   printf '%s\n' "$S" >"$RUN_RECORD/session"
   printf '%s\n' "$TEAM_NAME" >"$RUN_RECORD/agmsg-team"
@@ -1574,7 +1547,7 @@ create_run() {
 }
 
 load_run() {
-  local requested_id="$1" saved_runtime saved_mux
+  local requested_id="$1" saved_runtime
   if [ -n "$requested_id" ]; then
     RUN_ID="$requested_id"
   else
@@ -1590,10 +1563,6 @@ load_run() {
     return 1
   fi
   RUNTIME="$saved_runtime"
-  # Legacy guard: only herdr-generation runs can be resumed. A run with an
-  # absent or non-herdr mux marker predates the herdr-only launcher; reject it.
-  saved_mux="$(cat "$RUN_RECORD/mux" 2>/dev/null || true)"
-  [ "$saved_mux" = "herdr" ] || reject_legacy_run "$RUN_ID" "$saved_mux"
   # Engineer count is fixed by the run's worktrees; read the saved size.
   TEAM_SIZE="$(record_size "$RUN_RECORD")"
   # The messaging backend is fixed at run creation; inherit the saved value
@@ -1620,9 +1589,6 @@ adopt_legacy_run() {
   fi
   mkdir -p "$RUN_RECORD/members"
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
-  # These fixed worktrees are adopted and launched with herdr, so record the
-  # herdr generation marker (see create_run).
-  printf 'herdr\n' >"$RUN_RECORD/mux"
   printf '%s\n' "$INSTANCE" >"$RUN_RECORD/instance"
   printf '%s\n' "$S" >"$RUN_RECORD/session"
   printf '%s\n' "$TEAM_NAME" >"$RUN_RECORD/agmsg-team"

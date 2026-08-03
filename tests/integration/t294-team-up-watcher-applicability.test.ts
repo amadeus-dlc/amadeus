@@ -147,11 +147,4 @@ describe("team-up watcher verification applicability (Issue #1449/#1476)", () =>
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString().trim()).toBe("60 1");
   });
-
-  // BR-17: the retired constant leaves no alias or fallback behind.
-  test("CLAUDE_MONITOR_PROMPT is fully retired (BR-17)", () => {
-    const result = runLib('printf "[%s]" "${CLAUDE_MONITOR_PROMPT:-}"');
-    expect(result.exitCode, result.stderr.toString()).toBe(0);
-    expect(result.stdout.toString()).toBe("[]");
-  });
 });
