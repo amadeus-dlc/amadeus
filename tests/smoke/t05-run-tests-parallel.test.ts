@@ -187,6 +187,17 @@ describe("coverage source path normalization", () => {
     });
   }
 
+  test("folds temporary candidate harness sources into canonical core paths", () => {
+    const source = join(
+      realpathSync(tmpdir()),
+      "amadeus-candidate-codex-AbC123",
+      ".codex",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(CANONICAL_LIB);
+  });
+
   test("folds repository-relative harness prefixes via the generated-prefix table", () => {
     expect(normalizeCoverageSourcePath(".claude/tools/amadeus-lib.ts", coveragePathContext)).toBe(
       CANONICAL_LIB,
@@ -622,6 +633,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       const lcov = readFileSync(join(dir, "lcov.info"), "utf-8");
       expect(lcov).toContain("SF:packages/framework/core/tools/amadeus-lib.ts");
       expect(lcov).not.toContain("amadeus-pkg-codex-");
+      expect(lcov).not.toContain("amadeus-candidate-codex-");
       expect(lcov).toContain("SF:scripts/package.ts");
       expect(lcov).toContain("SF:packages/framework/harness/codex/manifest.ts");
       expect(lcov).toContain("SF:packages/framework/harness/kiro/manifest.ts");
