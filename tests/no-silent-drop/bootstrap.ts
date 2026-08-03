@@ -457,7 +457,7 @@ function gitObjectExists(repoRoot: string, object: string): boolean {
   return spawnSync("git", ["cat-file", "-e", object], { cwd: repoRoot, encoding: "utf8" }).status === 0;
 }
 
-function isAncestor(repoRoot: string, ancestor: string, descendant: string): boolean {
+export function isAncestor(repoRoot: string, ancestor: string, descendant: string): boolean {
   const result = spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
     cwd: repoRoot,
     encoding: "utf8",

@@ -23,7 +23,7 @@ import {
   scanSourceForTest,
   stateResultKinds,
 } from "../no-silent-drop/ast-scan.ts";
-import { loadTrustedPreviousLedgers } from "../no-silent-drop/bootstrap.ts";
+import { isAncestor, loadTrustedPreviousLedgers } from "../no-silent-drop/bootstrap.ts";
 import {
   captureSnapshot,
   isMode,
@@ -1076,6 +1076,11 @@ describe("no-silent-drop boundaries", () => {
     const incomplete = createLedgerRepo(false);
     expect(() => loadTrustedPreviousLedgers(incomplete.root, incomplete.sha, currentBaseline, currentExemptions))
       .toThrow("trusted previous exemptions is unavailable");
+
+    const nonRepository = mkdtempSync(join(tmpdir(), "nsd-lineage-error-"));
+    temporaryDirectories.push(nonRepository);
+    expect(() => isAncestor(nonRepository, "a".repeat(40), "b".repeat(40)))
+      .toThrow("bootstrap base lineage could not be verified");
   });
 
   test("real repository check emits the public pass envelope and exit 0", async () => {
