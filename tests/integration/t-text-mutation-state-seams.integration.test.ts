@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  handleCheckbox,
   handleSkip,
   mergeScopedCheckboxProgress,
   skipStageContent,
@@ -16,6 +17,35 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { useRealScopeData } from "../harness/real-scope-data.ts";
+
+class ExitSignal extends Error {
+  constructor(readonly code: number) {
+    super(`exit ${code}`);
+  }
+}
+
+function captureExit(action: () => void): { code: number | null; stderr: string } {
+  const originalExit = process.exit;
+  const originalError = console.error;
+  let code: number | null = null;
+  let stderr = "";
+  process.exit = ((value?: number) => {
+    throw new ExitSignal(value ?? 0);
+  }) as typeof process.exit;
+  console.error = (...args: unknown[]) => {
+    stderr += args.map(String).join(" ");
+  };
+  try {
+    action();
+  } catch (error) {
+    if (error instanceof ExitSignal) code = error.code;
+    else throw error;
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  return { code, stderr };
+}
 
 describe("state text mutation in-process seams", () => {
   let project: string;
@@ -46,6 +76,25 @@ describe("state text mutation in-process seams", () => {
     }
     expect(readFileSync(join(seededRecordDir(project), "amadeus-state.md"), "utf8"))
       .toContain("- [S] functional-design — EXECUTE");
+  });
+
+  test("checkbox handler rejects an unknown stage before mutation", () => {
+    const statePath = join(seededRecordDir(project), "amadeus-state.md");
+    const before = readFileSync(statePath, "utf8");
+    const previousProjectDir = process.env.CLAUDE_PROJECT_DIR;
+    const restoreScopeData = useRealScopeData();
+    process.env.CLAUDE_PROJECT_DIR = project;
+    let result: ReturnType<typeof captureExit>;
+    try {
+      result = captureExit(() => handleCheckbox(["missing-stage=completed"]));
+    } finally {
+      restoreScopeData();
+      if (previousProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = previousProjectDir;
+    }
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("reason=target-not-found");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
   });
 
   test("scoped merge applies the winner and records a loser deferral", () => {

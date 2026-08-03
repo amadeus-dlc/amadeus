@@ -1766,7 +1766,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "2337",
+    "lines": "2342",
     "reason": "Explicit Intent terminal selection is exercised through tests/integration/t361-amadeus-mirror-lifecycle-completion.integration.test.ts test 'a moved cursor keeps the original Intent pinned through lifecycle and terminal commit'; the selected-Intent state CLI child is outside parent Bun LCOV.",
     "expiry": "remove when selected-Intent terminal dispatch is driven in-process"
   },
@@ -1790,12 +1790,12 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5305",
+    "lines": "5311",
     "reason": "The targeted canonical emit inside a handler that main() only ever reaches as a subprocess (handleDelegateRejection / handleFork / handleMerge are module-private, so no in-process caller exists to drive them and bun's coverage cannot see through the spawn). The emit itself IS driven in-process: t390 exercises emitAuditEvent for these same events - identical event type, field set and target - and asserts the row matches the legacy writer's. What stays unmeasured is only this call site's wiring. Spawn-blindspot-two-step (ii): no behaviour-preserving refactor removes the line from the patch population, because migrating the call is the change."
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5288-5290",
+    "lines": "5294-5296",
     "reason": "The handleMerge call site for mergeScopedCheckboxProgress is reachable only through the spawned state CLI, so Bun does not attribute these three adapter rows to the parent LCOV report. The extracted merge decision is driven in-process by tests/integration/t-text-mutation-state-seams.integration.test.ts across winning, losing, and malformed-state paths; only the spawn-only result unpacking remains unmeasured.",
     "expiry": "remove when handleMerge gains an in-process driver or Bun merges child-process coverage"
   },
@@ -1819,7 +1819,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "5357-5360",
+    "lines": "5363-5366",
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
   },
@@ -1834,12 +1834,6 @@
     "lines": "5333",
     "reason": "The prepared verifier's fail-closed matrix is exercised by the named 'prepared completion refuses ...' tests in tests/integration/t265-engine-boundary.integration.test.ts; this line is the I/O-race sibling where a state was read but its Intent disappears before verification.",
     "expiry": "remove when prepared-completion Intent resolution receives an injectable read port"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "4956",
-    "reason": "Marker-kind resolution inside handleFork, which main() only ever reaches as a subprocess (the handler is module-private, so no in-process caller exists and bun cannot see through the spawn). The decision itself IS driven in-process: boltContextKind is exported from amadeus-observability.ts and exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts, while the spawned fork in the same file asserts the marker the CLI actually produced. What stays unmeasured is this call site's wiring. Spawn-blindspot-two-step: the seam extraction is step (i), this residue is (ii).",
-    "expiry": "remove when handleFork gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
