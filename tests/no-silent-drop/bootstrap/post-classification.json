@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
-  "censusDigest": "2ebf83c121608b5659bdd89d6b6b75e46244c0056fd8bc937d7b761d39049905",
+  "revision": "f9f31d1b034818ca9fc5ce8c7328f4fe1c0b9956",
+  "censusDigest": "d00ab37972ab53f37a1d69b79b592022712f4759528c316d0b52ffa962b89b5c",
   "findings": [
     {
       "ruleId": "NSD001",
@@ -25,20 +25,6 @@
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Non-fatal — a mint failure must never block the human's turn. }",
       "fingerprint": "96167b89c182294399cd63660b3920236b103f55857abc6365e537c690433b46",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/hooks/amadeus-plugin-compose.ts",
-      "line": 32,
-      "column": 3,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch (err) { console.error(`amadeus-plugin: auto-compose error (non-blocking): ${String(err)}`); }",
-      "fingerprint": "544af0317a9ec0886dc4aea6e44cce5486144334146cda3b976d5058eaf576b9",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
@@ -258,63 +244,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 281,
-      "column": 5,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch { // Unreadable audit — treat as length 0; the stage component still varies. }",
-      "fingerprint": "91757ba49e796857b55f7710913bd65c51b69c6e6137ef55f1cc80ba6dd01a0c",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 302,
-      "column": 5,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch { // Corrupt / unreadable guard file — treat as no prior record (count 0). }",
-      "fingerprint": "07f916d8f3aa339fb374f004f5732d7b945886b6188c835ebd1fe59b9cf1ffea",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 313,
-      "column": 5,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch { // If we cannot persist the counter we still proceed; the stop_hook_active // flag remains a second, native bound (see decideBlock). Worst case the // counter under-counts — never over-blocks — because an unwritable record // reads back as count 0, and the stop_hook_active escape hatch still fires. }",
-      "fingerprint": "5898a6a5bb4e9671bdfbc20ed0c882f3fd28605ba1d618ed4bf5f96ff29680b6",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 381,
-      "column": 5,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch { // Non-fatal — a stale streak only ever makes us release SOONER, never trap. }",
-      "fingerprint": "b866edba14e19a5a5ad38f0bb1e640e8ed1129a6f0d5cb77328d749465362fab",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 537,
+      "line": 450,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { observation = { kind: \"unreadable\", path: markerPath, reason: errorMessage(e) }; }",
@@ -328,7 +258,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 545,
+      "line": 458,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { janitor = { kind: \"delete-failed\", path: markerPath, reason: errorMessage(e) }; }",
@@ -342,7 +272,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 733,
+      "line": 646,
       "column": 13,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { parsedArgs = { command: args }; }",
@@ -356,7 +286,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 831,
+      "line": 744,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Unparseable directive — fail open. }",
@@ -370,7 +300,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 884,
+      "line": 800,
       "column": 3,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Malformed input follows the existing fail-open parser below. In particular, // it supplies no session id, so it can never consume a migration permission. }",
@@ -384,7 +314,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/hooks/amadeus-stop.ts",
-      "line": 914,
+      "line": 830,
       "column": 3,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Heartbeat failure is non-fatal — never let it affect the stop decision. }",
@@ -706,7 +636,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-audit.ts",
-      "line": 1232,
+      "line": 1339,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -720,8 +650,8 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-bolt.ts",
-      "line": 947,
-      "column": 5,
+      "line": 1035,
+      "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
       "fingerprint": "f69bd4a009ad12159aae0c2df1e75f32dd561214e15496ede388188d783a2c52",
@@ -734,7 +664,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-bolt.ts",
-      "line": 1009,
+      "line": 1067,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* noop — original error will surface via failJson next */ }",
@@ -762,7 +692,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-config.ts",
-      "line": 219,
+      "line": 228,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { rootReal = null; }",
@@ -790,7 +720,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-graph.ts",
-      "line": 2366,
+      "line": 2370,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* first compile: no grid on disk yet */ }",
@@ -804,7 +734,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-graph.ts",
-      "line": 2515,
+      "line": 2519,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { gridOnDisk = \"\"; }",
@@ -818,7 +748,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-graph.ts",
-      "line": 2523,
+      "line": 2527,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* unparseable/missing grid: compare the raw bytes (guaranteed drift) */ }",
@@ -1140,7 +1070,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6094,
+      "line": 6081,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Lock dir may already be removed }",
@@ -1154,7 +1084,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6106,
+      "line": 6093,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no stamp / unreadable }",
@@ -1168,7 +1098,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6256,
+      "line": 6243,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // leftover mutex is recovered by age on the next reap attempt }",
@@ -1182,7 +1112,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6287,
+      "line": 6274,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // held (EEXIST) or unreachable (ENOENT parent) — inspect before giving up }",
@@ -1196,7 +1126,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6309,
+      "line": 6296,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // leftover husk is harmless (never collides with the live mutex name) }",
@@ -1210,7 +1140,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6362,
+      "line": 6349,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // lockDir already re-created by yet another process → the live lock is // back in place; discard our private snapshot. try { rmSync(dead, { recursive: true, force: true }); } catch { /* harmless */ } }",
@@ -1224,7 +1154,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6365,
+      "line": 6352,
       "column": 63,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* harmless */ }",
@@ -1238,7 +1168,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6373,
+      "line": 6360,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // leftover .dead dir is harmless (it never collides with the live lock name) }",
@@ -1252,7 +1182,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6396,
+      "line": 6383,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // The acquire still fails closed; a later dead/unstamped reap can retry. }",
@@ -1266,7 +1196,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6418,
+      "line": 6405,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale // holder so a SIGKILL'd owner doesn't wedge every waiter for the full // retry budget. If we reap, retry the mkdir immediately (next loop turn). if (reapStaleLock(lockDir, reapPolicy)) { try { mkdirSync(lockDir); return finalizeAuditLockAcquire(lockDir, key, reapPolicy); } catch { // another waiter beat us to the freed dir — fall through to sleep } } if (i < maxRetries) { Bun.sleepSync(retryMs); } }",
@@ -1280,7 +1210,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6426,
+      "line": 6413,
       "column": 11,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // another waiter beat us to the freed dir — fall through to sleep }",
@@ -1294,7 +1224,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6514,
+      "line": 6501,
       "column": 30,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* tmp may already be gone */ }",
@@ -1308,7 +1238,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6686,
+      "line": 6673,
       "column": 66,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* already gone */ }",
@@ -1322,7 +1252,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 6906,
+      "line": 6893,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { files = []; }",
@@ -1336,7 +1266,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 7883,
+      "line": 7870,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Drop-log failure is truly non-fatal — we're already in a failure path. }",
@@ -1350,7 +1280,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "line": 7965,
+      "line": 7952,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Audit write failed — we're already in an error path, swallow. }",
@@ -1406,7 +1336,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 332,
+      "line": 342,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* ignore */ }",
@@ -1420,7 +1350,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 337,
+      "line": 347,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* ignore */ }",
@@ -1434,7 +1364,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 347,
+      "line": 357,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* ignore */ }",
@@ -1448,7 +1378,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 358,
+      "line": 368,
       "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* ignore */ }",
@@ -1462,7 +1392,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 363,
+      "line": 373,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Target absent (first write) is acceptable; other lstat errors fall through // to rename, which will surface a failure. }",
@@ -1476,7 +1406,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
-      "line": 372,
+      "line": 382,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* ignore */ }",
@@ -1602,7 +1532,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-      "line": 2350,
+      "line": 2362,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* advisory: guard is best-effort, never blocks a real next */ }",
@@ -1616,7 +1546,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-      "line": 3835,
+      "line": 3890,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // unparseable — fall through to null }",
@@ -1630,7 +1560,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-      "line": 5212,
+      "line": 5267,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // The command still returns no carrier. A later retry resolves the // exact marker or rejects it; it can never authorize another route. }",
@@ -1644,7 +1574,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-      "line": 5389,
+      "line": 5444,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -1658,7 +1588,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-plugin-activation.ts",
-      "line": 326,
+      "line": 338,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { alreadyRaised = false; // unreadable latch => raise (fail-open) }",
@@ -1672,7 +1602,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-plugin-activation.ts",
-      "line": 334,
+      "line": 346,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Unwritable latch: the advisory is still raised (it is already in // `fresh`); only the de-duplication for the rest of the run is lost. }",
@@ -1700,7 +1630,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-reviewer-runtime.ts",
-      "line": 635,
+      "line": 650,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (error) { const message = error instanceof Error ? error.message : String(error); deps.stderr.write(`amadeus-reviewer-runtime: ${message}\\n`); deps.exitCode.exitCode = 1; }",
@@ -1728,7 +1658,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-runtime.ts",
-      "line": 1517,
+      "line": 1560,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -1742,7 +1672,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts",
-      "line": 128,
+      "line": 180,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { findings.push({ harness, surface: \"scope-grid\", reason: \"unreadable\", path: gridPath, }); }",
@@ -1812,7 +1742,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 855,
+      "line": 876,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -1826,7 +1756,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 1520,
+      "line": 1552,
       "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* unreadable entry - skip */ }",
@@ -1840,7 +1770,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 1684,
+      "line": 1716,
       "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* unreadable dir - skip */ }",
@@ -1854,7 +1784,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 3731,
+      "line": 3771,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // fall through to the guard below }",
@@ -1868,7 +1798,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 3825,
+      "line": 3865,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // fall through to the guard below }",
@@ -1882,7 +1812,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 3894,
+      "line": 3934,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // fall through to the guard below }",
@@ -1896,7 +1826,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 4291,
+      "line": 4335,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Audit read failures are non-fatal — default to false, orchestrator // will use the standard resume flow. }",
@@ -1910,7 +1840,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 4345,
+      "line": 4389,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Audit unreadable — nothing to recover. }",
@@ -1924,7 +1854,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 4653,
+      "line": 4697,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // If audit emission itself fails, surface the original reason. }",
@@ -1938,7 +1868,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
-      "line": 4880,
+      "line": 4924,
       "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { stateForWalk = undefined; }",
@@ -1952,7 +1882,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-swarm.ts",
-      "line": 887,
+      "line": 1307,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -1966,7 +1896,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 689,
+      "line": 694,
       "column": 26,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { /* Best-effort cleanup after a rejected read. */ }",
@@ -1980,7 +1910,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 788,
+      "line": 793,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // An unreadable real directory is an existing but unhealthy heartbeat dir. }",
@@ -1994,7 +1924,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1538,
+      "line": 1543,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { composeMarkerObservation = (e as NodeJS.ErrnoException).code === \"ENOENT\" ? { kind: \"absent\" as const, path: composeMarkerPath } : { kind: \"unreadable\" as const, path: composeMarkerPath, reason: errorMessage(e) }; }",
@@ -2008,7 +1938,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1603,
+      "line": 1608,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { settingsReadable = false; }",
@@ -2022,7 +1952,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1764,
+      "line": 1769,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { probeOk = false; }",
@@ -2036,7 +1966,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1919,
+      "line": 1924,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Drift-check failure is non-fatal for doctor report }",
@@ -2050,7 +1980,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1941,
+      "line": 1946,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Lock-probe failure is non-fatal for the doctor report. }",
@@ -2064,7 +1994,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 1972,
+      "line": 1977,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // State-version check failure is non-fatal for doctor report }",
@@ -2078,7 +2008,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2123,
+      "line": 2128,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Orphan worktrees: check failed\", fix: errorMessage(e), }); }",
@@ -2092,7 +2022,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2186,
+      "line": 2191,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Stale branches: check failed\", fix: errorMessage(e), }); }",
@@ -2106,7 +2036,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2236,
+      "line": 2241,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Orphan state files: check failed\", fix: errorMessage(e), }); }",
@@ -2120,7 +2050,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2348,
+      "line": 2353,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Orphan audit: check failed\", fix: errorMessage(e), }); }",
@@ -2134,7 +2064,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2405,
+      "line": 2410,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // Practices-staleness check failure is non-fatal for doctor report }",
@@ -2148,7 +2078,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2477,
+      "line": 2482,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // MERGE_DISPATCH check failure is non-fatal for doctor report }",
@@ -2162,7 +2092,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2495,
+      "line": 2500,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Cycle detection: graph load failed\", fix: errorMessage(e), }); }",
@@ -2176,7 +2106,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2536,
+      "line": 2541,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Orphan stage files: check failed\", fix: errorMessage(e), }); }",
@@ -2190,7 +2120,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2571,
+      "line": 2576,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Scope validation: check failed\", fix: errorMessage(e), }); }",
@@ -2204,7 +2134,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2605,
+      "line": 2610,
       "column": 9,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (parseErr) { schemaFails.push({ slug: stage.slug, errors: [errorMessage(parseErr)] }); }",
@@ -2218,7 +2148,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2619,
+      "line": 2624,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Schema validation: check failed\", fix: errorMessage(e), }); }",
@@ -2232,7 +2162,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2653,
+      "line": 2658,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Graph references: check failed\", fix: errorMessage(e), }); }",
@@ -2246,7 +2176,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2688,
+      "line": 2693,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Keyword overlap: check failed\", fix: errorMessage(e), }); }",
@@ -2260,7 +2190,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2758,
+      "line": 2763,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Rule drift: check failed\", fix: errorMessage(e), }); }",
@@ -2274,7 +2204,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 2870,
+      "line": 2875,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch (e) { results.push({ pass: false, label: \"Intent registry: reconciliation check failed\", fix: errorMessage(e), }); }",
@@ -2288,7 +2218,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 3146,
+      "line": 3151,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // ignore parse errors }",
@@ -2302,7 +2232,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 3157,
+      "line": 3162,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // ignore }",
@@ -2316,7 +2246,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 3166,
+      "line": 3171,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // ignore }",
@@ -2330,7 +2260,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 3188,
+      "line": 3193,
       "column": 7,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // ignore }",
@@ -2344,7 +2274,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 4019,
+      "line": 4024,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // best-effort untrack; the migration itself already succeeded }",
@@ -2358,7 +2288,7 @@
     {
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-utility.ts",
-      "line": 6077,
+      "line": 6107,
       "column": 5,
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { // no resolvable workflow -> nothing to observe }",
@@ -2853,20 +2783,6 @@
       "message": "Catch block has a path that silently continues without an approved failure terminal",
       "snippet": "catch { if (result.stdout) process.stdout.write(result.stdout); }",
       "fingerprint": "13f1cebc7004a580e25c7b3ed018c2b1b5bd332ec6b8a4c7c645e49a72b0ad2f",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "ruleId": "NSD001",
-      "file": "packages/framework/harness/opencode/plugin/amadeus-opencode-plugin.ts",
-      "line": 46,
-      "column": 7,
-      "message": "Catch block has a path that silently continues without an approved failure terminal",
-      "snippet": "catch { // best-effort presence record — advisory }",
-      "fingerprint": "3149b45f003fc3869ed026816589ee53c94f74af860f48c3302627d74e270853",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [

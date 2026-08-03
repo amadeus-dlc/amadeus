@@ -3,7 +3,7 @@
   "commandVersion": "no-silent-drop-bootstrap-v1",
   "bootstrapBaseRevision": "47574fbabf274e11cb8e0b37bf35a0309a7b3d42",
   "preRevision": "47574fbabf274e11cb8e0b37bf35a0309a7b3d42",
-  "postRevision": "8a67ffc536be242d8a98128f4ba333cfbf6ccc4f",
+  "postRevision": "f9f31d1b034818ca9fc5ce8c7328f4fe1c0b9956",
   "ruleBundleDigest": "62afe6ed907cf244ba30852124cb1f11c0a9e076bd462bca5d8b64cb15b92d5d",
   "semanticDependencyDigest": "4601653522c5d43089d88c250f5c5f14936ec9d571dfca365b44d26639ae2069",
   "pre": {
@@ -27,28 +27,28 @@
   "post": {
     "raw": {
       "path": "tests/no-silent-drop/bootstrap/post-raw.json",
-      "digest": "b5bf72c6be10ab0a112e265f3c6aff284e9dd576f79cd222463b4d5f272097f8"
+      "digest": "85309587ead081639d5a2832683dcea06c4751577f55bfbcebdef3e99793fc33"
     },
     "classification": {
       "path": "tests/no-silent-drop/bootstrap/post-classification.json",
-      "digest": "f3cfa1216d3c4764252fe2015403db45d5e283a1c2720a4e3511dcc9c6f1bad4"
+      "digest": "ffd4b4a10921da203a24340c6367e6b045dcb78f3df8974f876aab63cb72d4ff"
     },
     "approval": {
       "path": "tests/no-silent-drop/bootstrap/post-approval.json",
-      "digest": "416507729e8ca7049f46a5243c1a8caaf0d5b3673786cced9e4f820d710f71eb"
+      "digest": "185c41ef9c168052ed808d37abedabada5494c6011e8ca034aea9ca86a6a37a6"
     },
     "approvedEvidence": {
       "path": "tests/no-silent-drop/bootstrap/post-approved-evidence.json",
-      "digest": "94c36b2864e0fcd40f30c6837ccfe10e02f06abca7e7b37aa53cd539c12ab67f"
+      "digest": "4610cb1017a6d3710b27cfb5d00d5b094a177d14e04b9a25edd69f2bdeb6c636"
     }
   },
   "candidate": {
     "path": "tests/no-silent-drop/baseline.json",
-    "digest": "d3fc4e8c65e5c9483b443d4a4efa5b9d9c0234f6a2ced9140fae4e6266e735e0"
+    "digest": "841d527b5d492cf13dc1f3bb00a97789ab73ce968de1c8c5bfd1fb4852281f79"
   },
   "humanReview": {
     "path": "tests/no-silent-drop/bootstrap/human-review.json",
-    "digest": "1dfaf25b4e57cc88047c78d55c424020be1ced2ab00414b3fa5a97ed26befcb3"
+    "digest": "f2c5769bbbe799bfbff23b3927e25aa60f10e904accc6d0016c852ac4446bd94"
   },
   "approvedPre": {
     "identitySetDigest": "eb09161b64084983d0e2f99009d68237f663559f4da28307d203cf804d12e730",
@@ -2099,7 +2099,7 @@
     ]
   },
   "candidateB0": {
-    "identitySetDigest": "2ebf83c121608b5659bdd89d6b6b75e46244c0056fd8bc937d7b761d39049905"
+    "identitySetDigest": "d00ab37972ab53f37a1d69b79b592022712f4759528c316d0b52ffa962b89b5c"
   },
   "initialExemptions": {
     "bytesDigest": "c944286914c4ad6eb54ba748cba0544316be80c0204ce85fd227d90dfd7a5a9e",
@@ -2108,20 +2108,44 @@
   },
   "removed": [
     {
+      "fingerprint": "07f916d8f3aa339fb374f004f5732d7b945886b6188c835ebd1fe59b9cf1ffea",
+      "issue": "#1979"
+    },
+    {
       "fingerprint": "19ef0e79c8061cceba1324b12baae3edfe7c08e9e67cbafeeb51fe96706a8955",
       "issue": "#1878"
+    },
+    {
+      "fingerprint": "3149b45f003fc3869ed026816589ee53c94f74af860f48c3302627d74e270853",
+      "issue": "#1979"
     },
     {
       "fingerprint": "45664ff7552f6153e4f6ec2c75987f0eda635ed663b0182a2b99a790ced28e74",
       "issue": "#1874"
     },
     {
+      "fingerprint": "544af0317a9ec0886dc4aea6e44cce5486144334146cda3b976d5058eaf576b9",
+      "issue": "#1979"
+    },
+    {
+      "fingerprint": "5898a6a5bb4e9671bdfbc20ed0c882f3fd28605ba1d618ed4bf5f96ff29680b6",
+      "issue": "#1979"
+    },
+    {
       "fingerprint": "75bdcc54ae4a714da29d84c1058092fa72c79eca1df2d5d307e4703dd3851c6b",
       "issue": "#1878"
     },
     {
+      "fingerprint": "91757ba49e796857b55f7710913bd65c51b69c6e6137ef55f1cc80ba6dd01a0c",
+      "issue": "#1979"
+    },
+    {
       "fingerprint": "a45b2fc3440409f02e79e25fd372f1d1e881aaf9bae3984765580e157fee325c",
       "issue": "#1874"
+    },
+    {
+      "fingerprint": "b866edba14e19a5a5ad38f0bb1e640e8ed1129a6f0d5cb77328d749465362fab",
+      "issue": "#1979"
     }
   ],
   "added": []
