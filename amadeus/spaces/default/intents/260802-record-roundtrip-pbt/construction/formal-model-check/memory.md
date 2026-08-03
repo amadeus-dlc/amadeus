@@ -19,3 +19,7 @@
 
 ## §13 学習選定
 - 2026-08-03T06:54:00Z — E-RRP-FMCS13(auto-solo、subagent transport)採用 **0件** 2-0 全会一致。GoA[E-RRP-FMCS13]: 2x2。両票の留保: (subagent-1)証跡が record 外 scratch にのみ存在し再監査で verdict を再現できない点は学習でなく証跡保全の設計課題として Issue/週次蒸留へ回付 /(subagent-2)発動契機が spec 変更でなく model-map の実装エントリ変更だった点は two-layer-verification-posture の明文外 — 同型再発時に「impl-entry drift も発動契機」の追補候補として再提出の余地。c1/c2 とも既決 cid(finite-exploration-not-detected-proof)およびステージ frontmatter/Step 3 の出荷済み契約の執行実例と実測判定。選挙は指令ループを terminal `recorded` まで完走。
+
+## Deviations
+- 2026-08-03T07:06:35Z — **指令ループ外での verb 単独実行(cid:requirements-analysis:always-elect 違反)**: E-RRP-FMCS13 で `tally` を探索的に単独実行(06:53:35)してから typed loop を駆動した。amadeus-election-store.ts:711 の tally 永続化パスが state を見ずに timeline へ `tallied` を append するため、state が `collecting` のまま tallied イベントが記録され、以後のループ駆動で `tallied → distributed ×2 → tallied` の不可能順序が生成された。直接証拠 = ループ step 1 の report が `{"committed":"distributed","state":"collecting"}` を返した(timeline に既に tallied があるのに state は collecting)。裁定結果は不変(両 tally とも established 2-0、最終 state `recorded`、verify 通過)。timeline.json は**遡及改変しない**(実操作列の忠実な記録であり、見た目の整合のための書換は検証劇場 Forbidden)。CLI 側の fail-open は Issue #2125 として起票。発見経緯 = PR #2124 の Cursor Bugbot レビュー(Medium)。
+- 2026-08-03T07:06:35Z — 同 PR の Bugbot Low 指摘(ballot の `at` > `receivedAt`)は全数走査で52件を実測。既存 OPEN #1946 と同一機序かつ origin/main 既存分を含む系統的パターンのため重複起票せず、#1946 へ実測を追記(cid:requirements-analysis:pre-filing-dup-and-branch-check)。
