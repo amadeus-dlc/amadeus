@@ -21,11 +21,13 @@
 // this gate.
 //
 // ALLOWLIST (E-CV1 Q1 = in-repo, reason-required, adopted 4/4). tests/
-// .coverage-patch-allowlist.json may exempt specific file:line ranges; every
-// entry must carry a non-empty reason (and an expiry condition where one can
-// be stated, enabling E-EXP1-style expiry inventories) and lands only through
-// PR review. The gate hard-fails on malformed or reason-less entries — an
-// allowlist that can be edited silently would be worse than none.
+// .coverage-patch-allowlist.json may exempt specific source fingerprints inside
+// a named function (or <module> for top-level code). The selector resolves to
+// current lines through the TypeScript AST, so unrelated line shifts do not
+// move or invalidate the exemption. Every entry must carry a non-empty reason
+// (and an expiry condition where one can be stated, enabling E-EXP1-style
+// expiry inventories) and lands only through PR review. The gate hard-fails on
+// malformed, reason-less, ambiguous, or stale entries.
 //
 // ORDERING (E-CV1 e3 reservation): seam refactor comes FIRST; the allowlist is
 // the SECOND resort for lines where a refactor is unnatural (message-string
@@ -35,6 +37,7 @@
 //
 // Run:
 //   bun tests/coverage-patch-gate.ts --check   # CI gate (exit 1 on violation)
+//   bun tests/coverage-patch-gate.ts --create-selector <file> <lines>
 // Env seams (tests point these at temp fixtures to PROVE the gate):
 //   AMADEUS_PATCH_LCOV       — lcov.info path (default coverage/lcov.info)
 //   AMADEUS_PATCH_DIFF       — unified diff file to evaluate (default: git diff)
@@ -42,9 +45,11 @@
 //   AMADEUS_PATCH_ALLOWLIST  — allowlist path (default tests/.coverage-patch-allowlist.json)
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(TESTS_DIR, "..");
@@ -119,14 +124,197 @@ export function parseDiffAddedLines(diff: string): Map<string, Set<number>> {
   return byFile;
 }
 
+export interface SemanticSelector {
+  function: string;
+  fingerprint: string;
+  anchorLines: number;
+  targetLines: string;
+}
+
+export interface ResolvedLineRange {
+  start: number;
+  end: number;
+}
+
+interface FunctionScope extends ResolvedLineRange {
+  name: string;
+}
+
+function parseLineRange(lines: string): ResolvedLineRange {
+  if (!/^\d+(-\d+)?$/.test(lines)) throw new Error(`coverage-patch-gate: invalid line range: ${lines}`);
+  const [start, explicitEnd] = lines.split("-").map((part) => Number.parseInt(part, 10));
+  const end = explicitEnd ?? start;
+  if (start < 1 || end < start) throw new Error(`coverage-patch-gate: invalid line range: ${lines}`);
+  return { start, end };
+}
+
+function sourceFingerprint(lines: readonly string[]): string {
+  return `sha256:${createHash("sha256").update(lines.join("\n")).digest("hex")}`;
+}
+
+function functionScopes(file: string, source: string): FunctionScope[] {
+  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const scopes: FunctionScope[] = [{ name: "<module>", start: 1, end: source.split(/\r?\n/).length }];
+  const lineRange = (node: ts.Node): ResolvedLineRange => ({
+    start: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+    end: sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1,
+  });
+  const propertyName = (name: ts.PropertyName | undefined): string | null => {
+    if (!name) return null;
+    if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+      return name.text;
+    }
+    return null;
+  };
+  const classPrefix = (node: ts.Node): string | null => {
+    const parent = node.parent;
+    if ((ts.isClassDeclaration(parent) || ts.isClassExpression(parent)) && parent.name) return parent.name.text;
+    return null;
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      scopes.push({ name: node.name.text, ...lineRange(node) });
+    } else if (ts.isMethodDeclaration(node) || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
+      const name = propertyName(node.name);
+      if (name) {
+        const prefix = classPrefix(node);
+        scopes.push({ name: prefix ? `${prefix}.${name}` : name, ...lineRange(node) });
+      }
+    } else if (ts.isConstructorDeclaration(node)) {
+      const prefix = classPrefix(node);
+      scopes.push({ name: prefix ? `${prefix}.constructor` : "constructor", ...lineRange(node) });
+    } else if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+      const parent = node.parent;
+      if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
+        scopes.push({ name: parent.name.text, ...lineRange(parent) });
+      } else if (ts.isPropertyAssignment(parent)) {
+        const name = propertyName(parent.name);
+        if (name) scopes.push({ name, ...lineRange(parent) });
+      } else if (ts.isFunctionExpression(node) && node.name) {
+        scopes.push({ name: node.name.text, ...lineRange(node) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return scopes;
+}
+
+export function createSemanticSelector(file: string, source: string, lines: string): SemanticSelector {
+  const target = parseLineRange(lines);
+  const sourceLines = source.split(/\r?\n/);
+  if (target.end > sourceLines.length) {
+    throw new Error(`coverage-patch-gate: line range ${lines} exceeds ${file}`);
+  }
+  const containing = functionScopes(file, source)
+    .filter((scope) => scope.start <= target.start && scope.end >= target.end)
+    .sort((a, b) => {
+      const widthDifference = a.end - a.start - (b.end - b.start);
+      if (widthDifference !== 0) return widthDifference;
+      if (a.name === "<module>") return 1;
+      if (b.name === "<module>") return -1;
+      return a.name.localeCompare(b.name);
+    });
+  let scope = containing[0];
+  if (!scope) throw new Error(`coverage-patch-gate: ${file}:${lines} is outside the source file`);
+  if (functionScopes(file, source).filter((candidate) => candidate.name === scope.name).length !== 1) {
+    scope = containing.find((candidate) => candidate.name === "<module>") as FunctionScope;
+  }
+  let anchorStart = target.start;
+  let anchorEnd = target.end;
+  let anchor: string[] = [];
+  let fingerprint = "";
+  for (;;) {
+    anchor = sourceLines.slice(anchorStart - 1, anchorEnd);
+    fingerprint = sourceFingerprint(anchor);
+    let matches = 0;
+    for (let start = scope.start; start + anchor.length - 1 <= scope.end; start += 1) {
+      if (sourceFingerprint(sourceLines.slice(start - 1, start - 1 + anchor.length)) === fingerprint) matches += 1;
+    }
+    if (matches === 1) break;
+    const canExpandBefore = anchorStart > scope.start;
+    const canExpandAfter = anchorEnd < scope.end;
+    if (!canExpandBefore && !canExpandAfter) {
+      throw new Error(`coverage-patch-gate: ${file}:${lines} source fingerprint is not unique in ${scope.name}`);
+    }
+    if (canExpandBefore) anchorStart -= 1;
+    if (canExpandAfter) anchorEnd += 1;
+  }
+  const relativeStart = target.start - anchorStart + 1;
+  const relativeEnd = target.end - anchorStart + 1;
+  return {
+    function: scope.name,
+    fingerprint,
+    anchorLines: anchor.length,
+    targetLines: relativeStart === relativeEnd ? String(relativeStart) : `${relativeStart}-${relativeEnd}`,
+  };
+}
+
+export function resolveSemanticSelector(
+  file: string,
+  source: string,
+  selector: SemanticSelector,
+): ResolvedLineRange {
+  const scopes = functionScopes(file, source).filter((scope) => scope.name === selector.function);
+  if (scopes.length !== 1) {
+    throw new Error(
+      `coverage-patch-gate: function ${selector.function} in ${file} resolved ${scopes.length} times (expected exactly one)`,
+    );
+  }
+  const [scope] = scopes;
+  const sourceLines = source.split(/\r?\n/);
+  const matches: number[] = [];
+  for (let start = scope.start; start + selector.anchorLines - 1 <= scope.end; start += 1) {
+    const candidate = sourceLines.slice(start - 1, start - 1 + selector.anchorLines);
+    if (sourceFingerprint(candidate) === selector.fingerprint) matches.push(start);
+  }
+  if (matches.length !== 1) {
+    throw new Error(
+      `coverage-patch-gate: source fingerprint for ${file}#${selector.function} resolved ${matches.length} times (expected exactly one)`,
+    );
+  }
+  const relative = parseLineRange(selector.targetLines);
+  return { start: matches[0] + relative.start - 1, end: matches[0] + relative.end - 1 };
+}
+
 // ---------------------------------------------------------------------------
 // Allowlist. Reason-required, range-scoped exemptions, reviewed in-repo.
 // ---------------------------------------------------------------------------
 export interface AllowlistEntry {
   file: string;
-  lines: string; // "12" or "12-20"
+  selector: SemanticSelector;
   reason: string;
   expiry?: string; // condition under which the entry should be removed (state it where possible)
+}
+
+export interface ResolvedAllowlistEntry {
+  file: string;
+  lines: string;
+  reason: string;
+  expiry?: string;
+}
+
+function validSemanticSelector(value: unknown): value is SemanticSelector {
+  if (value === null || typeof value !== "object") return false;
+  const selector = value as Partial<SemanticSelector>;
+  if (
+    typeof selector.function !== "string" ||
+    selector.function.length === 0 ||
+    typeof selector.fingerprint !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/.test(selector.fingerprint) ||
+    typeof selector.anchorLines !== "number" ||
+    !Number.isInteger(selector.anchorLines) ||
+    selector.anchorLines < 1 ||
+    typeof selector.targetLines !== "string"
+  ) {
+    return false;
+  }
+  try {
+    const target = parseLineRange(selector.targetLines);
+    return target.end <= selector.anchorLines;
+  } catch {
+    return false;
+  }
 }
 
 export function parseAllowlist(json: string): AllowlistEntry[] {
@@ -135,29 +323,50 @@ export function parseAllowlist(json: string): AllowlistEntry[] {
     throw new Error("coverage-patch-gate: allowlist must be a JSON array");
   }
   for (const e of data) {
+    if (typeof e?.lines === "string") {
+      throw new Error(`coverage-patch-gate: semantic selector required; absolute line pins are not allowed: ${JSON.stringify(e)}`);
+    }
     if (
       typeof e?.file !== "string" ||
-      typeof e?.lines !== "string" ||
-      !/^\d+(-\d+)?$/.test(e.lines) ||
+      !validSemanticSelector(e?.selector) ||
       typeof e?.reason !== "string" ||
       e.reason.trim().length === 0 ||
       (e.expiry !== undefined && typeof e.expiry !== "string")
     ) {
       throw new Error(
-        `coverage-patch-gate: malformed allowlist entry (file/lines/reason required, reason non-empty, expiry string when present): ${JSON.stringify(e)}`,
+        `coverage-patch-gate: malformed allowlist entry (file/selector/reason required, reason non-empty, expiry string when present): ${JSON.stringify(e)}`,
       );
     }
   }
   return data as AllowlistEntry[];
 }
 
+export function resolveAllowlistEntries(
+  entries: readonly AllowlistEntry[],
+  sources: ReadonlyMap<string, string>,
+): ResolvedAllowlistEntry[] {
+  return entries.map((entry) => {
+    const source = sources.get(entry.file);
+    if (source === undefined) {
+      throw new Error(`coverage-patch-gate: source not found for semantic allowlist entry: ${entry.file}`);
+    }
+    const range = resolveSemanticSelector(entry.file, source, entry.selector);
+    return {
+      file: entry.file,
+      lines: range.start === range.end ? String(range.start) : `${range.start}-${range.end}`,
+      reason: entry.reason,
+      ...(entry.expiry === undefined ? {} : { expiry: entry.expiry }),
+    };
+  });
+}
+
 // Stale detection (E-CV1 e3 reservation): every allowlist range must still
 // match at least one measurable (DA-recorded) line in the head LCOV. A range
 // that matches nothing is ledger rot and fails the gate loudly.
 export function findStaleAllowlistEntries(
-  entries: AllowlistEntry[],
+  entries: ResolvedAllowlistEntry[],
   lcov: Map<string, Map<number, number>>,
-): AllowlistEntry[] {
+): ResolvedAllowlistEntry[] {
   return entries.filter((e) => {
     const hits = lcov.get(e.file);
     if (!hits) return true;
@@ -170,7 +379,7 @@ export function findStaleAllowlistEntries(
   });
 }
 
-function allowlisted(entries: AllowlistEntry[], file: string, line: number): boolean {
+function allowlisted(entries: ResolvedAllowlistEntry[], file: string, line: number): boolean {
   return entries.some((e) => {
     if (e.file !== file) return false;
     const [lo, hi] = e.lines.split("-").map((s) => Number.parseInt(s, 10));
@@ -191,7 +400,7 @@ export interface PatchGateResult {
 export function evaluatePatch(
   added: Map<string, Set<number>>,
   lcov: Map<string, Map<number, number>>,
-  allowlist: AllowlistEntry[] = [],
+  allowlist: ResolvedAllowlistEntry[] = [],
 ): PatchGateResult {
   const result: PatchGateResult = { measuredAdded: 0, covered: 0, allowlistedCount: 0, violations: [] };
   for (const [file, lines] of added) {
@@ -273,7 +482,7 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
     const baseRef = process.env.AMADEUS_PATCH_BASE_REF ?? "origin/main";
     // three-dot: diff against the merge-base of baseRef and HEAD in one call
     const diff = spawnSync("git", ["diff", "--unified=0", `${baseRef}...HEAD`], {
-      cwd: REPO_ROOT,
+      cwd: repoRoot,
       encoding: "utf8",
       env: process.env,
       maxBuffer: 64 * 1024 * 1024,
@@ -285,10 +494,23 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
     diffText = diff.stdout;
   }
 
-  let allowlist: AllowlistEntry[] = [];
+  let allowlist: ResolvedAllowlistEntry[] = [];
   const alPath = allowlistPath();
   if (existsSync(alPath)) {
-    allowlist = parseAllowlist(readFileSync(alPath, "utf8"));
+    const entries = parseAllowlist(readFileSync(alPath, "utf8"));
+    const sources = new Map<string, string>();
+    for (const entry of entries) {
+      if ("selector" in entry) {
+        const sourcePath = join(repoRoot, entry.file);
+        if (existsSync(sourcePath)) sources.set(entry.file, readFileSync(sourcePath, "utf8"));
+      }
+    }
+    try {
+      allowlist = resolveAllowlistEntries(entries, sources);
+    } catch (error) {
+      console.error(`coverage-patch-gate: STALE semantic allowlist entry: ${(error as Error).message}`);
+      return 1;
+    }
     const stale = findStaleAllowlistEntries(allowlist, lcov);
     if (stale.length > 0) {
       console.error(
@@ -306,11 +528,26 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
 }
 
 export function main(argv: string[], repoRoot: string = REPO_ROOT): number {
-  if (argv[0] !== "--check") {
-    console.error("Usage: bun tests/coverage-patch-gate.ts --check");
-    return 2;
+  if (argv[0] === "--check" && argv.length === 1) return runCheck(repoRoot);
+  if (argv[0] === "--create-selector" && argv.length === 3) {
+    const [, file, lines] = argv;
+    const sourcePath = join(repoRoot, file);
+    if (!existsSync(sourcePath)) {
+      console.error(`coverage-patch-gate: source not found at ${sourcePath}`);
+      return 1;
+    }
+    try {
+      console.log(JSON.stringify(createSemanticSelector(file, readFileSync(sourcePath, "utf8"), lines), null, 2));
+      return 0;
+    } catch (error) {
+      console.error((error as Error).message);
+      return 1;
+    }
   }
-  return runCheck(repoRoot);
+  console.error(
+    "Usage: bun tests/coverage-patch-gate.ts --check | --create-selector <file> <lines>",
+  );
+  return 2;
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));

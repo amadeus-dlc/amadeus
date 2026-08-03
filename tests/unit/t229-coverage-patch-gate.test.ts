@@ -11,12 +11,15 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  createSemanticSelector,
   evaluatePatch,
   findStaleAllowlistEntries,
   parseAllowlist,
   parseDiffAddedLines,
   parseLcovLineHits,
   renderSummary,
+  resolveAllowlistEntries,
+  resolveSemanticSelector,
 } from "../coverage-patch-gate";
 
 const LCOV = [
@@ -44,6 +47,13 @@ const DIFF = [
   "@@ -1,0 +2,1 @@",
   "+some docs line",
 ].join("\n");
+
+const VALID_SELECTOR = {
+  function: "target",
+  fingerprint: `sha256:${"0".repeat(64)}`,
+  anchorLines: 1,
+  targetLines: "1",
+};
 
 describe("t229 patch gate parsers", () => {
   test("parseLcovLineHits groups DA records by file and keeps max hits", () => {
@@ -76,20 +86,33 @@ describe("t229 patch gate verdict (falling proof)", () => {
   });
 
   test("allowlisted line is exempted but counted", () => {
-    const allowlist = parseAllowlist(
-      JSON.stringify([
-        {
-          file: "packages/framework/core/tools/example.ts",
-          lines: "11",
-          reason: "spawn-only dispatch case; seam refactor unnatural (see #881 class)",
-          expiry: "remove when the dispatch moves behind an in-process seam",
-        },
-      ]),
-    );
+    const allowlist = [{
+      file: "packages/framework/core/tools/example.ts",
+      lines: "11",
+      reason: "spawn-only dispatch case; seam refactor unnatural (see #881 class)",
+      expiry: "remove when the dispatch moves behind an in-process seam",
+    }];
     const result = evaluatePatch(parseDiffAddedLines(DIFF), parseLcovLineHits(LCOV), allowlist);
     expect(result.violations).toEqual([]);
     expect(result.allowlistedCount).toBe(1);
     expect(renderSummary(result)).toContain("PASS");
+  });
+
+  test("a semantic allowlist resolves to LCOV lines before the patch verdict", () => {
+    const source = [
+      "export function target() {",
+      "  return 1;",
+      "}",
+    ].join("\n");
+    const selector = createSemanticSelector("example.ts", source, "2");
+    const allowlist = parseAllowlist(
+      JSON.stringify([{ file: "example.ts", selector, reason: "spawn-only boundary" }]),
+    );
+    const resolved = resolveAllowlistEntries(allowlist, new Map([["example.ts", source]]));
+    const lcov = parseLcovLineHits("SF:example.ts\nDA:2,0\nend_of_record");
+    const diff = parseDiffAddedLines("+++ b/example.ts\n@@ -1,0 +2,1 @@\n+  return 1;");
+
+    expect(evaluatePatch(diff, lcov, resolved).violations).toEqual([]);
   });
 
   test("fully covered diff passes", () => {
@@ -105,33 +128,90 @@ describe("t229 patch gate verdict (falling proof)", () => {
 });
 
 describe("t229 allowlist contract (E-CV1 Q1=A reservations)", () => {
+  test("legacy absolute line pins are rejected", () => {
+    expect(() =>
+      parseAllowlist(JSON.stringify([{ file: "x.ts", lines: "1", reason: "legacy pin" }])),
+    ).toThrow(/semantic selector required/);
+  });
+
+  test("a function-scoped source fingerprint survives unrelated lines inserted before the function", () => {
+    const original = [
+      "export function target() {",
+      "  const value = 1;",
+      "  return value;",
+      "}",
+    ].join("\n");
+    const selector = createSemanticSelector("example.ts", original, "2-3");
+
+    const shifted = ["// unrelated header", "// another header", original].join("\n");
+
+    expect(selector.function).toBe("target");
+    expect(resolveSemanticSelector("example.ts", shifted, selector)).toEqual({ start: 4, end: 5 });
+  });
+
+  test("the fingerprint widens to surrounding function context when the target source is repeated", () => {
+    const original = [
+      "export function target(input: boolean) {",
+      "  if (input) {",
+      "    return 1;",
+      "  }",
+      "  if (!input) {",
+      "    return 2;",
+      "  }",
+      "}",
+    ].join("\n");
+
+    const selector = createSemanticSelector("example.ts", original, "4");
+    const shifted = ["// unrelated header", original].join("\n");
+
+    expect(selector.anchorLines).toBeGreaterThan(1);
+    expect(resolveSemanticSelector("example.ts", shifted, selector)).toEqual({ start: 5, end: 5 });
+  });
+
+  test("arrow functions and module-level source both have stable semantic scopes", () => {
+    const source = [
+      "const moduleValue = 1;",
+      "export const target = () => {",
+      "  return moduleValue;",
+      "};",
+    ].join("\n");
+
+    const moduleSelector = createSemanticSelector("example.ts", source, "1");
+    const functionSelector = createSemanticSelector("example.ts", source, "3");
+
+    expect(moduleSelector.function).toBe("<module>");
+    expect(functionSelector.function).toBe("target");
+    expect(resolveSemanticSelector("example.ts", source, moduleSelector)).toEqual({ start: 1, end: 1 });
+    expect(resolveSemanticSelector("example.ts", source, functionSelector)).toEqual({ start: 3, end: 3 });
+  });
+
   test("reason-less entry throws (fail-closed ledger)", () => {
     expect(() =>
-      parseAllowlist(JSON.stringify([{ file: "x.ts", lines: "1", reason: "  " }])),
+      parseAllowlist(JSON.stringify([{ file: "x.ts", selector: VALID_SELECTOR, reason: "  " }])),
     ).toThrow(/malformed allowlist entry/);
   });
 
-  test("bad lines pattern throws", () => {
+  test("bad target-lines pattern throws", () => {
     expect(() =>
-      parseAllowlist(JSON.stringify([{ file: "x.ts", lines: "1-2-3", reason: "r" }])),
+      parseAllowlist(
+        JSON.stringify([{ file: "x.ts", selector: { ...VALID_SELECTOR, targetLines: "1-2-3" }, reason: "r" }]),
+      ),
     ).toThrow(/malformed allowlist entry/);
   });
 
   test("non-string expiry throws", () => {
     expect(() =>
-      parseAllowlist(JSON.stringify([{ file: "x.ts", lines: "1", reason: "r", expiry: 42 }])),
+      parseAllowlist(JSON.stringify([{ file: "x.ts", selector: VALID_SELECTOR, reason: "r", expiry: 42 }])),
     ).toThrow(/malformed allowlist entry/);
   });
 
   test("stale range (matches no measurable line) is detected", () => {
     const lcov = parseLcovLineHits(LCOV);
-    const entries = parseAllowlist(
-      JSON.stringify([
-        { file: "packages/framework/core/tools/example.ts", lines: "100-110", reason: "stale range" },
-        { file: "gone.ts", lines: "1", reason: "file no longer measured" },
-        { file: "packages/framework/core/tools/example.ts", lines: "11", reason: "still live" },
-      ]),
-    );
+    const entries = [
+      { file: "packages/framework/core/tools/example.ts", lines: "100-110", reason: "stale range" },
+      { file: "gone.ts", lines: "1", reason: "file no longer measured" },
+      { file: "packages/framework/core/tools/example.ts", lines: "11", reason: "still live" },
+    ];
     const stale = findStaleAllowlistEntries(entries, lcov);
     expect(stale.map((e) => e.lines)).toEqual(["100-110", "1"]);
   });
