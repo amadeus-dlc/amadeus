@@ -22,6 +22,7 @@ AI-DLC は、あなたが使う CLI 上にレンダリングされる 1 つの�
 | **OpenCode** | `$amadeus` | [OpenCode 上の AI-DLC](opencode.ja.md) — 前提条件、手動インストール、セッションスキル、フックがまだ配線されない理由。 |
 | **Cursor** | `/amadeus` | [Cursor 上の AI-DLC](cursor.ja.md) — 前提条件、手動インストール、8 イベントのフック配線。 |
 | **Kimi Code**(≥ 0.29.0) | `/skill:amadeus` | [Kimi Code 上の AI-DLC](kimi-code.ja.md) — 前提条件、インストーラとユーザーレベルのフック配線、Kimi での相違点。 |
+| **Pi Coding Agent**(≥ 0.83.0) | `/skill:amadeus` | [Pi Coding Agent 上の AI-DLC](pi.ja.md) — native trust、setup と package activation、gate 制約、doctor、lifecycle/driver failure。 |
 
 Kiro(IDE または CLI)上の AI-DLC は **Claude Opus 4.8** で最も良く動作し、これには **有料の Kiro プラン** が必要です。
 

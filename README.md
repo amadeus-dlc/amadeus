@@ -64,7 +64,7 @@ Amadeus-DLC implements the **AI-DLC methodology** — a structured, gated approa
 On top of that inheritance, this line develops its own additions. Among them:
 
 - the **installer** — `@amadeus-dlc/setup` installs and upgrades any harness distribution with one command, where upstream installs by manual copy;
-- **three additional harness surfaces** — OpenCode, Cursor, and Kimi Code — extending the four shipped upstream to seven;
+- **four additional harness surfaces** — OpenCode, Cursor, Kimi Code, and Pi Coding Agent — extending the four shipped upstream to eight;
 - a **workspace migration tool** (`/amadeus --migrate`) that converts an upstream v2 `aidlc/` workspace in place, previews included;
 - the **grilling** session skill for read-only design interrogation, and **fully bilingual documentation** — every guide ships in English and Japanese;
 - and the discipline behind all of the above: Amadeus is developed *with* Amadeus, in this repository, through its own stages, gates, and audit trail.
@@ -82,6 +82,7 @@ The engine — state machine, audit log, referee — is byte-identical across ev
 | **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Running on Kiro IDE](docs/guide/harnesses/kiro-ide.md) |
 | **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Running on Kiro CLI](docs/guide/harnesses/kiro-cli.md) |
 | **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Running on Kimi Code](docs/guide/harnesses/kimi-code.md) |
+| **Pi Coding Agent** | ≥ 0.83.0 | `bunx @amadeus-dlc/setup install --harness pi` | `/skill:amadeus` | [Running on Pi Coding Agent](docs/guide/harnesses/pi.md) |
 
 > [!NOTE]
 > This release works best with **Claude Opus 4.8** (on Kiro, that requires a paid plan). On weaker models the conductor may skip optional stage steps or rush approval gates. We are sharpening behavior on other models.

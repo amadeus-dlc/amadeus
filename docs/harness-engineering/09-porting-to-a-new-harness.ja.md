@@ -66,6 +66,139 @@ Claude のマニフェストは最小限のリファレンスです(リネーム
 
 再生成には `bun scripts/package.ts <name>`、Git境界検査には `bun run source-only:check`、そしてゲートには決定的なスイート(`bash tests/run-tests.sh --smoke --unit --integration -P 8`)に加えてライブジャーニーを実行してください。CIが隔離buildの再現性比較を行います。
 
+## Pi maintenance inventory
+
+Pi は、native resource loading、lifecycle extension、internal child-execution
+driver を組み合わせる harness の実例です。minimum runtime は
+`@earendil-works/pi-coding-agent` 0.83.0 です。formal-success platform は macOS と
+Linux で、native Windows は対象外です。Pi project trust は native ですが sandbox
+ではなく、Amadeus component が自動承認したり trust store を変更したりしてはいけません。
+extension と Pi Package は host user と同じ権限で動作します。
+
+### Authored resource と生成済み catalog
+
+`packages/framework/harness/pi/manifest.ts` が閉じた source of truth です。現在の resource
+inventory は次のとおりです。
+
+| Role | Authored source | Project destination | Loader |
+|------|-----------------|---------------------|--------|
+| Orchestrator skill | `skills/amadeus/SKILL.md` | `.pi/skills/amadeus/SKILL.md` | Pi `native` |
+| Question annex | `skills/amadeus/question-rendering.md` | `.pi/skills/amadeus/question-rendering.md` | Skill `annex` |
+| Lifecycle extension | `extensions/amadeus-pi-extension.ts` | `.pi/extensions/amadeus.ts` | Pi `native` |
+| Child driver | `drivers/amadeus-pi-driver.ts` | `.pi/drivers/amadeus-pi-driver.ts` | Amadeus `internal` |
+| Driver request/RPC contract | `drivers/amadeus-pi-driver-contract.ts` | `.pi/drivers/amadeus-pi-driver-contract.ts` | Amadeus `internal` |
+| Process-group guardian | `drivers/amadeus-pi-guardian.ts` | `.pi/drivers/amadeus-pi-guardian.ts` | Amadeus `internal` |
+| Replay store | `drivers/amadeus-pi-replay-store.ts` | `.pi/drivers/amadeus-pi-replay-store.ts` | Amadeus `internal` |
+
+この表を resource 数の invariant にしないでください。manifest を変更したら、resource
+identity と role を基準に inventory を更新します。`scripts/package.ts pi` は各 authored
+resource を hash 化し、その descriptor を `dist/pi/.pi/tools/data/harness.json` へ生成します。
+doctor が期待値にするのは observed install tree ではなく、この生成済み descriptor です。
+driver resource は `internal` のままとし、Pi native extension list に入れてはいけません。
+
+`scripts/pi-package.ts` は同じ manifest から Pi Package view を導出します。root
+`package.json` の `pi.extensions` と `pi.skills` は `dist/pi` 配下の native entry resource
+だけを公開し、setup path は完全な distribution を copy して必須 installer receipt を
+書きます。local package source identity には clean worktree と full commit SHA が必要です。
+Git source identity には credential を含まない canonical HTTPS と full commit SHA が必要です。
+branch、short SHA、mutable tag、credential を含む URL は formal evidence になりません。
+Package activation だけでは project の core runtime を配置できず、完全な Pi doctor contract
+を通過できません。
+
+生成される package entry は次のとおりです。
+
+```json
+{
+  "extensions": ["./dist/pi/.pi/extensions/amadeus.ts"],
+  "skills": ["./dist/pi/.pi/skills/amadeus"]
+}
+```
+
+### Lifecycle event inventory
+
+`packages/framework/harness/pi/extensions/amadeus-pi-extension.ts` は次の public Pi 0.83 event
+name を all-or-nothing の 1 set として登録します。
+
+| Pi event | Canonical lifecycle meaning |
+|----------|-----------------------------|
+| `session_start` | session started と recovery/reconciliation point |
+| `session_shutdown` | session shutdown |
+| `input` | input received。`source: interactive` だけが human presence を成立させる |
+| `agent_start` | agent turn started と continuation observation point |
+| `agent_end` | agent turn ended |
+| `agent_settled` | 唯一の automatic continuation trigger |
+| `tool_execution_start` | tool call identity で pair にする tool start |
+| `tool_execution_end` | tool call identity で pair にする tool end |
+| `session_before_compact` | canonical mission checkpoint |
+| `session_compact` | model summary を信頼しない mission reinjection |
+
+adapter は Pi の public structural Extension API を使います。registration、parse、journal
+prepare、core commit receipt、tool pairing、continuation observation は fail-closed です。
+raw prompt、tool argument、tool result、absolute path、credential を audit payload に含めては
+いけません。
+
+### Child-driver inventory
+
+Pi に built-in subagent primitive はありません。internal driver は child を 1 つだけ
+`pi --mode rpc --no-session` で起動し、size bound のある JSONL を交換して、correlation が
+一致する assistant text だけを抽出します。guardian は control message を認証し、child
+process group を所有します。terminal outcome は報告前に replay store へ commit され、
+同じ delivery の replay で 2 つ目の child を起動しません。version、executable identity、
+unsupported OS、timeout、cancellation、PID/PGID reuse の曖昧さ、malformed RPC、output bound、
+replay conflict、credential に似た request field はすべて fail-closed です。
+
+driver は deterministic swarm permit lifecycle、つまり prepare、acquire、driver が accept
+した confirm、check、settle/release、terminal finalize だけを通して呼び出します。accept
+された native handle を prose の主張で置き換えたり、未検証 result を converged と扱ったり
+してはいけません。
+
+### Test と generated surface
+
+実装変更時は次の contract family を同期します。
+
+- `tests/unit/t-pi-harness-manifest.test.ts` — runtime、trust、catalog path、collision、
+  loader-role rule。
+- `tests/smoke/t-pi-dist-structure.test.ts` — generated descriptor と authored resource の
+  byte/hash parity。
+- `tests/unit/t-pi-package-candidate.test.ts` と
+  `tests/integration/setup-install-flow.test.ts` の Pi case — 共通 candidate identity、完全な
+  setup install、transactional upgrade。
+- `tests/unit/t-pi-lifecycle-gate-adapter.test.ts` と
+  `tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts` — captured public event
+  shape、human presence、journaling、continuation、compaction。
+- `tests/unit/t-pi-driver-contract.test.ts` と
+  `tests/integration/t-pi-child-driver.integration.test.ts` — 閉じた RPC request/result behavior、
+  guardian cleanup、terminal replay。
+- `tests/unit/t-pi-doctor-diagnostics.test.ts` と
+  `tests/integration/t-pi-doctor-dispatch.integration.test.ts` — read-only かつ redacted な
+  diagnostics と utility dispatch。
+- `tests/integration/t-pi-docs-contract.test.ts` — user/maintainer section、link、manifest catalog、
+  event、package metadata、generated inventory の文書化。
+
+編集対象は `packages/framework/core/`、`packages/framework/harness/pi/`、manifest から導出される
+root package metadata、setup source、authored docs/test だけです。`dist/pi` は手編集せず、
+次の command で再生成・検証します。
+
+```bash
+bun scripts/package.ts pi
+bun scripts/package.ts pi --check
+bun test tests/unit/t-pi-harness-manifest.test.ts \
+  tests/smoke/t-pi-dist-structure.test.ts \
+  tests/unit/t-pi-package-candidate.test.ts \
+  tests/unit/t-pi-lifecycle-gate-adapter.test.ts \
+  tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts \
+  tests/unit/t-pi-driver-contract.test.ts \
+  tests/integration/t-pi-child-driver.integration.test.ts \
+  tests/unit/t-pi-doctor-diagnostics.test.ts \
+  tests/integration/t-pi-doctor-dispatch.integration.test.ts \
+  tests/integration/t-pi-docs-contract.test.ts
+bun run typecheck
+```
+
+これらの deterministic check は live provider journey を実行した証拠ではありません。
+live result を記録できるのは、明示的に enable した live test が、別途設定した provider
+credential を使って現在の環境で実際に実行された場合だけです。
+
 ## 次へ
 
 これで弧が閉じます: あなたはデータ面を形づくり(01–08章)、いまコアを新しい CLI にレンダリングしました。ここから:

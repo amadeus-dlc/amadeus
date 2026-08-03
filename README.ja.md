@@ -64,7 +64,7 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 この継承の上に、この開発ラインは独自の追加を重ねています。その一部:
 
 - **インストーラ** — `@amadeus-dlc/setup` が任意のハーネス配布物をワンコマンドでインストール・アップグレード(本家は手動コピー)
-- **ハーネス3面の追加** — OpenCode、Cursor、Kimi Code。本家出荷の4面を7面へ拡張
+- **ハーネス4面の追加** — OpenCode、Cursor、Kimi Code、Pi Coding Agent。本家出荷の4面を8面へ拡張
 - **ワークスペース移行ツール**(`/amadeus --migrate`)— 本家 v2 の `aidlc/` ワークスペースをプレビュー付きでその場変換
 - 読み取り専用の設計尋問スキル **grilling**、そして**全ガイドの日英二言語ドキュメント**
 - そしてこれらすべてを生み出す規律: Amadeus は Amadeus **で**、このリポジトリの中で、自身のステージ・ゲート・監査証跡を通して開発されている
@@ -82,6 +82,7 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 | **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
 | **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
 | **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Kimi Code で動かす](docs/guide/harnesses/kimi-code.ja.md) |
+| **Pi Coding Agent** | ≥ 0.83.0 | `bunx @amadeus-dlc/setup install --harness pi` | `/skill:amadeus` | [Pi Coding Agent で動かす](docs/guide/harnesses/pi.ja.md) |
 
 > [!NOTE]
 > 本リリースは **Claude Opus 4.8** で最もよく動作します(Kiro では有料プランが必要)。より弱いモデルでは、コンダクターが任意ステップ(レビュアーパス、学習リチュアル)を省略したり、承認ゲートを急いだりすることがあります。他モデルでの挙動は改善中です。

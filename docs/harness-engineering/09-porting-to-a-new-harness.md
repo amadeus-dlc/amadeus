@@ -151,6 +151,144 @@ to verify the Git boundary, and the deterministic suite
 (`bash tests/run-tests.sh --smoke --unit --integration -P 8`) plus the live
 journey to gate. CI performs the isolated-build reproducibility comparison.
 
+## Pi maintenance inventory
+
+Pi is the worked reference for a harness that combines native resource loading,
+a lifecycle extension, and an internal child-execution driver. Its minimum
+runtime is `@earendil-works/pi-coding-agent` 0.83.0. Native Windows is not a
+formal-success platform; macOS and Linux are. Pi project trust is native but is
+not a sandbox, and no Amadeus component may auto-approve it or mutate the trust
+store. The extension and any Pi package run with the host user's permissions.
+
+### Authored resources and the generated catalog
+
+`packages/framework/harness/pi/manifest.ts` is the closed source of truth. The
+current resource inventory is:
+
+| Role | Authored source | Project destination | Loader |
+|------|-----------------|---------------------|--------|
+| Orchestrator skill | `skills/amadeus/SKILL.md` | `.pi/skills/amadeus/SKILL.md` | Pi `native` |
+| Question annex | `skills/amadeus/question-rendering.md` | `.pi/skills/amadeus/question-rendering.md` | Skill `annex` |
+| Lifecycle extension | `extensions/amadeus-pi-extension.ts` | `.pi/extensions/amadeus.ts` | Pi `native` |
+| Child driver | `drivers/amadeus-pi-driver.ts` | `.pi/drivers/amadeus-pi-driver.ts` | Amadeus `internal` |
+| Driver request/RPC contract | `drivers/amadeus-pi-driver-contract.ts` | `.pi/drivers/amadeus-pi-driver-contract.ts` | Amadeus `internal` |
+| Process-group guardian | `drivers/amadeus-pi-guardian.ts` | `.pi/drivers/amadeus-pi-guardian.ts` | Amadeus `internal` |
+| Replay store | `drivers/amadeus-pi-replay-store.ts` | `.pi/drivers/amadeus-pi-replay-store.ts` | Amadeus `internal` |
+
+Do not turn this table into a numeric invariant. When the manifest changes,
+update this inventory by resource identity and role. `scripts/package.ts pi`
+hashes each authored resource and emits the descriptors into
+`dist/pi/.pi/tools/data/harness.json`; doctor treats that generated descriptor,
+not the observed install tree, as the expected catalog. The driver resources
+remain `internal` and must never appear in Pi's native extension list.
+
+`scripts/pi-package.ts` derives the Pi package view from the same manifest. The
+root `package.json` `pi.extensions` and `pi.skills` fields expose only native
+entry resources beneath `dist/pi`; the setup path copies the complete
+distribution and writes the required installer receipt. Local package source
+identity requires a clean worktree and full commit SHA. Git source identity
+requires credential-free canonical HTTPS plus a full commit SHA. Branches,
+short SHAs, mutable tags, and credential-bearing URLs are not formal evidence.
+Package activation alone does not materialize the core project runtime and
+cannot pass the complete Pi doctor contract.
+
+The generated package entry is:
+
+```json
+{
+  "extensions": ["./dist/pi/.pi/extensions/amadeus.ts"],
+  "skills": ["./dist/pi/.pi/skills/amadeus"]
+}
+```
+
+### Lifecycle event inventory
+
+`packages/framework/harness/pi/extensions/amadeus-pi-extension.ts` registers
+the following public Pi 0.83 event names as one all-or-nothing set:
+
+| Pi event | Canonical lifecycle meaning |
+|----------|-----------------------------|
+| `session_start` | session started and recovery/reconciliation point |
+| `session_shutdown` | session shutdown |
+| `input` | input received; only `source: interactive` can establish human presence |
+| `agent_start` | agent turn started and continuation observation point |
+| `agent_end` | agent turn ended |
+| `agent_settled` | the only automatic continuation trigger |
+| `tool_execution_start` | tool start, paired by tool call identity |
+| `tool_execution_end` | tool end, paired by tool call identity |
+| `session_before_compact` | canonical mission checkpoint |
+| `session_compact` | mission reinjection without trusting the model summary |
+
+The adapter uses Pi's public structural Extension API. Registration, parsing,
+journal preparation, core commit receipt, tool pairing, and continuation
+observation are fail-closed. Raw prompts, tool arguments, tool results, absolute
+paths, and credentials must not become audit payloads.
+
+### Child-driver inventory
+
+Pi has no built-in subagent primitive. The internal driver starts one child as
+`pi --mode rpc --no-session`, exchanges bounded JSONL, and extracts correlated
+assistant text only. The guardian authenticates control messages and owns the
+child process group. Terminal outcomes are committed to the replay store before
+they are reported; a replay of the same delivery starts no second child.
+Version, executable identity, unsupported OS, timeout, cancellation, PID/PGID
+reuse ambiguity, malformed RPC, output bounds, replay conflict, and credential-
+like request fields all fail closed.
+
+The driver is invoked only through the deterministic swarm permit lifecycle:
+prepare, acquire, driver-accepted confirm, check, settle/release, and terminal
+finalize. Do not replace accepted native handles with prose claims or treat an
+unverified result as converged.
+
+### Tests and generated surfaces
+
+Keep these contract families aligned with implementation changes:
+
+- `tests/unit/t-pi-harness-manifest.test.ts` — runtime, trust, catalog path,
+  collision, and loader-role rules.
+- `tests/smoke/t-pi-dist-structure.test.ts` — generated descriptor and authored
+  resource byte/hash parity.
+- `tests/unit/t-pi-package-candidate.test.ts` and the Pi cases in
+  `tests/integration/setup-install-flow.test.ts` — common candidate identity,
+  complete setup install, and transactional upgrade.
+- `tests/unit/t-pi-lifecycle-gate-adapter.test.ts` and
+  `tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts` — captured
+  public event shapes, human presence, journaling, continuation, and
+  compaction.
+- `tests/unit/t-pi-driver-contract.test.ts` and
+  `tests/integration/t-pi-child-driver.integration.test.ts` — closed RPC
+  request/result behavior, guardian cleanup, and terminal replay.
+- `tests/unit/t-pi-doctor-diagnostics.test.ts` and
+  `tests/integration/t-pi-doctor-dispatch.integration.test.ts` — read-only,
+  redacted diagnostics and utility dispatch.
+- `tests/integration/t-pi-docs-contract.test.ts` — user/maintainer section,
+  link, manifest catalog, event, package metadata, and generated inventory
+  documentation.
+
+Edit only `packages/framework/core/`, `packages/framework/harness/pi/`, root
+package metadata derived from the manifest, setup source, and authored docs or
+tests. Never edit `dist/pi` by hand. Regenerate and verify with:
+
+```bash
+bun scripts/package.ts pi
+bun scripts/package.ts pi --check
+bun test tests/unit/t-pi-harness-manifest.test.ts \
+  tests/smoke/t-pi-dist-structure.test.ts \
+  tests/unit/t-pi-package-candidate.test.ts \
+  tests/unit/t-pi-lifecycle-gate-adapter.test.ts \
+  tests/integration/t-pi-lifecycle-gate-adapter.integration.test.ts \
+  tests/unit/t-pi-driver-contract.test.ts \
+  tests/integration/t-pi-child-driver.integration.test.ts \
+  tests/unit/t-pi-doctor-diagnostics.test.ts \
+  tests/integration/t-pi-doctor-dispatch.integration.test.ts \
+  tests/integration/t-pi-docs-contract.test.ts
+bun run typecheck
+```
+
+These deterministic checks are not evidence that a live provider journey ran.
+Record a live result only when the explicitly enabled live test actually ran in
+the current environment with separately configured provider credentials.
+
 ## Next
 
 That closes the arc: you have shaped the data surfaces (chapters 01–08) and now
