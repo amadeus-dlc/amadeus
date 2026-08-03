@@ -317,6 +317,22 @@ describe("t381 both emit paths enforce the advisory hold", () => {
     expect(logs.join("\n")).toContain("unresolved advisory choice");
   });
 
+  test("receiptなしのapproval carrier reportもauthority処理前に拒否される", () => {
+    seedComposedProject();
+    seedStateFile(proj, FIX_REQUIREMENTS);
+    handleNext([], proj);
+    logs = [];
+    setEnv("AMADEUS_OPERATING_MODE", "solo");
+    handleReport([
+      "--stage", "requirements-analysis",
+      "--result", "completed",
+      "--standing-grant-id", "cafe0001",
+      "--standing-grant-route-id", "00000000-0000-4000-8000-000000000001",
+    ], proj);
+    expect(JSON.parse(logs.join("\n")).kind).toBe("error");
+    expect(logs.join("\n")).toContain("unresolved advisory choice");
+  });
+
   test("--single (the stage-runner path) carries advisories too", () => {
     seedComposedProject();
     handleNext(["--single", "--stage", "functional-design"], proj);

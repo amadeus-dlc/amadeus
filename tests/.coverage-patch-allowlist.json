@@ -3677,5 +3677,16 @@
     },
     "reason": "Defensive startup-failure classification for git show. The integration suite drives the observable non-zero lookup failure; making spawnSync itself fail to start would require removing the running test process's git executable or injecting a process port. The distinct INTERNAL_ERROR branch is retained fail closed.",
     "expiry": "remove when baselineAtRevision receives an injected process port that can model startup failure"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "modelCheckResultText",
+      "fingerprint": "sha256:502fcb66e608970eed3214feb5eda72f64551558f832a607eb648a6b7cc80a66",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defense-in-depth invariant: resolveRunRequiredHold filters verified-not-detected before rendering a hold result, so modelCheckResultText cannot receive that variant through its only caller. Detected, harness-error, not-run, and invalid rendering are exercised through the protected advisory choice integration tests.",
+    "expiry": "remove if modelCheckResultText becomes public or gains a caller that can pass verified-not-detected"
   }
 ]
