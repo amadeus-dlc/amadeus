@@ -86,19 +86,26 @@ describe("t416 registry drift pure extractors", () => {
 
   test("fails closed when extraction is empty", () => {
     const result = compare(["slug", "phase"], extractStageFieldRegistry("# no marker"));
+    const emptyCanonical = compare([], ["slug"]);
 
     expect(result.valid).toBe(false);
     expect(result.diagnostics).toContain("projection: empty extraction");
     expect(result.diagnostics.join("\n")).toContain("cardinality mismatch");
+    expect(emptyCanonical.valid).toBe(false);
+    expect(emptyCanonical.diagnostics).toContain("canonical: empty extraction");
   });
 
   test("detects duplicate entries and raw cardinality mismatch", () => {
     const duplicate = FIELD_REGISTRY.replace("| `phase` |", "| `slug` |\n| `phase` |");
     const result = compare(["slug", "phase"], extractStageFieldRegistry(duplicate));
+    const duplicateCanonical = compare(["slug", "slug"], ["slug"]);
 
     expect(result.valid).toBe(false);
     expect(result.duplicateActual).toEqual(["slug"]);
     expect(result.diagnostics).toContain("projection: duplicate entries: slug");
     expect(result.diagnostics.join("\n")).toContain("cardinality mismatch (2 !== 3)");
+    expect(duplicateCanonical.valid).toBe(false);
+    expect(duplicateCanonical.duplicateExpected).toEqual(["slug"]);
+    expect(duplicateCanonical.diagnostics).toContain("canonical: duplicate entries: slug");
   });
 });
