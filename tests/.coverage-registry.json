@@ -20,13 +20,13 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 581,
+    "total": 582,
     "enumeratedByClass": {
       "function": 331,
       "audit": 81,
       "scope": 15,
       "stage": 32,
-      "hook": 13,
+      "hook": 14,
       "subcommand": 102,
       "render-surface": 7
     },
@@ -35,7 +35,7 @@
       "audit": 35,
       "scope": 15,
       "stage": 8,
-      "hook": 13,
+      "hook": 14,
       "subcommand": 83,
       "render-surface": 7
     }
@@ -4349,6 +4349,18 @@
         },
         {
           "file": "tests/unit/t208-hook-shard-guards.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-dispatch",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/hook-dispatcher.integration.test.ts",
           "mechanism": "cli"
         }
       ],
