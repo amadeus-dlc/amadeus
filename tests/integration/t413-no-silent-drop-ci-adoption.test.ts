@@ -107,9 +107,15 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    expect(result.evidence.counts).toEqual({ C_pre: 217, B_pre: 217, B0: 217 });
-    expect(baseline.entries).toHaveLength(217);
-    expect(removed).toHaveLength(10);
+    // The census shrank 217 -> 216 when #1906 removed the fail-open catch that let
+    // finalizeAuditLockAcquire swallow a failed lock finalization: that catch was the
+    // NSD001 identity b775faf8 in amadeus-lib.ts, and deleting the silent-continue path
+    // deletes the finding. So the pre-approved set loses one more identity (10 -> 11)
+    // while its issue set is unchanged, because b775faf8 was already filed under #1979.
+    expect(result.evidence.counts).toEqual({ C_pre: 216, B_pre: 216, B0: 216 });
+    expect(baseline.entries).toHaveLength(216);
+    expect(removed).toHaveLength(11);
+    expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
       new Set(["#1874", "#1878", "#1979"]),
     );

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "censusDigest": "d00ab37972ab53f37a1d69b79b592022712f4759528c316d0b52ffa962b89b5c",
+  "censusDigest": "ce03dbe08e2330b09676e7d7282f2294d930d9ca55509c80743a6227a9886021",
   "entries": [
     {
       "fingerprint": "03c9e430ecf3c1b1dabee31906cf795d605efa4db2d7330390274a5c29675a45",
@@ -1284,14 +1284,6 @@
     },
     {
       "fingerprint": "b671c6947698c49cd5919f2354628b13683cb66dcc4d1b4fd0a28bd85c4af683",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "b775faf8b32b1244821b3298d8e7652100e8f1ecb9c15e0ecbcf569ec1844ef4",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
