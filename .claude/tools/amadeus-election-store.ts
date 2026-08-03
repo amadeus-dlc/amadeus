@@ -31,7 +31,7 @@ import {
   type Ballot,
   classifyLate,
   lateReexamRequired,
-  type Election,
+  Election,
   type ElectionState,
   err,
   type LateBallot,
@@ -85,6 +85,24 @@ function readJson<T>(path: string): Result<T, StoreError> {
 
 type ElectionFile = Election & { state: ElectionState };
 type LedgerFile = { ballots: Ballot[]; late: LateBallot[] };
+
+// #1980: reading election.json used to cast straight to ElectionFile, so a file
+// whose JSON parses but whose definition is invalid (the #1459 shapes) came back
+// as a well-formed Election. Both read sites (Store.load, Store.setState) go
+// through this composer instead. It adds NO validation of its own — the
+// definition is checked by Election.parse (the single definition validator) and
+// the state by VALID_STATES (the single state vocabulary) — and maps every
+// rejection onto the existing "corrupt" error, adding no new StoreError value.
+function parseElectionFile(raw: unknown): Result<ElectionFile, StoreError> {
+  const election = Election.parse(raw);
+  if (!election.ok) return err("corrupt");
+  // Election.parse has already proved raw is a non-null object; the state field
+  // is storage-only, so it is read here and checked against VALID_STATES — the
+  // same vocabulary the registry rows are checked against.
+  const state = (raw as Record<string, unknown>).state;
+  if (typeof state !== "string" || !VALID_STATES.has(state)) return err("corrupt");
+  return ok({ ...election.value, state: state as ElectionState });
+}
 
 // Older Bolt 1 ledgers lack the late lane; reading fills it in-memory only
 // (the file gains the field on the next append — no silent rewrite on load).
@@ -501,9 +519,11 @@ export const Store = {
   },
 
   load(root: string, electionId: string): Result<{ election: Election; state: ElectionState }, StoreError> {
-    const read = readJson<ElectionFile>(
+    const raw = readJson<unknown>(
       join(resolveElectionDir(root, electionId).dir, "election.json"),
     );
+    if (!raw.ok) return raw;
+    const read = parseElectionFile(raw.value);
     if (!read.ok) return read;
     const { state, ...election } = read.value;
     return ok({ election, state });
@@ -512,7 +532,9 @@ export const Store = {
   setState(root: string, electionId: string, state: ElectionState): Result<void, StoreError> {
     const resolved = resolveElectionDir(root, electionId);
     const path = join(resolved.dir, "election.json");
-    const read = readJson<ElectionFile>(path);
+    const raw = readJson<unknown>(path);
+    if (!raw.ok) return raw;
+    const read = parseElectionFile(raw.value);
     if (!read.ok) return read;
     const w = writeStoreFile(path, JSON.stringify({ ...read.value, state }, null, 2));
     if (!w.ok) return w;

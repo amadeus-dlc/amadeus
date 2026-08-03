@@ -53,14 +53,24 @@ function election(electionId: string) {
 }
 
 // Write a raw ElectionFile directly (bypassing Store.create) so no registry row
-// exists — used to exercise the absent/row-missing setState branches.
+// exists — used to exercise the absent/row-missing setState branches. The
+// definition itself must be valid: setState reads it back through the
+// definition validator (#1980), so an invalid stand-in would fail the read
+// before the registry branch under test is reached.
 function seedElectionFileWithoutRow(electionId: string): void {
   const dir = join(root, electionId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "election.json"),
     JSON.stringify(
-      { electionId, kind: "k", question: "q", choices: [], voters: ["a"], state: "draft" },
+      {
+        electionId,
+        kind: "k",
+        question: "q",
+        choices: [{ internalNo: 1, label: "a" }],
+        voters: ["a"],
+        state: "draft",
+      },
       null,
       2,
     ),
