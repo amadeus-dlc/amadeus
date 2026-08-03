@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件 — c1 は既存 cid(units-generation:c1 / enumeration 系)の執行実例であり新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件 — c1 は既存 cid(units-generation:c1 / enumeration 系)の執行実例であり新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "c1 採用 — 「AD の共有資源・交差判定は UG 依存エッジへ機械的に持ち上げて照合する」を追補として persist",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T17:54:01Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-UGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "AD 交差表の UG 依存エッジへの持ち上げ漏れが2例目として再発したら、起草時の機械照合(交差表→エッジ転記)の新規追補への昇格を再検討する。",
+      "rationale": "実測: (1) AD component-dependency.md:94-110 の交差表が U4+U5 の ci.yml/fixture 交差を既に「あり・直列化」と確定済み、(2) UG iteration 1 Major は同表と正反対の主張(交差なし)を書いた転記漏れで、reviewer の標準観点(enumeration-completeness-review の独立再列挙 / shared-ledger-insert-collision の共有台帳知識)が設計どおり捕捉し iteration 2 で edge 追加是正・READY、(3) diary c1 自身が「既存 cid の執行範囲の是正」と分類し、Unit 凝集も units-generation:c1 (a) の適用と明記。上流正本からの導出義務は inventory-from-grep-each-time / cross-unit-type-verbatim-check 等の既存ファミリが同型を覆っており、1回の捕捉済み転記漏れは新規学習でなく既存 cid の執行実例。よって 0件。",
+      "submittedAt": "2026-08-03T00:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-UGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "同型の AD 交差表→UG 依存エッジ持ち上げ漏れが別 intent で再発した場合は、enumeration-completeness-review への追補として昇格を再提案する。",
+      "rationale": "実測: (a) diary c1(memory.md:17)は Unit 凝集を cid:units-generation:c1 (a) の適用と自己申告。(b) unit-of-work.md Review Iteration 1 Major は「cast-guard/pbt-deep-ci が ci.yml + formal-verif-ci-baseline を共有するのに『交差なし』と正反対の主張」で、AD component-dependency.md「共有資源と交差判定」表(:104-106)で既に確定済みの判定の転記漏れ。(c) 是正は unit-of-work-dependency.md:43 の「共有資源による直列化」節+エッジ追加で AD 表と整合し Iteration 2 READY。機序は既存 cid の守備範囲内 — 上流確定判定の下流照合漏れは enumeration-completeness-review(E-SDE-FD 追補の上流照合面)、「交差なし」の未検証断定は absence-claim-grep-verify、既存表からの独立再導出は inventory-from-grep-each-time、交差判定自体は shared-ledger-insert-collision / code-generation:c6 がカバーし、reviewer が iteration 1 で捕捉した執行実例。単発発生・新規機序なしのため persist 相当の新規学習は無い。",
+      "submittedAt": "2026-08-02T17:53:31Z"
+    }
+  ],
+  "resolutions": []
+}

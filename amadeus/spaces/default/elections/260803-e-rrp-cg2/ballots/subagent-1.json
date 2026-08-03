@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-CG2",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A は S2/BR-PDC-7 の実行コマンド文字列に無いフラグを1個足すため、ci.yml のジョブ直上コメントへ「run-tests.ts:59 DEFAULT_TEST_TIMEOUT_MS=30_000 と逐語一致・ランナー非経由の 5000ms 既定を打ち消す環境差吸収であり深掘り予算/対象集合は不変」と申告付きで明記すること、および BR-PDC-8 の timeout-minutes を本実測 wall clock(約8.6秒)+setup から導出することを条件とする。",
+  "rationale": "実測(builder worktree をリードオンリー参照し独立再現): (1) tests/run-tests.ts:59 実文 `const DEFAULT_TEST_TIMEOUT_MS = 30_000;` と :663 の `\"test\", file, `--timeout=${DEFAULT_TEST_TIMEOUT_MS}`` を確認 — このリポの正準ランナーは全 bun test 起動へ 30000ms を渡す。ランナーを介さない本ジョブだけが bun 既定 5000ms を継承する。(2) 5パスを AMADEUS_PBT_DEEP=1 で --timeout なし実行: t417 P-EL2 が 5726.19ms で `this test timed out after 5000ms`、35 pass/1 fail、Ran 36 tests across 5 files [8.62s]。--timeout=30000 付き: EXIT=0、36 pass/0 fail、[8.58s]。wall clock がほぼ同一(8.62 vs 8.58)であることは、フラグが作業量を増やさず per-test cap のみを上げる = 遅延の隠蔽でなく環境差の吸収であることの実測的裏づけ。(3) 契約解釈: BR-PDC-7 の規範内容は env(AMADEUS_PBT_DEEP=1)・set -o pipefail・2>&1 | tee であってフラグ集合を閉じていない。S2 実行コマンド行の理由列は『対象を新規 PBT に限定し、深掘りの実行時間を有界に保つ』、BR-PDC-13 の検査は『引数が明示列挙であること』= 対象集合の限定であり、A はこれを一切変えない。S2 のタイムアウト行自体が『実測ベースで実装段に確定』と実装段へ委ねている。よって A は設計契約の変更ではなく実行環境差の吸収と判断する。(4) fail-open 化しない: timeout cap の引き上げは反例を緑にしない(反例は従来どおり loud fail)。continue-on-error/|| true は不使用で BR-PDC-9 不変、ジョブ全体は BR-PDC-8 の timeout-minutes で有界。値 30000 は既存定数からの逐語引用で新規マジックナンバーを作らない(cid:requirements-analysis:constants-from-code)。所在は ci.yml のみで U5 内。(5) 対案の棄却: C は BR-PDC-12(numRuns 50_000 不変)の直接違反で深掘り階層の目的自体を毀損。B は着地済み他 unit ファイル(t417)の編集で U5 所在を超え、per-test cap を別 unit 所有ファイルへ埋め込む。D は FR-5a の実 FS fail-closed 深掘り(唯一の integration property)を消す。いずれも A より契約適合度・利用者価値ともに劣る。",
+  "submittedAt": "2026-08-03T05:32:32Z"
+}

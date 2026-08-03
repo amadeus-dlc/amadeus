@@ -1,0 +1,27 @@
+{
+  "electionId": "E-RRP-FDS13",
+  "voter": "subagent-2",
+  "question": "260802-record-roundtrip-pbt / functional-design §13 学習選定。surface 候補3件: c1 = P-ST3 受理ドメイン精密化(AD 委任範囲の実測充填 — 行終端子4種+replace 置換パターン $)を執行クラスとして受理した / c2 = consumes-first-drafting 違反の同一セッション2回目 — conductor の委譲ブリーフが記憶起草の consumes を6サブエージェントへ増幅し 24面 FAILED(DP の1回目と同根、増幅面が新規)/ c3 = §12a reviewer 6体中2体が許可外パスを check-read なしで読取と自己開示(prompt 明示だけでは read-only 境界が破られる既知パターンの reviewer 面再現)。各候補を (a) 既存 cid の執行/違反実例で persist 不要 (b) 既存 cid への追補として persist 相当 で判定し、採用集合を選べ。判断材料: diary(construction/functional-design/memory.md)、audit の SENSOR_FAILED 24件→PASSED 48件、team.md consumes-first-drafting 原文、project.md c4-subagent-structural-guard / c1-reviewer-scope-alignment 原文、レビュー verdict(各 unit business-logic-model.md 末尾 Review block)。GoA 明記、2/3/6 は留保1文。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c2 のみ採用 — 「委譲ブリーフの consumes は directive から機械転記(記憶起草の増幅防止)」を consumes-first-drafting への追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "c2+c3 採用 — 両方を追補として persist"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "0件 — c1/c2/c3 すべて既存 cid の執行・違反実例"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "c3 のみ採用 — reviewer の scope 境界逸脱への構造対策追補を persist"
+    }
+  ]
+}

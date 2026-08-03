@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-ADS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "既存の derived-value-shows-formula / numbers-from-command-output-only 系数値規範ファミリへの追補として persist し、独立 cid 新設でファミリを分裂させないこと。",
+  "rationale": "実測: diary c1 原文(memory.md:17)、components.md Review iteration 1 Major(33/18→32/17 の4箇所自己矛盾)→ iteration 2 READY(初期値 33/18 不変・AST 述語は型引数非依存へ統一)を確認。既存 cid の grep 実測では numbers-from-command-output-only はコマンド出力からの転記(過去の実測値)、derived-value-shows-formula は算術派生値(平均・按分)の式併記、estimates-not-acceptance-criteria は推定ラベル明示をそれぞれ縛るが、いずれも『検出述語を将来コードへ適用した結果の予測値』を述語意味論の机上トレースまたは実測で導出せよとは規定しない。本件の誤りは算術・転記・ラベルのいずれでもなく述語意味論の誤予測であり、既存規範の執行実例に還元できない未被覆面。よって c1 採用。",
+  "submittedAt": "2026-08-02T17:41:00Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RRP-ADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "独立 cid でなく numbers-from-command-output-only / estimates-not-acceptance-criteria 系の既存数値規範への追補として persist し、適用対象を台帳・ゲートの将来値に限定して肥大を避けること。",
+  "rationale": "実測3点: (a) diary Interpretations 2026-08-02T17:38:52Z に c1 原文実在(33→32 断定→reviewer Major→是正4箇所+比率1件→iteration 2 READY)。(b) decisions.md ADR-2 Consequences は『U1 着地後も検出され続け、初期値は 33/18 のまま — AST 述語は呼出し側の型引数に依存しない』へ是正済み、components.md Review block に iteration 1 Major(自己矛盾4箇所伝播)と iteration 2 READY を確認。(c) 既存 cid 群の被覆判定 — numbers-from-command-output-only は検証・ゲート報告の実測数値の転記規律、derived-value-shows-formula は実測からの算術派生値、estimates-not-acceptance-criteria は推定のラベル分離と AC 不使用、ledger-count-mechanical-recalc は現在の列挙からの機械再計算 — いずれも『未来の測定値の予測』を検出述語の意味論適用(机上トレース)から導出せよという規律を定めない。本件の欠陥はラベル欠如でなく、機械導出可能(述語は型引数非依存)なのに導出せず誤った将来値を断定した点であり、ラベル義務では自己矛盾を防げない。よって未被覆面を埋める新規学習として採用。",
+  "submittedAt": "2026-08-03T00:00:00Z"
+}

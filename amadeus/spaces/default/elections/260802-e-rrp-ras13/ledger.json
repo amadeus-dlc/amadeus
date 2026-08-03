@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: diary memory.md は全節テンプレートコメントのみ(実記録0件=MEMORY_EMPTY一致)。requirements.md 必須7節完備+Review Iteration 1 READY(product-lead)、Minor 2件是正は numbers-from-command-output-only / constants-from-code 等の既存 cid 執行。questions 0問様式に E-OC1 判定と承認行 2026-08-02T17:02:39Z 実在。新規学習に相当する失敗・逸脱・手順発見は成果物・diary に不在。",
+      "submittedAt": "2026-08-02T17:09:24Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: (a) diary memory.md は Interpretations/Deviations/Tradeoffs/Open questions 全節がコメントのみの空(観察 0 件)。(b) requirements.md 実在・必須7節(Intent analysis/Functional/Non-functional/Constraints/Assumptions/Out of scope/Open questions)完備+Review — Iteration 1 READY(product-lead, 2026-08-02T17:07:28Z)。Minor 2件(NFR-4 閾値・FR-6a パス)は既存 cid(constants-from-code / 測定 ref 系)の執行範囲の是正であり新規学習ではない。(c) questions は 0問様式で E-OC1 判定ヘッダ(1問1行根拠)+承認行「ユーザー承認: 2026-08-02T17:02:39Z」実在(answer-evidence 承認語彙+ISO TS 充足)。逸脱・新規機構・未文書の罠の観察なし — 全手順が既決ノルムの執行と確認できたため 0 件で可。",
+      "submittedAt": "2026-08-02T17:09:31Z"
+    }
+  ],
+  "late": []
+}

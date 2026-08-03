@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RRP-FDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "c3 は cid:code-generation:c1-reviewer-scope-alignment(検証に構造的に必要なパスは dispatch 時点で許可集合へ含める)の違反実例そのものであり新規追補は不要 — reviewer 面での再発が再度観測されたら蒸留ラウンドで昇格を再判定する。",
+      "rationale": "実測: (a) diary 2026-08-02T18:15-18:27Z の3候補原文を直読。(b) audit で functional-design の SENSOR_FAILED 24件→是正後 PASSED を grep 実測(FAILED=24)。(c) team.md:242 consumes-first-drafting 原文 — 既存則は起草者本人の『directive を先に読む』を縛るが、conductor の委譲ブリーフが記憶起草の consumes を6サブエージェント×4成果物=24面へ増幅する経路は未規定の新規面であり、『委譲ブリーフの consumes は directive から機械転記』は追補相当。(d) c1 は AD が明示委任した除外集合の実測充填で always-elect の機械的執行クラス — state-pbt Review block(READY『AD 委任範囲内で言語仕様に照らし妥当、A-2 不変』GoA 1-2)が裏付け、新規則なし。(e) c3 は project.md:268 c1-reviewer-scope-alignment が既に処方する形(260731 FD の u5/u7/u8 と同型 — 検証に必要な unit-of-work-dependency.md の読取・内容一致・verdict 影響なし)の違反/反復実例で、project.md:14 c4-subagent-structural-guard も『prompt 明示だけに依存しない』を既定済み。よって c2 のみ採用。",
+      "submittedAt": "2026-08-02T18:29:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RRP-FDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "c2 は独立 cid でなく consumes-first-drafting への追補統合とし、適用は conductor の委譲ブリーフ経由で consumes を配布する場合に限定する(単独起草は既存本則で足りる)。",
+      "rationale": "実測: (a) diary Interpretations 18:15:15Z/18:16:39Z/18:27:32Z の3候補原文を確認。(b) audit シャードで FD の SENSOR_FAILED 24件(全て upstream-coverage、6 unit×4成果物 — seq 323/325/327 等で機序確認)→ 同 FD upstream-coverage SENSOR_PASSED 24件の遷移を機械カウント(grep -c)で確認 — c2 の増幅事実は実在。(c) c1 は state-pbt business-logic-model.md の Review block(READY 18:26:04Z、A-2 不変・AD 委任範囲内・言語仕様照合妥当と reviewer 独立確認)で照合 — 既決 contract の執行クラス(always-elect の機械的執行/no-election-judgment-gate 系)の執行実例であり新規範なし → persist 不要。(d) c2 は team.md consumes-first-drafting 原文が「起草前に directive の consumes 宣言を先に読む」という起草者側の順序を縛る一方、conductor の委譲ブリーフという配布点での記憶起草→6サブエージェント×4成果物への増幅は未カバー — DP(1回目)に続く同一セッション2回目の再発が既存則の構造的不足を実証し、「委譲ブリーフの consumes は directive から機械転記」は新規面 → 追補 persist 相当。(e) c3 は state-pbt(Minor: 許可外 unit-of-work-dependency.md を check-read なしで参照・内容一致・影響なし)と cast-guard(手続き開示1件)の Review block で確認したが、project.md c1-reviewer-scope-alignment(検証課題に構造的に必要なファイルは許可 read-only 集合へディスパッチ時点で含める — cross-unit 整合照合を明示列挙)と c4-subagent-structural-guard(prompt 明示だけに依存しない)が既に本形状をカバー — 本件は許可集合漏れ+既知パターン再現 = 既存 cid の違反/執行実例であり新規追補なし → 不採用(PM ラウンドの違反実例カウントへ回付)。",
+      "submittedAt": "2026-08-02T18:29:33Z"
+    }
+  ],
+  "late": []
+}

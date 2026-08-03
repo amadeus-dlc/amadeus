@@ -1218,3 +1218,8 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 所有境界
 
 薄い CLI wrapper は stdout、集計、exit 0/1、spawn CLI/cwd 互換性を所有する。doctor core は検査順序、結果集合、終了判定を所有し、audit 追記と stale lock cleanup を欠落させない。checks/dependencies は既存動作を提供し、utility 全体の再設計は行わない。
+
+## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+- 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
+

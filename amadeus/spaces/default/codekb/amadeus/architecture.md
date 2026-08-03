@@ -2873,3 +2873,52 @@ flowchart LR
   Wrapper --> Exit["exit 0 / 1"]
 ```
 <!-- text fallback: runUtilityMain が doctor コマンドを薄い CLI wrapper へ dispatch し、wrapper が doctor core を呼ぶ。doctor core は checks と env・cache・cwd・filesystem・audit などの dependencies を編成し、診断結果と終了判定を返す。wrapper は既存契約どおり stdout に診断と集計を出力し、終了コード0または1へ変換する。 -->
+
+## 記録系 write⇔read 境界の対称性と読み側バリデータ配置（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+本節の file:line はすべて observed `9750f8aea` 時点。患部 touch 判定・引用再確認テーブル・実対象線引きは `re-scans/260802-record-roundtrip-pbt.md` を正本とする。
+
+### 4境界の seam ペアと読み側バリデータの所在
+
+| 境界 | 書き手 | 読み手 | 読み側の検査 | 既存 PBT |
+| --- | --- | --- | --- | --- |
+| mirror | `amadeus-mirror-state-codec.ts:1898` `renderMirrorStateJson` / `:1927` `renderMirrorStateBlock` | `:1666` `parseMirrorStateDocument`（`:1695` で `parseJsonStrict`（`:153`）を適用） | あり（duplicate-key 検出つき strict parse + エンティティ検証） | 半分（`t274:58` は example-based の round-trip、property は `:341` の周辺バイト保存のみ） |
+| state（構造フィールド） | `amadeus-state.ts:278` `serializeMirrorBoundaryReceipts` | `:239` `parseMirrorBoundaryReceipts` | あり（fail-closed、下記） | なし |
+| state（テキストフィールド） | `amadeus-lib.ts:5237` `setField` / `:5271` `setFieldStrict` | `:5179` `getField` | 実質なし（正規表現 1 本、値は無検査） | なし |
+| audit | `amadeus-audit.ts:360` `escapeAuditValue` | `:367` `unescapeAuditBody` | 検査ではなく可逆符号化 | あり（`t204` P-AE1 条件付き round-trip、`t352`、`t364`） |
+| election | `amadeus-election-store.ts:60` `writeStoreFile` | `:71` `readJson<T>` | **なし**（`:80` 無検査キャスト） | なし |
+
+### 読み側の硬さは境界ごとに 3 層へ割れている
+
+**(a) 読み側が fail-closed（state 構造フィールド）**。`parseMirrorBoundaryReceipts`（`amadeus-state.ts:239`）は JSON parse の**前に**正規表現で phase キーの重複を走査して throw（`:248` `Mirror Boundary Receipts has duplicate phase`）、以降も不正 JSON（`:257`）、非オブジェクト（`:261`）、未知 phase（`:266`）、不正 status（`:270`）をすべて throw する。対の書き手 `serializeMirrorBoundaryReceipts`（`:278`）は `MIRROR_BOUNDARY_PHASES`（`:225`）の宣言順へ並べ替えてから `JSON.stringify` する**正規化書き手**である。
+
+→ この境界の round-trip プロパティは「恒等」ではなく「正規化後の同値」で張る必要がある。すなわち `parse ∘ serialize = id`（受理ドメイン上）は成立するが、キー順が自由な生テキストに対する `serialize ∘ parse = id` は成立しない（順序が正規化されるため）。PBT の等式をどちら向きに書くかで、成立しないほうを選ぶと偽の赤になる。
+
+**(b) 読み側が検査を持つがプロパティ未張（mirror）**。`parseMirrorStateDocument`（`:1666`）は `parseJsonStrict`（`:153`）経由で duplicate-key を検出し、エンティティ単位の検証を行う。ここで不足しているのは検査そのものではなく、`render → parse` を任意の妥当 snapshot 上で張る property 版と、その snapshot の arbitrary である。
+
+**(c) 読み側が素通り（election）**。`Store.load`（`amadeus-election-store.ts:503-510`）は `readJson<ElectionFile>` を呼ぶだけで `Election.parse` を再適用しない。`readJson` の該当行（`:80`、verbatim）:
+
+```ts
+    return ok(JSON.parse(text) as T);
+```
+
+### 発行側のみがバリデータを通る非対称（本 intent の中心機序）
+
+`Election.parse` / `Ballot.parse` のプロダクション呼出は `amadeus-election.ts:310`（open = 発行側）と `:433`（vote = 発行側）の 2 箇所のみで、消費側（status / tally / verify）からの呼出は 0 件（測定: `grep -rn "Election\.parse|Ballot\.parse" packages/framework/core/tools/ scripts/`、observed `9750f8aea`）。
+
+したがって #1459 が `amadeus-election-model.ts` へ入れた硬化 — 重複 `internalNo` の拒否（`:96`）、空 `choices` の拒否（`:77`）、重複 voter の拒否（`:109`）、および `hasDuplicates`（`:65`）という共有述語 — は、**ディスクからの読み戻し経路を一切通らない**。これが「修正しても読み側が素通りする」という、例示ベースのケース列挙で再発し続ける構造である。設計上の含意は、バリデータの追加ではなく**発行側と消費側が同一バリデータを食う構造への収斂**（4 境界とも既に `packages/framework/core/tools/` にあるため移設ではなく一本化）であり、適用単位は境界ごと（4 境界を貫く単一の汎用バリデータは作らない）。
+
+### round-trip プロパティと fail-closed プロパティの書き分けが必須である理由
+
+round-trip（`write → read` で同値）はメタモルフィックで独立オラクルを持たないため `cid:build-and-test:pbt-oracle-cancellation` に抵触しない。一方で、発行側と消費側が同一バリデータを共有する構造へ収斂させると、**バリデータ自身の欠陥は round-trip プロパティに現れない**（両側が等しく間違うため恒真になる）。
+
+→ 2 種を分けて張る。(1) **round-trip プロパティ** = 符号化層の全単射性の検証。(2) **fail-closed プロパティ** = 述語の否定側（任意の非適合入力が読み側 parse で必ず棄却される）。(2) では棄却規則をテスト側で再実装するとオラクル相殺に落ちるため、arbitrary は非適合入力の生成に徹し、判定は被検バリデータ自身へ委ねる構造にする。
+
+### 読み側 fail-closed の対称性欠落（state テキストフィールド層）
+
+`getField`（`amadeus-lib.ts:5179`）は一致行の捕捉群を `.trim()` して返し、`setField`（`:5237`）は `- **Field**:` 行が存在しないとき**無変更の content をそのまま返す**（サイレント no-op）。同一ファイルの `setFieldStrict`（`:5271`）は同じ状況で throw する。すなわち同じ書き込み意図に対して fail-open な書き手と fail-closed な書き手が併存しており、round-trip は `getField(setField(c, f, v), f) === v.trim()` という**trim 込み・フィールド存在前提**の条件付き同値でしか成立しない。この非対称は PBT の受理ドメイン定義（どの入力を妥当とするか）を設計段で明示しなければ、恒真プロパティか偽の赤のどちらかに落ちる。
+
+### 配置と投影の含意
+
+対象コーデック群（`amadeus-mirror-state-codec.ts` / `amadeus-election-model.ts` / `amadeus-election-store.ts` / `amadeus-journal.ts` / `amadeus-audit.ts` / `amadeus-state.ts`）はすべて `packages/framework/core/tools/` にあり、全ハーネス manifest の `coreDirs` が `{ src: "tools", dst: "tools" }`（`packages/framework/harness/claude/manifest.ts:53`、observed 実測。レビュー記載 `:52` から +1 シフト）で投影する。したがってコア側の一本化・fail-closed 化は自動的に (a) dist 7 ハーネス全ての再生成 (b) `dist:check` / `promote:self:check` (c) coverage patch ゲートの母集団入り（spawn 盲点があるため in-process seam 設計を実装時点で行う） (d) `t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照）を引き込む。テスト側は dist へ投影されない（`find dist -type d -name tests` / `find dist -name "*.test.ts"` ともに 0 件）。
+

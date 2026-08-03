@@ -538,5 +538,77 @@
     "dirName": "260803-e-ra-2072-learnings-1",
     "createdAt": "2026-08-03T00:43:08Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-RES13",
+    "dirName": "260802-e-rrp-res13",
+    "createdAt": "2026-08-02T16:44:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-RAS13",
+    "dirName": "260802-e-rrp-ras13",
+    "createdAt": "2026-08-02T17:07:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-ADS13",
+    "dirName": "260802-e-rrp-ads13",
+    "createdAt": "2026-08-02T17:39:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-UGS13",
+    "dirName": "260802-e-rrp-ugs13",
+    "createdAt": "2026-08-02T17:51:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-DPS13",
+    "dirName": "260802-e-rrp-dps13",
+    "createdAt": "2026-08-02T17:58:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-FDS13",
+    "dirName": "260802-e-rrp-fds13",
+    "createdAt": "2026-08-02T18:27:49Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-NDS13",
+    "dirName": "260802-e-rrp-nds13",
+    "createdAt": "2026-08-02T23:32:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CG1",
+    "dirName": "260803-e-rrp-cg1",
+    "createdAt": "2026-08-03T01:18:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CG2",
+    "dirName": "260803-e-rrp-cg2",
+    "createdAt": "2026-08-03T05:29:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CGS13",
+    "dirName": "260803-e-rrp-cgs13",
+    "createdAt": "2026-08-03T05:53:05Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-BTS13",
+    "dirName": "260803-e-rrp-bts13",
+    "createdAt": "2026-08-03T06:24:47Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-FMCS13",
+    "dirName": "260803-e-rrp-fmcs13",
+    "createdAt": "2026-08-03T06:51:09Z",
+    "status": "recorded"
   }
 ]

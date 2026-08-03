@@ -1956,3 +1956,86 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 推奨する最小分割
 
 `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` の順に境界を置く。CLI wrapper は引数・stdout・exit の互換性を所有し、doctor core は検査の編成と終了判定を所有する。checks/dependencies は既存の単位を活用し、全 check の純関数化や utility 全体の再編はスコープ外とする。
+
+## 記録系 round-trip PBT の患部配置（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
+
+本節の file:line はすべて observed `9750f8aea` 時点。全数・touch 判定の一次記録は `re-scans/260802-record-roundtrip-pbt.md` を正本とする。
+
+### 患部の 3 グループ
+
+**(1) コーデック正本（`packages/framework/core/tools/`）** — 読み側 fail-closed 化と発行⇔消費バリデータ一本化の対象。
+
+| ファイル | 書き手 | 読み手 |
+| --- | --- | --- |
+| `amadeus-mirror-state-codec.ts` | `:1898` `renderMirrorStateJson` / `:1927` `renderMirrorStateBlock` | `:1666` `parseMirrorStateDocument`（`:1695` → `:153` `parseJsonStrict`） |
+| `amadeus-state.ts` | `:278` `serializeMirrorBoundaryReceipts` | `:239` `parseMirrorBoundaryReceipts`（phase 定数 `:225`） |
+| `amadeus-lib.ts` | `:5237` `setField` / `:5271` `setFieldStrict` | `:5179` `getField` |
+| `amadeus-audit.ts` | `:360` `escapeAuditValue` | `:367` `unescapeAuditBody` |
+| `amadeus-election-store.ts` | `:60` `writeStoreFile` | `:71` `readJson<T>`（`:80` 無検査キャスト）、`:503-510` `Store.load` |
+| `amadeus-election-model.ts` | — | `Election.parse`（`:100`〜、`:77` 空 choices 拒否 / `:96` 重複 internalNo 拒否 / `:109` 重複 voter 拒否 / `:65` `hasDuplicates`） |
+| `amadeus-election.ts` | `:310` open が `Election.parse` / `:433` vote が `Ballot.parse`（発行側のみ） | — |
+| `amadeus-journal.ts` | 既存 PBT 被覆済み（`t352` / `t364`） | 同左 |
+
+**(2) テスト側（`tests/`、dist 非投影）** — 新規 PBT の置き場。既存の fast-check 使用ファイルは `tests/unit/` に 7 本、`tests/integration/` に 1 本、arbitrary ヘルパが `tests/helpers/arbitraries/` に 2 本の計 10 パス（測定: `grep -rln "fast-check" tests/` = 10、内訳は `tests/unit` 7 / `tests/integration` 1 / `tests/helpers` 2、observed `9750f8aea`）。
+
+| パス | 種別 |
+| --- | --- |
+| `tests/unit/setup-semver.pbt.test.ts` / `setup-manifest.pbt.test.ts` / `setup-plan-decisions.test.ts` | 既存（setup ドメイン、#697） |
+| `tests/unit/t204-audit-escape.pbt.test.ts` | 既存（audit、#697 Phase B B4） |
+| `tests/unit/t352-journal-codec.pbt.test.ts` / `tests/integration/t364-journal-v2.pbt.test.ts` | 既存（journal） |
+| `tests/unit/t274-amadeus-mirror-state-codec.test.ts` / `t275-amadeus-mirror-state-reducer.test.ts` | 既存（mirror、`.pbt.` 命名でないため命名探索では取りこぼす） |
+| `tests/helpers/arbitraries/manifest.ts` / `semver.ts` | 既存 arbitrary ヘルパ（新規 arbitrary の追加先） |
+| `tests/callsite-guard.ts` | 静的ガードの先例（shrink-only allowlist ratchet） |
+| `tests/run-tests.ts` | `:117` が `--ci = smoke + unit + integration` を宣言（新規 PBT の実行到達点） |
+
+実 FS を使う検証は integration へ置く（`cid:code-generation:fs-tests-integration-first`）。`writeStoreFile` の tmp→rename を実 FS で経由する election 境界の round-trip は、この規律に照らすと integration 側が既定になる。
+
+**(3) 静的ガードの挿入点** — 「共有バリデータを経由しない読み戻し経路」の検出。先例は `tests/callsite-guard.ts`（ヘッダ verbatim: `A deterministic shrink-only ratchet over the legacy audit and telemetry call sites, shaped after tests/complexity-gate.ts (the canonical gate template)`）。同ファイルが明示する設計原則 — file:line ピンではなく `(file, symbol)` 単位のカウントで単調減少性を保つ（`cid:code-generation:allowlist-line-pin-stale` 回避） — を新規ガードにも引き継ぐ。
+
+現行の候補母集団（単一行形の無検査キャスト）は `packages/framework/core/tools/*.ts` に 8 箇所 / 5 ファイル（測定: `grep -rnE "JSON\.parse\([^)]*\) as " packages/framework/core/tools/*.ts`、observed `9750f8aea`。**単一行の正規表現であり複数行にまたがる形は捕捉しない** — ガード実装時は AST 相当の走査か、複数行形の別途棚卸しが要る）:
+
+| ファイル:行 | 断片 |
+| --- | --- |
+| `amadeus-election-store.ts:80` | `return ok(JSON.parse(text) as T);` |
+| `amadeus-graph.ts:2004` | `parsed = JSON.parse(raw) as typeof parsed;` |
+| `amadeus-graph.ts:2523` | `const parsed = JSON.parse(gridOnDisk) as ScopeGrid;` |
+| `amadeus-includes.ts:80` | `const json = JSON.parse(raw) as { resources?: unknown };` |
+| `amadeus-lib.ts:849` | `const parsed = JSON.parse(output) as unknown;` |
+| `amadeus-plugin-compose.ts:1302` | `const raw = JSON.parse(text) as { plugins?: Record<string, DropEntry[]> };` |
+| `amadeus-plugin-compose.ts:1423` | `const o = JSON.parse(text) as { ledger: [string, Json][]; plugins: [string, Json][] };` |
+| `amadeus-plugin-compose.ts:1479` | `const o = JSON.parse(text) as Record<string, unknown>;` |
+
+本 intent の患部は 4 境界に限られるため、この 8 箇所全部が是正対象ではない（`amadeus-election-store.ts:80` が患部、他は allowlist 初期値の候補）。
+
+### 患部の区間 touch 判定（`47574fbab..9750f8aea`）
+
+| パス | 区間内コミット数 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-election.ts` | 0 | — |
+| `packages/framework/core/tools/amadeus-election-store.ts` | 0 | — |
+| `packages/framework/core/tools/amadeus-election-model.ts` | 0 | — |
+| `packages/framework/core/tools/amadeus-mirror-state-codec.ts` | 0 | — |
+| `packages/framework/core/tools/amadeus-state.ts` | 0 | — |
+| `packages/framework/core/tools/amadeus-lib.ts` | 1 | #2031、+1 行のみ |
+| `packages/framework/core/tools/amadeus-audit.ts` | 1 | #2031、+5 行（`EXECUTION_EVENT_SET_COMMITTED` 追加、event types 79→80） |
+| `packages/framework/core/tools/amadeus-journal.ts` | 0 | — |
+| `tests/run-tests.ts` | 0 | — |
+| `tests/callsite-guard.ts` | 0 | — |
+
+コマンド: `git log --oneline 47574fbab..9750f8aea -- <path> | wc -l` を 10 パスへ個別適用。**結論**: 乖離は区間内に新規導入されたものではなく残存（全患部で区間内の実質変更なし）。
+
+### 上流引用の行シフト再解決（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）
+
+Issue 本文・クロスレビューの引用のうち、observed `9750f8aea` で行がずれたもの。下流成果物はこの再解決値を使う。
+
+| 引用 | Issue / レビュー記載 | observed 実測 | シフト源 |
+| --- | --- | --- | --- |
+| `amadeus-state.ts` `parseMirrorBoundaryReceipts` | `:238` | `:239` | +1 |
+| `amadeus-state.ts` `serializeMirrorBoundaryReceipts` | `:277` | `:278` | +1 |
+| `amadeus-lib.ts` `setField` | `:5236` | `:5237` | +1（#2031） |
+| `amadeus-audit.ts` `escapeAuditValue` | `:355` | `:360` | +5（#2031） |
+| `amadeus-audit.ts` `unescapeAuditBody` | `:362` | `:367` | +5（#2031） |
+| `harness/claude/manifest.ts` `coreDirs` tools 行 | `:52` | `:53` | +1 |
+
+ずれなしを実測確認したもの: `amadeus-election.ts:310` / `:433`、`amadeus-election-store.ts:80`、`amadeus-lib.ts:5179` `getField`、`amadeus-election-store.ts:503-510` `Store.load`、`tests/run-tests.ts:117`、`t274:58` / `:341`。
+
