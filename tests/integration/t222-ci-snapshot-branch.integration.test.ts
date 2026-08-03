@@ -261,6 +261,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(snapshotJob).toContain("permission-contents: write");
     expect(snapshotJob).toContain("permission-pull-requests: write");
     expect(snapshotJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
+    expect(snapshotJob).toContain("persist-credentials: false");
     expect(snapshotJob).toContain("bun scripts/metrics-publication.ts snapshot");
     expect(snapshotJob).toContain('--target-sha "$GITHUB_SHA"');
     expect(snapshotJob).not.toContain("GITHUB_RUN_ATTEMPT");
