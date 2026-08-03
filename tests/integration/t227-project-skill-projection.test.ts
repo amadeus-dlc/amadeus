@@ -21,6 +21,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
 import { promoteSelfMain } from "../../scripts/promote-self.ts";
 
 let root: string;
@@ -41,7 +42,11 @@ beforeEach(() => {
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
   write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "# Claude onboarding\n");
-  write("AGENTS.md", "# Project rules\n");
+  write("CLAUDE.md", `${PROJECT_INSTRUCTIONS}# Claude onboarding\n`);
+  write(
+    "AGENTS.md",
+    "@.agents/rules/amadeus.md\n@.agents/rules/amadeus-codex-suffix.md\n\n# Project rules\n",
+  );
   write(
     "contrib/skills/amadeus-upstream-sync/SKILL.md",
     "---\nname: amadeus-upstream-sync\ndescription: Test fixture skill.\n---\n",
