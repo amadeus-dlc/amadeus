@@ -108,10 +108,10 @@ workflow.
 
 ## For framework developers
 
-`dist/kiro-ide` is **generated** from `packages/framework/core/` + `packages/framework/harness/kiro-ide/` by
+`dist/kiro-ide` is **generated** as ignored local output from `packages/framework/core/` + `packages/framework/harness/kiro-ide/` by
 `bun scripts/package.ts kiro-ide` (core copy with the `{{HARNESS_DIR}}` token
-substituted to `.kiro` and the `rules/` → `steering/` rename). `bun
-scripts/package.ts --check` is the drift guard and runs in CI. The authored
+substituted to `.kiro` and the `rules/` → `steering/` rename). CI compares
+two isolated builds and enforces the source-only boundary. The authored
 Kiro IDE surfaces live in `packages/framework/harness/kiro-ide/`: the orchestrator skill
 (`skills/amadeus/`), the agent JSONs (`agents/`), the hook adapter and
 `.kiro.hook` files (`hooks/`), `settings/cli.json`, and `AGENTS.md` — edit

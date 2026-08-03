@@ -7,7 +7,7 @@
 machine, audit log, graph, swarm referee, and learnings gate are byte-identical
 across every distribution — only the shell differs. The tree is **generated**
 from `packages/framework/core/` + `packages/framework/harness/cursor/` by
-`bun scripts/package.ts cursor`; never hand-edit it (the drift guard fails CI).
+`bun scripts/package.ts cursor` as ignored local output. Release CI rebuilds it from a clean checkout.
 
 ## Prerequisites
 
@@ -92,7 +92,7 @@ denies (not used here), any other code fails open. The adapter's
 
 ```bash
 bun scripts/package.ts cursor        # regenerate dist/cursor from packages/framework/core + harness/cursor
-bun scripts/package.ts --check       # CI drift guard (every harness)
+bun run source-only:check            # verify generated output remains outside the Git boundary
 ```
 
 ## Next steps

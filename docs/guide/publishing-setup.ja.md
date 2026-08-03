@@ -11,8 +11,9 @@
 このリポジトリのバージョンは **1 つ** です: `packages/setup/package.json` の
 version が `vX.Y.Z` リリースタグを駆動し、`AMADEUS_VERSION` と README バッジは
 それと等しく保たれます(t68 が整合をガードし、release-it の `after:bump` フックが
-`scripts/release-version-sync.ts` を実行して `dist/` とセルフインストールツリーも
-再生成するため、リリースコミットはすべてを同期した状態で出荷します)。1 つのタグが
+`scripts/release-version-sync.ts` を実行します)。生成された `dist/` とself-install
+treeは未追跡のままで、release workflowがリリース対象commitから再buildして配布assetを
+公開します。1 つのタグが
 同時に `@amadeus-dlc/setup` の npm リリースであり、インストーラがフレームワーク
 配布物を解決する GitHub タグでもあります。リリースノートはリリース時に GitHub
 Release へ生成されます — CHANGELOG ファイルはありません。
@@ -64,9 +65,9 @@ Release へ生成されます — CHANGELOG ファイルはありません。
 `packages/setup/package.json` の `version` は `0.1.0` から始まる独立した semver
 です(FR-017、BR-P06)。**リリースワークフローが代わりに bump します** — dispatch
 時に bump レベルを選び(第 5 章)、release-it がそれを bump し、`after:bump` フックが
-`AMADEUS_VERSION`、README バッジ、再生成された `dist/` + セルフインストールツリーを
-同期し、その一式がまとめてコミットされ、`vX.Y.Z` としてタグ付けされ、`main` へ
-push されます。リリースコミットは PR なしで `main` へ着地します — PR ルールに対する
+`AMADEUS_VERSION` とREADMEバッジを同期します。追跡されたversion surfaceだけが
+コミットされ、`vX.Y.Z` としてタグ付けされ、`main` へpushされます。生成物はignoreされた
+ままrelease jobが再buildします。リリースコミットは PR なしで `main` へ着地します — PR ルールに対する
 明示的でチームに記録された例外であり、リリースのバージョン同期に限定されます。
 
 手動フォールバック:
@@ -83,10 +84,13 @@ npm version <patch|minor|major> --no-git-tag-version
 
 ```bash
 # リポジトリルートから
+bun install --frozen-lockfile
+bun run build
 cd packages/setup && bun run build && cd -
 
 bun run typecheck
 bun run lint
+bun run source-only:check
 
 bash tests/run-tests.sh --ci
 ```
@@ -96,10 +100,8 @@ CI プロファイルには pack コントラクトテスト
 (`tests/integration/setup-files-drift.test.ts`)が含まれます — 先へ進む前に
 どちらもグリーンである必要があります。
 
-次に実ネットワークの E2E を実行します。これは実際の GitHub codeload アーカイブの
-形(単一のトップレベルラッパーディレクトリ)をライブリポジトリに対して検証する
-もので、GitHub のアーカイブ形式のドリフトが現場のインストールを壊すことに対する
-唯一のガードです:
+次に実ネットワークのE2Eを実行します。これは現在版の検証済みGitHub Release Asset経路と、
+asset境界より前に公開されたversionだけが使うsource archive fallback経路を検証します:
 
 ```bash
 AMADEUS_SETUP_E2E_NETWORK=1 bash tests/run-tests.sh --release
@@ -144,19 +146,20 @@ Actions タブから `main` に対して **Release @amadeus-dlc/setup** を実�
 レベル(patch / minor / major)を選びます。1 回の実行がすべてを行います:
 
 1. release-it が `packages/setup/package.json` を bump し、`after:bump` フック
-   (`scripts/release-version-sync.ts`)が `AMADEUS_VERSION`、README バッジ、
-   再生成された `dist/` + セルフインストールツリーを同期し、その一式がまとめて
-   コミットされ、`vX.Y.Z` としてタグ付けされ、`main` へ push される(設定:
+   (`scripts/release-version-sync.ts`)が `AMADEUS_VERSION` とREADMEバッジを同期する。
+   追跡されたversion surfaceがコミットされ、`vX.Y.Z` としてタグ付けされ、`main` へ push される(設定:
    `packages/setup/.release-it.json`)
-2. softprops/action-gh-release が自動生成ノート付きで GitHub Release を作成する
-3. `dist/cli.js` が新規にビルドされ、`npm publish --provenance --access public` で
+2. `build-dist` がそのcommitをcheckoutし、Bun 1.3.13で依存関係をinstallして全ハーネスを
+   buildし、full CI test profile、source-only境界、graph不変量を検査したうえで、決定的な
+   `amadeus-dist-vX.Y.Z.tar.gz`、manifest、`SHA256SUMS`を生成する
+3. softprops/action-gh-release が自動生成ノート付きGitHub Releaseを作成し、3つの配布ファイルを添付する
+4. `dist/cli.js` が新規にビルドされ、`npm publish --provenance --access public` で
    publish される(prerelease バージョンは自動的に `--tag next` で publish され、
    `latest` には決して触れない)
-4. レジストリへの伝播完了後、Bun で publish 後の検証を手動実行する
+5. レジストリへの伝播完了後、Bun で publish 後の検証を手動実行する
 
-リリースはテストを再実行しません: `main` 上のすべてのコミットは PR 時点で 5 つの
-CI 品質ゲートを既に通過しており、bump コミット自体は release-it による 1 行の
-バージョン変更だからです。
+リリースはasset構築前にfull CI test profileを意図的に再実行します。release jobが公開配布byteを
+所有するため、ローカル `dist/` の編集がGit履歴やこのクリーンcheckout buildへ入る経路はありません。
 
 **最初のリリース** に特別な扱いは不要です: リポジトリに `v*` タグがない状態では、
 dispatch は bump をスキップしてコミット済みのバージョンをそのまま
@@ -166,8 +169,8 @@ push することはフォールバックの入口として残っています �
 あります)、ノート → ビルド → publish を実行します。
 
 リリースせずにリハーサルするには、`dry-run: true` で dispatch します —
-release-it が `--dry-run` で実行され(コミット/タグ/push なし)、実際の publish は
-`npm publish --dry-run` に置き換わります。`NPM_TOKEN` は不要です。
+release-it が `--dry-run` で実行され(コミット/タグ/push なし)、配布asset生成はskipされ、
+実際の publish は `npm publish --dry-run` に置き換わります。`NPM_TOKEN` は不要です。
 
 ### フォールバック: 手動 publish(provenance なし)
 

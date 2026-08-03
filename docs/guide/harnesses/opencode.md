@@ -7,7 +7,7 @@
 machine, audit log, graph, swarm referee, and learnings gate are byte-identical
 across every distribution — only the shell differs. The tree is **generated**
 from `packages/framework/core/` + `packages/framework/harness/opencode/` by
-`bun scripts/package.ts opencode`; never hand-edit it (the drift guard fails CI).
+`bun scripts/package.ts opencode` as ignored local output. Release CI rebuilds it from a clean checkout.
 
 ## Prerequisites
 
@@ -100,7 +100,7 @@ row) lives in the intent record's `mapping-table.md`.
 
 ```bash
 bun scripts/package.ts opencode      # regenerate dist/opencode from packages/framework/core + harness/opencode
-bun scripts/package.ts --check       # CI drift guard (every harness)
+bun run source-only:check            # verify generated output remains outside the Git boundary
 ```
 
 ## Next steps

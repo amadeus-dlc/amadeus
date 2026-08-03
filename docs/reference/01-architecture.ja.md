@@ -253,7 +253,7 @@ sequenceDiagram
 
 ## ソース vs 配布物(1つの core、多数のハーネス)
 
-フレームワークは **一度だけ作成され、ハーネスごとに生成されます** — 現在は Claude Code、Kiro CLI、Codex CLI、そして移植先となる任意の高機能 CLI。手作業で作成するソースは、ハーネス中立の `packages/framework/core/` に加え、CLI ごとの薄い `packages/framework/harness/<name>/` サーフェスです。`bun scripts/package.ts` は、コミット済みでドリフトガードされた `dist/<harness>/` ツリーを再生成します:
+フレームワークは **一度だけ作成され、ハーネスごとに生成されます** — 現在は Claude Code、Kiro CLI、Codex CLI、そして移植先となる任意の高機能 CLI。手作業で作成するソースは、ハーネス中立の `packages/framework/core/` に加え、CLI ごとの薄い `packages/framework/harness/<name>/` サーフェスです。`bun scripts/package.ts` は追跡されないローカル `dist/<harness>/` ツリーを再生成し、リリース CI はクリーンビルドをバージョン付き asset としてパッケージします:
 
 ```
 packages/framework/core/           # hand-authored, harness-neutral (tools, amadeus-common,
@@ -263,9 +263,9 @@ packages/framework/harness/<name>/ # per-CLI surface: manifest.ts + orchestrator
                                    #   harness files (+ emit.ts for codex)
 scripts/package.ts                 # the build: copy core (token→.claude/.kiro/.codex) +
                                    #   harness, compile the graph, generate runners, emit;
-                                   #   `--check` is the byte-parity drift guard
-dist/<harness>/                    # GENERATED + committed: claude/.claude, kiro/.kiro,
-                                   #   codex/{.codex,.agents} — never hand-edited
+                                   #   source-only checks keep output outside Git
+dist/<harness>/                    # GENERATED + ignored local output: claude/.claude,
+                                   #   kiro/.kiro, codex/{.codex,.agents}
 ```
 
 `packages/framework/core/` の `.ts` は変換なしでバイトコピーされます。ランタイムの `harnessDir()` シーム(`packages/framework/core/tools/amadeus-lib.ts`)は、実行時に出荷レイアウトからハーネスディレクトリを導出します — ハードコードされたリストではなく、ツール自身のパスからのオープンセットなので、新しいハーネスにここでの編集は不要です — そしてその rules-dir リネームは、`rulesSubdir()` シームが読む、生成された `tools/data/harness.json` にツリーごとに出荷されます。1セットのツールソースがすべてのハーネスで実行されます。[Porting to a New Harness](../harness-engineering/09-porting-to-a-new-harness.ja.md) を参照。

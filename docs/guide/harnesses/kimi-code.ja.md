@@ -7,8 +7,8 @@
 エンジン、ステートマシン、監査ログ、グラフ、swarm レフェリー、learnings ゲートは
 すべてのディストリビューションでバイト単位で同一であり、異なるのはシェルだけです。
 このツリーは `bun scripts/package.ts kimi` によって `packages/framework/core/` +
-`packages/framework/harness/kimi/` から **生成** されます。手編集しないでください
-(ドリフトガードが CI で失敗します)。
+`packages/framework/harness/kimi/` から未追跡のローカル出力として**生成**されます。
+release CIはクリーンcheckoutから再生成します。
 
 ## 前提条件
 
@@ -167,7 +167,7 @@ kimi アームは 4 つのことを検査します:
 
 ```bash
 bun scripts/package.ts kimi          # packages/framework/core + harness/kimi から dist/kimi を再生成
-bun scripts/package.ts kimi --check  # ドリフトガード
+bun run source-only:check            # 生成物がGit境界の外にあることを検査
 ```
 
 Amadeus の self repository では、`bun run promote:self` が `dist/kimi/.kimi-code/`
