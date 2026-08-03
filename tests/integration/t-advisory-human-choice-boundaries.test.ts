@@ -445,6 +445,26 @@ describe("protected advisory choice persistence", () => {
     }
   });
 
+  test("stage completion closes only the active intent run", () => {
+    const { projectDir } = project();
+    const store = readStore(projectDir);
+    store.pending.push({
+      ...store.pending[0]!,
+      identity: {
+        ...store.pending[0]!.identity,
+        intentRun: "00000000-0000-7000-8000-000000000002",
+        advisoryInstance: "019fc698-ba1f-7000-8000-000000000002",
+      },
+    });
+    writeJson(storePath(projectDir), store);
+
+    closeAdvisoryInstancesForStage(projectDir, identity.checkpoint, "2026-08-03T12:00:00.000Z");
+
+    const closed = readStore(projectDir).pending;
+    expect(closed[0]?.closedAt).toBe("2026-08-03T12:00:00.000Z");
+    expect(closed[1]?.closedAt).toBeUndefined();
+  });
+
   test("invalid pending and receipt store members fail closed", () => {
     for (const mutate of [
       (store: AdvisoryChoiceStore) => { store.pending[0]!.identity.code = "unknown" as "changed"; },

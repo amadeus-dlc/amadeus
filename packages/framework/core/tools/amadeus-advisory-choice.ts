@@ -652,9 +652,15 @@ export function closeAdvisoryInstancesForStage(
   withAuditLock(projectDir, () => {
     const storeResult = readStore(projectDir);
     if (!storeResult.ok) return;
+    const intentRun = intentRunIdentity(projectDir);
+    if (intentRun === null) return;
     let changed = false;
     for (const pending of storeResult.value.pending) {
-      if (pending.identity.checkpoint === stage && pending.closedAt === undefined) {
+      if (
+        pending.identity.checkpoint === stage
+        && pending.identity.intentRun === intentRun
+        && pending.closedAt === undefined
+      ) {
         pending.closedAt = now;
         changed = true;
       }
