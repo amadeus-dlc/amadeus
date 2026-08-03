@@ -1,9 +1,0 @@
-{
-  "name": "opencode",
-  "harnessDir": ".opencode",
-  "rulesSubdir": "amadeus-rules",
-  "stageEntry": {
-    "kind": "command",
-    "path": ".opencode/commands/amadeus.md"
-  }
-}

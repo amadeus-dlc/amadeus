@@ -35,7 +35,7 @@ export type EmitContext = {
   /**
    * Read a file under harness/<name>/ (relative to harnessRoot) AND record it as
    * a referenced source, feeding the packager's unreferenced-source scan
-   * (checkHarness, #735). EVERY harness-source read an emit plugin does must go
+   * (the package source-inventory guard, #735). EVERY harness-source read an emit plugin does must go
    * through this — a bare readFileSync is invisible to the scan and its file
    * would be falsely flagged UNREFERENCED. Core/dist reads use readFileSync
    * directly; they are not harness source and are not scanned.

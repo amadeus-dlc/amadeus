@@ -36,6 +36,20 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  test("untracked distribution changes request the source-only drift guard", () => {
+    expect(detectChanges(["dist/claude/.claude/tools/generated.ts"])).toEqual({
+      full: "false",
+      drift: "true",
+      coverage: "false",
+    });
+  });
+
+  test("absent Kiro root faces do not request drift checks", () => {
+    expect(detectChanges([".kiro/tools/generated.ts", ".kiro-ide/tools/generated.ts"]))
+      .toEqual({ full: "false", drift: "false", coverage: "false" });
+    expect(detectChanges([".codex/config.toml"])).toMatchObject({ drift: "true" });
+  });
+
   test("ordinary project Markdown skips CI validation", () => {
     expect(detectChanges(["amadeus/spaces/default/memory/project.md"])).toEqual({
       full: "false",
@@ -78,14 +92,18 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(lintJob).toContain("bun run lint");
     expect(lintJob).toContain("bun tests/complexity-gate.ts --check");
     expect(contractJob).toContain("bun run distribution:check");
+    for (const generatedConsumerJob of [typecheckJob, lintJob, contractJob]) {
+      expect(generatedConsumerJob).toContain("bun run build");
+    }
     expect(testsJob).toContain("pip install lizard==1.23.0");
     expect(testsJob).toContain("bun run test:ci -- -P 4");
     expect(driftJob).toContain("needs: changes");
     expect(driftJob).toContain(
       `if: \${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}`,
     );
-    expect(driftJob).toContain("bun run dist:check");
-    expect(driftJob).toContain("bun run promote:self:check");
+    expect(driftJob).toContain("bun run source-only:check");
+    expect(driftJob).toContain("bun run build");
+    expect(driftJob).toContain("amadeus-graph.ts compile --check");
   });
 
   test("performance verification stays out of the blocking pipeline", () => {

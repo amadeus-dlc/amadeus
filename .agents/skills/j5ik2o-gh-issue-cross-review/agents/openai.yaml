@@ -1,5 +1,0 @@
-# skill-forge-source-sha256: 230f9964715b1fa4a3623995ffaa90c2d22946eff4afe779446a768a50007391
-interface:
-  display_name: "GitHub Issue Cross-Review"
-  short_description: "Cross-review GitHub issues with two independent reviewers"
-  default_prompt: "Use $j5ik2o-gh-issue-cross-review to independently verify this GitHub Issue."

@@ -158,3 +158,24 @@ export function gitattributesExpectation(
     .sort()
     .map((path) => `${path} -linguist-generated`);
 }
+
+export function sourceOnlyGeneratedPathPredicate(
+  allowlist: SelfInstallAllowlist,
+): (path: string) => boolean {
+  assertAllowlist(allowlist);
+  const trackedPaths = new Set(allowlist.tracked.map((entry) => entry.path));
+  return (path) => {
+    if (path.startsWith("dist/")) return true;
+    const isGeneratedSelfInstallPath = GENERATED_SELF_INSTALL_ROOTS.some((root) =>
+      path.startsWith(`${root}/`),
+    );
+    return isGeneratedSelfInstallPath && !trackedPaths.has(path);
+  };
+}
+
+export function isSourceOnlyGeneratedPath(
+  path: string,
+  allowlist: SelfInstallAllowlist,
+): boolean {
+  return sourceOnlyGeneratedPathPredicate(allowlist)(path);
+}

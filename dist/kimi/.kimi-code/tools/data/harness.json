@@ -1,9 +1,0 @@
-{
-  "name": "kimi",
-  "harnessDir": ".kimi-code",
-  "rulesSubdir": "rules",
-  "stageEntry": {
-    "kind": "runner",
-    "root": ".kimi-code/skills"
-  }
-}

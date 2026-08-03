@@ -10,7 +10,7 @@
 // Touches a real temp filesystem, hence integration tier (fs-tests-integration-first).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
 const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
 const PLUGIN = "formal-model-check";
 const OWNED_STAGE = `plugins/${PLUGIN}/stages/${PLUGIN}.md`;
@@ -82,6 +83,12 @@ function deps(opts: { verifyOk?: boolean; recompileOk?: boolean } = {}): PluginC
 
 function installGoodPlugin(): void {
   cpSync(FIXTURE, join(host, ".amadeus-plugin-src", PLUGIN), { recursive: true });
+}
+
+function installFixtureHarness(): void {
+  for (const name of readdirSync(CORE_ROOT)) {
+    cpSync(join(CORE_ROOT, name), join(host, name), { recursive: true });
+  }
 }
 
 beforeEach(() => {
@@ -184,9 +191,11 @@ describe("t302 default dependency bag runtime seams", () => {
 
   test("spawnRecompile runs the runtime compile subprocess and returns its exit-status flag", () => {
     // Drives the real spawnSync call in-process (only the spawned child is
-    // uninstrumented). The success flag is the subprocess exit status, so we
-    // assert its shape rather than an environment-dependent value.
+    // uninstrumented) against a fixture-local harness.
+    installFixtureHarness();
     const d = defaultPluginCliDeps();
-    expect(typeof d.recompile(host)).toBe("boolean");
+    expect(d.recompile(host)).toBe(true);
+    expect(existsSync(join(host, "tools", "data", "stage-graph.json"))).toBe(true);
+    expect(existsSync(join(host, "tools", "data", "scope-grid.json"))).toBe(true);
   });
 });

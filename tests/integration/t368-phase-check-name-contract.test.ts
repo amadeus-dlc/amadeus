@@ -7,8 +7,8 @@
 // `<record>/verification/phase-check-<phase>.md` exists (amadeus-state.ts).
 // The governance protocol and the reference docs used to instruct a bracketed
 // legacy spelling, which produced an artifact the engine never accepts. These
-// predicates pin the canonical name across the source of truth and every
-// generated distribution surface.
+// predicates pin the canonical name in the tracked source of truth. Generated
+// distribution surfaces are rebuilt from that source and are not tracked.
 //
 // This runs a real `git ls-files` / `git grep` enumeration over the tracked
 // corpus (process boundary to git), so it belongs to the integration tier
@@ -57,8 +57,8 @@ function filesWithLegacyName(): string[] {
   return lines(res.stdout);
 }
 
-// Every tracked copy of the governance protocol: the canonical source under
-// packages/, plus the dist and self-install trees generated from it.
+// Every tracked copy of the governance protocol. In a source-only checkout,
+// this is the canonical source under packages/.
 function governanceCopies(): string[] {
   const res = git(["ls-files", "--", `*${GOVERNANCE_REL}`]);
   expect(res.status).toBe(0);
@@ -73,9 +73,7 @@ describe("t368 phase-check artifact name contract", () => {
 
   test("every governance copy instructs the canonical phase-check template", () => {
     const copies = governanceCopies();
-    // The canonical source plus at least the generated surfaces — a collapsed
-    // corpus would make the predicate above vacuous.
-    expect(copies.length).toBeGreaterThan(1);
+    expect(copies.length).toBeGreaterThan(0);
     expect(copies).toContain(`packages/framework/core/${GOVERNANCE_REL}`);
 
     const res = git(["grep", "-lF", CANONICAL_TEMPLATE, "--", ...copies]);

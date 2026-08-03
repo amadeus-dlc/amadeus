@@ -3,11 +3,11 @@
 // t377 (integration) — plugin distribution-boundary guard LIVE scan (intent
 // 260731-formal-verif-value-chain, Unit u3-boundary-guard, FR-A6 / NFR-5).
 //
-// The plugin faces are NOT part of t258's SCAN_ROOTS (tests/lib/boundary-guard.ts
-// enumerates packages/framework, dist/<harness> and the self-install dotdirs, none
-// of which cover plugins/ or dist/plugins/). t377 therefore stands alone: it walks
-// all four plugin faces named by FR-A2's acceptance criteria and asserts that no
-// shipped plugin file carries a repo-only `scripts/` path reference.
+// The canonical plugin source is NOT part of t258's SCAN_ROOTS
+// (tests/lib/boundary-guard.ts enumerates packages/framework). t377 therefore
+// stands alone and asserts that no tracked plugin source carries a repo-only
+// `scripts/` path reference. Generated plugin projections are rebuilt and are
+// intentionally outside the tracked corpus.
 //
 // Reuse without coupling (BR-U3-2): the predicate, AllowRule smart constructor and
 // Finding shape come from tests/lib/boundary-guard.ts unchanged; t258's SCAN_ROOTS
@@ -29,13 +29,10 @@ import { AllowRule, type Finding, type RawAllowRule, scanDistributionTreeForScri
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
-// The four plugin faces of FR-A2's acceptance criteria: the canonical source, the
-// per-harness projections, the composed host copy and the installer staging tree.
+// The source-only tracked plugin face. Per-harness projections, composed host
+// copies, and installer staging trees are generated output.
 const PLUGIN_SCAN_ROOTS: readonly string[] = Object.freeze([
   "plugins",
-  "dist/plugins",
-  ".claude/plugins",
-  ".claude/.amadeus-plugin-src",
 ] as const);
 
 // Allowlist for legitimate `scripts/` tokens inside plugin faces. Empty by design:

@@ -88,6 +88,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build generated distributions
+        run: bun run build
+
       - name: Typecheck (tsc --noEmit, both tsconfigs)
         run: bun run typecheck
 
@@ -168,6 +171,9 @@ jobs:
       - name: Unchecked-cast guard (JSON read paths, shrink-only ratchet)
         run: bun tests/unchecked-cast-guard.ts --check
 
+      - name: Build generated distributions
+        run: bun run build
+
       # FR-MIG-4: the six-condition deletion gate for the legacy audit writer.
       # --check does not fail the job — BLOCKED is the expected state for the
       # whole migration period, and a permanently red job gets ignored. What CI
@@ -209,6 +215,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Intent Mirror distribution contract
         run: bun run distribution:check
@@ -329,7 +338,7 @@ jobs:
           fi
 
   drift-check:
-    name: Dist and self-install drift
+    name: Source-only and graph invariants
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}
     runs-on: ubuntu-latest
@@ -346,18 +355,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Dist drift guard
-        run: bun run dist:check
+      - name: Source-only boundary guard
+        run: bun run source-only:check
 
-      - name: Self-install drift guard
-        run: bun run promote:self:check
+      - name: Build generated distributions
+        run: bun run build
 
-      # Committed stage-graph.json / scope-grid.json vs a compile of THIS
-      # repository's stages, scopes and composed plugins (#1863). t124 / t66
-      # only compile fixture trees, t184 compares slug sets and t110 is a
-      # golden master — none of them sees a field-level drift in the real
-      # section, which is how a partial regeneration went undetected.
-      - name: Compiled graph drift guard
+      - name: Compiled graph invariant guard
         run: bun .claude/tools/amadeus-graph.ts compile --check
 
   coverage-head:

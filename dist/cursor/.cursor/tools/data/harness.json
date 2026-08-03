@@ -1,9 +1,0 @@
-{
-  "name": "cursor",
-  "harnessDir": ".cursor",
-  "rulesSubdir": "amadeus-rules",
-  "stageEntry": {
-    "kind": "command",
-    "path": ".cursor/commands/amadeus.md"
-  }
-}

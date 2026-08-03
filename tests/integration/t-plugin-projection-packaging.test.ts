@@ -34,7 +34,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { checkHarness, checkNeutralBundle, writeNeutralBundle } from "../../scripts/package.ts";
+import { checkNeutralBundle, writeNeutralBundle } from "../../scripts/package.ts";
 import {
   buildPluginProjection,
   checkHarnessTree,
@@ -47,8 +47,6 @@ import { packageFreshnessArgs } from "../../scripts/promote-self.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = "zz-u09-fixture";
-const TIMEOUT_MS = 120_000;
-
 let ws = "";
 let pluginsRoot = "";
 let emptyRoot = "";
@@ -99,23 +97,6 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
     writeNeutralBundle();
     expect(existsSync(join(ws, "dist-empty", "plugins"))).toBe(false);
   });
-
-  test(
-    "buildTree does NOT project plugins into the harness tree (neutral-bundle-only shipping)",
-    () => {
-      // A実装 (intent 260722-tla-plugin, ruling E-TLAU2 option A): plugins ship
-      // ONLY as the harness-neutral bundle (dist/plugins/<name>/); buildTree no
-      // longer projects them into the compile-visible <harnessDir>/plugins/ tree.
-      // A projected plugin STAGE there would be discovered by the stage-graph
-      // compile, making the shipped graph non-0-plugin and breaking the
-      // recompile-idempotence invariant (t110/t88, FR-2.3). So checkHarness must
-      // report NO plugin surface in the built harness tree.
-      const problems = checkHarness("claude");
-      const pluginProblems = problems.filter((p) => p.includes(`plugins/${FIXTURE}/`));
-      expect(pluginProblems).toEqual([]);
-    },
-    TIMEOUT_MS,
-  );
 
   test("buildPluginProjection loads the real manifest and transforms prose per harness", () => {
     const [plugin] = validatePluginSources(discoverPluginSources(pluginsRoot));

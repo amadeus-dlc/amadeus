@@ -48,8 +48,11 @@ const BASELINE_SHA = readFileSync(
 //     push before-SHA to the baseline-less path and disable checkout credential
 //     persistence in the tests job.
 //   - 260802-source-only-dist u7: build-before-test steps, the blocking
-//     reproducible-build job, and its ci-success dependency. The legacy drift
-//     job remains unchanged until the u8 atomic switch.
+//     reproducible-build job, and its ci-success dependency;
+//   - 260802-source-only-dist u8: the atomic source-only boundary and semantic
+//     graph-invariant checks replacing committed generated-tree comparisons;
+//   - 260802-source-only-dist u8 CI follow-up: build-before-use steps for the
+//     typecheck, lint deletion-gate, and distribution-contract jobs.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

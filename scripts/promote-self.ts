@@ -322,12 +322,8 @@ function run(cmd: string, args: string[]): void {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
-export function packageFreshnessArgs(mode: Mode): string[][] {
-  return SELF_INSTALL_HARNESSES.map((harness) =>
-    mode === "apply"
-      ? ["scripts/package.ts", harness]
-      : ["scripts/package.ts", harness, "--check"],
-  );
+export function packageFreshnessArgs(_mode: Mode): string[][] {
+  return SELF_INSTALL_HARNESSES.map((harness) => ["scripts/package.ts", harness]);
 }
 
 export function runPackageFreshness(
