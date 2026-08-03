@@ -36,6 +36,17 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  test("untracked distribution and absent Kiro root faces do not request drift checks", () => {
+    expect(
+      detectChanges([
+        "dist/claude/.claude/tools/generated.ts",
+        ".kiro/tools/generated.ts",
+        ".kiro-ide/tools/generated.ts",
+      ]),
+    ).toEqual({ full: "false", drift: "false", coverage: "false" });
+    expect(detectChanges([".codex/config.toml"])).toMatchObject({ drift: "true" });
+  });
+
   test("ordinary project Markdown skips CI validation", () => {
     expect(detectChanges(["amadeus/spaces/default/memory/project.md"])).toEqual({
       full: "false",
@@ -84,8 +95,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(driftJob).toContain(
       `if: \${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}`,
     );
-    expect(driftJob).toContain("bun run dist:check");
-    expect(driftJob).toContain("bun run promote:self:check");
+    expect(driftJob).toContain("bun run source-only:check");
+    expect(driftJob).toContain("bun run build");
+    expect(driftJob).toContain("amadeus-graph.ts compile --check");
   });
 
   test("performance verification stays out of the blocking pipeline", () => {

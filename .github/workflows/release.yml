@@ -164,9 +164,13 @@ jobs:
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: bun run test:ci
 
-      - name: Verify reproducible dist build
+      - name: Verify source-only boundary
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
-        run: bun scripts/package.ts --check
+        run: bun run source-only:check
+
+      - name: Verify graph compile invariants
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
+        run: bun dist/claude/.claude/tools/amadeus-graph.ts compile --check
 
       - name: Build release assets
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}

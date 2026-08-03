@@ -54,7 +54,8 @@ describe("t223 release bot bypass boundary", () => {
       "Install dependencies",
       "Build dist",
       "Run full test suite",
-      "Verify reproducible dist build",
+      "Verify source-only boundary",
+      "Verify graph compile invariants",
       "Build release assets",
       "Upload release assets",
     ]);

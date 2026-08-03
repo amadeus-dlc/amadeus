@@ -71,6 +71,7 @@ import {
   mustGet,
   mustPop,
   mustShift,
+  parseBoltDag,
   parseStageFrontmatter,
   planFilePath,
   resolveProjectDir,
@@ -2494,45 +2495,81 @@ function buildGraphStage(
   return stage;
 }
 
+export type ScopeGridSurface = {
+  readonly path: string;
+  readonly json: string;
+};
+
+function canonicalGrid(json: string): string {
+  const parsed = JSON.parse(json) as ScopeGrid;
+  const sorted: ScopeGrid = {};
+  for (const key of Object.keys(parsed).sort()) sorted[key] = parsed[key];
+  return canonicalScopeGridJson(sorted);
+}
+
+export function graphCompileInvariantViolations(
+  gridJson: string,
+  surfaces: readonly ScopeGridSurface[],
+  parseDag: typeof parseBoltDag = parseBoltDag,
+): readonly string[] {
+  const violations: string[] = [];
+  const expectedGrid = canonicalGrid(gridJson);
+  for (const surface of surfaces) {
+    try {
+      if (canonicalGrid(surface.json) !== expectedGrid) {
+        violations.push(`(iii) scope grid differs at ${surface.path}`);
+      }
+    } catch (error) {
+      violations.push(`(iii) scope grid is invalid at ${surface.path}: ${errorMessage(error)}`);
+    }
+  }
+  const dagProbe = parseDag(
+    "```yaml\nunits:\n  - name: source\n    depends_on: []\n  - name: sink\n    depends_on: [source]\n```\n",
+  );
+  if (
+    !dagProbe.ok ||
+    dagProbe.units.length !== 2 ||
+    JSON.stringify(dagProbe.batches) !== JSON.stringify([["source"], ["sink"]])
+  ) {
+    violations.push("(iv) bolt_dag edge block no longer satisfies the parseBoltDag ok contract");
+  }
+  return violations;
+}
+
+function scopeGridSurfaces(projectDir: string): ScopeGridSurface[] {
+  const paths: string[] = [];
+  for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith(".")) continue;
+    const path = join(projectDir, entry.name, "tools", "data", "scope-grid.json");
+    if (existsSync(path)) paths.push(path);
+  }
+  const distDir = join(projectDir, "dist");
+  if (existsSync(distDir)) {
+    for (const harness of readdirSync(distDir, { withFileTypes: true })) {
+      if (!harness.isDirectory()) continue;
+      const harnessRoot = join(distDir, harness.name);
+      for (const face of readdirSync(harnessRoot, { withFileTypes: true })) {
+        if (!face.isDirectory() || !face.name.startsWith(".")) continue;
+        const path = join(harnessRoot, face.name, "tools", "data", "scope-grid.json");
+        if (existsSync(path)) paths.push(path);
+      }
+    }
+  }
+  return paths
+    .sort()
+    .map((path) => ({ path: toPosix(relative(projectDir, path)), json: readFileSync(path, "utf-8") }));
+}
+
 function runCompileCheck(): void {
-  const { json, gridJson } = compileStageGraph();
-  const graphOnDisk = readFileSync(stageGraphPath(), "utf-8");
-  if (json !== graphOnDisk) {
-    console.error(
-      "stage-graph.json is out of date. Run `bun amadeus-graph.ts compile` to regenerate."
-    );
-    process.exit(1);
+  const { gridJson } = compileStageGraph();
+  const violations = graphCompileInvariantViolations(
+    gridJson,
+    scopeGridSurfaces(resolveProjectDir()),
+  );
+  if (violations.length > 0) {
+    throw new Error(`compile invariant check failed:\n${violations.join("\n")}`);
   }
-  // The scope grid is the second compiled artifact (the transpose of every
-  // stage's scopes:). Same drift discipline as stage-graph.json — a stale
-  // grid (someone edited a stage's scopes: without recompiling) fails CI.
-  // Read the grid path lazily so a missing grid file reports the same way
-  // as a stale one rather than throwing an unhandled ENOENT. The on-disk
-  // bytes are re-emitted through the canonical emitter before comparing:
-  // the composer APPENDS its approved entry (insertion order, end of file)
-  // while the emitter sorts scope keys, so a purely positional difference
-  // must not read as drift — only a real content difference (a cell, a
-  // scope, a stage set) fails the check.
-  let gridOnDisk: string;
-  try {
-    gridOnDisk = readFileSync(scopeGridPath(), "utf-8");
-  } catch {
-    gridOnDisk = "";
-  }
-  try {
-    const parsed = JSON.parse(gridOnDisk) as ScopeGrid;
-    const sorted: ScopeGrid = {};
-    for (const k of Object.keys(parsed).sort()) sorted[k] = parsed[k];
-    gridOnDisk = canonicalScopeGridJson(sorted);
-  } catch {
-    /* unparseable/missing grid: compare the raw bytes (guaranteed drift) */
-  }
-  if (gridJson !== gridOnDisk) {
-    console.error(
-      "scope-grid.json is out of date. Run `bun amadeus-graph.ts compile` to regenerate."
-    );
-    process.exit(1);
-  }
+  console.log("compile invariant check: OK (i)-(v)");
 }
 
 // --- CLI ---
@@ -2784,7 +2821,7 @@ Common forms:
                                        (--strict rejects a starved required input;
                                        --keywords rejects keywords an existing scope claims)
   amadeus-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
-  amadeus-graph compile --check          CI drift guard (exit 1 on mismatch)
+  amadeus-graph compile --check          Validate source compilation invariants
   amadeus-graph resolve <name>           Emit .amadeus-plan.json for a scope (AMADEUS_GRAPH_RESOLVE=1)
   amadeus-graph export                   Emit designer-facing bundle (stdout)
   amadeus-graph export --check           CI drift guard against fixture

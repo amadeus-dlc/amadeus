@@ -20,7 +20,7 @@
 //   - Unknown manifest keys tolerated (forward-compat); BOM frontmatter parses.
 //   - Empty sensors dir + zero-import stages produce sensors_applicable: [].
 //   - Two compiles of the same input produce byte-identical JSON.
-//   - compile --check detects sensor-manifest drift (CLI exit-1 shell).
+//   - compile --check validates sensor-manifest source (CLI exit shell).
 //   - FIELD_ORDER places sensors_applicable directly after rules_in_context.
 //
 // MECHANISM SEAMS (identical to the .sh):
@@ -105,6 +105,7 @@ function compileWithSensors(fixtureDir: string): {
   json: string;
   stages: GraphStage[];
 } {
+  setEnv("AMADEUS_HARNESS_DIR", ".claude");
   setEnv("AMADEUS_SENSORS_DIR", fixtureDir);
   setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
   setEnv("AMADEUS_STAGES_DIR", undefined); // real stage tree
@@ -409,11 +410,11 @@ describe("t89 CLI exit-code shell (Bun.spawnSync env-seam)", () => {
     expect(runCompile(join(FIXTURES, "unknown-id")).code).toBe(1);
   });
 
-  // Case 16 (.sh:189-204): compile --check detects sensor-manifest drift.
+  // Case 16 (.sh:189-204): compile --check validates edited sensor sources.
   // Compile once to seed the on-disk graph, edit the linter matches glob, then
-  // `compile --check` against the same graph must exit 1 (runCompileCheck's
+  // `compile --check` against the same graph must exit 0 (runCompileCheck's
   // process.exit boundary — no in-process seam exists).
-  test("--check: detects sensor-manifest drift after edit", () => {
+  test("--check: validates a sensor-manifest edit without a byte comparison", () => {
     const dir = mkdtempSync(join(tmpdir(), "t89-check-"));
     const out = mkdtempSync(join(tmpdir(), "t89-check-graph-"));
     scratch.push(dir, out);
@@ -427,12 +428,12 @@ describe("t89 CLI exit-code shell (Bun.spawnSync env-seam)", () => {
     const seed = spawnSync(BUN, [GRAPH_TS, "compile"], { env, encoding: "utf8" });
     expect(seed.status).toBe(0);
 
-    // Edit the linter manifest's matches glob; --check should now fail.
+    // Edit the linter manifest's matches glob; valid source still passes.
     const linterPath = join(dir, "amadeus-linter.md");
     const orig = readFileSync(linterPath, "utf-8");
     writeFileSync(linterPath, orig.replace('"**/*.{ts,js}"', '"**/*.{ts,js,jsx}"'));
 
     const check = spawnSync(BUN, [GRAPH_TS, "compile", "--check"], { env, encoding: "utf8" });
-    expect(check.status).toBe(1);
+    expect(check.status).toBe(0);
   });
 });

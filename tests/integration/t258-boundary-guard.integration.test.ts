@@ -73,7 +73,7 @@ const RAW_ALLOWLIST = [
   {
     id: "framework-build-and-packaging-tooling",
     fileGlob: "**",
-    pattern: "scripts/(package\\.ts|package-codex\\.ts|promote-self\\.ts|onboarding\\.ts|manifest-types\\.ts)",
+    pattern: "scripts/(package\\.ts|package-codex\\.ts|promote-self\\.ts|onboarding\\.ts|manifest-types\\.ts|source-only-boundary\\.ts)",
   },
   { id: "team-session-launcher-script", fileGlob: "**", pattern: "scripts/team-up\\.sh" },
   { id: "forbid-lint-tool", fileGlob: "**", pattern: "scripts/forbid" },

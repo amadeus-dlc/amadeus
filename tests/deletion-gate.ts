@@ -368,7 +368,7 @@ export const REPO_ROOT_FOR_TEST = REPO_ROOT;
 
 // Condition (f): the distribution drift guards (FR-DST-2, VER-6).
 const DISTRIBUTION_GUARDS: readonly (readonly string[])[] = [
-  ["scripts/package.ts", "--check"],
+  ["scripts/source-only-boundary.ts"],
   ["scripts/promote-self.ts", "--check"],
 ];
 

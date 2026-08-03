@@ -195,11 +195,11 @@ describe("u7 CI build-before-test contract", () => {
     );
 
     const drift = jobByName("drift-check");
-    expect(stepByName(drift, "Dist drift guard").run).toBe("bun run dist:check");
-    expect(stepByName(drift, "Self-install drift guard").run).toBe(
-      "bun run promote:self:check",
+    expect(stepByName(drift, "Source-only boundary guard").run).toBe(
+      "bun run source-only:check",
     );
-    expect(stepByName(drift, "Compiled graph drift guard").run).toBe(
+    expect(stepByName(drift, "Build generated distributions").run).toBe("bun run build");
+    expect(stepByName(drift, "Compiled graph invariant guard").run).toBe(
       "bun .claude/tools/amadeus-graph.ts compile --check",
     );
     expect(Object.keys(jobs)).toContain("drift-check");
