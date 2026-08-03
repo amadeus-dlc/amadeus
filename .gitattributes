@@ -9,6 +9,7 @@ dist/** linguist-generated
 
 # Keep project-local configuration visible for review.
 .claude/CLAUDE.md -linguist-generated
+.claude/hooks/amadeus-dispatch.ts -linguist-generated
 .claude/settings.json -linguist-generated
 .codex/config.toml -linguist-generated
 .codex/hooks.json -linguist-generated

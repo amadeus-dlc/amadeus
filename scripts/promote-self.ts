@@ -20,6 +20,14 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  COMPOSED_SCOPE_RE,
+  PLUGIN_ENGINE_STATE_RE,
+  preserved as preservedEntries,
+  SCOPE_GRID_RE,
+  SELF_INSTALL_ALLOWLIST,
+  STAGE_GRAPH_RE,
+} from "../packages/framework/core/tools/data/self-install-allowlist.ts";
 import { mirrorProjectionRegistryDigest } from "../packages/framework/harness/projections.ts";
 import {
   kimiConfigPath,
@@ -98,20 +106,7 @@ export function composeRootAgents(existing: Buffer, codexDist: Buffer): Buffer {
   return Buffer.from(`${prefix.trimEnd()}${separator}${suffix}`, "utf-8");
 }
 
-const preserved = [
-  ".claude/CLAUDE.md",
-  ".claude/settings.json",
-  ".claude/settings.local.json",
-  ".claude/worktrees/",
-  ".codex/config.toml",
-  ".codex/hooks.json",
-  ".codex/agmsg-delivery-mode",
-  ".codex/local/",
-  // Local activation of the shipped hooks.json.example (same pattern as Codex).
-  ".cursor/hooks.json",
-  // Local activation of the shipped opencode.json.example.
-  ".opencode/opencode.json",
-];
+const preserved = preservedEntries(SELF_INSTALL_ALLOWLIST);
 
 // Composed-scope runtime data: the adaptive composer APPENDS approved scopes to
 // the runtime scope registry (a `scopes/amadeus-<name>.md` file + an entry in
@@ -121,9 +116,6 @@ const preserved = [
 // --apply would delete it), the grid entry as DIFFERS. Both are preserved
 // instead: a scopes/*.md absent from dist is a composed scope, and scope-grid
 // comparison/write is per-key — dist keys must match, extra keys survive.
-export const COMPOSED_SCOPE_RE = /^\.[^/]+\/scopes\/amadeus-[^/]+\.md$/;
-export const SCOPE_GRID_RE = /^\.[^/]+\/tools\/data\/scope-grid\.json$/;
-
 // True when the grid at `got` already holds the bytes --apply would write.
 // Defined as the write path itself so check and apply cannot disagree: a
 // per-key comparison accepted any key ORDER, while --apply re-serialises in
@@ -175,9 +167,6 @@ export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
 // owned paths and plugin-slug runner skills are exempt from ORPHAN, and the
 // graph tolerance accepts only nodes carrying plugin_source: true whose slug
 // the ledger indexes.
-export const PLUGIN_ENGINE_STATE_RE = /^\.[^/]+\/\.amadeus-plugin-[^/]+(\/.*)?$/;
-export const STAGE_GRAPH_RE = /^\.[^/]+\/tools\/data\/stage-graph\.json$/;
-
 export type PluginLedger = {
   slugs: Set<string>;
   ownedPaths: Set<string>;
