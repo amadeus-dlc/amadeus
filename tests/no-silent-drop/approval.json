@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "censusDigest": "2ebf83c121608b5659bdd89d6b6b75e46244c0056fd8bc937d7b761d39049905",
+  "censusDigest": "d00ab37972ab53f37a1d69b79b592022712f4759528c316d0b52ffa962b89b5c",
   "entries": [
     {
       "fingerprint": "03c9e430ecf3c1b1dabee31906cf795d605efa4db2d7330390274a5c29675a45",
@@ -36,14 +36,6 @@
     },
     {
       "fingerprint": "07ba4856ae81303480a05ecadba568e2bad63530d641e98a4991597908a76999",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "07f916d8f3aa339fb374f004f5732d7b945886b6188c835ebd1fe59b9cf1ffea",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
@@ -355,14 +347,6 @@
       ]
     },
     {
-      "fingerprint": "3149b45f003fc3869ed026816589ee53c94f74af860f48c3302627d74e270853",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
       "fingerprint": "31ac313907e90fd325864ed15682cafd9cf7869475bf6df03efbc2697fe04d03",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
@@ -627,14 +611,6 @@
       ]
     },
     {
-      "fingerprint": "544af0317a9ec0886dc4aea6e44cce5486144334146cda3b976d5058eaf576b9",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
       "fingerprint": "556948bc62cf0e3ddac05785f57801d95c4ff0f3a55cdd436f3f948f3a60e279",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
@@ -652,14 +628,6 @@
     },
     {
       "fingerprint": "56fefececd27707e8c9ab14ec11fe58de312898a34d8ed9368dbf21a061dd1b7",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "5898a6a5bb4e9671bdfbc20ed0c882f3fd28605ba1d618ed4bf5f96ff29680b6",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
@@ -1115,14 +1083,6 @@
       ]
     },
     {
-      "fingerprint": "91757ba49e796857b55f7710913bd65c51b69c6e6137ef55f1cc80ba6dd01a0c",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
       "fingerprint": "9476171036de6f73034423633cbb6e773521a8352a0fa4266a6d6ccc6d62ef4f",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
@@ -1348,14 +1308,6 @@
     },
     {
       "fingerprint": "b83a85335ec63d321526cd95fb19e48a48a2d7866d39508956d7159bc66c3269",
-      "classification": "TP",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "b866edba14e19a5a5ad38f0bb1e640e8ed1129a6f0d5cb77328d749465362fab",
       "classification": "TP",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
