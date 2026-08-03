@@ -20,6 +20,7 @@ const WORKFLOW_PATH = join(REPO_ROOT, ".github/workflows/ci.yml");
 interface WorkflowStep {
   readonly name?: string;
   readonly run?: string;
+  readonly with?: Readonly<Record<string, unknown>>;
 }
 
 interface WorkflowJob {
@@ -120,6 +121,7 @@ describe("u7 CI build-before-test contract", () => {
 
   test("reproducibility job builds two isolated fixed-SHA trees sequentially", () => {
     const job = jobByName("reproducible-build");
+    expect(stepByName(job, "Checkout").with?.["persist-credentials"]).toBe(false);
     const build = stepByName(job, "Build isolated distributions").run ?? "";
     expect(spawnSync("bash", ["-n"], { input: build }).status).toBe(0);
     expect(build).toContain('git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"');
@@ -175,7 +177,7 @@ describe("u7 CI build-before-test contract", () => {
       const result = runRunnerFixture(state);
       expect(result.status, state).toBe(1);
       expect(result.stderr, state).toContain(
-        "run-tests: dist/ is missing — run `bun run build` first",
+        "run-tests: dist/ is missing or empty — run `bun run build` first",
       );
     }
 
