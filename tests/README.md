@@ -12,6 +12,16 @@ test exercises a given unit.
 
 For the full test strategy, levels, fixtures, and assertion guidelines, see [docs/reference/09-testing.md](../docs/reference/09-testing.md).
 
+## Patch coverage allowlist maintenance
+
+Patch-coverage exemptions in `.coverage-patch-allowlist.json` use a function-scoped source fingerprint instead of an absolute line range. If an intentional source edit makes an entry stale, regenerate its `selector` from the exemption's current target lines:
+
+```bash
+bun tests/coverage-patch-gate.ts --create-selector <file> <current-lines>
+```
+
+Replace only that entry's `selector`; keep its `reason` and `expiry`. Pass the current waived line or range, not the old `anchorLines` span. This also applies when a large anchor is invalidated by an edit anywhere inside it: rerun the command for the actual waived lines and accept the newly derived `fingerprint`, `anchorLines`, and `targetLines`. Then run `bun run coverage:ci` followed by `bun tests/coverage-patch-gate.ts --check`.
+
 ## Prerequisites / running the suite
 
 Different levels need different substrate. The deterministic levels (smoke,

@@ -20,6 +20,16 @@ import { readEvidenceArtifact } from "../no-silent-drop/repository-adoption-evid
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FULL_SHA = "0123456789abcdef0123456789abcdef01234567";
 const BOOTSTRAP_BASE_SHA = "47574fbabf274e11cb8e0b37bf35a0309a7b3d42";
+const revision = (...args: string[]): string | null => {
+  const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" });
+  const value = result.status === 0 ? result.stdout.trim() : "";
+  return /^[0-9a-f]{40}$/.test(value) ? value : null;
+};
+const headRevision = revision("rev-parse", "HEAD");
+const mergeBaseRevision = revision("merge-base", "HEAD", "origin/main");
+const TRUSTED_BASE_REVISION = mergeBaseRevision !== null && mergeBaseRevision !== headRevision
+  ? mergeBaseRevision
+  : revision("rev-parse", "HEAD^") ?? BOOTSTRAP_BASE_SHA;
 const temporaryDirectories: string[] = [];
 let closedRegistryTemplate: ReturnType<typeof emptyEvidenceRegistry> | undefined;
 
@@ -170,7 +180,7 @@ function replacePrimaryArtifact(root: string, value: unknown): void {
 
 describe("no-silent-drop CI argv authority", () => {
   test("a validated full base revision is consumed as one explicit argv", () => {
-    const result = runCli("--base-revision", BOOTSTRAP_BASE_SHA);
+    const result = runCli("--base-revision", TRUSTED_BASE_REVISION);
 
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ status: "pass", code: "NO_SILENT_DROP_OK" });
@@ -199,7 +209,7 @@ describe("no-silent-drop CI argv authority", () => {
   });
 
   test("explicit argv overrides the legacy environment seam", () => {
-    const result = spawnSync("bun", ["run", "no-silent-drop", "--", "--base-revision", BOOTSTRAP_BASE_SHA], {
+    const result = spawnSync("bun", ["run", "no-silent-drop", "--", "--base-revision", TRUSTED_BASE_REVISION], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       env: { ...process.env, AMADEUS_NSD_TRUSTED_BASE_SHA: "f".repeat(40) },

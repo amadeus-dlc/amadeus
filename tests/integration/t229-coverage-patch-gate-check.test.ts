@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { main, parseAllowlist, runCheck } from "../coverage-patch-gate";
+import { createSemanticSelector, main, parseAllowlist, runCheck } from "../coverage-patch-gate";
 
 const LCOV = [
   "SF:packages/framework/core/tools/example.ts",
@@ -179,18 +179,79 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(runCheck(repoRoot)).toBe(0);
   });
 
-  test("stale allowlist entry fails the run loudly", () => {
+  test("allowlist entry whose resolved range is absent from LCOV fails as stale", () => {
     const d = fixtureDir();
     const lcovPath = join(d, "lcov.info");
     writeFileSync(lcovPath, LCOV);
     const diffPath = join(d, "pr.diff");
     writeFileSync(diffPath, "");
     const alPath = join(d, "allowlist.json");
-    writeFileSync(alPath, JSON.stringify([{ file: "gone.ts", lines: "1", reason: "stale" }]));
+    const selector = createSemanticSelector("tracked.ts", "export const tracked = 1;\n", "1");
+    writeFileSync(
+      alPath,
+      JSON.stringify([{
+        file: "tracked.ts",
+        selector,
+        reason: "stale",
+      }]),
+    );
     process.env.AMADEUS_PATCH_LCOV = lcovPath;
     process.env.AMADEUS_PATCH_DIFF = diffPath;
     process.env.AMADEUS_PATCH_ALLOWLIST = alPath;
-    expect(runCheck(repoRoot)).toBe(1);
+    const result = captureCheck(repoRoot);
+    expect(result.result).toBe(1);
+    expect(result.stderr).toContain("STALE allowlist entries");
+  });
+
+  test("allowlist entry whose source is missing fails before stale LCOV evaluation", () => {
+    const d = fixtureDir();
+    const lcovPath = join(d, "lcov.info");
+    writeFileSync(lcovPath, LCOV);
+    const diffPath = join(d, "pr.diff");
+    writeFileSync(diffPath, "");
+    const alPath = join(d, "allowlist.json");
+    writeFileSync(alPath, JSON.stringify([{
+      file: "gone.ts",
+      selector: {
+        function: "<module>",
+        fingerprint: `sha256:${"0".repeat(64)}`,
+        anchorLines: 1,
+        targetLines: "1",
+      },
+      reason: "missing source",
+    }]));
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    process.env.AMADEUS_PATCH_DIFF = diffPath;
+    process.env.AMADEUS_PATCH_ALLOWLIST = alPath;
+
+    const result = captureCheck(repoRoot);
+    expect(result.result).toBe(1);
+    expect(result.stderr).toContain("source not found");
+  });
+
+  test("semantic allowlist resolution survives source lines inserted before its function", () => {
+    const original = ["export function target() {", "  return 1;", "}"].join("\n");
+    const selector = createSemanticSelector("tracked.ts", original, "2");
+    writeFileSync(join(repoRoot, "tracked.ts"), `${original}\n`);
+    expect(spawnSync("git", ["add", "tracked.ts"], { cwd: repoRoot }).status).toBe(0);
+    expect(spawnSync("git", ["commit", "-m", "test: add target fixture"], { cwd: repoRoot }).status).toBe(0);
+
+    writeFileSync(join(repoRoot, "tracked.ts"), `// unrelated header\n${original}\n`);
+    expect(spawnSync("git", ["add", "tracked.ts"], { cwd: repoRoot }).status).toBe(0);
+    expect(spawnSync("git", ["commit", "-m", "test: shift target fixture"], { cwd: repoRoot }).status).toBe(0);
+
+    const inputs = fixtureDir();
+    const lcovPath = join(inputs, "lcov.info");
+    writeFileSync(lcovPath, "SF:tracked.ts\nDA:3,0\nend_of_record\n");
+    const diffPath = join(inputs, "pr.diff");
+    writeFileSync(diffPath, "+++ b/tracked.ts\n@@ -2,0 +3,1 @@\n+  return 1;\n");
+    const allowlistPath = join(inputs, "allowlist.json");
+    writeFileSync(allowlistPath, JSON.stringify([{ file: "tracked.ts", selector, reason: "spawn-only boundary" }]));
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    process.env.AMADEUS_PATCH_DIFF = diffPath;
+    process.env.AMADEUS_PATCH_ALLOWLIST = allowlistPath;
+
+    expect(runCheck(repoRoot)).toBe(0);
   });
 
   test("missing diff file fails closed", () => {
@@ -235,6 +296,36 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     process.env.AMADEUS_PATCH_DIFF = diffPath;
     process.env.AMADEUS_PATCH_ALLOWLIST = join(d, "no-allowlist.json");
     expect(main(["--check"], repoRoot)).toBe(0);
+  });
+
+  test("main: --create-selector prints a semantic selector for a source range", () => {
+    const output: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => output.push(args.map(String).join(" "));
+    try {
+      expect(main(["--create-selector", "tracked.ts", "1"], repoRoot)).toBe(0);
+    } finally {
+      console.log = originalLog;
+    }
+
+    const selector = JSON.parse(output.join("\n"));
+    expect(selector.function).toBe("<module>");
+    expect(selector.fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  test("main: --create-selector fails closed for a missing source and invalid range", () => {
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+    try {
+      expect(main(["--create-selector", "missing.ts", "1"], repoRoot)).toBe(1);
+      expect(main(["--create-selector", "tracked.ts", "99"], repoRoot)).toBe(1);
+    } finally {
+      console.error = originalError;
+    }
+
+    expect(errors.join("\n")).toContain("source not found");
+    expect(errors.join("\n")).toContain("line range 99 exceeds tracked.ts");
   });
 
   test("allowlist that is not an array throws", () => {
