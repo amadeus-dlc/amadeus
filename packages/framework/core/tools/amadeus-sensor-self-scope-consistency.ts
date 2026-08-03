@@ -2,8 +2,8 @@
 //
 // The distributed tool stays dormant in ordinary projects. It activates only
 // when at least one `self-*` scope is present, then requires the five Amadeus
-// dogfood harness surfaces to expose the same four canonical self scopes in
-// both `scopes/amadeus-self-*.md` and `tools/data/scope-grid.json`.
+// dogfood harness surfaces to expose the same five promoted scopes in both
+// `scopes/amadeus-*.md` and `tools/data/scope-grid.json`.
 //
 // Matching identities are necessary but not sufficient: the faces are copies
 // of one another, so the sensor also compares their content — scope prose byte
@@ -15,6 +15,7 @@ import { join } from "node:path";
 
 export const SELF_HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code"] as const;
 export const EXPECTED_SELF_SCOPES = [
+  "installer-distribution",
   "self-document",
   "self-feature",
   "self-fix",
@@ -103,7 +104,9 @@ function inspectScopeFile(
       },
     };
   }
-  const match = filename.match(/^amadeus-(self-[a-z][a-z0-9-]*)\.md$/);
+  const match = filename.match(
+    /^amadeus-(installer-distribution|self-[a-z][a-z0-9-]*)\.md$/,
+  );
   if (!match) return {};
   const scope = match[1];
   const path = join(scopesDir, filename);
@@ -163,7 +166,7 @@ function readGridScopes(
   try {
     const grid = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<string, unknown>;
     for (const scope of Object.keys(grid)) {
-      if (scope.startsWith("self-")) {
+      if (scope === "installer-distribution" || scope.startsWith("self-")) {
         scopes.add(scope);
         values.set(scope, stageCells(grid[scope]));
       }

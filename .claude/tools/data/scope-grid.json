@@ -428,8 +428,7 @@
       "observability-setup": "SKIP",
       "incident-response": "SKIP",
       "performance-validation": "SKIP",
-      "feedback-optimization": "SKIP",
-      "formal-model-check": "EXECUTE"
+      "feedback-optimization": "SKIP"
     }
   },
   "self-fix": {

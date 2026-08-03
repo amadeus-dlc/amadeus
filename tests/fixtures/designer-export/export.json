@@ -24,7 +24,12 @@
         "infra",
         "security-patch",
         "workshop",
-        "chore"
+        "chore",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "inputs": "none (first stage after session start)",
       "outputs": "the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir",
@@ -70,7 +75,12 @@
         "infra",
         "security-patch",
         "workshop",
-        "chore"
+        "chore",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "inputs": "none (scans filesystem)",
       "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
@@ -116,7 +126,12 @@
         "infra",
         "security-patch",
         "workshop",
-        "chore"
+        "chore",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "inputs": "workspace classification from workspace-detection, scope from orchestrator",
       "outputs": "<record>/amadeus-state.md (full populated version, engine-resolved)",
@@ -164,7 +179,10 @@
         "enterprise",
         "feature",
         "mvp",
-        "poc"
+        "poc",
+        "installer-distribution",
+        "self-document",
+        "self-feature"
       ],
       "inputs": "User's project description ($ARGUMENTS), scope selection",
       "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
@@ -239,7 +257,8 @@
       ],
       "scopes": [
         "enterprise",
-        "feature"
+        "feature",
+        "installer-distribution"
       ],
       "inputs": "Intent statement from intent-capture stage",
       "outputs": "competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)",
@@ -331,7 +350,8 @@
       "scopes": [
         "enterprise",
         "feature",
-        "mvp"
+        "mvp",
+        "installer-distribution"
       ],
       "inputs": "Intent statement from intent-capture stage, market research from market-research stage (if executed)",
       "outputs": "feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)",
@@ -417,7 +437,9 @@
       "scopes": [
         "enterprise",
         "feature",
-        "mvp"
+        "mvp",
+        "installer-distribution",
+        "self-feature"
       ],
       "inputs": "Intent statement, feasibility assessment, constraint register",
       "outputs": "scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)",
@@ -696,7 +718,8 @@
       ],
       "scopes": [
         "enterprise",
-        "feature"
+        "feature",
+        "installer-distribution"
       ],
       "inputs": "All Ideation phase artifacts (intent, market research, feasibility, scope, team, mockups)",
       "outputs": "initiative-brief.md, decision-log.md, approval-handoff-questions.md (under this stage's record dir, engine-resolved)",
@@ -779,7 +802,12 @@
         "fix",
         "refactor",
         "security-patch",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "inputs": "<record>/amadeus-state.md",
       "outputs": "amadeus/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)",
@@ -888,7 +916,8 @@
         "feature",
         "mvp",
         "infra",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "inputs": "<record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts",
       "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's amadeus-team.md and amadeus-project.md.",
@@ -992,7 +1021,12 @@
         "refactor",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "reviewer": "amadeus-product-lead-agent",
       "reviewer_max_iterations": 2,
@@ -1086,7 +1120,8 @@
         "enterprise",
         "feature",
         "mvp",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "reviewer": "amadeus-product-lead-agent",
       "reviewer_max_iterations": 2,
@@ -1286,7 +1321,9 @@
         "enterprise",
         "feature",
         "mvp",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-feature"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -1390,7 +1427,9 @@
         "enterprise",
         "feature",
         "mvp",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-feature"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -1500,7 +1539,9 @@
         "enterprise",
         "feature",
         "mvp",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-feature"
       ],
       "inputs": "All Inception artifacts (requirements, stories, mockups, architecture, units)",
       "outputs": "bolt-plan.md, team-allocation.md, risk-and-sequencing-rationale.md, external-dependency-map.md, delivery-planning-questions.md (under this stage's record dir, engine-resolved)",
@@ -1625,7 +1666,11 @@
         "feature",
         "mvp",
         "refactor",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-refactor"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -1752,7 +1797,8 @@
         "mvp",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -1888,7 +1934,9 @@
         "feature",
         "mvp",
         "infra",
-        "workshop"
+        "workshop",
+        "installer-distribution",
+        "self-feature"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -2039,7 +2087,8 @@
         "feature",
         "mvp",
         "infra",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -2169,7 +2218,12 @@
         "refactor",
         "security-patch",
         "workshop",
-        "chore"
+        "chore",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -2221,7 +2275,7 @@
         {
           "id": "self-scope-consistency",
           "path": ".claude/sensors/amadeus-self-scope-consistency.md",
-          "matches": "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}",
+          "matches": "**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}",
           "category": "framework-integrity"
         }
       ]
@@ -2275,7 +2329,12 @@
         "refactor",
         "security-patch",
         "workshop",
-        "chore"
+        "chore",
+        "installer-distribution",
+        "self-document",
+        "self-feature",
+        "self-fix",
+        "self-refactor"
       ],
       "inputs": "ALL code generation outputs across all units",
       "outputs": "build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md (under this stage's record dir, engine-resolved)",
@@ -2368,7 +2427,8 @@
         "feature",
         "mvp",
         "infra",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "inputs": "Code generation output from code-generation stage, build/test results from build-and-test stage",
       "outputs": "ci-config.md, quality-gates.md, ci-pipeline-questions.md (under this stage's record dir, engine-resolved)",
@@ -2471,7 +2531,8 @@
         "feature",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "inputs": "CI pipeline config from ci-pipeline stage, infrastructure design from infrastructure-design stage",
       "outputs": "cd-config.md, deployment-strategy.md, rollback-runbook.md, deployment-pipeline-questions.md (under this stage's record dir, engine-resolved)",
@@ -2559,7 +2620,8 @@
         "enterprise",
         "feature",
         "infra",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "inputs": "Infrastructure design from infrastructure-design stage, CD pipeline config from deployment-pipeline stage",
       "outputs": "environment-inventory.md, validation-report.md, environment-provisioning-questions.md (under this stage's record dir, engine-resolved)",
@@ -2652,7 +2714,8 @@
         "feature",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "installer-distribution"
       ],
       "inputs": "CD pipeline config from deployment-pipeline stage, provisioned environments from environment-provisioning stage, built artifacts from Construction",
       "outputs": "deployment-log.md, smoke-test-results.md, health-check-report.md, deployment-execution-questions.md (under this stage's record dir, engine-resolved)",
@@ -3289,6 +3352,45 @@
       ],
       "description": "Infrastructure changes"
     },
+    "installer-distribution": {
+      "depth": "Standard",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "EXECUTE",
+        "market-research": "EXECUTE",
+        "feasibility": "EXECUTE",
+        "scope-definition": "EXECUTE",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "EXECUTE",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "EXECUTE",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "EXECUTE",
+        "refined-mockups": "SKIP",
+        "application-design": "EXECUTE",
+        "units-generation": "EXECUTE",
+        "delivery-planning": "EXECUTE",
+        "functional-design": "EXECUTE",
+        "nfr-requirements": "EXECUTE",
+        "nfr-design": "EXECUTE",
+        "infrastructure-design": "EXECUTE",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "EXECUTE",
+        "deployment-pipeline": "EXECUTE",
+        "environment-provisioning": "EXECUTE",
+        "deployment-execution": "EXECUTE",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [],
+      "description": ""
+    },
     "mvp": {
       "depth": "Standard",
       "stages": {
@@ -3461,6 +3563,166 @@
         "patch"
       ],
       "description": "CVE response"
+    },
+    "self-document": {
+      "depth": "Standard",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "EXECUTE",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "SKIP",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "SKIP",
+        "units-generation": "SKIP",
+        "delivery-planning": "SKIP",
+        "functional-design": "EXECUTE",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "SKIP",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [],
+      "description": "Write or update Amadeus documentation grounded in measured implementation facts",
+      "testStrategy": "Minimal"
+    },
+    "self-feature": {
+      "depth": "Standard",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "EXECUTE",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "EXECUTE",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "EXECUTE",
+        "units-generation": "EXECUTE",
+        "delivery-planning": "EXECUTE",
+        "functional-design": "EXECUTE",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "EXECUTE",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [],
+      "description": "Build a substantial new Amadeus feature with full framework verification",
+      "testStrategy": "Comprehensive"
+    },
+    "self-fix": {
+      "depth": "Minimal",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "SKIP",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "SKIP",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "SKIP",
+        "units-generation": "SKIP",
+        "delivery-planning": "SKIP",
+        "functional-design": "SKIP",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "SKIP",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [],
+      "description": "Correct a bounded Amadeus mismatch with comprehensive framework verification",
+      "testStrategy": "Comprehensive"
+    },
+    "self-refactor": {
+      "depth": "Minimal",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "SKIP",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "SKIP",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "SKIP",
+        "units-generation": "SKIP",
+        "delivery-planning": "SKIP",
+        "functional-design": "EXECUTE",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "SKIP",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [],
+      "description": "Refactor Amadeus internals while preserving behavior and harness parity",
+      "testStrategy": "Comprehensive"
     },
     "workshop": {
       "depth": "Standard",

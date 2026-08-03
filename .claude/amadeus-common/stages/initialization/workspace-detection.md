@@ -22,6 +22,11 @@ scopes:
   - security-patch
   - workshop
   - chore
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: none (scans filesystem)
 outputs: workspace classification (greenfield/brownfield), technology stack detection
 ---

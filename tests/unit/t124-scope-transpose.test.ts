@@ -78,7 +78,7 @@ const GRAPH_TOOL = join(AMADEUS_SRC, "tools", "amadeus-graph.ts");
 const GRAPH_JSON = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const GRID_JSON = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
 
-// The ten scopes the shipped grid carries — the .sh's hard-coded list.
+// The fifteen scopes the shipped grid carries.
 const SCOPES = [
   "enterprise",
   "feature",
@@ -88,7 +88,12 @@ const SCOPES = [
   "chore",
   "refactor",
   "infra",
+  "installer-distribution",
   "security-patch",
+  "self-document",
+  "self-feature",
+  "self-fix",
+  "self-refactor",
   "workshop",
 ];
 
@@ -204,13 +209,13 @@ describe("canonicalScopeGridJson() + compileStageGraph() determinism (in-process
 });
 
 // ===========================================================================
-// Grid <-> subgraph parity for all 10 shipped scopes (none).
+// Grid <-> subgraph parity for all 15 shipped scopes (none).
 // .sh test 12: the shipped grid's EXECUTE set per scope == subgraphForScope's
 // slugs per scope. The grid is the source the subgraph reads, so this is the
 // round-trip invariant the runtime relies on.
 // ===========================================================================
 describe("scope-grid <-> subgraphForScope parity (in-process)", () => {
-  test("shipped grid EXECUTE set is cell-identical to subgraphForScope for all 10 scopes [.sh test 12]", () => {
+  test("shipped grid EXECUTE set is cell-identical to subgraphForScope for all 15 scopes [.sh test 12]", () => {
     const grid = JSON.parse(readFileSync(GRID_JSON, "utf-8")) as Record<
       string,
       { stages: Record<string, "EXECUTE" | "SKIP"> }
