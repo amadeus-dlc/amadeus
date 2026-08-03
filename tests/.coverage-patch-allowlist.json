@@ -151,13 +151,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1069",
+    "lines": "1113",
     "reason": "Optional graph snapshot property in validateGrid's multi-line opts type; runtime-erased, bun lcov stamps the type-only line DA:0 even though the injected snapshot path is exercised in-process by t257 (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1073",
+    "lines": "1117",
     "reason": "Optional graph snapshot property in validateGrid's multi-line opts type; runtime-erased, bun lcov stamps the type-only line DA:0 even though the injected snapshot path is exercised in-process by t257 (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
@@ -1523,12 +1523,6 @@
     "lines": "330-331",
     "reason": "runPackageFreshness is exercised through its injected runner; Bun LCOV does not attribute the multi-line exported function signature rows.",
     "expiry": "remove when Bun LCOV attributes the exported function signature or the declaration becomes single-line"
-  },
-  {
-    "file": "scripts/promote-self.ts",
-    "lines": "697",
-    "reason": "self-promotion integration tests execute the shipped CLI and verify byte parity; the residual import-meta main wrapper is not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/scan-public-projections.ts",
