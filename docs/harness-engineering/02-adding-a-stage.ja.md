@@ -69,8 +69,10 @@ packages/framework/core/amadeus-common/stages/
 
 ```bash
 bun scripts/package.ts            # packages/framework/core/ + packages/framework/harness/ からすべてのハーネスを再生成
-bun scripts/package.ts --check    # CI ドリフトガード — コミット前に実行
+bun run source-only:check         # 生成物がGit境界の外にあることを確認
 ```
+
+生成されたtreeは未追跡のままです。CIは隔離した2つのworkspaceで再コンパイルし、結果をbyte単位で比較します。
 
 ランタイムはコンパイル済みの成果物 `<harness-dir>/tools/data/stage-graph.json`(例: インストール済みの Claude ツリーでは `.claude/tools/data/stage-graph.json`)を読みます。これはパッケージャーが呼び出すグラフコンパイラによって YAML から生成されます。既にインストール済みのツリー上で反復作業している場合は、そのツリーのグラフを直接再コンパイルできます:
 
@@ -139,7 +141,7 @@ bun .claude/tools/amadeus-runner-gen.ts check
 
 - **グラフ配置。** `compile` すると、ステージのエッジ(`requires_stage`、`consumes`、`produces`)がグラフに解決されます。トポロジカル順序、生成側/消費側のルックアップ、循環検出はすべて、それ以上の編集なしに新しいノードを織り込みます。
 - **コンパイル時のフィールド検証。** コンパイラはグラフを構築しながらフロントマターを検証します — 作成上のエラーは実行時にサイレントにではなく、`compile` で大声で失敗します。`lead_agent` や `support_agents` の値は `loadAgents()` を介して実際の `.claude/agents/*.md` ファイルと照合されます。更新すべきハードコードされたエージェント enum はありません。マッチするファイルのないエージェントを指定したステージはコンパイルに失敗するので(`lead_agent "<name>" has no matching .claude/agents/*.md`)、タイポが実行時に 404 になるグラフを出荷することはできません。予約済みの `orchestrator` slug(コンダクター自身。ブートストラップ initialization ステージで使われる)は例外です — それにはエージェントファイルがありません。
-- **CI ドリフトガード。** `bun .claude/tools/amadeus-graph.ts compile --check` は、クリーンなツリーでは `0` を返し、いずれかのステージ YAML が JSON を再コンパイルせずに編集されていた場合は `1` を返します。CI がこれを実行するので、忘れた `compile` は古いグラフを出荷するのではなく、明確なメッセージとともにマージをブロックします。
+- **CI 不変量検証。** `bun .claude/tools/amadeus-graph.ts compile --check` は正本のステージソースをコンパイルし、グラフ不変量を検証します。不変量を満たす場合は `0` で終了し、無効なフロントマター、参照、センサー、スコープグリッド、Bolt DAG エッジを loud に拒否します。
 - **フェーズルールのアタッチ。** ステージはディレクトリによってそのフェーズを宣言するので、マッチする `phases/<phase>.md` ルールレイヤーがコンパイル時にアタッチされます — そのエッジを自分で配線することはありません。
 
 ### 自分で確認しなければならないもの

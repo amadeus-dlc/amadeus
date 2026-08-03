@@ -88,9 +88,9 @@ per-scope(`/amadeus-feature`)のランナースキルがインストールされ
 ## フレームワーク開発者向け
 
 `dist/kiro` は `bun scripts/package.ts kiro` によって `packages/framework/core/` + `packages/framework/harness/kiro/`
-から **生成** されます(`{{HARNESS_DIR}}` トークンを `.kiro` に置換し、
-`rules/` → `steering/` をリネームしたコアコピー)。`bun scripts/package.ts --check`
-がドリフトガードで、CI(t145)で実行されます。作成された Kiro サーフェスは
+から未追跡のローカル出力として**生成**されます(`{{HARNESS_DIR}}` トークンを `.kiro` に置換し、
+`rules/` → `steering/` をリネームしたコアコピー)。CIは隔離した2回のbuildを比較し、
+source-only境界を検査します。作成された Kiro サーフェスは
 `packages/framework/harness/kiro/` にあります: オーケストレータースキル(`skills/amadeus/`)、
 エージェント JSON(`agents/`)、フックアダプタ
 (`hooks/amadeus-kiro-adapter.ts`)、`settings/cli.json`、`AGENTS.md` — それら

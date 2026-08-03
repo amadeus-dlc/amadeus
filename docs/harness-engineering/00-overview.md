@@ -106,22 +106,22 @@ Everything a harness engineer authors lives in **`packages/framework/core/`** �
 harness-neutral source of truth (stages under `packages/framework/core/amadeus-common/stages/`,
 agents under `packages/framework/core/agents/`, scopes, rules, sensors, knowledge, tools, hooks).
 The per-harness `dist/<harness>/` trees you actually run (`dist/claude/.claude/`,
-`dist/kiro/.kiro/`, `dist/codex/`) are **generated** from `packages/framework/core/` plus a thin
-`packages/framework/harness/<name>/` surface, and they are **drift-guarded** — a hand-edit there is
-rejected by CI. The loop is always:
+`dist/kiro/.kiro/`, `dist/codex/`) are **ignored local output** generated from
+`packages/framework/core/` plus a thin `packages/framework/harness/<name>/` surface. The loop is:
 
 ```bash
-# 1. edit the source in packages/framework/core/ (never dist/)
+# 1. edit the source in packages/framework/core/
 $EDITOR packages/framework/core/amadeus-common/stages/inception/my-stage.md
 
 # 2. regenerate every harness tree from packages/framework/core/ + packages/framework/harness/
 bun scripts/package.ts
 
-# 3. confirm no drift (the CI guard; run before committing)
-bun scripts/package.ts --check
+# 3. confirm generated output stays outside the Git boundary
+bun run source-only:check
 ```
 
-Commit the `packages/framework/core/` edit and the regenerated `dist/` together. When a recipe in
+Commit the `packages/framework/core/` edit, not regenerated output. CI compares two isolated builds
+byte-for-byte. When a recipe in
 the chapters below says to run `bun .claude/tools/amadeus-graph.ts compile` (or
 another tool), that command runs against an *installed* tree — your project's
 `.claude/` (or `.kiro/` / `.codex/`) — to recompile the graph at runtime; it is
@@ -151,9 +151,8 @@ Promotion is a move, not a second copy. Move the canonical file with `git mv`,
 make its internal paths relative to the new canonical location, add the
 appropriate manifest, package, and self-install projections, regenerate derived
 trees, then remove every reference to the old location. Commit the canonical
-change and generated projections together. Finish by running the distribution,
-self-install, and boundary drift checks; generated `dist/` trees are never
-edited by hand.
+change only; generated projections remain ignored. Finish with relevant tests,
+the isolated-build reproducibility gate, and `bun run source-only:check`.
 
 ---
 

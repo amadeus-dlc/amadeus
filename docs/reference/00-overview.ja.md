@@ -11,7 +11,7 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 > **本リファレンスにおけるパス表記。** AI-DLC は一度だけ作成され、ハーネスごとに生成されます。そのため、ファイルは意図に応じて次の3つの命名規約のいずれかで表されます:
 > - **`packages/framework/core/…`** — 手作業で作成する、ハーネス中立の **信頼できる情報源 (source of truth)**(例 `packages/framework/core/tools/amadeus-orchestrate.ts`、`packages/framework/core/amadeus-common/stages/`)。ここを編集します。
 > - **`packages/framework/harness/<name>/…`** — 手作業で作成する、各ランタイム向けのハーネス固有サーフェス。
-> - **`dist/<harness>/…`** — **生成され、コミットされ、ドリフトガードされる** 配布物(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)。手編集は禁止。`bun scripts/package.ts` によってバイト単位で再現されます。*出荷される* ものを説明する場合にのみ引用されます。
+> - **`dist/<harness>/…`** — **生成されるが追跡されない**、使い捨てのローカルビルド出力(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)。手編集せず `bun run build` で再生成します。公開配布物はリリース CI がクリーン checkout から構築するバージョン付き GitHub Release Asset です。
 > - **`<harness-dir>/…`**(例 `.claude/`、`.kiro/`、`.codex/`)— *インストール済み* プロジェクト内部の **ランタイム** ロケーション。コマンドが実行され、ワークフロー中にフレームワークが読み書きする場所です(`bun .claude/tools/amadeus-graph.ts compile`、`.claude/agents/` を読む `loadAgents()`)。このディレクトリはハーネスのパラメータです。
 >
 > 本リファレンスが素の `.claude/` パスを示している箇所は、Claude ハーネス固有のランタイムロケーションと読み替えてください。同じファイルは `packages/framework/core/` または `packages/framework/harness/` で作成され、各ハーネス固有のディレクトリへ出荷されます。

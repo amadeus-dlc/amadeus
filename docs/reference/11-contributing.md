@@ -25,7 +25,7 @@ packages/framework/core/          # Hand-authored, harness-neutral source (tools
 packages/framework/harness/<name>/ # Per-harness authored surfaces (manifest, orchestrator skill, settings/config)
 scripts/package.ts                # The build: regenerates dist/<harness>/ from packages/framework/core + harness
 scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents (workspace memory is never overwritten)
-dist/<harness>/      # GENERATED distributables (claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/) — never hand-edit; run the packager
+dist/<harness>/      # ignored, disposable local build output; regenerate with bun run build
 packages/setup/      # Sibling setup package when present; separate from packages/framework/
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)
 docs/                # Documentation
@@ -42,9 +42,9 @@ For the repository layout decision behind the framework package boundary plus ro
 1. **Fork and branch** from `main`
 2. **Read the architecture** -- [reference/01-architecture.md](01-architecture.md) explains the execution model, agent delegation, and hook system
 3. **Understand the entry points** -- the deterministic engine `packages/framework/core/tools/amadeus-orchestrate.ts` (`next` / `report`) owns routing; the conductor `packages/framework/harness/claude/skills/amadeus/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
-4. **Make changes** -- Edit the harness-neutral source in `packages/framework/core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `packages/framework/harness/<name>/` (the orchestrator skill, settings). Then run `bun run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`bun run dist:check` / `package.ts --check`) will fail CI
+4. **Make changes** -- Edit the harness-neutral source in `packages/framework/core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `packages/framework/harness/<name>/` (the orchestrator skill, settings). On a fresh clone, run `bun install --frozen-lockfile` and then `bun run build` before starting a harness. Generated `dist/` and self-install surfaces are ignored local output; do not stage them
    - There is no root `core/` or `harness/` directory: `packages/framework/` is the only source of truth for the harness-neutral core and the per-harness surfaces.
-5. **Promote locally when dogfooding** -- Run `bun run promote:self` to refresh this repository's project-local `.claude/`, `.codex/`, `.agents/`, `.cursor/`, `.opencode/`, `.kimi-code/`, `AGENTS.md`, and `CLAUDE.md` from the generated harness output; `bun run promote:self:check` drift-guards that self install. `amadeus/spaces/default/memory/` is intentionally not promoted — workspace memory is hand-edited method source (practices-discovery and the self-learning loop write to it at runtime), so the promoter never overwrites it. Composed-scope runtime data is likewise preserved: a `scopes/amadeus-<name>.md` absent from dist is a composer-authored scope (kept, never deleted as an orphan), and `tools/data/scope-grid.json` is compared and written per-key so composed entries survive while stock-entry drift still fails the check
+5. **Build locally when dogfooding** -- `bun run build` regenerates every `dist/<harness>/` tree and refreshes this repository's project-local `.claude/`, `.codex/`, `.agents/`, `.cursor/`, `.opencode/`, and `.kimi-code/` surfaces while preserving the tracked bootstrap/configuration allowlist and per-user runtime state. `amadeus/spaces/default/memory/` is intentionally not promoted — workspace memory is hand-edited method source. Run `bun run source-only:check` before submitting; CI also compares two isolated builds byte-for-byte
 6. **Test** -- Run `bun tests/run-tests.ts` before submitting
 7. **Submit** -- Open a PR against `main`
 

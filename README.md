@@ -114,7 +114,7 @@ On Windows, use *either* PowerShell *or* CMD, not both — your prompt shows `PS
 
 ### Install a harness
 
-`@amadeus-dlc/setup` requires Bun 1.3.13 or later. It fetches the tagged distribution from GitHub and copies it into your project — no manual `dist/` copying needed:
+`@amadeus-dlc/setup` requires Bun 1.3.13 or later. It fetches a verified, versioned GitHub Release Asset and copies the selected harness into your project. Versions published before Release Assets were introduced continue to use their legacy GitHub source archive path. No manual `dist/` copying is needed:
 
 ```bash
 bunx @amadeus-dlc/setup install
@@ -300,10 +300,10 @@ amadeus/
 │
 ├── scripts/
 │   ├── package.ts              # THE build entry: copy core+harness per manifest → graph compile →
-│   │                           #   runner-gen → emit() per tree.  --check = total drift guard (CI)
+│   │                           #   runner-gen → emit() per local tree
 │   └── manifest-types.ts       # shared manifest contract
 │
-│  ─────────── GENERATED, COMMITTED, DRIFT-GUARDED — never hand-edit ───────────
+│  ─────────── GENERATED, IGNORED, DISPOSABLE LOCAL OUTPUT ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # what users of each harness copy
 │   ├── codex/     opencode/    cursor/    kimi/
@@ -314,21 +314,25 @@ amadeus/
 └── book-pack/                  # local domain pack (book writing) — not shipped
 ```
 
-> `packages/framework/core/` is what the framework **is**. `packages/framework/harness/` is how each harness **speaks**. `dist/` is what users **copy**. Only framework source is edited; `bun scripts/package.ts` regenerates `dist/`, and a hand-edit to `dist/` is a CI failure.
+> `packages/framework/core/` is what the framework **is**. `packages/framework/harness/` is how each harness **speaks**. `dist/` is disposable local build output. Release CI builds the public distribution from a clean checkout and publishes it as a versioned asset.
 
-The framework source lives under `packages/framework/` so it sits beside sibling packages such as `packages/setup` (the installer); root `scripts/` and `dist/` remain the repository-level build entry and public install contract. The background and trade-offs are recorded in the [Workspace Layout Decision](docs/reference/18-workspace-layout.md).
+The framework source lives under `packages/framework/` so it sits beside sibling packages such as `packages/setup` (the installer). Root `scripts/` remains the repository-level build entry; the public install contract is the versioned GitHub Release Asset. The background and trade-offs are recorded in the [Workspace Layout Decision](docs/reference/18-workspace-layout.md).
 
 ## Build / regenerate the harnesses
 
-Maintainers edit the hand-authored source in `packages/framework/core/` (or a `packages/framework/harness/<name>/` surface), then regenerate the committed `dist/<harness>/` trees — **never hand-edit `dist/`**, the drift guard fails CI.
+After cloning this repository, install dependencies and build before starting a harness. Maintainers edit the hand-authored source in `packages/framework/core/` or `packages/framework/harness/<name>/`; generated output stays untracked.
 
 ```bash
-bun run dist                    # regenerate every dist/<harness>/ from core + harness
-bun scripts/package.ts <name>   # regenerate one harness (e.g. claude, kiro-ide, codex)
-bun run dist:check              # byte-parity drift guard (run in CI)
-bun run promote:self            # update this repo's project-local self install
-bun run promote:self:check      # drift guard for the project-local self install
+git clone https://github.com/amadeus-dlc/amadeus.git
+cd amadeus
+bun install --frozen-lockfile
+bun run build                   # generate dist/ and local self-install surfaces
+# start the harness you are developing
+
+bun run source-only:check       # reject generated files crossing the Git boundary
 ```
+
+CI verifies reproducibility by comparing two isolated builds. A local edit under `dist/` cannot propagate through Git or a release: the directory is ignored, and Release Assets are generated from a clean checkout. Re-run `bun run build` to replace local output.
 
 Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.md). The authoritative build reference is the [Contributing Guide](docs/reference/11-contributing.md#development-workflow).
 

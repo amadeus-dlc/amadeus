@@ -256,8 +256,8 @@ sequenceDiagram
 The framework is **authored once and generated per harness** — today Claude
 Code, Kiro CLI, and Codex CLI, and any capable CLI you port it to. The
 hand-authored source is a harness-neutral `packages/framework/core/` plus a thin `packages/framework/harness/<name>/`
-surface per CLI; `bun scripts/package.ts` regenerates the committed,
-drift-guarded `dist/<harness>/` trees:
+surface per CLI; `bun scripts/package.ts` regenerates ignored local
+`dist/<harness>/` trees, while release CI packages a clean build as a versioned asset:
 
 ```
 packages/framework/core/           # hand-authored, harness-neutral (tools, amadeus-common,
@@ -267,9 +267,9 @@ packages/framework/harness/<name>/ # per-CLI surface: manifest.ts + orchestrator
                                    #   harness files (+ emit.ts for codex)
 scripts/package.ts                 # the build: copy core (token→.claude/.kiro/.codex) +
                                    #   harness, compile the graph, generate runners, emit;
-                                   #   `--check` is the byte-parity drift guard
-dist/<harness>/                    # GENERATED + committed: claude/.claude, kiro/.kiro,
-                                   #   codex/{.codex,.agents} — never hand-edited
+                                   #   source-only checks keep output outside Git
+dist/<harness>/                    # GENERATED + ignored local output: claude/.claude,
+                                   #   kiro/.kiro, codex/{.codex,.agents}
 ```
 
 `packages/framework/core/` `.ts` is byte-copied untransformed; the runtime `harnessDir()` seam

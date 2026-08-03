@@ -5,8 +5,8 @@
 AI-DLC ships from **one core, many harnesses** — today Claude Code, Kiro CLI, Kiro IDE,
 and Codex CLI, and the set is open. The hand-authored source is a
 harness-neutral `packages/framework/core/` plus a thin `packages/framework/harness/<name>/` surface per CLI; the
-packager (`scripts/package.ts`) regenerates each committed `dist/<harness>/`
-tree. Adding another harness is **one directory and one manifest row** — the
+packager (`scripts/package.ts`) regenerates each ignored local `dist/<harness>/`
+tree; release CI builds the public asset from a clean checkout. Adding another harness is **one directory and one manifest row** — the
 engine, methodology, and harness-dir/rules resolution take no `packages/framework/core/` edits at
 all; the lone optional exception is a per-harness `--doctor` arm (see Step 2).
 This page walks the contract.
@@ -25,9 +25,9 @@ packages/framework/harness/
   kiro/    manifest.ts · skills/amadeus/ · agents/*.json · hooks/amadeus-kiro-adapter.ts · settings/cli.json · AGENTS.md
   codex/   manifest.ts · emit.ts · skills/amadeus/ · hooks/amadeus-codex-adapter.ts
 scripts/
-  package.ts               # bun scripts/package.ts [<name>] [--check]
+  package.ts               # bun scripts/package.ts [<name>]
   manifest-types.ts        # the HarnessManifest contract every manifest implements
-dist/<name>/               # GENERATED, committed, drift-guarded
+dist/<name>/               # GENERATED, ignored local output
 ```
 
 `packages/framework/core/` prose names the harness directory with the `{{HARNESS_DIR}}` token; the
@@ -36,11 +36,11 @@ packager substitutes whatever `harnessDir` the manifest declares (`.claude` /
 runtime `harnessDir()` seam in `packages/framework/core/tools/amadeus-lib.ts` derives the directory
 from the shipped layout at execution time (open-set: it reads the dir name from
 the tool's own path, not a hardcoded list), so the same tool sources run in
-every tree. The acceptance gate is **byte-parity**: regenerating a harness must
-reproduce its committed dist exactly (`package.ts --check`).
+every tree. The acceptance gate is **reproducibility**: CI regenerates every
+harness in two isolated workspaces and requires byte-identical results.
 
 The packager **discovers** harnesses by scanning `packages/framework/harness/` for a `manifest.ts`,
-so a new dir is built by the default `bun scripts/package.ts` and `--check` with
+so a new dir is built by the default `bun scripts/package.ts` with
 no edit to the packager itself — the literal meaning of "one directory and one
 manifest row, zero shared-code edits."
 
@@ -89,8 +89,8 @@ Core hooks consume Claude-shaped stdin as the normal form. A new harness ships
 listed in `harnessFiles` + `authoredExempt`) that normalizes the harness's hook
 payloads into that contract and subprocess-pipes to the shared core hook.
 Never split a core hook into logic+adapter — the core bodies stay byte-shared
-across all harnesses (the `--check` proves it: every `.ts` in a dist is
-byte-identical to its `packages/framework/core/` source).
+across all harnesses (the core byte-identity tests verify that every projected
+`.ts` matches its `packages/framework/core/` source).
 
 Wire the adapter to the harness's events the harness's own way: Kiro registers
 targets in `agents/amadeus.json`; Codex emits `hooks.json`. Register only events
@@ -112,16 +112,18 @@ with a real core-hook consumer.
 Structural divergence a declarative row can't express is `emit.ts` — a plugin
 the manifest references that the packager calls with an `EmitContext`
 (`coreRoot`, `harnessRoot`, `distRoot`, `harnessDir`, `substituteToken`,
-`check`) and that returns the paths it wrote. Codex's is the worked example:
+`check`) and that returns the paths it wrote. `check` is retained in the API for
+compatibility; the source-only packager invokes emitters in write mode and CI
+compares isolated output trees. Codex's is the worked example:
 `config.toml`, `hooks.json`, the hook-trust pre-seed, the `AGENTS.md` merge, the
 agent-TOML transpositions, and the `.agents/skills/` tree (composed from
 `packages/framework/core/tools/amadeus-runner-gen.ts`'s exported render functions under
 `AMADEUS_HARNESS_DIR`, never reimplemented). Harnesses whose surfaces are all
 authored files (Claude, Kiro) set `emit: null`.
 
-`emit` honors `ctx.check`: under `--check` it diffs its outputs and returns
-problems instead of writing, so the drift guard covers emit-owned files that
-live outside `<harnessDir>` (e.g. `.agents/skills/`, the root `AGENTS.md`).
+Emit-owned files outside `<harnessDir>` (for example `.agents/skills/` and root
+`AGENTS.md`) are included in the isolated-build comparison and source-only
+boundary checks.
 
 ## Step 4 — the one transform class
 
@@ -134,17 +136,20 @@ carry no token and pass through unchanged — the core-hygiene test
 
 ## Step 5 — tests + the gate
 
-- A packaging-parity test (`t145`) runs `package.ts --check`; it covers every
-  harness with a manifest automatically.
+- The reproducible-build CI job packages every discovered manifest in two
+  isolated workspaces and compares the complete outputs byte-for-byte.
+- `bun run source-only:check` rejects generated harness output that becomes
+  tracked or staged outside the bootstrap/configuration allowlist.
 - A `<name>` hook-adapter contract test pipes live-captured payloads through the
   adapter and asserts the observable core-hook effect.
 - Live journeys ship as e2e gated on a `skipReason()` (a `AMADEUS_<NAME>_*_LIVE=1`
   env + the binary present + authenticated) so they skip cleanly in the
   deterministic tier and run green locally before a port merges.
 
-Run `bun scripts/package.ts <name>` to regenerate, `--check` to drift-guard, and
-the deterministic suite (`bash tests/run-tests.sh --smoke --unit --integration
--P 8`) plus the live journey to gate.
+Run `bun scripts/package.ts <name>` to regenerate, `bun run source-only:check`
+to verify the Git boundary, and the deterministic suite
+(`bash tests/run-tests.sh --smoke --unit --integration -P 8`) plus the live
+journey to gate. CI performs the isolated-build reproducibility comparison.
 
 ## Next
 

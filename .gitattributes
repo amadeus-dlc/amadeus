@@ -1,13 +1,5 @@
-# Collapse generated harness projections in GitHub diffs by default.
-.agents/** linguist-generated
-.claude/** linguist-generated
-.codex/** linguist-generated
-.cursor/** linguist-generated
-.opencode/** linguist-generated
-.kimi-code/** linguist-generated
-dist/** linguist-generated
-
-# Keep project-local configuration visible for review.
+# Generated harness projections are ignored by Git. Keep the tracked
+# project-local bootstrap and configuration allowlist visible for review.
 .claude/CLAUDE.md -linguist-generated
 .claude/hooks/amadeus-dispatch.ts -linguist-generated
 .claude/settings.json -linguist-generated

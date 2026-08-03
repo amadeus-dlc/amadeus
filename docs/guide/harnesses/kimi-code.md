@@ -6,9 +6,9 @@
 **Kimi Code** harness. One deterministic core, many harnesses: the
 engine, state machine, audit log, graph, swarm referee, and learnings gate are
 byte-identical across every distribution — only the shell differs. The
-tree is **generated** from `packages/framework/core/` +
-`packages/framework/harness/kimi/` by `bun scripts/package.ts kimi`;
-never hand-edit it (the drift guard fails CI).
+tree is **generated** as ignored local output from `packages/framework/core/` +
+`packages/framework/harness/kimi/` by `bun scripts/package.ts kimi`.
+Release CI rebuilds it from a clean checkout.
 
 ## Prerequisites
 
@@ -172,7 +172,7 @@ skills (`/skill:amadeus-session-cost`, `/skill:amadeus-replay`,
 
 ```bash
 bun scripts/package.ts kimi          # regenerate dist/kimi from packages/framework/core + harness/kimi
-bun scripts/package.ts kimi --check  # drift guard
+bun run source-only:check            # verify generated output remains outside the Git boundary
 ```
 
 In the Amadeus self repository, `bun run promote:self` promotes

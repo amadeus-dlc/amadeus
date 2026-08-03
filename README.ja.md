@@ -114,7 +114,7 @@ Windows では PowerShell と CMD の*どちらか一方*を使ってくださ�
 
 ### ハーネスのインストール
 
-`@amadeus-dlc/setup` には Bun 1.3.13 以上が必要です。タグ付き配布物を GitHub から取得してプロジェクトへコピーします — `dist/` の手動コピーは不要です:
+`@amadeus-dlc/setup` には Bun 1.3.13 以上が必要です。検証済みのバージョン付き GitHub Release Asset を取得し、選択したハーネスをプロジェクトへコピーします。Release Asset 導入前のバージョンだけは従来の GitHub source archive 経路を使い続けます。`dist/` の手動コピーは不要です:
 
 ```bash
 bunx @amadeus-dlc/setup install
@@ -300,10 +300,10 @@ amadeus/
 │
 ├── scripts/
 │   ├── package.ts              # ビルドの入口: manifest に従い core+harness をコピー → graph compile →
-│   │                           #   runner-gen → ツリーごとに emit()。--check = 全域ドリフトガード(CI)
+│   │                           #   runner-gen → ローカルツリーごとに emit()
 │   └── manifest-types.ts       # 共有 manifest 契約
 │
-│  ─────────── 生成物(コミット・ドリフトガード対象)— 手編集禁止 ───────────
+│  ─────────── 生成物(未追跡・使い捨てのローカル出力) ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # 各ハーネスのユーザーがコピーするもの
 │   ├── codex/     opencode/    cursor/    kimi/
@@ -314,21 +314,25 @@ amadeus/
 └── book-pack/                  # ローカルドメインパック(書籍執筆)— 非出荷
 ```
 
-> `packages/framework/core/` がフレームワークの**本体**、`packages/framework/harness/` が各ハーネスの**話し方**、`dist/` がユーザーの**コピーするもの**です。編集するのはフレームワークソースだけ — `bun scripts/package.ts` が `dist/` を再生成し、`dist/` の手編集は CI が落とします。
+> `packages/framework/core/` がフレームワークの**本体**、`packages/framework/harness/` が各ハーネスの**話し方**です。`dist/` は使い捨てのローカル生成物です。リリースCIがクリーンcheckoutから公開用配布物を生成し、バージョン付きassetとして公開します。
 
-フレームワークソースは `packages/setup`(インストーラ)のような兄弟パッケージと並ぶよう `packages/framework/` 配下にあります。root の `scripts/` と `dist/` はリポジトリレベルのビルド入口・公開インストール契約として維持されます。背景とトレードオフは [Workspace Layout Decision](docs/reference/18-workspace-layout.ja.md) に記録されています。
+フレームワークソースは `packages/setup`(インストーラ)のような兄弟パッケージと並ぶよう `packages/framework/` 配下にあります。root の `scripts/` はリポジトリレベルのビルド入口であり、公開インストール契約はバージョン付き GitHub Release Asset です。背景とトレードオフは [Workspace Layout Decision](docs/reference/18-workspace-layout.ja.md) に記録されています。
 
 ## ハーネスのビルド / 再生成
 
-メンテナは `packages/framework/core/`(またはハーネス表層 `packages/framework/harness/<name>/`)の手書きソースを編集し、コミット対象の `dist/<harness>/` ツリーを再生成します — **`dist/` は絶対に手編集しない**こと。ドリフトガードが CI を落とします。
+このリポジトリをcloneしたら、ハーネスを起動する前に依存関係をインストールしてビルドします。メンテナが編集するのは `packages/framework/core/` または `packages/framework/harness/<name>/` の手書きソースであり、生成物は追跡しません。
 
 ```bash
-bun run dist                    # core + harness から全 dist/<harness>/ を再生成
-bun scripts/package.ts <name>   # 1ハーネスのみ再生成(例: claude, kiro-ide, codex)
-bun run dist:check              # バイトパリティのドリフトガード(CI で実行)
-bun run promote:self            # このリポジトリ自身のセルフインストールを更新
-bun run promote:self:check      # セルフインストールのドリフトガード
+git clone https://github.com/amadeus-dlc/amadeus.git
+cd amadeus
+bun install --frozen-lockfile
+bun run build                   # dist/ とローカルself-install面を生成
+# 開発対象のハーネスを起動
+
+bun run source-only:check       # 生成物がGit境界へ入っていないことを検査
 ```
+
+CIは隔離した2回のビルドを比較して再現性を検証します。`dist/` はignoreされ、Release Assetはクリーンcheckoutから生成されるため、ローカルでの手編集がGitやリリースへ伝播する経路はありません。ローカル出力を戻すには `bun run build` を再実行します。
 
 新しいハーネスの追加は [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.ja.md) を、ビルドの正式なリファレンスは [Contributing Guide](docs/reference/11-contributing.ja.md) を参照してください。
 
